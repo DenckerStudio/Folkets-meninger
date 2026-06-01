@@ -12,10 +12,14 @@ import {
   NavigationMenuTrigger,
 } from '@/components/ui/navigation-menu';
 import { NavLink, NavMenuLink, useNavSectionActive } from '@/components/ui/nav-link';
-import { Bell, LogIn, LogOut } from 'lucide-react';
+import { BarChart2, Bell, Flag, LogIn, LogOut, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
-import { desktopMoreNavLinks, desktopPrimaryNavLinks } from '@/lib/site-nav-links';
+import {
+  desktopMoreNavLinks,
+  desktopPrimaryNavLinks,
+  isAdminActive,
+} from '@/lib/site-nav-links';
 import { routes } from '@/lib/routes';
 
 export function Header() {
@@ -27,9 +31,10 @@ export function Header() {
   const [isForumAdmin, setIsForumAdmin] = React.useState(false);
   const displayName =
     user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
-  const moreSectionActive = useNavSectionActive(
-    desktopMoreNavLinks.flatMap((item) => (item.isActive ? [item.isActive] : [])),
-  );
+  const moreSectionActive = useNavSectionActive([
+    ...desktopMoreNavLinks.flatMap((item) => (item.isActive ? [item.isActive] : [])),
+    ...(isForumAdmin ? [isAdminActive] : []),
+  ]);
 
   const handleSignOut = async () => {
     const { getBrowserSupabase } = await import('@/lib/supabase');
@@ -81,7 +86,7 @@ export function Header() {
     >
       <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-4 md:gap-5">
-          <Link href={routes.dashboard} className="hover:opacity-90 rounded-md p-1 transition-opacity">
+          <Link href={routes.utforsk} className="hover:opacity-90 rounded-md p-1 transition-opacity">
             <FolketsStemmeLogo />
           </Link>
           <div className="hidden items-center gap-0.5 md:flex">
@@ -103,6 +108,41 @@ export function Header() {
                   </NavigationMenuTrigger>
                   <NavigationMenuContent className="bg-background p-1 pr-1.5">
                     <ul className="bg-popover w-72 space-y-1 rounded-md border p-2 shadow">
+                      {isForumAdmin ? (
+                        <>
+                          <li className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                            Admin
+                          </li>
+                          <li>
+                            <NavMenuLink
+                              title="Rapporter"
+                              description="Forum-meldinger og moderering"
+                              icon={Flag}
+                              href={routes.adminForumReports}
+                              isActive={isAdminActive}
+                            />
+                          </li>
+                          <li>
+                            <NavMenuLink
+                              title="Statistikk"
+                              description="Eksport og oversikt"
+                              icon={BarChart2}
+                              href={routes.adminStats}
+                              isActive={isAdminActive}
+                            />
+                          </li>
+                          <li>
+                            <NavMenuLink
+                              title="Forum-prompts"
+                              description="Godkjenning av dagens temaer"
+                              icon={Sparkles}
+                              href={routes.adminForumPrompts}
+                              isActive={isAdminActive}
+                            />
+                          </li>
+                          <li className="my-1 border-t border-border" aria-hidden />
+                        </>
+                      ) : null}
                       {desktopMoreNavLinks.map((item) => (
                         <li key={item.href}>
                           <NavMenuLink {...item} />
@@ -118,19 +158,6 @@ export function Header() {
         <div className="hidden items-center gap-2 md:flex">
           {isLoggedIn ? (
             <>
-              {isForumAdmin && (
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" render={<Link href={routes.adminForumReports} />}>
-                    Rapporter
-                  </Button>
-                  <Button variant="outline" render={<Link href={routes.adminStats} />}>
-                    Statistikk
-                  </Button>
-                  <Button variant="outline" render={<Link href={routes.adminForumPrompts} />}>
-                    Prompts
-                  </Button>
-                </div>
-              )}
               <Link
                 href={routes.varsler}
                 className="relative inline-flex h-10 w-10 items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"

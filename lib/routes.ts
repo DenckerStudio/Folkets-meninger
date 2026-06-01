@@ -29,7 +29,9 @@ export const routes = {
   adminForumReports: `${DASHBOARD_PREFIX}/admin/forum-reports`,
   adminStats: `${DASHBOARD_PREFIX}/admin/statistikk`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,
-  minSideForumPosts: `${DASHBOARD_PREFIX}/min-side?tab=mine-innlegg`,
+  forumMineInnlegg: `${DASHBOARD_PREFIX}/forum/mine-innlegg`,
+  /** @deprecated Use forumMineInnlegg */
+  minSideForumPosts: `${DASHBOARD_PREFIX}/forum/mine-innlegg`,
 } as const;
 
 export function isDashboardPath(pathname: string): boolean {

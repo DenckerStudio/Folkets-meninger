@@ -3,11 +3,9 @@ import {
   BarChart2,
   FileEdit,
   Info,
-  LayoutDashboard,
   MessageSquare,
   Search,
   UserRound,
-  Users,
 } from 'lucide-react';
 import { DASHBOARD_PREFIX, routes } from '@/lib/routes';
 
@@ -26,8 +24,6 @@ export type PrimaryNavLink = {
   href: string;
   isActive: NavIsActive;
 };
-
-export const isDashboardActive: NavIsActive = (pathname) => pathname === DASHBOARD_PREFIX;
 
 export const isUtforskActive: NavIsActive = (pathname) =>
   pathname === routes.utforsk ||
@@ -57,13 +53,15 @@ export const isInnsiktActive: NavIsActive = (pathname) =>
 export const isPolitikerHubActive: NavIsActive = (pathname) =>
   pathname.startsWith(routes.politikerHub);
 
+export const isAdminActive: NavIsActive = (pathname) =>
+  pathname.startsWith(`${DASHBOARD_PREFIX}/admin/`);
+
 /** Combined Utforsk active state for mobile (includes politikere/saker). */
 export const isMobileUtforskActive: NavIsActive = (pathname) =>
   isUtforskActive(pathname) || isPolitikereActive(pathname);
 
 /** Flat desktop primary nav — no duplicates. */
 export const desktopPrimaryNavLinks: PrimaryNavLink[] = [
-  { label: 'Dashboard', href: routes.dashboard, isActive: isDashboardActive },
   { label: 'Utforsk', href: routes.utforsk, isActive: isUtforskActive },
   { label: 'Politikere', href: routes.politikere, isActive: isPolitikereActive },
   { label: 'Høringer', href: routes.horinger, isActive: isHoringerActive },
@@ -97,12 +95,6 @@ export const desktopMoreNavLinks: SiteNavLinkItem[] = [
 
 /** Mobile bottom nav items. */
 export const mobileNavItems = [
-  {
-    label: 'Dashboard',
-    href: routes.dashboard,
-    icon: LayoutDashboard,
-    isActive: isDashboardActive,
-  },
   {
     label: 'Utforsk',
     href: routes.utforsk,
