@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test:e2e": "playwright test",
-    "test:unit": "npx tsx lib/forum/author-display.test.ts && npx tsx lib/forum/reports.test.ts && npx tsx lib/valgomat/scores.test.ts",
+    "test:unit": "npx tsx lib/forum/author-display.test.ts && npx tsx lib/forum/reports.test.ts && npx tsx lib/forum/admin-prompt-validation.test.ts && npx tsx lib/valgomat/scores.test.ts",
     "clean": "next clean"
   },
   "dependencies": {
@@ -20,7 +20,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "framer-motion": "^12.40.0",
     "lucide-react": "^0.553.0",
     "motion": "^12.35.2",
     "next": "^15.4.9",

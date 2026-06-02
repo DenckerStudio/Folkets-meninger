@@ -62,11 +62,12 @@ export async function GET(
         }
       }
 
-      if (detail.komite?.navn) {
+      const komiteNavn = typeof detail.komite === 'object' ? detail.komite?.navn : detail.komite;
+      if (komiteNavn) {
         related.push({
           kind: 'document',
           id: `komite-${id}`,
-          title: `Komité: ${detail.komite.navn}`,
+          title: `Komité: ${komiteNavn}`,
           href: routes.sak(id),
           subtitle: 'Se saksdetaljer',
         });

@@ -7,12 +7,12 @@ import HeroSection from '@/components/hero-section';
 import { LandingPopularIssues } from '@/components/landing-popular-issues';
 import { routes } from '@/lib/routes';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 const POPULAR_ISSUE_COUNT = 10;
 
 export default async function LandingPage() {
-  const issues = await getSaker();
+  const issues = await getSaker({ nextRevalidateSeconds: 3600 });
   const popularIssues = [...issues]
     .sort((a, b) => (b.votes?.total ?? 0) - (a.votes?.total ?? 0))
     .slice(0, POPULAR_ISSUE_COUNT);

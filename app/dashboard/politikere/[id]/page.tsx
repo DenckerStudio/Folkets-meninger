@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Landmark } from 'lucide-react';
 import Image from 'next/image';
-import { getRepresentanter } from '@/lib/stortinget';
+import { getPolitikereOversikt } from '@/lib/stortinget';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
 import { routes } from '@/lib/routes';
 
@@ -14,12 +14,15 @@ export default async function PolitikerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const representanter = await getRepresentanter();
-  const rep = representanter.find((r) => String(r.id) === String(id));
+  const politikere = await getPolitikereOversikt();
+  const rep = politikere.find((r) => String(r.id) === String(id));
 
   if (!rep) {
     notFound();
   }
+
+  const roleLabel = rep.tittel || 'Stortingsrepresentant';
+  const locationLabel = rep.departement || rep.fylke.navn;
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 pb-12">
@@ -42,8 +45,13 @@ export default async function PolitikerDetailPage({
           <h1 className="text-3xl font-bold text-gray-900">
             {rep.fornavn} {rep.etternavn}
           </h1>
-          <p className="text-gray-600 mt-1">{rep.parti.navn}</p>
-          <p className="text-gray-500 text-sm mt-1">{rep.fylke.navn}</p>
+          <p className="text-gray-600 mt-1 flex items-center gap-1.5">
+            {rep.erRegjeringsmedlem && <Landmark className="w-4 h-4 text-amber-600" />}
+            {roleLabel}
+          </p>
+          <p className="text-gray-500 text-sm mt-1">
+            {rep.parti.navn} · {locationLabel}
+          </p>
           <Link
             href={routes.forum}
             className="inline-flex mt-4 text-sm font-medium text-indigo-600 hover:text-indigo-500"

@@ -12,6 +12,7 @@ export const routes = {
   forum: `${DASHBOARD_PREFIX}/forum`,
   forumNew: (sakId?: string) =>
     sakId ? `${DASHBOARD_PREFIX}/forum/ny?sak=${sakId}` : `${DASHBOARD_PREFIX}/forum/ny`,
+  forumSpesielleSaker: `${DASHBOARD_PREFIX}/forum/spesielle-saker`,
   politikere: `${DASHBOARD_PREFIX}/politikere`,
   representanter: `${DASHBOARD_PREFIX}/representanter`,
   politikerHub: `${DASHBOARD_PREFIX}/politiker-hub`,
@@ -29,7 +30,9 @@ export const routes = {
   adminForumReports: `${DASHBOARD_PREFIX}/admin/forum-reports`,
   adminStats: `${DASHBOARD_PREFIX}/admin/statistikk`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,
-  minSideForumPosts: `${DASHBOARD_PREFIX}/min-side?tab=mine-innlegg`,
+  forumMineInnlegg: `${DASHBOARD_PREFIX}/forum/mine-innlegg`,
+  /** @deprecated Use forumMineInnlegg */
+  minSideForumPosts: `${DASHBOARD_PREFIX}/forum/mine-innlegg`,
 } as const;
 
 export function isDashboardPath(pathname: string): boolean {

@@ -1,16 +1,14 @@
 import { getAnonSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { resolveForumAuthor, type ForumAuthorDisplay } from '@/lib/forum/author-display';
 import type { ForumContextItem } from '@/lib/forum/context';
 import { stripUrlsForExcerpt } from '@/lib/forum/format-body';
 import { parseContextItemsFromBody, parseContextItemsJson } from '@/lib/forum/parse-context-lines';
 
-type UserJoin = { name: string | null } | { name: string | null }[] | null;
-
-function authorName(users: UserJoin): string {
-  if (!users) return 'Anonym';
-  const row = Array.isArray(users) ? users[0] : users;
-  return row?.name?.trim() || 'Anonym';
-}
+type UserJoin =
+  | { first_name: string | null; last_name: string | null; name: string | null }
+  | { first_name: string | null; last_name: string | null; name: string | null }[]
+  | null;
 
 export function formatTimeAgo(dateStr: string): string {
   const now = new Date();
@@ -63,7 +61,7 @@ export function forumSearchPattern(q: string | null | undefined): string | null 
 export type ForumThreadListItem = {
   id: string;
   title: string;
-  author: string;
+  author: ForumAuthorDisplay | null;
   createdAt: string;
   createdAtRaw: string;
   replies: number;
@@ -124,8 +122,9 @@ export async function getForumThreads(options?: {
         is_resolved,
         created_at,
         author_user_id,
+        is_system_thread,
         context_items,
-        users:author_user_id (name)
+        users:author_user_id (first_name, last_name, name)
       `)
       .order('created_at', { ascending: false })
       .limit(sort === 'engasjert' ? 50 : limit);
@@ -189,7 +188,10 @@ export async function getForumThreads(options?: {
       return {
         id: thread.id,
         title: thread.title,
-        author: authorName(thread.users as UserJoin),
+        author: resolveForumAuthor({
+          isSystemThread: thread.is_system_thread,
+          users: thread.users as UserJoin,
+        }),
         createdAt: formatTimeAgo(thread.created_at),
         createdAtRaw: thread.created_at,
         replies: replyCounts[thread.id] || 0,
@@ -223,7 +225,7 @@ export async function getForumThreads(options?: {
 
 export type ForumReplyItem = {
   id: string;
-  author: string;
+  author: ForumAuthorDisplay | null;
   content: string;
   createdAt: string;
   likes: number;
@@ -235,7 +237,8 @@ export type ForumThreadDetail = {
   id: string;
   title: string;
   content: string;
-  author: string;
+  author: ForumAuthorDisplay | null;
+  isSystemThread: boolean;
   createdAt: string;
   likes: number;
   threadLiked: boolean;
@@ -263,8 +266,9 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
         is_resolved,
         created_at,
         author_user_id,
+        is_system_thread,
         context_items,
-        users:author_user_id (name)
+        users:author_user_id (first_name, last_name, name)
       `)
       .eq('id', id)
       .single();
@@ -287,7 +291,7 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
         is_official_response,
         created_at,
         author_user_id,
-        users:author_user_id (name)
+        users:author_user_id (first_name, last_name, name)
       `)
       .eq('thread_id', thread.id)
       .order('created_at', { ascending: true });
@@ -365,7 +369,11 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
       id: thread.id,
       title: thread.title,
       content: cleanBody,
-      author: authorName(thread.users as UserJoin),
+      author: resolveForumAuthor({
+        isSystemThread: thread.is_system_thread,
+        users: thread.users as UserJoin,
+      }),
+      isSystemThread: thread.is_system_thread,
       createdAt: formatForumDate(thread.created_at),
       likes: likes?.length || 0,
       threadLiked,
@@ -375,7 +383,7 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
       replyLikedIds,
       replies: (replies || []).map((reply) => ({
         id: reply.id,
-        author: authorName(reply.users as UserJoin),
+        author: resolveForumAuthor({ users: reply.users as UserJoin }),
         content: parseContextItemsFromBody(reply.body).cleanBody,
         createdAt: formatForumDate(reply.created_at),
         likes: replyLikeCounts[reply.id] || 0,

@@ -26,6 +26,7 @@ import {
   clearForumThreadDraft,
   loadForumThreadDraft,
   saveForumThreadDraft,
+  type ForumThreadDraft,
 } from '@/lib/forum/thread-draft-storage';
 import ContextPicker, { ContextChip } from '@/components/forum/context-picker';
 import { SakQuickActionLinks } from '@/components/forum/sak-quick-action-modal';
@@ -55,7 +56,8 @@ export default function CreateThreadForm({
   const [error, setError] = useState('');
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [hasIdentity, setHasIdentity] = useState(true);
-  const [draftRestored, setDraftRestored] = useState(false);
+  const [pendingDraft, setPendingDraft] = useState<ForumThreadDraft | null>(null);
+  const [showDraftChoice, setShowDraftChoice] = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const draftHydrated = useRef(false);
   const { user } = useAuth();
@@ -77,9 +79,8 @@ export default function CreateThreadForm({
     [linkedItems]
   );
 
-  useEffect(() => {
-    const draft = loadForumThreadDraft();
-    if (draft) {
+  const applyDraft = useCallback(
+    (draft: ForumThreadDraft) => {
       setTitle(draft.title);
       setBody(draft.body);
       setLinkedItems(draft.linkedItems);
@@ -87,10 +88,44 @@ export default function CreateThreadForm({
         setPrimarySakId(draft.primarySakId);
         setPrimarySakTitle(draft.primarySakTitle);
       }
-      setDraftRestored(true);
+    },
+    [initialSakId]
+  );
+
+  const resetForm = useCallback(() => {
+    setTitle('');
+    setBody('');
+    setLinkedItems([]);
+    if (!initialSakId) {
+      setPrimarySakId(null);
+      setPrimarySakTitle(null);
     }
-    draftHydrated.current = true;
   }, [initialSakId]);
+
+  useEffect(() => {
+    const draft = loadForumThreadDraft();
+    if (draft) {
+      setPendingDraft(draft);
+      setShowDraftChoice(true);
+    } else {
+      draftHydrated.current = true;
+    }
+  }, []);
+
+  const handleContinueDraft = useCallback(() => {
+    if (pendingDraft) applyDraft(pendingDraft);
+    setPendingDraft(null);
+    setShowDraftChoice(false);
+    draftHydrated.current = true;
+  }, [applyDraft, pendingDraft]);
+
+  const handleStartFresh = useCallback(() => {
+    clearForumThreadDraft();
+    resetForm();
+    setPendingDraft(null);
+    setShowDraftChoice(false);
+    draftHydrated.current = true;
+  }, [resetForm]);
 
   const persistDraft = useCallback(() => {
     if (!draftHydrated.current) return;
@@ -265,19 +300,34 @@ export default function CreateThreadForm({
           </div>
         )}
 
-        {draftRestored && (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <span>Utkast gjenopprettet fra forrige besøk.</span>
-            <button
-              type="button"
-              onClick={() => {
-                clearForumThreadDraft();
-                setDraftRestored(false);
-              }}
-              className="shrink-0 text-xs font-medium text-amber-800 underline-offset-2 hover:underline"
-            >
-              Skjul
-            </button>
+        {showDraftChoice && (
+          <div
+            className="rounded-xl border border-indigo-100 bg-indigo-50/80 px-4 py-4 sm:px-5"
+            role="dialog"
+            aria-labelledby="draft-choice-heading"
+          >
+            <p id="draft-choice-heading" className="text-sm font-semibold text-gray-900">
+              Du har et lagret utkast
+            </p>
+            <p className="mt-1 text-sm text-gray-600">
+              Vil du fortsette der du slapp, eller starte en ny diskusjon?
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleContinueDraft}
+                className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
+              >
+                Fortsett med utkast
+              </button>
+              <button
+                type="button"
+                onClick={handleStartFresh}
+                className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm ring-1 ring-gray-200 transition-colors hover:bg-gray-50"
+              >
+                Start på nytt
+              </button>
+            </div>
           </div>
         )}
 

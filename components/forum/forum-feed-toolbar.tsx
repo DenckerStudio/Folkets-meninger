@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronDown, Search, X } from 'lucide-react';
 import type { ForumSort } from '@/lib/forum/queries';
 import { routes } from '@/lib/routes';
+import { PREFERENCE_KEYS } from '@/lib/preferences/keys';
+import { readLocalStorage, writeLocalStorage } from '@/lib/preferences/local-storage';
 
 const OPTIONS: { value: ForumSort; label: string }[] = [
   { value: 'nyeste', label: 'Nyeste' },
@@ -31,12 +33,22 @@ export default function ForumFeedToolbar() {
   const sort = (searchParams.get('sort') as ForumSort) || 'nyeste';
   const sak = searchParams.get('sak');
   const qFromUrl = searchParams.get('q') || '';
+  const restoredSortRef = useRef(false);
 
   const [query, setQuery] = useState(qFromUrl);
 
   useEffect(() => {
     setQuery(qFromUrl);
   }, [qFromUrl]);
+
+  useEffect(() => {
+    if (restoredSortRef.current || searchParams.get('sort')) return;
+    restoredSortRef.current = true;
+    const persisted = readLocalStorage<ForumSort>(PREFERENCE_KEYS.forum.sort);
+    if (persisted === 'engasjert' || persisted === 'nyeste') {
+      router.replace(buildForumQuery({ sort: persisted, sak, q: qFromUrl }));
+    }
+  }, [qFromUrl, router, sak, searchParams]);
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -51,6 +63,7 @@ export default function ForumFeedToolbar() {
   }, [query, qFromUrl, router, sak, sort]);
 
   const handleSortChange = (next: ForumSort) => {
+    writeLocalStorage(PREFERENCE_KEYS.forum.sort, next);
     router.push(buildForumQuery({ sort: next, sak, q: qFromUrl }));
   };
 

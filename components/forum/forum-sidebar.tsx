@@ -62,8 +62,13 @@ export default function ForumSidebar() {
 
       <div className="pt-4 mt-4 border-t border-gray-200 space-y-1">
         <Link
-          href={routes.minSideForumPosts}
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+          href={routes.forumMineInnlegg}
+          className={cn(
+            'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+            pathname === routes.forumMineInnlegg
+              ? 'bg-gray-100 text-gray-900'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+          )}
         >
           <User className="w-5 h-5 shrink-0" />
           Mine innlegg

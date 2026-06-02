@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Users, TrendingUp, MessageSquare, CheckCircle, AlertCircle, Search } from 'lucide-react';
-import { getSaker, getRepresentanter, StortingetRepresentant } from '@/lib/stortinget';
+import { getSaker, getPolitikereOversikt, type PolitikerOversikt } from '@/lib/stortinget';
 import { formatNumber } from '@/lib/utils';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -21,12 +21,51 @@ const partyLogos: Record<string, string> = {
   'Pasientfokus': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Pasientfokus_logo.png/200px-Pasientfokus_logo.png',
 };
 
+function PolitikerListItem({ rep }: { rep: PolitikerOversikt }) {
+  const roleOrLocation = rep.tittel || rep.departement || rep.fylke.navn;
+
+  return (
+    <div className="p-4 border border-gray-100 rounded-xl flex items-center bg-gray-50 hover:bg-gray-100 transition-colors">
+      <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold mr-4 flex-shrink-0 overflow-hidden relative">
+        <Image
+          src={`https://data.stortinget.no/eksport/personbilde?personid=${encodeURIComponent(rep.id)}&storrelse=lite&erstatningsbilde=true`}
+          alt={`${rep.fornavn} ${rep.etternavn}`}
+          fill
+          className="object-cover"
+          sizes="48px"
+        />
+      </div>
+      <div className="overflow-hidden">
+        <h3 className="font-semibold text-gray-900 truncate" title={`${rep.fornavn} ${rep.etternavn}`}>
+          {rep.fornavn} {rep.etternavn}
+        </h3>
+        <div className="flex items-center text-xs text-gray-500 mt-1">
+          {partyLogos[rep.parti.navn] && (
+            <div className="relative w-4 h-4 mr-1.5 flex-shrink-0">
+              <Image
+                src={partyLogos[rep.parti.navn]}
+                alt={`${rep.parti.navn} logo`}
+                fill
+                className="object-contain"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          )}
+          <span className="font-medium text-indigo-600 mr-2">{rep.parti.navn}</span>
+          <span className="truncate">{roleOrLocation}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PolitikerHubPage() {
   const [isVerified, setIsVerified] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [issues, setIssues] = useState<any[]>([]);
-  const [representanter, setRepresentanter] = useState<StortingetRepresentant[]>([]);
+  const [politikere, setPolitikere] = useState<PolitikerOversikt[]>([]);
   const [repSearchQuery, setRepSearchQuery] = useState('');
+  const [showAllPolitikere, setShowAllPolitikere] = useState(false);
 
   const categoryStats = useMemo(() => {
     const stats: Record<string, number> = {};
@@ -55,9 +94,9 @@ export default function PolitikerHubPage() {
         setIssues(data);
       }
     });
-    getRepresentanter().then((data) => {
+    getPolitikereOversikt().then((data) => {
       if (isMountedLocal) {
-        setRepresentanter(data);
+        setPolitikere(data);
       }
     });
     fetch('/api/user/politician-status')
@@ -71,18 +110,37 @@ export default function PolitikerHubPage() {
     };
   }, []);
 
-  const filteredRepresentanter = useMemo(() => {
-    if (!repSearchQuery.trim()) return representanter;
+  const filteredPolitikere = useMemo(() => {
+    if (!repSearchQuery.trim()) return politikere;
     const query = repSearchQuery.toLowerCase();
-    return representanter.filter(rep => 
-      rep.fornavn.toLowerCase().includes(query) ||
-      rep.etternavn.toLowerCase().includes(query) ||
-      rep.parti.navn.toLowerCase().includes(query) ||
-      rep.fylke.navn.toLowerCase().includes(query)
+    return politikere.filter(
+      (rep) =>
+        rep.fornavn.toLowerCase().includes(query) ||
+        rep.etternavn.toLowerCase().includes(query) ||
+        rep.parti.navn.toLowerCase().includes(query) ||
+        rep.fylke.navn.toLowerCase().includes(query) ||
+        (rep.tittel?.toLowerCase().includes(query) ?? false) ||
+        (rep.departement?.toLowerCase().includes(query) ?? false)
     );
-  }, [representanter, repSearchQuery]);
+  }, [politikere, repSearchQuery]);
 
-  const displayedReps = repSearchQuery ? filteredRepresentanter : filteredRepresentanter.slice(0, 12);
+  const regjeringsmedlemmer = useMemo(
+    () =>
+      filteredPolitikere
+        .filter((p) => p.erRegjeringsmedlem)
+        .sort((a, b) => (a.regjeringsSortering ?? 999) - (b.regjeringsSortering ?? 999)),
+    [filteredPolitikere]
+  );
+
+  const andrePolitikere = useMemo(
+    () =>
+      filteredPolitikere
+        .filter((p) => !p.erRegjeringsmedlem)
+        .sort((a, b) => a.etternavn.localeCompare(b.etternavn, 'no')),
+    [filteredPolitikere]
+  );
+
+  const displayedAndre = repSearchQuery || showAllPolitikere ? andrePolitikere : andrePolitikere.slice(0, 12);
 
   if (!isVerified) {
     return (
@@ -240,46 +298,47 @@ export default function PolitikerHubPage() {
           </div>
         </div>
         
-        {displayedReps.length === 0 ? (
+        {filteredPolitikere.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             Ingen politikere funnet som matcher &quot;{repSearchQuery}&quot;.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {displayedReps.map((rep) => (
-              <div key={rep.id} className="p-4 border border-gray-100 rounded-xl flex items-center bg-gray-50 hover:bg-gray-100 transition-colors">
-                <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold mr-4 flex-shrink-0">
-                  {rep.fornavn[0]}{rep.etternavn[0]}
-                </div>
-                <div className="overflow-hidden">
-                  <h3 className="font-semibold text-gray-900 truncate" title={`${rep.fornavn} ${rep.etternavn}`}>
-                    {rep.fornavn} {rep.etternavn}
-                  </h3>
-                  <div className="flex items-center text-xs text-gray-500 mt-1">
-                    {partyLogos[rep.parti.navn] && (
-                      <div className="relative w-4 h-4 mr-1.5 flex-shrink-0">
-                        <Image 
-                          src={partyLogos[rep.parti.navn]} 
-                          alt={`${rep.parti.navn} logo`}
-                          fill
-                          className="object-contain"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                    )}
-                    <span className="font-medium text-indigo-600 mr-2">{rep.parti.navn}</span>
-                    <span className="truncate">{rep.fylke.navn}</span>
-                  </div>
+          <div className="space-y-8">
+            {regjeringsmedlemmer.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-700 mb-3">Regjeringen</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {regjeringsmedlemmer.map((rep) => (
+                    <PolitikerListItem key={rep.id} rep={rep} />
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
+            {displayedAndre.length > 0 && (
+              <div>
+                {regjeringsmedlemmer.length > 0 && (
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-3">
+                    Stortingsrepresentanter
+                  </h3>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {displayedAndre.map((rep) => (
+                    <PolitikerListItem key={rep.id} rep={rep} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
-        
-        {!repSearchQuery && filteredRepresentanter.length > 12 && (
+
+        {!repSearchQuery && andrePolitikere.length > 12 && !showAllPolitikere && (
           <div className="mt-6 text-center">
-            <button className="text-indigo-600 font-medium hover:text-indigo-800 text-sm">
-              Vis alle {filteredRepresentanter.length} representanter
+            <button
+              type="button"
+              onClick={() => setShowAllPolitikere(true)}
+              className="text-indigo-600 font-medium hover:text-indigo-800 text-sm"
+            >
+              Vis alle {filteredPolitikere.length} politikere
             </button>
           </div>
         )}

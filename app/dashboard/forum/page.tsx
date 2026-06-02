@@ -8,6 +8,8 @@ import ForumRightRail from '@/components/forum/forum-right-rail';
 import { getForumThreads, getIssueTitle, getSuggestedIssues, type ForumSort } from '@/lib/forum/queries';
 import { getActiveForumPrompts } from '@/lib/forum/prompt-queries';
 import { routes } from '@/lib/routes';
+import { PageHeader } from '@/components/page-header';
+import { Button } from '@/components/ui/button';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +26,7 @@ export default async function ForumPage({
 
   const [topics, prompts, popularIssues] = await Promise.all([
     getForumThreads({ sakId, sort, search }),
-    getActiveForumPrompts(10),
+    getActiveForumPrompts(12),
     getSuggestedIssues(6),
   ]);
 
@@ -34,10 +36,10 @@ export default async function ForumPage({
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-6">
       <div>
         <header className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Forum</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Diskuter saker, still spørsmål og delta i dagens avstemninger.
-          </p>
+          <PageHeader
+            title="Forum"
+            description="Diskuter saker, still spørsmål og delta i dagens avstemninger."
+          />
         </header>
 
         {sakId && (
@@ -76,12 +78,9 @@ export default async function ForumPage({
             {search && (
               <p className="text-sm text-gray-500 mt-1">Prøv andre ord eller fjern søkefilteret.</p>
             )}
-            <Link
-              href={newThreadHref}
-              className="inline-flex mt-4 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700"
-            >
+            <Button render={<Link href={newThreadHref} />} className="mt-4">
               Start ny diskusjon
-            </Link>
+            </Button>
           </div>
         ) : (
           <div className="space-y-3">

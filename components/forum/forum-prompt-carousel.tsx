@@ -6,22 +6,43 @@ import { useRouter } from 'next/navigation';
 import { ChevronDown, ChevronUp, ExternalLink, Loader2, MessageSquare, Play, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import type { ForumPrompt } from '@/lib/forum/prompt-queries';
+import { filterReelVoteOptions } from '@/lib/forum/prompt-vote-options';
 import { getPromptPrimaryMedia, getPromptSourceDateRange } from '@/lib/forum/prompt-source';
 import { routes } from '@/lib/routes';
 
 type ForumPromptCarouselProps = {
   prompts: ForumPrompt[];
+  title?: string;
+  showHeader?: boolean;
+  showSeeAll?: boolean;
 };
 
-export default function ForumPromptCarousel({ prompts }: ForumPromptCarouselProps) {
+export default function ForumPromptCarousel({
+  prompts,
+  title = 'Spesielle saker',
+  showHeader = true,
+  showSeeAll = true,
+}: ForumPromptCarouselProps) {
   if (prompts.length === 0) return null;
 
   return (
-    <section className="mb-6" aria-label="Dagens spørsmål">
-      <div className="flex items-center gap-2 mb-3 px-1">
-        <Sparkles className="w-4 h-4 text-indigo-600" />
-        <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Dagens spørsmål</h2>
-      </div>
+    <section className="mb-6" aria-label="Spesielle saker">
+      {showHeader ? (
+        <div className="flex items-center justify-between gap-3 mb-3 px-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-indigo-600" />
+            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">{title}</h2>
+          </div>
+          {showSeeAll ? (
+            <Link
+              href={routes.forumSpesielleSaker}
+              className="text-xs font-semibold text-indigo-700 hover:text-indigo-600"
+            >
+              Se alle →
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
       <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1 scrollbar-thin">
         {prompts.map((prompt) => (
           <PromptReelCard key={prompt.id} prompt={prompt} />
@@ -35,7 +56,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
   const { user } = useAuth();
   const router = useRouter();
   const [selected, setSelected] = useState(prompt.userVote);
-  const [options, setOptions] = useState(prompt.options);
+  const [options, setOptions] = useState(() => filterReelVoteOptions(prompt.options));
   const [discussCount, setDiscussCount] = useState(prompt.discussClickCount);
   const [spawnedThreadId, setSpawnedThreadId] = useState(prompt.spawnedThreadId);
   const [discussClicked, setDiscussClicked] = useState(prompt.userDiscussClicked);
@@ -49,6 +70,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
   const dateRange = getPromptSourceDateRange(prompt.sources);
   const visibleSources = sourcesExpanded ? prompt.sources : prompt.sources.slice(0, 3);
   const hiddenSourceCount = Math.max(0, prompt.sources.length - 3);
+  const isUpdate = prompt.topicTags?.includes('oppdatering');
   const handleVote = async (optionId: string) => {
     if (!user || loading) return;
     setLoading('vote');
@@ -66,7 +88,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
         return;
       }
       setSelected(optionId);
-      if (data.options) setOptions(data.options);
+      if (data.options) setOptions(filterReelVoteOptions(data.options));
       router.refresh();
     } catch {
       setError('En feil oppstod');
@@ -149,6 +171,12 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
           >
             Langvarig stortingssak
           </Link>
+        )}
+
+        {isUpdate && (
+          <span className="mb-2 inline-flex w-fit items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-800">
+            Oppdatering
+          </span>
         )}
 
         {prompt.sources.length > 0 && (
@@ -254,7 +282,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
                 className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 hover:text-indigo-600"
               >
                 <MessageSquare className="w-4 h-4" />
-                Diskusjon startet — bli med →
+                Bli med i diskusjon →
               </Link>
             ) : (
               <>
@@ -269,7 +297,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
                   ) : (
                     <MessageSquare className="w-4 h-4" />
                   )}
-                  {discussClicked ? 'Du er med!' : 'Diskuter videre'}
+                  {discussClicked ? 'Du er med!' : 'Start diskusjon'}
                 </button>
                 <p className="mt-2 text-xs text-gray-500">
                   {discussCount}/{prompt.discussThreshold} ønsker felles diskusjon

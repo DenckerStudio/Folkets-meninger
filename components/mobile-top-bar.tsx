@@ -11,10 +11,7 @@ export function MobileTopBar() {
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
-    if (!user) {
-      setUnread(0);
-      return;
-    }
+    if (!user) return;
     const load = () => {
       fetch('/api/notifications/unread-count', { cache: 'no-store' })
         .then((res) => res.json())
