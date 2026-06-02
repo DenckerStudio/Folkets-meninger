@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { requireForumAdmin } from '@/lib/forum/admin';
+import {
+  isActivePromptUniqueViolation,
+  validatePromptSourceHeadlines,
+  validatePromptVoteOptions,
+} from '@/lib/forum/admin-prompt-validation';
 import { DEFAULT_REEL_VOTE_OPTIONS } from '@/lib/forum/prompt-vote-options';
 
 export const dynamic = 'force-dynamic';
@@ -11,6 +16,19 @@ type PromptStatus = (typeof PROMPT_STATUSES)[number];
 function parseStatus(value: string | null): PromptStatus | null {
   if (!value) return 'draft';
   return PROMPT_STATUSES.includes(value as PromptStatus) ? (value as PromptStatus) : null;
+}
+
+function mapPromptWriteError(error: { code?: string; message?: string } | null) {
+  if (isActivePromptUniqueViolation(error)) {
+    return NextResponse.json(
+      {
+        error:
+          'Det finnes allerede en aktiv reel med dette spørsmålet. Arkiver den eksisterende eller endre formuleringen.',
+      },
+      { status: 409 },
+    );
+  }
+  return null;
 }
 
 export async function GET(request: Request) {
@@ -51,13 +69,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Spørsmål må være minst 12 tegn' }, { status: 400 });
   }
 
-  const status: PromptStatus =
-    body.status === 'active' ? 'active' : 'draft';
+  const optionsInput =
+    Array.isArray(body.options) && body.options.length
+      ? body.options
+      : [...DEFAULT_REEL_VOTE_OPTIONS];
+  const optionsCheck = validatePromptVoteOptions(optionsInput);
+  if (!optionsCheck.ok) {
+    return NextResponse.json({ error: optionsCheck.error }, { status: 400 });
+  }
+
+  const sourcesCheck = validatePromptSourceHeadlines(body.source_headlines);
+  if (!sourcesCheck.ok) {
+    return NextResponse.json({ error: sourcesCheck.error }, { status: 400 });
+  }
+
+  const status: PromptStatus = body.status === 'active' ? 'active' : 'draft';
   const sensitivity = body.sensitivity === 'high' ? 'high' : 'low';
-  const options = Array.isArray(body.options) && body.options.length
-    ? body.options
-    : [...DEFAULT_REEL_VOTE_OPTIONS];
-  const sourceHeadlines = Array.isArray(body.source_headlines) ? body.source_headlines : [];
   const topicTags = Array.isArray(body.topic_tags)
     ? body.topic_tags.map((t: unknown) => String(t).trim()).filter(Boolean)
     : [];
@@ -72,8 +99,8 @@ export async function POST(request: Request) {
 
   const insert: Record<string, unknown> = {
     question,
-    options,
-    source_headlines: sourceHeadlines,
+    options: optionsInput,
+    source_headlines: sourcesCheck.sources,
     topic_tags: topicTags,
     sensitivity,
     status,
@@ -92,6 +119,8 @@ export async function POST(request: Request) {
   const { data, error } = await service.from('forum_prompts').insert(insert).select('id').single();
 
   if (error) {
+    const conflict = mapPromptWriteError(error);
+    if (conflict) return conflict;
     return NextResponse.json({ error: 'Kunne ikke opprette' }, { status: 500 });
   }
 
@@ -124,9 +153,26 @@ export async function PATCH(request: Request) {
 
   if (typeof body.question === 'string' && body.question.trim().length >= 12) {
     updates.question = body.question.trim();
+  } else if (typeof body.question === 'string' && body.question.trim().length > 0) {
+    return NextResponse.json({ error: 'Spørsmål må være minst 12 tegn' }, { status: 400 });
   }
-  if (Array.isArray(body.options)) updates.options = body.options;
-  if (Array.isArray(body.source_headlines)) updates.source_headlines = body.source_headlines;
+
+  if (Array.isArray(body.options)) {
+    const optionsCheck = validatePromptVoteOptions(body.options);
+    if (!optionsCheck.ok) {
+      return NextResponse.json({ error: optionsCheck.error }, { status: 400 });
+    }
+    updates.options = body.options;
+  }
+
+  if (body.source_headlines !== undefined) {
+    const sourcesCheck = validatePromptSourceHeadlines(body.source_headlines);
+    if (!sourcesCheck.ok) {
+      return NextResponse.json({ error: sourcesCheck.error }, { status: 400 });
+    }
+    updates.source_headlines = sourcesCheck.sources;
+  }
+
   if (Array.isArray(body.topic_tags)) {
     updates.topic_tags = body.topic_tags.map((t: unknown) => String(t).trim()).filter(Boolean);
   }
@@ -147,6 +193,8 @@ export async function PATCH(request: Request) {
   const { error } = await service.from('forum_prompts').update(updates).eq('id', id);
 
   if (error) {
+    const conflict = mapPromptWriteError(error);
+    if (conflict) return conflict;
     return NextResponse.json({ error: 'Kunne ikke oppdatere' }, { status: 500 });
   }
 

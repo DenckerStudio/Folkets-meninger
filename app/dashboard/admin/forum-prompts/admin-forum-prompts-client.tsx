@@ -8,6 +8,12 @@ import { routes } from '@/lib/routes';
 
 type PromptStatus = 'draft' | 'active' | 'archived';
 
+type SourceRow = {
+  title: string;
+  url: string;
+  outlet: string;
+};
+
 type AdminPrompt = {
   id: string;
   question: string;
@@ -31,12 +37,117 @@ type TrustedSource = {
 type Tab = 'drafts' | 'active' | 'archived' | 'create' | 'sources';
 
 const TABS: { id: Tab; label: string; status?: PromptStatus }[] = [
-  { id: 'drafts', label: 'Utkast', status: 'draft' },
+  { id: 'drafts', label: 'Godkjenn utkast', status: 'draft' },
   { id: 'active', label: 'Aktive', status: 'active' },
   { id: 'archived', label: 'Arkiv', status: 'archived' },
-  { id: 'create', label: 'Opprett' },
-  { id: 'sources', label: 'Kilder' },
+  { id: 'create', label: 'Opprett manuelt' },
+  { id: 'sources', label: 'Godkjente kilder' },
 ];
+
+function defaultExpiresIso(): string {
+  return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function toDatetimeLocalValue(iso: string | null | undefined): string {
+  const d = iso ? new Date(iso) : new Date(defaultExpiresIso());
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fromDatetimeLocalValue(value: string): string {
+  return new Date(value).toISOString();
+}
+
+function sourcesFromPrompt(
+  headlines: { title?: string; outlet?: string; url?: string }[] | undefined,
+): SourceRow[] {
+  if (!Array.isArray(headlines)) return [];
+  return headlines.map((h) => ({
+    title: String(h.title ?? ''),
+    url: String(h.url ?? ''),
+    outlet: String(h.outlet ?? 'Nyhet'),
+  }));
+}
+
+function emptySourceRow(): SourceRow {
+  return { title: '', url: '', outlet: 'Nyhet' };
+}
+
+function formatApiError(status: number, message: string): string {
+  if (status === 409) return message;
+  if (status === 400) return message;
+  return message || `Feil (${status})`;
+}
+
+function SourceEditor({
+  sources,
+  onChange,
+}: {
+  sources: SourceRow[];
+  onChange: (next: SourceRow[]) => void;
+}) {
+  const rows = sources.length ? sources : [emptySourceRow()];
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-medium text-gray-700">Kilder (tittel, URL, avis)</p>
+      {rows.map((row, index) => (
+        <div
+          key={index}
+          className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] items-start border border-gray-100 rounded-lg p-3"
+        >
+          <input
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            placeholder="Tittel"
+            value={row.title}
+            onChange={(e) => {
+              const next = [...rows];
+              next[index] = { ...next[index], title: e.target.value };
+              onChange(next);
+            }}
+          />
+          <input
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            placeholder="https://…"
+            value={row.url}
+            onChange={(e) => {
+              const next = [...rows];
+              next[index] = { ...next[index], url: e.target.value };
+              onChange(next);
+            }}
+          />
+          <input
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            placeholder="Avis"
+            value={row.outlet}
+            onChange={(e) => {
+              const next = [...rows];
+              next[index] = { ...next[index], outlet: e.target.value };
+              onChange(next);
+            }}
+          />
+          <button
+            type="button"
+            className="text-xs text-gray-500 hover:text-red-600 px-2 py-2"
+            onClick={() => {
+              const next = rows.filter((_, i) => i !== index);
+              onChange(next.length ? next : [emptySourceRow()]);
+            }}
+          >
+            Fjern
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        className="text-sm font-semibold text-indigo-700 hover:underline"
+        onClick={() => onChange([...rows, emptySourceRow()])}
+      >
+        + Legg til kilde
+      </button>
+    </div>
+  );
+}
 
 export default function AdminForumPromptsClient() {
   const [tab, setTab] = useState<Tab>('drafts');
@@ -46,18 +157,22 @@ export default function AdminForumPromptsClient() {
   const [error, setError] = useState('');
   const [acting, setActing] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingStatus, setEditingStatus] = useState<PromptStatus>('draft');
+  const [publishModalId, setPublishModalId] = useState<string | null>(null);
+  const [publishExpiresAt, setPublishExpiresAt] = useState(() => toDatetimeLocalValue(null));
   const [editForm, setEditForm] = useState({
     question: '',
     topic_tags: '',
     sensitivity: 'low',
-    sourcesJson: '[]',
+    expires_at: '',
+    sources: [] as SourceRow[],
   });
   const [createForm, setCreateForm] = useState({
     question: '',
     topic_tags: '',
     sensitivity: 'low',
     status: 'draft' as PromptStatus,
-    sourcesJson: '[]',
+    sources: [] as SourceRow[],
   });
   const [newSource, setNewSource] = useState({ domain: '', outlet_label: '' });
 
@@ -68,7 +183,7 @@ export default function AdminForumPromptsClient() {
       const res = await fetch(`/api/admin/forum-prompts?status=${status}`);
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Ingen tilgang');
+        setError(formatApiError(res.status, data.error || 'Ingen tilgang'));
         setPrompts([]);
         return;
       }
@@ -87,7 +202,7 @@ export default function AdminForumPromptsClient() {
       const res = await fetch('/api/admin/forum-sources');
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Ingen tilgang');
+        setError(formatApiError(res.status, data.error || 'Ingen tilgang'));
         setSources([]);
         return;
       }
@@ -114,15 +229,16 @@ export default function AdminForumPromptsClient() {
 
   const patchPrompt = async (id: string, body: Record<string, unknown>) => {
     setActing(id);
+    setError('');
     try {
       const res = await fetch('/api/admin/forum-prompts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, ...body }),
       });
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || 'Feil ved oppdatering');
+        setError(formatApiError(res.status, data.error || 'Feil ved oppdatering'));
         return false;
       }
       return true;
@@ -131,36 +247,54 @@ export default function AdminForumPromptsClient() {
     }
   };
 
-  const updateStatus = async (id: string, status: 'active' | 'archived') => {
-    const ok = await patchPrompt(id, { status });
+  const openPublishModal = (id: string) => {
+    setPublishModalId(id);
+    setPublishExpiresAt(toDatetimeLocalValue(null));
+  };
+
+  const confirmPublish = async () => {
+    if (!publishModalId) return;
+    const ok = await patchPrompt(publishModalId, {
+      status: 'active',
+      expires_at: fromDatetimeLocalValue(publishExpiresAt),
+    });
+    if (ok) {
+      setPublishModalId(null);
+      setPrompts((prev) => prev.filter((p) => p.id !== publishModalId));
+    }
+  };
+
+  const archivePrompt = async (id: string) => {
+    const ok = await patchPrompt(id, { status: 'archived' });
     if (ok) setPrompts((prev) => prev.filter((p) => p.id !== id));
   };
 
   const startEdit = (prompt: AdminPrompt) => {
     setEditingId(prompt.id);
+    setEditingStatus(prompt.status);
     setEditForm({
       question: prompt.question,
       topic_tags: (prompt.topic_tags || []).join(', '),
       sensitivity: prompt.sensitivity,
-      sourcesJson: JSON.stringify(prompt.source_headlines || [], null, 2),
+      expires_at: prompt.expires_at
+        ? toDatetimeLocalValue(prompt.expires_at)
+        : toDatetimeLocalValue(null),
+      sources: sourcesFromPrompt(prompt.source_headlines),
     });
   };
 
   const saveEdit = async (id: string) => {
-    let source_headlines: unknown[] = [];
-    try {
-      source_headlines = JSON.parse(editForm.sourcesJson);
-      if (!Array.isArray(source_headlines)) throw new Error('not array');
-    } catch {
-      setError('Ugyldig JSON for kilder');
-      return;
-    }
-    const ok = await patchPrompt(id, {
+    const source_headlines = editForm.sources.filter((s) => s.title.trim() || s.url.trim());
+    const body: Record<string, unknown> = {
       question: editForm.question,
       topic_tags: editForm.topic_tags.split(',').map((t) => t.trim()).filter(Boolean),
       sensitivity: editForm.sensitivity,
       source_headlines,
-    });
+    };
+    if (editingStatus === 'active') {
+      body.expires_at = fromDatetimeLocalValue(editForm.expires_at);
+    }
+    const ok = await patchPrompt(id, body);
     if (ok) {
       setEditingId(null);
       const cfg = TABS.find((t) => t.id === tab);
@@ -171,15 +305,7 @@ export default function AdminForumPromptsClient() {
   const submitCreate = async () => {
     setActing('create');
     setError('');
-    let source_headlines: unknown[] = [];
-    try {
-      source_headlines = JSON.parse(createForm.sourcesJson);
-      if (!Array.isArray(source_headlines)) throw new Error('not array');
-    } catch {
-      setError('Ugyldig JSON for kilder');
-      setActing(null);
-      return;
-    }
+    const source_headlines = createForm.sources.filter((s) => s.title.trim() || s.url.trim());
     try {
       const res = await fetch('/api/admin/forum-prompts', {
         method: 'POST',
@@ -195,7 +321,7 @@ export default function AdminForumPromptsClient() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Kunne ikke opprette');
+        setError(formatApiError(res.status, data.error || 'Kunne ikke opprette'));
         return;
       }
       setCreateForm({
@@ -203,7 +329,7 @@ export default function AdminForumPromptsClient() {
         topic_tags: '',
         sensitivity: 'low',
         status: 'draft',
-        sourcesJson: '[]',
+        sources: [],
       });
       setTab('drafts');
     } finally {
@@ -221,7 +347,7 @@ export default function AdminForumPromptsClient() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Kunne ikke legge til kilde');
+        setError(formatApiError(res.status, data.error || 'Kunne ikke legge til kilde'));
         return;
       }
       setNewSource({ domain: '', outlet_label: '' });
@@ -241,7 +367,7 @@ export default function AdminForumPromptsClient() {
       });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || 'Feil');
+        setError(formatApiError(res.status, data.error || 'Feil'));
         return;
       }
       loadSources();
@@ -254,10 +380,18 @@ export default function AdminForumPromptsClient() {
 
   return (
     <div>
-      <Link href={routes.forum} className="text-sm text-indigo-600 hover:text-indigo-500 mb-6 inline-block">
+      <Link href={routes.forum} className="text-sm text-indigo-600 hover:text-indigo-500 mb-4 inline-block">
         ← Tilbake til forum
       </Link>
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Forum Reels (admin)</h1>
+      <div className="flex flex-wrap items-center gap-3 mb-2">
+        <h1 className="text-2xl font-bold text-gray-900">Forum Reels (admin)</h1>
+        <Link
+          href={routes.adminForumReports}
+          className="text-sm font-semibold text-indigo-700 hover:underline"
+        >
+          Forum-rapporter →
+        </Link>
+      </div>
       <p className="text-sm text-gray-600 mb-6">
         Godkjenn utkast, rediger aktive reels og administrer godkjente nyhetskilder.
       </p>
@@ -281,8 +415,57 @@ export default function AdminForumPromptsClient() {
       </nav>
 
       {error && (
-        <div className="mb-6 rounded-lg bg-red-50 text-red-700 text-sm px-4 py-3">{error}</div>
+        <div
+          className="mb-6 rounded-lg bg-red-50 text-red-800 text-sm px-4 py-3 border border-red-100"
+          role="alert"
+        >
+          {error}
+        </div>
       )}
+
+      {publishModalId ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="publish-modal-title"
+        >
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
+            <h2 id="publish-modal-title" className="text-lg font-bold text-gray-900 mb-2">
+              Publiser reel
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Velg når den aktive reelen skal utløpe (standard er 7 dager fra nå).
+            </p>
+            <label className="block text-sm font-medium text-gray-700 mb-4">
+              Utløper
+              <input
+                type="datetime-local"
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                value={publishExpiresAt}
+                onChange={(e) => setPublishExpiresAt(e.target.value)}
+              />
+            </label>
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setPublishModalId(null)}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium"
+              >
+                Avbryt
+              </button>
+              <button
+                type="button"
+                disabled={acting === publishModalId}
+                onClick={confirmPublish}
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                Publiser
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {loading && tab !== 'create' ? (
         <div className="flex items-center gap-2 text-gray-500 py-12 justify-center">
@@ -318,12 +501,12 @@ export default function AdminForumPromptsClient() {
                 value={createForm.sensitivity}
                 onChange={(e) => setCreateForm((f) => ({ ...f, sensitivity: e.target.value }))}
               >
-                <option value="low">low</option>
-                <option value="high">high</option>
+                <option value="low">Lav</option>
+                <option value="high">Høy (utkast)</option>
               </select>
             </label>
             <label className="text-sm font-medium text-gray-700">
-              Status
+              Status ved opprettelse
               <select
                 className="mt-1 block rounded-lg border border-gray-200 px-3 py-2 text-sm"
                 value={createForm.status}
@@ -331,20 +514,15 @@ export default function AdminForumPromptsClient() {
                   setCreateForm((f) => ({ ...f, status: e.target.value as PromptStatus }))
                 }
               >
-                <option value="draft">draft</option>
-                <option value="active">active</option>
+                <option value="draft">Utkast</option>
+                <option value="active">Aktiv</option>
               </select>
             </label>
           </div>
-          <label className="block text-sm font-medium text-gray-700">
-            Kilder (JSON)
-            <textarea
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-mono"
-              rows={6}
-              value={createForm.sourcesJson}
-              onChange={(e) => setCreateForm((f) => ({ ...f, sourcesJson: e.target.value }))}
-            />
-          </label>
+          <SourceEditor
+            sources={createForm.sources}
+            onChange={(sources) => setCreateForm((f) => ({ ...f, sources }))}
+          />
           <button
             type="button"
             disabled={acting === 'create'}
@@ -352,7 +530,7 @@ export default function AdminForumPromptsClient() {
             className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
-            Opprett Reel
+            Opprett reel
           </button>
         </div>
       ) : null}
@@ -404,7 +582,11 @@ export default function AdminForumPromptsClient() {
                           : 'bg-gray-100 text-gray-600'
                     }`}
                   >
-                    {s.status}
+                    {s.status === 'approved'
+                      ? 'Godkjent'
+                      : s.status === 'pending'
+                        ? 'Venter'
+                        : 'Avvist'}
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -452,15 +634,39 @@ export default function AdminForumPromptsClient() {
                     />
                     <input
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                      placeholder="Stikkord"
+                      placeholder="Stikkord (kommaseparert)"
                       value={editForm.topic_tags}
                       onChange={(e) => setEditForm((f) => ({ ...f, topic_tags: e.target.value }))}
                     />
-                    <textarea
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-mono"
-                      rows={5}
-                      value={editForm.sourcesJson}
-                      onChange={(e) => setEditForm((f) => ({ ...f, sourcesJson: e.target.value }))}
+                    <label className="block text-sm font-medium text-gray-700">
+                      Sensitivitet
+                      <select
+                        className="mt-1 block rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                        value={editForm.sensitivity}
+                        onChange={(e) =>
+                          setEditForm((f) => ({ ...f, sensitivity: e.target.value }))
+                        }
+                      >
+                        <option value="low">Lav</option>
+                        <option value="high">Høy</option>
+                      </select>
+                    </label>
+                    {editingStatus === 'active' ? (
+                      <label className="block text-sm font-medium text-gray-700">
+                        Utløper
+                        <input
+                          type="datetime-local"
+                          className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                          value={editForm.expires_at}
+                          onChange={(e) =>
+                            setEditForm((f) => ({ ...f, expires_at: e.target.value }))
+                          }
+                        />
+                      </label>
+                    ) : null}
+                    <SourceEditor
+                      sources={editForm.sources}
+                      onChange={(sources) => setEditForm((f) => ({ ...f, sources }))}
                     />
                     <div className="flex gap-2">
                       <button
@@ -484,7 +690,13 @@ export default function AdminForumPromptsClient() {
                   <>
                     <div className="flex flex-wrap gap-2 mb-2">
                       <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
-                        {prompt.status} · {prompt.sensitivity}
+                        {prompt.status === 'draft'
+                          ? 'Utkast'
+                          : prompt.status === 'active'
+                            ? 'Aktiv'
+                            : 'Arkivert'}
+                        {' · '}
+                        {prompt.sensitivity === 'high' ? 'Høy sensitivitet' : 'Lav sensitivitet'}
                       </span>
                       {(prompt.topic_tags || []).map((tag) => (
                         <span key={tag} className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
@@ -493,6 +705,15 @@ export default function AdminForumPromptsClient() {
                       ))}
                     </div>
                     <h2 className="text-lg font-bold text-gray-900 mb-3">{prompt.question}</h2>
+                    {prompt.status === 'active' && prompt.expires_at ? (
+                      <p className="text-xs text-gray-500 mb-2">
+                        Utløper{' '}
+                        {new Date(prompt.expires_at).toLocaleString('nb-NO', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                      </p>
+                    ) : null}
                     {Array.isArray(prompt.source_headlines) && prompt.source_headlines.length > 0 && (
                       <ul className="text-xs text-gray-500 mb-4 space-y-1">
                         {prompt.source_headlines.slice(0, 4).map((h, i) => (
@@ -521,7 +742,7 @@ export default function AdminForumPromptsClient() {
                           <button
                             type="button"
                             disabled={acting === prompt.id}
-                            onClick={() => updateStatus(prompt.id, 'active')}
+                            onClick={() => openPublishModal(prompt.id)}
                             className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
                           >
                             <Check className="w-4 h-4" />
@@ -530,7 +751,7 @@ export default function AdminForumPromptsClient() {
                           <button
                             type="button"
                             disabled={acting === prompt.id}
-                            onClick={() => updateStatus(prompt.id, 'archived')}
+                            onClick={() => archivePrompt(prompt.id)}
                             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                           >
                             <X className="w-4 h-4" />
@@ -550,7 +771,7 @@ export default function AdminForumPromptsClient() {
                         <button
                           type="button"
                           disabled={acting === prompt.id}
-                          onClick={() => updateStatus(prompt.id, 'archived')}
+                          onClick={() => archivePrompt(prompt.id)}
                           className="text-sm text-gray-500 hover:underline"
                         >
                           Arkiver

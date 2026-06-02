@@ -469,7 +469,6 @@ for (const i of indices.slice(0, 8)) {
 return 'Oppsummering av valgte overskrifter:\\n' + lines.join('\\n');`;
 
 const MODERATION_ROUTE_JS = `const item = $input.first()?.json || {};
-let out = item.output ?? item;
 
 function stripCodeFence(text) {
   let t = String(text).trim();
@@ -500,12 +499,27 @@ function tryParseJson(raw) {
   return null;
 }
 
-if (typeof out === 'string') out = tryParseJson(out) || { prompts: [] };
-if (out && typeof out.output === 'object' && out.output !== null) out = out.output;
-if (out && typeof out.output === 'string') {
-  out = tryParseJson(out.output) || tryParseJson(out) || { prompts: [] };
+function normalizeAgentOutput(rawItem) {
+  const raw = rawItem || {};
+  const candidates = [raw.output, raw.text, raw.data, raw];
+  for (const c of candidates) {
+    if (c == null) continue;
+    if (typeof c === 'object') {
+      if (Array.isArray(c.prompts)) return c;
+      if (c.output != null) {
+        const inner = typeof c.output === 'string' ? tryParseJson(c.output) : c.output;
+        if (inner && Array.isArray(inner.prompts)) return inner;
+      }
+    }
+    if (typeof c === 'string') {
+      const parsed = tryParseJson(c);
+      if (parsed && Array.isArray(parsed.prompts)) return parsed;
+    }
+  }
+  return { prompts: [] };
 }
 
+const out = normalizeAgentOutput(item);
 let prompts = Array.isArray(out.prompts) ? out.prompts : [];
 prompts = prompts.filter((p) => {
   if (!p || typeof p !== 'object' || typeof p.question !== 'string') return false;
@@ -523,7 +537,27 @@ const existingQuestions = Array.isArray(agentInput.existingQuestions) && agentIn
   : (Array.isArray(item.existingQuestions) ? item.existingQuestions : []);
 const maxSortOrder = Number(agentInput.maxSortOrder ?? item.maxSortOrder) || 0;
 const trustedRow = $('Fetch trusted sources').first()?.json || {};
-const trustedSources = Array.isArray(trustedRow.trusted_sources) ? trustedRow.trusted_sources : [];
+let trustedSources = trustedRow.trusted_sources;
+if (typeof trustedSources === 'string') {
+  try { trustedSources = JSON.parse(trustedSources); } catch (_) { trustedSources = []; }
+}
+if (!Array.isArray(trustedSources)) trustedSources = [];
+
+/** Seed domains from migration 20260602130000 – used when DB list is empty (migration pending / query failed). */
+const FALLBACK_TRUSTED_DOMAINS = [
+  { domain: 'vg.no', outlet_label: 'VG' },
+  { domain: 'nrk.no', outlet_label: 'NRK' },
+  { domain: 'aftenposten.no', outlet_label: 'Aftenposten' },
+  { domain: 'dagbladet.no', outlet_label: 'Dagbladet' },
+  { domain: 'stortinget.no', outlet_label: 'Stortinget' },
+  { domain: 'folketsstemme.no', outlet_label: 'Folkets Stemme' },
+  { domain: 'folkets-stemme.no', outlet_label: 'Folkets Stemme' },
+];
+
+function effectiveTrustedList(trustedList) {
+  if (Array.isArray(trustedList) && trustedList.length > 0) return trustedList;
+  return FALLBACK_TRUSTED_DOMAINS;
+}
 
 function hostFromUrl(url) {
   try {
@@ -548,7 +582,9 @@ function isTrustedSource(url, outlet, trustedList) {
 }
 
 function hasUntrustedSource(sources, trustedList) {
-  return sources.some((s) => !isTrustedSource(s.url, s.outlet, trustedList));
+  const list = effectiveTrustedList(trustedList);
+  if (!list.length) return false;
+  return sources.some((s) => !isTrustedSource(s.url, s.outlet, list));
 }
 
 function norm(q) {
@@ -789,6 +825,53 @@ function pickSources(p, headlines) {
   return out;
 }
 
+function headlineToSource(h) {
+  if (!h || !h.url) return null;
+  return {
+    title: h.title,
+    url: h.url,
+    outlet: h.outlet,
+    description: h.description || null,
+    imageUrl: h.imageUrl || null,
+    videoUrl: h.videoUrl || null,
+    publishedAt: h.publishedAt || null,
+  };
+}
+
+function supplementSources(sources, headlines, question, minCount) {
+  const out = [...sources];
+  const seen = new Set(out.map((s) => s.url));
+  const qTokens = tokens(question);
+  const clusterIds = new Set();
+  for (const s of out) {
+    const h = headlines.find((x) => x && x.url === s.url);
+    if (h && h.clusterId != null) clusterIds.add(h.clusterId);
+  }
+  for (let i = 0; i < headlines.length && out.length < minCount; i++) {
+    const h = headlines[i];
+    if (!h || !h.url || seen.has(h.url)) continue;
+    if (clusterIds.size && h.clusterId != null && clusterIds.has(h.clusterId)) {
+      const src = headlineToSource(h);
+      if (src) { out.push(src); seen.add(h.url); }
+      continue;
+    }
+    const ht = tokens((h.title || '') + ' ' + (h.description || ''));
+    if (tokenOverlapCount(qTokens, ht) >= 2) {
+      const src = headlineToSource(h);
+      if (src) { out.push(src); seen.add(h.url); }
+    }
+  }
+  for (let i = 0; i < headlines.length && out.length < minCount; i++) {
+    const h = headlines[i];
+    if (!h || !h.url || seen.has(h.url)) continue;
+    if (h.longRunning || h.isPolitical) {
+      const src = headlineToSource(h);
+      if (src) { out.push(src); seen.add(h.url); }
+    }
+  }
+  return out;
+}
+
 function parseDateMs(value) {
   const t = Date.parse(String(value || ''));
   return Number.isNaN(t) ? null : t;
@@ -796,12 +879,15 @@ function parseDateMs(value) {
 
 function hasRecentSource(sources, maxAgeHours) {
   const now = Date.now();
+  let withDate = 0;
   for (const s of sources || []) {
     const t = parseDateMs(s.publishedAt);
     if (!t) continue;
-    const ageHours = (now - t) / 3600000;
-    if (ageHours <= maxAgeHours) return true;
+    withDate++;
+    if ((now - t) / 3600000 <= maxAgeHours) return true;
   }
+  // SearXNG/RSS uten publishedAt: ikke blokker hele batchen
+  if (withDate === 0 && sources.length >= 3) return true;
   return false;
 }
 
@@ -831,15 +917,25 @@ function indicesForIssue(pr, hl) {
   return idx.length ? idx : [inferSourceIndex(pr.question, hl)].filter((i) => i >= 0);
 }
 
-function acceptPromptBatch(batch) {
+function acceptPromptBatch(batch, opts) {
+  const mode = (opts && opts.mode) || 'agent';
+  const isFallback = mode === 'fallback';
+  const minSources = 3;
+  const recentMaxHours = isFallback ? 24 * 14 : 24 * 7;
+
   for (let i = 0; i < batch.length && results.length < batchLimit; i++) {
   const p = batch[i];
-  const noveltyExplanation = typeof p.novelty_explanation === 'string' ? p.novelty_explanation.trim() : '';
+  let noveltyExplanation = typeof p.novelty_explanation === 'string' ? p.novelty_explanation.trim() : '';
   const repeatReason = typeof p.repeat_reason === 'string' ? p.repeat_reason.trim() : '';
   const qRaw = String(p.question || '').trim();
   const q = repeatReason ? applyUpdateSuffixIfNeeded(qRaw, repeatReason) : qRaw;
   const key = norm(q);
   if (!q || key.length < 12 || key.length > 220 || blocked.test(q) || rejectQuestion.test(q)) continue;
+  if (noveltyExplanation.length < 8) {
+    const idxList = indicesForIssue(p, headlines);
+    const h = headlines[idxList[0] >= 0 ? idxList[0] : 0];
+    if (h) noveltyExplanation = fallbackNovelty(h, qRaw);
+  }
   if (noveltyExplanation.length < 8 || noveltyExplanation.length > 220) continue;
   if (!/^(støtter du|bør |skal |er du enig)/i.test(q)) continue;
   const similarity = findMostSimilarExisting(qRaw);
@@ -847,11 +943,12 @@ function acceptPromptBatch(batch) {
   if (seenQuestions.has(key)) continue;
   if (isNearDup && !repeatReason) continue;
   if (repeatReason && !looksLikeConcreteUpdate(repeatReason)) continue;
-  const sources = pickSources(p, headlines);
-  if (!sources.length || sources.length < 3) continue;
+  let sources = pickSources(p, headlines);
+  sources = supplementSources(sources, headlines, q, minSources);
+  if (sources.length < minSources) continue;
   if (!questionSourceAlignment(q, sources)) continue;
-  const recentOk = hasRecentSource(sources, 24);
-  if (!recentOk && !repeatReason) continue;
+  const recentOk = hasRecentSource(sources, recentMaxHours);
+  if (!recentOk && !repeatReason && !isFallback) continue;
   if (!recentOk && repeatReason && !looksLikeConcreteUpdate(repeatReason)) continue;
   seenQuestions.add(key);
 
@@ -901,8 +998,8 @@ function acceptPromptBatch(batch) {
   }
 }
 
-acceptPromptBatch(agentPrompts);
-if (!results.length && headlines.length) acceptPromptBatch(fallbackPrompts(headlines));
+acceptPromptBatch(agentPrompts, { mode: 'agent' });
+if (!results.length && headlines.length) acceptPromptBatch(fallbackPrompts(headlines), { mode: 'fallback' });
 
 return results;`;
 

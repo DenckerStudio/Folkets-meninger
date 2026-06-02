@@ -68,7 +68,7 @@ Workflow-kilde: [`forum-trending-prompts.workflow.ts`](forum-trending-prompts.wo
 
 1. **Fetch existing prompts** → **Fetch trusted sources** (`forum_trusted_sources`, status `approved`) → long-running saker → RSS → **Collect** (flere SearXNG-temaer, opptil 36 artikler, 10 treff per query)
 2. **Ollama agent** – samme som v3 (alignment, dedupe i kode, dags-memory)
-3. **Moderation + route** – alignment-gate; **ukjent kilde → `draft`**; stemmer `ja` / `nei` / `ikke_interessert`; tom output (`[]`) når ingenting skal lagres (ingen «Has SQL?»-node)
+3. **Moderation + route** – alignment-gate; **ukjent kilde → `draft`** (sjekkes mot `forum_trusted_sources`; hvis listen er tom brukes seed-domener fra migrasjonen, ikke «alt til draft»); stemmer `ja` / `nei` / `ikke_interessert`; tom output (`[]`) når ingenting skal lagres (ingen «Has SQL?»-node)
 4. **Save prompt** – kjører kun når moderering emitter SQL-rader
 
 **v3 (fortsatt relevant):** kilde-alignment, RSS-ingress, fallback-regler, partial unique index (`20260531140000_forum_prompts_dedupe.sql`)
