@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Bell, CheckCircle, LogIn } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { PageHeader } from '@/components/page-header';
 
 type NotificationItem = {
   id: string;
@@ -56,7 +57,7 @@ export default function VarslerPage() {
         <div className="w-20 h-20 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto">
           <Bell className="w-10 h-10 text-indigo-600" />
         </div>
-        <h2 className="text-3xl font-bold text-gray-900">Logg inn for å se varsler</h2>
+        <PageHeader as="h2" title="Logg inn for å se varsler" />
         <p className="text-gray-600">Du må være logget inn for å se in-app notifications.</p>
         <Link
           href="/auth/login"
@@ -72,10 +73,7 @@ export default function VarslerPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-12">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Bell className="w-5 h-5 text-gray-500" />
-          Varsler
-        </h1>
+        <PageHeader title="Varsler" className="flex-1" />
         <button
           type="button"
           onClick={markAllRead}

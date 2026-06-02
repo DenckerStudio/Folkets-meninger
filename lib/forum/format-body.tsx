@@ -91,7 +91,7 @@ export function FormattedForumBody({ text, className }: { text: string; classNam
   const paragraphs = text.split(/\n{2,}/);
 
   return (
-    <div className={className}>
+    <div className={className ? `prose prose-sm max-w-none ${className}` : 'prose prose-sm max-w-none text-gray-700'}>
       {paragraphs.map((paragraph, pIndex) => {
         const lines = paragraph.split('\n');
         return (

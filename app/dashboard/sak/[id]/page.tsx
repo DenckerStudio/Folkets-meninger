@@ -1,7 +1,8 @@
-import { getSak } from '@/lib/stortinget';
+import { getSak, type StortingetSakDetail } from '@/lib/stortinget';
+import { getCachedSakDetail } from '@/lib/stortinget-detail-cache';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, MessageSquare, Users, Calendar, FileText, GitBranch, Tag, Building2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, MessageSquare, Users, FileText, GitBranch, Tag, Building2 } from 'lucide-react';
 import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
 import ShareButton from './share-button';
@@ -10,7 +11,6 @@ import ExpandableText from './expandable-text';
 import VotingSection from './voting-section';
 import Image from 'next/image';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
-import { headers } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
@@ -83,22 +83,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
     notFound();
   }
 
-  let detailedContent: any = null;
-  try {
-    const h = await headers();
-    const host = h.get('x-forwarded-host') || h.get('host');
-    const proto = h.get('x-forwarded-proto') || 'http';
-    const baseUrl = host ? `${proto}://${host}` : '';
-
-    const detailRes = await fetch(`${baseUrl}/api/sak/${sak.id}`, {
-      next: { revalidate: 3600 },
-    });
-    if (detailRes.ok) {
-      detailedContent = await detailRes.json();
-    }
-  } catch (error) {
-    console.error("Error fetching detailed sak:", error);
-  }
+  const detailedContent: StortingetSakDetail | null = await getCachedSakDetail(sak.id);
 
   const innstillingstekst = detailedContent?.innstillingstekst;
   const kortvedtak = detailedContent?.kortvedtak;
@@ -159,7 +144,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
             <span className="ml-auto text-sm text-gray-500">Sist oppdatert: {sak.date}</span>
           </div>
 
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{sak.title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{sak.title}</h1>
           
           {/* Meta info grid */}
           {detailedContent && (

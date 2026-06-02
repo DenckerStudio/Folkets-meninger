@@ -1,35 +1,21 @@
 import FadeIn from '@/components/fade-in';
-import { headers } from 'next/headers';
+import { PageHeader } from '@/components/page-header';
+import { getSaksganger } from '@/lib/stortinget';
 
-export const dynamic = 'force-dynamic';
-
-type ApiResponse = {
-  saksganger: Array<{
-    id: string;
-    navn: string;
-    saksgang_steg_liste?: Array<{ id: string; navn: string; steg_nummer?: number }>;
-  }>;
-};
+export const revalidate = 86400;
 
 export default async function SaksgangerPage() {
-  const h = await headers();
-  const host = h.get('x-forwarded-host') || h.get('host');
-  const proto = h.get('x-forwarded-proto') || 'http';
-  const baseUrl = host ? `${proto}://${host}` : '';
-
-  const res = await fetch(`${baseUrl}/api/saksganger`, { cache: 'no-store' });
-  const data = (res.ok ? ((await res.json()) as ApiResponse) : null) ?? { saksganger: [] };
-
-  const sorted = [...data.saksganger].sort((a, b) => a.navn.localeCompare(b.navn, 'no'));
+  const saksganger = await getSaksganger();
+  const sorted = [...saksganger].sort((a, b) => a.navn.localeCompare(b.navn, 'no'));
 
   return (
     <div className="space-y-8 pb-12">
       <FadeIn delay={0.1}>
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8 md:p-12">
-          <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl tracking-tight">Saksganger</h1>
-          <p className="text-gray-600 mt-3">
-            Oversikt over saksganger (aktivt og historisk). Dette brukes også i sak-detaljer under feltet <span className="font-mono">saksgang</span>.
-          </p>
+          <PageHeader
+            title="Saksganger"
+            description="Oversikt over saksganger (aktivt og historisk). Brukes også i sak-detaljer under saksgang."
+          />
         </div>
       </FadeIn>
 
