@@ -29,11 +29,13 @@ export function Header() {
   const isLoggedIn = !!user;
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [isForumAdmin, setIsForumAdmin] = React.useState(false);
+  const showForumAdmin = isLoggedIn && isForumAdmin;
+  const displayUnreadCount = isLoggedIn ? unreadCount : 0;
   const displayName =
     user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
   const moreSectionActive = useNavSectionActive([
     ...desktopMoreNavLinks.flatMap((item) => (item.isActive ? [item.isActive] : [])),
-    ...(isForumAdmin ? [isAdminActive] : []),
+    ...(showForumAdmin ? [isAdminActive] : []),
   ]);
 
   const handleSignOut = async () => {
@@ -44,12 +46,10 @@ export function Header() {
   };
 
   React.useEffect(() => {
+    if (!isLoggedIn) return;
+
     let timer: number | undefined;
     const load = async () => {
-      if (!isLoggedIn) {
-        setUnreadCount(0);
-        return;
-      }
       try {
         const res = await fetch('/api/notifications/unread-count', { cache: 'no-store' });
         const json = await res.json();
@@ -67,10 +67,8 @@ export function Header() {
   }, [isLoggedIn]);
 
   React.useEffect(() => {
-    if (!isLoggedIn) {
-      setIsForumAdmin(false);
-      return;
-    }
+    if (!isLoggedIn) return;
+
     fetch('/api/admin/me')
       .then((res) => res.json())
       .then((json) => setIsForumAdmin(!!json.admin))
@@ -108,7 +106,7 @@ export function Header() {
                   </NavigationMenuTrigger>
                   <NavigationMenuContent className="bg-background p-1 pr-1.5">
                     <ul className="bg-popover w-72 space-y-1 rounded-md border p-2 shadow">
-                      {isForumAdmin ? (
+                      {showForumAdmin ? (
                         <>
                           <li className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
                             Admin
@@ -164,9 +162,9 @@ export function Header() {
                 aria-label="Varsler"
               >
                 <Bell className="size-4" />
-                {unreadCount > 0 ? (
+                {displayUnreadCount > 0 ? (
                   <span className="absolute -top-1 -right-1 inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-indigo-600 px-1.5 text-[11px] font-bold text-white">
-                    {unreadCount > 99 ? '99+' : unreadCount}
+                    {displayUnreadCount > 99 ? '99+' : displayUnreadCount}
                   </span>
                 ) : null}
               </Link>
