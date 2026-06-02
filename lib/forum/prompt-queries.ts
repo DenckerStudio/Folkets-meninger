@@ -32,20 +32,49 @@ export type PromptResults = {
 };
 
 export async function getActiveForumPrompts(limit = 18): Promise<ForumPrompt[]> {
+  const page = await getActiveForumPromptsPage({ limit });
+  return page.items;
+}
+
+export type ActiveForumPromptsPage = {
+  items: ForumPrompt[];
+  nextCursor: string | null;
+};
+
+export async function getActiveForumPromptsPage({
+  limit = 18,
+  cursor,
+}: {
+  limit?: number;
+  cursor?: string;
+}): Promise<ActiveForumPromptsPage> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return [];
+    return { items: [], nextCursor: null };
   }
 
   const supabase = getAnonSupabase();
-  const { data: prompts, error } = await supabase
+  let query = supabase
     .from('forum_prompts')
-    .select('id, question, options, topic_tags, source_headlines, stortinget_issue_id, discuss_click_count, discuss_threshold, spawned_thread_id, sort_order')
+    .select('id, question, options, topic_tags, source_headlines, stortinget_issue_id, discuss_click_count, discuss_threshold, spawned_thread_id, created_at')
     .eq('status', 'active')
     .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-    .order('sort_order', { ascending: true })
-    .limit(limit);
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(limit + 1);
 
-  if (error || !prompts?.length) return [];
+  if (cursor) {
+    const createdAt = cursor.split('|')[0] ?? '';
+    const id = cursor.split('|')[1] ?? '';
+    if (createdAt && id) {
+      query = query.or(
+        `and(created_at.lt.${createdAt}),and(created_at.eq.${createdAt},id.lt.${id})`,
+      );
+    }
+  }
+
+  const { data: prompts, error } = await query;
+
+  if (error || !prompts?.length) return { items: [], nextCursor: null };
 
   const authSupabase = await getServerSupabase();
   const { data: { user } } = await authSupabase.auth.getUser();
@@ -75,7 +104,7 @@ export async function getActiveForumPrompts(limit = 18): Promise<ForumPrompt[]> 
   }
 
   const results = await Promise.all(
-    prompts.map(async (prompt) => {
+    prompts.slice(0, limit).map(async (prompt) => {
       const { data: resultData } = await supabase.rpc('get_prompt_results', {
         p_prompt_id: prompt.id,
       });
@@ -115,7 +144,11 @@ export async function getActiveForumPrompts(limit = 18): Promise<ForumPrompt[]> 
     })
   );
 
-  return results;
+  const hasMore = prompts.length > limit;
+  const last = prompts[Math.min(limit - 1, prompts.length - 1)] as { created_at?: string; id: string } | undefined;
+  const nextCursor = hasMore && last?.created_at ? `${last.created_at}|${last.id}` : null;
+
+  return { items: results, nextCursor };
 }
 
 export async function getDraftForumPrompts() {

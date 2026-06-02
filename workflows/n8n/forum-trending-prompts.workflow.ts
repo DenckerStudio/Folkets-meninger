@@ -756,10 +756,10 @@ const scheduleTriggerAfternoon = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
   version: 1.3,
   config: {
-    name: 'Daily 14:00',
+    name: 'Hourly 30',
     parameters: {
       rule: {
-        interval: [{ field: 'cronExpression', expression: '0 14 * * *' }],
+        interval: [{ field: 'cronExpression', expression: '30 * * * *' }],
       },
     },
   },
@@ -800,10 +800,10 @@ const scheduleTrigger = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
   version: 1.3,
   config: {
-    name: 'Daily 06:00',
+    name: 'Hourly 00',
     parameters: {
       rule: {
-        interval: [{ field: 'cronExpression', expression: '0 6 * * *' }],
+        interval: [{ field: 'cronExpression', expression: '0 * * * *' }],
       },
     },
   },
@@ -835,13 +835,13 @@ const backfillSettings = node({
       assignments: {
         assignments: [
           { id: 'searxng-base', name: 'searxngBaseUrl', value: 'https://searxng.heyklever.app', type: 'string' },
-          { id: 'batch-limit', name: 'batchLimit', value: '10', type: 'string' },
+          { id: 'batch-limit', name: 'batchLimit', value: '25', type: 'string' },
           { id: 'long-running-days', name: 'longRunningMinDays', value: '14', type: 'string' },
         ],
       },
     },
   },
-  output: [{ searxngBaseUrl: 'https://searxng.heyklever.app', batchLimit: '10', longRunningMinDays: '14' }],
+  output: [{ searxngBaseUrl: 'https://searxng.heyklever.app', batchLimit: '25', longRunningMinDays: '14' }],
 });
 
 const fetchRssHeadlines = node({

@@ -11,17 +11,37 @@ import { routes } from '@/lib/routes';
 
 type ForumPromptCarouselProps = {
   prompts: ForumPrompt[];
+  title?: string;
+  showHeader?: boolean;
+  showSeeAll?: boolean;
 };
 
-export default function ForumPromptCarousel({ prompts }: ForumPromptCarouselProps) {
+export default function ForumPromptCarousel({
+  prompts,
+  title = 'Spesielle saker',
+  showHeader = true,
+  showSeeAll = true,
+}: ForumPromptCarouselProps) {
   if (prompts.length === 0) return null;
 
   return (
-    <section className="mb-6" aria-label="Dagens spørsmål">
-      <div className="flex items-center gap-2 mb-3 px-1">
-        <Sparkles className="w-4 h-4 text-indigo-600" />
-        <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Dagens spørsmål</h2>
-      </div>
+    <section className="mb-6" aria-label="Spesielle saker">
+      {showHeader ? (
+        <div className="flex items-center justify-between gap-3 mb-3 px-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-indigo-600" />
+            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">{title}</h2>
+          </div>
+          {showSeeAll ? (
+            <Link
+              href={routes.forumSpesielleSaker}
+              className="text-xs font-semibold text-indigo-700 hover:text-indigo-600"
+            >
+              Se alle →
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
       <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1 scrollbar-thin">
         {prompts.map((prompt) => (
           <PromptReelCard key={prompt.id} prompt={prompt} />

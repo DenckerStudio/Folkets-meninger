@@ -24,7 +24,7 @@ export default async function ForumPage({
 
   const [topics, prompts, popularIssues] = await Promise.all([
     getForumThreads({ sakId, sort, search }),
-    getActiveForumPrompts(10),
+    getActiveForumPrompts(12),
     getSuggestedIssues(6),
   ]);
 

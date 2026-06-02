@@ -205,6 +205,33 @@ export default function ExplorePage() {
       </div>
       </FadeIn>
 
+      <FadeIn delay={0.25} direction="up">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setSortBy('Nyeste først')}
+            className={`rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
+              sortBy === 'Nyeste først'
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            Nyeste
+          </button>
+          <button
+            type="button"
+            onClick={() => setSortBy('Mest engasjement')}
+            className={`rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
+              sortBy === 'Mest engasjement'
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            Populært
+          </button>
+        </div>
+      </FadeIn>
+
       {/* Issues List */}
       <FadeIn delay={0.3} direction="up">
         <div className="space-y-4">

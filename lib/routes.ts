@@ -12,6 +12,7 @@ export const routes = {
   forum: `${DASHBOARD_PREFIX}/forum`,
   forumNew: (sakId?: string) =>
     sakId ? `${DASHBOARD_PREFIX}/forum/ny?sak=${sakId}` : `${DASHBOARD_PREFIX}/forum/ny`,
+  forumSpesielleSaker: `${DASHBOARD_PREFIX}/forum/spesielle-saker`,
   politikere: `${DASHBOARD_PREFIX}/politikere`,
   representanter: `${DASHBOARD_PREFIX}/representanter`,
   politikerHub: `${DASHBOARD_PREFIX}/politiker-hub`,
