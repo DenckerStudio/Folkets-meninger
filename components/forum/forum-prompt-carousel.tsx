@@ -69,6 +69,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
   const dateRange = getPromptSourceDateRange(prompt.sources);
   const visibleSources = sourcesExpanded ? prompt.sources : prompt.sources.slice(0, 3);
   const hiddenSourceCount = Math.max(0, prompt.sources.length - 3);
+  const isUpdate = prompt.topicTags?.includes('oppdatering');
   const handleVote = async (optionId: string) => {
     if (!user || loading) return;
     setLoading('vote');
@@ -169,6 +170,12 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
           >
             Langvarig stortingssak
           </Link>
+        )}
+
+        {isUpdate && (
+          <span className="mb-2 inline-flex w-fit items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-800">
+            Oppdatering
+          </span>
         )}
 
         {prompt.sources.length > 0 && (
