@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronDown, ChevronUp, ExternalLink, Loader2, MessageSquare, Play, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import type { ForumPrompt } from '@/lib/forum/prompt-queries';
+import { filterReelVoteOptions } from '@/lib/forum/prompt-vote-options';
 import { getPromptPrimaryMedia, getPromptSourceDateRange } from '@/lib/forum/prompt-source';
 import { routes } from '@/lib/routes';
 
@@ -55,7 +56,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
   const { user } = useAuth();
   const router = useRouter();
   const [selected, setSelected] = useState(prompt.userVote);
-  const [options, setOptions] = useState(prompt.options);
+  const [options, setOptions] = useState(() => filterReelVoteOptions(prompt.options));
   const [discussCount, setDiscussCount] = useState(prompt.discussClickCount);
   const [spawnedThreadId, setSpawnedThreadId] = useState(prompt.spawnedThreadId);
   const [discussClicked, setDiscussClicked] = useState(prompt.userDiscussClicked);
@@ -87,7 +88,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
         return;
       }
       setSelected(optionId);
-      if (data.options) setOptions(data.options);
+      if (data.options) setOptions(filterReelVoteOptions(data.options));
       router.refresh();
     } catch {
       setError('En feil oppstod');
@@ -281,7 +282,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
                 className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 hover:text-indigo-600"
               >
                 <MessageSquare className="w-4 h-4" />
-                Diskusjon startet — bli med →
+                Bli med i diskusjon →
               </Link>
             ) : (
               <>
@@ -296,7 +297,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
                   ) : (
                     <MessageSquare className="w-4 h-4" />
                   )}
-                  {discussClicked ? 'Du er med!' : 'Diskuter videre'}
+                  {discussClicked ? 'Du er med!' : 'Start diskusjon'}
                 </button>
                 <p className="mt-2 text-xs text-gray-500">
                   {discussCount}/{prompt.discussThreshold} ønsker felles diskusjon

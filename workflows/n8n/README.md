@@ -64,16 +64,24 @@ Workflow-kilde: [`forum-trending-prompts.workflow.ts`](forum-trending-prompts.wo
 
 **Live workflow:** https://n8n.heyklever.app/workflow/MloIdsnX7FozM4dv
 
-**v3 flyt (dedupe + fallback + agent + kilde-alignment):**
+**v4 flyt (trusted sources + bredere søk + moderation → save):**
 
-1. **Fetch existing prompts** – henter aktive + siste 30 dager for dedupe
-2. **Fetch long-running saker** + **Fetch RSS** (inkl. kort `description` fra RSS) + **Collect all headlines** (clustering, SearXNG-queries)
-3. **Ollama agent** (`llama3.2:3b-text-q4_K_M`, JSON-format) med:
-   - Simple Memory (dags-session `forum-prompts-YYYY-MM-DD`)
-   - Ingen tool-calling (modellen støtter ikke tools) – dedupe skjer i kode
-   - System prompt krever at spørsmål følger av kildetitler/ingress (ingen tema-glidning)
-4. **Moderation + route** – filtrerer placeholder/duplikat; **questionSourceAlignment** (spørsmål må matche kildetitler); smalere **fallback** (svindel mot eldre ≠ korrupsjon); cluster-utvidelse kun ved token-overlapp med spørsmål; `INSERT … WHERE NOT EXISTS`
-5. DB: partial unique index på `lower(trim(question))` for aktive prompts (migrasjon `20260531140000_forum_prompts_dedupe.sql`)
+1. **Fetch existing prompts** → **Fetch trusted sources** (`forum_trusted_sources`, status `approved`) → long-running saker → RSS → **Collect** (flere SearXNG-temaer, opptil 36 artikler, 10 treff per query)
+2. **Ollama agent** – samme som v3 (alignment, dedupe i kode, dags-memory)
+3. **Moderation + route** – alignment-gate; **ukjent kilde → `draft`**; stemmer `ja` / `nei` / `ikke_interessert`; tom output (`[]`) når ingenting skal lagres (ingen «Has SQL?»-node)
+4. **Save prompt** – kjører kun når moderering emitter SQL-rader
+
+**v3 (fortsatt relevant):** kilde-alignment, RSS-ingress, fallback-regler, partial unique index (`20260531140000_forum_prompts_dedupe.sql`)
+
+Migrasjon **trusted sources:** `20260602130000_forum_trusted_sources.sql`
+
+Deploy:
+
+```bash
+node scripts/build-n8n-forum-prompts-ops.mjs /tmp/n8n-forum-prompts-ops.json
+node scripts/build-n8n-forum-prompts-topology-ops.mjs /tmp/n8n-forum-prompts-topology-ops.json
+# n8n MCP update_workflow (code batch, deretter topology batch hvis live workflow mangler noder)
+```
 
 **Opprydding feilaktige aktive prompts:** [`scripts/archive-misaligned-forum-prompts.sql`](../../scripts/archive-misaligned-forum-prompts.sql)
 

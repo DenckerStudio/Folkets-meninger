@@ -68,6 +68,13 @@ WHERE trim(question) <> ''
     OR created_at > now() - interval '30 days'
   )`;
 
+const TRUSTED_SOURCES_SQL = `SELECT COALESCE(
+  json_agg(json_build_object('domain', domain, 'outlet_label', outlet_label)),
+  '[]'::json
+) AS trusted_sources
+FROM public.forum_trusted_sources
+WHERE status = 'approved'`;
+
 const FETCH_RSS_JS = `const settings = $('Backfill settings').first()?.json || {};
 const existingRow = $('Fetch existing prompts').first()?.json || {};
 const longRunningIssues = ($input.all?.() || [$input.first()]).map((i) => i.json).filter((r) => r && r.id && r.title && r.id !== '_none_');
@@ -262,6 +269,11 @@ for (const issue of longRunningIssues.slice(0, 8)) {
 const searxQueries = [
   'site:nrk.no OR site:vg.no politikk regjering stortinget',
   'site:aftenposten.no OR site:dagbladet.no lovforslag budsjett',
+  'norge politikk samfunn debatt',
+  'norge velferd helse utdanning',
+  'norge justis politi domstol',
+  'norge økonomi skatt budsjett',
+  'norge klima energi bolig',
   'norge stortinget debatt mediepolitikk',
   'norge ukraina forsvar støtte',
   'norge klima kraft strøm',
@@ -278,7 +290,7 @@ for (const q of searxQueries) {
       url: baseUrl + '/search?q=' + encodeURIComponent(q) + '&format=json&language=nb-NO',
       timeout: 8000,
     });
-    for (const r of (res.results || []).slice(0, 6)) {
+    for (const r of (res.results || []).slice(0, 10)) {
       if (r.title && r.url) {
         items.push({
           title: r.title,
@@ -346,9 +358,9 @@ const picked = [];
 for (const c of clusters) {
   for (const h of c.items) {
     picked.push({ ...h, clusterId: c.id, clusterSpanDays: c.spanDays });
-    if (picked.length >= 28) break;
+    if (picked.length >= 36) break;
   }
-  if (picked.length >= 28) break;
+  if (picked.length >= 36) break;
 }
 
 const trimmed = picked.map(({ politicsScore: ps, tokens: _t, ...rest }) => ({
@@ -510,6 +522,34 @@ const existingQuestions = Array.isArray(agentInput.existingQuestions) && agentIn
   ? agentInput.existingQuestions
   : (Array.isArray(item.existingQuestions) ? item.existingQuestions : []);
 const maxSortOrder = Number(agentInput.maxSortOrder ?? item.maxSortOrder) || 0;
+const trustedRow = $('Fetch trusted sources').first()?.json || {};
+const trustedSources = Array.isArray(trustedRow.trusted_sources) ? trustedRow.trusted_sources : [];
+
+function hostFromUrl(url) {
+  try {
+    return new URL(String(url)).hostname.replace(/^www\\./, '').toLowerCase();
+  } catch (_) {
+    return '';
+  }
+}
+
+function isTrustedSource(url, outlet, trustedList) {
+  if (outlet === 'Stortinget') return true;
+  const u = String(url || '').toLowerCase();
+  if (u.includes('folketsstemme.no') || u.includes('folkets-stemme.no')) return true;
+  const host = hostFromUrl(url);
+  if (!host) return false;
+  for (const t of trustedList) {
+    const d = String(t.domain || '').toLowerCase().replace(/^www\\./, '');
+    if (!d) continue;
+    if (host === d || host.endsWith('.' + d)) return true;
+  }
+  return false;
+}
+
+function hasUntrustedSource(sources, trustedList) {
+  return sources.some((s) => !isTrustedSource(s.url, s.outlet, trustedList));
+}
 
 function norm(q) {
   return String(q || '').toLowerCase().replace(/[^a-zæøå0-9\\s]/g, ' ').replace(/\\s+/g, ' ').trim();
@@ -830,12 +870,12 @@ function acceptPromptBatch(batch) {
   }
 
   const sensitivity = p.sensitivity === 'high' ? 'high' : 'low';
-  const status = sensitivity === 'high' ? 'draft' : 'active';
+  let status = sensitivity === 'high' ? 'draft' : 'active';
+  if (hasUntrustedSource(sources, trustedSources)) status = 'draft';
   const options = [
     { id: 'ja', label: 'Ja' },
     { id: 'nei', label: 'Nei' },
-    { id: 'vet_ikke', label: 'Vet ikke' },
-    { id: 'avstemmes', label: 'Bør avstemmes' },
+    { id: 'ikke_interessert', label: 'Ikke interessert' },
   ];
   const tags = Array.isArray(p.topic_tags) ? p.topic_tags : [];
   if (repeatReason && !tags.includes('oppdatering')) tags.push('oppdatering');
@@ -864,7 +904,7 @@ function acceptPromptBatch(batch) {
 acceptPromptBatch(agentPrompts);
 if (!results.length && headlines.length) acceptPromptBatch(fallbackPrompts(headlines));
 
-return results.length ? results : [{ json: { sql: null, skipped: true } }];`;
+return results;`;
 
 const ollamaChatModel = languageModel({
   type: '@n8n/n8n-nodes-langchain.lmChatOllama',
@@ -962,6 +1002,21 @@ const fetchExistingPrompts = node({
     },
   },
   output: [{ existing_questions: ['støtter du nasjonalt forbud mot lasere i russefeiringen?'], max_sort_order: 3 }],
+});
+
+const fetchTrustedSources = node({
+  type: 'n8n-nodes-base.postgres',
+  version: 2.6,
+  config: {
+    name: 'Fetch trusted sources',
+    executeOnce: true,
+    credentials: { postgres: newCredential('Fokets Meninger') },
+    parameters: {
+      operation: 'executeQuery',
+      query: TRUSTED_SOURCES_SQL,
+    },
+  },
+  output: [{ trusted_sources: [{ domain: 'vg.no', outlet_label: 'VG' }] }],
 });
 
 const fetchLongRunningIssues = node({
@@ -1126,25 +1181,6 @@ const moderationRoute = node({
   output: [{ sql: 'INSERT INTO public.forum_prompts ...', question: 'Eksempel?', status: 'active' }],
 });
 
-const hasSql = ifElse({
-  version: 2.2,
-  config: {
-    name: 'Has SQL?',
-    parameters: {
-      conditions: {
-        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
-        conditions: [
-          {
-            leftValue: expr('{{ Boolean($json.sql) }}'),
-            operator: { type: 'boolean', operation: 'true' },
-          },
-        ],
-        combinator: 'and',
-      },
-    },
-  },
-});
-
 const savePrompt = node({
   type: 'n8n-nodes-base.postgres',
   version: 2.6,
@@ -1160,18 +1196,19 @@ const savePrompt = node({
 });
 
 sticky(
-  '## Forum trending prompts v3\\n\\nKilde-alignment-gate + RSS-ingress + smalere fallback + Ollama agent (fallback ved agent-feil).',
+  '## Forum trending prompts v4\\n\\nTrusted sources → draft, bredere SearXNG, moderation → save (ingen Has SQL), 3 stemmer.',
   [scheduleTrigger, scheduleTriggerAfternoon, webhookTrigger],
   { color: 5 }
 );
 
 const ingestPipeline = backfillSettings
   .to(fetchExistingPrompts)
+  .to(fetchTrustedSources)
   .to(fetchLongRunningIssues)
   .to(fetchRssHeadlines)
   .to(collectAllHeadlines)
   .to(buildAgentInput)
-  .to(hasHeadlines.onTrue(generatePromptsAgent.to(moderationRoute).to(hasSql.onTrue(savePrompt))));
+  .to(hasHeadlines.onTrue(generatePromptsAgent.to(moderationRoute).to(savePrompt)));
 
 export default workflow(
   'folkets-forum-trending-prompts',

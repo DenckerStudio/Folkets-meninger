@@ -10,9 +10,10 @@ Live workflow: https://n8n.heyklever.app/workflow/MloIdsnX7FozM4dv
 
 ```bash
 node scripts/build-n8n-forum-prompts-ops.mjs /tmp/n8n-forum-prompts-ops.json
+node scripts/build-n8n-forum-prompts-topology-ops.mjs /tmp/n8n-forum-prompts-topology-ops.json
 ```
 
-2. Push via n8n MCP `update_workflow` (one operation per call if the payload is large), or paste into n8n UI.
+2. Push via n8n MCP `update_workflow`: topology batch first (trusted sources node, remove Has SQL?, moderation → save), then code ops (one node per call if the payload is large), or paste into n8n UI.
 
 3. Test webhook:
 
