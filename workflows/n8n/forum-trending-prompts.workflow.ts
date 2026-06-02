@@ -21,30 +21,34 @@ import {
 
 const PROMPT_SYSTEM = `Du er politisk redaktør for «Folkets Stemme» (norsk borgerdebatt).
 
-INPUT: Nummererte nyhetsoverskrifter [0], [1], … – kun disse titlene/lenkene finnes.
+INPUT: Nummererte nyhetsoverskrifter [0], [1], … med tittel, valgfri kort ingress (Kort:), outlet og URL.
 Du får også EXISTING_PROMPTS – spørsmål som allerede finnes og MÅ unngås (inkl. nær-duplikater).
 
 Arbeidsflyt:
-1. Les overskrifter og identifiser 6–10 politiske temaer/klynger
+1. Les overskrifter/ingress og identifiser 6–10 politiske temaer/klynger
 2. Gruppér relaterte overskrifter (samme clusterId der det finnes)
 3. Formuler unike JA/NEI-spørsmål som ikke overlapper EXISTING_PROMPTS (inkl. nær-duplikater)
 4. Returner KUN gyldig JSON: {"prompts":[...]} – ingen markdown eller forklaring
 
 Per spørsmål:
 - question: kort, konkret (maks 120 tegn). Start med «Støtter du», «Bør Norge», «Skal» eller «Er du enig i at»
-- novelty_explanation: kort forklaring (1 setning, maks 160 tegn) for hvorfor akkurat dette spørsmålet er nytt/aktuelt NÅ (PÅKREVD for alle)
+- novelty_explanation: én setning (maks 160 tegn) som sier hva kildene faktisk rapporterer – ikke generell mening
 - repeat_reason: KUN hvis spørsmålet er en oppdatering/ny runde av et eldre tema eller nær-duplikat av EXISTING_PROMPTS. Må nevne konkret ny utvikling (vedtak, nye tall, ny dom, ny rapport, nytt forslag, ny hendelse, etc.). Hvis repeat_reason brukes, skal question være formulert som en oppdatering/vinkling, ikke identisk gjentakelse.
-- source_indices: 3–6 indekser fra listen (PÅKREVD)
+- source_indices: 3–6 indekser fra listen (PÅKREVD) – alle må støtte samme politiske vurdering
 - topic_tags: 1–3 norske stikkord
 - sensitivity: "low" eller "high" (high: krig, vold, kongehus, alvorlige personskandaler)
 - stortinget_issue_id: valgfri tekst-ID for langvarig stortingssak
 
-KILDEKRAV:
+KILDEKRAV (strengt):
+- Hvert spørsmål må kunne begrunnes ut fra titlene/ingressen på valgte source_indices – ikke generelle standpunkter uten dekning i kildene.
+- Alle source_indices må handle om samme sak/tema (ikke bland f.eks. svindel mot eldre med korrupsjon i offentlig sektor).
 - Minst 3 kilder per spørsmål.
 - Minst 1 kilde skal være nyere enn 24 timer (se publishedAt i listen).
 - UNNTAK: hvis ingen kilder er nyere enn 24 timer kan du KUN foreslå et spørsmål dersom repeat_reason eksplisitt beskriver en KONKRET ny utvikling som forklarer hvorfor temaet likevel må tas opp igjen NÅ (og kildene støtter det).
 
 FORBUDT:
+- spørsmål som ikke følger av kildenes faktiske innhold (tema-glidning)
+- svindel mot privatpersoner/eldre → ikke spør om korrupsjonsstraff i offentlig sektor
 - vage/åpne spørsmål («hva mener du om…», «bør vi diskutere…»)
 - clickbait/retorikk uten politisk beslutning
 - sport/kjendis uten politikk
@@ -74,8 +78,23 @@ const feeds = [
   { outlet: 'Aftenposten', url: 'https://www.aftenposten.no/rss' },
 ];
 
+function stripCdata(text) {
+  const s = String(text);
+  const start = s.indexOf('<![CDATA[');
+  if (start < 0) return s;
+  const end = s.indexOf(']]>', start + 9);
+  if (end < 0) return s;
+  return s.slice(start + 9, end);
+}
+
 function decodeXml(value) {
-  return String(value ?? '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, '$1').trim();
+  return stripCdata(String(value ?? ''))
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
 }
 
 function extractMedia(block) {
@@ -94,6 +113,20 @@ function extractMedia(block) {
   return { imageUrl, videoUrl };
 }
 
+function stripHtml(value) {
+  return String(value ?? '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();
+}
+
+function extractDescription(block) {
+  const raw =
+    decodeXml(block.match(/<description(?:\\s[^>]*)?>([\\s\\S]*?)<\\/description>/i)?.[1]) ||
+    decodeXml(block.match(/<content:encoded[^>]*>([\\s\\S]*?)<\\/content:encoded>/i)?.[1]) ||
+    '';
+  const text = stripHtml(raw);
+  if (!text) return null;
+  return text.length > 200 ? text.slice(0, 197).trimEnd() + '…' : text;
+}
+
 function parseRssItems(xml, outlet) {
   const items = [];
   for (const block of (String(xml).match(/<item[\\s\\S]*?<\\/item>/gi) || []).slice(0, 15)) {
@@ -102,7 +135,8 @@ function parseRssItems(xml, outlet) {
     const pubDate = decodeXml(block.match(/<pubDate>([\\s\\S]*?)<\\/pubDate>/i)?.[1]) || null;
     if (title && url) {
       const media = extractMedia(block);
-      items.push({ title, url, link: url, outlet, publishedAt: pubDate, ...media });
+      const description = extractDescription(block);
+      items.push({ title, url, link: url, outlet, publishedAt: pubDate, description, ...media });
     }
   }
   return items;
@@ -272,6 +306,7 @@ for (const item of items) {
     title,
     url,
     outlet,
+    description: item.description ? String(item.description).trim().slice(0, 200) : null,
     publishedAt: item.publishedAt || item.pubDate || null,
     imageUrl: item.imageUrl || null,
     videoUrl: item.videoUrl || null,
@@ -353,14 +388,15 @@ function shortDate(value) {
 const text = headlines.map((h, i) => {
   const pub = h.publishedAt ? shortDate(h.publishedAt) : '';
   const pubChunk = pub ? ', publishedAt: ' + pub : '';
-  return '[' + i + '] ' + h.title + ' (' + h.outlet + pubChunk + ')' + (h.longRunning ? ' [langvarig sak]' : '') + '\\n    ' + h.url;
+  const descChunk = h.description ? '\\n    Kort: ' + h.description : '';
+  return '[' + i + '] ' + h.title + ' (' + h.outlet + pubChunk + ')' + (h.longRunning ? ' [langvarig sak]' : '') + descChunk + '\\n    ' + h.url;
 }).join('\\n');
 
 const footer = existingBlock + '\\n\\n---\\nReturner 6–10 unike avstemningsspørsmål som JSON. Ikke bruk «...» som spørsmålstekst – skriv fullstendige JA/NEI-spørsmål.';
 return [{
   json: {
     headlines,
-    headlinesText: (text + footer).slice(0, 6000),
+    headlinesText: (text + footer).slice(0, 8000),
     skipAgent: false,
     headlineCount: headlines.length,
     existingQuestions,
@@ -541,7 +577,8 @@ const FALLBACK_RULES = [
   { re: /domstol|høyesterett|rettssak/, q: 'Støtter du sterkere rettssikkerhet ved politiets bruk av makt?', tags: ['justis', 'politi'] },
   { re: /storting|representant|opposisjon/, q: 'Bør Stortinget få sterkere kontroll med regjeringens maktbruk?', tags: ['storting', 'demokrati'] },
   { re: /lovforslag|lovendring|ny lov/, q: 'Støtter du at nye lover alltid skal ha konsekvensutredning før vedtak?', tags: ['lov', 'demokrati'] },
-  { re: /korrupsjon|underslag|svindel/, q: 'Bør straffen for korrupsjon i offentlig sektor skjerpes?', tags: ['korrupsjon', 'justis'] },
+  { re: /korrupsjon|underslag/, q: 'Bør straffen for korrupsjon i offentlig sektor skjerpes?', tags: ['korrupsjon', 'justis'] },
+  { re: /svindel.*eldre|eldre.*svindel|svindelforsøk.*eldre|svindelforsøk mot eldre|bedrageri.*eldre/, q: 'Bør staten styrke tiltak mot svindel og svindelforsøk mot eldre?', tags: ['svindel', 'eldre', 'sikkerhet'] },
 ];
 
 function titleFallback(headline, index) {
@@ -553,10 +590,17 @@ function titleFallback(headline, index) {
   if ((headline.isPolitical || headline.longRunning) === false) return null;
   return {
     question: 'Er du enig i at Norge bør ta tydeligere grep om «' + topic + '»?',
+    novelty_explanation: 'Aktuelt etter nyhetsdekning: ' + title.slice(0, 120),
     source_indices: [index],
     topic_tags: ['debatt'],
     sensitivity: 'low',
   };
+}
+
+function fallbackNovelty(headline, question) {
+  const title = String(headline?.title || '').trim();
+  if (title.length >= 12) return 'Aktuelt etter nyhetsdekning: ' + title.slice(0, 120);
+  return 'Aktuelt etter dagens nyhetsbilder om ' + String(question || '').slice(0, 80);
 }
 
 function fallbackPrompts(headlines) {
@@ -570,6 +614,7 @@ function fallbackPrompts(headlines) {
       if (rule.re.test(t)) {
         match = {
           question: rule.q,
+          novelty_explanation: fallbackNovelty(headlines[i], rule.q),
           source_indices: [i],
           topic_tags: rule.tags || [],
           sensitivity: rule.sensitivity || 'low',
@@ -588,6 +633,12 @@ function fallbackPrompts(headlines) {
 }
 
 const seenQuestions = new Set(existingQuestions.map((q) => norm(q)));
+
+function isDuplicateQuestion(q) {
+  const key = norm(q);
+  if (seenQuestions.has(key)) return true;
+  return findMostSimilarExisting(q).score >= 0.62;
+}
 const agentPrompts = prompts;
 
 const batchLimit = Math.max(1, Math.min(12, Number($('Backfill settings').first()?.json?.batchLimit ?? 10) || 10));
@@ -596,29 +647,73 @@ const blocked = /(porn|nazi|hitler|jævla neger)/i;
 const rejectQuestion = /bør det avstemmes|bør staten gjøre mer|bør det være nødvendig|forhindre brannskader i offentlige|antallet strømprisområder|olympiad|bronsemedalj|mesterliga|champions league|monty python|kultur og kreativ|forskning og utvikling i teknologiske|støtte førstehjelp i tilfelle|i norske byer bli forbudt for å forhindre skader|hva er den største|største utfordringen|hva mener du om|bør vi diskutere|er dette bra|bør politikerne|hva synes du|burde vi|skal vi snakke om|er du bekymret for|er du redd for/i;
 const results = [];
 
+function tokenOverlapCount(aTokens, bTokens) {
+  const bSet = new Set(bTokens);
+  let overlap = 0;
+  for (const w of aTokens) if (bSet.has(w)) overlap++;
+  return overlap;
+}
+
 function inferSourceIndex(question, headlines) {
   const q = norm(question);
+  const qTokens = tokens(question);
   let bestIdx = -1;
   let best = 0;
   for (let i = 0; i < headlines.length; i++) {
-    const t = norm(headlines[i].title || '');
+    const h = headlines[i];
+    const t = norm((h?.title || '') + ' ' + (h?.description || ''));
     let score = 0;
     for (const w of q.split(/\\s+/).filter((x) => x.length > 4)) {
       if (t.includes(w)) score += 2;
     }
-    for (const pw of ['laser', 'russ', 'russe', 'strøm', 'skudd', 'politi', 'ukraina', 'krig', 'ki', 'regjering', 'storting', 'forbud', 'dsa', 'epstein', 'medie', 'asyl', 'skatt', 'klima', 'bolig', 'helse']) {
+    for (const pw of ['laser', 'russ', 'russe', 'strøm', 'skudd', 'politi', 'ukraina', 'krig', 'ki', 'regjering', 'storting', 'forbud', 'dsa', 'epstein', 'medie', 'asyl', 'skatt', 'klima', 'bolig', 'helse', 'korrupsjon', 'underslag', 'svindel', 'eldre']) {
       if (q.includes(pw) && t.includes(pw)) score += 6;
     }
+    score += tokenOverlapCount(qTokens, tokens((h?.title || '') + ' ' + (h?.description || ''))) * 2;
     if (score > best) { best = score; bestIdx = i; }
   }
-  return best >= 4 ? bestIdx : -1;
+  return best >= 6 ? bestIdx : -1;
+}
+
+function sourceText(s) {
+  return norm((s?.title || '') + ' ' + (s?.description || ''));
+}
+
+function questionSourceAlignment(question, sources) {
+  if (!Array.isArray(sources) || !sources.length) return false;
+  const q = norm(question);
+  const qTokens = tokens(question).filter((w) => w.length > 4);
+  let anyOk = false;
+  for (const s of sources) {
+    const st = sourceText(s);
+    const jac = jaccard(question, st);
+    let wordHits = 0;
+    for (const w of qTokens) if (st.includes(w)) wordHits++;
+    if (jac >= 0.35 || wordHits >= 2) anyOk = true;
+  }
+  if (!anyOk) return false;
+  if (/korrupsjon|underslag|offentlig sektor/.test(q)) {
+    if (!sources.some((s) => /korrupsjon|underslag|offentlig/.test(sourceText(s)))) return false;
+  }
+  if (/korrupsjon|offentlig sektor/.test(q)) {
+    const onlyElderFraud = sources.every(
+      (s) => /svindel|eldre|forsøk|bedrager/.test(sourceText(s)) && !/korrupsjon|underslag|offentlig/.test(sourceText(s)),
+    );
+    if (onlyElderFraud) return false;
+  }
+  if (/(?:^|\\s)svindel(?:\\s|$)/.test(q) || /(?:^|\\s)eldre(?:\\s|$)/.test(q)) {
+    if (!sources.some((s) => /svindel|eldre|pensjon|forsøk|bedrager/.test(sourceText(s)))) return false;
+  }
+  return true;
 }
 
 function pickSources(p, headlines) {
-  let indices = Array.isArray(p.source_indices) ? p.source_indices : [];
+  const question = String(p.question || '');
+  const qTokens = tokens(question);
+  let indices = Array.isArray(p.source_indices) ? [...p.source_indices] : [];
   if (!indices.length && typeof p.source_headline_index === 'number') indices = [p.source_headline_index];
   if (!indices.length) {
-    const inferred = inferSourceIndex(p.question, headlines);
+    const inferred = inferSourceIndex(question, headlines);
     if (inferred >= 0) indices = [inferred];
   }
   const clusterIds = new Set();
@@ -626,10 +721,12 @@ function pickSources(p, headlines) {
     const h = headlines[Number(raw)];
     if (h && h.clusterId != null) clusterIds.add(h.clusterId);
   }
-  if (clusterIds.size) {
+  if (clusterIds.size && qTokens.length) {
     for (let i = 0; i < headlines.length; i++) {
       const h = headlines[i];
-      if (h && clusterIds.has(h.clusterId) && !indices.includes(i)) indices.push(i);
+      if (!h || !clusterIds.has(h.clusterId) || indices.includes(i)) continue;
+      const ht = tokens((h.title || '') + ' ' + (h.description || ''));
+      if (tokenOverlapCount(qTokens, ht) >= 2) indices.push(i);
     }
   }
   const out = [];
@@ -642,6 +739,7 @@ function pickSources(p, headlines) {
       title: h.title,
       url: h.url,
       outlet: h.outlet,
+      description: h.description || null,
       imageUrl: h.imageUrl || null,
       videoUrl: h.videoUrl || null,
       publishedAt: h.publishedAt || null,
@@ -711,6 +809,7 @@ function acceptPromptBatch(batch) {
   if (repeatReason && !looksLikeConcreteUpdate(repeatReason)) continue;
   const sources = pickSources(p, headlines);
   if (!sources.length || sources.length < 3) continue;
+  if (!questionSourceAlignment(q, sources)) continue;
   const recentOk = hasRecentSource(sources, 24);
   if (!recentOk && !repeatReason) continue;
   if (!recentOk && repeatReason && !looksLikeConcreteUpdate(repeatReason)) continue;
@@ -1061,7 +1160,7 @@ const savePrompt = node({
 });
 
 sticky(
-  '## Forum trending prompts v3\\n\\nDB-dedupe + 25+ fallback-temaer + Ollama agent med memory og JSON-output (fallback ved agent-feil).',
+  '## Forum trending prompts v3\\n\\nKilde-alignment-gate + RSS-ingress + smalere fallback + Ollama agent (fallback ved agent-feil).',
   [scheduleTrigger, scheduleTriggerAfternoon, webhookTrigger],
   { color: 5 }
 );
