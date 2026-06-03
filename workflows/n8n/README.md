@@ -64,23 +64,29 @@ Workflow-kilde: [`forum-trending-prompts.workflow.ts`](forum-trending-prompts.wo
 
 **Live workflow:** https://n8n.heyklever.app/workflow/MloIdsnX7FozM4dv
 
-**v4 flyt (trusted sources + bredere søk + moderation → save):**
+**v6 flyt (AI-moderering + læring):** se [`FORUM-PROMPTS-v6.md`](FORUM-PROMPTS-v6.md) — v5 artikkelhenting: [`FORUM-PROMPTS-v5.md`](FORUM-PROMPTS-v5.md)
 
-1. **Fetch existing prompts** → **Fetch trusted sources** (`forum_trusted_sources`, status `approved`) → long-running saker → RSS → **Collect** (flere SearXNG-temaer, opptil 36 artikler, 10 treff per query)
-2. **Ollama agent** – samme som v3 (alignment, dedupe i kode, dags-memory)
-3. **Moderation + route** – alignment-gate; **ukjent kilde → `draft`** (sjekkes mot `forum_trusted_sources`; hvis listen er tom brukes seed-domener fra migrasjonen, ikke «alt til draft»); stemmer `ja` / `nei` / `ikke_interessert`; tom output (`[]`) når ingenting skal lagres (ingen «Has SQL?»-node)
-4. **Save prompt** – kjører kun når moderering emitter SQL-rader
+1. **Fetch existing prompts** (+ approved/rejected examples) → trusted sources → long-running → RSS → Collect
+2. **Fetch article bodies** – brødtekst for topp 12 URL-er
+3. **Build agent input** → **Generate prompts (Ollama)**
+4. **Build moderation input** → **Moderate prompts (Ollama)** – lærer av eksempler, structured JSON
+5. **Prepare saves** → **Save prompt** (trusted → draft, AI-avslag → feedback-tabell)
 
-**v3 (fortsatt relevant):** kilde-alignment, RSS-ingress, fallback-regler, partial unique index (`20260531140000_forum_prompts_dedupe.sql`)
-
-Migrasjon **trusted sources:** `20260602130000_forum_trusted_sources.sql`
+Migrasjon **moderation feedback:** `20260603120000_forum_prompt_moderation_feedback.sql`
 
 Deploy:
 
 ```bash
-node scripts/build-n8n-forum-prompts-ops.mjs /tmp/n8n-forum-prompts-ops.json
-node scripts/build-n8n-forum-prompts-topology-ops.mjs /tmp/n8n-forum-prompts-topology-ops.json
-# n8n MCP update_workflow (code batch, deretter topology batch hvis live workflow mangler noder)
+# v6 topology (første gang – erstatter «Moderation + route»)
+node scripts/build-n8n-forum-prompts-v6-topology-ops.mjs /tmp/n8n-v6-topology.json
+
+# kode + SQL + modereringsprompt
+node scripts/build-n8n-forum-prompts-ops.mjs /tmp/n8n-v6-code-ops.json
+
+# v5 topology (kun hvis «Fetch article bodies» mangler)
+node scripts/build-n8n-forum-prompts-v5-topology-ops.mjs /tmp/n8n-forum-prompts-v5-topology-ops.json
+
+# n8n MCP update_workflow (topology først ved nye noder, deretter code-ops)
 ```
 
 **Opprydding feilaktige aktive prompts:** [`scripts/archive-misaligned-forum-prompts.sql`](../../scripts/archive-misaligned-forum-prompts.sql)

@@ -49,6 +49,16 @@ const operations = [
   },
   {
     type: 'updateNodeParameters',
+    nodeName: 'Fetch article bodies',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      language: 'javaScript',
+      jsCode: extract('FETCH_ARTICLE_BODIES_JS'),
+    },
+    replace: true,
+  },
+  {
+    type: 'updateNodeParameters',
     nodeName: 'Build agent input',
     parameters: {
       mode: 'runOnceForAllItems',
@@ -59,13 +69,44 @@ const operations = [
   },
   {
     type: 'updateNodeParameters',
-    nodeName: 'Moderation + route',
+    nodeName: 'Build moderation input',
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
-      jsCode: extract('MODERATION_ROUTE_JS'),
+      jsCode: extract('BUILD_MODERATION_INPUT_JS'),
     },
     replace: true,
+  },
+  {
+    type: 'updateNodeParameters',
+    nodeName: 'Prepare saves',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      language: 'javaScript',
+      jsCode: extract('PREPARE_SAVES_JS'),
+    },
+    replace: true,
+  },
+  {
+    type: 'setNodeParameter',
+    nodeName: 'Moderate prompts (Ollama)',
+    path: '/options/systemMessage',
+    value: extract('MODERATION_SYSTEM'),
+  },
+  {
+    type: 'updateNodeParameters',
+    nodeName: 'Fetch existing prompts',
+    parameters: {
+      operation: 'executeQuery',
+      query: extract('EXISTING_PROMPTS_SQL'),
+    },
+    replace: true,
+  },
+  {
+    type: 'setNodeParameter',
+    nodeName: 'Generate prompts (Ollama)',
+    path: '/options/maxIterations',
+    value: 5,
   },
 ];
 

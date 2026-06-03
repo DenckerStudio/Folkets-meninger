@@ -10,7 +10,16 @@ WHERE status = 'active'
   AND source_headlines::text ~* 'svindel|eldre|forsøk'
   AND source_headlines::text !~* 'korrupsjon|underslag|offentlig';
 
--- 2) Valgfritt: arkiver etter kjent feil-URL (Aftenposten svindel mot eldre)
+-- 2) Overskrift-mal («tydeligere grep om «…»») – skal aldri være active
+UPDATE public.forum_prompts
+SET status = 'archived'
+WHERE status IN ('active', 'draft')
+  AND (
+    question ~* 'tydeligere grep om'
+    OR question ~* 'ta tydeligere grep'
+  );
+
+-- 3) Valgfritt: arkiver etter kjent feil-URL (Aftenposten svindel mot eldre)
 UPDATE public.forum_prompts
 SET status = 'archived'
 WHERE status = 'active'

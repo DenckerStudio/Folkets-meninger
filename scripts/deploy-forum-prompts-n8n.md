@@ -9,11 +9,16 @@ Live workflow: https://n8n.heyklever.app/workflow/MloIdsnX7FozM4dv
 1. Build ops payload (unescapes template literals for n8n Code nodes):
 
 ```bash
+node scripts/build-n8n-forum-prompts-v5-topology-ops.mjs /tmp/n8n-forum-prompts-v5-topology-ops.json
 node scripts/build-n8n-forum-prompts-ops.mjs /tmp/n8n-forum-prompts-ops.json
-node scripts/build-n8n-forum-prompts-topology-ops.mjs /tmp/n8n-forum-prompts-topology-ops.json
+node scripts/build-n8n-forum-prompts-tools-ops.mjs /tmp/n8n-forum-prompts-tools-ops.json
+node scripts/build-n8n-forum-prompts-agent-fix-ops.mjs /tmp/n8n-forum-prompts-agent-fix-ops.json
 ```
 
-2. Push via n8n MCP `update_workflow`: topology batch first (trusted sources node, remove Has SQL?, moderation → save), then code ops (one node per call if the payload is large), or paste into n8n UI.
+2. Push via n8n MCP `update_workflow` (atomic batches):
+   - v5 topology (`Fetch article bodies` between Collect → Build agent input)
+   - code ops (prefer `setNodeParameter` with path `/jsCode` for large Code nodes; split Moderation into its own call)
+   - tools ops (`check_duplicate`, `read_article_clusters` → agent `ai_tool`)
 
 3. Test webhook:
 
