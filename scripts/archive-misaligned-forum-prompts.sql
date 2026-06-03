@@ -26,6 +26,13 @@ WHERE status = 'active'
   AND source_headlines::text ILIKE '%6qBJE8%'
   AND question ILIKE '%korrupsjon%offentlig%';
 
+-- 4) Spørsmål om én sak med tydelig feil-kilder (f.eks. Shada + boligpriser)
+UPDATE public.forum_prompts
+SET status = 'archived'
+WHERE status IN ('active', 'draft')
+  AND question ~* 'shada'
+  AND source_headlines::text ~* 'boligpris|boligmarked';
+
 -- Verifiser før/etter:
 -- SELECT id, question, source_headlines, status, created_at
 -- FROM public.forum_prompts

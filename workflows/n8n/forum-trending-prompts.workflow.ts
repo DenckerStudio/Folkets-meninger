@@ -95,6 +95,11 @@ ALLTID AVSLÅ:
 - Vage spørsmål («hva mener du om», «bør vi diskutere»)
 - Tema-glidning (f.eks. svindel mot eldre → korrupsjon i offentlig sektor)
 - Spørsmål uten dekning i valgte kilder
+- source_indices som blander ulike nyhetssaker (f.eks. Shada-saken + boligmarked)
+
+KILDEKRAV (strengt):
+- Alle source_indices må handle om SAMME sak – ikke fyll med andre politiske artikler for å nå 3 kilder
+- Velg kun artikler fra samme cluster/indeks-gruppe eller med tydelig ordoverlap med primærkilden
 
 Status per godkjent spørsmål:
 - "active": lav sensitivitet, trusted kilder, god kilde-alignment, nyhetsaktuelt
@@ -824,11 +829,104 @@ function tokens(q) {
   return String(q || '').toLowerCase().replace(/[^a-zæøå0-9\\s]/g, ' ').replace(/\\s+/g, ' ').trim().split(' ').filter((w) => w.length > 3);
 }
 
+function norm(q) {
+  return String(q || '').toLowerCase().replace(/[^a-zæøå0-9\\s]/g, ' ').replace(/\\s+/g, ' ').trim();
+}
+
+function jaccard(a, b) {
+  const A = new Set(tokens(a));
+  const B = new Set(tokens(b));
+  if (!A.size || !B.size) return 0;
+  let inter = 0;
+  for (const w of A) if (B.has(w)) inter++;
+  return inter / (A.size + B.size - inter);
+}
+
 function tokenOverlapCount(aTokens, bTokens) {
   const bSet = new Set(bTokens);
   let overlap = 0;
   for (const w of aTokens) if (bSet.has(w)) overlap++;
   return overlap;
+}
+
+function headlineTokens(h) {
+  return tokens(String(h?.title || '') + ' ' + String(h?.description || '') + ' ' + String(h?.articleText || ''));
+}
+
+function sourceStoryTokens(s) {
+  return tokens(String(s?.title || '') + ' ' + String(s?.description || '') + ' ' + String(s?.articleText || ''));
+}
+
+function sourceText(s) {
+  return norm(String(s?.title || '') + ' ' + String(s?.description || '') + ' ' + String(s?.articleText || ''));
+}
+
+function properNounsFromQuestion(question) {
+  const out = [];
+  for (const raw of String(question || '').split(/[^a-zA-ZæøåÆØÅ0-9]+/)) {
+    const w = raw.trim();
+    if (w.length >= 5) out.push(w.toLowerCase());
+  }
+  return out;
+}
+
+function sourceMatchesQuestion(h, question) {
+  if (!h) return false;
+  const joined = headlineTokens(h).join(' ');
+  for (const pn of properNounsFromQuestion(question)) {
+    if (joined.includes(pn)) return true;
+  }
+  return tokenOverlapCount(tokens(question), headlineTokens(h)) >= 2;
+}
+
+function inferSourceIndex(question, headlines) {
+  const qTokens = tokens(question);
+  let bestIdx = -1;
+  let best = 0;
+  for (let i = 0; i < headlines.length; i++) {
+    const h = headlines[i];
+    const t = norm((h?.title || '') + ' ' + (h?.description || '') + ' ' + (h?.articleText || ''));
+    let score = 0;
+    for (const pn of properNounsFromQuestion(question)) {
+      if (t.includes(pn)) score += 10;
+    }
+    for (const w of norm(question).split(/\\s+/).filter((x) => x.length > 4)) {
+      if (t.includes(w)) score += 2;
+    }
+    score += tokenOverlapCount(qTokens, headlineTokens(h)) * 2;
+    if (score > best) { best = score; bestIdx = i; }
+  }
+  return best >= 6 ? bestIdx : -1;
+}
+
+function sourcesCoherent(sources, headlines) {
+  if (!sources.length) return false;
+  const primary = sources[0];
+  const primaryTokens = sourceStoryTokens(primary);
+  const primaryHeadline = headlines.find((x) => x && x.url === primary.url);
+  const clusterId = primaryHeadline?.clusterId;
+  for (let i = 1; i < sources.length; i++) {
+    const s = sources[i];
+    const h = headlines.find((x) => x && x.url === s.url);
+    if (clusterId != null && h?.clusterId === clusterId) continue;
+    if (tokenOverlapCount(primaryTokens, sourceStoryTokens(s)) >= 2) continue;
+    return false;
+  }
+  return true;
+}
+
+function questionSourceAlignment(question, sources) {
+  if (!Array.isArray(sources) || !sources.length) return false;
+  const qTokens = tokens(question).filter((w) => w.length > 4);
+  let anyOk = false;
+  for (const s of sources) {
+    const st = sourceText(s);
+    if (jaccard(question, st) >= 0.2 || tokenOverlapCount(qTokens, sourceStoryTokens(s)) >= 1) {
+      anyOk = true;
+      break;
+    }
+  }
+  return anyOk && sourcesCoherent(sources, headlines);
 }
 
 function headlineToSource(h) {
@@ -848,27 +946,70 @@ function headlineToSource(h) {
 
 function pickSources(p, headlines) {
   const question = String(p.question || '');
-  const qTokens = tokens(question);
-  let indices = Array.isArray(p.source_indices) ? [...p.source_indices] : [];
+  let indices = Array.isArray(p.source_indices) ? p.source_indices.map(Number).filter((n) => !Number.isNaN(n) && n >= 0) : [];
+  if (!indices.length) {
+    const inferred = inferSourceIndex(question, headlines);
+    if (inferred >= 0) indices = [inferred];
+  }
+  const primaryIdx = indices.find((i) => sourceMatchesQuestion(headlines[i], question));
+  const resolvedPrimary = primaryIdx != null ? primaryIdx : (indices[0] != null ? indices[0] : inferSourceIndex(question, headlines));
+  if (resolvedPrimary == null || resolvedPrimary < 0 || !headlines[resolvedPrimary]) return [];
+
+  const primaryH = headlines[resolvedPrimary];
+  const primaryCluster = primaryH.clusterId;
+  const primaryTokens = headlineTokens(primaryH);
+
+  indices = [resolvedPrimary];
+  for (const i of Array.isArray(p.source_indices) ? p.source_indices.map(Number) : []) {
+    if (Number.isNaN(i) || i < 0 || i === resolvedPrimary) continue;
+    const h = headlines[i];
+    if (!h) continue;
+    if (primaryCluster != null && h.clusterId === primaryCluster) { indices.push(i); continue; }
+    if (sourceMatchesQuestion(h, question)) { indices.push(i); continue; }
+    if (tokenOverlapCount(primaryTokens, headlineTokens(h)) >= 2) indices.push(i);
+  }
+  if (primaryCluster != null) {
+    for (let i = 0; i < headlines.length; i++) {
+      if (i === resolvedPrimary || indices.includes(i)) continue;
+      const h = headlines[i];
+      if (h?.clusterId === primaryCluster) indices.push(i);
+    }
+  }
+
   const out = [];
   const seenUrl = new Set();
   for (const raw of indices) {
     const h = headlines[Number(raw)];
-    if (!h || seenUrl.has(h.url)) continue;
-    seenUrl.add(h.url);
+    if (!h || !h.url || seenUrl.has(h.url)) continue;
     const src = headlineToSource(h);
-    if (src) out.push(src);
+    if (src) { out.push(src); seenUrl.add(h.url); }
     if (out.length >= 8) break;
   }
-  if (out.length < 3) {
-    for (let i = 0; i < headlines.length && out.length < 3; i++) {
-      const h = headlines[i];
-      if (!h || !h.url || seenUrl.has(h.url)) continue;
-      const ht = tokens((h.title || '') + ' ' + (h.description || '') + ' ' + (h.articleText || ''));
-      if (tokenOverlapCount(qTokens, ht) >= 1 || h.isPolitical || h.longRunning) {
-        const src = headlineToSource(h);
-        if (src) { out.push(src); seenUrl.add(h.url); }
-      }
+  return out;
+}
+
+function supplementSources(sources, headlines, question, minCount) {
+  const out = [...sources];
+  const seen = new Set(out.map((s) => s.url));
+  const qTokens = tokens(question);
+  const primaryTokens = out.length ? sourceStoryTokens(out[0]) : [];
+  const clusterIds = new Set();
+  for (const s of out) {
+    const h = headlines.find((x) => x && x.url === s.url);
+    if (h?.clusterId != null) clusterIds.add(h.clusterId);
+  }
+  for (let i = 0; i < headlines.length && out.length < minCount; i++) {
+    const h = headlines[i];
+    if (!h?.url || seen.has(h.url)) continue;
+    if (clusterIds.size && h.clusterId != null && clusterIds.has(h.clusterId)) {
+      const src = headlineToSource(h);
+      if (src) { out.push(src); seen.add(h.url); }
+      continue;
+    }
+    const ht = headlineTokens(h);
+    if (tokenOverlapCount(qTokens, ht) >= 2 || tokenOverlapCount(primaryTokens, ht) >= 2) {
+      const src = headlineToSource(h);
+      if (src) { out.push(src); seen.add(h.url); }
     }
   }
   return out;
@@ -912,7 +1053,9 @@ for (let i = 0; i < approved.length && savedCount < batchLimit; i++) {
   if (seenQuestions.has(key)) continue;
 
   let sources = pickSources(p, headlines);
+  sources = supplementSources(sources, headlines, q, 3);
   if (sources.length < 3) continue;
+  if (!questionSourceAlignment(q, sources)) continue;
 
   let status = p.status === 'active' ? 'active' : 'draft';
   const sensitivity = p.sensitivity === 'high' ? 'high' : 'low';
