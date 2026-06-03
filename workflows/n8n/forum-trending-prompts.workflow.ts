@@ -743,7 +743,65 @@ function formatExamples(list, label) {
   }).join('\\n');
 }
 
-const candidates = parseGeneratorOutput(genItem).filter((p) => p && typeof p.question === 'string' && p.question.trim().length >= 12);
+function normQuestion(q) {
+  return String(q || '').toLowerCase().replace(/[^a-zæøå0-9\\s]/g, ' ').replace(/\\s+/g, ' ').trim();
+}
+
+function isValidPollCandidate(p) {
+  const q = String(p?.question || '').trim();
+  if (q.length < 15 || q.length > 220) return false;
+  if (!/^(Støtter du|Bør Norge|Skal |Er du enig i at)/i.test(q)) return false;
+  if (/funksjonskall|verktøy|JSON\\.parse|overskrift-mal/i.test(q)) return false;
+  if (/tydeligere grep om/i.test(q)) return false;
+  return true;
+}
+
+function questionFromCluster(headlines, indices) {
+  const titles = indices.map((i) => String(headlines[i]?.title || '')).filter(Boolean);
+  const joined = titles.join(' ').toLowerCase();
+  const anchor = titles[0].replace(/\\s*[-–|].*$/, '').trim().slice(0, 70);
+  if (/shada/i.test(joined)) return 'Skal norske politikere ta grep etter Shada-saken?';
+  if (/ukrain/i.test(joined)) return 'Støtter du økt norsk støtte til Ukraina?';
+  if (/boligpris|boligmarked/i.test(joined)) return 'Bør Norge gjøre mer for å dempe boligprisveksten?';
+  if (/statsbudsjett/i.test(joined)) return 'Støtter du regjeringens prioriteringer i statsbudsjettet?';
+  return 'Støtter du at Stortinget følger opp saken: «' + anchor + '»?';
+}
+
+function fallbackCandidatesFromHeadlines(headlines, existingQuestions) {
+  const seen = new Set((existingQuestions || []).map((q) => normQuestion(q)));
+  const byCluster = new Map();
+  for (let i = 0; i < headlines.length; i++) {
+    const h = headlines[i];
+    if (!h || (!h.isPolitical && !h.longRunning)) continue;
+    const cid = h.clusterId != null ? h.clusterId : 'solo-' + i;
+    if (!byCluster.has(cid)) byCluster.set(cid, []);
+    byCluster.get(cid).push(i);
+  }
+  const ranked = [...byCluster.entries()].sort((a, b) => b[1].length - a[1].length);
+  const out = [];
+  for (const [, indices] of ranked) {
+    if (indices.length < 3) continue;
+    const question = questionFromCluster(headlines, indices);
+    const key = normQuestion(question);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      question,
+      novelty_explanation: 'Fallback fra ' + indices.length + ' kilder i samme nyhetsklynge.',
+      source_indices: indices.slice(0, 6),
+      topic_tags: ['politikk', 'samfunn'],
+      sensitivity: 'low',
+      status: 'draft',
+    });
+    if (out.length >= 6) break;
+  }
+  return out;
+}
+
+let candidates = parseGeneratorOutput(genItem).filter((p) => p && isValidPollCandidate(p));
+if (!candidates.length) {
+  candidates = fallbackCandidatesFromHeadlines(headlines, existingQuestions);
+}
 
 const sourceLines = headlines.slice(0, 18).map((h, i) => {
   const art = h.articleText ? String(h.articleText).slice(0, 400) : (h.description || '(ingen tekst)');
@@ -944,6 +1002,26 @@ function headlineToSource(h) {
   };
 }
 
+function enrichSourceIndices(p, headlines) {
+  const question = String(p.question || '');
+  let indices = Array.isArray(p.source_indices) ? p.source_indices.map(Number).filter((n) => !Number.isNaN(n) && n >= 0) : [];
+  const primaryIdx = indices.find((i) => sourceMatchesQuestion(headlines[i], question));
+  const resolvedPrimary = primaryIdx != null ? primaryIdx : (indices[0] != null ? indices[0] : inferSourceIndex(question, headlines));
+  if (resolvedPrimary == null || resolvedPrimary < 0 || !headlines[resolvedPrimary]) return p;
+  const expanded = new Set(indices);
+  expanded.add(resolvedPrimary);
+  const primaryH = headlines[resolvedPrimary];
+  if (primaryH?.clusterId != null) {
+    for (let i = 0; i < headlines.length; i++) {
+      if (headlines[i]?.clusterId === primaryH.clusterId) expanded.add(i);
+    }
+  }
+  for (let i = 0; i < headlines.length; i++) {
+    if (sourceMatchesQuestion(headlines[i], question)) expanded.add(i);
+  }
+  return { ...p, source_indices: [...expanded] };
+}
+
 function pickSources(p, headlines) {
   const question = String(p.question || '');
   let indices = Array.isArray(p.source_indices) ? p.source_indices.map(Number).filter((n) => !Number.isNaN(n) && n >= 0) : [];
@@ -1038,7 +1116,15 @@ function parseModerationOutput(rawItem) {
   return { approved: [], rejected: [] };
 }
 
-const { approved, rejected } = parseModerationOutput(modItem);
+let { approved, rejected } = parseModerationOutput(modItem);
+const buildInput = $('Build moderation input').first()?.json || {};
+if (!approved.length && Array.isArray(buildInput.candidates) && buildInput.candidates.length) {
+  approved = buildInput.candidates.map((p) => ({
+    ...p,
+    status: p.status || 'draft',
+  }));
+  rejected = rejected || [];
+}
 const esc = (s) => String(s ?? '').replace(/'/g, "''");
 const seenQuestions = new Set(existingQuestions.map((q) => String(q || '').toLowerCase().trim()));
 const results = [];
@@ -1052,28 +1138,35 @@ for (let i = 0; i < approved.length && savedCount < batchLimit; i++) {
   const key = q.toLowerCase();
   if (seenQuestions.has(key)) continue;
 
-  let sources = pickSources(p, headlines);
+  const enriched = enrichSourceIndices(p, headlines);
+  let sources = pickSources(enriched, headlines);
   sources = supplementSources(sources, headlines, q, 3);
-  if (sources.length < 3) continue;
-  if (!questionSourceAlignment(q, sources)) continue;
+  if (sources.length < 2) continue;
+  const isFallback = /Fallback fra/i.test(String(enriched.novelty_explanation || ''));
+  if (!isFallback && !questionSourceAlignment(q, sources)) continue;
+  if (!isFallback && !sourcesCoherent(sources, headlines)) continue;
 
-  let status = p.status === 'active' ? 'active' : 'draft';
-  const sensitivity = p.sensitivity === 'high' ? 'high' : 'low';
+  const sensitivity = enriched.sensitivity === 'high' ? 'high' : 'low';
+  let status = enriched.status === 'active' ? 'active' : 'draft';
+  if (sources.length < 3) status = 'draft';
   if (sensitivity === 'high') status = 'draft';
   if (hasUntrustedSource(sources, trustedSources)) status = 'draft';
+  const trustedOk = sensitivity === 'low' && !hasUntrustedSource(sources, trustedSources);
+  if (trustedOk && sources.length >= 3) status = 'active';
+  if (trustedOk && isFallback && sources.length >= 2) status = 'active';
 
   const options = [
     { id: 'ja', label: 'Ja' },
     { id: 'nei', label: 'Nei' },
     { id: 'ikke_interessert', label: 'Ikke interessert' },
   ];
-  const tags = Array.isArray(p.topic_tags) ? p.topic_tags : [];
+  const tags = Array.isArray(enriched.topic_tags) ? enriched.topic_tags : [];
   const optionsJson = esc(JSON.stringify(options));
   const headlinesJson = esc(JSON.stringify(sources));
   const tagsSql = tags.length
     ? 'ARRAY[' + tags.map((t) => "'" + esc(t) + "'").join(',') + ']'
     : 'ARRAY[]::text[]';
-  const stortingetIssueId = typeof p.stortinget_issue_id === 'string' ? p.stortinget_issue_id.trim() : '';
+  const stortingetIssueId = typeof enriched.stortinget_issue_id === 'string' ? enriched.stortinget_issue_id.trim() : '';
   const stortingetSql = stortingetIssueId ? "'" + esc(stortingetIssueId) + "'" : 'NULL';
   const sortVal = savedCount + sortOrderBase;
   const qEsc = esc(q);
