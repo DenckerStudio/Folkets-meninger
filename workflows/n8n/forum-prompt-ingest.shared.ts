@@ -124,18 +124,20 @@ return [{
     longRunningIssues,
     existingQuestions: ctx.existing_questions || [],
     recentClusterTitles: ctx.recent_cluster_titles || [],
-    searxngBaseUrl: settings.searxngBaseUrl,
     batchLimit: settings.batchLimit,
     discoveryLimit: settings.discoveryLimit,
+    maxArticleAgeHours: settings.maxArticleAgeHours,
   },
 }];`;
 
-export const COLLECT_HEADLINES_DISCOVERY_JS = `const input = $input.first()?.json || {};
+/** RSS + long-running issues → clusters (no SearXNG HTTP in Code). Hard recency gate. */
+export const RSS_CLUSTER_JS = `const input = $input.first()?.json || {};
 const rssHeadlines = Array.isArray(input.rssHeadlines) ? input.rssHeadlines : [];
 const longRunningIssues = Array.isArray(input.longRunningIssues) ? input.longRunningIssues : [];
 const existingQuestions = Array.isArray(input.existingQuestions) ? input.existingQuestions : [];
 const recentClusterTitles = Array.isArray(input.recentClusterTitles) ? input.recentClusterTitles : [];
-const baseUrl = input.searxngBaseUrl || 'https://searxng.heyklever.app';
+const maxArticleAgeHours = Math.max(24, Math.min(168, Number(input.maxArticleAgeHours) || 72));
+const currentYear = new Date().getFullYear();
 
 function outletFromUrl(url) {
   if (!url) return 'Ukjent';
@@ -196,8 +198,44 @@ function recencyBoost(publishedAt) {
   if (!t) return 0;
   const ageHours = (Date.now() - t) / 3600000;
   if (ageHours < 24) return 2;
-  if (ageHours < 72) return 1;
+  if (ageHours < maxArticleAgeHours) return 1;
   return 0;
+}
+
+function isWithinRecency(publishedAt, longRunning) {
+  if (longRunning) return true;
+  const t = parseDate(publishedAt);
+  if (!t) return false;
+  return (Date.now() - t) / 3600000 <= maxArticleAgeHours;
+}
+
+function hasStaleYearInTitle(title, longRunning) {
+  if (longRunning) return false;
+  const t = String(title || '');
+  const m = t.match(/\\b(20\\d{2})\\b/g);
+  if (!m) return false;
+  for (const y of m) {
+    const yr = Number(y);
+    if (yr >= 2010 && yr < currentYear) return true;
+  }
+  return false;
+}
+
+function topicFingerprint(title) {
+  return normalizeTokens(title).slice(0, 12).join(' ');
+}
+
+function isDupTopic(title, existingQuestions, recentClusterTitles) {
+  const fp = topicFingerprint(title);
+  if (!fp) return false;
+  for (const q of existingQuestions || []) {
+    if (tokenOverlap(normalizeTokens(String(q)), normalizeTokens(title)) >= 3) return true;
+    if (topicFingerprint(String(q)) === fp) return true;
+  }
+  for (const r of recentClusterTitles || []) {
+    if (topicFingerprint(String(r)) === fp) return true;
+  }
+  return false;
 }
 
 const items = [...rssHeadlines];
@@ -214,45 +252,6 @@ for (const issue of longRunningIssues.slice(0, 8)) {
   });
 }
 
-const searxQueries = [
-  'site:nrk.no OR site:vg.no politikk regjering stortinget',
-  'site:aftenposten.no OR site:dagbladet.no lovforslag budsjett',
-  'norge politikk samfunn debatt',
-  'norge velferd helse utdanning',
-  'norge justis politi domstol',
-  'norge økonomi skatt budsjett',
-  'norge klima energi bolig',
-  'norge stortinget debatt mediepolitikk',
-  'norge ukraina forsvar støtte',
-  'norge klima kraft strøm',
-];
-for (const lr of longRunningIssues.slice(0, 3)) {
-  const shortTitle = String(lr.title || '').split(/[:–-]/)[0].trim().slice(0, 60);
-  if (shortTitle.length > 10) searxQueries.push(shortTitle + ' site:nrk.no OR site:vg.no');
-}
-
-for (const q of searxQueries) {
-  try {
-    const res = await this.helpers.httpRequest({
-      method: 'GET',
-      url: baseUrl + '/search?q=' + encodeURIComponent(q) + '&format=json&language=nb-NO',
-      timeout: 8000,
-    });
-    for (const r of (res.results || []).slice(0, 10)) {
-      if (r.title && r.url) {
-        items.push({
-          title: r.title,
-          url: r.url,
-          outlet: outletFromUrl(r.url),
-          imageUrl: r.img_src || r.thumbnail || null,
-          videoUrl: null,
-          publishedAt: r.publishedDate || null,
-        });
-      }
-    }
-  } catch (_) {}
-}
-
 const seen = new Set();
 const headlines = [];
 for (const item of items) {
@@ -260,6 +259,9 @@ for (const item of items) {
   const url = String(item.url || item.link || '').trim();
   const outlet = item.outlet || outletFromUrl(url);
   if (!isLikelyArticle(url, title) && !item.longRunning) continue;
+  if (!isWithinRecency(item.publishedAt || item.pubDate, item.longRunning)) continue;
+  if (hasStaleYearInTitle(title, item.longRunning)) continue;
+  if (isDupTopic(title, existingQuestions, recentClusterTitles)) continue;
   if (seen.has(url)) continue;
   seen.add(url);
   headlines.push({
@@ -272,7 +274,7 @@ for (const item of items) {
     videoUrl: item.videoUrl || null,
     stortingetIssueId: item.stortingetIssueId || null,
     longRunning: !!item.longRunning,
-    politicsScore: politicsScore(title) + recencyBoost(item.publishedAt),
+    politicsScore: politicsScore(title) + recencyBoost(item.publishedAt || item.pubDate),
     tokens: normalizeTokens(title),
   });
 }
@@ -295,16 +297,25 @@ for (const h of headlines) {
   cluster.items.push(h);
 }
 
+const freshClusters = [];
 for (const c of clusters) {
+  const dated = c.items.filter((i) => parseDate(i.publishedAt));
+  const freshCount = c.items.filter((i) => isWithinRecency(i.publishedAt, i.longRunning)).length;
+  if (!c.items.some((i) => i.longRunning) && freshCount < 2) continue;
+  if (dated.length) {
+    const newest = Math.max(...dated.map((i) => parseDate(i.publishedAt)));
+    if ((Date.now() - newest) / 3600000 > maxArticleAgeHours) continue;
+  }
   const dates = c.items.map((i) => parseDate(i.publishedAt)).filter(Boolean);
   c.spanDays = dates.length >= 2 ? (Math.max(...dates) - Math.min(...dates)) / 86400000 : 0;
   c.score = c.items.reduce((s, i) => s + (i.politicsScore || 0), 0) + (c.spanDays >= 3 ? 5 : 0) + (c.items.some((i) => i.longRunning) ? 6 : 0);
+  freshClusters.push(c);
 }
 
-clusters.sort((a, b) => b.score - a.score);
+freshClusters.sort((a, b) => b.score - a.score);
 
 const flatHeadlines = [];
-for (const c of clusters) {
+for (const c of freshClusters) {
   for (const h of c.items) {
     flatHeadlines.push({
       ...h,
@@ -317,12 +328,13 @@ for (const c of clusters) {
 
 return [{
   json: {
-    clusters,
+    clusters: freshClusters,
     headlines: flatHeadlines,
     headlineCount: flatHeadlines.length,
     longRunningIssues,
     existingQuestions,
     recentClusterTitles,
     discoveryLimit: Number(input.discoveryLimit) || 6,
+    maxArticleAgeHours,
   },
 }];`;

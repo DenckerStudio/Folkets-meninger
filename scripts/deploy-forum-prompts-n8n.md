@@ -1,8 +1,10 @@
-# Deploy forum trending prompts workflow to n8n
+# Deploy Forum Reels (v8)
 
-Source: [`workflows/n8n/forum-trending-prompts.workflow.ts`](../workflows/n8n/forum-trending-prompts.workflow.ts)
+Source: [`workflows/n8n/forum-research-discovery.workflow.ts`](../workflows/n8n/forum-research-discovery.workflow.ts)
 
-Live workflow: https://n8n.heyklever.app/workflow/MloIdsnX7FozM4dv
+Live workflow: https://n8n.heyklever.app/workflow/mjiQBSdxVv0sAuMu
+
+See [`workflows/n8n/FORUM-PROMPTS-v8.md`](../workflows/n8n/FORUM-PROMPTS-v8.md) and `scripts/deploy-forum-v8-n8n.mjs`.
 
 ## After editing the workflow file
 
