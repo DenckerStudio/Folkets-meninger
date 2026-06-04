@@ -1,9 +1,9 @@
 /**
- * Folkets Stemme – Forum trending prompts v6
- * RSS + SearXNG + langvarige saker → fetch article bodies → Ollama agent → AI moderation → forum_prompts
+ * Folkets Stemme – Forum prompt synthesis (v7 flow 2)
+ * Leser pending clusters fra forum_research_clusters → dyp research → JA/NEI-spørsmål → moderering → forum_prompts
  *
- * v6: AI-moderering (erstatter stor Code-node); lærer fra forum_prompt_moderation_feedback.
- * v5: henter faktisk artikkeltekst (HTML/JSON-LD) før agent; ingen «overskrift-mal» som active.
+ * Flow 1 (discovery): forum-research-discovery.workflow.ts
+ * v6: AI-moderering + forum_prompt_moderation_feedback
  * Live: https://n8n.heyklever.app/workflow/MloIdsnX7FozM4dv
  * Webhook: folkets-forum-prompts
  */
@@ -17,8 +17,69 @@ import {
   tool,
   outputParser,
   ifElse,
+  splitInBatches,
+  nextBatch,
   expr,
 } from '@n8n/workflow-sdk';
+
+const PENDING_CLUSTERS_SQL = `WITH picked AS (
+  SELECT id
+  FROM public.forum_research_clusters
+  WHERE status = 'pending'
+  ORDER BY politics_score DESC, created_at ASC
+  LIMIT 3
+)
+UPDATE public.forum_research_clusters c
+SET status = 'processing', updated_at = now()
+FROM picked p
+WHERE c.id = p.id
+RETURNING
+  c.id,
+  c.title,
+  c.discovery_rationale,
+  c.topic_tags,
+  c.stortinget_issue_id,
+  c.politics_score,
+  (
+    SELECT COALESCE(
+      json_agg(
+        json_build_object(
+          'title', a.title,
+          'url', a.url,
+          'outlet', a.outlet,
+          'publishedAt', a.published_at,
+          'description', a.description,
+          'imageUrl', a.image_url,
+          'videoUrl', a.video_url,
+          'longRunning', c.stortinget_issue_id IS NOT NULL
+        )
+        ORDER BY a.sort_order
+      ),
+      '[]'::json
+    )
+    FROM public.forum_research_articles a
+    WHERE a.cluster_id = c.id
+  ) AS articles_json`;
+
+const DEEP_RESEARCH_SYSTEM = `Du er analytiker for «Folkets Stemme». Du får flere artikler om SAMME sak.
+
+Oppgave:
+1. Les alle Artikkel:-utdrag grundig
+2. Sammenlign kildene: hva er felles fakta, hva er uenighet, hva er den politiske konflikten?
+3. Identifiser det konkrete valget folk kan ta stilling til (lov, policy, handling)
+4. Ikke sitér bare overskrifter – bygg forståelse fra brødtekst
+
+Returner KUN gyldig JSON:
+{
+  "story_title": "Kort sakstittel",
+  "summary": "2–4 setninger om hva saken handler om",
+  "shared_facts": ["fakta 1", "fakta 2"],
+  "disagreements": ["uenighet mellom kilder/partier om X"],
+  "political_choice": "Hva er det konkrete politiske valget?",
+  "poll_angles": ["mulig JA/NEI-vinkel 1", "mulig vinkel 2"],
+  "source_quality": "kort vurdering av kilde-dekning",
+  "confidence": "high|medium|low"
+}`;
 
 const PROMPT_SYSTEM = `OBLIGATORISK VERKTØYBRUK (før du svarer med JSON):
 - Du har check_duplicate og read_article_clusters. Kall dem – ikke hopp over.
@@ -32,13 +93,15 @@ const PROMPT_SYSTEM = `OBLIGATORISK VERKTØYBRUK (før du svarer med JSON):
 
 Du er politisk redaktør for «Folkets Stemme» (norsk borgerdebatt).
 
-INPUT: Nummererte kilder [0], [1], … med tittel, outlet, URL, og Artikkel:-utdrag (hentet fra artikkelen).
-Du får også EXISTING_PROMPTS – spørsmål som allerede finnes og MÅ unngås (inkl. nær-duplikater).
+INPUT:
+- DEEP_RESEARCH: ferdig analyse (sammenligning mellom kilder, politisk valg, poll_angles)
+- Nummererte kilder [0], [1], … med Artikkel:-utdrag
+- EXISTING_PROMPTS – unngå duplikater
 
 Arbeidsflyt:
-1. Les Artikkel:-utdragene – ikke bare overskrifter. Bruk read_article_clusters for klynger du er usikker på.
-2. Identifiser 6–10 politiske temaer der artiklene beskriver en konkret påstand, konflikt eller politisk valg
-3. Formuler unike JA/NEI-spørsmål ut fra innholdet i artiklene (ikke overskrift-sitat)
+1. Bruk DEEP_RESEARCH som primær forståelse – ikke ignorer disagreements/shared_facts
+2. Formuler 1–3 sterke JA/NEI-spørsmål per sak (svart på hvitt, ikke «hva mener du om»)
+3. Hvert spørsmål må følge av DEEP_RESEARCH.political_choice og Artikkel:-innhold
 4. Sjekk duplikater med check_duplicate før du legger inn et spørsmål
 5. Returner KUN gyldig JSON: {"prompts":[...]} – ingen markdown eller forklaring
 
@@ -158,7 +221,82 @@ const TRUSTED_SOURCES_SQL = `SELECT COALESCE(
 FROM public.forum_trusted_sources
 WHERE status = 'approved'`;
 
-const FETCH_RSS_JS = `const settings = $('Backfill settings').first()?.json || {};
+const EXPAND_CLUSTER_JS = `const row = $input.item?.json || $input.first()?.json || {};
+let articles = row.articles_json;
+if (typeof articles === 'string') {
+  try { articles = JSON.parse(articles); } catch (_) { articles = []; }
+}
+if (!Array.isArray(articles)) articles = [];
+const headlines = articles.map((a, i) => ({
+  title: String(a.title || ''),
+  url: String(a.url || ''),
+  outlet: a.outlet || 'Nyhet',
+  publishedAt: a.publishedAt || null,
+  description: a.description || null,
+  imageUrl: a.imageUrl || null,
+  videoUrl: a.videoUrl || null,
+  longRunning: !!a.longRunning,
+  stortingetIssueId: row.stortinget_issue_id || null,
+  clusterId: 0,
+  isPolitical: true,
+  sortIndex: i,
+}));
+const existing = $('Fetch existing prompts').first()?.json || {};
+return [{
+  json: {
+    clusterId: row.id,
+    clusterTitle: row.title,
+    discoveryRationale: row.discovery_rationale || '',
+    topicTags: row.topic_tags || [],
+    headlines,
+    headlineCount: headlines.length,
+    skipAgent: headlines.length < 3,
+    existingQuestions: existing.existing_questions || [],
+    approvedExamples: existing.approved_examples || [],
+    rejectedExamples: existing.rejected_examples || [],
+    maxSortOrder: Number(existing.max_sort_order) || 0,
+  },
+}];`;
+
+const BUILD_DEEP_RESEARCH_INPUT_JS = `const input = $input.first()?.json || {};
+const headlines = Array.isArray(input.headlines) ? input.headlines : [];
+if (!headlines.length) {
+  return [{ json: { ...input, deepResearchText: '', skipDeepResearch: true } }];
+}
+
+function shortDate(value) {
+  const t = Date.parse(String(value || ''));
+  if (Number.isNaN(t)) return '';
+  return new Date(t).toISOString().slice(0, 16).replace('T', ' ');
+}
+
+const sourceBlock = headlines.map((h, i) => {
+  const pub = h.publishedAt ? shortDate(h.publishedAt) : '';
+  const art = h.articleText
+    ? String(h.articleText).slice(0, 3200)
+    : (h.description || '(ingen artikkeltekst)');
+  return '[' + i + '] ' + h.title + ' (' + h.outlet + (pub ? ', ' + pub : '') + ', fetch=' + (h.articleFetchStatus || 'none') + ')\\n    ' + h.url + '\\n    Artikkel: ' + art;
+}).join('\\n\\n');
+
+const deepResearchText = [
+  'SAK: ' + (input.clusterTitle || 'Ukjent'),
+  input.discoveryRationale ? 'Discovery: ' + input.discoveryRationale : '',
+  '',
+  'KILDER (sammenlign disse grundig):',
+  sourceBlock,
+  '',
+  'Analyser saken og returner JSON som beskrevet.',
+].filter(Boolean).join('\\n');
+
+return [{
+  json: {
+    ...input,
+    deepResearchText: deepResearchText.slice(0, 16000),
+    skipDeepResearch: false,
+  },
+}];`;
+
+const FETCH_RSS_JS_LEGACY = `const settings = $('Backfill settings').first()?.json || {};
 const existingRow = $('Fetch existing prompts').first()?.json || {};
 const longRunningIssues = ($input.all?.() || [$input.first()]).map((i) => i.json).filter((r) => r && r.id && r.title && r.id !== '_none_');
 const feeds = [
@@ -470,7 +608,7 @@ return [{
 
 const FETCH_ARTICLE_BODIES_JS = `const input = $input.first()?.json || {};
 const headlines = Array.isArray(input.headlines) ? input.headlines : [];
-const maxFetch = 12;
+const maxFetch = Math.min(16, Math.max(headlines.length, 3));
 const timeout = 10000;
 
 function stripHtml(html) {
@@ -570,14 +708,44 @@ return [{
   },
 }];`;
 
-const BUILD_AGENT_INPUT_JS = `const headlines = $json.headlines || [];
-const existingQuestions = Array.isArray($json.existingQuestions) ? $json.existingQuestions : [];
-const approvedExamples = Array.isArray($json.approvedExamples) ? $json.approvedExamples : [];
-const rejectedExamples = Array.isArray($json.rejectedExamples) ? $json.rejectedExamples : [];
-const maxSortOrder = Number($json.maxSortOrder) || 0;
+const BUILD_AGENT_INPUT_JS = `const base = $('Expand cluster').first()?.json || {};
+const deepItem = $input.first()?.json || {};
+const headlines = Array.isArray(base.headlines) ? base.headlines : [];
+const existingQuestions = Array.isArray(base.existingQuestions) ? base.existingQuestions : [];
+const approvedExamples = Array.isArray(base.approvedExamples) ? base.approvedExamples : [];
+const rejectedExamples = Array.isArray(base.rejectedExamples) ? base.rejectedExamples : [];
+const maxSortOrder = Number(base.maxSortOrder) || 0;
+
+function stripCodeFence(text) {
+  let t = String(text).trim();
+  const fence = '\u0060\u0060\u0060';
+  const jsonTag = fence + 'json';
+  let i = t.toLowerCase().indexOf(jsonTag);
+  if (i >= 0) t = t.slice(i + jsonTag.length);
+  i = t.indexOf(fence);
+  if (i >= 0) t = t.slice(0, i);
+  return t.trim();
+}
+
+function parseDeepResearch(raw) {
+  const candidates = [raw.output, raw.text, raw];
+  for (const c of candidates) {
+    if (c == null) continue;
+    if (typeof c === 'object' && c.summary) return c;
+    if (typeof c === 'string') {
+      try {
+        const p = JSON.parse(stripCodeFence(c));
+        if (p && p.summary) return p;
+      } catch (_) {}
+    }
+  }
+  return null;
+}
+
+const deepResearch = parseDeepResearch(deepItem) || parseDeepResearch(deepItem.output) || {};
 
 if (!headlines.length) {
-  return [{ json: { headlines: [], headlinesText: '', skipAgent: true, headlineCount: 0, existingQuestions, approvedExamples, rejectedExamples, maxSortOrder } }];
+  return [{ json: { ...base, headlines: [], headlinesText: '', skipAgent: true, headlineCount: 0, deepResearch, existingQuestions, approvedExamples, rejectedExamples, maxSortOrder } }];
 }
 
 const existingBlock = existingQuestions.length
@@ -601,13 +769,19 @@ const text = headlines.map((h, i) => {
   return '[' + i + '] ' + h.title + ' (' + h.outlet + pubChunk + fetchChunk + ')' + (h.longRunning ? ' [langvarig sak]' : '') + descChunk + articleChunk + '\\n    ' + h.url;
 }).join('\\n');
 
-const footer = existingBlock + '\\n\\n---\\nReturner 6–10 unike avstemningsspørsmål som JSON. Les Artikkel:-utdrag. Ikke sitér overskrifter. Ikke bruk «...» som spørsmålstekst.';
+const deepBlock = deepResearch && deepResearch.summary
+  ? '\\n\\nDEEP_RESEARCH (bruk som primær forståelse):\\n' + JSON.stringify(deepResearch, null, 2)
+  : '\\n\\nDEEP_RESEARCH: (mangler – les Artikkel:-utdrag nøye)';
+
+const footer = existingBlock + deepBlock + '\\n\\n---\\nReturner 1–3 sterke JA/NEI-spørsmål som JSON for DENNE saken. Les Artikkel:-utdrag. Ikke sitér overskrifter.';
 return [{
   json: {
+    ...base,
     headlines,
     headlinesText: (text + footer).slice(0, 14000),
     skipAgent: false,
     headlineCount: headlines.length,
+    deepResearch,
     existingQuestions,
     approvedExamples,
     rejectedExamples,
@@ -632,7 +806,7 @@ const TOOL_INPUT_PARSE_JS = `function parseToolInput() {
 const CHECK_DUPLICATE_TOOL_JS = `${TOOL_INPUT_PARSE_JS}
 const inp = parseToolInput();
 const question = String(inp.question ?? inp.query ?? inp.input ?? inp.text ?? '').trim();
-const existing = $('Build agent input').first()?.json?.existingQuestions || [];
+const existing = ($('Build agent input').first()?.json?.existingQuestions) || ($('Expand cluster').first()?.json?.existingQuestions) || [];
 
 function norm(q) {
   return String(q || '').toLowerCase().replace(/[^a-zæøå0-9\\s]/g, ' ').replace(/\\s+/g, ' ').trim();
@@ -669,7 +843,7 @@ return 'OK: unique question';`;
 const READ_ARTICLE_CLUSTERS_TOOL_JS = `${TOOL_INPUT_PARSE_JS}
 const inp = parseToolInput();
 const raw = String(inp.indices ?? inp.query ?? inp.input ?? '').trim();
-const headlines = $('Build agent input').first()?.json?.headlines || [];
+const headlines = ($('Build agent input').first()?.json?.headlines) || ($('Expand cluster').first()?.json?.headlines) || [];
 const indices = raw.split(/[,\\s]+/).map((n) => parseInt(n, 10)).filter((n) => !Number.isNaN(n) && n >= 0);
 
 if (!indices.length) return 'ERROR: send {"indices":"0,2,5"} with comma-separated headline indices';
@@ -1202,6 +1376,19 @@ for (const r of rejected || []) {
   });
 }
 
+const clusterId = $('Expand cluster').first()?.json?.clusterId;
+const deepResearch = $('Build agent input').first()?.json?.deepResearch || {};
+if (clusterId) {
+  const drEsc = esc(JSON.stringify(deepResearch));
+  results.push({
+    json: {
+      sql:
+        "UPDATE public.forum_research_clusters SET status = 'completed', deep_research_json = '" + drEsc + "'::jsonb, processed_at = now(), updated_at = now() WHERE id = '" + esc(clusterId) + "'",
+      kind: 'cluster_complete',
+    },
+  });
+}
+
 return results;`;
 const ollamaChatModel = languageModel({
   type: '@n8n/n8n-nodes-langchain.lmChatOllama',
@@ -1226,6 +1413,34 @@ const moderationOllamaChatModel = languageModel({
       model: 'llama3.1:8b',
       options: { think: false, temperature: 0.1, format: 'json', numPredict: 1400, numCtx: 8192 },
     },
+  },
+});
+
+const deepResearchOllamaModel = languageModel({
+  type: '@n8n/n8n-nodes-langchain.lmChatOllama',
+  version: 1,
+  config: {
+    name: 'Deep research Ollama Chat Model',
+    credentials: { ollamaApi: newCredential('Ollama account') },
+    parameters: {
+      model: 'llama3.1:8b',
+      options: { think: false, temperature: 0.15, format: 'json', numPredict: 2000, numCtx: 8192 },
+    },
+  },
+});
+
+const deepResearchOutputParser = outputParser({
+  type: '@n8n/n8n-nodes-langchain.outputParserStructured',
+  version: 1.3,
+  config: {
+    name: 'Deep research JSON parser',
+    parameters: {
+      schemaType: 'fromJson',
+      jsonSchemaExample:
+        '{"story_title":"Sak","summary":"Kort oppsummering","shared_facts":["fakta"],"disagreements":["uenighet"],"political_choice":"Valg","poll_angles":["vinkel"],"source_quality":"god","confidence":"high"}',
+      autoFix: true,
+    },
+    subnodes: { model: deepResearchOllamaModel },
   },
 });
 
@@ -1341,19 +1556,33 @@ const fetchTrustedSources = node({
   output: [{ trusted_sources: [{ domain: 'vg.no', outlet_label: 'VG' }] }],
 });
 
-const fetchLongRunningIssues = node({
+const fetchPendingClusters = node({
   type: 'n8n-nodes-base.postgres',
   version: 2.6,
   config: {
-    name: 'Fetch long-running saker',
+    name: 'Fetch pending clusters',
+    executeOnce: true,
     credentials: { postgres: newCredential('Fokets Meninger') },
     parameters: {
       operation: 'executeQuery',
-      query:
-        "WITH issues AS (SELECT id, title, first_seen_at FROM public.stortinget_issues WHERE status = 'pending' AND first_seen_at IS NOT NULL AND first_seen_at < now() - interval '14 days' ORDER BY first_seen_at ASC LIMIT 10) SELECT id, title, first_seen_at FROM issues UNION ALL SELECT '_none_', 'Ingen langvarige saker', now() WHERE NOT EXISTS (SELECT 1 FROM issues)",
+      query: PENDING_CLUSTERS_SQL,
     },
   },
-  output: [{ id: '200329', title: 'Eksempel sak', first_seen_at: '2025-01-01T00:00:00Z' }],
+  output: [
+    {
+      id: '00000000-0000-0000-0000-000000000001',
+      title: 'Eksempel sak',
+      articles_json: [{ title: 'A', url: 'https://www.vg.no/a', outlet: 'VG' }],
+    },
+  ],
+});
+
+const processOneCluster = splitInBatches({
+  version: 3,
+  config: {
+    name: 'Process one cluster',
+    parameters: { batchSize: 1 },
+  },
 });
 
 const scheduleTrigger = trigger({
@@ -1404,32 +1633,66 @@ const backfillSettings = node({
   output: [{ searxngBaseUrl: 'https://searxng.heyklever.app', batchLimit: '25', longRunningMinDays: '14' }],
 });
 
-const fetchRssHeadlines = node({
+const expandCluster = node({
   type: 'n8n-nodes-base.code',
   version: 2,
   config: {
-    name: 'Fetch RSS headlines',
+    name: 'Expand cluster',
     parameters: {
-      mode: 'runOnceForAllItems',
+      mode: 'runOnceForEachItem',
       language: 'javaScript',
-      jsCode: FETCH_RSS_JS,
+      jsCode: EXPAND_CLUSTER_JS,
     },
   },
-  output: [{ rssHeadlines: [{ title: 'Eksempel', url: 'https://www.vg.no/nyheter/i/test', outlet: 'VG' }], rssCount: 1 }],
+  output: [{ clusterId: '00000000-0000-0000-0000-000000000001', headlines: [], skipAgent: false }],
 });
 
-const collectAllHeadlines = node({
+const buildDeepResearchInput = node({
   type: 'n8n-nodes-base.code',
   version: 2,
   config: {
-    name: 'Collect all headlines',
+    name: 'Build deep research input',
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
-      jsCode: COLLECT_HEADLINES_JS,
+      jsCode: BUILD_DEEP_RESEARCH_INPUT_JS,
     },
   },
-  output: [{ headlines: [{ title: 'Eksempel', url: 'https://www.vg.no/nyheter/i/test/a', outlet: 'VG' }], headlineCount: 1 }],
+  output: [{ deepResearchText: 'SAK: ...', skipDeepResearch: false }],
+});
+
+const deepResearchAgent = node({
+  type: '@n8n/n8n-nodes-langchain.agent',
+  version: 3.1,
+  config: {
+    name: 'Deep research (Ollama)',
+    onError: 'continueErrorOutput',
+    parameters: {
+      promptType: 'define',
+      text: expr('{{ $json.deepResearchText }}'),
+      hasOutputParser: true,
+      options: {
+        systemMessage: DEEP_RESEARCH_SYSTEM,
+        maxIterations: 2,
+        returnIntermediateSteps: false,
+        enableStreaming: false,
+      },
+      subnodes: {
+        model: deepResearchOllamaModel,
+        outputParser: deepResearchOutputParser,
+      },
+    },
+  },
+  output: [
+    {
+      output: {
+        summary: 'Oppsummering',
+        political_choice: 'Valg',
+        poll_angles: ['Støtter du X?'],
+        confidence: 'medium',
+      },
+    },
+  ],
 });
 
 const fetchArticleBodies = node({
@@ -1504,7 +1767,7 @@ const generatePromptsAgent = node({
       hasOutputParser: false,
       options: {
         systemMessage: PROMPT_SYSTEM,
-        maxIterations: 10,
+        maxIterations: 8,
         returnIntermediateSteps: true,
         enableStreaming: false,
       },
@@ -1592,36 +1855,45 @@ const savePrompt = node({
 });
 
 sticky(
-  '## Forum trending prompts v6\\n\\nAI-moderering med læring fra godkjente/avslåtte eksempler. Ingen stor modererings-Code-node.',
+  '## Forum prompt synthesis v7 (flow 2)\\n\\nLeser forum_research_clusters → dyp research → JA/NEI-spørsmål. Discovery: forum-research-discovery.',
   [scheduleTrigger, scheduleTriggerAfternoon, webhookTrigger],
   { color: 5 }
 );
 
-const ingestPipeline = backfillSettings
-  .to(fetchExistingPrompts)
-  .to(fetchTrustedSources)
-  .to(fetchLongRunningIssues)
-  .to(fetchRssHeadlines)
-  .to(collectAllHeadlines)
+const clusterSynthesisPipeline = expandCluster
   .to(fetchArticleBodies)
-  .to(buildAgentInput)
+  .to(buildDeepResearchInput)
   .to(
     hasHeadlines.onTrue(
-      generatePromptsAgent
-        .to(buildModerationInput)
-        .to(moderatePromptsAgent)
-        .to(prepareSaves)
-        .to(savePrompt)
+      deepResearchAgent
+        .to(buildAgentInput)
+        .to(
+          generatePromptsAgent
+            .to(buildModerationInput)
+            .to(moderatePromptsAgent)
+            .to(prepareSaves)
+            .to(savePrompt)
+        )
+    )
+  );
+
+const synthesisPipeline = backfillSettings
+  .to(fetchExistingPrompts)
+  .to(fetchTrustedSources)
+  .to(fetchPendingClusters)
+  .to(
+    processOneCluster.onEachBatch(
+      clusterSynthesisPipeline.to(nextBatch(processOneCluster))
     )
   );
 
 export default workflow(
   'folkets-forum-trending-prompts',
-  'Folkets Stemme – Forum trending prompts'
+  'Folkets Stemme – Forum prompt synthesis'
 )
   .add(scheduleTrigger)
-  .to(ingestPipeline)
+  .to(synthesisPipeline)
   .add(scheduleTriggerAfternoon)
-  .to(ingestPipeline)
+  .to(synthesisPipeline)
   .add(webhookTrigger)
-  .to(ingestPipeline);
+  .to(synthesisPipeline);

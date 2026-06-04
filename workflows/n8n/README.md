@@ -58,35 +58,44 @@ Etter migrasjon `20260529120000_simplify_issue_ai_summaries.sql`:
 
 Kjør `supabase db push` etter pull.
 
-## Forum trending prompts
+## Forum Reels (v7 – to flows)
 
-Workflow-kilde: [`forum-trending-prompts.workflow.ts`](forum-trending-prompts.workflow.ts)
+| Flow | Kilde | Live (etter deploy) |
+|------|--------|---------------------|
+| **1 Discovery** | [`forum-research-discovery.workflow.ts`](forum-research-discovery.workflow.ts) | https://n8n.heyklever.app/workflow/mjiQBSdxVv0sAuMu |
+| **2 Synthesis** | [`forum-trending-prompts.workflow.ts`](forum-trending-prompts.workflow.ts) | https://n8n.heyklever.app/workflow/MloIdsnX7FozM4dv |
 
-**Live workflow:** https://n8n.heyklever.app/workflow/MloIdsnX7FozM4dv
+**v7:** [`FORUM-PROMPTS-v7.md`](FORUM-PROMPTS-v7.md) — discovery lagrer saker i `forum_research_clusters`; synthesis gjør dyp research → JA/NEI-spørsmål.
 
-**v6 flyt (AI-moderering + læring):** se [`FORUM-PROMPTS-v6.md`](FORUM-PROMPTS-v6.md) — v5 artikkelhenting: [`FORUM-PROMPTS-v5.md`](FORUM-PROMPTS-v5.md)
+**v6 moderering:** [`FORUM-PROMPTS-v6.md`](FORUM-PROMPTS-v6.md)
 
-1. **Fetch existing prompts** (+ approved/rejected examples) → trusted sources → long-running → RSS → Collect
-2. **Fetch article bodies** – brødtekst for topp 12 URL-er
-3. **Build agent input** → **Generate prompts (Ollama)**
-4. **Build moderation input** → **Moderate prompts (Ollama)** – lærer av eksempler, structured JSON
-5. **Prepare saves** → **Save prompt** (trusted → draft, AI-avslag → feedback-tabell)
+### Discovery (flow 1)
+
+1. RSS + SearXNG + klynging → **Discover stories (Ollama)**
+2. Lagrer i `forum_research_clusters` + `forum_research_articles` (cluster → Expand article saves → Save articles)
+3. Ved suksess: **Trigger forum synthesis** → workflow `MloIdsnX7FozM4dv`
+4. Webhook: `POST /webhook/folkets-forum-research-discovery`
+
+### Synthesis (flow 2)
+
+1. **Fetch pending clusters** (max 3) → **Expand cluster** → **Fetch article bodies**
+2. **Deep research (Ollama)** – sammenligner kilder
+3. **Generate prompts** → **Moderate prompts** → **Save prompt**
+4. Webhook: `POST /webhook/folkets-forum-prompts` (uendret env)
 
 Migrasjon **moderation feedback:** `20260603120000_forum_prompt_moderation_feedback.sql`
 
 Deploy:
 
 ```bash
-# v6 topology (første gang – erstatter «Moderation + route»)
-node scripts/build-n8n-forum-prompts-v6-topology-ops.mjs /tmp/n8n-v6-topology.json
+# Migrasjon: 20260603140000_forum_research_clusters.sql
 
-# kode + SQL + modereringsprompt
-node scripts/build-n8n-forum-prompts-ops.mjs /tmp/n8n-v6-code-ops.json
+# Ny discovery-workflow: validate_workflow → create_workflow_from_code
 
-# v5 topology (kun hvis «Fetch article bodies» mangler)
-node scripts/build-n8n-forum-prompts-v5-topology-ops.mjs /tmp/n8n-forum-prompts-v5-topology-ops.json
-
-# n8n MCP update_workflow (topology først ved nye noder, deretter code-ops)
+# Synthesis (MloIdsnX7FozM4dv): topology v7 først, deretter kode
+node scripts/build-n8n-forum-prompts-v7-topology-ops.mjs /tmp/n8n-v7-topology.json
+node scripts/build-n8n-forum-prompts-ops.mjs /tmp/n8n-v7-synthesis-ops.json
+node scripts/build-n8n-forum-research-discovery-ops.mjs /tmp/n8n-v7-discovery-ops.json
 ```
 
 **Opprydding feilaktige aktive prompts:** [`scripts/archive-misaligned-forum-prompts.sql`](../../scripts/archive-misaligned-forum-prompts.sql)
