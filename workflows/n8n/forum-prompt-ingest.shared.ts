@@ -151,10 +151,10 @@ function outletFromUrl(url) {
 
 function isGenericListing(url) {
   const u = String(url).toLowerCase();
-  if (/tv\\.nrk\\.no|radio\\.nrk\\.no/.test(u)) return true;
-  if (/\\/politikk\\/?$/.test(u) || /\\/valg\\/\\d+\\/resultat/.test(u)) return true;
-  if (/\\/nyheter\\/norsk-politikk/.test(u)) return true;
-  if (/\\/sport\\//.test(u) && !/politi|lov|forbud|regjering/.test(u)) return true;
+  if (/tv\\.nrk\\.no|radio\\.nrk\\.no/i.test(u)) return true;
+  if (/\\/politikk\\/?$/i.test(u) || /\\/valg\\/\\d+\\/resultat/i.test(u)) return true;
+  if (/\\/nyheter\\/norsk-politikk/i.test(u)) return true;
+  if (/\\/sport\\//i.test(u) && !/politi|lov|forbud|regjering/i.test(u)) return true;
   return false;
 }
 
@@ -284,10 +284,12 @@ headlines.sort((a, b) => (b.politicsScore || 0) - (a.politicsScore || 0));
 const clusters = [];
 for (const h of headlines) {
   let cluster = null;
+  let bestOverlap = 0;
   for (const c of clusters) {
-    if (tokenOverlap(h.tokens, c.representative) >= 2) {
+    const ov = tokenOverlap(h.tokens, c.representative);
+    if (ov >= 1 && ov > bestOverlap) {
+      bestOverlap = ov;
       cluster = c;
-      break;
     }
   }
   if (!cluster) {
@@ -295,13 +297,15 @@ for (const h of headlines) {
     clusters.push(cluster);
   }
   cluster.items.push(h);
+  h.isPolitical = (h.politicsScore || 0) >= 1 || !!h.longRunning;
 }
 
 const freshClusters = [];
 for (const c of clusters) {
   const dated = c.items.filter((i) => parseDate(i.publishedAt));
   const freshCount = c.items.filter((i) => isWithinRecency(i.publishedAt, i.longRunning)).length;
-  if (!c.items.some((i) => i.longRunning) && freshCount < 2) continue;
+  if (!c.items.some((i) => i.longRunning) && freshCount < 1) continue;
+  if (c.items.length < 2) continue;
   if (dated.length) {
     const newest = Math.max(...dated.map((i) => parseDate(i.publishedAt)));
     if ((Date.now() - newest) / 3600000 > maxArticleAgeHours) continue;

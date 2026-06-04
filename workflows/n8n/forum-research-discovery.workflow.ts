@@ -89,8 +89,13 @@ headlines.forEach((h, i) => indexByUrl.set(h.url, i));
 
 const lines = [];
 for (const c of ranked) {
-  const items = (c.items || []).filter((h) => h.isPolitical !== false || h.longRunning);
-  if (items.length < 3) continue;
+  const items = (c.items || []).filter((h) => {
+    if (h.longRunning) return true;
+    if (h.isPolitical === true) return true;
+    if (h.isPolitical === false) return false;
+    return (Number(h.politicsScore) || 0) >= 1;
+  });
+  if (items.length < 2) continue;
   lines.push('=== KLYNGE ' + c.id + ' (score=' + (c.score || 0) + ', spanDays=' + (c.spanDays || 0) + ') ===');
   for (const h of items.slice(0, 8)) {
     const idx = indexByUrl.get(h.url);
@@ -100,7 +105,22 @@ for (const c of ranked) {
   }
 }
 
-if (lines.length < 3) {
+if (!lines.length && headlines.length) {
+  const political = headlines
+    .filter((h) => h.longRunning || (Number(h.politicsScore) || 0) >= 1 || h.isPolitical !== false)
+    .slice(0, 18);
+  if (political.length >= 2) {
+    lines.push('=== RSS-SEED (agent: grupper til saker, suppler med SearXNG til minst 3 kilder per sak) ===');
+    for (const h of political) {
+      const idx = indexByUrl.get(h.url);
+      if (idx == null) continue;
+      const pub = h.publishedAt ? String(h.publishedAt).slice(0, 16) : '';
+      lines.push('[' + idx + '] ' + h.title + ' (' + h.outlet + (pub ? ', ' + pub : '') + ')\\n    ' + h.url);
+    }
+  }
+}
+
+if (!lines.length) {
   return [];
 }
 
@@ -439,9 +459,7 @@ const searxngDiscoveryTool = tool({
   config: {
     name: 'searxng_discovery',
     credentials: { searXngApi: newCredential('SearXNG account') },
-    parameters: {
-      options: { numResults: 8, language: 'nb', safesearch: 0 },
-    },
+    parameters: {},
   },
 });
 
@@ -600,7 +618,7 @@ const discoverStoriesAgent = node({
     parameters: {
       promptType: 'define',
       text: expr('{{ $json.discoveryText }}'),
-      hasOutputParser: true,
+      hasOutputParser: false,
       options: {
         systemMessage: DISCOVERY_SYSTEM,
         maxIterations: 4,
@@ -609,7 +627,6 @@ const discoverStoriesAgent = node({
       },
       subnodes: {
         model: discoveryOllamaModel,
-        outputParser: discoveryOutputParser,
         tools: [searxngDiscoveryTool],
       },
     },

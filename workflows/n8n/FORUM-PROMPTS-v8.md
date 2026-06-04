@@ -63,4 +63,8 @@ Kode-tweaks uten full topologi: `node scripts/build-n8n-forum-research-discovery
 **Etter SDK-deploy:** SDK `subnodes` eksporteres ikke alltid som n8n-noder. Kjør da:
 `node scripts/fix-forum-v8-ollama-subnodes.mjs` (legger til Ollama-modeller, parsere, SearXNG, check_duplicate + `ai_*`-koblinger).
 
+**SearXNG:** Ikke sett `options` (språk, `numResults`, osv.) i n8n — la instansen bruke egne defaults. Ved `Bad Request` fra tool-noden: sjekk SearXNG-credential (kun base-URL), ikke overstyring i workflow.
+
+**Code-noder:** `node scripts/patch-forum-v8-code-nodes.mjs` (unescaper `\\` fra TS → gyldig JS i n8n).
+
 Cron: kun discovery-workflow (`0 * * * *`). Fjern `:30` synthesis-cron.

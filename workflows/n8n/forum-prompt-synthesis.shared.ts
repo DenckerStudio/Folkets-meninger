@@ -321,7 +321,7 @@ function isValidPollCandidate(p) {
   if (!/^(Støtter du|Bør Norge|Skal |Er du enig i at|Mener du)/i.test(q)) return false;
   if (/funksjonskall|verktøy|JSON\\.parse|overskrift-mal/i.test(q)) return false;
   if (/tydeligere grep om|Stortinget følger opp/i.test(q)) return false;
-  if (/«[^»]{8,}»/.test(q)) return false;
+  if (/«[^»]{8,}»/i.test(q)) return false;
   return true;
 }
 
@@ -429,8 +429,8 @@ function rejectsQuestion(q) {
   if (question.length < 15 || question.length > 220) return 'for kort/langt';
   if (!/^(Støtter du|Bør Norge|Skal |Er du enig i at|Mener du)/i.test(question)) return 'ugyldig starter';
   if (/Stortinget følger opp|overskrift-mal|tydeligere grep om/i.test(question)) return 'forbudt mal';
-  if (/«[^»]{8,}»/.test(question)) return 'overskrift i anførselstegn';
-  if (/\\b20\\d{2}\\b/.test(question)) {
+  if (/«[^»]{8,}»/i.test(question)) return 'overskrift i anførselstegn';
+  if (/\\b20\\d{2}\\b/i.test(question)) {
     const years = question.match(/\\b20\\d{2}\\b/g) || [];
     if (years.some((y) => Number(y) < currentYear)) return 'utdatert år';
   }

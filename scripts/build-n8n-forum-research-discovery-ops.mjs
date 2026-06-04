@@ -36,7 +36,7 @@ function extractExport(from, name) {
   const re = new RegExp(`export const ${name} = \`([\\s\\S]*?)\`;`, 'm');
   const m = from.match(re);
   if (!m) throw new Error(`missing export ${name}`);
-  return m[1];
+  return m[1].replace(/\\\\/g, '\\');
 }
 
 function codeOp(nodeName, js) {

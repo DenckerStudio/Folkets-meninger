@@ -46,10 +46,10 @@ function extractArticleText(html) {
 
 function isFetchableArticleUrl(url) {
   const u = String(url).toLowerCase();
-  if (!/^https?:\\/\\//.test(u)) return false;
-  if (/folketsstemme\\.no|folkets-stemme\\.no/.test(u)) return false;
-  if (/tv\\.nrk\\.no|radio\\.nrk\\.no/.test(u)) return false;
-  return /(vg\\.no|nrk\\.no|aftenposten\\.no|dagbladet\\.no|e24\\.no|dn\\.no|nettavisen\\.no)/.test(u);
+  if (!/^https?:\\/\\//i.test(u)) return false;
+  if (/folketsstemme\\.no|folkets-stemme\\.no/i.test(u)) return false;
+  if (/tv\\.nrk\\.no|radio\\.nrk\\.no/i.test(u)) return false;
+  return /(vg\\.no|nrk\\.no|aftenposten\\.no|dagbladet\\.no|e24\\.no|dn\\.no|nettavisen\\.no)/i.test(u);
 }
 
 const enriched = [];
@@ -149,10 +149,10 @@ function extractArticleText(html) {
 
 function isFetchableArticleUrl(url) {
   const u = String(url).toLowerCase();
-  if (!/^https?:\\/\\//.test(u)) return false;
-  if (/folketsstemme\\.no|folkets-stemme\\.no/.test(u)) return false;
-  if (/tv\\.nrk\\.no|radio\\.nrk\\.no/.test(u)) return false;
-  return /(vg\\.no|nrk\\.no|aftenposten\\.no|dagbladet\\.no|e24\\.no|dn\\.no|nettavisen\\.no)/.test(u);
+  if (!/^https?:\\/\\//i.test(u)) return false;
+  if (/folketsstemme\\.no|folkets-stemme\\.no/i.test(u)) return false;
+  if (/tv\\.nrk\\.no|radio\\.nrk\\.no/i.test(u)) return false;
+  return /(vg\\.no|nrk\\.no|aftenposten\\.no|dagbladet\\.no|e24\\.no|dn\\.no|nettavisen\\.no)/i.test(u);
 }
 
 const enriched = [];
