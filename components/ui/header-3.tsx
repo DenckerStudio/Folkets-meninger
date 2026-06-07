@@ -131,10 +131,10 @@ export function Header() {
                           </li>
                           <li>
                             <NavMenuLink
-                              title="Forum-prompts"
-                              description="Godkjenning av dagens temaer"
+                              title="Forum Reels"
+                              description="Pipeline fra nyhetssak til publisering"
                               icon={Sparkles}
-                              href={routes.adminForumPrompts}
+                              href={`${routes.adminForumPrompts}?tab=pipeline`}
                               isActive={isAdminActive}
                             />
                           </li>

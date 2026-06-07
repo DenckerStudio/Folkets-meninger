@@ -1,21 +1,16 @@
 #!/usr/bin/env node
 /**
- * @deprecated v8 — synthesis lives in forum-research-discovery.workflow.ts
- * Use: node scripts/build-n8n-forum-research-discovery-ops.mjs
+ * Build n8n update_workflow payload from forum-trending-prompts.workflow.ts (v7 synthesis)
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const trendingPath = path.join(root, 'workflows/n8n/forum-trending-prompts.workflow.ts');
-if (!fs.existsSync(trendingPath)) {
-  console.error(
-    'forum-trending-prompts.workflow.ts removed in v8. Use build-n8n-forum-research-discovery-ops.mjs',
-  );
-  process.exit(1);
-}
-const src = fs.readFileSync(trendingPath, 'utf8');
+const src = fs.readFileSync(
+  path.join(root, 'workflows/n8n/forum-trending-prompts.workflow.ts'),
+  'utf8',
+);
 
 function extract(name) {
   const re = new RegExp(`const ${name} = \`([\\s\\S]*?)\`;`, 'm');

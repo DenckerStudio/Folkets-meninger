@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "deploy:scout": "node scripts/deploy-forum-scout-v11.mjs",
+    "deploy:forum-v12": "node scripts/deploy-forum-v12-workflows.mjs",
     "test:e2e": "playwright test",
     "test:unit": "npx tsx lib/forum/author-display.test.ts && npx tsx lib/forum/reports.test.ts && npx tsx lib/forum/admin-prompt-validation.test.ts && npx tsx lib/valgomat/scores.test.ts",
     "clean": "next clean"
@@ -32,6 +34,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@n8n/workflow-sdk": "^0.9.0",
     "@playwright/test": "^1.52.0",
     "@tailwindcss/postcss": "4.1.11",
     "@tailwindcss/typography": "^0.5.19",

@@ -12,5 +12,5 @@
 - Stortinget data comes from `data.stortinget.no` (public API).
 - AI summaries and forum prompts are produced externally via n8n + Ollama and stored in Supabase.
 - Forum Reels UI: `forum-prompt-carousel.tsx` shows sources as compact outlet chips (article links); Ja/Nei/Ikke interessert votes + separate discuss CTA; dashboard has no global `MobileNav` bottom bar (`navigation.tsx`); forum uses top `ForumMobileNav`.
-- Forum Reels n8n v8: én pipeline `mjiQBSdxVv0sAuMu` (`forum-research-discovery.workflow.ts` + `forum-prompt-ingest.shared.ts`, `forum-prompt-synthesis.shared.ts`, `forum-article-enrich.shared.ts`); arkiver `MloIdsnX7FozM4dv`; doc `workflows/n8n/FORUM-PROMPTS-v8.md`; v6 moderering uendret (`FORUM-PROMPTS-v6.md`).
+- Forum Reels n8n v12 (live): RSS ingest `6yy1ESY2Zy7cWgtF`, prompt generator `vOP2zPflfT0yBvDQ` – Regjeringen RSS → pending clusters → fetch + én Ollama-agent → transaksjonell lagring (`forum_prompts` draft, cluster `draft`); ingen processing-status; kilder `forum-regjeringen-rss-ingest.workflow.ts` / `forum-prompt-generator.workflow.ts`; admin pipeline `/dashboard/admin/forum-prompts?tab=pipeline`.
 - The repo expects validation via `npm run lint` and `npm run build`; no broad automated test suite assumed in workflows.

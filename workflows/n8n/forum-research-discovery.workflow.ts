@@ -1,8 +1,11 @@
 /**
- * Folkets Stemme – Forum research discovery + synthesis (v8 single pipeline)
- * RSS cluster → Discover (SearXNG tool) → enrich → save clusters/articles → per-cluster synthesis → forum_prompts
+ * @deprecated v12 — use forum-regjeringen-rss-ingest.workflow.ts + forum-prompt-generator.workflow.ts
+ * Folkets Stemme – Forum story scout (v11.1)
+ * Code: 4 RSS feeds → politics filter → token cluster → debatten prefetch
+ * AI: én agent velger 1 sak + SearXNG (fallback)
+ * Code: enrich → quality gate → dedup → transactional insert
  *
- * Webhook: folkets-forum-research-discovery
+ * Webhook: POST folkets-forum-research-discovery
  */
 import {
   workflow,
@@ -13,469 +16,69 @@ import {
   languageModel,
   tool,
   outputParser,
-  splitInBatches,
-  nextBatch,
+  ifElse,
   expr,
 } from '@n8n/workflow-sdk';
+import { DISCOVERY_CONTEXT_SQL, SCOUT_PICK_SYSTEM } from './forum-workflow.shared';
 import {
-  DISCOVERY_CONTEXT_SQL,
-  FETCH_RSS_DISCOVERY_JS,
-  RSS_CLUSTER_JS,
-} from './forum-prompt-ingest.shared';
-import {
-  DEEP_RESEARCH_SYSTEM,
-  JOURNALIST_SYSTEM,
-  EDITOR_SYSTEM,
-  BUILD_DEEP_RESEARCH_INPUT_JS,
-  BUILD_JOURNALIST_INPUT_JS,
-  BUILD_EDITOR_INPUT_JS,
-  FINALIZE_PROMPTS_JS,
-  PREPARE_SAVES_JS,
-  CHECK_DUPLICATE_TOOL_JS,
-  EXISTING_PROMPTS_SQL,
-  TRUSTED_SOURCES_SQL,
-  EXPAND_SAVED_CLUSTER_JS,
-  RESET_RUN_STATIC_JS,
-} from './forum-prompt-synthesis.shared';
-import { ENRICH_STORY_ARTICLES_JS } from './forum-article-enrich.shared';
+  SCOUT_INGEST_AND_CLUSTER_JS,
+  SCOUT_PREFETCH_DEBATTEN_JS,
+  SCOUT_LOG_EMPTY_INGEST_JS,
+  SCOUT_BUILD_INSERT_QUERY_JS,
+  SCOUT_ENRICH_ARTICLES_JS,
+  NRK_DEBATTEN_SEARXNG_HINT,
+} from './forum-scout-ingest.shared';
 
-const DISCOVERY_SYSTEM = `Du er nyhetsredaktør for «Folkets Stemme». Du skal finne 3–6 politiske saker som er gode kandidater for dyp research og senere JA/NEI-avstemninger.
-
-Du har verktøyet SearXNG for å supplere klynger med flere relevante artikler (norsk politikk, siste 72 timer).
-
-INPUT: Klynger med overskrifter (flere medier om samme sak). Du får EXISTING_PROMPTS og RECENT_CLUSTERS (siste 72t) – ikke foreslå samme tema på nytt.
-
-Oppgave:
-1. Velg kun klynger med tydelig politisk konflikt, forslag, vedtak eller valg folk kan ta stilling til
-2. Hver valgt klynge må ha minst 3 artikler; prioriter artikler publisert innen 72 timer
-3. Forklar kort hvorfor saken er interessant NÅ (ny utvikling, debatt, konsekvens for folk)
-4. Prioriter saker med flere kilder og nyere artikler
-
-AVSLÅ klynger som:
-- Ren sport, kjendis, kongehus uten politisk beslutning
-- Vage «debatt om X» uten konkret politisk handling
-- Allerede dekket av EXISTING_PROMPTS eller RECENT_CLUSTERS (nær-duplikat tema/tittel)
-- Hovedsakelig artikler eldre enn 72 timer uten tydelig ny vinkel
-
-Returner KUN gyldig JSON:
-{
-  "stories": [{
-    "cluster_id": 0,
-    "title": "Kort sakstittel (maks 100 tegn)",
-    "why_interesting": "1–2 setninger om politisk valg/konflikt",
-    "priority": 1,
-    "topic_tags": ["stikkord"],
-    "article_indices": [0,1,2,3],
-    "stortinget_issue_id": null
-  }]
-}
-
-article_indices = globale indekser fra klyngelisten (0, 1, 2, …). Minst 3 per sak.`;
-
-const BUILD_DISCOVERY_INPUT_JS = `const input = $input.first()?.json || {};
-const clusters = Array.isArray(input.clusters) ? input.clusters : [];
-const headlines = Array.isArray(input.headlines) ? input.headlines : [];
-const existingQuestions = Array.isArray(input.existingQuestions) ? input.existingQuestions : [];
-const recentClusterTitles = Array.isArray(input.recentClusterTitles) ? input.recentClusterTitles : [];
-const discoveryLimit = Math.max(3, Math.min(8, Number(input.discoveryLimit) || 6));
-
-if (!clusters.length) {
-  return [];
-}
-
-const ranked = [...clusters].sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 14);
-const indexByUrl = new Map();
-headlines.forEach((h, i) => indexByUrl.set(h.url, i));
-
-const lines = [];
-for (const c of ranked) {
-  const items = (c.items || []).filter((h) => {
-    if (h.longRunning) return true;
-    if (h.isPolitical === true) return true;
-    if (h.isPolitical === false) return false;
-    return (Number(h.politicsScore) || 0) >= 1;
-  });
-  if (items.length < 2) continue;
-  lines.push('=== KLYNGE ' + c.id + ' (score=' + (c.score || 0) + ', spanDays=' + (c.spanDays || 0) + ') ===');
-  for (const h of items.slice(0, 8)) {
-    const idx = indexByUrl.get(h.url);
-    if (idx == null) continue;
-    const pub = h.publishedAt ? String(h.publishedAt).slice(0, 16) : '';
-    lines.push('[' + idx + '] ' + h.title + ' (' + h.outlet + (pub ? ', ' + pub : '') + ')\\n    ' + h.url);
-  }
-}
-
-if (!lines.length && headlines.length) {
-  const political = headlines
-    .filter((h) => h.longRunning || (Number(h.politicsScore) || 0) >= 1 || h.isPolitical !== false)
-    .slice(0, 18);
-  if (political.length >= 2) {
-    lines.push('=== RSS-SEED (agent: grupper til saker, suppler med SearXNG til minst 3 kilder per sak) ===');
-    for (const h of political) {
-      const idx = indexByUrl.get(h.url);
-      if (idx == null) continue;
-      const pub = h.publishedAt ? String(h.publishedAt).slice(0, 16) : '';
-      lines.push('[' + idx + '] ' + h.title + ' (' + h.outlet + (pub ? ', ' + pub : '') + ')\\n    ' + h.url);
-    }
-  }
-}
-
-if (!lines.length) {
-  return [];
-}
-
-const existingBlock = existingQuestions.length
-  ? '\\n\\nEXISTING_PROMPTS (ikke foreslå samme tema):\\n' + existingQuestions.slice(0, 35).map((q) => '- ' + q).join('\\n')
-  : '';
-const recentBlock = recentClusterTitles.length
-  ? '\\n\\nRECENT_CLUSTERS (siste 72t – unngå duplikat tema):\\n' + recentClusterTitles.slice(0, 25).map((t) => '- ' + t).join('\\n')
-  : '';
-
-const discoveryText = [
-  'KLYNGER (velg ' + discoveryLimit + ' beste saker; prioriter artikler < 72t):',
-  lines.join('\\n\\n'),
-  existingBlock,
-  recentBlock,
-  '\\n\\nBruk SearXNG ved behov for flere kilder. Returner stories som JSON.',
-].join('\\n');
-
-return [{
-  json: {
-    ...input,
-    discoveryText: discoveryText.slice(0, 14000),
-    discoveryLimit,
-  },
-}];`;
-
-const PREPARE_CLUSTER_SAVES_JS = `const gen = $input.first()?.json || {};
-const ingest = $('Enrich story articles').first()?.json || $('Build discovery input').first()?.json || {};
-const headlines = Array.isArray(ingest.headlines) ? ingest.headlines : [];
-const recentClusterTitles = Array.isArray(ingest.recentClusterTitles) ? ingest.recentClusterTitles : [];
-
-function stripCodeFence(text) {
-  let t = String(text).trim();
-  const fence = '\u0060\u0060\u0060';
-  let i = t.toLowerCase().indexOf(fence + 'json');
-  if (i >= 0) t = t.slice(i + 7);
-  i = t.indexOf(fence);
-  if (i >= 0) t = t.slice(0, i);
-  return t.trim();
-}
-
-function parseStories(raw) {
-  for (const c of [raw.output, raw.text, raw]) {
-    if (!c) continue;
-    if (typeof c === 'object' && Array.isArray(c.stories)) return c.stories;
-    if (typeof c === 'string') {
-      const s = stripCodeFence(c);
-      const a = s.indexOf('{');
-      const b = s.lastIndexOf('}');
-      try {
-        const p = JSON.parse(a >= 0 ? s.slice(a, b + 1) : s);
-        if (p?.stories) return p.stories;
-      } catch (_) {}
-    }
-  }
-  return [];
-}
-
-function sqlEsc(s) {
-  return String(s ?? '').replace(/'/g, "''");
-}
-
-function normTitle(t) {
-  return String(t || '').toLowerCase().replace(/[^a-zæøå0-9\\s]/g, ' ').replace(/\\s+/g, ' ').trim();
-}
-
-function isDupTitle(title) {
-  const n = normTitle(title);
-  return recentClusterTitles.some((r) => normTitle(r) === n);
-}
-
-const out = [];
-for (const story of parseStories(gen).slice(0, 6)) {
-  const title = String(story.title || '').trim();
-  const articles = (story.article_indices || [])
-    .map((i) => headlines[Number(i)])
-    .filter((h) => h?.url && h?.title);
-  if (!title || articles.length < 3 || isDupTitle(title)) continue;
-
-  const unique = [];
-  const seen = new Set();
-  for (const a of articles) {
-    if (seen.has(a.url)) continue;
-    seen.add(a.url);
-    unique.push(a);
-  }
-  if (unique.length < 3) continue;
-
-  const politicsScore = unique.reduce((s, a) => s + (Number(a.politicsScore) || 0), 0);
-  const topicTags = (story.topic_tags || ['politikk']).map(String);
-  const key = 'c' + story.cluster_id + '-' + normTitle(title).slice(0, 40);
-  const rationale = String(story.why_interesting || '').slice(0, 500);
-  const stortId = story.stortinget_issue_id ? "'" + sqlEsc(String(story.stortinget_issue_id)) + "'" : 'NULL';
-  const query =
-    "INSERT INTO public.forum_research_clusters (external_cluster_key, title, discovery_rationale, topic_tags, politics_score, source_count, span_days, stortinget_issue_id, status) VALUES ('" +
-    sqlEsc(key) +
-    "', '" +
-    sqlEsc(title) +
-    "', '" +
-    sqlEsc(rationale) +
-    "', ARRAY[" +
-    topicTags.map((t) => "'" + sqlEsc(t) + "'").join(',') +
-    "], " +
-    politicsScore +
-    ', ' +
-    unique.length +
-    ", 0, " +
-    stortId +
-    ", 'pending') RETURNING id";
-
-  out.push({
-    json: {
-      query,
-      title,
-      articleRows: unique,
-      discoveryRationale: rationale,
-      topicTags,
-      stortingetIssueId: story.stortinget_issue_id || null,
-    },
-  });
-}
-
-if (!out.length) {
-  return [{ json: { skipSave: true, query: 'SELECT 1 AS ok' } }];
-}
-return out;`;
-
-const EXPAND_ARTICLE_SAVES_JS = `const items = $input.all();
-const prepItems = $('Prepare cluster saves').all();
-const results = [];
-
-function sqlEsc(s) {
-  return String(s ?? '').replace(/'/g, "''");
-}
-
-function sqlText(val) {
-  if (val == null || val === '') return 'NULL';
-  return "'" + sqlEsc(String(val).slice(0, 12000)) + "'";
-}
-
-for (let i = 0; i < items.length; i++) {
-  const saved = items[i].json || {};
-  const clusterId = saved.id;
-  if (!clusterId || saved.skipSave) continue;
-
-  const prep = prepItems[i]?.json || {};
-  const articles = Array.isArray(prep.articleRows) ? prep.articleRows : [];
-  if (!articles.length) continue;
-
-  for (let sortOrder = 0; sortOrder < articles.length; sortOrder++) {
-    const a = articles[sortOrder];
-    if (!a?.url || !a?.title) continue;
-    const pub = a.publishedAt ? "'" + sqlEsc(new Date(a.publishedAt).toISOString()) + "'" : 'NULL';
-    const articleSql =
-      "INSERT INTO public.forum_research_articles (cluster_id, title, url, outlet, published_at, description, image_url, video_url, article_text, article_fetch_status, is_primary, sort_order) VALUES ('" +
-      sqlEsc(clusterId) +
-      "', '" +
-      sqlEsc(a.title) +
-      "', '" +
-      sqlEsc(a.url) +
-      "', '" +
-      sqlEsc(a.outlet || '') +
-      "', " +
-      pub +
-      ', ' +
-      (a.description ? "'" + sqlEsc(String(a.description).slice(0, 500)) + "'" : 'NULL') +
-      ', ' +
-      (a.imageUrl ? "'" + sqlEsc(a.imageUrl) + "'" : 'NULL') +
-      ', ' +
-      (a.videoUrl ? "'" + sqlEsc(a.videoUrl) + "'" : 'NULL') +
-      ', ' +
-      sqlText(a.articleText) +
-      ', ' +
-      (a.articleFetchStatus ? "'" + sqlEsc(a.articleFetchStatus) + "'" : 'NULL') +
-      ', ' +
-      (sortOrder === 0 ? 'true' : 'false') +
-      ', ' +
-      sortOrder +
-      ') ON CONFLICT (cluster_id, url) DO UPDATE SET article_text = EXCLUDED.article_text, article_fetch_status = EXCLUDED.article_fetch_status';
-    results.push({
-      json: {
-        articleSql,
-        clusterId,
-        title: prep.title,
-        discoveryRationale: prep.discoveryRationale,
-        topicTags: prep.topicTags,
-        stortingetIssueId: prep.stortingetIssueId,
-        articleRows: articles,
-      },
-    });
-  }
-}
-
-return results.length ? results : [{ json: { skipArticles: true, articleSql: 'SELECT 1 AS ok' } }];`;
-
-const QUEUE_SAVED_CLUSTERS_JS = `const saves = $('Save cluster').all();
-const prepItems = $('Prepare cluster saves').all();
-const out = [];
-
-for (let i = 0; i < saves.length; i++) {
-  const row = saves[i].json || {};
-  if (!row.id || row.skipSave) continue;
-  const prep = prepItems[i]?.json || {};
-  const articleRows = Array.isArray(prep.articleRows) ? prep.articleRows : [];
-  if (!articleRows.length) continue;
-  out.push({
-    json: {
-      clusterId: row.id,
-      title: prep.title,
-      discoveryRationale: prep.discoveryRationale || '',
-      topicTags: prep.topicTags || [],
-      stortingetIssueId: prep.stortingetIssueId || null,
-      articleRows,
-    },
-  });
-}
-
-if (!out.length) return [];
-return out;`;
-
-const MARK_CLUSTER_COMPLETED_JS = `const fin = $('Finalize prompts').first()?.json || {};
-const clusterId = fin.clusterId || $('Expand from saved').first()?.json?.clusterId;
-if (!clusterId) {
-  return [{ json: { skipMark: true, query: 'SELECT 1 AS ok' } }];
-}
-const esc = (s) => String(s ?? '').replace(/'/g, "''");
-const drEsc = esc(JSON.stringify(fin.deepResearch || {}));
-const query =
-  "UPDATE public.forum_research_clusters SET status = 'completed', deep_research_json = '" +
-  drEsc +
-  "'::jsonb, processed_at = now(), updated_at = now() WHERE id = '" +
-  esc(clusterId) +
-  "'";
-return [{ json: { query, clusterId } }];`;
-
-const discoveryOllamaModel = languageModel({
+const scoutAgentOllamaModel = languageModel({
   type: '@n8n/n8n-nodes-langchain.lmChatOllama',
   version: 1,
   config: {
-    name: 'Discovery Ollama Chat Model',
+    name: 'Scout Ollama Chat Model',
     credentials: { ollamaApi: newCredential('Ollama account') },
     parameters: {
       model: 'llama3.1:8b',
-      options: { think: false, temperature: 0.2, format: 'json', numPredict: 1600, numCtx: 8192 },
+      options: { think: false, temperature: 0.15, numPredict: 1200, numCtx: 8192 },
     },
   },
 });
 
-const synthesisOllamaModel = languageModel({
+const scoutParserOllamaModel = languageModel({
   type: '@n8n/n8n-nodes-langchain.lmChatOllama',
   version: 1,
   config: {
-    name: 'Synthesis Ollama Chat Model',
+    name: 'Scout parser Ollama',
     credentials: { ollamaApi: newCredential('Ollama account') },
     parameters: {
-      model: 'llama3.1:8b',
-      options: { think: false, temperature: 0.15, format: 'default', numPredict: 2400, numCtx: 8192 },
+      model: 'llama3.2:3b-text-q4_K_M',
+      options: { think: false, temperature: 0, format: 'json', numPredict: 1400, numCtx: 8192 },
     },
   },
 });
 
-const deepResearchOllamaModel = languageModel({
-  type: '@n8n/n8n-nodes-langchain.lmChatOllama',
-  version: 1,
-  config: {
-    name: 'Deep research Ollama Chat Model',
-    credentials: { ollamaApi: newCredential('Ollama account') },
-    parameters: {
-      model: 'llama3.1:8b',
-      options: { think: false, temperature: 0.15, format: 'json', numPredict: 2000, numCtx: 8192 },
-    },
-  },
-});
-
-const editorOllamaModel = languageModel({
-  type: '@n8n/n8n-nodes-langchain.lmChatOllama',
-  version: 1,
-  config: {
-    name: 'Editor Ollama Chat Model',
-    credentials: { ollamaApi: newCredential('Ollama account') },
-    parameters: {
-      model: 'llama3.1:8b',
-      options: { think: false, temperature: 0.1, format: 'json', numPredict: 1400, numCtx: 8192 },
-    },
-  },
-});
-
-const discoveryOutputParser = outputParser({
+const scoutOutputParser = outputParser({
   type: '@n8n/n8n-nodes-langchain.outputParserStructured',
   version: 1.3,
   config: {
-    name: 'Discovery JSON parser',
+    name: 'Scout JSON parser',
+    onError: 'continueRegularOutput',
     parameters: {
       schemaType: 'fromJson',
       jsonSchemaExample:
-        '{"stories":[{"cluster_id":0,"title":"Kort sak","why_interesting":"Politisk debatt","priority":1,"topic_tags":["politikk"],"article_indices":[0,1,2]}]}',
+        '{"selected_candidate_index":0,"why_interesting":"Politisk valg","topic_tags":["politikk"],"extra_articles":[{"title":"Tittel","url":"https://nrk.no/1","outlet":"NRK"}],"debatten_article":null}',
       autoFix: true,
     },
-    subnodes: { model: discoveryOllamaModel },
+    subnodes: { model: scoutParserOllamaModel },
   },
 });
 
-const deepResearchOutputParser = outputParser({
-  type: '@n8n/n8n-nodes-langchain.outputParserStructured',
-  version: 1.3,
-  config: {
-    name: 'Deep research JSON parser',
-    parameters: {
-      schemaType: 'fromJson',
-      jsonSchemaExample:
-        '{"story_title":"Sak","summary":"Kort","shared_facts":["fakta"],"disagreements":["uenighet"],"political_choice":"Valg","poll_angles":["vinkel"],"source_quality":"god","confidence":"high"}',
-      autoFix: true,
-    },
-    subnodes: { model: deepResearchOllamaModel },
-  },
-});
-
-const editorOutputParser = outputParser({
-  type: '@n8n/n8n-nodes-langchain.outputParserStructured',
-  version: 1.3,
-  config: {
-    name: 'Editor JSON parser',
-    parameters: {
-      schemaType: 'fromJson',
-      jsonSchemaExample:
-        '{"approved_prompts":[{"question":"Støtter du X?","novelty_explanation":"…","source_indices":[0,1,2],"topic_tags":["politikk"],"sensitivity":"low","status":"active"}],"rejected":[]}',
-      autoFix: true,
-    },
-    subnodes: { model: editorOllamaModel },
-  },
-});
-
-const searxngDiscoveryTool = tool({
+const searxngScoutTool = tool({
   type: '@n8n/n8n-nodes-langchain.toolSearXng',
   version: 1,
   config: {
-    name: 'searxng_discovery',
+    name: 'SearXNG',
     credentials: { searXngApi: newCredential('SearXNG account') },
-    parameters: {},
-  },
-});
-
-const checkDuplicateTool = tool({
-  type: '@n8n/n8n-nodes-langchain.toolCode',
-  version: 1.3,
-  config: {
-    name: 'check_duplicate',
     parameters: {
-      description:
-        'Check duplicate forum poll questions. Call with JSON: {"question":"Støtter du ...?"}. Returns DUPLICATE or OK.',
-      language: 'javaScript',
-      specifyInputSchema: true,
-      schemaType: 'fromJson',
-      jsonSchemaExample: '{"question":"Støtter du nasjonalt forbud mot lasere?"}',
-      jsCode: CHECK_DUPLICATE_TOOL_JS,
+      options: { numResults: 5, language: 'nb', safesearch: 0 },
     },
   },
 });
@@ -484,9 +87,9 @@ const scheduleTrigger = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
   version: 1.3,
   config: {
-    name: 'Hourly 00',
+    name: 'Every 30 min',
     parameters: {
-      rule: { interval: [{ field: 'cronExpression', expression: '0 * * * *' }] },
+      rule: { interval: [{ field: 'cronExpression', expression: '*/30 * * * *' }] },
     },
   },
   output: [{}],
@@ -506,40 +109,6 @@ const webhookTrigger = trigger({
   output: [{ body: {} }],
 });
 
-const backfillSettings = node({
-  type: 'n8n-nodes-base.set',
-  version: 3.4,
-  config: {
-    name: 'Backfill settings',
-    parameters: {
-      mode: 'manual',
-      includeOtherFields: true,
-      assignments: {
-        assignments: [
-          { id: 'discovery-limit', name: 'discoveryLimit', value: '6', type: 'string' },
-          { id: 'batch-limit', name: 'batchLimit', value: '10', type: 'string' },
-          { id: 'max-age', name: 'maxArticleAgeHours', value: '72', type: 'string' },
-        ],
-      },
-    },
-  },
-  output: [{ discoveryLimit: '6', batchLimit: '10' }],
-});
-
-const resetRunStatic = node({
-  type: 'n8n-nodes-base.code',
-  version: 2,
-  config: {
-    name: 'Reset run dedup state',
-    parameters: {
-      mode: 'runOnceForAllItems',
-      language: 'javaScript',
-      jsCode: RESET_RUN_STATIC_JS,
-    },
-  },
-  output: [{ reset: true }],
-});
-
 const fetchDiscoveryContext = node({
   type: 'n8n-nodes-base.postgres',
   version: 2.6,
@@ -549,460 +118,618 @@ const fetchDiscoveryContext = node({
     credentials: { postgres: newCredential('Fokets Meninger') },
     parameters: { operation: 'executeQuery', query: DISCOVERY_CONTEXT_SQL },
   },
-  output: [{ existing_questions: [], recent_cluster_titles: [] }],
+  output: [{ existing_questions: [], recent_story_titles: [], recent_story_keys: [] }],
 });
 
-const fetchLongRunningIssues = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
-  config: {
-    name: 'Fetch long-running saker',
-    credentials: { postgres: newCredential('Fokets Meninger') },
-    parameters: {
-      operation: 'executeQuery',
-      query:
-        "WITH issues AS (SELECT id, title, first_seen_at FROM public.stortinget_issues WHERE status = 'pending' AND first_seen_at IS NOT NULL AND first_seen_at < now() - interval '14 days' ORDER BY first_seen_at ASC LIMIT 10) SELECT id, title, first_seen_at FROM issues UNION ALL SELECT '_none_', 'Ingen langvarige saker', now() WHERE NOT EXISTS (SELECT 1 FROM issues)",
-    },
-  },
-  output: [{ id: '200329', title: 'Eksempel sak', first_seen_at: '2025-01-01T00:00:00Z' }],
-});
-
-const fetchRssHeadlines = node({
+const ingestAndCluster = node({
   type: 'n8n-nodes-base.code',
   version: 2,
   config: {
-    name: 'Fetch RSS headlines',
+    name: 'Ingest and cluster',
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
-      jsCode: FETCH_RSS_DISCOVERY_JS,
+      jsCode: SCOUT_INGEST_AND_CLUSTER_JS,
     },
   },
-  output: [{ rssHeadlines: [], rssCount: 0 }],
+  output: [{ candidates: [], stats: { candidates_count: 0 } }],
 });
 
-const clusterHeadlines = node({
+const prefetchDebatten = node({
   type: 'n8n-nodes-base.code',
   version: 2,
   config: {
-    name: 'Cluster headlines',
+    name: 'Prefetch debatten',
+    executeOnce: true,
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
-      jsCode: RSS_CLUSTER_JS,
+      jsCode: SCOUT_PREFETCH_DEBATTEN_JS,
     },
   },
-  output: [{ clusters: [], headlines: [], headlineCount: 0 }],
 });
 
-const buildDiscoveryInput = node({
+const logEmptyIngest = node({
   type: 'n8n-nodes-base.code',
   version: 2,
   config: {
-    name: 'Build discovery input',
+    name: 'Log empty ingest',
+    executeOnce: true,
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
-      jsCode: BUILD_DISCOVERY_INPUT_JS,
+      jsCode: SCOUT_LOG_EMPTY_INGEST_JS,
     },
   },
-  output: [{ discoveryText: 'KLYNGER...' }],
 });
 
-const discoverStoriesAgent = node({
-  type: '@n8n/n8n-nodes-langchain.agent',
-  version: 3.1,
+const hasCandidates = ifElse({
+  version: 2.2,
   config: {
-    name: 'Discover stories (Ollama)',
-    onError: 'continueErrorOutput',
+    name: 'Has candidates?',
     parameters: {
-      promptType: 'define',
-      text: expr('{{ $json.discoveryText }}'),
-      hasOutputParser: false,
-      options: {
-        systemMessage: DISCOVERY_SYSTEM,
-        maxIterations: 4,
-        returnIntermediateSteps: false,
-        enableStreaming: false,
-      },
-      subnodes: {
-        model: discoveryOllamaModel,
-        tools: [searxngDiscoveryTool],
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
+        conditions: [
+          {
+            leftValue:
+              "={{ (() => { const c = $('Prefetch debatten').first().json.candidates || []; return c.length >= 1 && c[0].articles?.length >= 2; })() }}",
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'equals' },
+          },
+        ],
+        combinator: 'and',
       },
     },
   },
-  output: [{ output: { stories: [{ cluster_id: 0, title: 'Eksempel', article_indices: [0, 1, 2] }] } }],
 });
 
-const enrichStoryArticles = node({
-  type: 'n8n-nodes-base.code',
-  version: 2,
+const buildPickPrompt = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
   config: {
-    name: 'Enrich story articles',
-    parameters: {
-      mode: 'runOnceForAllItems',
-      language: 'javaScript',
-      jsCode: ENRICH_STORY_ARTICLES_JS,
-    },
-  },
-  output: [{ headlines: [], articlesFetched: 0 }],
-});
-
-const prepareClusterSaves = node({
-  type: 'n8n-nodes-base.code',
-  version: 2,
-  config: {
-    name: 'Prepare cluster saves',
-    parameters: {
-      mode: 'runOnceForAllItems',
-      language: 'javaScript',
-      jsCode: PREPARE_CLUSTER_SAVES_JS,
-    },
-  },
-  output: [{ query: 'INSERT INTO public.forum_research_clusters...', title: 'Eksempel' }],
-});
-
-const saveCluster = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
-  config: {
-    name: 'Save cluster',
-    credentials: { postgres: newCredential('Fokets Meninger') },
-    parameters: {
-      operation: 'executeQuery',
-      query: expr('{{ $json.query }}'),
-    },
-  },
-  output: [{ id: 'uuid-cluster-id' }],
-});
-
-const expandArticleSaves = node({
-  type: 'n8n-nodes-base.code',
-  version: 2,
-  config: {
-    name: 'Expand article saves',
-    parameters: {
-      mode: 'runOnceForAllItems',
-      language: 'javaScript',
-      jsCode: EXPAND_ARTICLE_SAVES_JS,
-    },
-  },
-  output: [{ articleSql: 'INSERT INTO public.forum_research_articles...' }],
-});
-
-const saveArticles = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
-  config: {
-    name: 'Save articles',
-    credentials: { postgres: newCredential('Fokets Meninger') },
-    parameters: {
-      operation: 'executeQuery',
-      query: expr('{{ $json.articleSql }}'),
-    },
-  },
-  output: [{ success: true }],
-});
-
-const fetchExistingPrompts = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
-  config: {
-    name: 'Fetch existing prompts',
+    name: 'Build pick prompt',
     executeOnce: true,
-    credentials: { postgres: newCredential('Fokets Meninger') },
-    parameters: { operation: 'executeQuery', query: EXISTING_PROMPTS_SQL },
-  },
-  output: [{ existing_questions: [], max_sort_order: 0 }],
-});
-
-const fetchTrustedSources = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
-  config: {
-    name: 'Fetch trusted sources',
-    executeOnce: true,
-    credentials: { postgres: newCredential('Fokets Meninger') },
-    parameters: { operation: 'executeQuery', query: TRUSTED_SOURCES_SQL },
-  },
-  output: [{ trusted_sources: [] }],
-});
-
-const queueSavedClusters = node({
-  type: 'n8n-nodes-base.code',
-  version: 2,
-  config: {
-    name: 'Queue saved clusters',
     parameters: {
-      mode: 'runOnceForAllItems',
-      language: 'javaScript',
-      jsCode: QUEUE_SAVED_CLUSTERS_JS,
+      mode: 'manual',
+      includeOtherFields: false,
+      assignments: {
+        assignments: [
+          {
+            id: 'pick-text',
+            name: 'pickText',
+            value:
+              `={{ (() => { const ctx = $('Fetch discovery context').first().json; const ingest = $('Prefetch debatten').first().json; const ex = (ctx.existing_questions || []).slice(0, 15).map((q) => '- ' + q).join('\\n'); const rec = (ctx.recent_story_titles || []).slice(0, 12).map((t) => '- ' + t).join('\\n'); const keys = (ctx.recent_story_keys || []).slice(0, 15).map((k) => '- ' + k).join('\\n'); const debPrefetch = (ingest.debatten_prefetch || []).map((d, i) => d ? '[' + i + '] ' + d.title + ' (' + d.url + ')' : '[' + i + '] (ingen)').join('\\n'); const cards = (ingest.candidates || []).map((c, i) => { const arts = (c.articles || []).slice(0, 4).map((a, j) => '  [' + j + '] ' + a.title + ' (' + a.outlet + ')').join('\\n'); return '[' + i + '] ' + c.story_title + ' (score ' + c.politics_score + ', ' + c.outlet_count + ' medier)\\n' + arts; }).join('\\n\\n'); const debHint = ${JSON.stringify(NRK_DEBATTEN_SEARXNG_HINT)}; const stats = ingest.stats || {}; return 'INGEST_STATS: rss_raw=' + (stats.rss_raw || 0) + ' junk=' + (stats.filtered_junk || 0) + ' politics=' + (stats.filtered_politics || 0) + ' candidates=' + (stats.candidates_count || 0) + '\\n\\nSAKSKLYNGER (velg ÉN):\\n' + (cards || '(ingen)') + '\\n\\nDEBATTEN_PREFETCH:\\n' + (debPrefetch || '(ingen)') + '\\n\\nNRK_DEBATTEN: ' + debHint + '\\n\\nEXISTING_PROMPTS:\\n' + (ex || '(ingen)') + '\\n\\nRECENT_STORIES:\\n' + (rec || '(ingen)') + '\\n\\nRECENT_KEYS:\\n' + (keys || '(ingen)'); })() }}`,
+            type: 'string',
+          },
+        ],
+      },
     },
   },
-  output: [{ clusterId: 'uuid', title: 'Eksempel', articleRows: [] }],
 });
 
-const processOneCluster = splitInBatches({
-  version: 3,
-  config: {
-    name: 'Process one cluster',
-    parameters: { batchSize: 1 },
-  },
-});
-
-const expandFromSaved = node({
-  type: 'n8n-nodes-base.code',
-  version: 2,
-  config: {
-    name: 'Expand from saved',
-    parameters: {
-      mode: 'runOnceForEachItem',
-      language: 'javaScript',
-      jsCode: EXPAND_SAVED_CLUSTER_JS,
-    },
-  },
-  output: [{ clusterId: 'uuid', headlines: [], skipAgent: false }],
-});
-
-const buildDeepResearchInput = node({
-  type: 'n8n-nodes-base.code',
-  version: 2,
-  config: {
-    name: 'Build deep research input',
-    parameters: {
-      mode: 'runOnceForAllItems',
-      language: 'javaScript',
-      jsCode: BUILD_DEEP_RESEARCH_INPUT_JS,
-    },
-  },
-  output: [{ deepResearchText: 'SAK: ...' }],
-});
-
-const deepResearchAgent = node({
+const storyScoutAgent = node({
   type: '@n8n/n8n-nodes-langchain.agent',
   version: 3.1,
   config: {
-    name: 'Deep research (Ollama)',
+    name: 'Story scout (Ollama)',
+    executeOnce: true,
     onError: 'continueErrorOutput',
     parameters: {
       promptType: 'define',
-      text: expr('{{ $json.deepResearchText }}'),
+      text: expr('{{ $json.pickText }}'),
       hasOutputParser: true,
       options: {
-        systemMessage: DEEP_RESEARCH_SYSTEM,
-        maxIterations: 2,
-        returnIntermediateSteps: false,
-        enableStreaming: false,
-      },
-      subnodes: {
-        model: deepResearchOllamaModel,
-        outputParser: deepResearchOutputParser,
-      },
-    },
-  },
-  output: [{ output: { summary: 'Oppsummering', political_choice: 'Valg', confidence: 'medium' } }],
-});
-
-const buildJournalistInput = node({
-  type: 'n8n-nodes-base.code',
-  version: 2,
-  config: {
-    name: 'Build journalist input',
-    parameters: {
-      mode: 'runOnceForAllItems',
-      language: 'javaScript',
-      jsCode: BUILD_JOURNALIST_INPUT_JS,
-    },
-  },
-  output: [{ headlinesText: 'KILDER...', skipAgent: false }],
-});
-
-const journalistAgent = node({
-  type: '@n8n/n8n-nodes-langchain.agent',
-  version: 3.1,
-  config: {
-    name: 'Journalist (Ollama)',
-    onError: 'continueErrorOutput',
-    parameters: {
-      promptType: 'define',
-      text: expr('{{ $json.headlinesText }}'),
-      hasOutputParser: false,
-      options: {
-        systemMessage: JOURNALIST_SYSTEM,
-        maxIterations: 6,
-        returnIntermediateSteps: true,
-        enableStreaming: false,
-      },
-      subnodes: {
-        model: synthesisOllamaModel,
-        tools: [checkDuplicateTool],
-      },
-    },
-  },
-  output: [{ output: { prompts: [{ question: 'Støtter du X?', source_indices: [0, 1, 2] }] } }],
-});
-
-const buildEditorInput = node({
-  type: 'n8n-nodes-base.code',
-  version: 2,
-  config: {
-    name: 'Build editor input',
-    parameters: {
-      mode: 'runOnceForAllItems',
-      language: 'javaScript',
-      jsCode: BUILD_EDITOR_INPUT_JS,
-    },
-  },
-  output: [{ moderationText: 'KANDIDAT...', candidateCount: 1 }],
-});
-
-const editorAgent = node({
-  type: '@n8n/n8n-nodes-langchain.agent',
-  version: 3.1,
-  config: {
-    name: 'Editor (Ollama)',
-    onError: 'continueErrorOutput',
-    parameters: {
-      promptType: 'define',
-      text: expr('{{ $json.moderationText }}'),
-      hasOutputParser: true,
-      options: {
-        systemMessage: EDITOR_SYSTEM,
+        systemMessage: SCOUT_PICK_SYSTEM,
         maxIterations: 3,
         returnIntermediateSteps: false,
         enableStreaming: false,
       },
       subnodes: {
-        model: editorOllamaModel,
-        outputParser: editorOutputParser,
+        model: scoutAgentOllamaModel,
+        outputParser: scoutOutputParser,
+        tools: [searxngScoutTool],
       },
     },
   },
-  output: [
-    {
-      output: {
-        approved_prompts: [{ question: 'Støtter du X?', source_indices: [0, 1, 2], status: 'active' }],
-        rejected: [],
+});
+
+const normalizePick = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Normalize pick',
+    executeOnce: true,
+    parameters: {
+      mode: 'manual',
+      includeOtherFields: false,
+      assignments: {
+        assignments: [
+          {
+            id: 'story-title',
+            name: 'story_title',
+            value:
+              "={{ (() => { const out = $json.output || {}; const idx = Number.isFinite(Number(out.selected_candidate_index)) ? Number(out.selected_candidate_index) : 0; const cands = $('Prefetch debatten').first().json.candidates || []; const picked = cands[idx] || cands[0] || {}; return String(picked.story_title || '').slice(0, 160); })() }}",
+            type: 'string',
+          },
+          {
+            id: 'why',
+            name: 'why_interesting',
+            value:
+              "={{ $json.output?.why_interesting || 'Politisk sak fra dagens nyhetsbilde.' }}",
+            type: 'string',
+          },
+          {
+            id: 'tags',
+            name: 'topic_tags',
+            value:
+              "={{ (() => { const t = $json.output?.topic_tags; if (Array.isArray(t) && t.length) return t.map(String); return ['politikk']; })() }}",
+            type: 'array',
+          },
+          {
+            id: 'story-key',
+            name: 'story_key',
+            value:
+              "={{ (() => { const out = $json.output || {}; const idx = Number.isFinite(Number(out.selected_candidate_index)) ? Number(out.selected_candidate_index) : 0; const cands = $('Prefetch debatten').first().json.candidates || []; const picked = cands[idx] || cands[0] || {}; return picked.story_key || String(picked.story_title || '').toLowerCase().replace(/[^a-zæøå0-9]+/gi, ' ').trim().slice(0, 80); })() }}",
+            type: 'string',
+          },
+          {
+            id: 'politics-score',
+            name: 'politics_score',
+            value:
+              "={{ (() => { const out = $json.output || {}; const idx = Number.isFinite(Number(out.selected_candidate_index)) ? Number(out.selected_candidate_index) : 0; const cands = $('Prefetch debatten').first().json.candidates || []; return (cands[idx] || cands[0] || {}).politics_score || 0; })() }}",
+            type: 'number',
+          },
+          {
+            id: 'candidate-index',
+            name: 'candidate_index',
+            value:
+              "={{ (() => { const out = $json.output || {}; return Number.isFinite(Number(out.selected_candidate_index)) ? Number(out.selected_candidate_index) : 0; })() }}",
+            type: 'number',
+          },
+          {
+            id: 'scout-meta',
+            name: 'scout_metadata',
+            value:
+              "={{ (() => { const out = $json.output || {}; const idx = Number.isFinite(Number(out.selected_candidate_index)) ? Number(out.selected_candidate_index) : 0; const ingest = $('Prefetch debatten').first().json; const picked = (ingest.candidates || [])[idx] || (ingest.candidates || [])[0] || {}; const prefetched = (ingest.debatten_prefetch || [])[idx]; const deb = out.debatten_article || prefetched; const articles = Array.isArray(picked.articles) ? picked.articles : []; const fetchStatuses = articles.map(() => 'pending'); return { outlet_count: picked.outlet_count, outlets: picked.outlets, cluster_score: picked.cluster_score, ingest_stats: ingest.stats, debatten_used: !!(deb && deb.url), debatten_prefetched: !!prefetched, selected_index: idx, fetch_statuses: fetchStatuses }; })() }}",
+            type: 'object',
+          },
+          {
+            id: 'articles',
+            name: 'articles',
+            value:
+              "={{ (() => { const out = $json.output || {}; const idx = Number.isFinite(Number(out.selected_candidate_index)) ? Number(out.selected_candidate_index) : 0; const ingest = $('Prefetch debatten').first().json; const picked = (ingest.candidates || [])[idx] || (ingest.candidates || [])[0] || {}; let articles = Array.isArray(picked.articles) ? [...picked.articles] : []; const urls = new Set(articles.map((a) => a.url).filter(Boolean)); const prefetched = (ingest.debatten_prefetch || [])[idx]; const deb = out.debatten_article || prefetched; for (const a of [...(out.extra_articles || []), deb].filter(Boolean)) { if (a?.url && !urls.has(a.url)) { articles.push({ title: a.title, url: a.url, outlet: a.outlet || 'Nyhet', description: a.description || null, published_at: a.published_at || null, image_url: a.image_url || null }); urls.add(a.url); } } return articles.slice(0, 6); })() }}",
+            type: 'array',
+          },
+        ],
       },
     },
-  ],
+  },
 });
 
-const finalizePrompts = node({
+const enrichArticles = node({
   type: 'n8n-nodes-base.code',
   version: 2,
   config: {
-    name: 'Finalize prompts',
+    name: 'Enrich articles',
+    executeOnce: true,
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
-      jsCode: FINALIZE_PROMPTS_JS,
+      jsCode: SCOUT_ENRICH_ARTICLES_JS,
     },
   },
-  output: [{ approvedPrompts: [], clusterId: 'uuid' }],
 });
 
-const prepareSaves = node({
-  type: 'n8n-nodes-base.code',
-  version: 2,
+const updateScoutMetadata = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
   config: {
-    name: 'Prepare saves',
+    name: 'Update scout metadata',
+    executeOnce: true,
     parameters: {
-      mode: 'runOnceForAllItems',
-      language: 'javaScript',
-      jsCode: PREPARE_SAVES_JS,
+      mode: 'manual',
+      includeOtherFields: true,
+      assignments: {
+        assignments: [
+          {
+            id: 'scout-meta',
+            name: 'scout_metadata',
+            value:
+              "={{ (() => { const d = $json; const meta = { ...(d.scout_metadata || {}) }; const arts = d.articles || []; meta.fetch_statuses = arts.map((a) => a.source_payload?.fetch_status || 'unknown'); meta.enrich_stats = d.enrich_stats; return meta; })() }}",
+            type: 'object',
+          },
+        ],
+      },
     },
   },
-  output: [{ sql: 'INSERT INTO public.forum_prompts...' }],
 });
 
-const savePrompt = node({
+const passesQualityGate = ifElse({
+  version: 2.2,
+  config: {
+    name: 'Quality gate',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
+        conditions: [
+          {
+            leftValue:
+              "={{ (() => { const d = $('Update scout metadata').first().json; return (d.quality_source_count || 0) >= 2 && (d.articles || []).length >= 2 && String(d.story_title || '').trim().length >= 15; })() }}",
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'equals' },
+          },
+        ],
+        combinator: 'and',
+      },
+    },
+  },
+});
+
+const checkDuplicateStory = node({
   type: 'n8n-nodes-base.postgres',
   version: 2.6,
   config: {
-    name: 'Save prompt',
+    name: 'Check duplicate',
+    executeOnce: true,
     credentials: { postgres: newCredential('Fokets Meninger') },
     parameters: {
       operation: 'executeQuery',
-      query: expr('{{ $json.sql }}'),
+      query:
+        "={{ (() => { const d = $('Update scout metadata').first().json; const esc = (s) => String(s || '').replace(/'/g, \"''\"); const title = esc(d.story_title); const urls = (d.articles || []).map((a) => esc(a.url)).filter(Boolean); const inList = urls.length ? urls.map((u) => `'${u}'`).join(',') : \"''\"; return `SELECT (EXISTS (SELECT 1 FROM public.forum_research_clusters c WHERE c.created_at > now() - interval '72 hours' AND c.status NOT IN ('rejected', 'failed') AND (lower(trim(c.title)) = lower(trim('${title}')) OR (length(trim('${title}')) >= 12 AND (lower(trim(c.title)) LIKE '%' || lower(trim('${title}')) || '%' OR lower(trim('${title}')) LIKE '%' || lower(trim(c.title)) || '%'))))) AS duplicate_title, (SELECT COUNT(DISTINCT a.url)::int FROM public.forum_research_articles a JOIN public.forum_research_clusters c ON c.id = a.cluster_id WHERE c.created_at > now() - interval '72 hours' AND c.status NOT IN ('rejected', 'failed') AND a.url IN (${inList})) AS url_overlap`; })() }}",
     },
   },
-  output: [{ success: true }],
 });
 
-const markClusterCompleted = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+const prepareInsert = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
   config: {
-    name: 'Mark cluster completed',
-    credentials: { postgres: newCredential('Fokets Meninger') },
+    name: 'Prepare insert',
+    executeOnce: true,
     parameters: {
-      operation: 'executeQuery',
-      query: expr('{{ $json.query }}'),
+      mode: 'manual',
+      includeOtherFields: false,
+      assignments: {
+        assignments: [
+          {
+            id: 'story-title',
+            name: 'story_title',
+            value: "={{ $('Update scout metadata').first().json.story_title }}",
+            type: 'string',
+          },
+          {
+            id: 'why',
+            name: 'why_interesting',
+            value: "={{ $('Update scout metadata').first().json.why_interesting }}",
+            type: 'string',
+          },
+          {
+            id: 'tags',
+            name: 'topic_tags',
+            value: "={{ $('Update scout metadata').first().json.topic_tags }}",
+            type: 'array',
+          },
+          {
+            id: 'articles',
+            name: 'articles',
+            value: "={{ $('Update scout metadata').first().json.articles }}",
+            type: 'array',
+          },
+          {
+            id: 'story-key',
+            name: 'story_key',
+            value: "={{ $('Update scout metadata').first().json.story_key }}",
+            type: 'string',
+          },
+          {
+            id: 'politics-score',
+            name: 'politics_score',
+            value: "={{ $('Update scout metadata').first().json.politics_score }}",
+            type: 'number',
+          },
+          {
+            id: 'scout-meta',
+            name: 'scout_metadata',
+            value: "={{ $('Update scout metadata').first().json.scout_metadata }}",
+            type: 'object',
+          },
+          {
+            id: 'candidate-index',
+            name: 'candidate_index',
+            value: "={{ $('Update scout metadata').first().json.candidate_index ?? 0 }}",
+            type: 'number',
+          },
+          {
+            id: 'dup-title',
+            name: 'duplicate_title',
+            value: '={{ $json.duplicate_title }}',
+            type: 'boolean',
+          },
+          {
+            id: 'url-overlap',
+            name: 'url_overlap',
+            value: '={{ $json.url_overlap }}',
+            type: 'number',
+          },
+        ],
+      },
     },
   },
-  output: [{ success: true }],
 });
 
-const markClusterCompletedPrep = node({
+const notDuplicate = ifElse({
+  version: 2.2,
+  config: {
+    name: 'Not duplicate?',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
+        conditions: [
+          {
+            leftValue:
+              "={{ $json.duplicate_title === true || ($json.url_overlap || 0) >= 3 || ($json.articles || []).length < 2 || String($json.story_title || '').trim().length < 15 }}",
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'notEquals' },
+          },
+        ],
+        combinator: 'and',
+      },
+    },
+  },
+});
+
+const buildInsertQuery = node({
   type: 'n8n-nodes-base.code',
   version: 2,
   config: {
-    name: 'Prepare mark completed',
+    name: 'Build insert query',
+    executeOnce: true,
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
-      jsCode: MARK_CLUSTER_COMPLETED_JS,
+      jsCode: SCOUT_BUILD_INSERT_QUERY_JS,
     },
   },
-  output: [{ query: 'UPDATE public.forum_research_clusters...' }],
+});
+
+const insertClusterTransaction = node({
+  type: 'n8n-nodes-base.postgres',
+  version: 2.6,
+  config: {
+    name: 'Insert cluster transaction',
+    executeOnce: true,
+    credentials: { postgres: newCredential('Fokets Meninger') },
+    parameters: {
+      operation: 'executeQuery',
+      query: '={{ $json.query }}',
+    },
+  },
+});
+
+const prepareSecondCandidate = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Prepare second candidate',
+    executeOnce: true,
+    parameters: {
+      mode: 'manual',
+      includeOtherFields: false,
+      assignments: {
+        assignments: [
+          {
+            id: 'story-title',
+            name: 'story_title',
+            value:
+              "={{ (() => { const ingest = $('Prefetch debatten').first().json; const second = (ingest.candidates || [])[1]; return String(second?.story_title || '').slice(0, 160); })() }}",
+            type: 'string',
+          },
+          {
+            id: 'why',
+            name: 'why_interesting',
+            value:
+              "={{ (() => { const ingest = $('Prefetch debatten').first().json; const second = (ingest.candidates || [])[1]; return 'Alternativ politisk sak fra dagens nyhetsbilde: ' + (second?.story_title || ''); })() }}",
+            type: 'string',
+          },
+          {
+            id: 'tags',
+            name: 'topic_tags',
+            value: "={{ ['politikk'] }}",
+            type: 'array',
+          },
+          {
+            id: 'story-key',
+            name: 'story_key',
+            value:
+              "={{ (() => { const ingest = $('Prefetch debatten').first().json; const second = (ingest.candidates || [])[1]; return second?.story_key || ''; })() }}",
+            type: 'string',
+          },
+          {
+            id: 'politics-score',
+            name: 'politics_score',
+            value:
+              "={{ (() => { const ingest = $('Prefetch debatten').first().json; return (ingest.candidates || [])[1]?.politics_score || 0; })() }}",
+            type: 'number',
+          },
+          {
+            id: 'candidate-index',
+            name: 'candidate_index',
+            value: '={{ 1 }}',
+            type: 'number',
+          },
+          {
+            id: 'scout-meta',
+            name: 'scout_metadata',
+            value:
+              "={{ (() => { const ingest = $('Prefetch debatten').first().json; const second = (ingest.candidates || [])[1] || {}; const deb = (ingest.debatten_prefetch || [])[1]; return { outlet_count: second.outlet_count, outlets: second.outlets, cluster_score: second.cluster_score, ingest_stats: ingest.stats, debatten_used: !!deb, debatten_prefetched: !!deb, selected_index: 1, second_candidate: true, fetch_statuses: (second.articles || []).map(() => 'pending') }; })() }}",
+            type: 'object',
+          },
+          {
+            id: 'articles',
+            name: 'articles',
+            value:
+              "={{ (() => { const ingest = $('Prefetch debatten').first().json; const second = (ingest.candidates || [])[1]; let articles = Array.isArray(second?.articles) ? [...second.articles] : []; const deb = (ingest.debatten_prefetch || [])[1]; if (deb?.url && !articles.some((a) => a.url === deb.url)) articles.push(deb); return articles.slice(0, 6); })() }}",
+            type: 'array',
+          },
+        ],
+      },
+    },
+  },
+});
+
+const hasSecondCandidate = ifElse({
+  version: 2.2,
+  config: {
+    name: 'Has second candidate?',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
+        conditions: [
+          {
+            leftValue:
+              "={{ (() => { const ingest = $('Prefetch debatten').first().json; const idx = $('Prepare insert').first().json.candidate_index ?? 0; if (idx !== 0) return false; const first = (ingest.candidates || [])[0]; const second = (ingest.candidates || [])[1]; return !!(second && second.story_key && second.story_key !== first?.story_key && (second.articles || []).length >= 2); })() }}",
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'equals' },
+          },
+        ],
+        combinator: 'and',
+      },
+    },
+  },
+});
+
+const prepareFallbackCandidate = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Prepare fallback candidate',
+    executeOnce: true,
+    parameters: {
+      mode: 'manual',
+      includeOtherFields: false,
+      assignments: {
+        assignments: [
+          {
+            id: 'story-title',
+            name: 'story_title',
+            value:
+              "={{ (() => { const ingest = $('Prefetch debatten').first().json; const idx = ($('Prepare insert').first().json.candidate_index ?? 0) + 1; const picked = (ingest.candidates || [])[idx]; return String(picked?.story_title || '').slice(0, 160); })() }}",
+            type: 'string',
+          },
+          {
+            id: 'why',
+            name: 'why_interesting',
+            value:
+              "={{ (() => { const ingest = $('Prefetch debatten').first().json; const idx = ($('Prepare insert').first().json.candidate_index ?? 0) + 1; const picked = (ingest.candidates || [])[idx]; return 'Fallback politisk sak: ' + (picked?.story_title || ''); })() }}",
+            type: 'string',
+          },
+          {
+            id: 'tags',
+            name: 'topic_tags',
+            value: "={{ ['politikk'] }}",
+            type: 'array',
+          },
+          {
+            id: 'story-key',
+            name: 'story_key',
+            value:
+              "={{ (() => { const ingest = $('Prefetch debatten').first().json; const idx = ($('Prepare insert').first().json.candidate_index ?? 0) + 1; return (ingest.candidates || [])[idx]?.story_key || ''; })() }}",
+            type: 'string',
+          },
+          {
+            id: 'politics-score',
+            name: 'politics_score',
+            value:
+              "={{ (() => { const ingest = $('Prefetch debatten').first().json; const idx = ($('Prepare insert').first().json.candidate_index ?? 0) + 1; return (ingest.candidates || [])[idx]?.politics_score || 0; })() }}",
+            type: 'number',
+          },
+          {
+            id: 'candidate-index',
+            name: 'candidate_index',
+            value:
+              "={{ (() => { return ($('Prepare insert').first().json.candidate_index ?? 0) + 1; })() }}",
+            type: 'number',
+          },
+          {
+            id: 'scout-meta',
+            name: 'scout_metadata',
+            value:
+              "={{ (() => { const ingest = $('Prefetch debatten').first().json; const idx = ($('Prepare insert').first().json.candidate_index ?? 0) + 1; const picked = (ingest.candidates || [])[idx] || {}; const deb = (ingest.debatten_prefetch || [])[idx]; return { outlet_count: picked.outlet_count, outlets: picked.outlets, cluster_score: picked.cluster_score, ingest_stats: ingest.stats, debatten_used: !!deb, debatten_prefetched: !!deb, selected_index: idx, fallback: true, fetch_statuses: (picked.articles || []).map(() => 'pending') }; })() }}",
+            type: 'object',
+          },
+          {
+            id: 'articles',
+            name: 'articles',
+            value:
+              "={{ (() => { const ingest = $('Prefetch debatten').first().json; const idx = ($('Prepare insert').first().json.candidate_index ?? 0) + 1; const picked = (ingest.candidates || [])[idx]; let articles = Array.isArray(picked?.articles) ? [...picked.articles] : []; const deb = (ingest.debatten_prefetch || [])[idx]; if (deb?.url && !articles.some((a) => a.url === deb.url)) articles.push(deb); return articles.slice(0, 6); })() }}",
+            type: 'array',
+          },
+        ],
+      },
+    },
+  },
+});
+
+const hasFallbackCandidate = ifElse({
+  version: 2.2,
+  config: {
+    name: 'Has fallback candidate?',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
+        conditions: [
+          {
+            leftValue:
+              "={{ (() => { const curIdx = $('Prepare insert').first().json.candidate_index ?? 0; if (curIdx >= 1) return false; const ingest = $('Prefetch debatten').first().json; const idx = curIdx + 1; const picked = (ingest.candidates || [])[idx]; return !!(picked && picked.story_key && String($('Prepare fallback candidate').first().json.story_title || '').trim().length >= 15 && (picked.articles || []).length >= 2); })() }}",
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'equals' },
+          },
+        ],
+        combinator: 'and',
+      },
+    },
+  },
 });
 
 sticky(
-  '## Forum research v8 (single pipeline)\\n\\nRSS cluster → Discover (+ SearXNG tool) → enrich → save → per-cluster: deep research → journalist (1 spørsmål) → editor → forum_prompts. Ingen Execute Workflow til MloIdsnX7FozM4dv.',
+  '## Forum story scout v11.1\\n\\nDedup kun ved insert. Ingest uten DB-filter.\\nDebatten prefetch + agent. Transaksjonell insert. Cron */30.',
   [scheduleTrigger, webhookTrigger],
   { color: 4 }
 );
 
-const clusterSynthesisPipeline = expandFromSaved
-  .to(buildDeepResearchInput)
-  .to(deepResearchAgent)
-  .to(buildJournalistInput)
-  .to(journalistAgent)
-  .to(buildEditorInput)
-  .to(editorAgent)
-  .to(finalizePrompts)
-  .to(prepareSaves)
-  .to(savePrompt)
-  .to(markClusterCompletedPrep)
-  .to(markClusterCompleted)
-  .to(nextBatch(processOneCluster));
+const enrichChain = enrichArticles.to(updateScoutMetadata);
 
-const discoverySavePipeline = discoverStoriesAgent
-  .to(enrichStoryArticles)
-  .to(prepareClusterSaves)
-  .to(saveCluster)
-  .to(expandArticleSaves)
-  .to(saveArticles)
-  .to(fetchExistingPrompts)
-  .to(fetchTrustedSources)
-  .to(queueSavedClusters)
+const insertPipeline = buildInsertQuery.to(insertClusterTransaction);
+
+const secondCandidateBranch = hasSecondCandidate.onTrue(
+  prepareSecondCandidate.to(enrichChain),
+);
+
+const savePipeline = checkDuplicateStory
+  .to(prepareInsert)
   .to(
-    processOneCluster.onEachBatch(clusterSynthesisPipeline)
+    notDuplicate
+      .onTrue(insertPipeline.to(secondCandidateBranch))
+      .onFalse(
+        prepareFallbackCandidate.to(hasFallbackCandidate.onTrue(enrichChain)),
+      ),
   );
 
-const discoveryPipeline = backfillSettings
-  .to(resetRunStatic)
-  .to(fetchDiscoveryContext)
-  .to(fetchLongRunningIssues)
-  .to(fetchRssHeadlines)
-  .to(clusterHeadlines)
-  .to(buildDiscoveryInput)
-  .to(discoverySavePipeline);
+const postEnrichPipeline = enrichChain.to(passesQualityGate.onTrue(savePipeline));
+
+const pickPipeline = storyScoutAgent.to(normalizePick).to(postEnrichPipeline);
+
+const scoutPipeline = buildPickPrompt.to(pickPipeline);
+
+const discoveryPipeline = fetchDiscoveryContext
+  .to(ingestAndCluster)
+  .to(prefetchDebatten)
+  .to(hasCandidates.onTrue(scoutPipeline).onFalse(logEmptyIngest));
 
 export default workflow(
   'folkets-forum-research-discovery',
-  'Folkets Stemme – Forum research discovery (v8)'
+  'Folkets Stemme – Forum story scout (v11.1)'
 )
   .add(scheduleTrigger)
   .to(discoveryPipeline)

@@ -27,6 +27,7 @@ export const routes = {
   horing: (id: string) => `${DASHBOARD_PREFIX}/horinger/${id}`,
   forumTopic: (id: string) => `${DASHBOARD_PREFIX}/forum/${id}`,
   adminForumPrompts: `${DASHBOARD_PREFIX}/admin/forum-prompts`,
+  adminForumClusters: `${DASHBOARD_PREFIX}/admin/forum-clusters`,
   adminForumReports: `${DASHBOARD_PREFIX}/admin/forum-reports`,
   adminStats: `${DASHBOARD_PREFIX}/admin/statistikk`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,

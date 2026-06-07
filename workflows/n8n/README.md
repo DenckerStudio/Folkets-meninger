@@ -58,46 +58,30 @@ Etter migrasjon `20260529120000_simplify_issue_ai_summaries.sql`:
 
 Kjør `supabase db push` etter pull.
 
-## Forum Reels (v8 – én pipeline)
+## Forum Reels (v12 – Regjeringen RSS + prompt generator)
 
-| Kilde | Live |
-|--------|------|
-| [`forum-research-discovery.workflow.ts`](forum-research-discovery.workflow.ts) | https://n8n.heyklever.app/workflow/mjiQBSdxVv0sAuMu |
+| Steg | Kilde | Webhook |
+|------|--------|---------|
+| **1 Regjeringen RSS** | [`forum-regjeringen-rss-ingest.workflow.ts`](forum-regjeringen-rss-ingest.workflow.ts) | `POST /webhook/folkets-forum-regjeringen-rss` |
+| **2 Prompt generator** | [`forum-prompt-generator.workflow.ts`](forum-prompt-generator.workflow.ts) | schedule + `POST /webhook/folkets-forum-prompt-generator` |
 
-**v8:** [`FORUM-PROMPTS-v8.md`](FORUM-PROMPTS-v8.md) — RSS (72t) → Discover (+ SearXNG tool) → enrich → save → Researcher → Journalist → Editor → `forum_prompts`.
+**Dok:** [`FORUM-PROMPTS-v12.md`](FORUM-PROMPTS-v12.md)
 
-**Arkivert:** v7 synthesis workflow `MloIdsnX7FozM4dv` (kildefil `forum-trending-prompts.workflow.ts` fjernet i v8).
+**Live:** RSS `6yy1ESY2Zy7cWgtF` · Prompt generator `vOP2zPflfT0yBvDQ`
 
-**v6 moderering:** [`FORUM-PROMPTS-v6.md`](FORUM-PROMPTS-v6.md)
+**Env:** `N8N_FORUM_SYNTHESIS_WEBHOOK_URL` → `https://n8n.heyklever.app/webhook/folkets-forum-prompt-generator`
 
-1. Webhook: `POST /webhook/folkets-forum-research-discovery`
-2. Cron: `0 * * * *` (kun denne workflowen)
-3. Migrasjoner: `20260603140000_forum_research_clusters.sql`, `20260603120000_forum_prompt_moderation_feedback.sql`
+**Deploy:**
 
-Deploy: n8n MCP `validate_workflow` + oppdater `mjiQBSdxVv0sAuMu`; deaktiver `MloIdsnX7FozM4dv`.
+```bash
+node scripts/bundle-forum-regjeringen-rss-workflow.mjs /tmp/regjeringen-rss.ts
+node scripts/bundle-forum-prompt-generator-workflow.mjs /tmp/prompt-generator.ts
+npm run deploy:forum-v12 -- --publish
+```
+
+Arkivér v10/v11 scout/journalist/editor etter deploy (allerede arkivert — se FORUM-PROMPTS-v12.md).
 
 **Opprydding feilaktige aktive prompts:** [`scripts/archive-misaligned-forum-prompts.sql`](../../scripts/archive-misaligned-forum-prompts.sql)
-
-**v2 flyt:**
-
-1. **Fetch long-running saker** (Postgres: `status=pending`, `first_seen_at` > 14 dager)
-2. **Fetch RSS headlines** (parallell HTTP + bilde/video fra RSS)
-3. **Collect all headlines** — flere SearXNG-queries, clustering, outlet-diversitet, opptil 28 artikler
-4. **Ollama** → 6–10 prompts med 3–8 kilder per reel + valgfri `stortinget_issue_id`
-5. `sensitivity: high` → `draft`; `low` → `active` (7 dagers `expires_at`)
-6. UI: karusell med opptil 18 reels, utvidbare kilder, badge for langvarig sak
-
-| Nøkkel | Backfill settings |
-|--------|-------------------|
-| `batchLimit` | `10` |
-| `searxngBaseUrl` | f.eks. `https://searxng.heyklever.app` |
-| `longRunningMinDays` | `14` |
-
-Crons: 06:00 og 14:00 (n8n schedule triggers).
-
-Webhook: `POST /webhook/folkets-forum-prompts` (env `N8N_FORUM_PROMPTS_WEBHOOK_URL`).
-
-Krever migrasjon `20260531120000_production_readiness.sql` (`first_seen_at`, `stortinget_issue_id` på prompts).
 
 ## App cron (erstatter Vercel Cron)
 

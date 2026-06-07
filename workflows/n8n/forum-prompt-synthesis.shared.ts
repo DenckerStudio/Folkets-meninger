@@ -318,11 +318,52 @@ function normQuestion(q) {
 function isValidPollCandidate(p) {
   const q = String(p?.question || '').trim();
   if (q.length < 15 || q.length > 220) return false;
-  if (!/^(Støtter du|Bør Norge|Skal |Er du enig i at|Mener du)/i.test(q)) return false;
+  if (!/^(Støtter du|Bør Norge|Skal |Er du enig i at)/i.test(q)) return false;
   if (/funksjonskall|verktøy|JSON\\.parse|overskrift-mal/i.test(q)) return false;
-  if (/tydeligere grep om|Stortinget følger opp/i.test(q)) return false;
-  if (/«[^»]{8,}»/i.test(q)) return false;
+  if (/tydeligere grep om/i.test(q)) return false;
   return true;
+}
+
+function questionFromCluster(headlines, indices) {
+  const titles = indices.map((i) => String(headlines[i]?.title || '')).filter(Boolean);
+  const joined = titles.join(' ').toLowerCase();
+  const anchor = titles[0].replace(/\\s*[-–|].*$/, '').trim().slice(0, 70);
+  if (/shada/i.test(joined)) return 'Skal norske politikere ta grep etter Shada-saken?';
+  if (/ukrain/i.test(joined)) return 'Støtter du økt norsk støtte til Ukraina?';
+  if (/boligpris|boligmarked/i.test(joined)) return 'Bør Norge gjøre mer for å dempe boligprisveksten?';
+  if (/statsbudsjett/i.test(joined)) return 'Støtter du regjeringens prioriteringer i statsbudsjettet?';
+  return 'Støtter du at Stortinget følger opp saken: «' + anchor + '»?';
+}
+
+function fallbackCandidatesFromHeadlines(headlines, existingQuestions) {
+  const seen = new Set((existingQuestions || []).map((q) => normQuestion(q)));
+  const byCluster = new Map();
+  for (let i = 0; i < headlines.length; i++) {
+    const h = headlines[i];
+    if (!h || (!h.isPolitical && !h.longRunning)) continue;
+    const cid = h.clusterId != null ? h.clusterId : 'solo-' + i;
+    if (!byCluster.has(cid)) byCluster.set(cid, []);
+    byCluster.get(cid).push(i);
+  }
+  const ranked = [...byCluster.entries()].sort((a, b) => b[1].length - a[1].length);
+  const out = [];
+  for (const [, indices] of ranked) {
+    if (indices.length < 3) continue;
+    const question = questionFromCluster(headlines, indices);
+    const key = normQuestion(question);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      question,
+      novelty_explanation: 'Fallback fra ' + indices.length + ' kilder i samme nyhetsklynge.',
+      source_indices: indices.slice(0, 6),
+      topic_tags: ['politikk', 'samfunn'],
+      sensitivity: 'low',
+      status: 'draft',
+    });
+    if (out.length >= 6) break;
+  }
+  return out;
 }
 
 let candidates = parseGeneratorOutput(genItem).filter((p) => p && isValidPollCandidate(p));
@@ -364,10 +405,6 @@ export const FINALIZE_PROMPTS_JS = `const editorItem = $input.first()?.json || {
 const journalist = $('Build journalist input').first()?.json || {};
 const headlines = Array.isArray(journalist.headlines) ? journalist.headlines : [];
 const deepResearch = journalist.deepResearch || {};
-const existingQuestions = Array.isArray(journalist.existingQuestions) ? journalist.existingQuestions : [];
-const staticData = $getWorkflowStaticData('global');
-const sameRun = Array.isArray(staticData.savedQuestionsThisRun) ? staticData.savedQuestionsThisRun : [];
-const currentYear = new Date().getFullYear();
 
 function stripCodeFence(text) {
   let t = String(text).trim();
@@ -403,85 +440,21 @@ function parseEditorOutput(rawItem) {
   return { approved: [], rejected: [] };
 }
 
-function norm(q) {
-  return String(q || '').toLowerCase().replace(/[^a-zæøå0-9\\s]/g, ' ').replace(/\\s+/g, ' ').trim();
-}
-
-function tokens(q) {
-  return norm(q).split(' ').filter((w) => w.length > 3);
-}
-
-function isNearDuplicate(candidate, baseline) {
-  const c = norm(candidate);
-  const b = norm(baseline);
-  if (!c || !b) return false;
-  if (c === b) return true;
-  const ct = tokens(c);
-  const bt = new Set(tokens(b));
-  if (!ct.length) return false;
-  let overlap = 0;
-  for (const w of ct) if (bt.has(w)) overlap++;
-  return overlap >= 4 && overlap / ct.length >= 0.55;
-}
-
-function rejectsQuestion(q) {
-  const question = String(q || '').trim();
-  if (question.length < 15 || question.length > 220) return 'for kort/langt';
-  if (!/^(Støtter du|Bør Norge|Skal |Er du enig i at|Mener du)/i.test(question)) return 'ugyldig starter';
-  if (/Stortinget følger opp|overskrift-mal|tydeligere grep om/i.test(question)) return 'forbudt mal';
-  if (/«[^»]{8,}»/i.test(question)) return 'overskrift i anførselstegn';
-  if (/\\b20\\d{2}\\b/i.test(question)) {
-    const years = question.match(/\\b20\\d{2}\\b/g) || [];
-    if (years.some((y) => Number(y) < currentYear)) return 'utdatert år';
-  }
-  if (/\\bstøtte\\b/i.test(question) && !/\\bat\\b/i.test(question) && /^Støtter du\\b/i.test(question)) {
-    return 'grammatikk (manglende at)';
-  }
-  return null;
-}
-
-let { approved, rejected } = parseEditorOutput(editorItem);
-const extraRejected = [];
-
-approved = approved.filter((p) => {
-  const q = String(p?.question || '').trim();
-  const reason = rejectsQuestion(q);
-  if (reason) {
-    extraRejected.push({ question: q, reason });
-    return false;
-  }
-  for (const e of [...existingQuestions, ...sameRun]) {
-    if (isNearDuplicate(q, e)) {
-      extraRejected.push({ question: q, reason: 'nær-duplikat' });
-      return false;
-    }
-  }
-  return true;
-});
-
-approved = approved.slice(0, 1);
-
-if (approved.length) {
-  const q = String(approved[0].question || '').trim();
-  staticData.savedQuestionsThisRun = [...sameRun, q];
-}
-
+const { approved, rejected } = parseEditorOutput(editorItem);
 const clusterId = $('Expand from saved').first()?.json?.clusterId;
 
 return [{
   json: {
     ...journalist,
-    approvedPrompts: approved,
-    rejectedPrompts: [...(rejected || []), ...extraRejected],
+    approvedPrompts: approved.slice(0, 2),
+    rejectedPrompts: rejected || [],
     deepResearch,
     clusterId,
     skipFinalize: !approved.length,
   },
 }];`;
 
-export const PREPARE_SAVES_JS = `const finalize = $('Finalize prompts').first()?.json || {};
-if (finalize.skipFinalize) return [];
-const modItem = { output: { approved_prompts: finalize.approvedPrompts || [], rejected: finalize.rejectedPrompts || [] } };
+export const PREPARE_SAVES_JS = `const modItem = $("Finalize prompts").first()?.json || {};
 const agentInput = $('Build journalist input').first()?.json || {};
 const headlines = Array.isArray(agentInput.headlines) ? agentInput.headlines : [];
 const existingQuestions = Array.isArray(agentInput.existingQuestions) ? agentInput.existingQuestions : [];
@@ -867,8 +840,6 @@ export const CHECK_DUPLICATE_TOOL_JS = `${TOOL_INPUT_PARSE_JS}
 const inp = parseToolInput();
 const question = String(inp.question ?? inp.query ?? inp.input ?? inp.text ?? '').trim();
 const existing = ($('Build journalist input').first()?.json?.existingQuestions) || ($('Expand from saved').first()?.json?.existingQuestions) || [];
-const staticData = $getWorkflowStaticData('global');
-const sameRun = Array.isArray(staticData.savedQuestionsThisRun) ? staticData.savedQuestionsThisRun : [];
 
 function norm(q) {
   return String(q || '').toLowerCase().replace(/[^a-zæøå0-9\\s]/g, ' ').replace(/\\s+/g, ' ').trim();
@@ -895,16 +866,12 @@ function isNearDuplicate(candidate, baseline) {
 const key = norm(question);
 if (!key) return 'ERROR: empty question – send {"question":"..."}';
 
-for (const e of [...existing, ...sameRun]) {
+for (const e of existing) {
   if (isNearDuplicate(key, e)) {
     return 'DUPLICATE: overlaps with existing prompt "' + String(e).slice(0, 80) + '"';
   }
 }
 return 'OK: unique question';`;
-
-export const RESET_RUN_STATIC_JS = `const staticData = $getWorkflowStaticData('global');
-staticData.savedQuestionsThisRun = [];
-return [{ json: { reset: true } }];`;
 
 export const EXPAND_SAVED_CLUSTER_JS = `const row = $input.item?.json || $input.first()?.json || {};
 const articles = Array.isArray(row.articleRows) ? row.articleRows : [];
