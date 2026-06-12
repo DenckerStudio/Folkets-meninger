@@ -10,6 +10,7 @@ import { workflow, node, trigger, sticky } from '@n8n/workflow-sdk';
 const CALL_CRON_JS = `const SETTINGS_NODES = [
   'Cron settings',
   'Cron settings (categories)',
+  'Cron settings (labels)',
   'Cron settings (digest daily)',
   'Cron settings (digest weekly)',
 ];
@@ -79,6 +80,7 @@ function cronSettingsNode(name: string) {
 
 const cronSettingsSync = cronSettingsNode('Cron settings');
 const cronSettingsCategories = cronSettingsNode('Cron settings (categories)');
+const cronSettingsLabels = cronSettingsNode('Cron settings (labels)');
 const cronSettingsDigestDaily = cronSettingsNode('Cron settings (digest daily)');
 const cronSettingsDigestWeekly = cronSettingsNode('Cron settings (digest weekly)');
 
@@ -114,6 +116,23 @@ const setCategoriesPath = node({
     },
   },
   output: [{ cronPath: '/api/cron/categories' }],
+});
+
+const setLabelsPath = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Path: labels',
+    parameters: {
+      mode: 'manual',
+      assignments: {
+        assignments: [
+          { id: 'p', name: 'cronPath', value: '/api/cron/labels', type: 'string' },
+        ],
+      },
+    },
+  },
+  output: [{ cronPath: '/api/cron/labels' }],
 });
 
 const setDigestDailyPath = node({
@@ -190,6 +209,18 @@ const scheduleCategories = trigger({
   output: [{}],
 });
 
+const scheduleLabels = trigger({
+  type: 'n8n-nodes-base.scheduleTrigger',
+  version: 1.3,
+  config: {
+    name: 'Daily 04:30 labels',
+    parameters: {
+      rule: { interval: [{ field: 'cronExpression', expression: '30 4 * * *' }] },
+    },
+  },
+  output: [{}],
+});
+
 const scheduleDigestDaily = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
   version: 1.3,
@@ -216,7 +247,7 @@ const scheduleDigestWeekly = trigger({
 
 sticky(
   '## App cron (n8n → Folkets Stemme)\\n\\nErstatter Vercel Cron. Fyll inn **cronSecret** (samme som CRON_SECRET i app) og **appBaseUrl** i hver Cron settings-node.',
-  [scheduleSyncIssues, scheduleCategories, scheduleDigestDaily, scheduleDigestWeekly],
+  [scheduleSyncIssues, scheduleCategories, scheduleLabels, scheduleDigestDaily, scheduleDigestWeekly],
   { color: 3 }
 );
 
@@ -225,6 +256,8 @@ export default workflow('folkets-app-cron', 'Folkets Stemme – App cron (n8n)')
   .to(cronSettingsSync.to(setSyncPath).to(callCron))
   .add(scheduleCategories)
   .to(cronSettingsCategories.to(setCategoriesPath).to(callCron))
+  .add(scheduleLabels)
+  .to(cronSettingsLabels.to(setLabelsPath).to(callCron))
   .add(scheduleDigestDaily)
   .to(cronSettingsDigestDaily.to(setDigestDailyPath).to(callCron))
   .add(scheduleDigestWeekly)

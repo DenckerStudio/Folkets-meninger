@@ -62,7 +62,7 @@ Kjør `supabase db push` etter pull.
 
 | Steg | Kilde | Webhook |
 |------|--------|---------|
-| **1 Regjeringen RSS** | [`forum-regjeringen-rss-ingest.workflow.ts`](forum-regjeringen-rss-ingest.workflow.ts) | `POST /webhook/folkets-forum-regjeringen-rss` |
+| **1 Regjeringen RSS** | [`forum-regjeringen-rss-ingest.workflow.ts`](forum-regjeringen-rss-ingest.workflow.ts) | RSS Feed Trigger + cron `*/30` (RSS Read) |
 | **2 Prompt generator** | [`forum-prompt-generator.workflow.ts`](forum-prompt-generator.workflow.ts) | schedule + `POST /webhook/folkets-forum-prompt-generator` |
 
 **Dok:** [`FORUM-PROMPTS-v12.md`](FORUM-PROMPTS-v12.md)
@@ -93,6 +93,7 @@ Vercel **Hobby** har ikke Cron Jobs (krever Pro). n8n scheduler kaller appens be
 |--------------|---------------|
 | Daglig 03:00 | `GET /api/cron/sync-issues` |
 | Daglig 04:00 | `GET /api/cron/categories` |
+| Daglig 04:30 | `GET /api/cron/labels` |
 | Daglig 07:00 | `GET /api/cron/digest?frequency=daily` |
 | Mandag 07:30 | `GET /api/cron/digest?frequency=weekly` |
 

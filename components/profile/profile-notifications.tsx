@@ -6,6 +6,7 @@ const CHANNELS = [
   { key: 'forum', label: 'Forum' },
   { key: 'mentions', label: 'Mentions' },
   { key: 'categories', label: 'Kategorier/hjertesaker' },
+  { key: 'labels', label: 'AI-emner' },
 ] as const;
 
 type ProfileNotificationsProps = {
@@ -49,7 +50,7 @@ export function ProfileNotifications({
         </button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {CHANNELS.map((row) => (
           <div key={row.key} className="rounded-xl border border-gray-200 p-4">
             <div className="text-sm font-medium text-gray-900 mb-2">{row.label}</div>

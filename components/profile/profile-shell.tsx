@@ -32,12 +32,15 @@ export function ProfileShell() {
   const [voteHistory, setVoteHistory] = useState<VoteHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [interestCategories, setInterestCategories] = useState<string[]>([]);
+  const [interestLabels, setInterestLabels] = useState<string[]>([]);
   const [categoriesSaving, setCategoriesSaving] = useState(false);
+  const [labelsSaving, setLabelsSaving] = useState(false);
   const [notifEmailEnabled, setNotifEmailEnabled] = useState(true);
   const [notifFreq, setNotifFreq] = useState<Record<string, string>>({
     forum: 'realtime',
     mentions: 'realtime',
     categories: 'daily',
+    labels: 'daily',
   });
   const [notifSaving, setNotifSaving] = useState(false);
 
@@ -62,6 +65,13 @@ export function ProfileShell() {
       .then((res) => res.json())
       .then((json) => {
         if (Array.isArray(json.categories)) setInterestCategories(json.categories);
+      })
+      .catch(() => {});
+
+    fetch('/api/notifications/labels', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((json) => {
+        if (Array.isArray(json.labels)) setInterestLabels(json.labels);
       })
       .catch(() => {});
 
@@ -107,12 +117,15 @@ export function ProfileShell() {
       voteHistory={voteHistory}
       historyLoading={historyLoading}
       interestCategories={interestCategories}
+      interestLabels={interestLabels}
       categoriesSaving={categoriesSaving}
+      labelsSaving={labelsSaving}
       notifEmailEnabled={notifEmailEnabled}
       notifFreq={notifFreq}
       notifSaving={notifSaving}
       onSignOut={handleSignOut}
       onCategoriesChange={setInterestCategories}
+      onLabelsChange={setInterestLabels}
       onCategoriesSave={async () => {
         setCategoriesSaving(true);
         try {
@@ -123,6 +136,18 @@ export function ProfileShell() {
           });
         } finally {
           setCategoriesSaving(false);
+        }
+      }}
+      onLabelsSave={async () => {
+        setLabelsSaving(true);
+        try {
+          await fetch('/api/notifications/labels', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ labels: interestLabels }),
+          });
+        } finally {
+          setLabelsSaving(false);
         }
       }}
       onNotifEmailChange={setNotifEmailEnabled}
@@ -175,13 +200,17 @@ type ProfileShellAuthenticatedProps = {
   voteHistory: VoteHistoryItem[];
   historyLoading: boolean;
   interestCategories: string[];
+  interestLabels: string[];
   categoriesSaving: boolean;
+  labelsSaving: boolean;
   notifEmailEnabled: boolean;
   notifFreq: Record<string, string>;
   notifSaving: boolean;
   onSignOut: () => void;
   onCategoriesChange: (next: string[]) => void;
+  onLabelsChange: (next: string[]) => void;
   onCategoriesSave: () => Promise<void>;
+  onLabelsSave: () => Promise<void>;
   onNotifEmailChange: (value: boolean) => void;
   onNotifFreqChange: (channel: string, value: string) => void;
   onNotifSave: () => Promise<void>;
@@ -193,13 +222,17 @@ function ProfileShellAuthenticated({
   voteHistory,
   historyLoading,
   interestCategories,
+  interestLabels,
   categoriesSaving,
+  labelsSaving,
   notifEmailEnabled,
   notifFreq,
   notifSaving,
   onSignOut,
   onCategoriesChange,
+  onLabelsChange,
   onCategoriesSave,
+  onLabelsSave,
   onNotifEmailChange,
   onNotifFreqChange,
   onNotifSave,
@@ -262,8 +295,12 @@ function ProfileShellAuthenticated({
             <ProfileInterests
               interestCategories={interestCategories}
               onCategoriesChange={onCategoriesChange}
+              interestLabels={interestLabels}
+              onLabelsChange={onLabelsChange}
               saving={categoriesSaving}
+              labelsSaving={labelsSaving}
               onSave={onCategoriesSave}
+              onLabelsSave={onLabelsSave}
             />
           )}
           {activeTab === 'varsler' && (

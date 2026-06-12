@@ -22,6 +22,7 @@ type UtforskFilters = {
   searchQuery: string;
   selectedCategory: string;
   selectedStatus: string;
+  selectedAiLabels: string[];
   sortBy: string;
 };
 
@@ -29,21 +30,31 @@ const DEFAULT_UTFORSK_FILTERS: UtforskFilters = {
   searchQuery: '',
   selectedCategory: 'Alle kategorier',
   selectedStatus: 'Alle statuser',
+  selectedAiLabels: [],
   sortBy: 'Nyeste først',
 };
 
 function isUtforskFilters(value: unknown): value is UtforskFilters {
   if (!value || typeof value !== 'object') return false;
-  const v = value as UtforskFilters;
+  const v = value as Partial<UtforskFilters>;
   return (
     typeof v.searchQuery === 'string' &&
     typeof v.selectedCategory === 'string' &&
     typeof v.selectedStatus === 'string' &&
-    typeof v.sortBy === 'string'
+    typeof v.sortBy === 'string' &&
+    (v.selectedAiLabels === undefined || Array.isArray(v.selectedAiLabels))
   );
 }
 
-export default function ExploreClient({ initialIssues }: { initialIssues: SakListItem[] }) {
+export default function ExploreClient({
+  initialIssues,
+  issueLabels,
+  popularLabels,
+}: {
+  initialIssues: SakListItem[];
+  issueLabels: Record<string, string[]>;
+  popularLabels: string[];
+}) {
   const [issues] = useState(initialIssues);
   const { user } = useAuth();
   const [userVotes, setUserVotes] = useState<Record<string, string>>({});
@@ -55,13 +66,23 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
   );
 
   const displayedUserVotes = user ? userVotes : {};
-  const { searchQuery, selectedCategory, selectedStatus, sortBy } = filters;
+  const { searchQuery, selectedCategory, selectedStatus, selectedAiLabels, sortBy } = filters;
 
   const setSearchQuery = (searchQuery: string) => setFilters((prev) => ({ ...prev, searchQuery }));
   const setSelectedCategory = (selectedCategory: string) =>
     setFilters((prev) => ({ ...prev, selectedCategory }));
   const setSelectedStatus = (selectedStatus: string) => setFilters((prev) => ({ ...prev, selectedStatus }));
   const setSortBy = (sortBy: string) => setFilters((prev) => ({ ...prev, sortBy }));
+
+  const toggleAiLabel = (label: string) => {
+    setFilters((prev) => {
+      const current = prev.selectedAiLabels ?? [];
+      const next = current.includes(label)
+        ? current.filter((l) => l !== label)
+        : [...current, label];
+      return { ...prev, selectedAiLabels: next };
+    });
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -89,6 +110,14 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
 
   if (selectedCategory !== 'Alle kategorier') {
     displayedIssues = displayedIssues.filter((issue) => issue.category === selectedCategory);
+  }
+
+  const activeAiLabels = selectedAiLabels ?? [];
+  if (activeAiLabels.length > 0) {
+    displayedIssues = displayedIssues.filter((issue) => {
+      const labels = issueLabels[String(issue.id)] ?? [];
+      return activeAiLabels.some((label) => labels.includes(label));
+    });
   }
 
   if (selectedStatus === 'Åpne for stemmer') {
@@ -185,6 +214,42 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
         </div>
       </FadeIn>
 
+      {popularLabels.length > 0 && (
+        <FadeIn delay={0.22} direction="up">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-700">Emne (AI)</p>
+            <div className="flex flex-wrap gap-2">
+              {popularLabels.map((label) => {
+                const active = activeAiLabels.includes(label);
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => toggleAiLabel(label)}
+                    className={`rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
+                      active
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+              {activeAiLabels.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFilters((prev) => ({ ...prev, selectedAiLabels: [] }))}
+                  className="rounded-full px-3 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-800"
+                >
+                  Nullstill emner
+                </button>
+              )}
+            </div>
+          </div>
+        </FadeIn>
+      )}
+
       <FadeIn delay={0.25} direction="up">
         <div className="flex flex-wrap gap-2">
           <button
@@ -226,6 +291,14 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                           {issue.category}
                         </span>
+                        {(issueLabels[String(issue.id)] ?? []).slice(0, 3).map((label) => (
+                          <span
+                            key={`${issue.id}-${label}`}
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700"
+                          >
+                            {label}
+                          </span>
+                        ))}
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             issue.status === 'closed' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'

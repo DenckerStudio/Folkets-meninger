@@ -5,6 +5,7 @@ import {
 } from '@/lib/ai-summary/service';
 import { requireForumAdmin } from '@/lib/forum/admin';
 import { triggerAiSummaryWebhook } from '@/lib/trigger-ai-summary-webhook';
+import { isAiSummaryV2 } from '@/lib/ai-summary/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,20 @@ export async function GET(
   const result = await resolveAiSummaryForApi(id, { triggerIfMissing: true });
 
   if (result.status === 'ready') {
+    if (isAiSummaryV2(result)) {
+      return NextResponse.json({
+        version: 2,
+        narrative: result.narrative,
+        who_affected: result.who_affected,
+        how_affected: result.how_affected,
+        topic_cards: result.topic_cards,
+        labels: result.labels,
+        cached: result.cached,
+      });
+    }
+
     return NextResponse.json({
+      version: 1,
       hva: result.hva,
       hvem: result.hvem,
       kostnad: result.kostnad,
