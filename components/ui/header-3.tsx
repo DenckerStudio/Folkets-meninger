@@ -4,22 +4,9 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from '@/components/ui/navigation-menu';
-import { NavLink, NavMenuLink, useNavSectionActive } from '@/components/ui/nav-link';
-import { BarChart2, Bell, Flag, LogIn, LogOut, Sparkles } from 'lucide-react';
+import { Bell, ChevronDown, Eye, LogIn, LogOut, Settings, SlidersHorizontal, UserCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
-import {
-  desktopMoreNavLinks,
-  desktopPrimaryNavLinks,
-  isAdminActive,
-} from '@/lib/site-nav-links';
 import { routes } from '@/lib/routes';
 
 export function Header() {
@@ -28,15 +15,10 @@ export function Header() {
   const router = useRouter();
   const isLoggedIn = !!user;
   const [unreadCount, setUnreadCount] = React.useState(0);
-  const [isForumAdmin, setIsForumAdmin] = React.useState(false);
-  const showForumAdmin = isLoggedIn && isForumAdmin;
   const displayUnreadCount = isLoggedIn ? unreadCount : 0;
   const displayName =
     user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
-  const moreSectionActive = useNavSectionActive([
-    ...desktopMoreNavLinks.flatMap((item) => (item.isActive ? [item.isActive] : [])),
-    ...(showForumAdmin ? [isAdminActive] : []),
-  ]);
+  const initials = initialsFromDisplayName(displayName || user?.email || 'FS');
 
   const handleSignOut = async () => {
     const { getBrowserSupabase } = await import('@/lib/supabase');
@@ -66,15 +48,6 @@ export function Header() {
     };
   }, [isLoggedIn]);
 
-  React.useEffect(() => {
-    if (!isLoggedIn) return;
-
-    fetch('/api/admin/me')
-      .then((res) => res.json())
-      .then((json) => setIsForumAdmin(!!json.admin))
-      .catch(() => setIsForumAdmin(false));
-  }, [isLoggedIn]);
-
   return (
     <header
       className={cn(
@@ -83,99 +56,59 @@ export function Header() {
       )}
     >
       <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-4 md:gap-5">
-          <Link href={routes.utforsk} className="hover:opacity-90 rounded-md p-1 transition-opacity">
+        <div className="flex items-center gap-4">
+          <Link href={routes.forum} className="hover:opacity-90 rounded-md p-1 transition-opacity">
             <FolketsStemmeLogo />
           </Link>
-          <div className="hidden items-center gap-0.5 md:flex">
-            {desktopPrimaryNavLinks.map((item) => (
-              <NavLink key={item.href} href={item.href} isActive={item.isActive}>
-                {item.label}
-              </NavLink>
-            ))}
-            <NavigationMenu>
-              <NavigationMenuList>
-                <NavigationMenuItem>
-                  <NavigationMenuTrigger
-                    className={cn(
-                      'bg-transparent',
-                      moreSectionActive && 'text-[#00205b]',
-                    )}
-                  >
-                    Mer
-                  </NavigationMenuTrigger>
-                  <NavigationMenuContent className="bg-background p-1 pr-1.5">
-                    <ul className="bg-popover w-72 space-y-1 rounded-md border p-2 shadow">
-                      {showForumAdmin ? (
-                        <>
-                          <li className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                            Admin
-                          </li>
-                          <li>
-                            <NavMenuLink
-                              title="Rapporter"
-                              description="Forum-meldinger og moderering"
-                              icon={Flag}
-                              href={routes.adminForumReports}
-                              isActive={isAdminActive}
-                            />
-                          </li>
-                          <li>
-                            <NavMenuLink
-                              title="Statistikk"
-                              description="Eksport og oversikt"
-                              icon={BarChart2}
-                              href={routes.adminStats}
-                              isActive={isAdminActive}
-                            />
-                          </li>
-                          <li>
-                            <NavMenuLink
-                              title="Forum-prompts"
-                              description="Godkjenning av dagens temaer"
-                              icon={Sparkles}
-                              href={routes.adminForumPrompts}
-                              isActive={isAdminActive}
-                            />
-                          </li>
-                          <li className="my-1 border-t border-border" aria-hidden />
-                        </>
-                      ) : null}
-                      {desktopMoreNavLinks.map((item) => (
-                        <li key={item.href}>
-                          <NavMenuLink {...item} />
-                        </li>
-                      ))}
-                    </ul>
-                  </NavigationMenuContent>
-                </NavigationMenuItem>
-              </NavigationMenuList>
-            </NavigationMenu>
-          </div>
+          <span className="hidden rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 sm:inline-flex">
+            Forum
+          </span>
         </div>
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link
+            href={isLoggedIn ? routes.varsler : routes.login}
+            className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+            aria-label="Varsler"
+          >
+            <Bell className="size-4" />
+            {displayUnreadCount > 0 ? (
+              <span className="absolute -top-1 -right-1 inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-indigo-600 px-1.5 text-[11px] font-bold text-white">
+                {displayUnreadCount > 99 ? '99+' : displayUnreadCount}
+              </span>
+            ) : null}
+          </Link>
           {isLoggedIn ? (
-            <>
-              <Link
-                href={routes.varsler}
-                className="relative inline-flex h-10 w-10 items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
-                aria-label="Varsler"
-              >
-                <Bell className="size-4" />
-                {displayUnreadCount > 0 ? (
-                  <span className="absolute -top-1 -right-1 inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-indigo-600 px-1.5 text-[11px] font-bold text-white">
-                    {displayUnreadCount > 99 ? '99+' : displayUnreadCount}
-                  </span>
-                ) : null}
-              </Link>
-              <Button variant="outline" render={<Link href={routes.minSide} />}>
-                {displayName ? `Hei, ${displayName.split(' ')[0]}` : 'Min side'}
-              </Button>
-              <Button onClick={handleSignOut}>
-                <LogOut className="size-4" />
-                Logg ut
-              </Button>
-            </>
+            <details className="group relative">
+              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-gray-200 bg-white py-1.5 pl-1.5 pr-3 text-sm font-medium text-gray-800 shadow-sm transition-colors hover:bg-gray-50">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#00205b] text-xs font-bold text-white">
+                  {initials}
+                </span>
+                <span className="hidden max-w-28 truncate sm:inline">
+                  {displayName?.split(' ')[0] || 'Profil'}
+                </span>
+                <ChevronDown className="h-4 w-4 text-gray-400 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+                <div className="border-b border-gray-100 bg-gray-50 px-4 py-3">
+                  <p className="text-sm font-semibold text-gray-900">{displayName || 'Min konto'}</p>
+                  <p className="truncate text-xs text-gray-500">{user?.email}</p>
+                </div>
+                <div className="p-2">
+                  <ProfileMenuLink href={routes.minSide} icon={UserCircle} title="Min side" description="Stemmehistorikk og oversikt" />
+                  <ProfileMenuLink href={routes.profile(user!.id)} icon={Eye} title="Offentlig profil" description="Slik andre ser deg" />
+                  <ProfileMenuLink href={`${routes.minSide}?tab=offentlig`} icon={Settings} title="Profilinnstillinger" description="Bio, parti og poengdeling" />
+                  <ProfileMenuLink href={`${routes.minSide}?tab=varsler`} icon={SlidersHorizontal} title="Preferanser" description="Varsler og hjertesaker" />
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-red-700 transition-colors hover:bg-red-50"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logg ut
+                  </button>
+                </div>
+              </div>
+            </details>
           ) : (
             <>
               <Button variant="outline" render={<Link href={routes.login} />}>
@@ -189,6 +122,32 @@ export function Header() {
       </nav>
     </header>
   );
+}
+
+type ProfileMenuLinkProps = {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+};
+
+function ProfileMenuLink({ href, icon: Icon, title, description }: ProfileMenuLinkProps) {
+  return (
+    <Link href={href} className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-gray-50">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-gray-500" />
+      <span>
+        <span className="block text-sm font-medium text-gray-900">{title}</span>
+        <span className="block text-xs text-gray-500">{description}</span>
+      </span>
+    </Link>
+  );
+}
+
+function initialsFromDisplayName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
 function useScroll(threshold: number) {

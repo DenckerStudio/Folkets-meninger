@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Flame, Home, MessageSquare, Plus, User } from 'lucide-react';
+import { FileEdit, Flame, Home, MessageSquare, Plus, Search, Users, User } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +10,13 @@ const MOBILE_NAV = [
   { href: routes.forum, label: 'Hjem', icon: Home, sort: null },
   { href: `${routes.forum}?sort=engasjert`, label: 'Populært', icon: Flame, sort: 'engasjert' },
   { href: `${routes.forum}?sort=nyeste`, label: 'Nyeste', icon: MessageSquare, sort: 'nyeste' },
+] as const;
+
+const MOBILE_DEMOCRACY_NAV = [
+  { href: routes.utforsk, label: 'Saker', icon: Search },
+  { href: routes.horinger, label: 'Høringer', icon: FileEdit },
+  { href: routes.politikere, label: 'Politikere', icon: Users },
+  { href: routes.sporsmal, label: 'Spørsmål', icon: MessageSquare },
 ] as const;
 
 export default function ForumMobileNav() {
@@ -61,6 +68,26 @@ export default function ForumMobileNav() {
           <User className="w-3.5 h-3.5" />
           Mine innlegg
         </Link>
+      </nav>
+      <nav className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" aria-label="Demokrati-navigasjon mobil">
+        {MOBILE_DEMOCRACY_NAV.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(`${href}/`);
+          return (
+            <Link
+              key={label}
+              href={href}
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold border transition-colors',
+                active
+                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300',
+              )}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </Link>
+          );
+        })}
       </nav>
       <Link
         href={sakId ? routes.forumNew(sakId) : routes.forumNew()}
