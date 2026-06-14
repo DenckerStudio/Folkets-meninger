@@ -1,19 +1,13 @@
-import Link from 'next/link';
+'use client';
+
 import { ExternalLink } from 'lucide-react';
-import { routes } from '@/lib/routes';
+import { DashboardLink } from '@/components/dashboard-link';
+import type { ForumContextItem } from '@/lib/forum/context';
+import { parseBodySegments } from '@/lib/forum/parse-body-links';
 import { parseUrl } from '@/lib/forum/sanitize-links';
 
-const PATH_RE = /(\/dashboard\/[^\s<>"')\]]+)/g;
 const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
-
-function pathLabel(path: string): string {
-  if (path.startsWith(`${routes.forum}/`)) return 'Forumtråd';
-  if (path.startsWith(`${routes.horinger}/`)) return 'Høring';
-  if (path.includes('/sak/')) return 'Stortingssak';
-  if (path === routes.utforsk) return 'Utforsk saker';
-  if (path === routes.horinger) return 'Høringer';
-  return 'Intern lenke';
-}
+const PATH_RE = /(\/dashboard\/[^\s<>"')\]]+)/g;
 
 function renderExternalLink(url: string, key: string) {
   const parsed = parseUrl(url);
@@ -46,48 +40,45 @@ function renderExternalLink(url: string, key: string) {
   );
 }
 
-function renderLine(line: string, lineKey: string) {
-  const combined = line.split(/(\/dashboard\/[^\s<>"')\]]+|https?:\/\/[^\s<>"')\]]+)/g);
+function renderSegments(segments: ReturnType<typeof parseBodySegments>, keyPrefix: string) {
+  return segments.map((segment, index) => {
+    if (segment.type === 'text') {
+      return <span key={`${keyPrefix}-${index}`}>{segment.text}</span>;
+    }
 
-  return (
-    <span key={lineKey}>
-      {combined.map((part, index) => {
-        if (part.startsWith('/dashboard/')) {
-          return (
-            <Link
-              key={`${lineKey}-${index}`}
-              href={part}
-              className="text-indigo-600 hover:text-indigo-500 font-medium underline underline-offset-2"
-            >
-              {pathLabel(part)}
-            </Link>
-          );
-        }
+    if (segment.type === 'mention') {
+      return (
+        <span
+          key={`${keyPrefix}-${index}`}
+          className="text-indigo-700 bg-indigo-50 px-1 rounded font-medium"
+        >
+          {segment.text}
+        </span>
+      );
+    }
 
-        if (/^https?:\/\//i.test(part)) {
-          return renderExternalLink(part, `${lineKey}-url-${index}`);
-        }
-
-        const mentionParts = part.split(/(@[\p{L}0-9_.-]{2,32})/giu);
-        return mentionParts.map((segment, segIndex) => {
-          if (segment.startsWith('@')) {
-            return (
-              <span
-                key={`${lineKey}-${index}-${segIndex}`}
-                className="text-indigo-700 bg-indigo-50 px-1 rounded font-medium"
-              >
-                {segment}
-              </span>
-            );
-          }
-          return <span key={`${lineKey}-${index}-${segIndex}`}>{segment}</span>;
-        });
-      })}
-    </span>
-  );
+    return (
+      <DashboardLink
+        key={`${keyPrefix}-${index}`}
+        href={segment.href}
+        meta={segment.meta}
+        className="font-medium"
+      >
+        {segment.label}
+      </DashboardLink>
+    );
+  });
 }
 
-export function FormattedForumBody({ text, className }: { text: string; className?: string }) {
+export function FormattedForumBody({
+  text,
+  className,
+  contextItems = [],
+}: {
+  text: string;
+  className?: string;
+  contextItems?: ForumContextItem[];
+}) {
   const paragraphs = text.split(/\n{2,}/);
 
   return (
@@ -96,12 +87,32 @@ export function FormattedForumBody({ text, className }: { text: string; classNam
         const lines = paragraph.split('\n');
         return (
           <p key={pIndex} className={pIndex > 0 ? 'mt-4' : undefined}>
-            {lines.map((line, lIndex) => (
-              <span key={`${pIndex}-${lIndex}`}>
-                {lIndex > 0 && <br />}
-                {renderLine(line, `${pIndex}-${lIndex}`)}
-              </span>
-            ))}
+            {lines.map((line, lIndex) => {
+              const lineKey = `${pIndex}-${lIndex}`;
+              const segments = parseBodySegments(line, contextItems);
+              const hasOnlyText = segments.every((s) => s.type === 'text');
+
+              if (hasOnlyText && /https?:\/\//i.test(line)) {
+                const parts = line.split(/(https?:\/\/[^\s<>"')\]]+)/gi);
+                return (
+                  <span key={lineKey}>
+                    {lIndex > 0 && <br />}
+                    {parts.map((part, partIndex) =>
+                      /^https?:\/\//i.test(part)
+                        ? renderExternalLink(part, `${lineKey}-ext-${partIndex}`)
+                        : part
+                    )}
+                  </span>
+                );
+              }
+
+              return (
+                <span key={lineKey}>
+                  {lIndex > 0 && <br />}
+                  {renderSegments(segments, lineKey)}
+                </span>
+              );
+            })}
           </p>
         );
       })}

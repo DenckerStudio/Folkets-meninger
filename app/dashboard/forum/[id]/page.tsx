@@ -76,7 +76,11 @@ export default async function ForumPostPage({ params }: { params: Promise<{ id: 
             </div>
           )}
 
-          <FormattedForumBody text={post.content} className="text-gray-700 leading-relaxed" />
+          <FormattedForumBody
+            text={post.content}
+            contextItems={post.contextItems}
+            className="text-gray-700 leading-relaxed"
+          />
 
           <div className="mt-4 flex flex-wrap gap-2">
             <CommentCountPill count={post.replies.length} />

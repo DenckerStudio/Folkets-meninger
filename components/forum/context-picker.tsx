@@ -9,6 +9,7 @@ import {
   Shield,
   X,
 } from 'lucide-react';
+import { DashboardLink } from '@/components/dashboard-link';
 import {
   contextItemKey,
   type ForumContextItem,
@@ -196,7 +197,17 @@ export function ContextChip({
       }`}
     >
       <div className="min-w-0">
-        <p className="font-medium truncate max-w-[220px]">{item.title}</p>
+        {item.href.startsWith('/dashboard') ? (
+          <DashboardLink
+            href={item.href}
+            meta={item}
+            className="block truncate max-w-[220px] font-medium"
+          >
+            {item.title}
+          </DashboardLink>
+        ) : (
+          <p className="font-medium truncate max-w-[220px]">{item.title}</p>
+        )}
         <p className="text-xs opacity-70">{KIND_LABEL[item.kind]}{isPrimary ? ' · Hovedsak' : ''}</p>
       </div>
       <div className="flex items-center gap-1 shrink-0">
