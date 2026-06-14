@@ -44,9 +44,9 @@ export default function OmOssPage() {
           <div className="mx-auto w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6">
             <Shield className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-3">2. Sikker verifisering</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-3">2. Sikker innlogging</h3>
           <p className="text-gray-600">
-            Brukere logger inn med BankID. Dette sikrer at plattformen er fri for botter, troll og falske kontoer. Én person, én stemme.
+            Du logger inn med e-post, Google eller SMS. Det reduserer spam og troll, og gir én konto per person ved soft launch. BankID kommer senere.
           </p>
         </div>
 
@@ -74,7 +74,7 @@ export default function OmOssPage() {
           </p>
           
           <ul className="list-disc pl-5 space-y-3">
-            <li><strong>Dataminimering:</strong> Vi lagrer kun det som er strengt nødvendig for å verifisere at du har stemmerett i Norge.</li>
+            <li><strong>Dataminimering:</strong> Vi lagrer kun det som er nødvendig for konto og stemmegivning i soft launch.</li>
             <li><strong>Anonymisering:</strong> I det øyeblikket du avgir en stemme, lagres den i en separat database uten kobling til ditt navn eller fødselsnummer.</li>
             <li><strong>Norsk lagring:</strong> All data lagres på servere fysisk plassert i Norge eller EU/EØS. Ingen data sendes til tredjeland.</li>
             <li><strong>Sletting:</strong> Du kan når som helst slette din profil og all tilknyttet historikk med ett klikk.</li>

@@ -15,6 +15,6 @@ View your app in AI Studio: https://ai.studio/apps/8ded3f6f-04bf-4be9-88c6-0dc9b
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+2. Configure Supabase and `N8N_AI_SUMMARY_WEBHOOK_URL` in `.env.local` (see `AGENTS.md`)
 3. Run the app:
    `npm run dev`
