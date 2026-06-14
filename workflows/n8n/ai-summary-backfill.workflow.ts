@@ -12,36 +12,114 @@ import {
   placeholder,
 } from '@n8n/workflow-sdk';
 
-const MISSING_SUMMARIES_SQL = `SELECT i.id, i.title, i.summary, i.detail_json
+const MISSING_SUMMARIES_SQL = `SELECT
+  i.id,
+  i.title,
+  i.summary,
+  i.detail_json,
+  i.ai_summary_source_context,
+  COALESCE(
+    json_agg(
+      json_build_object(
+        'document_id', d.document_id,
+        'title', d.title,
+        'document_type', d.document_type,
+        'text_excerpt', d.text_excerpt,
+        'source_url', d.source_url
+      )
+      ORDER BY d.fetched_at DESC
+    ) FILTER (WHERE d.document_id IS NOT NULL),
+    '[]'::json
+  ) AS documents
 FROM public.stortinget_issues i
 LEFT JOIN public.issue_ai_summaries s ON s.stortinget_issue_id = i.id
+LEFT JOIN public.stortinget_issue_documents d ON d.issue_id = i.id
 WHERE s.stortinget_issue_id IS NULL
+GROUP BY i.id, i.title, i.summary, i.detail_json, i.ai_summary_source_context
 ORDER BY i.last_synced_at DESC NULLS LAST
 LIMIT $1`;
 
-const FETCH_ISSUE_BY_ID_SQL = `SELECT id, title, summary, detail_json
-FROM public.stortinget_issues
-WHERE id = $1`;
+const FETCH_ISSUE_BY_ID_SQL = `SELECT
+  i.id,
+  i.title,
+  i.summary,
+  i.detail_json,
+  i.ai_summary_source_context,
+  COALESCE(
+    json_agg(
+      json_build_object(
+        'document_id', d.document_id,
+        'title', d.title,
+        'document_type', d.document_type,
+        'text_excerpt', d.text_excerpt,
+        'source_url', d.source_url
+      )
+      ORDER BY d.fetched_at DESC
+    ) FILTER (WHERE d.document_id IS NOT NULL),
+    '[]'::json
+  ) AS documents
+FROM public.stortinget_issues i
+LEFT JOIN public.stortinget_issue_documents d ON d.issue_id = i.id
+WHERE i.id = $1
+GROUP BY i.id, i.title, i.summary, i.detail_json, i.ai_summary_source_context`;
 
 const BUILD_CONTEXT_JS = `const item = $input.item.json;
+if (item.ai_summary_source_context) {
+  let text = String(item.ai_summary_source_context);
+  if (text.length > 20000) {
+    text = text.slice(0, 20000) + '\\n\\n[... avkortet ...]';
+  }
+  return { json: { ...item, sakContextText: text } };
+}
 const detail =
   item.detail_json && typeof item.detail_json === 'object'
     ? item.detail_json
     : item.detail_json
       ? JSON.parse(String(item.detail_json))
       : {};
+let documents = item.documents || [];
+if (typeof documents === 'string') {
+  try { documents = JSON.parse(documents); } catch (_) { documents = []; }
+}
+const names = (list) => Array.isArray(list)
+  ? list.map((p) => [p?.fornavn, p?.etternavn].filter(Boolean).join(' ') + (p?.parti?.navn ? ' (' + p.parti.navn + ')' : '')).filter((x) => x.trim()).join(', ')
+  : '';
+const listNames = (list) => Array.isArray(list)
+  ? list.map((x) => typeof x === 'string' ? x : x?.navn).filter(Boolean).join(', ')
+  : '';
+const timeline = Array.isArray(detail.saksgang?.saksgang_steg_liste)
+  ? detail.saksgang.saksgang_steg_liste.slice(0, 8).flatMap((step) => [
+      step.navn ? '- ' + step.navn : null,
+      ...(Array.isArray(step.saksgang_hendelse_liste)
+        ? step.saksgang_hendelse_liste.map((e) => e?.hendelse_tekst ? '  - ' + e.hendelse_tekst : null)
+        : []),
+    ]).filter(Boolean).join('\\n')
+  : '';
 const parts = [
   'Sak ID: ' + item.id,
   item.title ? 'Tittel: ' + item.title : null,
   item.summary ? 'Kort beskrivelse: ' + item.summary : null,
+  detail.henvisning ? 'Dokumentreferanse: ' + detail.henvisning : null,
+  detail.komite?.navn ? 'Komité: ' + detail.komite.navn : (typeof detail.komite === 'string' ? 'Komité: ' + detail.komite : null),
+  listNames(detail.emne_liste) ? 'Emner: ' + listNames(detail.emne_liste) : null,
+  listNames(detail.stikkord_liste) ? 'Stikkord: ' + listNames(detail.stikkord_liste) : null,
+  names(detail.sak_opphav?.forslagstiller_liste) ? 'Forslagstillere: ' + names(detail.sak_opphav.forslagstiller_liste) : null,
+  names(detail.saksordfoerer_liste) ? 'Saksordførere: ' + names(detail.saksordfoerer_liste) : null,
+  timeline ? 'Saksgang og hendelser:\\n' + timeline : null,
   detail.innstillingstekst ? 'Innstillingstekst:\\n' + detail.innstillingstekst : null,
   detail.kortvedtak ? 'Kortvedtak:\\n' + detail.kortvedtak : null,
   detail.vedtakstekst ? 'Vedtakstekst:\\n' + detail.vedtakstekst : null,
   detail.parentestekst ? 'Parentestekst:\\n' + detail.parentestekst : null,
+  ...documents.slice(0, 5).map((d) => {
+    const title = d?.title || d?.document_id || 'Dokument';
+    const type = d?.document_type ? ' (' + d.document_type + ')' : '';
+    const excerpt = d?.text_excerpt ? String(d.text_excerpt).slice(0, 3000) : '';
+    return excerpt ? 'Tilhørende dokument: ' + title + type + '\\n' + excerpt : null;
+  }),
 ].filter(Boolean);
 let sakContextText = parts.join('\\n\\n');
-if (sakContextText.length > 12000) {
-  sakContextText = sakContextText.slice(0, 12000) + '\\n\\n[... avkortet ...]';
+if (sakContextText.length > 20000) {
+  sakContextText = sakContextText.slice(0, 20000) + '\\n\\n[... avkortet ...]';
 }
 return { json: { ...item, sakContextText } };`;
 

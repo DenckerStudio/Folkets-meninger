@@ -26,6 +26,7 @@ export const routes = {
   sak: (id: string) => `${DASHBOARD_PREFIX}/sak/${id}`,
   horing: (id: string) => `${DASHBOARD_PREFIX}/horinger/${id}`,
   forumTopic: (id: string) => `${DASHBOARD_PREFIX}/forum/${id}`,
+  profile: (id: string) => `/profil/${id}`,
   adminForumPrompts: `${DASHBOARD_PREFIX}/admin/forum-prompts`,
   adminForumReports: `${DASHBOARD_PREFIX}/admin/forum-reports`,
   adminStats: `${DASHBOARD_PREFIX}/admin/statistikk`,

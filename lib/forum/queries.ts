@@ -124,8 +124,10 @@ export async function getForumThreads(options?: {
         author_user_id,
         is_system_thread,
         context_items,
+        moderation_status,
         users:author_user_id (first_name, last_name, name)
       `)
+      .eq('moderation_status', 'approved')
       .order('created_at', { ascending: false })
       .limit(sort === 'engasjert' ? 50 : limit);
 
@@ -155,6 +157,7 @@ export async function getForumThreads(options?: {
       const { data: replies } = await supabase
         .from('forum_replies')
         .select('thread_id')
+        .eq('moderation_status', 'approved')
         .in('thread_id', threadIds);
 
       for (const r of replies || []) {
@@ -190,6 +193,7 @@ export async function getForumThreads(options?: {
         title: thread.title,
         author: resolveForumAuthor({
           isSystemThread: thread.is_system_thread,
+          userId: thread.author_user_id,
           users: thread.users as UserJoin,
         }),
         createdAt: formatTimeAgo(thread.created_at),
@@ -268,9 +272,11 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
         author_user_id,
         is_system_thread,
         context_items,
+        moderation_status,
         users:author_user_id (first_name, last_name, name)
       `)
       .eq('id', id)
+      .eq('moderation_status', 'approved')
       .single();
 
     if (error || !thread) return null;
@@ -291,9 +297,11 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
         is_official_response,
         created_at,
         author_user_id,
+        moderation_status,
         users:author_user_id (first_name, last_name, name)
       `)
       .eq('thread_id', thread.id)
+      .eq('moderation_status', 'approved')
       .order('created_at', { ascending: true });
 
     const replyLikeCounts: Record<string, number> = {};
@@ -371,6 +379,7 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
       content: cleanBody,
       author: resolveForumAuthor({
         isSystemThread: thread.is_system_thread,
+        userId: thread.author_user_id,
         users: thread.users as UserJoin,
       }),
       isSystemThread: thread.is_system_thread,
@@ -383,7 +392,7 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
       replyLikedIds,
       replies: (replies || []).map((reply) => ({
         id: reply.id,
-        author: resolveForumAuthor({ users: reply.users as UserJoin }),
+        author: resolveForumAuthor({ userId: reply.author_user_id, users: reply.users as UserJoin }),
         content: parseContextItemsFromBody(reply.body).cleanBody,
         createdAt: formatForumDate(reply.created_at),
         likes: replyLikeCounts[reply.id] || 0,
