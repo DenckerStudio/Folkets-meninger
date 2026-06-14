@@ -2,6 +2,7 @@
 
 import { motion } from 'motion/react';
 import { ReactNode } from 'react';
+import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 
 interface FadeInProps {
   children: ReactNode;
@@ -11,6 +12,12 @@ interface FadeInProps {
 }
 
 export default function FadeIn({ children, delay = 0, direction = 'up', className = '' }: FadeInProps) {
+  const reducedMotion = usePrefersReducedMotion();
+
+  if (reducedMotion) {
+    return <div className={className}>{children}</div>;
+  }
+
   const directionOffset = {
     up: { y: 20, x: 0 },
     down: { y: -20, x: 0 },
@@ -21,18 +28,18 @@ export default function FadeIn({ children, delay = 0, direction = 'up', classNam
 
   return (
     <motion.div
-      initial={{ 
-        opacity: 0, 
-        ...directionOffset[direction]
+      initial={{
+        opacity: 0,
+        ...directionOffset[direction],
       }}
-      animate={{ 
-        opacity: 1, 
-        x: 0, 
-        y: 0 
+      animate={{
+        opacity: 1,
+        x: 0,
+        y: 0,
       }}
       transition={{
         duration: 0.5,
-        delay: delay,
+        delay,
         ease: 'easeOut',
       }}
       className={className}

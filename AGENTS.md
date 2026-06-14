@@ -1,32 +1,16 @@
-# AGENTS.md
+## Learned User Preferences
 
-## Cursor Cloud specific instructions
+- Prefer minimal, focused fixes that unblock builds/CI.
+- When asked to commit/push, stage only intended changes and exclude unrelated artifacts.
+- Prefer working on informatively named branches with prefix `cursor/`.
+- Avoid user-visible mock/placeholder data; prefer honest empty/“coming soon” states.
 
-### Overview
+## Learned Workspace Facts
 
-**Folkets Stemme** ("The People's Voice") is a Norwegian civic engagement platform built as a single **Next.js 15 App Router** application. It fetches live data from the Norwegian Parliament's open API (`data.stortinget.no`) and lets citizens browse parliamentary cases, vote on issues, participate in forum discussions, and engage with hearings.
-
-### Architecture
-
-- **Auth**: Supabase Auth (email/password, Google OAuth, SMS OTP) — configured via Supabase Dashboard
-- **Database**: Supabase (PostgreSQL) with the `next_auth` schema for user management and `public` schema for domain tables
-- **External API**: Norwegian Parliament open data API (`data.stortinget.no`) — public, no auth required
-- **AI**: Optional Google Gemini API (`@google/genai`) for issue summaries
-
-### Running the app
-
-- **Dev server**: `npm run dev` (starts on `http://localhost:3000`)
-- **Lint**: `npm run lint`
-- **Build**: `npm run build`
-- See `package.json` scripts for the full list.
-
-### Key caveats
-
-- **Supabase secrets required for full functionality**: Without `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`, the app starts but shows empty data for votes, forum, and hearings. The Stortinget API data (issues, representatives) still works.
-- **OAuth configured in Supabase Dashboard**: Google (and other providers) are enabled via Supabase Dashboard → Authentication → Providers. The OAuth callback URL is `/api/auth/callback`.
-- **Middleware refreshes auth tokens**: `middleware.ts` runs on every request to refresh Supabase auth cookies via `@supabase/ssr`.
-- **Build warning on `/horinger`**: The `/horinger` route fetches from its own API at build time, causing a non-fatal `DYNAMIC_SERVER_USAGE` error. This is expected.
-- **No automated test suite**: Validation is done via lint, build, and manual testing.
-- **Voting schema**: SQL migrations live in `supabase/migrations/`. Run `supabase db push` (or paste SQL in the dashboard) before vote APIs work. Ballots are in `citizen_votes` (no `user_id`); per-user choices are encrypted in `user_vote_receipts` via `pgcrypto`.
-- **GEMINI_API_KEY is optional**: Without it, AI summaries show a fallback message.
-- **First-time env setup**: Copy `.env.example` to `.env.local` — it contains working Supabase credentials for development. The update script only runs `npm install`; `.env.local` must exist before `npm run dev` or `npm run build`.
+- Single Next.js App Router app (Next.js 15).
+- Auth and DB are Supabase (Postgres); app uses SSR cookies/middleware refresh patterns.
+- Stortinget data comes from `data.stortinget.no` (public API).
+- AI summaries and forum prompts are produced externally via n8n + Ollama and stored in Supabase.
+- Forum Reels: n8n workflow `MloIdsnX7FozM4dv`; `forum_trusted_sources` (unknown domain → `draft`); votes Ja/Nei/Ikke interessert + separate discuss CTA; agent `.cursor/agents/reels-prompts.md`.
+- The repo expects validation via `npm run lint` and `npm run build`; no broad automated test suite assumed in workflows.
+- First-time env setup: copy `.env.example` to `.env.local` before `npm run dev` or `npm run build`.

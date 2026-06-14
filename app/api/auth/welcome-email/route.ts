@@ -44,7 +44,7 @@ export async function POST() {
       channel: 'mentions',
       title: 'Velkommen til Folkets Stemme',
       body: 'Takk for at du registrerte deg.',
-      url: '/min-side',
+      url: '/dashboard/min-side',
       data: {},
       emailed_at: new Date().toISOString(),
     });

@@ -82,7 +82,7 @@ export async function GET(request: Request) {
             channel: 'categories',
             title: `Ny sak i ${issue.category}`,
             body: issue.title,
-            url: `/sak/${issue.id}`,
+            url: `/dashboard/sak/${issue.id}`,
             data: { issueId: issue.id, category: issue.category, status: issue.status, date: issue.date },
             origin,
           });

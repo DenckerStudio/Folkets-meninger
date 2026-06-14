@@ -1,106 +1,140 @@
+import type { ComponentType } from 'react';
 import Link from 'next/link';
-import { ArrowRight, TrendingUp, Users, ShieldCheck, Info } from 'lucide-react';
+import { ArrowRight, BarChart2, MessageSquare, ShieldCheck, TrendingUp, Users, Vote } from 'lucide-react';
 import { getSaker } from '@/lib/stortinget';
-import { formatNumber } from '@/lib/utils';
 import FadeIn from '@/components/fade-in';
 import HeroSection from '@/components/hero-section';
+import { LandingPopularIssues } from '@/components/landing-popular-issues';
+import { routes } from '@/lib/routes';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
-export default async function Home() {
-  const issues = await getSaker();
-  const topIssues = issues.slice(0, 3);
+const POPULAR_ISSUE_COUNT = 10;
+
+export default async function LandingPage() {
+  const issues = await getSaker({ nextRevalidateSeconds: 3600 });
+  const popularIssues = [...issues]
+    .sort((a, b) => (b.votes?.total ?? 0) - (a.votes?.total ?? 0))
+    .slice(0, POPULAR_ISSUE_COUNT);
 
   return (
     <div className="space-y-24 pb-12">
-      {/* Hero Section */}
       <HeroSection />
 
-      {/* Features */}
       <FadeIn delay={0.2} direction="up">
-        <section className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div className="w-12 h-12 inline-flex items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 mb-4">
-            <ShieldCheck className="w-6 h-6" />
+        <section>
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Slik fungerer det</h2>
+            <p className="mt-3 text-gray-600">
+              Fra Stortingets åpne data til din stemme — en enkel vei inn i demokratiet mellom valgene.
+            </p>
           </div>
-          <h3 className="text-lg font-medium text-gray-900">Verifisert & Sikkert</h3>
-          <p className="mt-2 text-base text-gray-500">
-            Sikker innlogging sikrer &quot;én person, én stemme&quot;. Din identitet er beskyttet, og stemmen din lagres anonymt.
-          </p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div className="w-12 h-12 inline-flex items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 mb-4">
-            <TrendingUp className="w-6 h-6" />
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            <FeatureCard
+              icon={TrendingUp}
+              iconClass="bg-emerald-100 text-emerald-600"
+              title="Direkte fra Stortinget"
+              description="Saker hentes automatisk fra Stortingets åpne API. Følg med på hva som debatteres og vedtas."
+            />
+            <FeatureCard
+              icon={Vote}
+              iconClass="bg-indigo-100 text-indigo-600"
+              title="Stem på saker"
+              description="Si din mening med verifisert stemmegivning. Én person, én stemme — anonymt i statistikken."
+            />
+            <FeatureCard
+              icon={MessageSquare}
+              iconClass="bg-amber-100 text-amber-600"
+              title="Delta i debatten"
+              description="Forum og høringer med navngitte innlegg — diskuter åpent med fornavn og etternavn."
+            />
+            <FeatureCard
+              icon={BarChart2}
+              iconClass="bg-violet-100 text-violet-600"
+              title="Innsikt for politikere"
+              description="Anonymisert statistikk hjelper representanter å forstå hva velgerne mener."
+            />
           </div>
-          <h3 className="text-lg font-medium text-gray-900">Direkte fra Stortinget</h3>
-          <p className="mt-2 text-base text-gray-500">
-            Saker hentes automatisk fra Stortingets åpne API. Få med deg hva som faktisk debatteres og vedtas.
-          </p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div className="w-12 h-12 inline-flex items-center justify-center rounded-xl bg-amber-100 text-amber-600 mb-4">
-            <Users className="w-6 h-6" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900">For Politikere</h3>
-          <p className="mt-2 text-base text-gray-500">
-            Politikere får tilgang til anonymisert statistikk for å forstå hva velgerne i deres distrikt mener om konkrete saker.
-          </p>
-        </div>
-      </section>
+        </section>
       </FadeIn>
 
-      {/* Trending Issues */}
-      <FadeIn delay={0.3} direction="up">
-      <section>
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Aktuelle saker nå</h2>
-          <Link href="/utforsk" className="text-sm font-medium text-indigo-600 hover:text-indigo-500 flex items-center">
-            Se alle <ArrowRight className="ml-1 w-4 h-4" />
-          </Link>
-        </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {topIssues.map((issue: any) => {
-            const forPercent = Math.round((issue.votes.for / issue.votes.total) * 100) || 0;
-            const againstPercent = Math.round((issue.votes.against / issue.votes.total) * 100) || 0;
-
-            return (
-              <Link key={issue.id} href={`/sak/${issue.id}`} className="group flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all overflow-hidden">
-                <div className="p-6 flex-grow">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {issue.category}
-                    </span>
-                    <span className="text-sm text-gray-500">Votering: {issue.date}</span>
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
-                    {issue.title}
-                  </h3>
-                  <p className="text-gray-600 line-clamp-2 mb-4">
-                    {issue.summary}
-                  </p>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Users className="w-4 h-4 mr-1.5" />
-                    {formatNumber(issue.votes.total)} har stemt
-                  </div>
-                </div>
-                <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 flex flex-col gap-3 mt-auto">
-                   <div className="flex gap-1 w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div className="bg-emerald-500" style={{ width: `${forPercent}%` }}></div>
-                      <div className="bg-rose-500" style={{ width: `${againstPercent}%` }}></div>
-                   </div>
-                   <div className="flex justify-between items-center w-full">
-                     <span className="text-xs font-medium text-gray-500">{forPercent}% For</span>
-                     <span className="text-indigo-600 text-sm font-medium flex items-center group-hover:text-indigo-700">
-                       Les mer <ArrowRight className="ml-1 w-4 h-4" />
-                     </span>
-                   </div>
-                </div>
+      <FadeIn delay={0.25} direction="up">
+        <section className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 lg:col-span-1">
+            <div className="w-12 h-12 inline-flex items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 mb-4">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900">Verifisert og sikkert</h3>
+            <p className="mt-2 text-base text-gray-500">
+              Sikker innlogging sikrer én person, én stemme. Identiteten din er beskyttet, og stemmen lagres
+              anonymt.
+            </p>
+          </div>
+          <div className="bg-gradient-to-br from-[#00205b]/5 to-[#ba0c2f]/5 p-8 rounded-2xl border border-gray-100 lg:col-span-2 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900">Klar til å delta?</h3>
+              <p className="mt-2 text-gray-600">
+                Opprett konto gratis og få tilgang til alle saker, stemmegivning, forum og høringer i dashboardet.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 shrink-0 w-full sm:w-auto">
+              <Link
+                href={routes.login}
+                className="inline-flex items-center justify-center px-6 py-3 text-base font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-xl transition-colors"
+              >
+                Kom i gang
               </Link>
-            );
-          })}
-        </div>
-      </section>
+              <Link
+                href={routes.dashboard}
+                className="inline-flex items-center justify-center px-6 py-3 text-base font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-xl transition-colors"
+              >
+                Dashboard <ArrowRight className="ml-2 w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
       </FadeIn>
+
+      <LandingPopularIssues issues={popularIssues} />
+
+      <FadeIn delay={0.35} direction="up">
+        <section className="text-center py-12 px-6 rounded-2xl bg-[#00205b] text-white">
+          <Users className="w-10 h-10 mx-auto mb-4 opacity-90" />
+          <h2 className="text-2xl sm:text-3xl font-bold">Demokratiet fortsetter mellom valgene</h2>
+          <p className="mt-4 max-w-xl mx-auto text-white/80">
+            Uavhengig plattform — vi samarbeider ikke med Regjeringen eller Stortinget. Et initiativ for å styrke
+            dialogen mellom innbyggere og folkevalgte.
+          </p>
+          <Link
+            href={routes.omOss}
+            className="mt-8 inline-flex items-center text-sm font-medium text-white/90 hover:text-white underline underline-offset-4"
+          >
+            Les mer om oss
+          </Link>
+        </section>
+      </FadeIn>
+    </div>
+  );
+}
+
+function FeatureCard({
+  icon: Icon,
+  iconClass,
+  title,
+  description,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  iconClass: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      <div className={`w-12 h-12 inline-flex items-center justify-center rounded-xl mb-4 ${iconClass}`}>
+        <Icon className="w-6 h-6" />
+      </div>
+      <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+      <p className="mt-2 text-base text-gray-500">{description}</p>
     </div>
   );
 }
