@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { createNotification, extractMentions, resolveMentionedUserIdsByName } from '@/lib/notifications';
+import { mapForumRpcError } from '@/lib/forum/rpc-errors';
+import {
+  validateCreateReply,
+  validateCreateThread,
+  validateToggleLike,
+} from '@/lib/forum/validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,25 +20,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
     }
 
+    await ensurePublicUser(user);
+
     const { action, ...payload } = await request.json();
     const service = getServiceSupabase();
 
     if (action === 'create_thread') {
+      const validated = validateCreateThread(payload);
+      if (!validated.ok) {
+        return NextResponse.json({ error: validated.error }, { status: 400 });
+      }
+
       const { data, error } = await service.rpc('create_forum_thread', {
         p_user_id: user.id,
-        p_title: payload.title,
-        p_body: payload.body,
-        p_stortinget_issue_id: payload.stortinget_issue_id || null,
+        p_title: validated.title,
+        p_body: validated.body,
+        p_stortinget_issue_id: validated.stortingetIssueId,
+        p_context_items: validated.contextItems,
+        p_is_system_thread: false,
       });
       if (error) {
         console.error('Create thread error:', error);
-        return NextResponse.json({ error: 'Kunne ikke opprette tråd' }, { status: 500 });
+        const msg = mapForumRpcError(error.message);
+        const status = msg.includes('fornavn') ? 400 : 500;
+        return NextResponse.json({ error: msg }, { status });
       }
 
       const origin = new URL(request.url).origin;
       const threadId = data as string;
 
-      const mentionNames = extractMentions(String(payload.body || ''));
+      const mentionNames = extractMentions(validated.body);
       const mentionedUserIds = await resolveMentionedUserIdsByName(mentionNames);
       await Promise.all(
         mentionedUserIds
@@ -42,8 +60,8 @@ export async function POST(request: Request) {
               type: 'mention',
               channel: 'mentions',
               title: 'Du ble nevnt i en ny forumtråd',
-              body: payload.title ? `Tråd: ${payload.title}` : null,
-              url: `/forum/${threadId}`,
+              body: validated.title ? `Tråd: ${validated.title}` : null,
+              url: `/dashboard/forum/${threadId}`,
               data: { threadId, byUserId: user.id },
               origin,
             })
@@ -54,20 +72,27 @@ export async function POST(request: Request) {
     }
 
     if (action === 'create_reply') {
+      const validated = validateCreateReply(payload);
+      if (!validated.ok) {
+        return NextResponse.json({ error: validated.error }, { status: 400 });
+      }
+
       const { data, error } = await service.rpc('create_forum_reply', {
         p_user_id: user.id,
-        p_thread_id: payload.thread_id,
-        p_body: payload.body,
-        p_parent_reply_id: payload.parent_reply_id || null,
+        p_thread_id: validated.threadId,
+        p_body: validated.body,
+        p_parent_reply_id: null,
         p_is_official_response: payload.is_official_response || false,
       });
       if (error) {
         console.error('Create reply error:', error);
-        return NextResponse.json({ error: 'Kunne ikke publisere svar' }, { status: 500 });
+        const msg = mapForumRpcError(error.message);
+        const status = msg.includes('fornavn') ? 400 : 500;
+        return NextResponse.json({ error: msg }, { status });
       }
 
       const origin = new URL(request.url).origin;
-      const threadId = String(payload.thread_id);
+      const threadId = validated.threadId;
       const replyId = data as string;
 
       const { data: thread } = await service
@@ -81,7 +106,7 @@ export async function POST(request: Request) {
         recipients.add(thread.author_user_id);
       }
 
-      const mentionNames = extractMentions(String(payload.body || ''));
+      const mentionNames = extractMentions(validated.body);
       const mentionedUserIds = await resolveMentionedUserIdsByName(mentionNames);
       for (const mentionedUserId of mentionedUserIds) {
         if (mentionedUserId !== user.id) recipients.add(mentionedUserId);
@@ -96,7 +121,7 @@ export async function POST(request: Request) {
             channel: isMention ? 'mentions' : 'forum',
             title: isMention ? 'Du ble nevnt i forumet' : 'Nytt svar i en tråd du følger',
             body: thread?.title ? `Tråd: ${thread.title}` : null,
-            url: `/forum/${threadId}`,
+            url: `/dashboard/forum/${threadId}`,
             data: { threadId, replyId, byUserId: user.id },
             origin,
           });
@@ -107,23 +132,23 @@ export async function POST(request: Request) {
     }
 
     if (action === 'toggle_like') {
-      const { target_type, target_id } = payload;
-      const { data: existing } = await service
-        .from('forum_likes')
-        .select('user_id')
-        .eq('user_id', user.id)
-        .eq('target_type', target_type)
-        .eq('target_id', target_id)
-        .single();
-
-      if (existing) {
-        await service.from('forum_likes').delete()
-          .eq('user_id', user.id).eq('target_type', target_type).eq('target_id', target_id);
-        return NextResponse.json({ liked: false });
-      } else {
-        await service.from('forum_likes').insert({ user_id: user.id, target_type, target_id });
-        return NextResponse.json({ liked: true });
+      const validated = validateToggleLike(payload);
+      if (!validated.ok) {
+        return NextResponse.json({ error: validated.error }, { status: 400 });
       }
+
+      const { data, error } = await service.rpc('toggle_forum_like', {
+        p_user_id: user.id,
+        p_target_type: validated.targetType,
+        p_target_id: validated.targetId,
+      });
+
+      if (error) {
+        console.error('Toggle like error:', error);
+        return NextResponse.json({ error: 'Kunne ikke oppdatere like' }, { status: 500 });
+      }
+
+      return NextResponse.json({ liked: data });
     }
 
     return NextResponse.json({ error: 'Ukjent handling' }, { status: 400 });

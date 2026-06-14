@@ -1,0 +1,74 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { Flame, Home, MessageSquare, Plus, User } from 'lucide-react';
+import { routes } from '@/lib/routes';
+import { cn } from '@/lib/utils';
+
+const MOBILE_NAV = [
+  { href: routes.forum, label: 'Hjem', icon: Home, sort: null },
+  { href: `${routes.forum}?sort=engasjert`, label: 'Populært', icon: Flame, sort: 'engasjert' },
+  { href: `${routes.forum}?sort=nyeste`, label: 'Nyeste', icon: MessageSquare, sort: 'nyeste' },
+] as const;
+
+export default function ForumMobileNav() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentSort = searchParams.get('sort') || 'nyeste';
+  const sakId = searchParams.get('sak');
+
+  return (
+    <div className="xl:hidden mb-4 space-y-3">
+      <nav
+        className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1"
+        aria-label="Forum-navigasjon mobil"
+      >
+        {MOBILE_NAV.map(({ href, label, icon: Icon, sort }) => {
+          const active =
+            pathname === routes.forum &&
+            (sort === null ? !searchParams.get('sort') : currentSort === sort);
+          const linkHref =
+            sakId && href.startsWith(routes.forum)
+              ? `${routes.forum}?${new URLSearchParams({ ...(sort ? { sort } : {}), sak: sakId }).toString()}`
+              : href;
+
+          return (
+            <Link
+              key={label}
+              href={linkHref}
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold border transition-colors',
+                active
+                  ? 'bg-gray-900 text-white border-gray-900'
+                  : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+              )}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </Link>
+          );
+        })}
+        <Link
+          href={routes.forumMineInnlegg}
+          className={cn(
+            'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold border transition-colors',
+            pathname === routes.forumMineInnlegg
+              ? 'bg-gray-900 text-white border-gray-900'
+              : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300',
+          )}
+        >
+          <User className="w-3.5 h-3.5" />
+          Mine innlegg
+        </Link>
+      </nav>
+      <Link
+        href={sakId ? routes.forumNew(sakId) : routes.forumNew()}
+        className="flex items-center justify-center gap-2 w-full rounded-full bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+      >
+        <Plus className="w-4 h-4" />
+        Start diskusjon
+      </Link>
+    </div>
+  );
+}

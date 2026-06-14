@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ShieldCheck, ArrowRight, Phone } from 'lucide-react';
 import FadeIn from '@/components/fade-in';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase';
 
 export default function LoginClient() {
@@ -12,11 +12,14 @@ export default function LoginClient() {
   const [showPhoneVerify, setShowPhoneVerify] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get('next') || '/dashboard/min-side';
   const supabase = getBrowserSupabase();
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -26,11 +29,22 @@ export default function LoginClient() {
 
     try {
       if (isRegister) {
+        const trimmedFirst = firstName.trim();
+        const trimmedLast = lastName.trim();
+        if (trimmedFirst.length < 2 || trimmedLast.length < 2) {
+          setError('Fornavn og etternavn må være minst 2 tegn.');
+          setIsLoading(false);
+          return;
+        }
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            data: { full_name: name },
+            data: {
+              first_name: trimmedFirst,
+              last_name: trimmedLast,
+              full_name: `${trimmedFirst} ${trimmedLast}`,
+            },
           },
         });
         if (signUpError) {
@@ -49,7 +63,7 @@ export default function LoginClient() {
           setIsLoading(false);
           return;
         }
-        router.push('/min-side');
+        router.push(nextPath);
         router.refresh();
       }
     } catch {
@@ -65,7 +79,7 @@ export default function LoginClient() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=/min-side`,
+        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(nextPath)}`,
       },
     });
     if (error) {
@@ -104,7 +118,7 @@ export default function LoginClient() {
     } catch {
       // ignore
     }
-    router.push('/min-side');
+    router.push(nextPath);
     router.refresh();
   };
 
@@ -180,13 +194,17 @@ export default function LoginClient() {
               </button>
 
               <button
+                type="button"
                 onClick={() => {
-                  router.push('/min-side');
+                  const completeNext = nextPath.includes('forum')
+                    ? `/auth/complete-profile?next=${encodeURIComponent(nextPath)}`
+                    : nextPath;
+                  router.push(completeNext);
                   router.refresh();
                 }}
                 className="w-full text-center text-sm text-gray-500 hover:text-gray-700"
               >
-                Hopp over for nå
+                Fortsett uten SMS-verifisering
               </button>
             </div>
           </div>
@@ -255,20 +273,40 @@ export default function LoginClient() {
 
             <form className="space-y-6" onSubmit={handleEmailAuth}>
               {isRegister && (
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                    Fullt navn
-                  </label>
-                  <div className="mt-1">
-                    <input
-                      id="name"
-                      name="name"
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="first-name" className="block text-sm font-medium text-gray-700">
+                      Fornavn
+                    </label>
+                    <div className="mt-1">
+                      <input
+                        id="first-name"
+                        name="first-name"
+                        type="text"
+                        required
+                        minLength={2}
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="last-name" className="block text-sm font-medium text-gray-700">
+                      Etternavn
+                    </label>
+                    <div className="mt-1">
+                      <input
+                        id="last-name"
+                        name="last-name"
+                        type="text"
+                        required
+                        minLength={2}
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
               )}

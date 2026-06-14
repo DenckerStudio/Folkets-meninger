@@ -1,9 +1,27 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      { source: '/utforsk', destination: '/dashboard/utforsk', permanent: true },
+      { source: '/utforsk/:path*', destination: '/dashboard/utforsk/:path*', permanent: true },
+      { source: '/min-side', destination: '/dashboard/min-side', permanent: true },
+      { source: '/varsler', destination: '/dashboard/varsler', permanent: true },
+      { source: '/horinger', destination: '/dashboard/horinger', permanent: true },
+      { source: '/horinger/:path*', destination: '/dashboard/horinger/:path*', permanent: true },
+      { source: '/forum', destination: '/dashboard/forum', permanent: true },
+      { source: '/forum/:path*', destination: '/dashboard/forum/:path*', permanent: true },
+      { source: '/sak/:id', destination: '/dashboard/sak/:id', permanent: true },
+      { source: '/politikere', destination: '/dashboard/politikere', permanent: true },
+      { source: '/representanter', destination: '/dashboard/representanter', permanent: true },
+      { source: '/politiker-hub', destination: '/dashboard/politiker-hub', permanent: true },
+      { source: '/saksganger', destination: '/dashboard/saksganger', permanent: true },
+      { source: '/sporsmal', destination: '/dashboard/sporsmal', permanent: true },
+    ];
+  },
   reactStrictMode: true,
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
     ignoreBuildErrors: false,
