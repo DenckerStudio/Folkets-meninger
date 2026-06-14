@@ -3,7 +3,8 @@
 import { usePathname } from 'next/navigation';
 import { Header } from '@/components/ui/header-3';
 import { LandingHeader } from '@/components/landing-header';
-import { isDashboardPath } from '@/lib/routes';
+import { DashboardMobileNav } from '@/components/dashboard-mobile-nav';
+import { isDashboardPath, isForumRelatedPath } from '@/lib/routes';
 
 type NavigationProps = {
   children: React.ReactNode;
@@ -21,6 +22,7 @@ export function Navigation({ children }: NavigationProps) {
       ) : inDashboard ? (
         <Header />
       ) : null}
+      {inDashboard && !isForumRelatedPath(pathname) ? <DashboardMobileNav /> : null}
       <div>{children}</div>
     </>
   );

@@ -2,21 +2,40 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { FileEdit, Flame, Home, MessageSquare, Plus, Search, Users, User } from 'lucide-react';
+import {
+  BarChart2,
+  FileEdit,
+  Flame,
+  GitBranch,
+  Home,
+  MessageSquare,
+  Plus,
+  Search,
+  Users,
+  User,
+  UserRound,
+} from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
+const MOBILE_SECTION_NAV = [
+  { href: routes.forum, label: 'Forum', icon: MessageSquare },
+  { href: routes.utforsk, label: 'Saker', icon: Search },
+  { href: routes.horinger, label: 'Høringer', icon: FileEdit },
+  { href: routes.politikere, label: 'Politikere', icon: Users },
+  { href: routes.minSide, label: 'Profil', icon: UserRound },
+] as const;
+
 const MOBILE_NAV = [
-  { href: routes.forum, label: 'Hjem', icon: Home, sort: null },
+  { href: routes.forum, label: 'Forumforside', icon: Home, sort: null },
   { href: `${routes.forum}?sort=engasjert`, label: 'Populært', icon: Flame, sort: 'engasjert' },
   { href: `${routes.forum}?sort=nyeste`, label: 'Nyeste', icon: MessageSquare, sort: 'nyeste' },
 ] as const;
 
-const MOBILE_DEMOCRACY_NAV = [
-  { href: routes.utforsk, label: 'Saker', icon: Search },
-  { href: routes.horinger, label: 'Høringer', icon: FileEdit },
-  { href: routes.politikere, label: 'Politikere', icon: Users },
+const MOBILE_MORE_NAV = [
   { href: routes.sporsmal, label: 'Spørsmål', icon: MessageSquare },
+  { href: routes.saksganger, label: 'Saksgang', icon: GitBranch },
+  { href: routes.innsikt, label: 'Innsikt', icon: BarChart2 },
 ] as const;
 
 export default function ForumMobileNav() {
@@ -27,6 +46,26 @@ export default function ForumMobileNav() {
 
   return (
     <div className="xl:hidden mb-4 space-y-3">
+      <nav className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" aria-label="Dashboard-navigasjon mobil">
+        {MOBILE_SECTION_NAV.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(`${href}/`);
+          return (
+            <Link
+              key={label}
+              href={href}
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold border transition-colors',
+                active
+                  ? 'bg-[#00205b] text-white border-[#00205b]'
+                  : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300',
+              )}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
       <nav
         className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1"
         aria-label="Forum-navigasjon mobil"
@@ -69,8 +108,8 @@ export default function ForumMobileNav() {
           Mine innlegg
         </Link>
       </nav>
-      <nav className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" aria-label="Demokrati-navigasjon mobil">
-        {MOBILE_DEMOCRACY_NAV.map(({ href, label, icon: Icon }) => {
+      <nav className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" aria-label="Flere demokrati-lenker mobil">
+        {MOBILE_MORE_NAV.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link

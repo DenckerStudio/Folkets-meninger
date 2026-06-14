@@ -88,7 +88,7 @@ export function Header() {
                 </span>
                 <ChevronDown className="h-4 w-4 text-gray-400 transition-transform group-open:rotate-180" />
               </summary>
-              <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+              <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
                 <div className="border-b border-gray-100 bg-gray-50 px-4 py-3">
                   <p className="text-sm font-semibold text-gray-900">{displayName || 'Min konto'}</p>
                   <p className="truncate text-xs text-gray-500">{user?.email}</p>
@@ -115,7 +115,7 @@ export function Header() {
                 <LogIn className="size-4" />
                 Logg inn
               </Button>
-              <Button render={<Link href={routes.login} />}>Kom i gang</Button>
+              <Button render={<Link href={routes.login} />} className="hidden sm:inline-flex">Kom i gang</Button>
             </>
           )}
         </div>
