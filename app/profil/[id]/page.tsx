@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { EyeOff, MessageSquare, ShieldCheck, Trophy, UserCircle } from 'lucide-react';
+import { ArrowLeft, EyeOff, MessageSquare, ShieldCheck, Trophy, UserCircle } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { getPublicProfile } from '@/lib/public-profile';
 import { routes } from '@/lib/routes';
@@ -16,6 +16,14 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-12">
+      <Link
+        href={routes.forum}
+        className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-500"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Til forum
+      </Link>
+
       <section className="rounded-2xl border border-gray-200 bg-gradient-to-br from-[#00205b]/5 via-white to-[#ba0c2f]/5 p-6 shadow-sm">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-4">

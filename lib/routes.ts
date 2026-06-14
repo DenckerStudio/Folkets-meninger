@@ -48,3 +48,7 @@ export function isPublicDashboardSakPath(pathname: string): boolean {
 export function isForumRelatedPath(pathname: string): boolean {
   return pathname.startsWith(`${DASHBOARD_PREFIX}/forum`) || pathname.includes('/forum');
 }
+
+export function isPublicProfilePath(pathname: string): boolean {
+  return /^\/profil\/[^/]+$/.test(pathname);
+}

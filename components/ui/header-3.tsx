@@ -6,19 +6,26 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Bell, ChevronDown, Eye, LogIn, LogOut, Settings, SlidersHorizontal, UserCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
-import { routes } from '@/lib/routes';
+import { usePathname, useRouter } from 'next/navigation';
+import { isPublicProfilePath, routes } from '@/lib/routes';
 
 export function Header() {
   const scrolled = useScroll(10);
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const isLoggedIn = !!user;
   const [unreadCount, setUnreadCount] = React.useState(0);
   const displayUnreadCount = isLoggedIn ? unreadCount : 0;
   const displayName =
     user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
   const initials = initialsFromDisplayName(displayName || user?.email || 'FS');
+  const logoHref = isPublicProfilePath(pathname)
+    ? routes.home
+    : isLoggedIn
+      ? routes.forum
+      : routes.home;
+  const sectionLabel = isPublicProfilePath(pathname) ? 'Forside' : 'Forum';
 
   const handleSignOut = async () => {
     const { getBrowserSupabase } = await import('@/lib/supabase');
@@ -57,11 +64,11 @@ export function Header() {
     >
       <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-4">
-          <Link href={routes.forum} className="hover:opacity-90 rounded-md p-1 transition-opacity">
+          <Link href={logoHref} className="hover:opacity-90 rounded-md p-1 transition-opacity" aria-label="Gå til forsiden">
             <FolketsStemmeLogo />
           </Link>
-          <span className="hidden rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 sm:inline-flex">
-            Forum
+          <span className="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+            {sectionLabel}
           </span>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
