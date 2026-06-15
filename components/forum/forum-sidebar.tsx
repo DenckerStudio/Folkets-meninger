@@ -2,16 +2,34 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Flame, Home, MessageSquare, Plus, Search, FileEdit, User } from 'lucide-react';
+import {
+  BarChart2,
+  FileEdit,
+  Flame,
+  GitBranch,
+  Home,
+  MessageSquare,
+  Plus,
+  Search,
+  Users,
+  User,
+} from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
-const NAV = [
-  { href: routes.forum, label: 'Hjem', icon: Home, sort: null },
+const FORUM_NAV = [
+  { href: routes.forum, label: 'Forumforside', icon: Home, sort: null },
   { href: `${routes.forum}?sort=engasjert`, label: 'Populært', icon: Flame, sort: 'engasjert' },
   { href: `${routes.forum}?sort=nyeste`, label: 'Nyeste', icon: MessageSquare, sort: 'nyeste' },
-  { href: routes.utforsk, label: 'Utforsk saker', icon: Search, sort: null },
-  { href: routes.horinger, label: 'Høringer', icon: FileEdit, sort: null },
+] as const;
+
+const DEMOCRACY_NAV = [
+  { href: routes.utforsk, label: 'Saker', icon: Search, active: (pathname: string) => pathname.startsWith(routes.utforsk) || pathname.startsWith('/dashboard/sak/') },
+  { href: routes.horinger, label: 'Høringer', icon: FileEdit, active: (pathname: string) => pathname.startsWith(routes.horinger) },
+  { href: routes.politikere, label: 'Politikere', icon: Users, active: (pathname: string) => pathname.startsWith(routes.politikere) || pathname.startsWith(routes.representanter) },
+  { href: routes.sporsmal, label: 'Spørsmål', icon: MessageSquare, active: (pathname: string) => pathname.startsWith(routes.sporsmal) },
+  { href: routes.saksganger, label: 'Saksgang', icon: GitBranch, active: (pathname: string) => pathname.startsWith(routes.saksganger) },
+  { href: routes.innsikt, label: 'Innsikt', icon: BarChart2, active: (pathname: string) => pathname.startsWith(routes.innsikt) },
 ] as const;
 
 export default function ForumSidebar() {
@@ -31,8 +49,12 @@ export default function ForumSidebar() {
   };
 
   return (
-    <nav className="space-y-1" aria-label="Forum-navigasjon">
-      {NAV.map(({ href, label, icon: Icon, sort }) => {
+    <nav className="space-y-5" aria-label="Forum-navigasjon">
+      <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+        <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+          Forum
+        </p>
+      {FORUM_NAV.map(({ href, label, icon: Icon, sort }) => {
         const isForumHome = href.startsWith(routes.forum);
         const active =
           isForumHome &&
@@ -50,7 +72,7 @@ export default function ForumSidebar() {
             className={cn(
               'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
               active
-                ? 'bg-gray-100 text-gray-900'
+                ? 'bg-indigo-50 text-indigo-700'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
             )}
           >
@@ -59,14 +81,39 @@ export default function ForumSidebar() {
           </Link>
         );
       })}
+      </div>
 
-      <div className="pt-4 mt-4 border-t border-gray-200 space-y-1">
+      <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+        <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+          Demokrati
+        </p>
+        {DEMOCRACY_NAV.map(({ href, label, icon: Icon, active }) => {
+          const isActive = active(pathname);
+          return (
+            <Link
+              key={label}
+              href={href}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                isActive
+                  ? 'bg-indigo-50 text-indigo-700'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+              )}
+            >
+              <Icon className="w-5 h-5 shrink-0" />
+              {label}
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm space-y-1">
         <Link
           href={routes.forumMineInnlegg}
           className={cn(
             'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
             pathname === routes.forumMineInnlegg
-              ? 'bg-gray-100 text-gray-900'
+              ? 'bg-indigo-50 text-indigo-700'
               : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
           )}
         >

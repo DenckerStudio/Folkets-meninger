@@ -2,5 +2,5 @@ import { redirect } from 'next/navigation';
 import { routes } from '@/lib/routes';
 
 export default function DashboardIndexPage() {
-  redirect(routes.utforsk);
+  redirect(routes.forum);
 }

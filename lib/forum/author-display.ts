@@ -6,6 +6,7 @@ export type ForumAuthorDisplay = {
   name: string;
   kind: ForumAuthorKind;
   initials: string;
+  userId?: string | null;
 };
 
 export type UserNameFields = {
@@ -38,6 +39,7 @@ export function initialsFromName(name: string): string {
 
 export function resolveForumAuthor(options: {
   isSystemThread?: boolean;
+  userId?: string | null;
   users?: UserNameFields | UserNameFields[] | null;
 }): ForumAuthorDisplay | null {
   if (options.isSystemThread) {
@@ -53,12 +55,12 @@ export function resolveForumAuthor(options: {
 
   if (userHasForumIdentity(row)) {
     const name = formatDisplayName(row.first_name!, row.last_name!);
-    return { name, kind: 'user', initials: initialsFromName(name) };
+    return { name, kind: 'user', initials: initialsFromName(name), userId: options.userId ?? null };
   }
 
   const legacy = row.name?.trim();
   if (legacy && legacy.length >= MIN_NAME_LEN * 2 + 1) {
-    return { name: legacy, kind: 'user', initials: initialsFromName(legacy) };
+    return { name: legacy, kind: 'user', initials: initialsFromName(legacy), userId: options.userId ?? null };
   }
 
   return null;

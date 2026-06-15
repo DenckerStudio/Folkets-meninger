@@ -26,6 +26,7 @@ export const routes = {
   sak: (id: string) => `${DASHBOARD_PREFIX}/sak/${id}`,
   horing: (id: string) => `${DASHBOARD_PREFIX}/horinger/${id}`,
   forumTopic: (id: string) => `${DASHBOARD_PREFIX}/forum/${id}`,
+  profile: (id: string) => `/profil/${id}`,
   adminForumPrompts: `${DASHBOARD_PREFIX}/admin/forum-prompts`,
   adminForumReports: `${DASHBOARD_PREFIX}/admin/forum-reports`,
   adminStats: `${DASHBOARD_PREFIX}/admin/statistikk`,
@@ -46,4 +47,8 @@ export function isPublicDashboardSakPath(pathname: string): boolean {
 
 export function isForumRelatedPath(pathname: string): boolean {
   return pathname.startsWith(`${DASHBOARD_PREFIX}/forum`) || pathname.includes('/forum');
+}
+
+export function isPublicProfilePath(pathname: string): boolean {
+  return /^\/profil\/[^/]+$/.test(pathname);
 }
