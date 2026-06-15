@@ -6,7 +6,6 @@ import {
   BarChart2,
   FileEdit,
   Flame,
-  GitBranch,
   Home,
   MessageSquare,
   Plus,
@@ -28,7 +27,6 @@ const DEMOCRACY_NAV = [
   { href: routes.horinger, label: 'Høringer', icon: FileEdit, active: (pathname: string) => pathname.startsWith(routes.horinger) },
   { href: routes.politikere, label: 'Politikere', icon: Users, active: (pathname: string) => pathname.startsWith(routes.politikere) || pathname.startsWith(routes.representanter) },
   { href: routes.sporsmal, label: 'Spørsmål', icon: MessageSquare, active: (pathname: string) => pathname.startsWith(routes.sporsmal) },
-  { href: routes.saksganger, label: 'Saksgang', icon: GitBranch, active: (pathname: string) => pathname.startsWith(routes.saksganger) },
   { href: routes.innsikt, label: 'Innsikt', icon: BarChart2, active: (pathname: string) => pathname.startsWith(routes.innsikt) },
 ] as const;
 
