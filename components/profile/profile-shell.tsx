@@ -14,6 +14,7 @@ import { ProfileValgomat } from '@/components/profile/profile-valgomat';
 import { ProfileInterests } from '@/components/profile/profile-interests';
 import { ProfileNotifications } from '@/components/profile/profile-notifications';
 import { ProfilePrivacy } from '@/components/profile/profile-privacy';
+import { ProfilePublicSettings } from '@/components/profile/profile-public-settings';
 import { ProfileAdminLinks } from '@/components/profile/profile-admin-links';
 import { isProfileTabId, type ProfileTabId } from '@/components/profile/profile-tabs';
 
@@ -212,6 +213,8 @@ function ProfileShellAuthenticated({
         ? 'Valgomat 2.0'
         : activeTab === 'innstillinger'
           ? 'Mine hjertesaker'
+        : activeTab === 'offentlig'
+          ? 'Offentlig profil'
           : activeTab === 'varsler'
             ? 'Varsler'
             : 'Privacy Hub';
@@ -247,6 +250,7 @@ function ProfileShellAuthenticated({
               <option value="historikk">Mine stemmer</option>
               <option value="valgomat">Valgomat 2.0</option>
               <option value="innstillinger">Mine hjertesaker</option>
+              <option value="offentlig">Offentlig profil</option>
               <option value="varsler">Varsler</option>
               <option value="min-data">Privacy Hub</option>
             </select>
@@ -276,6 +280,7 @@ function ProfileShellAuthenticated({
               onSave={onNotifSave}
             />
           )}
+          {activeTab === 'offentlig' && <ProfilePublicSettings userId={user.id} />}
           {activeTab === 'min-data' && <ProfilePrivacy />}
         </div>
       </div>

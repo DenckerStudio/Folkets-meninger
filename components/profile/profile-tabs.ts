@@ -1,10 +1,11 @@
 import type { LucideIcon } from 'lucide-react';
-import { Bell, FileText, PieChart, Settings, Shield } from 'lucide-react';
+import { Bell, FileText, PieChart, Settings, Shield, UserCircle } from 'lucide-react';
 
 export type ProfileTabId =
   | 'historikk'
   | 'valgomat'
   | 'innstillinger'
+  | 'offentlig'
   | 'varsler'
   | 'min-data';
 
@@ -31,6 +32,12 @@ export const PROFILE_TABS: {
     label: 'Mine hjertesaker',
     icon: Settings,
     description: 'Navn og interesseområder',
+  },
+  {
+    id: 'offentlig',
+    label: 'Offentlig profil',
+    icon: UserCircle,
+    description: 'Bio, parti og poengdeling',
   },
   {
     id: 'varsler',

@@ -48,6 +48,7 @@ export async function getUserForumPosts(
     .select('id, title, body, created_at')
     .eq('author_user_id', userId)
     .eq('is_system_thread', false)
+    .eq('moderation_status', 'approved')
     .order('created_at', { ascending: false })
     .limit(fetchLimit);
 
@@ -55,6 +56,7 @@ export async function getUserForumPosts(
     .from('forum_replies')
     .select('id, body, thread_id, created_at, forum_threads ( title )')
     .eq('author_user_id', userId)
+    .eq('moderation_status', 'approved')
     .order('created_at', { ascending: false })
     .limit(fetchLimit);
 
@@ -163,6 +165,7 @@ async function countRepliesPerThread(
   const { data } = await supabase
     .from('forum_replies')
     .select('thread_id')
+    .eq('moderation_status', 'approved')
     .in('thread_id', threadIds);
 
   for (const row of data ?? []) {

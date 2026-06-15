@@ -1,4 +1,4 @@
-export type ModerationCategory = 'hate' | 'sexual' | 'spam' | 'other';
+export type ModerationCategory = 'hate' | 'discrimination' | 'sexual' | 'violence' | 'spam' | 'other';
 
 export type ModerationResult =
   | { ok: true }
@@ -14,6 +14,12 @@ const HATE_PATTERNS = [
   /\b(jødesvin|jøde\s*hat)/i,
 ] as const;
 
+const DISCRIMINATION_PATTERNS = [
+  /\b(rase|religion|legning|funksjonshemmede)\s+(burde|skal)\s+(ut|fjernes|nektes)/i,
+  /\b(alle|ingen)\s+(muslimer|jøder|homofile|transpersoner|romfolk)\s+(er|bør|skal)\b/i,
+  /\b(send|kast)\s+(dem|alle)\s+ut\b/i,
+] as const;
+
 const SEXUAL_PATTERNS = [
   /\bporn(o|hub)?\b/i,
   /\bxnxx\b/i,
@@ -21,6 +27,11 @@ const SEXUAL_PATTERNS = [
   /\bsex\s*video/i,
   /\berotisk\s+film/i,
   /\bonlyfans\b/i,
+] as const;
+
+const VIOLENCE_PATTERNS = [
+  /\b(drep|skyt|bank opp|henrett)\s+(ham|henne|dem|alle)\b/i,
+  /\b(bombe|terror|massakre)\s+(stortinget|regjeringen|politikere|dem)\b/i,
 ] as const;
 
 const SPAM_PATTERNS = [
@@ -45,12 +56,32 @@ export function moderateForumText(text: string): ModerationResult {
     }
   }
 
+  for (const pattern of DISCRIMINATION_PATTERNS) {
+    if (pattern.test(normalized)) {
+      return {
+        ok: false,
+        reason: 'Diskriminerende generaliseringer er ikke tillatt',
+        category: 'discrimination',
+      };
+    }
+  }
+
   for (const pattern of SEXUAL_PATTERNS) {
     if (pattern.test(normalized)) {
       return {
         ok: false,
         reason: 'Eksplisitt eller upassende innhold er ikke tillatt',
         category: 'sexual',
+      };
+    }
+  }
+
+  for (const pattern of VIOLENCE_PATTERNS) {
+    if (pattern.test(normalized)) {
+      return {
+        ok: false,
+        reason: 'Oppfordringer til vold er ikke tillatt',
+        category: 'violence',
       };
     }
   }

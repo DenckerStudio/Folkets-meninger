@@ -1,6 +1,7 @@
 import { getServiceSupabase } from './supabase';
 import { getSakDetail, type StortingetSakDetail } from './stortinget';
 import { triggerAiSummaryWebhook } from './trigger-ai-summary-webhook';
+import { buildAiSummarySource, type AiSummaryDocumentSource } from './ai-summary/source-context';
 
 const DETAIL_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 
@@ -18,19 +19,39 @@ export async function getCachedSakDetail(sakId: string): Promise<StortingetSakDe
 
   const { data: cached } = await service
     .from('stortinget_issues')
-    .select('detail_json, last_synced_at')
+    .select('title, summary, detail_json, last_synced_at, ai_summary_source_hash')
     .eq('id', sakId)
     .single();
 
   if (cached?.detail_json) {
     const age = Date.now() - new Date(cached.last_synced_at).getTime();
     if (age < DETAIL_CACHE_MAX_AGE_MS) {
+      if (!cached.ai_summary_source_hash) {
+        const source = await updateAiSummarySource(service, sakId, cached.detail_json as StortingetSakDetail, {
+          title: cached.title,
+          summary: cached.summary,
+        });
+        await service
+          .from('stortinget_issues')
+          .update({
+            ai_summary_source_context: source.text,
+            ai_summary_source_json: source.json,
+            ai_summary_source_hash: source.hash,
+            ai_summary_source_updated_at: new Date().toISOString(),
+          })
+          .eq('id', sakId);
+      }
       return cached.detail_json as StortingetSakDetail;
     }
   }
 
   const detail = await getSakDetail(sakId, { nextRevalidateSeconds: 3600 });
   if (!detail) return (cached?.detail_json as StortingetSakDetail | undefined) ?? null;
+
+  const source = await updateAiSummarySource(service, sakId, detail, {
+    title: detail.korttittel || detail.tittel || `Sak ${sakId}`,
+    summary: detail.tittel || null,
+  });
 
   await service.from('stortinget_issues').upsert(
     {
@@ -40,6 +61,10 @@ export async function getCachedSakDetail(sakId: string): Promise<StortingetSakDe
       status: detail.ferdigbehandlet ? 'closed' : 'pending',
       detail_json: detail,
       last_synced_at: new Date().toISOString(),
+      ai_summary_source_context: source.text,
+      ai_summary_source_json: source.json,
+      ai_summary_source_hash: source.hash,
+      ai_summary_source_updated_at: new Date().toISOString(),
     },
     { onConflict: 'id' }
   );
@@ -55,4 +80,26 @@ export async function getCachedSakDetail(sakId: string): Promise<StortingetSakDe
   }
 
   return detail;
+}
+
+async function updateAiSummarySource(
+  service: ReturnType<typeof getServiceSupabase>,
+  sakId: string,
+  detail: StortingetSakDetail,
+  fallback: { title?: string | null; summary?: string | null }
+) {
+  const { data: documents } = await service
+    .from('stortinget_issue_documents')
+    .select('document_id, title, document_type, text_excerpt, source_url')
+    .eq('issue_id', sakId)
+    .order('fetched_at', { ascending: false })
+    .limit(5);
+
+  return buildAiSummarySource({
+    issueId: sakId,
+    title: fallback.title,
+    summary: fallback.summary,
+    detail,
+    documents: (documents ?? []) as AiSummaryDocumentSource[],
+  });
 }
