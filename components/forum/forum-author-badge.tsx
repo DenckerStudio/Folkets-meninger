@@ -1,6 +1,8 @@
 import { BadgeCheck } from 'lucide-react';
+import Link from 'next/link';
 import type { ForumAuthorDisplay } from '@/lib/forum/author-display';
 import { cn } from '@/lib/utils';
+import { routes } from '@/lib/routes';
 
 type ForumAuthorBadgeProps = {
   author: ForumAuthorDisplay;
@@ -13,6 +15,9 @@ export function ForumAuthorBadge({
   className,
   showPlatformHint = false,
 }: ForumAuthorBadgeProps) {
+  const name = <span className="text-sm font-medium text-gray-900 truncate">{author.name}</span>;
+  const canLink = author.kind === 'user' && author.userId;
+
   return (
     <div className={cn('flex items-center gap-2 min-w-0', className)}>
       <span
@@ -28,7 +33,13 @@ export function ForumAuthorBadge({
       </span>
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-sm font-medium text-gray-900 truncate">{author.name}</span>
+          {canLink ? (
+            <Link href={routes.profile(author.userId!)} className="hover:underline">
+              {name}
+            </Link>
+          ) : (
+            name
+          )}
           {author.kind === 'platform' && (
             <span className="inline-flex items-center gap-0.5 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 border border-indigo-100">
               <BadgeCheck className="w-3 h-3" />

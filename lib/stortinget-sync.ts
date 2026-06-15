@@ -1,15 +1,18 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { getSaker } from '@/lib/stortinget';
+import { getCachedSakDetail } from '@/lib/stortinget-detail-cache';
 
 export type SyncIssuesResult = {
   upserted: number;
   total: number;
+  newIssueIds: string[];
+  aiSummaryTriggered: number;
 };
 
 export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
   const issues = await getSaker();
   if (issues.length === 0) {
-    return { upserted: 0, total: 0 };
+    return { upserted: 0, total: 0, newIssueIds: [], aiSummaryTriggered: 0 };
   }
 
   const service = getServiceSupabase();
@@ -26,9 +29,17 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
 
   const chunkSize = 100;
   let upserted = 0;
+  const newIssueIds: string[] = [];
+  const missingSummaryIds: string[] = [];
 
   for (let i = 0; i < rows.length; i += chunkSize) {
     const chunk = rows.slice(i, i + chunkSize);
+    const { data: summaries } = await service
+      .from('issue_ai_summaries')
+      .select('stortinget_issue_id')
+      .in('stortinget_issue_id', chunk.map((row) => row.id));
+    const summarizedIds = new Set((summaries ?? []).map((row) => row.stortinget_issue_id));
+
     for (const row of chunk) {
       const { data: existing } = await service
         .from('stortinget_issues')
@@ -47,8 +58,22 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
         throw error;
       }
       upserted += 1;
+      if (!existing?.first_seen_at) {
+        newIssueIds.push(row.id);
+      }
+      if (!summarizedIds.has(row.id)) {
+        missingSummaryIds.push(row.id);
+      }
     }
   }
 
-  return { upserted, total: issues.length };
+  const candidates = [...new Set([...newIssueIds, ...missingSummaryIds.slice(0, 5)])];
+  let aiSummaryTriggered = 0;
+
+  for (const issueId of candidates) {
+    await getCachedSakDetail(issueId);
+    aiSummaryTriggered += 1;
+  }
+
+  return { upserted, total: issues.length, newIssueIds, aiSummaryTriggered };
 }

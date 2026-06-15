@@ -95,6 +95,10 @@ function mergeContextItems(body: string, jsonItems: unknown): ForumContextItem[]
   return merged;
 }
 
+function isMissingModerationColumn(error: { code?: string; message?: string } | null | undefined): boolean {
+  return error?.code === '42703' || error?.message?.includes('moderation_status') === true;
+}
+
 export async function getForumThreads(options?: {
   sakId?: string | null;
   sort?: ForumSort;
@@ -112,7 +116,8 @@ export async function getForumThreads(options?: {
 
   try {
     const supabase = getAnonSupabase();
-    let query = supabase
+    const buildThreadsQuery = (filterModeration: boolean) => {
+      let query = supabase
       .from('forum_threads')
       .select(`
         id,
@@ -124,20 +129,31 @@ export async function getForumThreads(options?: {
         author_user_id,
         is_system_thread,
         context_items,
+        moderation_status,
         users:author_user_id (first_name, last_name, name)
       `)
       .order('created_at', { ascending: false })
       .limit(sort === 'engasjert' ? 50 : limit);
 
-    if (sakId) {
-      query = query.eq('stortinget_issue_id', sakId);
-    }
+      if (filterModeration) {
+        query = query.eq('moderation_status', 'approved');
+      }
 
-    if (searchPattern) {
-      query = query.or(`title.ilike.${searchPattern},body.ilike.${searchPattern}`);
-    }
+      if (sakId) {
+        query = query.eq('stortinget_issue_id', sakId);
+      }
 
-    const { data: threads, error } = await query;
+      if (searchPattern) {
+        query = query.or(`title.ilike.${searchPattern},body.ilike.${searchPattern}`);
+      }
+
+      return query;
+    };
+
+    let { data: threads, error } = await buildThreadsQuery(true);
+    if (isMissingModerationColumn(error)) {
+      ({ data: threads, error } = await buildThreadsQuery(false));
+    }
 
     if (error) {
       console.error('Error fetching forum threads:', error);
@@ -152,10 +168,17 @@ export async function getForumThreads(options?: {
     const issueTitles: Record<string, string> = {};
 
     if (threadIds.length > 0) {
-      const { data: replies } = await supabase
+      let { data: replies, error: repliesError } = await supabase
         .from('forum_replies')
         .select('thread_id')
+        .eq('moderation_status', 'approved')
         .in('thread_id', threadIds);
+      if (isMissingModerationColumn(repliesError)) {
+        ({ data: replies } = await supabase
+          .from('forum_replies')
+          .select('thread_id')
+          .in('thread_id', threadIds));
+      }
 
       for (const r of replies || []) {
         replyCounts[r.thread_id] = (replyCounts[r.thread_id] || 0) + 1;
@@ -190,6 +213,7 @@ export async function getForumThreads(options?: {
         title: thread.title,
         author: resolveForumAuthor({
           isSystemThread: thread.is_system_thread,
+          userId: thread.author_user_id,
           users: thread.users as UserJoin,
         }),
         createdAt: formatTimeAgo(thread.created_at),
@@ -256,7 +280,8 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
 
   try {
     const supabase = getAnonSupabase();
-    const { data: thread, error } = await supabase
+    const buildThreadDetailQuery = (filterModeration: boolean) => {
+      let query = supabase
       .from('forum_threads')
       .select(`
         id,
@@ -268,10 +293,22 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
         author_user_id,
         is_system_thread,
         context_items,
+        moderation_status,
         users:author_user_id (first_name, last_name, name)
       `)
-      .eq('id', id)
-      .single();
+      .eq('id', id);
+
+      if (filterModeration) {
+        query = query.eq('moderation_status', 'approved');
+      }
+
+      return query.single();
+    };
+
+    let { data: thread, error } = await buildThreadDetailQuery(true);
+    if (isMissingModerationColumn(error)) {
+      ({ data: thread, error } = await buildThreadDetailQuery(false));
+    }
 
     if (error || !thread) return null;
 
@@ -283,7 +320,8 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
       .eq('target_type', 'thread')
       .eq('target_id', thread.id);
 
-    const { data: replies } = await supabase
+    const buildRepliesQuery = (filterModeration: boolean) => {
+      let query = supabase
       .from('forum_replies')
       .select(`
         id,
@@ -291,10 +329,22 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
         is_official_response,
         created_at,
         author_user_id,
+        moderation_status,
         users:author_user_id (first_name, last_name, name)
       `)
-      .eq('thread_id', thread.id)
-      .order('created_at', { ascending: true });
+      .eq('thread_id', thread.id);
+
+      if (filterModeration) {
+        query = query.eq('moderation_status', 'approved');
+      }
+
+      return query.order('created_at', { ascending: true });
+    };
+
+    let { data: replies, error: repliesError } = await buildRepliesQuery(true);
+    if (isMissingModerationColumn(repliesError)) {
+      ({ data: replies } = await buildRepliesQuery(false));
+    }
 
     const replyLikeCounts: Record<string, number> = {};
     const replyIds = (replies || []).map((r) => r.id);
@@ -371,6 +421,7 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
       content: cleanBody,
       author: resolveForumAuthor({
         isSystemThread: thread.is_system_thread,
+        userId: thread.author_user_id,
         users: thread.users as UserJoin,
       }),
       isSystemThread: thread.is_system_thread,
@@ -383,7 +434,7 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
       replyLikedIds,
       replies: (replies || []).map((reply) => ({
         id: reply.id,
-        author: resolveForumAuthor({ users: reply.users as UserJoin }),
+        author: resolveForumAuthor({ userId: reply.author_user_id, users: reply.users as UserJoin }),
         content: parseContextItemsFromBody(reply.body).cleanBody,
         createdAt: formatForumDate(reply.created_at),
         likes: replyLikeCounts[reply.id] || 0,
