@@ -22,7 +22,11 @@ async function searchSaker(q: string, limit: number): Promise<ForumContextItem[]
 
   if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
     const service = getServiceSupabase();
-    let query = service.from('stortinget_issues').select('id,title,status').limit(limit);
+    let query = service
+      .from('stortinget_issues')
+      .select('id,title,status,sak_kind')
+      .not('sak_kind', 'is', null)
+      .limit(limit);
 
     if (q) {
       query = query.ilike('title', `%${q}%`);
@@ -57,6 +61,9 @@ async function searchSaker(q: string, limit: number): Promise<ForumContextItem[]
             title: s.title,
             summary: s.summary || null,
             status: s.status || 'pending',
+            sak_kind: s.sakKind,
+            henvisning: s.henvisning,
+            dokumentgruppe: s.dokumentgruppe,
             last_synced_at: now,
           })),
           { onConflict: 'id' }
@@ -72,6 +79,7 @@ async function searchSaker(q: string, limit: number): Promise<ForumContextItem[]
     const { data } = await anon
       .from('stortinget_issues')
       .select('id,title,status')
+      .not('sak_kind', 'is', null)
       .ilike('title', `%${q}%`)
       .limit(limit);
 

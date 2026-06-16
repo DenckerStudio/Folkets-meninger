@@ -34,7 +34,7 @@ export default async function LandingPage() {
               icon={TrendingUp}
               iconClass="bg-emerald-100 text-emerald-600"
               title="Direkte fra Stortinget"
-              description="Saker hentes automatisk fra Stortingets åpne API. Følg med på hva som debatteres og vedtas."
+              description="Vi henter lovforslag og representantforslag fra Stortingets åpne API — saker som egner seg for enkelt ja/nei-engasjement."
             />
             <FeatureCard
               icon={Vote}

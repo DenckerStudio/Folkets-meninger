@@ -1,7 +1,14 @@
 'use server';
 
 import { STORTINGET_ACTIVE_PERIODE_ID, STORTINGET_ACTIVE_SESSION_ID } from './stortinget-config';
+import {
+  isDebattSak,
+  mapSakPresentation,
+  type SakKind,
+} from './stortinget-sak-presentation';
 import { parseStortingetDotNetDateToISO, stortingetUrl, type StortingetFormat } from './stortinget-utils';
+
+export type { SakKind };
 
 function getActiveSesjonId(): string {
   return STORTINGET_ACTIVE_SESSION_ID;
@@ -16,9 +23,12 @@ export interface StortingetSak {
   tittel: string;
   korttittel: string;
   status: number;
+  type?: number;
+  dokumentgruppe?: number;
   emne_liste?: { navn: string }[];
   sist_oppdatert_dato: string;
   henvisning: string;
+  forslagstiller_liste?: Array<{ fornavn?: string; etternavn?: string; parti?: { navn?: string } }>;
 }
 
 export interface SakVoteTotals {
@@ -36,6 +46,9 @@ export interface SakListItem {
   date: string;
   votes: SakVoteTotals;
   status: 'pending' | 'closed';
+  sakKind: SakKind | null;
+  henvisning: string | null;
+  dokumentgruppe: number | null;
 }
 
 export interface StortingetSakDetail {
@@ -47,6 +60,7 @@ export interface StortingetSakDetail {
   emne_liste?: { navn: string }[];
   sist_oppdatert_dato?: string;
   henvisning?: string;
+  dokumentgruppe?: number;
   type?: number;
   sak_nummer?: string;
   sak_sesjon?: string;
@@ -83,26 +97,48 @@ export interface StortingetSakDetail {
 const EMPTY_VOTES: SakVoteTotals = { for: 0, against: 0, abstain: 0, total: 0 };
 
 function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTotals = EMPTY_VOTES): SakListItem {
+  const presentation = mapSakPresentation({
+    korttittel: sak.korttittel,
+    tittel: sak.tittel,
+    henvisning: sak.henvisning,
+    dokumentgruppe: sak.dokumentgruppe,
+    emneNavn: sak.emne_liste?.[0]?.navn,
+  });
+
   return {
     id: sak.id.toString(),
-    title: sak.korttittel || sak.tittel,
-    summary: sak.tittel,
-    category: sak.emne_liste && sak.emne_liste.length > 0 ? sak.emne_liste[0].navn : 'Generelt',
+    title: presentation.title || sak.korttittel || sak.tittel || `Sak ${sak.id}`,
+    summary: presentation.summary,
+    category: presentation.category,
     date: parseStortingetDotNetDateToISO(sak.sist_oppdatert_dato),
     votes,
     status: sak.status === 1 ? 'pending' : 'closed',
+    sakKind: presentation.kind,
+    henvisning: presentation.henvisning,
+    dokumentgruppe: sak.dokumentgruppe ?? null,
   };
 }
 
 function mapDetailToListItem(detail: StortingetSakDetail, votes: SakVoteTotals = EMPTY_VOTES): SakListItem {
+  const presentation = mapSakPresentation({
+    korttittel: detail.korttittel,
+    tittel: detail.tittel,
+    henvisning: detail.henvisning,
+    dokumentgruppe: typeof detail.dokumentgruppe === 'number' ? detail.dokumentgruppe : null,
+    emneNavn: detail.emne_liste?.[0]?.navn,
+  });
+
   return {
     id: String(detail.id),
-    title: detail.korttittel || detail.tittel || `Sak ${detail.id}`,
-    summary: detail.tittel || '',
-    category: detail.emne_liste?.[0]?.navn ?? 'Generelt',
+    title: presentation.title || detail.korttittel || detail.tittel || `Sak ${detail.id}`,
+    summary: presentation.summary,
+    category: presentation.category,
     date: parseStortingetDotNetDateToISO(detail.sist_oppdatert_dato ?? ''),
     votes,
     status: detail.ferdigbehandlet ? 'closed' : detail.status === 1 ? 'pending' : 'closed',
+    sakKind: presentation.kind,
+    henvisning: presentation.henvisning,
+    dokumentgruppe: typeof detail.dokumentgruppe === 'number' ? detail.dokumentgruppe : null,
   };
 }
 
@@ -149,7 +185,9 @@ async function getVoteTotals(issueIds: string[]): Promise<Record<string, { for: 
   return result;
 }
 
-export async function getSaker(opts?: { nextRevalidateSeconds?: number }): Promise<SakListItem[]> {
+export async function getSaker(
+  opts?: { nextRevalidateSeconds?: number; includeAll?: boolean }
+): Promise<SakListItem[]> {
   try {
     const res = await fetch(
       stortingetUrl('/eksport/saker', { stortingssesjonid: getActiveSesjonId(), format: 'json' satisfies StortingetFormat }),
@@ -161,7 +199,19 @@ export async function getSaker(opts?: { nextRevalidateSeconds?: number }): Promi
     if (!res.ok) throw new Error('Failed to fetch saker');
     const data = (await res.json()) as { saker_liste?: StortingetSak[] };
 
-    const saker = (data.saker_liste ?? []).map((sak) => mapStortingetSakToListItem(sak));
+    const rawSaker = data.saker_liste ?? [];
+    const filtered = opts?.includeAll
+      ? rawSaker
+      : rawSaker.filter((sak) =>
+          isDebattSak({
+            korttittel: sak.korttittel,
+            tittel: sak.tittel,
+            henvisning: sak.henvisning,
+            dokumentgruppe: sak.dokumentgruppe,
+          })
+        );
+
+    const saker = filtered.map((sak) => mapStortingetSakToListItem(sak));
 
     const voteTotals = await getVoteTotals(saker.map((s) => s.id));
 

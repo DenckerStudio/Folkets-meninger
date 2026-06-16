@@ -1,4 +1,5 @@
 import { getSak, type StortingetSakDetail } from '@/lib/stortinget';
+import { getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { getCachedSakDetail } from '@/lib/stortinget-detail-cache';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -128,6 +129,11 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
         <div className="space-y-6">
           {/* Category + Status Badges */}
           <div className="flex flex-wrap items-center gap-2">
+            {sak.sakKind ? (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
+                {getSakKindLabel(sak.sakKind)}
+              </span>
+            ) : null}
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
               {sak.category}
             </span>
@@ -145,6 +151,9 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
           </div>
 
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{sak.title}</h1>
+          {(sak.henvisning || henvisning) ? (
+            <p className="text-sm text-gray-500">{sak.henvisning || henvisning}</p>
+          ) : null}
           
           {/* Meta info grid */}
           {detailedContent && (

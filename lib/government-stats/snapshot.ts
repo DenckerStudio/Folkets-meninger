@@ -78,6 +78,7 @@ export async function buildGovernmentStatsSnapshot(options?: {
   let issuesQuery = service
     .from('stortinget_issues')
     .select('id, title, status')
+    .not('sak_kind', 'is', null)
     .order('first_seen_at', { ascending: false, nullsFirst: false })
     .limit(limit);
 
@@ -85,6 +86,7 @@ export async function buildGovernmentStatsSnapshot(options?: {
     issuesQuery = service
       .from('stortinget_issues')
       .select('id, title, status')
+      .not('sak_kind', 'is', null)
       .in('id', options.issueIds);
   }
 

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Search, Filter, ArrowRight } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
 import type { SakListItem } from '@/lib/stortinget';
+import { getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { useState, useEffect, useMemo } from 'react';
 import FadeIn from '@/components/fade-in';
 import { PageHeader } from '@/components/page-header';
@@ -22,6 +23,7 @@ type UtforskFilters = {
   searchQuery: string;
   selectedCategory: string;
   selectedStatus: string;
+  selectedSakKind: string;
   sortBy: string;
 };
 
@@ -29,6 +31,7 @@ const DEFAULT_UTFORSK_FILTERS: UtforskFilters = {
   searchQuery: '',
   selectedCategory: 'Alle kategorier',
   selectedStatus: 'Alle statuser',
+  selectedSakKind: 'Alle sakstyper',
   sortBy: 'Nyeste først',
 };
 
@@ -39,6 +42,7 @@ function isUtforskFilters(value: unknown): value is UtforskFilters {
     typeof v.searchQuery === 'string' &&
     typeof v.selectedCategory === 'string' &&
     typeof v.selectedStatus === 'string' &&
+    typeof v.selectedSakKind === 'string' &&
     typeof v.sortBy === 'string'
   );
 }
@@ -55,12 +59,13 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
   );
 
   const displayedUserVotes = user ? userVotes : {};
-  const { searchQuery, selectedCategory, selectedStatus, sortBy } = filters;
+  const { searchQuery, selectedCategory, selectedStatus, selectedSakKind, sortBy } = filters;
 
   const setSearchQuery = (searchQuery: string) => setFilters((prev) => ({ ...prev, searchQuery }));
   const setSelectedCategory = (selectedCategory: string) =>
     setFilters((prev) => ({ ...prev, selectedCategory }));
   const setSelectedStatus = (selectedStatus: string) => setFilters((prev) => ({ ...prev, selectedStatus }));
+  const setSelectedSakKind = (selectedSakKind: string) => setFilters((prev) => ({ ...prev, selectedSakKind }));
   const setSortBy = (sortBy: string) => setFilters((prev) => ({ ...prev, sortBy }));
 
   useEffect(() => {
@@ -97,6 +102,12 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
     displayedIssues = displayedIssues.filter((issue) => issue.status === 'closed');
   }
 
+  if (selectedSakKind === 'Lovforslag') {
+    displayedIssues = displayedIssues.filter((issue) => issue.sakKind === 'lovforslag');
+  } else if (selectedSakKind === 'Representantforslag') {
+    displayedIssues = displayedIssues.filter((issue) => issue.sakKind === 'representantforslag');
+  }
+
   if (searchQuery.trim() !== '') {
     const query = searchQuery.toLowerCase();
     displayedIssues = displayedIssues.filter(
@@ -123,7 +134,10 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
   return (
     <div className="space-y-8">
       <FadeIn delay={0.1}>
-        <PageHeader title="Utforsk saker" description="Søk og filtrer blant alle saker fra Stortinget." />
+        <PageHeader
+          title="Utforsk saker"
+          description="Lovforslag og representantforslag fra Stortinget — saker som egner seg for enkelt ja/nei-engasjement."
+        />
       </FadeIn>
 
       <FadeIn delay={0.2} direction="up">
@@ -167,6 +181,20 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
                     {cat}
                   </option>
                 ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                <Filter className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="relative">
+              <select
+                value={selectedSakKind}
+                onChange={(e) => setSelectedSakKind(e.target.value)}
+                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-xl border appearance-none bg-white"
+              >
+                <option value="Alle sakstyper">Alle sakstyper</option>
+                <option value="Lovforslag">Lovforslag</option>
+                <option value="Representantforslag">Representantforslag</option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
                 <Filter className="h-4 w-4" />
@@ -222,7 +250,12 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden">
                   <Link href={`/dashboard/sak/${issue.id}`} className="block p-6 pb-4">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {issue.sakKind ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                            {getSakKindLabel(issue.sakKind)}
+                          </span>
+                        ) : null}
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                           {issue.category}
                         </span>
@@ -240,6 +273,9 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
                     <h2 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
                       {issue.title}
                     </h2>
+                    {issue.henvisning ? (
+                      <p className="text-sm text-gray-500 mb-2">{issue.henvisning}</p>
+                    ) : null}
                     <p className="text-gray-600 mb-4 line-clamp-2">{issue.summary}</p>
 
                     <div className="flex items-center justify-between mt-4">

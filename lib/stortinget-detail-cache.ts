@@ -1,5 +1,6 @@
 import { getServiceSupabase } from './supabase';
 import { getSakDetail, type StortingetSakDetail } from './stortinget';
+import { mapSakPresentation } from './stortinget-sak-presentation';
 import { triggerAiSummaryWebhook } from './trigger-ai-summary-webhook';
 import { buildAiSummarySource, type AiSummaryDocumentSource } from './ai-summary/source-context';
 
@@ -48,17 +49,28 @@ export async function getCachedSakDetail(sakId: string): Promise<StortingetSakDe
   const detail = await getSakDetail(sakId, { nextRevalidateSeconds: 3600 });
   if (!detail) return (cached?.detail_json as StortingetSakDetail | undefined) ?? null;
 
+  const presentation = mapSakPresentation({
+    korttittel: detail.korttittel,
+    tittel: detail.tittel,
+    henvisning: detail.henvisning,
+    dokumentgruppe: typeof detail.dokumentgruppe === 'number' ? detail.dokumentgruppe : null,
+    emneNavn: detail.emne_liste?.[0]?.navn,
+  });
+
   const source = await updateAiSummarySource(service, sakId, detail, {
-    title: detail.korttittel || detail.tittel || `Sak ${sakId}`,
-    summary: detail.tittel || null,
+    title: presentation.title || `Sak ${sakId}`,
+    summary: presentation.summary || null,
   });
 
   await service.from('stortinget_issues').upsert(
     {
       id: sakId,
-      title: detail.korttittel || detail.tittel || `Sak ${sakId}`,
-      summary: detail.tittel || null,
+      title: presentation.title || detail.korttittel || detail.tittel || `Sak ${sakId}`,
+      summary: presentation.summary || detail.tittel || null,
       status: detail.ferdigbehandlet ? 'closed' : 'pending',
+      sak_kind: presentation.kind,
+      henvisning: presentation.henvisning,
+      dokumentgruppe: typeof detail.dokumentgruppe === 'number' ? detail.dokumentgruppe : null,
       detail_json: detail,
       last_synced_at: new Date().toISOString(),
       ai_summary_source_context: source.text,

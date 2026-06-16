@@ -25,7 +25,7 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
           <div>
             <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Populære saker nå</h2>
             <p className="mt-2 text-gray-600 max-w-xl">
-              Et utvalg av de mest engasjerende sakene fra Stortinget. Logg inn for å utforske alle saker og stemme.
+              Lovforslag og representantforslag fra Stortinget — de mest engasjerende sakene for ja/nei-stemming.
             </p>
           </div>
           <Link
