@@ -91,6 +91,13 @@ export interface StortingetSakDetail {
     relatert_sak?: { id: number; korttittel?: string; tittel?: string };
     relasjonstype?: string;
   }>;
+  publikasjon_referanse_liste?: Array<{
+    eksport_id?: string | null;
+    lenke_tekst?: string | null;
+    lenke_url?: string | null;
+    type?: string | number | null;
+    undertype?: string | null;
+  }>;
   [key: string]: unknown;
 }
 

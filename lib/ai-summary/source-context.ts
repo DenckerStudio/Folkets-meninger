@@ -6,6 +6,7 @@ export type AiSummaryDocumentSource = {
   title?: string | null;
   document_type?: string | null;
   text_excerpt?: string | null;
+  content_full_text?: string | null;
   source_url?: string | null;
 };
 
@@ -112,7 +113,8 @@ export function buildAiSummarySource(args: {
   for (const doc of documents.slice(0, 5)) {
     const docTitle = clean(doc.title) || clean(doc.document_id) || 'Dokument';
     const docType = clean(doc.document_type);
-    const excerpt = clean(doc.text_excerpt);
+    const fullText = clean((doc as { content_full_text?: string | null }).content_full_text);
+    const excerpt = clean(doc.text_excerpt) || (fullText ? truncate(fullText, 3_000) : null);
     parts.push(
       [
         `Tilhørende dokument: ${docTitle}${docType ? ` (${docType})` : ''}`,

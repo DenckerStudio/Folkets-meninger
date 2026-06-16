@@ -106,6 +106,29 @@ Webhook: `POST /webhook/folkets-forum-prompts` (env `N8N_FORUM_PROMPTS_WEBHOOK_U
 
 Krever migrasjon `20260531120000_production_readiness.sql` (`first_seen_at`, `stortinget_issue_id` på prompts).
 
+## Dokument ingestion + RAG embeddings
+
+Workflow-kilder:
+
+- Dokument-cache + chunking skjer i appen (`lib/stortinget-document-ingest.ts`) ved sak-sync.
+- [`document-embeddings.workflow.ts`](document-embeddings.workflow.ts) – batch/kø for Ollama `nomic-embed-text` → `document_chunks.embedding`.
+
+| Nøkkel | Verdi |
+|--------|--------|
+| `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL` | f.eks. `https://n8n.heyklever.app/webhook/folkets-document-embeddings` |
+
+Webhook (valgfri sak-id):
+
+```bash
+curl -X POST "$N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL" \
+  -H "Content-Type: application/json" \
+  -d '{"stortinget_issue_id":"200329"}'
+```
+
+Supabase-migrasjon: `20260617120000_sak_documents_rag.sql` (`content_html`, `document_chunks`, pgvector).
+
+AI-sammendrag (`ai-summary-backfill`) inkluderer nå `rag_chunks` i kontekst når dokumenter er ingestet.
+
 ## App cron (erstatter Vercel Cron)
 
 Workflow-kilde: [`app-cron.workflow.ts`](app-cron.workflow.ts)

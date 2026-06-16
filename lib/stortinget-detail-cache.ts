@@ -3,6 +3,7 @@ import { getSakDetail, type StortingetSakDetail } from './stortinget';
 import { mapSakPresentation } from './stortinget-sak-presentation';
 import { triggerAiSummaryWebhook } from './trigger-ai-summary-webhook';
 import { buildAiSummarySource, type AiSummaryDocumentSource } from './ai-summary/source-context';
+import { ingestSakDocuments } from './stortinget-document-ingest';
 
 const DETAIL_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 
@@ -27,8 +28,9 @@ export async function getCachedSakDetail(sakId: string): Promise<StortingetSakDe
   if (cached?.detail_json) {
     const age = Date.now() - new Date(cached.last_synced_at).getTime();
     if (age < DETAIL_CACHE_MAX_AGE_MS) {
+      const detail = cached.detail_json as StortingetSakDetail;
       if (!cached.ai_summary_source_hash) {
-        const source = await updateAiSummarySource(service, sakId, cached.detail_json as StortingetSakDetail, {
+        const source = await updateAiSummarySource(service, sakId, detail, {
           title: cached.title,
           summary: cached.summary,
         });
@@ -42,7 +44,10 @@ export async function getCachedSakDetail(sakId: string): Promise<StortingetSakDe
           })
           .eq('id', sakId);
       }
-      return cached.detail_json as StortingetSakDetail;
+      void ingestSakDocuments(sakId, detail).catch((error) => {
+        console.warn('[document-ingest] Failed during cache hit:', error);
+      });
+      return detail;
     }
   }
 
@@ -91,6 +96,10 @@ export async function getCachedSakDetail(sakId: string): Promise<StortingetSakDe
     triggerAiSummaryWebhook(sakId);
   }
 
+  void ingestSakDocuments(sakId, detail).catch((error) => {
+    console.warn('[document-ingest] Failed during cache refresh:', error);
+  });
+
   return detail;
 }
 
@@ -102,7 +111,7 @@ async function updateAiSummarySource(
 ) {
   const { data: documents } = await service
     .from('stortinget_issue_documents')
-    .select('document_id, title, document_type, text_excerpt, source_url')
+    .select('document_id, title, document_type, text_excerpt, source_url, content_full_text')
     .eq('issue_id', sakId)
     .order('fetched_at', { ascending: false })
     .limit(5);

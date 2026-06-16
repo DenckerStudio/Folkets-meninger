@@ -97,15 +97,8 @@ export default function AiSummary({
 
       if (!cancelled) {
         setLoading(false);
-        setStatusMessage('Kunne ikke hente AI-sammendrag akkurat nå.');
-        setData({
-          hva: `Saken handler om: ${title}`,
-          hvem: 'Se saksdokumentene for detaljer.',
-          kostnad:
-            summary.includes('milliard') || summary.includes('kr')
-              ? 'Se saksdokumentene for økonomiske tall.'
-              : 'Ikke spesifisert i kortversjonen.',
-        });
+        setStatusMessage('AI-sammendrag er ikke tilgjengelig ennå. Prøv igjen senere.');
+        setData(null);
       }
     }
 
@@ -129,7 +122,19 @@ export default function AiSummary({
     );
   }
 
-  if (!data) return null;
+  if (!data) {
+    return (
+      <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-8">
+        <h2 className="text-xl font-bold text-gray-900 flex items-center mb-2">
+          <ShieldCheck className="w-6 h-6 text-indigo-600 mr-2" />
+          AI-forklart (nøytral)
+        </h2>
+        <p className="text-sm text-indigo-900">
+          {statusMessage ?? 'AI-sammendrag genereres i bakgrunnen og vises her når det er klart.'}
+        </p>
+      </div>
+    );
+  }
 
   const items = [
     { icon: BrainCircuit, label: 'Hva?', text: data.hva, color: 'text-indigo-600', bg: 'bg-indigo-50' },
