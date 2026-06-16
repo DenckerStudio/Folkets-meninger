@@ -9,7 +9,7 @@ import { SakMetaCard, SakSectionHeading, SakStatusBadge } from '@/components/sak
 import { SaksgangTimeline, type SaksgangStep } from '@/components/sak/saksgang-timeline';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, MessageSquare, Users, FileText, Tag, Building2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, MessageSquare, Users, Tag } from 'lucide-react';
 import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
 import ShareButton from './share-button';
@@ -200,17 +200,17 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
           {detailedContent ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {sakNummer && sakSesjon ? (
-                <SakMetaCard icon={FileText} label="Saksnummer" tooltipKey="saksnummer">
+                <SakMetaCard icon="file-text" label="Saksnummer" tooltipKey="saksnummer">
                   Sak nr. {sakNummer} ({sakSesjon})
                 </SakMetaCard>
               ) : null}
               {henvisning ? (
-                <SakMetaCard icon={ExternalLink} label="Dokumentreferanse" tooltipKey="dokumentreferanse">
+                <SakMetaCard icon="external-link" label="Dokumentreferanse" tooltipKey="dokumentreferanse">
                   {henvisning}
                 </SakMetaCard>
               ) : null}
               {komite ? (
-                <SakMetaCard icon={Building2} label="Komité" tooltipKey="komite">
+                <SakMetaCard icon="building-2" label="Komité" tooltipKey="komite">
                   {typeof komite === 'object' ? komite.navn : komite}
                 </SakMetaCard>
               ) : null}
@@ -223,7 +223,8 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
               <SakSectionHeading
                 title="Forslagstillere"
                 tooltipKey="forslagstillere"
-                icon={<Users className="w-5 h-5 text-indigo-600" />}
+                icon="users"
+                iconClassName="w-5 h-5 text-indigo-600"
               />
               <div className="flex flex-wrap gap-3">
                 {forslagstillere.map((f: any, i: number) => (
@@ -260,7 +261,8 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
               <SakSectionHeading
                 title="Saksordførere"
                 tooltipKey="saksordfoerer"
-                icon={<Users className="w-5 h-5 text-amber-600" />}
+                icon="users"
+                iconClassName="w-5 h-5 text-amber-600"
               />
               <div className="flex flex-wrap gap-3">
                 {saksordfoerere.map((s: any, i: number) => (
