@@ -2,7 +2,7 @@ import { getSak, type StortingetSakDetail } from '@/lib/stortinget';
 import { getCachedSakDetail } from '@/lib/stortinget-detail-cache';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, MessageSquare, Users, FileText, GitBranch, Tag, Building2 } from 'lucide-react';
+import { ExternalLink, MessageSquare, Users, FileText, GitBranch, Tag, Building2 } from 'lucide-react';
 import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
 import ShareButton from './share-button';
@@ -11,6 +11,7 @@ import ExpandableText from './expandable-text';
 import VotingSection from './voting-section';
 import Image from 'next/image';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
+import { routes } from '@/lib/routes';
 
 export const dynamic = 'force-dynamic';
 
@@ -109,18 +110,15 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
   return (
     <div className="max-w-4xl mx-auto space-y-12 pb-12">
       <FadeIn delay={0.1}>
-        <div className="flex items-center justify-between">
-          <Link href="/dashboard/utforsk" className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500">
-            <ArrowLeft className="mr-2 w-4 h-4" />
-            Tilbake til oversikt
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <Link
+            href={`${routes.forum}?sak=${sak.id}`}
+            className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+          >
+            <MessageSquare className="w-4 h-4" />
+            Diskuter i forum
           </Link>
-          <div className="flex gap-3">
-            <Link href={`/dashboard/forum?sak=${sak.id}`} className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500">
-              <MessageSquare className="mr-1.5 w-4 h-4" />
-              Diskuter i forum
-            </Link>
-            <ShareButton id={sak.id} title={sak.title} />
-          </div>
+          <ShareButton id={sak.id} title={sak.title} />
         </div>
       </FadeIn>
 

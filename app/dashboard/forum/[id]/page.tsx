@@ -1,12 +1,13 @@
 import Link from 'next/link';
-import { ArrowLeft, Clock, MessageCircle, CheckCircle, ShieldCheck } from 'lucide-react';
+import { Clock, MessageCircle, CheckCircle, ShieldCheck } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import LikeButton, { CommentCountPill, ShareThreadButton } from '@/components/forum/like-button';
 import { ForumAuthorBadge } from '@/components/forum/forum-author-badge';
-import { ForumReportButton } from '@/components/forum/forum-report-button';
+import { ForumPostActions } from '@/components/forum/forum-post-actions';
+import { RelatedDiscussions } from '@/components/forum/related-discussions';
 import { FormattedForumBody } from '@/lib/forum/format-body';
 import { ForumSourceList } from '@/components/forum/forum-source-card';
-import { getForumThread } from '@/lib/forum/queries';
+import { getForumThread, getRelatedForumThreads } from '@/lib/forum/queries';
 import { routes } from '@/lib/routes';
 import ForumReplyForm from './reply-form';
 
@@ -20,18 +21,19 @@ export default async function ForumPostPage({ params }: { params: Promise<{ id: 
     notFound();
   }
 
+  const relatedThreads =
+    post.relatedIssueId != null
+      ? await getRelatedForumThreads(post.relatedIssueId, post.id)
+      : [];
+
   const replyLikedSet = new Set(post.replyLikedIds);
+  const isThreadOwner = Boolean(post.currentUserId && post.authorUserId === post.currentUserId);
+  const threadDeleteRedirect = post.relatedIssueId
+    ? `${routes.forum}?sak=${post.relatedIssueId}`
+    : routes.forum;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-12">
-      <Link
-        href={routes.forum}
-        className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500"
-      >
-        <ArrowLeft className="mr-2 w-4 h-4" />
-        Tilbake til forumet
-      </Link>
-
       <article className="flex gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
         <div className="shrink-0">
           <LikeButton
@@ -65,7 +67,12 @@ export default async function ForumPostPage({ params }: { params: Promise<{ id: 
                 {post.createdAt}
               </span>
             </div>
-            <ForumReportButton targetType="thread" targetId={post.id} />
+            <ForumPostActions
+              targetType="thread"
+              targetId={post.id}
+              isOwner={isThreadOwner}
+              redirectAfterThreadDelete={threadDeleteRedirect}
+            />
           </div>
 
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">{post.title}</h1>
@@ -85,6 +92,14 @@ export default async function ForumPostPage({ params }: { params: Promise<{ id: 
         </div>
       </article>
 
+      {post.relatedIssueId && post.relatedIssueTitle && relatedThreads.length > 0 && (
+        <RelatedDiscussions
+          sakId={post.relatedIssueId}
+          sakTitle={post.relatedIssueTitle}
+          threads={relatedThreads}
+        />
+      )}
+
       <section className="space-y-4">
         <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
           <MessageCircle className="w-5 h-5 text-gray-400" />
@@ -95,49 +110,60 @@ export default async function ForumPostPage({ params }: { params: Promise<{ id: 
           <p className="text-center py-8 text-gray-500 text-sm">Ingen svar ennå. Vær den første!</p>
         ) : (
           <div className="space-y-3">
-            {post.replies.map((reply) => (
-              <article
-                key={reply.id}
-                id={`reply-${reply.id}`}
-                className={`flex gap-3 rounded-xl border p-4 scroll-mt-24 ${
-                  reply.isOfficialResponse ? 'border-indigo-300 bg-indigo-50/30' : 'border-gray-200 bg-white'
-                }`}
-              >
-                <LikeButton
-                  targetType="reply"
-                  targetId={reply.id}
-                  initialCount={reply.likes}
-                  initialLiked={replyLikedSet.has(reply.id)}
-                  variant="pill"
-                />
-                <div className="min-w-0 flex-1">
-                  {reply.isOfficialResponse && (
-                    <div className="text-xs font-bold text-indigo-800 mb-2 inline-flex items-center gap-1">
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      Offisielt svar
+            {post.replies.map((reply) => {
+              const isReplyOwner = Boolean(
+                post.currentUserId && reply.authorUserId === post.currentUserId,
+              );
+
+              return (
+                <article
+                  key={reply.id}
+                  id={`reply-${reply.id}`}
+                  className={`flex gap-3 rounded-xl border p-4 scroll-mt-24 ${
+                    reply.isOfficialResponse ? 'border-indigo-300 bg-indigo-50/30' : 'border-gray-200 bg-white'
+                  }`}
+                >
+                  <LikeButton
+                    targetType="reply"
+                    targetId={reply.id}
+                    initialCount={reply.likes}
+                    initialLiked={replyLikedSet.has(reply.id)}
+                    variant="pill"
+                  />
+                  <div className="min-w-0 flex-1">
+                    {reply.isOfficialResponse && (
+                      <div className="text-xs font-bold text-indigo-800 mb-2 inline-flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        Offisielt svar
+                      </div>
+                    )}
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {reply.author ? (
+                          <ForumAuthorBadge author={reply.author} />
+                        ) : (
+                          <span className="text-sm text-gray-500">Ukjent forfatter</span>
+                        )}
+                        {reply.isVerifiedPolitician && (
+                          <span className="text-indigo-600 text-xs inline-flex items-center gap-0.5 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                            <ShieldCheck className="w-3 h-3" />
+                            Verifisert
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-500">{reply.createdAt}</span>
+                      </div>
+                      <ForumPostActions
+                        targetType="reply"
+                        targetId={reply.id}
+                        isOwner={isReplyOwner}
+                        threadId={post.id}
+                      />
                     </div>
-                  )}
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {reply.author ? (
-                        <ForumAuthorBadge author={reply.author} />
-                      ) : (
-                        <span className="text-sm text-gray-500">Ukjent forfatter</span>
-                      )}
-                      {reply.isVerifiedPolitician && (
-                        <span className="text-indigo-600 text-xs inline-flex items-center gap-0.5 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
-                          <ShieldCheck className="w-3 h-3" />
-                          Verifisert
-                        </span>
-                      )}
-                      <span className="text-xs text-gray-500">{reply.createdAt}</span>
-                    </div>
-                    <ForumReportButton targetType="reply" targetId={reply.id} />
+                    <FormattedForumBody text={reply.content} className="text-gray-700 text-sm" />
                   </div>
-                  <FormattedForumBody text={reply.content} className="text-gray-700 text-sm" />
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
 

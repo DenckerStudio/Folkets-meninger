@@ -45,7 +45,7 @@ export default function ForumPostCard({ topic }: { topic: ForumThreadListItem })
           <span>·</span>
           <span>{topic.createdAt}</span>
           <span className="ml-auto">
-            <ForumPostCardMenu threadId={topic.id} />
+            <ForumPostCardMenu threadId={topic.id} authorUserId={topic.authorUserId} />
           </span>
         </div>
 
