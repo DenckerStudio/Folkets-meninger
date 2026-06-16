@@ -1,9 +1,6 @@
 import { getSak, type StortingetSakDetail } from '@/lib/stortinget';
-import {
-  classifySakKind,
-  getSakKindLabel,
-  SAK_META_TOOLTIPS,
-} from '@/lib/stortinget-sak-tooltips';
+import { classifySakKind, getSakKindLabel } from '@/lib/stortinget-sak-presentation';
+import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { getCachedSakDetail } from '@/lib/stortinget-detail-cache';
 import { SakMetaCard, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
 import { SaksgangTimeline, type SaksgangStep } from '@/components/sak/saksgang-timeline';
@@ -132,11 +129,13 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
   const emner = detailedContent?.emne_liste || [];
   const stikkord = detailedContent?.stikkord_liste || [];
   const relaterteSaker = detailedContent?.sak_relasjon_liste || [];
-  const sakKind = classifySakKind({
-    henvisning,
-    dokumentgruppe:
-      typeof detailedContent?.dokumentgruppe === 'number' ? detailedContent.dokumentgruppe : null,
-  });
+  const displaySakKind =
+    sak.sakKind ??
+    classifySakKind({
+      henvisning: sak.henvisning ?? henvisning,
+      dokumentgruppe:
+        typeof detailedContent?.dokumentgruppe === 'number' ? detailedContent.dokumentgruppe : null,
+    });
 
   return (
     <div className="max-w-4xl mx-auto space-y-12 pb-12">
@@ -160,11 +159,11 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
         <div className="space-y-6">
           {/* Category + Status Badges */}
           <div className="flex flex-wrap items-center gap-2">
-            {sakKind ? (
+            {displaySakKind ? (
               <SakStatusBadge
-                label={getSakKindLabel(sakKind)}
+                label={getSakKindLabel(displaySakKind)}
                 tooltip={
-                  sakKind === 'lovforslag'
+                  displaySakKind === 'lovforslag'
                     ? SAK_META_TOOLTIPS.lovforslag
                     : SAK_META_TOOLTIPS.representantforslag
                 }
@@ -192,8 +191,8 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
           </div>
 
           <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{sak.title}</h1>
-          {(henvisning || sak.summary) ? (
-            <p className="text-sm text-muted-foreground">{henvisning || sak.summary}</p>
+          {(sak.henvisning || henvisning) ? (
+            <p className="text-sm text-muted-foreground">{sak.henvisning || henvisning}</p>
           ) : null}
           
           {/* Meta info grid */}

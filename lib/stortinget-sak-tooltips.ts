@@ -1,40 +1,10 @@
 /** Brukervennlige forklaringer for saksgang og metadata fra Stortinget. */
 
-export type SakKind = 'lovforslag' | 'representantforslag';
-
-const LOVFORSLAG_HENVISNING = /\b(?:Prop\.\s*\d+\s*L|Innst\.\s*\d+\s*L|Lovvedtak)\b/i;
-const REPRESENTANTFORSLAG_HENVISNING = /Dokument\s*8\b/i;
-
-export function classifySakKind(input: {
-  henvisning?: string | null;
-  dokumentgruppe?: number | null;
-}): SakKind | null {
-  const henvisning = (input.henvisning ?? '').trim();
-  const dokumentgruppe = input.dokumentgruppe ?? null;
-
-  if (dokumentgruppe === 1 && LOVFORSLAG_HENVISNING.test(henvisning)) {
-    return 'lovforslag';
-  }
-
-  if (dokumentgruppe === 4 && REPRESENTANTFORSLAG_HENVISNING.test(henvisning)) {
-    return 'representantforslag';
-  }
-
-  return null;
-}
-
-export function getSakKindLabel(kind: SakKind): string {
-  switch (kind) {
-    case 'lovforslag':
-      return 'Lovforslag';
-    case 'representantforslag':
-      return 'Representantforslag';
-    default: {
-      const _exhaustive: never = kind;
-      return _exhaustive;
-    }
-  }
-}
+export {
+  classifySakKind,
+  getSakKindLabel,
+  type SakKind,
+} from './stortinget-sak-presentation';
 
 export const SAK_EVENT_TOOLTIPS: Record<string, string> = {
   FRADEP:

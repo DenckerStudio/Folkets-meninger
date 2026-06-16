@@ -23,6 +23,9 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
     title: issue.title || `Sak ${issue.id}`,
     summary: issue.summary || issue.title || null,
     status: issue.status || 'pending',
+    sak_kind: issue.sakKind,
+    henvisning: issue.henvisning,
+    dokumentgruppe: issue.dokumentgruppe,
     last_synced_at: now,
     last_updated_at: issue.date || now,
   }));
