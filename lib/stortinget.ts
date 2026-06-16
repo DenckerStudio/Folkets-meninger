@@ -47,6 +47,7 @@ export interface StortingetSakDetail {
   emne_liste?: { navn: string }[];
   sist_oppdatert_dato?: string;
   henvisning?: string;
+  dokumentgruppe?: number;
   type?: number;
   sak_nummer?: string;
   sak_sesjon?: string;
