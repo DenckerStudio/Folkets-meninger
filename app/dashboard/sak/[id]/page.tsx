@@ -1,8 +1,15 @@
 import { getSak, type StortingetSakDetail } from '@/lib/stortinget';
+import {
+  classifySakKind,
+  getSakKindLabel,
+  SAK_META_TOOLTIPS,
+} from '@/lib/stortinget-sak-tooltips';
 import { getCachedSakDetail } from '@/lib/stortinget-detail-cache';
+import { SakMetaCard, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
+import { SaksgangTimeline, type SaksgangStep } from '@/components/sak/saksgang-timeline';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, MessageSquare, Users, FileText, GitBranch, Tag, Building2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, MessageSquare, Users, FileText, Tag, Building2 } from 'lucide-react';
 import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
 import ShareButton from './share-button';
@@ -62,10 +69,6 @@ const eventLabels: Record<string, string> = {
   LOV: 'Lov vedtatt',
 };
 
-function cleanSaksgangName(name: string): string {
-  return name.replace(/^K(?=[A-ZÆØÅ][a-zæøå])/, '');
-}
-
 const sakTypeMap: Record<number, string> = {
   0: 'Alminnelig sak',
   1: 'Lovsak',
@@ -74,6 +77,30 @@ const sakTypeMap: Record<number, string> = {
   4: 'Interpellasjon',
   5: 'Spørsmål',
 };
+
+function buildSaksgangSteps(
+  saksgangSteg: NonNullable<StortingetSakDetail['saksgang']>['saksgang_steg_liste'],
+): SaksgangStep[] {
+  return (saksgangSteg ?? []).map((steg) => {
+    const allEvents = steg.saksgang_hendelse_liste || [];
+    const events = allEvents
+      .filter((h) => {
+        const hasValidDate = h.dato && !h.dato.startsWith('01.01.0001');
+        return hasValidDate || h.hendelse_tekst;
+      })
+      .map((h) => ({
+        id: h.id,
+        label: h.hendelse_tekst || eventLabels[h.id ?? ''] || null,
+        date: formatEventDate(h.dato ?? null),
+      }))
+      .filter((e) => e.label || e.date);
+
+    return {
+      navn: steg.navn,
+      events,
+    };
+  });
+}
 
 export default async function SakPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -98,13 +125,18 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
   const komite = detailedContent?.komite;
 
   const saksgang = detailedContent?.saksgang;
-  const saksgangSteg = saksgang?.saksgang_steg_liste || [];
+  const saksgangSteps = buildSaksgangSteps(saksgang?.saksgang_steg_liste);
 
   const forslagstillere = detailedContent?.sak_opphav?.forslagstiller_liste || [];
   const saksordfoerere = detailedContent?.saksordfoerer_liste || [];
   const emner = detailedContent?.emne_liste || [];
   const stikkord = detailedContent?.stikkord_liste || [];
   const relaterteSaker = detailedContent?.sak_relasjon_liste || [];
+  const sakKind = classifySakKind({
+    henvisning,
+    dokumentgruppe:
+      typeof detailedContent?.dokumentgruppe === 'number' ? detailedContent.dokumentgruppe : null,
+  });
 
   return (
     <div className="max-w-4xl mx-auto space-y-12 pb-12">
@@ -128,64 +160,71 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
         <div className="space-y-6">
           {/* Category + Status Badges */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+            {sakKind ? (
+              <SakStatusBadge
+                label={getSakKindLabel(sakKind)}
+                tooltip={
+                  sakKind === 'lovforslag'
+                    ? SAK_META_TOOLTIPS.lovforslag
+                    : SAK_META_TOOLTIPS.representantforslag
+                }
+                className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200"
+              />
+            ) : null}
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200">
               {sak.category}
             </span>
-            {sakType && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+            {sakType ? (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200">
                 {sakType}
               </span>
-            )}
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-              ferdigbehandlet ? 'bg-gray-100 text-gray-700' : 'bg-emerald-100 text-emerald-800'
-            }`}>
-              {ferdigbehandlet ? 'Ferdigbehandlet' : 'Under behandling'}
-            </span>
-            <span className="ml-auto text-sm text-gray-500">Sist oppdatert: {sak.date}</span>
+            ) : null}
+            <SakStatusBadge
+              label={ferdigbehandlet ? 'Ferdigbehandlet' : 'Under behandling'}
+              tooltip={ferdigbehandlet ? SAK_META_TOOLTIPS.ferdigbehandlet : SAK_META_TOOLTIPS.underBehandling}
+              className={
+                ferdigbehandlet
+                  ? 'bg-muted text-muted-foreground'
+                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+              }
+            />
+            <span className="ml-auto text-sm text-muted-foreground">Sist oppdatert: {sak.date}</span>
           </div>
 
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{sak.title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{sak.title}</h1>
+          {(henvisning || sak.summary) ? (
+            <p className="text-sm text-muted-foreground">{henvisning || sak.summary}</p>
+          ) : null}
           
           {/* Meta info grid */}
-          {detailedContent && (
+          {detailedContent ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sakNummer && sakSesjon && (
-                <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
-                  <FileText className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Saksnummer</div>
-                    <div className="text-sm font-semibold text-gray-900">Sak nr. {sakNummer} ({sakSesjon})</div>
-                  </div>
-                </div>
-              )}
-              {henvisning && (
-                <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
-                  <ExternalLink className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Dokumentreferanse</div>
-                    <div className="text-sm font-semibold text-gray-900">{henvisning}</div>
-                  </div>
-                </div>
-              )}
-              {komite && (
-                <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
-                  <Building2 className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Komité</div>
-                    <div className="text-sm font-semibold text-gray-900">{typeof komite === 'object' ? komite.navn : komite}</div>
-                  </div>
-                </div>
-              )}
+              {sakNummer && sakSesjon ? (
+                <SakMetaCard icon={FileText} label="Saksnummer" tooltipKey="saksnummer">
+                  Sak nr. {sakNummer} ({sakSesjon})
+                </SakMetaCard>
+              ) : null}
+              {henvisning ? (
+                <SakMetaCard icon={ExternalLink} label="Dokumentreferanse" tooltipKey="dokumentreferanse">
+                  {henvisning}
+                </SakMetaCard>
+              ) : null}
+              {komite ? (
+                <SakMetaCard icon={Building2} label="Komité" tooltipKey="komite">
+                  {typeof komite === 'object' ? komite.navn : komite}
+                </SakMetaCard>
+              ) : null}
             </div>
-          )}
+          ) : null}
 
           {/* Forslagstillere (Proposers) */}
-          {forslagstillere.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                <Users className="w-5 h-5 mr-2 text-indigo-600" />
-                Forslagstillere
-              </h2>
+          {forslagstillere.length > 0 ? (
+            <div className="rounded-2xl border border-border bg-card shadow-sm p-6">
+              <SakSectionHeading
+                title="Forslagstillere"
+                tooltipKey="forslagstillere"
+                icon={<Users className="w-5 h-5 text-indigo-600" />}
+              />
               <div className="flex flex-wrap gap-3">
                 {forslagstillere.map((f: any, i: number) => (
                   <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
@@ -214,15 +253,15 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
 
-          {/* Saksordførere (Case rapporteurs) */}
-          {saksordfoerere.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                <Users className="w-5 h-5 mr-2 text-amber-600" />
-                Saksordførere
-              </h2>
+          {saksordfoerere.length > 0 ? (
+            <div className="rounded-2xl border border-border bg-card shadow-sm p-6">
+              <SakSectionHeading
+                title="Saksordførere"
+                tooltipKey="saksordfoerer"
+                icon={<Users className="w-5 h-5 text-amber-600" />}
+              />
               <div className="flex flex-wrap gap-3">
                 {saksordfoerere.map((s: any, i: number) => (
                   <div key={i} className="flex items-center gap-2 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">
@@ -251,74 +290,15 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
 
-          {/* Saksgang (Case Progress) */}
-          {saksgangSteg.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-2 flex items-center">
-                <GitBranch className="w-5 h-5 mr-2 text-indigo-600" />
-                Saksgang
-              </h2>
-              {saksgang?.navn && (
-                <p className="text-sm text-gray-500 mb-4">{cleanSaksgangName(saksgang.navn)}</p>
-              )}
-              <div className="relative">
-                <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200" />
-                <div className="space-y-4">
-                  {saksgangSteg.map((steg: any, i: number) => {
-                    const isLast = i === saksgangSteg.length - 1;
-                    const allEvents = steg.saksgang_hendelse_liste || [];
-                    const meaningfulEvents = allEvents
-                      .filter((h: any) => {
-                        const hasValidDate = h.dato && !h.dato.startsWith('01.01.0001');
-                        return hasValidDate || h.hendelse_tekst;
-                      })
-                      .map((h: any) => ({
-                        label: h.hendelse_tekst || eventLabels[h.id] || null,
-                        date: formatEventDate(h.dato),
-                      }))
-                      .filter((e: any) => e.label || e.date);
-                    const hasAnyEvents = allEvents.length > 0;
-                    const stepDone = meaningfulEvents.length > 0;
-
-                    return (
-                      <div key={i} className="relative pl-10">
-                        <div className={`absolute left-2.5 w-3 h-3 rounded-full border-2 ${
-                          stepDone && ferdigbehandlet
-                            ? 'bg-emerald-500 border-emerald-500'
-                            : isLast && !ferdigbehandlet
-                              ? 'bg-indigo-500 border-indigo-500'
-                              : stepDone
-                                ? 'bg-indigo-500 border-indigo-500'
-                                : 'bg-white border-gray-300'
-                        }`} style={{ top: '0.35rem' }} />
-                        <div className={`text-sm font-semibold ${
-                          !hasAnyEvents && !stepDone ? 'text-gray-400' : 'text-gray-800'
-                        }`}>
-                          {steg.navn}
-                        </div>
-                        {meaningfulEvents.length > 0 && (
-                          <div className="mt-1.5 space-y-1">
-                            {meaningfulEvents.map((evt: any, j: number) => (
-                              <div key={j} className="flex items-baseline gap-2 text-xs">
-                                {evt.label && (
-                                  <span className="text-gray-600">{evt.label}</span>
-                                )}
-                                {evt.date && (
-                                  <span className="text-gray-400">{evt.date}</span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
+          {saksgangSteps.length > 0 ? (
+            <SaksgangTimeline
+              saksgangName={saksgang?.navn}
+              steps={saksgangSteps}
+              ferdigbehandlet={ferdigbehandlet}
+            />
+          ) : null}
 
           {/* Full description and detailed texts */}
           <div className="prose prose-indigo max-w-none text-gray-700">
