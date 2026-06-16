@@ -104,7 +104,8 @@ export function Header() {
                   <ProfileMenuLink href={routes.minSide} icon={UserCircle} title="Min side" description="Stemmehistorikk og oversikt" />
                   <ProfileMenuLink href={routes.profile(user!.id)} icon={Eye} title="Offentlig profil" description="Slik andre ser deg" />
                   <ProfileMenuLink href={`${routes.minSide}?tab=offentlig`} icon={Settings} title="Profilinnstillinger" description="Bio, parti og poengdeling" />
-                  <ProfileMenuLink href={`${routes.minSide}?tab=varsler`} icon={SlidersHorizontal} title="Preferanser" description="Varsler og hjertesaker" />
+                  <ProfileMenuLink href={`${routes.minSide}?tab=preferanser`} icon={SlidersHorizontal} title="Preferanser" description="Utseende, animasjoner og hjelp" />
+                  <ProfileMenuLink href={`${routes.minSide}?tab=varsler`} icon={Bell} title="Varsler" description="E-post og varsler" />
                   <button
                     type="button"
                     onClick={handleSignOut}
