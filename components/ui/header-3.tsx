@@ -7,13 +7,15 @@ import { cn } from '@/lib/utils';
 import { Bell, ChevronDown, Eye, LogIn, LogOut, Settings, SlidersHorizontal, UserCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
-import { isPublicProfilePath, routes } from '@/lib/routes';
+import { isDashboardPath, isPublicProfilePath, routes } from '@/lib/routes';
+import { DashboardNavMenuButton } from '@/components/dashboard/dashboard-nav-context';
 
 export function Header() {
   const scrolled = useScroll(10);
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const inDashboard = isDashboardPath(pathname);
   const isLoggedIn = !!user;
   const [unreadCount, setUnreadCount] = React.useState(0);
   const displayUnreadCount = isLoggedIn ? unreadCount : 0;
@@ -25,8 +27,6 @@ export function Header() {
     : isLoggedIn
       ? routes.forum
       : routes.home;
-  const sectionLabel = isPublicProfilePath(pathname) ? 'Forside' : 'Forum';
-
   const handleSignOut = async () => {
     const { getBrowserSupabase } = await import('@/lib/supabase');
     await getBrowserSupabase().auth.signOut();
@@ -63,13 +63,10 @@ export function Header() {
       )}
     >
       <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-4">
-          <Link href={logoHref} className="hover:opacity-90 rounded-md p-1 transition-opacity" aria-label="Gå til forsiden">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link href={logoHref} className="rounded-md p-1 transition-opacity hover:opacity-90" aria-label="Gå til forsiden">
             <FolketsStemmeLogo />
           </Link>
-          <span className="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-            {sectionLabel}
-          </span>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
@@ -84,8 +81,11 @@ export function Header() {
               </span>
             ) : null}
           </Link>
+          {inDashboard ? (
+            <DashboardNavMenuButton className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background text-gray-700 transition-colors hover:bg-accent hover:text-accent-foreground xl:hidden" />
+          ) : null}
           {isLoggedIn ? (
-            <details className="group relative">
+            <details className={cn('group relative', inDashboard && 'hidden xl:block')}>
               <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-gray-200 bg-white py-1.5 pl-1.5 pr-3 text-sm font-medium text-gray-800 shadow-sm transition-colors hover:bg-gray-50">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#00205b] text-xs font-bold text-white">
                   {initials}
