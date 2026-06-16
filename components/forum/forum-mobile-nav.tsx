@@ -6,7 +6,6 @@ import {
   BarChart2,
   FileEdit,
   Flame,
-  GitBranch,
   Home,
   MessageSquare,
   Plus,
@@ -34,7 +33,6 @@ const MOBILE_NAV = [
 
 const MOBILE_MORE_NAV = [
   { href: routes.sporsmal, label: 'Spørsmål', icon: MessageSquare },
-  { href: routes.saksganger, label: 'Saksgang', icon: GitBranch },
   { href: routes.innsikt, label: 'Innsikt', icon: BarChart2 },
 ] as const;
 
