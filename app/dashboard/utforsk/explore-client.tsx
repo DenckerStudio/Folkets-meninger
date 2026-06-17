@@ -7,6 +7,7 @@ import type { SakListItem } from '@/lib/stortinget';
 import { getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS } from '@/lib/sak-status';
 import { SakProcessingBadge } from '@/components/sak/sak-meta';
+import { formatVotingDaysLeftLabel } from '@/lib/sak-voting-window';
 import { useState, useEffect, useMemo } from 'react';
 import FadeIn from '@/components/fade-in';
 import { PageHeader } from '@/components/page-header';
@@ -263,7 +264,15 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
                         </span>
                         <SakProcessingBadge status={issue.status} size="sm" />
                       </div>
-                      <span className="text-sm text-muted-foreground">Votering: {issue.date}</span>
+                      <div className="text-sm text-muted-foreground text-right">
+                        {issue.votingOpen && issue.votingDaysLeft ? (
+                          <span className="font-medium text-emerald-700 dark:text-emerald-300">
+                            {formatVotingDaysLeftLabel(issue.votingDaysLeft)}
+                          </span>
+                        ) : issue.date ? (
+                          <span>Sist oppdatert: {issue.date}</span>
+                        ) : null}
+                      </div>
                     </div>
 
                     <h2 className="text-xl font-semibold text-foreground mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
@@ -297,6 +306,8 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
                         </span>
                         <span className="text-muted-foreground"> (anonymt i statistikken)</span>
                       </p>
+                    ) : issue.status === 'closed' ? (
+                      <p className="text-sm text-muted-foreground">Saken er ferdigbehandlet i Stortinget.</p>
                     ) : (
                       <p className="text-sm text-muted-foreground">Stem på saken for å registrere din mening.</p>
                     )}
@@ -304,7 +315,7 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
                       href={routes.sak(String(issue.id))}
                       className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shrink-0"
                     >
-                      Gå til sak og stem
+                      {issue.status === 'closed' || !issue.votingOpen ? 'Se resultat' : 'Gå til sak og stem'}
                       <ArrowRight className="ml-1.5 w-4 h-4" />
                     </Link>
                   </div>

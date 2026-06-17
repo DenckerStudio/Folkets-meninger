@@ -1,10 +1,44 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { resolveSakTreatmentStatus } from '@/lib/sak-status';
+import { getSakVotingWindow } from '@/lib/sak-voting-window';
+import type { StortingetSakDetail } from '@/lib/stortinget';
 
 export const dynamic = 'force-dynamic';
 
 type VoteChoice = 'for' | 'against' | 'abstain';
+
+async function getIssueVotingState(issueId: string) {
+  const service = getServiceSupabase();
+  const { data: issue } = await service
+    .from('stortinget_issues')
+    .select('status, ferdigbehandlet, voting_closes_at, detail_json')
+    .eq('id', issueId)
+    .maybeSingle();
+
+  const detail = (issue?.detail_json as StortingetSakDetail | null) ?? null;
+  const ferdigbehandlet =
+    typeof detail?.ferdigbehandlet === 'boolean' ? detail.ferdigbehandlet : issue?.ferdigbehandlet;
+
+  const treatmentStatus =
+    typeof ferdigbehandlet === 'boolean'
+      ? resolveSakTreatmentStatus({ ferdigbehandlet, numericStatus: detail?.status })
+      : issue?.status === 'closed' || issue?.status === 'pending'
+        ? issue.status
+        : 'pending';
+
+  const votingWindow = getSakVotingWindow(detail, { ferdigbehandlet });
+  const pastDeadline =
+    issue?.voting_closes_at != null && new Date(issue.voting_closes_at).getTime() <= Date.now();
+
+  const votingClosed = treatmentStatus === 'closed' || pastDeadline || !votingWindow.isOpen;
+
+  return {
+    votingClosed,
+    votingDaysLeft: votingClosed ? 0 : votingWindow.daysLeft,
+  };
+}
 
 function parseTotals(data: unknown) {
   if (!data || typeof data !== 'object') {
@@ -50,6 +84,14 @@ export async function POST(request: Request) {
     }
 
     const service = getServiceSupabase();
+    const votingState = await getIssueVotingState(String(issueId));
+    if (votingState.votingClosed) {
+      return NextResponse.json(
+        { error: 'Stemming er stengt for denne saken' },
+        { status: 403 },
+      );
+    }
+
     const { data, error } = await service.rpc('cast_vote', {
       p_user_id: user.id,
       p_issue_id: String(issueId),
@@ -65,6 +107,9 @@ export async function POST(request: Request) {
 
       if (combined.includes('already voted')) {
         return NextResponse.json({ error: 'Du har allerede stemt på denne saken' }, { status: 409 });
+      }
+      if (combined.includes('voting closed')) {
+        return NextResponse.json({ error: 'Stemming er stengt for denne saken' }, { status: 403 });
       }
       if (combined.includes('identity not verified')) {
         return NextResponse.json({ error: 'Din identitet er ikke verifisert ennå' }, { status: 403 });
@@ -145,7 +190,15 @@ export async function GET(request: Request) {
       }
     }
 
-    return NextResponse.json({ ...totals, hasVoted, userVote });
+    const votingState = await getIssueVotingState(issueId);
+
+    return NextResponse.json({
+      ...totals,
+      hasVoted,
+      userVote,
+      votingClosed: votingState.votingClosed,
+      votingDaysLeft: votingState.votingDaysLeft,
+    });
   } catch (error) {
     console.error('Error fetching vote totals:', error);
     return NextResponse.json({ for: 0, against: 0, abstain: 0, total: 0, hasVoted: false, userVote: null });

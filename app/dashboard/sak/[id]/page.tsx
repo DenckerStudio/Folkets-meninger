@@ -1,9 +1,11 @@
 import { getSak, type StortingetSakDetail } from '@/lib/stortinget';
 import { classifySakKind, getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
-import { getCachedSakDetail } from '@/lib/stortinget-detail-cache';
+import { getCachedSakDetail, getSakIssueMeta } from '@/lib/stortinget-detail-cache';
 import { SakMetaCard, SakProcessingBadge, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
 import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS, SAK_TYPE_BADGE_CLASS, resolveSakTreatmentStatus } from '@/lib/sak-status';
+import { getSakVotingWindow } from '@/lib/sak-voting-window';
+import { formatStortingetDate } from '@/lib/stortinget-horinger';
 import { SaksgangTimeline, type SaksgangStep } from '@/components/sak/saksgang-timeline';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -111,6 +113,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
   }
 
   const detailedContent: StortingetSakDetail | null = await getCachedSakDetail(sak.id);
+  const issueMeta = await getSakIssueMeta(sak.id);
   const documents = await getSakDocumentsWithStatus(sak.id, detailedContent);
 
   const innstillingstekst = detailedContent?.innstillingstekst;
@@ -145,7 +148,16 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
         ferdigbehandlet: detailedContent.ferdigbehandlet,
         numericStatus: detailedContent.status,
       })
-    : sak.status;
+    : issueMeta?.status ?? sak.status;
+
+  const votingWindow = getSakVotingWindow(detailedContent, {
+    ferdigbehandlet: detailedContent?.ferdigbehandlet ?? issueMeta?.ferdigbehandlet,
+  });
+  const votingClosed = treatmentStatus === 'closed' || !votingWindow.isOpen;
+
+  const lastUpdatedLabel =
+    formatStortingetDate(sak.date) ??
+    (issueMeta?.lastUpdatedAt ? formatStortingetDate(issueMeta.lastUpdatedAt) : null);
 
   return (
     <div className="max-w-4xl mx-auto space-y-12 pb-12">
@@ -189,7 +201,9 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
               </span>
             ) : null}
             <SakProcessingBadge status={treatmentStatus} />
-            <span className="ml-auto text-sm text-muted-foreground">Sist oppdatert: {sak.date}</span>
+            {lastUpdatedLabel ? (
+              <span className="ml-auto text-sm text-muted-foreground">Sist oppdatert: {lastUpdatedLabel}</span>
+            ) : null}
           </div>
 
           <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{sak.title}</h1>
@@ -420,7 +434,14 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
       </FadeIn>
 
       <FadeIn delay={0.5} direction="up">
-        <VotingSection initialVotes={sak.votes} sakId={sak.id} sakTitle={sak.title} sakSummary={sak.summary} />
+        <VotingSection
+          initialVotes={sak.votes}
+          sakId={sak.id}
+          sakTitle={sak.title}
+          sakSummary={sak.summary}
+          votingClosed={votingClosed}
+          votingDaysLeft={votingWindow.daysLeft}
+        />
       </FadeIn>
     </div>
   );

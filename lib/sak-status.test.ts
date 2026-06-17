@@ -10,7 +10,7 @@ assert.equal(
   'pending',
 );
 assert.equal(resolveSakTreatmentStatus({ numericStatus: 1 }), 'pending');
-assert.equal(resolveSakTreatmentStatus({ numericStatus: 2 }), 'closed');
+assert.equal(resolveSakTreatmentStatus({ numericStatus: 2 }), 'pending');
 assert.equal(getSakTreatmentLabel('closed'), 'Ferdigbehandlet');
 assert.equal(getSakTreatmentLabel('pending'), 'Under behandling');
 

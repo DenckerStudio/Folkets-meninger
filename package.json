@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test:e2e": "playwright test",
-    "test:unit": "npx tsx lib/forum/author-display.test.ts && npx tsx lib/forum/reports.test.ts && npx tsx lib/forum/admin-prompt-validation.test.ts && npx tsx lib/valgomat/scores.test.ts && npx tsx lib/stortinget-sak-presentation.test.ts && npx tsx lib/stortinget-sak-tooltips.test.ts && npx tsx lib/stortinget-documents.test.ts && npx tsx lib/html-document.test.ts && npx tsx lib/sak-status.test.ts",
+    "test:unit": "npx tsx lib/forum/author-display.test.ts && npx tsx lib/forum/reports.test.ts && npx tsx lib/forum/admin-prompt-validation.test.ts && npx tsx lib/valgomat/scores.test.ts && npx tsx lib/stortinget-sak-presentation.test.ts && npx tsx lib/stortinget-sak-tooltips.test.ts && npx tsx lib/stortinget-documents.test.ts && npx tsx lib/html-document.test.ts && npx tsx lib/sak-status.test.ts && npx tsx lib/sak-voting-window.test.ts",
     "clean": "next clean"
   },
   "dependencies": {

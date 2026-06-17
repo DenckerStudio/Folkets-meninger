@@ -1,6 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { getSaker, type StortingetSakDetail } from '@/lib/stortinget';
-import { getCachedSakDetail } from '@/lib/stortinget-detail-cache';
+import { getCachedSakDetail, refreshStalePendingSakDetails } from '@/lib/stortinget-detail-cache';
 import { resolveSakTreatmentStatus } from '@/lib/sak-status';
 
 export type SyncIssuesResult = {
@@ -8,12 +8,13 @@ export type SyncIssuesResult = {
   total: number;
   newIssueIds: string[];
   aiSummaryTriggered: number;
+  detailsRefreshed: number;
 };
 
 export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
   const issues = await getSaker();
   if (issues.length === 0) {
-    return { upserted: 0, total: 0, newIssueIds: [], aiSummaryTriggered: 0 };
+    return { upserted: 0, total: 0, newIssueIds: [], aiSummaryTriggered: 0, detailsRefreshed: 0 };
   }
 
   const service = getServiceSupabase();
@@ -47,7 +48,7 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
     for (const row of chunk) {
       const { data: existing } = await service
         .from('stortinget_issues')
-        .select('first_seen_at, detail_json')
+        .select('first_seen_at, detail_json, ferdigbehandlet')
         .eq('id', row.id)
         .maybeSingle();
 
@@ -58,11 +59,17 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
               ferdigbehandlet: detail.ferdigbehandlet,
               numericStatus: detail.status,
             })
-          : row.status;
+          : typeof existing?.ferdigbehandlet === 'boolean'
+            ? resolveSakTreatmentStatus({ ferdigbehandlet: existing.ferdigbehandlet })
+            : row.status;
 
       const payload = {
         ...row,
         status,
+        ferdigbehandlet:
+          typeof detail?.ferdigbehandlet === 'boolean'
+            ? detail.ferdigbehandlet
+            : (existing?.ferdigbehandlet ?? null),
         first_seen_at: existing?.first_seen_at ?? now,
       };
 
@@ -89,5 +96,7 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
     aiSummaryTriggered += 1;
   }
 
-  return { upserted, total: issues.length, newIssueIds, aiSummaryTriggered };
+  const detailsRefreshed = await refreshStalePendingSakDetails(50);
+
+  return { upserted, total: issues.length, newIssueIds, aiSummaryTriggered, detailsRefreshed };
 }

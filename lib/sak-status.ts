@@ -7,7 +7,7 @@ export function resolveSakTreatmentStatus(opts: {
   if (opts.ferdigbehandlet === true) return 'closed';
   if (opts.ferdigbehandlet === false) return 'pending';
   if (opts.numericStatus === 1) return 'pending';
-  return 'closed';
+  return 'pending';
 }
 
 export function getSakTreatmentLabel(status: SakTreatmentStatus): string {
