@@ -217,12 +217,21 @@ async function getCachedIssueStatuses(
       const chunk = issueIds.slice(i, i + chunkSize);
       const { data, error } = await service
         .from('stortinget_issues')
-        .select('id, status')
+        .select('id, status, detail_json')
         .in('id', chunk);
 
       if (error || !data) continue;
 
       for (const row of data) {
+        const detail = row.detail_json as StortingetSakDetail | null;
+        if (detail && typeof detail.ferdigbehandlet === 'boolean') {
+          result[String(row.id)] = resolveSakTreatmentStatus({
+            ferdigbehandlet: detail.ferdigbehandlet,
+            numericStatus: detail.status,
+          });
+          continue;
+        }
+
         if (row.status === 'closed' || row.status === 'pending') {
           result[String(row.id)] = row.status;
         }

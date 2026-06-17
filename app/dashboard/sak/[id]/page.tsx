@@ -3,7 +3,7 @@ import { classifySakKind, getSakKindLabel } from '@/lib/stortinget-sak-presentat
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { getCachedSakDetail } from '@/lib/stortinget-detail-cache';
 import { SakMetaCard, SakProcessingBadge, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
-import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS, SAK_TYPE_BADGE_CLASS } from '@/lib/sak-status';
+import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS, SAK_TYPE_BADGE_CLASS, resolveSakTreatmentStatus } from '@/lib/sak-status';
 import { SaksgangTimeline, type SaksgangStep } from '@/components/sak/saksgang-timeline';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -140,6 +140,13 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
         typeof detailedContent?.dokumentgruppe === 'number' ? detailedContent.dokumentgruppe : null,
     });
 
+  const treatmentStatus = detailedContent
+    ? resolveSakTreatmentStatus({
+        ferdigbehandlet: detailedContent.ferdigbehandlet,
+        numericStatus: detailedContent.status,
+      })
+    : sak.status;
+
   return (
     <div className="max-w-4xl mx-auto space-y-12 pb-12">
       <FadeIn delay={0.1}>
@@ -181,7 +188,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                 {sakType}
               </span>
             ) : null}
-            <SakProcessingBadge status={sak.status} />
+            <SakProcessingBadge status={treatmentStatus} />
             <span className="ml-auto text-sm text-muted-foreground">Sist oppdatert: {sak.date}</span>
           </div>
 
@@ -292,7 +299,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
             <SaksgangTimeline
               saksgangName={saksgang?.navn}
               steps={saksgangSteps}
-              ferdigbehandlet={sak.status === 'closed'}
+              ferdigbehandlet={treatmentStatus === 'closed'}
             />
           ) : null}
         </div>
