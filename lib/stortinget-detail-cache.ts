@@ -85,9 +85,13 @@ export async function refreshSakDetailCache(sakId: string): Promise<StortingetSa
   return getCachedSakDetail(sakId, { forceRefresh: true });
 }
 
+export async function refreshSakStatusOnly(sakId: string): Promise<StortingetSakDetail | null> {
+  return getCachedSakDetail(sakId, { forceRefresh: true, statusOnly: true });
+}
+
 export async function getCachedSakDetail(
   sakId: string,
-  opts?: { forceRefresh?: boolean },
+  opts?: { forceRefresh?: boolean; statusOnly?: boolean },
 ): Promise<StortingetSakDetail | null> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return getSakDetail(sakId, { nextRevalidateSeconds: 3600 });
@@ -142,6 +146,35 @@ export async function getCachedSakDetail(
     dokumentgruppe: typeof detail.dokumentgruppe === 'number' ? detail.dokumentgruppe : null,
     emneNavn: detail.emne_liste?.[0]?.navn,
   });
+
+  if (opts?.statusOnly) {
+    await service.from('stortinget_issues').upsert(
+      {
+        id: sakId,
+        title: presentation.title || detail.korttittel || detail.tittel || `Sak ${sakId}`,
+        summary: presentation.summary || detail.tittel || null,
+        status: resolveSakTreatmentStatus({
+          ferdigbehandlet: detail.ferdigbehandlet,
+          numericStatus: detail.status,
+        }),
+        ferdigbehandlet: typeof detail.ferdigbehandlet === 'boolean' ? detail.ferdigbehandlet : null,
+        voting_closes_at:
+          getSakVotingWindow(detail, { ferdigbehandlet: detail.ferdigbehandlet }).closesAt?.toISOString() ??
+          null,
+        sak_kind: presentation.kind,
+        henvisning: presentation.henvisning,
+        dokumentgruppe: typeof detail.dokumentgruppe === 'number' ? detail.dokumentgruppe : null,
+        detail_json: detail,
+        last_synced_at: new Date().toISOString(),
+        last_updated_at:
+          parseStortingetDotNetDateToISO(detail.sist_oppdatert_dato ?? '') ||
+          cached?.last_updated_at ||
+          null,
+      },
+      { onConflict: 'id' },
+    );
+    return detail;
+  }
 
   const source = await updateAiSummarySource(service, sakId, detail, {
     title: presentation.title || `Sak ${sakId}`,
