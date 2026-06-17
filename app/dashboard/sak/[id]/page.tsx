@@ -2,7 +2,8 @@ import { getSak, type StortingetSakDetail } from '@/lib/stortinget';
 import { classifySakKind, getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { getCachedSakDetail } from '@/lib/stortinget-detail-cache';
-import { SakMetaCard, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
+import { SakMetaCard, SakProcessingBadge, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
+import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS, SAK_TYPE_BADGE_CLASS } from '@/lib/sak-status';
 import { SaksgangTimeline, type SaksgangStep } from '@/components/sak/saksgang-timeline';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -121,7 +122,6 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
   const sakNummer = detailedContent?.sak_nummer;
   const sakSesjon = detailedContent?.sak_sesjon;
   const henvisning = detailedContent?.henvisning;
-  const ferdigbehandlet = detailedContent?.ferdigbehandlet;
   const komite = detailedContent?.komite;
 
   const saksgang = detailedContent?.saksgang;
@@ -144,12 +144,12 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
     <div className="max-w-4xl mx-auto space-y-12 pb-12">
       <FadeIn delay={0.1}>
         <div className="flex items-center justify-between">
-          <Link href="/dashboard/utforsk" className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500">
+          <Link href="/dashboard/utforsk" className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
             <ArrowLeft className="mr-2 w-4 h-4" />
             Tilbake til oversikt
           </Link>
           <div className="flex gap-3">
-            <Link href={`/dashboard/forum?sak=${sak.id}`} className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500">
+            <Link href={`/dashboard/forum?sak=${sak.id}`} className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
               <MessageSquare className="mr-1.5 w-4 h-4" />
               Diskuter i forum
             </Link>
@@ -170,26 +170,18 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                     ? SAK_META_TOOLTIPS.lovforslag
                     : SAK_META_TOOLTIPS.representantforslag
                 }
-                className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200"
+                className={SAK_KIND_BADGE_CLASS}
               />
             ) : null}
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200">
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${SAK_CATEGORY_BADGE_CLASS}`}>
               {sak.category}
             </span>
             {sakType ? (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200">
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${SAK_TYPE_BADGE_CLASS}`}>
                 {sakType}
               </span>
             ) : null}
-            <SakStatusBadge
-              label={ferdigbehandlet ? 'Ferdigbehandlet' : 'Under behandling'}
-              tooltip={ferdigbehandlet ? SAK_META_TOOLTIPS.ferdigbehandlet : SAK_META_TOOLTIPS.underBehandling}
-              className={
-                ferdigbehandlet
-                  ? 'bg-muted text-muted-foreground'
-                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-              }
-            />
+            <SakProcessingBadge status={sak.status} />
             <span className="ml-auto text-sm text-muted-foreground">Sist oppdatert: {sak.date}</span>
           </div>
 
@@ -226,12 +218,12 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                 title="Forslagstillere"
                 tooltipKey="forslagstillere"
                 icon="users"
-                iconClassName="w-5 h-5 text-indigo-600"
+                iconClassName="w-5 h-5 text-indigo-600 dark:text-indigo-400"
               />
               <div className="flex flex-wrap gap-3">
                 {forslagstillere.map((f: any, i: number) => (
-                  <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
-                    <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                  <div key={i} className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2 border border-border">
+                    <div className="relative w-8 h-8 rounded-full overflow-hidden bg-muted flex-shrink-0">
                       {f.id ? (
                         <Image
                           src={getPersonbildeUrl(String(f.id), 'lite', true)}
@@ -241,15 +233,15 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                           sizes="32px"
                         />
                       ) : (
-                        <div className="w-full h-full rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
+                        <div className="w-full h-full rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-indigo-600 dark:text-indigo-300 font-bold text-xs">
                           {f.fornavn?.[0]}{f.etternavn?.[0]}
                         </div>
                       )}
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{f.fornavn} {f.etternavn}</div>
+                      <div className="text-sm font-medium text-foreground">{f.fornavn} {f.etternavn}</div>
                       {f.parti?.navn && (
-                        <div className="text-xs text-gray-500">{f.parti.navn}</div>
+                        <div className="text-xs text-muted-foreground">{f.parti.navn}</div>
                       )}
                     </div>
                   </div>
@@ -264,12 +256,12 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                 title="Saksordførere"
                 tooltipKey="saksordfoerer"
                 icon="users"
-                iconClassName="w-5 h-5 text-amber-600"
+                iconClassName="w-5 h-5 text-amber-600 dark:text-amber-400"
               />
               <div className="flex flex-wrap gap-3">
                 {saksordfoerere.map((s: any, i: number) => (
-                  <div key={i} className="flex items-center gap-2 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">
-                    <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                  <div key={i} className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 rounded-lg px-3 py-2 border border-amber-100 dark:border-amber-900/50">
+                    <div className="relative w-8 h-8 rounded-full overflow-hidden bg-muted flex-shrink-0">
                       {s.id ? (
                         <Image
                           src={getPersonbildeUrl(String(s.id), 'lite', true)}
@@ -279,15 +271,15 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                           sizes="32px"
                         />
                       ) : (
-                        <div className="w-full h-full rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-xs">
+                        <div className="w-full h-full rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-700 dark:text-amber-300 font-bold text-xs">
                           {s.fornavn?.[0]}{s.etternavn?.[0]}
                         </div>
                       )}
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{s.fornavn} {s.etternavn}</div>
+                      <div className="text-sm font-medium text-foreground">{s.fornavn} {s.etternavn}</div>
                       {s.parti?.navn && (
-                        <div className="text-xs text-gray-500">{s.parti.navn}</div>
+                        <div className="text-xs text-muted-foreground">{s.parti.navn}</div>
                       )}
                     </div>
                   </div>
@@ -300,7 +292,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
             <SaksgangTimeline
               saksgangName={saksgang?.navn}
               steps={saksgangSteps}
-              ferdigbehandlet={ferdigbehandlet}
+              ferdigbehandlet={sak.status === 'closed'}
             />
           ) : null}
         </div>
@@ -319,20 +311,20 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
       <FadeIn delay={0.35} direction="up">
         <div className="space-y-6">
           {/* Full description and detailed texts */}
-          <div className="prose prose-indigo max-w-none text-gray-700">
+          <div className="prose prose-indigo dark:prose-invert max-w-none text-muted-foreground">
             {detailedContent?.tittel && detailedContent.tittel !== sak.title && (
               <p className="text-lg leading-relaxed">{detailedContent.tittel}</p>
             )}
 
             {parentestekst && (
-              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 not-prose">
-                <p className="text-sm text-amber-800">{parentestekst}</p>
+              <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/50 rounded-xl p-4 not-prose">
+                <p className="text-sm text-amber-800 dark:text-amber-200">{parentestekst}</p>
               </div>
             )}
             
             {(innstillingstekst || kortvedtak || vedtakstekst) && (
-              <div className="mt-8 space-y-6 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                <h2 className="text-xl font-bold text-gray-900 mt-0">Sakens detaljerte innhold</h2>
+              <div className="mt-8 space-y-6 bg-card p-6 rounded-2xl border border-border shadow-sm">
+                <h2 className="text-xl font-bold text-foreground mt-0">Sakens detaljerte innhold</h2>
                 
                 {innstillingstekst && (
                   <ExpandableText title="Innstilling" text={innstillingstekst} />
@@ -353,13 +345,13 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
           {(emner.length > 0 || stikkord.length > 0) && (
             <div className="flex flex-wrap gap-2">
               {emner.map((e: any, i: number) => (
-                <span key={`e-${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                <span key={`e-${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-950/50 dark:text-blue-200 dark:border-blue-900/50">
                   <Tag className="w-3 h-3" />
                   {e.navn || e}
                 </span>
               ))}
               {stikkord.map((s: any, i: number) => (
-                <span key={`s-${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600 border border-gray-200">
+                <span key={`s-${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border">
                   {typeof s === 'object' ? s.navn : s}
                 </span>
               ))}
@@ -368,8 +360,8 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
 
           {/* Related Cases */}
           {relaterteSaker.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Relaterte saker</h2>
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+              <h2 className="text-lg font-bold text-foreground mb-4">Relaterte saker</h2>
               <div className="space-y-2">
                 {relaterteSaker.map((rel: any, i: number) => {
                   const relSak = rel.relatert_sak;
@@ -378,11 +370,11 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                     <Link
                       key={i}
                       href={`/dashboard/sak/${relSak.id}`}
-                      className="block p-3 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-100 transition-colors"
+                      className="block p-3 rounded-lg bg-muted/50 hover:bg-muted border border-border transition-colors"
                     >
-                      <div className="text-sm font-medium text-indigo-600">{relSak.korttittel || relSak.tittel}</div>
+                      <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400">{relSak.korttittel || relSak.tittel}</div>
                       {rel.relasjonstype && (
-                        <div className="text-xs text-gray-500 mt-1">{rel.relasjonstype}</div>
+                        <div className="text-xs text-muted-foreground mt-1">{rel.relasjonstype}</div>
                       )}
                     </Link>
                   );
@@ -391,12 +383,12 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
             </div>
           )}
 
-          <div className="pt-4 border-t border-gray-100 flex flex-wrap gap-4">
+          <div className="pt-4 border-t border-border flex flex-wrap gap-4">
             <a
               href={`https://data.stortinget.no/eksport/sak?sakid=${sak.id}&format=json`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-indigo-600 transition-colors"
+              className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
             >
               <ExternalLink className="mr-1.5 w-4 h-4" />
               Kilde: data.stortinget.no (Sak ID: {sak.id})
@@ -406,7 +398,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                 href={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-indigo-600 transition-colors"
+                className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               >
                 <ExternalLink className="mr-1.5 w-4 h-4" />
                 Se på stortinget.no

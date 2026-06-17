@@ -110,14 +110,14 @@ function SakDocumentViewer({
       }
     >
       {loading ? (
-        <div className="flex min-h-[240px] items-center justify-center gap-2 text-sm text-gray-500">
-          <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
+        <div className="flex min-h-[240px] items-center justify-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin text-indigo-600 dark:text-indigo-400" />
           Laster dokument …
         </div>
       ) : null}
 
       {!loading && error ? (
-        <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div className="rounded-xl border border-amber-100 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
           {error}
           {document.sourceUrl ? (
             <div className="mt-3">
@@ -136,7 +136,7 @@ function SakDocumentViewer({
       ) : null}
 
       {!loading && content?.status === 'external_only' ? (
-        <div className="space-y-3 text-sm text-gray-700">
+        <div className="space-y-3 text-sm text-muted-foreground">
           <p>Dette dokumentet ligger på en ekstern side og kan ikke vises direkte i appen.</p>
           {content.sourceUrl ? (
             <a
@@ -149,13 +149,13 @@ function SakDocumentViewer({
               Åpne {content.title}
             </a>
           ) : (
-            <p className="text-gray-500">Ingen direkte lenke tilgjengelig.</p>
+            <p className="text-muted-foreground">Ingen direkte lenke tilgjengelig.</p>
           )}
         </div>
       ) : null}
 
       {!loading && content?.status === 'failed' ? (
-        <div className="space-y-3 text-sm text-gray-700">
+        <div className="space-y-3 text-sm text-muted-foreground">
           <p>Vi klarte ikke å hente dokumentet fra Stortingets åpne data.</p>
           {content.sourceUrl ? (
             <a
@@ -172,7 +172,7 @@ function SakDocumentViewer({
       ) : null}
 
       {!loading && content?.status === 'ready' ? (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
           <iframe
             title={content.title}
             srcDoc={content.html}
@@ -227,14 +227,14 @@ export function SakDocumentsSection({
     <>
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-4 flex items-center gap-2">
-          <FileText className="h-5 w-5 text-indigo-600" />
-          <h2 className="text-lg font-bold text-gray-900">Tilknyttede dokumenter</h2>
+          <FileText className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+          <h2 className="text-lg font-bold text-foreground">Tilknyttede dokumenter</h2>
         </div>
 
         <div className="space-y-5">
           {groups.map((group) => (
             <div key={group.kind}>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {group.label}
               </h3>
               <ul className="space-y-2">
@@ -243,10 +243,10 @@ export function SakDocumentsSection({
                     <button
                       type="button"
                       onClick={() => setActiveDocument(doc)}
-                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-left transition-colors hover:border-indigo-100 hover:bg-indigo-50/60"
+                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-left transition-colors hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30"
                     >
-                      <span className="text-sm font-medium text-gray-900">{doc.title}</span>
-                      <span className="shrink-0 text-xs text-gray-500">
+                      <span className="text-sm font-medium text-foreground">{doc.title}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
                         {statusLabel(doc.ingestStatus, doc.viewable)}
                       </span>
                     </button>

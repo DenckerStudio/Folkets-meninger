@@ -8,6 +8,7 @@ import {
   type ForumContextItem,
 } from '@/lib/forum/context';
 import { routes } from '@/lib/routes';
+import { getSakTreatmentLabel } from '@/lib/sak-status';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,7 @@ async function searchSaker(q: string, limit: number): Promise<ForumContextItem[]
 
     const { data } = await query.order('last_synced_at', { ascending: false });
     for (const row of data || []) {
-      items.push(sakContextItem(row.id, row.title || `Sak ${row.id}`, row.status === 'closed' ? 'Ferdigbehandlet' : 'Under behandling'));
+      items.push(sakContextItem(row.id, row.title || `Sak ${row.id}`, getSakTreatmentLabel(row.status === 'closed' ? 'closed' : 'pending')));
     }
   }
 
@@ -48,7 +49,7 @@ async function searchSaker(q: string, limit: number): Promise<ForumContextItem[]
       for (const sak of filtered) {
         if (items.some((i) => i.kind === 'sak' && i.id === sak.id)) continue;
         items.push(
-          sakContextItem(sak.id, sak.title || `Sak ${sak.id}`, sak.status === 'closed' ? 'Ferdigbehandlet' : 'Under behandling')
+          sakContextItem(sak.id, sak.title || `Sak ${sak.id}`, getSakTreatmentLabel(sak.status === 'closed' ? 'closed' : 'pending'))
         );
       }
 

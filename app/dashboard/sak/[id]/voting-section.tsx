@@ -157,16 +157,16 @@ export default function VotingSection({ initialVotes, sakId, sakTitle, sakSummar
   const abstainPercent = Math.round((votes.abstain / total) * 100);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Hva mener du?</h2>
+    <div className="bg-card rounded-2xl shadow-sm border border-border p-8">
+      <h2 className="text-2xl font-bold text-foreground mb-6 text-center">Hva mener du?</h2>
 
       {isLoadingVote && user && (
-        <p className="text-center text-sm text-gray-400 mb-4">Laster din stemme…</p>
+        <p className="text-center text-sm text-muted-foreground mb-4">Laster din stemme…</p>
       )}
       
       {!user && (
         <div className="mb-6 text-center">
-          <Link href="/auth/login" className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-500 font-medium">
+          <Link href="/auth/login" className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
             <LogIn className="w-4 h-4 mr-1.5" />
             Logg inn for å stemme
           </Link>
@@ -174,7 +174,7 @@ export default function VotingSection({ initialVotes, sakId, sakTitle, sakSummar
       )}
 
       {error && (
-        <div className="mb-6 text-center text-sm font-medium text-red-600 bg-red-50 py-2 rounded-lg">
+        <div className="mb-6 text-center text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 py-2 rounded-lg">
           {error}
         </div>
       )}
@@ -189,10 +189,10 @@ export default function VotingSection({ initialVotes, sakId, sakTitle, sakSummar
           aria-label="Stem for"
           className={`relative flex flex-col items-center justify-center py-6 px-4 rounded-xl border-2 transition-all duration-200 ${
             userVote === 'for' 
-              ? 'border-emerald-500 bg-emerald-100 text-emerald-800 shadow-md ring-2 ring-emerald-500 ring-offset-2' 
+              ? 'border-emerald-500 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200 shadow-md ring-2 ring-emerald-500 ring-offset-2 ring-offset-background' 
               : userVote !== null
-                ? 'border-gray-100 bg-gray-50 text-gray-400 opacity-50 cursor-not-allowed'
-                : 'border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-200 cursor-pointer'
+                ? 'border-border bg-muted text-muted-foreground opacity-50 cursor-not-allowed'
+                : 'border-emerald-100 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 hover:border-emerald-200 dark:hover:border-emerald-800 cursor-pointer'
           }`}
         >
           {userVote === 'for' && (
@@ -223,10 +223,10 @@ export default function VotingSection({ initialVotes, sakId, sakTitle, sakSummar
           aria-label="Stem avstår"
           className={`relative flex flex-col items-center justify-center py-6 px-4 rounded-xl border-2 transition-all duration-200 ${
             userVote === 'abstain' 
-              ? 'border-gray-400 bg-gray-200 text-gray-800 shadow-md ring-2 ring-gray-400 ring-offset-2' 
+              ? 'border-muted-foreground bg-muted text-foreground shadow-md ring-2 ring-muted-foreground ring-offset-2 ring-offset-background' 
               : userVote !== null
-                ? 'border-gray-100 bg-gray-50 text-gray-400 opacity-50 cursor-not-allowed'
-                : 'border-gray-100 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-200 cursor-pointer'
+                ? 'border-border bg-muted text-muted-foreground opacity-50 cursor-not-allowed'
+                : 'border-border bg-muted/50 text-foreground hover:bg-muted hover:border-muted-foreground/30 cursor-pointer'
           }`}
         >
           {userVote === 'abstain' && (
@@ -257,10 +257,10 @@ export default function VotingSection({ initialVotes, sakId, sakTitle, sakSummar
           aria-label="Stem mot"
           className={`relative flex flex-col items-center justify-center py-6 px-4 rounded-xl border-2 transition-all duration-200 ${
             userVote === 'against' 
-              ? 'border-rose-500 bg-rose-100 text-rose-800 shadow-md ring-2 ring-rose-500 ring-offset-2' 
+              ? 'border-rose-500 bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-200 shadow-md ring-2 ring-rose-500 ring-offset-2 ring-offset-background' 
               : userVote !== null
-                ? 'border-gray-100 bg-gray-50 text-gray-400 opacity-50 cursor-not-allowed'
-                : 'border-rose-100 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:border-rose-200 cursor-pointer'
+                ? 'border-border bg-muted text-muted-foreground opacity-50 cursor-not-allowed'
+                : 'border-rose-100 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950/50 hover:border-rose-200 dark:hover:border-rose-800 cursor-pointer'
           }`}
         >
           {userVote === 'against' && (
@@ -288,7 +288,7 @@ export default function VotingSection({ initialVotes, sakId, sakTitle, sakSummar
           <motion.div 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 text-center text-sm font-medium text-indigo-600 bg-indigo-50 py-2 rounded-lg"
+            className="mb-6 text-center text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 py-2 rounded-lg"
           >
             Takk for din stemme! Den er registrert og anonymisert.
           </motion.div>
@@ -296,10 +296,10 @@ export default function VotingSection({ initialVotes, sakId, sakTitle, sakSummar
       </AnimatePresence>
 
       <div className="space-y-4">
-        <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider text-center">Folkets mening hittil</h3>
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-center">Folkets mening hittil</h3>
         {votes.total > 0 ? (
           <>
-            <div className="h-4 flex rounded-full overflow-hidden bg-gray-100 shadow-inner">
+            <div className="h-4 flex rounded-full overflow-hidden bg-muted shadow-inner">
               <motion.div 
                 initial={{ width: 0 }}
                 animate={{ width: `${forPercent}%` }} 
@@ -328,16 +328,16 @@ export default function VotingSection({ initialVotes, sakId, sakTitle, sakSummar
                 {againstPercent > 10 && <span className="text-[10px] font-bold text-white opacity-80"><AnimatedPercent value={againstPercent} /></span>}
               </motion.div>
             </div>
-            <div className="flex justify-between text-sm text-gray-600 font-medium px-1">
-              <span className="text-emerald-600">For</span>
-              <span className="text-gray-500">Avstår</span>
-              <span className="text-rose-600">Mot</span>
+            <div className="flex justify-between text-sm text-muted-foreground font-medium px-1">
+              <span className="text-emerald-600 dark:text-emerald-400">For</span>
+              <span>Avstår</span>
+              <span className="text-rose-600 dark:text-rose-400">Mot</span>
             </div>
           </>
         ) : (
-          <p className="text-center text-sm text-gray-400">Ingen har stemt ennå. Vær den første!</p>
+          <p className="text-center text-sm text-muted-foreground">Ingen har stemt ennå. Vær den første!</p>
         )}
-        <p className="text-center text-xs text-gray-400 mt-4">
+        <p className="text-center text-xs text-muted-foreground mt-4">
           Din stemme lagres anonymt i tråd med GDPR.
         </p>
       </div>
