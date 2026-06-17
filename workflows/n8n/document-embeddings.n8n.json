@@ -1,0 +1,330 @@
+{
+  "name": "Folkets Stemme – dokument embeddings (RAG)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-node",
+      "name": "Every 15 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "batch-limit",
+              "name": "batchLimit",
+              "value": "8",
+              "type": "string"
+            },
+            {
+              "id": "issue-id",
+              "name": "issueId",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "embedding-settings-node",
+      "name": "Embedding settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  c.id,\n  c.issue_id,\n  c.document_id,\n  c.chunk_index,\n  c.content\nFROM public.document_chunks c\nWHERE c.embedding_status = 'pending'\n  AND ($1::text IS NULL OR $1::text = '' OR c.issue_id = $1::text)\nORDER BY c.created_at ASC\nLIMIT $2",
+        "options": {
+          "queryReplacement": "={{ [ $json.issueId || null, $json.batchLimit || \"8\" ] }}"
+        }
+      },
+      "id": "fetch-pending-chunks-node",
+      "name": "Fetch pending chunks",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_POSTGRES",
+          "name": "Supabase Postgres Folkets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "PLACEHOLDER_OLLAMA_URL/api/embeddings",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"nomic-embed-text:v1.5\",\"prompt\":{{ JSON.stringify($json.content) }}}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "embed-chunk-node",
+      "name": "Ollama embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const chunk = $('Fetch pending chunks').item.json;\nconst response = $input.item.json;\nconst embedding = response.embedding;\nreturn { json: { ...chunk, embedding } };"
+      },
+      "id": "map-embedding-node",
+      "name": "Map embedding vector",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const item = $input.item.json;\nconst embedding = item.embedding;\nif (!Array.isArray(embedding) || embedding.length === 0) {\n  throw new Error('Missing embedding vector');\n}\nconst vector = '[' + embedding.join(',') + ']';\nfunction esc(value) {\n  return \"'\" + String(value ?? '').replace(/'/g, \"''\") + \"'\";\n}\nconst updateSql = `UPDATE public.document_chunks\nSET embedding = '${vector}'::vector,\n    embedding_status = 'ready'\nWHERE id = ${esc(item.id)}::uuid`;\nreturn { json: { ...item, updateSql } };"
+      },
+      "id": "prepare-update-node",
+      "name": "Prepare embedding update SQL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.updateSql }}"
+      },
+      "id": "save-embedding-node",
+      "name": "Save embedding",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1780, 300],
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_POSTGRES",
+          "name": "Supabase Postgres Folkets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "rate-limit-pause-node",
+      "name": "Rate limit pause",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "status",
+              "name": "status",
+              "value": "embedding_batch_complete",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "batch-complete-node",
+      "name": "Batch run complete",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "folkets-document-embeddings",
+        "responseMode": "onReceived"
+      },
+      "id": "webhook-trigger-node",
+      "name": "Webhook document embeddings",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [240, 600]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "batch-limit",
+              "name": "batchLimit",
+              "value": "12",
+              "type": "string"
+            },
+            {
+              "id": "issue-id",
+              "name": "issueId",
+              "value": "={{ $json.body?.stortinget_issue_id || $json.stortinget_issue_id || \"\" }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "normalize-webhook-node",
+      "name": "Normalize webhook payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 600]
+    },
+    {
+      "parameters": {
+        "height": 300,
+        "width": 400,
+        "content": "## Dokument embeddings (RAG)\\n\\nBatch/kø: henter `document_chunks` med `embedding_status=pending`, kaller Ollama `nomic-embed-text:v1.5`, lagrer i pgvector.\\n\\nWebhook: `POST /webhook/folkets-document-embeddings` med valgfri `{ \"stortinget_issue_id\": \"…\" }`."
+      },
+      "id": "sticky-note-node",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [140, 180]
+    }
+  ],
+  "connections": {
+    "Every 15 minutes": {
+      "main": [
+        [
+          {
+            "node": "Embedding settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embedding settings": {
+      "main": [
+        [
+          {
+            "node": "Fetch pending chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch pending chunks": {
+      "main": [
+        [
+          {
+            "node": "Ollama embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama embeddings": {
+      "main": [
+        [
+          {
+            "node": "Map embedding vector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map embedding vector": {
+      "main": [
+        [
+          {
+            "node": "Prepare embedding update SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare embedding update SQL": {
+      "main": [
+        [
+          {
+            "node": "Save embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save embedding": {
+      "main": [
+        [
+          {
+            "node": "Rate limit pause",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate limit pause": {
+      "main": [
+        [
+          {
+            "node": "Batch run complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook document embeddings": {
+      "main": [
+        [
+          {
+            "node": "Normalize webhook payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize webhook payload": {
+      "main": [
+        [
+          {
+            "node": "Fetch pending chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 2,
+  "updatedAt": "2026-06-16T21:47:00.000Z",
+  "versionId": "1"
+}

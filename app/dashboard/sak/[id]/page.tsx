@@ -13,6 +13,8 @@ import ShareButton from './share-button';
 import FadeIn from '@/components/fade-in';
 import ExpandableText from './expandable-text';
 import VotingSection from './voting-section';
+import { SakDocumentsSection } from '@/components/sak/sak-documents-section';
+import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
 
@@ -108,6 +110,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
   }
 
   const detailedContent: StortingetSakDetail | null = await getCachedSakDetail(sak.id);
+  const documents = await getSakDocumentsWithStatus(sak.id, detailedContent);
 
   const innstillingstekst = detailedContent?.innstillingstekst;
   const kortvedtak = detailedContent?.kortvedtak;
@@ -300,7 +303,21 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
               ferdigbehandlet={ferdigbehandlet}
             />
           ) : null}
+        </div>
+      </FadeIn>
 
+      <FadeIn delay={0.25} direction="up">
+        <AiSummary sakId={sak.id} title={sak.title} summary={detailedContent?.tittel || sak.summary} />
+      </FadeIn>
+
+      {documents.length > 0 ? (
+        <FadeIn delay={0.3} direction="up">
+          <SakDocumentsSection sakId={sak.id} initialDocuments={documents} />
+        </FadeIn>
+      ) : null}
+
+      <FadeIn delay={0.35} direction="up">
+        <div className="space-y-6">
           {/* Full description and detailed texts */}
           <div className="prose prose-indigo max-w-none text-gray-700">
             {detailedContent?.tittel && detailedContent.tittel !== sak.title && (
@@ -397,10 +414,6 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
             )}
           </div>
         </div>
-      </FadeIn>
-
-      <FadeIn delay={0.3} direction="up">
-        <AiSummary sakId={sak.id} title={sak.title} summary={detailedContent?.tittel || sak.summary} />
       </FadeIn>
 
       <FadeIn delay={0.4} direction="up">

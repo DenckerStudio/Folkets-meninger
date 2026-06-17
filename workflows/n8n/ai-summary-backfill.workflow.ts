@@ -12,6 +12,27 @@ import {
   placeholder,
 } from '@n8n/workflow-sdk';
 
+const RAG_CHUNKS_SUBQUERY = `(
+  SELECT COALESCE(
+    json_agg(
+      json_build_object(
+        'document_id', dc.document_id,
+        'chunk_index', dc.chunk_index,
+        'content', dc.content
+      )
+      ORDER BY dc.document_id, dc.chunk_index
+    ),
+    '[]'::json
+  )
+  FROM (
+    SELECT document_id, chunk_index, content
+    FROM public.document_chunks
+    WHERE issue_id = i.id
+    ORDER BY document_id, chunk_index
+    LIMIT 12
+  ) dc
+) AS rag_chunks`;
+
 const MISSING_SUMMARIES_SQL = `SELECT
   i.id,
   i.title,
@@ -30,7 +51,8 @@ const MISSING_SUMMARIES_SQL = `SELECT
       ORDER BY d.fetched_at DESC
     ) FILTER (WHERE d.document_id IS NOT NULL),
     '[]'::json
-  ) AS documents
+  ) AS documents,
+  ${RAG_CHUNKS_SUBQUERY}
 FROM public.stortinget_issues i
 LEFT JOIN public.issue_ai_summaries s ON s.stortinget_issue_id = i.id
 LEFT JOIN public.stortinget_issue_documents d ON d.issue_id = i.id
@@ -57,7 +79,8 @@ const FETCH_ISSUE_BY_ID_SQL = `SELECT
       ORDER BY d.fetched_at DESC
     ) FILTER (WHERE d.document_id IS NOT NULL),
     '[]'::json
-  ) AS documents
+  ) AS documents,
+  ${RAG_CHUNKS_SUBQUERY}
 FROM public.stortinget_issues i
 LEFT JOIN public.stortinget_issue_documents d ON d.issue_id = i.id
 WHERE i.id = $1
@@ -117,6 +140,19 @@ const parts = [
     return excerpt ? 'Tilhørende dokument: ' + title + type + '\\n' + excerpt : null;
   }),
 ].filter(Boolean);
+let ragChunks = item.rag_chunks || [];
+if (typeof ragChunks === 'string') {
+  try { ragChunks = JSON.parse(ragChunks); } catch (_) { ragChunks = []; }
+}
+const ragLines = ragChunks.slice(0, 12).map((chunk, index) => {
+  const content = String(chunk?.content || '').trim().slice(0, 1200);
+  if (!content) return null;
+  const source = chunk?.document_id ? ' (kilde: ' + chunk.document_id + ')' : '';
+  return 'Dokumentutdrag ' + (index + 1) + source + ':\\n' + content;
+}).filter(Boolean);
+if (ragLines.length) {
+  parts.push('Relevante dokumentutdrag (RAG):\\n' + ragLines.join('\\n\\n'));
+}
 let sakContextText = parts.join('\\n\\n');
 if (sakContextText.length > 20000) {
   sakContextText = sakContextText.slice(0, 20000) + '\\n\\n[... avkortet ...]';
