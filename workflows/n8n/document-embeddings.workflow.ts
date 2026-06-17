@@ -4,8 +4,6 @@ import {
   trigger,
   sticky,
   newCredential,
-  splitInBatches,
-  nextBatch,
   expr,
   placeholder,
 } from '@n8n/workflow-sdk';
@@ -95,14 +93,6 @@ const fetchPendingChunks = node({
   ],
 });
 
-const processChunkBatch = splitInBatches({
-  version: 3,
-  config: {
-    name: 'Process chunk batch',
-    parameters: { batchSize: 1 },
-  },
-});
-
 const embedChunk = node({
   type: 'n8n-nodes-base.httpRequest',
   version: 4.2,
@@ -115,7 +105,7 @@ const embedChunk = node({
       sendBody: true,
       specifyBody: 'json',
       jsonBody: expr(
-        '{"model":"nomic-embed-text","prompt":{{ JSON.stringify($json.content) }}}'
+        '{"model":"nomic-embed-text:v1.5","prompt":{{ JSON.stringify($json.content) }}}'
       ),
       options: { timeout: 120000 },
     },
@@ -131,7 +121,7 @@ const mapEmbedding = node({
     parameters: {
       mode: 'runOnceForEachItem',
       language: 'javaScript',
-      jsCode: `const chunk = $('Process chunk batch').item.json;
+      jsCode: `const chunk = $('Fetch pending chunks').item.json;
 const response = $input.item.json;
 const embedding = response.embedding;
 return { json: { ...chunk, embedding } };`,
@@ -217,7 +207,8 @@ const webhookTrigger = trigger({
     parameters: {
       httpMethod: 'POST',
       path: 'folkets-document-embeddings',
-      responseMode: 'lastNode',
+      responseMode: 'onReceived',
+      responseData: 'allEntries',
     },
   },
   output: [{ body: { stortinget_issue_id: '200329' } }],
@@ -252,16 +243,18 @@ const normalizeWebhook = node({
 });
 
 sticky(
-  '## Dokument embeddings (RAG)\n\nBatch/kø: henter `document_chunks` med `embedding_status=pending`, kaller Ollama `nomic-embed-text`, lagrer i pgvector.\n\nWebhook: `POST /webhook/folkets-document-embeddings` med valgfri `{ "stortinget_issue_id": "…" }`.',
+  '## Dokument embeddings (RAG)\n\nHenter pending `document_chunks`, kaller Ollama `nomic-embed-text:v1.5` sekvensielt (ett item per node-kjøring), lagrer i pgvector.\n\nWebhook: `POST /webhook/folkets-document-embeddings` med valgfri `{ "stortinget_issue_id": "…" }`.',
   [scheduleTrigger, webhookTrigger],
   { color: 5 }
 );
 
-const embeddingPipeline = embedChunk
+const embeddingPipeline = fetchPendingChunks
+  .to(embedChunk)
   .to(mapEmbedding)
   .to(prepareEmbeddingUpdate)
   .to(saveEmbedding)
-  .to(rateLimitPause);
+  .to(rateLimitPause)
+  .to(batchRunComplete);
 
 export default workflow(
   'folkets-document-embeddings',
@@ -269,12 +262,7 @@ export default workflow(
 )
   .add(scheduleTrigger)
   .to(embeddingSettings)
-  .to(fetchPendingChunks)
-  .to(
-    processChunkBatch
-      .onDone(batchRunComplete)
-      .onEachBatch(embeddingPipeline.to(nextBatch(processChunkBatch)))
-  )
+  .to(embeddingPipeline)
   .add(webhookTrigger)
   .to(normalizeWebhook)
-  .to(fetchPendingChunks);
+  .to(embeddingPipeline);

@@ -67,21 +67,11 @@
     },
     {
       "parameters": {
-        "batchSize": 1
-      },
-      "id": "process-chunk-batch-node",
-      "name": "Process chunk batch",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [900, 300]
-    },
-    {
-      "parameters": {
         "method": "POST",
         "url": "PLACEHOLDER_OLLAMA_URL/api/embeddings",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"model\":\"nomic-embed-text\",\"prompt\":{{ JSON.stringify($json.content) }}}",
+        "jsonBody": "={\"model\":\"nomic-embed-text:v1.5\",\"prompt\":{{ JSON.stringify($json.content) }}}",
         "options": {
           "timeout": 120000
         }
@@ -97,7 +87,7 @@
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "javaScript",
-        "jsCode": "const chunk = $('Process chunk batch').item.json;\nconst response = $input.item.json;\nconst embedding = response.embedding;\nreturn { json: { ...chunk, embedding } };"
+        "jsCode": "const chunk = $('Fetch pending chunks').item.json;\nconst response = $input.item.json;\nconst embedding = response.embedding;\nreturn { json: { ...chunk, embedding } };"
       },
       "id": "map-embedding-node",
       "name": "Map embedding vector",
@@ -170,7 +160,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "folkets-document-embeddings",
-        "responseMode": "lastNode"
+        "responseMode": "onReceived"
       },
       "id": "webhook-trigger-node",
       "name": "Webhook document embeddings",
@@ -208,7 +198,7 @@
       "parameters": {
         "height": 300,
         "width": 400,
-        "content": "## Dokument embeddings (RAG)\\n\\nBatch/kø: henter `document_chunks` med `embedding_status=pending`, kaller Ollama `nomic-embed-text`, lagrer i pgvector.\\n\\nWebhook: `POST /webhook/folkets-document-embeddings` med valgfri `{ \"stortinget_issue_id\": \"…\" }`."
+        "content": "## Dokument embeddings (RAG)\\n\\nBatch/kø: henter `document_chunks` med `embedding_status=pending`, kaller Ollama `nomic-embed-text:v1.5`, lagrer i pgvector.\\n\\nWebhook: `POST /webhook/folkets-document-embeddings` med valgfri `{ \"stortinget_issue_id\": \"…\" }`."
       },
       "id": "sticky-note-node",
       "name": "Note",
@@ -244,25 +234,7 @@
       "main": [
         [
           {
-            "node": "Process chunk batch",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Process chunk batch": {
-      "main": [
-        [
-          {
             "node": "Ollama embeddings",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Batch run complete",
             "type": "main",
             "index": 0
           }
@@ -317,7 +289,7 @@
       "main": [
         [
           {
-            "node": "Process chunk batch",
+            "node": "Batch run complete",
             "type": "main",
             "index": 0
           }

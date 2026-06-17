@@ -108,10 +108,7 @@ Krever migrasjon `20260531120000_production_readiness.sql` (`first_seen_at`, `st
 
 ## Dokument ingestion + RAG embeddings
 
-Workflow-kilder:
-
-- Dokument-cache + chunking skjer i appen (`lib/stortinget-document-ingest.ts`) ved sak-sync.
-- [`document-embeddings.workflow.ts`](document-embeddings.workflow.ts) – batch/kø for Ollama `nomic-embed-text` → `document_chunks.embedding`.
+**Live workflow:** https://n8n.heyklever.app/workflow/IkedEmJEJFqj7ZnM
 
 | Nøkkel | Verdi |
 |--------|--------|
