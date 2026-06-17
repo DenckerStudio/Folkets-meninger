@@ -1,5 +1,3 @@
-'use server';
-
 import { STORTINGET_ACTIVE_PERIODE_ID, STORTINGET_ACTIVE_SESSION_ID } from './stortinget-config';
 import {
   isDebattSak,
@@ -243,22 +241,15 @@ async function getCachedIssueOverlays(
       const chunk = issueIds.slice(i, i + chunkSize);
       const { data, error } = await service
         .from('stortinget_issues')
-        .select('id, status, detail_json, ferdigbehandlet, voting_closes_at, last_updated_at')
+        .select('id, status, ferdigbehandlet, voting_closes_at, last_updated_at')
         .in('id', chunk);
 
       if (error || !data) continue;
 
       for (const row of data) {
-        const detail = row.detail_json as StortingetSakDetail | null;
-        const ferdigbehandlet =
-          typeof detail?.ferdigbehandlet === 'boolean' ? detail.ferdigbehandlet : row.ferdigbehandlet;
-
         const status =
-          typeof ferdigbehandlet === 'boolean'
-            ? resolveSakTreatmentStatus({
-                ferdigbehandlet,
-                numericStatus: detail?.status,
-              })
+          typeof row.ferdigbehandlet === 'boolean'
+            ? resolveSakTreatmentStatus({ ferdigbehandlet: row.ferdigbehandlet })
             : row.status === 'closed' || row.status === 'pending'
               ? row.status
               : 'pending';
@@ -272,12 +263,9 @@ async function getCachedIssueOverlays(
             votingOpen = false;
             votingDaysLeft = 0;
           } else {
+            votingOpen = status !== 'closed';
             votingDaysLeft = Math.max(1, Math.ceil((closesMs - now) / 86_400_000));
           }
-        } else if (detail) {
-          const window = getSakVotingWindow(detail, { ferdigbehandlet });
-          votingOpen = window.isOpen && status !== 'closed';
-          votingDaysLeft = window.daysLeft;
         }
 
         result[String(row.id)] = {
@@ -323,7 +311,12 @@ export async function getSaker(
 
     const saker = filtered.map((sak) => mapStortingetSakToListItem(sak));
 
-    const cachedOverlays = await getCachedIssueOverlays(saker.map((s) => s.id));
+    const issueIds = saker.map((s) => s.id);
+    const [cachedOverlays, voteTotals] = await Promise.all([
+      getCachedIssueOverlays(issueIds),
+      getVoteTotals(issueIds),
+    ]);
+
     for (const sak of saker) {
       const cached = cachedOverlays[sak.id];
       if (!cached) continue;
@@ -334,8 +327,6 @@ export async function getSaker(
         sak.date = cached.lastUpdatedAt.split('T')[0];
       }
     }
-
-    const voteTotals = await getVoteTotals(saker.map((s) => s.id));
 
     for (const sak of saker) {
       if (voteTotals[sak.id]) {
@@ -351,21 +342,42 @@ export async function getSaker(
 }
 
 export async function getSak(id: string): Promise<SakListItem | null> {
-  const detail = await getSakDetail(id, { nextRevalidateSeconds: 3600 });
+  const bundle = await getSakPageBundle(id);
+  return bundle?.sak ?? null;
+}
+
+export async function getSakPageBundle(
+  id: string,
+): Promise<{
+  sak: SakListItem;
+  detail: StortingetSakDetail;
+  issueMeta: import('./stortinget-detail-cache').SakIssueMeta | null;
+} | null> {
+  const { getCachedSakDetail, getSakIssueMeta } = await import('./stortinget-detail-cache');
+  const detail = await getCachedSakDetail(id);
   if (!detail) return null;
 
-  const voteTotals = await getVoteTotals([id]);
-  const item = mapDetailToListItem(detail, voteTotals[id] ?? EMPTY_VOTES);
+  const [voteTotals, issueMeta] = await Promise.all([getVoteTotals([id]), getSakIssueMeta(id)]);
+  const sak = mapDetailToListItem(detail, voteTotals[id] ?? EMPTY_VOTES);
 
-  if (!item.date) {
-    const { getSakIssueMeta } = await import('./stortinget-detail-cache');
-    const meta = await getSakIssueMeta(id);
-    if (meta?.lastUpdatedAt) {
-      item.date = meta.lastUpdatedAt.split('T')[0];
+  if (issueMeta) {
+    sak.status = issueMeta.status;
+    if (issueMeta.lastUpdatedAt && !sak.date) {
+      sak.date = issueMeta.lastUpdatedAt.split('T')[0];
+    }
+    if (issueMeta.votingClosesAt) {
+      const closesMs = new Date(issueMeta.votingClosesAt).getTime();
+      if (closesMs <= Date.now()) {
+        sak.votingOpen = false;
+        sak.votingDaysLeft = 0;
+      } else if (issueMeta.status !== 'closed') {
+        sak.votingOpen = true;
+        sak.votingDaysLeft = Math.max(1, Math.ceil((closesMs - Date.now()) / 86_400_000));
+      }
     }
   }
 
-  return item;
+  return { sak, detail, issueMeta };
 }
 
 export async function getSakDetail(

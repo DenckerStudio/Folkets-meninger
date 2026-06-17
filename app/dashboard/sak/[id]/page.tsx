@@ -1,7 +1,6 @@
-import { getSak, type StortingetSakDetail } from '@/lib/stortinget';
+import { getSakPageBundle, type StortingetSakDetail } from '@/lib/stortinget';
 import { classifySakKind, getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
-import { getCachedSakDetail, getSakIssueMeta } from '@/lib/stortinget-detail-cache';
 import { SakMetaCard, SakProcessingBadge, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
 import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS, SAK_TYPE_BADGE_CLASS, resolveSakTreatmentStatus } from '@/lib/sak-status';
 import { getSakVotingWindow } from '@/lib/sak-voting-window';
@@ -106,14 +105,13 @@ function buildSaksgangSteps(
 
 export default async function SakPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
-  const sak = await getSak(resolvedParams.id);
+  const bundle = await getSakPageBundle(resolvedParams.id);
 
-  if (!sak) {
+  if (!bundle) {
     notFound();
   }
 
-  const detailedContent: StortingetSakDetail | null = await getCachedSakDetail(sak.id);
-  const issueMeta = await getSakIssueMeta(sak.id);
+  const { sak, detail: detailedContent, issueMeta } = bundle;
   const documents = await getSakDocumentsWithStatus(sak.id, detailedContent);
 
   const innstillingstekst = detailedContent?.innstillingstekst;

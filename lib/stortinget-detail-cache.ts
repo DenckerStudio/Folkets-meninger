@@ -115,19 +115,25 @@ export async function getCachedSakDetail(
     if (age < DETAIL_CACHE_MAX_AGE_MS) {
       const detail = cached.detail_json as StortingetSakDetail;
       if (!cached.ai_summary_source_hash) {
-        const source = await updateAiSummarySource(service, sakId, detail, {
-          title: cached.title,
-          summary: cached.summary,
-        });
-        await service
-          .from('stortinget_issues')
-          .update({
-            ai_summary_source_context: source.text,
-            ai_summary_source_json: source.json,
-            ai_summary_source_hash: source.hash,
-            ai_summary_source_updated_at: new Date().toISOString(),
-          })
-          .eq('id', sakId);
+        void (async () => {
+          try {
+            const source = await updateAiSummarySource(service, sakId, detail, {
+              title: cached.title,
+              summary: cached.summary,
+            });
+            await service
+              .from('stortinget_issues')
+              .update({
+                ai_summary_source_context: source.text,
+                ai_summary_source_json: source.json,
+                ai_summary_source_hash: source.hash,
+                ai_summary_source_updated_at: new Date().toISOString(),
+              })
+              .eq('id', sakId);
+          } catch (error) {
+            console.warn('[ai-summary-source] Failed to backfill on cache hit:', error);
+          }
+        })();
       }
       void ingestSakDocuments(sakId, detail).catch((error) => {
         console.warn('[document-ingest] Failed during cache hit:', error);

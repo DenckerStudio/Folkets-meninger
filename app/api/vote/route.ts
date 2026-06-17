@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { resolveSakTreatmentStatus } from '@/lib/sak-status';
-import { getSakVotingWindow } from '@/lib/sak-voting-window';
-import type { StortingetSakDetail } from '@/lib/stortinget';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,30 +11,33 @@ async function getIssueVotingState(issueId: string) {
   const service = getServiceSupabase();
   const { data: issue } = await service
     .from('stortinget_issues')
-    .select('status, ferdigbehandlet, voting_closes_at, detail_json')
+    .select('status, ferdigbehandlet, voting_closes_at')
     .eq('id', issueId)
     .maybeSingle();
 
-  const detail = (issue?.detail_json as StortingetSakDetail | null) ?? null;
-  const ferdigbehandlet =
-    typeof detail?.ferdigbehandlet === 'boolean' ? detail.ferdigbehandlet : issue?.ferdigbehandlet;
-
   const treatmentStatus =
-    typeof ferdigbehandlet === 'boolean'
-      ? resolveSakTreatmentStatus({ ferdigbehandlet, numericStatus: detail?.status })
+    typeof issue?.ferdigbehandlet === 'boolean'
+      ? resolveSakTreatmentStatus({ ferdigbehandlet: issue.ferdigbehandlet })
       : issue?.status === 'closed' || issue?.status === 'pending'
         ? issue.status
         : 'pending';
 
-  const votingWindow = getSakVotingWindow(detail, { ferdigbehandlet });
   const pastDeadline =
     issue?.voting_closes_at != null && new Date(issue.voting_closes_at).getTime() <= Date.now();
 
-  const votingClosed = treatmentStatus === 'closed' || pastDeadline || !votingWindow.isOpen;
+  let votingDaysLeft = 0;
+  if (!pastDeadline && issue?.voting_closes_at && treatmentStatus !== 'closed') {
+    votingDaysLeft = Math.max(
+      1,
+      Math.ceil((new Date(issue.voting_closes_at).getTime() - Date.now()) / 86_400_000),
+    );
+  }
+
+  const votingClosed = treatmentStatus === 'closed' || pastDeadline;
 
   return {
     votingClosed,
-    votingDaysLeft: votingClosed ? 0 : votingWindow.daysLeft,
+    votingDaysLeft: votingClosed ? 0 : votingDaysLeft,
   };
 }
 
