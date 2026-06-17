@@ -1,6 +1,5 @@
 import { STORTINGET_ACTIVE_PERIODE_ID, STORTINGET_ACTIVE_SESSION_ID } from './stortinget-config';
 import {
-  isDebattSak,
   mapSakPresentation,
   type SakKind,
 } from './stortinget-sak-presentation';
@@ -108,31 +107,6 @@ export interface StortingetSakDetail {
 
 const EMPTY_VOTES: SakVoteTotals = { for: 0, against: 0, abstain: 0, total: 0 };
 
-function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTotals = EMPTY_VOTES): SakListItem {
-  const presentation = mapSakPresentation({
-    korttittel: sak.korttittel,
-    tittel: sak.tittel,
-    henvisning: sak.henvisning,
-    dokumentgruppe: sak.dokumentgruppe,
-    emneNavn: sak.emne_liste?.[0]?.navn,
-  });
-
-  return {
-    id: sak.id.toString(),
-    title: presentation.title || sak.korttittel || sak.tittel || `Sak ${sak.id}`,
-    summary: presentation.summary,
-    category: presentation.category,
-    date: parseStortingetDotNetDateToISO(sak.sist_oppdatert_dato),
-    votes,
-    status: resolveSakTreatmentStatus({ numericStatus: sak.status }),
-    sakKind: presentation.kind,
-    henvisning: presentation.henvisning,
-    dokumentgruppe: sak.dokumentgruppe ?? null,
-    votingOpen: true,
-    votingDaysLeft: null,
-  };
-}
-
 function mapDetailToListItem(detail: StortingetSakDetail, votes: SakVoteTotals = EMPTY_VOTES): SakListItem {
   const presentation = mapSakPresentation({
     korttittel: detail.korttittel,
@@ -204,137 +178,16 @@ async function getVoteTotals(issueIds: string[]): Promise<Record<string, { for: 
   return result;
 }
 
-async function getCachedIssueOverlays(
-  issueIds: string[],
-): Promise<
-  Record<
-    string,
-    {
-      status: SakTreatmentStatus;
-      votingDaysLeft: number | null;
-      votingOpen: boolean;
-      lastUpdatedAt: string | null;
-    }
-  >
-> {
-  const result: Record<
-    string,
-    {
-      status: SakTreatmentStatus;
-      votingDaysLeft: number | null;
-      votingOpen: boolean;
-      lastUpdatedAt: string | null;
-    }
-  > = {};
-
-  if (issueIds.length === 0 || !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return result;
-  }
-
-  try {
-    const { getServiceSupabase } = await import('./supabase');
-    const service = getServiceSupabase();
-    const chunkSize = 200;
-    const now = Date.now();
-
-    for (let i = 0; i < issueIds.length; i += chunkSize) {
-      const chunk = issueIds.slice(i, i + chunkSize);
-      const { data, error } = await service
-        .from('stortinget_issues')
-        .select('id, status, ferdigbehandlet, voting_closes_at, last_updated_at')
-        .in('id', chunk);
-
-      if (error || !data) continue;
-
-      for (const row of data) {
-        const status =
-          typeof row.ferdigbehandlet === 'boolean'
-            ? resolveSakTreatmentStatus({ ferdigbehandlet: row.ferdigbehandlet })
-            : row.status === 'closed' || row.status === 'pending'
-              ? row.status
-              : 'pending';
-
-        let votingDaysLeft: number | null = null;
-        let votingOpen = status !== 'closed';
-
-        if (row.voting_closes_at) {
-          const closesMs = new Date(row.voting_closes_at).getTime();
-          if (closesMs <= now) {
-            votingOpen = false;
-            votingDaysLeft = 0;
-          } else {
-            votingOpen = status !== 'closed';
-            votingDaysLeft = Math.max(1, Math.ceil((closesMs - now) / 86_400_000));
-          }
-        }
-
-        result[String(row.id)] = {
-          status,
-          votingDaysLeft,
-          votingOpen,
-          lastUpdatedAt: row.last_updated_at ?? null,
-        };
-      }
-    }
-  } catch (e) {
-    console.error('Failed to fetch cached issue overlays:', e);
-  }
-
-  return result;
-}
-
 export async function getSaker(
-  opts?: { nextRevalidateSeconds?: number; includeAll?: boolean }
+  opts?: { nextRevalidateSeconds?: number; includeAll?: boolean; forceRefresh?: boolean },
 ): Promise<SakListItem[]> {
   try {
-    const res = await fetch(
-      stortingetUrl('/eksport/saker', { stortingssesjonid: getActiveSesjonId(), format: 'json' satisfies StortingetFormat }),
-      {
-        next: opts?.nextRevalidateSeconds ? { revalidate: opts.nextRevalidateSeconds } : undefined,
-        cache: opts?.nextRevalidateSeconds ? undefined : 'no-store',
-      }
-    );
-    if (!res.ok) throw new Error('Failed to fetch saker');
-    const data = (await res.json()) as { saker_liste?: StortingetSak[] };
-
-    const rawSaker = data.saker_liste ?? [];
-    const filtered = opts?.includeAll
-      ? rawSaker
-      : rawSaker.filter((sak) =>
-          isDebattSak({
-            korttittel: sak.korttittel,
-            tittel: sak.tittel,
-            henvisning: sak.henvisning,
-            dokumentgruppe: sak.dokumentgruppe,
-          })
-        );
-
-    const saker = filtered.map((sak) => mapStortingetSakToListItem(sak));
-
-    const issueIds = saker.map((s) => s.id);
-    const [cachedOverlays, voteTotals] = await Promise.all([
-      getCachedIssueOverlays(issueIds),
-      getVoteTotals(issueIds),
-    ]);
-
-    for (const sak of saker) {
-      const cached = cachedOverlays[sak.id];
-      if (!cached) continue;
-      sak.status = cached.status;
-      sak.votingOpen = cached.votingOpen;
-      sak.votingDaysLeft = cached.votingDaysLeft;
-      if (!sak.date && cached.lastUpdatedAt) {
-        sak.date = cached.lastUpdatedAt.split('T')[0];
-      }
-    }
-
-    for (const sak of saker) {
-      if (voteTotals[sak.id]) {
-        sak.votes = voteTotals[sak.id];
-      }
-    }
-
-    return saker;
+    const { getSakerWithCache } = await import('./stortinget-saker-cache');
+    return await getSakerWithCache({
+      includeAll: opts?.includeAll,
+      preferDb: true,
+      forceRefresh: opts?.forceRefresh === true,
+    });
   } catch (error) {
     console.error('Error fetching saker:', error);
     return [];

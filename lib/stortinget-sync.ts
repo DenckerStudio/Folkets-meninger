@@ -25,6 +25,7 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
     title: issue.title || `Sak ${issue.id}`,
     summary: issue.summary || issue.title || null,
     status: issue.status || 'pending',
+    category: issue.category || null,
     sak_kind: issue.sakKind,
     henvisning: issue.henvisning,
     dokumentgruppe: issue.dokumentgruppe,

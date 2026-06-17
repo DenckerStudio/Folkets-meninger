@@ -1,22 +1,12 @@
 import type { ComponentType } from 'react';
 import Link from 'next/link';
 import { ArrowRight, BarChart2, MessageSquare, ShieldCheck, TrendingUp, Users, Vote } from 'lucide-react';
-import { getSaker } from '@/lib/stortinget';
 import FadeIn from '@/components/fade-in';
 import HeroSection from '@/components/hero-section';
-import { LandingPopularIssues } from '@/components/landing-popular-issues';
+import { LandingPopularIssuesLazy } from '@/components/landing-popular-issues-lazy';
 import { routes } from '@/lib/routes';
 
-export const revalidate = 3600;
-
-const POPULAR_ISSUE_COUNT = 10;
-
 export default async function LandingPage() {
-  const issues = await getSaker({ nextRevalidateSeconds: 3600 });
-  const popularIssues = [...issues]
-    .sort((a, b) => (b.votes?.total ?? 0) - (a.votes?.total ?? 0))
-    .slice(0, POPULAR_ISSUE_COUNT);
-
   return (
     <div className="space-y-24 pb-12">
       <HeroSection />
@@ -95,7 +85,7 @@ export default async function LandingPage() {
         </section>
       </FadeIn>
 
-      <LandingPopularIssues issues={popularIssues} />
+      <LandingPopularIssuesLazy />
 
       <FadeIn delay={0.35} direction="up">
         <section className="text-center py-12 px-6 rounded-2xl bg-[#00205b] text-white">
