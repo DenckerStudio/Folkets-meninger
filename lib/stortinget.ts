@@ -6,6 +6,10 @@ import {
   mapSakPresentation,
   type SakKind,
 } from './stortinget-sak-presentation';
+import {
+  resolveSakTreatmentStatus,
+  type SakTreatmentStatus,
+} from './sak-status';
 import { parseStortingetDotNetDateToISO, stortingetUrl, type StortingetFormat } from './stortinget-utils';
 
 export type { SakKind };
@@ -45,7 +49,7 @@ export interface SakListItem {
   category: string;
   date: string;
   votes: SakVoteTotals;
-  status: 'pending' | 'closed';
+  status: SakTreatmentStatus;
   sakKind: SakKind | null;
   henvisning: string | null;
   dokumentgruppe: number | null;
@@ -119,7 +123,7 @@ function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTotals = E
     category: presentation.category,
     date: parseStortingetDotNetDateToISO(sak.sist_oppdatert_dato),
     votes,
-    status: sak.status === 1 ? 'pending' : 'closed',
+    status: resolveSakTreatmentStatus({ numericStatus: sak.status }),
     sakKind: presentation.kind,
     henvisning: presentation.henvisning,
     dokumentgruppe: sak.dokumentgruppe ?? null,
@@ -142,7 +146,10 @@ function mapDetailToListItem(detail: StortingetSakDetail, votes: SakVoteTotals =
     category: presentation.category,
     date: parseStortingetDotNetDateToISO(detail.sist_oppdatert_dato ?? ''),
     votes,
-    status: detail.ferdigbehandlet ? 'closed' : detail.status === 1 ? 'pending' : 'closed',
+    status: resolveSakTreatmentStatus({
+      ferdigbehandlet: detail.ferdigbehandlet,
+      numericStatus: detail.status,
+    }),
     sakKind: presentation.kind,
     henvisning: presentation.henvisning,
     dokumentgruppe: typeof detail.dokumentgruppe === 'number' ? detail.dokumentgruppe : null,
@@ -192,6 +199,51 @@ async function getVoteTotals(issueIds: string[]): Promise<Record<string, { for: 
   return result;
 }
 
+async function getCachedIssueStatuses(
+  issueIds: string[],
+): Promise<Record<string, SakTreatmentStatus>> {
+  const result: Record<string, SakTreatmentStatus> = {};
+
+  if (issueIds.length === 0 || !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return result;
+  }
+
+  try {
+    const { getServiceSupabase } = await import('./supabase');
+    const service = getServiceSupabase();
+    const chunkSize = 200;
+
+    for (let i = 0; i < issueIds.length; i += chunkSize) {
+      const chunk = issueIds.slice(i, i + chunkSize);
+      const { data, error } = await service
+        .from('stortinget_issues')
+        .select('id, status, detail_json')
+        .in('id', chunk);
+
+      if (error || !data) continue;
+
+      for (const row of data) {
+        const detail = row.detail_json as StortingetSakDetail | null;
+        if (detail && typeof detail.ferdigbehandlet === 'boolean') {
+          result[String(row.id)] = resolveSakTreatmentStatus({
+            ferdigbehandlet: detail.ferdigbehandlet,
+            numericStatus: detail.status,
+          });
+          continue;
+        }
+
+        if (row.status === 'closed' || row.status === 'pending') {
+          result[String(row.id)] = row.status;
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Failed to fetch cached issue statuses:', e);
+  }
+
+  return result;
+}
+
 export async function getSaker(
   opts?: { nextRevalidateSeconds?: number; includeAll?: boolean }
 ): Promise<SakListItem[]> {
@@ -219,6 +271,14 @@ export async function getSaker(
         );
 
     const saker = filtered.map((sak) => mapStortingetSakToListItem(sak));
+
+    const cachedStatuses = await getCachedIssueStatuses(saker.map((s) => s.id));
+    for (const sak of saker) {
+      const cached = cachedStatuses[sak.id];
+      if (cached) {
+        sak.status = cached;
+      }
+    }
 
     const voteTotals = await getVoteTotals(saker.map((s) => s.id));
 

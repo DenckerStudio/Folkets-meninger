@@ -54,7 +54,7 @@ export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: Saksg
     <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div className="mb-2 flex items-center gap-2">
         <h2 className="text-lg font-bold text-foreground flex items-center">
-          <GitBranch className="w-5 h-5 mr-2 text-indigo-600" />
+          <GitBranch className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
           Saksgang
         </h2>
         {showTooltips ? (

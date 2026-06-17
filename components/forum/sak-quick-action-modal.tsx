@@ -7,6 +7,7 @@ import UserSakVoteStatus from '@/components/forum/user-sak-vote-status';
 import AiSummary from '@/app/dashboard/sak/[id]/ai-summary';
 import VotingSection from '@/app/dashboard/sak/[id]/voting-section';
 import { routes } from '@/lib/routes';
+import { getSakTreatmentLabel, resolveSakTreatmentStatus } from '@/lib/sak-status';
 import { cn } from '@/lib/utils';
 
 export type SakQuickPanel = 'overview' | 'vote' | 'ai-summary';
@@ -62,7 +63,9 @@ function SakOverviewPanel({
           summary,
           excerpt: excerpt && excerpt.length > 0 ? excerpt : null,
           komite: json.komite?.navn ?? null,
-          statusLabel: json.ferdigbehandlet ? 'Ferdig behandlet' : 'Under behandling',
+          statusLabel: getSakTreatmentLabel(
+            resolveSakTreatmentStatus({ ferdigbehandlet: json.ferdigbehandlet }),
+          ),
         });
       })
       .catch(() => {

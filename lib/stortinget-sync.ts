@@ -1,6 +1,7 @@
 import { getServiceSupabase } from '@/lib/supabase';
-import { getSaker } from '@/lib/stortinget';
+import { getSaker, type StortingetSakDetail } from '@/lib/stortinget';
 import { getCachedSakDetail } from '@/lib/stortinget-detail-cache';
+import { resolveSakTreatmentStatus } from '@/lib/sak-status';
 
 export type SyncIssuesResult = {
   upserted: number;
@@ -46,12 +47,22 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
     for (const row of chunk) {
       const { data: existing } = await service
         .from('stortinget_issues')
-        .select('first_seen_at')
+        .select('first_seen_at, detail_json')
         .eq('id', row.id)
         .maybeSingle();
 
+      const detail = existing?.detail_json as StortingetSakDetail | null;
+      const status =
+        detail && typeof detail.ferdigbehandlet === 'boolean'
+          ? resolveSakTreatmentStatus({
+              ferdigbehandlet: detail.ferdigbehandlet,
+              numericStatus: detail.status,
+            })
+          : row.status;
+
       const payload = {
         ...row,
+        status,
         first_seen_at: existing?.first_seen_at ?? now,
       };
 

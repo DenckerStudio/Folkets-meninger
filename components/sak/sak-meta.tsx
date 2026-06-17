@@ -2,6 +2,12 @@
 
 import { Building2, ExternalLink, FileText, Users, type LucideIcon } from 'lucide-react';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
+import {
+  getSakTreatmentBadgeClassName,
+  getSakTreatmentLabel,
+  getSakTreatmentTooltipKey,
+  type SakTreatmentStatus,
+} from '@/lib/sak-status';
 import { useSakTooltipsEnabled } from '@/components/theme-provider';
 import { InfoTooltip, LabeledWithTooltip } from '@/components/ui/info-tooltip';
 
@@ -40,6 +46,27 @@ export function SakMetaCard({ icon, label, tooltipKey, children }: SakMetaCardPr
   );
 }
 
+export function SakProcessingBadge({
+  status,
+  size = 'md',
+}: {
+  status: SakTreatmentStatus;
+  size?: 'sm' | 'md';
+}) {
+  const showTooltips = useSakTooltipsEnabled();
+  const label = getSakTreatmentLabel(status);
+  const tooltipKey = getSakTreatmentTooltipKey(status);
+  const sizeClass = size === 'sm' ? 'px-2.5 py-0.5 text-xs' : 'px-3 py-1 text-sm';
+
+  return (
+    <SakStatusBadge
+      label={label}
+      tooltip={showTooltips ? SAK_META_TOOLTIPS[tooltipKey] : undefined}
+      className={`${sizeClass} ${getSakTreatmentBadgeClassName(status)}`}
+    />
+  );
+}
+
 export function SakStatusBadge({
   label,
   tooltip,
@@ -75,7 +102,7 @@ export function SakSectionHeading({
 
   return (
     <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-      {Icon ? <Icon className={iconClassName ?? 'w-5 h-5 text-indigo-600'} /> : null}
+      {Icon ? <Icon className={iconClassName ?? 'w-5 h-5 text-indigo-600 dark:text-indigo-400'} /> : null}
       <span>{title}</span>
       {showTooltips && tooltipKey ? (
         <InfoTooltip label={title} description={SAK_META_TOOLTIPS[tooltipKey]} side="bottom" />

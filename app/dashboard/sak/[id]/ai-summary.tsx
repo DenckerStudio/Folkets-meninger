@@ -110,13 +110,13 @@ export default function AiSummary({
 
   if (loading) {
     return (
-      <div className="bg-gradient-to-br from-indigo-50 to-white rounded-2xl border border-indigo-100 p-8 animate-pulse">
-        <div className="h-6 bg-indigo-100 rounded w-1/3 mb-6"></div>
-        {statusMessage && <div className="text-sm text-indigo-700 mb-3">{statusMessage}</div>}
+      <div className="bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/40 dark:to-card rounded-2xl border border-indigo-100 dark:border-indigo-900/50 p-8 animate-pulse">
+        <div className="h-6 bg-indigo-100 dark:bg-indigo-900/50 rounded w-1/3 mb-6"></div>
+        {statusMessage && <div className="text-sm text-indigo-700 dark:text-indigo-300 mb-3">{statusMessage}</div>}
         <div className="space-y-4">
-          <div className="h-4 bg-indigo-50 rounded w-full"></div>
-          <div className="h-4 bg-indigo-50 rounded w-5/6"></div>
-          <div className="h-4 bg-indigo-50 rounded w-4/6"></div>
+          <div className="h-4 bg-indigo-50 dark:bg-indigo-900/30 rounded w-full"></div>
+          <div className="h-4 bg-indigo-50 dark:bg-indigo-900/30 rounded w-5/6"></div>
+          <div className="h-4 bg-indigo-50 dark:bg-indigo-900/30 rounded w-4/6"></div>
         </div>
       </div>
     );
@@ -124,12 +124,12 @@ export default function AiSummary({
 
   if (!data) {
     return (
-      <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-8">
-        <h2 className="text-xl font-bold text-gray-900 flex items-center mb-2">
-          <ShieldCheck className="w-6 h-6 text-indigo-600 mr-2" />
+      <div className="rounded-2xl border border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/60 dark:bg-indigo-950/30 p-8">
+        <h2 className="text-xl font-bold text-foreground flex items-center mb-2">
+          <ShieldCheck className="w-6 h-6 text-indigo-600 dark:text-indigo-400 mr-2" />
           AI-forklart (nøytral)
         </h2>
-        <p className="text-sm text-indigo-900">
+        <p className="text-sm text-indigo-900 dark:text-indigo-200">
           {statusMessage ?? 'AI-sammendrag genereres i bakgrunnen og vises her når det er klart.'}
         </p>
       </div>
@@ -137,27 +137,27 @@ export default function AiSummary({
   }
 
   const items = [
-    { icon: BrainCircuit, label: 'Hva?', text: data.hva, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { icon: Users, label: 'Hvem?', text: data.hvem, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { icon: Coins, label: 'Kostnad?', text: data.kostnad, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { icon: BrainCircuit, label: 'Hva?', text: data.hva, color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-950/40' },
+    { icon: Users, label: 'Hvem?', text: data.hvem, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40' },
+    { icon: Coins, label: 'Kostnad?', text: data.kostnad, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950/40' },
   ];
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-gradient-to-br from-indigo-50 to-white rounded-2xl border border-indigo-100 p-8 shadow-sm"
+      className="bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/40 dark:to-card rounded-2xl border border-indigo-100 dark:border-indigo-900/50 p-8 shadow-sm"
     >
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900 flex items-center">
-          <ShieldCheck className="w-6 h-6 text-indigo-600 mr-2" />
+        <h2 className="text-xl font-bold text-foreground flex items-center">
+          <ShieldCheck className="w-6 h-6 text-indigo-600 dark:text-indigo-400 mr-2" />
           AI-forklart (nøytral)
         </h2>
         <div className="flex items-center gap-2">
           {data.cached && (
-            <span className="text-xs text-gray-500 hidden sm:inline">Lagret sammendrag</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">Lagret sammendrag</span>
           )}
-          <span className="text-xs text-gray-400 flex items-center gap-1">
+          <span className="text-xs text-muted-foreground flex items-center gap-1">
             <NorwegianFlagIcon className="shrink-0 rounded-[1px] shadow-sm" />
             Generert av AI
           </span>
@@ -171,7 +171,7 @@ export default function AiSummary({
               <item.icon className="w-5 h-5 mr-2" />
               {item.label}
             </div>
-            <p className="text-gray-700 text-sm leading-relaxed">{item.text}</p>
+            <p className="text-muted-foreground text-sm leading-relaxed">{item.text}</p>
           </div>
         ))}
       </div>
