@@ -1,71 +1,67 @@
-import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { checkRateLimit, getRateLimitPolicy } from '@/lib/rate-limit';
 import { isPublicDashboardSakPath, routes } from '@/lib/routes';
+import { refreshSessionCookies, resolveMiddlewareUser } from '@/lib/supabase-middleware';
+
+function applyRateLimit(request: NextRequest, pathname: string): NextResponse | null {
+  const ratePolicy = getRateLimitPolicy(pathname);
+  if (!ratePolicy) {
+    return null;
+  }
+
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown';
+  const rate = checkRateLimit(`${pathname}:${ip}`, ratePolicy.limit, ratePolicy.windowMs);
+  if (!rate.ok) {
+    return NextResponse.json(
+      { error: 'For mange forespørsler. Prøv igjen om litt.' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(rate.retryAfterSeconds) },
+      },
+    );
+  }
+
+  return null;
+}
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
   const { pathname } = request.nextUrl;
 
-  const ratePolicy = getRateLimitPolicy(pathname);
-  if (ratePolicy) {
-    const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') ||
-      'unknown';
-    const rate = checkRateLimit(`${pathname}:${ip}`, ratePolicy.limit, ratePolicy.windowMs);
-    if (!rate.ok) {
-      return NextResponse.json(
-        { error: 'For mange forespørsler. Prøv igjen om litt.' },
-        {
-          status: 429,
-          headers: { 'Retry-After': String(rate.retryAfterSeconds) },
-        }
-      );
-    }
+  const rateLimited = applyRateLimit(request, pathname);
+  if (rateLimited) {
+    return rateLimited;
   }
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
-          );
-        },
-      },
-    },
-  );
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (isPublicDashboardSakPath(pathname)) {
+    return refreshSessionCookies(request);
+  }
 
   const isDashboard = pathname === routes.dashboard || pathname.startsWith(`${routes.dashboard}/`);
-
-  if (isDashboard && !isPublicDashboardSakPath(pathname)) {
-    if (!user) {
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = routes.login;
-      loginUrl.searchParams.set('next', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
+  if (!isDashboard) {
+    return NextResponse.next();
   }
 
-  return supabaseResponse;
+  const { user, response } = await resolveMiddlewareUser(request);
+  if (!user) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = routes.login;
+    loginUrl.searchParams.set('next', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return response;
 }
 
 export const config = {
   matcher: [
     '/dashboard/:path*',
-    '/auth/:path*',
     '/api/vote/:path*',
     '/api/forum/:path*',
     '/api/sak/:path*/ai-summary',
