@@ -1076,10 +1076,10 @@ const scheduleTriggerAfternoon = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
   version: 1.3,
   config: {
-    name: 'Hourly 30',
+    name: 'Every 4 hours :30',
     parameters: {
       rule: {
-        interval: [{ field: 'cronExpression', expression: '30 * * * *' }],
+        interval: [{ field: 'cronExpression', expression: '30 */4 * * *' }],
       },
     },
   },
@@ -1135,10 +1135,10 @@ const scheduleTrigger = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
   version: 1.3,
   config: {
-    name: 'Hourly 00',
+    name: 'Every 4 hours :00',
     parameters: {
       rule: {
-        interval: [{ field: 'cronExpression', expression: '0 * * * *' }],
+        interval: [{ field: 'cronExpression', expression: '0 */4 * * *' }],
       },
     },
   },

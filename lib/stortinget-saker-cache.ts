@@ -14,7 +14,8 @@ import type { SakListItem, SakVoteTotals, StortingetSak } from './stortinget';
 const EMPTY_VOTES: SakVoteTotals = { for: 0, against: 0, abstain: 0, total: 0 };
 const LIST_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 const MIN_DB_LIST_COUNT = 10;
-const MEMORY_CACHE_TTL_MS = 5 * 60 * 1000;
+const MEMORY_CACHE_TTL_MS = 30 * 60 * 1000;
+const DB_LIST_LIMIT = 500;
 
 let memoryListCache: { items: SakListItem[]; expiresAt: number } | null = null;
 
@@ -56,7 +57,7 @@ type DbIssueRow = {
   category: string | null;
 };
 
-function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTotals = EMPTY_VOTES): SakListItem {
+export function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTotals = EMPTY_VOTES): SakListItem {
   const presentation = mapSakPresentation({
     korttittel: sak.korttittel,
     tittel: sak.tittel,
@@ -226,7 +227,7 @@ function applyOverlaysToSaker(
   }
 }
 
-async function enrichSakerList(saker: SakListItem[]): Promise<SakListItem[]> {
+export async function enrichSakerList(saker: SakListItem[]): Promise<SakListItem[]> {
   const issueIds = saker.map((sak) => sak.id);
   const [overlays, voteTotals] = await Promise.all([
     getCachedIssueOverlays(issueIds),
@@ -298,14 +299,16 @@ async function readSakerListFromDbUncached(): Promise<{ items: SakListItem[]; st
       .from('stortinget_issues')
       .select(`${baseSelect}, category`)
       .not('sak_kind', 'is', null)
-      .order('last_updated_at', { ascending: false, nullsFirst: false });
+      .order('last_updated_at', { ascending: false, nullsFirst: false })
+      .limit(DB_LIST_LIMIT);
 
     if (withCategory.error?.message?.includes('category')) {
       const withoutCategory = await service
         .from('stortinget_issues')
         .select(baseSelect)
         .not('sak_kind', 'is', null)
-        .order('last_updated_at', { ascending: false, nullsFirst: false });
+        .order('last_updated_at', { ascending: false, nullsFirst: false })
+        .limit(DB_LIST_LIMIT);
       data = (withoutCategory.data as DbIssueRow[] | null) ?? null;
       error = withoutCategory.error;
     } else {
@@ -345,10 +348,10 @@ async function readSakerListFromDb(): Promise<{ items: SakListItem[]; stale: boo
 const getCachedSakerListFromDb = unstable_cache(
   async () => readSakerListFromDb(),
   ['stortinget-saker-db-list'],
-  { revalidate: 300, tags: ['stortinget-saker'] },
+  { revalidate: 1800, tags: ['stortinget-saker'] },
 );
 
-async function fetchRawSakerFromStortinget(): Promise<StortingetSak[]> {
+export async function fetchRawSakerFromStortinget(): Promise<StortingetSak[]> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20_000);
 
@@ -372,6 +375,44 @@ async function fetchRawSakerFromStortinget(): Promise<StortingetSak[]> {
   }
 }
 
+type PersistListRow = {
+  id: string;
+  title: string;
+  summary: string | null;
+  status: string;
+  category: string | null;
+  sak_kind: string | null;
+  henvisning: string | null;
+  dokumentgruppe: number | null;
+  last_synced_at: string;
+  last_updated_at: string;
+};
+
+function persistRowChanged(
+  existing: {
+    title: string | null;
+    summary: string | null;
+    status: string | null;
+    category: string | null;
+    sak_kind: string | null;
+    henvisning: string | null;
+    dokumentgruppe: number | null;
+    last_updated_at: string | null;
+  },
+  next: PersistListRow,
+): boolean {
+  return (
+    existing.title !== next.title ||
+    existing.summary !== next.summary ||
+    existing.status !== next.status ||
+    existing.category !== next.category ||
+    existing.sak_kind !== next.sak_kind ||
+    existing.henvisning !== next.henvisning ||
+    existing.dokumentgruppe !== next.dokumentgruppe ||
+    existing.last_updated_at !== next.last_updated_at
+  );
+}
+
 export async function persistSakerListToDb(items: SakListItem[]): Promise<void> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY || items.length === 0) {
     return;
@@ -383,8 +424,15 @@ export async function persistSakerListToDb(items: SakListItem[]): Promise<void> 
 
   for (let i = 0; i < items.length; i += chunkSize) {
     const chunk = items.slice(i, i + chunkSize);
-    const { error } = await service.from('stortinget_issues').upsert(
-      chunk.map((item) => ({
+    const chunkIds = chunk.map((item) => item.id);
+    const { data: existingRows } = await service
+      .from('stortinget_issues')
+      .select('id, title, summary, status, category, sak_kind, henvisning, dokumentgruppe, last_updated_at')
+      .in('id', chunkIds);
+
+    const existingById = new Map((existingRows ?? []).map((row) => [row.id, row]));
+    const toUpsert = chunk
+      .map((item) => ({
         id: item.id,
         title: item.title,
         summary: item.summary || null,
@@ -395,9 +443,17 @@ export async function persistSakerListToDb(items: SakListItem[]): Promise<void> 
         dokumentgruppe: item.dokumentgruppe,
         last_synced_at: now,
         last_updated_at: item.date ? `${item.date}T00:00:00.000Z` : now,
-      })),
-      { onConflict: 'id' },
-    );
+      }))
+      .filter((row) => {
+        const existing = existingById.get(row.id);
+        return !existing || persistRowChanged(existing, row);
+      });
+
+    if (toUpsert.length === 0) {
+      continue;
+    }
+
+    const { error } = await service.from('stortinget_issues').upsert(toUpsert, { onConflict: 'id' });
 
     if (error) {
       console.error('persistSakerListToDb chunk error:', error);
@@ -538,11 +594,6 @@ export async function getSakerWithCache(opts?: GetSakerCacheOpts): Promise<SakLi
     const cached = await getCachedSakerListFromDb();
     if (cached?.items.length) {
       writeMemoryListCache(cached.items);
-      if (cached.stale && canRefreshFromStortingetApi()) {
-        void refreshSakerListFromStortinget({ includeAll: opts?.includeAll }).then((items) => {
-          if (items?.length) writeMemoryListCache(items);
-        });
-      }
       return cached.items;
     }
   }

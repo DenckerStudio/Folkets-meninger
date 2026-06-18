@@ -8,7 +8,7 @@ import { resolveSakTreatmentStatus } from './sak-status';
 import { getSakVotingWindow } from './sak-voting-window';
 import { parseStortingetDotNetDateToISO } from './stortinget-utils';
 
-const DETAIL_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+const DETAIL_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export type SakIssueMeta = {
   lastUpdatedAt: string | null;
@@ -113,32 +113,7 @@ export async function getCachedSakDetail(
   if (!opts?.forceRefresh && cached?.detail_json) {
     const age = Date.now() - new Date(cached.last_synced_at).getTime();
     if (age < DETAIL_CACHE_MAX_AGE_MS) {
-      const detail = cached.detail_json as StortingetSakDetail;
-      if (!cached.ai_summary_source_hash) {
-        void (async () => {
-          try {
-            const source = await updateAiSummarySource(service, sakId, detail, {
-              title: cached.title,
-              summary: cached.summary,
-            });
-            await service
-              .from('stortinget_issues')
-              .update({
-                ai_summary_source_context: source.text,
-                ai_summary_source_json: source.json,
-                ai_summary_source_hash: source.hash,
-                ai_summary_source_updated_at: new Date().toISOString(),
-              })
-              .eq('id', sakId);
-          } catch (error) {
-            console.warn('[ai-summary-source] Failed to backfill on cache hit:', error);
-          }
-        })();
-      }
-      void ingestSakDocuments(sakId, detail).catch((error) => {
-        console.warn('[document-ingest] Failed during cache hit:', error);
-      });
-      return detail;
+      return cached.detail_json as StortingetSakDetail;
     }
   }
 
@@ -231,7 +206,7 @@ async function updateAiSummarySource(
   });
 }
 
-export async function refreshStalePendingSakDetails(limit = 40): Promise<number> {
+export async function refreshStalePendingSakDetails(limit = 10): Promise<number> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return 0;
   }
