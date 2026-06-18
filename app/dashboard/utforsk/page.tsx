@@ -1,9 +1,9 @@
 import { getSaker } from '@/lib/stortinget';
 import ExploreClient from './explore-client';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 export default async function ExplorePage() {
-  const initialIssues = await getSaker({ nextRevalidateSeconds: 3600 });
+  const initialIssues = await getSaker();
   return <ExploreClient initialIssues={initialIssues} />;
 }

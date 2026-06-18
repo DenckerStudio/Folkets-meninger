@@ -281,7 +281,7 @@ async function getVoteTotals(
   return result;
 }
 
-async function readSakerListFromDb(): Promise<{ items: SakListItem[]; stale: boolean } | null> {
+async function readSakerListFromDbUncached(): Promise<{ items: SakListItem[]; stale: boolean } | null> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return null;
   }
@@ -332,6 +332,14 @@ async function readSakerListFromDb(): Promise<{ items: SakListItem[]; stale: boo
     console.error('Failed to read saker list from DB:', e);
     return null;
   }
+}
+
+async function readSakerListFromDb(): Promise<{ items: SakListItem[]; stale: boolean } | null> {
+  if (isProductionBuild()) {
+    return null;
+  }
+
+  return withTimeout(readSakerListFromDbUncached(), 12_000, null);
 }
 
 const getCachedSakerListFromDb = unstable_cache(
@@ -513,6 +521,10 @@ export async function getPopularSaker(limit = 10): Promise<SakListItem[]> {
 }
 
 export async function getSakerWithCache(opts?: GetSakerCacheOpts): Promise<SakListItem[]> {
+  if (isProductionBuild()) {
+    return [];
+  }
+
   const preferDb = opts?.preferDb !== false;
 
   if (!opts?.forceRefresh) {

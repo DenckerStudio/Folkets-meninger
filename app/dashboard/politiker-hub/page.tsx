@@ -3,7 +3,7 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import PolitikerHubClient from './politiker-hub-client';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 async function getPoliticianVerificationStatus(): Promise<boolean> {
   try {
@@ -28,7 +28,7 @@ async function getPoliticianVerificationStatus(): Promise<boolean> {
 
 export default async function PolitikerHubPage() {
   const [initialIssues, initialPolitikere, isVerified] = await Promise.all([
-    getSaker({ nextRevalidateSeconds: 3600 }),
+    getSaker(),
     getPolitikereOversikt(),
     getPoliticianVerificationStatus(),
   ]);
