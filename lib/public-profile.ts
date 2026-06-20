@@ -1,7 +1,8 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { formatTimeAgo } from '@/lib/forum/queries';
 import { stripUrlsForExcerpt } from '@/lib/forum/format-body';
-import { getUserPointSummary } from '@/lib/user-points';
+import { getUserPointsProfile } from '@/lib/user-points-profile';
+import type { UserPointsProgress } from '@/lib/user-points-levels';
 
 export type PublicProfileActivity =
   | {
@@ -30,7 +31,8 @@ export type PublicProfile = {
   isPublic: boolean;
   bio: string | null;
   partyPreference: string | null;
-  points: number | null;
+  points: number;
+  pointsProgress: UserPointsProgress;
   activity: PublicProfileActivity[];
   stats: {
     threads: number;
@@ -59,7 +61,7 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
   const service = getServiceSupabase();
   let { data: user, error: userError } = await service
     .from('users')
-    .select('id, first_name, last_name, name, bio, party_preference, profile_is_public, show_party_preference, show_points')
+    .select('id, first_name, last_name, name, bio, party_preference, profile_is_public, show_party_preference')
     .eq('id', userId)
     .maybeSingle();
 
@@ -76,7 +78,6 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
           party_preference: null,
           profile_is_public: false,
           show_party_preference: false,
-          show_points: true,
         }
       : null;
   }
@@ -88,7 +89,7 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
       ? `${user.first_name} ${user.last_name}`.trim()
       : user.name || 'Bruker';
 
-  const [threadsResRaw, repliesResRaw, points] = await Promise.all([
+  const [threadsResRaw, repliesResRaw, pointsProfile] = await Promise.all([
     service
       .from('forum_threads')
       .select('id, title, body, created_at')
@@ -104,7 +105,7 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
       .eq('moderation_status', 'approved')
       .order('created_at', { ascending: false })
       .limit(20),
-    getUserPointSummary(userId, 0),
+    getUserPointsProfile(userId, 0),
   ]);
 
   const threadsRes = threadsResRaw.error
@@ -163,7 +164,8 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
     bio: user.profile_is_public ? user.bio ?? null : null,
     partyPreference:
       user.profile_is_public && user.show_party_preference ? user.party_preference ?? null : null,
-    points: user.profile_is_public && user.show_points !== false ? points.points : null,
+    points: pointsProfile.points,
+    pointsProgress: pointsProfile.progress,
     activity: activity.slice(0, 20),
     stats: {
       threads: threadsRes.data?.length ?? 0,

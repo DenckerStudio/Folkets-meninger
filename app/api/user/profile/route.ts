@@ -3,7 +3,12 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { userHasForumIdentity } from '@/lib/forum/author-display';
-import { getUserPointSummary } from '@/lib/user-points';
+import { getUserPointsProfile } from '@/lib/user-points-profile';
+import {
+  canAwardProfileCompletePoints,
+  getUserVerificationStatus,
+  PROFILE_BIO_MIN_LENGTH,
+} from '@/lib/user-verification';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +22,7 @@ export async function GET() {
   const service = getServiceSupabase();
   let { data, error } = await service
     .from('users')
-    .select('first_name, last_name, name, email, bio, party_preference, profile_is_public, show_party_preference, show_points, avatar_url')
+    .select('first_name, last_name, name, email, bio, party_preference, profile_is_public, show_party_preference, avatar_url')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -34,7 +39,6 @@ export async function GET() {
           party_preference: '',
           profile_is_public: false,
           show_party_preference: false,
-          show_points: true,
           avatar_url: '',
         }
       : null;
@@ -45,7 +49,8 @@ export async function GET() {
     return NextResponse.json({ error: 'Kunne ikke hente profil' }, { status: 500 });
   }
 
-  const pointSummary = await getUserPointSummary(user.id);
+  const pointsProfile = await getUserPointsProfile(user.id);
+  const verification = getUserVerificationStatus(user);
 
   return NextResponse.json({
     first_name: data?.first_name ?? null,
@@ -56,10 +61,17 @@ export async function GET() {
     party_preference: data?.party_preference ?? '',
     profile_is_public: data?.profile_is_public ?? false,
     show_party_preference: data?.show_party_preference ?? false,
-    show_points: data?.show_points ?? true,
     avatar_url: data?.avatar_url ?? '',
-    points: pointSummary.points,
-    recent_points: pointSummary.recent,
+    points: pointsProfile.points,
+    points_progress: pointsProfile.progress,
+    recent_points: pointsProfile.recent,
+    verification,
+    profile_bio_min_length: PROFILE_BIO_MIN_LENGTH,
+    profile_points_eligible: canAwardProfileCompletePoints({
+      bio: data?.bio ?? '',
+      profileIsPublic: data?.profile_is_public === true,
+      verification,
+    }),
     has_forum_identity: userHasForumIdentity(data),
   });
 }
@@ -117,14 +129,22 @@ export async function PATCH(request: Request) {
   }
   if ('profile_is_public' in body) profilePatch.profile_is_public = body.profile_is_public === true;
   if ('show_party_preference' in body) profilePatch.show_party_preference = body.show_party_preference === true;
-  if ('show_points' in body) profilePatch.show_points = body.show_points !== false;
   if ('avatar_url' in body) profilePatch.avatar_url = typeof body.avatar_url === 'string' ? body.avatar_url.trim().slice(0, 500) : '';
 
+  let updatedProfile:
+    | {
+        bio: string | null;
+        profile_is_public: boolean;
+      }
+    | null = null;
+
   if (Object.keys(profilePatch).length > 0) {
-    const { error } = await service
+    const { data: updated, error } = await service
       .from('users')
       .update(profilePatch)
-      .eq('id', user.id);
+      .eq('id', user.id)
+      .select('bio, profile_is_public')
+      .maybeSingle();
 
     if (error) {
       if (error.message?.includes('column')) {
@@ -136,7 +156,37 @@ export async function PATCH(request: Request) {
       console.error('update public profile fields', error);
       return NextResponse.json({ error: 'Kunne ikke lagre offentlig profil' }, { status: 500 });
     }
+
+    updatedProfile = updated;
   }
+
+  const verification = getUserVerificationStatus(user);
+  const { data: currentProfile } = updatedProfile
+    ? { data: updatedProfile }
+    : await service
+        .from('users')
+        .select('bio, profile_is_public')
+        .eq('id', user.id)
+        .maybeSingle();
+
+  if (
+    canAwardProfileCompletePoints({
+      bio: currentProfile?.bio,
+      profileIsPublic: currentProfile?.profile_is_public === true,
+      verification,
+    })
+  ) {
+    await service.rpc('award_user_points', {
+      p_user_id: user.id,
+      p_delta: 15,
+      p_reason: 'profile_complete',
+      p_ref_type: 'profile',
+      p_ref_key: 'profile_complete',
+      p_ref_id: null,
+    });
+  }
+
+  const pointsProfile = await getUserPointsProfile(user.id);
 
   return NextResponse.json({
     success: true,
@@ -144,5 +194,13 @@ export async function PATCH(request: Request) {
     last_name: hasNameFields ? lastName : undefined,
     display_name: hasNameFields ? `${firstName} ${lastName}` : undefined,
     has_forum_identity: hasNameFields ? true : undefined,
+    points: pointsProfile.points,
+    points_progress: pointsProfile.progress,
+    verification,
+    profile_points_eligible: canAwardProfileCompletePoints({
+      bio: currentProfile?.bio,
+      profileIsPublic: currentProfile?.profile_is_public === true,
+      verification,
+    }),
   });
 }
