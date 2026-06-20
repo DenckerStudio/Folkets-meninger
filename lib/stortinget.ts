@@ -7,6 +7,7 @@ import {
   type SakKind,
 } from './stortinget-sak-presentation';
 import { parseStortingetDotNetDateToISO, stortingetUrl, type StortingetFormat } from './stortinget-utils';
+import { inferFerdigbehandletFromListSak, resolveSakListStatus } from './sak-status';
 
 export type { SakKind };
 
@@ -25,6 +26,8 @@ export interface StortingetSak {
   status: number;
   type?: number;
   dokumentgruppe?: number;
+  innstilling_id?: number;
+  innstilling_kode?: number;
   emne_liste?: { navn: string }[];
   sist_oppdatert_dato: string;
   henvisning: string;
@@ -103,6 +106,45 @@ export interface StortingetSakDetail {
 
 const EMPTY_VOTES: SakVoteTotals = { for: 0, against: 0, abstain: 0, total: 0 };
 
+async function applyDbStatusOverlay(saker: SakListItem[]): Promise<void> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY || saker.length === 0) {
+    return;
+  }
+
+  try {
+    const { getServiceSupabase } = await import('./supabase');
+    const service = getServiceSupabase();
+    const chunkSize = 200;
+
+    for (let i = 0; i < saker.length; i += chunkSize) {
+      const chunk = saker.slice(i, i + chunkSize);
+      const { data, error } = await service
+        .from('stortinget_issues')
+        .select('id, status, detail_json')
+        .in(
+          'id',
+          chunk.map((sak) => sak.id),
+        );
+
+      if (error || !data) continue;
+
+      for (const row of data) {
+        const sak = chunk.find((item) => item.id === row.id);
+        if (!sak) continue;
+
+        const detail = row.detail_json as StortingetSakDetail | null;
+        sak.status = resolveSakListStatus({
+          ferdigbehandlet: detail?.ferdigbehandlet,
+          cachedStatus: row.status,
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Failed to apply DB status overlay:', error);
+  }
+}
+
+/** List export keeps status=1 for many finished saker; innstilling fields are a reliable hint. */
 function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTotals = EMPTY_VOTES): SakListItem {
   const presentation = mapSakPresentation({
     korttittel: sak.korttittel,
@@ -119,7 +161,10 @@ function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTotals = E
     category: presentation.category,
     date: parseStortingetDotNetDateToISO(sak.sist_oppdatert_dato),
     votes,
-    status: sak.status === 1 ? 'pending' : 'closed',
+    status: resolveSakListStatus({
+      ferdigbehandlet: inferFerdigbehandletFromListSak(sak),
+      numericStatus: sak.status,
+    }),
     sakKind: presentation.kind,
     henvisning: presentation.henvisning,
     dokumentgruppe: sak.dokumentgruppe ?? null,
@@ -142,7 +187,10 @@ function mapDetailToListItem(detail: StortingetSakDetail, votes: SakVoteTotals =
     category: presentation.category,
     date: parseStortingetDotNetDateToISO(detail.sist_oppdatert_dato ?? ''),
     votes,
-    status: detail.ferdigbehandlet ? 'closed' : detail.status === 1 ? 'pending' : 'closed',
+    status: resolveSakListStatus({
+      ferdigbehandlet: detail.ferdigbehandlet,
+      numericStatus: detail.status,
+    }),
     sakKind: presentation.kind,
     henvisning: presentation.henvisning,
     dokumentgruppe: typeof detail.dokumentgruppe === 'number' ? detail.dokumentgruppe : null,
@@ -227,6 +275,8 @@ export async function getSaker(
         sak.votes = voteTotals[sak.id];
       }
     }
+
+    await applyDbStatusOverlay(saker);
 
     return saker;
   } catch (error) {

@@ -121,7 +121,8 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
   const sakNummer = detailedContent?.sak_nummer;
   const sakSesjon = detailedContent?.sak_sesjon;
   const henvisning = detailedContent?.henvisning;
-  const ferdigbehandlet = detailedContent?.ferdigbehandlet;
+  const ferdigbehandlet =
+    detailedContent?.ferdigbehandlet === true || sak.status === 'closed';
   const komite = detailedContent?.komite;
 
   const saksgang = detailedContent?.saksgang;

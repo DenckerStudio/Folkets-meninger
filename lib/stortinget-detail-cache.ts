@@ -1,5 +1,6 @@
 import { getServiceSupabase } from './supabase';
 import { getSakDetail, type StortingetSakDetail } from './stortinget';
+import { resolveSakListStatus } from './sak-status';
 import { mapSakPresentation } from './stortinget-sak-presentation';
 import { triggerAiSummaryWebhook } from './trigger-ai-summary-webhook';
 import { buildAiSummarySource, type AiSummaryDocumentSource } from './ai-summary/source-context';
@@ -72,7 +73,10 @@ export async function getCachedSakDetail(sakId: string): Promise<StortingetSakDe
       id: sakId,
       title: presentation.title || detail.korttittel || detail.tittel || `Sak ${sakId}`,
       summary: presentation.summary || detail.tittel || null,
-      status: detail.ferdigbehandlet ? 'closed' : 'pending',
+      status: resolveSakListStatus({
+        ferdigbehandlet: detail.ferdigbehandlet,
+        numericStatus: detail.status,
+      }),
       sak_kind: presentation.kind,
       henvisning: presentation.henvisning,
       dokumentgruppe: typeof detail.dokumentgruppe === 'number' ? detail.dokumentgruppe : null,
