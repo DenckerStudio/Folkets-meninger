@@ -24,6 +24,8 @@ type AdminPrompt = {
   source_headlines: { title?: string; outlet?: string; url?: string }[];
   created_at: string;
   expires_at?: string | null;
+  submitted_by?: string | null;
+  submission_tier?: 'trusted' | 'curator' | null;
 };
 
 type TrustedSource = {
@@ -698,6 +700,15 @@ export default function AdminForumPromptsClient() {
                         {' · '}
                         {prompt.sensitivity === 'high' ? 'Høy sensitivitet' : 'Lav sensitivitet'}
                       </span>
+                      {prompt.submitted_by ? (
+                        <Link
+                          href={routes.profile(prompt.submitted_by)}
+                          className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded hover:underline"
+                        >
+                          Brukerforslag
+                          {prompt.submission_tier === 'curator' ? ' (Kurator)' : ' (Pålitelig)'}
+                        </Link>
+                      ) : null}
                       {(prompt.topic_tags || []).map((tag) => (
                         <span key={tag} className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
                           {tag}

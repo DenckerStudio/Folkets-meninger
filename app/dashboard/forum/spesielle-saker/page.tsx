@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
-import { Sparkles } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, Sparkles } from 'lucide-react';
 import { getActiveForumPromptsPage } from '@/lib/forum/prompt-queries';
 import { ForumPromptsFeed } from '@/components/forum/forum-prompts-feed';
+import { routes } from '@/lib/routes';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +27,13 @@ export default async function ForumSpesielleSakerPage() {
             Nye spørsmål legges inn fortløpende. Scroll for å laste flere.
           </p>
         </div>
+        <Link
+          href={routes.forumForeslaReel}
+          className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
+        >
+          <Plus className="h-4 w-4" />
+          Foreslå reel
+        </Link>
       </header>
 
       <ForumPromptsFeed initialItems={page.items} initialCursor={page.nextCursor} />

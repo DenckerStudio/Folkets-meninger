@@ -1,8 +1,11 @@
 'use client';
 
-import { Trophy } from 'lucide-react';
+import Link from 'next/link';
+import { Sparkles, Trophy } from 'lucide-react';
+import { REEL_SUBMIT_TRUSTED_POINTS } from '@/lib/forum/reel-submission-access';
 import type { UserPointsProgress } from '@/lib/user-points-levels';
 import { getUserPointsProgress } from '@/lib/user-points-levels';
+import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
 type PointsProgressProps = {
@@ -73,6 +76,16 @@ export function PointsProgress({
             Du har nådd Veteran-nivå. Takk for langvarig, konstruktiv deltakelse.
           </p>
         )}
+
+        {points >= REEL_SUBMIT_TRUSTED_POINTS ? (
+          <Link
+            href={routes.forumForeslaReel}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 hover:text-indigo-600"
+          >
+            <Sparkles className="h-4 w-4" />
+            Foreslå forum-reel
+          </Link>
+        ) : null}
       </div>
     </div>
   );

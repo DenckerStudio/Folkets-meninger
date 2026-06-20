@@ -99,10 +99,11 @@ export default function OmOssPage() {
           </div>
           <div className="relative border-l-2 border-emerald-200 pl-6 pb-2">
             <div className="absolute w-4 h-4 bg-emerald-500 rounded-full -left-[9px] top-1 ring-4 ring-white"></div>
-            <h3 className="text-lg font-bold text-gray-900">Fase 2: Poeng, tillit og reels fra brukere (Nå)</h3>
+            <h3 className="text-lg font-bold text-gray-900">Fase 2: Poeng, tillit og reels fra brukere (Pågår)</h3>
             <p className="text-gray-600 mt-2">
               Poengsystem som belønner konstruktiv aktivitet over tid. Poeng er alltid synlige og bygger troverdighet —
-              ikke stemmevekt. Hvert nivå åpner nye muligheter, som å foreslå og senere publisere forum-reels.
+              ikke stemmevekt. Pålitelige brukere (750+ poeng) kan foreslå forum-reels til admin-godkjenning. Kuratorer
+              (2 000+ poeng) kan publisere direkte fra godkjente kilder.
             </p>
             <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-5">
               <div className="flex items-center gap-2 text-amber-950 font-semibold">
