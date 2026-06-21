@@ -34,6 +34,7 @@ type TrustedSource = {
   outlet_label: string;
   status: 'approved' | 'pending' | 'rejected';
   created_at: string;
+  suggested_by?: string | null;
 };
 
 type Tab = 'drafts' | 'active' | 'archived' | 'create' | 'sources';
@@ -575,6 +576,14 @@ export default function AdminForumPromptsClient() {
                 <div>
                   <span className="font-semibold text-gray-900">{s.outlet_label}</span>
                   <span className="text-gray-500 text-sm ml-2">{s.domain}</span>
+                  {s.suggested_by ? (
+                    <Link
+                      href={routes.profile(s.suggested_by)}
+                      className="ml-2 text-xs font-semibold text-indigo-700 hover:underline"
+                    >
+                      Brukerforslag
+                    </Link>
+                  ) : null}
                   <span
                     className={`ml-2 text-xs px-2 py-0.5 rounded ${
                       s.status === 'approved'

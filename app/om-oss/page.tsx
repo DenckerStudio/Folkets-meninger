@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { Info, Shield, Database, Lock, Map, Lightbulb, MessageSquarePlus, Trophy } from 'lucide-react';
+import { routes } from '@/lib/routes';
 
 export default function OmOssPage() {
   return (
@@ -105,7 +107,7 @@ export default function OmOssPage() {
               ikke stemmevekt. Pålitelige brukere (750+ poeng) kan foreslå forum-reels til admin-godkjenning. Kuratorer
               (2 000+ poeng) kan publisere direkte fra godkjente kilder.
             </p>
-            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+            <div className="mt-4 rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 shadow-sm">
               <div className="flex items-center gap-2 text-amber-950 font-semibold">
                 <Trophy className="w-5 h-5" />
                 Poengnivåer
@@ -120,6 +122,12 @@ export default function OmOssPage() {
                 Du tjener poeng gjennom foruminnlegg, kommentarer, likes, stemming på saker og reels, og fullført
                 offentlig profil med bekreftet e-post og telefon. Alle stemmer teller likt i politikken.
               </p>
+              <Link
+                href={routes.login}
+                className="mt-4 inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+              >
+                Opprett konto og begynn å samle poeng
+              </Link>
             </div>
           </div>
           <div className="relative border-l-2 border-gray-200 pl-6 pb-2">

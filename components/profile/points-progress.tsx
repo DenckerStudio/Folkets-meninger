@@ -41,6 +41,9 @@ export function PointsProgress({
           <div className="text-right">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Poeng</p>
             <p className="text-2xl font-bold text-[#00205b]">{state.points}</p>
+            {!state.isMaxTier ? (
+              <p className={cn('text-xs font-semibold tabular-nums', state.tier.color)}>{state.progressLabel}</p>
+            ) : null}
           </div>
         </div>
       )}
@@ -53,10 +56,13 @@ export function PointsProgress({
           <span className={cn('font-bold tabular-nums', state.tier.color)}>{state.progressLabel}</span>
         </div>
 
-        <div className="h-3 overflow-hidden rounded-full bg-white/80 ring-1 ring-amber-100">
+        <div className="h-3 overflow-hidden rounded-full bg-gray-200 ring-1 ring-gray-300">
           <div
-            className={cn('h-full rounded-full transition-all duration-500', state.tier.barColor)}
-            style={{ width: `${state.progressPercent}%` }}
+            className={cn(
+              'h-full min-w-[0.35rem] rounded-full transition-all duration-500 shadow-sm',
+              state.tier.barColor,
+            )}
+            style={{ width: `${Math.max(state.progressPercent, state.points > 0 && !state.isMaxTier ? 3 : 0)}%` }}
             role="progressbar"
             aria-valuenow={state.points}
             aria-valuemin={0}
@@ -80,7 +86,7 @@ export function PointsProgress({
         {points >= REEL_SUBMIT_TRUSTED_POINTS ? (
           <Link
             href={routes.forumForeslaReel}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 hover:text-indigo-600"
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
           >
             <Sparkles className="h-4 w-4" />
             Foreslå forum-reel

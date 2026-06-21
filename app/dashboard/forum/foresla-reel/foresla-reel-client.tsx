@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Send, Sparkles } from 'lucide-react';
+import { ArrowLeft, Globe, Loader2, Send, Sparkles } from 'lucide-react';
 import { PointsProgress } from '@/components/profile/points-progress';
 import type { UserPointsProgress } from '@/lib/user-points-levels';
 import { getUserPointsProgress } from '@/lib/user-points-levels';
 import type { ReelSubmissionAccess } from '@/lib/forum/reel-submission-access';
+import type { SourceSuggestionAccess } from '@/lib/forum/source-suggestion-access';
 import { routes } from '@/lib/routes';
 
 type SourceRow = {
@@ -31,14 +32,23 @@ export function ForeslaReelClient() {
   const [access, setAccess] = useState<ReelSubmissionAccess | null>(null);
   const [points, setPoints] = useState(0);
   const [pointsProgress, setPointsProgress] = useState<UserPointsProgress>(() => getUserPointsProgress(0));
+  const [sourceAccess, setSourceAccess] = useState<SourceSuggestionAccess | null>(null);
+  const [sourceDomain, setSourceDomain] = useState('');
+  const [sourceOutlet, setSourceOutlet] = useState('');
+  const [sourceMessage, setSourceMessage] = useState('');
+  const [sourceError, setSourceError] = useState('');
+  const [sourceSubmitting, setSourceSubmitting] = useState(false);
 
   useEffect(() => {
-    fetch('/api/forum/reel-submit', { cache: 'no-store' })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.access) setAccess(data.access);
-        if (typeof data.points === 'number') setPoints(data.points);
-        if (data.points_progress) setPointsProgress(data.points_progress);
+    Promise.all([
+      fetch('/api/forum/reel-submit', { cache: 'no-store' }).then((res) => res.json()),
+      fetch('/api/forum/suggest-source', { cache: 'no-store' }).then((res) => res.json()),
+    ])
+      .then(([reelData, sourceData]) => {
+        if (reelData.access) setAccess(reelData.access);
+        if (typeof reelData.points === 'number') setPoints(reelData.points);
+        if (reelData.points_progress) setPointsProgress(reelData.points_progress);
+        if (sourceData.access) setSourceAccess(sourceData.access);
       })
       .catch(() => setError('Kunne ikke laste tilgang til reel-innsending.'))
       .finally(() => setLoading(false));
@@ -87,6 +97,34 @@ export function ForeslaReelClient() {
         if (payload.access) setAccess(payload.access);
       })
       .catch(() => {});
+  };
+
+  const submitSource = async () => {
+    setSourceSubmitting(true);
+    setSourceError('');
+    setSourceMessage('');
+
+    const res = await fetch('/api/forum/suggest-source', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        domain: sourceDomain,
+        outlet_label: sourceOutlet,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    setSourceSubmitting(false);
+
+    if (!res.ok) {
+      setSourceError(data.error || 'Kunne ikke sende kildeforslag');
+      return;
+    }
+
+    if (data.access) setSourceAccess(data.access);
+    setSourceMessage(data.message || 'Kildeforslag sendt.');
+    setSourceDomain('');
+    setSourceOutlet('');
   };
 
   if (loading) {
@@ -250,6 +288,53 @@ export function ForeslaReelClient() {
           </button>
         </form>
       ) : null}
+
+      <section className="rounded-2xl border border-violet-200 bg-violet-50/70 p-6">
+        <div className="flex items-center gap-2 text-violet-950">
+          <Globe className="h-5 w-5" />
+          <h2 className="text-lg font-semibold">Foreslå nyhetskilde (Veteran)</h2>
+        </div>
+        {sourceAccess && sourceAccess.pointsNeeded > 0 ? (
+          <p className="mt-2 text-sm leading-6 text-violet-900">
+            Du trenger <strong>{sourceAccess.pointsNeeded} poeng til</strong> (totalt 5 000) for å foreslå nye
+            godkjente kilder.
+          </p>
+        ) : sourceAccess?.canSuggest ? (
+          <div className="mt-4 space-y-3">
+            <p className="text-sm text-violet-900">
+              Forslag sendes til admin. Månedlig kvote: {sourceAccess.monthlyRemaining} av {sourceAccess.monthlyLimit}{' '}
+              igjen.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <input
+                className="rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm"
+                placeholder="Domene, f.eks. vg.no"
+                value={sourceDomain}
+                onChange={(e) => setSourceDomain(e.target.value)}
+              />
+              <input
+                className="rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm"
+                placeholder="Visningsnavn, f.eks. VG"
+                value={sourceOutlet}
+                onChange={(e) => setSourceOutlet(e.target.value)}
+              />
+            </div>
+            {sourceError ? <p className="text-sm text-red-600">{sourceError}</p> : null}
+            {sourceMessage ? <p className="text-sm text-emerald-700">{sourceMessage}</p> : null}
+            <button
+              type="button"
+              disabled={sourceSubmitting || !sourceDomain.trim() || sourceOutlet.trim().length < 2}
+              onClick={() => void submitSource()}
+              className="inline-flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-800 disabled:opacity-50"
+            >
+              {sourceSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
+              Send kildeforslag
+            </button>
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-violet-900">Du har brukt opp månedlig kvote for kildeforslag.</p>
+        )}
+      </section>
     </div>
   );
 }
