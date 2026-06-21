@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, ChevronUp, ExternalLink, Loader2, MessageSquare, Play, Sparkles } from 'lucide-react';
+import { Loader2, MessageSquare, Play, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import type { ForumPrompt } from '@/lib/forum/prompt-queries';
 import { filterReelVoteOptions } from '@/lib/forum/prompt-vote-options';
@@ -68,8 +68,11 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
   const hasVoted = !!selected;
   const media = getPromptPrimaryMedia(prompt.sources);
   const dateRange = getPromptSourceDateRange(prompt.sources);
-  const visibleSources = sourcesExpanded ? prompt.sources : prompt.sources.slice(0, 3);
-  const hiddenSourceCount = Math.max(0, prompt.sources.length - 3);
+  const sourceChipLimit = 5;
+  const visibleSources = sourcesExpanded
+    ? prompt.sources
+    : prompt.sources.slice(0, sourceChipLimit);
+  const hiddenSourceCount = Math.max(0, prompt.sources.length - sourceChipLimit);
   const isUpdate = prompt.topicTags?.includes('oppdatering');
   const handleVote = async (optionId: string) => {
     if (!user || loading) return;
@@ -182,49 +185,45 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
         {prompt.sources.length > 0 && (
           <div className="mb-3">
             {dateRange && (
-              <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+              <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">
                 {dateRange}
               </p>
             )}
-            <ul className="space-y-1.5">
+            <div className="flex flex-wrap gap-1" role="list" aria-label="Kilder">
               {visibleSources.map((source) => (
-                <li key={source.url}>
-                  <a
-                    href={source.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-start gap-1.5 text-xs text-gray-600 hover:text-indigo-700"
-                  >
-                    <span className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 font-semibold text-[10px] uppercase tracking-wide text-gray-700 group-hover:bg-indigo-100 group-hover:text-indigo-800">
-                      {source.outlet}
-                    </span>
-                    <span className="line-clamp-2 leading-snug">{source.title}</span>
-                    <ExternalLink className="w-3 h-3 shrink-0 mt-0.5 opacity-60" />
-                  </a>
-                </li>
+                <a
+                  key={source.url}
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={source.title}
+                  role="listitem"
+                  className="inline-flex max-w-[7.5rem] truncate rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                >
+                  {source.outlet}
+                </a>
               ))}
-            </ul>
-            {hiddenSourceCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setSourcesExpanded((v) => !v)}
-                className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 hover:text-indigo-600"
-                aria-expanded={sourcesExpanded}
-              >
-                {sourcesExpanded ? (
-                  <>
-                    <ChevronUp className="w-3.5 h-3.5" /> Vis færre kilder
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="w-3.5 h-3.5" /> +{hiddenSourceCount} flere kilder
-                  </>
-                )}
-              </button>
-            )}
-            <p className="mt-1 text-[10px] text-gray-500">
-              {prompt.sources.length} {prompt.sources.length === 1 ? 'kilde' : 'kilder'}
-            </p>
+              {hiddenSourceCount > 0 && !sourcesExpanded && (
+                <button
+                  type="button"
+                  onClick={() => setSourcesExpanded(true)}
+                  className="inline-flex rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 hover:border-indigo-200 hover:bg-indigo-50"
+                  aria-expanded={false}
+                >
+                  +{hiddenSourceCount}
+                </button>
+              )}
+              {sourcesExpanded && prompt.sources.length > sourceChipLimit && (
+                <button
+                  type="button"
+                  onClick={() => setSourcesExpanded(false)}
+                  className="inline-flex rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                  aria-expanded={true}
+                >
+                  Færre
+                </button>
+              )}
+            </div>
           </div>
         )}
 

@@ -66,10 +66,10 @@ export default function AdminForumReportsClient() {
           </p>
         </div>
         <Link
-          href={routes.adminForumPrompts}
+          href={`${routes.adminForumPrompts}?tab=pipeline`}
           className="text-sm text-indigo-600 hover:underline shrink-0"
         >
-          Prompt-admin →
+          Forum Reels →
         </Link>
       </div>
 

@@ -59,24 +59,17 @@ export function ForumDrawerProfile({ onNavigate, className }: ForumDrawerProfile
           onNavigate={onNavigate}
         />
         <DrawerProfileLink
-<<<<<<< HEAD
           href={`${routes.minSide}?tab=preferanser`}
-=======
-          href={`${routes.minSide}?tab=varsler`}
->>>>>>> origin/cursor/forum-delete-hamburger-1979
           icon={SlidersHorizontal}
           label="Preferanser"
           onNavigate={onNavigate}
         />
-<<<<<<< HEAD
         <DrawerProfileLink
           href={`${routes.minSide}?tab=varsler`}
           icon={Settings}
           label="Varsler"
           onNavigate={onNavigate}
         />
-=======
->>>>>>> origin/cursor/forum-delete-hamburger-1979
         <button
           type="button"
           onClick={handleSignOut}

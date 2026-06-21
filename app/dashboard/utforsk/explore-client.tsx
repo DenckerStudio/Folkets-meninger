@@ -27,6 +27,7 @@ type UtforskFilters = {
   selectedCategory: string;
   selectedStatus: string;
   selectedSakKind: string;
+  selectedAiLabels: string[];
   sortBy: string;
 };
 
@@ -35,22 +36,32 @@ const DEFAULT_UTFORSK_FILTERS: UtforskFilters = {
   selectedCategory: 'Alle kategorier',
   selectedStatus: 'Alle statuser',
   selectedSakKind: 'Alle sakstyper',
+  selectedAiLabels: [],
   sortBy: 'Nyeste først',
 };
 
 function isUtforskFilters(value: unknown): value is UtforskFilters {
   if (!value || typeof value !== 'object') return false;
-  const v = value as UtforskFilters;
+  const v = value as Partial<UtforskFilters>;
   return (
     typeof v.searchQuery === 'string' &&
     typeof v.selectedCategory === 'string' &&
     typeof v.selectedStatus === 'string' &&
     typeof v.selectedSakKind === 'string' &&
-    typeof v.sortBy === 'string'
+    typeof v.sortBy === 'string' &&
+    (v.selectedAiLabels === undefined || Array.isArray(v.selectedAiLabels))
   );
 }
 
-export default function ExploreClient({ initialIssues }: { initialIssues: SakListItem[] }) {
+export default function ExploreClient({
+  initialIssues,
+  issueLabels,
+  popularLabels,
+}: {
+  initialIssues: SakListItem[];
+  issueLabels: Record<string, string[]>;
+  popularLabels: string[];
+}) {
   const [issues] = useState(initialIssues);
   const { user } = useAuth();
   const [userVotes, setUserVotes] = useState<Record<string, string>>({});
@@ -62,7 +73,8 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
   );
 
   const displayedUserVotes = user ? userVotes : {};
-  const { searchQuery, selectedCategory, selectedStatus, selectedSakKind, sortBy } = filters;
+  const { searchQuery, selectedCategory, selectedStatus, selectedSakKind, selectedAiLabels, sortBy } = filters;
+  const activeAiLabels = selectedAiLabels ?? [];
 
   const setSearchQuery = (searchQuery: string) => setFilters((prev) => ({ ...prev, searchQuery }));
   const setSelectedCategory = (selectedCategory: string) =>
@@ -70,6 +82,16 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
   const setSelectedStatus = (selectedStatus: string) => setFilters((prev) => ({ ...prev, selectedStatus }));
   const setSelectedSakKind = (selectedSakKind: string) => setFilters((prev) => ({ ...prev, selectedSakKind }));
   const setSortBy = (sortBy: string) => setFilters((prev) => ({ ...prev, sortBy }));
+
+  const toggleAiLabel = (label: string) => {
+    setFilters((prev) => {
+      const current = prev.selectedAiLabels ?? [];
+      const next = current.includes(label)
+        ? current.filter((l) => l !== label)
+        : [...current, label];
+      return { ...prev, selectedAiLabels: next };
+    });
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -216,6 +238,42 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
         </div>
       </FadeIn>
 
+      {popularLabels.length > 0 && (
+        <FadeIn delay={0.22} direction="up">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-foreground">Emne (AI)</p>
+            <div className="flex flex-wrap gap-2">
+              {popularLabels.map((label) => {
+                const active = activeAiLabels.includes(label);
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => toggleAiLabel(label)}
+                    className={`rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
+                      active
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+              {activeAiLabels.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFilters((prev) => ({ ...prev, selectedAiLabels: [] }))}
+                  className="rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Nullstill emner
+                </button>
+              )}
+            </div>
+          </div>
+        </FadeIn>
+      )}
+
       <FadeIn delay={0.25} direction="up">
         <div className="flex flex-wrap gap-2">
           <button
@@ -262,6 +320,14 @@ export default function ExploreClient({ initialIssues }: { initialIssues: SakLis
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SAK_CATEGORY_BADGE_CLASS}`}>
                           {issue.category}
                         </span>
+                        {(issueLabels[String(issue.id)] ?? []).slice(0, 3).map((label) => (
+                          <span
+                            key={`${issue.id}-${label}`}
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200"
+                          >
+                            {label}
+                          </span>
+                        ))}
                         <SakProcessingBadge status={issue.status} size="sm" />
                       </div>
                       <div className="text-sm text-muted-foreground text-right">

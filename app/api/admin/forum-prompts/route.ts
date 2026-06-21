@@ -190,12 +190,36 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Ingen felter å oppdatere' }, { status: 400 });
   }
 
+  const { data: existing, error: fetchError } = await service
+    .from('forum_prompts')
+    .select('research_cluster_id')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (fetchError) {
+    return NextResponse.json({ error: 'Kunne ikke hente prompt' }, { status: 500 });
+  }
+
   const { error } = await service.from('forum_prompts').update(updates).eq('id', id);
 
   if (error) {
     const conflict = mapPromptWriteError(error);
     if (conflict) return conflict;
     return NextResponse.json({ error: 'Kunne ikke oppdatere' }, { status: 500 });
+  }
+
+  const clusterId = existing?.research_cluster_id;
+  if (clusterId && body.status === 'active') {
+    await service
+      .from('forum_research_clusters')
+      .update({ status: 'finished', updated_at: new Date().toISOString() })
+      .eq('id', clusterId);
+  } else if (clusterId && body.status === 'archived') {
+    await service
+      .from('forum_research_clusters')
+      .update({ status: 'rejected', updated_at: new Date().toISOString() })
+      .eq('id', clusterId)
+      .in('status', ['draft', 'accepted', 'processing']);
   }
 
   return NextResponse.json({ success: true });

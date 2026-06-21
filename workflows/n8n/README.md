@@ -58,53 +58,46 @@ Etter migrasjon `20260529120000_simplify_issue_ai_summaries.sql`:
 
 Kjør `supabase db push` etter pull.
 
-## Forum trending prompts
+## Forum Reels (v12 – Regjeringen RSS + prompt generator)
+
+| Steg | Kilde | Webhook |
+|------|--------|---------|
+| **1 Regjeringen RSS** | [`forum-regjeringen-rss-ingest.workflow.ts`](forum-regjeringen-rss-ingest.workflow.ts) | RSS Feed Trigger + cron `*/30` (RSS Read) |
+| **2 Prompt generator** | [`forum-prompt-generator.workflow.ts`](forum-prompt-generator.workflow.ts) | schedule + `POST /webhook/folkets-forum-prompt-generator` |
+
+**Dok:** [`FORUM-PROMPTS-v12.md`](FORUM-PROMPTS-v12.md)
+
+**Live:** RSS `6yy1ESY2Zy7cWgtF` · Prompt generator `vOP2zPflfT0yBvDQ`
+
+**Env:** `N8N_FORUM_SYNTHESIS_WEBHOOK_URL` → `https://n8n.heyklever.app/webhook/folkets-forum-prompt-generator`
+
+**Deploy:**
+
+```bash
+node scripts/bundle-forum-regjeringen-rss-workflow.mjs /tmp/regjeringen-rss.ts
+node scripts/bundle-forum-prompt-generator-workflow.mjs /tmp/prompt-generator.ts
+npm run deploy:forum-v12 -- --publish
+```
+
+Arkivér v10/v11 scout/journalist/editor etter deploy (allerede arkivert — se FORUM-PROMPTS-v12.md).
+
+**Opprydding feilaktige aktive prompts:** [`scripts/archive-misaligned-forum-prompts.sql`](../../scripts/archive-misaligned-forum-prompts.sql)
+
+## Forum trending prompts (v5 – SearXNG + RSS, alltid draft)
 
 Workflow-kilde: [`forum-trending-prompts.workflow.ts`](forum-trending-prompts.workflow.ts)
 
 **Live workflow:** https://n8n.heyklever.app/workflow/MloIdsnX7FozM4dv
 
-**v4 flyt (trusted sources + bredere søk + moderation → save):**
-
-1. **Fetch existing prompts** → **Fetch trusted sources** (`forum_trusted_sources`, status `approved`) → long-running saker → RSS → **Collect** (flere SearXNG-temaer, opptil 36 artikler, 10 treff per query)
-2. **Ollama agent** – samme som v3 (alignment, dedupe i kode, dags-memory)
-3. **Moderation + route** – alignment-gate; **ukjent kilde → `draft`** (sjekkes mot `forum_trusted_sources`; hvis listen er tom brukes seed-domener fra migrasjonen, ikke «alt til draft»); stemmer `ja` / `nei` / `ikke_interessert`; tom output (`[]`) når ingenting skal lagres (ingen «Has SQL?»-node)
-4. **Save prompt** – kjører kun når moderering emitter SQL-rader
-
-**v3 (fortsatt relevant):** kilde-alignment, RSS-ingress, fallback-regler, partial unique index (`20260531140000_forum_prompts_dedupe.sql`)
-
-Migrasjon **trusted sources:** `20260602130000_forum_trusted_sources.sql`
-
-Deploy:
-
-```bash
-node scripts/build-n8n-forum-prompts-ops.mjs /tmp/n8n-forum-prompts-ops.json
-node scripts/build-n8n-forum-prompts-topology-ops.mjs /tmp/n8n-forum-prompts-topology-ops.json
-# n8n MCP update_workflow (code batch, deretter topology batch hvis live workflow mangler noder)
-```
-
-**Opprydding feilaktige aktive prompts:** [`scripts/archive-misaligned-forum-prompts.sql`](../../scripts/archive-misaligned-forum-prompts.sql)
-
-**v2 flyt:**
-
-1. **Fetch long-running saker** (Postgres: `status=pending`, `first_seen_at` > 14 dager)
-2. **Fetch RSS headlines** (parallell HTTP + bilde/video fra RSS)
-3. **Collect all headlines** — flere SearXNG-queries, clustering, outlet-diversitet, opptil 28 artikler
-4. **Ollama** → 6–10 prompts med 3–8 kilder per reel + valgfri `stortinget_issue_id`
-5. `sensitivity: high` → `draft`; `low` → `active` (7 dagers `expires_at`)
-6. UI: karusell med opptil 18 reels, utvidbare kilder, badge for langvarig sak
+**v5:** alignment-gate, dedupe 0.55, min 4 kilder, **alltid `draft`** → admin-godkjenning i appen.
 
 | Nøkkel | Backfill settings |
 |--------|-------------------|
-| `batchLimit` | `10` |
+| `batchLimit` | `10` (maks 8 per kjøring) |
 | `searxngBaseUrl` | f.eks. `https://searxng.heyklever.app` |
 | `longRunningMinDays` | `14` |
 
-Crons: 06:00 og 14:00 (n8n schedule triggers).
-
 Webhook: `POST /webhook/folkets-forum-prompts` (env `N8N_FORUM_PROMPTS_WEBHOOK_URL`).
-
-Krever migrasjon `20260531120000_production_readiness.sql` (`first_seen_at`, `stortinget_issue_id` på prompts).
 
 ## Dokument ingestion + RAG embeddings
 
@@ -136,6 +129,7 @@ Vercel **Hobby** har ikke Cron Jobs (krever Pro). n8n scheduler kaller appens be
 |--------------|---------------|
 | Daglig 03:00 | `GET /api/cron/sync-issues` |
 | Daglig 04:00 | `GET /api/cron/categories` |
+| Daglig 04:30 | `GET /api/cron/labels` |
 | Daglig 07:00 | `GET /api/cron/digest?frequency=daily` |
 | Mandag 07:30 | `GET /api/cron/digest?frequency=weekly` |
 

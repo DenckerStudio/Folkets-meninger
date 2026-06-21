@@ -11,7 +11,8 @@
 - Auth and DB are Supabase (Postgres); app uses SSR cookies/middleware refresh patterns.
 - Stortinget data comes from `data.stortinget.no` (public API).
 - AI summaries and forum prompts are produced externally via n8n + Ollama and stored in Supabase; the app should not assume Gemini for current summary generation.
-- Forum Reels: n8n workflow `MloIdsnX7FozM4dv`; `forum_trusted_sources` (unknown domain → `draft`); votes Ja/Nei/Ikke interessert + separate discuss CTA; agent `.cursor/agents/reels-prompts.md`.
+- Forum Reels: primary workflow `MloIdsnX7FozM4dv` (`forum-trending-prompts.workflow.ts` v5, alltid draft); optional v12 Regjeringen RSS + prompt generator workflows in `workflows/n8n/`; `forum_trusted_sources`; votes Ja/Nei/Ikke interessert + discuss CTA; agent `.cursor/agents/reels-prompts.md`.
+- Public reels UI gated by `FORUM_REELS_PUBLIC` (default false); admin pipeline at `/dashboard/admin/forum-prompts` (optional `?tab=pipeline` for v12).
 - The repo expects validation via `npm run lint` and `npm run build`; no broad automated test suite assumed in workflows.
 - First-time env setup: copy `.env.example` to `.env.local` before `npm run dev` or `npm run build`.
 

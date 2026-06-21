@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
-import { getActiveForumPromptsPage } from '@/lib/forum/prompt-queries';
 import { ForumPromptsFeed } from '@/components/forum/forum-prompts-feed';
+import { getActiveForumPromptsPage } from '@/lib/forum/prompt-queries';
+import { FORUM_REELS_PUBLIC_ENABLED } from '@/lib/forum/reels-public';
+import { routes } from '@/lib/routes';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +14,10 @@ export const metadata: Metadata = {
 };
 
 export default async function ForumSpesielleSakerPage() {
+  if (!FORUM_REELS_PUBLIC_ENABLED) {
+    redirect(routes.forum);
+  }
+
   const page = await getActiveForumPromptsPage({ limit: 16 });
 
   return (
@@ -31,4 +38,3 @@ export default async function ForumSpesielleSakerPage() {
     </div>
   );
 }
-

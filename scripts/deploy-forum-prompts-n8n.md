@@ -1,30 +1,61 @@
-# Deploy forum trending prompts workflow to n8n
+# Deploy forum Reels v12 workflows to n8n
 
-Source: [`workflows/n8n/forum-trending-prompts.workflow.ts`](../workflows/n8n/forum-trending-prompts.workflow.ts)
+**Live (v12):**
 
-Live workflow: https://n8n.heyklever.app/workflow/MloIdsnX7FozM4dv
+| Workflow | ID | Kilde |
+|----------|-----|--------|
+| Regjeringen RSS ingest | `6yy1ESY2Zy7cWgtF` | [`forum-regjeringen-rss-ingest.workflow.ts`](../workflows/n8n/forum-regjeringen-rss-ingest.workflow.ts) |
+| JA/NEI prompt generator | `vOP2zPflfT0yBvDQ` | [`forum-prompt-generator.workflow.ts`](../workflows/n8n/forum-prompt-generator.workflow.ts) |
 
-## After editing the workflow file
+**Arkiv (v10 — ikke redeploy):** scout `j6NZpV4IHP0AHFVj`, journalist `sb31mc2dmhIvdbRg`, editor `YY6u4GmeiZVk5R2e`
 
-1. Build ops payload (unescapes template literals for n8n Code nodes):
+Dok: [`workflows/n8n/FORUM-PROMPTS-v12.md`](../workflows/n8n/FORUM-PROMPTS-v12.md)
+
+## Etter endring i repo
+
+1. Bundle:
 
 ```bash
-node scripts/build-n8n-forum-prompts-ops.mjs /tmp/n8n-forum-prompts-ops.json
-node scripts/build-n8n-forum-prompts-topology-ops.mjs /tmp/n8n-forum-prompts-topology-ops.json
+node scripts/bundle-forum-regjeringen-rss-workflow.mjs .tmp/forum-regjeringen-rss-bundled.ts
+node scripts/bundle-forum-prompt-generator-workflow.mjs .tmp/forum-prompt-generator-bundled.ts
 ```
 
-2. Push via n8n MCP `update_workflow`: topology batch first (trusted sources node, remove Has SQL?, moderation → save), then code ops (one node per call if the payload is large), or paste into n8n UI.
+2. Valider via n8n MCP: `validate_workflow` på bundled `.ts` (inline shared constants).
 
-3. Test webhook:
+3. Deploy:
+   - **Prompt generator:** `node scripts/deploy-forum-v12-prompt-generator.mjs` (REST patch live `vOP2zPflfT0yBvDQ`)
+   - **RSS:** MCP `create_workflow_from_code` (ny instans) eller `update_workflow` / REST patch på `6yy1ESY2Zy7cWgtF`
+   - **Alt:** `npm run deploy:forum-v12`
+
+4. Publiser: MCP `publish_workflow` eller REST `POST /workflows/{id}/activate`
+
+## Webhooks
 
 ```bash
-curl -X POST "https://n8n.heyklever.app/webhook/folkets-forum-prompts" \
+curl -X POST "https://n8n.heyklever.app/webhook/folkets-forum-regjeringen-rss" \
+  -H "Content-Type: application/json" -d '{}'
+
+curl -X POST "https://n8n.heyklever.app/webhook/folkets-forum-prompt-generator" \
+  -H "Content-Type: application/json" -d '{}'
+```
+
+Manuell replay med cluster-id:
+
+```bash
+curl -X POST "https://n8n.heyklever.app/webhook/folkets-forum-prompt-generator" \
   -H "Content-Type: application/json" \
-  -d '{}'
+  -d '{"clusterId":"<uuid>"}'
 ```
 
-4. Archive misaligned active prompts in Supabase (once):
+## Env (app)
 
 ```bash
-# See scripts/archive-misaligned-forum-prompts.sql
+N8N_FORUM_SYNTHESIS_WEBHOOK_URL=https://n8n.heyklever.app/webhook/folkets-forum-prompt-generator
 ```
+
+## Credentials (n8n)
+
+| Credential | Noder |
+|------------|--------|
+| Fokets Meninger | Postgres |
+| Ollama account | Prompt generator agent + JSON parser |

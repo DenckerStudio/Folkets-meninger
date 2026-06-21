@@ -45,11 +45,11 @@ export function ProfileAdminLinks() {
         </li>
         <li>
           <Link
-            href={routes.adminForumPrompts}
+            href={`${routes.adminForumPrompts}?tab=pipeline`}
             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <Sparkles className="w-4 h-4 text-gray-500" />
-            Forum-prompts
+            Forum Reels
           </Link>
         </li>
       </ul>

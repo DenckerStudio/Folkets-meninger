@@ -159,7 +159,25 @@ if (sakContextText.length > 20000) {
 }
 return { json: { ...item, sakContextText } };`;
 
-const MAP_AGENT_OUTPUT_JS = `const item = $input.item.json;
+const MAP_V2_BODY_JS = `function normalizeLabel(s) {
+  const t = String(s ?? '').trim().replace(/\\s+/g, ' ');
+  if (t.length < 2 || t.length > 48) return null;
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+function parseCards(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .slice(0, 3)
+    .map((c) => {
+      if (!c || typeof c !== 'object') return null;
+      const title = String(c.title ?? '').trim();
+      const body = String(c.body ?? '').trim();
+      if (!title || !body) return null;
+      return { title: title.slice(0, 80), body: body.slice(0, 600) };
+    })
+    .filter(Boolean);
+}
+const item = $input.item.json;
 let out = item.output ?? item;
 if (typeof out === 'string') {
   try {
@@ -168,59 +186,161 @@ if (typeof out === 'string') {
     out = {};
   }
 }
+const narrative = String(out.narrative ?? '').trim();
+const who_affected = String(out.who_affected ?? '').trim();
+const how_affected = String(out.how_affected ?? '').trim();
+const topic_cards = parseCards(out.topic_cards);
+const labelKeys = new Set();
+const labels = [];
+for (const raw of Array.isArray(out.labels) ? out.labels : []) {
+  const label = normalizeLabel(raw);
+  if (!label) continue;
+  const key = label.toLowerCase();
+  if (labelKeys.has(key)) continue;
+  labelKeys.add(key);
+  labels.push(label);
+  if (labels.length >= 5) break;
+}
+for (const card of topic_cards) {
+  if (labels.length >= 2) break;
+  const label = normalizeLabel(card.title);
+  if (!label) continue;
+  const key = label.toLowerCase();
+  if (labelKeys.has(key)) continue;
+  labelKeys.add(key);
+  labels.push(label);
+}
+const econCard = topic_cards.find((c) => /økonom|kost|finans|skatt/i.test(c.title));
+const kostnad = econCard
+  ? econCard.body
+  : topic_cards[0]?.body && /økonom|kost|finans|skatt/i.test(topic_cards[0].title)
+    ? topic_cards[0].body
+    : 'Ikke omtalt i kilden.';`;
+
+const MAP_AGENT_OUTPUT_JS = `${MAP_V2_BODY_JS}
 const issueId = $('Process one issue').item?.json?.id ?? item.id;
 return {
   json: {
     issueId,
-    hva: String(out.hva ?? '').trim(),
-    hvem: String(out.hvem ?? '').trim(),
-    kostnad: String(out.kostnad ?? '').trim(),
+    narrative,
+    who_affected,
+    how_affected,
+    topic_cards,
+    labels,
+    hva: narrative,
+    hvem: who_affected,
+    kostnad,
   },
 };`;
 
-const MAP_AGENT_OUTPUT_WEBHOOK_JS = `const item = $input.item.json;
-let out = item.output ?? item;
-if (typeof out === 'string') {
-  try {
-    out = JSON.parse(out);
-  } catch (_) {
-    out = {};
-  }
-}
+const MAP_AGENT_OUTPUT_WEBHOOK_JS = `${MAP_V2_BODY_JS}
 const issueId = $('Normalize issue ID').item?.json?.id ?? item.id;
 return {
   json: {
     issueId,
-    hva: String(out.hva ?? '').trim(),
-    hvem: String(out.hvem ?? '').trim(),
-    kostnad: String(out.kostnad ?? '').trim(),
+    narrative,
+    who_affected,
+    how_affected,
+    topic_cards,
+    labels,
+    hva: narrative,
+    hvem: who_affected,
+    kostnad,
   },
 };`;
 
-const PREPARE_UPSERT_SQL_JS = `const { issueId, hva, hvem, kostnad } = $input.item.json;
+const PREPARE_UPSERT_SQL_JS = `const {
+  issueId,
+  narrative,
+  who_affected,
+  how_affected,
+  topic_cards,
+  labels,
+  hva,
+  hvem,
+  kostnad,
+} = $input.item.json;
 function esc(value) {
   return "'" + String(value ?? '').replace(/'/g, "''") + "'";
 }
-const upsertSql = \`INSERT INTO public.issue_ai_summaries (
-  stortinget_issue_id, hva, hvem, kostnad, updated_at
-) VALUES (\${esc(issueId)}, \${esc(hva)}, \${esc(hvem)}, \${esc(kostnad)}, NOW())
-ON CONFLICT (stortinget_issue_id) DO UPDATE SET
-  hva = EXCLUDED.hva,
-  hvem = EXCLUDED.hvem,
-  kostnad = EXCLUDED.kostnad,
-  updated_at = NOW()\`;
-return { json: { issueId, hva, hvem, kostnad, upsertSql } };`;
+function pgTextArray(arr) {
+  const list = Array.isArray(arr) ? arr : [];
+  if (!list.length) return "ARRAY[]::text[]";
+  return "ARRAY[" + list.map((a) => esc(a)).join(", ") + "]::text[]";
+}
+const cardsJson = esc(JSON.stringify(topic_cards || [])) + "::jsonb";
+const labelsSql = pgTextArray(labels);
+const upsertSql = \`WITH ups AS (
+  INSERT INTO public.issue_ai_summaries (
+    stortinget_issue_id,
+    narrative,
+    who_affected,
+    how_affected,
+    topic_cards,
+    labels,
+    hva,
+    hvem,
+    kostnad,
+    updated_at
+  ) VALUES (
+    \${esc(issueId)},
+    \${esc(narrative)},
+    \${esc(who_affected)},
+    \${esc(how_affected)},
+    \${cardsJson},
+    \${labelsSql},
+    \${esc(hva)},
+    \${esc(hvem)},
+    \${esc(kostnad)},
+    NOW()
+  )
+  ON CONFLICT (stortinget_issue_id) DO UPDATE SET
+    narrative = EXCLUDED.narrative,
+    who_affected = EXCLUDED.who_affected,
+    how_affected = EXCLUDED.how_affected,
+    topic_cards = EXCLUDED.topic_cards,
+    labels = EXCLUDED.labels,
+    hva = EXCLUDED.hva,
+    hvem = EXCLUDED.hvem,
+    kostnad = EXCLUDED.kostnad,
+    updated_at = NOW()
+  RETURNING stortinget_issue_id, labels
+)
+UPDATE public.stortinget_issues i
+SET ai_labels = ups.labels
+FROM ups
+WHERE i.id = ups.stortinget_issue_id\`;
+return {
+  json: {
+    issueId,
+    narrative,
+    who_affected,
+    how_affected,
+    topic_cards,
+    labels,
+    hva,
+    hvem,
+    kostnad,
+    upsertSql,
+  },
+};`;
 
 const SUMMARY_SYSTEM_MESSAGE = `Du er en nøytral, faktabasert assistent for «Folkets Stemme» som forenkler stortingssaker for vanlige borgere.
 
 SPRÅK: Skriv utelukkende på norsk (bokmål). Korte, tydelige setninger. Saklig og nøytral. Bygg kun på kilden.
 
-Lag tre korte forklaringer:
-- hva: Hva saken handler om (2–3 setninger)
-- hvem: Hvem som påvirkes (2–3 setninger, ikke spekuler)
-- kostnad: Økonomiske konsekvenser (2–3 setninger, ingen oppdiktede beløp)
+Returner JSON med:
+- narrative: Kort overordnet forklaring (2–4 setninger)
+- who_affected: Hvem som berøres (2–3 setninger, kun fra kilden)
+- how_affected: Hvordan de berøres (2–3 setninger, konkret)
+- topic_cards: 0–3 temakort valgt ut fra sakens innhold. Hvert kort: { "title": "...", "body": "..." }
+- labels: 2–5 korte nøkkelord på norsk (Title Case, konsistent). Brukes til søk og varsler.
 
-Returner strukturert JSON med feltene hva, hvem, kostnad.`;
+Regler:
+- who_affected og how_affected skal alltid fylles ut
+- topic_cards er dynamiske (ikke fast hva/hvem/kostnad)
+- Ingen oppdiktede beløp; skriv «ukjent» eller «ikke omtalt» når kilden mangler tall
+- labels skal være generelle emneord (f.eks. Skatt, Helse, Privatøkonomi), ikke hele setninger`;
 
 const ollamaChatModel = languageModel({
   type: '@n8n/n8n-nodes-langchain.lmChatOllama',
@@ -247,7 +367,7 @@ const summaryOutputParser = outputParser({
     parameters: {
       schemaType: 'fromJson',
       jsonSchemaExample:
-        '{"hva":"Hva saken handler om","hvem":"Hvem som påvirkes","kostnad":"Økonomiske konsekvenser"}',
+        '{"narrative":"Kort overordnet forklaring","who_affected":"Hvem som berøres","how_affected":"Hvordan de berøres","topic_cards":[{"title":"Finansiering","body":"..."}],"labels":["Skatt","Privatøkonomi"]}',
     },
   },
 });
@@ -368,9 +488,11 @@ const generateSummaryAgent = node({
   output: [
     {
       output: {
-        hva: 'Sakens innhold',
-        hvem: 'Berørte grupper',
-        kostnad: 'Økonomi',
+        narrative: 'Sakens innhold',
+        who_affected: 'Berørte grupper',
+        how_affected: 'Konkret påvirkning',
+        topic_cards: [{ title: 'Finansiering', body: 'Økonomiske konsekvenser' }],
+        labels: ['Skatt', 'Privatøkonomi'],
       },
     },
   ],
@@ -390,6 +512,11 @@ const mapAgentOutput = node({
   output: [
     {
       issueId: '200329',
+      narrative: 'Sakens innhold',
+      who_affected: 'Berørte grupper',
+      how_affected: 'Konkret påvirkning',
+      topic_cards: [{ title: 'Finansiering', body: 'Økonomi' }],
+      labels: ['Skatt', 'Privatøkonomi'],
       hva: 'Sakens innhold',
       hvem: 'Berørte grupper',
       kostnad: 'Økonomi',
@@ -411,6 +538,11 @@ const prepareUpsertSql = node({
   output: [
     {
       issueId: '200329',
+      narrative: 'Sakens innhold',
+      who_affected: 'Berørte grupper',
+      how_affected: 'Konkret påvirkning',
+      topic_cards: [{ title: 'Finansiering', body: 'Økonomi' }],
+      labels: ['Skatt', 'Privatøkonomi'],
       hva: 'Sakens innhold',
       hvem: 'Berørte grupper',
       kostnad: 'Økonomi',
@@ -604,9 +736,11 @@ const generateSummaryAgentWebhook = node({
   output: [
     {
       output: {
-        hva: 'Sakens innhold',
-        hvem: 'Berørte grupper',
-        kostnad: 'Økonomi',
+        narrative: 'Sakens innhold',
+        who_affected: 'Berørte grupper',
+        how_affected: 'Konkret påvirkning',
+        topic_cards: [{ title: 'Finansiering', body: 'Økonomiske konsekvenser' }],
+        labels: ['Skatt', 'Privatøkonomi'],
       },
     },
   ],
@@ -626,6 +760,11 @@ const mapAgentOutputWebhook = node({
   output: [
     {
       issueId: '200329',
+      narrative: 'Sakens innhold',
+      who_affected: 'Berørte grupper',
+      how_affected: 'Konkret påvirkning',
+      topic_cards: [{ title: 'Finansiering', body: 'Økonomi' }],
+      labels: ['Skatt', 'Privatøkonomi'],
       hva: 'Sakens innhold',
       hvem: 'Berørte grupper',
       kostnad: 'Økonomi',
@@ -647,6 +786,11 @@ const prepareUpsertSqlWebhook = node({
   output: [
     {
       issueId: '200329',
+      narrative: 'Sakens innhold',
+      who_affected: 'Berørte grupper',
+      how_affected: 'Konkret påvirkning',
+      topic_cards: [{ title: 'Finansiering', body: 'Økonomi' }],
+      labels: ['Skatt', 'Privatøkonomi'],
       hva: 'Sakens innhold',
       hvem: 'Berørte grupper',
       kostnad: 'Økonomi',
@@ -677,14 +821,14 @@ const respondToWebhook = node({
     parameters: {
       respondWith: 'json',
       responseBody: expr(
-        '{{ { ok: true, issueId: $("Normalize issue ID").item.json.id, hva: $("Prepare upsert SQL (webhook)").item.json.hva, hvem: $("Prepare upsert SQL (webhook)").item.json.hvem, kostnad: $("Prepare upsert SQL (webhook)").item.json.kostnad, saved: true } }}'
+        '{{ { ok: true, issueId: $("Normalize issue ID").item.json.id, version: 2, narrative: $("Prepare upsert SQL (webhook)").item.json.narrative, who_affected: $("Prepare upsert SQL (webhook)").item.json.who_affected, how_affected: $("Prepare upsert SQL (webhook)").item.json.how_affected, topic_cards: $("Prepare upsert SQL (webhook)").item.json.topic_cards, labels: $("Prepare upsert SQL (webhook)").item.json.labels, saved: true } }}'
       ),
     },
   },
 });
 
 sticky(
-  '## AI-sammendrag med Ollama\n\n**Ollama credential:** «Ollama Heyklever» → https://ollama.heyklever.app\n\n**Modell:** Rediger i «Ollama Chat Model» (standard llama3.2:3b-text-q4_K_M).\n\n**Postgres:** «Supabase Postgres Folkets». Ingen HTTP til Next.js – agent skriver hva/hvem/kostnad til `issue_ai_summaries`.',
+  '## AI-sammendrag v2 med Ollama\n\n**Ollama credential:** «Ollama Heyklever» → https://ollama.heyklever.app\n\n**Modell:** Rediger i «Ollama Chat Model» (standard llama3.2:3b-text-q4_K_M).\n\n**Postgres:** «Supabase Postgres Folkets». Agent skriver narrative, who/how, topic_cards og labels til `issue_ai_summaries`, og synker `stortinget_issues.ai_labels`.',
   [scheduleTrigger, ollamaChatModel, webhookTrigger],
   { color: 4 }
 );

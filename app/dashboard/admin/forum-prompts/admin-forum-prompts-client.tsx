@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Check, Loader2, Pencil, Plus, X } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Loader2, Pencil, Plus, Sparkles } from 'lucide-react';
 import { DEFAULT_REEL_VOTE_OPTIONS } from '@/lib/forum/prompt-vote-options';
 import { routes } from '@/lib/routes';
+import { AdminForumPipelinePanel } from './admin-forum-pipeline-panel';
 
 type PromptStatus = 'draft' | 'active' | 'archived';
 
@@ -34,15 +36,32 @@ type TrustedSource = {
   created_at: string;
 };
 
-type Tab = 'drafts' | 'active' | 'archived' | 'create' | 'sources';
+type Tab = 'pipeline' | 'active' | 'archived' | 'create' | 'sources';
 
 const TABS: { id: Tab; label: string; status?: PromptStatus }[] = [
-  { id: 'drafts', label: 'Godkjenn utkast', status: 'draft' },
+  { id: 'pipeline', label: 'Pipeline' },
   { id: 'active', label: 'Aktive', status: 'active' },
   { id: 'archived', label: 'Arkiv', status: 'archived' },
   { id: 'create', label: 'Opprett manuelt' },
   { id: 'sources', label: 'Godkjente kilder' },
 ];
+
+function parseInitialTab(param: string | null): Tab {
+  if (
+    param === 'pipeline' ||
+    param === 'sources' ||
+    param === 'create' ||
+    param === 'archived' ||
+    param === 'active'
+  ) {
+    return param;
+  }
+  return 'pipeline';
+}
+
+function tabUrl(tab: Tab): string {
+  return `${routes.adminForumPrompts}?tab=${tab}`;
+}
 
 function defaultExpiresIso(): string {
   return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -150,7 +169,9 @@ function SourceEditor({
 }
 
 export default function AdminForumPromptsClient() {
-  const [tab, setTab] = useState<Tab>('drafts');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => parseInitialTab(searchParams.get('tab')));
   const [prompts, setPrompts] = useState<AdminPrompt[]>([]);
   const [sources, setSources] = useState<TrustedSource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,8 +179,6 @@ export default function AdminForumPromptsClient() {
   const [acting, setActing] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingStatus, setEditingStatus] = useState<PromptStatus>('draft');
-  const [publishModalId, setPublishModalId] = useState<string | null>(null);
-  const [publishExpiresAt, setPublishExpiresAt] = useState(() => toDatetimeLocalValue(null));
   const [editForm, setEditForm] = useState({
     question: '',
     topic_tags: '',
@@ -214,7 +233,29 @@ export default function AdminForumPromptsClient() {
     }
   }, []);
 
+  const selectTab = useCallback(
+    (next: Tab) => {
+      setTab(next);
+      router.replace(tabUrl(next), { scroll: false });
+    },
+    [router],
+  );
+
   useEffect(() => {
+    const param = searchParams.get('tab');
+    if (param === 'drafts' || param === 'clusters') {
+      router.replace(tabUrl('pipeline'));
+      return;
+    }
+    const next = parseInitialTab(param);
+    if (next !== tab) setTab(next);
+  }, [searchParams, router, tab]);
+
+  useEffect(() => {
+    if (tab === 'pipeline') {
+      setLoading(false);
+      return;
+    }
     if (tab === 'sources') {
       loadSources();
       return;
@@ -244,23 +285,6 @@ export default function AdminForumPromptsClient() {
       return true;
     } finally {
       setActing(null);
-    }
-  };
-
-  const openPublishModal = (id: string) => {
-    setPublishModalId(id);
-    setPublishExpiresAt(toDatetimeLocalValue(null));
-  };
-
-  const confirmPublish = async () => {
-    if (!publishModalId) return;
-    const ok = await patchPrompt(publishModalId, {
-      status: 'active',
-      expires_at: fromDatetimeLocalValue(publishExpiresAt),
-    });
-    if (ok) {
-      setPublishModalId(null);
-      setPrompts((prev) => prev.filter((p) => p.id !== publishModalId));
     }
   };
 
@@ -331,7 +355,11 @@ export default function AdminForumPromptsClient() {
         status: 'draft',
         sources: [],
       });
-      setTab('drafts');
+      if (createForm.status === 'draft') {
+        selectTab('pipeline');
+      } else {
+        selectTab('active');
+      }
     } finally {
       setActing(null);
     }
@@ -376,24 +404,26 @@ export default function AdminForumPromptsClient() {
     }
   };
 
-  const draftCount = tab === 'drafts' ? prompts.length : undefined;
-
   return (
     <div>
       <Link href={routes.forum} className="text-sm text-indigo-600 hover:text-indigo-500 mb-4 inline-block">
         ← Tilbake til forum
       </Link>
       <div className="flex flex-wrap items-center gap-3 mb-2">
-        <h1 className="text-2xl font-bold text-gray-900">Forum Reels (admin)</h1>
+        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <Sparkles className="w-7 h-7 text-indigo-600" />
+          Forum Reels
+        </h1>
         <Link
           href={routes.adminForumReports}
           className="text-sm font-semibold text-indigo-700 hover:underline"
         >
-          Forum-rapporter →
+          Rapporter →
         </Link>
       </div>
       <p className="text-sm text-gray-600 mb-6">
-        Godkjenn utkast, rediger aktive reels og administrer godkjente nyhetskilder.
+        Regjeringen RSS og AI-prompt i Pipeline-fanen. Aktive reels, arkiv, manuell opprettelse og kilder
+        i de andre fanene.
       </p>
 
       <nav className="flex flex-wrap gap-2 mb-6 border-b border-gray-200 pb-2">
@@ -401,7 +431,7 @@ export default function AdminForumPromptsClient() {
           <button
             key={t.id}
             type="button"
-            onClick={() => setTab(t.id)}
+            onClick={() => selectTab(t.id)}
             className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
               tab === t.id
                 ? 'bg-indigo-600 text-white'
@@ -409,65 +439,27 @@ export default function AdminForumPromptsClient() {
             }`}
           >
             {t.label}
-            {t.id === 'drafts' && draftCount != null && draftCount > 0 ? ` (${draftCount})` : null}
           </button>
         ))}
       </nav>
 
-      {error && (
+      {error && tab !== 'pipeline' ? (
         <div
           className="mb-6 rounded-lg bg-red-50 text-red-800 text-sm px-4 py-3 border border-red-100"
           role="alert"
         >
           {error}
         </div>
-      )}
-
-      {publishModalId ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="publish-modal-title"
-        >
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
-            <h2 id="publish-modal-title" className="text-lg font-bold text-gray-900 mb-2">
-              Publiser reel
-            </h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Velg når den aktive reelen skal utløpe (standard er 7 dager fra nå).
-            </p>
-            <label className="block text-sm font-medium text-gray-700 mb-4">
-              Utløper
-              <input
-                type="datetime-local"
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                value={publishExpiresAt}
-                onChange={(e) => setPublishExpiresAt(e.target.value)}
-              />
-            </label>
-            <div className="flex gap-2 justify-end">
-              <button
-                type="button"
-                onClick={() => setPublishModalId(null)}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium"
-              >
-                Avbryt
-              </button>
-              <button
-                type="button"
-                disabled={acting === publishModalId}
-                onClick={confirmPublish}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
-                Publiser
-              </button>
-            </div>
-          </div>
-        </div>
       ) : null}
 
-      {loading && tab !== 'create' ? (
+      {tab === 'pipeline' ? (
+        <AdminForumPipelinePanel
+          onGoToActive={() => selectTab('active')}
+          onGoToCreate={() => selectTab('create')}
+        />
+      ) : null}
+
+      {loading && tab !== 'create' && tab !== 'pipeline' ? (
         <div className="flex items-center gap-2 text-gray-500 py-12 justify-center">
           <Loader2 className="w-5 h-5 animate-spin" />
           Laster…
@@ -617,7 +609,7 @@ export default function AdminForumPromptsClient() {
         </div>
       ) : null}
 
-      {!loading && ['drafts', 'active', 'archived'].includes(tab) ? (
+      {!loading && ['active', 'archived'].includes(tab) ? (
         prompts.length === 0 && !error ? (
           <p className="text-gray-500 py-8">Ingen reels i denne fanen.</p>
         ) : (
@@ -737,28 +729,6 @@ export default function AdminForumPromptsClient() {
                       </ul>
                     )}
                     <div className="flex flex-wrap gap-2">
-                      {tab === 'drafts' ? (
-                        <>
-                          <button
-                            type="button"
-                            disabled={acting === prompt.id}
-                            onClick={() => openPublishModal(prompt.id)}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-                          >
-                            <Check className="w-4 h-4" />
-                            Publiser
-                          </button>
-                          <button
-                            type="button"
-                            disabled={acting === prompt.id}
-                            onClick={() => archivePrompt(prompt.id)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                          >
-                            <X className="w-4 h-4" />
-                            Avvis
-                          </button>
-                        </>
-                      ) : null}
                       <button
                         type="button"
                         onClick={() => startEdit(prompt)}
