@@ -3,7 +3,7 @@
   "name": "Folkets Stemme – Forum Stortinget-sak RAG prompt generator (v13)",
   "nodes": [
     {
-      "id": "ffecab6f-7025-4bf1-a57f-b30c53753cf0",
+      "id": "52a27368-191f-4c41-80ac-3c592a69f456",
       "name": "Daily 06:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -23,7 +23,7 @@
       }
     },
     {
-      "id": "8097723d-c878-4bdd-bcd7-575188ad2942",
+      "id": "39ef302d-2786-41f7-8b0e-d8b70a112854",
       "name": "Fetch sak for prompt",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
@@ -35,18 +35,13 @@
         "operation": "executeQuery",
         "query": "WITH target AS (\n  SELECT i.id\n  FROM public.stortinget_issues i\n  WHERE i.status = 'pending'\n    AND EXISTS (\n      SELECT 1\n      FROM public.document_chunks dc\n      WHERE dc.issue_id = i.id\n        AND dc.embedding_status = 'ready'\n        AND dc.embedding IS NOT NULL\n    )\n    AND NOT EXISTS (\n      SELECT 1\n      FROM public.forum_prompts fp\n      WHERE fp.stortinget_issue_id = i.id\n        AND fp.status IN ('active', 'draft')\n    )\n    AND (\n      NULLIF(trim($1::text), '') IS NULL\n      OR i.id = NULLIF(trim($1::text), '')\n    )\n  ORDER BY i.last_updated_at DESC NULLS LAST, i.first_seen_at ASC\n  LIMIT 1\n)\nSELECT\n  i.id AS issue_id,\n  i.title AS issue_title,\n  COALESCE(i.summary, '') AS issue_summary,\n  COALESCE(i.category, '') AS issue_category,\n  i.first_seen_at,\n  i.last_updated_at,\n  left(\n    COALESCE(\n      nullif(trim(i.detail_json->>'innstillingstekst'), ''),\n      nullif(trim(i.detail_json->>'vedtakstekst'), ''),\n      i.summary,\n      ''\n    ),\n    2400\n  ) AS detail_excerpt,\n  s.hva AS ai_hva,\n  s.hvem AS ai_hvem,\n  s.kostnad AS ai_kostnad,\n  (\n    SELECT COALESCE(\n      json_agg(\n        json_build_object(\n          'document_id', d.document_id,\n          'title', d.title,\n          'document_type', d.document_type,\n          'source_url', d.source_url\n        )\n        ORDER BY d.fetched_at DESC\n      ),\n      '[]'::json\n    )\n    FROM public.stortinget_issue_documents d\n    WHERE d.issue_id = i.id\n    LIMIT 6\n  ) AS documents,\n  (\n    SELECT COALESCE(\n      json_agg(DISTINCT lower(trim(question))) FILTER (\n        WHERE question IS NOT NULL AND trim(question) <> ''\n      ),\n      '[]'::json\n    )\n    FROM public.forum_prompts\n    WHERE trim(question) <> '' AND status IN ('active', 'draft')\n  ) AS existing_questions,\n  (\n    SELECT COALESCE(\n      MAX(sort_order) FILTER (\n        WHERE status = 'active' AND (expires_at IS NULL OR expires_at > now())\n      ),\n      0\n    )\n    FROM public.forum_prompts\n  ) AS max_sort_order\nFROM target t\nJOIN public.stortinget_issues i ON i.id = t.id\nLEFT JOIN public.issue_ai_summaries s ON s.stortinget_issue_id = i.id",
         "options": {
-          "queryReplacement": "={{ (() => { const raw = $json.body?.stortinget_issue_id ?? $json.body?.stortingetIssueId ?? $json.body?.issue_id ?? $json.body?.id ?? $json.stortinget_issue_id ?? $json.issue_id ?? $json.id ?? ''; const id = String(raw || '').trim(); return id && id !== 'null' && id !== 'undefined' ? id : ''; })() }}"
+          "queryReplacement": "={{ [ (() => { const raw = $json.body?.stortinget_issue_id ?? $json.body?.stortingetIssueId ?? $json.body?.issue_id ?? $json.body?.id ?? $json.stortinget_issue_id ?? $json.issue_id ?? $json.id ?? ''; const id = String(raw || '').trim(); return id && id !== 'null' && id !== 'undefined' ? id : ''; })() ] }}"
         }
       },
-      "credentials": {
-        "postgres": {
-          "id": "CREDENTIAL_ID_POSTGRES",
-          "name": "Fokets Meninger"
-        }
-      }
+      "credentials": {}
     },
     {
-      "id": "a452ebf0-900e-447f-8284-03c90830a431",
+      "id": "f7a3d804-b665-4888-8f8c-242d8df24fa6",
       "name": "Build RAG query",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -62,7 +57,7 @@
       "executeOnce": true
     },
     {
-      "id": "946a9a57-31e4-463a-b8fb-446c8a84a64c",
+      "id": "d122adae-dbd5-4024-a36b-333d5ad156be",
       "name": "Ollama embeddings",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -72,7 +67,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "PLACEHOLDER_OLLAMA_URL/api/embeddings",
+        "url": "<__PLACEHOLDER_VALUE__https://ollama.example.com/api/embeddings__>",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"model\":\"nomic-embed-text:v1.5\",\"prompt\":{{ JSON.stringify($json.ragQuery) }}}",
@@ -83,7 +78,7 @@
       "onError": "continueErrorOutput"
     },
     {
-      "id": "1186e97f-9888-44ed-8c2e-a950bb774f7a",
+      "id": "4a48abe6-f9fd-4a5c-a6ca-fabd208c4013",
       "name": "Map embedding for RAG",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -99,7 +94,7 @@
       "executeOnce": true
     },
     {
-      "id": "f37af572-3aa4-4193-aafa-0d729856f7c6",
+      "id": "920695c3-026d-4b35-b7ac-1140c99531f8",
       "name": "Retrieve RAG chunks",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
@@ -114,15 +109,10 @@
           "queryReplacement": "={{ [ $json.issue_id, $json.vectorLiteral, $json.matchCount || 8 ] }}"
         }
       },
-      "credentials": {
-        "postgres": {
-          "id": "CREDENTIAL_ID_POSTGRES",
-          "name": "Fokets Meninger"
-        }
-      }
+      "credentials": {}
     },
     {
-      "id": "2ee8a050-76ae-44e3-8a16-8adf43265f5a",
+      "id": "3f1a91cd-3ff6-4a1f-9763-da7182b71b28",
       "name": "Merge RAG context",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -138,7 +128,7 @@
       "executeOnce": true
     },
     {
-      "id": "48749758-ced2-49af-bbaf-e01b75148abb",
+      "id": "32e25aa2-6f78-4efa-84ac-151a5cdeb736",
       "name": "Sak prompt generator (Ollama)",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
@@ -155,12 +145,34 @@
           "maxIterations": 2,
           "returnIntermediateSteps": false,
           "enableStreaming": false
+        },
+        "subnodes": {
+          "model": {
+            "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+            "version": "1",
+            "config": {
+              "name": "Sak prompt Ollama Chat Model",
+              "credentials": {},
+              "parameters": {
+                "model": "gemma4:e2b-it-qat",
+                "options": {
+                  "think": false,
+                  "temperature": 0.15,
+                  "numPredict": 1800,
+                  "numCtx": 12288
+                }
+              }
+            },
+            "id": "2a9d954b-ce69-4960-8a33-30b2cb33b06c",
+            "name": "Sak prompt Ollama Chat Model",
+            "_subnodeType": "ai_languageModel"
+          }
         }
       },
       "onError": "continueErrorOutput"
     },
     {
-      "id": "536bd4bd-abb9-480f-b2ca-38896bece278",
+      "id": "251f1ef8-ed95-4b68-805c-5dd45d111294",
       "name": "Build save query",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -176,7 +188,7 @@
       "executeOnce": true
     },
     {
-      "id": "cb7c9237-dc09-479b-a4e7-2f3bd86a7aef",
+      "id": "e0e6d6d0-ec67-4d87-a279-87fe53dc9017",
       "name": "Save prompt",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
@@ -188,15 +200,10 @@
         "operation": "executeQuery",
         "query": "={{ $json.query || \"SELECT 1 AS skipped WHERE false\" }}"
       },
-      "credentials": {
-        "postgres": {
-          "id": "CREDENTIAL_ID_POSTGRES",
-          "name": "Fokets Meninger"
-        }
-      }
+      "credentials": {}
     },
     {
-      "id": "65539b2b-62f1-475c-8a75-88c1a7bda0bf",
+      "id": "6720c00e-69bc-46f5-bfeb-c01cb9fa3fb8",
       "name": "Webhook sak prompt generator",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
@@ -209,32 +216,7 @@
         "httpMethod": "POST",
         "responseMode": "onReceived"
       },
-      "webhookId": "2c42a3a3-f15a-49a2-9acd-c0b6090a75db"
-    },
-    {
-      "id": "80129211-1fe1-4e03-b69e-83cac65fa672",
-      "name": "Sak prompt Ollama Chat Model",
-      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
-      "typeVersion": 1,
-      "position": [
-        1320,
-        520
-      ],
-      "parameters": {
-        "model": "gemma4:e2b-it-qat",
-        "options": {
-          "think": false,
-          "temperature": 0.15,
-          "numPredict": 1800,
-          "numCtx": 12288
-        }
-      },
-      "credentials": {
-        "ollamaApi": {
-          "id": "CREDENTIAL_ID_OLLAMA",
-          "name": "Ollama account"
-        }
-      }
+      "webhookId": "3bdcd8fc-22c9-4d7d-a8c4-ac1ecfddd0bb"
     }
   ],
   "connections": {
@@ -343,17 +325,6 @@
           {
             "node": "Fetch sak for prompt",
             "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Sak prompt Ollama Chat Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Sak prompt generator (Ollama)",
-            "type": "ai_languageModel",
             "index": 0
           }
         ]

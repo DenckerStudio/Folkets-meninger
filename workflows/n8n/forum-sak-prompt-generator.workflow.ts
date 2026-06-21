@@ -25,7 +25,7 @@ import {
 } from './forum-sak-prompt.shared';
 
 const ISSUE_ID_REPLACEMENT =
-  "={{ (() => { const raw = $json.body?.stortinget_issue_id ?? $json.body?.stortingetIssueId ?? $json.body?.issue_id ?? $json.body?.id ?? $json.stortinget_issue_id ?? $json.issue_id ?? $json.id ?? ''; const id = String(raw || '').trim(); return id && id !== 'null' && id !== 'undefined' ? id : ''; })() }}";
+  "={{ [ (() => { const raw = $json.body?.stortinget_issue_id ?? $json.body?.stortingetIssueId ?? $json.body?.issue_id ?? $json.body?.id ?? $json.stortinget_issue_id ?? $json.issue_id ?? $json.id ?? ''; const id = String(raw || '').trim(); return id && id !== 'null' && id !== 'undefined' ? id : ''; })() ] }}";
 
 const sakAgentOllamaModel = languageModel({
   type: '@n8n/n8n-nodes-langchain.lmChatOllama',
