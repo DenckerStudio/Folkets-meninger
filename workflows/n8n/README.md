@@ -64,6 +64,15 @@ Workflow-kilde: [`forum-trending-prompts.workflow.ts`](forum-trending-prompts.wo
 
 **Live workflow:** https://n8n.heyklever.app/workflow/MloIdsnX7FozM4dv
 
+**v5 flyt (admin-godkjenning, strengere QA):**
+
+1. **Fetch existing prompts** → **Fetch trusted sources** → long-running saker → RSS → **Collect** (SearXNG, opptil 36 artikler)
+2. **Ollama agent** – 4–6 kilder per spørsmål, novelty_explanation påkrevd
+3. **Moderation + route** – alignment-gate, dedupe terskel 0.55, min 4 kilder (agent) / 3 (fallback), **alltid `draft`** (ingen auto-publisering)
+4. **Save prompt** – kun når moderering emitter SQL-rader; admin godkjenner i appen (`/dashboard/admin/forum-prompts`)
+
+**App:** `FORUM_REELS_PUBLIC=false` (default) skjuler aktive reels for vanlige brukere; admin ser forhåndsvisning. Sett `FORUM_REELS_PUBLIC=true` ved lansering.
+
 **v4 flyt (trusted sources + bredere søk + moderation → save):**
 
 1. **Fetch existing prompts** → **Fetch trusted sources** (`forum_trusted_sources`, status `approved`) → long-running saker → RSS → **Collect** (flere SearXNG-temaer, opptil 36 artikler, 10 treff per query)
@@ -96,7 +105,7 @@ node scripts/build-n8n-forum-prompts-topology-ops.mjs /tmp/n8n-forum-prompts-top
 
 | Nøkkel | Backfill settings |
 |--------|-------------------|
-| `batchLimit` | `10` |
+| `batchLimit` | `10` (maks 8 lagres per kjøring) |
 | `searxngBaseUrl` | f.eks. `https://searxng.heyklever.app` |
 | `longRunningMinDays` | `14` |
 
