@@ -1,10 +1,10 @@
 import { getServiceSupabase } from './supabase';
 import { getSakDetail, type StortingetSakDetail } from './stortinget';
+import { resolveSakListStatus } from './sak-status';
 import { mapSakPresentation } from './stortinget-sak-presentation';
 import { triggerAiSummaryWebhook } from './trigger-ai-summary-webhook';
 import { buildAiSummarySource, type AiSummaryDocumentSource } from './ai-summary/source-context';
 import { ingestSakDocuments } from './stortinget-document-ingest';
-import { resolveSakTreatmentStatus } from './sak-status';
 import { getSakVotingWindow } from './sak-voting-window';
 import { parseStortingetDotNetDateToISO } from './stortinget-utils';
 
@@ -12,7 +12,7 @@ const DETAIL_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export type SakIssueMeta = {
   lastUpdatedAt: string | null;
-  status: ReturnType<typeof resolveSakTreatmentStatus>;
+  status: ReturnType<typeof resolveSakListStatus>;
   ferdigbehandlet: boolean | null;
   votingClosesAt: string | null;
 };
@@ -24,7 +24,7 @@ function buildIssueUpsert(
   source: Awaited<ReturnType<typeof buildAiSummarySource>>,
   lastUpdatedAt?: string | null,
 ) {
-  const treatmentStatus = resolveSakTreatmentStatus({
+  const treatmentStatus = resolveSakListStatus({
     ferdigbehandlet: detail.ferdigbehandlet,
     numericStatus: detail.status,
   });
@@ -72,7 +72,7 @@ export async function getSakIssueMeta(sakId: string): Promise<SakIssueMeta | nul
       status:
         data.status === 'closed' || data.status === 'pending'
           ? data.status
-          : resolveSakTreatmentStatus({ ferdigbehandlet: data.ferdigbehandlet }),
+          : resolveSakListStatus({ ferdigbehandlet: data.ferdigbehandlet, cachedStatus: data.status }),
       ferdigbehandlet: data.ferdigbehandlet ?? null,
       votingClosesAt: data.voting_closes_at ?? null,
     };
@@ -134,7 +134,7 @@ export async function getCachedSakDetail(
         id: sakId,
         title: presentation.title || detail.korttittel || detail.tittel || `Sak ${sakId}`,
         summary: presentation.summary || detail.tittel || null,
-        status: resolveSakTreatmentStatus({
+        status: resolveSakListStatus({
           ferdigbehandlet: detail.ferdigbehandlet,
           numericStatus: detail.status,
         }),

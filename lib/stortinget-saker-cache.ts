@@ -6,7 +6,7 @@ import {
   getSakKindLabel,
   type SakKind,
 } from './stortinget-sak-presentation';
-import { resolveSakTreatmentStatus, type SakTreatmentStatus } from './sak-status';
+import { inferFerdigbehandletFromListSak, resolveSakListStatus, type SakTreatmentStatus } from './sak-status';
 import { parseStortingetDotNetDateToISO, stortingetUrl, type StortingetFormat } from './stortinget-utils';
 import { STORTINGET_ACTIVE_SESSION_ID } from './stortinget-config';
 import type { SakListItem, SakVoteTotals, StortingetSak } from './stortinget';
@@ -73,7 +73,10 @@ export function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTot
     category: presentation.category,
     date: parseStortingetDotNetDateToISO(sak.sist_oppdatert_dato),
     votes,
-    status: resolveSakTreatmentStatus({ numericStatus: sak.status }),
+    status: resolveSakListStatus({
+      ferdigbehandlet: inferFerdigbehandletFromListSak(sak),
+      numericStatus: sak.status,
+    }),
     sakKind: presentation.kind,
     henvisning: presentation.henvisning,
     dokumentgruppe: sak.dokumentgruppe ?? null,
@@ -84,7 +87,7 @@ export function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTot
 
 function resolveRowTreatmentStatus(row: DbIssueRow): SakTreatmentStatus {
   if (typeof row.ferdigbehandlet === 'boolean') {
-    return resolveSakTreatmentStatus({ ferdigbehandlet: row.ferdigbehandlet });
+    return resolveSakListStatus({ ferdigbehandlet: row.ferdigbehandlet, cachedStatus: row.status });
   }
   if (row.status === 'closed' || row.status === 'pending') {
     return row.status;
@@ -177,7 +180,7 @@ async function getCachedIssueOverlays(
       for (const row of data) {
         const status =
           typeof row.ferdigbehandlet === 'boolean'
-            ? resolveSakTreatmentStatus({ ferdigbehandlet: row.ferdigbehandlet })
+            ? resolveSakListStatus({ ferdigbehandlet: row.ferdigbehandlet, cachedStatus: row.status })
             : row.status === 'closed' || row.status === 'pending'
               ? row.status
               : 'pending';

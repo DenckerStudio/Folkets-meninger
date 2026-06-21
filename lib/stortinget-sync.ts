@@ -6,7 +6,7 @@ import {
 } from './stortinget-saker-cache';
 import { getCachedSakDetail, refreshStalePendingSakDetails } from './stortinget-detail-cache';
 import { isDebattSak } from './stortinget-sak-presentation';
-import { resolveSakTreatmentStatus } from './sak-status';
+import { resolveSakListStatus } from './sak-status';
 import type { StortingetSakDetail } from './stortinget';
 
 export type SyncIssuesResult = {
@@ -130,12 +130,16 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
       const detail = existing?.detail_json ?? null;
       const status =
         detail && typeof detail.ferdigbehandlet === 'boolean'
-          ? resolveSakTreatmentStatus({
+          ? resolveSakListStatus({
               ferdigbehandlet: detail.ferdigbehandlet,
               numericStatus: detail.status,
+              cachedStatus: existing?.status,
             })
           : typeof existing?.ferdigbehandlet === 'boolean'
-            ? resolveSakTreatmentStatus({ ferdigbehandlet: existing.ferdigbehandlet })
+            ? resolveSakListStatus({
+                ferdigbehandlet: existing.ferdigbehandlet,
+                cachedStatus: existing?.status,
+              })
             : row.status;
 
       const payload: IssueListRow = {

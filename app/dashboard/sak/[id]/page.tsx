@@ -2,7 +2,7 @@ import { getSakPageBundle, type StortingetSakDetail } from '@/lib/stortinget';
 import { classifySakKind, getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { SakMetaCard, SakProcessingBadge, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
-import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS, SAK_TYPE_BADGE_CLASS, resolveSakTreatmentStatus } from '@/lib/sak-status';
+import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS, SAK_TYPE_BADGE_CLASS, resolveSakListStatus } from '@/lib/sak-status';
 import { getSakVotingWindow } from '@/lib/sak-voting-window';
 import { formatStortingetDate } from '@/lib/stortinget-horinger';
 import { SaksgangTimeline, type SaksgangStep } from '@/components/sak/saksgang-timeline';
@@ -142,7 +142,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
     });
 
   const treatmentStatus = detailedContent
-    ? resolveSakTreatmentStatus({
+    ? resolveSakListStatus({
         ferdigbehandlet: detailedContent.ferdigbehandlet,
         numericStatus: detailedContent.status,
       })
