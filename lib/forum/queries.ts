@@ -68,6 +68,7 @@ export type ForumThreadListItem = {
   likes: number;
   relatedIssueId: string | null;
   relatedIssueTitle: string | null;
+  authorUserId: string | null;
   isResolved: boolean;
   bodyExcerpt: string;
   contextItems: ForumContextItem[];
@@ -224,6 +225,7 @@ export async function getForumThreads(options?: {
         relatedIssueTitle: thread.stortinget_issue_id
           ? issueTitles[thread.stortinget_issue_id] ?? null
           : null,
+        authorUserId: thread.author_user_id,
         isResolved: thread.is_resolved,
         bodyExcerpt: stripUrlsForExcerpt(cleanBody, 180),
         contextItems: mergeContextItems(thread.body, thread.context_items),
@@ -250,6 +252,7 @@ export async function getForumThreads(options?: {
 export type ForumReplyItem = {
   id: string;
   author: ForumAuthorDisplay | null;
+  authorUserId: string | null;
   content: string;
   createdAt: string;
   likes: number;
@@ -262,6 +265,7 @@ export type ForumThreadDetail = {
   title: string;
   content: string;
   author: ForumAuthorDisplay | null;
+  authorUserId: string | null;
   isSystemThread: boolean;
   createdAt: string;
   likes: number;
@@ -271,6 +275,7 @@ export type ForumThreadDetail = {
   contextItems: ForumContextItem[];
   replies: ForumReplyItem[];
   replyLikedIds: string[];
+  currentUserId: string | null;
 };
 
 export async function getForumThread(id: string): Promise<ForumThreadDetail | null> {
@@ -424,6 +429,7 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
         userId: thread.author_user_id,
         users: thread.users as UserJoin,
       }),
+      authorUserId: thread.author_user_id,
       isSystemThread: thread.is_system_thread,
       createdAt: formatForumDate(thread.created_at),
       likes: likes?.length || 0,
@@ -432,9 +438,11 @@ export async function getForumThread(id: string): Promise<ForumThreadDetail | nu
       relatedIssueTitle,
       contextItems: mergeContextItems(thread.body, thread.context_items),
       replyLikedIds,
+      currentUserId: user?.id ?? null,
       replies: (replies || []).map((reply) => ({
         id: reply.id,
         author: resolveForumAuthor({ userId: reply.author_user_id, users: reply.users as UserJoin }),
+        authorUserId: reply.author_user_id,
         content: parseContextItemsFromBody(reply.body).cleanBody,
         createdAt: formatForumDate(reply.created_at),
         likes: replyLikeCounts[reply.id] || 0,
@@ -461,6 +469,15 @@ export async function getIssueTitle(issueId: string): Promise<string | null> {
     .maybeSingle();
 
   return data?.title ?? null;
+}
+
+export async function getRelatedForumThreads(
+  sakId: string,
+  excludeThreadId: string,
+  limit = 8,
+): Promise<ForumThreadListItem[]> {
+  const threads = await getForumThreads({ sakId, sort: 'nyeste', limit: limit + 1 });
+  return threads.filter((t) => t.id !== excludeThreadId).slice(0, limit);
 }
 
 export async function getSuggestedIssues(limit = 6): Promise<{ id: string; title: string }[]> {

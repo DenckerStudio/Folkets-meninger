@@ -19,6 +19,7 @@ import { SakDocumentsSection } from '@/components/sak/sak-documents-section';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
+import { routes } from '@/lib/routes';
 
 export const dynamic = 'force-dynamic';
 
@@ -160,6 +161,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
   return (
     <div className="max-w-4xl mx-auto space-y-12 pb-12">
       <FadeIn delay={0.1}>
+<<<<<<< HEAD
         <div className="flex items-center justify-between">
           <Link href="/dashboard/utforsk" className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
             <ArrowLeft className="mr-2 w-4 h-4" />
@@ -172,6 +174,17 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
             </Link>
             <ShareButton id={sak.id} title={sak.title} />
           </div>
+=======
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <Link
+            href={`${routes.forum}?sak=${sak.id}`}
+            className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+          >
+            <MessageSquare className="w-4 h-4" />
+            Diskuter i forum
+          </Link>
+          <ShareButton id={sak.id} title={sak.title} />
+>>>>>>> origin/cursor/forum-delete-hamburger-1979
         </div>
       </FadeIn>
 

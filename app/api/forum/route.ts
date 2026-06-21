@@ -7,6 +7,7 @@ import { mapForumRpcError } from '@/lib/forum/rpc-errors';
 import {
   validateCreateReply,
   validateCreateThread,
+  validateDeletePost,
   validateToggleLike,
 } from '@/lib/forum/validation';
 
@@ -129,6 +130,70 @@ export async function POST(request: Request) {
       );
 
       return NextResponse.json({ success: true, replyId: data });
+    }
+
+    if (action === 'delete_thread' || action === 'delete_reply') {
+      const validated = validateDeletePost({
+        target_type: action === 'delete_thread' ? 'thread' : 'reply',
+        target_id: payload.target_id,
+      });
+      if (!validated.ok) {
+        return NextResponse.json({ error: validated.error }, { status: 400 });
+      }
+
+      if (validated.targetType === 'thread') {
+        const { data: thread, error: fetchError } = await service
+          .from('forum_threads')
+          .select('id, author_user_id, is_system_thread')
+          .eq('id', validated.targetId)
+          .maybeSingle();
+
+        if (fetchError || !thread) {
+          return NextResponse.json({ error: 'Tråden finnes ikke' }, { status: 404 });
+        }
+        if (thread.is_system_thread || thread.author_user_id !== user.id) {
+          return NextResponse.json({ error: 'Du kan bare slette egne innlegg' }, { status: 403 });
+        }
+
+        const { error: deleteError } = await service
+          .from('forum_threads')
+          .delete()
+          .eq('id', validated.targetId)
+          .eq('author_user_id', user.id);
+
+        if (deleteError) {
+          console.error('Delete thread error:', deleteError);
+          return NextResponse.json({ error: 'Kunne ikke slette tråden' }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true });
+      }
+
+      const { data: reply, error: fetchError } = await service
+        .from('forum_replies')
+        .select('id, author_user_id')
+        .eq('id', validated.targetId)
+        .maybeSingle();
+
+      if (fetchError || !reply) {
+        return NextResponse.json({ error: 'Svaret finnes ikke' }, { status: 404 });
+      }
+      if (reply.author_user_id !== user.id) {
+        return NextResponse.json({ error: 'Du kan bare slette egne innlegg' }, { status: 403 });
+      }
+
+      const { error: deleteError } = await service
+        .from('forum_replies')
+        .delete()
+        .eq('id', validated.targetId)
+        .eq('author_user_id', user.id);
+
+      if (deleteError) {
+        console.error('Delete reply error:', deleteError);
+        return NextResponse.json({ error: 'Kunne ikke slette svaret' }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true });
     }
 
     if (action === 'toggle_like') {
