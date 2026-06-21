@@ -82,13 +82,8 @@ async function markAiSummaryRequested(issueId: string): Promise<boolean> {
 
     await supabase
       .from('stortinget_issues')
-      .upsert(
-        {
-          id: issueId,
-          ai_summary_requested_at: new Date().toISOString(),
-        },
-        { onConflict: 'id' }
-      );
+      .update({ ai_summary_requested_at: new Date().toISOString() })
+      .eq('id', issueId);
 
     return true;
   } catch (e) {

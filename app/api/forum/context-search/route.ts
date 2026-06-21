@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAnonSupabase, getServiceSupabase } from '@/lib/supabase';
-import { getRepresentanterForPeriode, getSaker } from '@/lib/stortinget';
+import { getRepresentanterForPeriode } from '@/lib/stortinget';
 import {
   hearingContextItem,
   politicianContextItem,
@@ -39,53 +39,21 @@ async function searchSaker(q: string, limit: number): Promise<ForumContextItem[]
     }
   }
 
-  if (items.length < 5 && q.length >= 2) {
-    try {
-      const live = await getSaker();
-      const filtered = live
-        .filter((s) => `${s.title} ${s.summary || ''}`.toLowerCase().includes(q))
-        .slice(0, limit - items.length);
-
-      for (const sak of filtered) {
-        if (items.some((i) => i.kind === 'sak' && i.id === sak.id)) continue;
-        items.push(
-          sakContextItem(sak.id, sak.title || `Sak ${sak.id}`, getSakTreatmentLabel(sak.status === 'closed' ? 'closed' : 'pending'))
-        );
-      }
-
-      if (process.env.SUPABASE_SERVICE_ROLE_KEY && filtered.length > 0) {
-        const service = getServiceSupabase();
-        const now = new Date().toISOString();
-        void service.from('stortinget_issues').upsert(
-          filtered.map((s) => ({
-            id: String(s.id),
-            title: s.title,
-            summary: s.summary || null,
-            status: s.status || 'pending',
-            sak_kind: s.sakKind,
-            henvisning: s.henvisning,
-            dokumentgruppe: s.dokumentgruppe,
-            last_synced_at: now,
-          })),
-          { onConflict: 'id' }
-        );
-      }
-    } catch (e) {
-      console.error('context-search live fallback error', e);
-    }
-  }
-
-  if (items.length === 0 && q.length >= 2) {
+  if (items.length < limit && q.length >= 2) {
     const anon = getAnonSupabase();
     const { data } = await anon
       .from('stortinget_issues')
-      .select('id,title,status')
+      .select('id,title,status,sak_kind')
       .not('sak_kind', 'is', null)
       .ilike('title', `%${q}%`)
-      .limit(limit);
+      .order('last_synced_at', { ascending: false })
+      .limit(limit - items.length);
 
     for (const row of data || []) {
-      items.push(sakContextItem(row.id, row.title || `Sak ${row.id}`));
+      if (items.some((item) => item.kind === 'sak' && item.id === row.id)) continue;
+      items.push(
+        sakContextItem(row.id, row.title || `Sak ${row.id}`, getSakTreatmentLabel(row.status === 'closed' ? 'closed' : 'pending')),
+      );
     }
   }
 

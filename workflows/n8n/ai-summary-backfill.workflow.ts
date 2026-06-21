@@ -256,10 +256,10 @@ const scheduleTrigger = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
   version: 1.3,
   config: {
-    name: 'Every 10 minutes',
+    name: 'Every 30 minutes',
     parameters: {
       rule: {
-        interval: [{ field: 'minutes', minutesInterval: 10 }],
+        interval: [{ field: 'minutes', minutesInterval: 30 }],
       },
     },
   },

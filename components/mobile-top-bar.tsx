@@ -19,7 +19,7 @@ export function MobileTopBar() {
         .catch(() => {});
     };
     load();
-    const timer = window.setInterval(load, 30000);
+    const timer = window.setInterval(load, 5 * 60 * 1000);
     return () => window.clearInterval(timer);
   }, [user]);
 

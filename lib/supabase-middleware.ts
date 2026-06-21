@@ -6,6 +6,12 @@ const MIDDLEWARE_AUTH_TIMEOUT_MS = 3_500;
 
 type MiddlewareSupabaseClient = ReturnType<typeof createServerClient>;
 
+export function hasSupabaseAuthCookies(request: NextRequest): boolean {
+  return request.cookies.getAll().some(
+    (cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token'),
+  );
+}
+
 export function createMiddlewareSupabaseClient(
   request: NextRequest,
   response: NextResponse,
@@ -62,6 +68,10 @@ async function getUserWithTimeout(supabase: MiddlewareSupabaseClient): Promise<U
 export async function refreshSessionCookies(
   request: NextRequest,
 ): Promise<NextResponse> {
+  if (!hasSupabaseAuthCookies(request)) {
+    return NextResponse.next({ request });
+  }
+
   const initialResponse = NextResponse.next({ request });
   const { supabase, getResponse } = createMiddlewareSupabaseClient(request, initialResponse);
   await supabase.auth.getSession();
