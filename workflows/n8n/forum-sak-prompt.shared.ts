@@ -245,7 +245,18 @@ Hvis kildene mangler substans: sett repeat_reason og tom question.`;
 
 export const SAK_PROMPT_GENERATOR_SAVE_JS = `const sak = $('Merge RAG context').first()?.json || {};
 const agent = $('Sak prompt generator (Ollama)').first()?.json || {};
-const out = agent.output || {};
+let out = agent.output;
+if (typeof out === 'string') {
+  try { out = JSON.parse(out); } catch { out = {}; }
+}
+if (!out || typeof out !== 'object') out = {};
+if (!out.prompt) {
+  const raw = String(agent.text || agent.output || '').trim();
+  const match = raw.match(/\\{[\\s\\S]*\\}/);
+  if (match) {
+    try { out = JSON.parse(match[0]); } catch { out = {}; }
+  }
+}
 const prompt = out.prompt || {};
 const research = out.research || {};
 

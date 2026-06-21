@@ -11,7 +11,6 @@ import {
   sticky,
   newCredential,
   languageModel,
-  outputParser,
   expr,
   placeholder,
 } from '@n8n/workflow-sdk';
@@ -35,38 +34,9 @@ const sakAgentOllamaModel = languageModel({
     name: 'Sak prompt Ollama Chat Model',
     credentials: { ollamaApi: newCredential('Ollama account') },
     parameters: {
-      model: 'llama3.1:8b',
+      model: 'gemma4:e2b-it-qat',
       options: { think: false, temperature: 0.15, numPredict: 1800, numCtx: 12288 },
     },
-  },
-});
-
-const sakParserOllamaModel = languageModel({
-  type: '@n8n/n8n-nodes-langchain.lmChatOllama',
-  version: 1,
-  config: {
-    name: 'Sak prompt parser Ollama',
-    credentials: { ollamaApi: newCredential('Ollama account') },
-    parameters: {
-      model: 'llama3.2:3b-text-q4_K_M',
-      options: { think: false, temperature: 0, format: 'json', numPredict: 1400, numCtx: 8192 },
-    },
-  },
-});
-
-const sakOutputParser = outputParser({
-  type: '@n8n/n8n-nodes-langchain.outputParserStructured',
-  version: 1.3,
-  config: {
-    name: 'Sak prompt JSON parser',
-    onError: 'continueRegularOutput',
-    parameters: {
-      schemaType: 'fromJson',
-      jsonSchemaExample:
-        '{"research":{"story_title":"Sak","summary":"…","political_choice":"…","confidence":"high"},"prompt":{"question":"Mener du …?","novelty_explanation":"…","source_indices":[0],"topic_tags":["stortingssak"],"sensitivity":"low","repeat_reason":null}}',
-      autoFix: true,
-    },
-    subnodes: { model: sakParserOllamaModel },
   },
 });
 
@@ -216,7 +186,7 @@ const sakPromptGeneratorAgent = node({
     parameters: {
       promptType: 'define',
       text: expr('{{ $json.promptText }}'),
-      hasOutputParser: true,
+      hasOutputParser: false,
       options: {
         systemMessage: SAK_PROMPT_GENERATOR_SYSTEM,
         maxIterations: 2,
@@ -225,7 +195,6 @@ const sakPromptGeneratorAgent = node({
       },
       subnodes: {
         model: sakAgentOllamaModel,
-        outputParser: sakOutputParser,
       },
     },
   },
@@ -261,7 +230,7 @@ const savePrompt = node({
     credentials: { postgres: newCredential('Fokets Meninger') },
     parameters: {
       operation: 'executeQuery',
-      query: '={{ $json.query }}',
+      query: '={{ $json.query || "SELECT 1 AS skipped WHERE false" }}',
     },
   },
   output: [{ id: 'uuid-prompt', question: 'Mener du …?', stortinget_issue_id: '200329' }],

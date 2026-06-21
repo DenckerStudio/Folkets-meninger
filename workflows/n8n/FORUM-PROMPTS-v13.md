@@ -4,7 +4,7 @@ Ny pipeline som lager JA/NEI-reels **direkte fra stortingssaker** med RAG (dokum
 
 | Workflow | Kilde | Webhook |
 |----------|--------|---------|
-| **Sak-RAG prompt generator** | [`forum-sak-prompt-generator.workflow.ts`](forum-sak-prompt-generator.workflow.ts) | `POST /webhook/folkets-forum-sak-prompt-generator` |
+| **Sak-RAG prompt generator** | [`forum-sak-prompt-generator.workflow.ts`](forum-sak-prompt-generator.workflow.ts) · live `0LG3T8FwbhZ28vpQ` | `POST /webhook/folkets-forum-sak-prompt-generator` |
 
 Kjører **parallelt** med v12 Regjeringen RSS — komplementerer nyhets-RSS med parlamentarisk substans.
 
