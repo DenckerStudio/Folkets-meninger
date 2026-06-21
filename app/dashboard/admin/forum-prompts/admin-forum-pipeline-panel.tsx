@@ -27,8 +27,24 @@ type ResearchCluster = {
   topic_tags: string[];
   source_count: number;
   status: string;
+  source_type?: string;
   created_at: string;
   forum_research_articles?: ClusterArticle[];
+};
+
+type SakCandidate = {
+  issueId: string;
+  title: string;
+  category: string | null;
+  ragChunkCount: number;
+  hasAiSummary: boolean;
+  lastUpdatedAt: string | null;
+};
+
+type SakCoverage = {
+  pendingIssues: number;
+  pendingWithRag: number;
+  sakCandidates: number;
 };
 
 type SourceRow = {
@@ -44,6 +60,8 @@ type DraftPrompt = {
   sensitivity: string;
   source_headlines: { title?: string; outlet?: string; url?: string }[];
   created_at: string;
+  stortinget_issue_id?: string | null;
+  generation_metadata?: { source_type?: string; confidence?: string } | null;
 };
 
 function defaultExpiresIso(): string {
@@ -166,6 +184,8 @@ type AdminForumPipelinePanelProps = {
 
 export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminForumPipelinePanelProps) {
   const [queueClusters, setQueueClusters] = useState<ResearchCluster[]>([]);
+  const [sakCandidates, setSakCandidates] = useState<SakCandidate[]>([]);
+  const [sakCoverage, setSakCoverage] = useState<SakCoverage | null>(null);
   const [drafts, setDrafts] = useState<DraftPrompt[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -186,11 +206,16 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
       setError('');
     }
     try {
-      const [queueRes, draftsRes] = await Promise.all([
-        fetch('/api/admin/forum-clusters?status=pending'),
+      const [queueRes, draftsRes, sakRes] = await Promise.all([
+        fetch('/api/admin/forum-clusters?status=pending&source_type=rss'),
         fetch('/api/admin/forum-prompts?status=draft'),
+        fetch('/api/admin/forum-sak-candidates'),
       ]);
-      const [queueData, draftsData] = await Promise.all([queueRes.json(), draftsRes.json()]);
+      const [queueData, draftsData, sakData] = await Promise.all([
+        queueRes.json(),
+        draftsRes.json(),
+        sakRes.json(),
+      ]);
 
       if (!queueRes.ok) {
         setError(formatApiError(queueRes.status, queueData.error || 'Kunne ikke laste kø'));
@@ -201,6 +226,14 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
 
       if (draftsRes.ok) {
         setDrafts(draftsData.prompts || []);
+      }
+
+      if (sakRes.ok) {
+        setSakCandidates(sakData.candidates || []);
+        setSakCoverage(sakData.coverage || null);
+      } else {
+        setSakCandidates([]);
+        setSakCoverage(null);
       }
     } catch {
       if (!opts?.silent) {
@@ -239,6 +272,27 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
         return;
       }
       setQueueClusters((prev) => prev.filter((c) => c.id !== id));
+    } finally {
+      setActing(null);
+    }
+  };
+
+  const triggerSakPrompt = async (issueId?: string) => {
+    const key = issueId ? `sak:${issueId}` : 'sak:next';
+    setActing(key);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/forum-sak-prompts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(issueId ? { stortinget_issue_id: issueId } : {}),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(formatApiError(res.status, data.error || 'Kunne ikke starte sak-RAG'));
+        return;
+      }
+      window.setTimeout(() => void loadPipeline({ silent: true }), 3000);
     } finally {
       setActing(null);
     }
@@ -315,15 +369,21 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
   return (
     <div>
       <div className="rounded-xl border border-gray-200 bg-white p-5 mb-6">
-        <h2 className="text-sm font-semibold text-gray-900">Automatisk pipeline (v12)</h2>
+        <h2 className="text-sm font-semibold text-gray-900">Automatisk pipeline (v12 + v13)</h2>
         <p className="text-sm text-gray-600 mt-1">
-          Regjeringen RSS henter saker hver 30. min. AI genererer JA/NEI-spørsmål hver 15. min. Du
-          godkjenner utkast og publiserer til Forum Reels.
+          Regjeringen RSS (v12) og Stortinget-sak RAG (v13) produserer JA/NEI-utkast. Du godkjenner
+          og publiserer til Forum Reels.
         </p>
         <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
           <div>
-            <dt className="text-gray-500">I kø</dt>
+            <dt className="text-gray-500">RSS i kø</dt>
             <dd className="font-semibold text-gray-900 tabular-nums">{pendingCount}</dd>
+          </div>
+          <div>
+            <dt className="text-gray-500">Sak-kandidater (RAG)</dt>
+            <dd className="font-semibold text-gray-900 tabular-nums">
+              {sakCoverage?.sakCandidates ?? sakCandidates.length}
+            </dd>
           </div>
           <div>
             <dt className="text-gray-500">Utkast</dt>
@@ -392,10 +452,81 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
         </div>
       ) : (
         <div className="space-y-8">
-          <section>
+          <section className="mb-10">
             <div className="flex flex-wrap items-baseline justify-between gap-2 mb-4">
-              <h2 className="text-lg font-bold text-gray-900">Automatisk kø</h2>
-              <p className="text-sm text-gray-500">
+              <h2 className="text-lg font-bold text-gray-900">Stortingssaker (RAG v13)</h2>
+              <button
+                type="button"
+                disabled={!!acting}
+                onClick={() => void triggerSakPrompt()}
+                className="text-sm font-semibold text-indigo-700 hover:underline disabled:opacity-50"
+              >
+                Generer for neste kandidat →
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              Åpne saker med dokument-embeddings og uten eksisterende reel. Cron daglig 06:00.
+              {sakCoverage ? (
+                <span className="block mt-1 text-xs text-gray-400">
+                  {sakCoverage.pendingWithRag} av {sakCoverage.pendingIssues} åpne saker har RAG.
+                </span>
+              ) : null}
+            </p>
+
+            {sakCandidates.length === 0 ? (
+              <p className="text-gray-500 text-sm py-6 rounded-xl border border-dashed border-gray-200 text-center">
+                Ingen sak-kandidater akkurat nå. Synk dokumenter og embeddings for flere saker.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {sakCandidates.map((candidate) => (
+                  <article
+                    key={candidate.issueId}
+                    className="rounded-xl border border-indigo-100 bg-indigo-50/30 p-5"
+                  >
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
+                        Stortingssak
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {candidate.ragChunkCount} RAG-chunks
+                        {candidate.hasAiSummary ? ' · AI-sammendrag' : ''}
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900">{candidate.title}</h3>
+                    <p className="text-xs text-gray-500 mt-1">Sak {candidate.issueId}</p>
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      <button
+                        type="button"
+                        disabled={!!acting}
+                        onClick={() => void triggerSakPrompt(candidate.issueId)}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                      >
+                        {acting === `sak:${candidate.issueId}` ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-3.5 h-3.5" />
+                        )}
+                        Generer reel
+                      </button>
+                      <a
+                        href={`/dashboard/sak/${candidate.issueId}`}
+                        className="text-sm text-indigo-700 hover:underline inline-flex items-center gap-1"
+                      >
+                        Se sak
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section>
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-gray-900">Regjeringen RSS (v12)</h2>
+              <p className="text-sm text-gray-500 mt-1">
                 Saker fra Regjeringen RSS — behandles uten manuell godkjenning
               </p>
             </div>
@@ -489,6 +620,22 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
               <div className="space-y-4">
                 {drafts.map((prompt) => (
                   <article key={prompt.id} className="rounded-xl border border-gray-200 bg-white p-5">
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {prompt.topic_tags?.includes('stortingssak') ||
+                      prompt.generation_metadata?.source_type === 'stortinget_sak' ? (
+                        <span className="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-indigo-50 text-indigo-800">
+                          Stortingssak
+                        </span>
+                      ) : null}
+                      {prompt.stortinget_issue_id ? (
+                        <a
+                          href={`/dashboard/sak/${prompt.stortinget_issue_id}`}
+                          className="text-xs text-indigo-600 hover:underline"
+                        >
+                          Sak {prompt.stortinget_issue_id}
+                        </a>
+                      ) : null}
+                    </div>
                     {editingId === prompt.id ? (
                       <div className="space-y-3">
                         <textarea

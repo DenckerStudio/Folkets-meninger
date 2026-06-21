@@ -81,6 +81,25 @@ npm run deploy:forum-v12 -- --publish
 
 Arkivér v10/v11 scout/journalist/editor etter deploy (allerede arkivert — se FORUM-PROMPTS-v12.md).
 
+## Forum Reels v13 – Stortinget-sak RAG
+
+| Steg | Kilde | Webhook |
+|------|--------|---------|
+| **Sak-RAG prompt generator** | [`forum-sak-prompt-generator.workflow.ts`](forum-sak-prompt-generator.workflow.ts) | cron daglig 06:00 + `POST /webhook/folkets-forum-sak-prompt-generator` |
+
+**Dok:** [`FORUM-PROMPTS-v13.md`](FORUM-PROMPTS-v13.md)
+
+**Env:** `N8N_FORUM_SAK_PROMPTS_WEBHOOK_URL`
+
+**Deploy:**
+
+```bash
+node scripts/bundle-forum-sak-prompt-generator-workflow.mjs /tmp/sak-prompt-generator.ts
+npm run deploy:forum-v13-sak-prompt -- --temp-id <id> --publish
+```
+
+**App:** Admin pipeline viser sak-kandidater; sak-side har «Generer reel-utkast» for forum-admin.
+
 **Opprydding feilaktige aktive prompts:** [`scripts/archive-misaligned-forum-prompts.sql`](../../scripts/archive-misaligned-forum-prompts.sql)
 
 ## Forum trending prompts (v5 – SearXNG + RSS, alltid draft)
