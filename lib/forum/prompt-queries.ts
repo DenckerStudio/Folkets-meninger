@@ -1,6 +1,7 @@
 import { getAnonSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { parsePromptSources, type PromptSourceHeadline } from '@/lib/forum/prompt-source';
+import { canViewForumReels } from '@/lib/forum/reels-visibility';
 
 export type PromptOption = {
   id: string;
@@ -74,6 +75,10 @@ export async function getActiveForumPromptsPage({
   cursor?: string;
 }): Promise<ActiveForumPromptsPage> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return { items: [], nextCursor: null };
+  }
+
+  if (!(await canViewForumReels())) {
     return { items: [], nextCursor: null };
   }
 

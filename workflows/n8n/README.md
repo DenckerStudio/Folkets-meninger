@@ -89,7 +89,16 @@ Workflow-kilde: [`forum-trending-prompts.workflow.ts`](forum-trending-prompts.wo
 
 **Live workflow:** https://n8n.heyklever.app/workflow/MloIdsnX7FozM4dv
 
-**v5:** alignment-gate, dedupe 0.55, min 4 kilder, **alltid `draft`** → admin-godkjenning i appen.
+**v5:** alignment-gate, dedupe 0.55, min 4 kilder, **alltid `draft`** → admin-godkjenning i appen (`/dashboard/admin/forum-prompts`).
+
+**App:** `FORUM_REELS_PUBLIC=false` (default) skjuler aktive reels for vanlige brukere; forum-admin ser forhåndsvisning. Sett `FORUM_REELS_PUBLIC=true` ved lansering.
+
+Deploy:
+
+```bash
+node scripts/build-n8n-forum-prompts-ops.mjs /tmp/n8n-forum-prompts-ops.json
+node scripts/build-n8n-forum-prompts-topology-ops.mjs /tmp/n8n-forum-prompts-topology-ops.json
+```
 
 | Nøkkel | Backfill settings |
 |--------|-------------------|

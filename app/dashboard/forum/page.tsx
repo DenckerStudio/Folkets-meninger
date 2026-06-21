@@ -7,7 +7,7 @@ import ForumFeedToolbar from '@/components/forum/forum-feed-toolbar';
 import ForumRightRail from '@/components/forum/forum-right-rail';
 import { getForumThreads, getIssueTitle, getSuggestedIssues, type ForumSort } from '@/lib/forum/queries';
 import { getActiveForumPrompts } from '@/lib/forum/prompt-queries';
-import { FORUM_REELS_PUBLIC_ENABLED } from '@/lib/forum/reels-public';
+import { canViewForumReels } from '@/lib/forum/reels-visibility';
 import { routes } from '@/lib/routes';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -25,10 +25,11 @@ export default async function ForumPage({
   const search = params.q?.trim() || null;
   const sakTitle = sakId ? await getIssueTitle(sakId) : null;
 
-  const [topics, popularIssues, prompts] = await Promise.all([
+  const [topics, prompts, popularIssues, reelsVisible] = await Promise.all([
     getForumThreads({ sakId, sort, search }),
+    getActiveForumPrompts(12),
     getSuggestedIssues(6),
-    FORUM_REELS_PUBLIC_ENABLED ? getActiveForumPrompts(12) : Promise.resolve([]),
+    canViewForumReels(),
   ]);
 
   const newThreadHref = sakId ? routes.forumNew(sakId) : routes.forumNew();
@@ -39,7 +40,11 @@ export default async function ForumPage({
         <header className="mb-6">
           <PageHeader
             title="Forum"
-            description="Diskuter saker, still spørsmål og del meninger med andre."
+            description={
+              reelsVisible
+                ? 'Diskuter saker, still spørsmål og delta i dagens avstemninger.'
+                : 'Diskuter saker og still spørsmål om politikk og samfunn.'
+            }
           />
         </header>
 
@@ -60,7 +65,7 @@ export default async function ForumPage({
           </div>
         )}
 
-        {FORUM_REELS_PUBLIC_ENABLED ? <ForumPromptCarousel prompts={prompts} /> : null}
+        {reelsVisible ? <ForumPromptCarousel prompts={prompts} /> : null}
 
         <Suspense fallback={null}>
           <ForumFeedToolbar />

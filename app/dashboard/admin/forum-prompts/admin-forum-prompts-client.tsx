@@ -26,6 +26,8 @@ type AdminPrompt = {
   source_headlines: { title?: string; outlet?: string; url?: string }[];
   created_at: string;
   expires_at?: string | null;
+  submitted_by?: string | null;
+  submission_tier?: 'trusted' | 'curator' | null;
 };
 
 type TrustedSource = {
@@ -34,6 +36,7 @@ type TrustedSource = {
   outlet_label: string;
   status: 'approved' | 'pending' | 'rejected';
   created_at: string;
+  suggested_by?: string | null;
 };
 
 type Tab = 'pipeline' | 'active' | 'archived' | 'create' | 'sources';
@@ -565,6 +568,14 @@ export default function AdminForumPromptsClient() {
                 <div>
                   <span className="font-semibold text-gray-900">{s.outlet_label}</span>
                   <span className="text-gray-500 text-sm ml-2">{s.domain}</span>
+                  {s.suggested_by ? (
+                    <Link
+                      href={routes.profile(s.suggested_by)}
+                      className="ml-2 text-xs font-semibold text-indigo-700 hover:underline"
+                    >
+                      Brukerforslag
+                    </Link>
+                  ) : null}
                   <span
                     className={`ml-2 text-xs px-2 py-0.5 rounded ${
                       s.status === 'approved'
@@ -690,6 +701,15 @@ export default function AdminForumPromptsClient() {
                         {' · '}
                         {prompt.sensitivity === 'high' ? 'Høy sensitivitet' : 'Lav sensitivitet'}
                       </span>
+                      {prompt.submitted_by ? (
+                        <Link
+                          href={routes.profile(prompt.submitted_by)}
+                          className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded hover:underline"
+                        >
+                          Brukerforslag
+                          {prompt.submission_tier === 'curator' ? ' (Kurator)' : ' (Pålitelig)'}
+                        </Link>
+                      ) : null}
                       {(prompt.topic_tags || []).map((tag) => (
                         <span key={tag} className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
                           {tag}

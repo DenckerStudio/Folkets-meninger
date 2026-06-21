@@ -18,6 +18,8 @@ import { ProfilePublicSettings } from '@/components/profile/profile-public-setti
 import { ProfileAppPreferences } from '@/components/profile/profile-app-preferences';
 import { ProfileAdminLinks } from '@/components/profile/profile-admin-links';
 import { isProfileTabId, type ProfileTabId } from '@/components/profile/profile-tabs';
+import { getUserPointsProgress } from '@/lib/user-points-levels';
+import type { UserPointsProgress } from '@/lib/user-points-levels';
 
 function resolveTab(tabParam: string | null): ProfileTabId {
   if (isProfileTabId(tabParam)) return tabParam;
@@ -45,6 +47,8 @@ export function ProfileShell() {
     labels: 'daily',
   });
   const [notifSaving, setNotifSaving] = useState(false);
+  const [points, setPoints] = useState(0);
+  const [pointsProgress, setPointsProgress] = useState<UserPointsProgress>(() => getUserPointsProgress(0));
 
   useEffect(() => {
     if (!user) {
@@ -59,6 +63,24 @@ export function ProfileShell() {
       })
       .catch(() => {})
       .finally(() => setHistoryLoading(false));
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    fetch('/api/user/profile', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (typeof data.points === 'number') {
+          setPoints(data.points);
+        }
+        if (data.points_progress) {
+          setPointsProgress(data.points_progress);
+        } else if (typeof data.points === 'number') {
+          setPointsProgress(getUserPointsProgress(data.points));
+        }
+      })
+      .catch(() => {});
   }, [user]);
 
   useEffect(() => {
@@ -118,6 +140,8 @@ export function ProfileShell() {
       activeTab={activeTab}
       voteHistory={voteHistory}
       historyLoading={historyLoading}
+      points={points}
+      pointsProgress={pointsProgress}
       interestCategories={interestCategories}
       interestLabels={interestLabels}
       categoriesSaving={categoriesSaving}
@@ -201,6 +225,8 @@ type ProfileShellAuthenticatedProps = {
   activeTab: ProfileTabId;
   voteHistory: VoteHistoryItem[];
   historyLoading: boolean;
+  points: number;
+  pointsProgress: UserPointsProgress;
   interestCategories: string[];
   interestLabels: string[];
   categoriesSaving: boolean;
@@ -223,6 +249,8 @@ function ProfileShellAuthenticated({
   activeTab,
   voteHistory,
   historyLoading,
+  points,
+  pointsProgress,
   interestCategories,
   interestLabels,
   categoriesSaving,
@@ -257,7 +285,13 @@ function ProfileShellAuthenticated({
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 px-1">
-      <ProfileHero user={user} voteCount={voteHistory.length} onSignOut={onSignOut} />
+      <ProfileHero
+        user={user}
+        voteCount={voteHistory.length}
+        points={points}
+        pointsProgress={pointsProgress}
+        onSignOut={onSignOut}
+      />
       <ProfileAdminLinks />
 
       <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8">
