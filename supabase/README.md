@@ -37,6 +37,16 @@ Aggregates are exposed via `get_issue_vote_totals` / `get_vote_totals_batch`. Di
 
 Points are persisted in `user_points_balances` and `user_points_ledger` from migration `20260614130000_forum_profiles_points_ai_sources.sql`. `award_user_points` is idempotent by `(user_id, reason, ref_key)` and is executable by `service_role`; public clients should not call it directly.
 
+When applying migrations manually in the SQL editor, keep the points and unlock chain in filename order:
+
+1. `20260614130000_forum_profiles_points_ai_sources.sql`
+2. `20260614160000_harden_forum_points_moderation.sql`
+3. `20260620120000_points_levels_and_awards.sql`
+4. `20260620140000_forum_reel_user_submission.sql`
+5. `20260620160000_veteran_source_suggestions.sql`
+
+`user_points_balances` is readable by `anon` and `authenticated` users so public profiles can show points. `user_points_ledger` is readable only by the owning authenticated user. Migration `20260620120000_points_levels_and_awards.sql` also sets `users.show_points = true` for existing rows.
+
 ### Point events
 
 | Event | Delta | Source |
@@ -51,7 +61,7 @@ Points are persisted in `user_points_balances` and `user_points_ledger` from mig
 | Complete public, verified profile | `+15` | `app/api/user/profile` calls `award_user_points` with `profile_complete` |
 | User-submitted reel published or approved | `+25` | `submit_forum_prompt` or `trg_award_points_for_approved_user_reel` |
 
-The UI tier thresholds live in `lib/user-points-levels.ts`:
+The UI tier thresholds live in `lib/user-points-levels.ts`; enforcement thresholds also exist in SQL RPCs, so update both app code and migrations/tests when changing a tier:
 
 | Tier | Min points | Unlock |
 |------|------------|--------|
@@ -82,6 +92,8 @@ Constraints enforced in both app code and SQL:
 - Active direct-published reels expire after 7 days.
 
 Admins review drafts at `/dashboard/admin/forum-prompts`. Public reels remain hidden unless `FORUM_REELS_PUBLIC=true`; when false, only forum admins can preview `/dashboard/forum/spesielle-saker`.
+
+These gates control submission and publication workflow, not public rollout. `FORUM_REELS_PUBLIC=false` still hides active reels from non-admin users.
 
 ### Trusted source suggestions
 

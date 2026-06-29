@@ -55,7 +55,7 @@ npm run test:e2e
 
 ## Forum Reels operational model
 
-1. n8n Forum Reels v5 (`forum-trending-prompts.workflow.ts`) reads trusted/news sources and always writes `forum_prompts.status = 'draft'`.
+1. n8n Forum Reels v5 (`forum-trending-prompts.workflow.ts`) reads RSS, SearXNG, and long-running Stortinget issues, then always writes `forum_prompts.status = 'draft'`.
 2. Forum admins review and publish drafts in `/dashboard/admin/forum-prompts`.
 3. Public users see `/dashboard/forum/spesielle-saker` only when `FORUM_REELS_PUBLIC=true`; otherwise forum admins can preview and everyone else sees a coming-soon state.
 4. Users with enough points can submit prompts through `/dashboard/forum/foresla-reel`. Trusted users submit drafts for admin review; curator users can publish directly only when all sources are approved trusted domains.
