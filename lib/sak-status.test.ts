@@ -55,4 +55,15 @@ assert.equal(
   'closed',
 );
 
+// Stale DB column (false) must not override cached detail_json (true) — sak 200211.
+assert.equal(
+  resolveSakStatusFromSources({
+    ferdigbehandlet: false,
+    detailJson: { ferdigbehandlet: true, status: 1 },
+    cachedStatus: 'closed',
+    numericStatus: 1,
+  }),
+  'closed',
+);
+
 console.log('sak-status.test.ts: ok');
