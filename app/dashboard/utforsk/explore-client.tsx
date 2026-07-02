@@ -306,7 +306,9 @@ export default function ExploreClient({
           {displayedIssues.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">Ingen saker funnet som matcher dine kriterier.</div>
           ) : (
-            displayedIssues.map((issue, index) => (
+            displayedIssues.map((issue, index) => {
+              const sakKindLabel = issue.sakKind ? getSakKindLabel(issue.sakKind) : null;
+              return (
               <FadeIn key={issue.id} delay={0.1 * Math.min(index, 5)} direction="up">
                 <div className="bg-card rounded-2xl shadow-sm border border-border hover:shadow-md transition-shadow overflow-hidden">
                   <Link href={`/dashboard/sak/${issue.id}`} className="block p-6 pb-4">
@@ -314,12 +316,14 @@ export default function ExploreClient({
                       <div className="flex items-center gap-3 flex-wrap">
                         {issue.sakKind ? (
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SAK_KIND_BADGE_CLASS}`}>
-                            {getSakKindLabel(issue.sakKind)}
+                            {sakKindLabel}
                           </span>
                         ) : null}
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SAK_CATEGORY_BADGE_CLASS}`}>
-                          {issue.category}
-                        </span>
+                        {issue.category && issue.category !== sakKindLabel ? (
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SAK_CATEGORY_BADGE_CLASS}`}>
+                            {issue.category}
+                          </span>
+                        ) : null}
                         {(issueLabels[String(issue.id)] ?? []).slice(0, 3).map((label) => (
                           <span
                             key={`${issue.id}-${label}`}
@@ -387,7 +391,8 @@ export default function ExploreClient({
                   </div>
                 </div>
               </FadeIn>
-            ))
+              );
+            })
           )}
         </div>
       </FadeIn>

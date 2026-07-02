@@ -101,6 +101,8 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
   const newIssueIds: string[] = [];
   const missingSummaryIds: string[] = [];
 
+  const issueById = new Map(issues.map((issue) => [String(issue.id), issue]));
+
   for (let i = 0; i < rows.length; i += chunkSize) {
     const chunk = rows.slice(i, i + chunkSize);
     const chunkIds = chunk.map((row) => row.id);
@@ -128,6 +130,7 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
     for (const row of chunk) {
       const existing = existingById.get(row.id);
       const detail = existing?.detail_json ?? null;
+      const issue = issueById.get(row.id);
       const status = resolveSakStatusFromSources({
         ferdigbehandlet:
           typeof detail?.ferdigbehandlet === 'boolean'
@@ -135,6 +138,7 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
             : existing?.ferdigbehandlet,
         detailJson: detail,
         cachedStatus: existing?.status ?? row.status,
+        numericStatus: issue?.stortingetNumericStatus,
       });
 
       const payload: IssueListRow = {

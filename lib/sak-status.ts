@@ -32,6 +32,7 @@ export function resolveSakStatusFromSources(input: {
   ferdigbehandlet?: boolean | null;
   detailJson?: SakDetailStatusFields | null;
   cachedStatus?: string | null;
+  /** Fresh list-export status code; wins over stale detail_json.status when both are set. */
   numericStatus?: number | null;
   listInnstilling?: ListSakInnstillingFields | null;
 }): SakTreatmentStatus {
