@@ -1,6 +1,6 @@
 import { getServiceSupabase } from './supabase';
 import { getSakDetail, type StortingetSakDetail } from './stortinget';
-import { resolveSakListStatus } from './sak-status';
+import { resolveSakListStatus, resolveSakStatusFromSources } from './sak-status';
 import { mapSakPresentation } from './stortinget-sak-presentation';
 import { triggerAiSummaryWebhook } from './trigger-ai-summary-webhook';
 import { buildAiSummarySource, type AiSummaryDocumentSource } from './ai-summary/source-context';
@@ -61,19 +61,27 @@ export async function getSakIssueMeta(sakId: string): Promise<SakIssueMeta | nul
     const service = getServiceSupabase();
     const { data } = await service
       .from('stortinget_issues')
-      .select('status, ferdigbehandlet, voting_closes_at, last_updated_at')
+      .select('status, ferdigbehandlet, voting_closes_at, last_updated_at, detail_json')
       .eq('id', sakId)
       .maybeSingle();
 
     if (!data) return null;
 
+    const detail = data.detail_json as StortingetSakDetail | null;
+
     return {
       lastUpdatedAt: data.last_updated_at ?? null,
-      status:
-        data.status === 'closed' || data.status === 'pending'
-          ? data.status
-          : resolveSakListStatus({ ferdigbehandlet: data.ferdigbehandlet, cachedStatus: data.status }),
-      ferdigbehandlet: data.ferdigbehandlet ?? null,
+      status: resolveSakStatusFromSources({
+        ferdigbehandlet: data.ferdigbehandlet,
+        detailJson: detail,
+        cachedStatus: data.status,
+      }),
+      ferdigbehandlet:
+        typeof data.ferdigbehandlet === 'boolean'
+          ? data.ferdigbehandlet
+          : typeof detail?.ferdigbehandlet === 'boolean'
+            ? detail.ferdigbehandlet
+            : null,
       votingClosesAt: data.voting_closes_at ?? null,
     };
   } catch {
