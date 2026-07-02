@@ -1,6 +1,6 @@
 export type SakTreatmentStatus = 'pending' | 'closed';
 
-type ListSakInnstillingFields = {
+export type ListSakInnstillingFields = {
   innstilling_id?: number;
   innstilling_kode?: number;
 };
@@ -39,9 +39,11 @@ export function resolveSakStatusFromSources(input: {
   const detailFerdigbehandlet =
     typeof input.detailJson?.ferdigbehandlet === 'boolean' ? input.detailJson.ferdigbehandlet : null;
   const effectiveFerdigbehandlet =
-    typeof input.ferdigbehandlet === 'boolean'
-      ? input.ferdigbehandlet
-      : detailFerdigbehandlet;
+    typeof detailFerdigbehandlet === 'boolean'
+      ? detailFerdigbehandlet
+      : typeof input.ferdigbehandlet === 'boolean'
+        ? input.ferdigbehandlet
+        : null;
   const numericStatus =
     input.numericStatus ??
     (typeof input.detailJson?.status === 'number' ? input.detailJson.status : null);

@@ -81,6 +81,10 @@ export function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTot
       numericStatus: sak.status,
     }),
     stortingetNumericStatus: sak.status,
+    listInnstilling: {
+      innstilling_id: sak.innstilling_id,
+      innstilling_kode: sak.innstilling_kode,
+    },
     sakKind: presentation.kind,
     henvisning: presentation.henvisning,
     dokumentgruppe: sak.dokumentgruppe ?? null,
@@ -143,6 +147,7 @@ function mapDbRowToListItem(row: DbIssueRow, votes: SakVoteTotals = EMPTY_VOTES)
 async function getCachedIssueOverlays(
   issueIds: string[],
   listNumericStatusById: Record<string, number> = {},
+  listInnstillingById: Record<string, { innstilling_id?: number; innstilling_kode?: number }> = {},
 ): Promise<
   Record<
     string,
@@ -189,6 +194,7 @@ async function getCachedIssueOverlays(
           detailJson: detail,
           cachedStatus: row.status,
           numericStatus: listNumericStatusById[String(row.id)],
+          listInnstilling: listInnstillingById[String(row.id)],
         });
 
         let votingDaysLeft: number | null = null;
@@ -250,6 +256,10 @@ async function applyLiveListExportStatuses(saker: SakListItem[]): Promise<SakLis
       const raw = rawById.get(item.id);
       if (!raw) continue;
       item.stortingetNumericStatus = raw.status;
+      item.listInnstilling = {
+        innstilling_id: raw.innstilling_id,
+        innstilling_kode: raw.innstilling_kode,
+      };
       item.status = resolveSakListStatus({
         ferdigbehandlet: inferFerdigbehandletFromListSak(raw),
         numericStatus: raw.status,
@@ -271,8 +281,11 @@ export async function enrichSakerList(saker: SakListItem[]): Promise<SakListItem
       typeof sak.stortingetNumericStatus === 'number' ? [[sak.id, sak.stortingetNumericStatus]] : [],
     ),
   );
+  const listInnstillingById = Object.fromEntries(
+    saker.flatMap((sak) => (sak.listInnstilling ? [[sak.id, sak.listInnstilling]] : [])),
+  );
   const [overlays, voteTotals] = await Promise.all([
-    getCachedIssueOverlays(issueIds, listNumericStatusById),
+    getCachedIssueOverlays(issueIds, listNumericStatusById, listInnstillingById),
     getVoteTotals(issueIds),
   ]);
 
@@ -422,6 +435,7 @@ type PersistListRow = {
   title: string;
   summary: string | null;
   status: string;
+  ferdigbehandlet: boolean | null;
   category: string | null;
   sak_kind: string | null;
   henvisning: string | null;
@@ -435,6 +449,7 @@ function persistRowChanged(
     title: string | null;
     summary: string | null;
     status: string | null;
+    ferdigbehandlet?: boolean | null;
     category: string | null;
     sak_kind: string | null;
     henvisning: string | null;
@@ -447,6 +462,7 @@ function persistRowChanged(
     existing.title !== next.title ||
     existing.summary !== next.summary ||
     existing.status !== next.status ||
+    (existing.ferdigbehandlet ?? null) !== next.ferdigbehandlet ||
     existing.category !== next.category ||
     existing.sak_kind !== next.sak_kind ||
     existing.henvisning !== next.henvisning ||
@@ -485,13 +501,21 @@ export async function persistSakerListToDb(items: SakListItem[]): Promise<void> 
           detailJson: detail,
           cachedStatus: existing?.status ?? item.status,
           numericStatus: item.stortingetNumericStatus,
+          listInnstilling: item.listInnstilling,
         });
+        const ferdigbehandlet =
+          typeof detail?.ferdigbehandlet === 'boolean'
+            ? detail.ferdigbehandlet
+            : typeof existing?.ferdigbehandlet === 'boolean'
+              ? existing.ferdigbehandlet
+              : null;
 
         return {
           id: item.id,
           title: item.title,
           summary: item.summary || null,
           status,
+          ferdigbehandlet,
           category: item.category || null,
           sak_kind: item.sakKind,
           henvisning: item.henvisning,

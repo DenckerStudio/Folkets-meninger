@@ -139,6 +139,7 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
         detailJson: detail,
         cachedStatus: existing?.status ?? row.status,
         numericStatus: issue?.stortingetNumericStatus,
+        listInnstilling: issue?.listInnstilling,
       });
 
       const payload: IssueListRow = {

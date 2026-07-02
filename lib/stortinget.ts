@@ -6,6 +6,7 @@ import {
 import {
   resolveSakListStatus,
   type SakTreatmentStatus,
+  type ListSakInnstillingFields,
 } from './sak-status';
 import { getSakVotingWindow } from './sak-voting-window';
 import { parseStortingetDotNetDateToISO, stortingetUrl, type StortingetFormat } from './stortinget-utils';
@@ -52,6 +53,7 @@ export interface SakListItem {
   status: SakTreatmentStatus;
   /** Raw `status` from Stortinget list/detail export; used to beat stale cached detail_json. */
   stortingetNumericStatus?: number;
+  listInnstilling?: ListSakInnstillingFields;
   sakKind: SakKind | null;
   henvisning: string | null;
   dokumentgruppe: number | null;
