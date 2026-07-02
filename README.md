@@ -1,20 +1,77 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Folkets Stemme
 
-# Run and deploy your AI Studio app
+Folkets Stemme is a Next.js App Router application for following Stortinget
+saker, voting on active saker, and discussing political issues in a moderated
+forum. The app reads public Stortinget data from `data.stortinget.no`, stores
+app state in Supabase, and delegates AI summaries, forum prompt generation, and
+document embeddings to n8n workflows backed by Ollama.
 
-This contains everything you need to run your app locally.
+## Quick start
 
-View your app in AI Studio: https://ai.studio/apps/8ded3f6f-04bf-4be9-88c6-0dc9bcc5bc40
+**Prerequisites:** Node.js and access to the Supabase/n8n environment values.
 
-## Run Locally
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
 
-**Prerequisites:**  Node.js
+Fill `.env.local` from `.env.example` before starting the dev server. The
+minimum local app setup needs Supabase URL/keys; cron, SMTP, and n8n webhook
+values are only needed for the workflows that call those services.
 
+## Useful commands
 
-1. Install dependencies:
-   `npm install`
-2. Configure Supabase and `N8N_AI_SUMMARY_WEBHOOK_URL` in `.env.local` (see `AGENTS.md`)
-3. Run the app:
-   `npm run dev`
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Start the local Next.js dev server |
+| `npm run lint` | Run ESLint over the repo |
+| `npm run build` | Build the Next.js app |
+| `npm run test:unit` | Run focused TypeScript unit tests |
+| `npm run test:e2e` | Run Playwright smoke tests |
+
+## Architecture at a glance
+
+```text
+Browser / Next.js App Router
+  -> Supabase Auth + Postgres (votes, forum, notifications, sak cache)
+  -> data.stortinget.no (saker, details, publications)
+  -> n8n webhooks (AI summaries, document embeddings, forum prompts, cron)
+  -> Ollama / SearXNG / SMTP as workflow dependencies
+```
+
+Important constraints:
+
+- Public sak detail pages under `/dashboard/sak/[id]` can be viewed without
+  authentication; the rest of `/dashboard/*` requires a Supabase session.
+- Votes are accepted only while a sak is open. The app and `cast_vote` RPC both
+  check `status`, `ferdigbehandlet`, and `voting_closes_at`.
+- Human forum posts require a public first and last name. System forum threads
+  created by workflows use the `is_system_thread` path instead.
+- AI summary text is not generated in the Next.js app. The app stores source
+  context and triggers n8n; summaries are read back from Supabase.
+
+## Documentation index
+
+| File | Covers |
+|------|--------|
+| [`AGENTS.md`](AGENTS.md) | Agent-facing architecture facts, env vars, validation expectations, and operational notes |
+| [`supabase/README.md`](supabase/README.md) | Migration domains, voting RPCs, forum schema, notifications, RAG tables, and DB runbooks |
+| [`workflows/n8n/README.md`](workflows/n8n/README.md) | AI summary, forum prompt, document embedding, and app cron workflows |
+| [`infra/searxng/README.md`](infra/searxng/README.md) | SearXNG deployment/configuration used by forum prompt discovery |
+| [`scripts/deploy-forum-prompts-n8n.md`](scripts/deploy-forum-prompts-n8n.md) | Forum prompt workflow deployment notes |
+
+## Operational scripts
+
+| Script | Use |
+|--------|-----|
+| `scripts/backfill-sak-status.ts` | Refresh `ferdigbehandlet`, `voting_closes_at`, and sak metadata from Stortinget detail data |
+| `scripts/backfill-sak-documents.ts` | Ingest recent sak documents and create pending RAG chunks |
+| `scripts/deploy-document-embeddings-n8n.mjs` | Deploy/update the document embeddings workflow in n8n |
+| `scripts/archive-misaligned-forum-prompts.sql` | Archive active forum prompts that should no longer be shown |
+
+Example status refresh:
+
+```bash
+npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
+```

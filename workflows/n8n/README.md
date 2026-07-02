@@ -131,6 +131,16 @@ Webhook: `POST /webhook/folkets-forum-prompts` (env `N8N_FORUM_PROMPTS_WEBHOOK_U
 
 **Live workflow:** https://n8n.heyklever.app/workflow/IkedEmJEJFqj7ZnM
 
+App-side kilde:
+
+- `lib/stortinget-detail-cache.ts` kaller `ingestSakDocuments` ved cache-hit og
+  cache-refresh.
+- `lib/stortinget-document-ingest.ts` parser saksdokumenter, henter visbar HTML
+  fra Stortinget, lagrer tekst/HTML i `stortinget_issue_documents`, og oppretter
+  `document_chunks` med `embedding_status='pending'`.
+- `lib/trigger-document-embeddings-webhook.ts` sender fire-and-forget webhook når
+  nye chunks er opprettet.
+
 | Nøkkel | Verdi |
 |--------|--------|
 | `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL` | f.eks. `https://n8n.heyklever.app/webhook/folkets-document-embeddings` |
@@ -146,6 +156,21 @@ curl -X POST "$N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL" \
 Supabase-migrasjon: `20260617120000_sak_documents_rag.sql` (`content_html`, `document_chunks`, pgvector).
 
 AI-sammendrag (`ai-summary-backfill`) inkluderer nå `rag_chunks` i kontekst når dokumenter er ingestet.
+
+Backfill / deploy:
+
+```bash
+npx tsx scripts/backfill-sak-documents.ts 10
+node scripts/deploy-document-embeddings-n8n.mjs
+```
+
+Feilsøking:
+
+| Symptom | Sjekk |
+|---------|-------|
+| Ingen dokumenter | Saken mangler visbare dokumentreferanser, eller `parseSakDocuments` fant ingen |
+| Chunks blir stående `pending` | `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL`, n8n workflow-status, og Ollama embedding-modell |
+| AI-sammendrag mangler dokumentkontekst | Kjør dokumentbackfill først, deretter AI summary backfill/webhook |
 
 ## App cron (erstatter Vercel Cron)
 

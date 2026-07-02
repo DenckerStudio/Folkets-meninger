@@ -11,7 +11,7 @@ docker compose up -d
 
 Default URL (local): `http://127.0.0.1:8080`
 
-Production example: `https://search.heyklever.app` — put behind reverse proxy with TLS.
+Production example used by the n8n workflow source: `https://searxng.heyklever.app` — put behind reverse proxy with TLS.
 
 ## n8n configuration
 
@@ -19,15 +19,15 @@ In workflow **Folkets Stemme – Forum trending prompts**, set the **Backfill se
 
 | Key | Example |
 |-----|---------|
-| `searxngBaseUrl` | `https://search.heyklever.app` |
-| `batchLimit` | `5` (max prompts per run) |
+| `searxngBaseUrl` | `https://searxng.heyklever.app` |
+| `batchLimit` | `25` in the Set node; workflow code clamps generated prompts to max 12 per run |
 
 n8n blocks `$env` in expressions — use Set nodes, not environment variables in node fields.
 
 ## JSON API
 
 ```bash
-curl 'https://search.heyklever.app/search?q=site:vg.no+nyheter&format=json&language=nb-NO'
+curl 'https://searxng.heyklever.app/search?q=site:vg.no+nyheter&format=json&language=nb-NO'
 ```
 
 If SearXNG is unavailable, the n8n workflow continues with RSS-only headlines.
