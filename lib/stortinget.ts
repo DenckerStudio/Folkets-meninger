@@ -214,9 +214,12 @@ export async function getSakPageBundle(
 
   const [voteTotals, issueMeta] = await Promise.all([getVoteTotals([id]), getSakIssueMeta(id)]);
   const sak = mapDetailToListItem(detail, voteTotals[id] ?? EMPTY_VOTES);
+  sak.status = resolveSakListStatus({
+    ferdigbehandlet: detail.ferdigbehandlet,
+    numericStatus: detail.status,
+  });
 
   if (issueMeta) {
-    sak.status = issueMeta.status;
     if (issueMeta.lastUpdatedAt && !sak.date) {
       sak.date = issueMeta.lastUpdatedAt.split('T')[0];
     }

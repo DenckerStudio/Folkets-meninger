@@ -6,7 +6,7 @@ import {
   getSakKindLabel,
   type SakKind,
 } from './stortinget-sak-presentation';
-import { inferFerdigbehandletFromListSak, resolveSakListStatus, type SakTreatmentStatus } from './sak-status';
+import { inferFerdigbehandletFromListSak, resolveSakListStatus, resolveSakStatusFromSources, type SakTreatmentStatus } from './sak-status';
 import { parseStortingetDotNetDateToISO, stortingetUrl, type StortingetFormat } from './stortinget-utils';
 import { STORTINGET_ACTIVE_SESSION_ID } from './stortinget-config';
 import type { SakListItem, SakVoteTotals, StortingetSak } from './stortinget';
@@ -42,6 +42,8 @@ function canRefreshFromStortingetApi(): boolean {
   return !isProductionBuild();
 }
 
+import type { StortingetSakDetail } from './stortinget';
+
 type DbIssueRow = {
   id: string;
   title: string | null;
@@ -55,6 +57,7 @@ type DbIssueRow = {
   henvisning: string | null;
   dokumentgruppe: number | null;
   category: string | null;
+  detail_json?: StortingetSakDetail | null;
 };
 
 export function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTotals = EMPTY_VOTES): SakListItem {
@@ -86,13 +89,11 @@ export function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTot
 }
 
 function resolveRowTreatmentStatus(row: DbIssueRow): SakTreatmentStatus {
-  if (typeof row.ferdigbehandlet === 'boolean') {
-    return resolveSakListStatus({ ferdigbehandlet: row.ferdigbehandlet, cachedStatus: row.status });
-  }
-  if (row.status === 'closed' || row.status === 'pending') {
-    return row.status;
-  }
-  return 'pending';
+  return resolveSakStatusFromSources({
+    ferdigbehandlet: row.ferdigbehandlet,
+    detailJson: row.detail_json ?? null,
+    cachedStatus: row.status,
+  });
 }
 
 function resolveRowVotingState(row: DbIssueRow, status: SakTreatmentStatus) {
@@ -172,18 +173,18 @@ async function getCachedIssueOverlays(
       const chunk = issueIds.slice(i, i + chunkSize);
       const { data, error } = await service
         .from('stortinget_issues')
-        .select('id, status, ferdigbehandlet, voting_closes_at, last_updated_at')
+        .select('id, status, ferdigbehandlet, voting_closes_at, last_updated_at, detail_json')
         .in('id', chunk);
 
       if (error || !data) continue;
 
       for (const row of data) {
-        const status =
-          typeof row.ferdigbehandlet === 'boolean'
-            ? resolveSakListStatus({ ferdigbehandlet: row.ferdigbehandlet, cachedStatus: row.status })
-            : row.status === 'closed' || row.status === 'pending'
-              ? row.status
-              : 'pending';
+        const detail = row.detail_json as StortingetSakDetail | null;
+        const status = resolveSakStatusFromSources({
+          ferdigbehandlet: row.ferdigbehandlet,
+          detailJson: detail,
+          cachedStatus: row.status,
+        });
 
         let votingDaysLeft: number | null = null;
         let votingOpen = status !== 'closed';
@@ -291,7 +292,7 @@ async function readSakerListFromDbUncached(): Promise<{ items: SakListItem[]; st
   }
 
   const baseSelect =
-    'id, title, summary, status, ferdigbehandlet, voting_closes_at, last_updated_at, last_synced_at, sak_kind, henvisning, dokumentgruppe';
+    'id, title, summary, status, ferdigbehandlet, voting_closes_at, last_updated_at, last_synced_at, sak_kind, henvisning, dokumentgruppe, detail_json';
 
   try {
     const service = getServiceSupabase();
@@ -520,7 +521,7 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T): Promi
 async function queryPopularRowsFromDb(): Promise<DbIssueRow[]> {
   const service = getServiceSupabase();
   const baseSelect =
-    'id, title, summary, status, ferdigbehandlet, voting_closes_at, last_updated_at, last_synced_at, sak_kind, henvisning, dokumentgruppe';
+    'id, title, summary, status, ferdigbehandlet, voting_closes_at, last_updated_at, last_synced_at, sak_kind, henvisning, dokumentgruppe, detail_json';
 
   const withCategory = await service
     .from('stortinget_issues')

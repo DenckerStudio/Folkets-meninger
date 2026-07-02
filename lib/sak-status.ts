@@ -5,6 +5,11 @@ type ListSakInnstillingFields = {
   innstilling_kode?: number;
 };
 
+type SakDetailStatusFields = {
+  ferdigbehandlet?: boolean | null;
+  status?: number | null;
+};
+
 /** Stortinget list export can keep status=1 while detail has ferdigbehandlet=true. */
 export function resolveSakListStatus(input: {
   ferdigbehandlet?: boolean | null;
@@ -12,12 +17,47 @@ export function resolveSakListStatus(input: {
   cachedStatus?: string | null;
 }): SakTreatmentStatus {
   if (input.ferdigbehandlet === true) return 'closed';
-  if (input.cachedStatus === 'closed') return 'closed';
   if (input.ferdigbehandlet === false) {
     return input.numericStatus === 1 ? 'pending' : 'closed';
   }
+  if (input.cachedStatus === 'closed') return 'closed';
   if (input.numericStatus === 1) return 'pending';
+  if (input.numericStatus != null) return 'closed';
+  if (input.cachedStatus === 'pending') return 'pending';
   return 'closed';
+}
+
+/** Prefer cached detail / DB column over list-export heuristics. */
+export function resolveSakStatusFromSources(input: {
+  ferdigbehandlet?: boolean | null;
+  detailJson?: SakDetailStatusFields | null;
+  cachedStatus?: string | null;
+  numericStatus?: number | null;
+  listInnstilling?: ListSakInnstillingFields | null;
+}): SakTreatmentStatus {
+  const detailFerdigbehandlet =
+    typeof input.detailJson?.ferdigbehandlet === 'boolean' ? input.detailJson.ferdigbehandlet : null;
+  const effectiveFerdigbehandlet =
+    typeof input.ferdigbehandlet === 'boolean'
+      ? input.ferdigbehandlet
+      : detailFerdigbehandlet;
+  const numericStatus =
+    input.numericStatus ??
+    (typeof input.detailJson?.status === 'number' ? input.detailJson.status : null);
+
+  if (typeof effectiveFerdigbehandlet === 'boolean') {
+    return resolveSakListStatus({
+      ferdigbehandlet: effectiveFerdigbehandlet,
+      numericStatus,
+      cachedStatus: input.cachedStatus,
+    });
+  }
+
+  return resolveSakListStatus({
+    ferdigbehandlet: inferFerdigbehandletFromListSak(input.listInnstilling ?? {}),
+    numericStatus,
+    cachedStatus: input.cachedStatus,
+  });
 }
 
 /** @deprecated Use resolveSakListStatus */
