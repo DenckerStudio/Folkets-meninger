@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build n8n update_workflow payload from forum-trending-prompts.workflow.ts
- * Unescapes template-literal backslashes so code runs correctly in n8n Code nodes.
+ * Build n8n update_workflow payload from forum-trending-prompts.workflow.ts (v7 synthesis)
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -23,27 +22,55 @@ function extract(name) {
 const operations = [
   {
     type: 'setNodeParameter',
+    nodeName: 'Deep research (Ollama)',
+    path: '/options/systemMessage',
+    value: extract('DEEP_RESEARCH_SYSTEM'),
+  },
+  {
+    type: 'setNodeParameter',
     nodeName: 'Generate prompts (Ollama)',
     path: '/options/systemMessage',
     value: extract('PROMPT_SYSTEM'),
   },
   {
+    type: 'setNodeParameter',
+    nodeName: 'Moderate prompts (Ollama)',
+    path: '/options/systemMessage',
+    value: extract('MODERATION_SYSTEM'),
+  },
+  {
     type: 'updateNodeParameters',
-    nodeName: 'Fetch RSS headlines',
+    nodeName: 'Fetch pending clusters',
+    parameters: { operation: 'executeQuery', query: extract('PENDING_CLUSTERS_SQL') },
+    replace: true,
+  },
+  {
+    type: 'updateNodeParameters',
+    nodeName: 'Expand cluster',
     parameters: {
-      mode: 'runOnceForAllItems',
+      mode: 'runOnceForEachItem',
       language: 'javaScript',
-      jsCode: extract('FETCH_RSS_JS'),
+      jsCode: extract('EXPAND_CLUSTER_JS'),
     },
     replace: true,
   },
   {
     type: 'updateNodeParameters',
-    nodeName: 'Collect all headlines',
+    nodeName: 'Fetch article bodies',
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
-      jsCode: extract('COLLECT_HEADLINES_JS'),
+      jsCode: extract('FETCH_ARTICLE_BODIES_JS'),
+    },
+    replace: true,
+  },
+  {
+    type: 'updateNodeParameters',
+    nodeName: 'Build deep research input',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      language: 'javaScript',
+      jsCode: extract('BUILD_DEEP_RESEARCH_INPUT_JS'),
     },
     replace: true,
   },
@@ -59,13 +86,38 @@ const operations = [
   },
   {
     type: 'updateNodeParameters',
-    nodeName: 'Moderation + route',
+    nodeName: 'Build moderation input',
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
-      jsCode: extract('MODERATION_ROUTE_JS'),
+      jsCode: extract('BUILD_MODERATION_INPUT_JS'),
     },
     replace: true,
+  },
+  {
+    type: 'updateNodeParameters',
+    nodeName: 'Prepare saves',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      language: 'javaScript',
+      jsCode: extract('PREPARE_SAVES_JS'),
+    },
+    replace: true,
+  },
+  {
+    type: 'updateNodeParameters',
+    nodeName: 'Fetch existing prompts',
+    parameters: {
+      operation: 'executeQuery',
+      query: extract('EXISTING_PROMPTS_SQL'),
+    },
+    replace: true,
+  },
+  {
+    type: 'setNodeParameter',
+    nodeName: 'Generate prompts (Ollama)',
+    path: '/options/maxIterations',
+    value: 8,
   },
 ];
 

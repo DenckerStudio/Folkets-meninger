@@ -1,4 +1,6 @@
-import { Info, Shield, Database, Lock, Map, Lightbulb, MessageSquarePlus } from 'lucide-react';
+import Link from 'next/link';
+import { Info, Shield, Database, Lock, Map, Lightbulb, MessageSquarePlus, Trophy } from 'lucide-react';
+import { routes } from '@/lib/routes';
 
 export default function OmOssPage() {
   return (
@@ -92,16 +94,50 @@ export default function OmOssPage() {
           <div className="relative border-l-2 border-emerald-200 pl-6 pb-2">
             <div className="absolute w-4 h-4 bg-emerald-500 rounded-full -left-[9px] top-1 ring-4 ring-white"></div>
             <h3 className="text-lg font-bold text-gray-900">Fase 1: Lansering & Kjernefunksjonalitet (Nå)</h3>
-            <p className="text-gray-600 mt-2">Visning av saker fra Stortinget, forenkling av tekst med AI, og sikker innlogging for å avgi stemme på saker og høringer.</p>
+            <p className="text-gray-600 mt-2">
+              Visning av saker fra Stortinget, forenkling av tekst med AI, sikker innlogging for å avgi stemme på saker og
+              høringer, samt forum med reels og offentlige profiler.
+            </p>
+          </div>
+          <div className="relative border-l-2 border-emerald-200 pl-6 pb-2">
+            <div className="absolute w-4 h-4 bg-emerald-500 rounded-full -left-[9px] top-1 ring-4 ring-white"></div>
+            <h3 className="text-lg font-bold text-gray-900">Fase 2: Poeng, tillit og reels fra brukere (Pågår)</h3>
+            <p className="text-gray-600 mt-2">
+              Poengsystem som belønner konstruktiv aktivitet over tid. Poeng er alltid synlige og bygger troverdighet —
+              ikke stemmevekt. Pålitelige brukere (750+ poeng) kan foreslå forum-reels til admin-godkjenning. Kuratorer
+              (2 000+ poeng) kan publisere direkte fra godkjente kilder.
+            </p>
+            <div className="mt-4 rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 shadow-sm">
+              <div className="flex items-center gap-2 text-amber-950 font-semibold">
+                <Trophy className="w-5 h-5" />
+                Poengnivåer
+              </div>
+              <ul className="mt-3 space-y-2 text-sm text-amber-900">
+                <li><strong>Aktiv (250 poeng):</strong> Synlig merke som aktiv bidragsyter.</li>
+                <li><strong>Pålitelig (750 poeng):</strong> Foreslå forum-reels til admin-godkjenning.</li>
+                <li><strong>Kurator (2 000 poeng):</strong> Publiser reels fra godkjente kilder uten admin.</li>
+                <li><strong>Veteran (5 000 poeng):</strong> Foreslå nye kilder og høyere publiseringsgrense.</li>
+              </ul>
+              <p className="mt-3 text-sm text-amber-800">
+                Du tjener poeng gjennom foruminnlegg, kommentarer, likes, stemming på saker og reels, og fullført
+                offentlig profil med bekreftet e-post og telefon. Alle stemmer teller likt i politikken.
+              </p>
+              <Link
+                href={routes.login}
+                className="mt-4 inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+              >
+                Opprett konto og begynn å samle poeng
+              </Link>
+            </div>
           </div>
           <div className="relative border-l-2 border-gray-200 pl-6 pb-2">
             <div className="absolute w-4 h-4 bg-gray-300 rounded-full -left-[9px] top-1 ring-4 ring-white"></div>
-            <h3 className="text-lg font-bold text-gray-900">Fase 2: Interaksjon & Valgløfter</h3>
-            <p className="text-gray-600 mt-2">Lansering av diskusjonsforum, mulighet for å følge politikere, og sporing av hvorvidt politikere holder sine valgløfter over tid.</p>
+            <h3 className="text-lg font-bold text-gray-900">Fase 3: Valgløfter og politikeroppfølging</h3>
+            <p className="text-gray-600 mt-2">Mulighet for å følge politikere og spore hvorvidt politikere holder sine valgløfter over tid.</p>
           </div>
           <div className="relative border-l-2 border-transparent pl-6">
             <div className="absolute w-4 h-4 bg-gray-300 rounded-full -left-[9px] top-1 ring-4 ring-white"></div>
-            <h3 className="text-lg font-bold text-gray-900">Fase 3: Kommune & Fylkesnivå</h3>
+            <h3 className="text-lg font-bold text-gray-900">Fase 4: Kommune & Fylkesnivå</h3>
             <p className="text-gray-600 mt-2">Utvidelse av datagrunnlaget til å inkludere lokale politiske saker fra kommunestyrer og fylkesting for mer lokal innflytelse.</p>
           </div>
         </div>

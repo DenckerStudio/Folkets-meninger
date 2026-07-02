@@ -10,7 +10,7 @@ export async function requireForumAdminPage(): Promise<void> {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`${routes.login}?next=${encodeURIComponent(routes.adminForumPrompts)}`);
+    redirect(`${routes.login}?next=${encodeURIComponent(`${routes.adminForumPrompts}?tab=pipeline`)}`);
   }
 
   const admin = await isForumAdmin(user.id, user.email);

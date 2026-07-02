@@ -1,18 +1,18 @@
 import { getServiceSupabase } from './supabase';
 import { getSakDetail, type StortingetSakDetail } from './stortinget';
+import { resolveSakListStatus } from './sak-status';
 import { mapSakPresentation } from './stortinget-sak-presentation';
 import { triggerAiSummaryWebhook } from './trigger-ai-summary-webhook';
 import { buildAiSummarySource, type AiSummaryDocumentSource } from './ai-summary/source-context';
 import { ingestSakDocuments } from './stortinget-document-ingest';
-import { resolveSakTreatmentStatus } from './sak-status';
 import { getSakVotingWindow } from './sak-voting-window';
 import { parseStortingetDotNetDateToISO } from './stortinget-utils';
 
-const DETAIL_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+const DETAIL_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export type SakIssueMeta = {
   lastUpdatedAt: string | null;
-  status: ReturnType<typeof resolveSakTreatmentStatus>;
+  status: ReturnType<typeof resolveSakListStatus>;
   ferdigbehandlet: boolean | null;
   votingClosesAt: string | null;
 };
@@ -24,7 +24,7 @@ function buildIssueUpsert(
   source: Awaited<ReturnType<typeof buildAiSummarySource>>,
   lastUpdatedAt?: string | null,
 ) {
-  const treatmentStatus = resolveSakTreatmentStatus({
+  const treatmentStatus = resolveSakListStatus({
     ferdigbehandlet: detail.ferdigbehandlet,
     numericStatus: detail.status,
   });
@@ -72,7 +72,7 @@ export async function getSakIssueMeta(sakId: string): Promise<SakIssueMeta | nul
       status:
         data.status === 'closed' || data.status === 'pending'
           ? data.status
-          : resolveSakTreatmentStatus({ ferdigbehandlet: data.ferdigbehandlet }),
+          : resolveSakListStatus({ ferdigbehandlet: data.ferdigbehandlet, cachedStatus: data.status }),
       ferdigbehandlet: data.ferdigbehandlet ?? null,
       votingClosesAt: data.voting_closes_at ?? null,
     };
@@ -113,32 +113,7 @@ export async function getCachedSakDetail(
   if (!opts?.forceRefresh && cached?.detail_json) {
     const age = Date.now() - new Date(cached.last_synced_at).getTime();
     if (age < DETAIL_CACHE_MAX_AGE_MS) {
-      const detail = cached.detail_json as StortingetSakDetail;
-      if (!cached.ai_summary_source_hash) {
-        void (async () => {
-          try {
-            const source = await updateAiSummarySource(service, sakId, detail, {
-              title: cached.title,
-              summary: cached.summary,
-            });
-            await service
-              .from('stortinget_issues')
-              .update({
-                ai_summary_source_context: source.text,
-                ai_summary_source_json: source.json,
-                ai_summary_source_hash: source.hash,
-                ai_summary_source_updated_at: new Date().toISOString(),
-              })
-              .eq('id', sakId);
-          } catch (error) {
-            console.warn('[ai-summary-source] Failed to backfill on cache hit:', error);
-          }
-        })();
-      }
-      void ingestSakDocuments(sakId, detail).catch((error) => {
-        console.warn('[document-ingest] Failed during cache hit:', error);
-      });
-      return detail;
+      return cached.detail_json as StortingetSakDetail;
     }
   }
 
@@ -159,7 +134,7 @@ export async function getCachedSakDetail(
         id: sakId,
         title: presentation.title || detail.korttittel || detail.tittel || `Sak ${sakId}`,
         summary: presentation.summary || detail.tittel || null,
-        status: resolveSakTreatmentStatus({
+        status: resolveSakListStatus({
           ferdigbehandlet: detail.ferdigbehandlet,
           numericStatus: detail.status,
         }),
@@ -231,7 +206,7 @@ async function updateAiSummarySource(
   });
 }
 
-export async function refreshStalePendingSakDetails(limit = 40): Promise<number> {
+export async function refreshStalePendingSakDetails(limit = 10): Promise<number> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return 0;
   }

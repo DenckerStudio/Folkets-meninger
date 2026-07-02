@@ -18,6 +18,8 @@ import { ProfilePublicSettings } from '@/components/profile/profile-public-setti
 import { ProfileAppPreferences } from '@/components/profile/profile-app-preferences';
 import { ProfileAdminLinks } from '@/components/profile/profile-admin-links';
 import { isProfileTabId, type ProfileTabId } from '@/components/profile/profile-tabs';
+import { getUserPointsProgress } from '@/lib/user-points-levels';
+import type { UserPointsProgress } from '@/lib/user-points-levels';
 
 function resolveTab(tabParam: string | null): ProfileTabId {
   if (isProfileTabId(tabParam)) return tabParam;
@@ -34,14 +36,19 @@ export function ProfileShell() {
   const [voteHistory, setVoteHistory] = useState<VoteHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [interestCategories, setInterestCategories] = useState<string[]>([]);
+  const [interestLabels, setInterestLabels] = useState<string[]>([]);
   const [categoriesSaving, setCategoriesSaving] = useState(false);
+  const [labelsSaving, setLabelsSaving] = useState(false);
   const [notifEmailEnabled, setNotifEmailEnabled] = useState(true);
   const [notifFreq, setNotifFreq] = useState<Record<string, string>>({
     forum: 'realtime',
     mentions: 'realtime',
     categories: 'daily',
+    labels: 'daily',
   });
   const [notifSaving, setNotifSaving] = useState(false);
+  const [points, setPoints] = useState(0);
+  const [pointsProgress, setPointsProgress] = useState<UserPointsProgress>(() => getUserPointsProgress(0));
 
   useEffect(() => {
     if (!user) {
@@ -60,10 +67,35 @@ export function ProfileShell() {
 
   useEffect(() => {
     if (!user) return;
+
+    fetch('/api/user/profile', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (typeof data.points === 'number') {
+          setPoints(data.points);
+        }
+        if (data.points_progress) {
+          setPointsProgress(data.points_progress);
+        } else if (typeof data.points === 'number') {
+          setPointsProgress(getUserPointsProgress(data.points));
+        }
+      })
+      .catch(() => {});
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
     fetch('/api/notifications/categories', { cache: 'no-store' })
       .then((res) => res.json())
       .then((json) => {
         if (Array.isArray(json.categories)) setInterestCategories(json.categories);
+      })
+      .catch(() => {});
+
+    fetch('/api/notifications/labels', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((json) => {
+        if (Array.isArray(json.labels)) setInterestLabels(json.labels);
       })
       .catch(() => {});
 
@@ -108,13 +140,18 @@ export function ProfileShell() {
       activeTab={activeTab}
       voteHistory={voteHistory}
       historyLoading={historyLoading}
+      points={points}
+      pointsProgress={pointsProgress}
       interestCategories={interestCategories}
+      interestLabels={interestLabels}
       categoriesSaving={categoriesSaving}
+      labelsSaving={labelsSaving}
       notifEmailEnabled={notifEmailEnabled}
       notifFreq={notifFreq}
       notifSaving={notifSaving}
       onSignOut={handleSignOut}
       onCategoriesChange={setInterestCategories}
+      onLabelsChange={setInterestLabels}
       onCategoriesSave={async () => {
         setCategoriesSaving(true);
         try {
@@ -125,6 +162,18 @@ export function ProfileShell() {
           });
         } finally {
           setCategoriesSaving(false);
+        }
+      }}
+      onLabelsSave={async () => {
+        setLabelsSaving(true);
+        try {
+          await fetch('/api/notifications/labels', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ labels: interestLabels }),
+          });
+        } finally {
+          setLabelsSaving(false);
         }
       }}
       onNotifEmailChange={setNotifEmailEnabled}
@@ -176,14 +225,20 @@ type ProfileShellAuthenticatedProps = {
   activeTab: ProfileTabId;
   voteHistory: VoteHistoryItem[];
   historyLoading: boolean;
+  points: number;
+  pointsProgress: UserPointsProgress;
   interestCategories: string[];
+  interestLabels: string[];
   categoriesSaving: boolean;
+  labelsSaving: boolean;
   notifEmailEnabled: boolean;
   notifFreq: Record<string, string>;
   notifSaving: boolean;
   onSignOut: () => void;
   onCategoriesChange: (next: string[]) => void;
+  onLabelsChange: (next: string[]) => void;
   onCategoriesSave: () => Promise<void>;
+  onLabelsSave: () => Promise<void>;
   onNotifEmailChange: (value: boolean) => void;
   onNotifFreqChange: (channel: string, value: string) => void;
   onNotifSave: () => Promise<void>;
@@ -194,14 +249,20 @@ function ProfileShellAuthenticated({
   activeTab,
   voteHistory,
   historyLoading,
+  points,
+  pointsProgress,
   interestCategories,
+  interestLabels,
   categoriesSaving,
+  labelsSaving,
   notifEmailEnabled,
   notifFreq,
   notifSaving,
   onSignOut,
   onCategoriesChange,
+  onLabelsChange,
   onCategoriesSave,
+  onLabelsSave,
   onNotifEmailChange,
   onNotifFreqChange,
   onNotifSave,
@@ -224,7 +285,13 @@ function ProfileShellAuthenticated({
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 px-1">
-      <ProfileHero user={user} voteCount={voteHistory.length} onSignOut={onSignOut} />
+      <ProfileHero
+        user={user}
+        voteCount={voteHistory.length}
+        points={points}
+        pointsProgress={pointsProgress}
+        onSignOut={onSignOut}
+      />
       <ProfileAdminLinks />
 
       <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8">
@@ -270,8 +337,12 @@ function ProfileShellAuthenticated({
             <ProfileInterests
               interestCategories={interestCategories}
               onCategoriesChange={onCategoriesChange}
+              interestLabels={interestLabels}
+              onLabelsChange={onLabelsChange}
               saving={categoriesSaving}
+              labelsSaving={labelsSaving}
               onSave={onCategoriesSave}
+              onLabelsSave={onLabelsSave}
             />
           )}
           {activeTab === 'preferanser' && <ProfileAppPreferences />}

@@ -1,0 +1,335 @@
+{
+  "id": "folkets-forum-sak-prompt-generator",
+  "name": "Folkets Stemme – Forum Stortinget-sak RAG prompt generator (v13)",
+  "nodes": [
+    {
+      "id": "52a27368-191f-4c41-80ac-3c592a69f456",
+      "name": "Daily 06:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "39ef302d-2786-41f7-8b0e-d8b70a112854",
+      "name": "Fetch sak for prompt",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        300,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH target AS (\n  SELECT i.id\n  FROM public.stortinget_issues i\n  WHERE i.status = 'pending'\n    AND EXISTS (\n      SELECT 1\n      FROM public.document_chunks dc\n      WHERE dc.issue_id = i.id\n        AND dc.embedding_status = 'ready'\n        AND dc.embedding IS NOT NULL\n    )\n    AND NOT EXISTS (\n      SELECT 1\n      FROM public.forum_prompts fp\n      WHERE fp.stortinget_issue_id = i.id\n        AND fp.status IN ('active', 'draft')\n    )\n    AND (\n      NULLIF(trim($1::text), '') IS NULL\n      OR i.id = NULLIF(trim($1::text), '')\n    )\n  ORDER BY i.last_updated_at DESC NULLS LAST, i.first_seen_at ASC\n  LIMIT 1\n)\nSELECT\n  i.id AS issue_id,\n  i.title AS issue_title,\n  COALESCE(i.summary, '') AS issue_summary,\n  COALESCE(i.category, '') AS issue_category,\n  i.first_seen_at,\n  i.last_updated_at,\n  left(\n    COALESCE(\n      nullif(trim(i.detail_json->>'innstillingstekst'), ''),\n      nullif(trim(i.detail_json->>'vedtakstekst'), ''),\n      i.summary,\n      ''\n    ),\n    2400\n  ) AS detail_excerpt,\n  s.hva AS ai_hva,\n  s.hvem AS ai_hvem,\n  s.kostnad AS ai_kostnad,\n  (\n    SELECT COALESCE(\n      json_agg(\n        json_build_object(\n          'document_id', d.document_id,\n          'title', d.title,\n          'document_type', d.document_type,\n          'source_url', d.source_url\n        )\n        ORDER BY d.fetched_at DESC\n      ),\n      '[]'::json\n    )\n    FROM public.stortinget_issue_documents d\n    WHERE d.issue_id = i.id\n    LIMIT 6\n  ) AS documents,\n  (\n    SELECT COALESCE(\n      json_agg(DISTINCT lower(trim(question))) FILTER (\n        WHERE question IS NOT NULL AND trim(question) <> ''\n      ),\n      '[]'::json\n    )\n    FROM public.forum_prompts\n    WHERE trim(question) <> '' AND status IN ('active', 'draft')\n  ) AS existing_questions,\n  (\n    SELECT COALESCE(\n      MAX(sort_order) FILTER (\n        WHERE status = 'active' AND (expires_at IS NULL OR expires_at > now())\n      ),\n      0\n    )\n    FROM public.forum_prompts\n  ) AS max_sort_order\nFROM target t\nJOIN public.stortinget_issues i ON i.id = t.id\nLEFT JOIN public.issue_ai_summaries s ON s.stortinget_issue_id = i.id",
+        "options": {
+          "queryReplacement": "={{ [ (() => { const raw = $json.body?.stortinget_issue_id ?? $json.body?.stortingetIssueId ?? $json.body?.issue_id ?? $json.body?.id ?? $json.stortinget_issue_id ?? $json.issue_id ?? $json.id ?? ''; const id = String(raw || '').trim(); return id && id !== 'null' && id !== 'undefined' ? id : ''; })() ] }}"
+        }
+      },
+      "credentials": {}
+    },
+    {
+      "id": "f7a3d804-b665-4888-8f8c-242d8df24fa6",
+      "name": "Build RAG query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const sak = $('Fetch sak for prompt').first()?.json || {};\nconst parts = [\n  sak.issue_title,\n  sak.issue_summary,\n  sak.detail_excerpt,\n  sak.ai_hva,\n].map((v) => String(v || '').trim()).filter(Boolean);\nconst ragQuery = parts.join(' ').slice(0, 1200) || String(sak.issue_title || 'stortingssak');\nreturn [{ json: { ...sak, ragQuery } }];"
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "d122adae-dbd5-4024-a36b-333d5ad156be",
+      "name": "Ollama embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "<__PLACEHOLDER_VALUE__https://ollama.example.com/api/embeddings__>",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"nomic-embed-text:v1.5\",\"prompt\":{{ JSON.stringify($json.ragQuery) }}}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "4a48abe6-f9fd-4a5c-a6ca-fabd208c4013",
+      "name": "Map embedding for RAG",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const sak = $('Build RAG query').first()?.json || {};\nconst embItem = $('Ollama embeddings').first()?.json || {};\nconst embedding = embItem.embedding;\nif (!Array.isArray(embedding) || embedding.length === 0) {\n  throw new Error('Missing embedding vector for RAG retrieval');\n}\nconst vectorLiteral = '[' + embedding.join(',') + ']';\nreturn [{\n  json: {\n    issue_id: sak.issue_id,\n    vectorLiteral,\n    matchCount: 8,\n  },\n}];"
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "920695c3-026d-4b35-b7ac-1140c99531f8",
+      "name": "Retrieve RAG chunks",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  id,\n  document_id,\n  chunk_index,\n  content,\n  similarity\nFROM public.match_issue_document_chunks(\n  $1::text,\n  $2::vector,\n  $3::int\n)",
+        "options": {
+          "queryReplacement": "={{ [ $json.issue_id, $json.vectorLiteral, $json.matchCount || 8 ] }}"
+        }
+      },
+      "credentials": {}
+    },
+    {
+      "id": "3f1a91cd-3ff6-4a1f-9763-da7182b71b28",
+      "name": "Merge RAG context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const sak = $('Build RAG query').first()?.json || {};\nconst ragRows = $('Retrieve RAG chunks').all().map((i) => i.json);\nconst chunks = ragRows.filter((r) => r && r.content);\n\nconst chunkBlock = chunks.length\n  ? chunks\n      .map(\n        (c, idx) =>\n          '[' +\n          idx +\n          '] ' +\n          (c.document_id || 'dok') +\n          ' #' +\n          (c.chunk_index ?? 0) +\n          ' (likhet ' +\n          (typeof c.similarity === 'number' ? c.similarity.toFixed(2) : '?') +\n          ')\\n' +\n          String(c.content || '').slice(0, 1400),\n      )\n      .join('\\n\\n')\n  : '(ingen RAG-chunks — bruk sammendrag og utdrag)';\n\nconst docs = Array.isArray(sak.documents) ? sak.documents : [];\nconst docBlock = docs.length\n  ? docs\n      .map((d, idx) => '[' + idx + '] ' + (d.title || 'Dokument') + ' (' + (d.document_type || 'dok') + ')')\n      .join('\\n')\n  : '(ingen dokumenter)';\n\nconst summaryBlock = [\n  sak.ai_hva ? 'Hva: ' + sak.ai_hva : '',\n  sak.ai_hvem ? 'Hvem: ' + sak.ai_hvem : '',\n  sak.ai_kostnad ? 'Kostnad: ' + sak.ai_kostnad : '',\n]\n  .filter(Boolean)\n  .join('\\n');\n\nconst existing = (sak.existing_questions || []).slice(0, 35).map((q) => '- ' + q).join('\\n');\n\nconst promptText = [\n  'STORTINGSSAK: ' + (sak.issue_title || ''),\n  sak.issue_category ? 'Kategori: ' + sak.issue_category : '',\n  '',\n  'SAMMENDRAG:',\n  summaryBlock || sak.issue_summary || '(mangler)',\n  '',\n  'UTDRAG FRA SAK:',\n  sak.detail_excerpt || '(mangler)',\n  '',\n  'DOKUMENTER:',\n  docBlock,\n  '',\n  'RAG-CHUNKS (grunnlag for spørsmål):',\n  chunkBlock,\n  '',\n  'EXISTING_PROMPTS (unngå duplikat):',\n  existing || '(ingen)',\n  '',\n  'Returner research + ett JA/NEI-spørsmål som JSON.',\n].join('\\n');\n\nconst sourceHeadlines = chunks.map((c) => ({\n  title: String(c.document_id || 'Dokument') + ' (chunk ' + String(c.chunk_index ?? 0) + ')',\n  url: '/dashboard/sak/' + sak.issue_id,\n  outlet: 'Stortinget',\n  excerpt: String(c.content || '').slice(0, 400),\n  document_id: c.document_id,\n  chunk_index: c.chunk_index,\n  similarity: c.similarity,\n}));\n\nif (sourceHeadlines.length === 0 && sak.issue_id) {\n  sourceHeadlines.push({\n    title: sak.issue_title || 'Stortingssak',\n    url: '/dashboard/sak/' + sak.issue_id,\n    outlet: 'Stortinget',\n    excerpt: String(sak.detail_excerpt || sak.issue_summary || '').slice(0, 400),\n  });\n}\n\nreturn [{\n  json: {\n    ...sak,\n    promptText,\n    rag_chunks: chunks,\n    source_headlines: sourceHeadlines,\n  },\n}];"
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "32e25aa2-6f78-4efa-84ac-151a5cdeb736",
+      "name": "Sak prompt generator (Ollama)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1500,
+        300
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.promptText }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "Du er AI-journalist for «Folkets Stemme» (v13 – Stortinget-sak med RAG).\n\nINPUT: én stortingssak med sammendrag, utdrag og nummererte RAG-chunks [0], [1], …\nLes kildene og lag nøyaktig ETT JA/NEI-spørsmål for forum-avstemning om et konkret politisk valg i saken.\n\nSpørsmål-regler:\n- Konkret politisk valg («Mener du …», «Støtter du at …», «Bør Norge …»)\n- ALDRI sitér sakstittel i anførselstegn som spørsmålet\n- ALDRI «Støtter du at Stortinget følger opp saken: «…»?»\n- Unngå duplikat av EXISTING_PROMPTS (semantisk samme tema)\n- Maks 120 tegn, grammatisk korrekt norsk\n- Spørsmålet SKAL dekkes av RAG-chunks eller sammendrag (source_indices)\n- Nøytral formulering — ikke «regjeringens forslag» uten kontekst\n\nReturner KUN gyldig JSON:\n{\n  \"research\": {\n    \"story_title\": \"…\",\n    \"summary\": \"2–3 setninger\",\n    \"political_choice\": \"…\",\n    \"confidence\": \"high|medium|low\"\n  },\n  \"prompt\": {\n    \"question\": \"…\",\n    \"novelty_explanation\": \"maks 160 tegn\",\n    \"source_indices\": [0],\n    \"topic_tags\": [\"stortingssak\"],\n    \"sensitivity\": \"low|high\",\n    \"repeat_reason\": null\n  }\n}\n\nHvis kildene mangler substans: sett repeat_reason og tom question.",
+          "maxIterations": 2,
+          "returnIntermediateSteps": false,
+          "enableStreaming": false
+        },
+        "subnodes": {
+          "model": {
+            "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+            "version": "1",
+            "config": {
+              "name": "Sak prompt Ollama Chat Model",
+              "credentials": {},
+              "parameters": {
+                "model": "gemma4:e2b-it-qat",
+                "options": {
+                  "think": false,
+                  "temperature": 0.15,
+                  "numPredict": 1800,
+                  "numCtx": 12288
+                }
+              }
+            },
+            "id": "2a9d954b-ce69-4960-8a33-30b2cb33b06c",
+            "name": "Sak prompt Ollama Chat Model",
+            "_subnodeType": "ai_languageModel"
+          }
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "251f1ef8-ed95-4b68-805c-5dd45d111294",
+      "name": "Build save query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1700,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const sak = $('Merge RAG context').first()?.json || {};\nconst agent = $('Sak prompt generator (Ollama)').first()?.json || {};\nlet out = agent.output;\nif (typeof out === 'string') {\n  try { out = JSON.parse(out); } catch { out = {}; }\n}\nif (!out || typeof out !== 'object') out = {};\nif (!out.prompt) {\n  const raw = String(agent.text || agent.output || '').trim();\n  const match = raw.match(/\\{[\\s\\S]*\\}/);\n  if (match) {\n    try { out = JSON.parse(match[0]); } catch { out = {}; }\n  }\n}\nconst prompt = out.prompt || {};\nconst research = out.research || {};\n\nconst esc = (s) => String(s ?? '').replace(/'/g, \"''\");\nconst issueId = String(sak.issue_id || '').trim();\nconst question = String(prompt.question || '').trim();\nconst confidence = String(research.confidence || 'medium').toLowerCase();\nconst pc = String(research.political_choice || '').trim();\nconst hasPolitics = pc && !/^ingen politisk valg$/i.test(pc);\nconst ragChunks = Array.isArray(sak.rag_chunks) ? sak.rag_chunks : [];\nconst hasContext =\n  ragChunks.length > 0 ||\n  String(sak.detail_excerpt || '').trim().length >= 80 ||\n  String(sak.ai_hva || '').trim().length >= 40;\nconst valid =\n  issueId &&\n  question.length >= 15 &&\n  hasPolitics &&\n  hasContext &&\n  confidence !== 'low';\n\nif (!issueId) {\n  return [{ json: { skip: true, reason: 'missing_issue_id' } }];\n}\n\nif (!valid) {\n  return [{\n    json: {\n      skip: true,\n      outcome: 'rejected',\n      issue_id: issueId,\n      reason: !question\n        ? 'empty_question'\n        : confidence === 'low'\n          ? 'low_confidence'\n          : !hasPolitics\n            ? 'no_political_choice'\n            : 'insufficient_context',\n    },\n  }];\n}\n\nconst topicTags = Array.isArray(prompt.topic_tags)\n  ? [...new Set(['stortingssak', ...prompt.topic_tags])]\n  : ['stortingssak'];\nconst topicTagsSql =\n  'ARRAY[' + topicTags.map((t) => \"'\" + esc(t) + \"'\").join(',') + ']::text[]';\nconst sensitivity = esc(prompt.sensitivity || 'low');\nconst sortOrder = Number(sak.max_sort_order || 0) + 1;\nconst optionsJson = esc(\n  JSON.stringify([\n    { id: 'ja', label: 'Ja' },\n    { id: 'nei', label: 'Nei' },\n    { id: 'ikke_interessert', label: 'Ikke interessert' },\n  ]),\n);\nconst sourceHeadlines = esc(JSON.stringify(sak.source_headlines || []));\nconst generationMetadata = esc(\n  JSON.stringify({\n    source_type: 'stortinget_sak',\n    confidence,\n    rag_chunk_count: ragChunks.length,\n    rag_chunks: ragChunks.slice(0, 8).map((c) => ({\n      document_id: c.document_id,\n      chunk_index: c.chunk_index,\n      similarity: c.similarity,\n    })),\n    political_choice: pc,\n  }),\n);\nconst researchJson = esc(JSON.stringify(research));\n\nconst query = [\n  'INSERT INTO public.forum_prompts (',\n  '  question, options, source_headlines, topic_tags, sensitivity,',\n  '  status, sort_order, stortinget_issue_id, generation_metadata',\n  ') VALUES (',\n  \"  '\" + esc(question) + \"',\",\n  \"  '\" + optionsJson + \"'::jsonb,\",\n  \"  '\" + sourceHeadlines + \"'::jsonb,\",\n  '  ' + topicTagsSql + ',',\n  \"  '\" + sensitivity + \"',\",\n  \"  'draft',\",\n  '  ' + sortOrder + ',',\n  \"  '\" + esc(issueId) + \"',\",\n  \"  '\" + generationMetadata + \"'::jsonb\",\n  ')',\n  'RETURNING id, question, stortinget_issue_id;',\n].join('\\n');\n\nreturn [{\n  json: {\n    query,\n    outcome: 'saved',\n    issue_id: issueId,\n    question,\n    research,\n  },\n}];"
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "e0e6d6d0-ec67-4d87-a279-87fe53dc9017",
+      "name": "Save prompt",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1900,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.query || \"SELECT 1 AS skipped WHERE false\" }}"
+      },
+      "credentials": {}
+    },
+    {
+      "id": "6720c00e-69bc-46f5-bfeb-c01cb9fa3fb8",
+      "name": "Webhook sak prompt generator",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        100,
+        450
+      ],
+      "parameters": {
+        "path": "folkets-forum-sak-prompt-generator",
+        "httpMethod": "POST",
+        "responseMode": "onReceived"
+      },
+      "webhookId": "3bdcd8fc-22c9-4d7d-a8c4-ac1ecfddd0bb"
+    }
+  ],
+  "connections": {
+    "Daily 06:00": {
+      "main": [
+        [
+          {
+            "node": "Fetch sak for prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch sak for prompt": {
+      "main": [
+        [
+          {
+            "node": "Build RAG query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build RAG query": {
+      "main": [
+        [
+          {
+            "node": "Ollama embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama embeddings": {
+      "main": [
+        [
+          {
+            "node": "Map embedding for RAG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map embedding for RAG": {
+      "main": [
+        [
+          {
+            "node": "Retrieve RAG chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve RAG chunks": {
+      "main": [
+        [
+          {
+            "node": "Merge RAG context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge RAG context": {
+      "main": [
+        [
+          {
+            "node": "Sak prompt generator (Ollama)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sak prompt generator (Ollama)": {
+      "main": [
+        [
+          {
+            "node": "Build save query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build save query": {
+      "main": [
+        [
+          {
+            "node": "Save prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook sak prompt generator": {
+      "main": [
+        [
+          {
+            "node": "Fetch sak for prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

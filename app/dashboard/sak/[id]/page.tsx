@@ -2,7 +2,7 @@ import { getSakPageBundle, type StortingetSakDetail } from '@/lib/stortinget';
 import { classifySakKind, getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { SakMetaCard, SakProcessingBadge, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
-import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS, SAK_TYPE_BADGE_CLASS, resolveSakTreatmentStatus } from '@/lib/sak-status';
+import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS, SAK_TYPE_BADGE_CLASS, resolveSakListStatus } from '@/lib/sak-status';
 import { getSakVotingWindow } from '@/lib/sak-voting-window';
 import { formatStortingetDate } from '@/lib/stortinget-horinger';
 import { SaksgangTimeline, type SaksgangStep } from '@/components/sak/saksgang-timeline';
@@ -19,6 +19,10 @@ import { SakDocumentsSection } from '@/components/sak/sak-documents-section';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
+import { routes } from '@/lib/routes';
+import { getServerSupabase } from '@/lib/supabase-server';
+import { isForumAdmin } from '@/lib/forum/admin';
+import { AdminGenerateSakReelButton } from '@/components/forum/admin-generate-sak-reel-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -114,6 +118,14 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
   const { sak, detail: detailedContent, issueMeta } = bundle;
   const documents = await getSakDocumentsWithStatus(sak.id, detailedContent);
 
+  const supabase = await getServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const showAdminReelButton = user
+    ? await isForumAdmin(user.id, user.email)
+    : false;
+
   const innstillingstekst = detailedContent?.innstillingstekst;
   const kortvedtak = detailedContent?.kortvedtak;
   const vedtakstekst = detailedContent?.vedtakstekst;
@@ -142,7 +154,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
     });
 
   const treatmentStatus = detailedContent
-    ? resolveSakTreatmentStatus({
+    ? resolveSakListStatus({
         ferdigbehandlet: detailedContent.ferdigbehandlet,
         numericStatus: detailedContent.status,
       })
@@ -166,7 +178,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
             Tilbake til oversikt
           </Link>
           <div className="flex gap-3">
-            <Link href={`/dashboard/forum?sak=${sak.id}`} className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
+            <Link href={`${routes.forum}?sak=${sak.id}`} className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
               <MessageSquare className="mr-1.5 w-4 h-4" />
               Diskuter i forum
             </Link>
@@ -429,6 +441,14 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
 
       <FadeIn delay={0.4} direction="up">
         <PoliticianResponseForm sakId={sak.id} />
+      </FadeIn>
+
+      <FadeIn delay={0.45} direction="up">
+        {showAdminReelButton ? (
+          <div className="mb-6">
+            <AdminGenerateSakReelButton issueId={sak.id} issueTitle={sak.title} />
+          </div>
+        ) : null}
       </FadeIn>
 
       <FadeIn delay={0.5} direction="up">

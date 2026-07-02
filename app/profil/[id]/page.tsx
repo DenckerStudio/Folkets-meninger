@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { ArrowLeft, EyeOff, MessageSquare, ShieldCheck, Trophy, UserCircle } from 'lucide-react';
+import { ArrowLeft, EyeOff, MessageSquare, ShieldCheck, UserCircle } from 'lucide-react';
 import { notFound } from 'next/navigation';
+import { PointsProgress, PointsTierBadge } from '@/components/profile/points-progress';
 import { getPublicProfile } from '@/lib/public-profile';
 import { routes } from '@/lib/routes';
 
@@ -38,19 +39,21 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
               <h1 className="truncate text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
                 {profile.displayName}
               </h1>
-              <p className="mt-1 max-w-2xl text-sm text-gray-600">
-                Forumaktivitet og profilfelt brukeren har valgt å dele.
-              </p>
+              <div className="mt-2">
+                <PointsTierBadge points={profile.points} />
+              </div>
             </div>
           </div>
 
           <dl className="grid grid-cols-3 gap-3 lg:min-w-[22rem]">
             <StatCard label="Tråder" value={profile.stats.threads} />
             <StatCard label="Kommentarer" value={profile.stats.replies} />
-            <StatCard label="Poeng" value={profile.points ?? 'Skjult'} />
+            <StatCard label="Poeng" value={profile.points} />
           </dl>
         </div>
       </section>
+
+      <PointsProgress points={profile.points} progress={profile.pointsProgress} compact />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-6">
@@ -64,7 +67,8 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
               <div className="mt-4 flex gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-800">
                 <EyeOff className="mt-0.5 h-5 w-5 shrink-0" />
                 <p>
-                  Bio, parti og poeng er ikke delt offentlig. Foruminnlegg og kommentarer vises fordi de allerede er offentlige.
+                  Bio og parti er ikke delt offentlig. Foruminnlegg, kommentarer og poeng vises fordi de er en del av
+                  offentlig aktivitet.
                 </p>
               </div>
             )}
@@ -108,8 +112,9 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
           <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Delte preferanser</h2>
             <div className="mt-4 space-y-3">
+              <InfoRow label="Nivå" value={profile.pointsProgress.tier.name} />
+              <InfoRow label="Poeng" value={`${profile.points} poeng`} />
               <InfoRow label="Parti" value={profile.partyPreference || 'Ikke delt'} />
-              <InfoRow label="Poeng" value={profile.points !== null ? `${profile.points} poeng` : 'Ikke delt'} />
             </div>
           </section>
 
@@ -119,20 +124,18 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
               <div>
                 <p className="text-sm font-semibold text-emerald-950">Personvern først</p>
                 <p className="mt-1 text-sm leading-6 text-emerald-800">
-                  Stemmer forblir anonyme. Profilfelt deles bare når brukeren velger det.
+                  Stemmer forblir anonyme og teller likt. Poeng viser aktivitet og tillit, ikke stemmevekt.
                 </p>
               </div>
             </div>
           </section>
 
-          {profile.points !== null && (
+          {profile.pointsProgress.nextUnlock && (
             <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
-              <div className="flex items-center gap-2">
-                <Trophy className="h-5 w-5" />
-                <p className="text-sm font-semibold">Aktiv bidragsyter</p>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-amber-800">
-                Poeng kommer fra forumaktivitet, likes og deltakelse.
+              <p className="text-sm font-semibold">Neste nivå</p>
+              <p className="mt-2 text-sm leading-6 text-amber-800">{profile.pointsProgress.nextUnlock}</p>
+              <p className="mt-3 text-sm font-bold tabular-nums text-amber-900">
+                {profile.pointsProgress.progressLabel}
               </p>
             </section>
           )}

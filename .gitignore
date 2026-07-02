@@ -10,3 +10,5 @@ supabase/.temp/
 tsconfig.tsbuildinfo
 .vercel
 .env*.local
+test-results/
+.tmp/

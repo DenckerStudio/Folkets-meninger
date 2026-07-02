@@ -4,7 +4,7 @@ import {
   type SakKind,
 } from './stortinget-sak-presentation';
 import {
-  resolveSakTreatmentStatus,
+  resolveSakListStatus,
   type SakTreatmentStatus,
 } from './sak-status';
 import { getSakVotingWindow } from './sak-voting-window';
@@ -27,6 +27,8 @@ export interface StortingetSak {
   status: number;
   type?: number;
   dokumentgruppe?: number;
+  innstilling_id?: number;
+  innstilling_kode?: number;
   emne_liste?: { navn: string }[];
   sist_oppdatert_dato: string;
   henvisning: string;
@@ -123,7 +125,7 @@ function mapDetailToListItem(detail: StortingetSakDetail, votes: SakVoteTotals =
     category: presentation.category,
     date: parseStortingetDotNetDateToISO(detail.sist_oppdatert_dato ?? ''),
     votes,
-    status: resolveSakTreatmentStatus({
+    status: resolveSakListStatus({
       ferdigbehandlet: detail.ferdigbehandlet,
       numericStatus: detail.status,
     }),

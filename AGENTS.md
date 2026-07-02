@@ -11,9 +11,10 @@
 - Auth and DB are Supabase (Postgres); app uses SSR cookies/middleware refresh patterns.
 - Stortinget data comes from `data.stortinget.no` (public API).
 - AI summaries and forum prompts are produced externally via n8n + Ollama and stored in Supabase; the app should not assume Gemini for current summary generation.
-- Forum Reels: n8n workflow `MloIdsnX7FozM4dv`; `forum_trusted_sources` (unknown domain -> `draft`); votes Ja/Nei/Ikke interessert + separate discuss CTA.
+- Forum Reels: v5 trending (`MloIdsnX7FozM4dv`, draft); v12 Regjeringen RSS + prompt generator; **v13 Stortinget-sak RAG** (`forum-sak-prompt-generator.workflow.ts`, `N8N_FORUM_SAK_PROMPTS_WEBHOOK_URL`); `forum_trusted_sources`; votes Ja/Nei/Ikke interessert + discuss CTA.
+- Public reels UI gated by `FORUM_REELS_PUBLIC` (default false); admin pipeline at `/dashboard/admin/forum-prompts` (`?tab=pipeline` — RSS v12 + sak-RAG v13).
 - The repo expects validation via `npm run lint` and `npm run build`; no broad automated test suite assumed in workflows.
-- `.env.local` setup: copy `.env.example` to `.env.local` before starting the dev server.
+- First-time env setup: copy `.env.example` to `.env.local` before `npm run dev` or `npm run build`.
 
 ## Architecture Map
 
@@ -49,6 +50,7 @@ The canonical template is `.env.example`.
 | `N8N_AI_SUMMARY_WEBHOOK_URL` | Trigger missing sak AI summaries |
 | `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL` | Trigger pending document chunk embeddings |
 | `N8N_FORUM_PROMPTS_WEBHOOK_URL` | Trigger forum prompt generation |
+| `N8N_FORUM_SAK_PROMPTS_WEBHOOK_URL` | Trigger v13 Stortinget-sak RAG reel drafts |
 | `FORUM_ADMIN_EMAILS` | Comma-separated forum/admin allowlist in addition to `app_metadata.role=admin` |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Notification and welcome email delivery |
 | `STORTINGET_SESSION_ID`, `STORTINGET_PERIODE_ID` | Server defaults for Stortinget data |
@@ -89,6 +91,8 @@ The canonical template is `.env.example`.
   `/dashboard/admin/forum-reports` and require `requireForumAdmin()`.
 - Forum prompt source governance lives in `forum_trusted_sources`; unknown source
   domains are routed to draft by the n8n forum prompt workflow.
+- v13 sak-RAG drafts: admin pipeline at `/dashboard/admin/forum-prompts?tab=pipeline`
+  and per-sak trigger on `/dashboard/sak/<id>`; see `workflows/n8n/FORUM-PROMPTS-v13.md`.
 
 ### Document ingest and RAG
 
@@ -126,3 +130,13 @@ The canonical template is `.env.example`.
   payloads, and deployment/runbook notes.
 - Keep subsystem runbooks co-located; avoid adding a new docs tree unless a topic
   no longer fits an existing README.
+
+## Cursor Cloud specific instructions
+
+- Package manager is npm (only `package-lock.json`). The update script runs `npm ci`, so dependencies are already installed at session start. Scripts live in `package.json`: `dev`, `build`, `lint`, `test:unit`, `test:e2e`.
+- Supabase credentials (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) are provided as Cloud Agent secrets / env vars and point at a real hosted project with all `supabase/migrations/*.sql` applied (voting `vote_encryption_secret` pepper is configured). Browser-side auth from the in-VM Chrome reaches Supabase fine — the full auth/forum/voting flow works end-to-end.
+- **`.env.local` is still required to run the dev server**, because it carries the non-secret `STORTINGET_*` / `NEXT_PUBLIC_STORTINGET_*` defaults (and `middleware.ts` builds a Supabase client on every request, so the `NEXT_PUBLIC_SUPABASE_*` values must be resolvable or every page 500s). It is gitignored; recreate from `.env.example` if absent. Next.js reads injected `process.env` with higher precedence than `.env.local`, so the injected secrets win even if `.env.local` holds older values.
+- Auth is email/password (`supabase.auth.signUp` / `signInWithPassword`). **Email signups require confirmation**, so a raw signup does NOT create a session. To get a usable test login, create a pre-confirmed user with the admin API and the service role key, then sign in: `POST {SUPABASE_URL}/auth/v1/admin/users` with `{"email":...,"password":...,"email_confirm":true,"user_metadata":{...}}` (the project rejects `@example.com`; use e.g. `@gmail.com`).
+- `/dashboard/*` is gated by middleware (redirects to `/auth/login`) except public issue pages `/dashboard/sak/<id>` (see `isPublicDashboardSakPath`). Issue pages fetch live `data.stortinget.no` data and can take 10–30s on first load.
+- Hello-world that exercises core functionality: log in, then open an issue (`/dashboard/sak/<id>`) and cast a "For" vote in the "Hva mener du?" section — the vote persists and the `/dashboard/min-side` vote count updates.
+- `npm run test:unit` shells out to `npx tsx ...`; the first run downloads `tsx` (needs network) and then caches it.

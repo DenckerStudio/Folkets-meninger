@@ -102,6 +102,13 @@ export function validateCreateReply(payload: {
   return { ok: true, threadId: payload.thread_id, body: sanitized };
 }
 
+export function validateDeletePost(payload: {
+  target_type?: unknown;
+  target_id?: unknown;
+}): { ok: true; targetType: ForumTargetType; targetId: string } | { ok: false; error: string } {
+  return validateToggleLike(payload);
+}
+
 export function validateToggleLike(payload: {
   target_type?: unknown;
   target_id?: unknown;

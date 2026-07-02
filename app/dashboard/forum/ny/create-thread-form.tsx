@@ -29,6 +29,7 @@ import {
   type ForumThreadDraft,
 } from '@/lib/forum/thread-draft-storage';
 import ContextPicker, { ContextChip } from '@/components/forum/context-picker';
+import { ForumBodyComposer } from '@/components/forum/forum-body-composer';
 import { SakQuickActionLinks } from '@/components/forum/sak-quick-action-modal';
 
 type CreateThreadFormProps = {
@@ -411,14 +412,14 @@ export default function CreateThreadForm({
                   <AtSign className="h-3.5 w-3.5" /> Nevn
                 </button>
               </div>
-              <textarea
-                ref={bodyRef}
+              <ForumBodyComposer
                 id="thread-body"
+                textareaRef={bodyRef}
                 rows={12}
                 value={body}
-                onChange={(e) => setBody(e.target.value)}
+                onChange={setBody}
+                linkedItems={linkedItems}
                 maxLength={FORUM_LIMITS.bodyMax}
-                className={`${inputClass} min-h-[220px] resize-y leading-relaxed`}
                 placeholder="Skriv innlegget ditt. Referanser legges inn automatisk når du velger fra søket over."
               />
               <p className="mt-1.5 text-xs text-gray-500">

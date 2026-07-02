@@ -13,6 +13,7 @@ export const routes = {
   forumNew: (sakId?: string) =>
     sakId ? `${DASHBOARD_PREFIX}/forum/ny?sak=${sakId}` : `${DASHBOARD_PREFIX}/forum/ny`,
   forumSpesielleSaker: `${DASHBOARD_PREFIX}/forum/spesielle-saker`,
+  forumForeslaReel: `${DASHBOARD_PREFIX}/forum/foresla-reel`,
   politikere: `${DASHBOARD_PREFIX}/politikere`,
   representanter: `${DASHBOARD_PREFIX}/representanter`,
   politikerHub: `${DASHBOARD_PREFIX}/politiker-hub`,
@@ -28,6 +29,7 @@ export const routes = {
   forumTopic: (id: string) => `${DASHBOARD_PREFIX}/forum/${id}`,
   profile: (id: string) => `/profil/${id}`,
   adminForumPrompts: `${DASHBOARD_PREFIX}/admin/forum-prompts`,
+  adminForumClusters: `${DASHBOARD_PREFIX}/admin/forum-clusters`,
   adminForumReports: `${DASHBOARD_PREFIX}/admin/forum-reports`,
   adminStats: `${DASHBOARD_PREFIX}/admin/statistikk`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,

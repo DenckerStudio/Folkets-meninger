@@ -1,6 +1,6 @@
 /**
- * Folkets Stemme – Forum trending prompts v3
- * RSS + SearXNG + langvarige saker → Ollama agent (tools + memory) → forum_prompts
+ * Folkets Stemme – Forum trending prompts v5
+ * RSS + SearXNG + langvarige saker → Ollama agent (tools + memory) → forum_prompts (alltid draft)
  *
  * Live: https://n8n.heyklever.app/workflow/MloIdsnX7FozM4dv
  * Webhook: folkets-forum-prompts
@@ -34,7 +34,7 @@ Per spørsmål:
 - question: kort, konkret (maks 120 tegn). Start med «Støtter du», «Bør Norge», «Skal» eller «Er du enig i at»
 - novelty_explanation: én setning (maks 160 tegn) som sier hva kildene faktisk rapporterer – ikke generell mening
 - repeat_reason: KUN hvis spørsmålet er en oppdatering/ny runde av et eldre tema eller nær-duplikat av EXISTING_PROMPTS. Må nevne konkret ny utvikling (vedtak, nye tall, ny dom, ny rapport, nytt forslag, ny hendelse, etc.). Hvis repeat_reason brukes, skal question være formulert som en oppdatering/vinkling, ikke identisk gjentakelse.
-- source_indices: 3–6 indekser fra listen (PÅKREVD) – alle må støtte samme politiske vurdering
+- source_indices: 4–6 indekser fra listen (PÅKREVD for nye temaer) – alle må støtte samme politiske vurdering
 - topic_tags: 1–3 norske stikkord
 - sensitivity: "low" eller "high" (high: krig, vold, kongehus, alvorlige personskandaler)
 - stortinget_issue_id: valgfri tekst-ID for langvarig stortingssak
@@ -42,7 +42,7 @@ Per spørsmål:
 KILDEKRAV (strengt):
 - Hvert spørsmål må kunne begrunnes ut fra titlene/ingressen på valgte source_indices – ikke generelle standpunkter uten dekning i kildene.
 - Alle source_indices må handle om samme sak/tema (ikke bland f.eks. svindel mot eldre med korrupsjon i offentlig sektor).
-- Minst 3 kilder per spørsmål.
+- Minst 4 kilder per spørsmål (3 kun ved oppdatering med repeat_reason).
 - Minst 1 kilde skal være nyere enn 24 timer (se publishedAt i listen).
 - UNNTAK: hvis ingen kilder er nyere enn 24 timer kan du KUN foreslå et spørsmål dersom repeat_reason eksplisitt beskriver en KONKRET ny utvikling som forklarer hvorfor temaet likevel må tas opp igjen NÅ (og kildene støtter det).
 
@@ -56,7 +56,9 @@ FORBUDT:
 - duplikater eller nær-duplikater uten repeat_reason
 
 FORMAT:
-Returner {"prompts":[{question, novelty_explanation, repeat_reason?, source_indices, topic_tags, sensitivity, stortinget_issue_id?}]} og ingenting annet.`;
+Returner {"prompts":[{question, novelty_explanation, repeat_reason?, source_indices, topic_tags, sensitivity, stortinget_issue_id?}]} og ingenting annet.
+
+MERK: Alle forslag lagres som utkast til admin-godkjenning – kvalitet og kilde-alignment er viktigere enn volum.`;
 
 const EXISTING_PROMPTS_SQL = `SELECT
   COALESCE(json_agg(DISTINCT lower(trim(question))) FILTER (WHERE question IS NOT NULL AND trim(question) <> ''), '[]'::json) AS existing_questions,
@@ -713,11 +715,11 @@ const seenQuestions = new Set(existingQuestions.map((q) => norm(q)));
 function isDuplicateQuestion(q) {
   const key = norm(q);
   if (seenQuestions.has(key)) return true;
-  return findMostSimilarExisting(q).score >= 0.62;
+  return findMostSimilarExisting(q).score >= 0.55;
 }
 const agentPrompts = prompts;
 
-const batchLimit = Math.max(1, Math.min(12, Number($('Backfill settings').first()?.json?.batchLimit ?? 10) || 10));
+const batchLimit = Math.max(1, Math.min(8, Number($('Backfill settings').first()?.json?.batchLimit ?? 8) || 8));
 const sortOrderBase = maxSortOrder + 1;
 const blocked = /(porn|nazi|hitler|jævla neger)/i;
 const rejectQuestion = /bør det avstemmes|bør staten gjøre mer|bør det være nødvendig|forhindre brannskader i offentlige|antallet strømprisområder|olympiad|bronsemedalj|mesterliga|champions league|monty python|kultur og kreativ|forskning og utvikling i teknologiske|støtte førstehjelp i tilfelle|i norske byer bli forbudt for å forhindre skader|hva er den største|største utfordringen|hva mener du om|bør vi diskutere|er dette bra|bør politikerne|hva synes du|burde vi|skal vi snakke om|er du bekymret for|er du redd for/i;
@@ -920,7 +922,7 @@ function indicesForIssue(pr, hl) {
 function acceptPromptBatch(batch, opts) {
   const mode = (opts && opts.mode) || 'agent';
   const isFallback = mode === 'fallback';
-  const minSources = 3;
+  const minSources = isFallback ? 3 : 4;
   const recentMaxHours = isFallback ? 24 * 14 : 24 * 7;
 
   for (let i = 0; i < batch.length && results.length < batchLimit; i++) {
@@ -931,15 +933,15 @@ function acceptPromptBatch(batch, opts) {
   const q = repeatReason ? applyUpdateSuffixIfNeeded(qRaw, repeatReason) : qRaw;
   const key = norm(q);
   if (!q || key.length < 12 || key.length > 220 || blocked.test(q) || rejectQuestion.test(q)) continue;
-  if (noveltyExplanation.length < 8) {
+  if (noveltyExplanation.length < 12) {
     const idxList = indicesForIssue(p, headlines);
     const h = headlines[idxList[0] >= 0 ? idxList[0] : 0];
     if (h) noveltyExplanation = fallbackNovelty(h, qRaw);
   }
-  if (noveltyExplanation.length < 8 || noveltyExplanation.length > 220) continue;
+  if (noveltyExplanation.length < 12 || noveltyExplanation.length > 220) continue;
   if (!/^(støtter du|bør |skal |er du enig)/i.test(q)) continue;
   const similarity = findMostSimilarExisting(qRaw);
-  const isNearDup = similarity.score >= 0.62;
+  const isNearDup = similarity.score >= 0.55;
   if (seenQuestions.has(key)) continue;
   if (isNearDup && !repeatReason) continue;
   if (repeatReason && !looksLikeConcreteUpdate(repeatReason)) continue;
@@ -967,8 +969,7 @@ function acceptPromptBatch(batch, opts) {
   }
 
   const sensitivity = p.sensitivity === 'high' ? 'high' : 'low';
-  let status = sensitivity === 'high' ? 'draft' : 'active';
-  if (hasUntrustedSource(sources, trustedSources)) status = 'draft';
+  const status = 'draft';
   const options = [
     { id: 'ja', label: 'Ja' },
     { id: 'nei', label: 'Nei' },
@@ -1076,10 +1077,10 @@ const scheduleTriggerAfternoon = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
   version: 1.3,
   config: {
-    name: 'Hourly 30',
+    name: 'Every 4 hours :30',
     parameters: {
       rule: {
-        interval: [{ field: 'cronExpression', expression: '30 * * * *' }],
+        interval: [{ field: 'cronExpression', expression: '30 */4 * * *' }],
       },
     },
   },
@@ -1135,10 +1136,10 @@ const scheduleTrigger = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
   version: 1.3,
   config: {
-    name: 'Hourly 00',
+    name: 'Every 4 hours :00',
     parameters: {
       rule: {
-        interval: [{ field: 'cronExpression', expression: '0 * * * *' }],
+        interval: [{ field: 'cronExpression', expression: '0 */4 * * *' }],
       },
     },
   },
@@ -1170,13 +1171,13 @@ const backfillSettings = node({
       assignments: {
         assignments: [
           { id: 'searxng-base', name: 'searxngBaseUrl', value: 'https://searxng.heyklever.app', type: 'string' },
-          { id: 'batch-limit', name: 'batchLimit', value: '25', type: 'string' },
+          { id: 'batch-limit', name: 'batchLimit', value: '10', type: 'string' },
           { id: 'long-running-days', name: 'longRunningMinDays', value: '14', type: 'string' },
         ],
       },
     },
   },
-  output: [{ searxngBaseUrl: 'https://searxng.heyklever.app', batchLimit: '25', longRunningMinDays: '14' }],
+  output: [{ searxngBaseUrl: 'https://searxng.heyklever.app', batchLimit: '10', longRunningMinDays: '14' }],
 });
 
 const fetchRssHeadlines = node({
@@ -1275,7 +1276,7 @@ const moderationRoute = node({
       jsCode: MODERATION_ROUTE_JS,
     },
   },
-  output: [{ sql: 'INSERT INTO public.forum_prompts ...', question: 'Eksempel?', status: 'active' }],
+  output: [{ sql: 'INSERT INTO public.forum_prompts ...', question: 'Eksempel?', status: 'draft' }],
 });
 
 const savePrompt = node({
@@ -1293,7 +1294,7 @@ const savePrompt = node({
 });
 
 sticky(
-  '## Forum trending prompts v4\\n\\nTrusted sources → draft, bredere SearXNG, moderation → save (ingen Has SQL), 3 stemmer.',
+  '## Forum trending prompts v5\\n\\nAlltid draft → admin-godkjenning. Strengere dedupe (0.55), min 4 kilder (agent), batch max 8.',
   [scheduleTrigger, scheduleTriggerAfternoon, webhookTrigger],
   { color: 5 }
 );

@@ -1,0 +1,32 @@
+import { test, expect } from '@playwright/test';
+
+test.describe('Reel flow UI', () => {
+  test('om-oss roadmap documents points tiers', async ({ page }) => {
+    await page.goto('/om-oss');
+    await expect(page.getByText(/Poengnivåer/i)).toBeVisible();
+    await expect(page.getByText(/Pålitelig \(750 poeng\)/i)).toBeVisible();
+    await expect(page.getByText(/Kurator \(2 000 poeng\)/i)).toBeVisible();
+    await expect(page.getByText(/stemmer teller likt/i)).toBeVisible();
+    await expect(page.getByRole('link', { name: /Opprett konto og begynn å samle poeng/i })).toBeVisible();
+    await page.screenshot({ path: '/opt/cursor/artifacts/screenshots/om-oss-roadmap.png', fullPage: true });
+  });
+
+  test('foresla-reel redirects unauthenticated users to login', async ({ page }) => {
+    await page.goto('/dashboard/forum/foresla-reel');
+    await expect(page).toHaveURL(/auth\/login/);
+  });
+
+  test('spesielle saker redirects to login preserving destination', async ({ page }) => {
+    await page.goto('/dashboard/forum/spesielle-saker');
+    await expect(page).toHaveURL(/auth\/login/);
+    await expect(page.url()).toContain('spesielle-saker');
+  });
+
+  test('public profile shows points progress when user exists', async ({ page }) => {
+    const res = await page.goto('/profil/8813b8dd-0c44-4524-8ebf-f20858bdd0cd');
+    expect(res?.status()).toBeLessThan(500);
+    await expect(page.getByText(/Offentlig forumprofil/i)).toBeVisible();
+    await expect(page.locator('dt', { hasText: 'Poeng' }).first()).toBeVisible();
+    await page.screenshot({ path: '/opt/cursor/artifacts/screenshots/public-profile-points.png', fullPage: true });
+  });
+});

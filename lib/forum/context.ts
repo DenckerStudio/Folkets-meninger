@@ -18,13 +18,13 @@ export function contextItemKey(item: Pick<ForumContextItem, 'kind' | 'id'>): str
 export function formatContextLine(item: ForumContextItem): string {
   switch (item.kind) {
     case 'sak':
-      return `📋 Stortingssak: ${item.title} — ${item.href}`;
+      return `📋 Stortingssak: ${item.title}`;
     case 'hearing':
-      return `📢 Høring: ${item.title} — ${item.href}`;
+      return `📢 Høring: ${item.title}`;
     case 'politician':
-      return `👤 Politiker: @${item.title}${item.meta ? ` (${item.meta})` : ''}${item.href ? ` — ${item.href}` : ''}`;
+      return `👤 Politiker: @${item.title}${item.meta ? ` (${item.meta})` : ''}`;
     case 'document':
-      return `📄 Dokument: ${item.title}${item.href ? ` — ${item.href}` : ''}`;
+      return `📄 Dokument: ${item.title}`;
     default:
       return item.title;
   }

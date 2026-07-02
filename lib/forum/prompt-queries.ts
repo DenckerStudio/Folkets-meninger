@@ -1,6 +1,7 @@
 import { getAnonSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { parsePromptSources, type PromptSourceHeadline } from '@/lib/forum/prompt-source';
+import { canViewForumReels } from '@/lib/forum/reels-visibility';
 
 export type PromptOption = {
   id: string;
@@ -8,6 +9,39 @@ export type PromptOption = {
   count?: number;
   percent?: number;
 };
+
+export type PromptResults = {
+  total?: number;
+  options?: PromptOption[];
+  discuss_click_count?: number;
+  discuss_threshold?: number;
+  spawned_thread_id?: string | null;
+};
+
+const PROMPT_RESULTS_CACHE_TTL_MS = 5 * 60 * 1000;
+const promptResultsCache = new Map<string, { data: PromptResults; expiresAt: number }>();
+
+async function getPromptResultsCached(
+  supabase: ReturnType<typeof getAnonSupabase>,
+  promptId: string,
+): Promise<PromptResults> {
+  const cached = promptResultsCache.get(promptId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
+  const { data: resultData } = await supabase.rpc('get_prompt_results', {
+    p_prompt_id: promptId,
+  });
+
+  const parsed = (resultData || {}) as PromptResults;
+  promptResultsCache.set(promptId, {
+    data: parsed,
+    expiresAt: Date.now() + PROMPT_RESULTS_CACHE_TTL_MS,
+  });
+
+  return parsed;
+}
 
 export type ForumPrompt = {
   id: string;
@@ -21,14 +55,6 @@ export type ForumPrompt = {
   spawnedThreadId: string | null;
   userVote: string | null;
   userDiscussClicked: boolean;
-};
-
-export type PromptResults = {
-  total: number;
-  options: PromptOption[];
-  discussClickCount: number;
-  discussThreshold: number;
-  spawnedThreadId: string | null;
 };
 
 export async function getActiveForumPrompts(limit = 18): Promise<ForumPrompt[]> {
@@ -49,6 +75,10 @@ export async function getActiveForumPromptsPage({
   cursor?: string;
 }): Promise<ActiveForumPromptsPage> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return { items: [], nextCursor: null };
+  }
+
+  if (!(await canViewForumReels())) {
     return { items: [], nextCursor: null };
   }
 
@@ -105,17 +135,7 @@ export async function getActiveForumPromptsPage({
 
   const results = await Promise.all(
     prompts.slice(0, limit).map(async (prompt) => {
-      const { data: resultData } = await supabase.rpc('get_prompt_results', {
-        p_prompt_id: prompt.id,
-      });
-
-      const parsed = (resultData || {}) as {
-        total?: number;
-        options?: PromptOption[];
-        discuss_click_count?: number;
-        discuss_threshold?: number;
-        spawned_thread_id?: string | null;
-      };
+      const parsed = await getPromptResultsCached(supabase, prompt.id);
 
       const rawOptions = Array.isArray(prompt.options) ? prompt.options : [];
       const resultOptions = parsed.options || [];

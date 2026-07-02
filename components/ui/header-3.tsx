@@ -49,7 +49,7 @@ export function Header() {
     };
 
     void load();
-    timer = window.setInterval(load, 30000);
+    timer = window.setInterval(load, 5 * 60 * 1000);
     return () => {
       if (timer) window.clearInterval(timer);
     };

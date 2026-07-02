@@ -7,7 +7,7 @@ export default async function AdminForumPromptsPage() {
   await requireForumAdminPage();
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       <AdminForumPromptsClient />
     </div>
   );
