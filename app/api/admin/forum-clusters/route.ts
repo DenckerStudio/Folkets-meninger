@@ -40,6 +40,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const statusParam =
     searchParams.get('status') || CLUSTER_SCOUT_QUEUE_STATUSES.join(',');
+  const sourceType = searchParams.get('source_type')?.trim() || '';
   const statuses = statusParam.split(',').map((s) => s.trim());
   const invalid = statuses.filter((s) => !isResearchClusterStatus(s));
   if (invalid.length) {
@@ -47,13 +48,19 @@ export async function GET(request: Request) {
   }
 
   const service = getServiceSupabase();
-  const { data, error } = await service
+  let query = service
     .from('forum_research_clusters')
     .select(
-      `id, title, discovery_rationale, topic_tags, politics_score, source_count, status, created_at, scout_metadata,
+      `id, title, discovery_rationale, topic_tags, politics_score, source_count, status, created_at, scout_metadata, source_type,
        forum_research_articles (id, title, url, outlet, published_at, is_primary, sort_order, source_payload)`,
     )
-    .in('status', statuses)
+    .in('status', statuses);
+
+  if (sourceType) {
+    query = query.eq('source_type', sourceType);
+  }
+
+  const { data, error } = await query
     .order('politics_score', { ascending: false })
     .order('created_at', { ascending: true });
 

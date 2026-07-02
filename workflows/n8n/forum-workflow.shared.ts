@@ -299,6 +299,7 @@ export const FETCH_CLUSTER_FOR_PROMPT_SQL = `WITH target AS (
   SELECT c.id
   FROM public.forum_research_clusters c
   WHERE c.status = 'pending'
+    AND c.source_type = 'rss'
     AND (
       NULLIF(trim($1::text), '') IS NULL
       OR c.id = NULLIF(trim($1::text), '')::uuid
