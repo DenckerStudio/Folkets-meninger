@@ -80,6 +80,7 @@ export function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTot
       ferdigbehandlet: inferFerdigbehandletFromListSak(sak),
       numericStatus: sak.status,
     }),
+    stortingetNumericStatus: sak.status,
     sakKind: presentation.kind,
     henvisning: presentation.henvisning,
     dokumentgruppe: sak.dokumentgruppe ?? null,
@@ -129,6 +130,8 @@ function mapDbRowToListItem(row: DbIssueRow, votes: SakVoteTotals = EMPTY_VOTES)
     date: row.last_updated_at?.split('T')[0] ?? '',
     votes,
     status,
+    stortingetNumericStatus:
+      typeof row.detail_json?.status === 'number' ? row.detail_json.status : undefined,
     sakKind: row.sak_kind,
     henvisning: row.henvisning,
     dokumentgruppe: row.dokumentgruppe,
@@ -139,6 +142,7 @@ function mapDbRowToListItem(row: DbIssueRow, votes: SakVoteTotals = EMPTY_VOTES)
 
 async function getCachedIssueOverlays(
   issueIds: string[],
+  listNumericStatusById: Record<string, number> = {},
 ): Promise<
   Record<
     string,
@@ -184,6 +188,7 @@ async function getCachedIssueOverlays(
           ferdigbehandlet: row.ferdigbehandlet,
           detailJson: detail,
           cachedStatus: row.status,
+          numericStatus: listNumericStatusById[String(row.id)],
         });
 
         let votingDaysLeft: number | null = null;
@@ -231,10 +236,43 @@ function applyOverlaysToSaker(
   }
 }
 
+/** Merge live list-export status codes so stale detail_json cannot show "Under behandling". */
+async function applyLiveListExportStatuses(saker: SakListItem[]): Promise<SakListItem[]> {
+  if (!canRefreshFromStortingetApi() || saker.length === 0) {
+    return saker;
+  }
+
+  try {
+    const rawSaker = await fetchRawSakerFromStortinget();
+    const rawById = new Map(rawSaker.map((sak) => [String(sak.id), sak]));
+
+    for (const item of saker) {
+      const raw = rawById.get(item.id);
+      if (!raw) continue;
+      item.stortingetNumericStatus = raw.status;
+      item.status = resolveSakListStatus({
+        ferdigbehandlet: inferFerdigbehandletFromListSak(raw),
+        numericStatus: raw.status,
+      });
+    }
+
+    await enrichSakerList(saker);
+  } catch (error) {
+    console.error('applyLiveListExportStatuses error:', error);
+  }
+
+  return saker;
+}
+
 export async function enrichSakerList(saker: SakListItem[]): Promise<SakListItem[]> {
   const issueIds = saker.map((sak) => sak.id);
+  const listNumericStatusById = Object.fromEntries(
+    saker.flatMap((sak) =>
+      typeof sak.stortingetNumericStatus === 'number' ? [[sak.id, sak.stortingetNumericStatus]] : [],
+    ),
+  );
   const [overlays, voteTotals] = await Promise.all([
-    getCachedIssueOverlays(issueIds),
+    getCachedIssueOverlays(issueIds, listNumericStatusById),
     getVoteTotals(issueIds),
   ]);
 
@@ -431,23 +469,37 @@ export async function persistSakerListToDb(items: SakListItem[]): Promise<void> 
     const chunkIds = chunk.map((item) => item.id);
     const { data: existingRows } = await service
       .from('stortinget_issues')
-      .select('id, title, summary, status, category, sak_kind, henvisning, dokumentgruppe, last_updated_at')
+      .select(
+        'id, title, summary, status, category, sak_kind, henvisning, dokumentgruppe, last_updated_at, detail_json, ferdigbehandlet',
+      )
       .in('id', chunkIds);
 
     const existingById = new Map((existingRows ?? []).map((row) => [row.id, row]));
     const toUpsert = chunk
-      .map((item) => ({
-        id: item.id,
-        title: item.title,
-        summary: item.summary || null,
-        status: item.status,
-        category: item.category || null,
-        sak_kind: item.sakKind,
-        henvisning: item.henvisning,
-        dokumentgruppe: item.dokumentgruppe,
-        last_synced_at: now,
-        last_updated_at: item.date ? `${item.date}T00:00:00.000Z` : now,
-      }))
+      .map((item) => {
+        const existing = existingById.get(item.id);
+        const detail = (existing?.detail_json as StortingetSakDetail | null | undefined) ?? null;
+        const status = resolveSakStatusFromSources({
+          ferdigbehandlet:
+            typeof existing?.ferdigbehandlet === 'boolean' ? existing.ferdigbehandlet : null,
+          detailJson: detail,
+          cachedStatus: existing?.status ?? item.status,
+          numericStatus: item.stortingetNumericStatus,
+        });
+
+        return {
+          id: item.id,
+          title: item.title,
+          summary: item.summary || null,
+          status,
+          category: item.category || null,
+          sak_kind: item.sakKind,
+          henvisning: item.henvisning,
+          dokumentgruppe: item.dokumentgruppe,
+          last_synced_at: now,
+          last_updated_at: item.date ? `${item.date}T00:00:00.000Z` : now,
+        };
+      })
       .filter((row) => {
         const existing = existingById.get(row.id);
         return !existing || persistRowChanged(existing, row);
@@ -590,15 +642,16 @@ export async function getSakerWithCache(opts?: GetSakerCacheOpts): Promise<SakLi
   if (!opts?.forceRefresh) {
     const memory = readMemoryListCache();
     if (memory) {
-      return memory;
+      return applyLiveListExportStatuses(memory);
     }
   }
 
   if (!opts?.forceRefresh && preferDb) {
     const cached = await getCachedSakerListFromDb();
     if (cached?.items.length) {
-      writeMemoryListCache(cached.items);
-      return cached.items;
+      const items = await applyLiveListExportStatuses(cached.items);
+      writeMemoryListCache(items);
+      return items;
     }
   }
 

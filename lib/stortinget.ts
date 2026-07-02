@@ -50,6 +50,8 @@ export interface SakListItem {
   date: string;
   votes: SakVoteTotals;
   status: SakTreatmentStatus;
+  /** Raw `status` from Stortinget list/detail export; used to beat stale cached detail_json. */
+  stortingetNumericStatus?: number;
   sakKind: SakKind | null;
   henvisning: string | null;
   dokumentgruppe: number | null;
@@ -129,6 +131,7 @@ function mapDetailToListItem(detail: StortingetSakDetail, votes: SakVoteTotals =
       ferdigbehandlet: detail.ferdigbehandlet,
       numericStatus: detail.status,
     }),
+    stortingetNumericStatus: typeof detail.status === 'number' ? detail.status : undefined,
     sakKind: presentation.kind,
     henvisning: presentation.henvisning,
     dokumentgruppe: typeof detail.dokumentgruppe === 'number' ? detail.dokumentgruppe : null,

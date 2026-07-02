@@ -44,4 +44,15 @@ assert.equal(
   'closed',
 );
 
+// Stale cached detail_json (status=1) must not override fresh list export (status=3).
+assert.equal(
+  resolveSakStatusFromSources({
+    ferdigbehandlet: false,
+    detailJson: { ferdigbehandlet: false, status: 1 },
+    cachedStatus: 'pending',
+    numericStatus: 3,
+  }),
+  'closed',
+);
+
 console.log('sak-status.test.ts: ok');
