@@ -20,11 +20,11 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Anonymous voting | `20260528000001_anonymous_voting.sql`, `20260528000002_vote_schema_repair.sql`, `20260618120000_sak_voting_status.sql` | `citizen_votes`, `user_vote_receipts`, `cast_vote`, vote aggregate RPCs |
 | Notifications | `20260528000003_notifications.sql` | `notification_preferences`, `notification_category_subscriptions`, `notifications` |
 | AI summaries | `20260528120000_issue_ai_summaries.sql`, `20260529120000_simplify_issue_ai_summaries.sql` | `issue_ai_summaries` |
-| Auth/user sync | `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql` | `users`, `ensure_public_user`, `user_has_forum_identity` |
+| Auth/user sync | `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql` | `users`, `ensure_public_user`, `user_has_forum_identity`, `hearing_comments`, `create_hearing_comment` |
 | Forum base/features | `20260530120000_forum_enhancements.sql`, `20260531120000_production_readiness.sql`, `20260531140000_forum_prompts_dedupe.sql` | forum threads/replies/likes/prompts and production indexes |
 | Forum reports/sources | `20260602120000_forum_reports_enhance.sql`, `20260602130000_forum_trusted_sources.sql` | `forum_reports`, `forum_trusted_sources` |
 | Forum profiles/points/moderation | `20260614130000_forum_profiles_points_ai_sources.sql`, `20260614160000_harden_forum_points_moderation.sql`, `20260614170000_public_user_display_grants.sql` | public profile fields, point ledgers, moderation RPCs/grants |
-| Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category` |
+| Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql`, `20260702160000_backfill_ferdigbehandlet_from_detail.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category`, `ferdigbehandlet` repair |
 | Sak documents/RAG | `20260617120000_sak_documents_rag.sql` | `stortinget_issue_documents`, `document_chunks`, `match_issue_document_chunks` |
 
 ## Voting setup
@@ -86,9 +86,64 @@ summaries, forum prompts, documents, and government stats.
 | `detail_json` | Cached Stortinget detail payload |
 | `ai_summary_source_*` | Source context/hash used by n8n AI summary generation |
 
-`lib/stortinget-sync.ts` upserts list rows from `getSaker()`. Detail refreshes in
-`lib/stortinget-detail-cache.ts` enrich rows with `detail_json`, treatment state,
-AI summary source context, and document ingest triggers.
+`lib/sak-status.ts` is the central resolver for "Under behandling" vs
+"Ferdigbehandlet". Do not trust one Stortinget field alone: list exports can keep
+`status = 1` after treatment is finished, while cached details or
+`innstilling_id`/`innstilling_kode` may already show completion. Current list and
+sync paths merge:
+
+1. `detail_json.ferdigbehandlet` when available.
+2. The denormalized `stortinget_issues.ferdigbehandlet` column.
+3. Fresh list `status`, plus list `innstilling_*` completion hints.
+4. Existing cached `status` as a fallback.
+
+`lib/stortinget-saker-cache.ts` owns list reads. It uses a 30-minute in-memory
+cache, a 30-minute `unstable_cache` wrapper around the DB list, and a 6-hour DB
+freshness threshold before falling back to live Stortinget data. During
+`next build` (`NEXT_PHASE=phase-production-build`) `getSakerWithCache()` returns
+an empty list instead of calling Supabase or Stortinget, so pages must tolerate an
+empty sak list at build time.
+
+`lib/stortinget-detail-cache.ts` owns per-sak detail refreshes. Detail JSON is
+fresh for 24 hours. Full refreshes update `detail_json`, treatment state,
+`voting_closes_at`, AI summary source context, and document ingest triggers.
+`refreshSakStatusOnly()` updates status metadata only and is what
+`scripts/backfill-sak-status.ts` uses for bulk repair.
+
+Cron sync (`GET /api/cron/sync-issues`) calls `syncStortingetIssuesToDb()`, reads
+the live list with `fetchRawSakerFromStortinget()`, filters to `isDebattSak()`,
+enriches DB overlays/vote totals, and then upserts changed rows. It also refreshes
+details for new or missing-summary issues and sweeps up to 10 stale pending
+details. The response contains `upserted`, `total`, `newIssueIds`,
+`aiSummaryTriggered`, and `detailsRefreshed`.
+
+Use the SQL migration `20260702160000_backfill_ferdigbehandlet_from_detail.sql`
+only for historical drift where `detail_json.ferdigbehandlet` and the
+denormalized column disagree. Use the status backfill script when live Stortinget
+detail data should refresh status/deadline metadata:
+
+```bash
+npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
+```
+
+## Hearings (høring comments)
+
+Høring metadata is not stored in Postgres. The app reads live Stortinget data via
+`lib/stortinget-horinger.ts` and the `/api/horinger` read proxy. Local user
+comments are stored separately in `hearing_comments` and are keyed by
+`stortinget_hearing_id` text, not by a local `hearings` table.
+
+| Object | Purpose |
+|--------|---------|
+| `hearing_comments` | Public app comments for a Stortinget hearing id |
+| `hearing_comments_select` | RLS policy allowing public reads |
+| `create_hearing_comment(uuid, text, text)` | Service-role write RPC used by `POST /api/hearings` |
+
+`create_hearing_comment` calls `ensure_public_user`, requires
+`user_has_forum_identity`, trims bodies, and accepts 1-10000 characters. These
+comments are not official submissions to Stortinget; the detail page labels them
+as public app comments. They also do not use forum thread/reply moderation or
+forum point triggers.
 
 ## Forum schema
 
