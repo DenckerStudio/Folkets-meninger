@@ -1,10 +1,11 @@
 # Folkets Stemme
 
 Folkets Stemme is a Next.js App Router application for following Stortinget
-saker, voting on active saker, and discussing political issues in a moderated
-forum. The app reads public Stortinget data from `data.stortinget.no`, stores
-app state in Supabase, and delegates AI summaries, forum prompt generation, and
-document embeddings to n8n workflows backed by Ollama.
+saker and høringer, voting on active saker, and discussing political issues in a
+moderated forum. The app reads public Stortinget data from
+`data.stortinget.no`, stores app state in Supabase, and delegates AI summaries,
+forum prompt generation, and document embeddings to n8n workflows backed by
+Ollama.
 
 ## Quick start
 
@@ -46,6 +47,8 @@ Important constraints:
   authentication; the rest of `/dashboard/*` requires a Supabase session.
 - Votes are accepted only while a sak is open. The app and `cast_vote` RPC both
   check `status`, `ferdigbehandlet`, and `voting_closes_at`.
+- Høringer are fetched live from Stortinget; only local user comments are stored
+  in Supabase.
 - Human forum posts require a public first and last name. System forum threads
   created by workflows use the `is_system_thread` path instead.
 - AI summary text is not generated in the Next.js app. The app stores source
