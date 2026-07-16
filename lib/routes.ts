@@ -47,6 +47,14 @@ export function isPublicDashboardSakPath(pathname: string): boolean {
   return /^\/dashboard\/sak\/[^/]+$/.test(pathname);
 }
 
+/** Public politician explorer and profile pages (Stortinget open data). */
+export function isPublicDashboardPolitikerPath(pathname: string): boolean {
+  return (
+    pathname === routes.politikere ||
+    pathname.startsWith(`${routes.politikere}/`)
+  );
+}
+
 export function isForumRelatedPath(pathname: string): boolean {
   return pathname.startsWith(`${DASHBOARD_PREFIX}/forum`) || pathname.includes('/forum');
 }

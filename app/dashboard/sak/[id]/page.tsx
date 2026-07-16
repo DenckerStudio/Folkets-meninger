@@ -252,31 +252,47 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                 iconClassName="w-5 h-5 text-indigo-600 dark:text-indigo-400"
               />
               <div className="flex flex-wrap gap-3">
-                {forslagstillere.map((f: any, i: number) => (
-                  <div key={i} className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2 border border-border">
-                    <div className="relative w-8 h-8 rounded-full overflow-hidden bg-muted flex-shrink-0">
-                      {f.id ? (
-                        <Image
-                          src={getPersonbildeUrl(String(f.id), 'lite', true)}
-                          alt={`${f.fornavn || ''} ${f.etternavn || ''}`.trim() || 'Forslagstiller'}
-                          fill
-                          className="object-cover"
-                          sizes="32px"
-                        />
-                      ) : (
-                        <div className="w-full h-full rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-indigo-600 dark:text-indigo-300 font-bold text-xs">
-                          {f.fornavn?.[0]}{f.etternavn?.[0]}
-                        </div>
-                      )}
+                {forslagstillere.map((f: any, i: number) => {
+                  const content = (
+                    <>
+                      <div className="relative w-8 h-8 rounded-full overflow-hidden bg-muted flex-shrink-0">
+                        {f.id ? (
+                          <Image
+                            src={getPersonbildeUrl(String(f.id), 'lite', true)}
+                            alt={`${f.fornavn || ''} ${f.etternavn || ''}`.trim() || 'Forslagstiller'}
+                            fill
+                            className="object-cover"
+                            sizes="32px"
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-indigo-600 dark:text-indigo-300 font-bold text-xs">
+                            {f.fornavn?.[0]}{f.etternavn?.[0]}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-foreground">{f.fornavn} {f.etternavn}</div>
+                        {f.parti?.navn && (
+                          <div className="text-xs text-muted-foreground">{f.parti.navn}</div>
+                        )}
+                      </div>
+                    </>
+                  );
+
+                  return f.id ? (
+                    <Link
+                      key={f.id}
+                      href={routes.politiker(String(f.id))}
+                      className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2 border border-border hover:border-indigo-200 hover:bg-indigo-50/40 transition-colors"
+                    >
+                      {content}
+                    </Link>
+                  ) : (
+                    <div key={i} className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2 border border-border">
+                      {content}
                     </div>
-                    <div>
-                      <div className="text-sm font-medium text-foreground">{f.fornavn} {f.etternavn}</div>
-                      {f.parti?.navn && (
-                        <div className="text-xs text-muted-foreground">{f.parti.navn}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : null}
@@ -290,31 +306,47 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                 iconClassName="w-5 h-5 text-amber-600 dark:text-amber-400"
               />
               <div className="flex flex-wrap gap-3">
-                {saksordfoerere.map((s: any, i: number) => (
-                  <div key={i} className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 rounded-lg px-3 py-2 border border-amber-100 dark:border-amber-900/50">
-                    <div className="relative w-8 h-8 rounded-full overflow-hidden bg-muted flex-shrink-0">
-                      {s.id ? (
-                        <Image
-                          src={getPersonbildeUrl(String(s.id), 'lite', true)}
-                          alt={`${s.fornavn || ''} ${s.etternavn || ''}`.trim() || 'Saksordfører'}
-                          fill
-                          className="object-cover"
-                          sizes="32px"
-                        />
-                      ) : (
-                        <div className="w-full h-full rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-700 dark:text-amber-300 font-bold text-xs">
-                          {s.fornavn?.[0]}{s.etternavn?.[0]}
-                        </div>
-                      )}
+                {saksordfoerere.map((s: any, i: number) => {
+                  const content = (
+                    <>
+                      <div className="relative w-8 h-8 rounded-full overflow-hidden bg-muted flex-shrink-0">
+                        {s.id ? (
+                          <Image
+                            src={getPersonbildeUrl(String(s.id), 'lite', true)}
+                            alt={`${s.fornavn || ''} ${s.etternavn || ''}`.trim() || 'Saksordfører'}
+                            fill
+                            className="object-cover"
+                            sizes="32px"
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-700 dark:text-amber-300 font-bold text-xs">
+                            {s.fornavn?.[0]}{s.etternavn?.[0]}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-foreground">{s.fornavn} {s.etternavn}</div>
+                        {s.parti?.navn && (
+                          <div className="text-xs text-muted-foreground">{s.parti.navn}</div>
+                        )}
+                      </div>
+                    </>
+                  );
+
+                  return s.id ? (
+                    <Link
+                      key={s.id}
+                      href={routes.politiker(String(s.id))}
+                      className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 rounded-lg px-3 py-2 border border-amber-100 dark:border-amber-900/50 hover:border-amber-200 transition-colors"
+                    >
+                      {content}
+                    </Link>
+                  ) : (
+                    <div key={i} className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 rounded-lg px-3 py-2 border border-amber-100 dark:border-amber-900/50">
+                      {content}
                     </div>
-                    <div>
-                      <div className="text-sm font-medium text-foreground">{s.fornavn} {s.etternavn}</div>
-                      {s.parti?.navn && (
-                        <div className="text-xs text-muted-foreground">{s.parti.navn}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : null}

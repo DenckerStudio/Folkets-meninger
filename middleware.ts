@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { checkRateLimit, getRateLimitPolicy } from '@/lib/rate-limit';
-import { isPublicDashboardSakPath, routes } from '@/lib/routes';
+import { isPublicDashboardPolitikerPath, isPublicDashboardSakPath, routes } from '@/lib/routes';
 import { refreshSessionCookies, resolveMiddlewareUser } from '@/lib/supabase-middleware';
 
 function applyRateLimit(request: NextRequest, pathname: string): NextResponse | null {
@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (isPublicDashboardSakPath(pathname)) {
+  if (isPublicDashboardSakPath(pathname) || isPublicDashboardPolitikerPath(pathname)) {
     return refreshSessionCookies(request);
   }
 

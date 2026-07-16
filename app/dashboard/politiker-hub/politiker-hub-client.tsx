@@ -7,6 +7,8 @@ import type { PolitikerOversikt, SakListItem } from '@/lib/stortinget';
 import { formatNumber } from '@/lib/utils';
 import Link from 'next/link';
 import Image from 'next/image';
+import { routes } from '@/lib/routes';
+import { getPersonbildeUrl } from '@/lib/stortinget-utils';
 
 const partyLogos: Record<string, string> = {
   'Arbeiderpartiet': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Arbeiderpartiet_logo.svg/200px-Arbeiderpartiet_logo.svg.png',
@@ -25,10 +27,13 @@ function PolitikerListItem({ rep }: { rep: PolitikerOversikt }) {
   const roleOrLocation = rep.tittel || rep.departement || rep.fylke.navn;
 
   return (
-    <div className="p-4 border border-gray-100 rounded-xl flex items-center bg-gray-50 hover:bg-gray-100 transition-colors">
+    <Link
+      href={routes.politiker(String(rep.id))}
+      className="p-4 border border-gray-100 rounded-xl flex items-center bg-gray-50 hover:bg-gray-100 transition-colors"
+    >
       <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold mr-4 flex-shrink-0 overflow-hidden relative">
         <Image
-          src={`https://data.stortinget.no/eksport/personbilde?personid=${encodeURIComponent(rep.id)}&storrelse=lite&erstatningsbilde=true`}
+          src={getPersonbildeUrl(rep.id, 'lite', true)}
           alt={`${rep.fornavn} ${rep.etternavn}`}
           fill
           className="object-cover"
@@ -55,7 +60,7 @@ function PolitikerListItem({ rep }: { rep: PolitikerOversikt }) {
           <span className="truncate">{roleOrLocation}</span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -127,6 +132,14 @@ export default function PolitikerHubClient({
     [filteredPolitikere],
   );
 
+  const topIssues = useMemo(
+    () =>
+      [...initialIssues]
+        .sort((a, b) => (b.votes?.total ?? 0) - (a.votes?.total ?? 0))
+        .slice(0, 5),
+    [initialIssues],
+  );
+
   const displayedAndre = repSearchQuery || showAllPolitikere ? andrePolitikere : andrePolitikere.slice(0, 12);
 
   if (!isVerified) {
@@ -184,10 +197,17 @@ export default function PolitikerHubClient({
             <div className="mt-8 bg-indigo-50 rounded-xl p-6 border border-indigo-100">
               <h3 className="text-lg font-semibold text-indigo-900 mb-2 flex items-center">
                 <TrendingUp className="w-5 h-5 mr-2" />
-                AI-Analyse av trenden
+                Hva engasjerer velgerne nå?
               </h3>
               <p className="text-indigo-800">
-                Basert på data fra Stortinget ser vi at saker innen <strong>{categoryStats[0]?.fullName || 'visse kategorier'}</strong> skaper desidert mest engasjement for tiden. Dette indikerer at velgerne er spesielt opptatt av disse temaene i den nåværende politiske debatten.
+                {categoryStats[0]?.fullName ? (
+                  <>
+                    Saker innen <strong>{categoryStats[0].fullName}</strong> har fått flest anonyme stemmer i appen
+                    akkurat nå. Bruk dette som et signal på hvilke temaer innbyggerne følger tett.
+                  </>
+                ) : (
+                  'Det er ikke nok stemmedata ennå til å vise tydelige kategoritrender.'
+                )}
               </p>
             </div>
           </div>
@@ -195,20 +215,27 @@ export default function PolitikerHubClient({
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
               <MessageSquare className="w-5 h-5 mr-2 text-indigo-600" />
-              Publiser ditt svar
+              Publiser offisielt svar
             </h2>
             <p className="text-gray-600 mb-4">
-              Forklar velgerne hvorfor du stemte som du gjorde, eller hva partiet ditt mener om saken. Dette vil vises øverst for alle brukere fra Hordaland som ser på denne saken.
+              Åpne en sak og forklar din eller partiet ditt sin stilling. Svaret vises med verifiseringsmerke for alle
+              brukere som leser saken.
             </p>
-            <textarea
-              rows={4}
-              className="w-full border border-gray-300 rounded-xl p-4 focus:ring-indigo-500 focus:border-indigo-500 mb-4"
-              placeholder="Skriv din kommentar her..."
-            ></textarea>
-            <div className="flex justify-end">
-              <button className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors">
-                Publiser offisielt svar
-              </button>
+            <div className="flex flex-wrap gap-3">
+              {topIssues.slice(0, 3).map((issue) => (
+                <Link
+                  key={issue.id}
+                  href={routes.sak(issue.id)}
+                  className="inline-flex items-center rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition-colors"
+                >
+                  {issue.title.length > 48 ? `${issue.title.slice(0, 48)}…` : issue.title}
+                </Link>
+              ))}
+            </div>
+            <div className="mt-4">
+              <Link href={routes.utforsk} className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
+                Utforsk alle saker →
+              </Link>
             </div>
           </div>
         </div>
@@ -216,17 +243,17 @@ export default function PolitikerHubClient({
         <div className="space-y-8">
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Mest engasjerende saker</h3>
-            <p className="text-sm text-gray-500 mb-4">Saker med flest unike stemmer fra Hordaland.</p>
+            <p className="text-sm text-gray-500 mb-4">Saker med flest anonyme stemmer i appen.</p>
             <div className="space-y-3">
-              {initialIssues.slice(0, 3).map((issue, index) => (
-                <Link href={`/dashboard/sak/${issue.id}`} key={issue.id} className="block p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-100">
+              {topIssues.map((issue, index) => (
+                <Link href={routes.sak(issue.id)} key={issue.id} className="block p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-100">
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-sm font-medium text-indigo-600 line-clamp-2 pr-4">{issue.title}</span>
                     <span className="text-sm font-bold text-gray-400 whitespace-nowrap">#{index + 1}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs text-gray-500">
                     <span className="truncate max-w-[120px]">{issue.category}</span>
-                    <span className="flex items-center whitespace-nowrap"><Users className="w-3 h-3 mr-1" /> {formatNumber(Math.floor(issue.votes.total * 0.12))}</span>
+                    <span className="flex items-center whitespace-nowrap"><Users className="w-3 h-3 mr-1" /> {formatNumber(issue.votes?.total ?? 0)}</span>
                   </div>
                 </Link>
               ))}
@@ -258,10 +285,10 @@ export default function PolitikerHubClient({
           <div>
             <h2 className="text-xl font-bold text-gray-900 flex items-center">
               <CheckCircle className="w-5 h-5 mr-2 text-indigo-600" />
-              Verifiserte Politikere
+              Finn politikere
             </h2>
             <p className="text-gray-600 mt-2">
-              Dette er listen over politikere som har verifisert seg på plattformen og aktivt deltar i dialogen.
+              Utforsk profiler med saker, temaer og offisielle svar. Verifiserte profiler markeres på profilsiden.
             </p>
           </div>
           <div className="relative w-full md:w-72">

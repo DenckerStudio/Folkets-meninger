@@ -10,6 +10,7 @@ export default function PoliticianResponseForm({ sakId }: { sakId?: string }) {
   const [response, setResponse] = useState('');
   const [isPublished, setIsPublished] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -42,6 +43,7 @@ export default function PoliticianResponseForm({ sakId }: { sakId?: string }) {
   const handlePublish = async () => {
     if (!response.trim() || isSubmitting) return;
     setIsSubmitting(true);
+    setErrorMessage(null);
 
     try {
       const res = await fetch('/api/politician/response', {
@@ -55,9 +57,14 @@ export default function PoliticianResponseForm({ sakId }: { sakId?: string }) {
 
       if (res.ok) {
         setIsPublished(true);
+        return;
       }
+
+      const data = await res.json().catch(() => ({}));
+      setErrorMessage(typeof data.error === 'string' ? data.error : 'Kunne ikke publisere svar');
     } catch (e) {
       console.error('Failed to publish response:', e);
+      setErrorMessage('Kunne ikke publisere svar');
     } finally {
       setIsSubmitting(false);
     }
@@ -76,9 +83,14 @@ export default function PoliticianResponseForm({ sakId }: { sakId?: string }) {
         rows={4} 
         value={response}
         onChange={(e) => setResponse(e.target.value)}
-        className="w-full border border-border rounded-xl p-4 bg-background text-foreground focus:ring-indigo-500 focus:border-indigo-500 mb-4 text-sm"
+        maxLength={4000}
+        className="w-full border border-border rounded-xl p-4 bg-background text-foreground focus:ring-indigo-500 focus:border-indigo-500 mb-2 text-sm"
         placeholder="Skriv din forklaring her..."
       ></textarea>
+      <div className="flex items-center justify-between mb-4 text-xs text-muted-foreground">
+        <span>{response.length}/4000 tegn</span>
+        {errorMessage ? <span className="text-red-600">{errorMessage}</span> : null}
+      </div>
       <div className="flex justify-end">
         <button 
           onClick={handlePublish}
