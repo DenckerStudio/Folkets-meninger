@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  ArrowLeft,
   ArrowRight,
   Building2,
   FileText,
+  Info,
   Landmark,
   MapPin,
   MessageSquare,
@@ -22,6 +22,9 @@ import type { PolitikerProfileData, PolitikerSakItem, PolitikerSporsmalItem } fr
 import { POLITIKER_TABS, isPolitikerTabId, type PolitikerTabId } from '@/components/politikere/politiker-tabs';
 import { SAK_CATEGORY_BADGE_CLASS } from '@/lib/sak-status';
 import { getSakKindLabel, type SakKind } from '@/lib/stortinget-sak-presentation';
+import { BackButton } from '@/components/dashboard/back-button';
+import { PoliticianResponseList } from '@/components/politikere/politician-response-dialog';
+import { getPolitikerRolleInfo } from '@/lib/politiker-roller';
 
 type PolitikerProfileShellProps = {
   rep: PolitikerOversikt;
@@ -108,6 +111,7 @@ function SporsmalList({ items, emptyMessage }: { items: PolitikerSporsmalItem[];
 function OverviewPanel({ rep, profile }: PolitikerProfileShellProps) {
   const totalSaker = profile.broughtUpSaker.length + profile.saksordfoererSaker.length;
   const topTopics = profile.topicStats.slice(0, 5);
+  const rolleInfo = getPolitikerRolleInfo(rep.tittel, rep.erRegjeringsmedlem);
 
   return (
     <div className="space-y-6">
@@ -130,11 +134,19 @@ function OverviewPanel({ rep, profile }: PolitikerProfileShellProps) {
         </div>
       </div>
 
+      <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-5">
+        <h2 className="font-semibold text-indigo-900 flex items-center gap-2">
+          <Info className="w-4 h-4" />
+          Om rollen: {rolleInfo.title}
+        </h2>
+        <p className="text-sm text-indigo-900/90 mt-2 leading-relaxed">{rolleInfo.description}</p>
+      </div>
+
       {rep.erRegjeringsmedlem ? (
         <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
           <h2 className="font-semibold text-amber-900 flex items-center gap-2">
             <Landmark className="w-4 h-4" />
-            Regjeringsrolle
+            I regjeringen nå
           </h2>
           <p className="text-sm text-amber-800 mt-2">
             {rep.fornavn} {rep.etternavn} sitter i regjeringen som {rep.tittel?.toLowerCase() ?? 'statsråd'}
@@ -164,6 +176,13 @@ function OverviewPanel({ rep, profile }: PolitikerProfileShellProps) {
               </div>
             ))}
           </div>
+        </div>
+      ) : null}
+
+      {profile.officialResponses.length > 0 ? (
+        <div className="rounded-2xl border border-gray-100 bg-white p-6">
+          <h2 className="font-semibold text-gray-900 mb-4">Nylige offisielle svar</h2>
+          <PoliticianResponseList rep={rep} responses={profile.officialResponses.slice(0, 3)} />
         </div>
       ) : null}
 
@@ -201,6 +220,7 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
   const activeTab = resolveTab(searchParams.get('tab'));
   const roleLabel = rep.tittel || 'Stortingsrepresentant';
   const locationLabel = rep.departement || rep.fylke.navn;
+  const rolleInfo = getPolitikerRolleInfo(rep.tittel, rep.erRegjeringsmedlem);
 
   const setTab = (tab: PolitikerTabId) => {
     router.replace(`${routes.politiker(String(rep.id))}?tab=${tab}`, { scroll: false });
@@ -208,10 +228,7 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-12">
-      <Link href={routes.politikere} className="inline-flex items-center text-indigo-600 font-medium text-sm">
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Tilbake til politikere
-      </Link>
+      <BackButton fallbackHref={routes.politikere} />
 
       <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
         <div className="flex flex-col sm:flex-row gap-6 items-start">
@@ -250,6 +267,7 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
                 {locationLabel}
               </span>
             </div>
+            <p className="mt-4 text-sm text-gray-600 leading-relaxed max-w-2xl">{rolleInfo.description}</p>
             <Link
               href={routes.forum}
               className="inline-flex mt-4 text-sm font-medium text-indigo-600 hover:text-indigo-500"
@@ -381,31 +399,7 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
                     : 'Politikeren har ikke verifisert seg på plattformen, eller har ikke publisert svar ennå.'}
                 </p>
               ) : (
-                <div className="space-y-4">
-                  {profile.officialResponses.map((response) => (
-                    <article
-                      key={response.id}
-                      className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-5"
-                    >
-                      {response.issueTitle ? (
-                        <Link
-                          href={routes.sak(response.stortingetIssueId)}
-                          className="text-sm font-semibold text-indigo-700 hover:text-indigo-800 line-clamp-2"
-                        >
-                          {response.issueTitle}
-                        </Link>
-                      ) : null}
-                      <p className="text-sm text-gray-700 mt-3 whitespace-pre-wrap">{response.content}</p>
-                      <time className="text-xs text-gray-500 mt-3 block">
-                        {new Date(response.publishedAt).toLocaleDateString('nb-NO', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                        })}
-                      </time>
-                    </article>
-                  ))}
-                </div>
+                <PoliticianResponseList rep={rep} responses={profile.officialResponses} />
               )}
 
               {(profile.sporsmalFra.length > 0 || profile.sporsmalTil.length > 0) && (

@@ -32,4 +32,10 @@ test.describe('Politiker profiles', () => {
     });
     expect(res.status()).toBe(401);
   });
+
+  test('sak page shows history back button', async ({ page }) => {
+    await page.goto('/dashboard/forum');
+    await page.goto('/dashboard/sak/200027');
+    await expect(page.getByRole('button', { name: 'Tilbake' })).toBeVisible();
+  });
 });

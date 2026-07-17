@@ -8,7 +8,8 @@ import { formatStortingetDate } from '@/lib/stortinget-horinger';
 import { SaksgangTimeline, type SaksgangStep } from '@/components/sak/saksgang-timeline';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, MessageSquare, Users, Tag } from 'lucide-react';
+import { ExternalLink, MessageSquare, Users, Tag } from 'lucide-react';
+import { BackButton } from '@/components/dashboard/back-button';
 import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
 import ShareButton from './share-button';
@@ -173,10 +174,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
     <div className="max-w-4xl mx-auto space-y-12 pb-12">
       <FadeIn delay={0.1}>
         <div className="flex items-center justify-between">
-          <Link href="/dashboard/utforsk" className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
-            <ArrowLeft className="mr-2 w-4 h-4" />
-            Tilbake til oversikt
-          </Link>
+          <BackButton fallbackHref={routes.utforsk} />
           <div className="flex gap-3">
             <Link href={`${routes.forum}?sak=${sak.id}`} className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
               <MessageSquare className="mr-1.5 w-4 h-4" />

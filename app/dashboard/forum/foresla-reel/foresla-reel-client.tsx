@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Globe, Loader2, Send, Sparkles } from 'lucide-react';
+import { Globe, Loader2, Send, Sparkles } from 'lucide-react';
+import { BackButton } from '@/components/dashboard/back-button';
 import { PointsProgress } from '@/components/profile/points-progress';
 import type { UserPointsProgress } from '@/lib/user-points-levels';
 import { getUserPointsProgress } from '@/lib/user-points-levels';
@@ -133,13 +134,7 @@ export function ForeslaReelClient() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <Link
-        href={routes.forumSpesielleSaker}
-        className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-500"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Tilbake til spesielle saker
-      </Link>
+      <BackButton fallbackHref={routes.forumSpesielleSaker} />
 
       <header className="space-y-2">
         <div className="flex items-center gap-2">

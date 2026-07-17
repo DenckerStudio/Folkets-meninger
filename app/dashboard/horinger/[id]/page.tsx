@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
-  ArrowLeft,
   Calendar,
   Clock,
   ExternalLink,
@@ -9,6 +8,7 @@ import {
   MessageSquare,
   Users,
 } from 'lucide-react';
+import { BackButton } from '@/components/dashboard/back-button';
 import { getAnonSupabase } from '@/lib/supabase';
 import {
   fetchStortingetHoringById,
@@ -88,13 +88,7 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
 
   return (
     <div className="space-y-8 pb-12">
-      <Link
-        href={routes.horinger}
-        className="inline-flex items-center text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium text-sm"
-      >
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Tilbake til høringer
-      </Link>
+      <BackButton fallbackHref={routes.horinger} />
 
       <div className="bg-card border border-border rounded-3xl p-8 shadow-sm space-y-6">
         <div className="flex flex-wrap gap-2">

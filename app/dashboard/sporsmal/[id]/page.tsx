@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Calendar, MessageSquare, User } from 'lucide-react';
+import { Calendar, MessageSquare, User } from 'lucide-react';
+import { BackButton } from '@/components/dashboard/back-button';
 import { STORTINGET_ACTIVE_SESSION_ID } from '@/lib/stortinget-config';
 import {
   findSporsmalById,
@@ -40,10 +41,7 @@ export default async function SporsmalDetailPage({
 
   return (
     <div className="space-y-8 pb-12">
-      <Link href={routes.sporsmal} className="inline-flex items-center text-indigo-600 font-medium text-sm">
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Tilbake til spørsmål
-      </Link>
+      <BackButton fallbackHref={routes.sporsmal} />
 
       <article className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm space-y-6">
         <div className="flex flex-wrap gap-2">
