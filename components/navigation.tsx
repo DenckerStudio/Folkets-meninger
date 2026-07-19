@@ -3,7 +3,9 @@
 import { usePathname } from 'next/navigation';
 import { Header } from '@/components/ui/header-3';
 import { LandingHeader } from '@/components/landing-header';
+import { MobileNav } from '@/components/mobile-nav';
 import { DashboardNavProvider } from '@/components/dashboard/dashboard-nav-context';
+import { cn } from '@/lib/utils';
 import { isDashboardPath, isPublicProfilePath } from '@/lib/routes';
 
 type NavigationProps = {
@@ -23,7 +25,15 @@ export function Navigation({ children }: NavigationProps) {
       ) : showAppHeader ? (
         <Header />
       ) : null}
-      <div>{children}</div>
+      <div
+        className={cn(
+          inDashboard &&
+            'pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] xl:pb-0',
+        )}
+      >
+        {children}
+      </div>
+      {inDashboard ? <MobileNav /> : null}
     </>
   );
 

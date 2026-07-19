@@ -15,7 +15,7 @@ export function MobileNav() {
   );
 
   return (
-    <div className="md:hidden">
+    <div className="xl:hidden">
       <InteractiveMenu items={items} accentColor="#00205b" />
     </div>
   );
