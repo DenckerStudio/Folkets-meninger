@@ -20,11 +20,11 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Anonymous voting | `20260528000001_anonymous_voting.sql`, `20260528000002_vote_schema_repair.sql`, `20260618120000_sak_voting_status.sql` | `citizen_votes`, `user_vote_receipts`, `cast_vote`, vote aggregate RPCs |
 | Notifications | `20260528000003_notifications.sql` | `notification_preferences`, `notification_category_subscriptions`, `notifications` |
 | AI summaries | `20260528120000_issue_ai_summaries.sql`, `20260529120000_simplify_issue_ai_summaries.sql` | `issue_ai_summaries` |
-| Auth/user sync | `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql` | `users`, `ensure_public_user`, `user_has_forum_identity` |
+| Auth/user sync + hearings comments | `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql` | `users`, `ensure_public_user`, `user_has_forum_identity`, `hearing_comments`, `create_hearing_comment` |
 | Forum base/features | `20260530120000_forum_enhancements.sql`, `20260531120000_production_readiness.sql`, `20260531140000_forum_prompts_dedupe.sql` | forum threads/replies/likes/prompts and production indexes |
 | Forum reports/sources | `20260602120000_forum_reports_enhance.sql`, `20260602130000_forum_trusted_sources.sql` | `forum_reports`, `forum_trusted_sources` |
 | Forum profiles/points/moderation | `20260614130000_forum_profiles_points_ai_sources.sql`, `20260614160000_harden_forum_points_moderation.sql`, `20260614170000_public_user_display_grants.sql` | public profile fields, point ledgers, moderation RPCs/grants |
-| Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category` |
+| Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql`, `20260702160000_backfill_ferdigbehandlet_from_detail.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category`, status drift repair |
 | Sak documents/RAG | `20260617120000_sak_documents_rag.sql` | `stortinget_issue_documents`, `document_chunks`, `match_issue_document_chunks` |
 
 ## Voting setup
@@ -90,6 +90,19 @@ summaries, forum prompts, documents, and government stats.
 `lib/stortinget-detail-cache.ts` enrich rows with `detail_json`, treatment state,
 AI summary source context, and document ingest triggers.
 
+Treatment status is intentionally resolved from more than one source. The
+application uses `lib/sak-status.ts` so `detail_json.ferdigbehandlet` wins over a
+stale denormalized `ferdigbehandlet` column, fresh list-export numeric status can
+override stale `detail_json.status`, and list `innstilling_id`/`innstilling_kode`
+can imply a finished sak when Stortinget leaves list `status=1`.
+
+If `stortinget_issues.ferdigbehandlet` drifts from cached detail data, apply
+`20260702160000_backfill_ferdigbehandlet_from_detail.sql` or run:
+
+```bash
+npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
+```
+
 ## Forum schema
 
 Forum writes go through RPCs rather than direct client inserts.
@@ -106,6 +119,27 @@ Human forum authors must have `first_name` and `last_name` of at least two
 characters. `ensure_public_user` syncs missing profile rows from Supabase Auth,
 and `user_has_forum_identity` gates human thread/reply RPCs. System threads can
 set `is_system_thread = true` and bypass the human identity requirement.
+
+## Hearing comments
+
+`20260601120000_forum_public_identity.sql` also defines local comments for
+Stortinget hearings. There is no local hearings table; comments are keyed by the
+Stortinget export id.
+
+| Object | Purpose |
+|--------|---------|
+| `hearing_comments` | Public local comments for `/dashboard/horinger/<id>` |
+| `hearing_comments_select` | RLS policy that allows public reads |
+| `create_hearing_comment` | Service-role RPC used by `POST /api/hearings` |
+
+`create_hearing_comment(p_user_id, p_stortinget_hearing_id, p_body)` calls
+`ensure_public_user`, requires `user_has_forum_identity`, trims body text, allows
+1-10000 characters, and rejects empty hearing ids. The Next.js route creates
+mention notifications for `@name` matches after the RPC succeeds.
+
+These comments are Folkets Stemme discussion entries only. They are not
+submitted to Stortinget; the høring detail page links users to Stortinget for
+official submissions.
 
 Point triggers award:
 

@@ -9,7 +9,8 @@
 
 - Single Next.js App Router app (Next.js 15).
 - Auth and DB are Supabase (Postgres); app uses SSR cookies/middleware refresh patterns.
-- Stortinget data comes from `data.stortinget.no` (public API).
+- Stortinget data comes from `data.stortinget.no` (public API), including sak
+  lists/details, høringer, and publications.
 - AI summaries and forum prompts are produced externally via n8n + Ollama and stored in Supabase; the app should not assume Gemini for current summary generation.
 - Forum Reels: v5 trending (`MloIdsnX7FozM4dv`, draft); v12 Regjeringen RSS + prompt generator; **v13 Stortinget-sak RAG** (`forum-sak-prompt-generator.workflow.ts`, `N8N_FORUM_SAK_PROMPTS_WEBHOOK_URL`); `forum_trusted_sources`; votes Ja/Nei/Ikke interessert + discuss CTA.
 - Public reels UI gated by `FORUM_REELS_PUBLIC` (default false); admin pipeline at `/dashboard/admin/forum-prompts` (`?tab=pipeline` — RSS v12 + sak-RAG v13).
@@ -33,7 +34,8 @@ External systems:
   `/dashboard/*` except public sak pages.
 - Supabase Postgres stores votes, forum content, notifications, AI summaries,
   Stortinget issue cache, document chunks, and admin/trusted-source data.
-- Stortinget APIs are read-only sources for sak lists/details/publications.
+- Stortinget APIs are read-only sources for sak lists/details, høringer, and
+  publications.
 - n8n calls app cron endpoints with `x-cron-secret` and receives fire-and-forget
   webhooks from the app for AI summaries and document embeddings.
 - Ollama generates AI summaries/prompts and embeddings from n8n, not from the app.
@@ -68,7 +70,37 @@ The canonical template is `.env.example`.
 - Detail refresh computes `sak_kind`, `henvisning`, `dokumentgruppe`,
   `ferdigbehandlet`, and `voting_closes_at`, then triggers missing AI summaries
   and document ingest.
+- Sak treatment labels use `lib/sak-status.ts`, not a single raw Stortinget
+  field. `resolveSakStatusFromSources` prefers `detail_json.ferdigbehandlet`
+  over the denormalized DB column, then merges numeric Stortinget status and
+  list `innstilling` fields.
+- Known Stortinget quirk: list exports can keep `status=1` while a sak is
+  finished. Treat `innstilling_id > 0` with `innstilling_kode` 1 or 2 as a
+  finished-sak hint when no explicit `ferdigbehandlet` boolean is available.
+- If list and detail pages disagree between "Under behandling" and
+  "Ferdigbehandlet", inspect `stortinget_issues.detail_json`,
+  `ferdigbehandlet`, and fresh list-export innstilling fields. Repair DB drift
+  with `supabase/migrations/20260702160000_backfill_ferdigbehandlet_from_detail.sql`
+  or the backfill script below.
 - One-off status repair: `npx tsx scripts/backfill-sak-status.ts --pending-only`.
+
+### Høringer
+
+- `/dashboard/horinger` and `/dashboard/horinger/<id>` show Stortinget hearings;
+  `/horinger` redirects to the dashboard path. These routes are login-gated by
+  middleware, unlike public `/dashboard/sak/<id>` pages.
+- `lib/stortinget-horinger.ts` fetches
+  `https://data.stortinget.no/eksport/horinger?format=json` with a 1-hour
+  revalidate and normalizes Stortinget date values.
+- Stortinget may send sentinel dates (`/Date(-62135596800000)/` or
+  `01.01.0001`) when no deadline is published. Treat them as missing dates, not
+  real future/past deadlines.
+- Hearing status kinds are `open`, `planned`, `held`, and `cancelled`, derived
+  from `horing_status` plus innspill/application/session dates.
+- Local hearing comments are public rows in `hearing_comments`; the app posts
+  via `POST /api/hearings`, which calls `create_hearing_comment` with the
+  service role. The RPC still enforces `first_name`/`last_name` via
+  `user_has_forum_identity`; comments are not submitted to Stortinget.
 
 ### Voting lifecycle
 

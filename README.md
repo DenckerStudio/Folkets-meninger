@@ -1,10 +1,11 @@
 # Folkets Stemme
 
 Folkets Stemme is a Next.js App Router application for following Stortinget
-saker, voting on active saker, and discussing political issues in a moderated
-forum. The app reads public Stortinget data from `data.stortinget.no`, stores
-app state in Supabase, and delegates AI summaries, forum prompt generation, and
-document embeddings to n8n workflows backed by Ollama.
+saker and høringer, voting on active saker, and discussing political issues in
+a moderated forum. The app reads public Stortinget data from
+`data.stortinget.no`, stores app state in Supabase, and delegates AI summaries,
+forum prompt generation, and document embeddings to n8n workflows backed by
+Ollama.
 
 ## Quick start
 
@@ -35,7 +36,7 @@ values are only needed for the workflows that call those services.
 ```text
 Browser / Next.js App Router
   -> Supabase Auth + Postgres (votes, forum, notifications, sak cache)
-  -> data.stortinget.no (saker, details, publications)
+  -> data.stortinget.no (saker, details, høringer, publications)
   -> n8n webhooks (AI summaries, document embeddings, forum prompts, cron)
   -> Ollama / SearXNG / SMTP as workflow dependencies
 ```
@@ -44,8 +45,13 @@ Important constraints:
 
 - Public sak detail pages under `/dashboard/sak/[id]` can be viewed without
   authentication; the rest of `/dashboard/*` requires a Supabase session.
+- Høringer live under `/dashboard/horinger` and `/dashboard/horinger/[id]`.
+  `/horinger` redirects there, so browsing and local comments require login.
 - Votes are accepted only while a sak is open. The app and `cast_vote` RPC both
   check `status`, `ferdigbehandlet`, and `voting_closes_at`.
+- Sak treatment labels are resolved from multiple Stortinget sources because
+  list exports can keep `status=1` after a detail payload says the sak is
+  `ferdigbehandlet`.
 - Human forum posts require a public first and last name. System forum threads
   created by workflows use the `is_system_thread` path instead.
 - AI summary text is not generated in the Next.js app. The app stores source
