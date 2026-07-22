@@ -1,27 +1,38 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { getServiceSupabase } from '@/lib/supabase';
+import {
+  buildForumVoteInsights,
+  ForumVoteHistoryError,
+  getUserForumVoteHistory,
+} from '@/lib/forum/vote-history-service';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
     const supabase = await getServerSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
-      return NextResponse.json([], { status: 200 });
+      return NextResponse.json({ items: [], summary: buildForumVoteInsights([]).summary });
     }
 
-    const service = getServiceSupabase();
-    const { data, error } = await service.rpc('get_user_vote_history', { p_user_id: user.id });
-    if (error) {
-      console.error('Vote history error:', error);
-      return NextResponse.json([]);
-    }
-    const history = Array.isArray(data) ? data : [];
-    return NextResponse.json(history);
+    const items = await getUserForumVoteHistory(user.id);
+    const insights = buildForumVoteInsights(items);
+
+    return NextResponse.json({
+      items,
+      summary: insights.summary,
+      top_topics: insights.top_topics,
+    });
   } catch (error) {
-    console.error('Vote history error:', error);
-    return NextResponse.json([]);
+    if (error instanceof ForumVoteHistoryError) {
+      console.error('Forum vote history error:', error.message);
+    } else {
+      console.error('Forum vote history error:', error);
+    }
+    return NextResponse.json({ items: [], summary: buildForumVoteInsights([]).summary });
   }
 }

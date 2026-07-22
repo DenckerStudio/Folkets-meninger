@@ -64,7 +64,7 @@ export function ProfileHero({ user, voteCount, points, pointsProgress, onSignOut
         </div>
         <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 max-w-md">
           <div className="rounded-xl bg-white/80 border border-gray-100 px-4 py-3">
-            <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Stemmer</dt>
+            <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Ja/nei-svar</dt>
             <dd className="text-2xl font-bold text-[#00205b] mt-0.5">{voteCount}</dd>
           </div>
           <div className="rounded-xl bg-white/80 border border-gray-100 px-4 py-3">

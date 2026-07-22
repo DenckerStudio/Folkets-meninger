@@ -12,8 +12,8 @@ export function ProfilePrivacy() {
             <Shield className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" aria-hidden />
             <div className="text-sm text-blue-800 space-y-2">
               <p className="font-medium">Hvordan vi beskytter deg</p>
-              <p>1. Din identitet brukes kun til å bekrefte at du er en ekte person og forhindre dobbelstemmer.</p>
-              <p>2. Dine stemmer lagres i en separat, anonymisert database. Ingen kan koble ditt navn til en spesifikk stemme.</p>
+              <p>1. Din identitet brukes kun til å bekrefte at du er en ekte person og forhindre misbruk.</p>
+              <p>2. Dine ja/nei-svar i forumet knyttes til profilen din, mens gamle anonyme sak-stemmer (hvis du har slike) fortsatt er adskilt fra navnet ditt.</p>
               <p>3. All data lagres på sikre servere i henhold til GDPR (Privacy by Design).</p>
             </div>
           </div>
@@ -28,7 +28,7 @@ export function ProfilePrivacy() {
           <div>
             <h4 className="text-sm font-medium text-red-900">Slett profil og all data</h4>
             <p className="text-xs text-red-700 mt-1">
-              Sletter profilen din, innstillinger og all stemmehistorikk permanent.
+              Sletter profilen din, innstillinger og forum-historikk permanent.
             </p>
           </div>
           <button

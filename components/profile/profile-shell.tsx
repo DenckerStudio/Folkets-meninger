@@ -11,6 +11,8 @@ import { ProfileHero } from '@/components/profile/profile-hero';
 import { ProfileSidebarNav } from '@/components/profile/profile-sidebar-nav';
 import { ProfileVoteHistory, type VoteHistoryItem } from '@/components/profile/profile-vote-history';
 import { ProfileValgomat } from '@/components/profile/profile-valgomat';
+import type { ForumVoteHistorySummary } from '@/lib/forum/vote-history';
+import { summarizeForumVoteHistory } from '@/lib/forum/vote-history';
 import { ProfileInterests } from '@/components/profile/profile-interests';
 import { ProfileNotifications } from '@/components/profile/profile-notifications';
 import { ProfilePrivacy } from '@/components/profile/profile-privacy';
@@ -34,6 +36,9 @@ export function ProfileShell() {
   const activeTab = resolveTab(tabParam);
 
   const [voteHistory, setVoteHistory] = useState<VoteHistoryItem[]>([]);
+  const [voteSummary, setVoteSummary] = useState<ForumVoteHistorySummary>(() =>
+    summarizeForumVoteHistory([]),
+  );
   const [historyLoading, setHistoryLoading] = useState(true);
   const [interestCategories, setInterestCategories] = useState<string[]>([]);
   const [interestLabels, setInterestLabels] = useState<string[]>([]);
@@ -59,7 +64,19 @@ export function ProfileShell() {
     fetch('/api/user/vote-history')
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) setVoteHistory(data);
+        if (Array.isArray(data)) {
+          setVoteHistory(data);
+          setVoteSummary(summarizeForumVoteHistory(data));
+          return;
+        }
+        if (Array.isArray(data.items)) {
+          setVoteHistory(data.items);
+        }
+        if (data.summary) {
+          setVoteSummary(data.summary);
+        } else if (Array.isArray(data.items)) {
+          setVoteSummary(summarizeForumVoteHistory(data.items));
+        }
       })
       .catch(() => {})
       .finally(() => setHistoryLoading(false));
@@ -139,6 +156,7 @@ export function ProfileShell() {
       user={user}
       activeTab={activeTab}
       voteHistory={voteHistory}
+      voteSummary={voteSummary}
       historyLoading={historyLoading}
       points={points}
       pointsProgress={pointsProgress}
@@ -207,7 +225,7 @@ function ProfileLoginPrompt() {
       </div>
       <h2 className="text-3xl font-bold text-gray-900">Logg inn for å se din profil</h2>
       <p className="text-gray-600">
-        Du må være logget inn for å se din stemmehistorikk, valgomat og innstillinger.
+        Du må være logget inn for å se ja/nei-historikk, valgomat og innstillinger.
       </p>
       <Link
         href={routes.login}
@@ -224,6 +242,7 @@ type ProfileShellAuthenticatedProps = {
   user: SupabaseUser;
   activeTab: ProfileTabId;
   voteHistory: VoteHistoryItem[];
+  voteSummary: ForumVoteHistorySummary;
   historyLoading: boolean;
   points: number;
   pointsProgress: UserPointsProgress;
@@ -248,6 +267,7 @@ function ProfileShellAuthenticated({
   user,
   activeTab,
   voteHistory,
+  voteSummary,
   historyLoading,
   points,
   pointsProgress,
@@ -287,7 +307,7 @@ function ProfileShellAuthenticated({
     <div className="max-w-5xl mx-auto space-y-6 px-1">
       <ProfileHero
         user={user}
-        voteCount={voteHistory.length}
+        voteCount={voteSummary.total}
         points={points}
         pointsProgress={pointsProgress}
         onSignOut={onSignOut}
@@ -330,9 +350,13 @@ function ProfileShellAuthenticated({
           <h2 className="text-lg font-semibold text-gray-900 lg:sr-only">{activeLabel}</h2>
 
           {activeTab === 'historikk' && (
-            <ProfileVoteHistory items={voteHistory} loading={historyLoading} />
+            <ProfileVoteHistory
+              items={voteHistory}
+              summary={voteSummary}
+              loading={historyLoading}
+            />
           )}
-          {activeTab === 'valgomat' && <ProfileValgomat voteCount={voteHistory.length} />}
+          {activeTab === 'valgomat' && <ProfileValgomat summary={voteSummary} />}
           {activeTab === 'innstillinger' && (
             <ProfileInterests
               interestCategories={interestCategories}

@@ -2,20 +2,21 @@
 
 import { ValgomatPanel } from '@/components/valgomat-panel';
 import { ProfileCard } from '@/components/profile/profile-card';
+import type { ForumVoteHistorySummary } from '@/lib/forum/vote-history';
 
 type ProfileValgomatProps = {
-  voteCount: number;
+  summary: ForumVoteHistorySummary;
 };
 
-export function ProfileValgomat({ voteCount }: ProfileValgomatProps) {
+export function ProfileValgomat({ summary }: ProfileValgomatProps) {
   return (
     <div className="space-y-6">
       <ProfileCard
         title="Valgomat 2.0"
         description={
-          voteCount > 0
-            ? `Basert på dine ${voteCount} stemmer. Stem på flere saker for bedre nøyaktighet.`
-            : 'Stem på saker for å se hvilke partier du er mest enig med.'
+          summary.total > 0
+            ? `Basert på ${summary.total} ja/nei-svar i forumet. Svar på flere avstemninger for et tydeligere bilde.`
+            : 'Svar på ja/nei-avstemninger i forumet for å se engasjement og stemmemønster.'
         }
       >
         <ValgomatPanel />

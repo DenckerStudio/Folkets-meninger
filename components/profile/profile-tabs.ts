@@ -20,13 +20,13 @@ export const PROFILE_TABS: {
     id: 'historikk',
     label: 'Mine stemmer',
     icon: FileText,
-    description: 'Stemmehistorikk på saker',
+    description: 'Ja/nei-svar i forumet',
   },
   {
     id: 'valgomat',
     label: 'Valgomat 2.0',
     icon: PieChart,
-    description: 'Partimatch basert på stemmer',
+    description: 'Engasjement og stemmemønster',
   },
   {
     id: 'innstillinger',
