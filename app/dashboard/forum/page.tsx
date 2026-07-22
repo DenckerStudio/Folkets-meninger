@@ -1,10 +1,11 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, MessageSquarePlus } from 'lucide-react';
 import ForumPostCard from '@/components/forum/forum-post-card';
 import ForumPromptCarousel from '@/components/forum/forum-prompt-carousel';
 import ForumFeedToolbar from '@/components/forum/forum-feed-toolbar';
 import ForumRightRail from '@/components/forum/forum-right-rail';
+import { SakMeningSection } from '@/components/forum/sak-mening-section';
 import { getForumThreads, getIssueTitle, getSuggestedIssues, type ForumSort } from '@/lib/forum/queries';
 import { getActiveForumPrompts } from '@/lib/forum/prompt-queries';
 import { canViewForumReels } from '@/lib/forum/reels-visibility';
@@ -42,8 +43,8 @@ export default async function ForumPage({
             title="Forum"
             description={
               reelsVisible
-                ? 'Diskuter saker, still spørsmål og delta i dagens avstemninger.'
-                : 'Diskuter saker og still spørsmål om politikk og samfunn.'
+                ? 'Diskuter saker, del ja/nei-meninger og delta i avstemninger.'
+                : 'Diskuter saker, del ja/nei-meninger og still spørsmål om politikk og samfunn.'
             }
           />
         </header>
@@ -54,9 +55,13 @@ export default async function ForumPage({
               <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Filtrert på sak</p>
               <p className="font-semibold text-indigo-950 mt-0.5">{sakTitle || `Sak ${sakId}`}</p>
             </div>
-            <div className="flex gap-3 text-sm">
+            <div className="flex flex-wrap gap-3 text-sm">
               <Link href={routes.sak(sakId)} className="font-medium text-indigo-600 hover:text-indigo-500">
                 Se saken
+              </Link>
+              <Link href={routes.forumMening(sakId)} className="inline-flex items-center gap-1 font-medium text-indigo-600 hover:text-indigo-500">
+                <MessageSquarePlus className="h-4 w-4" />
+                Del ja/nei-mening
               </Link>
               <Link href={routes.forum} className="font-medium text-indigo-600 hover:text-indigo-500">
                 Vis alle
@@ -64,6 +69,12 @@ export default async function ForumPage({
             </div>
           </div>
         )}
+
+        {sakId && sakTitle ? (
+          <div className="mb-6">
+            <SakMeningSection sakId={sakId} sakTitle={sakTitle} />
+          </div>
+        ) : null}
 
         {reelsVisible ? <ForumPromptCarousel prompts={prompts} /> : null}
 

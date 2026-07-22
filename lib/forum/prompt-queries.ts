@@ -1,6 +1,7 @@
 import { getAnonSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { parsePromptSources, type PromptSourceHeadline } from '@/lib/forum/prompt-source';
+import { SAK_MENING_TOPIC_TAG } from '@/lib/forum/sak-mening';
 import { canViewForumReels } from '@/lib/forum/reels-visibility';
 
 export type PromptOption = {
@@ -169,6 +170,104 @@ export async function getActiveForumPromptsPage({
   const nextCursor = hasMore && last?.created_at ? `${last.created_at}|${last.id}` : null;
 
   return { items: results, nextCursor };
+}
+
+async function hydrateForumPrompts(
+  prompts: Array<{
+    id: string;
+    question: string;
+    options: unknown;
+    topic_tags?: string[] | null;
+    source_headlines?: unknown;
+    stortinget_issue_id?: string | null;
+    discuss_click_count?: number | null;
+    discuss_threshold?: number | null;
+    spawned_thread_id?: string | null;
+  }>,
+): Promise<ForumPrompt[]> {
+  if (!prompts.length) return [];
+
+  const supabase = getAnonSupabase();
+  const authSupabase = await getServerSupabase();
+  const {
+    data: { user },
+  } = await authSupabase.auth.getUser();
+
+  const promptIds = prompts.map((p) => p.id);
+  let votesByPrompt: Record<string, string> = {};
+  let discussByPrompt = new Set<string>();
+
+  if (user) {
+    const { data: votes } = await authSupabase
+      .from('forum_prompt_votes')
+      .select('prompt_id, option_id')
+      .eq('user_id', user.id)
+      .in('prompt_id', promptIds);
+
+    for (const v of votes || []) {
+      votesByPrompt[v.prompt_id] = v.option_id;
+    }
+
+    const { data: clicks } = await authSupabase
+      .from('forum_prompt_discuss_clicks')
+      .select('prompt_id')
+      .eq('user_id', user.id)
+      .in('prompt_id', promptIds);
+
+    discussByPrompt = new Set((clicks || []).map((c) => c.prompt_id));
+  }
+
+  return Promise.all(
+    prompts.map(async (prompt) => {
+      const parsed = await getPromptResultsCached(supabase, prompt.id);
+      const rawOptions = Array.isArray(prompt.options) ? prompt.options : [];
+      const resultOptions = parsed.options || [];
+
+      return {
+        id: prompt.id,
+        question: prompt.question,
+        options: rawOptions.map((opt: { id: string; label: string }) => {
+          const match = resultOptions.find((r) => r.id === opt.id);
+          return {
+            id: opt.id,
+            label: opt.label,
+            count: match?.count ?? 0,
+            percent: match?.percent ?? 0,
+          };
+        }),
+        topicTags: prompt.topic_tags || [],
+        sources: parsePromptSources(prompt.source_headlines),
+        stortingetIssueId: prompt.stortinget_issue_id ?? null,
+        discussClickCount: parsed.discuss_click_count ?? prompt.discuss_click_count ?? 0,
+        discussThreshold: parsed.discuss_threshold ?? prompt.discuss_threshold ?? 10,
+        spawnedThreadId: parsed.spawned_thread_id ?? prompt.spawned_thread_id ?? null,
+        userVote: votesByPrompt[prompt.id] ?? null,
+        userDiscussClicked: discussByPrompt.has(prompt.id),
+      };
+    }),
+  );
+}
+
+export async function getSakMeningPromptsForIssue(issueId: string, limit = 12): Promise<ForumPrompt[]> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return [];
+  }
+
+  const supabase = getAnonSupabase();
+  const { data: prompts, error } = await supabase
+    .from('forum_prompts')
+    .select(
+      'id, question, options, topic_tags, source_headlines, stortinget_issue_id, discuss_click_count, discuss_threshold, spawned_thread_id, created_at',
+    )
+    .eq('status', 'active')
+    .eq('stortinget_issue_id', issueId)
+    .contains('topic_tags', [SAK_MENING_TOPIC_TAG])
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error || !prompts?.length) return [];
+  return hydrateForumPrompts(prompts);
 }
 
 export async function getDraftForumPrompts() {

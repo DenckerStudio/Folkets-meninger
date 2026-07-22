@@ -2,25 +2,16 @@
 
 import Link from 'next/link';
 import { Search, Filter, ArrowRight } from 'lucide-react';
-import { formatNumber } from '@/lib/utils';
 import type { SakListItem } from '@/lib/stortinget';
 import { getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS } from '@/lib/sak-status';
 import { SakProcessingBadge } from '@/components/sak/sak-meta';
-import { formatVotingDaysLeftLabel } from '@/lib/sak-voting-window';
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import FadeIn from '@/components/fade-in';
 import { PageHeader } from '@/components/page-header';
-import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
 import { PREFERENCE_KEYS } from '@/lib/preferences/keys';
 import { usePersistedState } from '@/hooks/use-persisted-state';
-
-const VOTE_LABELS: Record<string, string> = {
-  for: 'For',
-  against: 'Mot',
-  abstain: 'Avstår',
-};
 
 type UtforskFilters = {
   searchQuery: string;
@@ -62,17 +53,12 @@ export default function ExploreClient({
   issueLabels: Record<string, string[]>;
   popularLabels: string[];
 }) {
-  const [issues] = useState(initialIssues);
-  const { user } = useAuth();
-  const [userVotes, setUserVotes] = useState<Record<string, string>>({});
-
   const [filters, setFilters] = usePersistedState(
     PREFERENCE_KEYS.utforsk.filters,
     DEFAULT_UTFORSK_FILTERS,
     isUtforskFilters
   );
 
-  const displayedUserVotes = user ? userVotes : {};
   const { searchQuery, selectedCategory, selectedStatus, selectedSakKind, selectedAiLabels, sortBy } = filters;
   const activeAiLabels = selectedAiLabels ?? [];
 
@@ -93,35 +79,18 @@ export default function ExploreClient({
     });
   };
 
-  useEffect(() => {
-    if (!user) return;
-    fetch('/api/user/vote-history')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!Array.isArray(data)) return;
-        const map: Record<string, string> = {};
-        for (const row of data) {
-          const id = row.stortinget_issue_id ?? row.issue_id ?? row.id;
-          const choice = row.choice ?? row.vote;
-          if (id && choice) map[String(id)] = String(choice);
-        }
-        setUserVotes(map);
-      })
-      .catch(() => {});
-  }, [user]);
-
   const categories = useMemo(() => {
-    const cats = new Set(issues.map((issue) => issue.category));
+    const cats = new Set(initialIssues.map((issue) => issue.category));
     return Array.from(cats).sort();
-  }, [issues]);
+  }, [initialIssues]);
 
-  let displayedIssues = issues;
+  let displayedIssues = initialIssues;
 
   if (selectedCategory !== 'Alle kategorier') {
     displayedIssues = displayedIssues.filter((issue) => issue.category === selectedCategory);
   }
 
-  if (selectedStatus === 'Under behandling' || selectedStatus === 'Åpne for stemmer') {
+  if (selectedStatus === 'Under behandling') {
     displayedIssues = displayedIssues.filter((issue) => issue.status !== 'closed');
   } else if (selectedStatus === 'Ferdigbehandlet / Historikk') {
     displayedIssues = displayedIssues.filter((issue) => issue.status === 'closed');
@@ -144,16 +113,10 @@ export default function ExploreClient({
   }
 
   displayedIssues = [...displayedIssues].sort((a, b) => {
-    if (sortBy === 'Nyeste først') {
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
-    }
-    if (sortBy === 'Mest engasjement') {
-      return b.votes.total - a.votes.total;
-    }
-    if (sortBy === 'Snart votering') {
+    if (sortBy === 'Eldste først') {
       return new Date(a.date).getTime() - new Date(b.date).getTime();
     }
-    return 0;
+    return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
 
   return (
@@ -161,7 +124,7 @@ export default function ExploreClient({
       <FadeIn delay={0.1}>
         <PageHeader
           title="Utforsk saker"
-          description="Lovforslag og representantforslag fra Stortinget — saker som egner seg for enkelt ja/nei-engasjement."
+          description="Lovforslag og representantforslag fra Stortinget — les om sakene og del ja/nei-meninger i forumet."
         />
       </FadeIn>
 
@@ -231,8 +194,7 @@ export default function ExploreClient({
               className="block w-full pl-3 pr-10 py-2 text-base border-border focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-xl border appearance-none bg-background text-foreground"
             >
               <option value="Nyeste først">Nyeste først</option>
-              <option value="Mest engasjement">Mest engasjement</option>
-              <option value="Snart votering">Snart votering</option>
+              <option value="Eldste først">Eldste først</option>
             </select>
           </div>
         </div>
@@ -289,14 +251,14 @@ export default function ExploreClient({
           </button>
           <button
             type="button"
-            onClick={() => setSortBy('Mest engasjement')}
+            onClick={() => setSortBy('Eldste først')}
             className={`rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
-              sortBy === 'Mest engasjement'
+              sortBy === 'Eldste først'
                 ? 'bg-foreground text-background border-foreground'
                 : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
             }`}
           >
-            Populært
+            Eldste
           </button>
         </div>
       </FadeIn>
@@ -311,7 +273,7 @@ export default function ExploreClient({
               return (
               <FadeIn key={issue.id} delay={0.1 * Math.min(index, 5)} direction="up">
                 <div className="bg-card rounded-2xl shadow-sm border border-border hover:shadow-md transition-shadow overflow-hidden">
-                  <Link href={`/dashboard/sak/${issue.id}`} className="block p-6 pb-4">
+                  <Link href={`/dashboard/sak/${issue.id}`} className="block p-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                       <div className="flex items-center gap-3 flex-wrap">
                         {issue.sakKind ? (
@@ -334,15 +296,11 @@ export default function ExploreClient({
                         ))}
                         <SakProcessingBadge status={issue.status} size="sm" />
                       </div>
-                      <div className="text-sm text-muted-foreground text-right">
-                        {issue.votingOpen && issue.votingDaysLeft ? (
-                          <span className="font-medium text-emerald-700 dark:text-emerald-300">
-                            {formatVotingDaysLeftLabel(issue.votingDaysLeft)}
-                          </span>
-                        ) : issue.date ? (
-                          <span>Sist oppdatert: {issue.date}</span>
-                        ) : null}
-                      </div>
+                      {issue.date ? (
+                        <div className="text-sm text-muted-foreground text-right">
+                          Sist oppdatert: {issue.date}
+                        </div>
+                      ) : null}
                     </div>
 
                     <h2 className="text-xl font-semibold text-foreground mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
@@ -351,41 +309,24 @@ export default function ExploreClient({
                     {issue.henvisning ? (
                       <p className="text-sm text-muted-foreground mb-2">{issue.henvisning}</p>
                     ) : null}
-                    <p className="text-muted-foreground mb-4 line-clamp-2">{issue.summary}</p>
+                    <p className="text-muted-foreground line-clamp-2">{issue.summary}</p>
 
-                    <div className="flex items-center justify-between mt-4">
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                        <div className="flex items-center">
-                          <span className="font-medium text-foreground mr-1">{formatNumber(issue.votes.total)}</span>{' '}
-                          stemmer
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-end mt-4">
                       <div className="text-indigo-600 dark:text-indigo-400 text-sm font-medium flex items-center">
-                        Les mer <ArrowRight className="ml-1 w-4 h-4" />
+                        Les saken <ArrowRight className="ml-1 w-4 h-4" />
                       </div>
                     </div>
                   </Link>
 
                   <div className="px-6 py-4 bg-muted/40 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    {displayedUserVotes[String(issue.id)] ? (
-                      <p className="text-sm text-foreground">
-                        Du har stemt:{' '}
-                        <span className="font-semibold">
-                          {VOTE_LABELS[displayedUserVotes[String(issue.id)]] ??
-                            displayedUserVotes[String(issue.id)]}
-                        </span>
-                        <span className="text-muted-foreground"> (anonymt i statistikken)</span>
-                      </p>
-                    ) : issue.status === 'closed' ? (
-                      <p className="text-sm text-muted-foreground">Saken er ferdigbehandlet i Stortinget.</p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Stem på saken for å registrere din mening.</p>
-                    )}
+                    <p className="text-sm text-muted-foreground">
+                      Del din mening i forumet med «(Jeg mener) …» og la andre svare ja eller nei.
+                    </p>
                     <Link
-                      href={routes.sak(String(issue.id))}
+                      href={routes.forumMening(String(issue.id))}
                       className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shrink-0"
                     >
-                      {issue.status === 'closed' || !issue.votingOpen ? 'Se resultat' : 'Gå til sak og stem'}
+                      Del ja/nei-mening
                       <ArrowRight className="ml-1.5 w-4 h-4" />
                     </Link>
                   </div>
