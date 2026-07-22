@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
+import { AdminNavSection } from '@/components/admin/admin-nav-section';
 
 const FORUM_NAV = [
   { href: routes.forum, label: 'Forumforside', icon: Home, sort: null },
@@ -104,6 +105,8 @@ export default function ForumSidebar() {
           );
         })}
       </div>
+
+      <AdminNavSection />
 
       <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm space-y-1">
         <Link

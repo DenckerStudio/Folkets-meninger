@@ -18,7 +18,6 @@ import { ProfileNotifications } from '@/components/profile/profile-notifications
 import { ProfilePrivacy } from '@/components/profile/profile-privacy';
 import { ProfilePublicSettings } from '@/components/profile/profile-public-settings';
 import { ProfileAppPreferences } from '@/components/profile/profile-app-preferences';
-import { ProfileAdminLinks } from '@/components/profile/profile-admin-links';
 import { isProfileTabId, type ProfileTabId } from '@/components/profile/profile-tabs';
 import { getUserPointsProgress } from '@/lib/user-points-levels';
 import type { UserPointsProgress } from '@/lib/user-points-levels';
@@ -312,8 +311,6 @@ function ProfileShellAuthenticated({
         pointsProgress={pointsProgress}
         onSignOut={onSignOut}
       />
-      <ProfileAdminLinks />
-
       <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8">
         <aside className="hidden lg:block">
           <div className="sticky top-24">
