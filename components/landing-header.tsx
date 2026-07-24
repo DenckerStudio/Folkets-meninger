@@ -28,7 +28,7 @@ export function LandingHeader() {
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 w-full border-b bg-background/95 supports-[backdrop-filter]:bg-background/80',
+        'sticky top-0 z-50 w-full border-b bg-background/95 pt-[env(safe-area-inset-top,0px)] supports-[backdrop-filter]:bg-background/80',
         scrolled ? 'border-border shadow-sm backdrop-blur-lg' : 'border-border/60',
       )}
     >
@@ -85,9 +85,9 @@ function FolketsStemmeLogo() {
           <circle cx="120" cy="90" r="14" fill="#00205b" stroke="white" strokeWidth="6" />
         </g>
       </svg>
-      <div className="hidden flex-col justify-center font-extrabold tracking-tight sm:flex">
-        <span className="text-[#00205b] text-sm leading-none">FOLKETS</span>
-        <span className="text-[#ba0c2f] text-sm leading-none">STEMME</span>
+      <div className="flex flex-col justify-center font-extrabold tracking-tight">
+        <span className="text-[#00205b] text-[0.65rem] leading-none sm:text-sm">FOLKETS</span>
+        <span className="text-[#ba0c2f] text-[0.65rem] leading-none sm:text-sm">STEMME</span>
       </div>
     </div>
   );
