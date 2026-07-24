@@ -62,13 +62,40 @@ The canonical template is `.env.example`.
 ### Stortinget sync and sak cache
 
 - `GET /api/cron/sync-issues` calls `lib/stortinget-sync.ts`; n8n schedules it
-  in `workflows/n8n/app-cron.workflow.ts`.
+  in `workflows/n8n/app-cron.workflow.ts`. The result includes `upserted`,
+  `total`, `newIssueIds`, `aiSummaryTriggered`, and `detailsRefreshed`.
+- `lib/sak-status.ts` is the source of truth for "Under behandling" vs
+  "Ferdigbehandlet"; it merges detail `ferdigbehandlet`, denormalized DB state,
+  fresh list `status`, and `innstilling_*` hints because Stortinget list/detail
+  exports can drift.
+- `lib/stortinget-saker-cache.ts` serves the list from 30-minute memory cache,
+  30-minute `unstable_cache` DB reads, optional live list status overlays, and
+  live Stortinget fallback. `getSakerWithCache()` returns `[]` during
+  `NEXT_PHASE=phase-production-build`.
 - `lib/stortinget-detail-cache.ts` stores detail JSON in `stortinget_issues` with
-  a 6-hour max age and refreshes stale pending details.
+  a 24-hour max age and refreshes stale pending details.
 - Detail refresh computes `sak_kind`, `henvisning`, `dokumentgruppe`,
   `ferdigbehandlet`, and `voting_closes_at`, then triggers missing AI summaries
   and document ingest.
-- One-off status repair: `npx tsx scripts/backfill-sak-status.ts --pending-only`.
+- `refreshSakStatusOnly` powers one-off metadata repair without AI/doc side
+  effects: `npx tsx scripts/backfill-sak-status.ts --pending-only`.
+- One-time SQL drift repair:
+  `supabase/migrations/20260702160000_backfill_ferdigbehandlet_from_detail.sql`.
+
+### Høringer
+
+- `lib/stortinget-horinger.ts` fetches live Stortinget høringer from
+  `data.stortinget.no/eksport/horinger?format=json` with 1-hour revalidation;
+  hearing metadata is not cached in Postgres.
+- Always parse hearing dates with `parseStortingetDate`; Stortinget may return
+  `.NET DateTime.MinValue` or `01.01.0001` sentinels when no date is set.
+- Pages live at `/dashboard/horinger` and `/dashboard/horinger/[id]`; they are
+  behind dashboard auth. Legacy `/horinger/*` paths redirect via `next.config.ts`.
+- Read APIs are `/api/horinger` and `/api/horinger/[id]`. User comments are
+  written through `POST /api/hearings` and the `create_hearing_comment` RPC.
+- `hearing_comments` stores public app comments keyed by
+  `stortinget_hearing_id`; comments require forum identity and are not official
+  submissions to Stortinget.
 
 ### Voting lifecycle
 

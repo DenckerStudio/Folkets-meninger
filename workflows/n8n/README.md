@@ -186,6 +186,10 @@ Vercel **Hobby** har ikke Cron Jobs (krever Pro). n8n scheduler kaller appens be
 | Daglig 07:00 | `GET /api/cron/digest?frequency=daily` |
 | Mandag 07:30 | `GET /api/cron/digest?frequency=weekly` |
 
+`sync-issues` returnerer bl.a. `upserted`, `total`, `newIssueIds`,
+`aiSummaryTriggered` og `detailsRefreshed`. `detailsRefreshed` er antall stale
+pending saker som fikk detaljcache oppdatert i samme kjøring.
+
 **Cron settings** (Set node — fyll inn i n8n, ikke commit secret):
 
 | Felt | Verdi |

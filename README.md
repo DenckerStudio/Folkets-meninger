@@ -46,6 +46,8 @@ Important constraints:
   authentication; the rest of `/dashboard/*` requires a Supabase session.
 - Votes are accepted only while a sak is open. The app and `cast_vote` RPC both
   check `status`, `ferdigbehandlet`, and `voting_closes_at`.
+- Høringer are fetched live from Stortinget, not cached in Postgres. Local
+  "innspill" are public app comments and are not sent to Stortinget.
 - Human forum posts require a public first and last name. System forum threads
   created by workflows use the `is_system_thread` path instead.
 - AI summary text is not generated in the Next.js app. The app stores source
@@ -56,7 +58,7 @@ Important constraints:
 | File | Covers |
 |------|--------|
 | [`AGENTS.md`](AGENTS.md) | Agent-facing architecture facts, env vars, validation expectations, and operational notes |
-| [`supabase/README.md`](supabase/README.md) | Migration domains, voting RPCs, forum schema, notifications, RAG tables, and DB runbooks |
+| [`supabase/README.md`](supabase/README.md) | Migration domains, voting RPCs, sak cache, hearing comments, forum schema, notifications, RAG tables, and DB runbooks |
 | [`workflows/n8n/README.md`](workflows/n8n/README.md) | AI summary, forum prompt, document embedding, and app cron workflows |
 | [`infra/searxng/README.md`](infra/searxng/README.md) | SearXNG deployment/configuration used by forum prompt discovery |
 | [`scripts/deploy-forum-prompts-n8n.md`](scripts/deploy-forum-prompts-n8n.md) | Forum prompt workflow deployment notes |
@@ -75,3 +77,7 @@ Example status refresh:
 ```bash
 npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
 ```
+
+Focused unit coverage for recently fragile source parsers/status logic lives in
+`lib/sak-status.test.ts` and `lib/stortinget-horinger.test.ts`; both run through
+`npm run test:unit`.
