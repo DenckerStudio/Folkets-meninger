@@ -24,6 +24,7 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Forum base/features | `20260530120000_forum_enhancements.sql`, `20260531120000_production_readiness.sql`, `20260531140000_forum_prompts_dedupe.sql` | forum threads/replies/likes/prompts and production indexes |
 | Forum reports/sources | `20260602120000_forum_reports_enhance.sql`, `20260602130000_forum_trusted_sources.sql` | `forum_reports`, `forum_trusted_sources` |
 | Forum profiles/points/moderation | `20260614130000_forum_profiles_points_ai_sources.sql`, `20260614160000_harden_forum_points_moderation.sql`, `20260614170000_public_user_display_grants.sql` | public profile fields, point ledgers, moderation RPCs/grants |
+| Forum sak-RAG prompts | `20260621120000_forum_sak_rag_prompts.sql` | `forum_prompts.generation_metadata`, `forum_research_clusters.source_type`, `get_sak_prompt_coverage` |
 | Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql`, `20260702160000_backfill_ferdigbehandlet_from_detail.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category`, `ferdigbehandlet` repair |
 | Sak documents/RAG | `20260617120000_sak_documents_rag.sql` | `stortinget_issue_documents`, `document_chunks`, `match_issue_document_chunks` |
 
@@ -145,6 +146,29 @@ comments are not official submissions to Stortinget; the detail page labels them
 as public app comments. They also do not use forum thread/reply moderation or
 forum point triggers.
 
+### Sak treatment status precedence
+
+Status labels and voting availability are intentionally resolved from multiple
+Stortinget sources because the list export can keep `status = 1` after a sak is
+finished. `lib/sak-status.ts` applies this order:
+
+1. Use `detail_json.ferdigbehandlet` when it is boolean; otherwise use the
+   denormalized `stortinget_issues.ferdigbehandlet` column.
+2. Combine that boolean with the freshest numeric Stortinget status available.
+   List-export status wins over stale `detail_json.status` on list pages.
+3. If no boolean is available, infer a finished sak from list `innstilling`
+   fields (`innstilling_id > 0` and `innstilling_kode` 1 or 2).
+4. Fall back to cached `status`; unknown status is treated as closed.
+
+`lib/stortinget-saker-cache.ts` overlays live list-export status through
+`applyLiveListExportStatuses()` when API refreshes are allowed, then persists
+rows with `persistSakerListToDb()`. If the DB column drifts from cached detail
+JSON, apply `20260702160000_backfill_ferdigbehandlet_from_detail.sql` or rerun:
+
+```bash
+npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
+```
+
 ## Forum schema
 
 Forum writes go through RPCs rather than direct client inserts.
@@ -174,6 +198,19 @@ Point triggers award:
 
 Admin pages use `lib/forum/admin.ts`: `FORUM_ADMIN_EMAILS` allowlist first, then
 Supabase `app_metadata.role = "admin"`.
+
+### Hearing comments
+
+Høringer themselves are not stored locally; pages fetch
+`data.stortinget.no/eksport/horinger?format=json` through
+`lib/stortinget-horinger.ts`. Local user input is stored in
+`hearing_comments`, keyed by the Stortinget hearing id string.
+
+`POST /api/hearings` uses `create_hearing_comment(p_user_id,
+p_stortinget_hearing_id, p_body)` with the service role. The RPC calls
+`ensure_public_user`, requires `user_has_forum_identity`, and enforces body
+length 1-10000 characters. Reads are public through the
+`hearing_comments_select` policy.
 
 ## Notifications
 

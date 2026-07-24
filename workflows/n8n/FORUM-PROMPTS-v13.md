@@ -22,16 +22,23 @@ flowchart LR
 |------|-------------|
 | **Sak-kø** | `pending` saker med `document_chunks.embedding_status = ready`, uten aktiv/draft prompt |
 | **RAG** | Embed sak-tittel+sammendrag → top 8 chunks via `match_issue_document_chunks` |
-| **Agent** | Ollama `llama3.1:8b` + strukturert JSON-parser |
+| **Agent** | Ollama `gemma4:e2b-it-qat` (`think=false`, lav temperatur), uten n8n output parser |
 | **Lagring** | `forum_prompts` draft med `stortinget_issue_id` + `generation_metadata` |
 
-## Kandidatfilter (Fase 0 — prod 2026-06-21)
+Output valideres i `SAK_PROMPT_GENERATOR_SAVE_JS`: workflowen trekker ut JSON fra
+agent-svaret, avviser lav confidence, tomt spørsmål, manglende politisk valg
+eller for lite kontekst, og lagrer kun gyldige utkast.
 
-| Metrikk | Verdi |
-|---------|-------|
-| Åpne saker (`pending`) | 66 |
-| Med RAG-embeddings | 11 |
-| Sak-kandidater (uten reel) | 11 |
+## Kandidatfilter og metrikker
+
+Kandidater må være `pending`, ha minst én ready RAG-chunk, og ikke allerede ha
+aktivt/draft prompt-utkast for samme `stortinget_issue_id`.
+
+| Kilde | Bruk |
+|-------|-----|
+| `get_sak_prompt_coverage()` | Admin-metrikker: pending saker, pending med RAG, pending med prompt, kandidater |
+| `lib/forum/sak-prompt-candidates.ts` | Admin kandidatlisten, maks 25 saker fra de 80 nyeste pending sakene |
+| `lib/forum/sak-prompt-metrics.ts` | Draft/active sak-prompts og snitt RAG-chunks per draft |
 
 ## Env
 
@@ -42,8 +49,18 @@ N8N_FORUM_SAK_PROMPTS_WEBHOOK_URL=https://n8n.heyklever.app/webhook/folkets-foru
 ## Deploy
 
 ```bash
-node scripts/bundle-forum-sak-prompt-generator-workflow.mjs .tmp/sak-prompt-generator.ts
-# MCP validate_workflow + create_workflow_from_code → node scripts/deploy-forum-v13-sak-prompt-generator.mjs --temp-id <id> --publish
+N8N_API_KEY=... npm run deploy:forum-v13-sak-prompt -- --skip-test
+```
+
+Deploy-scriptet eksporterer workflow JSON fra SDK-kilden, henter Postgres- og
+Ollama-credentials fra referanseworkflows, setter Ollama embeddings-URL, finner
+eksisterende workflow ved navn/webhook path, oppdaterer eller oppretter den, og
+aktiverer workflowen. Uten `--skip-test` kjører scriptet en webhook smoke test.
+
+Hvis du trenger en ren TypeScript-bundle for manuell validering:
+
+```bash
+node scripts/bundle-forum-sak-prompt-generator-workflow.mjs /tmp/sak-prompt-generator.ts
 ```
 
 ## Test

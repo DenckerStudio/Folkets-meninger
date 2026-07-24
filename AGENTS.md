@@ -9,7 +9,8 @@
 
 - Single Next.js App Router app (Next.js 15).
 - Auth and DB are Supabase (Postgres); app uses SSR cookies/middleware refresh patterns.
-- Stortinget data comes from `data.stortinget.no` (public API).
+- Stortinget data comes from `data.stortinget.no` (public API): saker,
+  publications, questions, and høringer.
 - AI summaries and forum prompts are produced externally via n8n + Ollama and stored in Supabase; the app should not assume Gemini for current summary generation.
 - Forum Reels: v5 trending (`MloIdsnX7FozM4dv`, draft); v12 Regjeringen RSS + prompt generator; **v13 Stortinget-sak RAG** (`forum-sak-prompt-generator.workflow.ts`, `N8N_FORUM_SAK_PROMPTS_WEBHOOK_URL`); `forum_trusted_sources`; votes Ja/Nei/Ikke interessert + discuss CTA.
 - Public reels UI gated by `FORUM_REELS_PUBLIC` (default false); admin pipeline at `/dashboard/admin/forum-prompts` (`?tab=pipeline` — RSS v12 + sak-RAG v13).
@@ -51,6 +52,7 @@ The canonical template is `.env.example`.
 | `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL` | Trigger pending document chunk embeddings |
 | `N8N_FORUM_PROMPTS_WEBHOOK_URL` | Trigger forum prompt generation |
 | `N8N_FORUM_SAK_PROMPTS_WEBHOOK_URL` | Trigger v13 Stortinget-sak RAG reel drafts |
+| `FORUM_REELS_PUBLIC` | Enables public forum reels when `true`; default hidden/admin preview |
 | `FORUM_ADMIN_EMAILS` | Comma-separated forum/admin allowlist in addition to `app_metadata.role=admin` |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Notification and welcome email delivery |
 | `STORTINGET_SESSION_ID`, `STORTINGET_PERIODE_ID` | Server defaults for Stortinget data |
@@ -79,6 +81,11 @@ The canonical template is `.env.example`.
   and document ingest.
 - `refreshSakStatusOnly` powers one-off metadata repair without AI/doc side
   effects: `npx tsx scripts/backfill-sak-status.ts --pending-only`.
+- Sak list/detail labels use `lib/sak-status.ts`. Prefer
+  `detail_json.ferdigbehandlet`, then the denormalized `ferdigbehandlet` column,
+  then fresh list-export status/innstilling hints; this avoids showing stale
+  "Under behandling" labels when Stortinget's list export still reports
+  `status=1` for finished saker.
 - One-time SQL drift repair:
   `supabase/migrations/20260702160000_backfill_ferdigbehandlet_from_detail.sql`.
 

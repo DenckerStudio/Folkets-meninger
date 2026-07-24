@@ -94,11 +94,14 @@ Arkivér v10/v11 scout/journalist/editor etter deploy (allerede arkivert — se 
 **Deploy:**
 
 ```bash
-node scripts/bundle-forum-sak-prompt-generator-workflow.mjs /tmp/sak-prompt-generator.ts
-npm run deploy:forum-v13-sak-prompt -- --temp-id <id> --publish
+N8N_API_KEY=... npm run deploy:forum-v13-sak-prompt -- --skip-test
 ```
 
-**App:** Admin pipeline viser sak-kandidater; sak-side har «Generer reel-utkast» for forum-admin.
+Deploy-scriptet eksporterer workflow JSON, gjenbruker Postgres/Ollama-credentials
+fra eksisterende workflows, finner eller oppretter workflowen, aktiverer den, og
+kan smoke-teste webhooken når `--skip-test` utelates.
+
+**App:** Admin pipeline viser sak-kandidater via `get_sak_prompt_coverage()`; sak-side har «Generer reel-utkast» for forum-admin.
 
 **Opprydding feilaktige aktive prompts:** [`scripts/archive-misaligned-forum-prompts.sql`](../../scripts/archive-misaligned-forum-prompts.sql)
 
