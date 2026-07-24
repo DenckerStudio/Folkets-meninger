@@ -177,7 +177,6 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
           <BackButton fallbackHref={routes.utforsk} />
           <SakPageActions sakId={sak.id} title={sak.title} className="sm:justify-end" />
         </div>
-        </div>
       </FadeIn>
 
       <FadeIn delay={0.2} direction="up">
