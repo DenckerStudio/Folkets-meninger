@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { BackButton } from '@/components/dashboard/back-button';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Pencil, Plus, Sparkles } from 'lucide-react';
 import { DEFAULT_REEL_VOTE_OPTIONS } from '@/lib/forum/prompt-vote-options';
@@ -409,9 +410,7 @@ export default function AdminForumPromptsClient() {
 
   return (
     <div>
-      <Link href={routes.forum} className="text-sm text-indigo-600 hover:text-indigo-500 mb-4 inline-block">
-        ← Tilbake til forum
-      </Link>
+      <BackButton fallbackHref={routes.forum} className="mb-4" />
       <div className="flex flex-wrap items-center gap-3 mb-2">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <Sparkles className="w-7 h-7 text-indigo-600" />
