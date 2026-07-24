@@ -55,7 +55,7 @@ export function MineInnleggList({ embedded = false }: { embedded?: boolean }) {
           className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-500"
         >
           <Plus className="w-4 h-4" />
-          Start en diskusjon
+          Del din mening
         </Link>
       </div>
     );

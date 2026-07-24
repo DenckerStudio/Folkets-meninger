@@ -35,6 +35,8 @@ type ContextPickerProps = {
   selectedKeys?: Set<string>;
   placeholder?: string;
   compact?: boolean;
+  /** When set, only search and show this context type (hides category tabs). */
+  lockedKind?: ForumContextKind;
 };
 
 export default function ContextPicker({
@@ -42,10 +44,11 @@ export default function ContextPicker({
   selectedKeys = new Set(),
   placeholder = 'Søk etter sak, høring eller politiker…',
   compact = false,
+  lockedKind,
 }: ContextPickerProps) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | ForumContextKind>('all');
+  const [activeTab, setActiveTab] = useState<'all' | ForumContextKind>(lockedKind ?? 'all');
   const [results, setResults] = useState<ForumContextItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -60,7 +63,7 @@ export default function ContextPicker({
     try {
       const params = new URLSearchParams({
         q: debouncedQuery,
-        type: activeTab,
+        type: lockedKind ?? activeTab,
         limit: '8',
       });
       const res = await fetch(`/api/forum/context-search?${params.toString()}`);
@@ -71,7 +74,7 @@ export default function ContextPicker({
     } finally {
       setLoading(false);
     }
-  }, [activeTab, debouncedQuery]);
+  }, [activeTab, debouncedQuery, lockedKind]);
 
   useEffect(() => {
     if (open) {
@@ -112,26 +115,28 @@ export default function ContextPicker({
             onClick={() => setOpen(false)}
           />
           <div className="absolute z-20 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-            <div className="flex gap-1 p-2 border-b border-gray-100 bg-gray-50 overflow-x-auto">
-              {TAB_CONFIG.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                      activeTab === tab.id
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
+            {!lockedKind ? (
+              <div className="flex gap-1 p-2 border-b border-gray-100 bg-gray-50 overflow-x-auto">
+                {TAB_CONFIG.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                        activeTab === tab.id
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
 
             <div className="max-h-72 overflow-y-auto">
               {loading ? (

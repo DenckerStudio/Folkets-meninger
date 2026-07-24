@@ -127,11 +127,11 @@ export default function ForumMobileNav() {
         })}
       </nav>
       <Link
-        href={sakId ? routes.forumNew(sakId) : routes.forumNew()}
+        href={routes.forumNew(sakId ?? undefined)}
         className="flex items-center justify-center gap-2 w-full rounded-full bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
       >
         <Plus className="w-4 h-4" />
-        Start diskusjon
+        Del din mening
       </Link>
     </div>
   );

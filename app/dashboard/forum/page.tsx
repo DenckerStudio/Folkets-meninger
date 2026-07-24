@@ -5,12 +5,13 @@ import ForumPostCard from '@/components/forum/forum-post-card';
 import ForumPromptCarousel from '@/components/forum/forum-prompt-carousel';
 import ForumFeedToolbar from '@/components/forum/forum-feed-toolbar';
 import ForumRightRail from '@/components/forum/forum-right-rail';
+import { ForumOpinionComposer } from '@/components/forum/forum-opinion-composer';
+import { ForumRulesPanel } from '@/components/forum/forum-rules-panel';
 import { getForumThreads, getIssueTitle, getSuggestedIssues, type ForumSort } from '@/lib/forum/queries';
 import { getActiveForumPrompts } from '@/lib/forum/prompt-queries';
 import { canViewForumReels } from '@/lib/forum/reels-visibility';
 import { routes } from '@/lib/routes';
 import { PageHeader } from '@/components/page-header';
-import { Button } from '@/components/ui/button';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +49,12 @@ export default async function ForumPage({
           />
         </header>
 
+        <ForumOpinionComposer
+          sakId={sakId}
+          sakTitle={sakTitle}
+          suggestedIssues={popularIssues}
+        />
+
         {sakId && (
           <div className="mb-6 rounded-xl border border-indigo-100 bg-indigo-50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
@@ -84,9 +91,12 @@ export default async function ForumPage({
             {search && (
               <p className="text-sm text-gray-500 mt-1">Prøv andre ord eller fjern søkefilteret.</p>
             )}
-            <Button render={<Link href={newThreadHref} />} className="mt-4">
-              Start ny diskusjon
-            </Button>
+            <Link
+              href={newThreadHref}
+              className="mt-4 inline-flex text-sm font-semibold text-indigo-600 hover:text-indigo-500"
+            >
+              Del din mening øverst på siden →
+            </Link>
           </div>
         ) : (
           <div className="space-y-3">
@@ -95,6 +105,8 @@ export default async function ForumPage({
             ))}
           </div>
         )}
+
+        <ForumRulesPanel className="mt-8 lg:hidden" />
       </div>
 
       <ForumRightRail recentThreads={topics} popularIssues={popularIssues} />

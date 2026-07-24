@@ -10,8 +10,13 @@ export const routes = {
   varsler: `${DASHBOARD_PREFIX}/varsler`,
   horinger: `${DASHBOARD_PREFIX}/horinger`,
   forum: `${DASHBOARD_PREFIX}/forum`,
-  forumNew: (sakId?: string) =>
-    sakId ? `${DASHBOARD_PREFIX}/forum/ny?sak=${sakId}` : `${DASHBOARD_PREFIX}/forum/ny`,
+  forumNew: (sakId?: string) => {
+    const base = `${DASHBOARD_PREFIX}/forum`;
+    if (sakId) {
+      return `${base}?sak=${encodeURIComponent(sakId)}#del-din-mening`;
+    }
+    return `${base}#del-din-mening`;
+  },
   forumSpesielleSaker: `${DASHBOARD_PREFIX}/forum/spesielle-saker`,
   forumForeslaReel: `${DASHBOARD_PREFIX}/forum/foresla-reel`,
   politikere: `${DASHBOARD_PREFIX}/politikere`,
