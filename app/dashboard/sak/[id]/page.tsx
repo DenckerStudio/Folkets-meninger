@@ -8,18 +8,17 @@ import { formatStortingetDate } from '@/lib/stortinget-horinger';
 import { SaksgangTimeline, type SaksgangStep } from '@/components/sak/saksgang-timeline';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, MessageSquare, Users, Tag } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Tag } from 'lucide-react';
 import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
-import ShareButton from './share-button';
 import FadeIn from '@/components/fade-in';
 import ExpandableText from './expandable-text';
 import VotingSection from './voting-section';
 import { SakDocumentsSection } from '@/components/sak/sak-documents-section';
+import { SakPageActions } from '@/components/sak/sak-page-actions';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
-import { routes } from '@/lib/routes';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { isForumAdmin } from '@/lib/forum/admin';
 import { AdminGenerateSakReelButton } from '@/components/forum/admin-generate-sak-reel-button';
@@ -170,25 +169,19 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
     (issueMeta?.lastUpdatedAt ? formatStortingetDate(issueMeta.lastUpdatedAt) : null);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-12 pb-12">
+    <div className="max-w-4xl mx-auto space-y-8 pb-16 sm:space-y-12 sm:pb-12">
       <FadeIn delay={0.1}>
-        <div className="flex items-center justify-between">
-          <Link href="/dashboard/utforsk" className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
-            <ArrowLeft className="mr-2 w-4 h-4" />
-            Tilbake til oversikt
-          </Link>
-          <div className="flex gap-3">
-            <Link href={`${routes.forum}?sak=${sak.id}`} className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
-              <MessageSquare className="mr-1.5 w-4 h-4" />
-              Diskuter i forum
-            </Link>
-            <ShareButton id={sak.id} title={sak.title} />
-          </div>
-        </div>
+        <Link
+          href="/dashboard/utforsk"
+          className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4 shrink-0" aria-hidden />
+          Tilbake til oversikt
+        </Link>
       </FadeIn>
 
       <FadeIn delay={0.2} direction="up">
-        <div className="space-y-6">
+        <div className="space-y-5 sm:space-y-6">
           {/* Category + Status Badges */}
           <div className="flex flex-wrap items-center gap-2">
             {displaySakKind ? (
@@ -212,7 +205,9 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
             ) : null}
             <SakProcessingBadge status={treatmentStatus} />
             {lastUpdatedLabel ? (
-              <span className="ml-auto text-sm text-muted-foreground">Sist oppdatert: {lastUpdatedLabel}</span>
+              <span className="w-full text-sm text-muted-foreground sm:ml-auto sm:w-auto">
+                Sist oppdatert: {lastUpdatedLabel}
+              </span>
             ) : null}
           </div>
 
@@ -220,6 +215,8 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
           {(sak.henvisning || henvisning) ? (
             <p className="text-sm text-muted-foreground">{sak.henvisning || henvisning}</p>
           ) : null}
+
+          <SakPageActions sakId={sak.id} title={sak.title} />
           
           {/* Meta info grid */}
           {detailedContent ? (
@@ -244,7 +241,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
 
           {/* Forslagstillere (Proposers) */}
           {forslagstillere.length > 0 ? (
-            <div className="rounded-2xl border border-border bg-card shadow-sm p-6">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
               <SakSectionHeading
                 title="Forslagstillere"
                 tooltipKey="forslagstillere"
@@ -282,7 +279,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
           ) : null}
 
           {saksordfoerere.length > 0 ? (
-            <div className="rounded-2xl border border-border bg-card shadow-sm p-6">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
               <SakSectionHeading
                 title="Saksordførere"
                 tooltipKey="saksordfoerer"
@@ -331,6 +328,17 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
 
       <FadeIn delay={0.25} direction="up">
         <AiSummary sakId={sak.id} title={sak.title} summary={detailedContent?.tittel || sak.summary} />
+      </FadeIn>
+
+      <FadeIn delay={0.28} direction="up">
+        <VotingSection
+          initialVotes={sak.votes}
+          sakId={sak.id}
+          sakTitle={sak.title}
+          sakSummary={sak.summary}
+          votingClosed={votingClosed}
+          votingDaysLeft={votingWindow.daysLeft}
+        />
       </FadeIn>
 
       {documents.length > 0 ? (
@@ -414,7 +422,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
             </div>
           )}
 
-          <div className="pt-4 border-t border-border flex flex-wrap gap-4">
+          <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:flex-wrap sm:gap-4">
             <a
               href={`https://data.stortinget.no/eksport/sak?sakid=${sak.id}&format=json`}
               target="_blank"
@@ -436,6 +444,13 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
               </a>
             )}
           </div>
+
+          <SakPageActions
+            sakId={sak.id}
+            title={sak.title}
+            variant="compact"
+            className="border-t border-border pt-6"
+          />
         </div>
       </FadeIn>
 
@@ -445,21 +460,10 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
 
       <FadeIn delay={0.45} direction="up">
         {showAdminReelButton ? (
-          <div className="mb-6">
+          <div>
             <AdminGenerateSakReelButton issueId={sak.id} issueTitle={sak.title} />
           </div>
         ) : null}
-      </FadeIn>
-
-      <FadeIn delay={0.5} direction="up">
-        <VotingSection
-          initialVotes={sak.votes}
-          sakId={sak.id}
-          sakTitle={sak.title}
-          sakSummary={sak.summary}
-          votingClosed={votingClosed}
-          votingDaysLeft={votingWindow.daysLeft}
-        />
       </FadeIn>
     </div>
   );

@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ThumbsUp, ThumbsDown, Minus, CheckCircle, LogIn, Lock } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Minus, CheckCircle, LogIn, Lock, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 import { formatVotingDaysLeftLabel } from '@/lib/sak-voting-window';
+import { routes } from '@/lib/routes';
 
 function AnimatedPercent({ value, initialValue = 0 }: { value: number, initialValue?: number }) {
   const [displayValue, setDisplayValue] = useState(initialValue);
@@ -181,8 +182,8 @@ export default function VotingSection({
   const canVote = !isClosed && !userVote && !isLoadingVote;
 
   return (
-    <div className="bg-card rounded-2xl shadow-sm border border-border p-8">
-      <h2 className="text-2xl font-bold text-foreground mb-2 text-center">
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-8">
+      <h2 className="mb-2 text-center text-xl font-bold text-foreground sm:text-2xl">
         {isClosed ? 'Folkets mening' : 'Hva mener du?'}
       </h2>
 
@@ -225,7 +226,7 @@ export default function VotingSection({
           Stemming er stengt for denne saken.
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="mb-6 grid grid-cols-3 gap-2 sm:mb-8 sm:gap-4">
           <motion.button 
             whileTap={canVote ? { scale: 0.95 } : {}}
             whileHover={canVote ? { scale: 1.02 } : {}}
@@ -233,7 +234,7 @@ export default function VotingSection({
             disabled={!canVote || isSubmitting}
             aria-pressed={userVote === 'for'}
             aria-label="Stem for"
-            className={`relative flex flex-col items-center justify-center py-6 px-4 rounded-xl border-2 transition-all duration-200 ${
+            className={`relative flex min-h-[5.5rem] flex-col items-center justify-center rounded-xl border-2 px-1 py-3 transition-all duration-200 sm:min-h-0 sm:px-4 sm:py-6 ${
               userVote === 'for' 
                 ? 'border-emerald-500 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200 shadow-md ring-2 ring-emerald-500 ring-offset-2 ring-offset-background' 
                 : !canVote
@@ -246,18 +247,18 @@ export default function VotingSection({
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", bounce: 0.6 }}
-                className="absolute top-3 right-3"
+                className="absolute right-1.5 top-1.5 sm:right-3 sm:top-3"
               >
-                <CheckCircle className="w-6 h-6 text-white fill-emerald-500" />
+                <CheckCircle className="h-5 w-5 fill-emerald-500 text-white sm:h-6 sm:w-6" />
               </motion.div>
             )}
             <motion.div
               animate={userVote === 'for' ? { scale: [1, 1.2, 1], rotate: [0, -10, 10, 0] } : {}}
               transition={{ duration: 0.5 }}
             >
-              <ThumbsUp className={`w-8 h-8 mb-2 ${userVote === 'for' ? 'fill-emerald-200' : ''}`} />
+              <ThumbsUp className={`mb-1 h-6 w-6 sm:mb-2 sm:h-8 sm:w-8 ${userVote === 'for' ? 'fill-emerald-200' : ''}`} />
             </motion.div>
-            <span className="font-semibold">For</span>
+            <span className="text-xs font-semibold sm:text-base">For</span>
           </motion.button>
 
           <motion.button 
@@ -267,7 +268,7 @@ export default function VotingSection({
             disabled={!canVote || isSubmitting}
             aria-pressed={userVote === 'abstain'}
             aria-label="Stem avstår"
-            className={`relative flex flex-col items-center justify-center py-6 px-4 rounded-xl border-2 transition-all duration-200 ${
+            className={`relative flex min-h-[5.5rem] flex-col items-center justify-center rounded-xl border-2 px-1 py-3 transition-all duration-200 sm:min-h-0 sm:px-4 sm:py-6 ${
               userVote === 'abstain' 
                 ? 'border-muted-foreground bg-muted text-foreground shadow-md ring-2 ring-muted-foreground ring-offset-2 ring-offset-background' 
                 : !canVote
@@ -280,18 +281,18 @@ export default function VotingSection({
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", bounce: 0.6 }}
-                className="absolute top-3 right-3"
+                className="absolute right-1.5 top-1.5 sm:right-3 sm:top-3"
               >
-                <CheckCircle className="w-6 h-6 text-white fill-gray-600" />
+                <CheckCircle className="h-5 w-5 fill-gray-600 text-white sm:h-6 sm:w-6" />
               </motion.div>
             )}
             <motion.div
               animate={userVote === 'abstain' ? { scale: [1, 1.2, 1] } : {}}
               transition={{ duration: 0.4 }}
             >
-              <Minus className={`w-8 h-8 mb-2 ${userVote === 'abstain' ? 'stroke-gray-800' : ''}`} />
+              <Minus className={`mb-1 h-6 w-6 sm:mb-2 sm:h-8 sm:w-8 ${userVote === 'abstain' ? 'stroke-gray-800' : ''}`} />
             </motion.div>
-            <span className="font-semibold">Avstår</span>
+            <span className="text-xs font-semibold sm:text-base">Avstår</span>
           </motion.button>
 
           <motion.button 
@@ -301,7 +302,7 @@ export default function VotingSection({
             disabled={!canVote || isSubmitting}
             aria-pressed={userVote === 'against'}
             aria-label="Stem mot"
-            className={`relative flex flex-col items-center justify-center py-6 px-4 rounded-xl border-2 transition-all duration-200 ${
+            className={`relative flex min-h-[5.5rem] flex-col items-center justify-center rounded-xl border-2 px-1 py-3 transition-all duration-200 sm:min-h-0 sm:px-4 sm:py-6 ${
               userVote === 'against' 
                 ? 'border-rose-500 bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-200 shadow-md ring-2 ring-rose-500 ring-offset-2 ring-offset-background' 
                 : !canVote
@@ -314,18 +315,18 @@ export default function VotingSection({
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", bounce: 0.6 }}
-                className="absolute top-3 right-3"
+                className="absolute right-1.5 top-1.5 sm:right-3 sm:top-3"
               >
-                <CheckCircle className="w-6 h-6 text-white fill-rose-500" />
+                <CheckCircle className="h-5 w-5 fill-rose-500 text-white sm:h-6 sm:w-6" />
               </motion.div>
             )}
             <motion.div
               animate={userVote === 'against' ? { scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] } : {}}
               transition={{ duration: 0.5 }}
             >
-              <ThumbsDown className={`w-8 h-8 mb-2 ${userVote === 'against' ? 'fill-rose-200' : ''}`} />
+              <ThumbsDown className={`mb-1 h-6 w-6 sm:mb-2 sm:h-8 sm:w-8 ${userVote === 'against' ? 'fill-rose-200' : ''}`} />
             </motion.div>
-            <span className="font-semibold">Mot</span>
+            <span className="text-xs font-semibold sm:text-base">Mot</span>
           </motion.button>
         </div>
       )}
@@ -386,9 +387,22 @@ export default function VotingSection({
             {isClosed ? 'Ingen stemmer ble registrert før saken ble avsluttet.' : 'Ingen har stemt ennå. Vær den første!'}
           </p>
         )}
-        <p className="text-center text-xs text-muted-foreground mt-4">
+        <p className="mt-4 text-center text-xs text-muted-foreground">
           Din stemme lagres anonymt i tråd med GDPR.
         </p>
+      </div>
+
+      <div className="mt-6 border-t border-border pt-6">
+        <p className="mb-3 text-center text-sm text-muted-foreground">
+          Vil du utdype eller høre andres argumenter?
+        </p>
+        <Link
+          href={`${routes.forum}?sak=${sakId}`}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200 dark:hover:bg-indigo-950/80"
+        >
+          <MessageSquare className="h-4 w-4 shrink-0" aria-hidden />
+          Diskuter i forum
+        </Link>
       </div>
     </div>
   );

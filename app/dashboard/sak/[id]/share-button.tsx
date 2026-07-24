@@ -3,7 +3,14 @@
 import { Share2, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-export default function ShareButton({ id, title }: { id: string, title: string }) {
+type ShareButtonProps = {
+  id: string;
+  title: string;
+  className?: string;
+  compact?: boolean;
+};
+
+export default function ShareButton({ id, title, className = '', compact = false }: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
   const [url, setUrl] = useState('');
 
@@ -42,10 +49,17 @@ export default function ShareButton({ id, title }: { id: string, title: string }
 
   return (
     <button
+      type="button"
       onClick={handleShare}
-      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors shadow-sm"
+      className={`inline-flex items-center rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-muted hover:text-indigo-600 dark:hover:text-indigo-400 ${
+        compact ? 'py-2 text-xs sm:text-sm' : 'py-2.5'
+      } ${className}`.trim()}
     >
-      {copied ? <Check className="w-4 h-4 mr-2 text-emerald-600" /> : <Share2 className="w-4 h-4 mr-2" />}
+      {copied ? (
+        <Check className="mr-2 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+      ) : (
+        <Share2 className="mr-2 h-4 w-4 shrink-0" aria-hidden />
+      )}
       {copied ? 'Lenke kopiert!' : 'Del sak'}
     </button>
   );
