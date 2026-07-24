@@ -34,7 +34,8 @@ External systems:
   `/dashboard/*` except public sak pages.
 - Supabase Postgres stores votes, forum content, notifications, AI summaries,
   Stortinget issue cache, document chunks, and admin/trusted-source data.
-- Stortinget APIs are read-only sources for sak lists/details/publications.
+- Stortinget APIs are read-only sources for sak lists/details, høringer, and
+  publications.
 - n8n calls app cron endpoints with `x-cron-secret` and receives fire-and-forget
   webhooks from the app for AI summaries and document embeddings.
 - Ollama generates AI summaries/prompts and embeddings from n8n, not from the app.
@@ -81,28 +82,36 @@ The canonical template is `.env.example`.
   and document ingest.
 - `refreshSakStatusOnly` powers one-off metadata repair without AI/doc side
   effects: `npx tsx scripts/backfill-sak-status.ts --pending-only`.
-- Sak list/detail labels use `lib/sak-status.ts`. Prefer
-  `detail_json.ferdigbehandlet`, then the denormalized `ferdigbehandlet` column,
-  then fresh list-export status/innstilling hints; this avoids showing stale
-  "Under behandling" labels when Stortinget's list export still reports
-  `status=1` for finished saker.
-- One-time SQL drift repair:
-  `supabase/migrations/20260702160000_backfill_ferdigbehandlet_from_detail.sql`.
+- Sak treatment labels use `lib/sak-status.ts`, not a single raw Stortinget
+  field. `resolveSakStatusFromSources` prefers `detail_json.ferdigbehandlet`
+  over the denormalized DB column, then merges numeric Stortinget status and
+  list `innstilling` fields.
+- Known Stortinget quirk: list exports can keep `status=1` while a sak is
+  finished. Treat `innstilling_id > 0` with `innstilling_kode` 1 or 2 as a
+  finished-sak hint when no explicit `ferdigbehandlet` boolean is available.
+- If list and detail pages disagree between "Under behandling" and
+  "Ferdigbehandlet", inspect `stortinget_issues.detail_json`,
+  `ferdigbehandlet`, and fresh list-export innstilling fields. Repair DB drift
+  with `supabase/migrations/20260702160000_backfill_ferdigbehandlet_from_detail.sql`
+  or the backfill script above.
 
 ### Høringer
 
-- `lib/stortinget-horinger.ts` fetches live Stortinget høringer from
-  `data.stortinget.no/eksport/horinger?format=json` with 1-hour revalidation;
-  hearing metadata is not cached in Postgres.
-- Always parse hearing dates with `parseStortingetDate`; Stortinget may return
-  `.NET DateTime.MinValue` or `01.01.0001` sentinels when no date is set.
-- Pages live at `/dashboard/horinger` and `/dashboard/horinger/[id]`; they are
-  behind dashboard auth. Legacy `/horinger/*` paths redirect via `next.config.ts`.
-- Read APIs are `/api/horinger` and `/api/horinger/[id]`. User comments are
-  written through `POST /api/hearings` and the `create_hearing_comment` RPC.
-- `hearing_comments` stores public app comments keyed by
-  `stortinget_hearing_id`; comments require forum identity and are not official
-  submissions to Stortinget.
+- `/dashboard/horinger` and `/dashboard/horinger/<id>` show Stortinget hearings;
+  `/horinger` redirects to the dashboard path. These routes are login-gated by
+  middleware, unlike public `/dashboard/sak/<id>` pages.
+- `lib/stortinget-horinger.ts` fetches
+  `https://data.stortinget.no/eksport/horinger?format=json` with a 1-hour
+  revalidate and normalizes Stortinget date values.
+- Stortinget may send sentinel dates (`/Date(-62135596800000)/` or
+  `01.01.0001`) when no deadline is published. Treat them as missing dates, not
+  real future/past deadlines.
+- Hearing status kinds are `open`, `planned`, `held`, and `cancelled`, derived
+  from `horing_status` plus innspill/application/session dates.
+- Local hearing comments are public rows in `hearing_comments`; the app posts
+  via `POST /api/hearings`, which calls `create_hearing_comment` with the
+  service role. The RPC still enforces `first_name`/`last_name` via
+  `user_has_forum_identity`; comments are not submitted to Stortinget.
 
 ### Voting lifecycle
 

@@ -36,7 +36,7 @@ values are only needed for the workflows that call those services.
 ```text
 Browser / Next.js App Router
   -> Supabase Auth + Postgres (votes, forum, notifications, sak cache)
-  -> data.stortinget.no (saker, details, publications)
+  -> data.stortinget.no (saker, details, høringer, publications)
   -> n8n webhooks (AI summaries, document embeddings, forum prompts, cron)
   -> Ollama / SearXNG / SMTP as workflow dependencies
 ```
@@ -45,10 +45,15 @@ Important constraints:
 
 - Public sak detail pages under `/dashboard/sak/[id]` can be viewed without
   authentication; the rest of `/dashboard/*` requires a Supabase session.
+- Høringer live under `/dashboard/horinger` and `/dashboard/horinger/[id]`.
+  `/horinger` redirects there, so browsing and local comments require login.
 - Votes are accepted only while a sak is open. The app and `cast_vote` RPC both
   check `status`, `ferdigbehandlet`, and `voting_closes_at`.
 - Høringer are fetched live from Stortinget, not cached in Postgres. Local
   "innspill" are public app comments and are not sent to Stortinget.
+- Sak treatment labels are resolved from multiple Stortinget sources because
+  list exports can keep `status=1` after a detail payload says the sak is
+  `ferdigbehandlet`.
 - Human forum posts require a public first and last name. System forum threads
   created by workflows use the `is_system_thread` path instead.
 - AI summary text is not generated in the Next.js app. The app stores source
