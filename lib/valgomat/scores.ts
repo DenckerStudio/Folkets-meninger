@@ -19,13 +19,8 @@ export const VALGOMAT_PARTIES = [
 /** Partisammenligning krever stemmedata fra Stortinget per sak — ikke tilgjengelig ennå. */
 export const PARTY_ALIGNMENT_AVAILABLE = false;
 
-/** Normalizes `get_user_vote_history` RPC payload to a vote count. */
-export function voteCountFromHistoryRpc(data: unknown): number {
-  if (Array.isArray(data)) {
-    return data.length;
-  }
-  if (data && typeof data === 'object' && !Array.isArray(data)) {
-    return 0;
-  }
-  return 0;
+/** Normalizes forum vote history payload to a vote count. */
+export function voteCountFromHistory(items: unknown): number {
+  if (!Array.isArray(items)) return 0;
+  return items.length;
 }

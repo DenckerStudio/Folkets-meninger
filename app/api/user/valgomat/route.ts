@@ -31,7 +31,7 @@ export async function GET() {
   } catch (e) {
     if (e instanceof ValgomatServiceError) {
       console.error('valgomat service:', e.message);
-      return NextResponse.json({ error: 'Kunne ikke hente stemmehistorikk' }, { status: 500 });
+      return NextResponse.json({ error: 'Kunne ikke hente forum-historikk' }, { status: 500 });
     }
     console.error('valgomat', e);
     return NextResponse.json({ error: 'Kunne ikke beregne valgomat' }, { status: 500 });

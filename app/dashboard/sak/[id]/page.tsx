@@ -3,18 +3,16 @@ import { classifySakKind, getSakKindLabel } from '@/lib/stortinget-sak-presentat
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { SakMetaCard, SakProcessingBadge, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
 import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS, SAK_TYPE_BADGE_CLASS, resolveSakListStatus } from '@/lib/sak-status';
-import { getSakVotingWindow } from '@/lib/sak-voting-window';
 import { formatStortingetDate } from '@/lib/stortinget-horinger';
 import { SaksgangTimeline, type SaksgangStep } from '@/components/sak/saksgang-timeline';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, MessageSquare, Users, Tag } from 'lucide-react';
+import { ArrowLeft, ExternalLink, MessageSquare, MessageSquarePlus, Users, Tag } from 'lucide-react';
 import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
 import ShareButton from './share-button';
 import FadeIn from '@/components/fade-in';
 import ExpandableText from './expandable-text';
-import VotingSection from './voting-section';
 import { SakDocumentsSection } from '@/components/sak/sak-documents-section';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
@@ -23,6 +21,7 @@ import { routes } from '@/lib/routes';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { isForumAdmin } from '@/lib/forum/admin';
 import { AdminGenerateSakReelButton } from '@/components/forum/admin-generate-sak-reel-button';
+import { SakMeningSection } from '@/components/forum/sak-mening-section';
 
 export const dynamic = 'force-dynamic';
 
@@ -160,11 +159,6 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
       })
     : issueMeta?.status ?? sak.status;
 
-  const votingWindow = getSakVotingWindow(detailedContent, {
-    ferdigbehandlet: detailedContent?.ferdigbehandlet ?? issueMeta?.ferdigbehandlet,
-  });
-  const votingClosed = treatmentStatus === 'closed' || !votingWindow.isOpen;
-
   const lastUpdatedLabel =
     formatStortingetDate(sak.date) ??
     (issueMeta?.lastUpdatedAt ? formatStortingetDate(issueMeta.lastUpdatedAt) : null);
@@ -177,7 +171,11 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
             <ArrowLeft className="mr-2 w-4 h-4" />
             Tilbake til oversikt
           </Link>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            <Link href={routes.forumMening(sak.id)} className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
+              <MessageSquarePlus className="mr-1.5 w-4 h-4" />
+              Del ja/nei-mening
+            </Link>
             <Link href={`${routes.forum}?sak=${sak.id}`} className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
               <MessageSquare className="mr-1.5 w-4 h-4" />
               Diskuter i forum
@@ -452,14 +450,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
       </FadeIn>
 
       <FadeIn delay={0.5} direction="up">
-        <VotingSection
-          initialVotes={sak.votes}
-          sakId={sak.id}
-          sakTitle={sak.title}
-          sakSummary={sak.summary}
-          votingClosed={votingClosed}
-          votingDaysLeft={votingWindow.daysLeft}
-        />
+        <SakMeningSection sakId={sak.id} sakTitle={sak.title} />
       </FadeIn>
     </div>
   );

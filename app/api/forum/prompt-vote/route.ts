@@ -2,29 +2,31 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { ensurePublicUser } from '@/lib/ensure-public-user';
-import { requireForumReelsAccess } from '@/lib/forum/reels-visibility';
+import { requireForumPromptInteractionAccess } from '@/lib/forum/reels-visibility';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
-    const access = await requireForumReelsAccess();
+    const { prompt_id, option_id } = await request.json();
+    if (!prompt_id || !option_id) {
+      return NextResponse.json({ error: 'Mangler prompt eller alternativ' }, { status: 400 });
+    }
+
+    const access = await requireForumPromptInteractionAccess(prompt_id);
     if (!access.ok) {
       return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
     const supabase = await getServerSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
     }
 
     await ensurePublicUser(user);
-
-    const { prompt_id, option_id } = await request.json();
-    if (!prompt_id || !option_id) {
-      return NextResponse.json({ error: 'Mangler prompt eller alternativ' }, { status: 400 });
-    }
 
     const service = getServiceSupabase();
     const { data, error } = await service.rpc('cast_prompt_vote', {

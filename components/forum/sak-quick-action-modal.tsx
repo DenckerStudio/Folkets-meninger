@@ -2,22 +2,19 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, FileText, Loader2, Sparkles, Vote, X } from 'lucide-react';
-import UserSakVoteStatus from '@/components/forum/user-sak-vote-status';
+import { ExternalLink, FileText, Loader2, Sparkles, X } from 'lucide-react';
 import AiSummary from '@/app/dashboard/sak/[id]/ai-summary';
-import VotingSection from '@/app/dashboard/sak/[id]/voting-section';
 import { routes } from '@/lib/routes';
 import { getSakTreatmentLabel, resolveSakTreatmentStatus } from '@/lib/sak-status';
 import { cn } from '@/lib/utils';
 
-export type SakQuickPanel = 'overview' | 'vote' | 'ai-summary';
+export type SakQuickPanel = 'overview' | 'ai-summary';
 
 const PANEL_META: Record<
   SakQuickPanel,
   { title: string; icon: typeof FileText }
 > = {
   overview: { title: 'Sak', icon: FileText },
-  vote: { title: 'Stem på saken', icon: Vote },
   'ai-summary': { title: 'AI-sammendrag', icon: Sparkles },
 };
 
@@ -198,15 +195,6 @@ export function SakQuickActionModal({
             <SakOverviewPanel key={sakId} sakId={sakId} sakTitle={sakTitle} />
           )}
 
-          {panel === 'vote' && (
-            <VotingSection
-              sakId={sakId}
-              sakTitle={sakTitle}
-              sakSummary={sakTitle}
-              initialVotes={{ for: 0, against: 0, abstain: 0, total: 0 }}
-            />
-          )}
-
           {panel === 'ai-summary' && (
             <AiSummary sakId={sakId} title={sakTitle} summary={sakTitle} />
           )}
@@ -250,7 +238,9 @@ export function SakQuickActionLinks({ sakId, sakTitle }: SakQuickActionLinksProp
       <button type="button" className={linkClass} onClick={() => open('overview')}>
         <FileText className="h-3.5 w-3.5" /> Se sak
       </button>
-      <UserSakVoteStatus sakId={sakId} />
+      <Link href={routes.forumMening(sakId)} className={linkClass}>
+        Del ja/nei-mening
+      </Link>
       <button type="button" className={linkClass} onClick={() => open('ai-summary')}>
         <Sparkles className="h-3.5 w-3.5" /> AI-sammendrag
       </button>

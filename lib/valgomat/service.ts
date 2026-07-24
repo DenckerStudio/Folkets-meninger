@@ -1,8 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServiceSupabase } from '@/lib/supabase';
 import {
+  buildForumVoteInsights,
+  fetchUserForumVoteHistory,
+  type ForumVoteInsights,
+} from '@/lib/forum/vote-history-service';
+import {
   PARTY_ALIGNMENT_AVAILABLE,
-  voteCountFromHistoryRpc,
   type ValgomatPartyScore,
 } from '@/lib/valgomat/scores';
 
@@ -10,6 +14,7 @@ export type ValgomatResult = {
   scores: ValgomatPartyScore[];
   vote_count: number;
   party_alignment_available: boolean;
+  insights: ForumVoteInsights;
 };
 
 export class ValgomatServiceError extends Error {
@@ -19,28 +24,22 @@ export class ValgomatServiceError extends Error {
   }
 }
 
-export async function fetchUserVoteCount(
+export async function fetchUserForumVoteInsights(
   service: SupabaseClient,
   userId: string,
-): Promise<number> {
-  const { data, error } = await service.rpc('get_user_vote_history', {
-    p_user_id: userId,
-  });
-
-  if (error) {
-    throw new ValgomatServiceError(error.message);
-  }
-
-  return voteCountFromHistoryRpc(data);
+): Promise<ForumVoteInsights> {
+  const items = await fetchUserForumVoteHistory(service, userId);
+  return buildForumVoteInsights(items);
 }
 
 export async function getValgomatForUser(userId: string): Promise<ValgomatResult> {
   const service = getServiceSupabase();
-  const voteCount = await fetchUserVoteCount(service, userId);
+  const insights = await fetchUserForumVoteInsights(service, userId);
 
   return {
     scores: [],
-    vote_count: voteCount,
+    vote_count: insights.summary.total,
     party_alignment_available: PARTY_ALIGNMENT_AVAILABLE,
+    insights,
   };
 }

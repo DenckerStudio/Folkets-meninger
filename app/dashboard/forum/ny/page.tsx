@@ -39,6 +39,14 @@ export default async function NewForumThreadPage({
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-gray-600 sm:text-base">
               Del synspunkter, still spørsmål og koble innlegget til saker, høringer og politikere.
+              Vil du dele en ja/nei-mening om saken?{' '}
+              {sakId ? (
+                <Link href={routes.forumMening(sakId)} className="font-medium text-indigo-600 hover:text-indigo-500">
+                  Start en «(Jeg mener) …»-avstemning
+                </Link>
+              ) : (
+                <span>Velg en sak først for å starte en «(Jeg mener) …»-avstemning.</span>
+              )}
             </p>
           </div>
         </header>
