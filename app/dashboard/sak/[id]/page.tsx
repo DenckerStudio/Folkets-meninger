@@ -171,13 +171,16 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-16 sm:space-y-12 sm:pb-12">
       <FadeIn delay={0.1}>
-        <Link
-          href="/dashboard/utforsk"
-          className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4 shrink-0" aria-hidden />
-          Tilbake til oversikt
-        </Link>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Link
+            href="/dashboard/utforsk"
+            className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4 shrink-0" aria-hidden />
+            Tilbake til oversikt
+          </Link>
+          <SakPageActions sakId={sak.id} title={sak.title} className="sm:justify-end" />
+        </div>
       </FadeIn>
 
       <FadeIn delay={0.2} direction="up">
@@ -216,8 +219,6 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
             <p className="text-sm text-muted-foreground">{sak.henvisning || henvisning}</p>
           ) : null}
 
-          <SakPageActions sakId={sak.id} title={sak.title} />
-          
           {/* Meta info grid */}
           {detailedContent ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -444,13 +445,6 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
               </a>
             )}
           </div>
-
-          <SakPageActions
-            sakId={sak.id}
-            title={sak.title}
-            variant="compact"
-            className="border-t border-border pt-6"
-          />
         </div>
       </FadeIn>
 

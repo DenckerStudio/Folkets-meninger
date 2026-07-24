@@ -7,10 +7,9 @@ type ShareButtonProps = {
   id: string;
   title: string;
   className?: string;
-  compact?: boolean;
 };
 
-export default function ShareButton({ id, title, className = '', compact = false }: ShareButtonProps) {
+export default function ShareButton({ id, title, className = '' }: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
   const [url, setUrl] = useState('');
 
@@ -51,16 +50,14 @@ export default function ShareButton({ id, title, className = '', compact = false
     <button
       type="button"
       onClick={handleShare}
-      className={`inline-flex items-center rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-muted hover:text-indigo-600 dark:hover:text-indigo-400 ${
-        compact ? 'py-2 text-xs sm:text-sm' : 'py-2.5'
-      } ${className}`.trim()}
+      className={`inline-flex items-center gap-1.5 font-medium text-muted-foreground transition-colors hover:text-indigo-600 dark:hover:text-indigo-400 ${className}`.trim()}
     >
       {copied ? (
-        <Check className="mr-2 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+        <Check className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
       ) : (
-        <Share2 className="mr-2 h-4 w-4 shrink-0" aria-hidden />
+        <Share2 className="h-4 w-4 shrink-0" aria-hidden />
       )}
-      {copied ? 'Lenke kopiert!' : 'Del sak'}
+      {copied ? 'Lenke kopiert' : 'Del sak'}
     </button>
   );
 }

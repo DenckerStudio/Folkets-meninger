@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ThumbsUp, ThumbsDown, Minus, CheckCircle, LogIn, Lock, MessageSquare } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Minus, CheckCircle, LogIn, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 import { formatVotingDaysLeftLabel } from '@/lib/sak-voting-window';
-import { routes } from '@/lib/routes';
 
 function AnimatedPercent({ value, initialValue = 0 }: { value: number, initialValue?: number }) {
   const [displayValue, setDisplayValue] = useState(initialValue);
@@ -390,19 +389,6 @@ export default function VotingSection({
         <p className="mt-4 text-center text-xs text-muted-foreground">
           Din stemme lagres anonymt i tråd med GDPR.
         </p>
-      </div>
-
-      <div className="mt-6 border-t border-border pt-6">
-        <p className="mb-3 text-center text-sm text-muted-foreground">
-          Vil du utdype eller høre andres argumenter?
-        </p>
-        <Link
-          href={`${routes.forum}?sak=${sakId}`}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200 dark:hover:bg-indigo-950/80"
-        >
-          <MessageSquare className="h-4 w-4 shrink-0" aria-hidden />
-          Diskuter i forum
-        </Link>
       </div>
     </div>
   );
