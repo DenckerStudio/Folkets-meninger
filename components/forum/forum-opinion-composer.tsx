@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FileText, Loader2, LogIn, Send } from 'lucide-react';
+import { Loader2, LogIn, Send } from 'lucide-react';
 import { FORUM_LIMITS } from '@/lib/forum/validation';
 import {
   contextItemKey,
@@ -29,7 +29,7 @@ type ForumOpinionComposerProps = {
 };
 
 const inputClass =
-  'w-full min-h-[3rem] resize-y rounded-xl border-0 bg-gray-50 px-4 py-3 text-sm text-gray-900 shadow-sm ring-1 ring-gray-200 transition-shadow placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30';
+  'min-h-[2.75rem] w-full flex-1 resize-none border-0 bg-transparent py-2.5 pr-3 text-sm leading-relaxed text-gray-900 placeholder:text-gray-400 focus:outline-none';
 
 function stripOpinionPrefix(text: string): string {
   const trimmed = text.trim();
@@ -227,13 +227,13 @@ export function ForumOpinionComposer({
     return (
       <section
         id="del-din-mening"
-        className="mb-6 rounded-2xl border border-dashed border-gray-200 bg-white px-5 py-8 text-center shadow-sm sm:px-6"
+        className="mb-8 border-b border-gray-100 pb-8 text-center"
       >
-        <h2 className="text-lg font-bold text-gray-900">Del din mening</h2>
-        <p className="mt-2 text-sm text-gray-600">Logg inn for å dele hva du mener om saker og samfunn.</p>
+        <h2 className="text-lg font-semibold tracking-tight text-gray-900">Del din mening</h2>
+        <p className="mt-1.5 text-sm text-gray-500">Logg inn for å dele hva du mener.</p>
         <Link
           href={routes.login}
-          className="mt-4 inline-flex items-center font-medium text-indigo-600 hover:text-indigo-500"
+          className="mt-4 inline-flex items-center text-sm font-semibold text-indigo-600 hover:text-indigo-500"
         >
           <LogIn className="mr-1.5 h-4 w-4" aria-hidden />
           Logg inn
@@ -243,23 +243,18 @@ export function ForumOpinionComposer({
   }
 
   return (
-    <section
-      id="del-din-mening"
-      className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm ring-1 ring-gray-200/80 sm:p-6"
-    >
-      <h2 className="text-lg font-bold text-gray-900">Del din mening</h2>
-      <p className="mt-1 text-sm text-gray-600">
-        Start med «Jeg mener», og legg ved saker du syns er relevante.
-      </p>
+    <section id="del-din-mening" className="mb-8 border-b border-gray-100 pb-8">
+      <h2 className="text-lg font-semibold tracking-tight text-gray-900">Del din mening</h2>
+      <p className="mt-1 text-sm text-gray-500">Skriv etter «Jeg mener» — legg ved saker om du vil.</p>
 
       {error ? (
-        <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-100">
+        <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       ) : null}
 
       {showDraftChoice && pendingDraft ? (
-        <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/80 px-4 py-4">
+        <div className="mt-4 rounded-xl bg-gray-50 px-4 py-4">
           <p className="text-sm font-semibold text-gray-900">Du har et lagret utkast</p>
           <div className="mt-3 flex flex-wrap gap-3">
             <button
@@ -270,7 +265,7 @@ export function ForumOpinionComposer({
                 setShowDraftChoice(false);
                 draftHydrated.current = true;
               }}
-              className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800"
             >
               Fortsett utkast
             </button>
@@ -283,7 +278,7 @@ export function ForumOpinionComposer({
                 setShowDraftChoice(false);
                 draftHydrated.current = true;
               }}
-              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-800 ring-1 ring-gray-200 hover:bg-gray-50"
+              className="rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
             >
               Start på nytt
             </button>
@@ -291,22 +286,19 @@ export function ForumOpinionComposer({
         </div>
       ) : null}
 
-      <div className="mt-4 space-y-4">
+      <div className="mt-5 space-y-4">
         <div>
           <label htmlFor="forum-opinion-statement" className="sr-only">
             Din mening
           </label>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-            <span
-              className="inline-flex shrink-0 items-center rounded-xl bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-800 ring-1 ring-indigo-100 sm:mt-0"
-              aria-hidden
-            >
+          <div className="flex items-start rounded-2xl bg-gray-50/90 px-4 py-1 focus-within:bg-gray-100/90 focus-within:ring-2 focus-within:ring-indigo-500/10">
+            <span className="shrink-0 py-2.5 pr-2 text-sm font-medium text-gray-500" aria-hidden>
               Jeg mener
             </span>
             <textarea
               id="forum-opinion-statement"
               ref={statementRef}
-              rows={3}
+              rows={2}
               value={statement}
               onChange={(e) => setStatement(e.target.value)}
               maxLength={FORUM_LIMITS.bodyMax - FORUM_OPINION_PREFIX.length}
@@ -314,17 +306,10 @@ export function ForumOpinionComposer({
               placeholder="vi bør begrense AI i skole og arbeidslivet"
             />
           </div>
-          {statement.trim() ? (
-            <p className="mt-2 text-xs text-gray-500">
-              Forhåndsvisning:{' '}
-              <span className="text-gray-700">{buildOpinionBody(statement)}</span>
-            </p>
-          ) : null}
         </div>
 
         <div>
-          <p className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-800">
-            <FileText className="h-4 w-4 text-indigo-600" aria-hidden />
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
             Relevante saker
           </p>
           <ContextPicker
@@ -369,7 +354,7 @@ export function ForumOpinionComposer({
                   key={issue.id}
                   type="button"
                   onClick={() => handleSelect(sakContextItem(issue.id, issue.title))}
-                  className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-left text-xs font-medium text-gray-800 transition-colors hover:border-indigo-200 hover:bg-indigo-50"
+                  className="rounded-full bg-gray-100 px-3 py-1.5 text-left text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200/80"
                 >
                   <span className="line-clamp-1">{issue.title}</span>
                 </button>
@@ -379,21 +364,21 @@ export function ForumOpinionComposer({
         </div>
       </div>
 
-      <div className="mt-5 flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-gray-500">
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-gray-400">
           {displayName ? (
             <>
-              Publiserer som <strong>{displayName}</strong>. Innlegget er offentlig.
+              Som <span className="text-gray-600">{displayName}</span> · offentlig innlegg
             </>
           ) : (
-            'Innlegget vises med fornavn og etternavn.'
+            'Vises med fornavn og etternavn.'
           )}
         </p>
         <button
           type="button"
           onClick={handleSubmit}
           disabled={!canPublish || isSubmitting}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-50"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:bg-gray-800 disabled:opacity-40"
         >
           {isSubmitting ? (
             <>

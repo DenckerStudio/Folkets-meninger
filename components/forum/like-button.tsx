@@ -74,24 +74,20 @@ export default function LikeButton({
 
   if (variant === 'pill') {
     return (
-      <div
-        className={`flex flex-col items-center rounded-full border bg-gray-50 min-w-[40px] py-1 ${
-          liked ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200'
-        }`}
-      >
+      <div className="flex min-w-[2.25rem] flex-col items-center py-0.5">
         <button
           type="button"
           onClick={handleToggle}
           disabled={!user || isSubmitting}
-          className={`p-1 rounded-full transition-colors disabled:opacity-50 ${
-            liked ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600 hover:bg-white'
+          className={`rounded-lg p-1.5 transition-colors disabled:opacity-40 ${
+            liked ? 'text-indigo-600' : 'text-gray-400 hover:bg-gray-100 hover:text-indigo-600'
           }`}
           aria-pressed={liked}
           aria-label={liked ? 'Fjern like' : 'Lik'}
         >
-          <ChevronUp className={`w-5 h-5 ${liked ? 'fill-current' : ''}`} />
+          <ChevronUp className={`h-5 w-5 ${liked ? 'fill-current' : ''}`} />
         </button>
-        <span className={`text-xs font-bold tabular-nums ${liked ? 'text-indigo-700' : 'text-gray-700'}`}>
+        <span className={`text-xs font-semibold tabular-nums ${liked ? 'text-indigo-600' : 'text-gray-500'}`}>
           {count}
         </span>
       </div>
@@ -103,10 +99,10 @@ export default function LikeButton({
       type="button"
       onClick={handleToggle}
       disabled={!user || isSubmitting}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
         liked
-          ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
-          : 'border-gray-200 bg-white text-gray-600 hover:border-indigo-200 hover:text-indigo-600'
+          ? 'text-indigo-600'
+          : 'text-gray-500 hover:bg-gray-100 hover:text-indigo-600'
       }`}
       aria-pressed={liked}
     >
@@ -136,7 +132,7 @@ export function ShareThreadButton({ threadId }: { threadId: string }) {
     <button
       type="button"
       onClick={handleShare}
-      className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-colors"
+      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
     >
       <Share2 className="w-4 h-4" />
       {copied ? 'Kopiert!' : 'Del'}
@@ -146,8 +142,8 @@ export function ShareThreadButton({ threadId }: { threadId: string }) {
 
 export function CommentCountPill({ count }: { count: number }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600">
-      <MessageCircle className="w-4 h-4" />
+    <span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800">
+      <MessageCircle className="h-4 w-4" />
       {count}
     </span>
   );

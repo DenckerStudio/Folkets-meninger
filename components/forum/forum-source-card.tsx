@@ -29,7 +29,10 @@ export default function ForumSourceCard({ item, variant = 'full', className }: F
   const inner = (
     <>
       <div className={cn('flex items-center gap-2 mb-1.5', variant === 'compact' && 'mb-1')}>
-        <span className={cn('inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border', config.accent)}>
+        <span className={cn(
+          'inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide',
+          variant === 'compact' ? 'text-gray-500' : cn('rounded-full border px-2 py-0.5', config.accent),
+        )}>
           <Icon className="w-3 h-3" />
           {config.label}
         </span>
@@ -53,9 +56,11 @@ export default function ForumSourceCard({ item, variant = 'full', className }: F
   );
 
   const cardClass = cn(
-    'group block rounded-xl border bg-white transition-all hover:shadow-md hover:border-indigo-200',
-    variant === 'compact' ? 'p-3' : 'p-4',
-    className
+    'group block transition-colors',
+    variant === 'compact'
+      ? 'rounded-lg px-2 py-1.5 -mx-2 hover:bg-gray-100/80'
+      : 'rounded-xl border bg-white hover:border-indigo-200 hover:shadow-md p-4',
+    className,
   );
 
   if (isExternal) {

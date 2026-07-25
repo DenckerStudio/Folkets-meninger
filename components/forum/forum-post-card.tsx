@@ -9,73 +9,76 @@ import { routes } from '@/lib/routes';
 
 export default function ForumPostCard({ topic }: { topic: ForumThreadListItem }) {
   const sakLabel = topic.relatedIssueTitle
-    ? topic.relatedIssueTitle.length > 48
-      ? `${topic.relatedIssueTitle.slice(0, 48)}…`
+    ? topic.relatedIssueTitle.length > 56
+      ? `${topic.relatedIssueTitle.slice(0, 56)}…`
       : topic.relatedIssueTitle
     : null;
 
   return (
-    <article className="flex gap-3 sm:gap-4 rounded-xl border border-gray-200 bg-white p-3 sm:p-4 hover:border-gray-300 transition-colors">
-      <div className="shrink-0 pt-1">
-        <LikeButton
-          targetType="thread"
-          targetId={topic.id}
-          initialCount={topic.likes}
-          variant="pill"
-          stopPropagation
-        />
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 mb-1">
-          {topic.relatedIssueId && sakLabel && (
-            <Link
-              href={routes.sak(topic.relatedIssueId)}
-              className="font-semibold text-gray-900 hover:underline"
-            >
-              r/{sakLabel}
-            </Link>
-          )}
-          {topic.relatedIssueId && sakLabel && <span>·</span>}
-          {topic.author ? (
-            <ForumAuthorBadge author={topic.author} className="!gap-1.5" />
-          ) : (
-            <span className="text-gray-400">Ukjent forfatter</span>
-          )}
-          <span>·</span>
-          <span>{topic.createdAt}</span>
-          <span className="ml-auto">
-            <ForumPostCardMenu threadId={topic.id} authorUserId={topic.authorUserId} />
-          </span>
+    <article className="group py-5 transition-colors hover:bg-gray-50/60 -mx-3 px-3 sm:-mx-4 sm:px-4 rounded-2xl">
+      <div className="flex gap-3 sm:gap-4">
+        <div className="shrink-0 pt-0.5">
+          <LikeButton
+            targetType="thread"
+            targetId={topic.id}
+            initialCount={topic.likes}
+            variant="pill"
+            stopPropagation
+          />
         </div>
 
-        <Link href={routes.forumTopic(topic.id)} className="block group">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors flex items-start gap-2">
-            <span className="line-clamp-2">{topic.title}</span>
-            {topic.isResolved && (
-              <span className="inline-flex items-center shrink-0 px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
-                <CheckCircle className="w-3 h-3 mr-0.5" />
+        <div className="min-w-0 flex-1">
+          <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
+            {topic.relatedIssueId && sakLabel ? (
+              <Link
+                href={routes.sak(topic.relatedIssueId)}
+                className="font-medium text-gray-700 hover:text-indigo-600"
+              >
+                {sakLabel}
+              </Link>
+            ) : null}
+            {topic.relatedIssueId && sakLabel ? <span className="text-gray-300">·</span> : null}
+            {topic.author ? (
+              <ForumAuthorBadge author={topic.author} className="!gap-1.5" />
+            ) : (
+              <span className="text-gray-400">Ukjent forfatter</span>
+            )}
+            <span className="text-gray-300">·</span>
+            <time>{topic.createdAt}</time>
+            <span className="ml-auto opacity-0 transition-opacity group-hover:opacity-100">
+              <ForumPostCardMenu threadId={topic.id} authorUserId={topic.authorUserId} />
+            </span>
+          </div>
+
+          <Link href={routes.forumTopic(topic.id)} className="block">
+            <h3 className="text-[1.05rem] font-semibold leading-snug text-gray-900 transition-colors group-hover:text-indigo-700 sm:text-lg">
+              <span className="line-clamp-3">{topic.title}</span>
+            </h3>
+
+            {topic.isResolved ? (
+              <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                <CheckCircle className="h-3.5 w-3.5" aria-hidden />
                 Besvart
               </span>
-            )}
-          </h3>
+            ) : null}
 
-          {topic.bodyExcerpt && (
-            <p className="mt-1.5 text-sm text-gray-600 line-clamp-2">{topic.bodyExcerpt}</p>
-          )}
-        </Link>
-
-        {topic.contextItems.length > 0 && (
-          <div className="mt-3">
-            <ForumSourceList items={topic.contextItems.slice(0, 2)} variant="compact" />
-          </div>
-        )}
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Link href={routes.forumTopic(topic.id)}>
-            <CommentCountPill count={topic.replies} />
+            {topic.bodyExcerpt ? (
+              <p className="mt-2 text-sm leading-relaxed text-gray-600 line-clamp-2">{topic.bodyExcerpt}</p>
+            ) : null}
           </Link>
-          <ShareThreadButton threadId={topic.id} />
+
+          {topic.contextItems.length > 0 ? (
+            <div className="mt-3">
+              <ForumSourceList items={topic.contextItems.slice(0, 2)} variant="compact" />
+            </div>
+          ) : null}
+
+          <div className="mt-3 flex flex-wrap items-center gap-1">
+            <Link href={routes.forumTopic(topic.id)} className="inline-flex">
+              <CommentCountPill count={topic.replies} />
+            </Link>
+            <ShareThreadButton threadId={topic.id} />
+          </div>
         </div>
       </div>
     </article>

@@ -37,7 +37,7 @@ export function ForumRulesPanel({ className = '', defaultOpen = false }: ForumRu
         )}
       >
         <div className="overflow-hidden">
-          <ul className="mt-3 space-y-2 rounded-xl border border-border bg-card p-4 text-xs leading-relaxed text-muted-foreground">
+          <ul className="mt-3 space-y-2 text-xs leading-relaxed text-muted-foreground">
             {FORUM_RULES_ITEMS.map((rule) => (
               <li key={rule}>{rule}</li>
             ))}

@@ -100,7 +100,7 @@ export default function ContextPicker({
           }}
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
-          className={`w-full border border-gray-300 rounded-lg pl-10 pr-3 focus:ring-indigo-500 focus:border-indigo-500 text-sm ${
+          className={`w-full rounded-xl border-0 bg-gray-50/90 pl-10 pr-3 text-sm focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/15 ${
             compact ? 'py-2' : 'py-2.5'
           }`}
         />
@@ -114,7 +114,7 @@ export default function ContextPicker({
             aria-label="Lukk søk"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute z-20 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-black/5">
             {!lockedKind ? (
               <div className="flex gap-1 p-2 border-b border-gray-100 bg-gray-50 overflow-x-auto">
                 {TAB_CONFIG.map((tab) => {
@@ -195,10 +195,8 @@ export function ContextChip({
 }) {
   return (
     <div
-      className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm shadow-sm ${
-        isPrimary
-          ? 'border-indigo-300 bg-indigo-50 text-indigo-900'
-          : 'border-gray-200 bg-white text-gray-800'
+      className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm ${
+        isPrimary ? 'bg-indigo-50 text-indigo-900' : 'bg-gray-100/90 text-gray-800'
       }`}
     >
       <div className="min-w-0">

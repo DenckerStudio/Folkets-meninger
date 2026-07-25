@@ -1,5 +1,5 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { MessageSquare } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import type { ForumThreadListItem } from '@/lib/forum/queries';
 import { ForumRulesPanel } from '@/components/forum/forum-rules-panel';
@@ -9,51 +9,55 @@ type ForumRightRailProps = {
   popularIssues: { id: string; title: string }[];
 };
 
+function RailSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
 export default function ForumRightRail({ recentThreads, popularIssues }: ForumRightRailProps) {
   return (
-    <aside className="space-y-4">
-      {popularIssues.length > 0 && (
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h3 className="text-sm font-bold text-gray-900 mb-3">Mest engasjerte saker</h3>
-          <ul className="space-y-2">
+    <aside className="space-y-8 lg:pt-2">
+      {popularIssues.length > 0 ? (
+        <RailSection title="Engasjerte saker">
+          <ul className="space-y-2.5">
             {popularIssues.map((issue) => (
               <li key={issue.id}>
                 <Link
                   href={`${routes.forum}?sak=${issue.id}#del-din-mening`}
-                  className="text-sm text-indigo-600 hover:text-indigo-500 line-clamp-2 font-medium"
+                  className="text-sm font-medium leading-snug text-gray-800 line-clamp-2 hover:text-indigo-600"
                 >
                   {issue.title}
                 </Link>
               </li>
             ))}
           </ul>
-        </div>
-      )}
+        </RailSection>
+      ) : null}
 
-      {recentThreads.length > 0 && (
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-gray-400" />
-            Nylige tråder
-          </h3>
+      {recentThreads.length > 0 ? (
+        <RailSection title="Nylig aktivitet">
           <ul className="space-y-3">
             {recentThreads.slice(0, 5).map((thread) => (
               <li key={thread.id}>
                 <Link href={routes.forumTopic(thread.id)} className="block group">
-                  <p className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-indigo-600">
+                  <p className="text-sm font-medium leading-snug text-gray-900 line-clamp-2 group-hover:text-indigo-600">
                     {thread.title}
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="mt-1 text-xs text-gray-500">
                     {thread.likes} likes · {thread.replies} svar
                   </p>
                 </Link>
               </li>
             ))}
           </ul>
-        </div>
-      )}
+        </RailSection>
+      ) : null}
 
-      <ForumRulesPanel className="rounded-xl border border-gray-200 bg-white p-5" />
+      <ForumRulesPanel />
     </aside>
   );
 }
