@@ -20,7 +20,10 @@ import {
   saveForumThreadDraft,
   type ForumThreadDraft,
 } from '@/lib/forum/thread-draft-storage';
-import ContextPicker, { ContextChip } from '@/components/forum/context-picker';
+import {
+  ForumComposerAttachments,
+  type ComposerAttachPanel,
+} from '@/components/forum/forum-composer-attachments';
 
 type ForumOpinionComposerProps = {
   sakId?: string | null;
@@ -64,6 +67,7 @@ export function ForumOpinionComposer({
   const [hasIdentity, setHasIdentity] = useState(true);
   const [pendingDraft, setPendingDraft] = useState<ForumThreadDraft | null>(null);
   const [showDraftChoice, setShowDraftChoice] = useState(false);
+  const [attachPanel, setAttachPanel] = useState<ComposerAttachPanel>(null);
   const statementRef = useRef<HTMLTextAreaElement>(null);
   const draftHydrated = useRef(false);
   const { user } = useAuth();
@@ -166,9 +170,26 @@ export function ForumOpinionComposer({
         return;
       }
       appendContext(item, false);
+
+      if (item.kind === 'politician') {
+        const handle = `@${item.title.split(/\s+/)[0]}`;
+        setStatement((prev) => {
+          if (prev.includes(handle)) return prev;
+          const needsSpace = prev.length > 0 && !prev.endsWith(' ');
+          return `${prev}${needsSpace ? ' ' : ''}${handle} `;
+        });
+      }
     },
     [appendContext, primarySakId],
   );
+
+  const handleRemoveItem = useCallback((item: ForumContextItem) => {
+    setLinkedItems((prev) => prev.filter((p) => contextItemKey(p) !== contextItemKey(item)));
+    if (item.kind === 'sak' && item.id === primarySakId) {
+      setPrimarySakId(null);
+      setPrimarySakTitle(null);
+    }
+  }, [primarySakId]);
 
   const handleSubmit = async () => {
     const trimmed = statement.trim();
@@ -220,8 +241,11 @@ export function ForumOpinionComposer({
     }
   };
 
-  const quickSuggestions = suggestedIssues.filter((s) => s.id !== primarySakId).slice(0, 3);
   const canPublish = statement.trim().length >= 1;
+
+  const focusStatement = useCallback(() => {
+    statementRef.current?.focus();
+  }, []);
 
   if (!user) {
     return (
@@ -245,7 +269,7 @@ export function ForumOpinionComposer({
   return (
     <section id="del-din-mening" className="mb-8 border-b border-gray-100 pb-8">
       <h2 className="text-lg font-semibold tracking-tight text-gray-900">Del din mening</h2>
-      <p className="mt-1 text-sm text-gray-500">Skriv etter «Jeg mener» — legg ved saker om du vil.</p>
+      <p className="mt-1 text-sm text-gray-500">Skriv etter «Jeg mener». Legg ved saker, politikere eller kilder under.</p>
 
       {error ? (
         <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -306,61 +330,22 @@ export function ForumOpinionComposer({
               placeholder="vi bør begrense AI i skole og arbeidslivet"
             />
           </div>
-        </div>
 
-        <div>
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
-            Relevante saker
-          </p>
-          <ContextPicker
+          <ForumComposerAttachments
+            panel={attachPanel}
+            onPanelChange={setAttachPanel}
+            linkedItems={linkedItems}
+            linkedKeys={linkedKeys}
+            primarySakId={primarySakId}
             onSelect={handleSelect}
-            selectedKeys={linkedKeys}
-            placeholder="Søk og legg ved stortingssaker…"
-            lockedKind="sak"
-            compact
+            onRemove={handleRemoveItem}
+            onSetPrimarySak={(id, title) => {
+              setPrimarySakId(id);
+              setPrimarySakTitle(title);
+            }}
+            suggestedIssues={suggestedIssues}
+            onPoliticianPanelOpen={focusStatement}
           />
-          {linkedItems.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {linkedItems.map((item) => (
-                <ContextChip
-                  key={contextItemKey(item)}
-                  item={item}
-                  isPrimary={item.kind === 'sak' && item.id === primarySakId}
-                  onPrimary={
-                    item.kind === 'sak'
-                      ? () => {
-                          setPrimarySakId(item.id);
-                          setPrimarySakTitle(item.title);
-                        }
-                      : undefined
-                  }
-                  onRemove={() => {
-                    setLinkedItems((prev) =>
-                      prev.filter((p) => contextItemKey(p) !== contextItemKey(item)),
-                    );
-                    if (item.kind === 'sak' && item.id === primarySakId) {
-                      setPrimarySakId(null);
-                      setPrimarySakTitle(null);
-                    }
-                  }}
-                />
-              ))}
-            </div>
-          ) : null}
-          {quickSuggestions.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {quickSuggestions.map((issue) => (
-                <button
-                  key={issue.id}
-                  type="button"
-                  onClick={() => handleSelect(sakContextItem(issue.id, issue.title))}
-                  className="rounded-full bg-gray-100 px-3 py-1.5 text-left text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200/80"
-                >
-                  <span className="line-clamp-1">{issue.title}</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
         </div>
       </div>
 

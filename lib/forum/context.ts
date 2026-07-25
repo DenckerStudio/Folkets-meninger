@@ -24,6 +24,9 @@ export function formatContextLine(item: ForumContextItem): string {
     case 'politician':
       return `👤 Politiker: @${item.title}${item.meta ? ` (${item.meta})` : ''}`;
     case 'document':
+      if (item.href.startsWith('http://') || item.href.startsWith('https://')) {
+        return `🔗 Kilde: ${item.title} — ${item.href}`;
+      }
       return `📄 Dokument: ${item.title}`;
     default:
       return item.title;
@@ -79,10 +82,37 @@ export function politicianContextItem(
   };
 }
 
+export function externalSourceItem(rawUrl: string): { item: ForumContextItem } | { error: string } {
+  let normalized = rawUrl.trim();
+  if (!normalized) {
+    return { error: 'Skriv inn en nettadresse' };
+  }
+  if (!/^https?:\/\//i.test(normalized)) {
+    normalized = `https://${normalized}`;
+  }
+
+  let hostname = normalized;
+  try {
+    hostname = new URL(normalized).hostname.replace(/^www\./, '');
+  } catch {
+    return { error: 'Ugyldig nettadresse' };
+  }
+
+  return {
+    item: {
+      kind: 'document',
+      id: normalized,
+      title: hostname,
+      subtitle: normalized,
+      href: normalized,
+    },
+  };
+}
+
 export function documentContextItem(title: string, href?: string | null): ForumContextItem {
   return {
     kind: 'document',
-    id: title,
+    id: href || title,
     title,
     href: href || '',
   };

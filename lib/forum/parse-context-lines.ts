@@ -2,7 +2,7 @@ import type { ForumContextItem, ForumContextKind } from '@/lib/forum/context';
 import { routes } from '@/lib/routes';
 
 const CONTEXT_LINE_RE =
-  /^(?:📋|📢|👤|📄)\s+(Stortingssak|Høring|Politiker|Dokument):\s*(.+?)\s*—\s*(\S+)\s*$/;
+  /^(?:📋|📢|👤|📄|🔗)\s+(Stortingssak|Høring|Politiker|Dokument|Kilde):\s*(.+?)(?:\s*—\s*(\S+))?\s*$/;
 
 function kindFromLabel(label: string): ForumContextKind {
   switch (label) {
@@ -13,6 +13,8 @@ function kindFromLabel(label: string): ForumContextKind {
     case 'Politiker':
       return 'politician';
     case 'Dokument':
+      return 'document';
+    case 'Kilde':
       return 'document';
     default:
       return 'document';
@@ -32,6 +34,9 @@ function idFromHref(kind: ForumContextKind, href: string, title: string): string
     const match = href.match(/repId=(\d+)/);
     return match?.[1] ?? title;
   }
+  if (kind === 'document' && href.startsWith('http')) {
+    return href;
+  }
   return title;
 }
 
@@ -41,7 +46,7 @@ export function parseContextLine(line: string): ForumContextItem | null {
 
   const kind = kindFromLabel(match[1]);
   let title = match[2].trim();
-  let href = match[3].trim();
+  let href = (match[3] ?? '').trim();
   let meta: string | null = null;
 
   if (kind === 'politician') {
@@ -52,8 +57,17 @@ export function parseContextLine(line: string): ForumContextItem | null {
     }
   }
 
-  if (href.startsWith('/')) {
-    href = href;
+  if (!href && kind === 'document' && title.startsWith('http')) {
+    href = title;
+    try {
+      title = new URL(title).hostname.replace(/^www\./, '');
+    } catch {
+      /* keep title */
+    }
+  }
+
+  if (!href && kind !== 'document') {
+    return null;
   }
 
   return {

@@ -211,7 +211,12 @@ export function ContextChip({
         ) : (
           <p className="font-medium truncate max-w-[220px]">{item.title}</p>
         )}
-        <p className="text-xs opacity-70">{KIND_LABEL[item.kind]}{isPrimary ? ' · Hovedsak' : ''}</p>
+        <p className="text-xs opacity-70">
+          {item.kind === 'document' && item.href.startsWith('http')
+            ? 'Kilde'
+            : KIND_LABEL[item.kind]}
+          {isPrimary ? ' · Hovedsak' : ''}
+        </p>
       </div>
       <div className="flex items-center gap-1 shrink-0">
         {onPrimary && item.kind === 'sak' && !isPrimary && (
