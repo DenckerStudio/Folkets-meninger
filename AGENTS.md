@@ -31,9 +31,10 @@ Next.js App Router
 External systems:
 
 - Supabase Auth stores user sessions; middleware refreshes cookies and protects
-  `/dashboard/*` except public sak pages.
+  `/dashboard/*` except public sak and politician explorer/profile pages.
 - Supabase Postgres stores votes, forum content, notifications, AI summaries,
-  Stortinget issue cache, document chunks, and admin/trusted-source data.
+  Stortinget issue cache, document chunks, politician verification/responses,
+  and admin/trusted-source data.
 - Stortinget APIs are read-only sources for sak lists/details, høringer, and
   publications.
 - n8n calls app cron endpoints with `x-cron-secret` and receives fire-and-forget
@@ -137,6 +138,25 @@ The canonical template is `.env.example`.
 - v13 sak-RAG drafts: admin pipeline at `/dashboard/admin/forum-prompts?tab=pipeline`
   and per-sak trigger on `/dashboard/sak/<id>`; see `workflows/n8n/FORUM-PROMPTS-v13.md`.
 
+### Politiker profiles and official responses
+
+- `/dashboard/politikere` and `/dashboard/politikere/<id>` are public
+  Stortinget-data pages; `/dashboard/politiker-hub` is login-gated and requires
+  a `politician_profiles.user_id` row.
+- `lib/politiker-profile-data.ts` combines Stortinget representative/government
+  data, current-session questions, cached `stortinget_issues.detail_json`
+  involvement, and `politician_responses`.
+- `get_politiker_saker_from_cache(stortinget_rep_id)` is a service-role RPC
+  that reads cached `sak_opphav.forslagstiller_liste` and
+  `saksordfoerer_liste` from `stortinget_issues.detail_json`.
+- `GET /api/user/politician-status` returns `{ isVerified: false }` for
+  anonymous users or lookup errors; there is no current self-service
+  verification flow.
+- `POST /api/politician/response` requires a Supabase session plus matching
+  `politician_profiles` row, limits content to 4000 characters, and allows only
+  one official answer per politician per sak via
+  `politician_responses_profile_issue_uidx`.
+
 ### Document ingest and RAG
 
 - `lib/stortinget-document-ingest.ts` parses sak documents, fetches publication
@@ -180,6 +200,6 @@ The canonical template is `.env.example`.
 - Supabase credentials (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) are provided as Cloud Agent secrets / env vars and point at a real hosted project with all `supabase/migrations/*.sql` applied (voting `vote_encryption_secret` pepper is configured). Browser-side auth from the in-VM Chrome reaches Supabase fine — the full auth/forum/voting flow works end-to-end.
 - **`.env.local` is still required to run the dev server**, because it carries the non-secret `STORTINGET_*` / `NEXT_PUBLIC_STORTINGET_*` defaults (and `middleware.ts` builds a Supabase client on every request, so the `NEXT_PUBLIC_SUPABASE_*` values must be resolvable or every page 500s). It is gitignored; recreate from `.env.example` if absent. Next.js reads injected `process.env` with higher precedence than `.env.local`, so the injected secrets win even if `.env.local` holds older values.
 - Auth is email/password (`supabase.auth.signUp` / `signInWithPassword`). **Email signups require confirmation**, so a raw signup does NOT create a session. To get a usable test login, create a pre-confirmed user with the admin API and the service role key, then sign in: `POST {SUPABASE_URL}/auth/v1/admin/users` with `{"email":...,"password":...,"email_confirm":true,"user_metadata":{...}}` (the project rejects `@example.com`; use e.g. `@gmail.com`).
-- `/dashboard/*` is gated by middleware (redirects to `/auth/login`) except public issue pages `/dashboard/sak/<id>` (see `isPublicDashboardSakPath`). Issue pages fetch live `data.stortinget.no` data and can take 10–30s on first load.
+- `/dashboard/*` is gated by middleware (redirects to `/auth/login`) except public issue pages `/dashboard/sak/<id>` and politician explorer/profile pages `/dashboard/politikere[/<id>]` (see `isPublicDashboardSakPath` and `isPublicDashboardPolitikerPath`). Issue pages fetch live `data.stortinget.no` data and can take 10–30s on first load.
 - Hello-world that exercises core functionality: log in, then open an issue (`/dashboard/sak/<id>`) and cast a "For" vote in the "Hva mener du?" section — the vote persists and the `/dashboard/min-side` vote count updates.
 - `npm run test:unit` shells out to `npx tsx ...`; the first run downloads `tsx` (needs network) and then caches it.

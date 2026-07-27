@@ -35,7 +35,7 @@ values are only needed for the workflows that call those services.
 
 ```text
 Browser / Next.js App Router
-  -> Supabase Auth + Postgres (votes, forum, notifications, sak cache)
+  -> Supabase Auth + Postgres (votes, forum, notifications, sak cache, politician profiles)
   -> data.stortinget.no (saker, details, høringer, publications)
   -> n8n webhooks (AI summaries, document embeddings, forum prompts, cron)
   -> Ollama / SearXNG / SMTP as workflow dependencies
@@ -45,6 +45,9 @@ Important constraints:
 
 - Public sak detail pages under `/dashboard/sak/[id]` can be viewed without
   authentication; the rest of `/dashboard/*` requires a Supabase session.
+- Public politician explorer/profile pages under `/dashboard/politikere` read
+  Stortinget open data without login. `/dashboard/politiker-hub` still requires
+  login and a matching `politician_profiles.user_id` row.
 - Høringer live under `/dashboard/horinger` and `/dashboard/horinger/[id]`.
   `/horinger` redirects there, so browsing and local comments require login.
 - Votes are accepted only while a sak is open. The app and `cast_vote` RPC both
@@ -56,6 +59,9 @@ Important constraints:
   `ferdigbehandlet`.
 - Human forum posts require a public first and last name. System forum threads
   created by workflows use the `is_system_thread` path instead.
+- Verified politicians can publish one official response per sak through
+  `/api/politician/response`; responses are limited to 4000 characters and are
+  shown with verification context on sak and politician profile pages.
 - AI summary text is not generated in the Next.js app. The app stores source
   context and triggers n8n; summaries are read back from Supabase.
 

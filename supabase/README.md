@@ -25,6 +25,7 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Forum reports/sources | `20260602120000_forum_reports_enhance.sql`, `20260602130000_forum_trusted_sources.sql` | `forum_reports`, `forum_trusted_sources` |
 | Forum profiles/points/moderation | `20260614130000_forum_profiles_points_ai_sources.sql`, `20260614160000_harden_forum_points_moderation.sql`, `20260614170000_public_user_display_grants.sql` | public profile fields, point ledgers, moderation RPCs/grants |
 | Forum sak-RAG prompts | `20260621120000_forum_sak_rag_prompts.sql` | `forum_prompts.generation_metadata`, `forum_research_clusters.source_type`, `get_sak_prompt_coverage` |
+| Politician profiles/responses | `20260716120000_politiker_profile_support.sql` | `politician_profiles`, `politician_responses`, `get_politiker_saker_from_cache`, one-response-per-sak index |
 | Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql`, `20260702160000_backfill_ferdigbehandlet_from_detail.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category`, `ferdigbehandlet` repair |
 | Sak documents/RAG | `20260617120000_sak_documents_rag.sql` | `stortinget_issue_documents`, `document_chunks`, `match_issue_document_chunks` |
 
@@ -219,6 +220,48 @@ mention notifications for `@name` matches after the RPC succeeds.
 These comments are Folkets Stemme discussion entries only. They are not
 submitted to Stortinget; the høring detail page links users to Stortinget for
 official submissions.
+
+## Politiker profiles and official responses
+
+Politician discovery is mostly Stortinget open data, while app-specific
+verification and official answers live in Supabase.
+
+| Object | Purpose |
+|--------|---------|
+| `politician_profiles` | Links a Supabase `user_id` to a Stortinget representative id (`stortinget_rep_id`) and marks that politician as verified in the app |
+| `politician_responses` | Official politician answers attached to a Stortinget sak |
+| `get_politiker_saker_from_cache(text)` | Service-role RPC that derives `forslagstiller` and `saksordfoerer` saker from `stortinget_issues.detail_json` |
+| `politician_responses_profile_issue_uidx` | Enforces one official response per verified politician per sak |
+
+Verified status is not self-service in the current app. `/dashboard/politiker-hub`
+and `/api/user/politician-status` check for a `politician_profiles` row matching
+the current Supabase user. Anonymous users and errors return
+`{ "isVerified": false }`; the UI tells users to contact an administrator.
+
+Official responses are posted through `POST /api/politician/response`:
+
+- Requires a Supabase session (`401` if missing).
+- Requires `politician_profiles.user_id = auth user id` (`403` if missing).
+- Requires non-empty `stortinget_issue_id` and `content`; content is capped at
+  4000 characters.
+- Rejects duplicates with `409`; the unique index is the final guard even if two
+  requests race.
+- Uses the service-role client for the insert. The
+  `politician_responses_insert_verified` RLS policy also uses `auth.uid()` for
+  matching profile inserts if writes are later moved to direct authenticated
+  access.
+
+Public profile pages under `/dashboard/politikere/[id]` call
+`lib/politiker-profile-data.ts`. They combine:
+
+1. Stortinget representative/government data from `getPolitikereOversikt()`.
+2. Cached sak involvement from `get_politiker_saker_from_cache()`, reading
+   `sak_opphav.forslagstiller_liste` and `saksordfoerer_liste` in cached detail
+   JSON.
+3. Current-session questions from Stortinget (`skriftligesporsmal`,
+   `sporretimesporsmal`, and `interpellasjoner`).
+4. Up to 20 recent `politician_responses`, joined back to `stortinget_issues`
+   for titles when available.
 
 Point triggers award:
 
