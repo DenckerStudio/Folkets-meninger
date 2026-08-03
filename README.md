@@ -45,6 +45,10 @@ Important constraints:
 
 - Public sak detail pages under `/dashboard/sak/[id]` can be viewed without
   authentication; the rest of `/dashboard/*` requires a Supabase session.
+- Public politician explorer/profile pages under `/dashboard/politikere` and
+  `/dashboard/politikere/[id]` are also public Stortinget-data pages. The
+  politician hub at `/dashboard/politiker-hub` is login-gated and only unlocks
+  when the signed-in user is mapped in `politician_profiles`.
 - Høringer live under `/dashboard/horinger` and `/dashboard/horinger/[id]`.
   `/horinger` redirects there, so browsing and local comments require login.
 - Votes are accepted only while a sak is open. The app and `cast_vote` RPC both
@@ -64,7 +68,7 @@ Important constraints:
 | File | Covers |
 |------|--------|
 | [`AGENTS.md`](AGENTS.md) | Agent-facing architecture facts, env vars, validation expectations, and operational notes |
-| [`supabase/README.md`](supabase/README.md) | Migration domains, voting RPCs, sak cache, hearing comments, forum schema, notifications, RAG tables, and DB runbooks |
+| [`supabase/README.md`](supabase/README.md) | Migration domains, voting RPCs, sak cache, hearing comments, forum schema, politician verification/responses, notifications, RAG tables, and DB runbooks |
 | [`workflows/n8n/README.md`](workflows/n8n/README.md) | AI summary, forum prompt, document embedding, and app cron workflows |
 | [`infra/searxng/README.md`](infra/searxng/README.md) | SearXNG deployment/configuration used by forum prompt discovery |
 | [`scripts/deploy-forum-prompts-n8n.md`](scripts/deploy-forum-prompts-n8n.md) | Forum prompt workflow deployment notes |
@@ -87,3 +91,25 @@ npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
 Focused unit coverage for recently fragile source parsers/status logic lives in
 `lib/sak-status.test.ts` and `lib/stortinget-horinger.test.ts`; both run through
 `npm run test:unit`.
+
+## Politician profiles and official responses
+
+Public politician pages are built from Stortinget open data plus local Supabase
+state:
+
+- `/dashboard/politikere` and `/dashboard/politikere/[id]` call
+  `getPolitikereOversikt()` and remain public through middleware.
+- `lib/politiker-profile-data.ts` enriches profiles with cached sak roles from
+  `get_politiker_saker_from_cache`, Stortinget question lists for the active
+  session, local `politician_responses`, and a verified badge when a matching
+  `politician_profiles` row exists.
+- `/dashboard/politiker-hub` is authenticated and shows engagement stats only
+  for users whose Supabase auth id is mapped to `politician_profiles.user_id`.
+  The app does not self-provision that mapping.
+
+Verified politicians can publish one official response per sak. The sak page
+checks `/api/user/politician-status`; when verified, it shows
+`PoliticianResponseForm`, which posts up to 4000 characters to
+`POST /api/politician/response`. The route rejects anonymous users, users without
+a `politician_profiles` row, and duplicate responses; the database also has a
+unique index on `(politician_profile_id, stortinget_issue_id)`.
