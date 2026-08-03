@@ -27,6 +27,7 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Forum sak-RAG prompts | `20260621120000_forum_sak_rag_prompts.sql` | `forum_prompts.generation_metadata`, `forum_research_clusters.source_type`, `get_sak_prompt_coverage` |
 | Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql`, `20260702160000_backfill_ferdigbehandlet_from_detail.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category`, `ferdigbehandlet` repair |
 | Sak documents/RAG | `20260617120000_sak_documents_rag.sql` | `stortinget_issue_documents`, `document_chunks`, `match_issue_document_chunks` |
+| Politician profiles/responses | `20260716120000_politiker_profile_support.sql` | `get_politiker_saker_from_cache`, `politician_responses_profile_issue_uidx`, verified insert policy |
 
 ## Voting setup
 
@@ -232,6 +233,47 @@ Point triggers award:
 
 Admin pages use `lib/forum/admin.ts`: `FORUM_ADMIN_EMAILS` allowlist first, then
 Supabase `app_metadata.role = "admin"`.
+
+## Politician profiles and official responses
+
+Politician verification is local app state layered on top of public Stortinget
+representative data. A user is treated as a verified politician when
+`politician_profiles.user_id` matches their Supabase Auth user id.
+
+| Object | Purpose |
+|--------|---------|
+| `politician_profiles` | Maps a Supabase user to a Stortinget representative id (`stortinget_rep_id`) |
+| `politician_responses` | Official per-sak responses shown on sak and politician profile pages |
+| `get_politiker_saker_from_cache(text)` | Service-role RPC that reads `stortinget_issues.detail_json` and returns saker where a representative is `forslagstiller` or `saksordfoerer` |
+| `politician_responses_profile_issue_uidx` | Enforces one official response per politician profile per sak |
+
+The committed migration `20260716120000_politiker_profile_support.sql` hardens
+this area by adding the cache RPC, the unique response index, and an insert
+policy based on `auth.uid()`. It assumes the base `politician_profiles` and
+`politician_responses` tables already exist in the target Supabase project; the
+repo currently does not contain their `CREATE TABLE` migration. Before resetting
+or provisioning a fresh project, inspect/export the hosted schema for these
+tables instead of relying on `supabase/migrations/*.sql` alone.
+
+App code uses the service role for politician reads and writes:
+
+- `/api/user/politician-status` returns `{ isVerified: false }` for anonymous or
+  unmapped users and `true` when a profile row exists.
+- `POST /api/politician/response` requires a session, trims content, enforces a
+  4000-character maximum, checks the user's `politician_profiles` row, rejects
+  duplicates, and inserts into `politician_responses`.
+- `lib/politiker-profile-data.ts` reads local responses and calls
+  `get_politiker_saker_from_cache`; sak role lists are only as fresh as
+  `stortinget_issues.detail_json`.
+
+Troubleshooting:
+
+| Symptom | Check |
+|---------|-------|
+| Verified politician sees the hub lock screen | `politician_profiles.user_id` matches the Supabase Auth user id, not email or metadata |
+| Profile page has no proposal/saksordfører saker | Detail cache may be missing `sak_opphav.forslagstiller_liste` or `saksordfoerer_liste`; refresh affected saker through the normal sak sync/detail cache paths |
+| Official response returns 409 | A response already exists for the same `(politician_profile_id, stortinget_issue_id)` |
+| Fresh database migration fails on politician objects | Base `politician_profiles` / `politician_responses` tables are missing; export/create them before applying the hardening migration |
 
 ### Hearing comments
 

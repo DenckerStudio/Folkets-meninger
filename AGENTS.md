@@ -11,6 +11,8 @@
 - Auth and DB are Supabase (Postgres); app uses SSR cookies/middleware refresh patterns.
 - Stortinget data comes from `data.stortinget.no` (public API): saker,
   publications, questions, and høringer.
+- Politician profile pages combine public Stortinget representative/question
+  data with local Supabase verification and official-response rows.
 - AI summaries and forum prompts are produced externally via n8n + Ollama and stored in Supabase; the app should not assume Gemini for current summary generation.
 - Forum Reels: v5 trending (`MloIdsnX7FozM4dv`, draft); v12 Regjeringen RSS + prompt generator; **v13 Stortinget-sak RAG** (`forum-sak-prompt-generator.workflow.ts`, `N8N_FORUM_SAK_PROMPTS_WEBHOOK_URL`); `forum_trusted_sources`; votes Ja/Nei/Ikke interessert + discuss CTA.
 - Public reels UI gated by `FORUM_REELS_PUBLIC` (default false); admin pipeline at `/dashboard/admin/forum-prompts` (`?tab=pipeline` — RSS v12 + sak-RAG v13).
@@ -31,7 +33,7 @@ Next.js App Router
 External systems:
 
 - Supabase Auth stores user sessions; middleware refreshes cookies and protects
-  `/dashboard/*` except public sak pages.
+  `/dashboard/*` except public sak and politician pages.
 - Supabase Postgres stores votes, forum content, notifications, AI summaries,
   Stortinget issue cache, document chunks, and admin/trusted-source data.
 - Stortinget APIs are read-only sources for sak lists/details, høringer, and
@@ -137,6 +139,27 @@ The canonical template is `.env.example`.
 - v13 sak-RAG drafts: admin pipeline at `/dashboard/admin/forum-prompts?tab=pipeline`
   and per-sak trigger on `/dashboard/sak/<id>`; see `workflows/n8n/FORUM-PROMPTS-v13.md`.
 
+### Politician profiles and official responses
+
+- Public politician pages are `/dashboard/politikere` and
+  `/dashboard/politikere/<id>`; middleware allows them without login alongside
+  public sak detail pages.
+- `lib/politiker-profile-data.ts` enriches Stortinget representative data with
+  cached sak roles from `get_politiker_saker_from_cache`, active-session
+  questions from `getSporsmalListe`, local `politician_responses`, and verified
+  state from `politician_profiles`.
+- `/dashboard/politiker-hub` is login-gated and unlocks only when the current
+  Supabase auth user has a `politician_profiles.user_id` row. The app does not
+  self-provision politician verification.
+- Sak pages show `PoliticianResponseForm` only when
+  `/api/user/politician-status` returns verified. `POST
+  /api/politician/response` enforces login, verified profile, 4000-character
+  content limit, and one response per politician per sak; the DB unique index
+  `politician_responses_profile_issue_uidx` is the final duplicate guard.
+- `supabase/migrations/20260716120000_politiker_profile_support.sql` assumes
+  base `politician_profiles` and `politician_responses` tables already exist;
+  inspect/export the hosted schema before fresh-project resets.
+
 ### Document ingest and RAG
 
 - `lib/stortinget-document-ingest.ts` parses sak documents, fetches publication
@@ -180,6 +203,6 @@ The canonical template is `.env.example`.
 - Supabase credentials (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) are provided as Cloud Agent secrets / env vars and point at a real hosted project with all `supabase/migrations/*.sql` applied (voting `vote_encryption_secret` pepper is configured). Browser-side auth from the in-VM Chrome reaches Supabase fine — the full auth/forum/voting flow works end-to-end.
 - **`.env.local` is still required to run the dev server**, because it carries the non-secret `STORTINGET_*` / `NEXT_PUBLIC_STORTINGET_*` defaults (and `middleware.ts` builds a Supabase client on every request, so the `NEXT_PUBLIC_SUPABASE_*` values must be resolvable or every page 500s). It is gitignored; recreate from `.env.example` if absent. Next.js reads injected `process.env` with higher precedence than `.env.local`, so the injected secrets win even if `.env.local` holds older values.
 - Auth is email/password (`supabase.auth.signUp` / `signInWithPassword`). **Email signups require confirmation**, so a raw signup does NOT create a session. To get a usable test login, create a pre-confirmed user with the admin API and the service role key, then sign in: `POST {SUPABASE_URL}/auth/v1/admin/users` with `{"email":...,"password":...,"email_confirm":true,"user_metadata":{...}}` (the project rejects `@example.com`; use e.g. `@gmail.com`).
-- `/dashboard/*` is gated by middleware (redirects to `/auth/login`) except public issue pages `/dashboard/sak/<id>` (see `isPublicDashboardSakPath`). Issue pages fetch live `data.stortinget.no` data and can take 10–30s on first load.
+- `/dashboard/*` is gated by middleware (redirects to `/auth/login`) except public issue pages `/dashboard/sak/<id>` (see `isPublicDashboardSakPath`) and public politician pages `/dashboard/politikere*` (see `isPublicDashboardPolitikerPath`). Issue pages fetch live `data.stortinget.no` data and can take 10–30s on first load.
 - Hello-world that exercises core functionality: log in, then open an issue (`/dashboard/sak/<id>`) and cast a "For" vote in the "Hva mener du?" section — the vote persists and the `/dashboard/min-side` vote count updates.
 - `npm run test:unit` shells out to `npx tsx ...`; the first run downloads `tsx` (needs network) and then caches it.
