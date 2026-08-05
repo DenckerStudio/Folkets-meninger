@@ -96,6 +96,17 @@ export async function POST(request: Request) {
       const threadId = validated.threadId;
       const replyId = data as string;
 
+      if (validated.stance && replyId) {
+        const { error: stanceError } = await service
+          .from('forum_replies')
+          .update({ stance: validated.stance })
+          .eq('id', replyId)
+          .eq('author_user_id', user.id);
+        if (stanceError) {
+          console.error('Forum reply stance update error:', stanceError);
+        }
+      }
+
       const { data: thread } = await service
         .from('forum_threads')
         .select('id,title,author_user_id')

@@ -9,6 +9,7 @@ import {
   getUserVerificationStatus,
   PROFILE_BIO_MIN_LENGTH,
 } from '@/lib/user-verification';
+import { isNorwayCountyCode } from '@/lib/polls/norway-counties';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,7 @@ export async function GET() {
   const service = getServiceSupabase();
   let { data, error } = await service
     .from('users')
-    .select('first_name, last_name, name, email, bio, party_preference, profile_is_public, show_party_preference, avatar_url')
+    .select('first_name, last_name, name, email, bio, party_preference, profile_is_public, show_party_preference, avatar_url, fylke_code')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -40,6 +41,7 @@ export async function GET() {
           profile_is_public: false,
           show_party_preference: false,
           avatar_url: '',
+          fylke_code: null,
         }
       : null;
     error = fallback.error;
@@ -62,6 +64,7 @@ export async function GET() {
     profile_is_public: data?.profile_is_public ?? false,
     show_party_preference: data?.show_party_preference ?? false,
     avatar_url: data?.avatar_url ?? '',
+    fylke_code: (data as { fylke_code?: string | null } | null)?.fylke_code ?? null,
     points: pointsProfile.points,
     points_progress: pointsProfile.progress,
     recent_points: pointsProfile.recent,
@@ -130,6 +133,13 @@ export async function PATCH(request: Request) {
   if ('profile_is_public' in body) profilePatch.profile_is_public = body.profile_is_public === true;
   if ('show_party_preference' in body) profilePatch.show_party_preference = body.show_party_preference === true;
   if ('avatar_url' in body) profilePatch.avatar_url = typeof body.avatar_url === 'string' ? body.avatar_url.trim().slice(0, 500) : '';
+  if ('fylke_code' in body) {
+    const raw = typeof body.fylke_code === 'string' ? body.fylke_code.trim() : '';
+    if (raw && !isNorwayCountyCode(raw)) {
+      return NextResponse.json({ error: 'Ugyldig fylkeskode' }, { status: 400 });
+    }
+    profilePatch.fylke_code = raw || null;
+  }
 
   let updatedProfile:
     | {

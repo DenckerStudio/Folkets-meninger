@@ -12,6 +12,7 @@ import {
   Search,
   Users,
   User,
+  Vote,
 } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
@@ -24,6 +25,7 @@ const FORUM_NAV = [
 
 const DEMOCRACY_NAV = [
   { href: routes.utforsk, label: 'Saker', icon: Search, active: (pathname: string) => pathname.startsWith(routes.utforsk) || pathname.startsWith('/dashboard/sak/') },
+  { href: routes.avstemninger, label: 'Avstemninger', icon: Vote, active: (pathname: string) => pathname.startsWith(routes.avstemninger) || pathname.startsWith(routes.initiativ) },
   { href: routes.horinger, label: 'Høringer', icon: FileEdit, active: (pathname: string) => pathname.startsWith(routes.horinger) },
   { href: routes.politikere, label: 'Politikere', icon: Users, active: (pathname: string) => pathname.startsWith(routes.politikere) || pathname.startsWith(routes.representanter) },
   { href: routes.sporsmal, label: 'Spørsmål', icon: MessageSquare, active: (pathname: string) => pathname.startsWith(routes.sporsmal) },
