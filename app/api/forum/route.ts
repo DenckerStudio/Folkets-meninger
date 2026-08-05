@@ -96,6 +96,17 @@ export async function POST(request: Request) {
       const threadId = validated.threadId;
       const replyId = data as string;
 
+      if (validated.stance && replyId) {
+        const { error: stanceError } = await service
+          .from('forum_replies')
+          .update({ stance: validated.stance })
+          .eq('id', replyId)
+          .eq('author_user_id', user.id);
+        if (stanceError) {
+          console.error('Forum reply stance update error:', stanceError);
+        }
+      }
+
       const { data: thread } = await service
         .from('forum_threads')
         .select('id,title,author_user_id')
@@ -214,6 +225,26 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json({ liked: data });
+    }
+
+    if (action === 'toggle_dislike') {
+      const validated = validateToggleLike(payload);
+      if (!validated.ok) {
+        return NextResponse.json({ error: validated.error }, { status: 400 });
+      }
+
+      const { data, error } = await service.rpc('toggle_forum_dislike', {
+        p_user_id: user.id,
+        p_target_type: validated.targetType,
+        p_target_id: validated.targetId,
+      });
+
+      if (error) {
+        console.error('Toggle dislike error:', error);
+        return NextResponse.json({ error: 'Kunne ikke oppdatere dislike' }, { status: 500 });
+      }
+
+      return NextResponse.json({ disliked: data });
     }
 
     return NextResponse.json({ error: 'Ukjent handling' }, { status: 400 });

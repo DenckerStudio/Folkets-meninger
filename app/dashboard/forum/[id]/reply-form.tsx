@@ -10,6 +10,7 @@ import { routes } from '@/lib/routes';
 
 export default function ForumReplyForm({ threadId }: { threadId: string }) {
   const [body, setBody] = useState('');
+  const [stance, setStance] = useState<'ja' | 'nei' | 'neutral' | ''>('');
   const [isOfficialResponse, setIsOfficialResponse] = useState(false);
   const [isPolitician, setIsPolitician] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -56,6 +57,10 @@ export default function ForumReplyForm({ threadId }: { threadId: string }) {
         body: body.trim(),
       };
 
+      if (stance === 'ja' || stance === 'nei' || stance === 'neutral') {
+        payload.stance = stance;
+      }
+
       if (isPolitician && isOfficialResponse) {
         payload.is_official_response = true;
       }
@@ -73,6 +78,7 @@ export default function ForumReplyForm({ threadId }: { threadId: string }) {
       }
 
       setBody('');
+      setStance('');
       setIsOfficialResponse(false);
       router.refresh();
     } catch {
@@ -120,6 +126,34 @@ export default function ForumReplyForm({ threadId }: { threadId: string }) {
             className="w-full border border-gray-300 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
             placeholder="Hva tenker du om dette?"
           />
+          <div className="mt-3">
+            <p className="mb-1.5 text-xs font-medium text-gray-600">
+              Standpunkt for avstemningsargumenter (valgfritt)
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { id: '', label: 'Ingen' },
+                  { id: 'ja', label: 'Ja-argument' },
+                  { id: 'nei', label: 'Nei-argument' },
+                  { id: 'neutral', label: 'Nøytral' },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.id || 'none'}
+                  type="button"
+                  onClick={() => setStance(option.id)}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    stance === option.id
+                      ? 'border-indigo-300 bg-indigo-50 text-indigo-800'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
           {isPolitician && (
             <label className="mt-3 flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
               <input

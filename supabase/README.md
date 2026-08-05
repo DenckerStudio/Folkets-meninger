@@ -18,6 +18,7 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Domain | Migrations | Main objects |
 |--------|------------|--------------|
 | Anonymous voting | `20260528000001_anonymous_voting.sql`, `20260528000002_vote_schema_repair.sql`, `20260618120000_sak_voting_status.sql` | `citizen_votes`, `user_vote_receipts`, `cast_vote`, vote aggregate RPCs |
+| Direct democracy polls | `20260805120000_direct_democracy_polls.sql`, `20260805130000_polls_production_hardening.sql` | `polls`, `poll_votes`, `poll_vote_receipts`, `citizen_initiatives`, `norway_counties`, `forum_dislikes`, MinID fylke claims, poll RPCs |
 | Notifications | `20260528000003_notifications.sql` | `notification_preferences`, `notification_category_subscriptions`, `notifications` |
 | AI summaries | `20260528120000_issue_ai_summaries.sql`, `20260529120000_simplify_issue_ai_summaries.sql` | `issue_ai_summaries` |
 | Auth/user sync + hearings comments | `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql` | `users`, `ensure_public_user`, `user_has_forum_identity`, `hearing_comments`, `create_hearing_comment` |
@@ -51,6 +52,46 @@ ON CONFLICT (key) DO UPDATE SET value = excluded.value;
 | `stortinget_issues` | Issue title/summary cache |
 
 Aggregates are exposed via `get_issue_vote_totals` / `get_vote_totals_batch`. Direct reads on `citizen_votes` are denied by RLS.
+
+## Direct democracy polls (Swiss-inspired advisory votes)
+
+`20260805120000_direct_democracy_polls.sql` adds a dual-track poll module that
+reuses the same anonymity pattern as sak voting:
+
+| Table | Purpose |
+|-------|---------|
+| `polls` | Stortinget- or citizen-track poll metadata + neutral summary |
+| `poll_votes` | Anonymous ballots (`choice` + optional `fylke_code`, **no** `user_id`) |
+| `poll_vote_receipts` | One row per user per poll; choice stored encrypted |
+| `citizen_initiatives` | Folkinitiativ progressing toward a national poll |
+| `citizen_initiative_endorsements` | One endorsement per user per initiative |
+| `norway_counties` | The 15 fylker used for regional breakdown |
+| `forum_replies.stance` | Optional `ja` / `nei` / `neutral` for top arguments |
+
+Key RPCs: `cast_poll_vote`, `get_poll_totals`, `get_poll_totals_by_fylke`,
+`get_poll_top_arguments`, `ensure_stortinget_poll`, `create_citizen_initiative`,
+`endorse_citizen_initiative`, `promote_citizen_initiative_to_poll`.
+
+App surfaces: `/dashboard/avstemninger`, `/dashboard/initiativ`,
+`/api/polls`, `/api/initiatives`.
+
+### Encryption and fylke hardening
+
+`20260805130000_polls_production_hardening.sql`:
+
+- Revokes client execute on `vote_encryption_key` / `encrypt_vote_choice` /
+  `decrypt_vote_choice` / `private.get_setting` (service_role + definer RPCs only).
+  Pepper stays in `private.app_settings` (`vote_encryption_secret`) — never
+  `NEXT_PUBLIC_*`.
+- Ranks top arguments by **net upvotes** (`likes - dislikes`) via `forum_dislikes`.
+- `users.fylke_code` is only set through `apply_verified_fylke_claim` (MinID /
+  ID-porten / bankid / mock). Profile PATCH rejects client fylke edits.
+- `cast_poll_vote` copies fylke onto the ballot only when `fylke_verified`;
+  otherwise the ballot fylke is NULL (ukjent/uverifisert).
+
+Dev mock claim: `POST /api/auth/minid/fylke` with `{ fylkeCode, source: "mock_minid" }`
+when `ALLOW_MOCK_MINID=true` or `NODE_ENV=development`. Production IdP callbacks
+must send `x-minid-claim-secret: $MINID_CLAIM_SECRET`.
 
 ### Voting closure rules
 

@@ -22,7 +22,7 @@ export async function GET() {
   const service = getServiceSupabase();
   let { data, error } = await service
     .from('users')
-    .select('first_name, last_name, name, email, bio, party_preference, profile_is_public, show_party_preference, avatar_url')
+    .select('first_name, last_name, name, email, bio, party_preference, profile_is_public, show_party_preference, avatar_url, fylke_code, fylke_verified, fylke_source')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -40,6 +40,9 @@ export async function GET() {
           profile_is_public: false,
           show_party_preference: false,
           avatar_url: '',
+          fylke_code: null,
+          fylke_verified: false,
+          fylke_source: null,
         }
       : null;
     error = fallback.error;
@@ -51,25 +54,42 @@ export async function GET() {
 
   const pointsProfile = await getUserPointsProfile(user.id);
   const verification = getUserVerificationStatus(user);
+  const profileRow = data as {
+    first_name?: string | null;
+    last_name?: string | null;
+    name?: string | null;
+    email?: string | null;
+    bio?: string | null;
+    party_preference?: string | null;
+    profile_is_public?: boolean;
+    show_party_preference?: boolean;
+    avatar_url?: string | null;
+    fylke_code?: string | null;
+    fylke_verified?: boolean | null;
+    fylke_source?: string | null;
+  } | null;
 
   return NextResponse.json({
-    first_name: data?.first_name ?? null,
-    last_name: data?.last_name ?? null,
-    display_name: data?.name ?? null,
-    email: data?.email ?? user.email,
-    bio: data?.bio ?? '',
-    party_preference: data?.party_preference ?? '',
-    profile_is_public: data?.profile_is_public ?? false,
-    show_party_preference: data?.show_party_preference ?? false,
-    avatar_url: data?.avatar_url ?? '',
+    first_name: profileRow?.first_name ?? null,
+    last_name: profileRow?.last_name ?? null,
+    display_name: profileRow?.name ?? null,
+    email: profileRow?.email ?? user.email,
+    bio: profileRow?.bio ?? '',
+    party_preference: profileRow?.party_preference ?? '',
+    profile_is_public: profileRow?.profile_is_public ?? false,
+    show_party_preference: profileRow?.show_party_preference ?? false,
+    avatar_url: profileRow?.avatar_url ?? '',
+    fylke_code: profileRow?.fylke_verified ? profileRow.fylke_code ?? null : null,
+    fylke_verified: profileRow?.fylke_verified === true,
+    fylke_source: profileRow?.fylke_verified ? profileRow.fylke_source ?? null : null,
     points: pointsProfile.points,
     points_progress: pointsProfile.progress,
     recent_points: pointsProfile.recent,
     verification,
     profile_bio_min_length: PROFILE_BIO_MIN_LENGTH,
     profile_points_eligible: canAwardProfileCompletePoints({
-      bio: data?.bio ?? '',
-      profileIsPublic: data?.profile_is_public === true,
+      bio: profileRow?.bio ?? '',
+      profileIsPublic: profileRow?.profile_is_public === true,
       verification,
     }),
     has_forum_identity: userHasForumIdentity(data),
@@ -130,6 +150,16 @@ export async function PATCH(request: Request) {
   if ('profile_is_public' in body) profilePatch.profile_is_public = body.profile_is_public === true;
   if ('show_party_preference' in body) profilePatch.show_party_preference = body.show_party_preference === true;
   if ('avatar_url' in body) profilePatch.avatar_url = typeof body.avatar_url === 'string' ? body.avatar_url.trim().slice(0, 500) : '';
+  // fylke_code is MinID/ID-porten verified only — clients cannot self-serve overwrite
+  if ('fylke_code' in body) {
+    return NextResponse.json(
+      {
+        error:
+          'Fylke kan ikke endres manuelt. Det settes ved MinID/ID-porten-verifisering for å sikre fylkesstatistikken.',
+      },
+      { status: 403 },
+    );
+  }
 
   let updatedProfile:
     | {

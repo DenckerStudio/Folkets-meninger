@@ -70,11 +70,14 @@ export function validateCreateThread(payload: {
   };
 }
 
+export type ForumReplyStance = 'ja' | 'nei' | 'neutral';
+
 export function validateCreateReply(payload: {
   thread_id?: unknown;
   body?: unknown;
   parent_reply_id?: unknown;
-}): { ok: true; threadId: string; body: string } | { ok: false; error: string } {
+  stance?: unknown;
+}): { ok: true; threadId: string; body: string; stance: ForumReplyStance | null } | { ok: false; error: string } {
   if (!isValidUuid(payload.thread_id)) {
     return { ok: false, error: 'Ugyldig tråd' };
   }
@@ -99,7 +102,15 @@ export function validateCreateReply(payload: {
     return { ok: false, error: urlCheck.error };
   }
 
-  return { ok: true, threadId: payload.thread_id, body: sanitized };
+  let stance: ForumReplyStance | null = null;
+  if (payload.stance != null && payload.stance !== '') {
+    if (payload.stance !== 'ja' && payload.stance !== 'nei' && payload.stance !== 'neutral') {
+      return { ok: false, error: 'Ugyldig standpunkt (ja/nei)' };
+    }
+    stance = payload.stance;
+  }
+
+  return { ok: true, threadId: payload.thread_id, body: sanitized, stance };
 }
 
 export function validateDeletePost(payload: {

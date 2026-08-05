@@ -38,6 +38,10 @@ export const routes = {
   adminForumReports: `${DASHBOARD_PREFIX}/admin/forum-reports`,
   adminStats: `${DASHBOARD_PREFIX}/admin/statistikk`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,
+  avstemninger: `${DASHBOARD_PREFIX}/avstemninger`,
+  poll: (id: string) => `${DASHBOARD_PREFIX}/avstemninger/${id}`,
+  initiativ: `${DASHBOARD_PREFIX}/initiativ`,
+  initiative: (id: string) => `${DASHBOARD_PREFIX}/initiativ/${id}`,
   forumMineInnlegg: `${DASHBOARD_PREFIX}/forum/mine-innlegg`,
   /** @deprecated Use forumMineInnlegg */
   minSideForumPosts: `${DASHBOARD_PREFIX}/forum/mine-innlegg`,
