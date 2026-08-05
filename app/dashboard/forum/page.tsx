@@ -5,12 +5,13 @@ import ForumPostCard from '@/components/forum/forum-post-card';
 import ForumPromptCarousel from '@/components/forum/forum-prompt-carousel';
 import ForumFeedToolbar from '@/components/forum/forum-feed-toolbar';
 import ForumRightRail from '@/components/forum/forum-right-rail';
+import { ForumOpinionComposer } from '@/components/forum/forum-opinion-composer';
+import { ForumRulesPanel } from '@/components/forum/forum-rules-panel';
 import { getForumThreads, getIssueTitle, getSuggestedIssues, type ForumSort } from '@/lib/forum/queries';
 import { getActiveForumPrompts } from '@/lib/forum/prompt-queries';
 import { canViewForumReels } from '@/lib/forum/reels-visibility';
 import { routes } from '@/lib/routes';
 import { PageHeader } from '@/components/page-header';
-import { Button } from '@/components/ui/button';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,28 +38,35 @@ export default async function ForumPage({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-6">
       <div>
-        <header className="mb-6">
+        <header className="mb-5">
           <PageHeader
             title="Forum"
             description={
               reelsVisible
-                ? 'Diskuter saker, still spørsmål og delta i dagens avstemninger.'
-                : 'Diskuter saker og still spørsmål om politikk og samfunn.'
+                ? 'Diskuter saker og delta i debatten.'
+                : 'Del meninger og følg diskusjoner om politikk og samfunn.'
             }
+            className="space-y-1"
           />
         </header>
 
+        <ForumOpinionComposer
+          sakId={sakId}
+          sakTitle={sakTitle}
+          suggestedIssues={popularIssues}
+        />
+
         {sakId && (
-          <div className="mb-6 rounded-xl border border-indigo-100 bg-indigo-50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Filtrert på sak</p>
-              <p className="font-semibold text-indigo-950 mt-0.5">{sakTitle || `Sak ${sakId}`}</p>
-            </div>
-            <div className="flex gap-3 text-sm">
+          <div className="mb-6 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-gray-600">
+              <span className="text-gray-400">Filtrert:</span>{' '}
+              <span className="font-medium text-gray-900">{sakTitle || `Sak ${sakId}`}</span>
+            </p>
+            <div className="flex gap-4">
               <Link href={routes.sak(sakId)} className="font-medium text-indigo-600 hover:text-indigo-500">
                 Se saken
               </Link>
-              <Link href={routes.forum} className="font-medium text-indigo-600 hover:text-indigo-500">
+              <Link href={routes.forum} className="font-medium text-gray-500 hover:text-gray-800">
                 Vis alle
               </Link>
             </div>
@@ -72,9 +80,9 @@ export default async function ForumPage({
         </Suspense>
 
         {topics.length === 0 ? (
-          <div className="text-center py-16 rounded-xl border border-dashed border-gray-200 bg-white">
-            <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-            <p className="text-lg font-medium text-gray-700">
+          <div className="py-16 text-center">
+            <MessageSquare className="mx-auto mb-4 h-10 w-10 text-gray-200" />
+            <p className="text-base font-medium text-gray-800">
               {search
                 ? `Ingen treff for «${search}»`
                 : sakId
@@ -84,17 +92,22 @@ export default async function ForumPage({
             {search && (
               <p className="text-sm text-gray-500 mt-1">Prøv andre ord eller fjern søkefilteret.</p>
             )}
-            <Button render={<Link href={newThreadHref} />} className="mt-4">
-              Start ny diskusjon
-            </Button>
+            <Link
+              href={newThreadHref}
+              className="mt-4 inline-flex text-sm font-semibold text-indigo-600 hover:text-indigo-500"
+            >
+              Del din mening øverst på siden →
+            </Link>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="divide-y divide-gray-100">
             {topics.map((topic) => (
               <ForumPostCard key={topic.id} topic={topic} />
             ))}
           </div>
         )}
+
+        <ForumRulesPanel className="mt-10 lg:hidden" />
       </div>
 
       <ForumRightRail recentThreads={topics} popularIssues={popularIssues} />

@@ -11,6 +11,7 @@ const CONTEXT_PREFIXES = [
   { prefix: '📢 Høring: ', kind: 'hearing' as const },
   { prefix: '👤 Politiker: ', kind: 'politician' as const },
   { prefix: '📄 Dokument: ', kind: 'document' as const },
+  { prefix: '🔗 Kilde: ', kind: 'document' as const },
 ];
 
 const DASHBOARD_PATH_RE = /(\/dashboard\/[^\s<>"')\]]+)/g;

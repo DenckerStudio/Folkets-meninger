@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronDown, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import type { ForumSort } from '@/lib/forum/queries';
 import { routes } from '@/lib/routes';
 import { PREFERENCE_KEYS } from '@/lib/preferences/keys';
 import { readLocalStorage, writeLocalStorage } from '@/lib/preferences/local-storage';
+import { cn } from '@/lib/utils';
 
 const OPTIONS: { value: ForumSort; label: string }[] = [
   { value: 'nyeste', label: 'Nyeste' },
@@ -75,10 +76,10 @@ export default function ForumFeedToolbar() {
   const hasActiveSearch = qFromUrl.trim().length >= 2;
 
   return (
-    <div className="mb-4 space-y-3">
+    <div className="mb-2 space-y-4">
       <div className="relative">
         <Search
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+          className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
           aria-hidden
         />
         <label htmlFor="forum-search" className="sr-only">
@@ -89,43 +90,46 @@ export default function ForumFeedToolbar() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Søk i tittel og innlegg…"
-          className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          placeholder="Søk i diskusjoner…"
+          className="w-full rounded-2xl border-0 bg-gray-50/90 py-3 pl-11 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
           autoComplete="off"
         />
         {(query || hasActiveSearch) && (
           <button
             type="button"
             onClick={clearSearch}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-gray-400 hover:bg-gray-200/60 hover:text-gray-600"
             aria-label="Tøm søk"
           >
-            <X className="w-4 h-4" />
+            <X className="h-4 w-4" />
           </button>
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-lg font-bold text-gray-900">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold tracking-tight text-gray-900">
           {hasActiveSearch ? 'Søkeresultater' : 'Diskusjoner'}
         </h2>
-        <div className="relative shrink-0">
-          <label htmlFor="forum-sort" className="sr-only">
-            Sorter
-          </label>
-          <select
-            id="forum-sort"
-            value={sort}
-            onChange={(e) => handleSortChange(e.target.value as ForumSort)}
-            className="appearance-none rounded-lg border border-gray-200 bg-white pl-3 pr-9 py-2 text-sm font-medium text-gray-700 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            {OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <div
+          className="inline-flex rounded-xl bg-gray-100/80 p-0.5"
+          role="group"
+          aria-label="Sorter diskusjoner"
+        >
+          {OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => handleSortChange(opt.value)}
+              className={cn(
+                'rounded-[0.65rem] px-3 py-1.5 text-xs font-semibold transition-colors',
+                sort === opt.value
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900',
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       </div>
     </div>
