@@ -31,8 +31,8 @@ function attachButtonClass(active: boolean) {
   return cn(
     'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
     active
-      ? 'bg-gray-900 text-white'
-      : 'bg-gray-100 text-gray-700 hover:bg-gray-200/80',
+      ? 'bg-primary text-primary-foreground'
+      : 'bg-muted text-foreground hover:bg-muted/80',
   );
 }
 
@@ -107,7 +107,7 @@ export function ForumComposerAttachments({
       </div>
 
       {panel === 'sak' ? (
-        <div className="rounded-2xl bg-gray-50/90 p-3">
+        <div className="rounded-2xl bg-muted/90 p-3">
           <ContextPicker
             onSelect={onSelect}
             selectedKeys={linkedKeys}
@@ -122,7 +122,7 @@ export function ForumComposerAttachments({
                   key={issue.id}
                   type="button"
                   onClick={() => onSelect(sakContextItem(issue.id, issue.title))}
-                  className="rounded-full bg-white px-3 py-1.5 text-left text-xs font-medium text-gray-700 shadow-sm ring-1 ring-gray-200/80 hover:bg-gray-50"
+                  className="rounded-full bg-card px-3 py-1.5 text-left text-xs font-medium text-foreground shadow-sm ring-1 ring-border/80 hover:bg-muted/50"
                 >
                   <span className="line-clamp-1">{issue.title}</span>
                 </button>
@@ -133,7 +133,7 @@ export function ForumComposerAttachments({
       ) : null}
 
       {panel === 'politiker' ? (
-        <div className="rounded-2xl bg-gray-50/90 p-3">
+        <div className="rounded-2xl bg-muted/90 p-3">
           <ContextPicker
             onSelect={onSelect}
             selectedKeys={linkedKeys}
@@ -143,7 +143,7 @@ export function ForumComposerAttachments({
           />
           {popularPoliticians.length > 0 ? (
             <div className="mt-3">
-              <p className="mb-2 text-xs font-medium text-gray-500">Mest omtalt i forumet</p>
+              <p className="mb-2 text-xs font-medium text-muted-foreground">Mest omtalt i forumet</p>
               <div className="flex flex-wrap gap-2">
                 {popularPoliticians.map((item) => (
                   <button
@@ -151,10 +151,10 @@ export function ForumComposerAttachments({
                     type="button"
                     disabled={linkedKeys.has(contextItemKey(item))}
                     onClick={() => onSelect(item)}
-                    className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-gray-800 shadow-sm ring-1 ring-gray-200/80 hover:bg-gray-50 disabled:opacity-40"
+                    className="rounded-full bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-sm ring-1 ring-border/80 hover:bg-muted/50 disabled:opacity-40"
                   >
                     @{item.title.split(/\s+/)[0]}
-                    {item.meta ? <span className="text-gray-400"> · {item.meta}</span> : null}
+                    {item.meta ? <span className="text-muted-foreground"> · {item.meta}</span> : null}
                   </button>
                 ))}
               </div>
@@ -164,7 +164,7 @@ export function ForumComposerAttachments({
       ) : null}
 
       {panel === 'kilde' ? (
-        <div className="rounded-2xl bg-gray-50/90 p-3 space-y-2">
+        <div className="rounded-2xl bg-muted/90 p-3 space-y-2">
           <label htmlFor="forum-source-url" className="sr-only">
             Kilde-URL
           </label>
@@ -178,18 +178,18 @@ export function ForumComposerAttachments({
                 setSourceError('');
               }}
               placeholder="vg.no/artikkel eller https://…"
-              className="flex-1 rounded-xl border-0 bg-white px-3 py-2 text-sm text-gray-900 ring-1 ring-gray-200/80 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
+              className="flex-1 rounded-xl border-0 bg-card px-3 py-2 text-sm text-foreground ring-1 ring-border/80 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
             />
             <button
               type="button"
               onClick={addSource}
-              className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800"
+              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
             >
               Legg til
             </button>
           </div>
-          {sourceError ? <p className="text-xs text-red-600">{sourceError}</p> : null}
-          <p className="text-xs text-gray-500">Godkjente kilder inkluderer bl.a. vg.no, nrk.no og aftenposten.no.</p>
+          {sourceError ? <p className="text-xs text-destructive">{sourceError}</p> : null}
+          <p className="text-xs text-muted-foreground">Godkjente kilder inkluderer bl.a. vg.no, nrk.no og aftenposten.no.</p>
         </div>
       ) : null}
 

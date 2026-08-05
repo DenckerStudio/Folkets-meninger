@@ -68,12 +68,12 @@ export default function CompleteProfileClient() {
       <FadeIn delay={0.1}>
         <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center">
-              <ShieldCheck className="w-8 h-8 text-indigo-600" />
+            <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-950/50 rounded-2xl flex items-center justify-center">
+              <ShieldCheck className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Fullfør profilen din</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-2xl font-bold text-foreground">Fullfør profilen din</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
             Foruminnlegg er offentlige og viser fornavn og etternavn. Stemmer forblir anonyme i statistikken.
           </p>
         </div>
@@ -83,16 +83,16 @@ export default function CompleteProfileClient() {
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
           <form
             onSubmit={handleSubmit}
-            className="bg-white py-8 px-6 shadow-sm rounded-3xl border border-gray-100 space-y-4"
+            className="bg-card py-8 px-6 shadow-sm rounded-3xl border border-border space-y-4"
           >
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              <div className="text-sm text-destructive bg-destructive/10 border border-red-100 rounded-lg px-3 py-2">
                 {error}
               </div>
             )}
 
             <div>
-              <label htmlFor="first-name" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="first-name" className="block text-sm font-medium text-foreground">
                 Fornavn
               </label>
               <input
@@ -101,12 +101,12 @@ export default function CompleteProfileClient() {
                 minLength={2}
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm"
+                className="mt-1 block w-full rounded-xl border border-border px-3 py-2.5 text-sm"
               />
             </div>
 
             <div>
-              <label htmlFor="last-name" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="last-name" className="block text-sm font-medium text-foreground">
                 Etternavn
               </label>
               <input
@@ -115,7 +115,7 @@ export default function CompleteProfileClient() {
                 minLength={2}
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="mt-1 block w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm"
+                className="mt-1 block w-full rounded-xl border border-border px-3 py-2.5 text-sm"
               />
             </div>
 
@@ -127,9 +127,9 @@ export default function CompleteProfileClient() {
               {saving ? 'Lagrer…' : 'Fortsett'}
             </button>
 
-            <p className="text-xs text-center text-gray-500">
+            <p className="text-xs text-center text-muted-foreground">
               Du kan endre navnet senere under{' '}
-              <Link href={routes.minSide} className="text-indigo-600 hover:underline">
+              <Link href={routes.minSide} className="text-indigo-600 dark:text-indigo-400 hover:underline">
                 Min side
               </Link>
               .

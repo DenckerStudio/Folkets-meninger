@@ -129,7 +129,7 @@ export function ForeslaReelClient() {
   };
 
   if (loading) {
-    return <div className="py-16 text-center text-gray-500">Laster…</div>;
+    return <div className="py-16 text-center text-muted-foreground">Laster…</div>;
   }
 
   return (
@@ -138,10 +138,10 @@ export function ForeslaReelClient() {
 
       <header className="space-y-2">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-6 w-6 text-indigo-600" />
-          <h1 className="text-2xl font-bold text-gray-900">Foreslå forum-reel</h1>
+          <Sparkles className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+          <h1 className="text-2xl font-bold text-foreground">Foreslå forum-reel</h1>
         </div>
-        <p className="text-sm leading-6 text-gray-600">
+        <p className="text-sm leading-6 text-muted-foreground">
           Med nok poeng kan du foreslå spørsmål fra nyhetsbildet. Pålitelige brukere sender til admin-godkjenning.
           Kuratorer kan publisere direkte fra godkjente kilder.
         </p>
@@ -150,12 +150,12 @@ export function ForeslaReelClient() {
       <PointsProgress points={points} progress={pointsProgress} compact />
 
       {access?.mode === 'locked' ? (
-        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-6 text-sm leading-6 text-gray-700">
+        <div className="rounded-2xl border border-border bg-muted/40 p-6 text-sm leading-6 text-foreground">
           Du trenger <strong>{access.pointsNeeded} poeng til</strong> (totalt 750) for å foreslå reels. Poeng tjenes
           gjennom forum, stemming og verified profil.
         </div>
       ) : (
-        <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-5 text-sm text-indigo-950">
+        <div className="rounded-2xl border border-indigo-100 bg-indigo-50 dark:bg-indigo-950/40 p-5 text-sm text-indigo-950">
           {access?.mode === 'curator' ? (
             <p>
               Du er <strong>Kurator</strong>. Reels fra godkjente kilder publiseres direkte. Ukjente domener går fortsatt
@@ -174,14 +174,14 @@ export function ForeslaReelClient() {
 
       {access && access.mode !== 'locked' ? (
         <form
-          className="space-y-5 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+          className="space-y-5 rounded-2xl border border-border bg-card p-6 shadow-sm"
           onSubmit={(event) => {
             event.preventDefault();
             void submit();
           }}
         >
           <div>
-            <label htmlFor="reel-question" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="reel-question" className="block text-sm font-medium text-foreground">
               Spørsmål
             </label>
             <textarea
@@ -190,18 +190,18 @@ export function ForeslaReelClient() {
               maxLength={280}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
               placeholder="F.eks.: Bør Norge øke støtten til Ukraina ytterligere i 2026?"
             />
-            <p className="mt-1 text-xs text-gray-500">{question.length}/280 tegn</p>
+            <p className="mt-1 text-xs text-muted-foreground">{question.length}/280 tegn</p>
           </div>
 
           <div className="space-y-3">
-            <p className="text-sm font-medium text-gray-700">Kilder</p>
+            <p className="text-sm font-medium text-foreground">Kilder</p>
             {sources.map((row, index) => (
-              <div key={index} className="grid gap-2 rounded-xl border border-gray-100 p-3 sm:grid-cols-3">
+              <div key={index} className="grid gap-2 rounded-xl border border-border p-3 sm:grid-cols-3">
                 <input
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  className="rounded-lg border border-border px-3 py-2 text-sm"
                   placeholder="Tittel"
                   value={row.title}
                   onChange={(e) => {
@@ -211,7 +211,7 @@ export function ForeslaReelClient() {
                   }}
                 />
                 <input
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  className="rounded-lg border border-border px-3 py-2 text-sm"
                   placeholder="https://…"
                   value={row.url}
                   onChange={(e) => {
@@ -221,7 +221,7 @@ export function ForeslaReelClient() {
                   }}
                 />
                 <input
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  className="rounded-lg border border-border px-3 py-2 text-sm"
                   placeholder="Avis"
                   value={row.outlet}
                   onChange={(e) => {
@@ -235,7 +235,7 @@ export function ForeslaReelClient() {
             <button
               type="button"
               onClick={() => setSources((prev) => [...prev, emptySourceRow()])}
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+              className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
             >
               + Legg til kilde
             </button>
@@ -243,26 +243,26 @@ export function ForeslaReelClient() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="reel-tags" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="reel-tags" className="block text-sm font-medium text-foreground">
                 Stikkord (valgfritt)
               </label>
               <input
                 id="reel-tags"
                 value={topicTags}
                 onChange={(e) => setTopicTags(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm"
                 placeholder="f.eks. utenrikspolitikk, økonomi"
               />
             </div>
             <div>
-              <label htmlFor="reel-sensitivity" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="reel-sensitivity" className="block text-sm font-medium text-foreground">
                 Sensitivitet
               </label>
               <select
                 id="reel-sensitivity"
                 value={sensitivity}
                 onChange={(e) => setSensitivity(e.target.value === 'high' ? 'high' : 'low')}
-                className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm"
               >
                 <option value="low">Lav</option>
                 <option value="high">Høy</option>
@@ -270,7 +270,7 @@ export function ForeslaReelClient() {
             </div>
           </div>
 
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
           {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
 
           <button
@@ -302,19 +302,19 @@ export function ForeslaReelClient() {
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <input
-                className="rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm"
+                className="rounded-xl border border-violet-200 bg-card px-3 py-2 text-sm"
                 placeholder="Domene, f.eks. vg.no"
                 value={sourceDomain}
                 onChange={(e) => setSourceDomain(e.target.value)}
               />
               <input
-                className="rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm"
+                className="rounded-xl border border-violet-200 bg-card px-3 py-2 text-sm"
                 placeholder="Visningsnavn, f.eks. VG"
                 value={sourceOutlet}
                 onChange={(e) => setSourceOutlet(e.target.value)}
               />
             </div>
-            {sourceError ? <p className="text-sm text-red-600">{sourceError}</p> : null}
+            {sourceError ? <p className="text-sm text-destructive">{sourceError}</p> : null}
             {sourceMessage ? <p className="text-sm text-emerald-700">{sourceMessage}</p> : null}
             <button
               type="button"

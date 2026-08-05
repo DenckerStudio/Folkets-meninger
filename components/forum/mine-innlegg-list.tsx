@@ -39,20 +39,20 @@ export function MineInnleggList({ embedded = false }: { embedded?: boolean }) {
   }, [load]);
 
   if (loading) {
-    return <p className="text-sm text-gray-500 py-4">Laster innlegg…</p>;
+    return <p className="text-sm text-muted-foreground py-4">Laster innlegg…</p>;
   }
 
   if (items.length === 0) {
     return (
-      <div className={`text-center py-8 ${embedded ? '' : 'rounded-xl border border-gray-200 bg-gray-50'}`}>
-        <MessagesSquare className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-        <p className="text-gray-700 font-medium">Du har ikke publisert i forumet ennå</p>
-        <p className="text-sm text-gray-500 mt-1 max-w-sm mx-auto">
+      <div className={`text-center py-8 ${embedded ? '' : 'rounded-xl border border-border bg-muted/40'}`}>
+        <MessagesSquare className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+        <p className="text-foreground font-medium">Du har ikke publisert i forumet ennå</p>
+        <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
           Innlegg vises med ditt navn og er offentlige.
         </p>
         <Link
           href={routes.forumNew()}
-          className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-500"
+          className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
         >
           <Plus className="w-4 h-4" />
           Del din mening
@@ -63,7 +63,7 @@ export function MineInnleggList({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <div className="space-y-3">
-      <ul className="divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden bg-white">
+      <ul className="divide-y divide-border border border-border rounded-xl overflow-hidden bg-card">
         {items.map((item) => (
           <li key={`${item.kind}-${item.id}`}>
             <Link
@@ -72,14 +72,14 @@ export function MineInnleggList({ embedded = false }: { embedded?: boolean }) {
                   ? routes.forumTopic(item.threadId)
                   : `${routes.forumTopic(item.threadId)}#reply-${item.id}`
               }
-              className="block px-4 py-4 hover:bg-gray-50 transition-colors"
+              className="block px-4 py-4 hover:bg-muted/50 transition-colors"
             >
               <div className="flex items-start gap-3">
                 <div
                   className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
                     item.kind === 'thread'
-                      ? 'bg-indigo-100 text-indigo-600'
-                      : 'bg-gray-100 text-gray-600'
+                      ? 'bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
+                      : 'bg-muted text-muted-foreground'
                   }`}
                 >
                   {item.kind === 'thread' ? (
@@ -89,8 +89,8 @@ export function MineInnleggList({ embedded = false }: { embedded?: boolean }) {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-x-2 text-xs text-gray-500 mb-0.5">
-                    <span className="font-medium text-gray-700">
+                  <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground mb-0.5">
+                    <span className="font-medium text-foreground">
                       {item.kind === 'thread' ? 'Tråd' : 'Svar'}
                     </span>
                     <span>·</span>
@@ -102,12 +102,12 @@ export function MineInnleggList({ embedded = false }: { embedded?: boolean }) {
                       </>
                     )}
                   </div>
-                  <p className="font-medium text-gray-900 line-clamp-1">
+                  <p className="font-medium text-foreground line-clamp-1">
                     {item.kind === 'thread' ? item.title : item.threadTitle}
                   </p>
-                  <p className="text-sm text-gray-600 line-clamp-2 mt-0.5">{item.excerpt}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{item.excerpt}</p>
                   {item.kind === 'thread' && item.replyCount > 0 && (
-                    <p className="text-xs text-gray-500 mt-1">{item.replyCount} svar</p>
+                    <p className="text-xs text-muted-foreground mt-1">{item.replyCount} svar</p>
                   )}
                 </div>
               </div>
@@ -120,7 +120,7 @@ export function MineInnleggList({ embedded = false }: { embedded?: boolean }) {
           type="button"
           disabled={loadingMore}
           onClick={() => load(page + 1, true)}
-          className="w-full py-2 text-sm font-medium text-indigo-600 hover:text-indigo-500 disabled:opacity-50"
+          className="w-full py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 disabled:opacity-50"
         >
           {loadingMore ? 'Laster…' : 'Vis flere'}
         </button>

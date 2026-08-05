@@ -15,9 +15,9 @@ export const USER_POINT_TIERS: readonly UserPointTier[] = [
     id: 'new',
     name: 'Ny deltaker',
     minPoints: 0,
-    color: 'text-gray-700',
-    barColor: 'bg-gray-400',
-    ringColor: 'ring-gray-200',
+    color: 'text-foreground',
+    barColor: 'bg-muted-foreground/50',
+    ringColor: 'ring-border',
     unlocks: 'Les, stem på saker og del i forumet.',
   },
   {

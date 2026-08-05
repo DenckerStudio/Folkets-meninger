@@ -23,7 +23,7 @@ export function ForumRulesPanel({ className = '', defaultOpen = false }: ForumRu
         className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         aria-expanded={open}
       >
-        <Shield className="h-4 w-4 text-indigo-600" aria-hidden />
+        <Shield className="h-4 w-4 text-indigo-600 dark:text-indigo-400" aria-hidden />
         Forumregler
         <ChevronDown
           className={cn('h-4 w-4 transition-transform duration-200', open && 'rotate-180')}

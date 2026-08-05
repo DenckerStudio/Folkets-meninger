@@ -4,8 +4,8 @@ import { ArrowLeft } from 'lucide-react';
 export default function NotFound() {
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
-      <h2 className="text-4xl font-bold text-gray-900 mb-4">Siden ble ikke funnet</h2>
-      <p className="text-lg text-gray-600 mb-8">
+      <h2 className="text-4xl font-bold text-foreground mb-4">Siden ble ikke funnet</h2>
+      <p className="text-lg text-muted-foreground mb-8">
         Vi kunne ikke finne siden du lette etter. Den kan ha blitt flyttet eller slettet.
       </p>
       <Link 

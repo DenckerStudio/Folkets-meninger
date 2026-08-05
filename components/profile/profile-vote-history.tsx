@@ -19,30 +19,30 @@ export function ProfileVoteHistory({ items, loading }: ProfileVoteHistoryProps) 
   return (
     <ProfileCard title="Siste stemmer" description="Saker du har stemt på. Stemmer er anonyme i offentlig statistikk.">
       {loading ? (
-        <p className="text-center py-8 text-gray-500 text-sm">Laster stemmehistorikk…</p>
+        <p className="text-center py-8 text-muted-foreground text-sm">Laster stemmehistorikk…</p>
       ) : items.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          <p className="font-medium text-gray-900">Ingen stemmer ennå</p>
+        <div className="text-center py-8 text-muted-foreground">
+          <p className="font-medium text-foreground">Ingen stemmer ennå</p>
           <p className="text-sm mt-2">Utforsk saker og stem for å se historikken din her.</p>
           <Link
             href={routes.utforsk}
-            className="mt-4 inline-block text-indigo-600 font-medium hover:text-indigo-500 text-sm"
+            className="mt-4 inline-block text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-500 text-sm"
           >
             Utforsk saker →
           </Link>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-200 rounded-xl border border-gray-200 overflow-hidden">
+        <ul className="divide-y divide-border rounded-xl border border-border overflow-hidden">
           {items.map((item) => (
             <li key={item.stortinget_issue_id}>
               <Link
                 href={routes.sak(item.stortinget_issue_id)}
-                className="block px-4 py-4 hover:bg-gray-50 transition-colors"
+                className="block px-4 py-4 hover:bg-muted/50 transition-colors"
               >
-                <p className="text-sm font-medium text-indigo-600 truncate">
+                <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 truncate">
                   {item.title || `Sak ${item.stortinget_issue_id}`}
                 </p>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Stemt: {new Date(item.voted_at).toLocaleDateString('nb-NO')}
                 </p>
               </Link>

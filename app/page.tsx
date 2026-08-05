@@ -14,33 +14,33 @@ export default async function LandingPage() {
       <FadeIn delay={0.2} direction="up">
         <section>
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Slik fungerer det</h2>
-            <p className="mt-3 text-gray-600">
+            <h2 className="text-3xl font-bold text-foreground tracking-tight">Slik fungerer det</h2>
+            <p className="mt-3 text-muted-foreground">
               Fra Stortingets åpne data til din stemme — en enkel vei inn i demokratiet mellom valgene.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             <FeatureCard
               icon={TrendingUp}
-              iconClass="bg-emerald-100 text-emerald-600"
+              iconClass="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400"
               title="Direkte fra Stortinget"
               description="Vi henter lovforslag og representantforslag fra Stortingets åpne API — saker som egner seg for enkelt ja/nei-engasjement."
             />
             <FeatureCard
               icon={Vote}
-              iconClass="bg-indigo-100 text-indigo-600"
+              iconClass="bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400"
               title="Stem på saker"
               description="Si din mening med verifisert stemmegivning. Én person, én stemme — anonymt i statistikken."
             />
             <FeatureCard
               icon={MessageSquare}
-              iconClass="bg-amber-100 text-amber-600"
+              iconClass="bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400"
               title="Delta i debatten"
               description="Forum og høringer med navngitte innlegg — diskuter åpent med fornavn og etternavn."
             />
             <FeatureCard
               icon={BarChart2}
-              iconClass="bg-violet-100 text-violet-600"
+              iconClass="bg-violet-100 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400"
               title="Innsikt for politikere"
               description="Anonymisert statistikk hjelper representanter å forstå hva velgerne mener."
             />
@@ -50,33 +50,33 @@ export default async function LandingPage() {
 
       <FadeIn delay={0.25} direction="up">
         <section className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 lg:col-span-1">
-            <div className="w-12 h-12 inline-flex items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 mb-4">
+          <div className="bg-card p-6 rounded-2xl shadow-sm border border-border lg:col-span-1">
+            <div className="w-12 h-12 inline-flex items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 mb-4">
               <ShieldCheck className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900">Verifisert og sikkert</h3>
-            <p className="mt-2 text-base text-gray-500">
+            <h3 className="text-lg font-medium text-foreground">Verifisert og sikkert</h3>
+            <p className="mt-2 text-base text-muted-foreground">
               Sikker innlogging sikrer én person, én stemme. Identiteten din er beskyttet, og stemmen lagres
               anonymt.
             </p>
           </div>
-          <div className="bg-gradient-to-br from-[#00205b]/5 to-[#ba0c2f]/5 p-8 rounded-2xl border border-gray-100 lg:col-span-2 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="bg-gradient-to-br from-[#00205b]/5 to-[#ba0c2f]/5 p-8 rounded-2xl border border-border lg:col-span-2 flex flex-col sm:flex-row items-center justify-between gap-6">
             <div>
-              <h3 className="text-xl font-semibold text-gray-900">Klar til å delta?</h3>
-              <p className="mt-2 text-gray-600">
+              <h3 className="text-xl font-semibold text-foreground">Klar til å delta?</h3>
+              <p className="mt-2 text-muted-foreground">
                 Opprett konto gratis og få tilgang til alle saker, stemmegivning, forum og høringer i dashboardet.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 shrink-0 w-full sm:w-auto">
               <Link
                 href={routes.login}
-                className="inline-flex items-center justify-center px-6 py-3 text-base font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-xl transition-colors"
+                className="inline-flex items-center justify-center px-6 py-3 text-base font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-xl transition-colors"
               >
                 Kom i gang
               </Link>
               <Link
                 href={routes.dashboard}
-                className="inline-flex items-center justify-center px-6 py-3 text-base font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-xl transition-colors"
+                className="inline-flex items-center justify-center px-6 py-3 text-base font-medium text-foreground bg-card border border-border hover:bg-muted/50 rounded-xl transition-colors"
               >
                 Dashboard <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
@@ -119,12 +119,12 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+    <div className="bg-card p-6 rounded-2xl shadow-sm border border-border">
       <div className={`w-12 h-12 inline-flex items-center justify-center rounded-xl mb-4 ${iconClass}`}>
         <Icon className="w-6 h-6" />
       </div>
-      <h3 className="text-lg font-medium text-gray-900">{title}</h3>
-      <p className="mt-2 text-base text-gray-500">{description}</p>
+      <h3 className="text-lg font-medium text-foreground">{title}</h3>
+      <p className="mt-2 text-base text-muted-foreground">{description}</p>
     </div>
   );
 }

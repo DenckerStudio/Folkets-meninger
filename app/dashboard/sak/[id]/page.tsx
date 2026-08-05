@@ -277,7 +277,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                     <Link
                       key={f.id}
                       href={routes.politiker(String(f.id))}
-                      className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2 border border-border hover:border-indigo-200 hover:bg-indigo-50/40 transition-colors"
+                      className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2 border border-border hover:border-indigo-200 hover:bg-indigo-50 dark:bg-indigo-950/40/40 transition-colors"
                     >
                       {content}
                     </Link>
@@ -331,7 +331,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                     <Link
                       key={s.id}
                       href={routes.politiker(String(s.id))}
-                      className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 rounded-lg px-3 py-2 border border-amber-100 dark:border-amber-900/50 hover:border-amber-200 transition-colors"
+                      className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 rounded-lg px-3 py-2 border border-amber-100 dark:border-amber-900/50 hover:border-amber-200 dark:border-amber-900/50 transition-colors"
                     >
                       {content}
                     </Link>

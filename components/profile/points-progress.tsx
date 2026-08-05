@@ -26,21 +26,21 @@ export function PointsProgress({
   const state = progress ?? getUserPointsProgress(points);
 
   return (
-    <div className={cn('rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-4 shadow-sm', className)}>
+    <div className={cn('rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-gradient-to-br from-amber-50 dark:from-amber-950/30 via-background to-orange-50 dark:to-orange-950/20 p-4 shadow-sm', className)}>
       {showHeading && (
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-700">
               <Trophy className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-sm font-semibold text-gray-900">Poeng og tillit</p>
+              <p className="text-sm font-semibold text-foreground">Poeng og tillit</p>
               <p className={cn('text-sm font-bold', state.tier.color)}>{state.tier.name}</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Poeng</p>
-            <p className="text-2xl font-bold text-[#00205b]">{state.points}</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Poeng</p>
+            <p className="text-2xl font-bold text-brand">{state.points}</p>
             {!state.isMaxTier ? (
               <p className={cn('text-xs font-semibold tabular-nums', state.tier.color)}>{state.progressLabel}</p>
             ) : null}
@@ -50,13 +50,13 @@ export function PointsProgress({
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3 text-sm">
-          <span className="font-medium text-gray-700">
+          <span className="font-medium text-foreground">
             {state.isMaxTier ? 'Høyeste nivå nådd' : `Mot ${state.nextTier?.name ?? 'neste nivå'}`}
           </span>
           <span className={cn('font-bold tabular-nums', state.tier.color)}>{state.progressLabel}</span>
         </div>
 
-        <div className="h-3 overflow-hidden rounded-full bg-gray-200 ring-1 ring-gray-300">
+        <div className="h-3 overflow-hidden rounded-full bg-muted ring-1 ring-gray-300">
           <div
             className={cn(
               'h-full min-w-[0.35rem] rounded-full transition-all duration-500 shadow-sm',
@@ -72,8 +72,8 @@ export function PointsProgress({
         </div>
 
         {!compact && state.nextUnlock && (
-          <p className="text-sm leading-6 text-gray-600">
-            <span className="font-medium text-gray-800">Neste nivå åpner:</span> {state.nextUnlock}
+          <p className="text-sm leading-6 text-muted-foreground">
+            <span className="font-medium text-foreground">Neste nivå åpner:</span> {state.nextUnlock}
           </p>
         )}
 
@@ -103,7 +103,7 @@ export function PointsTierBadge({ points, className }: { points: number; classNa
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold ring-1',
+        'inline-flex items-center gap-1.5 rounded-full bg-card/90 px-2.5 py-1 text-xs font-semibold ring-1',
         state.tier.color,
         state.tier.ringColor,
         className,

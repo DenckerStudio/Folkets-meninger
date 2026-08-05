@@ -16,7 +16,7 @@ export type NavLinkProps = {
 const navLinkBase = cn(
   'relative inline-flex items-center px-2.5 py-1.5 text-sm font-medium transition-colors motion-reduce:transition-none',
   'text-muted-foreground hover:text-foreground',
-  'after:absolute after:bottom-0 after:left-2.5 after:h-0.5 after:rounded-full after:bg-[#00205b]',
+  'after:absolute after:bottom-0 after:left-2.5 after:h-0.5 after:rounded-full after:bg-brand',
   'after:transition-all after:duration-200 motion-reduce:after:transition-none',
 );
 
@@ -32,7 +32,7 @@ export function NavLink({ href, children, className, isActive }: NavLinkProps) {
       className={cn(
         navLinkBase,
         active
-          ? 'text-[#00205b] after:w-[calc(100%-1.25rem)]'
+          ? 'text-brand after:w-[calc(100%-1.25rem)]'
           : 'after:w-0 hover:after:w-[calc(100%-1.25rem)]',
         className,
       )}
@@ -63,7 +63,7 @@ export function NavMenuLink({ title, description, icon: Icon, href, isActive }: 
         'flex w-full flex-row gap-x-2 rounded-sm p-2 transition-colors motion-reduce:transition-none',
         'hover:bg-accent hover:text-accent-foreground',
         'focus:bg-accent focus:text-accent-foreground focus:outline-none',
-        active && 'bg-accent/60 text-[#00205b]',
+        active && 'bg-accent/60 text-brand',
       )}
     >
       <div className="bg-background/40 flex aspect-square size-10 items-center justify-center rounded-md border shadow-sm">

@@ -54,8 +54,8 @@ export default function ForumMobileNav() {
               className={cn(
                 'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold border transition-colors',
                 active
-                  ? 'bg-[#00205b] text-white border-[#00205b]'
-                  : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300',
+                  ? 'bg-[#00205b] text-white border-brand'
+                  : 'bg-card text-foreground border-border hover:border-border',
               )}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -84,8 +84,8 @@ export default function ForumMobileNav() {
               className={cn(
                 'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold border transition-colors',
                 active
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-card text-foreground border-border hover:border-border'
               )}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -98,8 +98,8 @@ export default function ForumMobileNav() {
           className={cn(
             'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold border transition-colors',
             pathname === routes.forumMineInnlegg
-              ? 'bg-gray-900 text-white border-gray-900'
-              : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300',
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'bg-card text-foreground border-border hover:border-border',
           )}
         >
           <User className="w-3.5 h-3.5" />
@@ -117,7 +117,7 @@ export default function ForumMobileNav() {
                 'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold border transition-colors',
                 active
                   ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300',
+                  : 'bg-card text-foreground border-border hover:border-border',
               )}
             >
               <Icon className="w-3.5 h-3.5" />

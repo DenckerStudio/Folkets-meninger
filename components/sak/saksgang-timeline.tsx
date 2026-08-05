@@ -81,9 +81,9 @@ export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: Saksg
                     stepDone && ferdigbehandlet
                       ? 'bg-emerald-500 border-emerald-500'
                       : isLast && !ferdigbehandlet
-                        ? 'bg-indigo-500 border-indigo-500'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/400 border-indigo-500'
                         : stepDone
-                          ? 'bg-indigo-500 border-indigo-500'
+                          ? 'bg-indigo-50 dark:bg-indigo-950/400 border-indigo-500'
                           : 'bg-card border-border'
                   }`}
                   style={{ top: '0.35rem' }}

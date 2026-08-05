@@ -34,7 +34,7 @@ export function LinkHoverCard({ href, preview, children, className }: LinkHoverC
             initial={reduceMotion ? false : { opacity: 0, y: 8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
-            className="rounded-xl border border-gray-200 bg-white p-4 shadow-xl ring-1 ring-black/5"
+            className="rounded-xl border border-border bg-card p-4 shadow-xl ring-1 ring-border/60"
           >
             {preview}
           </motion.div>

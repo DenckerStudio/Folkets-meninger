@@ -89,7 +89,7 @@ export default function PoliticianResponseForm({ sakId }: { sakId?: string }) {
       ></textarea>
       <div className="flex items-center justify-between mb-4 text-xs text-muted-foreground">
         <span>{response.length}/4000 tegn</span>
-        {errorMessage ? <span className="text-red-600">{errorMessage}</span> : null}
+        {errorMessage ? <span className="text-destructive">{errorMessage}</span> : null}
       </div>
       <div className="flex justify-end">
         <button 

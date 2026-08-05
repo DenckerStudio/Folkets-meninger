@@ -22,7 +22,7 @@ export default async function PolitikerDetailPage({
   const profile = await getPolitikerProfileData(String(rep.id), rep);
 
   return (
-    <Suspense fallback={<div className="max-w-5xl mx-auto py-12 text-center text-gray-500">Laster profil…</div>}>
+    <Suspense fallback={<div className="max-w-5xl mx-auto py-12 text-center text-muted-foreground">Laster profil…</div>}>
       <PolitikerProfileShell rep={rep} profile={profile} />
     </Suspense>
   );

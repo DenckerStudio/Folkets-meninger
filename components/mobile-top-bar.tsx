@@ -29,10 +29,10 @@ export function MobileTopBar() {
     <div className="md:hidden fixed top-0 right-0 z-40 p-3 safe-area-inset-top">
       <Link
         href={routes.varsler}
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm"
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card shadow-sm"
         aria-label="Varsler"
       >
-        <Bell className="w-5 h-5 text-gray-700" />
+        <Bell className="w-5 h-5 text-foreground" />
         {unread > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[1.125rem] h-[1.125rem] rounded-full bg-indigo-600 text-[10px] font-bold text-white flex items-center justify-center px-1">
             {unread > 99 ? '99+' : unread}

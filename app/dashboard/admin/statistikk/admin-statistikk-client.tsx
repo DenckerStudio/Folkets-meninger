@@ -29,16 +29,16 @@ export default function AdminStatistikkClient() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <BarChart3 className="w-6 h-6 text-indigo-600" />
+        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <BarChart3 className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
           Statistikk-eksport
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Anonyme aggregater for manuell deling. Automatisk sending til myndigheter er ikke aktivert (fase C).
         </p>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+      <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-foreground">
         {PUBLIC_STATS_DISCLAIMER}
       </div>
 
@@ -54,19 +54,19 @@ export default function AdminStatistikkClient() {
         </button>
         <a
           href="/api/admin/government-stats/export?format=json&limit=200"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted/50"
         >
           JSON (krever innlogging)
         </a>
         <Link
           href={routes.innsikt}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted/50"
         >
           Offentlig innsikt-side →
         </Link>
       </div>
 
-      <Link href={routes.adminForumReports} className="text-sm text-indigo-600 hover:underline">
+      <Link href={routes.adminForumReports} className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
         ← Forum-rapporter
       </Link>
     </div>

@@ -13,13 +13,21 @@ Ollama.
 
 ```bash
 npm install
+# Option A — test Supabase (heyklever):
+npm run env:test
+# Option B — blank template:
 cp .env.example .env.local
 npm run dev
 ```
 
-Fill `.env.local` from `.env.example` before starting the dev server. The
-minimum local app setup needs Supabase URL/keys; cron, SMTP, and n8n webhook
-values are only needed for the workflows that call those services.
+`npm run env:test` writes `.env.local` from `.env.test` (self-hosted test
+Supabase at `https://supabase.heyklever.app`). For a fully local Docker stack,
+run `npm run supabase:start` and paste keys from `npm run supabase:status`.
+
+Fill `.env.local` from `.env.example` before starting the dev server if you are
+not using `env:test`. The minimum local app setup needs Supabase URL/keys;
+cron, SMTP, and n8n webhook values are only needed for the workflows that call
+those services.
 
 ## Useful commands
 
@@ -29,8 +37,10 @@ values are only needed for the workflows that call those services.
 | `npm run lint` | Run ESLint over the repo |
 | `npm run build` | Build the Next.js app |
 | `npm run test:unit` | Run focused TypeScript unit tests |
-| `npm run test:e2e` | Run Playwright smoke tests |
-
+| `npm run test:e2e` | Run Playwright smoke tests (loads `.env.test`) |
+| `npm run env:test` | Write `.env.local` from `.env.test` (heyklever Supabase) |
+| `npm run supabase:start` | Start local Supabase via Docker CLI |
+| `npm run supabase:status` | Print local Supabase URL/keys |
 ## Architecture at a glance
 
 ```text

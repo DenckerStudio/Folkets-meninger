@@ -7,6 +7,7 @@ supabase/.temp/
 *.log
 .env*
 !.env.example
+!.env.test
 tsconfig.tsbuildinfo
 .vercel
 .env*.local

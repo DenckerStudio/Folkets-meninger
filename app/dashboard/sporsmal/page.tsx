@@ -27,7 +27,7 @@ export default async function SporsmalPage({
   return (
     <div className="space-y-8 pb-12">
       <FadeIn delay={0.1}>
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8 md:p-12">
+        <div className="bg-card rounded-[2.5rem] shadow-sm border border-border p-8 md:p-12">
           <PageHeader
             title="Spørsmål"
             description={`Skriftlige spørsmål, spørretime og interpellasjoner fra Stortinget (${sesjonId}). Søk, filtrer og les detaljer.`}

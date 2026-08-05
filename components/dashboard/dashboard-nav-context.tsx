@@ -70,18 +70,18 @@ function DashboardNavDrawer({ open, onClose }: { open: boolean; onClose: () => v
             role="dialog"
             aria-modal="true"
             aria-label="Navigasjonsmeny"
-            className="absolute inset-y-0 left-0 flex w-[min(88vw,320px)] flex-col bg-gray-50 shadow-2xl"
+            className="absolute inset-y-0 left-0 flex w-[min(88vw,320px)] flex-col bg-muted/40 shadow-2xl"
             initial={reducedMotion ? false : { x: '-100%' }}
             animate={{ x: 0 }}
             exit={reducedMotion ? undefined : { x: '-100%' }}
             transition={panelTransition}
           >
-            <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
-              <span className="text-sm font-semibold text-gray-900">Meny</span>
+            <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
+              <span className="text-sm font-semibold text-foreground">Meny</span>
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 active:scale-95"
+                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
                 aria-label="Lukk"
               >
                 <X className="h-5 w-5" />
@@ -91,7 +91,7 @@ function DashboardNavDrawer({ open, onClose }: { open: boolean; onClose: () => v
               className="flex-1 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]"
               onClick={onClose}
             >
-              <Suspense fallback={<div className="h-48 animate-pulse rounded-xl bg-gray-100" />}>
+              <Suspense fallback={<div className="h-48 animate-pulse rounded-xl bg-muted" />}>
                 <ForumSidebar />
               </Suspense>
               <ForumDrawerProfile onNavigate={onClose} />

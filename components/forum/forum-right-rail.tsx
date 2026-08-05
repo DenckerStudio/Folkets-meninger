@@ -12,7 +12,7 @@ type ForumRightRailProps = {
 function RailSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">{title}</h3>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
       {children}
     </section>
   );
@@ -28,7 +28,7 @@ export default function ForumRightRail({ recentThreads, popularIssues }: ForumRi
               <li key={issue.id}>
                 <Link
                   href={`${routes.forum}?sak=${issue.id}#del-din-mening`}
-                  className="text-sm font-medium leading-snug text-gray-800 line-clamp-2 hover:text-indigo-600"
+                  className="text-sm font-medium leading-snug text-foreground line-clamp-2 hover:text-indigo-600 dark:text-indigo-400"
                 >
                   {issue.title}
                 </Link>
@@ -44,10 +44,10 @@ export default function ForumRightRail({ recentThreads, popularIssues }: ForumRi
             {recentThreads.slice(0, 5).map((thread) => (
               <li key={thread.id}>
                 <Link href={routes.forumTopic(thread.id)} className="block group">
-                  <p className="text-sm font-medium leading-snug text-gray-900 line-clamp-2 group-hover:text-indigo-600">
+                  <p className="text-sm font-medium leading-snug text-foreground line-clamp-2 group-hover:text-indigo-600 dark:text-indigo-400">
                     {thread.title}
                   </p>
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {thread.likes} likes · {thread.replies} svar
                   </p>
                 </Link>

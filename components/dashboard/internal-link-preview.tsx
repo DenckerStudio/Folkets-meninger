@@ -4,10 +4,10 @@ import type { ForumContextItem } from '@/lib/forum/context';
 import { cn } from '@/lib/utils';
 
 const KIND_CONFIG = {
-  sak: { label: 'Stortingssak', icon: FileText, accent: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
+  sak: { label: 'Stortingssak', icon: FileText, accent: 'text-indigo-700 bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800' },
   hearing: { label: 'Høring', icon: Gavel, accent: 'text-violet-700 bg-violet-50 border-violet-200' },
   politician: { label: 'Politiker', icon: Shield, accent: 'text-sky-700 bg-sky-50 border-sky-200' },
-  document: { label: 'Dokument', icon: FileText, accent: 'text-gray-700 bg-gray-50 border-gray-200' },
+  document: { label: 'Dokument', icon: FileText, accent: 'text-foreground bg-muted/40 border-border' },
   forum: { label: 'Forumtråd', icon: MessageSquare, accent: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
 } as const;
 
@@ -33,14 +33,14 @@ export function InternalLinkPreview({ item, href, className }: InternalLinkPrevi
         <Icon className="w-3 h-3" />
         {config.label}
       </span>
-      <p className="text-sm font-semibold text-gray-900 leading-snug">{item.title}</p>
-      {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      <p className="text-sm font-semibold text-foreground leading-snug">{item.title}</p>
+      {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
       {href.startsWith('http') ? (
         <a
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-500"
+          className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
         >
           Åpne kilde
           <ExternalLink className="w-3 h-3" />
@@ -48,7 +48,7 @@ export function InternalLinkPreview({ item, href, className }: InternalLinkPrevi
       ) : (
         <Link
           href={href}
-          className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-500"
+          className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
         >
           Åpne kilde
           <ArrowRight className="w-3 h-3" />

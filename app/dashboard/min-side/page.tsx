@@ -14,7 +14,7 @@ export default async function MinSidePage({ searchParams }: PageProps) {
   }
 
   return (
-    <Suspense fallback={<div className="p-8 text-center text-gray-500">Laster…</div>}>
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Laster…</div>}>
       <ProfileShell />
     </Suspense>
   );

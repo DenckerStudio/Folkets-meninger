@@ -82,23 +82,23 @@ export function Header() {
             ) : null}
           </Link>
           {inDashboard ? (
-            <DashboardNavMenuButton className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background text-gray-700 transition-colors hover:bg-accent hover:text-accent-foreground xl:hidden" />
+            <DashboardNavMenuButton className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background text-foreground transition-colors hover:bg-accent hover:text-accent-foreground xl:hidden" />
           ) : null}
           {isLoggedIn ? (
             <details className={cn('group relative', inDashboard && 'hidden xl:block')}>
-              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-gray-200 bg-white py-1.5 pl-1.5 pr-3 text-sm font-medium text-gray-800 shadow-sm transition-colors hover:bg-gray-50">
+              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-border bg-card py-1.5 pl-1.5 pr-3 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted/50">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#00205b] text-xs font-bold text-white">
                   {initials}
                 </span>
                 <span className="hidden max-w-28 truncate sm:inline">
                   {displayName?.split(' ')[0] || 'Profil'}
                 </span>
-                <ChevronDown className="h-4 w-4 text-gray-400 transition-transform group-open:rotate-180" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
               </summary>
-              <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
-                <div className="border-b border-gray-100 bg-gray-50 px-4 py-3">
-                  <p className="text-sm font-semibold text-gray-900">{displayName || 'Min konto'}</p>
-                  <p className="truncate text-xs text-gray-500">{user?.email}</p>
+              <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-xl">
+                <div className="border-b border-border bg-muted/40 px-4 py-3">
+                  <p className="text-sm font-semibold text-foreground">{displayName || 'Min konto'}</p>
+                  <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
                 </div>
                 <div className="p-2">
                   <ProfileMenuLink href={routes.minSide} icon={UserCircle} title="Min side" description="Stemmehistorikk og oversikt" />
@@ -109,7 +109,7 @@ export function Header() {
                   <button
                     type="button"
                     onClick={handleSignOut}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-red-700 transition-colors hover:bg-red-50"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
                   >
                     <LogOut className="h-4 w-4" />
                     Logg ut
@@ -141,11 +141,11 @@ type ProfileMenuLinkProps = {
 
 function ProfileMenuLink({ href, icon: Icon, title, description }: ProfileMenuLinkProps) {
   return (
-    <Link href={href} className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-gray-50">
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-gray-500" />
+    <Link href={href} className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/50">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
       <span>
-        <span className="block text-sm font-medium text-gray-900">{title}</span>
-        <span className="block text-xs text-gray-500">{description}</span>
+        <span className="block text-sm font-medium text-foreground">{title}</span>
+        <span className="block text-xs text-muted-foreground">{description}</span>
       </span>
     </Link>
   );
@@ -203,8 +203,8 @@ function FolketsStemmeLogo() {
         </g>
       </svg>
       <div className="flex flex-col justify-center font-extrabold tracking-tight">
-        <span className="text-[#00205b] text-[0.65rem] leading-none sm:text-sm">FOLKETS</span>
-        <span className="text-[#ba0c2f] text-[0.65rem] leading-none sm:text-sm">STEMME</span>
+        <span className="text-brand text-[0.65rem] leading-none sm:text-sm">FOLKETS</span>
+        <span className="text-brand-accent text-[0.65rem] leading-none sm:text-sm">STEMME</span>
       </div>
     </div>
   );

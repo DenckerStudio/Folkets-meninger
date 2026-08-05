@@ -88,7 +88,7 @@ function SakOverviewPanel({
 
   if (!detail) {
     return (
-      <div className="flex items-center gap-2 py-8 text-sm text-gray-500">
+      <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
         Henter sak…
       </div>
@@ -99,17 +99,17 @@ function SakOverviewPanel({
     <div className="space-y-4">
       {error && <p className="text-sm text-amber-700">{error}</p>}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
+        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
           {detail.statusLabel || 'Stortingssak'}
         </p>
-        <h3 className="mt-1 text-xl font-bold text-gray-900">{detail.title}</h3>
+        <h3 className="mt-1 text-xl font-bold text-foreground">{detail.title}</h3>
         {detail.komite && (
-          <p className="mt-2 text-sm text-gray-600">Komité: {detail.komite}</p>
+          <p className="mt-2 text-sm text-muted-foreground">Komité: {detail.komite}</p>
         )}
       </div>
-      <p className="text-sm leading-relaxed text-gray-700">{detail.summary}</p>
+      <p className="text-sm leading-relaxed text-foreground">{detail.summary}</p>
       {detail.excerpt && (
-        <p className="rounded-xl bg-gray-50 px-4 py-3 text-sm leading-relaxed text-gray-600 ring-1 ring-gray-100">
+        <p className="rounded-xl bg-muted/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground ring-1 ring-gray-100">
           {detail.excerpt}
           {detail.excerpt.length >= 480 ? '…' : ''}
         </p>
@@ -163,7 +163,7 @@ export function SakQuickActionModal({
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <button
         type="button"
-        className="absolute inset-0 bg-gray-900/50 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-foreground/50 backdrop-blur-[2px]"
         aria-label="Lukk"
         onClick={onClose}
       />
@@ -174,19 +174,19 @@ export function SakQuickActionModal({
         aria-labelledby={titleId}
         className={cn(
           'relative z-10 flex w-full max-h-[min(90vh,720px)] flex-col overflow-hidden',
-          'rounded-t-2xl border border-gray-200 bg-white shadow-xl sm:max-w-2xl sm:rounded-2xl',
+          'rounded-t-2xl border border-border bg-card shadow-xl sm:max-w-2xl sm:rounded-2xl',
           panel === 'ai-summary' && 'sm:max-w-3xl'
         )}
       >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
-          <h2 id={titleId} className="flex items-center gap-2 text-lg font-bold text-gray-900">
-            <Icon className="h-5 w-5 text-indigo-600" aria-hidden />
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-4">
+          <h2 id={titleId} className="flex items-center gap-2 text-lg font-bold text-foreground">
+            <Icon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" aria-hidden />
             {meta.title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label="Lukk dialog"
           >
             <X className="h-5 w-5" />
@@ -212,14 +212,14 @@ export function SakQuickActionModal({
           )}
         </div>
 
-        <div className="shrink-0 border-t border-gray-100 px-5 py-4">
+        <div className="shrink-0 border-t border-border px-5 py-4">
           <Link
             href={
               panel === 'ai-summary'
                 ? `${routes.sak(sakId)}#ai-summary`
                 : routes.sak(sakId)
             }
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
             onClick={onClose}
           >
             <ExternalLink className="h-4 w-4" />
@@ -243,7 +243,7 @@ export function SakQuickActionLinks({ sakId, sakTitle }: SakQuickActionLinksProp
   const close = useCallback(() => setPanel(null), []);
 
   const linkClass =
-    'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-100/80 hover:text-indigo-800';
+    'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-300 transition-colors hover:bg-indigo-100 dark:bg-indigo-950/50/80 hover:text-indigo-800';
 
   return (
     <>

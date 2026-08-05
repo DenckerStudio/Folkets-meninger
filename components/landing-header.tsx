@@ -86,8 +86,8 @@ function FolketsStemmeLogo() {
         </g>
       </svg>
       <div className="flex flex-col justify-center font-extrabold tracking-tight">
-        <span className="text-[#00205b] text-[0.65rem] leading-none sm:text-sm">FOLKETS</span>
-        <span className="text-[#ba0c2f] text-[0.65rem] leading-none sm:text-sm">STEMME</span>
+        <span className="text-brand text-[0.65rem] leading-none sm:text-sm">FOLKETS</span>
+        <span className="text-brand-accent text-[0.65rem] leading-none sm:text-sm">STEMME</span>
       </div>
     </div>
   );

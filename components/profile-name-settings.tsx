@@ -36,16 +36,16 @@ export function ProfileNameSettings() {
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-4">
+    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="text-lg font-medium text-gray-900">Ditt navn i forumet</h3>
-        <p className="text-sm text-gray-500 mt-1">
+        <h3 className="text-lg font-medium text-foreground">Ditt navn i forumet</h3>
+        <p className="text-sm text-muted-foreground mt-1">
           Foruminnlegg viser fornavn og etternavn. Stemmer på saker forblir anonyme i statistikken.
         </p>
       </div>
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="settings-first-name" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="settings-first-name" className="block text-sm font-medium text-foreground">
             Fornavn
           </label>
           <input
@@ -53,11 +53,11 @@ export function ProfileNameSettings() {
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             minLength={2}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
           />
         </div>
         <div>
-          <label htmlFor="settings-last-name" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="settings-last-name" className="block text-sm font-medium text-foreground">
             Etternavn
           </label>
           <input
@@ -65,11 +65,11 @@ export function ProfileNameSettings() {
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             minLength={2}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
           />
         </div>
       </div>
-      {message && <p className="text-sm text-gray-600">{message}</p>}
+      {message && <p className="text-sm text-muted-foreground">{message}</p>}
       <button
         type="button"
         onClick={save}

@@ -58,15 +58,15 @@ export default async function ForumPage({
 
         {sakId && (
           <div className="mb-6 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-gray-600">
-              <span className="text-gray-400">Filtrert:</span>{' '}
-              <span className="font-medium text-gray-900">{sakTitle || `Sak ${sakId}`}</span>
+            <p className="text-muted-foreground">
+              <span className="text-muted-foreground">Filtrert:</span>{' '}
+              <span className="font-medium text-foreground">{sakTitle || `Sak ${sakId}`}</span>
             </p>
             <div className="flex gap-4">
-              <Link href={routes.sak(sakId)} className="font-medium text-indigo-600 hover:text-indigo-500">
+              <Link href={routes.sak(sakId)} className="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500">
                 Se saken
               </Link>
-              <Link href={routes.forum} className="font-medium text-gray-500 hover:text-gray-800">
+              <Link href={routes.forum} className="font-medium text-muted-foreground hover:text-foreground">
                 Vis alle
               </Link>
             </div>
@@ -81,8 +81,8 @@ export default async function ForumPage({
 
         {topics.length === 0 ? (
           <div className="py-16 text-center">
-            <MessageSquare className="mx-auto mb-4 h-10 w-10 text-gray-200" />
-            <p className="text-base font-medium text-gray-800">
+            <MessageSquare className="mx-auto mb-4 h-10 w-10 text-muted-foreground/40" />
+            <p className="text-base font-medium text-foreground">
               {search
                 ? `Ingen treff for «${search}»`
                 : sakId
@@ -90,17 +90,17 @@ export default async function ForumPage({
                   : 'Ingen diskusjoner ennå'}
             </p>
             {search && (
-              <p className="text-sm text-gray-500 mt-1">Prøv andre ord eller fjern søkefilteret.</p>
+              <p className="text-sm text-muted-foreground mt-1">Prøv andre ord eller fjern søkefilteret.</p>
             )}
             <Link
               href={newThreadHref}
-              className="mt-4 inline-flex text-sm font-semibold text-indigo-600 hover:text-indigo-500"
+              className="mt-4 inline-flex text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
             >
               Del din mening øverst på siden →
             </Link>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-border">
             {topics.map((topic) => (
               <ForumPostCard key={topic.id} topic={topic} />
             ))}

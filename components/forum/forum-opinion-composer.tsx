@@ -32,7 +32,7 @@ type ForumOpinionComposerProps = {
 };
 
 const inputClass =
-  'min-h-[2.75rem] w-full flex-1 resize-none border-0 bg-transparent py-2.5 pr-3 text-sm leading-relaxed text-gray-900 placeholder:text-gray-400 focus:outline-none';
+  'min-h-[2.75rem] w-full flex-1 resize-none border-0 bg-transparent py-2.5 pr-3 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none';
 
 function stripOpinionPrefix(text: string): string {
   const trimmed = text.trim();
@@ -251,13 +251,13 @@ export function ForumOpinionComposer({
     return (
       <section
         id="del-din-mening"
-        className="mb-8 border-b border-gray-100 pb-8 text-center"
+        className="mb-8 border-b border-border pb-8 text-center"
       >
-        <h2 className="text-lg font-semibold tracking-tight text-gray-900">Del din mening</h2>
-        <p className="mt-1.5 text-sm text-gray-500">Logg inn for å dele hva du mener.</p>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">Del din mening</h2>
+        <p className="mt-1.5 text-sm text-muted-foreground">Logg inn for å dele hva du mener.</p>
         <Link
           href={routes.login}
-          className="mt-4 inline-flex items-center text-sm font-semibold text-indigo-600 hover:text-indigo-500"
+          className="mt-4 inline-flex items-center text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
         >
           <LogIn className="mr-1.5 h-4 w-4" aria-hidden />
           Logg inn
@@ -267,19 +267,19 @@ export function ForumOpinionComposer({
   }
 
   return (
-    <section id="del-din-mening" className="mb-8 border-b border-gray-100 pb-8">
-      <h2 className="text-lg font-semibold tracking-tight text-gray-900">Del din mening</h2>
-      <p className="mt-1 text-sm text-gray-500">Skriv etter «Jeg mener». Legg ved saker, politikere eller kilder under.</p>
+    <section id="del-din-mening" className="mb-8 border-b border-border pb-8">
+      <h2 className="text-lg font-semibold tracking-tight text-foreground">Del din mening</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Skriv etter «Jeg mener». Legg ved saker, politikere eller kilder under.</p>
 
       {error ? (
-        <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mt-4 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
         </div>
       ) : null}
 
       {showDraftChoice && pendingDraft ? (
-        <div className="mt-4 rounded-xl bg-gray-50 px-4 py-4">
-          <p className="text-sm font-semibold text-gray-900">Du har et lagret utkast</p>
+        <div className="mt-4 rounded-xl bg-muted/40 px-4 py-4">
+          <p className="text-sm font-semibold text-foreground">Du har et lagret utkast</p>
           <div className="mt-3 flex flex-wrap gap-3">
             <button
               type="button"
@@ -289,7 +289,7 @@ export function ForumOpinionComposer({
                 setShowDraftChoice(false);
                 draftHydrated.current = true;
               }}
-              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
             >
               Fortsett utkast
             </button>
@@ -302,7 +302,7 @@ export function ForumOpinionComposer({
                 setShowDraftChoice(false);
                 draftHydrated.current = true;
               }}
-              className="rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+              className="rounded-lg px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted"
             >
               Start på nytt
             </button>
@@ -315,8 +315,8 @@ export function ForumOpinionComposer({
           <label htmlFor="forum-opinion-statement" className="sr-only">
             Din mening
           </label>
-          <div className="flex items-start rounded-2xl bg-gray-50/90 px-4 py-1 focus-within:bg-gray-100/90 focus-within:ring-2 focus-within:ring-indigo-500/10">
-            <span className="shrink-0 py-2.5 pr-2 text-sm font-medium text-gray-500" aria-hidden>
+          <div className="flex items-start rounded-2xl bg-muted/90 px-4 py-1 focus-within:bg-muted/90 focus-within:ring-2 focus-within:ring-indigo-500/10">
+            <span className="shrink-0 py-2.5 pr-2 text-sm font-medium text-muted-foreground" aria-hidden>
               Jeg mener
             </span>
             <textarea
@@ -350,10 +350,10 @@ export function ForumOpinionComposer({
       </div>
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-muted-foreground">
           {displayName ? (
             <>
-              Som <span className="text-gray-600">{displayName}</span> · offentlig innlegg
+              Som <span className="text-muted-foreground">{displayName}</span> · offentlig innlegg
             </>
           ) : (
             'Vises med fornavn og etternavn.'
@@ -363,7 +363,7 @@ export function ForumOpinionComposer({
           type="button"
           onClick={handleSubmit}
           disabled={!canPublish || isSubmitting}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:bg-gray-800 disabled:opacity-40"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:opacity-40"
         >
           {isSubmitting ? (
             <>

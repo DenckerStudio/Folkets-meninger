@@ -24,7 +24,7 @@ const VOTE_DISPLAY: Record<
   abstain: {
     label: 'Avstår',
     icon: Minus,
-    className: 'bg-gray-100 text-gray-700 ring-gray-200',
+    className: 'bg-muted text-foreground ring-border',
   },
 };
 
@@ -60,7 +60,7 @@ function UserSakVoteStatusInner({ sakId }: { sakId: string }) {
 
   if (!loaded) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-indigo-600/70">
+      <span className="inline-flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400/70">
         <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
         Henter stemme…
       </span>
@@ -69,7 +69,7 @@ function UserSakVoteStatusInner({ sakId }: { sakId: string }) {
 
   if (!userVote) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-indigo-600/80 ring-1 ring-indigo-100/80">
+      <span className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400/80 ring-1 ring-indigo-100/80">
         Du har ikke stemt på denne saken
       </span>
     );

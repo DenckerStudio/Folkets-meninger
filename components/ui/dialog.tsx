@@ -62,7 +62,7 @@ export function Dialog({
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <button
         type="button"
-        className="absolute inset-0 bg-gray-900/50 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-foreground/50 backdrop-blur-[2px]"
         aria-label="Lukk"
         onClick={onClose}
       />
@@ -74,18 +74,18 @@ export function Dialog({
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
           'relative z-10 flex w-full max-h-[min(92vh,900px)] flex-col overflow-hidden',
-          'rounded-t-2xl border border-gray-200 bg-white shadow-xl sm:rounded-2xl',
+          'rounded-t-2xl border border-border bg-card shadow-xl sm:rounded-2xl',
           SIZE_CLASS[size],
           className
         )}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
           <div className="min-w-0">
-            <h2 id={titleId} className="text-lg font-bold text-gray-900">
+            <h2 id={titleId} className="text-lg font-bold text-foreground">
               {title}
             </h2>
             {description ? (
-              <p id={descriptionId} className="mt-1 text-sm text-gray-500">
+              <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
                 {description}
               </p>
             ) : null}
@@ -93,7 +93,7 @@ export function Dialog({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label="Lukk dialog"
           >
             <X className="h-5 w-5" />
@@ -102,7 +102,7 @@ export function Dialog({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">{children}</div>
 
-        {footer ? <div className="shrink-0 border-t border-gray-100 px-5 py-4">{footer}</div> : null}
+        {footer ? <div className="shrink-0 border-t border-border px-5 py-4">{footer}</div> : null}
       </div>
     </div>
   );

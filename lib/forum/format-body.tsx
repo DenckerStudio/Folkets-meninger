@@ -12,7 +12,7 @@ const PATH_RE = /(\/dashboard\/[^\s<>"')\]]+)/g;
 function renderExternalLink(url: string, key: string) {
   const parsed = parseUrl(url);
   if (!parsed?.isAllowed) {
-    return <span key={key} className="text-gray-400">[lenke fjernet]</span>;
+    return <span key={key} className="text-muted-foreground">[lenke fjernet]</span>;
   }
 
   let label = parsed.host || 'Ekstern kilde';
@@ -28,12 +28,12 @@ function renderExternalLink(url: string, key: string) {
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-indigo-600 hover:text-indigo-500 font-medium underline underline-offset-2 inline-flex items-center gap-1"
+        className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-medium underline underline-offset-2 inline-flex items-center gap-1"
       >
         {label}
         <ExternalLink className="w-3 h-3 shrink-0" />
       </a>
-      <span className="text-[10px] uppercase tracking-wide font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+      <span className="text-[10px] uppercase tracking-wide font-semibold text-amber-700 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 px-1.5 py-0.5 rounded">
         Ekstern kilde
       </span>
     </span>
@@ -50,7 +50,7 @@ function renderSegments(segments: ReturnType<typeof parseBodySegments>, keyPrefi
       return (
         <span
           key={`${keyPrefix}-${index}`}
-          className="text-indigo-700 bg-indigo-50 px-1 rounded font-medium"
+          className="text-indigo-700 bg-indigo-50 dark:bg-indigo-950/40 px-1 rounded font-medium"
         >
           {segment.text}
         </span>
@@ -82,7 +82,7 @@ export function FormattedForumBody({
   const paragraphs = text.split(/\n{2,}/);
 
   return (
-    <div className={className ? `prose prose-sm max-w-none ${className}` : 'prose prose-sm max-w-none text-gray-700'}>
+    <div className={className ? `prose prose-sm max-w-none ${className}` : 'prose prose-sm max-w-none text-foreground'}>
       {paragraphs.map((paragraph, pIndex) => {
         const lines = paragraph.split('\n');
         return (

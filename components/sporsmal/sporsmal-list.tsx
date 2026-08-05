@@ -61,7 +61,7 @@ export default function SporsmalList({ sporsmal, type, sesjonId }: SporsmalListP
               'px-4 py-2 rounded-xl text-sm font-semibold border transition-colors',
               t === type
                 ? 'bg-indigo-600 text-white border-indigo-600'
-                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50',
+                : 'bg-card text-foreground border-border hover:bg-muted/50',
             )}
           >
             {sporsmalTypeLabel(t)}
@@ -71,21 +71,21 @@ export default function SporsmalList({ sporsmal, type, sesjonId }: SporsmalListP
 
       <div className="flex flex-col md:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Søk i tittel, politiker, minister eller emne…"
             aria-label="Søk i spørsmål"
-            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-xl border border-border bg-card py-2.5 pl-10 pr-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
         <select
           value={answerFilter}
           onChange={(e) => setAnswerFilter(e.target.value as AnswerFilter)}
           aria-label="Filtrer på svarstatus"
-          className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm md:w-auto"
+          className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm md:w-auto"
         >
           <option value="alle">Alle</option>
           <option value="besvart">Besvart</option>
@@ -93,11 +93,11 @@ export default function SporsmalList({ sporsmal, type, sesjonId }: SporsmalListP
         </select>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 text-sm text-gray-500">
+      <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-border text-sm text-muted-foreground">
           {filtered.length} av {sporsmal.length} spørsmål
         </div>
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-border">
           {filtered.slice(0, 200).map((item, idx) => {
             const title = getSporsmalTitle(item);
             const sendt = formatSporsmalDate(item.sendt_dato) ?? formatSporsmalDate(item.datert_dato);
@@ -108,32 +108,32 @@ export default function SporsmalList({ sporsmal, type, sesjonId }: SporsmalListP
             const besvart = isSporsmalBesvart(item);
 
             return (
-              <div key={String(item.id ?? idx)} className="px-6 py-4 hover:bg-gray-50/50 transition-colors">
+              <div key={String(item.id ?? idx)} className="px-6 py-4 hover:bg-muted/50 transition-colors">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
                   {item.sporsmal_nummer != null && (
-                    <span className="text-xs font-medium text-gray-400">#{item.sporsmal_nummer}</span>
+                    <span className="text-xs font-medium text-muted-foreground">#{item.sporsmal_nummer}</span>
                   )}
                   <span
                     className={cn(
                       'inline-flex px-2 py-0.5 rounded-full text-xs font-semibold',
-                      besvart ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800',
+                      besvart ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800' : 'bg-amber-100 dark:bg-amber-950/50 text-amber-800',
                     )}
                   >
                     {besvart ? 'Besvart' : 'Ubesvart'}
                   </span>
-                  {statusLabel && <span className="text-xs text-gray-500">{statusLabel}</span>}
+                  {statusLabel && <span className="text-xs text-muted-foreground">{statusLabel}</span>}
                 </div>
                 {item.id ? (
                   <Link
                     href={routes.sporsmalDetail(String(item.id))}
-                    className="text-sm font-semibold text-gray-900 hover:text-indigo-600 line-clamp-2"
+                    className="text-sm font-semibold text-foreground hover:text-indigo-600 dark:text-indigo-400 line-clamp-2"
                   >
                     {title}
                   </Link>
                 ) : (
-                  <div className="text-sm font-semibold text-gray-900 line-clamp-2">{title}</div>
+                  <div className="text-sm font-semibold text-foreground line-clamp-2">{title}</div>
                 )}
-                <div className="mt-1.5 text-xs text-gray-500 flex flex-wrap gap-x-3 gap-y-1">
+                <div className="mt-1.5 text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
                   {fraNavn && <span>Fra {fraNavn}</span>}
                   {minister && <span>Til {minister}</span>}
                   {sendt && <span>{sendt}</span>}
@@ -143,7 +143,7 @@ export default function SporsmalList({ sporsmal, type, sesjonId }: SporsmalListP
                     {emner.map((emne) => (
                       <span
                         key={emne}
-                        className="inline-flex px-2 py-0.5 rounded-md bg-gray-100 text-xs text-gray-600"
+                        className="inline-flex px-2 py-0.5 rounded-md bg-muted text-xs text-muted-foreground"
                       >
                         {emne}
                       </span>
@@ -154,10 +154,10 @@ export default function SporsmalList({ sporsmal, type, sesjonId }: SporsmalListP
             );
           })}
           {filtered.length > 200 && (
-            <div className="px-6 py-4 text-xs text-gray-500">Viser første 200 treff. Bruk søk for å finne flere.</div>
+            <div className="px-6 py-4 text-xs text-muted-foreground">Viser første 200 treff. Bruk søk for å finne flere.</div>
           )}
           {filtered.length === 0 && (
-            <div className="px-6 py-10 text-sm text-gray-500 text-center">Ingen spørsmål matcher filtrene.</div>
+            <div className="px-6 py-10 text-sm text-muted-foreground text-center">Ingen spørsmål matcher filtrene.</div>
           )}
         </div>
       </div>

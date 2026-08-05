@@ -67,9 +67,9 @@ export function ProfileInterests({
           {INTEREST_OPTIONS.map((cat) => (
             <label
               key={cat}
-              className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+              className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
             >
-              <span className="text-sm font-medium text-gray-900">{cat}</span>
+              <span className="text-sm font-medium text-foreground">{cat}</span>
               <input
                 type="checkbox"
                 checked={interestCategories.includes(cat)}
@@ -79,7 +79,7 @@ export function ProfileInterests({
                     : interestCategories.filter((c) => c !== cat);
                   onCategoriesChange(next);
                 }}
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                className="h-4 w-4 rounded border-border text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500"
               />
             </label>
           ))}
@@ -115,7 +115,7 @@ export function ProfileInterests({
                   className={`rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
                     active
                       ? 'bg-indigo-600 text-white border-indigo-600'
-                      : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                      : 'bg-card text-foreground border-border hover:border-border'
                   }`}
                 >
                   {label}
@@ -137,19 +137,19 @@ export function ProfileInterests({
               }
             }}
             placeholder="Legg til eget emne…"
-            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            className="flex-1 rounded-lg border border-border px-3 py-2 text-sm"
           />
           <button
             type="button"
             onClick={addCustomLabel}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
           >
             Legg til
           </button>
         </div>
 
         {interestLabels.length > 0 && (
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             Abonnerer på: {interestLabels.join(', ')}
           </p>
         )}

@@ -55,13 +55,13 @@ export function ValgomatPanel() {
   }, []);
 
   if (loading) {
-    return <p className="text-sm text-gray-500 py-6 text-center">Beregner partiforslag…</p>;
+    return <p className="text-sm text-muted-foreground py-6 text-center">Beregner partiforslag…</p>;
   }
 
   if (error) {
     return (
       <div className="text-center py-8 space-y-2">
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-destructive">{error}</p>
         <button
           type="button"
           onClick={() => {
@@ -69,7 +69,7 @@ export function ValgomatPanel() {
             setError(null);
             window.location.reload();
           }}
-          className="text-sm text-indigo-600 font-medium hover:text-indigo-500"
+          className="text-sm text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-500"
         >
           Prøv igjen
         </button>
@@ -80,8 +80,8 @@ export function ValgomatPanel() {
   if (voteCount === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">Du må stemme på minst noen saker for å se din Valgomat.</p>
-        <Link href={routes.utforsk} className="mt-4 inline-block text-indigo-600 font-medium hover:text-indigo-500">
+        <p className="text-muted-foreground">Du må stemme på minst noen saker for å se din Valgomat.</p>
+        <Link href={routes.utforsk} className="mt-4 inline-block text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-500">
           Utforsk saker →
         </Link>
       </div>
@@ -91,17 +91,17 @@ export function ValgomatPanel() {
   if (!alignmentAvailable || scores.length === 0) {
     return (
       <div className="space-y-4 py-4">
-        <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900">
+        <div className="rounded-xl border border-indigo-100 bg-indigo-50 dark:bg-indigo-950/40 p-4 text-sm text-indigo-900">
           Du har stemt på <strong>{voteCount}</strong>{' '}
           {voteCount === 1 ? 'sak' : 'saker'}. Partisammenligning (hvilke partier du stemmer mest likt)
           kommer når vi har koblet stemmene dine mot Stortingets partivurderinger per sak.
         </div>
-        <p className="text-sm text-gray-500 text-center">
+        <p className="text-sm text-muted-foreground text-center">
           Ingen fiktive prosenter vises — bare ekte data når sammenligningen er klar.
         </p>
         <Link
           href={routes.utforsk}
-          className="block text-center text-indigo-600 font-medium hover:text-indigo-500 text-sm"
+          className="block text-center text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-500 text-sm"
         >
           Stem på flere saker →
         </Link>
@@ -111,17 +111,17 @@ export function ValgomatPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-sm text-indigo-900">
+      <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 rounded-xl p-4 text-sm text-indigo-900">
         Basert på {voteCount} stemmer sammenlignet med partivurdering per sak.
       </div>
       <ul className="space-y-3">
         {scores.map((row) => (
           <li key={row.party}>
             <div className="flex justify-between text-sm mb-1">
-              <span className="font-medium text-gray-900">{row.party}</span>
-              <span className="text-gray-600">{row.agreement_percent}% enighet</span>
+              <span className="font-medium text-foreground">{row.party}</span>
+              <span className="text-muted-foreground">{row.agreement_percent}% enighet</span>
             </div>
-            <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
                 className="h-full bg-indigo-600 rounded-full"
                 style={{ width: `${row.agreement_percent}%` }}

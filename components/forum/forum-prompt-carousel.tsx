@@ -30,13 +30,13 @@ export default function ForumPromptCarousel({
       {showHeader ? (
         <div className="flex items-center justify-between gap-3 mb-3 px-1">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-indigo-600" />
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">{title}</h2>
+            <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <h2 className="text-sm font-bold text-foreground uppercase tracking-wide">{title}</h2>
           </div>
           {showSeeAll ? (
             <Link
               href={routes.forumSpesielleSaker}
-              className="text-xs font-semibold text-indigo-700 hover:text-indigo-600"
+              className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:text-indigo-600 dark:text-indigo-400"
             >
               Se alle →
             </Link>
@@ -128,9 +128,9 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
   };
 
   return (
-    <article className="snap-center shrink-0 w-[min(100%,300px)] sm:w-[320px] flex flex-col rounded-2xl border border-indigo-100 bg-gradient-to-b from-white to-indigo-50/40 shadow-sm overflow-hidden">
+    <article className="snap-center shrink-0 w-[min(100%,300px)] sm:w-[320px] flex flex-col rounded-2xl border border-indigo-100 dark:border-indigo-900/50 bg-gradient-to-b from-white to-indigo-50/40 shadow-sm overflow-hidden">
       {media && !mediaError && (
-        <div className="relative aspect-[4/5] max-h-[220px] w-full bg-gray-900 shrink-0">
+        <div className="relative aspect-[4/5] max-h-[220px] w-full bg-foreground shrink-0">
           {media.type === 'image' ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -145,7 +145,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
               href={media.articleUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-full w-full items-center justify-center bg-gray-900"
+              className="flex h-full w-full items-center justify-center bg-foreground"
             >
               {media.posterUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -170,14 +170,14 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
         {prompt.stortingetIssueId && (
           <Link
             href={routes.sak(prompt.stortingetIssueId)}
-            className="mb-2 inline-flex w-fit items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900 hover:bg-amber-200"
+            className="mb-2 inline-flex w-fit items-center rounded-full bg-amber-100 dark:bg-amber-950/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900 hover:bg-amber-200"
           >
             Langvarig stortingssak
           </Link>
         )}
 
         {isUpdate && (
-          <span className="mb-2 inline-flex w-fit items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-800">
+          <span className="mb-2 inline-flex w-fit items-center rounded-full bg-indigo-100 dark:bg-indigo-950/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-800">
             Oppdatering
           </span>
         )}
@@ -185,7 +185,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
         {prompt.sources.length > 0 && (
           <div className="mb-3">
             {dateRange && (
-              <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+              <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                 {dateRange}
               </p>
             )}
@@ -198,7 +198,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
                   rel="noopener noreferrer"
                   title={source.title}
                   role="listitem"
-                  className="inline-flex max-w-[7.5rem] truncate rounded-md border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                  className="inline-flex max-w-[7.5rem] truncate rounded-md border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:border-indigo-200 hover:bg-indigo-50 dark:bg-indigo-950/40 hover:text-indigo-700 dark:text-indigo-300"
                 >
                   {source.outlet}
                 </a>
@@ -207,7 +207,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
                 <button
                   type="button"
                   onClick={() => setSourcesExpanded(true)}
-                  className="inline-flex rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 hover:border-indigo-200 hover:bg-indigo-50"
+                  className="inline-flex rounded-md border border-border bg-card px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:text-indigo-300 hover:border-indigo-200 hover:bg-indigo-50 dark:bg-indigo-950/40"
                   aria-expanded={false}
                 >
                   +{hiddenSourceCount}
@@ -217,7 +217,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
                 <button
                   type="button"
                   onClick={() => setSourcesExpanded(false)}
-                  className="inline-flex rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                  className="inline-flex rounded-md border border-border bg-card px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground hover:border-border hover:bg-muted/50"
                   aria-expanded={true}
                 >
                   Færre
@@ -227,7 +227,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
           </div>
         )}
 
-        <p className="text-base font-bold text-gray-900 leading-snug mb-4">{prompt.question}</p>
+        <p className="text-base font-bold text-foreground leading-snug mb-4">{prompt.question}</p>
 
         {!hasVoted ? (
           <div className="grid grid-cols-2 gap-2">
@@ -237,7 +237,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
                 type="button"
                 disabled={!user || loading === 'vote'}
                 onClick={() => handleVote(opt.id)}
-                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-800 hover:border-indigo-300 hover:bg-indigo-50 disabled:opacity-50 transition-colors"
+                className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground hover:border-indigo-300 hover:bg-indigo-50 dark:bg-indigo-950/40 disabled:opacity-50 transition-colors"
               >
                 {opt.label}
               </button>
@@ -247,11 +247,11 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
           <div className="space-y-2">
             {options.map((opt) => (
               <div key={opt.id}>
-                <div className="flex justify-between text-xs font-medium text-gray-700 mb-1">
-                  <span className={selected === opt.id ? 'text-indigo-700' : ''}>{opt.label}</span>
+                <div className="flex justify-between text-xs font-medium text-foreground mb-1">
+                  <span className={selected === opt.id ? 'text-indigo-700 dark:text-indigo-300' : ''}>{opt.label}</span>
                   <span>{opt.percent ?? 0}%</span>
                 </div>
-                <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all ${selected === opt.id ? 'bg-indigo-600' : 'bg-indigo-300'}`}
                     style={{ width: `${opt.percent ?? 0}%` }}
@@ -263,22 +263,22 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
         )}
 
         {!user && (
-          <p className="mt-3 text-xs text-gray-500">
-            <Link href={routes.login} className="text-indigo-600 font-medium hover:underline">
+          <p className="mt-3 text-xs text-muted-foreground">
+            <Link href={routes.login} className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
               Logg inn
             </Link>{' '}
             for å stemme
           </p>
         )}
 
-        {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+        {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
 
         {hasVoted && (
-          <div className="mt-4 pt-4 border-t border-indigo-100">
+          <div className="mt-4 pt-4 border-t border-indigo-100 dark:border-indigo-900/50">
             {spawnedThreadId ? (
               <Link
                 href={routes.forumTopic(spawnedThreadId)}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 hover:text-indigo-600"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 dark:text-indigo-300 hover:text-indigo-600 dark:text-indigo-400"
               >
                 <MessageSquare className="w-4 h-4" />
                 Bli med i diskusjon →
@@ -298,7 +298,7 @@ function PromptReelCard({ prompt }: { prompt: ForumPrompt }) {
                   )}
                   {discussClicked ? 'Du er med!' : 'Start diskusjon'}
                 </button>
-                <p className="mt-2 text-xs text-gray-500">
+                <p className="mt-2 text-xs text-muted-foreground">
                   {discussCount}/{prompt.discussThreshold} ønsker felles diskusjon
                 </p>
               </>

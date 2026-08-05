@@ -7,11 +7,11 @@ const KIND_CONFIG: Record<
   ForumContextKind | 'external',
   { label: string; icon: typeof FileText; accent: string }
 > = {
-  sak: { label: 'Stortingssak', icon: FileText, accent: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
+  sak: { label: 'Stortingssak', icon: FileText, accent: 'text-indigo-700 bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800' },
   hearing: { label: 'Høring', icon: Gavel, accent: 'text-violet-700 bg-violet-50 border-violet-200' },
   politician: { label: 'Politiker', icon: Shield, accent: 'text-sky-700 bg-sky-50 border-sky-200' },
-  document: { label: 'Dokument', icon: File, accent: 'text-gray-700 bg-gray-50 border-gray-200' },
-  external: { label: 'Ekstern kilde', icon: ExternalLink, accent: 'text-amber-700 bg-amber-50 border-amber-200' },
+  document: { label: 'Dokument', icon: File, accent: 'text-foreground bg-muted/40 border-border' },
+  external: { label: 'Ekstern kilde', icon: ExternalLink, accent: 'text-amber-700 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/50' },
 };
 
 type ForumSourceCardProps = {
@@ -31,7 +31,7 @@ export default function ForumSourceCard({ item, variant = 'full', className }: F
       <div className={cn('flex items-center gap-2 mb-1.5', variant === 'compact' && 'mb-1')}>
         <span className={cn(
           'inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide',
-          variant === 'compact' ? 'text-gray-500' : cn('rounded-full border px-2 py-0.5', config.accent),
+          variant === 'compact' ? 'text-muted-foreground' : cn('rounded-full border px-2 py-0.5', config.accent),
         )}>
           <Icon className="w-3 h-3" />
           {config.label}
@@ -40,14 +40,14 @@ export default function ForumSourceCard({ item, variant = 'full', className }: F
           <span className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Ekstern</span>
         )}
       </div>
-      <p className={cn('font-semibold text-gray-900 leading-snug', variant === 'compact' ? 'text-sm line-clamp-1' : 'text-base')}>
+      <p className={cn('font-semibold text-foreground leading-snug', variant === 'compact' ? 'text-sm line-clamp-1' : 'text-base')}>
         {item.title}
       </p>
       {(item.subtitle || ('meta' in item && item.meta)) && (
-        <p className="text-xs text-gray-500 mt-0.5">{item.subtitle || ('meta' in item ? item.meta : null)}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{item.subtitle || ('meta' in item ? item.meta : null)}</p>
       )}
       {variant === 'full' && (
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 mt-2 group-hover:text-indigo-500">
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 mt-2 group-hover:text-indigo-500">
           Åpne kilde
           <ArrowRight className="w-3 h-3" />
         </span>
@@ -58,8 +58,8 @@ export default function ForumSourceCard({ item, variant = 'full', className }: F
   const cardClass = cn(
     'group block transition-colors',
     variant === 'compact'
-      ? 'rounded-lg px-2 py-1.5 -mx-2 hover:bg-gray-100/80'
-      : 'rounded-xl border bg-white hover:border-indigo-200 hover:shadow-md p-4',
+      ? 'rounded-lg px-2 py-1.5 -mx-2 hover:bg-muted/80'
+      : 'rounded-xl border bg-card hover:border-indigo-200 dark:border-indigo-800 hover:shadow-md p-4',
     className,
   );
 

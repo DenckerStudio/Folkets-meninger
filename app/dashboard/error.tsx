@@ -18,8 +18,8 @@ export default function DashboardError({
 
   return (
     <div className="max-w-lg mx-auto py-16 px-4 text-center">
-      <h1 className="text-2xl font-bold tracking-tight text-gray-900 mb-2">Noe gikk galt</h1>
-      <p className="text-gray-600 mb-6">
+      <h1 className="text-2xl font-bold tracking-tight text-foreground mb-2">Noe gikk galt</h1>
+      <p className="text-muted-foreground mb-6">
         Vi kunne ikke laste denne siden. Prøv igjen, eller gå tilbake til utforsk.
       </p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">

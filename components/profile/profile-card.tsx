@@ -11,15 +11,15 @@ export function ProfileCard({ title, description, children, className }: Profile
   return (
     <section
       className={cn(
-        'rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4',
+        'rounded-xl border border-border bg-card p-6 shadow-sm space-y-4',
         className,
       )}
     >
       {(title || description) && (
         <header>
-          {title ? <h3 className="text-lg font-semibold text-gray-900">{title}</h3> : null}
+          {title ? <h3 className="text-lg font-semibold text-foreground">{title}</h3> : null}
           {description ? (
-            <p className="text-sm text-gray-500 mt-1">{description}</p>
+            <p className="text-sm text-muted-foreground mt-1">{description}</p>
           ) : null}
         </header>
       )}

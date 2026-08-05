@@ -21,21 +21,21 @@ export default async function ForumSpesielleSakerPage() {
       <div className="space-y-6">
         <header>
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-indigo-600" />
-            <h1 className="text-2xl font-bold text-gray-900">Spesielle saker</h1>
+            <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            <h1 className="text-2xl font-bold text-foreground">Spesielle saker</h1>
           </div>
         </header>
 
-        <div className="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/50 p-8 text-center">
+        <div className="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50 dark:bg-indigo-950/40/50 p-8 text-center">
           <Clock className="mx-auto mb-4 h-10 w-10 text-indigo-400" />
-          <h2 className="text-lg font-semibold text-gray-900">Kommer snart</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-gray-600">
+          <h2 className="text-lg font-semibold text-foreground">Kommer snart</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
             Vi forbereder nye spørsmål og avstemninger fra nyhetsbildet. Funksjonen rulles ut til alle
             brukere når kvaliteten er på plass.
           </p>
           <Link
             href={routes.forumForeslaReel}
-            className="mt-6 inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-card px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 dark:bg-indigo-950/40"
           >
             <Plus className="h-4 w-4" />
             Foreslå reel (Pålitelig+)
@@ -52,16 +52,16 @@ export default async function ForumSpesielleSakerPage() {
       <header className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-indigo-600" />
-            <h1 className="text-2xl font-bold text-gray-900">Spesielle saker</h1>
+            <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            <h1 className="text-2xl font-bold text-foreground">Spesielle saker</h1>
           </div>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Nye spørsmål legges inn fortløpende. Scroll for å laste flere.
           </p>
         </div>
         <Link
           href={routes.forumForeslaReel}
-          className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
+          className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 dark:bg-indigo-950/40 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/50"
         >
           <Plus className="h-4 w-4" />
           Foreslå reel

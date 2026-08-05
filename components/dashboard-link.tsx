@@ -44,7 +44,7 @@ export function DashboardLink({
         target="_blank"
         rel="noopener noreferrer"
         className={cn(
-          'text-indigo-600 hover:text-indigo-500 font-medium underline underline-offset-2 inline-flex items-center gap-1',
+          'text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-medium underline underline-offset-2 inline-flex items-center gap-1',
           externalClassName ?? className
         )}
       >
@@ -73,7 +73,7 @@ export function DashboardLink({
           href={href}
           preview={previewForMeta(resolvedMeta, href)}
           className={cn(
-            'text-indigo-600 hover:text-indigo-500 font-medium underline underline-offset-2',
+            'text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-medium underline underline-offset-2',
             className
           )}
         >
@@ -87,7 +87,7 @@ export function DashboardLink({
     <Link
       href={href}
       className={cn(
-        'text-indigo-600 hover:text-indigo-500 font-medium underline underline-offset-2',
+        'text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-medium underline underline-offset-2',
         className
       )}
     >

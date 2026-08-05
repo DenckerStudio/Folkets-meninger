@@ -38,7 +38,7 @@ function resolveTab(tabParam: string | null): PolitikerTabId {
 
 function SakList({ saker, emptyMessage }: { saker: PolitikerSakItem[]; emptyMessage: string }) {
   if (saker.length === 0) {
-    return <p className="text-sm text-gray-500 py-6 text-center">{emptyMessage}</p>;
+    return <p className="text-sm text-muted-foreground py-6 text-center">{emptyMessage}</p>;
   }
 
   return (
@@ -47,11 +47,11 @@ function SakList({ saker, emptyMessage }: { saker: PolitikerSakItem[]; emptyMess
         <Link
           key={`${sak.role}-${sak.id}`}
           href={routes.sak(sak.id)}
-          className="block rounded-2xl border border-gray-100 bg-white p-4 hover:border-indigo-100 hover:shadow-sm transition-all"
+          className="block rounded-2xl border border-border bg-card p-4 hover:border-indigo-100 dark:border-indigo-900/50 hover:shadow-sm transition-all"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="font-semibold text-gray-900 line-clamp-2">{sak.title}</h3>
+              <h3 className="font-semibold text-foreground line-clamp-2">{sak.title}</h3>
               <div className="mt-2 flex flex-wrap gap-2">
                 {sak.category ? (
                   <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', SAK_CATEGORY_BADGE_CLASS)}>
@@ -59,14 +59,14 @@ function SakList({ saker, emptyMessage }: { saker: PolitikerSakItem[]; emptyMess
                   </span>
                 ) : null}
                 {sak.sakKind === 'lovforslag' || sak.sakKind === 'representantforslag' ? (
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-foreground">
                     {getSakKindLabel(sak.sakKind as SakKind)}
                   </span>
                 ) : null}
-                <span className="text-xs text-gray-500 capitalize">{sak.status === 'open' ? 'Åpen' : 'Avsluttet'}</span>
+                <span className="text-xs text-muted-foreground capitalize">{sak.status === 'open' ? 'Åpen' : 'Avsluttet'}</span>
               </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-gray-400 shrink-0 mt-1" />
+            <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0 mt-1" />
           </div>
         </Link>
       ))}
@@ -76,7 +76,7 @@ function SakList({ saker, emptyMessage }: { saker: PolitikerSakItem[]; emptyMess
 
 function SporsmalList({ items, emptyMessage }: { items: PolitikerSporsmalItem[]; emptyMessage: string }) {
   if (items.length === 0) {
-    return <p className="text-sm text-gray-500 py-4">{emptyMessage}</p>;
+    return <p className="text-sm text-muted-foreground py-4">{emptyMessage}</p>;
   }
 
   return (
@@ -85,10 +85,10 @@ function SporsmalList({ items, emptyMessage }: { items: PolitikerSporsmalItem[];
         <Link
           key={`${item.type}-${item.id}`}
           href={routes.sporsmalDetail(item.id)}
-          className="block rounded-xl border border-gray-100 bg-gray-50 p-4 hover:bg-white hover:border-gray-200 transition-colors"
+          className="block rounded-xl border border-border bg-muted/40 p-4 hover:bg-card hover:border-border transition-colors"
         >
-          <div className="text-sm font-medium text-gray-900 line-clamp-2">{item.title}</div>
-          <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
+          <div className="text-sm font-medium text-foreground line-clamp-2">{item.title}</div>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span>{item.typeLabel}</span>
             {item.date ? <span>· {item.date}</span> : null}
             {item.counterparty ? <span>· {item.counterparty}</span> : null}
@@ -96,7 +96,7 @@ function SporsmalList({ items, emptyMessage }: { items: PolitikerSporsmalItem[];
           {item.emner.length > 0 ? (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {item.emner.slice(0, 3).map((emne) => (
-                <span key={emne} className="text-xs bg-white border border-gray-200 rounded-full px-2 py-0.5 text-gray-600">
+                <span key={emne} className="text-xs bg-card border border-border rounded-full px-2 py-0.5 text-muted-foreground">
                   {emne}
                 </span>
               ))}
@@ -116,25 +116,25 @@ function OverviewPanel({ rep, profile }: PolitikerProfileShellProps) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-gray-100 bg-white p-4">
-          <div className="text-2xl font-bold text-gray-900">{profile.broughtUpSaker.length}</div>
-          <div className="text-sm text-gray-500 mt-1">Representantforslag</div>
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="text-2xl font-bold text-foreground">{profile.broughtUpSaker.length}</div>
+          <div className="text-sm text-muted-foreground mt-1">Representantforslag</div>
         </div>
-        <div className="rounded-2xl border border-gray-100 bg-white p-4">
-          <div className="text-2xl font-bold text-gray-900">{profile.saksordfoererSaker.length}</div>
-          <div className="text-sm text-gray-500 mt-1">Som saksordfører</div>
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="text-2xl font-bold text-foreground">{profile.saksordfoererSaker.length}</div>
+          <div className="text-sm text-muted-foreground mt-1">Som saksordfører</div>
         </div>
-        <div className="rounded-2xl border border-gray-100 bg-white p-4">
-          <div className="text-2xl font-bold text-gray-900">{profile.sporsmalFra.length + profile.sporsmalTil.length}</div>
-          <div className="text-sm text-gray-500 mt-1">Spørsmål i sesjonen</div>
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="text-2xl font-bold text-foreground">{profile.sporsmalFra.length + profile.sporsmalTil.length}</div>
+          <div className="text-sm text-muted-foreground mt-1">Spørsmål i sesjonen</div>
         </div>
-        <div className="rounded-2xl border border-gray-100 bg-white p-4">
-          <div className="text-2xl font-bold text-gray-900">{profile.officialResponses.length}</div>
-          <div className="text-sm text-gray-500 mt-1">Offisielle svar her</div>
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="text-2xl font-bold text-foreground">{profile.officialResponses.length}</div>
+          <div className="text-sm text-muted-foreground mt-1">Offisielle svar her</div>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-5">
+      <div className="rounded-2xl border border-indigo-100 bg-indigo-50 dark:bg-indigo-950/40/50 p-5">
         <h2 className="font-semibold text-indigo-900 flex items-center gap-2">
           <Info className="w-4 h-4" />
           Om rollen: {rolleInfo.title}
@@ -143,7 +143,7 @@ function OverviewPanel({ rep, profile }: PolitikerProfileShellProps) {
       </div>
 
       {rep.erRegjeringsmedlem ? (
-        <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
+        <div className="rounded-2xl border border-amber-100 bg-amber-50 dark:bg-amber-950/40 p-5">
           <h2 className="font-semibold text-amber-900 flex items-center gap-2">
             <Landmark className="w-4 h-4" />
             I regjeringen nå
@@ -157,22 +157,22 @@ function OverviewPanel({ rep, profile }: PolitikerProfileShellProps) {
       ) : null}
 
       {totalSaker === 0 && !rep.erRegjeringsmedlem ? (
-        <div className="rounded-2xl border border-gray-100 bg-gray-50 p-5 text-sm text-gray-600">
+        <div className="rounded-2xl border border-border bg-muted/40 p-5 text-sm text-muted-foreground">
           Vi fant ingen registrerte representantforslag eller saksordførerroller for denne perioden i Stortingets åpne data.
         </div>
       ) : null}
 
       {topTopics.length > 0 ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-6">
-          <h2 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
-            <Tags className="w-4 h-4 text-indigo-600" />
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <h2 className="font-semibold text-foreground flex items-center gap-2 mb-4">
+            <Tags className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             Mest involverte temaer
           </h2>
           <div className="space-y-3">
             {topTopics.map((topic) => (
               <div key={topic.name} className="flex items-center justify-between gap-3">
-                <span className="text-sm text-gray-700 truncate">{topic.name}</span>
-                <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">{topic.count} saker</span>
+                <span className="text-sm text-foreground truncate">{topic.name}</span>
+                <span className="text-sm font-semibold text-foreground whitespace-nowrap">{topic.count} saker</span>
               </div>
             ))}
           </div>
@@ -180,31 +180,31 @@ function OverviewPanel({ rep, profile }: PolitikerProfileShellProps) {
       ) : null}
 
       {profile.officialResponses.length > 0 ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Nylige offisielle svar</h2>
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <h2 className="font-semibold text-foreground mb-4">Nylige offisielle svar</h2>
           <PoliticianResponseList rep={rep} responses={profile.officialResponses.slice(0, 3)} />
         </div>
       ) : null}
 
       {profile.broughtUpSaker.length > 0 ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Nylige forslag</h2>
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <h2 className="font-semibold text-foreground mb-4">Nylige forslag</h2>
           <SakList saker={profile.broughtUpSaker.slice(0, 5)} emptyMessage="" />
         </div>
       ) : null}
 
       {(profile.sporsmalFra.length > 0 || profile.sporsmalTil.length > 0) && (
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 space-y-6">
-          <h2 className="font-semibold text-gray-900">Spørsmål i inneværende stortingssesjon</h2>
+        <div className="rounded-2xl border border-border bg-card p-6 space-y-6">
+          <h2 className="font-semibold text-foreground">Spørsmål i inneværende stortingssesjon</h2>
           {profile.sporsmalFra.length > 0 ? (
             <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Stilt av politikeren</h3>
+              <h3 className="text-sm font-medium text-foreground mb-3">Stilt av politikeren</h3>
               <SporsmalList items={profile.sporsmalFra.slice(0, 3)} emptyMessage="" />
             </div>
           ) : null}
           {profile.sporsmalTil.length > 0 ? (
             <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Stilt til politikeren</h3>
+              <h3 className="text-sm font-medium text-foreground mb-3">Stilt til politikeren</h3>
               <SporsmalList items={profile.sporsmalTil.slice(0, 3)} emptyMessage="" />
             </div>
           ) : null}
@@ -230,9 +230,9 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
     <div className="max-w-5xl mx-auto space-y-8 pb-12">
       <BackButton fallbackHref={routes.politikere} />
 
-      <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
+      <div className="bg-card rounded-3xl border border-border p-8 shadow-sm">
         <div className="flex flex-col sm:flex-row gap-6 items-start">
-          <div className="relative w-24 h-24 rounded-2xl overflow-hidden border border-gray-100 shrink-0">
+          <div className="relative w-24 h-24 rounded-2xl overflow-hidden border border-border shrink-0">
             <Image
               src={getPersonbildeUrl(rep.id, 'stort', true)}
               alt={`${rep.fornavn} ${rep.etternavn}`}
@@ -243,7 +243,7 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-foreground">
                 {rep.fornavn} {rep.etternavn}
               </h1>
               {profile.isPlatformVerified ? (
@@ -253,11 +253,11 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
                 </span>
               ) : null}
             </div>
-            <p className="text-gray-600 mt-1 flex items-center gap-1.5">
-              {rep.erRegjeringsmedlem ? <Landmark className="w-4 h-4 text-amber-600" /> : null}
+            <p className="text-muted-foreground mt-1 flex items-center gap-1.5">
+              {rep.erRegjeringsmedlem ? <Landmark className="w-4 h-4 text-amber-600 dark:text-amber-400" /> : null}
               {roleLabel}
             </p>
-            <div className="mt-2 flex flex-wrap gap-4 text-sm text-gray-500">
+            <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
                 <Building2 className="w-4 h-4" />
                 {rep.parti.navn}
@@ -267,10 +267,10 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
                 {locationLabel}
               </span>
             </div>
-            <p className="mt-4 text-sm text-gray-600 leading-relaxed max-w-2xl">{rolleInfo.description}</p>
+            <p className="mt-4 text-sm text-muted-foreground leading-relaxed max-w-2xl">{rolleInfo.description}</p>
             <Link
               href={routes.forum}
-              className="inline-flex mt-4 text-sm font-medium text-indigo-600 hover:text-indigo-500"
+              className="inline-flex mt-4 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
             >
               Diskuter i forum →
             </Link>
@@ -291,15 +291,15 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
                 className={cn(
                   'flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-colors',
                   active
-                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-100'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent',
+                    ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900/50'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground border border-transparent',
                 )}
                 aria-current={active ? 'page' : undefined}
               >
-                <Icon className={cn('w-5 h-5 shrink-0 mt-0.5', active ? 'text-indigo-600' : 'text-gray-400')} />
+                <Icon className={cn('w-5 h-5 shrink-0 mt-0.5', active ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground')} />
                 <span className="min-w-0">
                   <span className="font-medium block">{tab.label}</span>
-                  <span className="text-xs text-gray-500 line-clamp-2">{tab.description}</span>
+                  <span className="text-xs text-muted-foreground line-clamp-2">{tab.description}</span>
                 </span>
               </button>
             );
@@ -310,12 +310,12 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
           {activeTab === 'oversikt' ? <OverviewPanel rep={rep} profile={profile} /> : null}
 
           {activeTab === 'forslag' ? (
-            <section className="rounded-2xl border border-gray-100 bg-white p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-indigo-600" />
+            <section className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="text-xl font-bold text-foreground mb-2 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 Forslag politikeren har brakt opp
               </h2>
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-sm text-muted-foreground mb-6">
                 Representantforslag der {rep.fornavn} {rep.etternavn} står som forslagstiller i Stortingets data.
               </p>
               <SakList
@@ -326,12 +326,12 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
           ) : null}
 
           {activeTab === 'saksordfoerer' ? (
-            <section className="rounded-2xl border border-gray-100 bg-white p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-amber-600" />
+            <section className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="text-xl font-bold text-foreground mb-2 flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 Saker som saksordfører
               </h2>
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-sm text-muted-foreground mb-6">
                 Saker der {rep.fornavn} {rep.etternavn} er utpekt som saksordfører for komiteen.
               </p>
               <SakList
@@ -342,16 +342,16 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
           ) : null}
 
           {activeTab === 'temaer' ? (
-            <section className="rounded-2xl border border-gray-100 bg-white p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-                <Tags className="w-5 h-5 text-indigo-600" />
+            <section className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="text-xl font-bold text-foreground mb-2 flex items-center gap-2">
+                <Tags className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 Temaer med mest involvering
               </h2>
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-sm text-muted-foreground mb-6">
                 Fordeling basert på kategorier i saker der politikeren er forslagstiller eller saksordfører.
               </p>
               {profile.topicStats.length === 0 ? (
-                <p className="text-sm text-gray-500 py-6 text-center">Ingen temaer å vise ennå.</p>
+                <p className="text-sm text-muted-foreground py-6 text-center">Ingen temaer å vise ennå.</p>
               ) : (
                 <div className="space-y-4">
                   {profile.topicStats.map((topic, index) => {
@@ -360,17 +360,17 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
                     return (
                       <div key={topic.name}>
                         <div className="flex justify-between text-sm mb-1.5 gap-3">
-                          <span className="font-medium text-gray-800 truncate">{topic.name}</span>
-                          <span className="text-gray-500 whitespace-nowrap">{topic.count} saker</span>
+                          <span className="font-medium text-foreground truncate">{topic.name}</span>
+                          <span className="text-muted-foreground whitespace-nowrap">{topic.count} saker</span>
                         </div>
-                        <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div className="h-2 rounded-full bg-muted overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-indigo-500"
+                            className="h-full rounded-full bg-indigo-50 dark:bg-indigo-950/400"
                             style={{ width: `${width}%` }}
                           />
                         </div>
                         {index === 0 ? (
-                          <p className="text-xs text-gray-500 mt-1">Mest aktivt tema i perioden</p>
+                          <p className="text-xs text-muted-foreground mt-1">Mest aktivt tema i perioden</p>
                         ) : null}
                       </div>
                     );
@@ -381,19 +381,19 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
           ) : null}
 
           {activeTab === 'svar' ? (
-            <section className="rounded-2xl border border-gray-100 bg-white p-6 space-y-6">
+            <section className="rounded-2xl border border-border bg-card p-6 space-y-6">
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-indigo-600" />
+                <h2 className="text-xl font-bold text-foreground mb-2 flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                   Offisielle svar på Folkets Stemme
                 </h2>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Svar publisert av verifiserte politikere direkte på saker i appen.
                 </p>
               </div>
 
               {profile.officialResponses.length === 0 ? (
-                <p className="text-sm text-gray-500 py-6 text-center">
+                <p className="text-sm text-muted-foreground py-6 text-center">
                   {profile.isPlatformVerified
                     ? 'Ingen offisielle svar publisert ennå.'
                     : 'Politikeren har ikke verifisert seg på plattformen, eller har ikke publisert svar ennå.'}
@@ -403,17 +403,17 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
               )}
 
               {(profile.sporsmalFra.length > 0 || profile.sporsmalTil.length > 0) && (
-                <div className="border-t border-gray-100 pt-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">Spørsmål fra Stortinget</h3>
+                <div className="border-t border-border pt-6">
+                  <h3 className="font-semibold text-foreground mb-4">Spørsmål fra Stortinget</h3>
                   {profile.sporsmalFra.length > 0 ? (
                     <div className="mb-6">
-                      <h4 className="text-sm font-medium text-gray-700 mb-3">Stilt av politikeren</h4>
+                      <h4 className="text-sm font-medium text-foreground mb-3">Stilt av politikeren</h4>
                       <SporsmalList items={profile.sporsmalFra} emptyMessage="" />
                     </div>
                   ) : null}
                   {profile.sporsmalTil.length > 0 ? (
                     <div>
-                      <h4 className="text-sm font-medium text-gray-700 mb-3">Stilt til politikeren</h4>
+                      <h4 className="text-sm font-medium text-foreground mb-3">Stilt til politikeren</h4>
                       <SporsmalList items={profile.sporsmalTil} emptyMessage="" />
                     </div>
                   ) : null}

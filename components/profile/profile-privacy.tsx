@@ -24,16 +24,16 @@ export function ProfilePrivacy() {
         title="Slett historikk og data"
         description="I tråd med norsk lov og GDPR har du rett til å bli glemt."
       >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 border border-red-200 rounded-xl bg-red-50">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 border border-destructive/30 rounded-xl bg-destructive/10">
           <div>
             <h4 className="text-sm font-medium text-red-900">Slett profil og all data</h4>
-            <p className="text-xs text-red-700 mt-1">
+            <p className="text-xs text-destructive mt-1">
               Sletter profilen din, innstillinger og all stemmehistorikk permanent.
             </p>
           </div>
           <button
             type="button"
-            className="inline-flex items-center px-4 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-lg text-red-700 bg-white hover:bg-red-50 shrink-0"
+            className="inline-flex items-center px-4 py-2 border border-destructive/40 shadow-sm text-sm font-medium rounded-lg text-destructive bg-card hover:bg-destructive/10 shrink-0"
           >
             Slett alt
           </button>

@@ -31,33 +31,33 @@ export function ProfileNotifications({
       title="Varslingsinnstillinger"
       description="Slå av/på e-postvarsler. In-app varsler påvirkes ikke."
     >
-      <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/50 px-4 py-3">
+      <div className="flex items-center justify-between rounded-xl border border-border bg-muted/50 px-4 py-3">
         <div>
-          <h4 className="text-sm font-medium text-gray-900">E-postvarsler</h4>
-          <p className="text-xs text-gray-500 mt-0.5">Mottak av oppdateringer på e-post</p>
+          <h4 className="text-sm font-medium text-foreground">E-postvarsler</h4>
+          <p className="text-xs text-muted-foreground mt-0.5">Mottak av oppdateringer på e-post</p>
         </div>
         <button
           type="button"
           onClick={() => onEmailEnabledChange(!emailEnabled)}
-          className={`${emailEnabled ? 'bg-indigo-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors`}
+          className={`${emailEnabled ? 'bg-indigo-600' : 'bg-muted'} relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors`}
           role="switch"
           aria-checked={emailEnabled}
         >
           <span
             aria-hidden
-            className={`${emailEnabled ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform transition`}
+            className={`${emailEnabled ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-card shadow transform transition`}
           />
         </button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {CHANNELS.map((row) => (
-          <div key={row.key} className="rounded-xl border border-gray-200 p-4">
-            <div className="text-sm font-medium text-gray-900 mb-2">{row.label}</div>
+          <div key={row.key} className="rounded-xl border border-border p-4">
+            <div className="text-sm font-medium text-foreground mb-2">{row.label}</div>
             <select
               value={frequencies[row.key] || 'daily'}
               onChange={(e) => onFrequencyChange(row.key, e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
             >
               <option value="realtime">Sanntid</option>
               <option value="daily">Daglig</option>

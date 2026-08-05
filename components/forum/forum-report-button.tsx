@@ -65,7 +65,7 @@ export function ForumReportButton({
   };
 
   if (status === 'sent') {
-    return <span className="text-xs text-emerald-600">Rapport sendt</span>;
+    return <span className="text-xs text-emerald-600 dark:text-emerald-400">Rapport sendt</span>;
   }
 
   if (status === 'duplicate') {
@@ -81,7 +81,7 @@ export function ForumReportButton({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted/50"
       >
         <Flag className="w-4 h-4 text-rose-500" />
         Rapporter
@@ -90,7 +90,7 @@ export function ForumReportButton({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-rose-600"
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-rose-600"
       >
         <Flag className="w-3.5 h-3.5" />
         Rapporter
@@ -104,16 +104,16 @@ export function ForumReportButton({
         <div
           className={
             variant === 'menu-item'
-              ? 'absolute z-20 left-0 right-0 mt-1 rounded-lg border border-gray-200 bg-white p-3 shadow-lg'
-              : 'absolute z-10 right-0 mt-1 w-72 rounded-lg border border-gray-200 bg-white p-3 shadow-lg'
+              ? 'absolute z-20 left-0 right-0 mt-1 rounded-lg border border-border bg-card p-3 shadow-lg'
+              : 'absolute z-10 right-0 mt-1 w-72 rounded-lg border border-border bg-card p-3 shadow-lg'
           }
         >
-          <p className="text-xs font-medium text-gray-700 mb-2">Årsak</p>
+          <p className="text-xs font-medium text-foreground mb-2">Årsak</p>
           <div className="space-y-1 mb-2">
             {FORUM_REPORT_CATEGORIES.map((c) => (
               <label
                 key={c.id}
-                className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer"
+                className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer"
               >
                 <input
                   type="radio"
@@ -131,12 +131,12 @@ export function ForumReportButton({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Utdyp gjerne (valgfritt)"
-            className="w-full text-xs border border-gray-200 rounded-md p-2"
+            className="w-full text-xs border border-border rounded-md p-2"
           />
           <div className="mt-2 flex justify-end gap-2">
             <button
               type="button"
-              className="text-xs text-gray-500"
+              className="text-xs text-muted-foreground"
               onClick={() => setOpen(false)}
             >
               Avbryt
@@ -151,7 +151,7 @@ export function ForumReportButton({
             </button>
           </div>
           {status === 'error' && (
-            <p className="text-xs text-red-600 mt-1">
+            <p className="text-xs text-destructive mt-1">
               Kunne ikke sende. Logg inn og prøv igjen.
             </p>
           )}

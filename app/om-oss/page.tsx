@@ -7,18 +7,18 @@ export default function OmOssPage() {
     <div className="max-w-4xl mx-auto space-y-12">
       {/* Header */}
       <div className="text-center space-y-4">
-        <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight sm:text-5xl">
+        <h1 className="text-4xl font-extrabold text-foreground tracking-tight sm:text-5xl">
           Om Folkets Stemme
         </h1>
-        <p className="text-xl text-gray-500 max-w-2xl mx-auto">
+        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
           En uavhengig plattform bygget for å styrke demokratiet ved å gi innbyggerne en direkte, verifisert stemme i løpende politiske saker.
         </p>
       </div>
 
       {/* Mission */}
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 md:p-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Vår misjon</h2>
-        <div className="prose prose-indigo max-w-none text-gray-600">
+      <div className="bg-card rounded-3xl shadow-sm border border-border p-8 md:p-12">
+        <h2 className="text-2xl font-bold text-foreground mb-4">Vår misjon</h2>
+        <div className="prose prose-indigo max-w-none text-muted-foreground">
           <p className="text-lg leading-relaxed">
             Demokratiet stopper ikke på valgdagen. Mellom valgene fattes det tusenvis av beslutninger på Stortinget som påvirker hverdagen vår. 
             Folkets Stemme ble skapt for å tette gapet mellom politikerne og folket i disse periodene.
@@ -32,45 +32,45 @@ export default function OmOssPage() {
 
       {/* How it works */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 text-center">
-          <div className="mx-auto w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-6">
+        <div className="bg-card p-8 rounded-3xl shadow-sm border border-border text-center">
+          <div className="mx-auto w-16 h-16 bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mb-6">
             <Database className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-3">1. Data fra kilden</h3>
-          <p className="text-gray-600">
+          <h3 className="text-xl font-bold text-foreground mb-3">1. Data fra kilden</h3>
+          <p className="text-muted-foreground">
             Vi henter alle saker, forslag og voteringer direkte og ufiltrert fra Stortingets åpne API (data.stortinget.no).
           </p>
         </div>
 
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 text-center">
-          <div className="mx-auto w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6">
+        <div className="bg-card p-8 rounded-3xl shadow-sm border border-border text-center">
+          <div className="mx-auto w-16 h-16 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center mb-6">
             <Shield className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-3">2. Sikker innlogging</h3>
-          <p className="text-gray-600">
+          <h3 className="text-xl font-bold text-foreground mb-3">2. Sikker innlogging</h3>
+          <p className="text-muted-foreground">
             Du logger inn med e-post, Google eller SMS. Det reduserer spam og troll, og gir én konto per person ved soft launch. BankID kommer senere.
           </p>
         </div>
 
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 text-center">
-          <div className="mx-auto w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mb-6">
+        <div className="bg-card p-8 rounded-3xl shadow-sm border border-border text-center">
+          <div className="mx-auto w-16 h-16 bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center mb-6">
             <Info className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-3">3. Anonym innsikt</h3>
-          <p className="text-gray-600">
+          <h3 className="text-xl font-bold text-foreground mb-3">3. Anonym innsikt</h3>
+          <p className="text-muted-foreground">
             Når du stemmer, kobles stemmen fra din identitet. Politikere ser kun aggregerte trender (f.eks. aldersgrupper i et fylke).
           </p>
         </div>
       </div>
 
       {/* Privacy & Security */}
-      <div className="bg-gray-50 rounded-3xl p-8 md:p-12 border border-gray-200">
+      <div className="bg-muted/40 rounded-3xl p-8 md:p-12 border border-border">
         <div className="flex items-center mb-6">
-          <Lock className="w-8 h-8 text-indigo-600 mr-4" />
-          <h2 className="text-2xl font-bold text-gray-900">Personvern og sikkerhet (GDPR)</h2>
+          <Lock className="w-8 h-8 text-indigo-600 dark:text-indigo-400 mr-4" />
+          <h2 className="text-2xl font-bold text-foreground">Personvern og sikkerhet (GDPR)</h2>
         </div>
         
-        <div className="space-y-6 text-gray-600">
+        <div className="space-y-6 text-muted-foreground">
           <p>
             Å lagre politiske meninger innebærer behandling av sensitive personopplysninger. Vi tar dette på største alvor og bygger plattformen etter prinsippet om <strong>innebygd personvern (Privacy by Design)</strong>.
           </p>
@@ -85,29 +85,29 @@ export default function OmOssPage() {
       </div>
 
       {/* Roadmap */}
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 md:p-12">
+      <div className="bg-card rounded-3xl shadow-sm border border-border p-8 md:p-12">
         <div className="flex items-center mb-6">
-          <Map className="w-8 h-8 text-emerald-600 mr-4" />
-          <h2 className="text-2xl font-bold text-gray-900">Veien videre (Roadmap)</h2>
+          <Map className="w-8 h-8 text-emerald-600 dark:text-emerald-400 mr-4" />
+          <h2 className="text-2xl font-bold text-foreground">Veien videre (Roadmap)</h2>
         </div>
         <div className="space-y-8">
           <div className="relative border-l-2 border-emerald-200 pl-6 pb-2">
             <div className="absolute w-4 h-4 bg-emerald-500 rounded-full -left-[9px] top-1 ring-4 ring-white"></div>
-            <h3 className="text-lg font-bold text-gray-900">Fase 1: Lansering & Kjernefunksjonalitet (Nå)</h3>
-            <p className="text-gray-600 mt-2">
+            <h3 className="text-lg font-bold text-foreground">Fase 1: Lansering & Kjernefunksjonalitet (Nå)</h3>
+            <p className="text-muted-foreground mt-2">
               Visning av saker fra Stortinget, forenkling av tekst med AI, sikker innlogging for å avgi stemme på saker og
               høringer, samt forum med reels og offentlige profiler.
             </p>
           </div>
           <div className="relative border-l-2 border-emerald-200 pl-6 pb-2">
             <div className="absolute w-4 h-4 bg-emerald-500 rounded-full -left-[9px] top-1 ring-4 ring-white"></div>
-            <h3 className="text-lg font-bold text-gray-900">Fase 2: Poeng, tillit og reels fra brukere (Pågår)</h3>
-            <p className="text-gray-600 mt-2">
+            <h3 className="text-lg font-bold text-foreground">Fase 2: Poeng, tillit og reels fra brukere (Pågår)</h3>
+            <p className="text-muted-foreground mt-2">
               Poengsystem som belønner konstruktiv aktivitet over tid. Poeng er alltid synlige og bygger troverdighet —
               ikke stemmevekt. Pålitelige brukere (750+ poeng) kan foreslå forum-reels til admin-godkjenning. Kuratorer
               (2 000+ poeng) kan publisere direkte fra godkjente kilder.
             </p>
-            <div className="mt-4 rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 shadow-sm">
+            <div className="mt-4 rounded-2xl border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/40 p-5 shadow-sm">
               <div className="flex items-center gap-2 text-amber-950 font-semibold">
                 <Trophy className="w-5 h-5" />
                 Poengnivåer
@@ -130,27 +130,27 @@ export default function OmOssPage() {
               </Link>
             </div>
           </div>
-          <div className="relative border-l-2 border-gray-200 pl-6 pb-2">
-            <div className="absolute w-4 h-4 bg-gray-300 rounded-full -left-[9px] top-1 ring-4 ring-white"></div>
-            <h3 className="text-lg font-bold text-gray-900">Fase 3: Valgløfter og politikeroppfølging</h3>
-            <p className="text-gray-600 mt-2">Mulighet for å følge politikere og spore hvorvidt politikere holder sine valgløfter over tid.</p>
+          <div className="relative border-l-2 border-border pl-6 pb-2">
+            <div className="absolute w-4 h-4 bg-muted-foreground/30 rounded-full -left-[9px] top-1 ring-4 ring-white"></div>
+            <h3 className="text-lg font-bold text-foreground">Fase 3: Valgløfter og politikeroppfølging</h3>
+            <p className="text-muted-foreground mt-2">Mulighet for å følge politikere og spore hvorvidt politikere holder sine valgløfter over tid.</p>
           </div>
           <div className="relative border-l-2 border-transparent pl-6">
-            <div className="absolute w-4 h-4 bg-gray-300 rounded-full -left-[9px] top-1 ring-4 ring-white"></div>
-            <h3 className="text-lg font-bold text-gray-900">Fase 4: Kommune & Fylkesnivå</h3>
-            <p className="text-gray-600 mt-2">Utvidelse av datagrunnlaget til å inkludere lokale politiske saker fra kommunestyrer og fylkesting for mer lokal innflytelse.</p>
+            <div className="absolute w-4 h-4 bg-muted-foreground/30 rounded-full -left-[9px] top-1 ring-4 ring-white"></div>
+            <h3 className="text-lg font-bold text-foreground">Fase 4: Kommune & Fylkesnivå</h3>
+            <p className="text-muted-foreground mt-2">Utvidelse av datagrunnlaget til å inkludere lokale politiske saker fra kommunestyrer og fylkesting for mer lokal innflytelse.</p>
           </div>
         </div>
       </div>
 
       {/* Feedback & Ideas */}
-      <div className="bg-indigo-50 rounded-3xl shadow-sm border border-indigo-100 p-8 md:p-12 flex flex-col md:flex-row items-center gap-8">
+      <div className="bg-indigo-50 dark:bg-indigo-950/40 rounded-3xl shadow-sm border border-indigo-100 dark:border-indigo-900/50 p-8 md:p-12 flex flex-col md:flex-row items-center gap-8">
         <div className="flex-1 space-y-4">
-          <div className="flex items-center text-indigo-600">
+          <div className="flex items-center text-indigo-600 dark:text-indigo-400">
             <Lightbulb className="w-8 h-8 mr-4" />
-            <h2 className="text-2xl font-bold text-gray-900">Har du en idé eller funnet en feil?</h2>
+            <h2 className="text-2xl font-bold text-foreground">Har du en idé eller funnet en feil?</h2>
           </div>
-          <p className="text-gray-700 text-lg leading-relaxed">
+          <p className="text-foreground text-lg leading-relaxed">
             Folkets Stemme utvikles kontinuerlig, og vi ønsker at plattformen skal formes av brukerne. Har du ønsker om ny funksjonalitet, funnet en bug, eller har generelle tilbakemeldinger?
           </p>
           <p className="text-indigo-800 font-medium">Bruk knappen for å sende oss dine innspill!</p>
@@ -165,8 +165,8 @@ export default function OmOssPage() {
 
       {/* FAQ / Contact */}
       <div className="text-center pb-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Har du spørsmål?</h2>
-        <p className="text-gray-600 mb-6">
+        <h2 className="text-2xl font-bold text-foreground mb-4">Har du spørsmål?</h2>
+        <p className="text-muted-foreground mb-6">
           Vi er under utvikling og tar gjerne imot tilbakemeldinger fra både innbyggere og politikere.
         </p>
         <a href="mailto:kontakt@folketsstemme.no" className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-xl shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">

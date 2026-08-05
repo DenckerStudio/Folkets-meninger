@@ -57,32 +57,32 @@ export default function AdminForumReportsClient() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Flag className="w-6 h-6 text-rose-600" />
             Forum-rapporter
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Åpne rapporter fra brukere. Forumtekst er offentlig — vurder innhold og eventuell oppfølging.
           </p>
         </div>
         <Link
           href={`${routes.adminForumPrompts}?tab=pipeline`}
-          className="text-sm text-indigo-600 hover:underline shrink-0"
+          className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline shrink-0"
         >
           Forum Reels →
         </Link>
       </div>
 
       {error && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+        <p className="text-sm text-destructive bg-destructive/10 border border-red-100 rounded-lg px-3 py-2">
           {error}
         </p>
       )}
 
       {loading ? (
-        <p className="text-gray-500 text-sm">Laster…</p>
+        <p className="text-muted-foreground text-sm">Laster…</p>
       ) : reports.length === 0 ? (
-        <p className="text-gray-500 text-sm rounded-xl border border-gray-200 bg-gray-50 p-6 text-center">
+        <p className="text-muted-foreground text-sm rounded-xl border border-border bg-muted/40 p-6 text-center">
           Ingen åpne rapporter.
         </p>
       ) : (
@@ -90,9 +90,9 @@ export default function AdminForumReportsClient() {
           {reports.map((r) => (
             <li
               key={r.id}
-              className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+              className="rounded-xl border border-border bg-card p-4 shadow-sm"
             >
-              <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 mb-2">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-2">
                 <span className="font-medium text-rose-700">
                   {reportCategoryLabel(r.category)}
                 </span>
@@ -101,13 +101,13 @@ export default function AdminForumReportsClient() {
                 <span>·</span>
                 <span>{new Date(r.createdAt).toLocaleString('nb-NO')}</span>
               </div>
-              <h2 className="font-semibold text-gray-900">{r.targetTitle}</h2>
+              <h2 className="font-semibold text-foreground">{r.targetTitle}</h2>
               {r.targetAuthorName && (
-                <p className="text-xs text-gray-500 mt-0.5">Av {r.targetAuthorName}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Av {r.targetAuthorName}</p>
               )}
-              <p className="text-sm text-gray-600 mt-2">{r.targetExcerpt}</p>
+              <p className="text-sm text-muted-foreground mt-2">{r.targetExcerpt}</p>
               {r.reason && (
-                <p className="text-sm text-gray-700 mt-2 italic border-l-2 border-rose-200 pl-3">
+                <p className="text-sm text-foreground mt-2 italic border-l-2 border-rose-200 pl-3">
                   «{r.reason}»
                 </p>
               )}
@@ -118,7 +118,7 @@ export default function AdminForumReportsClient() {
                       ? `${routes.forumTopic(r.threadId)}#reply-${r.targetId}`
                       : routes.forumTopic(r.threadId)
                   }
-                  className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline"
+                  className="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   Vis innlegg
@@ -135,7 +135,7 @@ export default function AdminForumReportsClient() {
                   type="button"
                   disabled={actingId === r.id}
                   onClick={() => resolve(r.id, 'dismissed')}
-                  className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  className="text-sm px-3 py-1.5 rounded-lg border border-border text-foreground hover:bg-muted/50 disabled:opacity-50"
                 >
                   Avvis
                 </button>

@@ -127,7 +127,7 @@ export function ProfileShell() {
   };
 
   if (isPending) {
-    return <div className="p-8 text-center text-gray-500">Laster…</div>;
+    return <div className="p-8 text-center text-muted-foreground">Laster…</div>;
   }
 
   if (!user) {
@@ -202,11 +202,11 @@ export function ProfileShell() {
 function ProfileLoginPrompt() {
   return (
     <div className="max-w-md mx-auto mt-20 text-center space-y-6">
-      <div className="w-20 h-20 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto">
-        <User className="w-10 h-10 text-indigo-600" />
+      <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-950/50 rounded-2xl flex items-center justify-center mx-auto">
+        <User className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
       </div>
-      <h2 className="text-3xl font-bold text-gray-900">Logg inn for å se din profil</h2>
-      <p className="text-gray-600">
+      <h2 className="text-3xl font-bold text-foreground">Logg inn for å se din profil</h2>
+      <p className="text-muted-foreground">
         Du må være logget inn for å se din stemmehistorikk, valgomat og innstillinger.
       </p>
       <Link
@@ -315,7 +315,7 @@ function ProfileShellAuthenticated({
                   router.replace(`${routes.minSide}?tab=${id}`, { scroll: false });
                 }
               }}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-900"
+              className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground"
             >
               <option value="historikk">Mine stemmer</option>
               <option value="valgomat">Valgomat 2.0</option>
@@ -327,7 +327,7 @@ function ProfileShellAuthenticated({
             </select>
           </div>
 
-          <h2 className="text-lg font-semibold text-gray-900 lg:sr-only">{activeLabel}</h2>
+          <h2 className="text-lg font-semibold text-foreground lg:sr-only">{activeLabel}</h2>
 
           {activeTab === 'historikk' && (
             <ProfileVoteHistory items={voteHistory} loading={historyLoading} />

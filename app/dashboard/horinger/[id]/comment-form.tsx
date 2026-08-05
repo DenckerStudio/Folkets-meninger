@@ -46,8 +46,8 @@ export default function HearingCommentForm({
 
   if (!user) {
     return (
-      <p className="text-sm text-center text-gray-600 py-4">
-        <Link href={routes.login} className="text-indigo-600 font-medium hover:underline">
+      <p className="text-sm text-center text-muted-foreground py-4">
+        <Link href={routes.login} className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
           Logg inn
         </Link>{' '}
         for å gi innspill.
@@ -56,16 +56,16 @@ export default function HearingCommentForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-      <p className="text-xs text-gray-600">
+    <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-4 space-y-3">
+      <p className="text-xs text-muted-foreground">
         Innspillet publiseres med ditt navn og er offentlig synlig for andre brukere.
       </p>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
       <textarea
         rows={4}
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg p-3 text-sm"
+        className="w-full border border-border rounded-lg p-3 text-sm"
         placeholder="Skriv innspillet ditt…"
         required
       />

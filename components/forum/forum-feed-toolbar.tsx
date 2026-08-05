@@ -79,7 +79,7 @@ export default function ForumFeedToolbar() {
     <div className="mb-2 space-y-4">
       <div className="relative">
         <Search
-          className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+          className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
           aria-hidden
         />
         <label htmlFor="forum-search" className="sr-only">
@@ -91,14 +91,14 @@ export default function ForumFeedToolbar() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Søk i diskusjoner…"
-          className="w-full rounded-2xl border-0 bg-gray-50/90 py-3 pl-11 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
+          className="w-full rounded-2xl border-0 bg-muted/90 py-3 pl-11 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:bg-muted focus:outline-none focus:ring-2 focus:ring-indigo-500/15"
           autoComplete="off"
         />
         {(query || hasActiveSearch) && (
           <button
             type="button"
             onClick={clearSearch}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-gray-400 hover:bg-gray-200/60 hover:text-gray-600"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted-foreground hover:bg-muted/60 hover:text-muted-foreground"
             aria-label="Tøm søk"
           >
             <X className="h-4 w-4" />
@@ -107,11 +107,11 @@ export default function ForumFeedToolbar() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold tracking-tight text-gray-900">
+        <h2 className="text-sm font-semibold tracking-tight text-foreground">
           {hasActiveSearch ? 'Søkeresultater' : 'Diskusjoner'}
         </h2>
         <div
-          className="inline-flex rounded-xl bg-gray-100/80 p-0.5"
+          className="inline-flex rounded-xl bg-muted/80 p-0.5"
           role="group"
           aria-label="Sorter diskusjoner"
         >
@@ -123,8 +123,8 @@ export default function ForumFeedToolbar() {
               className={cn(
                 'rounded-[0.65rem] px-3 py-1.5 text-xs font-semibold transition-colors',
                 sort === opt.value
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900',
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
               )}
             >
               {opt.label}

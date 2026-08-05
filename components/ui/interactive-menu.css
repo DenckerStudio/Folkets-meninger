@@ -1,5 +1,5 @@
 :root {
-  --component-active-color-default: #00205b;
+  --component-active-color-default: var(--brand);
 }
 
 .menu {

@@ -34,7 +34,7 @@ export function ForumBodyComposer({
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-xl bg-gray-50 shadow-sm ring-1 ring-gray-200 transition-shadow focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500/30',
+        'relative overflow-hidden rounded-xl bg-muted/40 shadow-sm ring-1 ring-border transition-shadow focus-within:bg-card focus-within:ring-2 focus-within:ring-indigo-500/30',
         className
       )}
     >
@@ -45,7 +45,7 @@ export function ForumBodyComposer({
         {segments.map((segment, index) => {
           if (segment.type === 'text') {
             return (
-              <span key={index} className="text-gray-900">
+              <span key={index} className="text-foreground">
                 {segment.text}
               </span>
             );
@@ -55,7 +55,7 @@ export function ForumBodyComposer({
             return (
               <span
                 key={index}
-                className="rounded bg-indigo-50 px-1 font-medium text-indigo-700"
+                className="rounded bg-indigo-50 dark:bg-indigo-950/40 px-1 font-medium text-indigo-700 dark:text-indigo-300"
               >
                 {segment.text}
               </span>
@@ -81,7 +81,7 @@ export function ForumBodyComposer({
         maxLength={maxLength}
         placeholder={placeholder}
         spellCheck
-        className="relative block min-h-[220px] w-full resize-y bg-transparent px-4 py-3 text-sm leading-relaxed text-transparent caret-gray-900 placeholder:text-gray-400 selection:bg-indigo-200/60 focus:outline-none"
+        className="relative block min-h-[220px] w-full resize-y bg-transparent px-4 py-3 text-sm leading-relaxed text-transparent caret-gray-900 placeholder:text-muted-foreground selection:bg-indigo-200/60 focus:outline-none"
       />
     </div>
   );

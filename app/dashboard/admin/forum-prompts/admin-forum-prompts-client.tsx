@@ -113,14 +113,14 @@ function SourceEditor({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium text-gray-700">Kilder (tittel, URL, avis)</p>
+      <p className="text-sm font-medium text-foreground">Kilder (tittel, URL, avis)</p>
       {rows.map((row, index) => (
         <div
           key={index}
-          className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] items-start border border-gray-100 rounded-lg p-3"
+          className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] items-start border border-border rounded-lg p-3"
         >
           <input
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            className="rounded-lg border border-border px-3 py-2 text-sm"
             placeholder="Tittel"
             value={row.title}
             onChange={(e) => {
@@ -130,7 +130,7 @@ function SourceEditor({
             }}
           />
           <input
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            className="rounded-lg border border-border px-3 py-2 text-sm"
             placeholder="https://…"
             value={row.url}
             onChange={(e) => {
@@ -140,7 +140,7 @@ function SourceEditor({
             }}
           />
           <input
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            className="rounded-lg border border-border px-3 py-2 text-sm"
             placeholder="Avis"
             value={row.outlet}
             onChange={(e) => {
@@ -151,7 +151,7 @@ function SourceEditor({
           />
           <button
             type="button"
-            className="text-xs text-gray-500 hover:text-red-600 px-2 py-2"
+            className="text-xs text-muted-foreground hover:text-destructive px-2 py-2"
             onClick={() => {
               const next = rows.filter((_, i) => i !== index);
               onChange(next.length ? next : [emptySourceRow()]);
@@ -163,7 +163,7 @@ function SourceEditor({
       ))}
       <button
         type="button"
-        className="text-sm font-semibold text-indigo-700 hover:underline"
+        className="text-sm font-semibold text-indigo-700 dark:text-indigo-300 hover:underline"
         onClick={() => onChange([...rows, emptySourceRow()])}
       >
         + Legg til kilde
@@ -412,23 +412,23 @@ export default function AdminForumPromptsClient() {
     <div>
       <BackButton fallbackHref={routes.forum} className="mb-4" />
       <div className="flex flex-wrap items-center gap-3 mb-2">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Sparkles className="w-7 h-7 text-indigo-600" />
+        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <Sparkles className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
           Forum Reels
         </h1>
         <Link
           href={routes.adminForumReports}
-          className="text-sm font-semibold text-indigo-700 hover:underline"
+          className="text-sm font-semibold text-indigo-700 dark:text-indigo-300 hover:underline"
         >
           Rapporter →
         </Link>
       </div>
-      <p className="text-sm text-gray-600 mb-6">
+      <p className="text-sm text-muted-foreground mb-6">
         Regjeringen RSS og AI-prompt i Pipeline-fanen. Aktive reels, arkiv, manuell opprettelse og kilder
         i de andre fanene.
       </p>
 
-      <nav className="flex flex-wrap gap-2 mb-6 border-b border-gray-200 pb-2">
+      <nav className="flex flex-wrap gap-2 mb-6 border-b border-border pb-2">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -437,7 +437,7 @@ export default function AdminForumPromptsClient() {
             className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
               tab === t.id
                 ? 'bg-indigo-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-muted text-foreground hover:bg-muted'
             }`}
           >
             {t.label}
@@ -447,7 +447,7 @@ export default function AdminForumPromptsClient() {
 
       {error && tab !== 'pipeline' ? (
         <div
-          className="mb-6 rounded-lg bg-red-50 text-red-800 text-sm px-4 py-3 border border-red-100"
+          className="mb-6 rounded-lg bg-destructive/10 text-red-800 text-sm px-4 py-3 border border-red-100"
           role="alert"
         >
           {error}
@@ -462,36 +462,36 @@ export default function AdminForumPromptsClient() {
       ) : null}
 
       {loading && tab !== 'create' && tab !== 'pipeline' ? (
-        <div className="flex items-center gap-2 text-gray-500 py-12 justify-center">
+        <div className="flex items-center gap-2 text-muted-foreground py-12 justify-center">
           <Loader2 className="w-5 h-5 animate-spin" />
           Laster…
         </div>
       ) : null}
 
       {!loading && tab === 'create' ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-4 max-w-2xl">
-          <label className="block text-sm font-medium text-gray-700">
+        <div className="rounded-xl border border-border bg-card p-5 space-y-4 max-w-2xl">
+          <label className="block text-sm font-medium text-foreground">
             Spørsmål
             <textarea
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
               rows={3}
               value={createForm.question}
               onChange={(e) => setCreateForm((f) => ({ ...f, question: e.target.value }))}
             />
           </label>
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-foreground">
             Stikkord (kommaseparert)
             <input
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
               value={createForm.topic_tags}
               onChange={(e) => setCreateForm((f) => ({ ...f, topic_tags: e.target.value }))}
             />
           </label>
           <div className="flex gap-4">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-foreground">
               Sensitivitet
               <select
-                className="mt-1 block rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                className="mt-1 block rounded-lg border border-border px-3 py-2 text-sm"
                 value={createForm.sensitivity}
                 onChange={(e) => setCreateForm((f) => ({ ...f, sensitivity: e.target.value }))}
               >
@@ -499,10 +499,10 @@ export default function AdminForumPromptsClient() {
                 <option value="high">Høy (utkast)</option>
               </select>
             </label>
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-foreground">
               Status ved opprettelse
               <select
-                className="mt-1 block rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                className="mt-1 block rounded-lg border border-border px-3 py-2 text-sm"
                 value={createForm.status}
                 onChange={(e) =>
                   setCreateForm((f) => ({ ...f, status: e.target.value as PromptStatus }))
@@ -531,20 +531,20 @@ export default function AdminForumPromptsClient() {
 
       {!loading && tab === 'sources' ? (
         <div className="space-y-6">
-          <div className="rounded-xl border border-gray-200 bg-white p-5 flex flex-wrap gap-3 items-end">
-            <label className="text-sm font-medium text-gray-700">
+          <div className="rounded-xl border border-border bg-card p-5 flex flex-wrap gap-3 items-end">
+            <label className="text-sm font-medium text-foreground">
               Domene
               <input
-                className="mt-1 block rounded-lg border border-gray-200 px-3 py-2 text-sm w-48"
+                className="mt-1 block rounded-lg border border-border px-3 py-2 text-sm w-48"
                 placeholder="example.no"
                 value={newSource.domain}
                 onChange={(e) => setNewSource((s) => ({ ...s, domain: e.target.value }))}
               />
             </label>
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-foreground">
               Visningsnavn
               <input
-                className="mt-1 block rounded-lg border border-gray-200 px-3 py-2 text-sm w-48"
+                className="mt-1 block rounded-lg border border-border px-3 py-2 text-sm w-48"
                 value={newSource.outlet_label}
                 onChange={(e) => setNewSource((s) => ({ ...s, outlet_label: e.target.value }))}
               />
@@ -562,15 +562,15 @@ export default function AdminForumPromptsClient() {
             {sources.map((s) => (
               <li
                 key={s.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-4 py-3"
               >
                 <div>
-                  <span className="font-semibold text-gray-900">{s.outlet_label}</span>
-                  <span className="text-gray-500 text-sm ml-2">{s.domain}</span>
+                  <span className="font-semibold text-foreground">{s.outlet_label}</span>
+                  <span className="text-muted-foreground text-sm ml-2">{s.domain}</span>
                   {s.suggested_by ? (
                     <Link
                       href={routes.profile(s.suggested_by)}
-                      className="ml-2 text-xs font-semibold text-indigo-700 hover:underline"
+                      className="ml-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:underline"
                     >
                       Brukerforslag
                     </Link>
@@ -580,8 +580,8 @@ export default function AdminForumPromptsClient() {
                       s.status === 'approved'
                         ? 'bg-green-50 text-green-800'
                         : s.status === 'pending'
-                          ? 'bg-amber-50 text-amber-800'
-                          : 'bg-gray-100 text-gray-600'
+                          ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800'
+                          : 'bg-muted text-muted-foreground'
                     }`}
                   >
                     {s.status === 'approved'
@@ -597,7 +597,7 @@ export default function AdminForumPromptsClient() {
                       type="button"
                       disabled={acting === s.id}
                       onClick={() => updateSourceStatus(s.id, 'approved')}
-                      className="text-xs font-semibold text-indigo-700 hover:underline"
+                      className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:underline"
                     >
                       Godkjenn
                     </button>
@@ -607,7 +607,7 @@ export default function AdminForumPromptsClient() {
                       type="button"
                       disabled={acting === s.id}
                       onClick={() => updateSourceStatus(s.id, 'rejected')}
-                      className="text-xs text-gray-500 hover:underline"
+                      className="text-xs text-muted-foreground hover:underline"
                     >
                       Avvis
                     </button>
@@ -621,29 +621,29 @@ export default function AdminForumPromptsClient() {
 
       {!loading && ['active', 'archived'].includes(tab) ? (
         prompts.length === 0 && !error ? (
-          <p className="text-gray-500 py-8">Ingen reels i denne fanen.</p>
+          <p className="text-muted-foreground py-8">Ingen reels i denne fanen.</p>
         ) : (
           <div className="space-y-4">
             {prompts.map((prompt) => (
-              <article key={prompt.id} className="rounded-xl border border-gray-200 bg-white p-5">
+              <article key={prompt.id} className="rounded-xl border border-border bg-card p-5">
                 {editingId === prompt.id ? (
                   <div className="space-y-3">
                     <textarea
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-border px-3 py-2 text-sm"
                       rows={3}
                       value={editForm.question}
                       onChange={(e) => setEditForm((f) => ({ ...f, question: e.target.value }))}
                     />
                     <input
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-border px-3 py-2 text-sm"
                       placeholder="Stikkord (kommaseparert)"
                       value={editForm.topic_tags}
                       onChange={(e) => setEditForm((f) => ({ ...f, topic_tags: e.target.value }))}
                     />
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-foreground">
                       Sensitivitet
                       <select
-                        className="mt-1 block rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                        className="mt-1 block rounded-lg border border-border px-3 py-2 text-sm"
                         value={editForm.sensitivity}
                         onChange={(e) =>
                           setEditForm((f) => ({ ...f, sensitivity: e.target.value }))
@@ -654,11 +654,11 @@ export default function AdminForumPromptsClient() {
                       </select>
                     </label>
                     {editingStatus === 'active' ? (
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-foreground">
                         Utløper
                         <input
                           type="datetime-local"
-                          className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                          className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
                           value={editForm.expires_at}
                           onChange={(e) =>
                             setEditForm((f) => ({ ...f, expires_at: e.target.value }))
@@ -682,7 +682,7 @@ export default function AdminForumPromptsClient() {
                       <button
                         type="button"
                         onClick={() => setEditingId(null)}
-                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+                        className="rounded-lg border border-border px-3 py-1.5 text-sm"
                       >
                         Avbryt
                       </button>
@@ -691,7 +691,7 @@ export default function AdminForumPromptsClient() {
                 ) : (
                   <>
                     <div className="flex flex-wrap gap-2 mb-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-2 py-0.5 rounded">
                         {prompt.status === 'draft'
                           ? 'Utkast'
                           : prompt.status === 'active'
@@ -703,21 +703,21 @@ export default function AdminForumPromptsClient() {
                       {prompt.submitted_by ? (
                         <Link
                           href={routes.profile(prompt.submitted_by)}
-                          className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded hover:underline"
+                          className="text-xs font-semibold text-indigo-700 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded hover:underline"
                         >
                           Brukerforslag
                           {prompt.submission_tier === 'curator' ? ' (Kurator)' : ' (Pålitelig)'}
                         </Link>
                       ) : null}
                       {(prompt.topic_tags || []).map((tag) => (
-                        <span key={tag} className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                        <span key={tag} className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
                           {tag}
                         </span>
                       ))}
                     </div>
-                    <h2 className="text-lg font-bold text-gray-900 mb-3">{prompt.question}</h2>
+                    <h2 className="text-lg font-bold text-foreground mb-3">{prompt.question}</h2>
                     {prompt.status === 'active' && prompt.expires_at ? (
-                      <p className="text-xs text-gray-500 mb-2">
+                      <p className="text-xs text-muted-foreground mb-2">
                         Utløper{' '}
                         {new Date(prompt.expires_at).toLocaleString('nb-NO', {
                           dateStyle: 'medium',
@@ -726,7 +726,7 @@ export default function AdminForumPromptsClient() {
                       </p>
                     ) : null}
                     {Array.isArray(prompt.source_headlines) && prompt.source_headlines.length > 0 && (
-                      <ul className="text-xs text-gray-500 mb-4 space-y-1">
+                      <ul className="text-xs text-muted-foreground mb-4 space-y-1">
                         {prompt.source_headlines.slice(0, 4).map((h, i) => (
                           <li key={i}>
                             {h.url ? (
@@ -734,7 +734,7 @@ export default function AdminForumPromptsClient() {
                                 href={h.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-indigo-600 hover:underline"
+                                className="text-indigo-600 dark:text-indigo-400 hover:underline"
                               >
                                 {h.title} ({h.outlet})
                               </a>
@@ -751,7 +751,7 @@ export default function AdminForumPromptsClient() {
                       <button
                         type="button"
                         onClick={() => startEdit(prompt)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
                       >
                         <Pencil className="w-4 h-4" />
                         Rediger
@@ -761,7 +761,7 @@ export default function AdminForumPromptsClient() {
                           type="button"
                           disabled={acting === prompt.id}
                           onClick={() => archivePrompt(prompt.id)}
-                          className="text-sm text-gray-500 hover:underline"
+                          className="text-sm text-muted-foreground hover:underline"
                         >
                           Arkiver
                         </button>

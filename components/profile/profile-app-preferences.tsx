@@ -155,11 +155,11 @@ export function ProfileAppPreferences() {
             type="checkbox"
             checked={preferences.sakTooltips}
             onChange={(e) => update({ sakTooltips: e.target.checked })}
-            className="mt-1 h-4 w-4 rounded border-input text-indigo-600 focus:ring-indigo-500"
+            className="mt-1 h-4 w-4 rounded border-input text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500"
           />
           <span className="min-w-0">
             <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Info className="h-4 w-4 text-indigo-600" />
+              <Info className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               Vis hjelpetekster i saker
             </span>
             <span className="mt-1 block text-xs text-muted-foreground">

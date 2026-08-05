@@ -128,12 +128,12 @@ export default function LoginClient() {
         <FadeIn delay={0.1}>
           <div className="sm:mx-auto sm:w-full sm:max-w-md">
             <div className="flex justify-center">
-              <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                <Phone className="w-8 h-8 text-emerald-600" />
+              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-950/50 rounded-2xl flex items-center justify-center">
+                <Phone className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Bekreft telefonnummer</h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">Bekreft telefonnummer</h2>
+            <p className="mt-2 text-center text-sm text-muted-foreground">
               For å sikre &quot;én person, én stemme&quot; trenger vi å verifisere telefonnummeret ditt via SMS.
             </p>
           </div>
@@ -141,11 +141,11 @@ export default function LoginClient() {
 
         <FadeIn delay={0.2} direction="up">
           <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-            <div className="bg-white py-8 px-4 shadow-sm sm:rounded-3xl sm:px-10 border border-gray-100 space-y-6">
-              {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">{error}</div>}
+            <div className="bg-card py-8 px-4 shadow-sm sm:rounded-3xl sm:px-10 border border-border space-y-6">
+              {error && <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-xl text-sm">{error}</div>}
 
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="phone" className="block text-sm font-medium text-foreground">
                   Telefonnummer (med landskode)
                 </label>
                 <div className="mt-1 flex gap-2">
@@ -155,7 +155,7 @@ export default function LoginClient() {
                     placeholder="+47 XXX XX XXX"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   />
                   <button
                     onClick={handleSendOtp}
@@ -168,7 +168,7 @@ export default function LoginClient() {
               </div>
 
               <div>
-                <label htmlFor="otp" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="otp" className="block text-sm font-medium text-foreground">
                   Verifiseringskode
                 </label>
                 <div className="mt-1">
@@ -180,7 +180,7 @@ export default function LoginClient() {
                     placeholder="123456"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value)}
-                    className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm tracking-widest text-center text-lg"
+                    className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm tracking-widest text-center text-lg"
                   />
                 </div>
               </div>
@@ -202,7 +202,7 @@ export default function LoginClient() {
                   router.push(completeNext);
                   router.refresh();
                 }}
-                className="w-full text-center text-sm text-gray-500 hover:text-gray-700"
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
               >
                 Fortsett uten SMS-verifisering
               </button>
@@ -218,27 +218,27 @@ export default function LoginClient() {
       <FadeIn delay={0.1}>
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <div className="flex justify-center">
-            <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center">
-              <ShieldCheck className="w-8 h-8 text-indigo-600" />
+            <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-950/50 rounded-2xl flex items-center justify-center">
+              <ShieldCheck className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
             </div>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">
             {isRegister ? 'Registrer ny bruker' : 'Logg inn på din konto'}
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">Tilgang til sikker, representativ demokratideltakelse.</p>
+          <p className="mt-2 text-center text-sm text-muted-foreground">Tilgang til sikker, representativ demokratideltakelse.</p>
         </div>
       </FadeIn>
 
       <FadeIn delay={0.2} direction="up">
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-white py-8 px-4 shadow-sm sm:rounded-3xl sm:px-10 border border-gray-100">
-            {error && <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">{error}</div>}
+          <div className="bg-card py-8 px-4 shadow-sm sm:rounded-3xl sm:px-10 border border-border">
+            {error && <div className="mb-6 bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-xl text-sm">{error}</div>}
 
             <div className="space-y-3 mb-6">
               <button
                 onClick={() => handleSocialLogin('google')}
                 disabled={isLoading}
-                className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-300 rounded-xl shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-border rounded-xl shadow-sm text-sm font-medium text-foreground bg-card hover:bg-muted/50 disabled:opacity-50 transition-colors"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path
@@ -264,10 +264,10 @@ export default function LoginClient() {
 
             <div className="relative mb-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200" />
+                <div className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">eller med e-post</span>
+                <span className="px-4 bg-card text-muted-foreground">eller med e-post</span>
               </div>
             </div>
 
@@ -275,7 +275,7 @@ export default function LoginClient() {
               {isRegister && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="first-name" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="first-name" className="block text-sm font-medium text-foreground">
                       Fornavn
                     </label>
                     <div className="mt-1">
@@ -287,12 +287,12 @@ export default function LoginClient() {
                         minLength={2}
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
-                        className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       />
                     </div>
                   </div>
                   <div>
-                    <label htmlFor="last-name" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="last-name" className="block text-sm font-medium text-foreground">
                       Etternavn
                     </label>
                     <div className="mt-1">
@@ -304,7 +304,7 @@ export default function LoginClient() {
                         minLength={2}
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
-                        className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       />
                     </div>
                   </div>
@@ -312,7 +312,7 @@ export default function LoginClient() {
               )}
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="email" className="block text-sm font-medium text-foreground">
                   E-post
                 </label>
                 <div className="mt-1">
@@ -324,13 +324,13 @@ export default function LoginClient() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="password" className="block text-sm font-medium text-foreground">
                   Passord
                 </label>
                 <div className="mt-1">
@@ -341,7 +341,7 @@ export default function LoginClient() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   />
                 </div>
               </div>
@@ -385,7 +385,7 @@ export default function LoginClient() {
                     setIsRegister(!isRegister);
                     setError('');
                   }}
-                  className="text-sm text-indigo-600 hover:text-indigo-500"
+                  className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
                 >
                   {isRegister ? 'Har du allerede konto? Logg inn her' : 'Trenger du konto? Registrer deg'}
                 </button>

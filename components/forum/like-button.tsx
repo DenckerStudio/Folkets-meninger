@@ -80,14 +80,14 @@ export default function LikeButton({
           onClick={handleToggle}
           disabled={!user || isSubmitting}
           className={`rounded-lg p-1.5 transition-colors disabled:opacity-40 ${
-            liked ? 'text-indigo-600' : 'text-gray-400 hover:bg-gray-100 hover:text-indigo-600'
+            liked ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground hover:bg-muted hover:text-indigo-600 dark:text-indigo-400'
           }`}
           aria-pressed={liked}
           aria-label={liked ? 'Fjern like' : 'Lik'}
         >
           <ChevronUp className={`h-5 w-5 ${liked ? 'fill-current' : ''}`} />
         </button>
-        <span className={`text-xs font-semibold tabular-nums ${liked ? 'text-indigo-600' : 'text-gray-500'}`}>
+        <span className={`text-xs font-semibold tabular-nums ${liked ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground'}`}>
           {count}
         </span>
       </div>
@@ -101,8 +101,8 @@ export default function LikeButton({
       disabled={!user || isSubmitting}
       className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
         liked
-          ? 'text-indigo-600'
-          : 'text-gray-500 hover:bg-gray-100 hover:text-indigo-600'
+          ? 'text-indigo-600 dark:text-indigo-400'
+          : 'text-muted-foreground hover:bg-muted hover:text-indigo-600 dark:text-indigo-400'
       }`}
       aria-pressed={liked}
     >
@@ -132,7 +132,7 @@ export function ShareThreadButton({ threadId }: { threadId: string }) {
     <button
       type="button"
       onClick={handleShare}
-      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
+      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
     >
       <Share2 className="w-4 h-4" />
       {copied ? 'Kopiert!' : 'Del'}
@@ -142,7 +142,7 @@ export function ShareThreadButton({ threadId }: { threadId: string }) {
 
 export function CommentCountPill({ count }: { count: number }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800">
+    <span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
       <MessageCircle className="h-4 w-4" />
       {count}
     </span>

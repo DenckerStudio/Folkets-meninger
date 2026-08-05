@@ -16,27 +16,27 @@ export default async function InnsiktPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-          <BarChart3 className="w-8 h-8 text-indigo-600" />
+        <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+          <BarChart3 className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
           Åpen innsikt
         </h1>
-        <p className="text-gray-600 mt-2">
+        <p className="text-muted-foreground mt-2">
           Anonyme stemmetall fra Folkets Stemme. Ingen persondata eller forumtekst.
         </p>
       </div>
 
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex gap-3 text-sm text-amber-900">
+      <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 p-4 flex gap-3 text-sm text-amber-900">
         <Info className="w-5 h-5 shrink-0 mt-0.5" />
         <p>{PUBLIC_STATS_DISCLAIMER}</p>
       </div>
 
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-muted-foreground">
         Oppdatert {new Date(snapshot.generatedAt).toLocaleString('nb-NO')} · Kun saker med minst{' '}
         {GOVERNMENT_STATS_MIN_VOTES} stemmer
       </p>
 
       {snapshot.issues.length === 0 ? (
-        <p className="text-gray-500 text-center py-12 rounded-xl border border-gray-200 bg-gray-50">
+        <p className="text-muted-foreground text-center py-12 rounded-xl border border-border bg-muted/40">
           Ingen saker har nok stemmer til å vises offentlig ennå.
         </p>
       ) : (
@@ -50,14 +50,14 @@ export default async function InnsiktPage() {
             return (
               <li
                 key={issue.stortingetIssueId}
-                className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+                className="rounded-xl border border-border bg-card p-5 shadow-sm"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <h2 className="font-semibold text-gray-900 pr-4">{issue.title}</h2>
-                  <span className="text-xs text-gray-500 shrink-0">{issue.total} stemmer</span>
+                  <h2 className="font-semibold text-foreground pr-4">{issue.title}</h2>
+                  <span className="text-xs text-muted-foreground shrink-0">{issue.total} stemmer</span>
                 </div>
 
-                <div className="mt-4 h-3 rounded-full overflow-hidden flex bg-gray-100">
+                <div className="mt-4 h-3 rounded-full overflow-hidden flex bg-muted">
                   <div
                     className="bg-emerald-500"
                     style={{ width: `${forPct}%` }}
@@ -69,13 +69,13 @@ export default async function InnsiktPage() {
                     title={`Mot ${againstPct}%`}
                   />
                   <div
-                    className="bg-gray-400"
+                    className="bg-muted-foreground/50"
                     style={{ width: `${abstainPct}%` }}
                     title={`Avstår ${abstainPct}%`}
                   />
                 </div>
 
-                <div className="mt-2 flex flex-wrap gap-4 text-xs text-gray-600">
+                <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
                   <span>For: {issue.for} ({forPct}%)</span>
                   <span>Mot: {issue.against} ({againstPct}%)</span>
                   <span>Avstår: {issue.abstain} ({abstainPct}%)</span>
@@ -84,7 +84,7 @@ export default async function InnsiktPage() {
                 <div className="mt-4 flex flex-wrap gap-4 text-sm">
                   <Link
                     href={routes.sak(issue.stortingetIssueId)}
-                    className="text-indigo-600 hover:underline"
+                    className="text-indigo-600 dark:text-indigo-400 hover:underline"
                   >
                     Se sak →
                   </Link>
@@ -92,7 +92,7 @@ export default async function InnsiktPage() {
                     href={issue.stortingetUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-700"
+                    className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                   >
                     Stortinget
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -104,9 +104,9 @@ export default async function InnsiktPage() {
         </ul>
       )}
 
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-muted-foreground">
         Maskinlesbar data:{' '}
-        <a href="/api/public/vote-stats" className="text-indigo-600 hover:underline">
+        <a href="/api/public/vote-stats" className="text-indigo-600 dark:text-indigo-400 hover:underline">
           /api/public/vote-stats
         </a>
       </p>

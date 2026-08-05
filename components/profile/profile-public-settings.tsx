@@ -32,10 +32,10 @@ function VerificationRow({
   hint: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
+    <div className="flex items-start justify-between gap-3 rounded-xl border border-border bg-muted/40 px-3 py-2.5">
       <div>
-        <p className="text-sm font-medium text-gray-900">{label}</p>
-        <p className="text-xs text-gray-500">{hint}</p>
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground">{hint}</p>
       </div>
       <span
         className={`inline-flex items-center gap-1 text-xs font-semibold ${verified ? 'text-emerald-700' : 'text-amber-700'}`}
@@ -120,23 +120,23 @@ export function ProfilePublicSettings({ userId }: { userId: string }) {
         description="Poeng er alltid synlige og viser tillit bygget gjennom aktivitet. Bio og parti deles bare hvis du velger det."
       >
         <div className="grid gap-4">
-          <label className="flex items-start gap-3 rounded-xl border border-gray-200 p-4">
+          <label className="flex items-start gap-3 rounded-xl border border-border p-4">
             <input
               type="checkbox"
               checked={isPublic}
               onChange={(e) => setIsPublic(e.target.checked)}
-              className="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              className="mt-1 rounded border-border text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500"
             />
             <span>
-              <span className="block text-sm font-medium text-gray-900">Gjør profilen min offentlig</span>
-              <span className="block text-sm text-gray-500">
+              <span className="block text-sm font-medium text-foreground">Gjør profilen min offentlig</span>
+              <span className="block text-sm text-muted-foreground">
                 Andre kan se bio, synlige preferanser og forumaktivitet på profilsiden din.
               </span>
             </span>
           </label>
 
           <div>
-            <label htmlFor="public-bio" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="public-bio" className="block text-sm font-medium text-foreground">
               Bio
             </label>
             <textarea
@@ -145,13 +145,13 @@ export function ProfilePublicSettings({ userId }: { userId: string }) {
               value={bio}
               maxLength={500}
               onChange={(e) => setBio(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
               placeholder="Kort om deg og hva du bryr deg om politisk."
             />
-            <p className="mt-1 text-xs text-gray-500">{bio.length}/500 tegn</p>
+            <p className="mt-1 text-xs text-muted-foreground">{bio.length}/500 tegn</p>
           </div>
 
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-amber-950">
               <Trophy className="h-4 w-4" />
               +15 poeng for fullført profil
@@ -175,7 +175,7 @@ export function ProfilePublicSettings({ userId }: { userId: string }) {
             {!verification.fullyVerified && (
               <Link
                 href={routes.login}
-                className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-indigo-700 hover:text-indigo-600"
+                className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-indigo-700 dark:text-indigo-300 hover:text-indigo-600 dark:text-indigo-400"
               >
                 <Phone className="h-4 w-4" />
                 Gå til innlogging for å fullføre verifisering
@@ -188,7 +188,7 @@ export function ProfilePublicSettings({ userId }: { userId: string }) {
               </p>
             )}
             {verification.emailVerified && !verification.phoneVerified && (
-              <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-gray-600">
+              <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Mail className="h-3.5 w-3.5" />
                 E-post er bekreftet. Telefon gjenstår.
               </p>
@@ -196,34 +196,34 @@ export function ProfilePublicSettings({ userId }: { userId: string }) {
           </div>
 
           <div>
-            <label htmlFor="party-preference" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="party-preference" className="block text-sm font-medium text-foreground">
               Parti du holder mest med
             </label>
             <input
               id="party-preference"
               value={partyPreference}
               onChange={(e) => setPartyPreference(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
               placeholder="Valgfritt, f.eks. Venstre"
             />
-            <label className="mt-2 flex items-center gap-2 text-sm text-gray-700">
+            <label className="mt-2 flex items-center gap-2 text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={showParty}
                 onChange={(e) => setShowParty(e.target.checked)}
-                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                className="rounded border-border text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500"
               />
               Vis partipreferanse offentlig
             </label>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
-            Du har <span className="font-semibold text-gray-900">{points} poeng</span>. Poeng kan ikke skjules —
+          <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+            Du har <span className="font-semibold text-foreground">{points} poeng</span>. Poeng kan ikke skjules —
             de viser troverdighet bygget over tid.
           </div>
         </div>
 
-        {message && <p className="text-sm text-gray-600">{message}</p>}
+        {message && <p className="text-sm text-muted-foreground">{message}</p>}
 
         <div className="flex flex-wrap gap-3">
           <button
@@ -236,7 +236,7 @@ export function ProfilePublicSettings({ userId }: { userId: string }) {
           </button>
           <Link
             href={routes.profile(userId)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
           >
             Se offentlig profil <ExternalLink className="h-4 w-4" />
           </Link>

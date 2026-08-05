@@ -18,7 +18,7 @@ export function DashboardMobileNav() {
   const pathname = usePathname();
 
   return (
-    <div className="border-b border-gray-100 bg-white/95 px-4 py-2 backdrop-blur md:hidden">
+    <div className="border-b border-border bg-card/95 px-4 py-2 backdrop-blur md:hidden">
       <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" aria-label="Dashboard-navigasjon mobil">
         {DASHBOARD_MOBILE_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
@@ -29,8 +29,8 @@ export function DashboardMobileNav() {
               className={cn(
                 'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-colors',
                 active
-                  ? 'border-[#00205b] bg-[#00205b] text-white'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300',
+                  ? 'border-brand bg-[#00205b] text-white'
+                  : 'border-border bg-card text-foreground hover:border-border',
               )}
             >
               <Icon className="h-3.5 w-3.5" />

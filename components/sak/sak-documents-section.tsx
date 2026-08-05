@@ -101,7 +101,7 @@ function SakDocumentViewer({
             href={document.sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-500"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
           >
             <ExternalLink className="h-4 w-4" />
             Åpne originalkilde
@@ -125,7 +125,7 @@ function SakDocumentViewer({
                 href={document.sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 font-medium text-indigo-700 hover:text-indigo-600"
+                className="inline-flex items-center gap-1.5 font-medium text-indigo-700 dark:text-indigo-300 hover:text-indigo-600 dark:text-indigo-400"
               >
                 <ExternalLink className="h-4 w-4" />
                 Åpne på ekstern side
@@ -143,7 +143,7 @@ function SakDocumentViewer({
               href={content.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 font-medium text-indigo-600 hover:text-indigo-500"
+              className="inline-flex items-center gap-1.5 font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
             >
               <ExternalLink className="h-4 w-4" />
               Åpne {content.title}
@@ -162,7 +162,7 @@ function SakDocumentViewer({
               href={content.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 font-medium text-indigo-600 hover:text-indigo-500"
+              className="inline-flex items-center gap-1.5 font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
             >
               <ExternalLink className="h-4 w-4" />
               Åpne originalkilde

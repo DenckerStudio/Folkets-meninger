@@ -20,18 +20,18 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
     <div className="mx-auto max-w-5xl space-y-6 pb-12">
       <BackButton fallbackHref={routes.forum} />
 
-      <section className="rounded-2xl border border-gray-200 bg-gradient-to-br from-[#00205b]/5 via-white to-[#ba0c2f]/5 p-6 shadow-sm">
+      <section className="rounded-2xl border border-border bg-gradient-to-br from-[#00205b]/5 via-background to-[#ba0c2f]/5 p-6 shadow-sm">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#00205b] text-xl font-bold text-white shadow-md">
               {profile.initials}
             </div>
             <div className="min-w-0">
-              <p className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-white/80 px-2.5 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-indigo-100">
+              <p className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-card/80 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-100">
                 <UserCircle className="h-3.5 w-3.5" />
                 Offentlig forumprofil
               </p>
-              <h1 className="truncate text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+              <h1 className="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                 {profile.displayName}
               </h1>
               <div className="mt-2">
@@ -52,10 +52,10 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-6">
-          <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900">Om brukeren</h2>
+          <section className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-foreground">Om brukeren</h2>
             {profile.isPublic ? (
-              <p className="mt-3 text-sm leading-6 text-gray-700">
+              <p className="mt-3 text-sm leading-6 text-foreground">
                 {profile.bio || 'Brukeren har ikke skrevet bio ennå.'}
               </p>
             ) : (
@@ -69,33 +69,33 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
             )}
           </section>
 
-          <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-              <MessageSquare className="h-5 w-5 text-gray-400" />
+          <section className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+              <MessageSquare className="h-5 w-5 text-muted-foreground" />
               Forumaktivitet
             </h2>
 
             {profile.activity.length === 0 ? (
-              <p className="mt-4 text-sm text-gray-500">Ingen offentlige innlegg eller kommentarer ennå.</p>
+              <p className="mt-4 text-sm text-muted-foreground">Ingen offentlige innlegg eller kommentarer ennå.</p>
             ) : (
               <div className="mt-5 space-y-3">
                 {profile.activity.map((item) => (
                   <Link
                     key={`${item.kind}:${item.id}`}
                     href={routes.forumTopic(item.threadId)}
-                    className="group block rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-indigo-200 hover:bg-indigo-50/40"
+                    className="group block rounded-xl border border-border bg-card p-4 transition-colors hover:border-indigo-200 hover:bg-indigo-50 dark:bg-indigo-950/40/40"
                   >
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                      <span className="rounded-full bg-indigo-50 px-2 py-0.5 font-semibold text-indigo-700 ring-1 ring-indigo-100">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span className="rounded-full bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 font-semibold text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-100">
                         {item.kind === 'thread' ? 'Tråd' : 'Kommentar'}
                       </span>
                       <span>·</span>
                       <span>{item.createdAtLabel}</span>
                     </div>
-                    <h3 className="mt-2 font-semibold text-gray-900 group-hover:text-indigo-700">
+                    <h3 className="mt-2 font-semibold text-foreground group-hover:text-indigo-700 dark:text-indigo-300">
                       {item.kind === 'thread' ? item.title : item.threadTitle}
                     </h3>
-                    <p className="mt-1 line-clamp-2 text-sm leading-6 text-gray-600">{item.excerpt}</p>
+                    <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted-foreground">{item.excerpt}</p>
                   </Link>
                 ))}
               </div>
@@ -104,8 +104,8 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         </div>
 
         <aside className="space-y-4">
-          <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Delte preferanser</h2>
+          <section className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Delte preferanser</h2>
             <div className="mt-4 space-y-3">
               <InfoRow label="Nivå" value={profile.pointsProgress.tier.name} />
               <InfoRow label="Poeng" value={`${profile.points} poeng`} />
@@ -115,7 +115,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
 
           <section className="rounded-xl border border-emerald-100 bg-emerald-50 p-5">
             <div className="flex items-start gap-3">
-              <ShieldCheck className="mt-0.5 h-5 w-5 text-emerald-600" />
+              <ShieldCheck className="mt-0.5 h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               <div>
                 <p className="text-sm font-semibold text-emerald-950">Personvern først</p>
                 <p className="mt-1 text-sm leading-6 text-emerald-800">
@@ -126,7 +126,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
           </section>
 
           {profile.pointsProgress.nextUnlock && (
-            <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
+            <section className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 p-5 text-amber-950">
               <p className="text-sm font-semibold">Neste nivå</p>
               <p className="mt-2 text-sm leading-6 text-amber-800">{profile.pointsProgress.nextUnlock}</p>
               <p className="mt-3 text-sm font-bold tabular-nums text-amber-900">
@@ -142,18 +142,18 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-xl border border-gray-100 bg-white/85 px-4 py-3 shadow-sm">
-      <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</dt>
-      <dd className="mt-0.5 text-2xl font-bold text-[#00205b]">{value}</dd>
+    <div className="rounded-xl border border-border bg-card/85 px-4 py-3 shadow-sm">
+      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-2xl font-bold text-brand">{value}</dd>
     </div>
   );
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl bg-gray-50 px-3 py-2">
-      <span className="text-sm text-gray-500">{label}</span>
-      <span className="text-sm font-semibold text-gray-900">{value}</span>
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/40 px-3 py-2">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm font-semibold text-foreground">{value}</span>
     </div>
   );
 }

@@ -10,8 +10,8 @@ type PageHeaderProps = {
 export function PageHeader({ title, description, className, as: Tag = 'h1' }: PageHeaderProps) {
   return (
     <div className={cn('space-y-2', className)}>
-      <Tag className="text-2xl font-bold tracking-tight text-gray-900">{title}</Tag>
-      {description ? <p className="text-gray-600">{description}</p> : null}
+      <Tag className="text-2xl font-bold tracking-tight text-foreground">{title}</Tag>
+      {description ? <p className="text-muted-foreground">{description}</p> : null}
     </div>
   );
 }

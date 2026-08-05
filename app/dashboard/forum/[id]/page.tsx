@@ -34,7 +34,7 @@ export default async function ForumPostPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-12">
-      <article className="flex gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
+      <article className="flex gap-4 rounded-xl border border-border bg-card p-4 sm:p-6">
         <div className="shrink-0">
           <LikeButton
             targetType="thread"
@@ -47,10 +47,10 @@ export default async function ForumPostPage({ params }: { params: Promise<{ id: 
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               {post.relatedIssueId && post.relatedIssueTitle && (
                 <>
-                  <Link href={routes.sak(post.relatedIssueId)} className="font-semibold text-gray-900 hover:underline">
+                  <Link href={routes.sak(post.relatedIssueId)} className="font-semibold text-foreground hover:underline">
                     r/{post.relatedIssueTitle.length > 40 ? `${post.relatedIssueTitle.slice(0, 40)}…` : post.relatedIssueTitle}
                   </Link>
                   <span>·</span>
@@ -75,7 +75,7 @@ export default async function ForumPostPage({ params }: { params: Promise<{ id: 
             />
           </div>
 
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">{post.title}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-4">{post.title}</h1>
 
           {post.contextItems.length > 0 && (
             <div className="mb-4">
@@ -86,7 +86,7 @@ export default async function ForumPostPage({ params }: { params: Promise<{ id: 
           <FormattedForumBody
             text={post.content}
             contextItems={post.contextItems}
-            className="text-gray-700 leading-relaxed"
+            className="text-foreground leading-relaxed"
           />
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -105,13 +105,13 @@ export default async function ForumPostPage({ params }: { params: Promise<{ id: 
       )}
 
       <section className="space-y-4">
-        <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-          <MessageCircle className="w-5 h-5 text-gray-400" />
+        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <MessageCircle className="w-5 h-5 text-muted-foreground" />
           Svar ({post.replies.length})
         </h2>
 
         {post.replies.length === 0 ? (
-          <p className="text-center py-8 text-gray-500 text-sm">Ingen svar ennå. Vær den første!</p>
+          <p className="text-center py-8 text-muted-foreground text-sm">Ingen svar ennå. Vær den første!</p>
         ) : (
           <div className="space-y-3">
             {post.replies.map((reply) => {
@@ -124,7 +124,7 @@ export default async function ForumPostPage({ params }: { params: Promise<{ id: 
                   key={reply.id}
                   id={`reply-${reply.id}`}
                   className={`flex gap-3 rounded-xl border p-4 scroll-mt-24 ${
-                    reply.isOfficialResponse ? 'border-indigo-300 bg-indigo-50/30' : 'border-gray-200 bg-white'
+                    reply.isOfficialResponse ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-950/40/30' : 'border-border bg-card'
                   }`}
                 >
                   <LikeButton
@@ -146,15 +146,15 @@ export default async function ForumPostPage({ params }: { params: Promise<{ id: 
                         {reply.author ? (
                           <ForumAuthorBadge author={reply.author} />
                         ) : (
-                          <span className="text-sm text-gray-500">Ukjent forfatter</span>
+                          <span className="text-sm text-muted-foreground">Ukjent forfatter</span>
                         )}
                         {reply.isVerifiedPolitician && (
-                          <span className="text-indigo-600 text-xs inline-flex items-center gap-0.5 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                          <span className="text-indigo-600 dark:text-indigo-400 text-xs inline-flex items-center gap-0.5 bg-indigo-50 dark:bg-indigo-950/40 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-900/50">
                             <ShieldCheck className="w-3 h-3" />
                             Verifisert
                           </span>
                         )}
-                        <span className="text-xs text-gray-500">{reply.createdAt}</span>
+                        <span className="text-xs text-muted-foreground">{reply.createdAt}</span>
                       </div>
                       <ForumPostActions
                         targetType="reply"
@@ -163,7 +163,7 @@ export default async function ForumPostPage({ params }: { params: Promise<{ id: 
                         threadId={post.id}
                       />
                     </div>
-                    <FormattedForumBody text={reply.content} className="text-gray-700 text-sm" />
+                    <FormattedForumBody text={reply.content} className="text-foreground text-sm" />
                   </div>
                 </article>
               );

@@ -36,13 +36,13 @@ const partyLogos: Record<string, string> = {
 
 function getPartyColor(partyName: string) {
   const colors: Record<string, { bg: string; text: string; border: string; icon: string }> = {
-    Arbeiderpartiet: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-100', icon: 'bg-red-600' },
+    Arbeiderpartiet: { bg: 'bg-destructive/10', text: 'text-destructive', border: 'border-red-100', icon: 'bg-red-600' },
     Høyre: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-100', icon: 'bg-blue-600' },
     Senterpartiet: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-100', icon: 'bg-green-600' },
     Fremskrittspartiet: {
-      bg: 'bg-indigo-50',
-      text: 'text-indigo-700',
-      border: 'border-indigo-100',
+      bg: 'bg-indigo-50 dark:bg-indigo-950/40',
+      text: 'text-indigo-700 dark:text-indigo-300',
+      border: 'border-indigo-100 dark:border-indigo-900/50',
       icon: 'bg-indigo-900',
     },
     'Sosialistisk Venstreparti': {
@@ -51,7 +51,7 @@ function getPartyColor(partyName: string) {
       border: 'border-rose-100',
       icon: 'bg-rose-600',
     },
-    Rødt: { bg: 'bg-red-50', text: 'text-red-800', border: 'border-red-200', icon: 'bg-red-700' },
+    Rødt: { bg: 'bg-destructive/10', text: 'text-red-800', border: 'border-destructive/30', icon: 'bg-red-700' },
     Venstre: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-100', icon: 'bg-emerald-600' },
     'Kristelig Folkeparti': {
       bg: 'bg-yellow-50',
@@ -68,7 +68,7 @@ function getPartyColor(partyName: string) {
     Pasientfokus: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-100', icon: 'bg-orange-500' },
   };
 
-  return colors[partyName] || { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', icon: 'bg-gray-500' };
+  return colors[partyName] || { bg: 'bg-muted/40', text: 'text-foreground', border: 'border-border', icon: 'bg-muted/400' };
 }
 
 function PolitikerCard({ rep, index }: { rep: PolitikerOversikt; index: number }) {
@@ -79,12 +79,12 @@ function PolitikerCard({ rep, index }: { rep: PolitikerOversikt; index: number }
     <FadeIn delay={0.1 * Math.min(index, 8)} direction="up">
       <Link
         href={routes.politiker(String(rep.id))}
-        className="group bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-gray-200 transition-all duration-200 flex flex-col h-full overflow-hidden"
+        className="group bg-card rounded-2xl shadow-sm border border-border hover:shadow-lg hover:border-border transition-all duration-200 flex flex-col h-full overflow-hidden"
       >
         <div className={`h-2 w-full ${partyColors.icon}`} />
         <div className="p-6 flex flex-col flex-grow">
           <div className="flex items-start justify-between mb-5">
-            <div className="relative w-14 h-14 rounded-2xl shadow-sm overflow-hidden border border-gray-100 group-hover:scale-105 transition-transform duration-200 bg-gray-50">
+            <div className="relative w-14 h-14 rounded-2xl shadow-sm overflow-hidden border border-border group-hover:scale-105 transition-transform duration-200 bg-muted/40">
               <Image
                 src={getPersonbildeUrl(rep.id, 'lite', true)}
                 alt={`${rep.fornavn} ${rep.etternavn}`}
@@ -94,7 +94,7 @@ function PolitikerCard({ rep, index }: { rep: PolitikerOversikt; index: number }
               />
             </div>
             {rep.erRegjeringsmedlem ? (
-              <div className="flex items-center bg-amber-50 text-amber-800 px-2.5 py-1 rounded-full text-xs font-semibold border border-amber-100 shadow-sm max-w-[120px]">
+              <div className="flex items-center bg-amber-50 dark:bg-amber-950/40 text-amber-800 px-2.5 py-1 rounded-full text-xs font-semibold border border-amber-100 shadow-sm max-w-[120px]">
                 <Landmark className="w-3.5 h-3.5 mr-1 shrink-0" />
                 <span className="truncate">{roleLabel}</span>
               </div>
@@ -107,13 +107,13 @@ function PolitikerCard({ rep, index }: { rep: PolitikerOversikt; index: number }
           </div>
 
           <div className="mb-4">
-            <h3 className="text-xl font-bold text-gray-900 leading-tight mb-1 group-hover:text-indigo-600 transition-colors">
+            <h3 className="text-xl font-bold text-foreground leading-tight mb-1 group-hover:text-indigo-600 dark:text-indigo-400 transition-colors">
               {rep.fornavn} {rep.etternavn}
             </h3>
-            <p className="text-sm font-medium text-gray-500">{roleLabel}</p>
+            <p className="text-sm font-medium text-muted-foreground">{roleLabel}</p>
           </div>
 
-          <div className="mt-auto pt-5 border-t border-gray-50 space-y-3">
+          <div className="mt-auto pt-5 border-t border-border space-y-3">
             <div className="flex items-center text-sm">
               <div
                 className={`w-6 h-6 rounded-full ${partyColors.bg} flex items-center justify-center mr-3 flex-shrink-0 overflow-hidden relative`}
@@ -130,13 +130,13 @@ function PolitikerCard({ rep, index }: { rep: PolitikerOversikt; index: number }
                   <Building2 className={`w-3.5 h-3.5 ${partyColors.text}`} />
                 )}
               </div>
-              <span className="font-medium text-gray-700">{rep.parti.navn}</span>
+              <span className="font-medium text-foreground">{rep.parti.navn}</span>
             </div>
             <div className="flex items-center text-sm">
-              <div className="w-6 h-6 rounded-full bg-gray-50 flex items-center justify-center mr-3 flex-shrink-0">
-                <MapPin className="w-3.5 h-3.5 text-gray-500" />
+              <div className="w-6 h-6 rounded-full bg-muted/40 flex items-center justify-center mr-3 flex-shrink-0">
+                <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
               </div>
-              <span className="text-gray-600">{rep.departement || rep.fylke.navn}</span>
+              <span className="text-muted-foreground">{rep.departement || rep.fylke.navn}</span>
             </div>
           </div>
         </div>
@@ -199,18 +199,18 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="relative w-full sm:w-96">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
+              <Search className="h-5 w-5 text-muted-foreground" />
             </div>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+              className="block w-full pl-10 pr-3 py-2 border border-border rounded-xl leading-5 bg-card placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
               placeholder="Søk etter navn, parti, rolle eller fylke..."
             />
           </div>
-          <div className="flex items-center text-sm text-gray-500 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
-            <ShieldCheck className="w-4 h-4 text-indigo-600 mr-2" />
+          <div className="flex items-center text-sm text-muted-foreground bg-card px-4 py-2 rounded-xl border border-border shadow-sm">
+            <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mr-2" />
             <span>{filteredPolitikere.length} politikere</span>
           </div>
         </div>
@@ -220,11 +220,11 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
         <FadeIn delay={0.25} direction="up">
           <section className="space-y-4">
             <div>
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <Landmark className="w-5 h-5 text-amber-600" />
+              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                <Landmark className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 Regjeringen
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Statsminister, statsråder og regjeringsmedlemmer fra Stortingets åpne data.
               </p>
             </div>
@@ -239,7 +239,7 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
 
       <FadeIn delay={0.3} direction="up">
         {listedPolitikere.length === 0 && !showRegjeringSection ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-muted-foreground">
             Ingen politikere funnet som matcher &quot;{searchQuery}&quot;.
           </div>
         ) : listedPolitikere.length > 0 ? (

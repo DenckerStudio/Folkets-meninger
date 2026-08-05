@@ -214,7 +214,7 @@ export default function VotingSection({
       )}
 
       {error && (
-        <div className="mb-6 text-center text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 py-2 rounded-lg">
+        <div className="mb-6 text-center text-sm font-medium text-destructive dark:text-red-400 bg-destructive/10 dark:bg-red-950/40 py-2 rounded-lg">
           {error}
         </div>
       )}
@@ -360,7 +360,7 @@ export default function VotingSection({
                 initial={{ width: 0 }}
                 animate={{ width: `${abstainPercent}%` }} 
                 transition={{ type: 'spring', bounce: 0, duration: 1 }}
-                className="bg-gray-400 relative flex items-center justify-center" 
+                className="bg-muted-foreground/50 relative flex items-center justify-center" 
                 title={`Avstår: ${abstainPercent}%`}
               >
                 {abstainPercent > 10 && <span className="text-[10px] font-bold text-white opacity-80"><AnimatedPercent value={abstainPercent} /></span>}

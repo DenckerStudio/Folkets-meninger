@@ -2,8 +2,8 @@ import { UserCircle } from 'lucide-react';
 
 export function ForumIdentityBanner() {
   return (
-    <div className="mb-6 rounded-xl border border-indigo-100 bg-indigo-50/80 p-4 flex gap-3">
-      <UserCircle className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+    <div className="mb-6 rounded-xl border border-indigo-100 bg-indigo-50 dark:bg-indigo-950/40/80 p-4 flex gap-3">
+      <UserCircle className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
       <div className="text-sm text-indigo-950">
         <p className="font-semibold">Forumet er ikke anonymt</p>
         <p className="mt-1 text-indigo-900/90">

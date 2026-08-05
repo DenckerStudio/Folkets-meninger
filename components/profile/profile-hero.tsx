@@ -33,7 +33,7 @@ export function ProfileHero({ user, voteCount, points, pointsProgress, onSignOut
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-[#00205b]/5 via-white to-[#ba0c2f]/5 p-6 shadow-sm">
+      <div className="rounded-2xl border border-border bg-gradient-to-br from-[#00205b]/5 via-background to-[#ba0c2f]/5 p-6 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4 min-w-0">
             <div
@@ -46,8 +46,8 @@ export function ProfileHero({ user, voteCount, points, pointsProgress, onSignOut
               {initialsFromUser(user)}
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-gray-900 truncate">Min profil</h1>
-              <p className="text-sm text-gray-600 mt-0.5 flex items-center gap-1 truncate">
+              <h1 className="text-2xl font-bold text-foreground truncate">Min profil</h1>
+              <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1 truncate">
                 <Shield className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
                 <span className="truncate">{displayName}</span>
               </p>
@@ -56,23 +56,23 @@ export function ProfileHero({ user, voteCount, points, pointsProgress, onSignOut
           <button
             type="button"
             onClick={onSignOut}
-            className="inline-flex items-center justify-center gap-2 self-start sm:self-center px-4 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center justify-center gap-2 self-start sm:self-center px-4 py-2 border border-border rounded-xl text-sm font-medium text-foreground bg-card hover:bg-muted/50 transition-colors"
           >
             <LogOut className="w-4 h-4" />
             Logg ut
           </button>
         </div>
         <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 max-w-md">
-          <div className="rounded-xl bg-white/80 border border-gray-100 px-4 py-3">
-            <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Stemmer</dt>
-            <dd className="text-2xl font-bold text-[#00205b] mt-0.5">{voteCount}</dd>
+          <div className="rounded-xl bg-card/80 border border-border px-4 py-3">
+            <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Stemmer</dt>
+            <dd className="text-2xl font-bold text-brand mt-0.5">{voteCount}</dd>
           </div>
-          <div className="rounded-xl bg-white/80 border border-gray-100 px-4 py-3">
-            <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Poeng</dt>
-            <dd className="text-2xl font-bold text-[#00205b] mt-0.5">{points}</dd>
+          <div className="rounded-xl bg-card/80 border border-border px-4 py-3">
+            <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Poeng</dt>
+            <dd className="text-2xl font-bold text-brand mt-0.5">{points}</dd>
           </div>
-          <div className="rounded-xl bg-white/80 border border-gray-100 px-4 py-3 col-span-2 sm:col-span-1">
-            <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Nivå</dt>
+          <div className="rounded-xl bg-card/80 border border-border px-4 py-3 col-span-2 sm:col-span-1">
+            <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nivå</dt>
             <dd className={cn('text-base font-bold mt-0.5', pointsProgress.tier.color)}>{pointsProgress.tier.name}</dd>
           </div>
         </dl>

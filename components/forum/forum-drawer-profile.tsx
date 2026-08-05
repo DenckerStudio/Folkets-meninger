@@ -39,14 +39,14 @@ export function ForumDrawerProfile({ onNavigate, className }: ForumDrawerProfile
   };
 
   return (
-    <div className={cn('mt-5 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm xl:hidden', className)}>
+    <div className={cn('mt-5 rounded-2xl border border-border bg-card p-3 shadow-sm xl:hidden', className)}>
       <div className="mb-3 flex items-center gap-3 px-3 py-1">
         <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#00205b] text-xs font-bold text-white">
           {initials}
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-gray-900">{displayName}</p>
-          <p className="truncate text-xs text-gray-500">{user.email}</p>
+          <p className="truncate text-sm font-semibold text-foreground">{displayName}</p>
+          <p className="truncate text-xs text-muted-foreground">{user.email}</p>
         </div>
       </div>
       <nav className="space-y-0.5" aria-label="Profil">
@@ -73,7 +73,7 @@ export function ForumDrawerProfile({ onNavigate, className }: ForumDrawerProfile
         <button
           type="button"
           onClick={handleSignOut}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
         >
           <LogOut className="h-5 w-5 shrink-0" />
           Logg ut
@@ -98,7 +98,7 @@ function DrawerProfileLink({
     <Link
       href={href}
       onClick={onNavigate}
-      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
     >
       <Icon className="h-5 w-5 shrink-0" />
       {label}

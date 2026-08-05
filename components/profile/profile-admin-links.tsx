@@ -28,27 +28,27 @@ export function ProfileAdminLinks() {
         <li>
           <Link
             href={routes.adminForumReports}
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50"
           >
-            <Flag className="w-4 h-4 text-gray-500" />
+            <Flag className="w-4 h-4 text-muted-foreground" />
             Rapporter
           </Link>
         </li>
         <li>
           <Link
             href={routes.adminStats}
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50"
           >
-            <BarChart2 className="w-4 h-4 text-gray-500" />
+            <BarChart2 className="w-4 h-4 text-muted-foreground" />
             Statistikk
           </Link>
         </li>
         <li>
           <Link
             href={`${routes.adminForumPrompts}?tab=pipeline`}
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50"
           >
-            <Sparkles className="w-4 h-4 text-gray-500" />
+            <Sparkles className="w-4 h-4 text-muted-foreground" />
             Forum Reels
           </Link>
         </li>

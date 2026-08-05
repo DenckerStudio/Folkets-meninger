@@ -43,40 +43,40 @@ export default async function SporsmalDetailPage({
     <div className="space-y-8 pb-12">
       <BackButton fallbackHref={routes.sporsmal} />
 
-      <article className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm space-y-6">
+      <article className="bg-card rounded-3xl border border-border p-8 shadow-sm space-y-6">
         <div className="flex flex-wrap gap-2">
-          <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
+          <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-950/50 text-indigo-800">
             {sporsmalTypeLabel(type)}
           </span>
           <span
             className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-              besvart ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+              besvart ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800' : 'bg-amber-100 dark:bg-amber-950/50 text-amber-800'
             }`}
           >
             {besvart ? 'Besvart' : 'Ubesvart'}
           </span>
           {statusLabel && (
-            <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+            <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
               {statusLabel}
             </span>
           )}
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+        <h1 className="text-2xl font-bold text-foreground">{title}</h1>
 
         {fullText.length > 200 && (
-          <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">{fullText}</div>
+          <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap">{fullText}</div>
         )}
 
         <dl className="grid sm:grid-cols-2 gap-4 text-sm">
           {fraNavn && (
             <div className="flex gap-2">
-              <User className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+              <User className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
               <div>
-                <dt className="text-gray-500">Fra</dt>
-                <dd className="font-medium text-gray-900">
+                <dt className="text-muted-foreground">Fra</dt>
+                <dd className="font-medium text-foreground">
                   {question.sporsmal_fra?.id ? (
-                    <Link href={routes.politiker(question.sporsmal_fra.id)} className="hover:text-indigo-600">
+                    <Link href={routes.politiker(question.sporsmal_fra.id)} className="hover:text-indigo-600 dark:text-indigo-400">
                       {fraNavn}
                       {question.sporsmal_fra.parti?.navn ? ` (${question.sporsmal_fra.parti.navn})` : ''}
                     </Link>
@@ -89,28 +89,28 @@ export default async function SporsmalDetailPage({
           )}
           {question.sporsmal_til_minister_tittel && (
             <div className="flex gap-2">
-              <User className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+              <User className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
               <div>
-                <dt className="text-gray-500">Til</dt>
-                <dd className="font-medium text-gray-900">{question.sporsmal_til_minister_tittel}</dd>
+                <dt className="text-muted-foreground">Til</dt>
+                <dd className="font-medium text-foreground">{question.sporsmal_til_minister_tittel}</dd>
               </div>
             </div>
           )}
           {sendt && (
             <div className="flex gap-2">
-              <Calendar className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+              <Calendar className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
               <div>
-                <dt className="text-gray-500">Dato</dt>
-                <dd className="font-medium text-gray-900">{sendt}</dd>
+                <dt className="text-muted-foreground">Dato</dt>
+                <dd className="font-medium text-foreground">{sendt}</dd>
               </div>
             </div>
           )}
           {besvartDato && (
             <div className="flex gap-2">
-              <Calendar className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+              <Calendar className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
               <div>
-                <dt className="text-gray-500">Besvart</dt>
-                <dd className="font-medium text-gray-900">
+                <dt className="text-muted-foreground">Besvart</dt>
+                <dd className="font-medium text-foreground">
                   {besvartDato}
                   {question.besvart_av_minister_tittel ? ` av ${question.besvart_av_minister_tittel}` : ''}
                 </dd>
@@ -121,10 +121,10 @@ export default async function SporsmalDetailPage({
 
         {emner.length > 0 && (
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Emner</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Emner</p>
             <div className="flex flex-wrap gap-2">
               {emner.map((emne) => (
-                <span key={emne} className="inline-flex px-2.5 py-1 rounded-lg bg-gray-100 text-sm text-gray-700">
+                <span key={emne} className="inline-flex px-2.5 py-1 rounded-lg bg-muted text-sm text-foreground">
                   {emne}
                 </span>
               ))}
@@ -134,7 +134,7 @@ export default async function SporsmalDetailPage({
 
         <Link
           href={routes.forumNew()}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-500"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
         >
           <MessageSquare className="w-4 h-4" />
           Diskuter i forum

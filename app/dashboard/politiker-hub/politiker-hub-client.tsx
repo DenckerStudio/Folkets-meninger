@@ -29,9 +29,9 @@ function PolitikerListItem({ rep }: { rep: PolitikerOversikt }) {
   return (
     <Link
       href={routes.politiker(String(rep.id))}
-      className="p-4 border border-gray-100 rounded-xl flex items-center bg-gray-50 hover:bg-gray-100 transition-colors"
+      className="p-4 border border-border rounded-xl flex items-center bg-muted/40 hover:bg-muted transition-colors"
     >
-      <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold mr-4 flex-shrink-0 overflow-hidden relative">
+      <div className="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold mr-4 flex-shrink-0 overflow-hidden relative">
         <Image
           src={getPersonbildeUrl(rep.id, 'lite', true)}
           alt={`${rep.fornavn} ${rep.etternavn}`}
@@ -41,10 +41,10 @@ function PolitikerListItem({ rep }: { rep: PolitikerOversikt }) {
         />
       </div>
       <div className="overflow-hidden">
-        <h3 className="font-semibold text-gray-900 truncate" title={`${rep.fornavn} ${rep.etternavn}`}>
+        <h3 className="font-semibold text-foreground truncate" title={`${rep.fornavn} ${rep.etternavn}`}>
           {rep.fornavn} {rep.etternavn}
         </h3>
-        <div className="flex items-center text-xs text-gray-500 mt-1">
+        <div className="flex items-center text-xs text-muted-foreground mt-1">
           {partyLogos[rep.parti.navn] && (
             <div className="relative w-4 h-4 mr-1.5 flex-shrink-0">
               <Image
@@ -56,7 +56,7 @@ function PolitikerListItem({ rep }: { rep: PolitikerOversikt }) {
               />
             </div>
           )}
-          <span className="font-medium text-indigo-600 mr-2">{rep.parti.navn}</span>
+          <span className="font-medium text-indigo-600 dark:text-indigo-400 mr-2">{rep.parti.navn}</span>
           <span className="truncate">{roleOrLocation}</span>
         </div>
       </div>
@@ -145,9 +145,9 @@ export default function PolitikerHubClient({
   if (!isVerified) {
     return (
       <div className="max-w-md mx-auto mt-20 text-center">
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">Politiker-verifisering</h2>
-        <p className="text-gray-600 mb-8">Logg inn med din @stortinget.no e-post for å få tilgang til innsikt og statistikk for ditt distrikt.</p>
-        <p className="text-sm text-gray-500">
+        <h2 className="text-3xl font-bold text-foreground mb-4">Politiker-verifisering</h2>
+        <p className="text-muted-foreground mb-8">Logg inn med din @stortinget.no e-post for å få tilgang til innsikt og statistikk for ditt distrikt.</p>
+        <p className="text-sm text-muted-foreground">
           Kontakt administrator for å knytte din konto til en verifisert politikerprofil.
         </p>
       </div>
@@ -156,9 +156,9 @@ export default function PolitikerHubClient({
 
   return (
     <div className="space-y-8">
-      <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-        <h1 className="text-2xl font-bold text-gray-900">Politiker-hub</h1>
-        <p className="text-gray-600 mt-2 flex items-center gap-1">
+      <div className="bg-card p-8 rounded-3xl shadow-sm border border-border">
+        <h1 className="text-2xl font-bold text-foreground">Politiker-hub</h1>
+        <p className="text-muted-foreground mt-2 flex items-center gap-1">
           <CheckCircle className="w-4 h-4 text-emerald-500" />
           Verifisert konto — aggregert engasjement fra anonyme stemmer i appen.
         </p>
@@ -166,12 +166,12 @@ export default function PolitikerHubClient({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+          <div className="bg-card p-8 rounded-3xl shadow-sm border border-border">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Engasjement per kategori</h2>
+              <h2 className="text-xl font-bold text-foreground">Engasjement per kategori</h2>
             </div>
 
-            <p className="text-gray-600 mb-8">
+            <p className="text-muted-foreground mb-8">
               Oversikt over hvilke politiske saksområder som skaper mest engasjement blant innbyggerne.
             </p>
 
@@ -190,11 +190,11 @@ export default function PolitikerHubClient({
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="w-full h-full bg-gray-50 rounded-xl animate-pulse"></div>
+                <div className="w-full h-full bg-muted/40 rounded-xl animate-pulse"></div>
               )}
             </div>
 
-            <div className="mt-8 bg-indigo-50 rounded-xl p-6 border border-indigo-100">
+            <div className="mt-8 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl p-6 border border-indigo-100 dark:border-indigo-900/50">
               <h3 className="text-lg font-semibold text-indigo-900 mb-2 flex items-center">
                 <TrendingUp className="w-5 h-5 mr-2" />
                 Hva engasjerer velgerne nå?
@@ -212,12 +212,12 @@ export default function PolitikerHubClient({
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-              <MessageSquare className="w-5 h-5 mr-2 text-indigo-600" />
+          <div className="bg-card p-8 rounded-3xl shadow-sm border border-border">
+            <h2 className="text-xl font-bold text-foreground mb-4 flex items-center">
+              <MessageSquare className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
               Publiser offisielt svar
             </h2>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               Åpne en sak og forklar din eller partiet ditt sin stilling. Svaret vises med verifiseringsmerke for alle
               brukere som leser saken.
             </p>
@@ -226,14 +226,14 @@ export default function PolitikerHubClient({
                 <Link
                   key={issue.id}
                   href={routes.sak(issue.id)}
-                  className="inline-flex items-center rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition-colors"
+                  className="inline-flex items-center rounded-xl border border-indigo-100 bg-indigo-50 dark:bg-indigo-950/40 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/50 transition-colors"
                 >
                   {issue.title.length > 48 ? `${issue.title.slice(0, 48)}…` : issue.title}
                 </Link>
               ))}
             </div>
             <div className="mt-4">
-              <Link href={routes.utforsk} className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
+              <Link href={routes.utforsk} className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800">
                 Utforsk alle saker →
               </Link>
             </div>
@@ -241,17 +241,17 @@ export default function PolitikerHubClient({
         </div>
 
         <div className="space-y-8">
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Mest engasjerende saker</h3>
-            <p className="text-sm text-gray-500 mb-4">Saker med flest anonyme stemmer i appen.</p>
+          <div className="bg-card p-6 rounded-3xl shadow-sm border border-border">
+            <h3 className="text-lg font-bold text-foreground mb-4">Mest engasjerende saker</h3>
+            <p className="text-sm text-muted-foreground mb-4">Saker med flest anonyme stemmer i appen.</p>
             <div className="space-y-3">
               {topIssues.map((issue, index) => (
-                <Link href={routes.sak(issue.id)} key={issue.id} className="block p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-100">
+                <Link href={routes.sak(issue.id)} key={issue.id} className="block p-4 bg-muted/40 rounded-xl hover:bg-muted transition-colors border border-border">
                   <div className="flex justify-between items-start mb-2">
-                    <span className="text-sm font-medium text-indigo-600 line-clamp-2 pr-4">{issue.title}</span>
-                    <span className="text-sm font-bold text-gray-400 whitespace-nowrap">#{index + 1}</span>
+                    <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400 line-clamp-2 pr-4">{issue.title}</span>
+                    <span className="text-sm font-bold text-muted-foreground whitespace-nowrap">#{index + 1}</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span className="truncate max-w-[120px]">{issue.category}</span>
                     <span className="flex items-center whitespace-nowrap"><Users className="w-3 h-3 mr-1" /> {formatNumber(issue.votes?.total ?? 0)}</span>
                   </div>
@@ -260,53 +260,53 @@ export default function PolitikerHubClient({
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Kategorifordeling</h3>
+          <div className="bg-card p-6 rounded-3xl shadow-sm border border-border">
+            <h3 className="text-lg font-bold text-foreground mb-4">Kategorifordeling</h3>
             <div className="space-y-4">
               {categoryStats.slice(0, 5).map((stat, index) => (
-                <div key={stat.name} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                <div key={stat.name} className="flex items-center justify-between p-4 bg-muted/40 rounded-xl">
                   <div className="flex items-center">
-                    <div className={`w-2 h-2 rounded-full mr-2 ${['bg-emerald-500', 'bg-blue-500', 'bg-amber-500', 'bg-purple-500', 'bg-rose-500'][index % 5]}`}></div>
-                    <span className="text-sm font-medium text-gray-700 truncate max-w-[150px]" title={stat.fullName}>{stat.fullName}</span>
+                    <div className={`w-2 h-2 rounded-full mr-2 ${['bg-emerald-500', 'bg-blue-500', 'bg-amber-50 dark:bg-amber-950/400', 'bg-purple-500', 'bg-rose-500'][index % 5]}`}></div>
+                    <span className="text-sm font-medium text-foreground truncate max-w-[150px]" title={stat.fullName}>{stat.fullName}</span>
                   </div>
-                  <span className="text-sm font-bold text-gray-900">{stat.percentage}%</span>
+                  <span className="text-sm font-bold text-foreground">{stat.percentage}%</span>
                 </div>
               ))}
               {categoryStats.length === 0 && (
-                <div className="text-sm text-gray-500 text-center py-4">Ingen data tilgjengelig</div>
+                <div className="text-sm text-muted-foreground text-center py-4">Ingen data tilgjengelig</div>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+      <div className="bg-card p-8 rounded-3xl shadow-sm border border-border">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 flex items-center">
-              <CheckCircle className="w-5 h-5 mr-2 text-indigo-600" />
+            <h2 className="text-xl font-bold text-foreground flex items-center">
+              <CheckCircle className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
               Finn politikere
             </h2>
-            <p className="text-gray-600 mt-2">
+            <p className="text-muted-foreground mt-2">
               Utforsk profiler med saker, temaer og offisielle svar. Verifiserte profiler markeres på profilsiden.
             </p>
           </div>
           <div className="relative w-full md:w-72">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
+              <Search className="h-4 w-4 text-muted-foreground" />
             </div>
             <input
               type="text"
               value={repSearchQuery}
               onChange={(e) => setRepSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+              className="block w-full pl-10 pr-3 py-2 border border-border rounded-xl leading-5 bg-muted/40 placeholder-gray-500 focus:outline-none focus:bg-card focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
               placeholder="Søk på navn, parti eller fylke..."
             />
           </div>
         </div>
 
         {filteredPolitikere.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted-foreground">
             Ingen politikere funnet som matcher &quot;{repSearchQuery}&quot;.
           </div>
         ) : (
@@ -324,7 +324,7 @@ export default function PolitikerHubClient({
             {displayedAndre.length > 0 && (
               <div>
                 {regjeringsmedlemmer.length > 0 && (
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-3">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
                     Stortingsrepresentanter
                   </h3>
                 )}
@@ -343,7 +343,7 @@ export default function PolitikerHubClient({
             <button
               type="button"
               onClick={() => setShowAllPolitikere(true)}
-              className="text-indigo-600 font-medium hover:text-indigo-800 text-sm"
+              className="text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-800 text-sm"
             >
               Vis alle {filteredPolitikere.length} politikere
             </button>

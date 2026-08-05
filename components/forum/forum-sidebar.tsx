@@ -48,8 +48,8 @@ export default function ForumSidebar() {
 
   return (
     <nav className="space-y-5" aria-label="Forum-navigasjon">
-      <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-        <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+      <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+        <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Forum
         </p>
       {FORUM_NAV.map(({ href, label, icon: Icon, sort }) => {
@@ -70,8 +70,8 @@ export default function ForumSidebar() {
             className={cn(
               'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
               active
-                ? 'bg-indigo-50 text-indigo-700'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300'
+                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
             )}
           >
             <Icon className="w-5 h-5 shrink-0" />
@@ -81,8 +81,8 @@ export default function ForumSidebar() {
       })}
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-        <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+      <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+        <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Demokrati
         </p>
         {DEMOCRACY_NAV.map(({ href, label, icon: Icon, active }) => {
@@ -94,8 +94,8 @@ export default function ForumSidebar() {
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-indigo-50 text-indigo-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                  ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300'
+                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
               )}
             >
               <Icon className="w-5 h-5 shrink-0" />
@@ -105,14 +105,14 @@ export default function ForumSidebar() {
         })}
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm space-y-1">
+      <div className="rounded-2xl border border-border bg-card p-3 shadow-sm space-y-1">
         <Link
           href={routes.forumMineInnlegg}
           className={cn(
             'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
             pathname === routes.forumMineInnlegg
-              ? 'bg-indigo-50 text-indigo-700'
-              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+              ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300'
+              : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
           )}
         >
           <User className="w-5 h-5 shrink-0" />

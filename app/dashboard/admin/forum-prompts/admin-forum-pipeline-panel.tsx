@@ -118,14 +118,14 @@ function SourceEditor({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium text-gray-700">Kilder (tittel, URL, avis)</p>
+      <p className="text-sm font-medium text-foreground">Kilder (tittel, URL, avis)</p>
       {rows.map((row, index) => (
         <div
           key={index}
-          className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] items-start border border-gray-100 rounded-lg p-3"
+          className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] items-start border border-border rounded-lg p-3"
         >
           <input
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            className="rounded-lg border border-border px-3 py-2 text-sm"
             placeholder="Tittel"
             value={row.title}
             onChange={(e) => {
@@ -135,7 +135,7 @@ function SourceEditor({
             }}
           />
           <input
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            className="rounded-lg border border-border px-3 py-2 text-sm"
             placeholder="https://…"
             value={row.url}
             onChange={(e) => {
@@ -145,7 +145,7 @@ function SourceEditor({
             }}
           />
           <input
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            className="rounded-lg border border-border px-3 py-2 text-sm"
             placeholder="Kilde"
             value={row.outlet}
             onChange={(e) => {
@@ -156,7 +156,7 @@ function SourceEditor({
           />
           <button
             type="button"
-            className="text-sm text-gray-500 hover:text-red-600 px-1"
+            className="text-sm text-muted-foreground hover:text-destructive px-1"
             onClick={() => {
               const next = rows.filter((_, i) => i !== index);
               onChange(next.length ? next : [emptySourceRow()]);
@@ -168,7 +168,7 @@ function SourceEditor({
       ))}
       <button
         type="button"
-        className="text-sm font-semibold text-indigo-700 hover:underline"
+        className="text-sm font-semibold text-indigo-700 dark:text-indigo-300 hover:underline"
         onClick={() => onChange([...rows, emptySourceRow()])}
       >
         + Kilde
@@ -368,33 +368,33 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
 
   return (
     <div>
-      <div className="rounded-xl border border-gray-200 bg-white p-5 mb-6">
-        <h2 className="text-sm font-semibold text-gray-900">Automatisk pipeline (v12 + v13)</h2>
-        <p className="text-sm text-gray-600 mt-1">
+      <div className="rounded-xl border border-border bg-card p-5 mb-6">
+        <h2 className="text-sm font-semibold text-foreground">Automatisk pipeline (v12 + v13)</h2>
+        <p className="text-sm text-muted-foreground mt-1">
           Regjeringen RSS (v12) og Stortinget-sak RAG (v13) produserer JA/NEI-utkast. Du godkjenner
           og publiserer til Forum Reels.
         </p>
         <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
           <div>
-            <dt className="text-gray-500">RSS i kø</dt>
-            <dd className="font-semibold text-gray-900 tabular-nums">{pendingCount}</dd>
+            <dt className="text-muted-foreground">RSS i kø</dt>
+            <dd className="font-semibold text-foreground tabular-nums">{pendingCount}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">Sak-kandidater (RAG)</dt>
-            <dd className="font-semibold text-gray-900 tabular-nums">
+            <dt className="text-muted-foreground">Sak-kandidater (RAG)</dt>
+            <dd className="font-semibold text-foreground tabular-nums">
               {sakCoverage?.sakCandidates ?? sakCandidates.length}
             </dd>
           </div>
           <div>
-            <dt className="text-gray-500">Utkast</dt>
-            <dd className="font-semibold text-gray-900 tabular-nums">{drafts.length}</dd>
+            <dt className="text-muted-foreground">Utkast</dt>
+            <dd className="font-semibold text-foreground tabular-nums">{drafts.length}</dd>
           </div>
         </dl>
       </div>
 
       {error ? (
         <div
-          className="mb-6 rounded-lg bg-red-50 text-red-800 text-sm px-4 py-3 border border-red-100"
+          className="mb-6 rounded-lg bg-destructive/10 text-red-800 text-sm px-4 py-3 border border-red-100"
           role="alert"
         >
           {error}
@@ -408,18 +408,18 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
           aria-modal="true"
           aria-labelledby="publish-modal-title"
         >
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
-            <h2 id="publish-modal-title" className="text-lg font-bold text-gray-900 mb-2">
+          <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-lg">
+            <h2 id="publish-modal-title" className="text-lg font-bold text-foreground mb-2">
               Publiser reel
             </h2>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Velg når den aktive reelen skal utløpe (standard er 7 dager fra nå).
             </p>
-            <label className="block text-sm font-medium text-gray-700 mb-4">
+            <label className="block text-sm font-medium text-foreground mb-4">
               Utløper
               <input
                 type="datetime-local"
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
                 value={publishExpiresAt}
                 onChange={(e) => setPublishExpiresAt(e.target.value)}
               />
@@ -428,7 +428,7 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
               <button
                 type="button"
                 onClick={() => setPublishModalId(null)}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium"
+                className="rounded-lg border border-border px-4 py-2 text-sm font-medium"
               >
                 Avbryt
               </button>
@@ -446,7 +446,7 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
       ) : null}
 
       {loading ? (
-        <div className="flex items-center gap-2 text-gray-500 py-12 justify-center">
+        <div className="flex items-center gap-2 text-muted-foreground py-12 justify-center">
           <Loader2 className="w-5 h-5 animate-spin" />
           Laster pipeline…
         </div>
@@ -454,27 +454,27 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
         <div className="space-y-8">
           <section className="mb-10">
             <div className="flex flex-wrap items-baseline justify-between gap-2 mb-4">
-              <h2 className="text-lg font-bold text-gray-900">Stortingssaker (RAG v13)</h2>
+              <h2 className="text-lg font-bold text-foreground">Stortingssaker (RAG v13)</h2>
               <button
                 type="button"
                 disabled={!!acting}
                 onClick={() => void triggerSakPrompt()}
-                className="text-sm font-semibold text-indigo-700 hover:underline disabled:opacity-50"
+                className="text-sm font-semibold text-indigo-700 dark:text-indigo-300 hover:underline disabled:opacity-50"
               >
                 Generer for neste kandidat →
               </button>
             </div>
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Åpne saker med dokument-embeddings og uten eksisterende reel. Cron daglig 06:00.
               {sakCoverage ? (
-                <span className="block mt-1 text-xs text-gray-400">
+                <span className="block mt-1 text-xs text-muted-foreground">
                   {sakCoverage.pendingWithRag} av {sakCoverage.pendingIssues} åpne saker har RAG.
                 </span>
               ) : null}
             </p>
 
             {sakCandidates.length === 0 ? (
-              <p className="text-gray-500 text-sm py-6 rounded-xl border border-dashed border-gray-200 text-center">
+              <p className="text-muted-foreground text-sm py-6 rounded-xl border border-dashed border-border text-center">
                 Ingen sak-kandidater akkurat nå. Synk dokumenter og embeddings for flere saker.
               </p>
             ) : (
@@ -482,25 +482,25 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
                 {sakCandidates.map((candidate) => (
                   <article
                     key={candidate.issueId}
-                    className="rounded-xl border border-indigo-100 bg-indigo-50/30 p-5"
+                    className="rounded-xl border border-indigo-100 bg-indigo-50 dark:bg-indigo-950/40/30 p-5"
                   >
                     <div className="flex flex-wrap gap-2 mb-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
+                      <span className="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950/50 text-indigo-800">
                         Stortingssak
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         {candidate.ragChunkCount} RAG-chunks
                         {candidate.hasAiSummary ? ' · AI-sammendrag' : ''}
                       </span>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">{candidate.title}</h3>
-                    <p className="text-xs text-gray-500 mt-1">Sak {candidate.issueId}</p>
+                    <h3 className="text-lg font-bold text-foreground">{candidate.title}</h3>
+                    <p className="text-xs text-muted-foreground mt-1">Sak {candidate.issueId}</p>
                     <div className="flex flex-wrap gap-2 mt-4">
                       <button
                         type="button"
                         disabled={!!acting}
                         onClick={() => void triggerSakPrompt(candidate.issueId)}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-50 dark:bg-indigo-950/400 disabled:opacity-50"
                       >
                         {acting === `sak:${candidate.issueId}` ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -511,7 +511,7 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
                       </button>
                       <a
                         href={`/dashboard/sak/${candidate.issueId}`}
-                        className="text-sm text-indigo-700 hover:underline inline-flex items-center gap-1"
+                        className="text-sm text-indigo-700 dark:text-indigo-300 hover:underline inline-flex items-center gap-1"
                       >
                         Se sak
                         <ExternalLink className="w-3 h-3" />
@@ -525,14 +525,14 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
 
           <section>
             <div className="mb-4">
-              <h2 className="text-lg font-bold text-gray-900">Regjeringen RSS (v12)</h2>
-              <p className="text-sm text-gray-500 mt-1">
+              <h2 className="text-lg font-bold text-foreground">Regjeringen RSS (v12)</h2>
+              <p className="text-sm text-muted-foreground mt-1">
                 Saker fra Regjeringen RSS — behandles uten manuell godkjenning
               </p>
             </div>
 
             {queueClusters.length === 0 ? (
-              <p className="text-gray-500 text-sm py-6 rounded-xl border border-dashed border-gray-200 text-center">
+              <p className="text-muted-foreground text-sm py-6 rounded-xl border border-dashed border-border text-center">
                 Ingen saker i kø. Kjør RSS-webhooken eller vent på neste cron (*/30).
               </p>
             ) : (
@@ -542,27 +542,27 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
                   return (
                     <article
                       key={cluster.id}
-                      className="rounded-xl border border-gray-200 bg-white p-5"
+                      className="rounded-xl border border-border bg-card p-5"
                     >
                       <div className="flex flex-wrap gap-2 mb-2">
-                        <span className="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-amber-50 text-amber-800">
+                        <span className="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-800">
                           {clusterStatusLabel(cluster.status)}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-muted-foreground">
                           {formatWhen(cluster.created_at)}
                         </span>
                       </div>
-                      <h3 className="text-lg font-bold text-gray-900">{cluster.title}</h3>
+                      <h3 className="text-lg font-bold text-foreground">{cluster.title}</h3>
                       {cluster.discovery_rationale ? (
-                        <p className="text-sm text-gray-600 mt-2">{cluster.discovery_rationale}</p>
+                        <p className="text-sm text-muted-foreground mt-2">{cluster.discovery_rationale}</p>
                       ) : null}
                       {article ? (
-                        <p className="mt-3 text-xs text-gray-500">
+                        <p className="mt-3 text-xs text-muted-foreground">
                           <a
                             href={article.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-indigo-600 hover:underline"
+                            className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:underline"
                           >
                             {article.outlet || 'Regjeringen'}
                             <ExternalLink className="w-3 h-3" />
@@ -575,13 +575,13 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
                             type="button"
                             disabled={!!acting}
                             onClick={() => rejectCluster(cluster.id)}
-                            className="text-sm text-gray-500 hover:underline disabled:opacity-50"
+                            className="text-sm text-muted-foreground hover:underline disabled:opacity-50"
                           >
                             Avvis sak
                           </button>
                         </div>
                       ) : (
-                        <p className="text-xs text-indigo-700 mt-3 flex items-center gap-1.5">
+                        <p className="text-xs text-indigo-700 dark:text-indigo-300 mt-3 flex items-center gap-1.5">
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           Utkast dukker opp nedenfor når AI er ferdig (innen ~15 min).
                         </p>
@@ -595,20 +595,20 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
 
           <section>
             <div className="flex flex-wrap items-baseline justify-between gap-2 mb-4">
-              <h2 className="text-lg font-bold text-gray-900">Utkast til godkjenning</h2>
-              <p className="text-sm text-gray-500">Rediger, publiser eller avvis AI-genererte reels</p>
+              <h2 className="text-lg font-bold text-foreground">Utkast til godkjenning</h2>
+              <p className="text-sm text-muted-foreground">Rediger, publiser eller avvis AI-genererte reels</p>
             </div>
 
             {drafts.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-gray-200 px-6 py-10 text-center">
+              <div className="rounded-xl border border-dashed border-border px-6 py-10 text-center">
                 <Sparkles className="w-8 h-8 text-indigo-400 mx-auto mb-2" />
-                <p className="text-gray-600 text-sm">Ingen utkast venter.</p>
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-muted-foreground text-sm">Ingen utkast venter.</p>
+                <p className="text-sm text-muted-foreground mt-2">
                   Du kan også{' '}
                   <button
                     type="button"
                     onClick={onGoToCreate}
-                    className="text-indigo-700 font-medium hover:underline inline-flex items-center gap-0.5"
+                    className="text-indigo-700 dark:text-indigo-300 font-medium hover:underline inline-flex items-center gap-0.5"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     opprette en reel manuelt
@@ -619,18 +619,18 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
             ) : (
               <div className="space-y-4">
                 {drafts.map((prompt) => (
-                  <article key={prompt.id} className="rounded-xl border border-gray-200 bg-white p-5">
+                  <article key={prompt.id} className="rounded-xl border border-border bg-card p-5">
                     <div className="flex flex-wrap gap-2 mb-2">
                       {prompt.topic_tags?.includes('stortingssak') ||
                       prompt.generation_metadata?.source_type === 'stortinget_sak' ? (
-                        <span className="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-indigo-50 text-indigo-800">
+                        <span className="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800">
                           Stortingssak
                         </span>
                       ) : null}
                       {prompt.stortinget_issue_id ? (
                         <a
                           href={`/dashboard/sak/${prompt.stortinget_issue_id}`}
-                          className="text-xs text-indigo-600 hover:underline"
+                          className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
                         >
                           Sak {prompt.stortinget_issue_id}
                         </a>
@@ -639,21 +639,21 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
                     {editingId === prompt.id ? (
                       <div className="space-y-3">
                         <textarea
-                          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                          className="w-full rounded-lg border border-border px-3 py-2 text-sm"
                           rows={3}
                           value={editForm.question}
                           onChange={(e) => setEditForm((f) => ({ ...f, question: e.target.value }))}
                         />
                         <input
-                          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                          className="w-full rounded-lg border border-border px-3 py-2 text-sm"
                           placeholder="Stikkord (kommaseparert)"
                           value={editForm.topic_tags}
                           onChange={(e) => setEditForm((f) => ({ ...f, topic_tags: e.target.value }))}
                         />
-                        <label className="block text-sm font-medium text-gray-700">
+                        <label className="block text-sm font-medium text-foreground">
                           Sensitivitet
                           <select
-                            className="mt-1 block rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                            className="mt-1 block rounded-lg border border-border px-3 py-2 text-sm"
                             value={editForm.sensitivity}
                             onChange={(e) =>
                               setEditForm((f) => ({ ...f, sensitivity: e.target.value }))
@@ -679,7 +679,7 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
                           <button
                             type="button"
                             onClick={() => setEditingId(null)}
-                            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+                            className="rounded-lg border border-border px-3 py-1.5 text-sm"
                           >
                             Avbryt
                           </button>
@@ -688,21 +688,21 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
                     ) : (
                       <>
                         <div className="flex flex-wrap gap-2 mb-2">
-                          <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-2 py-0.5 rounded">
                             Utkast · {prompt.sensitivity === 'high' ? 'Høy sensitivitet' : 'Lav sensitivitet'}
                           </span>
                           {(prompt.topic_tags || []).map((tag) => (
                             <span
                               key={tag}
-                              className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded"
+                              className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded"
                             >
                               {tag}
                             </span>
                           ))}
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-3">{prompt.question}</h3>
+                        <h3 className="text-lg font-bold text-foreground mb-3">{prompt.question}</h3>
                         {Array.isArray(prompt.source_headlines) && prompt.source_headlines.length > 0 ? (
-                          <ul className="text-xs text-gray-500 mb-4 space-y-1">
+                          <ul className="text-xs text-muted-foreground mb-4 space-y-1">
                             {prompt.source_headlines.slice(0, 4).map((h, i) => (
                               <li key={i}>
                                 {h.url ? (
@@ -710,7 +710,7 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
                                     href={h.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-indigo-600 hover:underline"
+                                    className="text-indigo-600 dark:text-indigo-400 hover:underline"
                                   >
                                     {h.title} ({h.outlet})
                                   </a>
@@ -736,7 +736,7 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
                           <button
                             type="button"
                             onClick={() => startEdit(prompt)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
                           >
                             <Pencil className="w-4 h-4" />
                             Rediger
@@ -745,7 +745,7 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
                             type="button"
                             disabled={acting === prompt.id}
                             onClick={() => archiveDraft(prompt.id)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
                           >
                             <X className="w-4 h-4" />
                             Avvis
@@ -761,12 +761,12 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
         </div>
       )}
 
-      <p className="mt-8 text-sm text-gray-500 text-center">
+      <p className="mt-8 text-sm text-muted-foreground text-center">
         Publiserte reels finner du under{' '}
         <button
           type="button"
           onClick={onGoToActive}
-          className="text-indigo-700 font-medium hover:underline"
+          className="text-indigo-700 dark:text-indigo-300 font-medium hover:underline"
         >
           Aktive
         </button>

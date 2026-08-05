@@ -71,19 +71,19 @@ export function ForumPromptsFeed({ initialItems, initialCursor }: PromptsFeedPro
         />
       ))}
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       {cursor ? (
         <button
           type="button"
           onClick={() => void loadMore()}
           disabled={loading}
-          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-gray-50 disabled:opacity-60"
+          className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground hover:bg-muted/50 disabled:opacity-60"
         >
           {loading ? 'Laster…' : 'Last flere'}
         </button>
       ) : (
-        <p className="text-sm text-gray-500 text-center">Ingen flere spesielle saker akkurat nå.</p>
+        <p className="text-sm text-muted-foreground text-center">Ingen flere spesielle saker akkurat nå.</p>
       )}
     </div>
   );

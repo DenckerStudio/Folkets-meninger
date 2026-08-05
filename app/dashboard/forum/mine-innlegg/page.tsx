@@ -10,8 +10,8 @@ export default function ForumMineInnleggPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-gray-900">Mine innlegg</h1>
-        <p className="text-sm text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-foreground">Mine innlegg</h1>
+        <p className="text-sm text-muted-foreground mt-1">
           Dine tråder og svar i forumet. Innlegg er offentlige og viser ditt navn.
         </p>
       </header>

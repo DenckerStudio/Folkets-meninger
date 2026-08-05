@@ -15,7 +15,7 @@ export default function ForumPostCard({ topic }: { topic: ForumThreadListItem })
     : null;
 
   return (
-    <article className="group py-5 transition-colors hover:bg-gray-50/60 -mx-3 px-3 sm:-mx-4 sm:px-4 rounded-2xl">
+    <article className="group py-5 transition-colors hover:bg-muted/60 -mx-3 px-3 sm:-mx-4 sm:px-4 rounded-2xl">
       <div className="flex gap-3 sm:gap-4">
         <div className="shrink-0 pt-0.5">
           <LikeButton
@@ -28,22 +28,22 @@ export default function ForumPostCard({ topic }: { topic: ForumThreadListItem })
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
+          <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
             {topic.relatedIssueId && sakLabel ? (
               <Link
                 href={routes.sak(topic.relatedIssueId)}
-                className="font-medium text-gray-700 hover:text-indigo-600"
+                className="font-medium text-foreground hover:text-indigo-600 dark:text-indigo-400"
               >
                 {sakLabel}
               </Link>
             ) : null}
-            {topic.relatedIssueId && sakLabel ? <span className="text-gray-300">·</span> : null}
+            {topic.relatedIssueId && sakLabel ? <span className="text-muted-foreground">·</span> : null}
             {topic.author ? (
               <ForumAuthorBadge author={topic.author} className="!gap-1.5" />
             ) : (
-              <span className="text-gray-400">Ukjent forfatter</span>
+              <span className="text-muted-foreground">Ukjent forfatter</span>
             )}
-            <span className="text-gray-300">·</span>
+            <span className="text-muted-foreground">·</span>
             <time>{topic.createdAt}</time>
             <span className="ml-auto opacity-0 transition-opacity group-hover:opacity-100">
               <ForumPostCardMenu threadId={topic.id} authorUserId={topic.authorUserId} />
@@ -51,7 +51,7 @@ export default function ForumPostCard({ topic }: { topic: ForumThreadListItem })
           </div>
 
           <Link href={routes.forumTopic(topic.id)} className="block">
-            <h3 className="text-[1.05rem] font-semibold leading-snug text-gray-900 transition-colors group-hover:text-indigo-700 sm:text-lg">
+            <h3 className="text-[1.05rem] font-semibold leading-snug text-foreground transition-colors group-hover:text-indigo-700 dark:text-indigo-300 sm:text-lg">
               <span className="line-clamp-3">{topic.title}</span>
             </h3>
 
@@ -63,7 +63,7 @@ export default function ForumPostCard({ topic }: { topic: ForumThreadListItem })
             ) : null}
 
             {topic.bodyExcerpt ? (
-              <p className="mt-2 text-sm leading-relaxed text-gray-600 line-clamp-2">{topic.bodyExcerpt}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-2">{topic.bodyExcerpt}</p>
             ) : null}
           </Link>
 
