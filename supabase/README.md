@@ -28,6 +28,24 @@ npm run supabase:status
 Set `SUPABASE_SERVICE_ROLE_KEY` separately for server RPCs (voting, admin). It
 is never committed.
 
+### Vercel (production / preview)
+
+Vercel cannot reach `127.0.0.1` — use the self-hosted heyklever instance
+(`https://supabase.heyklever.app`), same as `.env.test`.
+
+```bash
+# One-time: create https://vercel.com/account/tokens
+export VERCEL_TOKEN=...
+export HEYKLEVER_SUPABASE_SERVICE_ROLE_KEY=...   # heyklever service role (server-only)
+npm run vercel:env:supabase
+```
+
+This upserts `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
+optionally `SUPABASE_SERVICE_ROLE_KEY` on project `folkets-inspill` for
+production, preview, and development. Redeploy after syncing.
+
+Dry run: `npm run vercel:env:supabase -- --dry-run`
+
 ## Applying migrations
 
 Run migrations against your Supabase project:
