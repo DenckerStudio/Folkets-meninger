@@ -43,16 +43,16 @@ type InitiativeRow = {
 
 function parseSourceUrls(value: unknown): { label?: string; url: string }[] {
   if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => {
-      if (!item || typeof item !== 'object') return null;
-      const row = item as Record<string, unknown>;
-      const url = typeof row.url === 'string' ? row.url : null;
-      if (!url) return null;
-      const label = typeof row.label === 'string' ? row.label : undefined;
-      return { url, label };
-    })
-    .filter((x): x is { label?: string; url: string } => x != null);
+  const out: { label?: string; url: string }[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    const url = typeof row.url === 'string' ? row.url : null;
+    if (!url) continue;
+    const label = typeof row.label === 'string' ? row.label : undefined;
+    out.push({ url, label });
+  }
+  return out;
 }
 
 export function mapPollRow(row: PollRow): PollRecord {
