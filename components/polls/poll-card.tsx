@@ -51,7 +51,8 @@ function ArgumentList({
             <li key={item.id} className="text-sm text-gray-800">
               <p className="leading-snug">{item.body}</p>
               <p className="mt-1 text-xs text-gray-500">
-                {item.authorName || 'Deltaker'} · {item.likeCount} likes
+                {item.authorName || 'Deltaker'} · net {item.netUpvotes} ({item.likeCount}↑
+                {item.dislikeCount > 0 ? ` ${item.dislikeCount}↓` : ''})
               </p>
             </li>
           ))}

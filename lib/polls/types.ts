@@ -32,6 +32,8 @@ export type PollArgument = {
   body: string;
   stance: 'ja' | 'nei';
   likeCount: number;
+  dislikeCount: number;
+  netUpvotes: number;
   authorName: string | null;
   createdAt: string;
 };

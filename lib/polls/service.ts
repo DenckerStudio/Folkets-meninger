@@ -106,11 +106,19 @@ function parseArgument(raw: unknown): PollArgument | null {
   const r = raw as Record<string, unknown>;
   if (typeof r.id !== 'string' || typeof r.body !== 'string') return null;
   if (r.stance !== 'ja' && r.stance !== 'nei') return null;
+  const likeCount = Number(r.likeCount ?? 0);
+  const dislikeCount = Number(r.dislikeCount ?? 0);
+  const netUpvotes =
+    typeof r.netUpvotes === 'number'
+      ? r.netUpvotes
+      : likeCount - dislikeCount;
   return {
     id: r.id,
     body: r.body,
     stance: r.stance,
-    likeCount: Number(r.likeCount ?? 0),
+    likeCount,
+    dislikeCount,
+    netUpvotes,
     authorName: typeof r.authorName === 'string' ? r.authorName : null,
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : '',
   };
