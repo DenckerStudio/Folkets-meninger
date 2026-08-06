@@ -1,9 +1,8 @@
 'use client';
 
-import { Database, Info, Shield } from 'lucide-react';
 import AboutSection from '@/components/ui/about-section';
 
-/** Landing “Om oss” + misjon, based on 21st.dev About Section. */
+/** Landing “Om oss” + misjon — typography-first, no cards. */
 export function LandingAbout() {
   return (
     <AboutSection
@@ -13,29 +12,8 @@ export function LandingAbout() {
       missionTitle="Vår misjon"
       missionParagraphs={[
         'Demokratiet stopper ikke på valgdagen. Mellom valgene fattes det tusenvis av beslutninger på Stortinget som påvirker hverdagen vår. Folkets Stemme ble skapt for å tette gapet mellom politikerne og folket i disse periodene.',
-        'Vi tror at hvis politikere får tilgang til reell, verifisert statistikk over hva velgerne deres faktisk mener om konkrete saker, vil det føre til bedre og mer representative beslutninger. Samtidig gir det innbyggerne en følelse av å bli hørt.',
-      ]}
-      pillars={[
-        {
-          icon: Database,
-          accent: 'blue',
-          title: 'Data fra kilden',
-          description:
-            'Vi henter saker, forslag og voteringer direkte og ufiltrert fra Stortingets åpne API.',
-        },
-        {
-          icon: Shield,
-          accent: 'red',
-          title: 'Sikker innlogging',
-          description:
-            'E-post, Google eller SMS. Én konto per person ved soft launch — BankID kommer senere.',
-        },
-        {
-          icon: Info,
-          accent: 'blue',
-          title: 'Anonym innsikt',
-          description: 'Stemmen kobles fra identiteten din. Politikere ser kun aggregerte trender.',
-        },
+        'Vi henter saker direkte fra Stortingets åpne API, krever sikker innlogging (BankID kommer senere), og viser kun anonym innsikt — slik at politikere ser trender, ikke personer.',
+        'Vi tror at reell, verifisert statistikk over hva velgerne mener om konkrete saker fører til bedre beslutninger — og at innbyggere fortjener å bli hørt mellom valgene.',
       ]}
       privacy={{
         title: 'Personvern og sikkerhet',

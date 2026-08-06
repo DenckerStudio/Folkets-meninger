@@ -3,9 +3,9 @@ import { test, expect } from '@playwright/test';
 test.describe('Reel flow UI', () => {
   test('landing roadmap documents points tiers', async ({ page }) => {
     await page.goto('/#veien-videre');
-    await expect(page.getByText(/Poengnivåer/i)).toBeVisible();
-    await expect(page.getByText(/Pålitelig \(750\)/i)).toBeVisible();
-    await expect(page.getByText(/Kurator \(2 000\)/i)).toBeVisible();
+    await expect(page.getByText(/Poeng og tillit/i)).toBeVisible();
+    await expect(page.getByText(/Pålitelig 750/i)).toBeVisible();
+    await expect(page.getByText(/Kurator 2 000/i)).toBeVisible();
     await expect(page.getByRole('link', { name: /Opprett konto/i }).first()).toBeVisible();
     await page.screenshot({ path: '/opt/cursor/artifacts/screenshots/landing-roadmap.png', fullPage: true });
   });
