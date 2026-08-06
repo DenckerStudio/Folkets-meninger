@@ -3,7 +3,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { LogIn } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
 import { useAuth } from '@/hooks/use-auth';
@@ -28,35 +27,47 @@ export function LandingHeader() {
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 w-full bg-background/95 pt-[env(safe-area-inset-top,0px)] supports-[backdrop-filter]:bg-background/80',
+        'sticky top-0 z-50 w-full bg-white/95 pt-[env(safe-area-inset-top,0px)] supports-[backdrop-filter]:bg-white/85',
         scrolled ? 'shadow-sm backdrop-blur-lg' : '',
       )}
     >
       <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href={routes.home} className="hover:opacity-90 rounded-md p-1 transition-opacity">
+        <Link href={routes.home} className="rounded-md p-1 transition-opacity hover:opacity-90">
           <FolketsStemmeLogo />
         </Link>
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href={routes.omOss}
-            className="hidden sm:inline-flex text-sm font-medium text-muted-foreground hover:text-foreground px-3 py-2"
+            className="hidden sm:inline-flex text-sm font-medium text-[#001433]/65 hover:text-[#ba0c2f] px-3 py-2 transition-colors"
           >
             Om oss
           </Link>
           {user ? (
-            <Button render={<Link href={routes.dashboard} />}>Gå til dashboard</Button>
+            <Link
+              href={routes.dashboard}
+              className="inline-flex items-center rounded-full bg-[#00205b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#ba0c2f] transition-colors"
+            >
+              Gå til dashboard
+            </Link>
           ) : (
             <>
-              <Button variant="outline" render={<Link href={routes.login} />}>
+              <Link
+                href={routes.login}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#00205b]/15 bg-white px-4 py-2 text-sm font-semibold text-[#00205b] hover:border-[#00205b]/40 hover:bg-[#00205b]/[0.04] transition-colors"
+              >
                 <LogIn className="size-4" />
                 Logg inn
-              </Button>
-              <Button render={<Link href={routes.login} />}>Kom i gang</Button>
+              </Link>
+              <Link
+                href={routes.login}
+                className="inline-flex items-center rounded-full bg-[#00205b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#ba0c2f] transition-colors"
+              >
+                Kom i gang
+              </Link>
             </>
           )}
         </div>
       </nav>
-      {/* Rødt | hvitt | blått — always under navbar while scrolling */}
       <div className="flex h-1.5 w-full" aria-hidden>
         <span className="flex-1 bg-[#ba0c2f]" />
         <span className="flex-1 bg-white" />
@@ -92,8 +103,8 @@ function FolketsStemmeLogo() {
         </g>
       </svg>
       <div className="flex flex-col justify-center font-extrabold tracking-tight">
-        <span className="text-brand text-[0.65rem] leading-none sm:text-sm">FOLKETS</span>
-        <span className="text-brand-accent text-[0.65rem] leading-none sm:text-sm">STEMME</span>
+        <span className="text-[#00205b] text-[0.65rem] leading-none sm:text-sm">FOLKETS</span>
+        <span className="text-[#ba0c2f] text-[0.65rem] leading-none sm:text-sm">STEMME</span>
       </div>
     </div>
   );
