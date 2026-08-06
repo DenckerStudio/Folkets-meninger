@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { Header } from '@/components/ui/header-3';
+import { LandingFooter } from '@/components/landing-footer';
 import { LandingHeader } from '@/components/landing-header';
 import { DashboardNavProvider } from '@/components/dashboard/dashboard-nav-context';
 import { isDashboardPath, isPublicProfilePath } from '@/lib/routes';
@@ -24,6 +25,7 @@ export function Navigation({ children }: NavigationProps) {
         <Header />
       ) : null}
       <div>{children}</div>
+      {isMarketing ? <LandingFooter /> : null}
     </>
   );
 
