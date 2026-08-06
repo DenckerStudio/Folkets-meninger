@@ -24,13 +24,6 @@ export default function HeroSection() {
         <div className="absolute bottom-[10%] right-[25%] h-[35%] w-[30%] rounded-full bg-[#00205b]/[0.1] blur-[80px]" />
       </div>
 
-      {/* Thin tricolor edge */}
-      <div className="absolute top-0 inset-x-0 flex h-px pointer-events-none" aria-hidden>
-        <span className="flex-1 bg-[#ba0c2f]/70" />
-        <span className="flex-1 bg-white" />
-        <span className="flex-1 bg-[#00205b]/70" />
-      </div>
-
       <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 bg-white/80 text-[#00205b] text-sm font-medium mb-8 border border-[#00205b]/12 backdrop-blur-sm">
           <span

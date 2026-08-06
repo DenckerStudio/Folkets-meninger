@@ -28,8 +28,8 @@ export function LandingHeader() {
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 w-full border-b bg-background/95 pt-[env(safe-area-inset-top,0px)] supports-[backdrop-filter]:bg-background/80',
-        scrolled ? 'border-border shadow-sm backdrop-blur-lg' : 'border-border/60',
+        'sticky top-0 z-50 w-full bg-background/95 pt-[env(safe-area-inset-top,0px)] supports-[backdrop-filter]:bg-background/80',
+        scrolled ? 'shadow-sm backdrop-blur-lg' : '',
       )}
     >
       <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -56,6 +56,12 @@ export function LandingHeader() {
           )}
         </div>
       </nav>
+      {/* Rødt | hvitt | blått — always under navbar while scrolling */}
+      <div className="flex h-1.5 w-full" aria-hidden>
+        <span className="flex-1 bg-[#ba0c2f]" />
+        <span className="flex-1 bg-white" />
+        <span className="flex-1 bg-[#00205b]" />
+      </div>
     </header>
   );
 }
