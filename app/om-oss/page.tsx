@@ -163,13 +163,13 @@ export default function OmOssPage() {
             Plattformen formes av brukerne. Send ønsker, bugs eller tilbakemeldinger — vi leser alt.
           </p>
         </div>
-        <a
-          href="mailto:feedback@folketsstemme.no?subject=Innspill%20til%20Folkets%20Stemme"
+        <Link
+          href={routes.innspill}
           className="inline-flex w-full md:w-auto items-center justify-center gap-2 rounded-full bg-[#00205b] px-6 py-3 text-sm font-semibold text-white hover:bg-[#ba0c2f] transition-colors shrink-0"
         >
           <MessageSquarePlus className="h-4 w-4" />
           Send innspill
-        </a>
+        </Link>
       </section>
 
       <div className="text-center pb-6">
@@ -177,12 +177,12 @@ export default function OmOssPage() {
         <p className="text-[#001433]/65 mb-6 max-w-lg mx-auto">
           Vi er under utvikling og tar gjerne imot tilbakemeldinger fra både innbyggere og politikere.
         </p>
-        <a
-          href="mailto:kontakt@folketsstemme.no"
+        <Link
+          href={routes.innspill}
           className="inline-flex items-center rounded-full border border-[#00205b]/15 bg-white px-6 py-3 text-sm font-semibold text-[#00205b] hover:border-[#00205b]/40 hover:bg-[#00205b]/[0.04] transition-colors"
         >
           Kontakt oss
-        </a>
+        </Link>
       </div>
     </div>
   );

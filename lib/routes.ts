@@ -25,6 +25,7 @@ export const routes = {
   saksganger: `${DASHBOARD_PREFIX}/saksganger`,
   sporsmal: `${DASHBOARD_PREFIX}/sporsmal`,
   omOss: '/om-oss',
+  innspill: '/innspill',
   login: '/auth/login',
   completeProfile: '/auth/complete-profile',
   politiker: (id: string) => `${DASHBOARD_PREFIX}/politikere/${id}`,

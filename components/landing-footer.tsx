@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Mail } from 'lucide-react';
+import { MessageSquarePlus } from 'lucide-react';
 import { LandingLogo } from '@/components/landing-logo';
 import { routes } from '@/lib/routes';
 
@@ -12,6 +12,7 @@ const platformLinks = [
 
 const aboutLinks = [
   { href: routes.omOss, label: 'Om oss' },
+  { href: routes.innspill, label: 'Gi innspill' },
   { href: routes.login, label: 'Logg inn' },
   { href: routes.dashboard, label: 'Dashboard' },
 ] as const;
@@ -30,13 +31,13 @@ export function LandingFooter() {
             <p className="mt-5 max-w-md text-sm leading-relaxed text-[#001433]/65">
               Uavhengig plattform for stemmegivning, forum og høringer — demokratiet fortsetter mellom valgene.
             </p>
-            <a
-              href="mailto:kontakt@folketsstemme.no"
+            <Link
+              href={routes.innspill}
               className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-[#00205b] transition-colors hover:text-[#ba0c2f]"
             >
-              <Mail className="h-4 w-4" aria-hidden />
-              kontakt@folketsstemme.no
-            </a>
+              <MessageSquarePlus className="h-4 w-4" aria-hidden />
+              Kontakt oss / gi innspill
+            </Link>
           </div>
 
           <div>
@@ -68,14 +69,6 @@ export function LandingFooter() {
                   </Link>
                 </li>
               ))}
-              <li>
-                <a
-                  href="mailto:feedback@folketsstemme.no?subject=Innspill%20til%20Folkets%20Stemme"
-                  className="text-sm text-[#001433]/70 transition-colors hover:text-[#ba0c2f]"
-                >
-                  Gi innspill
-                </a>
-              </li>
             </ul>
           </div>
         </div>

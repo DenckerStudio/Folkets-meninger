@@ -122,6 +122,39 @@ export async function sendDigestEmail(input: DigestEmailInput) {
   await transporter.sendMail({ from, to: input.to, subject, html });
 }
 
+export type SiteFeedbackEmailInput = {
+  name?: string | null;
+  email: string;
+  category: string;
+  message: string;
+};
+
+/** Best-effort notify inbox for public “Gi innspill” form. Requires SMTP env. */
+export async function sendSiteFeedbackEmail(input: SiteFeedbackEmailInput) {
+  const transporter = getTransporter();
+  const { from } = getSmtpConfig();
+  const to = process.env.FEEDBACK_INBOX_EMAIL?.trim() || 'kontakt@folketsstemme.no';
+
+  const subject = `[Innspill] ${input.category} — ${input.email}`;
+  const html = `
+    <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5;">
+      <h2 style="margin:0 0 12px 0;">Nytt innspill</h2>
+      <p style="margin:0 0 8px 0;"><strong>Kategori:</strong> ${escapeHtml(input.category)}</p>
+      <p style="margin:0 0 8px 0;"><strong>Navn:</strong> ${escapeHtml(input.name?.trim() || 'Ikke oppgitt')}</p>
+      <p style="margin:0 0 8px 0;"><strong>E-post:</strong> ${escapeHtml(input.email)}</p>
+      <p style="margin:16px 0 0 0; white-space:pre-wrap;">${escapeHtml(input.message)}</p>
+    </div>
+  `.trim();
+
+  await transporter.sendMail({
+    from,
+    to,
+    replyTo: input.email,
+    subject,
+    html,
+  });
+}
+
 function escapeHtml(value: string) {
   return value
     .replaceAll('&', '&amp;')

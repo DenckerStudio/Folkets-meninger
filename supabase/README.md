@@ -75,6 +75,7 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Forum reports/sources | `20260602120000_forum_reports_enhance.sql`, `20260602130000_forum_trusted_sources.sql` | `forum_reports`, `forum_trusted_sources` |
 | Forum profiles/points/moderation | `20260614130000_forum_profiles_points_ai_sources.sql`, `20260614160000_harden_forum_points_moderation.sql`, `20260614170000_public_user_display_grants.sql` | public profile fields, point ledgers, moderation RPCs/grants |
 | Forum sak-RAG prompts | `20260621120000_forum_sak_rag_prompts.sql` | `forum_prompts.generation_metadata`, `forum_research_clusters.source_type`, `get_sak_prompt_coverage` |
+| Marketing feedback | `20260806140000_site_feedback.sql` | `site_feedback` (public “Gi innspill” form; service-role writes only) |
 | Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql`, `20260702160000_backfill_ferdigbehandlet_from_detail.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category`, `ferdigbehandlet` repair |
 | Sak documents/RAG | `20260617120000_sak_documents_rag.sql` | `stortinget_issue_documents`, `document_chunks`, `match_issue_document_chunks` |
 

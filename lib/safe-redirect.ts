@@ -2,6 +2,7 @@ const ALLOWED_PREFIXES = [
   '/dashboard',
   '/auth/login',
   '/om-oss',
+  '/innspill',
   '/',
 ] as const;
 

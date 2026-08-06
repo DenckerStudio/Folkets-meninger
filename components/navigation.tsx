@@ -13,7 +13,8 @@ type NavigationProps = {
 
 export function Navigation({ children }: NavigationProps) {
   const pathname = usePathname();
-  const isMarketing = pathname === '/' || pathname === '/om-oss';
+  const isMarketing =
+    pathname === '/' || pathname === '/om-oss' || pathname === '/innspill';
   const inDashboard = isDashboardPath(pathname);
   const showAppHeader = inDashboard || isPublicProfilePath(pathname);
 
