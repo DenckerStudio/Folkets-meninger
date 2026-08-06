@@ -4,33 +4,51 @@ import Link from 'next/link';
 import { Timeline } from '@/components/ui/modern-timeline';
 import { routes } from '@/lib/routes';
 
-/** Landing roadmap via 21st.dev Modern Timeline — no card chrome. */
+/**
+ * Landing roadmap — statuses mirror what is actually shipped in the app today
+ * (see AGENTS.md / dashboard routes), plus near-term UX priorities from product review.
+ */
 export function LandingRoadmap() {
   return (
     <div id="veien-videre" className="scroll-mt-28">
       <Timeline
         title="Veien videre"
-        subtitle="Fra soft launch til lokal demokrati — slik bygger vi Folkets Stemme videre."
+        subtitle="Slik står plattformen i dag — og hva vi prioriterer for å gjøre det enklere å forstå, stemme og følge med."
         items={[
           {
             category: 'Fase 1',
-            date: 'Nå',
-            title: 'Lansering',
+            date: 'Soft launch',
+            title: 'Kjerneplattformen er live',
             description:
-              'Saker fra Stortinget, AI-forenkling, sikker stemmegivning, forum med reels og offentlige profiler.',
+              'Saker og dokumenter fra Stortinget, AI-sammendrag, ja/nei-stemming med lukkevindu, forum med moderering, høringer med lokale innspill, politikeroversikt, varsler og offentlige sak-/politiker-sider.',
             status: 'completed',
+            detail: (
+              <p>
+                Du kan også sende{' '}
+                <Link
+                  href={routes.innspill}
+                  className="font-semibold text-[#00205b] underline-offset-2 hover:text-[#ba0c2f] hover:underline"
+                >
+                  innspill
+                </Link>{' '}
+                direkte fra nettsiden.
+              </p>
+            ),
           },
           {
             category: 'Fase 2',
-            date: 'Pågår',
-            title: 'Poeng og tillit',
+            date: 'Nå',
+            title: 'Tillit, synlighet og førsteinntrykk',
             description:
-              'Poeng belønner konstruktiv aktivitet. Pålitelige brukere kan foreslå reels; kuratorer publiserer fra godkjente kilder.',
+              'Poengnivåer (Aktiv → Veteran) finnes allerede. Neste: gjøre engasjementet synlig før innlogging, åpne forum-reels for publikum, stramme opp onboarding til første stemme, og forberede BankID.',
             status: 'current',
             detail: (
               <p>
-                Nivåer: Aktiv 250 · Pålitelig 750 · Kurator 2 000 · Veteran 5 000.{' '}
-                <Link href={routes.login} className="font-semibold text-[#00205b] underline-offset-2 hover:text-[#ba0c2f] hover:underline">
+                Nivåer i bruk: Aktiv 250 · Pålitelig 750 · Kurator 2 000 · Veteran 5 000.{' '}
+                <Link
+                  href={routes.login}
+                  className="font-semibold text-[#00205b] underline-offset-2 hover:text-[#ba0c2f] hover:underline"
+                >
                   Opprett konto
                 </Link>
               </p>
@@ -38,17 +56,18 @@ export function LandingRoadmap() {
           },
           {
             category: 'Fase 3',
-            date: 'Senere',
-            title: 'Valgløfter',
-            description: 'Følge politikere og spore om valgløfter holdes over tid.',
+            date: 'Neste',
+            title: 'Dypere politisk innsikt',
+            description:
+              'Valgomat med parti-sammenligning (når Stortingets stemmedata per parti er tilgjengelig), sporing av valgløfter, rikere politiker-hub og åpen innsikt når nok anonyme stemmer er samlet.',
             status: 'upcoming',
           },
           {
             category: 'Fase 4',
             date: 'Senere',
-            title: 'Kommune og fylke',
+            title: 'Nærmere deg — kommune og fylke',
             description:
-              'Lokale saker fra kommunestyrer og fylkesting for mer lokal innflytelse.',
+              'Lokale saker fra kommunestyrer og fylkesting, slik at den samme stemmen også gjelder der beslutningene treffer hverdagen hardest.',
             status: 'upcoming',
           },
         ]}
