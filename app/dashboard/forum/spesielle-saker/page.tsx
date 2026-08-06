@@ -68,7 +68,25 @@ export default async function ForumSpesielleSakerPage() {
         </Link>
       </header>
 
-      <ForumPromptsFeed initialItems={page.items} initialCursor={page.nextCursor} />
+      {page.items.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/60 p-8 text-center dark:border-indigo-900 dark:bg-indigo-950/30">
+          <Sparkles className="mx-auto mb-3 h-8 w-8 text-indigo-400" />
+          <h2 className="text-lg font-semibold text-foreground">Ingen aktive spørsmål akkurat nå</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+            Nye reels dukker opp fortløpende fra nyhetsbildet og Stortinget-saker. Foreslå et spørsmål
+            mens du venter — Pålitelig+ kan sende inn.
+          </p>
+          <Link
+            href={routes.forumForeslaReel}
+            className="mt-5 inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500"
+          >
+            <Plus className="h-4 w-4" />
+            Foreslå reel
+          </Link>
+        </div>
+      ) : (
+        <ForumPromptsFeed initialItems={page.items} initialCursor={page.nextCursor} />
+      )}
     </div>
   );
 }

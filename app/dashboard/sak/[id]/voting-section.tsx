@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 import { formatVotingDaysLeftLabel } from '@/lib/sak-voting-window';
+import { routes } from '@/lib/routes';
 
 function AnimatedPercent({ value, initialValue = 0 }: { value: number, initialValue?: number }) {
   const [displayValue, setDisplayValue] = useState(initialValue);
@@ -205,11 +206,17 @@ export default function VotingSection({
       )}
       
       {!user && !isClosed && (
-        <div className="mb-6 text-center">
-          <Link href="/auth/login" className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium">
-            <LogIn className="w-4 h-4 mr-1.5" />
+        <div className="mb-6 space-y-2 text-center">
+          <Link
+            href={`${routes.login}?next=${encodeURIComponent(routes.sak(sakId))}`}
+            className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+          >
+            <LogIn className="mr-1.5 h-4 w-4" />
             Logg inn for å stemme
           </Link>
+          <p className="text-xs text-muted-foreground">
+            Logg inn → stem For, Mot eller Avstår → se resultatet. Én person, én stemme.
+          </p>
         </div>
       )}
 

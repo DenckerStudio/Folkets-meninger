@@ -91,17 +91,17 @@ export function ValgomatPanel() {
   if (!alignmentAvailable || scores.length === 0) {
     return (
       <div className="space-y-4 py-4">
-        <div className="rounded-xl border border-indigo-100 bg-indigo-50 dark:bg-indigo-950/40 p-4 text-sm text-indigo-900">
+        <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900 dark:border-indigo-900/40 dark:bg-indigo-950/40 dark:text-indigo-100">
           Du har stemt på <strong>{voteCount}</strong>{' '}
-          {voteCount === 1 ? 'sak' : 'saker'}. Partisammenligning (hvilke partier du stemmer mest likt)
-          kommer når vi har koblet stemmene dine mot Stortingets partivurderinger per sak.
+          {voteCount === 1 ? 'sak' : 'saker'}. Partisammenligning er klar i produktet, men slått av
+          inntil vi har ekte stemmedata per parti fra Stortinget — vi viser ingen fiktive prosenter.
         </div>
-        <p className="text-sm text-muted-foreground text-center">
-          Ingen fiktive prosenter vises — bare ekte data når sammenligningen er klar.
+        <p className="text-center text-sm text-muted-foreground">
+          Fortsett å stemme. Når partidata er koblet, dukker Valgomaten opp automatisk her.
         </p>
         <Link
           href={routes.utforsk}
-          className="block text-center text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-500 text-sm"
+          className="block text-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
         >
           Stem på flere saker →
         </Link>

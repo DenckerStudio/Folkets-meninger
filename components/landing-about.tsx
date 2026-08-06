@@ -12,7 +12,7 @@ export function LandingAbout() {
       missionTitle="Vår misjon"
       missionParagraphs={[
         'Demokratiet stopper ikke på valgdagen. Mellom valgene fattes det tusenvis av beslutninger på Stortinget som påvirker hverdagen vår. Folkets Stemme ble skapt for å tette gapet mellom politikerne og folket i disse periodene.',
-        'Vi henter saker direkte fra Stortingets åpne API, krever sikker innlogging (BankID kommer senere), og viser kun anonym innsikt — slik at politikere ser trender, ikke personer.',
+        'Vi henter saker direkte fra Stortingets åpne API, krever sikker innlogging (MinID kommer senere), og viser kun anonym innsikt — slik at politikere ser trender, ikke personer.',
         'Vi tror at reell, verifisert statistikk over hva velgerne mener om konkrete saker fører til bedre beslutninger — og at innbyggere fortjener å bli hørt mellom valgene.',
       ]}
       privacy={{

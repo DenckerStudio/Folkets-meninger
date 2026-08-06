@@ -40,7 +40,7 @@ export function LandingRoadmap() {
             date: 'Nå',
             title: 'Tillit, synlighet og førsteinntrykk',
             description:
-              'Poengnivåer (Aktiv → Veteran) finnes allerede. Neste: gjøre engasjementet synlig før innlogging, åpne forum-reels for publikum, stramme opp onboarding til første stemme, og forberede BankID.',
+              'Poengnivåer (Aktiv → Veteran) finnes allerede. Vi synliggjør saker før innlogging, åpner forum-reels for publikum, strammer opp stien til første stemme, og forbereder MinID.',
             status: 'current',
             detail: (
               <p>
