@@ -6,8 +6,8 @@ test.describe('Folkets Stemme smoke', () => {
     await expect(page.getByRole('heading', { name: /Folkets Stemme|Slik fungerer det/i }).first()).toBeVisible();
   });
 
-  test('om-oss mentions login not BankID', async ({ page }) => {
-    await page.goto('/om-oss');
+  test('landing about section mentions login not BankID', async ({ page }) => {
+    await page.goto('/#om-oss');
     await expect(page.getByText(/BankID kommer senere/i)).toBeVisible();
   });
 

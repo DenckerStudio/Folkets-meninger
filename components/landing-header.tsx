@@ -37,12 +37,18 @@ export function LandingHeader() {
           <LandingLogo clipId="fs-header-bubble" />
         </Link>
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link
+          <a
             href={routes.omOss}
-            className="hidden sm:inline-flex text-sm font-medium text-[#001433]/65 hover:text-[#ba0c2f] px-3 py-2 transition-colors"
+            onClick={(event) => {
+              if (window.location.pathname !== '/') return;
+              event.preventDefault();
+              document.getElementById('om-oss')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              window.history.replaceState(null, '', '/#om-oss');
+            }}
+            className="hidden sm:inline-flex px-3 py-2 text-sm font-medium text-[#001433]/65 transition-colors hover:text-[#ba0c2f]"
           >
             Om oss
-          </Link>
+          </a>
           {user ? (
             <Link
               href={routes.dashboard}

@@ -1,14 +1,13 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Reel flow UI', () => {
-  test('om-oss roadmap documents points tiers', async ({ page }) => {
-    await page.goto('/om-oss');
+  test('landing roadmap documents points tiers', async ({ page }) => {
+    await page.goto('/#veien-videre');
     await expect(page.getByText(/Poengnivåer/i)).toBeVisible();
-    await expect(page.getByText(/Pålitelig \(750 poeng\)/i)).toBeVisible();
-    await expect(page.getByText(/Kurator \(2 000 poeng\)/i)).toBeVisible();
-    await expect(page.getByText(/stemmer teller likt/i)).toBeVisible();
-    await expect(page.getByRole('link', { name: /Opprett konto og begynn å samle poeng/i })).toBeVisible();
-    await page.screenshot({ path: '/opt/cursor/artifacts/screenshots/om-oss-roadmap.png', fullPage: true });
+    await expect(page.getByText(/Pålitelig \(750\)/i)).toBeVisible();
+    await expect(page.getByText(/Kurator \(2 000\)/i)).toBeVisible();
+    await expect(page.getByRole('link', { name: /Opprett konto/i }).first()).toBeVisible();
+    await page.screenshot({ path: '/opt/cursor/artifacts/screenshots/landing-roadmap.png', fullPage: true });
   });
 
   test('foresla-reel redirects unauthenticated users to login', async ({ page }) => {

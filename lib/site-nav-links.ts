@@ -44,7 +44,8 @@ export const isMinSideActive: NavIsActive = (pathname) =>
   pathname.startsWith(routes.varsler) ||
   pathname.startsWith('/auth');
 
-export const isOmOssActive: NavIsActive = (pathname) => pathname === routes.omOss;
+export const isOmOssActive: NavIsActive = (pathname) =>
+  pathname === '/' || pathname === routes.home;
 
 
 export const isInnsiktActive: NavIsActive = (pathname) =>
@@ -73,7 +74,7 @@ export const desktopMoreNavLinks: SiteNavLinkItem[] = [
   {
     title: 'Om oss',
     href: routes.omOss,
-    description: 'Historie, mål og hvordan vi jobber',
+    description: 'Misjon, personvern og veien videre',
     icon: Info,
     isActive: isOmOssActive,
   },

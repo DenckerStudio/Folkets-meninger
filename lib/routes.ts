@@ -24,7 +24,7 @@ export const routes = {
   politikerHub: `${DASHBOARD_PREFIX}/politiker-hub`,
   saksganger: `${DASHBOARD_PREFIX}/saksganger`,
   sporsmal: `${DASHBOARD_PREFIX}/sporsmal`,
-  omOss: '/om-oss',
+  omOss: '/#om-oss',
   innspill: '/innspill',
   login: '/auth/login',
   completeProfile: '/auth/complete-profile',
