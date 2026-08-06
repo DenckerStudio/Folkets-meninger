@@ -1,3 +1,5 @@
+import { isLandingPath } from '@/lib/preferences/landing-theme';
+
 export type ThemeMode = 'light' | 'dark' | 'system';
 
 export type MotionPreference = 'system' | 'reduce' | 'full';
@@ -56,13 +58,18 @@ export function shouldReduceMotion(motion: MotionPreference): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-export function applyAppPreferencesToDocument(prefs: AppPreferences): void {
+export function applyAppPreferencesToDocument(
+  prefs: AppPreferences,
+  options?: { pathname?: string },
+): void {
   if (typeof document === 'undefined') return;
 
   const root = document.documentElement;
-  const resolvedTheme = resolveThemeMode(prefs.theme);
+  const forceLight = options?.pathname !== undefined && isLandingPath(options.pathname);
+  const resolvedTheme = forceLight ? 'light' : resolveThemeMode(prefs.theme);
   root.classList.toggle('dark', resolvedTheme === 'dark');
   root.classList.toggle('motion-reduce', shouldReduceMotion(prefs.motion));
-  root.dataset.theme = prefs.theme;
+  root.dataset.theme = forceLight ? 'light' : prefs.theme;
   root.dataset.motion = prefs.motion;
+  root.dataset.landingLight = forceLight ? 'true' : 'false';
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { PREFERENCE_KEYS } from '@/lib/preferences/keys';
 import {
   applyAppPreferencesToDocument,
@@ -12,6 +13,7 @@ import {
 import { usePersistedState } from '@/hooks/use-persisted-state';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [rawPreferences] = usePersistedState(
     PREFERENCE_KEYS.app.preferences,
     DEFAULT_APP_PREFERENCES,
@@ -21,13 +23,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const preferences = mergeAppPreferences(rawPreferences);
 
   useEffect(() => {
-    applyAppPreferencesToDocument(preferences);
+    applyAppPreferencesToDocument(preferences, { pathname });
 
     const mediaTheme = window.matchMedia('(prefers-color-scheme: dark)');
     const mediaMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     const syncFromSystem = () => {
-      applyAppPreferencesToDocument(preferences);
+      applyAppPreferencesToDocument(preferences, { pathname });
     };
 
     mediaTheme.addEventListener('change', syncFromSystem);
@@ -37,12 +39,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       mediaTheme.removeEventListener('change', syncFromSystem);
       mediaMotion.removeEventListener('change', syncFromSystem);
     };
-  }, [preferences]);
+  }, [preferences, pathname]);
 
   return children;
 }
 
 export function useAppPreferences(): [AppPreferences, (next: AppPreferences | ((prev: AppPreferences) => AppPreferences)) => void] {
+  const pathname = usePathname();
   const [raw, setRaw] = usePersistedState(
     PREFERENCE_KEYS.app.preferences,
     DEFAULT_APP_PREFERENCES,
@@ -55,7 +58,7 @@ export function useAppPreferences(): [AppPreferences, (next: AppPreferences | ((
     setRaw((prev) => {
       const current = mergeAppPreferences(prev);
       const resolved = typeof next === 'function' ? next(current) : next;
-      applyAppPreferencesToDocument(resolved);
+      applyAppPreferencesToDocument(resolved, { pathname });
       return resolved;
     });
   };

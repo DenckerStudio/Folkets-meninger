@@ -22,25 +22,25 @@ export default async function LandingPage() {
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             <FeatureCard
               icon={TrendingUp}
-              iconClass="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400"
+              iconClass="bg-emerald-100 text-emerald-600"
               title="Direkte fra Stortinget"
               description="Vi henter lovforslag og representantforslag fra Stortingets åpne API — saker som egner seg for enkelt ja/nei-engasjement."
             />
             <FeatureCard
               icon={Vote}
-              iconClass="bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400"
+              iconClass="bg-indigo-100 text-indigo-600"
               title="Stem på saker"
               description="Si din mening med verifisert stemmegivning. Én person, én stemme — anonymt i statistikken."
             />
             <FeatureCard
               icon={MessageSquare}
-              iconClass="bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400"
+              iconClass="bg-amber-100 text-amber-600"
               title="Delta i debatten"
               description="Forum og høringer med navngitte innlegg — diskuter åpent med fornavn og etternavn."
             />
             <FeatureCard
               icon={BarChart2}
-              iconClass="bg-violet-100 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400"
+              iconClass="bg-violet-100 text-violet-600"
               title="Innsikt for politikere"
               description="Anonymisert statistikk hjelper representanter å forstå hva velgerne mener."
             />
@@ -51,7 +51,7 @@ export default async function LandingPage() {
       <FadeIn delay={0.25} direction="up">
         <section className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="bg-card p-6 rounded-2xl shadow-sm border border-border lg:col-span-1">
-            <div className="w-12 h-12 inline-flex items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 mb-4">
+            <div className="w-12 h-12 inline-flex items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 mb-4">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <h3 className="text-lg font-medium text-foreground">Verifisert og sikkert</h3>

@@ -30,7 +30,7 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
           </div>
           <Link
             href={`${routes.login}?next=${encodeURIComponent(routes.utforsk)}`}
-            className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 flex items-center shrink-0"
+            className="text-sm font-medium text-indigo-600 hover:text-indigo-500 flex items-center shrink-0"
           >
             Logg inn for alle saker <ArrowRight className="ml-1 w-4 h-4" />
           </Link>
@@ -53,7 +53,7 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
                     </span>
                     <span className="text-sm text-muted-foreground shrink-0">Votering: {issue.date}</span>
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2 group-hover:text-indigo-600 dark:text-indigo-400 transition-colors line-clamp-2">
+                  <h3 className="text-xl font-semibold text-foreground mb-2 group-hover:text-indigo-600 transition-colors line-clamp-2">
                     {issue.title}
                   </h3>
                   <p className="text-muted-foreground line-clamp-2 mb-4">{issue.summary}</p>
@@ -69,7 +69,7 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
                   </div>
                   <div className="flex justify-between items-center w-full">
                     <span className="text-xs font-medium text-muted-foreground">{forPercent}% For</span>
-                    <span className="text-indigo-600 dark:text-indigo-400 text-sm font-medium flex items-center group-hover:text-indigo-700 dark:text-indigo-300">
+                    <span className="text-indigo-600 text-sm font-medium flex items-center group-hover:text-indigo-700">
                       Les mer <ArrowRight className="ml-1 w-4 h-4" />
                     </span>
                   </div>

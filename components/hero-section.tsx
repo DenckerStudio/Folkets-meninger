@@ -20,7 +20,7 @@ export default function HeroSection() {
       />
 
       <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="inline-flex items-center px-3 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-sm font-medium mb-8 border border-indigo-100 dark:border-indigo-900/50">
+        <div className="inline-flex items-center px-3 py-1 bg-indigo-50 text-indigo-700 text-sm font-medium mb-8 border border-indigo-100">
           <span
             className={`flex h-2 w-2 bg-indigo-600 mr-2 rounded-full ${reducedMotion ? '' : 'animate-pulse'}`}
           />
