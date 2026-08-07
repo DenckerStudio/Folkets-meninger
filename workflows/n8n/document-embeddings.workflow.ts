@@ -8,6 +8,15 @@ import {
   placeholder,
 } from '@n8n/workflow-sdk';
 
+/**
+ * RAG embeddings:
+ * - App creates pending document_chunks (no HTML cache; document body cleared after chunking).
+ * - n8n embeds with Ollama and writes vectors to Postgres (required for match_issue_document_chunks).
+ * - After embed, mark document chunks_status=ready and clear any leftover body text.
+ *
+ * n8n is not a vector store — embeddings must stay in pgvector.
+ */
+
 const PENDING_CHUNKS_SQL = `SELECT
   c.id,
   c.issue_id,
@@ -33,7 +42,27 @@ const updateSql = \`UPDATE public.document_chunks
 SET embedding = '\${vector}'::vector,
     embedding_status = 'ready'
 WHERE id = \${esc(item.id)}::uuid\`;
-return { json: { ...item, updateSql } };`;
+const finalizeSql = \`UPDATE public.stortinget_issue_documents d
+SET chunks_status = CASE
+      WHEN EXISTS (
+        SELECT 1 FROM public.document_chunks c
+        WHERE c.issue_id = d.issue_id
+          AND c.document_id = d.document_id
+          AND c.embedding_status = 'pending'
+      ) THEN 'pending'
+      WHEN EXISTS (
+        SELECT 1 FROM public.document_chunks c
+        WHERE c.issue_id = d.issue_id
+          AND c.document_id = d.document_id
+          AND c.embedding_status = 'ready'
+      ) THEN 'ready'
+      ELSE d.chunks_status
+    END,
+    content_full_text = NULL,
+    content_html = NULL
+WHERE d.issue_id = \${esc(item.issue_id)}
+  AND d.document_id = \${esc(item.document_id)}\`;
+return { json: { ...item, updateSql, finalizeSql } };`;
 
 const scheduleTrigger = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
@@ -131,6 +160,7 @@ return { json: { ...chunk, embedding } };`,
     {
       id: '00000000-0000-0000-0000-000000000001',
       issue_id: '200329',
+      document_id: 'inns-202526-434s',
       embedding: [0.1, 0.2, 0.3],
     },
   ],
@@ -147,7 +177,7 @@ const prepareEmbeddingUpdate = node({
       jsCode: PREPARE_EMBEDDING_UPDATE_JS,
     },
   },
-  output: [{ updateSql: 'UPDATE public.document_chunks SET ...' }],
+  output: [{ updateSql: 'UPDATE public.document_chunks SET ...', finalizeSql: 'UPDATE ...' }],
 });
 
 const saveEmbedding = node({
@@ -159,6 +189,21 @@ const saveEmbedding = node({
     parameters: {
       operation: 'executeQuery',
       query: expr('{{ $json.updateSql }}'),
+    },
+  },
+  output: [{ success: true }],
+});
+
+const clearDocumentBody = node({
+  type: 'n8n-nodes-base.postgres',
+  version: 2.6,
+  config: {
+    name: 'Clear document body storage',
+    credentials: { postgres: newCredential('Supabase Postgres Folkets') },
+    parameters: {
+      operation: 'executeQuery',
+      // Postgres node output drops prior fields — read finalizeSql from the prepare node.
+      query: expr("={{ $('Prepare embedding update SQL').item.json.finalizeSql }}"),
     },
   },
   output: [{ success: true }],
@@ -243,7 +288,7 @@ const normalizeWebhook = node({
 });
 
 sticky(
-  '## Dokument embeddings (RAG)\n\nHenter pending `document_chunks`, kaller Ollama `nomic-embed-text:v1.5` sekvensielt (ett item per node-kjøring), lagrer i pgvector.\n\nWebhook: `POST /webhook/folkets-document-embeddings` med valgfri `{ "stortinget_issue_id": "…" }`.',
+  '## Dokument embeddings (lagringseffektiv RAG)\n\nAppen lagrer ikke HTML-cache; chunk-tekst er én kopi i `document_chunks`. n8n embedder med Ollama og skriver til pgvector (påkrevd for RAG — n8n er ikke vektorlager). Etter embed: `chunks_status=ready` + slett leftover `content_full_text`/`content_html`.\n\nWebhook: `POST /webhook/folkets-document-embeddings` med valgfri `{ "stortinget_issue_id": "…" }`.',
   [scheduleTrigger, webhookTrigger],
   { color: 5 }
 );
@@ -253,6 +298,7 @@ const embeddingPipeline = fetchPendingChunks
   .to(mapEmbedding)
   .to(prepareEmbeddingUpdate)
   .to(saveEmbedding)
+  .to(clearDocumentBody)
   .to(rateLimitPause)
   .to(batchRunComplete);
 

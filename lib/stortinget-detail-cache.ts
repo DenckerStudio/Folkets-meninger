@@ -61,27 +61,22 @@ export async function getSakIssueMeta(sakId: string): Promise<SakIssueMeta | nul
     const service = getServiceSupabase();
     const { data } = await service
       .from('stortinget_issues')
-      .select('status, ferdigbehandlet, voting_closes_at, last_updated_at, detail_json')
+      .select('status, ferdigbehandlet, voting_closes_at, last_updated_at')
       .eq('id', sakId)
       .maybeSingle();
 
     if (!data) return null;
 
-    const detail = data.detail_json as StortingetSakDetail | null;
-
     return {
       lastUpdatedAt: data.last_updated_at ?? null,
       status: resolveSakStatusFromSources({
         ferdigbehandlet: data.ferdigbehandlet,
-        detailJson: detail,
         cachedStatus: data.status,
       }),
       ferdigbehandlet:
         typeof data.ferdigbehandlet === 'boolean'
           ? data.ferdigbehandlet
-          : typeof detail?.ferdigbehandlet === 'boolean'
-            ? detail.ferdigbehandlet
-            : null,
+          : null,
       votingClosesAt: data.voting_closes_at ?? null,
     };
   } catch {
@@ -200,7 +195,7 @@ async function updateAiSummarySource(
 ) {
   const { data: documents } = await service
     .from('stortinget_issue_documents')
-    .select('document_id, title, document_type, text_excerpt, source_url, content_full_text')
+    .select('document_id, title, document_type, text_excerpt, source_url')
     .eq('issue_id', sakId)
     .order('fetched_at', { ascending: false })
     .limit(5);
