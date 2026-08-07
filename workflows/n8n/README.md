@@ -134,15 +134,23 @@ Webhook: `POST /webhook/folkets-forum-prompts` (env `N8N_FORUM_PROMPTS_WEBHOOK_U
 
 **Live workflow:** https://n8n.heyklever.app/workflow/IkedEmJEJFqj7ZnM
 
+**Lagring:** Appen cacher ikke publikasjons-HTML. Chunk-tekst lagres én gang i
+`document_chunks`; n8n skriver embeddings til pgvector (påkrevd for RAG — n8n
+er ikke vektorlager). Se migrasjon
+`20260807112603_document_chunks_storage_efficiency.sql` og
+`scripts/reclaim-document-storage.sql` ved `exceed_db_size_quota`.
+
 App-side kilde:
 
 - `lib/stortinget-detail-cache.ts` kaller `ingestSakDocuments` ved cache-hit og
   cache-refresh.
 - `lib/stortinget-document-ingest.ts` parser saksdokumenter, henter visbar HTML
-  fra Stortinget, lagrer tekst/HTML i `stortinget_issue_documents`, og oppretter
-  `document_chunks` med `embedding_status='pending'`.
+  fra Stortinget, lagrer kort `text_excerpt`, oppretter `document_chunks` med
+  `embedding_status='pending'`, og sletter `content_full_text`/`content_html`.
 - `lib/trigger-document-embeddings-webhook.ts` sender fire-and-forget webhook når
   nye chunks er opprettet.
+- n8n (`document-embeddings.workflow.ts`) embedder pending chunks, setter
+  `chunks_status=ready`, og rydder leftover dokumenttekst.
 
 | Nøkkel | Verdi |
 |--------|--------|
@@ -156,7 +164,8 @@ curl -X POST "$N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL" \
   -d '{"stortinget_issue_id":"200329"}'
 ```
 
-Supabase-migrasjon: `20260617120000_sak_documents_rag.sql` (`content_html`, `document_chunks`, pgvector).
+Supabase-migrasjoner: `20260617120000_sak_documents_rag.sql`,
+`20260807112603_document_chunks_storage_efficiency.sql`.
 
 AI-sammendrag (`ai-summary-backfill`) inkluderer nå `rag_chunks` i kontekst når dokumenter er ingestet.
 
@@ -174,6 +183,7 @@ Feilsøking:
 | Ingen dokumenter | Saken mangler visbare dokumentreferanser, eller `parseSakDocuments` fant ingen |
 | Chunks blir stående `pending` | `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL`, n8n workflow-status, og Ollama embedding-modell |
 | AI-sammendrag mangler dokumentkontekst | Kjør dokumentbackfill først, deretter AI summary backfill/webhook |
+| `exceed_db_size_quota` / 402 | Kjør `scripts/reclaim-document-storage.sql` som DB-eier, deretter `VACUUM FULL` |
 
 ## App cron (erstatter Vercel Cron)
 

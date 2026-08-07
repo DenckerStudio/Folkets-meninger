@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { getCachedSakDetail } from '@/lib/stortinget-detail-cache';
 import { parseSakDocuments } from '@/lib/stortinget-documents';
+import { fetchPublikasjonHtml } from '@/lib/stortinget-publikasjon';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,47 +31,68 @@ export async function GET(
     });
   }
 
-  let service: ReturnType<typeof getServiceSupabase>;
+  let service: ReturnType<typeof getServiceSupabase> | null = null;
   try {
     service = getServiceSupabase();
   } catch {
-    return NextResponse.json({ status: 'pending', retry_after_seconds: 10 });
+    service = null;
   }
 
-  const { data: row } = await service
-    .from('stortinget_issue_documents')
-    .select('title, content_html, ingest_status, source_url')
-    .eq('issue_id', id)
-    .eq('document_id', decodedDocId)
-    .maybeSingle();
+  if (service) {
+    const { data: row } = await service
+      .from('stortinget_issue_documents')
+      .select('title, content_html, ingest_status, source_url')
+      .eq('issue_id', id)
+      .eq('document_id', decodedDocId)
+      .maybeSingle();
 
-  if (!row) {
-    return NextResponse.json({ status: 'pending', retry_after_seconds: 10 });
+    if (row?.ingest_status === 'external_only') {
+      return NextResponse.json({
+        status: 'external_only',
+        title: row.title ?? document.title,
+        sourceUrl: row.source_url ?? document.sourceUrl,
+      });
+    }
+
+    if (row?.ingest_status === 'failed') {
+      return NextResponse.json({
+        status: 'failed',
+        title: row.title ?? document.title,
+        sourceUrl: row.source_url ?? document.sourceUrl,
+      });
+    }
+
+    // Legacy cache (pre storage-efficiency). Prefer this when present.
+    if (row?.ingest_status === 'ready' && row.content_html) {
+      return NextResponse.json({
+        status: 'ready',
+        title: row.title ?? document.title,
+        html: row.content_html,
+      });
+    }
   }
 
-  if (row.ingest_status === 'external_only') {
+  // Storage-efficient path: fetch HTML live from Stortinget (no DB HTML cache).
+  if (!document.exportId) {
     return NextResponse.json({
       status: 'external_only',
-      title: row.title ?? document.title,
-      sourceUrl: row.source_url ?? document.sourceUrl,
+      title: document.title,
+      sourceUrl: document.sourceUrl,
     });
   }
 
-  if (row.ingest_status === 'failed') {
+  const fetched = await fetchPublikasjonHtml(document.exportId);
+  if (!fetched) {
     return NextResponse.json({
       status: 'failed',
-      title: row.title ?? document.title,
-      sourceUrl: row.source_url ?? document.sourceUrl,
+      title: document.title,
+      sourceUrl: document.sourceUrl,
     });
   }
 
-  if (row.ingest_status === 'ready' && row.content_html) {
-    return NextResponse.json({
-      status: 'ready',
-      title: row.title ?? document.title,
-      html: row.content_html,
-    });
-  }
-
-  return NextResponse.json({ status: 'pending', retry_after_seconds: 8 });
+  return NextResponse.json({
+    status: 'ready',
+    title: document.title,
+    html: fetched.displayHtml,
+  });
 }

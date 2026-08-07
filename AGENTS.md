@@ -145,10 +145,15 @@ The canonical template is `.env.example`.
 ### Document ingest and RAG
 
 - `lib/stortinget-document-ingest.ts` parses sak documents, fetches publication
-  HTML where available, stores plain text/HTML in `stortinget_issue_documents`,
-  and writes pending `document_chunks`.
+  HTML where available, stores a short excerpt (no HTML cache), writes pending
+  `document_chunks`, then clears `content_full_text` so chunk text is the single copy.
 - New chunks fire `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL`; n8n embeds pending
-  chunks and marks them ready for `match_issue_document_chunks`.
+  chunks in Postgres pgvector (required for RAG — n8n is not a vector store)
+  and marks them ready for `match_issue_document_chunks`.
+- Viewer HTML is fetched live from Stortinget via
+  `/api/sak/[id]/documents/[docId]/content` when no legacy `content_html` exists.
+- If DB hits size quota: `scripts/reclaim-document-storage.sql` or
+  `reclaim_document_body_storage()`.
 - Backfill recent cached issues with `npx tsx scripts/backfill-sak-documents.ts 10`.
 
 ### Notifications and cron

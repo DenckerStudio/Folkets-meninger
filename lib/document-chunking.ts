@@ -1,5 +1,5 @@
-const DEFAULT_CHUNK_SIZE = 900;
-const DEFAULT_OVERLAP = 120;
+const DEFAULT_CHUNK_SIZE = 1400;
+const DEFAULT_OVERLAP = 80;
 
 function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
@@ -37,3 +37,8 @@ export function chunkDocumentText(
 
   return chunks;
 }
+
+export const DOCUMENT_CHUNK_DEFAULTS = {
+  chunkSize: DEFAULT_CHUNK_SIZE,
+  overlap: DEFAULT_OVERLAP,
+} as const;

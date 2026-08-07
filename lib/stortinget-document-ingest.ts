@@ -94,6 +94,18 @@ async function upsertDocumentChunks(args: {
       .in('chunk_index', staleIndexes);
   }
 
+  // One text copy only: chunks hold RAG content; drop document body immediately.
+  const hasChunks = created > 0 || (existingChunks?.length ?? 0) > 0 || chunks.length > 0;
+  await args.service
+    .from('stortinget_issue_documents')
+    .update({
+      content_full_text: null,
+      content_html: null,
+      chunks_status: hasChunks ? 'pending' : 'none',
+    })
+    .eq('issue_id', args.issueId)
+    .eq('document_id', args.document.id);
+
   return created;
 }
 
@@ -117,6 +129,7 @@ async function ingestOneDocument(args: {
         content_full_text: null,
         mime_type: null,
         ingest_status: 'external_only',
+        chunks_status: 'none',
         content_hash: contentHash(`${document.title}:${document.sourceUrl ?? ''}`),
         fetched_at: new Date().toISOString(),
       },
@@ -139,6 +152,7 @@ async function ingestOneDocument(args: {
         content_full_text: null,
         mime_type: null,
         ingest_status: 'failed',
+        chunks_status: 'none',
         content_hash: contentHash(document.exportId),
         fetched_at: new Date().toISOString(),
       },
@@ -150,6 +164,7 @@ async function ingestOneDocument(args: {
   const hash = contentHash(fetched.plainText);
   const excerpt = fetched.plainText.slice(0, 3_000);
 
+  // Do not cache HTML (viewer fetches live). Plain text is temporary until chunked.
   await service.from('stortinget_issue_documents').upsert(
     {
       issue_id: issueId,
@@ -158,10 +173,11 @@ async function ingestOneDocument(args: {
       document_type: document.documentType,
       source_url: document.sourceUrl,
       text_excerpt: excerpt,
-      content_html: fetched.displayHtml,
+      content_html: null,
       content_full_text: fetched.plainText,
       mime_type: fetched.mimeType,
       ingest_status: 'ready',
+      chunks_status: 'pending',
       content_hash: hash,
       fetched_at: new Date().toISOString(),
     },
@@ -207,7 +223,7 @@ export async function ingestSakDocuments(
   for (const document of documents) {
     const { data: existing } = await service
       .from('stortinget_issue_documents')
-      .select('content_hash, ingest_status')
+      .select('content_hash, ingest_status, chunks_status')
       .eq('issue_id', issueId)
       .eq('document_id', document.id)
       .maybeSingle();
@@ -215,6 +231,9 @@ export async function ingestSakDocuments(
     if (existing?.ingest_status === 'ready' && existing.content_hash) {
       result.processed += 1;
       result.ready += 1;
+      if (existing.chunks_status === 'pending') {
+        shouldTriggerEmbeddings = true;
+      }
       continue;
     }
 
