@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Copy .env.test → .env.local for local/test work against heyklever Supabase.
+ * Copy .env.test → .env.local for local/test work against Folkets-Stemme Supabase.
  * Preserves any existing SUPABASE_SERVICE_ROLE_KEY / secrets already in .env.local.
  */
 import fs from 'node:fs';
@@ -34,6 +34,7 @@ const prev = parse(existing);
 
 // Keep secrets from existing .env.local when test file leaves them blank/commented.
 for (const key of [
+  'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
   'SUPABASE_SERVICE_ROLE_KEY',
   'CRON_SECRET',
   'SMTP_HOST',
