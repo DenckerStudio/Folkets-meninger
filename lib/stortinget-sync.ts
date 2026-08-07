@@ -7,7 +7,6 @@ import {
 import { getCachedSakDetail, refreshStalePendingSakDetails } from './stortinget-detail-cache';
 import { isDebattSak } from './stortinget-sak-presentation';
 import { resolveSakStatusFromSources } from './sak-status';
-import type { StortingetSakDetail } from './stortinget';
 
 export type SyncIssuesResult = {
   upserted: number;
@@ -20,7 +19,6 @@ export type SyncIssuesResult = {
 type ExistingIssueRow = {
   id: string;
   first_seen_at: string | null;
-  detail_json: StortingetSakDetail | null;
   ferdigbehandlet: boolean | null;
   title: string | null;
   summary: string | null;
@@ -115,7 +113,7 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
       service
         .from('stortinget_issues')
         .select(
-          'id, first_seen_at, detail_json, ferdigbehandlet, title, summary, status, category, sak_kind, henvisning, dokumentgruppe, last_updated_at',
+          'id, first_seen_at, ferdigbehandlet, title, summary, status, category, sak_kind, henvisning, dokumentgruppe, last_updated_at',
         )
         .in('id', chunkIds),
     ]);
@@ -129,14 +127,9 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
 
     for (const row of chunk) {
       const existing = existingById.get(row.id);
-      const detail = existing?.detail_json ?? null;
       const issue = issueById.get(row.id);
       const status = resolveSakStatusFromSources({
-        ferdigbehandlet:
-          typeof detail?.ferdigbehandlet === 'boolean'
-            ? detail.ferdigbehandlet
-            : existing?.ferdigbehandlet,
-        detailJson: detail,
+        ferdigbehandlet: existing?.ferdigbehandlet,
         cachedStatus: existing?.status ?? row.status,
         numericStatus: issue?.stortingetNumericStatus,
         listInnstilling: issue?.listInnstilling,
@@ -145,10 +138,7 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
       const payload: IssueListRow = {
         ...row,
         status,
-        ferdigbehandlet:
-          typeof detail?.ferdigbehandlet === 'boolean'
-            ? detail.ferdigbehandlet
-            : (existing?.ferdigbehandlet ?? null),
+        ferdigbehandlet: existing?.ferdigbehandlet ?? null,
         first_seen_at: existing?.first_seen_at ?? now,
       };
 

@@ -333,6 +333,10 @@ App-side flow (storage-efficient):
 6. Document viewer (`/api/sak/[id]/documents/[docId]/content`) fetches HTML live
    from Stortinget when no legacy `content_html` cache exists.
 
+**Egress:** List/sync/overlay queries must not select full `detail_json`.
+Use denormalized columns + live list overlays. n8n AI-summary SQL projects a
+trimmed detail context instead of the full JSON blob.
+
 **Important:** n8n is not a vector store. RAG requires embeddings in Postgres
 (`match_issue_document_chunks`). Moving chunk *blobs* into n8n would break
 similarity search.

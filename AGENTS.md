@@ -70,18 +70,21 @@ The canonical template is `.env.example`.
 ### Stortinget sync and sak cache
 
 - `GET /api/cron/sync-issues` calls `lib/stortinget-sync.ts`; n8n schedules it
-  in `workflows/n8n/app-cron.workflow.ts`. The result includes `upserted`,
-  `total`, `newIssueIds`, `aiSummaryTriggered`, and `detailsRefreshed`.
+ in `workflows/n8n/app-cron.workflow.ts`. The result includes `upserted`,
+ `total`, `newIssueIds`, `aiSummaryTriggered`, and `detailsRefreshed`.
 - `lib/sak-status.ts` is the source of truth for "Under behandling" vs
-  "Ferdigbehandlet"; it merges detail `ferdigbehandlet`, denormalized DB state,
-  fresh list `status`, and `innstilling_*` hints because Stortinget list/detail
-  exports can drift.
+ "Ferdigbehandlet"; it merges detail `ferdigbehandlet`, denormalized DB state,
+ fresh list `status`, and `innstilling_*` hints because Stortinget list/detail
+ exports can drift.
+- List/sync/overlay queries must **not** select full `detail_json` (egress).
+ Prefer denormalized `ferdigbehandlet`/`status` plus live list overlays; reserve
+ full `detail_json` for sak detail pages and AI source builds.
 - `lib/stortinget-saker-cache.ts` serves the list from 30-minute memory cache,
-  30-minute `unstable_cache` DB reads, optional live list status overlays, and
-  live Stortinget fallback. `getSakerWithCache()` returns `[]` during
-  `NEXT_PHASE=phase-production-build`.
+ 30-minute `unstable_cache` DB reads, optional live list status overlays, and
+ live Stortinget fallback. `getSakerWithCache()` returns `[]` during
+ `NEXT_PHASE=phase-production-build`.
 - `lib/stortinget-detail-cache.ts` stores detail JSON in `stortinget_issues` with
-  a 24-hour max age and refreshes stale pending details.
+ a 24-hour max age and refreshes stale pending details.
 - Detail refresh computes `sak_kind`, `henvisning`, `dokumentgruppe`,
   `ferdigbehandlet`, and `voting_closes_at`, then triggers missing AI summaries
   and document ingest.

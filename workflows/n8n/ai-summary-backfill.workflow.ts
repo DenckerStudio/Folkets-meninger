@@ -12,13 +12,22 @@ import {
   placeholder,
 } from '@n8n/workflow-sdk';
 
+const DETAIL_CONTEXT_SQL = `jsonb_strip_nulls(jsonb_build_object(
+  'ferdigbehandlet', i.detail_json->'ferdigbehandlet',
+  'status', i.detail_json->'status',
+  'innstillingstekst', left(coalesce(i.detail_json->>'innstillingstekst', ''), 6000),
+  'vedtakstekst', left(coalesce(i.detail_json->>'vedtakstekst', ''), 4000),
+  'korttittel', i.detail_json->>'korttittel',
+  'tittel', i.detail_json->>'tittel'
+))`;
+
 const RAG_CHUNKS_SUBQUERY = `(
   SELECT COALESCE(
     json_agg(
       json_build_object(
         'document_id', dc.document_id,
         'chunk_index', dc.chunk_index,
-        'content', dc.content
+        'content', left(dc.content, 1200)
       )
       ORDER BY dc.document_id, dc.chunk_index
     ),
@@ -28,8 +37,9 @@ const RAG_CHUNKS_SUBQUERY = `(
     SELECT document_id, chunk_index, content
     FROM public.document_chunks
     WHERE issue_id = i.id
+      AND embedding_status = 'ready'
     ORDER BY document_id, chunk_index
-    LIMIT 12
+    LIMIT 8
   ) dc
 ) AS rag_chunks`;
 
@@ -37,15 +47,15 @@ const MISSING_SUMMARIES_SQL = `SELECT
   i.id,
   i.title,
   i.summary,
-  i.detail_json,
-  i.ai_summary_source_context,
+  ${DETAIL_CONTEXT_SQL} AS detail_json,
+  left(coalesce(i.ai_summary_source_context, ''), 12000) AS ai_summary_source_context,
   COALESCE(
     json_agg(
       json_build_object(
         'document_id', d.document_id,
         'title', d.title,
         'document_type', d.document_type,
-        'text_excerpt', d.text_excerpt,
+        'text_excerpt', left(coalesce(d.text_excerpt, ''), 2000),
         'source_url', d.source_url
       )
       ORDER BY d.fetched_at DESC
@@ -65,15 +75,15 @@ const FETCH_ISSUE_BY_ID_SQL = `SELECT
   i.id,
   i.title,
   i.summary,
-  i.detail_json,
-  i.ai_summary_source_context,
+  ${DETAIL_CONTEXT_SQL} AS detail_json,
+  left(coalesce(i.ai_summary_source_context, ''), 12000) AS ai_summary_source_context,
   COALESCE(
     json_agg(
       json_build_object(
         'document_id', d.document_id,
         'title', d.title,
         'document_type', d.document_type,
-        'text_excerpt', d.text_excerpt,
+        'text_excerpt', left(coalesce(d.text_excerpt, ''), 2000),
         'source_url', d.source_url
       )
       ORDER BY d.fetched_at DESC
