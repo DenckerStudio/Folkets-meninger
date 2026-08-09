@@ -42,8 +42,6 @@ function canRefreshFromStortingetApi(): boolean {
   return !isProductionBuild();
 }
 
-import type { StortingetSakDetail } from './stortinget';
-
 type DbIssueRow = {
   id: string;
   title: string | null;
@@ -57,7 +55,8 @@ type DbIssueRow = {
   henvisning: string | null;
   dokumentgruppe: number | null;
   category: string | null;
-  detail_json?: StortingetSakDetail | null;
+  /** Optional thin fields only — never select full detail_json on list paths (egress). */
+  detail_status?: number | null;
 };
 
 export function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTotals = EMPTY_VOTES): SakListItem {
@@ -96,8 +95,8 @@ export function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTot
 function resolveRowTreatmentStatus(row: DbIssueRow): SakTreatmentStatus {
   return resolveSakStatusFromSources({
     ferdigbehandlet: row.ferdigbehandlet,
-    detailJson: row.detail_json ?? null,
     cachedStatus: row.status,
+    numericStatus: typeof row.detail_status === 'number' ? row.detail_status : null,
   });
 }
 
@@ -135,7 +134,7 @@ function mapDbRowToListItem(row: DbIssueRow, votes: SakVoteTotals = EMPTY_VOTES)
     votes,
     status,
     stortingetNumericStatus:
-      typeof row.detail_json?.status === 'number' ? row.detail_json.status : undefined,
+      typeof row.detail_status === 'number' ? row.detail_status : undefined,
     sakKind: row.sak_kind,
     henvisning: row.henvisning,
     dokumentgruppe: row.dokumentgruppe,
@@ -182,16 +181,14 @@ async function getCachedIssueOverlays(
       const chunk = issueIds.slice(i, i + chunkSize);
       const { data, error } = await service
         .from('stortinget_issues')
-        .select('id, status, ferdigbehandlet, voting_closes_at, last_updated_at, detail_json')
+        .select('id, status, ferdigbehandlet, voting_closes_at, last_updated_at')
         .in('id', chunk);
 
       if (error || !data) continue;
 
       for (const row of data) {
-        const detail = row.detail_json as StortingetSakDetail | null;
         const status = resolveSakStatusFromSources({
           ferdigbehandlet: row.ferdigbehandlet,
-          detailJson: detail,
           cachedStatus: row.status,
           numericStatus: listNumericStatusById[String(row.id)],
           listInnstilling: listInnstillingById[String(row.id)],
@@ -343,7 +340,7 @@ async function readSakerListFromDbUncached(): Promise<{ items: SakListItem[]; st
   }
 
   const baseSelect =
-    'id, title, summary, status, ferdigbehandlet, voting_closes_at, last_updated_at, last_synced_at, sak_kind, henvisning, dokumentgruppe, detail_json';
+    'id, title, summary, status, ferdigbehandlet, voting_closes_at, last_updated_at, last_synced_at, sak_kind, henvisning, dokumentgruppe';
 
   try {
     const service = getServiceSupabase();
@@ -486,7 +483,7 @@ export async function persistSakerListToDb(items: SakListItem[]): Promise<void> 
     const { data: existingRows } = await service
       .from('stortinget_issues')
       .select(
-        'id, title, summary, status, category, sak_kind, henvisning, dokumentgruppe, last_updated_at, detail_json, ferdigbehandlet',
+        'id, title, summary, status, category, sak_kind, henvisning, dokumentgruppe, last_updated_at, ferdigbehandlet',
       )
       .in('id', chunkIds);
 
@@ -494,21 +491,15 @@ export async function persistSakerListToDb(items: SakListItem[]): Promise<void> 
     const toUpsert = chunk
       .map((item) => {
         const existing = existingById.get(item.id);
-        const detail = (existing?.detail_json as StortingetSakDetail | null | undefined) ?? null;
         const status = resolveSakStatusFromSources({
           ferdigbehandlet:
             typeof existing?.ferdigbehandlet === 'boolean' ? existing.ferdigbehandlet : null,
-          detailJson: detail,
           cachedStatus: existing?.status ?? item.status,
           numericStatus: item.stortingetNumericStatus,
           listInnstilling: item.listInnstilling,
         });
         const ferdigbehandlet =
-          typeof detail?.ferdigbehandlet === 'boolean'
-            ? detail.ferdigbehandlet
-            : typeof existing?.ferdigbehandlet === 'boolean'
-              ? existing.ferdigbehandlet
-              : null;
+          typeof existing?.ferdigbehandlet === 'boolean' ? existing.ferdigbehandlet : null;
 
         return {
           id: item.id,
@@ -597,7 +588,7 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number, fallback: T): Promi
 async function queryPopularRowsFromDb(): Promise<DbIssueRow[]> {
   const service = getServiceSupabase();
   const baseSelect =
-    'id, title, summary, status, ferdigbehandlet, voting_closes_at, last_updated_at, last_synced_at, sak_kind, henvisning, dokumentgruppe, detail_json';
+    'id, title, summary, status, ferdigbehandlet, voting_closes_at, last_updated_at, last_synced_at, sak_kind, henvisning, dokumentgruppe';
 
   const withCategory = await service
     .from('stortinget_issues')

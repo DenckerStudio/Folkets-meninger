@@ -16,11 +16,11 @@
 - Public reels UI gated by `FORUM_REELS_PUBLIC` (set `true` for public launch; admin pipeline at `/dashboard/admin/forum-prompts` (`?tab=pipeline` — RSS v12 + sak-RAG v13).
 - The repo expects validation via `npm run lint` and `npm run build`; no broad automated test suite assumed in workflows.
 - First-time env setup: copy `.env.example` to `.env.local` before `npm run dev` or `npm run build`.
-  For the heyklever test Supabase, prefer `npm run env:test` (writes `.env.local` from `.env.test`).
-  Local Docker Supabase uses `supabase/config.toml` + `npm run supabase:start`.
+  For the Folkets-Stemme test Supabase, prefer `npm run env:test` (writes `.env.local` from `.env.test`).
+ Local Docker Supabase uses `supabase/config.toml` + `npm run supabase:start`.
 - Theme tokens live in `app/globals.css` (`background`/`foreground`/`card`/`muted`/`brand`). Prefer
-  semantic classes (`bg-card`, `text-muted-foreground`, `border-border`, `text-brand`) over hard-coded
-  gray/white so light and dark mode stay consistent.
+ semantic classes (`bg-card`, `text-muted-foreground`, `border-border`, `text-brand`) over hard-coded
+ gray/white so light and dark mode stay consistent.
 
 ## Architecture Map
 
@@ -51,7 +51,7 @@ The canonical template is `.env.example`.
 
 | Variable | Used for |
 |----------|----------|
-| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser/server Supabase client setup. Test defaults: `.env.test` → heyklever |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser/server Supabase client setup. Test defaults: `.env.test` → Folkets-Stemme (`qetckokgtzbpunbzslfp`) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only DB writes, RPCs, admin reads, document ingest, voting |
 | `CRON_SECRET` | Protects `/api/cron/*` endpoints; n8n sends it as `x-cron-secret` |
 | `N8N_AI_SUMMARY_WEBHOOK_URL` | Trigger missing sak AI summaries |
@@ -70,18 +70,21 @@ The canonical template is `.env.example`.
 ### Stortinget sync and sak cache
 
 - `GET /api/cron/sync-issues` calls `lib/stortinget-sync.ts`; n8n schedules it
-  in `workflows/n8n/app-cron.workflow.ts`. The result includes `upserted`,
-  `total`, `newIssueIds`, `aiSummaryTriggered`, and `detailsRefreshed`.
+ in `workflows/n8n/app-cron.workflow.ts`. The result includes `upserted`,
+ `total`, `newIssueIds`, `aiSummaryTriggered`, and `detailsRefreshed`.
 - `lib/sak-status.ts` is the source of truth for "Under behandling" vs
-  "Ferdigbehandlet"; it merges detail `ferdigbehandlet`, denormalized DB state,
-  fresh list `status`, and `innstilling_*` hints because Stortinget list/detail
-  exports can drift.
+ "Ferdigbehandlet"; it merges detail `ferdigbehandlet`, denormalized DB state,
+ fresh list `status`, and `innstilling_*` hints because Stortinget list/detail
+ exports can drift.
+- List/sync/overlay queries must **not** select full `detail_json` (egress).
+ Prefer denormalized `ferdigbehandlet`/`status` plus live list overlays; reserve
+ full `detail_json` for sak detail pages and AI source builds.
 - `lib/stortinget-saker-cache.ts` serves the list from 30-minute memory cache,
-  30-minute `unstable_cache` DB reads, optional live list status overlays, and
-  live Stortinget fallback. `getSakerWithCache()` returns `[]` during
-  `NEXT_PHASE=phase-production-build`.
+ 30-minute `unstable_cache` DB reads, optional live list status overlays, and
+ live Stortinget fallback. `getSakerWithCache()` returns `[]` during
+ `NEXT_PHASE=phase-production-build`.
 - `lib/stortinget-detail-cache.ts` stores detail JSON in `stortinget_issues` with
-  a 24-hour max age and refreshes stale pending details.
+ a 24-hour max age and refreshes stale pending details.
 - Detail refresh computes `sak_kind`, `henvisning`, `dokumentgruppe`,
   `ferdigbehandlet`, and `voting_closes_at`, then triggers missing AI summaries
   and document ingest.
@@ -145,10 +148,15 @@ The canonical template is `.env.example`.
 ### Document ingest and RAG
 
 - `lib/stortinget-document-ingest.ts` parses sak documents, fetches publication
-  HTML where available, stores plain text/HTML in `stortinget_issue_documents`,
-  and writes pending `document_chunks`.
+  HTML where available, stores a short excerpt (no HTML cache), writes pending
+  `document_chunks`, then clears `content_full_text` so chunk text is the single copy.
 - New chunks fire `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL`; n8n embeds pending
-  chunks and marks them ready for `match_issue_document_chunks`.
+  chunks in Postgres pgvector (required for RAG — n8n is not a vector store)
+  and marks them ready for `match_issue_document_chunks`.
+- Viewer HTML is fetched live from Stortinget via
+  `/api/sak/[id]/documents/[docId]/content` when no legacy `content_html` exists.
+- If DB hits size quota: `scripts/reclaim-document-storage.sql` or
+  `reclaim_document_body_storage()`.
 - Backfill recent cached issues with `npx tsx scripts/backfill-sak-documents.ts 10`.
 
 ### Notifications and cron
@@ -183,8 +191,8 @@ The canonical template is `.env.example`.
 
 - Package manager is npm (only `package-lock.json`). The update script runs `npm ci`, so dependencies are already installed at session start. Scripts live in `package.json`: `dev`, `build`, `lint`, `test:unit`, `test:e2e`.
 - Supabase credentials (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) are provided as Cloud Agent secrets / env vars and point at a real hosted project with all `supabase/migrations/*.sql` applied (voting `vote_encryption_secret` pepper is configured). Browser-side auth from the in-VM Chrome reaches Supabase fine — the full auth/forum/voting flow works end-to-end.
-- **`.env.local` is still required to run the dev server**, because it carries the non-secret `STORTINGET_*` / `NEXT_PUBLIC_STORTINGET_*` defaults (and `middleware.ts` builds a Supabase client on every request, so the `NEXT_PUBLIC_SUPABASE_*` values must be resolvable or every page 500s). It is gitignored; recreate with `npm run env:test` (heyklever test Supabase) or from `.env.example` if absent. Next.js reads injected `process.env` with higher precedence than `.env.local`, so the injected secrets win even if `.env.local` holds older values.
-- Playwright and CI use the heyklever test Supabase from `.env.test` / workflow `env` (anon key only). Set `SUPABASE_SERVICE_ROLE_KEY` via secrets when server RPCs are needed.
+- **`.env.local` is still required to run the dev server**, because it carries the non-secret `STORTINGET_*` / `NEXT_PUBLIC_STORTINGET_*` defaults (and `middleware.ts` builds a Supabase client on every request, so the `NEXT_PUBLIC_SUPABASE_*` values must be resolvable or every page 500s). It is gitignored; recreate with `npm run env:test` (Folkets-Stemme test Supabase) or from `.env.example` if absent. Next.js reads injected `process.env` with higher precedence than `.env.local`, so the injected secrets win even if `.env.local` holds older values.
+- Playwright and CI use the Folkets-Stemme test Supabase from `.env.test` / workflow `env` (anon key only). Set `SUPABASE_SERVICE_ROLE_KEY` via secrets when server RPCs are needed.
 - Auth is email/password (`supabase.auth.signUp` / `signInWithPassword`). **Email signups require confirmation**, so a raw signup does NOT create a session. To get a usable test login, create a pre-confirmed user with the admin API and the service role key, then sign in: `POST {SUPABASE_URL}/auth/v1/admin/users` with `{"email":...,"password":...,"email_confirm":true,"user_metadata":{...}}` (the project rejects `@example.com`; use e.g. `@gmail.com`).
 - `/dashboard/*` is gated by middleware (redirects to `/auth/login`) except public issue pages `/dashboard/sak/<id>` (see `isPublicDashboardSakPath`). Issue pages fetch live `data.stortinget.no` data and can take 10–30s on first load.
 - Hello-world that exercises core functionality: log in, then open an issue (`/dashboard/sak/<id>`) and cast a "For" vote in the "Hva mener du?" section — the vote persists and the `/dashboard/min-side` vote count updates.

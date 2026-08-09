@@ -77,7 +77,7 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Forum sak-RAG prompts | `20260621120000_forum_sak_rag_prompts.sql` | `forum_prompts.generation_metadata`, `forum_research_clusters.source_type`, `get_sak_prompt_coverage` |
 | Marketing feedback | `20260806140000_site_feedback.sql` | `site_feedback` (public “Gi innspill” form; service-role writes only) |
 | Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql`, `20260702160000_backfill_ferdigbehandlet_from_detail.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category`, `ferdigbehandlet` repair |
-| Sak documents/RAG | `20260617120000_sak_documents_rag.sql` | `stortinget_issue_documents`, `document_chunks`, `match_issue_document_chunks` |
+| Sak documents/RAG | `20260617120000_sak_documents_rag.sql`, `20260807112603_document_chunks_storage_efficiency.sql` | `stortinget_issue_documents`, `document_chunks`, `chunks_status`, `match_issue_document_chunks`, reclaim helpers |
 
 ## Voting setup
 
@@ -316,18 +316,38 @@ from `.env.example`.
 `20260614130000_forum_profiles_points_ai_sources.sql` introduces
 `stortinget_issue_documents`; `20260617120000_sak_documents_rag.sql` adds cached
 HTML/text fields, `document_chunks`, pgvector, and `match_issue_document_chunks`.
+`20260807112603_document_chunks_storage_efficiency.sql` adds `chunks_status`,
+reclaims cached `content_html`, and clears `content_full_text` once chunks exist.
 
-App-side flow:
+App-side flow (storage-efficient):
 
 1. `lib/stortinget-detail-cache.ts` fetches or reads a sak detail.
 2. `lib/stortinget-document-ingest.ts` parses document references and fetches
-   viewable publication HTML.
-3. Ready documents are stored in `stortinget_issue_documents`; text is chunked
-   into `document_chunks` with `embedding_status = 'pending'`.
+   viewable publication HTML from Stortinget.
+3. Ready documents store a short `text_excerpt` only (no HTML cache). Text is
+   chunked into `document_chunks` (`embedding_status = 'pending'`), then
+   `content_full_text` / `content_html` are cleared so chunk text is the single copy.
 4. `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL` is triggered when new chunks are
    created.
-5. The n8n embedding workflow fills `embedding vector(768)` and marks chunks
-   `ready`; AI summary backfill can include `rag_chunks` as context.
+5. The n8n embedding workflow fills `embedding vector(768)`, marks chunks
+   `ready`, sets `chunks_status = ready`, and clears leftover document bodies.
+6. Document viewer (`/api/sak/[id]/documents/[docId]/content`) fetches HTML live
+   from Stortinget when no legacy `content_html` cache exists.
+
+**Egress:** List/sync/overlay queries must not select full `detail_json`.
+Use denormalized columns + live list overlays. n8n AI-summary SQL projects a
+trimmed detail context instead of the full JSON blob.
+
+**Important:** n8n is not a vector store. RAG requires embeddings in Postgres
+(`match_issue_document_chunks`). Moving chunk *blobs* into n8n would break
+similarity search.
+
+If the DB hits `exceed_db_size_quota`, reclaim with:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/reclaim-document-storage.sql
+# or: select * from public.reclaim_document_body_storage();
+```
 
 Backfill recent cached saker:
 

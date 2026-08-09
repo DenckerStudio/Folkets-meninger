@@ -99,7 +99,7 @@
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "javaScript",
-        "jsCode": "const item = $input.item.json;\nconst embedding = item.embedding;\nif (!Array.isArray(embedding) || embedding.length === 0) {\n  throw new Error('Missing embedding vector');\n}\nconst vector = '[' + embedding.join(',') + ']';\nfunction esc(value) {\n  return \"'\" + String(value ?? '').replace(/'/g, \"''\") + \"'\";\n}\nconst updateSql = `UPDATE public.document_chunks\nSET embedding = '${vector}'::vector,\n    embedding_status = 'ready'\nWHERE id = ${esc(item.id)}::uuid`;\nreturn { json: { ...item, updateSql } };"
+        "jsCode": "const item = $input.item.json;\nconst embedding = item.embedding;\nif (!Array.isArray(embedding) || embedding.length === 0) {\n  throw new Error('Missing embedding vector');\n}\nconst vector = '[' + embedding.join(',') + ']';\nfunction esc(value) {\n  return \"'\" + String(value ?? '').replace(/'/g, \"''\") + \"'\";\n}\nconst updateSql = `UPDATE public.document_chunks\nSET embedding = '${vector}'::vector,\n    embedding_status = 'ready'\nWHERE id = ${esc(item.id)}::uuid`;\nconst finalizeSql = `UPDATE public.stortinget_issue_documents d\nSET chunks_status = CASE\n      WHEN EXISTS (\n        SELECT 1 FROM public.document_chunks c\n        WHERE c.issue_id = d.issue_id\n          AND c.document_id = d.document_id\n          AND c.embedding_status = 'pending'\n      ) THEN 'pending'\n      WHEN EXISTS (\n        SELECT 1 FROM public.document_chunks c\n        WHERE c.issue_id = d.issue_id\n          AND c.document_id = d.document_id\n          AND c.embedding_status = 'ready'\n      ) THEN 'ready'\n      ELSE d.chunks_status\n    END,\n    content_full_text = NULL,\n    content_html = NULL\nWHERE d.issue_id = ${esc(item.issue_id)}\n  AND d.document_id = ${esc(item.document_id)}`;\nreturn { json: { ...item, updateSql, finalizeSql } };"
       },
       "id": "prepare-update-node",
       "name": "Prepare embedding update SQL",
@@ -126,6 +126,23 @@
     },
     {
       "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $('Prepare embedding update SQL').item.json.finalizeSql }}"
+      },
+      "id": "clear-document-body-node",
+      "name": "Clear document body storage",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [2000, 300],
+      "credentials": {
+        "postgres": {
+          "id": "CREDENTIAL_ID_POSTGRES",
+          "name": "Supabase Postgres Folkets"
+        }
+      }
+    },
+    {
+      "parameters": {
         "resume": "timeInterval",
         "amount": 2,
         "unit": "seconds"
@@ -134,7 +151,7 @@
       "name": "Rate limit pause",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [2000, 300]
+      "position": [2220, 300]
     },
     {
       "parameters": {
@@ -198,7 +215,7 @@
       "parameters": {
         "height": 300,
         "width": 400,
-        "content": "## Dokument embeddings (RAG)\\n\\nBatch/kø: henter `document_chunks` med `embedding_status=pending`, kaller Ollama `nomic-embed-text:v1.5`, lagrer i pgvector.\\n\\nWebhook: `POST /webhook/folkets-document-embeddings` med valgfri `{ \"stortinget_issue_id\": \"…\" }`."
+        "content": "## Dokument embeddings (lagringseffektiv RAG)\\n\\nAppen lagrer ikke HTML-cache; chunk-tekst er én kopi i `document_chunks`. n8n embedder med Ollama og skriver til pgvector (påkrevd for RAG — n8n er ikke vektorlager). Etter embed: `chunks_status=ready` + slett leftover `content_full_text`/`content_html`.\\n\\nWebhook: `POST /webhook/folkets-document-embeddings` med valgfri `{ \"stortinget_issue_id\": \"…\" }`."
       },
       "id": "sticky-note-node",
       "name": "Note",
@@ -275,6 +292,17 @@
       ]
     },
     "Save embedding": {
+      "main": [
+        [
+          {
+            "node": "Clear document body storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear document body storage": {
       "main": [
         [
           {

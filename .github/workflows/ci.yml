@@ -9,9 +9,10 @@ jobs:
   lint-and-build:
     runs-on: ubuntu-latest
     env:
-      # Test Supabase (self-hosted heyklever) — mirrors `.env.test`
-      NEXT_PUBLIC_SUPABASE_URL: https://supabase.heyklever.app
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc4NTkyNTI2MCwiZXhwIjo0OTQxNTk4ODYwLCJyb2xlIjoiYW5vbiJ9.FCdvrpnNYflrR3lKJ1XZ5pCDQZ-Tky7FkHbjgeZ7hm0
+      # Test Supabase (Folkets-Stemme) — mirrors `.env.test`
+      NEXT_PUBLIC_SUPABASE_URL: https://qetckokgtzbpunbzslfp.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFldGNrb2tndHpicHVuYnpzbGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMDkwOTcsImV4cCI6MjEwMTY4NTA5N30.COJ3FNQw5H5OMFGdJQaLL_eWM030Qb5G9KMLqhGSnpE
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_k_PGVTo33O7eckaeCGNhhA__hB6PepT
       STORTINGET_SESSION_ID: 2025-2026
       STORTINGET_PERIODE_ID: 2021-2025
       NEXT_PUBLIC_STORTINGET_SESSION_ID: 2025-2026

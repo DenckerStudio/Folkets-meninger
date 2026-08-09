@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 /**
- * Push Supabase settings from `.env.test` (heyklever / local test) to Vercel
+ * Push Supabase settings from `.env.test` (Folkets-Stemme / local test) to Vercel
  * project environment variables for folkets-inspill.
  *
  * Requires a Vercel token with project env access:
  *   export VERCEL_TOKEN=<token from https://vercel.com/account/tokens>
  *
- * Optional server secret for heyklever (not in .env.test):
- *   export HEYKLEVER_SUPABASE_SERVICE_ROLE_KEY=<heyklever service role>
+ * Optional server secret (not in .env.test):
+ *   export SUPABASE_SERVICE_ROLE_KEY=<service role for qetckokgtzbpunbzslfp>
+ *   # legacy alias still accepted:
+ *   export HEYKLEVER_SUPABASE_SERVICE_ROLE_KEY=<service role>
  *
  * Usage:
  *   npm run vercel:env:supabase
@@ -82,11 +84,10 @@ async function main() {
   const fromFile = parseEnvFile(ENV_TEST);
   const url = fromFile.get('NEXT_PUBLIC_SUPABASE_URL');
   const anon = fromFile.get('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  const publishable = fromFile.get('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
   const serviceRole =
+    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
     process.env.HEYKLEVER_SUPABASE_SERVICE_ROLE_KEY?.trim() ||
-    (process.argv.includes('--with-current-service-role')
-      ? process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
-      : '') ||
     fromFile.get('SUPABASE_SERVICE_ROLE_KEY')?.trim() ||
     '';
 
@@ -101,16 +102,26 @@ async function main() {
       value: url,
       type: 'plain',
       target: TARGETS,
-      comment: 'Self-hosted test Supabase (heyklever) — synced from .env.test',
+      comment: 'Folkets-Stemme Supabase — synced from .env.test',
     },
     {
       key: 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
       value: anon,
       type: 'encrypted',
       target: TARGETS,
-      comment: 'Anon key for heyklever Supabase',
+      comment: 'Anon key for Folkets-Stemme Supabase',
     },
   ];
+
+  if (publishable) {
+    entries.push({
+      key: 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+      value: publishable,
+      type: 'encrypted',
+      target: TARGETS,
+      comment: 'Publishable key for Folkets-Stemme Supabase',
+    });
+  }
 
   if (serviceRole) {
     entries.push({
@@ -118,12 +129,12 @@ async function main() {
       value: serviceRole,
       type: 'sensitive',
       target: TARGETS,
-      comment: 'Service role for heyklever Supabase (server-only)',
+      comment: 'Service role for Folkets-Stemme Supabase (server-only)',
     });
   } else {
     console.warn(
-      'WARN: HEYKLEVER_SUPABASE_SERVICE_ROLE_KEY not set — skipping service role.\n' +
-        '      Set it (or pass --with-current-service-role) before syncing server RPC env.',
+      'WARN: SUPABASE_SERVICE_ROLE_KEY not set — skipping service role.\n' +
+        '      Set it (or HEYKLEVER_SUPABASE_SERVICE_ROLE_KEY / --with-current-service-role) before syncing server RPC env.',
     );
   }
 
