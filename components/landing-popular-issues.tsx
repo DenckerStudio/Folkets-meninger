@@ -24,9 +24,11 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f] mb-3">Engasjement</p>
-            <h2 className="text-3xl font-bold text-[#001433] tracking-tight sm:text-4xl">Populære saker nå</h2>
-            <p className="mt-2 text-[#001433]/65 max-w-xl">
-              Lovforslag og representantforslag fra Stortinget — de mest engasjerende sakene for ja/nei-stemming.
+            <h2 className="text-balance text-3xl font-bold tracking-tight text-[#001433] sm:text-4xl">
+              Populære saker nå
+            </h2>
+            <p className="text-pretty mt-3 max-w-xl text-base leading-relaxed text-[#001433]/65">
+              Aktuelle lovforslag og representantforslag fra Stortinget — der flest engasjerer seg akkurat nå.
             </p>
           </div>
           <Link

@@ -10,7 +10,8 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: 'Folkets Stemme',
-  description: 'En nøytral plattform som brobygger mellom Stortinget og innbyggerne.',
+  description:
+    'Uavhengig plattform for å følge Stortinget, forstå saker og delta i demokratiet mellom valgene.',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {

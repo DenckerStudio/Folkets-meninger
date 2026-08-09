@@ -29,7 +29,7 @@ export function LandingFooter() {
               <LandingLogo clipId="fs-footer-bubble" />
             </Link>
             <p className="mt-5 max-w-md text-sm leading-relaxed text-[#001433]/65">
-              Uavhengig plattform for stemmegivning, forum og høringer — demokratiet fortsetter mellom valgene.
+              Uavhengig plattform for å følge Stortinget, delta i debatten og bli hørt mellom valgene.
             </p>
             <Link
               href={routes.innspill}
