@@ -6,9 +6,9 @@ test.describe('Folkets Stemme smoke', () => {
     await expect(page.getByRole('heading', { name: /Folkets Stemme|Slik fungerer det/i }).first()).toBeVisible();
   });
 
-  test('om-oss mentions login not BankID', async ({ page }) => {
-    await page.goto('/om-oss');
-    await expect(page.getByText(/BankID kommer senere/i)).toBeVisible();
+  test('landing about section mentions login not MinID yet', async ({ page }) => {
+    await page.goto('/#om-oss');
+    await expect(page.getByText(/MinID kommer senere/i)).toBeVisible();
   });
 
   test('public sak route responds', async ({ page }) => {

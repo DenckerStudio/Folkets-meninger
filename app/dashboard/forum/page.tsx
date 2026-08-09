@@ -80,23 +80,25 @@ export default async function ForumPage({
         </Suspense>
 
         {topics.length === 0 ? (
-          <div className="py-16 text-center">
+          <div className="rounded-2xl border border-dashed border-border bg-muted/30 py-14 text-center">
             <MessageSquare className="mx-auto mb-4 h-10 w-10 text-muted-foreground/40" />
             <p className="text-base font-medium text-foreground">
               {search
                 ? `Ingen treff for «${search}»`
                 : sakId
                   ? 'Ingen diskusjoner om denne saken ennå'
-                  : 'Ingen diskusjoner ennå'}
+                  : 'Start den første diskusjonen'}
             </p>
-            {search && (
-              <p className="text-sm text-muted-foreground mt-1">Prøv andre ord eller fjern søkefilteret.</p>
-            )}
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              {search
+                ? 'Prøv andre ord eller fjern søkefilteret.'
+                : 'Del hva du mener — forumet formes av innleggene. Et kort, saklig innlegg er nok til å sparke i gang debatten.'}
+            </p>
             <Link
               href={newThreadHref}
-              className="mt-4 inline-flex text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
+              className="mt-5 inline-flex rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500"
             >
-              Del din mening øverst på siden →
+              Del din mening
             </Link>
           </div>
         ) : (

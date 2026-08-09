@@ -13,7 +13,7 @@
   publications, questions, and høringer.
 - AI summaries and forum prompts are produced externally via n8n + Ollama and stored in Supabase; the app should not assume Gemini for current summary generation.
 - Forum Reels: v5 trending (`MloIdsnX7FozM4dv`, draft); v12 Regjeringen RSS + prompt generator; **v13 Stortinget-sak RAG** (`forum-sak-prompt-generator.workflow.ts`, `N8N_FORUM_SAK_PROMPTS_WEBHOOK_URL`); `forum_trusted_sources`; votes Ja/Nei/Ikke interessert + discuss CTA.
-- Public reels UI gated by `FORUM_REELS_PUBLIC` (default false); admin pipeline at `/dashboard/admin/forum-prompts` (`?tab=pipeline` — RSS v12 + sak-RAG v13).
+- Public reels UI gated by `FORUM_REELS_PUBLIC` (set `true` for public launch; admin pipeline at `/dashboard/admin/forum-prompts` (`?tab=pipeline` — RSS v12 + sak-RAG v13).
 - The repo expects validation via `npm run lint` and `npm run build`; no broad automated test suite assumed in workflows.
 - First-time env setup: copy `.env.example` to `.env.local` before `npm run dev` or `npm run build`.
   For the Folkets-Stemme test Supabase, prefer `npm run env:test` (writes `.env.local` from `.env.test`).
@@ -58,7 +58,7 @@ The canonical template is `.env.example`.
 | `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL` | Trigger pending document chunk embeddings |
 | `N8N_FORUM_PROMPTS_WEBHOOK_URL` | Trigger forum prompt generation |
 | `N8N_FORUM_SAK_PROMPTS_WEBHOOK_URL` | Trigger v13 Stortinget-sak RAG reel drafts |
-| `FORUM_REELS_PUBLIC` | Enables public forum reels when `true`; default hidden/admin preview |
+| `FORUM_REELS_PUBLIC` | Enables public forum reels when `true` |
 | `FORUM_ADMIN_EMAILS` | Comma-separated forum/admin allowlist in addition to `app_metadata.role=admin` |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Notification and welcome email delivery |
 | `STORTINGET_SESSION_ID`, `STORTINGET_PERIODE_ID` | Server defaults for Stortinget data |

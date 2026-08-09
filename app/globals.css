@@ -155,3 +155,25 @@
     scroll-behavior: auto !important;
   }
 }
+
+@keyframes fs-text-gradient {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.fs-text-gradient {
+  animation-name: fs-text-gradient;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fs-text-gradient {
+    animation: none;
+    background-position: 0% center;
+  }
+}

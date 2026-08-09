@@ -614,35 +614,53 @@ async function queryPopularRowsFromDb(): Promise<DbIssueRow[]> {
   return (withCategory.data as DbIssueRow[] | null) ?? [];
 }
 
+function sortPopularSaker(items: SakListItem[]): SakListItem[] {
+  return [...items].sort((a, b) => {
+    const aOpen = a.status === 'pending' ? 1 : 0;
+    const bOpen = b.status === 'pending' ? 1 : 0;
+    if (bOpen !== aOpen) return bOpen - aOpen;
+
+    const voteDiff = (b.votes?.total ?? 0) - (a.votes?.total ?? 0);
+    if (voteDiff !== 0) return voteDiff;
+
+    return (b.date || '').localeCompare(a.date || '');
+  });
+}
+
+/**
+ * Popular saker for landing/forum previews.
+ * Prefers vote totals from DB/memory, then falls back to the live/cached
+ * Stortinget list so the marketing surface never goes blank when DB is down.
+ */
 export async function getPopularSaker(limit = 10): Promise<SakListItem[]> {
   const cappedLimit = Math.min(Math.max(limit, 1), 20);
   const memory = readMemoryListCache();
-  if (memory) {
-    return [...memory]
-      .sort((a, b) => (b.votes?.total ?? 0) - (a.votes?.total ?? 0))
-      .slice(0, cappedLimit);
+  if (memory?.length) {
+    return sortPopularSaker(memory).slice(0, cappedLimit);
   }
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return [];
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const rows = await withTimeout(queryPopularRowsFromDb(), 8_000, []);
+      if (rows.length > 0) {
+        const voteTotals = await withTimeout(getVoteTotals(rows.map((row) => row.id)), 8_000, {});
+        const popular = sortPopularSaker(
+          rows.map((row) => mapDbRowToListItem(row, voteTotals[row.id] ?? EMPTY_VOTES)),
+        ).slice(0, cappedLimit);
+
+        writeMemoryListCache(popular);
+        return popular;
+      }
+    } catch (error) {
+      console.error('getPopularSaker db error:', error);
+    }
   }
 
   try {
-    const rows = await withTimeout(queryPopularRowsFromDb(), 8_000, []);
-    if (rows.length === 0) {
-      return [];
-    }
-
-    const voteTotals = await withTimeout(getVoteTotals(rows.map((row) => row.id)), 8_000, {});
-    const popular = rows
-      .map((row) => mapDbRowToListItem(row, voteTotals[row.id] ?? EMPTY_VOTES))
-      .sort((a, b) => (b.votes?.total ?? 0) - (a.votes?.total ?? 0))
-      .slice(0, cappedLimit);
-
-    writeMemoryListCache(popular);
-    return popular;
+    const list = await getSakerWithCache({ preferDb: true });
+    return sortPopularSaker(list).slice(0, cappedLimit);
   } catch (error) {
-    console.error('getPopularSaker error:', error);
+    console.error('getPopularSaker fallback error:', error);
     return [];
   }
 }

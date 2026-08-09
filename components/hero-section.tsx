@@ -5,79 +5,87 @@ import { Info } from 'lucide-react';
 import { motion } from 'motion/react';
 import { routes } from '@/lib/routes';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
+import { LandingMeshBackground } from '@/components/landing-mesh-background';
 
 export default function HeroSection() {
   const reducedMotion = usePrefersReducedMotion();
 
   const sectionClass =
-    'relative overflow-hidden text-center py-24 sm:py-32 w-[100vw] left-[50%] right-[50%] -ml-[50vw] -mr-[50vw] border-b border-border bg-gradient-to-br from-[#ba0c2f]/10 via-background to-[#00205b]/10 -mt-8 mb-12';
+    'landing-hero relative overflow-hidden text-center py-24 sm:py-32 w-[100vw] left-[50%] right-[50%] -ml-[50vw] -mr-[50vw] border-b border-[#00205b]/10 bg-white -mt-8 mb-12';
 
   const content = (
     <>
-      <div className="absolute top-0 left-1/4 -translate-x-1/2 w-[600px] h-[600px] bg-[#ba0c2f]/10 blur-[120px] rounded-full pointer-events-none" />
-      <div
-        className={`absolute bottom-0 right-1/4 translate-x-1/2 w-[600px] h-[600px] bg-[#00205b]/10 blur-[120px] rounded-full pointer-events-none ${reducedMotion ? '' : 'animate-pulse-slow'}`}
-      />
+      <LandingMeshBackground />
 
       <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="inline-flex items-center px-3 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-sm font-medium mb-8 border border-indigo-100 dark:border-indigo-900/50">
+        <motion.div
+          initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.15, ease: 'easeOut' }}
+          className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 bg-white/85 text-[#00205b] text-sm font-medium mb-8 border border-[#00205b]/12 backdrop-blur-md shadow-sm"
+        >
           <span
-            className={`flex h-2 w-2 bg-indigo-600 mr-2 rounded-full ${reducedMotion ? '' : 'animate-pulse'}`}
+            className={`h-1.5 w-1.5 shrink-0 rounded-full bg-[#ba0c2f] ${reducedMotion ? '' : 'animate-pulse'}`}
           />
           Demokratiet fortsetter mellom valgene
-        </div>
+        </motion.div>
 
-        <h1 className="text-5xl tracking-tight font-extrabold text-foreground sm:text-6xl md:text-7xl mb-6">
+        <motion.h1
+          initial={reducedMotion ? false : { opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.25, ease: 'easeOut' }}
+          className="text-5xl tracking-tight font-extrabold text-[#001433] sm:text-6xl md:text-7xl mb-6 drop-shadow-[0_1px_0_rgba(255,255,255,0.85)]"
+        >
           <span className="block mb-2">Din stemme teller.</span>
-          <span className="block text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-600">
-            Også mellom valgene.
-          </span>
-        </h1>
+          <span className="block text-[#001433]">Også mellom valgene.</span>
+        </motion.h1>
 
-        <p className="mt-6 max-w-2xl mx-auto text-lg text-muted-foreground sm:text-xl leading-relaxed">
+        <motion.p
+          initial={reducedMotion ? false : { opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.75, delay: 0.4, ease: 'easeOut' }}
+          className="mt-6 max-w-2xl mx-auto text-lg text-[#001433]/75 sm:text-xl leading-relaxed"
+        >
           Folkets Stemme er en nøytral plattform som brobygger mellom Stortinget og innbyggerne. Si din mening om
           aktuelle saker med verifisert stemmegivning.
-        </p>
+        </motion.p>
 
-        <div className="mt-10 max-w-md mx-auto sm:flex sm:justify-center gap-4">
+        <motion.div
+          initial={reducedMotion ? false : { opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.55, ease: 'easeOut' }}
+          className="mt-10 max-w-md mx-auto flex flex-col sm:flex-row sm:justify-center gap-3"
+        >
           <Link
             href={routes.login}
-            className="w-full sm:w-auto flex items-center justify-center px-8 py-4 border border-transparent text-base font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-all duration-200 md:text-lg shadow-sm"
+            className="inline-flex w-full sm:w-auto items-center justify-center rounded-full px-8 py-3.5 text-base font-semibold text-white bg-[#00205b] hover:bg-[#ba0c2f] transition-colors duration-200 md:text-lg shadow-sm"
           >
             Kom i gang
           </Link>
           <Link
             href={routes.login}
-            className="mt-3 sm:mt-0 w-full sm:w-auto flex items-center justify-center px-8 py-4 border border-border text-base font-medium text-foreground bg-card hover:bg-muted/50 transition-all duration-200 md:text-lg shadow-sm"
+            className="inline-flex w-full sm:w-auto items-center justify-center rounded-full px-8 py-3.5 text-base font-semibold text-[#00205b] bg-white/85 hover:bg-white border border-[#00205b]/15 hover:border-[#00205b]/40 transition-colors duration-200 md:text-lg backdrop-blur-md"
           >
             Logg inn
           </Link>
-        </div>
+        </motion.div>
 
-        <div className="mt-16 inline-flex items-start text-left bg-card border border-border p-5 max-w-2xl mx-auto shadow-sm">
-          <Info className="w-5 h-5 text-muted-foreground mr-3 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            <strong className="text-foreground">Uavhengig plattform:</strong> Vi samarbeider ikke med Regjeringen eller
-            Stortinget. Dette er et uavhengig initiativ for å styrke demokratiet. Vårt håp er at politikerne på sikt vil
-            ta i bruk dataene og lytte til folket her inne.
+        <motion.div
+          initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.7, ease: 'easeOut' }}
+          className="mt-16 inline-flex items-start text-left rounded-2xl bg-white/75 border border-[#00205b]/10 px-5 py-4 max-w-2xl mx-auto backdrop-blur-md shadow-sm"
+        >
+          <Info className="w-4 h-4 text-[#00205b]/50 mr-3 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-[#001433]/70 leading-relaxed">
+            <strong className="font-semibold text-[#001433]">Uavhengig plattform:</strong> Vi samarbeider ikke med
+            Regjeringen eller Stortinget. Dette er et uavhengig initiativ for å styrke demokratiet. Vårt håp er at
+            politikerne på sikt vil ta i bruk dataene og lytte til folket her inne.
           </p>
-        </div>
+        </motion.div>
       </div>
     </>
   );
 
-  if (reducedMotion) {
-    return <section className={sectionClass}>{content}</section>;
-  }
-
-  return (
-    <motion.section
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 1.5, ease: 'easeOut' }}
-      className={sectionClass}
-    >
-      {content}
-    </motion.section>
-  );
+  return <section className={sectionClass}>{content}</section>;
 }

@@ -113,7 +113,7 @@ Workflow-kilde: [`forum-trending-prompts.workflow.ts`](forum-trending-prompts.wo
 
 **v5:** alignment-gate, dedupe 0.55, min 4 kilder, **alltid `draft`** → admin-godkjenning i appen (`/dashboard/admin/forum-prompts`).
 
-**App:** `FORUM_REELS_PUBLIC=false` (default) skjuler aktive reels for vanlige brukere; forum-admin ser forhåndsvisning. Sett `FORUM_REELS_PUBLIC=true` ved lansering.
+**App:** `FORUM_REELS_PUBLIC=true` viser aktive reels for alle brukere. Sett `false` for admin-only forhåndsvisning.
 
 Deploy:
 
