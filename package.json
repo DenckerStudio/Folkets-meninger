@@ -17,6 +17,8 @@
     "supabase:start": "npx supabase start",
     "supabase:stop": "npx supabase stop",
     "supabase:status": "npx supabase status",
+    "supabase:reset": "npx supabase db reset",
+    "supabase:schema": "node scripts/build-local-schema.mjs",
     "clean": "next clean"
   },
   "dependencies": {

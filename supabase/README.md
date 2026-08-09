@@ -11,18 +11,25 @@ RAG tables.
 | Test (self-hosted) | `https://supabase.heyklever.app` | `npm run env:test` → writes `.env.local` from `.env.test` |
 | Local Docker | `http://127.0.0.1:54321` | `npm run supabase:start`, then copy keys from `npm run supabase:status` into `.env.local` |
 
-`supabase/config.toml` enables the Supabase CLI against this repo's migrations.
+`supabase/config.toml` runs one squashed migration plus `supabase/seed.sql` on
+`supabase db reset`. Historical incremental files live in
+`supabase/migrations_legacy/` (reference only — not applied by the CLI).
+
 Docker is required for `supabase start`. CI and Playwright use the heyklever
 test instance via `.env.test` / workflow env (anon key only).
 
 ```bash
-# Point the app at the heyklever test Supabase
-npm run env:test
-npm run dev
+# Local Docker: apply schema + seed, then wire the app
+npm run supabase:reset
+npm run supabase:status   # copy URL + anon + service_role into .env.local
 
-# Or run a full local stack (Docker required)
+# Or start without reset (existing local volume)
 npm run supabase:start
 npm run supabase:status
+
+# Point the app at heyklever test Supabase instead
+npm run env:test
+npm run dev
 ```
 
 Set `SUPABASE_SERVICE_ROLE_KEY` separately for server RPCs (voting, admin). It
@@ -48,29 +55,50 @@ Dry run: `npm run vercel:env:supabase -- --dry-run`
 
 ## Applying migrations
 
-Run migrations against your Supabase project:
+### Local Docker (recommended for fresh dev DB)
 
 ```bash
-supabase link --project-ref <your-project-ref>
-supabase db push
+npm run supabase:reset   # migrations + seed.sql
 ```
 
-Against local Docker:
+This applies `supabase/migrations/20260806120000_folkets_stemme_schema.sql` and
+then `supabase/seed.sql` (vote pepper + demo sak).
+
+### Hosted Supabase (already on incremental history)
+
+Do **not** run the squashed file on heyklever/production if those databases
+already applied the files in `migrations_legacy/`. Extend schema via the SQL
+editor or add a new dated migration and `supabase db push` only when you
+intentionally manage remote history again.
+
+For a **brand-new** hosted project, you can paste the squashed migration and
+seed in the SQL editor instead of the legacy chain.
+
+## Schema layout
+
+| Path | Purpose |
+|------|---------|
+| `migrations/20260806120000_folkets_stemme_schema.sql` | Single schema applied on local `db reset` |
+| `seed.sql` | Local dev data (vote pepper, demo sak) |
+| `migrations_legacy/*.sql` | Original incremental migrations (audit / reference) |
+
+Regenerate the squashed file after editing legacy SQL:
 
 ```bash
-npx supabase db reset
+node scripts/build-local-schema.mjs
 ```
 
-Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
+## Migration index (legacy files)
 
-## Migration index
+The table below maps domains to the archived incremental filenames in
+`migrations_legacy/`:
 
 | Domain | Migrations | Main objects |
 |--------|------------|--------------|
 | Anonymous voting | `20260528000001_anonymous_voting.sql`, `20260528000002_vote_schema_repair.sql`, `20260618120000_sak_voting_status.sql` | `citizen_votes`, `user_vote_receipts`, `cast_vote`, vote aggregate RPCs |
 | Notifications | `20260528000003_notifications.sql` | `notification_preferences`, `notification_category_subscriptions`, `notifications` |
 | AI summaries | `20260528120000_issue_ai_summaries.sql`, `20260529120000_simplify_issue_ai_summaries.sql` | `issue_ai_summaries` |
-| Auth/user sync + hearings comments | `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql` | `users`, `ensure_public_user`, `user_has_forum_identity`, `hearing_comments`, `create_hearing_comment` |
+| Auth/user sync + hearings comments | `20260529140000_public_users_bootstrap.sql`, `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql` | `users`, `politician_profiles`, `ensure_public_user`, `user_has_forum_identity`, `hearing_comments`, `create_hearing_comment` |
 | Forum base/features | `20260530120000_forum_enhancements.sql`, `20260531120000_production_readiness.sql`, `20260531140000_forum_prompts_dedupe.sql` | forum threads/replies/likes/prompts and production indexes |
 | Forum reports/sources | `20260602120000_forum_reports_enhance.sql`, `20260602130000_forum_trusted_sources.sql` | `forum_reports`, `forum_trusted_sources` |
 | Forum profiles/points/moderation | `20260614130000_forum_profiles_points_ai_sources.sql`, `20260614160000_harden_forum_points_moderation.sql`, `20260614170000_public_user_display_grants.sql` | public profile fields, point ledgers, moderation RPCs/grants |

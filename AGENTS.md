@@ -29,7 +29,7 @@ Next.js App Router
   app/                 public pages, dashboard, API routes, cron endpoints
   components/          UI components for saker, forum, profile, valgomat
   lib/                 Stortinget clients, Supabase clients, forum services, notifications
-  supabase/migrations/ Postgres schema, RLS, RPCs, triggers
+  supabase/migrations/ Squashed local schema; supabase/migrations_legacy/ archived incrementals; seed.sql
   workflows/n8n/       External automation for AI summaries, forum prompts, embeddings, cron
 ```
 
@@ -100,7 +100,7 @@ The canonical template is `.env.example`.
 - If list and detail pages disagree between "Under behandling" and
   "Ferdigbehandlet", inspect `stortinget_issues.detail_json`,
   `ferdigbehandlet`, and fresh list-export innstilling fields. Repair DB drift
-  with `supabase/migrations/20260702160000_backfill_ferdigbehandlet_from_detail.sql`
+  with `supabase/migrations_legacy/20260702160000_backfill_ferdigbehandlet_from_detail.sql`
   or the backfill script above.
 
 ### Høringer
@@ -127,7 +127,7 @@ The canonical template is `.env.example`.
   events such as `VOT`, `VEDTAK`, `BEHS`, and related treatment events.
 - `app/api/vote/route.ts` rejects votes when the issue is closed,
   `ferdigbehandlet` is true, or `voting_closes_at` has passed.
-- `supabase/migrations/20260618120000_sak_voting_status.sql` enforces the same
+- `supabase/migrations_legacy/20260618120000_sak_voting_status.sql` enforces the same
   closure rules in the `cast_vote` RPC.
 
 ### Forum

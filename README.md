@@ -40,6 +40,7 @@ those services.
 | `npm run test:e2e` | Run Playwright smoke tests (loads `.env.test`) |
 | `npm run env:test` | Write `.env.local` from `.env.test` (heyklever Supabase) |
 | `npm run supabase:start` | Start local Supabase via Docker CLI |
+| `npm run supabase:reset` | Reset local DB (squashed migration + seed) |
 | `npm run supabase:status` | Print local Supabase URL/keys |
 ## Architecture at a glance
 

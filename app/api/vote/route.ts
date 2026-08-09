@@ -118,7 +118,7 @@ export async function POST(request: Request) {
       if (combined.includes('not unique') || combined.includes('could not choose')) {
         return NextResponse.json(
           {
-            error: 'Databasefeil: flere cast_vote-funksjoner. Kjør supabase/migrations/20260528000002_vote_schema_repair.sql.',
+            error: 'Databasefeil: flere cast_vote-funksjoner. Kjør vote_schema_repair (supabase/migrations_legacy/20260528000002_vote_schema_repair.sql eller lokal db reset).',
           },
           { status: 500 }
         );
