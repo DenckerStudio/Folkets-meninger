@@ -34,20 +34,20 @@ export default function HeroSection() {
           initial={reducedMotion ? false : { opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.25, ease: 'easeOut' }}
-          className="text-5xl tracking-tight font-extrabold text-[#001433] sm:text-6xl md:text-7xl mb-6 drop-shadow-[0_1px_0_rgba(255,255,255,0.85)]"
+          className="text-balance text-4xl font-extrabold leading-[1.08] tracking-tight text-[#001433] sm:text-6xl md:text-7xl mb-6 drop-shadow-[0_1px_0_rgba(255,255,255,0.85)]"
         >
-          <span className="block mb-2">Din stemme teller.</span>
-          <span className="block text-[#001433]">Også mellom valgene.</span>
+          <span className="block mb-2 sm:mb-3">Forstå politikken.</span>
+          <span className="block text-[#00205b]">Delta mellom valgene.</span>
         </motion.h1>
 
         <motion.p
           initial={reducedMotion ? false : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.75, delay: 0.4, ease: 'easeOut' }}
-          className="mt-6 max-w-2xl mx-auto text-lg text-[#001433]/75 sm:text-xl leading-relaxed"
+          className="text-pretty mx-auto mt-6 max-w-xl text-base leading-relaxed text-[#001433]/72 sm:text-lg sm:leading-relaxed"
         >
-          Folkets Stemme er en nøytral plattform som brobygger mellom Stortinget og innbyggerne. Si din mening om
-          aktuelle saker med verifisert stemmegivning.
+          Folkets Stemme er en uavhengig plattform som gjør stortingspolitikk tilgjengelig: les saker med
+          AI-sammendrag, diskuter i forumet, følg høringer — og vis hva du mener når det betyr noe.
         </motion.p>
 
         <motion.div
@@ -77,10 +77,10 @@ export default function HeroSection() {
           className="mt-16 inline-flex items-start text-left rounded-2xl bg-white/75 border border-[#00205b]/10 px-5 py-4 max-w-2xl mx-auto backdrop-blur-md shadow-sm"
         >
           <Info className="w-4 h-4 text-[#00205b]/50 mr-3 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-[#001433]/70 leading-relaxed">
-            <strong className="font-semibold text-[#001433]">Uavhengig plattform:</strong> Vi samarbeider ikke med
-            Regjeringen eller Stortinget. Dette er et uavhengig initiativ for å styrke demokratiet. Vårt håp er at
-            politikerne på sikt vil ta i bruk dataene og lytte til folket her inne.
+          <p className="text-pretty text-sm leading-relaxed text-[#001433]/70">
+            <strong className="font-semibold text-[#001433]">Uavhengig initiativ.</strong> Vi er ikke en del av
+            Regjeringen eller Stortinget. Målet er å gjøre det enklere for folk å følge med — og for politikere å se
+            anonyme trender i hva velgerne mener.
           </p>
         </motion.div>
       </div>

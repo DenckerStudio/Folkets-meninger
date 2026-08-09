@@ -123,21 +123,21 @@ export default function HowItWorks({
   features,
   className,
   stepPositions,
-  title = 'Fra Stortinget til din stemme',
+  title = 'Fra Stortinget til folket',
   eyebrow = 'Slik fungerer det',
-  description = 'En enkel vei inn i demokratiet mellom valgene — med data direkte fra kilden.',
+  description = 'Saker, dokumenter og debatt — koblet direkte til det som behandles på Stortinget.',
 }: HowItWorksProps) {
   const defaultFeatures: Step[] = [
     {
       title: 'Direkte fra Stortinget',
       description:
-        'Lovforslag og representantforslag hentes ufiltrert fra Stortingets åpne API — klare for ja/nei.',
+        'Lovforslag og representantforslag hentes fra Stortingets åpne API, med AI-sammendrag og dokumenter.',
       colorTheme: 'red',
     },
     {
-      title: 'Stem på saker',
+      title: 'Si din mening',
       description:
-        'Si din mening med verifisert stemmegivning. Én person, én stemme — anonymt i statistikken.',
+        'Marker hva du støtter på konkrete saker. Én person, én stemme — anonymt i den samlede innsikten.',
       colorTheme: 'blue',
     },
     {
@@ -181,8 +181,10 @@ export default function HowItWorks({
 
         <div className="relative z-10 mx-auto mb-10 max-w-2xl text-center md:mb-14">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">{eyebrow}</p>
-          <h2 className="text-3xl font-bold tracking-tight text-[#001433] sm:text-4xl">{title}</h2>
-          <p className="mt-3 text-[#001433]/65">{description}</p>
+          <h2 className="text-balance text-3xl font-bold tracking-tight text-[#001433] sm:text-4xl">{title}</h2>
+          <p className="text-pretty mx-auto mt-4 max-w-lg text-base leading-relaxed text-[#001433]/65 sm:text-lg">
+            {description}
+          </p>
         </div>
 
         <div className="relative z-10 mx-auto max-w-6xl">

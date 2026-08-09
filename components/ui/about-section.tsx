@@ -54,7 +54,9 @@ export default function AboutSection({
         </SoftBlurIn>
         {subtitle ? (
           <SoftBlurIn delay={0.14}>
-            <p className="mt-5 text-lg leading-relaxed text-[#001433]/70">{subtitle}</p>
+            <p className="text-pretty mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#001433]/70 sm:text-lg">
+              {subtitle}
+            </p>
           </SoftBlurIn>
         ) : null}
       </div>
@@ -71,7 +73,7 @@ export default function AboutSection({
               key={paragraph.slice(0, 40)}
               text={paragraph}
               delay={0.05 * index}
-              className="text-xl leading-relaxed text-[#001433] sm:text-2xl sm:leading-relaxed"
+              className="text-pretty text-lg leading-[1.65] text-[#001433] sm:text-xl sm:leading-relaxed"
             />
           ))}
         </div>

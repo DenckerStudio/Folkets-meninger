@@ -13,14 +13,14 @@ export function LandingRoadmap() {
     <div id="veien-videre" className="scroll-mt-28">
       <Timeline
         title="Veien videre"
-        subtitle="Slik står plattformen i dag — og hva vi prioriterer for å gjøre det enklere å forstå, stemme og følge med."
+        subtitle="Slik står plattformen i dag — og hva vi prioriterer for å gjøre det enklere å forstå, delta og følge med."
         items={[
           {
             category: 'Fase 1',
             date: 'Soft launch',
             title: 'Kjerneplattformen er live',
             description:
-              'Saker og dokumenter fra Stortinget, AI-sammendrag, ja/nei-stemming med lukkevindu, forum med moderering, høringer med lokale innspill, politikeroversikt, varsler og offentlige sak-/politiker-sider.',
+              'Saker og dokumenter fra Stortinget, AI-sammendrag, mening på saker med lukkevindu, forum med moderering, høringer med lokale innspill, politikeroversikt, varsler og offentlige sak-/politiker-sider.',
             status: 'completed',
             detail: (
               <p>

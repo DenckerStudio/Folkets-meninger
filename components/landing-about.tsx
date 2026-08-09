@@ -8,12 +8,12 @@ export function LandingAbout() {
     <AboutSection
       eyebrow="Om oss"
       title="Om Folkets Stemme"
-      subtitle="En uavhengig plattform bygget for å styrke demokratiet ved å gi innbyggerne en direkte, verifisert stemme i løpende politiske saker."
+      subtitle="Vi bygger bro mellom Stortinget og folket — med forståelige saker, åpen debatt og anonym innsikt politikere kan stole på."
       missionTitle="Vår misjon"
       missionParagraphs={[
-        'Demokratiet stopper ikke på valgdagen. Mellom valgene fattes det tusenvis av beslutninger på Stortinget som påvirker hverdagen vår. Folkets Stemme ble skapt for å tette gapet mellom politikerne og folket i disse periodene.',
-        'Vi henter saker direkte fra Stortingets åpne API, krever sikker innlogging (MinID kommer senere), og viser kun anonym innsikt — slik at politikere ser trender, ikke personer.',
-        'Vi tror at reell, verifisert statistikk over hva velgerne mener om konkrete saker fører til bedre beslutninger — og at innbyggere fortjener å bli hørt mellom valgene.',
+        'Demokratiet stopper ikke på valgdagen. Mellom valgene fattes det tusenvis av beslutninger som påvirker skole, helse, klima og økonomi. Folkets Stemme finnes for at flere skal kunne følge med og bli hørt — uten å måtte være politisk nerd.',
+        'Vi henter saker og dokumenter fra Stortingets åpne data, forklarer dem med AI-sammendrag, og samler mening, debatt og høringsinnspill på ett sted. Innlogging sikrer én stemme per person (MinID kommer senere); statistikken viser trender, ikke navn.',
+        'Vi er nøytrale: verken Regjeringen eller Stortinget eier plattformen. Ambisjonen er et mer informert folk og politikere som lettere kan lytte til hva velgerne faktisk mener.',
       ]}
       privacy={{
         title: 'Personvern og sikkerhet',
