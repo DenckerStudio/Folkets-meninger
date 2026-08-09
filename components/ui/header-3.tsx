@@ -25,8 +25,9 @@ export function Header() {
   const logoHref = isPublicProfilePath(pathname)
     ? routes.home
     : isLoggedIn
-      ? routes.forum
+      ? routes.utforsk
       : routes.home;
+  const loginHref = `${routes.login}?next=${encodeURIComponent(routes.utforsk)}`;
   const handleSignOut = async () => {
     const { getBrowserSupabase } = await import('@/lib/supabase');
     await getBrowserSupabase().auth.signOut();
@@ -70,7 +71,7 @@ export function Header() {
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
-            href={isLoggedIn ? routes.varsler : routes.login}
+            href={isLoggedIn ? routes.varsler : loginHref}
             className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
             aria-label="Varsler"
           >
@@ -119,11 +120,11 @@ export function Header() {
             </details>
           ) : (
             <>
-              <Button variant="outline" render={<Link href={routes.login} />}>
+              <Button variant="outline" render={<Link href={loginHref} />}>
                 <LogIn className="size-4" />
                 Logg inn
               </Button>
-              <Button render={<Link href={routes.login} />} className="hidden sm:inline-flex">Kom i gang</Button>
+              <Button render={<Link href={loginHref} />} className="hidden sm:inline-flex">Kom i gang</Button>
             </>
           )}
         </div>

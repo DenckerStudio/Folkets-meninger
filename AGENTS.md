@@ -71,7 +71,11 @@ The canonical template is `.env.example`.
 
 - `GET /api/cron/sync-issues` calls `lib/stortinget-sync.ts`; n8n schedules it
  in `workflows/n8n/app-cron.workflow.ts`. The result includes `upserted`,
- `total`, `newIssueIds`, `aiSummaryTriggered`, and `detailsRefreshed`.
+ `total`, `newIssueIds`, `aiSummaryTriggered`, `detailsRefreshed`, and
+ `ragIngestQueued`. Detail cache-hit triggers `ensureSakDocumentsIngested` when
+ RAG coverage is missing; sync also queues pending-without-RAG issues.
+- Post-login `/dashboard` redirects to utforsk (path to first vote); default
+ `sanitizePostLoginPath` fallback is `/dashboard/utforsk`.
 - `lib/sak-status.ts` is the source of truth for "Under behandling" vs
  "Ferdigbehandlet"; it merges detail `ferdigbehandlet`, denormalized DB state,
  fresh list `status`, and `innstilling_*` hints because Stortinget list/detail

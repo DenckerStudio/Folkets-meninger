@@ -1,5 +1,6 @@
 import AdminForumPromptsClient from './admin-forum-prompts-client';
 import { requireForumAdminPage } from '@/lib/forum/admin-gate';
+import { isForumReelsPublicEnabled } from '@/lib/forum/reels-visibility';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,7 +9,7 @@ export default async function AdminForumPromptsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <AdminForumPromptsClient />
+      <AdminForumPromptsClient reelsPublicEnabled={isForumReelsPublicEnabled()} />
     </div>
   );
 }

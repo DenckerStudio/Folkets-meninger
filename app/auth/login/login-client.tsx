@@ -5,6 +5,7 @@ import { ShieldCheck, ArrowRight, Phone } from 'lucide-react';
 import FadeIn from '@/components/fade-in';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase';
+import { sanitizePostLoginPath } from '@/lib/safe-redirect';
 
 export default function LoginClient() {
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +20,7 @@ export default function LoginClient() {
   const [error, setError] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get('next') || '/dashboard/min-side';
+  const nextPath = sanitizePostLoginPath(searchParams.get('next'));
   const supabase = getBrowserSupabase();
 
   const handleEmailAuth = async (e: React.FormEvent) => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Check,
   ExternalLink,
@@ -10,6 +10,13 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
+import {
+  classifyReelDraft,
+  computeReelsLaunchReadiness,
+  getReelDraftRagChunkCount,
+  sortDraftsForPublishPriority,
+  type ReelDraftKind,
+} from '@/lib/forum/reels-launch';
 
 type ClusterArticle = {
   id: string;
@@ -61,8 +68,29 @@ type DraftPrompt = {
   source_headlines: { title?: string; outlet?: string; url?: string }[];
   created_at: string;
   stortinget_issue_id?: string | null;
-  generation_metadata?: { source_type?: string; confidence?: string } | null;
+  generation_metadata?: {
+    source_type?: string;
+    confidence?: string;
+    rag_chunk_count?: number;
+  } | null;
 };
+
+function draftKindLabel(kind: ReelDraftKind): string {
+  switch (kind) {
+    case 'v13_grounded':
+      return 'v13 RAG · anbefalt';
+    case 'v13_thin':
+      return 'v13 uten RAG';
+    case 'v12_rss':
+      return 'v12 RSS';
+    case 'other':
+      return 'Annet / v5 · lav prioritet';
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
 
 function defaultExpiresIso(): string {
   return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -178,15 +206,21 @@ function SourceEditor({
 }
 
 type AdminForumPipelinePanelProps = {
+  reelsPublicEnabled?: boolean;
   onGoToActive: () => void;
   onGoToCreate: () => void;
 };
 
-export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminForumPipelinePanelProps) {
+export function AdminForumPipelinePanel({
+  reelsPublicEnabled = false,
+  onGoToActive,
+  onGoToCreate,
+}: AdminForumPipelinePanelProps) {
   const [queueClusters, setQueueClusters] = useState<ResearchCluster[]>([]);
   const [sakCandidates, setSakCandidates] = useState<SakCandidate[]>([]);
   const [sakCoverage, setSakCoverage] = useState<SakCoverage | null>(null);
   const [drafts, setDrafts] = useState<DraftPrompt[]>([]);
+  const [activeCount, setActiveCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [acting, setActing] = useState<string | null>(null);
@@ -199,21 +233,22 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
     sensitivity: 'low',
     sources: [] as SourceRow[],
   });
-
   const loadPipeline = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) {
       setLoading(true);
       setError('');
     }
     try {
-      const [queueRes, draftsRes, sakRes] = await Promise.all([
+      const [queueRes, draftsRes, activeRes, sakRes] = await Promise.all([
         fetch('/api/admin/forum-clusters?status=pending&source_type=rss'),
         fetch('/api/admin/forum-prompts?status=draft'),
+        fetch('/api/admin/forum-prompts?status=active'),
         fetch('/api/admin/forum-sak-candidates'),
       ]);
-      const [queueData, draftsData, sakData] = await Promise.all([
+      const [queueData, draftsData, activeData, sakData] = await Promise.all([
         queueRes.json(),
         draftsRes.json(),
+        activeRes.json(),
         sakRes.json(),
       ]);
 
@@ -225,7 +260,11 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
       }
 
       if (draftsRes.ok) {
-        setDrafts(draftsData.prompts || []);
+        setDrafts(sortDraftsForPublishPriority(draftsData.prompts || []));
+      }
+
+      if (activeRes.ok) {
+        setActiveCount(Array.isArray(activeData.prompts) ? activeData.prompts.length : 0);
       }
 
       if (sakRes.ok) {
@@ -365,16 +404,30 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
   };
 
   const pendingCount = queueClusters.length;
+  const launchReadiness = useMemo(
+    () =>
+      computeReelsLaunchReadiness({
+        activeCount,
+        drafts,
+        pendingWithRag: sakCoverage?.pendingWithRag,
+        sakCandidates: sakCoverage?.sakCandidates ?? sakCandidates.length,
+      }),
+    [activeCount, drafts, sakCoverage, sakCandidates.length],
+  );
 
   return (
     <div>
       <div className="rounded-xl border border-border bg-card p-5 mb-6">
         <h2 className="text-sm font-semibold text-foreground">Automatisk pipeline (v12 + v13)</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Regjeringen RSS (v12) og Stortinget-sak RAG (v13) produserer JA/NEI-utkast. Du godkjenner
-          og publiserer til Forum Reels.
+          Regjeringen RSS (v12) og Stortinget-sak RAG (v13) produserer JA/NEI-utkast. Publiser
+          grounded v13 først; hold v5/ukjent som lav prioritet.
         </p>
         <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <div>
+            <dt className="text-muted-foreground">Aktive reels</dt>
+            <dd className="font-semibold text-foreground tabular-nums">{launchReadiness.activeCount}</dd>
+          </div>
           <div>
             <dt className="text-muted-foreground">RSS i kø</dt>
             <dd className="font-semibold text-foreground tabular-nums">{pendingCount}</dd>
@@ -386,10 +439,40 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Utkast</dt>
-            <dd className="font-semibold text-foreground tabular-nums">{drafts.length}</dd>
+            <dt className="text-muted-foreground">Utkast (v13 RAG / v12 / annet)</dt>
+            <dd className="font-semibold text-foreground tabular-nums">
+              {launchReadiness.groundedV13Drafts} / {launchReadiness.v12Drafts} /{' '}
+              {launchReadiness.otherDrafts}
+            </dd>
           </div>
         </dl>
+        <div
+          className={`mt-4 rounded-lg border px-3 py-2 text-sm ${
+            launchReadiness.readyForPublic
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
+              : 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100'
+          }`}
+        >
+          {launchReadiness.readyForPublic ? (
+            <p>
+              Lanseringsklar: ≥{launchReadiness.minActive} aktive reels.
+              {reelsPublicEnabled
+                ? ' FORUM_REELS_PUBLIC er på — publikum ser Spesielle saker.'
+                : ' Sett FORUM_REELS_PUBLIC=true i prod for å åpne for publikum.'}
+            </p>
+          ) : (
+            <p>
+              Publiser flere grounded utkast før offentlig lansering: {launchReadiness.activeCount}/
+              {launchReadiness.minActive} aktive.
+              {sakCoverage ? (
+                <span className="block mt-1 text-xs opacity-90">
+                  {sakCoverage.pendingWithRag} av {sakCoverage.pendingIssues} åpne saker har RAG ·{' '}
+                  {launchReadiness.groundedV13Drafts} v13-utkast med RAG-grunnlag.
+                </span>
+              ) : null}
+            </p>
+          )}
+        </div>
       </div>
 
       {error ? (
@@ -596,7 +679,9 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
           <section>
             <div className="flex flex-wrap items-baseline justify-between gap-2 mb-4">
               <h2 className="text-lg font-bold text-foreground">Utkast til godkjenning</h2>
-              <p className="text-sm text-muted-foreground">Rediger, publiser eller avvis AI-genererte reels</p>
+              <p className="text-sm text-muted-foreground">
+                Sortert: v13 med RAG først, deretter v12, deretter v5/annet
+              </p>
             </div>
 
             {drafts.length === 0 ? (
@@ -618,14 +703,25 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
               </div>
             ) : (
               <div className="space-y-4">
-                {drafts.map((prompt) => (
+                {drafts.map((prompt) => {
+                  const kind = classifyReelDraft(prompt);
+                  const ragChunks = getReelDraftRagChunkCount(prompt);
+                  return (
                   <article key={prompt.id} className="rounded-xl border border-border bg-card p-5">
                     <div className="flex flex-wrap gap-2 mb-2">
-                      {prompt.topic_tags?.includes('stortingssak') ||
-                      prompt.generation_metadata?.source_type === 'stortinget_sak' ? (
-                        <span className="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800">
-                          Stortingssak
-                        </span>
+                      <span
+                        className={`text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded ${
+                          kind === 'v13_grounded'
+                            ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
+                            : kind === 'other'
+                              ? 'bg-muted text-muted-foreground'
+                              : 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200'
+                        }`}
+                      >
+                        {draftKindLabel(kind)}
+                      </span>
+                      {ragChunks > 0 ? (
+                        <span className="text-xs text-muted-foreground">{ragChunks} RAG-chunks</span>
                       ) : null}
                       {prompt.stortinget_issue_id ? (
                         <a
@@ -754,7 +850,8 @@ export function AdminForumPipelinePanel({ onGoToActive, onGoToCreate }: AdminFor
                       </>
                     )}
                   </article>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>

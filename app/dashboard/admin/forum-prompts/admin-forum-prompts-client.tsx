@@ -172,7 +172,11 @@ function SourceEditor({
   );
 }
 
-export default function AdminForumPromptsClient() {
+export default function AdminForumPromptsClient({
+  reelsPublicEnabled = false,
+}: {
+  reelsPublicEnabled?: boolean;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>(() => parseInitialTab(searchParams.get('tab')));
@@ -456,6 +460,7 @@ export default function AdminForumPromptsClient() {
 
       {tab === 'pipeline' ? (
         <AdminForumPipelinePanel
+          reelsPublicEnabled={reelsPublicEnabled}
           onGoToActive={() => selectTab('active')}
           onGoToCreate={() => selectTab('create')}
         />

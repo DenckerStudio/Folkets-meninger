@@ -7,6 +7,9 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { triggerDocumentEmbeddingsWebhook } from '@/lib/trigger-document-embeddings-webhook';
 
 const INGEST_DELAY_MS = 400;
+/** Avoid re-triggering ingest/embeddings on every sak page view. */
+const INGEST_TRIGGER_COOLDOWN_MS = 30 * 60 * 1000;
+const recentIngestTriggers = new Map<string, number>();
 
 type IngestResult = {
   processed: number;
@@ -192,6 +195,77 @@ async function ingestOneDocument(args: {
   });
 
   return { status: 'ready', chunksCreated };
+}
+
+/** True when viewable docs are missing, failed, or still waiting on chunk embeddings. */
+export async function issueNeedsDocumentIngest(
+  issueId: string,
+  detail: StortingetSakDetail | null | undefined,
+): Promise<boolean> {
+  const documents = parseSakDocuments(detail).filter((doc) => doc.viewable && doc.exportId);
+  if (documents.length === 0) return false;
+
+  let service: ReturnType<typeof getServiceSupabase>;
+  try {
+    service = getServiceSupabase();
+  } catch {
+    return false;
+  }
+
+  const { data: rows } = await service
+    .from('stortinget_issue_documents')
+    .select('document_id, ingest_status, chunks_status')
+    .eq('issue_id', issueId);
+
+  const byId = new Map(
+    (rows ?? []).map((row) => [
+      String(row.document_id),
+      {
+        ingestStatus: String(row.ingest_status ?? ''),
+        chunksStatus: String(row.chunks_status ?? ''),
+      },
+    ]),
+  );
+
+  for (const document of documents) {
+    const existing = byId.get(document.id);
+    if (!existing) return true;
+    if (existing.ingestStatus === 'ready') {
+      if (existing.chunksStatus === 'pending' || existing.chunksStatus === '') return true;
+      continue;
+    }
+    if (existing.ingestStatus === 'external_only') continue;
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Fire-and-forget ingest when a warm detail cache lacks RAG coverage.
+ * Cooldown prevents hammering Stortinget / n8n on every page view.
+ */
+export function ensureSakDocumentsIngested(
+  issueId: string,
+  detail: StortingetSakDetail | null | undefined,
+): void {
+  const last = recentIngestTriggers.get(issueId);
+  if (last && Date.now() - last < INGEST_TRIGGER_COOLDOWN_MS) return;
+
+  // Reserve cooldown immediately so concurrent page views do not pile up ingest jobs.
+  recentIngestTriggers.set(issueId, Date.now());
+
+  void issueNeedsDocumentIngest(issueId, detail)
+    .then((needs) => {
+      if (!needs) {
+        recentIngestTriggers.delete(issueId);
+        return;
+      }
+      return ingestSakDocuments(issueId, detail);
+    })
+    .catch((error) => {
+      console.warn('[document-ingest] Failed ensure on cache hit:', error);
+    });
 }
 
 export async function ingestSakDocuments(

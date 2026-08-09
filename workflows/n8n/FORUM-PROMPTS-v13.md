@@ -102,3 +102,12 @@ Migrasjon `20260621120000_forum_sak_rag_prompts.sql`:
 3. `generation_metadata.rag_chunk_count` > 0 for RAG-grounded prompts
 4. Admin kan publisere → karusell viser sak-lenke
 5. v12 RSS-flyt uendret (`source_type = rss`)
+
+## Offentlig lansering (`FORUM_REELS_PUBLIC`)
+
+Admin pipeline (`?tab=pipeline`) viser lanseringsstatus:
+
+- Mål: ≥ **8** aktive reels (`REELS_PUBLIC_LAUNCH_MIN_ACTIVE` i `lib/forum/reels-launch.ts`)
+- Publiser **v13 med `rag_chunk_count > 0` først**, deretter v12 RSS; hold v5/ukjent som lav prioritet
+- Når terskelen er nådd: sett `FORUM_REELS_PUBLIC=true` i prod (allerede default i `.env.example` / `.env.test`)
+- Uten nok aktive prompts ser publikum fortsatt en tom feed — fyll inventaret før du kommuniserer «live»

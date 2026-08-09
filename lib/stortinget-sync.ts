@@ -4,7 +4,13 @@ import {
   mapStortingetSakToListItem,
   enrichSakerList,
 } from './stortinget-saker-cache';
-import { getCachedSakDetail, refreshStalePendingSakDetails } from './stortinget-detail-cache';
+import {
+  getCachedSakDetail,
+  MISSING_SUMMARY_DETAIL_REFRESH_LIMIT,
+  refreshPendingIssuesWithoutRag,
+  refreshStalePendingSakDetails,
+  STALE_PENDING_DETAIL_REFRESH_LIMIT,
+} from './stortinget-detail-cache';
 import { isDebattSak } from './stortinget-sak-presentation';
 import { resolveSakStatusFromSources } from './sak-status';
 
@@ -14,6 +20,7 @@ export type SyncIssuesResult = {
   newIssueIds: string[];
   aiSummaryTriggered: number;
   detailsRefreshed: number;
+  ragIngestQueued: number;
 };
 
 type ExistingIssueRow = {
@@ -74,7 +81,14 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
   );
 
   if (filtered.length === 0) {
-    return { upserted: 0, total: 0, newIssueIds: [], aiSummaryTriggered: 0, detailsRefreshed: 0 };
+    return {
+      upserted: 0,
+      total: 0,
+      newIssueIds: [],
+      aiSummaryTriggered: 0,
+      detailsRefreshed: 0,
+      ragIngestQueued: 0,
+    };
   }
 
   const issues = await enrichSakerList(filtered.map((sak) => mapStortingetSakToListItem(sak)));
@@ -168,7 +182,9 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
     }
   }
 
-  const candidates = [...new Set([...newIssueIds, ...missingSummaryIds.slice(0, 3)])];
+  const candidates = [
+    ...new Set([...newIssueIds, ...missingSummaryIds.slice(0, MISSING_SUMMARY_DETAIL_REFRESH_LIMIT)]),
+  ];
   let aiSummaryTriggered = 0;
 
   for (const issueId of candidates) {
@@ -176,7 +192,15 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
     aiSummaryTriggered += 1;
   }
 
-  const detailsRefreshed = await refreshStalePendingSakDetails(10);
+  const detailsRefreshed = await refreshStalePendingSakDetails(STALE_PENDING_DETAIL_REFRESH_LIMIT);
+  const ragIngestQueued = await refreshPendingIssuesWithoutRag();
 
-  return { upserted, total: issues.length, newIssueIds, aiSummaryTriggered, detailsRefreshed };
+  return {
+    upserted,
+    total: issues.length,
+    newIssueIds,
+    aiSummaryTriggered,
+    detailsRefreshed,
+    ragIngestQueued,
+  };
 }

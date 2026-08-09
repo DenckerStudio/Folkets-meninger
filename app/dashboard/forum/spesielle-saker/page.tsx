@@ -30,8 +30,8 @@ export default async function ForumSpesielleSakerPage() {
           <Clock className="mx-auto mb-4 h-10 w-10 text-indigo-400" />
           <h2 className="text-lg font-semibold text-foreground">Kommer snart</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            Vi forbereder nye spørsmål og avstemninger fra nyhetsbildet. Funksjonen rulles ut til alle
-            brukere når kvaliteten er på plass.
+            Vi fyller opp med grounded spørsmål (Stortinget-sak RAG og Regjeringen) før Spesielle
+            saker åpnes for alle. Forum-admin godkjenner utkast i pipeline-fanen.
           </p>
           <Link
             href={routes.forumForeslaReel}

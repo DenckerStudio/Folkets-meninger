@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Search, Filter, ArrowRight } from 'lucide-react';
+import { Search, Filter, ArrowRight, Vote } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
 import type { SakListItem } from '@/lib/stortinget';
 import { getSakKindLabel } from '@/lib/stortinget-sak-presentation';
@@ -65,6 +65,7 @@ export default function ExploreClient({
   const [issues] = useState(initialIssues);
   const { user } = useAuth();
   const [userVotes, setUserVotes] = useState<Record<string, string>>({});
+  const [votesLoaded, setVotesLoaded] = useState(false);
 
   const [filters, setFilters] = usePersistedState(
     PREFERENCE_KEYS.utforsk.filters,
@@ -75,6 +76,12 @@ export default function ExploreClient({
   const displayedUserVotes = user ? userVotes : {};
   const { searchQuery, selectedCategory, selectedStatus, selectedSakKind, selectedAiLabels, sortBy } = filters;
   const activeAiLabels = selectedAiLabels ?? [];
+  const firstOpenIssue = useMemo(
+    () => issues.find((issue) => issue.status !== 'closed' && issue.votingOpen) ?? null,
+    [issues],
+  );
+  const showFirstVotePrompt =
+    Boolean(user) && votesLoaded && Object.keys(userVotes).length === 0 && firstOpenIssue;
 
   const setSearchQuery = (searchQuery: string) => setFilters((prev) => ({ ...prev, searchQuery }));
   const setSelectedCategory = (selectedCategory: string) =>
@@ -94,11 +101,19 @@ export default function ExploreClient({
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setVotesLoaded(false);
+      setUserVotes({});
+      return;
+    }
+    setVotesLoaded(false);
     fetch('/api/user/vote-history')
       .then((res) => res.json())
       .then((data) => {
-        if (!Array.isArray(data)) return;
+        if (!Array.isArray(data)) {
+          setUserVotes({});
+          return;
+        }
         const map: Record<string, string> = {};
         for (const row of data) {
           const id = row.stortinget_issue_id ?? row.issue_id ?? row.id;
@@ -107,7 +122,12 @@ export default function ExploreClient({
         }
         setUserVotes(map);
       })
-      .catch(() => {});
+      .catch(() => {
+        setUserVotes({});
+      })
+      .finally(() => {
+        setVotesLoaded(true);
+      });
   }, [user]);
 
   const categories = useMemo(() => {
@@ -164,6 +184,32 @@ export default function ExploreClient({
           description="Lovforslag og representantforslag fra Stortinget — saker som egner seg for enkelt ja/nei-engasjement."
         />
       </FadeIn>
+
+      {showFirstVotePrompt && firstOpenIssue ? (
+        <FadeIn delay={0.15} direction="up">
+          <div className="flex flex-col gap-4 rounded-2xl border border-brand/20 bg-brand/5 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="flex gap-3">
+              <span className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                <Vote className="h-5 w-5" aria-hidden />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Avgi din første stemme</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Start med «{firstOpenIssue.title}» — det tar noen sekunder og hjelper andre å se hva som
+                  engasjerer.
+                </p>
+              </div>
+            </div>
+            <Link
+              href={routes.sak(String(firstOpenIssue.id))}
+              className="inline-flex items-center justify-center rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:opacity-90 shrink-0"
+            >
+              Stem nå
+              <ArrowRight className="ml-1.5 h-4 w-4" />
+            </Link>
+          </div>
+        </FadeIn>
+      ) : null}
 
       <FadeIn delay={0.2} direction="up">
         <div className="bg-card p-4 rounded-2xl shadow-sm border border-border flex flex-col md:flex-row gap-4">
