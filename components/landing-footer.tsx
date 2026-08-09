@@ -13,8 +13,8 @@ const platformLinks = [
 const aboutLinks = [
   { href: routes.omOss, label: 'Om oss' },
   { href: routes.innspill, label: 'Gi innspill' },
-  { href: routes.login, label: 'Logg inn' },
-  { href: routes.dashboard, label: 'Dashboard' },
+  { href: `${routes.login}?next=${encodeURIComponent(routes.utforsk)}`, label: 'Logg inn' },
+  { href: routes.utforsk, label: 'Utforsk saker' },
 ] as const;
 
 export function LandingFooter() {

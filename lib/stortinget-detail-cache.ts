@@ -4,11 +4,15 @@ import { resolveSakListStatus, resolveSakStatusFromSources } from './sak-status'
 import { mapSakPresentation } from './stortinget-sak-presentation';
 import { triggerAiSummaryWebhook } from './trigger-ai-summary-webhook';
 import { buildAiSummarySource, type AiSummaryDocumentSource } from './ai-summary/source-context';
-import { ingestSakDocuments } from './stortinget-document-ingest';
+import { ensureSakDocumentsIngested, ingestSakDocuments } from './stortinget-document-ingest';
 import { getSakVotingWindow } from './sak-voting-window';
 import { parseStortingetDotNetDateToISO } from './stortinget-utils';
 
 const DETAIL_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+/** Daily sync budget for pending saker that still lack ready RAG chunks. */
+export const PENDING_WITHOUT_RAG_REFRESH_LIMIT = 15;
+export const STALE_PENDING_DETAIL_REFRESH_LIMIT = 20;
+export const MISSING_SUMMARY_DETAIL_REFRESH_LIMIT = 8;
 
 export type SakIssueMeta = {
   lastUpdatedAt: string | null;
@@ -116,7 +120,10 @@ export async function getCachedSakDetail(
   if (!opts?.forceRefresh && cached?.detail_json) {
     const age = Date.now() - new Date(cached.last_synced_at).getTime();
     if (age < DETAIL_CACHE_MAX_AGE_MS) {
-      return cached.detail_json as StortingetSakDetail;
+      const detail = cached.detail_json as StortingetSakDetail;
+      // Warm cache still needs RAG when docs were never ingested (or chunks pending).
+      ensureSakDocumentsIngested(sakId, detail);
+      return detail;
     }
   }
 
@@ -209,7 +216,9 @@ async function updateAiSummarySource(
   });
 }
 
-export async function refreshStalePendingSakDetails(limit = 10): Promise<number> {
+export async function refreshStalePendingSakDetails(
+  limit = STALE_PENDING_DETAIL_REFRESH_LIMIT,
+): Promise<number> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return 0;
   }
@@ -236,4 +245,50 @@ export async function refreshStalePendingSakDetails(limit = 10): Promise<number>
   }
 
   return refreshed;
+}
+
+/**
+ * Queue document ingest for pending saker that have detail but no ready RAG chunks.
+ * Uses warm detail_json via getCachedSakDetail (no full detail_json list select).
+ */
+export async function refreshPendingIssuesWithoutRag(
+  limit = PENDING_WITHOUT_RAG_REFRESH_LIMIT,
+): Promise<number> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return 0;
+  }
+
+  const service = getServiceSupabase();
+  const scanLimit = Math.max(limit * 4, 40);
+
+  const { data: pending, error } = await service
+    .from('stortinget_issues')
+    .select('id')
+    .eq('status', 'pending')
+    .order('last_updated_at', { ascending: false, nullsFirst: false })
+    .limit(scanLimit);
+
+  if (error || !pending?.length) {
+    return 0;
+  }
+
+  const issueIds = pending.map((row) => String(row.id));
+  const { data: readyChunks } = await service
+    .from('document_chunks')
+    .select('issue_id')
+    .in('issue_id', issueIds)
+    .eq('embedding_status', 'ready');
+
+  const withRag = new Set((readyChunks ?? []).map((row) => String(row.issue_id)));
+  const withoutRag = issueIds.filter((id) => !withRag.has(id)).slice(0, limit);
+
+  let queued = 0;
+  for (const issueId of withoutRag) {
+    const detail = await getCachedSakDetail(issueId);
+    if (!detail) continue;
+    ensureSakDocumentsIngested(issueId, detail);
+    queued += 1;
+  }
+
+  return queued;
 }

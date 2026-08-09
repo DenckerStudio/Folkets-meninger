@@ -55,7 +55,7 @@ function LandingPopularIssuesEmpty() {
       </p>
       <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
         <Link
-          href={routes.login}
+          href={`${routes.login}?next=${encodeURIComponent(routes.utforsk)}`}
           className="inline-flex items-center justify-center rounded-full bg-[#00205b] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#ba0c2f]"
         >
           Logg inn og stem
@@ -64,7 +64,7 @@ function LandingPopularIssuesEmpty() {
           href={`${routes.login}?next=${encodeURIComponent(routes.utforsk)}`}
           className="inline-flex items-center text-sm font-semibold text-[#00205b] transition-colors hover:text-[#ba0c2f]"
         >
-          Utforsk saker etter innlogging <ArrowRight className="ml-1 h-4 w-4" />
+          Utforsk åpne saker <ArrowRight className="ml-1 h-4 w-4" />
         </Link>
       </div>
     </section>

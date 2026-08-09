@@ -113,7 +113,7 @@ Workflow-kilde: [`forum-trending-prompts.workflow.ts`](forum-trending-prompts.wo
 
 **v5:** alignment-gate, dedupe 0.55, min 4 kilder, **alltid `draft`** → admin-godkjenning i appen (`/dashboard/admin/forum-prompts`).
 
-**App:** `FORUM_REELS_PUBLIC=true` viser aktive reels for alle brukere. Sett `false` for admin-only forhåndsvisning.
+**App:** `FORUM_REELS_PUBLIC=true` viser aktive reels for alle brukere. Sett `false` for admin-only forhåndsvisning. Admin pipeline viser lanseringsklarhet (≥8 aktive; prioriter v13 med RAG). Se også `lib/forum/reels-launch.ts` og `FORUM-PROMPTS-v13.md`.
 
 Deploy:
 
@@ -142,8 +142,10 @@ er ikke vektorlager). Se migrasjon
 
 App-side kilde:
 
-- `lib/stortinget-detail-cache.ts` kaller `ingestSakDocuments` ved cache-hit og
-  cache-refresh.
+- `lib/stortinget-detail-cache.ts` kaller `ensureSakDocumentsIngested` ved
+  cache-hit når dokumenter/chunks mangler (cooldown 30 min), og
+  `ingestSakDocuments` ved full cache-refresh. Daglig sync køer også pending
+  saker uten ready RAG-chunks (`refreshPendingIssuesWithoutRag`).
 - `lib/stortinget-document-ingest.ts` parser saksdokumenter, henter visbar HTML
   fra Stortinget, lagrer kort `text_excerpt`, oppretter `document_chunks` med
   `embedding_status='pending'`, og sletter `content_full_text`/`content_html`.

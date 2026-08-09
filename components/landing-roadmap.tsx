@@ -40,16 +40,16 @@ export function LandingRoadmap() {
             date: 'Nå',
             title: 'Tillit, synlighet og førsteinntrykk',
             description:
-              'Poengnivåer (Aktiv → Veteran) finnes allerede. Vi synliggjør saker før innlogging, åpner forum-reels for publikum, strammer opp stien til første stemme, og forbereder MinID.',
+              'Poengnivåer (Aktiv → Veteran) finnes allerede. Innlogging lander på utforsk for første stemme, populære saker er synlige før login, og forum-reels åpnes når nok aktive grounded prompts er publisert. MinID forberedes.',
             status: 'current',
             detail: (
               <p>
                 Nivåer i bruk: Aktiv 250 · Pålitelig 750 · Kurator 2 000 · Veteran 5 000.{' '}
                 <Link
-                  href={routes.login}
+                  href={`${routes.login}?next=${encodeURIComponent(routes.utforsk)}`}
                   className="font-semibold text-[#00205b] underline-offset-2 hover:text-[#ba0c2f] hover:underline"
                 >
-                  Opprett konto
+                  Opprett konto og stem
                 </Link>
               </p>
             ),

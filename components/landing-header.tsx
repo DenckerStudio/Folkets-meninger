@@ -51,22 +51,22 @@ export function LandingHeader() {
           </a>
           {user ? (
             <Link
-              href={routes.dashboard}
+              href={routes.utforsk}
               className="inline-flex items-center rounded-full bg-[#00205b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#ba0c2f] transition-colors"
             >
-              Gå til dashboard
+              Utforsk saker
             </Link>
           ) : (
             <>
               <Link
-                href={routes.login}
+                href={`${routes.login}?next=${encodeURIComponent(routes.utforsk)}`}
                 className="inline-flex items-center gap-1.5 rounded-full border border-[#00205b]/15 bg-white px-4 py-2 text-sm font-semibold text-[#00205b] hover:border-[#00205b]/40 hover:bg-[#00205b]/[0.04] transition-colors"
               >
                 <LogIn className="size-4" />
                 Logg inn
               </Link>
               <Link
-                href={routes.login}
+                href={`${routes.login}?next=${encodeURIComponent(routes.utforsk)}`}
                 className="inline-flex items-center rounded-full bg-[#00205b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#ba0c2f] transition-colors"
               >
                 Kom i gang

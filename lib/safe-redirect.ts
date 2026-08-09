@@ -5,9 +5,12 @@ const ALLOWED_PREFIXES = [
   '/',
 ] as const;
 
+/** Default post-login destination: utforsk (path to first vote). */
+export const DEFAULT_POST_LOGIN_PATH = '/dashboard/utforsk';
+
 /** Prevent open redirects after OAuth — only allow same-origin relative paths. */
 export function sanitizePostLoginPath(next: string | null | undefined): string {
-  const fallback = '/dashboard/min-side';
+  const fallback = DEFAULT_POST_LOGIN_PATH;
   if (!next || typeof next !== 'string') return fallback;
 
   const trimmed = next.trim();
