@@ -65,7 +65,7 @@ export default function ExploreClient({
   const [issues] = useState(initialIssues);
   const { user } = useAuth();
   const [userVotes, setUserVotes] = useState<Record<string, string>>({});
-  const [votesLoaded, setVotesLoaded] = useState(false);
+  const [votesUserId, setVotesUserId] = useState<string | null>(null);
 
   const [filters, setFilters] = usePersistedState(
     PREFERENCE_KEYS.utforsk.filters,
@@ -73,7 +73,8 @@ export default function ExploreClient({
     isUtforskFilters
   );
 
-  const displayedUserVotes = user ? userVotes : {};
+  const votesLoadedForUser = Boolean(user && votesUserId === user.id);
+  const displayedUserVotes = votesLoadedForUser ? userVotes : {};
   const { searchQuery, selectedCategory, selectedStatus, selectedSakKind, selectedAiLabels, sortBy } = filters;
   const activeAiLabels = selectedAiLabels ?? [];
   const firstOpenIssue = useMemo(
@@ -81,7 +82,7 @@ export default function ExploreClient({
     [issues],
   );
   const showFirstVotePrompt =
-    Boolean(user) && votesLoaded && Object.keys(userVotes).length === 0 && firstOpenIssue;
+    votesLoadedForUser && Object.keys(userVotes).length === 0 && firstOpenIssue;
 
   const setSearchQuery = (searchQuery: string) => setFilters((prev) => ({ ...prev, searchQuery }));
   const setSelectedCategory = (selectedCategory: string) =>
@@ -101,17 +102,18 @@ export default function ExploreClient({
   };
 
   useEffect(() => {
-    if (!user) {
-      setVotesLoaded(false);
-      setUserVotes({});
-      return;
-    }
-    setVotesLoaded(false);
+    if (!user) return;
+
+    const uid = user.id;
+    let cancelled = false;
+
     fetch('/api/user/vote-history')
       .then((res) => res.json())
       .then((data) => {
+        if (cancelled) return;
         if (!Array.isArray(data)) {
           setUserVotes({});
+          setVotesUserId(uid);
           return;
         }
         const map: Record<string, string> = {};
@@ -121,13 +123,17 @@ export default function ExploreClient({
           if (id && choice) map[String(id)] = String(choice);
         }
         setUserVotes(map);
+        setVotesUserId(uid);
       })
       .catch(() => {
+        if (cancelled) return;
         setUserVotes({});
-      })
-      .finally(() => {
-        setVotesLoaded(true);
+        setVotesUserId(uid);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   const categories = useMemo(() => {
