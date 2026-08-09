@@ -616,8 +616,8 @@ async function queryPopularRowsFromDb(): Promise<DbIssueRow[]> {
 
 function sortPopularSaker(items: SakListItem[]): SakListItem[] {
   return [...items].sort((a, b) => {
-    const aOpen = a.status === 'Under behandling' ? 1 : 0;
-    const bOpen = b.status === 'Under behandling' ? 1 : 0;
+    const aOpen = a.status === 'pending' ? 1 : 0;
+    const bOpen = b.status === 'pending' ? 1 : 0;
     if (bOpen !== aOpen) return bOpen - aOpen;
 
     const voteDiff = (b.votes?.total ?? 0) - (a.votes?.total ?? 0);
