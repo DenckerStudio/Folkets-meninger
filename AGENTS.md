@@ -4,6 +4,10 @@
 - When asked to commit/push, stage only intended changes and exclude unrelated artifacts.
 - Prefer working on informatively named branches with prefix `cursor/`.
 - Avoid user-visible mock/placeholder data; prefer honest empty/“coming soon” states.
+- **Planned (not implemented yet):** full forum/reels removal + Alternativ C egress plan in
+  `infra/coolify/README.md`. Locked F0: no poll top-arguments; landing `utforsk`; remove forum
+  points → simple opt-in activity visibility; `ADMIN_EMAILS` + `app_metadata.role`; no forum data
+  export. Subagent: `.cursor/agents/forum-removal-egress.md`.
 
 ## Learned Workspace Facts
 
