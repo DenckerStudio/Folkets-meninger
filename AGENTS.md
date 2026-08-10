@@ -136,6 +136,8 @@ The canonical template is `.env.example`.
   domains are routed to draft by the n8n forum prompt workflow.
 - v13 sak-RAG drafts: admin pipeline at `/dashboard/admin/forum-prompts?tab=pipeline`
   and per-sak trigger on `/dashboard/sak/<id>`; see `workflows/n8n/FORUM-PROMPTS-v13.md`.
+- **Planned:** full forum/reels removal site-wide; decouple polls from forum threads;
+  hosted Supabase egress plan (Alternativ C) — see `infra/coolify/README.md`.
 
 ### Document ingest and RAG
 
