@@ -1,6 +1,10 @@
 # Coolify / infrastruktur — Alternativ C + forum-fjerning
 
-Dette dokumentet er **planleggingsnotat** (ikke implementert enda). Det beskriver:
+Dette dokumentet er plan + runbook for Alternativ C og forum-fjerning.
+**App-fjerning (F2) + DB DROP (F3c) er implementert** på `cursor/remove-forum-c641`.
+Gjenstår: C0 egress-måling, C1 Redis, F1 pause av eventuelle aktive forum-n8n i prod.
+
+Det beskriver:
 
 1. **Alternativ C** — fortsatt **hosted Supabase**, redusert egress via Coolify (Redis, cache-disiplin, n8n/ops), uten full self-host av Postgres ennå.
 2. **Full fjerning av forum** fra produktet — alt bruker-/admin-UI, API, n8n-pipeline og DB-funksjonalitet knyttet til forum/reels.

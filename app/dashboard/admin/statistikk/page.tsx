@@ -1,10 +1,10 @@
 import AdminStatistikkClient from './admin-statistikk-client';
-import { requireForumAdminPage } from '@/lib/forum/admin-gate';
+import { requireAdminPage } from '@/lib/admin/gate';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminStatistikkPage() {
-  await requireForumAdminPage();
+  await requireAdminPage();
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">

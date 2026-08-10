@@ -268,12 +268,6 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
               </span>
             </div>
             <p className="mt-4 text-sm text-muted-foreground leading-relaxed max-w-2xl">{rolleInfo.description}</p>
-            <Link
-              href={routes.forum}
-              className="inline-flex mt-4 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
-            >
-              Diskuter i forum →
-            </Link>
           </div>
         </div>
       </div>

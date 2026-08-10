@@ -34,7 +34,7 @@ test.describe('Politiker profiles', () => {
   });
 
   test('sak page shows history back button', async ({ page }) => {
-    await page.goto('/dashboard/forum');
+    await page.goto('/dashboard/utforsk');
     await page.goto('/dashboard/sak/200027');
     await expect(page.getByRole('button', { name: 'Tilbake' })).toBeVisible();
   });

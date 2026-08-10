@@ -63,7 +63,6 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/api/vote/:path*',
-    '/api/forum/:path*',
     '/api/sak/:path*/ai-summary',
     '/api/feedback',
   ],

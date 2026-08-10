@@ -2,13 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileEdit, MessageSquare, Search, UserRound, Users } from 'lucide-react';
+import { FileEdit, Search, UserRound, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
 
 const DASHBOARD_MOBILE_ITEMS = [
-  { href: routes.forum, label: 'Forum', icon: MessageSquare },
-  { href: routes.utforsk, label: 'Saker', icon: Search },
+  { href: routes.utforsk, label: 'Utforsk', icon: Search },
   { href: routes.horinger, label: 'Høringer', icon: FileEdit },
   { href: routes.politikere, label: 'Politikere', icon: Users },
   { href: routes.minSide, label: 'Profil', icon: UserRound },
@@ -29,7 +28,7 @@ export function DashboardMobileNav() {
               className={cn(
                 'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-colors',
                 active
-                  ? 'border-brand bg-[#00205b] text-white'
+                  ? 'border-brand bg-brand text-white'
                   : 'border-border bg-card text-foreground hover:border-border',
               )}
             >

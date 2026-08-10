@@ -58,6 +58,14 @@ Etter migrasjon `20260529120000_simplify_issue_ai_summaries.sql`:
 
 Kjør `supabase db push` etter pull.
 
+## Forum Reels — archived (product removed)
+
+Forum/reels pipelines are **inactive**. Sources and docs live under
+[`archive/forum/`](archive/forum/). Disable any remaining live n8n workflows that
+touch `forum_*` tables. App env no longer uses `N8N_FORUM_*` / `FORUM_REELS_PUBLIC`.
+
+<details><summary>Historical notes (v12/v13/v5)</summary>
+
 ## Forum Reels (v12 – Regjeringen RSS + prompt generator)
 
 | Steg | Kilde | Webhook |
@@ -129,6 +137,8 @@ node scripts/build-n8n-forum-prompts-topology-ops.mjs /tmp/n8n-forum-prompts-top
 | `longRunningMinDays` | `14` |
 
 Webhook: `POST /webhook/folkets-forum-prompts` (env `N8N_FORUM_PROMPTS_WEBHOOK_URL`).
+
+</details>
 
 ## Dokument ingestion + RAG embeddings
 

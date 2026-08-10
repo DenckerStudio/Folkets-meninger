@@ -30,7 +30,7 @@ export default function CompleteProfileClient() {
     fetch('/api/user/profile')
       .then((res) => res.json())
       .then((data) => {
-        if (data.has_forum_identity) {
+        if (data.has_public_identity) {
           router.replace(nextPath);
           return;
         }
@@ -74,7 +74,7 @@ export default function CompleteProfileClient() {
           </div>
           <h1 className="text-2xl font-bold text-foreground">Fullfør profilen din</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Foruminnlegg er offentlige og viser fornavn og etternavn. Stemmer forblir anonyme i statistikken.
+            Offentlige innspill (f.eks. høringer) viser fornavn og etternavn. Stemmer forblir anonyme i statistikken.
           </p>
         </div>
       </FadeIn>

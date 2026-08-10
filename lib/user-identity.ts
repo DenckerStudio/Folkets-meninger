@@ -1,5 +1,5 @@
 import type { User } from '@supabase/supabase-js';
-import { userHasForumIdentity, type UserNameFields } from '@/lib/forum/author-display';
+import { userHasPublicIdentity, type UserNameFields } from '@/lib/identity/public-identity';
 
 export function namesFromAuthUser(user: User): { firstName: string; lastName: string } | null {
   const meta = user.user_metadata as Record<string, unknown> | undefined;
@@ -30,14 +30,15 @@ export function namesFromAuthUser(user: User): { firstName: string; lastName: st
   };
 }
 
-export function authUserHasForumIdentity(user: User): boolean {
+export function authUserHasPublicIdentity(user: User): boolean {
   const names = namesFromAuthUser(user);
   if (!names) return false;
   const fields: UserNameFields = {
     first_name: names.firstName,
     last_name: names.lastName,
   };
-  return userHasForumIdentity(fields);
+  return userHasPublicIdentity(fields);
 }
 
-export { isForumRelatedPath } from '@/lib/routes';
+/** @deprecated Use authUserHasPublicIdentity */
+export const authUserHasForumIdentity = authUserHasPublicIdentity;

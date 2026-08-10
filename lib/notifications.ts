@@ -1,7 +1,7 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { sendRealtimeNotificationEmail } from '@/lib/email/nodemailer';
 
-export type NotificationChannel = 'forum' | 'mentions' | 'categories' | 'labels';
+export type NotificationChannel = 'categories' | 'labels';
 export type NotificationFrequency = 'realtime' | 'daily' | 'weekly';
 
 export type CreateNotificationInput = {
@@ -71,7 +71,7 @@ export async function createNotification(input: CreateNotificationInput) {
     return;
   }
 
-  const preference = freq[input.channel] ?? (input.channel === 'categories' || input.channel === 'labels' ? 'daily' : 'realtime');
+  const preference = freq[input.channel] ?? 'daily';
   if (!emailEnabled || preference !== 'realtime') return;
 
   try {

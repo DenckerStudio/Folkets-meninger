@@ -1,5 +1,4 @@
-import { Suspense } from 'react';
-import ForumSidebar from '@/components/forum/forum-sidebar';
+import DashboardSidebar from '@/components/dashboard/dashboard-sidebar';
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
@@ -7,9 +6,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <div className="grid grid-cols-1 xl:grid-cols-[240px_minmax(0,1fr)] gap-6">
         <aside className="hidden xl:block">
           <div className="sticky top-24">
-            <Suspense fallback={<div className="h-48 animate-pulse bg-muted rounded-xl" />}>
-              <ForumSidebar />
-            </Suspense>
+            <DashboardSidebar />
           </div>
         </aside>
         <div className="min-w-0">{children}</div>

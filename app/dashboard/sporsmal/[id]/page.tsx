@@ -131,14 +131,6 @@ export default async function SporsmalDetailPage({
             </div>
           </div>
         )}
-
-        <Link
-          href={routes.forumNew()}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
-        >
-          <MessageSquare className="w-4 h-4" />
-          Diskuter i forum
-        </Link>
       </article>
     </div>
   );

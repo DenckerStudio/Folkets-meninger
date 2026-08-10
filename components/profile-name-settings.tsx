@@ -38,9 +38,9 @@ export function ProfileNameSettings() {
   return (
     <div className="rounded-xl border border-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="text-lg font-medium text-foreground">Ditt navn i forumet</h3>
+        <h3 className="text-lg font-medium text-foreground">Ditt offentlige navn</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Foruminnlegg viser fornavn og etternavn. Stemmer på saker forblir anonyme i statistikken.
+          Offentlige innspill viser fornavn og etternavn. Stemmer på saker forblir anonyme i statistikken.
         </p>
       </div>
       <div className="grid sm:grid-cols-2 gap-4">

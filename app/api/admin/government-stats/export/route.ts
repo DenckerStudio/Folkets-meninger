@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireForumAdmin } from '@/lib/forum/admin';
+import { requireAdmin } from '@/lib/admin/gate';
 import {
   buildGovernmentStatsSnapshot,
   snapshotToCsv,
@@ -8,7 +8,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const auth = await requireForumAdmin();
+  const auth = await requireAdmin();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }

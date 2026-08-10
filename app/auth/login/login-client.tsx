@@ -196,7 +196,7 @@ export default function LoginClient() {
               <button
                 type="button"
                 onClick={() => {
-                  const completeNext = nextPath.includes('forum')
+                  const completeNext = nextPath.includes('horinger')
                     ? `/auth/complete-profile?next=${encodeURIComponent(nextPath)}`
                     : nextPath;
                   router.push(completeNext);

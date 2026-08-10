@@ -9,16 +9,6 @@ export const routes = {
   minSide: `${DASHBOARD_PREFIX}/min-side`,
   varsler: `${DASHBOARD_PREFIX}/varsler`,
   horinger: `${DASHBOARD_PREFIX}/horinger`,
-  forum: `${DASHBOARD_PREFIX}/forum`,
-  forumNew: (sakId?: string) => {
-    const base = `${DASHBOARD_PREFIX}/forum`;
-    if (sakId) {
-      return `${base}?sak=${encodeURIComponent(sakId)}#del-din-mening`;
-    }
-    return `${base}#del-din-mening`;
-  },
-  forumSpesielleSaker: `${DASHBOARD_PREFIX}/forum/spesielle-saker`,
-  forumForeslaReel: `${DASHBOARD_PREFIX}/forum/foresla-reel`,
   politikere: `${DASHBOARD_PREFIX}/politikere`,
   representanter: `${DASHBOARD_PREFIX}/representanter`,
   politikerHub: `${DASHBOARD_PREFIX}/politiker-hub`,
@@ -32,16 +22,9 @@ export const routes = {
   sporsmalDetail: (id: string) => `${DASHBOARD_PREFIX}/sporsmal/${id}`,
   sak: (id: string) => `${DASHBOARD_PREFIX}/sak/${id}`,
   horing: (id: string) => `${DASHBOARD_PREFIX}/horinger/${id}`,
-  forumTopic: (id: string) => `${DASHBOARD_PREFIX}/forum/${id}`,
   profile: (id: string) => `/profil/${id}`,
-  adminForumPrompts: `${DASHBOARD_PREFIX}/admin/forum-prompts`,
-  adminForumClusters: `${DASHBOARD_PREFIX}/admin/forum-clusters`,
-  adminForumReports: `${DASHBOARD_PREFIX}/admin/forum-reports`,
   adminStats: `${DASHBOARD_PREFIX}/admin/statistikk`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,
-  forumMineInnlegg: `${DASHBOARD_PREFIX}/forum/mine-innlegg`,
-  /** @deprecated Use forumMineInnlegg */
-  minSideForumPosts: `${DASHBOARD_PREFIX}/forum/mine-innlegg`,
 } as const;
 
 export function isDashboardPath(pathname: string): boolean {
@@ -59,10 +42,6 @@ export function isPublicDashboardPolitikerPath(pathname: string): boolean {
     pathname === routes.politikere ||
     pathname.startsWith(`${routes.politikere}/`)
   );
-}
-
-export function isForumRelatedPath(pathname: string): boolean {
-  return pathname.startsWith(`${DASHBOARD_PREFIX}/forum`) || pathname.includes('/forum');
 }
 
 export function isPublicProfilePath(pathname: string): boolean {

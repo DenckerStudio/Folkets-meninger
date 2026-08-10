@@ -143,7 +143,7 @@ export default function HowItWorks({
     {
       title: 'Delta i debatten',
       description:
-        'Forum og høringer med navngitte innlegg — diskuter åpent med fornavn og etternavn.',
+        'Høringer med navngitte innspill — del mening med fornavn og etternavn.',
       colorTheme: 'navy',
     },
     {

@@ -1,8 +1,10 @@
 # Supabase migrations and schema runbook
 
-Supabase backs auth-adjacent user state, anonymous voting receipts, forum
-content, notifications, Stortinget issue caches, AI summary data, and document
-RAG tables.
+Supabase backs auth-adjacent user state, anonymous voting receipts, hearing
+comments, notifications, Stortinget issue caches, AI summary data, and document
+RAG tables. Forum tables/RPCs were removed in
+`20260810120000_remove_forum_and_activity_visibility.sql` (no data export).
+Users may opt in to public activity via `users.activity_visibility`.
 
 ## Local / test environments
 
