@@ -18,7 +18,7 @@ export const USER_POINT_TIERS: readonly UserPointTier[] = [
     color: 'text-foreground',
     barColor: 'bg-muted-foreground/50',
     ringColor: 'ring-border',
-    unlocks: 'Les, stem på saker og del i forumet.',
+    unlocks: 'Les saker, stem og følg høringer.',
   },
   {
     id: 'active',
@@ -36,7 +36,7 @@ export const USER_POINT_TIERS: readonly UserPointTier[] = [
     color: 'text-indigo-700',
     barColor: 'bg-indigo-500',
     ringColor: 'ring-indigo-200',
-    unlocks: 'Foreslå forum-reels som admin kan godkjenne.',
+    unlocks: 'Synlig «Pålitelig»-merke på profilen din.',
   },
   {
     id: 'curator',
@@ -45,7 +45,7 @@ export const USER_POINT_TIERS: readonly UserPointTier[] = [
     color: 'text-violet-700',
     barColor: 'bg-violet-500',
     ringColor: 'ring-violet-200',
-    unlocks: 'Publiser reels fra godkjente nyhetskilder uten admin-godkjenning.',
+    unlocks: 'Synlig «Kurator»-merke på profilen din.',
   },
   {
     id: 'veteran',
@@ -54,7 +54,7 @@ export const USER_POINT_TIERS: readonly UserPointTier[] = [
     color: 'text-amber-800',
     barColor: 'bg-amber-500',
     ringColor: 'ring-amber-200',
-    unlocks: 'Foreslå nye nyhetskilder og høyere publiseringsgrense.',
+    unlocks: 'Synlig «Veteran»-merke for langvarig engasjement.',
   },
 ] as const;
 
