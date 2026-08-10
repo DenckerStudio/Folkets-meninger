@@ -1,7 +1,9 @@
 node_modules/
 .next/
 coverage/
-.cursor/
+.cursor/*
+!.cursor/agents/
+!.cursor/agents/**
 supabase/.temp/
 .DS_Store
 *.log
