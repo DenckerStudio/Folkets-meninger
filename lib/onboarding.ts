@@ -11,6 +11,7 @@ export const ONBOARDING_META_KEYS = {
   completed: 'onboarding_completed',
   skipped: 'onboarding_skipped',
   tourCompleted: 'onboarding_tour_completed',
+  bankIdVerified: 'onboarding_bankid_verified',
 } as const;
 
 export type OnboardingStepId = 'welcome' | 'name' | 'sms' | 'bankid';
@@ -30,8 +31,8 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     index: 1,
     label: 'Velkommen',
     title: 'Velkommen til Folkets Stemme',
-    description: 'Tre korte steg: navn, SMS-verifisering, og BankID når det er klart. Du kan hoppe over når som helst.',
-    optional: true,
+    description: 'Tre steg er obligatoriske: navn, SMS og BankID. Etterpå kan du ta en kort omvisning — den kan hoppes over.',
+    optional: false,
   },
   {
     id: 'name',
@@ -39,23 +40,23 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     label: 'Navn',
     title: 'Hvem er du?',
     description: 'Fornavn og etternavn vises på offentlige innspill, for eksempel høringer. Stemmer forblir anonyme i statistikken.',
-    optional: true,
+    optional: false,
   },
   {
     id: 'sms',
     index: 3,
     label: 'SMS',
     title: 'Bekreft med SMS',
-    description: 'Én person, én stemme. Vi sender en kode til telefonen din. Du kan gjøre dette senere.',
-    optional: true,
+    description: 'Én person, én stemme. Du må bekrefte telefonnummeret med koden vi sender.',
+    optional: false,
   },
   {
     id: 'bankid',
     index: 4,
     label: 'BankID',
-    title: 'BankID kommer',
-    description: 'Sterkere identitetsbekreftelse med BankID kommer. Hopp over nå, så varsler vi deg når det er klart.',
-    optional: true,
+    title: 'Bekreft med BankID',
+    description: 'BankID er påkrevd for å sikre identiteten din før du deltar.',
+    optional: false,
   },
 ] as const;
 
@@ -92,7 +93,7 @@ export const PRODUCT_TOUR_STEPS: readonly ProductTourStep[] = [
   {
     id: 'min-side',
     title: 'Min side',
-    body: 'Stemmehistorikk, profil og innstillinger. Du kan fullføre SMS eller navn her senere.',
+    body: 'Stemmehistorikk, profil og innstillinger. Omvisningen kan du starte på nytt herfra.',
     selector: '[data-tour="min-side"]',
     placement: 'right',
     openNav: true,
@@ -112,6 +113,13 @@ export type OnboardingMetadata = {
   completed: boolean;
   skipped: boolean;
   tourCompleted: boolean;
+  bankIdVerified: boolean;
+};
+
+export type OnboardingProgressGate = {
+  hasName: boolean;
+  phoneVerified: boolean;
+  bankIdVerified: boolean;
 };
 
 function readBooleanMeta(meta: Record<string, unknown>, key: string): boolean {
@@ -125,6 +133,7 @@ export function readOnboardingMetadata(user: Pick<User, 'user_metadata'> | null 
     completed: readBooleanMeta(meta, ONBOARDING_META_KEYS.completed),
     skipped: readBooleanMeta(meta, ONBOARDING_META_KEYS.skipped),
     tourCompleted: readBooleanMeta(meta, ONBOARDING_META_KEYS.tourCompleted),
+    bankIdVerified: readBooleanMeta(meta, ONBOARDING_META_KEYS.bankIdVerified),
   };
 }
 
@@ -134,7 +143,25 @@ export function buildOnboardingUserMetadata(patch: Partial<OnboardingMetadata>):
   if (patch.completed !== undefined) data[ONBOARDING_META_KEYS.completed] = patch.completed;
   if (patch.skipped !== undefined) data[ONBOARDING_META_KEYS.skipped] = patch.skipped;
   if (patch.tourCompleted !== undefined) data[ONBOARDING_META_KEYS.tourCompleted] = patch.tourCompleted;
+  if (patch.bankIdVerified !== undefined) data[ONBOARDING_META_KEYS.bankIdVerified] = patch.bankIdVerified;
   return data;
+}
+
+export function canAdvanceOnboardingStep(step: OnboardingStepId, gate: OnboardingProgressGate): boolean {
+  switch (step) {
+    case 'welcome':
+      return true;
+    case 'name':
+      return gate.hasName;
+    case 'sms':
+      return gate.phoneVerified;
+    case 'bankid':
+      return gate.bankIdVerified;
+    default: {
+      const exhaustive: never = step;
+      throw new Error(`Unknown onboarding step: ${exhaustive}`);
+    }
+  }
 }
 
 export function needsOnboarding(options: {

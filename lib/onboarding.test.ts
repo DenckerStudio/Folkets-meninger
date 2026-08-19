@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import {
   buildOnboardingUserMetadata,
+  canAdvanceOnboardingStep,
   formatOnboardingStepIndex,
   getOnboardingStep,
   needsOnboarding,
   nextOnboardingStepId,
   normalizePhoneNumber,
+  ONBOARDING_STEPS,
   previousOnboardingStepId,
   readOnboardingMetadata,
   utforskWithTour,
@@ -14,6 +16,7 @@ import { sanitizePostLoginPath } from './safe-redirect';
 
 assert.equal(formatOnboardingStepIndex(1), '01');
 assert.equal(formatOnboardingStepIndex(4), '04');
+assert.ok(ONBOARDING_STEPS.every((step) => step.optional === false));
 
 assert.equal(getOnboardingStep('sms').label, 'SMS');
 assert.equal(nextOnboardingStepId('welcome'), 'name');
@@ -30,7 +33,7 @@ assert.equal(normalizePhoneNumber(''), null);
 
 assert.equal(
   needsOnboarding({
-    metadata: { pending: true, completed: false, skipped: false, tourCompleted: false },
+    metadata: { pending: true, completed: false, skipped: false, tourCompleted: false, bankIdVerified: false },
     hasPublicIdentity: true,
   }),
   true,
@@ -38,7 +41,7 @@ assert.equal(
 
 assert.equal(
   needsOnboarding({
-    metadata: { pending: false, completed: false, skipped: false, tourCompleted: false },
+    metadata: { pending: false, completed: false, skipped: false, tourCompleted: false, bankIdVerified: false },
     hasPublicIdentity: true,
   }),
   false,
@@ -46,7 +49,7 @@ assert.equal(
 
 assert.equal(
   needsOnboarding({
-    metadata: { pending: false, completed: false, skipped: false, tourCompleted: false },
+    metadata: { pending: false, completed: false, skipped: false, tourCompleted: false, bankIdVerified: false },
     hasPublicIdentity: false,
   }),
   true,
@@ -54,7 +57,7 @@ assert.equal(
 
 assert.equal(
   needsOnboarding({
-    metadata: { pending: true, completed: false, skipped: true, tourCompleted: false },
+    metadata: { pending: true, completed: false, skipped: true, tourCompleted: false, bankIdVerified: false },
     hasPublicIdentity: false,
   }),
   false,
@@ -62,10 +65,39 @@ assert.equal(
 
 assert.equal(
   needsOnboarding({
-    metadata: { pending: true, completed: true, skipped: false, tourCompleted: false },
+    metadata: { pending: true, completed: true, skipped: false, tourCompleted: false, bankIdVerified: true },
     hasPublicIdentity: false,
   }),
   false,
+);
+
+assert.equal(
+  canAdvanceOnboardingStep('welcome', { hasName: false, phoneVerified: false, bankIdVerified: false }),
+  true,
+);
+assert.equal(
+  canAdvanceOnboardingStep('name', { hasName: false, phoneVerified: false, bankIdVerified: false }),
+  false,
+);
+assert.equal(
+  canAdvanceOnboardingStep('name', { hasName: true, phoneVerified: false, bankIdVerified: false }),
+  true,
+);
+assert.equal(
+  canAdvanceOnboardingStep('sms', { hasName: true, phoneVerified: false, bankIdVerified: false }),
+  false,
+);
+assert.equal(
+  canAdvanceOnboardingStep('sms', { hasName: true, phoneVerified: true, bankIdVerified: false }),
+  true,
+);
+assert.equal(
+  canAdvanceOnboardingStep('bankid', { hasName: true, phoneVerified: true, bankIdVerified: false }),
+  false,
+);
+assert.equal(
+  canAdvanceOnboardingStep('bankid', { hasName: true, phoneVerified: true, bankIdVerified: true }),
+  true,
 );
 
 const meta = readOnboardingMetadata({

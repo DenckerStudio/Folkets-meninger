@@ -1,11 +1,8 @@
 'use client';
 
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  formatOnboardingStepIndex,
-  ONBOARDING_STEPS,
-  type OnboardingStepId,
-} from '@/lib/onboarding';
+import { ONBOARDING_STEPS, type OnboardingStepId } from '@/lib/onboarding';
 
 type OnboardingStepperProps = {
   current: OnboardingStepId;
@@ -15,37 +12,25 @@ export function OnboardingStepper({ current }: OnboardingStepperProps) {
   const currentIndex = ONBOARDING_STEPS.findIndex((step) => step.id === current);
 
   return (
-    <ol className="grid grid-cols-4 border-b border-foreground/15">
+    <ol className="grid grid-cols-4 gap-2">
       {ONBOARDING_STEPS.map((step, index) => {
         const active = step.id === current;
         const done = index < currentIndex;
         return (
-          <li
-            key={step.id}
-            className={cn(
-              'relative flex flex-col gap-1 px-2 py-3 sm:px-3 sm:py-4',
-              index > 0 && 'border-l border-foreground/15',
-            )}
-          >
-            {active ? (
-              <span className="absolute inset-x-0 bottom-0 h-0.5 bg-brand-accent" aria-hidden />
-            ) : null}
-            <span
+          <li key={step.id}>
+            <div
               className={cn(
-                'font-mono text-[0.65rem] font-medium tracking-[0.18em]',
-                active ? 'text-brand-accent' : done ? 'text-foreground' : 'text-muted-foreground',
+                'flex flex-col gap-0.5 rounded-xl border px-2 py-2.5 sm:px-3',
+                active && 'border-brand bg-brand text-brand-foreground',
+                done && !active && 'border-brand/20 bg-brand/10 text-brand',
+                !active && !done && 'border-border bg-card text-muted-foreground',
               )}
             >
-              {formatOnboardingStepIndex(step.index)}
-            </span>
-            <span
-              className={cn(
-                'text-[0.7rem] font-semibold uppercase tracking-[0.16em] sm:text-xs',
-                active ? 'text-foreground' : 'text-muted-foreground',
-              )}
-            >
-              {step.label}
-            </span>
+              <span className="inline-flex h-4 items-center text-[0.65rem] font-semibold tracking-wide">
+                {done ? <Check className="h-3.5 w-3.5" aria-hidden /> : String(step.index).padStart(2, '0')}
+              </span>
+              <span className="truncate text-xs font-semibold">{step.label}</span>
+            </div>
           </li>
         );
       })}

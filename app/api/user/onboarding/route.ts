@@ -13,18 +13,16 @@ import { getUserVerificationStatus } from '@/lib/user-verification';
 
 export const dynamic = 'force-dynamic';
 
-type OnboardingAction = 'complete' | 'skip' | 'tour_complete' | 'tour_reset';
+type OnboardingAction = 'complete' | 'tour_complete' | 'tour_reset';
 
 function isOnboardingAction(value: unknown): value is OnboardingAction {
-  return value === 'complete' || value === 'skip' || value === 'tour_complete' || value === 'tour_reset';
+  return value === 'complete' || value === 'tour_complete' || value === 'tour_reset';
 }
 
 function metadataPatchForAction(action: OnboardingAction): Partial<OnboardingMetadata> {
   switch (action) {
     case 'complete':
-      return { pending: false, completed: true, skipped: false };
-    case 'skip':
-      return { pending: false, completed: true, skipped: true };
+      return { pending: false, completed: true, skipped: false, bankIdVerified: true };
     case 'tour_complete':
       return { tourCompleted: true };
     case 'tour_reset':
@@ -100,6 +98,7 @@ export async function GET() {
     completed: metadata.completed || dbCompleted,
     skipped: metadata.skipped || dbSkipped,
     tourCompleted: metadata.tourCompleted || dbTourCompleted,
+    bankIdVerified: metadata.bankIdVerified,
   };
 
   return NextResponse.json({
@@ -123,10 +122,26 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => ({}));
   if (!isOnboardingAction(body.action)) {
+    if (body.action === 'skip') {
+      return NextResponse.json(
+        { error: 'Navn, SMS og BankID er obligatorisk. Bare omvisningen kan hoppes over.' },
+        { status: 400 },
+      );
+    }
     return NextResponse.json({ error: 'Ugyldig handling' }, { status: 400 });
   }
 
   await ensurePublicUser(user);
+
+  if (body.action === 'complete') {
+    const verification = getUserVerificationStatus(user);
+    if (!verification.phoneVerified) {
+      return NextResponse.json(
+        { error: 'Telefonnummeret må bekreftes med SMS før onboarding kan fullføres.' },
+        { status: 400 },
+      );
+    }
+  }
 
   const patch = metadataPatchForAction(body.action);
   await persistOnboardingState(user.id, patch);

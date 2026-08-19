@@ -188,13 +188,13 @@ export function ProfileAppPreferences() {
           }}
           className="flex w-full items-start gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:bg-muted/50"
         >
-          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand">
             <Map className="h-4 w-4" />
           </span>
           <span className="min-w-0">
             <span className="block text-sm font-semibold text-foreground">Start omvisning på nytt</span>
             <span className="mt-0.5 block text-xs text-muted-foreground">
-              Popup-guiden peker på menyen og varsler. Du kan hoppe over når som helst.
+              Popup-guiden peker på menyen og varsler. Bare omvisningen kan hoppes over.
             </span>
           </span>
         </button>

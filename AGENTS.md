@@ -134,8 +134,8 @@ The canonical template is `.env.example`.
 ### Identity, activity, admin
 
 - Public first/last name required for hearing comments (`user_has_public_identity`);
-  `/auth/onboarding` collects name, optional SMS, and a BankID placeholder (skip allowed).
-  `/auth/complete-profile` redirects to onboarding. Dashboard product tour is skippable.
+  `/auth/onboarding` requires name, SMS, and BankID. Only the dashboard product tour is skippable.
+  `/auth/complete-profile` redirects to onboarding.
 - Public activity is opt-in via `users.activity_visibility` (`private` default).
 - Admin access: `ADMIN_EMAILS` allowlist, then `app_metadata.role === "admin"`
   (`lib/admin/gate.ts`). Remaining admin surface: `/dashboard/admin/statistikk`.

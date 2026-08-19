@@ -4,7 +4,6 @@ import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
-  formatOnboardingStepIndex,
   PRODUCT_TOUR_STEPS,
   type ProductTourPlacement,
   type ProductTourStep,
@@ -89,7 +88,7 @@ export function ProductTour({
       />
       {target ? (
         <div
-          className="pointer-events-none absolute z-[1] border-2 border-brand-accent bg-transparent shadow-[0_0_0_9999px_rgba(11,18,32,0.55)]"
+        className="pointer-events-none absolute z-[1] rounded-xl border-2 border-brand bg-transparent shadow-[0_0_0_9999px_rgba(11,18,32,0.5)]"
           style={{
             top: target.top - PAD,
             left: target.left - PAD,
@@ -107,46 +106,41 @@ export function ProductTour({
             setPopoverSize(next);
           }
         }}
-        className="absolute z-[81] w-[min(22rem,calc(100vw-1.5rem))] border border-foreground/20 bg-card text-card-foreground shadow-2xl"
+        className="absolute z-[81] w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-xl"
         style={{ top: popoverPos.top, left: popoverPos.left }}
       >
-        <div className="h-1 w-full bg-brand-accent" />
+        <div className="h-1 w-full bg-brand" />
         <div className="px-5 py-4">
-          <p className="font-mono text-[0.65rem] tracking-[0.2em] text-brand-accent">
-            {formatOnboardingStepIndex(index + 1)} / {formatOnboardingStepIndex(PRODUCT_TOUR_STEPS.length)}
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+            Steg {index + 1} av {PRODUCT_TOUR_STEPS.length}
           </p>
-          <h2 id="product-tour-title" className="mt-2 text-lg font-semibold tracking-tight text-foreground">
+          <h2 id="product-tour-title" className="mt-1.5 text-lg font-bold tracking-tight text-foreground">
             {step.title}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
-          <div className="mt-3 h-px bg-foreground/15" aria-hidden />
           <div
-            className="mt-3 h-1 bg-muted"
+            className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted"
             role="progressbar"
             aria-valuemin={1}
             aria-valuemax={PRODUCT_TOUR_STEPS.length}
             aria-valuenow={index + 1}
           >
             <div
-              className="h-full bg-brand-accent"
+              className="h-full rounded-full bg-brand"
               style={{ width: `${((index + 1) / PRODUCT_TOUR_STEPS.length) * 100}%` }}
             />
           </div>
           <div className="mt-4 flex items-center justify-between gap-3">
-            <button
-              type="button"
-              className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground hover:text-foreground"
-              onClick={onSkip}
-            >
+            <Button type="button" variant="ghost" size="sm" className="rounded-xl" onClick={onSkip}>
               Hopp over
-            </button>
+            </Button>
             <div className="flex gap-2">
               {index > 0 ? (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="rounded-none uppercase tracking-[0.12em]"
+                  className="rounded-xl"
                   onClick={() => setIndex((value) => value - 1)}
                 >
                   Tilbake
@@ -155,9 +149,7 @@ export function ProductTour({
               <Button
                 type="button"
                 size="sm"
-                className={cn(
-                  'rounded-none bg-brand text-brand-foreground uppercase tracking-[0.12em] hover:bg-brand/90',
-                )}
+                className={cn('rounded-xl bg-brand text-brand-foreground hover:bg-brand/90')}
                 onClick={() => {
                   if (isLast) onComplete();
                   else setIndex((value) => value + 1);

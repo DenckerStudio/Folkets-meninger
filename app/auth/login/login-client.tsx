@@ -111,15 +111,15 @@ export default function LoginClient() {
     return (
       <div className="min-h-[80vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <FadeIn delay={0.1}>
-          <div className="sm:mx-auto sm:w-full sm:max-w-md border border-foreground/20 bg-card p-8">
-            <p className="font-mono text-xs tracking-[0.2em] text-brand-accent">01 / REGISTRERING</p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">Sjekk e-posten din</h2>
+          <div className="sm:mx-auto sm:w-full sm:max-w-md rounded-3xl border border-border bg-card p-8 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-accent">Registrering</p>
+            <h2 className="mt-3 text-2xl font-bold tracking-tight text-foreground">Sjekk e-posten din</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Vi har sendt en bekreftelse til {email}. Når du har bekreftet, logger du inn og fortsetter onboarding.
+              Vi har sendt en bekreftelse til {email}. Når du har bekreftet, logger du inn og fortsetter onboarding med SMS og BankID.
             </p>
             <button
               type="button"
-              className="mt-6 text-xs font-semibold uppercase tracking-[0.16em] text-brand hover:underline"
+              className="mt-6 text-sm font-medium text-brand hover:underline"
               onClick={() => {
                 setPendingEmailConfirm(false);
                 setIsRegister(false);
@@ -138,24 +138,24 @@ export default function LoginClient() {
       <FadeIn delay={0.1}>
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <div className="flex justify-center">
-            <div className="flex h-16 w-16 items-center justify-center border border-foreground/20 bg-brand text-brand-foreground">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-soft text-brand">
               <ShieldCheck className="h-8 w-8" />
             </div>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-semibold tracking-tight text-foreground">
+          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-foreground">
             {isRegister ? 'Opprett konto' : 'Logg inn'}
           </h2>
           <p className="mt-2 text-center text-sm text-muted-foreground">
-            {isRegister ? 'Deretter navn, SMS og omvisning — du kan hoppe over.' : 'Tilgang til saker, høringer og stemmegivning.'}
+            {isRegister ? 'Deretter bekrefter du med SMS og BankID. Omvisningen kan hoppes over.' : 'Tilgang til saker, høringer og stemmegivning.'}
           </p>
         </div>
       </FadeIn>
 
       <FadeIn delay={0.2} direction="up">
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="border border-foreground/20 bg-card py-8 px-4 sm:px-10">
+          <div className="rounded-3xl border border-border bg-card px-4 py-8 shadow-sm sm:px-10">
             {error && (
-              <div className="mb-6 border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                 {error}
               </div>
             )}
@@ -164,7 +164,7 @@ export default function LoginClient() {
               <button
                 onClick={() => handleSocialLogin('google')}
                 disabled={isLoading}
-                className="flex w-full items-center justify-center gap-3 border border-border py-3 px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-3 rounded-xl border border-border py-3 px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
                   <path
@@ -201,7 +201,7 @@ export default function LoginClient() {
               {isRegister && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="first-name" className="block text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    <label htmlFor="first-name" className="block text-sm font-medium text-foreground">
                       Fornavn
                     </label>
                     <input
@@ -212,11 +212,11 @@ export default function LoginClient() {
                       minLength={2}
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="mt-1 block w-full rounded-none border-0 border-b border-foreground/30 bg-transparent px-0 py-2.5 text-sm outline-none focus:border-brand-accent"
+                      className="mt-1 block w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
                     />
                   </div>
                   <div>
-                    <label htmlFor="last-name" className="block text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    <label htmlFor="last-name" className="block text-sm font-medium text-foreground">
                       Etternavn
                     </label>
                     <input
@@ -227,14 +227,14 @@ export default function LoginClient() {
                       minLength={2}
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="mt-1 block w-full rounded-none border-0 border-b border-foreground/30 bg-transparent px-0 py-2.5 text-sm outline-none focus:border-brand-accent"
+                      className="mt-1 block w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
                     />
                   </div>
                 </div>
               )}
 
               <div>
-                <label htmlFor="email" className="block text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                <label htmlFor="email" className="block text-sm font-medium text-foreground">
                   E-post
                 </label>
                 <input
@@ -245,12 +245,12 @@ export default function LoginClient() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 block w-full rounded-none border-0 border-b border-foreground/30 bg-transparent px-0 py-2.5 text-sm outline-none focus:border-brand-accent"
+                  className="mt-1 block w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                <label htmlFor="password" className="block text-sm font-medium text-foreground">
                   Passord
                 </label>
                 <input
@@ -260,14 +260,14 @@ export default function LoginClient() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 block w-full rounded-none border-0 border-b border-foreground/30 bg-transparent px-0 py-2.5 text-sm outline-none focus:border-brand-accent"
+                  className="mt-1 block w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex w-full items-center justify-center border border-transparent bg-brand py-3 px-4 text-sm font-semibold uppercase tracking-[0.14em] text-brand-foreground hover:bg-brand/90 disabled:opacity-50"
+                className="flex w-full items-center justify-center rounded-xl bg-brand py-3 px-4 text-sm font-semibold text-brand-foreground hover:bg-brand/90 disabled:opacity-50"
               >
                 {isLoading ? 'Vennligst vent…' : (
                   <span className="flex items-center">
