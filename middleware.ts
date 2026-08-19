@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { checkRateLimit, getRateLimitPolicy } from '@/lib/rate-limit';
+import { hasIncompleteOnboarding, onboardingPathWithNext } from '@/lib/onboarding';
 import { isPublicDashboardPolitikerPath, isPublicDashboardSakPath, routes } from '@/lib/routes';
 import { refreshSessionCookies, resolveMiddlewareUser } from '@/lib/supabase-middleware';
 
@@ -54,6 +55,11 @@ export async function middleware(request: NextRequest) {
     loginUrl.pathname = routes.login;
     loginUrl.searchParams.set('next', pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  if (hasIncompleteOnboarding(user)) {
+    const next = `${pathname}${request.nextUrl.search}`;
+    return NextResponse.redirect(new URL(onboardingPathWithNext(next), request.url));
   }
 
   return response;

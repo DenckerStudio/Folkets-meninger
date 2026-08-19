@@ -4,12 +4,17 @@ import {
   canAdvanceOnboardingStep,
   formatOnboardingStepIndex,
   getOnboardingStep,
+  hasIncompleteOnboarding,
+  hasFinishedIdentityOnboarding,
+  isNewAuthUser,
   needsOnboarding,
   nextOnboardingStepId,
   normalizePhoneNumber,
   ONBOARDING_STEPS,
+  postOnboardingDestination,
   previousOnboardingStepId,
   readOnboardingMetadata,
+  stripProductTourQuery,
   utforskWithTour,
 } from './onboarding';
 import { sanitizePostLoginPath } from './safe-redirect';
@@ -113,6 +118,37 @@ assert.equal(patch.onboarding_skipped, false);
 
 assert.equal(utforskWithTour(true), '/dashboard/utforsk?tour=1');
 assert.equal(utforskWithTour(false), '/dashboard/utforsk');
+assert.equal(stripProductTourQuery('/dashboard/utforsk?tour=1'), '/dashboard/utforsk');
+assert.equal(stripProductTourQuery('/dashboard/sak/1?tour=1&x=2'), '/dashboard/sak/1?x=2');
+assert.equal(postOnboardingDestination('/auth/onboarding'), '/dashboard/utforsk');
+assert.equal(postOnboardingDestination('/dashboard/min-side?tour=1'), '/dashboard/min-side');
+assert.equal(
+  postOnboardingDestination('/dashboard/min-side', { startTour: true }),
+  '/dashboard/min-side?tour=1',
+);
+assert.equal(postOnboardingDestination('/innspill', { startTour: true }), '/dashboard/utforsk?tour=1');
+
+assert.equal(
+  hasIncompleteOnboarding({
+    user_metadata: { onboarding_pending: true, onboarding_completed: false },
+  }),
+  true,
+);
+assert.equal(
+  hasIncompleteOnboarding({
+    user_metadata: { onboarding_pending: true, onboarding_completed: true },
+  }),
+  false,
+);
+assert.equal(
+  hasFinishedIdentityOnboarding({
+    user_metadata: { onboarding_completed: true },
+  }),
+  true,
+);
+assert.equal(isNewAuthUser(new Date().toISOString()), true);
+assert.equal(isNewAuthUser(new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()), false);
+assert.equal(isNewAuthUser(null), false);
 
 assert.equal(sanitizePostLoginPath(null), '/dashboard/utforsk');
 assert.equal(sanitizePostLoginPath('/auth/onboarding'), '/auth/onboarding');

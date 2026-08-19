@@ -14,8 +14,8 @@ import {
   getOnboardingStep,
   nextOnboardingStepId,
   normalizePhoneNumber,
+  postOnboardingDestination,
   previousOnboardingStepId,
-  utforskWithTour,
   type OnboardingStepId,
 } from '@/lib/onboarding';
 import { routes } from '@/lib/routes';
@@ -71,9 +71,12 @@ export function OnboardingWizard() {
         if (data.last_name) setLastName(String(data.last_name));
         if (data.verification?.phoneVerified) setOtpVerified(true);
         if (data.onboarding?.bankIdVerified) setBankIdVerified(true);
+        if (data.needs_onboarding === false) {
+          router.replace(postOnboardingDestination(nextPath));
+        }
       })
       .catch(() => {});
-  }, [user, loading, router]);
+  }, [user, loading, router, nextPath]);
 
   const goTo = (next: OnboardingStepId | null, dir: Direction) => {
     if (!next) {
@@ -103,10 +106,7 @@ export function OnboardingWizard() {
       setError(data.error || 'Kunne ikke fullføre onboarding.');
       return;
     }
-    const destination = nextPath.startsWith('/dashboard')
-      ? `${nextPath}${nextPath.includes('?') ? '&' : '?'}tour=1`
-      : utforskWithTour(true);
-    router.replace(destination);
+    router.replace(postOnboardingDestination(nextPath, { startTour: true }));
     router.refresh();
   };
 
@@ -319,7 +319,6 @@ function WelcomePanel() {
       <WelcomeRow index="01" title="Navn" body="Offentlig identitet for høringer." required />
       <WelcomeRow index="02" title="SMS" body="Bekreft telefonnummeret ditt." required />
       <WelcomeRow index="03" title="BankID" body="Bekreft identitet før du deltar." required />
-      <WelcomeRow index="04" title="Omvisning" body="Kort gjennomgang av menyen — kan hoppes over." required={false} />
     </ul>
   );
 }
@@ -473,7 +472,7 @@ function BankIdPanel({
     return (
       <div className="flex items-start gap-3 rounded-xl border border-border bg-brand-soft px-4 py-4 text-sm text-foreground">
         <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
-        <span>BankID er bekreftet. Trykk fullfør for å gå videre til omvisningen.</span>
+        <span>BankID er bekreftet. Trykk fullfør for å gå til dashbordet.</span>
       </div>
     );
   }

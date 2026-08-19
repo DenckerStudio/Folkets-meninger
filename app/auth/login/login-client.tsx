@@ -5,7 +5,7 @@ import { ShieldCheck, ArrowRight } from 'lucide-react';
 import FadeIn from '@/components/fade-in';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase';
-import { buildOnboardingUserMetadata, onboardingPathWithNext } from '@/lib/onboarding';
+import { buildOnboardingUserMetadata, hasIncompleteOnboarding, onboardingPathWithNext } from '@/lib/onboarding';
 import { routes } from '@/lib/routes';
 import { sanitizePostLoginPath } from '@/lib/safe-redirect';
 
@@ -24,9 +24,16 @@ export default function LoginClient() {
   const supabase = getBrowserSupabase();
 
   const continueAfterAuth = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     const res = await fetch('/api/user/onboarding');
     const data = await res.json().catch(() => ({}));
-    if (data.needs_onboarding) {
+    const needs =
+      typeof data.needs_onboarding === 'boolean'
+        ? data.needs_onboarding
+        : hasIncompleteOnboarding(user);
+    if (needs) {
       router.push(onboardingPathWithNext(nextPath));
     } else {
       router.push(nextPath.startsWith('/auth/') ? routes.utforsk : nextPath);
@@ -146,7 +153,7 @@ export default function LoginClient() {
             {isRegister ? 'Opprett konto' : 'Logg inn'}
           </h2>
           <p className="mt-2 text-center text-sm text-muted-foreground">
-            {isRegister ? 'Deretter bekrefter du med SMS og BankID. Omvisningen kan hoppes over.' : 'Tilgang til saker, høringer og stemmegivning.'}
+            {isRegister ? 'Etter registrering bekrefter du med SMS og BankID. Omvisningen starter på dashbordet.' : 'Tilgang til saker, høringer og stemmegivning.'}
           </p>
         </div>
       </FadeIn>

@@ -31,7 +31,7 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     index: 1,
     label: 'Velkommen',
     title: 'Velkommen til Folkets Stemme',
-    description: 'Tre steg er obligatoriske: navn, SMS og BankID. Etterpå kan du ta en kort omvisning — den kan hoppes over.',
+    description: 'Tre steg er obligatoriske: navn, SMS og BankID. Når du er ferdig, kommer du inn på dashbordet.',
     optional: false,
   },
   {
@@ -171,6 +171,56 @@ export function needsOnboarding(options: {
   if (options.metadata.completed || options.metadata.skipped) return false;
   if (options.metadata.pending) return true;
   return !options.hasPublicIdentity;
+}
+
+/** True when signup onboarding is still required. Used to keep users off the dashboard. */
+export function hasIncompleteOnboarding(
+  user: Pick<User, 'user_metadata'> | null | undefined,
+): boolean {
+  if (!user) return false;
+  const metadata = readOnboardingMetadata(user);
+  if (metadata.completed || metadata.skipped) return false;
+  return metadata.pending;
+}
+
+export function hasFinishedIdentityOnboarding(
+  user: Pick<User, 'user_metadata'> | null | undefined,
+): boolean {
+  if (!user) return false;
+  const metadata = readOnboardingMetadata(user);
+  return metadata.completed || metadata.skipped;
+}
+
+const NEW_AUTH_USER_MS = 24 * 60 * 60 * 1000;
+
+/** True for accounts created in the last 24 hours — used to send new OAuth signups into onboarding. */
+export function isNewAuthUser(createdAt: string | null | undefined, now = Date.now()): boolean {
+  if (!createdAt) return false;
+  const created = Date.parse(createdAt);
+  if (!Number.isFinite(created)) return false;
+  return now - created >= 0 && now - created < NEW_AUTH_USER_MS;
+}
+
+export function stripProductTourQuery(path: string): string {
+  const question = path.indexOf('?');
+  if (question === -1) return path;
+  const pathname = path.slice(0, question);
+  const params = new URLSearchParams(path.slice(question + 1));
+  params.delete(PRODUCT_TOUR_QUERY);
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
+}
+
+/** After name/SMS/BankID, land on the dashboard. Pass startTour after a fresh completion. */
+export function postOnboardingDestination(
+  nextPath: string,
+  options?: { startTour?: boolean },
+): string {
+  const cleaned = stripProductTourQuery(nextPath);
+  const dest = cleaned.startsWith('/dashboard') ? cleaned : '/dashboard/utforsk';
+  if (!options?.startTour) return dest;
+  const sep = dest.includes('?') ? '&' : '?';
+  return `${dest}${sep}${PRODUCT_TOUR_QUERY}=1`;
 }
 
 export function getOnboardingStep(id: OnboardingStepId): OnboardingStep {

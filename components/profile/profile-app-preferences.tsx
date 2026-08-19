@@ -194,7 +194,7 @@ export function ProfileAppPreferences() {
           <span className="min-w-0">
             <span className="block text-sm font-semibold text-foreground">Start omvisning på nytt</span>
             <span className="mt-0.5 block text-xs text-muted-foreground">
-              Popup-guiden peker på menyen og varsler. Bare omvisningen kan hoppes over.
+              Popup-guiden vises på dashbordet og peker på menyen og varsler. Bare omvisningen kan hoppes over.
             </span>
           </span>
         </button>

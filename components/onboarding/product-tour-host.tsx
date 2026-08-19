@@ -6,11 +6,13 @@ import { ProductTour } from '@/components/onboarding/product-tour';
 import { useDashboardNavOptional } from '@/components/dashboard/dashboard-nav-context';
 import { useAuth } from '@/hooks/use-auth';
 import {
+  hasFinishedIdentityOnboarding,
   PRODUCT_TOUR_EVENT,
   PRODUCT_TOUR_QUERY,
   PRODUCT_TOUR_STORAGE_KEY,
   readOnboardingMetadata,
 } from '@/lib/onboarding';
+import { isDashboardPath } from '@/lib/routes';
 
 function readLocalTourCompleted(): boolean {
   if (typeof window === 'undefined') return false;
@@ -33,13 +35,17 @@ export function ProductTourHost() {
 
   const requested = searchParams.get(PRODUCT_TOUR_QUERY) === '1';
   const meta = user ? readOnboardingMetadata(user) : null;
+  const onDashboard = isDashboardPath(pathname);
+  const identityDone = hasFinishedIdentityOnboarding(user);
   const open =
+    onDashboard &&
+    identityDone &&
     !loading &&
     !!user &&
     !dismissed &&
     (requested ||
       replayNonce > 0 ||
-      Boolean((meta?.completed || meta?.skipped) && !meta?.tourCompleted && !localCompleted));
+      Boolean(!meta?.tourCompleted && !localCompleted));
 
   useEffect(() => {
     const onStart = () => {

@@ -5,6 +5,7 @@ import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { userHasPublicIdentityInDb } from '@/lib/identity/require-public-identity';
 import {
   buildOnboardingUserMetadata,
+  isNewAuthUser,
   needsOnboarding,
   onboardingPathWithNext,
   readOnboardingMetadata,
@@ -55,7 +56,10 @@ export async function GET(request: Request) {
       if (user) {
         const hasIdentity = await userHasPublicIdentityInDb(user.id);
         const metadata = readOnboardingMetadata(user);
-        if (needsOnboarding({ metadata, hasPublicIdentity: hasIdentity })) {
+        const needsIdentityOnboarding =
+          needsOnboarding({ metadata, hasPublicIdentity: hasIdentity }) ||
+          (!metadata.completed && !metadata.skipped && isNewAuthUser(user.created_at));
+        if (needsIdentityOnboarding) {
           if (!metadata.pending && !metadata.completed) {
             await supabase.auth.updateUser({
               data: buildOnboardingUserMetadata({ pending: true }),
