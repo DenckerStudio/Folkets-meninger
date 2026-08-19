@@ -71,6 +71,7 @@ export function Header() {
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href={isLoggedIn ? routes.varsler : routes.login}
+            data-tour="varsler"
             className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
             aria-label="Varsler"
           >

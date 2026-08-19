@@ -1,12 +1,14 @@
-import { Suspense } from 'react';
-import CompleteProfileClient from './complete-profile-client';
+import { redirect } from 'next/navigation';
+import { routes } from '@/lib/routes';
 
 export const dynamic = 'force-dynamic';
 
-export default function CompleteProfilePage() {
-  return (
-    <Suspense fallback={<div className="min-h-[40vh] flex items-center justify-center text-muted-foreground">Laster…</div>}>
-      <CompleteProfileClient />
-    </Suspense>
-  );
+export default async function CompleteProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const params = await searchParams;
+  const next = params.next ? `?next=${encodeURIComponent(params.next)}` : '';
+  redirect(`${routes.onboarding}${next}`);
 }

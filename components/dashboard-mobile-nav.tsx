@@ -7,10 +7,10 @@ import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
 
 const DASHBOARD_MOBILE_ITEMS = [
-  { href: routes.utforsk, label: 'Utforsk', icon: Search },
-  { href: routes.horinger, label: 'Høringer', icon: FileEdit },
-  { href: routes.politikere, label: 'Politikere', icon: Users },
-  { href: routes.minSide, label: 'Profil', icon: UserRound },
+  { href: routes.utforsk, label: 'Utforsk', icon: Search, tour: 'utforsk' },
+  { href: routes.horinger, label: 'Høringer', icon: FileEdit, tour: 'horinger' },
+  { href: routes.politikere, label: 'Politikere', icon: Users, tour: undefined },
+  { href: routes.minSide, label: 'Profil', icon: UserRound, tour: 'min-side' },
 ] as const;
 
 export function DashboardMobileNav() {
@@ -19,12 +19,13 @@ export function DashboardMobileNav() {
   return (
     <div className="border-b border-border bg-card/95 px-4 py-2 backdrop-blur md:hidden">
       <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" aria-label="Dashboard-navigasjon mobil">
-        {DASHBOARD_MOBILE_ITEMS.map(({ href, label, icon: Icon }) => {
+        {DASHBOARD_MOBILE_ITEMS.map(({ href, label, icon: Icon, tour }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
               key={href}
               href={href}
+              data-tour={tour}
               className={cn(
                 'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-colors',
                 active
