@@ -2,7 +2,7 @@
 /**
  * Fix GoTrue email/OAuth links on self-hosted supabase-folkets:
  * - Verification emails must use https://supabase.heyklever.app (not http://supabase-kong:8000)
- * - Post-verify redirect must use the frontend (https://folketsstemme.no), not the Supabase API host
+ * - Post-verify redirect must use the frontend (https://folkets-meninger.no), not the Supabase API host
  *
  * Usage:
  *   export COOLIFY_API_TOKEN=...
@@ -13,12 +13,12 @@ const DEFAULTS = {
   coolifyBaseUrl: 'https://coolify.heyklever.app/api/v1',
   serviceUuid: 'yfjwpr0riezmaxuekvradco4',
   supabasePublicUrl: 'https://supabase.heyklever.app',
-  siteUrl: 'https://folketsstemme.no',
+  siteUrl: 'https://folkets-meninger.no',
   redirectAllowList: [
-    'https://folketsstemme.no/**',
-    'https://*.folketsstemme.no/**',
     'https://folkets-meninger.no/**',
     'https://*.folkets-meninger.no/**',
+    'https://folketsstemme.no/**',
+    'https://*.folketsstemme.no/**',
     'https://*.vercel.app/**',
     'http://localhost:3000/**',
     'http://127.0.0.1:3000/**',

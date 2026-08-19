@@ -2,7 +2,7 @@
 /**
  * Configure self-hosted Supabase (`supabase-folkets`) on Coolify:
  * - Enable GoTrue OAuth providers (Google + GitHub) in the service compose
- * - Set auth redirect / site URL env vars for folketsstemme.no
+ * - Set auth redirect / site URL env vars for folkets-meninger.no
  * - Restart the service
  * - Optionally apply repo migrations and seed vote_encryption_secret
  *
@@ -31,12 +31,12 @@ const DEFAULTS = {
   coolifyBaseUrl: 'https://coolify.heyklever.app/api/v1',
   serviceUuid: 'yfjwpr0riezmaxuekvradco4',
   supabasePublicUrl: 'https://supabase.heyklever.app',
-  siteUrl: 'https://folketsstemme.no',
+  siteUrl: 'https://folkets-meninger.no',
   redirectAllowList: [
-    'https://folketsstemme.no/**',
-    'https://*.folketsstemme.no/**',
     'https://folkets-meninger.no/**',
     'https://*.folkets-meninger.no/**',
+    'https://folketsstemme.no/**',
+    'https://*.folketsstemme.no/**',
     'https://*.vercel.app/**',
     'http://localhost:3000/**',
     'http://127.0.0.1:3000/**',

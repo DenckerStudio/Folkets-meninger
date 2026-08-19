@@ -8,7 +8,7 @@ Self-hosted Supabase for Folkets Stemme, managed in Coolify project **Folkets-me
 | Service UUID | `yfjwpr0riezmaxuekvradco4` |
 | Public API | `https://supabase.heyklever.app` |
 | Coolify dashboard | `https://coolify.heyklever.app` |
-| Frontend site URL | `https://folketsstemme.no` |
+| Frontend site URL | `https://folkets-meninger.no` |
 | OAuth callback | `https://supabase.heyklever.app/auth/v1/callback` |
 
 ## Current status (via Coolify MCP)
@@ -48,7 +48,7 @@ node scripts/setup-supabase-folkets-coolify.mjs --dry-run
 **Google Cloud Console** → OAuth 2.0 Client (Web):
 
 - Authorized redirect URI: `https://supabase.heyklever.app/auth/v1/callback`
-- Authorized JavaScript origins: `https://folketsstemme.no`, `https://supabase.heyklever.app`
+- Authorized JavaScript origins: `https://folkets-meninger.no`, `https://supabase.heyklever.app`
 
 **GitHub** → Settings → Developer settings → OAuth App:
 
@@ -58,7 +58,7 @@ node scripts/setup-supabase-folkets-coolify.mjs --dry-run
 
 | Variable | Purpose |
 |----------|---------|
-| `GOTRUE_SITE_URL` | Frontend origin (`https://folketsstemme.no`) — **not** the Supabase API host |
+| `GOTRUE_SITE_URL` | Frontend origin (`https://folkets-meninger.no`) — **not** the Supabase API host |
 | `ADDITIONAL_REDIRECT_URLS` | Allow-list for `/api/auth/callback` redirects (Vercel previews, localhost) |
 | `GOTRUE_EXTERNAL_*` | Google/GitHub OAuth client credentials |
 | `GOTRUE_MAILER_EXTERNAL_HOSTS` | Suppresses forwarded-host warnings from Traefik |
@@ -101,7 +101,7 @@ If the API script cannot patch compose:
 | Symptom | Fix |
 |---------|-----|
 | OAuth redirects to Supabase signup form | Set `GOTRUE_SITE_URL` to frontend domain, not API URL |
-| Confirm email links to `http://supabase-kong:8000/...` | Set `API_EXTERNAL_URL=https://supabase.heyklever.app` (not internal Kong URL); set `GOTRUE_SITE_URL=https://folketsstemme.no`; add `GOTRUE_MAILER_EXTERNAL_HOSTS=supabase.heyklever.app,supabase-kong`; restart `supabase-auth` |
+| Confirm email links to `http://supabase-kong:8000/...` | Set `API_EXTERNAL_URL=https://supabase.heyklever.app` (not internal Kong URL); set `GOTRUE_SITE_URL=https://folkets-meninger.no`; add `GOTRUE_MAILER_EXTERNAL_HOSTS=supabase.heyklever.app,supabase-kong`; restart `supabase-auth` |
 | `Email not confirmed` | Configure SMTP or set `ENABLE_EMAIL_AUTOCONFIRM=true` for dev only |
 | `sms Provider could not be found` | Disable phone signup (`ENABLE_PHONE_SIGNUP=false`) or configure Twilio |
 | REST 401 with anon key | Use keys from this instance’s Coolify env, not supabase.co |
