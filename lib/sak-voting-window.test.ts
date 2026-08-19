@@ -28,6 +28,20 @@ assert.ok((openWindow.daysLeft ?? 0) > 0);
 const closedWindow = getSakVotingWindow({ ferdigbehandlet: true });
 assert.equal(closedWindow.isOpen, false);
 
+const pastVotDetail = {
+  ferdigbehandlet: false,
+  saksgang: {
+    saksgang_steg_liste: [
+      {
+        navn: 'Behandling',
+        saksgang_hendelse_liste: [{ id: 'VOT', dato: '01.01.2020 00:00:00' }],
+      },
+    ],
+  },
+};
+const pastVotWindow = getSakVotingWindow(pastVotDetail, { now: new Date('2026-06-15T12:00:00Z') });
+assert.equal(pastVotWindow.isOpen, false);
+
 assert.equal(formatVotingDaysLeftLabel(3), '3 dager igjen å stemme');
 assert.equal(formatVotingDaysLeftLabel(1), '1 dag igjen å stemme');
 

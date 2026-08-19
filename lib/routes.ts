@@ -6,6 +6,8 @@ export const routes = {
   home: '/',
   dashboard: DASHBOARD_PREFIX,
   utforsk: `${DASHBOARD_PREFIX}/utforsk`,
+  avstemninger: `${DASHBOARD_PREFIX}/avstemninger`,
+  initiativ: `${DASHBOARD_PREFIX}/initiativ`,
   minSide: `${DASHBOARD_PREFIX}/min-side`,
   varsler: `${DASHBOARD_PREFIX}/varsler`,
   horinger: `${DASHBOARD_PREFIX}/horinger`,
@@ -21,6 +23,8 @@ export const routes = {
   politiker: (id: string) => `${DASHBOARD_PREFIX}/politikere/${id}`,
   sporsmalDetail: (id: string) => `${DASHBOARD_PREFIX}/sporsmal/${id}`,
   sak: (id: string) => `${DASHBOARD_PREFIX}/sak/${id}`,
+  poll: (id: string) => `${DASHBOARD_PREFIX}/avstemninger/${id}`,
+  initiative: (id: string) => `${DASHBOARD_PREFIX}/initiativ/${id}`,
   horing: (id: string) => `${DASHBOARD_PREFIX}/horinger/${id}`,
   profile: (id: string) => `/profil/${id}`,
   adminStats: `${DASHBOARD_PREFIX}/admin/statistikk`,
@@ -42,6 +46,16 @@ export function isPublicDashboardPolitikerPath(pathname: string): boolean {
     pathname === routes.politikere ||
     pathname.startsWith(`${routes.politikere}/`)
   );
+}
+
+/** Public Ja/Nei/Blank ballots — guests can read; voting requires login. */
+export function isPublicDashboardAvstemningPath(pathname: string): boolean {
+  return pathname === routes.avstemninger || /^\/dashboard\/avstemninger\/[^/]+$/.test(pathname);
+}
+
+/** Public citizen-initiative list and detail — mutations require login. */
+export function isPublicDashboardInitiativPath(pathname: string): boolean {
+  return pathname === routes.initiativ || /^\/dashboard\/initiativ\/[^/]+$/.test(pathname);
 }
 
 export function isPublicProfilePath(pathname: string): boolean {

@@ -96,7 +96,7 @@ export default function VotingSection({
         }
 
         if (typeof data.votingClosed === 'boolean') {
-          setIsClosed(data.votingClosed);
+          setIsClosed(data.votingClosed || votingClosed);
         }
         if (typeof data.votingDaysLeft === 'number' || data.votingDaysLeft === null) {
           setDaysLeft(data.votingDaysLeft);
@@ -112,7 +112,7 @@ export default function VotingSection({
     return () => {
       cancelled = true;
     };
-  }, [sakId, user?.id]);
+  }, [sakId, user?.id, votingClosed]);
 
   const handleVote = async (type: 'for' | 'against' | 'abstain') => {
     if (isClosed || userVote || isSubmitting) return;

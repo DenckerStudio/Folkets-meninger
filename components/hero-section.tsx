@@ -46,8 +46,8 @@ export default function HeroSection() {
           transition={{ duration: 0.75, delay: 0.4, ease: 'easeOut' }}
           className="mt-6 max-w-2xl mx-auto text-lg text-[#001433]/75 sm:text-xl leading-relaxed"
         >
-          Folkets Stemme er en nøytral plattform som brobygger mellom Stortinget og innbyggerne. Si din mening om
-          aktuelle saker med verifisert stemmegivning.
+          Folkets Stemme er en nøytral plattform som brobygger mellom Stortinget og innbyggerne. Si din mening med
+          Ja, Nei eller Blank. BankID og MinID kommer senere.
         </motion.p>
 
         <motion.div
@@ -57,10 +57,10 @@ export default function HeroSection() {
           className="mt-10 max-w-md mx-auto flex flex-col sm:flex-row sm:justify-center gap-3"
         >
           <Link
-            href={routes.login}
+            href={routes.avstemninger}
             className="inline-flex w-full sm:w-auto items-center justify-center rounded-full px-8 py-3.5 text-base font-semibold text-white bg-[#00205b] hover:bg-[#ba0c2f] transition-colors duration-200 md:text-lg shadow-sm"
           >
-            Kom i gang
+            Se avstemninger
           </Link>
           <Link
             href={routes.login}

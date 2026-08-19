@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { checkRateLimit, getRateLimitPolicy } from '@/lib/rate-limit';
-import { isPublicDashboardPolitikerPath, isPublicDashboardSakPath, routes } from '@/lib/routes';
+import {
+  isPublicDashboardAvstemningPath,
+  isPublicDashboardInitiativPath,
+  isPublicDashboardPolitikerPath,
+  isPublicDashboardSakPath,
+  routes,
+} from '@/lib/routes';
 import { refreshSessionCookies, resolveMiddlewareUser } from '@/lib/supabase-middleware';
 
 function applyRateLimit(request: NextRequest, pathname: string): NextResponse | null {
@@ -39,7 +45,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (isPublicDashboardSakPath(pathname) || isPublicDashboardPolitikerPath(pathname)) {
+  if (
+    isPublicDashboardSakPath(pathname) ||
+    isPublicDashboardPolitikerPath(pathname) ||
+    isPublicDashboardAvstemningPath(pathname) ||
+    isPublicDashboardInitiativPath(pathname)
+  ) {
     return refreshSessionCookies(request);
   }
 

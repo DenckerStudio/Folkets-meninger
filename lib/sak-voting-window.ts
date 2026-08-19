@@ -39,23 +39,30 @@ export function parseSaksgangEventDate(raw: string | null | undefined): Date | n
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-export function getNextVoteCloseDate(detail: StortingetSakDetail | null | undefined): Date | null {
-  if (!detail?.saksgang?.saksgang_steg_liste) return null;
-
-  const now = Date.now();
-  let closest: Date | null = null;
-
+function collectVoteCloseDates(detail: StortingetSakDetail | null | undefined): Date[] {
+  if (!detail?.saksgang?.saksgang_steg_liste) return [];
+  const dates: Date[] = [];
   for (const step of detail.saksgang.saksgang_steg_liste) {
     for (const event of step.saksgang_hendelse_liste ?? []) {
       if (!event.id || !VOTE_CLOSE_EVENT_IDS.has(event.id)) continue;
       const date = parseSaksgangEventDate(event.dato);
-      if (!date || date.getTime() < now) continue;
-      if (!closest || date.getTime() < closest.getTime()) {
-        closest = date;
-      }
+      if (date) dates.push(date);
     }
   }
+  return dates;
+}
 
+export function getNextVoteCloseDate(
+  detail: StortingetSakDetail | null | undefined,
+  now = Date.now(),
+): Date | null {
+  let closest: Date | null = null;
+  for (const date of collectVoteCloseDates(detail)) {
+    if (date.getTime() < now) continue;
+    if (!closest || date.getTime() < closest.getTime()) {
+      closest = date;
+    }
+  }
   return closest;
 }
 
@@ -70,17 +77,26 @@ export function getSakVotingWindow(
     return { isOpen: false, closesAt: now, daysLeft: 0 };
   }
 
-  const closesAt = getNextVoteCloseDate(detail);
-  if (!closesAt) {
-    return { isOpen: true, closesAt: null, daysLeft: null };
+  const voteDates = collectVoteCloseDates(detail);
+  const nowMs = now.getTime();
+  const future = voteDates
+    .filter((date) => date.getTime() > nowMs)
+    .sort((a, b) => a.getTime() - b.getTime());
+
+  if (future.length > 0) {
+    const closesAt = future[0];
+    const daysLeft = Math.max(1, Math.ceil((closesAt.getTime() - nowMs) / 86_400_000));
+    return { isOpen: true, closesAt, daysLeft };
   }
 
-  if (closesAt.getTime() <= now.getTime()) {
-    return { isOpen: false, closesAt, daysLeft: 0 };
+  if (voteDates.length > 0) {
+    const lastPast = voteDates.reduce((latest, date) =>
+      date.getTime() > latest.getTime() ? date : latest,
+    );
+    return { isOpen: false, closesAt: lastPast, daysLeft: 0 };
   }
 
-  const daysLeft = Math.max(1, Math.ceil((closesAt.getTime() - now.getTime()) / 86_400_000));
-  return { isOpen: true, closesAt, daysLeft };
+  return { isOpen: true, closesAt: null, daysLeft: null };
 }
 
 export function formatVotingDaysLeftLabel(daysLeft: number | null): string | null {
