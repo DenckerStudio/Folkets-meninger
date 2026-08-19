@@ -40,6 +40,7 @@ export default function LoginClient() {
           email,
           password,
           options: {
+            emailRedirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(nextPath)}`,
             data: {
               first_name: trimmedFirst,
               last_name: trimmedLast,

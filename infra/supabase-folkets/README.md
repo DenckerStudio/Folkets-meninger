@@ -101,6 +101,7 @@ If the API script cannot patch compose:
 | Symptom | Fix |
 |---------|-----|
 | OAuth redirects to Supabase signup form | Set `GOTRUE_SITE_URL` to frontend domain, not API URL |
+| Confirm email links to `http://supabase-kong:8000/...` | Set `API_EXTERNAL_URL=https://supabase.heyklever.app` (not internal Kong URL); set `GOTRUE_SITE_URL=https://folketsstemme.no`; add `GOTRUE_MAILER_EXTERNAL_HOSTS=supabase.heyklever.app,supabase-kong`; restart `supabase-auth` |
 | `Email not confirmed` | Configure SMTP or set `ENABLE_EMAIL_AUTOCONFIRM=true` for dev only |
 | `sms Provider could not be found` | Disable phone signup (`ENABLE_PHONE_SIGNUP=false`) or configure Twilio |
 | REST 401 with anon key | Use keys from this instance’s Coolify env, not supabase.co |
