@@ -35,6 +35,8 @@ const DEFAULTS = {
   redirectAllowList: [
     'https://folketsstemme.no/**',
     'https://*.folketsstemme.no/**',
+    'https://folkets-meninger.no/**',
+    'https://*.folkets-meninger.no/**',
     'https://*.vercel.app/**',
     'http://localhost:3000/**',
     'http://127.0.0.1:3000/**',
@@ -163,7 +165,7 @@ function buildEnvUpdates(config) {
     { key: 'GOTRUE_EXTERNAL_GITHUB_CLIENT_ID', value: config.githubClientId },
     { key: 'GOTRUE_EXTERNAL_GITHUB_SECRET', value: config.githubClientSecret },
     { key: 'GOTRUE_EXTERNAL_GITHUB_REDIRECT_URI', value: oauthCallback },
-    { key: 'GOTRUE_MAILER_EXTERNAL_HOSTS', value: 'supabase.heyklever.app' },
+    { key: 'GOTRUE_MAILER_EXTERNAL_HOSTS', value: 'supabase.heyklever.app,supabase-kong' },
   ];
 }
 
