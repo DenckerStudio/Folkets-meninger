@@ -103,14 +103,12 @@ export default function ExploreClient({
   };
 
   useEffect(() => {
-    if (!user) {
-      setVoteHistoryLoaded(true);
-      return;
-    }
+    if (!user) return;
+    let cancelled = false;
     fetch('/api/user/vote-history')
       .then((res) => res.json())
       .then((data) => {
-        if (!Array.isArray(data)) return;
+        if (cancelled || !Array.isArray(data)) return;
         const map: Record<string, string> = {};
         for (const row of data) {
           const id = row.stortinget_issue_id ?? row.issue_id ?? row.id;
@@ -120,7 +118,12 @@ export default function ExploreClient({
         setUserVotes(map);
       })
       .catch(() => {})
-      .finally(() => setVoteHistoryLoaded(true));
+      .finally(() => {
+        if (!cancelled) setVoteHistoryLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   const categories = useMemo(() => {
