@@ -175,23 +175,6 @@ export async function PATCH(request: Request) {
         .eq('id', user.id)
         .maybeSingle();
 
-  if (
-    canAwardProfileCompletePoints({
-      bio: currentProfile?.bio,
-      profileIsPublic: currentProfile?.profile_is_public === true,
-      verification,
-    })
-  ) {
-    await service.rpc('award_user_points', {
-      p_user_id: user.id,
-      p_delta: 15,
-      p_reason: 'profile_complete',
-      p_ref_type: 'profile',
-      p_ref_key: 'profile_complete',
-      p_ref_id: null,
-    });
-  }
-
   const pointsProfile = await getUserPointsProfile(user.id);
 
   return NextResponse.json({

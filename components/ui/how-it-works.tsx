@@ -131,13 +131,13 @@ export default function HowItWorks({
     {
       title: 'Direkte fra Stortinget',
       description:
-        'Lovforslag og representantforslag hentes ufiltrert fra Stortingets åpne API — klare for ja/nei.',
+        'Lovforslag og representantforslag hentes ufiltrert fra Stortingets åpne API — kildedokumentene bak avstemningene.',
       colorTheme: 'red',
     },
     {
-      title: 'Stem på saker',
+      title: 'Stem Ja, Nei eller Blank',
       description:
-        'Si din mening med verifisert stemmegivning. Én person, én stemme — anonymt i statistikken.',
+        'Nasjonale avstemninger bruker samme tre valg som i Sveits. Stemmen er anonym i statistikken. BankID og MinID kommer senere.',
       colorTheme: 'blue',
     },
     {

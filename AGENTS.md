@@ -5,6 +5,8 @@
 - Prefer working on informatively named branches with prefix `cursor/`.
 - Avoid user-visible mock/placeholder data; prefer honest empty/“coming soon” states.
 - Forum/reels removed from the product. Landing after login / `/dashboard` is `utforsk`.
+  Primary nav: Utforsk / Avstemninger / Høringer. Default Stortinget period is
+  `2025-2029`. BankID/MinID is later — do not ship live ID-porten UI.
   Opt-in `activity_visibility` (`private`|`summary`|`full`). Admin via `ADMIN_EMAILS` +
   `app_metadata.role=admin`. Plan/history: `infra/coolify/README.md`, subagent
   `.cursor/agents/forum-removal-egress.md`.
@@ -40,9 +42,10 @@ Next.js App Router
 External systems:
 
 - Supabase Auth stores user sessions; middleware refreshes cookies and protects
-  `/dashboard/*` except public sak/politiker pages.
-- Supabase Postgres stores votes, hearing comments, notifications, AI summaries,
-  Stortinget issue cache, document chunks, and admin data.
+  `/dashboard/*` except public sak, politiker, avstemning, and initiativ pages.
+- Supabase Postgres stores sak votes, poll ballots, citizen initiatives, hearing
+  comments, notifications, AI summaries, Stortinget issue cache, document chunks,
+  and admin data.
 - Stortinget APIs are read-only sources for sak lists/details, høringer, and
   publications.
 - n8n calls app cron endpoints with `x-cron-secret` and receives fire-and-forget
@@ -126,18 +129,39 @@ The canonical template is `.env.example`.
 
 - `lib/sak-voting-window.ts` derives the next voting deadline from saksgang
   events such as `VOT`, `VEDTAK`, `BEHS`, and related treatment events.
+- If every vote-close event date is in the past, the sak is closed. Missing
+  vote-close events still leave the window open (unless `ferdigbehandlet`).
 - `app/api/vote/route.ts` rejects votes when the issue is closed,
   `ferdigbehandlet` is true, or `voting_closes_at` has passed.
+- `voting-section.tsx` must not reopen a ballot when the server already sent
+  `votingClosed: true`.
 - `supabase/migrations/20260618120000_sak_voting_status.sql` enforces the same
   closure rules in the `cast_vote` RPC.
+- Sak ballots stay For/Mot/Avstår. Public Ja/Nei/Blank language is polls only.
+
+### Avstemninger and borgerinitiativ
+
+- Dual-track polls live in `polls` (`stortinget` | `citizen`) with anonymous
+  `poll_votes` and encrypted `poll_vote_receipts`. Ballot choices: `ja`/`nei`/`blank`.
+- Citizen initiatives are title/body only (no forum, no top-arguments). Default
+  support threshold is 500. Schema:
+  `supabase/migrations/20260819210000_direct_democracy_polls.sql`.
+- Public routes: `/dashboard/avstemninger`, `/dashboard/avstemninger/<id>`,
+  `/dashboard/initiativ`, `/dashboard/initiativ/<id>`. Voting and endorsements
+  require login. Empty lists are honest — do not seed mock polls.
+- Fylke breakdowns use `users.fylke_code` only when `fylke_verified` is true.
+  `apply_verified_fylke_claim` is reserved for BankID/MinID later; no MinID UI now.
+- Primary nav: Utforsk / Avstemninger / Høringer. Post-login fallback is Utforsk.
 
 ### Identity, activity, admin
 
-- Public first/last name required for hearing comments (`user_has_public_identity`);
-  `/auth/complete-profile` collects missing names.
+- Public first/last name required for hearing comments and creating initiatives
+  (`user_has_public_identity`); `/auth/complete-profile` collects missing names.
 - Public activity is opt-in via `users.activity_visibility` (`private` default).
 - Admin access: `ADMIN_EMAILS` allowlist, then `app_metadata.role === "admin"`
   (`lib/admin/gate.ts`). Remaining admin surface: `/dashboard/admin/statistikk`.
+- BankID/MinID is not shipped. Keep “MinID kommer senere” copy; do not claim
+  live “én person, én stemme” identity verification.
 
 ### Document ingest and RAG
 
@@ -189,6 +213,9 @@ The canonical template is `.env.example`.
 - **`.env.local` is still required to run the dev server**, because it carries the non-secret `STORTINGET_*` / `NEXT_PUBLIC_STORTINGET_*` defaults (and `middleware.ts` builds a Supabase client on every request, so the `NEXT_PUBLIC_SUPABASE_*` values must be resolvable or every page 500s). It is gitignored; recreate with `npm run env:test` (Folkets-Stemme test Supabase) or from `.env.example` if absent. Next.js reads injected `process.env` with higher precedence than `.env.local`, so the injected secrets win even if `.env.local` holds older values.
 - Playwright and CI use the Folkets-Stemme test Supabase from `.env.test` / workflow `env` (anon key only). Set `SUPABASE_SERVICE_ROLE_KEY` via secrets when server RPCs are needed.
 - Auth is email/password (`supabase.auth.signUp` / `signInWithPassword`). **Email signups require confirmation**, so a raw signup does NOT create a session. To get a usable test login, create a pre-confirmed user with the admin API and the service role key, then sign in: `POST {SUPABASE_URL}/auth/v1/admin/users` with `{"email":...,"password":...,"email_confirm":true,"user_metadata":{...}}` (the project rejects `@example.com`; use e.g. `@gmail.com`).
-- `/dashboard/*` is gated by middleware (redirects to `/auth/login`) except public issue pages `/dashboard/sak/<id>` (see `isPublicDashboardSakPath`). Issue pages fetch live `data.stortinget.no` data and can take 10–30s on first load.
+- `/dashboard/*` is gated by middleware (redirects to `/auth/login`) except public
+  issue pages `/dashboard/sak/<id>`, politician pages, `/dashboard/avstemninger`
+  (and `/<id>`), and `/dashboard/initiativ` (and `/<id>`). Issue pages fetch live
+  `data.stortinget.no` data and can take 10–30s on first load.
 - Hello-world that exercises core functionality: log in, then open an issue (`/dashboard/sak/<id>`) and cast a "For" vote in the "Hva mener du?" section — the vote persists and the `/dashboard/min-side` vote count updates.
 - `npm run test:unit` shells out to `npx tsx ...`; the first run downloads `tsx` (needs network) and then caches it.

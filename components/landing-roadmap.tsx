@@ -20,7 +20,7 @@ export function LandingRoadmap() {
             date: 'Soft launch',
             title: 'Kjerneplattformen er live',
             description:
-              'Saker og dokumenter fra Stortinget, AI-sammendrag, ja/nei-stemming med lukkevindu, høringer med lokale innspill, politikeroversikt, varsler og offentlige sak-/politiker-sider.',
+              'Saker og dokumenter fra Stortinget, AI-sammendrag, sak-stemmer (For/Mot/Avstår), høringer med lokale innspill, politikeroversikt, varsler og offentlige sak-/politiker-sider.',
             status: 'completed',
             detail: (
               <p>
@@ -40,16 +40,16 @@ export function LandingRoadmap() {
             date: 'Nå',
             title: 'Tillit, synlighet og førsteinntrykk',
             description:
-              'Vi synliggjør saker før innlogging, strammer opp stien til første stemme, og forbereder MinID.',
+              'Avstemninger (Ja/Nei/Blank) og borgerinitiativ er på plass. Vi synliggjør spørsmål før innlogging og forbereder BankID/MinID.',
             status: 'current',
             detail: (
               <p>
-                Nivåer i bruk: Aktiv 250 · Pålitelig 750 · Kurator 2 000 · Veteran 5 000.{' '}
+                Identitetsverifisering med BankID og MinID kommer senere.{' '}
                 <Link
-                  href={routes.login}
+                  href={routes.avstemninger}
                   className="font-semibold text-[#00205b] underline-offset-2 hover:text-[#ba0c2f] hover:underline"
                 >
-                  Opprett konto
+                  Se avstemninger
                 </Link>
               </p>
             ),

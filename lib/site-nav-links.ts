@@ -5,6 +5,7 @@ import {
   Info,
   Search,
   UserRound,
+  Vote,
 } from 'lucide-react';
 import { DASHBOARD_PREFIX, routes } from '@/lib/routes';
 
@@ -31,6 +32,12 @@ export const isUtforskActive: NavIsActive = (pathname) =>
 
 export const isPolitikereActive: NavIsActive = (pathname) =>
   pathname.startsWith(routes.politikere) || pathname.startsWith(routes.representanter);
+
+export const isAvstemningerActive: NavIsActive = (pathname) =>
+  pathname === routes.avstemninger || pathname.startsWith(`${routes.avstemninger}/`);
+
+export const isInitiativActive: NavIsActive = (pathname) =>
+  pathname === routes.initiativ || pathname.startsWith(`${routes.initiativ}/`);
 
 export const isHoringerActive: NavIsActive = (pathname) =>
   pathname === routes.horinger || pathname.startsWith(`${routes.horinger}/`);
@@ -59,7 +66,7 @@ export const isMobileUtforskActive: NavIsActive = (pathname) =>
 /** Flat desktop primary nav — no duplicates. */
 export const desktopPrimaryNavLinks: PrimaryNavLink[] = [
   { label: 'Utforsk', href: routes.utforsk, isActive: isUtforskActive },
-  { label: 'Politikere', href: routes.politikere, isActive: isPolitikereActive },
+  { label: 'Avstemninger', href: routes.avstemninger, isActive: isAvstemningerActive },
   { label: 'Høringer', href: routes.horinger, isActive: isHoringerActive },
 ];
 
@@ -80,6 +87,13 @@ export const desktopMoreNavLinks: SiteNavLinkItem[] = [
     isActive: isInnsiktActive,
   },
   {
+    title: 'Borgerinitiativ',
+    href: routes.initiativ,
+    description: 'Foreslå nasjonale avstemninger',
+    icon: FileEdit,
+    isActive: isInitiativActive,
+  },
+  {
     title: 'Politiker-hub',
     href: routes.politikerHub,
     description: 'Innsikt og svar til innbyggere',
@@ -95,6 +109,12 @@ export const mobileNavItems = [
     href: routes.utforsk,
     icon: Search,
     isActive: isMobileUtforskActive,
+  },
+  {
+    label: 'Avstemninger',
+    href: routes.avstemninger,
+    icon: Vote,
+    isActive: isAvstemningerActive,
   },
   {
     label: 'Høringer',

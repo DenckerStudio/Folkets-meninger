@@ -5,6 +5,7 @@ import { routes } from '@/lib/routes';
 
 const platformLinks = [
   { href: routes.utforsk, label: 'Utforsk saker' },
+  { href: routes.avstemninger, label: 'Avstemninger' },
   { href: routes.horinger, label: 'Høringer' },
   { href: routes.politikere, label: 'Politikere' },
 ] as const;

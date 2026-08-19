@@ -38,7 +38,7 @@ export const PROFILE_TABS: {
     id: 'offentlig',
     label: 'Offentlig profil',
     icon: UserCircle,
-    description: 'Bio, parti og poeng',
+    description: 'Bio, parti og synlighet',
   },
   {
     id: 'preferanser',

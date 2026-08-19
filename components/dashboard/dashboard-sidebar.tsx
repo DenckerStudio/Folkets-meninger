@@ -8,12 +8,14 @@ import {
   Search,
   UserRound,
   Users,
+  Vote,
 } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
 const NAV = [
   { href: routes.utforsk, label: 'Utforsk', icon: Search, match: (p: string) => p.startsWith(routes.utforsk) || p.startsWith(`${routes.dashboard}/sak/`) },
+  { href: routes.avstemninger, label: 'Avstemninger', icon: Vote, match: (p: string) => p.startsWith(routes.avstemninger) },
   { href: routes.politikere, label: 'Politikere', icon: Users, match: (p: string) => p.startsWith(routes.politikere) },
   { href: routes.horinger, label: 'Høringer', icon: FileEdit, match: (p: string) => p.startsWith(routes.horinger) },
   { href: routes.innsikt, label: 'Innsikt', icon: BarChart2, match: (p: string) => p.startsWith(routes.innsikt) },

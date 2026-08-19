@@ -5,6 +5,7 @@ import { ShieldCheck, ArrowRight, Phone } from 'lucide-react';
 import FadeIn from '@/components/fade-in';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase';
+import { sanitizePostLoginPath } from '@/lib/safe-redirect';
 
 export default function LoginClient() {
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +20,7 @@ export default function LoginClient() {
   const [error, setError] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get('next') || '/dashboard/min-side';
+  const nextPath = sanitizePostLoginPath(searchParams.get('next'));
   const supabase = getBrowserSupabase();
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -134,7 +135,7 @@ export default function LoginClient() {
             </div>
             <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">Bekreft telefonnummer</h2>
             <p className="mt-2 text-center text-sm text-muted-foreground">
-              For å sikre &quot;én person, én stemme&quot; trenger vi å verifisere telefonnummeret ditt via SMS.
+              SMS-bekreftelse er valgfri. BankID og MinID kommer senere.
             </p>
           </div>
         </FadeIn>
@@ -225,7 +226,9 @@ export default function LoginClient() {
           <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">
             {isRegister ? 'Registrer ny bruker' : 'Logg inn på din konto'}
           </h2>
-          <p className="mt-2 text-center text-sm text-muted-foreground">Tilgang til sikker, representativ demokratideltakelse.</p>
+            <p className="mt-2 text-center text-sm text-muted-foreground">
+              Logg inn med e-post eller Google. BankID og MinID kommer senere.
+            </p>
         </div>
       </FadeIn>
 

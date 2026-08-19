@@ -96,7 +96,7 @@ export default function VotingSection({
         }
 
         if (typeof data.votingClosed === 'boolean') {
-          setIsClosed(data.votingClosed);
+          setIsClosed(data.votingClosed || votingClosed);
         }
         if (typeof data.votingDaysLeft === 'number' || data.votingDaysLeft === null) {
           setDaysLeft(data.votingDaysLeft);

@@ -22,6 +22,13 @@ const VOTE_LABELS: Record<string, string> = {
   abstain: 'Avstår',
 };
 
+function votingUrgency(issue: SakListItem): number {
+  if (issue.votingOpen && issue.votingDaysLeft != null && issue.votingDaysLeft > 0) {
+    return issue.votingDaysLeft;
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
 type UtforskFilters = {
   searchQuery: string;
   selectedCategory: string;
@@ -65,6 +72,7 @@ export default function ExploreClient({
   const [issues] = useState(initialIssues);
   const { user } = useAuth();
   const [userVotes, setUserVotes] = useState<Record<string, string>>({});
+  const [voteHistoryLoaded, setVoteHistoryLoaded] = useState(false);
 
   const [filters, setFilters] = usePersistedState(
     PREFERENCE_KEYS.utforsk.filters,
@@ -75,6 +83,7 @@ export default function ExploreClient({
   const displayedUserVotes = user ? userVotes : {};
   const { searchQuery, selectedCategory, selectedStatus, selectedSakKind, selectedAiLabels, sortBy } = filters;
   const activeAiLabels = selectedAiLabels ?? [];
+  const firstOpenIssue = issues.find((issue) => issue.votingOpen && issue.status !== 'closed');
 
   const setSearchQuery = (searchQuery: string) => setFilters((prev) => ({ ...prev, searchQuery }));
   const setSelectedCategory = (selectedCategory: string) =>
@@ -94,7 +103,10 @@ export default function ExploreClient({
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setVoteHistoryLoaded(true);
+      return;
+    }
     fetch('/api/user/vote-history')
       .then((res) => res.json())
       .then((data) => {
@@ -107,7 +119,8 @@ export default function ExploreClient({
         }
         setUserVotes(map);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setVoteHistoryLoaded(true));
   }, [user]);
 
   const categories = useMemo(() => {
@@ -143,6 +156,13 @@ export default function ExploreClient({
     );
   }
 
+  if (activeAiLabels.length > 0) {
+    displayedIssues = displayedIssues.filter((issue) => {
+      const labels = issueLabels[String(issue.id)] ?? [];
+      return activeAiLabels.some((label) => labels.includes(label));
+    });
+  }
+
   displayedIssues = [...displayedIssues].sort((a, b) => {
     if (sortBy === 'Nyeste først') {
       return new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -151,7 +171,7 @@ export default function ExploreClient({
       return b.votes.total - a.votes.total;
     }
     if (sortBy === 'Snart votering') {
-      return new Date(a.date).getTime() - new Date(b.date).getTime();
+      return votingUrgency(a) - votingUrgency(b);
     }
     return 0;
   });
@@ -161,9 +181,34 @@ export default function ExploreClient({
       <FadeIn delay={0.1}>
         <PageHeader
           title="Utforsk saker"
-          description="Lovforslag og representantforslag fra Stortinget — saker som egner seg for enkelt ja/nei-engasjement."
+          description="Lovforslag og representantforslag fra Stortinget — kildedokumenter. Nasjonale avstemninger med Ja, Nei eller Blank ligger under Avstemninger."
         />
       </FadeIn>
+
+      {user && voteHistoryLoaded && Object.keys(displayedUserVotes).length === 0 ? (
+        <div className="rounded-2xl border border-brand/20 bg-brand/5 px-5 py-4">
+          <p className="text-sm font-medium text-foreground">Gi din første stemme</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Saker bruker For/Mot/Avstår. Nasjonale avstemninger bruker Ja/Nei/Blank.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {firstOpenIssue ? (
+              <Link
+                href={routes.sak(String(firstOpenIssue.id))}
+                className="inline-flex items-center rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand/90"
+              >
+                Åpne en sak
+              </Link>
+            ) : null}
+            <Link
+              href={routes.avstemninger}
+              className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+            >
+              Gå til avstemninger
+            </Link>
+          </div>
+        </div>
+      ) : null}
 
       <FadeIn delay={0.2} direction="up">
         <div className="bg-card p-4 rounded-2xl shadow-sm border border-border flex flex-col md:flex-row gap-4">

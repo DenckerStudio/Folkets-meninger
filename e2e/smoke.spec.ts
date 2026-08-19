@@ -31,6 +31,12 @@ test.describe('Folkets Stemme smoke', () => {
     expect(res?.status()).toBeLessThan(500);
   });
 
+  test('public avstemninger page loads', async ({ page }) => {
+    const res = await page.goto('/dashboard/avstemninger');
+    expect(res?.status()).toBeLessThan(500);
+    await expect(page.getByRole('heading', { name: 'Avstemninger' })).toBeVisible();
+  });
+
   test('cron endpoint rejects missing secret', async ({ request }) => {
     const res = await request.get('/api/cron/sync-issues');
     expect(res.status()).toBe(401);

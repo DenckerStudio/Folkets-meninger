@@ -53,10 +53,12 @@ Browser / Next.js App Router
 
 Important constraints:
 
-- Public sak detail pages under `/dashboard/sak/[id]` can be viewed without
+- Public sak detail pages under `/dashboard/sak/[id]`, politician pages,
+  `/dashboard/avstemninger`, and `/dashboard/initiativ` can be viewed without
   authentication; the rest of `/dashboard/*` requires a Supabase session.
 - Høringer live under `/dashboard/horinger` and `/dashboard/horinger/[id]`.
   `/horinger` redirects there, so browsing and local comments require login.
+- Sak votes are For/Mot/Avstår. National polls under Avstemninger use Ja/Nei/Blank.
 - Votes are accepted only while a sak is open. The app and `cast_vote` RPC both
   check `status`, `ferdigbehandlet`, and `voting_closes_at`.
 - Høringer are fetched live from Stortinget, not cached in Postgres. Local

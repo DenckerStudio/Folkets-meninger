@@ -80,6 +80,7 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Marketing feedback | `20260806140000_site_feedback.sql` | `site_feedback` (public “Gi innspill” form; service-role writes only) |
 | Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql`, `20260702160000_backfill_ferdigbehandlet_from_detail.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category`, `ferdigbehandlet` repair |
 | Sak documents/RAG | `20260617120000_sak_documents_rag.sql`, `20260807112603_document_chunks_storage_efficiency.sql` | `stortinget_issue_documents`, `document_chunks`, `chunks_status`, `match_issue_document_chunks`, reclaim helpers |
+| Direct-democracy polls | `20260819210000_direct_democracy_polls.sql` | `norway_counties`, `polls`, `poll_votes`, `poll_vote_receipts`, `citizen_initiatives`, `citizen_initiative_endorsements`, Ja/Nei/Blank RPCs |
 
 ## Voting setup
 
@@ -120,11 +121,30 @@ before the RPC, but the RPC is the final enforcement point.
 
 `voting_closes_at` is derived by `lib/sak-voting-window.ts` from Stortinget
 saksgang events (`VOT`, `VEDTAK`, `BEHS`, and related treatment event IDs).
-Repair stale status/deadline data with:
+If all such event dates are in the past, the window is closed (do not treat
+“no future VOT” as still open). Repair stale status/deadline data with:
 
 ```bash
 npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
 ```
+
+### Advisory polls (Ja/Nei/Blank)
+
+`20260819210000_direct_democracy_polls.sql` adds Swiss-inspired dual-track polls
+and citizen initiatives **without** forum coupling (no `forum_thread_id`, no
+top-arguments RPC).
+
+| Table | Purpose |
+|-------|---------|
+| `polls` | `stortinget` or `citizen` track; public when `status` is `open` or `closed` |
+| `poll_votes` | Anonymous ballots (`ja`/`nei`/`blank` + optional verified `fylke_code`) |
+| `poll_vote_receipts` | One encrypted receipt per user per poll |
+| `citizen_initiatives` | Title/body only; default support threshold 500 |
+| `norway_counties` | 15 fylker after the 2024 reform |
+
+Fylke is attached only when `users.fylke_verified` is true.
+`apply_verified_fylke_claim` is service-role only for a later BankID/MinID flow.
+Do not seed mock polls; empty UI is the honest launch state.
 
 ## Stortinget issue cache
 
