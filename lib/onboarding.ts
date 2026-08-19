@@ -149,8 +149,7 @@ export function needsOnboarding(options: {
 export function getOnboardingStep(id: OnboardingStepId): OnboardingStep {
   const step = ONBOARDING_STEPS.find((item) => item.id === id);
   if (!step) {
-    const exhaustive: never = id;
-    throw new Error(`Unknown onboarding step: ${exhaustive}`);
+    throw new Error(`Unknown onboarding step: ${id}`);
   }
   return step;
 }

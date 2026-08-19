@@ -39,10 +39,11 @@ export function OnboardingWizard() {
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState('');
+  const [otpVerified, setOtpVerified] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [phoneVerified, setPhoneVerified] = useState(false);
 
   const current = useMemo(() => getOnboardingStep(step), [step]);
+  const phoneVerified = otpVerified || (user ? getUserVerificationStatus(user).phoneVerified : false);
 
   useEffect(() => {
     if (loading) return;
@@ -51,14 +52,12 @@ export function OnboardingWizard() {
       return;
     }
 
-    setPhoneVerified(getUserVerificationStatus(user).phoneVerified);
-
     fetch('/api/user/onboarding')
       .then((res) => res.json())
       .then((data) => {
         if (data.first_name) setFirstName(String(data.first_name));
         if (data.last_name) setLastName(String(data.last_name));
-        if (data.verification?.phoneVerified) setPhoneVerified(true);
+        if (data.verification?.phoneVerified) setOtpVerified(true);
       })
       .catch(() => {});
   }, [user, loading, router]);
@@ -154,7 +153,7 @@ export function OnboardingWizard() {
       setError('Ugyldig kode. Prøv igjen, eller hopp over.');
       return false;
     }
-    setPhoneVerified(true);
+    setOtpVerified(true);
     return true;
   };
 

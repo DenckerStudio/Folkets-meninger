@@ -27,25 +27,26 @@ export function ProductTourHost() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [open, setOpen] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const [replayNonce, setReplayNonce] = useState(0);
+  const [localCompleted] = useState(readLocalTourCompleted);
 
   const requested = searchParams.get(PRODUCT_TOUR_QUERY) === '1';
+  const meta = user ? readOnboardingMetadata(user) : null;
+  const open =
+    !loading &&
+    !!user &&
+    !dismissed &&
+    (requested ||
+      replayNonce > 0 ||
+      Boolean((meta?.completed || meta?.skipped) && !meta?.tourCompleted && !localCompleted));
 
   useEffect(() => {
-    if (loading || !user) return;
-    if (requested) {
-      setOpen(true);
-      return;
-    }
-    const meta = readOnboardingMetadata(user);
-    if (meta.tourCompleted || readLocalTourCompleted()) return;
-    if (meta.completed || meta.skipped) {
-      setOpen(true);
-    }
-  }, [loading, user, requested]);
-
-  useEffect(() => {
-    const onStart = () => setOpen(true);
+    const onStart = () => {
+      window.localStorage.removeItem(PRODUCT_TOUR_STORAGE_KEY);
+      setDismissed(false);
+      setReplayNonce((value) => value + 1);
+    };
     window.addEventListener(PRODUCT_TOUR_EVENT, onStart);
     return () => window.removeEventListener(PRODUCT_TOUR_EVENT, onStart);
   }, []);
@@ -58,25 +59,21 @@ export function ProductTourHost() {
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }, [pathname, requested, router, searchParams]);
 
-  const finish = useCallback(
-    async (persist: boolean) => {
-      setOpen(false);
-      nav?.setOpen(false);
-      writeLocalTourCompleted();
-      clearTourQuery();
-      if (!persist) return;
-      try {
-        await fetch('/api/user/onboarding', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'tour_complete' }),
-        });
-      } catch {
-        // Local completion is enough to avoid repeating the tour.
-      }
-    },
-    [clearTourQuery, nav],
-  );
+  const finish = useCallback(async () => {
+    setDismissed(true);
+    nav?.setOpen(false);
+    writeLocalTourCompleted();
+    clearTourQuery();
+    try {
+      await fetch('/api/user/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'tour_complete' }),
+      });
+    } catch {
+      // Local completion is enough to avoid repeating the tour.
+    }
+  }, [clearTourQuery, nav]);
 
   if (!open) return null;
 
@@ -84,8 +81,8 @@ export function ProductTourHost() {
     <ProductTour
       onRequestNavOpen={() => nav?.setOpen(true)}
       onRequestNavClose={() => nav?.setOpen(false)}
-      onComplete={() => void finish(true)}
-      onSkip={() => void finish(true)}
+      onComplete={() => void finish()}
+      onSkip={() => void finish()}
     />
   );
 }
