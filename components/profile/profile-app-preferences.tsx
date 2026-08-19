@@ -1,12 +1,13 @@
 'use client';
 
-import { Monitor, Moon, Sun, Sparkles, Info } from 'lucide-react';
+import { Monitor, Moon, Sun, Sparkles, Info, Map } from 'lucide-react';
 import {
   type AppPreferences,
   type MotionPreference,
   type ThemeMode,
 } from '@/lib/preferences/app-preferences';
 import { useAppPreferences } from '@/components/theme-provider';
+import { PRODUCT_TOUR_EVENT, PRODUCT_TOUR_STORAGE_KEY } from '@/lib/onboarding';
 
 type OptionCardProps<T extends string> = {
   value: T;
@@ -167,6 +168,36 @@ export function ProfileAppPreferences() {
             </span>
           </span>
         </label>
+      </PreferenceSection>
+
+      <PreferenceSection
+        title="Omvisning"
+        description="En kort gjennomgang av hvor Utforsk, høringer, Min side og varsler ligger."
+      >
+        <button
+          type="button"
+          onClick={() => {
+            window.localStorage.removeItem(PRODUCT_TOUR_STORAGE_KEY);
+            void fetch('/api/user/onboarding', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'tour_reset' }),
+            }).finally(() => {
+              window.dispatchEvent(new Event(PRODUCT_TOUR_EVENT));
+            });
+          }}
+          className="flex w-full items-start gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:bg-muted/50"
+        >
+          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+            <Map className="h-4 w-4" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-foreground">Start omvisning på nytt</span>
+            <span className="mt-0.5 block text-xs text-muted-foreground">
+              Popup-guiden peker på menyen og varsler. Du kan hoppe over når som helst.
+            </span>
+          </span>
+        </button>
       </PreferenceSection>
     </div>
   );

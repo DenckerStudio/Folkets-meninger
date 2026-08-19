@@ -18,6 +18,7 @@ export const routes = {
   innspill: '/innspill',
   login: '/auth/login',
   completeProfile: '/auth/complete-profile',
+  onboarding: '/auth/onboarding',
   politiker: (id: string) => `${DASHBOARD_PREFIX}/politikere/${id}`,
   sporsmalDetail: (id: string) => `${DASHBOARD_PREFIX}/sporsmal/${id}`,
   sak: (id: string) => `${DASHBOARD_PREFIX}/sak/${id}`,

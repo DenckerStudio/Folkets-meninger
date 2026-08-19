@@ -21,9 +21,14 @@ test.describe('Folkets Stemme smoke', () => {
     await expect(page).toHaveURL(/auth\/login|dashboard\/utforsk/);
   });
 
-  test('complete-profile page explains public identity', async ({ page }) => {
+  test('complete-profile redirects to onboarding or login', async ({ page }) => {
     await page.goto('/auth/complete-profile');
-    await expect(page.getByText(/Offentlige innspill|fornavn og etternavn/i)).toBeVisible();
+    await expect(page).toHaveURL(/auth\/onboarding|auth\/login/);
+  });
+
+  test('onboarding page sends guests to login', async ({ page }) => {
+    await page.goto('/auth/onboarding');
+    await expect(page).toHaveURL(/auth\/login/);
   });
 
   test('horinger list page loads', async ({ page }) => {

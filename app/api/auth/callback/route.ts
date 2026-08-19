@@ -3,6 +3,12 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { userHasPublicIdentityInDb } from '@/lib/identity/require-public-identity';
+import {
+  buildOnboardingUserMetadata,
+  needsOnboarding,
+  onboardingPathWithNext,
+  readOnboardingMetadata,
+} from '@/lib/onboarding';
 import { sanitizePostLoginPath } from '@/lib/safe-redirect';
 import { routes } from '@/lib/routes';
 
@@ -46,12 +52,19 @@ export async function GET(request: Request) {
           console.error('Failed to sync public.users on login', e);
         }
       }
-      if (user && requiresPublicIdentity(next)) {
+      if (user) {
         const hasIdentity = await userHasPublicIdentityInDb(user.id);
-        if (!hasIdentity) {
-          const profileUrl = new URL(routes.completeProfile, origin);
-          profileUrl.searchParams.set('next', next);
-          return NextResponse.redirect(profileUrl.toString());
+        const metadata = readOnboardingMetadata(user);
+        if (needsOnboarding({ metadata, hasPublicIdentity: hasIdentity })) {
+          if (!metadata.pending && !metadata.completed) {
+            await supabase.auth.updateUser({
+              data: buildOnboardingUserMetadata({ pending: true }),
+            });
+          }
+          return NextResponse.redirect(`${origin}${onboardingPathWithNext(next)}`);
+        }
+        if (requiresPublicIdentity(next) && !hasIdentity) {
+          return NextResponse.redirect(`${origin}${onboardingPathWithNext(next)}`);
         }
       }
       return NextResponse.redirect(`${origin}${next}`);
