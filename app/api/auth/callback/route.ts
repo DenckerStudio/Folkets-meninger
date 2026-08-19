@@ -1,15 +1,19 @@
-import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import { ensurePublicUser } from "@/lib/ensure-public-user";
-import { userHasForumIdentityInDb } from "@/lib/forum/require-forum-identity";
-import { sanitizePostLoginPath } from "@/lib/safe-redirect";
-import { isForumRelatedPath, routes } from "@/lib/routes";
+import { NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { ensurePublicUser } from '@/lib/ensure-public-user';
+import { userHasPublicIdentityInDb } from '@/lib/identity/require-public-identity';
+import { sanitizePostLoginPath } from '@/lib/safe-redirect';
+import { routes } from '@/lib/routes';
+
+function requiresPublicIdentity(pathname: string): boolean {
+  return pathname.startsWith(`${routes.horinger}/`) || pathname.startsWith('/dashboard/horinger/');
+}
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  const next = sanitizePostLoginPath(searchParams.get("next"));
+  const code = searchParams.get('code');
+  const next = sanitizePostLoginPath(searchParams.get('next'));
 
   if (code) {
     const cookieStore = await cookies();
@@ -23,16 +27,18 @@ export async function GET(request: Request) {
           },
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, options),
             );
           },
         },
-      }
+      },
     );
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         try {
           await ensurePublicUser(user);
@@ -40,8 +46,8 @@ export async function GET(request: Request) {
           console.error('Failed to sync public.users on login', e);
         }
       }
-      if (user && isForumRelatedPath(next)) {
-        const hasIdentity = await userHasForumIdentityInDb(user.id);
+      if (user && requiresPublicIdentity(next)) {
+        const hasIdentity = await userHasPublicIdentityInDb(user.id);
         if (!hasIdentity) {
           const profileUrl = new URL(routes.completeProfile, origin);
           profileUrl.searchParams.set('next', next);

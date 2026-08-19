@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { ensurePublicUser } from '@/lib/ensure-public-user';
-import { FORUM_IDENTITY_ERROR } from '@/lib/forum/require-forum-identity';
-import { createNotification, extractMentions, resolveMentionedUserIdsByName } from '@/lib/notifications';
+import { PUBLIC_IDENTITY_ERROR } from '@/lib/identity/public-identity';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,29 +39,10 @@ export async function POST(request: Request) {
       console.error('Create hearing comment error:', error);
       const msg = String(error.message || '');
       if (msg.includes('first and last name')) {
-        return NextResponse.json({ error: FORUM_IDENTITY_ERROR }, { status: 400 });
+        return NextResponse.json({ error: PUBLIC_IDENTITY_ERROR }, { status: 400 });
       }
       return NextResponse.json({ error: 'Kunne ikke publisere innspill' }, { status: 500 });
     }
-
-    const origin = new URL(request.url).origin;
-    const mentionNames = extractMentions(String(body || ''));
-    const mentionedUserIds = await resolveMentionedUserIdsByName(mentionNames);
-    await Promise.all(
-      mentionedUserIds
-        .filter((id) => id !== user.id)
-        .map((mentionedUserId) =>
-          createNotification({
-            userId: mentionedUserId,
-            type: 'mention',
-            channel: 'mentions',
-            title: 'Du ble nevnt i et innspill',
-            url: `/dashboard/horinger/${hearingId}`,
-            data: { hearingId, commentId: data, byUserId: user.id },
-            origin,
-          }),
-        ),
-    );
 
     return NextResponse.json({ success: true, commentId: data });
   } catch (error) {

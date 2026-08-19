@@ -66,8 +66,8 @@ export default function AdminStatistikkClient() {
         </Link>
       </div>
 
-      <Link href={routes.adminForumReports} className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
-        ← Forum-rapporter
+      <Link href={routes.utforsk} className="text-sm text-brand hover:underline">
+        ← Tilbake til utforsk
       </Link>
     </div>
   );

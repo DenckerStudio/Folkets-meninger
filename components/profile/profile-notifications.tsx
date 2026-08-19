@@ -3,8 +3,6 @@
 import { ProfileCard } from '@/components/profile/profile-card';
 
 const CHANNELS = [
-  { key: 'forum', label: 'Forum' },
-  { key: 'mentions', label: 'Mentions' },
   { key: 'categories', label: 'Kategorier/hjertesaker' },
   { key: 'labels', label: 'AI-emner' },
 ] as const;
@@ -38,26 +36,32 @@ export function ProfileNotifications({
         </div>
         <button
           type="button"
-          onClick={() => onEmailEnabledChange(!emailEnabled)}
-          className={`${emailEnabled ? 'bg-indigo-600' : 'bg-muted'} relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors`}
           role="switch"
           aria-checked={emailEnabled}
+          onClick={() => onEmailEnabledChange(!emailEnabled)}
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+            emailEnabled ? 'bg-brand' : 'bg-muted'
+          }`}
         >
           <span
-            aria-hidden
-            className={`${emailEnabled ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-card shadow transform transition`}
+            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
+              emailEnabled ? 'translate-x-5' : 'translate-x-0'
+            }`}
           />
         </button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {CHANNELS.map((row) => (
-          <div key={row.key} className="rounded-xl border border-border p-4">
-            <div className="text-sm font-medium text-foreground mb-2">{row.label}</div>
+      <div className="mt-4 space-y-3">
+        {CHANNELS.map((channel) => (
+          <div
+            key={channel.key}
+            className="flex flex-col gap-2 rounded-xl border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <span className="text-sm font-medium text-foreground">{channel.label}</span>
             <select
-              value={frequencies[row.key] || 'daily'}
-              onChange={(e) => onFrequencyChange(row.key, e.target.value)}
-              className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+              value={frequencies[channel.key] ?? 'daily'}
+              onChange={(e) => onFrequencyChange(channel.key, e.target.value)}
+              className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
             >
               <option value="realtime">Sanntid</option>
               <option value="daily">Daglig</option>
@@ -71,9 +75,9 @@ export function ProfileNotifications({
         type="button"
         onClick={() => void onSave()}
         disabled={saving}
-        className="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-60"
+        className="mt-4 inline-flex items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
       >
-        {saving ? 'Lagrer…' : 'Lagre varslingsinnstillinger'}
+        {saving ? 'Lagrer…' : 'Lagre varsler'}
       </button>
     </ProfileCard>
   );

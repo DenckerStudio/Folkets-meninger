@@ -1,11 +1,10 @@
 'use client';
 
-import { createContext, Suspense, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { Menu, X } from 'lucide-react';
-import ForumSidebar from '@/components/forum/forum-sidebar';
-import { ForumDrawerProfile } from '@/components/forum/forum-drawer-profile';
+import DashboardSidebar from '@/components/dashboard/dashboard-sidebar';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { cn } from '@/lib/utils';
 
@@ -91,10 +90,7 @@ function DashboardNavDrawer({ open, onClose }: { open: boolean; onClose: () => v
               className="flex-1 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]"
               onClick={onClose}
             >
-              <Suspense fallback={<div className="h-48 animate-pulse rounded-xl bg-muted" />}>
-                <ForumSidebar />
-              </Suspense>
-              <ForumDrawerProfile onNavigate={onClose} />
+              <DashboardSidebar />
             </div>
           </motion.div>
         </div>

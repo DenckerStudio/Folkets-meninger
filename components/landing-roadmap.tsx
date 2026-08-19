@@ -20,7 +20,7 @@ export function LandingRoadmap() {
             date: 'Soft launch',
             title: 'Kjerneplattformen er live',
             description:
-              'Saker og dokumenter fra Stortinget, AI-sammendrag, ja/nei-stemming med lukkevindu, forum med moderering, høringer med lokale innspill, politikeroversikt, varsler og offentlige sak-/politiker-sider.',
+              'Saker og dokumenter fra Stortinget, AI-sammendrag, ja/nei-stemming med lukkevindu, høringer med lokale innspill, politikeroversikt, varsler og offentlige sak-/politiker-sider.',
             status: 'completed',
             detail: (
               <p>
@@ -40,7 +40,7 @@ export function LandingRoadmap() {
             date: 'Nå',
             title: 'Tillit, synlighet og førsteinntrykk',
             description:
-              'Poengnivåer (Aktiv → Veteran) finnes allerede. Vi synliggjør saker før innlogging, åpner forum-reels for publikum, strammer opp stien til første stemme, og forbereder MinID.',
+              'Vi synliggjør saker før innlogging, strammer opp stien til første stemme, og forbereder MinID.',
             status: 'current',
             detail: (
               <p>

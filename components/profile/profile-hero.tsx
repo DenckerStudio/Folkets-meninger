@@ -2,15 +2,11 @@
 
 import { LogOut, Shield } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
-import { PointsProgress } from '@/components/profile/points-progress';
-import type { UserPointsProgress } from '@/lib/user-points-levels';
 import { cn } from '@/lib/utils';
 
 type ProfileHeroProps = {
   user: User;
   voteCount: number;
-  points: number;
-  pointsProgress: UserPointsProgress;
   onSignOut: () => void;
 };
 
@@ -27,19 +23,19 @@ function initialsFromUser(user: User): string {
   return email.slice(0, 2).toUpperCase() || '?';
 }
 
-export function ProfileHero({ user, voteCount, points, pointsProgress, onSignOut }: ProfileHeroProps) {
+export function ProfileHero({ user, voteCount, onSignOut }: ProfileHeroProps) {
   const displayName =
     (user.user_metadata?.full_name as string | undefined) || user.email || 'Bruker';
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-border bg-gradient-to-br from-[#00205b]/5 via-background to-[#ba0c2f]/5 p-6 shadow-sm">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4 min-w-0">
             <div
               className={cn(
                 'flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl',
-                'bg-[#00205b] text-lg font-bold text-white shadow-md',
+                'bg-brand text-lg font-bold text-white',
               )}
               aria-hidden
             >
@@ -62,23 +58,13 @@ export function ProfileHero({ user, voteCount, points, pointsProgress, onSignOut
             Logg ut
           </button>
         </div>
-        <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 max-w-md">
-          <div className="rounded-xl bg-card/80 border border-border px-4 py-3">
-            <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Stemmer</dt>
+        <dl className="mt-5 grid grid-cols-1 gap-3 max-w-xs">
+          <div className="rounded-xl bg-muted/40 border border-border px-4 py-3">
+            <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Stemmer avgitt</dt>
             <dd className="text-2xl font-bold text-brand mt-0.5">{voteCount}</dd>
-          </div>
-          <div className="rounded-xl bg-card/80 border border-border px-4 py-3">
-            <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Poeng</dt>
-            <dd className="text-2xl font-bold text-brand mt-0.5">{points}</dd>
-          </div>
-          <div className="rounded-xl bg-card/80 border border-border px-4 py-3 col-span-2 sm:col-span-1">
-            <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nivå</dt>
-            <dd className={cn('text-base font-bold mt-0.5', pointsProgress.tier.color)}>{pointsProgress.tier.name}</dd>
           </div>
         </dl>
       </div>
-
-      <PointsProgress points={points} progress={pointsProgress} />
     </div>
   );
 }

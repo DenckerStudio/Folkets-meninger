@@ -3,7 +3,6 @@ import {
   BarChart2,
   FileEdit,
   Info,
-  MessageSquare,
   Search,
   UserRound,
 } from 'lucide-react';
@@ -36,9 +35,6 @@ export const isPolitikereActive: NavIsActive = (pathname) =>
 export const isHoringerActive: NavIsActive = (pathname) =>
   pathname === routes.horinger || pathname.startsWith(`${routes.horinger}/`);
 
-export const isForumActive: NavIsActive = (pathname) =>
-  pathname === routes.forum || pathname.startsWith(`${routes.forum}/`);
-
 export const isMinSideActive: NavIsActive = (pathname) =>
   pathname.startsWith(routes.minSide) ||
   pathname.startsWith(routes.varsler) ||
@@ -46,7 +42,6 @@ export const isMinSideActive: NavIsActive = (pathname) =>
 
 export const isOmOssActive: NavIsActive = (pathname) =>
   pathname === '/' || pathname === routes.home;
-
 
 export const isInnsiktActive: NavIsActive = (pathname) =>
   pathname === routes.innsikt || pathname.startsWith(`${routes.innsikt}/`);
@@ -66,7 +61,6 @@ export const desktopPrimaryNavLinks: PrimaryNavLink[] = [
   { label: 'Utforsk', href: routes.utforsk, isActive: isUtforskActive },
   { label: 'Politikere', href: routes.politikere, isActive: isPolitikereActive },
   { label: 'Høringer', href: routes.horinger, isActive: isHoringerActive },
-  { label: 'Forum', href: routes.forum, isActive: isForumActive },
 ];
 
 /** Secondary links in the «Mer» dropdown. */
@@ -107,12 +101,6 @@ export const mobileNavItems = [
     href: routes.horinger,
     icon: FileEdit,
     isActive: isHoringerActive,
-  },
-  {
-    label: 'Forum',
-    href: routes.forum,
-    icon: MessageSquare,
-    isActive: isForumActive,
   },
   {
     label: 'Profil',

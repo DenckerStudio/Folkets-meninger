@@ -3,7 +3,7 @@ import {
   deleteAiSummary,
   resolveAiSummaryForApi,
 } from '@/lib/ai-summary/service';
-import { requireForumAdmin } from '@/lib/forum/admin';
+import { requireAdmin } from '@/lib/admin/gate';
 import { triggerAiSummaryWebhook } from '@/lib/trigger-ai-summary-webhook';
 import { isAiSummaryV2 } from '@/lib/ai-summary/types';
 
@@ -68,7 +68,7 @@ export async function POST(
     return GET(request, { params });
   }
 
-  const admin = await requireForumAdmin();
+  const admin = await requireAdmin();
   if (!admin.ok) {
     return NextResponse.json({ error: admin.error }, { status: admin.status });
   }

@@ -21,10 +21,6 @@ import { SakPageActions } from '@/components/sak/sak-page-actions';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
-import { getServerSupabase } from '@/lib/supabase-server';
-import { isForumAdmin } from '@/lib/forum/admin';
-import { AdminGenerateSakReelButton } from '@/components/forum/admin-generate-sak-reel-button';
-
 export const dynamic = 'force-dynamic';
 
 function parseStortingetDate(dateStr: string): string {
@@ -118,14 +114,6 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
 
   const { sak, detail: detailedContent, issueMeta } = bundle;
   const documents = await getSakDocumentsWithStatus(sak.id, detailedContent);
-
-  const supabase = await getServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const showAdminReelButton = user
-    ? await isForumAdmin(user.id, user.email)
-    : false;
 
   const innstillingstekst = detailedContent?.innstillingstekst;
   const kortvedtak = detailedContent?.kortvedtak;
@@ -478,14 +466,6 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
 
       <FadeIn delay={0.4} direction="up">
         <PoliticianResponseForm sakId={sak.id} />
-      </FadeIn>
-
-      <FadeIn delay={0.45} direction="up">
-        {showAdminReelButton ? (
-          <div>
-            <AdminGenerateSakReelButton issueId={sak.id} issueTitle={sak.title} />
-          </div>
-        ) : null}
       </FadeIn>
     </div>
   );

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { ensurePublicUser } from '@/lib/ensure-public-user';
-import { userHasForumIdentity } from '@/lib/forum/author-display';
+import { userHasPublicIdentity } from '@/lib/identity/public-identity';
+import { parseActivityVisibility } from '@/lib/identity/activity-visibility';
 import { getUserPointsProfile } from '@/lib/user-points-profile';
 import {
   canAwardProfileCompletePoints,
@@ -22,7 +23,7 @@ export async function GET() {
   const service = getServiceSupabase();
   let { data, error } = await service
     .from('users')
-    .select('first_name, last_name, name, email, bio, party_preference, profile_is_public, show_party_preference, avatar_url')
+    .select('first_name, last_name, name, email, bio, party_preference, profile_is_public, show_party_preference, avatar_url, activity_visibility')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -40,6 +41,7 @@ export async function GET() {
           profile_is_public: false,
           show_party_preference: false,
           avatar_url: '',
+          activity_visibility: 'private',
         }
       : null;
     error = fallback.error;
@@ -72,7 +74,8 @@ export async function GET() {
       profileIsPublic: data?.profile_is_public === true,
       verification,
     }),
-    has_forum_identity: userHasForumIdentity(data),
+    activity_visibility: parseActivityVisibility((data as { activity_visibility?: unknown } | null)?.activity_visibility),
+    has_public_identity: userHasPublicIdentity(data),
   });
 }
 
@@ -130,6 +133,9 @@ export async function PATCH(request: Request) {
   if ('profile_is_public' in body) profilePatch.profile_is_public = body.profile_is_public === true;
   if ('show_party_preference' in body) profilePatch.show_party_preference = body.show_party_preference === true;
   if ('avatar_url' in body) profilePatch.avatar_url = typeof body.avatar_url === 'string' ? body.avatar_url.trim().slice(0, 500) : '';
+  if ('activity_visibility' in body) {
+    profilePatch.activity_visibility = parseActivityVisibility(body.activity_visibility);
+  }
 
   let updatedProfile:
     | {
@@ -193,7 +199,7 @@ export async function PATCH(request: Request) {
     first_name: hasNameFields ? firstName : undefined,
     last_name: hasNameFields ? lastName : undefined,
     display_name: hasNameFields ? `${firstName} ${lastName}` : undefined,
-    has_forum_identity: hasNameFields ? true : undefined,
+    has_public_identity: hasNameFields ? true : undefined,
     points: pointsProfile.points,
     points_progress: pointsProfile.progress,
     verification,

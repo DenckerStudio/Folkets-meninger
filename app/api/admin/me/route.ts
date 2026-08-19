@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { isForumAdmin } from '@/lib/forum/admin';
+import { isAdmin } from '@/lib/admin/gate';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +10,6 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ admin: false });
   }
-  const admin = await isForumAdmin(user.id, user.email);
+  const admin = await isAdmin(user.id, user.email);
   return NextResponse.json({ admin });
 }

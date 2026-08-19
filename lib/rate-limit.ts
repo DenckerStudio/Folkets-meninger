@@ -35,14 +35,8 @@ export function getRateLimitPolicy(pathname: string): { limit: number; windowMs:
   if (pathname.startsWith('/api/vote')) {
     return { limit: 30, windowMs: 60_000 };
   }
-  if (pathname.startsWith('/api/forum')) {
-    return { limit: 60, windowMs: 60_000 };
-  }
   if (/^\/api\/sak\/[^/]+\/ai-summary/.test(pathname)) {
     return { limit: 20, windowMs: 60_000 };
-  }
-  if (pathname.startsWith('/api/forum/context-search')) {
-    return { limit: 40, windowMs: 60_000 };
   }
   if (pathname.startsWith('/api/feedback')) {
     return { limit: 8, windowMs: 60_000 };

@@ -5,7 +5,6 @@ import { routes } from '@/lib/routes';
 
 const platformLinks = [
   { href: routes.utforsk, label: 'Utforsk saker' },
-  { href: routes.forum, label: 'Forum' },
   { href: routes.horinger, label: 'Høringer' },
   { href: routes.politikere, label: 'Politikere' },
 ] as const;
@@ -29,7 +28,7 @@ export function LandingFooter() {
               <LandingLogo clipId="fs-footer-bubble" />
             </Link>
             <p className="mt-5 max-w-md text-sm leading-relaxed text-[#001433]/65">
-              Uavhengig plattform for stemmegivning, forum og høringer — demokratiet fortsetter mellom valgene.
+              Uavhengig plattform for stemmegivning og høringer — demokratiet fortsetter mellom valgene.
             </p>
             <Link
               href={routes.innspill}

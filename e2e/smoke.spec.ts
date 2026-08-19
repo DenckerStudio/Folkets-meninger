@@ -16,14 +16,14 @@ test.describe('Folkets Stemme smoke', () => {
     expect(res?.status()).toBeLessThan(500);
   });
 
-  test('forum redirects unauthenticated users to login', async ({ page }) => {
+  test('legacy forum path redirects toward utforsk or login', async ({ page }) => {
     await page.goto('/dashboard/forum');
-    await expect(page).toHaveURL(/auth\/login/);
+    await expect(page).toHaveURL(/auth\/login|dashboard\/utforsk/);
   });
 
-  test('complete-profile page explains public forum identity', async ({ page }) => {
+  test('complete-profile page explains public identity', async ({ page }) => {
     await page.goto('/auth/complete-profile');
-    await expect(page.getByText(/Foruminnlegg er offentlige/i)).toBeVisible();
+    await expect(page.getByText(/Offentlige innspill|fornavn og etternavn/i)).toBeVisible();
   });
 
   test('horinger list page loads', async ({ page }) => {

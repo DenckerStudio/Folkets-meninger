@@ -29,7 +29,7 @@ export default async function LandingPage() {
       <FadeIn delay={0.25} direction="up">
         <CallToAction
           title="Klar til å delta?"
-          subtitle="Opprett konto gratis og få tilgang til saker, stemmegivning, forum og høringer. Én person, én stemme — uavhengig av Regjeringen og Stortinget."
+          subtitle="Opprett konto gratis og få tilgang til saker, stemmegivning og høringer. Én person, én stemme — uavhengig av Regjeringen og Stortinget."
           primaryButtonText="Kom i gang"
           primaryButtonLink={routes.login}
           secondaryButtonText="Gi innspill"

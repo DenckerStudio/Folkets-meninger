@@ -41,7 +41,7 @@ export async function POST() {
     await service.from('notifications').insert({
       user_id: user.id,
       type: 'welcome_email',
-      channel: 'mentions',
+      channel: 'categories',
       title: 'Velkommen til Folkets Stemme',
       body: 'Takk for at du registrerte deg.',
       url: '/dashboard/min-side',

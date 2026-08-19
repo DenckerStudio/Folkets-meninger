@@ -27,8 +27,7 @@ import {
   isHoringOpen,
   normalizeStortingetUrl,
 } from '@/lib/stortinget-horinger';
-import { resolveHearingCommentAuthor } from '@/lib/forum/author-display';
-import { ForumAuthorBadge } from '@/components/forum/forum-author-badge';
+import { resolveHearingCommentAuthor } from '@/lib/identity/public-identity';
 import { routes } from '@/lib/routes';
 import HearingCommentForm from './comment-form';
 
@@ -232,16 +231,6 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
           </div>
         )}
 
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href={`${routes.forum}?q=${encodeURIComponent(title.slice(0, 80))}`}
-            className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
-          >
-            <MessageSquare className="w-4 h-4" />
-            Diskuter i forumet
-          </Link>
-        </div>
-
         <p className="text-sm text-muted-foreground bg-muted/40 border border-border rounded-lg p-3">
           Innspill her er offentlige og viser fornavn og etternavn. De sendes ikke automatisk til Stortinget —
           for offisielle høringsinnspill følg lenker på stortinget.no.
@@ -265,7 +254,7 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
             {comments.map((comment) => (
               <article key={comment.id} className="bg-card border border-border rounded-xl p-4">
                 {comment.author ? (
-                  <ForumAuthorBadge author={comment.author} className="mb-2" />
+                  <p className="mb-2 text-sm font-semibold text-foreground">{comment.author.name}</p>
                 ) : null}
                 <p className="text-foreground text-sm whitespace-pre-wrap">{comment.body}</p>
                 <p className="text-xs text-muted-foreground mt-2">{comment.createdAt}</p>
