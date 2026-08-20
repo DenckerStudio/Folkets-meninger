@@ -20,7 +20,6 @@ import { SakShareProvider } from '@/components/sak/sak-share-context';
 import { SakPeople } from '@/components/sak/sak-people';
 import { SakRelatedPoll } from '@/components/sak/sak-related-poll';
 import { RedditJoinBanner } from '@/components/sak/reddit-join-banner';
-import { Suspense } from 'react';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import { getPollByStortingetIssueId } from '@/lib/polls/service';
 
@@ -97,8 +96,15 @@ function buildSaksgangSteps(
   });
 }
 
-export default async function SakPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function SakPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const resolvedParams = await params;
+  const resolvedSearch = await searchParams;
   const bundle = await getSakPageBundle(resolvedParams.id);
 
   if (!bundle) {
@@ -167,6 +173,8 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
           </div>
         </FadeIn>
 
+        <RedditJoinBanner status={resolvedSearch.reddit} />
+
         <FadeIn delay={0.1} direction="up">
           <header className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -198,9 +206,6 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
           </header>
         </FadeIn>
 
-        <Suspense fallback={null}>
-          <RedditJoinBanner />
-        </Suspense>
         <SakRelatedPoll poll={relatedPoll} />
 
         <FadeIn delay={0.15} direction="up">
