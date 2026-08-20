@@ -67,6 +67,9 @@ The canonical template is `.env.example`.
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Notification and welcome email delivery |
 | `STORTINGET_SESSION_ID`, `STORTINGET_PERIODE_ID` | Server defaults for Stortinget data |
 | `NEXT_PUBLIC_STORTINGET_SESSION_ID`, `NEXT_PUBLIC_STORTINGET_PERIODE_ID` | Client-visible Stortinget defaults |
+| `NEXT_PUBLIC_REDDIT_COMMUNITY` | Subreddit for sak discussion (`Folkets_meninger`) |
+| `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` | Reddit web-app OAuth; used to log in and subscribe the user to the community |
+| `REDDIT_REDIRECT_URI` | Optional override; default `{origin}/api/reddit/callback` |
 | `DISABLE_HMR` | Dev-only escape hatch for HMR issues |
 
 ## Current Subsystems and Runbooks

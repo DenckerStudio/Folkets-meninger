@@ -62,6 +62,7 @@ export function SakShareProvider({
       <SakSelectionToolbar />
       <SakQuoteDialog
         open={quoteOpen}
+        sakId={sakId}
         title={title}
         getPageUrl={getPageUrl}
         draft={draft}

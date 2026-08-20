@@ -16,7 +16,7 @@ test.describe('Folkets Stemme smoke', () => {
     const res = await page.goto('/dashboard/sak/200329');
     expect(res?.status()).toBeLessThan(500);
     await expect(page.getByRole('button', { name: /^Del$|^Kopiert$/ })).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByRole('link', { name: /Reddit/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Reddit/ })).toHaveAttribute('href', /\/api\/reddit\/start/);
     await expect(page.getByRole('heading', { name: 'Hva mener du?' })).toHaveCount(0);
   });
 

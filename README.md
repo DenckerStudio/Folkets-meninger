@@ -60,6 +60,10 @@ Important constraints:
   `/horinger` redirects there, so browsing and local comments require login.
 - Sak pages are source documents. National polls under Avstemninger use Ja/Nei/Blank.
 - Sak voting UI is not shown on the sak page. Related open polls, if any, link to Avstemninger.
+- «Diskuter i Reddit» sends the user through Reddit OAuth (`/api/reddit/start`) and
+  subscribes them to `r/Folkets_meninger` before opening a prefilled post.
+  Requires `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` from a Reddit web app
+  with redirect `https://YOUR_DOMAIN/api/reddit/callback`.
 - Høringer are fetched live from Stortinget, not cached in Postgres. Local
   "innspill" are public app comments and are not sent to Stortinget.
 - Sak treatment labels are resolved from multiple Stortinget sources because

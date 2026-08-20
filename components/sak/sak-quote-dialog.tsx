@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { Check, Copy, MessagesSquare, Share2 } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
-import { redditCommunityName, redditSubmitQuoteUrl } from '@/lib/reddit';
+import { redditCommunityName, redditOAuthStartPath } from '@/lib/reddit';
 import { formatQuoteShareText, twitterIntentUrl, type QuoteShareDraft } from '@/lib/share';
 
 export function SakQuoteDialog({
   open,
+  sakId,
   title,
   getPageUrl,
   draft,
@@ -15,6 +16,7 @@ export function SakQuoteDialog({
   onDraftChange,
 }: {
   open: boolean;
+  sakId: string;
   title: string;
   getPageUrl: () => string;
   draft: QuoteShareDraft;
@@ -24,12 +26,12 @@ export function SakQuoteDialog({
   const [copied, setCopied] = useState(false);
   const quote = draft.quote.trim();
   const pageUrl = open ? getPageUrl() : '';
-  const canShare = quote.length >= 8 && Boolean(pageUrl);
+  const canShare = quote.length >= 8 && Boolean(sakId);
 
   const payloadText = formatQuoteShareText({
     quote,
     title,
-    url: pageUrl,
+    url: pageUrl || `/dashboard/sak/${sakId}`,
     sourceLabel: draft.sourceLabel,
   });
 
@@ -58,11 +60,13 @@ export function SakQuoteDialog({
   };
 
   const redditHref = canShare
-    ? redditSubmitQuoteUrl({
+    ? redditOAuthStartPath({
+        kind: 'quote',
         title,
-        url: pageUrl,
+        url: `/dashboard/sak/${sakId}`,
         quote,
         sourceLabel: draft.sourceLabel,
+        next: `/dashboard/sak/${sakId}`,
       })
     : undefined;
 
@@ -105,8 +109,6 @@ export function SakQuoteDialog({
           {redditHref ? (
             <a
               href={redditHref}
-              target="_blank"
-              rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand/90"
             >
               <MessagesSquare className="h-4 w-4" />
@@ -139,8 +141,8 @@ export function SakQuoteDialog({
           placeholder="Lim inn eller skriv sitatet du vil dele…"
         />
         <p className="text-xs text-muted-foreground">
-          Innlegget åpnes i r/{redditCommunityName()} med saken som kilde. Reddit-konto kreves for å
-          publisere.
+          Innlegget åpnes i r/{redditCommunityName()} etter at du logger inn med Reddit. Vi melder
+          deg inn i gruppen automatisk.
         </p>
       </div>
     </Dialog>

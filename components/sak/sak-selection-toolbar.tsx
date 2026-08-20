@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Quote, MessagesSquare } from 'lucide-react';
 import { useSakShareOptional } from '@/components/sak/sak-share-context';
-import { redditSubmitQuoteUrl } from '@/lib/reddit';
+import { redditOAuthStartPath } from '@/lib/reddit';
 
 const MIN_QUOTE_LENGTH = 12;
 
@@ -76,13 +76,14 @@ export function SakSelectionToolbar() {
 
   if (!share || !coords || !text) return null;
 
-  const redditHref = share.getPageUrl()
-    ? redditSubmitQuoteUrl({
-        title: share.title,
-        url: share.getPageUrl(),
-        quote: text,
-      })
-    : null;
+  const redditHref = redditOAuthStartPath({
+    kind: 'quote',
+    title: share.title,
+    url: `/dashboard/sak/${share.sakId}`,
+    quote: text,
+    sourceLabel: share.title,
+    next: `/dashboard/sak/${share.sakId}`,
+  });
 
   return (
     <div
@@ -102,8 +103,6 @@ export function SakSelectionToolbar() {
       {redditHref ? (
         <a
           href={redditHref}
-          target="_blank"
-          rel="noopener noreferrer"
           onMouseDown={(event) => event.preventDefault()}
           className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
         >

@@ -11,13 +11,15 @@ import {
   Quote,
   Share2,
 } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { useSakShare } from '@/components/sak/sak-share-context';
-import { redditCommunityName, redditCommunityUrl, redditSubmitLinkUrl } from '@/lib/reddit';
+import { redditCommunityName, redditOAuthStartPath } from '@/lib/reddit';
 import { emailShareUrl, facebookShareUrl, linkedInShareUrl, twitterIntentUrl } from '@/lib/share';
 import { cn } from '@/lib/utils';
 
 export function SakPageActions({ className = '' }: { className?: string }) {
   const share = useSakShare();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -66,6 +68,12 @@ export function SakPageActions({ className = '' }: { className?: string }) {
   };
 
   const menuPageUrl = open ? share.getPageUrl() : '';
+  const redditHref = redditOAuthStartPath({
+    kind: 'submit',
+    title: share.title,
+    url: `/dashboard/sak/${share.sakId}`,
+    next: pathname || `/dashboard/sak/${share.sakId}`,
+  });
 
   return (
     <nav
@@ -132,26 +140,17 @@ export function SakPageActions({ className = '' }: { className?: string }) {
         ) : null}
       </div>
       <a
-        href={redditCommunityUrl()}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(event) => {
-          const url = share.getPageUrl();
-          if (!url) return;
-          event.preventDefault();
-          window.open(
-            redditSubmitLinkUrl({ title: share.title, url }),
-            '_blank',
-            'noopener,noreferrer',
-          );
-        }}
+        href={redditHref}
+        title={`Logg inn med Reddit og bli med i r/${redditCommunityName()}`}
         className="inline-flex h-9 items-center gap-1.5 rounded-full bg-brand px-3 text-sm font-medium text-white hover:bg-brand/90"
       >
         <MessagesSquare className="h-4 w-4" />
         <span className="hidden min-[420px]:inline">Diskuter i Reddit</span>
         <span className="min-[420px]:hidden">Reddit</span>
       </a>
-      <span className="sr-only">Åpner r/{redditCommunityName()}</span>
+      <span className="sr-only">
+        Logg inn med Reddit for å bli med i r/{redditCommunityName()}
+      </span>
     </nav>
   );
 }

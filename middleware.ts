@@ -76,5 +76,6 @@ export const config = {
     '/api/vote/:path*',
     '/api/sak/:path*/ai-summary',
     '/api/feedback',
+    '/api/reddit/:path*',
   ],
 };

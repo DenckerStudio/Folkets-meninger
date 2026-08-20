@@ -19,6 +19,8 @@ import { SakPageActions } from '@/components/sak/sak-page-actions';
 import { SakShareProvider } from '@/components/sak/sak-share-context';
 import { SakPeople } from '@/components/sak/sak-people';
 import { SakRelatedPoll } from '@/components/sak/sak-related-poll';
+import { RedditJoinBanner } from '@/components/sak/reddit-join-banner';
+import { Suspense } from 'react';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import { getPollByStortingetIssueId } from '@/lib/polls/service';
 
@@ -196,6 +198,9 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
           </header>
         </FadeIn>
 
+        <Suspense fallback={null}>
+          <RedditJoinBanner />
+        </Suspense>
         <SakRelatedPoll poll={relatedPoll} />
 
         <FadeIn delay={0.15} direction="up">
