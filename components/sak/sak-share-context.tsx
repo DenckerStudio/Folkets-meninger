@@ -8,6 +8,7 @@ import { sakAbsoluteUrl, type QuoteShareDraft } from '@/lib/share';
 type SakShareContextValue = {
   sakId: string;
   title: string;
+  redditNeedsJoin: boolean;
   getPageUrl: () => string;
   openQuoteShare: (draft?: QuoteShareDraft) => void;
 };
@@ -29,10 +30,12 @@ export function useSakShareOptional(): SakShareContextValue | null {
 export function SakShareProvider({
   sakId,
   title,
+  redditNeedsJoin = false,
   children,
 }: {
   sakId: string;
   title: string;
+  redditNeedsJoin?: boolean;
   children: React.ReactNode;
 }) {
   const [quoteOpen, setQuoteOpen] = useState(false);
@@ -52,8 +55,8 @@ export function SakShareProvider({
   }, []);
 
   const value = useMemo(
-    () => ({ sakId, title, getPageUrl, openQuoteShare }),
-    [sakId, title, getPageUrl, openQuoteShare],
+    () => ({ sakId, title, redditNeedsJoin, getPageUrl, openQuoteShare }),
+    [sakId, title, redditNeedsJoin, getPageUrl, openQuoteShare],
   );
 
   return (
@@ -68,6 +71,7 @@ export function SakShareProvider({
         draft={draft}
         onClose={() => setQuoteOpen(false)}
         onDraftChange={setDraft}
+        redditNeedsJoin={redditNeedsJoin}
       />
     </SakShareContext.Provider>
   );

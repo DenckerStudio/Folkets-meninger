@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useSakShare } from '@/components/sak/sak-share-context';
-import { redditCommunityName, redditOAuthStartPath } from '@/lib/reddit';
+import { redditCommunityName, redditHrefForIntent, redditOAuthStartPath } from '@/lib/reddit';
 import { emailShareUrl, facebookShareUrl, linkedInShareUrl, twitterIntentUrl } from '@/lib/share';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +23,7 @@ export function SakPageActions({ className = '' }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const sakPath = pathname || `/dashboard/sak/${share.sakId}`;
 
   useEffect(() => {
     if (!open) return;
@@ -68,12 +69,18 @@ export function SakPageActions({ className = '' }: { className?: string }) {
   };
 
   const menuPageUrl = open ? share.getPageUrl() : '';
-  const redditHref = redditOAuthStartPath({
-    kind: 'submit',
-    title: share.title,
-    url: `/dashboard/sak/${share.sakId}`,
-    next: pathname || `/dashboard/sak/${share.sakId}`,
-  });
+  const redditHref = menuPageUrl
+    ? redditHrefForIntent(
+        {
+          kind: 'submit',
+          title: share.title,
+          url: share.redditNeedsJoin ? `/dashboard/sak/${share.sakId}` : menuPageUrl,
+          next: sakPath,
+        },
+        share.redditNeedsJoin,
+      )
+    : '';
+  const joinHref = redditOAuthStartPath({ kind: 'join', next: sakPath });
 
   return (
     <nav
@@ -121,6 +128,12 @@ export function SakPageActions({ className = '' }: { className?: string }) {
             {menuPageUrl ? (
               <>
                 <div className="my-1 border-t border-border" />
+                {redditHref ? (
+                  <MenuLink href={redditHref}>
+                    <MessagesSquare className="h-4 w-4" />
+                    Reddit
+                  </MenuLink>
+                ) : null}
                 <MenuLink href={twitterIntentUrl({ title: share.title, url: menuPageUrl })}>Del på X</MenuLink>
                 <MenuLink href={facebookShareUrl(menuPageUrl)}>
                   <Facebook className="h-4 w-4" />
@@ -139,18 +152,17 @@ export function SakPageActions({ className = '' }: { className?: string }) {
           </div>
         ) : null}
       </div>
-      <a
-        href={redditHref}
-        title={`Logg inn med Reddit og bli med i r/${redditCommunityName()}`}
-        className="inline-flex h-9 items-center gap-1.5 rounded-full bg-brand px-3 text-sm font-medium text-white hover:bg-brand/90"
-      >
-        <MessagesSquare className="h-4 w-4" />
-        <span className="hidden min-[420px]:inline">Diskuter i Reddit</span>
-        <span className="min-[420px]:hidden">Reddit</span>
-      </a>
-      <span className="sr-only">
-        Logg inn med Reddit for å bli med i r/{redditCommunityName()}
-      </span>
+      {share.redditNeedsJoin ? (
+        <a
+          href={joinHref}
+          title={`Logg inn med Reddit én gang for å bli med i r/${redditCommunityName()}`}
+          className="inline-flex h-9 items-center gap-1.5 rounded-full bg-brand px-3 text-sm font-medium text-white hover:bg-brand/90"
+        >
+          <MessagesSquare className="h-4 w-4" />
+          <span className="hidden min-[420px]:inline">Bli med i Reddit</span>
+          <span className="min-[420px]:hidden">Reddit</span>
+        </a>
+      ) : null}
     </nav>
   );
 }
@@ -175,12 +187,13 @@ function MenuButton({
 }
 
 function MenuLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const external = href.startsWith('http://') || href.startsWith('https://');
   return (
     <a
       href={href}
       role="menuitem"
-      target={href.startsWith('mailto:') ? undefined : '_blank'}
-      rel={href.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
+      target={external ? '_blank' : undefined}
+      rel={external ? 'noopener noreferrer' : undefined}
       className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
     >
       {children}

@@ -13,6 +13,7 @@ import {
   isRedditOAuthConfigured,
   REDDIT_INTENT_COOKIE,
   REDDIT_JOINED_COOKIE,
+  REDDIT_JOINED_MAX_AGE,
   REDDIT_STATE_COOKIE,
   redditRedirectUri,
   subscribeRedditUser,
@@ -83,6 +84,6 @@ export async function GET(request: Request) {
 
   const destination = fallbackDestination(origin, intent);
   const response = NextResponse.redirect(destination);
-  response.cookies.set(REDDIT_JOINED_COOKIE, '1', { ...cookieBase(secure), maxAge: 60 * 60 * 24 * 30 });
+  response.cookies.set(REDDIT_JOINED_COOKIE, '1', { ...cookieBase(secure), maxAge: REDDIT_JOINED_MAX_AGE });
   return clearOauth(response);
 }

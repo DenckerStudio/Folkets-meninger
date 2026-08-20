@@ -138,3 +138,8 @@ export function redditDestinationForIntent(intent: RedditIntent): string {
     }
   }
 }
+
+export function redditHrefForIntent(intent: RedditIntent, needsJoin: boolean): string {
+  if (needsJoin) return redditOAuthStartPath(intent);
+  return redditDestinationForIntent(intent);
+}

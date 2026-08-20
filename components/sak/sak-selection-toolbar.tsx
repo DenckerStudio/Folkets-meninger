@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Quote, MessagesSquare } from 'lucide-react';
 import { useSakShareOptional } from '@/components/sak/sak-share-context';
-import { redditOAuthStartPath } from '@/lib/reddit';
+import { redditHrefForIntent } from '@/lib/reddit';
 
 const MIN_QUOTE_LENGTH = 12;
 
@@ -76,14 +76,17 @@ export function SakSelectionToolbar() {
 
   if (!share || !coords || !text) return null;
 
-  const redditHref = redditOAuthStartPath({
-    kind: 'quote',
-    title: share.title,
-    url: `/dashboard/sak/${share.sakId}`,
-    quote: text,
-    sourceLabel: share.title,
-    next: `/dashboard/sak/${share.sakId}`,
-  });
+  const redditHref = redditHrefForIntent(
+    {
+      kind: 'quote',
+      title: share.title,
+      url: share.redditNeedsJoin ? `/dashboard/sak/${share.sakId}` : share.getPageUrl(),
+      quote: text,
+      sourceLabel: share.title,
+      next: `/dashboard/sak/${share.sakId}`,
+    },
+    share.redditNeedsJoin,
+  );
 
   return (
     <div
@@ -104,6 +107,8 @@ export function SakSelectionToolbar() {
         <a
           href={redditHref}
           onMouseDown={(event) => event.preventDefault()}
+          target={share.redditNeedsJoin ? undefined : '_blank'}
+          rel={share.redditNeedsJoin ? undefined : 'noopener noreferrer'}
           className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
         >
           <MessagesSquare className="h-3.5 w-3.5" />

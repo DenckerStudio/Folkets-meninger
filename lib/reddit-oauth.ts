@@ -3,6 +3,19 @@ import { redditCommunityName } from '@/lib/reddit';
 export const REDDIT_STATE_COOKIE = 'reddit_oauth_state';
 export const REDDIT_INTENT_COOKIE = 'reddit_oauth_intent';
 export const REDDIT_JOINED_COOKIE = 'reddit_joined';
+export const REDDIT_JOINED_MAX_AGE = 60 * 60 * 24 * 365;
+
+export function hasJoinedReddit(
+  cookieValue: string | undefined,
+  queryStatus?: string | string[] | null,
+): boolean {
+  const status = Array.isArray(queryStatus) ? queryStatus[0] : queryStatus;
+  return cookieValue === '1' || status === 'joined';
+}
+
+export function redditNeedsJoin(joined: boolean): boolean {
+  return isRedditOAuthConfigured() && !joined;
+}
 
 const AUTHORIZE_URL = 'https://www.reddit.com/api/v1/authorize';
 const TOKEN_URL = 'https://www.reddit.com/api/v1/access_token';

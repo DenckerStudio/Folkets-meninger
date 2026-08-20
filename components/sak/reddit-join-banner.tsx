@@ -1,7 +1,7 @@
 import { redditCommunityName } from '@/lib/reddit';
 
 const MESSAGES = {
-  joined: `Du er med i r/${redditCommunityName()}. Du kan nå diskutere saken der.`,
+  joined: `Du er med i r/${redditCommunityName()}. Bruk Del når du vil poste saken der.`,
   denied: 'Reddit-innlogging ble avbrutt. Du kan prøve igjen når du vil.',
   error:
     'Vi fikk ikke meldt deg inn i Reddit-gruppen automatisk. Prøv igjen, eller åpne gruppen manuelt.',

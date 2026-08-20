@@ -1,4 +1,6 @@
+import { cookies } from 'next/headers';
 import { getSakPageBundle, type StortingetSakDetail } from '@/lib/stortinget';
+import { hasJoinedReddit, redditNeedsJoin, REDDIT_JOINED_COOKIE } from '@/lib/reddit-oauth';
 import { classifySakKind, getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { SakProcessingBadge, SakStatusBadge } from '@/components/sak/sak-meta';
@@ -105,6 +107,11 @@ export default async function SakPage({
 }) {
   const resolvedParams = await params;
   const resolvedSearch = await searchParams;
+  const cookieStore = await cookies();
+  const redditJoined = hasJoinedReddit(
+    cookieStore.get(REDDIT_JOINED_COOKIE)?.value,
+    resolvedSearch.reddit,
+  );
   const bundle = await getSakPageBundle(resolvedParams.id);
 
   if (!bundle) {
@@ -164,7 +171,11 @@ export default async function SakPage({
   ].filter((bit): bit is string => Boolean(bit));
 
   return (
-    <SakShareProvider sakId={sak.id} title={sak.title}>
+    <SakShareProvider
+      sakId={sak.id}
+      title={sak.title}
+      redditNeedsJoin={redditNeedsJoin(redditJoined)}
+    >
       <div className="relative mx-auto max-w-3xl space-y-8 pb-16 sm:space-y-10">
         <FadeIn delay={0.05}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

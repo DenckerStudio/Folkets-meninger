@@ -1,5 +1,5 @@
-import { redditCommunityName, redditSubmitLinkUrl, redditSubmitQuoteUrl, clampShareTitle, redditOAuthStartPath, parseRedditIntentFromSearch, absolutizeRedditIntent } from '@/lib/reddit';
-import { redditAuthorizeUrl, redditBasicAuthHeader } from '@/lib/reddit-oauth';
+import { redditCommunityName, redditSubmitLinkUrl, redditSubmitQuoteUrl, clampShareTitle, redditOAuthStartPath, parseRedditIntentFromSearch, absolutizeRedditIntent, redditHrefForIntent } from '@/lib/reddit';
+import { redditAuthorizeUrl, redditBasicAuthHeader, hasJoinedReddit } from '@/lib/reddit-oauth';
 import {
   emailShareUrl,
   facebookShareUrl,
@@ -64,6 +64,18 @@ const start = redditOAuthStartPath({
   next: '/dashboard/sak/1',
 });
 assert(start.startsWith('/api/reddit/start'), 'oauth start path');
+assert(
+  redditHrefForIntent({ kind: 'submit', title: 'Sak', url: 'https://folketsstemme.no/dashboard/sak/1' }, true).startsWith(
+    '/api/reddit/start',
+  ),
+  'join still uses oauth',
+);
+assert(
+  redditHrefForIntent({ kind: 'submit', title: 'Sak', url: 'https://folketsstemme.no/dashboard/sak/1' }, false).includes(
+    '/r/Folkets_meninger/submit',
+  ),
+  'after join uses reddit submit',
+);
 const parsed = parseRedditIntentFromSearch(new URLSearchParams(start.split('?')[1] ?? ''));
 assert(parsed.kind === 'submit', 'parsed submit intent');
 assert(
@@ -78,6 +90,8 @@ const authorize = redditAuthorizeUrl({
 });
 assert(authorize.startsWith('https://www.reddit.com/api/v1/authorize'), 'authorize host');
 assert(decodeURIComponent(new URL(authorize).searchParams.get('scope') ?? '') === 'identity subscribe', 'authorize scopes');
-assert(redditBasicAuthHeader('id', 'sec').startsWith('Basic '), 'basic auth header');
+assert(hasJoinedReddit('1') === true, 'cookie marks joined');
+assert(hasJoinedReddit(undefined, 'joined') === true, 'query marks joined');
+assert(hasJoinedReddit(undefined, 'denied') === false, 'denied is not joined');
 
 console.log('share/reddit tests OK');
