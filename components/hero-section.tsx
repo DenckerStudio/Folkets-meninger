@@ -54,17 +54,17 @@ export default function HeroSection() {
           initial={reducedMotion ? false : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.55, ease: 'easeOut' }}
-          className="mt-10 max-w-md mx-auto flex flex-col sm:flex-row sm:justify-center gap-3"
+          className="mt-8 sm:mt-10 max-w-sm sm:max-w-md mx-auto flex flex-col sm:flex-row sm:justify-center gap-2.5 sm:gap-3"
         >
           <Link
             href={routes.avstemninger}
-            className="inline-flex w-full sm:w-auto items-center justify-center rounded-full px-8 py-3.5 text-base font-semibold text-white bg-[#00205b] hover:bg-[#ba0c2f] transition-colors duration-200 md:text-lg shadow-sm"
+            className="inline-flex w-full sm:w-auto items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold text-white bg-[#00205b] shadow-sm transition-colors duration-200 hover:bg-[#ba0c2f] sm:px-7 sm:py-3 sm:text-base"
           >
             Se avstemninger
           </Link>
           <Link
             href={routes.login}
-            className="inline-flex w-full sm:w-auto items-center justify-center rounded-full px-8 py-3.5 text-base font-semibold text-[#00205b] bg-white/85 hover:bg-white border border-[#00205b]/15 hover:border-[#00205b]/40 transition-colors duration-200 md:text-lg backdrop-blur-md"
+            className="inline-flex w-full sm:w-auto items-center justify-center rounded-full border border-[#00205b]/15 bg-white/85 px-5 py-2.5 text-sm font-semibold text-[#00205b] backdrop-blur-md transition-colors duration-200 hover:border-[#00205b]/40 hover:bg-white sm:px-7 sm:py-3 sm:text-base"
           >
             Logg inn
           </Link>

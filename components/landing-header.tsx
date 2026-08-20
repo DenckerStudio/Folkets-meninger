@@ -36,7 +36,7 @@ export function LandingHeader() {
         <Link href={routes.home} className="rounded-md p-1 transition-opacity hover:opacity-90">
           <LandingLogo clipId="fs-header-bubble" />
         </Link>
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3">
           <a
             href={routes.omOss}
             onClick={(event) => {
@@ -52,24 +52,26 @@ export function LandingHeader() {
           {user ? (
             <Link
               href={routes.dashboard}
-              className="inline-flex items-center rounded-full bg-[#00205b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#ba0c2f] transition-colors"
+              className="inline-flex items-center rounded-full bg-[#00205b] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#ba0c2f] sm:px-4 sm:py-2 sm:text-sm"
             >
-              Gå til dashboard
+              <span className="sm:hidden">Dashboard</span>
+              <span className="hidden sm:inline">Gå til dashboard</span>
             </Link>
           ) : (
             <>
               <Link
                 href={routes.login}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#00205b]/15 bg-white px-4 py-2 text-sm font-semibold text-[#00205b] hover:border-[#00205b]/40 hover:bg-[#00205b]/[0.04] transition-colors"
+                className="inline-flex items-center gap-1 rounded-full border border-[#00205b]/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#00205b] transition-colors hover:border-[#00205b]/40 hover:bg-[#00205b]/[0.04] sm:gap-1.5 sm:px-4 sm:py-2 sm:text-sm"
               >
-                <LogIn className="size-4" />
+                <LogIn className="size-3.5 sm:size-4" />
                 Logg inn
               </Link>
               <Link
                 href={routes.avstemninger}
-                className="inline-flex items-center rounded-full bg-[#00205b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#ba0c2f] transition-colors"
+                className="inline-flex items-center rounded-full bg-[#00205b] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#ba0c2f] sm:px-4 sm:py-2 sm:text-sm"
               >
-                Se avstemninger
+                <span className="sm:hidden">Avstemninger</span>
+                <span className="hidden sm:inline">Se avstemninger</span>
               </Link>
             </>
           )}
