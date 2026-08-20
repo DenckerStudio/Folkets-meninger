@@ -16,8 +16,7 @@ type DashboardNavContextValue = {
 
 const DashboardNavContext = createContext<DashboardNavContextValue | null>(null);
 
-const DRAWER_SPRING = { type: 'spring' as const, damping: 30, stiffness: 340, mass: 0.85 };
-const BACKDROP_TRANSITION = { duration: 0.22, ease: [0.4, 0, 0.2, 1] as const };
+const PANEL_EASE = [0.32, 0.72, 0, 1] as const;
 
 export function useDashboardNav() {
   const ctx = useContext(DashboardNavContext);
@@ -48,8 +47,12 @@ function DashboardNavDrawer({ open, onClose }: { open: boolean; onClose: () => v
     };
   }, [open, onClose]);
 
-  const panelTransition = reducedMotion ? { duration: 0 } : DRAWER_SPRING;
-  const backdropTransition = reducedMotion ? { duration: 0 } : BACKDROP_TRANSITION;
+  const panelTransition = reducedMotion
+    ? { duration: 0 }
+    : { type: 'tween' as const, duration: 0.26, ease: PANEL_EASE };
+  const backdropTransition = reducedMotion
+    ? { duration: 0 }
+    : { duration: 0.22, ease: PANEL_EASE };
 
   return (
     <AnimatePresence>
@@ -57,7 +60,7 @@ function DashboardNavDrawer({ open, onClose }: { open: boolean; onClose: () => v
         <div className="fixed inset-0 z-[60] xl:hidden" role="presentation">
           <motion.button
             type="button"
-            className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-black/50"
             aria-label="Lukk meny"
             onClick={onClose}
             initial={reducedMotion ? false : { opacity: 0 }}
@@ -69,28 +72,25 @@ function DashboardNavDrawer({ open, onClose }: { open: boolean; onClose: () => v
             role="dialog"
             aria-modal="true"
             aria-label="Navigasjonsmeny"
-            className="absolute inset-y-0 left-0 flex w-[min(88vw,320px)] flex-col bg-muted/40 shadow-2xl"
+            className="absolute inset-y-0 left-0 flex w-[min(84vw,288px)] flex-col border-r border-border bg-background shadow-2xl"
             initial={reducedMotion ? false : { x: '-100%' }}
             animate={{ x: 0 }}
             exit={reducedMotion ? undefined : { x: '-100%' }}
             transition={panelTransition}
           >
-            <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
-              <span className="text-sm font-semibold text-foreground">Meny</span>
+            <div className="flex items-center justify-between border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
+              <span className="text-sm font-semibold tracking-tight text-foreground">Meny</span>
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 aria-label="Lukk"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div
-              className="flex-1 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]"
-              onClick={onClose}
-            >
-              <DashboardSidebar />
+            <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
+              <DashboardSidebar variant="drawer" onNavigate={onClose} />
             </div>
           </motion.div>
         </div>
@@ -127,7 +127,7 @@ export function DashboardNavMenuButton({ className }: { className?: string }) {
     <button
       type="button"
       onClick={nav.toggle}
-      className={cn(className, 'relative active:scale-95')}
+      className={cn(className)}
       aria-expanded={nav.open}
       aria-label={nav.open ? 'Lukk meny' : 'Åpne meny'}
     >
@@ -135,10 +135,10 @@ export function DashboardNavMenuButton({ className }: { className?: string }) {
         <motion.span
           key={nav.open ? 'close' : 'open'}
           className="inline-flex"
-          initial={reducedMotion ? false : { opacity: 0, rotate: nav.open ? -90 : 90, scale: 0.8 }}
-          animate={{ opacity: 1, rotate: 0, scale: 1 }}
-          exit={reducedMotion ? undefined : { opacity: 0, rotate: nav.open ? 90 : -90, scale: 0.8 }}
-          transition={reducedMotion ? { duration: 0 } : { duration: 0.18, ease: 'easeOut' }}
+          initial={reducedMotion ? false : { opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={reducedMotion ? undefined : { opacity: 0, scale: 0.92 }}
+          transition={reducedMotion ? { duration: 0 } : { duration: 0.15, ease: 'easeOut' }}
         >
           {nav.open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </motion.span>

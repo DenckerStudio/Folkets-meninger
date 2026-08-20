@@ -139,11 +139,13 @@ export function Header() {
             </details>
           ) : (
             <>
-              <Button variant="outline" render={<Link href={routes.login} />}>
-                <LogIn className="size-4" />
-                Logg inn
+              <Button variant="outline" size="sm" className="sm:h-8" render={<Link href={routes.login} />}>
+                <LogIn className="size-3.5 sm:size-4" />
+                <span className="hidden min-[380px]:inline">Logg inn</span>
               </Button>
-              <Button render={<Link href={routes.login} />} className="hidden sm:inline-flex">Kom i gang</Button>
+              <Button size="sm" className="hidden sm:inline-flex sm:h-8" render={<Link href={routes.login} />}>
+                Kom i gang
+              </Button>
             </>
           )}
         </div>
