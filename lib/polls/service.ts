@@ -145,6 +145,20 @@ export async function getPollById(pollId: string): Promise<PollRecord | null> {
   return mapPollRow(data as PollRow);
 }
 
+export async function getPollByStortingetIssueId(issueId: string): Promise<PollRecord | null> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !issueId) return null;
+  const service = getServiceSupabase();
+  const { data, error } = await service
+    .from('polls')
+    .select(POLL_SELECT)
+    .eq('stortinget_issue_id', issueId)
+    .in('status', ['open', 'closed'])
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return mapPollRow(data as PollRow);
+}
+
 export async function getPollTotals(pollId: string): Promise<PollTotals> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return emptyPollTotals();
   const service = getServiceSupabase();

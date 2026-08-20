@@ -20,7 +20,7 @@ export function LandingRoadmap() {
             date: 'Soft launch',
             title: 'Kjerneplattformen er live',
             description:
-              'Saker og dokumenter fra Stortinget, AI-sammendrag, sak-stemmer (For/Mot/Avstår), høringer med lokale innspill, politikeroversikt, varsler og offentlige sak-/politiker-sider.',
+              'Saker og dokumenter fra Stortinget, AI-sammendrag, høringer med lokale innspill, politikeroversikt, varsler og offentlige sak-/politiker-sider.',
             status: 'completed',
             detail: (
               <p>

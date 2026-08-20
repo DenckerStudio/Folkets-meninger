@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ExternalLink, FileText, Loader2 } from 'lucide-react';
+import { ExternalLink, FileText, Loader2, Quote } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
+import { useSakShareOptional } from '@/components/sak/sak-share-context';
 import {
   groupSakDocumentsByKind,
   SAK_DOCUMENT_KIND_LABELS,
@@ -40,6 +41,7 @@ function SakDocumentViewer({
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState<DocumentContentResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const share = useSakShareOptional();
 
   useEffect(() => {
     let cancelled = false;
@@ -96,17 +98,34 @@ function SakDocumentViewer({
       description={SAK_DOCUMENT_KIND_LABELS[document.kind]}
       size="xl"
       footer={
-        document.sourceUrl ? (
-          <a
-            href={document.sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Åpne originalkilde
-          </a>
-        ) : null
+        <div className="flex flex-wrap items-center gap-3">
+          {share ? (
+            <button
+              type="button"
+              onClick={() =>
+                share.openQuoteShare({
+                  quote: '',
+                  sourceLabel: document.title,
+                })
+              }
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-brand"
+            >
+              <Quote className="h-4 w-4" />
+              Del sitat
+            </button>
+          ) : null}
+          {document.sourceUrl ? (
+            <a
+              href={document.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand/80"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Åpne originalkilde
+            </a>
+          ) : null}
+        </div>
       }
     >
       {loading ? (
@@ -227,8 +246,8 @@ export function SakDocumentsSection({
     <>
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-4 flex items-center gap-2">
-          <FileText className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-          <h2 className="text-lg font-bold text-foreground">Tilknyttede dokumenter</h2>
+          <FileText className="h-5 w-5 text-brand" />
+          <h2 className="text-lg font-semibold text-foreground">Saksdokumenter</h2>
         </div>
 
         <div className="space-y-5">
@@ -243,7 +262,7 @@ export function SakDocumentsSection({
                     <button
                       type="button"
                       onClick={() => setActiveDocument(doc)}
-                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-left transition-colors hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30"
+                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3 text-left transition-colors hover:border-border hover:bg-muted/60"
                     >
                       <span className="text-sm font-medium text-foreground">{doc.title}</span>
                       <span className="shrink-0 text-xs text-muted-foreground">

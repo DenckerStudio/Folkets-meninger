@@ -1,9 +1,10 @@
 'use client';
 
-import { ShieldCheck, BrainCircuit, Users, Sparkles, Tag } from 'lucide-react';
+import { ShieldCheck, BrainCircuit, Users, Sparkles, Tag, Quote } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import type { AiSummaryLegacy, AiSummaryV2, TopicCard } from '@/lib/ai-summary/types';
+import { useSakShareOptional } from '@/components/sak/sak-share-context';
 
 type SummaryData =
   | ({ version: 2 } & AiSummaryV2 & { cached?: boolean })
@@ -140,13 +141,13 @@ export default function AiSummary({
 
   if (loading) {
     return (
-      <div className="bg-gradient-to-br from-indigo-50 to-white rounded-2xl border border-indigo-100 dark:border-indigo-900/50 p-8 animate-pulse">
-        <div className="h-6 bg-indigo-100 dark:bg-indigo-950/50 rounded w-1/3 mb-6"></div>
-        {statusMessage && <div className="text-sm text-indigo-700 dark:text-indigo-300 mb-3">{statusMessage}</div>}
+      <div className="rounded-2xl border border-border bg-card p-5 animate-pulse sm:p-6">
+        <div className="mb-6 h-6 w-1/3 rounded bg-muted"></div>
+        {statusMessage && <div className="mb-3 text-sm text-muted-foreground">{statusMessage}</div>}
         <div className="space-y-4">
-          <div className="h-4 bg-indigo-50 dark:bg-indigo-950/40 rounded w-full"></div>
-          <div className="h-4 bg-indigo-50 dark:bg-indigo-950/40 rounded w-5/6"></div>
-          <div className="h-4 bg-indigo-50 dark:bg-indigo-950/40 rounded w-4/6"></div>
+          <div className="h-4 w-full rounded bg-muted"></div>
+          <div className="h-4 w-5/6 rounded bg-muted"></div>
+          <div className="h-4 w-4/6 rounded bg-muted"></div>
         </div>
       </div>
     );
@@ -158,12 +159,12 @@ export default function AiSummary({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-gradient-to-br from-indigo-50 to-white rounded-2xl border border-indigo-100 dark:border-indigo-900/50 p-8 shadow-sm"
+      className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6"
     >
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-foreground flex items-center">
-          <ShieldCheck className="w-6 h-6 text-indigo-600 dark:text-indigo-400 mr-2" />
-          AI-forklart (nøytral)
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="flex items-center text-lg font-semibold text-foreground">
+          <ShieldCheck className="mr-2 h-5 w-5 text-brand" />
+          AI-forklart
         </h2>
         <div className="flex items-center gap-2">
           {data.cached && (
@@ -186,14 +187,16 @@ export default function AiSummary({
 }
 
 function V2Summary({ data }: { data: AiSummaryV2 & { cached?: boolean } }) {
+  const share = useSakShareOptional();
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {data.labels.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {data.labels.map((label) => (
             <span
               key={label}
-              className="inline-flex items-center gap-1 rounded-full bg-card border border-indigo-100 dark:border-indigo-900/50 px-3 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-300"
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-foreground"
             >
               <Tag className="w-3 h-3" />
               {label}
@@ -202,34 +205,53 @@ function V2Summary({ data }: { data: AiSummaryV2 & { cached?: boolean } }) {
         </div>
       )}
 
-      <p className="text-foreground text-sm leading-relaxed">{data.narrative}</p>
+      <div>
+        <div className="mb-2 flex items-center justify-end">
+          {share && data.narrative ? (
+            <button
+              type="button"
+              onClick={() =>
+                share.openQuoteShare({
+                  quote: data.narrative.slice(0, 600),
+                  sourceLabel: 'AI-sammendrag',
+                })
+              }
+              className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+              <Quote className="h-3.5 w-3.5" />
+              Del sitat
+            </button>
+          ) : null}
+        </div>
+        <p className="text-sm leading-relaxed text-foreground">{data.narrative}</p>
+      </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="bg-emerald-50 rounded-xl p-5">
-          <div className="flex items-center text-emerald-600 dark:text-emerald-400 font-semibold mb-2">
-            <Users className="w-5 h-5 mr-2" />
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-xl bg-muted/40 p-4">
+          <div className="mb-2 flex items-center font-semibold text-foreground">
+            <Users className="mr-2 h-4 w-4 text-muted-foreground" />
             Hvem berøres?
           </div>
-          <p className="text-foreground text-sm leading-relaxed">{data.who_affected}</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">{data.who_affected}</p>
         </div>
-        <div className="bg-violet-50 rounded-xl p-5">
-          <div className="flex items-center text-violet-600 dark:text-violet-400 font-semibold mb-2">
-            <Sparkles className="w-5 h-5 mr-2" />
+        <div className="rounded-xl bg-muted/40 p-4">
+          <div className="mb-2 flex items-center font-semibold text-foreground">
+            <Sparkles className="mr-2 h-4 w-4 text-muted-foreground" />
             Hvordan berøres de?
           </div>
-          <p className="text-foreground text-sm leading-relaxed">{data.how_affected}</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">{data.how_affected}</p>
         </div>
       </div>
 
       {data.topic_cards.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3">
           {data.topic_cards.map((card) => (
-            <div key={card.title} className="bg-indigo-50 dark:bg-indigo-950/40 rounded-xl p-5">
-              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold mb-2">
-                <BrainCircuit className="w-5 h-5 mr-2" />
+            <div key={card.title} className="rounded-xl border border-border p-4">
+              <div className="mb-2 flex items-center font-semibold text-foreground">
+                <BrainCircuit className="mr-2 h-4 w-4 text-muted-foreground" />
                 {card.title}
               </div>
-              <p className="text-foreground text-sm leading-relaxed">{card.body}</p>
+              <p className="text-sm leading-relaxed text-muted-foreground">{card.body}</p>
             </div>
           ))}
         </div>
