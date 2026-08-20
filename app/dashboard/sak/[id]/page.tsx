@@ -244,7 +244,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
 
         {(emner.length > 0 || stikkord.length > 0) ? (
           <div className="flex flex-wrap gap-2">
-            {emner.map((e: { navn?: string } | string, i: number) => (
+            {emner.map((e, i) => (
               <span
                 key={`e-${i}`}
                 className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground"
@@ -253,7 +253,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                 {typeof e === 'object' ? e.navn : e}
               </span>
             ))}
-            {stikkord.map((s: { navn?: string } | string, i: number) => (
+            {stikkord.map((s, i) => (
               <span
                 key={`s-${i}`}
                 className="inline-flex items-center rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground"
@@ -268,7 +268,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
           <section className="space-y-2">
             <h2 className="text-lg font-semibold text-foreground">Relaterte saker</h2>
             <div className="space-y-2">
-              {relaterteSaker.map((rel: { relatert_sak?: { id?: string; korttittel?: string; tittel?: string }; relasjonstype?: string }, i: number) => {
+              {relaterteSaker.map((rel, i) => {
                 const relSak = rel.relatert_sak;
                 if (!relSak?.id) return null;
                 return (
