@@ -1,6 +1,10 @@
 import { cookies } from 'next/headers';
+import type { Metadata } from 'next';
 import { getSakPageBundle, type StortingetSakDetail } from '@/lib/stortinget';
 import { hasJoinedReddit, redditNeedsJoin, REDDIT_JOINED_COOKIE } from '@/lib/reddit-oauth';
+import { getAiSummaryFromDb } from '@/lib/ai-summary/service';
+import type { AiSummary } from '@/lib/ai-summary/types';
+import { buildSakShareDescription, buildSakShareMeta, type SakShareMeta } from '@/lib/share';
 import { classifySakKind, getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { SakProcessingBadge, SakStatusBadge } from '@/components/sak/sak-meta';
@@ -26,6 +30,72 @@ import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import { getPollByStortingetIssueId } from '@/lib/polls/service';
 
 export const dynamic = 'force-dynamic';
+
+function sakOpenGraphMetadata(meta: SakShareMeta): Metadata {
+  return {
+    title: `${meta.title} | Folkets Stemme`,
+    description: meta.description,
+    alternates: { canonical: meta.url },
+    openGraph: {
+      type: 'article',
+      locale: 'nb_NO',
+      siteName: 'Folkets Stemme',
+      title: meta.title,
+      description: meta.description,
+      url: meta.url,
+    },
+    twitter: {
+      card: 'summary',
+      title: meta.title,
+      description: meta.description,
+    },
+  };
+}
+
+function aiNarrativeForShare(ai: AiSummary | null): string | null {
+  if (!ai) return null;
+  switch (ai.version) {
+    case 2:
+      return ai.narrative;
+    case 1:
+      return ai.hva;
+    default: {
+      const _exhaustive: never = ai;
+      return _exhaustive;
+    }
+  }
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const [bundle, ai] = await Promise.all([getSakPageBundle(id), getAiSummaryFromDb(id)]);
+  if (!bundle) {
+    return { title: 'Sak | Folkets Stemme' };
+  }
+
+  const { sak, detail } = bundle;
+  const description = buildSakShareDescription({
+    title: sak.title,
+    summary: sak.summary,
+    category: sak.category,
+    henvisning: sak.henvisning ?? detail.henvisning,
+    innstillingstekst: detail.innstillingstekst,
+    kortvedtak: detail.kortvedtak,
+    aiNarrative: aiNarrativeForShare(ai),
+  });
+
+  return sakOpenGraphMetadata(
+    buildSakShareMeta({
+      sakId: sak.id,
+      title: sak.title,
+      description,
+    }),
+  );
+}
 
 function formatEventDate(dateStr: string | null): string | null {
   if (!dateStr || dateStr.startsWith('01.01.0001')) return null;

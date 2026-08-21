@@ -64,6 +64,8 @@ Important constraints:
   After that, Reddit is a destination under **Del**. Requires `REDDIT_CLIENT_ID` /
   `REDDIT_CLIENT_SECRET` from a Reddit web app with redirect
   `https://YOUR_DOMAIN/api/reddit/callback`.
+- Sak pages emit Open Graph title, description, and canonical URL so Reddit link
+  previews show the sak — not a generic dashboard title.
 - Høringer are fetched live from Stortinget, not cached in Postgres. Local
   "innspill" are public app comments and are not sent to Stortinget.
 - Sak treatment labels are resolved from multiple Stortinget sources because

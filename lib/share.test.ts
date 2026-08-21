@@ -8,6 +8,10 @@ import {
   sakAbsoluteUrl,
   shareChannelUrl,
   twitterIntentUrl,
+  siteOrigin,
+  buildSakShareDescription,
+  buildSakShareMeta,
+  clampShareDescription,
 } from '@/lib/share';
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -40,6 +44,32 @@ assert(
     'https://folketsstemme.no/dashboard/sak/200329',
   'absolute sak url',
 );
+
+assert(siteOrigin() === 'https://folketsstemme.no', 'default site origin');
+assert(
+  buildSakShareDescription({
+    title: 'Kort tittel',
+    aiNarrative: 'Dette er AI-sammendraget som Reddit skal vise.',
+    summary: 'Ikke denne',
+  }) === 'Dette er AI-sammendraget som Reddit skal vise.',
+  'og prefers ai narrative',
+);
+assert(
+  buildSakShareDescription({
+    title: 'Sak',
+    innstillingstekst: '<p>Innstilling  om  klima</p>',
+  }).includes('Innstilling om klima'),
+  'og strips html from innstilling',
+);
+assert(clampShareDescription('a'.repeat(250)).endsWith('…'), 'og description truncated');
+const og = buildSakShareMeta({
+  sakId: '200329',
+  title: 'Endringer i forretningsorden',
+  description: 'Kort beskrivelse',
+});
+assert(og.title === 'Endringer i forretningsorden', 'og title');
+assert(og.description === 'Kort beskrivelse', 'og description');
+assert(og.url.endsWith('/dashboard/sak/200329'), 'og canonical sak url');
 
 const quoteText = formatQuoteShareText({
   quote: 'Folkets mening teller',

@@ -19,6 +19,9 @@ test.describe('Folkets Stemme smoke', () => {
     await page.getByRole('button', { name: /^Del$|^Kopiert$/ }).click();
     await expect(page.getByRole('menuitem', { name: /^Reddit$/ })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Hva mener du?' })).toHaveCount(0);
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', /.+/);
+    await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', /.+/);
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', /\/dashboard\/sak\/200329/);
   });
 
   test('legacy forum path redirects toward utforsk or login', async ({ page }) => {

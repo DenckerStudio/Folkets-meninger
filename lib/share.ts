@@ -16,9 +16,71 @@ export type SharePayload = {
   sourceLabel?: string;
 };
 
+export type SakShareMeta = {
+  title: string;
+  description: string;
+  url: string;
+};
+
+const DEFAULT_SITE_ORIGIN = 'https://folketsstemme.no';
+const OG_DESCRIPTION_MAX = 200;
+
+export function siteOrigin(): string {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  return raw && raw.length > 0 ? raw.replace(/\/$/, '') : DEFAULT_SITE_ORIGIN;
+}
+
 export function sakAbsoluteUrl(origin: string, sakId: string): string {
   const base = origin.replace(/\/$/, '');
   return `${base}${routes.sak(sakId)}`;
+}
+
+export function clampShareDescription(text: string, max = OG_DESCRIPTION_MAX): string {
+  const cleaned = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (cleaned.length <= max) return cleaned;
+  return `${cleaned.slice(0, max - 1).trimEnd()}…`;
+}
+
+export function buildSakShareDescription(input: {
+  title: string;
+  summary?: string | null;
+  category?: string | null;
+  henvisning?: string | null;
+  innstillingstekst?: string | null;
+  kortvedtak?: string | null;
+  aiNarrative?: string | null;
+}): string {
+  const ai = input.aiNarrative?.trim();
+  if (ai) return clampShareDescription(ai);
+
+  const innstilling = input.innstillingstekst?.trim();
+  if (innstilling) return clampShareDescription(innstilling);
+
+  const vedtak = input.kortvedtak?.trim();
+  if (vedtak) return clampShareDescription(vedtak);
+
+  const summary = input.summary?.trim();
+  if (summary && summary !== input.title) return clampShareDescription(summary);
+
+  const bits = [
+    input.henvisning?.trim() || null,
+    input.category?.trim() || null,
+    'Nøytral saksoversikt fra Stortinget — Folkets Stemme',
+  ].filter((bit): bit is string => Boolean(bit));
+  return clampShareDescription(bits.join('. '));
+}
+
+export function buildSakShareMeta(input: {
+  sakId: string;
+  title: string;
+  description: string;
+}): SakShareMeta {
+  const title = input.title.replace(/\s+/g, ' ').trim() || 'Sak';
+  return {
+    title,
+    description: clampShareDescription(input.description),
+    url: sakAbsoluteUrl(siteOrigin(), input.sakId),
+  };
 }
 
 export function formatQuoteShareText(input: {
