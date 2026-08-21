@@ -11,9 +11,17 @@ test.describe('Folkets Stemme smoke', () => {
     await expect(page.getByText(/MinID kommer senere/i)).toBeVisible();
   });
 
-  test('public sak route responds', async ({ page }) => {
+  test('public sak page has share actions and no sak vote widget', async ({ page }) => {
+    test.setTimeout(60_000);
     const res = await page.goto('/dashboard/sak/200329');
     expect(res?.status()).toBeLessThan(500);
+    await expect(page.getByRole('button', { name: /^Del$|^Kopiert$/ })).toBeVisible({ timeout: 45_000 });
+    await page.getByRole('button', { name: /^Del$|^Kopiert$/ }).click();
+    await expect(page.getByRole('menuitem', { name: /^Reddit$/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hva mener du?' })).toHaveCount(0);
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', /.+/);
+    await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', /.+/);
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', /\/dashboard\/sak\/200329/);
   });
 
   test('legacy forum path redirects toward utforsk or login', async ({ page }) => {

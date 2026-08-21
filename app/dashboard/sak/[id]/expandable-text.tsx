@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Quote } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useSakShareOptional } from '@/components/sak/sak-share-context';
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -18,6 +19,7 @@ export default function ExpandableText({
   maxLength?: number;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const share = useSakShareOptional();
 
   if (!text) return null;
 
@@ -26,7 +28,24 @@ export default function ExpandableText({
 
   return (
     <div className="mb-6 last:mb-0">
-      <h3 className="text-sm font-bold text-indigo-900 dark:text-indigo-200 uppercase tracking-wider mb-2">{title}</h3>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3>
+        {share ? (
+          <button
+            type="button"
+            onClick={() =>
+              share.openQuoteShare({
+                quote: displayText.slice(0, 600),
+                sourceLabel: title,
+              })
+            }
+            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
+            <Quote className="h-3.5 w-3.5" />
+            Del sitat
+          </button>
+        ) : null}
+      </div>
       <div className="relative">
         <motion.div
           layout
@@ -36,13 +55,14 @@ export default function ExpandableText({
           {displayText}
         </motion.div>
         {!isExpanded && isLong && (
-          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-card to-transparent pointer-events-none" />
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-card to-transparent" />
         )}
       </div>
       {isLong && (
         <button
+          type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="mt-2 inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+          className="mt-2 inline-flex items-center text-sm font-medium text-brand hover:text-brand/80"
         >
           {isExpanded ? (
             <>

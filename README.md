@@ -58,9 +58,14 @@ Important constraints:
   authentication; the rest of `/dashboard/*` requires a Supabase session.
 - Høringer live under `/dashboard/horinger` and `/dashboard/horinger/[id]`.
   `/horinger` redirects there, so browsing and local comments require login.
-- Sak votes are For/Mot/Avstår. National polls under Avstemninger use Ja/Nei/Blank.
-- Votes are accepted only while a sak is open. The app and `cast_vote` RPC both
-  check `status`, `ferdigbehandlet`, and `voting_closes_at`.
+- Sak pages are source documents. National polls under Avstemninger use Ja/Nei/Blank.
+- Sak voting UI is not shown on the sak page. Related open polls, if any, link to Avstemninger.
+- Reddit: first visit can invite the user to log in once and join `r/Folkets_meninger`.
+  After that, Reddit is a destination under **Del**. Requires `REDDIT_CLIENT_ID` /
+  `REDDIT_CLIENT_SECRET` from a Reddit web app with redirect
+  `https://YOUR_DOMAIN/api/reddit/callback`.
+- Sak pages emit Open Graph title, description, and canonical URL so Reddit link
+  previews show the sak — not a generic dashboard title.
 - Høringer are fetched live from Stortinget, not cached in Postgres. Local
   "innspill" are public app comments and are not sent to Stortinget.
 - Sak treatment labels are resolved from multiple Stortinget sources because

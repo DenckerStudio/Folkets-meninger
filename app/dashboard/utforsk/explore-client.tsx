@@ -192,23 +192,23 @@ export default function ExploreClient({
         <div className="rounded-2xl border border-brand/20 bg-brand/5 px-5 py-4">
           <p className="text-sm font-medium text-foreground">Gi din første stemme</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Saker bruker For/Mot/Avstår. Nasjonale avstemninger bruker Ja/Nei/Blank.
+            Nasjonale avstemninger bruker Ja, Nei eller Blank. Denne listen er kildedokumenter fra Stortinget.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {firstOpenIssue ? (
-              <Link
-                href={routes.sak(String(firstOpenIssue.id))}
-                className="inline-flex items-center rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand/90"
-              >
-                Åpne en sak
-              </Link>
-            ) : null}
             <Link
               href={routes.avstemninger}
-              className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              className="inline-flex items-center rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand/90"
             >
               Gå til avstemninger
             </Link>
+            {firstOpenIssue ? (
+              <Link
+                href={routes.sak(String(firstOpenIssue.id))}
+                className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              >
+                Les en sak
+              </Link>
+            ) : null}
           </div>
         </div>
       ) : null}
