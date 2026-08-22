@@ -1,6 +1,7 @@
 import { EyeOff, ShieldCheck, UserCircle } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { BackButton } from '@/components/dashboard/back-button';
+import { KnowledgeBadges } from '@/components/profile/knowledge-badges';
 import { activityVisibilityLabel } from '@/lib/identity/activity-visibility';
 import { getPublicProfile } from '@/lib/public-profile';
 import { routes } from '@/lib/routes';
@@ -64,10 +65,18 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
           Deling: {activityVisibilityLabel(profile.activityVisibility)}
         </p>
         {shareActivity ? (
-          <dl className="mt-4 grid grid-cols-2 gap-3">
-            <StatCard label="Stemmer avgitt" value={profile.stats.votesCast ?? 0} />
-            <StatCard label="Høringsinnspill" value={profile.stats.hearingComments ?? 0} />
-          </dl>
+          <>
+            <dl className="mt-4 grid grid-cols-2 gap-3">
+              <StatCard label="Stemmer avgitt" value={profile.stats.votesCast ?? 0} />
+              <StatCard label="Høringsinnspill" value={profile.stats.hearingComments ?? 0} />
+            </dl>
+            {profile.badges.length > 0 ? (
+              <div className="mt-5">
+                <h3 className="mb-3 text-sm font-semibold text-foreground">Kunnskapsmerker</h3>
+                <KnowledgeBadges earned={profile.badges} />
+              </div>
+            ) : null}
+          </>
         ) : (
           <p className="mt-4 text-sm text-muted-foreground">
             Brukeren har valgt å ikke dele aktivitet offentlig.

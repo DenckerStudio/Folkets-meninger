@@ -206,6 +206,7 @@ Vercel **Hobby** har ikke Cron Jobs (krever Pro). n8n scheduler kaller appens be
 | Daglig 03:00 | `GET /api/cron/sync-issues` |
 | Daglig 04:00 | `GET /api/cron/categories` |
 | Daglig 04:30 | `GET /api/cron/labels` |
+| Daglig 06:00 | `GET /api/cron/package-counter-proposals` |
 | Daglig 07:00 | `GET /api/cron/digest?frequency=daily` |
 | Mandag 07:30 | `GET /api/cron/digest?frequency=weekly` |
 
@@ -227,6 +228,19 @@ Manuell test:
 ```bash
 curl -sS -H "x-cron-secret: $CRON_SECRET" \
   "https://www.folkets-stemme.no/api/cron/sync-issues"
+```
+
+## Motforslag horingsinnspill
+
+Workflow-kilde: [`hearing-innspill-package.workflow.ts`](hearing-innspill-package.workflow.ts)
+
+Appen kaller `N8N_HEARING_INNSPILL_WEBHOOK_URL` når et motforslag når
+støtteterskelen. n8n mottar JSON + Markdown. Dette er **ikke** innsending til
+et Stortinget-API — rapporten e-postes/lagres, og offisielt innspill lastes
+opp på stortinget.no.
+
+```bash
+N8N_HEARING_INNSPILL_WEBHOOK_URL=https://n8n.heyklever.app/webhook/folkets-hearing-innspill
 ```
 
 ## Deploy fra repo

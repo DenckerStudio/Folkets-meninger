@@ -28,6 +28,14 @@ function statusLabel(status: string, viewable: boolean): string {
   return 'Venter';
 }
 
+function markDocumentRead(sakId: string, documentId: string) {
+  void fetch(`/api/sak/${sakId}/knowledge`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'read_document', documentId }),
+  }).catch(() => {});
+}
+
 function SakDocumentViewer({
   sakId,
   document,
@@ -87,6 +95,14 @@ function SakDocumentViewer({
       cancelled = true;
     };
   }, [sakId, document.id]);
+
+  useEffect(() => {
+    if (content?.status !== 'ready' && content?.status !== 'external_only') return;
+    const timer = window.setTimeout(() => {
+      markDocumentRead(sakId, document.id);
+    }, 8_000);
+    return () => window.clearTimeout(timer);
+  }, [sakId, document.id, content?.status]);
 
   return (
     <Dialog

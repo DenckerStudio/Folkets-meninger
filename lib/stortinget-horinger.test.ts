@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  findHoringerForSak,
   formatStortingetDate,
   getHoringApplicationDeadline,
   getHoringInnspillDeadline,
@@ -47,5 +48,14 @@ const aktivOpen = {
 };
 assert.equal(getHoringStatusKind(aktivOpen), 'open');
 assert.equal(isHoringOpen(aktivOpen), true);
+
+const linked = findHoringerForSak(
+  [
+    { id: 'h1', horing_sak_info_liste: [{ sak_id: 200211 }] },
+    { id: 'h2', horing_sak_info_liste: [{ sak_id: 1 }] },
+  ],
+  '200211',
+);
+assert.deepEqual(linked.map((h) => h.id), ['h1']);
 
 console.log('stortinget-horinger.test.ts: ok');

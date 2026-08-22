@@ -63,6 +63,7 @@ The canonical template is `.env.example`.
 | `CRON_SECRET` | Protects `/api/cron/*` endpoints; n8n sends it as `x-cron-secret` |
 | `N8N_AI_SUMMARY_WEBHOOK_URL` | Trigger missing sak AI summaries |
 | `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL` | Trigger pending document chunk embeddings |
+| `N8N_HEARING_INNSPILL_WEBHOOK_URL` | Trigger n8n packaging of motforslag hearing reports |
 | `ADMIN_EMAILS` | Comma-separated admin allowlist (legacy `FORUM_ADMIN_EMAILS` still read as fallback) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Notification and welcome email delivery |
 | `STORTINGET_SESSION_ID`, `STORTINGET_PERIODE_ID` | Server defaults for Stortinget data |
@@ -197,8 +198,25 @@ The canonical template is `.env.example`.
 - Channels in UI: `categories`, `labels` (forum/mentions removed).
 - `/api/cron/digest?frequency=daily|weekly` sends digest emails with SMTP env
   vars and advances `last_digest_sent_at_by_channel`.
-- `/api/cron/categories` and `/api/cron/sync-issues` are also protected by
-  `CRON_SECRET`.
+- `/api/cron/categories`, `/api/cron/sync-issues`, and
+  `/api/cron/package-counter-proposals` are also protected by `CRON_SECRET`.
+
+### Kunnskapspoeng, merker og motforslag
+
+- Knowledge points reuse `award_user_points` (not forum likes). Awards:
+  quiz pass (+15), document read after 8s in the viewer (+5), constructive
+  motforslag (+20) or hearing comment (+10).
+- Badges: Informert borger (1 quiz), Saksforsker (3 document reads),
+  Fylkesekspert (self-declared `users.fylke_code` + 1 quiz). BankID is not
+  required and `fylke_verified` stays false.
+- In-app knowledge quiz is grounded in sak title/summary/komité/AI summary.
+  Typebot is not wired; the same award path can later accept an external
+  webhook.
+- Motforslag live on the sak page (`counter_proposals`). Threshold default 10.
+  When reached, the app packages a Markdown/JSON report and fires
+  `N8N_HEARING_INNSPILL_WEBHOOK_URL`. This is **not** a Stortinget submit API —
+  official innspill still goes via stortinget.no. Schema:
+  `supabase/migrations/20260822120000_knowledge_and_counter_proposals.sql`.
 
 ### Admin, stats, and valgomat
 

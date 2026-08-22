@@ -2,11 +2,18 @@
 
 import { LogOut, Shield } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
+import { KnowledgeBadges } from '@/components/profile/knowledge-badges';
+import { PointsProgress } from '@/components/profile/points-progress';
+import type { EarnedBadge } from '@/lib/knowledge/types';
+import type { UserPointsProgress } from '@/lib/user-points-levels';
 import { cn } from '@/lib/utils';
 
 type ProfileHeroProps = {
   user: User;
   voteCount: number;
+  points?: number;
+  pointsProgress?: UserPointsProgress | null;
+  badges?: EarnedBadge[];
   onSignOut: () => void;
 };
 
@@ -23,7 +30,14 @@ function initialsFromUser(user: User): string {
   return email.slice(0, 2).toUpperCase() || '?';
 }
 
-export function ProfileHero({ user, voteCount, onSignOut }: ProfileHeroProps) {
+export function ProfileHero({
+  user,
+  voteCount,
+  points = 0,
+  pointsProgress = null,
+  badges = [],
+  onSignOut,
+}: ProfileHeroProps) {
   const displayName =
     (user.user_metadata?.full_name as string | undefined) || user.email || 'Bruker';
 
@@ -58,12 +72,17 @@ export function ProfileHero({ user, voteCount, onSignOut }: ProfileHeroProps) {
             Logg ut
           </button>
         </div>
-        <dl className="mt-5 grid grid-cols-1 gap-3 max-w-xs">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl bg-muted/40 border border-border px-4 py-3">
-            <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Stemmer avgitt</dt>
-            <dd className="text-2xl font-bold text-brand mt-0.5">{voteCount}</dd>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Stemmer avgitt</p>
+            <p className="text-2xl font-bold text-brand mt-0.5">{voteCount}</p>
           </div>
-        </dl>
+          <PointsProgress points={points} progress={pointsProgress} />
+        </div>
+        <div className="mt-5">
+          <h2 className="mb-3 text-sm font-semibold text-foreground">Kunnskapsmerker</h2>
+          <KnowledgeBadges earned={badges} />
+        </div>
       </div>
     </div>
   );

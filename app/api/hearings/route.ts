@@ -3,6 +3,9 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { PUBLIC_IDENTITY_ERROR } from '@/lib/identity/public-identity';
+import { isConstructiveArgument } from '@/lib/knowledge/constructive';
+import { hearingCommentAward } from '@/lib/knowledge/award';
+import { syncUserBadges } from '@/lib/knowledge/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +45,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: PUBLIC_IDENTITY_ERROR }, { status: 400 });
       }
       return NextResponse.json({ error: 'Kunne ikke publisere innspill' }, { status: 500 });
+    }
+
+    if (isConstructiveArgument(body.trim()) && data) {
+      await hearingCommentAward(user.id, String(data));
+      await syncUserBadges(user.id);
     }
 
     return NextResponse.json({ success: true, commentId: data });

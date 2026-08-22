@@ -5,6 +5,8 @@ import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { userHasPublicIdentity } from '@/lib/identity/public-identity';
 import { parseActivityVisibility } from '@/lib/identity/activity-visibility';
 import { getUserPointsProfile } from '@/lib/user-points-profile';
+import { listUserBadges, syncUserBadges } from '@/lib/knowledge/service';
+import { isNorwayCountyCode } from '@/lib/polls/norway-counties';
 import {
   canAwardProfileCompletePoints,
   getUserVerificationStatus,
@@ -23,7 +25,7 @@ export async function GET() {
   const service = getServiceSupabase();
   let { data, error } = await service
     .from('users')
-    .select('first_name, last_name, name, email, bio, party_preference, profile_is_public, show_party_preference, avatar_url, activity_visibility')
+    .select('first_name, last_name, name, email, bio, party_preference, profile_is_public, show_party_preference, avatar_url, activity_visibility, fylke_code')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -42,6 +44,7 @@ export async function GET() {
           show_party_preference: false,
           avatar_url: '',
           activity_visibility: 'private',
+          fylke_code: null,
         }
       : null;
     error = fallback.error;
@@ -51,7 +54,10 @@ export async function GET() {
     return NextResponse.json({ error: 'Kunne ikke hente profil' }, { status: 500 });
   }
 
-  const pointsProfile = await getUserPointsProfile(user.id);
+  const [pointsProfile, badges] = await Promise.all([
+    getUserPointsProfile(user.id),
+    listUserBadges(user.id),
+  ]);
   const verification = getUserVerificationStatus(user);
 
   return NextResponse.json({
@@ -67,6 +73,8 @@ export async function GET() {
     points: pointsProfile.points,
     points_progress: pointsProfile.progress,
     recent_points: pointsProfile.recent,
+    badges,
+    fylke_code: (data as { fylke_code?: string | null } | null)?.fylke_code ?? null,
     verification,
     profile_bio_min_length: PROFILE_BIO_MIN_LENGTH,
     profile_points_eligible: canAwardProfileCompletePoints({
@@ -136,6 +144,13 @@ export async function PATCH(request: Request) {
   if ('activity_visibility' in body) {
     profilePatch.activity_visibility = parseActivityVisibility(body.activity_visibility);
   }
+  if ('fylke_code' in body) {
+    const raw = typeof body.fylke_code === 'string' ? body.fylke_code.trim() : '';
+    if (raw && !isNorwayCountyCode(raw)) {
+      return NextResponse.json({ error: 'Ugyldig fylke' }, { status: 400 });
+    }
+    profilePatch.fylke_code = raw || null;
+  }
 
   let updatedProfile:
     | {
@@ -175,7 +190,14 @@ export async function PATCH(request: Request) {
         .eq('id', user.id)
         .maybeSingle();
 
-  const pointsProfile = await getUserPointsProfile(user.id);
+  if ('fylke_code' in body) {
+    await syncUserBadges(user.id);
+  }
+
+  const [pointsProfile, badges] = await Promise.all([
+    getUserPointsProfile(user.id),
+    listUserBadges(user.id),
+  ]);
 
   return NextResponse.json({
     success: true,
@@ -185,6 +207,8 @@ export async function PATCH(request: Request) {
     has_public_identity: hasNameFields ? true : undefined,
     points: pointsProfile.points,
     points_progress: pointsProfile.progress,
+    badges,
+    fylke_code: 'fylke_code' in body ? profilePatch.fylke_code : undefined,
     verification,
     profile_points_eligible: canAwardProfileCompletePoints({
       bio: currentProfile?.bio,

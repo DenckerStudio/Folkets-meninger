@@ -1,5 +1,7 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { parseActivityVisibility, type ActivityVisibility } from '@/lib/identity/activity-visibility';
+import { listUserBadges } from '@/lib/knowledge/service';
+import type { EarnedBadge } from '@/lib/knowledge/types';
 
 export type PublicProfile = {
   id: string;
@@ -14,6 +16,7 @@ export type PublicProfile = {
     votesCast: number | null;
     hearingComments: number | null;
   };
+  badges: EarnedBadge[];
 };
 
 function initialsFromName(name: string): string {
@@ -91,5 +94,6 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
       votesCast,
       hearingComments,
     },
+    badges: shareActivity ? await listUserBadges(userId) : [],
   };
 }

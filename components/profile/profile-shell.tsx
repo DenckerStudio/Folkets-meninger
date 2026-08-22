@@ -17,7 +17,10 @@ import { ProfilePrivacy } from '@/components/profile/profile-privacy';
 import { ProfilePublicSettings } from '@/components/profile/profile-public-settings';
 import { ProfileAppPreferences } from '@/components/profile/profile-app-preferences';
 import { ProfileAdminLinks } from '@/components/profile/profile-admin-links';
+import { ProfileFylkePicker } from '@/components/profile/profile-fylke-picker';
 import { isProfileTabId, type ProfileTabId } from '@/components/profile/profile-tabs';
+import type { EarnedBadge } from '@/lib/knowledge/types';
+import type { UserPointsProgress } from '@/lib/user-points-levels';
 
 function resolveTab(tabParam: string | null): ProfileTabId {
   if (isProfileTabId(tabParam)) return tabParam;
@@ -43,6 +46,10 @@ export function ProfileShell() {
     labels: 'daily',
   });
   const [notifSaving, setNotifSaving] = useState(false);
+  const [points, setPoints] = useState(0);
+  const [pointsProgress, setPointsProgress] = useState<UserPointsProgress | null>(null);
+  const [badges, setBadges] = useState<EarnedBadge[]>([]);
+  const [fylkeCode, setFylkeCode] = useState<string | null>(null);
   useEffect(() => {
     if (!user) {
       setHistoryLoading(false);
@@ -71,6 +78,18 @@ export function ProfileShell() {
       .then((res) => res.json())
       .then((json) => {
         if (Array.isArray(json.labels)) setInterestLabels(json.labels);
+      })
+      .catch(() => {});
+
+    fetch('/api/user/profile', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((json) => {
+        if (typeof json.points === 'number') setPoints(json.points);
+        if (json.points_progress) setPointsProgress(json.points_progress);
+        if (Array.isArray(json.badges)) setBadges(json.badges);
+        if (typeof json.fylke_code === 'string' || json.fylke_code === null) {
+          setFylkeCode(json.fylke_code);
+        }
       })
       .catch(() => {});
 
@@ -123,6 +142,20 @@ export function ProfileShell() {
       notifFreq={notifFreq}
       notifSaving={notifSaving}
       onSignOut={handleSignOut}
+      points={points}
+      pointsProgress={pointsProgress}
+      badges={badges}
+      fylkeCode={fylkeCode}
+      onFylkeSaved={(code) => {
+        setFylkeCode(code);
+        fetch('/api/user/profile', { cache: 'no-store' })
+          .then((res) => res.json())
+          .then((json) => {
+            if (typeof json.points === 'number') setPoints(json.points);
+            if (Array.isArray(json.badges)) setBadges(json.badges);
+          })
+          .catch(() => {});
+      }}
       onCategoriesChange={setInterestCategories}
       onLabelsChange={setInterestLabels}
       onCategoriesSave={async () => {
@@ -206,6 +239,11 @@ type ProfileShellAuthenticatedProps = {
   notifFreq: Record<string, string>;
   notifSaving: boolean;
   onSignOut: () => void;
+  points: number;
+  pointsProgress: UserPointsProgress | null;
+  badges: EarnedBadge[];
+  fylkeCode: string | null;
+  onFylkeSaved: (code: string | null) => void;
   onCategoriesChange: (next: string[]) => void;
   onLabelsChange: (next: string[]) => void;
   onCategoriesSave: () => Promise<void>;
@@ -228,6 +266,11 @@ function ProfileShellAuthenticated({
   notifFreq,
   notifSaving,
   onSignOut,
+  points,
+  pointsProgress,
+  badges,
+  fylkeCode,
+  onFylkeSaved,
   onCategoriesChange,
   onLabelsChange,
   onCategoriesSave,
@@ -257,8 +300,12 @@ function ProfileShellAuthenticated({
       <ProfileHero
         user={user}
         voteCount={voteHistory.length}
+        points={points}
+        pointsProgress={pointsProgress}
+        badges={badges}
         onSignOut={onSignOut}
       />
+      <ProfileFylkePicker fylkeCode={fylkeCode} onSaved={onFylkeSaved} />
       <ProfileAdminLinks />
 
       <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8">

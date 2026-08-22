@@ -216,6 +216,13 @@ export function normalizeStortingetUrl(url: string | undefined): string | null {
   return url.startsWith('//') ? `https:${url}` : url;
 }
 
+export function findHoringerForSak(hearings: StortingetHoring[], sakId: string): StortingetHoring[] {
+  const id = String(sakId);
+  return hearings.filter((hearing) =>
+    (hearing.horing_sak_info_liste ?? []).some((sak) => String(sak.sak_id ?? '') === id),
+  );
+}
+
 export function sortHoringer(hearings: StortingetHoring[]): StortingetHoring[] {
   return [...hearings].sort((a, b) => {
     const kindOrder: Record<HoringStatusKind, number> = {

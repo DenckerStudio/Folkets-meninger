@@ -20,6 +20,8 @@ import { SakDocumentsSection } from '@/components/sak/sak-documents-section';
 import { SakPageActions } from '@/components/sak/sak-page-actions';
 import { ImpactCalculator } from '@/components/sak/impact-calculator';
 import { AlignmentScore } from '@/components/sak/alignment-score';
+import { KnowledgeQuiz } from '@/components/sak/knowledge-quiz';
+import { CounterProposals } from '@/components/sak/counter-proposals';
 import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
@@ -381,6 +383,14 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
           <SakDocumentsSection sakId={sak.id} initialDocuments={documents} />
         </FadeIn>
       ) : null}
+
+      <FadeIn delay={0.32} direction="up">
+        <KnowledgeQuiz sakId={sak.id} />
+      </FadeIn>
+
+      <FadeIn delay={0.33} direction="up">
+        <CounterProposals sakId={sak.id} />
+      </FadeIn>
 
       <FadeIn delay={0.35} direction="up">
         <div className="space-y-6">
