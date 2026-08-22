@@ -64,6 +64,10 @@ export const SAK_META_TOOLTIPS = {
     'Forslag fra én eller flere representanter om at Stortinget eller regjeringen skal gjøre noe bestemt.',
   underBehandling: 'Saken er fortsatt aktiv i Stortinget og er ikke ferdig avgjort.',
   ferdigbehandlet: 'Saken er avsluttet i Stortinget. Den kan fortsatt være relevant som historikk.',
+  konsekvensKalkulator:
+    'Anonymt anslag basert på saksdokumentene og AI-sammendraget. Opplysningene lagres bare på enheten din, og beløp vises bare når kilden faktisk oppgir tall.',
+  samsvarsScore:
+    'Sammenligner anonyme stemmer i appen med Stortingets offisielle votering for saken. Avstår i appen er ikke det samme som representanter som ikke var til stede.',
 } as const;
 
 export function getSakEventTooltip(eventId: string | null | undefined, label?: string | null): string | null {

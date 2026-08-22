@@ -177,6 +177,19 @@ The canonical template is `.env.example`.
   `reclaim_document_body_storage()`.
 - Backfill recent cached issues with `npx tsx scripts/backfill-sak-documents.ts 10`.
 
+### Konsekvens-kalkulator and samsvars-score
+
+- Sak page (`/dashboard/sak/<id>`) shows **Hva betyr saken for deg?** after the AI
+  summary. Anonymous fylke/housing/car/occupation stay in localStorage
+  (`folkets:impact:profile`). `POST /api/sak/[id]/impact` retrieves document
+  chunks (no embeddings column — egress) plus the AI summary and synthesizes a
+  personal effect. Kroner amounts are shown only when they appear in the source.
+- **Folkets vilje vs. Stortinget** sits after the ballot. It fetches
+  `data.stortinget.no/eksport/voteringer?sakid=` (1h revalidate), picks a
+  substantive votering, and scores gap vs app `get_issue_vote_totals`.
+  `ALIGNMENT_MIN_FOLK_VOTES = 5` before claiming folkets vilje. Pending saker
+  get an honest “Stortinget har ikke votert ennå” state.
+
 ### Notifications and cron
 
 - Notifications use `notification_preferences`,

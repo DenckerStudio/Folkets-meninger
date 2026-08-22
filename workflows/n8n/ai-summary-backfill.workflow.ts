@@ -350,6 +350,7 @@ Regler:
 - who_affected og how_affected skal alltid fylles ut
 - topic_cards er dynamiske (ikke fast hva/hvem/kostnad)
 - Ingen oppdiktede beløp; skriv «ukjent» eller «ikke omtalt» når kilden mangler tall
+- Når kilden har tall: ta med konkrete kroner, tidshorisont (år/måned) og hvem det gjelder (bileiere, leietakere, studenter, pensjonister, fylke)
 - labels skal være generelle emneord (f.eks. Skatt, Helse, Privatøkonomi), ikke hele setninger`;
 
 const ollamaChatModel = languageModel({

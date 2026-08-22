@@ -4,6 +4,7 @@ import {
   getSakEventTooltip,
   getSakKindLabel,
   getSakStepTooltip,
+  SAK_META_TOOLTIPS,
 } from './stortinget-sak-tooltips';
 
 assert.equal(
@@ -20,5 +21,7 @@ assert.equal(getSakKindLabel('lovforslag'), 'Lovforslag');
 assert.ok(getSakEventTooltip('FREMMET')?.includes('offisielt'));
 assert.ok(getSakEventTooltip('SENDT')?.includes('komité'));
 assert.ok(getSakStepTooltip('I komité')?.includes('Komiteen'));
+assert.ok(SAK_META_TOOLTIPS.konsekvensKalkulator.includes('Anonymt'));
+assert.ok(SAK_META_TOOLTIPS.samsvarsScore.includes('Stortingets'));
 
 console.log('stortinget sak tooltips tests passed');

@@ -177,7 +177,7 @@ curl -X POST "$N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL" \
 Supabase-migrasjoner: `20260617120000_sak_documents_rag.sql`,
 `20260807112603_document_chunks_storage_efficiency.sql`.
 
-AI-sammendrag (`ai-summary-backfill`) inkluderer nå `rag_chunks` i kontekst når dokumenter er ingestet.
+AI-sammendrag (`ai-summary-backfill`) inkluderer nå `rag_chunks` i kontekst når dokumenter er ingestet. Prompten ber også om konkrete grupper og kronebeløp når kilden har dem — brukes av konsekvens-kalkulatoren på sakssiden (`POST /api/sak/[id]/impact`).
 
 Backfill / deploy:
 

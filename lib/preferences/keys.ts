@@ -8,4 +8,7 @@ export const PREFERENCE_KEYS = {
   politikere: {
     search: 'folkets:politikere:search',
   },
+  impact: {
+    profile: 'folkets:impact:profile',
+  },
 } as const;

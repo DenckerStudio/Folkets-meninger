@@ -18,6 +18,9 @@ import ExpandableText from './expandable-text';
 import VotingSection from './voting-section';
 import { SakDocumentsSection } from '@/components/sak/sak-documents-section';
 import { SakPageActions } from '@/components/sak/sak-page-actions';
+import { ImpactCalculator } from '@/components/sak/impact-calculator';
+import { AlignmentScore } from '@/components/sak/alignment-score';
+import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
@@ -113,7 +116,10 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
   }
 
   const { sak, detail: detailedContent, issueMeta } = bundle;
-  const documents = await getSakDocumentsWithStatus(sak.id, detailedContent);
+  const [documents, voteringer] = await Promise.all([
+    getSakDocumentsWithStatus(sak.id, detailedContent),
+    fetchSakVoteringer(sak.id),
+  ]);
 
   const innstillingstekst = detailedContent?.innstillingstekst;
   const kortvedtak = detailedContent?.kortvedtak;
@@ -347,6 +353,10 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
         <AiSummary sakId={sak.id} title={sak.title} summary={detailedContent?.tittel || sak.summary} />
       </FadeIn>
 
+      <FadeIn delay={0.27} direction="up">
+        <ImpactCalculator sakId={sak.id} />
+      </FadeIn>
+
       <FadeIn delay={0.28} direction="up">
         <VotingSection
           initialVotes={sak.votes}
@@ -355,6 +365,14 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
           sakSummary={sak.summary}
           votingClosed={votingClosed}
           votingDaysLeft={votingWindow.daysLeft}
+        />
+      </FadeIn>
+
+      <FadeIn delay={0.29} direction="up">
+        <AlignmentScore
+          sakId={sak.id}
+          voteringer={voteringer}
+          initialFolk={sak.votes}
         />
       </FadeIn>
 

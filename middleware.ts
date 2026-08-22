@@ -75,6 +75,7 @@ export const config = {
     '/dashboard/:path*',
     '/api/vote/:path*',
     '/api/sak/:path*/ai-summary',
+    '/api/sak/:path*/impact',
     '/api/feedback',
   ],
 };

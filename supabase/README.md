@@ -356,6 +356,10 @@ App-side flow (storage-efficient):
 6. Document viewer (`/api/sak/[id]/documents/[docId]/content`) fetches HTML live
    from Stortinget when no legacy `content_html` cache exists.
 
+The sak impact calculator (`POST /api/sak/[id]/impact`) reads `document_chunks.content`
+(never the `embedding` column) plus `issue_ai_summaries` and only surfaces kroner
+amounts that appear in those sources.
+
 **Egress:** List/sync/overlay queries must not select full `detail_json`.
 Use denormalized columns + live list overlays. n8n AI-summary SQL projects a
 trimmed detail context instead of the full JSON blob.
