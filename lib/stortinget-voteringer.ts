@@ -23,7 +23,10 @@ export function isLawWholeVotering(votering: SakVotering): boolean {
 }
 
 export function voteringDecidedCount(votering: SakVotering): number {
-  return (votering.antall_for ?? 0) + (votering.antall_mot ?? 0);
+  const forCount = votering.antall_for ?? 0;
+  const againstCount = votering.antall_mot ?? 0;
+  if (forCount < 0 || againstCount < 0) return 0;
+  return forCount + againstCount;
 }
 
 function voteringTimeMs(votering: SakVotering): number {

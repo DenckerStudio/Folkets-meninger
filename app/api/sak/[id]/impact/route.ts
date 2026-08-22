@@ -15,7 +15,9 @@ export async function POST(
 
   const body = await request.json().catch(() => ({}));
   const profile = parseImpactProfile(body);
-  const result = await calculateSakImpact(id, profile);
+  const title = typeof body.title === 'string' ? body.title.slice(0, 300) : null;
+  const summary = typeof body.summary === 'string' ? body.summary.slice(0, 2000) : null;
+  const result = await calculateSakImpact(id, profile, { title, summary });
 
   return NextResponse.json(result);
 }

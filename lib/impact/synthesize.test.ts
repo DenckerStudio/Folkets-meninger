@@ -15,9 +15,12 @@ assert.equal(mentions[0]?.amountKr, 1800);
 assert.equal(mentions[0]?.direction, 'increase');
 assert.equal(mentions[0]?.kind, 'fee');
 
-const monthly = extractMoneyMentions('Studenter får 500 kr mer i støtte per måned.');
-assert.equal(monthly[0]?.amountKr, 6000);
-assert.equal(monthly[0]?.kind, 'benefit');
+const refund = extractMoneyMentions(
+  'Forslaget vil tilbakeføre klimaavgifter til innbyggerne, anslått til 4 000 kr i året per person.',
+);
+assert.equal(refund[0]?.amountKr, 4000);
+assert.equal(refund[0]?.kind, 'benefit');
+assert.equal(refund[0]?.direction, 'increase');
 
 const noBareNumber = extractMoneyMentions('Saken har nummer 12345 og ble fremmet i 2025.');
 assert.equal(noBareNumber.length, 0);
@@ -81,5 +84,14 @@ const noCar = synthesizeImpact({
   },
 });
 assert.notEqual(noCar.annualAmountKr, 1800);
+
+const thin = synthesizeImpact({
+  profile: parseImpactProfile({ occupation: 'employed' }),
+  chunks: [],
+  summary: null,
+  title: 'Representantforslag om klimaavgifter',
+});
+assert.match(thin.headline, /ikke nok saksdokumenter|klimaavgifter/i);
+assert.equal(thin.annualAmountKr, null);
 
 console.log('impact tests passed');

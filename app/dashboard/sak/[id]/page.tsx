@@ -354,7 +354,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
       </FadeIn>
 
       <FadeIn delay={0.27} direction="up">
-        <ImpactCalculator sakId={sak.id} />
+        <ImpactCalculator sakId={sak.id} sakTitle={sak.title} sakSummary={sak.summary} />
       </FadeIn>
 
       <FadeIn delay={0.28} direction="up">

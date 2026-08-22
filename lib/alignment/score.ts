@@ -1,6 +1,10 @@
 import { ALIGNMENT_MIN_FOLK_VOTES, type AlignmentComparison, type AlignmentSide, type AlignmentVerdict, type FolkVoteCounts, type SakVotering } from './types';
 import { pickPrimaryVotering, voteringDecidedCount } from '@/lib/stortinget-voteringer';
 
+function sanitizeCount(value: number | null | undefined): number {
+  return typeof value === 'number' && value > 0 ? value : 0;
+}
+
 function percent(part: number, total: number): number {
   if (total <= 0) return 0;
   return Math.round((part / total) * 100);
@@ -77,13 +81,18 @@ export function buildAlignmentComparison(
     };
   }
 
-  const stFor = votering.antall_for ?? 0;
-  const stAgainst = votering.antall_mot ?? 0;
-  const stAbsent = votering.antall_ikke_tilstede ?? 0;
+  const stFor = sanitizeCount(votering.antall_for);
+  const stAgainst = sanitizeCount(votering.antall_mot);
+  const stAbsent = sanitizeCount(votering.antall_ikke_tilstede);
   const stDecided = voteringDecidedCount(votering);
-  const stForPercent = percent(stFor, stDecided);
-  const stAgainstPercent = percent(stAgainst, stDecided);
-  const stSide: AlignmentSide = votering.vedtatt ? 'for' : sideFromCounts(stFor, stAgainst);
+  const hasElectronicCounts = stDecided > 0;
+  const stForPercent = hasElectronicCounts ? percent(stFor, stDecided) : null;
+  const stAgainstPercent = hasElectronicCounts ? percent(stAgainst, stDecided) : null;
+  const stSide: AlignmentSide = votering.vedtatt
+    ? 'for'
+    : hasElectronicCounts
+      ? sideFromCounts(stFor, stAgainst)
+      : 'against';
   const otherVoteringCount = Math.max(0, voteringer.length - 1);
 
   const stortinget = {
@@ -94,8 +103,12 @@ export function buildAlignmentComparison(
     adopted: Boolean(votering.vedtatt),
   };
 
+  const adoptedLabel = stortinget.adopted ? 'vedtok forslaget' : 'nedstemte forslaget';
+  const stCountHeadline = hasElectronicCounts
+    ? `Stortinget ${adoptedLabel} med ${stForPercent} % For og ${stAgainstPercent} % Mot.`
+    : `Stortinget ${adoptedLabel} uten elektronisk personlig votering.`;
+
   if (folkTotal < ALIGNMENT_MIN_FOLK_VOTES) {
-    const adoptedLabel = stortinget.adopted ? 'vedtok forslaget' : 'nedstemte forslaget';
     return {
       folk,
       folkForPercent,
@@ -109,7 +122,7 @@ export function buildAlignmentComparison(
       score: null,
       gapPoints: null,
       verdict: 'insufficient',
-      headline: `Stortinget ${adoptedLabel} med ${stForPercent} % For og ${stAgainstPercent} % Mot.`,
+      headline: stCountHeadline,
       summary: `Folkets mening vises når minst ${ALIGNMENT_MIN_FOLK_VOTES} anonyme stemmer er avgitt i appen.`,
       votering,
       otherVoteringCount,
@@ -117,16 +130,18 @@ export function buildAlignmentComparison(
   }
 
   const folkShare = folkDecided > 0 ? folk.for / folkDecided : 0;
-  const stShare = stDecided > 0 ? stFor / stDecided : 0;
+  const stShare = hasElectronicCounts ? stFor / stDecided : stortinget.adopted ? 1 : 0;
   const sameSide = folkSide !== 'tie' && stSide !== 'tie' && folkSide === stSide;
-  const score = alignmentScore(folkShare, stShare, sameSide);
-  const gapPoints = Math.round(Math.abs(folkShare - stShare) * 100);
+  const score = hasElectronicCounts ? alignmentScore(folkShare, stShare, sameSide) : sameSide ? 70 : 20;
+  const gapPoints = hasElectronicCounts ? Math.round(Math.abs(folkShare - stShare) * 100) : sameSide ? 0 : 100;
   const verdict = verdictFrom(score, sameSide);
 
   const folkPhrase = `${folkForPercent} % av brukerne stemte For`;
-  const stPhrase = stortinget.adopted
-    ? `Stortinget vedtok forslaget med ${stForPercent} % flertall`
-    : `Stortinget nedstemte forslaget med ${stAgainstPercent} % Mot`;
+  const stPhrase = hasElectronicCounts
+    ? stortinget.adopted
+      ? `Stortinget vedtok forslaget med ${stForPercent} % flertall`
+      : `Stortinget nedstemte forslaget med ${stAgainstPercent} % Mot`
+    : `Stortinget ${adoptedLabel} uten elektronisk personlig votering`;
 
   let headline = `${folkPhrase}. ${stPhrase}.`;
   if (!sameSide && folkSide === 'for') {

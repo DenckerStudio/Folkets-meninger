@@ -72,7 +72,15 @@ function amountTone(result: ImpactResult): string {
   return 'text-foreground';
 }
 
-export function ImpactCalculator({ sakId }: { sakId: string }) {
+export function ImpactCalculator({
+  sakId,
+  sakTitle,
+  sakSummary,
+}: {
+  sakId: string;
+  sakTitle?: string;
+  sakSummary?: string;
+}) {
   const headingId = useId();
   const showTooltips = useSakTooltipsEnabled();
   const [profile, setProfile] = useState<ImpactProfile>(EMPTY_IMPACT_PROFILE);
@@ -101,7 +109,11 @@ export function ImpactCalculator({ sakId }: { sakId: string }) {
         const res = await fetch(`/api/sak/${encodeURIComponent(sakId)}/impact`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(nextProfile),
+          body: JSON.stringify({
+            ...nextProfile,
+            title: sakTitle ?? null,
+            summary: sakSummary ?? null,
+          }),
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -117,7 +129,7 @@ export function ImpactCalculator({ sakId }: { sakId: string }) {
         setLoading(false);
       }
     },
-    [sakId],
+    [sakId, sakTitle, sakSummary],
   );
 
   useEffect(() => {

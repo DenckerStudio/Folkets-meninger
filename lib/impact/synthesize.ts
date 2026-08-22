@@ -156,19 +156,30 @@ function buildHeadline(args: {
   amount: number | null;
   kind: ImpactAmountKind | null;
   who: string | null;
+  title?: string | null;
+  hasSource: boolean;
 }): string {
   const you = userSituationPhrase(args.profile);
   if (args.amount != null && (args.direction === 'increase' || args.direction === 'decrease')) {
     return `Dette forslaget vil gi ${you} anslått ${formatKr(args.amount)} ${amountVerb(args.direction, args.kind)} i året.`;
   }
+  if (args.amount != null) {
+    return `Saken omtaler anslått ${formatKr(args.amount)} i året som kan gjelde ${you}.`;
+  }
   if (args.direction === 'mixed') {
     return `Som ${you} kan saken både gi og ta — dokumentene peker på flere motstridende økonomiske virkninger.`;
   }
   if (args.direction === 'none') {
+    if (!args.hasSource) {
+      return `Vi har ikke nok saksdokumenter inne ennå til å anslå kroner for ${you}.`;
+    }
     return `Ut fra dokumentene ser vi ingen konkret personlig pengeeffekt for ${you}.`;
   }
   if (args.who) {
     return `Som ${you} kan saken påvirke deg, men kilden oppgir ikke et konkret beløp for din situasjon.`;
+  }
+  if (args.title) {
+    return `Som ${you} kan «${args.title}» være relevant, men kilden oppgir ikke et konkret beløp.`;
   }
   return 'Vi fant ikke nok i dokumentene til å beregne en personlig kroneeffekt ennå.';
 }
@@ -182,6 +193,7 @@ export function synthesizeImpact(args: {
   const texts = summaryTexts(args.summary);
   const relevant = retrieveRelevantChunks(args.chunks, args.profile, 8);
   const corpus = [
+    args.title,
     texts.how,
     texts.who,
     texts.narrative,
@@ -217,6 +229,8 @@ export function synthesizeImpact(args: {
         amount,
         kind,
         who: texts.who,
+        title: args.title,
+        hasSource: args.chunks.length > 0 || Boolean(texts.who || texts.how),
       })
     : texts.who
       ? 'Velg noen anonyme opplysninger for å se hvordan saken kan treffe deg.'
@@ -225,6 +239,7 @@ export function synthesizeImpact(args: {
   const personalSummary = personalized
     ? matching[0]?.summary ??
       texts.how ??
+      args.title ??
       'Dokumentene beskriver saken, men kobler den ikke tydelig til din situasjon.'
     : texts.how ??
       'Kalkulatoren bruker saksdokumentene og AI-sammendraget til å anslå effekten for deg.';

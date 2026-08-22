@@ -20,6 +20,17 @@ function parseNorwegianAmount(raw: string): number | null {
   return Math.round(value);
 }
 
+function nearestMatchDistance(text: string, index: number, pattern: RegExp): number | null {
+  let best: number | null = null;
+  const flags = pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`;
+  const re = new RegExp(pattern.source, flags);
+  for (const match of text.matchAll(re)) {
+    const dist = Math.abs((match.index ?? 0) - index);
+    if (best == null || dist < best) best = dist;
+  }
+  return best;
+}
+
 function detectPeriod(context: string): MoneyMention['period'] {
   const lower = context.toLowerCase();
   if (/per år|i året|årlig|\/år|pr\.?\s*år/.test(lower)) return 'year';
@@ -28,22 +39,47 @@ function detectPeriod(context: string): MoneyMention['period'] {
   return 'unknown';
 }
 
-function detectDirection(context: string): ImpactDirection {
-  const lower = context.toLowerCase();
-  const up = /økt|øker|økes|øke|økning|høyere|mer i|tillegg|dyrt|dyrere|innføres|påslag/.test(lower);
-  const down = /redus|kutt|lavere|mindre i|fritak|fjern|lettelse|billigere|nedjust/.test(lower);
-  if (up && down) return 'mixed';
-  if (up) return 'increase';
-  if (down) return 'decrease';
+function detectDirection(text: string, amountIndex: number): ImpactDirection {
+  const up = nearestMatchDistance(
+    text,
+    amountIndex,
+    /økt|øker|økes|øke|økning|høyere|mer i|tillegg|dyrt|dyrere|innføres|påslag|tilbakefør|tilbakebet|utbetales/gi,
+  );
+  const down = nearestMatchDistance(
+    text,
+    amountIndex,
+    /redus|kutt|lavere|mindre i|fritak|fjern|lettelse|billigere|nedjust/gi,
+  );
+  const upDist = up != null && up < 140 ? up : null;
+  const downDist = down != null && down < 140 ? down : null;
+  if (upDist != null && downDist != null) {
+    if (Math.abs(upDist - downDist) < 12) return 'mixed';
+    return upDist < downDist ? 'increase' : 'decrease';
+  }
+  if (upDist != null) return 'increase';
+  if (downDist != null) return 'decrease';
   return 'unknown';
 }
 
-function detectKind(context: string): ImpactAmountKind {
-  const lower = context.toLowerCase();
-  if (/støtte|ytelse|stipend|refusjon|trygd|tilskudd/.test(lower)) return 'benefit';
-  if (/skatt|fradrag|formue/.test(lower)) return 'tax';
-  if (/avgift|gebyr|bompenger|egenandel/.test(lower)) return 'fee';
-  return 'other';
+function detectKind(text: string, amountIndex: number): ImpactAmountKind {
+  const refund = nearestMatchDistance(text, amountIndex, /tilbakefør|tilbakebet|utbetaling|refusjon/gi);
+  if (refund != null && refund < 160) return 'benefit';
+
+  const benefit = nearestMatchDistance(
+    text,
+    amountIndex,
+    /støtte|ytelse|stipend|trygd|tilskudd/gi,
+  );
+  const tax = nearestMatchDistance(text, amountIndex, /skatt|fradrag|formue/gi);
+  const fee = nearestMatchDistance(text, amountIndex, /avgift|gebyr|bompenger|egenandel/gi);
+  const ranked = [
+    { kind: 'benefit' as const, dist: benefit },
+    { kind: 'tax' as const, dist: tax },
+    { kind: 'fee' as const, dist: fee },
+  ]
+    .filter((row) => row.dist != null && row.dist < 120)
+    .sort((a, b) => (a.dist ?? 999) - (b.dist ?? 999));
+  return ranked[0]?.kind ?? 'other';
 }
 
 const MONEY_RE =
@@ -75,8 +111,8 @@ export function extractMoneyMentions(text: string): MoneyMention[] {
       amountKr: annual,
       raw,
       period,
-      direction: detectDirection(classify),
-      kind: detectKind(classify),
+      direction: detectDirection(text, match.index ?? 0),
+      kind: detectKind(text, match.index ?? 0),
       excerpt,
     });
   }

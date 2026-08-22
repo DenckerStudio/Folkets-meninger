@@ -228,7 +228,7 @@ export function AlignmentScore({
         </div>
       </div>
 
-      {comparison.verdict !== 'pending' ? (
+      {comparison.stortingetForPercent != null ? (
         <div className="mt-6 h-56 w-full">
           {mounted ? (
             <ResponsiveContainer width="100%" height="100%">
@@ -315,6 +315,12 @@ export function AlignmentScore({
                 </span>
               </div>
             </>
+          ) : comparison.stortinget ? (
+            <p className="text-sm text-muted-foreground">
+              {comparison.stortinget.adopted
+                ? 'Saken ble vedtatt uten elektronisk personlig votering (ingen For/Mot-tall fra Stortinget).'
+                : 'Saken ble behandlet uten elektronisk personlig votering (ingen For/Mot-tall fra Stortinget).'}
+            </p>
           ) : (
             <p className="text-sm text-muted-foreground">
               Ingen votering er registrert hos Stortinget for denne saken ennå.

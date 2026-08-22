@@ -33,6 +33,20 @@ const few = buildAlignmentComparison({ for: 2, against: 1, abstain: 0, total: 3 
 assert.equal(few.verdict, 'insufficient');
 assert.ok(few.score == null);
 
+const noButtons = buildAlignmentComparison(folk, [
+  {
+    votering_id: 28430,
+    vedtatt: true,
+    antall_for: -1,
+    antall_mot: -1,
+    personlig_votering: false,
+    votering_tema: 'Redegjørelse',
+  },
+]);
+assert.equal(noButtons.stortingetForPercent, null);
+assert.match(noButtons.headline, /uten elektronisk personlig votering/);
+assert.equal(noButtons.stortinget?.adopted, true);
+
 const aligned = buildAlignmentComparison(
   { for: 70, against: 20, abstain: 10, total: 100 },
   [
