@@ -192,14 +192,8 @@ export function AlignmentScore({
     ];
   }, [comparison]);
 
-  const stAbsentPercent =
-    comparison.stortinget && comparison.stortinget.for + comparison.stortinget.against + comparison.stortinget.absent > 0
-      ? Math.round(
-          (comparison.stortinget.absent /
-            (comparison.stortinget.for + comparison.stortinget.against + comparison.stortinget.absent)) *
-            100,
-        )
-      : 0;
+  const showComparisonChart =
+    comparison.stortingetForPercent != null && comparison.folk.total >= ALIGNMENT_MIN_FOLK_VOTES;
 
   return (
     <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-8">
@@ -228,7 +222,7 @@ export function AlignmentScore({
         </div>
       </div>
 
-      {comparison.stortingetForPercent != null ? (
+      {showComparisonChart ? (
         <div className="mt-6 h-56 w-full">
           {mounted ? (
             <ResponsiveContainer width="100%" height="100%">
@@ -302,14 +296,18 @@ export function AlignmentScore({
               <SplitBar
                 forPercent={comparison.stortingetForPercent}
                 againstPercent={comparison.stortingetAgainstPercent ?? 0}
-                restPercent={stAbsentPercent}
+                restPercent={0}
                 restLabel="Ikke til stede"
               />
               <div className="mt-2 flex justify-between text-xs font-medium text-muted-foreground">
                 <span className="text-emerald-600 dark:text-emerald-400">
                   For {comparison.stortingetForPercent}%
                 </span>
-                <span>Ikke til stede {stAbsentPercent}%</span>
+                <span>
+                  {comparison.stortinget.absent > 0
+                    ? `${comparison.stortinget.absent} ikke til stede`
+                    : 'Alle til stede stemte'}
+                </span>
                 <span className="text-rose-600 dark:text-rose-400">
                   Mot {comparison.stortingetAgainstPercent}%
                 </span>
