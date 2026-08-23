@@ -8,7 +8,7 @@ import { Bell, ChevronDown, Eye, LogIn, LogOut, Settings, SlidersHorizontal, Use
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 import { isDashboardPath, isPublicProfilePath, routes } from '@/lib/routes';
-import { desktopPrimaryNavLinks } from '@/lib/site-nav-links';
+import { desktopMoreNavLinks, desktopPrimaryNavLinks } from '@/lib/site-nav-links';
 import { DashboardNavMenuButton } from '@/components/dashboard/dashboard-nav-context';
 
 export function Header() {
@@ -86,6 +86,7 @@ export function Header() {
                 </Link>
               );
             })}
+            <MoreNavMenu pathname={pathname ?? ''} />
           </nav>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
@@ -151,6 +152,53 @@ export function Header() {
         </div>
       </nav>
     </header>
+  );
+}
+
+function MoreNavMenu({ pathname }: { pathname: string }) {
+  const anyActive = desktopMoreNavLinks.some((link) => link.isActive?.(pathname));
+
+  return (
+    <details className="group relative">
+      <summary
+        className={cn(
+          'flex cursor-pointer list-none items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+          anyActive
+            ? 'bg-brand/10 text-brand'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+        )}
+      >
+        Mer
+        <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="absolute left-0 mt-2 w-80 overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-xl">
+        <div className="p-2">
+          {desktopMoreNavLinks.map((link) => {
+            const Icon = link.icon;
+            const active = link.isActive?.(pathname) ?? false;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  'flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/50',
+                  active && 'bg-brand/10',
+                )}
+                aria-current={active ? 'page' : undefined}
+              >
+                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <span>
+                  <span className="block text-sm font-medium text-foreground">{link.title}</span>
+                  {link.description ? (
+                    <span className="block text-xs text-muted-foreground">{link.description}</span>
+                  ) : null}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </details>
   );
 }
 

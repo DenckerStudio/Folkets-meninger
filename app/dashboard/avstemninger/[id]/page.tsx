@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { PollBallot } from '@/components/polls/poll-ballot';
 import { PollResultView } from '@/components/polls/poll-result-view';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { pollStatusLabel, pollTrackLabel } from '@/lib/polls/labels';
+import { pollStatusLabel, pollTrackLabel, SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import {
   getPollById,
   getPollTotals,
@@ -47,6 +47,9 @@ export default async function PollDetailPage({ params }: PageProps) {
         </span>
       </div>
       <h1 className="text-2xl font-bold tracking-tight text-foreground">{poll.title}</h1>
+      {poll.track === 'system' ? (
+        <p className="text-sm text-muted-foreground">{SYSTEM_REEL_DISCLAIMER}</p>
+      ) : null}
       {poll.neutralSummary ? (
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{poll.neutralSummary}</p>
       ) : null}

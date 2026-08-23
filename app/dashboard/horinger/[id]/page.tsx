@@ -18,6 +18,7 @@ import {
   getDaysUntilHoringDeadline,
   getHoringApplicationDeadline,
   getHoringInnspillDeadline,
+  getHoringSkriftligInnspillUrl,
   getHoringStartDate,
   getHoringStatusBadgeClass,
   getHoringStatusKind,
@@ -84,6 +85,7 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
   const tidspunkter = hearing.horingstidspunkt_liste ?? [];
   const daysLeft = getDaysUntilHoringDeadline(hearing);
   const statusInfo = hearing.status_info_tekst?.trim();
+  const skriftligInnspillUrl = getHoringSkriftligInnspillUrl(hearing);
 
   return (
     <div className="space-y-8 pb-12">
@@ -231,10 +233,24 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
           </div>
         )}
 
-        <p className="text-sm text-muted-foreground bg-muted/40 border border-border rounded-lg p-3">
-          Innspill her er offentlige og viser fornavn og etternavn. De sendes ikke automatisk til Stortinget —
-          for offisielle høringsinnspill følg lenker på stortinget.no.
-        </p>
+        <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Innspill her er offentlige og viser fornavn og etternavn. De sendes ikke automatisk til
+            Stortinget.
+          </p>
+          <a
+            href={skriftligInnspillUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-background hover:opacity-90"
+          >
+            Send innspill til Stortinget
+            <ExternalLink className="w-4 h-4" />
+          </a>
+          <p className="text-xs text-muted-foreground">
+            Åpner Stortingets skjema for skriftlig høringsinnspill.
+          </p>
+        </div>
       </div>
 
       <section className="space-y-4">

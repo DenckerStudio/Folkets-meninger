@@ -11,11 +11,15 @@ export function getBrowserSupabase() {
 let serviceClient: SupabaseClient | null = null;
 
 export function getServiceSupabase(): SupabaseClient {
-  if (!serviceClient) {
-    serviceClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url || !key) {
+    throw new Error(
+      'SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_URL must be set for server-side Supabase access',
     );
+  }
+  if (!serviceClient) {
+    serviceClient = createClient(url, key);
   }
   return serviceClient;
 }

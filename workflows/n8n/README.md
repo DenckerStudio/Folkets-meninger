@@ -58,9 +58,35 @@ Etter migrasjon `20260529120000_simplify_issue_ai_summaries.sql`:
 
 Kjør `supabase db push` etter pull.
 
+## System poll drafts (Reels)
+
+Workflow-kilde: [`system-poll-draft.workflow.ts`](system-poll-draft.workflow.ts) · [`system-poll-draft.shared.ts`](system-poll-draft.shared.ts)
+
+Lager **utkast** (`polls.track = 'system'`, `status = 'draft'`) fra stortingssak + RAG.
+Admin publiserer i `/dashboard/admin/reels`. Offentlig feed: `/dashboard/avstemninger/reels`.
+
+| Steg | Beskrivelse |
+|------|-------------|
+| Sak-kø | Pending sak med ready RAG-chunks, uten eksisterende draft/open/closed poll |
+| RAG | Embed tittel+sammendrag → `match_issue_document_chunks` |
+| Agent | Ollama ja/nei-spørsmål (ballot er alltid Ja / Nei / Blank) |
+| Lagring | `create_system_poll_draft(...)` — ikke `ensure_stortinget_poll` (den åpner med en gang) |
+
+```bash
+N8N_SYSTEM_POLL_DRAFT_WEBHOOK_URL=https://n8n.heyklever.app/webhook/folkets-system-poll-draft
+```
+
+```bash
+curl -X POST "$N8N_SYSTEM_POLL_DRAFT_WEBHOOK_URL" \
+  -H "Content-Type: application/json" \
+  -d '{"stortinget_issue_id":"200329"}'
+```
+
+Triggere: daglig 06:00 + `POST /webhook/folkets-system-poll-draft`. Appen kaller webhooken fra `lib/trigger-system-poll-draft-webhook.ts` og admin «Generer utkast».
+
 ## Forum Reels — archived (product removed)
 
-Forum/reels pipelines are **inactive**. Sources and docs live under
+Forum/reels **forum**-pipelines are **inactive**. Sources and docs live under
 [`archive/forum/`](archive/forum/). Disable any remaining live n8n workflows that
 touch `forum_*` tables. App env no longer uses `N8N_FORUM_*` / `FORUM_REELS_PUBLIC`.
 

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   BarChart2,
+  Calendar,
   FileEdit,
   Search,
   UserRound,
@@ -18,6 +19,7 @@ const NAV = [
   { href: routes.avstemninger, label: 'Avstemninger', icon: Vote, match: (p: string) => p.startsWith(routes.avstemninger) },
   { href: routes.politikere, label: 'Politikere', icon: Users, match: (p: string) => p.startsWith(routes.politikere) },
   { href: routes.horinger, label: 'Høringer', icon: FileEdit, match: (p: string) => p.startsWith(routes.horinger) },
+  { href: routes.kalender, label: 'Kalender', icon: Calendar, match: (p: string) => p.startsWith(routes.kalender) },
   { href: routes.innsikt, label: 'Innsikt', icon: BarChart2, match: (p: string) => p.startsWith(routes.innsikt) },
   { href: routes.minSide, label: 'Min side', icon: UserRound, match: (p: string) => p.startsWith(routes.minSide) },
 ] as const;

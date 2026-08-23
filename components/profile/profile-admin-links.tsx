@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BarChart2 } from 'lucide-react';
+import { BarChart2, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
 import { ProfileCard } from '@/components/profile/profile-card';
@@ -32,6 +32,15 @@ export function ProfileAdminLinks() {
           >
             <BarChart2 className="w-4 h-4 text-muted-foreground" />
             Statistikk
+          </Link>
+        </li>
+        <li>
+          <Link
+            href={routes.adminReels}
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50"
+          >
+            <Sparkles className="w-4 h-4 text-muted-foreground" />
+            Reels
           </Link>
         </li>
       </ul>

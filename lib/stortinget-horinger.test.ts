@@ -4,6 +4,7 @@ import {
   formatStortingetDate,
   getHoringApplicationDeadline,
   getHoringInnspillDeadline,
+  getHoringSkriftligInnspillUrl,
   getHoringStartDate,
   getHoringStatusKind,
   getHoringStatusLabel,
@@ -57,5 +58,10 @@ const linked = findHoringerForSak(
   '200211',
 );
 assert.deepEqual(linked.map((h) => h.id), ['h1']);
+
+assert.equal(
+  getHoringSkriftligInnspillUrl({ id: '10005906' }),
+  'https://www.stortinget.no/no/Hva-skjer-pa-Stortinget/Horing/skriv-skriftlig-innspill/?h=10005906',
+);
 
 console.log('stortinget-horinger.test.ts: ok');

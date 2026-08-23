@@ -1,7 +1,9 @@
 'use client';
 
 import type { CSSProperties } from 'react';
-import { LazyMotion, domAnimation, m } from 'motion/react';
+import { useRef } from 'react';
+import { LazyMotion, domAnimation, m, useInView, useReducedMotion } from 'motion/react';
+import { SoftBlurIn } from '@/components/ui/soft-blur-in';
 
 interface CardProps {
   number: string;
@@ -15,7 +17,34 @@ interface CardProps {
     text: string;
     border: string;
   };
+  reduceMotion?: boolean | null;
+  inView?: boolean;
+  index?: number;
 }
+
+/** 21st.dev Reveal / Blur Fade — expo-out, short travel. */
+const SMOOTH_EASE = [0.16, 1, 0.3, 1] as const;
+
+const BOARD_IN_VIEW = {
+  once: true,
+  amount: 0.18,
+  margin: '0px 0px -16% 0px',
+} as const;
+
+const cardItemVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97, filter: 'blur(6px)' },
+  visible: (index: number) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    filter: 'blur(0px)',
+    transition: {
+      delay: 0.06 + index * 0.13,
+      duration: 0.7,
+      ease: SMOOTH_EASE,
+    },
+  }),
+};
 
 const Pin = ({ className }: { className?: string }) => (
   <svg
@@ -40,6 +69,9 @@ const Card = ({
   className,
   rotate,
   colors: customColors,
+  reduceMotion = false,
+  inView = false,
+  index = 0,
 }: CardProps) => {
   const defaultBgColors = {
     red: 'bg-[#ba0c2f]/[0.07]',
@@ -62,21 +94,28 @@ const Card = ({
   const borderColor = customColors?.border || defaultBorderColors[colorTheme];
 
   return (
-    <div
-      className={`relative w-full md:w-[280px] transition-transform duration-300 hover:z-30 hover:scale-105 ${rotate ?? ''} ${className ?? ''}`}
-    >
-      <div className="rounded-[25px] border border-[#00205b]/10 bg-white p-2 shadow-[0px_10px_28px_0px_rgba(0,32,91,0.08)]">
-        <Pin className={`mx-auto mb-6 h-8 w-8 z-20 ${textColor}`} />
-        <div
-          className={`${bgColor} border ${borderColor} relative flex h-full flex-col overflow-hidden rounded-[15px] p-[15px]`}
-        >
-          <span className={`${textColor} mb-5 font-serif text-4xl font-semibold tracking-tight`}>
-            {number}
-          </span>
-          <h3 className="mb-[10px] text-2xl font-semibold leading-none text-[#001433]">{title}</h3>
-          <p className="text-sm/5 tracking-tight text-[#001433]/60">{description}</p>
+    <div className={`relative w-full md:w-[280px] ${rotate ?? ''} ${className ?? ''}`}>
+      <m.div
+        custom={index}
+        initial={reduceMotion ? false : 'hidden'}
+        animate={reduceMotion || inView ? 'visible' : 'hidden'}
+        variants={cardItemVariants}
+      >
+        <div className="transition-transform duration-300 hover:z-30 hover:scale-105">
+          <div className="rounded-[25px] border border-[#00205b]/10 bg-white p-2 shadow-[0px_10px_28px_0px_rgba(0,32,91,0.08)]">
+            <Pin className={`mx-auto mb-6 h-8 w-8 z-20 ${textColor}`} />
+            <div
+              className={`${bgColor} border ${borderColor} relative flex h-full flex-col overflow-hidden rounded-[15px] p-[15px]`}
+            >
+              <span className={`${textColor} mb-5 font-serif text-4xl font-semibold tracking-tight`}>
+                {number}
+              </span>
+              <h3 className="mb-[10px] text-2xl font-semibold leading-none text-[#001433]">{title}</h3>
+              <p className="text-sm/5 tracking-tight text-[#001433]/60">{description}</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </m.div>
     </div>
   );
 };
@@ -127,6 +166,10 @@ export default function HowItWorks({
   eyebrow = 'Slik fungerer det',
   description = 'En enkel vei inn i demokratiet mellom valgene — med data direkte fra kilden.',
 }: HowItWorksProps) {
+  const reduceMotion = useReducedMotion();
+  const boardRef = useRef<HTMLDivElement>(null);
+  const boardInView = useInView(boardRef, BOARD_IN_VIEW);
+
   const defaultFeatures: Step[] = [
     {
       title: 'Direkte fra Stortinget',
@@ -164,6 +207,8 @@ export default function HowItWorks({
   else if (data.length === 4) height = 900;
   else height = 1130;
 
+  const pathShouldAnimate = boardInView && !reduceMotion;
+
   return (
     <LazyMotion features={domAnimation}>
       <div className={`relative bg-transparent px-4 sm:px-8 max-md:pb-16 max-md:pt-4 md:py-8 ${className ?? ''}`}>
@@ -180,13 +225,20 @@ export default function HowItWorks({
         <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-white" aria-hidden />
 
         <div className="relative z-10 mx-auto mb-10 max-w-2xl text-center md:mb-14">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">{eyebrow}</p>
-          <h2 className="text-3xl font-bold tracking-tight text-[#001433] sm:text-4xl">{title}</h2>
-          <p className="mt-3 text-[#001433]/65">{description}</p>
+          <SoftBlurIn>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">{eyebrow}</p>
+          </SoftBlurIn>
+          <SoftBlurIn delay={0.08}>
+            <h2 className="text-3xl font-bold tracking-tight text-[#001433] sm:text-4xl">{title}</h2>
+          </SoftBlurIn>
+          <SoftBlurIn delay={0.14}>
+            <p className="mt-3 text-[#001433]/65">{description}</p>
+          </SoftBlurIn>
         </div>
 
         <div className="relative z-10 mx-auto max-w-6xl">
           <div
+            ref={boardRef}
             className="relative mx-auto flex h-auto w-full max-w-[1000px] flex-col space-y-8 md:block md:h-[var(--md-height)] md:space-y-0"
             style={{ '--md-height': `${height}px` } as CSSProperties}
           >
@@ -216,12 +268,20 @@ export default function HowItWorks({
                       strokeLinecap="round"
                       vectorEffect="non-scaling-stroke"
                       initial={{ strokeDashoffset: 0 }}
-                      animate={{ strokeDashoffset: -140 }}
-                      transition={{
-                        duration: 3,
-                        repeat: Infinity,
-                        ease: 'linear',
-                      }}
+                      animate={
+                        pathShouldAnimate
+                          ? { strokeDashoffset: -140 }
+                          : { strokeDashoffset: 0 }
+                      }
+                      transition={
+                        pathShouldAnimate
+                          ? {
+                              duration: 3,
+                              repeat: Infinity,
+                              ease: 'linear',
+                            }
+                          : { duration: 0 }
+                      }
                     />
                   );
                 })()}
@@ -241,6 +301,9 @@ export default function HowItWorks({
                   colors={step.colors}
                   rotate={position.rotate}
                   className={position.className}
+                  reduceMotion={reduceMotion}
+                  inView={boardInView}
+                  index={index}
                 />
               );
             })}

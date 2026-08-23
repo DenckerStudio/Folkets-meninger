@@ -16,9 +16,18 @@ type PollBallotProps = {
   votingOpen: boolean;
   initialTotals: PollTotals;
   initialVote: PollChoice | null;
+  loginNext?: string;
+  compact?: boolean;
 };
 
-export function PollBallot({ pollId, votingOpen, initialTotals, initialVote }: PollBallotProps) {
+export function PollBallot({
+  pollId,
+  votingOpen,
+  initialTotals,
+  initialVote,
+  loginNext,
+  compact = false,
+}: PollBallotProps) {
   const { user } = useAuth();
   const router = useRouter();
   const [totals, setTotals] = useState(initialTotals);
@@ -29,7 +38,7 @@ export function PollBallot({ pollId, votingOpen, initialTotals, initialVote }: P
   const vote = async (choice: PollChoice) => {
     if (!votingOpen || userVote || busy) return;
     if (!user) {
-      router.push(`${routes.login}?next=${encodeURIComponent(routes.poll(pollId))}`);
+      router.push(`${routes.login}?next=${encodeURIComponent(loginNext ?? routes.poll(pollId))}`);
       return;
     }
     setBusy(true);
@@ -55,12 +64,16 @@ export function PollBallot({ pollId, votingOpen, initialTotals, initialVote }: P
   };
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-      <h2 className="text-base font-semibold text-foreground">Hva mener du?</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Ja, nei eller blank. Stemmen lagres anonymt. BankID og MinID kommer senere.
-      </p>
-      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+    <section className={cn(!compact && 'rounded-2xl border border-border bg-card p-5 shadow-sm')}>
+      {compact ? null : (
+        <>
+          <h2 className="text-base font-semibold text-foreground">Hva mener du?</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Ja, nei eller blank. Stemmen lagres anonymt. BankID og MinID kommer senere.
+          </p>
+        </>
+      )}
+      <div className={cn('grid gap-2 sm:grid-cols-3', compact ? 'mt-0' : 'mt-4')}>
         {CHOICES.map((choice) => {
           const selected = userVote === choice;
           return (

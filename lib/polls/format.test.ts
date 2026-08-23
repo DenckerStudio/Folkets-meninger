@@ -31,6 +31,8 @@ assert(pollChoicePercent(sample, 'nei') === 0, 'zero side');
 assert(pollChoiceLabel('ja') === 'Ja', 'ja label');
 assert(pollChoiceLabel('blank') === 'Blank', 'blank label');
 assert(pollTrackLabel('citizen') === 'Borgerinitiativ', 'citizen track');
+assert(pollTrackLabel('system') === 'Systemgenerert', 'system track');
+assert(pollTrackLabel('stortinget') === 'Stortinget', 'stortinget track');
 assert(isNorwayCountyCode('03'), 'oslo code');
 assert(!isNorwayCountyCode('99'), 'invalid code');
 
