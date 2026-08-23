@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   BarChart2,
+  Calendar,
   FileEdit,
   Info,
   Search,
@@ -42,6 +43,9 @@ export const isInitiativActive: NavIsActive = (pathname) =>
 export const isHoringerActive: NavIsActive = (pathname) =>
   pathname === routes.horinger || pathname.startsWith(`${routes.horinger}/`);
 
+export const isKalenderActive: NavIsActive = (pathname) =>
+  pathname === routes.kalender || pathname.startsWith(`${routes.kalender}/`);
+
 export const isMinSideActive: NavIsActive = (pathname) =>
   pathname.startsWith(routes.minSide) ||
   pathname.startsWith(routes.varsler) ||
@@ -72,6 +76,13 @@ export const desktopPrimaryNavLinks: PrimaryNavLink[] = [
 
 /** Secondary links in the «Mer» dropdown. */
 export const desktopMoreNavLinks: SiteNavLinkItem[] = [
+  {
+    title: 'Kalender',
+    href: routes.kalender,
+    description: 'Høringer og frister i kalendervisning',
+    icon: Calendar,
+    isActive: isKalenderActive,
+  },
   {
     title: 'Om oss',
     href: routes.omOss,

@@ -11,6 +11,8 @@ export const routes = {
   minSide: `${DASHBOARD_PREFIX}/min-side`,
   varsler: `${DASHBOARD_PREFIX}/varsler`,
   horinger: `${DASHBOARD_PREFIX}/horinger`,
+  kalender: `${DASHBOARD_PREFIX}/kalender`,
+  horingerIcs: '/api/kalender/horinger.ics',
   politikere: `${DASHBOARD_PREFIX}/politikere`,
   representanter: `${DASHBOARD_PREFIX}/representanter`,
   politikerHub: `${DASHBOARD_PREFIX}/politiker-hub`,
