@@ -3,7 +3,7 @@
   "name": "Folkets Stemme – dokument embeddings (RAG)",
   "nodes": [
     {
-      "id": "ba26fb63-859b-4ce6-bccd-907b4d85603a",
+      "id": "bf1cf99a-9a8f-4ca1-9857-789ee34fdf57",
       "name": "Every 60 minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
@@ -23,7 +23,7 @@
       }
     },
     {
-      "id": "623841d0-da9c-42cc-add6-4eb3604c76fe",
+      "id": "9ad25af3-38a0-491e-938c-aea4b983b86a",
       "name": "Embedding settings",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -53,7 +53,7 @@
       }
     },
     {
-      "id": "c8127225-8f80-4a36-ad9c-cbe9debfce2f",
+      "id": "d95196a0-60b1-4a05-b913-d4de22e795f8",
       "name": "Fetch pending chunks",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
@@ -73,7 +73,7 @@
       "credentials": {}
     },
     {
-      "id": "977a64b6-09a7-4bbd-8126-c8abec3350e9",
+      "id": "87728688-60ee-4763-8b8c-c61f173f0f1f",
       "name": "Ollama embeddings",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -94,7 +94,7 @@
       "onError": "continueErrorOutput"
     },
     {
-      "id": "ba5f651a-655b-4008-be37-9789182c65d2",
+      "id": "6f41bd03-028a-47b6-b1ff-0513f6be4941",
       "name": "Map embedding vector",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -109,7 +109,7 @@
       }
     },
     {
-      "id": "12bf6f8e-7310-4d0b-b457-a03ed238b2c3",
+      "id": "e29bd12a-affe-49ab-9b86-37e3cb259011",
       "name": "Save embedding",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
@@ -149,7 +149,7 @@
       "credentials": {}
     },
     {
-      "id": "4efe8dca-f66f-46b0-90ae-69ea102aaed2",
+      "id": "b85d389b-9d66-4295-8403-35b5ec5a8c72",
       "name": "Clear document body storage",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
@@ -168,7 +168,7 @@
       "credentials": {}
     },
     {
-      "id": "34056413-7f0d-47c6-aae6-bb715517e3b0",
+      "id": "5417fe8a-4b4c-4b96-9d7c-edcd913d5f49",
       "name": "Rate limit pause",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -183,7 +183,7 @@
       }
     },
     {
-      "id": "7317b600-5378-4d5a-8254-2f4d96ff24dd",
+      "id": "399078e0-b4ae-4ec6-b8e3-131c9599de66",
       "name": "Batch run complete",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -206,7 +206,7 @@
       }
     },
     {
-      "id": "3f7e05e6-15cc-4e14-b820-e5192ed5673c",
+      "id": "c66133cf-bc16-4508-be0a-d04a82487e50",
       "name": "Webhook document embeddings",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
@@ -220,10 +220,10 @@
         "responseMode": "onReceived",
         "responseData": "allEntries"
       },
-      "webhookId": "fbf77c40-f54b-44bc-91d5-936a79d15441"
+      "webhookId": "8f562b84-73b6-4468-97f3-0c3afd10d944"
     },
     {
-      "id": "135e5cc0-689f-4039-90c4-790cf312886b",
+      "id": "58a8b0af-d781-4421-8e1b-6f1988e75154",
       "name": "Normalize webhook payload",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
