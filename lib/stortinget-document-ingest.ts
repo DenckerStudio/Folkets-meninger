@@ -5,6 +5,8 @@ import { parseSakDocuments, type SakDocumentRef } from '@/lib/stortinget-documen
 import type { StortingetSakDetail } from '@/lib/stortinget';
 import { getServiceSupabase } from '@/lib/supabase';
 import { triggerDocumentEmbeddingsWebhook } from '@/lib/trigger-document-embeddings-webhook';
+import { persistAiSummarySource } from '@/lib/ai-summary/persist-source';
+import { triggerAiSummaryWebhook } from '@/lib/trigger-ai-summary-webhook';
 
 const INGEST_DELAY_MS = 400;
 
@@ -260,6 +262,15 @@ export async function ingestSakDocuments(
 
   if (shouldTriggerEmbeddings) {
     triggerDocumentEmbeddingsWebhook(issueId);
+  }
+
+  if (result.chunksCreated > 0) {
+    try {
+      await persistAiSummarySource(issueId);
+      triggerAiSummaryWebhook(issueId);
+    } catch (error) {
+      console.warn('[document-ingest] Kunne ikke oppdatere AI-kilde etter ingest:', error);
+    }
   }
 
   return result;

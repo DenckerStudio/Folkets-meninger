@@ -3,7 +3,7 @@ import { getSakDetail, type StortingetSakDetail } from './stortinget';
 import { resolveSakListStatus, resolveSakStatusFromSources } from './sak-status';
 import { mapSakPresentation } from './stortinget-sak-presentation';
 import { triggerAiSummaryWebhook } from './trigger-ai-summary-webhook';
-import { buildAiSummarySource, type AiSummaryDocumentSource } from './ai-summary/source-context';
+import { buildAiSummarySource, type AiSummaryChunkSource, type AiSummaryDocumentSource } from './ai-summary/source-context';
 import { ingestSakDocuments } from './stortinget-document-ingest';
 import { getSakVotingWindow } from './sak-voting-window';
 import { parseStortingetDotNetDateToISO } from './stortinget-utils';
@@ -198,7 +198,14 @@ async function updateAiSummarySource(
     .select('document_id, title, document_type, text_excerpt, source_url')
     .eq('issue_id', sakId)
     .order('fetched_at', { ascending: false })
-    .limit(5);
+    .limit(6);
+
+  const { data: chunks } = await service
+    .from('document_chunks')
+    .select('document_id, chunk_index, content')
+    .eq('issue_id', sakId)
+    .order('chunk_index', { ascending: true })
+    .limit(16);
 
   return buildAiSummarySource({
     issueId: sakId,
@@ -206,6 +213,7 @@ async function updateAiSummarySource(
     summary: fallback.summary,
     detail,
     documents: (documents ?? []) as AiSummaryDocumentSource[],
+    chunks: (chunks ?? []) as AiSummaryChunkSource[],
   });
 }
 

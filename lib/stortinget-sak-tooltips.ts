@@ -66,6 +66,8 @@ export const SAK_META_TOOLTIPS = {
   ferdigbehandlet: 'Saken er avsluttet i Stortinget. Den kan fortsatt være relevant som historikk.',
   konsekvensKalkulator:
     'Anonymt anslag basert på saksdokumentene og AI-sammendraget. Opplysningene lagres bare på enheten din, og beløp vises bare når kilden faktisk oppgir tall.',
+  aiSammendrag:
+    'Kort, nøytral forklaring av saken (hva, hvem, kostnad) laget av AI fra Stortingets kilder. Dette er ikke et vedtak og ikke et politisk råd.',
   samsvarsScore:
     'Sammenligner anonyme stemmer i appen med Stortingets offisielle votering for saken. Avstår i appen er ikke det samme som representanter som ikke var til stede.',
 } as const;

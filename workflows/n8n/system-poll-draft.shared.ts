@@ -86,7 +86,7 @@ FROM public.match_issue_document_chunks(
   $3::int
 )`;
 
-export const BUILD_RAG_QUERY_JS = `const sak = $('Fetch sak for poll').first()?.json || {};
+export const BUILD_RAG_QUERY_JS = `const sak = $('Expand sak for poll').first()?.json || $input.first()?.json || {};
 const parts = [
   sak.issue_title,
   sak.issue_summary,
@@ -286,9 +286,12 @@ if (!valid) {
   }];
 }
 
-const sourceUrls = esc(JSON.stringify(sak.source_urls || []));
-const generationMetadata = esc(
-  JSON.stringify({
+const rpcBody = {
+  p_issue_id: issueId,
+  p_title: question,
+  p_neutral_summary: summary,
+  p_source_urls: sak.source_urls || [],
+  p_generation_metadata: {
     source_type: 'stortinget_sak',
     confidence,
     rag_chunk_count: ragChunks.length,
@@ -299,27 +302,12 @@ const generationMetadata = esc(
     })),
     political_choice: pc,
     model: 'gemma4:e2b-it-qat',
-  }),
-);
-
-const query = [
-  'INSERT INTO public.polls (',
-  '  track, status, title, neutral_summary, source_urls, stortinget_issue_id, generation_metadata',
-  ') VALUES (',
-  "  'system',",
-  "  'draft',",
-  "  '" + esc(question) + "',",
-  "  '" + esc(summary) + "',",
-  "  '" + sourceUrls + "'::jsonb,",
-  "  '" + esc(issueId) + "',",
-  "  '" + generationMetadata + "'::jsonb",
-  ')',
-  'RETURNING id;',
-].join('\\n');
+  },
+};
 
 return [{
   json: {
-    query,
+    rpcBody,
     outcome: 'saved',
     issue_id: issueId,
     question,

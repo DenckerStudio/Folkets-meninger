@@ -5,8 +5,8 @@ import {
   sticky,
   newCredential,
   expr,
-  placeholder,
 } from '@n8n/workflow-sdk';
+import { FOLKETS_SUPABASE_CRED, FOLKETS_SUPABASE_REST } from './n8n-supabase.shared';
 
 /**
  * RAG embeddings:
@@ -17,52 +17,17 @@ import {
  * n8n is not a vector store — embeddings must stay in pgvector.
  */
 
-const PENDING_CHUNKS_SQL = `SELECT
-  c.id,
-  c.issue_id,
-  c.document_id,
-  c.chunk_index,
-  c.content
-FROM public.document_chunks c
-WHERE c.embedding_status = 'pending'
-  AND ($1::text IS NULL OR $1::text = '' OR c.issue_id = $1::text)
-ORDER BY c.created_at ASC
-LIMIT $2`;
-
 const PREPARE_EMBEDDING_UPDATE_JS = `const item = $input.item.json;
 const embedding = item.embedding;
 if (!Array.isArray(embedding) || embedding.length === 0) {
   throw new Error('Missing embedding vector');
 }
-const vector = '[' + embedding.join(',') + ']';
-function esc(value) {
-  return "'" + String(value ?? '').replace(/'/g, "''") + "'";
-}
-const updateSql = \`UPDATE public.document_chunks
-SET embedding = '\${vector}'::vector,
-    embedding_status = 'ready'
-WHERE id = \${esc(item.id)}::uuid\`;
-const finalizeSql = \`UPDATE public.stortinget_issue_documents d
-SET chunks_status = CASE
-      WHEN EXISTS (
-        SELECT 1 FROM public.document_chunks c
-        WHERE c.issue_id = d.issue_id
-          AND c.document_id = d.document_id
-          AND c.embedding_status = 'pending'
-      ) THEN 'pending'
-      WHEN EXISTS (
-        SELECT 1 FROM public.document_chunks c
-        WHERE c.issue_id = d.issue_id
-          AND c.document_id = d.document_id
-          AND c.embedding_status = 'ready'
-      ) THEN 'ready'
-      ELSE d.chunks_status
-    END,
-    content_full_text = NULL,
-    content_html = NULL
-WHERE d.issue_id = \${esc(item.issue_id)}
-  AND d.document_id = \${esc(item.document_id)}\`;
-return { json: { ...item, updateSql, finalizeSql } };`;
+return {
+  json: {
+    ...item,
+    embedding_vector: '[' + embedding.join(',') + ']',
+  },
+};`;
 
 const scheduleTrigger = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
@@ -71,7 +36,7 @@ const scheduleTrigger = trigger({
     name: 'Every 60 minutes',
     parameters: {
       rule: {
-        interval: [{ field: 'minutes', minutesInterval: 60 }],
+        interval: [{ field: 'hours', hoursInterval: 1 }],
       },
     },
   },
@@ -98,17 +63,53 @@ const embeddingSettings = node({
 });
 
 const fetchPendingChunks = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
   config: {
     name: 'Fetch pending chunks',
-    credentials: { postgres: newCredential('Supabase Postgres Folkets') },
+    credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
-      operation: 'executeQuery',
-      query: PENDING_CHUNKS_SQL,
-      options: {
-        queryReplacement: expr('{{ [ $json.issueId || null, $json.batchLimit || "8" ] }}'),
-      },
+      method: 'POST',
+      url: `${FOLKETS_SUPABASE_REST}/rpc/n8n_list_pending_document_chunks`,
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'supabaseApi',
+      sendBody: true,
+      specifyBody: 'json',
+      jsonBody: expr(
+        '={{ JSON.stringify({ p_issue_id: $json.issueId || null, p_limit: Number($json.batchLimit || 8) }) }}',
+      ),
+      options: { timeout: 60000 },
+    },
+  },
+  output: [
+    {
+      id: '00000000-0000-0000-0000-000000000001',
+      issue_id: '200329',
+      document_id: 'inns-202526-434s',
+      chunk_index: 0,
+      content: 'Eksempel chunk tekst',
+    },
+  ],
+});
+
+const expandPendingChunks = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Expand pending chunks',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      language: 'javaScript',
+      jsCode: `const raw = $input.first()?.json;
+let rows = [];
+if (Array.isArray(raw)) rows = raw;
+else if (Array.isArray(raw?.data)) rows = raw.data;
+else if (raw && typeof raw === 'object' && raw.id) rows = [raw];
+else {
+  const all = $input.all().map((i) => i.json).filter(Boolean);
+  if (all.length && all.every((r) => r && r.id && !Array.isArray(r))) rows = all;
+}
+return rows.map((r) => ({ json: r }));`,
     },
   },
   output: [
@@ -130,7 +131,7 @@ const embedChunk = node({
     onError: 'continueErrorOutput',
     parameters: {
       method: 'POST',
-      url: placeholder('https://ollama.example.com/api/embeddings'),
+      url: 'https://ollama.heyklever.app/api/embeddings',
       sendBody: true,
       specifyBody: 'json',
       jsonBody: expr(
@@ -150,7 +151,7 @@ const mapEmbedding = node({
     parameters: {
       mode: 'runOnceForEachItem',
       language: 'javaScript',
-      jsCode: `const chunk = $('Fetch pending chunks').item.json;
+      jsCode: `const chunk = $('Expand pending chunks').item.json;
 const response = $input.item.json;
 const embedding = response.embedding;
 return { json: { ...chunk, embedding } };`,
@@ -177,33 +178,49 @@ const prepareEmbeddingUpdate = node({
       jsCode: PREPARE_EMBEDDING_UPDATE_JS,
     },
   },
-  output: [{ updateSql: 'UPDATE public.document_chunks SET ...', finalizeSql: 'UPDATE ...' }],
+  output: [{ embedding_vector: '[0.1,0.2,0.3]' }],
 });
 
 const saveEmbedding = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
   config: {
     name: 'Save embedding',
-    credentials: { postgres: newCredential('Supabase Postgres Folkets') },
+    credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
-      operation: 'executeQuery',
-      query: expr('{{ $json.updateSql }}'),
+      method: 'POST',
+      url: `${FOLKETS_SUPABASE_REST}/rpc/n8n_save_document_embedding`,
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'supabaseApi',
+      sendBody: true,
+      specifyBody: 'json',
+      jsonBody: expr(
+        '={{ JSON.stringify({ p_chunk_id: $json.id, p_embedding: $json.embedding_vector }) }}',
+      ),
+      options: { timeout: 60000 },
     },
   },
   output: [{ success: true }],
 });
 
 const clearDocumentBody = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
   config: {
     name: 'Clear document body storage',
-    credentials: { postgres: newCredential('Supabase Postgres Folkets') },
+    onError: 'continueRegularOutput',
+    credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
-      operation: 'executeQuery',
-      // Postgres node output drops prior fields — read finalizeSql from the prepare node.
-      query: expr("={{ $('Prepare embedding update SQL').item.json.finalizeSql }}"),
+      method: 'POST',
+      url: `${FOLKETS_SUPABASE_REST}/rpc/n8n_finalize_document_storage`,
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'supabaseApi',
+      sendBody: true,
+      specifyBody: 'json',
+      jsonBody: expr(
+        "={{ JSON.stringify({ p_issue_id: $('Prepare embedding update SQL').item.json.issue_id, p_document_id: $('Prepare embedding update SQL').item.json.document_id }) }}",
+      ),
+      options: { timeout: 60000 },
     },
   },
   output: [{ success: true }],
@@ -294,6 +311,7 @@ sticky(
 );
 
 const embeddingPipeline = fetchPendingChunks
+  .to(expandPendingChunks)
   .to(embedChunk)
   .to(mapEmbedding)
   .to(prepareEmbeddingUpdate)

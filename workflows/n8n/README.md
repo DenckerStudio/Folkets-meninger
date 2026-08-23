@@ -1,4 +1,19 @@
-# n8n – AI-sammendrag backfill (Ollama)
+# n8n – Folkets Stemme
+
+Credential i n8n: **Folkets Stemme Self-hosted** (`supabaseApi`). Ikke Postgres-noden / «Fokets Meninger».
+
+Etter `20260823200000_n8n_postgrest_rpcs.sql` (`supabase db push`) skriver n8n via SECURITY DEFINER-RPC-er. Direkte tabell-INSERT treffer RLS (42501) på self-hosted PostgREST.
+
+| Workflow | Status | Live |
+|----------|--------|------|
+| AI-sammendrag backfill | Aktiv | https://n8n.heyklever.app/workflow/GP666Zq84qc19tcE |
+| Dokument embeddings (RAG) | Aktiv | https://n8n.heyklever.app/workflow/IkedEmJEJFqj7ZnM |
+| App cron | Aktiv | https://n8n.heyklever.app/workflow/rwiy05sitrv5QDbQ |
+| Motforslag horingsinnspill | Aktiv | https://n8n.heyklever.app/workflow/VX3uRDi7cVRwpxuQ |
+| System poll (Reels) draft | Aktiv | https://n8n.heyklever.app/workflow/TWTrqNYhvYcWz4UX |
+| Forum (v9/v12/v13/RSS) | Arkivert | `archive/forum/` |
+
+## AI-sammendrag backfill (Ollama)
 
 Workflow-kilde: [`ai-summary-backfill.workflow.ts`](ai-summary-backfill.workflow.ts)
 
@@ -13,6 +28,8 @@ Workflow-kilde: [`ai-summary-backfill.workflow.ts`](ai-summary-backfill.workflow
 
 Appen genererer ikke sammendrag selv — den leser Supabase og poller `GET /api/sak/[id]/ai-summary` til rad finnes.
 
+Etter `20260823210000_n8n_ai_summary_rich_context.sql` henter n8n `ai_summary_source_context`, dokumentutdrag og `document_chunks` (ikke full `detail_json`). Prompten ber om 5–8 setninger. Ollama: `numPredict` 2200, `numCtx` 16384, `think: false`. Dokumentingest bygger kilden på nytt og kjører webhooken om igjen så tynne sammendrag overskrives.
+
 ## Konfigurasjon i n8n
 
 | Nøkkel | Hvor | Verdi |
@@ -20,7 +37,7 @@ Appen genererer ikke sammendrag selv — den leser Supabase og poller `GET /api/
 | **Ollama credential** | «Ollama Heyklever» | Base URL: `https://ollama.heyklever.app` |
 | **Modell** | Under «Ollama Chat Model» | f.eks. `llama3.2:3b-text-q4_K_M` |
 | **batchLimit** | «Backfill settings (schedule)» | `1` (anbefalt) |
-| **Postgres** | «Supabase Postgres Folkets» | Supabase connection string |
+| **Supabase** | «Folkets Stemme Self-hosted» (supabaseApi) | Supabase URL + service role via n8n Supabase node |
 
 n8n blokkerer `$env` i noder — ikke bruk `$env` for app-URL her.
 
@@ -65,6 +82,12 @@ Workflow-kilde: [`system-poll-draft.workflow.ts`](system-poll-draft.workflow.ts)
 Lager **utkast** (`polls.track = 'system'`, `status = 'draft'`) fra stortingssak + RAG.
 Admin publiserer i `/dashboard/admin/reels`. Offentlig feed: `/dashboard/avstemninger/reels`.
 
+**Live workflow:** https://n8n.heyklever.app/workflow/TWTrqNYhvYcWz4UX
+
+Timezone: `Europe/Oslo`. Credential: **Folkets Stemme Self-hosted**. Ollama: **Ollama account** (`gemma4:e2b-it-qat`).
+
+Daglig 06:00 plukker neste pending sak med ready RAG-chunks og uten eksisterende poll. Webhook kan sende `{ "stortinget_issue_id": "…" }` for én sak (samme kø-filter). Tom kø = tom kjøring, ikke feil. Krever `20260823200000_n8n_postgrest_rpcs.sql`.
+
 | Steg | Beskrivelse |
 |------|-------------|
 | Sak-kø | Pending sak med ready RAG-chunks, uten eksisterende draft/open/closed poll |
@@ -101,7 +124,7 @@ touch `forum_*` tables. App env no longer uses `N8N_FORUM_*` / `FORUM_REELS_PUBL
 
 **Dok:** [`FORUM-PROMPTS-v12.md`](FORUM-PROMPTS-v12.md)
 
-**Live:** RSS `6yy1ESY2Zy7cWgtF` · Prompt generator `vOP2zPflfT0yBvDQ`
+**Arkivert i n8n:** RSS `6yy1ESY2Zy7cWgtF` · Prompt generator `vOP2zPflfT0yBvDQ`
 
 **Env:** `N8N_FORUM_SYNTHESIS_WEBHOOK_URL` → `https://n8n.heyklever.app/webhook/folkets-forum-prompt-generator`
 
@@ -131,7 +154,7 @@ Arkivér v10/v11 scout/journalist/editor etter deploy (allerede arkivert — se 
 N8N_API_KEY=... npm run deploy:forum-v13-sak-prompt -- --skip-test
 ```
 
-Deploy-scriptet eksporterer workflow JSON, gjenbruker Postgres/Ollama-credentials
+Deploy-scriptet eksporterer workflow JSON, gjenbruker Supabase/Ollama-credentials
 fra eksisterende workflows, finner eller oppretter workflowen, aktiverer den, og
 kan smoke-teste webhooken når `--skip-test` utelates.
 
@@ -143,7 +166,7 @@ kan smoke-teste webhooken når `--skip-test` utelates.
 
 Workflow-kilde: [`forum-trending-prompts.workflow.ts`](forum-trending-prompts.workflow.ts)
 
-**Live workflow:** https://n8n.heyklever.app/workflow/MloIdsnX7FozM4dv
+**Tidligere live (fjernet/arkivert):** `MloIdsnX7FozM4dv`
 
 **v5:** alignment-gate, dedupe 0.55, min 4 kilder, **alltid `draft`** → admin-godkjenning i appen (`/dashboard/admin/forum-prompts`).
 
@@ -201,7 +224,8 @@ curl -X POST "$N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL" \
 ```
 
 Supabase-migrasjoner: `20260617120000_sak_documents_rag.sql`,
-`20260807112603_document_chunks_storage_efficiency.sql`.
+`20260807112603_document_chunks_storage_efficiency.sql`,
+`20260823180000_n8n_supabase_views_and_rpcs.sql` (view `n8n_issues_missing_ai_summary` for AI-backfill).
 
 AI-sammendrag (`ai-summary-backfill`) inkluderer nå `rag_chunks` i kontekst når dokumenter er ingestet. Prompten ber også om konkrete grupper og kronebeløp når kilden har dem — brukes av konsekvens-kalkulatoren på sakssiden (`POST /api/sak/[id]/impact`).
 
@@ -267,6 +291,8 @@ opp på stortinget.no.
 
 ```bash
 N8N_HEARING_INNSPILL_WEBHOOK_URL=https://n8n.heyklever.app/webhook/folkets-hearing-innspill
+
+**Live workflow:** https://n8n.heyklever.app/workflow/VX3uRDi7cVRwpxuQ
 ```
 
 ## Deploy fra repo

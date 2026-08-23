@@ -11,20 +11,15 @@ import {
   newCredential,
   languageModel,
   expr,
-  placeholder,
 } from '@n8n/workflow-sdk';
+import { FOLKETS_SUPABASE_CRED, FOLKETS_SUPABASE_REST } from './n8n-supabase.shared';
 import {
-  FETCH_SAK_FOR_POLL_SQL,
-  RAG_RETRIEVE_SQL,
   BUILD_RAG_QUERY_JS,
   MAP_EMBEDDING_FOR_RAG_JS,
   MERGE_RAG_CONTEXT_JS,
   SYSTEM_POLL_GENERATOR_SYSTEM,
   SYSTEM_POLL_GENERATOR_SAVE_JS,
 } from './system-poll-draft.shared';
-
-const ISSUE_ID_REPLACEMENT =
-  "={{ [ (() => { const raw = $json.body?.stortinget_issue_id ?? $json.body?.stortingetIssueId ?? $json.body?.issue_id ?? $json.body?.id ?? $json.stortinget_issue_id ?? $json.issue_id ?? $json.id ?? ''; const id = String(raw || '').trim(); return id && id !== 'null' && id !== 'undefined' ? id : ''; })() ] }}";
 
 const sakAgentOllamaModel = languageModel({
   type: '@n8n/n8n-nodes-langchain.lmChatOllama',
@@ -41,13 +36,14 @@ const sakAgentOllamaModel = languageModel({
 
 const scheduleTrigger = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
-  version: 1.2,
+  version: 1.3,
   config: {
     name: 'Daily 06:00',
     parameters: {
       rule: { interval: [{ field: 'cronExpression', expression: '0 6 * * *' }] },
     },
   },
+  output: [{}],
 });
 
 const webhookTrigger = trigger({
@@ -64,16 +60,79 @@ const webhookTrigger = trigger({
   output: [{ body: { stortinget_issue_id: '200329' } }],
 });
 
+const normalizePollInput = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Normalize poll input',
+    parameters: {
+      mode: 'manual',
+      assignments: {
+        assignments: [
+          {
+            id: 'issue-id',
+            name: 'issueId',
+            type: 'string',
+            value: expr(
+              "{{ $json.body?.stortinget_issue_id ?? $json.body?.stortingetIssueId ?? $json.body?.issue_id ?? $json.body?.id ?? $json.stortinget_issue_id ?? $json.issue_id ?? $json.id ?? '' }}",
+            ),
+          },
+        ],
+      },
+    },
+  },
+  output: [{ issueId: '200329' }],
+});
+
 const fetchSakForPoll = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
   config: {
     name: 'Fetch sak for poll',
-    credentials: { postgres: newCredential('Fokets Meninger') },
+    credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
-      operation: 'executeQuery',
-      query: FETCH_SAK_FOR_POLL_SQL,
-      options: { queryReplacement: ISSUE_ID_REPLACEMENT },
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'supabaseApi',
+      method: 'POST',
+      url: `${FOLKETS_SUPABASE_REST}/rpc/n8n_list_sak_for_system_poll`,
+      sendBody: true,
+      specifyBody: 'json',
+      jsonBody: expr(
+        '={{ JSON.stringify({ p_issue_id: $json.issueId || null }) }}',
+      ),
+      options: { timeout: 60000 },
+    },
+  },
+  output: [
+    {
+      issue_id: '200329',
+      issue_title: 'Eksempel stortingssak',
+      issue_summary: 'Sammendrag',
+      detail_excerpt: 'Innstillingstekst utdrag',
+      existing_questions: [],
+      documents: [],
+    },
+  ],
+});
+
+const expandSakForPoll = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Expand sak for poll',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      language: 'javaScript',
+      jsCode: `const raw = $input.first()?.json;
+let rows = [];
+if (Array.isArray(raw)) rows = raw;
+else if (Array.isArray(raw?.data)) rows = raw.data;
+else if (raw && typeof raw === 'object' && raw.issue_id) rows = [raw];
+else {
+  const all = $input.all().map((i) => i.json).filter(Boolean);
+  if (all.length && all.every((r) => r && r.issue_id && !Array.isArray(r))) rows = all;
+}
+return rows.filter((r) => r && r.issue_id).map((r) => ({ json: r }));`,
     },
   },
   output: [
@@ -100,6 +159,7 @@ const buildRagQuery = node({
       jsCode: BUILD_RAG_QUERY_JS,
     },
   },
+  output: [{ issue_id: '200329', ragQuery: 'Eksempel stortingssak' }],
 });
 
 const embedRagQuery = node({
@@ -110,7 +170,7 @@ const embedRagQuery = node({
     onError: 'continueErrorOutput',
     parameters: {
       method: 'POST',
-      url: placeholder('https://ollama.example.com/api/embeddings'),
+      url: 'https://ollama.heyklever.app/api/embeddings',
       sendBody: true,
       specifyBody: 'json',
       jsonBody: expr(
@@ -134,20 +194,26 @@ const mapEmbeddingForRag = node({
       jsCode: MAP_EMBEDDING_FOR_RAG_JS,
     },
   },
+  output: [{ issue_id: '200329', vectorLiteral: '[0.1,0.2]', matchCount: 8 }],
 });
 
 const retrieveRagChunks = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
   config: {
     name: 'Retrieve RAG chunks',
-    credentials: { postgres: newCredential('Fokets Meninger') },
+    credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
-      operation: 'executeQuery',
-      query: RAG_RETRIEVE_SQL,
-      options: {
-        queryReplacement: '={{ [ $json.issue_id, $json.vectorLiteral, $json.matchCount || 8 ] }}',
-      },
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'supabaseApi',
+      method: 'POST',
+      url: `${FOLKETS_SUPABASE_REST}/rpc/n8n_match_issue_document_chunks`,
+      sendBody: true,
+      specifyBody: 'json',
+      jsonBody: expr(
+        '={{ JSON.stringify({ p_issue_id: $json.issue_id, p_query_embedding: $json.vectorLiteral, p_match_count: $json.matchCount || 8 }) }}',
+      ),
+      options: { timeout: 60000 },
     },
   },
   output: [
@@ -172,6 +238,7 @@ const mergeRagContext = node({
       jsCode: MERGE_RAG_CONTEXT_JS,
     },
   },
+  output: [{ promptText: 'STORTINGSSAK', issue_id: '200329', rag_chunks: [], source_urls: [] }],
 });
 
 const systemPollGeneratorAgent = node({
@@ -217,17 +284,40 @@ const buildSaveQuery = node({
       jsCode: SYSTEM_POLL_GENERATOR_SAVE_JS,
     },
   },
+  output: [{ rpcBody: { p_issue_id: '200329', p_title: 'Mener du ...?' }, outcome: 'saved' }],
+});
+
+const gateSaveDraft = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Gate save draft',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      language: 'javaScript',
+      jsCode: `const item = $input.first()?.json || {};
+if (!item.rpcBody) return [];
+return [{ json: item }];`,
+    },
+  },
+  output: [{ rpcBody: { p_issue_id: '200329', p_title: 'Mener du ...?' }, outcome: 'saved' }],
 });
 
 const saveDraft = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
   config: {
     name: 'Save system poll draft',
-    credentials: { postgres: newCredential('Fokets Meninger') },
+    credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
-      operation: 'executeQuery',
-      query: '={{ $json.query || "SELECT 1 AS skipped WHERE false" }}',
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'supabaseApi',
+      method: 'POST',
+      url: `${FOLKETS_SUPABASE_REST}/rpc/create_system_poll_draft`,
+      sendBody: true,
+      specifyBody: 'json',
+      jsonBody: expr('={{ JSON.stringify($json.rpcBody || {}) }}'),
+      options: { timeout: 60000 },
     },
   },
   output: [{ id: 'uuid-poll' }],
@@ -239,14 +329,16 @@ sticky(
   { color: 4 },
 );
 
-const sakPipeline = fetchSakForPoll
+const sakPipeline = normalizePollInput
+  .to(fetchSakForPoll)
+  .to(expandSakForPoll)
   .to(buildRagQuery)
   .to(embedRagQuery)
   .to(mapEmbeddingForRag)
   .to(retrieveRagChunks)
   .to(mergeRagContext)
   .to(systemPollGeneratorAgent)
-  .to(buildSaveQuery.to(saveDraft));
+  .to(buildSaveQuery.to(gateSaveDraft.to(saveDraft)));
 
 export default workflow(
   'folkets-system-poll-draft',
