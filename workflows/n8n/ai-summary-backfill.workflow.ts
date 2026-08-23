@@ -11,90 +11,7 @@ import {
   expr,
   placeholder,
 } from '@n8n/workflow-sdk';
-
-const DETAIL_CONTEXT_SQL = `jsonb_strip_nulls(jsonb_build_object(
-  'ferdigbehandlet', i.detail_json->'ferdigbehandlet',
-  'status', i.detail_json->'status',
-  'innstillingstekst', left(coalesce(i.detail_json->>'innstillingstekst', ''), 6000),
-  'vedtakstekst', left(coalesce(i.detail_json->>'vedtakstekst', ''), 4000),
-  'korttittel', i.detail_json->>'korttittel',
-  'tittel', i.detail_json->>'tittel'
-))`;
-
-const RAG_CHUNKS_SUBQUERY = `(
-  SELECT COALESCE(
-    json_agg(
-      json_build_object(
-        'document_id', dc.document_id,
-        'chunk_index', dc.chunk_index,
-        'content', left(dc.content, 1200)
-      )
-      ORDER BY dc.document_id, dc.chunk_index
-    ),
-    '[]'::json
-  )
-  FROM (
-    SELECT document_id, chunk_index, content
-    FROM public.document_chunks
-    WHERE issue_id = i.id
-      AND embedding_status = 'ready'
-    ORDER BY document_id, chunk_index
-    LIMIT 8
-  ) dc
-) AS rag_chunks`;
-
-const MISSING_SUMMARIES_SQL = `SELECT
-  i.id,
-  i.title,
-  i.summary,
-  ${DETAIL_CONTEXT_SQL} AS detail_json,
-  left(coalesce(i.ai_summary_source_context, ''), 12000) AS ai_summary_source_context,
-  COALESCE(
-    json_agg(
-      json_build_object(
-        'document_id', d.document_id,
-        'title', d.title,
-        'document_type', d.document_type,
-        'text_excerpt', left(coalesce(d.text_excerpt, ''), 2000),
-        'source_url', d.source_url
-      )
-      ORDER BY d.fetched_at DESC
-    ) FILTER (WHERE d.document_id IS NOT NULL),
-    '[]'::json
-  ) AS documents,
-  ${RAG_CHUNKS_SUBQUERY}
-FROM public.stortinget_issues i
-LEFT JOIN public.issue_ai_summaries s ON s.stortinget_issue_id = i.id
-LEFT JOIN public.stortinget_issue_documents d ON d.issue_id = i.id
-WHERE s.stortinget_issue_id IS NULL
-GROUP BY i.id, i.title, i.summary, i.detail_json, i.ai_summary_source_context
-ORDER BY i.last_synced_at DESC NULLS LAST
-LIMIT $1`;
-
-const FETCH_ISSUE_BY_ID_SQL = `SELECT
-  i.id,
-  i.title,
-  i.summary,
-  ${DETAIL_CONTEXT_SQL} AS detail_json,
-  left(coalesce(i.ai_summary_source_context, ''), 12000) AS ai_summary_source_context,
-  COALESCE(
-    json_agg(
-      json_build_object(
-        'document_id', d.document_id,
-        'title', d.title,
-        'document_type', d.document_type,
-        'text_excerpt', left(coalesce(d.text_excerpt, ''), 2000),
-        'source_url', d.source_url
-      )
-      ORDER BY d.fetched_at DESC
-    ) FILTER (WHERE d.document_id IS NOT NULL),
-    '[]'::json
-  ) AS documents,
-  ${RAG_CHUNKS_SUBQUERY}
-FROM public.stortinget_issues i
-LEFT JOIN public.stortinget_issue_documents d ON d.issue_id = i.id
-WHERE i.id = $1
-GROUP BY i.id, i.title, i.summary, i.detail_json, i.ai_summary_source_context`;
+import { folketsSupabaseCredential } from './workflow-credentials';
 
 const BUILD_CONTEXT_JS = `const item = $input.item.json;
 if (item.ai_summary_source_context) {
@@ -259,7 +176,7 @@ return {
   },
 };`;
 
-const PREPARE_UPSERT_SQL_JS = `const {
+const PREPARE_SUMMARY_RPC_PAYLOAD_JS = `const {
   issueId,
   narrative,
   who_affected,
@@ -270,56 +187,6 @@ const PREPARE_UPSERT_SQL_JS = `const {
   hvem,
   kostnad,
 } = $input.item.json;
-function esc(value) {
-  return "'" + String(value ?? '').replace(/'/g, "''") + "'";
-}
-function pgTextArray(arr) {
-  const list = Array.isArray(arr) ? arr : [];
-  if (!list.length) return "ARRAY[]::text[]";
-  return "ARRAY[" + list.map((a) => esc(a)).join(", ") + "]::text[]";
-}
-const cardsJson = esc(JSON.stringify(topic_cards || [])) + "::jsonb";
-const labelsSql = pgTextArray(labels);
-const upsertSql = \`WITH ups AS (
-  INSERT INTO public.issue_ai_summaries (
-    stortinget_issue_id,
-    narrative,
-    who_affected,
-    how_affected,
-    topic_cards,
-    labels,
-    hva,
-    hvem,
-    kostnad,
-    updated_at
-  ) VALUES (
-    \${esc(issueId)},
-    \${esc(narrative)},
-    \${esc(who_affected)},
-    \${esc(how_affected)},
-    \${cardsJson},
-    \${labelsSql},
-    \${esc(hva)},
-    \${esc(hvem)},
-    \${esc(kostnad)},
-    NOW()
-  )
-  ON CONFLICT (stortinget_issue_id) DO UPDATE SET
-    narrative = EXCLUDED.narrative,
-    who_affected = EXCLUDED.who_affected,
-    how_affected = EXCLUDED.how_affected,
-    topic_cards = EXCLUDED.topic_cards,
-    labels = EXCLUDED.labels,
-    hva = EXCLUDED.hva,
-    hvem = EXCLUDED.hvem,
-    kostnad = EXCLUDED.kostnad,
-    updated_at = NOW()
-  RETURNING stortinget_issue_id, labels
-)
-UPDATE public.stortinget_issues i
-SET ai_labels = ups.labels
-FROM ups
-WHERE i.id = ups.stortinget_issue_id\`;
 return {
   json: {
     issueId,
@@ -331,7 +198,28 @@ return {
     hva,
     hvem,
     kostnad,
-    upsertSql,
+    rpcPayload: {
+      issue_id: issueId,
+      narrative,
+      who_affected,
+      how_affected,
+      topic_cards: topic_cards || [],
+      labels: labels || [],
+      hva,
+      hvem,
+      kostnad,
+    },
+    rpcQuery: 'p_payload=' + encodeURIComponent(JSON.stringify({
+      issue_id: issueId,
+      narrative,
+      who_affected,
+      how_affected,
+      topic_cards: topic_cards || [],
+      labels: labels || [],
+      hva,
+      hvem,
+      kostnad,
+    })),
   },
 };`;
 
@@ -421,19 +309,20 @@ const backfillSettingsSchedule = node({
 });
 
 const fetchMissingSummaries = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.supabase',
+  version: 1,
   config: {
     name: 'Fetch issues without summary',
-    credentials: { postgres: newCredential('Supabase Postgres Folkets') },
+    credentials: folketsSupabaseCredential,
     parameters: {
-      operation: 'executeQuery',
-      query: MISSING_SUMMARIES_SQL,
-      options: {
-        queryReplacement: expr(
-          '{{ $("Backfill settings (schedule)").item.json.batchLimit }}'
-        ),
-      },
+      resource: 'row',
+      operation: 'getAll',
+      tableId: 'rpc/n8n_list_issues_missing_ai_summary',
+      returnAll: true,
+      filterType: 'string',
+      filterString: expr(
+        '{{ "p_limit=" + ($("Backfill settings (schedule)").item.json.batchLimit || 1) }}'
+      ),
     },
   },
   output: [
@@ -535,15 +424,15 @@ const mapAgentOutput = node({
   ],
 });
 
-const prepareUpsertSql = node({
+const prepareSummaryRpcPayload = node({
   type: 'n8n-nodes-base.code',
   version: 2,
   config: {
-    name: 'Prepare upsert SQL',
+    name: 'Prepare summary RPC payload',
     parameters: {
       mode: 'runOnceForEachItem',
       language: 'javaScript',
-      jsCode: PREPARE_UPSERT_SQL_JS,
+      jsCode: PREPARE_SUMMARY_RPC_PAYLOAD_JS,
     },
   },
   output: [
@@ -557,23 +446,28 @@ const prepareUpsertSql = node({
       hva: 'Sakens innhold',
       hvem: 'Berørte grupper',
       kostnad: 'Økonomi',
-      upsertSql: 'INSERT INTO ...',
+      rpcPayload: { issue_id: '200329' },
+      rpcQuery: 'p_payload=%7B%7D',
     },
   ],
 });
 
 const saveSummaryToDb = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.supabase',
+  version: 1,
   config: {
     name: 'Save summary to Supabase',
-    credentials: { postgres: newCredential('Supabase Postgres Folkets') },
+    credentials: folketsSupabaseCredential,
     parameters: {
-      operation: 'executeQuery',
-      query: expr('{{ $json.upsertSql }}'),
+      resource: 'row',
+      operation: 'getAll',
+      tableId: 'rpc/n8n_upsert_issue_ai_summary',
+      returnAll: true,
+      filterType: 'string',
+      filterString: expr('{{ $json.rpcQuery }}'),
     },
   },
-  output: [{ success: true }],
+  output: [{ ok: true, issue_id: '200329' }],
 });
 
 const logSummaryResult = node({
@@ -589,7 +483,7 @@ const logSummaryResult = node({
           {
             id: 'issue-id',
             name: 'issueId',
-            value: expr('{{ $("Prepare upsert SQL").item.json.issueId }}'),
+            value: expr('{{ $("Prepare summary RPC payload").item.json.issueId }}'),
             type: 'string',
           },
           {
@@ -686,17 +580,20 @@ const normalizeIssueId = node({
 });
 
 const fetchIssueById = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.supabase',
+  version: 1,
   config: {
     name: 'Fetch issue by ID',
-    credentials: { postgres: newCredential('Supabase Postgres Folkets') },
+    credentials: folketsSupabaseCredential,
     parameters: {
-      operation: 'executeQuery',
-      query: FETCH_ISSUE_BY_ID_SQL,
-      options: {
-        queryReplacement: expr('{{ $("Normalize issue ID").item.json.id }}'),
-      },
+      resource: 'row',
+      operation: 'getAll',
+      tableId: 'rpc/n8n_get_issue_ai_context',
+      returnAll: true,
+      filterType: 'string',
+      filterString: expr(
+        '{{ "p_issue_id=" + encodeURIComponent($("Normalize issue ID").item.json.id) }}'
+      ),
     },
   },
   output: [
@@ -783,15 +680,15 @@ const mapAgentOutputWebhook = node({
   ],
 });
 
-const prepareUpsertSqlWebhook = node({
+const prepareSummaryRpcPayloadWebhook = node({
   type: 'n8n-nodes-base.code',
   version: 2,
   config: {
-    name: 'Prepare upsert SQL (webhook)',
+    name: 'Prepare summary RPC payload (webhook)',
     parameters: {
       mode: 'runOnceForEachItem',
       language: 'javaScript',
-      jsCode: PREPARE_UPSERT_SQL_JS,
+      jsCode: PREPARE_SUMMARY_RPC_PAYLOAD_JS,
     },
   },
   output: [
@@ -805,23 +702,28 @@ const prepareUpsertSqlWebhook = node({
       hva: 'Sakens innhold',
       hvem: 'Berørte grupper',
       kostnad: 'Økonomi',
-      upsertSql: 'INSERT INTO ...',
+      rpcPayload: { issue_id: '200329' },
+      rpcQuery: 'p_payload=%7B%7D',
     },
   ],
 });
 
 const saveSummaryWebhook = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.supabase',
+  version: 1,
   config: {
     name: 'Save summary (webhook)',
-    credentials: { postgres: newCredential('Supabase Postgres Folkets') },
+    credentials: folketsSupabaseCredential,
     parameters: {
-      operation: 'executeQuery',
-      query: expr('{{ $json.upsertSql }}'),
+      resource: 'row',
+      operation: 'getAll',
+      tableId: 'rpc/n8n_upsert_issue_ai_summary',
+      returnAll: true,
+      filterType: 'string',
+      filterString: expr('{{ $json.rpcQuery }}'),
     },
   },
-  output: [{ success: true }],
+  output: [{ ok: true, issue_id: '200329' }],
 });
 
 const respondToWebhook = node({
@@ -832,14 +734,14 @@ const respondToWebhook = node({
     parameters: {
       respondWith: 'json',
       responseBody: expr(
-        '{{ { ok: true, issueId: $("Normalize issue ID").item.json.id, version: 2, narrative: $("Prepare upsert SQL (webhook)").item.json.narrative, who_affected: $("Prepare upsert SQL (webhook)").item.json.who_affected, how_affected: $("Prepare upsert SQL (webhook)").item.json.how_affected, topic_cards: $("Prepare upsert SQL (webhook)").item.json.topic_cards, labels: $("Prepare upsert SQL (webhook)").item.json.labels, saved: true } }}'
+        '{{ { ok: true, issueId: $("Normalize issue ID").item.json.id, version: 2, narrative: $("Prepare summary RPC payload (webhook)").item.json.narrative, who_affected: $("Prepare summary RPC payload (webhook)").item.json.who_affected, how_affected: $("Prepare summary RPC payload (webhook)").item.json.how_affected, topic_cards: $("Prepare summary RPC payload (webhook)").item.json.topic_cards, labels: $("Prepare summary RPC payload (webhook)").item.json.labels, saved: true } }}'
       ),
     },
   },
 });
 
 sticky(
-  '## AI-sammendrag v2 med Ollama\n\n**Ollama credential:** «Ollama Heyklever» → https://ollama.heyklever.app\n\n**Modell:** Rediger i «Ollama Chat Model» (standard llama3.2:3b-text-q4_K_M).\n\n**Postgres:** «Supabase Postgres Folkets». Agent skriver narrative, who/how, topic_cards og labels til `issue_ai_summaries`, og synker `stortinget_issues.ai_labels`.',
+  '## AI-sammendrag v2 med Ollama\n\n**Ollama credential:** «Ollama Heyklever»\n\n**Modell:** Rediger i «Ollama Chat Model» (standard llama3.2:3b-text-q4_K_M).\n\n**Supabase:** «Folkets-meninger». Agent skriver narrative, who/how, topic_cards og labels til `issue_ai_summaries`, og synker `stortinget_issues.ai_labels`.',
   [scheduleTrigger, ollamaChatModel, webhookTrigger],
   { color: 4 }
 );
@@ -847,7 +749,7 @@ sticky(
 const summaryPipeline = buildSakContext
   .to(generateSummaryAgent)
   .to(mapAgentOutput)
-  .to(prepareUpsertSql)
+  .to(prepareSummaryRpcPayload)
   .to(saveSummaryToDb)
   .to(logSummaryResult);
 
@@ -869,6 +771,6 @@ export default workflow(
   .to(buildSakContextWebhook)
   .to(generateSummaryAgentWebhook)
   .to(mapAgentOutputWebhook)
-  .to(prepareUpsertSqlWebhook)
+  .to(prepareSummaryRpcPayloadWebhook)
   .to(saveSummaryWebhook)
   .to(respondToWebhook);

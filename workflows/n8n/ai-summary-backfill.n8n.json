@@ -1,0 +1,688 @@
+{
+  "id": "folkets-ai-summary-backfill",
+  "name": "Folkets Stemme – AI-sammendrag backfill",
+  "nodes": [
+    {
+      "id": "9927ab74-73a6-4ecd-905b-a61f108c990c",
+      "name": "Every 30 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "1be7470e-7bce-4d7f-a713-0162d6e929b1",
+      "name": "Backfill settings (schedule)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        300,
+        300
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "batch-limit",
+              "name": "batchLimit",
+              "value": "1",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "6d158ea9-caab-4d56-a4c0-ac6c5880f1a9",
+      "name": "Fetch issues without summary",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "rpc/n8n_list_issues_missing_ai_summary",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "={{ \"p_limit=\" + ($(\"Backfill settings (schedule)\").item.json.batchLimit || 1) }}"
+      },
+      "credentials": {}
+    },
+    {
+      "id": "0d02b8cd-805a-45b6-ba11-1aa784b44cc4",
+      "name": "Batch run complete",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        900,
+        300
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "status",
+              "name": "status",
+              "value": "scheduled_backfill_complete",
+              "type": "string"
+            },
+            {
+              "id": "at",
+              "name": "completedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "35408672-49f0-4da3-b5e5-cc7a1f6705c0",
+      "name": "Build sak context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        450
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const item = $input.item.json;\nif (item.ai_summary_source_context) {\n  let text = String(item.ai_summary_source_context);\n  if (text.length > 20000) {\n    text = text.slice(0, 20000) + '\\n\\n[... avkortet ...]';\n  }\n  return { json: { ...item, sakContextText: text } };\n}\nconst detail =\n  item.detail_json && typeof item.detail_json === 'object'\n    ? item.detail_json\n    : item.detail_json\n      ? JSON.parse(String(item.detail_json))\n      : {};\nlet documents = item.documents || [];\nif (typeof documents === 'string') {\n  try { documents = JSON.parse(documents); } catch (_) { documents = []; }\n}\nconst names = (list) => Array.isArray(list)\n  ? list.map((p) => [p?.fornavn, p?.etternavn].filter(Boolean).join(' ') + (p?.parti?.navn ? ' (' + p.parti.navn + ')' : '')).filter((x) => x.trim()).join(', ')\n  : '';\nconst listNames = (list) => Array.isArray(list)\n  ? list.map((x) => typeof x === 'string' ? x : x?.navn).filter(Boolean).join(', ')\n  : '';\nconst timeline = Array.isArray(detail.saksgang?.saksgang_steg_liste)\n  ? detail.saksgang.saksgang_steg_liste.slice(0, 8).flatMap((step) => [\n      step.navn ? '- ' + step.navn : null,\n      ...(Array.isArray(step.saksgang_hendelse_liste)\n        ? step.saksgang_hendelse_liste.map((e) => e?.hendelse_tekst ? '  - ' + e.hendelse_tekst : null)\n        : []),\n    ]).filter(Boolean).join('\\n')\n  : '';\nconst parts = [\n  'Sak ID: ' + item.id,\n  item.title ? 'Tittel: ' + item.title : null,\n  item.summary ? 'Kort beskrivelse: ' + item.summary : null,\n  detail.henvisning ? 'Dokumentreferanse: ' + detail.henvisning : null,\n  detail.komite?.navn ? 'Komité: ' + detail.komite.navn : (typeof detail.komite === 'string' ? 'Komité: ' + detail.komite : null),\n  listNames(detail.emne_liste) ? 'Emner: ' + listNames(detail.emne_liste) : null,\n  listNames(detail.stikkord_liste) ? 'Stikkord: ' + listNames(detail.stikkord_liste) : null,\n  names(detail.sak_opphav?.forslagstiller_liste) ? 'Forslagstillere: ' + names(detail.sak_opphav.forslagstiller_liste) : null,\n  names(detail.saksordfoerer_liste) ? 'Saksordførere: ' + names(detail.saksordfoerer_liste) : null,\n  timeline ? 'Saksgang og hendelser:\\n' + timeline : null,\n  detail.innstillingstekst ? 'Innstillingstekst:\\n' + detail.innstillingstekst : null,\n  detail.kortvedtak ? 'Kortvedtak:\\n' + detail.kortvedtak : null,\n  detail.vedtakstekst ? 'Vedtakstekst:\\n' + detail.vedtakstekst : null,\n  detail.parentestekst ? 'Parentestekst:\\n' + detail.parentestekst : null,\n  ...documents.slice(0, 5).map((d) => {\n    const title = d?.title || d?.document_id || 'Dokument';\n    const type = d?.document_type ? ' (' + d.document_type + ')' : '';\n    const excerpt = d?.text_excerpt ? String(d.text_excerpt).slice(0, 3000) : '';\n    return excerpt ? 'Tilhørende dokument: ' + title + type + '\\n' + excerpt : null;\n  }),\n].filter(Boolean);\nlet ragChunks = item.rag_chunks || [];\nif (typeof ragChunks === 'string') {\n  try { ragChunks = JSON.parse(ragChunks); } catch (_) { ragChunks = []; }\n}\nconst ragLines = ragChunks.slice(0, 12).map((chunk, index) => {\n  const content = String(chunk?.content || '').trim().slice(0, 1200);\n  if (!content) return null;\n  const source = chunk?.document_id ? ' (kilde: ' + chunk.document_id + ')' : '';\n  return 'Dokumentutdrag ' + (index + 1) + source + ':\\n' + content;\n}).filter(Boolean);\nif (ragLines.length) {\n  parts.push('Relevante dokumentutdrag (RAG):\\n' + ragLines.join('\\n\\n'));\n}\nlet sakContextText = parts.join('\\n\\n');\nif (sakContextText.length > 20000) {\n  sakContextText = sakContextText.slice(0, 20000) + '\\n\\n[... avkortet ...]';\n}\nreturn { json: { ...item, sakContextText } };"
+      }
+    },
+    {
+      "id": "21c85733-67cb-47c4-8c20-faa2ae45d237",
+      "name": "Generate summary (Ollama)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1100,
+        450
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.sakContextText }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Du er en nøytral, faktabasert assistent for «Folkets Stemme» som forenkler stortingssaker for vanlige borgere.\n\nSPRÅK: Skriv utelukkende på norsk (bokmål). Korte, tydelige setninger. Saklig og nøytral. Bygg kun på kilden.\n\nReturner JSON med:\n- narrative: Kort overordnet forklaring (2–4 setninger)\n- who_affected: Hvem som berøres (2–3 setninger, kun fra kilden)\n- how_affected: Hvordan de berøres (2–3 setninger, konkret)\n- topic_cards: 0–3 temakort valgt ut fra sakens innhold. Hvert kort: { \"title\": \"...\", \"body\": \"...\" }\n- labels: 2–5 korte nøkkelord på norsk (Title Case, konsistent). Brukes til søk og varsler.\n\nRegler:\n- who_affected og how_affected skal alltid fylles ut\n- topic_cards er dynamiske (ikke fast hva/hvem/kostnad)\n- Ingen oppdiktede beløp; skriv «ukjent» eller «ikke omtalt» når kilden mangler tall\n- Når kilden har tall: ta med konkrete kroner, tidshorisont (år/måned) og hvem det gjelder (bileiere, leietakere, studenter, pensjonister, fylke)\n- labels skal være generelle emneord (f.eks. Skatt, Helse, Privatøkonomi), ikke hele setninger",
+          "maxIterations": 4,
+          "enableStreaming": false
+        },
+        "subnodes": {
+          "model": {
+            "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+            "version": "1",
+            "config": {
+              "name": "Ollama Chat Model",
+              "credentials": {},
+              "parameters": {
+                "model": "<__PLACEHOLDER_VALUE__llama3.2:3b-text-q4_K_M__>",
+                "options": {
+                  "temperature": 0.3,
+                  "format": "json",
+                  "numPredict": 900
+                }
+              }
+            },
+            "id": "a31bed8b-6e71-4750-87d7-f1122371ba2b",
+            "name": "Ollama Chat Model",
+            "_subnodeType": "ai_languageModel"
+          },
+          "outputParser": {
+            "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+            "version": "1.3",
+            "config": {
+              "name": "Summary JSON parser",
+              "parameters": {
+                "schemaType": "fromJson",
+                "jsonSchemaExample": "{\"narrative\":\"Kort overordnet forklaring\",\"who_affected\":\"Hvem som berøres\",\"how_affected\":\"Hvordan de berøres\",\"topic_cards\":[{\"title\":\"Finansiering\",\"body\":\"...\"}],\"labels\":[\"Skatt\",\"Privatøkonomi\"]}"
+              }
+            },
+            "id": "516c767c-73ec-4fd6-9580-1584e586abe9",
+            "name": "Summary JSON parser",
+            "_subnodeType": "ai_outputParser"
+          }
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "62f1a5ff-6780-458d-9eaa-9748cc1b150f",
+      "name": "Map agent output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        450
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "function normalizeLabel(s) {\n  const t = String(s ?? '').trim().replace(/\\s+/g, ' ');\n  if (t.length < 2 || t.length > 48) return null;\n  return t.charAt(0).toUpperCase() + t.slice(1);\n}\nfunction parseCards(raw) {\n  if (!Array.isArray(raw)) return [];\n  return raw\n    .slice(0, 3)\n    .map((c) => {\n      if (!c || typeof c !== 'object') return null;\n      const title = String(c.title ?? '').trim();\n      const body = String(c.body ?? '').trim();\n      if (!title || !body) return null;\n      return { title: title.slice(0, 80), body: body.slice(0, 600) };\n    })\n    .filter(Boolean);\n}\nconst item = $input.item.json;\nlet out = item.output ?? item;\nif (typeof out === 'string') {\n  try {\n    out = JSON.parse(out);\n  } catch (_) {\n    out = {};\n  }\n}\nconst narrative = String(out.narrative ?? '').trim();\nconst who_affected = String(out.who_affected ?? '').trim();\nconst how_affected = String(out.how_affected ?? '').trim();\nconst topic_cards = parseCards(out.topic_cards);\nconst labelKeys = new Set();\nconst labels = [];\nfor (const raw of Array.isArray(out.labels) ? out.labels : []) {\n  const label = normalizeLabel(raw);\n  if (!label) continue;\n  const key = label.toLowerCase();\n  if (labelKeys.has(key)) continue;\n  labelKeys.add(key);\n  labels.push(label);\n  if (labels.length >= 5) break;\n}\nfor (const card of topic_cards) {\n  if (labels.length >= 2) break;\n  const label = normalizeLabel(card.title);\n  if (!label) continue;\n  const key = label.toLowerCase();\n  if (labelKeys.has(key)) continue;\n  labelKeys.add(key);\n  labels.push(label);\n}\nconst econCard = topic_cards.find((c) => /økonom|kost|finans|skatt/i.test(c.title));\nconst kostnad = econCard\n  ? econCard.body\n  : topic_cards[0]?.body && /økonom|kost|finans|skatt/i.test(topic_cards[0].title)\n    ? topic_cards[0].body\n    : 'Ikke omtalt i kilden.';\nconst issueId = $('Process one issue').item?.json?.id ?? item.id;\nreturn {\n  json: {\n    issueId,\n    narrative,\n    who_affected,\n    how_affected,\n    topic_cards,\n    labels,\n    hva: narrative,\n    hvem: who_affected,\n    kostnad,\n  },\n};"
+      }
+    },
+    {
+      "id": "12aec96c-dec3-41ea-b1b6-85a9ff36a9ed",
+      "name": "Prepare summary RPC payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        450
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const {\n  issueId,\n  narrative,\n  who_affected,\n  how_affected,\n  topic_cards,\n  labels,\n  hva,\n  hvem,\n  kostnad,\n} = $input.item.json;\nreturn {\n  json: {\n    issueId,\n    narrative,\n    who_affected,\n    how_affected,\n    topic_cards,\n    labels,\n    hva,\n    hvem,\n    kostnad,\n    rpcPayload: {\n      issue_id: issueId,\n      narrative,\n      who_affected,\n      how_affected,\n      topic_cards: topic_cards || [],\n      labels: labels || [],\n      hva,\n      hvem,\n      kostnad,\n    },\n    rpcQuery: 'p_payload=' + encodeURIComponent(JSON.stringify({\n      issue_id: issueId,\n      narrative,\n      who_affected,\n      how_affected,\n      topic_cards: topic_cards || [],\n      labels: labels || [],\n      hva,\n      hvem,\n      kostnad,\n    })),\n  },\n};"
+      }
+    },
+    {
+      "id": "2d958747-42c9-45cf-bac9-6e2fb0c78743",
+      "name": "Save summary to Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1700,
+        450
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "rpc/n8n_upsert_issue_ai_summary",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "={{ $json.rpcQuery }}"
+      },
+      "credentials": {}
+    },
+    {
+      "id": "6eeb1ef1-4e8c-4e78-9b3f-aef62ea0a89a",
+      "name": "Log summary result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1900,
+        450
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "issue-id",
+              "name": "issueId",
+              "value": "={{ $(\"Prepare summary RPC payload\").item.json.issueId }}",
+              "type": "string"
+            },
+            {
+              "id": "saved",
+              "name": "saved",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "0d2d24e0-ff4c-460c-bd47-bb7de801fdc4",
+      "name": "Rate limit pause",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2100,
+        450
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 5,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "074d02c7-1b06-4ce2-918d-3a3d505b7685",
+      "name": "Process one issue",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        700,
+        300
+      ],
+      "parameters": {
+        "batchSize": 1
+      }
+    },
+    {
+      "id": "6d4a134e-a93f-4f20-89e7-2e49e8111546",
+      "name": "Webhook new issue",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        100,
+        450
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "folkets-ai-summary",
+        "responseMode": "responseNode"
+      },
+      "webhookId": "dad1348e-6ed9-4980-93d2-ddbfb621b5e0"
+    },
+    {
+      "id": "c9c3a975-659b-4910-9a83-80fb6883ec77",
+      "name": "Normalize issue ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        300,
+        450
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "issue-id",
+              "name": "id",
+              "value": "={{ $json.body?.stortinget_issue_id ?? $json.body?.id ?? $json.stortinget_issue_id ?? $json.id }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "51fa0908-8ec2-408f-a714-4a8c171a67c9",
+      "name": "Fetch issue by ID",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        500,
+        450
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "rpc/n8n_get_issue_ai_context",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "={{ \"p_issue_id=\" + encodeURIComponent($(\"Normalize issue ID\").item.json.id) }}"
+      },
+      "credentials": {}
+    },
+    {
+      "id": "02eeda51-7ba5-4b02-93e4-ed6699fcc579",
+      "name": "Build sak context (webhook)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        450
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const item = $input.item.json;\nif (item.ai_summary_source_context) {\n  let text = String(item.ai_summary_source_context);\n  if (text.length > 20000) {\n    text = text.slice(0, 20000) + '\\n\\n[... avkortet ...]';\n  }\n  return { json: { ...item, sakContextText: text } };\n}\nconst detail =\n  item.detail_json && typeof item.detail_json === 'object'\n    ? item.detail_json\n    : item.detail_json\n      ? JSON.parse(String(item.detail_json))\n      : {};\nlet documents = item.documents || [];\nif (typeof documents === 'string') {\n  try { documents = JSON.parse(documents); } catch (_) { documents = []; }\n}\nconst names = (list) => Array.isArray(list)\n  ? list.map((p) => [p?.fornavn, p?.etternavn].filter(Boolean).join(' ') + (p?.parti?.navn ? ' (' + p.parti.navn + ')' : '')).filter((x) => x.trim()).join(', ')\n  : '';\nconst listNames = (list) => Array.isArray(list)\n  ? list.map((x) => typeof x === 'string' ? x : x?.navn).filter(Boolean).join(', ')\n  : '';\nconst timeline = Array.isArray(detail.saksgang?.saksgang_steg_liste)\n  ? detail.saksgang.saksgang_steg_liste.slice(0, 8).flatMap((step) => [\n      step.navn ? '- ' + step.navn : null,\n      ...(Array.isArray(step.saksgang_hendelse_liste)\n        ? step.saksgang_hendelse_liste.map((e) => e?.hendelse_tekst ? '  - ' + e.hendelse_tekst : null)\n        : []),\n    ]).filter(Boolean).join('\\n')\n  : '';\nconst parts = [\n  'Sak ID: ' + item.id,\n  item.title ? 'Tittel: ' + item.title : null,\n  item.summary ? 'Kort beskrivelse: ' + item.summary : null,\n  detail.henvisning ? 'Dokumentreferanse: ' + detail.henvisning : null,\n  detail.komite?.navn ? 'Komité: ' + detail.komite.navn : (typeof detail.komite === 'string' ? 'Komité: ' + detail.komite : null),\n  listNames(detail.emne_liste) ? 'Emner: ' + listNames(detail.emne_liste) : null,\n  listNames(detail.stikkord_liste) ? 'Stikkord: ' + listNames(detail.stikkord_liste) : null,\n  names(detail.sak_opphav?.forslagstiller_liste) ? 'Forslagstillere: ' + names(detail.sak_opphav.forslagstiller_liste) : null,\n  names(detail.saksordfoerer_liste) ? 'Saksordførere: ' + names(detail.saksordfoerer_liste) : null,\n  timeline ? 'Saksgang og hendelser:\\n' + timeline : null,\n  detail.innstillingstekst ? 'Innstillingstekst:\\n' + detail.innstillingstekst : null,\n  detail.kortvedtak ? 'Kortvedtak:\\n' + detail.kortvedtak : null,\n  detail.vedtakstekst ? 'Vedtakstekst:\\n' + detail.vedtakstekst : null,\n  detail.parentestekst ? 'Parentestekst:\\n' + detail.parentestekst : null,\n  ...documents.slice(0, 5).map((d) => {\n    const title = d?.title || d?.document_id || 'Dokument';\n    const type = d?.document_type ? ' (' + d.document_type + ')' : '';\n    const excerpt = d?.text_excerpt ? String(d.text_excerpt).slice(0, 3000) : '';\n    return excerpt ? 'Tilhørende dokument: ' + title + type + '\\n' + excerpt : null;\n  }),\n].filter(Boolean);\nlet ragChunks = item.rag_chunks || [];\nif (typeof ragChunks === 'string') {\n  try { ragChunks = JSON.parse(ragChunks); } catch (_) { ragChunks = []; }\n}\nconst ragLines = ragChunks.slice(0, 12).map((chunk, index) => {\n  const content = String(chunk?.content || '').trim().slice(0, 1200);\n  if (!content) return null;\n  const source = chunk?.document_id ? ' (kilde: ' + chunk.document_id + ')' : '';\n  return 'Dokumentutdrag ' + (index + 1) + source + ':\\n' + content;\n}).filter(Boolean);\nif (ragLines.length) {\n  parts.push('Relevante dokumentutdrag (RAG):\\n' + ragLines.join('\\n\\n'));\n}\nlet sakContextText = parts.join('\\n\\n');\nif (sakContextText.length > 20000) {\n  sakContextText = sakContextText.slice(0, 20000) + '\\n\\n[... avkortet ...]';\n}\nreturn { json: { ...item, sakContextText } };"
+      }
+    },
+    {
+      "id": "6febf023-cef9-4e01-a3a9-6717154b84ee",
+      "name": "Generate summary (Ollama webhook)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        900,
+        450
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.sakContextText }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Du er en nøytral, faktabasert assistent for «Folkets Stemme» som forenkler stortingssaker for vanlige borgere.\n\nSPRÅK: Skriv utelukkende på norsk (bokmål). Korte, tydelige setninger. Saklig og nøytral. Bygg kun på kilden.\n\nReturner JSON med:\n- narrative: Kort overordnet forklaring (2–4 setninger)\n- who_affected: Hvem som berøres (2–3 setninger, kun fra kilden)\n- how_affected: Hvordan de berøres (2–3 setninger, konkret)\n- topic_cards: 0–3 temakort valgt ut fra sakens innhold. Hvert kort: { \"title\": \"...\", \"body\": \"...\" }\n- labels: 2–5 korte nøkkelord på norsk (Title Case, konsistent). Brukes til søk og varsler.\n\nRegler:\n- who_affected og how_affected skal alltid fylles ut\n- topic_cards er dynamiske (ikke fast hva/hvem/kostnad)\n- Ingen oppdiktede beløp; skriv «ukjent» eller «ikke omtalt» når kilden mangler tall\n- Når kilden har tall: ta med konkrete kroner, tidshorisont (år/måned) og hvem det gjelder (bileiere, leietakere, studenter, pensjonister, fylke)\n- labels skal være generelle emneord (f.eks. Skatt, Helse, Privatøkonomi), ikke hele setninger",
+          "maxIterations": 4,
+          "enableStreaming": false
+        },
+        "subnodes": {
+          "model": {
+            "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+            "version": "1",
+            "config": {
+              "name": "Ollama Chat Model",
+              "credentials": {},
+              "parameters": {
+                "model": "<__PLACEHOLDER_VALUE__llama3.2:3b-text-q4_K_M__>",
+                "options": {
+                  "temperature": 0.3,
+                  "format": "json",
+                  "numPredict": 900
+                }
+              }
+            },
+            "id": "a31bed8b-6e71-4750-87d7-f1122371ba2b",
+            "name": "Ollama Chat Model",
+            "_subnodeType": "ai_languageModel"
+          },
+          "outputParser": {
+            "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+            "version": "1.3",
+            "config": {
+              "name": "Summary JSON parser",
+              "parameters": {
+                "schemaType": "fromJson",
+                "jsonSchemaExample": "{\"narrative\":\"Kort overordnet forklaring\",\"who_affected\":\"Hvem som berøres\",\"how_affected\":\"Hvordan de berøres\",\"topic_cards\":[{\"title\":\"Finansiering\",\"body\":\"...\"}],\"labels\":[\"Skatt\",\"Privatøkonomi\"]}"
+              }
+            },
+            "id": "516c767c-73ec-4fd6-9580-1584e586abe9",
+            "name": "Summary JSON parser",
+            "_subnodeType": "ai_outputParser"
+          }
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "15a01bf7-a3fe-4eff-9bf2-84977acc0396",
+      "name": "Map agent output (webhook)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        450
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "function normalizeLabel(s) {\n  const t = String(s ?? '').trim().replace(/\\s+/g, ' ');\n  if (t.length < 2 || t.length > 48) return null;\n  return t.charAt(0).toUpperCase() + t.slice(1);\n}\nfunction parseCards(raw) {\n  if (!Array.isArray(raw)) return [];\n  return raw\n    .slice(0, 3)\n    .map((c) => {\n      if (!c || typeof c !== 'object') return null;\n      const title = String(c.title ?? '').trim();\n      const body = String(c.body ?? '').trim();\n      if (!title || !body) return null;\n      return { title: title.slice(0, 80), body: body.slice(0, 600) };\n    })\n    .filter(Boolean);\n}\nconst item = $input.item.json;\nlet out = item.output ?? item;\nif (typeof out === 'string') {\n  try {\n    out = JSON.parse(out);\n  } catch (_) {\n    out = {};\n  }\n}\nconst narrative = String(out.narrative ?? '').trim();\nconst who_affected = String(out.who_affected ?? '').trim();\nconst how_affected = String(out.how_affected ?? '').trim();\nconst topic_cards = parseCards(out.topic_cards);\nconst labelKeys = new Set();\nconst labels = [];\nfor (const raw of Array.isArray(out.labels) ? out.labels : []) {\n  const label = normalizeLabel(raw);\n  if (!label) continue;\n  const key = label.toLowerCase();\n  if (labelKeys.has(key)) continue;\n  labelKeys.add(key);\n  labels.push(label);\n  if (labels.length >= 5) break;\n}\nfor (const card of topic_cards) {\n  if (labels.length >= 2) break;\n  const label = normalizeLabel(card.title);\n  if (!label) continue;\n  const key = label.toLowerCase();\n  if (labelKeys.has(key)) continue;\n  labelKeys.add(key);\n  labels.push(label);\n}\nconst econCard = topic_cards.find((c) => /økonom|kost|finans|skatt/i.test(c.title));\nconst kostnad = econCard\n  ? econCard.body\n  : topic_cards[0]?.body && /økonom|kost|finans|skatt/i.test(topic_cards[0].title)\n    ? topic_cards[0].body\n    : 'Ikke omtalt i kilden.';\nconst issueId = $('Normalize issue ID').item?.json?.id ?? item.id;\nreturn {\n  json: {\n    issueId,\n    narrative,\n    who_affected,\n    how_affected,\n    topic_cards,\n    labels,\n    hva: narrative,\n    hvem: who_affected,\n    kostnad,\n  },\n};"
+      }
+    },
+    {
+      "id": "8b44d3ca-1f73-4fd9-b8c6-bcb291627fcd",
+      "name": "Prepare summary RPC payload (webhook)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        450
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const {\n  issueId,\n  narrative,\n  who_affected,\n  how_affected,\n  topic_cards,\n  labels,\n  hva,\n  hvem,\n  kostnad,\n} = $input.item.json;\nreturn {\n  json: {\n    issueId,\n    narrative,\n    who_affected,\n    how_affected,\n    topic_cards,\n    labels,\n    hva,\n    hvem,\n    kostnad,\n    rpcPayload: {\n      issue_id: issueId,\n      narrative,\n      who_affected,\n      how_affected,\n      topic_cards: topic_cards || [],\n      labels: labels || [],\n      hva,\n      hvem,\n      kostnad,\n    },\n    rpcQuery: 'p_payload=' + encodeURIComponent(JSON.stringify({\n      issue_id: issueId,\n      narrative,\n      who_affected,\n      how_affected,\n      topic_cards: topic_cards || [],\n      labels: labels || [],\n      hva,\n      hvem,\n      kostnad,\n    })),\n  },\n};"
+      }
+    },
+    {
+      "id": "85e3c754-95c3-4e4f-a8fe-766711cad7ea",
+      "name": "Save summary (webhook)",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        450
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "rpc/n8n_upsert_issue_ai_summary",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "={{ $json.rpcQuery }}"
+      },
+      "credentials": {}
+    },
+    {
+      "id": "20b4a14b-4bdd-4cf3-b6b2-1a30e681c87f",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1700,
+        450
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, issueId: $(\"Normalize issue ID\").item.json.id, version: 2, narrative: $(\"Prepare summary RPC payload (webhook)\").item.json.narrative, who_affected: $(\"Prepare summary RPC payload (webhook)\").item.json.who_affected, how_affected: $(\"Prepare summary RPC payload (webhook)\").item.json.how_affected, topic_cards: $(\"Prepare summary RPC payload (webhook)\").item.json.topic_cards, labels: $(\"Prepare summary RPC payload (webhook)\").item.json.labels, saved: true } }}"
+      }
+    }
+  ],
+  "connections": {
+    "Every 30 minutes": {
+      "main": [
+        [
+          {
+            "node": "Backfill settings (schedule)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backfill settings (schedule)": {
+      "main": [
+        [
+          {
+            "node": "Fetch issues without summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch issues without summary": {
+      "main": [
+        [
+          {
+            "node": "Process one issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build sak context": {
+      "main": [
+        [
+          {
+            "node": "Generate summary (Ollama)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate summary (Ollama)": {
+      "main": [
+        [
+          {
+            "node": "Map agent output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map agent output": {
+      "main": [
+        [
+          {
+            "node": "Prepare summary RPC payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare summary RPC payload": {
+      "main": [
+        [
+          {
+            "node": "Save summary to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save summary to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Log summary result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log summary result": {
+      "main": [
+        [
+          {
+            "node": "Rate limit pause",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate limit pause": {
+      "main": [
+        [
+          {
+            "node": "Process one issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process one issue": {
+      "main": [
+        [
+          {
+            "node": "Batch run complete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build sak context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook new issue": {
+      "main": [
+        [
+          {
+            "node": "Normalize issue ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize issue ID": {
+      "main": [
+        [
+          {
+            "node": "Fetch issue by ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch issue by ID": {
+      "main": [
+        [
+          {
+            "node": "Build sak context (webhook)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build sak context (webhook)": {
+      "main": [
+        [
+          {
+            "node": "Generate summary (Ollama webhook)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate summary (Ollama webhook)": {
+      "main": [
+        [
+          {
+            "node": "Map agent output (webhook)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map agent output (webhook)": {
+      "main": [
+        [
+          {
+            "node": "Prepare summary RPC payload (webhook)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare summary RPC payload (webhook)": {
+      "main": [
+        [
+          {
+            "node": "Save summary (webhook)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save summary (webhook)": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

@@ -1,7 +1,16 @@
 {
+  "id": "folkets-document-embeddings",
   "name": "Folkets Stemme – dokument embeddings (RAG)",
   "nodes": [
     {
+      "id": "bf1cf99a-9a8f-4ca1-9857-789ee34fdf57",
+      "name": "Every 60 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        100,
+        300
+      ],
       "parameters": {
         "rule": {
           "interval": [
@@ -11,14 +20,17 @@
             }
           ]
         }
-      },
-      "id": "schedule-trigger-node",
-      "name": "Every 15 minutes",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.3,
-      "position": [240, 300]
+      }
     },
     {
+      "id": "9ad25af3-38a0-491e-938c-aea4b983b86a",
+      "name": "Embedding settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        300,
+        300
+      ],
       "parameters": {
         "mode": "manual",
         "includeOtherFields": true,
@@ -38,37 +50,40 @@
             }
           ]
         }
-      },
-      "id": "embedding-settings-node",
-      "name": "Embedding settings",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [460, 300]
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT\n  c.id,\n  c.issue_id,\n  c.document_id,\n  c.chunk_index,\n  c.content\nFROM public.document_chunks c\nWHERE c.embedding_status = 'pending'\n  AND ($1::text IS NULL OR $1::text = '' OR c.issue_id = $1::text)\nORDER BY c.created_at ASC\nLIMIT $2",
-        "options": {
-          "queryReplacement": "={{ [ $json.issueId || null, $json.batchLimit || \"8\" ] }}"
-        }
-      },
-      "id": "fetch-pending-chunks-node",
-      "name": "Fetch pending chunks",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [680, 300],
-      "credentials": {
-        "postgres": {
-          "id": "CREDENTIAL_ID_POSTGRES",
-          "name": "Supabase Postgres Folkets"
-        }
       }
     },
     {
+      "id": "d95196a0-60b1-4a05-b913-d4de22e795f8",
+      "name": "Fetch pending chunks",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "document_chunks",
+        "returnAll": false,
+        "limit": "={{ Number($json.batchLimit || 8) }}",
+        "filterType": "string",
+        "filterString": "={{ \"embedding_status=eq.pending&order=created_at.asc\" + ($json.issueId ? \"&issue_id=eq.\" + $json.issueId : \"\") }}"
+      },
+      "credentials": {}
+    },
+    {
+      "id": "87728688-60ee-4763-8b8c-c61f173f0f1f",
+      "name": "Ollama embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        300
+      ],
       "parameters": {
         "method": "POST",
-        "url": "PLACEHOLDER_OLLAMA_URL/api/embeddings",
+        "url": "<__PLACEHOLDER_VALUE__https://ollama.example.com/api/embeddings__>",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"model\":\"nomic-embed-text:v1.5\",\"prompt\":{{ JSON.stringify($json.content) }}}",
@@ -76,84 +91,106 @@
           "timeout": 120000
         }
       },
-      "id": "embed-chunk-node",
-      "name": "Ollama embeddings",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1120, 300],
       "onError": "continueErrorOutput"
     },
     {
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "language": "javaScript",
-        "jsCode": "const chunk = $('Fetch pending chunks').item.json;\nconst response = $input.item.json;\nconst embedding = response.embedding;\nreturn { json: { ...chunk, embedding } };"
-      },
-      "id": "map-embedding-node",
+      "id": "6f41bd03-028a-47b6-b1ff-0513f6be4941",
       "name": "Map embedding vector",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 300]
-    },
-    {
+      "position": [
+        900,
+        300
+      ],
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "javaScript",
-        "jsCode": "const item = $input.item.json;\nconst embedding = item.embedding;\nif (!Array.isArray(embedding) || embedding.length === 0) {\n  throw new Error('Missing embedding vector');\n}\nconst vector = '[' + embedding.join(',') + ']';\nfunction esc(value) {\n  return \"'\" + String(value ?? '').replace(/'/g, \"''\") + \"'\";\n}\nconst updateSql = `UPDATE public.document_chunks\nSET embedding = '${vector}'::vector,\n    embedding_status = 'ready'\nWHERE id = ${esc(item.id)}::uuid`;\nconst finalizeSql = `UPDATE public.stortinget_issue_documents d\nSET chunks_status = CASE\n      WHEN EXISTS (\n        SELECT 1 FROM public.document_chunks c\n        WHERE c.issue_id = d.issue_id\n          AND c.document_id = d.document_id\n          AND c.embedding_status = 'pending'\n      ) THEN 'pending'\n      WHEN EXISTS (\n        SELECT 1 FROM public.document_chunks c\n        WHERE c.issue_id = d.issue_id\n          AND c.document_id = d.document_id\n          AND c.embedding_status = 'ready'\n      ) THEN 'ready'\n      ELSE d.chunks_status\n    END,\n    content_full_text = NULL,\n    content_html = NULL\nWHERE d.issue_id = ${esc(item.issue_id)}\n  AND d.document_id = ${esc(item.document_id)}`;\nreturn { json: { ...item, updateSql, finalizeSql } };"
-      },
-      "id": "prepare-update-node",
-      "name": "Prepare embedding update SQL",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1560, 300]
+        "jsCode": "const chunk = $('Fetch pending chunks').item.json;\nconst response = $input.item.json;\nconst embedding = response.embedding;\nif (!Array.isArray(embedding) || embedding.length === 0) {\n  throw new Error('Missing embedding vector');\n}\nreturn { json: { ...chunk, embedding } };"
+      }
     },
     {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "={{ $json.updateSql }}"
-      },
-      "id": "save-embedding-node",
+      "id": "e29bd12a-affe-49ab-9b86-37e3cb259011",
       "name": "Save embedding",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [1780, 300],
-      "credentials": {
-        "postgres": {
-          "id": "CREDENTIAL_ID_POSTGRES",
-          "name": "Supabase Postgres Folkets"
-        }
-      }
-    },
-    {
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        300
+      ],
       "parameters": {
-        "operation": "executeQuery",
-        "query": "={{ $('Prepare embedding update SQL').item.json.finalizeSql }}"
-      },
-      "id": "clear-document-body-node",
-      "name": "Clear document body storage",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [2000, 300],
-      "credentials": {
-        "postgres": {
-          "id": "CREDENTIAL_ID_POSTGRES",
-          "name": "Supabase Postgres Folkets"
+        "resource": "row",
+        "operation": "update",
+        "tableId": "document_chunks",
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "dataToSend": "defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "embedding",
+              "fieldValue": "={{ $json.embedding }}"
+            },
+            {
+              "fieldId": "embedding_status",
+              "fieldValue": "ready"
+            }
+          ]
         }
-      }
+      },
+      "credentials": {}
     },
     {
+      "id": "b85d389b-9d66-4295-8403-35b5ec5a8c72",
+      "name": "Clear document body storage",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "getAll",
+        "tableId": "rpc/n8n_finalize_document_embedding",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "={{ \"p_issue_id=\" + encodeURIComponent($json.issue_id) + \"&p_document_id=\" + encodeURIComponent($json.document_id) }}"
+      },
+      "credentials": {}
+    },
+    {
+      "id": "5417fe8a-4b4c-4b96-9d7c-edcd913d5f49",
+      "name": "Rate limit pause",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1500,
+        300
+      ],
       "parameters": {
         "resume": "timeInterval",
         "amount": 2,
         "unit": "seconds"
-      },
-      "id": "rate-limit-pause-node",
-      "name": "Rate limit pause",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [2220, 300]
+      }
     },
     {
+      "id": "399078e0-b4ae-4ec6-b8e3-131c9599de66",
+      "name": "Batch run complete",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1700,
+        300
+      ],
       "parameters": {
         "mode": "manual",
         "assignments": {
@@ -166,26 +203,34 @@
             }
           ]
         }
-      },
-      "id": "batch-complete-node",
-      "name": "Batch run complete",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [900, 500]
+      }
     },
     {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "folkets-document-embeddings",
-        "responseMode": "onReceived"
-      },
-      "id": "webhook-trigger-node",
+      "id": "c66133cf-bc16-4508-be0a-d04a82487e50",
       "name": "Webhook document embeddings",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [240, 600]
+      "position": [
+        100,
+        450
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "folkets-document-embeddings",
+        "responseMode": "onReceived",
+        "responseData": "allEntries"
+      },
+      "webhookId": "8f562b84-73b6-4468-97f3-0c3afd10d944"
     },
     {
+      "id": "58a8b0af-d781-4421-8e1b-6f1988e75154",
+      "name": "Normalize webhook payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        300,
+        450
+      ],
       "parameters": {
         "mode": "manual",
         "assignments": {
@@ -204,28 +249,11 @@
             }
           ]
         }
-      },
-      "id": "normalize-webhook-node",
-      "name": "Normalize webhook payload",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [460, 600]
-    },
-    {
-      "parameters": {
-        "height": 300,
-        "width": 400,
-        "content": "## Dokument embeddings (lagringseffektiv RAG)\\n\\nAppen lagrer ikke HTML-cache; chunk-tekst er én kopi i `document_chunks`. n8n embedder med Ollama og skriver til pgvector (påkrevd for RAG — n8n er ikke vektorlager). Etter embed: `chunks_status=ready` + slett leftover `content_full_text`/`content_html`.\\n\\nWebhook: `POST /webhook/folkets-document-embeddings` med valgfri `{ \"stortinget_issue_id\": \"…\" }`."
-      },
-      "id": "sticky-note-node",
-      "name": "Note",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [140, 180]
+      }
     }
   ],
   "connections": {
-    "Every 15 minutes": {
+    "Every 60 minutes": {
       "main": [
         [
           {
@@ -270,17 +298,6 @@
       ]
     },
     "Map embedding vector": {
-      "main": [
-        [
-          {
-            "node": "Prepare embedding update SQL",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare embedding update SQL": {
       "main": [
         [
           {
@@ -347,12 +364,5 @@
       ]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "staticData": null,
-  "tags": [],
-  "triggerCount": 2,
-  "updatedAt": "2026-06-16T21:47:00.000Z",
-  "versionId": "1"
+  "settings": {}
 }

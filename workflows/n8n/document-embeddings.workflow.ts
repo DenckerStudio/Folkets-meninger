@@ -3,66 +3,19 @@ import {
   node,
   trigger,
   sticky,
-  newCredential,
   expr,
   placeholder,
 } from '@n8n/workflow-sdk';
+import { folketsSupabaseCredential } from './workflow-credentials';
 
 /**
  * RAG embeddings:
  * - App creates pending document_chunks (no HTML cache; document body cleared after chunking).
- * - n8n embeds with Ollama and writes vectors to Postgres (required for match_issue_document_chunks).
+ * - n8n embeds with Ollama and writes vectors via Supabase API (required for match_issue_document_chunks).
  * - After embed, mark document chunks_status=ready and clear any leftover body text.
  *
  * n8n is not a vector store — embeddings must stay in pgvector.
  */
-
-const PENDING_CHUNKS_SQL = `SELECT
-  c.id,
-  c.issue_id,
-  c.document_id,
-  c.chunk_index,
-  c.content
-FROM public.document_chunks c
-WHERE c.embedding_status = 'pending'
-  AND ($1::text IS NULL OR $1::text = '' OR c.issue_id = $1::text)
-ORDER BY c.created_at ASC
-LIMIT $2`;
-
-const PREPARE_EMBEDDING_UPDATE_JS = `const item = $input.item.json;
-const embedding = item.embedding;
-if (!Array.isArray(embedding) || embedding.length === 0) {
-  throw new Error('Missing embedding vector');
-}
-const vector = '[' + embedding.join(',') + ']';
-function esc(value) {
-  return "'" + String(value ?? '').replace(/'/g, "''") + "'";
-}
-const updateSql = \`UPDATE public.document_chunks
-SET embedding = '\${vector}'::vector,
-    embedding_status = 'ready'
-WHERE id = \${esc(item.id)}::uuid\`;
-const finalizeSql = \`UPDATE public.stortinget_issue_documents d
-SET chunks_status = CASE
-      WHEN EXISTS (
-        SELECT 1 FROM public.document_chunks c
-        WHERE c.issue_id = d.issue_id
-          AND c.document_id = d.document_id
-          AND c.embedding_status = 'pending'
-      ) THEN 'pending'
-      WHEN EXISTS (
-        SELECT 1 FROM public.document_chunks c
-        WHERE c.issue_id = d.issue_id
-          AND c.document_id = d.document_id
-          AND c.embedding_status = 'ready'
-      ) THEN 'ready'
-      ELSE d.chunks_status
-    END,
-    content_full_text = NULL,
-    content_html = NULL
-WHERE d.issue_id = \${esc(item.issue_id)}
-  AND d.document_id = \${esc(item.document_id)}\`;
-return { json: { ...item, updateSql, finalizeSql } };`;
 
 const scheduleTrigger = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
@@ -98,17 +51,21 @@ const embeddingSettings = node({
 });
 
 const fetchPendingChunks = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.supabase',
+  version: 1,
   config: {
     name: 'Fetch pending chunks',
-    credentials: { postgres: newCredential('Supabase Postgres Folkets') },
+    credentials: folketsSupabaseCredential,
     parameters: {
-      operation: 'executeQuery',
-      query: PENDING_CHUNKS_SQL,
-      options: {
-        queryReplacement: expr('{{ [ $json.issueId || null, $json.batchLimit || "8" ] }}'),
-      },
+      resource: 'row',
+      operation: 'getAll',
+      tableId: 'document_chunks',
+      returnAll: false,
+      limit: expr('{{ Number($json.batchLimit || 8) }}'),
+      filterType: 'string',
+      filterString: expr(
+        '{{ "embedding_status=eq.pending&order=created_at.asc" + ($json.issueId ? "&issue_id=eq." + $json.issueId : "") }}'
+      ),
     },
   },
   output: [
@@ -153,6 +110,9 @@ const mapEmbedding = node({
       jsCode: `const chunk = $('Fetch pending chunks').item.json;
 const response = $input.item.json;
 const embedding = response.embedding;
+if (!Array.isArray(embedding) || embedding.length === 0) {
+  throw new Error('Missing embedding vector');
+}
 return { json: { ...chunk, embedding } };`,
     },
   },
@@ -166,47 +126,63 @@ return { json: { ...chunk, embedding } };`,
   ],
 });
 
-const prepareEmbeddingUpdate = node({
-  type: 'n8n-nodes-base.code',
-  version: 2,
-  config: {
-    name: 'Prepare embedding update SQL',
-    parameters: {
-      mode: 'runOnceForEachItem',
-      language: 'javaScript',
-      jsCode: PREPARE_EMBEDDING_UPDATE_JS,
-    },
-  },
-  output: [{ updateSql: 'UPDATE public.document_chunks SET ...', finalizeSql: 'UPDATE ...' }],
-});
-
 const saveEmbedding = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.supabase',
+  version: 1,
   config: {
     name: 'Save embedding',
-    credentials: { postgres: newCredential('Supabase Postgres Folkets') },
+    credentials: folketsSupabaseCredential,
     parameters: {
-      operation: 'executeQuery',
-      query: expr('{{ $json.updateSql }}'),
+      resource: 'row',
+      operation: 'update',
+      tableId: 'document_chunks',
+      filterType: 'manual',
+      matchType: 'allFilters',
+      filters: {
+        conditions: [
+          {
+            keyName: 'id',
+            condition: 'eq',
+            keyValue: expr('{{ $json.id }}'),
+          },
+        ],
+      },
+      dataToSend: 'defineBelow',
+      fieldsUi: {
+        fieldValues: [
+          {
+            fieldId: 'embedding',
+            fieldValue: expr('{{ $json.embedding }}'),
+          },
+          {
+            fieldId: 'embedding_status',
+            fieldValue: 'ready',
+          },
+        ],
+      },
     },
   },
-  output: [{ success: true }],
+  output: [{ id: '00000000-0000-0000-0000-000000000001', embedding_status: 'ready' }],
 });
 
 const clearDocumentBody = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.supabase',
+  version: 1,
   config: {
     name: 'Clear document body storage',
-    credentials: { postgres: newCredential('Supabase Postgres Folkets') },
+    credentials: folketsSupabaseCredential,
     parameters: {
-      operation: 'executeQuery',
-      // Postgres node output drops prior fields — read finalizeSql from the prepare node.
-      query: expr("={{ $('Prepare embedding update SQL').item.json.finalizeSql }}"),
+      resource: 'row',
+      operation: 'getAll',
+      tableId: 'rpc/n8n_finalize_document_embedding',
+      returnAll: true,
+      filterType: 'string',
+      filterString: expr(
+        '{{ "p_issue_id=" + encodeURIComponent($json.issue_id) + "&p_document_id=" + encodeURIComponent($json.document_id) }}'
+      ),
     },
   },
-  output: [{ success: true }],
+  output: [{ ok: true, issue_id: '200329', document_id: 'inns-202526-434s', chunks_status: 'ready' }],
 });
 
 const rateLimitPause = node({
@@ -288,7 +264,7 @@ const normalizeWebhook = node({
 });
 
 sticky(
-  '## Dokument embeddings (lagringseffektiv RAG)\n\nAppen lagrer ikke HTML-cache; chunk-tekst er én kopi i `document_chunks`. n8n embedder med Ollama og skriver til pgvector (påkrevd for RAG — n8n er ikke vektorlager). Etter embed: `chunks_status=ready` + slett leftover `content_full_text`/`content_html`.\n\nWebhook: `POST /webhook/folkets-document-embeddings` med valgfri `{ "stortinget_issue_id": "…" }`.',
+  '## Dokument embeddings (lagringseffektiv RAG)\n\nAppen lagrer ikke HTML-cache; chunk-tekst er én kopi i `document_chunks`. n8n embedder med Ollama og skriver til pgvector via Supabase API (påkrevd for RAG — n8n er ikke vektorlager). Etter embed: `chunks_status=ready` + slett leftover `content_full_text`/`content_html`.\n\n**Supabase credential:** «Folkets-meninger».\n\nWebhook: `POST /webhook/folkets-document-embeddings` med valgfri `{ "stortinget_issue_id": "…" }`.',
   [scheduleTrigger, webhookTrigger],
   { color: 5 }
 );
@@ -296,7 +272,6 @@ sticky(
 const embeddingPipeline = fetchPendingChunks
   .to(embedChunk)
   .to(mapEmbedding)
-  .to(prepareEmbeddingUpdate)
   .to(saveEmbedding)
   .to(clearDocumentBody)
   .to(rateLimitPause)
