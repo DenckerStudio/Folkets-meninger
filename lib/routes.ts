@@ -7,10 +7,13 @@ export const routes = {
   dashboard: DASHBOARD_PREFIX,
   utforsk: `${DASHBOARD_PREFIX}/utforsk`,
   avstemninger: `${DASHBOARD_PREFIX}/avstemninger`,
+  avstemningerReels: `${DASHBOARD_PREFIX}/avstemninger/reels`,
   initiativ: `${DASHBOARD_PREFIX}/initiativ`,
   minSide: `${DASHBOARD_PREFIX}/min-side`,
   varsler: `${DASHBOARD_PREFIX}/varsler`,
   horinger: `${DASHBOARD_PREFIX}/horinger`,
+  kalender: `${DASHBOARD_PREFIX}/kalender`,
+  horingerIcs: '/api/kalender/horinger.ics',
   politikere: `${DASHBOARD_PREFIX}/politikere`,
   representanter: `${DASHBOARD_PREFIX}/representanter`,
   politikerHub: `${DASHBOARD_PREFIX}/politiker-hub`,
@@ -28,6 +31,7 @@ export const routes = {
   horing: (id: string) => `${DASHBOARD_PREFIX}/horinger/${id}`,
   profile: (id: string) => `/profil/${id}`,
   adminStats: `${DASHBOARD_PREFIX}/admin/statistikk`,
+  adminReels: `${DASHBOARD_PREFIX}/admin/reels`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,
 } as const;
 

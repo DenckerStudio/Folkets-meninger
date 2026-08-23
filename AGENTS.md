@@ -4,12 +4,14 @@
 - When asked to commit/push, stage only intended changes and exclude unrelated artifacts.
 - Prefer working on informatively named branches with prefix `cursor/`.
 - Avoid user-visible mock/placeholder data; prefer honest empty/“coming soon” states.
-- Forum/reels removed from the product. Landing after login / `/dashboard` is `utforsk`.
+- Forum is removed from the product. System-generated Reels live under
+  Avstemninger (`/dashboard/avstemninger/reels`) as ja/nei/blank polls. Landing
+  after login / `/dashboard` is `utforsk`.
   Primary nav: Utforsk / Avstemninger / Høringer. Default Stortinget period is
   `2025-2029`. BankID/MinID is later — do not ship live ID-porten UI.
-  Opt-in `activity_visibility` (`private`|`summary`|`full`). Admin via `ADMIN_EMAILS` +
-  `app_metadata.role=admin`. Plan/history: `infra/coolify/README.md`, subagent
-  `.cursor/agents/forum-removal-egress.md`.
+  Opt-in `activity_visibility` (`private`|`summary`|`full`). Admin via
+  `user_roles` + `is_admin()` (`lib/admin/gate.ts`). Plan/history:
+  `infra/coolify/README.md`, subagent `.cursor/agents/forum-removal-egress.md`.
 
 ## Learned Workspace Facts
 
@@ -35,7 +37,8 @@ Next.js App Router
   components/          UI components for saker, profile, valgomat, dashboard
   lib/                 Stortinget clients, Supabase clients, notifications, identity/admin
   supabase/migrations/ Postgres schema, RLS, RPCs, triggers
-  workflows/n8n/       External automation for AI summaries, embeddings, cron
+  workflows/n8n/       External automation for AI summaries, embeddings, cron,
+                       and system poll (Reels) drafts
                        (archived forum pipelines under workflows/n8n/archive/forum/)
 ```
 
@@ -49,7 +52,7 @@ External systems:
 - Stortinget APIs are read-only sources for sak lists/details, høringer, and
   publications.
 - n8n calls app cron endpoints with `x-cron-secret` and receives fire-and-forget
-  webhooks from the app for AI summaries and document embeddings.
+  webhooks from the app for AI summaries, document embeddings, and system poll drafts.
 - Ollama generates AI summaries and embeddings from n8n, not from the app.
 
 ## Environment Variables
@@ -64,7 +67,7 @@ The canonical template is `.env.example`.
 | `N8N_AI_SUMMARY_WEBHOOK_URL` | Trigger missing sak AI summaries |
 | `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL` | Trigger pending document chunk embeddings |
 | `N8N_HEARING_INNSPILL_WEBHOOK_URL` | Trigger n8n packaging of motforslag hearing reports |
-| `ADMIN_EMAILS` | Comma-separated admin allowlist (legacy `FORUM_ADMIN_EMAILS` still read as fallback) |
+| `N8N_SYSTEM_POLL_DRAFT_WEBHOOK_URL` | Trigger n8n system-poll (Reels) draft generation from sak RAG |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Notification and welcome email delivery |
 | `STORTINGET_SESSION_ID`, `STORTINGET_PERIODE_ID` | Server defaults for Stortinget data |
 | `NEXT_PUBLIC_STORTINGET_SESSION_ID`, `NEXT_PUBLIC_STORTINGET_PERIODE_ID` | Client-visible Stortinget defaults |
@@ -142,14 +145,20 @@ The canonical template is `.env.example`.
 
 ### Avstemninger and borgerinitiativ
 
-- Dual-track polls live in `polls` (`stortinget` | `citizen`) with anonymous
-  `poll_votes` and encrypted `poll_vote_receipts`. Ballot choices: `ja`/`nei`/`blank`.
+- Dual-track polls live in `polls` (`stortinget` | `citizen` | `system`) with
+  anonymous `poll_votes` and encrypted `poll_vote_receipts`. Ballot choices:
+  `ja`/`nei`/`blank`.
 - Citizen initiatives are title/body only (no forum, no top-arguments). Default
   support threshold is 500. Schema:
-  `supabase/migrations/20260819210000_direct_democracy_polls.sql`.
-- Public routes: `/dashboard/avstemninger`, `/dashboard/avstemninger/<id>`,
-  `/dashboard/initiativ`, `/dashboard/initiativ/<id>`. Voting and endorsements
-  require login. Empty lists are honest — do not seed mock polls.
+  `supabase/migrations/20260819210000_direct_democracy_polls.sql` plus
+  `20260821130000_system_poll_reels.sql` for system Reels.
+- Public routes: `/dashboard/avstemninger`, `/dashboard/avstemninger/reels`,
+  `/dashboard/avstemninger/<id>`, `/dashboard/initiativ`, `/dashboard/initiativ/<id>`.
+  Voting and endorsements require login. Empty lists are honest — do not seed mock polls.
+- System Reels are AI-generated ja/nei/blank questions from sak RAG (n8n + Ollama),
+  stored as `polls` drafts (`track=system`) and published by admin. Copy must state
+  they are system-generated. Do not use `ensure_stortinget_poll` for drafts (it opens
+  immediately); use `create_system_poll_draft` → `publish_poll`.
 - Fylke breakdowns use `users.fylke_code` only when `fylke_verified` is true.
   `apply_verified_fylke_claim` is reserved for BankID/MinID later; no MinID UI now.
 - Primary nav: Utforsk / Avstemninger / Høringer. Post-login fallback is Utforsk.
@@ -159,8 +168,10 @@ The canonical template is `.env.example`.
 - Public first/last name required for hearing comments and creating initiatives
   (`user_has_public_identity`); `/auth/complete-profile` collects missing names.
 - Public activity is opt-in via `users.activity_visibility` (`private` default).
-- Admin access: `ADMIN_EMAILS` allowlist, then `app_metadata.role === "admin"`
-  (`lib/admin/gate.ts`). Remaining admin surface: `/dashboard/admin/statistikk`.
+- Admin access: `public.user_roles` (`role = 'admin'`) via `lib/admin/gate.ts`
+  (`is_admin()`). Grant/revoke with `grant_app_role_by_email` /
+  `revoke_app_role_by_email` (service role) or `/dashboard/admin/reels`.
+  Remaining admin surface: `/dashboard/admin/statistikk`, `/dashboard/admin/reels`.
 - BankID/MinID is not shipped. Keep “MinID kommer senere” copy; do not claim
   live “én person, én stemme” identity verification.
 

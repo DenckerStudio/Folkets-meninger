@@ -223,6 +223,12 @@ export function findHoringerForSak(hearings: StortingetHoring[], sakId: string):
   );
 }
 
+/** Official form for written hearing submissions on stortinget.no (`?h=` = hearing id). */
+export function getHoringSkriftligInnspillUrl(hearing: StortingetHoring | { id: string | number }): string {
+  const id = encodeURIComponent(String(hearing.id));
+  return `https://www.stortinget.no/no/Hva-skjer-pa-Stortinget/Horing/skriv-skriftlig-innspill/?h=${id}`;
+}
+
 export function sortHoringer(hearings: StortingetHoring[]): StortingetHoring[] {
   return [...hearings].sort((a, b) => {
     const kindOrder: Record<HoringStatusKind, number> = {

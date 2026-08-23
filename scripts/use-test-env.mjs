@@ -44,11 +44,8 @@ for (const key of [
   'SMTP_FROM',
   'N8N_AI_SUMMARY_WEBHOOK_URL',
   'N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL',
-  'N8N_FORUM_PROMPTS_WEBHOOK_URL',
-  'N8N_FORUM_SYNTHESIS_WEBHOOK_URL',
-  'N8N_FORUM_RSS_WEBHOOK_URL',
-  'N8N_FORUM_SAK_PROMPTS_WEBHOOK_URL',
-  'FORUM_ADMIN_EMAILS',
+  'N8N_HEARING_INNSPILL_WEBHOOK_URL',
+  'N8N_SYSTEM_POLL_DRAFT_WEBHOOK_URL',
 ]) {
   if ((!next.has(key) || !next.get(key)) && prev.has(key) && prev.get(key)) {
     next.set(key, prev.get(key));

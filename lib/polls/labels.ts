@@ -15,12 +15,17 @@ export function pollChoiceLabel(choice: PollChoice): string {
   }
 }
 
+export const SYSTEM_REEL_DISCLAIMER =
+  'Disse spørsmålene er systemgenererte fra stortingssaker (AI og saksdokumenter) og godkjent av en administrator. De er ikke borgerinitiativ og ikke offisielle Stortinget-avstemninger.';
+
 export function pollTrackLabel(track: PollTrack): string {
   switch (track) {
     case 'stortinget':
       return 'Stortinget';
     case 'citizen':
       return 'Borgerinitiativ';
+    case 'system':
+      return 'Systemgenerert';
     default: {
       const _exhaustive: never = track;
       return _exhaustive;

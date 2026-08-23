@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { AvstemningerTabs } from '@/components/polls/avstemninger-tabs';
 import { PollCard } from '@/components/polls/poll-card';
 import { PageHeader } from '@/components/page-header';
 import { getPollTotals, listOpenPolls } from '@/lib/polls/service';
@@ -21,6 +22,7 @@ export default async function AvstemningerPage() {
         title="Avstemninger"
         description="Nasjonale spørsmål med Ja, Nei eller Blank — etter sveitsisk modell. Stortingssaker som kildedokumenter ligger under Utforsk."
       />
+      <AvstemningerTabs active="alle" />
       <p className="text-sm text-muted-foreground">
         Mangler et spørsmål?{' '}
         <Link href={routes.initiativ} className="font-medium text-brand hover:underline">

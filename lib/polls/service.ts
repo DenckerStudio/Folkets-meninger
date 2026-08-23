@@ -5,9 +5,12 @@ import type {
   CitizenInitiativeRecord,
   PollChoice,
   PollFylkeTotals,
+  PollGenerationMetadata,
   PollRecord,
   PollSourceUrl,
   PollTotals,
+  SakPollCandidate,
+  SakPollCoverage,
 } from '@/lib/polls/types';
 
 export { emptyPollTotals, isPollVotingOpen, pollChoicePercent } from '@/lib/polls/format';
@@ -24,6 +27,7 @@ type PollRow = {
   opens_at: string | null;
   closes_at: string | null;
   created_at: string;
+  generation_metadata?: unknown;
 };
 
 type InitiativeRow = {
@@ -39,7 +43,7 @@ type InitiativeRow = {
 };
 
 const POLL_SELECT =
-  'id, track, status, title, neutral_summary, source_urls, stortinget_issue_id, citizen_initiative_id, opens_at, closes_at, created_at';
+  'id, track, status, title, neutral_summary, source_urls, stortinget_issue_id, citizen_initiative_id, opens_at, closes_at, created_at, generation_metadata';
 
 const INITIATIVE_SELECT =
   'id, title, body, author_user_id, support_threshold, support_count, status, promoted_poll_id, created_at';
@@ -58,6 +62,11 @@ function parseSourceUrls(value: unknown): PollSourceUrl[] {
   return out;
 }
 
+function parseGenerationMetadata(value: unknown): PollGenerationMetadata {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value as PollGenerationMetadata;
+}
+
 export function mapPollRow(row: PollRow): PollRecord {
   return {
     id: row.id,
@@ -71,6 +80,7 @@ export function mapPollRow(row: PollRow): PollRecord {
     opensAt: row.opens_at,
     closesAt: row.closes_at,
     createdAt: row.created_at,
+    generationMetadata: parseGenerationMetadata(row.generation_metadata),
   };
 }
 
@@ -129,6 +139,36 @@ export async function listOpenPolls(limit = 30): Promise<PollRecord[]> {
     .from('polls')
     .select(POLL_SELECT)
     .in('status', ['open', 'closed'])
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+  return (data as PollRow[]).map(mapPollRow);
+}
+
+export async function listOpenSystemPolls(limit = 30): Promise<PollRecord[]> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
+  const service = getServiceSupabase();
+  const { data, error } = await service
+    .from('polls')
+    .select(POLL_SELECT)
+    .eq('track', 'system')
+    .in('status', ['open', 'closed'])
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+  return (data as PollRow[]).map(mapPollRow);
+}
+
+export async function listSystemPollDrafts(limit = 50): Promise<PollRecord[]> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
+  const service = getServiceSupabase();
+  const { data, error } = await service
+    .from('polls')
+    .select(POLL_SELECT)
+    .eq('track', 'system')
+    .eq('status', 'draft')
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -217,6 +257,82 @@ export async function ensureStortingetPoll(input: {
     return null;
   }
   return typeof data === 'string' ? data : null;
+}
+
+export async function createSystemPollDraft(input: {
+  issueId?: string | null;
+  title: string;
+  neutralSummary?: string;
+  sourceUrls?: PollSourceUrl[];
+  generationMetadata?: PollGenerationMetadata;
+}): Promise<string> {
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc('create_system_poll_draft', {
+    p_issue_id: input.issueId ?? null,
+    p_title: input.title,
+    p_neutral_summary: input.neutralSummary ?? '',
+    p_source_urls: input.sourceUrls ?? [],
+    p_generation_metadata: input.generationMetadata ?? {},
+  });
+  if (error) throw error;
+  return String(data);
+}
+
+export async function publishPoll(pollId: string): Promise<string> {
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc('publish_poll', { p_poll_id: pollId });
+  if (error) throw error;
+  return String(data);
+}
+
+export async function archivePoll(pollId: string): Promise<string> {
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc('archive_poll', { p_poll_id: pollId });
+  if (error) throw error;
+  return String(data);
+}
+
+export async function getSakPollCoverage(): Promise<SakPollCoverage> {
+  const empty: SakPollCoverage = {
+    pendingIssues: 0,
+    pendingWithRag: 0,
+    pendingWithPoll: 0,
+    sakCandidates: 0,
+  };
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return empty;
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc('get_sak_poll_coverage');
+  if (error || !data) return empty;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || typeof row !== 'object') return empty;
+  const r = row as Record<string, unknown>;
+  return {
+    pendingIssues: Number(r.pending_issues ?? 0),
+    pendingWithRag: Number(r.pending_with_rag ?? 0),
+    pendingWithPoll: Number(r.pending_with_poll ?? 0),
+    sakCandidates: Number(r.sak_candidates ?? 0),
+  };
+}
+
+export async function listSakPollCandidates(limit = 25): Promise<SakPollCandidate[]> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc('get_sak_poll_candidates', { p_limit: limit });
+  if (error || !Array.isArray(data)) return [];
+  return data
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const r = item as Record<string, unknown>;
+      if (typeof r.issue_id !== 'string') return null;
+      return {
+        issueId: r.issue_id,
+        title: typeof r.title === 'string' ? r.title : r.issue_id,
+        summary: typeof r.summary === 'string' ? r.summary : '',
+        lastUpdatedAt: typeof r.last_updated_at === 'string' ? r.last_updated_at : null,
+        ragChunkCount: Number(r.rag_chunk_count ?? 0),
+      } satisfies SakPollCandidate;
+    })
+    .filter((x): x is SakPollCandidate => x != null);
 }
 
 export async function listCitizenInitiatives(limit = 30): Promise<CitizenInitiativeRecord[]> {

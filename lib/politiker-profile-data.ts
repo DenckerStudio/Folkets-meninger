@@ -107,7 +107,16 @@ function mapSporsmalItem(
   };
 }
 
+function hasServiceSupabase(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
+  );
+}
+
 async function getPolitikerSakerFromCache(personId: string): Promise<PolitikerSakItem[]> {
+  if (!hasServiceSupabase()) return [];
+
   const service = getServiceSupabase();
   const { data, error } = await service.rpc('get_politiker_saker_from_cache', {
     p_stortinget_rep_id: personId,
@@ -129,6 +138,8 @@ async function getPolitikerSakerFromCache(personId: string): Promise<PolitikerSa
 }
 
 async function getOfficialResponses(stortingetRepId: string): Promise<PolitikerOfficialResponse[]> {
+  if (!hasServiceSupabase()) return [];
+
   const service = getServiceSupabase();
 
   const { data: profile } = await service
@@ -213,6 +224,8 @@ async function getPolitikerSporsmal(
 }
 
 async function isPolitikerPlatformVerified(stortingetRepId: string): Promise<boolean> {
+  if (!hasServiceSupabase()) return false;
+
   const service = getServiceSupabase();
   const { data } = await service
     .from('politician_profiles')

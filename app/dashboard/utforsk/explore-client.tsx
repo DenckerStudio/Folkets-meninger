@@ -188,11 +188,21 @@ export default function ExploreClient({
         />
       </FadeIn>
 
-      {user && voteHistoryLoaded && Object.keys(displayedUserVotes).length === 0 ? (
+      {user &&
+      voteHistoryLoaded &&
+      Object.keys(displayedUserVotes).length === 0 ? (
         <div className="rounded-2xl border border-brand/20 bg-brand/5 px-5 py-4">
-          <p className="text-sm font-medium text-foreground">Gi din første stemme</p>
+          <h2 className="text-md font-bold text-foreground">
+            Del din mening
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Saker bruker For/Mot/Avstår. Nasjonale avstemninger bruker Ja/Nei/Blank.
+            Start en ja/nei/blank avstemning på en sak eller en nasjonal
+            avstemning. La andre stemme på saken eller avstemningen din, kanskje
+            vi får til en endring.
+          </p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Våre meninger står sterkere sammen. Stem for at folk får en
+            rettferdig stemme på Stortinget.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {firstOpenIssue ? (
@@ -236,7 +246,9 @@ export default function ExploreClient({
               >
                 <option value="Alle statuser">Alle statuser</option>
                 <option value="Under behandling">Under behandling</option>
-                <option value="Ferdigbehandlet / Historikk">Historikk (Ferdigbehandlet)</option>
+                <option value="Ferdigbehandlet / Historikk">
+                  Historikk (Ferdigbehandlet)
+                </option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground">
                 <Filter className="h-4 w-4" />
@@ -300,8 +312,8 @@ export default function ExploreClient({
                     onClick={() => toggleAiLabel(label)}
                     className={`rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
                       active
-                        ? 'bg-indigo-600 text-white border-indigo-600'
-                        : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "bg-card text-foreground border-border hover:border-muted-foreground/40"
                     }`}
                   >
                     {label}
@@ -311,7 +323,9 @@ export default function ExploreClient({
               {activeAiLabels.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setFilters((prev) => ({ ...prev, selectedAiLabels: [] }))}
+                  onClick={() =>
+                    setFilters((prev) => ({ ...prev, selectedAiLabels: [] }))
+                  }
                   className="rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
                 >
                   Nullstill emner
@@ -326,22 +340,22 @@ export default function ExploreClient({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => setSortBy('Nyeste først')}
+            onClick={() => setSortBy("Nyeste først")}
             className={`rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
-              sortBy === 'Nyeste først'
-                ? 'bg-foreground text-background border-foreground'
-                : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
+              sortBy === "Nyeste først"
+                ? "bg-foreground text-background border-foreground"
+                : "bg-card text-foreground border-border hover:border-muted-foreground/40"
             }`}
           >
             Nyeste
           </button>
           <button
             type="button"
-            onClick={() => setSortBy('Mest engasjement')}
+            onClick={() => setSortBy("Mest engasjement")}
             className={`rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
-              sortBy === 'Mest engasjement'
-                ? 'bg-foreground text-background border-foreground'
-                : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
+              sortBy === "Mest engasjement"
+                ? "bg-foreground text-background border-foreground"
+                : "bg-card text-foreground border-border hover:border-muted-foreground/40"
             }`}
           >
             Populært
@@ -352,93 +366,126 @@ export default function ExploreClient({
       <FadeIn delay={0.3} direction="up">
         <div className="space-y-4">
           {displayedIssues.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">Ingen saker funnet som matcher dine kriterier.</div>
+            <div className="text-center py-12 text-muted-foreground">
+              Ingen saker funnet som matcher dine kriterier.
+            </div>
           ) : (
             displayedIssues.map((issue, index) => {
-              const sakKindLabel = issue.sakKind ? getSakKindLabel(issue.sakKind) : null;
+              const sakKindLabel = issue.sakKind
+                ? getSakKindLabel(issue.sakKind)
+                : null;
               return (
-              <FadeIn key={issue.id} delay={0.1 * Math.min(index, 5)} direction="up">
-                <div className="bg-card rounded-2xl shadow-sm border border-border hover:shadow-md transition-shadow overflow-hidden">
-                  <Link href={`/dashboard/sak/${issue.id}`} className="block p-6 pb-4">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        {issue.sakKind ? (
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SAK_KIND_BADGE_CLASS}`}>
-                            {sakKindLabel}
-                          </span>
-                        ) : null}
-                        {issue.category && issue.category !== sakKindLabel ? (
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SAK_CATEGORY_BADGE_CLASS}`}>
-                            {issue.category}
-                          </span>
-                        ) : null}
-                        {(issueLabels[String(issue.id)] ?? []).slice(0, 3).map((label) => (
-                          <span
-                            key={`${issue.id}-${label}`}
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200"
-                          >
-                            {label}
-                          </span>
-                        ))}
-                        <SakProcessingBadge status={issue.status} size="sm" />
-                      </div>
-                      <div className="text-sm text-muted-foreground text-right">
-                        {issue.votingOpen && issue.votingDaysLeft ? (
-                          <span className="font-medium text-emerald-700 dark:text-emerald-300">
-                            {formatVotingDaysLeftLabel(issue.votingDaysLeft)}
-                          </span>
-                        ) : issue.date ? (
-                          <span>Sist oppdatert: {issue.date}</span>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <h2 className="text-xl font-semibold text-foreground mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                      {issue.title}
-                    </h2>
-                    {issue.henvisning ? (
-                      <p className="text-sm text-muted-foreground mb-2">{issue.henvisning}</p>
-                    ) : null}
-                    <p className="text-muted-foreground mb-4 line-clamp-2">{issue.summary}</p>
-
-                    <div className="flex items-center justify-between mt-4">
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                        <div className="flex items-center">
-                          <span className="font-medium text-foreground mr-1">{formatNumber(issue.votes.total)}</span>{' '}
-                          stemmer
+                <FadeIn
+                  key={issue.id}
+                  delay={0.1 * Math.min(index, 5)}
+                  direction="up"
+                >
+                  <div className="bg-card rounded-2xl shadow-sm border border-border hover:shadow-md transition-shadow overflow-hidden">
+                    <Link
+                      href={`/dashboard/sak/${issue.id}`}
+                      className="block p-6 pb-4"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {issue.sakKind ? (
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SAK_KIND_BADGE_CLASS}`}
+                            >
+                              {sakKindLabel}
+                            </span>
+                          ) : null}
+                          {issue.category && issue.category !== sakKindLabel ? (
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SAK_CATEGORY_BADGE_CLASS}`}
+                            >
+                              {issue.category}
+                            </span>
+                          ) : null}
+                          {(issueLabels[String(issue.id)] ?? [])
+                            .slice(0, 3)
+                            .map((label) => (
+                              <span
+                                key={`${issue.id}-${label}`}
+                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200"
+                              >
+                                {label}
+                              </span>
+                            ))}
+                          <SakProcessingBadge status={issue.status} size="sm" />
+                        </div>
+                        <div className="text-sm text-muted-foreground text-right">
+                          {issue.votingOpen && issue.votingDaysLeft ? (
+                            <span className="font-medium text-emerald-700 dark:text-emerald-300">
+                              {formatVotingDaysLeftLabel(issue.votingDaysLeft)}
+                            </span>
+                          ) : issue.date ? (
+                            <span>Sist oppdatert: {issue.date}</span>
+                          ) : null}
                         </div>
                       </div>
-                      <div className="text-indigo-600 dark:text-indigo-400 text-sm font-medium flex items-center">
-                        Les mer <ArrowRight className="ml-1 w-4 h-4" />
-                      </div>
-                    </div>
-                  </Link>
 
-                  <div className="px-6 py-4 bg-muted/40 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    {displayedUserVotes[String(issue.id)] ? (
-                      <p className="text-sm text-foreground">
-                        Du har stemt:{' '}
-                        <span className="font-semibold">
-                          {VOTE_LABELS[displayedUserVotes[String(issue.id)]] ??
-                            displayedUserVotes[String(issue.id)]}
-                        </span>
-                        <span className="text-muted-foreground"> (anonymt i statistikken)</span>
+                      <h2 className="text-xl font-semibold text-foreground mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        {issue.title}
+                      </h2>
+                      {issue.henvisning ? (
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {issue.henvisning}
+                        </p>
+                      ) : null}
+                      <p className="text-muted-foreground mb-4 line-clamp-2">
+                        {issue.summary}
                       </p>
-                    ) : issue.status === 'closed' ? (
-                      <p className="text-sm text-muted-foreground">Saken er ferdigbehandlet i Stortinget.</p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Stem på saken for å registrere din mening.</p>
-                    )}
-                    <Link
-                      href={routes.sak(String(issue.id))}
-                      className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shrink-0"
-                    >
-                      {issue.status === 'closed' || !issue.votingOpen ? 'Se resultat' : 'Gå til sak og stem'}
-                      <ArrowRight className="ml-1.5 w-4 h-4" />
+
+                      <div className="flex items-center justify-between mt-4">
+                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                          <div className="flex items-center">
+                            <span className="font-medium text-foreground mr-1">
+                              {formatNumber(issue.votes.total)}
+                            </span>{" "}
+                            stemmer
+                          </div>
+                        </div>
+                        <div className="text-indigo-600 dark:text-indigo-400 text-sm font-medium flex items-center">
+                          Les mer <ArrowRight className="ml-1 w-4 h-4" />
+                        </div>
+                      </div>
                     </Link>
+
+                    <div className="px-6 py-4 bg-muted/40 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      {displayedUserVotes[String(issue.id)] ? (
+                        <p className="text-sm text-foreground">
+                          Du har stemt:{" "}
+                          <span className="font-semibold">
+                            {VOTE_LABELS[
+                              displayedUserVotes[String(issue.id)]
+                            ] ?? displayedUserVotes[String(issue.id)]}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {" "}
+                            (anonymt i statistikken)
+                          </span>
+                        </p>
+                      ) : issue.status === "closed" ? (
+                        <p className="text-sm text-muted-foreground">
+                          Saken er ferdigbehandlet i Stortinget.
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Stem på saken for å registrere din mening.
+                        </p>
+                      )}
+                      <Link
+                        href={routes.sak(String(issue.id))}
+                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shrink-0"
+                      >
+                        {issue.status === "closed" || !issue.votingOpen
+                          ? "Se resultat"
+                          : "Gå til sak og stem"}
+                        <ArrowRight className="ml-1.5 w-4 h-4" />
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              </FadeIn>
+                </FadeIn>
               );
             })
           )}

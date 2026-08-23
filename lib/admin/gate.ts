@@ -1,23 +1,21 @@
 import { redirect } from 'next/navigation';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { getServiceSupabase } from '@/lib/supabase';
 import { routes } from '@/lib/routes';
 
-function adminEmailAllowlist(): string[] {
-  const raw =
-    process.env.ADMIN_EMAILS?.trim() ||
-    process.env.FORUM_ADMIN_EMAILS?.trim() ||
-    '';
-  return raw
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-}
+/** Site admin: membership in public.user_roles (role = admin). */
+export async function isAdmin(userId: string, _email?: string | null): Promise<boolean> {
+  if (!userId) return false;
 
-/** Site admin: ADMIN_EMAILS allowlist and/or app_metadata.role === "admin". */
-export async function isAdmin(userId: string, email?: string | null): Promise<boolean> {
-  const allowlist = adminEmailAllowlist();
-  if (email && allowlist.includes(email.toLowerCase())) {
-    return true;
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const service = getServiceSupabase();
+    const { data, error } = await service
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'admin')
+      .maybeSingle();
+    if (!error) return Boolean(data);
   }
 
   const supabase = await getServerSupabase();
@@ -25,7 +23,6 @@ export async function isAdmin(userId: string, email?: string | null): Promise<bo
     data: { user },
   } = await supabase.auth.getUser();
   if (!user || user.id !== userId) return false;
-
   return user.app_metadata?.role === 'admin';
 }
 

@@ -17,7 +17,6 @@ jobs:
       STORTINGET_PERIODE_ID: 2025-2029
       NEXT_PUBLIC_STORTINGET_SESSION_ID: 2025-2026
       NEXT_PUBLIC_STORTINGET_PERIODE_ID: 2025-2029
-      FORUM_REELS_PUBLIC: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

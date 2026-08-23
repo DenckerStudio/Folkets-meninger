@@ -12,9 +12,11 @@ type SoftBlurInProps = {
 };
 
 /**
- * Soft Blur In (21st.dev text-component pattern).
- * Blurs into focus on enter-view for readable motion.
+ * 21st.dev Reveal + Magic UI Blur Fade.
+ * Expo-out unblur with a short rise; waits until the block is a bit into view.
  */
+const SMOOTH_EASE = [0.16, 1, 0.3, 1] as const;
+
 export function SoftBlurIn({
   children,
   className,
@@ -27,10 +29,10 @@ export function SoftBlurIn({
     <LazyMotion features={domAnimation}>
       <m.div
         className={cn(className)}
-        initial={reduceMotion ? false : { opacity: 0, filter: 'blur(10px)', y: 12 }}
+        initial={reduceMotion ? false : { opacity: 0, filter: 'blur(6px)', y: 10 }}
         whileInView={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
-        viewport={{ once: true, margin: '-40px' }}
-        transition={{ duration, delay, ease: 'easeOut' }}
+        viewport={{ once: true, amount: 0.45, margin: '0px 0px -12% 0px' }}
+        transition={{ duration, delay, ease: SMOOTH_EASE }}
       >
         {children}
       </m.div>

@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
       { source: '/varsler', destination: '/dashboard/varsler', permanent: true },
       { source: '/horinger', destination: '/dashboard/horinger', permanent: true },
       { source: '/horinger/:path*', destination: '/dashboard/horinger/:path*', permanent: true },
+      { source: '/kalender', destination: '/dashboard/kalender', permanent: true },
       { source: '/avstemninger', destination: '/dashboard/avstemninger', permanent: true },
       { source: '/avstemninger/:path*', destination: '/dashboard/avstemninger/:path*', permanent: true },
       { source: '/initiativ', destination: '/dashboard/initiativ', permanent: true },

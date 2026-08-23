@@ -80,7 +80,8 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Marketing feedback | `20260806140000_site_feedback.sql` | `site_feedback` (public “Gi innspill” form; service-role writes only) |
 | Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql`, `20260702160000_backfill_ferdigbehandlet_from_detail.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category`, `ferdigbehandlet` repair |
 | Sak documents/RAG | `20260617120000_sak_documents_rag.sql`, `20260807112603_document_chunks_storage_efficiency.sql` | `stortinget_issue_documents`, `document_chunks`, `chunks_status`, `match_issue_document_chunks`, reclaim helpers |
-| Direct-democracy polls | `20260819210000_direct_democracy_polls.sql` | `norway_counties`, `polls`, `poll_votes`, `poll_vote_receipts`, `citizen_initiatives`, `citizen_initiative_endorsements`, Ja/Nei/Blank RPCs |
+| Direct-democracy polls | `20260819210000_direct_democracy_polls.sql`, `20260821130000_system_poll_reels.sql` | `norway_counties`, `polls` (`stortinget`/`citizen`/`system`), `poll_votes`, `poll_vote_receipts`, `citizen_initiatives`, `citizen_initiative_endorsements`, Ja/Nei/Blank RPCs, system Reels drafts |
+| App RBAC | `20260821120000_app_rbac_user_roles.sql` | `app_roles`, `user_roles`, `is_admin()`, `grant_app_role_by_email`, `revoke_app_role_by_email` |
 | Knowledge + motforslag | `20260822120000_knowledge_and_counter_proposals.sql` | `user_knowledge_quiz_passes`, `user_document_reads`, `user_badges`, `counter_proposals`, `counter_proposal_endorsements`, package RPCs |
 
 ## Voting setup
@@ -133,15 +134,22 @@ npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
 
 `20260819210000_direct_democracy_polls.sql` adds Swiss-inspired dual-track polls
 and citizen initiatives **without** forum coupling (no `forum_thread_id`, no
-top-arguments RPC).
+top-arguments RPC). `20260821130000_system_poll_reels.sql` adds `track=system`
+(Reels) with `generation_metadata` and draft → publish RPCs.
 
 | Table | Purpose |
 |-------|---------|
-| `polls` | `stortinget` or `citizen` track; public when `status` is `open` or `closed` |
+| `polls` | `stortinget`, `citizen`, or `system` track; public when `status` is `open` or `closed` |
 | `poll_votes` | Anonymous ballots (`ja`/`nei`/`blank` + optional verified `fylke_code`) |
 | `poll_vote_receipts` | One encrypted receipt per user per poll |
 | `citizen_initiatives` | Title/body only; default support threshold 500 |
 | `norway_counties` | 15 fylker after the 2024 reform |
+
+System Reels are AI-generated ja/nei/blank questions. n8n inserts drafts via
+`create_system_poll_draft`; admins publish with `publish_poll` or archive with
+`archive_poll`. Do not call `ensure_stortinget_poll` for AI drafts (it opens the
+poll immediately). Coverage helpers: `get_sak_poll_coverage()`,
+`get_sak_poll_candidates()`.
 
 Fylke is attached only when `users.fylke_verified` is true.
 `apply_verified_fylke_claim` is service-role only for a later BankID/MinID flow.
@@ -304,8 +312,19 @@ Point triggers award:
 | Like received by another author | +2 |
 | Vote receipt inserted | +3 |
 
-Admin pages use `lib/forum/admin.ts`: `FORUM_ADMIN_EMAILS` allowlist first, then
-Supabase `app_metadata.role = "admin"`.
+Admin pages use `lib/admin/gate.ts`, which reads `public.user_roles` (`role =
+'admin'`). `is_admin()` is the SQL helper. Env allowlists (`ADMIN_EMAILS` /
+`FORUM_ADMIN_EMAILS`) are removed.
+
+Bootstrap the first admin in the SQL editor (service role / postgres):
+
+```sql
+SELECT public.grant_app_role_by_email('you@example.com', 'admin', NULL);
+```
+
+Further grant/revoke: `/dashboard/admin/reels` or the same RPCs. JWT
+`app_metadata.role` is synced for compatibility; `user_roles` is the source of
+truth.
 
 ### Hearing comments
 

@@ -59,6 +59,12 @@ export default function AdminStatistikkClient() {
           JSON (krever innlogging)
         </a>
         <Link
+          href={routes.adminReels}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted/50"
+        >
+          Reels-utkast →
+        </Link>
+        <Link
           href={routes.innsikt}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted/50"
         >
