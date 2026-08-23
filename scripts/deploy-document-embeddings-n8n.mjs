@@ -7,7 +7,7 @@
  *   N8N_API_KEY=... node scripts/deploy-document-embeddings-n8n.mjs --test
  *
  * Reads workflow JSON from workflows/n8n/document-embeddings.n8n.json by default.
- * Clones Postgres credential IDs from AI summary workflow GP666Zq84qc19tcE.
+ * Clones Supabase credential IDs from AI summary workflow GP666Zq84qc19tcE.
  * Sets Ollama embeddings URL from NEXT_PUBLIC_OLLAMA_URL or reference workflow HTTP node.
  */
 import fs from 'node:fs';
@@ -19,6 +19,7 @@ const N8N_BASE = process.env.N8N_API_URL || 'https://n8n.heyklever.app';
 const AI_SUMMARY_WORKFLOW_ID = 'GP666Zq84qc19tcE';
 const WORKFLOW_NAME = 'Folkets Stemme – dokument embeddings (RAG)';
 const WEBHOOK_PATH = 'folkets-document-embeddings';
+const SUPABASE_CREDENTIAL_NAME = 'Folkets-meninger';
 
 function loadEnv() {
   for (const name of ['.env.local', '.env']) {
@@ -45,11 +46,11 @@ function normalizeOllamaEmbeddingsUrl(baseUrl) {
   return `${trimmed}/api/embeddings`;
 }
 
-function findPostgresCredentialId(nodes) {
+function findSupabaseCredentialId(nodes) {
   for (const node of nodes) {
-    const cred = node?.credentials?.postgres;
-    if (cred?.id && cred.id !== 'CREDENTIAL_ID_POSTGRES') {
-      return { id: cred.id, name: cred.name || 'Supabase Postgres Folkets' };
+    const cred = node?.credentials?.supabaseApi;
+    if (cred?.id && cred.id !== 'CREDENTIAL_ID_SUPABASE') {
+      return { id: cred.id, name: cred.name || SUPABASE_CREDENTIAL_NAME };
     }
   }
   return null;
@@ -66,12 +67,12 @@ function findOllamaHttpUrl(nodes) {
   return null;
 }
 
-function applyCredentials(workflow, postgresCred, ollamaUrl) {
+function applyCredentials(workflow, supabaseCred, ollamaUrl) {
   const nodes = workflow.nodes.map((node) => {
     const next = { ...node };
-    if (postgresCred && next.type === 'n8n-nodes-base.postgres') {
+    if (supabaseCred && next.type === 'n8n-nodes-base.supabase') {
       next.credentials = {
-        postgres: { id: postgresCred.id, name: postgresCred.name },
+        supabaseApi: { id: supabaseCred.id, name: supabaseCred.name },
       };
     }
     if (ollamaUrl && next.type === 'n8n-nodes-base.httpRequest' && next.name === 'Ollama embeddings') {
@@ -145,9 +146,11 @@ async function main() {
   let workflow = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
 
   const reference = await n8nFetch(key, `/api/v1/workflows/${AI_SUMMARY_WORKFLOW_ID}`);
-  const postgresCred = findPostgresCredentialId(reference.nodes || []);
-  if (!postgresCred) {
-    throw new Error(`Could not find Postgres credential in reference workflow ${AI_SUMMARY_WORKFLOW_ID}`);
+  const supabaseCred = findSupabaseCredentialId(reference.nodes || []);
+  if (!supabaseCred) {
+    throw new Error(
+      `Could not find Supabase credential (${SUPABASE_CREDENTIAL_NAME}) in reference workflow ${AI_SUMMARY_WORKFLOW_ID}`,
+    );
   }
 
   const ollamaUrl =
@@ -157,7 +160,7 @@ async function main() {
     throw new Error('Could not resolve Ollama embeddings URL (set NEXT_PUBLIC_OLLAMA_URL)');
   }
 
-  workflow = applyCredentials(workflow, postgresCred, ollamaUrl);
+  workflow = applyCredentials(workflow, supabaseCred, ollamaUrl);
 
   const existingId = await findExistingWorkflowId(key);
   let workflowId;
@@ -198,7 +201,7 @@ async function main() {
     workflowId,
     active,
     webhookPath: WEBHOOK_PATH,
-    postgresCredential: postgresCred,
+    supabaseCredential: supabaseCred,
     ollamaEmbeddingsUrl: ollamaUrl,
     webhookTest,
   };

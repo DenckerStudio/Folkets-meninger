@@ -20,7 +20,7 @@ Appen genererer ikke sammendrag selv — den leser Supabase og poller `GET /api/
 | **Ollama credential** | «Ollama Heyklever» | Base URL: `https://ollama.heyklever.app` |
 | **Modell** | Under «Ollama Chat Model» | f.eks. `llama3.2:3b-text-q4_K_M` |
 | **batchLimit** | «Backfill settings (schedule)» | `1` (anbefalt) |
-| **Postgres** | «Supabase Postgres Folkets» | Supabase connection string |
+| **Supabase** | «Folkets-meninger» | Supabase API (service role) |
 
 n8n blokkerer `$env` i noder — ikke bruk `$env` for app-URL her.
 
@@ -57,6 +57,12 @@ Etter migrasjon `20260529120000_simplify_issue_ai_summaries.sql`:
 | — | `stortinget_issues.ai_summary_json`, `ai_summary_generated_at` |
 
 Kjør `supabase db push` etter pull.
+
+**n8n Supabase RPC (20260823140000_n8n_supabase_rpc.sql):** Aktive workflows bruker
+Supabase-noden med credential «Folkets-meninger» i stedet for Postgres `executeQuery`.
+Komplekse spørringer ligger i `n8n_*`-RPC-er (`n8n_list_issues_missing_ai_summary`,
+`n8n_get_issue_ai_context`, `n8n_upsert_issue_ai_summary`, `n8n_finalize_document_embedding`).
+Eksporter JSON fra TypeScript med `npx tsx scripts/export-n8n-workflows.mjs`.
 
 ## Forum Reels — archived (product removed)
 
@@ -105,7 +111,7 @@ Arkivér v10/v11 scout/journalist/editor etter deploy (allerede arkivert — se 
 N8N_API_KEY=... npm run deploy:forum-v13-sak-prompt -- --skip-test
 ```
 
-Deploy-scriptet eksporterer workflow JSON, gjenbruker Postgres/Ollama-credentials
+Deploy-scriptet eksporterer workflow JSON, gjenbruker Supabase/Ollama-credentials
 fra eksisterende workflows, finner eller oppretter workflowen, aktiverer den, og
 kan smoke-teste webhooken når `--skip-test` utelates.
 
@@ -159,7 +165,7 @@ App-side kilde:
   `embedding_status='pending'`, og sletter `content_full_text`/`content_html`.
 - `lib/trigger-document-embeddings-webhook.ts` sender fire-and-forget webhook når
   nye chunks er opprettet.
-- n8n (`document-embeddings.workflow.ts`) embedder pending chunks, setter
+- n8n (`document-embeddings.workflow.ts`) embedder pending chunks via Supabase API, setter
   `chunks_status=ready`, og rydder leftover dokumenttekst.
 
 | Nøkkel | Verdi |
@@ -183,6 +189,7 @@ Backfill / deploy:
 
 ```bash
 npx tsx scripts/backfill-sak-documents.ts 10
+npx tsx scripts/export-n8n-workflows.mjs
 node scripts/deploy-document-embeddings-n8n.mjs
 ```
 
