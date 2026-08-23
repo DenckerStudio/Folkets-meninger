@@ -252,4 +252,27 @@ N8N_HEARING_INNSPILL_WEBHOOK_URL=https://n8n.heyklever.app/webhook/folkets-heari
 
 ## Deploy fra repo
 
-Valider og opprett via n8n-mcp: `validate_workflow` → `create_workflow_from_code` → `publish_workflow`.
+Valider og opprett via n8n-mcp: `validate_workflow` → `update_workflow` / `create_workflow_from_code` → `publish_workflow`.
+
+**MCP-tilkobling (Cursor / Cloud Agent):**
+
+| Felt | Verdi |
+|------|--------|
+| MCP URL | `https://n8n.heyklever.app/mcp-server/http` |
+| Credential | «Folkets-meninger» (Supabase API) i workflow-noder |
+| Token | n8n → Settings → Instance-level MCP → API key |
+
+Ikke bruk `n8n.dencker.no` — domenet peker ikke lenger til riktig instans.
+
+Deploy-script (MCP HTTP):
+
+```bash
+npx tsx scripts/export-n8n-workflows.mjs
+N8N_MCP_TOKEN=... node scripts/deploy-n8n-workflows-mcp.mjs --publish
+```
+
+Alternativ REST-deploy for dokument-embeddings:
+
+```bash
+N8N_API_KEY=... node scripts/deploy-document-embeddings-n8n.mjs
+```
