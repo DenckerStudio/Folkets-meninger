@@ -8,7 +8,7 @@ import { node, sticky, trigger, workflow } from '@n8n/workflow-sdk';
 
 const webhook = trigger({
   type: 'n8n-nodes-base.webhook',
-  version: 2,
+  version: 2.1,
   config: {
     name: 'Motforslag innspill',
     parameters: {
@@ -17,7 +17,15 @@ const webhook = trigger({
       responseMode: 'onReceived',
     },
   },
-  output: [{ kind: 'motforslag_horingsinnspill' }],
+  output: [
+    {
+      body: {
+        markdown: '# Innspill',
+        sak: { id: '200329', title: 'Eksempel' },
+        proposal: { supportCount: 10 },
+      },
+    },
+  ],
 });
 
 const prepare = node({
@@ -28,7 +36,8 @@ const prepare = node({
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
-      jsCode: `const payload = $input.first()?.json || {};
+      jsCode: `const item = $input.first()?.json || {};
+const payload = item.body || item;
 const subject = 'Motforslag-innspill: ' + (payload.sak?.title || payload.sak?.id || 'ukjent sak');
 return [{
   json: {

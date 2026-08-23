@@ -210,7 +210,15 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
           {(sak.henvisning || henvisning) ? (
             <p className="text-sm text-muted-foreground">{sak.henvisning || henvisning}</p>
           ) : null}
+        </div>
+      </FadeIn>
 
+      <FadeIn delay={0.22} direction="up">
+        <AiSummary sakId={sak.id} />
+      </FadeIn>
+
+      <FadeIn delay={0.24} direction="up">
+        <div className="space-y-5 sm:space-y-6">
           {/* Meta info grid */}
           {detailedContent ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -352,10 +360,6 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
       </FadeIn>
 
       <FadeIn delay={0.25} direction="up">
-        <AiSummary sakId={sak.id} title={sak.title} summary={detailedContent?.tittel || sak.summary} />
-      </FadeIn>
-
-      <FadeIn delay={0.27} direction="up">
         <ImpactCalculator sakId={sak.id} sakTitle={sak.title} sakSummary={sak.summary} />
       </FadeIn>
 

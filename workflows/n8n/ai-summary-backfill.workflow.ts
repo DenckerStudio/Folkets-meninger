@@ -97,23 +97,20 @@ WHERE i.id = $1
 GROUP BY i.id, i.title, i.summary, i.detail_json, i.ai_summary_source_context`;
 
 const BUILD_CONTEXT_JS = `const item = $input.item.json;
-if (item.ai_summary_source_context) {
-  let text = String(item.ai_summary_source_context);
-  if (text.length > 20000) {
-    text = text.slice(0, 20000) + '\\n\\n[... avkortet ...]';
-  }
-  return { json: { ...item, sakContextText: text } };
-}
+const parseJson = (value, fallback) => {
+  if (Array.isArray(value) || (value && typeof value === 'object')) return value;
+  if (typeof value !== 'string' || !value.trim()) return fallback;
+  try { return JSON.parse(value); } catch (_) { return fallback; }
+};
+const source = String(item.ai_summary_source_context || '').trim();
 const detail =
   item.detail_json && typeof item.detail_json === 'object'
     ? item.detail_json
-    : item.detail_json
-      ? JSON.parse(String(item.detail_json))
-      : {};
-let documents = item.documents || [];
-if (typeof documents === 'string') {
-  try { documents = JSON.parse(documents); } catch (_) { documents = []; }
-}
+    : parseJson(item.detail_json, {});
+let documents = parseJson(item.documents, []);
+let chunks = parseJson(item.document_chunks || item.rag_chunks, []);
+if (!Array.isArray(documents)) documents = [];
+if (!Array.isArray(chunks)) chunks = [];
 const names = (list) => Array.isArray(list)
   ? list.map((p) => [p?.fornavn, p?.etternavn].filter(Boolean).join(' ') + (p?.parti?.navn ? ' (' + p.parti.navn + ')' : '')).filter((x) => x.trim()).join(', ')
   : '';
@@ -128,46 +125,46 @@ const timeline = Array.isArray(detail.saksgang?.saksgang_steg_liste)
         : []),
     ]).filter(Boolean).join('\\n')
   : '';
-const parts = [
+const fallbackParts = [
   'Sak ID: ' + item.id,
   item.title ? 'Tittel: ' + item.title : null,
   item.summary ? 'Kort beskrivelse: ' + item.summary : null,
-  detail.henvisning ? 'Dokumentreferanse: ' + detail.henvisning : null,
+  (item.henvisning || detail.henvisning) ? 'Dokumentreferanse: ' + (item.henvisning || detail.henvisning) : null,
   detail.komite?.navn ? 'Komité: ' + detail.komite.navn : (typeof detail.komite === 'string' ? 'Komité: ' + detail.komite : null),
   listNames(detail.emne_liste) ? 'Emner: ' + listNames(detail.emne_liste) : null,
   listNames(detail.stikkord_liste) ? 'Stikkord: ' + listNames(detail.stikkord_liste) : null,
   names(detail.sak_opphav?.forslagstiller_liste) ? 'Forslagstillere: ' + names(detail.sak_opphav.forslagstiller_liste) : null,
   names(detail.saksordfoerer_liste) ? 'Saksordførere: ' + names(detail.saksordfoerer_liste) : null,
   timeline ? 'Saksgang og hendelser:\\n' + timeline : null,
-  detail.innstillingstekst ? 'Innstillingstekst:\\n' + detail.innstillingstekst : null,
-  detail.kortvedtak ? 'Kortvedtak:\\n' + detail.kortvedtak : null,
-  detail.vedtakstekst ? 'Vedtakstekst:\\n' + detail.vedtakstekst : null,
-  detail.parentestekst ? 'Parentestekst:\\n' + detail.parentestekst : null,
-  ...documents.slice(0, 5).map((d) => {
-    const title = d?.title || d?.document_id || 'Dokument';
-    const type = d?.document_type ? ' (' + d.document_type + ')' : '';
-    const excerpt = d?.text_excerpt ? String(d.text_excerpt).slice(0, 3000) : '';
-    return excerpt ? 'Tilhørende dokument: ' + title + type + '\\n' + excerpt : null;
-  }),
+  detail.innstillingstekst ? 'Innstillingstekst:\\n' + String(detail.innstillingstekst).slice(0, 8000) : null,
+  detail.kortvedtak ? 'Kortvedtak:\\n' + String(detail.kortvedtak).slice(0, 4000) : null,
+  detail.vedtakstekst ? 'Vedtakstekst:\\n' + String(detail.vedtakstekst).slice(0, 4000) : null,
+  detail.parentestekst ? 'Parentestekst:\\n' + String(detail.parentestekst).slice(0, 2000) : null,
 ].filter(Boolean);
-let ragChunks = item.rag_chunks || [];
-if (typeof ragChunks === 'string') {
-  try { ragChunks = JSON.parse(ragChunks); } catch (_) { ragChunks = []; }
+const parts = source ? [source] : fallbackParts;
+for (const d of documents.slice(0, 6)) {
+  const title = d?.title || d?.document_id || 'Dokument';
+  const type = d?.document_type ? ' (' + d.document_type + ')' : '';
+  const excerpt = d?.text_excerpt ? String(d.text_excerpt).slice(0, 3000) : '';
+  if (excerpt && !source.includes(excerpt.slice(0, 80))) {
+    parts.push('Tilhørende dokument: ' + title + type + '\\n' + excerpt);
+  }
 }
-const ragLines = ragChunks.slice(0, 12).map((chunk, index) => {
-  const content = String(chunk?.content || '').trim().slice(0, 1200);
+const ragLines = chunks.slice(0, 16).map((chunk, index) => {
+  const content = String(chunk?.content || '').trim().slice(0, 1600);
   if (!content) return null;
-  const source = chunk?.document_id ? ' (kilde: ' + chunk.document_id + ')' : '';
-  return 'Dokumentutdrag ' + (index + 1) + source + ':\\n' + content;
+  if (source && source.includes(content.slice(0, 80))) return null;
+  const src = chunk?.document_id ? ' (kilde: ' + chunk.document_id + ')' : '';
+  return 'Dokumentutdrag ' + (index + 1) + src + ':\\n' + content;
 }).filter(Boolean);
 if (ragLines.length) {
-  parts.push('Relevante dokumentutdrag (RAG):\\n' + ragLines.join('\\n\\n'));
+  parts.push('Relevante dokumentutdrag:\\n' + ragLines.join('\\n\\n'));
 }
 let sakContextText = parts.join('\\n\\n');
-if (sakContextText.length > 20000) {
-  sakContextText = sakContextText.slice(0, 20000) + '\\n\\n[... avkortet ...]';
+if (sakContextText.length > 28000) {
+  sakContextText = sakContextText.slice(0, 28000) + '\\n\\n[... avkortet ...]';
 }
-return { json: { ...item, sakContextText } };`;
+return { json: { ...item, sakContextText, contextChars: sakContextText.length } };`;
 
 const MAP_V2_BODY_JS = `function normalizeLabel(s) {
   const t = String(s ?? '').trim().replace(/\\s+/g, ' ');
@@ -196,8 +193,16 @@ if (typeof out === 'string') {
     out = {};
   }
 }
-const narrative = String(out.narrative ?? '').trim();
-const who_affected = String(out.who_affected ?? '').trim();
+if (!out || typeof out !== 'object') out = {};
+if (!out.hva && !out.narrative) {
+  const raw = String(item.text || item.output || '').trim();
+  const match = raw.match(/\\{[\\s\\S]*\\}/);
+  if (match) {
+    try { out = JSON.parse(match[0]); } catch (_) { out = {}; }
+  }
+}
+const narrative = String(out.narrative ?? out.hva ?? '').trim();
+const who_affected = String(out.who_affected ?? out.hvem ?? '').trim();
 const how_affected = String(out.how_affected ?? '').trim();
 const topic_cards = parseCards(out.topic_cards);
 const labelKeys = new Set();
@@ -229,33 +234,37 @@ const kostnad = econCard
 
 const MAP_AGENT_OUTPUT_JS = `${MAP_V2_BODY_JS}
 const issueId = $('Process one issue').item?.json?.id ?? item.id;
+const hva = String(out.hva ?? narrative).trim();
+const hvem = String(out.hvem ?? who_affected).trim();
 return {
   json: {
     issueId,
-    narrative,
-    who_affected,
+    narrative: narrative || hva,
+    who_affected: who_affected || hvem,
     how_affected,
     topic_cards,
     labels,
-    hva: narrative,
-    hvem: who_affected,
-    kostnad,
+    hva,
+    hvem,
+    kostnad: String(out.kostnad ?? '').trim() || kostnad,
   },
 };`;
 
 const MAP_AGENT_OUTPUT_WEBHOOK_JS = `${MAP_V2_BODY_JS}
 const issueId = $('Normalize issue ID').item?.json?.id ?? item.id;
+const hva = String(out.hva ?? narrative).trim();
+const hvem = String(out.hvem ?? who_affected).trim();
 return {
   json: {
     issueId,
-    narrative,
-    who_affected,
+    narrative: narrative || hva,
+    who_affected: who_affected || hvem,
     how_affected,
     topic_cards,
     labels,
-    hva: narrative,
-    hvem: who_affected,
-    kostnad,
+    hva,
+    hvem,
+    kostnad: String(out.kostnad ?? '').trim() || kostnad,
   },
 };`;
 
@@ -335,23 +344,31 @@ return {
   },
 };`;
 
-const SUMMARY_SYSTEM_MESSAGE = `Du er en nøytral, faktabasert assistent for «Folkets Stemme» som forenkler stortingssaker for vanlige borgere.
+const SUMMARY_SYSTEM_MESSAGE = `Du er en nøytral, faktabasert veileder for «Folkets Stemme». Du forklarer stortingssaker for vanlige borgere.
 
-SPRÅK: Skriv utelukkende på norsk (bokmål). Korte, tydelige setninger. Saklig og nøytral. Bygg kun på kilden.
+SPRÅK: Kun norsk bokmål. Saklig og presis. Ingen meninger og ingen stemmeråd.
 
-Returner JSON med:
-- narrative: Kort overordnet forklaring (2–4 setninger)
-- who_affected: Hvem som berøres (2–3 setninger, kun fra kilden)
-- how_affected: Hvordan de berøres (2–3 setninger, konkret)
-- topic_cards: 0–3 temakort valgt ut fra sakens innhold. Hvert kort: { "title": "...", "body": "..." }
-- labels: 2–5 korte nøkkelord på norsk (Title Case, konsistent). Brukes til søk og varsler.
+KILDE: Bruk KUN teksten du får (tittel, innstilling, vedtak, dokumentutdrag). Hvis noe ikke står der, skriv at det ikke er omtalt. Aldri gjett, aldri finn på beløp.
+
+Skriv UTFYLLENDE avsnitt — ikke stikkord, og ikke la tittelen være hele svaret.
+
+Returner KUN gyldig JSON:
+{
+  "hva": "5–8 setninger: hva som konkret foreslås eller er vedtatt, bakgrunn, hovedinnhold i proposisjon/innstilling, og hvor saken står i Stortinget. Ta med Prop./Innst./Dokument 8 når det finnes.",
+  "hvem": "3–5 setninger: hvem som berøres (næringer, kommuner, brukere, det offentlige). Navngi komité og forslagsstillere når kilden har dem.",
+  "kostnad": "2–4 setninger: kroner, budsjettår og hvem som betaler/mottar. Mangler tall: si det tydelig.",
+  "narrative": "4–6 setninger, samme sak som hva, tettere formulert.",
+  "who_affected": "Samme innhold som hvem.",
+  "how_affected": "Hvordan plikter, rettigheter eller hverdag endres. Konkret.",
+  "topic_cards": [{"title":"...","body":"..."}],
+  "labels": ["Emneord"]
+}
 
 Regler:
-- who_affected og how_affected skal alltid fylles ut
-- topic_cards er dynamiske (ikke fast hva/hvem/kostnad)
-- Ingen oppdiktede beløp; skriv «ukjent» eller «ikke omtalt» når kilden mangler tall
-- Når kilden har tall: ta med konkrete kroner, tidshorisont (år/måned) og hvem det gjelder (bileiere, leietakere, studenter, pensjonister, fylke)
-- labels skal være generelle emneord (f.eks. Skatt, Helse, Privatøkonomi), ikke hele setninger`;
+- hva, hvem og kostnad SKAL fylles ut
+- topic_cards: 1–3 kort fra sakens substans (ikke tomme overskrifter)
+- labels: 2–5 korte emneord i Title Case (f.eks. Bank, Kapitalkrav, Taushetsplikt)
+- Når kilden har tall: ta med kroner, tidshorisont og hvem det gjelder`;
 
 const ollamaChatModel = languageModel({
   type: '@n8n/n8n-nodes-langchain.lmChatOllama',
@@ -360,11 +377,13 @@ const ollamaChatModel = languageModel({
     name: 'Ollama Chat Model',
     credentials: { ollamaApi: newCredential('Ollama Heyklever') },
     parameters: {
-      model: placeholder('llama3.2:3b-text-q4_K_M'),
+      model: placeholder('qwen3:4b-q4_K_M'),
       options: {
-        temperature: 0.3,
+        think: false,
+        temperature: 0.2,
         format: 'json',
-        numPredict: 900,
+        numPredict: 2200,
+        numCtx: 16384,
       },
     },
   },
