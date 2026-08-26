@@ -45,12 +45,23 @@ assert.equal(isDebattSak(lovforslag), true);
 assert.equal(isDebattSak(riksrevisjon), false);
 
 const repTitle = buildSakDisplayTitle(representantforslag);
-assert.equal(repTitle, 'Forenkling og avbyråkratisering i jernbanesektoren');
-assert.ok(buildSakDisplaySummary(representantforslag, repTitle).includes('Geir Inge Lien'));
+assert.equal(repTitle, representantforslag.korttittel);
+assert.equal(buildSakDisplaySummary(representantforslag, repTitle), representantforslag.tittel);
 
 const lovTitle = buildSakDisplayTitle(lovforslag);
 assert.equal(lovTitle, lovforslag.korttittel);
-assert.ok(buildSakDisplaySummary(lovforslag, lovTitle).includes('Prop. 103 L'));
+assert.equal(buildSakDisplaySummary(lovforslag, lovTitle), '');
+
+const wheelchair = {
+  dokumentgruppe: 4,
+  henvisning: 'Dokument 8:288 S (2025–2026)',
+  korttittel:
+    'Representantforslag fra stortingsrepresentantene Remi Sølvberg, Sofie Marhaug og Geir Jørgensen om å sikre rullestolbrukere likeverdig tilgang til luftfart',
+  tittel:
+    'Representantforslag fra stortingsrepresentantene Remi Sølvberg, Sofie Marhaug og Geir Jørgensen om å sikre rullestolbrukere likeverdig tilgang til luftfart',
+};
+assert.equal(buildSakDisplayTitle(wheelchair), wheelchair.korttittel);
+assert.equal(buildSakDisplaySummary(wheelchair, wheelchair.korttittel), '');
 
 const mapped = mapSakPresentation({ ...representantforslag, emneNavn: null });
 assert.equal(mapped.kind, 'representantforslag');

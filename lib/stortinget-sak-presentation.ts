@@ -11,9 +11,6 @@ export type SakPresentationInput = {
 const LOVFORSLAG_HENVISNING = /\b(?:Prop\.\s*\d+\s*L|Innst\.\s*\d+\s*L|Lovvedtak)\b/i;
 const REPRESENTANTFORSLAG_HENVISNING = /Dokument\s*8\b/i;
 
-const REPRESENTANTFORSLAG_TITLE_PREFIX =
-  /^Representantforslag(?:\s+fra\s+(?:stortingsrepresentant(?:en|ene)?|representant(?:en|ene)?)\s+.+?)?\s+om\s+/i;
-
 export function classifySakKind(sak: SakPresentationInput): SakKind | null {
   const henvisning = (sak.henvisning ?? '').trim();
   const dokumentgruppe = sak.dokumentgruppe ?? null;
@@ -46,48 +43,20 @@ export function getSakKindLabel(kind: SakKind): string {
   }
 }
 
-function capitalizeFirst(text: string): string {
-  if (!text) return text;
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
+/** Official Stortinget short title (`korttittel`), falling back to `tittel`. Never paraphrased. */
 export function buildSakDisplayTitle(sak: SakPresentationInput): string {
-  const raw = (sak.korttittel || sak.tittel || '').trim();
-  if (!raw) return '';
-
-  const kind = classifySakKind(sak);
-
-  if (kind === 'representantforslag') {
-    const stripped = raw.replace(REPRESENTANTFORSLAG_TITLE_PREFIX, '').trim();
-    if (stripped) {
-      return capitalizeFirst(stripped);
-    }
-  }
-
-  return raw;
+  const korttittel = (sak.korttittel || '').trim();
+  const tittel = (sak.tittel || '').trim();
+  return korttittel || tittel;
 }
 
+/** Official Stortinget long title (`tittel`) when it adds information beyond the short title. */
 export function buildSakDisplaySummary(sak: SakPresentationInput, displayTitle: string): string {
   const tittel = (sak.tittel || '').trim();
-  const henvisning = (sak.henvisning || '').trim();
-  const kind = classifySakKind(sak);
-
-  if (kind === 'representantforslag' && tittel && tittel !== displayTitle) {
-    return tittel;
-  }
-
-  if (kind === 'lovforslag') {
-    if (henvisning && displayTitle) {
-      return `${henvisning} — ${displayTitle}`;
-    }
-    return henvisning || tittel || displayTitle;
-  }
-
   if (tittel && tittel !== displayTitle) {
     return tittel;
   }
-
-  return henvisning || tittel || displayTitle;
+  return '';
 }
 
 export function buildSakCategory(sak: SakPresentationInput, emneNavn?: string | null): string {
