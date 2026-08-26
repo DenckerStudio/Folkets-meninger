@@ -225,14 +225,16 @@ export async function getSakPageBundle(
     getLiveListExportFields(id),
   ]);
   const sak = mapDetailToListItem(detail, voteTotals[id] ?? EMPTY_VOTES);
+  // Same resolver as the list overlay: denormalized ferdigbehandlet + live list
+  // numeric/innstilling. Do not pass full detail_json.status in a way that can
+  // beat a fresh list export (that was the list-vs-detail tag drift).
   sak.status = resolveSakStatusFromSources({
-    ferdigbehandlet: issueMeta?.ferdigbehandlet ?? null,
-    detailJson: {
-      ferdigbehandlet: detail.ferdigbehandlet,
-      status: detail.status,
-    },
+    ferdigbehandlet:
+      typeof detail.ferdigbehandlet === 'boolean'
+        ? detail.ferdigbehandlet
+        : issueMeta?.ferdigbehandlet ?? null,
     cachedStatus: issueMeta?.status ?? sak.status,
-    numericStatus: listFields?.numericStatus,
+    numericStatus: listFields?.numericStatus ?? (typeof detail.status === 'number' ? detail.status : null),
     listInnstilling: listFields?.listInnstilling,
   });
   if (typeof listFields?.numericStatus === 'number') {

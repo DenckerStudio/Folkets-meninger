@@ -467,13 +467,7 @@ export async function getLiveListExportFields(sakId: string): Promise<{
   }
 
   try {
-    const raw = await Promise.race([
-      fetchRawSakerFromStortinget(),
-      new Promise<null>((resolve) => {
-        setTimeout(() => resolve(null), 12_000);
-      }),
-    ]);
-    if (!raw) return null;
+    const raw = await fetchRawSakerFromStortinget();
     const sak = raw.find((item) => String(item.id) === String(sakId));
     if (!sak) return null;
     return {
