@@ -432,9 +432,11 @@ export default function ExploreClient({
                           {issue.henvisning}
                         </p>
                       ) : null}
-                      <p className="text-muted-foreground mb-4 line-clamp-2">
-                        {issue.summary}
-                      </p>
+                      {issue.summary ? (
+                        <p className="text-muted-foreground mb-4 line-clamp-2">
+                          {issue.summary}
+                        </p>
+                      ) : null}
 
                       <div className="flex items-center justify-between mt-4">
                         <div className="flex items-center space-x-4 text-sm text-muted-foreground">

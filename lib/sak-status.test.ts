@@ -55,6 +55,18 @@ assert.equal(
   'closed',
 );
 
+// Sak 200391-style: detail ferdigbehandlet=false, stale status=1, live list status=3, no innstilling.
+assert.equal(
+  resolveSakStatusFromSources({
+    ferdigbehandlet: false,
+    detailJson: { ferdigbehandlet: false, status: 1 },
+    cachedStatus: 'pending',
+    numericStatus: 3,
+    listInnstilling: { innstilling_id: -1, innstilling_kode: 0 },
+  }),
+  'closed',
+);
+
 // Stale DB column (false) must not override cached detail_json (true) — sak 200211.
 assert.equal(
   resolveSakStatusFromSources({

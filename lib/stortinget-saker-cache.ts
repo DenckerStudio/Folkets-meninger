@@ -18,6 +18,7 @@ const MEMORY_CACHE_TTL_MS = 30 * 60 * 1000;
 const DB_LIST_LIMIT = 500;
 
 let memoryListCache: { items: SakListItem[]; expiresAt: number } | null = null;
+let rawSakerMemoryCache: { items: StortingetSak[]; expiresAt: number } | null = null;
 
 function readMemoryListCache(): SakListItem[] | null {
   if (!memoryListCache || memoryListCache.expiresAt <= Date.now()) {
@@ -257,6 +258,16 @@ async function applyLiveListExportStatuses(saker: SakListItem[]): Promise<SakLis
         innstilling_id: raw.innstilling_id,
         innstilling_kode: raw.innstilling_kode,
       };
+      const presentation = mapSakPresentation({
+        korttittel: raw.korttittel,
+        tittel: raw.tittel,
+        henvisning: raw.henvisning,
+        dokumentgruppe: raw.dokumentgruppe,
+        emneNavn: raw.emne_liste?.[0]?.navn,
+      });
+      item.title = presentation.title || raw.korttittel || raw.tittel || item.title;
+      item.summary = presentation.summary;
+      item.henvisning = presentation.henvisning;
       item.status = resolveSakListStatus({
         ferdigbehandlet: inferFerdigbehandletFromListSak(raw),
         numericStatus: raw.status,
@@ -404,6 +415,10 @@ const getCachedSakerListFromDb = unstable_cache(
 );
 
 export async function fetchRawSakerFromStortinget(): Promise<StortingetSak[]> {
+  if (rawSakerMemoryCache && rawSakerMemoryCache.expiresAt > Date.now()) {
+    return rawSakerMemoryCache.items;
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20_000);
 
@@ -421,9 +436,55 @@ export async function fetchRawSakerFromStortinget(): Promise<StortingetSak[]> {
     }
 
     const data = (await res.json()) as { saker_liste?: StortingetSak[] };
-    return data.saker_liste ?? [];
+    const items = data.saker_liste ?? [];
+    if (items.length > 0) {
+      rawSakerMemoryCache = {
+        items,
+        expiresAt: Date.now() + MEMORY_CACHE_TTL_MS,
+      };
+    }
+    return items;
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+/** Live list-export status/innstilling for one sak — same inputs the list overlay uses. */
+export async function getLiveListExportFields(sakId: string): Promise<{
+  numericStatus?: number;
+  listInnstilling?: { innstilling_id?: number; innstilling_kode?: number };
+} | null> {
+  if (isProductionBuild()) {
+    return null;
+  }
+
+  const cached = readMemoryListCache()?.find((sak) => sak.id === String(sakId));
+  if (cached && typeof cached.stortingetNumericStatus === 'number') {
+    return {
+      numericStatus: cached.stortingetNumericStatus,
+      listInnstilling: cached.listInnstilling,
+    };
+  }
+
+  try {
+    const raw = await Promise.race([
+      fetchRawSakerFromStortinget(),
+      new Promise<null>((resolve) => {
+        setTimeout(() => resolve(null), 12_000);
+      }),
+    ]);
+    if (!raw) return null;
+    const sak = raw.find((item) => String(item.id) === String(sakId));
+    if (!sak) return null;
+    return {
+      numericStatus: sak.status,
+      listInnstilling: {
+        innstilling_id: sak.innstilling_id,
+        innstilling_kode: sak.innstilling_kode,
+      },
+    };
+  } catch {
+    return null;
   }
 }
 

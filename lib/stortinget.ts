@@ -5,6 +5,7 @@ import {
 } from './stortinget-sak-presentation';
 import {
   resolveSakListStatus,
+  resolveSakStatusFromSources,
   type SakTreatmentStatus,
   type ListSakInnstillingFields,
 } from './sak-status';
@@ -214,15 +215,32 @@ export async function getSakPageBundle(
   issueMeta: import('./stortinget-detail-cache').SakIssueMeta | null;
 } | null> {
   const { getCachedSakDetail, getSakIssueMeta } = await import('./stortinget-detail-cache');
+  const { getLiveListExportFields } = await import('./stortinget-saker-cache');
   const detail = await getCachedSakDetail(id);
   if (!detail) return null;
 
-  const [voteTotals, issueMeta] = await Promise.all([getVoteTotals([id]), getSakIssueMeta(id)]);
+  const [voteTotals, issueMeta, listFields] = await Promise.all([
+    getVoteTotals([id]),
+    getSakIssueMeta(id),
+    getLiveListExportFields(id),
+  ]);
   const sak = mapDetailToListItem(detail, voteTotals[id] ?? EMPTY_VOTES);
-  sak.status = resolveSakListStatus({
-    ferdigbehandlet: detail.ferdigbehandlet,
-    numericStatus: detail.status,
+  sak.status = resolveSakStatusFromSources({
+    ferdigbehandlet: issueMeta?.ferdigbehandlet ?? null,
+    detailJson: {
+      ferdigbehandlet: detail.ferdigbehandlet,
+      status: detail.status,
+    },
+    cachedStatus: issueMeta?.status ?? sak.status,
+    numericStatus: listFields?.numericStatus,
+    listInnstilling: listFields?.listInnstilling,
   });
+  if (typeof listFields?.numericStatus === 'number') {
+    sak.stortingetNumericStatus = listFields.numericStatus;
+  }
+  if (listFields?.listInnstilling) {
+    sak.listInnstilling = listFields.listInnstilling;
+  }
 
   if (issueMeta) {
     if (issueMeta.lastUpdatedAt && !sak.date) {
@@ -233,11 +251,15 @@ export async function getSakPageBundle(
       if (closesMs <= Date.now()) {
         sak.votingOpen = false;
         sak.votingDaysLeft = 0;
-      } else if (issueMeta.status !== 'closed') {
+      } else if (sak.status !== 'closed') {
         sak.votingOpen = true;
         sak.votingDaysLeft = Math.max(1, Math.ceil((closesMs - Date.now()) / 86_400_000));
       }
     }
+  }
+
+  if (sak.status === 'closed') {
+    sak.votingOpen = false;
   }
 
   return { sak, detail, issueMeta };
