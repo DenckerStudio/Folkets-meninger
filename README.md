@@ -58,6 +58,9 @@ Important constraints:
   authentication; the rest of `/dashboard/*` requires a Supabase session.
 - Høringer live under `/dashboard/horinger` and `/dashboard/horinger/[id]`.
   `/horinger` redirects there, so browsing and local comments require login.
+- `/dashboard/kalender` shows høring sessions and deadlines for logged-in users.
+  `/api/kalender/horinger.ics` exposes the same hearing window as an iCalendar
+  feed with one-hour cache headers.
 - Sak votes are For/Mot/Avstår. National polls under Avstemninger use Ja/Nei/Blank.
 - Votes are accepted only while a sak is open. The app and `cast_vote` RPC both
   check `status`, `ferdigbehandlet`, and `voting_closes_at`.

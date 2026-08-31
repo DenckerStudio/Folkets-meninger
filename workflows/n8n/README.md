@@ -1,8 +1,15 @@
 # n8n – Folkets Stemme
 
-Credential i n8n: **Folkets Stemme Self-hosted** (`supabaseApi`). Ikke Postgres-noden / «Fokets Meninger».
+Aktive workflows bruker to Supabase-tilkoblinger:
 
-Etter `20260823200000_n8n_postgrest_rpcs.sql` (`supabase db push`) skriver n8n via SECURITY DEFINER-RPC-er. Direkte tabell-INSERT treffer RLS (42501) på self-hosted PostgREST.
+- **Folkets Stemme Self-hosted** (`supabaseApi`) for PostgREST RPC-kall i
+  dokument-embeddings og system poll drafts.
+- **Supabase Postgres Folkets** for AI-sammendrag-backfill, som fortsatt kjører
+  trimmede SQL-spørringer og upsert-SQL via Postgres-noden.
+
+Etter `20260823200000_n8n_postgrest_rpcs.sql` (`supabase db push`) skal
+PostgREST-baserte n8n-steg skrive via SECURITY DEFINER-RPC-er. Direkte
+tabell-INSERT via Supabase API treffer RLS (42501) på self-hosted PostgREST.
 
 | Workflow | Status | Live |
 |----------|--------|------|
@@ -21,10 +28,14 @@ Workflow-kilde: [`ai-summary-backfill.workflow.ts`](ai-summary-backfill.workflow
 
 ## Flyt
 
-1. Hent `stortinget_issues` uten rad i `issue_ai_summaries` (schedule) eller via webhook + `id`
-2. Bygg kontekst fra `title`, `summary`, `detail_json` (Code)
-3. **AI Agent** med **Ollama Chat Model** → strukturert JSON (`hva`, `hvem`, `kostnad`)
-4. Upsert til `issue_ai_summaries` (ingen speiling til `stortinget_issues`)
+1. Hent `stortinget_issues` uten rad i `issue_ai_summaries` (schedule) eller via
+   webhook + `id` med Postgres-noden.
+2. Bygg kontekst fra `title`, `summary`, trimmede `detail_json`-felt,
+   `ai_summary_source_context`, dokumentutdrag og ready `document_chunks`.
+3. **AI Agent** med **Ollama Chat Model** → strukturert v2-JSON
+   (`narrative`, `who_affected`, `how_affected`, `topic_cards`, `labels`) pluss
+   legacy-feltene `hva`, `hvem`, `kostnad`.
+4. Upsert til `issue_ai_summaries` og synk `stortinget_issues.ai_labels`.
 
 Appen genererer ikke sammendrag selv — den leser Supabase og poller `GET /api/sak/[id]/ai-summary` til rad finnes.
 
@@ -37,7 +48,8 @@ Etter `20260823210000_n8n_ai_summary_rich_context.sql` henter n8n `ai_summary_so
 | **Ollama credential** | «Ollama Heyklever» | Base URL: `https://ollama.heyklever.app` |
 | **Modell** | Under «Ollama Chat Model» | f.eks. `llama3.2:3b-text-q4_K_M` |
 | **batchLimit** | «Backfill settings (schedule)» | `1` (anbefalt) |
-| **Supabase** | «Folkets Stemme Self-hosted» (supabaseApi) | Supabase URL + service role via n8n Supabase node |
+| **Supabase API** | «Folkets Stemme Self-hosted» (supabaseApi) | Supabase URL + service role via n8n Supabase node; brukes av RPC-workflows |
+| **Supabase Postgres** | «Supabase Postgres Folkets» | Brukes av AI-sammendrag-backfill |
 
 n8n blokkerer `$env` i noder — ikke bruk `$env` for app-URL her.
 
@@ -66,12 +78,19 @@ curl -X POST "$N8N_AI_SUMMARY_WEBHOOK_URL" \
 
 ## Supabase-skjema
 
-Etter migrasjon `20260529120000_simplify_issue_ai_summaries.sql`:
+Etter migrasjonene `20260529120000_simplify_issue_ai_summaries.sql`,
+`20260608120000_issue_ai_summaries_v2.sql` og
+`20260823210000_n8n_ai_summary_rich_context.sql`:
 
 | Beholdes | Fjernet |
 |----------|---------|
-| `issue_ai_summaries`: `stortinget_issue_id`, `hva`, `hvem`, `kostnad`, `created_at`, `updated_at` | `context_hash`, `approved_at`, `hva_approved_at`, `hvem_approved_at`, `kostnad_approved_at`, `cards_json`, `cards_approved_at` |
+| `issue_ai_summaries`: `stortinget_issue_id`, `hva`, `hvem`, `kostnad`, `narrative`, `who_affected`, `how_affected`, `topic_cards`, `labels`, `created_at`, `updated_at` | `context_hash`, `approved_at`, `hva_approved_at`, `hvem_approved_at`, `kostnad_approved_at`, `cards_json`, `cards_approved_at` |
 | — | `stortinget_issues.ai_summary_json`, `ai_summary_generated_at` |
+
+`n8n_get_issue_ai_summary_context(text)` exposes trimmed detail fields,
+`ai_summary_source_context`, dokumentutdrag og chunk-tekst for n8n. Appen
+returnerer v2 når den finnes, og faller tilbake til legacy
+`hva`/`hvem`/`kostnad` via `GET /api/sak/[id]/ai-summary`.
 
 Kjør `supabase db push` etter pull.
 
