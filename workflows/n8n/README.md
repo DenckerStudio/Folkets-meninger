@@ -119,39 +119,40 @@ touch `forum_*` tables. App env no longer uses `N8N_FORUM_*` / `FORUM_REELS_PUBL
 
 | Steg | Kilde | Webhook |
 |------|--------|---------|
-| **1 Regjeringen RSS** | [`forum-regjeringen-rss-ingest.workflow.ts`](forum-regjeringen-rss-ingest.workflow.ts) | RSS Feed Trigger + cron `*/30` (RSS Read) |
-| **2 Prompt generator** | [`forum-prompt-generator.workflow.ts`](forum-prompt-generator.workflow.ts) | schedule + `POST /webhook/folkets-forum-prompt-generator` |
+| **1 Regjeringen RSS** | [`archive/forum/forum-regjeringen-rss-ingest.workflow.ts`](archive/forum/forum-regjeringen-rss-ingest.workflow.ts) | RSS Feed Trigger + cron `*/30` (RSS Read) |
+| **2 Prompt generator** | [`archive/forum/forum-prompt-generator.workflow.ts`](archive/forum/forum-prompt-generator.workflow.ts) | schedule + `POST /webhook/folkets-forum-prompt-generator` |
 
-**Dok:** [`FORUM-PROMPTS-v12.md`](FORUM-PROMPTS-v12.md)
+**Historisk dok:** [`archive/forum/FORUM-PROMPTS-v12.md`](archive/forum/FORUM-PROMPTS-v12.md)
 
 **Arkivert i n8n:** RSS `6yy1ESY2Zy7cWgtF` · Prompt generator `vOP2zPflfT0yBvDQ`
 
-**Env:** `N8N_FORUM_SYNTHESIS_WEBHOOK_URL` → `https://n8n.heyklever.app/webhook/folkets-forum-prompt-generator`
+**Historisk env:** `N8N_FORUM_SYNTHESIS_WEBHOOK_URL` → `https://n8n.heyklever.app/webhook/folkets-forum-prompt-generator`
 
 **Deploy:**
 
 ```bash
-node scripts/bundle-forum-regjeringen-rss-workflow.mjs /tmp/regjeringen-rss.ts
-node scripts/bundle-forum-prompt-generator-workflow.mjs /tmp/prompt-generator.ts
-npm run deploy:forum-v12 -- --publish
+node scripts/archive/bundle-forum-regjeringen-rss-workflow.mjs /tmp/regjeringen-rss.ts
+node scripts/archive/bundle-forum-prompt-generator-workflow.mjs /tmp/prompt-generator.ts
+node scripts/archive/deploy-forum-v12-workflows.mjs --publish
 ```
 
-Arkivér v10/v11 scout/journalist/editor etter deploy (allerede arkivert — se FORUM-PROMPTS-v12.md).
+Arkivér v10/v11 scout/journalist/editor etter deploy (allerede arkivert — se
+[`archive/forum/FORUM-PROMPTS-v12.md`](archive/forum/FORUM-PROMPTS-v12.md)).
 
 ## Forum Reels v13 – Stortinget-sak RAG
 
 | Steg | Kilde | Webhook |
 |------|--------|---------|
-| **Sak-RAG prompt generator** | [`forum-sak-prompt-generator.workflow.ts`](forum-sak-prompt-generator.workflow.ts) | cron daglig 06:00 + `POST /webhook/folkets-forum-sak-prompt-generator` |
+| **Sak-RAG prompt generator** | [`archive/forum/forum-sak-prompt-generator.workflow.ts`](archive/forum/forum-sak-prompt-generator.workflow.ts) | cron daglig 06:00 + `POST /webhook/folkets-forum-sak-prompt-generator` |
 
-**Dok:** [`FORUM-PROMPTS-v13.md`](FORUM-PROMPTS-v13.md)
+**Historisk dok:** [`archive/forum/FORUM-PROMPTS-v13.md`](archive/forum/FORUM-PROMPTS-v13.md)
 
-**Env:** `N8N_FORUM_SAK_PROMPTS_WEBHOOK_URL`
+**Historisk env:** `N8N_FORUM_SAK_PROMPTS_WEBHOOK_URL`
 
 **Deploy:**
 
 ```bash
-N8N_API_KEY=... npm run deploy:forum-v13-sak-prompt -- --skip-test
+N8N_API_KEY=... node scripts/archive/deploy-forum-v13-sak-prompt-generator.mjs --skip-test
 ```
 
 Deploy-scriptet eksporterer workflow JSON, gjenbruker Supabase/Ollama-credentials
@@ -160,23 +161,24 @@ kan smoke-teste webhooken når `--skip-test` utelates.
 
 **App:** Admin pipeline viser sak-kandidater via `get_sak_prompt_coverage()`; sak-side har «Generer reel-utkast» for forum-admin.
 
-**Opprydding feilaktige aktive prompts:** [`scripts/archive-misaligned-forum-prompts.sql`](../../scripts/archive-misaligned-forum-prompts.sql)
+**Opprydding feilaktige aktive prompts:** [`scripts/archive/archive-misaligned-forum-prompts.sql`](../../scripts/archive/archive-misaligned-forum-prompts.sql)
 
 ## Forum trending prompts (v5 – SearXNG + RSS, alltid draft)
 
-Workflow-kilde: [`forum-trending-prompts.workflow.ts`](forum-trending-prompts.workflow.ts)
+Workflow-kilde: [`archive/forum/forum-trending-prompts.workflow.ts`](archive/forum/forum-trending-prompts.workflow.ts)
 
 **Tidligere live (fjernet/arkivert):** `MloIdsnX7FozM4dv`
 
 **v5:** alignment-gate, dedupe 0.55, min 4 kilder, **alltid `draft`** → admin-godkjenning i appen (`/dashboard/admin/forum-prompts`).
 
-**App:** `FORUM_REELS_PUBLIC=true` viser aktive reels for alle brukere. Sett `false` for admin-only forhåndsvisning.
+**Historisk app-env:** `FORUM_REELS_PUBLIC=true` viste aktive reels for alle
+brukere. Verdien brukes ikke etter forum-fjerningen.
 
 Deploy:
 
 ```bash
-node scripts/build-n8n-forum-prompts-ops.mjs /tmp/n8n-forum-prompts-ops.json
-node scripts/build-n8n-forum-prompts-topology-ops.mjs /tmp/n8n-forum-prompts-topology-ops.json
+node scripts/archive/build-n8n-forum-prompts-ops.mjs /tmp/n8n-forum-prompts-ops.json
+node scripts/archive/build-n8n-forum-prompts-topology-ops.mjs /tmp/n8n-forum-prompts-topology-ops.json
 ```
 
 | Nøkkel | Backfill settings |
@@ -185,7 +187,8 @@ node scripts/build-n8n-forum-prompts-topology-ops.mjs /tmp/n8n-forum-prompts-top
 | `searxngBaseUrl` | f.eks. `https://searxng.heyklever.app` |
 | `longRunningMinDays` | `14` |
 
-Webhook: `POST /webhook/folkets-forum-prompts` (env `N8N_FORUM_PROMPTS_WEBHOOK_URL`).
+Webhook: `POST /webhook/folkets-forum-prompts` (historisk env
+`N8N_FORUM_PROMPTS_WEBHOOK_URL`).
 
 </details>
 

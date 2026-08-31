@@ -1,11 +1,11 @@
 # Folkets Stemme
 
 Folkets Stemme is a Next.js App Router application for following Stortinget
-saker and høringer, voting on active saker, and discussing political issues in a
-moderated forum. The app reads public Stortinget data from
-`data.stortinget.no`, stores app state in Supabase, and delegates AI summaries,
-forum prompt generation, and document embeddings to n8n workflows backed by
-Ollama.
+saker and høringer, voting on active saker, participating in Ja/Nei/Blank
+avstemninger, and creating borgerinitiativ. The app reads public Stortinget data
+from `data.stortinget.no`, stores app state in Supabase, and delegates AI
+summaries, document embeddings, system poll drafts, and cron orchestration to
+n8n workflows backed by Ollama.
 
 ## Quick start
 
@@ -45,10 +45,10 @@ those services.
 
 ```text
 Browser / Next.js App Router
-  -> Supabase Auth + Postgres (votes, forum, notifications, sak cache)
+  -> Supabase Auth + Postgres (votes, polls, initiatives, hearings, notifications, sak cache)
   -> data.stortinget.no (saker, details, høringer, publications)
-  -> n8n webhooks (AI summaries, document embeddings, forum prompts, cron)
-  -> Ollama / SearXNG / SMTP as workflow dependencies
+  -> n8n webhooks (AI summaries, document embeddings, system poll drafts, cron, motforslag)
+  -> Ollama / SMTP as workflow dependencies
 ```
 
 Important constraints:
@@ -63,11 +63,13 @@ Important constraints:
   check `status`, `ferdigbehandlet`, and `voting_closes_at`.
 - Høringer are fetched live from Stortinget, not cached in Postgres. Local
   "innspill" are public app comments and are not sent to Stortinget.
+- Public first and last name are required before publishing høring comments or
+  creating borgerinitiativ. BankID/MinID verification is not shipped yet.
 - Sak treatment labels are resolved from multiple Stortinget sources because
   list exports can keep `status=1` after a detail payload says the sak is
   `ferdigbehandlet`.
-- Human forum posts require a public first and last name. System forum threads
-  created by workflows use the `is_system_thread` path instead.
+- Forum has been removed from the product. Historical forum/n8n files remain
+  archived only; do not add new `forum_*` UI, env vars, or workflows.
 - AI summary text is not generated in the Next.js app. The app stores source
   context and triggers n8n; summaries are read back from Supabase.
 
@@ -76,10 +78,10 @@ Important constraints:
 | File | Covers |
 |------|--------|
 | [`AGENTS.md`](AGENTS.md) | Agent-facing architecture facts, env vars, validation expectations, and operational notes |
-| [`supabase/README.md`](supabase/README.md) | Migration domains, voting RPCs, sak cache, hearing comments, forum schema, notifications, RAG tables, and DB runbooks |
-| [`workflows/n8n/README.md`](workflows/n8n/README.md) | AI summary, forum prompt, document embedding, and app cron workflows |
-| [`infra/searxng/README.md`](infra/searxng/README.md) | SearXNG deployment/configuration used by forum prompt discovery |
-| [`scripts/deploy-forum-prompts-n8n.md`](scripts/deploy-forum-prompts-n8n.md) | Forum prompt workflow deployment notes |
+| [`supabase/README.md`](supabase/README.md) | Migration domains, voting/poll RPCs, sak cache, public identity, hearing comments, notifications, RAG tables, and DB runbooks |
+| [`workflows/n8n/README.md`](workflows/n8n/README.md) | AI summary, document embedding, system poll draft, app cron, and motforslag workflows |
+| [`infra/coolify/README.md`](infra/coolify/README.md) | Coolify deployment notes and the forum-removal/egress-reduction plan |
+| [`workflows/n8n/archive/forum/`](workflows/n8n/archive/forum/) | Historical forum prompt workflow notes (inactive) |
 
 ## Operational scripts
 
@@ -88,7 +90,7 @@ Important constraints:
 | `scripts/backfill-sak-status.ts` | Refresh `ferdigbehandlet`, `voting_closes_at`, and sak metadata from Stortinget detail data |
 | `scripts/backfill-sak-documents.ts` | Ingest recent sak documents and create pending RAG chunks |
 | `scripts/deploy-document-embeddings-n8n.mjs` | Deploy/update the document embeddings workflow in n8n |
-| `scripts/archive-misaligned-forum-prompts.sql` | Archive active forum prompts that should no longer be shown |
+| `scripts/reclaim-document-storage.sql` | Clear legacy cached document bodies after chunks are stored |
 
 Example status refresh:
 
