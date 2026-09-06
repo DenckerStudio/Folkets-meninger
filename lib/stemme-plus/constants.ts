@@ -1,4 +1,4 @@
-/** Monthly Stemme+ price in NOK (øre not used — display + Stripe unit amount). */
+/** Planned monthly price when Stripe checkout ships (NOK). */
 export const STEMME_PLUS_MONTHLY_PRICE_NOK = 59;
 
 export const STEMME_PLUS_CURRENCY = 'nok';

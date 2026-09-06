@@ -4,20 +4,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { HeartHandshake, Loader2, Sparkles } from 'lucide-react';
 import { ProfileCard } from '@/components/profile/profile-card';
 import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
-import { STEMME_PLUS_BENEFITS } from '@/lib/stemme-plus/constants';
+import { STEMME_PLUS_BENEFITS, STEMME_PLUS_MONTHLY_PRICE_NOK } from '@/lib/stemme-plus/constants';
 
 type StemmePlusStatus = {
   tier: 'free' | 'stemme_plus';
   subscription_status: string | null;
   subscription_period_end: string | null;
-  stripe_configured: boolean;
   monthly_price_nok: number;
 };
 
 export function ProfileStemmePlus() {
   const [status, setStatus] = useState<StemmePlusStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadStatus = useCallback(async () => {
@@ -41,50 +39,8 @@ export function ProfileStemmePlus() {
     void loadStatus();
   }, [loadStatus]);
 
-  const startCheckout = async () => {
-    setActionLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/stemme-plus/checkout', { method: 'POST' });
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error || 'Kunne ikke starte betaling');
-      }
-      if (json.url) {
-        window.location.href = json.url;
-        return;
-      }
-      throw new Error('Manglende betalingslenke');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Kunne ikke starte betaling');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const openPortal = async () => {
-    setActionLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/stemme-plus/portal', { method: 'POST' });
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error || 'Kunne ikke åpne abonnementsportal');
-      }
-      if (json.url) {
-        window.location.href = json.url;
-        return;
-      }
-      throw new Error('Manglende portallenke');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Kunne ikke åpne abonnementsportal');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const isActive = status?.tier === 'stemme_plus';
-  const price = status?.monthly_price_nok ?? 59;
+  const price = status?.monthly_price_nok ?? STEMME_PLUS_MONTHLY_PRICE_NOK;
 
   return (
     <ProfileCard
@@ -98,7 +54,7 @@ export function ProfileStemmePlus() {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground">
-              {isActive ? 'Takk for at du støtter oss!' : `Bli støttemedlem — ${price} kr/mnd`}
+              {isActive ? 'Takk for at du støtter oss!' : `Støttemedlemskap — planlagt ${price} kr/mnd`}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               Stemme, utforsk og høringer forblir gratis. Stemme+ gir ekstra fordeler for deg som vil
@@ -128,48 +84,23 @@ export function ProfileStemmePlus() {
 
       {status && isActive ? (
         <div className="mt-5 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <StemmePlusBadge size="md" />
-            {status.subscription_period_end ? (
-              <span className="text-xs text-muted-foreground">
-                Periode til{' '}
-                {new Date(status.subscription_period_end).toLocaleDateString('nb-NO', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                })}
-              </span>
-            ) : null}
-          </div>
-          {status.stripe_configured ? (
-            <button
-              type="button"
-              onClick={() => void openPortal()}
-              disabled={actionLoading}
-              className="inline-flex items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted/50 disabled:opacity-60"
-            >
-              {actionLoading ? 'Åpner…' : 'Administrer abonnement'}
-            </button>
+          <StemmePlusBadge size="md" />
+          {status.subscription_period_end ? (
+            <p className="text-xs text-muted-foreground">
+              Gyldig til{' '}
+              {new Date(status.subscription_period_end).toLocaleDateString('nb-NO', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+            </p>
           ) : null}
         </div>
       ) : (
-        <div className="mt-5">
-          {status?.stripe_configured ? (
-            <button
-              type="button"
-              onClick={() => void startCheckout()}
-              disabled={actionLoading}
-              className="inline-flex items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-            >
-              {actionLoading ? 'Starter…' : `Bli Stemme+ (${price} kr/mnd)`}
-            </button>
-          ) : (
-            <p className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-              Betaling kommer når Stripe er koblet. Grunnlaget (plan, merker og varsler) er klart —
-              sett opp miljøvariabler for Stripe for å aktivere checkout.
-            </p>
-          )}
-        </div>
+        <p className="mt-5 rounded-xl border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+          Selvbetjent abonnement med Stripe kommer senere. Fordelene er allerede aktive for brukere
+          med Stemme+ (f.eks. tildelt av admin til testing).
+        </p>
       )}
     </ProfileCard>
   );
