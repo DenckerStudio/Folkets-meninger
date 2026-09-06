@@ -2,13 +2,67 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Sparkles, X } from 'lucide-react';
+import { pollDraftGenerationStatusLabel } from '@/lib/admin/poll-draft-generation';
+import { usePollDraftGeneration } from '@/hooks/use-poll-draft-generation';
 import { routes } from '@/lib/routes';
 import type { PollRecord, SakPollCandidate, SakPollCoverage } from '@/lib/polls/types';
 
 type DraftsResponse = { drafts: PollRecord[] };
 type CandidatesResponse = { candidates: SakPollCandidate[]; coverage: SakPollCoverage };
 type AdminsResponse = { admins: { userId: string; email: string | null }[] };
+
+function GenerationStatusBadge({
+  issueId,
+  getJob,
+  onDismiss,
+}: {
+  issueId?: string;
+  getJob: ReturnType<typeof usePollDraftGeneration>['getJob'];
+  onDismiss: (key: string) => void;
+}) {
+  const job = getJob(issueId);
+  if (!job || job.status === 'generating') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-2.5 py-1 text-xs font-medium text-brand">
+        <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+        Genererer…
+      </span>
+    );
+  }
+
+  if (job.status === 'ready') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+        <CheckCircle2 className="h-3 w-3" aria-hidden />
+        Utkast klart
+        <button
+          type="button"
+          onClick={() => onDismiss(job.key)}
+          className="rounded p-0.5 hover:bg-emerald-500/10"
+          aria-label="Lukk status"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
+      <AlertCircle className="h-3 w-3" aria-hidden />
+      {pollDraftGenerationStatusLabel(job.status)}
+      <button
+        type="button"
+        onClick={() => onDismiss(job.key)}
+        className="rounded p-0.5 hover:bg-destructive/10"
+        aria-label="Lukk status"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </span>
+  );
+}
 
 export default function AdminReelsClient() {
   const [drafts, setDrafts] = useState<PollRecord[]>([]);
@@ -18,6 +72,7 @@ export default function AdminReelsClient() {
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   const [pending, startTransition] = useTransition();
+  const { jobs, startGeneration, dismissJob, getJob, isGenerating } = usePollDraftGeneration();
 
   const load = () => {
     startTransition(async () => {
@@ -49,6 +104,12 @@ export default function AdminReelsClient() {
     load();
   }, []);
 
+  useEffect(() => {
+    const onReady = () => load();
+    window.addEventListener('poll-drafts:ready', onReady);
+    return () => window.removeEventListener('poll-drafts:ready', onReady);
+  }, []);
+
   const patchPoll = (id: string, action: 'publish' | 'archive') => {
     startTransition(async () => {
       setError('');
@@ -69,15 +130,10 @@ export default function AdminReelsClient() {
   const generate = (issueId?: string) => {
     startTransition(async () => {
       setError('');
-      const res = await fetch('/api/admin/poll-drafts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(issueId ? { stortinget_issue_id: issueId } : {}),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(typeof data.error === 'string' ? data.error : 'Kunne ikke starte generering');
-        return;
+      try {
+        await startGeneration(issueId);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Kunne ikke starte generering');
       }
     });
   };
@@ -119,6 +175,8 @@ export default function AdminReelsClient() {
     });
   };
 
+  const activeGeneratingJobs = jobs.filter((job) => job.status === 'generating');
+
   return (
     <div className="space-y-8">
       <div>
@@ -137,19 +195,42 @@ export default function AdminReelsClient() {
         </p>
       ) : null}
 
+      {activeGeneratingJobs.length > 0 ? (
+        <div
+          className="flex items-start gap-3 rounded-xl border border-brand/30 bg-brand/5 px-4 py-3"
+          role="status"
+          aria-live="polite"
+        >
+          <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-brand" aria-hidden />
+          <div className="space-y-1 text-sm">
+            <p className="font-medium text-foreground">
+              {activeGeneratingJobs.length === 1
+                ? 'Genererer utkast via n8n…'
+                : `Genererer ${activeGeneratingJobs.length} utkast via n8n…`}
+            </p>
+            <p className="text-muted-foreground">
+              Vi sjekker utkastlisten automatisk. Dette kan ta opptil et minutt.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold text-foreground">Utkast</h2>
-          <button
-            type="button"
-            onClick={() => generate()}
-            disabled={pending}
-            className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
-          >
-            Generer neste
-          </button>
+          <div className="flex items-center gap-2">
+            {getJob() ? <GenerationStatusBadge getJob={getJob} onDismiss={dismissJob} /> : null}
+            <button
+              type="button"
+              onClick={() => generate()}
+              disabled={pending || isGenerating()}
+              className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+            >
+              Generer neste
+            </button>
+          </div>
         </div>
         {drafts.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
@@ -212,14 +293,24 @@ export default function AdminReelsClient() {
                     {candidate.issueId} · {candidate.ragChunkCount} RAG-chunks
                   </p>
                 </div>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => generate(candidate.issueId)}
-                  className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
-                >
-                  Generer utkast
-                </button>
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  {getJob(candidate.issueId) ? (
+                    <GenerationStatusBadge
+                      issueId={candidate.issueId}
+                      getJob={getJob}
+                      onDismiss={dismissJob}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={pending || isGenerating(candidate.issueId)}
+                      onClick={() => generate(candidate.issueId)}
+                      className="rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+                    >
+                      Generer utkast
+                    </button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
