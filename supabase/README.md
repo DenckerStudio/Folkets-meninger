@@ -152,7 +152,7 @@ poll immediately). Coverage helpers: `get_sak_poll_coverage()`,
 `get_sak_poll_candidates()`.
 
 Fylke is attached only when `users.fylke_verified` is true.
-`apply_verified_fylke_claim` is service-role only for a later BankID/MinID flow.
+`apply_verified_fylke_claim` is service-role only and not wired in the app.
 Do not seed mock polls; empty UI is the honest launch state.
 
 ## Stortinget issue cache

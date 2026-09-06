@@ -40,17 +40,17 @@ export function LandingRoadmap() {
             date: 'Nå',
             title: 'Tillit, synlighet og førsteinntrykk',
             description:
-              'Avstemninger (Ja/Nei/Blank) og borgerinitiativ er på plass. Vi synliggjør spørsmål før innlogging og forbereder BankID/MinID.',
+              'Avstemninger (Ja/Nei/Blank) og borgerinitiativ er på plass. Vi synliggjør spørsmål før innlogging og forbedrer førsteinntrykket.',
             status: 'current',
             detail: (
               <p>
-                Identitetsverifisering med BankID og MinID kommer senere.{' '}
                 <Link
                   href={routes.avstemninger}
                   className="font-semibold text-[#00205b] underline-offset-2 hover:text-[#ba0c2f] hover:underline"
                 >
                   Se avstemninger
-                </Link>
+                </Link>{' '}
+                og utforsk borgerinitiativ — uten å måtte logge inn først.
               </p>
             ),
           },
