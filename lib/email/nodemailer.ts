@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
-import { getSmtpConfig } from './smtp-config';
-
-type Frequency = 'realtime' | 'daily' | 'weekly';
+import { digestEmailSubject } from '@/lib/notifications/digest';
+import { getSmtpConfig } from '@/lib/email/smtp-config';
+import type { DigestFrequency } from '@/lib/notifications/channels';
 
 let cachedTransporter: nodemailer.Transporter | null = null;
 
@@ -33,7 +33,7 @@ export async function sendWelcomeEmail(input: WelcomeEmailInput) {
   const html = `
     <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5;">
       <h2>${greeting}</h2>
-      <p>Takk for at du registrerte deg. Du kan nå følge saker, delta i diskusjoner og få varsler om det du bryr deg om.</p>
+      <p>Takk for at du registrerte deg. Du kan nå følge saker, stemme og få varsler om det du bryr deg om.</p>
       <p>Hilsen<br/>Folkets Stemme</p>
     </div>
   `.trim();
@@ -70,7 +70,7 @@ export async function sendRealtimeNotificationEmail(input: RealtimeNotificationE
 
 export type DigestEmailInput = {
   to: string;
-  frequency: Frequency;
+  frequency: DigestFrequency;
   items: Array<{ title: string; url?: string | null; createdAt: string }>;
 };
 
@@ -78,10 +78,7 @@ export async function sendDigestEmail(input: DigestEmailInput) {
   const transporter = getTransporter();
   const { from } = getSmtpConfig();
 
-  const subject =
-    input.frequency === 'daily'
-      ? 'Dine varsler (daglig oppsummering)'
-      : 'Dine varsler (ukentlig oppsummering)';
+  const subject = digestEmailSubject(input.frequency);
 
   const list = input.items
     .map((item) => {

@@ -58,7 +58,7 @@ export default function VarslerPage() {
           <Bell className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
         </div>
         <PageHeader as="h2" title="Logg inn for å se varsler" />
-        <p className="text-muted-foreground">Du må være logget inn for å se in-app notifications.</p>
+        <p className="text-muted-foreground">Du må være logget inn for å se in-app varsler.</p>
         <Link
           href="/auth/login"
           className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors"

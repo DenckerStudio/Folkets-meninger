@@ -1,11 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { ProfileCard } from '@/components/profile/profile-card';
-
-const CHANNELS = [
-  { key: 'categories', label: 'Kategorier/hjertesaker' },
-  { key: 'labels', label: 'AI-emner' },
-] as const;
+import { CHANNEL_UI_COPY, NOTIFICATION_CHANNELS } from '@/lib/notifications/channels';
+import { routes } from '@/lib/routes';
 
 type ProfileNotificationsProps = {
   emailEnabled: boolean;
@@ -27,12 +25,22 @@ export function ProfileNotifications({
   return (
     <ProfileCard
       title="Varslingsinnstillinger"
-      description="Slå av/på e-postvarsler. In-app varsler påvirkes ikke."
+      description="Velg hvordan du vil motta e-postvarsler. In-app varsler på Varsler-siden påvirkes ikke av disse innstillingene."
     >
+      <p className="text-sm text-muted-foreground">
+        Abonnement på{' '}
+        <Link href={`${routes.minSide}?tab=innstillinger`} className="text-brand hover:underline">
+          hjertesaker og AI-emner
+        </Link>{' '}
+        styres under Mine hjertesaker.
+      </p>
+
       <div className="flex items-center justify-between rounded-xl border border-border bg-muted/50 px-4 py-3">
         <div>
           <h4 className="text-sm font-medium text-foreground">E-postvarsler</h4>
-          <p className="text-xs text-muted-foreground mt-0.5">Mottak av oppdateringer på e-post</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Hovedbryter for alle e-postvarsler (sanntid og oppsummeringer)
+          </p>
         </div>
         <button
           type="button"
@@ -52,23 +60,30 @@ export function ProfileNotifications({
       </div>
 
       <div className="mt-4 space-y-3">
-        {CHANNELS.map((channel) => (
-          <div
-            key={channel.key}
-            className="flex flex-col gap-2 rounded-xl border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <span className="text-sm font-medium text-foreground">{channel.label}</span>
-            <select
-              value={frequencies[channel.key] ?? 'daily'}
-              onChange={(e) => onFrequencyChange(channel.key, e.target.value)}
-              className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+        {NOTIFICATION_CHANNELS.map((channel) => {
+          const copy = CHANNEL_UI_COPY[channel];
+          return (
+            <div
+              key={channel}
+              className="flex flex-col gap-2 rounded-xl border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
-              <option value="realtime">Sanntid</option>
-              <option value="daily">Daglig</option>
-              <option value="weekly">Ukentlig</option>
-            </select>
-          </div>
-        ))}
+              <div className="min-w-0">
+                <span className="text-sm font-medium text-foreground">{copy.label}</span>
+                <p className="text-xs text-muted-foreground mt-0.5">{copy.description}</p>
+              </div>
+              <select
+                value={frequencies[channel] ?? 'daily'}
+                onChange={(e) => onFrequencyChange(channel, e.target.value)}
+                disabled={!emailEnabled}
+                className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
+              >
+                <option value="realtime">Sanntid (én e-post per varsel)</option>
+                <option value="daily">Daglig oppsummering</option>
+                <option value="weekly">Ukentlig oppsummering</option>
+              </select>
+            </div>
+          );
+        })}
       </div>
 
       <button

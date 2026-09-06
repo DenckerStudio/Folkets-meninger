@@ -20,6 +20,7 @@ export async function GET(request: Request) {
     const { data, error } = await supabase
       .from('notifications')
       .select('id,type,channel,title,body,url,data,created_at,read_at')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(limit);
 
