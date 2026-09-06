@@ -47,6 +47,9 @@ export function getRateLimitPolicy(pathname: string): { limit: number; windowMs:
   if (/^\/api\/sak\/[^/]+\/counter-proposals/.test(pathname)) {
     return { limit: 20, windowMs: 60_000 };
   }
+  if (/^\/api\/sak\/[^/]+\/discussion/.test(pathname)) {
+    return { limit: 30, windowMs: 60_000 };
+  }
   if (pathname.startsWith('/api/feedback')) {
     return { limit: 8, windowMs: 60_000 };
   }
