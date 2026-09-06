@@ -15,7 +15,6 @@ import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
 import FadeIn from '@/components/fade-in';
 import ExpandableText from './expandable-text';
-import VotingSection from './voting-section';
 import { SakDocumentsSection } from '@/components/sak/sak-documents-section';
 import { SakPageActions } from '@/components/sak/sak-page-actions';
 import { SakOfficialDescription } from '@/components/sak/sak-official-description';
@@ -25,6 +24,9 @@ import { AlignmentScore } from '@/components/sak/alignment-score';
 import { KnowledgeQuiz } from '@/components/sak/knowledge-quiz';
 import { CounterProposals } from '@/components/sak/counter-proposals';
 import { DiscussionSection } from '@/components/sak/discussion-section';
+import { SakParticipationFlow } from '@/components/sak/sak-participation-flow';
+import { listCounterProposals, findHearingLinkForSak } from '@/lib/counter-proposals/service';
+import { buildParticipationSummary } from '@/lib/sak-participation';
 import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
@@ -111,10 +113,13 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
   }
 
   const { sak, detail: detailedContent, issueMeta } = bundle;
-  const [documents, voteringer] = await Promise.all([
+  const [documents, voteringer, counterProposals, hearingLink] = await Promise.all([
     getSakDocumentsWithStatus(sak.id, detailedContent),
     fetchSakVoteringer(sak.id),
+    listCounterProposals(sak.id),
+    findHearingLinkForSak(sak.id),
   ]);
+  const participation = buildParticipationSummary(counterProposals, hearingLink);
 
   const innstillingstekst = detailedContent?.innstillingstekst;
   const kortvedtak = detailedContent?.kortvedtak;
@@ -346,13 +351,14 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
               />
             ) : null}
 
-            <VotingSection
-              initialVotes={sak.votes}
+            <SakParticipationFlow
               sakId={sak.id}
               sakTitle={officialTitle}
               sakSummary={descriptionToShow || officialTitle}
+              initialVotes={sak.votes}
               votingClosed={votingClosed}
               votingDaysLeft={votingWindow.daysLeft}
+              participation={participation}
             />
 
             <AlignmentScore

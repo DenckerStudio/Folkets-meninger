@@ -56,6 +56,7 @@ interface VotingSectionProps {
   sakSummary?: string;
   votingClosed?: boolean;
   votingDaysLeft?: number | null;
+  onVoteCast?: (vote: 'for' | 'against' | 'abstain') => void;
 }
 
 export default function VotingSection({
@@ -65,6 +66,7 @@ export default function VotingSection({
   sakSummary,
   votingClosed = false,
   votingDaysLeft = null,
+  onVoteCast,
 }: VotingSectionProps) {
   const [votes, setVotes] = useState(initialVotes);
   const [userVote, setUserVote] = useState<'for' | 'against' | 'abstain' | null>(null);
@@ -93,6 +95,7 @@ export default function VotingSection({
 
         if (data.userVote && ['for', 'against', 'abstain'].includes(data.userVote)) {
           setUserVote(data.userVote);
+          onVoteCast?.(data.userVote);
         }
 
         if (typeof data.votingClosed === 'boolean') {
@@ -112,7 +115,7 @@ export default function VotingSection({
     return () => {
       cancelled = true;
     };
-  }, [sakId, user?.id, votingClosed]);
+  }, [sakId, user?.id, votingClosed, onVoteCast]);
 
   const handleVote = async (type: 'for' | 'against' | 'abstain') => {
     if (isClosed || userVote || isSubmitting) return;
@@ -152,6 +155,7 @@ export default function VotingSection({
       }
 
       setUserVote(data.userVote ?? type);
+      onVoteCast?.(data.userVote ?? type);
       if (data.totals) {
         const totals = data.totals;
         setVotes({
