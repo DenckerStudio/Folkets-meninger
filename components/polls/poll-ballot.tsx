@@ -69,7 +69,7 @@ export function PollBallot({
         <>
           <h2 className="text-base font-semibold text-foreground">Hva mener du?</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Ja, nei eller blank. Stemmen lagres anonymt. BankID og MinID kommer senere.
+            Ja, nei eller blank. Stemmen lagres anonymt.
           </p>
         </>
       )}

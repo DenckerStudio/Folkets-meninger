@@ -135,7 +135,7 @@ export default function LoginClient() {
             </div>
             <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">Bekreft telefonnummer</h2>
             <p className="mt-2 text-center text-sm text-muted-foreground">
-              SMS-bekreftelse er valgfri. BankID og MinID kommer senere.
+              SMS-bekreftelse er valgfri — du kan hoppe over og fortsette med e-postkontoen.
             </p>
           </div>
         </FadeIn>
@@ -227,7 +227,7 @@ export default function LoginClient() {
             {isRegister ? 'Registrer ny bruker' : 'Logg inn på din konto'}
           </h2>
             <p className="mt-2 text-center text-sm text-muted-foreground">
-              Logg inn med e-post eller Google. BankID og MinID kommer senere.
+              Logg inn med e-post eller Google for å stemme og delta.
             </p>
         </div>
       </FadeIn>

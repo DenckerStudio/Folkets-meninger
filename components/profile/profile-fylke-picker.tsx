@@ -49,8 +49,7 @@ export function ProfileFylkePicker({
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-semibold text-foreground">Fylke du følger</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Selvvalgt, ikke BankID-bekreftet. Trengs for merket Fylkesekspert sammen med en bestått
-            kunnskapstest. MinID kommer senere.
+            Selvvalgt fylke. Trengs for merket Fylkesekspert sammen med en bestått kunnskapstest.
           </p>
           <select
             value={value}

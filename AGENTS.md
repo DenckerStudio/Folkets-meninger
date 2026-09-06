@@ -8,7 +8,8 @@
   Avstemninger (`/dashboard/avstemninger/reels`) as ja/nei/blank polls. Landing
   after login / `/dashboard` is `utforsk`.
   Primary nav: Utforsk / Avstemninger / Høringer. Default Stortinget period is
-  `2025-2029`. BankID/MinID is later — do not ship live ID-porten UI.
+  `2025-2029`. Auth is email/password and Google OAuth via Supabase — do not
+  mention BankID, MinID, or electronic ID verification in user-facing copy.
   Opt-in `activity_visibility` (`private`|`summary`|`full`). Admin via
   `user_roles` + `is_admin()` (`lib/admin/gate.ts`). Plan/history:
   `infra/coolify/README.md`, subagent `.cursor/agents/forum-removal-egress.md`.
@@ -160,7 +161,7 @@ The canonical template is `.env.example`.
   they are system-generated. Do not use `ensure_stortinget_poll` for drafts (it opens
   immediately); use `create_system_poll_draft` → `publish_poll`.
 - Fylke breakdowns use `users.fylke_code` only when `fylke_verified` is true.
-  `apply_verified_fylke_claim` is reserved for BankID/MinID later; no MinID UI now.
+  Self-declared fylke via the profile picker does not set `fylke_verified`.
 - Primary nav: Utforsk / Avstemninger / Høringer. Post-login fallback is Utforsk.
 
 ### Identity, activity, admin
@@ -172,8 +173,8 @@ The canonical template is `.env.example`.
   (`is_admin()`). Grant/revoke with `grant_app_role_by_email` /
   `revoke_app_role_by_email` (service role) or `/dashboard/admin/reels`.
   Remaining admin surface: `/dashboard/admin/statistikk`, `/dashboard/admin/reels`.
-- BankID/MinID is not shipped. Keep “MinID kommer senere” copy; do not claim
-  live “én person, én stemme” identity verification.
+- Do not mention BankID, MinID, or electronic ID verification anywhere in
+  user-facing copy, roadmap items, or marketing text.
 
 ### Document ingest and RAG
 
@@ -218,8 +219,8 @@ The canonical template is `.env.example`.
   quiz pass (+15), document read after 8s in the viewer (+5), constructive
   motforslag (+20) or hearing comment (+10).
 - Badges: Informert borger (1 quiz), Saksforsker (3 document reads),
-  Fylkesekspert (self-declared `users.fylke_code` + 1 quiz). BankID is not
-  required and `fylke_verified` stays false.
+  Fylkesekspert (self-declared `users.fylke_code` + 1 quiz). `fylke_verified`
+  stays false for self-declared fylke.
 - In-app knowledge quiz is grounded in sak title/summary/komité/AI summary.
   Typebot is not wired; the same award path can later accept an external
   webhook.

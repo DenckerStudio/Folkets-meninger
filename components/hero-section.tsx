@@ -47,7 +47,7 @@ export default function HeroSection() {
           className="mt-6 max-w-2xl mx-auto text-lg text-[#001433]/75 sm:text-xl leading-relaxed"
         >
           Folkets Stemme er en nøytral plattform som brobygger mellom Stortinget og innbyggerne. Si din mening med
-          Ja, Nei eller Blank. BankID og MinID kommer senere.
+          Ja, Nei eller Blank — stemmen lagres anonymt i statistikken.
         </motion.p>
 
         <motion.div

@@ -113,7 +113,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Stemming er stengt for denne saken' }, { status: 403 });
       }
       if (combined.includes('identity not verified')) {
-        return NextResponse.json({ error: 'Din identitet er ikke verifisert ennå' }, { status: 403 });
+        return NextResponse.json({ error: 'Du har ikke tilgang til å stemme på denne saken' }, { status: 403 });
       }
       if (combined.includes('not unique') || combined.includes('could not choose')) {
         return NextResponse.json(
