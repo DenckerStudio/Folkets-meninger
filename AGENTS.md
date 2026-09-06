@@ -7,7 +7,7 @@
 - Forum is removed from the product. System-generated Reels live under
   Avstemninger (`/dashboard/avstemninger/reels`) as ja/nei/blank polls. Landing
   after login / `/dashboard` is `utforsk`.
-  Primary nav: Utforsk / Avstemninger / Høringer. Default Stortinget period is
+  Primary nav: Utforsk / Avstemninger / Høringer / Forslag. Default Stortinget period is
   `2025-2029`. Auth is email/password and Google OAuth via Supabase — do not
   mention BankID, MinID, or electronic ID verification in user-facing copy.
   Opt-in `activity_visibility` (`private`|`summary`|`full`). Admin via
@@ -72,6 +72,7 @@ The canonical template is `.env.example`.
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Notification and welcome email delivery |
 | `STORTINGET_SESSION_ID`, `STORTINGET_PERIODE_ID` | Server defaults for Stortinget data |
 | `NEXT_PUBLIC_STORTINGET_SESSION_ID`, `NEXT_PUBLIC_STORTINGET_PERIODE_ID` | Client-visible Stortinget defaults |
+| `FIDER_BASE_URL`, `FIDER_OAUTH_CLIENT_ID`, `FIDER_OAUTH_CLIENT_SECRET` | Fider feature-request SSO (`docs/fider-oauth.md`) |
 | `DISABLE_HMR` | Dev-only escape hatch for HMR issues |
 
 ## Current Subsystems and Runbooks
@@ -248,6 +249,15 @@ The canonical template is `.env.example`.
   `GOVERNMENT_STATS_MIN_VOTES = 50` before publishing aggregate vote rows.
 - Valgomat party alignment is intentionally disabled until Stortinget per-party
   voting data exists (`PARTY_ALIGNMENT_AVAILABLE = false`).
+
+### Fider (feature requests / SSO)
+
+- Fider runs on Coolify; public URL via `FIDER_BASE_URL` (HTTPS when domain is live).
+- SSO uses an app OAuth bridge (`/api/oauth/fider/*`), not Supabase OAuth 2.1 server
+  (`auth.oauth_server.enabled = false` in `supabase/config.toml`).
+- Dashboard nav **Forslag** → `/dashboard/forslag` redirects to Fider (not iframe).
+- Fider callback URL: `{FIDER_BASE_URL}/oauth/{provider}/callback` (default provider `folkets`).
+- Setup runbook: `docs/fider-oauth.md`.
 
 ## Documentation Locations
 

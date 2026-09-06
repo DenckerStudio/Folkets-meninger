@@ -34,7 +34,7 @@ Relatert produktarbeid: avstemninger/initiativ (PR #57, `polls` / `citizen_initi
 - Liste topp-kallere:
   - App: `lib/stortinget-saker-cache.ts`, `lib/stortinget-detail-cache.ts`, `lib/forum/queries.ts` (fjernes), document chunks / RAG.
   - n8n: workflows som SELECT fra Postgres uten `LIMIT` (forum-prompts, embeddings, AI summary med `detail_json`).
-- Dokumenter nåværende Coolify-tjenester: n8n, Ollama, SearXNG (`infra/searxng/`).
+- Dokumenter nåværende Coolify-tjenester: n8n, Ollama, SearXNG (`infra/searxng/`), Fider (feature requests).
 - Definer **SLO**: mål egress % reduksjon etter C1+C2 (f.eks. −30 % mot baseline).
 
 **Leveranse:** tabell «kilde → estimert egress → tiltak» i dette filens appendix (oppdateres etter C0).
