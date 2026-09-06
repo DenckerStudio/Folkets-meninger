@@ -1,22 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { sendDigestEmail } from '@/lib/email/nodemailer';
+import { isSmtpConfigured } from '@/lib/email/smtp-config';
+import { cronAuthResponse, verifyCronAuth } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic';
 
 type Frequency = 'daily' | 'weekly';
-
-function assertCronAuth(request: Request) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    throw new Error('CRON_SECRET is not configured');
-  }
-  const provided = request.headers.get('x-cron-secret');
-  if (!provided || provided !== expected) {
-    return false;
-  }
-  return true;
-}
 
 function parseFrequency(url: URL): Frequency {
   const value = url.searchParams.get('frequency');
@@ -25,15 +15,27 @@ function parseFrequency(url: URL): Frequency {
 }
 
 export async function GET(request: Request) {
+  const auth = verifyCronAuth(request);
+  if (!auth.ok) {
+    return cronAuthResponse(auth);
+  }
+
+  const url = new URL(request.url);
+  const origin = url.origin;
+  const frequency = parseFrequency(url);
+
+  if (!isSmtpConfigured()) {
+    console.warn('Cron digest skipped: SMTP is not configured');
+    return NextResponse.json({
+      ok: true,
+      frequency,
+      usersProcessed: 0,
+      emailsSent: 0,
+      skipped: 'smtp_not_configured',
+    });
+  }
+
   try {
-    if (!assertCronAuth(request)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const url = new URL(request.url);
-    const origin = url.origin;
-    const frequency = parseFrequency(url);
-
     const service = getServiceSupabase();
 
     const { data: prefs } = await service
@@ -97,4 +99,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Cron error' }, { status: 500 });
   }
 }
-

@@ -1,28 +1,7 @@
 import nodemailer from 'nodemailer';
+import { getSmtpConfig } from './smtp-config';
 
 type Frequency = 'realtime' | 'daily' | 'weekly';
-
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing environment variable: ${name}`);
-  }
-  return value;
-}
-
-function getSmtpConfig() {
-  const host = requireEnv('SMTP_HOST');
-  const port = Number(requireEnv('SMTP_PORT'));
-  const user = requireEnv('SMTP_USER');
-  const pass = requireEnv('SMTP_PASS');
-  const from = requireEnv('SMTP_FROM');
-
-  if (!Number.isFinite(port)) {
-    throw new Error('SMTP_PORT must be a number');
-  }
-
-  return { host, port, user, pass, from };
-}
 
 let cachedTransporter: nodemailer.Transporter | null = null;
 

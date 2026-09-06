@@ -280,6 +280,17 @@ curl -sS -H "x-cron-secret: $CRON_SECRET" \
   "https://www.folkets-stemme.no/api/cron/sync-issues"
 ```
 
+**Feilsøking (HTTP 500/503 fra app):**
+
+| Symptom | Årsak | Tiltak |
+|---------|-------|--------|
+| `503` + `CRON_SECRET is not configured` | `CRON_SECRET` mangler i Vercel env for `folkets-inspill` | Legg til `CRON_SECRET` i Vercel → Project Settings → Environment Variables (Production). Verdien må matche `cronSecret` i alle n8n «Cron settings*»-noder. Redeploy etterpå. |
+| `401 Unauthorized` | Header `x-cron-secret` matcher ikke appens `CRON_SECRET` | Synkroniser secret mellom n8n og Vercel. |
+| `200` + `skipped: smtp_not_configured` på digest | SMTP-variabler mangler | Sett `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` i Vercel. Digest kjører uten å sende e-post inntil SMTP er på plass. |
+| `500 Cron error` på sync etter auth | Supabase/Stortinget-feil i handler | Sjekk Vercel runtime logs for `Cron sync-issues error`. Verifiser `SUPABASE_SERVICE_ROLE_KEY` og at Stortinget-API er oppe. |
+
+Forventet suksess: `{"ok":true,...}` med HTTP `200`.
+
 ## Motforslag horingsinnspill
 
 Workflow-kilde: [`hearing-innspill-package.workflow.ts`](hearing-innspill-package.workflow.ts)
