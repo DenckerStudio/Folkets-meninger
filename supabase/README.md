@@ -326,6 +326,34 @@ Further grant/revoke: `/dashboard/admin/reels` or the same RPCs. JWT
 `app_metadata.role` is synced for compatibility; `user_roles` is the source of
 truth.
 
+## Marketing feedback
+
+`20260806140000_site_feedback.sql` creates the storage table for the public
+`/innspill` page. The table is not a public write surface; RLS is enabled, no
+anon/authenticated policies are defined, and only `service_role` receives
+`SELECT`/`INSERT`.
+
+| Object | Purpose |
+|--------|---------|
+| `site_feedback` | Product feedback from `/innspill` with email, category, message, optional name/user id, user agent, and page path |
+| `site_feedback_service` | Service-role-only policy used by `POST /api/feedback` |
+| `site_feedback_created_at_idx` | Descending created-at index for inbox/admin review queries |
+
+`POST /api/feedback` is unauthenticated. It requires
+`SUPABASE_SERVICE_ROLE_KEY`, uses that key to insert rows, associates the current
+Supabase user when a session cookie exists, and then attempts a best-effort SMTP
+notification through `sendSiteFeedbackEmail()`. Configure `SMTP_HOST`,
+`SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` for email; set
+`FEEDBACK_INBOX_EMAIL` to override the default recipient
+(`kontakt@folketsstemme.no`).
+
+Abuse controls are intentionally lightweight and in-process: middleware applies
+`8` requests/minute per IP to `/api/feedback`, the route applies `5`
+submissions/minute per IP, and the form includes a hidden `company` honeypot.
+Accepted categories are `idé`, `feil`, `spørsmål`, and `annet`. If database
+insert and email both fail, the API returns `500`; if either succeeds, it returns
+`{ ok: true }`.
+
 ### Hearing comments
 
 Høringer themselves are not stored locally; pages fetch
