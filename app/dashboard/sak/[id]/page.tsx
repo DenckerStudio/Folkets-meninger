@@ -345,6 +345,8 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
               />
             ) : null}
 
+            <KnowledgeQuiz sakId={sak.id} variant="pre-vote" />
+
             <VotingSection
               initialVotes={sak.votes}
               sakId={sak.id}
@@ -455,7 +457,6 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
         forDeg={
           <div className="space-y-6">
             <ImpactCalculator sakId={sak.id} sakTitle={officialTitle} sakSummary={descriptionToShow || officialTitle} />
-            <KnowledgeQuiz sakId={sak.id} />
           </div>
         }
         motforslag={<CounterProposals sakId={sak.id} />}
