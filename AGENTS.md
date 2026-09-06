@@ -173,6 +173,10 @@ The canonical template is `.env.example`.
   (`is_admin()`). Grant/revoke with `grant_app_role_by_email` /
   `revoke_app_role_by_email` (service role) or `/dashboard/admin/reels`.
   Remaining admin surface: `/dashboard/admin/statistikk`, `/dashboard/admin/reels`.
+- **Stemme+** (`users.subscription_tier`): supporter badge, richer digest, smarter
+  alerts. Stripe checkout is deferred — grant test access via
+  `grant_stemme_plus_by_email` / admin Reels UI (`/api/admin/stemme-plus`).
+  Planned price constant: 59 kr/mnd (`lib/stemme-plus/constants.ts`).
 - Do not mention BankID, MinID, or electronic ID verification anywhere in
   user-facing copy, roadmap items, or marketing text.
 
