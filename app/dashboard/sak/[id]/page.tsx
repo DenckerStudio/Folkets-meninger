@@ -24,6 +24,7 @@ import { ImpactCalculator } from '@/components/sak/impact-calculator';
 import { AlignmentScore } from '@/components/sak/alignment-score';
 import { KnowledgeQuiz } from '@/components/sak/knowledge-quiz';
 import { CounterProposals } from '@/components/sak/counter-proposals';
+import { DiscussionSection } from '@/components/sak/discussion-section';
 import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
@@ -459,6 +460,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
           </div>
         }
         motforslag={<CounterProposals sakId={sak.id} />}
+        diskusjon={<DiscussionSection sakId={sak.id} />}
       />
     </div>
   );

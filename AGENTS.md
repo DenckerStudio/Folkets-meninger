@@ -230,6 +230,18 @@ The canonical template is `.env.example`.
   official innspill still goes via stortinget.no. Schema:
   `supabase/migrations/20260822120000_knowledge_and_counter_proposals.sql`.
 
+### Sak-diskusjon (Diskusjon tab)
+
+- Greenfield sak-scoped debate — **not** the removed site-wide forum (`forum_*`
+  tables stay dropped; no `/dashboard/forum` nav). Design:
+  `docs/DESIGN-sak-discussion.md`.
+- One room per sak (`issue_discussions` + flat `issue_discussion_posts` for MVP).
+  Public read on sak page; login + `user_has_public_identity` to post via
+  `POST /api/sak/[id]/discussion` (service-role `create_issue_discussion_post`).
+- Sak page tab **Diskusjon** (`#diskusjon`) beside Motforslag. Reports via
+  `POST /api/sak/[id]/discussion/report` → `content_reports`. Lightweight regex
+  check in `lib/moderation/content-check.ts`. No points for posts; no n8n on UGC.
+
 ### Admin, stats, and valgomat
 
 - Government stats exports are available under the admin stats route and apply
