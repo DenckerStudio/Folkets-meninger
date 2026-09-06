@@ -17,7 +17,7 @@ const TAB_LABELS: Record<SakPageTabId, string> = {
   oversikt: 'Oversikt',
   dokumenter: 'Dokumenter',
   'for-deg': 'For deg',
-  motforslag: 'Motforslag',
+  motforslag: 'Innspill',
   diskusjon: 'Diskusjon',
 };
 
@@ -31,6 +31,18 @@ function tabFromHash(): SakPageTabId {
   if (typeof window === 'undefined') return 'oversikt';
   const hash = window.location.hash.replace(/^#/, '');
   return isSakPageTabId(hash) ? hash : 'oversikt';
+}
+
+function dispatchTabChange() {
+  window.dispatchEvent(new Event(TAB_CHANGE_EVENT));
+}
+
+export function navigateToSakTab(id: SakPageTabId) {
+  const nextHash = `#${id}`;
+  if (window.location.hash !== nextHash) {
+    window.history.replaceState(null, '', nextHash);
+  }
+  dispatchTabChange();
 }
 
 function subscribeToTab(onChange: () => void) {
@@ -58,11 +70,7 @@ export function SakPageTabs({
   const active = useSyncExternalStore(subscribeToTab, tabFromHash, () => 'oversikt');
 
   const selectTab = useCallback((id: SakPageTabId) => {
-    const nextHash = `#${id}`;
-    if (window.location.hash !== nextHash) {
-      window.history.replaceState(null, '', nextHash);
-    }
-    window.dispatchEvent(new Event(TAB_CHANGE_EVENT));
+    navigateToSakTab(id);
   }, []);
 
   const panels: Record<SakPageTabId, ReactNode> = {

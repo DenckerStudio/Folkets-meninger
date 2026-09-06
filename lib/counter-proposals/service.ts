@@ -15,6 +15,11 @@ import {
 } from '@/lib/stortinget-horinger';
 import { triggerHearingInnspillWebhook } from '@/lib/trigger-hearing-innspill-webhook';
 import {
+  notifyCounterProposalEndorsed,
+  notifyCounterProposalPackaged,
+  notifyCounterProposalThresholdMet,
+} from './notify';
+import {
   buildCounterProposalPackage,
   canPackageCounterProposal,
   counterProposalPackageToMarkdown,
@@ -209,9 +214,30 @@ export async function endorseCounterProposal(userId: string, proposalId: string)
 
   if (error) throw error;
 
-  await counterProposalEndorsedAward(userId, proposalId);
   const proposal = await getCounterProposal(proposalId);
-  if (proposal && canPackageCounterProposal(proposal) && proposal.status === 'threshold_met') {
+  if (proposal) {
+    await notifyCounterProposalEndorsed({
+      authorUserId: proposal.authorUserId,
+      endorserUserId: userId,
+      sakId: proposal.stortingetIssueId,
+      proposalTitle: proposal.title,
+      supportCount: (data as { supportCount?: number }).supportCount ?? proposal.supportCount,
+    }).catch((err) => console.warn('notifyCounterProposalEndorsed', err));
+
+    if (canPackageCounterProposal(proposal) && proposal.status === 'threshold_met') {
+      await notifyCounterProposalThresholdMet({
+        authorUserId: proposal.authorUserId,
+        sakId: proposal.stortingetIssueId,
+        proposalTitle: proposal.title,
+        supportCount: proposal.supportCount,
+        supportThreshold: proposal.supportThreshold,
+      }).catch((err) => console.warn('notifyCounterProposalThresholdMet', err));
+    }
+  }
+
+  await counterProposalEndorsedAward(userId, proposalId);
+  const refreshed = await getCounterProposal(proposalId);
+  if (refreshed && canPackageCounterProposal(refreshed) && refreshed.status === 'threshold_met') {
     await packageCounterProposal({ proposalId, force: false });
   }
 
@@ -279,6 +305,12 @@ export async function packageCounterProposal(options: {
     console.error('mark_counter_proposal_packaged', error);
     throw new Error('Kunne ikke pakke motforslaget');
   }
+
+  await notifyCounterProposalPackaged({
+    authorUserId: proposal.authorUserId,
+    sakId: proposal.stortingetIssueId,
+    proposalTitle: proposal.title,
+  }).catch((err) => console.warn('notifyCounterProposalPackaged', err));
 
   return {
     packaged: data === true,
