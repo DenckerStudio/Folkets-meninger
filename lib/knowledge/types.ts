@@ -9,6 +9,16 @@ export type KnowledgeBadge = {
   howToEarn: string;
 };
 
+export type KnowledgeQuizQuestionKind =
+  | 'hva'
+  | 'hvem'
+  | 'konsekvens'
+  | 'komite'
+  | 'tema'
+  | 'kategori';
+
+export type QuizContextLevel = 'rich' | 'basic' | 'minimal';
+
 export type KnowledgeQuizOption = {
   id: string;
   text: string;
@@ -16,6 +26,7 @@ export type KnowledgeQuizOption = {
 
 export type KnowledgeQuizQuestion = {
   id: string;
+  kind: KnowledgeQuizQuestionKind;
   prompt: string;
   options: KnowledgeQuizOption[];
   correctOptionId: string;
@@ -23,6 +34,7 @@ export type KnowledgeQuizQuestion = {
 
 export type PublicKnowledgeQuizQuestion = {
   id: string;
+  kind: KnowledgeQuizQuestionKind;
   prompt: string;
   options: KnowledgeQuizOption[];
 };
