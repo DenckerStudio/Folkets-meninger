@@ -3,8 +3,6 @@ import { digestEmailSubject } from '@/lib/notifications/digest';
 import { getSmtpConfig } from '@/lib/email/smtp-config';
 import type { DigestFrequency } from '@/lib/notifications/channels';
 
-type Frequency = 'realtime' | 'daily' | 'weekly';
-
 let cachedTransporter: nodemailer.Transporter | null = null;
 
 function getTransporter() {
