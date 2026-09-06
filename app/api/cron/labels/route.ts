@@ -88,6 +88,7 @@ export async function GET(request: Request) {
     }
 
     let created = 0;
+    let failed = 0;
     let maxUpdatedAt = new Date(lastSeenIso).getTime();
 
     for (const summary of summaries) {
@@ -107,8 +108,7 @@ export async function GET(request: Request) {
           if (alreadyNotified) continue;
 
           notifiedUsers.add(userId);
-          created += 1;
-          await createNotification({
+          const result = await createNotification({
             userId,
             type: 'new_case_for_label',
             channel: 'labels',
@@ -118,6 +118,8 @@ export async function GET(request: Request) {
             data: { issueId, label, labels },
             origin,
           });
+          if (result.ok) created += 1;
+          else failed += 1;
         }
       }
 
@@ -131,6 +133,7 @@ export async function GET(request: Request) {
       ok: true,
       updatedSummaries: summaries.length,
       notificationsCreated: created,
+      notificationsFailed: failed,
     });
   } catch (e) {
     console.error('Cron labels error', e);

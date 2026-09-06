@@ -59,14 +59,14 @@ export async function GET(request: Request) {
     }
 
     let created = 0;
+    let failed = 0;
     for (const issue of fresh) {
       const userIds = byCategory.get(issue.category);
       if (!userIds || userIds.size === 0) continue;
 
-      await Promise.all(
-        [...userIds].map(async (userId) => {
-          created += 1;
-          return createNotification({
+      const results = await Promise.all(
+        [...userIds].map((userId) =>
+          createNotification({
             userId,
             type: 'new_case_in_category',
             channel: 'categories',
@@ -75,9 +75,14 @@ export async function GET(request: Request) {
             url: `/dashboard/sak/${issue.id}`,
             data: { issueId: issue.id, category: issue.category, status: issue.status, date: issue.date },
             origin,
-          });
-        }),
+          }),
+        ),
       );
+
+      for (const result of results) {
+        if (result.ok) created += 1;
+        else failed += 1;
+      }
     }
 
     const maxDate = fresh
@@ -85,7 +90,7 @@ export async function GET(request: Request) {
       .reduce((a, b) => Math.max(a, b), lastSeenMs);
     await setLastSeenDateIso(new Date(maxDate).toISOString());
 
-    return NextResponse.json({ ok: true, newIssues: fresh.length, notificationsCreated: created });
+    return NextResponse.json({ ok: true, newIssues: fresh.length, notificationsCreated: created, notificationsFailed: failed });
   } catch (e) {
     console.error('Cron categories error', e);
     return NextResponse.json({ error: 'Cron error' }, { status: 500 });

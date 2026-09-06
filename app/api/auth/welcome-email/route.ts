@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { sendWelcomeEmail } from '@/lib/email/nodemailer';
+import { isSmtpConfigured } from '@/lib/email/smtp-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,12 @@ export async function POST() {
     const name = (adminUser.data.user?.user_metadata as any)?.full_name as string | undefined;
 
     if (!email) {
-      return NextResponse.json({ ok: true, skipped: true });
+      return NextResponse.json({ ok: true, skipped: true, reason: 'no_email' });
+    }
+
+    if (!isSmtpConfigured()) {
+      console.warn('Welcome email skipped: SMTP is not configured', { userId: user.id });
+      return NextResponse.json({ ok: true, skipped: true, reason: 'smtp_not_configured' });
     }
 
     await sendWelcomeEmail({ to: email, name: name || null });

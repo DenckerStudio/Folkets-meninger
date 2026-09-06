@@ -1,57 +1,77 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { sendRealtimeNotificationEmail } from '@/lib/email/nodemailer';
+import { isSmtpConfigured } from '@/lib/email/smtp-config';
+import { toAbsoluteNotificationUrl } from '@/lib/notifications/digest';
+import { normalizeEmailFrequencyByChannel } from '@/lib/notifications/preferences';
+import type {
+  AdminComposeNotificationInput,
+  CreateNotificationInput,
+  CreateNotificationResult,
+} from '@/lib/notifications/types';
 
-export type NotificationChannel = 'categories' | 'labels';
-export type NotificationFrequency = 'realtime' | 'daily' | 'weekly';
+export type {
+  AdminComposeNotificationInput,
+  CreateNotificationInput,
+  CreateNotificationResult,
+} from '@/lib/notifications/types';
+export type { NotificationChannel, NotificationFrequency } from '@/lib/notifications/channels';
+export {
+  CHANNEL_UI_COPY,
+  DEFAULT_EMAIL_FREQUENCY_BY_CHANNEL,
+  NOTIFICATION_CHANNELS,
+} from '@/lib/notifications/channels';
+export { normalizeEmailFrequencyByChannel, pickDigestChannels } from '@/lib/notifications/preferences';
 
-export type CreateNotificationInput = {
-  userId: string;
-  type: string;
-  channel: NotificationChannel;
-  title: string;
-  body?: string | null;
-  url?: string | null;
-  data?: Record<string, unknown>;
-  origin?: string | null;
-};
-
-export function extractMentions(text: string): string[] {
-  if (!text) return [];
-  const matches = text.matchAll(/(^|\\s)@([\\p{L}0-9_.-]{2,32})\\b/giu);
-  const names = new Set<string>();
-  for (const m of matches) {
-    const name = (m[2] || '').trim();
-    if (name) names.add(name);
-  }
-  return [...names];
-}
-
-async function ensurePreferences(userId: string) {
+async function ensurePreferences(userId: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const service = getServiceSupabase();
-  await service.from('notification_preferences').upsert(
+  const { error } = await service.from('notification_preferences').upsert(
     { user_id: userId },
-    { onConflict: 'user_id', ignoreDuplicates: true }
+    { onConflict: 'user_id', ignoreDuplicates: true },
   );
+
+  if (error) {
+    console.error('Failed to ensure notification preferences', error);
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
 }
 
 async function getPreferences(userId: string) {
-  await ensurePreferences(userId);
+  const ensured = await ensurePreferences(userId);
+  if (!ensured.ok) {
+    return { ok: false as const, error: ensured.error };
+  }
+
   const service = getServiceSupabase();
-  const { data } = await service
+  const { data, error } = await service
     .from('notification_preferences')
     .select('email_enabled,email_frequency_by_channel')
     .eq('user_id', userId)
     .maybeSingle();
 
+  if (error) {
+    console.error('Failed to load notification preferences', error);
+    return { ok: false as const, error: error.message };
+  }
+
   const emailEnabled = data?.email_enabled ?? true;
-  const freq = (data?.email_frequency_by_channel || {}) as Record<string, NotificationFrequency>;
-  return { emailEnabled, freq };
+  const freq = normalizeEmailFrequencyByChannel(
+    (data?.email_frequency_by_channel || {}) as Record<string, unknown>,
+  );
+
+  return { ok: true as const, emailEnabled, freq };
 }
 
-export async function createNotification(input: CreateNotificationInput) {
-  const service = getServiceSupabase();
-  const { emailEnabled, freq } = await getPreferences(input.userId);
+export async function createNotification(
+  input: CreateNotificationInput,
+): Promise<CreateNotificationResult> {
+  const prefs = await getPreferences(input.userId);
+  if (!prefs.ok) {
+    return { ok: false, error: prefs.error };
+  }
 
+  const service = getServiceSupabase();
   const { data: inserted, error } = await service
     .from('notifications')
     .insert({
@@ -68,21 +88,45 @@ export async function createNotification(input: CreateNotificationInput) {
 
   if (error) {
     console.error('Failed to insert notification', error);
-    return;
+    return { ok: false, error: error.message };
   }
 
-  const preference = freq[input.channel] ?? 'daily';
-  if (!emailEnabled || preference !== 'realtime') return;
+  const preference = prefs.freq[input.channel] ?? 'daily';
+  if (!prefs.emailEnabled || preference !== 'realtime') {
+    return {
+      ok: true,
+      id: inserted.id,
+      emailSent: false,
+      emailSkippedReason: !prefs.emailEnabled ? 'disabled' : 'not_realtime',
+    };
+  }
+
+  if (!isSmtpConfigured()) {
+    console.warn('Realtime notification email skipped: SMTP is not configured', {
+      userId: input.userId,
+      notificationId: inserted.id,
+    });
+    return {
+      ok: true,
+      id: inserted.id,
+      emailSent: false,
+      emailSkippedReason: 'smtp_not_configured',
+    };
+  }
 
   try {
     const userRes = await service.auth.admin.getUserById(input.userId);
     const email = userRes.data.user?.email;
-    if (!email) return;
+    if (!email) {
+      return {
+        ok: true,
+        id: inserted.id,
+        emailSent: false,
+        emailSkippedReason: 'no_email',
+      };
+    }
 
-    const absoluteUrl =
-      input.url && input.origin && input.url.startsWith('/')
-        ? `${input.origin}${input.url}`
-        : input.url || undefined;
+    const absoluteUrl = toAbsoluteNotificationUrl(input.url, input.origin || '');
 
     await sendRealtimeNotificationEmail({
       to: email,
@@ -92,33 +136,57 @@ export async function createNotification(input: CreateNotificationInput) {
       url: absoluteUrl ?? null,
     });
 
-    if (inserted?.id) {
-      await service
-        .from('notifications')
-        .update({ emailed_at: new Date().toISOString(), email_last_error: null })
-        .eq('id', inserted.id);
-    }
+    await service
+      .from('notifications')
+      .update({ emailed_at: new Date().toISOString(), email_last_error: null })
+      .eq('id', inserted.id);
+
+    return { ok: true, id: inserted.id, emailSent: true };
   } catch (e) {
     console.error('Failed to send realtime notification email', e);
     const message = e instanceof Error ? e.message : 'Unknown error';
-    if (inserted?.id) {
-      await service.from('notifications').update({ email_last_error: message }).eq('id', inserted.id);
+    await service.from('notifications').update({ email_last_error: message }).eq('id', inserted.id);
+    return { ok: true, id: inserted.id, emailSent: false };
+  }
+}
+
+/**
+ * Service-role entry point for future admin broadcast / smarter alerts.
+ * Today it delegates to `createNotification` with optional delivery overrides.
+ */
+export async function dispatchNotification(
+  input: AdminComposeNotificationInput,
+): Promise<CreateNotificationResult> {
+  const delivery = input.delivery ?? 'both';
+
+  if (delivery === 'email_only') {
+    if (!isSmtpConfigured()) {
+      return { ok: false, error: 'SMTP is not configured' };
     }
+
+    const service = getServiceSupabase();
+    const userRes = await service.auth.admin.getUserById(input.userId);
+    const email = userRes.data.user?.email;
+    if (!email) {
+      return { ok: false, error: 'User has no email address' };
+    }
+
+    const absoluteUrl = toAbsoluteNotificationUrl(input.url, input.origin || '');
+    await sendRealtimeNotificationEmail({
+      to: email,
+      subject: input.title,
+      title: input.title,
+      body: input.body,
+      url: absoluteUrl ?? null,
+    });
+
+    return { ok: true, id: 'email-only', emailSent: true };
   }
-}
 
-export async function resolveMentionedUserIdsByName(names: string[]): Promise<string[]> {
-  const service = getServiceSupabase();
-  const unique = [...new Set(names.map((n) => n.trim()).filter(Boolean))];
-  if (unique.length === 0) return [];
-
-  // Best-effort: the project already joins `users:author_user_id (name)` in forum queries.
-  // Assume a `users` table/view exists with `id` and `name`.
-  const { data, error } = await service.from('users').select('id,name').in('name', unique);
-  if (error) {
-    console.error('Failed to resolve mentions', error);
-    return [];
+  const result = await createNotification(input);
+  if (!result.ok || delivery === 'in_app_only') {
+    return result;
   }
-  return (data || []).map((row: any) => row.id).filter(Boolean);
-}
 
+  return result;
+}
