@@ -3,6 +3,8 @@ import { getSaker } from '@/lib/stortinget';
 import { getServiceSupabase } from '@/lib/supabase';
 import { createNotification } from '@/lib/notifications';
 import { cronAuthResponse, verifyCronAuth } from '@/lib/cron-auth';
+import { buildCategoryAlertBody } from '@/lib/notifications/enrichment';
+import { userHasStemmePlus } from '@/lib/stemme-plus/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,18 +67,28 @@ export async function GET(request: Request) {
       if (!userIds || userIds.size === 0) continue;
 
       const results = await Promise.all(
-        [...userIds].map((userId) =>
-          createNotification({
+        [...userIds].map(async (userId) => {
+          const isPlus = await userHasStemmePlus(userId);
+          return createNotification({
             userId,
             type: 'new_case_in_category',
             channel: 'categories',
             title: `Ny sak i ${issue.category}`,
-            body: issue.title,
+            body: buildCategoryAlertBody(
+              { title: issue.title, category: issue.category, status: issue.status },
+              isPlus,
+            ),
             url: `/dashboard/sak/${issue.id}`,
-            data: { issueId: issue.id, category: issue.category, status: issue.status, date: issue.date },
+            data: {
+              issueId: issue.id,
+              category: issue.category,
+              status: issue.status,
+              date: issue.date,
+              stemmePlus: isPlus,
+            },
             origin,
-          }),
-        ),
+          });
+        }),
       );
 
       for (const result of results) {

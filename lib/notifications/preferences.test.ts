@@ -49,7 +49,8 @@ const cursor = buildDigestCursorUpdate({ categories: 'old' }, ['categories', 'la
 assert.equal(cursor.categories, '2026-02-01T00:00:00.000Z');
 assert.equal(cursor.labels, '2026-02-01T00:00:00.000Z');
 
-assert.equal(digestEmailSubject('daily'), 'Dine varsler (daglig oppsummering)');
-assert.equal(digestEmailSubject('weekly'), 'Dine varsler (ukentlig oppsummering)');
+assert.equal(digestEmailSubject('daily'), 'Dine varsler (daglig oppsummering — Stemme+)');
+assert.equal(digestEmailSubject('weekly'), 'Dine varsler (ukentlig oppsummering — Stemme+)');
+assert.equal(digestEmailSubject('weekly', true), 'Dine varsler (ukentlig smakebit)');
 
 console.log('notifications/preferences.test.ts: ok');

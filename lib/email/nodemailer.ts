@@ -2,6 +2,8 @@ import nodemailer from 'nodemailer';
 import { digestEmailSubject } from '@/lib/notifications/digest';
 import { getSmtpConfig } from '@/lib/email/smtp-config';
 import type { DigestFrequency } from '@/lib/notifications/channels';
+import type { PreparedDigest } from '@/lib/notifications/enrichment';
+import { STEMME_PLUS_MONTHLY_PRICE_NOK } from '@/lib/stemme-plus/constants';
 
 let cachedTransporter: nodemailer.Transporter | null = null;
 
@@ -71,31 +73,73 @@ export async function sendRealtimeNotificationEmail(input: RealtimeNotificationE
 export type DigestEmailInput = {
   to: string;
   frequency: DigestFrequency;
-  items: Array<{ title: string; url?: string | null; createdAt: string }>;
+  digest: PreparedDigest;
 };
 
 export async function sendDigestEmail(input: DigestEmailInput) {
   const transporter = getTransporter();
   const { from } = getSmtpConfig();
 
-  const subject = digestEmailSubject(input.frequency);
-
-  const list = input.items
-    .map((item) => {
-      const safeTitle = escapeHtml(item.title);
-      const link = item.url ? ` <a href="${item.url}" target="_blank" rel="noreferrer">Åpne</a>` : '';
-      return `<li>${safeTitle}${link}</li>`;
-    })
-    .join('');
-
-  const html = `
-    <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5;">
-      <h3 style="margin:0 0 12px 0;">Oppsummering</h3>
-      <ul style="padding-left: 18px; margin: 0;">${list || '<li>Ingen nye varsler.</li>'}</ul>
-    </div>
-  `.trim();
+  const subject = digestEmailSubject(input.frequency, input.digest.isTeaser);
+  const html = buildDigestEmailHtml(input.digest);
 
   await transporter.sendMail({ from, to: input.to, subject, html });
+}
+
+function buildDigestEmailHtml(digest: PreparedDigest): string {
+  const sections: string[] = [];
+
+  if (digest.groupedByChannel.length > 0) {
+    for (const group of digest.groupedByChannel) {
+      const items = group.items
+        .map((item) => renderDigestItem(item, true))
+        .join('');
+      sections.push(`
+        <h4 style="margin:16px 0 8px 0;font-size:14px;color:#374151;">${escapeHtml(group.label)}</h4>
+        <ul style="padding-left:18px;margin:0;">${items}</ul>
+      `);
+    }
+  } else {
+    const list = digest.items.map((item) => renderDigestItem(item, digest.items.some((i) => i.body))).join('');
+    sections.push(`<ul style="padding-left: 18px; margin: 0;">${list || '<li>Ingen nye varsler.</li>'}</ul>`);
+  }
+
+  const teaserNote = digest.isTeaser
+    ? `<p style="margin:16px 0 0 0;font-size:13px;color:#6b7280;">Dette er en kort smakebit (maks ${digest.maxItems} saker). Med Stemme+ (${STEMME_PLUS_MONTHLY_PRICE_NOK} kr/mnd) får du full oppsummering med mer kontekst og sanntidsvarsler.</p>`
+    : '';
+
+  return `
+    <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5;">
+      <h3 style="margin:0 0 12px 0;">${digest.isTeaser ? 'Ukentlig smakebit' : 'Din oppsummering'}</h3>
+      ${sections.join('')}
+      ${teaserNote}
+    </div>
+  `.trim();
+}
+
+function renderDigestItem(
+  item: { title: string; body?: string | null; url?: string | null; createdAt: string },
+  includeBody: boolean,
+): string {
+  const safeTitle = escapeHtml(item.title);
+  const link = item.url ? ` <a href="${item.url}" target="_blank" rel="noreferrer">Åpne</a>` : '';
+  const body =
+    includeBody && item.body
+      ? `<div style="font-size:13px;color:#4b5563;margin-top:2px;">${escapeHtml(item.body)}</div>`
+      : '';
+  const date = formatDigestDate(item.createdAt);
+  return `<li style="margin-bottom:8px;"><strong>${safeTitle}</strong>${link}${body}<div style="font-size:12px;color:#9ca3af;margin-top:2px;">${date}</div></li>`;
+}
+
+function formatDigestDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('nb-NO', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export type SiteFeedbackEmailInput = {

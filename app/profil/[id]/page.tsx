@@ -2,6 +2,7 @@ import { EyeOff, ShieldCheck, UserCircle } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { BackButton } from '@/components/dashboard/back-button';
 import { KnowledgeBadges } from '@/components/profile/knowledge-badges';
+import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
 import { activityVisibilityLabel } from '@/lib/identity/activity-visibility';
 import { getPublicProfile } from '@/lib/public-profile';
 import { routes } from '@/lib/routes';
@@ -36,6 +37,11 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
             <h1 className="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               {profile.displayName}
             </h1>
+            {profile.isStemmePlusSupporter ? (
+              <div className="mt-2">
+                <StemmePlusBadge size="md" />
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
