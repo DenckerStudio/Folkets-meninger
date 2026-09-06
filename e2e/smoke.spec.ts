@@ -39,6 +39,8 @@ test.describe('Folkets Stemme smoke', () => {
 
   test('cron endpoint rejects missing secret', async ({ request }) => {
     const res = await request.get('/api/cron/sync-issues');
-    expect(res.status()).toBe(401);
+    expect(res.status()).toBe(503);
+    const body = await res.json();
+    expect(body.error).toMatch(/CRON_SECRET is not configured/);
   });
 });

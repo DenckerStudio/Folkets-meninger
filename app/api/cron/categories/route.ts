@@ -2,20 +2,9 @@ import { NextResponse } from 'next/server';
 import { getSaker } from '@/lib/stortinget';
 import { getServiceSupabase } from '@/lib/supabase';
 import { createNotification } from '@/lib/notifications';
+import { cronAuthResponse, verifyCronAuth } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic';
-
-function assertCronAuth(request: Request) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    throw new Error('CRON_SECRET is not configured');
-  }
-  const provided = request.headers.get('x-cron-secret');
-  if (!provided || provided !== expected) {
-    return false;
-  }
-  return true;
-}
 
 async function getLastSeenDateIso(): Promise<string | null> {
   const service = getServiceSupabase();
@@ -38,11 +27,12 @@ async function setLastSeenDateIso(value: string) {
 }
 
 export async function GET(request: Request) {
-  try {
-    if (!assertCronAuth(request)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  const auth = verifyCronAuth(request);
+  if (!auth.ok) {
+    return cronAuthResponse(auth);
+  }
 
+  try {
     const origin = new URL(request.url).origin;
     const lastSeen = await getLastSeenDateIso();
     const lastSeenMs = lastSeen ? new Date(lastSeen).getTime() : 0;
@@ -86,7 +76,7 @@ export async function GET(request: Request) {
             data: { issueId: issue.id, category: issue.category, status: issue.status, date: issue.date },
             origin,
           });
-        })
+        }),
       );
     }
 
@@ -101,4 +91,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Cron error' }, { status: 500 });
   }
 }
-

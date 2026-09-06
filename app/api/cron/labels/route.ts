@@ -1,20 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { createNotification } from '@/lib/notifications';
+import { cronAuthResponse, verifyCronAuth } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic';
-
-function assertCronAuth(request: Request) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    throw new Error('CRON_SECRET is not configured');
-  }
-  const provided = request.headers.get('x-cron-secret');
-  if (!provided || provided !== expected) {
-    return false;
-  }
-  return true;
-}
 
 async function getLastSeenUpdatedAt(): Promise<string | null> {
   const service = getServiceSupabase();
@@ -51,11 +40,12 @@ async function userAlreadyNotifiedForIssue(userId: string, issueId: string): Pro
 }
 
 export async function GET(request: Request) {
-  try {
-    if (!assertCronAuth(request)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  const auth = verifyCronAuth(request);
+  if (!auth.ok) {
+    return cronAuthResponse(auth);
+  }
 
+  try {
     const origin = new URL(request.url).origin;
     const lastSeen = await getLastSeenUpdatedAt();
     const lastSeenIso = lastSeen ?? new Date(0).toISOString();
