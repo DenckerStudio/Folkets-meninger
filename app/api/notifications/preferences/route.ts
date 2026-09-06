@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { getServiceSupabase } from '@/lib/supabase';
 import { normalizeEmailFrequencyByChannel } from '@/lib/notifications/preferences';
+import { normalizeFrequenciesForTier } from '@/lib/stemme-plus/gates';
+import { isStemmePlusActive } from '@/lib/stemme-plus/tier';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,23 +45,33 @@ export async function GET() {
         return NextResponse.json({ error: 'Kunne ikke opprette innstillinger' }, { status: 500 });
       }
 
+      const subscription = await loadSubscriptionRow(user.id);
+      const frequencies = normalizeFrequenciesForTier(
+        normalizeEmailFrequencyByChannel(created.email_frequency_by_channel as Record<string, unknown>),
+        subscription,
+      );
+
       return NextResponse.json({
         preferences: {
           ...created,
-          email_frequency_by_channel: normalizeEmailFrequencyByChannel(
-            created.email_frequency_by_channel as Record<string, unknown>,
-          ),
+          email_frequency_by_channel: frequencies,
         },
+        stemme_plus: isStemmePlusActive(subscription),
       });
     }
+
+    const subscription = await loadSubscriptionRow(user.id);
+    const frequencies = normalizeFrequenciesForTier(
+      normalizeEmailFrequencyByChannel(data.email_frequency_by_channel as Record<string, unknown>),
+      subscription,
+    );
 
     return NextResponse.json({
       preferences: {
         ...data,
-        email_frequency_by_channel: normalizeEmailFrequencyByChannel(
-          data.email_frequency_by_channel as Record<string, unknown>,
-        ),
+        email_frequency_by_channel: frequencies,
       },
+      stemme_plus: isStemmePlusActive(subscription),
     });
   } catch (e) {
     console.error('Preferences GET error', e);
@@ -79,9 +92,13 @@ export async function POST(request: Request) {
 
     const payload = await request.json();
     const email_enabled = typeof payload.email_enabled === 'boolean' ? payload.email_enabled : undefined;
+    const subscription = await loadSubscriptionRow(user.id);
     const email_frequency_by_channel =
       payload.email_frequency_by_channel && typeof payload.email_frequency_by_channel === 'object'
-        ? normalizeEmailFrequencyByChannel(payload.email_frequency_by_channel as Record<string, unknown>)
+        ? normalizeFrequenciesForTier(
+            normalizeEmailFrequencyByChannel(payload.email_frequency_by_channel as Record<string, unknown>),
+            subscription,
+          )
         : undefined;
 
     const update: Record<string, unknown> = { user_id: user.id };
@@ -108,9 +125,21 @@ export async function POST(request: Request) {
           data.email_frequency_by_channel as Record<string, unknown>,
         ),
       },
+      stemme_plus: isStemmePlusActive(subscription),
     });
   } catch (e) {
     console.error('Preferences POST error', e);
     return NextResponse.json({ error: 'En feil oppstod' }, { status: 500 });
   }
+}
+
+async function loadSubscriptionRow(userId: string) {
+  const service = getServiceSupabase();
+  const { data } = await service
+    .from('users')
+    .select('subscription_tier, subscription_status, subscription_period_end')
+    .eq('id', userId)
+    .maybeSingle();
+
+  return data ?? { subscription_tier: 'free' };
 }

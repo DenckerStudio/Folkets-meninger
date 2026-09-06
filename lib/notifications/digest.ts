@@ -45,8 +45,11 @@ export function buildDigestCursorUpdate(
   return next;
 }
 
-export function digestEmailSubject(frequency: DigestFrequency): string {
+export function digestEmailSubject(frequency: DigestFrequency, isTeaser = false): string {
+  if (isTeaser) {
+    return 'Dine varsler (ukentlig smakebit)';
+  }
   return frequency === 'daily'
-    ? 'Dine varsler (daglig oppsummering)'
-    : 'Dine varsler (ukentlig oppsummering)';
+    ? 'Dine varsler (daglig oppsummering — Stemme+)'
+    : 'Dine varsler (ukentlig oppsummering — Stemme+)';
 }

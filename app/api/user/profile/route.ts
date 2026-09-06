@@ -6,6 +6,7 @@ import { userHasPublicIdentity } from '@/lib/identity/public-identity';
 import { parseActivityVisibility } from '@/lib/identity/activity-visibility';
 import { getUserPointsProfile } from '@/lib/user-points-profile';
 import { listUserBadges, syncUserBadges } from '@/lib/knowledge/service';
+import { isStemmePlusActive } from '@/lib/stemme-plus/tier';
 import { isNorwayCountyCode } from '@/lib/polls/norway-counties';
 import {
   canAwardProfileCompletePoints,
@@ -25,7 +26,7 @@ export async function GET() {
   const service = getServiceSupabase();
   let { data, error } = await service
     .from('users')
-    .select('first_name, last_name, name, email, bio, party_preference, profile_is_public, show_party_preference, avatar_url, activity_visibility, fylke_code')
+    .select('first_name, last_name, name, email, bio, party_preference, profile_is_public, show_party_preference, avatar_url, activity_visibility, fylke_code, subscription_tier, subscription_status, subscription_period_end')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -45,6 +46,9 @@ export async function GET() {
           avatar_url: '',
           activity_visibility: 'private',
           fylke_code: null,
+          subscription_tier: 'free',
+          subscription_status: null,
+          subscription_period_end: null,
         }
       : null;
     error = fallback.error;
@@ -84,6 +88,7 @@ export async function GET() {
     }),
     activity_visibility: parseActivityVisibility((data as { activity_visibility?: unknown } | null)?.activity_visibility),
     has_public_identity: userHasPublicIdentity(data),
+    stemme_plus: isStemmePlusActive(data),
   });
 }
 

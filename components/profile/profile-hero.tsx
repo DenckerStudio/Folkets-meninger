@@ -3,6 +3,7 @@
 import { LogOut, Shield } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import { KnowledgeBadges } from '@/components/profile/knowledge-badges';
+import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
 import { PointsProgress } from '@/components/profile/points-progress';
 import type { EarnedBadge } from '@/lib/knowledge/types';
 import type { UserPointsProgress } from '@/lib/user-points-levels';
@@ -14,6 +15,7 @@ type ProfileHeroProps = {
   points?: number;
   pointsProgress?: UserPointsProgress | null;
   badges?: EarnedBadge[];
+  isStemmePlus?: boolean;
   onSignOut: () => void;
 };
 
@@ -36,6 +38,7 @@ export function ProfileHero({
   points = 0,
   pointsProgress = null,
   badges = [],
+  isStemmePlus = false,
   onSignOut,
 }: ProfileHeroProps) {
   const displayName =
@@ -57,9 +60,12 @@ export function ProfileHero({
             </div>
             <div className="min-w-0">
               <h1 className="text-2xl font-bold text-foreground truncate">Min profil</h1>
-              <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1 truncate">
-                <Shield className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
-                <span className="truncate">{displayName}</span>
+              <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-2 truncate flex-wrap">
+                <span className="inline-flex items-center gap-1 truncate">
+                  <Shield className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
+                  <span className="truncate">{displayName}</span>
+                </span>
+                {isStemmePlus ? <StemmePlusBadge /> : null}
               </p>
             </div>
           </div>

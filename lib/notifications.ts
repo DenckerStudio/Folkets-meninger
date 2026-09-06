@@ -3,6 +3,8 @@ import { sendRealtimeNotificationEmail } from '@/lib/email/nodemailer';
 import { isSmtpConfigured } from '@/lib/email/smtp-config';
 import { toAbsoluteNotificationUrl } from '@/lib/notifications/digest';
 import { normalizeEmailFrequencyByChannel } from '@/lib/notifications/preferences';
+import { canUseRealtimeAlerts } from '@/lib/stemme-plus/gates';
+import { getUserSubscription } from '@/lib/stemme-plus/service';
 import type {
   AdminComposeNotificationInput,
   CreateNotificationInput,
@@ -92,12 +94,22 @@ export async function createNotification(
   }
 
   const preference = prefs.freq[input.channel] ?? 'daily';
+  const subscription = await getUserSubscription(input.userId);
   if (!prefs.emailEnabled || preference !== 'realtime') {
     return {
       ok: true,
       id: inserted.id,
       emailSent: false,
       emailSkippedReason: !prefs.emailEnabled ? 'disabled' : 'not_realtime',
+    };
+  }
+
+  if (!canUseRealtimeAlerts(subscription)) {
+    return {
+      ok: true,
+      id: inserted.id,
+      emailSent: false,
+      emailSkippedReason: 'not_realtime',
     };
   }
 

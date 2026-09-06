@@ -11,6 +11,8 @@ import {
 } from '@/lib/notifications/digest';
 import { pickDigestChannels } from '@/lib/notifications/preferences';
 import { isDigestFrequency } from '@/lib/notifications/channels';
+import { prepareDigestForUser } from '@/lib/notifications/enrichment';
+import { getUserSubscription } from '@/lib/stemme-plus/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,7 +80,13 @@ export async function GET(request: Request) {
         continue;
       }
 
-      const items: Array<{ title: string; url?: string | null; createdAt: string }> = [];
+      const items: Array<{
+        title: string;
+        body?: string | null;
+        url?: string | null;
+        createdAt: string;
+        channel: string;
+      }> = [];
       const lastDigest = (p.last_digest_sent_at_by_channel || {}) as Record<string, string>;
       let userQueryFailed = false;
 
@@ -87,7 +95,7 @@ export async function GET(request: Request) {
 
         const { data: notifs, error: notifsError } = await service
           .from('notifications')
-          .select('title,url,created_at')
+          .select('title,body,url,created_at,channel')
           .eq('user_id', p.user_id)
           .eq('channel', channel)
           .gt('created_at', sinceIso)
@@ -107,8 +115,10 @@ export async function GET(request: Request) {
         for (const n of notifs || []) {
           items.push({
             title: n.title,
+            body: n.body,
             url: toAbsoluteNotificationUrl(n.url, origin),
             createdAt: n.created_at,
+            channel,
           });
         }
       }
@@ -123,8 +133,11 @@ export async function GET(request: Request) {
         continue;
       }
 
+      const subscription = await getUserSubscription(p.user_id);
+      const preparedDigest = prepareDigestForUser(items, subscription);
+
       try {
-        await sendDigestEmail({ to: email, frequency, items });
+        await sendDigestEmail({ to: email, frequency, digest: preparedDigest });
         emailsSent += 1;
 
         const nextCursor = buildDigestCursorUpdate(lastDigest, channels, sentAtIso);

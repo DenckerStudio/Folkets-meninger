@@ -2,6 +2,7 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { parseActivityVisibility, type ActivityVisibility } from '@/lib/identity/activity-visibility';
 import { listUserBadges } from '@/lib/knowledge/service';
 import type { EarnedBadge } from '@/lib/knowledge/types';
+import { isStemmePlusActive } from '@/lib/stemme-plus/tier';
 
 export type PublicProfile = {
   id: string;
@@ -17,6 +18,7 @@ export type PublicProfile = {
     hearingComments: number | null;
   };
   badges: EarnedBadge[];
+  isStemmePlusSupporter: boolean;
 };
 
 function initialsFromName(name: string): string {
@@ -35,7 +37,7 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
   let { data: user, error: userError } = await service
     .from('users')
     .select(
-      'id, first_name, last_name, name, bio, party_preference, profile_is_public, show_party_preference, activity_visibility',
+      'id, first_name, last_name, name, bio, party_preference, profile_is_public, show_party_preference, activity_visibility, subscription_tier, subscription_status, subscription_period_end',
     )
     .eq('id', userId)
     .maybeSingle();
@@ -50,6 +52,9 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
       ? {
           ...fallback.data,
           activity_visibility: 'private',
+          subscription_tier: 'free',
+          subscription_status: null,
+          subscription_period_end: null,
         }
       : null;
   }
@@ -95,5 +100,6 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
       hearingComments,
     },
     badges: shareActivity ? await listUserBadges(userId) : [],
+    isStemmePlusSupporter: isStemmePlusActive(user),
   };
 }
