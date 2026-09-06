@@ -117,6 +117,9 @@ The canonical template is `.env.example`.
 - `/dashboard/horinger` and `/dashboard/horinger/<id>` show Stortinget hearings;
   `/horinger` redirects to the dashboard path. These routes are login-gated by
   middleware, unlike public `/dashboard/sak/<id>` pages.
+- `/dashboard/kalender` is also login-gated and renders høring sessions plus
+  innspill/application deadlines. `/api/kalender/horinger.ics` is a public
+  one-hour cached iCalendar feed for the +/- 90 day hearing window.
 - `lib/stortinget-horinger.ts` fetches
   `https://data.stortinget.no/eksport/horinger?format=json` with a 1-hour
   revalidate and normalizes Stortinget date values.
@@ -190,14 +193,21 @@ The canonical template is `.env.example`.
   `reclaim_document_body_storage()`.
 - Backfill recent cached issues with `npx tsx scripts/backfill-sak-documents.ts 10`.
 
-### Konsekvens-kalkulator and samsvars-score
+### Sak detail page, konsekvens-kalkulator and samsvars-score
 
-- Sak page (`/dashboard/sak/<id>`) shows **Hva betyr saken for deg?** after the AI
-  summary. Anonymous fylke/housing/car/occupation stay in localStorage
-  (`folkets:impact:profile`). `POST /api/sak/[id]/impact` retrieves document
-  chunks (no embeddings column — egress) plus the AI summary and synthesizes a
-  personal effect. Kroner amounts are shown only when they appear in the source.
-- **Folkets vilje vs. Stortinget** sits after the ballot. It fetches
+- Sak page (`/dashboard/sak/<id>`) uses hash-backed tabs from
+  `components/sak/sak-page-tabs.tsx`: Oversikt / Dokumenter / For deg /
+  Motforslag. The AI summary opens on demand in a "Vis AI-sammendrag" dialog.
+- Detail status comes from `getSakPageBundle()` and uses the same
+  `resolveSakStatusFromSources()` merge as list pages, including live
+  `getLiveListExportFields()` overlays so stale cached detail status does not
+  disagree with Utforsk.
+- **Hva betyr saken for deg?** lives in the For deg tab. Anonymous
+  fylke/housing/car/occupation stay in localStorage (`folkets:impact:profile`).
+  `POST /api/sak/[id]/impact` retrieves document chunks (no embeddings column —
+  egress) plus the AI summary and synthesizes a personal effect. Kroner amounts
+  are shown only when they appear in the source.
+- **Folkets vilje vs. Stortinget** sits in the Oversikt tab after the ballot. It fetches
   `data.stortinget.no/eksport/voteringer?sakid=` (1h revalidate), picks a
   substantive votering, and scores gap vs app `get_issue_vote_totals`.
   `ALIGNMENT_MIN_FOLK_VOTES = 5` before claiming folkets vilje. Pending saker
