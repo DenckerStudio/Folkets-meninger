@@ -22,9 +22,10 @@ test.describe('Folkets Stemme smoke', () => {
     await expect(page).toHaveURL(/auth\/login|dashboard\/folkets-meninger/);
   });
 
-  test('folkets meninger requires login', async ({ page }) => {
-    await page.goto('/dashboard/folkets-meninger');
-    await expect(page).toHaveURL(/auth\/login/);
+  test('folkets meninger list is public', async ({ page }) => {
+    const res = await page.goto('/dashboard/folkets-meninger');
+    expect(res?.status()).toBeLessThan(500);
+    await expect(page.getByRole('heading', { name: 'Folkets meninger' })).toBeVisible();
   });
 
   test('complete-profile page explains public identity', async ({ page }) => {

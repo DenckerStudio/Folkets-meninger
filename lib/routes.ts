@@ -66,6 +66,14 @@ export function isPublicDashboardInitiativPath(pathname: string): boolean {
   return pathname === routes.initiativ || /^\/dashboard\/initiativ\/[^/]+$/.test(pathname);
 }
 
+/** Public Folkets meninger list and detail — posting requires login. */
+export function isPublicDashboardFolketsMeningerPath(pathname: string): boolean {
+  return (
+    pathname === routes.folketsMeninger ||
+    /^\/dashboard\/folkets-meninger\/[^/]+$/.test(pathname)
+  );
+}
+
 export function isPublicProfilePath(pathname: string): boolean {
   return /^\/profil\/[^/]+$/.test(pathname);
 }
