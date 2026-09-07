@@ -73,8 +73,15 @@ Relatert produktarbeid: avstemninger/initiativ (PR #57, `polls` / `citizen_initi
 ### Fase C3 — Observability og grenser
 
 - Varsel når egress > terskel (Supabase billing eller daglig rapport).
-- Coolify healthchecks for Redis, n8n, Ollama.
+- Coolify healthchecks for Redis, n8n, Ollama, Fider.
 - Runbook: «Redis flush», «n8n workflow paused», «fallback uten cache».
+
+### Fider (feature requests)
+
+- **URL:** `https://feedback.folkets-meninger.no` (`FIDER_BASE_URL` i app + `BASE_URL` i Fider-container).
+- **OAuth callback (Fider admin):** `https://feedback.folkets-meninger.no/oauth/folkets/callback`
+- App SSO-bro: `docs/fider-oauth.md` — authorize/token/userinfo på `folketsstemme.no`, client id/secret i begge env.
+- Dashboard: **Forslag** → `/dashboard/forslag` (redirect, ikke iframe).
 
 ### Fase C4 — (valgfri, senere) self-host Postgres
 

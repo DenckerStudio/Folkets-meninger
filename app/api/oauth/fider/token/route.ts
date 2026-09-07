@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   }
 
   const fiderBaseUrl = getFiderBaseUrl();
-  if (!fiderBaseUrl || !isAllowedFiderRedirectUri(redirectUri, fiderBaseUrl)) {
+  if (!isAllowedFiderRedirectUri(redirectUri, fiderBaseUrl)) {
     return oauthError('Ugyldig redirect_uri');
   }
 

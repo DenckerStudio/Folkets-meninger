@@ -2,18 +2,22 @@
 
 export const FIDER_OAUTH_PROVIDER_SLUG = 'folkets';
 
+/** Production Fider instance on Coolify (locked domain). */
+export const FIDER_PRODUCTION_BASE_URL = 'https://feedback.folkets-meninger.no';
+
+/** OAuth callback URL Fider admin shows after registering the custom provider. */
+export const FIDER_OAUTH_CALLBACK_URL = `${FIDER_PRODUCTION_BASE_URL}/oauth/${FIDER_OAUTH_PROVIDER_SLUG}/callback`;
+
 const trimTrailingSlash = (url: string) => url.replace(/\/$/, '');
 
-export function getFiderBaseUrl(): string | null {
-  const raw = process.env.FIDER_BASE_URL?.trim();
-  if (!raw) return null;
+export function getFiderBaseUrl(): string {
+  const raw = process.env.FIDER_BASE_URL?.trim() || FIDER_PRODUCTION_BASE_URL;
   return trimTrailingSlash(raw);
 }
 
 export function isFiderConfigured(): boolean {
   return Boolean(
-    getFiderBaseUrl() &&
-      process.env.FIDER_OAUTH_CLIENT_ID?.trim() &&
+    process.env.FIDER_OAUTH_CLIENT_ID?.trim() &&
       process.env.FIDER_OAUTH_CLIENT_SECRET?.trim(),
   );
 }

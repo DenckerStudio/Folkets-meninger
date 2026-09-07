@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import {
+  FIDER_OAUTH_CALLBACK_URL,
+  FIDER_PRODUCTION_BASE_URL,
   getFiderOAuthCallbackUrl,
   getFiderSsoStartUrl,
   isAllowedFiderRedirectUri,
@@ -34,8 +36,12 @@ assert.equal(
   'https://forslag.example.com/oauth/folkets/callback',
 );
 assert.equal(
-  getFiderSsoStartUrl('https://forslag.example.com'),
-  'https://forslag.example.com/oauth/folkets',
+  getFiderOAuthCallbackUrl(FIDER_PRODUCTION_BASE_URL),
+  FIDER_OAUTH_CALLBACK_URL,
+);
+assert.equal(
+  getFiderSsoStartUrl(FIDER_PRODUCTION_BASE_URL),
+  'https://feedback.folkets-meninger.no/oauth/folkets',
 );
 assert.ok(
   isAllowedFiderRedirectUri(

@@ -24,10 +24,5 @@ export default function ForslagPage() {
     );
   }
 
-  const fiderBaseUrl = getFiderBaseUrl();
-  if (!fiderBaseUrl) {
-    redirect(routes.utforsk);
-  }
-
-  redirect(getFiderSsoStartUrl(fiderBaseUrl));
+  redirect(getFiderSsoStartUrl(getFiderBaseUrl()));
 }
