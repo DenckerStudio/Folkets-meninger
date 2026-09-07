@@ -72,7 +72,7 @@ The canonical template is `.env.example`.
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Notification and welcome email delivery |
 | `STORTINGET_SESSION_ID`, `STORTINGET_PERIODE_ID` | Server defaults for Stortinget data |
 | `NEXT_PUBLIC_STORTINGET_SESSION_ID`, `NEXT_PUBLIC_STORTINGET_PERIODE_ID` | Client-visible Stortinget defaults |
-| `FIDER_BASE_URL`, `FIDER_OAUTH_CLIENT_ID`, `FIDER_OAUTH_CLIENT_SECRET` | Fider SSO at `https://feedback.folkets-meninger.no` (`docs/fider-oauth.md`) |
+| `FIDER_BASE_URL`, `FIDER_OAUTH_CLIENT_ID`, `FIDER_OAUTH_CLIENT_SECRET`, `FIDER_OAUTH_PROVIDER_SLUG` | Fider SSO at `https://feedback.folkets-meninger.no` (`docs/fider-oauth.md`) |
 | `DISABLE_HMR` | Dev-only escape hatch for HMR issues |
 
 ## Current Subsystems and Runbooks
@@ -261,7 +261,9 @@ The canonical template is `.env.example`.
 - SSO uses an app OAuth bridge (`/api/oauth/fider/*`), not Supabase OAuth 2.1 server
   (`auth.oauth_server.enabled = false` in `supabase/config.toml`).
 - Dashboard nav **Forslag** → `/dashboard/forslag` redirects to Fider (not iframe).
-- Fider OAuth callback: `https://feedback.folkets-meninger.no/oauth/folkets/callback`.
+- Coolify Fider auto-assigns OAuth provider id (production: `_wwecatue6z`); set
+  `FIDER_OAUTH_PROVIDER_SLUG` to match the locked callback path.
+- Fider OAuth callback: `https://feedback.folkets-meninger.no/oauth/_wwecatue6z/callback`.
 - Setup runbook: `docs/fider-oauth.md`.
 
 ## Documentation Locations

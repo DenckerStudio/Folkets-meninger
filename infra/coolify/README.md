@@ -79,7 +79,7 @@ Relatert produktarbeid: avstemninger/initiativ (PR #57, `polls` / `citizen_initi
 ### Fider (feature requests)
 
 - **URL:** `https://feedback.folkets-meninger.no` (`FIDER_BASE_URL` i app + `BASE_URL` i Fider-container).
-- **OAuth callback (Fider admin):** `https://feedback.folkets-meninger.no/oauth/folkets/callback`
+- **OAuth callback (Fider admin):** `https://feedback.folkets-meninger.no/oauth/_wwecatue6z/callback` (auto-assigned provider id; set `FIDER_OAUTH_PROVIDER_SLUG` in app)
 - App SSO-bro: `docs/fider-oauth.md` — authorize/token/userinfo på `folketsstemme.no`, client id/secret i begge env.
 - Dashboard: **Forslag** → `/dashboard/forslag` (redirect, ikke iframe).
 

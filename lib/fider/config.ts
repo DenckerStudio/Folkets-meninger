@@ -1,12 +1,20 @@
 /** Fider feature-request integration (OAuth SSO bridge). */
 
-export const FIDER_OAUTH_PROVIDER_SLUG = 'folkets';
+/**
+ * Default OAuth provider slug on Coolify Fider (auto-assigned; not editable in admin UI).
+ * Override with `FIDER_OAUTH_PROVIDER_SLUG` if Fider assigns a different id.
+ */
+export const FIDER_OAUTH_PROVIDER_SLUG_DEFAULT = '_wwecatue6z';
 
 /** Production Fider instance on Coolify (locked domain). */
 export const FIDER_PRODUCTION_BASE_URL = 'https://feedback.folkets-meninger.no';
 
-/** OAuth callback URL Fider admin shows after registering the custom provider. */
-export const FIDER_OAUTH_CALLBACK_URL = `${FIDER_PRODUCTION_BASE_URL}/oauth/${FIDER_OAUTH_PROVIDER_SLUG}/callback`;
+export function getFiderOAuthProviderSlug(): string {
+  return process.env.FIDER_OAUTH_PROVIDER_SLUG?.trim() || FIDER_OAUTH_PROVIDER_SLUG_DEFAULT;
+}
+
+/** OAuth callback URL Fider admin shows after registering the custom provider (default slug). */
+export const FIDER_OAUTH_CALLBACK_URL = `${FIDER_PRODUCTION_BASE_URL}/oauth/${FIDER_OAUTH_PROVIDER_SLUG_DEFAULT}/callback`;
 
 const trimTrailingSlash = (url: string) => url.replace(/\/$/, '');
 
@@ -58,14 +66,12 @@ export function getFiderOAuthUserinfoUrl(appBaseUrl: string): string {
 }
 
 export function getFiderOAuthCallbackUrl(fiderBaseUrl: string): string {
-  const slug = process.env.FIDER_OAUTH_PROVIDER_SLUG?.trim() || FIDER_OAUTH_PROVIDER_SLUG;
-  return `${trimTrailingSlash(fiderBaseUrl)}/oauth/${slug}/callback`;
+  return `${trimTrailingSlash(fiderBaseUrl)}/oauth/${getFiderOAuthProviderSlug()}/callback`;
 }
 
 /** URL that starts Fider sign-in via the Folkets Stemme OAuth provider. */
 export function getFiderSsoStartUrl(fiderBaseUrl: string): string {
-  const slug = process.env.FIDER_OAUTH_PROVIDER_SLUG?.trim() || FIDER_OAUTH_PROVIDER_SLUG;
-  return `${trimTrailingSlash(fiderBaseUrl)}/oauth/${slug}`;
+  return `${trimTrailingSlash(fiderBaseUrl)}/oauth/${getFiderOAuthProviderSlug()}`;
 }
 
 export function isAllowedFiderRedirectUri(redirectUri: string, fiderBaseUrl: string): boolean {
