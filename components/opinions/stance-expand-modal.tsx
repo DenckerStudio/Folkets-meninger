@@ -61,11 +61,19 @@ export function StanceExpandModal({
     setSelected(null);
     setFillOrigin(null);
     setLocalError('');
-  }, [busy]);
+    setBody(initialBody);
+  }, [busy, initialBody]);
 
   useEffect(() => {
     setBody(initialBody);
   }, [initialBody]);
+
+  useEffect(() => {
+    if (phase !== 'filling') return;
+    const delayMs = reducedMotion ? 220 : 480;
+    const timer = window.setTimeout(() => setPhase('expanded'), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [phase, reducedMotion]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -95,10 +103,6 @@ export function StanceExpandModal({
     }
     setSelected(stance);
     setLocalError('');
-    if (reducedMotion) {
-      setPhase('expanded');
-      return;
-    }
     setPhase('filling');
   }
 
@@ -135,7 +139,6 @@ export function StanceExpandModal({
 
       <motion.div
         ref={cardRef}
-        layout
         role={expanded ? 'dialog' : undefined}
         aria-modal={expanded || undefined}
         aria-labelledby={expanded ? titleId : undefined}
@@ -169,10 +172,7 @@ export function StanceExpandModal({
               }}
               initial={{ width: 28, height: 28, x: '-50%', y: '-50%' }}
               animate={{ width: 1600, height: 1600 }}
-              transition={{ duration: reducedMotion ? 0 : 0.45, ease: [0.22, 1, 0.36, 1] }}
-              onAnimationComplete={() => {
-                if (phase === 'filling') setPhase('expanded');
-              }}
+              transition={{ duration: reducedMotion ? 0.2 : 0.45, ease: [0.22, 1, 0.36, 1] }}
             />
           ) : null}
         </div>
