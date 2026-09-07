@@ -46,7 +46,7 @@ export async function requireAdmin(): Promise<
   return { ok: true, userId: user.id };
 }
 
-export async function requireAdminPage(nextPath: string = routes.adminStats): Promise<void> {
+export async function requireAdminPage(nextPath: string = routes.admin): Promise<void> {
   const supabase = await getServerSupabase();
   const {
     data: { user },

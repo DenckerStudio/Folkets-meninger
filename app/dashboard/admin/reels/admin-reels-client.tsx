@@ -6,6 +6,7 @@ import { AlertCircle, CheckCircle2, Loader2, Sparkles, X } from 'lucide-react';
 import { pollDraftGenerationStatusLabel } from '@/lib/admin/poll-draft-generation';
 import { usePollDraftGeneration } from '@/hooks/use-poll-draft-generation';
 import { routes } from '@/lib/routes';
+import { AdminBackLink } from '@/components/admin/admin-shell';
 import type { PollRecord, SakPollCandidate, SakPollCoverage } from '@/lib/polls/types';
 
 type DraftsResponse = { drafts: PollRecord[] };
@@ -469,12 +470,10 @@ export default function AdminReelsClient() {
       </section>
 
       <div className="flex flex-wrap gap-4 text-sm">
-        <Link href={routes.adminStats} className="font-medium text-brand hover:underline">
-          Statistikk
-        </Link>
         <Link href={routes.avstemningerReels} className="font-medium text-brand hover:underline">
           Offentlig Reels-feed
         </Link>
+        <AdminBackLink />
       </div>
     </div>
   );
