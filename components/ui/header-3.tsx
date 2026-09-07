@@ -8,8 +8,9 @@ import { Bell, ChevronDown, Eye, LogIn, LogOut, Settings, SlidersHorizontal, Use
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 import { isDashboardPath, isPublicProfilePath, routes } from '@/lib/routes';
-import { desktopMoreNavLinks, desktopPrimaryNavLinks } from '@/lib/site-nav-links';
+import { desktopMoreNavLinks, desktopPrimaryNavLinks, isAdminActive } from '@/lib/site-nav-links';
 import { DashboardNavMenuButton } from '@/components/dashboard/dashboard-nav-context';
+import { AdminMoreNavLink } from '@/components/admin/admin-more-nav-link';
 
 export function Header() {
   const scrolled = useScroll(10);
@@ -156,7 +157,8 @@ export function Header() {
 }
 
 function MoreNavMenu({ pathname }: { pathname: string }) {
-  const anyActive = desktopMoreNavLinks.some((link) => link.isActive?.(pathname));
+  const anyActive =
+    isAdminActive(pathname) || desktopMoreNavLinks.some((link) => link.isActive?.(pathname));
 
   return (
     <details className="group relative">
@@ -173,6 +175,7 @@ function MoreNavMenu({ pathname }: { pathname: string }) {
       </summary>
       <div className="absolute left-0 mt-2 w-80 overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-xl">
         <div className="p-2">
+          <AdminMoreNavLink pathname={pathname} />
           {desktopMoreNavLinks.map((link) => {
             const Icon = link.icon;
             const active = link.isActive?.(pathname) ?? false;

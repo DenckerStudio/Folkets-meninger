@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { BarChart3, Download } from 'lucide-react';
 import { PUBLIC_STATS_DISCLAIMER } from '@/lib/government-stats/snapshot';
 import { routes } from '@/lib/routes';
+import { AdminBackLink } from '@/components/admin/admin-shell';
 
 export default function AdminStatistikkClient() {
   const [downloading, setDownloading] = useState(false);
@@ -59,12 +60,6 @@ export default function AdminStatistikkClient() {
           JSON (krever innlogging)
         </a>
         <Link
-          href={routes.adminReels}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted/50"
-        >
-          Reels-utkast →
-        </Link>
-        <Link
           href={routes.innsikt}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted/50"
         >
@@ -72,9 +67,7 @@ export default function AdminStatistikkClient() {
         </Link>
       </div>
 
-      <Link href={routes.utforsk} className="text-sm text-brand hover:underline">
-        ← Tilbake til utforsk
-      </Link>
+      <AdminBackLink />
     </div>
   );
 }

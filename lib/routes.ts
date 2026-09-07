@@ -30,6 +30,7 @@ export const routes = {
   initiative: (id: string) => `${DASHBOARD_PREFIX}/initiativ/${id}`,
   horing: (id: string) => `${DASHBOARD_PREFIX}/horinger/${id}`,
   profile: (id: string) => `/profil/${id}`,
+  admin: `${DASHBOARD_PREFIX}/admin`,
   adminStats: `${DASHBOARD_PREFIX}/admin/statistikk`,
   adminReels: `${DASHBOARD_PREFIX}/admin/reels`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,

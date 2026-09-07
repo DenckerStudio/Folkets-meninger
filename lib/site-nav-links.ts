@@ -61,7 +61,7 @@ export const isPolitikerHubActive: NavIsActive = (pathname) =>
   pathname.startsWith(routes.politikerHub);
 
 export const isAdminActive: NavIsActive = (pathname) =>
-  pathname.startsWith(`${DASHBOARD_PREFIX}/admin/`);
+  pathname === routes.admin || pathname.startsWith(`${routes.admin}/`);
 
 /** Combined Utforsk active state for mobile (includes politikere/saker). */
 export const isMobileUtforskActive: NavIsActive = (pathname) =>
