@@ -2,29 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  BarChart2,
-  Calendar,
-  FileEdit,
-  Lightbulb,
-  Search,
-  UserRound,
-  Users,
-  Vote,
-} from 'lucide-react';
+import { Shield } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { useIsAdmin } from '@/hooks/use-is-admin';
 import { routes } from '@/lib/routes';
+import { dashboardSidebarNavItems } from '@/lib/site-nav-links';
 import { cn } from '@/lib/utils';
-
-const NAV = [
-  { href: routes.utforsk, label: 'Utforsk', icon: Search, match: (p: string) => p.startsWith(routes.utforsk) || p.startsWith(`${routes.dashboard}/sak/`) },
-  { href: routes.avstemninger, label: 'Avstemninger', icon: Vote, match: (p: string) => p.startsWith(routes.avstemninger) },
-  { href: routes.politikere, label: 'Politikere', icon: Users, match: (p: string) => p.startsWith(routes.politikere) },
-  { href: routes.horinger, label: 'Høringer', icon: FileEdit, match: (p: string) => p.startsWith(routes.horinger) },
-  { href: routes.forslag, label: 'Forslag', icon: Lightbulb, match: (p: string) => p.startsWith(routes.forslag) },
-  { href: routes.kalender, label: 'Kalender', icon: Calendar, match: (p: string) => p.startsWith(routes.kalender) },
-  { href: routes.innsikt, label: 'Innsikt', icon: BarChart2, match: (p: string) => p.startsWith(routes.innsikt) },
-  { href: routes.minSide, label: 'Min side', icon: UserRound, match: (p: string) => p.startsWith(routes.minSide) },
-] as const;
 
 type DashboardSidebarProps = {
   variant?: 'desktop' | 'drawer';
@@ -42,12 +25,13 @@ export default function DashboardSidebar({ variant = 'desktop', onNavigate }: Da
       )}
       aria-label="Dashbordmeny"
     >
-      {NAV.map(({ href, label, icon: Icon, match }) => {
-        const active = match(pathname);
+      {dashboardSidebarNavItems.map((item) => {
+        const active = item.isActive?.(pathname) ?? false;
+        const Icon = item.icon;
         return (
           <Link
-            key={href}
-            href={href}
+            key={item.href}
+            href={item.href}
             onClick={onNavigate}
             className={cn(
               'flex items-center gap-3 font-medium transition-colors',
@@ -68,10 +52,54 @@ export default function DashboardSidebar({ variant = 'desktop', onNavigate }: Da
             aria-current={active ? 'page' : undefined}
           >
             <Icon className={cn('shrink-0', isDrawer ? 'h-[1.125rem] w-[1.125rem]' : 'h-4 w-4')} />
-            {label}
+            {item.title}
           </Link>
         );
       })}
+      <AdminSidebarLink pathname={pathname} variant={variant} onNavigate={onNavigate} />
     </nav>
+  );
+}
+
+type AdminSidebarLinkProps = {
+  pathname: string;
+  variant: 'desktop' | 'drawer';
+  onNavigate?: () => void;
+};
+
+function AdminSidebarLink({ pathname, variant, onNavigate }: AdminSidebarLinkProps) {
+  const { user } = useAuth();
+  const isAdminUser = useIsAdmin();
+  const isDrawer = variant === 'drawer';
+
+  if (!user || !isAdminUser) return null;
+
+  const active = pathname === routes.admin || pathname.startsWith(`${routes.admin}/`);
+
+  return (
+    <Link
+      href={routes.admin}
+      onClick={onNavigate}
+      className={cn(
+        'flex items-center gap-3 font-medium transition-colors',
+        isDrawer
+          ? cn(
+              'rounded-lg border-l-[3px] px-3 py-2.5 text-[0.9375rem]',
+              active
+                ? 'border-brand bg-brand/10 text-brand'
+                : 'border-transparent text-foreground/85 hover:bg-muted/70 hover:text-foreground',
+            )
+          : cn(
+              'rounded-lg px-3 py-2 text-sm',
+              active
+                ? 'bg-brand/10 text-brand'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+            ),
+      )}
+      aria-current={active ? 'page' : undefined}
+    >
+      <Shield className={cn('shrink-0', isDrawer ? 'h-[1.125rem] w-[1.125rem]' : 'h-4 w-4')} />
+      Admin
+    </Link>
   );
 }
