@@ -5,6 +5,7 @@ export const DASHBOARD_PREFIX = '/dashboard';
 export const routes = {
   home: '/',
   dashboard: DASHBOARD_PREFIX,
+  folketsMeninger: `${DASHBOARD_PREFIX}/folkets-meninger`,
   utforsk: `${DASHBOARD_PREFIX}/utforsk`,
   avstemninger: `${DASHBOARD_PREFIX}/avstemninger`,
   avstemningerReels: `${DASHBOARD_PREFIX}/avstemninger/reels`,
@@ -26,6 +27,7 @@ export const routes = {
   politiker: (id: string) => `${DASHBOARD_PREFIX}/politikere/${id}`,
   sporsmalDetail: (id: string) => `${DASHBOARD_PREFIX}/sporsmal/${id}`,
   sak: (id: string) => `${DASHBOARD_PREFIX}/sak/${id}`,
+  opinion: (id: string) => `${DASHBOARD_PREFIX}/folkets-meninger/${id}`,
   poll: (id: string) => `${DASHBOARD_PREFIX}/avstemninger/${id}`,
   initiative: (id: string) => `${DASHBOARD_PREFIX}/initiativ/${id}`,
   horing: (id: string) => `${DASHBOARD_PREFIX}/horinger/${id}`,

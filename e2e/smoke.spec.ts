@@ -17,9 +17,14 @@ test.describe('Folkets Stemme smoke', () => {
     expect(res?.status()).toBeLessThan(500);
   });
 
-  test('legacy forum path redirects toward utforsk or login', async ({ page }) => {
+  test('legacy forum path redirects toward folkets meninger or login', async ({ page }) => {
     await page.goto('/dashboard/forum');
-    await expect(page).toHaveURL(/auth\/login|dashboard\/utforsk/);
+    await expect(page).toHaveURL(/auth\/login|dashboard\/folkets-meninger/);
+  });
+
+  test('folkets meninger requires login', async ({ page }) => {
+    await page.goto('/dashboard/folkets-meninger');
+    await expect(page).toHaveURL(/auth\/login/);
   });
 
   test('complete-profile page explains public identity', async ({ page }) => {

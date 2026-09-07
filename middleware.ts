@@ -78,6 +78,7 @@ export const config = {
     '/api/sak/:path*/impact',
     '/api/sak/:path*/knowledge',
     '/api/sak/:path*/counter-proposals',
+    '/api/opinions/:path*',
     '/api/feedback',
     '/api/oauth/fider/:path*',
   ],

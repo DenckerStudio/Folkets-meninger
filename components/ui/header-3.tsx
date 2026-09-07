@@ -27,7 +27,7 @@ export function Header() {
   const logoHref = isPublicProfilePath(pathname)
     ? routes.home
     : isLoggedIn
-      ? routes.utforsk
+      ? routes.folketsMeninger
       : routes.home;
   const handleSignOut = async () => {
     const { getBrowserSupabase } = await import('@/lib/supabase');
