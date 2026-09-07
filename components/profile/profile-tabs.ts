@@ -72,3 +72,8 @@ export const PROFILE_TAB_IDS = PROFILE_TABS.map((t) => t.id);
 export function isProfileTabId(value: string | null): value is ProfileTabId {
   return value !== null && PROFILE_TAB_IDS.includes(value as ProfileTabId);
 }
+
+export function getProfileTabLabel(tabId: ProfileTabId): string {
+  const tab = PROFILE_TABS.find((item) => item.id === tabId);
+  return tab?.label ?? 'Profil';
+}

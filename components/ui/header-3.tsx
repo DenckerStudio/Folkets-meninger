@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Bell, ChevronDown, Eye, LogIn, LogOut, Settings, SlidersHorizontal, UserCircle } from 'lucide-react';
+import { Bell, ChevronDown, Eye, LogIn, LogOut, UserCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 import { isDashboardPath, isPublicProfilePath, routes } from '@/lib/routes';
@@ -123,11 +123,8 @@ export function Header() {
                   <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
                 </div>
                 <div className="p-2">
-                  <ProfileMenuLink href={routes.minSide} icon={UserCircle} title="Min side" description="Stemmehistorikk og oversikt" />
+                  <ProfileMenuLink href={routes.minSide} icon={UserCircle} title="Min side" description="Profil og innstillinger" />
                   <ProfileMenuLink href={routes.profile(user!.id)} icon={Eye} title="Offentlig profil" description="Slik andre ser deg" />
-                  <ProfileMenuLink href={`${routes.minSide}?tab=offentlig`} icon={Settings} title="Profilinnstillinger" description="Bio, parti og synlighet" />
-                  <ProfileMenuLink href={`${routes.minSide}?tab=preferanser`} icon={SlidersHorizontal} title="Preferanser" description="Utseende, animasjoner og hjelp" />
-                  <ProfileMenuLink href={`${routes.minSide}?tab=varsler`} icon={Bell} title="Varsler" description="E-post og varsler" />
                   <button
                     type="button"
                     onClick={handleSignOut}
