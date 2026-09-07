@@ -5,11 +5,11 @@ import { useAuth } from '@/hooks/use-auth';
 
 export function useIsAdmin(): boolean {
   const { user } = useAuth();
+  const [adminForUserId, setAdminForUserId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (!user) {
-      setIsAdmin(false);
       return;
     }
 
@@ -18,16 +18,26 @@ export function useIsAdmin(): boolean {
     fetch('/api/admin/me')
       .then((res) => res.json())
       .then((json) => {
-        if (!cancelled) setIsAdmin(!!json.admin);
+        if (!cancelled) {
+          setIsAdmin(!!json.admin);
+          setAdminForUserId(user.id);
+        }
       })
       .catch(() => {
-        if (!cancelled) setIsAdmin(false);
+        if (!cancelled) {
+          setIsAdmin(false);
+          setAdminForUserId(user.id);
+        }
       });
 
     return () => {
       cancelled = true;
     };
   }, [user]);
+
+  if (!user || adminForUserId !== user.id) {
+    return false;
+  }
 
   return isAdmin;
 }
