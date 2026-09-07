@@ -7,7 +7,8 @@ import {
   submitKnowledgeQuiz,
   userHasPassedQuiz,
 } from '@/lib/knowledge/service';
-import { toPublicQuizQuestions } from '@/lib/knowledge/quiz';
+import { getQuizContextLevel, toPublicQuizQuestions } from '@/lib/knowledge/quiz';
+import { getAiSummaryFromDb } from '@/lib/ai-summary/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,7 +39,9 @@ export async function GET(
     return NextResponse.json({ error: 'Sak ikke funnet' }, { status: 404 });
   }
 
-  const quiz = await buildQuizForIssue(source);
+  const aiSummary = await getAiSummaryFromDb(source.issueId);
+  const quiz = await buildQuizForIssue({ ...source, aiSummary });
+  const contextLevel = getQuizContextLevel({ ...source, aiSummary });
   const supabase = await getServerSupabase();
   const {
     data: { user },
@@ -52,6 +55,8 @@ export async function GET(
     passScore: quiz.passScore,
     passed,
     loggedIn: Boolean(user),
+    contextLevel,
+    hasAiSummary: Boolean(aiSummary),
   });
 }
 
