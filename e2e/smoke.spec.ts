@@ -28,6 +28,17 @@ test.describe('Folkets Stemme smoke', () => {
     await expect(page.getByRole('heading', { name: 'Folkets meninger' })).toBeVisible();
   });
 
+  test('imot fills the compact bar before the stance modal expands', async ({ page }) => {
+    await page.goto('/dashboard/folkets-meninger');
+    await expect(page.getByRole('heading', { name: 'Folkets meninger' })).toBeVisible();
+    const modal = page.locator('[data-stance-modal]');
+    await expect(modal).toHaveAttribute('data-phase', 'idle');
+    await page.getByRole('button', { name: 'Imot' }).click();
+    await expect(modal).toHaveAttribute('data-phase', 'filling');
+    await expect(modal).toHaveAttribute('data-phase', 'expanded', { timeout: 2000 });
+    await expect(page.getByRole('heading', { name: /Hvorfor imot/i })).toBeVisible();
+  });
+
   test('complete-profile page explains public identity', async ({ page }) => {
     await page.goto('/auth/complete-profile');
     await expect(page.getByText(/Offentlige innspill|fornavn og etternavn/i)).toBeVisible();

@@ -137,7 +137,8 @@ export function StanceExpandModal({
 
       <motion.div
         ref={cardRef}
-        role={expanded ? 'dialog' : undefined}
+        data-stance-modal=""
+        data-phase={phase}
         aria-modal={expanded || undefined}
         aria-labelledby={expanded ? titleId : undefined}
         className={cn(
