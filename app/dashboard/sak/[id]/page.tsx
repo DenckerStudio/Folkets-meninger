@@ -3,7 +3,6 @@ import { classifySakKind, getSakKindLabel } from '@/lib/stortinget-sak-presentat
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { SakMetaCard, SakProcessingBadge, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
 import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS, SAK_TYPE_BADGE_CLASS } from '@/lib/sak-status';
-import { getSakVotingWindow } from '@/lib/sak-voting-window';
 import { formatStortingetDate } from '@/lib/stortinget-horinger';
 import { SaksgangTimeline, type SaksgangStep } from '@/components/sak/saksgang-timeline';
 import { notFound } from 'next/navigation';
@@ -154,11 +153,6 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
     officialDescription && officialDescription !== officialTitle ? officialDescription : '';
 
   const treatmentStatus = sak.status;
-
-  const votingWindow = getSakVotingWindow(detailedContent, {
-    ferdigbehandlet: detailedContent?.ferdigbehandlet ?? issueMeta?.ferdigbehandlet,
-  });
-  const votingClosed = treatmentStatus === 'closed' || !votingWindow.isOpen;
 
   const lastUpdatedLabel =
     formatStortingetDate(sak.date) ??
@@ -357,9 +351,6 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
               sakId={sak.id}
               sakTitle={officialTitle}
               sakSummary={descriptionToShow || officialTitle}
-              initialVotes={sak.votes}
-              votingClosed={votingClosed}
-              votingDaysLeft={votingWindow.daysLeft}
               participation={participation}
             />
 

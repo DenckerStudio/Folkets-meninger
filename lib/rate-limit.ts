@@ -32,7 +32,7 @@ export function checkRateLimit(
 
 /** Paths that get write/expensive rate limits (per IP). */
 export function getRateLimitPolicy(pathname: string): { limit: number; windowMs: number } | null {
-  if (pathname.startsWith('/api/vote')) {
+  if (pathname.startsWith('/api/vote') || pathname.startsWith('/api/stance')) {
     return { limit: 30, windowMs: 60_000 };
   }
   if (/^\/api\/sak\/[^/]+\/ai-summary/.test(pathname)) {

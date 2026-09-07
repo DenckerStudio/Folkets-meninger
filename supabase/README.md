@@ -69,7 +69,8 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 
 | Domain | Migrations | Main objects |
 |--------|------------|--------------|
-| Anonymous voting | `20260528000001_anonymous_voting.sql`, `20260528000002_vote_schema_repair.sql`, `20260618120000_sak_voting_status.sql` | `citizen_votes`, `user_vote_receipts`, `cast_vote`, vote aggregate RPCs |
+| Anonymous voting (legacy) | `20260528000001_anonymous_voting.sql`, `20260528000002_vote_schema_repair.sql`, `20260618120000_sak_voting_status.sql` | `citizen_votes`, `user_vote_receipts`, `cast_vote`, vote aggregate RPCs — read-only for historical alignment |
+| Issue stances | `20260907120000_issue_stances.sql` | `issue_stances`, `set_issue_stance`, `get_user_stance_*` RPCs |
 | Notifications | `20260528000003_notifications.sql`, `20260906180000_notification_channel_defaults.sql` | `notification_preferences`, `notification_category_subscriptions`, `notifications` |
 | Stemme+ subscription | `20260906200000_stemme_plus_subscription.sql`, `20260906210000_stemme_plus_admin_grant.sql` | `users.subscription_tier`, admin RPCs `grant_stemme_plus_by_email` / `revoke_stemme_plus_by_email` (Stripe checkout deferred) |
 | AI summaries | `20260528120000_issue_ai_summaries.sql`, `20260529120000_simplify_issue_ai_summaries.sql`, `20260823210000_n8n_ai_summary_rich_context.sql` | `issue_ai_summaries`, `n8n_get_issue_ai_summary_context` |

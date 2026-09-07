@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 
 type ProfileHeroProps = {
   user: User;
-  voteCount: number;
+  stanceCount: number;
   points?: number;
   pointsProgress?: UserPointsProgress | null;
   badges?: EarnedBadge[];
@@ -34,7 +34,7 @@ function initialsFromUser(user: User): string {
 
 export function ProfileHero({
   user,
-  voteCount,
+  stanceCount,
   points = 0,
   pointsProgress = null,
   badges = [],
@@ -80,8 +80,8 @@ export function ProfileHero({
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl bg-muted/40 border border-border px-4 py-3">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Stemmer avgitt</p>
-            <p className="text-2xl font-bold text-brand mt-0.5">{voteCount}</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Holdninger markert</p>
+            <p className="text-2xl font-bold text-brand mt-0.5">{stanceCount}</p>
           </div>
           <PointsProgress points={points} progress={pointsProgress} />
         </div>

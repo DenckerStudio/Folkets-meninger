@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   buildParticipationSummary,
-  motforslagCtaForVote,
+  motforslagCtaForStance,
   participationStepLabel,
 } from './sak-participation';
 
@@ -30,8 +30,8 @@ assert.equal(summary.proposalCount, 1);
 assert.equal(summary.topProposal?.title, 'Alternativ A');
 assert.equal(summary.hearingOpen, true);
 
-assert.equal(participationStepLabel('vote'), 'Stem');
-assert.match(motforslagCtaForVote('against'), /alternativ/i);
-assert.match(motforslagCtaForVote(null), /Utforsk motforslag/i);
+assert.equal(participationStepLabel('stance'), 'Holdning');
+assert.match(motforslagCtaForStance('uenig'), /alternativ/i);
+assert.match(motforslagCtaForStance(null), /Utforsk motforslag/i);
 
 console.log('sak-participation.test.ts: ok');
