@@ -71,12 +71,10 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 |--------|------------|--------------|
 | Anonymous voting | `20260528000001_anonymous_voting.sql`, `20260528000002_vote_schema_repair.sql`, `20260618120000_sak_voting_status.sql` | `citizen_votes`, `user_vote_receipts`, `cast_vote`, vote aggregate RPCs |
 | Notifications | `20260528000003_notifications.sql` | `notification_preferences`, `notification_category_subscriptions`, `notifications` |
-| AI summaries | `20260528120000_issue_ai_summaries.sql`, `20260529120000_simplify_issue_ai_summaries.sql`, `20260823210000_n8n_ai_summary_rich_context.sql` | `issue_ai_summaries`, `n8n_get_issue_ai_summary_context` |
-| Auth/user sync + hearings comments | `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql` | `users`, `ensure_public_user`, `user_has_forum_identity`, `hearing_comments`, `create_hearing_comment` |
-| Forum base/features | `20260530120000_forum_enhancements.sql`, `20260531120000_production_readiness.sql`, `20260531140000_forum_prompts_dedupe.sql` | forum threads/replies/likes/prompts and production indexes |
-| Forum reports/sources | `20260602120000_forum_reports_enhance.sql`, `20260602130000_forum_trusted_sources.sql` | `forum_reports`, `forum_trusted_sources` |
-| Forum profiles/points/moderation | `20260614130000_forum_profiles_points_ai_sources.sql`, `20260614160000_harden_forum_points_moderation.sql`, `20260614170000_public_user_display_grants.sql` | public profile fields, point ledgers, moderation RPCs/grants |
-| Forum sak-RAG prompts | `20260621120000_forum_sak_rag_prompts.sql` | `forum_prompts.generation_metadata`, `forum_research_clusters.source_type`, `get_sak_prompt_coverage` |
+| AI summaries | `20260528120000_issue_ai_summaries.sql`, `20260529120000_simplify_issue_ai_summaries.sql`, `20260823210000_n8n_ai_summary_rich_context.sql` | `issue_ai_summaries`, `n8n_get_issue_ai_summary_context`, n8n source-context columns |
+| Auth/user sync + hearings comments | `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql`, `20260810120000_remove_forum_and_activity_visibility.sql` | `users`, `ensure_public_user`, `user_has_public_identity`, compatibility `user_has_forum_identity`, `hearing_comments`, `create_hearing_comment`, `activity_visibility` |
+| Public profiles + points base | `20260614130000_forum_profiles_points_ai_sources.sql`, `20260614160000_harden_forum_points_moderation.sql`, `20260614170000_public_user_display_grants.sql`, `20260620120000_points_levels_and_awards.sql` | public profile fields, `user_points_balances`, `user_points_ledger`, `award_user_points`, levels and hardened grants |
+| Removed forum objects | `20260530120000_forum_enhancements.sql` through `20260621120000_forum_sak_rag_prompts.sql`, then `20260810120000_remove_forum_and_activity_visibility.sql` | historical `forum_*` tables/RPCs are dropped; do not build active features on them |
 | Marketing feedback | `20260806140000_site_feedback.sql` | `site_feedback` (public “Gi innspill” form; service-role writes only) |
 | Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql`, `20260702160000_backfill_ferdigbehandlet_from_detail.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category`, `ferdigbehandlet` repair |
 | Sak documents/RAG | `20260617120000_sak_documents_rag.sql`, `20260807112603_document_chunks_storage_efficiency.sql` | `stortinget_issue_documents`, `document_chunks`, `chunks_status`, `match_issue_document_chunks`, reclaim helpers |
@@ -158,7 +156,7 @@ Do not seed mock polls; empty UI is the honest launch state.
 ## Stortinget issue cache
 
 `stortinget_issues` is both the list cache and the anchor table for votes,
-summaries, forum prompts, documents, and government stats.
+summaries, polls, documents, and government stats.
 
 | Column | Source / purpose |
 |--------|------------------|
@@ -223,10 +221,10 @@ comments are stored separately in `hearing_comments` and are keyed by
 | `create_hearing_comment(uuid, text, text)` | Service-role write RPC used by `POST /api/hearings` |
 
 `create_hearing_comment` calls `ensure_public_user`, requires
-`user_has_forum_identity`, trims bodies, and accepts 1-10000 characters. These
-comments are not official submissions to Stortinget; the detail page labels them
-as public app comments. They also do not use forum thread/reply moderation or
-forum point triggers.
+`user_has_public_identity`, trims bodies, and accepts 1-10000 characters.
+`POST /api/hearings` uses the service role to call the RPC and awards +10
+knowledge points for constructive comments. These comments are not official
+submissions to Stortinget; the detail page labels them as public app comments.
 
 ### Sak treatment status precedence
 
@@ -264,57 +262,21 @@ If `stortinget_issues.ferdigbehandlet` drifts from cached detail data, apply
 npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
 ```
 
-## Forum schema
+## Public identity, activity visibility, and admin
 
-Forum writes go through RPCs rather than direct client inserts.
-
-| Object | Purpose |
-|--------|---------|
-| `create_forum_thread` / `create_forum_reply` | Validate identity, length, moderation, and official replies before insert |
-| `forum_moderation_check` | DB-side regex moderation for hate, discrimination, sexual content, violence, and spam |
-| `forum_reports` | One report per user/target; categories: `spam`, `harassment`, `misinformation`, `other` |
-| `forum_trusted_sources` | Approved/pending/rejected domains for n8n forum reel source routing |
-| `user_points_balances` / `user_points_ledger` | Public point balance and private per-user ledger |
-
-Human forum authors must have `first_name` and `last_name` of at least two
-characters. `ensure_public_user` syncs missing profile rows from Supabase Auth,
-and `user_has_forum_identity` gates human thread/reply RPCs. System threads can
-set `is_system_thread = true` and bypass the human identity requirement.
-
-## Hearing comments
-
-`20260601120000_forum_public_identity.sql` also defines local comments for
-Stortinget hearings. There is no local hearings table; comments are keyed by the
-Stortinget export id.
+Forum writes are no longer active. `20260810120000_remove_forum_and_activity_visibility.sql`
+drops `forum_*` tables/RPCs and adds the neutral `user_has_public_identity`
+helper. `user_has_forum_identity` remains only as a compatibility wrapper while
+older references roll forward.
 
 | Object | Purpose |
 |--------|---------|
-| `hearing_comments` | Public local comments for `/dashboard/horinger/<id>` |
-| `hearing_comments_select` | RLS policy that allows public reads |
-| `create_hearing_comment` | Service-role RPC used by `POST /api/hearings` |
-
-`create_hearing_comment(p_user_id, p_stortinget_hearing_id, p_body)` calls
-`ensure_public_user`, requires `user_has_forum_identity`, trims body text, allows
-1-10000 characters, and rejects empty hearing ids. The Next.js route creates
-mention notifications for `@name` matches after the RPC succeeds.
-
-These comments are Folkets Stemme discussion entries only. They are not
-submitted to Stortinget; the høring detail page links users to Stortinget for
-official submissions.
-
-Point triggers award:
-
-| Event | Points |
-|-------|--------|
-| Approved human thread created | +10 |
-| Approved reply created | +5 |
-| Like given | +1 |
-| Like received by another author | +2 |
-| Vote receipt inserted | +3 |
-
-Admin pages use `lib/admin/gate.ts`, which reads `public.user_roles` (`role =
-'admin'`). `is_admin()` is the SQL helper. Env allowlists (`ADMIN_EMAILS` /
-`FORUM_ADMIN_EMAILS`) are removed.
+| `users.first_name` / `users.last_name` | Public name fields; each must be at least two characters for public-identity gated writes |
+| `ensure_public_user` | Service-side profile row sync from Supabase Auth metadata |
+| `user_has_public_identity` | Current gate for hearing comments, citizen initiatives, and motforslag |
+| `users.activity_visibility` | Opt-in public activity setting: `private`, `summary`, or `full` |
+| `user_roles` / `is_admin()` | Source of truth for app admin access |
+| `grant_app_role_by_email` / `revoke_app_role_by_email` | Service-role admin bootstrap and maintenance RPCs |
 
 Bootstrap the first admin in the SQL editor (service role / postgres):
 
@@ -326,25 +288,25 @@ Further grant/revoke: `/dashboard/admin/reels` or the same RPCs. JWT
 `app_metadata.role` is synced for compatibility; `user_roles` is the source of
 truth.
 
-### Hearing comments
+## Knowledge and participation points
 
-Høringer themselves are not stored locally; pages fetch
-`data.stortinget.no/eksport/horinger?format=json` through
-`lib/stortinget-horinger.ts`. Local user input is stored in
-`hearing_comments`, keyed by the Stortinget hearing id string.
+Point writes reuse `award_user_points`:
 
-`POST /api/hearings` uses `create_hearing_comment(p_user_id,
-p_stortinget_hearing_id, p_body)` with the service role. The RPC calls
-`ensure_public_user`, requires `user_has_forum_identity`, and enforces body
-length 1-10000 characters. Reads are public through the
-`hearing_comments_select` policy.
+| Event | Points |
+|-------|--------|
+| Vote receipt inserted | +3 |
+| Knowledge quiz passed | +15 |
+| Document read after the viewer delay | +5 |
+| Motforslag created | +20 |
+| Motforslag endorsed | +2 |
+| Constructive hearing comment | +10 |
 
 ## Notifications
 
 `20260528000003_notifications.sql` creates:
 
 - `notification_preferences`: per-user email enablement and frequency by channel
-  (`forum`, `mentions`, `categories` by default).
+  (current UI channels are `categories` and `labels`).
 - `notification_category_subscriptions`: "hjertesaker" category subscriptions.
 - `notifications`: in-app inbox rows with optional email delivery metadata.
 
@@ -355,9 +317,10 @@ from `.env.example`.
 
 ## Document ingest and RAG
 
-`20260614130000_forum_profiles_points_ai_sources.sql` introduces
-`stortinget_issue_documents`; `20260617120000_sak_documents_rag.sql` adds cached
-HTML/text fields, `document_chunks`, pgvector, and `match_issue_document_chunks`.
+`20260614130000_forum_profiles_points_ai_sources.sql` (legacy filename)
+introduces `stortinget_issue_documents`; `20260617120000_sak_documents_rag.sql`
+adds cached HTML/text fields, `document_chunks`, pgvector, and
+`match_issue_document_chunks`.
 `20260807112603_document_chunks_storage_efficiency.sql` adds `chunks_status`,
 reclaims cached `content_html`, and clears `content_full_text` once chunks exist.
 
