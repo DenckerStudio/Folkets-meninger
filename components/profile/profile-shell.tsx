@@ -16,6 +16,7 @@ import { ProfileNotifications } from '@/components/profile/profile-notifications
 import { ProfilePrivacy } from '@/components/profile/profile-privacy';
 import { ProfilePublicSettings } from '@/components/profile/profile-public-settings';
 import { ProfileAppPreferences } from '@/components/profile/profile-app-preferences';
+import { ProfileStemmePlus } from '@/components/profile/profile-stemme-plus';
 import { ProfileAdminLinks } from '@/components/profile/profile-admin-links';
 import { ProfileFylkePicker } from '@/components/profile/profile-fylke-picker';
 import { isProfileTabId, type ProfileTabId } from '@/components/profile/profile-tabs';
@@ -50,6 +51,7 @@ export function ProfileShell() {
   const [pointsProgress, setPointsProgress] = useState<UserPointsProgress | null>(null);
   const [badges, setBadges] = useState<EarnedBadge[]>([]);
   const [fylkeCode, setFylkeCode] = useState<string | null>(null);
+  const [isStemmePlus, setIsStemmePlus] = useState(false);
   useEffect(() => {
     if (!user) {
       setHistoryLoading(false);
@@ -90,6 +92,16 @@ export function ProfileShell() {
         if (typeof json.fylke_code === 'string' || json.fylke_code === null) {
           setFylkeCode(json.fylke_code);
         }
+        if (typeof json.stemme_plus === 'boolean') {
+          setIsStemmePlus(json.stemme_plus);
+        }
+      })
+      .catch(() => {});
+
+    fetch('/api/stemme-plus/status', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.tier === 'stemme_plus') setIsStemmePlus(true);
       })
       .catch(() => {});
 
@@ -109,6 +121,9 @@ export function ProfileShell() {
               ...json.preferences.email_frequency_by_channel,
             }));
           }
+        }
+        if (typeof json.stemme_plus === 'boolean') {
+          setIsStemmePlus(json.stemme_plus);
         }
       })
       .catch(() => {});
@@ -145,6 +160,7 @@ export function ProfileShell() {
       points={points}
       pointsProgress={pointsProgress}
       badges={badges}
+      isStemmePlus={isStemmePlus}
       fylkeCode={fylkeCode}
       onFylkeSaved={(code) => {
         setFylkeCode(code);
@@ -242,6 +258,7 @@ type ProfileShellAuthenticatedProps = {
   points: number;
   pointsProgress: UserPointsProgress | null;
   badges: EarnedBadge[];
+  isStemmePlus: boolean;
   fylkeCode: string | null;
   onFylkeSaved: (code: string | null) => void;
   onCategoriesChange: (next: string[]) => void;
@@ -269,6 +286,7 @@ function ProfileShellAuthenticated({
   points,
   pointsProgress,
   badges,
+  isStemmePlus,
   fylkeCode,
   onFylkeSaved,
   onCategoriesChange,
@@ -293,6 +311,8 @@ function ProfileShellAuthenticated({
             ? 'Preferanser'
           : activeTab === 'varsler'
             ? 'Varsler'
+            : activeTab === 'stemme-plus'
+              ? 'Stemme+'
             : 'Privacy Hub';
 
   return (
@@ -303,6 +323,7 @@ function ProfileShellAuthenticated({
         points={points}
         pointsProgress={pointsProgress}
         badges={badges}
+        isStemmePlus={isStemmePlus}
         onSignOut={onSignOut}
       />
       <ProfileFylkePicker fylkeCode={fylkeCode} onSaved={onFylkeSaved} />
@@ -337,6 +358,7 @@ function ProfileShellAuthenticated({
               <option value="offentlig">Offentlig profil</option>
               <option value="preferanser">Preferanser</option>
               <option value="varsler">Varsler</option>
+              <option value="stemme-plus">Stemme+</option>
               <option value="min-data">Privacy Hub</option>
             </select>
           </div>
@@ -368,8 +390,10 @@ function ProfileShellAuthenticated({
               onFrequencyChange={onNotifFreqChange}
               saving={notifSaving}
               onSave={onNotifSave}
+              isStemmePlus={isStemmePlus}
             />
           )}
+          {activeTab === 'stemme-plus' && <ProfileStemmePlus />}
           {activeTab === 'offentlig' && <ProfilePublicSettings userId={user.id} />}
           {activeTab === 'min-data' && <ProfilePrivacy />}
         </div>

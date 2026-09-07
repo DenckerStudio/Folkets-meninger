@@ -12,6 +12,7 @@ type ProfileNotificationsProps = {
   onFrequencyChange: (channel: string, value: string) => void;
   saving: boolean;
   onSave: () => Promise<void>;
+  isStemmePlus?: boolean;
 };
 
 export function ProfileNotifications({
@@ -21,6 +22,7 @@ export function ProfileNotifications({
   onFrequencyChange,
   saving,
   onSave,
+  isStemmePlus = false,
 }: ProfileNotificationsProps) {
   return (
     <ProfileCard
@@ -77,14 +79,25 @@ export function ProfileNotifications({
                 disabled={!emailEnabled}
                 className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
               >
-                <option value="realtime">Sanntid (én e-post per varsel)</option>
+                <option value="realtime" disabled={!isStemmePlus}>
+                  Sanntid (én e-post per varsel){!isStemmePlus ? ' — Stemme+' : ''}
+                </option>
                 <option value="daily">Daglig oppsummering</option>
-                <option value="weekly">Ukentlig oppsummering</option>
+                <option value="weekly">Ukentlig oppsummering{isStemmePlus ? '' : ' (smakebit)'}</option>
               </select>
             </div>
           );
         })}
       </div>
+
+      {!isStemmePlus ? (
+        <p className="mt-4 text-sm text-muted-foreground">
+          <Link href={`${routes.minSide}?tab=stemme-plus`} className="text-brand hover:underline">
+            Stemme+
+          </Link>{' '}
+          gir sanntidsvarsler, rikere ukentlig oppsummering og smartere hjertesak-varsler.
+        </p>
+      ) : null}
 
       <button
         type="button"

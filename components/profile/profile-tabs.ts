@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Bell, FileText, PieChart, Settings, Shield, SlidersHorizontal, UserCircle } from 'lucide-react';
+import { Bell, FileText, HeartHandshake, PieChart, Settings, Shield, SlidersHorizontal, UserCircle } from 'lucide-react';
 
 export type ProfileTabId =
   | 'historikk'
@@ -8,6 +8,7 @@ export type ProfileTabId =
   | 'offentlig'
   | 'preferanser'
   | 'varsler'
+  | 'stemme-plus'
   | 'min-data';
 
 export const PROFILE_TABS: {
@@ -51,6 +52,12 @@ export const PROFILE_TABS: {
     label: 'Varsler',
     icon: Bell,
     description: 'E-post og kanaler',
+  },
+  {
+    id: 'stemme-plus',
+    label: 'Stemme+',
+    icon: HeartHandshake,
+    description: 'Støtt oss og få fordeler',
   },
   {
     id: 'min-data',

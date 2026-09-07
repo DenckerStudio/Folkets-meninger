@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { createNotification } from '@/lib/notifications';
 import { cronAuthResponse, verifyCronAuth } from '@/lib/cron-auth';
+import { buildLabelAlertBody } from '@/lib/notifications/enrichment';
+import { userHasStemmePlus } from '@/lib/stemme-plus/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -108,14 +110,19 @@ export async function GET(request: Request) {
           if (alreadyNotified) continue;
 
           notifiedUsers.add(userId);
+          const isPlus = await userHasStemmePlus(userId);
+          const matchedLabels = isPlus
+            ? labels.filter((entry: string) => byLabel.get(entry)?.has(userId))
+            : [label];
+
           const result = await createNotification({
             userId,
             type: 'new_case_for_label',
             channel: 'labels',
             title: `Ny sak: ${label}`,
-            body: title,
+            body: buildLabelAlertBody(title, matchedLabels, isPlus),
             url: `/dashboard/sak/${issueId}`,
-            data: { issueId, label, labels },
+            data: { issueId, label, labels: matchedLabels, stemmePlus: isPlus },
             origin,
           });
           if (result.ok) created += 1;
