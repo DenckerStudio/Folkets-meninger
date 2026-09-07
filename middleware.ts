@@ -79,5 +79,6 @@ export const config = {
     '/api/sak/:path*/knowledge',
     '/api/sak/:path*/counter-proposals',
     '/api/feedback',
+    '/api/oauth/fider/:path*',
   ],
 };

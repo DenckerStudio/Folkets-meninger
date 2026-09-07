@@ -4,6 +4,7 @@ import {
   Calendar,
   FileEdit,
   Info,
+  Lightbulb,
   Search,
   UserRound,
   Vote,
@@ -43,6 +44,9 @@ export const isInitiativActive: NavIsActive = (pathname) =>
 export const isHoringerActive: NavIsActive = (pathname) =>
   pathname === routes.horinger || pathname.startsWith(`${routes.horinger}/`);
 
+export const isForslagActive: NavIsActive = (pathname) =>
+  pathname === routes.forslag || pathname.startsWith(`${routes.forslag}/`);
+
 export const isKalenderActive: NavIsActive = (pathname) =>
   pathname === routes.kalender || pathname.startsWith(`${routes.kalender}/`);
 
@@ -72,6 +76,7 @@ export const desktopPrimaryNavLinks: PrimaryNavLink[] = [
   { label: 'Utforsk', href: routes.utforsk, isActive: isUtforskActive },
   { label: 'Avstemninger', href: routes.avstemninger, isActive: isAvstemningerActive },
   { label: 'Høringer', href: routes.horinger, isActive: isHoringerActive },
+  { label: 'Forslag', href: routes.forslag, isActive: isForslagActive },
 ];
 
 /** Secondary links in the «Mer» dropdown. */
@@ -103,6 +108,13 @@ export const desktopMoreNavLinks: SiteNavLinkItem[] = [
     description: 'Foreslå nasjonale avstemninger',
     icon: FileEdit,
     isActive: isInitiativActive,
+  },
+  {
+    title: 'Forslag og tilbakemelding',
+    href: routes.forslag,
+    description: 'Del idéer og stem på forbedringer for plattformen',
+    icon: Lightbulb,
+    isActive: isForslagActive,
   },
   {
     title: 'Politiker-hub',

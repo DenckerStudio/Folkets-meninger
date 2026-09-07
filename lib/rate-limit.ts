@@ -53,5 +53,8 @@ export function getRateLimitPolicy(pathname: string): { limit: number; windowMs:
   if (pathname.startsWith('/api/feedback')) {
     return { limit: 8, windowMs: 60_000 };
   }
+  if (pathname.startsWith('/api/oauth/fider/')) {
+    return { limit: 60, windowMs: 60_000 };
+  }
   return null;
 }
