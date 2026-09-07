@@ -3,62 +3,50 @@
 import Link from 'next/link';
 import { CheckCircle2, ChevronRight, FileSignature, Scale } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import VotingSection from '@/app/dashboard/sak/[id]/voting-section';
+import StanceSection from '@/app/dashboard/sak/[id]/stance-section';
 import {
-  motforslagCtaForVote,
+  motforslagCtaForStance,
   participationStepLabel,
   SAK_PARTICIPATION_STEPS,
   type SakParticipationSummary,
 } from '@/lib/sak-participation';
 import { routes } from '@/lib/routes';
 import { navigateToSakTab } from '@/components/sak/sak-page-tabs';
-
-type VoteTotals = {
-  for: number;
-  against: number;
-  abstain: number;
-  total: number;
-};
+import type { IssueStance } from '@/lib/stances/types';
 
 export function SakParticipationFlow({
   sakId,
   sakTitle,
   sakSummary,
-  initialVotes,
-  votingClosed,
-  votingDaysLeft,
   participation,
 }: {
   sakId: string;
   sakTitle: string;
   sakSummary: string;
-  initialVotes: VoteTotals;
-  votingClosed: boolean;
-  votingDaysLeft: number | null;
   participation: SakParticipationSummary;
 }) {
-  const [userVote, setUserVote] = useState<'for' | 'against' | 'abstain' | null>(null);
+  const [userStance, setUserStance] = useState<IssueStance | null>(null);
 
   const goToMotforslag = useCallback(() => {
     navigateToSakTab('motforslag');
   }, []);
 
-  const voteComplete = Boolean(userVote) || votingClosed;
-  const activeStep = voteComplete ? (participation.proposalCount > 0 ? 'motforslag' : 'innspill') : 'vote';
+  const stanceComplete = userStance !== null;
+  const activeStep = stanceComplete ? (participation.proposalCount > 0 ? 'motforslag' : 'innspill') : 'stance';
 
   return (
     <section className="space-y-4" aria-label="Din mening på saken">
       <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
         <h2 className="text-lg font-bold text-foreground sm:text-xl">Din mening på saken</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Stem, utforsk motforslag og send innspill — alt knyttet til denne saken.
+          Marker holdning, utforsk motforslag og send innspill — alt knyttet til denne saken.
         </p>
 
         <ol className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           {SAK_PARTICIPATION_STEPS.map((step, index) => {
             const isActive = step === activeStep;
             const isDone =
-              (step === 'vote' && voteComplete) ||
+              (step === 'stance' && stanceComplete) ||
               (step === 'motforslag' && participation.proposalCount > 0);
             return (
               <li key={step} className="flex items-center gap-2 text-sm">
@@ -83,21 +71,16 @@ export function SakParticipationFlow({
         </ol>
       </div>
 
-      <VotingSection
-        initialVotes={initialVotes}
+      <StanceSection
         sakId={sakId}
         sakTitle={sakTitle}
         sakSummary={sakSummary}
-        votingClosed={votingClosed}
-        votingDaysLeft={votingDaysLeft}
-        onVoteCast={setUserVote}
+        onStanceSaved={setUserStance}
       />
 
-      {voteComplete ? (
+      {stanceComplete ? (
         <div className="rounded-2xl border border-brand/20 bg-brand/5 p-4 sm:p-5">
-          <p className="text-sm font-medium text-foreground">
-            {motforslagCtaForVote(userVote)}
-          </p>
+          <p className="text-sm font-medium text-foreground">{motforslagCtaForStance(userStance)}</p>
           <button
             type="button"
             onClick={goToMotforslag}

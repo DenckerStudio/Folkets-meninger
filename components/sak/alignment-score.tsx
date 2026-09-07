@@ -214,6 +214,11 @@ export function AlignmentScore({
         </span>
       </div>
 
+      <p className="mb-4 text-xs text-muted-foreground">
+        Viser historiske anonyme For/Mot/Avstår-stemmer fra før holdninger erstattet per-sak stemming. Nye
+        holdninger (enig/uenig) er personlige og inngår ikke her.
+      </p>
+
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
         {comparison.score != null ? <ScoreRing score={comparison.score} /> : null}
         <div className="min-w-0 flex-1 space-y-2">

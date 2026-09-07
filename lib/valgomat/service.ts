@@ -2,13 +2,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServiceSupabase } from '@/lib/supabase';
 import {
   PARTY_ALIGNMENT_AVAILABLE,
-  voteCountFromHistoryRpc,
+  stanceCountFromRpc,
   type ValgomatPartyScore,
 } from '@/lib/valgomat/scores';
+import { getUserStanceCount } from '@/lib/stances/service';
 
 export type ValgomatResult = {
   scores: ValgomatPartyScore[];
-  vote_count: number;
+  stance_count: number;
   party_alignment_available: boolean;
 };
 
@@ -19,28 +20,21 @@ export class ValgomatServiceError extends Error {
   }
 }
 
-export async function fetchUserVoteCount(
+export async function fetchUserStanceCount(
   service: SupabaseClient,
   userId: string,
 ): Promise<number> {
-  const { data, error } = await service.rpc('get_user_vote_history', {
-    p_user_id: userId,
-  });
-
-  if (error) {
-    throw new ValgomatServiceError(error.message);
-  }
-
-  return voteCountFromHistoryRpc(data);
+  const count = await getUserStanceCount(service, userId);
+  return stanceCountFromRpc(count);
 }
 
 export async function getValgomatForUser(userId: string): Promise<ValgomatResult> {
   const service = getServiceSupabase();
-  const voteCount = await fetchUserVoteCount(service, userId);
+  const stanceCount = await fetchUserStanceCount(service, userId);
 
   return {
     scores: [],
-    vote_count: voteCount,
+    stance_count: stanceCount,
     party_alignment_available: PARTY_ALIGNMENT_AVAILABLE,
   };
 }

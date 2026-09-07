@@ -9,7 +9,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
 import { ProfileHero } from '@/components/profile/profile-hero';
 import { ProfileOverview } from '@/components/profile/profile-overview';
-import { ProfileVoteHistory, type VoteHistoryItem } from '@/components/profile/profile-vote-history';
+import { ProfileStanceHistory } from '@/components/profile/profile-stance-history';
+import type { StanceHistoryItem } from '@/lib/stances/types';
 import { ProfileValgomat } from '@/components/profile/profile-valgomat';
 import { ProfileInterests } from '@/components/profile/profile-interests';
 import { ProfileNotifications } from '@/components/profile/profile-notifications';
@@ -31,7 +32,7 @@ export function ProfileShell() {
   const tabParam = searchParams.get('tab');
   const activeTab = resolveProfileTab(tabParam);
 
-  const [voteHistory, setVoteHistory] = useState<VoteHistoryItem[]>([]);
+  const [stanceHistory, setStanceHistory] = useState<StanceHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [interestCategories, setInterestCategories] = useState<string[]>([]);
   const [interestLabels, setInterestLabels] = useState<string[]>([]);
@@ -54,10 +55,10 @@ export function ProfileShell() {
       return;
     }
 
-    fetch('/api/user/vote-history')
+    fetch('/api/user/stance-history')
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) setVoteHistory(data);
+        if (Array.isArray(data)) setStanceHistory(data);
       })
       .catch(() => {})
       .finally(() => setHistoryLoading(false));
@@ -143,7 +144,7 @@ export function ProfileShell() {
     <ProfileShellAuthenticated
       user={user}
       activeTab={activeTab}
-      voteHistory={voteHistory}
+      stanceHistory={stanceHistory}
       historyLoading={historyLoading}
       interestCategories={interestCategories}
       interestLabels={interestLabels}
@@ -225,7 +226,7 @@ function ProfileLoginPrompt() {
       </div>
       <h2 className="text-3xl font-bold text-foreground">Logg inn for å se din profil</h2>
       <p className="text-muted-foreground">
-        Du må være logget inn for å se din stemmehistorikk, valgomat og innstillinger.
+        Du må være logget inn for å se holdningshistorikk, valgomat og innstillinger.
       </p>
       <Link
         href={routes.login}
@@ -241,7 +242,7 @@ function ProfileLoginPrompt() {
 type ProfileShellAuthenticatedProps = {
   user: SupabaseUser;
   activeTab: ProfileTabId | null;
-  voteHistory: VoteHistoryItem[];
+  stanceHistory: StanceHistoryItem[];
   historyLoading: boolean;
   interestCategories: string[];
   interestLabels: string[];
@@ -269,7 +270,7 @@ type ProfileShellAuthenticatedProps = {
 function ProfileShellAuthenticated({
   user,
   activeTab,
-  voteHistory,
+  stanceHistory,
   historyLoading,
   interestCategories,
   interestLabels,
@@ -301,7 +302,7 @@ function ProfileShellAuthenticated({
         <>
           <ProfileHero
             user={user}
-            voteCount={voteHistory.length}
+            stanceCount={stanceHistory.filter((item) => item.stance !== 'ikke_interessert').length}
             points={points}
             pointsProgress={pointsProgress}
             badges={badges}
@@ -323,9 +324,13 @@ function ProfileShellAuthenticated({
           </div>
 
           {activeTab === 'historikk' && (
-            <ProfileVoteHistory items={voteHistory} loading={historyLoading} />
+            <ProfileStanceHistory items={stanceHistory} loading={historyLoading} />
           )}
-          {activeTab === 'valgomat' && <ProfileValgomat voteCount={voteHistory.length} />}
+          {activeTab === 'valgomat' && (
+            <ProfileValgomat
+              stanceCount={stanceHistory.filter((item) => item.stance !== 'ikke_interessert').length}
+            />
+          )}
           {activeTab === 'innstillinger' && (
             <>
               <ProfileFylkePicker fylkeCode={fylkeCode} onSaved={onFylkeSaved} />
