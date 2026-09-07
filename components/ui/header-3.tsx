@@ -4,13 +4,13 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Bell, ChevronDown, Eye, LogIn, LogOut, UserCircle } from 'lucide-react';
+import { Bell, ChevronDown, Eye, LogIn, LogOut, Shield, UserCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { useIsAdmin } from '@/hooks/use-is-admin';
 import { usePathname, useRouter } from 'next/navigation';
 import { isDashboardPath, isPublicProfilePath, routes } from '@/lib/routes';
-import { desktopMoreNavLinks, desktopPrimaryNavLinks, isAdminActive } from '@/lib/site-nav-links';
+import { desktopPrimaryNavLinks, isAdminActive } from '@/lib/site-nav-links';
 import { DashboardNavMenuButton } from '@/components/dashboard/dashboard-nav-context';
-import { AdminMoreNavLink } from '@/components/admin/admin-more-nav-link';
 
 export function Header() {
   const scrolled = useScroll(10);
@@ -88,7 +88,6 @@ export function Header() {
                   </Link>
                 );
               })}
-              <MoreNavMenu pathname={pathname ?? ''} />
             </nav>
           ) : null}
         </div>
@@ -127,6 +126,7 @@ export function Header() {
                 <div className="p-2">
                   <ProfileMenuLink href={routes.minSide} icon={UserCircle} title="Min side" description="Profil og innstillinger" />
                   <ProfileMenuLink href={routes.profile(user!.id)} icon={Eye} title="Offentlig profil" description="Slik andre ser deg" />
+                  <AdminProfileMenuLink pathname={pathname ?? ''} />
                   <button
                     type="button"
                     onClick={handleSignOut}
@@ -155,55 +155,6 @@ export function Header() {
   );
 }
 
-function MoreNavMenu({ pathname }: { pathname: string }) {
-  const anyActive =
-    isAdminActive(pathname) || desktopMoreNavLinks.some((link) => link.isActive?.(pathname));
-
-  return (
-    <details className="group relative">
-      <summary
-        className={cn(
-          'flex cursor-pointer list-none items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-          anyActive
-            ? 'bg-brand/10 text-brand'
-            : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-        )}
-      >
-        Mer
-        <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
-      </summary>
-      <div className="absolute left-0 mt-2 w-80 overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-xl">
-        <div className="p-2">
-          <AdminMoreNavLink pathname={pathname} />
-          {desktopMoreNavLinks.map((link) => {
-            const Icon = link.icon;
-            const active = link.isActive?.(pathname) ?? false;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  'flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/50',
-                  active && 'bg-brand/10',
-                )}
-                aria-current={active ? 'page' : undefined}
-              >
-                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                <span>
-                  <span className="block text-sm font-medium text-foreground">{link.title}</span>
-                  {link.description ? (
-                    <span className="block text-xs text-muted-foreground">{link.description}</span>
-                  ) : null}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-    </details>
-  );
-}
-
 type ProfileMenuLinkProps = {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -218,6 +169,31 @@ function ProfileMenuLink({ href, icon: Icon, title, description }: ProfileMenuLi
       <span>
         <span className="block text-sm font-medium text-foreground">{title}</span>
         <span className="block text-xs text-muted-foreground">{description}</span>
+      </span>
+    </Link>
+  );
+}
+
+function AdminProfileMenuLink({ pathname }: { pathname: string }) {
+  const isAdminUser = useIsAdmin();
+
+  if (!isAdminUser) return null;
+
+  const active = isAdminActive(pathname);
+
+  return (
+    <Link
+      href={routes.admin}
+      className={cn(
+        'flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/50',
+        active && 'bg-brand/10',
+      )}
+      aria-current={active ? 'page' : undefined}
+    >
+      <Shield className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      <span>
+        <span className="block text-sm font-medium text-foreground">Admin</span>
+        <span className="block text-xs text-muted-foreground">Drift, Reels og statistikk</span>
       </span>
     </Link>
   );

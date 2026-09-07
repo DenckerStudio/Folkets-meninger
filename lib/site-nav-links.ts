@@ -3,7 +3,6 @@ import {
   BarChart2,
   Calendar,
   FileEdit,
-  Info,
   Lightbulb,
   Search,
   UserRound,
@@ -72,19 +71,8 @@ export const isAdminActive: NavIsActive = (pathname) =>
 export const isMobileUtforskActive: NavIsActive = (pathname) =>
   isUtforskActive(pathname) || isPolitikereActive(pathname);
 
-/** Flat desktop primary nav — no duplicates. */
-export const desktopPrimaryNavLinks: PrimaryNavLink[] = [
-  { label: 'Utforsk', href: routes.utforsk, isActive: isUtforskActive },
-  { label: 'Avstemninger', href: routes.avstemninger, isActive: isAvstemningerActive },
-  { label: 'Høringer', href: routes.horinger, isActive: isHoringerActive },
-  { label: 'Forslag', href: routes.forslag, isActive: isForslagActive },
-];
-
-/**
- * Single source of truth for dashboard sidebar + mobile drawer.
- * Header nav is hidden on dashboard routes so this is the only in-app nav there.
- */
-export const dashboardSidebarNavItems: SiteNavLinkItem[] = [
+/** Core product areas — header primary tabs and top of dashboard sidebar. */
+export const coreNavItems: SiteNavLinkItem[] = [
   {
     title: 'Utforsk',
     href: routes.utforsk,
@@ -98,12 +86,6 @@ export const dashboardSidebarNavItems: SiteNavLinkItem[] = [
     isActive: isAvstemningerActive,
   },
   {
-    title: 'Politikere',
-    href: routes.politikere,
-    icon: Users,
-    isActive: isPolitikereActive,
-  },
-  {
     title: 'Høringer',
     href: routes.horinger,
     icon: FileEdit,
@@ -114,6 +96,16 @@ export const dashboardSidebarNavItems: SiteNavLinkItem[] = [
     href: routes.forslag,
     icon: Lightbulb,
     isActive: isForslagActive,
+  },
+];
+
+/** Secondary dashboard destinations — sidebar only (not repeated in header «Mer»). */
+export const extendedNavItems: SiteNavLinkItem[] = [
+  {
+    title: 'Politikere',
+    href: routes.politikere,
+    icon: Users,
+    isActive: isPolitikereActive,
   },
   {
     title: 'Borgerinitiativ',
@@ -139,6 +131,10 @@ export const dashboardSidebarNavItems: SiteNavLinkItem[] = [
     icon: BarChart2,
     isActive: isPolitikerHubActive,
   },
+];
+
+/** Account — sidebar bottom; profile menu on header. */
+export const accountNavItems: SiteNavLinkItem[] = [
   {
     title: 'Min side',
     href: routes.minSide,
@@ -147,46 +143,24 @@ export const dashboardSidebarNavItems: SiteNavLinkItem[] = [
   },
 ];
 
-/** Secondary links in the «Mer» dropdown (marketing / logged-out header only). */
-export const desktopMoreNavLinks: SiteNavLinkItem[] = [
-  {
-    title: 'Kalender',
-    href: routes.kalender,
-    description: 'Høringer og frister i kalendervisning',
-    icon: Calendar,
-    isActive: isKalenderActive,
-  },
-  {
-    title: 'Om oss',
-    href: routes.omOss,
-    description: 'Misjon, personvern og veien videre',
-    icon: Info,
-    isActive: isOmOssActive,
-  },
-  {
-    title: 'Åpen innsikt',
-    href: routes.innsikt,
-    description: 'Anonyme stemmetall per sak',
-    icon: BarChart2,
-    isActive: isInnsiktActive,
-  },
-  {
-    title: 'Borgerinitiativ',
-    href: routes.initiativ,
-    description: 'Foreslå nasjonale avstemninger',
-    icon: FileEdit,
-    isActive: isInitiativActive,
-  },
-  {
-    title: 'Politiker-hub',
-    href: routes.politikerHub,
-    description: 'Innsikt og svar til innbyggere',
-    icon: BarChart2,
-    isActive: isPolitikerHubActive,
-  },
+/** Flat desktop primary nav — core items only, no «Mer» overflow. */
+export const desktopPrimaryNavLinks: PrimaryNavLink[] = coreNavItems.map((item) => ({
+  label: item.title,
+  href: item.href,
+  isActive: item.isActive ?? (() => false),
+}));
+
+/**
+ * Dashboard sidebar + mobile drawer — single in-app nav surface.
+ * Header primary/Mer are hidden on dashboard routes.
+ */
+export const dashboardSidebarNavItems: SiteNavLinkItem[] = [
+  ...coreNavItems,
+  ...extendedNavItems,
+  ...accountNavItems,
 ];
 
-/** Mobile bottom nav items. */
+/** Mobile bottom nav items (2–5 slots). */
 export const mobileNavItems = [
   {
     label: 'Utforsk',
@@ -213,3 +187,6 @@ export const mobileNavItems = [
     isActive: isMinSideActive,
   },
 ] as const;
+
+/** All dashboard nav hrefs — used to guard against duplicate header entries. */
+export const dashboardNavHrefs = new Set(dashboardSidebarNavItems.map((item) => item.href));
