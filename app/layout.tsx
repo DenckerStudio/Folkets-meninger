@@ -3,14 +3,14 @@ import './globals.css';
 import { Navigation } from '@/components/navigation';
 import { ThemeProvider } from '@/components/theme-provider';
 import { THEME_INIT_SCRIPT } from '@/lib/preferences/theme-init-script';
+import { getMetadataBase } from '@/lib/seo/metadata';
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: 'Folkets Stemme',
-  description: 'En nøytral plattform som brobygger mellom Stortinget og innbyggerne.',
+  metadataBase: getMetadataBase(),
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {

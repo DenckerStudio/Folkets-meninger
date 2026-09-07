@@ -36,7 +36,7 @@ export default function HeroSection() {
           transition={{ duration: 0.8, delay: 0.25, ease: 'easeOut' }}
           className="text-5xl tracking-tight font-extrabold text-[#001433] sm:text-6xl md:text-7xl mb-6 drop-shadow-[0_1px_0_rgba(255,255,255,0.85)]"
         >
-          <span className="block mb-2">Din stemme teller.</span>
+          <span className="block mb-2">Din stemme teller. </span>
           <span className="block text-[#001433]">Også mellom valgene.</span>
         </motion.h1>
 

@@ -6,6 +6,9 @@ import { LandingPopularIssuesLazy } from '@/components/landing-popular-issues-la
 import { LandingRoadmap } from '@/components/landing-roadmap';
 import CallToAction from '@/components/ui/call-to-action';
 import { routes } from '@/lib/routes';
+import { homepageMetadata } from '@/lib/seo/metadata';
+
+export const metadata = homepageMetadata();
 
 export default async function LandingPage() {
   return (
