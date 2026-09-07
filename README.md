@@ -1,10 +1,11 @@
 # Folkets Stemme
 
 Folkets Stemme is a Next.js App Router application for following Stortinget
-saker and høringer, voting on active saker, and discussing political issues in a
-moderated forum. The app reads public Stortinget data from
-`data.stortinget.no`, stores app state in Supabase, and delegates AI summaries,
-forum prompt generation, and document embeddings to n8n workflows backed by
+saker and høringer, voting on active saker, taking part in advisory
+Avstemninger/borgerinitiativ, and discussing individual saker. The app reads
+public Stortinget data from `data.stortinget.no`, stores app state in Supabase,
+and delegates AI summaries, document embeddings, cron jobs, motforslag
+packaging, and system poll (Reels) draft generation to n8n workflows backed by
 Ollama.
 
 ## Quick start
@@ -13,16 +14,16 @@ Ollama.
 
 ```bash
 npm install
-# Option A — test Supabase (heyklever):
+# Option A — test Supabase (Folkets-Stemme test project):
 npm run env:test
 # Option B — blank template:
 cp .env.example .env.local
 npm run dev
 ```
 
-`npm run env:test` writes `.env.local` from `.env.test` (self-hosted test
-Supabase at `https://supabase.heyklever.app`). For a fully local Docker stack,
-run `npm run supabase:start` and paste keys from `npm run supabase:status`.
+`npm run env:test` writes `.env.local` from `.env.test` (hosted test Supabase).
+For a fully local Docker stack, run `npm run supabase:start` and paste keys from
+`npm run supabase:status`.
 
 Fill `.env.local` from `.env.example` before starting the dev server if you are
 not using `env:test`. The minimum local app setup needs Supabase URL/keys;
@@ -45,10 +46,10 @@ those services.
 
 ```text
 Browser / Next.js App Router
-  -> Supabase Auth + Postgres (votes, forum, notifications, sak cache)
+  -> Supabase Auth + Postgres (votes, polls, discussions, notifications, sak cache)
   -> data.stortinget.no (saker, details, høringer, publications)
-  -> n8n webhooks (AI summaries, document embeddings, forum prompts, cron)
-  -> Ollama / SearXNG / SMTP as workflow dependencies
+  -> n8n webhooks (AI summaries, document embeddings, system poll drafts, cron)
+  -> Ollama / SMTP as workflow dependencies
 ```
 
 Important constraints:
@@ -63,11 +64,23 @@ Important constraints:
   check `status`, `ferdigbehandlet`, and `voting_closes_at`.
 - Høringer are fetched live from Stortinget, not cached in Postgres. Local
   "innspill" are public app comments and are not sent to Stortinget.
+- Sak discussion lives on each sak detail page under the `#diskusjon` tab. It
+  uses `issue_discussions` / `issue_discussion_posts`, requires login plus public
+  first and last name to post, and is not the removed site-wide forum.
+- Public activity is opt-in with `users.activity_visibility`; vote choices stay
+  private.
+- Admin access uses DB RBAC (`user_roles` + `is_admin()`). Current admin pages
+  are `/dashboard/admin`, `/dashboard/admin/statistikk`, and
+  `/dashboard/admin/reels`.
+- Stemme+ is a supporter tier stored on `users.subscription_tier`. Stripe
+  checkout is deferred; grant test access through `/api/admin/stemme-plus`, the
+  admin Reels UI, or the `grant_stemme_plus_by_email` RPC.
+- Dashboard navigation is flat: header primary items are Utforsk,
+  Avstemninger, Høringer, and Forslag. Dashboard routes use the sidebar/mobile
+  drawer as the single extended navigation surface.
 - Sak treatment labels are resolved from multiple Stortinget sources because
   list exports can keep `status=1` after a detail payload says the sak is
   `ferdigbehandlet`.
-- Human forum posts require a public first and last name. System forum threads
-  created by workflows use the `is_system_thread` path instead.
 - AI summary text is not generated in the Next.js app. The app stores source
   context and triggers n8n; summaries are read back from Supabase.
 
@@ -76,11 +89,12 @@ Important constraints:
 | File | Covers |
 |------|--------|
 | [`AGENTS.md`](AGENTS.md) | Agent-facing architecture facts, env vars, validation expectations, and operational notes |
-| [`supabase/README.md`](supabase/README.md) | Migration domains, voting RPCs, sak cache, hearing comments, forum schema, notifications, RAG tables, and DB runbooks |
-| [`workflows/n8n/README.md`](workflows/n8n/README.md) | AI summary, forum prompt, document embedding, and app cron workflows |
-| [`infra/searxng/README.md`](infra/searxng/README.md) | SearXNG deployment/configuration used by forum prompt discovery |
+| [`supabase/README.md`](supabase/README.md) | Migration domains, voting/poll RPCs, sak cache, hearing comments, sak discussion, notifications, Stemme+, RAG tables, and DB runbooks |
+| [`workflows/n8n/README.md`](workflows/n8n/README.md) | AI summary, system poll draft, document embedding, app cron, and motforslag workflows |
 | [`docs/fider-oauth.md`](docs/fider-oauth.md) | Fider feature requests at `https://feedback.folkets-meninger.no` and OAuth SSO setup |
-| [`scripts/deploy-forum-prompts-n8n.md`](scripts/deploy-forum-prompts-n8n.md) | Forum prompt workflow deployment notes |
+| [`docs/DESIGN-sak-discussion.md`](docs/DESIGN-sak-discussion.md) | Design notes for the sak-scoped Diskusjon MVP |
+| [`infra/coolify/README.md`](infra/coolify/README.md) | Coolify, egress, Fider, and forum-removal history/runbook |
+| [`infra/searxng/README.md`](infra/searxng/README.md) | Legacy SearXNG notes for archived forum prompt workflows |
 
 ## Operational scripts
 
@@ -89,7 +103,6 @@ Important constraints:
 | `scripts/backfill-sak-status.ts` | Refresh `ferdigbehandlet`, `voting_closes_at`, and sak metadata from Stortinget detail data |
 | `scripts/backfill-sak-documents.ts` | Ingest recent sak documents and create pending RAG chunks |
 | `scripts/deploy-document-embeddings-n8n.mjs` | Deploy/update the document embeddings workflow in n8n |
-| `scripts/archive-misaligned-forum-prompts.sql` | Archive active forum prompts that should no longer be shown |
 
 Example status refresh:
 

@@ -70,14 +70,12 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Domain | Migrations | Main objects |
 |--------|------------|--------------|
 | Anonymous voting | `20260528000001_anonymous_voting.sql`, `20260528000002_vote_schema_repair.sql`, `20260618120000_sak_voting_status.sql` | `citizen_votes`, `user_vote_receipts`, `cast_vote`, vote aggregate RPCs |
-| Notifications | `20260528000003_notifications.sql`, `20260906180000_notification_channel_defaults.sql` | `notification_preferences`, `notification_category_subscriptions`, `notifications` |
+| Notifications | `20260528000003_notifications.sql`, `20260906180000_notification_channel_defaults.sql` | `notification_preferences`, `notification_category_subscriptions`, `notifications`; active channels are `categories` and `labels` |
 | Stemme+ subscription | `20260906200000_stemme_plus_subscription.sql`, `20260906210000_stemme_plus_admin_grant.sql` | `users.subscription_tier`, admin RPCs `grant_stemme_plus_by_email` / `revoke_stemme_plus_by_email` (Stripe checkout deferred) |
 | AI summaries | `20260528120000_issue_ai_summaries.sql`, `20260529120000_simplify_issue_ai_summaries.sql`, `20260823210000_n8n_ai_summary_rich_context.sql` | `issue_ai_summaries`, `n8n_get_issue_ai_summary_context` |
-| Auth/user sync + hearings comments | `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql` | `users`, `ensure_public_user`, `user_has_forum_identity`, `hearing_comments`, `create_hearing_comment` |
-| Forum base/features | `20260530120000_forum_enhancements.sql`, `20260531120000_production_readiness.sql`, `20260531140000_forum_prompts_dedupe.sql` | forum threads/replies/likes/prompts and production indexes |
-| Forum reports/sources | `20260602120000_forum_reports_enhance.sql`, `20260602130000_forum_trusted_sources.sql` | `forum_reports`, `forum_trusted_sources` |
-| Forum profiles/points/moderation | `20260614130000_forum_profiles_points_ai_sources.sql`, `20260614160000_harden_forum_points_moderation.sql`, `20260614170000_public_user_display_grants.sql` | public profile fields, point ledgers, moderation RPCs/grants |
-| Forum sak-RAG prompts | `20260621120000_forum_sak_rag_prompts.sql` | `forum_prompts.generation_metadata`, `forum_research_clusters.source_type`, `get_sak_prompt_coverage` |
+| Auth/user sync + hearings comments | `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql`, `20260810120000_remove_forum_and_activity_visibility.sql` | `users`, `ensure_public_user`, `user_has_public_identity`, `hearing_comments`, `create_hearing_comment`, `users.activity_visibility` |
+| Forum removal | `20260810120000_remove_forum_and_activity_visibility.sql` | Drops `forum_*` tables/RPCs, keeps a compatibility wrapper for `user_has_forum_identity` |
+| Sak discussion | `20260906193000_issue_discussion_mvp.sql` | `issue_discussions`, `issue_discussion_posts`, `content_reports`, `create_issue_discussion_post`, `report_content` |
 | Marketing feedback | `20260806140000_site_feedback.sql` | `site_feedback` (public “Gi innspill” form; service-role writes only) |
 | Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql`, `20260702160000_backfill_ferdigbehandlet_from_detail.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category`, `ferdigbehandlet` repair |
 | Sak documents/RAG | `20260617120000_sak_documents_rag.sql`, `20260807112603_document_chunks_storage_efficiency.sql` | `stortinget_issue_documents`, `document_chunks`, `chunks_status`, `match_issue_document_chunks`, reclaim helpers |
@@ -159,7 +157,7 @@ Do not seed mock polls; empty UI is the honest launch state.
 ## Stortinget issue cache
 
 `stortinget_issues` is both the list cache and the anchor table for votes,
-summaries, forum prompts, documents, and government stats.
+summaries, polls, documents, and government stats.
 
 | Column | Source / purpose |
 |--------|------------------|
@@ -210,83 +208,19 @@ detail data should refresh status/deadline metadata:
 npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
 ```
 
-## Hearings (høring comments)
+## Public identity, hearing comments, and sak discussion
 
-Høring metadata is not stored in Postgres. The app reads live Stortinget data via
-`lib/stortinget-horinger.ts` and the `/api/horinger` read proxy. Local user
-comments are stored separately in `hearing_comments` and are keyed by
-`stortinget_hearing_id` text, not by a local `hearings` table.
+`20260810120000_remove_forum_and_activity_visibility.sql` renamed the active
+identity predicate to `user_has_public_identity`. It checks that
+`users.first_name` and `users.last_name` are both at least two trimmed
+characters. The old `user_has_forum_identity` function remains only as a thin
+compatibility wrapper for older RPC references.
 
-| Object | Purpose |
-|--------|---------|
-| `hearing_comments` | Public app comments for a Stortinget hearing id |
-| `hearing_comments_select` | RLS policy allowing public reads |
-| `create_hearing_comment(uuid, text, text)` | Service-role write RPC used by `POST /api/hearings` |
+### Hearing comments
 
-`create_hearing_comment` calls `ensure_public_user`, requires
-`user_has_forum_identity`, trims bodies, and accepts 1-10000 characters. These
-comments are not official submissions to Stortinget; the detail page labels them
-as public app comments. They also do not use forum thread/reply moderation or
-forum point triggers.
-
-### Sak treatment status precedence
-
-Status labels and voting availability are intentionally resolved from multiple
-Stortinget sources because the list export can keep `status = 1` after a sak is
-finished. `lib/sak-status.ts` applies this order:
-
-1. Use `detail_json.ferdigbehandlet` when it is boolean; otherwise use the
-   denormalized `stortinget_issues.ferdigbehandlet` column.
-2. Combine that boolean with the freshest numeric Stortinget status available.
-   List-export status wins over stale `detail_json.status` on list pages.
-3. If no boolean is available, infer a finished sak from list `innstilling`
-   fields (`innstilling_id > 0` and `innstilling_kode` 1 or 2).
-4. Fall back to cached `status`; unknown status is treated as closed.
-
-`lib/stortinget-saker-cache.ts` overlays live list-export status through
-`applyLiveListExportStatuses()` when API refreshes are allowed, then persists
-rows with `persistSakerListToDb()`. If the DB column drifts from cached detail
-JSON, apply `20260702160000_backfill_ferdigbehandlet_from_detail.sql` or rerun:
-
-```bash
-npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
-```
-
-Treatment status is intentionally resolved from more than one source. The
-application uses `lib/sak-status.ts` so `detail_json.ferdigbehandlet` wins over a
-stale denormalized `ferdigbehandlet` column, fresh list-export numeric status can
-override stale `detail_json.status`, and list `innstilling_id`/`innstilling_kode`
-can imply a finished sak when Stortinget leaves list `status=1`.
-
-If `stortinget_issues.ferdigbehandlet` drifts from cached detail data, apply
-`20260702160000_backfill_ferdigbehandlet_from_detail.sql` or run:
-
-```bash
-npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
-```
-
-## Forum schema
-
-Forum writes go through RPCs rather than direct client inserts.
-
-| Object | Purpose |
-|--------|---------|
-| `create_forum_thread` / `create_forum_reply` | Validate identity, length, moderation, and official replies before insert |
-| `forum_moderation_check` | DB-side regex moderation for hate, discrimination, sexual content, violence, and spam |
-| `forum_reports` | One report per user/target; categories: `spam`, `harassment`, `misinformation`, `other` |
-| `forum_trusted_sources` | Approved/pending/rejected domains for n8n forum reel source routing |
-| `user_points_balances` / `user_points_ledger` | Public point balance and private per-user ledger |
-
-Human forum authors must have `first_name` and `last_name` of at least two
-characters. `ensure_public_user` syncs missing profile rows from Supabase Auth,
-and `user_has_forum_identity` gates human thread/reply RPCs. System threads can
-set `is_system_thread = true` and bypass the human identity requirement.
-
-## Hearing comments
-
-`20260601120000_forum_public_identity.sql` also defines local comments for
-Stortinget hearings. There is no local hearings table; comments are keyed by the
-Stortinget export id.
+`20260601120000_forum_public_identity.sql` originally defined local comments for
+Stortinget hearings; current writes use the public-identity helper. There is no
+local hearings table, and comments are keyed by the Stortinget export id.
 
 | Object | Purpose |
 |--------|---------|
@@ -295,23 +229,39 @@ Stortinget export id.
 | `create_hearing_comment` | Service-role RPC used by `POST /api/hearings` |
 
 `create_hearing_comment(p_user_id, p_stortinget_hearing_id, p_body)` calls
-`ensure_public_user`, requires `user_has_forum_identity`, trims body text, allows
+`ensure_public_user`, requires `user_has_public_identity`, trims body text, allows
 1-10000 characters, and rejects empty hearing ids. The Next.js route creates
-mention notifications for `@name` matches after the RPC succeeds.
+the row through the service role.
 
 These comments are Folkets Stemme discussion entries only. They are not
 submitted to Stortinget; the høring detail page links users to Stortinget for
 official submissions.
 
-Point triggers award:
+### Sak discussion (Diskusjon tab)
 
-| Event | Points |
-|-------|--------|
-| Approved human thread created | +10 |
-| Approved reply created | +5 |
-| Like given | +1 |
-| Like received by another author | +2 |
-| Vote receipt inserted | +3 |
+`20260906193000_issue_discussion_mvp.sql` adds one discussion room per sak and
+flat public posts. This is not the removed site-wide forum and has no n8n prompt
+workflow, likes, points, or nested replies.
+
+| Object | Purpose |
+|--------|---------|
+| `issue_discussions` | One row per `stortinget_issue_id` |
+| `issue_discussion_posts` | Public, non-nested posts; public reads hide `is_removed` rows |
+| `content_reports` | One report per reporter/target; currently supports `issue_discussion_post` |
+| `ensure_issue_discussion(text)` | Creates/fetches the room for a sak |
+| `create_issue_discussion_post(uuid, text, text, uuid)` | Service-role write RPC; requires public identity; body length 1-4000 |
+| `report_content(uuid, text, uuid, text, text)` | Service-role report RPC used by `/discussion/report` |
+
+App routes:
+
+- `GET /api/sak/[id]/discussion` returns newest posts, paginated by
+  `created_at` cursor, with `Cache-Control: private, no-store`.
+- `POST /api/sak/[id]/discussion` requires login, IP/user rate limits, public
+  identity, and `lib/moderation/content-check.ts`.
+- `POST /api/sak/[id]/discussion/report` requires login, verifies the post
+  belongs to the sak, and upserts a `content_reports` row.
+
+### Admin and Stemme+
 
 Admin pages use `lib/admin/gate.ts`, which reads `public.user_roles` (`role =
 'admin'`). `is_admin()` is the SQL helper. Env allowlists (`ADMIN_EMAILS` /
@@ -323,9 +273,9 @@ Bootstrap the first admin in the SQL editor (service role / postgres):
 SELECT public.grant_app_role_by_email('you@example.com', 'admin', NULL);
 ```
 
-Further grant/revoke: `/dashboard/admin/reels` or the same RPCs. JWT
-`app_metadata.role` is synced for compatibility; `user_roles` is the source of
-truth.
+Further grant/revoke: the same RPCs. JWT `app_metadata.role` is synced for
+compatibility; `user_roles` is the source of truth. Current admin UI lives at
+`/dashboard/admin`, `/dashboard/admin/statistikk`, and `/dashboard/admin/reels`.
 
 ### Stemme+ (supporter tier)
 
@@ -337,28 +287,19 @@ SELECT public.grant_stemme_plus_by_email('supporter@example.com', NULL);
 -- Revoke: SELECT public.revoke_stemme_plus_by_email('supporter@example.com');
 ```
 
-Or use **Stemme+ (testing)** on `/dashboard/admin/reels`. Benefits: profile badge,
-richer digest e-mail, realtime/smarter category+label alerts (`lib/stemme-plus/gates.ts`).
-
-### Hearing comments
-
-Høringer themselves are not stored locally; pages fetch
-`data.stortinget.no/eksport/horinger?format=json` through
-`lib/stortinget-horinger.ts`. Local user input is stored in
-`hearing_comments`, keyed by the Stortinget hearing id string.
-
-`POST /api/hearings` uses `create_hearing_comment(p_user_id,
-p_stortinget_hearing_id, p_body)` with the service role. The RPC calls
-`ensure_public_user`, requires `user_has_forum_identity`, and enforces body
-length 1-10000 characters. Reads are public through the
-`hearing_comments_select` policy.
+Or use **Stemme+ (testing)** on `/dashboard/admin/reels`, backed by
+`/api/admin/stemme-plus` and `list_stemme_plus_supporters()`. Benefits: profile
+badge, richer digest e-mail, realtime/smarter category+label alerts
+(`lib/stemme-plus/gates.ts`). `/api/stemme-plus/status` returns the current
+user's tier and the planned monthly price; checkout/portal routes are not
+shipped yet.
 
 ## Notifications
 
 `20260528000003_notifications.sql` creates:
 
-- `notification_preferences`: per-user email enablement and frequency by channel
-  (`forum`, `mentions`, `categories` by default).
+- `notification_preferences`: per-user email enablement and frequency by active
+  channel (`categories`, `labels`).
 - `notification_category_subscriptions`: "hjertesaker" category subscriptions.
 - `notifications`: in-app inbox rows with optional email delivery metadata.
 
