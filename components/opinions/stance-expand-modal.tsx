@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type MouseEvent } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { FLAG_RED, STANCE_VISUAL, stanceLabel } from '@/lib/opinions/labels';
 import { OPINION_BODY_MAX, OPINION_STANCES, type OpinionStance } from '@/lib/opinions/types';
 import { cn } from '@/lib/utils';
 
 const COMPACT_HEIGHT = 72;
+const FILL_DURATION_MS = 560;
 
 type Phase = 'idle' | 'filling' | 'expanded';
 
@@ -40,7 +40,6 @@ export function StanceExpandModal({
 }: StanceExpandModalProps) {
   const titleId = useId();
   const bodyId = useId();
-  const reducedMotion = usePrefersReducedMotion();
   const cardRef = useRef<HTMLDivElement>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [selected, setSelected] = useState<OpinionStance | null>(null);
@@ -70,10 +69,9 @@ export function StanceExpandModal({
 
   useEffect(() => {
     if (phase !== 'filling') return;
-    const delayMs = reducedMotion ? 220 : 480;
-    const timer = window.setTimeout(() => setPhase('expanded'), delayMs);
+    const timer = window.setTimeout(() => setPhase('expanded'), FILL_DURATION_MS);
     return () => window.clearTimeout(timer);
-  }, [phase, reducedMotion]);
+  }, [phase]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -144,35 +142,30 @@ export function StanceExpandModal({
         aria-labelledby={expanded ? titleId : undefined}
         className={cn(
           'rounded-xxl absolute inset-x-0 top-0 w-full overflow-hidden border border-border bg-card shadow-sm',
-          expanded ? 'z-50 shadow-2xl' : 'z-10',
+          expanded || filling ? 'z-50 shadow-2xl' : 'z-10',
         )}
         animate={{
           height: expanded ? 'auto' : COMPACT_HEIGHT,
         }}
         transition={{
-          type: 'spring',
-          stiffness: 300,
-          damping: 30,
-          bounce: 0,
-          duration: 0.3,
+          height: expanded
+            ? { type: 'spring', stiffness: 300, damping: 30, bounce: 0 }
+            : { duration: 0 },
         }}
-        style={{ maxWidth: '80rem' }}
+        style={{ maxWidth: '80rem', height: expanded ? undefined : COMPACT_HEIGHT }}
       >
-        <div
-          className="pointer-events-none absolute inset-0 overflow-hidden rounded-xxl"
-          aria-hidden
-        >
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xxl" aria-hidden>
           {fillOrigin && selected && (filling || expanded) ? (
-            <motion.span
-              className="absolute rounded-full"
-              style={{
-                backgroundColor: fillColor,
-                left: fillOrigin.x,
-                top: fillOrigin.y,
+            <motion.div
+              className="absolute inset-0"
+              style={{ backgroundColor: fillColor }}
+              initial={{
+                clipPath: `circle(18px at ${fillOrigin.x}px ${fillOrigin.y}px)`,
               }}
-              initial={{ width: 28, height: 28, x: '-50%', y: '-50%' }}
-              animate={{ width: 1600, height: 1600 }}
-              transition={{ duration: reducedMotion ? 0.2 : 0.45, ease: [0.22, 1, 0.36, 1] }}
+              animate={{
+                clipPath: 'circle(150% at 50% 50%)',
+              }}
+              transition={{ duration: FILL_DURATION_MS / 1000, ease: [0.22, 1, 0.36, 1] }}
             />
           ) : null}
         </div>
