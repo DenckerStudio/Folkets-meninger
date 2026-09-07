@@ -4,6 +4,13 @@ import { PollCard } from '@/components/polls/poll-card';
 import { PageHeader } from '@/components/page-header';
 import { getPollTotals, listOpenPolls } from '@/lib/polls/service';
 import { routes } from '@/lib/routes';
+import { publicPageMetadata } from '@/lib/seo/metadata';
+
+export const metadata = publicPageMetadata({
+  titleSegment: 'Avstemninger',
+  description: 'Nasjonale spørsmål med Ja, Nei eller Blank. Stem anonymt — etter sveitsisk modell.',
+  canonicalPath: '/avstemninger',
+});
 
 export const dynamic = 'force-dynamic';
 
@@ -32,8 +39,8 @@ export default async function AvstemningerPage() {
       </p>
       {withTotals.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border px-6 py-12 text-center text-muted-foreground">
-          Ingen avstemninger er publisert ennå. Når et borgerinitiativ når terskelen, eller en Stortingssak løftes
-          til avstemning, vises den her.
+          Ingen avstemninger publisert ennå. Når et borgerinitiativ når terskelen, eller en sak løftes, dukker den opp
+          her.
         </div>
       ) : (
         <div className="grid gap-4">

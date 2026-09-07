@@ -4,6 +4,13 @@ import { PageHeader } from '@/components/page-header';
 import { initiativeStatusLabel } from '@/lib/polls/labels';
 import { listCitizenInitiatives } from '@/lib/polls/service';
 import { routes } from '@/lib/routes';
+import { publicPageMetadata } from '@/lib/seo/metadata';
+
+export const metadata = publicPageMetadata({
+  titleSegment: 'Borgerinitiativ',
+  description: 'Foreslå et spørsmål. Når nok støtter det, kan det bli en nasjonal avstemning.',
+  canonicalPath: '/initiativ',
+});
 
 export const dynamic = 'force-dynamic';
 

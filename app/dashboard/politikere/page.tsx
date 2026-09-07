@@ -1,6 +1,13 @@
 import FadeIn from '@/components/fade-in';
 import { getPolitikereOversikt } from '@/lib/stortinget';
+import { publicPageMetadata } from '@/lib/seo/metadata';
 import PolitikereExplorer from './politikere-explorer';
+
+export const metadata = publicPageMetadata({
+  titleSegment: 'Politikere',
+  description: 'Oversikt over stortingsrepresentanter og regjeringsmedlemmer. Se hvem som representerer deg.',
+  canonicalPath: '/politikere',
+});
 
 export const dynamic = 'force-dynamic';
 
