@@ -2,7 +2,9 @@
 
 Dette dokumentet er plan + runbook for Alternativ C og forum-fjerning.
 **App-fjerning (F2) + DB DROP (F3c) er implementert** på `cursor/remove-forum-c641`.
-Gjenstår: C0 egress-måling, C1 Redis, F1 pause av eventuelle aktive forum-n8n i prod.
+Admin ble levert med DB RBAC (`public.user_roles` + `is_admin()`), ikke
+`ADMIN_EMAILS` allowlist. Gjenstår: C0 egress-måling, C1 Redis, og bekreftelse
+på at eventuelle gamle forum-n8n workflows er pauset i prod.
 
 Det beskriver:
 
@@ -96,7 +98,7 @@ Forum er dypt integrert (~90 filer med `forum` i navn/sti, pluss migrasjoner og 
 | Poeng / gamification | **Fjern forum-poeng** (ledger-triggers for threads/replies/likes). Erstatt med **enkel aktivitetsmodell** (se under) |
 | Offentlig aktivitet | Bruker **velger** hva som deles; **ikke obligatorisk**. Kan dele «alt av aktivitet» eller begrense/skjule |
 | Notifikasjoner | Fjern `forum`/`mentions`-kanal fra UI og prefs; behold categories/labels (+ polls når relevant) |
-| Admin | Fjern forum-prompts/clusters/reports. **`ADMIN_EMAILS`** allowlist + `app_metadata.role === "admin"` (erstatter `FORUM_ADMIN_EMAILS`) |
+| Admin | Fjern forum-prompts/clusters/reports. Implementert med `public.user_roles` + `is_admin()`; `app_metadata.role` er kun kompatibilitet |
 | `user_has_forum_identity` | Rename/flytt til `user_has_public_identity` (navn for høringer/initiativ) |
 | Forum-historikk | **Ikke eksporter** — DROP uten arkiv etter F2 er i prod |
 
@@ -120,7 +122,9 @@ Erstatt forum-poeng/nivå-UI med lettvektet, ærlig aktivitet:
    - `forum-prompt-generator`, `forum-regjeringen-rss-ingest`, `forum-sak-prompt-generator`, scout/research/trending (deprecated v7–v11).
 2. Fjern/tomme app-env på Vercel/Coolify:
    - `N8N_FORUM_PROMPTS_WEBHOOK_URL`, `N8N_FORUM_SYNTHESIS_WEBHOOK_URL`, `N8N_FORUM_RSS_WEBHOOK_URL`, `N8N_FORUM_SAK_PROMPTS_WEBHOOK_URL`, `FORUM_REELS_PUBLIC`.
-3. `FORUM_ADMIN_EMAILS` → **`ADMIN_EMAILS`** (ny allowlist) + fortsatt `app_metadata.role === "admin"`. Oppdater `lib/forum/admin.ts` → `lib/admin/gate.ts` (eller tilsvarende) før forum-lib slettes.
+3. Fjern eventuell `FORUM_ADMIN_EMAILS`. Nåværende adminmodell er
+   `public.user_roles` + `is_admin()` via `lib/admin/gate.ts`; ikke gjeninnfør
+   env-basert allowlist.
 
 **Egress-effekt:** umiddelbar reduksjon fra n8n som leser `forum_*` og store prompt-tabeller.
 
@@ -285,7 +289,7 @@ Rollback F2: redeploy forrige release (forum-kode fortsatt i git history). Rollb
 1. ~~Godkjenn F0~~ — **låst** (se over).
 2. Kjør C0 egress-snapshot i Supabase.
 3. Implementasjonsbranch: `cursor/remove-forum-c641` (etter eller sammen med polls PR #57 — polls må miste forum-kobling).
-4. F1: slå av forum-n8n i prod + sett `ADMIN_EMAILS`.
+4. F1: bekreft at forum-n8n er slått av i prod; admin går via `user_roles`.
 5. F2 + F3a (+ aktivitets-visibility) i én eller to PR-er; F3c DROP uten eksport; deretter C1 Redis.
 
 **Subagent:** `.cursor/agents/forum-removal-egress.md` — bruk ved implementasjon av F/C-fasene.
