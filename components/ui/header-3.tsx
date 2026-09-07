@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Bell, ChevronDown, Eye, LogIn, LogOut, Settings, SlidersHorizontal, UserCircle } from 'lucide-react';
+import { Bell, ChevronDown, Eye, LogIn, LogOut, UserCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 import { isDashboardPath, isPublicProfilePath, routes } from '@/lib/routes';
@@ -69,26 +69,28 @@ export function Header() {
           <Link href={logoHref} className="rounded-md p-1 transition-opacity hover:opacity-90" aria-label="Gå til forsiden">
             <FolketsStemmeLogo />
           </Link>
-          <nav className="ml-2 hidden items-center gap-1 md:flex" aria-label="Hovedmeny">
-            {desktopPrimaryNavLinks.map((link) => {
-              const active = link.isActive(pathname ?? '');
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    active
-                      ? 'bg-brand/10 text-brand'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                  )}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-            <MoreNavMenu pathname={pathname ?? ''} />
-          </nav>
+          {!inDashboard ? (
+            <nav className="ml-2 hidden items-center gap-1 md:flex" aria-label="Hovedmeny">
+              {desktopPrimaryNavLinks.map((link) => {
+                const active = link.isActive(pathname ?? '');
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={cn(
+                      'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      active
+                        ? 'bg-brand/10 text-brand'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    )}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+              <MoreNavMenu pathname={pathname ?? ''} />
+            </nav>
+          ) : null}
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
@@ -123,11 +125,8 @@ export function Header() {
                   <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
                 </div>
                 <div className="p-2">
-                  <ProfileMenuLink href={routes.minSide} icon={UserCircle} title="Min side" description="Stemmehistorikk og oversikt" />
+                  <ProfileMenuLink href={routes.minSide} icon={UserCircle} title="Min side" description="Profil og innstillinger" />
                   <ProfileMenuLink href={routes.profile(user!.id)} icon={Eye} title="Offentlig profil" description="Slik andre ser deg" />
-                  <ProfileMenuLink href={`${routes.minSide}?tab=offentlig`} icon={Settings} title="Profilinnstillinger" description="Bio, parti og synlighet" />
-                  <ProfileMenuLink href={`${routes.minSide}?tab=preferanser`} icon={SlidersHorizontal} title="Preferanser" description="Utseende, animasjoner og hjelp" />
-                  <ProfileMenuLink href={`${routes.minSide}?tab=varsler`} icon={Bell} title="Varsler" description="E-post og varsler" />
                   <button
                     type="button"
                     onClick={handleSignOut}

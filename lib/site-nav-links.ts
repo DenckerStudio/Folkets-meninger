@@ -7,6 +7,7 @@ import {
   Lightbulb,
   Search,
   UserRound,
+  Users,
   Vote,
 } from 'lucide-react';
 import { DASHBOARD_PREFIX, routes } from '@/lib/routes';
@@ -79,7 +80,74 @@ export const desktopPrimaryNavLinks: PrimaryNavLink[] = [
   { label: 'Forslag', href: routes.forslag, isActive: isForslagActive },
 ];
 
-/** Secondary links in the «Mer» dropdown. */
+/**
+ * Single source of truth for dashboard sidebar + mobile drawer.
+ * Header nav is hidden on dashboard routes so this is the only in-app nav there.
+ */
+export const dashboardSidebarNavItems: SiteNavLinkItem[] = [
+  {
+    title: 'Utforsk',
+    href: routes.utforsk,
+    icon: Search,
+    isActive: isUtforskActive,
+  },
+  {
+    title: 'Avstemninger',
+    href: routes.avstemninger,
+    icon: Vote,
+    isActive: isAvstemningerActive,
+  },
+  {
+    title: 'Politikere',
+    href: routes.politikere,
+    icon: Users,
+    isActive: isPolitikereActive,
+  },
+  {
+    title: 'Høringer',
+    href: routes.horinger,
+    icon: FileEdit,
+    isActive: isHoringerActive,
+  },
+  {
+    title: 'Forslag',
+    href: routes.forslag,
+    icon: Lightbulb,
+    isActive: isForslagActive,
+  },
+  {
+    title: 'Borgerinitiativ',
+    href: routes.initiativ,
+    icon: FileEdit,
+    isActive: isInitiativActive,
+  },
+  {
+    title: 'Kalender',
+    href: routes.kalender,
+    icon: Calendar,
+    isActive: isKalenderActive,
+  },
+  {
+    title: 'Innsikt',
+    href: routes.innsikt,
+    icon: BarChart2,
+    isActive: isInnsiktActive,
+  },
+  {
+    title: 'Politiker-hub',
+    href: routes.politikerHub,
+    icon: BarChart2,
+    isActive: isPolitikerHubActive,
+  },
+  {
+    title: 'Min side',
+    href: routes.minSide,
+    icon: UserRound,
+    isActive: isMinSideActive,
+  },
+];
+
+/** Secondary links in the «Mer» dropdown (marketing / logged-out header only). */
 export const desktopMoreNavLinks: SiteNavLinkItem[] = [
   {
     title: 'Kalender',
@@ -108,13 +176,6 @@ export const desktopMoreNavLinks: SiteNavLinkItem[] = [
     description: 'Foreslå nasjonale avstemninger',
     icon: FileEdit,
     isActive: isInitiativActive,
-  },
-  {
-    title: 'Forslag og tilbakemelding',
-    href: routes.forslag,
-    description: 'Del idéer og stem på forbedringer for plattformen',
-    icon: Lightbulb,
-    isActive: isForslagActive,
   },
   {
     title: 'Politiker-hub',

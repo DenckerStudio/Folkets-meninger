@@ -8,7 +8,7 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
 import { ProfileHero } from '@/components/profile/profile-hero';
-import { ProfileSidebarNav } from '@/components/profile/profile-sidebar-nav';
+import { ProfileOverview, ProfileBackLink } from '@/components/profile/profile-overview';
 import { ProfileVoteHistory, type VoteHistoryItem } from '@/components/profile/profile-vote-history';
 import { ProfileValgomat } from '@/components/profile/profile-valgomat';
 import { ProfileInterests } from '@/components/profile/profile-interests';
@@ -17,15 +17,15 @@ import { ProfilePrivacy } from '@/components/profile/profile-privacy';
 import { ProfilePublicSettings } from '@/components/profile/profile-public-settings';
 import { ProfileAppPreferences } from '@/components/profile/profile-app-preferences';
 import { ProfileStemmePlus } from '@/components/profile/profile-stemme-plus';
-import { ProfileAdminLinks } from '@/components/profile/profile-admin-links';
 import { ProfileFylkePicker } from '@/components/profile/profile-fylke-picker';
-import { isProfileTabId, type ProfileTabId } from '@/components/profile/profile-tabs';
+import { useIsAdmin } from '@/hooks/use-is-admin';
+import { getProfileTabLabel, isProfileTabId, type ProfileTabId } from '@/components/profile/profile-tabs';
 import type { EarnedBadge } from '@/lib/knowledge/types';
 import type { UserPointsProgress } from '@/lib/user-points-levels';
 
-function resolveTab(tabParam: string | null): ProfileTabId {
+function resolveTab(tabParam: string | null): ProfileTabId | null {
   if (isProfileTabId(tabParam)) return tabParam;
-  return 'historikk';
+  return null;
 }
 
 export function ProfileShell() {
@@ -244,7 +244,7 @@ function ProfileLoginPrompt() {
 
 type ProfileShellAuthenticatedProps = {
   user: SupabaseUser;
-  activeTab: ProfileTabId;
+  activeTab: ProfileTabId | null;
   voteHistory: VoteHistoryItem[];
   historyLoading: boolean;
   interestCategories: string[];
@@ -297,23 +297,7 @@ function ProfileShellAuthenticated({
   onNotifFreqChange,
   onNotifSave,
 }: ProfileShellAuthenticatedProps) {
-  const router = useRouter();
-  const activeLabel =
-    activeTab === 'historikk'
-      ? 'Mine stemmer'
-      : activeTab === 'valgomat'
-        ? 'Valgomat 2.0'
-        : activeTab === 'innstillinger'
-          ? 'Mine hjertesaker'
-        : activeTab === 'offentlig'
-          ? 'Offentlig profil'
-          : activeTab === 'preferanser'
-            ? 'Preferanser'
-          : activeTab === 'varsler'
-            ? 'Varsler'
-            : activeTab === 'stemme-plus'
-              ? 'Stemme+'
-            : 'Privacy Hub';
+  const isAdminUser = useIsAdmin();
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 px-1">
@@ -326,60 +310,35 @@ function ProfileShellAuthenticated({
         isStemmePlus={isStemmePlus}
         onSignOut={onSignOut}
       />
-      <ProfileFylkePicker fylkeCode={fylkeCode} onSaved={onFylkeSaved} />
-      <ProfileAdminLinks />
 
-      <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8">
-        <aside className="hidden lg:block">
-          <div className="sticky top-24">
-            <ProfileSidebarNav activeTab={activeTab} />
-          </div>
-        </aside>
-
+      {activeTab === null ? (
+        <>
+          <ProfileFylkePicker fylkeCode={fylkeCode} onSaved={onFylkeSaved} />
+          <ProfileOverview showAdminLink={isAdminUser} />
+        </>
+      ) : (
         <div className="min-w-0 space-y-4">
-          <div className="lg:hidden">
-            <label htmlFor="profile-tab-mobile" className="sr-only">
-              Velg seksjon
-            </label>
-            <select
-              id="profile-tab-mobile"
-              value={activeTab}
-              onChange={(e) => {
-                const id = e.target.value;
-                if (isProfileTabId(id)) {
-                  router.replace(`${routes.minSide}?tab=${id}`, { scroll: false });
-                }
-              }}
-              className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground"
-            >
-              <option value="historikk">Mine stemmer</option>
-              <option value="valgomat">Valgomat 2.0</option>
-              <option value="innstillinger">Mine hjertesaker</option>
-              <option value="offentlig">Offentlig profil</option>
-              <option value="preferanser">Preferanser</option>
-              <option value="varsler">Varsler</option>
-              <option value="stemme-plus">Stemme+</option>
-              <option value="min-data">Privacy Hub</option>
-            </select>
-          </div>
-
-          <h2 className="text-lg font-semibold text-foreground lg:sr-only">{activeLabel}</h2>
+          <ProfileBackLink />
+          <h2 className="text-lg font-semibold text-foreground">{getProfileTabLabel(activeTab)}</h2>
 
           {activeTab === 'historikk' && (
             <ProfileVoteHistory items={voteHistory} loading={historyLoading} />
           )}
           {activeTab === 'valgomat' && <ProfileValgomat voteCount={voteHistory.length} />}
           {activeTab === 'innstillinger' && (
-            <ProfileInterests
-              interestCategories={interestCategories}
-              onCategoriesChange={onCategoriesChange}
-              interestLabels={interestLabels}
-              onLabelsChange={onLabelsChange}
-              saving={categoriesSaving}
-              labelsSaving={labelsSaving}
-              onSave={onCategoriesSave}
-              onLabelsSave={onLabelsSave}
-            />
+            <>
+              <ProfileFylkePicker fylkeCode={fylkeCode} onSaved={onFylkeSaved} />
+              <ProfileInterests
+                interestCategories={interestCategories}
+                onCategoriesChange={onCategoriesChange}
+                interestLabels={interestLabels}
+                onLabelsChange={onLabelsChange}
+                saving={categoriesSaving}
+                labelsSaving={labelsSaving}
+                onSave={onCategoriesSave}
+                onLabelsSave={onLabelsSave}
+              />
+            </>
           )}
           {activeTab === 'preferanser' && <ProfileAppPreferences />}
           {activeTab === 'varsler' && (
@@ -397,7 +356,7 @@ function ProfileShellAuthenticated({
           {activeTab === 'offentlig' && <ProfilePublicSettings userId={user.id} />}
           {activeTab === 'min-data' && <ProfilePrivacy />}
         </div>
-      </div>
+      )}
     </div>
   );
 }
