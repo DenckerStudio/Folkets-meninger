@@ -31,7 +31,7 @@ export default function ExpandableText({
         <motion.div
           layout
           initial={false}
-          className={`whitespace-pre-wrap text-muted-foreground ${!isExpanded && isLong ? 'line-clamp-4 overflow-hidden' : ''}`}
+          className={`break-words whitespace-pre-wrap text-muted-foreground ${!isExpanded && isLong ? 'line-clamp-4 overflow-hidden' : ''}`}
         >
           {displayText}
         </motion.div>
