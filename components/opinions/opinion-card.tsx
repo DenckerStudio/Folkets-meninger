@@ -67,7 +67,7 @@ export function OpinionCard({ opinion }: OpinionCardProps) {
         </p>
         <Link
           href={routes.opinion(opinion.id)}
-          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand/90"
+          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90"
         >
           Si For, Blank eller Imot
           <ArrowRight className="ml-1.5 h-4 w-4" />

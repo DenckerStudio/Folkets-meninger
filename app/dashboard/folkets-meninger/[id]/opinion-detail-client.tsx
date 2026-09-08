@@ -89,16 +89,16 @@ export function OpinionDetailClient({ opinion, isAuthor }: OpinionDetailClientPr
           )}
         </div>
         <div className="grid grid-cols-3 border-t border-border text-center text-sm">
-          <div className="px-3 py-3" style={{ backgroundColor: 'color-mix(in oklab, #BA0C2F 8%, transparent)' }}>
-            <p className="font-semibold text-[#BA0C2F]">Imot</p>
+          <div className="bg-brand-accent-soft px-3 py-3">
+            <p className="font-semibold text-brand-accent">Imot</p>
             <p className="text-muted-foreground">{formatNumber(opinion.counts.imot)}</p>
           </div>
           <div className="px-3 py-3">
             <p className="font-semibold text-foreground">Blank</p>
             <p className="text-muted-foreground">{formatNumber(opinion.counts.blank)}</p>
           </div>
-          <div className="px-3 py-3" style={{ backgroundColor: 'color-mix(in oklab, #00205B 8%, transparent)' }}>
-            <p className="font-semibold text-[#00205B]">For</p>
+          <div className="bg-brand-soft px-3 py-3">
+            <p className="font-semibold text-brand">For</p>
             <p className="text-muted-foreground">{formatNumber(opinion.counts.for)}</p>
           </div>
         </div>

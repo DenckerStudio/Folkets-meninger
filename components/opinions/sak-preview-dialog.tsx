@@ -36,7 +36,7 @@ export function SakPreviewDialog({ issueId, title, onClose, onSelect }: SakPrevi
                 onSelect(issueId);
                 onClose();
               }}
-              className="rounded-full bg-[#00205B] px-5 py-2 text-sm font-semibold text-white hover:bg-[#00205B]/90"
+              className="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-brand-foreground hover:bg-brand/90"
             >
               Velg denne saken
             </button>

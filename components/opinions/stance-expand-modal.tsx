@@ -274,11 +274,7 @@ export function StanceExpandModal({
                     rows={6}
                     maxLength={OPINION_BODY_MAX}
                     placeholder={`Skriv minst ${minLength} tegn om hvorfor du er ${stanceLabel(selected).toLowerCase()}.`}
-                    className="mt-3 w-full resize-none rounded-2xl border bg-white/95 px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2"
-                    style={{
-                      borderColor: 'transparent',
-                      color: '#001433',
-                    }}
+                    className="mt-3 w-full resize-none rounded-2xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-brand/30"
                   />
                   <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs" style={{ color: fillFg }}>
                     <span>

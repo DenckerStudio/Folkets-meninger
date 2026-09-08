@@ -41,10 +41,10 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
   return (
     <div data-sak-picker="" className="space-y-2">
       <div>
-        <label htmlFor="sak-picker-search" className="mb-1 block text-sm font-medium text-[#001433]">
+        <label htmlFor="sak-picker-search" className="mb-1 block text-sm font-medium text-foreground">
           Knytt til en sak
         </label>
-        <p className="text-xs leading-relaxed text-[#001433]/60">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           {hasTitleContext
             ? 'Forslagene oppdateres automatisk ut fra tittelen. Åpne saken her for å sjekke at det er riktig — du mister ikke skjemaet.'
             : 'Skriv tittelen først, så foreslår vi saker. Åpne en sak for å se innholdet uten å forlate siden.'}
@@ -52,11 +52,11 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
       </div>
 
       {selected ? (
-        <div className="flex items-start justify-between gap-3 rounded-2xl border border-[#00205b]/15 bg-white/90 px-3 py-2.5">
+        <div className="flex items-start justify-between gap-3 rounded-2xl border border-border bg-background px-3 py-2.5">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#00205b]/70">Valgt sak</p>
-            <p className="mt-0.5 truncate text-sm font-medium text-[#001433]">{selected.title}</p>
-            <p className="text-xs text-[#001433]/60">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-brand">Valgt sak</p>
+            <p className="mt-0.5 truncate text-sm font-medium text-foreground">{selected.title}</p>
+            <p className="text-xs text-muted-foreground">
               {selected.category ? `${selected.category} · ` : ''}
               {selected.henvisning ? `${selected.henvisning} · ` : ''}
               Sak {selected.id}
@@ -67,7 +67,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
               type="button"
               data-sak-preview={selected.id}
               onClick={() => setPreviewId(selected.id)}
-              className="text-xs font-medium text-[#00205b] hover:underline"
+              className="text-xs font-medium text-brand hover:underline"
             >
               Vis sak
             </button>
@@ -77,7 +77,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
                 onChange(null);
                 setQuery('');
               }}
-              className="text-xs font-medium text-[#001433]/60 hover:underline"
+              className="text-xs font-medium text-muted-foreground hover:underline"
             >
               Bytt sak
             </button>
@@ -86,21 +86,21 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
       ) : (
         <>
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#001433]/40" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               id="sak-picker-search"
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Søk på sakstittel eller saksnummer"
-              className="w-full rounded-2xl border border-[#00205b]/15 bg-white/90 py-2.5 pl-9 pr-10 text-sm text-[#001433] outline-none placeholder:text-[#001433]/40 focus:ring-2 focus:ring-[#00205b]/25"
+              className="w-full rounded-2xl border border-border bg-background py-2.5 pl-9 pr-10 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-brand/30"
             />
             {hasQuery ? (
               <button
                 type="button"
                 aria-label="Tøm søk"
                 onClick={() => setQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#001433]/40 hover:text-[#001433]"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -108,23 +108,23 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
           </div>
 
           {showList ? (
-            <div className="overflow-hidden rounded-2xl border border-[#00205b]/12 bg-white/90">
-              <div className="flex items-center justify-between border-b border-[#00205b]/8 px-3 py-2">
-                <p className="text-xs font-semibold text-[#001433]">{listLabel}</p>
-                <p className="text-xs text-[#001433]/50">
+            <div className="overflow-hidden rounded-2xl border border-border bg-background">
+              <div className="flex items-center justify-between border-b border-border px-3 py-2">
+                <p className="text-xs font-semibold text-foreground">{listLabel}</p>
+                <p className="text-xs text-muted-foreground">
                   {rows.length === 1 ? '1 sak' : `${rows.length} saker`}
                 </p>
               </div>
               {loading && rows.length === 0 ? (
-                <p className="px-3 py-4 text-sm text-[#001433]/55">Henter saker…</p>
+                <p className="px-3 py-4 text-sm text-muted-foreground">Henter saker…</p>
               ) : rows.length === 0 ? (
-                <p className="px-3 py-4 text-sm text-[#001433]/55">
+                <p className="px-3 py-4 text-sm text-muted-foreground">
                   {hasQuery
                     ? 'Ingen saker matcher søket. Prøv et annet ord eller saksnummer.'
                     : 'Ingen treff på tittelen ennå. Prøv et mer konkret søk.'}
                 </p>
               ) : (
-                <ul className="max-h-72 divide-y divide-[#00205b]/8 overflow-auto" role="listbox">
+                <ul className="max-h-72 divide-y divide-border overflow-auto" role="listbox">
                   {rows.map((option, index) => (
                     <li key={option.id}>
                       <div className="flex items-stretch">
@@ -134,7 +134,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
                           aria-selected={false}
                           data-sak-option={option.id}
                           className={cn(
-                            'flex min-w-0 flex-1 flex-col items-start px-3 py-2.5 text-left hover:bg-[#00205b]/5',
+                            'flex min-w-0 flex-1 flex-col items-start px-3 py-2.5 text-left hover:bg-muted',
                           )}
                           onClick={() => {
                             onChange(option.id);
@@ -142,16 +142,16 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
                           }}
                         >
                           <span className="flex w-full items-start gap-2">
-                            <span className="min-w-0 flex-1 text-sm font-medium leading-snug text-[#001433]">
+                            <span className="min-w-0 flex-1 text-sm font-medium leading-snug text-foreground">
                               {option.title}
                             </span>
                             {!hasQuery && index === 0 ? (
-                              <span className="shrink-0 rounded-full bg-[#00205b]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#00205b]">
+                              <span className="shrink-0 rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand">
                                 Beste treff
                               </span>
                             ) : null}
                           </span>
-                          <span className="mt-0.5 text-xs text-[#001433]/55">
+                          <span className="mt-0.5 text-xs text-muted-foreground">
                             {option.category ? `${option.category} · ` : ''}
                             {option.henvisning ? `${option.henvisning} · ` : ''}
                             Sak {option.id}
@@ -161,7 +161,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
                           type="button"
                           data-sak-preview={option.id}
                           onClick={() => setPreviewId(option.id)}
-                          className="shrink-0 px-3 text-xs font-medium text-[#00205b] hover:underline"
+                          className="shrink-0 px-3 text-xs font-medium text-brand hover:underline"
                         >
                           Vis
                         </button>

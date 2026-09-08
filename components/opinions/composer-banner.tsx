@@ -6,7 +6,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { OpinionPointsEditor } from '@/components/opinions/opinion-points-editor';
 import { SakPicker } from '@/components/opinions/sak-picker';
-import { FLAG_BLUE, FLAG_RED, FLAG_WHITE, STANCE_VISUAL } from '@/lib/opinions/labels';
+import { STANCE_VISUAL } from '@/lib/opinions/labels';
 import {
   OPINION_BODY_MAX,
   OPINION_BODY_MIN,
@@ -21,6 +21,7 @@ import {
 } from '@/lib/opinions/types';
 import { emptyOpinionPointDrafts, validateOpinionPoints } from '@/lib/opinions/validate';
 import { routes } from '@/lib/routes';
+import { cn } from '@/lib/utils';
 
 const CREATE_STANCE_ORDER = ['imot', 'for'] as const satisfies readonly OpinionCreateStance[];
 
@@ -157,22 +158,22 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
     <section
       data-composer=""
       data-expanded={expanded ? 'true' : 'false'}
-      className="relative overflow-hidden rounded-xxl border border-[#00205b]/12 bg-white"
+      className="relative overflow-hidden rounded-xxl border border-border bg-card"
     >
       <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xxl" aria-hidden>
-        <div className="absolute -left-16 -top-20 h-52 w-52 rounded-full bg-[#ba0c2f]/15 blur-3xl" />
-        <div className="absolute -right-12 top-1/3 h-44 w-44 rounded-full bg-[#00205b]/18 blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.92),_transparent_55%)]" />
+        <div className="absolute -left-16 -top-20 h-52 w-52 rounded-full bg-brand-accent/15 blur-3xl" />
+        <div className="absolute -right-12 top-1/3 h-44 w-44 rounded-full bg-brand/18 blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_color-mix(in_oklab,var(--card)_88%,transparent),_transparent_55%)]" />
       </div>
 
       {!expanded ? (
         <div className="relative flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
-          <p className="text-base font-semibold tracking-tight text-[#001433]">Del din mening</p>
+          <p className="text-base font-semibold tracking-tight text-foreground">Del din mening</p>
           <button
             type="button"
             data-composer-cta="open"
             onClick={() => setExpanded(true)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[#00205B] px-4 py-2 text-sm font-semibold text-white hover:bg-[#00205B]/90"
+            className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground hover:bg-brand/90"
           >
             Del din mening
             <ChevronDown className="h-4 w-4" />
@@ -182,10 +183,10 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
         <form className="relative space-y-5 px-5 py-6 sm:px-8 sm:py-8" onSubmit={submit}>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-xl font-extrabold tracking-tight text-[#001433] sm:text-2xl">
+              <h2 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
                 Del din mening
               </h2>
-              <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[#001433]/65">
+              <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
                 Velg saken først, deretter For eller Imot. Tittel: {OPINION_TITLE_MIN}–{OPINION_TITLE_MAX} tegn.
                 Begrunnelse: minst {OPINION_BODY_MIN} tegn. Kulepunkter: minst {OPINION_POINTS_MIN}, hver på{' '}
                 {OPINION_POINT_TEXT_MIN}–{OPINION_POINT_TEXT_MAX} tegn.
@@ -195,7 +196,7 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
               type="button"
               data-composer-cta="close"
               onClick={() => setExpanded(false)}
-              className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-[#00205b] hover:underline"
+              className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-brand hover:underline"
             >
               Skjul
               <ChevronUp className="h-4 w-4" />
@@ -204,10 +205,10 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
 
           <div>
             <div className="mb-1 flex items-baseline justify-between gap-3">
-              <label htmlFor="opinion-title" className="text-sm font-medium text-[#001433]">
+              <label htmlFor="opinion-title" className="text-sm font-medium text-foreground">
                 Tittel
               </label>
-              <span className="text-xs text-[#001433]/55">
+              <span className="text-xs text-muted-foreground">
                 {titleLength}/{OPINION_TITLE_MAX} · minst {OPINION_TITLE_MIN} tegn
               </span>
             </div>
@@ -218,7 +219,7 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Tittel på meningen"
               maxLength={OPINION_TITLE_MAX}
-              className="w-full rounded-2xl border border-[#00205b]/15 bg-white/90 px-3 py-2.5 text-sm text-[#001433] outline-none placeholder:text-[#001433]/40 focus:ring-2 focus:ring-[#00205b]/25"
+              className="w-full rounded-2xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-brand/30"
             />
           </div>
 
@@ -235,9 +236,9 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
           />
 
           <div>
-            <p className="mb-1 text-sm font-medium text-[#001433]">Standpunkt</p>
+            <p className="mb-1 text-sm font-medium text-foreground">Standpunkt</p>
             {issueId ? (
-              <div className="flex overflow-hidden rounded-2xl border border-[#00205b]/12">
+              <div className="flex overflow-hidden rounded-2xl border border-border">
                 {CREATE_STANCE_ORDER.map((choice) => {
                   const visual = STANCE_VISUAL[choice];
                   const selected = stance === choice;
@@ -248,12 +249,17 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
                       data-create-stance={choice}
                       aria-pressed={selected}
                       onClick={() => pickCreateStance(choice)}
-                      className="flex-1 px-4 py-3 text-sm font-semibold"
-                      style={{
-                        backgroundColor: selected ? visual.bg : FLAG_WHITE,
-                        color: selected ? visual.fg : visual.bg,
-                        boxShadow: selected ? undefined : `inset 0 0 0 1px ${visual.bg}22`,
-                      }}
+                      className={cn(
+                        'flex-1 px-4 py-3 text-sm font-semibold',
+                        !selected && 'bg-card',
+                        !selected && choice === 'imot' && 'text-brand-accent',
+                        !selected && choice === 'for' && 'text-brand',
+                      )}
+                      style={
+                        selected
+                          ? { backgroundColor: visual.bg, color: visual.fg }
+                          : undefined
+                      }
                     >
                       {visual.label}
                     </button>
@@ -261,7 +267,7 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
                 })}
               </div>
             ) : (
-              <p className="rounded-2xl border border-dashed border-[#00205b]/15 px-3 py-3 text-sm text-[#001433]/55">
+              <p className="rounded-2xl border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
                 Velg en sak først, så kan du si For eller Imot.
               </p>
             )}
@@ -269,16 +275,16 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
 
           <div>
             <div className="mb-1 flex items-baseline justify-between gap-3">
-              <label htmlFor="opinion-body" className="text-sm font-medium text-[#001433]">
+              <label htmlFor="opinion-body" className="text-sm font-medium text-foreground">
                 Begrunnelse
               </label>
-              <span className="text-xs text-[#001433]/55">
+              <span className="text-xs text-muted-foreground">
                 {bodyRemaining > 0
                   ? `${bodyRemaining} tegn igjen til minstekravet`
                   : `${bodyLength}/${OPINION_BODY_MAX} tegn`}
               </span>
             </div>
-            <p className="mb-2 text-xs leading-relaxed text-[#001433]/60">
+            <p className="mb-2 text-xs leading-relaxed text-muted-foreground">
               Minst {OPINION_BODY_MIN} tegn, maks {OPINION_BODY_MAX} tegn.
             </p>
             <textarea
@@ -288,7 +294,7 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
               rows={7}
               maxLength={OPINION_BODY_MAX}
               placeholder={`Skriv minst ${OPINION_BODY_MIN} tegn om hvorfor du mener dette.`}
-              className="w-full resize-y rounded-2xl border border-[#00205b]/15 bg-white/90 px-3 py-2.5 text-sm text-[#001433] outline-none placeholder:text-[#001433]/40 focus:ring-2 focus:ring-[#00205b]/25"
+              className="w-full resize-y rounded-2xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-brand/30"
             />
           </div>
 
@@ -302,7 +308,7 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
           />
 
           {error ? (
-            <p className="text-sm font-medium" style={{ color: FLAG_RED }}>
+            <p className="text-sm font-medium text-destructive">
               {error}
             </p>
           ) : null}
@@ -311,8 +317,7 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
             <button
               type="submit"
               disabled={busy}
-              className="rounded-full px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-              style={{ backgroundColor: FLAG_BLUE }}
+              className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? 'Lagrer…' : 'Publiser mening'}
             </button>
