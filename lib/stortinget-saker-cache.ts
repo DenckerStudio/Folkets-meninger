@@ -35,6 +35,10 @@ function writeMemoryListCache(items: SakListItem[]) {
   };
 }
 
+export function getSakerFromMemoryCache(): SakListItem[] {
+  return readMemoryListCache() ?? [];
+}
+
 function isProductionBuild(): boolean {
   return process.env.NEXT_PHASE === 'phase-production-build';
 }

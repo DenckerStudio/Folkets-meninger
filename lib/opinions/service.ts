@@ -22,7 +22,7 @@ import {
   validateOpinionPoints,
   validateReplyDraft,
 } from '@/lib/opinions/validate';
-import { getSakerWithCache } from '@/lib/stortinget-saker-cache';
+import { getSakerFromMemoryCache, getSakerWithCache } from '@/lib/stortinget-saker-cache';
 import { getAnonSupabase, getServiceSupabase } from '@/lib/supabase';
 
 type UserJoin = {
@@ -171,8 +171,8 @@ const REPLY_SELECT = `
   users:author_user_id (first_name, last_name, name)
 `;
 
-async function listSakPickerOptionsFromCache(limit: number): Promise<SakPickerOption[]> {
-  const saker = await getSakerWithCache();
+async function listSakPickerOptionsFromCache(limit: number, live: boolean): Promise<SakPickerOption[]> {
+  const saker = live ? await getSakerWithCache() : getSakerFromMemoryCache();
   const seen = new Set<string>();
   const options: SakPickerOption[] = [];
   for (const sak of saker) {
@@ -222,10 +222,13 @@ async function listSakPickerOptionsFromDb(limit: number): Promise<SakPickerOptio
     }));
 }
 
-export async function listSakPickerOptions(limit = 300): Promise<SakPickerOption[]> {
+export async function listSakPickerOptions(
+  limit = 300,
+  opts?: { live?: boolean },
+): Promise<SakPickerOption[]> {
   const fromDb = await listSakPickerOptionsFromDb(limit);
   if (fromDb.length > 0) return fromDb;
-  return listSakPickerOptionsFromCache(limit);
+  return listSakPickerOptionsFromCache(limit, opts?.live === true);
 }
 
 export async function listCitizenOpinions(limit = OPINION_LIST_PAGE_SIZE): Promise<OpinionListItem[]> {

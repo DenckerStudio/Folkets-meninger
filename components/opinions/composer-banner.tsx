@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { OpinionPointsEditor } from '@/components/opinions/opinion-points-editor';
@@ -30,6 +30,36 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
   const [error, setError] = useState('');
   const [pointsError, setPointsError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [remoteOptions, setRemoteOptions] = useState<SakPickerOption[]>([]);
+
+  useEffect(() => {
+    if (sakOptions.length > 0) return;
+    let cancelled = false;
+    fetch('/api/opinions/sak-options')
+      .then((res) => (res.ok ? res.json() : { options: [] }))
+      .then((data: { options?: SakPickerOption[] }) => {
+        if (!cancelled && Array.isArray(data.options)) {
+          setRemoteOptions(data.options);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setRemoteOptions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sakOptions.length]);
+
+  const mergedOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: SakPickerOption[] = [];
+    for (const option of [...sakOptions, ...remoteOptions]) {
+      if (!option.id || seen.has(option.id)) continue;
+      seen.add(option.id);
+      merged.push(option);
+    }
+    return merged;
+  }, [remoteOptions, sakOptions]);
 
   const submit = async (stance: OpinionStance, body: string) => {
     if (!user) {
@@ -107,7 +137,7 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
           className="w-full rounded-2xl border border-[#00205b]/15 bg-white/90 px-3 py-2.5 text-sm text-[#001433] outline-none placeholder:text-[#001433]/40 focus:ring-2 focus:ring-[#00205b]/25"
         />
 
-        <SakPicker options={sakOptions} value={issueId} onChange={setIssueId} context={title} />
+        <SakPicker options={mergedOptions} value={issueId} onChange={setIssueId} context={title} />
 
         <OpinionPointsEditor
           value={points}
