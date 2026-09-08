@@ -18,7 +18,7 @@ export function SakPicker({ options, value, onChange, context = '' }: SakPickerP
   const [open, setOpen] = useState(false);
 
   const selected = value ? options.find((option) => option.id === value) : null;
-  const searchText = query.trim() || context;
+  const searchText = [query.trim(), context.trim()].filter(Boolean).join(' ');
   const hasContext = tokenizeOpinionQuery(context).length > 0 || context.trim().length >= 5;
 
   const filtered = useMemo(
