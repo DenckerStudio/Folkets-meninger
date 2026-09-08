@@ -191,7 +191,7 @@ export function StanceExpandModal({
           Compact For/Blank/Imot bar inspired by 21st.dev Motion Button
           (expanding circle fill) + Expandable Dialog (spring height expand).
         */}
-        <div className="relative z-10 flex h-[72px] items-stretch gap-0 p-0">
+        <div className="relative z-10 grid h-[72px] grid-cols-3 gap-0 overflow-hidden p-0">
           {OPINION_STANCES.map((stance) => {
             const visual = STANCE_VISUAL[stance];
             const isPicked = selected === stance;
@@ -200,29 +200,23 @@ export function StanceExpandModal({
               <button
                 key={stance}
                 type="button"
+                data-stance-choice={stance}
                 disabled={disabled || busy}
                 onClick={(event) => pickStance(stance, event)}
                 className={cn(
-                  'flex flex-1 items-center justify-center border-0 shadow-none text-sm font-semibold tracking-wide sm:text-base',
+                  'm-0 flex items-center justify-center appearance-none border-0 p-0 text-sm font-semibold tracking-wide shadow-none outline-none ring-0 sm:text-base',
+                  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-white',
                   disabled && 'cursor-not-allowed opacity-60',
                 )}
                 aria-pressed={isPicked || isCurrent}
-                style={
-                  filling || expanded
-                    ? {
-                        backgroundColor: 'transparent',
-                        color: fillFg,
-                        opacity: isPicked ? 1 : 0.35,
-                        borderRadius: stanceButtonRadius(stance, phase),
-                        boxShadow: 'none',
-                      }
-                    : {
-                        backgroundColor: visual.bg,
-                        color: visual.fg,
-                        borderRadius: stanceButtonRadius(stance, phase),
-                        boxShadow: 'none',
-                      }
-                }
+                style={{
+                  backgroundColor: filling || expanded ? 'transparent' : visual.bg,
+                  color: filling || expanded ? fillFg : visual.fg,
+                  opacity: filling || expanded ? (isPicked ? 1 : 0.35) : 1,
+                  border: 'none',
+                  boxShadow: 'none',
+                  borderRadius: stanceButtonRadius(stance, phase),
+                }}
               >
                 {visual.label}
               </button>

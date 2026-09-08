@@ -22,6 +22,7 @@ import {
   validateOpinionPoints,
   validateReplyDraft,
 } from '@/lib/opinions/validate';
+import { getSakerWithCache } from '@/lib/stortinget-saker-cache';
 import { getAnonSupabase, getServiceSupabase } from '@/lib/supabase';
 
 type UserJoin = {
@@ -170,7 +171,25 @@ const REPLY_SELECT = `
   users:author_user_id (first_name, last_name, name)
 `;
 
-export async function listSakPickerOptions(limit = 300): Promise<SakPickerOption[]> {
+async function listSakPickerOptionsFromCache(limit: number): Promise<SakPickerOption[]> {
+  const saker = await getSakerWithCache();
+  const seen = new Set<string>();
+  const options: SakPickerOption[] = [];
+  for (const sak of saker) {
+    if (!sak.id || !sak.title || seen.has(sak.id)) continue;
+    seen.add(sak.id);
+    options.push({
+      id: sak.id,
+      title: sak.title,
+      category: sak.category || null,
+      henvisning: sak.henvisning ?? null,
+    });
+    if (options.length >= limit) break;
+  }
+  return options;
+}
+
+async function listSakPickerOptionsFromDb(limit: number): Promise<SakPickerOption[]> {
   if (!supabaseConfigured()) return [];
 
   const supabase = getAnonSupabase();
@@ -201,6 +220,12 @@ export async function listSakPickerOptions(limit = 300): Promise<SakPickerOption
       category: row.category ? String(row.category) : null,
       henvisning: 'henvisning' in row && row.henvisning ? String(row.henvisning) : null,
     }));
+}
+
+export async function listSakPickerOptions(limit = 300): Promise<SakPickerOption[]> {
+  const fromDb = await listSakPickerOptionsFromDb(limit);
+  if (fromDb.length > 0) return fromDb;
+  return listSakPickerOptionsFromCache(limit);
 }
 
 export async function listCitizenOpinions(limit = OPINION_LIST_PAGE_SIZE): Promise<OpinionListItem[]> {

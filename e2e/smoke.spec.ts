@@ -33,7 +33,7 @@ test.describe('Folkets Stemme smoke', () => {
     await expect(page.getByRole('heading', { name: 'Folkets meninger' })).toBeVisible();
     const modal = page.locator('[data-stance-modal]');
     await expect(modal).toHaveAttribute('data-phase', 'idle');
-    await page.getByRole('button', { name: 'Imot' }).click();
+    await modal.locator('[data-stance-choice="imot"]').click();
     await expect(modal).toHaveAttribute('data-phase', 'filling');
     await expect(modal).toHaveAttribute('data-phase', 'expanded', { timeout: 2000 });
     await expect(page.getByRole('heading', { name: /Hvorfor imot/i })).toBeVisible();
