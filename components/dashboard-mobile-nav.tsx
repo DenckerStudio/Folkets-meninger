@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileEdit, Search, UserRound, Users, Vote } from 'lucide-react';
+import { FileEdit, MessagesSquare, Search, UserRound, Users, Vote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
 
 const DASHBOARD_MOBILE_ITEMS = [
+  { href: routes.folketsMeninger, label: 'Meninger', icon: MessagesSquare },
   { href: routes.utforsk, label: 'Utforsk', icon: Search },
   { href: routes.avstemninger, label: 'Avstemninger', icon: Vote },
   { href: routes.horinger, label: 'Høringer', icon: FileEdit },

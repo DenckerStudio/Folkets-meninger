@@ -40,9 +40,21 @@ test('every sidebar href is registered in dashboardNavHrefs', () => {
   }
 });
 
+test('folkets meninger is the first core destination', () => {
+  assert.equal(coreNavItems[0]?.href, routes.folketsMeninger);
+});
+
+test('borgerinitiativ is not in dashboard nav', () => {
+  assert.equal(
+    dashboardSidebarNavItems.some((item) => item.href === routes.initiativ),
+    false,
+  );
+});
+
 test('mobile nav stays within core destinations plus profile', () => {
   assert.ok(mobileNavItems.length >= 2 && mobileNavItems.length <= 5);
   const allowed = new Set([
+    routes.folketsMeninger,
     routes.utforsk,
     routes.avstemninger,
     routes.horinger,

@@ -4,6 +4,7 @@ import {
   Calendar,
   FileEdit,
   Lightbulb,
+  MessagesSquare,
   Search,
   UserRound,
   Users,
@@ -26,6 +27,11 @@ export type PrimaryNavLink = {
   href: string;
   isActive: NavIsActive;
 };
+
+export const isFolketsMeningerActive: NavIsActive = (pathname) =>
+  pathname === routes.dashboard ||
+  pathname === routes.folketsMeninger ||
+  pathname.startsWith(`${routes.folketsMeninger}/`);
 
 export const isUtforskActive: NavIsActive = (pathname) =>
   pathname === routes.utforsk ||
@@ -74,6 +80,12 @@ export const isMobileUtforskActive: NavIsActive = (pathname) =>
 /** Core product areas — header primary tabs and top of dashboard sidebar. */
 export const coreNavItems: SiteNavLinkItem[] = [
   {
+    title: 'Folkets meninger',
+    href: routes.folketsMeninger,
+    icon: MessagesSquare,
+    isActive: isFolketsMeningerActive,
+  },
+  {
     title: 'Utforsk',
     href: routes.utforsk,
     icon: Search,
@@ -106,12 +118,6 @@ export const extendedNavItems: SiteNavLinkItem[] = [
     href: routes.politikere,
     icon: Users,
     isActive: isPolitikereActive,
-  },
-  {
-    title: 'Borgerinitiativ',
-    href: routes.initiativ,
-    icon: FileEdit,
-    isActive: isInitiativActive,
   },
   {
     title: 'Kalender',
@@ -162,6 +168,12 @@ export const dashboardSidebarNavItems: SiteNavLinkItem[] = [
 
 /** Mobile bottom nav items (2–5 slots). */
 export const mobileNavItems = [
+  {
+    label: 'Meninger',
+    href: routes.folketsMeninger,
+    icon: MessagesSquare,
+    isActive: isFolketsMeningerActive,
+  },
   {
     label: 'Utforsk',
     href: routes.utforsk,

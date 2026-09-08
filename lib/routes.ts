@@ -5,6 +5,7 @@ export const DASHBOARD_PREFIX = '/dashboard';
 export const routes = {
   home: '/',
   dashboard: DASHBOARD_PREFIX,
+  folketsMeninger: `${DASHBOARD_PREFIX}/folkets-meninger`,
   utforsk: `${DASHBOARD_PREFIX}/utforsk`,
   avstemninger: `${DASHBOARD_PREFIX}/avstemninger`,
   avstemningerReels: `${DASHBOARD_PREFIX}/avstemninger/reels`,
@@ -26,6 +27,8 @@ export const routes = {
   politiker: (id: string) => `${DASHBOARD_PREFIX}/politikere/${id}`,
   sporsmalDetail: (id: string) => `${DASHBOARD_PREFIX}/sporsmal/${id}`,
   sak: (id: string) => `${DASHBOARD_PREFIX}/sak/${id}`,
+  opinion: (id: string) => `${DASHBOARD_PREFIX}/folkets-meninger/${id}`,
+  sakEmbed: (id: string) => `/embed/sak/${id}`,
   poll: (id: string) => `${DASHBOARD_PREFIX}/avstemninger/${id}`,
   initiative: (id: string) => `${DASHBOARD_PREFIX}/initiativ/${id}`,
   horing: (id: string) => `${DASHBOARD_PREFIX}/horinger/${id}`,
@@ -64,6 +67,18 @@ export function isPublicDashboardInitiativPath(pathname: string): boolean {
   return pathname === routes.initiativ || /^\/dashboard\/initiativ\/[^/]+$/.test(pathname);
 }
 
+/** Public Folkets meninger list and detail — posting requires login. */
+export function isPublicDashboardFolketsMeningerPath(pathname: string): boolean {
+  return (
+    pathname === routes.folketsMeninger ||
+    /^\/dashboard\/folkets-meninger\/[^/]+$/.test(pathname)
+  );
+}
+
 export function isPublicProfilePath(pathname: string): boolean {
   return /^\/profil\/[^/]+$/.test(pathname);
+}
+
+export function isEmbedPath(pathname: string): boolean {
+  return pathname.startsWith('/embed/');
 }

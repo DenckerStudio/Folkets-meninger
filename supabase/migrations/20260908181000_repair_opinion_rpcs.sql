@@ -1,0 +1,212 @@
+-- Repair Folkets meninger RPCs without $function$ quoting.
+-- Coolify / some SQL editors treat $function as an env var and cut the body,
+-- which yields: unterminated dollar-quoted string at or near "$function$".
+-- Paste this whole file (one run). Safe to re-run.
+
+ALTER TABLE public.citizen_opinions
+  ADD COLUMN IF NOT EXISTS points jsonb NOT NULL DEFAULT '[]'::jsonb;
+
+ALTER TABLE public.citizen_opinions
+  DROP CONSTRAINT IF EXISTS citizen_opinions_body_len;
+
+ALTER TABLE public.citizen_opinions
+  ADD CONSTRAINT citizen_opinions_body_len CHECK (
+    char_length(body) <= 4000
+    AND (stance = 'blank' OR char_length(btrim(body)) >= 250)
+  );
+
+ALTER TABLE public.citizen_opinion_replies
+  DROP CONSTRAINT IF EXISTS citizen_opinion_replies_body_len;
+
+ALTER TABLE public.citizen_opinion_replies
+  ADD CONSTRAINT citizen_opinion_replies_body_len CHECK (
+    char_length(body) <= 4000
+    AND (stance = 'blank' OR char_length(btrim(body)) >= 80)
+  );
+
+DROP FUNCTION IF EXISTS public.create_citizen_opinion(uuid, text, text, text, text);
+DROP FUNCTION IF EXISTS public.create_citizen_opinion(uuid, text, text, text, text, jsonb);
+
+CREATE FUNCTION public.create_citizen_opinion(
+  p_user_id uuid,
+  p_title text,
+  p_body text,
+  p_stance text,
+  p_stortinget_issue_id text DEFAULT NULL,
+  p_points jsonb DEFAULT '[]'::jsonb
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'auth'
+AS $$
+DECLARE
+  v_id uuid;
+  v_title text;
+  v_body text;
+  v_stance text;
+  v_issue_id text;
+  v_points jsonb;
+  v_point jsonb;
+  v_point_stance text;
+  v_point_text text;
+  v_for_count integer := 0;
+  v_imot_count integer := 0;
+BEGIN
+  PERFORM public.ensure_public_user(p_user_id);
+
+  IF NOT public.user_has_public_identity(p_user_id) THEN
+    RAISE EXCEPTION 'Complete your profile with first and last name before posting';
+  END IF;
+
+  v_title := btrim(coalesce(p_title, ''));
+  v_body := btrim(coalesce(p_body, ''));
+  v_stance := btrim(coalesce(p_stance, ''));
+  v_issue_id := nullif(btrim(coalesce(p_stortinget_issue_id, '')), '');
+  v_points := coalesce(p_points, '[]'::jsonb);
+
+  IF char_length(v_title) < 5 OR char_length(v_title) > 200 THEN
+    RAISE EXCEPTION 'Title must be between 5 and 200 characters';
+  END IF;
+
+  IF v_stance NOT IN ('for', 'imot') THEN
+    RAISE EXCEPTION 'Invalid stance';
+  END IF;
+
+  IF char_length(v_body) < 250 OR char_length(v_body) > 4000 THEN
+    RAISE EXCEPTION 'Body must be between 250 and 4000 characters';
+  END IF;
+
+  IF jsonb_typeof(v_points) <> 'array' THEN
+    RAISE EXCEPTION 'At least 3 for/imot points required';
+  END IF;
+
+  IF jsonb_array_length(v_points) < 3 OR jsonb_array_length(v_points) > 8 THEN
+    RAISE EXCEPTION 'At least 3 for/imot points required';
+  END IF;
+
+  FOR v_point IN SELECT value FROM jsonb_array_elements(v_points)
+  LOOP
+    IF jsonb_typeof(v_point) <> 'object' THEN
+      RAISE EXCEPTION 'Invalid opinion point';
+    END IF;
+
+    v_point_stance := btrim(coalesce(v_point->>'stance', ''));
+    v_point_text := btrim(regexp_replace(coalesce(v_point->>'text', ''), '\s+', ' ', 'g'));
+
+    IF v_point_stance NOT IN ('for', 'imot') THEN
+      RAISE EXCEPTION 'Invalid opinion point stance';
+    END IF;
+
+    IF char_length(v_point_text) < 12 OR char_length(v_point_text) > 180 THEN
+      RAISE EXCEPTION 'Each opinion point must be between 12 and 180 characters';
+    END IF;
+
+    IF v_point_stance = 'for' THEN
+      v_for_count := v_for_count + 1;
+    ELSE
+      v_imot_count := v_imot_count + 1;
+    END IF;
+  END LOOP;
+
+  IF v_for_count < 1 OR v_imot_count < 1 THEN
+    RAISE EXCEPTION 'Include at least one for and one imot point';
+  END IF;
+
+  INSERT INTO public.citizen_opinions (
+    author_user_id,
+    title,
+    body,
+    stance,
+    stortinget_issue_id,
+    points
+  )
+  VALUES (p_user_id, v_title, v_body, v_stance, v_issue_id, v_points)
+  RETURNING id INTO v_id;
+
+  RETURN v_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.create_citizen_opinion_reply(
+  p_user_id uuid,
+  p_opinion_id uuid,
+  p_stance text,
+  p_body text
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'auth'
+AS $$
+DECLARE
+  v_id uuid;
+  v_body text;
+  v_stance text;
+  v_author uuid;
+  v_removed boolean;
+BEGIN
+  PERFORM public.ensure_public_user(p_user_id);
+
+  IF NOT public.user_has_public_identity(p_user_id) THEN
+    RAISE EXCEPTION 'Complete your profile with first and last name before posting';
+  END IF;
+
+  IF p_opinion_id IS NULL THEN
+    RAISE EXCEPTION 'Opinion id required';
+  END IF;
+
+  SELECT author_user_id, is_removed
+    INTO v_author, v_removed
+  FROM public.citizen_opinions
+  WHERE id = p_opinion_id;
+
+  IF v_author IS NULL THEN
+    RAISE EXCEPTION 'Opinion not found';
+  END IF;
+
+  IF v_removed THEN
+    RAISE EXCEPTION 'Opinion not found';
+  END IF;
+
+  IF v_author = p_user_id THEN
+    RAISE EXCEPTION 'You cannot reply to your own opinion';
+  END IF;
+
+  v_body := btrim(coalesce(p_body, ''));
+  v_stance := btrim(coalesce(p_stance, ''));
+
+  IF v_stance NOT IN ('for', 'blank', 'imot') THEN
+    RAISE EXCEPTION 'Invalid stance';
+  END IF;
+
+  IF v_stance = 'blank' THEN
+    IF char_length(v_body) > 4000 THEN
+      RAISE EXCEPTION 'Body must be at most 4000 characters';
+    END IF;
+  ELSIF char_length(v_body) < 80 OR char_length(v_body) > 4000 THEN
+    RAISE EXCEPTION 'Body must be between 80 and 4000 characters';
+  END IF;
+
+  INSERT INTO public.citizen_opinion_replies (
+    opinion_id,
+    author_user_id,
+    stance,
+    body
+  )
+  VALUES (p_opinion_id, p_user_id, v_stance, v_body)
+  ON CONFLICT (opinion_id, author_user_id) DO UPDATE
+    SET stance = EXCLUDED.stance,
+        body = EXCLUDED.body,
+        is_removed = false,
+        updated_at = now()
+  RETURNING id INTO v_id;
+
+  RETURN v_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.create_citizen_opinion(uuid, text, text, text, text, jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.create_citizen_opinion_reply(uuid, uuid, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_citizen_opinion(uuid, text, text, text, text, jsonb) TO service_role;
+GRANT EXECUTE ON FUNCTION public.create_citizen_opinion_reply(uuid, uuid, text, text) TO service_role;

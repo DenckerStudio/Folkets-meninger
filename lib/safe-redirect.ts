@@ -1,3 +1,5 @@
+import { routes } from '@/lib/routes';
+
 const ALLOWED_PREFIXES = [
   '/dashboard',
   '/auth/login',
@@ -8,7 +10,7 @@ const ALLOWED_PREFIXES = [
 
 /** Prevent open redirects after OAuth — only allow same-origin relative paths. */
 export function sanitizePostLoginPath(next: string | null | undefined): string {
-  const fallback = '/dashboard/utforsk';
+  const fallback = routes.folketsMeninger;
   if (!next || typeof next !== 'string') return fallback;
 
   const trimmed = next.trim();
