@@ -1,6 +1,7 @@
 import {
   OPINION_BODY_MAX,
   OPINION_BODY_MIN,
+  OPINION_CREATE_STANCES,
   OPINION_POINTS_MAX,
   OPINION_POINTS_MIN,
   OPINION_POINT_STANCES,
@@ -10,6 +11,7 @@ import {
   OPINION_STANCES,
   OPINION_TITLE_MAX,
   OPINION_TITLE_MIN,
+  type OpinionCreateStance,
   type OpinionPoint,
   type OpinionPointStance,
   type OpinionStance,
@@ -17,6 +19,10 @@ import {
 
 export function isOpinionStance(value: unknown): value is OpinionStance {
   return typeof value === 'string' && (OPINION_STANCES as readonly string[]).includes(value);
+}
+
+export function isOpinionCreateStance(value: unknown): value is OpinionCreateStance {
+  return typeof value === 'string' && (OPINION_CREATE_STANCES as readonly string[]).includes(value);
 }
 
 export function isOpinionPointStance(value: unknown): value is OpinionPointStance {
@@ -125,8 +131,8 @@ export function validateOpinionDraft(input: {
     errors.body = `Begrunnelsen må være minst ${OPINION_BODY_MIN} tegn`;
   }
 
-  if (!isOpinionStance(input.stance)) {
-    errors.stance = 'Velg For, Blank eller Imot';
+  if (!isOpinionCreateStance(input.stance)) {
+    errors.stance = 'Velg For eller Imot';
   }
 
   const pointsResult = validateOpinionPoints(input.points);

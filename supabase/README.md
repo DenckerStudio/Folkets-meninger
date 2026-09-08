@@ -84,9 +84,9 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Direct-democracy polls | `20260819210000_direct_democracy_polls.sql`, `20260821130000_system_poll_reels.sql` | `norway_counties`, `polls` (`stortinget`/`citizen`/`system`), `poll_votes`, `poll_vote_receipts`, `citizen_initiatives`, `citizen_initiative_endorsements`, Ja/Nei/Blank RPCs, system Reels drafts |
 | App RBAC | `20260821120000_app_rbac_user_roles.sql` | `app_roles`, `user_roles`, `is_admin()`, `grant_app_role_by_email`, `revoke_app_role_by_email` |
 | Knowledge + motforslag | `20260822120000_knowledge_and_counter_proposals.sql` | `user_knowledge_quiz_passes`, `user_document_reads`, `user_badges`, `counter_proposals`, `counter_proposal_endorsements`, package RPCs |
-| Folkets meninger | `20260907223000_citizen_opinions.sql`, `20260908120000_citizen_opinion_points.sql`, `20260908153000_blank_stance_optional_body.sql` | `citizen_opinions`, `citizen_opinion_replies`, `points` (min. 3 For/Imot-kulepunkter), Blank uten begrunnelse, `create_citizen_opinion`, `create_citizen_opinion_reply` |
+| Folkets meninger | `20260907223000_citizen_opinions.sql`, `20260908120000_citizen_opinion_points.sql`, `20260908153000_blank_stance_optional_body.sql`, `20260908170000_create_opinion_for_imot_only.sql` | `citizen_opinions`, `citizen_opinion_replies`, `points` (min. 3 For/Imot-kulepunkter), create For/Imot only, Blank replies without begrunnelse, `create_citizen_opinion`, `create_citizen_opinion_reply` |
 
-Citizen opinions are the dashboard home (`/dashboard/folkets-meninger`). Authors write For/Imot with at least 250 characters plus at least three For/Imot bullet points; Blank requires no written reason. Replies require a stance plus at least 80 characters unless the stance is Blank.
+Citizen opinions are the dashboard home (`/dashboard/folkets-meninger`). Authors write For or Imot with at least 250 characters plus at least three For/Imot bullet points. Blank is only available when answering someone else's opinion, and requires no written reason. Replies require a stance plus at least 80 characters unless the stance is Blank.
 
 ## Voting setup
 

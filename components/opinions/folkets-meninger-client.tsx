@@ -47,7 +47,7 @@ export function FolketsMeningerClient({ opinions, sakOptions }: FolketsMeningerC
       <FadeIn delay={0.1}>
         <PageHeader
           title="Folkets meninger"
-          description="Del hva du mener om saker fra Stortinget. Andre kan svare For, Blank eller Imot — og må begrunne det."
+          description="Del For eller Imot om saker fra Stortinget. Andre kan svare For, Blank eller Imot — For og Imot må begrunnes."
         />
       </FadeIn>
 

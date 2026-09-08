@@ -16,6 +16,7 @@ import {
 } from '@/lib/opinions/types';
 import {
   hasOpinionFieldErrors,
+  isOpinionCreateStance,
   isOpinionStance,
   parseOpinionPoints,
   requiresOpinionBody,
@@ -332,7 +333,7 @@ export async function createCitizenOpinion(
   const body = input.body.trim();
   const pointsResult = validateOpinionPoints(input.points);
   const errors = validateOpinionDraft({ title, body, stance: input.stance, points: input.points });
-  if (hasOpinionFieldErrors(errors) || !isOpinionStance(input.stance) || pointsResult.error) {
+  if (hasOpinionFieldErrors(errors) || !isOpinionCreateStance(input.stance) || pointsResult.error) {
     throw new Error(errors.title || errors.body || errors.stance || errors.points || 'Ugyldig mening');
   }
   if (title.length < OPINION_TITLE_MIN || title.length > OPINION_TITLE_MAX) {

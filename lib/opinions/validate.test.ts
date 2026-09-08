@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   emptyOpinionPointDrafts,
   hasOpinionFieldErrors,
+  isOpinionCreateStance,
   isOpinionStance,
   parseOpinionPoints,
   validateOpinionDraft,
@@ -14,6 +15,9 @@ assert.equal(isOpinionStance('blank'), true);
 assert.equal(isOpinionStance('imot'), true);
 assert.equal(isOpinionStance('against'), false);
 assert.equal(isOpinionStance('ja'), false);
+assert.equal(isOpinionCreateStance('for'), true);
+assert.equal(isOpinionCreateStance('imot'), true);
+assert.equal(isOpinionCreateStance('blank'), false);
 
 const points = [
   { stance: 'for', text: 'Bedre kollektiv gir flere reisende i distriktene.' },
@@ -49,7 +53,8 @@ const okBlankDraft = validateOpinionDraft({
   stance: 'blank',
   points,
 });
-assert.deepEqual(okBlankDraft, {});
+assert.ok(okBlankDraft.stance);
+assert.equal(okBlankDraft.body, undefined);
 
 const blankTooLong = validateOpinionDraft({
   title: 'Kollektivtilbud i distriktene',
@@ -58,6 +63,7 @@ const blankTooLong = validateOpinionDraft({
   points,
 });
 assert.ok(blankTooLong.body);
+assert.ok(blankTooLong.stance);
 
 const missingStance = validateOpinionDraft({
   title: 'Kollektivtilbud i distriktene',

@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type MouseEvent } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type CSSProperties, type FormEvent, type MouseEvent } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { FLAG_RED, STANCE_VISUAL, stanceLabel } from '@/lib/opinions/labels';
-import { OPINION_BODY_MAX, OPINION_STANCES, type OpinionStance } from '@/lib/opinions/types';
+import { FLAG_RED, FLAG_WHITE, STANCE_VISUAL, stanceLabel } from '@/lib/opinions/labels';
+import { OPINION_BODY_MAX, OPINION_FLAG_STANCES, type OpinionStance } from '@/lib/opinions/types';
 import { cn } from '@/lib/utils';
 
 const COMPACT_HEIGHT = 72;
@@ -24,6 +24,8 @@ type StanceExpandModalProps = {
   disabled?: boolean;
   disabledReason?: string;
   className?: string;
+  /** When false, the middle flag stripe stays empty white (create flow). Replies keep Blank. */
+  allowBlank?: boolean;
 };
 
 export function StanceExpandModal({
@@ -37,6 +39,7 @@ export function StanceExpandModal({
   disabled = false,
   disabledReason,
   className,
+  allowBlank = true,
 }: StanceExpandModalProps) {
   const titleId = useId();
   const bodyId = useId();
@@ -84,6 +87,7 @@ export function StanceExpandModal({
 
   function pickStance(stance: OpinionStance, event: MouseEvent<HTMLButtonElement>) {
     if (disabled || busy || filling) return;
+    if (stance === 'blank' && !allowBlank) return;
     if (phase === 'expanded') {
       setSelected(stance);
       setLocalError('');
@@ -107,6 +111,7 @@ export function StanceExpandModal({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!selected || busy) return;
+    if (selected === 'blank' && !allowBlank) return;
     if (selected === 'blank') {
       await onSubmit('blank', '');
       return;
@@ -142,6 +147,7 @@ export function StanceExpandModal({
       <motion.div
         ref={cardRef}
         data-stance-modal=""
+        data-allow-blank={allowBlank ? 'true' : 'false'}
         data-phase={phase}
         aria-modal={expanded || undefined}
         aria-labelledby={expanded ? titleId : undefined}
@@ -176,14 +182,39 @@ export function StanceExpandModal({
         </div>
 
         {/*
-          Compact For/Blank/Imot bar inspired by 21st.dev Motion Button
-          (expanding circle fill) + Expandable Dialog (spring height expand).
+          Compact Imot / white / For strip (Norwegian flag LTR). Inspired by
+          21st.dev Motion Button (circle fill) + Expandable Dialog (spring height).
         */}
         <div className="relative z-10 grid h-[72px] grid-cols-3 gap-0 overflow-hidden p-0">
-          {OPINION_STANCES.map((stance) => {
+          {OPINION_FLAG_STANCES.map((stance) => {
             const visual = STANCE_VISUAL[stance];
             const isPicked = selected === stance;
             const isCurrent = !selected && initialStance === stance;
+            const tileStyle: CSSProperties = {
+              backgroundColor: filling || expanded ? 'transparent' : visual.bg,
+              color: filling || expanded ? fillFg : visual.fg,
+              opacity: filling || expanded ? (isPicked ? 1 : 0.35) : 1,
+              border: 'none',
+              boxShadow: 'none',
+              borderRadius: 0,
+            };
+
+            if (stance === 'blank' && !allowBlank) {
+              return (
+                <div
+                  key="blank-spacer"
+                  data-stance-spacer="blank"
+                  aria-hidden="true"
+                  className="m-0"
+                  style={{
+                    ...tileStyle,
+                    backgroundColor: filling || expanded ? 'transparent' : FLAG_WHITE,
+                    opacity: filling || expanded ? 0.35 : 1,
+                  }}
+                />
+              );
+            }
+
             return (
               <button
                 key={stance}
@@ -197,14 +228,7 @@ export function StanceExpandModal({
                   disabled && 'cursor-not-allowed opacity-60',
                 )}
                 aria-pressed={isPicked || isCurrent}
-                style={{
-                  backgroundColor: filling || expanded ? 'transparent' : visual.bg,
-                  color: filling || expanded ? fillFg : visual.fg,
-                  opacity: filling || expanded ? (isPicked ? 1 : 0.35) : 1,
-                  border: 'none',
-                  boxShadow: 'none',
-                  borderRadius: 0,
-                }}
+                style={tileStyle}
               >
                 {visual.label}
               </button>

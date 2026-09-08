@@ -46,7 +46,7 @@ export function OpinionCard({ opinion }: OpinionCardProps) {
               meninger
             </span>
             <span className="text-xs">
-              For {opinion.counts.for} · Blank {opinion.counts.blank} · Imot {opinion.counts.imot}
+              Imot {opinion.counts.imot} · Blank {opinion.counts.blank} · For {opinion.counts.for}
             </span>
           </div>
           <span className="flex items-center text-sm font-medium text-brand">

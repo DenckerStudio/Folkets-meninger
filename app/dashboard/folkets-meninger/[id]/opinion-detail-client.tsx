@@ -89,17 +89,17 @@ export function OpinionDetailClient({ opinion, isAuthor }: OpinionDetailClientPr
           )}
         </div>
         <div className="grid grid-cols-3 border-t border-border text-center text-sm">
-          <div className="px-3 py-3" style={{ backgroundColor: 'color-mix(in oklab, #00205B 8%, transparent)' }}>
-            <p className="font-semibold text-[#00205B]">For</p>
-            <p className="text-muted-foreground">{formatNumber(opinion.counts.for)}</p>
+          <div className="px-3 py-3" style={{ backgroundColor: 'color-mix(in oklab, #BA0C2F 8%, transparent)' }}>
+            <p className="font-semibold text-[#BA0C2F]">Imot</p>
+            <p className="text-muted-foreground">{formatNumber(opinion.counts.imot)}</p>
           </div>
           <div className="px-3 py-3">
             <p className="font-semibold text-foreground">Blank</p>
             <p className="text-muted-foreground">{formatNumber(opinion.counts.blank)}</p>
           </div>
-          <div className="px-3 py-3" style={{ backgroundColor: 'color-mix(in oklab, #BA0C2F 8%, transparent)' }}>
-            <p className="font-semibold text-[#BA0C2F]">Imot</p>
-            <p className="text-muted-foreground">{formatNumber(opinion.counts.imot)}</p>
+          <div className="px-3 py-3" style={{ backgroundColor: 'color-mix(in oklab, #00205B 8%, transparent)' }}>
+            <p className="font-semibold text-[#00205B]">For</p>
+            <p className="text-muted-foreground">{formatNumber(opinion.counts.for)}</p>
           </div>
         </div>
       </article>
@@ -120,6 +120,7 @@ export function OpinionDetailClient({ opinion, isAuthor }: OpinionDetailClientPr
             error={error}
             initialStance={opinion.viewerReply?.stance ?? null}
             initialBody={opinion.viewerReply?.body ?? ''}
+            allowBlank
           />
         )}
       </section>

@@ -1,7 +1,11 @@
 export const OPINION_STANCES = ['for', 'blank', 'imot'] as const;
+/** Visual order matching the Norwegian flag: red, white, blue. */
+export const OPINION_FLAG_STANCES = ['imot', 'blank', 'for'] as const;
+export const OPINION_CREATE_STANCES = ['for', 'imot'] as const;
 export const OPINION_POINT_STANCES = ['for', 'imot'] as const;
 
 export type OpinionStance = (typeof OPINION_STANCES)[number];
+export type OpinionCreateStance = (typeof OPINION_CREATE_STANCES)[number];
 export type OpinionPointStance = (typeof OPINION_POINT_STANCES)[number];
 
 export const OPINION_TITLE_MIN = 5;

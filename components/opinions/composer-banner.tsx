@@ -85,6 +85,10 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
       setError(pointsResult.error);
       return;
     }
+    if (stance === 'blank') {
+      setError('Velg For eller Imot');
+      return;
+    }
     setBusy(true);
     setError('');
     setPointsError('');
@@ -132,8 +136,7 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
           </h2>
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[#001433]/65">
             Knytt meningen til saken du skriver om, del minst {OPINION_POINTS_MIN} kulepunkter for og imot,
-            og velg For, Blank eller Imot. For og Imot krever minst {OPINION_BODY_MIN} tegn. Blank krever ingen
-            begrunnelse.
+            og velg For eller Imot. Begge krever minst {OPINION_BODY_MIN} tegn.
           </p>
         </div>
 
@@ -169,6 +172,7 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
           onSubmit={submit}
           busy={busy}
           error={error}
+          allowBlank={false}
         />
       </div>
     </section>
