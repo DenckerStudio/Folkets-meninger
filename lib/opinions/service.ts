@@ -18,6 +18,7 @@ import {
   hasOpinionFieldErrors,
   isOpinionStance,
   parseOpinionPoints,
+  requiresOpinionBody,
   validateOpinionDraft,
   validateOpinionPoints,
   validateReplyDraft,
@@ -337,7 +338,10 @@ export async function createCitizenOpinion(
   if (title.length < OPINION_TITLE_MIN || title.length > OPINION_TITLE_MAX) {
     throw new Error('Ugyldig tittel');
   }
-  if (body.length < OPINION_BODY_MIN || body.length > OPINION_BODY_MAX) {
+  if (body.length > OPINION_BODY_MAX) {
+    throw new Error('Ugyldig begrunnelse');
+  }
+  if (requiresOpinionBody(input.stance) && body.length < OPINION_BODY_MIN) {
     throw new Error('Ugyldig begrunnelse');
   }
 
@@ -372,7 +376,10 @@ export async function createCitizenOpinionReply(
   if (hasOpinionFieldErrors(errors) || !isOpinionStance(input.stance)) {
     throw new Error(errors.body || errors.stance || 'Ugyldig svar');
   }
-  if (body.length < OPINION_REPLY_BODY_MIN || body.length > OPINION_BODY_MAX) {
+  if (body.length > OPINION_BODY_MAX) {
+    throw new Error('Ugyldig begrunnelse');
+  }
+  if (requiresOpinionBody(input.stance) && body.length < OPINION_REPLY_BODY_MIN) {
     throw new Error('Ugyldig begrunnelse');
   }
 

@@ -107,6 +107,10 @@ export function StanceExpandModal({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!selected || busy) return;
+    if (selected === 'blank') {
+      await onSubmit('blank', '');
+      return;
+    }
     const trimmed = body.trim();
     if (trimmed.length < minLength) {
       setLocalError(`Skriv minst ${minLength} tegn om hvorfor du mener dette.`);
@@ -228,30 +232,38 @@ export function StanceExpandModal({
                 className="text-base font-semibold"
                 style={{ color: fillFg }}
               >
-                Hvorfor {stanceLabel(selected).toLowerCase()}?
+                {selected === 'blank' ? 'Blank stemme' : `Hvorfor ${stanceLabel(selected).toLowerCase()}?`}
               </h3>
-              <label htmlFor={bodyId} className="sr-only">
-                Begrunnelse
-              </label>
-              <textarea
-                id={bodyId}
-                value={body}
-                onChange={(event) => setBody(event.target.value)}
-                rows={6}
-                maxLength={OPINION_BODY_MAX}
-                placeholder={`Skriv minst ${minLength} tegn om hvorfor du er ${stanceLabel(selected).toLowerCase()}.`}
-                className="mt-3 w-full resize-none rounded-2xl border bg-white/95 px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2"
-                style={{
-                  borderColor: selected === 'blank' ? 'rgba(0,32,91,0.2)' : 'transparent',
-                  color: '#001433',
-                }}
-              />
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs" style={{ color: fillFg }}>
-                <span>
-                  {remaining > 0 ? `${remaining} tegn igjen` : `${body.trim().length} tegn`}
-                </span>
-                <span className="opacity-80">Maks {OPINION_BODY_MAX} tegn</span>
-              </div>
+              {selected === 'blank' ? (
+                <p className="mt-2 text-sm leading-relaxed" style={{ color: fillFg, opacity: 0.85 }}>
+                  Ingen begrunnelse kreves. Du kan publisere med en gang.
+                </p>
+              ) : (
+                <>
+                  <label htmlFor={bodyId} className="sr-only">
+                    Begrunnelse
+                  </label>
+                  <textarea
+                    id={bodyId}
+                    value={body}
+                    onChange={(event) => setBody(event.target.value)}
+                    rows={6}
+                    maxLength={OPINION_BODY_MAX}
+                    placeholder={`Skriv minst ${minLength} tegn om hvorfor du er ${stanceLabel(selected).toLowerCase()}.`}
+                    className="mt-3 w-full resize-none rounded-2xl border bg-white/95 px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2"
+                    style={{
+                      borderColor: 'transparent',
+                      color: '#001433',
+                    }}
+                  />
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs" style={{ color: fillFg }}>
+                    <span>
+                      {remaining > 0 ? `${remaining} tegn igjen` : `${body.trim().length} tegn`}
+                    </span>
+                    <span className="opacity-80">Maks {OPINION_BODY_MAX} tegn</span>
+                  </div>
+                </>
+              )}
               {displayError ? (
                 <p className="mt-2 text-sm font-medium" style={{ color: selected === 'blank' ? FLAG_RED : '#fff' }}>
                   {displayError}
@@ -272,7 +284,7 @@ export function StanceExpandModal({
                 </button>
                 <button
                   type="submit"
-                  disabled={busy || body.trim().length < minLength}
+                  disabled={busy || (selected !== 'blank' && body.trim().length < minLength)}
                   className="rounded-full px-5 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                   style={{
                     backgroundColor: fillFg,

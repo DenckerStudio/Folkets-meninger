@@ -43,6 +43,22 @@ const okDraft = validateOpinionDraft({
 assert.deepEqual(okDraft, {});
 assert.equal(hasOpinionFieldErrors(okDraft), false);
 
+const okBlankDraft = validateOpinionDraft({
+  title: 'Kollektivtilbud i distriktene',
+  body: '',
+  stance: 'blank',
+  points,
+});
+assert.deepEqual(okBlankDraft, {});
+
+const blankTooLong = validateOpinionDraft({
+  title: 'Kollektivtilbud i distriktene',
+  body: 'x'.repeat(4001),
+  stance: 'blank',
+  points,
+});
+assert.ok(blankTooLong.body);
+
 const missingStance = validateOpinionDraft({
   title: 'Kollektivtilbud i distriktene',
   body: longEnough,
@@ -73,5 +89,8 @@ assert.ok(shortReply.body);
 
 const okReply = validateReplyDraft({ body: 'y'.repeat(80), stance: 'blank' });
 assert.deepEqual(okReply, {});
+
+const okBlankReply = validateReplyDraft({ body: '', stance: 'blank' });
+assert.deepEqual(okBlankReply, {});
 
 console.log('opinions/validate.test.ts: ok');

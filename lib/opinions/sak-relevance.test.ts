@@ -29,7 +29,6 @@ assert.equal(
 );
 
 const empty = rankSakOptions(options, '');
-assert.equal(empty.length, 5);
-assert.equal(empty[0]?.id, '1');
+assert.equal(empty.length, 0);
 
 console.log('opinions/sak-relevance.test.ts: ok');

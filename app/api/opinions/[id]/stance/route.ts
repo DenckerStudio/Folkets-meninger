@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkDiscussionContent } from '@/lib/moderation/content-check';
 import { createCitizenOpinionReply } from '@/lib/opinions/service';
-import { hasOpinionFieldErrors, validateReplyDraft } from '@/lib/opinions/validate';
+import { hasOpinionFieldErrors, isOpinionStance, validateReplyDraft } from '@/lib/opinions/validate';
 import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { PUBLIC_IDENTITY_ERROR } from '@/lib/identity/public-identity';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -71,9 +71,11 @@ export async function POST(
     );
   }
 
-  const moderation = checkDiscussionContent(text);
-  if (!moderation.approved) {
-    return NextResponse.json({ error: moderation.reason }, { status: 400 });
+  if (!(isOpinionStance(stance) && stance === 'blank' && !text.trim())) {
+    const moderation = checkDiscussionContent(text);
+    if (!moderation.approved) {
+      return NextResponse.json({ error: moderation.reason }, { status: 400 });
+    }
   }
 
   try {

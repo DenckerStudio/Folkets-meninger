@@ -124,7 +124,8 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
           </h2>
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[#001433]/65">
             Knytt meningen til saken du skriver om, del minst {OPINION_POINTS_MIN} kulepunkter for og imot,
-            velg For, Blank eller Imot, og skriv minst {OPINION_BODY_MIN} tegn om hvorfor.
+            og velg For, Blank eller Imot. For og Imot krever minst {OPINION_BODY_MIN} tegn. Blank krever ingen
+            begrunnelse.
           </p>
         </div>
 

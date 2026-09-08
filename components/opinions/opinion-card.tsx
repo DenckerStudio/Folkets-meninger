@@ -35,7 +35,9 @@ export function OpinionCard({ opinion }: OpinionCardProps) {
 
         <h2 className="mb-2 text-xl font-semibold text-foreground">{opinion.title}</h2>
         <OpinionPointsList points={opinion.points} compact className="mb-4" />
-        <p className="mb-4 line-clamp-2 text-muted-foreground">{opinion.body}</p>
+        {opinion.body.trim() ? (
+          <p className="mb-4 line-clamp-2 text-muted-foreground">{opinion.body}</p>
+        ) : null}
 
         <div className="mt-4 flex items-center justify-between">
           <div className="flex items-center gap-4 text-sm text-muted-foreground">

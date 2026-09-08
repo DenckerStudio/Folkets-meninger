@@ -82,7 +82,11 @@ export function OpinionDetailClient({ opinion, isAuthor }: OpinionDetailClientPr
             {opinion.authorName ? `Delt av ${opinion.authorName}` : 'Delt av en innbygger'}
           </p>
           <OpinionPointsList points={opinion.points} className="mt-4" />
-          <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-foreground">{opinion.body}</p>
+          {opinion.body.trim() ? (
+            <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-foreground">{opinion.body}</p>
+          ) : (
+            <p className="mt-4 text-sm text-muted-foreground">Ingen begrunnelse — blank stemme.</p>
+          )}
         </div>
         <div className="grid grid-cols-3 border-t border-border text-center text-sm">
           <div className="px-3 py-3" style={{ backgroundColor: 'color-mix(in oklab, #00205B 8%, transparent)' }}>

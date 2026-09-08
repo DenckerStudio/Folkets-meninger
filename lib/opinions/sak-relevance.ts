@@ -120,16 +120,12 @@ export function rankSakOptions(
 ): SakPickerOption[] {
   const query = context.trim().toLowerCase();
   const tokens = tokenizeOpinionQuery(context);
-  if (!query) return options.slice(0, limit);
+  if (!query) return [];
 
   const ranked = options
     .map((option) => ({ option, score: scoreSakOption(option, query, tokens) }))
     .filter((entry) => entry.score > 0)
     .sort((a, b) => b.score - a.score || a.option.title.localeCompare(b.option.title, 'nb'));
 
-  if (ranked.length > 0) {
-    return ranked.slice(0, limit).map((entry) => entry.option);
-  }
-
-  return options.slice(0, limit);
+  return ranked.slice(0, limit).map((entry) => entry.option);
 }

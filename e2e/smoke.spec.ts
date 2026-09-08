@@ -39,6 +39,27 @@ test.describe('Folkets Stemme smoke', () => {
     await expect(page.getByRole('heading', { name: /Hvorfor imot/i })).toBeVisible();
   });
 
+  test('blank expands without a required reason', async ({ page }) => {
+    await page.goto('/dashboard/folkets-meninger');
+    await expect(page.getByRole('heading', { name: 'Folkets meninger' })).toBeVisible();
+    const modal = page.locator('[data-stance-modal]');
+    await modal.locator('[data-stance-choice="blank"]').click();
+    await expect(modal).toHaveAttribute('data-phase', 'filling');
+    await expect(modal).toHaveAttribute('data-phase', 'expanded', { timeout: 2000 });
+    await expect(page.getByRole('heading', { name: 'Blank stemme' })).toBeVisible();
+    await expect(page.getByText(/Ingen begrunnelse kreves/i)).toBeVisible();
+    await expect(modal.locator('textarea')).toHaveCount(0);
+    await expect(modal.getByRole('button', { name: 'Publiser mening' })).toBeEnabled();
+  });
+
+  test('sak suggestions appear from the opinion title', async ({ page }) => {
+    await page.goto('/dashboard/folkets-meninger');
+    await expect(page.getByRole('heading', { name: 'Folkets meninger' })).toBeVisible();
+    await page.getByPlaceholder('Tittel på meningen').fill('Kollektivtilbud i distriktene');
+    await expect(page.getByText('Forslag ut fra tittelen')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Beste treff')).toBeVisible();
+  });
+
   test('complete-profile page explains public identity', async ({ page }) => {
     await page.goto('/auth/complete-profile');
     await expect(page.getByText(/Offentlige innspill|fornavn og etternavn/i)).toBeVisible();

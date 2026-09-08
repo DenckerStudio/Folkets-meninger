@@ -23,6 +23,10 @@ export function isOpinionPointStance(value: unknown): value is OpinionPointStanc
   return typeof value === 'string' && (OPINION_POINT_STANCES as readonly string[]).includes(value);
 }
 
+export function requiresOpinionBody(stance: unknown): boolean {
+  return isOpinionStance(stance) && stance !== 'blank';
+}
+
 export type OpinionFieldErrors = {
   title?: string;
   body?: string;
@@ -115,10 +119,10 @@ export function validateOpinionDraft(input: {
     errors.title = `Tittelen kan ikke være lengre enn ${OPINION_TITLE_MAX} tegn`;
   }
 
-  if (body.length < OPINION_BODY_MIN) {
-    errors.body = `Begrunnelsen må være minst ${OPINION_BODY_MIN} tegn`;
-  } else if (body.length > OPINION_BODY_MAX) {
+  if (body.length > OPINION_BODY_MAX) {
     errors.body = `Begrunnelsen kan ikke være lengre enn ${OPINION_BODY_MAX} tegn`;
+  } else if (requiresOpinionBody(input.stance) && body.length < OPINION_BODY_MIN) {
+    errors.body = `Begrunnelsen må være minst ${OPINION_BODY_MIN} tegn`;
   }
 
   if (!isOpinionStance(input.stance)) {
@@ -137,10 +141,10 @@ export function validateReplyDraft(input: { body: string; stance: unknown }): Op
   const errors: OpinionFieldErrors = {};
   const body = input.body.trim();
 
-  if (body.length < OPINION_REPLY_BODY_MIN) {
-    errors.body = `Begrunnelsen må være minst ${OPINION_REPLY_BODY_MIN} tegn`;
-  } else if (body.length > OPINION_BODY_MAX) {
+  if (body.length > OPINION_BODY_MAX) {
     errors.body = `Begrunnelsen kan ikke være lengre enn ${OPINION_BODY_MAX} tegn`;
+  } else if (requiresOpinionBody(input.stance) && body.length < OPINION_REPLY_BODY_MIN) {
+    errors.body = `Begrunnelsen må være minst ${OPINION_REPLY_BODY_MIN} tegn`;
   }
 
   if (!isOpinionStance(input.stance)) {
