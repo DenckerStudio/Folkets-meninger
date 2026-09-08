@@ -13,6 +13,22 @@ type Phase = 'idle' | 'filling' | 'expanded';
 
 type FillOrigin = { x: number; y: number };
 
+function stanceButtonRadius(stance: OpinionStance, phase: Phase): string {
+  const expandedLike = phase === 'filling' || phase === 'expanded';
+  switch (stance) {
+    case 'for':
+      return expandedLike ? '2rem 0 0 0' : '2rem 0 0 2rem';
+    case 'blank':
+      return '0';
+    case 'imot':
+      return expandedLike ? '0 2rem 0 0' : '0 2rem 2rem 0';
+    default: {
+      const _exhaustive: never = stance;
+      return _exhaustive;
+    }
+  }
+}
+
 type StanceExpandModalProps = {
   minLength: number;
   submitLabel: string;
@@ -142,7 +158,7 @@ export function StanceExpandModal({
         aria-modal={expanded || undefined}
         aria-labelledby={expanded ? titleId : undefined}
         className={cn(
-          'rounded-xxl absolute inset-x-0 top-0 w-full overflow-hidden border border-border bg-card shadow-sm',
+          'rounded-xxl absolute inset-x-0 top-0 w-full overflow-hidden bg-card shadow-sm',
           expanded || filling ? 'z-50 shadow-2xl' : 'z-10',
         )}
         animate={{
@@ -175,7 +191,7 @@ export function StanceExpandModal({
           Compact For/Blank/Imot bar inspired by 21st.dev Motion Button
           (expanding circle fill) + Expandable Dialog (spring height expand).
         */}
-        <div className="relative z-10 flex h-[72px] items-stretch gap-1 p-1.5">
+        <div className="relative z-10 flex h-[72px] items-stretch gap-0 p-0">
           {OPINION_STANCES.map((stance) => {
             const visual = STANCE_VISUAL[stance];
             const isPicked = selected === stance;
@@ -187,7 +203,7 @@ export function StanceExpandModal({
                 disabled={disabled || busy}
                 onClick={(event) => pickStance(stance, event)}
                 className={cn(
-                  'flex flex-1 items-center justify-center rounded-[1.35rem] text-sm font-semibold tracking-wide transition-opacity sm:text-base',
+                  'flex flex-1 items-center justify-center border-0 shadow-none text-sm font-semibold tracking-wide sm:text-base',
                   disabled && 'cursor-not-allowed opacity-60',
                 )}
                 aria-pressed={isPicked || isCurrent}
@@ -197,15 +213,14 @@ export function StanceExpandModal({
                         backgroundColor: 'transparent',
                         color: fillFg,
                         opacity: isPicked ? 1 : 0.35,
+                        borderRadius: stanceButtonRadius(stance, phase),
+                        boxShadow: 'none',
                       }
                     : {
                         backgroundColor: visual.bg,
                         color: visual.fg,
-                        boxShadow: isCurrent
-                          ? `0 0 0 2px ${visual.ring}, 0 0 0 4px rgba(255,255,255,0.9)`
-                          : stance === 'blank'
-                            ? `inset 0 0 0 1px ${visual.ring}`
-                            : undefined,
+                        borderRadius: stanceButtonRadius(stance, phase),
+                        boxShadow: 'none',
                       }
                 }
               >

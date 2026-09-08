@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { OpinionPointsList } from '@/components/opinions/opinion-points-list';
 import { formatOpinionDate, stanceLabel, STANCE_VISUAL } from '@/lib/opinions/labels';
 import type { OpinionListItem } from '@/lib/opinions/types';
 import { formatNumber } from '@/lib/utils';
@@ -33,6 +34,7 @@ export function OpinionCard({ opinion }: OpinionCardProps) {
         </div>
 
         <h2 className="mb-2 text-xl font-semibold text-foreground">{opinion.title}</h2>
+        <OpinionPointsList points={opinion.points} compact className="mb-4" />
         <p className="mb-4 line-clamp-2 text-muted-foreground">{opinion.body}</p>
 
         <div className="mt-4 flex items-center justify-between">

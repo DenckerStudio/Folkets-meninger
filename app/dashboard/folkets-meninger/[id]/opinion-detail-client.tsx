@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { BackButton } from '@/components/dashboard/back-button';
+import { OpinionPointsList } from '@/components/opinions/opinion-points-list';
 import { StanceExpandModal } from '@/components/opinions/stance-expand-modal';
 import { useAuth } from '@/hooks/use-auth';
 import { formatOpinionDate, stanceLabel, STANCE_VISUAL } from '@/lib/opinions/labels';
@@ -80,6 +81,7 @@ export function OpinionDetailClient({ opinion, isAuthor }: OpinionDetailClientPr
           <p className="mt-2 text-sm text-muted-foreground">
             {opinion.authorName ? `Delt av ${opinion.authorName}` : 'Delt av en innbygger'}
           </p>
+          <OpinionPointsList points={opinion.points} className="mt-4" />
           <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-foreground">{opinion.body}</p>
         </div>
         <div className="grid grid-cols-3 border-t border-border text-center text-sm">

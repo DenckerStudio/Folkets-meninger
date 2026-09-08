@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { checkDiscussionContent } from '@/lib/moderation/content-check';
 import { createCitizenOpinion, listCitizenOpinions } from '@/lib/opinions/service';
 import { OPINION_LIST_PAGE_SIZE } from '@/lib/opinions/types';
-import { hasOpinionFieldErrors, validateOpinionDraft } from '@/lib/opinions/validate';
+import { hasOpinionFieldErrors, parseOpinionPoints, validateOpinionDraft } from '@/lib/opinions/validate';
 import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { PUBLIC_IDENTITY_ERROR } from '@/lib/identity/public-identity';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -73,17 +73,25 @@ export async function POST(request: Request) {
   const title = typeof body.title === 'string' ? body.title : '';
   const text = typeof body.body === 'string' ? body.body : '';
   const stance = body.stance;
+  const points = body.points;
   const stortingetIssueId = typeof body.stortingetIssueId === 'string' ? body.stortingetIssueId : null;
 
-  const fieldErrors = validateOpinionDraft({ title, body: text, stance });
+  const fieldErrors = validateOpinionDraft({ title, body: text, stance, points });
   if (hasOpinionFieldErrors(fieldErrors)) {
     return NextResponse.json(
-      { error: fieldErrors.title || fieldErrors.body || fieldErrors.stance, fieldErrors },
+      {
+        error: fieldErrors.title || fieldErrors.body || fieldErrors.stance || fieldErrors.points,
+        fieldErrors,
+      },
       { status: 400 },
     );
   }
 
-  const moderation = checkDiscussionContent(`${title}\n${text}`);
+  const moderation = checkDiscussionContent(
+    `${title}\n${text}\n${parseOpinionPoints(points)
+      .map((point) => point.text)
+      .join('\n')}`,
+  );
   if (!moderation.approved) {
     return NextResponse.json({ error: moderation.reason }, { status: 400 });
   }
@@ -94,6 +102,7 @@ export async function POST(request: Request) {
       title,
       body: text,
       stance,
+      points,
       stortingetIssueId,
     });
     return NextResponse.json({ success: true, opinionId });

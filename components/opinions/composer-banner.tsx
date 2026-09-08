@@ -3,9 +3,18 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
+import { OpinionPointsEditor } from '@/components/opinions/opinion-points-editor';
 import { SakPicker } from '@/components/opinions/sak-picker';
 import { StanceExpandModal } from '@/components/opinions/stance-expand-modal';
-import { OPINION_BODY_MIN, OPINION_TITLE_MAX, type OpinionStance, type SakPickerOption } from '@/lib/opinions/types';
+import {
+  OPINION_BODY_MIN,
+  OPINION_POINTS_MIN,
+  OPINION_TITLE_MAX,
+  type OpinionPoint,
+  type OpinionStance,
+  type SakPickerOption,
+} from '@/lib/opinions/types';
+import { emptyOpinionPointDrafts, validateOpinionPoints } from '@/lib/opinions/validate';
 import { routes } from '@/lib/routes';
 
 type ComposerBannerProps = {
@@ -17,7 +26,9 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [issueId, setIssueId] = useState<string | null>(null);
+  const [points, setPoints] = useState<OpinionPoint[]>(emptyOpinionPointDrafts);
   const [error, setError] = useState('');
+  const [pointsError, setPointsError] = useState('');
   const [busy, setBusy] = useState(false);
 
   const submit = async (stance: OpinionStance, body: string) => {
@@ -30,8 +41,15 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
       setError('Skriv en tittel på minst 5 tegn før du deler.');
       return;
     }
+    const pointsResult = validateOpinionPoints(points);
+    if (pointsResult.error) {
+      setPointsError(pointsResult.error);
+      setError(pointsResult.error);
+      return;
+    }
     setBusy(true);
     setError('');
+    setPointsError('');
     try {
       const res = await fetch('/api/opinions', {
         method: 'POST',
@@ -40,6 +58,7 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
           title: trimmedTitle,
           body,
           stance,
+          points: pointsResult.points,
           stortingetIssueId: issueId,
         }),
       });
@@ -74,8 +93,8 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
             Del din mening
           </h2>
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[#001433]/65">
-            Knytt meningen til en sak fra Utforsk, velg For, Blank eller Imot, og skriv minst {OPINION_BODY_MIN}{' '}
-            tegn om hvorfor.
+            Knytt meningen til saken du skriver om, del minst {OPINION_POINTS_MIN} kulepunkter for og imot,
+            velg For, Blank eller Imot, og skriv minst {OPINION_BODY_MIN} tegn om hvorfor.
           </p>
         </div>
 
@@ -88,7 +107,16 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
           className="w-full rounded-2xl border border-[#00205b]/15 bg-white/90 px-3 py-2.5 text-sm text-[#001433] outline-none placeholder:text-[#001433]/40 focus:ring-2 focus:ring-[#00205b]/25"
         />
 
-        <SakPicker options={sakOptions} value={issueId} onChange={setIssueId} />
+        <SakPicker options={sakOptions} value={issueId} onChange={setIssueId} context={title} />
+
+        <OpinionPointsEditor
+          value={points}
+          onChange={(next) => {
+            setPoints(next);
+            setPointsError('');
+          }}
+          error={pointsError}
+        />
 
         <StanceExpandModal
           minLength={OPINION_BODY_MIN}

@@ -14,7 +14,14 @@ import {
   type OpinionStanceCounts,
   type SakPickerOption,
 } from '@/lib/opinions/types';
-import { hasOpinionFieldErrors, isOpinionStance, validateOpinionDraft, validateReplyDraft } from '@/lib/opinions/validate';
+import {
+  hasOpinionFieldErrors,
+  isOpinionStance,
+  parseOpinionPoints,
+  validateOpinionDraft,
+  validateOpinionPoints,
+  validateReplyDraft,
+} from '@/lib/opinions/validate';
 import { getAnonSupabase, getServiceSupabase } from '@/lib/supabase';
 
 type UserJoin = {
@@ -28,6 +35,7 @@ type OpinionRow = {
   title: string;
   body: string;
   stance: string;
+  points: unknown;
   stortinget_issue_id: string | null;
   created_at: string;
   author_user_id: string;
@@ -65,6 +73,7 @@ function mapOpinionRow(row: OpinionRow, issueTitle: string | null, counts: Opini
     title: row.title,
     body: row.body,
     stance,
+    points: parseOpinionPoints(row.points),
     stortingetIssueId: row.stortinget_issue_id,
     issueTitle,
     createdAt: row.created_at,
@@ -143,6 +152,7 @@ const OPINION_SELECT = `
   title,
   body,
   stance,
+  points,
   stortinget_issue_id,
   created_at,
   author_user_id,
@@ -164,23 +174,32 @@ export async function listSakPickerOptions(limit = 300): Promise<SakPickerOption
   if (!supabaseConfigured()) return [];
 
   const supabase = getAnonSupabase();
-  const { data, error } = await supabase
+  const withHenvisning = await supabase
     .from('stortinget_issues')
-    .select('id, title, category')
+    .select('id, title, category, henvisning')
     .order('last_synced_at', { ascending: false })
     .limit(limit);
 
-  if (error) {
-    console.error('listSakPickerOptions error:', error.message);
+  const result = withHenvisning.error
+    ? await supabase
+        .from('stortinget_issues')
+        .select('id, title, category')
+        .order('last_synced_at', { ascending: false })
+        .limit(limit)
+    : withHenvisning;
+
+  if (result.error) {
+    console.error('listSakPickerOptions error:', result.error.message);
     return [];
   }
 
-  return (data ?? [])
+  return (result.data ?? [])
     .filter((row) => row.id && row.title)
     .map((row) => ({
       id: String(row.id),
       title: String(row.title),
       category: row.category ? String(row.category) : null,
+      henvisning: 'henvisning' in row && row.henvisning ? String(row.henvisning) : null,
     }));
 }
 
@@ -268,7 +287,13 @@ export async function getCitizenOpinion(id: string, viewerUserId?: string | null
 
 export async function createCitizenOpinion(
   userId: string,
-  input: { title: string; body: string; stance: unknown; stortingetIssueId?: string | null },
+  input: {
+    title: string;
+    body: string;
+    stance: unknown;
+    points?: unknown;
+    stortingetIssueId?: string | null;
+  },
 ): Promise<string> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Tjenesten er ikke konfigurert');
@@ -276,9 +301,10 @@ export async function createCitizenOpinion(
 
   const title = input.title.trim();
   const body = input.body.trim();
-  const errors = validateOpinionDraft({ title, body, stance: input.stance });
-  if (hasOpinionFieldErrors(errors) || !isOpinionStance(input.stance)) {
-    throw new Error(errors.title || errors.body || errors.stance || 'Ugyldig mening');
+  const pointsResult = validateOpinionPoints(input.points);
+  const errors = validateOpinionDraft({ title, body, stance: input.stance, points: input.points });
+  if (hasOpinionFieldErrors(errors) || !isOpinionStance(input.stance) || pointsResult.error) {
+    throw new Error(errors.title || errors.body || errors.stance || errors.points || 'Ugyldig mening');
   }
   if (title.length < OPINION_TITLE_MIN || title.length > OPINION_TITLE_MAX) {
     throw new Error('Ugyldig tittel');
@@ -294,6 +320,7 @@ export async function createCitizenOpinion(
     p_body: body,
     p_stance: input.stance,
     p_stortinget_issue_id: input.stortingetIssueId?.trim() || null,
+    p_points: pointsResult.points,
   });
 
   if (error) {
