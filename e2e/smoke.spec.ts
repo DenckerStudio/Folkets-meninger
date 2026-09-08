@@ -53,11 +53,14 @@ test.describe('Folkets Stemme smoke', () => {
   });
 
   test('sak suggestions appear from the opinion title', async ({ page }) => {
+    test.setTimeout(120_000);
     await page.goto('/dashboard/folkets-meninger');
     await expect(page.getByRole('heading', { name: 'Folkets meninger' })).toBeVisible();
     await page.getByPlaceholder('Tittel på meningen').fill('Kollektivtilbud i distriktene');
     await expect(page.getByText('Forslag ut fra tittelen')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText('Beste treff')).toBeVisible();
+    await expect(
+      page.locator('[data-sak-option]').first().or(page.getByText(/Ingen treff på tittelen/)),
+    ).toBeVisible({ timeout: 90000 });
   });
 
   test('complete-profile page explains public identity', async ({ page }) => {

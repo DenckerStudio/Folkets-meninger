@@ -31,10 +31,15 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
   const [pointsError, setPointsError] = useState('');
   const [busy, setBusy] = useState(false);
   const [remoteOptions, setRemoteOptions] = useState<SakPickerOption[]>([]);
+  const [loadingSaker, setLoadingSaker] = useState(sakOptions.length === 0);
 
   useEffect(() => {
-    if (sakOptions.length > 0) return;
+    if (sakOptions.length > 0) {
+      setLoadingSaker(false);
+      return;
+    }
     let cancelled = false;
+    setLoadingSaker(true);
     fetch('/api/opinions/sak-options')
       .then((res) => (res.ok ? res.json() : { options: [] }))
       .then((data: { options?: SakPickerOption[] }) => {
@@ -44,6 +49,9 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
       })
       .catch(() => {
         if (!cancelled) setRemoteOptions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSaker(false);
       });
     return () => {
       cancelled = true;
@@ -138,7 +146,13 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
           className="w-full rounded-2xl border border-[#00205b]/15 bg-white/90 px-3 py-2.5 text-sm text-[#001433] outline-none placeholder:text-[#001433]/40 focus:ring-2 focus:ring-[#00205b]/25"
         />
 
-        <SakPicker options={mergedOptions} value={issueId} onChange={setIssueId} context={title} />
+        <SakPicker
+          options={mergedOptions}
+          value={issueId}
+          onChange={setIssueId}
+          context={title}
+          loading={loadingSaker && mergedOptions.length === 0}
+        />
 
         <OpinionPointsEditor
           value={points}

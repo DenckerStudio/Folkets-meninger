@@ -11,9 +11,10 @@ type SakPickerProps = {
   value: string | null;
   onChange: (issueId: string | null) => void;
   context?: string;
+  loading?: boolean;
 };
 
-export function SakPicker({ options, value, onChange, context = '' }: SakPickerProps) {
+export function SakPicker({ options, value, onChange, context = '', loading = false }: SakPickerProps) {
   const [query, setQuery] = useState('');
 
   const selected = value ? options.find((option) => option.id === value) : null;
@@ -101,7 +102,9 @@ export function SakPicker({ options, value, onChange, context = '' }: SakPickerP
                   {rows.length === 1 ? '1 sak' : `${rows.length} saker`}
                 </p>
               </div>
-              {rows.length === 0 ? (
+              {loading && rows.length === 0 ? (
+                <p className="px-3 py-4 text-sm text-[#001433]/55">Henter saker…</p>
+              ) : rows.length === 0 ? (
                 <p className="px-3 py-4 text-sm text-[#001433]/55">
                   {hasQuery
                     ? 'Ingen saker matcher søket. Prøv et annet ord eller saksnummer.'
