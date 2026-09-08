@@ -28,38 +28,21 @@ test.describe('Folkets Stemme smoke', () => {
     await expect(page.getByRole('heading', { name: 'Folkets meninger' })).toBeVisible();
   });
 
-  test('imot fills the compact bar before the stance modal expands', async ({ page }) => {
+  test('composer starts collapsed and expands without the animated stance bar', async ({ page }) => {
     await page.goto('/dashboard/folkets-meninger');
     await expect(page.getByRole('heading', { name: 'Folkets meninger' })).toBeVisible();
-    const modal = page.locator('[data-stance-modal]');
-    await expect(modal).toHaveAttribute('data-phase', 'idle');
-    await modal.locator('[data-stance-choice="imot"]').click();
-    await expect(modal).toHaveAttribute('data-phase', 'filling');
-    await expect(modal).toHaveAttribute('data-phase', 'expanded', { timeout: 2000 });
-    await expect(page.getByRole('heading', { name: /Hvorfor imot/i })).toBeVisible();
-  });
-
-  test('create stance bar is red then white spacer then blue, without Blank', async ({ page }) => {
-    await page.goto('/dashboard/folkets-meninger');
-    await expect(page.getByRole('heading', { name: 'Folkets meninger' })).toBeVisible();
-    const modal = page.locator('[data-stance-modal]').first();
-    await expect(modal).toHaveAttribute('data-allow-blank', 'false');
-    await expect(modal.locator('[data-stance-choice="blank"]')).toHaveCount(0);
-    await expect(modal.locator('[data-stance-spacer="blank"]')).toBeVisible();
-    await expect(modal.locator('[data-stance-choice="imot"]')).toHaveText('Imot');
-    await expect(modal.locator('[data-stance-choice="for"]')).toHaveText('For');
-
-    const imotBox = await modal.locator('[data-stance-choice="imot"]').boundingBox();
-    const spacerBox = await modal.locator('[data-stance-spacer="blank"]').boundingBox();
-    const forBox = await modal.locator('[data-stance-choice="for"]').boundingBox();
-    expect(imotBox).toBeTruthy();
-    expect(spacerBox).toBeTruthy();
-    expect(forBox).toBeTruthy();
-    expect(imotBox!.x).toBeLessThan(spacerBox!.x);
-    expect(spacerBox!.x).toBeLessThan(forBox!.x);
-
-    await modal.locator('[data-stance-spacer="blank"]').click({ force: true });
-    await expect(modal).toHaveAttribute('data-phase', 'idle');
+    const composer = page.locator('[data-composer]');
+    await expect(composer).toHaveAttribute('data-expanded', 'false');
+    await expect(page.locator('[data-stance-modal]')).toHaveCount(0);
+    await expect(page.getByText('Borgerinitiativ')).toHaveCount(0);
+    await composer.locator('[data-composer-cta="open"]').click();
+    await expect(composer).toHaveAttribute('data-expanded', 'true');
+    await expect(page.getByText(/Tittel: 5[-–]200 tegn/)).toBeVisible();
+    await expect(page.getByText(/Hvert kulepunkt: 12[-–]180 tegn/)).toBeVisible();
+    await expect(page.getByLabel('Begrunnelse')).toBeVisible();
+    await expect(page.getByText('Velg en sak først, så kan du si For eller Imot.')).toBeVisible();
+    await expect(composer.locator('[data-create-stance]')).toHaveCount(0);
+    await expect(page.locator('[data-stance-modal]')).toHaveCount(0);
   });
 
   test('reply stance bar keeps Blank in the white stripe', async ({ page }) => {
@@ -91,11 +74,16 @@ test.describe('Folkets Stemme smoke', () => {
     test.setTimeout(120_000);
     await page.goto('/dashboard/folkets-meninger');
     await expect(page.getByRole('heading', { name: 'Folkets meninger' })).toBeVisible();
+    await page.getByRole('button', { name: 'Del din mening' }).click();
     await page.getByPlaceholder('Tittel på meningen').fill('Kollektivtilbud i distriktene');
     await expect(page.getByText('Forslag ut fra tittelen')).toBeVisible({ timeout: 15000 });
-    await expect(
-      page.locator('[data-sak-option]').first().or(page.getByText(/Ingen treff på tittelen/)),
-    ).toBeVisible({ timeout: 90000 });
+    const firstOption = page.locator('[data-sak-option]').first();
+    const empty = page.getByText(/Ingen treff på tittelen/);
+    await expect(firstOption.or(empty)).toBeVisible({ timeout: 90000 });
+    if ((await firstOption.count()) > 0) {
+      await page.locator('[data-sak-preview]').first().click();
+      await expect(page.locator('[data-sak-preview-frame]')).toBeVisible();
+    }
   });
 
   test('complete-profile page explains public identity', async ({ page }) => {

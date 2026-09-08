@@ -28,6 +28,7 @@ export const routes = {
   sporsmalDetail: (id: string) => `${DASHBOARD_PREFIX}/sporsmal/${id}`,
   sak: (id: string) => `${DASHBOARD_PREFIX}/sak/${id}`,
   opinion: (id: string) => `${DASHBOARD_PREFIX}/folkets-meninger/${id}`,
+  sakEmbed: (id: string) => `/embed/sak/${id}`,
   poll: (id: string) => `${DASHBOARD_PREFIX}/avstemninger/${id}`,
   initiative: (id: string) => `${DASHBOARD_PREFIX}/initiativ/${id}`,
   horing: (id: string) => `${DASHBOARD_PREFIX}/horinger/${id}`,
@@ -76,4 +77,8 @@ export function isPublicDashboardFolketsMeningerPath(pathname: string): boolean 
 
 export function isPublicProfilePath(pathname: string): boolean {
   return /^\/profil\/[^/]+$/.test(pathname);
+}
+
+export function isEmbedPath(pathname: string): boolean {
+  return pathname.startsWith('/embed/');
 }

@@ -7,6 +7,7 @@ import {
   OPINION_POINTS_MIN,
   OPINION_POINT_STANCES,
   OPINION_POINT_TEXT_MAX,
+  OPINION_POINT_TEXT_MIN,
   type OpinionPoint,
   type OpinionPointStance,
 } from '@/lib/opinions/types';
@@ -46,7 +47,8 @@ export function OpinionPointsEditor({ value, onChange, error }: OpinionPointsEdi
         </span>
       </div>
       <p className="mb-3 text-xs leading-relaxed text-[#001433]/60">
-        Del minst tre korte argumenter merket For eller Imot, med minst ett av hvert.
+        Del minst {OPINION_POINTS_MIN} korte argumenter merket For eller Imot, med minst ett av hvert.
+        Hvert kulepunkt: {OPINION_POINT_TEXT_MIN}–{OPINION_POINT_TEXT_MAX} tegn.
       </p>
       <ul className="space-y-2">
         {value.map((point, index) => (
@@ -81,6 +83,9 @@ export function OpinionPointsEditor({ value, onChange, error }: OpinionPointsEdi
               placeholder={point.stance === 'for' ? 'Argument for …' : 'Argument imot …'}
               className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2.5 text-sm text-[#001433] outline-none placeholder:text-[#001433]/40"
             />
+            <span className="self-center pr-2 text-[11px] tabular-nums text-[#001433]/45">
+              {point.text.trim().length}/{OPINION_POINT_TEXT_MAX}
+            </span>
             {value.length > OPINION_POINTS_MIN ? (
               <button
                 type="button"

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Search, X } from 'lucide-react';
+import { SakPreviewDialog } from '@/components/opinions/sak-preview-dialog';
 import { rankSakOptions, tokenizeOpinionQuery } from '@/lib/opinions/sak-relevance';
 import type { SakPickerOption } from '@/lib/opinions/types';
 import { cn } from '@/lib/utils';
@@ -16,8 +17,10 @@ type SakPickerProps = {
 
 export function SakPicker({ options, value, onChange, context = '', loading = false }: SakPickerProps) {
   const [query, setQuery] = useState('');
+  const [previewId, setPreviewId] = useState<string | null>(null);
 
   const selected = value ? options.find((option) => option.id === value) : null;
+  const previewOption = previewId ? options.find((option) => option.id === previewId) : null;
   const hasQuery = query.trim().length > 0;
   const hasTitleContext = tokenizeOpinionQuery(context).length > 0 || context.trim().length >= 5;
 
@@ -43,8 +46,8 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
         </label>
         <p className="text-xs leading-relaxed text-[#001433]/60">
           {hasTitleContext
-            ? 'Forslagene oppdateres automatisk ut fra tittelen. Søk om du vil velge en annen sak.'
-            : 'Skriv tittelen først, så foreslår vi saker. Du kan også søke på tittel eller saksnummer.'}
+            ? 'Forslagene oppdateres automatisk ut fra tittelen. Åpne saken her for å sjekke at det er riktig — du mister ikke skjemaet.'
+            : 'Skriv tittelen først, så foreslår vi saker. Åpne en sak for å se innholdet uten å forlate siden.'}
         </p>
       </div>
 
@@ -59,16 +62,26 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
               Sak {selected.id}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              onChange(null);
-              setQuery('');
-            }}
-            className="shrink-0 text-xs font-medium text-[#00205b] hover:underline"
-          >
-            Bytt sak
-          </button>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <button
+              type="button"
+              data-sak-preview={selected.id}
+              onClick={() => setPreviewId(selected.id)}
+              className="text-xs font-medium text-[#00205b] hover:underline"
+            >
+              Vis sak
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onChange(null);
+                setQuery('');
+              }}
+              className="text-xs font-medium text-[#001433]/60 hover:underline"
+            >
+              Bytt sak
+            </button>
+          </div>
         </div>
       ) : (
         <>
@@ -114,35 +127,45 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
                 <ul className="max-h-72 divide-y divide-[#00205b]/8 overflow-auto" role="listbox">
                   {rows.map((option, index) => (
                     <li key={option.id}>
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={false}
-                        data-sak-option={option.id}
-                        className={cn(
-                          'flex w-full flex-col items-start px-3 py-2.5 text-left hover:bg-[#00205b]/5',
-                        )}
-                        onClick={() => {
-                          onChange(option.id);
-                          setQuery('');
-                        }}
-                      >
-                        <span className="flex w-full items-start gap-2">
-                          <span className="min-w-0 flex-1 text-sm font-medium leading-snug text-[#001433]">
-                            {option.title}
-                          </span>
-                          {!hasQuery && index === 0 ? (
-                            <span className="shrink-0 rounded-full bg-[#00205b]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#00205b]">
-                              Beste treff
+                      <div className="flex items-stretch">
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={false}
+                          data-sak-option={option.id}
+                          className={cn(
+                            'flex min-w-0 flex-1 flex-col items-start px-3 py-2.5 text-left hover:bg-[#00205b]/5',
+                          )}
+                          onClick={() => {
+                            onChange(option.id);
+                            setQuery('');
+                          }}
+                        >
+                          <span className="flex w-full items-start gap-2">
+                            <span className="min-w-0 flex-1 text-sm font-medium leading-snug text-[#001433]">
+                              {option.title}
                             </span>
-                          ) : null}
-                        </span>
-                        <span className="mt-0.5 text-xs text-[#001433]/55">
-                          {option.category ? `${option.category} · ` : ''}
-                          {option.henvisning ? `${option.henvisning} · ` : ''}
-                          Sak {option.id}
-                        </span>
-                      </button>
+                            {!hasQuery && index === 0 ? (
+                              <span className="shrink-0 rounded-full bg-[#00205b]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#00205b]">
+                                Beste treff
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="mt-0.5 text-xs text-[#001433]/55">
+                            {option.category ? `${option.category} · ` : ''}
+                            {option.henvisning ? `${option.henvisning} · ` : ''}
+                            Sak {option.id}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          data-sak-preview={option.id}
+                          onClick={() => setPreviewId(option.id)}
+                          className="shrink-0 px-3 text-xs font-medium text-[#00205b] hover:underline"
+                        >
+                          Vis
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -151,6 +174,20 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
           ) : null}
         </>
       )}
+
+      <SakPreviewDialog
+        issueId={previewId}
+        title={previewOption?.title ?? selected?.title}
+        onClose={() => setPreviewId(null)}
+        onSelect={
+          previewId && previewId !== value
+            ? (id) => {
+                onChange(id);
+                setQuery('');
+              }
+            : undefined
+        }
+      />
     </div>
   );
 }

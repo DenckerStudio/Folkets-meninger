@@ -1,21 +1,28 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { OpinionPointsEditor } from '@/components/opinions/opinion-points-editor';
 import { SakPicker } from '@/components/opinions/sak-picker';
-import { StanceExpandModal } from '@/components/opinions/stance-expand-modal';
+import { FLAG_BLUE, FLAG_RED, FLAG_WHITE, STANCE_VISUAL } from '@/lib/opinions/labels';
 import {
+  OPINION_BODY_MAX,
   OPINION_BODY_MIN,
   OPINION_POINTS_MIN,
+  OPINION_POINT_TEXT_MAX,
+  OPINION_POINT_TEXT_MIN,
   OPINION_TITLE_MAX,
+  OPINION_TITLE_MIN,
+  type OpinionCreateStance,
   type OpinionPoint,
-  type OpinionStance,
   type SakPickerOption,
 } from '@/lib/opinions/types';
 import { emptyOpinionPointDrafts, validateOpinionPoints } from '@/lib/opinions/validate';
 import { routes } from '@/lib/routes';
+
+const CREATE_STANCE_ORDER = ['imot', 'for'] as const satisfies readonly OpinionCreateStance[];
 
 type ComposerBannerProps = {
   sakOptions: SakPickerOption[];
@@ -24,8 +31,11 @@ type ComposerBannerProps = {
 export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
   const { user } = useAuth();
   const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
   const [issueId, setIssueId] = useState<string | null>(null);
+  const [stance, setStance] = useState<OpinionCreateStance | null>(null);
   const [points, setPoints] = useState<OpinionPoint[]>(emptyOpinionPointDrafts);
   const [error, setError] = useState('');
   const [pointsError, setPointsError] = useState('');
@@ -69,24 +79,38 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
     return merged;
   }, [remoteOptions, sakOptions]);
 
-  const submit = async (stance: OpinionStance, body: string) => {
+  const titleLength = title.trim().length;
+  const bodyLength = body.trim().length;
+  const bodyRemaining = Math.max(0, OPINION_BODY_MIN - bodyLength);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
     if (!user) {
       router.push(`${routes.login}?next=${encodeURIComponent(routes.folketsMeninger)}`);
       return;
     }
     const trimmedTitle = title.trim();
-    if (trimmedTitle.length < 5) {
-      setError('Skriv en tittel på minst 5 tegn før du deler.');
+    if (trimmedTitle.length < OPINION_TITLE_MIN) {
+      setError(`Tittelen må være minst ${OPINION_TITLE_MIN} tegn.`);
+      return;
+    }
+    if (!issueId) {
+      setError('Velg en sak før du tar standpunkt.');
+      return;
+    }
+    if (!stance) {
+      setError('Velg For eller Imot');
+      return;
+    }
+    const trimmedBody = body.trim();
+    if (trimmedBody.length < OPINION_BODY_MIN) {
+      setError(`Begrunnelsen må være minst ${OPINION_BODY_MIN} tegn.`);
       return;
     }
     const pointsResult = validateOpinionPoints(points);
     if (pointsResult.error) {
       setPointsError(pointsResult.error);
       setError(pointsResult.error);
-      return;
-    }
-    if (stance === 'blank') {
-      setError('Velg For eller Imot');
       return;
     }
     setBusy(true);
@@ -98,7 +122,7 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: trimmedTitle,
-          body,
+          body: trimmedBody,
           stance,
           points: pointsResult.points,
           stortingetIssueId: issueId,
@@ -120,61 +144,181 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
     }
   };
 
+  function pickCreateStance(next: OpinionCreateStance) {
+    if (!issueId) {
+      setError('Velg en sak før du tar standpunkt.');
+      return;
+    }
+    setStance(next);
+    setError('');
+  }
+
   return (
-    <section className="relative rounded-xxl border border-[#00205b]/12 bg-white px-5 py-6 sm:px-8 sm:py-8">
+    <section
+      data-composer=""
+      data-expanded={expanded ? 'true' : 'false'}
+      className="relative overflow-hidden rounded-xxl border border-[#00205b]/12 bg-white"
+    >
       <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xxl" aria-hidden>
         <div className="absolute -left-16 -top-20 h-52 w-52 rounded-full bg-[#ba0c2f]/15 blur-3xl" />
         <div className="absolute -right-12 top-1/3 h-44 w-44 rounded-full bg-[#00205b]/18 blur-3xl" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.92),_transparent_55%)]" />
       </div>
 
-      <div className="relative space-y-5">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ba0c2f]">Borgerinitiativ</p>
-          <h2 className="mt-1 text-xl font-extrabold tracking-tight text-[#001433] sm:text-2xl">
+      {!expanded ? (
+        <div className="relative flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
+          <p className="text-base font-semibold tracking-tight text-[#001433]">Del din mening</p>
+          <button
+            type="button"
+            data-composer-cta="open"
+            onClick={() => setExpanded(true)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#00205B] px-4 py-2 text-sm font-semibold text-white hover:bg-[#00205B]/90"
+          >
             Del din mening
-          </h2>
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[#001433]/65">
-            Knytt meningen til saken du skriver om, del minst {OPINION_POINTS_MIN} kulepunkter for og imot,
-            og velg For eller Imot. Begge krever minst {OPINION_BODY_MIN} tegn.
-          </p>
+            <ChevronDown className="h-4 w-4" />
+          </button>
         </div>
+      ) : (
+        <form className="relative space-y-5 px-5 py-6 sm:px-8 sm:py-8" onSubmit={submit}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-extrabold tracking-tight text-[#001433] sm:text-2xl">
+                Del din mening
+              </h2>
+              <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[#001433]/65">
+                Velg saken først, deretter For eller Imot. Tittel: {OPINION_TITLE_MIN}–{OPINION_TITLE_MAX} tegn.
+                Begrunnelse: minst {OPINION_BODY_MIN} tegn. Kulepunkter: minst {OPINION_POINTS_MIN}, hver på{' '}
+                {OPINION_POINT_TEXT_MIN}–{OPINION_POINT_TEXT_MAX} tegn.
+              </p>
+            </div>
+            <button
+              type="button"
+              data-composer-cta="close"
+              onClick={() => setExpanded(false)}
+              className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-[#00205b] hover:underline"
+            >
+              Skjul
+              <ChevronUp className="h-4 w-4" />
+            </button>
+          </div>
 
-        <input
-          type="text"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="Tittel på meningen"
-          maxLength={OPINION_TITLE_MAX}
-          className="w-full rounded-2xl border border-[#00205b]/15 bg-white/90 px-3 py-2.5 text-sm text-[#001433] outline-none placeholder:text-[#001433]/40 focus:ring-2 focus:ring-[#00205b]/25"
-        />
+          <div>
+            <div className="mb-1 flex items-baseline justify-between gap-3">
+              <label htmlFor="opinion-title" className="text-sm font-medium text-[#001433]">
+                Tittel
+              </label>
+              <span className="text-xs text-[#001433]/55">
+                {titleLength}/{OPINION_TITLE_MAX} · minst {OPINION_TITLE_MIN} tegn
+              </span>
+            </div>
+            <input
+              id="opinion-title"
+              type="text"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Tittel på meningen"
+              maxLength={OPINION_TITLE_MAX}
+              className="w-full rounded-2xl border border-[#00205b]/15 bg-white/90 px-3 py-2.5 text-sm text-[#001433] outline-none placeholder:text-[#001433]/40 focus:ring-2 focus:ring-[#00205b]/25"
+            />
+          </div>
 
-        <SakPicker
-          options={mergedOptions}
-          value={issueId}
-          onChange={setIssueId}
-          context={title}
-          loading={loadingSaker && mergedOptions.length === 0}
-        />
+          <SakPicker
+            options={mergedOptions}
+            value={issueId}
+            onChange={(next) => {
+              setIssueId(next);
+              if (!next) setStance(null);
+              setError('');
+            }}
+            context={title}
+            loading={loadingSaker && mergedOptions.length === 0}
+          />
 
-        <OpinionPointsEditor
-          value={points}
-          onChange={(next) => {
-            setPoints(next);
-            setPointsError('');
-          }}
-          error={pointsError}
-        />
+          <div>
+            <p className="mb-1 text-sm font-medium text-[#001433]">Standpunkt</p>
+            {issueId ? (
+              <div className="flex overflow-hidden rounded-2xl border border-[#00205b]/12">
+                {CREATE_STANCE_ORDER.map((choice) => {
+                  const visual = STANCE_VISUAL[choice];
+                  const selected = stance === choice;
+                  return (
+                    <button
+                      key={choice}
+                      type="button"
+                      data-create-stance={choice}
+                      aria-pressed={selected}
+                      onClick={() => pickCreateStance(choice)}
+                      className="flex-1 px-4 py-3 text-sm font-semibold"
+                      style={{
+                        backgroundColor: selected ? visual.bg : FLAG_WHITE,
+                        color: selected ? visual.fg : visual.bg,
+                        boxShadow: selected ? undefined : `inset 0 0 0 1px ${visual.bg}22`,
+                      }}
+                    >
+                      {visual.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="rounded-2xl border border-dashed border-[#00205b]/15 px-3 py-3 text-sm text-[#001433]/55">
+                Velg en sak først, så kan du si For eller Imot.
+              </p>
+            )}
+          </div>
 
-        <StanceExpandModal
-          minLength={OPINION_BODY_MIN}
-          submitLabel="Publiser mening"
-          onSubmit={submit}
-          busy={busy}
-          error={error}
-          allowBlank={false}
-        />
-      </div>
+          <div>
+            <div className="mb-1 flex items-baseline justify-between gap-3">
+              <label htmlFor="opinion-body" className="text-sm font-medium text-[#001433]">
+                Begrunnelse
+              </label>
+              <span className="text-xs text-[#001433]/55">
+                {bodyRemaining > 0
+                  ? `${bodyRemaining} tegn igjen til minstekravet`
+                  : `${bodyLength}/${OPINION_BODY_MAX} tegn`}
+              </span>
+            </div>
+            <p className="mb-2 text-xs leading-relaxed text-[#001433]/60">
+              Minst {OPINION_BODY_MIN} tegn, maks {OPINION_BODY_MAX} tegn.
+            </p>
+            <textarea
+              id="opinion-body"
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+              rows={7}
+              maxLength={OPINION_BODY_MAX}
+              placeholder={`Skriv minst ${OPINION_BODY_MIN} tegn om hvorfor du mener dette.`}
+              className="w-full resize-y rounded-2xl border border-[#00205b]/15 bg-white/90 px-3 py-2.5 text-sm text-[#001433] outline-none placeholder:text-[#001433]/40 focus:ring-2 focus:ring-[#00205b]/25"
+            />
+          </div>
+
+          <OpinionPointsEditor
+            value={points}
+            onChange={(next) => {
+              setPoints(next);
+              setPointsError('');
+            }}
+            error={pointsError}
+          />
+
+          {error ? (
+            <p className="text-sm font-medium" style={{ color: FLAG_RED }}>
+              {error}
+            </p>
+          ) : null}
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-full px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ backgroundColor: FLAG_BLUE }}
+            >
+              {busy ? 'Lagrer…' : 'Publiser mening'}
+            </button>
+          </div>
+        </form>
+      )}
     </section>
   );
 }

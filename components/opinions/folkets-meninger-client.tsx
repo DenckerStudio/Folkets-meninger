@@ -43,19 +43,16 @@ export function FolketsMeningerClient({ opinions, sakOptions }: FolketsMeningerC
   }, [opinions, searchQuery, sortBy, stanceFilter]);
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-3 pb-12">
       <FadeIn delay={0.1}>
-        <PageHeader
-          title="Folkets meninger"
-          description="Del For eller Imot om saker fra Stortinget. Andre kan svare For, Blank eller Imot — For og Imot må begrunnes."
-        />
+        <PageHeader title="Folkets meninger" />
       </FadeIn>
 
-      <FadeIn delay={0.15} direction="up">
+      <FadeIn delay={0.12} direction="up">
         <ComposerBanner sakOptions={sakOptions} />
       </FadeIn>
 
-      <FadeIn delay={0.2} direction="up">
+      <FadeIn delay={0.18} direction="up">
         <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm md:flex-row">
           <div className="relative flex-grow">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -95,7 +92,7 @@ export function FolketsMeningerClient({ opinions, sakOptions }: FolketsMeningerC
         </div>
       </FadeIn>
 
-      <FadeIn delay={0.25} direction="up">
+      <FadeIn delay={0.22} direction="up">
         <div className="space-y-4">
           {displayed.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border px-6 py-12 text-center text-muted-foreground">
