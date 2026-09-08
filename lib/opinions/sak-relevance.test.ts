@@ -13,7 +13,10 @@ assert.deepEqual(tokenizeOpinionQuery('Jeg vil ha bedre kollektiv i distriktene'
 
 const ranked = rankSakOptions(options, 'Kollektivtilbud i distriktene');
 assert.equal(ranked[0]?.id, '3');
-assert.ok(ranked.find((option) => option.id === '2'));
+assert.equal(
+  ranked.some((option) => option.id === '4'),
+  false,
+);
 assert.equal(
   rankSakOptions(options, 'elbil og skatt')[0]?.id,
   '1',
