@@ -21,7 +21,7 @@ RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public', 'auth'
-AS $function$
+AS $$
 DECLARE
   v_id uuid;
   v_title text;
@@ -108,7 +108,7 @@ BEGIN
 
   RETURN v_id;
 END;
-$function$;
+$$;
 
 REVOKE ALL ON FUNCTION public.create_citizen_opinion(uuid, text, text, text, text, jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.create_citizen_opinion(uuid, text, text, text, text, jsonb) TO service_role;

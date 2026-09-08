@@ -81,7 +81,7 @@ RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public', 'auth'
-AS $function$
+AS $$
 DECLARE
   v_id uuid;
   v_title text;
@@ -124,7 +124,7 @@ BEGIN
 
   RETURN v_id;
 END;
-$function$;
+$$;
 
 CREATE OR REPLACE FUNCTION public.create_citizen_opinion_reply(
   p_user_id uuid,
@@ -136,7 +136,7 @@ RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public', 'auth'
-AS $function$
+AS $$
 DECLARE
   v_id uuid;
   v_body text;
@@ -198,7 +198,7 @@ BEGIN
 
   RETURN v_id;
 END;
-$function$;
+$$;
 
 REVOKE ALL ON FUNCTION public.create_citizen_opinion(uuid, text, text, text, text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.create_citizen_opinion_reply(uuid, uuid, text, text) FROM PUBLIC;

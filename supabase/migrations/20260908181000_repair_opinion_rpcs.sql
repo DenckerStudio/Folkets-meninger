@@ -1,4 +1,10 @@
--- Blank stance does not require a written body. For/Imot keep the existing minimums.
+-- Repair Folkets meninger RPCs without $function$ quoting.
+-- Coolify / some SQL editors treat $function as an env var and cut the body,
+-- which yields: unterminated dollar-quoted string at or near "$function$".
+-- Paste this whole file (one run). Safe to re-run.
+
+ALTER TABLE public.citizen_opinions
+  ADD COLUMN IF NOT EXISTS points jsonb NOT NULL DEFAULT '[]'::jsonb;
 
 ALTER TABLE public.citizen_opinions
   DROP CONSTRAINT IF EXISTS citizen_opinions_body_len;
@@ -18,7 +24,10 @@ ALTER TABLE public.citizen_opinion_replies
     AND (stance = 'blank' OR char_length(btrim(body)) >= 80)
   );
 
-CREATE OR REPLACE FUNCTION public.create_citizen_opinion(
+DROP FUNCTION IF EXISTS public.create_citizen_opinion(uuid, text, text, text, text);
+DROP FUNCTION IF EXISTS public.create_citizen_opinion(uuid, text, text, text, text, jsonb);
+
+CREATE FUNCTION public.create_citizen_opinion(
   p_user_id uuid,
   p_title text,
   p_body text,
@@ -60,15 +69,11 @@ BEGIN
     RAISE EXCEPTION 'Title must be between 5 and 200 characters';
   END IF;
 
-  IF v_stance NOT IN ('for', 'blank', 'imot') THEN
+  IF v_stance NOT IN ('for', 'imot') THEN
     RAISE EXCEPTION 'Invalid stance';
   END IF;
 
-  IF v_stance = 'blank' THEN
-    IF char_length(v_body) > 4000 THEN
-      RAISE EXCEPTION 'Body must be at most 4000 characters';
-    END IF;
-  ELSIF char_length(v_body) < 250 OR char_length(v_body) > 4000 THEN
+  IF char_length(v_body) < 250 OR char_length(v_body) > 4000 THEN
     RAISE EXCEPTION 'Body must be between 250 and 4000 characters';
   END IF;
 
