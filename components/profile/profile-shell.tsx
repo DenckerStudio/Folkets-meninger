@@ -14,8 +14,6 @@ import { ProfileValgomat } from '@/components/profile/profile-valgomat';
 import { ProfileInterests } from '@/components/profile/profile-interests';
 import { ProfileNotifications } from '@/components/profile/profile-notifications';
 import { ProfilePrivacy } from '@/components/profile/profile-privacy';
-import { ProfilePublicSettings } from '@/components/profile/profile-public-settings';
-import { ProfileAppPreferences } from '@/components/profile/profile-app-preferences';
 import { ProfileStemmePlus } from '@/components/profile/profile-stemme-plus';
 import { ProfileFylkePicker } from '@/components/profile/profile-fylke-picker';
 import { useIsAdmin } from '@/hooks/use-is-admin';
@@ -340,7 +338,6 @@ function ProfileShellAuthenticated({
               />
             </>
           )}
-          {activeTab === 'preferanser' && <ProfileAppPreferences />}
           {activeTab === 'varsler' && (
             <ProfileNotifications
               emailEnabled={notifEmailEnabled}
@@ -353,7 +350,6 @@ function ProfileShellAuthenticated({
             />
           )}
           {activeTab === 'stemme-plus' && <ProfileStemmePlus />}
-          {activeTab === 'offentlig' && <ProfilePublicSettings userId={user.id} />}
           {activeTab === 'min-data' && <ProfilePrivacy />}
         </div>
       )}

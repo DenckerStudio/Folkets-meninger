@@ -1,16 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Bell, ChevronDown, Eye, LogIn, LogOut, Shield, UserCircle } from 'lucide-react';
+import { Bell, LogIn } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { useIsAdmin } from '@/hooks/use-is-admin';
 import { usePathname, useRouter } from 'next/navigation';
 import { isDashboardPath, isPublicProfilePath, routes } from '@/lib/routes';
-import { desktopPrimaryNavLinks, isAdminActive } from '@/lib/site-nav-links';
+import { desktopPrimaryNavLinks } from '@/lib/site-nav-links';
 import { DashboardNavMenuButton } from '@/components/dashboard/dashboard-nav-context';
+import { ProfileMenuDropdown } from '@/components/profile/profile-menu-dropdown';
 
 export function Header() {
   const scrolled = useScroll(10);
@@ -21,9 +21,6 @@ export function Header() {
   const isLoggedIn = !!user;
   const [unreadCount, setUnreadCount] = React.useState(0);
   const displayUnreadCount = isLoggedIn ? unreadCount : 0;
-  const displayName =
-    user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
-  const initials = initialsFromDisplayName(displayName || user?.email || 'FS');
   const logoHref = isPublicProfilePath(pathname)
     ? routes.home
     : isLoggedIn
@@ -108,36 +105,11 @@ export function Header() {
             <DashboardNavMenuButton className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background text-foreground transition-colors hover:bg-accent hover:text-accent-foreground xl:hidden" />
           ) : null}
           {isLoggedIn ? (
-            <details className={cn('group relative', inDashboard && 'hidden xl:block')}>
-              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-border bg-card py-1.5 pl-1.5 pr-3 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted/50">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#00205b] text-xs font-bold text-white">
-                  {initials}
-                </span>
-                <span className="hidden max-w-28 truncate sm:inline">
-                  {displayName?.split(' ')[0] || 'Profil'}
-                </span>
-                <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
-              </summary>
-              <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-xl">
-                <div className="border-b border-border bg-muted/40 px-4 py-3">
-                  <p className="text-sm font-semibold text-foreground">{displayName || 'Min konto'}</p>
-                  <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
-                </div>
-                <div className="p-2">
-                  <ProfileMenuLink href={routes.minSide} icon={UserCircle} title="Min side" description="Profil og innstillinger" />
-                  <ProfileMenuLink href={routes.profile(user!.id)} icon={Eye} title="Offentlig profil" description="Slik andre ser deg" />
-                  <AdminProfileMenuLink pathname={pathname ?? ''} />
-                  <button
-                    type="button"
-                    onClick={handleSignOut}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Logg ut
-                  </button>
-                </div>
-              </div>
-            </details>
+            <div className={cn(inDashboard && 'hidden xl:block')}>
+              <Suspense fallback={<ProfileMenuDropdownFallback />}>
+                <ProfileMenuDropdown onSignOut={handleSignOut} />
+              </Suspense>
+            </div>
           ) : (
             <>
               <Button variant="outline" size="sm" className="sm:h-8" render={<Link href={routes.login} />}>
@@ -155,55 +127,13 @@ export function Header() {
   );
 }
 
-type ProfileMenuLinkProps = {
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-};
-
-function ProfileMenuLink({ href, icon: Icon, title, description }: ProfileMenuLinkProps) {
+function ProfileMenuDropdownFallback() {
   return (
-    <Link href={href} className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/50">
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-      <span>
-        <span className="block text-sm font-medium text-foreground">{title}</span>
-        <span className="block text-xs text-muted-foreground">{description}</span>
-      </span>
-    </Link>
+    <div
+      className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-popover"
+      aria-hidden
+    />
   );
-}
-
-function AdminProfileMenuLink({ pathname }: { pathname: string }) {
-  const isAdminUser = useIsAdmin();
-
-  if (!isAdminUser) return null;
-
-  const active = isAdminActive(pathname);
-
-  return (
-    <Link
-      href={routes.admin}
-      className={cn(
-        'flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/50',
-        active && 'bg-brand/10',
-      )}
-      aria-current={active ? 'page' : undefined}
-    >
-      <Shield className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-      <span>
-        <span className="block text-sm font-medium text-foreground">Admin</span>
-        <span className="block text-xs text-muted-foreground">Drift, Reels og statistikk</span>
-      </span>
-    </Link>
-  );
-}
-
-function initialsFromDisplayName(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
 function useScroll(threshold: number) {

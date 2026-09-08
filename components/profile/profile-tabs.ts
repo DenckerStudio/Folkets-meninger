@@ -1,11 +1,10 @@
 import type { LucideIcon } from 'lucide-react';
-import { Bell, FileText, HeartHandshake, PieChart, Settings, Shield, SlidersHorizontal, UserCircle } from 'lucide-react';
+import { Bell, FileText, HeartHandshake, PieChart, Settings, Shield, SlidersHorizontal } from 'lucide-react';
 
 export type ProfileTabId =
   | 'historikk'
   | 'valgomat'
   | 'innstillinger'
-  | 'offentlig'
   | 'preferanser'
   | 'varsler'
   | 'stemme-plus'
@@ -34,12 +33,6 @@ export const PROFILE_TABS: {
     label: 'Mine hjertesaker',
     icon: Settings,
     description: 'Navn og interesseområder',
-  },
-  {
-    id: 'offentlig',
-    label: 'Offentlig profil',
-    icon: UserCircle,
-    description: 'Bio, parti og synlighet',
   },
   {
     id: 'preferanser',
