@@ -13,22 +13,6 @@ type Phase = 'idle' | 'filling' | 'expanded';
 
 type FillOrigin = { x: number; y: number };
 
-function stanceButtonRadius(stance: OpinionStance, phase: Phase): string {
-  const expandedLike = phase === 'filling' || phase === 'expanded';
-  switch (stance) {
-    case 'for':
-      return expandedLike ? '2rem 0 0 0' : '2rem 0 0 2rem';
-    case 'blank':
-      return '0';
-    case 'imot':
-      return expandedLike ? '0 2rem 0 0' : '0 2rem 2rem 0';
-    default: {
-      const _exhaustive: never = stance;
-      return _exhaustive;
-    }
-  }
-}
-
 type StanceExpandModalProps = {
   minLength: number;
   submitLabel: string;
@@ -158,7 +142,7 @@ export function StanceExpandModal({
         aria-modal={expanded || undefined}
         aria-labelledby={expanded ? titleId : undefined}
         className={cn(
-          'rounded-xxl absolute inset-x-0 top-0 w-full overflow-hidden bg-card shadow-sm',
+          'rounded-xxl absolute inset-x-0 top-0 w-full overflow-hidden border border-border bg-card shadow-sm',
           expanded || filling ? 'z-50 shadow-2xl' : 'z-10',
         )}
         animate={{
@@ -215,7 +199,7 @@ export function StanceExpandModal({
                   opacity: filling || expanded ? (isPicked ? 1 : 0.35) : 1,
                   border: 'none',
                   boxShadow: 'none',
-                  borderRadius: stanceButtonRadius(stance, phase),
+                  borderRadius: 0,
                 }}
               >
                 {visual.label}
