@@ -45,12 +45,15 @@ export function SakPreviewDialog({ issueId, title, onClose, onSelect }: SakPrevi
       }
     >
       {issueId ? (
-        <iframe
-          title={title?.trim() || `Sak ${issueId}`}
-          src={routes.sakEmbed(issueId)}
-          data-sak-preview-frame={issueId}
-          className="-mx-5 -my-5 h-[min(70vh,720px)] w-[calc(100%+2.5rem)] border-0 bg-background"
-        />
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">Sak {issueId}</p>
+          <iframe
+            title={title?.trim() || `Sak ${issueId}`}
+            src={routes.sakEmbed(issueId)}
+            data-sak-preview-frame={issueId}
+            className="h-[min(64vh,640px)] w-full rounded-xl border border-border bg-background"
+          />
+        </div>
       ) : null}
     </Dialog>
   );
