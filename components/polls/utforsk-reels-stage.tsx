@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  type MouseEvent,
   type ReactNode,
 } from 'react';
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
@@ -20,8 +19,6 @@ import { cn } from '@/lib/utils';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 
 const SLIDE = { type: 'spring', stiffness: 80, damping: 18 } as const;
-const FILL_DURATION_MS = 560;
-const FILL_EASE = [0.22, 1, 0.36, 1] as const;
 
 function subscribeLocationHash(onStoreChange: () => void) {
   window.addEventListener('hashchange', onStoreChange);
@@ -44,13 +41,7 @@ function notifyHashChanged() {
   window.dispatchEvent(new Event('hashchange'));
 }
 
-function ReelsNavArrow({
-  direction,
-  filling,
-}: {
-  direction: 'forward' | 'back';
-  filling: boolean;
-}) {
+function ReelsNavArrow({ direction }: { direction: 'forward' | 'back' }) {
   const iconClass = 'h-5 w-5';
   let icon: ReactNode;
   switch (direction) {
@@ -67,12 +58,7 @@ function ReelsNavArrow({
   }
 
   return (
-    <span
-      className={cn(
-        'relative z-10 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
-        filling ? 'bg-brand-foreground text-brand' : 'bg-brand text-white',
-      )}
-    >
+    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white">
       {icon}
     </span>
   );
@@ -154,91 +140,37 @@ function ReelsNavCta({
   itemCount: number;
   onNavigate: () => void;
 }) {
-  const timersRef = useRef<number[]>([]);
-  const busyRef = useRef(false);
-  const [fillOrigin, setFillOrigin] = useState<{ x: number; y: number } | null>(null);
-  const filling = fillOrigin !== null;
   const reversed = direction === 'back';
-
-  useEffect(() => {
-    const timers = timersRef.current;
-    return () => {
-      timers.forEach((id) => window.clearTimeout(id));
-    };
-  }, []);
-
   const subtitle =
     itemCount > 0
       ? 'Si ja eller nei på systemgenererte spørsmål fra stortingssaker.'
       : 'Ingen Reels er publisert ennå. Åpne for å se status.';
 
-  const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
-    if (busyRef.current) return;
-    busyRef.current = true;
-
-    const navigateAndReset = () => {
-      onNavigate();
-      const resetId = window.setTimeout(() => {
-        setFillOrigin(null);
-        busyRef.current = false;
-      }, 450);
-      timersRef.current.push(resetId);
-    };
-
-    const rect = event.currentTarget.getBoundingClientRect();
-    const fromKeyboard = event.detail === 0;
-    setFillOrigin({
-      x: fromKeyboard ? (reversed ? 36 : rect.width - 36) : event.clientX - rect.left,
-      y: fromKeyboard ? rect.height / 2 : event.clientY - rect.top,
-    });
-
-    const fillId = window.setTimeout(navigateAndReset, FILL_DURATION_MS);
-    timersRef.current.push(fillId);
-  };
-
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={onNavigate}
       aria-controls="reels"
       aria-label={reversed ? 'Tilbake til saker' : 'Åpne Reels'}
-      className="relative flex w-full items-center justify-between gap-4 overflow-hidden rounded-2xl border border-brand/20 bg-brand/5 px-5 py-4 transition-colors hover:border-brand/40 hover:bg-brand/10"
+      className="flex w-full items-center justify-between gap-4 rounded-2xl border border-brand/20 bg-brand/5 px-5 py-4 transition-colors hover:border-brand/40 hover:bg-brand/10"
     >
-      <span className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl" aria-hidden>
-        {fillOrigin ? (
-          <motion.div
-            key={`${fillOrigin.x}-${fillOrigin.y}`}
-            className="absolute inset-0"
-            style={{ backgroundColor: 'var(--brand)' }}
-            initial={{ clipPath: `circle(18px at ${fillOrigin.x}px ${fillOrigin.y}px)` }}
-            animate={{ clipPath: `circle(800px at ${fillOrigin.x}px ${fillOrigin.y}px)` }}
-            transition={{ duration: FILL_DURATION_MS / 1000, ease: FILL_EASE }}
-          />
-        ) : null}
-      </span>
+      {reversed ? <ReelsNavArrow direction={direction} /> : null}
 
-      {reversed ? <ReelsNavArrow direction={direction} filling={filling} /> : null}
-
-      <div className={cn('relative z-10 min-w-0 flex-1', reversed ? 'text-right' : 'text-left')}>
+      <div className={cn('min-w-0 flex-1', reversed ? 'text-right' : 'text-left')}>
         <span
           className={cn(
-            'inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide',
-            filling ? 'text-brand-foreground' : 'text-brand',
+            'inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-brand',
             reversed && 'flex-row-reverse',
           )}
         >
           <Sparkles className="h-3.5 w-3.5" aria-hidden />
           Reels
         </span>
-        <h2 className={cn('mt-1 text-lg font-bold', filling ? 'text-brand-foreground' : 'text-foreground')}>
-          Del din mening
-        </h2>
-        <p className={cn('mt-1 text-sm', filling ? 'text-brand-foreground/80' : 'text-muted-foreground')}>
-          {subtitle}
-        </p>
+        <h2 className="mt-1 text-lg font-bold text-foreground">Del din mening</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
       </div>
 
-      {reversed ? null : <ReelsNavArrow direction={direction} filling={filling} />}
+      {reversed ? null : <ReelsNavArrow direction={direction} />}
     </button>
   );
 }
