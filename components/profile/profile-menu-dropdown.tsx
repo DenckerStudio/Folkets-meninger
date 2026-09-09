@@ -5,7 +5,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LogOut, Shield, UserCircle } from "lucide-react";
 import { SmoothDropdown, type SmoothDropdownItem } from "@/components/ui/smooth-dropdown";
 import { Dialog } from "@/components/ui/dialog";
-import { ProfileAppPreferences } from "@/components/profile/profile-app-preferences";
 import { PROFILE_TABS, type ProfileTabId } from "@/components/profile/profile-tabs";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { isAdminActive } from "@/lib/site-nav-links";
@@ -16,16 +15,13 @@ type ProfileMenuDropdownProps = {
   className?: string;
 };
 
-const DROPDOWN_TAB_IDS = PROFILE_TABS
-  .filter((tab) => tab.id !== "preferanser")
-  .map((tab) => tab.id);
+const DROPDOWN_TAB_IDS = PROFILE_TABS.map((tab) => tab.id);
 
 export function ProfileMenuDropdown({ onSignOut, className }: ProfileMenuDropdownProps) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
   const isAdminUser = useIsAdmin();
-  const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -56,21 +52,14 @@ export function ProfileMenuDropdown({ onSignOut, className }: ProfileMenuDropdow
     }
 
     menuItems.push(
-      ...PROFILE_TABS.filter((tab) => tab.id !== "preferanser").map((tab) => ({
+      ...PROFILE_TABS.map((tab) => ({
         id: tab.id,
         label: tab.label,
         icon: tab.icon,
       })),
     );
 
-    menuItems.push(
-      {
-        id: "preferanser",
-        label: "Preferanser",
-        icon: PROFILE_TABS.find((tab) => tab.id === "preferanser")!.icon,
-      },
-      { id: "divider", label: "", icon: null, type: "divider" },
-    );
+    menuItems.push({ id: "divider", label: "", icon: null, type: "divider" });
 
     if (isAdminUser) {
       menuItems.push({
@@ -91,11 +80,6 @@ export function ProfileMenuDropdown({ onSignOut, className }: ProfileMenuDropdow
   }, [isAdminUser, onMinSideSubPage]);
 
   const handleSelect = (id: string) => {
-    if (id === "preferanser") {
-      setPreferencesOpen(true);
-      return;
-    }
-
     if (id === "logout") {
       setLogoutOpen(true);
       return;
@@ -135,16 +119,6 @@ export function ProfileMenuDropdown({ onSignOut, className }: ProfileMenuDropdow
         triggerAriaLabel="Profilmeny"
         className={className}
       />
-      <Dialog
-        open={preferencesOpen}
-        onClose={() => setPreferencesOpen(false)}
-        title="Preferanser"
-        description="Utseende, animasjoner og hjelpetekster i saker."
-        size="md"
-        className="sm:max-w-md"
-      >
-        <ProfileAppPreferences />
-      </Dialog>
       <Dialog
         open={logoutOpen}
         onClose={() => {

@@ -470,7 +470,7 @@ export default function AdminReelsClient() {
       </section>
 
       <div className="flex flex-wrap gap-4 text-sm">
-        <Link href={routes.avstemningerReels} className="font-medium text-brand hover:underline">
+        <Link href={routes.utforsk} className="font-medium text-brand hover:underline">
           Offentlig Reels-feed
         </Link>
         <AdminBackLink />

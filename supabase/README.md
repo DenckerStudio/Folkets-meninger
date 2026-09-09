@@ -138,7 +138,7 @@ npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
 
 ### Advisory polls (Ja/Nei/Blank)
 
-`20260819210000_direct_democracy_polls.sql` adds Swiss-inspired dual-track polls
+`20260819210000_direct_democracy_polls.sql` adds dual-track Ja/Nei/Blank polls
 and citizen initiatives **without** forum coupling (no `forum_thread_id`, no
 top-arguments RPC). `20260821130000_system_poll_reels.sql` adds `track=system`
 (Reels) with `generation_metadata` and draft → publish RPCs.

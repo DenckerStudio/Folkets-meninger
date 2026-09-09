@@ -44,6 +44,17 @@ test('folkets meninger is the first core destination', () => {
   assert.equal(coreNavItems[0]?.href, routes.folketsMeninger);
 });
 
+test('avstemninger and politiker-hub are not in dashboard nav', () => {
+  assert.equal(
+    dashboardSidebarNavItems.some((item) => item.href === routes.avstemninger),
+    false,
+  );
+  assert.equal(
+    dashboardSidebarNavItems.some((item) => item.href === routes.politikerHub),
+    false,
+  );
+});
+
 test('borgerinitiativ is not in dashboard nav', () => {
   assert.equal(
     dashboardSidebarNavItems.some((item) => item.href === routes.initiativ),
@@ -56,8 +67,8 @@ test('mobile nav stays within core destinations plus profile', () => {
   const allowed = new Set([
     routes.folketsMeninger,
     routes.utforsk,
-    routes.avstemninger,
     routes.horinger,
+    routes.forslag,
     routes.minSide,
   ]);
   for (const item of mobileNavItems) {

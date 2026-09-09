@@ -8,7 +8,6 @@ import {
   Search,
   UserRound,
   Users,
-  Vote,
 } from 'lucide-react';
 import { DASHBOARD_PREFIX, routes } from '@/lib/routes';
 
@@ -67,9 +66,6 @@ export const isOmOssActive: NavIsActive = (pathname) =>
 export const isInnsiktActive: NavIsActive = (pathname) =>
   pathname === routes.innsikt || pathname.startsWith(`${routes.innsikt}/`);
 
-export const isPolitikerHubActive: NavIsActive = (pathname) =>
-  pathname.startsWith(routes.politikerHub);
-
 export const isAdminActive: NavIsActive = (pathname) =>
   pathname === routes.admin || pathname.startsWith(`${routes.admin}/`);
 
@@ -90,12 +86,6 @@ export const coreNavItems: SiteNavLinkItem[] = [
     href: routes.utforsk,
     icon: Search,
     isActive: isUtforskActive,
-  },
-  {
-    title: 'Avstemninger',
-    href: routes.avstemninger,
-    icon: Vote,
-    isActive: isAvstemningerActive,
   },
   {
     title: 'Høringer',
@@ -130,12 +120,6 @@ export const extendedNavItems: SiteNavLinkItem[] = [
     href: routes.innsikt,
     icon: BarChart2,
     isActive: isInnsiktActive,
-  },
-  {
-    title: 'Politiker-hub',
-    href: routes.politikerHub,
-    icon: BarChart2,
-    isActive: isPolitikerHubActive,
   },
 ];
 
@@ -181,16 +165,16 @@ export const mobileNavItems = [
     isActive: isMobileUtforskActive,
   },
   {
-    label: 'Avstemninger',
-    href: routes.avstemninger,
-    icon: Vote,
-    isActive: isAvstemningerActive,
-  },
-  {
     label: 'Høringer',
     href: routes.horinger,
     icon: FileEdit,
     isActive: isHoringerActive,
+  },
+  {
+    label: 'Forslag',
+    href: routes.forslag,
+    icon: Lightbulb,
+    isActive: isForslagActive,
   },
   {
     label: 'Profil',

@@ -1,12 +1,11 @@
 import type { LucideIcon } from 'lucide-react';
-import { Bell, FileText, HeartHandshake, PieChart, Settings, Shield, SlidersHorizontal } from 'lucide-react';
+import { FileText, HeartHandshake, PieChart, Settings, Shield, SlidersHorizontal } from 'lucide-react';
 
 export type ProfileTabId =
   | 'historikk'
   | 'valgomat'
   | 'innstillinger'
   | 'preferanser'
-  | 'varsler'
   | 'stemme-plus'
   | 'min-data';
 
@@ -38,13 +37,7 @@ export const PROFILE_TABS: {
     id: 'preferanser',
     label: 'Preferanser',
     icon: SlidersHorizontal,
-    description: 'Utseende, animasjoner og hjelp',
-  },
-  {
-    id: 'varsler',
-    label: 'Varsler',
-    icon: Bell,
-    description: 'E-post og kanaler',
+    description: 'Utseende, varsler og hjelp',
   },
   {
     id: 'stemme-plus',
@@ -54,7 +47,7 @@ export const PROFILE_TABS: {
   },
   {
     id: 'min-data',
-    label: 'Privacy Hub',
+    label: 'Personvern',
     icon: Shield,
     description: 'Data og personvern',
   },
@@ -69,4 +62,16 @@ export function isProfileTabId(value: string | null): value is ProfileTabId {
 export function getProfileTabLabel(tabId: ProfileTabId): string {
   const tab = PROFILE_TABS.find((item) => item.id === tabId);
   return tab?.label ?? 'Profil';
+}
+
+export function getProfileTabDescription(tabId: ProfileTabId): string {
+  const tab = PROFILE_TABS.find((item) => item.id === tabId);
+  return tab?.description ?? '';
+}
+
+/** Legacy `?tab=varsler` links land on Preferanser. */
+export function resolveProfileTab(tabParam: string | null): ProfileTabId | null {
+  if (tabParam === 'varsler') return 'preferanser';
+  if (isProfileTabId(tabParam)) return tabParam;
+  return null;
 }

@@ -180,7 +180,7 @@ export default function HowItWorks({
     {
       title: 'Stem Ja, Nei eller Blank',
       description:
-        'Nasjonale avstemninger bruker samme tre valg som i Sveits. Stemmen er anonym i statistikken.',
+        'Nasjonale spørsmål bruker Ja, Nei eller Blank. Stemmen er anonym i statistikken.',
       colorTheme: 'blue',
     },
     {

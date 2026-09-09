@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
       { source: '/horinger/:path*', destination: '/dashboard/horinger/:path*', permanent: true },
       { source: '/kalender', destination: '/dashboard/kalender', permanent: true },
       { source: '/avstemninger', destination: '/dashboard/avstemninger', permanent: true },
+      { source: '/avstemninger/reels', destination: '/dashboard/utforsk', permanent: true },
       { source: '/avstemninger/:path*', destination: '/dashboard/avstemninger/:path*', permanent: true },
       { source: '/initiativ', destination: '/dashboard/initiativ', permanent: true },
       { source: '/initiativ/:path*', destination: '/dashboard/initiativ/:path*', permanent: true },
@@ -21,7 +22,9 @@ const nextConfig: NextConfig = {
       { source: '/sak/:id', destination: '/dashboard/sak/:id', permanent: true },
       { source: '/politikere', destination: '/dashboard/politikere', permanent: true },
       { source: '/representanter', destination: '/dashboard/representanter', permanent: true },
-      { source: '/politiker-hub', destination: '/dashboard/politiker-hub', permanent: true },
+      { source: '/politiker-hub', destination: '/dashboard/politikere', permanent: true },
+      { source: '/dashboard/politiker-hub', destination: '/dashboard/politikere', permanent: true },
+      { source: '/dashboard/avstemninger/reels', destination: '/dashboard/utforsk', permanent: true },
       { source: '/saksganger', destination: '/dashboard/saksganger', permanent: true },
       { source: '/sporsmal', destination: '/dashboard/sporsmal', permanent: true },
     ];

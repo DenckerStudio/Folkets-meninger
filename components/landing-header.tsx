@@ -67,11 +67,11 @@ export function LandingHeader() {
                 Logg inn
               </Link>
               <Link
-                href={routes.avstemninger}
+                href={routes.utforsk}
                 className="inline-flex items-center rounded-full bg-[#00205b] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#ba0c2f] sm:px-4 sm:py-2 sm:text-sm"
               >
-                <span className="sm:hidden">Avstemninger</span>
-                <span className="hidden sm:inline">Se avstemninger</span>
+                <span className="sm:hidden">Utforsk</span>
+                <span className="hidden sm:inline">Utforsk saker</span>
               </Link>
             </>
           )}

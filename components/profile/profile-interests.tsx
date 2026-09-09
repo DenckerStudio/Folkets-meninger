@@ -79,7 +79,7 @@ export function ProfileInterests({
                     : interestCategories.filter((c) => c !== cat);
                   onCategoriesChange(next);
                 }}
-                className="h-4 w-4 rounded border-border text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500"
+                className="h-4 w-4 rounded border-border text-brand focus:ring-brand"
               />
             </label>
           ))}
@@ -88,7 +88,7 @@ export function ProfileInterests({
           type="button"
           onClick={() => void onSave()}
           disabled={saving}
-          className="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-60"
+          className="inline-flex items-center px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand/90 disabled:opacity-60"
         >
           {saving ? 'Lagrer…' : 'Lagre interesseområder'}
         </button>
@@ -114,7 +114,7 @@ export function ProfileInterests({
                   }}
                   className={`rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
                     active
-                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      ? 'bg-brand text-white border-brand'
                       : 'bg-card text-foreground border-border hover:border-border'
                   }`}
                 >
@@ -158,7 +158,7 @@ export function ProfileInterests({
           type="button"
           onClick={() => void onLabelsSave()}
           disabled={labelsSaving}
-          className="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-60"
+          className="inline-flex items-center px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand/90 disabled:opacity-60"
         >
           {labelsSaving ? 'Lagrer…' : 'Lagre AI-emner'}
         </button>

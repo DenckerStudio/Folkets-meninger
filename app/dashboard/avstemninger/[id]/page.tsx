@@ -37,8 +37,11 @@ export default async function PollDetailPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-12">
-      <Link href={routes.avstemninger} className="text-sm font-medium text-brand hover:underline">
-        ← Alle avstemninger
+      <Link
+        href={poll.track === 'system' ? routes.utforsk : routes.avstemninger}
+        className="text-sm font-medium text-brand hover:underline"
+      >
+        {poll.track === 'system' ? '← Utforsk' : '← Alle avstemninger'}
       </Link>
       <div className="flex flex-wrap gap-2 text-xs font-medium">
         <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-brand">{pollTrackLabel(poll.track)}</span>

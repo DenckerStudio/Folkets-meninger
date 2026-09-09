@@ -80,7 +80,7 @@ Kjør `supabase db push` etter pull.
 Workflow-kilde: [`system-poll-draft.workflow.ts`](system-poll-draft.workflow.ts) · [`system-poll-draft.shared.ts`](system-poll-draft.shared.ts)
 
 Lager **utkast** (`polls.track = 'system'`, `status = 'draft'`) fra stortingssak + RAG.
-Admin publiserer i `/dashboard/admin/reels`. Offentlig feed: `/dashboard/avstemninger/reels`.
+Admin publiserer i `/dashboard/admin/reels`. Offentlig feed: `/dashboard/utforsk`.
 
 **Live workflow:** https://n8n.heyklever.app/workflow/TWTrqNYhvYcWz4UX
 

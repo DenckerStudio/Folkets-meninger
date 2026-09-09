@@ -40,17 +40,17 @@ export function LandingRoadmap() {
             date: 'Nå',
             title: 'Tillit, synlighet og førsteinntrykk',
             description:
-              'Avstemninger (Ja/Nei/Blank) og borgerinitiativ er på plass. Vi synliggjør spørsmål før innlogging og forbedrer førsteinntrykket.',
+              'Reels (Ja/Nei/Blank) ligger på Utforsk, og borgerinitiativ er på plass. Vi synliggjør spørsmål før innlogging og forbedrer førsteinntrykket.',
             status: 'current',
             detail: (
               <p>
                 <Link
-                  href={routes.avstemninger}
+                  href={routes.utforsk}
                   className="font-semibold text-[#00205b] underline-offset-2 hover:text-[#ba0c2f] hover:underline"
                 >
-                  Se avstemninger
+                  Utforsk saker
                 </Link>{' '}
-                og utforsk borgerinitiativ — uten å måtte logge inn først.
+                og si din mening med ja, nei eller blank — uten å måtte logge inn først.
               </p>
             ),
           },
@@ -59,7 +59,7 @@ export function LandingRoadmap() {
             date: 'Neste',
             title: 'Dypere politisk innsikt',
             description:
-              'Valgomat med parti-sammenligning (når Stortingets stemmedata per parti er tilgjengelig), sporing av valgløfter, rikere politiker-hub og åpen innsikt når nok anonyme stemmer er samlet.',
+              'Valgomat med parti-sammenligning (når Stortingets stemmedata per parti er tilgjengelig), sporing av valgløfter og åpen innsikt når nok anonyme stemmer er samlet.',
             status: 'upcoming',
           },
           {

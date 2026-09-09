@@ -5,17 +5,11 @@ import { ChevronDown, ExternalLink, Info, Sparkles } from 'lucide-react';
 import { PollBallot } from '@/components/polls/poll-ballot';
 import { SYSTEM_REEL_DISCLAIMER, pollTrackLabel } from '@/lib/polls/labels';
 import { isPollVotingOpen } from '@/lib/polls/format';
-import type { PollChoice, PollRecord, PollTotals } from '@/lib/polls/types';
+import type { SystemReelFeedItem } from '@/lib/polls/types';
 import { routes } from '@/lib/routes';
 
-type ReelFeedItem = {
-  poll: PollRecord;
-  totals: PollTotals;
-  userVote: PollChoice | null;
-};
-
 type ReelsFeedProps = {
-  items: ReelFeedItem[];
+  items: SystemReelFeedItem[];
 };
 
 export function ReelsFeed({ items }: ReelsFeedProps) {
@@ -29,7 +23,7 @@ export function ReelsFeed({ items }: ReelsFeedProps) {
       </div>
 
       <div
-        className="h-[min(34rem,calc(100dvh-16rem))] snap-y snap-mandatory overflow-y-auto rounded-2xl border border-border bg-card shadow-sm"
+        className="h-[min(32rem,calc(100dvh-14rem))] snap-y snap-mandatory overflow-y-auto rounded-2xl border border-border bg-card shadow-sm"
         aria-label="Systemgenererte reels"
       >
         {items.map(({ poll, totals, userVote }, index) => (
@@ -106,7 +100,7 @@ export function ReelsFeed({ items }: ReelsFeedProps) {
                 votingOpen={isPollVotingOpen(poll)}
                 initialTotals={totals}
                 initialVote={userVote}
-                loginNext={routes.avstemningerReels}
+                loginNext={routes.utforsk}
                 compact
               />
               {index < items.length - 1 ? (
@@ -123,11 +117,45 @@ export function ReelsFeed({ items }: ReelsFeedProps) {
   );
 }
 
+export function ReelsEmptyState() {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+        {SYSTEM_REEL_DISCLAIMER}
+      </div>
+      <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10">
+          <Sparkles className="h-6 w-6 text-brand" aria-hidden />
+        </div>
+        <h2 className="mt-4 text-lg font-semibold text-foreground">Ingen Reels publisert ennå</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+          Når administratorer har godkjent systemgenererte spørsmål fra stortingssaker, vises de her som
+          ja/nei/blank-avstemninger.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export function UtforskReels({ items }: { items: SystemReelFeedItem[] }) {
+  return (
+    <section className="space-y-3">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">Reels</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Si ja, nei eller blank — ett systemgenerert spørsmål om gangen.
+        </p>
+      </div>
+      {items.length === 0 ? <ReelsEmptyState /> : <ReelsFeed items={items} />}
+    </section>
+  );
+}
+
 export function ReelsFeedSkeleton() {
   return (
     <div className="animate-pulse space-y-3">
       <div className="h-14 rounded-xl bg-muted" />
-      <div className="h-[min(34rem,calc(100dvh-16rem))] rounded-2xl border border-border bg-card p-5">
+      <div className="h-[min(32rem,calc(100dvh-14rem))] rounded-2xl border border-border bg-card p-5">
         <div className="space-y-3">
           <div className="h-5 w-32 rounded-full bg-muted" />
           <div className="h-8 w-4/5 rounded bg-muted" />
