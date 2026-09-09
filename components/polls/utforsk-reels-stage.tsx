@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 
 const SLIDE = { type: 'spring', stiffness: 80, damping: 18 } as const;
+const FADE = { duration: 0.42, ease: [0.22, 1, 0.36, 1] } as const;
 
 function subscribeLocationHash(onStoreChange: () => void) {
   window.addEventListener('hashchange', onStoreChange);
@@ -98,11 +99,21 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
         animate={{ x: reelsOpen ? '-50%' : '0%' }}
         transition={reducedMotion ? { duration: 0 } : SLIDE}
       >
-        <div className="w-1/2 shrink-0 space-y-8" aria-hidden={reelsOpen} {...(reelsOpen ? { inert: true } : {})}>
+        <motion.div
+          initial={false}
+          animate={{ opacity: reelsOpen ? 0 : 1 }}
+          transition={reducedMotion ? { duration: 0 } : FADE}
+          className="w-1/2 shrink-0 space-y-8"
+          aria-hidden={reelsOpen}
+          {...(reelsOpen ? { inert: true } : {})}
+        >
           {children({ openReels, itemCount: items.length })}
-        </div>
-        <div
+        </motion.div>
+        <motion.div
           id="reels"
+          initial={false}
+          animate={{ opacity: reelsOpen ? 1 : 0 }}
+          transition={reducedMotion ? { duration: 0 } : FADE}
           className="w-1/2 shrink-0"
           aria-hidden={!reelsOpen}
           {...(!reelsOpen ? { inert: true } : {})}
@@ -115,7 +126,7 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
             onSelect={setActivePollId}
             onClose={closeReels}
           />
-        </div>
+        </motion.div>
       </motion.div>
     </div>
   );
