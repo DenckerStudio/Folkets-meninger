@@ -26,6 +26,8 @@ export function ProfileMenuDropdown({ onSignOut, className }: ProfileMenuDropdow
   const searchParams = useSearchParams();
   const isAdminUser = useIsAdmin();
   const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   const activeTab = searchParams.get("tab");
   const onMinSideOverview =
@@ -95,7 +97,7 @@ export function ProfileMenuDropdown({ onSignOut, className }: ProfileMenuDropdow
     }
 
     if (id === "logout") {
-      void onSignOut();
+      setLogoutOpen(true);
       return;
     }
 
@@ -111,6 +113,16 @@ export function ProfileMenuDropdown({ onSignOut, className }: ProfileMenuDropdow
 
     if (DROPDOWN_TAB_IDS.includes(id as ProfileTabId)) {
       router.push(`${routes.minSide}?tab=${id}`);
+    }
+  };
+
+  const confirmSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await onSignOut();
+      setLogoutOpen(false);
+    } finally {
+      setSigningOut(false);
     }
   };
 
@@ -132,6 +144,38 @@ export function ProfileMenuDropdown({ onSignOut, className }: ProfileMenuDropdow
         className="sm:max-w-md"
       >
         <ProfileAppPreferences />
+      </Dialog>
+      <Dialog
+        open={logoutOpen}
+        onClose={() => {
+          if (!signingOut) setLogoutOpen(false);
+        }}
+        title="Logg ut?"
+        description="Er du sikker på at du vil logge ut?"
+        size="md"
+        className="sm:max-w-md"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setLogoutOpen(false)}
+              disabled={signingOut}
+              className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            >
+              Avbryt
+            </button>
+            <button
+              type="button"
+              onClick={() => void confirmSignOut()}
+              disabled={signingOut}
+              className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
+            >
+              {signingOut ? "Logger ut…" : "Logg ut"}
+            </button>
+          </div>
+        }
+      >
+        <span className="sr-only">Bekreft utlogging</span>
       </Dialog>
     </>
   );
