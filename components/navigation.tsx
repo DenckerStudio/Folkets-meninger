@@ -5,6 +5,7 @@ import { Header } from '@/components/ui/header-3';
 import { LandingFooter } from '@/components/landing-footer';
 import { LandingHeader } from '@/components/landing-header';
 import { DashboardNavProvider } from '@/components/dashboard/dashboard-nav-context';
+import { ProfileMenuFloating } from '@/components/profile/profile-menu-floating';
 import { isDashboardPath, isEmbedPath, isPublicProfilePath } from '@/lib/routes';
 
 type NavigationProps = {
@@ -33,8 +34,18 @@ export function Navigation({ children }: NavigationProps) {
   );
 
   if (inDashboard) {
-    return <DashboardNavProvider>{content}</DashboardNavProvider>;
+    return (
+      <DashboardNavProvider>
+        {content}
+        <ProfileMenuFloating />
+      </DashboardNavProvider>
+    );
   }
 
-  return content;
+  return (
+    <>
+      {content}
+      {showAppHeader ? <ProfileMenuFloating /> : null}
+    </>
+  );
 }

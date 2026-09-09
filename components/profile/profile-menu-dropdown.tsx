@@ -28,36 +28,47 @@ export function ProfileMenuDropdown({ onSignOut, className }: ProfileMenuDropdow
   const [preferencesOpen, setPreferencesOpen] = useState(false);
 
   const activeTab = searchParams.get("tab");
+  const onMinSideOverview =
+    pathname === routes.minSide || pathname === `${routes.minSide}/`;
+  const onMinSideSubPage =
+    pathname.startsWith(routes.minSide) &&
+    Boolean(activeTab && DROPDOWN_TAB_IDS.includes(activeTab as ProfileTabId));
+
   const activeItemId = useMemo(() => {
     if (isAdminActive(pathname)) return "admin";
-    if (pathname.startsWith(routes.minSide)) {
-      if (activeTab && DROPDOWN_TAB_IDS.includes(activeTab as ProfileTabId)) {
-        return activeTab;
-      }
-      return "min-side";
-    }
+    if (onMinSideOverview) return "min-side";
+    if (onMinSideSubPage) return activeTab;
+    if (pathname.startsWith(routes.minSide)) return null;
     return null;
-  }, [activeTab, pathname]);
+  }, [activeTab, onMinSideOverview, onMinSideSubPage, pathname]);
 
   const items = useMemo((): SmoothDropdownItem[] => {
-    const menuItems: SmoothDropdownItem[] = [
-      {
+    const menuItems: SmoothDropdownItem[] = [];
+
+    if (!onMinSideSubPage) {
+      menuItems.push({
         id: "min-side",
         label: "Min side",
         icon: UserCircle,
-      },
+      });
+    }
+
+    menuItems.push(
       ...PROFILE_TABS.filter((tab) => tab.id !== "preferanser").map((tab) => ({
         id: tab.id,
         label: tab.label,
         icon: tab.icon,
       })),
+    );
+
+    menuItems.push(
       {
         id: "preferanser",
         label: "Preferanser",
         icon: PROFILE_TABS.find((tab) => tab.id === "preferanser")!.icon,
       },
       { id: "divider", label: "", icon: null, type: "divider" },
-    ];
+    );
 
     if (isAdminUser) {
       menuItems.push({
@@ -75,7 +86,7 @@ export function ProfileMenuDropdown({ onSignOut, className }: ProfileMenuDropdow
     });
 
     return menuItems;
-  }, [isAdminUser]);
+  }, [isAdminUser, onMinSideSubPage]);
 
   const handleSelect = (id: string) => {
     if (id === "preferanser") {
