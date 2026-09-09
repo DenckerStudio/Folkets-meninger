@@ -7,6 +7,7 @@ import {
   type ThemeMode,
 } from '@/lib/preferences/app-preferences';
 import { useAppPreferences } from '@/components/theme-provider';
+import { cn } from '@/lib/utils';
 
 type OptionCardProps<T extends string> = {
   value: T;
@@ -24,14 +25,17 @@ function OptionCard<T extends string>({
   description,
   icon,
   onSelect,
-}: OptionCardProps<T>) {
+  compact = false,
+}: OptionCardProps<T> & { compact?: boolean }) {
   const selected = value === current;
 
   return (
     <button
       type="button"
       onClick={() => onSelect(value)}
-      className={`flex w-full items-start gap-3 rounded-xl border p-4 text-left transition-colors ${
+      className={`flex w-full items-start gap-3 rounded-xl border text-left transition-colors ${
+        compact ? 'p-3' : 'p-4'
+      } ${
         selected
           ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-500/40 dark:bg-indigo-950/40'
           : 'border-border bg-card hover:bg-muted/50'
@@ -57,23 +61,32 @@ function PreferenceSection({
   title,
   description,
   children,
+  compact = false,
 }: {
   title: string;
   description: string;
   children: React.ReactNode;
+  compact?: boolean;
 }) {
   return (
-    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
+    <section
+      className={cn(
+        'space-y-3 border border-border bg-card shadow-sm',
+        compact ? 'rounded-xl p-3' : 'space-y-4 rounded-2xl p-6',
+      )}
+    >
       <div>
-        <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        <h3 className={cn('font-semibold text-foreground', compact ? 'text-sm' : 'text-lg')}>
+          {title}
+        </h3>
+        <p className="mt-1 text-xs text-muted-foreground sm:text-sm">{description}</p>
       </div>
       {children}
     </section>
   );
 }
 
-export function ProfileAppPreferences() {
+export function ProfileAppPreferences({ compact = false }: { compact?: boolean }) {
   const [preferences, setPreferences] = useAppPreferences();
 
   const update = (patch: Partial<AppPreferences>) => {
@@ -81,13 +94,15 @@ export function ProfileAppPreferences() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={compact ? 'space-y-3' : 'space-y-6'}>
       <PreferenceSection
         title="Utseende"
         description="Velg lys eller mørk modus. Innstillingen lagres i nettleseren din."
+        compact={compact}
       >
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-3 sm:gap-3">
           <OptionCard<ThemeMode>
+            compact={compact}
             value="light"
             current={preferences.theme}
             label="Lys"
@@ -96,6 +111,7 @@ export function ProfileAppPreferences() {
             onSelect={(theme) => update({ theme })}
           />
           <OptionCard<ThemeMode>
+            compact={compact}
             value="dark"
             current={preferences.theme}
             label="Mørk"
@@ -104,6 +120,7 @@ export function ProfileAppPreferences() {
             onSelect={(theme) => update({ theme })}
           />
           <OptionCard<ThemeMode>
+            compact={compact}
             value="system"
             current={preferences.theme}
             label="System"
@@ -117,9 +134,11 @@ export function ProfileAppPreferences() {
       <PreferenceSection
         title="Animasjoner"
         description="Tilpass bevegelse og overganger etter hva som passer best for deg."
+        compact={compact}
       >
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-3 sm:gap-3">
           <OptionCard<MotionPreference>
+            compact={compact}
             value="system"
             current={preferences.motion}
             label="System"
@@ -128,6 +147,7 @@ export function ProfileAppPreferences() {
             onSelect={(motion) => update({ motion })}
           />
           <OptionCard<MotionPreference>
+            compact={compact}
             value="reduce"
             current={preferences.motion}
             label="Redusert"
@@ -136,6 +156,7 @@ export function ProfileAppPreferences() {
             onSelect={(motion) => update({ motion })}
           />
           <OptionCard<MotionPreference>
+            compact={compact}
             value="full"
             current={preferences.motion}
             label="Full"
@@ -149,8 +170,14 @@ export function ProfileAppPreferences() {
       <PreferenceSection
         title="Hjelp i saker"
         description="Vis korte forklaringer når du leser om saksgang og stortingstermer."
+        compact={compact}
       >
-        <label className="flex items-start gap-3 rounded-xl border border-border bg-muted/30 p-4 cursor-pointer">
+        <label
+          className={cn(
+            'flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-muted/30',
+            compact ? 'p-3' : 'p-4',
+          )}
+        >
           <input
             type="checkbox"
             checked={preferences.sakTooltips}

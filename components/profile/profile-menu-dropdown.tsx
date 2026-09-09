@@ -140,10 +140,11 @@ export function ProfileMenuDropdown({ onSignOut, className }: ProfileMenuDropdow
         onClose={() => setPreferencesOpen(false)}
         title="Preferanser"
         description="Utseende, animasjoner og hjelpetekster i saker."
-        size="md"
-        className="sm:max-w-md"
+        size="sm"
+        className="max-h-[min(75dvh,28rem)] sm:max-w-md"
+        bodyClassName="py-3 sm:py-4"
       >
-        <ProfileAppPreferences />
+        <ProfileAppPreferences compact />
       </Dialog>
       <Dialog
         open={logoutOpen}
@@ -152,31 +153,30 @@ export function ProfileMenuDropdown({ onSignOut, className }: ProfileMenuDropdow
         }}
         title="Logg ut?"
         description="Er du sikker på at du vil logge ut?"
-        size="md"
-        className="sm:max-w-md"
+        size="sm"
+        className="max-w-[min(100%,20rem)]"
+        hideBody
         footer={
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setLogoutOpen(false)}
-              disabled={signingOut}
-              className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-            >
-              Avbryt
-            </button>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={() => void confirmSignOut()}
               disabled={signingOut}
-              className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
+              className="rounded-lg bg-destructive px-4 py-2.5 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
             >
               {signingOut ? "Logger ut…" : "Logg ut"}
             </button>
+            <button
+              type="button"
+              onClick={() => setLogoutOpen(false)}
+              disabled={signingOut}
+              className="rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            >
+              Avbryt
+            </button>
           </div>
         }
-      >
-        <span className="sr-only">Bekreft utlogging</span>
-      </Dialog>
+      />
     </>
   );
 }

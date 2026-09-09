@@ -209,7 +209,7 @@ function MobileProfileSheet({
             role="dialog"
             aria-modal="true"
             aria-label={triggerAriaLabel}
-            className="fixed inset-x-0 bottom-0 z-[70] max-h-[min(85vh,640px)] overflow-y-auto rounded-t-2xl border border-border bg-popover shadow-2xl"
+            className="fixed inset-x-3 bottom-3 z-[70] max-h-[min(70dvh,28rem)] overflow-y-auto rounded-2xl border border-border bg-popover shadow-2xl pb-[env(safe-area-inset-bottom,0px)] sm:inset-x-0 sm:bottom-0 sm:max-h-[min(75dvh,32rem)] sm:rounded-t-2xl sm:rounded-b-none"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
@@ -227,8 +227,8 @@ function MobileProfileSheet({
                 </button>
               </div>
             </div>
-            <div className="p-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
-              <div className="mx-auto max-w-lg">
+            <div className="p-2 sm:p-3">
+              <div className="mx-auto w-full max-w-lg">
                 <MenuList
                   items={items}
                   activeItemId={activeItemId}

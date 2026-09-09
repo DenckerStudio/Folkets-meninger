@@ -13,9 +13,10 @@ function useIsMounted() {
   );
 }
 
-type DialogSize = 'md' | 'lg' | 'xl' | 'full';
+type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
 const SIZE_CLASS: Record<DialogSize, string> = {
+  sm: 'sm:max-w-sm',
   md: 'sm:max-w-2xl',
   lg: 'sm:max-w-3xl',
   xl: 'sm:max-w-5xl',
@@ -27,10 +28,12 @@ export type DialogProps = {
   onClose: () => void;
   title: ReactNode;
   description?: ReactNode;
-  children: ReactNode;
+  children?: ReactNode;
   footer?: ReactNode;
   size?: DialogSize;
   className?: string;
+  hideBody?: boolean;
+  bodyClassName?: string;
 };
 
 export function Dialog({
@@ -42,6 +45,8 @@ export function Dialog({
   footer,
   size = 'lg',
   className,
+  hideBody = false,
+  bodyClassName,
 }: DialogProps) {
   const mounted = useIsMounted();
   const titleId = useId();
@@ -69,7 +74,7 @@ export function Dialog({
   if (!open || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-3 sm:items-center sm:p-4">
       <button
         type="button"
         className="absolute inset-0 bg-foreground/50 backdrop-blur-[2px]"
@@ -83,15 +88,15 @@ export function Dialog({
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
-          'relative z-10 flex w-full max-h-[min(92vh,900px)] flex-col overflow-hidden',
-          'rounded-t-2xl border border-border bg-card shadow-xl sm:rounded-2xl',
+          'relative z-10 flex w-full max-h-[min(85dvh,900px)] flex-col overflow-hidden',
+          'rounded-2xl border border-border bg-card shadow-xl sm:rounded-2xl',
           SIZE_CLASS[size],
           className
         )}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-5 sm:py-4">
           <div className="min-w-0">
-            <h2 id={titleId} className="text-lg font-bold text-foreground">
+            <h2 id={titleId} className="text-base font-bold text-foreground sm:text-lg">
               {title}
             </h2>
             {description ? (
@@ -110,9 +115,20 @@ export function Dialog({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">{children}</div>
+        {hideBody ? null : (
+          <div
+            className={cn(
+              'min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5',
+              bodyClassName,
+            )}
+          >
+            {children}
+          </div>
+        )}
 
-        {footer ? <div className="shrink-0 border-t border-border px-5 py-4">{footer}</div> : null}
+        {footer ? (
+          <div className="shrink-0 border-t border-border px-4 py-3 sm:px-5 sm:py-4">{footer}</div>
+        ) : null}
       </div>
     </div>,
     document.body,
