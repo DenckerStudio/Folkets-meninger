@@ -18,15 +18,15 @@ export const PROFILE_TABS: {
 }[] = [
   {
     id: 'historikk',
-    label: 'Mine stemmer',
+    label: 'Mine holdninger',
     icon: FileText,
-    description: 'Stemmehistorikk på saker',
+    description: 'Holdningshistorikk på saker',
   },
   {
     id: 'valgomat',
     label: 'Valgomat 2.0',
     icon: PieChart,
-    description: 'Partimatch basert på stemmer',
+    description: 'Partimatch basert på holdninger',
   },
   {
     id: 'innstillinger',

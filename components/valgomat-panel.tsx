@@ -12,6 +12,7 @@ type PartyScore = {
 
 type ValgomatResponse = {
   scores?: PartyScore[];
+  stance_count?: number;
   vote_count?: number;
   party_alignment_available?: boolean;
   error?: string;
@@ -19,7 +20,7 @@ type ValgomatResponse = {
 
 export function ValgomatPanel() {
   const [scores, setScores] = useState<PartyScore[]>([]);
-  const [voteCount, setVoteCount] = useState(0);
+  const [stanceCount, setStanceCount] = useState(0);
   const [alignmentAvailable, setAlignmentAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,14 +36,14 @@ export function ValgomatPanel() {
         }
         if (cancelled) return;
         setScores(data.scores ?? []);
-        setVoteCount(data.vote_count ?? 0);
+        setStanceCount(data.stance_count ?? data.vote_count ?? 0);
         setAlignmentAvailable(data.party_alignment_available === true);
         setError(null);
       })
       .catch((err: Error) => {
         if (cancelled) return;
         setScores([]);
-        setVoteCount(0);
+        setStanceCount(0);
         setError(err.message || 'Kunne ikke laste Valgomat');
       })
       .finally(() => {
@@ -77,10 +78,12 @@ export function ValgomatPanel() {
     );
   }
 
-  if (voteCount === 0) {
+  if (stanceCount === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-muted-foreground">Du må stemme på minst noen saker for å se din Valgomat.</p>
+        <p className="text-muted-foreground">
+          Marker holdning (enig eller uenig) på minst noen saker for å se din Valgomat.
+        </p>
         <Link href={routes.utforsk} className="mt-4 inline-block text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-500">
           Utforsk saker →
         </Link>
@@ -92,18 +95,19 @@ export function ValgomatPanel() {
     return (
       <div className="space-y-4 py-4">
         <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900 dark:border-indigo-900/40 dark:bg-indigo-950/40 dark:text-indigo-100">
-          Du har stemt på <strong>{voteCount}</strong>{' '}
-          {voteCount === 1 ? 'sak' : 'saker'}. Partisammenligning er klar i produktet, men slått av
-          inntil vi har ekte stemmedata per parti fra Stortinget — vi viser ingen fiktive prosenter.
+          Du har markert <strong>{stanceCount}</strong>{' '}
+          {stanceCount === 1 ? 'holdning' : 'holdninger'} (enig/uenig). Partisammenligning er klar i
+          produktet, men slått av inntil vi har ekte stemmedata per parti fra Stortinget — vi viser
+          ingen fiktive prosenter.
         </div>
         <p className="text-center text-sm text-muted-foreground">
-          Fortsett å stemme. Når partidata er koblet, dukker Valgomaten opp automatisk her.
+          Fortsett å markere holdninger. Når partidata er koblet, dukker Valgomaten opp automatisk her.
         </p>
         <Link
           href={routes.utforsk}
           className="block text-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
         >
-          Stem på flere saker →
+          Utforsk flere saker →
         </Link>
       </div>
     );
@@ -112,7 +116,7 @@ export function ValgomatPanel() {
   return (
     <div className="space-y-4">
       <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 rounded-xl p-4 text-sm text-indigo-900">
-        Basert på {voteCount} stemmer sammenlignet med partivurdering per sak.
+        Basert på {stanceCount} holdninger sammenlignet med partivurdering per sak.
       </div>
       <ul className="space-y-3">
         {scores.map((row) => (
