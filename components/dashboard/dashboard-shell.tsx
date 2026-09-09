@@ -9,7 +9,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <DashboardSidebar />
           </div>
         </aside>
-        <div className="min-w-0">{children}</div>
+        <div className="min-w-0 overflow-x-clip">{children}</div>
       </div>
     </div>
   );

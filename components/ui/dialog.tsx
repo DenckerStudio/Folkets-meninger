@@ -1,8 +1,17 @@
 'use client';
 
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+function useIsMounted() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
 
 type DialogSize = 'md' | 'lg' | 'xl' | 'full';
 
@@ -34,6 +43,7 @@ export function Dialog({
   size = 'lg',
   className,
 }: DialogProps) {
+  const mounted = useIsMounted();
   const titleId = useId();
   const descriptionId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -56,9 +66,9 @@ export function Dialog({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <button
         type="button"
@@ -104,6 +114,7 @@ export function Dialog({
 
         {footer ? <div className="shrink-0 border-t border-border px-5 py-4">{footer}</div> : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

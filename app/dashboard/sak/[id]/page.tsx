@@ -165,7 +165,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
     (issueMeta?.lastUpdatedAt ? formatStortingetDate(issueMeta.lastUpdatedAt) : null);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-16 sm:space-y-10 sm:pb-12">
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-8 overflow-x-clip pb-16 sm:space-y-10 sm:pb-12">
       <FadeIn delay={0.1}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <BackButton fallbackHref={routes.utforsk} />
@@ -203,7 +203,9 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
             ) : null}
           </div>
 
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{officialTitle}</h1>
+          <h1 className="text-balance text-2xl font-bold tracking-tight break-words text-foreground sm:text-3xl">
+            {officialTitle}
+          </h1>
           <AiSummary sakId={sak.id} />
           {descriptionToShow ? <SakOfficialDescription text={descriptionToShow} /> : null}
           {(sak.henvisning || henvisning) ? (

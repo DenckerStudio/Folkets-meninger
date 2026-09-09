@@ -84,10 +84,13 @@ export function SakPageTabs({
   return (
     <div className="space-y-6">
       <nav
-        className="sticky top-0 z-20 -mx-4 overflow-x-auto border-b border-border bg-background/95 px-4 py-2 backdrop-blur sm:-mx-0 sm:px-0"
+        className="sticky top-[calc(4rem+env(safe-area-inset-top,0px))] z-30 -mx-4 overflow-x-auto border-b border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:mx-0 sm:px-0"
         aria-label="Saksseksjoner"
       >
-        <div className="flex min-w-max gap-1 rounded-xl border border-border bg-muted/40 p-1" role="tablist">
+        <div
+          className="flex w-max min-w-full gap-1 rounded-xl border border-border bg-muted/40 p-1 sm:w-auto sm:min-w-0"
+          role="tablist"
+        >
           {SAK_PAGE_TAB_IDS.map((id) => (
             <button
               key={id}
@@ -96,7 +99,7 @@ export function SakPageTabs({
               id={`sak-tab-${id}`}
               onClick={() => selectTab(id)}
               className={cn(
-                'rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
+                'shrink-0 rounded-lg px-2.5 py-2 text-xs font-medium whitespace-nowrap transition-colors sm:px-3 sm:text-sm',
                 active === id
                   ? 'bg-card text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground',
