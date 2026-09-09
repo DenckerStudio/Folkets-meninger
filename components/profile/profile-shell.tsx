@@ -8,7 +8,7 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
 import { ProfileHero } from '@/components/profile/profile-hero';
-import { ProfileOverview, ProfileBackLink } from '@/components/profile/profile-overview';
+import { ProfileOverview } from '@/components/profile/profile-overview';
 import { ProfileVoteHistory, type VoteHistoryItem } from '@/components/profile/profile-vote-history';
 import { ProfileValgomat } from '@/components/profile/profile-valgomat';
 import { ProfileInterests } from '@/components/profile/profile-interests';
@@ -299,24 +299,22 @@ function ProfileShellAuthenticated({
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 px-1">
-      <ProfileHero
-        user={user}
-        voteCount={voteHistory.length}
-        points={points}
-        pointsProgress={pointsProgress}
-        badges={badges}
-        isStemmePlus={isStemmePlus}
-        onSignOut={onSignOut}
-      />
-
       {activeTab === null ? (
         <>
+          <ProfileHero
+            user={user}
+            voteCount={voteHistory.length}
+            points={points}
+            pointsProgress={pointsProgress}
+            badges={badges}
+            isStemmePlus={isStemmePlus}
+            onSignOut={onSignOut}
+          />
           <ProfileFylkePicker fylkeCode={fylkeCode} onSaved={onFylkeSaved} />
           <ProfileOverview showAdminLink={isAdminUser} />
         </>
       ) : (
         <div className="min-w-0 space-y-4">
-          <ProfileBackLink />
           <h2 className="text-lg font-semibold text-foreground">{getProfileTabLabel(activeTab)}</h2>
 
           {activeTab === 'historikk' && (

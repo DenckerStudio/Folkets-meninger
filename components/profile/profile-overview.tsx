@@ -15,8 +15,8 @@ export function ProfileOverview({ showAdminLink = false }: ProfileOverviewProps)
       <div>
         <h2 className="text-lg font-semibold text-foreground">Oversikt</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Bruk profilmenyen øverst til høyre for å åpne stemmehistorikk, innstillinger, varsler og
-          mer.
+          Bruk profilmenyen for å åpne stemmehistorikk, innstillinger, varsler og mer. På mobil
+          finner du den nederst til høyre.
         </p>
       </div>
 
@@ -33,13 +33,5 @@ export function ProfileOverview({ showAdminLink = false }: ProfileOverviewProps)
         </Link>
       ) : null}
     </div>
-  );
-}
-
-export function ProfileBackLink() {
-  return (
-    <Link href={routes.minSide} className="inline-flex text-sm font-medium text-brand hover:underline">
-      ← Tilbake til oversikt
-    </Link>
   );
 }

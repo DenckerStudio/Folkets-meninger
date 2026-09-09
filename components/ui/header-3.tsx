@@ -105,9 +105,11 @@ export function Header() {
             <DashboardNavMenuButton className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background text-foreground transition-colors hover:bg-accent hover:text-accent-foreground xl:hidden" />
           ) : null}
           {isLoggedIn ? (
-            <Suspense fallback={<ProfileMenuDropdownFallback />}>
-              <ProfileMenuDropdown onSignOut={handleSignOut} />
-            </Suspense>
+            <div className="hidden md:block">
+              <Suspense fallback={<ProfileMenuDropdownFallback />}>
+                <ProfileMenuDropdown onSignOut={handleSignOut} />
+              </Suspense>
+            </div>
           ) : (
             <>
               <Button variant="outline" size="sm" className="sm:h-8" render={<Link href={routes.login} />}>
