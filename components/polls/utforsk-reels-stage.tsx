@@ -154,7 +154,6 @@ function ReelsNavCta({
   itemCount: number;
   onNavigate: () => void;
 }) {
-  const reducedMotion = usePrefersReducedMotion();
   const timersRef = useRef<number[]>([]);
   const busyRef = useRef(false);
   const [fillOrigin, setFillOrigin] = useState<{ x: number; y: number } | null>(null);
@@ -185,11 +184,6 @@ function ReelsNavCta({
       }, 450);
       timersRef.current.push(resetId);
     };
-
-    if (reducedMotion) {
-      navigateAndReset();
-      return;
-    }
 
     const rect = event.currentTarget.getBoundingClientRect();
     const fromKeyboard = event.detail === 0;
