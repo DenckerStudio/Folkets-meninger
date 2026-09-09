@@ -1,4 +1,3 @@
-import { ReelsFeedSkeleton } from '@/components/polls/reels-feed';
 import { PageHeader } from '@/components/page-header';
 
 export default function UtforskLoading() {
@@ -8,7 +7,7 @@ export default function UtforskLoading() {
         title="Utforsk saker"
         description="Lovforslag og representantforslag fra Stortinget — kildedokumenter."
       />
-      <ReelsFeedSkeleton />
+      <div className="h-[5.5rem] animate-pulse rounded-2xl border border-border bg-muted/40" />
       <div className="animate-pulse space-y-4">
         <div className="h-12 rounded-2xl bg-muted" />
         <div className="space-y-3">

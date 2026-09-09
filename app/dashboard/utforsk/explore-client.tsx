@@ -11,7 +11,7 @@ import { formatVotingDaysLeftLabel } from '@/lib/sak-voting-window';
 import { useState, useEffect, useMemo } from 'react';
 import FadeIn from '@/components/fade-in';
 import { PageHeader } from '@/components/page-header';
-import { UtforskReels } from '@/components/polls/reels-feed';
+import { UtforskReelsStage, ReelsEntryCta } from '@/components/polls/utforsk-reels-stage';
 import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
 import { PREFERENCE_KEYS } from '@/lib/preferences/keys';
@@ -179,6 +179,8 @@ export default function ExploreClient({
   });
 
   return (
+    <UtforskReelsStage items={reelItems}>
+      {({ openReels, itemCount }) => (
     <div className="space-y-8">
       <FadeIn delay={0.1}>
         <PageHeader
@@ -188,7 +190,7 @@ export default function ExploreClient({
       </FadeIn>
 
       <FadeIn delay={0.15} direction="up">
-        <UtforskReels items={reelItems} />
+        <ReelsEntryCta onOpen={openReels} itemCount={itemCount} />
       </FadeIn>
 
       <FadeIn delay={0.2} direction="up">
@@ -462,5 +464,7 @@ export default function ExploreClient({
         </div>
       </FadeIn>
     </div>
+      )}
+    </UtforskReelsStage>
   );
 }
