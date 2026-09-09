@@ -204,12 +204,14 @@ function ReelsNavCta({
       aria-label={reversed ? 'Tilbake til saker' : 'Åpne Reels'}
       className="relative flex w-full items-center justify-between gap-4 overflow-hidden rounded-2xl border border-brand/20 bg-brand/5 px-5 py-4 transition-colors hover:border-brand/40 hover:bg-brand/10"
     >
-      <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl" aria-hidden>
+      <span className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl" aria-hidden>
         {fillOrigin ? (
           <motion.div
-            className="absolute inset-0 bg-brand"
+            key={`${fillOrigin.x}-${fillOrigin.y}`}
+            className="absolute inset-0"
+            style={{ backgroundColor: 'var(--brand)' }}
             initial={{ clipPath: `circle(18px at ${fillOrigin.x}px ${fillOrigin.y}px)` }}
-            animate={{ clipPath: 'circle(150% at 50% 50%)' }}
+            animate={{ clipPath: `circle(800px at ${fillOrigin.x}px ${fillOrigin.y}px)` }}
             transition={{ duration: FILL_DURATION_MS / 1000, ease: FILL_EASE }}
           />
         ) : null}
