@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, type ComponentType } from "react";
+import { useState, useRef, useEffect, useSyncExternalStore, type ComponentType } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import useMeasure from "react-use-measure";
@@ -35,6 +36,14 @@ type MenuListProps = {
   onHover: (id: string | null) => void;
   onSelect: (id: string) => void;
 };
+
+function useIsMounted() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
 
 function MenuList({
   items,
@@ -164,6 +173,80 @@ function MenuList({
   );
 }
 
+function MobileProfileSheet({
+  isOpen,
+  triggerAriaLabel,
+  items,
+  activeItemId,
+  hoveredItem,
+  onHover,
+  onSelect,
+  onClose,
+}: {
+  isOpen: boolean;
+  triggerAriaLabel: string;
+  items: SmoothDropdownItem[];
+  activeItemId: string | null;
+  hoveredItem: string | null;
+  onHover: (id: string | null) => void;
+  onSelect: (id: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <AnimatePresence>
+      {isOpen ? (
+        <>
+          <motion.button
+            type="button"
+            className="fixed inset-0 z-[65] bg-foreground/45 backdrop-blur-[1px]"
+            aria-label="Lukk meny"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+          />
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label={triggerAriaLabel}
+            className="fixed inset-x-0 bottom-0 z-[70] max-h-[min(85vh,640px)] overflow-y-auto rounded-t-2xl border border-border bg-popover shadow-2xl"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 32, stiffness: 360, mass: 0.9 }}
+          >
+            <div className="sticky top-0 z-10 border-b border-border bg-popover/95 px-4 py-3 backdrop-blur">
+              <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-foreground">Profilmeny</p>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="rounded-lg px-2 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  Lukk
+                </button>
+              </div>
+            </div>
+            <div className="p-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
+              <div className="mx-auto max-w-lg">
+                <MenuList
+                  items={items}
+                  activeItemId={activeItemId}
+                  hoveredItem={hoveredItem}
+                  isOpen={isOpen}
+                  animated={false}
+                  onHover={onHover}
+                  onSelect={onSelect}
+                />
+              </div>
+            </div>
+          </motion.div>
+        </>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
 export function SmoothDropdown({
   items,
   activeItemId = null,
@@ -172,6 +255,7 @@ export function SmoothDropdown({
   className,
 }: SmoothDropdownProps) {
   const isMobile = useIsMobile();
+  const isMounted = useIsMounted();
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -201,7 +285,7 @@ export function SmoothDropdown({
   }, [isOpen, isMobile]);
 
   useEffect(() => {
-    if (!isOpen || !isMobile) return;
+    if (!isOpen) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setIsOpen(false);
@@ -209,7 +293,7 @@ export function SmoothDropdown({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isOpen, isMobile]);
+  }, [isOpen]);
 
   const openHeight = Math.max(40, Math.ceil(contentBounds.height));
 
@@ -230,61 +314,28 @@ export function SmoothDropdown({
     </button>
   );
 
+  const mobileSheet =
+    isMounted && isMobile
+      ? createPortal(
+          <MobileProfileSheet
+            isOpen={isOpen}
+            triggerAriaLabel={triggerAriaLabel}
+            items={items}
+            activeItemId={activeItemId}
+            hoveredItem={hoveredItem}
+            onHover={setHoveredItem}
+            onSelect={handleItemSelect}
+            onClose={() => setIsOpen(false)}
+          />,
+          document.body,
+        )
+      : null;
+
   if (isMobile) {
     return (
       <div className={cn("not-prose", className)}>
         {triggerButton}
-        <AnimatePresence>
-          {isOpen ? (
-            <>
-              <motion.button
-                type="button"
-                className="fixed inset-0 z-[65] bg-foreground/45 backdrop-blur-[1px]"
-                aria-label="Lukk meny"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsOpen(false)}
-              />
-              <motion.div
-                role="dialog"
-                aria-modal="true"
-                aria-label={triggerAriaLabel}
-                className="fixed inset-x-0 bottom-0 z-[70] max-h-[min(85vh,640px)] overflow-y-auto rounded-t-2xl border border-border bg-popover shadow-2xl"
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 32, stiffness: 360, mass: 0.9 }}
-              >
-                <div className="sticky top-0 z-10 border-b border-border bg-popover/95 px-4 py-3 backdrop-blur">
-                  <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-foreground">Profilmeny</p>
-                    <button
-                      type="button"
-                      onClick={() => setIsOpen(false)}
-                      className="rounded-lg px-2 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    >
-                      Lukk
-                    </button>
-                  </div>
-                </div>
-                <div className="p-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
-                  <div className="mx-auto max-w-lg">
-                    <MenuList
-                      items={items}
-                      activeItemId={activeItemId}
-                      hoveredItem={hoveredItem}
-                      isOpen={isOpen}
-                      animated={false}
-                      onHover={setHoveredItem}
-                      onSelect={handleItemSelect}
-                    />
-                  </div>
-                </div>
-              </motion.div>
-            </>
-          ) : null}
-        </AnimatePresence>
+        {mobileSheet}
       </div>
     );
   }
