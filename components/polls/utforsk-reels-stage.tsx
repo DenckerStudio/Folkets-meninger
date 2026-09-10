@@ -8,7 +8,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Compass, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { Swiper as SwiperType } from 'swiper';
 import { CardCarousel } from '@/components/ui/card-carousel';
@@ -18,8 +18,29 @@ import type { SystemReelFeedItem } from '@/lib/polls/types';
 import { cn } from '@/lib/utils';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 
-const SLIDE = { type: 'spring', stiffness: 80, damping: 18 } as const;
-const FADE = { duration: 0.42, ease: [0.22, 1, 0.36, 1] } as const;
+/** Horizontal track — soft spring so the pane glide feels calm, not snappy. */
+const SLIDE = { type: 'spring', stiffness: 56, damping: 22, mass: 0.92 } as const;
+/** Cross-fade inspired by 21st transition-panel (opacity + blur + slight y). */
+const PANE_EASE = [0.22, 1, 0.36, 1] as const;
+const PANE_TRANSITION = { duration: 0.52, ease: PANE_EASE } as const;
+
+function paneMotion(reelsOpen: boolean, pane: 'saker' | 'reels') {
+  const hidden = pane === 'saker' ? reelsOpen : !reelsOpen;
+  if (hidden) {
+    return {
+      opacity: 0,
+      y: pane === 'saker' ? -10 : 10,
+      filter: 'blur(5px)',
+      scale: 0.988,
+    };
+  }
+  return {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    scale: 1,
+  };
+}
 
 function subscribeLocationHash(onStoreChange: () => void) {
   window.addEventListener('hashchange', onStoreChange);
@@ -101,9 +122,9 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
       >
         <motion.div
           initial={false}
-          animate={{ opacity: reelsOpen ? 0 : 1 }}
-          transition={reducedMotion ? { duration: 0 } : FADE}
-          className="w-1/2 shrink-0 space-y-8"
+          animate={paneMotion(reelsOpen, 'saker')}
+          transition={reducedMotion ? { duration: 0 } : PANE_TRANSITION}
+          className="w-1/2 shrink-0 origin-center space-y-8"
           aria-hidden={reelsOpen}
           {...(reelsOpen ? { inert: true } : {})}
         >
@@ -112,16 +133,15 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
         <motion.div
           id="reels"
           initial={false}
-          animate={{ opacity: reelsOpen ? 1 : 0 }}
-          transition={reducedMotion ? { duration: 0 } : FADE}
-          className="w-1/2 shrink-0"
+          animate={paneMotion(reelsOpen, 'reels')}
+          transition={reducedMotion ? { duration: 0 } : PANE_TRANSITION}
+          className="w-1/2 shrink-0 origin-center"
           aria-hidden={!reelsOpen}
           {...(!reelsOpen ? { inert: true } : {})}
         >
           <ReelsPanel
             active={reelsOpen}
             items={items}
-            itemCount={items.length}
             activePollId={activePollId}
             onSelect={setActivePollId}
             onClose={closeReels}
@@ -142,28 +162,62 @@ export function ReelsEntryCta({
   return <ReelsNavCta direction="forward" itemCount={itemCount} onNavigate={onOpen} />;
 }
 
+export function ReelsBackCta({ onBack }: { onBack: () => void }) {
+  return <ReelsNavCta direction="back" onNavigate={onBack} />;
+}
+
+type ReelsNavCopy = {
+  badge: string;
+  title: string;
+  subtitle: string;
+  BadgeIcon: typeof Sparkles;
+};
+
+function reelsNavCopy(direction: 'forward' | 'back', itemCount: number): ReelsNavCopy {
+  switch (direction) {
+    case 'forward':
+      return {
+        badge: 'Reels',
+        title: 'Del din mening',
+        subtitle:
+          itemCount > 0
+            ? 'Si ja eller nei på systemgenererte spørsmål fra stortingssaker.'
+            : 'Ingen Reels er publisert ennå. Åpne for å se status.',
+        BadgeIcon: Sparkles,
+      };
+    case 'back':
+      return {
+        badge: 'Utforsk',
+        title: 'Tilbake til saker',
+        subtitle: 'Lovforslag og representantforslag fra Stortinget — kildedokumenter.',
+        BadgeIcon: Compass,
+      };
+    default: {
+      const _exhaustive: never = direction;
+      return _exhaustive;
+    }
+  }
+}
+
 function ReelsNavCta({
   direction,
-  itemCount,
+  itemCount = 0,
   onNavigate,
 }: {
   direction: 'forward' | 'back';
-  itemCount: number;
+  itemCount?: number;
   onNavigate: () => void;
 }) {
   const reversed = direction === 'back';
-  const subtitle =
-    itemCount > 0
-      ? 'Si ja eller nei på systemgenererte spørsmål fra stortingssaker.'
-      : 'Ingen Reels er publisert ennå. Åpne for å se status.';
+  const { badge, title, subtitle, BadgeIcon } = reelsNavCopy(direction, itemCount);
 
   return (
     <button
       type="button"
       onClick={onNavigate}
-      aria-controls="reels"
+      aria-controls={direction === 'forward' ? 'reels' : undefined}
       aria-label={reversed ? 'Tilbake til saker' : 'Åpne Reels'}
-      className="flex w-full items-center justify-between gap-4 rounded-2xl border border-brand/20 bg-brand/5 px-5 py-4 transition-colors hover:border-brand/40 hover:bg-brand/10"
+      className="flex w-full items-center justify-between gap-4 rounded-2xl border border-brand/20 bg-brand/5 px-5 py-4 transition-[colors,transform] duration-200 hover:border-brand/40 hover:bg-brand/10 active:scale-[0.995]"
     >
       {reversed ? <ReelsNavArrow direction={direction} /> : null}
 
@@ -174,10 +228,10 @@ function ReelsNavCta({
             reversed && 'flex-row-reverse',
           )}
         >
-          <Sparkles className="h-3.5 w-3.5" aria-hidden />
-          Reels
+          <BadgeIcon className="h-3.5 w-3.5" aria-hidden />
+          {badge}
         </span>
-        <h2 className="mt-1 text-lg font-bold text-foreground">Del din mening</h2>
+        <h2 className="mt-1 text-lg font-bold text-foreground">{title}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
       </div>
 
@@ -189,14 +243,12 @@ function ReelsNavCta({
 function ReelsPanel({
   active,
   items,
-  itemCount,
   activePollId,
   onSelect,
   onClose,
 }: {
   active: boolean;
   items: SystemReelFeedItem[];
-  itemCount: number;
   activePollId: string | null;
   onSelect: (id: string | null) => void;
   onClose: () => void;
@@ -213,7 +265,7 @@ function ReelsPanel({
 
   return (
     <div className="space-y-4 pb-8">
-      <ReelsNavCta direction="back" itemCount={itemCount} onNavigate={onClose} />
+      <ReelsBackCta onBack={onClose} />
 
       {items.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center">
