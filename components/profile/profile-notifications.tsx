@@ -26,8 +26,8 @@ export function ProfileNotifications({
 }: ProfileNotificationsProps) {
   return (
     <ProfileCard
-      title="Varslingsinnstillinger"
-      description="Velg hvordan du vil motta e-postvarsler. In-app varsler på Varsler-siden påvirkes ikke av disse innstillingene."
+      title="Varsler"
+      description="Velg hvordan du vil motta e-post. In-app varsler (bjellen) påvirkes ikke av disse innstillingene."
     >
       <p className="text-sm text-muted-foreground">
         Abonnement på{' '}

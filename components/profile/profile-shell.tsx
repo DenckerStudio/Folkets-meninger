@@ -17,21 +17,19 @@ import { ProfilePrivacy } from '@/components/profile/profile-privacy';
 import { ProfileStemmePlus } from '@/components/profile/profile-stemme-plus';
 import { ProfileFylkePicker } from '@/components/profile/profile-fylke-picker';
 import { useIsAdmin } from '@/hooks/use-is-admin';
-import { getProfileTabLabel, isProfileTabId, type ProfileTabId } from '@/components/profile/profile-tabs';
+import { getProfileTabDescription, getProfileTabLabel, resolveProfileTab, type ProfileTabId } from '@/components/profile/profile-tabs';
+import { ProfileAppPreferences } from '@/components/profile/profile-app-preferences';
+import { BackButton } from '@/components/dashboard/back-button';
+import { PageHeader } from '@/components/page-header';
 import type { EarnedBadge } from '@/lib/knowledge/types';
 import type { UserPointsProgress } from '@/lib/user-points-levels';
-
-function resolveTab(tabParam: string | null): ProfileTabId | null {
-  if (isProfileTabId(tabParam)) return tabParam;
-  return null;
-}
 
 export function ProfileShell() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, loading: isPending, signOut } = useAuth();
   const tabParam = searchParams.get('tab');
-  const activeTab = resolveTab(tabParam);
+  const activeTab = resolveProfileTab(tabParam);
 
   const [voteHistory, setVoteHistory] = useState<VoteHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
@@ -222,8 +220,8 @@ export function ProfileShell() {
 function ProfileLoginPrompt() {
   return (
     <div className="max-w-md mx-auto mt-20 text-center space-y-6">
-      <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-950/50 rounded-2xl flex items-center justify-center mx-auto">
-        <User className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
+      <div className="w-20 h-20 bg-brand/10 rounded-2xl flex items-center justify-center mx-auto">
+        <User className="w-10 h-10 text-brand" />
       </div>
       <h2 className="text-3xl font-bold text-foreground">Logg inn for å se din profil</h2>
       <p className="text-muted-foreground">
@@ -231,7 +229,7 @@ function ProfileLoginPrompt() {
       </p>
       <Link
         href={routes.login}
-        className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors"
+        className="inline-flex items-center px-6 py-3 bg-brand text-white font-medium rounded-xl hover:bg-brand/90 transition-colors"
       >
         <LogIn className="w-5 h-5 mr-2" />
         Logg inn
@@ -314,8 +312,15 @@ function ProfileShellAuthenticated({
           <ProfileOverview showAdminLink={isAdminUser} />
         </>
       ) : (
-        <div className="min-w-0 space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">{getProfileTabLabel(activeTab)}</h2>
+        <div className="min-w-0 space-y-6">
+          <div className="space-y-3">
+            <BackButton fallbackHref={routes.minSide} />
+            <PageHeader
+              as="h2"
+              title={getProfileTabLabel(activeTab)}
+              description={getProfileTabDescription(activeTab)}
+            />
+          </div>
 
           {activeTab === 'historikk' && (
             <ProfileVoteHistory items={voteHistory} loading={historyLoading} />
@@ -336,19 +341,22 @@ function ProfileShellAuthenticated({
               />
             </>
           )}
-          {activeTab === 'varsler' && (
-            <ProfileNotifications
-              emailEnabled={notifEmailEnabled}
-              onEmailEnabledChange={onNotifEmailChange}
-              frequencies={notifFreq}
-              onFrequencyChange={onNotifFreqChange}
-              saving={notifSaving}
-              onSave={onNotifSave}
-              isStemmePlus={isStemmePlus}
-            />
+          {activeTab === 'preferanser' && (
+            <div className="space-y-6">
+              <ProfileAppPreferences />
+              <ProfileNotifications
+                emailEnabled={notifEmailEnabled}
+                onEmailEnabledChange={onNotifEmailChange}
+                frequencies={notifFreq}
+                onFrequencyChange={onNotifFreqChange}
+                saving={notifSaving}
+                onSave={onNotifSave}
+                isStemmePlus={isStemmePlus}
+              />
+            </div>
           )}
           {activeTab === 'stemme-plus' && <ProfileStemmePlus />}
-          {activeTab === 'min-data' && <ProfilePrivacy />}
+          {activeTab === 'min-data' && <ProfilePrivacy userId={user.id} />}
         </div>
       )}
     </div>

@@ -96,7 +96,7 @@ export function Header() {
           >
             <Bell className="size-4" />
             {displayUnreadCount > 0 ? (
-              <span className="absolute -top-1 -right-1 inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-indigo-600 px-1.5 text-[11px] font-bold text-white">
+              <span className="absolute -top-1 -right-1 inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-brand px-1.5 text-[11px] font-bold text-white">
                 {displayUnreadCount > 99 ? '99+' : displayUnreadCount}
               </span>
             ) : null}

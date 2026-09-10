@@ -57,10 +57,10 @@ export default function HeroSection() {
           className="mt-8 sm:mt-10 max-w-sm sm:max-w-md mx-auto flex flex-col sm:flex-row sm:justify-center gap-2.5 sm:gap-3"
         >
           <Link
-            href={routes.avstemninger}
+            href={routes.utforsk}
             className="inline-flex w-full sm:w-auto items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold text-white bg-[#00205b] shadow-sm transition-colors duration-200 hover:bg-[#ba0c2f] sm:px-7 sm:py-3 sm:text-base"
           >
-            Se avstemninger
+            Utforsk saker
           </Link>
           <Link
             href={routes.login}

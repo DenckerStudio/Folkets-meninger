@@ -11,6 +11,7 @@ import type {
   PollTotals,
   SakPollCandidate,
   SakPollCoverage,
+  SystemReelFeedItem,
 } from '@/lib/polls/types';
 
 export { emptyPollTotals, isPollVotingOpen, pollChoicePercent } from '@/lib/polls/format';
@@ -221,6 +222,24 @@ export async function getUserPollVote(
   const row = data as { hasVoted?: boolean; vote?: string };
   const vote = row.vote === 'ja' || row.vote === 'nei' || row.vote === 'blank' ? row.vote : null;
   return { hasVoted: Boolean(row.hasVoted), vote };
+}
+
+export async function listSystemReelFeedItems(
+  userId: string | null,
+  limit = 40,
+): Promise<SystemReelFeedItem[]> {
+  const polls = await listOpenSystemPolls(limit);
+  return Promise.all(
+    polls.map(async (poll) => {
+      const [totals, voteState] = await Promise.all([
+        getPollTotals(poll.id),
+        userId
+          ? getUserPollVote(userId, poll.id)
+          : Promise.resolve({ hasVoted: false, vote: null }),
+      ]);
+      return { poll, totals, userVote: voteState.vote };
+    }),
+  );
 }
 
 export async function castPollVote(input: {

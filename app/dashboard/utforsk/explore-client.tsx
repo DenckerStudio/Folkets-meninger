@@ -11,10 +11,12 @@ import { formatVotingDaysLeftLabel } from '@/lib/sak-voting-window';
 import { useState, useEffect, useMemo } from 'react';
 import FadeIn from '@/components/fade-in';
 import { PageHeader } from '@/components/page-header';
+import { UtforskReelsStage, ReelsEntryCta } from '@/components/polls/utforsk-reels-stage';
 import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
 import { PREFERENCE_KEYS } from '@/lib/preferences/keys';
 import { usePersistedState } from '@/hooks/use-persisted-state';
+import type { SystemReelFeedItem } from '@/lib/polls/types';
 
 const VOTE_LABELS: Record<string, string> = {
   for: 'For',
@@ -64,15 +66,16 @@ export default function ExploreClient({
   initialIssues,
   issueLabels,
   popularLabels,
+  reelItems,
 }: {
   initialIssues: SakListItem[];
   issueLabels: Record<string, string[]>;
   popularLabels: string[];
+  reelItems: SystemReelFeedItem[];
 }) {
   const [issues] = useState(initialIssues);
   const { user } = useAuth();
   const [userVotes, setUserVotes] = useState<Record<string, string>>({});
-  const [voteHistoryLoaded, setVoteHistoryLoaded] = useState(false);
 
   const [filters, setFilters] = usePersistedState(
     PREFERENCE_KEYS.utforsk.filters,
@@ -83,7 +86,6 @@ export default function ExploreClient({
   const displayedUserVotes = user ? userVotes : {};
   const { searchQuery, selectedCategory, selectedStatus, selectedSakKind, selectedAiLabels, sortBy } = filters;
   const activeAiLabels = selectedAiLabels ?? [];
-  const firstOpenIssue = issues.find((issue) => issue.votingOpen && issue.status !== 'closed');
 
   const setSearchQuery = (searchQuery: string) => setFilters((prev) => ({ ...prev, searchQuery }));
   const setSelectedCategory = (selectedCategory: string) =>
@@ -117,10 +119,7 @@ export default function ExploreClient({
         }
         setUserVotes(map);
       })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setVoteHistoryLoaded(true);
-      });
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -180,48 +179,19 @@ export default function ExploreClient({
   });
 
   return (
+    <UtforskReelsStage items={reelItems}>
+      {({ openReels, itemCount }) => (
     <div className="space-y-8">
       <FadeIn delay={0.1}>
         <PageHeader
           title="Utforsk saker"
-          description="Lovforslag og representantforslag fra Stortinget — kildedokumenter. Nasjonale avstemninger med Ja, Nei eller Blank ligger under Avstemninger."
+          description="Lovforslag og representantforslag fra Stortinget — kildedokumenter."
         />
       </FadeIn>
 
-      {user &&
-      voteHistoryLoaded &&
-      Object.keys(displayedUserVotes).length === 0 ? (
-        <div className="rounded-2xl border border-brand/20 bg-brand/5 px-5 py-4">
-          <h2 className="text-md font-bold text-foreground">
-            Del din mening
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Start en ja/nei/blank avstemning på en sak eller en nasjonal
-            avstemning. La andre stemme på saken eller avstemningen din, kanskje
-            vi får til en endring.
-          </p>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Våre meninger står sterkere sammen. Stem for at folk får en
-            rettferdig stemme på Stortinget.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {firstOpenIssue ? (
-              <Link
-                href={routes.sak(String(firstOpenIssue.id))}
-                className="inline-flex items-center rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand/90"
-              >
-                Åpne en sak
-              </Link>
-            ) : null}
-            <Link
-              href={routes.avstemninger}
-              className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
-            >
-              Gå til avstemninger
-            </Link>
-          </div>
-        </div>
-      ) : null}
+      <FadeIn delay={0.15} direction="up">
+        <ReelsEntryCta onOpen={openReels} itemCount={itemCount} />
+      </FadeIn>
 
       <FadeIn delay={0.2} direction="up">
         <div className="bg-card p-4 rounded-2xl shadow-sm border border-border flex flex-col md:flex-row gap-4">
@@ -233,7 +203,7 @@ export default function ExploreClient({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-border rounded-xl leading-5 bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              className="block w-full pl-10 pr-3 py-2 border border-border rounded-xl leading-5 bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand/30 focus:border-brand sm:text-sm"
               placeholder="Søk etter saker, stikkord eller saksnummer..."
             />
           </div>
@@ -242,7 +212,7 @@ export default function ExploreClient({
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="block w-full pl-3 pr-10 py-2 text-base border-border focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-xl border appearance-none bg-background text-foreground"
+                className="block w-full pl-3 pr-10 py-2 text-base border-border focus:outline-none focus:ring-brand/30 focus:border-brand sm:text-sm rounded-xl border appearance-none bg-background text-foreground"
               >
                 <option value="Alle statuser">Alle statuser</option>
                 <option value="Under behandling">Under behandling</option>
@@ -258,7 +228,7 @@ export default function ExploreClient({
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="block w-full pl-3 pr-10 py-2 text-base border-border focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-xl border appearance-none bg-background text-foreground"
+                className="block w-full pl-3 pr-10 py-2 text-base border-border focus:outline-none focus:ring-brand/30 focus:border-brand sm:text-sm rounded-xl border appearance-none bg-background text-foreground"
               >
                 <option value="Alle kategorier">Alle kategorier</option>
                 {categories.map((cat) => (
@@ -275,7 +245,7 @@ export default function ExploreClient({
               <select
                 value={selectedSakKind}
                 onChange={(e) => setSelectedSakKind(e.target.value)}
-                className="block w-full pl-3 pr-10 py-2 text-base border-border focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-xl border appearance-none bg-background text-foreground"
+                className="block w-full pl-3 pr-10 py-2 text-base border-border focus:outline-none focus:ring-brand/30 focus:border-brand sm:text-sm rounded-xl border appearance-none bg-background text-foreground"
               >
                 <option value="Alle sakstyper">Alle sakstyper</option>
                 <option value="Lovforslag">Lovforslag</option>
@@ -288,7 +258,7 @@ export default function ExploreClient({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="block w-full pl-3 pr-10 py-2 text-base border-border focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-xl border appearance-none bg-background text-foreground"
+              className="block w-full pl-3 pr-10 py-2 text-base border-border focus:outline-none focus:ring-brand/30 focus:border-brand sm:text-sm rounded-xl border appearance-none bg-background text-foreground"
             >
               <option value="Nyeste først">Nyeste først</option>
               <option value="Mest engasjement">Mest engasjement</option>
@@ -312,8 +282,8 @@ export default function ExploreClient({
                     onClick={() => toggleAiLabel(label)}
                     className={`rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
                       active
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-card text-foreground border-border hover:border-muted-foreground/40"
+                        ? 'bg-brand text-white border-brand'
+                        : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
                     }`}
                   >
                     {label}
@@ -340,22 +310,22 @@ export default function ExploreClient({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => setSortBy("Nyeste først")}
+            onClick={() => setSortBy('Nyeste først')}
             className={`rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
-              sortBy === "Nyeste først"
-                ? "bg-foreground text-background border-foreground"
-                : "bg-card text-foreground border-border hover:border-muted-foreground/40"
+              sortBy === 'Nyeste først'
+                ? 'bg-foreground text-background border-foreground'
+                : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
             }`}
           >
             Nyeste
           </button>
           <button
             type="button"
-            onClick={() => setSortBy("Mest engasjement")}
+            onClick={() => setSortBy('Mest engasjement')}
             className={`rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
-              sortBy === "Mest engasjement"
-                ? "bg-foreground text-background border-foreground"
-                : "bg-card text-foreground border-border hover:border-muted-foreground/40"
+              sortBy === 'Mest engasjement'
+                ? 'bg-foreground text-background border-foreground'
+                : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
             }`}
           >
             Populært
@@ -366,7 +336,7 @@ export default function ExploreClient({
       <FadeIn delay={0.3} direction="up">
         <div className="space-y-4">
           {displayedIssues.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center text-muted-foreground">
               Ingen saker funnet som matcher dine kriterier.
             </div>
           ) : (
@@ -383,7 +353,7 @@ export default function ExploreClient({
                   <div className="bg-card rounded-2xl shadow-sm border border-border hover:shadow-md transition-shadow overflow-hidden">
                     <Link
                       href={`/dashboard/sak/${issue.id}`}
-                      className="block p-6 pb-4"
+                      className="block p-6 pb-4 group"
                     >
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                         <div className="flex items-center gap-3 flex-wrap">
@@ -406,7 +376,7 @@ export default function ExploreClient({
                             .map((label) => (
                               <span
                                 key={`${issue.id}-${label}`}
-                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200"
+                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand/10 text-brand"
                               >
                                 {label}
                               </span>
@@ -424,7 +394,7 @@ export default function ExploreClient({
                         </div>
                       </div>
 
-                      <h2 className="text-xl font-semibold text-foreground mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                      <h2 className="text-xl font-semibold text-foreground mb-2 group-hover:text-brand transition-colors">
                         {issue.title}
                       </h2>
                       {issue.henvisning ? (
@@ -443,11 +413,11 @@ export default function ExploreClient({
                           <div className="flex items-center">
                             <span className="font-medium text-foreground mr-1">
                               {formatNumber(issue.votes.total)}
-                            </span>{" "}
+                            </span>{' '}
                             stemmer
                           </div>
                         </div>
-                        <div className="text-indigo-600 dark:text-indigo-400 text-sm font-medium flex items-center">
+                        <div className="text-brand text-sm font-medium flex items-center">
                           Les mer <ArrowRight className="ml-1 w-4 h-4" />
                         </div>
                       </div>
@@ -456,18 +426,18 @@ export default function ExploreClient({
                     <div className="px-6 py-4 bg-muted/40 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       {displayedUserVotes[String(issue.id)] ? (
                         <p className="text-sm text-foreground">
-                          Du har stemt:{" "}
+                          Du har stemt:{' '}
                           <span className="font-semibold">
                             {VOTE_LABELS[
                               displayedUserVotes[String(issue.id)]
                             ] ?? displayedUserVotes[String(issue.id)]}
                           </span>
                           <span className="text-muted-foreground">
-                            {" "}
+                            {' '}
                             (anonymt i statistikken)
                           </span>
                         </p>
-                      ) : issue.status === "closed" ? (
+                      ) : issue.status === 'closed' ? (
                         <p className="text-sm text-muted-foreground">
                           Saken er ferdigbehandlet i Stortinget.
                         </p>
@@ -478,11 +448,11 @@ export default function ExploreClient({
                       )}
                       <Link
                         href={routes.sak(String(issue.id))}
-                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shrink-0"
+                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-brand hover:bg-brand/90 rounded-lg shrink-0"
                       >
-                        {issue.status === "closed" || !issue.votingOpen
-                          ? "Se resultat"
-                          : "Gå til sak og stem"}
+                        {issue.status === 'closed' || !issue.votingOpen
+                          ? 'Se resultat'
+                          : 'Gå til sak og stem'}
                         <ArrowRight className="ml-1.5 w-4 h-4" />
                       </Link>
                     </div>
@@ -494,5 +464,7 @@ export default function ExploreClient({
         </div>
       </FadeIn>
     </div>
+      )}
+    </UtforskReelsStage>
   );
 }

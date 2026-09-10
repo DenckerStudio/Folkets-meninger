@@ -33,14 +33,14 @@ function OptionCard<T extends string>({
       onClick={() => onSelect(value)}
       className={`flex w-full items-start gap-3 rounded-xl border p-4 text-left transition-colors ${
         selected
-          ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-500/40 dark:bg-indigo-950/40'
+          ? 'border-brand/40 bg-brand/5'
           : 'border-border bg-card hover:bg-muted/50'
       }`}
       aria-pressed={selected}
     >
       <span
         className={`mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-          selected ? 'bg-indigo-600 text-white' : 'bg-muted text-muted-foreground'
+          selected ? 'bg-brand text-white' : 'bg-muted text-muted-foreground'
         }`}
       >
         {icon}
@@ -155,11 +155,11 @@ export function ProfileAppPreferences() {
             type="checkbox"
             checked={preferences.sakTooltips}
             onChange={(e) => update({ sakTooltips: e.target.checked })}
-            className="mt-1 h-4 w-4 rounded border-input text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500"
+            className="mt-1 h-4 w-4 rounded border-input text-brand focus:ring-brand"
           />
           <span className="min-w-0">
             <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Info className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              <Info className="h-4 w-4 text-brand" />
               Vis hjelpetekster i saker
             </span>
             <span className="mt-1 block text-xs text-muted-foreground">

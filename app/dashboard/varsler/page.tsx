@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Bell, CheckCircle, LogIn } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { PageHeader } from '@/components/page-header';
+import { routes } from '@/lib/routes';
 
 type NotificationItem = {
   id: string;
@@ -54,16 +55,16 @@ export default function VarslerPage() {
   if (!user) {
     return (
       <div className="max-w-md mx-auto mt-20 text-center space-y-6">
-        <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-950/50 rounded-2xl flex items-center justify-center mx-auto">
-          <Bell className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-brand/10">
+          <Bell className="h-10 w-10 text-brand" />
         </div>
         <PageHeader as="h2" title="Logg inn for å se varsler" />
         <p className="text-muted-foreground">Du må være logget inn for å se in-app varsler.</p>
         <Link
-          href="/auth/login"
-          className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors"
+          href={routes.login}
+          className="inline-flex items-center rounded-xl bg-brand px-6 py-3 font-medium text-white transition-colors hover:bg-brand/90"
         >
-          <LogIn className="w-5 h-5 mr-2" />
+          <LogIn className="mr-2 h-5 w-5" />
           Logg inn
         </Link>
       </div>
@@ -71,41 +72,51 @@ export default function VarslerPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-12">
-      <div className="flex items-center justify-between">
-        <PageHeader title="Varsler" className="flex-1" />
+    <div className="mx-auto max-w-3xl space-y-6 pb-12">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <PageHeader
+          title="Varsler"
+          description="In-app varsler. E-postinnstillinger ligger under Preferanser."
+          className="flex-1"
+        />
         <button
           type="button"
           onClick={markAllRead}
-          className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg border border-border bg-card hover:bg-muted/50"
+          className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-muted/50"
           disabled={pending}
         >
-          <CheckCircle className="w-4 h-4 mr-2" />
+          <CheckCircle className="mr-2 h-4 w-4" />
           Marker alle som lest
         </button>
       </div>
 
+      <p className="text-sm text-muted-foreground">
+        <Link href={`${routes.minSide}?tab=preferanser`} className="font-medium text-brand hover:underline">
+          Administrer e-postvarsler
+        </Link>
+      </p>
+
       {items.length === 0 ? (
-        <div className="bg-card border border-border rounded-2xl p-10 text-center text-muted-foreground">
+        <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center text-muted-foreground">
           Ingen varsler ennå.
         </div>
       ) : (
-        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <ul className="divide-y divide-border">
             {items.map((n) => (
-              <li key={n.id} className={`p-5 ${n.read_at ? 'bg-card' : 'bg-indigo-50 dark:bg-indigo-950/40/40'}`}>
+              <li key={n.id} className={`p-5 ${n.read_at ? 'bg-card' : 'bg-brand/5'}`}>
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-foreground">{n.title}</div>
-                    {n.body ? <div className="text-sm text-muted-foreground mt-1">{n.body}</div> : null}
-                    <div className="text-xs text-muted-foreground mt-2">
+                    {n.body ? <div className="mt-1 text-sm text-muted-foreground">{n.body}</div> : null}
+                    <div className="mt-2 text-xs text-muted-foreground">
                       {new Date(n.created_at).toLocaleString('nb-NO')}
                     </div>
                   </div>
                   {n.url ? (
                     <Link
                       href={n.url}
-                      className="shrink-0 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
+                      className="shrink-0 text-sm font-medium text-brand hover:underline"
                     >
                       Åpne
                     </Link>
@@ -119,4 +130,3 @@ export default function VarslerPage() {
     </div>
   );
 }
-

@@ -26,7 +26,7 @@ export function ProfileVoteHistory({ items, loading }: ProfileVoteHistoryProps) 
           <p className="text-sm mt-2">Utforsk saker og stem for å se historikken din her.</p>
           <Link
             href={routes.utforsk}
-            className="mt-4 inline-block text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-500 text-sm"
+            className="mt-4 inline-block text-sm font-medium text-brand hover:underline"
           >
             Utforsk saker →
           </Link>
@@ -37,9 +37,9 @@ export function ProfileVoteHistory({ items, loading }: ProfileVoteHistoryProps) 
             <li key={item.stortinget_issue_id}>
               <Link
                 href={routes.sak(item.stortinget_issue_id)}
-                className="block px-4 py-4 hover:bg-muted/50 transition-colors"
+                className="group block px-4 py-4 hover:bg-muted/50 transition-colors"
               >
-                <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 truncate">
+                <p className="text-sm font-medium text-foreground truncate group-hover:text-brand">
                   {item.title || `Sak ${item.stortinget_issue_id}`}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">

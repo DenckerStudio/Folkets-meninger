@@ -5,9 +5,9 @@
 - Prefer working on informatively named branches with prefix `cursor/`.
 - Avoid user-visible mock/placeholder data; prefer honest empty/“coming soon” states.
 - Forum is removed from the product. System-generated Reels live under
-  Avstemninger (`/dashboard/avstemninger/reels`) as ja/nei/blank polls. Landing
-  after login / `/dashboard` is `utforsk`.
-  Primary nav: Utforsk / Avstemninger / Høringer / Forslag. Default Stortinget period is
+ Utforsk (`/dashboard/utforsk`) as ja/nei/blank polls. Landing
+ after login / `/dashboard` is `utforsk`.
+ Primary nav: Folkets meninger / Utforsk / Høringer / Forslag. Default Stortinget period is
   `2025-2029`. Auth is email/password and Google OAuth via Supabase — do not
   mention BankID, MinID, or electronic ID verification in user-facing copy.
   Opt-in `activity_visibility` (`private`|`summary`|`full`). Admin via
@@ -46,7 +46,7 @@ Next.js App Router
 External systems:
 
 - Supabase Auth stores user sessions; middleware refreshes cookies and protects
-  `/dashboard/*` except public sak, politiker, avstemning, and initiativ pages.
+ `/dashboard/*` except public sak, politiker, utforsk, avstemning, folkets-meninger, and initiativ pages.
 - Supabase Postgres stores sak votes, poll ballots, citizen initiatives, hearing
   comments, notifications, AI summaries, Stortinget issue cache, document chunks,
   and admin data.
@@ -154,16 +154,17 @@ The canonical template is `.env.example`.
   support threshold is 500. Schema:
   `supabase/migrations/20260819210000_direct_democracy_polls.sql` plus
   `20260821130000_system_poll_reels.sql` for system Reels.
-- Public routes: `/dashboard/avstemninger`, `/dashboard/avstemninger/reels`,
-  `/dashboard/avstemninger/<id>`, `/dashboard/initiativ`, `/dashboard/initiativ/<id>`.
-  Voting and endorsements require login. Empty lists are honest — do not seed mock polls.
+- Public routes: `/dashboard/utforsk` (saker + Reels), `/dashboard/avstemninger`,
+ `/dashboard/avstemninger/<id>`, `/dashboard/initiativ`, `/dashboard/initiativ/<id>`.
+ Voting and endorsements require login. Empty lists are honest — do not seed mock polls.
+ Avstemninger is not in primary nav; `/dashboard/avstemninger/reels` redirects to Utforsk.
 - System Reels are AI-generated ja/nei/blank questions from sak RAG (n8n + Ollama),
-  stored as `polls` drafts (`track=system`) and published by admin. Copy must state
-  they are system-generated. Do not use `ensure_stortinget_poll` for drafts (it opens
-  immediately); use `create_system_poll_draft` → `publish_poll`.
+ stored as `polls` drafts (`track=system`) and published by admin. Copy must state
+ they are system-generated. Do not use `ensure_stortinget_poll` for drafts (it opens
+ immediately); use `create_system_poll_draft` → `publish_poll`. The public feed sits on Utforsk.
 - Fylke breakdowns use `users.fylke_code` only when `fylke_verified` is true.
-  Self-declared fylke via the profile picker does not set `fylke_verified`.
-- Primary nav: Utforsk / Avstemninger / Høringer. Post-login fallback is Utforsk.
+ Self-declared fylke via the profile picker does not set `fylke_verified`.
+- Primary nav: Folkets meninger / Utforsk / Høringer / Forslag. Post-login fallback is Utforsk.
 
 ### Identity, activity, admin
 
@@ -284,8 +285,9 @@ The canonical template is `.env.example`.
 - Playwright and CI use the Folkets-Stemme test Supabase from `.env.test` / workflow `env` (anon key only). Set `SUPABASE_SERVICE_ROLE_KEY` via secrets when server RPCs are needed.
 - Auth is email/password (`supabase.auth.signUp` / `signInWithPassword`). **Email signups require confirmation**, so a raw signup does NOT create a session. To get a usable test login, create a pre-confirmed user with the admin API and the service role key, then sign in: `POST {SUPABASE_URL}/auth/v1/admin/users` with `{"email":...,"password":...,"email_confirm":true,"user_metadata":{...}}` (the project rejects `@example.com`; use e.g. `@gmail.com`).
 - `/dashboard/*` is gated by middleware (redirects to `/auth/login`) except public
-  issue pages `/dashboard/sak/<id>`, politician pages, `/dashboard/avstemninger`
-  (and `/<id>`), and `/dashboard/initiativ` (and `/<id>`). Issue pages fetch live
-  `data.stortinget.no` data and can take 10–30s on first load.
+ issue pages `/dashboard/sak/<id>`, politician pages, `/dashboard/utforsk`,
+ `/dashboard/avstemninger` (and `/<id>`), `/dashboard/folkets-meninger`, and
+ `/dashboard/initiativ` (and `/<id>`). Issue pages fetch live
+ `data.stortinget.no` data and can take 10–30s on first load.
 - Hello-world that exercises core functionality: log in, then open an issue (`/dashboard/sak/<id>`) and cast a "For" vote in the "Hva mener du?" section — the vote persists and the `/dashboard/min-side` vote count updates.
 - `npm run test:unit` shells out to `npx tsx ...`; the first run downloads `tsx` (needs network) and then caches it.

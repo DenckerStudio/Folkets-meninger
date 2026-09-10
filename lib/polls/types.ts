@@ -35,6 +35,12 @@ export type PollGenerationMetadata = {
   [key: string]: unknown;
 };
 
+export type SystemReelFeedItem = {
+  poll: PollRecord;
+  totals: PollTotals;
+  userVote: PollChoice | null;
+};
+
 export type PollRecord = {
   id: string;
   track: PollTrack;

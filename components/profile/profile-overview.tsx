@@ -15,7 +15,7 @@ export function ProfileOverview({ showAdminLink = false }: ProfileOverviewProps)
       <div>
         <h2 className="text-lg font-semibold text-foreground">Oversikt</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Bruk profilmenyen for å åpne stemmehistorikk, innstillinger, varsler og mer. På mobil
+          Bruk profilmenyen for å åpne stemmehistorikk, innstillinger, preferanser og mer. På mobil
           finner du den nederst til høyre.
         </p>
       </div>

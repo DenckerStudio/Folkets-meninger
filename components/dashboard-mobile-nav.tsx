@@ -2,16 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileEdit, MessagesSquare, Search, UserRound, Users, Vote } from 'lucide-react';
+import { FileEdit, Lightbulb, MessagesSquare, Search, UserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
 
 const DASHBOARD_MOBILE_ITEMS = [
   { href: routes.folketsMeninger, label: 'Meninger', icon: MessagesSquare },
   { href: routes.utforsk, label: 'Utforsk', icon: Search },
-  { href: routes.avstemninger, label: 'Avstemninger', icon: Vote },
   { href: routes.horinger, label: 'Høringer', icon: FileEdit },
-  { href: routes.politikere, label: 'Politikere', icon: Users },
+  { href: routes.forslag, label: 'Forslag', icon: Lightbulb },
   { href: routes.minSide, label: 'Profil', icon: UserRound },
 ] as const;
 

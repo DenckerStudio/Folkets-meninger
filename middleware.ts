@@ -6,6 +6,7 @@ import {
   isPublicDashboardInitiativPath,
   isPublicDashboardPolitikerPath,
   isPublicDashboardSakPath,
+  isPublicDashboardUtforskPath,
   routes,
 } from '@/lib/routes';
 import { refreshSessionCookies, resolveMiddlewareUser } from '@/lib/supabase-middleware';
@@ -51,7 +52,8 @@ export async function middleware(request: NextRequest) {
     isPublicDashboardPolitikerPath(pathname) ||
     isPublicDashboardAvstemningPath(pathname) ||
     isPublicDashboardInitiativPath(pathname) ||
-    isPublicDashboardFolketsMeningerPath(pathname)
+    isPublicDashboardFolketsMeningerPath(pathname) ||
+    isPublicDashboardUtforskPath(pathname)
   ) {
     return refreshSessionCookies(request);
   }
