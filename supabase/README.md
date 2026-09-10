@@ -10,7 +10,7 @@ Users may opt in to public activity via `users.activity_visibility`.
 
 | Environment | URL | How to use |
 |-------------|-----|------------|
-| Test (self-hosted) | `https://supabase.heyklever.app` | `npm run env:test` → writes `.env.local` from `.env.test` |
+| Test (self-hosted) | `https://supabase.heyklever.app` | Coolify service `supabase-folkets` — see `infra/supabase-folkets/README.md` |
 | Local Docker | `http://127.0.0.1:54321` | `npm run supabase:start`, then copy keys from `npm run supabase:status` into `.env.local` |
 
 `supabase/config.toml` enables the Supabase CLI against this repo's migrations.
