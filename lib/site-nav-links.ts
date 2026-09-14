@@ -6,6 +6,7 @@ import {
   Lightbulb,
   MessagesSquare,
   Search,
+  Shield,
   UserRound,
   Users,
 } from 'lucide-react';
@@ -130,6 +131,14 @@ export const accountNavItems: SiteNavLinkItem[] = [
   },
 ];
 
+/** Appended for admins only — not in static sidebar/mobile arrays. */
+export const adminAccountNavItem: SiteNavLinkItem = {
+  title: 'Admin',
+  href: routes.admin,
+  icon: Shield,
+  isActive: isAdminActive,
+};
+
 /** Flat desktop primary nav — core items only, no «Mer» overflow. */
 export const desktopPrimaryNavLinks: PrimaryNavLink[] = coreNavItems.map((item) => ({
   label: item.title,
@@ -146,6 +155,11 @@ export const dashboardSidebarNavItems: SiteNavLinkItem[] = [
   ...extendedNavItems,
   ...accountNavItems,
 ];
+
+export function dashboardSidebarNavItemsForAdmin(isAdmin: boolean): SiteNavLinkItem[] {
+  if (!isAdmin) return dashboardSidebarNavItems;
+  return [...dashboardSidebarNavItems, adminAccountNavItem];
+}
 
 /** Mobile bottom nav items (2–5 slots). */
 export const mobileNavItems = [
@@ -182,4 +196,7 @@ export const mobileNavItems = [
 ] as const;
 
 /** All dashboard nav hrefs — used to guard against duplicate header entries. */
-export const dashboardNavHrefs = new Set(dashboardSidebarNavItems.map((item) => item.href));
+export const dashboardNavHrefs = new Set([
+  ...dashboardSidebarNavItems.map((item) => item.href),
+  routes.admin,
+]);

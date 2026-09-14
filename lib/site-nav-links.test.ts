@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   accountNavItems,
+  adminAccountNavItem,
   coreNavItems,
   dashboardNavHrefs,
   dashboardSidebarNavItems,
+  dashboardSidebarNavItemsForAdmin,
   desktopPrimaryNavLinks,
   extendedNavItems,
   mobileNavItems,
@@ -53,6 +55,20 @@ test('avstemninger and politiker-hub are not in dashboard nav', () => {
     dashboardSidebarNavItems.some((item) => item.href === routes.politikerHub),
     false,
   );
+});
+
+test('admin sidebar item is appended only for admins', () => {
+  assert.equal(dashboardSidebarNavItemsForAdmin(false).length, dashboardSidebarNavItems.length);
+  assert.equal(
+    dashboardSidebarNavItemsForAdmin(true).at(-1)?.href,
+    adminAccountNavItem.href,
+  );
+});
+
+test('admin nav item highlights admin routes', () => {
+  assert.equal(adminAccountNavItem.isActive?.(routes.admin), true);
+  assert.equal(adminAccountNavItem.isActive?.(`${routes.admin}/reels`), true);
+  assert.equal(adminAccountNavItem.isActive?.(routes.minSide), false);
 });
 
 test('mobile nav stays within core destinations plus profile', () => {
