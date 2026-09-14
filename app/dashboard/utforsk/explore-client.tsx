@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { Search, Filter, ArrowRight } from 'lucide-react';
-import { formatNumber } from '@/lib/utils';
 import type { SakListItem } from '@/lib/stortinget';
 import { getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS } from '@/lib/sak-status';
@@ -18,11 +17,7 @@ import { PREFERENCE_KEYS } from '@/lib/preferences/keys';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import type { SystemReelFeedItem } from '@/lib/polls/types';
 
-const VOTE_LABELS: Record<string, string> = {
-  for: 'For',
-  against: 'Mot',
-  abstain: 'Avstår',
-};
+import { ISSUE_STANCE_LABELS, type IssueStance } from '@/lib/stances/types';
 
 function votingUrgency(issue: SakListItem): number {
   if (issue.votingOpen && issue.votingDaysLeft != null && issue.votingDaysLeft > 0) {
@@ -75,7 +70,8 @@ export default function ExploreClient({
 }) {
   const [issues] = useState(initialIssues);
   const { user } = useAuth();
-  const [userVotes, setUserVotes] = useState<Record<string, string>>({});
+  const [userStances, setUserStances] = useState<Record<string, IssueStance>>({});
+  const [stanceHistoryLoaded, setStanceHistoryLoaded] = useState(false);
 
   const [filters, setFilters] = usePersistedState(
     PREFERENCE_KEYS.utforsk.filters,
@@ -83,9 +79,10 @@ export default function ExploreClient({
     isUtforskFilters
   );
 
-  const displayedUserVotes = user ? userVotes : {};
+  const displayedUserStances = user ? userStances : {};
   const { searchQuery, selectedCategory, selectedStatus, selectedSakKind, selectedAiLabels, sortBy } = filters;
   const activeAiLabels = selectedAiLabels ?? [];
+  const firstOpenIssue = issues.find((issue) => issue.votingOpen && issue.status !== 'closed');
 
   const setSearchQuery = (searchQuery: string) => setFilters((prev) => ({ ...prev, searchQuery }));
   const setSelectedCategory = (selectedCategory: string) =>
@@ -107,19 +104,24 @@ export default function ExploreClient({
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    fetch('/api/user/vote-history')
+    fetch('/api/user/stance-history')
       .then((res) => res.json())
       .then((data) => {
         if (cancelled || !Array.isArray(data)) return;
-        const map: Record<string, string> = {};
+        const map: Record<string, IssueStance> = {};
         for (const row of data) {
           const id = row.stortinget_issue_id ?? row.issue_id ?? row.id;
-          const choice = row.choice ?? row.vote;
-          if (id && choice) map[String(id)] = String(choice);
+          const stance = row.stance;
+          if (id && stance && ['enig', 'uenig', 'ikke_interessert'].includes(stance)) {
+            map[String(id)] = stance as IssueStance;
+          }
         }
-        setUserVotes(map);
+        setUserStances(map);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setStanceHistoryLoaded(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -192,6 +194,46 @@ export default function ExploreClient({
       <FadeIn delay={0.15} direction="up">
         <ReelsEntryCta onOpen={openReels} itemCount={itemCount} />
       </FadeIn>
+
+      {user &&
+      stanceHistoryLoaded &&
+      Object.keys(displayedUserStances).length === 0 ? (
+        <div className="rounded-2xl border border-brand/20 bg-brand/5 px-5 py-4">
+          <h2 className="text-md font-bold text-foreground">
+            Del din holdning
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Marker om du er enig, uenig eller ikke interessert i saker fra Stortinget.
+            Holdningene dine brukes til Valgomat og hjertesaker.
+          </p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            For nasjonale ja/nei-avstemninger, se Avstemninger og borgerinitiativ.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {firstOpenIssue ? (
+              <Link
+                href={routes.sak(String(firstOpenIssue.id))}
+                className="inline-flex items-center rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand/90"
+              >
+                Åpne en sak
+              </Link>
+            ) : issues[0] ? (
+              <Link
+                href={routes.sak(String(issues[0].id))}
+                className="inline-flex items-center rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand/90"
+              >
+                Åpne en sak
+              </Link>
+            ) : null}
+            <Link
+              href={routes.avstemninger}
+              className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+            >
+              Gå til avstemninger
+            </Link>
+          </div>
+        </div>
+      ) : null}
 
       <FadeIn delay={0.2} direction="up">
         <div className="bg-card p-4 rounded-2xl shadow-sm border border-border flex flex-col md:flex-row gap-4">
@@ -408,15 +450,7 @@ export default function ExploreClient({
                         </p>
                       ) : null}
 
-                      <div className="flex items-center justify-between mt-4">
-                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                          <div className="flex items-center">
-                            <span className="font-medium text-foreground mr-1">
-                              {formatNumber(issue.votes.total)}
-                            </span>{' '}
-                            stemmer
-                          </div>
-                        </div>
+                      <div className="flex items-center justify-end mt-4">
                         <div className="text-brand text-sm font-medium flex items-center">
                           Les mer <ArrowRight className="ml-1 w-4 h-4" />
                         </div>
@@ -424,35 +458,23 @@ export default function ExploreClient({
                     </Link>
 
                     <div className="px-6 py-4 bg-muted/40 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      {displayedUserVotes[String(issue.id)] ? (
+                      {displayedUserStances[String(issue.id)] ? (
                         <p className="text-sm text-foreground">
-                          Du har stemt:{' '}
+                          Din holdning:{' '}
                           <span className="font-semibold">
-                            {VOTE_LABELS[
-                              displayedUserVotes[String(issue.id)]
-                            ] ?? displayedUserVotes[String(issue.id)]}
+                            {ISSUE_STANCE_LABELS[displayedUserStances[String(issue.id)]]}
                           </span>
-                          <span className="text-muted-foreground">
-                            {' '}
-                            (anonymt i statistikken)
-                          </span>
-                        </p>
-                      ) : issue.status === 'closed' ? (
-                        <p className="text-sm text-muted-foreground">
-                          Saken er ferdigbehandlet i Stortinget.
                         </p>
                       ) : (
                         <p className="text-sm text-muted-foreground">
-                          Stem på saken for å registrere din mening.
+                          Marker holdning for å tilpasse Valgomat og hjertesaker.
                         </p>
                       )}
                       <Link
                         href={routes.sak(String(issue.id))}
                         className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-brand hover:bg-brand/90 rounded-lg shrink-0"
                       >
-                        {issue.status === 'closed' || !issue.votingOpen
-                          ? 'Se resultat'
-                          : 'Gå til sak og stem'}
+                        {displayedUserStances[String(issue.id)] ? 'Se sak' : 'Marker holdning'}
                         <ArrowRight className="ml-1.5 w-4 h-4" />
                       </Link>
                     </div>

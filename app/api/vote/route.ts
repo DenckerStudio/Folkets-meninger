@@ -57,102 +57,14 @@ function parseTotals(data: unknown) {
   };
 }
 
-export async function POST(request: Request) {
-  try {
-    const { issueId, vote, title, summary } = await request.json();
-
-    if (!issueId || !vote) {
-      return NextResponse.json({ error: 'Mangler saks-ID eller stemme' }, { status: 400 });
-    }
-
-    if (!['for', 'against', 'abstain'].includes(vote)) {
-      return NextResponse.json({ error: 'Ugyldig stemmetype' }, { status: 400 });
-    }
-
-    const supabase = await getServerSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Du må være logget inn for å stemme' }, { status: 401 });
-    }
-
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.error('Vote error: SUPABASE_SERVICE_ROLE_KEY is not configured');
-      return NextResponse.json(
-        { error: 'Stemming er ikke konfigurert på serveren (mangler service role key).' },
-        { status: 503 }
-      );
-    }
-
-    const service = getServiceSupabase();
-    const votingState = await getIssueVotingState(String(issueId));
-    if (votingState.votingClosed) {
-      return NextResponse.json(
-        { error: 'Stemming er stengt for denne saken' },
-        { status: 403 },
-      );
-    }
-
-    const { data, error } = await service.rpc('cast_vote', {
-      p_user_id: user.id,
-      p_issue_id: String(issueId),
-      p_choice: vote as VoteChoice,
-      p_title: title ?? null,
-      p_summary: summary ?? null,
-    });
-
-    if (error) {
-      const msg = error.message ?? '';
-      const details = error.details ?? '';
-      const combined = `${msg} ${details}`.toLowerCase();
-
-      if (combined.includes('already voted')) {
-        return NextResponse.json({ error: 'Du har allerede stemt på denne saken' }, { status: 409 });
-      }
-      if (combined.includes('voting closed')) {
-        return NextResponse.json({ error: 'Stemming er stengt for denne saken' }, { status: 403 });
-      }
-      if (combined.includes('identity not verified')) {
-        return NextResponse.json({ error: 'Du har ikke tilgang til å stemme på denne saken' }, { status: 403 });
-      }
-      if (combined.includes('not unique') || combined.includes('could not choose')) {
-        return NextResponse.json(
-          {
-            error: 'Databasefeil: flere cast_vote-funksjoner. Kjør supabase/migrations/20260528000002_vote_schema_repair.sql.',
-          },
-          { status: 500 }
-        );
-      }
-      if (combined.includes('does not exist') && combined.includes('cast_vote')) {
-        return NextResponse.json(
-          {
-            error: 'Stemme-API er ikke satt opp i databasen. Kjør Supabase-migrasjonene.',
-          },
-          { status: 503 }
-        );
-      }
-
-      console.error('Vote RPC error:', { message: error.message, details: error.details, hint: error.hint, code: error.code });
-      return NextResponse.json(
-        {
-          error: 'Kunne ikke registrere stemme',
-          code: error.code,
-          hint: process.env.NODE_ENV === 'development' ? error.hint ?? error.message : undefined,
-        },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Stemme registrert anonymt',
-      totals: parseTotals(data),
-      userVote: vote,
-    });
-  } catch (error) {
-    console.error('Voting Error:', error);
-    return NextResponse.json({ error: 'Kunne ikke registrere stemme' }, { status: 500 });
-  }
+export async function POST() {
+  return NextResponse.json(
+    {
+      error:
+        'Per-sak stemming (For/Mot/Avstår) er avviklet. Marker holdning (enig/uenig/ikke interessert) via /api/stance. Ja/nei-avstemninger finnes under Avstemninger.',
+    },
+    { status: 410 },
+  );
 }
 
 export async function GET(request: Request) {

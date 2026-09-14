@@ -1,6 +1,7 @@
 import type { CounterProposalRecord } from '@/lib/counter-proposals/types';
+import type { IssueStance } from '@/lib/stances/types';
 
-export const SAK_PARTICIPATION_STEPS = ['vote', 'motforslag', 'innspill'] as const;
+export const SAK_PARTICIPATION_STEPS = ['stance', 'motforslag', 'innspill'] as const;
 
 export type SakParticipationStep = (typeof SAK_PARTICIPATION_STEPS)[number];
 
@@ -35,8 +36,8 @@ export function buildParticipationSummary(
 
 export function participationStepLabel(step: SakParticipationStep): string {
   switch (step) {
-    case 'vote':
-      return 'Stem';
+    case 'stance':
+      return 'Holdning';
     case 'motforslag':
       return 'Motforslag';
     case 'innspill':
@@ -48,14 +49,14 @@ export function participationStepLabel(step: SakParticipationStep): string {
   }
 }
 
-export function motforslagCtaForVote(vote: 'for' | 'against' | 'abstain' | null): string {
-  switch (vote) {
-    case 'against':
-      return 'Stemte du mot? Foreslå et alternativ som motforslag.';
-    case 'for':
-      return 'Du stemte for. Se om andre har foreslått forbedringer, eller frem et eget.';
-    case 'abstain':
-      return 'Du avstod. Utforsk motforslag eller frem et konkret alternativ.';
+export function motforslagCtaForStance(stance: IssueStance | null): string {
+  switch (stance) {
+    case 'uenig':
+      return 'Uenig? Foreslå et alternativ som motforslag.';
+    case 'enig':
+      return 'Du er enig. Se om andre har foreslått forbedringer, eller frem et eget.';
+    case 'ikke_interessert':
+      return 'Ikke interessert i saken? Du kan likevel utforske motforslag fra andre.';
     default:
       return 'Utforsk motforslag fra andre borgere, eller frem et eget alternativ.';
   }

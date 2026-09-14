@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ProfileNameSettings } from '@/components/profile-name-settings';
 import { ProfileCard } from '@/components/profile/profile-card';
+import type { StanceSignals } from '@/lib/stances/types';
 
 const INTEREST_OPTIONS = [
   'Helse og omsorg',
@@ -36,12 +37,25 @@ export function ProfileInterests({
 }: ProfileInterestsProps) {
   const [popularLabels, setPopularLabels] = useState<string[]>([]);
   const [customLabel, setCustomLabel] = useState('');
+  const [stanceSignals, setStanceSignals] = useState<StanceSignals>({ categories: [], labels: [] });
 
   useEffect(() => {
     fetch('/api/ai-summary/labels', { cache: 'no-store' })
       .then((res) => res.json())
       .then((json) => {
         if (Array.isArray(json.labels)) setPopularLabels(json.labels);
+      })
+      .catch(() => {});
+
+    fetch('/api/user/stance-signals', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((json) => {
+        if (json && typeof json === 'object') {
+          setStanceSignals({
+            categories: Array.isArray(json.categories) ? json.categories : [],
+            labels: Array.isArray(json.labels) ? json.labels : [],
+          });
+        }
       })
       .catch(() => {});
   }, []);
@@ -59,6 +73,75 @@ export function ProfileInterests({
   return (
     <div className="space-y-6">
       <ProfileNameSettings />
+      {(stanceSignals.categories.length > 0 || stanceSignals.labels.length > 0) && (
+        <ProfileCard
+          title="Forslag fra dine holdninger"
+          description="Basert på saker du har markert som enig eller uenig. Legg til som hjertesaker med ett klikk."
+        >
+          {stanceSignals.categories.length > 0 ? (
+            <div className="mb-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
+                Komitéområder
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {stanceSignals.categories.map((signal) => {
+                  const active = interestCategories.includes(signal.value);
+                  return (
+                    <button
+                      key={signal.value}
+                      type="button"
+                      onClick={() => {
+                        const next = active
+                          ? interestCategories.filter((c) => c !== signal.value)
+                          : [...new Set([...interestCategories, signal.value])];
+                        onCategoriesChange(next);
+                      }}
+                      className={`rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
+                        active
+                          ? 'bg-brand text-white border-brand'
+                          : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
+                      }`}
+                    >
+                      {signal.value}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+          {stanceSignals.labels.length > 0 ? (
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
+                AI-emner
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {stanceSignals.labels.map((signal) => {
+                  const active = interestLabels.includes(signal.value);
+                  return (
+                    <button
+                      key={signal.value}
+                      type="button"
+                      onClick={() => {
+                        const next = active
+                          ? interestLabels.filter((l) => l !== signal.value)
+                          : [...interestLabels, signal.value];
+                        onLabelsChange(next);
+                      }}
+                      className={`rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
+                        active
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
+                      }`}
+                    >
+                      {signal.value}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        </ProfileCard>
+      )}
       <ProfileCard
         title="Interesseområder"
         description="Velg hvilke saksområder du ønsker å følge ekstra nøye med på."
