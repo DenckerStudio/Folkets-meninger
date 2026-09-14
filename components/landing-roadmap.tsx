@@ -40,7 +40,7 @@ export function LandingRoadmap() {
             date: 'Nå',
             title: 'Tillit, synlighet og førsteinntrykk',
             description:
-              'Reels (Ja/Nei/Blank) ligger på Utforsk, og borgerinitiativ er på plass. Vi synliggjør spørsmål før innlogging og forbedrer førsteinntrykket.',
+              'Reels (Ja/Nei/Blank) ligger på Utforsk. Vi synliggjør spørsmål før innlogging og forbedrer førsteinntrykket.',
             status: 'current',
             detail: (
               <p>

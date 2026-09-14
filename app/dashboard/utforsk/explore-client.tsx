@@ -207,7 +207,7 @@ export default function ExploreClient({
             Holdningene dine brukes til Valgomat og hjertesaker.
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
-            For nasjonale ja/nei-avstemninger, se Avstemninger og borgerinitiativ.
+            For andre nasjonale ja/nei-avstemninger, se Avstemninger.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {firstOpenIssue ? (

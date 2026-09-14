@@ -139,17 +139,17 @@ npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
 
 ### Advisory polls (Ja/Nei/Blank)
 
-`20260819210000_direct_democracy_polls.sql` adds dual-track Ja/Nei/Blank polls
-and citizen initiatives **without** forum coupling (no `forum_thread_id`, no
-top-arguments RPC). `20260821130000_system_poll_reels.sql` adds `track=system`
-(Reels) with `generation_metadata` and draft → publish RPCs.
+`20260819210000_direct_democracy_polls.sql` adds Ja/Nei/Blank polls (including
+legacy `citizen_initiatives` tables — no longer exposed in the Next.js app).
+`20260821130000_system_poll_reels.sql` adds `track=system` (Reels) with
+`generation_metadata` and draft → publish RPCs.
 
 | Table | Purpose |
 |-------|---------|
 | `polls` | `stortinget`, `citizen`, or `system` track; public when `status` is `open` or `closed` |
 | `poll_votes` | Anonymous ballots (`ja`/`nei`/`blank` + optional verified `fylke_code`) |
 | `poll_vote_receipts` | One encrypted receipt per user per poll |
-| `citizen_initiatives` | Title/body only; default support threshold 500 |
+| `citizen_initiatives` | Legacy borgerinitiativ schema (retained in DB; app routes removed) |
 | `norway_counties` | 15 fylker after the 2024 reform |
 
 System Reels are AI-generated ja/nei/blank questions. n8n inserts drafts via

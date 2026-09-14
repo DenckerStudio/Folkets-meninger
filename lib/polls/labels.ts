@@ -1,4 +1,4 @@
-import type { InitiativeStatus, PollChoice, PollStatus, PollTrack } from '@/lib/polls/types';
+import type { PollChoice, PollStatus, PollTrack } from '@/lib/polls/types';
 
 export function pollChoiceLabel(choice: PollChoice): string {
   switch (choice) {
@@ -16,14 +16,14 @@ export function pollChoiceLabel(choice: PollChoice): string {
 }
 
 export const SYSTEM_REEL_DISCLAIMER =
-  'Disse spørsmålene er systemgenererte fra stortingssaker (AI og saksdokumenter) og godkjent av en administrator. De er ikke borgerinitiativ og ikke offisielle Stortinget-avstemninger.';
+  'Disse spørsmålene er systemgenererte fra stortingssaker (AI og saksdokumenter) og godkjent av en administrator. De er ikke offisielle Stortinget-avstemninger.';
 
 export function pollTrackLabel(track: PollTrack): string {
   switch (track) {
     case 'stortinget':
       return 'Stortinget';
     case 'citizen':
-      return 'Borgerinitiativ';
+      return 'Avviklet';
     case 'system':
       return 'Systemgenerert';
     default: {
@@ -43,25 +43,6 @@ export function pollStatusLabel(status: PollStatus): string {
       return 'Stengt';
     case 'archived':
       return 'Arkivert';
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
-}
-
-export function initiativeStatusLabel(status: InitiativeStatus): string {
-  switch (status) {
-    case 'gathering':
-      return 'Samler støtte';
-    case 'threshold_met':
-      return 'Terskel nådd';
-    case 'promoted':
-      return 'Ble avstemning';
-    case 'rejected':
-      return 'Avvist';
-    case 'withdrawn':
-      return 'Trukket';
     default: {
       const _exhaustive: never = status;
       return _exhaustive;

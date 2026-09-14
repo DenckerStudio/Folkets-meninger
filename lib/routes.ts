@@ -10,7 +10,6 @@ export const routes = {
   avstemninger: `${DASHBOARD_PREFIX}/avstemninger`,
   /** @deprecated Reels live on Utforsk; this path redirects there. */
   avstemningerReels: `${DASHBOARD_PREFIX}/avstemninger/reels`,
-  initiativ: `${DASHBOARD_PREFIX}/initiativ`,
   minSide: `${DASHBOARD_PREFIX}/min-side`,
   varsler: `${DASHBOARD_PREFIX}/varsler`,
   horinger: `${DASHBOARD_PREFIX}/horinger`,
@@ -31,7 +30,6 @@ export const routes = {
   opinion: (id: string) => `${DASHBOARD_PREFIX}/folkets-meninger/${id}`,
   sakEmbed: (id: string) => `/embed/sak/${id}`,
   poll: (id: string) => `${DASHBOARD_PREFIX}/avstemninger/${id}`,
-  initiative: (id: string) => `${DASHBOARD_PREFIX}/initiativ/${id}`,
   horing: (id: string) => `${DASHBOARD_PREFIX}/horinger/${id}`,
   profile: (id: string) => `/profil/${id}`,
   admin: `${DASHBOARD_PREFIX}/admin`,
@@ -66,11 +64,6 @@ export function isPublicDashboardAvstemningPath(pathname: string): boolean {
 /** Public Utforsk (saker + system Reels) — guests can read; voting requires login. */
 export function isPublicDashboardUtforskPath(pathname: string): boolean {
   return pathname === routes.utforsk || pathname.startsWith(`${routes.utforsk}/`);
-}
-
-/** Public citizen-initiative list and detail — mutations require login. */
-export function isPublicDashboardInitiativPath(pathname: string): boolean {
-  return pathname === routes.initiativ || /^\/dashboard\/initiativ\/[^/]+$/.test(pathname);
 }
 
 /** Public Folkets meninger list and detail — posting requires login. */

@@ -46,8 +46,8 @@ Next.js App Router
 External systems:
 
 - Supabase Auth stores user sessions; middleware refreshes cookies and protects
- `/dashboard/*` except public sak, politiker, utforsk, avstemning, folkets-meninger, and initiativ pages.
-- Supabase Postgres stores sak votes, poll ballots, citizen initiatives, hearing
+ `/dashboard/*` except public sak, politiker, utforsk, avstemning, and folkets-meninger pages.
+- Supabase Postgres stores sak votes, poll ballots, hearing
   comments, notifications, AI summaries, Stortinget issue cache, document chunks,
   and admin data.
 - Stortinget APIs are read-only sources for sak lists/details, høringer, and
@@ -145,19 +145,17 @@ The canonical template is `.env.example`.
   closure rules in the `cast_vote` RPC.
 - Sak ballots stay For/Mot/Avstår. Public Ja/Nei/Blank language is polls only.
 
-### Avstemninger and borgerinitiativ
+### Avstemninger
 
-- Dual-track polls live in `polls` (`stortinget` | `citizen` | `system`) with
+- Polls live in `polls` (`stortinget` | `system`; legacy `citizen` rows stay in DB but are hidden in the app) with
   anonymous `poll_votes` and encrypted `poll_vote_receipts`. Ballot choices:
   `ja`/`nei`/`blank`.
-- Citizen initiatives are title/body only (no forum, no top-arguments). Default
-  support threshold is 500. Schema:
-  `supabase/migrations/20260819210000_direct_democracy_polls.sql` plus
+- Schema: `supabase/migrations/20260819210000_direct_democracy_polls.sql` plus
   `20260821130000_system_poll_reels.sql` for system Reels.
 - Public routes: `/dashboard/utforsk` (saker + Reels), `/dashboard/avstemninger`,
- `/dashboard/avstemninger/<id>`, `/dashboard/initiativ`, `/dashboard/initiativ/<id>`.
- Voting and endorsements require login. Empty lists are honest — do not seed mock polls.
+ `/dashboard/avstemninger/<id>`. Poll voting requires login. Empty lists are honest — do not seed mock polls.
  Avstemninger is not in primary nav; `/dashboard/avstemninger/reels` redirects to Utforsk.
+ Legacy `/initiativ` URLs redirect to Utforsk.
 - System Reels are AI-generated ja/nei/blank questions from sak RAG (n8n + Ollama),
  stored as `polls` drafts (`track=system`) and published by admin. Copy must state
  they are system-generated. Do not use `ensure_stortinget_poll` for drafts (it opens
@@ -168,7 +166,7 @@ The canonical template is `.env.example`.
 
 ### Identity, activity, admin
 
-- Public first/last name required for hearing comments and creating initiatives
+- Public first/last name required for hearing comments and similar UGC
   (`user_has_public_identity`); `/auth/complete-profile` collects missing names.
 - Public activity is opt-in via `users.activity_visibility` (`private` default).
 - Admin access: `public.user_roles` (`role = 'admin'`) via `lib/admin/gate.ts`
@@ -286,8 +284,7 @@ The canonical template is `.env.example`.
 - Auth is email/password (`supabase.auth.signUp` / `signInWithPassword`). **Email signups require confirmation**, so a raw signup does NOT create a session. To get a usable test login, create a pre-confirmed user with the admin API and the service role key, then sign in: `POST {SUPABASE_URL}/auth/v1/admin/users` with `{"email":...,"password":...,"email_confirm":true,"user_metadata":{...}}` (the project rejects `@example.com`; use e.g. `@gmail.com`).
 - `/dashboard/*` is gated by middleware (redirects to `/auth/login`) except public
  issue pages `/dashboard/sak/<id>`, politician pages, `/dashboard/utforsk`,
- `/dashboard/avstemninger` (and `/<id>`), `/dashboard/folkets-meninger`, and
- `/dashboard/initiativ` (and `/<id>`). Issue pages fetch live
+ `/dashboard/avstemninger` (and `/<id>`), and `/dashboard/folkets-meninger`. Issue pages fetch live
  `data.stortinget.no` data and can take 10–30s on first load.
 - Hello-world that exercises core functionality: log in, then open an issue (`/dashboard/sak/<id>`) and cast a "For" vote in the "Hva mener du?" section — the vote persists and the `/dashboard/min-side` vote count updates.
 - `npm run test:unit` shells out to `npx tsx ...`; the first run downloads `tsx` (needs network) and then caches it.

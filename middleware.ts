@@ -3,7 +3,6 @@ import { checkRateLimit, getRateLimitPolicy } from '@/lib/rate-limit';
 import {
   isPublicDashboardAvstemningPath,
   isPublicDashboardFolketsMeningerPath,
-  isPublicDashboardInitiativPath,
   isPublicDashboardPolitikerPath,
   isPublicDashboardSakPath,
   isPublicDashboardUtforskPath,
@@ -51,7 +50,6 @@ export async function middleware(request: NextRequest) {
     isPublicDashboardSakPath(pathname) ||
     isPublicDashboardPolitikerPath(pathname) ||
     isPublicDashboardAvstemningPath(pathname) ||
-    isPublicDashboardInitiativPath(pathname) ||
     isPublicDashboardFolketsMeningerPath(pathname) ||
     isPublicDashboardUtforskPath(pathname)
   ) {

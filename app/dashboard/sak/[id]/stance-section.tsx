@@ -207,7 +207,7 @@ export default function StanceSection({
       </AnimatePresence>
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        Nasjonale ja/nei-avstemninger finner du under Avstemninger og borgerinitiativ.
+        Systemgenererte ja/nei-spørsmål finner du på Utforsk. Andre nasjonale avstemninger ligger under Avstemninger.
       </p>
     </div>
   );

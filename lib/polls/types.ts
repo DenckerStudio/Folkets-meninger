@@ -1,7 +1,6 @@
 export type PollTrack = 'stortinget' | 'citizen' | 'system';
 export type PollStatus = 'draft' | 'open' | 'closed' | 'archived';
 export type PollChoice = 'ja' | 'nei' | 'blank';
-export type InitiativeStatus = 'gathering' | 'threshold_met' | 'promoted' | 'rejected' | 'withdrawn';
 
 export type PollSourceUrl = {
   label?: string;
@@ -54,18 +53,6 @@ export type PollRecord = {
   closesAt: string | null;
   createdAt: string;
   generationMetadata: PollGenerationMetadata;
-};
-
-export type CitizenInitiativeRecord = {
-  id: string;
-  title: string;
-  body: string;
-  authorUserId: string;
-  supportThreshold: number;
-  supportCount: number;
-  status: InitiativeStatus;
-  promotedPollId: string | null;
-  createdAt: string;
 };
 
 export type SakPollCoverage = {

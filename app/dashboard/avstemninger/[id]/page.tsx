@@ -22,7 +22,7 @@ type PageProps = {
 export default async function PollDetailPage({ params }: PageProps) {
   const { id } = await params;
   const poll = await getPollById(id);
-  if (!poll) notFound();
+  if (!poll || poll.track === 'citizen') notFound();
 
   const supabase = await getServerSupabase();
   const {

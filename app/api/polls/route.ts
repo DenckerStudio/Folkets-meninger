@@ -27,7 +27,7 @@ export async function GET(request: Request) {
   }
 
   const poll = await getPollById(pollId);
-  if (!poll) {
+  if (!poll || poll.track === 'citizen') {
     return NextResponse.json({ error: 'Avstemning ikke funnet' }, { status: 404 });
   }
 
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     }
 
     const poll = await getPollById(pollId);
-    if (!poll) {
+    if (!poll || poll.track === 'citizen') {
       return NextResponse.json({ error: 'Avstemning ikke funnet' }, { status: 404 });
     }
     if (!isPollVotingOpen(poll)) {
