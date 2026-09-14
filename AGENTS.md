@@ -47,9 +47,9 @@ External systems:
 
 - Supabase Auth stores user sessions; middleware refreshes cookies and protects
  `/dashboard/*` except public sak, politiker, utforsk, avstemning, and folkets-meninger pages.
-- Supabase Postgres stores sak votes, poll ballots, hearing
-  comments, notifications, AI summaries, Stortinget issue cache, document chunks,
-  and admin data.
+- Supabase Postgres stores personal issue stances, legacy vote totals, poll
+  ballots, hearing comments, notifications, AI summaries, Stortinget issue
+  cache, document chunks, and admin data.
 - Stortinget APIs are read-only sources for sak lists/details, høringer, and
   publications.
 - n8n calls app cron endpoints with `x-cron-secret` and receives fire-and-forget
@@ -63,7 +63,7 @@ The canonical template is `.env.example`.
 | Variable | Used for |
 |----------|----------|
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser/server Supabase client setup. Test defaults: `.env.test` → Folkets-Stemme (`qetckokgtzbpunbzslfp`) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server-only DB writes, RPCs, admin reads, document ingest, voting |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only DB writes, RPCs, admin reads, document ingest, stances/voting |
 | `CRON_SECRET` | Protects `/api/cron/*` endpoints; n8n sends it as `x-cron-secret` |
 | `N8N_AI_SUMMARY_WEBHOOK_URL` | Trigger missing sak AI summaries |
 | `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL` | Trigger pending document chunk embeddings |
@@ -131,19 +131,23 @@ The canonical template is `.env.example`.
   service role. The RPC enforces `first_name`/`last_name` via
   `user_has_public_identity`; comments are not submitted to Stortinget.
 
-### Voting lifecycle
+### Issue stances and legacy voting
 
-- `lib/sak-voting-window.ts` derives the next voting deadline from saksgang
-  events such as `VOT`, `VEDTAK`, `BEHS`, and related treatment events.
-- If every vote-close event date is in the past, the sak is closed. Missing
-  vote-close events still leave the window open (unless `ferdigbehandlet`).
-- `app/api/vote/route.ts` rejects votes when the issue is closed,
-  `ferdigbehandlet` is true, or `voting_closes_at` has passed.
-- `voting-section.tsx` must not reopen a ballot when the server already sent
-  `votingClosed: true`.
-- `supabase/migrations/20260618120000_sak_voting_status.sql` enforces the same
-  closure rules in the `cast_vote` RPC.
-- Sak ballots stay For/Mot/Avstår. Public Ja/Nei/Blank language is polls only.
+- Sak pages collect personal issue stances, not new anonymous For/Mot/Avstår
+  votes. `app/api/stance/route.ts` accepts `enig`, `uenig`, and
+  `ikke_interessert`, then calls `set_issue_stance` with the service role.
+- `issue_stances` is private per user. Stances feed Min side history,
+  Valgomat readiness (`enig`/`uenig` only), and hjertesak suggestions via
+  `get_user_stance_signals`; they are not public ballots and are not governed
+  by `voting_closes_at`.
+- `app/api/vote/route.ts` is legacy read-only: `GET` returns historical
+  anonymous For/Mot/Avstår totals for "Folkets vilje vs. Stortinget", while
+  `POST` returns `410` and points clients to `/api/stance`.
+- `lib/sak-voting-window.ts` still derives `voting_closes_at` from saksgang
+  events (`VOT`, `VEDTAK`, `BEHS`, etc.) for metadata/repair and the old
+  `cast_vote` closure guard in
+  `supabase/migrations/20260618120000_sak_voting_status.sql`.
+- Public Ja/Nei/Blank language is polls/Reels only.
 
 ### Avstemninger
 
@@ -286,5 +290,5 @@ The canonical template is `.env.example`.
  issue pages `/dashboard/sak/<id>`, politician pages, `/dashboard/utforsk`,
  `/dashboard/avstemninger` (and `/<id>`), and `/dashboard/folkets-meninger`. Issue pages fetch live
  `data.stortinget.no` data and can take 10–30s on first load.
-- Hello-world that exercises core functionality: log in, then open an issue (`/dashboard/sak/<id>`) and cast a "For" vote in the "Hva mener du?" section — the vote persists and the `/dashboard/min-side` vote count updates.
+- Hello-world that exercises core functionality: log in, open an issue (`/dashboard/sak/<id>`), and mark an "Enig" or "Uenig" stance in "Hva er din holdning?" — the stance persists and appears under `/dashboard/min-side`.
 - `npm run test:unit` shells out to `npx tsx ...`; the first run downloads `tsx` (needs network) and then caches it.

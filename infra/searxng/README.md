@@ -1,6 +1,9 @@
-# SearXNG on Heyklever (open-source web search for forum prompts)
+# SearXNG on Heyklever (legacy forum prompt research)
 
-Self-hosted meta-search used by the n8n «forum trending prompts» workflow alongside RSS feeds.
+Self-hosted meta-search used by archived n8n forum prompt workflows alongside
+RSS feeds. The site-wide forum is no longer part of the product; keep this
+runbook only for operating or auditing historical workflow assets under
+`workflows/n8n/archive/forum/`.
 
 ## Quick start
 
@@ -11,11 +14,13 @@ docker compose up -d
 
 Default URL (local): `http://127.0.0.1:8080`
 
-Production example used by the n8n workflow source: `https://searxng.heyklever.app` — put behind reverse proxy with TLS.
+Production example used by the archived n8n workflow source:
+`https://searxng.heyklever.app` — put behind reverse proxy with TLS.
 
 ## n8n configuration
 
-In workflow **Folkets Stemme – Forum trending prompts**, set the **Backfill settings** Set node:
+In archived workflow **Folkets Stemme – Forum trending prompts**, set the
+**Backfill settings** Set node:
 
 | Key | Example |
 |-----|---------|
@@ -30,7 +35,8 @@ n8n blocks `$env` in expressions — use Set nodes, not environment variables in
 curl 'https://searxng.heyklever.app/search?q=site:vg.no+nyheter&format=json&language=nb-NO'
 ```
 
-If SearXNG is unavailable, the n8n workflow continues with RSS-only headlines.
+If SearXNG is unavailable, the archived n8n workflow continues with RSS-only
+headlines.
 
 ## settings.yml notes
 
