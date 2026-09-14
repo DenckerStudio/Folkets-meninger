@@ -43,9 +43,6 @@ export const isPolitikereActive: NavIsActive = (pathname) =>
 export const isAvstemningerActive: NavIsActive = (pathname) =>
   pathname === routes.avstemninger || pathname.startsWith(`${routes.avstemninger}/`);
 
-export const isInitiativActive: NavIsActive = (pathname) =>
-  pathname === routes.initiativ || pathname.startsWith(`${routes.initiativ}/`);
-
 export const isHoringerActive: NavIsActive = (pathname) =>
   pathname === routes.horinger || pathname.startsWith(`${routes.horinger}/`);
 

@@ -102,6 +102,11 @@ test.describe('Folkets Stemme smoke', () => {
     await expect(page.getByRole('heading', { name: 'Avstemninger' })).toBeVisible();
   });
 
+  test('legacy initiativ URLs redirect to utforsk', async ({ page }) => {
+    await page.goto('/dashboard/initiativ');
+    await expect(page).toHaveURL(/dashboard\/utforsk/);
+  });
+
   test('cron endpoint rejects missing secret', async ({ request }) => {
     const res = await request.get('/api/cron/sync-issues');
     expect(res.status()).toBe(503);

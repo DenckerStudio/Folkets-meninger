@@ -55,13 +55,6 @@ test('avstemninger and politiker-hub are not in dashboard nav', () => {
   );
 });
 
-test('borgerinitiativ is not in dashboard nav', () => {
-  assert.equal(
-    dashboardSidebarNavItems.some((item) => item.href === routes.initiativ),
-    false,
-  );
-});
-
 test('mobile nav stays within core destinations plus profile', () => {
   assert.ok(mobileNavItems.length >= 2 && mobileNavItems.length <= 5);
   const allowed = new Set([

@@ -32,6 +32,3 @@ export function countyName(code: string | null | undefined): string | null {
 
 /** Minimum ballots per county before regional results are shown (k-anonymity). */
 export const POLL_FYLKE_MIN_VOTES = 5;
-
-/** Default support threshold for citizen initiatives to become national polls. */
-export const CITIZEN_INITIATIVE_DEFAULT_THRESHOLD = 500;

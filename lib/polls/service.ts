@@ -2,7 +2,6 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { emptyPollTotals } from '@/lib/polls/format';
 import { POLL_FYLKE_MIN_VOTES } from '@/lib/polls/norway-counties';
 import type {
-  CitizenInitiativeRecord,
   PollChoice,
   PollFylkeTotals,
   PollGenerationMetadata,
@@ -31,23 +30,8 @@ type PollRow = {
   generation_metadata?: unknown;
 };
 
-type InitiativeRow = {
-  id: string;
-  title: string;
-  body: string;
-  author_user_id: string;
-  support_threshold: number;
-  support_count: number;
-  status: string;
-  promoted_poll_id: string | null;
-  created_at: string;
-};
-
 const POLL_SELECT =
   'id, track, status, title, neutral_summary, source_urls, stortinget_issue_id, citizen_initiative_id, opens_at, closes_at, created_at, generation_metadata';
-
-const INITIATIVE_SELECT =
-  'id, title, body, author_user_id, support_threshold, support_count, status, promoted_poll_id, created_at';
 
 function parseSourceUrls(value: unknown): PollSourceUrl[] {
   if (!Array.isArray(value)) return [];
@@ -82,20 +66,6 @@ export function mapPollRow(row: PollRow): PollRecord {
     closesAt: row.closes_at,
     createdAt: row.created_at,
     generationMetadata: parseGenerationMetadata(row.generation_metadata),
-  };
-}
-
-export function mapInitiativeRow(row: InitiativeRow): CitizenInitiativeRecord {
-  return {
-    id: row.id,
-    title: row.title,
-    body: row.body,
-    authorUserId: row.author_user_id,
-    supportThreshold: row.support_threshold,
-    supportCount: row.support_count,
-    status: row.status as CitizenInitiativeRecord['status'],
-    promotedPollId: row.promoted_poll_id,
-    createdAt: row.created_at,
   };
 }
 
@@ -139,6 +109,7 @@ export async function listOpenPolls(limit = 30): Promise<PollRecord[]> {
   const { data, error } = await service
     .from('polls')
     .select(POLL_SELECT)
+    .neq('track', 'citizen')
     .in('status', ['open', 'closed'])
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -354,88 +325,3 @@ export async function listSakPollCandidates(limit = 25): Promise<SakPollCandidat
     .filter((x): x is SakPollCandidate => x != null);
 }
 
-export async function listCitizenInitiatives(limit = 30): Promise<CitizenInitiativeRecord[]> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
-  const service = getServiceSupabase();
-  const { data, error } = await service
-    .from('citizen_initiatives')
-    .select(INITIATIVE_SELECT)
-    .in('status', ['gathering', 'threshold_met', 'promoted'])
-    .order('support_count', { ascending: false })
-    .limit(limit);
-
-  if (error || !data) return [];
-  return (data as InitiativeRow[]).map(mapInitiativeRow);
-}
-
-export async function getCitizenInitiative(id: string): Promise<CitizenInitiativeRecord | null> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
-  const service = getServiceSupabase();
-  const { data, error } = await service
-    .from('citizen_initiatives')
-    .select(INITIATIVE_SELECT)
-    .eq('id', id)
-    .maybeSingle();
-  if (error || !data) return null;
-  return mapInitiativeRow(data as InitiativeRow);
-}
-
-export async function createCitizenInitiative(input: {
-  userId: string;
-  title: string;
-  body: string;
-  supportThreshold?: number;
-}): Promise<string> {
-  const service = getServiceSupabase();
-  const { data, error } = await service.rpc('create_citizen_initiative', {
-    p_user_id: input.userId,
-    p_title: input.title,
-    p_body: input.body,
-    p_support_threshold: input.supportThreshold ?? 500,
-  });
-  if (error) throw error;
-  return String(data);
-}
-
-export async function endorseCitizenInitiative(userId: string, initiativeId: string) {
-  const service = getServiceSupabase();
-  const { data, error } = await service.rpc('endorse_citizen_initiative', {
-    p_user_id: userId,
-    p_initiative_id: initiativeId,
-  });
-  if (error) throw error;
-  return data as {
-    initiativeId: string;
-    supportCount: number;
-    supportThreshold: number;
-    status: string;
-    endorsed: boolean;
-  };
-}
-
-export async function promoteCitizenInitiativeToPoll(input: {
-  initiativeId: string;
-  actorUserId?: string | null;
-  force?: boolean;
-}): Promise<string> {
-  const service = getServiceSupabase();
-  const { data, error } = await service.rpc('promote_citizen_initiative_to_poll', {
-    p_initiative_id: input.initiativeId,
-    p_actor_user_id: input.actorUserId ?? null,
-    p_force: input.force ?? false,
-  });
-  if (error) throw error;
-  return String(data);
-}
-
-export async function userHasEndorsedInitiative(userId: string, initiativeId: string): Promise<boolean> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return false;
-  const service = getServiceSupabase();
-  const { data } = await service
-    .from('citizen_initiative_endorsements')
-    .select('initiative_id')
-    .eq('initiative_id', initiativeId)
-    .eq('user_id', userId)
-    .maybeSingle();
-  return Boolean(data);
-}

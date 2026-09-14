@@ -54,8 +54,8 @@ Browser / Next.js App Router
 Important constraints:
 
 - Public sak detail pages under `/dashboard/sak/[id]`, politician pages,
-  `/dashboard/utforsk`, `/dashboard/avstemninger`, `/dashboard/folkets-meninger`,
-  and `/dashboard/initiativ` can be viewed without authentication; the rest of
+  `/dashboard/utforsk`, `/dashboard/avstemninger`, and `/dashboard/folkets-meninger`
+  can be viewed without authentication; the rest of
   `/dashboard/*` requires a Supabase session.
 - Høringer live under `/dashboard/horinger` and `/dashboard/horinger/[id]`.
   `/horinger` redirects there, so browsing and local comments require login.
