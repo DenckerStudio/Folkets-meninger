@@ -69,29 +69,51 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 
 | Domain | Migrations | Main objects |
 |--------|------------|--------------|
-| Anonymous voting (legacy) | `20260528000001_anonymous_voting.sql`, `20260528000002_vote_schema_repair.sql`, `20260618120000_sak_voting_status.sql` | `citizen_votes`, `user_vote_receipts`, `cast_vote`, vote aggregate RPCs — read-only for historical alignment |
+| Anonymous voting (legacy) | `20260528000001_anonymous_voting.sql`, `20260528000002_vote_schema_repair.sql`, `20260618120000_sak_voting_status.sql` | `citizen_votes`, `user_vote_receipts`, `cast_vote`, vote aggregate RPCs — read-only for historical alignment (`POST /api/vote` is 410) |
 | Issue stances | `20260907120000_issue_stances.sql` | `issue_stances`, `set_issue_stance`, `get_user_stance_*` RPCs |
 | Notifications | `20260528000003_notifications.sql`, `20260906180000_notification_channel_defaults.sql` | `notification_preferences`, `notification_category_subscriptions`, `notifications` |
 | Stemme+ subscription | `20260906200000_stemme_plus_subscription.sql`, `20260906210000_stemme_plus_admin_grant.sql` | `users.subscription_tier`, admin RPCs `grant_stemme_plus_by_email` / `revoke_stemme_plus_by_email` (Stripe checkout deferred) |
 | AI summaries | `20260528120000_issue_ai_summaries.sql`, `20260529120000_simplify_issue_ai_summaries.sql`, `20260823210000_n8n_ai_summary_rich_context.sql` | `issue_ai_summaries`, `n8n_get_issue_ai_summary_context` |
-| Auth/user sync + hearings comments | `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql` | `users`, `ensure_public_user`, `user_has_forum_identity`, `hearing_comments`, `create_hearing_comment` |
-| Forum base/features | `20260530120000_forum_enhancements.sql`, `20260531120000_production_readiness.sql`, `20260531140000_forum_prompts_dedupe.sql` | forum threads/replies/likes/prompts and production indexes |
-| Forum reports/sources | `20260602120000_forum_reports_enhance.sql`, `20260602130000_forum_trusted_sources.sql` | `forum_reports`, `forum_trusted_sources` |
-| Forum profiles/points/moderation | `20260614130000_forum_profiles_points_ai_sources.sql`, `20260614160000_harden_forum_points_moderation.sql`, `20260614170000_public_user_display_grants.sql` | public profile fields, point ledgers, moderation RPCs/grants |
-| Forum sak-RAG prompts | `20260621120000_forum_sak_rag_prompts.sql` | `forum_prompts.generation_metadata`, `forum_research_clusters.source_type`, `get_sak_prompt_coverage` |
+| Auth/user sync + public identity + hearing comments | `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql`, `20260810120000_remove_forum_and_activity_visibility.sql` | `users`, `ensure_public_user`, `user_has_public_identity` (`user_has_forum_identity` wrapper kept), `activity_visibility`, `hearing_comments`, `create_hearing_comment` |
+| Forum history (removed) | `20260530120000_forum_enhancements.sql` through `20260621120000_forum_sak_rag_prompts.sql`, removed by `20260810120000_remove_forum_and_activity_visibility.sql` | `forum_*` tables/RPCs are dropped; archived n8n/forum docs are historical only |
 | Marketing feedback | `20260806140000_site_feedback.sql` | `site_feedback` (public “Gi innspill” form; service-role writes only) |
 | Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql`, `20260702160000_backfill_ferdigbehandlet_from_detail.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category`, `ferdigbehandlet` repair |
 | Sak documents/RAG | `20260617120000_sak_documents_rag.sql`, `20260807112603_document_chunks_storage_efficiency.sql` | `stortinget_issue_documents`, `document_chunks`, `chunks_status`, `match_issue_document_chunks`, reclaim helpers |
-| Direct-democracy polls | `20260819210000_direct_democracy_polls.sql`, `20260821130000_system_poll_reels.sql` | `norway_counties`, `polls` (`stortinget`/`citizen`/`system`), `poll_votes`, `poll_vote_receipts`, `citizen_initiatives`, `citizen_initiative_endorsements`, Ja/Nei/Blank RPCs, system Reels drafts |
+| Direct-democracy polls | `20260819210000_direct_democracy_polls.sql`, `20260821130000_system_poll_reels.sql` | `norway_counties`, `polls` (`stortinget`/`system`; legacy `citizen` rows hidden), `poll_votes`, `poll_vote_receipts`, retained legacy `citizen_initiatives`, Ja/Nei/Blank RPCs, system Reels drafts |
 | App RBAC | `20260821120000_app_rbac_user_roles.sql` | `app_roles`, `user_roles`, `is_admin()`, `grant_app_role_by_email`, `revoke_app_role_by_email` |
 | Knowledge + motforslag | `20260822120000_knowledge_and_counter_proposals.sql` | `user_knowledge_quiz_passes`, `user_document_reads`, `user_badges`, `counter_proposals`, `counter_proposal_endorsements`, package RPCs |
+| Sak discussion | `20260906193000_issue_discussion_mvp.sql` | `issue_discussions`, `issue_discussion_posts`, `content_reports`, service-role post/report RPCs |
 | Folkets meninger | `20260907223000_citizen_opinions.sql`, `20260908120000_citizen_opinion_points.sql`, `20260908153000_blank_stance_optional_body.sql`, `20260908170000_create_opinion_for_imot_only.sql`, `20260908181000_repair_opinion_rpcs.sql` | `citizen_opinions`, `citizen_opinion_replies`, `points` (min. 3 For/Imot-kulepunkter), create For/Imot only, Blank replies without begrunnelse, `create_citizen_opinion`, `create_citizen_opinion_reply` |
 
 Citizen opinions are the dashboard home (`/dashboard/folkets-meninger`). Authors write For or Imot with at least 250 characters plus at least three For/Imot bullet points. Blank is only available when answering someone else's opinion, and requires no written reason. Replies require a stance plus at least 80 characters unless the stance is Blank.
 
 If the SQL editor fails with `unterminated dollar-quoted string` near `$function$`, paste **`20260908181000_repair_opinion_rpcs.sql`** as one run. Coolify and some editors treat `$function` as a variable and cut the function body. These RPCs use `$$` quoting.
 
-## Voting setup
+## Issue stances and legacy voting
+
+### Personal issue stances
+
+`20260907120000_issue_stances.sql` replaces per-sak For/Mot/Avstår voting in the
+product UI with personal issue stances:
+
+| Object | Purpose |
+|--------|---------|
+| `issue_stances` | One row per user + Stortinget issue with `enig`, `uenig`, or `ikke_interessert` |
+| `set_issue_stance` | Service-role RPC used by `POST /api/stance`; upserts the sak anchor row if needed |
+| `get_user_stance_on_issue` | Service-role RPC used by `GET /api/stance?issueId=...` |
+| `get_user_stance_history` | Feeds profile history and Utforsk stance badges |
+| `get_user_stance_count` / `get_user_stance_signals` | Feeds profile stats, Valgomat, and "hjertesaker" signals |
+
+The route in `app/api/stance/route.ts` authenticates with the SSR Supabase
+client, then calls the RPCs with `SUPABASE_SERVICE_ROLE_KEY`. Missing service
+role configuration returns 503 for writes. The allowed stance values are defined
+in `lib/stances/types.ts`; do not reuse Ja/Nei/Blank poll choices here.
+
+Stances are personal profile signals, not public votes. They can be changed at
+any time and are currently used by the sak page, Utforsk, Valgomat scoring, and
+profile "hjertesaker" components.
+
+### Legacy For/Mot/Avstår voting
 
 1. Apply `20260528000001_anonymous_voting.sql` (requires `pgcrypto` in the `extensions` schema — standard on Supabase).
 2. If voting fails with 500, ambiguous `cast_vote`, or legacy schema errors, run **`20260528000002_vote_schema_repair.sql`**.
@@ -104,6 +126,11 @@ ON CONFLICT (key) DO UPDATE SET value = excluded.value;
 ```
 
 4. Ensure `SUPABASE_SERVICE_ROLE_KEY` is set in the Next.js app (server-only).
+
+This stack is retained for historical aggregate displays only. `GET /api/vote`
+still reads `get_issue_vote_totals` / `get_user_vote_on_issue` so alignment
+components can compare against old data, but `POST /api/vote` returns HTTP 410
+and directs clients to `/api/stance` or Ja/Nei/Blank polls.
 
 ### Architecture
 
@@ -118,15 +145,17 @@ Aggregates are exposed via `get_issue_vote_totals` / `get_vote_totals_batch`. Di
 ### Voting closure rules
 
 `20260618120000_sak_voting_status.sql` adds `ferdigbehandlet` and
-`voting_closes_at` to `stortinget_issues` and updates `cast_vote` so closed saker
-cannot receive new ballots. A vote is rejected when any of these are true:
+`voting_closes_at` to `stortinget_issues` and updates historical `cast_vote` so
+closed saker cannot receive new legacy ballots. If the legacy RPC is called
+directly, a vote is rejected when any of these are true:
 
 - `stortinget_issues.status = 'closed'`
 - `stortinget_issues.ferdigbehandlet IS TRUE`
 - `stortinget_issues.voting_closes_at <= now()`
 
-The Next.js API mirrors this in `app/api/vote/route.ts` so users receive a 403
-before the RPC, but the RPC is the final enforcement point.
+The current Next.js API does not write these ballots. `POST /api/vote` returns
+410 before any closure check; `GET /api/vote` returns historical totals and the
+derived closure state for read-only UI.
 
 `voting_closes_at` is derived by `lib/sak-voting-window.ts` from Stortinget
 saksgang events (`VOT`, `VEDTAK`, `BEHS`, and related treatment event IDs).
@@ -164,8 +193,8 @@ Do not seed mock polls; empty UI is the honest launch state.
 
 ## Stortinget issue cache
 
-`stortinget_issues` is both the list cache and the anchor table for votes,
-summaries, forum prompts, documents, and government stats.
+`stortinget_issues` is both the list cache and the anchor table for stances,
+legacy vote totals, summaries, polls, documents, and government stats.
 
 | Column | Source / purpose |
 |--------|------------------|
@@ -230,10 +259,10 @@ comments are stored separately in `hearing_comments` and are keyed by
 | `create_hearing_comment(uuid, text, text)` | Service-role write RPC used by `POST /api/hearings` |
 
 `create_hearing_comment` calls `ensure_public_user`, requires
-`user_has_forum_identity`, trims bodies, and accepts 1-10000 characters. These
+`user_has_public_identity`, trims bodies, and accepts 1-10000 characters. These
 comments are not official submissions to Stortinget; the detail page labels them
-as public app comments. They also do not use forum thread/reply moderation or
-forum point triggers.
+as public app comments. They also do not use the removed site-wide forum objects
+or point triggers.
 
 ### Sak treatment status precedence
 
@@ -271,53 +300,44 @@ If `stortinget_issues.ferdigbehandlet` drifts from cached detail data, apply
 npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
 ```
 
-## Forum schema
+## Public user-generated content
 
-Forum writes go through RPCs rather than direct client inserts.
+The site-wide forum is removed. Current public UGC uses narrower, service-role
+RPC-backed surfaces and the shared public identity requirement:
 
-| Object | Purpose |
-|--------|---------|
-| `create_forum_thread` / `create_forum_reply` | Validate identity, length, moderation, and official replies before insert |
-| `forum_moderation_check` | DB-side regex moderation for hate, discrimination, sexual content, violence, and spam |
-| `forum_reports` | One report per user/target; categories: `spam`, `harassment`, `misinformation`, `other` |
-| `forum_trusted_sources` | Approved/pending/rejected domains for n8n forum reel source routing |
-| `user_points_balances` / `user_points_ledger` | Public point balance and private per-user ledger |
+| Surface | Tables / RPCs | App code | Notes |
+|---------|---------------|----------|-------|
+| Folkets meninger | `citizen_opinions`, `citizen_opinion_replies`, `create_citizen_opinion`, `create_citizen_opinion_reply` | `/dashboard/folkets-meninger`, `POST /api/opinions`, `lib/opinions/service.ts` | Public read. Creating an opinion requires For/Imot, 250-4000 chars, and 3-8 For/Imot points with at least one of each side. Replies can be For, Imot, or Blank; Blank replies may omit body text. |
+| Sak discussion | `issue_discussions`, `issue_discussion_posts`, `content_reports`, `create_issue_discussion_post`, `report_content` | `GET/POST /api/sak/[id]/discussion`, `POST /api/sak/[id]/discussion/report` | One flat discussion room per sak. No nested replies, no points, no n8n side effects. |
+| Hearing comments | `hearing_comments`, `create_hearing_comment` | `/dashboard/horinger/[id]`, `POST /api/hearings` | Local comments keyed by Stortinget hearing id; not official submissions to Stortinget. |
 
-Human forum authors must have `first_name` and `last_name` of at least two
-characters. `ensure_public_user` syncs missing profile rows from Supabase Auth,
-and `user_has_forum_identity` gates human thread/reply RPCs. System threads can
-set `is_system_thread = true` and bypass the human identity requirement.
+`20260810120000_remove_forum_and_activity_visibility.sql` introduced
+`user_has_public_identity` and keeps `user_has_forum_identity` only as a wrapper
+for older migrations. New and repaired RPCs should call `user_has_public_identity`
+after `ensure_public_user`. Required public identity is first and last name of at
+least two characters each.
 
-## Hearing comments
+Forum tables/RPCs (`forum_*`, `create_forum_*`, `forum_reports`, old forum prompt
+helpers) are intentionally dropped by the removal migration. Do not add new code
+that depends on those objects; archived workflow files under `workflows/n8n/archive/forum/`
+are historical reference only.
 
-`20260601120000_forum_public_identity.sql` also defines local comments for
-Stortinget hearings. There is no local hearings table; comments are keyed by the
-Stortinget export id.
+### Hearing comments
 
-| Object | Purpose |
-|--------|---------|
-| `hearing_comments` | Public local comments for `/dashboard/horinger/<id>` |
-| `hearing_comments_select` | RLS policy that allows public reads |
-| `create_hearing_comment` | Service-role RPC used by `POST /api/hearings` |
+Høringer themselves are not stored locally; pages fetch
+`data.stortinget.no/eksport/horinger?format=json` through
+`lib/stortinget-horinger.ts`. Local user input is stored in `hearing_comments`,
+keyed by the Stortinget hearing id string.
 
-`create_hearing_comment(p_user_id, p_stortinget_hearing_id, p_body)` calls
-`ensure_public_user`, requires `user_has_forum_identity`, trims body text, allows
-1-10000 characters, and rejects empty hearing ids. The Next.js route creates
-mention notifications for `@name` matches after the RPC succeeds.
+`POST /api/hearings` uses `create_hearing_comment(p_user_id,
+p_stortinget_hearing_id, p_body)` with the service role. The RPC calls
+`ensure_public_user`, requires `user_has_public_identity`, rejects empty hearing
+ids, and enforces body length 1-10000 characters. Reads are public through the
+`hearing_comments_select` policy.
 
 These comments are Folkets Stemme discussion entries only. They are not
 submitted to Stortinget; the høring detail page links users to Stortinget for
 official submissions.
-
-Point triggers award:
-
-| Event | Points |
-|-------|--------|
-| Approved human thread created | +10 |
-| Approved reply created | +5 |
-| Like given | +1 |
-| Like received by another author | +2 |
-| Vote receipt inserted | +3 |
 
 Admin pages use `lib/admin/gate.ts`, which reads `public.user_roles` (`role =
 'admin'`). `is_admin()` is the SQL helper. Env allowlists (`ADMIN_EMAILS` /
@@ -346,25 +366,13 @@ SELECT public.grant_stemme_plus_by_email('supporter@example.com', NULL);
 Or use **Stemme+ (testing)** on `/dashboard/admin/reels`. Benefits: profile badge,
 richer digest e-mail, realtime/smarter category+label alerts (`lib/stemme-plus/gates.ts`).
 
-### Hearing comments
-
-Høringer themselves are not stored locally; pages fetch
-`data.stortinget.no/eksport/horinger?format=json` through
-`lib/stortinget-horinger.ts`. Local user input is stored in
-`hearing_comments`, keyed by the Stortinget hearing id string.
-
-`POST /api/hearings` uses `create_hearing_comment(p_user_id,
-p_stortinget_hearing_id, p_body)` with the service role. The RPC calls
-`ensure_public_user`, requires `user_has_forum_identity`, and enforces body
-length 1-10000 characters. Reads are public through the
-`hearing_comments_select` policy.
-
 ## Notifications
 
 `20260528000003_notifications.sql` creates:
 
 - `notification_preferences`: per-user email enablement and frequency by channel
-  (`forum`, `mentions`, `categories` by default).
+  (current UI channels are `categories` and `labels`; older `forum`/`mentions`
+  values may exist in historical rows but are not active product surfaces).
 - `notification_category_subscriptions`: "hjertesaker" category subscriptions.
 - `notifications`: in-app inbox rows with optional email delivery metadata.
 

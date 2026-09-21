@@ -1,11 +1,10 @@
 # Folkets Stemme
 
 Folkets Stemme is a Next.js App Router application for following Stortinget
-saker and høringer, voting on active saker, and discussing political issues in a
-moderated forum. The app reads public Stortinget data from
-`data.stortinget.no`, stores app state in Supabase, and delegates AI summaries,
-forum prompt generation, and document embeddings to n8n workflows backed by
-Ollama.
+saker and høringer, sharing public opinions, and collecting personal issue
+stances. The app reads public Stortinget data from `data.stortinget.no`, stores
+app state in Supabase, and delegates AI summaries, system Reels drafts, document
+embeddings, and cron jobs to n8n workflows backed by Ollama.
 
 ## Quick start
 
@@ -41,34 +40,45 @@ those services.
 | `npm run env:test` | Write `.env.local` from `.env.test` (heyklever Supabase) |
 | `npm run supabase:start` | Start local Supabase via Docker CLI |
 | `npm run supabase:status` | Print local Supabase URL/keys |
+
 ## Architecture at a glance
 
 ```text
 Browser / Next.js App Router
-  -> Supabase Auth + Postgres (votes, forum, notifications, sak cache)
+  -> Supabase Auth + Postgres (stances, polls, opinions, notifications, sak cache)
   -> data.stortinget.no (saker, details, høringer, publications)
-  -> n8n webhooks (AI summaries, document embeddings, forum prompts, cron)
-  -> Ollama / SearXNG / SMTP as workflow dependencies
+  -> n8n webhooks (AI summaries, document embeddings, system Reels, cron)
+  -> Ollama / SMTP as workflow dependencies
 ```
 
 Important constraints:
 
-- Public sak detail pages under `/dashboard/sak/[id]`, politician pages,
-  `/dashboard/utforsk`, `/dashboard/avstemninger`, and `/dashboard/folkets-meninger`
-  can be viewed without authentication; the rest of
-  `/dashboard/*` requires a Supabase session.
+- Primary navigation is `Folkets meninger`, `Utforsk`, `Høringer`, and
+  `Forslag`. `/dashboard` lands on `/dashboard/folkets-meninger` in the current
+  app surface.
+- Public read routes include sak details under `/dashboard/sak/[id]`,
+  politician pages, `/dashboard/utforsk`, `/dashboard/avstemninger` (and
+  individual polls), and `/dashboard/folkets-meninger` (and individual
+  opinions). Writing or saving personal data requires a Supabase session.
 - Høringer live under `/dashboard/horinger` and `/dashboard/horinger/[id]`.
   `/horinger` redirects there, so browsing and local comments require login.
-- Sak votes are For/Mot/Avstår. System Reels on Utforsk use Ja/Nei/Blank.
-- Votes are accepted only while a sak is open. The app and `cast_vote` RPC both
-  check `status`, `ferdigbehandlet`, and `voting_closes_at`.
+- Sak pages no longer cast public For/Mot/Avstår ballots. Users can save a
+  personal issue stance (`enig`, `uenig`, or `ikke_interessert`) through
+  `/api/stance`; these signals feed Valgomat and profile "hjertesaker".
+- Legacy `/api/vote` still exposes historical aggregate totals for alignment
+  displays, but `POST /api/vote` returns 410 and points users to `/api/stance`.
+- System Reels on Utforsk and other polls under `/dashboard/avstemninger` use
+  Ja/Nei/Blank ballots. Poll voting requires login; public read access does not.
+- Folkets meninger is a public opinion surface. Creating an opinion requires a
+  public first/last name, a For/Imot stance, at least 250 characters, and at
+  least three For/Imot bullet points. Replies can be For, Imot, or Blank.
 - Høringer are fetched live from Stortinget, not cached in Postgres. Local
   "innspill" are public app comments and are not sent to Stortinget.
 - Sak treatment labels are resolved from multiple Stortinget sources because
   list exports can keep `status=1` after a detail payload says the sak is
   `ferdigbehandlet`.
-- Human forum posts require a public first and last name. System forum threads
-  created by workflows use the `is_system_thread` path instead.
+- Legacy `/forum`, `/initiativ`, and `/dashboard/avstemninger/reels` URLs
+  redirect to the current Folkets meninger or Utforsk surfaces.
 - AI summary text is not generated in the Next.js app. The app stores source
   context and triggers n8n; summaries are read back from Supabase.
 
@@ -77,11 +87,10 @@ Important constraints:
 | File | Covers |
 |------|--------|
 | [`AGENTS.md`](AGENTS.md) | Agent-facing architecture facts, env vars, validation expectations, and operational notes |
-| [`supabase/README.md`](supabase/README.md) | Migration domains, voting RPCs, sak cache, hearing comments, forum schema, notifications, RAG tables, and DB runbooks |
-| [`workflows/n8n/README.md`](workflows/n8n/README.md) | AI summary, forum prompt, document embedding, and app cron workflows |
-| [`infra/searxng/README.md`](infra/searxng/README.md) | SearXNG deployment/configuration used by forum prompt discovery |
+| [`supabase/README.md`](supabase/README.md) | Migration domains, issue stances, polls, Folkets meninger, sak cache, hearing comments, notifications, RAG tables, and DB runbooks |
+| [`workflows/n8n/README.md`](workflows/n8n/README.md) | AI summary, document embedding, system Reels draft, motforslag packaging, and app cron workflows |
+| [`infra/searxng/README.md`](infra/searxng/README.md) | Archived SearXNG deployment/configuration notes from the removed forum pipeline |
 | [`docs/fider-oauth.md`](docs/fider-oauth.md) | Fider feature requests at `https://feedback.folkets-meninger.no` and OAuth SSO setup |
-| [`scripts/deploy-forum-prompts-n8n.md`](scripts/deploy-forum-prompts-n8n.md) | Forum prompt workflow deployment notes |
 
 ## Operational scripts
 
@@ -90,7 +99,7 @@ Important constraints:
 | `scripts/backfill-sak-status.ts` | Refresh `ferdigbehandlet`, `voting_closes_at`, and sak metadata from Stortinget detail data |
 | `scripts/backfill-sak-documents.ts` | Ingest recent sak documents and create pending RAG chunks |
 | `scripts/deploy-document-embeddings-n8n.mjs` | Deploy/update the document embeddings workflow in n8n |
-| `scripts/archive-misaligned-forum-prompts.sql` | Archive active forum prompts that should no longer be shown |
+| `scripts/reclaim-document-storage.sql` | Reclaim legacy cached document bodies if Supabase storage quota is tight |
 
 Example status refresh:
 
@@ -99,5 +108,6 @@ npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
 ```
 
 Focused unit coverage for recently fragile source parsers/status logic lives in
-`lib/sak-status.test.ts` and `lib/stortinget-horinger.test.ts`; both run through
-`npm run test:unit`.
+`lib/sak-status.test.ts`, `lib/stortinget-horinger.test.ts`,
+`lib/sak-participation.test.ts`, `lib/polls/format.test.ts`, and related
+domain tests; they run through `npm run test:unit`.
