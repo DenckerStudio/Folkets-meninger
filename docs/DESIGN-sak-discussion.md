@@ -58,7 +58,7 @@ Key RPCs (all dropped except wrapper): `create_forum_thread`, `create_forum_repl
 | `forum-research-discovery`, `forum-story-research`, `forum-story-editor` | v10/v11 scout pipeline (deprecated) |
 | `forum-trending-prompts` | Trending reel selection |
 
-**Replacement for AI-generated engagement:** `system-poll-draft.workflow.ts` writes to `polls` (`track=system`), published under **Avstemninger → Reels** — decoupled from user discussion.
+**Replacement for AI-generated engagement:** `system-poll-draft.workflow.ts` writes to `polls` (`track=system`), published under **Utforsk → Reels** — decoupled from user discussion.
 
 ### 1.4 Points / gamification
 
@@ -72,7 +72,7 @@ Forum used `user_points_ledger` + level UI driven by forum activity. Removal loc
 Documented in `infra/coolify/README.md` (Alternativ C + F0–F5) and `.cursor/agents/forum-removal-egress.md`:
 
 1. **Supabase egress** — n8n full-table scans on `forum_prompts` / clusters; app reads on threads/replies/likes; `detail_json` in prompt pipelines.
-2. **Product complexity** — general forum competed with sak voting, polls, høringer, motforslag; reels/prompts were a separate editorial product.
+2. **Product complexity** — general forum competed with issue stances, polls, høringer, motforslag; reels/prompts were a separate editorial product.
 3. **Tight coupling** — polls/initiativ depended on `forum_thread_id` and top-arguments RPC.
 4. **Operational load** — multi-workflow n8n mesh (scout, RSS, synthesis, sak-RAG) with admin moderation surfaces.
 5. **Explicit product lock** — no forum data export; DROP after app removal (PR #66, `ac6a77b`).
@@ -95,8 +95,8 @@ Grep of live migrations: no `CREATE TABLE forum_*` after the removal migration. 
 |---------|-------|---------|
 | **Hearing comments** | `stortinget_hearing_id` | Flat list, `create_hearing_comment` RPC, `user_has_public_identity`, public read RLS |
 | **Motforslag** | `stortinget_issue_id` | Structured proposals + endorsements; sak tab “Motforslag”; threshold → n8n package (not UGC chat) |
-| **Sak voting** | `stortinget_issue_id` | Anonymous encrypted ballots — **must never correlate with public posts** |
-| **System Reels** | `polls.track=system` | Admin-published ja/nei/blank — **not** a discussion surface |
+| **Issue stances / legacy sak votes** | `stortinget_issue_id` | Private `issue_stances` plus historical anonymous encrypted vote totals — **must never correlate with public posts** |
+| **System Reels** | `polls.track=system` | Admin-published ja/nei/blank on Utforsk — **not** a discussion surface |
 | **Knowledge quiz / badges** | per sak | Engagement without social feed |
 | **Politician responses** | per sak | Verified politicians only (`/api/politician/response`) |
 

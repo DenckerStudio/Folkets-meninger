@@ -1,11 +1,11 @@
 # Folkets Stemme
 
 Folkets Stemme is a Next.js App Router application for following Stortinget
-saker and høringer, voting on active saker, and discussing political issues in a
-moderated forum. The app reads public Stortinget data from
+saker and høringer, sharing public opinions, saving personal issue stances, and
+answering advisory Ja/Nei/Blank polls. The app reads public Stortinget data from
 `data.stortinget.no`, stores app state in Supabase, and delegates AI summaries,
-forum prompt generation, and document embeddings to n8n workflows backed by
-Ollama.
+system poll draft generation, document embeddings, and cron orchestration to n8n
+workflows backed by Ollama.
 
 ## Quick start
 
@@ -45,30 +45,42 @@ those services.
 
 ```text
 Browser / Next.js App Router
-  -> Supabase Auth + Postgres (votes, forum, notifications, sak cache)
+  -> Supabase Auth + Postgres (issue stances, polls, opinions, notifications, sak cache)
   -> data.stortinget.no (saker, details, høringer, publications)
-  -> n8n webhooks (AI summaries, document embeddings, forum prompts, cron)
-  -> Ollama / SearXNG / SMTP as workflow dependencies
+  -> n8n webhooks (AI summaries, document embeddings, system poll drafts, cron)
+  -> Ollama / SMTP as workflow dependencies
 ```
 
 Important constraints:
 
-- Public sak detail pages under `/dashboard/sak/[id]`, politician pages,
-  `/dashboard/utforsk`, `/dashboard/avstemninger`, and `/dashboard/folkets-meninger`
-  can be viewed without authentication; the rest of
-  `/dashboard/*` requires a Supabase session.
+- Primary navigation is flat: **Folkets meninger**, **Utforsk**, **Høringer**,
+  **Forslag**. Secondary dashboard links (Politikere, Kalender, Innsikt, Min
+  side) live in the dashboard sidebar/drawer. Admin users also see **Admin**.
+- `/dashboard` redirects to `/dashboard/folkets-meninger`. Public sak detail
+  pages under `/dashboard/sak/[id]`, politician pages, `/dashboard/utforsk`,
+  `/dashboard/avstemninger`, and `/dashboard/folkets-meninger` can be viewed
+  without authentication; the rest of `/dashboard/*` requires a Supabase
+  session.
 - Høringer live under `/dashboard/horinger` and `/dashboard/horinger/[id]`.
   `/horinger` redirects there, so browsing and local comments require login.
-- Sak votes are For/Mot/Avstår. System Reels on Utforsk use Ja/Nei/Blank.
-- Votes are accepted only while a sak is open. The app and `cast_vote` RPC both
-  check `status`, `ferdigbehandlet`, and `voting_closes_at`.
+- Sak pages save personal issue stances (`enig`, `uenig`, `ikke_interessert`)
+  through `/api/stance`. These stances are private inputs for Valgomat and
+  hjertesaker, not public ballots.
+- Legacy per-sak For/Mot/Avstår voting is read-only. `POST /api/vote` returns
+  `410`; `GET /api/vote` still serves historical totals for alignment widgets.
+- System Reels live on Utforsk (`/dashboard/utforsk#reels`) as system-generated
+  Ja/Nei/Blank polls. Other public polls are under `/dashboard/avstemninger`.
+  Legacy citizen/borgerinitiativ rows remain in the database but are hidden in
+  the app; `/initiativ` and `/dashboard/initiativ` redirect to Utforsk.
 - Høringer are fetched live from Stortinget, not cached in Postgres. Local
   "innspill" are public app comments and are not sent to Stortinget.
 - Sak treatment labels are resolved from multiple Stortinget sources because
   list exports can keep `status=1` after a detail payload says the sak is
   `ferdigbehandlet`.
-- Human forum posts require a public first and last name. System forum threads
-  created by workflows use the `is_system_thread` path instead.
+- Public UGC (Folkets meninger, sak discussions, høring comments) requires a
+  public first and last name via `user_has_public_identity`.
+- The site-wide forum has been removed. Forum URLs redirect to Folkets
+  meninger, and forum n8n pipelines/scripts are archived only.
 - AI summary text is not generated in the Next.js app. The app stores source
   context and triggers n8n; summaries are read back from Supabase.
 
@@ -77,11 +89,12 @@ Important constraints:
 | File | Covers |
 |------|--------|
 | [`AGENTS.md`](AGENTS.md) | Agent-facing architecture facts, env vars, validation expectations, and operational notes |
-| [`supabase/README.md`](supabase/README.md) | Migration domains, voting RPCs, sak cache, hearing comments, forum schema, notifications, RAG tables, and DB runbooks |
-| [`workflows/n8n/README.md`](workflows/n8n/README.md) | AI summary, forum prompt, document embedding, and app cron workflows |
-| [`infra/searxng/README.md`](infra/searxng/README.md) | SearXNG deployment/configuration used by forum prompt discovery |
+| [`supabase/README.md`](supabase/README.md) | Migration domains, issue stances, legacy voting, polls/Reels, sak cache, hearing comments, notifications, RAG tables, and DB runbooks |
+| [`workflows/n8n/README.md`](workflows/n8n/README.md) | AI summary, system poll draft, document embedding, motforslag, and app cron workflows |
+| [`infra/coolify/README.md`](infra/coolify/README.md) | Hosted Supabase egress plan and forum-removal history |
+| [`infra/searxng/README.md`](infra/searxng/README.md) | Archived SearXNG context for removed forum prompt discovery |
 | [`docs/fider-oauth.md`](docs/fider-oauth.md) | Fider feature requests at `https://feedback.folkets-meninger.no` and OAuth SSO setup |
-| [`scripts/deploy-forum-prompts-n8n.md`](scripts/deploy-forum-prompts-n8n.md) | Forum prompt workflow deployment notes |
+| [`docs/DESIGN-sak-discussion.md`](docs/DESIGN-sak-discussion.md) | Sak-scoped discussion MVP design |
 
 ## Operational scripts
 
@@ -90,7 +103,9 @@ Important constraints:
 | `scripts/backfill-sak-status.ts` | Refresh `ferdigbehandlet`, `voting_closes_at`, and sak metadata from Stortinget detail data |
 | `scripts/backfill-sak-documents.ts` | Ingest recent sak documents and create pending RAG chunks |
 | `scripts/deploy-document-embeddings-n8n.mjs` | Deploy/update the document embeddings workflow in n8n |
-| `scripts/archive-misaligned-forum-prompts.sql` | Archive active forum prompts that should no longer be shown |
+| `scripts/backfill-ai-summaries-v2.mjs` | Backfill/refresh richer AI summaries through the current n8n workflow |
+| `scripts/reclaim-document-storage.sql` | Reclaim cached document bodies after chunking |
+| `scripts/archive/*forum*` | Historical forum workflow utilities; archived, not current product automation |
 
 Example status refresh:
 

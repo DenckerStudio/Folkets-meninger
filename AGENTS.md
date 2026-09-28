@@ -5,8 +5,8 @@
 - Prefer working on informatively named branches with prefix `cursor/`.
 - Avoid user-visible mock/placeholder data; prefer honest empty/“coming soon” states.
 - Forum is removed from the product. System-generated Reels live under
- Utforsk (`/dashboard/utforsk`) as ja/nei/blank polls. Landing
- after login / `/dashboard` is `utforsk`.
+  Utforsk (`/dashboard/utforsk`) as ja/nei/blank polls. Current `/dashboard`
+  route redirects to Folkets meninger (`/dashboard/folkets-meninger`).
  Primary nav: Folkets meninger / Utforsk / Høringer / Forslag. Default Stortinget period is
   `2025-2029`. Auth is email/password and Google OAuth via Supabase — do not
   mention BankID, MinID, or electronic ID verification in user-facing copy.
@@ -47,7 +47,7 @@ External systems:
 
 - Supabase Auth stores user sessions; middleware refreshes cookies and protects
  `/dashboard/*` except public sak, politiker, utforsk, avstemning, and folkets-meninger pages.
-- Supabase Postgres stores sak votes, poll ballots, hearing
+- Supabase Postgres stores issue stances, legacy sak vote totals, poll ballots, hearing
   comments, notifications, AI summaries, Stortinget issue cache, document chunks,
   and admin data.
 - Stortinget APIs are read-only sources for sak lists/details, høringer, and
@@ -131,19 +131,20 @@ The canonical template is `.env.example`.
   service role. The RPC enforces `first_name`/`last_name` via
   `user_has_public_identity`; comments are not submitted to Stortinget.
 
-### Voting lifecycle
+### Issue stances and legacy sak voting
 
-- `lib/sak-voting-window.ts` derives the next voting deadline from saksgang
-  events such as `VOT`, `VEDTAK`, `BEHS`, and related treatment events.
-- If every vote-close event date is in the past, the sak is closed. Missing
-  vote-close events still leave the window open (unless `ferdigbehandlet`).
-- `app/api/vote/route.ts` rejects votes when the issue is closed,
-  `ferdigbehandlet` is true, or `voting_closes_at` has passed.
-- `voting-section.tsx` must not reopen a ballot when the server already sent
-  `votingClosed: true`.
-- `supabase/migrations/20260618120000_sak_voting_status.sql` enforces the same
-  closure rules in the `cast_vote` RPC.
-- Sak ballots stay For/Mot/Avstår. Public Ja/Nei/Blank language is polls only.
+- Sak pages save personal issue stances (`enig` / `uenig` /
+  `ikke_interessert`) through `POST /api/stance`; these are private signals for
+  Valgomat/hjertesaker, not public votes.
+- `issue_stances` and `set_issue_stance` / `get_user_stance_*` are defined in
+  `supabase/migrations/20260907120000_issue_stances.sql`.
+- `app/api/vote/route.ts` is legacy/read-only: `GET` still returns historical
+  For/Mot/Avstår totals and old user receipts for alignment widgets, while
+  `POST` returns `410 Gone`.
+- `lib/sak-voting-window.ts`, `voting_closes_at`, and `cast_vote` remain for
+  historical data/rollback safety and old aggregate semantics; do not wire new
+  UI to `cast_vote`.
+- Public Ja/Nei/Blank language is polls only.
 
 ### Avstemninger
 
@@ -153,16 +154,18 @@ The canonical template is `.env.example`.
 - Schema: `supabase/migrations/20260819210000_direct_democracy_polls.sql` plus
   `20260821130000_system_poll_reels.sql` for system Reels.
 - Public routes: `/dashboard/utforsk` (saker + Reels), `/dashboard/avstemninger`,
- `/dashboard/avstemninger/<id>`. Poll voting requires login. Empty lists are honest — do not seed mock polls.
- Avstemninger is not in primary nav; `/dashboard/avstemninger/reels` redirects to Utforsk.
- Legacy `/initiativ` URLs redirect to Utforsk.
+  `/dashboard/avstemninger/<id>`. Poll voting requires login. Empty lists are
+  honest — do not seed mock polls. Avstemninger is not in primary nav;
+  `/dashboard/avstemninger/reels` redirects to Utforsk. Legacy `/initiativ` URLs
+  redirect to Utforsk.
 - System Reels are AI-generated ja/nei/blank questions from sak RAG (n8n + Ollama),
  stored as `polls` drafts (`track=system`) and published by admin. Copy must state
  they are system-generated. Do not use `ensure_stortinget_poll` for drafts (it opens
  immediately); use `create_system_poll_draft` → `publish_poll`. The public feed sits on Utforsk.
 - Fylke breakdowns use `users.fylke_code` only when `fylke_verified` is true.
  Self-declared fylke via the profile picker does not set `fylke_verified`.
-- Primary nav: Folkets meninger / Utforsk / Høringer / Forslag. Post-login fallback is Utforsk.
+- Primary nav: Folkets meninger / Utforsk / Høringer / Forslag. Current
+  `/dashboard` fallback is Folkets meninger.
 
 ### Identity, activity, admin
 
@@ -201,7 +204,7 @@ The canonical template is `.env.example`.
   (`folkets:impact:profile`). `POST /api/sak/[id]/impact` retrieves document
   chunks (no embeddings column — egress) plus the AI summary and synthesizes a
   personal effect. Kroner amounts are shown only when they appear in the source.
-- **Folkets vilje vs. Stortinget** sits after the ballot. It fetches
+- **Folkets vilje vs. Stortinget** sits on the sak page. It fetches
   `data.stortinget.no/eksport/voteringer?sakid=` (1h revalidate), picks a
   substantive votering, and scores gap vs app `get_issue_vote_totals`.
   `ALIGNMENT_MIN_FOLK_VOTES = 5` before claiming folkets vilje. Pending saker
@@ -278,7 +281,7 @@ The canonical template is `.env.example`.
 ## Cursor Cloud specific instructions
 
 - Package manager is npm (only `package-lock.json`). The update script runs `npm ci`, so dependencies are already installed at session start. Scripts live in `package.json`: `dev`, `build`, `lint`, `test:unit`, `test:e2e`.
-- Supabase credentials (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) are provided as Cloud Agent secrets / env vars and point at a real hosted project with all `supabase/migrations/*.sql` applied (voting `vote_encryption_secret` pepper is configured). Browser-side auth from the in-VM Chrome reaches Supabase fine — the full auth/voting flow works end-to-end.
+- Supabase credentials (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) are provided as Cloud Agent secrets / env vars and point at a real hosted project with all `supabase/migrations/*.sql` applied (legacy voting `vote_encryption_secret` pepper is configured). Browser-side auth from the in-VM Chrome reaches Supabase fine — auth, stance, and poll flows work end-to-end.
 - **`.env.local` is still required to run the dev server**, because it carries the non-secret `STORTINGET_*` / `NEXT_PUBLIC_STORTINGET_*` defaults (and `middleware.ts` builds a Supabase client on every request, so the `NEXT_PUBLIC_SUPABASE_*` values must be resolvable or every page 500s). It is gitignored; recreate with `npm run env:test` (Folkets-Stemme test Supabase) or from `.env.example` if absent. Next.js reads injected `process.env` with higher precedence than `.env.local`, so the injected secrets win even if `.env.local` holds older values.
 - Playwright and CI use the Folkets-Stemme test Supabase from `.env.test` / workflow `env` (anon key only). Set `SUPABASE_SERVICE_ROLE_KEY` via secrets when server RPCs are needed.
 - Auth is email/password (`supabase.auth.signUp` / `signInWithPassword`). **Email signups require confirmation**, so a raw signup does NOT create a session. To get a usable test login, create a pre-confirmed user with the admin API and the service role key, then sign in: `POST {SUPABASE_URL}/auth/v1/admin/users` with `{"email":...,"password":...,"email_confirm":true,"user_metadata":{...}}` (the project rejects `@example.com`; use e.g. `@gmail.com`).
@@ -286,5 +289,5 @@ The canonical template is `.env.example`.
  issue pages `/dashboard/sak/<id>`, politician pages, `/dashboard/utforsk`,
  `/dashboard/avstemninger` (and `/<id>`), and `/dashboard/folkets-meninger`. Issue pages fetch live
  `data.stortinget.no` data and can take 10–30s on first load.
-- Hello-world that exercises core functionality: log in, then open an issue (`/dashboard/sak/<id>`) and cast a "For" vote in the "Hva mener du?" section — the vote persists and the `/dashboard/min-side` vote count updates.
+- Hello-world that exercises core functionality: log in, then open an issue (`/dashboard/sak/<id>`) and save an Enig/Uenig/Ikke interessert stance in "Hva er din holdning?" — the stance persists and appears in profile/Utforsk stance history.
 - `npm run test:unit` shells out to `npx tsx ...`; the first run downloads `tsx` (needs network) and then caches it.
