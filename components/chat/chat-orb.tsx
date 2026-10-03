@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { useChatOverlay } from '@/components/chat/chat-overlay-context';
+import { issueIdFromPathname } from '@/lib/chat/overlay';
 import './chat-orb.css';
 
 type BlobSpec = {
@@ -66,6 +68,7 @@ function paintOrb(ctx: CanvasRenderingContext2D, size: number, time: number, bra
 }
 
 export function ChatOrb() {
+  const pathname = usePathname();
   const { open, openChat, closeChat } = useChatOverlay();
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -118,7 +121,10 @@ export function ChatOrb() {
       aria-label={open ? 'Lukk AI-chat' : 'Åpne AI-chat'}
       onClick={() => {
         if (open) closeChat();
-        else openChat(null);
+        else {
+          const sak = issueIdFromPathname(pathname);
+          openChat(sak ? { issueId: sak } : null);
+        }
       }}
     >
       <span className="chat-orb-halo" aria-hidden />

@@ -4,6 +4,7 @@ import {
   buildChatLoginNextPath,
   canUseOverlayActions,
   chatDeepLinkQuery,
+  issueIdFromPathname,
   resolveChatGate,
   shouldOpenChatFromSearchParams,
 } from '@/lib/chat/overlay';
@@ -38,6 +39,14 @@ test('chat query opens the overlay for 1 or open', () => {
   assert.equal(shouldOpenChatFromSearchParams(new URLSearchParams('chat=1')), true);
   assert.equal(shouldOpenChatFromSearchParams(new URLSearchParams('chat=open')), true);
   assert.equal(shouldOpenChatFromSearchParams(new URLSearchParams('sak=1')), false);
+});
+
+test('issueIdFromPathname reads /dashboard/sak/[id]', () => {
+  assert.equal(issueIdFromPathname('/dashboard/sak/200365'), '200365');
+  assert.equal(issueIdFromPathname('/dashboard/sak/200365?chat=1'), '200365');
+  assert.equal(issueIdFromPathname('/dashboard/utforsk'), null);
+  assert.equal(issueIdFromPathname('/dashboard/sak/200365/dokumenter'), null);
+  assert.equal(issueIdFromPathname(null), null);
 });
 
 test('chatDeepLinkQuery keeps optional sak', () => {

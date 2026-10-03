@@ -366,7 +366,8 @@ Overlay chat RAG (`retrieveSakContext` / `listMatchingSaker`) reads
 `stortinget_issues`, `document_chunks` (`document_id, chunk_index, content`
 only) and `issue_ai_summaries` with the logged-in request session, falling
 back to the anon key. It never selects embedding columns and does not use
-the service-role-only lexical RPCs.
+the service-role-only lexical RPCs. The orb panel action `Hent sakskontekst`
+(`POST /api/chat/sak-context`) reuses that path and does not call an LLM.
 
 Deploy `BYOK_ENCRYPTION_KEY` on Coolify/Vercel (never commit the value). Generate
 a 64-hex AES-256 key with `openssl rand -hex 32`, or use a passphrase (scrypt).

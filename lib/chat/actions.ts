@@ -1,3 +1,4 @@
+import type { ChatSakContext } from '@/lib/chat/rag';
 import { searchSearxng, type SearxngHit } from '@/lib/chat/searxng';
 
 export const SPELLING_CONTEXTS = ['diskusjon', 'motforslag', 'horing', 'annet'] as const;
@@ -9,6 +10,7 @@ export const RETTSSKRIVING_INSTRUCTION =
 export const RETTSSKRIVING_DRAFT_MIN = 8;
 export const RETTSSKRIVING_DRAFT_MAX = 8000;
 export const SOURCE_QUERY_MIN = 3;
+export const SAK_CONTEXT_QUERY_MIN = 2;
 
 export type RettsskrivingMode = 'instruction' | 'corrected';
 
@@ -35,6 +37,8 @@ export type SourceSearchResult =
   | { ok: true; unavailable: false; results: SearxngHit[] }
   | { ok: false; unavailable: true; error: string; results: [] }
   | { ok: false; unavailable: false; error: string; results: [] };
+
+export type SakContextActionResult = ChatSakContext & { empty: boolean };
 
 export function isSpellingContext(value: string): value is SpellingContext {
   return (SPELLING_CONTEXTS as readonly string[]).includes(value);
@@ -102,4 +106,23 @@ export async function runUpdatedSourceSearch(query: string): Promise<SourceSearc
   }
 
   return { ok: true, unavailable: false, results: result.results };
+}
+
+export function isSakContextEmpty(context: Pick<ChatSakContext, 'issue' | 'summary' | 'chunks'>): boolean {
+  return !context.issue || (!context.summary && context.chunks.length === 0);
+}
+
+export function parseSakContextInput(input: {
+  issueId?: string | null;
+  query?: string | null;
+}): { ok: true; issueId: string | null; query: string } | { ok: false; error: string } {
+  const issueId = input.issueId?.trim() || null;
+  const query = input.query?.trim() || '';
+  if (!issueId && query.length < SAK_CONTEXT_QUERY_MIN) {
+    return {
+      ok: false,
+      error: `Skriv inn sak-id eller minst ${SAK_CONTEXT_QUERY_MIN} tegn av tittelen.`,
+    };
+  }
+  return { ok: true, issueId, query: query || issueId || '' };
 }

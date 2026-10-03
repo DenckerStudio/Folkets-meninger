@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ChatOrb } from '@/components/chat/chat-orb';
 import { ChatPanel } from '@/components/chat/chat-panel';
 import { useChatOverlay } from '@/components/chat/chat-overlay-context';
-import { shouldOpenChatFromSearchParams } from '@/lib/chat/overlay';
+import { issueIdFromPathname, shouldOpenChatFromSearchParams } from '@/lib/chat/overlay';
 
 function ChatUrlBridge() {
   const searchParams = useSearchParams();
@@ -20,9 +20,9 @@ function ChatUrlBridge() {
 
   useEffect(() => {
     if (!shouldOpenChatFromSearchParams(searchParams)) return;
-    const sak = searchParams.get('sak')?.trim();
+    const sak = searchParams.get('sak')?.trim() || issueIdFromPathname(pathname);
     openChat(sak ? { issueId: sak } : null);
-  }, [openChat, searchParams]);
+  }, [openChat, pathname, searchParams]);
 
   useEffect(() => {
     if (open || !wasOpen.current || !shouldOpenChatFromSearchParams(searchParams)) return;

@@ -212,7 +212,10 @@ The canonical template is `.env.example`.
 - Server tools: `retrieveSakContext` (session/anon SELECT of
   `document_chunks` without embeddings + AI summaries), `searchUpdatedSources`
   (SearXNG JSON), `helpRettsskriving` (grammar help for the user's own draft —
-  does not post UGC).
+  does not post UGC). Overlay panel action **Hent sakskontekst** uses the same
+  `retrieveSakContext` session path (`POST /api/chat/sak-context`) and does not
+  call an LLM. If the overlay opens on `/dashboard/sak/[id]`, that id is the
+  default.
 - Do not mention BankID, MinID, or electronic ID verification anywhere in
   user-facing copy, roadmap items, or marketing text.
 

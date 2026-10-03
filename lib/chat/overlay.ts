@@ -16,7 +16,7 @@ export function resolveChatGate(input: {
   return 'ready';
 }
 
-/** Overlay actions need login + Stemme+. SearXNG and instruction-only rettskriving work without BYOK; LLM correction uses the user's key when present. */
+/** Overlay actions need login + Stemme+. Sak context, SearXNG, and instruction-only rettskriving work without BYOK; LLM correction uses the user's key when present. */
 export function canUseOverlayActions(gate: ChatGateReason): boolean {
   switch (gate) {
     case 'ready':
@@ -44,6 +44,18 @@ export function chatDeepLinkQuery(issueId?: string | null): string {
   const sak = issueId?.trim();
   if (sak) params.set('sak', sak);
   return params.toString();
+}
+
+/** Sak id from `/dashboard/sak/[id]` so the orb can default context without `?sak=`. */
+export function issueIdFromPathname(pathname: string | null | undefined): string | null {
+  const pathOnly = (pathname ?? '').trim().split('?')[0] ?? '';
+  const match = /^\/dashboard\/sak\/([^/]+)$/.exec(pathOnly);
+  if (!match?.[1]) return null;
+  try {
+    return decodeURIComponent(match[1]).trim() || null;
+  } catch {
+    return match[1].trim() || null;
+  }
 }
 
 /** Post-login return path that reopens the orb panel (and optional sak). */
