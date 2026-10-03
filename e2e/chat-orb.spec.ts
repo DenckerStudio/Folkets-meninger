@@ -155,9 +155,12 @@ test.describe('AI-chat orb overlay', () => {
     await expect(panel.getByPlaceholder('Sak-id eller tittel')).toHaveValue('200365');
     await expect(panel.getByText('Ingen språkmodell')).toBeVisible();
 
-    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    await page.addStyleTag({
+      content:
+        'nextjs-portal { display: none !important; } html, body, button, input, p, h2 { font-family: ui-sans-serif, system-ui, sans-serif !important; }',
+    });
     await page.screenshot({
-      path: `${ARTIFACTS}/chat-panel-sak-context-action.png`,
+      path: `${ARTIFACTS}/hent-sakskontekst-action.png`,
     });
 
     await panel.getByRole('button', { name: 'Hent', exact: true }).click();
@@ -167,7 +170,7 @@ test.describe('AI-chat orb overlay', () => {
     await expect(panel.locator('[data-sak-context-result="empty"]')).toHaveCount(0);
 
     await page.screenshot({
-      path: `${ARTIFACTS}/chat-panel-sak-context-result.png`,
+      path: `${ARTIFACTS}/hent-sakskontekst-result.png`,
     });
   });
 
@@ -196,9 +199,12 @@ test.describe('AI-chat orb overlay', () => {
     await expect(panel.getByRole('button', { name: 'Hent sakskontekst' })).toBeVisible();
     await expect(panel.getByPlaceholder('Sak-id eller tittel')).toHaveValue('200365');
 
-    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    await page.addStyleTag({
+      content:
+        'nextjs-portal { display: none !important; } html, body, button, input, p, h2 { font-family: ui-sans-serif, system-ui, sans-serif !important; }',
+    });
     await page.screenshot({
-      path: `${ARTIFACTS}/chat-panel-sak-context-default-id.png`,
+      path: `${ARTIFACTS}/hent-sakskontekst-sak-page-default.png`,
     });
   });
 
