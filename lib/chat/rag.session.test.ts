@@ -16,7 +16,9 @@ assert.match(toolsSrc, /searchIssuesForChat\(query, 8, ragClient\)/);
 
 assert.match(routeSrc, /requireStemmePlus/);
 assert.match(routeSrc, /getServerSupabase/);
+assert.match(routeSrc, /loadDecryptedByok\(gate\.userId, session\)/);
 assert.match(routeSrc, /createChatTools\(issueId, ragClient\)/);
+assert.doesNotMatch(routeSrc, /getServiceSupabase/);
 assert.doesNotMatch(routeSrc, /runtime\s*=\s*['"]edge['"]/);
 
 console.log('chat/rag.session.test.ts: ok session-bound overlay RAG');

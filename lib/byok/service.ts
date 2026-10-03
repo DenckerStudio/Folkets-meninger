@@ -1,4 +1,5 @@
-import { getServiceSupabase } from '@/lib/supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { getServerSupabase } from '@/lib/supabase-server';
 import {
   decryptSecret,
   encryptSecret,
@@ -19,6 +20,8 @@ export type DecryptedByokCredential = ByokCredentialMeta & {
   apiKey: string;
 };
 
+export type ByokClient = Pick<SupabaseClient, 'from'>;
+
 type CredentialRow = {
   provider: string;
   model: string;
@@ -30,35 +33,58 @@ type CredentialRow = {
   updated_at: string;
 };
 
+const META_COLUMNS = 'provider, model, base_url, key_last4, updated_at';
+const SECRET_COLUMNS =
+  'provider, model, base_url, ciphertext_b64, iv_b64, auth_tag_b64, key_last4, updated_at';
+
 export function byokStorageReady(): boolean {
   return isByokEncryptionConfigured();
 }
 
-export async function getByokMeta(userId: string): Promise<ByokCredentialMeta | null> {
-  const service = getServiceSupabase();
-  const { data, error } = await service
+async function byokClient(explicit?: ByokClient | null): Promise<ByokClient> {
+  if (explicit) return explicit;
+  return getServerSupabase();
+}
+
+function toMeta(row: {
+  provider: string;
+  model: string;
+  base_url: string | null;
+  key_last4: string;
+  updated_at: string;
+}): ByokCredentialMeta {
+  return {
+    provider: row.provider as LlmProvider,
+    model: row.model,
+    baseUrl: row.base_url,
+    keyLast4: row.key_last4,
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function getByokMeta(
+  userId: string,
+  client?: ByokClient | null,
+): Promise<ByokCredentialMeta | null> {
+  const supabase = await byokClient(client);
+  const { data, error } = await supabase
     .from('user_llm_credentials')
-    .select('provider, model, base_url, key_last4, updated_at')
+    .select(META_COLUMNS)
     .eq('user_id', userId)
     .maybeSingle();
 
   if (error || !data) return null;
-  return {
-    provider: data.provider as LlmProvider,
-    model: data.model,
-    baseUrl: data.base_url,
-    keyLast4: data.key_last4,
-    updatedAt: data.updated_at,
-  };
+  return toMeta(data);
 }
 
 export async function loadDecryptedByok(
   userId: string,
+  client?: ByokClient | null,
 ): Promise<DecryptedByokCredential | null> {
-  const service = getServiceSupabase();
-  const { data, error } = await service
+  const supabase = await byokClient(client);
+  const { data, error } = await supabase
     .from('user_llm_credentials')
-    .select('provider, model, base_url, ciphertext_b64, iv_b64, auth_tag_b64, key_last4, updated_at')
+    .select(SECRET_COLUMNS)
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -71,11 +97,7 @@ export async function loadDecryptedByok(
   });
 
   return {
-    provider: row.provider as LlmProvider,
-    model: row.model,
-    baseUrl: row.base_url,
-    keyLast4: row.key_last4,
-    updatedAt: row.updated_at,
+    ...toMeta(row),
     apiKey,
   };
 }
@@ -86,13 +108,14 @@ export async function saveByokCredential(args: {
   model: string;
   apiKey: string;
   baseUrl: string | null;
+  client?: ByokClient | null;
 }): Promise<ByokCredentialMeta> {
   const encrypted = encryptSecret(args.apiKey.trim());
   const last4 = keyLast4(args.apiKey);
-  const service = getServiceSupabase();
+  const supabase = await byokClient(args.client);
   const now = new Date().toISOString();
 
-  const { data, error } = await service
+  const { data, error } = await supabase
     .from('user_llm_credentials')
     .upsert(
       {
@@ -108,25 +131,22 @@ export async function saveByokCredential(args: {
       },
       { onConflict: 'user_id' },
     )
-    .select('provider, model, base_url, key_last4, updated_at')
+    .select(META_COLUMNS)
     .single();
 
   if (error || !data) {
     throw new Error('Kunne ikke lagre nøkkelen');
   }
 
-  return {
-    provider: data.provider as LlmProvider,
-    model: data.model,
-    baseUrl: data.base_url,
-    keyLast4: data.key_last4,
-    updatedAt: data.updated_at,
-  };
+  return toMeta(data);
 }
 
-export async function deleteByokCredential(userId: string): Promise<void> {
-  const service = getServiceSupabase();
-  const { error } = await service.from('user_llm_credentials').delete().eq('user_id', userId);
+export async function deleteByokCredential(
+  userId: string,
+  client?: ByokClient | null,
+): Promise<void> {
+  const supabase = await byokClient(client);
+  const { error } = await supabase.from('user_llm_credentials').delete().eq('user_id', userId);
   if (error) {
     throw new Error('Kunne ikke slette nøkkelen');
   }

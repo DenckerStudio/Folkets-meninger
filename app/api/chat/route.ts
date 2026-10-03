@@ -66,7 +66,8 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Mangler meldinger' }, { status: 400 });
   }
 
-  const credential = await loadDecryptedByok(gate.userId);
+  const session = await getServerSupabase();
+  const credential = await loadDecryptedByok(gate.userId, session);
   if (!credential) {
     return Response.json(
       { error: 'Lagre en egen LLM-nøkkel under Stemme+ før du chatter.' },
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
   }
 
   const issueId = readIssueId(request, body);
-  const ragClient = await getServerSupabase();
+  const ragClient = session;
 
   try {
     const model = createUserLanguageModel(credential);

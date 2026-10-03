@@ -1,5 +1,5 @@
 import { getUser } from '@/lib/supabase-server';
-import { getUserSubscription, userHasStemmePlus } from '@/lib/stemme-plus/service';
+import { getOwnSubscription } from '@/lib/stemme-plus/service';
 import { isStemmePlusActive, type UserSubscriptionRow } from '@/lib/stemme-plus/tier';
 
 export type StemmePlusEntitlement = {
@@ -11,7 +11,7 @@ export type StemmePlusEntitlement = {
 export async function loadStemmePlusEntitlement(
   userId: string,
 ): Promise<StemmePlusEntitlement> {
-  const subscription = await getUserSubscription(userId);
+  const subscription = await getOwnSubscription(userId);
   return {
     userId,
     active: isStemmePlusActive(subscription),
@@ -36,8 +36,8 @@ export async function requireStemmePlus(): Promise<
   const auth = await requireAuthedUser();
   if (!auth.ok) return auth;
 
-  const active = await userHasStemmePlus(auth.userId);
-  if (!active) {
+  const subscription = await getOwnSubscription(auth.userId);
+  if (!isStemmePlusActive(subscription)) {
     return {
       ok: false,
       status: 403,

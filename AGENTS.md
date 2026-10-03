@@ -194,14 +194,19 @@ The canonical template is `.env.example`.
   + Stemme+ gating stay. Free users see an upgrade empty state, not a broken
   composer.
 - Users store their own LLM key (OpenAI / Anthropic / OpenAI-compatible / AI
-  Gateway) encrypted at rest in `user_llm_credentials` (service-role only).
-  Never log keys; never return the secret after save.
+  Gateway) encrypted at rest in `user_llm_credentials`. The owning authenticated
+  user may load ciphertext via RLS; decrypt stays server-side with
+  `BYOK_ENCRYPTION_KEY`. Never log keys; never return the secret after save.
+- Overlay chat entitlement (`requireStemmePlus`) and BYOK load use the request
+  session (`users.subscription_tier` + owner ciphertext). Do not use the
+  service role for production chat — a mismatched Cloud Agent key fail-closes.
 - Chat API: `POST /api/chat` (Node.js / Fluid Compute, `maxDuration` 120, no
   `runtime = 'edge'`). AI SDK `streamText` + tools. Transcripts are ephemeral
   in the browser.
-- Server tools: `retrieveSakContext` (lexical `search_issue_document_chunks_text`
-  + AI summaries; no embeddings column), `searchUpdatedSources` (SearXNG JSON),
-  `helpRettsskriving` (grammar help for the user's own draft — does not post UGC).
+- Server tools: `retrieveSakContext` (session/anon SELECT of
+  `document_chunks` without embeddings + AI summaries), `searchUpdatedSources`
+  (SearXNG JSON), `helpRettsskriving` (grammar help for the user's own draft —
+  does not post UGC).
 - Do not mention BankID, MinID, or electronic ID verification anywhere in
   user-facing copy, roadmap items, or marketing text.
 
