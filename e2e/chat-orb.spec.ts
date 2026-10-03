@@ -1,7 +1,16 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import fs from 'node:fs';
 
 const ARTIFACTS = '/opt/cursor/artifacts';
+
+/** Panel mounts immediately with "Laster AI-chat…"; wait until the guest gate is settled. */
+async function waitForGuestChatPanel(page: Page) {
+  const panel = page.locator('[data-chat-panel]');
+  await expect(panel).toBeVisible({ timeout: 90_000 });
+  await expect(panel.getByRole('link', { name: 'Logg inn' })).toBeVisible({ timeout: 90_000 });
+  await expect(panel.getByText('Laster AI-chat…')).toHaveCount(0);
+  return panel;
+}
 
 test.describe('AI-chat orb overlay', () => {
   test.beforeAll(() => {
@@ -24,11 +33,9 @@ test.describe('AI-chat orb overlay', () => {
 
     await orb.click();
 
-    const panel = page.locator('[data-chat-panel]');
-    await expect(panel).toBeVisible();
+    const panel = await waitForGuestChatPanel(page);
     await expect(page.getByRole('heading', { name: 'AI-chat', exact: true })).toBeVisible();
-    await expect(page.getByText('Logg inn for å bruke AI-chat')).toBeVisible();
-    await expect(panel.getByRole('link', { name: 'Logg inn' })).toBeVisible();
+    await expect(panel.getByText('Logg inn for å bruke AI-chat')).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Rettskriving' })).toHaveCount(0);
     await expect(panel.getByRole('button', { name: 'Hent sakskontekst' })).toHaveCount(0);
     await expect(panel.getByRole('button', { name: 'Finn oppdaterte kilder' })).toHaveCount(0);
@@ -267,10 +274,8 @@ test.describe('AI-chat orb overlay', () => {
   test('login next preserves chat+sak deep link', async ({ page }) => {
     test.setTimeout(90_000);
     await page.goto('/dashboard/utforsk?chat=1&sak=200417');
-    const panel = page.locator('[data-chat-panel]');
-    await expect(panel).toBeVisible({ timeout: 90_000 });
+    const panel = await waitForGuestChatPanel(page);
     const login = panel.getByRole('link', { name: 'Logg inn' });
-    await expect(login).toBeVisible();
     const href = await login.getAttribute('href');
     expect(href).toBeTruthy();
     const url = new URL(href!, 'http://localhost');
@@ -286,7 +291,7 @@ test.describe('AI-chat orb overlay', () => {
     test.setTimeout(90_000);
     await page.goto('/dashboard/chat');
     await expect(page).toHaveURL(/\/dashboard\/utforsk(\?|$)/);
-    await expect(page.locator('[data-chat-panel]')).toBeVisible({ timeout: 90_000 });
+    await waitForGuestChatPanel(page);
     await expect(page.getByRole('heading', { name: 'AI-chat', exact: true })).toBeVisible();
   });
 
@@ -306,10 +311,9 @@ test.describe('AI-chat orb overlay', () => {
 
     await orb.click();
 
-    const panel = page.locator('[data-chat-panel]');
-    await expect(panel).toBeVisible();
+    const panel = await waitForGuestChatPanel(page);
     await expect(page.getByRole('heading', { name: 'AI-chat', exact: true })).toBeVisible();
-    await expect(page.getByText('Logg inn for å bruke AI-chat')).toBeVisible();
+    await expect(panel.getByText('Logg inn for å bruke AI-chat')).toBeVisible();
 
     await page.screenshot({
       path: `${ARTIFACTS}/chat-panel-utforsk-open.png`,

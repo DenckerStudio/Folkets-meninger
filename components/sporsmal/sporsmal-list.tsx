@@ -15,6 +15,7 @@ import {
   type StortingetSporsmal,
 } from '@/lib/stortinget-sporsmal';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { dashboardControlClass, dashboardSearchClass } from '@/components/dashboard/filter-field';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -79,14 +80,14 @@ export default function SporsmalList({ sporsmal, type, sesjonId }: SporsmalListP
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Søk i tittel, politiker, minister eller emne…"
             aria-label="Søk i spørsmål"
-            className="w-full rounded-xl border border-border bg-card py-2.5 pl-10 pr-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className={dashboardSearchClass()}
           />
         </div>
         <select
           value={answerFilter}
           onChange={(e) => setAnswerFilter(e.target.value as AnswerFilter)}
           aria-label="Filtrer på svarstatus"
-          className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm md:w-auto"
+          className={dashboardControlClass('md:w-auto')}
         >
           <option value="alle">Alle</option>
           <option value="besvart">Besvart</option>
