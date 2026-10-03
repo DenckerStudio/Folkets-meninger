@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import { useAuth } from '@/hooks/use-auth';
 import { PageHeader } from '@/components/page-header';
 import { routes } from '@/lib/routes';
+import { loginWithNext } from '@/lib/safe-redirect';
 
 type NotificationItem = {
   id: string;
@@ -63,7 +64,7 @@ export default function VarslerPage() {
         <PageHeader as="h2" title="Logg inn for å se varsler" />
         <p className="text-muted-foreground">Du må være logget inn for å se in-app varsler.</p>
         <Link
-          href={routes.login}
+          href={loginWithNext(routes.varsler)}
           className="inline-flex items-center rounded-xl bg-brand px-6 py-3 font-medium text-brand-foreground transition-colors hover:bg-brand/90"
         >
           <LogIn className="mr-2 h-5 w-5" />

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
+import { loginWithNext } from '@/lib/safe-redirect';
 
 export default function HearingCommentForm({
   stortingetHearingId,
@@ -47,7 +48,7 @@ export default function HearingCommentForm({
   if (!user) {
     return (
       <p className="text-sm text-center text-muted-foreground py-4">
-        <Link href={routes.login} className="text-brand font-medium hover:underline">
+        <Link href={loginWithNext(routes.horing(stortingetHearingId))} className="text-brand font-medium hover:underline">
           Logg inn
         </Link>{' '}
         for å gi innspill.

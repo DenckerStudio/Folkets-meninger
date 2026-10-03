@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
+import { loginWithNext } from '@/lib/safe-redirect';
 import { ProfileHero } from '@/components/profile/profile-hero';
 import { ProfileOverview } from '@/components/profile/profile-overview';
 import { ProfileStanceHistory } from '@/components/profile/profile-stance-history';
@@ -228,7 +229,7 @@ function ProfileLoginPrompt() {
         description="Du må være logget inn for å se holdningshistorikk, valgomat og innstillinger."
         action={
           <Link
-            href={routes.login}
+            href={loginWithNext(routes.minSide)}
             className="inline-flex items-center rounded-xl bg-brand px-6 py-3 font-medium text-brand-foreground hover:bg-brand/90"
           >
             <LogIn className="mr-2 h-5 w-5" />

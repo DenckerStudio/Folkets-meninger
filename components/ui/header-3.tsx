@@ -8,6 +8,7 @@ import { Bell, LogIn } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 import { isDashboardPath, isPublicProfilePath, routes } from '@/lib/routes';
+import { loginWithNext } from '@/lib/safe-redirect';
 import { desktopPrimaryNavLinks } from '@/lib/site-nav-links';
 import { DashboardNavMenuButton } from '@/components/dashboard/dashboard-nav-context';
 import { ProfileMenuDropdown } from '@/components/profile/profile-menu-dropdown';
@@ -19,6 +20,7 @@ export function Header() {
   const pathname = usePathname();
   const inDashboard = isDashboardPath(pathname);
   const isLoggedIn = !!user;
+  const loginHref = loginWithNext(pathname);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const displayUnreadCount = isLoggedIn ? unreadCount : 0;
   const logoHref = isPublicProfilePath(pathname)
@@ -90,7 +92,7 @@ export function Header() {
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
-            href={isLoggedIn ? routes.varsler : routes.login}
+            href={isLoggedIn ? routes.varsler : loginHref}
             className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
             aria-label="Varsler"
           >
@@ -112,11 +114,11 @@ export function Header() {
             </div>
           ) : (
             <>
-              <Button variant="outline" size="sm" className="sm:h-8" render={<Link href={routes.login} />}>
+              <Button variant="outline" size="sm" className="sm:h-8" render={<Link href={loginHref} />}>
                 <LogIn className="size-3.5 sm:size-4" />
                 <span className="hidden min-[380px]:inline">Logg inn</span>
               </Button>
-              <Button size="sm" className="hidden sm:inline-flex sm:h-8" render={<Link href={routes.login} />}>
+              <Button size="sm" className="hidden sm:inline-flex sm:h-8" render={<Link href={loginHref} />}>
                 Kom i gang
               </Button>
             </>
