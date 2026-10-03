@@ -40,6 +40,7 @@ const fetchPendingChunks = node({
   version: 4.2,
   config: {
     name: 'Count pending chunks',
+    alwaysOutputData: true,
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       method: 'POST',
@@ -60,6 +61,8 @@ const fetchMissingSummaries = node({
   version: 4.2,
   config: {
     name: 'Count missing summaries',
+    alwaysOutputData: true,
+    executeOnce: true,
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       method: 'POST',
@@ -80,6 +83,8 @@ const fetchDraftPolls = node({
   version: 4.2,
   config: {
     name: 'List draft polls',
+    alwaysOutputData: true,
+    executeOnce: true,
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       method: 'GET',
@@ -106,9 +111,16 @@ const summarizeHealth = node({
   if (raw && typeof raw === 'object' && (raw.id || raw.issue_id)) return [raw];
   return [];
 }
-const chunks = asRows($('Count pending chunks').first()?.json);
-const missing = asRows($('Count missing summaries').first()?.json).filter((r) => r && r.id);
-const drafts = asRows($('List draft polls').first()?.json).filter((r) => r && r.id);
+function rowsFrom(name) {
+  try {
+    return $(name).all().flatMap((item) => asRows(item.json));
+  } catch (_) {
+    return [];
+  }
+}
+const chunks = rowsFrom('Count pending chunks');
+const missing = rowsFrom('Count missing summaries').filter((r) => r && r.id);
+const drafts = rowsFrom('List draft polls').filter((r) => r && r.id);
 const pendingChunks = chunks.filter((r) => r && r.id).length;
 const missingSummaries = missing.length;
 const draftPolls = drafts.length;
