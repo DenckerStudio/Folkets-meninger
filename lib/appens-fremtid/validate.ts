@@ -38,12 +38,7 @@ export function validateSuggestionBody(body: string): string | null {
   return lengthError('Beskrivelsen', body, SUGGESTION_BODY_MIN, SUGGESTION_BODY_MAX);
 }
 
-export function validateSuggestionInput(input: {
-  title: unknown;
-  body: unknown;
-  category: unknown;
-  audience: unknown;
-}): { title: string; body: string; category: SuggestionCategory; audience: SuggestionAudience } | { error: string } {
+export function validateSuggestionInput(input: Record<string, unknown>): { title: string; body: string; category: SuggestionCategory; audience: SuggestionAudience } | { error: string } {
   const title = normalizeText(input.title);
   const body = normalizeText(input.body);
   const titleError = validateSuggestionTitle(title);
@@ -55,10 +50,7 @@ export function validateSuggestionInput(input: {
   return { title, body, category: input.category, audience: input.audience };
 }
 
-export function validateChangelogInput(input: {
-  title: unknown;
-  body: unknown;
-}): { title: string; body: string } | { error: string } {
+export function validateChangelogInput(input: Record<string, unknown>): { title: string; body: string } | { error: string } {
   const title = normalizeText(input.title);
   const body = normalizeText(input.body);
   const titleError = lengthError('Tittelen', title, CHANGELOG_TITLE_MIN, CHANGELOG_TITLE_MAX);
@@ -68,11 +60,7 @@ export function validateChangelogInput(input: {
   return { title, body };
 }
 
-export function validateRoadmapInput(input: {
-  title: unknown;
-  body: unknown;
-  status: unknown;
-}): { title: string; body: string; status: RoadmapStatus } | { error: string } {
+export function validateRoadmapInput(input: Record<string, unknown>): { title: string; body: string; status: RoadmapStatus } | { error: string } {
   const title = normalizeText(input.title);
   const body = normalizeText(input.body);
   const titleError = lengthError('Tittelen', title, ROADMAP_TITLE_MIN, ROADMAP_TITLE_MAX);
