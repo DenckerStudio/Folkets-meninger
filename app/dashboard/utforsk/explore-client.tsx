@@ -8,7 +8,12 @@ import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS } from '@/lib/sak-status
 import { SakProcessingBadge } from '@/components/sak/sak-meta';
 import { formatVotingDaysLeftLabel } from '@/lib/sak-voting-window';
 import { useState, useEffect, useMemo } from 'react';
-import FadeIn from '@/components/fade-in';
+import { LayoutGroup } from 'motion/react';
+import { EmptyLineState } from '@/components/motion/empty-line';
+import { MotionList, MotionListRow } from '@/components/motion/list-row';
+import { Pressable } from '@/components/motion/pressable';
+import { SectionSettle } from '@/components/motion/section-settle';
+import { TabUnderline } from '@/components/motion/tab-underline';
 import { PageHeader } from '@/components/page-header';
 import { UtforskReelsStage, ReelsEntryCta } from '@/components/polls/utforsk-reels-stage';
 import { useAuth } from '@/hooks/use-auth';
@@ -184,16 +189,16 @@ export default function ExploreClient({
     <UtforskReelsStage items={reelItems}>
       {({ openReels, itemCount }) => (
     <div className="space-y-8">
-      <FadeIn delay={0.1}>
+      <SectionSettle>
         <PageHeader
           title="Utforsk saker"
           description="Lovforslag og representantforslag fra Stortinget."
         />
-      </FadeIn>
+      </SectionSettle>
 
-      <FadeIn delay={0.15} direction="up">
+      <SectionSettle>
         <ReelsEntryCta onOpen={openReels} itemCount={itemCount} />
-      </FadeIn>
+      </SectionSettle>
 
       {user &&
       stanceHistoryLoaded &&
@@ -235,7 +240,7 @@ export default function ExploreClient({
         </div>
       ) : null}
 
-      <FadeIn delay={0.2} direction="up">
+      <SectionSettle>
         <div className="bg-card p-4 rounded-2xl shadow-sm border border-border flex flex-col md:flex-row gap-4">
           <div className="relative flex-grow">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -308,10 +313,10 @@ export default function ExploreClient({
             </select>
           </div>
         </div>
-      </FadeIn>
+      </SectionSettle>
 
       {popularLabels.length > 0 && (
-        <FadeIn delay={0.22} direction="up">
+        <SectionSettle>
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">Emne (AI)</p>
             <div className="flex flex-wrap gap-2">
@@ -345,53 +350,53 @@ export default function ExploreClient({
               )}
             </div>
           </div>
-        </FadeIn>
+        </SectionSettle>
       )}
 
-      <FadeIn delay={0.25} direction="up">
+      <SectionSettle>
+        <LayoutGroup>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
+          <Pressable
             onClick={() => setSortBy('Nyeste først')}
-            className={`rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
+            className={`relative rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
               sortBy === 'Nyeste først'
                 ? 'bg-foreground text-background border-foreground'
                 : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
             }`}
           >
             Nyeste
-          </button>
-          <button
-            type="button"
+            {sortBy === 'Nyeste først' ? <TabUnderline layoutId="utforsk-sort" /> : null}
+          </Pressable>
+          <Pressable
             onClick={() => setSortBy('Mest engasjement')}
-            className={`rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
+            className={`relative rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
               sortBy === 'Mest engasjement'
                 ? 'bg-foreground text-background border-foreground'
                 : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
             }`}
           >
             Populært
-          </button>
+            {sortBy === 'Mest engasjement' ? <TabUnderline layoutId="utforsk-sort" /> : null}
+          </Pressable>
         </div>
-      </FadeIn>
+        </LayoutGroup>
+      </SectionSettle>
 
-      <FadeIn delay={0.3} direction="up">
+      <SectionSettle>
         <div className="space-y-4">
           {displayedIssues.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center text-muted-foreground">
-              Ingen saker funnet som matcher dine kriterier.
+            <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-muted-foreground">
+              <EmptyLineState>Ingen saker funnet som matcher dine kriterier.</EmptyLineState>
             </div>
           ) : (
-            displayedIssues.map((issue, index) => {
+            <MotionList className="space-y-4">
+            {displayedIssues.map((issue) => {
               const sakKindLabel = issue.sakKind
                 ? getSakKindLabel(issue.sakKind)
                 : null;
               return (
-                <FadeIn
-                  key={issue.id}
-                  delay={0.1 * Math.min(index, 5)}
-                  direction="up"
-                >
+                <MotionListRow id={String(issue.id)} key={issue.id}>
+                  <SectionSettle>
                   <div className="bg-card rounded-2xl shadow-sm border border-border hover:shadow-md transition-shadow overflow-hidden">
                     <Link
                       href={`/dashboard/sak/${issue.id}`}
@@ -479,12 +484,14 @@ export default function ExploreClient({
                       </Link>
                     </div>
                   </div>
-                </FadeIn>
+                  </SectionSettle>
+                </MotionListRow>
               );
-            })
+            })}
+            </MotionList>
           )}
         </div>
-      </FadeIn>
+      </SectionSettle>
     </div>
       )}
     </UtforskReelsStage>

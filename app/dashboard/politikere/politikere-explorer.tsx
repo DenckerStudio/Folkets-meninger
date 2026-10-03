@@ -5,7 +5,9 @@ import Image from 'next/image';
 import { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ArrowRight, MapPin, Search, Landmark, ShieldCheck } from 'lucide-react';
-import FadeIn from '@/components/fade-in';
+import { EmptyLineState } from '@/components/motion/empty-line';
+import { PartyMark } from '@/components/motion/party-mark';
+import { SectionSettle } from '@/components/motion/section-settle';
 import { PartyLogo } from '@/components/politikere/party-logo';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
 import type { PolitikerOversikt } from '@/lib/stortinget';
@@ -15,12 +17,12 @@ import { usePersistedState } from '@/hooks/use-persisted-state';
 import { missingPartyLogos, uniquePartyNames } from '@/lib/party-logos';
 import { cn } from '@/lib/utils';
 
-function PolitikerCard({ rep, index }: { rep: PolitikerOversikt; index: number }) {
+function PolitikerCard({ rep }: { rep: PolitikerOversikt }) {
   const roleLabel = rep.tittel || 'Stortingsrepresentant';
   const locationLabel = rep.departement || rep.fylke.navn;
 
   return (
-    <FadeIn delay={0.1 * Math.min(index, 8)} direction="up">
+    <SectionSettle>
       <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
         <Link href={routes.politiker(String(rep.id))} className="group block min-w-0 flex-1 p-6 pb-4">
           <div className="mb-4 flex items-start justify-between gap-3">
@@ -67,7 +69,9 @@ function PolitikerCard({ rep, index }: { rep: PolitikerOversikt; index: number }
             href={routes.parti(rep.parti.navn)}
             className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-foreground hover:text-brand"
           >
-            <PartyLogo partyName={rep.parti.navn} className="h-8 w-8 shrink-0" />
+            <PartyMark label={rep.parti.navn} className="h-8 w-8 shrink-0">
+              <PartyLogo partyName={rep.parti.navn} className="h-8 w-8" />
+            </PartyMark>
             <span className="truncate">{rep.parti.navn}</span>
           </Link>
           <Link
@@ -79,7 +83,7 @@ function PolitikerCard({ rep, index }: { rep: PolitikerOversikt; index: number }
           </Link>
         </div>
       </div>
-    </FadeIn>
+    </SectionSettle>
   );
 }
 
@@ -108,12 +112,12 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
   const [searchQuery, setSearchQuery] = usePersistedState(
     PREFERENCE_KEYS.politikere.search,
     '',
-    isSearchString
+    isSearchString,
   );
 
   const partyNames = useMemo(
     () => uniquePartyNames(politikere.map((rep) => rep.parti.navn)),
-    [politikere]
+    [politikere],
   );
   const missingLogos = useMemo(() => missingPartyLogos(partyNames), [partyNames]);
 
@@ -139,7 +143,7 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
       filteredPolitikere
         .filter((p) => p.erRegjeringsmedlem)
         .sort((a, b) => (a.regjeringsSortering ?? 999) - (b.regjeringsSortering ?? 999)),
-    [filteredPolitikere]
+    [filteredPolitikere],
   );
 
   const showRegjeringSection = !searchQuery.trim() && !selectedParty && regjeringsmedlemmer.length > 0;
@@ -160,7 +164,7 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
 
   return (
     <div className="space-y-8">
-      <FadeIn delay={0.15} direction="up">
+      <SectionSettle>
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">Trykk på en partilogo for å åpne partiet.</p>
           <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
@@ -175,20 +179,22 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
                     'inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium',
                     active
                       ? 'border-brand bg-brand/10 text-brand'
-                      : 'border-border bg-card text-foreground hover:border-brand/40'
+                      : 'border-border bg-card text-foreground hover:border-brand/40',
                   )}
                   aria-current={active ? 'page' : undefined}
                 >
-                  <PartyLogo partyName={name} decorative className="h-8 w-8" />
+                  <PartyMark label={name} className="h-8 w-8">
+                    <PartyLogo partyName={name} decorative className="h-8 w-8" />
+                  </PartyMark>
                   <span>{name}</span>
                 </Link>
               );
             })}
           </div>
         </div>
-      </FadeIn>
+      </SectionSettle>
 
-      <FadeIn delay={0.2} direction="up">
+      <SectionSettle>
         <div className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-center">
           <div className="relative w-full sm:w-96">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -207,10 +213,10 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
             <span>{filteredPolitikere.length} politikere</span>
           </div>
         </div>
-      </FadeIn>
+      </SectionSettle>
 
-      {showRegjeringSection && (
-        <FadeIn delay={0.25} direction="up">
+      {showRegjeringSection ? (
+        <SectionSettle>
           <section className="space-y-4">
             <div>
               <h2 className="flex items-center gap-2 text-xl font-bold text-foreground">
@@ -222,29 +228,29 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
               </p>
             </div>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {regjeringsmedlemmer.map((rep, index) => (
-                <PolitikerCard key={rep.id} rep={rep} index={index} />
+              {regjeringsmedlemmer.map((rep) => (
+                <PolitikerCard key={rep.id} rep={rep} />
               ))}
             </div>
           </section>
-        </FadeIn>
-      )}
+        </SectionSettle>
+      ) : null}
 
-      <FadeIn delay={0.3} direction="up">
+      <SectionSettle>
         {listedPolitikere.length === 0 && !showRegjeringSection ? (
-          <div className="py-12 text-center text-muted-foreground">
+          <EmptyLineState className="py-12 text-muted-foreground">
             {selectedParty
               ? `Ingen politikere funnet for ${selectedParty}${searchQuery.trim() ? ` som matcher "${searchQuery}"` : ''}.`
               : `Ingen politikere funnet som matcher "${searchQuery}".`}
-          </div>
+          </EmptyLineState>
         ) : listedPolitikere.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {listedPolitikere.map((rep, index) => (
-              <PolitikerCard key={rep.id} rep={rep} index={index} />
+            {listedPolitikere.map((rep) => (
+              <PolitikerCard key={rep.id} rep={rep} />
             ))}
           </div>
         ) : null}
-      </FadeIn>
+      </SectionSettle>
     </div>
   );
 }

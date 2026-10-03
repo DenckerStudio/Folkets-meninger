@@ -11,6 +11,7 @@ import {
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, Compass } from 'lucide-react';
 import { CivicBubble } from '@/components/icons/civic';
+import { EmptyLineState } from '@/components/motion/empty-line';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Swiper as SwiperType } from 'swiper';
 import { CardCarousel } from '@/components/ui/card-carousel';
@@ -19,10 +20,7 @@ import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import type { SystemReelFeedItem } from '@/lib/polls/types';
 import { cn } from '@/lib/utils';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
-
-/** Quiet fullscreen ease — no lateral slide. */
-const MODAL_EASE = [0.22, 1, 0.36, 1] as const;
-const MODAL_TRANSITION = { duration: 0.48, ease: MODAL_EASE } as const;
+import { MODAL_TRANSITION } from '@/lib/motion/tokens';
 
 function subscribeLocationHash(onStoreChange: () => void) {
   window.addEventListener('hashchange', onStoreChange);
@@ -277,14 +275,16 @@ function ReelsPanel({
       <ReelsBackCta onBack={onClose} />
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10">
-            <CivicBubble className="h-6 w-6 text-brand" />
-          </div>
-          <h2 className="mt-4 text-lg font-semibold text-foreground">Ingen Reels publisert ennå</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            Godkjente spørsmål fra stortingssaker vises her.
-          </p>
+        <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12">
+          <EmptyLineState>
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10">
+              <CivicBubble className="h-6 w-6 text-brand" />
+            </div>
+            <h2 className="mt-4 text-lg font-semibold text-foreground">Ingen Reels publisert ennå</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              Godkjente spørsmål fra stortingssaker vises her.
+            </p>
+          </EmptyLineState>
         </div>
       ) : (
         <CardCarousel

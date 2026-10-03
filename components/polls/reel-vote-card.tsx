@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { CivicBubble } from '@/components/icons/civic';
+import { VoteFillButton } from '@/components/motion/vote-fill';
 import { useAuth } from '@/hooks/use-auth';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { isPollVotingOpen } from '@/lib/polls/format';
@@ -106,9 +107,8 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
         <div className="overflow-hidden rounded-2xl shadow-lg">
           <AnimatePresence>
             {buttons.map((button, index) => (
-              <motion.button
+              <motion.div
                 key={button.key}
-                type="button"
                 custom={index}
                 initial={reducedMotion ? false : { opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -116,16 +116,20 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
                   ...SLIDE,
                   delay: reducedMotion ? 0 : 0.05 + index * 0.07,
                 }}
-                disabled={button.key !== 'tilbake' && (busy || Boolean(userVote) || !votingOpen)}
-                onClick={button.onClick}
-                className={cn(
-                  'flex w-full items-center justify-center px-4 py-4 text-base font-bold tracking-wide transition-opacity disabled:opacity-60',
-                  button.className,
-                  userVote === button.key ? 'ring-2 ring-inset ring-white/80' : '',
-                )}
               >
-                {button.label}
-              </motion.button>
+                <VoteFillButton
+                  selected={userVote === button.key}
+                  disabled={button.key !== 'tilbake' && (busy || Boolean(userVote) || !votingOpen)}
+                  onClick={button.onClick}
+                  className={cn(
+                    'flex w-full items-center justify-center px-4 py-4 text-base font-bold tracking-wide transition-opacity disabled:opacity-60',
+                    button.className,
+                    userVote === button.key ? 'ring-2 ring-inset ring-white/80' : '',
+                  )}
+                >
+                  {button.label}
+                </VoteFillButton>
+              </motion.div>
             ))}
           </AnimatePresence>
         </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LogIn } from 'lucide-react';
 import { LandingLogo } from '@/components/landing-logo';
+import { FlagStripe } from '@/components/motion/flag-stripe';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
 import { useAuth } from '@/hooks/use-auth';
@@ -79,11 +80,7 @@ export function LandingHeader() {
           )}
         </div>
       </nav>
-      <div className="flex h-1.5 w-full" aria-hidden>
-        <span className="flex-1 bg-[#ba0c2f]" />
-        <span className="flex-1 bg-white" />
-        <span className="flex-1 bg-[#00205b]" />
-      </div>
+      <FlagStripe animate={pathname === '/'} />
     </header>
   );
 }

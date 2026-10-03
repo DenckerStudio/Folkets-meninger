@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { routes } from '@/lib/routes';
+import { EmptyLineState } from '@/components/motion/empty-line';
+import { MotionList, MotionListRow } from '@/components/motion/list-row';
 import { ProfileCard } from '@/components/profile/profile-card';
+import { routes } from '@/lib/routes';
 
 export type VoteHistoryItem = {
   stortinget_issue_id: string;
@@ -21,7 +23,7 @@ export function ProfileVoteHistory({ items, loading }: ProfileVoteHistoryProps) 
       {loading ? (
         <p className="text-center py-8 text-muted-foreground text-sm">Laster stemmehistorikk…</p>
       ) : items.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
+        <EmptyLineState className="py-8 text-muted-foreground">
           <p className="font-medium text-foreground">Ingen stemmer ennå</p>
           <p className="text-sm mt-2">Utforsk saker og stem for å se historikken din her.</p>
           <Link
@@ -30,11 +32,11 @@ export function ProfileVoteHistory({ items, loading }: ProfileVoteHistoryProps) 
           >
             Utforsk saker →
           </Link>
-        </div>
+        </EmptyLineState>
       ) : (
-        <ul className="divide-y divide-border rounded-xl border border-border overflow-hidden">
+        <MotionList className="divide-y divide-border rounded-xl border border-border overflow-hidden">
           {items.map((item) => (
-            <li key={item.stortinget_issue_id}>
+            <MotionListRow id={item.stortinget_issue_id} key={item.stortinget_issue_id}>
               <Link
                 href={routes.sak(item.stortinget_issue_id)}
                 className="group block px-4 py-4 hover:bg-muted/50 transition-colors"
@@ -46,9 +48,9 @@ export function ProfileVoteHistory({ items, loading }: ProfileVoteHistoryProps) 
                   Stemt: {new Date(item.voted_at).toLocaleDateString('nb-NO')}
                 </p>
               </Link>
-            </li>
+            </MotionListRow>
           ))}
-        </ul>
+        </MotionList>
       )}
     </ProfileCard>
   );
