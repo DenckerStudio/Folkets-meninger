@@ -82,6 +82,6 @@ export const config = {
     '/api/sak/:path*/counter-proposals',
     '/api/opinions/:path*',
     '/api/feedback',
-    '/api/oauth/fider/:path*',
+    '/api/suggestions',
   ],
 };

@@ -72,7 +72,6 @@ The canonical template is `.env.example`.
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Notification and welcome email delivery |
 | `STORTINGET_SESSION_ID`, `STORTINGET_PERIODE_ID` | Server defaults for Stortinget data |
 | `NEXT_PUBLIC_STORTINGET_SESSION_ID`, `NEXT_PUBLIC_STORTINGET_PERIODE_ID` | Client-visible Stortinget defaults |
-| `FIDER_BASE_URL`, `FIDER_OAUTH_CLIENT_ID`, `FIDER_OAUTH_CLIENT_SECRET` | Fider SSO at `https://feedback.folkets-meninger.no` (`docs/fider-oauth.md`) |
 | `DISABLE_HMR` | Dev-only escape hatch for HMR issues |
 
 ## Current Subsystems and Runbooks
@@ -253,15 +252,14 @@ The canonical template is `.env.example`.
 - Valgomat party alignment is intentionally disabled until Stortinget per-party
   voting data exists (`PARTY_ALIGNMENT_AVAILABLE = false`).
 
-### Fider (feature requests / SSO)
+### In-app forslag (product feedback)
 
-- Fider runs on Coolify at **https://feedback.folkets-meninger.no** (`FIDER_BASE_URL`; default in
-  `lib/fider/config.ts` when env is unset).
-- SSO uses an app OAuth bridge (`/api/oauth/fider/*`), not Supabase OAuth 2.1 server
-  (`auth.oauth_server.enabled = false` in `supabase/config.toml`).
-- Dashboard nav **Forslag** → `/dashboard/forslag` redirects to Fider (not iframe).
-- Fider OAuth callback: `https://feedback.folkets-meninger.no/oauth/folkets/callback`.
-- Setup runbook: `docs/fider-oauth.md`.
+- Dashboard nav **Forslag** → `/dashboard/forslag`. Logged-in users send a short
+  suggestion (10–500 tegn) via `POST /api/suggestions`.
+- Stored in `app_suggestions` through `create_app_suggestion`
+  (`supabase/migrations/20261003163035_app_suggestions.sql`). Service-role writes only.
+- Public marketing form `/innspill` (`site_feedback`) is separate.
+- Fider is not used by the app. The Coolify Fider server is left running.
 
 ## Documentation Locations
 
