@@ -1,13 +1,12 @@
-import type { LucideIcon } from 'lucide-react';
+import type { ComponentType } from 'react';
 import {
   BarChart3,
   Bell,
   LayoutDashboard,
   Lightbulb,
-  Sparkles,
-  Star,
   Users,
 } from 'lucide-react';
+import { CivicBubble, CivicHeart } from '@/components/icons/civic';
 import { routes } from '@/lib/routes';
 
 export type AdminNavItem = {
@@ -15,7 +14,7 @@ export type AdminNavItem = {
   title: string;
   description: string;
   href?: string;
-  icon: LucideIcon;
+  icon: ComponentType<{ className?: string }>;
   status: 'active' | 'coming';
 };
 
@@ -33,7 +32,7 @@ export const adminNavItems: AdminNavItem[] = [
     title: 'Reels',
     description: 'Systemgenererte avstemninger fra stortingssaker',
     href: routes.adminReels,
-    icon: Sparkles,
+    icon: CivicBubble,
     status: 'active',
   },
   {
@@ -57,7 +56,7 @@ export const adminNavItems: AdminNavItem[] = [
     title: 'Stemme+',
     description: 'Manuell tildeling av støttemedlemskap',
     href: routes.adminStemmePlus,
-    icon: Star,
+    icon: CivicHeart,
     status: 'active',
   },
   {

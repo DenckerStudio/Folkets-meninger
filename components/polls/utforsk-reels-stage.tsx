@@ -9,7 +9,8 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ArrowRight, Compass, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Compass } from 'lucide-react';
+import { CivicBubble } from '@/components/icons/civic';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Swiper as SwiperType } from 'swiper';
 import { CardCarousel } from '@/components/ui/card-carousel';
@@ -178,7 +179,7 @@ type ReelsNavCopy = {
   badge: string;
   title: string;
   subtitle: string;
-  BadgeIcon: typeof Sparkles;
+  BadgeIcon: typeof CivicBubble | typeof Compass;
 };
 
 function reelsNavCopy(direction: 'forward' | 'back', itemCount: number): ReelsNavCopy {
@@ -189,15 +190,15 @@ function reelsNavCopy(direction: 'forward' | 'back', itemCount: number): ReelsNa
         title: 'Del din mening',
         subtitle:
           itemCount > 0
-            ? 'Si ja eller nei på systemgenererte spørsmål fra stortingssaker.'
-            : 'Ingen Reels er publisert ennå. Åpne for å se status.',
-        BadgeIcon: Sparkles,
+            ? 'Ja, nei eller blank på spørsmål fra stortingssaker.'
+            : 'Ingen Reels er publisert ennå.',
+        BadgeIcon: CivicBubble,
       };
     case 'back':
       return {
         badge: 'Utforsk',
         title: 'Tilbake til saker',
-        subtitle: 'Lovforslag og representantforslag fra Stortinget — kildedokumenter.',
+        subtitle: 'Lovforslag og representantforslag.',
         BadgeIcon: Compass,
       };
     default: {
@@ -278,20 +279,20 @@ function ReelsPanel({
       {items.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10">
-            <Sparkles className="h-6 w-6 text-brand" aria-hidden />
+            <CivicBubble className="h-6 w-6 text-brand" />
           </div>
           <h2 className="mt-4 text-lg font-semibold text-foreground">Ingen Reels publisert ennå</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            Når administratorer har godkjent systemgenererte spørsmål fra stortingssaker, vises de her.
+            Godkjente spørsmål fra stortingssaker vises her.
           </p>
         </div>
       ) : (
         <CardCarousel
           title="Reels"
-          description="Bla mellom spørsmål. Trykk på et kort for å stemme ja eller nei."
+          description="Bla og trykk for å stemme."
           badge={
             <>
-              <Sparkles className="fill-brand-accent/30 stroke-1 text-brand" /> Systemgenerert
+              <CivicBubble className="h-4 w-4 text-brand" /> Systemgenerert
             </>
           }
           autoplayDelay={reducedMotion ? 0 : 2200}

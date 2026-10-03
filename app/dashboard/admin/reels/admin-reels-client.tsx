@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { AlertCircle, CheckCircle2, Loader2, Sparkles, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, X } from 'lucide-react';
+import { CivicBubble } from '@/components/icons/civic';
 import { pollDraftGenerationStatusLabel } from '@/lib/admin/poll-draft-generation';
 import { usePollDraftGeneration } from '@/hooks/use-poll-draft-generation';
 import { routes } from '@/lib/routes';
@@ -191,11 +192,11 @@ export default function AdminReelsClient({
     <div className="space-y-8">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
-          <Sparkles className="h-6 w-6 text-brand" />
+          <CivicBubble className="h-6 w-6 text-brand" />
           Reels-utkast
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Systemgenererte ja/nei/blank-spørsmål fra stortingssaker. Publiser til Reels-feeden, eller arkiver.
+          Publiser til Reels-feeden, eller arkiver.
         </p>
       </div>
 

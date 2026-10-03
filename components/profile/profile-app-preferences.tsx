@@ -1,6 +1,7 @@
 'use client';
 
-import { Monitor, Moon, Sun, Sparkles, Info } from 'lucide-react';
+import { Monitor, Moon, Sun, Info } from 'lucide-react';
+import { CivicRings } from '@/components/icons/civic';
 import {
   type AppPreferences,
   type MotionPreference,
@@ -132,7 +133,7 @@ export function ProfileAppPreferences() {
             current={preferences.motion}
             label="Redusert"
             description="Mindre animasjon og bevegelse"
-            icon={<Sparkles className="h-4 w-4" />}
+            icon={<CivicRings className="h-4 w-4" />}
             onSelect={(motion) => update({ motion })}
           />
           <OptionCard<MotionPreference>
@@ -140,7 +141,7 @@ export function ProfileAppPreferences() {
             current={preferences.motion}
             label="Full"
             description="Vis alle animasjoner"
-            icon={<Sparkles className="h-4 w-4" />}
+            icon={<CivicRings className="h-4 w-4" />}
             onSelect={(motion) => update({ motion })}
           />
         </div>
