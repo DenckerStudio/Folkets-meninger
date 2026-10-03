@@ -68,8 +68,8 @@ export default function CompleteProfileClient() {
       <FadeIn delay={0.1}>
         <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-950/50 rounded-2xl flex items-center justify-center">
-              <ShieldCheck className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+            <div className="w-16 h-16 bg-brand/10 rounded-2xl flex items-center justify-center">
+              <ShieldCheck className="w-8 h-8 text-brand" />
             </div>
           </div>
           <h1 className="text-2xl font-bold text-foreground">Fullfør profilen din</h1>
@@ -101,7 +101,7 @@ export default function CompleteProfileClient() {
                 minLength={2}
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="mt-1 block w-full rounded-xl border border-border px-3 py-2.5 text-sm"
+                className="mt-1 block w-full rounded-xl border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand/30 focus:border-brand"
               />
             </div>
 
@@ -115,21 +115,21 @@ export default function CompleteProfileClient() {
                 minLength={2}
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="mt-1 block w-full rounded-xl border border-border px-3 py-2.5 text-sm"
+                className="mt-1 block w-full rounded-xl border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand/30 focus:border-brand"
               />
             </div>
 
             <button
               type="submit"
               disabled={saving}
-              className="w-full py-3 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
+              className="w-full py-3 rounded-xl bg-brand text-brand-foreground text-sm font-semibold hover:bg-brand/90 disabled:opacity-50"
             >
               {saving ? 'Lagrer…' : 'Fortsett'}
             </button>
 
             <p className="text-xs text-center text-muted-foreground">
               Du kan endre navnet senere under{' '}
-              <Link href={routes.minSide} className="text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href={routes.minSide} className="text-brand hover:underline">
                 Min side
               </Link>
               .
