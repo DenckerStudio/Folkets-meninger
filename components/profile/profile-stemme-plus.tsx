@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { HeartHandshake, Loader2, Sparkles } from 'lucide-react';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { ByokSettings, type ByokMetaView } from '@/components/profile/byok-settings';
 import { ProfileCard } from '@/components/profile/profile-card';
 import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
@@ -182,11 +183,11 @@ export function ProfileStemmePlus() {
               Bli Stemme+ — {price} kr/mnd
             </Button>
           ) : (
-            <p className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-              Selvbetjent betaling via Stripe er ikke konfigurert i dette miljøet ennå ({price}{' '}
-              kr/mnd når den er klar). Fordelene er allerede aktive for brukere med Stemme+
-              (for eksempel tildelt av admin).
-            </p>
+            <EmptyState
+              className="py-6"
+              title="Stripe-kasse er ikke konfigurert ennå"
+              description={`Selvbetjent betaling via Vercel Marketplace → Stripe kommer når nøklene er satt (${price} kr/mnd). Fordelene er allerede aktive for brukere med Stemme+ (for eksempel tildelt av admin).`}
+            />
           )}
         </div>
       )}

@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import Stripe from 'stripe';
 import { getServiceSupabase } from '@/lib/supabase';
 import { getStripeRuntimeConfig } from '@/lib/stripe/config';
@@ -103,6 +104,8 @@ export async function createStemmePlusCheckoutSession(args: {
     },
     allow_promotion_codes: true,
     locale: 'nb',
+    // Marketplace Checkout: omit payment_method_types so Stripe picks dynamic methods.
+    integration_identifier: `stemmeplus_${randomBytes(4).toString('hex')}`,
   });
 
   if (!session.url) {

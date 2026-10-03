@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState, useTransition } from 'react';
-import { HeartHandshake } from 'lucide-react';
+import { EmptyState } from '@/components/dashboard/empty-state';
+import { PageHeader } from '@/components/page-header';
 import { STEMME_PLUS_MONTHLY_PRICE_NOK } from '@/lib/stemme-plus/constants';
 
 type Supporter = {
@@ -72,16 +73,11 @@ export function StemmePlusAdmin() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-          <HeartHandshake className="h-5 w-5 text-brand" />
-          Stemme+
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Tildel eller fjern Stemme+ ({STEMME_PLUS_MONTHLY_PRICE_NOK} kr/mnd). Selvbetjent Stripe
-          aktiveres når `STRIPE_SECRET_KEY` og `STRIPE_STEMME_PLUS_PRICE_ID` er satt.
-        </p>
-      </div>
+      <PageHeader
+        as="h2"
+        title="Stemme+"
+        description={`Tildel eller fjern Stemme+ (${STEMME_PLUS_MONTHLY_PRICE_NOK} kr/mnd). Selvbetjent Stripe aktiveres når STRIPE_SECRET_KEY og STRIPE_STEMME_PLUS_PRICE_ID er satt.`}
+      />
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
@@ -106,7 +102,11 @@ export function StemmePlusAdmin() {
         ))}
       </ul>
       {supporters.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Ingen aktive Stemme+-støttespillere.</p>
+        <EmptyState
+          title="Ingen aktive Stemme+-støttespillere"
+          description="Tildel medlemskap med e-post under. Stripe-kasse forblir ærlig uoppsatt til nøklene finnes."
+          className="py-8"
+        />
       ) : null}
 
       <form
