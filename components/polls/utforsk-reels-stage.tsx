@@ -21,7 +21,7 @@ import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 
 /** Quiet fullscreen ease — no lateral slide. */
 const MODAL_EASE = [0.22, 1, 0.36, 1] as const;
-const MODAL_TRANSITION = { duration: 0.36, ease: MODAL_EASE } as const;
+const MODAL_TRANSITION = { duration: 0.48, ease: MODAL_EASE } as const;
 
 function subscribeLocationHash(onStoreChange: () => void) {
   window.addEventListener('hashchange', onStoreChange);
@@ -136,9 +136,9 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
                   aria-modal="true"
                   aria-label="Reels"
                   className="fixed inset-0 z-[70] overflow-y-auto bg-background"
-                  initial={reducedMotion ? false : { opacity: 0, scale: 0.985 }}
+                  initial={reducedMotion ? false : { opacity: 0, scale: 0.972 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={reducedMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.992 }}
+                  exit={reducedMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.985 }}
                   transition={reducedMotion ? { duration: 0 } : MODAL_TRANSITION}
                 >
                   <div className="mx-auto min-h-dvh w-full max-w-3xl px-4 py-6 sm:px-6">
