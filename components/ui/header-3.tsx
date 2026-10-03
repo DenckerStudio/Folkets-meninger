@@ -56,6 +56,7 @@ export function Header() {
 
   return (
     <header
+      data-site-chrome
       className={cn(
         'sticky top-0 z-50 w-full border-b bg-background/95 pt-[env(safe-area-inset-top,0px)] supports-[backdrop-filter]:bg-background/80',
         scrolled ? 'border-border shadow-sm backdrop-blur-lg' : 'border-border/60',

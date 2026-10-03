@@ -252,6 +252,19 @@
   margin-inline: auto;
 }
 
+html[data-reels-open] {
+  overflow: hidden;
+}
+
+html[data-reels-open] body {
+  overflow: hidden;
+}
+
+html[data-reels-open] [data-site-chrome] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html:not([data-motion='full']) .civic-draw,
   html.motion-reduce .civic-draw,

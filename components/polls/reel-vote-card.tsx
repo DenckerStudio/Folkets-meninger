@@ -143,17 +143,26 @@ export function ReelCarouselCard({
   selected,
   onSelect,
   onBack,
+  fill = false,
 }: {
   item: SystemReelFeedItem;
   selected: boolean;
   onSelect: () => void;
   onBack: () => void;
+  fill?: boolean;
 }) {
   const reducedMotion = usePrefersReducedMotion();
   const pointerStart = useRef({ x: 0, y: 0 });
 
   return (
-    <div className="h-[22rem] w-[17.5rem] overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+    <div
+      className={cn(
+        'overflow-hidden bg-card shadow-sm',
+        fill
+          ? 'h-full w-full rounded-none border-0'
+          : 'h-[22rem] w-[17.5rem] rounded-3xl border border-border',
+      )}
+    >
       <motion.div
         className="flex h-full w-[200%]"
         animate={{ x: selected ? '-50%' : '0%' }}
