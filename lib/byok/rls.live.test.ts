@@ -46,7 +46,7 @@ async function main() {
     note:
       'Anon/session can already read subscription_tier and stripe_customer_id on Folkets-Stemme. ' +
       'Status returns the real has_stripe_customer boolean from that session SELECT. ' +
-      'BYOK ciphertext stays table-denied for anon until ops apply 20261003200000 (owner RLS).',
+      'BYOK ciphertext stays table-denied for anon until ops apply 20261003210000 (owner RLS).',
   };
 
   writeFileSync('/opt/cursor/artifacts/byok-rls-live.json', JSON.stringify(payload, null, 2));

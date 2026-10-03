@@ -15,7 +15,7 @@ const preferencesSrc = readFileSync(
 const chatSrc = readFileSync(new URL('../../app/api/chat/route.ts', import.meta.url), 'utf8');
 const byokRouteSrc = readFileSync(new URL('../../app/api/byok/route.ts', import.meta.url), 'utf8');
 const migration = readFileSync(
-  new URL('../../supabase/migrations/20261003200000_chat_session_byok_and_tier.sql', import.meta.url),
+  new URL('../../supabase/migrations/20261003210000_chat_session_byok_and_tier.sql', import.meta.url),
   'utf8',
 );
 

@@ -72,7 +72,7 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Anonymous voting (legacy) | `20260528000001_anonymous_voting.sql`, `20260528000002_vote_schema_repair.sql`, `20260618120000_sak_voting_status.sql` | `citizen_votes`, `user_vote_receipts`, `cast_vote`, vote aggregate RPCs — read-only for historical alignment |
 | Issue stances | `20260907120000_issue_stances.sql` | `issue_stances`, `set_issue_stance`, `get_user_stance_*` RPCs |
 | Notifications | `20260528000003_notifications.sql`, `20260906180000_notification_channel_defaults.sql` | `notification_preferences`, `notification_category_subscriptions`, `notifications` |
-| Stemme+ subscription | `20260906200000_stemme_plus_subscription.sql`, `20260906210000_stemme_plus_admin_grant.sql`, `20261003190000_stemme_plus_byok_chat.sql`, `20261003200000_chat_session_byok_and_tier.sql` | `users.subscription_tier`, admin grant RPCs, encrypted `user_llm_credentials`, owner RLS for chat/BYOK load, lexical chat RAG RPCs, Stripe webhook idempotency |
+| Stemme+ subscription | `20260906200000_stemme_plus_subscription.sql`, `20260906210000_stemme_plus_admin_grant.sql`, `20261003190000_stemme_plus_byok_chat.sql`, `20261003210000_chat_session_byok_and_tier.sql` | `users.subscription_tier`, admin grant RPCs, encrypted `user_llm_credentials`, owner RLS for chat/BYOK load, lexical chat RAG RPCs, Stripe webhook idempotency |
 | AI summaries | `20260528120000_issue_ai_summaries.sql`, `20260529120000_simplify_issue_ai_summaries.sql`, `20260823210000_n8n_ai_summary_rich_context.sql`, `20261003160000_n8n_pipeline_ops.sql` | `issue_ai_summaries`, `n8n_get_issue_ai_summary_context`, thin-summary refresh in `n8n_list_issues_missing_ai_summary`, `n8n_ops_events`, `n8n_pipeline_health` |
 | Auth/user sync + hearings comments | `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql` | `users`, `ensure_public_user`, `user_has_forum_identity`, `hearing_comments`, `create_hearing_comment` |
 | Forum base/features | `20260530120000_forum_enhancements.sql`, `20260531120000_production_readiness.sql`, `20260531140000_forum_prompts_dedupe.sql` | forum threads/replies/likes/prompts and production indexes |
@@ -354,7 +354,7 @@ only deep-links the panel).
 
 User LLM keys are AES-256-GCM encrypted in `user_llm_credentials`. The owning
 authenticated user can SELECT/INSERT/UPDATE/DELETE their own ciphertext
-(`20261003200000_chat_session_byok_and_tier.sql`); decrypt stays server-side
+(`20261003210000_chat_session_byok_and_tier.sql`); decrypt stays server-side
 with `BYOK_ENCRYPTION_KEY`. Overlay chat, `/api/stemme-plus/status`, min-side
 badge, and notification prefs read the caller's `users.subscription_tier`
 (and status/period end) through the request session — not the service role.
