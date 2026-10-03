@@ -43,21 +43,25 @@ function fakeSubscriptionClient(
   };
 }
 
-const plus = await readUserSubscription(
-  fakeSubscriptionClient({
-    subscription_tier: 'stemme_plus',
-    subscription_status: 'active',
-    subscription_period_end: null,
-  }),
-  'user-1',
-);
-assert.equal(plus.userId, 'user-1');
-assert.equal(plus.subscription_tier, 'stemme_plus');
+async function main() {
+  const plus = await readUserSubscription(
+    fakeSubscriptionClient({
+      subscription_tier: 'stemme_plus',
+      subscription_status: 'active',
+      subscription_period_end: null,
+    }),
+    'user-1',
+  );
+  assert.equal(plus.userId, 'user-1');
+  assert.equal(plus.subscription_tier, 'stemme_plus');
 
-const denied = await readUserSubscription(
-  fakeSubscriptionClient(null, { message: 'permission denied for column subscription_tier' }),
-  'user-2',
-);
-assert.equal(denied.subscription_tier, 'free');
+  const denied = await readUserSubscription(
+    fakeSubscriptionClient(null, { message: 'permission denied for column subscription_tier' }),
+    'user-2',
+  );
+  assert.equal(denied.subscription_tier, 'free');
 
-console.log('stemme-plus/session.test.ts: ok session-scoped entitlement');
+  console.log('stemme-plus/session.test.ts: ok session-scoped entitlement');
+}
+
+void main();

@@ -27,34 +27,40 @@ function fakeByokClient(row: Row | null): ByokClient {
   };
 }
 
-const encrypted = encryptSecret('sk-test-session-scoped-key');
-const row = {
-  provider: 'openai',
-  model: 'gpt-4.1-mini',
-  base_url: null,
-  ciphertext_b64: encrypted.ciphertextB64,
-  iv_b64: encrypted.ivB64,
-  auth_tag_b64: encrypted.authTagB64,
-  key_last4: 'key',
-  updated_at: '2026-10-03T00:00:00.000Z',
-};
+async function main() {
+  try {
+    const encrypted = encryptSecret('sk-test-session-scoped-key');
+    const row = {
+      provider: 'openai',
+      model: 'gpt-4.1-mini',
+      base_url: null,
+      ciphertext_b64: encrypted.ciphertextB64,
+      iv_b64: encrypted.ivB64,
+      auth_tag_b64: encrypted.authTagB64,
+      key_last4: 'key',
+      updated_at: '2026-10-03T00:00:00.000Z',
+    };
 
-const meta = await getByokMeta('user-1', fakeByokClient(row));
-assert.equal(meta?.provider, 'openai');
-assert.equal(meta?.keyLast4, 'key');
-assert.equal('apiKey' in (meta ?? {}), false);
+    const meta = await getByokMeta('user-1', fakeByokClient(row));
+    assert.equal(meta?.provider, 'openai');
+    assert.equal(meta?.keyLast4, 'key');
+    assert.equal('apiKey' in (meta ?? {}), false);
 
-const loaded = await loadDecryptedByok('user-1', fakeByokClient(row));
-assert.equal(loaded?.apiKey, 'sk-test-session-scoped-key');
-assert.equal(loaded?.model, 'gpt-4.1-mini');
+    const loaded = await loadDecryptedByok('user-1', fakeByokClient(row));
+    assert.equal(loaded?.apiKey, 'sk-test-session-scoped-key');
+    assert.equal(loaded?.model, 'gpt-4.1-mini');
 
-const missing = await loadDecryptedByok('user-1', fakeByokClient(null));
-assert.equal(missing, null);
+    const missing = await loadDecryptedByok('user-1', fakeByokClient(null));
+    assert.equal(missing, null);
 
-if (previous === undefined) {
-  delete process.env.BYOK_ENCRYPTION_KEY;
-} else {
-  process.env.BYOK_ENCRYPTION_KEY = previous;
+    console.log('byok/session.test.ts: ok session ciphertext + server decrypt');
+  } finally {
+    if (previous === undefined) {
+      delete process.env.BYOK_ENCRYPTION_KEY;
+    } else {
+      process.env.BYOK_ENCRYPTION_KEY = previous;
+    }
+  }
 }
 
-console.log('byok/session.test.ts: ok session ciphertext + server decrypt');
+void main();
