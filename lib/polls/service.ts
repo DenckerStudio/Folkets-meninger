@@ -1,6 +1,7 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { emptyPollTotals } from '@/lib/polls/format';
 import { isPollAlreadyExistsError, normalizePollIssueId } from '@/lib/polls/already-exists';
+import { nextPollStatusForAction, type PollStatusAction } from '@/lib/polls/apply-status';
 import { POLL_FYLKE_MIN_VOTES } from '@/lib/polls/norway-counties';
 import type {
   PollChoice,
@@ -323,18 +324,39 @@ export async function createSystemPollDraft(input: {
   return String(data);
 }
 
-export async function publishPoll(pollId: string): Promise<string> {
+export async function updatePollStatusRow(pollId: string, action: PollStatusAction): Promise<string> {
   const service = getServiceSupabase();
-  const { data, error } = await service.rpc('publish_poll', { p_poll_id: pollId });
-  if (error) throw error;
-  return String(data);
+  const { data: row, error: readError } = await service
+    .from('polls')
+    .select('id, status, opens_at')
+    .eq('id', pollId)
+    .maybeSingle();
+  if (readError) throw readError;
+  if (!row) throw new Error('Poll not found');
+
+  const next = nextPollStatusForAction(String(row.status), action);
+  const patch: { status: 'open' | 'archived'; updated_at: string; opens_at?: string } = {
+    status: next.status,
+    updated_at: new Date().toISOString(),
+  };
+  if (next.setOpensAtIfMissing && !row.opens_at) {
+    patch.opens_at = patch.updated_at;
+  }
+
+  const { error: updateError } = await service.from('polls').update(patch).eq('id', pollId);
+  if (updateError) throw updateError;
+  return pollId;
+}
+
+export async function publishPoll(pollId: string): Promise<string> {
+  // Live PATCH /api/admin/polls failed with PGRST202: PostgREST has no
+  // publish_poll(p_poll_id) / archive_poll(p_poll_id) in its schema cache.
+  // Update the row with the service role instead of calling those RPCs.
+  return updatePollStatusRow(pollId, 'publish');
 }
 
 export async function archivePoll(pollId: string): Promise<string> {
-  const service = getServiceSupabase();
-  const { data, error } = await service.rpc('archive_poll', { p_poll_id: pollId });
-  if (error) throw error;
-  return String(data);
+  return updatePollStatusRow(pollId, 'archive');
 }
 
 export async function getSakPollCoverage(): Promise<SakPollCoverage> {

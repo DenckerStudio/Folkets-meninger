@@ -77,6 +77,7 @@ export default function AdminReelsClient({
   const [pipelineHealthUnavailable, setPipelineHealthUnavailable] = useState(false);
   const [catchupMessage, setCatchupMessage] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [pending, startTransition] = useTransition();
   const { jobs, startGeneration, dismissJob, getJob, isGenerating } = usePollDraftGeneration();
 
@@ -137,6 +138,7 @@ export default function AdminReelsClient({
   const patchPoll = (id: string, action: 'publish' | 'archive') => {
     startTransition(async () => {
       setError('');
+      setSuccess('');
       const res = await fetch('/api/admin/polls', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -147,6 +149,7 @@ export default function AdminReelsClient({
         setError(typeof data.error === 'string' ? data.error : 'Handling feilet');
         return;
       }
+      setSuccess(action === 'publish' ? 'Utkastet er publisert.' : 'Utkastet er arkivert.');
       load();
     });
   };
@@ -279,6 +282,11 @@ export default function AdminReelsClient({
       ) : null}
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {success ? (
+        <p className="text-sm text-emerald-700 dark:text-emerald-400" role="status">
+          {success}
+        </p>
+      ) : null}
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
