@@ -11,6 +11,7 @@ import {
   newCredential,
   languageModel,
   expr,
+  ifElse,
 } from '@n8n/workflow-sdk';
 import { FOLKETS_SUPABASE_CRED, FOLKETS_SUPABASE_REST } from './n8n-supabase.shared';
 import {
@@ -132,7 +133,9 @@ else {
   const all = $input.all().map((i) => i.json).filter(Boolean);
   if (all.length && all.every((r) => r && r.issue_id && !Array.isArray(r))) rows = all;
 }
-return rows.filter((r) => r && r.issue_id).map((r) => ({ json: r }));`,
+rows = rows.filter((r) => r && r.issue_id);
+if (!rows.length) return [];
+return rows.map((r) => ({ json: r }));`,
     },
   },
   output: [
@@ -287,6 +290,52 @@ const buildSaveQuery = node({
   output: [{ rpcBody: { p_issue_id: '200329', p_title: 'Mener du ...?' }, outcome: 'saved' }],
 });
 
+const hasSakForPoll = ifElse({
+  version: 2.2,
+  config: {
+    name: 'Has sak for poll?',
+    parameters: {
+      looseTypeValidation: true,
+      conditions: {
+        combinator: 'and',
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
+        conditions: [
+          {
+            id: 'has-issue',
+            leftValue: expr('{{ $json.issue_id }}'),
+            rightValue: '',
+            operator: { type: 'string', operation: 'notEmpty' },
+          },
+        ],
+      },
+    },
+  },
+});
+
+const logEmptyPollQueue = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Log empty poll queue',
+    parameters: {
+      mode: 'manual',
+      includeOtherFields: true,
+      assignments: {
+        assignments: [
+          { id: 'outcome', name: 'outcome', value: 'empty_queue', type: 'string' },
+          {
+            id: 'message',
+            name: 'message',
+            value: 'No pending sak with ready RAG for system poll draft',
+            type: 'string',
+          },
+        ],
+      },
+    },
+  },
+  output: [{ outcome: 'empty_queue' }],
+});
+
 const gateSaveDraft = node({
   type: 'n8n-nodes-base.code',
   version: 2,
@@ -296,11 +345,62 @@ const gateSaveDraft = node({
       mode: 'runOnceForAllItems',
       language: 'javaScript',
       jsCode: `const item = $input.first()?.json || {};
-if (!item.rpcBody) return [];
-return [{ json: item }];`,
+if (!item.rpcBody) {
+  return [{
+    json: {
+      ...item,
+      saved: false,
+      outcome: item.outcome || 'skipped',
+      message: item.reason
+        ? 'System poll draft not saved: ' + item.reason
+        : 'System poll draft not saved (gate)',
+    },
+  }];
+}
+return [{ json: { ...item, saved: true } }];`,
     },
   },
   output: [{ rpcBody: { p_issue_id: '200329', p_title: 'Mener du ...?' }, outcome: 'saved' }],
+});
+
+const hasRpcBody = ifElse({
+  version: 2.2,
+  config: {
+    name: 'Has rpcBody?',
+    parameters: {
+      looseTypeValidation: true,
+      conditions: {
+        combinator: 'and',
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
+        conditions: [
+          {
+            id: 'has-rpc',
+            leftValue: expr('{{ $json.rpcBody }}'),
+            rightValue: '',
+            operator: { type: 'object', operation: 'notEmpty' },
+          },
+        ],
+      },
+    },
+  },
+});
+
+const logSkippedDraft = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Log skipped draft',
+    parameters: {
+      mode: 'manual',
+      includeOtherFields: true,
+      assignments: {
+        assignments: [
+          { id: 'outcome', name: 'outcome', value: 'skipped', type: 'string' },
+        ],
+      },
+    },
+  },
+  output: [{ outcome: 'skipped' }],
 });
 
 const saveDraft = node({
@@ -329,16 +429,18 @@ sticky(
   { color: 4 },
 );
 
-const sakPipeline = normalizePollInput
-  .to(fetchSakForPoll)
-  .to(expandSakForPoll)
-  .to(buildRagQuery)
+const generateAndSave = buildRagQuery
   .to(embedRagQuery)
   .to(mapEmbeddingForRag)
   .to(retrieveRagChunks)
   .to(mergeRagContext)
   .to(systemPollGeneratorAgent)
-  .to(buildSaveQuery.to(gateSaveDraft.to(saveDraft)));
+  .to(buildSaveQuery.to(gateSaveDraft.to(hasRpcBody.onTrue(saveDraft).onFalse(logSkippedDraft))));
+
+const sakPipeline = normalizePollInput
+  .to(fetchSakForPoll)
+  .to(expandSakForPoll)
+  .to(hasSakForPoll.onTrue(generateAndSave).onFalse(logEmptyPollQueue));
 
 export default workflow(
   'folkets-system-poll-draft',
