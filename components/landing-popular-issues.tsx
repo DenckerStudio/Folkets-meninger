@@ -3,6 +3,7 @@ import { ArrowRight, Users } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
 import { routes } from '@/lib/routes';
 import { LandingHeadingRule } from '@/components/icons/civic';
+import { LandingTextSettle } from '@/components/landing-text-settle';
 
 export type LandingIssue = {
   id: string;
@@ -22,12 +23,18 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
     <section>
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f] mb-3">Engasjement</p>
-            <h2 className="text-3xl font-bold text-[#001433] tracking-tight sm:text-4xl">Populære saker nå</h2>
-            <LandingHeadingRule />
-            <p className="mt-2 text-[#001433]/65 max-w-xl">
-              De mest engasjerende sakene for ja/nei-stemming.
-            </p>
+            <LandingTextSettle>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f] mb-3">Engasjement</p>
+            </LandingTextSettle>
+            <LandingTextSettle>
+              <h2 className="text-3xl font-bold text-[#001433] tracking-tight sm:text-4xl">Populære saker nå</h2>
+              <LandingHeadingRule />
+            </LandingTextSettle>
+            <LandingTextSettle>
+              <p className="mt-2 text-[#001433]/65 max-w-xl">
+                De mest engasjerende sakene for ja/nei-stemming.
+              </p>
+            </LandingTextSettle>
           </div>
           <Link
             href={`${routes.login}?next=${encodeURIComponent(routes.utforsk)}`}

@@ -4,8 +4,14 @@ import type { ReactNode } from 'react';
 import { LazyMotion, domAnimation, m, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { LandingHeadingRule } from '@/components/icons/civic';
-import { SoftBlurIn } from '@/components/ui/soft-blur-in';
+import { LandingTextSettle } from '@/components/landing-text-settle';
 import { TextGradient } from '@/components/ui/text-gradient';
+import {
+  LANDING_TEXT_SETTLE_DURATION,
+  LANDING_TEXT_SETTLE_EASE,
+  LANDING_TEXT_SETTLE_OPACITY_FROM,
+  LANDING_TEXT_SETTLE_Y,
+} from '@/lib/landing-text-motion';
 
 export type TimelineStatus = 'completed' | 'current' | 'upcoming';
 
@@ -54,23 +60,23 @@ export function Timeline({ items, title, subtitle, className }: ModernTimelinePr
     <section className={cn('relative', className)}>
       {(title || subtitle) && (
         <header className="mx-auto mb-16 max-w-3xl text-center">
-          <SoftBlurIn>
+          <LandingTextSettle>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">Roadmap</p>
-          </SoftBlurIn>
+          </LandingTextSettle>
           {title ? (
-            <SoftBlurIn delay={0.06}>
+            <LandingTextSettle>
               <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl">
                 <TextGradient as="span" colors={['#001433', '#00205b', '#ba0c2f', '#001433']} duration={8}>
                   {title}
                 </TextGradient>
               </h2>
               <LandingHeadingRule className="landing-heading-rule--center" />
-            </SoftBlurIn>
+            </LandingTextSettle>
           ) : null}
           {subtitle ? (
-            <SoftBlurIn delay={0.12}>
+            <LandingTextSettle>
               <p className="mt-4 text-lg leading-relaxed text-[#001433]/65">{subtitle}</p>
-            </SoftBlurIn>
+            </LandingTextSettle>
           ) : null}
         </header>
       )}
@@ -82,16 +88,20 @@ export function Timeline({ items, title, subtitle, className }: ModernTimelinePr
             aria-hidden
           />
 
-          {items.map((item, index) => {
+          {items.map((item) => {
             const isLeft = index % 2 === 0;
 
             return (
               <m.li
                 key={`${item.date}-${item.title}`}
-                initial={reduceMotion ? false : { opacity: 0, y: 28 }}
+                initial={
+                  reduceMotion
+                    ? false
+                    : { opacity: LANDING_TEXT_SETTLE_OPACITY_FROM, y: LANDING_TEXT_SETTLE_Y }
+                }
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-60px' }}
-                transition={{ duration: 0.55, delay: index * 0.05, ease: 'easeOut' }}
+                transition={{ duration: LANDING_TEXT_SETTLE_DURATION, ease: LANDING_TEXT_SETTLE_EASE }}
                 className="relative grid grid-cols-[2rem_minmax(0,1fr)] items-start gap-5 pb-14 last:pb-2 sm:grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] sm:gap-10"
               >
                 <div className="hidden pt-0.5 sm:block">

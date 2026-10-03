@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Vote } from 'lucide-react';
 import { LandingPopularIssues, type LandingIssue } from '@/components/landing-popular-issues';
+import { LandingTextSettle } from '@/components/landing-text-settle';
 import { routes } from '@/lib/routes';
 
 function LandingPopularIssuesSkeleton() {
@@ -48,10 +49,14 @@ function LandingPopularIssuesEmpty() {
       <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#00205b]/[0.06] text-[#00205b]">
         <Vote className="h-6 w-6" aria-hidden />
       </div>
-      <h2 className="text-2xl font-bold tracking-tight text-[#001433]">Bli med å gjøre sakene synlige</h2>
-      <p className="mx-auto mt-3 max-w-lg text-[#001433]/65 leading-relaxed">
-        Når nok innbyggere stemmer, dukker sakene opp her.
-      </p>
+      <LandingTextSettle>
+        <h2 className="text-2xl font-bold tracking-tight text-[#001433]">Bli med å gjøre sakene synlige</h2>
+      </LandingTextSettle>
+      <LandingTextSettle>
+        <p className="mx-auto mt-3 max-w-lg text-[#001433]/65 leading-relaxed">
+          Når nok innbyggere stemmer, dukker sakene opp her.
+        </p>
+      </LandingTextSettle>
       <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
         <Link
           href={routes.login}

@@ -2,6 +2,11 @@
 
 import { useRef } from 'react';
 import { gsap, registerGsap, ScrollTrigger, useGSAP } from '@/lib/gsap-client';
+import {
+  LANDING_TEXT_SETTLE_DURATION,
+  LANDING_TEXT_SETTLE_GSAP_EASE,
+  LANDING_TEXT_SETTLE_Y,
+} from '@/lib/landing-text-motion';
 
 const TICK_COUNT = 6;
 
@@ -73,16 +78,15 @@ export function LandingExperience({ children }: { children: React.ReactNode }) {
             return;
           }
 
-          gsap.set(sections, { autoAlpha: 0, y: 26 });
+          gsap.set(sections, { autoAlpha: 1, y: LANDING_TEXT_SETTLE_Y });
           gsap.set(rules, { scaleX: 0 });
           gsap.set(ticks, { autoAlpha: 0, scaleX: 0, transformOrigin: 'left center' });
 
           sections.forEach((section, index) => {
             gsap.to(section, {
-              autoAlpha: 1,
               y: 0,
-              duration: 0.7,
-              ease: 'power2.out',
+              duration: LANDING_TEXT_SETTLE_DURATION,
+              ease: LANDING_TEXT_SETTLE_GSAP_EASE,
               scrollTrigger: {
                 trigger: section,
                 start: 'top 86%',
