@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
+import { findSystemPollForIssue } from '@/lib/polls/service';
 import { triggerSystemPollDraftWebhook } from '@/lib/trigger-system-poll-draft-webhook';
 
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,19 @@ export async function POST(request: Request) {
     }
   } catch {
     issueId = undefined;
+  }
+
+  if (issueId) {
+    const existing = await findSystemPollForIssue(issueId);
+    if (existing) {
+      return NextResponse.json({
+        ok: true,
+        alreadyExists: true,
+        queued: false,
+        draft: existing,
+        stortinget_issue_id: issueId,
+      });
+    }
   }
 
   const queued = triggerSystemPollDraftWebhook(issueId);

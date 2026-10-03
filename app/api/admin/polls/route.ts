@@ -4,6 +4,15 @@ import { archivePoll, listSystemPollDrafts, publishPoll } from '@/lib/polls/serv
 
 export const dynamic = 'force-dynamic';
 
+function pollPatchErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message: unknown }).message;
+    if (typeof message === 'string') return message;
+  }
+  return '';
+}
+
 export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) {
@@ -35,7 +44,7 @@ export async function PATCH(request: Request) {
     const pollId = action === 'publish' ? await publishPoll(id) : await archivePoll(id);
     return NextResponse.json({ ok: true, id: pollId, action });
   } catch (error) {
-    const message = error instanceof Error ? error.message : '';
+    const message = pollPatchErrorMessage(error);
     if (message.toLowerCase().includes('not a draft') || message.toLowerCase().includes('cannot be archived')) {
       return NextResponse.json({ error: 'Utkastet kan ikke oppdateres' }, { status: 409 });
     }
