@@ -5,379 +5,27 @@ import {
   sticky,
   newCredential,
   languageModel,
-  outputParser,
   splitInBatches,
   nextBatch,
   expr,
-  placeholder,
+  ifElse,
 } from '@n8n/workflow-sdk';
-
-const DETAIL_CONTEXT_SQL = `jsonb_strip_nulls(jsonb_build_object(
-  'ferdigbehandlet', i.detail_json->'ferdigbehandlet',
-  'status', i.detail_json->'status',
-  'innstillingstekst', left(coalesce(i.detail_json->>'innstillingstekst', ''), 6000),
-  'vedtakstekst', left(coalesce(i.detail_json->>'vedtakstekst', ''), 4000),
-  'korttittel', i.detail_json->>'korttittel',
-  'tittel', i.detail_json->>'tittel'
-))`;
-
-const RAG_CHUNKS_SUBQUERY = `(
-  SELECT COALESCE(
-    json_agg(
-      json_build_object(
-        'document_id', dc.document_id,
-        'chunk_index', dc.chunk_index,
-        'content', left(dc.content, 1200)
-      )
-      ORDER BY dc.document_id, dc.chunk_index
-    ),
-    '[]'::json
-  )
-  FROM (
-    SELECT document_id, chunk_index, content
-    FROM public.document_chunks
-    WHERE issue_id = i.id
-      AND embedding_status = 'ready'
-    ORDER BY document_id, chunk_index
-    LIMIT 8
-  ) dc
-) AS rag_chunks`;
-
-const MISSING_SUMMARIES_SQL = `SELECT
-  i.id,
-  i.title,
-  i.summary,
-  ${DETAIL_CONTEXT_SQL} AS detail_json,
-  left(coalesce(i.ai_summary_source_context, ''), 12000) AS ai_summary_source_context,
-  COALESCE(
-    json_agg(
-      json_build_object(
-        'document_id', d.document_id,
-        'title', d.title,
-        'document_type', d.document_type,
-        'text_excerpt', left(coalesce(d.text_excerpt, ''), 2000),
-        'source_url', d.source_url
-      )
-      ORDER BY d.fetched_at DESC
-    ) FILTER (WHERE d.document_id IS NOT NULL),
-    '[]'::json
-  ) AS documents,
-  ${RAG_CHUNKS_SUBQUERY}
-FROM public.stortinget_issues i
-LEFT JOIN public.issue_ai_summaries s ON s.stortinget_issue_id = i.id
-LEFT JOIN public.stortinget_issue_documents d ON d.issue_id = i.id
-WHERE s.stortinget_issue_id IS NULL
-GROUP BY i.id, i.title, i.summary, i.detail_json, i.ai_summary_source_context
-ORDER BY i.last_synced_at DESC NULLS LAST
-LIMIT $1`;
-
-const FETCH_ISSUE_BY_ID_SQL = `SELECT
-  i.id,
-  i.title,
-  i.summary,
-  ${DETAIL_CONTEXT_SQL} AS detail_json,
-  left(coalesce(i.ai_summary_source_context, ''), 12000) AS ai_summary_source_context,
-  COALESCE(
-    json_agg(
-      json_build_object(
-        'document_id', d.document_id,
-        'title', d.title,
-        'document_type', d.document_type,
-        'text_excerpt', left(coalesce(d.text_excerpt, ''), 2000),
-        'source_url', d.source_url
-      )
-      ORDER BY d.fetched_at DESC
-    ) FILTER (WHERE d.document_id IS NOT NULL),
-    '[]'::json
-  ) AS documents,
-  ${RAG_CHUNKS_SUBQUERY}
-FROM public.stortinget_issues i
-LEFT JOIN public.stortinget_issue_documents d ON d.issue_id = i.id
-WHERE i.id = $1
-GROUP BY i.id, i.title, i.summary, i.detail_json, i.ai_summary_source_context`;
-
-const BUILD_CONTEXT_JS = `const item = $input.item.json;
-const parseJson = (value, fallback) => {
-  if (Array.isArray(value) || (value && typeof value === 'object')) return value;
-  if (typeof value !== 'string' || !value.trim()) return fallback;
-  try { return JSON.parse(value); } catch (_) { return fallback; }
-};
-const source = String(item.ai_summary_source_context || '').trim();
-const detail =
-  item.detail_json && typeof item.detail_json === 'object'
-    ? item.detail_json
-    : parseJson(item.detail_json, {});
-let documents = parseJson(item.documents, []);
-let chunks = parseJson(item.document_chunks || item.rag_chunks, []);
-if (!Array.isArray(documents)) documents = [];
-if (!Array.isArray(chunks)) chunks = [];
-const names = (list) => Array.isArray(list)
-  ? list.map((p) => [p?.fornavn, p?.etternavn].filter(Boolean).join(' ') + (p?.parti?.navn ? ' (' + p.parti.navn + ')' : '')).filter((x) => x.trim()).join(', ')
-  : '';
-const listNames = (list) => Array.isArray(list)
-  ? list.map((x) => typeof x === 'string' ? x : x?.navn).filter(Boolean).join(', ')
-  : '';
-const timeline = Array.isArray(detail.saksgang?.saksgang_steg_liste)
-  ? detail.saksgang.saksgang_steg_liste.slice(0, 8).flatMap((step) => [
-      step.navn ? '- ' + step.navn : null,
-      ...(Array.isArray(step.saksgang_hendelse_liste)
-        ? step.saksgang_hendelse_liste.map((e) => e?.hendelse_tekst ? '  - ' + e.hendelse_tekst : null)
-        : []),
-    ]).filter(Boolean).join('\\n')
-  : '';
-const fallbackParts = [
-  'Sak ID: ' + item.id,
-  item.title ? 'Tittel: ' + item.title : null,
-  item.summary ? 'Kort beskrivelse: ' + item.summary : null,
-  (item.henvisning || detail.henvisning) ? 'Dokumentreferanse: ' + (item.henvisning || detail.henvisning) : null,
-  detail.komite?.navn ? 'Komité: ' + detail.komite.navn : (typeof detail.komite === 'string' ? 'Komité: ' + detail.komite : null),
-  listNames(detail.emne_liste) ? 'Emner: ' + listNames(detail.emne_liste) : null,
-  listNames(detail.stikkord_liste) ? 'Stikkord: ' + listNames(detail.stikkord_liste) : null,
-  names(detail.sak_opphav?.forslagstiller_liste) ? 'Forslagstillere: ' + names(detail.sak_opphav.forslagstiller_liste) : null,
-  names(detail.saksordfoerer_liste) ? 'Saksordførere: ' + names(detail.saksordfoerer_liste) : null,
-  timeline ? 'Saksgang og hendelser:\\n' + timeline : null,
-  detail.innstillingstekst ? 'Innstillingstekst:\\n' + String(detail.innstillingstekst).slice(0, 8000) : null,
-  detail.kortvedtak ? 'Kortvedtak:\\n' + String(detail.kortvedtak).slice(0, 4000) : null,
-  detail.vedtakstekst ? 'Vedtakstekst:\\n' + String(detail.vedtakstekst).slice(0, 4000) : null,
-  detail.parentestekst ? 'Parentestekst:\\n' + String(detail.parentestekst).slice(0, 2000) : null,
-].filter(Boolean);
-const parts = source ? [source] : fallbackParts;
-for (const d of documents.slice(0, 6)) {
-  const title = d?.title || d?.document_id || 'Dokument';
-  const type = d?.document_type ? ' (' + d.document_type + ')' : '';
-  const excerpt = d?.text_excerpt ? String(d.text_excerpt).slice(0, 3000) : '';
-  if (excerpt && !source.includes(excerpt.slice(0, 80))) {
-    parts.push('Tilhørende dokument: ' + title + type + '\\n' + excerpt);
-  }
-}
-const ragLines = chunks.slice(0, 16).map((chunk, index) => {
-  const content = String(chunk?.content || '').trim().slice(0, 1600);
-  if (!content) return null;
-  if (source && source.includes(content.slice(0, 80))) return null;
-  const src = chunk?.document_id ? ' (kilde: ' + chunk.document_id + ')' : '';
-  return 'Dokumentutdrag ' + (index + 1) + src + ':\\n' + content;
-}).filter(Boolean);
-if (ragLines.length) {
-  parts.push('Relevante dokumentutdrag:\\n' + ragLines.join('\\n\\n'));
-}
-let sakContextText = parts.join('\\n\\n');
-if (sakContextText.length > 28000) {
-  sakContextText = sakContextText.slice(0, 28000) + '\\n\\n[... avkortet ...]';
-}
-return { json: { ...item, sakContextText, contextChars: sakContextText.length } };`;
-
-const MAP_V2_BODY_JS = `function normalizeLabel(s) {
-  const t = String(s ?? '').trim().replace(/\\s+/g, ' ');
-  if (t.length < 2 || t.length > 48) return null;
-  return t.charAt(0).toUpperCase() + t.slice(1);
-}
-function parseCards(raw) {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .slice(0, 3)
-    .map((c) => {
-      if (!c || typeof c !== 'object') return null;
-      const title = String(c.title ?? '').trim();
-      const body = String(c.body ?? '').trim();
-      if (!title || !body) return null;
-      return { title: title.slice(0, 80), body: body.slice(0, 600) };
-    })
-    .filter(Boolean);
-}
-const item = $input.item.json;
-let out = item.output ?? item;
-if (typeof out === 'string') {
-  try {
-    out = JSON.parse(out);
-  } catch (_) {
-    out = {};
-  }
-}
-if (!out || typeof out !== 'object') out = {};
-if (!out.hva && !out.narrative) {
-  const raw = String(item.text || item.output || '').trim();
-  const match = raw.match(/\\{[\\s\\S]*\\}/);
-  if (match) {
-    try { out = JSON.parse(match[0]); } catch (_) { out = {}; }
-  }
-}
-const narrative = String(out.narrative ?? out.hva ?? '').trim();
-const who_affected = String(out.who_affected ?? out.hvem ?? '').trim();
-const how_affected = String(out.how_affected ?? '').trim();
-const topic_cards = parseCards(out.topic_cards);
-const labelKeys = new Set();
-const labels = [];
-for (const raw of Array.isArray(out.labels) ? out.labels : []) {
-  const label = normalizeLabel(raw);
-  if (!label) continue;
-  const key = label.toLowerCase();
-  if (labelKeys.has(key)) continue;
-  labelKeys.add(key);
-  labels.push(label);
-  if (labels.length >= 5) break;
-}
-for (const card of topic_cards) {
-  if (labels.length >= 2) break;
-  const label = normalizeLabel(card.title);
-  if (!label) continue;
-  const key = label.toLowerCase();
-  if (labelKeys.has(key)) continue;
-  labelKeys.add(key);
-  labels.push(label);
-}
-const econCard = topic_cards.find((c) => /økonom|kost|finans|skatt/i.test(c.title));
-const kostnad = econCard
-  ? econCard.body
-  : topic_cards[0]?.body && /økonom|kost|finans|skatt/i.test(topic_cards[0].title)
-    ? topic_cards[0].body
-    : 'Ikke omtalt i kilden.';`;
-
-const MAP_AGENT_OUTPUT_JS = `${MAP_V2_BODY_JS}
-const issueId = $('Process one issue').item?.json?.id ?? item.id;
-const hva = String(out.hva ?? narrative).trim();
-const hvem = String(out.hvem ?? who_affected).trim();
-return {
-  json: {
-    issueId,
-    narrative: narrative || hva,
-    who_affected: who_affected || hvem,
-    how_affected,
-    topic_cards,
-    labels,
-    hva,
-    hvem,
-    kostnad: String(out.kostnad ?? '').trim() || kostnad,
-  },
-};`;
-
-const MAP_AGENT_OUTPUT_WEBHOOK_JS = `${MAP_V2_BODY_JS}
-const issueId = $('Normalize issue ID').item?.json?.id ?? item.id;
-const hva = String(out.hva ?? narrative).trim();
-const hvem = String(out.hvem ?? who_affected).trim();
-return {
-  json: {
-    issueId,
-    narrative: narrative || hva,
-    who_affected: who_affected || hvem,
-    how_affected,
-    topic_cards,
-    labels,
-    hva,
-    hvem,
-    kostnad: String(out.kostnad ?? '').trim() || kostnad,
-  },
-};`;
-
-const PREPARE_UPSERT_SQL_JS = `const {
-  issueId,
-  narrative,
-  who_affected,
-  how_affected,
-  topic_cards,
-  labels,
-  hva,
-  hvem,
-  kostnad,
-} = $input.item.json;
-function esc(value) {
-  return "'" + String(value ?? '').replace(/'/g, "''") + "'";
-}
-function pgTextArray(arr) {
-  const list = Array.isArray(arr) ? arr : [];
-  if (!list.length) return "ARRAY[]::text[]";
-  return "ARRAY[" + list.map((a) => esc(a)).join(", ") + "]::text[]";
-}
-const cardsJson = esc(JSON.stringify(topic_cards || [])) + "::jsonb";
-const labelsSql = pgTextArray(labels);
-const upsertSql = \`WITH ups AS (
-  INSERT INTO public.issue_ai_summaries (
-    stortinget_issue_id,
-    narrative,
-    who_affected,
-    how_affected,
-    topic_cards,
-    labels,
-    hva,
-    hvem,
-    kostnad,
-    updated_at
-  ) VALUES (
-    \${esc(issueId)},
-    \${esc(narrative)},
-    \${esc(who_affected)},
-    \${esc(how_affected)},
-    \${cardsJson},
-    \${labelsSql},
-    \${esc(hva)},
-    \${esc(hvem)},
-    \${esc(kostnad)},
-    NOW()
-  )
-  ON CONFLICT (stortinget_issue_id) DO UPDATE SET
-    narrative = EXCLUDED.narrative,
-    who_affected = EXCLUDED.who_affected,
-    how_affected = EXCLUDED.how_affected,
-    topic_cards = EXCLUDED.topic_cards,
-    labels = EXCLUDED.labels,
-    hva = EXCLUDED.hva,
-    hvem = EXCLUDED.hvem,
-    kostnad = EXCLUDED.kostnad,
-    updated_at = NOW()
-  RETURNING stortinget_issue_id, labels
-)
-UPDATE public.stortinget_issues i
-SET ai_labels = ups.labels
-FROM ups
-WHERE i.id = ups.stortinget_issue_id\`;
-return {
-  json: {
-    issueId,
-    narrative,
-    who_affected,
-    how_affected,
-    topic_cards,
-    labels,
-    hva,
-    hvem,
-    kostnad,
-    upsertSql,
-  },
-};`;
-
-const SUMMARY_SYSTEM_MESSAGE = `Du er en nøytral, faktabasert veileder for «Folkets Stemme». Du forklarer stortingssaker for vanlige borgere.
-
-SPRÅK: Kun norsk bokmål. Saklig og presis. Ingen meninger og ingen stemmeråd.
-
-KILDE: Bruk KUN teksten du får (tittel, innstilling, vedtak, dokumentutdrag). Hvis noe ikke står der, skriv at det ikke er omtalt. Aldri gjett, aldri finn på beløp.
-
-Skriv UTFYLLENDE avsnitt — ikke stikkord, og ikke la tittelen være hele svaret.
-
-Returner KUN gyldig JSON:
-{
-  "hva": "5–8 setninger: hva som konkret foreslås eller er vedtatt, bakgrunn, hovedinnhold i proposisjon/innstilling, og hvor saken står i Stortinget. Ta med Prop./Innst./Dokument 8 når det finnes.",
-  "hvem": "3–5 setninger: hvem som berøres (næringer, kommuner, brukere, det offentlige). Navngi komité og forslagsstillere når kilden har dem.",
-  "kostnad": "2–4 setninger: kroner, budsjettår og hvem som betaler/mottar. Mangler tall: si det tydelig.",
-  "narrative": "4–6 setninger, samme sak som hva, tettere formulert.",
-  "who_affected": "Samme innhold som hvem.",
-  "how_affected": "Hvordan plikter, rettigheter eller hverdag endres. Konkret.",
-  "topic_cards": [{"title":"...","body":"..."}],
-  "labels": ["Emneord"]
-}
-
-Regler:
-- hva, hvem og kostnad SKAL fylles ut
-- topic_cards: 1–3 kort fra sakens substans (ikke tomme overskrifter)
-- labels: 2–5 korte emneord i Title Case (f.eks. Bank, Kapitalkrav, Taushetsplikt)
-- Når kilden har tall: ta med kroner, tidshorisont og hvem det gjelder`;
+import { FOLKETS_N8N_BASE, FOLKETS_SUPABASE_CRED, rpcUrl } from './n8n-supabase.shared';
+import {
+  BUILD_SAK_CONTEXT_JS,
+  EXPAND_OR_EMPTY_JS,
+  MAP_SUMMARY_OUTPUT_JS,
+  SUMMARY_SYSTEM_MESSAGE,
+} from './n8n-pipeline.shared';
 
 const ollamaChatModel = languageModel({
   type: '@n8n/n8n-nodes-langchain.lmChatOllama',
   version: 1,
   config: {
     name: 'Ollama Chat Model',
-    credentials: { ollamaApi: newCredential('Ollama Heyklever') },
+    credentials: { ollamaApi: newCredential('Ollama account') },
     parameters: {
-      model: placeholder('qwen3:4b-q4_K_M'),
+      model: 'qwen3:4b-q4_K_M',
       options: {
         think: false,
         temperature: 0.2,
@@ -385,19 +33,6 @@ const ollamaChatModel = languageModel({
         numPredict: 2200,
         numCtx: 16384,
       },
-    },
-  },
-});
-
-const summaryOutputParser = outputParser({
-  type: '@n8n/n8n-nodes-langchain.outputParserStructured',
-  version: 1.3,
-  config: {
-    name: 'Summary JSON parser',
-    parameters: {
-      schemaType: 'fromJson',
-      jsonSchemaExample:
-        '{"narrative":"Kort overordnet forklaring","who_affected":"Hvem som berøres","how_affected":"Hvordan de berøres","topic_cards":[{"title":"Finansiering","body":"..."}],"labels":["Skatt","Privatøkonomi"]}',
     },
   },
 });
@@ -426,12 +61,7 @@ const backfillSettingsSchedule = node({
       includeOtherFields: true,
       assignments: {
         assignments: [
-          {
-            id: 'batch-limit',
-            name: 'batchLimit',
-            value: '1',
-            type: 'string',
-          },
+          { id: 'batch-limit', name: 'batchLimit', value: '1', type: 'string' },
         ],
       },
     },
@@ -440,19 +70,22 @@ const backfillSettingsSchedule = node({
 });
 
 const fetchMissingSummaries = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
   config: {
     name: 'Fetch issues without summary',
-    credentials: { postgres: newCredential('Supabase Postgres Folkets') },
+    credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
-      operation: 'executeQuery',
-      query: MISSING_SUMMARIES_SQL,
-      options: {
-        queryReplacement: expr(
-          '{{ $("Backfill settings (schedule)").item.json.batchLimit }}'
-        ),
-      },
+      method: 'POST',
+      url: rpcUrl('n8n_list_issues_missing_ai_summary'),
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'supabaseApi',
+      sendBody: true,
+      specifyBody: 'json',
+      jsonBody: expr(
+        '={{ JSON.stringify({ p_limit: Number($("Backfill settings (schedule)").item.json.batchLimit || 1) }) }}',
+      ),
+      options: { timeout: 60000 },
     },
   },
   output: [
@@ -460,9 +93,23 @@ const fetchMissingSummaries = node({
       id: '200329',
       title: 'Example sak',
       summary: 'Kort tittel',
-      detail_json: { innstillingstekst: 'Eksempeltekst' },
+      ai_summary_source_context: 'Innstillingstekst',
     },
   ],
+});
+
+const expandMissingIssues = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Expand missing issues',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      language: 'javaScript',
+      jsCode: EXPAND_OR_EMPTY_JS,
+    },
+  },
+  output: [{ id: '200329', title: 'Example sak' }],
 });
 
 const processOneIssue = splitInBatches({
@@ -481,17 +128,45 @@ const buildSakContext = node({
     parameters: {
       mode: 'runOnceForEachItem',
       language: 'javaScript',
-      jsCode: BUILD_CONTEXT_JS,
+      jsCode: BUILD_SAK_CONTEXT_JS,
     },
   },
   output: [
     {
       id: '200329',
       title: 'Example sak',
-      summary: 'Kort',
       sakContextText: 'Sak ID: 200329\nTittel: Example',
+      contextChars: 32,
     },
   ],
+});
+
+const hasUsableContext = ifElse({
+  version: 2.2,
+  config: {
+    name: 'Has usable context?',
+    parameters: {
+      looseTypeValidation: true,
+      conditions: {
+        combinator: 'and',
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
+        conditions: [
+          {
+            id: 'has-id',
+            leftValue: expr('{{ $json.id }}'),
+            rightValue: '',
+            operator: { type: 'string', operation: 'notEmpty' },
+          },
+          {
+            id: 'enough-context',
+            leftValue: expr('{{ $json.contextChars }}'),
+            rightValue: 40,
+            operator: { type: 'number', operation: 'gt' },
+          },
+        ],
+      },
+    },
+  },
 });
 
 const generateSummaryAgent = node({
@@ -503,7 +178,7 @@ const generateSummaryAgent = node({
     parameters: {
       promptType: 'define',
       text: expr('{{ $json.sakContextText }}'),
-      hasOutputParser: true,
+      hasOutputParser: false,
       options: {
         systemMessage: SUMMARY_SYSTEM_MESSAGE,
         maxIterations: 4,
@@ -511,21 +186,10 @@ const generateSummaryAgent = node({
       },
       subnodes: {
         model: ollamaChatModel,
-        outputParser: summaryOutputParser,
       },
     },
   },
-  output: [
-    {
-      output: {
-        narrative: 'Sakens innhold',
-        who_affected: 'Berørte grupper',
-        how_affected: 'Konkret påvirkning',
-        topic_cards: [{ title: 'Finansiering', body: 'Økonomiske konsekvenser' }],
-        labels: ['Skatt', 'Privatøkonomi'],
-      },
-    },
-  ],
+  output: [{ output: { hva: 'Sakens innhold', hvem: 'Berørte', kostnad: 'Ikke omtalt' } }],
 });
 
 const mapAgentOutput = node({
@@ -536,63 +200,92 @@ const mapAgentOutput = node({
     parameters: {
       mode: 'runOnceForEachItem',
       language: 'javaScript',
-      jsCode: MAP_AGENT_OUTPUT_JS,
+      jsCode: MAP_SUMMARY_OUTPUT_JS,
     },
   },
   output: [
     {
       issueId: '200329',
-      narrative: 'Sakens innhold',
-      who_affected: 'Berørte grupper',
-      how_affected: 'Konkret påvirkning',
-      topic_cards: [{ title: 'Finansiering', body: 'Økonomi' }],
-      labels: ['Skatt', 'Privatøkonomi'],
       hva: 'Sakens innhold',
       hvem: 'Berørte grupper',
-      kostnad: 'Økonomi',
+      kostnad: 'Ikke omtalt i kilden.',
+      narrative: 'Sakens innhold',
+      who_affected: 'Berørte grupper',
+      how_affected: '',
+      topic_cards: [],
+      labels: ['Skatt'],
     },
   ],
 });
 
-const prepareUpsertSql = node({
-  type: 'n8n-nodes-base.code',
-  version: 2,
+const hasValidSummary = ifElse({
+  version: 2.2,
   config: {
-    name: 'Prepare upsert SQL',
+    name: 'Has valid summary?',
     parameters: {
-      mode: 'runOnceForEachItem',
-      language: 'javaScript',
-      jsCode: PREPARE_UPSERT_SQL_JS,
+      looseTypeValidation: true,
+      conditions: {
+        combinator: 'and',
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
+        conditions: [
+          {
+            id: 'has-issue',
+            leftValue: expr('{{ $json.issueId }}'),
+            rightValue: '',
+            operator: { type: 'string', operation: 'notEmpty' },
+          },
+          {
+            id: 'not-skip',
+            leftValue: expr('{{ $json.skip }}'),
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'notEquals' },
+          },
+        ],
+      },
     },
   },
-  output: [
-    {
-      issueId: '200329',
-      narrative: 'Sakens innhold',
-      who_affected: 'Berørte grupper',
-      how_affected: 'Konkret påvirkning',
-      topic_cards: [{ title: 'Finansiering', body: 'Økonomi' }],
-      labels: ['Skatt', 'Privatøkonomi'],
-      hva: 'Sakens innhold',
-      hvem: 'Berørte grupper',
-      kostnad: 'Økonomi',
-      upsertSql: 'INSERT INTO ...',
-    },
-  ],
 });
 
 const saveSummaryToDb = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
   config: {
     name: 'Save summary to Supabase',
-    credentials: { postgres: newCredential('Supabase Postgres Folkets') },
+    credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
-      operation: 'executeQuery',
-      query: expr('{{ $json.upsertSql }}'),
+      method: 'POST',
+      url: rpcUrl('n8n_upsert_issue_ai_summary'),
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'supabaseApi',
+      sendBody: true,
+      specifyBody: 'json',
+      jsonBody: expr(
+        '={{ JSON.stringify({ p_issue_id: $json.issueId, p_hva: $json.hva, p_hvem: $json.hvem, p_kostnad: $json.kostnad, p_narrative: $json.narrative || $json.hva, p_who_affected: $json.who_affected || $json.hvem, p_how_affected: $json.how_affected || "", p_topic_cards: $json.topic_cards || [], p_labels: $json.labels || [] }) }}',
+      ),
+      options: { timeout: 60000 },
     },
   },
-  output: [{ success: true }],
+  output: [{ ok: true }],
+});
+
+const triggerPollDraft = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
+  config: {
+    name: 'Trigger system poll draft',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: `${FOLKETS_N8N_BASE}/webhook/folkets-system-poll-draft`,
+      sendBody: true,
+      specifyBody: 'json',
+      jsonBody: expr(
+        '={{ JSON.stringify({ stortinget_issue_id: $("Map agent output").item.json.issueId }) }}',
+      ),
+      options: { timeout: 15000 },
+    },
+  },
+  output: [{ ok: true }],
 });
 
 const logSummaryResult = node({
@@ -608,20 +301,40 @@ const logSummaryResult = node({
           {
             id: 'issue-id',
             name: 'issueId',
-            value: expr('{{ $("Prepare upsert SQL").item.json.issueId }}'),
+            value: expr('{{ $("Map agent output").item.json.issueId }}'),
             type: 'string',
           },
+          { id: 'saved', name: 'saved', value: true, type: 'boolean' },
+          { id: 'outcome', name: 'outcome', value: 'saved', type: 'string' },
+        ],
+      },
+    },
+  },
+  output: [{ issueId: '200329', saved: true, outcome: 'saved' }],
+});
+
+const logSkipSummary = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Log skipped summary',
+    parameters: {
+      mode: 'manual',
+      includeOtherFields: true,
+      assignments: {
+        assignments: [
+          { id: 'outcome', name: 'outcome', value: 'skipped', type: 'string' },
           {
-            id: 'saved',
-            name: 'saved',
-            value: true,
-            type: 'boolean',
+            id: 'message',
+            name: 'message',
+            value: 'Skipped AI summary (empty queue, thin context, or invalid model output)',
+            type: 'string',
           },
         ],
       },
     },
   },
-  output: [{ issueId: '200329', saved: true }],
+  output: [{ outcome: 'skipped' }],
 });
 
 const rateLimitPause = node({
@@ -646,18 +359,8 @@ const batchRunComplete = node({
       mode: 'manual',
       assignments: {
         assignments: [
-          {
-            id: 'status',
-            name: 'status',
-            value: 'scheduled_backfill_complete',
-            type: 'string',
-          },
-          {
-            id: 'at',
-            name: 'completedAt',
-            value: expr('{{ $now.toISO() }}'),
-            type: 'string',
-          },
+          { id: 'status', name: 'status', value: 'scheduled_backfill_complete', type: 'string' },
+          { id: 'at', name: 'completedAt', value: expr('{{ $now.toISO() }}'), type: 'string' },
         ],
       },
     },
@@ -693,7 +396,7 @@ const normalizeIssueId = node({
             id: 'issue-id',
             name: 'id',
             value: expr(
-              '{{ $json.body?.stortinget_issue_id ?? $json.body?.id ?? $json.stortinget_issue_id ?? $json.id }}'
+              '{{ $json.body?.stortinget_issue_id ?? $json.body?.id ?? $json.stortinget_issue_id ?? $json.id }}',
             ),
             type: 'string',
           },
@@ -704,18 +407,45 @@ const normalizeIssueId = node({
   output: [{ id: '200329' }],
 });
 
-const fetchIssueById = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+const hasWebhookIssueId = ifElse({
+  version: 2.2,
   config: {
-    name: 'Fetch issue by ID',
-    credentials: { postgres: newCredential('Supabase Postgres Folkets') },
+    name: 'Has webhook issue id?',
     parameters: {
-      operation: 'executeQuery',
-      query: FETCH_ISSUE_BY_ID_SQL,
-      options: {
-        queryReplacement: expr('{{ $("Normalize issue ID").item.json.id }}'),
+      looseTypeValidation: true,
+      conditions: {
+        combinator: 'and',
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
+        conditions: [
+          {
+            id: 'has-id',
+            leftValue: expr('{{ $json.id }}'),
+            rightValue: '',
+            operator: { type: 'string', operation: 'notEmpty' },
+          },
+        ],
       },
+    },
+  },
+});
+
+const fetchIssueContext = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
+  config: {
+    name: 'Fetch issue context',
+    credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
+    parameters: {
+      method: 'POST',
+      url: rpcUrl('n8n_get_issue_ai_summary_context'),
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'supabaseApi',
+      sendBody: true,
+      specifyBody: 'json',
+      jsonBody: expr(
+        '={{ JSON.stringify({ p_issue_id: $("Normalize issue ID").item.json.id }) }}',
+      ),
+      options: { timeout: 60000 },
     },
   },
   output: [
@@ -723,9 +453,23 @@ const fetchIssueById = node({
       id: '200329',
       title: 'Example sak',
       summary: 'Kort',
-      detail_json: {},
+      ai_summary_source_context: 'Kontekst',
     },
   ],
+});
+
+const expandWebhookIssue = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Expand webhook issue',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      language: 'javaScript',
+      jsCode: EXPAND_OR_EMPTY_JS,
+    },
+  },
+  output: [{ id: '200329', title: 'Example sak' }],
 });
 
 const buildSakContextWebhook = node({
@@ -736,10 +480,38 @@ const buildSakContextWebhook = node({
     parameters: {
       mode: 'runOnceForEachItem',
       language: 'javaScript',
-      jsCode: BUILD_CONTEXT_JS,
+      jsCode: BUILD_SAK_CONTEXT_JS,
     },
   },
-  output: [{ id: '200329', sakContextText: 'Sak ID: 200329' }],
+  output: [{ id: '200329', sakContextText: 'Sak ID: 200329', contextChars: 18 }],
+});
+
+const hasWebhookContext = ifElse({
+  version: 2.2,
+  config: {
+    name: 'Has webhook context?',
+    parameters: {
+      looseTypeValidation: true,
+      conditions: {
+        combinator: 'and',
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
+        conditions: [
+          {
+            id: 'has-id',
+            leftValue: expr('{{ $json.id }}'),
+            rightValue: '',
+            operator: { type: 'string', operation: 'notEmpty' },
+          },
+          {
+            id: 'enough-context',
+            leftValue: expr('{{ $json.contextChars }}'),
+            rightValue: 40,
+            operator: { type: 'number', operation: 'gt' },
+          },
+        ],
+      },
+    },
+  },
 });
 
 const generateSummaryAgentWebhook = node({
@@ -751,7 +523,7 @@ const generateSummaryAgentWebhook = node({
     parameters: {
       promptType: 'define',
       text: expr('{{ $json.sakContextText }}'),
-      hasOutputParser: true,
+      hasOutputParser: false,
       options: {
         systemMessage: SUMMARY_SYSTEM_MESSAGE,
         maxIterations: 4,
@@ -759,21 +531,10 @@ const generateSummaryAgentWebhook = node({
       },
       subnodes: {
         model: ollamaChatModel,
-        outputParser: summaryOutputParser,
       },
     },
   },
-  output: [
-    {
-      output: {
-        narrative: 'Sakens innhold',
-        who_affected: 'Berørte grupper',
-        how_affected: 'Konkret påvirkning',
-        topic_cards: [{ title: 'Finansiering', body: 'Økonomiske konsekvenser' }],
-        labels: ['Skatt', 'Privatøkonomi'],
-      },
-    },
-  ],
+  output: [{ output: { hva: 'Sakens innhold', hvem: 'Berørte', kostnad: 'Ikke omtalt' } }],
 });
 
 const mapAgentOutputWebhook = node({
@@ -784,63 +545,92 @@ const mapAgentOutputWebhook = node({
     parameters: {
       mode: 'runOnceForEachItem',
       language: 'javaScript',
-      jsCode: MAP_AGENT_OUTPUT_WEBHOOK_JS,
+      jsCode: MAP_SUMMARY_OUTPUT_JS,
     },
   },
   output: [
     {
       issueId: '200329',
-      narrative: 'Sakens innhold',
-      who_affected: 'Berørte grupper',
-      how_affected: 'Konkret påvirkning',
-      topic_cards: [{ title: 'Finansiering', body: 'Økonomi' }],
-      labels: ['Skatt', 'Privatøkonomi'],
       hva: 'Sakens innhold',
       hvem: 'Berørte grupper',
-      kostnad: 'Økonomi',
+      kostnad: 'Ikke omtalt i kilden.',
+      narrative: 'Sakens innhold',
+      who_affected: 'Berørte grupper',
+      how_affected: '',
+      topic_cards: [],
+      labels: ['Skatt'],
     },
   ],
 });
 
-const prepareUpsertSqlWebhook = node({
-  type: 'n8n-nodes-base.code',
-  version: 2,
+const hasValidWebhookSummary = ifElse({
+  version: 2.2,
   config: {
-    name: 'Prepare upsert SQL (webhook)',
+    name: 'Has valid webhook summary?',
     parameters: {
-      mode: 'runOnceForEachItem',
-      language: 'javaScript',
-      jsCode: PREPARE_UPSERT_SQL_JS,
+      looseTypeValidation: true,
+      conditions: {
+        combinator: 'and',
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
+        conditions: [
+          {
+            id: 'has-issue',
+            leftValue: expr('{{ $json.issueId }}'),
+            rightValue: '',
+            operator: { type: 'string', operation: 'notEmpty' },
+          },
+          {
+            id: 'not-skip',
+            leftValue: expr('{{ $json.skip }}'),
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'notEquals' },
+          },
+        ],
+      },
     },
   },
-  output: [
-    {
-      issueId: '200329',
-      narrative: 'Sakens innhold',
-      who_affected: 'Berørte grupper',
-      how_affected: 'Konkret påvirkning',
-      topic_cards: [{ title: 'Finansiering', body: 'Økonomi' }],
-      labels: ['Skatt', 'Privatøkonomi'],
-      hva: 'Sakens innhold',
-      hvem: 'Berørte grupper',
-      kostnad: 'Økonomi',
-      upsertSql: 'INSERT INTO ...',
-    },
-  ],
 });
 
 const saveSummaryWebhook = node({
-  type: 'n8n-nodes-base.postgres',
-  version: 2.6,
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
   config: {
     name: 'Save summary (webhook)',
-    credentials: { postgres: newCredential('Supabase Postgres Folkets') },
+    credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
-      operation: 'executeQuery',
-      query: expr('{{ $json.upsertSql }}'),
+      method: 'POST',
+      url: rpcUrl('n8n_upsert_issue_ai_summary'),
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'supabaseApi',
+      sendBody: true,
+      specifyBody: 'json',
+      jsonBody: expr(
+        '={{ JSON.stringify({ p_issue_id: $json.issueId, p_hva: $json.hva, p_hvem: $json.hvem, p_kostnad: $json.kostnad, p_narrative: $json.narrative || $json.hva, p_who_affected: $json.who_affected || $json.hvem, p_how_affected: $json.how_affected || "", p_topic_cards: $json.topic_cards || [], p_labels: $json.labels || [] }) }}',
+      ),
+      options: { timeout: 60000 },
     },
   },
-  output: [{ success: true }],
+  output: [{ ok: true }],
+});
+
+const triggerPollDraftWebhook = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
+  config: {
+    name: 'Trigger system poll draft (webhook)',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: `${FOLKETS_N8N_BASE}/webhook/folkets-system-poll-draft`,
+      sendBody: true,
+      specifyBody: 'json',
+      jsonBody: expr(
+        '={{ JSON.stringify({ stortinget_issue_id: $("Map agent output (webhook)").item.json.issueId }) }}',
+      ),
+      options: { timeout: 15000 },
+    },
+  },
+  output: [{ ok: true }],
 });
 
 const respondToWebhook = node({
@@ -851,43 +641,78 @@ const respondToWebhook = node({
     parameters: {
       respondWith: 'json',
       responseBody: expr(
-        '{{ { ok: true, issueId: $("Normalize issue ID").item.json.id, version: 2, narrative: $("Prepare upsert SQL (webhook)").item.json.narrative, who_affected: $("Prepare upsert SQL (webhook)").item.json.who_affected, how_affected: $("Prepare upsert SQL (webhook)").item.json.how_affected, topic_cards: $("Prepare upsert SQL (webhook)").item.json.topic_cards, labels: $("Prepare upsert SQL (webhook)").item.json.labels, saved: true } }}'
+        '{{ { ok: true, issueId: $("Map agent output (webhook)").item.json.issueId, saved: true, hva: $("Map agent output (webhook)").item.json.hva } }}',
+      ),
+    },
+  },
+});
+
+const respondWebhookSkipped = node({
+  type: 'n8n-nodes-base.respondToWebhook',
+  version: 1.5,
+  config: {
+    name: 'Respond skipped',
+    parameters: {
+      respondWith: 'json',
+      responseBody: expr(
+        '{{ { ok: true, skipped: true, reason: $json.reason || "missing_or_thin_issue" } }}',
       ),
     },
   },
 });
 
 sticky(
-  '## AI-sammendrag v2 med Ollama\n\n**Ollama credential:** «Ollama Heyklever» → https://ollama.heyklever.app\n\n**Modell:** Rediger i «Ollama Chat Model» (standard llama3.2:3b-text-q4_K_M).\n\n**Postgres:** «Supabase Postgres Folkets». Agent skriver narrative, who/how, topic_cards og labels til `issue_ai_summaries`, og synker `stortinget_issues.ai_labels`.',
-  [scheduleTrigger, ollamaChatModel, webhookTrigger],
-  { color: 4 }
+  '## AI-sammendrag (Ollama)\n\nTom kø avbrytes uten Ollama-kall. Webhook henter `n8n_get_issue_ai_summary_context`. Etter lagring trigges system-poll-utkast.\n\n**Ikke** generer sammendrag uten sak-id.',
+  [scheduleTrigger, webhookTrigger],
+  { color: 4 },
 );
 
-const summaryPipeline = buildSakContext
-  .to(generateSummaryAgent)
-  .to(mapAgentOutput)
-  .to(prepareUpsertSql)
-  .to(saveSummaryToDb)
-  .to(logSummaryResult);
+const savedSchedulePath = saveSummaryToDb
+  .to(triggerPollDraft)
+  .to(logSummaryResult)
+  .to(rateLimitPause)
+  .to(nextBatch(processOneIssue));
+
+const summaryPipeline = buildSakContext.to(
+  hasUsableContext
+    .onTrue(
+      generateSummaryAgent.to(
+        mapAgentOutput.to(hasValidSummary.onTrue(savedSchedulePath).onFalse(logSkipSummary.to(nextBatch(processOneIssue)))),
+      ),
+    )
+    .onFalse(logSkipSummary.to(nextBatch(processOneIssue))),
+);
+
+const webhookSavedPath = saveSummaryWebhook.to(triggerPollDraftWebhook).to(respondToWebhook);
 
 export default workflow(
   'folkets-ai-summary-backfill',
-  'Folkets Stemme – AI-sammendrag backfill'
+  'Folkets Stemme – AI-sammendrag backfill',
 )
   .add(scheduleTrigger)
   .to(backfillSettingsSchedule)
   .to(fetchMissingSummaries)
-  .to(
-    processOneIssue
-      .onDone(batchRunComplete)
-      .onEachBatch(summaryPipeline.to(rateLimitPause.to(nextBatch(processOneIssue))))
-  )
+  .to(expandMissingIssues)
+  .to(processOneIssue.onDone(batchRunComplete).onEachBatch(summaryPipeline))
   .add(webhookTrigger)
   .to(normalizeIssueId)
-  .to(fetchIssueById)
-  .to(buildSakContextWebhook)
-  .to(generateSummaryAgentWebhook)
-  .to(mapAgentOutputWebhook)
-  .to(prepareUpsertSqlWebhook)
-  .to(saveSummaryWebhook)
-  .to(respondToWebhook);
+  .to(
+    hasWebhookIssueId
+      .onTrue(
+        fetchIssueContext.to(expandWebhookIssue).to(buildSakContextWebhook).to(
+          hasWebhookContext
+            .onTrue(
+              generateSummaryAgentWebhook.to(
+                mapAgentOutputWebhook.to(
+                  hasValidWebhookSummary.onTrue(webhookSavedPath).onFalse(respondWebhookSkipped),
+                ),
+              ),
+            )
+            .onFalse(respondWebhookSkipped),
+        ),
+      )
+      .onFalse(respondWebhookSkipped),
+  )
+  .group('Hent manglende saker', [backfillSettingsSchedule, fetchMissingSummaries, expandMissingIssues], {
+    description: 'RPC-kø for saker uten AI-sammendrag',
+  });
