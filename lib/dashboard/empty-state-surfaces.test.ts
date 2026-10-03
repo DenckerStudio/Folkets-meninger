@@ -34,4 +34,9 @@ assert.match(stemmePlusPage, /StemmePlusAdmin/);
 const chatPage = read('app/dashboard/chat/page.tsx');
 assert.match(chatPage, /redirect\(`\$\{routes\.utforsk\}\?\$\{chatDeepLinkQuery\(sak\)\}`\)/);
 
+const orbCss = read('components/chat/chat-orb.css');
+assert.match(orbCss, /z-index:\s*80/);
+const chatPanel = read('components/chat/chat-panel.tsx');
+assert.match(chatPanel, /z-\[90\]/);
+
 console.log('dashboard/empty-state-surfaces.test.ts: ok Reels + admin empties + chat redirect');

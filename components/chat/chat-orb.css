@@ -2,7 +2,7 @@
   position: fixed;
   right: 1rem;
   bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
-  z-index: 40;
+  z-index: 80;
   display: grid;
   place-items: center;
   width: 4rem;
