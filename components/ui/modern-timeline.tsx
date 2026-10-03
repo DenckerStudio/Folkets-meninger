@@ -88,7 +88,7 @@ export function Timeline({ items, title, subtitle, className }: ModernTimelinePr
             aria-hidden
           />
 
-          {items.map((item) => {
+          {items.map((item, index) => {
             const isLeft = index % 2 === 0;
 
             return (
