@@ -6,6 +6,7 @@
  */
 import { expr, ifElse, node, sticky, trigger, workflow } from '@n8n/workflow-sdk';
 import { FOLKETS_APP_BASE } from './n8n-supabase.shared';
+import { createInWorkflowErrorNotify } from './in-workflow-error-notify';
 
 const webhook = trigger({
   type: 'n8n-nodes-base.webhook',
@@ -150,38 +151,11 @@ const respondEmpty = node({
   },
 });
 
-const pipelineErrorTrigger = trigger({
-  type: 'n8n-nodes-base.errorTrigger',
-  version: 1,
-  config: { name: 'Pipeline error' },
-  output: [{ workflow: { name: 'folkets-hearing-innspill-package' }, execution: { id: '0' } }],
-});
-
-const recordPipelineError = node({
-  type: 'n8n-nodes-base.set',
-  version: 3.4,
-  config: {
-    name: 'Record pipeline error',
-    parameters: {
-      mode: 'manual',
-      assignments: {
-        assignments: [
-          {
-            id: 'fallback',
-            name: 'appFallback',
-            type: 'string',
-            value: 'App logs webhook failure; motforslag-rapporten ligger i payload og kan sendes på nytt',
-          },
-        ],
-      },
-    },
-  },
-  output: [{ appFallback: 're-post N8N_HEARING_INNSPILL_WEBHOOK_URL' }],
-});
+const inWorkflowError = createInWorkflowErrorNotify('folkets-hearing-innspill-package');
 
 sticky(
-  '## Motforslag → horingsinnspill\n\nWebhook fra appen. Fyll inn cronSecret i Notify settings (samme som CRON_SECRET). Ikke et Stortinget-API. Error Trigger logger; appen dropper ikke rapporten stille.',
-  [webhook, pipelineErrorTrigger],
+  '## Motforslag → horingsinnspill\n\nWebhook fra appen. Fyll inn cronSecret i Notify settings (samme som CRON_SECRET). Ikke et Stortinget-API. Error Trigger POSTer til /api/ops/n8n-notify; appen dropper ikke rapporten stille.',
+  [webhook],
   { color: 4 },
 );
 
@@ -193,5 +167,5 @@ export default workflow(
   .to(prepare)
   .to(notifySettings)
   .to(hasReport.onTrue(notifyAdmin.to(respondOk)).onFalse(respondEmpty))
-  .add(pipelineErrorTrigger)
-  .to(recordPipelineError);
+  .add(inWorkflowError.errorTrigger)
+  .to(inWorkflowError.formatError.to(inWorkflowError.notifySettings).to(inWorkflowError.notifyAdmin));

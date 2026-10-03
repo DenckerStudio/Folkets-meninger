@@ -21,6 +21,7 @@ import {
   SYSTEM_POLL_GENERATOR_SYSTEM,
   SYSTEM_POLL_GENERATOR_SAVE_JS,
 } from './system-poll-draft.shared';
+import { createInWorkflowErrorNotify } from './in-workflow-error-notify';
 
 const sakAgentOllamaModel = languageModel({
   type: '@n8n/n8n-nodes-langchain.lmChatOllama',
@@ -467,44 +468,11 @@ const hasEmbeddingVector = ifElse({
   },
 });
 
-const pipelineErrorTrigger = trigger({
-  type: 'n8n-nodes-base.errorTrigger',
-  version: 1,
-  config: { name: 'Pipeline error' },
-  output: [{ workflow: { name: 'folkets-system-poll-draft' }, execution: { id: '0' } }],
-});
-
-const recordPipelineError = node({
-  type: 'n8n-nodes-base.set',
-  version: 3.4,
-  config: {
-    name: 'Record pipeline error',
-    parameters: {
-      mode: 'manual',
-      assignments: {
-        assignments: [
-          {
-            id: 'fallback',
-            name: 'appFallback',
-            type: 'string',
-            value: '/api/cron/n8n-retry re-queues draft webhook; pending sak stays without poll',
-          },
-          {
-            id: 'at',
-            name: 'failedAt',
-            type: 'string',
-            value: expr('{{ $now.toISO() }}'),
-          },
-        ],
-      },
-    },
-  },
-  output: [{ appFallback: '/api/cron/n8n-retry', failedAt: '2026-10-03T00:00:00.000Z' }],
-});
+const inWorkflowError = createInWorkflowErrorNotify('folkets-system-poll-draft');
 
 sticky(
-  '## System poll (Reels) draft generator\\n\\nHent pending sak (RAG, AI-sammendrag eller metadata) → Ollama ja/nei/blank → create_system_poll_draft. Embedding-feil faller tilbake til dokumentutdrag. Error Trigger logger; appen re-trigges via /api/cron/n8n-retry. ALDRI ensure_stortinget_poll.',
-  [scheduleTrigger, webhookTrigger, pipelineErrorTrigger],
+  '## System poll (Reels) draft generator\\n\\nHent pending sak (RAG, AI-sammendrag eller metadata) → Ollama ja/nei/blank → create_system_poll_draft. Embedding-feil faller tilbake til dokumentutdrag. Error Trigger POSTer til /api/ops/n8n-notify; appen re-trigges via /api/cron/n8n-retry. ALDRI ensure_stortinget_poll.',
+  [scheduleTrigger, webhookTrigger],
   { color: 4 },
 );
 
@@ -532,5 +500,5 @@ export default workflow(
   .to(sakPipeline)
   .add(webhookTrigger)
   .to(sakPipeline)
-  .add(pipelineErrorTrigger)
-  .to(recordPipelineError);
+  .add(inWorkflowError.errorTrigger)
+  .to(inWorkflowError.formatError.to(inWorkflowError.notifySettings).to(inWorkflowError.notifyAdmin));
