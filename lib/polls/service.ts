@@ -1,5 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { emptyPollTotals } from '@/lib/polls/format';
+import { isPollAlreadyExistsError, normalizePollIssueId } from '@/lib/polls/already-exists';
 import { POLL_FYLKE_MIN_VOTES } from '@/lib/polls/norway-counties';
 import type {
   PollChoice,
@@ -22,16 +23,19 @@ type PollRow = {
   title: string;
   neutral_summary: string;
   source_urls: unknown;
-  stortinget_issue_id: string | null;
-  citizen_initiative_id: string | null;
+  stortinget_issue_id: unknown;
+  citizen_initiative_id?: string | null;
   opens_at: string | null;
   closes_at: string | null;
   created_at: string;
   generation_metadata?: unknown;
 };
 
-const POLL_SELECT =
-  'id, track, status, title, neutral_summary, source_urls, stortinget_issue_id, citizen_initiative_id, opens_at, closes_at, created_at, generation_metadata';
+/** Admin/public lists do not need RAG metadata — keep the payload small and avoid optional-column failures. */
+const POLL_LIST_SELECT =
+  'id, track, status, title, neutral_summary, source_urls, stortinget_issue_id, opens_at, closes_at, created_at';
+
+const POLL_SELECT = `${POLL_LIST_SELECT}, citizen_initiative_id, generation_metadata`;
 
 function parseSourceUrls(value: unknown): PollSourceUrl[] {
   if (!Array.isArray(value)) return [];
@@ -55,13 +59,13 @@ function parseGenerationMetadata(value: unknown): PollGenerationMetadata {
 export function mapPollRow(row: PollRow): PollRecord {
   return {
     id: row.id,
-    track: row.track as PollRecord['track'],
-    status: row.status as PollRecord['status'],
+    track: String(row.track).trim() as PollRecord['track'],
+    status: String(row.status).trim() as PollRecord['status'],
     title: row.title,
     neutralSummary: row.neutral_summary ?? '',
     sourceUrls: parseSourceUrls(row.source_urls),
-    stortingetIssueId: row.stortinget_issue_id,
-    citizenInitiativeId: row.citizen_initiative_id,
+    stortingetIssueId: normalizePollIssueId(row.stortinget_issue_id),
+    citizenInitiativeId: row.citizen_initiative_id ?? null,
     opensAt: row.opens_at,
     closesAt: row.closes_at,
     createdAt: row.created_at,
@@ -103,49 +107,88 @@ export function parseFylkeTotals(data: unknown): PollFylkeTotals[] {
     .filter((x): x is PollFylkeTotals => x != null);
 }
 
+async function listPollRows(
+  apply: (select: string) => PromiseLike<{ data: unknown; error: { message?: string } | null }>,
+  label: string,
+): Promise<PollRow[]> {
+  const { data, error } = await apply(POLL_LIST_SELECT);
+  if (error) {
+    console.error(`[polls] ${label} failed`, error);
+    return [];
+  }
+  return Array.isArray(data) ? (data as PollRow[]) : [];
+}
+
 export async function listOpenPolls(limit = 30): Promise<PollRecord[]> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
   const service = getServiceSupabase();
-  const { data, error } = await service
-    .from('polls')
-    .select(POLL_SELECT)
-    .neq('track', 'citizen')
-    .in('status', ['open', 'closed'])
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (error || !data) return [];
-  return (data as PollRow[]).map(mapPollRow);
+  const rows = await listPollRows(
+    (select) =>
+      service
+        .from('polls')
+        .select(select)
+        .neq('track', 'citizen')
+        .in('status', ['open', 'closed'])
+        .order('created_at', { ascending: false })
+        .limit(limit),
+    'listOpenPolls',
+  );
+  return rows.map(mapPollRow);
 }
 
 export async function listOpenSystemPolls(limit = 30): Promise<PollRecord[]> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
   const service = getServiceSupabase();
-  const { data, error } = await service
-    .from('polls')
-    .select(POLL_SELECT)
-    .eq('track', 'system')
-    .in('status', ['open', 'closed'])
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (error || !data) return [];
-  return (data as PollRow[]).map(mapPollRow);
+  const rows = await listPollRows(
+    (select) =>
+      service
+        .from('polls')
+        .select(select)
+        .eq('track', 'system')
+        .in('status', ['open', 'closed'])
+        .order('created_at', { ascending: false })
+        .limit(limit),
+    'listOpenSystemPolls',
+  );
+  return rows.map(mapPollRow);
 }
 
 export async function listSystemPollDrafts(limit = 50): Promise<PollRecord[]> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
   const service = getServiceSupabase();
+  const rows = await listPollRows(
+    (select) =>
+      service
+        .from('polls')
+        .select(select)
+        .eq('track', 'system')
+        .eq('status', 'draft')
+        .order('created_at', { ascending: false })
+        .limit(limit),
+    'listSystemPollDrafts',
+  );
+  return rows.map(mapPollRow);
+}
+
+export async function findSystemPollForIssue(issueId: string): Promise<PollRecord | null> {
+  const trimmed = normalizePollIssueId(issueId);
+  if (!trimmed || !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  const service = getServiceSupabase();
   const { data, error } = await service
     .from('polls')
-    .select(POLL_SELECT)
+    .select(POLL_LIST_SELECT)
     .eq('track', 'system')
-    .eq('status', 'draft')
+    .eq('stortinget_issue_id', trimmed)
+    .in('status', ['draft', 'open', 'closed'])
     .order('created_at', { ascending: false })
-    .limit(limit);
+    .limit(1)
+    .maybeSingle();
 
-  if (error || !data) return [];
-  return (data as PollRow[]).map(mapPollRow);
+  if (error) {
+    console.error('[polls] findSystemPollForIssue failed', error);
+    return null;
+  }
+  return data ? mapPollRow(data as PollRow) : null;
 }
 
 export async function getPollById(pollId: string): Promise<PollRecord | null> {
@@ -256,15 +299,27 @@ export async function createSystemPollDraft(input: {
   sourceUrls?: PollSourceUrl[];
   generationMetadata?: PollGenerationMetadata;
 }): Promise<string> {
+  const issueId = normalizePollIssueId(input.issueId);
+  if (issueId) {
+    const existing = await findSystemPollForIssue(issueId);
+    if (existing) return existing.id;
+  }
+
   const service = getServiceSupabase();
   const { data, error } = await service.rpc('create_system_poll_draft', {
-    p_issue_id: input.issueId ?? null,
+    p_issue_id: issueId,
     p_title: input.title,
     p_neutral_summary: input.neutralSummary ?? '',
     p_source_urls: input.sourceUrls ?? [],
     p_generation_metadata: input.generationMetadata ?? {},
   });
-  if (error) throw error;
+  if (error) {
+    if (isPollAlreadyExistsError(error) && issueId) {
+      const existing = await findSystemPollForIssue(issueId);
+      if (existing) return existing.id;
+    }
+    throw error;
+  }
   return String(data);
 }
 

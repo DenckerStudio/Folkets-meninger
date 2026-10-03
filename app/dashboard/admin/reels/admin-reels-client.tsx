@@ -65,8 +65,12 @@ function GenerationStatusBadge({
   );
 }
 
-export default function AdminReelsClient() {
-  const [drafts, setDrafts] = useState<PollRecord[]>([]);
+export default function AdminReelsClient({
+  initialDrafts = [],
+}: {
+  initialDrafts?: PollRecord[];
+}) {
+  const [drafts, setDrafts] = useState<PollRecord[]>(initialDrafts);
   const [candidates, setCandidates] = useState<SakPollCandidate[]>([]);
   const [coverage, setCoverage] = useState<SakPollCoverage | null>(null);
   const [pipelineHealth, setPipelineHealth] = useState<PipelineHealth | null>(null);
@@ -85,12 +89,23 @@ export default function AdminReelsClient() {
           fetch('/api/admin/poll-candidates'),
           fetch('/api/admin/pipeline-health'),
         ]);
-        if (!draftsRes.ok || !candidatesRes.ok) {
-          setError('Kunne ikke laste admin-data');
-          return;
+        const failures: string[] = [];
+
+        if (draftsRes.ok) {
+          const draftsJson = (await draftsRes.json()) as DraftsResponse;
+          setDrafts(draftsJson.drafts ?? []);
+        } else {
+          failures.push('utkast');
         }
-        const draftsJson = (await draftsRes.json()) as DraftsResponse;
-        const candidatesJson = (await candidatesRes.json()) as CandidatesResponse;
+
+        if (candidatesRes.ok) {
+          const candidatesJson = (await candidatesRes.json()) as CandidatesResponse;
+          setCandidates(candidatesJson.candidates ?? []);
+          setCoverage(candidatesJson.coverage ?? null);
+        } else {
+          failures.push('sak-kandidater');
+        }
+
         if (healthRes.ok) {
           const healthJson = (await healthRes.json()) as { health?: PipelineHealth };
           setPipelineHealth(healthJson.health ?? null);
@@ -99,9 +114,10 @@ export default function AdminReelsClient() {
           setPipelineHealth(null);
           setPipelineHealthUnavailable(true);
         }
-        setDrafts(draftsJson.drafts ?? []);
-        setCandidates(candidatesJson.candidates ?? []);
-        setCoverage(candidatesJson.coverage ?? null);
+
+        if (failures.length > 0) {
+          setError(`Kunne ikke laste ${failures.join(', ')}`);
+        }
       } catch {
         setError('Kunne ikke laste admin-data');
       }
