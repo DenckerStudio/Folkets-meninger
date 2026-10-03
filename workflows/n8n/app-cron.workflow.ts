@@ -32,7 +32,7 @@ const path = $json.cronPath || '/api/cron/sync-issues';
 const query = $json.cronQuery ? '?' + $json.cronQuery : '';
 
 if (!baseUrl || !secret) {
-  return [{ json: { ok: false, error: 'Missing appBaseUrl or cronSecret in Cron settings' } }];
+  throw new Error('Missing appBaseUrl or cronSecret in Cron settings');
 }
 
 let lastError = null;
@@ -55,7 +55,8 @@ for (let attempt = 1; attempt <= 2; attempt++) {
 }
 const status = lastError.statusCode || lastError.response?.statusCode;
 const body = lastError.response?.body || lastError.message;
-return [{ json: { ok: false, path, status, error: body, retried: true } }];`;
+throw new Error('App cron ' + path + ' failed (status ' + (status || 'n/a') + '): ' + (typeof body === 'string' ? body : JSON.stringify(body)));
+`;
 
 function cronSettingsNode(name: string) {
   return node({

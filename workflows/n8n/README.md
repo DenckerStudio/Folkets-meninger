@@ -11,9 +11,22 @@ Etter `20260823200000_n8n_postgrest_rpcs.sql` (`supabase db push`) skriver n8n v
 | App cron | Aktiv | https://n8n.heyklever.app/workflow/rwiy05sitrv5QDbQ |
 | Motforslag horingsinnspill | Aktiv | https://n8n.heyklever.app/workflow/VX3uRDi7cVRwpxuQ |
 | System poll (Reels) draft | Aktiv | https://n8n.heyklever.app/workflow/TWTrqNYhvYcWz4UX |
-| n8n feilvarsling | Publisert | https://n8n.heyklever.app/workflow/iBNVwqPIsvf0JmTc |
 | Pipeline-helse | Aktiv | https://n8n.heyklever.app/workflow/m6lHrqTxSVdJTcma |
+| n8n feilvarsling | Aktiv | https://n8n.heyklever.app/workflow/iBNVwqPIsvf0JmTc |
 | Forum (v9/v12/v13/RSS) | Arkivert | `archive/forum/` |
+
+## Anbefalt sak-flyt
+
+```text
+App cron 03:00  →  sync-issues
+                 →  dokument-ingest (app)
+                 →  embeddings-webhook
+                 →  (chunks ready) AI-sammendrag-webhook
+                 →  (sammendrag lagret) system-poll-utkast
+                 →  admin publiserer i /dashboard/admin/reels
+```
+
+Tom kø er suksess (ikke Ollama-kall). Tynne sammendrag (< 180 tegn) med ferdig RAG plukkes på nytt av `n8n_list_issues_missing_ai_summary`. Pipeline-helse kl 08:00 tar catch-up og varsler admin ved stor kø.
 
 ## Feilhåndtering og app-fallback
 
@@ -27,7 +40,7 @@ Aktive flyter har **per-node retry** (`retryOnFail` / `maxTries`) og `onError` s
 | App cron | HTTP mot `/api/cron/*` retried én gang | Endepunktene er selvstendige (`x-cron-secret`) og kan kalles uten n8n |
 | Motforslag innspill | Error Trigger logger | Appen logger webhook-feil; rapporten kan postes på nytt |
 
-**Error Trigger:** [`error-handler.workflow.ts`](error-handler.workflow.ts) er publisert som `iBNVwqPIsvf0JmTc`. `settings.errorWorkflow` er satt på AI-sammendrag, embeddings, Reels-utkast, app cron, motforslag og pipeline-helse. Handleren POSTer til `POST /api/ops/n8n-notify` (`x-cron-secret`); appen logger og e-poster når SMTP er satt. Fyll `cronSecret` i n8n «Notify settings».
+**Error Trigger:** [`ops-error-handler.workflow.ts`](ops-error-handler.workflow.ts) (samme live-ID som [`error-handler.workflow.ts`](error-handler.workflow.ts)) er publisert som `iBNVwqPIsvf0JmTc`. `settings.errorWorkflow` er satt på AI-sammendrag, embeddings, Reels-utkast, app cron, motforslag og pipeline-helse. Handleren POSTer til `POST /api/ops/n8n-notify` (`x-cron-secret`); appen logger til `n8n_ops_events` og e-poster admin når SMTP er satt. Fyll `cronSecret` i n8n «Notify settings».
 
 **App cron n8n-retry** (hver 2. time i `app-cron.workflow.ts`):
 
@@ -78,8 +91,10 @@ N8N_AI_SUMMARY_WEBHOOK_URL=https://n8n.heyklever.app/webhook/folkets-ai-summary
 
 | Trigger | Oppførsel |
 |---------|-----------|
-| **Every 10 minutes** | SQL → én sak → Ollama agent → lagre → 5 s pause |
-| **Webhook POST** | `{ "stortinget_issue_id": "…" }` → hent sak → Ollama → lagre → JSON-svar |
+| **Every 30 minutes** | RPC-kø → én sak med id → Ollama → upsert (inkl. v2-felter) → system-poll-webhook |
+| **Webhook POST** | `{ "stortinget_issue_id": "…" }` → `n8n_get_issue_ai_summary_context` → Ollama → lagre → JSON-svar |
+
+Tom kø / manglende sak-id avbrytes **før** Ollama. `n8n_upsert_issue_ai_summary` krever `p_issue_id` (PostgREST matcher på parameternavn).
 
 ## Test webhook
 
@@ -329,18 +344,31 @@ opp på stortinget.no.
 
 ```bash
 N8N_HEARING_INNSPILL_WEBHOOK_URL=https://n8n.heyklever.app/webhook/folkets-hearing-innspill
-
-**Live workflow:** https://n8n.heyklever.app/workflow/VX3uRDi7cVRwpxuQ
 ```
 
-## Feilvarsling og app-fallback
+**Live workflow:** https://n8n.heyklever.app/workflow/VX3uRDi7cVRwpxuQ
 
-Delt Error Trigger: [`error-handler.workflow.ts`](error-handler.workflow.ts) · live `iBNVwqPIsvf0JmTc`.
-`settings.errorWorkflow` er satt på AI-sammendrag, embeddings, Reels-utkast, app cron, motforslag og pipeline-helse.
+n8n forbereder rapporten og kaller `POST /api/ops/n8n-notify` (`x-cron-secret`) som logger til `n8n_ops_events` og e-poster admin. Fyll inn `cronSecret` i noden «Notify settings».
 
-Ved produksjonsfeil POSTer handleren til `POST /api/ops/n8n-notify` med `x-cron-secret`.
-Appen logger alltid; e-post går til `OPS_ALERT_EMAIL` / `FEEDBACK_INBOX_EMAIL` / `kontakt@folketsstemme.no` når SMTP er satt.
-Fyll `cronSecret` i n8n «Notify settings» (ikke commit secret).
+## Pipeline-helse
+
+Workflow-kilde: [`pipeline-health.workflow.ts`](pipeline-health.workflow.ts)
+
+**Live workflow:** https://n8n.heyklever.app/workflow/m6lHrqTxSVdJTcma
+
+Daglig 08:00 + `POST /webhook/folkets-pipeline-health`. Teller pending chunks, manglende sammendrag og draft-polls. Catch-up av embeddings og første manglende AI-sammendrag. Varsel via `/api/ops/n8n-notify` når køen er stor. Admin-UI: `/dashboard/admin/reels` («Kjør catch-up»).
+
+```bash
+N8N_PIPELINE_HEALTH_WEBHOOK_URL=https://n8n.heyklever.app/webhook/folkets-pipeline-health
+```
+
+## n8n feilvarsling
+
+Workflow-kilde: [`ops-error-handler.workflow.ts`](ops-error-handler.workflow.ts)
+
+**Live workflow:** https://n8n.heyklever.app/workflow/iBNVwqPIsvf0JmTc
+
+Publiser denne først, fyll inn `cronSecret`, og sett den som **Error workflow** på de andre Folkets-flytene. Den logger til `n8n_ops_events` og e-poster admin ved produksjonsfeil.
 
 App-side backup (uavhengig av n8n Error Trigger):
 

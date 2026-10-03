@@ -72,8 +72,8 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Anonymous voting (legacy) | `20260528000001_anonymous_voting.sql`, `20260528000002_vote_schema_repair.sql`, `20260618120000_sak_voting_status.sql` | `citizen_votes`, `user_vote_receipts`, `cast_vote`, vote aggregate RPCs — read-only for historical alignment |
 | Issue stances | `20260907120000_issue_stances.sql` | `issue_stances`, `set_issue_stance`, `get_user_stance_*` RPCs |
 | Notifications | `20260528000003_notifications.sql`, `20260906180000_notification_channel_defaults.sql` | `notification_preferences`, `notification_category_subscriptions`, `notifications` |
-| Stemme+ subscription | `20260906200000_stemme_plus_subscription.sql`, `20260906210000_stemme_plus_admin_grant.sql`, `20261003190000_stemme_plus_byok_chat.sql` | `users.subscription_tier`, admin grant RPCs, encrypted `user_llm_credentials`, lexical chat RAG RPCs, Stripe webhook idempotency |
-| AI summaries | `20260528120000_issue_ai_summaries.sql`, `20260529120000_simplify_issue_ai_summaries.sql`, `20260823210000_n8n_ai_summary_rich_context.sql` | `issue_ai_summaries`, `n8n_get_issue_ai_summary_context` |
+| Stemme+ subscription | `20260906200000_stemme_plus_subscription.sql`, `20260906210000_stemme_plus_admin_grant.sql` | `users.subscription_tier`, admin RPCs `grant_stemme_plus_by_email` / `revoke_stemme_plus_by_email` (Stripe checkout deferred) |
+| AI summaries | `20260528120000_issue_ai_summaries.sql`, `20260529120000_simplify_issue_ai_summaries.sql`, `20260823210000_n8n_ai_summary_rich_context.sql`, `20261003160000_n8n_pipeline_ops.sql` | `issue_ai_summaries`, `n8n_get_issue_ai_summary_context`, thin-summary refresh in `n8n_list_issues_missing_ai_summary`, `n8n_ops_events`, `n8n_pipeline_health` |
 | Auth/user sync + hearings comments | `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql` | `users`, `ensure_public_user`, `user_has_forum_identity`, `hearing_comments`, `create_hearing_comment` |
 | Forum base/features | `20260530120000_forum_enhancements.sql`, `20260531120000_production_readiness.sql`, `20260531140000_forum_prompts_dedupe.sql` | forum threads/replies/likes/prompts and production indexes |
 | Forum reports/sources | `20260602120000_forum_reports_enhance.sql`, `20260602130000_forum_trusted_sources.sql` | `forum_reports`, `forum_trusted_sources` |
@@ -82,7 +82,7 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Marketing feedback | `20260806140000_site_feedback.sql` | `site_feedback` (public “Gi innspill” form; service-role writes only) |
 | Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql`, `20260702160000_backfill_ferdigbehandlet_from_detail.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category`, `ferdigbehandlet` repair |
 | Sak documents/RAG | `20260617120000_sak_documents_rag.sql`, `20260807112603_document_chunks_storage_efficiency.sql` | `stortinget_issue_documents`, `document_chunks`, `chunks_status`, `match_issue_document_chunks`, reclaim helpers |
-| Direct-democracy polls | `20260819210000_direct_democracy_polls.sql`, `20260821130000_system_poll_reels.sql` | `norway_counties`, `polls` (`stortinget`/`citizen`/`system`), `poll_votes`, `poll_vote_receipts`, `citizen_initiatives`, `citizen_initiative_endorsements`, Ja/Nei/Blank RPCs, system Reels drafts |
+| Direct-democracy polls | `20260819210000_direct_democracy_polls.sql`, `20260821130000_system_poll_reels.sql`, `20261003180000_system_poll_source_packaging.sql` | `norway_counties`, `polls` (`stortinget`/`citizen`/`system`), `poll_votes`, `poll_vote_receipts`, `citizen_initiatives`, `citizen_initiative_endorsements`, Ja/Nei/Blank RPCs, system Reels drafts from RAG / AI-sammendrag / metadata |
 | App RBAC | `20260821120000_app_rbac_user_roles.sql` | `app_roles`, `user_roles`, `is_admin()`, `grant_app_role_by_email`, `revoke_app_role_by_email` |
 | Knowledge + motforslag | `20260822120000_knowledge_and_counter_proposals.sql` | `user_knowledge_quiz_passes`, `user_document_reads`, `user_badges`, `counter_proposals`, `counter_proposal_endorsements`, package RPCs |
 | Folkets meninger | `20260907223000_citizen_opinions.sql`, `20260908120000_citizen_opinion_points.sql`, `20260908153000_blank_stance_optional_body.sql`, `20260908170000_create_opinion_for_imot_only.sql`, `20260908181000_repair_opinion_rpcs.sql` | `citizen_opinions`, `citizen_opinion_replies`, `points` (min. 3 For/Imot-kulepunkter), create For/Imot only, Blank replies without begrunnelse, `create_citizen_opinion`, `create_citizen_opinion_reply` |
@@ -155,8 +155,9 @@ legacy `citizen_initiatives` tables — no longer exposed in the Next.js app).
 System Reels are AI-generated ja/nei/blank questions. n8n inserts drafts via
 `create_system_poll_draft`; admins publish with `publish_poll` or archive with
 `archive_poll`. Do not call `ensure_stortinget_poll` for AI drafts (it opens the
-poll immediately). Coverage helpers: `get_sak_poll_coverage()`,
-`get_sak_poll_candidates()`.
+poll immediately). `20261003180000_system_poll_source_packaging.sql` widens
+the candidate queue to RAG, AI-sammendrag, or sak-metadata. Coverage helpers:
+`get_sak_poll_coverage()`, `get_sak_poll_candidates()`.
 
 Fylke is attached only when `users.fylke_verified` is true.
 `apply_verified_fylke_claim` is service-role only and not wired in the app.
@@ -335,23 +336,16 @@ truth.
 
 ### Stemme+ (supporter tier)
 
-Tier lives on `users.subscription_tier` (`free` | `stemme_plus`). Price is 59 kr/mnd.
-Self-serve Stripe Checkout is wired (`/api/stemme-plus/checkout`, webhook
-`/api/webhooks/stripe`) but stays honestly unconfigured until
-`STRIPE_SECRET_KEY` + `STRIPE_STEMME_PLUS_PRICE_ID` exist. Grant for testing:
+Stripe self-serve checkout is **not** shipped yet. Tier lives on `users.subscription_tier`
+(`free` | `stemme_plus`). Grant for testing:
 
 ```sql
 SELECT public.grant_stemme_plus_by_email('supporter@example.com', NULL);
 -- Revoke: SELECT public.revoke_stemme_plus_by_email('supporter@example.com');
 ```
 
-Or use `/dashboard/admin/stemme-plus` (also still available on admin Reels).
-Benefits: profile badge, richer digest, realtime/smarter alerts, and BYOK AI-chat
-(`lib/stemme-plus/gates.ts`, `/dashboard/chat`).
-
-User LLM keys are AES-256-GCM encrypted in `user_llm_credentials` (service_role
-only). Chat RAG uses `search_issue_document_chunks_text` / `search_stortinget_issues_for_chat`
-and never selects embedding columns.
+Or use **Stemme+ (testing)** on `/dashboard/admin/reels`. Benefits: profile badge,
+richer digest e-mail, realtime/smarter category+label alerts (`lib/stemme-plus/gates.ts`).
 
 ### Hearing comments
 
