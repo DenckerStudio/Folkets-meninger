@@ -40,7 +40,7 @@ function resolveTab(tabParam: string | null): PolitikerTabId {
 
 function SakList({ saker, emptyMessage }: { saker: PolitikerSakItem[]; emptyMessage: string }) {
   if (saker.length === 0) {
-    return <EmptyState title="Ingen saker her" description={emptyMessage} className="py-6" />;
+    return <EmptyState compact title="Ingen saker her" description={emptyMessage} />;
   }
 
   return (
@@ -347,7 +347,11 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
                 Fordeling basert på kategorier i saker der politikeren er forslagstiller eller saksordfører.
               </p>
               {profile.topicStats.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">Ingen temaer å vise ennå.</p>
+                <EmptyState
+                  compact
+                  title="Ingen temaer å vise ennå"
+                  description="Når politikeren er forslagstiller eller saksordfører, vises temaene her."
+                />
               ) : (
                 <div className="space-y-4">
                   {profile.topicStats.map((topic, index) => {
@@ -389,11 +393,15 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
               </div>
 
               {profile.officialResponses.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">
-                  {profile.isPlatformVerified
-                    ? 'Ingen offisielle svar publisert ennå.'
-                    : 'Politikeren har ikke verifisert seg på plattformen, eller har ikke publisert svar ennå.'}
-                </p>
+                <EmptyState
+                  compact
+                  title="Ingen offisielle svar ennå"
+                  description={
+                    profile.isPlatformVerified
+                      ? 'Politikeren har ikke publisert svar på saker i Folkets Stemme ennå.'
+                      : 'Politikeren har ikke verifisert seg på plattformen, eller har ikke publisert svar ennå.'
+                  }
+                />
               ) : (
                 <PoliticianResponseList rep={rep} responses={profile.officialResponses} />
               )}

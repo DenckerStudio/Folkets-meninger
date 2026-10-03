@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Flag, Loader2, MessageSquare } from 'lucide-react';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
 import {
@@ -218,9 +219,11 @@ export function DiscussionSection({ sakId }: { sakId: string }) {
       {loading ? (
         <p className="text-sm text-muted-foreground">Laster diskusjon …</p>
       ) : posts.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-          Ingen kommentarer ennå — vær den første.
-        </p>
+        <EmptyState
+          compact
+          title="Ingen kommentarer ennå"
+          description="Vær den første til å dele et synspunkt. Innlegg er offentlige og vises med navn."
+        />
       ) : (
         <ul className="space-y-4">
           {posts.map((post) => (

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { routes } from '@/lib/routes';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { ProfileCard } from '@/components/profile/profile-card';
 
 export type VoteHistoryItem = {
@@ -21,16 +22,16 @@ export function ProfileVoteHistory({ items, loading }: ProfileVoteHistoryProps) 
       {loading ? (
         <p className="text-center py-8 text-muted-foreground text-sm">Laster stemmehistorikk…</p>
       ) : items.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <p className="font-medium text-foreground">Ingen stemmer ennå</p>
-          <p className="text-sm mt-2">Utforsk saker og stem for å se historikken din her.</p>
-          <Link
-            href={routes.utforsk}
-            className="mt-4 inline-block text-sm font-medium text-brand hover:underline"
-          >
-            Utforsk saker →
-          </Link>
-        </div>
+        <EmptyState
+          compact
+          title="Ingen stemmer ennå"
+          description="Utforsk saker og stem for å se historikken din her."
+          action={
+            <Link href={routes.utforsk} className="text-sm font-medium text-brand hover:underline">
+              Utforsk saker
+            </Link>
+          }
+        />
       ) : (
         <ul className="divide-y divide-border rounded-xl border border-border overflow-hidden">
           {items.map((item) => (

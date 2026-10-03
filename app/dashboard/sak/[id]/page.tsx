@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { ExternalLink, Tag } from 'lucide-react';
 import { BackButton } from '@/components/dashboard/back-button';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { routes } from '@/lib/routes';
 import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
@@ -371,9 +372,11 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
             {documents.length > 0 ? (
               <SakDocumentsSection sakId={sak.id} initialDocuments={documents} />
             ) : (
-              <p className="rounded-xl border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
-                Ingen saksdokumenter er hentet inn ennå.
-              </p>
+              <EmptyState
+                compact
+                title="Ingen saksdokumenter ennå"
+                description="Dokumenter hentes inn fra Stortinget når de er tilgjengelige."
+              />
             )}
 
             {parentestekst ? (

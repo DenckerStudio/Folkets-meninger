@@ -14,6 +14,7 @@ import {
   sporsmalTypeLabel,
   type StortingetSporsmal,
 } from '@/lib/stortinget-sporsmal';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -157,7 +158,12 @@ export default function SporsmalList({ sporsmal, type, sesjonId }: SporsmalListP
             <div className="px-6 py-4 text-xs text-muted-foreground">Viser første 200 treff. Bruk søk for å finne flere.</div>
           )}
           {filtered.length === 0 && (
-            <div className="px-6 py-10 text-sm text-muted-foreground text-center">Ingen spørsmål matcher filtrene.</div>
+            <EmptyState
+              compact
+              className="m-4"
+              title="Ingen spørsmål matcher filtrene"
+              description="Prøv et annet søk eller filter."
+            />
           )}
         </div>
       </div>

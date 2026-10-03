@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useMemo } from 'react';
 import { ShieldCheck, MapPin, Building2, Search, Landmark } from 'lucide-react';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import FadeIn from '@/components/fade-in';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
 import type { PolitikerOversikt } from '@/lib/stortinget';
@@ -239,9 +240,10 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
 
       <FadeIn delay={0.3} direction="up">
         {listedPolitikere.length === 0 && !showRegjeringSection ? (
-          <div className="text-center py-12 text-muted-foreground">
-            Ingen politikere funnet som matcher &quot;{searchQuery}&quot;.
-          </div>
+          <EmptyState
+            title="Ingen politikere matcher søket"
+            description={`Ingen politikere funnet som matcher «${searchQuery}».`}
+          />
         ) : listedPolitikere.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {listedPolitikere.map((rep, index) => (

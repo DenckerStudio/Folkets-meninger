@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { BackButton } from '@/components/dashboard/back-button';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { OpinionPointsList } from '@/components/opinions/opinion-points-list';
 import { StanceExpandModal } from '@/components/opinions/stance-expand-modal';
 import { useAuth } from '@/hooks/use-auth';
@@ -131,9 +132,11 @@ export function OpinionDetailClient({ opinion, isAuthor }: OpinionDetailClientPr
           Begrunnelser ({formatNumber(opinion.replies.length)})
         </h2>
         {opinion.replies.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-            Ingen har svart ennå. Vær den første til å si For, Blank eller Imot.
-          </p>
+          <EmptyState
+            compact
+            title="Ingen har svart ennå"
+            description="Vær den første til å si For, Blank eller Imot."
+          />
         ) : (
           <ul className="space-y-3">
             {opinion.replies.map((reply) => {

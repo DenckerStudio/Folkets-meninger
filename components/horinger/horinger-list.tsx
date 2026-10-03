@@ -17,6 +17,7 @@ import {
   sortHoringer,
   summarizeHoringer,
 } from '@/lib/stortinget-horinger';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { routes } from '@/lib/routes';
 
 type HoringerListProps = {
@@ -154,9 +155,10 @@ export default function HoringerList({ hearings }: HoringerListProps) {
 
       <div className="grid gap-4">
         {filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground rounded-2xl border border-dashed border-border">
-            Ingen høringer matcher filtrene.
-          </div>
+          <EmptyState
+            title="Ingen høringer matcher filtrene"
+            description="Prøv et annet søk, status eller komité."
+          />
         ) : (
           filtered.map((hearing) => {
             const open = isHoringOpen(hearing);

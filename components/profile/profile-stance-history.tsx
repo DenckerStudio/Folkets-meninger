@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { routes } from '@/lib/routes';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { ProfileCard } from '@/components/profile/profile-card';
 import { ISSUE_STANCE_LABELS, type StanceHistoryItem } from '@/lib/stances/types';
 
@@ -19,16 +20,16 @@ export function ProfileStanceHistory({ items, loading }: ProfileStanceHistoryPro
       {loading ? (
         <p className="text-center py-8 text-muted-foreground text-sm">Laster holdningshistorikk…</p>
       ) : items.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <p className="font-medium text-foreground">Ingen holdninger ennå</p>
-          <p className="text-sm mt-2">Utforsk saker og marker holdning for å se historikken din her.</p>
-          <Link
-            href={routes.utforsk}
-            className="mt-4 inline-block text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-500 text-sm"
-          >
-            Utforsk saker →
-          </Link>
-        </div>
+        <EmptyState
+          compact
+          title="Ingen holdninger ennå"
+          description="Utforsk saker og marker holdning for å se historikken din her."
+          action={
+            <Link href={routes.utforsk} className="text-sm font-medium text-brand hover:underline">
+              Utforsk saker
+            </Link>
+          }
+        />
       ) : (
         <ul className="divide-y divide-border rounded-xl border border-border overflow-hidden">
           {items.map((item) => (
