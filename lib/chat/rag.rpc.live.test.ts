@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
+import { retrieveSakContext, searchIssuesForChat } from '@/lib/chat/rag';
 
-function loadLocalEnv() {
-  const text = readFileSync('/workspace/.env.local', 'utf8');
+function loadFolketsPublicEnv() {
+  const text = readFileSync('/workspace/.env.test', 'utf8');
   for (const line of text.split(/\r?\n/)) {
     if (!line || line.startsWith('#') || !line.includes('=')) continue;
     const i = line.indexOf('=');
@@ -11,38 +12,62 @@ function loadLocalEnv() {
     const value = line.slice(i + 1);
     if (key.startsWith('NEXT_PUBLIC_SUPABASE')) {
       process.env[key] = value;
-    } else if (key && process.env[key] === undefined) {
-      process.env[key] = value;
     }
   }
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 }
 
-loadLocalEnv();
+loadFolketsPublicEnv();
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 assert.ok(url && url.includes('qetckokgtzbpunbzslfp'), 'Folkets-Stemme URL missing');
 assert.ok(anon, 'Folkets anon key missing');
+assert.equal(process.env.SUPABASE_SERVICE_ROLE_KEY, undefined);
 
 async function main() {
   const supabase = createClient(url, anon);
-  const { data, error } = await supabase.rpc('search_stortinget_issues_for_chat', {
+  const rpc = await supabase.rpc('search_stortinget_issues_for_chat', {
     p_query: 'Demo',
     p_limit: 5,
   });
 
+  const listed = await searchIssuesForChat('200365', 3);
+  const context = await retrieveSakContext({
+    issueId: '200365',
+    query: 'vektgrense førerkort',
+  });
+
   const payload = {
     urlHost: new URL(url).host,
-    rpcError: error?.message ?? null,
-    rowCount: Array.isArray(data) ? data.length : 0,
-    note: error
-      ? 'RPC is service_role-only on hosted Folkets-Stemme; anon call is denied as designed.'
-      : 'RPC returned rows to anon.',
+    usedServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+    rpcError: rpc.error?.message ?? null,
+    listedIds: listed.map((issue) => issue.id),
+    retrieve: {
+      issueId: context.issue?.id ?? null,
+      chunkCount: context.chunks.length,
+      hasSummary: Boolean(context.summary),
+      chunkKeys: context.chunks[0] ? Object.keys(context.chunks[0]) : [],
+      note: context.note,
+    },
+    note:
+      'Overlay RAG reads public sak tables with the user session (anon fallback). ' +
+      'Lexical RPCs stay service_role-only and are not required for the orb panel.',
   };
 
   writeFileSync('/opt/cursor/artifacts/rag-rpc-live.json', JSON.stringify(payload, null, 2));
-  assert.ok(error?.message || Array.isArray(data), 'RAG RPC did not respond');
-  console.log('chat/rag.rpc.live.test.ts: ok', payload.rpcError || `${payload.rowCount} rows`);
+
+  assert.match(rpc.error?.message ?? '', /permission denied/i);
+  assert.ok(listed.some((issue) => issue.id === '200365'));
+  assert.equal(context.issue?.id, '200365');
+  assert.ok(context.chunks.length > 0 || context.summary);
+  assert.ok(!payload.retrieve.chunkKeys.includes('embedding'));
+  console.log(
+    'chat/rag.rpc.live.test.ts: ok',
+    payload.retrieve.issueId,
+    'chunks',
+    payload.retrieve.chunkCount,
+  );
 }
 
 void main();

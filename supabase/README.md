@@ -351,8 +351,11 @@ from the dashboard orb overlay (`lib/stemme-plus/gates.ts`; `/dashboard/chat`
 only deep-links the panel).
 
 User LLM keys are AES-256-GCM encrypted in `user_llm_credentials` (service_role
-only). Chat RAG uses `search_issue_document_chunks_text` / `search_stortinget_issues_for_chat`
-and never selects embedding columns.
+only). Overlay chat RAG (`retrieveSakContext` / `listMatchingSaker`) reads
+`stortinget_issues`, `document_chunks` (`document_id, chunk_index, content`
+only) and `issue_ai_summaries` with the logged-in request session, falling
+back to the anon key. It never selects embedding columns and does not use
+the service-role-only lexical RPCs.
 
 Deploy `BYOK_ENCRYPTION_KEY` on Coolify/Vercel (never commit the value). Generate
 a 64-hex AES-256 key with `openssl rand -hex 32`, or use a passphrase (scrypt).

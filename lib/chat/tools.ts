@@ -1,11 +1,18 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { retrieveSakContext, searchIssuesForChat } from '@/lib/chat/rag';
+import {
+  retrieveSakContext,
+  searchIssuesForChat,
+  type ChatRagClient,
+} from '@/lib/chat/rag';
 import { searchSearxng } from '@/lib/chat/searxng';
 
 const spellingContexts = ['diskusjon', 'motforslag', 'horing', 'annet'] as const;
 
-export function createChatTools(preferredIssueId?: string | null) {
+export function createChatTools(
+  preferredIssueId?: string | null,
+  ragClient?: ChatRagClient | null,
+) {
   return {
     retrieveSakContext: tool({
       description:
@@ -21,6 +28,7 @@ export function createChatTools(preferredIssueId?: string | null) {
         const context = await retrieveSakContext({
           issueId: issueId || preferredIssueId,
           query,
+          client: ragClient,
         });
         return {
           issue: context.issue,
@@ -66,7 +74,7 @@ export function createChatTools(preferredIssueId?: string | null) {
         query: z.string().min(2).describe('Tittel, henvisning eller sak-id.'),
       }),
       execute: async ({ query }) => {
-        const issues = await searchIssuesForChat(query, 8);
+        const issues = await searchIssuesForChat(query, 8, ragClient);
         return {
           issues,
           note:

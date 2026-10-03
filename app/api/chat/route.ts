@@ -12,6 +12,7 @@ import { createUserLanguageModel } from '@/lib/chat/model';
 import { createChatTools } from '@/lib/chat/tools';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { requireStemmePlus } from '@/lib/stemme-plus/entitlement';
+import { getServerSupabase } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
   }
 
   const issueId = readIssueId(request, body);
+  const ragClient = await getServerSupabase();
 
   try {
     const model = createUserLanguageModel(credential);
@@ -81,7 +83,7 @@ export async function POST(request: Request) {
       model,
       instructions: buildChatInstructions(issueId),
       messages: await convertToModelMessages(messages as UIMessage[]),
-      tools: createChatTools(issueId),
+      tools: createChatTools(issueId, ragClient),
       stopWhen: isStepCount(6),
       onError: ({ error }) => {
         const message = error instanceof Error ? error.message : 'unknown chat error';
