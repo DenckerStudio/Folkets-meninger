@@ -71,9 +71,9 @@ export default function PoliticianResponseForm({ sakId }: { sakId?: string }) {
   };
 
   return (
-    <div className="bg-card rounded-2xl shadow-sm border border-indigo-100 dark:border-indigo-900/50 p-8 mb-8">
+    <div className="bg-card rounded-2xl shadow-sm border border-brand/20 p-8 mb-8">
       <h2 className="text-xl font-bold text-foreground mb-4 flex items-center">
-        <MessageSquare className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
+        <MessageSquare className="w-5 h-5 mr-2 text-brand" />
         Publiser ditt offisielle svar
       </h2>
       <p className="text-muted-foreground mb-4 text-sm">
@@ -84,7 +84,7 @@ export default function PoliticianResponseForm({ sakId }: { sakId?: string }) {
         value={response}
         onChange={(e) => setResponse(e.target.value)}
         maxLength={4000}
-        className="w-full border border-border rounded-xl p-4 bg-background text-foreground focus:ring-indigo-500 focus:border-indigo-500 mb-2 text-sm"
+        className="w-full border border-border rounded-xl p-4 bg-background text-foreground outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand mb-2 text-sm"
         placeholder="Skriv din forklaring her..."
       ></textarea>
       <div className="flex items-center justify-between mb-4 text-xs text-muted-foreground">
@@ -95,7 +95,7 @@ export default function PoliticianResponseForm({ sakId }: { sakId?: string }) {
         <button 
           onClick={handlePublish}
           disabled={!response.trim() || isSubmitting}
-          className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-6 py-2 bg-brand text-white font-medium rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? 'Publiserer...' : 'Publiser svar'}
         </button>

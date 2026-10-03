@@ -129,7 +129,7 @@ export function ProfileInterests({
                       }}
                       className={`rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
                         active
-                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          ? 'bg-brand text-white border-brand'
                           : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
                       }`}
                     >

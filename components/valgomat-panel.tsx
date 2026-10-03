@@ -70,7 +70,7 @@ export function ValgomatPanel() {
             setError(null);
             window.location.reload();
           }}
-          className="text-sm text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-500"
+          className="text-sm text-brand font-medium hover:text-brand/80"
         >
           Prøv igjen
         </button>
@@ -84,7 +84,7 @@ export function ValgomatPanel() {
         <p className="text-muted-foreground">
           Marker holdning (enig eller uenig) på minst noen saker for å se din Valgomat.
         </p>
-        <Link href={routes.utforsk} className="mt-4 inline-block text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-500">
+        <Link href={routes.utforsk} className="mt-4 inline-block text-brand font-medium hover:text-brand/80">
           Utforsk saker →
         </Link>
       </div>
@@ -94,7 +94,7 @@ export function ValgomatPanel() {
   if (!alignmentAvailable || scores.length === 0) {
     return (
       <div className="space-y-4 py-4">
-        <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900 dark:border-indigo-900/40 dark:bg-indigo-950/40 dark:text-indigo-100">
+        <div className="rounded-xl border border-brand/20 bg-brand/5 p-4 text-sm text-foreground">
           Du har markert <strong>{stanceCount}</strong>{' '}
           {stanceCount === 1 ? 'holdning' : 'holdninger'} (enig/uenig). Partisammenligning er klar i
           produktet, men slått av inntil vi har ekte stemmedata per parti fra Stortinget — vi viser
@@ -105,7 +105,7 @@ export function ValgomatPanel() {
         </p>
         <Link
           href={routes.utforsk}
-          className="block text-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+          className="block text-center text-sm font-medium text-brand hover:text-brand/80"
         >
           Utforsk flere saker →
         </Link>
@@ -115,7 +115,7 @@ export function ValgomatPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 rounded-xl p-4 text-sm text-indigo-900">
+      <div className="bg-brand/5 border border-brand/20 rounded-xl p-4 text-sm text-foreground">
         Basert på {stanceCount} holdninger sammenlignet med partivurdering per sak.
       </div>
       <ul className="space-y-3">
@@ -127,7 +127,7 @@ export function ValgomatPanel() {
             </div>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full bg-indigo-600 rounded-full"
+                className="h-full bg-brand rounded-full"
                 style={{ width: `${row.agreement_percent}%` }}
               />
             </div>

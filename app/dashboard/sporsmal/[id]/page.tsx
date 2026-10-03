@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Calendar, MessageSquare, User } from 'lucide-react';
+import { Calendar, User } from 'lucide-react';
 import { BackButton } from '@/components/dashboard/back-button';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { STORTINGET_ACTIVE_SESSION_ID } from '@/lib/stortinget-config';
@@ -46,7 +46,7 @@ export default async function SporsmalDetailPage({
 
       <article className="bg-card rounded-3xl border border-border p-8 shadow-sm space-y-6">
         <div className="flex flex-wrap gap-2">
-          <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-950/50 text-indigo-800">
+          <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand/10 text-brand">
             {sporsmalTypeLabel(type)}
           </span>
           <span
@@ -77,7 +77,7 @@ export default async function SporsmalDetailPage({
                 <dt className="text-muted-foreground">Fra</dt>
                 <dd className="font-medium text-foreground">
                   {question.sporsmal_fra?.id ? (
-                    <Link href={routes.politiker(question.sporsmal_fra.id)} className="hover:text-indigo-600 dark:text-indigo-400">
+                    <Link href={routes.politiker(question.sporsmal_fra.id)} className="hover:text-brand">
                       {fraNavn}
                       {question.sporsmal_fra.parti?.navn ? ` (${question.sporsmal_fra.parti.navn})` : ''}
                     </Link>

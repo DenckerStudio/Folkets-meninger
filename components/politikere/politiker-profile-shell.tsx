@@ -136,12 +136,12 @@ function OverviewPanel({ rep, profile }: PolitikerProfileShellProps) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-indigo-100 bg-indigo-50 dark:bg-indigo-950/40/50 p-5">
-        <h2 className="font-semibold text-indigo-900 flex items-center gap-2">
+      <div className="rounded-2xl border border-brand/20 bg-brand/5 p-5">
+        <h2 className="font-semibold text-brand flex items-center gap-2">
           <Info className="w-4 h-4" />
           Om rollen: {rolleInfo.title}
         </h2>
-        <p className="text-sm text-indigo-900/90 mt-2 leading-relaxed">{rolleInfo.description}</p>
+        <p className="text-sm text-foreground mt-2 leading-relaxed">{rolleInfo.description}</p>
       </div>
 
       {rep.erRegjeringsmedlem ? (
@@ -167,7 +167,7 @@ function OverviewPanel({ rep, profile }: PolitikerProfileShellProps) {
       {topTopics.length > 0 ? (
         <div className="rounded-2xl border border-border bg-card p-6">
           <h2 className="font-semibold text-foreground flex items-center gap-2 mb-4">
-            <Tags className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <Tags className="w-4 h-4 text-brand" />
             Mest involverte temaer
           </h2>
           <div className="space-y-3">
@@ -287,12 +287,12 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
                 className={cn(
                   'flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-colors',
                   active
-                    ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900/50'
+                    ? 'bg-brand/10 text-brand border border-brand/20'
                     : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground border border-transparent',
                 )}
                 aria-current={active ? 'page' : undefined}
               >
-                <Icon className={cn('w-5 h-5 shrink-0 mt-0.5', active ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground')} />
+                <Icon className={cn('w-5 h-5 shrink-0 mt-0.5', active ? 'text-brand' : 'text-muted-foreground')} />
                 <span className="min-w-0">
                   <span className="font-medium block">{tab.label}</span>
                   <span className="text-xs text-muted-foreground line-clamp-2">{tab.description}</span>
@@ -308,7 +308,7 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
           {activeTab === 'forslag' ? (
             <section className="rounded-2xl border border-border bg-card p-6">
               <h2 className="text-xl font-bold text-foreground mb-2 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <FileText className="w-5 h-5 text-brand" />
                 Forslag politikeren har brakt opp
               </h2>
               <p className="text-sm text-muted-foreground mb-6">
@@ -340,7 +340,7 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
           {activeTab === 'temaer' ? (
             <section className="rounded-2xl border border-border bg-card p-6">
               <h2 className="text-xl font-bold text-foreground mb-2 flex items-center gap-2">
-                <Tags className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <Tags className="w-5 h-5 text-brand" />
                 Temaer med mest involvering
               </h2>
               <p className="text-sm text-muted-foreground mb-6">
@@ -365,7 +365,7 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
                         </div>
                         <div className="h-2 rounded-full bg-muted overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-indigo-50 dark:bg-indigo-950/400"
+                            className="h-full rounded-full bg-brand"
                             style={{ width: `${width}%` }}
                           />
                         </div>
@@ -384,7 +384,7 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
             <section className="rounded-2xl border border-border bg-card p-6 space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-foreground mb-2 flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                  <MessageSquare className="w-5 h-5 text-brand" />
                   Offisielle svar på Folkets Stemme
                 </h2>
                 <p className="text-sm text-muted-foreground">

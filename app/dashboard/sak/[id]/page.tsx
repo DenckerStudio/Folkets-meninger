@@ -239,7 +239,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                   title="Forslagstillere"
                   tooltipKey="forslagstillere"
                   icon="users"
-                  iconClassName="w-5 h-5 text-indigo-600 dark:text-indigo-400"
+                  iconClassName="w-5 h-5 text-brand"
                 />
                 <div className="flex flex-wrap gap-3">
                   {forslagstillere.map((f: any, i: number) => {
@@ -255,7 +255,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                               sizes="32px"
                             />
                           ) : (
-                            <div className="w-full h-full rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-indigo-600 dark:text-indigo-300 font-bold text-xs">
+                            <div className="w-full h-full rounded-full bg-brand/10 flex items-center justify-center text-brand font-bold text-xs">
                               {f.fornavn?.[0]}{f.etternavn?.[0]}
                             </div>
                           )}
@@ -273,7 +273,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                       <Link
                         key={f.id}
                         href={routes.politiker(String(f.id))}
-                        className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2 border border-border hover:border-indigo-200 hover:bg-indigo-50 dark:bg-indigo-950/40/40 transition-colors"
+                        className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2 border border-border hover:border-brand/40 hover:bg-brand/5 transition-colors"
                       >
                         {content}
                       </Link>
@@ -397,7 +397,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
             {(emner.length > 0 || stikkord.length > 0) ? (
               <div className="flex flex-wrap gap-2">
                 {emner.map((e: any, i: number) => (
-                  <span key={`e-${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-950/50 dark:text-blue-200 dark:border-blue-900/50">
+                  <span key={`e-${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-brand/10 text-brand border border-brand/20">
                     <Tag className="w-3 h-3" />
                     {e.navn || e}
                   </span>
@@ -421,9 +421,9 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                       <Link
                         key={i}
                         href={`/dashboard/sak/${relSak.id}`}
-                        className="block p-3 rounded-lg bg-muted/50 hover:bg-muted border border-border transition-colors"
+                        className="group block p-3 rounded-lg bg-muted/50 hover:bg-muted border border-border transition-colors"
                       >
-                        <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400">{relSak.korttittel || relSak.tittel}</div>
+                        <div className="text-sm font-medium text-foreground group-hover:text-brand">{relSak.korttittel || relSak.tittel}</div>
                         {rel.relasjonstype ? (
                           <div className="text-xs text-muted-foreground mt-1">{rel.relasjonstype}</div>
                         ) : null}
@@ -439,7 +439,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                 href={`https://data.stortinget.no/eksport/sak?sakid=${sak.id}&format=json`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-brand transition-colors"
               >
                 <ExternalLink className="mr-1.5 w-4 h-4" />
                 Kilde: data.stortinget.no (Sak ID: {sak.id})
@@ -449,7 +449,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
                   href={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-brand transition-colors"
                 >
                   <ExternalLink className="mr-1.5 w-4 h-4" />
                   Se på stortinget.no

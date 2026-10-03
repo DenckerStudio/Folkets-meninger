@@ -351,7 +351,7 @@ export function AlignmentScore({
         href={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sakId}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-5 inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-indigo-600 dark:hover:text-indigo-400"
+        className="mt-5 inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-brand"
       >
         <ExternalLink className="mr-1.5 h-4 w-4" />
         Se saken på stortinget.no

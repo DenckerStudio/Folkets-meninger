@@ -34,7 +34,7 @@ export function MobileTopBar() {
       >
         <Bell className="w-5 h-5 text-foreground" />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[1.125rem] h-[1.125rem] rounded-full bg-indigo-600 text-[10px] font-bold text-white flex items-center justify-center px-1">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[1.125rem] h-[1.125rem] rounded-full bg-brand text-[10px] font-bold text-brand-foreground flex items-center justify-center px-1">
             {unread > 99 ? '99+' : unread}
           </span>
         )}

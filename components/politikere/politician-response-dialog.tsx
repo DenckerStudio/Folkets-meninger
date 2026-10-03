@@ -42,17 +42,17 @@ export function PoliticianResponseList({ rep, responses }: PoliticianResponseDia
             key={response.id}
             type="button"
             onClick={() => setActiveResponse(response)}
-            className="w-full rounded-2xl border border-indigo-100 bg-indigo-50 dark:bg-indigo-950/40/40 p-5 text-left transition-colors hover:border-indigo-200 hover:bg-indigo-50 dark:bg-indigo-950/40"
+            className="w-full rounded-2xl border border-brand/20 bg-brand/5 p-5 text-left transition-colors hover:border-brand/40 hover:bg-brand/10"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-indigo-800 line-clamp-2">
+                <p className="text-sm font-semibold text-brand line-clamp-2">
                   {response.issueTitle ?? `Sak ${response.stortingetIssueId}`}
                 </p>
                 <p className="mt-2 text-sm text-foreground line-clamp-3">{truncate(response.content)}</p>
                 <time className="mt-3 block text-xs text-muted-foreground">{formatPublishedDate(response.publishedAt)}</time>
               </div>
-              <MessageSquareQuote className="h-5 w-5 shrink-0 text-indigo-500" />
+              <MessageSquareQuote className="h-5 w-5 shrink-0 text-brand" />
             </div>
           </button>
         ))}
@@ -80,7 +80,7 @@ export function PoliticianResponseList({ rep, responses }: PoliticianResponseDia
               <p className="text-xs text-muted-foreground">Svaret er knyttet til saken under.</p>
               <Link
                 href={routes.sak(activeResponse.stortingetIssueId)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand/90 transition-colors"
               >
                 Åpne saken
                 <ExternalLink className="h-4 w-4" />

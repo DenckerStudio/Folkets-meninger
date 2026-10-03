@@ -36,9 +36,9 @@ export function ProfileStanceHistory({ items, loading }: ProfileStanceHistoryPro
             <li key={item.stortinget_issue_id}>
               <Link
                 href={routes.sak(item.stortinget_issue_id)}
-                className="block px-4 py-4 hover:bg-muted/50 transition-colors"
+                className="group block px-4 py-4 hover:bg-muted/50 transition-colors"
               >
-                <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 truncate">
+                <p className="text-sm font-medium text-foreground truncate group-hover:text-brand">
                   {item.title || `Sak ${item.stortinget_issue_id}`}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
