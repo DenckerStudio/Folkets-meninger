@@ -71,12 +71,100 @@ test.describe('AI-chat orb overlay', () => {
       path: `${ARTIFACTS}/chat-panel-actions-open.png`,
     });
 
+    await expect(
+      panel.getByText('Uten nøkkel viser vi bare instruksjonen. Vi later ikke som en modell har rettet teksten.'),
+    ).toBeVisible();
+
+    await page.route('**/api/chat/rettskriving', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          original: 'Stortinget bør vurdere forslaget om klima.',
+          context: 'annet',
+          instruction: 'Rett stavemåte, grammatikk og tydelighet. Behold brukerens mening.',
+          published: false,
+          mode: 'instruction',
+          corrected: null,
+          notes: null,
+        }),
+      });
+    });
+
+    await panel.getByPlaceholder('Lim inn eller skriv en kladd. Vi publiserer den ikke.').fill(
+      'Stortinget bør vurdere forslaget om klima.',
+    );
+    await panel.getByRole('button', { name: 'Sjekk kladden' }).click();
+    await expect(panel.locator('[data-rettskriving-result="instruction"]')).toBeVisible();
+    await expect(panel.getByText('Ingen LLM-retting uten nøkkel')).toBeVisible();
+    await expect(panel.locator('[data-rettskriving-result="corrected"]')).toHaveCount(0);
+
+    await page.screenshot({
+      path: `${ARTIFACTS}/chat-panel-rettskriving-no-key.png`,
+    });
+
     await panel.getByRole('button', { name: 'Finn oppdaterte kilder' }).click();
     await expect(panel.getByPlaceholder('Søk etter oppdaterte kilder…')).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Søk' })).toBeVisible();
 
     await page.screenshot({
       path: `${ARTIFACTS}/chat-panel-actions-sources.png`,
+    });
+  });
+
+  test('Stemme+ panel with BYOK shows a corrected draft from the API', async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.route('**/api/stemme-plus/status', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          tier: 'stemme_plus',
+          has_byok: true,
+          monthly_price_nok: 59,
+          checkout_configured: false,
+        }),
+      });
+    });
+    await page.route('**/api/chat/rettskriving', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          original: 'Stortinget burde vurdere forslaget om klima.',
+          context: 'annet',
+          instruction: 'Rett stavemåte, grammatikk og tydelighet. Behold brukerens mening.',
+          published: false,
+          mode: 'corrected',
+          corrected: 'Stortinget bør vurdere forslaget om klima.',
+          notes: 'Byttet burde til bør.',
+        }),
+      });
+    });
+
+    await page.goto('/dashboard/avstemninger');
+    await expect(page.getByRole('heading', { name: 'Avstemninger', exact: true })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Åpne AI-chat' }).click();
+    const panel = page.locator('[data-chat-panel]');
+    await expect(panel).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Rett kladden' })).toBeVisible();
+    await expect(
+      panel.getByText('Vi retter kladden med nøkkelen din. Kladden publiseres ikke.'),
+    ).toBeVisible();
+
+    await panel.getByPlaceholder('Lim inn eller skriv en kladd. Vi publiserer den ikke.').fill(
+      'Stortinget burde vurdere forslaget om klima.',
+    );
+    await panel.getByRole('button', { name: 'Rett kladden' }).click();
+    await expect(panel.locator('[data-rettskriving-result="corrected"]')).toBeVisible();
+    await expect(panel.getByText('Rettet med nøkkelen din')).toBeVisible();
+    await expect(panel.getByText('Stortinget bør vurdere forslaget om klima.')).toBeVisible();
+    await expect(panel.getByText('Merknader: Byttet burde til bør.')).toBeVisible();
+
+    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    await page.screenshot({
+      path: `${ARTIFACTS}/chat-panel-rettskriving-keyed.png`,
     });
   });
 

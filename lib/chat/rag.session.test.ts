@@ -24,9 +24,11 @@ assert.doesNotMatch(routeSrc, /getServiceSupabase/);
 assert.doesNotMatch(routeSrc, /runtime\s*=\s*['"]edge['"]/);
 
 assert.match(rettSrc, /requireStemmePlus/);
-assert.match(rettSrc, /runRettsskriving/);
-assert.doesNotMatch(rettSrc, /loadDecryptedByok/);
+assert.match(rettSrc, /loadDecryptedByok\(gate\.userId, session\)/);
+assert.match(rettSrc, /getServerSupabase/);
+assert.match(rettSrc, /resolveRettsskrivingResult/);
 assert.doesNotMatch(rettSrc, /streamText/);
+assert.doesNotMatch(rettSrc, /runtime\s*=\s*['"]edge['"]/);
 assert.match(sourcesSrc, /requireStemmePlus/);
 assert.match(sourcesSrc, /runUpdatedSourceSearch/);
 assert.doesNotMatch(sourcesSrc, /loadDecryptedByok/);

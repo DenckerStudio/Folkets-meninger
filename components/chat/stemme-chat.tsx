@@ -111,7 +111,7 @@ export function StemmeChat({
       compact
       className={emptyClassName}
       title="Lagre en LLM-nøkkel først"
-      description="Stemme+ AI-chat kjører på nøkkelen din (OpenAI, Anthropic, AI Gateway eller OpenAI-kompatibel). Rettskriving og kildesøk over fungerer uten nøkkel. Vi lagrer nøkkelen kryptert og sender den aldri tilbake til nettleseren."
+      description="Stemme+ AI-chat kjører på nøkkelen din (OpenAI, Anthropic, AI Gateway eller OpenAI-kompatibel). Uten nøkkel viser rettskriving bare instruksjonen — vi later ikke som en modell har rettet teksten. Kildesøk fungerer uten nøkkel. Vi lagrer nøkkelen kryptert og sender den aldri tilbake til nettleseren."
       action={
         <Link
           href={`${routes.minSide}?tab=stemme-plus`}
@@ -126,7 +126,9 @@ export function StemmeChat({
   if (gate === 'no-key') {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
-        {showActions ? <ChatPanelActions issueTitle={issueTitle} compact={compact} /> : null}
+        {showActions ? (
+          <ChatPanelActions issueTitle={issueTitle} compact={compact} hasByok={false} />
+        ) : null}
         {noKeyEmpty}
       </div>
     );
@@ -134,7 +136,9 @@ export function StemmeChat({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {showActions ? <ChatPanelActions issueTitle={issueTitle} compact={compact} /> : null}
+      {showActions ? (
+        <ChatPanelActions issueTitle={issueTitle} compact={compact} hasByok={gate === 'ready'} />
+      ) : null}
       <SurfaceCard
         padded={false}
         className={cn('flex flex-col', compact ? 'min-h-0 flex-1 border-0 shadow-none' : 'min-h-[32rem]')}

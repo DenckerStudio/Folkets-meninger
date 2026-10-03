@@ -21,6 +21,9 @@ const spelling = runRettsskriving({
 assert.equal(spelling.ok, true);
 if (!spelling.ok) throw new Error('expected rettskriving ok');
 assert.equal(spelling.result.published, false);
+assert.equal(spelling.result.mode, 'instruction');
+assert.equal(spelling.result.corrected, null);
+assert.equal(spelling.result.notes, null);
 assert.equal(spelling.result.original, 'Stortinget bør vurdere forslaget om klima.');
 assert.equal(spelling.result.instruction, RETTSSKRIVING_INSTRUCTION);
 assert.doesNotMatch(spelling.result.instruction, /publisert som innlegg/i);

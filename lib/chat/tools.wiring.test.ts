@@ -67,7 +67,7 @@ async function main() {
     },
     rettskriving: {
       context: spelling.context,
-      instructionOnly: !('corrected' in spelling),
+      instructionOnly: spelling.mode === 'instruction' && spelling.corrected == null,
     },
     searxng: {
       unavailable: sources.unavailable,

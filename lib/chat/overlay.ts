@@ -16,7 +16,7 @@ export function resolveChatGate(input: {
   return 'ready';
 }
 
-/** Rettskriving and SearXNG actions need login + Stemme+, not a BYOK LLM turn. */
+/** Overlay actions need login + Stemme+. SearXNG and instruction-only rettskriving work without BYOK; LLM correction uses the user's key when present. */
 export function canUseOverlayActions(gate: ChatGateReason): boolean {
   switch (gate) {
     case 'ready':

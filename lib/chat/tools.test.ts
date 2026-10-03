@@ -13,6 +13,8 @@ async function main() {
 
   assert.equal(spelling.original, 'Stortinget bør vurdere forslaget om klima.');
   assert.equal(spelling.context, 'diskusjon');
+  assert.equal(spelling.mode, 'instruction');
+  assert.equal(spelling.corrected, null);
   assert.match(spelling.instruction, /rettskriving|stavemåte|grammatikk/i);
   assert.doesNotMatch(spelling.instruction, /generer et ferdig innlegg som om det var publisert/i);
   console.log('chat/tools.test.ts: ok');

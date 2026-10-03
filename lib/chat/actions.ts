@@ -10,12 +10,26 @@ export const RETTSSKRIVING_DRAFT_MIN = 8;
 export const RETTSSKRIVING_DRAFT_MAX = 8000;
 export const SOURCE_QUERY_MIN = 3;
 
-export type RettsskrivingResult = {
+export type RettsskrivingMode = 'instruction' | 'corrected';
+
+type RettsskrivingBase = {
   original: string;
   context: SpellingContext;
   instruction: string;
   published: false;
 };
+
+export type RettsskrivingResult =
+  | (RettsskrivingBase & {
+      mode: 'instruction';
+      corrected: null;
+      notes: null;
+    })
+  | (RettsskrivingBase & {
+      mode: 'corrected';
+      corrected: string;
+      notes: string | null;
+    });
 
 export type SourceSearchResult =
   | { ok: true; unavailable: false; results: SearxngHit[] }
@@ -43,7 +57,7 @@ export function spellingContextLabel(context: SpellingContext): string {
   }
 }
 
-/** Same payload as `helpRettsskriving` — does not publish UGC or invent a correction. */
+/** Instruction-only payload — does not publish UGC or invent a correction. */
 export function runRettsskriving(input: {
   draft: string;
   context: SpellingContext;
@@ -63,6 +77,9 @@ export function runRettsskriving(input: {
       context: input.context,
       instruction: RETTSSKRIVING_INSTRUCTION,
       published: false,
+      mode: 'instruction',
+      corrected: null,
+      notes: null,
     },
   };
 }

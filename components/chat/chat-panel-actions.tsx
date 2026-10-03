@@ -21,6 +21,7 @@ type PanelAction = 'rettskriving' | 'kilder';
 type ChatPanelActionsProps = {
   issueTitle?: string | null;
   compact?: boolean;
+  hasByok?: boolean;
 };
 
 function actionLabel(action: PanelAction): string {
@@ -36,7 +37,11 @@ function actionLabel(action: PanelAction): string {
   }
 }
 
-export function ChatPanelActions({ issueTitle, compact = false }: ChatPanelActionsProps) {
+export function ChatPanelActions({
+  issueTitle,
+  compact = false,
+  hasByok = false,
+}: ChatPanelActionsProps) {
   const [action, setAction] = useState<PanelAction>('rettskriving');
 
   return (
@@ -62,12 +67,16 @@ export function ChatPanelActions({ issueTitle, compact = false }: ChatPanelActio
       <p className="mt-2 text-xs text-muted-foreground">
         Direkte handlinger — uten å starte en AI-samtale. Kladden publiseres ikke.
       </p>
-      {action === 'rettskriving' ? <RettsskrivingForm /> : <SourceSearchForm issueTitle={issueTitle} />}
+      {action === 'rettskriving' ? (
+        <RettsskrivingForm hasByok={hasByok} />
+      ) : (
+        <SourceSearchForm issueTitle={issueTitle} />
+      )}
     </div>
   );
 }
 
-function RettsskrivingForm() {
+function RettsskrivingForm({ hasByok }: { hasByok: boolean }) {
   const [draft, setDraft] = useState('');
   const [context, setContext] = useState<SpellingContext>('annet');
   const [busy, setBusy] = useState(false);
@@ -105,6 +114,11 @@ function RettsskrivingForm() {
         void submit();
       }}
     >
+      <p className="text-xs text-muted-foreground">
+        {hasByok
+          ? 'Vi retter kladden med nøkkelen din. Kladden publiseres ikke.'
+          : 'Uten nøkkel viser vi bare instruksjonen. Vi later ikke som en modell har rettet teksten.'}
+      </p>
       <label className="block">
         <span className="sr-only">Kladd til rettskriving</span>
         <textarea
@@ -133,21 +147,50 @@ function RettsskrivingForm() {
         </label>
         <Button type="submit" size="sm" disabled={busy || draft.trim().length < RETTSSKRIVING_DRAFT_MIN}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          Sjekk kladden
+          {hasByok ? 'Rett kladden' : 'Sjekk kladden'}
         </Button>
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {result ? (
-        <div className="space-y-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
+      {result ? <RettsskrivingResultView result={result} /> : null}
+    </form>
+  );
+}
+
+function RettsskrivingResultView({ result }: { result: RettsskrivingResult }) {
+  switch (result.mode) {
+    case 'corrected':
+      return (
+        <div
+          data-rettskriving-result="corrected"
+          className="space-y-2 rounded-lg border border-border bg-muted/30 px-3 py-2"
+        >
           <p className="text-xs font-medium text-foreground">
-            Kladden er ikke publisert · {spellingContextLabel(result.context)}
+            Rettet med nøkkelen din · ikke publisert · {spellingContextLabel(result.context)}
+          </p>
+          <p className="whitespace-pre-wrap text-sm text-foreground">{result.corrected}</p>
+          {result.notes ? (
+            <p className="text-xs text-muted-foreground">Merknader: {result.notes}</p>
+          ) : null}
+        </div>
+      );
+    case 'instruction':
+      return (
+        <div
+          data-rettskriving-result="instruction"
+          className="space-y-2 rounded-lg border border-dashed border-border bg-muted/20 px-3 py-2"
+        >
+          <p className="text-xs font-medium text-foreground">
+            Ingen LLM-retting uten nøkkel · ikke publisert · {spellingContextLabel(result.context)}
           </p>
           <p className="text-xs text-muted-foreground">{result.instruction}</p>
           <p className="whitespace-pre-wrap text-sm text-foreground">{result.original}</p>
         </div>
-      ) : null}
-    </form>
-  );
+      );
+    default: {
+      const _never: never = result.mode;
+      return _never;
+    }
+  }
 }
 
 function SourceSearchForm({ issueTitle }: { issueTitle?: string | null }) {
