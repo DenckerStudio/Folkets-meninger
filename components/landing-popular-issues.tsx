@@ -3,6 +3,7 @@ import { ArrowRight, Users } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
 import { routes } from '@/lib/routes';
 import FadeIn from '@/components/fade-in';
+import { LandingHeadingRule } from '@/components/icons/civic';
 
 export type LandingIssue = {
   id: string;
@@ -25,6 +26,7 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f] mb-3">Engasjement</p>
             <h2 className="text-3xl font-bold text-[#001433] tracking-tight sm:text-4xl">Populære saker nå</h2>
+            <LandingHeadingRule />
             <p className="mt-2 text-[#001433]/65 max-w-xl">
               De mest engasjerende sakene for ja/nei-stemming.
             </p>
