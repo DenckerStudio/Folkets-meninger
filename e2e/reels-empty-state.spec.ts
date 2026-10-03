@@ -3,6 +3,8 @@ import fs from 'node:fs';
 
 const ARTIFACTS = '/opt/cursor/artifacts';
 
+test.use({ video: { mode: 'on', size: { width: 1280, height: 720 } } });
+
 test.describe('Utforsk Reels empty chrome', () => {
   test.beforeAll(() => {
     fs.mkdirSync(ARTIFACTS, { recursive: true });
@@ -32,6 +34,8 @@ test.describe('Utforsk Reels empty chrome', () => {
     await page.getByRole('button', { name: 'Åpne AI-chat' }).click();
     const panel = page.locator('[data-chat-panel]');
     await expect(panel).toBeVisible();
+    await expect(panel.getByRole('link', { name: 'Logg inn' })).toBeVisible({ timeout: 20_000 });
+    await expect(panel.getByText('Laster AI-chat…')).toHaveCount(0);
     await expect(panel.getByText('Logg inn for å bruke AI-chat')).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Rettskriving' })).toHaveCount(0);
     await page.screenshot({ path: `${ARTIFACTS}/tip_utforsk_reels_orb_login_gate.png` });
