@@ -11,7 +11,8 @@ Etter `20260823200000_n8n_postgrest_rpcs.sql` (`supabase db push`) skriver n8n v
 | App cron | Aktiv | https://n8n.heyklever.app/workflow/rwiy05sitrv5QDbQ |
 | Motforslag horingsinnspill | Aktiv | https://n8n.heyklever.app/workflow/VX3uRDi7cVRwpxuQ |
 | System poll (Reels) draft | Aktiv | https://n8n.heyklever.app/workflow/TWTrqNYhvYcWz4UX |
-| n8n error handler | Kilde i repo | [`error-handler.workflow.ts`](error-handler.workflow.ts) |
+| n8n feilvarsling | Publisert | https://n8n.heyklever.app/workflow/iBNVwqPIsvf0JmTc |
+| Pipeline-helse | Aktiv | https://n8n.heyklever.app/workflow/m6lHrqTxSVdJTcma |
 | Forum (v9/v12/v13/RSS) | Arkivert | `archive/forum/` |
 
 ## Feilhåndtering og app-fallback
@@ -26,7 +27,7 @@ Aktive flyter har **per-node retry** (`retryOnFail` / `maxTries`) og `onError` s
 | App cron | HTTP mot `/api/cron/*` retried én gang | Endepunktene er selvstendige (`x-cron-secret`) og kan kalles uten n8n |
 | Motforslag innspill | Error Trigger logger | Appen logger webhook-feil; rapporten kan postes på nytt |
 
-**Error Trigger:** [`error-handler.workflow.ts`](error-handler.workflow.ts) er delt handler. Publiser den i n8n, deretter sett `settings.errorWorkflow` på de fire produksjonsflytene. Samme-workflow Error Trigger ligger også i system-poll, embeddings og hearing-innspill.
+**Error Trigger:** [`error-handler.workflow.ts`](error-handler.workflow.ts) er publisert som `iBNVwqPIsvf0JmTc`. `settings.errorWorkflow` er satt på AI-sammendrag, embeddings, Reels-utkast, app cron, motforslag og pipeline-helse. Handleren POSTer til `POST /api/ops/n8n-notify` (`x-cron-secret`); appen logger og e-poster når SMTP er satt. Fyll `cronSecret` i n8n «Notify settings».
 
 **App cron n8n-retry** (hver 2. time i `app-cron.workflow.ts`):
 
@@ -332,6 +333,25 @@ N8N_HEARING_INNSPILL_WEBHOOK_URL=https://n8n.heyklever.app/webhook/folkets-heari
 **Live workflow:** https://n8n.heyklever.app/workflow/VX3uRDi7cVRwpxuQ
 ```
 
+## Feilvarsling og app-fallback
+
+Delt Error Trigger: [`error-handler.workflow.ts`](error-handler.workflow.ts) · live `iBNVwqPIsvf0JmTc`.
+`settings.errorWorkflow` er satt på AI-sammendrag, embeddings, Reels-utkast, app cron, motforslag og pipeline-helse.
+
+Ved produksjonsfeil POSTer handleren til `POST /api/ops/n8n-notify` med `x-cron-secret`.
+Appen logger alltid; e-post går til `OPS_ALERT_EMAIL` / `FEEDBACK_INBOX_EMAIL` / `kontakt@folketsstemme.no` når SMTP er satt.
+Fyll `cronSecret` i n8n «Notify settings» (ikke commit secret).
+
+App-side backup (uavhengig av n8n Error Trigger):
+
+```bash
+curl -sS -H "x-cron-secret: $CRON_SECRET" \
+  "https://www.folkets-stemme.no/api/cron/n8n-retry"
+```
+
+`n8n-retry` køer manglende AI-sammendrag, pending embeddings og neste Reels-utkast via eksisterende webhooks (`create_system_poll_draft`, aldri `ensure_stortinget_poll`).
+
 ## Deploy fra repo
 
 Valider og opprett via n8n-mcp: `validate_workflow` → `create_workflow_from_code` → `publish_workflow`.
+Sett `settings.errorWorkflow` til `iBNVwqPIsvf0JmTc` på produksjonsflytene etter publish.

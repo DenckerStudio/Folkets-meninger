@@ -175,6 +175,23 @@ export async function sendSiteFeedbackEmail(input: SiteFeedbackEmailInput) {
   });
 }
 
+export type OpsAlertEmailInput = {
+  to: string;
+  subject: string;
+  text: string;
+};
+
+export async function sendOpsAlertEmail(input: OpsAlertEmailInput) {
+  const transporter = getTransporter();
+  const { from } = getSmtpConfig();
+  const html = `
+    <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5;">
+      <p style="white-space:pre-wrap; margin:0;">${escapeHtml(input.text)}</p>
+    </div>
+  `.trim();
+  await transporter.sendMail({ from, to: input.to, subject: input.subject, html });
+}
+
 function escapeHtml(value: string) {
   return value
     .replaceAll('&', '&amp;')
