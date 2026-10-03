@@ -31,7 +31,7 @@ export default function AdminStatistikkClient() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <BarChart3 className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+          <BarChart3 className="w-6 h-6 text-brand" />
           Statistikk-eksport
         </h1>
         <p className="text-sm text-muted-foreground mt-1">

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { BackButton } from '@/components/dashboard/back-button';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { OpinionPointsList } from '@/components/opinions/opinion-points-list';
 import { StanceExpandModal } from '@/components/opinions/stance-expand-modal';
 import { useAuth } from '@/hooks/use-auth';
@@ -51,7 +52,7 @@ export function OpinionDetailClient({ opinion, isAuthor }: OpinionDetailClientPr
   };
 
   return (
-    <div className="space-y-8 pb-12">
+    <DashboardPage>
       <BackButton fallbackHref={routes.folketsMeninger} />
 
       <article className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -162,6 +163,6 @@ export function OpinionDetailClient({ opinion, isAuthor }: OpinionDetailClientPr
           </ul>
         )}
       </section>
-    </div>
+    </DashboardPage>
   );
 }

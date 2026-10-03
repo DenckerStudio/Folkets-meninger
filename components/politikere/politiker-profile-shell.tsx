@@ -23,6 +23,8 @@ import { POLITIKER_TABS, isPolitikerTabId, type PolitikerTabId } from '@/compone
 import { SAK_CATEGORY_BADGE_CLASS } from '@/lib/sak-status';
 import { getSakKindLabel, type SakKind } from '@/lib/stortinget-sak-presentation';
 import { BackButton } from '@/components/dashboard/back-button';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { PoliticianResponseList } from '@/components/politikere/politician-response-dialog';
 import { getPolitikerRolleInfo } from '@/lib/politiker-roller';
 
@@ -38,7 +40,7 @@ function resolveTab(tabParam: string | null): PolitikerTabId {
 
 function SakList({ saker, emptyMessage }: { saker: PolitikerSakItem[]; emptyMessage: string }) {
   if (saker.length === 0) {
-    return <p className="text-sm text-muted-foreground py-6 text-center">{emptyMessage}</p>;
+    return <EmptyState title="Ingen saker her" description={emptyMessage} className="py-6" />;
   }
 
   return (
@@ -47,7 +49,7 @@ function SakList({ saker, emptyMessage }: { saker: PolitikerSakItem[]; emptyMess
         <Link
           key={`${sak.role}-${sak.id}`}
           href={routes.sak(sak.id)}
-          className="block rounded-2xl border border-border bg-card p-4 hover:border-indigo-100 dark:border-indigo-900/50 hover:shadow-sm transition-all"
+          className="block rounded-2xl border border-border bg-card p-4 hover:border-brand/40 hover:shadow-sm transition-all"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -227,7 +229,7 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-12">
+    <DashboardPage className="mx-auto max-w-5xl">
       <BackButton fallbackHref={routes.politikere} />
 
       <div className="bg-card rounded-3xl border border-border p-8 shadow-sm">
@@ -417,6 +419,6 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
           ) : null}
         </div>
       </div>
-    </div>
+    </DashboardPage>
   );
 }

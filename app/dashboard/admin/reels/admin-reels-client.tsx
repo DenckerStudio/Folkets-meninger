@@ -7,6 +7,7 @@ import { pollDraftGenerationStatusLabel } from '@/lib/admin/poll-draft-generatio
 import { usePollDraftGeneration } from '@/hooks/use-poll-draft-generation';
 import { routes } from '@/lib/routes';
 import { AdminBackLink } from '@/components/admin/admin-shell';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import type { PollRecord, SakPollCandidate, SakPollCoverage } from '@/lib/polls/types';
 
 type DraftsResponse = { drafts: PollRecord[] };
@@ -284,9 +285,11 @@ export default function AdminReelsClient() {
           </div>
         </div>
         {drafts.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
-            Ingen systemgenererte utkast. Generer fra en sak under, eller vent på n8n-kjøringen. Listen holdes tom til et ekte utkast finnes.
-          </p>
+          <EmptyState
+            title="Ingen utkast"
+            description="Generer fra en sak under, eller vent på n8n-kjøringen. Listen holdes tom til et ekte utkast finnes."
+            className="py-8"
+          />
         ) : (
           <ul className="space-y-3">
             {drafts.map((poll) => (
@@ -330,9 +333,11 @@ export default function AdminReelsClient() {
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-foreground">Sak-kandidater</h2>
         {candidates.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Ingen kandidater med RAG, AI-sammendrag eller sakssammendrag akkurat nå.
-          </p>
+          <EmptyState
+            title="Ingen sak-kandidater"
+            description="Ingen kandidater med RAG, AI-sammendrag eller sakssammendrag akkurat nå."
+            className="py-6"
+          />
         ) : (
           <ul className="space-y-2">
             {candidates.map((candidate) => (

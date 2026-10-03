@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { PageHeader } from '@/components/page-header';
 import { PollBallot } from '@/components/polls/poll-ballot';
 import { PollResultView } from '@/components/polls/poll-result-view';
 import { getServerSupabase } from '@/lib/supabase-server';
@@ -36,7 +38,7 @@ export default async function PollDetailPage({ params }: PageProps) {
   ]);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 pb-12">
+    <DashboardPage className="mx-auto max-w-3xl space-y-6">
       <Link
         href={poll.track === 'system' ? routes.utforsk : routes.avstemninger}
         className="text-sm font-medium text-brand hover:underline"
@@ -49,7 +51,7 @@ export default async function PollDetailPage({ params }: PageProps) {
           {pollStatusLabel(poll.status)}
         </span>
       </div>
-      <h1 className="text-2xl font-bold tracking-tight text-foreground">{poll.title}</h1>
+      <PageHeader title={poll.title} />
       {poll.track === 'system' ? (
         <p className="text-sm text-muted-foreground">{SYSTEM_REEL_DISCLAIMER}</p>
       ) : null}
@@ -85,6 +87,6 @@ export default async function PollDetailPage({ params }: PageProps) {
         <h2 className="text-base font-semibold text-foreground">Resultat per fylke</h2>
         <PollResultView byFylke={byFylke} />
       </section>
-    </div>
+    </DashboardPage>
   );
 }
