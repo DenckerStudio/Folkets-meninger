@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
-import { buildChatLoginNextPath, canUseOverlayActions, type ChatGateReason } from '@/lib/chat/overlay';
+import { canUseOverlayActions, chatLoginHref, type ChatGateReason } from '@/lib/chat/overlay';
 
 type StemmeChatProps = {
   gate: ChatGateReason;
@@ -71,9 +71,7 @@ export function StemmeChat({
         description="AI-chat er en Stemme+-funksjon. Logg inn med e-post eller Google for å fortsette."
         action={
           <Link
-            href={`${routes.login}?next=${encodeURIComponent(
-              buildChatLoginNextPath(pathname || routes.utforsk, issueId, routes.utforsk),
-            )}`}
+            href={chatLoginHref(pathname || routes.utforsk, issueId, routes.utforsk)}
             className="inline-flex rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
           >
             Logg inn

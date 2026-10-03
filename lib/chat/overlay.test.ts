@@ -4,10 +4,13 @@ import {
   buildChatLoginNextPath,
   canUseOverlayActions,
   chatDeepLinkQuery,
+  chatLoginHref,
   issueIdFromPathname,
   resolveChatGate,
   shouldOpenChatFromSearchParams,
 } from '@/lib/chat/overlay';
+import { loginWithNext } from '@/lib/safe-redirect';
+import { routes } from '@/lib/routes';
 
 test('resolveChatGate prefers login, then Stemme+, then BYOK', () => {
   assert.equal(
@@ -74,4 +77,22 @@ test('buildChatLoginNextPath keeps chat reopen + optional sak', () => {
     buildChatLoginNextPath('/dashboard/utforsk?foo=1', '104'),
     '/dashboard/utforsk?chat=1&sak=104',
   );
+});
+
+test('chatLoginHref uses loginWithNext and keeps overlay reopen', () => {
+  assert.equal(
+    chatLoginHref('/dashboard/utforsk', null),
+    loginWithNext('/dashboard/utforsk?chat=1'),
+  );
+  assert.equal(
+    chatLoginHref('/dashboard/utforsk', '200417'),
+    loginWithNext('/dashboard/utforsk?chat=1&sak=200417'),
+  );
+  assert.equal(
+    chatLoginHref('/dashboard/sak/200417', '200417'),
+    loginWithNext('/dashboard/sak/200417?chat=1&sak=200417'),
+  );
+  assert.equal(chatLoginHref('https://evil.example', '200417'), loginWithNext(routes.utforsk));
+  assert.equal(chatLoginHref('//evil.example', '200417'), loginWithNext(routes.utforsk));
+  assert.equal(chatLoginHref(routes.login, '200417'), loginWithNext(routes.utforsk));
 });

@@ -1,3 +1,5 @@
+import { loginWithNext } from '@/lib/safe-redirect';
+
 export type ChatGateReason = 'login' | 'free' | 'no-key' | 'ready';
 
 export type ChatIssueContext = {
@@ -67,4 +69,13 @@ export function buildChatLoginNextPath(
   const raw = (pathname ?? '').trim() || fallbackPath;
   const pathOnly = raw.split('?')[0] || fallbackPath;
   return `${pathOnly}?${chatDeepLinkQuery(issueId)}`;
+}
+
+/** Login URL with sanitized `next` that still reopens the overlay (`?chat=1`). */
+export function chatLoginHref(
+  pathname: string | null | undefined,
+  issueId?: string | null,
+  fallbackPath = '/dashboard/utforsk',
+): string {
+  return loginWithNext(buildChatLoginNextPath(pathname, issueId, fallbackPath));
 }
