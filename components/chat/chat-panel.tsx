@@ -8,6 +8,16 @@ import { useChatOverlay } from '@/components/chat/chat-overlay-context';
 import { STEMME_PLUS_MONTHLY_PRICE_NOK } from '@/lib/stemme-plus/constants';
 import { resolveChatGate, type ChatGateReason } from '@/lib/chat/overlay';
 
+const STATUS_LOAD_TIMEOUT_MS = 8000;
+
+function guestGate(): ChatGateReason {
+  return resolveChatGate({
+    authenticated: false,
+    hasStemmePlus: false,
+    hasByok: false,
+  });
+}
+
 type PanelMeta = {
   priceNok: number;
   checkoutConfigured: boolean;
@@ -51,20 +61,19 @@ export function ChatPanel() {
     if (!open) return;
 
     let cancelled = false;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), STATUS_LOAD_TIMEOUT_MS);
     const load = async () => {
       setGate('loading');
       setError(null);
       try {
-        const res = await fetch('/api/stemme-plus/status', { cache: 'no-store' });
+        const res = await fetch('/api/stemme-plus/status', {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
         if (cancelled) return;
         if (res.status === 401) {
-          setGate(
-            resolveChatGate({
-              authenticated: false,
-              hasStemmePlus: false,
-              hasByok: false,
-            }),
-          );
+          setGate(guestGate());
           setMeta({
             priceNok: STEMME_PLUS_MONTHLY_PRICE_NOK,
             checkoutConfigured: false,
@@ -95,7 +104,13 @@ export function ChatPanel() {
           checkoutConfigured: Boolean(json.checkout_configured),
         });
       } catch (loadError) {
-        if (!cancelled) {
+        if (cancelled) return;
+        setGate(guestGate());
+        setMeta({
+          priceNok: STEMME_PLUS_MONTHLY_PRICE_NOK,
+          checkoutConfigured: false,
+        });
+        if (!(loadError instanceof DOMException && loadError.name === 'AbortError')) {
           setError(loadError instanceof Error ? loadError.message : 'Kunne ikke hente tilgang til AI-chat.');
         }
       }
@@ -104,6 +119,8 @@ export function ChatPanel() {
     void load();
     return () => {
       cancelled = true;
+      controller.abort();
+      window.clearTimeout(timeout);
     };
   }, [open]);
 

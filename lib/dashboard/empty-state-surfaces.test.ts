@@ -38,5 +38,7 @@ const orbCss = read('components/chat/chat-orb.css');
 assert.match(orbCss, /z-index:\s*80/);
 const chatPanel = read('components/chat/chat-panel.tsx');
 assert.match(chatPanel, /z-\[90\]/);
+assert.match(chatPanel, /STATUS_LOAD_TIMEOUT_MS/);
+assert.match(chatPanel, /guestGate\(\)/);
 
 console.log('dashboard/empty-state-surfaces.test.ts: ok Reels + admin empties + chat redirect');
