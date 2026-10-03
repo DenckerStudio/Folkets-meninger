@@ -26,8 +26,8 @@ export default async function HoringerPage() {
           title="Høringer"
           description={
             stats.open > 0
-              ? `${stats.open} høringer er åpne for innspill nå. Søk, filtrer og del din mening — eller les hva andre mener.`
-              : 'Se planlagte og avholdte høringer fra Stortinget. Søk, filtrer og følg med på demokratiet.'
+              ? `${stats.open} åpne for innspill. Søk, filtrer eller del din mening.`
+              : 'Planlagte og avholdte høringer fra Stortinget.'
           }
         />
         <Link

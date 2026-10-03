@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { ChangelogList } from '@/components/appens-fremtid/changelog-list';
-import { RoadmapList } from '@/components/appens-fremtid/roadmap-list';
 import { SectionTabs } from '@/components/appens-fremtid/section-tabs';
+import { LandingRoadmap } from '@/components/landing-roadmap';
 import { SuggestionForm } from '@/components/appens-fremtid/suggestion-form';
 import { VotingList } from '@/components/appens-fremtid/voting-list';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
@@ -94,7 +94,7 @@ export function AppensFremtidPage() {
     <DashboardPage>
       <PageHeader
         title={APPENS_FREMTID_TITLE}
-        description="Send inn forslag, se hva som er på vei, og stem på det vi har lagt ut."
+        description="Forslag, veikart og det som er på vei."
       />
 
       <SectionTabs items={TABS} value={tab} onChange={setTab} label="Appens fremtid" />
@@ -136,7 +136,7 @@ export function AppensFremtidPage() {
       {tab === 'roadmap' ? (
         <section className="space-y-3">
           <p className="text-sm text-muted-foreground">Det vi planlegger, jobber med eller har gjort.</p>
-          <RoadmapList items={roadmap} />
+          <LandingRoadmap items={roadmap} />
         </section>
       ) : null}
     </DashboardPage>

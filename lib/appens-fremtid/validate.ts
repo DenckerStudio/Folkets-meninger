@@ -60,7 +60,16 @@ export function validateChangelogInput(input: Record<string, unknown>): { title:
   return { title, body };
 }
 
-export function validateRoadmapInput(input: Record<string, unknown>): { title: string; body: string; status: RoadmapStatus } | { error: string } {
+export function parseSortOrder(value: unknown): number | undefined | { error: string } {
+  if (value === undefined || value === null || value === '') return undefined;
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n) || n < 0 || n > 9999) return { error: 'Ugyldig rekkefølge.' };
+  return Math.floor(n);
+}
+
+export function validateRoadmapInput(
+  input: Record<string, unknown>,
+): { title: string; body: string; status: RoadmapStatus; sortOrder?: number } | { error: string } {
   const title = normalizeText(input.title);
   const body = normalizeText(input.body);
   const titleError = lengthError('Tittelen', title, ROADMAP_TITLE_MIN, ROADMAP_TITLE_MAX);
@@ -68,5 +77,52 @@ export function validateRoadmapInput(input: Record<string, unknown>): { title: s
   const bodyError = lengthError('Teksten', body, ROADMAP_BODY_MIN, ROADMAP_BODY_MAX);
   if (bodyError) return { error: bodyError };
   if (!isRoadmapStatus(input.status)) return { error: 'Velg en status.' };
-  return { title, body, status: input.status };
+  const sortOrder = parseSortOrder(input.sortOrder ?? input.sort_order);
+  if (sortOrder && typeof sortOrder === 'object') return sortOrder;
+  return sortOrder === undefined
+    ? { title, body, status: input.status }
+    : { title, body, status: input.status, sortOrder };
+}
+
+export function validateRoadmapPatch(
+  input: Record<string, unknown>,
+):
+  | { id: string; title?: string; body?: string; status?: RoadmapStatus; sortOrder?: number }
+  | { error: string } {
+  const id = typeof input.id === 'string' ? input.id.trim() : '';
+  if (!id) return { error: 'Mangler punkt' };
+
+  const next: { id: string; title?: string; body?: string; status?: RoadmapStatus; sortOrder?: number } =
+    { id };
+  if (input.title !== undefined) {
+    const title = normalizeText(input.title);
+    const titleError = lengthError('Tittelen', title, ROADMAP_TITLE_MIN, ROADMAP_TITLE_MAX);
+    if (titleError) return { error: titleError };
+    next.title = title;
+  }
+  if (input.body !== undefined) {
+    const body = normalizeText(input.body);
+    const bodyError = lengthError('Teksten', body, ROADMAP_BODY_MIN, ROADMAP_BODY_MAX);
+    if (bodyError) return { error: bodyError };
+    next.body = body;
+  }
+  if (input.status !== undefined) {
+    if (!isRoadmapStatus(input.status)) return { error: 'Velg en status.' };
+    next.status = input.status;
+  }
+  if (input.sortOrder !== undefined || input.sort_order !== undefined) {
+    const sortOrder = parseSortOrder(input.sortOrder ?? input.sort_order);
+    if (sortOrder && typeof sortOrder === 'object') return sortOrder;
+    if (sortOrder !== undefined) next.sortOrder = sortOrder;
+  }
+
+  if (
+    next.title === undefined &&
+    next.body === undefined &&
+    next.status === undefined &&
+    next.sortOrder === undefined
+  ) {
+    return { error: 'Mangler felt å oppdatere' };
+  }
+  return next;
 }

@@ -19,7 +19,7 @@ export function pollChoiceLabel(choice: PollChoice): string {
 }
 
 export const SYSTEM_REEL_DISCLAIMER =
-  'Disse spørsmålene er systemgenererte fra stortingssaker (AI og saksdokumenter) og godkjent av en administrator. De er ikke offisielle Stortinget-avstemninger.';
+  'Systemgenerert fra stortingssaker og godkjent av admin. Ikke en offisiell Stortinget-avstemning.';
 
 export function pollTrackLabel(track: PollTrack): string {
   switch (track) {

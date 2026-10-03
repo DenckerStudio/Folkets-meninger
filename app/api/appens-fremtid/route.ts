@@ -16,9 +16,9 @@ export async function GET() {
 
   try {
     const [suggestions, changelog, roadmap] = await Promise.all([
-      listVotingAppSuggestions(user.id),
-      listAppChangelogEntries(),
-      listAppRoadmapItems(),
+      listVotingAppSuggestions(user.id).catch(() => []),
+      listAppChangelogEntries().catch(() => []),
+      listAppRoadmapItems().catch(() => []),
     ]);
     return NextResponse.json({ suggestions, changelog, roadmap });
   } catch (error) {

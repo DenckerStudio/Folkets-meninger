@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useSyncExternalStore, type ReactNode } from 'react';
+import { LayoutGroup } from 'motion/react';
+import { TabUnderline } from '@/components/motion/tab-underline';
 import { cn } from '@/lib/utils';
 
 export const SAK_PAGE_TAB_IDS = [
@@ -87,6 +89,7 @@ export function SakPageTabs({
         className="sticky top-[calc(4rem+env(safe-area-inset-top,0px))] z-30 -mx-4 overflow-x-auto border-b border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:mx-0 sm:px-0"
         aria-label="Saksseksjoner"
       >
+        <LayoutGroup>
         <div
           className="flex w-max min-w-full gap-1 rounded-xl border border-border bg-muted/40 p-1 sm:w-auto sm:min-w-0"
           role="tablist"
@@ -99,7 +102,7 @@ export function SakPageTabs({
               id={`sak-tab-${id}`}
               onClick={() => selectTab(id)}
               className={cn(
-                'shrink-0 rounded-lg px-2.5 py-2 text-xs font-medium whitespace-nowrap transition-colors sm:px-3 sm:text-sm',
+                'relative shrink-0 rounded-lg px-2.5 py-2 text-xs font-medium whitespace-nowrap transition-colors sm:px-3 sm:text-sm',
                 active === id
                   ? 'bg-card text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground',
@@ -109,9 +112,11 @@ export function SakPageTabs({
               tabIndex={active === id ? 0 : -1}
             >
               {TAB_LABELS[id]}
+              {active === id ? <TabUnderline layoutId="sak-page-tabs" /> : null}
             </button>
           ))}
         </div>
+        </LayoutGroup>
       </nav>
 
       {SAK_PAGE_TAB_IDS.map((id) => (

@@ -30,7 +30,7 @@ export function AdminShell({ children }: AdminShellProps) {
           <h1 className="text-2xl font-bold text-foreground">Admin</h1>
         </div>
         <p className="text-sm text-muted-foreground">
-          Verktøy for drift, innhold og statistikk i Folkets Stemme.
+          Drift, innhold og statistikk.
         </p>
       </header>
 

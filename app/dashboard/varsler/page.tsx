@@ -79,7 +79,7 @@ export default function VarslerPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <PageHeader
           title="Varsler"
-          description="In-app varsler. E-postinnstillinger ligger under Preferanser."
+          description="E-postinnstillinger ligger under Preferanser."
           className="flex-1"
         />
         <button

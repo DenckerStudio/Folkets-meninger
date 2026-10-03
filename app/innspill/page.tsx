@@ -15,8 +15,7 @@ export default function InnspillPage() {
           Gi innspill
         </h1>
         <p className="mx-auto max-w-xl text-lg leading-relaxed text-[#001433]/65">
-          Har du en idé, funnet en feil, eller spørsmål om plattformen? Send oss en melding — vi leser
-          alt og bruker tilbakemeldingene til å forbedre Folkets Stemme.
+          Idé, feil eller spørsmål? Vi leser alt.
         </p>
       </div>
 

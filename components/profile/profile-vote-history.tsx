@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { routes } from '@/lib/routes';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { MotionList, MotionListRow } from '@/components/motion/list-row';
 import { ProfileCard } from '@/components/profile/profile-card';
+import { routes } from '@/lib/routes';
 
 export type VoteHistoryItem = {
   stortinget_issue_id: string;
@@ -18,7 +19,7 @@ type ProfileVoteHistoryProps = {
 
 export function ProfileVoteHistory({ items, loading }: ProfileVoteHistoryProps) {
   return (
-    <ProfileCard title="Siste stemmer" description="Saker du har stemt på. Stemmer er anonyme i offentlig statistikk.">
+    <ProfileCard title="Siste stemmer" description="Anonyme i offentlig statistikk.">
       {loading ? (
         <p className="text-center py-8 text-muted-foreground text-sm">Laster stemmehistorikk…</p>
       ) : items.length === 0 ? (
@@ -33,9 +34,9 @@ export function ProfileVoteHistory({ items, loading }: ProfileVoteHistoryProps) 
           }
         />
       ) : (
-        <ul className="divide-y divide-border rounded-xl border border-border overflow-hidden">
+        <MotionList className="divide-y divide-border rounded-xl border border-border overflow-hidden">
           {items.map((item) => (
-            <li key={item.stortinget_issue_id}>
+            <MotionListRow id={item.stortinget_issue_id} key={item.stortinget_issue_id}>
               <Link
                 href={routes.sak(item.stortinget_issue_id)}
                 className="group block px-4 py-4 hover:bg-muted/50 transition-colors"
@@ -47,9 +48,9 @@ export function ProfileVoteHistory({ items, loading }: ProfileVoteHistoryProps) 
                   Stemt: {new Date(item.voted_at).toLocaleDateString('nb-NO')}
                 </p>
               </Link>
-            </li>
+            </MotionListRow>
           ))}
-        </ul>
+        </MotionList>
       )}
     </ProfileCard>
   );

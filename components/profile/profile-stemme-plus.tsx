@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { HeartHandshake, Loader2, Sparkles } from 'lucide-react';
+import { HeartHandshake, Loader2 } from 'lucide-react';
 import { useChatOverlay } from '@/components/chat/chat-overlay-context';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { CivicTick } from '@/components/icons/civic';
 import { ByokSettings, type ByokMetaView } from '@/components/profile/byok-settings';
 import { ProfileCard } from '@/components/profile/profile-card';
 import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
@@ -128,7 +129,7 @@ export function ProfileStemmePlus() {
       <ul className="mt-4 space-y-2">
         {STEMME_PLUS_BENEFITS.map((benefit) => (
           <li key={benefit} className="flex items-start gap-2 text-sm text-foreground">
-            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
+            <CivicTick className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
             {benefit}
           </li>
         ))}
