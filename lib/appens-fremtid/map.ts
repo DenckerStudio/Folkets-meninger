@@ -64,12 +64,13 @@ export function mapRoadmapRow(row: Record<string, unknown>): RoadmapItem | null 
     return null;
   }
   if (!isRoadmapStatus(row.status)) return null;
+  const sortRaw = typeof row.sort_order === 'number' ? row.sort_order : Number(row.sort_order);
   return {
     id: row.id,
     title: row.title,
     body: row.body,
     status: row.status,
-    sortOrder: asCount(row.sort_order),
+    sortOrder: Number.isFinite(sortRaw) ? Math.floor(sortRaw) : 0,
     createdAt: typeof row.created_at === 'string' ? row.created_at : '',
   };
 }

@@ -5,7 +5,7 @@ export default function UtforskLoading() {
     <div className="space-y-8">
       <PageHeader
         title="Utforsk saker"
-        description="Lovforslag og representantforslag fra Stortinget — kildedokumenter."
+        description="Lovforslag og representantforslag fra Stortinget."
       />
       <div className="h-[5.5rem] animate-pulse rounded-2xl border border-border bg-muted/40" />
       <div className="animate-pulse space-y-4">

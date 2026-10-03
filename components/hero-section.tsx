@@ -27,7 +27,7 @@ export default function HeroSection() {
           <span
             className={`h-1.5 w-1.5 shrink-0 rounded-full bg-[#ba0c2f] ${reducedMotion ? '' : 'animate-pulse'}`}
           />
-          Demokratiet fortsetter mellom valgene
+          Uavhengig plattform
         </motion.div>
 
         <motion.h1
@@ -46,8 +46,7 @@ export default function HeroSection() {
           transition={{ duration: 0.75, delay: 0.4, ease: 'easeOut' }}
           className="mt-6 max-w-2xl mx-auto text-lg text-[#001433]/75 sm:text-xl leading-relaxed"
         >
-          Folkets Stemme er en nøytral plattform som brobygger mellom Stortinget og innbyggerne. Si din mening med
-          Ja, Nei eller Blank — stemmen lagres anonymt i statistikken.
+          Si din mening med Ja, Nei eller Blank. Stemmen lagres anonymt i statistikken.
         </motion.p>
 
         <motion.div
@@ -78,9 +77,7 @@ export default function HeroSection() {
         >
           <Info className="w-4 h-4 text-[#00205b]/50 mr-3 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-[#001433]/70 leading-relaxed">
-            <strong className="font-semibold text-[#001433]">Uavhengig plattform:</strong> Vi samarbeider ikke med
-            Regjeringen eller Stortinget. Dette er et uavhengig initiativ for å styrke demokratiet. Vårt håp er at
-            politikerne på sikt vil ta i bruk dataene og lytte til folket her inne.
+            Vi samarbeider ikke med Regjeringen eller Stortinget. Håpet er at politikerne lytter til folket her.
           </p>
         </motion.div>
       </div>

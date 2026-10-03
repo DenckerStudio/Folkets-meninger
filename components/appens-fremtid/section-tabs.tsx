@@ -1,5 +1,7 @@
 'use client';
 
+import { LayoutGroup } from 'motion/react';
+import { TabUnderline } from '@/components/motion/tab-underline';
 import { cn } from '@/lib/utils';
 
 type TabItem<T extends string> = {
@@ -19,6 +21,7 @@ export function SectionTabs<T extends string>({
   label: string;
 }) {
   return (
+    <LayoutGroup>
     <div className="flex flex-wrap gap-2" role="tablist" aria-label={label}>
       {items.map((item) => (
         <button
@@ -28,15 +31,17 @@ export function SectionTabs<T extends string>({
           aria-selected={value === item.id}
           onClick={() => onChange(item.id)}
           className={cn(
-            'rounded-lg px-3 py-1.5 text-sm font-medium',
+            'relative rounded-lg px-3 py-1.5 text-sm font-medium',
             value === item.id
               ? 'bg-brand/10 text-brand'
               : 'text-muted-foreground hover:bg-muted hover:text-foreground',
           )}
         >
           {item.label}
+          {value === item.id ? <TabUnderline layoutId="section-tabs" /> : null}
         </button>
       ))}
     </div>
+    </LayoutGroup>
   );
 }

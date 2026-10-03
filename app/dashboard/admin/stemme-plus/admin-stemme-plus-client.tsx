@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { Star } from 'lucide-react';
+import { CivicHeart } from '@/components/icons/civic';
 import { AdminEmailGrant } from '@/components/admin/admin-email-grant';
 import { AdminBackLink } from '@/components/admin/admin-shell';
 
@@ -78,7 +78,7 @@ export default function AdminStemmePlusClient() {
     <div className="space-y-6">
       <div>
         <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-          <Star className="h-5 w-5 text-brand" aria-hidden />
+          <CivicHeart className="h-5 w-5 text-brand" />
           Stemme+
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">

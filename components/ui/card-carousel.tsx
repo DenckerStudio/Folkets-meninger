@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperType } from 'swiper';
 import { Autoplay, EffectCoverflow, Navigation, Pagination } from 'swiper/modules';
-import { SparklesIcon } from 'lucide-react';
+import { CivicBubble } from '@/components/icons/civic';
 
 import 'swiper/css';
 import 'swiper/css/effect-coverflow';
@@ -104,7 +104,7 @@ export const CardCarousel: React.FC<CardCarouselProps> = ({
             >
               {badge ?? (
                 <>
-                  <SparklesIcon className="fill-brand-accent/30 stroke-1 text-brand" /> Reels
+                  <CivicBubble className="h-4 w-4 text-brand" /> Reels
                 </>
               )}
             </Badge>

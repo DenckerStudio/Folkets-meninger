@@ -6,8 +6,10 @@ import {
 } from '@/lib/appens-fremtid/constants';
 import {
   normalizeText,
+  parseSortOrder,
   validateChangelogInput,
   validateRoadmapInput,
+  validateRoadmapPatch,
   validateSuggestionBody,
   validateSuggestionInput,
   validateSuggestionTitle,
@@ -55,5 +57,20 @@ const badRoadmap = validateRoadmapInput({
   status: 'soon',
 });
 assert.deepEqual(badRoadmap, { error: 'Velg en status.' });
+
+assert.equal(parseSortOrder(2), 2);
+assert.equal(parseSortOrder(0), 0);
+assert.deepEqual(parseSortOrder(-1), { error: 'Ugyldig rekkefølge.' });
+
+const okPatch = validateRoadmapPatch({
+  id: '11111111-1111-1111-1111-111111111111',
+  title: 'Mørk modus',
+  status: 'done',
+  sortOrder: 3,
+});
+assert.equal('error' in okPatch, false);
+
+const badPatch = validateRoadmapPatch({ id: '11111111-1111-1111-1111-111111111111' });
+assert.deepEqual(badPatch, { error: 'Mangler felt å oppdatere' });
 
 console.log('appens-fremtid/validate.test.ts: ok');

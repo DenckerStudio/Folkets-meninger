@@ -17,7 +17,7 @@ export default async function AvstemningerPage() {
     <div className="space-y-8 pb-12">
       <PageHeader
         title="Avstemninger"
-        description="Nasjonale spørsmål med Ja, Nei eller Blank. Stortingssaker som kildedokumenter ligger under Utforsk."
+        description="Ja, nei eller blank. Saker ligger under Utforsk."
       />
       {withTotals.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border px-6 py-12 text-center text-muted-foreground">

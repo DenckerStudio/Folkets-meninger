@@ -30,7 +30,7 @@ export default async function SporsmalPage({
         <div className="bg-card rounded-[2.5rem] shadow-sm border border-border p-8 md:p-12">
           <PageHeader
             title="Spørsmål"
-            description={`Skriftlige spørsmål, spørretime og interpellasjoner fra Stortinget (${sesjonId}). Søk, filtrer og les detaljer.`}
+            description={`Skriftlige spørsmål, spørretime og interpellasjoner (${sesjonId}).`}
           />
         </div>
       </FadeIn>

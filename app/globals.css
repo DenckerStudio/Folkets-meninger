@@ -178,3 +178,87 @@
     background-position: 0% center;
   }
 }
+
+@keyframes civic-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes civic-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes civic-ring {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.civic-icon {
+  overflow: visible;
+}
+
+.civic-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: civic-draw 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.civic-draw-delay {
+  animation-delay: 0.18s;
+}
+
+.civic-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: civic-pulse 2.4s ease-in-out infinite;
+}
+
+.civic-ring {
+  animation: civic-ring 2.2s ease-in-out infinite;
+}
+
+.civic-ring-delay {
+  animation-delay: 0.35s;
+}
+
+.landing-heading-rule {
+  display: block;
+  width: 2.5rem;
+  height: 2px;
+  margin-top: 0.7rem;
+  background: #ba0c2f;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.landing-heading-rule--center {
+  margin-inline: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion='full']) .civic-draw,
+  html.motion-reduce .civic-draw,
+  html:not([data-motion='full']) .civic-pulse,
+  html.motion-reduce .civic-pulse,
+  html:not([data-motion='full']) .civic-ring,
+  html.motion-reduce .civic-ring {
+    animation: none;
+  }
+}

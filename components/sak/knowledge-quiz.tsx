@@ -4,14 +4,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   BookOpen,
-  BrainCircuit,
   CheckCircle2,
   ChevronRight,
   Loader2,
   Lock,
   RotateCcw,
-  Sparkles,
 } from 'lucide-react';
+import { CivicBallot } from '@/components/icons/civic';
 import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
 import { QUIZ_KIND_LABELS } from '@/lib/knowledge/quiz';
@@ -158,13 +157,12 @@ export function KnowledgeQuiz({ sakId, variant = 'default' }: { sakId: string; v
       >
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-            <BrainCircuit className="h-5 w-5" />
+            <CivicBallot className="h-5 w-5" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-foreground">Kunnskapstest</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Vi mangler nok saksgrunnlag for å lage en meningsfull test akkurat nå. Les
-              dokumentene eller kom tilbake når AI-sammendraget er klart.
+              For lite saksgrunnlag akkurat nå. Les dokumentene, eller kom tilbake når sammendraget er klart.
             </p>
             <button
               type="button"
@@ -216,22 +214,22 @@ export function KnowledgeQuiz({ sakId, variant = 'default' }: { sakId: string; v
     >
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
-          <BrainCircuit className="h-5 w-5" />
+          <CivicBallot className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-bold text-foreground">Kunnskapstest</h2>
             {variant === 'pre-vote' ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-xs font-medium text-brand">
-                <Sparkles className="h-3 w-3" />
+                <CivicBallot className="h-3 w-3" />
                 Før du stemmer
               </span>
             ) : null}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {variant === 'pre-vote'
-              ? 'Sjekk at du forstår hva saken handler om, hvem som berøres og hvilke konsekvenser som nevnes — før du avgir stemme.'
-              : `Du trenger ${quiz.passScore} av ${quiz.questions.length} riktige for å bestå og få merket Informert borger (+15 poeng).`}
+              ? 'Sjekk at du forstår saken før du stemmer.'
+              : `${quiz.passScore} av ${quiz.questions.length} riktige for merket Informert borger.`}
           </p>
           {contextNote ? (
             <p

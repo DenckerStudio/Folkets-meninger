@@ -38,7 +38,7 @@ export default async function KalenderPage() {
     <div className="space-y-8 pb-12">
       <PageHeader
         title="Kalender"
-        description="Høringssesjoner og innspillsfrister fra Stortinget. Abonner i din egen kalender, eller bla måned for måned."
+        description="Høringer og innspillsfrister. Abonner, eller bla måned for måned."
       />
 
       {events.length === 0 ? (

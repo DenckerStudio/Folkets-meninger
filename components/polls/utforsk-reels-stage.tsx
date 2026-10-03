@@ -8,8 +8,11 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import { ArrowLeft, ArrowRight, Compass, Sparkles } from 'lucide-react';
-import { motion } from 'motion/react';
+import { createPortal } from 'react-dom';
+import { ArrowLeft, ArrowRight, Compass } from 'lucide-react';
+import { CivicBubble } from '@/components/icons/civic';
+import { EmptyLineState } from '@/components/motion/empty-line';
+import { AnimatePresence, motion } from 'motion/react';
 import type { Swiper as SwiperType } from 'swiper';
 import { CardCarousel } from '@/components/ui/card-carousel';
 import { ReelCarouselCard } from '@/components/polls/reel-vote-card';
@@ -17,30 +20,7 @@ import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import type { SystemReelFeedItem } from '@/lib/polls/types';
 import { cn } from '@/lib/utils';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
-
-/** Horizontal track — soft spring so the pane glide feels calm, not snappy. */
-const SLIDE = { type: 'spring', stiffness: 56, damping: 22, mass: 0.92 } as const;
-/** Cross-fade inspired by 21st transition-panel (opacity + blur + slight y). */
-const PANE_EASE = [0.22, 1, 0.36, 1] as const;
-const PANE_TRANSITION = { duration: 0.52, ease: PANE_EASE } as const;
-
-function paneMotion(reelsOpen: boolean, pane: 'saker' | 'reels') {
-  const hidden = pane === 'saker' ? reelsOpen : !reelsOpen;
-  if (hidden) {
-    return {
-      opacity: 0,
-      y: pane === 'saker' ? -10 : 10,
-      filter: 'blur(5px)',
-      scale: 0.988,
-    };
-  }
-  return {
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    scale: 1,
-  };
-}
+import { MODAL_TRANSITION } from '@/lib/motion/tokens';
 
 function subscribeLocationHash(onStoreChange: () => void) {
   window.addEventListener('hashchange', onStoreChange);
@@ -57,6 +37,14 @@ function getLocationHash() {
 
 function getServerLocationHash() {
   return '';
+}
+
+function useIsMounted() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 }
 
 function notifyHashChanged() {
@@ -93,6 +81,7 @@ type UtforskReelsStageProps = {
 
 export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
   const reducedMotion = usePrefersReducedMotion();
+  const mounted = useIsMounted();
   const hash = useSyncExternalStore(subscribeLocationHash, getLocationHash, getServerLocationHash);
   const reelsOpen = hash === '#reels';
   const [activePollId, setActivePollId] = useState<string | null>(null);
@@ -102,8 +91,7 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
       window.history.pushState(null, '', `${window.location.pathname}${window.location.search}#reels`);
       notifyHashChanged();
     }
-    window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
-  }, [reducedMotion]);
+  }, []);
 
   const closeReels = useCallback(() => {
     setActivePollId(null);
@@ -113,41 +101,60 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
     }
   }, []);
 
+  useEffect(() => {
+    if (!reelsOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [reelsOpen]);
+
+  useEffect(() => {
+    if (!reelsOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeReels();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [reelsOpen, closeReels]);
+
   return (
-    <div className="overflow-hidden">
-      <motion.div
-        className="flex w-[200%] items-start"
-        animate={{ x: reelsOpen ? '-50%' : '0%' }}
-        transition={reducedMotion ? { duration: 0 } : SLIDE}
-      >
-        <motion.div
-          initial={false}
-          animate={paneMotion(reelsOpen, 'saker')}
-          transition={reducedMotion ? { duration: 0 } : PANE_TRANSITION}
-          className="w-1/2 shrink-0 origin-center space-y-8"
-          aria-hidden={reelsOpen}
-          {...(reelsOpen ? { inert: true } : {})}
-        >
-          {children({ openReels, itemCount: items.length })}
-        </motion.div>
-        <motion.div
-          id="reels"
-          initial={false}
-          animate={paneMotion(reelsOpen, 'reels')}
-          transition={reducedMotion ? { duration: 0 } : PANE_TRANSITION}
-          className="w-1/2 shrink-0 origin-center"
-          aria-hidden={!reelsOpen}
-          {...(!reelsOpen ? { inert: true } : {})}
-        >
-          <ReelsPanel
-            active={reelsOpen}
-            items={items}
-            activePollId={activePollId}
-            onSelect={setActivePollId}
-            onClose={closeReels}
-          />
-        </motion.div>
-      </motion.div>
+    <div>
+      <div aria-hidden={reelsOpen} {...(reelsOpen ? { inert: true } : {})}>
+        {children({ openReels, itemCount: items.length })}
+      </div>
+      {mounted
+        ? createPortal(
+            <AnimatePresence>
+              {reelsOpen ? (
+                <motion.div
+                  key="reels-modal"
+                  id="reels"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Reels"
+                  className="fixed inset-0 z-[70] overflow-y-auto bg-background"
+                  initial={reducedMotion ? false : { opacity: 0, scale: 0.972 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={reducedMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.985 }}
+                  transition={reducedMotion ? { duration: 0 } : MODAL_TRANSITION}
+                >
+                  <div className="mx-auto min-h-dvh w-full max-w-3xl px-4 py-6 sm:px-6">
+                    <ReelsPanel
+                      active={reelsOpen}
+                      items={items}
+                      activePollId={activePollId}
+                      onSelect={setActivePollId}
+                      onClose={closeReels}
+                    />
+                  </div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
@@ -170,7 +177,7 @@ type ReelsNavCopy = {
   badge: string;
   title: string;
   subtitle: string;
-  BadgeIcon: typeof Sparkles;
+  BadgeIcon: typeof CivicBubble | typeof Compass;
 };
 
 function reelsNavCopy(direction: 'forward' | 'back', itemCount: number): ReelsNavCopy {
@@ -181,15 +188,15 @@ function reelsNavCopy(direction: 'forward' | 'back', itemCount: number): ReelsNa
         title: 'Del din mening',
         subtitle:
           itemCount > 0
-            ? 'Si ja eller nei på systemgenererte spørsmål fra stortingssaker.'
-            : 'Ingen Reels er publisert ennå. Åpne for å se status.',
-        BadgeIcon: Sparkles,
+            ? 'Ja, nei eller blank på spørsmål fra stortingssaker.'
+            : 'Ingen Reels er publisert ennå.',
+        BadgeIcon: CivicBubble,
       };
     case 'back':
       return {
         badge: 'Utforsk',
         title: 'Tilbake til saker',
-        subtitle: 'Lovforslag og representantforslag fra Stortinget — kildedokumenter.',
+        subtitle: 'Lovforslag og representantforslag.',
         BadgeIcon: Compass,
       };
     default: {
@@ -268,22 +275,24 @@ function ReelsPanel({
       <ReelsBackCta onBack={onClose} />
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10">
-            <Sparkles className="h-6 w-6 text-brand" aria-hidden />
-          </div>
-          <h2 className="mt-4 text-lg font-semibold text-foreground">Ingen Reels publisert ennå</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            Når administratorer har godkjent systemgenererte spørsmål fra stortingssaker, vises de her.
-          </p>
+        <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12">
+          <EmptyLineState>
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10">
+              <CivicBubble className="h-6 w-6 text-brand" />
+            </div>
+            <h2 className="mt-4 text-lg font-semibold text-foreground">Ingen Reels publisert ennå</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              Godkjente spørsmål fra stortingssaker vises her.
+            </p>
+          </EmptyLineState>
         </div>
       ) : (
         <CardCarousel
           title="Reels"
-          description="Bla mellom spørsmål. Trykk på et kort for å stemme ja eller nei."
+          description="Bla og trykk for å stemme."
           badge={
             <>
-              <Sparkles className="fill-brand-accent/30 stroke-1 text-brand" /> Systemgenerert
+              <CivicBubble className="h-4 w-4 text-brand" /> Systemgenerert
             </>
           }
           autoplayDelay={reducedMotion ? 0 : 2200}

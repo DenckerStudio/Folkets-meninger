@@ -14,7 +14,7 @@ export default async function SaksgangerPage() {
         <div className="bg-card rounded-[2.5rem] shadow-sm border border-border p-8 md:p-12">
           <PageHeader
             title="Saksganger"
-            description="Oversikt over saksganger (aktivt og historisk). Brukes også i sak-detaljer under saksgang."
+            description="Aktive og historiske saksganger."
           />
         </div>
       </FadeIn>

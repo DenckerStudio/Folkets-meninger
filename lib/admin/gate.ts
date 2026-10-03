@@ -8,17 +8,29 @@ export async function isAdmin(userId: string, _email?: string | null): Promise<b
   if (!userId) return false;
 
   if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    const service = getServiceSupabase();
-    const { data, error } = await service
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .eq('role', 'admin')
-      .maybeSingle();
-    if (!error) return Boolean(data);
+    try {
+      const service = getServiceSupabase();
+      const { data, error } = await service
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle();
+      if (!error) return Boolean(data);
+    } catch {
+      // Dead or mismatched service-role host — fall back to the user session.
+    }
   }
 
   const supabase = await getServerSupabase();
+  const { data: roleRow } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userId)
+    .eq('role', 'admin')
+    .maybeSingle();
+  if (roleRow) return true;
+
   const {
     data: { user },
   } = await supabase.auth.getUser();

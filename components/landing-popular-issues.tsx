@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { ArrowRight, Users } from 'lucide-react';
-import { formatNumber } from '@/lib/utils';
 import { routes } from '@/lib/routes';
 import FadeIn from '@/components/fade-in';
+import { LandingHeadingRule } from '@/components/icons/civic';
+import { CountUp } from '@/components/motion/count-up';
 
 export type LandingIssue = {
   id: string;
@@ -18,6 +19,8 @@ type LandingPopularIssuesProps = {
 };
 
 export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
+  const stemmer = issues.reduce((sum, issue) => sum + issue.votes.total, 0);
+
   return (
     <FadeIn delay={0.22} direction="up">
       <section>
@@ -25,8 +28,9 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f] mb-3">Engasjement</p>
             <h2 className="text-3xl font-bold text-[#001433] tracking-tight sm:text-4xl">Populære saker nå</h2>
+            <LandingHeadingRule />
             <p className="mt-2 text-[#001433]/65 max-w-xl">
-              Lovforslag og representantforslag fra Stortinget — de mest engasjerende sakene for ja/nei-stemming.
+              <CountUp value={issues.length} /> saker · <CountUp value={stemmer} /> stemmer
             </p>
           </div>
           <Link
@@ -60,7 +64,7 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
                   <p className="text-[#001433]/65 line-clamp-2 mb-4">{issue.summary}</p>
                   <div className="flex items-center text-sm text-[#001433]/55">
                     <Users className="w-4 h-4 mr-1.5 shrink-0" />
-                    {formatNumber(issue.votes.total)} har stemt
+                    <CountUp value={issue.votes.total} /> har stemt
                   </div>
                 </div>
                 <div className="px-6 py-4 border-t border-[#00205b]/8 bg-[#00205b]/[0.02] flex flex-col gap-3 mt-auto">

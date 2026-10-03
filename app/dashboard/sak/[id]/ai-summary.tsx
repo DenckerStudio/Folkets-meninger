@@ -1,7 +1,9 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
-import { BrainCircuit, CircleDollarSign, Loader2, Users } from 'lucide-react';
+import type { ComponentType } from 'react';
+import { CircleDollarSign, FileText, Loader2, Users } from 'lucide-react';
+import { CivicBubble } from '@/components/icons/civic';
 import { Dialog } from '@/components/ui/dialog';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
@@ -111,7 +113,7 @@ export default function AiSummary({ sakId }: { sakId: string }) {
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        <BrainCircuit className="h-3.5 w-3.5" aria-hidden />
+        <CivicBubble className="h-3.5 w-3.5" />
         Vis AI-sammendrag
       </button>
 
@@ -130,7 +132,7 @@ export default function AiSummary({ sakId }: { sakId: string }) {
             ) : null}
           </span>
         }
-        description="Generert av AI fra saksdokumentene. Dette er ikke et offisielt Stortinget-sammendrag."
+        description="Fra saksdokumentene. Ikke et offisielt Stortinget-sammendrag."
         size="lg"
         footer={
           <button
@@ -171,7 +173,7 @@ function FactTile({
   label,
   text,
 }: {
-  icon: typeof BrainCircuit;
+  icon: ComponentType<{ className?: string }>;
   label: string;
   text: string;
 }) {
@@ -216,7 +218,7 @@ function V2Summary({ data }: { data: AiSummaryV2 }) {
       {data.topic_cards.length > 0 ? (
         <div className="grid gap-3 md:grid-cols-3">
           {data.topic_cards.map((card) => (
-            <FactTile key={card.title} icon={BrainCircuit} label={card.title} text={card.body} />
+            <FactTile key={card.title} icon={FileText} label={card.title} text={card.body} />
           ))}
         </div>
       ) : null}

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { LandingHeadingRule } from '@/components/icons/civic';
 import { cn } from '@/lib/utils';
 
 export type CallToActionProps = {
@@ -43,6 +44,7 @@ export default function CallToAction({
         <h2 className="text-balance text-3xl font-extrabold tracking-tight text-[#001433] sm:text-4xl md:text-5xl">
           {title}
         </h2>
+        <LandingHeadingRule className="landing-heading-rule--center" />
         <p className="mt-5 max-w-2xl text-pretty text-base leading-relaxed text-[#001433]/65 sm:text-lg">
           {subtitle}
         </p>
