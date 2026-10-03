@@ -10,6 +10,7 @@ import {
   sticky,
   newCredential,
   languageModel,
+  ifElse,
   expr,
 } from '@n8n/workflow-sdk';
 import { FOLKETS_SUPABASE_CRED, FOLKETS_SUPABASE_REST } from './n8n-supabase.shared';
@@ -89,6 +90,9 @@ const fetchSakForPoll = node({
   version: 4.2,
   config: {
     name: 'Fetch sak for poll',
+    retryOnFail: true,
+    maxTries: 2,
+    waitBetweenTries: 2000,
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       authentication: 'predefinedCredentialType',
@@ -108,9 +112,15 @@ const fetchSakForPoll = node({
       issue_id: '200329',
       issue_title: 'Eksempel stortingssak',
       issue_summary: 'Sammendrag',
+      henvisning: 'Prop. 1 L',
+      sak_kind: 'lovforslag',
+      komite: 'Justiskomiteen',
       detail_excerpt: 'Innstillingstekst utdrag',
+      ai_hva: 'Kort AI-sammendrag',
+      fallback_chunks: [],
       existing_questions: [],
       documents: [],
+      source_kind: 'rag',
     },
   ],
 });
@@ -140,7 +150,10 @@ return rows.filter((r) => r && r.issue_id).map((r) => ({ json: r }));`,
       issue_id: '200329',
       issue_title: 'Eksempel stortingssak',
       issue_summary: 'Sammendrag',
-      detail_excerpt: 'Innstillingstekst utdrag',
+      henvisning: 'Prop. 1 L',
+      sak_kind: 'lovforslag',
+      source_kind: 'rag',
+      fallback_chunks: [],
       existing_questions: [],
       documents: [],
     },
@@ -167,7 +180,10 @@ const embedRagQuery = node({
   version: 4.2,
   config: {
     name: 'Ollama embeddings',
-    onError: 'continueErrorOutput',
+    onError: 'continueRegularOutput',
+    retryOnFail: true,
+    maxTries: 3,
+    waitBetweenTries: 3000,
     parameters: {
       method: 'POST',
       url: 'https://ollama.heyklever.app/api/embeddings',
@@ -202,6 +218,10 @@ const retrieveRagChunks = node({
   version: 4.2,
   config: {
     name: 'Retrieve RAG chunks',
+    onError: 'continueRegularOutput',
+    retryOnFail: true,
+    maxTries: 2,
+    waitBetweenTries: 2000,
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       authentication: 'predefinedCredentialType',
@@ -246,7 +266,10 @@ const systemPollGeneratorAgent = node({
   version: 3.1,
   config: {
     name: 'System poll generator (Ollama)',
-    onError: 'continueErrorOutput',
+    onError: 'continueRegularOutput',
+    retryOnFail: true,
+    maxTries: 2,
+    waitBetweenTries: 4000,
     parameters: {
       promptType: 'define',
       text: expr('{{ $json.promptText }}'),
@@ -308,6 +331,9 @@ const saveDraft = node({
   version: 4.2,
   config: {
     name: 'Save system poll draft',
+    retryOnFail: true,
+    maxTries: 2,
+    waitBetweenTries: 2000,
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       authentication: 'predefinedCredentialType',
@@ -323,9 +349,63 @@ const saveDraft = node({
   output: [{ id: 'uuid-poll' }],
 });
 
+const hasEmbeddingVector = ifElse({
+  version: 2.3,
+  config: {
+    name: 'Has embedding vector',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
+        conditions: [
+          {
+            leftValue: expr('{{ $json.vectorLiteral }}'),
+            operator: { type: 'string', operation: 'notEmpty' },
+          },
+        ],
+        combinator: 'and',
+      },
+    },
+  },
+});
+
+const pipelineErrorTrigger = trigger({
+  type: 'n8n-nodes-base.errorTrigger',
+  version: 1,
+  config: { name: 'Pipeline error' },
+  output: [{ workflow: { name: 'folkets-system-poll-draft' }, execution: { id: '0' } }],
+});
+
+const recordPipelineError = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Record pipeline error',
+    parameters: {
+      mode: 'manual',
+      assignments: {
+        assignments: [
+          {
+            id: 'fallback',
+            name: 'appFallback',
+            type: 'string',
+            value: '/api/cron/n8n-retry re-queues draft webhook; pending sak stays without poll',
+          },
+          {
+            id: 'at',
+            name: 'failedAt',
+            type: 'string',
+            value: expr('{{ $now.toISO() }}'),
+          },
+        ],
+      },
+    },
+  },
+  output: [{ appFallback: '/api/cron/n8n-retry', failedAt: '2026-10-03T00:00:00.000Z' }],
+});
+
 sticky(
-  '## System poll (Reels) draft generator\\n\\nHent stortingssak med embeddings → RAG → Ollama ja/nei/blank → polls draft (track=system). Cron daglig 06:00. Webhook: folkets-system-poll-draft. Admin publiserer i appen.',
-  [scheduleTrigger, webhookTrigger],
+  '## System poll (Reels) draft generator\\n\\nHent pending sak (RAG, AI-sammendrag eller metadata) → Ollama ja/nei/blank → create_system_poll_draft. Embedding-feil faller tilbake til dokumentutdrag. Error Trigger logger; appen re-trigges via /api/cron/n8n-retry. ALDRI ensure_stortinget_poll.',
+  [scheduleTrigger, webhookTrigger, pipelineErrorTrigger],
   { color: 4 },
 );
 
@@ -335,8 +415,11 @@ const sakPipeline = normalizePollInput
   .to(buildRagQuery)
   .to(embedRagQuery)
   .to(mapEmbeddingForRag)
-  .to(retrieveRagChunks)
-  .to(mergeRagContext)
+  .to(
+    hasEmbeddingVector
+      .onTrue(retrieveRagChunks.to(mergeRagContext))
+      .onFalse(mergeRagContext),
+  )
   .to(systemPollGeneratorAgent)
   .to(buildSaveQuery.to(gateSaveDraft.to(saveDraft)));
 
@@ -347,4 +430,6 @@ export default workflow(
   .add(scheduleTrigger)
   .to(sakPipeline)
   .add(webhookTrigger)
-  .to(sakPipeline);
+  .to(sakPipeline)
+  .add(pipelineErrorTrigger)
+  .to(recordPipelineError);

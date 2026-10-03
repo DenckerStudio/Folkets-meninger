@@ -284,8 +284,8 @@ export default function AdminReelsClient() {
           </div>
         </div>
         {drafts.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-            Ingen utkast. Generer fra en sak under, eller vent på n8n-kjøringen.
+          <p className="rounded-2xl border border-dashed border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+            Ingen systemgenererte utkast. Generer fra en sak under, eller vent på n8n-kjøringen. Listen holdes tom til et ekte utkast finnes.
           </p>
         ) : (
           <ul className="space-y-3">
@@ -308,7 +308,7 @@ export default function AdminReelsClient() {
                     type="button"
                     disabled={pending}
                     onClick={() => patchPoll(poll.id, 'publish')}
-                    className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                    className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
                   >
                     Publiser
                   </button>
@@ -330,7 +330,9 @@ export default function AdminReelsClient() {
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-foreground">Sak-kandidater</h2>
         {candidates.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Ingen kandidater med klare RAG-chunks akkurat nå.</p>
+          <p className="text-sm text-muted-foreground">
+            Ingen kandidater med RAG, AI-sammendrag eller sakssammendrag akkurat nå.
+          </p>
         ) : (
           <ul className="space-y-2">
             {candidates.map((candidate) => (
@@ -342,6 +344,8 @@ export default function AdminReelsClient() {
                   <p className="text-sm font-medium text-foreground">{candidate.title}</p>
                   <p className="text-xs text-muted-foreground">
                     {candidate.issueId} · {candidate.ragChunkCount} RAG-chunks
+                    {candidate.hasAiSummary ? ' · AI-sammendrag' : ''}
+                    {candidate.sourceKind === 'metadata' ? ' · metadata' : ''}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">

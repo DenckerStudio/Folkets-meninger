@@ -314,12 +314,19 @@ export async function listSakPollCandidates(limit = 25): Promise<SakPollCandidat
       if (!item || typeof item !== 'object') return null;
       const r = item as Record<string, unknown>;
       if (typeof r.issue_id !== 'string') return null;
+      const sourceKindRaw = typeof r.source_kind === 'string' ? r.source_kind : 'metadata';
+      const sourceKind =
+        sourceKindRaw === 'rag' || sourceKindRaw === 'ai_summary' || sourceKindRaw === 'metadata'
+          ? sourceKindRaw
+          : 'metadata';
       return {
         issueId: r.issue_id,
         title: typeof r.title === 'string' ? r.title : r.issue_id,
         summary: typeof r.summary === 'string' ? r.summary : '',
         lastUpdatedAt: typeof r.last_updated_at === 'string' ? r.last_updated_at : null,
         ragChunkCount: Number(r.rag_chunk_count ?? 0),
+        hasAiSummary: Boolean(r.has_ai_summary),
+        sourceKind,
       } satisfies SakPollCandidate;
     })
     .filter((x): x is SakPollCandidate => x != null);
