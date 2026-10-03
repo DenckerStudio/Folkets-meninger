@@ -1,12 +1,15 @@
 import type { ChangelogEntry } from '@/lib/appens-fremtid/constants';
 import { formatWhen } from '@/components/appens-fremtid/format';
+import { EmptyState } from '@/components/dashboard/empty-state';
 
 export function ChangelogList({ entries }: { entries: ChangelogEntry[] }) {
   if (entries.length === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-        Ingen endringer er publisert ennå.
-      </p>
+      <EmptyState
+        compact
+        title="Ingen endringer ennå"
+        description="Ingen endringer er publisert ennå."
+      />
     );
   }
 

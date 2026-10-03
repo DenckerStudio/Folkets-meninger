@@ -4,13 +4,12 @@ import {
   type RoadmapItem,
   type RoadmapStatus,
 } from '@/lib/appens-fremtid/constants';
+import { EmptyState } from '@/components/dashboard/empty-state';
 
 export function RoadmapList({ items }: { items: RoadmapItem[] }) {
   if (items.length === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-        Veikartet er tomt ennå.
-      </p>
+      <EmptyState compact title="Veikartet er tomt" description="Veikartet er tomt ennå." />
     );
   }
 

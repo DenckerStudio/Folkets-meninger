@@ -6,6 +6,8 @@ import { RoadmapList } from '@/components/appens-fremtid/roadmap-list';
 import { SectionTabs } from '@/components/appens-fremtid/section-tabs';
 import { SuggestionForm } from '@/components/appens-fremtid/suggestion-form';
 import { VotingList } from '@/components/appens-fremtid/voting-list';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { PageHeader } from '@/components/page-header';
 import {
   APPENS_FREMTID_TITLE,
@@ -89,7 +91,7 @@ export function AppensFremtidPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 pb-12">
+    <DashboardPage>
       <PageHeader
         title={APPENS_FREMTID_TITLE}
         description="Send inn forslag, se hva som er på vei, og stem på det vi har lagt ut."
@@ -97,7 +99,9 @@ export function AppensFremtidPage() {
 
       <SectionTabs items={TABS} value={tab} onChange={setTab} label="Appens fremtid" />
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <EmptyState tone="error" title="Kunne ikke laste" description={error} />
+      ) : null}
 
       {tab === 'forslag' ? (
         <div className="space-y-8">
@@ -135,6 +139,6 @@ export function AppensFremtidPage() {
           <RoadmapList items={roadmap} />
         </section>
       ) : null}
-    </div>
+    </DashboardPage>
   );
 }

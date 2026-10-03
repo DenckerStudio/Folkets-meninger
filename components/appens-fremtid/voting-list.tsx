@@ -7,6 +7,7 @@ import {
   type SuggestionRecord,
   type SuggestionVote,
 } from '@/lib/appens-fremtid/constants';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { cn } from '@/lib/utils';
 
 export function VotingList({
@@ -20,9 +21,11 @@ export function VotingList({
 }) {
   if (suggestions.length === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-        Ingen forslag er lagt ut til stemming ennå.
-      </p>
+      <EmptyState
+        compact
+        title="Ingen forslag til stemming"
+        description="Ingen forslag er lagt ut til stemming ennå."
+      />
     );
   }
 
