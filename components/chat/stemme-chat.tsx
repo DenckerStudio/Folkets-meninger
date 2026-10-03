@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, isToolUIPart } from 'ai';
 import { Loader2, Send } from 'lucide-react';
+import { EmptyState } from '@/components/dashboard/empty-state';
+import { SurfaceCard } from '@/components/dashboard/surface-card';
 import { Button } from '@/components/ui/button';
 import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
 import { routes } from '@/lib/routes';
@@ -56,46 +58,44 @@ export function StemmeChat({
 
   if (gate === 'free') {
     return (
-      <div className="rounded-xl border border-dashed border-border bg-card px-6 py-10 text-center">
-        <StemmePlusBadge size="md" />
-        <h2 className="mt-4 text-lg font-semibold text-foreground">AI-chat er en Stemme+-funksjon</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          Chatboten bruker din egen LLM-nøkkel og våre sakdata. Gratis brukere beholder stemme,
-          utforsk og høringer — uten en ødelagt chat.
-        </p>
-        <p className="mt-4 text-sm text-foreground">{priceNok} kr/mnd</p>
-        <div className="mt-5 flex flex-wrap justify-center gap-3">
-          <Link
-            href={`${routes.minSide}?tab=stemme-plus`}
-            className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-          >
-            {checkoutConfigured ? 'Gå til Stemme+' : 'Se Stemme+-status'}
-          </Link>
-        </div>
-      </div>
+      <EmptyState
+        title="AI-chat er en Stemme+-funksjon"
+        description="Chatboten bruker din egen LLM-nøkkel og våre sakdata. Gratis brukere beholder stemme, utforsk og høringer — uten en ødelagt chat."
+        action={
+          <div className="space-y-3">
+            <StemmePlusBadge size="md" />
+            <p className="text-sm text-foreground">{priceNok} kr/mnd</p>
+            <Link
+              href={`${routes.minSide}?tab=stemme-plus`}
+              className="inline-flex rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+            >
+              {checkoutConfigured ? 'Gå til Stemme+' : 'Se Stemme+-status'}
+            </Link>
+          </div>
+        }
+      />
     );
   }
 
   if (gate === 'no-key') {
     return (
-      <div className="rounded-xl border border-dashed border-border bg-card px-6 py-10 text-center">
-        <h2 className="text-lg font-semibold text-foreground">Lagre en LLM-nøkkel først</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          Stemme+ AI-chat kjører på nøkkelen din (OpenAI, Anthropic, AI Gateway eller
-          OpenAI-kompatibel). Vi lagrer den kryptert og sender den aldri tilbake til nettleseren.
-        </p>
-        <Link
-          href={`${routes.minSide}?tab=stemme-plus`}
-          className="mt-5 inline-flex rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-        >
-          Åpne nøkkelinnstillinger
-        </Link>
-      </div>
+      <EmptyState
+        title="Lagre en LLM-nøkkel først"
+        description="Stemme+ AI-chat kjører på nøkkelen din (OpenAI, Anthropic, AI Gateway eller OpenAI-kompatibel). Vi lagrer den kryptert og sender den aldri tilbake til nettleseren."
+        action={
+          <Link
+            href={`${routes.minSide}?tab=stemme-plus`}
+            className="inline-flex rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+          >
+            Åpne nøkkelinnstillinger
+          </Link>
+        }
+      />
     );
   }
 
   return (
-    <div className="flex min-h-[32rem] flex-col rounded-xl border border-border bg-card">
+    <SurfaceCard padded={false} className="flex min-h-[32rem] flex-col">
       <div className="border-b border-border px-4 py-3">
         <p className="text-sm text-muted-foreground">
           {issueId
@@ -106,10 +106,11 @@ export function StemmeChat({
 
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Ingen samtaler lagres på serveren. Still et spørsmål om en sak, be om kilder, eller lim
-            inn en kladd for språkretting.
-          </p>
+          <EmptyState
+            className="border-none bg-transparent px-0 py-6"
+            title="Ingen samtale ennå"
+            description="Ingen samtaler lagres på serveren. Still et spørsmål om en sak, be om kilder, eller lim inn en kladd for rettskriving."
+          />
         ) : null}
 
         {messages.map((message) => (
@@ -183,6 +184,6 @@ export function StemmeChat({
           </Button>
         )}
       </form>
-    </div>
+    </SurfaceCard>
   );
 }
