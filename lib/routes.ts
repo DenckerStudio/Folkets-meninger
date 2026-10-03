@@ -25,6 +25,8 @@ export const routes = {
   login: '/auth/login',
   completeProfile: '/auth/complete-profile',
   politiker: (id: string) => `${DASHBOARD_PREFIX}/politikere/${id}`,
+  parti: (name: string) =>
+    `${DASHBOARD_PREFIX}/politikere?parti=${encodeURIComponent(name)}`,
   sporsmalDetail: (id: string) => `${DASHBOARD_PREFIX}/sporsmal/${id}`,
   sak: (id: string) => `${DASHBOARD_PREFIX}/sak/${id}`,
   opinion: (id: string) => `${DASHBOARD_PREFIX}/folkets-meninger/${id}`,
