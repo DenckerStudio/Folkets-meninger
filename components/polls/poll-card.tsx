@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { pollChoicePercent } from '@/lib/polls/format';
-import { pollChoiceLabel, pollStatusLabel, pollTrackLabel } from '@/lib/polls/labels';
+import { pollChoiceLabel, pollStatusLabel, pollTrackLabel, SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import type { PollChoice, PollRecord, PollTotals } from '@/lib/polls/types';
 import { routes } from '@/lib/routes';
 
@@ -27,6 +27,9 @@ export function PollCard({ poll, totals }: PollCardProps) {
       </h2>
       {poll.neutralSummary ? (
         <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{poll.neutralSummary}</p>
+      ) : null}
+      {poll.track === 'system' ? (
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{SYSTEM_REEL_DISCLAIMER}</p>
       ) : null}
       <div className="mt-4 grid grid-cols-3 gap-2">
         {CHOICES.map((choice) => (

@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Calendar } from 'lucide-react';
 import { fetchStortingetHoringer, sortHoringer, summarizeHoringer } from '@/lib/stortinget-horinger';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import HoringerList from '@/components/horinger/horinger-list';
 import { PageHeader } from '@/components/page-header';
 import { routes } from '@/lib/routes';
@@ -18,7 +20,7 @@ export default async function HoringerPage() {
   const stats = summarizeHoringer(hearings);
 
   return (
-    <div className="space-y-8 pb-12">
+    <DashboardPage>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <PageHeader
           title="Høringer"
@@ -38,12 +40,14 @@ export default async function HoringerPage() {
       </div>
 
       {hearings.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground rounded-2xl border border-dashed border-border">
-          Klarte ikke å hente høringer. Prøv igjen senere.
-        </div>
+        <EmptyState
+          title="Klarte ikke å hente høringer"
+          description="Prøv igjen senere. Kilden er Stortingets åpne data."
+          tone="error"
+        />
       ) : (
         <HoringerList hearings={sortHoringer(hearings)} />
       )}
-    </div>
+    </DashboardPage>
   );
 }

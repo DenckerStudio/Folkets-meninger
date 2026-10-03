@@ -1,4 +1,6 @@
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import FadeIn from '@/components/fade-in';
+import { PageHeader } from '@/components/page-header';
 import { getPolitikereOversikt } from '@/lib/stortinget';
 import PolitikereExplorer from './politikere-explorer';
 
@@ -8,23 +10,15 @@ export default async function PolitikerePage() {
   const politikere = await getPolitikereOversikt();
 
   return (
-    <div className="space-y-12 pb-12">
+    <DashboardPage>
       <FadeIn delay={0.1}>
-        <div className="bg-card rounded-[2.5rem] shadow-sm border border-border p-8 md:p-12 text-center relative overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-indigo-50 dark:bg-indigo-950/400/5 blur-[80px] rounded-full pointer-events-none" />
-          <div className="relative z-10">
-            <h1 className="text-4xl font-extrabold text-foreground sm:text-5xl mb-6 tracking-tight">
-              Politikere
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Her finner du oversikt over stortingsrepresentanter og regjeringsmedlemmer.
-              Verifiserte politikere kan svare direkte på saker og se anonymisert statistikk fra sine velgere.
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          title="Politikere"
+          description="Stortingsrepresentanter og regjeringsmedlemmer. Verifiserte politikere kan svare på saker og se anonymisert statistikk fra velgerne sine."
+        />
       </FadeIn>
 
       <PolitikereExplorer politikere={politikere} />
-    </div>
+    </DashboardPage>
   );
 }

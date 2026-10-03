@@ -1,3 +1,5 @@
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { PollCard } from '@/components/polls/poll-card';
 import { PageHeader } from '@/components/page-header';
 import { getPollTotals, listOpenPolls } from '@/lib/polls/service';
@@ -14,15 +16,16 @@ export default async function AvstemningerPage() {
   );
 
   return (
-    <div className="space-y-8 pb-12">
+    <DashboardPage>
       <PageHeader
         title="Avstemninger"
         description="Nasjonale spørsmål med Ja, Nei eller Blank. Stortingssaker som kildedokumenter ligger under Utforsk."
       />
       {withTotals.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border px-6 py-12 text-center text-muted-foreground">
-          Ingen avstemninger er publisert ennå. Når en Stortingssak løftes til nasjonal avstemning, vises den her.
-        </div>
+        <EmptyState
+          title="Ingen avstemninger er publisert ennå"
+          description="Når en stortingssak løftes til nasjonal avstemning, vises den her."
+        />
       ) : (
         <div className="grid gap-4">
           {withTotals.map(({ poll, totals }) => (
@@ -30,6 +33,6 @@ export default async function AvstemningerPage() {
           ))}
         </div>
       )}
-    </div>
+    </DashboardPage>
   );
 }

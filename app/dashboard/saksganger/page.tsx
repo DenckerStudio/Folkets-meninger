@@ -1,3 +1,6 @@
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { EmptyState } from '@/components/dashboard/empty-state';
+import { SurfaceCard } from '@/components/dashboard/surface-card';
 import FadeIn from '@/components/fade-in';
 import { PageHeader } from '@/components/page-header';
 import { getSaksganger } from '@/lib/stortinget';
@@ -9,18 +12,19 @@ export default async function SaksgangerPage() {
   const sorted = [...saksganger].sort((a, b) => a.navn.localeCompare(b.navn, 'no'));
 
   return (
-    <div className="space-y-8 pb-12">
+    <DashboardPage>
       <FadeIn delay={0.1}>
-        <div className="bg-card rounded-[2.5rem] shadow-sm border border-border p-8 md:p-12">
-          <PageHeader
-            title="Saksganger"
-            description="Oversikt over saksganger (aktivt og historisk). Brukes også i sak-detaljer under saksgang."
-          />
-        </div>
+        <PageHeader
+          title="Saksganger"
+          description="Oversikt over saksganger (aktivt og historisk). Brukes også i sak-detaljer under saksgang."
+        />
       </FadeIn>
 
       <FadeIn delay={0.2} direction="up">
-        <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+        {sorted.length === 0 ? (
+          <EmptyState title="Ingen saksganger" description="Klarte ikke å hente data fra Stortinget." tone="error" />
+        ) : (
+        <SurfaceCard padded={false} className="overflow-hidden">
           <div className="px-6 py-4 border-b border-border text-sm text-muted-foreground">{sorted.length} saksganger</div>
           <div className="divide-y divide-border">
             {sorted.map((sg) => (
@@ -48,11 +52,11 @@ export default async function SaksgangerPage() {
                 )}
               </div>
             ))}
-            {sorted.length === 0 && <div className="px-6 py-10 text-sm text-muted-foreground">Ingen data.</div>}
           </div>
-        </div>
+        </SurfaceCard>
+        )}
       </FadeIn>
-    </div>
+    </DashboardPage>
   );
 }
 

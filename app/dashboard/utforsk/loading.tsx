@@ -1,8 +1,9 @@
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { PageHeader } from '@/components/page-header';
 
 export default function UtforskLoading() {
   return (
-    <div className="space-y-8">
+    <DashboardPage>
       <PageHeader
         title="Utforsk saker"
         description="Lovforslag og representantforslag fra Stortinget — kildedokumenter."
@@ -16,6 +17,6 @@ export default function UtforskLoading() {
           ))}
         </div>
       </div>
-    </div>
+    </DashboardPage>
   );
 }

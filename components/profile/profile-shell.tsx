@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { LogIn, User } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -21,6 +21,8 @@ import { useIsAdmin } from '@/hooks/use-is-admin';
 import { getProfileTabDescription, getProfileTabLabel, resolveProfileTab, type ProfileTabId } from '@/components/profile/profile-tabs';
 import { ProfileAppPreferences } from '@/components/profile/profile-app-preferences';
 import { BackButton } from '@/components/dashboard/back-button';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { PageHeader } from '@/components/page-header';
 import type { EarnedBadge } from '@/lib/knowledge/types';
 import type { UserPointsProgress } from '@/lib/user-points-levels';
@@ -220,22 +222,21 @@ export function ProfileShell() {
 
 function ProfileLoginPrompt() {
   return (
-    <div className="max-w-md mx-auto mt-20 text-center space-y-6">
-      <div className="w-20 h-20 bg-brand/10 rounded-2xl flex items-center justify-center mx-auto">
-        <User className="w-10 h-10 text-brand" />
-      </div>
-      <h2 className="text-3xl font-bold text-foreground">Logg inn for å se din profil</h2>
-      <p className="text-muted-foreground">
-        Du må være logget inn for å se holdningshistorikk, valgomat og innstillinger.
-      </p>
-      <Link
-        href={routes.login}
-        className="inline-flex items-center px-6 py-3 bg-brand text-white font-medium rounded-xl hover:bg-brand/90 transition-colors"
-      >
-        <LogIn className="w-5 h-5 mr-2" />
-        Logg inn
-      </Link>
-    </div>
+    <DashboardPage className="mx-auto max-w-md">
+      <EmptyState
+        title="Logg inn for å se din profil"
+        description="Du må være logget inn for å se holdningshistorikk, valgomat og innstillinger."
+        action={
+          <Link
+            href={routes.login}
+            className="inline-flex items-center rounded-xl bg-brand px-6 py-3 font-medium text-brand-foreground hover:bg-brand/90"
+          >
+            <LogIn className="mr-2 h-5 w-5" />
+            Logg inn
+          </Link>
+        }
+      />
+    </DashboardPage>
   );
 }
 
@@ -297,7 +298,7 @@ function ProfileShellAuthenticated({
   const isAdminUser = useIsAdmin();
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 px-1">
+    <DashboardPage className="mx-auto max-w-5xl px-1">
       {activeTab === null ? (
         <>
           <ProfileHero
@@ -364,6 +365,6 @@ function ProfileShellAuthenticated({
           {activeTab === 'min-data' && <ProfilePrivacy userId={user.id} />}
         </div>
       )}
-    </div>
+    </DashboardPage>
   );
 }

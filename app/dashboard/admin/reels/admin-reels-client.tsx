@@ -7,6 +7,7 @@ import { pollDraftGenerationStatusLabel } from '@/lib/admin/poll-draft-generatio
 import { usePollDraftGeneration } from '@/hooks/use-poll-draft-generation';
 import { routes } from '@/lib/routes';
 import { AdminBackLink } from '@/components/admin/admin-shell';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import type { PollRecord, SakPollCandidate, SakPollCoverage } from '@/lib/polls/types';
 import { pipelineHealthNeedsAttention, type PipelineHealth } from '@/lib/n8n/pipeline-health';
 
@@ -373,9 +374,11 @@ export default function AdminReelsClient() {
           </div>
         </div>
         {drafts.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-            Ingen utkast. Generer fra en sak under, eller vent på n8n-kjøringen.
-          </p>
+          <EmptyState
+            title="Ingen utkast"
+            description="Generer fra en sak under, eller vent på n8n-kjøringen. Listen holdes tom til et ekte utkast finnes."
+            className="py-8"
+          />
         ) : (
           <ul className="space-y-3">
             {drafts.map((poll) => (
@@ -397,7 +400,7 @@ export default function AdminReelsClient() {
                     type="button"
                     disabled={pending}
                     onClick={() => patchPoll(poll.id, 'publish')}
-                    className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                    className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
                   >
                     Publiser
                   </button>
@@ -419,7 +422,11 @@ export default function AdminReelsClient() {
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-foreground">Sak-kandidater</h2>
         {candidates.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Ingen kandidater med klare RAG-chunks akkurat nå.</p>
+          <EmptyState
+            title="Ingen sak-kandidater"
+            description="Ingen kandidater med RAG, AI-sammendrag eller sakssammendrag akkurat nå."
+            className="py-6"
+          />
         ) : (
           <ul className="space-y-2">
             {candidates.map((candidate) => (
@@ -431,6 +438,8 @@ export default function AdminReelsClient() {
                   <p className="text-sm font-medium text-foreground">{candidate.title}</p>
                   <p className="text-xs text-muted-foreground">
                     {candidate.issueId} · {candidate.ragChunkCount} RAG-chunks
+                    {candidate.hasAiSummary ? ' · AI-sammendrag' : ''}
+                    {candidate.sourceKind === 'metadata' ? ' · metadata' : ''}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">

@@ -1,119 +1,42 @@
-/** System poll drafts (Reels) from Stortinget-sak RAG. */
-
-export const FETCH_SAK_FOR_POLL_SQL = `WITH target AS (
-  SELECT i.id
-  FROM public.stortinget_issues i
-  WHERE i.status = 'pending'
-    AND EXISTS (
-      SELECT 1
-      FROM public.document_chunks dc
-      WHERE dc.issue_id = i.id
-        AND dc.embedding_status = 'ready'
-        AND dc.embedding IS NOT NULL
-    )
-    AND NOT EXISTS (
-      SELECT 1
-      FROM public.polls p
-      WHERE p.stortinget_issue_id = i.id
-        AND p.status IN ('draft', 'open', 'closed')
-    )
-    AND (
-      NULLIF(trim($1::text), '') IS NULL
-      OR i.id = NULLIF(trim($1::text), '')
-    )
-  ORDER BY i.last_updated_at DESC NULLS LAST, i.first_seen_at ASC
-  LIMIT 1
-)
-SELECT
-  i.id AS issue_id,
-  i.title AS issue_title,
-  COALESCE(i.summary, '') AS issue_summary,
-  COALESCE(i.category, '') AS issue_category,
-  i.first_seen_at,
-  i.last_updated_at,
-  left(
-    COALESCE(
-      nullif(trim(i.detail_json->>'innstillingstekst'), ''),
-      nullif(trim(i.detail_json->>'vedtakstekst'), ''),
-      i.summary,
-      ''
-    ),
-    2400
-  ) AS detail_excerpt,
-  s.hva AS ai_hva,
-  s.hvem AS ai_hvem,
-  s.kostnad AS ai_kostnad,
-  (
-    SELECT COALESCE(
-      json_agg(
-        json_build_object(
-          'document_id', d.document_id,
-          'title', d.title,
-          'document_type', d.document_type,
-          'source_url', d.source_url
-        )
-        ORDER BY d.fetched_at DESC
-      ),
-      '[]'::json
-    )
-    FROM public.stortinget_issue_documents d
-    WHERE d.issue_id = i.id
-    LIMIT 6
-  ) AS documents,
-  (
-    SELECT COALESCE(
-      json_agg(DISTINCT lower(trim(title))) FILTER (
-        WHERE title IS NOT NULL AND trim(title) <> ''
-      ),
-      '[]'::json
-    )
-    FROM public.polls
-    WHERE trim(title) <> '' AND status IN ('open', 'draft', 'closed')
-  ) AS existing_questions
-FROM target t
-JOIN public.stortinget_issues i ON i.id = t.id
-LEFT JOIN public.issue_ai_summaries s ON s.stortinget_issue_id = i.id`;
-
-export const RAG_RETRIEVE_SQL = `SELECT
-  id,
-  document_id,
-  chunk_index,
-  content,
-  similarity
-FROM public.match_issue_document_chunks(
-  $1::text,
-  $2::vector,
-  $3::int
-)`;
+/** System poll drafts (Reels) from Stortinget-sak RAG + AI-summary fallback. */
 
 export const BUILD_RAG_QUERY_JS = `const sak = $('Expand sak for poll').first()?.json || $input.first()?.json || {};
 const parts = [
   sak.issue_title,
+  sak.henvisning,
   sak.issue_summary,
   sak.detail_excerpt,
   sak.ai_hva,
+  sak.ai_narrative,
 ].map((v) => String(v || '').trim()).filter(Boolean);
-const ragQuery = parts.join(' ').slice(0, 1200) || String(sak.issue_title || 'stortingssak');
+const ragQuery = parts.join(' ').slice(0, 1400) || String(sak.issue_title || 'stortingssak');
 return [{ json: { ...sak, ragQuery } }];`;
 
 export const MAP_EMBEDDING_FOR_RAG_JS = `const sak = $('Build RAG query').first()?.json || {};
 const embItem = $('Ollama embeddings').first()?.json || {};
 const embedding = embItem.embedding;
-if (!Array.isArray(embedding) || embedding.length === 0) {
-  throw new Error('Missing embedding vector for RAG retrieval');
-}
-const vectorLiteral = '[' + embedding.join(',') + ']';
+const hasVector = Array.isArray(embedding) && embedding.length > 0;
+const vectorLiteral = hasVector ? '[' + embedding.join(',') + ']' : '';
 return [{
   json: {
+    ...sak,
     issue_id: sak.issue_id,
     vectorLiteral,
-    matchCount: 8,
+    matchCount: hasVector ? 8 : 0,
+    skipRag: !hasVector,
   },
 }];`;
 
-export const MERGE_RAG_CONTEXT_JS = `const sak = $('Build RAG query').first()?.json || {};
-const ragRows = $('Retrieve RAG chunks').all().map((i) => i.json);
-const chunks = ragRows.filter((r) => r && r.content);
+export const MERGE_RAG_CONTEXT_JS = `const sak = $('Build RAG query').first()?.json || $('Map embedding for RAG').first()?.json || {};
+let ragRows = [];
+try {
+  ragRows = $('Retrieve RAG chunks').all().map((i) => i.json);
+} catch (_) {
+  ragRows = [];
+}
+const fallback = Array.isArray(sak.fallback_chunks) ? sak.fallback_chunks : [];
+const ragChunks = ragRows.filter((r) => r && r.content);
+const chunks = ragChunks.length ? ragChunks : fallback.filter((r) => r && r.content);
 
 const chunkBlock = chunks.length
   ? chunks
@@ -126,21 +49,25 @@ const chunkBlock = chunks.length
           ' #' +
           (c.chunk_index ?? 0) +
           ' (likhet ' +
-          (typeof c.similarity === 'number' ? c.similarity.toFixed(2) : '?') +
+          (typeof c.similarity === 'number' ? c.similarity.toFixed(2) : 'utdrag') +
           ')\\n' +
           String(c.content || '').slice(0, 1400),
       )
       .join('\\n\\n')
-  : '(ingen RAG-chunks — bruk sammendrag og utdrag)';
+  : '(ingen dokumentutdrag — bruk sammendrag og metadata)';
 
 const docs = Array.isArray(sak.documents) ? sak.documents : [];
 const docBlock = docs.length
   ? docs
-      .map((d, idx) => '[' + idx + '] ' + (d.title || 'Dokument') + ' (' + (d.document_type || 'dok') + ')')
-      .join('\\n')
+      .map((d, idx) => {
+        const excerpt = d.text_excerpt ? '\\n' + String(d.text_excerpt).slice(0, 500) : '';
+        return '[' + idx + '] ' + (d.title || 'Dokument') + ' (' + (d.document_type || 'dok') + ')' + excerpt;
+      })
+      .join('\\n\\n')
   : '(ingen dokumenter)';
 
 const summaryBlock = [
+  sak.ai_narrative ? 'Fortelling: ' + sak.ai_narrative : '',
   sak.ai_hva ? 'Hva: ' + sak.ai_hva : '',
   sak.ai_hvem ? 'Hvem: ' + sak.ai_hvem : '',
   sak.ai_kostnad ? 'Kostnad: ' + sak.ai_kostnad : '',
@@ -149,10 +76,15 @@ const summaryBlock = [
   .join('\\n');
 
 const existing = (sak.existing_questions || []).slice(0, 35).map((q) => '- ' + q).join('\\n');
+const sourceKind = String(sak.source_kind || (ragChunks.length ? 'rag' : 'fallback'));
 
 const promptText = [
   'STORTINGSSAK: ' + (sak.issue_title || ''),
+  sak.henvisning ? 'Henvisning: ' + sak.henvisning : '',
+  sak.sak_kind ? 'Sakstype: ' + sak.sak_kind : '',
   sak.issue_category ? 'Kategori: ' + sak.issue_category : '',
+  sak.komite ? 'Komité: ' + sak.komite : '',
+  'Kildepakke: ' + sourceKind,
   '',
   'SAMMENDRAG:',
   summaryBlock || sak.issue_summary || '(mangler)',
@@ -163,13 +95,14 @@ const promptText = [
   'DOKUMENTER:',
   docBlock,
   '',
-  'RAG-CHUNKS (grunnlag for spørsmål):',
+  'KILDEUTDRAG (grunnlag for spørsmål):',
   chunkBlock,
   '',
   'EXISTING_PROMPTS (unngå duplikat):',
   existing || '(ingen)',
   '',
-  'Returner research + ett JA/NEI/BLANK-spørsmål som JSON.',
+  'Lag nøyaktig ETT konkret ja/nei-spørsmål. Tredje valg er alltid Blank.',
+  'Spørsmålet skal handle om et politisk valg i saken, ikke gjenta tittelen.',
 ].join('\\n');
 
 const sourceUrls = [];
@@ -193,30 +126,33 @@ return [{
     ...sak,
     promptText,
     rag_chunks: chunks,
+    source_kind: sourceKind,
+    used_embedding_rag: ragChunks.length > 0,
     source_urls: sourceUrls,
   },
 }];`;
 
-export const SYSTEM_POLL_GENERATOR_SYSTEM = `Du er AI-journalist for Folkets Stemme.
+export const SYSTEM_POLL_GENERATOR_SYSTEM = `Du er redaktør for Folkets Stemme-Reels.
 
-INPUT: én stortingssak med sammendrag, utdrag og nummererte RAG-chunks [0], [1], …
-Les kildene og lag nøyaktig ETT ja/nei-spørsmål (tredje valg er alltid Blank) om et konkret politisk valg i saken.
+INPUT: én stortingssak med metadata, AI-sammendrag og nummererte kildeutdrag [0], [1], …
+Les kildene og lag nøyaktig ETT ja/nei-spørsmål. Ballot er alltid Ja / Nei / Blank.
 
-Spørsmål-regler:
+Krav til spørsmålet:
 - Konkret politisk valg («Mener du …», «Støtter du at …», «Bør Norge …»)
-- ALDRI sitér sakstittel i anførselstegn som spørsmålet
-- Unngå duplikat av EXISTING_PROMPTS (semantisk samme tema)
-- Maks 120 tegn, grammatisk korrekt norsk
-- Spørsmålet SKAL dekkes av RAG-chunks eller sammendrag (source_indices)
-- Nøytral formulering
-- Ikke lag egne svaralternativer — ballot er alltid Ja / Nei / Blank
+- Én presis handling, plikt, rettighet eller bevilgning — ikke hele saken
+- ALDRI sitér sakstittel i anførselstegn som selve spørsmålet
+- Unngå semantisk duplikat av EXISTING_PROMPTS
+- 40–120 tegn, grammatisk korrekt bokmål
+- Må dekkes av kildeutdrag eller sammendrag (source_indices)
+- Nøytral: ingen «burde selvsagt» / partipreg
+- Ikke lag egne svaralternativer
 
 Returner KUN gyldig JSON:
 {
   "research": {
-    "story_title": "…",
-    "summary": "2–3 nøytrale setninger",
-    "political_choice": "…",
+    "story_title": "kort nøytral tittel",
+    "summary": "2–3 nøytrale setninger om valget i saken",
+    "political_choice": "hva ja betyr konkret",
     "confidence": "high|medium|low"
   },
   "prompt": {
@@ -227,7 +163,7 @@ Returner KUN gyldig JSON:
   }
 }
 
-Hvis kildene mangler substans: sett repeat_reason og tom question.`;
+Hvis kildene mangler substans: sett repeat_reason, tom question og confidence=low.`;
 
 export const SYSTEM_POLL_GENERATOR_SAVE_JS = `const sak = $('Merge RAG context').first()?.json || {};
 const agent = $('System poll generator (Ollama)').first()?.json || {};
@@ -246,9 +182,8 @@ if (!out.prompt) {
 const prompt = out.prompt || {};
 const research = out.research || {};
 
-const esc = (s) => String(s ?? '').replace(/'/g, "''");
 const issueId = String(sak.issue_id || '').trim();
-const question = String(prompt.question || '').trim();
+const question = String(prompt.question || '').replace(/\\s+/g, ' ').trim();
 const summary = String(research.summary || '').trim();
 const confidence = String(research.confidence || 'medium').toLowerCase();
 const pc = String(research.political_choice || '').trim();
@@ -257,13 +192,19 @@ const ragChunks = Array.isArray(sak.rag_chunks) ? sak.rag_chunks : [];
 const hasContext =
   ragChunks.length > 0 ||
   String(sak.detail_excerpt || '').trim().length >= 80 ||
-  String(sak.ai_hva || '').trim().length >= 40;
+  String(sak.ai_hva || sak.ai_narrative || '').trim().length >= 40 ||
+  String(sak.issue_summary || '').trim().length >= 80;
+const tooShort = question.length < 40;
+const tooLong = question.length > 140;
+const looksLikeTitle = sak.issue_title && question.toLowerCase().includes(String(sak.issue_title).toLowerCase().slice(0, 24));
 const valid =
   issueId &&
-  question.length >= 15 &&
+  !tooShort &&
+  !tooLong &&
   hasPolitics &&
   hasContext &&
-  confidence !== 'low';
+  confidence !== 'low' &&
+  !looksLikeTitle;
 
 if (!issueId) {
   return [{ json: { skip: true, reason: 'missing_issue_id' } }];
@@ -277,11 +218,17 @@ if (!valid) {
       issue_id: issueId,
       reason: !question
         ? 'empty_question'
-        : confidence === 'low'
-          ? 'low_confidence'
-          : !hasPolitics
-            ? 'no_political_choice'
-            : 'insufficient_context',
+        : tooShort
+          ? 'question_too_short'
+          : tooLong
+            ? 'question_too_long'
+            : looksLikeTitle
+              ? 'repeats_title'
+              : confidence === 'low'
+                ? 'low_confidence'
+                : !hasPolitics
+                  ? 'no_political_choice'
+                  : 'insufficient_context',
     },
   }];
 }
@@ -293,6 +240,9 @@ const rpcBody = {
   p_source_urls: sak.source_urls || [],
   p_generation_metadata: {
     source_type: 'stortinget_sak',
+    source_kind: sak.source_kind || 'unknown',
+    used_embedding_rag: Boolean(sak.used_embedding_rag),
+    system_generated: true,
     confidence,
     rag_chunk_count: ragChunks.length,
     rag_chunks: ragChunks.slice(0, 8).map((c) => ({

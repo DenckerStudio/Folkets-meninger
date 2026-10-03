@@ -181,6 +181,8 @@ export type OpsNotificationEmailInput = {
   text: string;
 };
 
+export type OpsAlertEmailInput = OpsNotificationEmailInput;
+
 export async function sendOpsNotificationEmail(input: OpsNotificationEmailInput) {
   const transporter = getTransporter();
   const { from } = getSmtpConfig();
@@ -198,6 +200,10 @@ export async function sendOpsNotificationEmail(input: OpsNotificationEmailInput)
     text: input.text,
     html,
   });
+}
+
+export async function sendOpsAlertEmail(input: OpsAlertEmailInput) {
+  return sendOpsNotificationEmail(input);
 }
 
 function escapeHtml(value: string) {

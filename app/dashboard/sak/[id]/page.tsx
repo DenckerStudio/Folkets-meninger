@@ -9,6 +9,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ExternalLink, Tag } from 'lucide-react';
 import { BackButton } from '@/components/dashboard/back-button';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { routes } from '@/lib/routes';
 import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
@@ -159,7 +160,7 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
     (issueMeta?.lastUpdatedAt ? formatStortingetDate(issueMeta.lastUpdatedAt) : null);
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-8 overflow-x-clip pb-16 sm:space-y-10 sm:pb-12">
+    <DashboardPage className="mx-auto w-full min-w-0 max-w-4xl overflow-x-clip sm:space-y-10">
       <FadeIn delay={0.1}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <BackButton fallbackHref={routes.utforsk} />
@@ -462,6 +463,6 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
         motforslag={<CounterProposals sakId={sak.id} />}
         diskusjon={<DiscussionSection sakId={sak.id} />}
       />
-    </div>
+    </DashboardPage>
   );
 }
