@@ -13,7 +13,7 @@ type OptionCardProps<T extends string> = {
   value: T;
   current: T;
   label: string;
-  description: string;
+  description?: string;
   icon: React.ReactNode;
   onSelect: (value: T) => void;
 };
@@ -48,7 +48,7 @@ function OptionCard<T extends string>({
       </span>
       <span className="min-w-0">
         <span className="block text-sm font-semibold text-foreground">{label}</span>
-        <span className="mt-0.5 block text-xs text-muted-foreground">{description}</span>
+        {description ? <span className="mt-0.5 block text-xs text-muted-foreground">{description}</span> : null}
       </span>
     </button>
   );
@@ -85,14 +85,13 @@ export function ProfileAppPreferences() {
     <div className="space-y-6">
       <PreferenceSection
         title="Utseende"
-        description="Velg lys eller mørk modus. Innstillingen lagres i nettleseren din."
+        description="Lagres i nettleseren."
       >
         <div className="grid gap-3 sm:grid-cols-3">
           <OptionCard<ThemeMode>
             value="light"
             current={preferences.theme}
             label="Lys"
-            description="Lyst grensesnitt"
             icon={<Sun className="h-4 w-4" />}
             onSelect={(theme) => update({ theme })}
           />
@@ -100,7 +99,6 @@ export function ProfileAppPreferences() {
             value="dark"
             current={preferences.theme}
             label="Mørk"
-            description="Mørkt grensesnitt"
             icon={<Moon className="h-4 w-4" />}
             onSelect={(theme) => update({ theme })}
           />
@@ -117,7 +115,7 @@ export function ProfileAppPreferences() {
 
       <PreferenceSection
         title="Animasjoner"
-        description="Tilpass bevegelse og overganger etter hva som passer best for deg."
+        description="Bevegelse og overganger."
       >
         <div className="grid gap-3 sm:grid-cols-3">
           <OptionCard<MotionPreference>
@@ -149,7 +147,7 @@ export function ProfileAppPreferences() {
 
       <PreferenceSection
         title="Hjelp i saker"
-        description="Vis korte forklaringer når du leser om saksgang og stortingstermer."
+        description="Korte forklaringer på saksgang og termer."
       >
         <label className="flex items-start gap-3 rounded-xl border border-border bg-muted/30 p-4 cursor-pointer">
           <input

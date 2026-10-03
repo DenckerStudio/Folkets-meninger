@@ -17,7 +17,7 @@ type ProfileVoteHistoryProps = {
 
 export function ProfileVoteHistory({ items, loading }: ProfileVoteHistoryProps) {
   return (
-    <ProfileCard title="Siste stemmer" description="Saker du har stemt på. Stemmer er anonyme i offentlig statistikk.">
+    <ProfileCard title="Siste stemmer" description="Anonyme i offentlig statistikk.">
       {loading ? (
         <p className="text-center py-8 text-muted-foreground text-sm">Laster stemmehistorikk…</p>
       ) : items.length === 0 ? (

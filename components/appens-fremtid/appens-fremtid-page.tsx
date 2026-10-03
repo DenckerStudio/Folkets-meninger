@@ -92,7 +92,7 @@ export function AppensFremtidPage() {
     <div className="mx-auto max-w-2xl space-y-8 pb-12">
       <PageHeader
         title={APPENS_FREMTID_TITLE}
-        description="Send inn forslag, se hva som er på vei, og stem på det vi har lagt ut."
+        description="Forslag, veikart og det som er på vei."
       />
 
       <SectionTabs items={TABS} value={tab} onChange={setTab} label="Appens fremtid" />

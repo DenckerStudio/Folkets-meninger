@@ -14,7 +14,7 @@ export function ProfileStanceHistory({ items, loading }: ProfileStanceHistoryPro
   return (
     <ProfileCard
       title="Mine holdninger"
-      description="Saker du har markert som enig, uenig eller ikke interessert."
+      description="Enig, uenig eller ikke interessert."
     >
       {loading ? (
         <p className="text-center py-8 text-muted-foreground text-sm">Laster holdningshistorikk…</p>
