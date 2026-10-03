@@ -72,7 +72,7 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
     {
       key: 'nei',
       label: 'Nei',
-      className: 'bg-white text-brand hover:bg-white/90',
+      className: 'bg-background text-brand hover:bg-background/90',
       onClick: () => void vote('nei'),
     },
     {

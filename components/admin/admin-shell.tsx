@@ -22,7 +22,7 @@ export function AdminShell({ children }: AdminShellProps) {
   const pathname = usePathname() ?? '';
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+    <div className="space-y-6">
       <header className="space-y-1">
         <div className="flex items-center gap-2">
           <Shield className="h-6 w-6 text-brand" aria-hidden />

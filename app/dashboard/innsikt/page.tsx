@@ -1,5 +1,9 @@
 import Link from 'next/link';
 import { BarChart3, ExternalLink, Info } from 'lucide-react';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { EmptyState } from '@/components/dashboard/empty-state';
+import { SurfaceCard } from '@/components/dashboard/surface-card';
+import { PageHeader } from '@/components/page-header';
 import {
   buildGovernmentStatsSnapshot,
   GOVERNMENT_STATS_MIN_VOTES,
@@ -14,31 +18,29 @@ export default async function InnsiktPage() {
   const snapshot = await buildGovernmentStatsSnapshot({ limit: 80 });
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-          <BarChart3 className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-          Åpen innsikt
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Anonyme stemmetall fra Folkets Stemme. Ingen persondata eller forumtekst.
+    <DashboardPage>
+      <PageHeader
+        title="Åpen innsikt"
+        description="Anonyme stemmetall fra Folkets Stemme. Ingen persondata."
+      />
+      <div className="flex items-start gap-2 text-sm text-muted-foreground">
+        <BarChart3 className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
+        <p>
+          Oppdatert {new Date(snapshot.generatedAt).toLocaleString('nb-NO')} · Kun saker med minst{' '}
+          {GOVERNMENT_STATS_MIN_VOTES} stemmer
         </p>
       </div>
 
-      <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 p-4 flex gap-3 text-sm text-amber-900">
-        <Info className="w-5 h-5 shrink-0 mt-0.5" />
-        <p>{PUBLIC_STATS_DISCLAIMER}</p>
-      </div>
-
-      <p className="text-xs text-muted-foreground">
-        Oppdatert {new Date(snapshot.generatedAt).toLocaleString('nb-NO')} · Kun saker med minst{' '}
-        {GOVERNMENT_STATS_MIN_VOTES} stemmer
-      </p>
+      <SurfaceCard className="flex gap-3 p-4 text-sm" padded={false}>
+        <Info className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
+        <p className="text-muted-foreground">{PUBLIC_STATS_DISCLAIMER}</p>
+      </SurfaceCard>
 
       {snapshot.issues.length === 0 ? (
-        <p className="text-muted-foreground text-center py-12 rounded-xl border border-border bg-muted/40">
-          Ingen saker har nok stemmer til å vises offentlig ennå.
-        </p>
+        <EmptyState
+          title="Ingen offentlig statistikk ennå"
+          description="Saker vises her når de har nok anonyme stemmer."
+        />
       ) : (
         <ul className="space-y-4">
           {snapshot.issues.map((issue) => {
@@ -84,7 +86,7 @@ export default async function InnsiktPage() {
                 <div className="mt-4 flex flex-wrap gap-4 text-sm">
                   <Link
                     href={routes.sak(issue.stortingetIssueId)}
-                    className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                    className="text-brand hover:underline"
                   >
                     Se sak →
                   </Link>
@@ -106,10 +108,10 @@ export default async function InnsiktPage() {
 
       <p className="text-sm text-muted-foreground">
         Maskinlesbar data:{' '}
-        <a href="/api/public/vote-stats" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+        <a href="/api/public/vote-stats" className="text-brand hover:underline">
           /api/public/vote-stats
         </a>
       </p>
-    </div>
+    </DashboardPage>
   );
 }
