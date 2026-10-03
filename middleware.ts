@@ -83,5 +83,9 @@ export const config = {
     '/api/opinions/:path*',
     '/api/feedback',
     '/api/oauth/fider/:path*',
+    '/api/chat',
+    '/api/byok',
+    '/api/stemme-plus/checkout',
+    '/api/stemme-plus/portal',
   ],
 };

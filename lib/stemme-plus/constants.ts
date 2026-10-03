@@ -1,4 +1,4 @@
-/** Planned monthly price when Stripe checkout ships (NOK). */
+/** Monthly price shown in UI and used when Stripe Price is configured (NOK). */
 export const STEMME_PLUS_MONTHLY_PRICE_NOK = 59;
 
 export const STEMME_PLUS_CURRENCY = 'nok';
@@ -15,4 +15,5 @@ export const STEMME_PLUS_BENEFITS = [
   'Støttemerke på profilen',
   'Rikere ukentlig nyhetsoppsummering',
   'Sanntidsvarsler og smartere hjertesak-varsler',
+  'AI-chat om saker med din egen LLM-nøkkel (BYOK), RAG og kildesøk',
 ] as const;

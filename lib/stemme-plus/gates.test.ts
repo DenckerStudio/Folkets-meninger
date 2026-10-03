@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  canUseAiChatbot,
   canUseRealtimeAlerts,
   clampNotificationFrequencyForTier,
   digestItemLimit,
@@ -15,6 +16,8 @@ const free = { subscription_tier: 'free' };
 
 assert.equal(canUseRealtimeAlerts(plus), true);
 assert.equal(canUseRealtimeAlerts(free), false);
+assert.equal(canUseAiChatbot(plus), true);
+assert.equal(canUseAiChatbot(free), false);
 assert.equal(digestItemLimit(plus), 50);
 assert.equal(digestItemLimit(free), 5);
 assert.equal(clampNotificationFrequencyForTier('realtime', free), 'daily');

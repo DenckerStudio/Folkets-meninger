@@ -52,9 +52,10 @@ export const adminNavItems: AdminNavItem[] = [
   {
     id: 'stemme-plus',
     title: 'Stemme+',
-    description: 'Abonnement og premium-funksjoner',
+    description: 'Abonnement, tildeling og BYOK-status',
+    href: routes.adminStemmePlus,
     icon: Star,
-    status: 'coming',
+    status: 'active',
   },
 ];
 

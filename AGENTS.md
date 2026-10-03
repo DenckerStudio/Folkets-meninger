@@ -73,6 +73,10 @@ The canonical template is `.env.example`.
 | `STORTINGET_SESSION_ID`, `STORTINGET_PERIODE_ID` | Server defaults for Stortinget data |
 | `NEXT_PUBLIC_STORTINGET_SESSION_ID`, `NEXT_PUBLIC_STORTINGET_PERIODE_ID` | Client-visible Stortinget defaults |
 | `FIDER_BASE_URL`, `FIDER_OAUTH_CLIENT_ID`, `FIDER_OAUTH_CLIENT_SECRET` | Fider SSO at `https://feedback.folkets-meninger.no` (`docs/fider-oauth.md`) |
+| `BYOK_ENCRYPTION_KEY` | AES-256-GCM key for user LLM credentials (64 hex chars or passphrase) |
+| `SEARXNG_BASE_URL` | Chat source search; default `https://searxng.heyklever.app` |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_STEMME_PLUS_PRICE_ID` | Stemme+ Stripe checkout/webhook. Honest unconfigured UI if missing |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Optional Stripe publishable key (checkout uses Checkout Sessions) |
 | `DISABLE_HMR` | Dev-only escape hatch for HMR issues |
 
 ## Current Subsystems and Runbooks
@@ -172,11 +176,29 @@ The canonical template is `.env.example`.
 - Admin access: `public.user_roles` (`role = 'admin'`) via `lib/admin/gate.ts`
   (`is_admin()`). Grant/revoke with `grant_app_role_by_email` /
   `revoke_app_role_by_email` (service role) or `/dashboard/admin/reels`.
-  Remaining admin surface: `/dashboard/admin/statistikk`, `/dashboard/admin/reels`.
+  Remaining admin surface: `/dashboard/admin/statistikk`,
+  `/dashboard/admin/reels`, `/dashboard/admin/stemme-plus`.
 - **Stemme+** (`users.subscription_tier`): supporter badge, richer digest, smarter
-  alerts. Stripe checkout is deferred — grant test access via
-  `grant_stemme_plus_by_email` / admin Reels UI (`/api/admin/stemme-plus`).
-  Planned price constant: 59 kr/mnd (`lib/stemme-plus/constants.ts`).
+  alerts, and Stemme+-gated BYOK AI-chat (`/dashboard/chat`). Price 59 kr/mnd
+  (`lib/stemme-plus/constants.ts`). Admin grant via `grant_stemme_plus_by_email`
+  / `/dashboard/admin/stemme-plus` (`/api/admin/stemme-plus`). Stripe Checkout
+  + webhook (`/api/webhooks/stripe`) run when `STRIPE_SECRET_KEY` and
+  `STRIPE_STEMME_PLUS_PRICE_ID` exist; otherwise the UI shows an honest
+  unconfigured state.
+
+### Stemme+ BYOK AI-chat
+
+- Route: `/dashboard/chat` (optional `?sak=<id>`). Sidebar **AI-chat**. Free users
+  see an upgrade empty state, not a broken composer.
+- Users store their own LLM key (OpenAI / Anthropic / OpenAI-compatible / AI
+  Gateway) encrypted at rest in `user_llm_credentials` (service-role only).
+  Never log keys; never return the secret after save.
+- Chat API: `POST /api/chat` (Node.js / Fluid Compute, `maxDuration` 120, no
+  `runtime = 'edge'`). AI SDK `streamText` + tools. Transcripts are ephemeral
+  in the browser.
+- Server tools: `retrieveSakContext` (lexical `search_issue_document_chunks_text`
+  + AI summaries; no embeddings column), `searchUpdatedSources` (SearXNG JSON),
+  `helpRettsskriving` (grammar help for the user's own draft — does not post UGC).
 - Do not mention BankID, MinID, or electronic ID verification anywhere in
   user-facing copy, roadmap items, or marketing text.
 

@@ -59,5 +59,14 @@ export function getRateLimitPolicy(pathname: string): { limit: number; windowMs:
   if (pathname.startsWith('/api/oauth/fider/')) {
     return { limit: 60, windowMs: 60_000 };
   }
+  if (pathname.startsWith('/api/chat')) {
+    return { limit: 20, windowMs: 60_000 };
+  }
+  if (pathname.startsWith('/api/byok')) {
+    return { limit: 20, windowMs: 60_000 };
+  }
+  if (pathname.startsWith('/api/stemme-plus/checkout') || pathname.startsWith('/api/stemme-plus/portal')) {
+    return { limit: 10, windowMs: 60_000 };
+  }
   return null;
 }

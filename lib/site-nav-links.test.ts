@@ -46,6 +46,17 @@ test('folkets meninger is the first core destination', () => {
   assert.equal(coreNavItems[0]?.href, routes.folketsMeninger);
 });
 
+test('AI-chat lives in extended sidebar, not primary nav', () => {
+  assert.equal(
+    extendedNavItems.some((item) => item.href === routes.chat),
+    true,
+  );
+  assert.equal(
+    desktopPrimaryNavLinks.some((link) => link.href === routes.chat),
+    false,
+  );
+});
+
 test('avstemninger and politiker-hub are not in dashboard nav', () => {
   assert.equal(
     dashboardSidebarNavItems.some((item) => item.href === routes.avstemninger),
