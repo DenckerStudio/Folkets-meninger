@@ -6,13 +6,14 @@ import { usePathname } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, isToolUIPart } from 'ai';
 import { Loader2, Send } from 'lucide-react';
+import { ChatPanelActions } from '@/components/chat/chat-panel-actions';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { SurfaceCard } from '@/components/dashboard/surface-card';
 import { Button } from '@/components/ui/button';
 import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
-import { buildChatLoginNextPath, type ChatGateReason } from '@/lib/chat/overlay';
+import { buildChatLoginNextPath, canUseOverlayActions, type ChatGateReason } from '@/lib/chat/overlay';
 
 type StemmeChatProps = {
   gate: ChatGateReason;
@@ -104,117 +105,129 @@ export function StemmeChat({
     );
   }
 
+  const showActions = canUseOverlayActions(gate);
+  const noKeyEmpty = (
+    <EmptyState
+      compact
+      className={emptyClassName}
+      title="Lagre en LLM-nøkkel først"
+      description="Stemme+ AI-chat kjører på nøkkelen din (OpenAI, Anthropic, AI Gateway eller OpenAI-kompatibel). Rettskriving og kildesøk over fungerer uten nøkkel. Vi lagrer nøkkelen kryptert og sender den aldri tilbake til nettleseren."
+      action={
+        <Link
+          href={`${routes.minSide}?tab=stemme-plus`}
+          className="inline-flex rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+        >
+          Åpne nøkkelinnstillinger
+        </Link>
+      }
+    />
+  );
+
   if (gate === 'no-key') {
     return (
-      <EmptyState
-        className={emptyClassName}
-        title="Lagre en LLM-nøkkel først"
-        description="Stemme+ AI-chat kjører på nøkkelen din (OpenAI, Anthropic, AI Gateway eller OpenAI-kompatibel). Vi lagrer den kryptert og sender den aldri tilbake til nettleseren."
-        action={
-          <Link
-            href={`${routes.minSide}?tab=stemme-plus`}
-            className="inline-flex rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-          >
-            Åpne nøkkelinnstillinger
-          </Link>
-        }
-      />
+      <div className="flex min-h-0 flex-1 flex-col">
+        {showActions ? <ChatPanelActions issueTitle={issueTitle} compact={compact} /> : null}
+        {noKeyEmpty}
+      </div>
     );
   }
 
   return (
-    <SurfaceCard
-      padded={false}
-      className={cn('flex flex-col', compact ? 'min-h-0 flex-1 border-0 shadow-none' : 'min-h-[32rem]')}
-    >
-      <div className="border-b border-border px-4 py-3">
-        <p className="text-sm text-muted-foreground">
-          {issueId
-            ? `Kontekst: ${issueTitle || `sak ${issueId}`}`
-            : 'Spør om saker, dokumenter, kilder eller rettskriving av dine egne utkast.'}
-        </p>
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col">
+      {showActions ? <ChatPanelActions issueTitle={issueTitle} compact={compact} /> : null}
+      <SurfaceCard
+        padded={false}
+        className={cn('flex flex-col', compact ? 'min-h-0 flex-1 border-0 shadow-none' : 'min-h-[32rem]')}
+      >
+        <div className="border-b border-border px-4 py-3">
+          <p className="text-sm text-muted-foreground">
+            {issueId
+              ? `Kontekst: ${issueTitle || `sak ${issueId}`}`
+              : 'Spør om saker, dokumenter, kilder eller rettskriving av dine egne utkast.'}
+          </p>
+        </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
-        {messages.length === 0 ? (
-          <EmptyState
-            className="border-none bg-transparent px-0 py-6"
-            title="Ingen samtale ennå"
-            description="Ingen samtaler lagres på serveren. Still et spørsmål om en sak, be om kilder, eller lim inn en kladd for rettskriving."
-          />
+        <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
+          {messages.length === 0 ? (
+            <EmptyState
+              className="border-none bg-transparent px-0 py-6"
+              title="Ingen samtale ennå"
+              description="Ingen samtaler lagres på serveren. Still et spørsmål om en sak, be om kilder, eller lim inn en kladd for rettskriving."
+            />
+          ) : null}
+
+          {messages.map((message) => (
+            <article
+              key={message.id}
+              className={
+                message.role === 'user'
+                  ? 'ml-8 rounded-xl bg-muted/50 px-3 py-2 text-sm text-foreground'
+                  : 'mr-4 space-y-2 text-sm text-foreground'
+              }
+            >
+              <p className="text-xs font-medium text-muted-foreground">
+                {message.role === 'user' ? 'Du' : 'AI'}
+              </p>
+              {message.parts.map((part, index) => {
+                if (part.type === 'text') {
+                  return (
+                    <p key={`${message.id}-${index}`} className="whitespace-pre-wrap">
+                      {part.text}
+                    </p>
+                  );
+                }
+                if (isToolUIPart(part)) {
+                  const done = part.state === 'output-available';
+                  return (
+                    <p
+                      key={`${message.id}-${index}`}
+                      className="rounded-lg border border-border bg-muted/30 px-2 py-1 text-xs text-muted-foreground"
+                    >
+                      {done ? 'Ferdig: ' : 'Jobber: '}
+                      {toolLabel(part.type)}
+                    </p>
+                  );
+                }
+                return null;
+              })}
+            </article>
+          ))}
+        </div>
+
+        {error ? (
+          <p className="px-4 text-sm text-destructive">
+            {error.message || 'Noe gikk galt i samtalen.'}
+          </p>
         ) : null}
 
-        {messages.map((message) => (
-          <article
-            key={message.id}
-            className={
-              message.role === 'user'
-                ? 'ml-8 rounded-xl bg-muted/50 px-3 py-2 text-sm text-foreground'
-                : 'mr-4 space-y-2 text-sm text-foreground'
-            }
-          >
-            <p className="text-xs font-medium text-muted-foreground">
-              {message.role === 'user' ? 'Du' : 'AI'}
-            </p>
-            {message.parts.map((part, index) => {
-              if (part.type === 'text') {
-                return (
-                  <p key={`${message.id}-${index}`} className="whitespace-pre-wrap">
-                    {part.text}
-                  </p>
-                );
-              }
-              if (isToolUIPart(part)) {
-                const done = part.state === 'output-available';
-                return (
-                  <p
-                    key={`${message.id}-${index}`}
-                    className="rounded-lg border border-border bg-muted/30 px-2 py-1 text-xs text-muted-foreground"
-                  >
-                    {done ? 'Ferdig: ' : 'Jobber: '}
-                    {toolLabel(part.type)}
-                  </p>
-                );
-              }
-              return null;
-            })}
-          </article>
-        ))}
-      </div>
-
-      {error ? (
-        <p className="px-4 text-sm text-destructive">
-          {error.message || 'Noe gikk galt i samtalen.'}
-        </p>
-      ) : null}
-
-      <form
-        className="flex gap-2 border-t border-border p-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const text = input.trim();
-          if (!text || busy) return;
-          void sendMessage({ text });
-          setInput('');
-        }}
-      >
-        <input
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder="Spør om en sak, eller lim inn en kladd for rettskriving…"
-          className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
-        />
-        {busy ? (
-          <Button type="button" variant="outline" onClick={() => stop()}>
-            Stopp
-          </Button>
-        ) : (
-          <Button type="submit" disabled={!input.trim()}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            Send
-          </Button>
-        )}
-      </form>
-    </SurfaceCard>
+        <form
+          className="flex gap-2 border-t border-border p-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const text = input.trim();
+            if (!text || busy) return;
+            void sendMessage({ text });
+            setInput('');
+          }}
+        >
+          <input
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder="Spør om en sak, eller lim inn en kladd for rettskriving…"
+            className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+          />
+          {busy ? (
+            <Button type="button" variant="outline" onClick={() => stop()}>
+              Stopp
+            </Button>
+          ) : (
+            <Button type="submit" disabled={!input.trim()}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Send
+            </Button>
+          )}
+        </form>
+      </SurfaceCard>
+    </div>
   );
 }

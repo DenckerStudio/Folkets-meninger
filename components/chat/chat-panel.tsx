@@ -132,7 +132,7 @@ export function ChatPanel() {
               AI-chat
             </h2>
             <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
-              Snakk om saker, kilder og rettskriving — på nøkkelen din.
+              Rettskriving og kilder direkte — AI-samtale på nøkkelen din.
             </p>
           </div>
           <button

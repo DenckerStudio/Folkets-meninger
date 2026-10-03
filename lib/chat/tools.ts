@@ -1,13 +1,15 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import {
+  SPELLING_CONTEXTS,
+  runRettsskriving,
+  runUpdatedSourceSearch,
+} from '@/lib/chat/actions';
+import {
   retrieveSakContext,
   searchIssuesForChat,
   type ChatRagClient,
 } from '@/lib/chat/rag';
-import { searchSearxng } from '@/lib/chat/searxng';
-
-const spellingContexts = ['diskusjon', 'motforslag', 'horing', 'annet'] as const;
 
 export function createChatTools(
   preferredIssueId?: string | null,
@@ -45,9 +47,9 @@ export function createChatTools(
         query: z.string().min(3).describe('Søkestreng, gjerne med sakstittel eller henvisning.'),
       }),
       execute: async ({ query }) => {
-        const result = await searchSearxng(query);
+        const result = await runUpdatedSourceSearch(query);
         if (!result.ok) {
-          return { unavailable: true, error: result.error, results: [] as const };
+          return { unavailable: result.unavailable, error: result.error, results: [] as const };
         }
         return { unavailable: false, results: result.results };
       },
@@ -57,15 +59,19 @@ export function createChatTools(
         'Hjelp brukeren med rettskriving og grammatikk i en kladd til sak-diskusjon, motforslag eller høringsinnspill. Returner rettet tekst og korte merknader. Generer ikke nytt politisk innhold.',
       inputSchema: z.object({
         draft: z.string().min(8).max(8000).describe('Brukerens egen kladd.'),
-        context: z.enum(spellingContexts).describe('Hvor teksten skal brukes.'),
+        context: z.enum(SPELLING_CONTEXTS).describe('Hvor teksten skal brukes.'),
       }),
       execute: async ({ draft, context }) => {
-        return {
-          original: draft,
-          context,
-          instruction:
-            'Rett stavemåte, grammatikk og tydelighet. Behold brukerens mening. Ikke finn på argumenter, sitater eller fakta. Ikke formuler et ferdig innlegg som om det var publisert.',
-        };
+        const result = runRettsskriving({ draft, context });
+        if (!result.ok) {
+          return {
+            original: draft,
+            context,
+            instruction: result.error,
+            published: false as const,
+          };
+        }
+        return result.result;
       },
     }),
     listMatchingSaker: tool({

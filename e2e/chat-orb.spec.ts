@@ -29,9 +29,54 @@ test.describe('AI-chat orb overlay', () => {
     await expect(page.getByRole('heading', { name: 'AI-chat', exact: true })).toBeVisible();
     await expect(page.getByText('Logg inn for å bruke AI-chat')).toBeVisible();
     await expect(panel.getByRole('link', { name: 'Logg inn' })).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Rettskriving' })).toHaveCount(0);
+    await expect(panel.getByRole('button', { name: 'Finn oppdaterte kilder' })).toHaveCount(0);
 
     await page.screenshot({
       path: `${ARTIFACTS}/chat-panel-open.png`,
+    });
+  });
+
+  test('Stemme+ panel shows rettskriving and source actions without a chat turn', async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.route('**/api/stemme-plus/status', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          tier: 'stemme_plus',
+          has_byok: false,
+          monthly_price_nok: 59,
+          checkout_configured: false,
+        }),
+      });
+    });
+
+    await page.goto('/dashboard/avstemninger');
+    await expect(page.getByRole('heading', { name: 'Avstemninger' })).toBeVisible();
+
+    const orb = page.getByRole('button', { name: 'Åpne AI-chat' });
+    await orb.click();
+
+    const panel = page.locator('[data-chat-panel]');
+    await expect(panel).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Rettskriving' })).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Finn oppdaterte kilder' })).toBeVisible();
+    await expect(panel.getByPlaceholder('Lim inn eller skriv en kladd. Vi publiserer den ikke.')).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Sjekk kladden' })).toBeVisible();
+    await expect(page.getByText('Lagre en LLM-nøkkel først')).toBeVisible();
+
+    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    await page.screenshot({
+      path: `${ARTIFACTS}/chat-panel-actions-open.png`,
+    });
+
+    await panel.getByRole('button', { name: 'Finn oppdaterte kilder' }).click();
+    await expect(panel.getByPlaceholder('Søk etter oppdaterte kilder…')).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Søk' })).toBeVisible();
+
+    await page.screenshot({
+      path: `${ARTIFACTS}/chat-panel-actions-sources.png`,
     });
   });
 

@@ -16,6 +16,22 @@ export function resolveChatGate(input: {
   return 'ready';
 }
 
+/** Rettskriving and SearXNG actions need login + Stemme+, not a BYOK LLM turn. */
+export function canUseOverlayActions(gate: ChatGateReason): boolean {
+  switch (gate) {
+    case 'ready':
+    case 'no-key':
+      return true;
+    case 'login':
+    case 'free':
+      return false;
+    default: {
+      const _never: never = gate;
+      return _never;
+    }
+  }
+}
+
 export function shouldOpenChatFromSearchParams(params: {
   get: (name: string) => string | null;
 }): boolean {

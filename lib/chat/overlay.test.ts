@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildChatLoginNextPath,
+  canUseOverlayActions,
   chatDeepLinkQuery,
   resolveChatGate,
   shouldOpenChatFromSearchParams,
@@ -24,6 +25,13 @@ test('resolveChatGate prefers login, then Stemme+, then BYOK', () => {
     resolveChatGate({ authenticated: true, hasStemmePlus: true, hasByok: true }),
     'ready',
   );
+});
+
+test('overlay actions require Stemme+ but not BYOK', () => {
+  assert.equal(canUseOverlayActions('login'), false);
+  assert.equal(canUseOverlayActions('free'), false);
+  assert.equal(canUseOverlayActions('no-key'), true);
+  assert.equal(canUseOverlayActions('ready'), true);
 });
 
 test('chat query opens the overlay for 1 or open', () => {

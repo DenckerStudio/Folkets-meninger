@@ -1,0 +1,88 @@
+import { searchSearxng, type SearxngHit } from '@/lib/chat/searxng';
+
+export const SPELLING_CONTEXTS = ['diskusjon', 'motforslag', 'horing', 'annet'] as const;
+export type SpellingContext = (typeof SPELLING_CONTEXTS)[number];
+
+export const RETTSSKRIVING_INSTRUCTION =
+  'Rett stavemåte, grammatikk og tydelighet. Behold brukerens mening. Ikke finn på argumenter, sitater eller fakta. Ikke formuler et ferdig innlegg som om det var publisert.';
+
+export const RETTSSKRIVING_DRAFT_MIN = 8;
+export const RETTSSKRIVING_DRAFT_MAX = 8000;
+export const SOURCE_QUERY_MIN = 3;
+
+export type RettsskrivingResult = {
+  original: string;
+  context: SpellingContext;
+  instruction: string;
+  published: false;
+};
+
+export type SourceSearchResult =
+  | { ok: true; unavailable: false; results: SearxngHit[] }
+  | { ok: false; unavailable: true; error: string; results: [] }
+  | { ok: false; unavailable: false; error: string; results: [] };
+
+export function isSpellingContext(value: string): value is SpellingContext {
+  return (SPELLING_CONTEXTS as readonly string[]).includes(value);
+}
+
+export function spellingContextLabel(context: SpellingContext): string {
+  switch (context) {
+    case 'diskusjon':
+      return 'Sak-diskusjon';
+    case 'motforslag':
+      return 'Motforslag';
+    case 'horing':
+      return 'Høringsinnspill';
+    case 'annet':
+      return 'Annet';
+    default: {
+      const _never: never = context;
+      return _never;
+    }
+  }
+}
+
+/** Same payload as `helpRettsskriving` — does not publish UGC or invent a correction. */
+export function runRettsskriving(input: {
+  draft: string;
+  context: SpellingContext;
+}): { ok: true; result: RettsskrivingResult } | { ok: false; error: string } {
+  const draft = input.draft.trim();
+  if (draft.length < RETTSSKRIVING_DRAFT_MIN) {
+    return { ok: false, error: `Kladden må være minst ${RETTSSKRIVING_DRAFT_MIN} tegn.` };
+  }
+  if (draft.length > RETTSSKRIVING_DRAFT_MAX) {
+    return { ok: false, error: `Kladden kan være maks ${RETTSSKRIVING_DRAFT_MAX} tegn.` };
+  }
+
+  return {
+    ok: true,
+    result: {
+      original: draft,
+      context: input.context,
+      instruction: RETTSSKRIVING_INSTRUCTION,
+      published: false,
+    },
+  };
+}
+
+/** Same path as `searchUpdatedSources` / SearXNG — honest empty or unavailable. */
+export async function runUpdatedSourceSearch(query: string): Promise<SourceSearchResult> {
+  const trimmed = query.trim();
+  if (trimmed.length < SOURCE_QUERY_MIN) {
+    return {
+      ok: false,
+      unavailable: false,
+      error: `Søkestrengen må være minst ${SOURCE_QUERY_MIN} tegn.`,
+      results: [],
+    };
+  }
+
+  const result = await searchSearxng(trimmed);
+  if (!result.ok) {
+    return { ok: false, unavailable: true, error: result.error, results: [] };
+  }
+
+  return { ok: true, unavailable: false, results: result.results };
+}
