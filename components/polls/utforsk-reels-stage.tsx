@@ -11,7 +11,7 @@ import {
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, Compass } from 'lucide-react';
 import { CivicBubble } from '@/components/icons/civic';
-import { EmptyLineState } from '@/components/motion/empty-line';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Swiper as SwiperType } from 'swiper';
 import { CardCarousel } from '@/components/ui/card-carousel';
@@ -189,7 +189,7 @@ function reelsNavCopy(direction: 'forward' | 'back', itemCount: number): ReelsNa
         subtitle:
           itemCount > 0
             ? 'Ja, nei eller blank på spørsmål fra stortingssaker.'
-            : 'Ingen Reels er publisert ennå.',
+            : 'Ingen systemgenererte ja/nei/blank-Reels er publisert ennå.',
         BadgeIcon: CivicBubble,
       };
     case 'back':
@@ -275,17 +275,15 @@ function ReelsPanel({
       <ReelsBackCta onBack={onClose} />
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12">
-          <EmptyLineState>
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10">
+        <EmptyState
+          title="Ingen Reels publisert ennå"
+          description={`${SYSTEM_REEL_DISCLAIMER} Godkjente ja/nei/blank-spørsmål fra stortingssaker vises her.`}
+          icon={
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand/10">
               <CivicBubble className="h-6 w-6 text-brand" />
             </div>
-            <h2 className="mt-4 text-lg font-semibold text-foreground">Ingen Reels publisert ennå</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-              Godkjente ja/nei/blank-spørsmål fra stortingssaker vises her.
-            </p>
-          </EmptyLineState>
-        </div>
+          }
+        />
       ) : (
         <CardCarousel
           title="Reels"

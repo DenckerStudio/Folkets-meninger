@@ -85,7 +85,7 @@ export function StemmePlusAdmin() {
         {supporters.map((supporter) => (
           <li
             key={supporter.userId}
-            className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2"
+            className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2"
           >
             <span className="text-sm text-foreground">{supporter.email || supporter.userId}</span>
             {supporter.email ? (
