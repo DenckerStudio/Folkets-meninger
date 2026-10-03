@@ -46,7 +46,7 @@ export function createChatTools(preferredIssueId?: string | null) {
     }),
     helpRettsskriving: tool({
       description:
-        'Hjelp brukeren med rettsskriving og grammatikk i en kladd til sak-diskusjon, motforslag eller høringsinnspill. Returner rettet tekst og korte merknader. Generer ikke nytt politisk innhold.',
+        'Hjelp brukeren med rettskriving og grammatikk i en kladd til sak-diskusjon, motforslag eller høringsinnspill. Returner rettet tekst og korte merknader. Generer ikke nytt politisk innhold.',
       inputSchema: z.object({
         draft: z.string().min(8).max(8000).describe('Brukerens egen kladd.'),
         context: z.enum(spellingContexts).describe('Hvor teksten skal brukes.'),

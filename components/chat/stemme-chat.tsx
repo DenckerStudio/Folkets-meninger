@@ -100,7 +100,7 @@ export function StemmeChat({
         <p className="text-sm text-muted-foreground">
           {issueId
             ? `Kontekst: ${issueTitle || `sak ${issueId}`}`
-            : 'Spør om saker, dokumenter, kilder eller rettsskriving av dine egne utkast.'}
+            : 'Spør om saker, dokumenter, kilder eller rettskriving av dine egne utkast.'}
         </p>
       </div>
 
@@ -169,7 +169,7 @@ export function StemmeChat({
         <input
           value={input}
           onChange={(event) => setInput(event.target.value)}
-          placeholder="Spør om en sak, eller lim inn en kladd for rettsskriving…"
+          placeholder="Spør om en sak, eller lim inn en kladd for rettskriving…"
           className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
         />
         {busy ? (

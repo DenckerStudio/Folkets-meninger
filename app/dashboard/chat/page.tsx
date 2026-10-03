@@ -36,7 +36,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
         </div>
         <p className="text-sm text-muted-foreground">
           Snakk om Stortinget-saker med vår cache og dokumentutdrag, hent oppdaterte kilder, eller
-          få hjelp med rettsskriving av dine egne utkast. Chatten bruker nøkkelen din — vi genererer
+          få hjelp med rettskriving av dine egne utkast. Chatten bruker nøkkelen din — vi genererer
           ikke innlegg for deg.
         </p>
         {issueId ? (
