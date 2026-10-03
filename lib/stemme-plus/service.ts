@@ -9,7 +9,9 @@ export type UserSubscriptionSnapshot = UserSubscriptionRow & {
 
 export type SubscriptionClient = Pick<SupabaseClient, 'from'>;
 
-const SUBSCRIPTION_COLUMNS = 'subscription_tier, subscription_status, subscription_period_end';
+const TIER_COLUMNS = 'subscription_tier, subscription_status, subscription_period_end';
+/** Own-row read. Do not GRANT stripe_customer_id globally — users_select_public_display is USING (true). */
+const OWN_SUBSCRIPTION_COLUMNS = `${TIER_COLUMNS}, stripe_customer_id`;
 
 function emptySubscription(userId: string): UserSubscriptionSnapshot {
   return {
@@ -17,29 +19,43 @@ function emptySubscription(userId: string): UserSubscriptionSnapshot {
     subscription_tier: 'free',
     subscription_status: null,
     subscription_period_end: null,
+    stripe_customer_id: null,
   };
+}
+
+function toSnapshot(userId: string, data: UserSubscriptionRow): UserSubscriptionSnapshot {
+  return {
+    userId,
+    subscription_tier: data.subscription_tier,
+    subscription_status: data.subscription_status,
+    subscription_period_end: data.subscription_period_end,
+    stripe_customer_id: data.stripe_customer_id ?? null,
+  };
+}
+
+async function selectOwnUserRow(
+  client: SubscriptionClient,
+  userId: string,
+  columns: string,
+) {
+  return client.from('users').select(columns).eq('id', userId).maybeSingle();
 }
 
 export async function readUserSubscription(
   client: SubscriptionClient,
   userId: string,
 ): Promise<UserSubscriptionSnapshot> {
-  const { data, error } = await client
-    .from('users')
-    .select(SUBSCRIPTION_COLUMNS)
-    .eq('id', userId)
-    .maybeSingle();
+  const own = await selectOwnUserRow(client, userId, OWN_SUBSCRIPTION_COLUMNS);
+  if (!own.error && own.data) {
+    return toSnapshot(userId, own.data);
+  }
 
-  if (error || !data) {
+  const tier = await selectOwnUserRow(client, userId, TIER_COLUMNS);
+  if (tier.error || !tier.data) {
     return emptySubscription(userId);
   }
 
-  return {
-    userId,
-    subscription_tier: data.subscription_tier,
-    subscription_status: data.subscription_status,
-    subscription_period_end: data.subscription_period_end,
-  };
+  return toSnapshot(userId, tier.data);
 }
 
 /** Own Stemme+ row via the logged-in request session. No service role. */

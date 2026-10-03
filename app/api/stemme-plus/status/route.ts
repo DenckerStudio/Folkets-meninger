@@ -28,7 +28,7 @@ export async function GET() {
     subscription_period_end: row.subscription_period_end ?? null,
     monthly_price_nok: STEMME_PLUS_MONTHLY_PRICE_NOK,
     checkout_configured: isStripeCheckoutConfigured(),
-    has_stripe_customer: false,
+    has_stripe_customer: Boolean(row.stripe_customer_id),
     byok_encryption_ready: byokStorageReady(),
     has_byok: Boolean(byok),
     byok: byok

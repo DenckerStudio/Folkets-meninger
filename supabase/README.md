@@ -353,9 +353,13 @@ only deep-links the panel).
 User LLM keys are AES-256-GCM encrypted in `user_llm_credentials`. The owning
 authenticated user can SELECT/INSERT/UPDATE/DELETE their own ciphertext
 (`20261003200000_chat_session_byok_and_tier.sql`); decrypt stays server-side
-with `BYOK_ENCRYPTION_KEY`. Overlay chat reads the caller's
-`users.subscription_tier` (and status/period end) through the request session
-— not the service role. Cron/admin cross-user lookups still use service role.
+with `BYOK_ENCRYPTION_KEY`. Overlay chat, `/api/stemme-plus/status`, min-side
+badge, and notification prefs read the caller's `users.subscription_tier`
+(and status/period end) through the request session — not the service role.
+`has_stripe_customer` is the same session SELECT on `users.stripe_customer_id`
+when that column is visible to the caller; do not GRANT it globally (the
+public display policy is `USING (true)`). Cron/admin cross-user lookups still
+use service role.
 
 Overlay chat RAG (`retrieveSakContext` / `listMatchingSaker`) reads
 `stortinget_issues`, `document_chunks` (`document_id, chunk_index, content`

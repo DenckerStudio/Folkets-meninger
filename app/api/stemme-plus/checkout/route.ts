@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getUser } from '@/lib/supabase-server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServerSupabase, getUser } from '@/lib/supabase-server';
 import { isStripeCheckoutConfigured } from '@/lib/stripe/config';
 import { createStemmePlusCheckoutSession } from '@/lib/stripe/subscription';
-import { userHasStemmePlus } from '@/lib/stemme-plus/service';
+import { ownUserHasStemmePlus, readUserSubscription } from '@/lib/stemme-plus/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +22,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const alreadyPlus = await userHasStemmePlus(user.id);
+  const alreadyPlus = await ownUserHasStemmePlus(user.id);
   if (alreadyPlus) {
     return NextResponse.json({ error: 'Du har allerede Stemme+' }, { status: 409 });
   }
@@ -43,20 +42,18 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
-  const user = await getUser();
+  const supabase = await getServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
   }
 
-  const service = getServiceSupabase();
-  const { data } = await service
-    .from('users')
-    .select('stripe_customer_id')
-    .eq('id', user.id)
-    .maybeSingle();
+  const row = await readUserSubscription(supabase, user.id);
 
   return NextResponse.json({
     configured: isStripeCheckoutConfigured(),
-    hasCustomer: Boolean(data?.stripe_customer_id),
+    hasCustomer: Boolean(row.stripe_customer_id),
   });
 }

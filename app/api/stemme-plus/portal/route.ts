@@ -1,24 +1,21 @@
 import { NextResponse } from 'next/server';
-import { getUser } from '@/lib/supabase-server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServerSupabase } from '@/lib/supabase-server';
 import { createBillingPortalSession } from '@/lib/stripe/subscription';
+import { readUserSubscription } from '@/lib/stemme-plus/service';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
-  const user = await getUser();
+  const supabase = await getServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
   }
 
-  const service = getServiceSupabase();
-  const { data } = await service
-    .from('users')
-    .select('stripe_customer_id')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  const customerId = data?.stripe_customer_id;
+  const row = await readUserSubscription(supabase, user.id);
+  const customerId = row.stripe_customer_id;
   if (!customerId || typeof customerId !== 'string') {
     return NextResponse.json(
       { error: 'Ingen Stripe-kunde er knyttet til kontoen. Admin-tildelt Stemme+ har ikke selvbetjent portal.' },

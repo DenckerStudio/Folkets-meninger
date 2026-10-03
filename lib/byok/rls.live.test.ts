@@ -26,10 +26,11 @@ assert.equal(process.env.SUPABASE_SERVICE_ROLE_KEY, undefined);
 
 async function main() {
   const supabase = createClient(url, anon);
-  const [creds, secretCols, tier] = await Promise.all([
+  const [creds, secretCols, tier, customer] = await Promise.all([
     supabase.from('user_llm_credentials').select('user_id, key_last4').limit(1),
     supabase.from('user_llm_credentials').select('ciphertext_b64').limit(1),
     supabase.from('users').select('subscription_tier, subscription_status, subscription_period_end').limit(1),
+    supabase.from('users').select('stripe_customer_id').limit(1),
   ]);
 
   const payload = {
@@ -38,10 +39,13 @@ async function main() {
     credentialsError: creds.error?.message ?? null,
     secretError: secretCols.error?.message ?? null,
     tierError: tier.error?.message ?? null,
+    customerError: customer.error?.message ?? null,
     tierReadable: !tier.error,
+    stripeCustomerReadable: !customer.error,
     credentialRows: Array.isArray(creds.data) ? creds.data.length : 0,
     note:
-      'Anon/session can already read subscription_tier on Folkets-Stemme. ' +
+      'Anon/session can already read subscription_tier and stripe_customer_id on Folkets-Stemme. ' +
+      'Status returns the real has_stripe_customer boolean from that session SELECT. ' +
       'BYOK ciphertext stays table-denied for anon until ops apply 20261003200000 (owner RLS).',
   };
 
@@ -52,7 +56,15 @@ async function main() {
   assert.equal(payload.usedServiceRole, false);
   assert.equal(payload.credentialRows, 0);
   assert.equal(payload.tierReadable, true);
-  console.log('byok/rls.live.test.ts: ok', payload.credentialsError, 'tier', payload.tierReadable);
+  assert.equal(payload.stripeCustomerReadable, true);
+  console.log(
+    'byok/rls.live.test.ts: ok',
+    payload.credentialsError,
+    'tier',
+    payload.tierReadable,
+    'stripe_customer',
+    payload.stripeCustomerReadable,
+  );
 }
 
 void main();
