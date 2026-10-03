@@ -7,6 +7,7 @@ import { pollDraftGenerationStatusLabel } from '@/lib/admin/poll-draft-generatio
 import { usePollDraftGeneration } from '@/hooks/use-poll-draft-generation';
 import { routes } from '@/lib/routes';
 import { AdminBackLink } from '@/components/admin/admin-shell';
+import { ReelCandidateRatings } from '@/components/admin/reel-candidate-ratings';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import type { PollRecord, SakPollCandidate, SakPollCoverage } from '@/lib/polls/types';
 import { pipelineHealthNeedsAttention, type PipelineHealth } from '@/lib/n8n/pipeline-health';
@@ -66,14 +67,19 @@ function GenerationStatusBadge({
   );
 }
 
-export default function AdminReelsClient() {
-  const [drafts, setDrafts] = useState<PollRecord[]>([]);
+export default function AdminReelsClient({
+  initialDrafts = [],
+}: {
+  initialDrafts?: PollRecord[];
+}) {
+  const [drafts, setDrafts] = useState<PollRecord[]>(initialDrafts);
   const [candidates, setCandidates] = useState<SakPollCandidate[]>([]);
   const [coverage, setCoverage] = useState<SakPollCoverage | null>(null);
   const [pipelineHealth, setPipelineHealth] = useState<PipelineHealth | null>(null);
   const [pipelineHealthUnavailable, setPipelineHealthUnavailable] = useState(false);
   const [catchupMessage, setCatchupMessage] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [pending, startTransition] = useTransition();
   const { jobs, startGeneration, dismissJob, getJob, isGenerating } = usePollDraftGeneration();
 
@@ -86,12 +92,23 @@ export default function AdminReelsClient() {
           fetch('/api/admin/poll-candidates'),
           fetch('/api/admin/pipeline-health'),
         ]);
-        if (!draftsRes.ok || !candidatesRes.ok) {
-          setError('Kunne ikke laste admin-data');
-          return;
+        const failures: string[] = [];
+
+        if (draftsRes.ok) {
+          const draftsJson = (await draftsRes.json()) as DraftsResponse;
+          setDrafts(draftsJson.drafts ?? []);
+        } else {
+          failures.push('utkast');
         }
-        const draftsJson = (await draftsRes.json()) as DraftsResponse;
-        const candidatesJson = (await candidatesRes.json()) as CandidatesResponse;
+
+        if (candidatesRes.ok) {
+          const candidatesJson = (await candidatesRes.json()) as CandidatesResponse;
+          setCandidates(candidatesJson.candidates ?? []);
+          setCoverage(candidatesJson.coverage ?? null);
+        } else {
+          failures.push('sak-kandidater');
+        }
+
         if (healthRes.ok) {
           const healthJson = (await healthRes.json()) as { health?: PipelineHealth };
           setPipelineHealth(healthJson.health ?? null);
@@ -100,9 +117,10 @@ export default function AdminReelsClient() {
           setPipelineHealth(null);
           setPipelineHealthUnavailable(true);
         }
-        setDrafts(draftsJson.drafts ?? []);
-        setCandidates(candidatesJson.candidates ?? []);
-        setCoverage(candidatesJson.coverage ?? null);
+
+        if (failures.length > 0) {
+          setError(`Kunne ikke laste ${failures.join(', ')}`);
+        }
       } catch {
         setError('Kunne ikke laste admin-data');
       }
@@ -122,6 +140,7 @@ export default function AdminReelsClient() {
   const patchPoll = (id: string, action: 'publish' | 'archive') => {
     startTransition(async () => {
       setError('');
+      setSuccess('');
       const res = await fetch('/api/admin/polls', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -132,6 +151,7 @@ export default function AdminReelsClient() {
         setError(typeof data.error === 'string' ? data.error : 'Handling feilet');
         return;
       }
+      setSuccess(action === 'publish' ? 'Utkastet er publisert.' : 'Utkastet er arkivert.');
       load();
     });
   };
@@ -264,6 +284,11 @@ export default function AdminReelsClient() {
       ) : null}
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {success ? (
+        <p className="text-sm text-emerald-700 dark:text-emerald-400" role="status">
+          {success}
+        </p>
+      ) : null}
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
@@ -302,6 +327,7 @@ export default function AdminReelsClient() {
                     Sak {poll.stortingetIssueId}
                   </Link>
                 ) : null}
+                <ReelCandidateRatings metadata={poll.generationMetadata} />
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"

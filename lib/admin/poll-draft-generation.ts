@@ -1,3 +1,4 @@
+import { normalizePollIssueId } from '@/lib/polls/already-exists';
 import type { PollRecord } from '@/lib/polls/types';
 
 export const POLL_DRAFT_POLL_INTERVAL_MS = 2_500;
@@ -22,8 +23,11 @@ export function findCompletedDraft(
   job: PollDraftGenerationJob,
   drafts: PollRecord[],
 ): PollRecord | null {
-  if (job.issueId) {
-    return drafts.find((draft) => draft.stortingetIssueId === job.issueId) ?? null;
+  const jobIssueId = normalizePollIssueId(job.issueId);
+  if (jobIssueId) {
+    return (
+      drafts.find((draft) => normalizePollIssueId(draft.stortingetIssueId) === jobIssueId) ?? null
+    );
   }
 
   const knownIds = new Set(job.knownDraftIds);

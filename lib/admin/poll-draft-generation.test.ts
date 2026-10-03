@@ -42,6 +42,11 @@ const drafts = [
 ];
 
 assert(findCompletedDraft(issueJob, drafts)?.id === 'new-draft', 'find by issue');
+assert(
+  findCompletedDraft({ ...issueJob, issueId: 'sak-1' }, [basePoll({ id: 'coerced', stortingetIssueId: 'sak-1' })])
+    ?.id === 'coerced',
+  'find by matching issue id',
+);
 
 const nextJob = {
   key: '__next__',
