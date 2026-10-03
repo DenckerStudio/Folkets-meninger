@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ArrowRight, MapPin, Search, Landmark, ShieldCheck } from 'lucide-react';
 import FadeIn from '@/components/fade-in';
@@ -117,6 +117,12 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
   );
   const missingLogos = useMemo(() => missingPartyLogos(partyNames), [partyNames]);
 
+  useEffect(() => {
+    if (!selectedParty) return;
+    const chip = document.getElementById(`party-chip-${selectedParty}`);
+    chip?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  }, [selectedParty]);
+
   const filteredPolitikere = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     const base = politikere.filter((rep) => {
@@ -163,6 +169,7 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
               return (
                 <Link
                   key={name}
+                  id={`party-chip-${name}`}
                   href={active ? routes.politikere : routes.parti(name)}
                   className={cn(
                     'inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium',
