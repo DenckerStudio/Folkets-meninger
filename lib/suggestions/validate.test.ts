@@ -8,11 +8,11 @@ assert.equal(normalizeSuggestionBody(12), '');
 
 assert.equal(
   validateSuggestionBody('kort'),
-  `Forslaget må være minst ${SUGGESTION_BODY_MIN} tegn.`,
+  `Beskrivelsen må være minst ${SUGGESTION_BODY_MIN} tegn.`,
 );
 assert.equal(
   validateSuggestionBody('x'.repeat(SUGGESTION_BODY_MAX + 1)),
-  `Forslaget kan være maks ${SUGGESTION_BODY_MAX} tegn.`,
+  `Beskrivelsen kan være maks ${SUGGESTION_BODY_MAX} tegn.`,
 );
 assert.equal(validateSuggestionBody('x'.repeat(SUGGESTION_BODY_MIN)), null);
 assert.equal(validateSuggestionBody('x'.repeat(SUGGESTION_BODY_MAX)), null);

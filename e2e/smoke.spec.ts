@@ -107,9 +107,15 @@ test.describe('Folkets Stemme smoke', () => {
     await expect(page).toHaveURL(/dashboard\/utforsk/);
   });
 
-  test('forslag requires login and is not a Fider placeholder', async ({ page }) => {
-    await page.goto('/dashboard/forslag');
+  test('appens fremtid requires login and is not a Fider placeholder', async ({ page }) => {
+    await page.goto('/dashboard/appens-fremtid');
     await expect(page).toHaveURL(/auth\/login/);
+    await expect(page.getByText(/under oppsett/i)).toHaveCount(0);
+  });
+
+  test('legacy forslag URL still requires login', async ({ page }) => {
+    await page.goto('/dashboard/forslag');
+    await expect(page).toHaveURL(/auth\/login|appens-fremtid/);
     await expect(page.getByText(/under oppsett/i)).toHaveCount(0);
   });
 

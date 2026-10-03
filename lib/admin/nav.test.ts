@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { adminNavIsActive, adminNavItems } from '@/lib/admin/nav';
 import { routes } from '@/lib/routes';
 
-const forslag = adminNavItems.find((item) => item.id === 'forslag');
+const forslag = adminNavItems.find((item) => item.id === 'appens-fremtid');
 assert.ok(forslag);
+assert.equal(forslag.title, 'Appens fremtid');
 assert.equal(forslag.status, 'active');
 assert.equal(forslag.href, routes.adminForslag);
 

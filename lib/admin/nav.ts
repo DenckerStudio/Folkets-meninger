@@ -21,9 +21,9 @@ export type AdminNavItem = {
 
 export const adminNavItems: AdminNavItem[] = [
   {
-    id: 'forslag',
-    title: 'Forslag',
-    description: 'Innkommende forslag fra innloggede brukere',
+    id: 'appens-fremtid',
+    title: 'Appens fremtid',
+    description: 'Forslag, endringslogg og veikart',
     href: routes.adminForslag,
     icon: Lightbulb,
     status: 'active',

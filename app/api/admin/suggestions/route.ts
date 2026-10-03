@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
-import { listAppSuggestions, setAppSuggestionStatus } from '@/lib/admin/suggestions';
-import { isSuggestionStatus } from '@/lib/suggestions/constants';
+import {
+  listAppSuggestions,
+  setAppSuggestionStatus,
+  setAppSuggestionVoting,
+} from '@/lib/admin/suggestions';
+import { isSuggestionStatus } from '@/lib/appens-fremtid/constants';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,13 +41,21 @@ export async function PATCH(request: Request) {
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const id = typeof body.id === 'string' ? body.id.trim() : '';
-    const status = body.status;
-    if (!id || !isSuggestionStatus(status)) {
+    if (!id) {
+      return NextResponse.json({ error: 'Mangler forslag' }, { status: 400 });
+    }
+
+    if (typeof body.votingOpen === 'boolean') {
+      await setAppSuggestionVoting(id, auth.userId, body.votingOpen);
+      return NextResponse.json({ ok: true, id, votingOpen: body.votingOpen });
+    }
+
+    if (!isSuggestionStatus(body.status)) {
       return NextResponse.json({ error: 'Mangler forslag eller status' }, { status: 400 });
     }
 
-    await setAppSuggestionStatus(id, auth.userId, status);
-    return NextResponse.json({ ok: true, id, status });
+    await setAppSuggestionStatus(id, auth.userId, body.status);
+    return NextResponse.json({ ok: true, id, status: body.status });
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
     if (message.toLowerCase().includes('not found')) {

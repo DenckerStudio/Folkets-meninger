@@ -3,7 +3,7 @@ import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getServiceSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { normalizeSuggestionBody, validateSuggestionBody } from '@/lib/suggestions/validate';
+import { validateSuggestionInput } from '@/lib/appens-fremtid/validate';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,10 +35,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Ugyldig forespørsel' }, { status: 400 });
     }
 
-    const body = normalizeSuggestionBody(payload.body);
-    const validationError = validateSuggestionBody(body);
-    if (validationError) {
-      return NextResponse.json({ error: validationError }, { status: 400 });
+    const parsed = validateSuggestionInput(payload);
+    if ('error' in parsed) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
 
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -53,7 +52,10 @@ export async function POST(request: Request) {
     const service = getServiceSupabase();
     const { data, error } = await service.rpc('create_app_suggestion', {
       p_user_id: user.id,
-      p_body: body,
+      p_title: parsed.title,
+      p_body: parsed.body,
+      p_category: parsed.category,
+      p_audience: parsed.audience,
     });
 
     if (error) {

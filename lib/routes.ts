@@ -39,7 +39,7 @@ export const routes = {
   adminBrukere: `${DASHBOARD_PREFIX}/admin/brukere`,
   adminStemmePlus: `${DASHBOARD_PREFIX}/admin/stemme-plus`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,
-  forslag: `${DASHBOARD_PREFIX}/forslag`,
+  forslag: `${DASHBOARD_PREFIX}/appens-fremtid`,
 } as const;
 
 export function isDashboardPath(pathname: string): boolean {

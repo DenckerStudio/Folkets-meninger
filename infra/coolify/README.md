@@ -79,7 +79,7 @@ Relatert produktarbeid: avstemninger/initiativ (PR #57, `polls` / `citizen_initi
 ### Fider (ikke i bruk av appen)
 
 - Coolify kan fortsatt hoste Fider på `https://feedback.folkets-meninger.no`. Denne endringen slår ikke av den tjenesten.
-- Folkets Stemme linker ikke lenger til Fider og har ingen OAuth-bro. **Forslag** i appen er `/dashboard/forslag` (innloggede forslag i `app_suggestions`).
+- Folkets Stemme linker ikke lenger til Fider og har ingen OAuth-bro. **Appens fremtid** i appen er `/dashboard/appens-fremtid` (forslag, endringslogg og veikart i egne tabeller).
 
 ### Fase C4 — (valgfri, senere) self-host Postgres
 

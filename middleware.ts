@@ -83,5 +83,6 @@ export const config = {
     '/api/opinions/:path*',
     '/api/feedback',
     '/api/suggestions',
+    '/api/suggestions/:path*',
   ],
 };
