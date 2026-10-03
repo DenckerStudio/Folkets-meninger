@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowRight, Users } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
 import { routes } from '@/lib/routes';
-import FadeIn from '@/components/fade-in';
+import { LandingHeadingRule } from '@/components/icons/civic';
 
 export type LandingIssue = {
   id: string;
@@ -19,14 +19,14 @@ type LandingPopularIssuesProps = {
 
 export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
   return (
-    <FadeIn delay={0.22} direction="up">
-      <section>
+    <section>
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f] mb-3">Engasjement</p>
             <h2 className="text-3xl font-bold text-[#001433] tracking-tight sm:text-4xl">Populære saker nå</h2>
+            <LandingHeadingRule />
             <p className="mt-2 text-[#001433]/65 max-w-xl">
-              Lovforslag og representantforslag fra Stortinget — de mest engasjerende sakene for ja/nei-stemming.
+              De mest engasjerende sakene for ja/nei-stemming.
             </p>
           </div>
           <Link
@@ -80,6 +80,5 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
           })}
         </div>
       </section>
-    </FadeIn>
   );
 }

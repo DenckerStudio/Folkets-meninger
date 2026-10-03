@@ -3,6 +3,7 @@
 import type { CSSProperties } from 'react';
 import { useRef } from 'react';
 import { LazyMotion, domAnimation, m, useInView, useReducedMotion } from 'motion/react';
+import { LandingHeadingRule } from '@/components/icons/civic';
 import { SoftBlurIn } from '@/components/ui/soft-blur-in';
 
 interface CardProps {
@@ -164,7 +165,7 @@ export default function HowItWorks({
   stepPositions,
   title = 'Fra Stortinget til din stemme',
   eyebrow = 'Slik fungerer det',
-  description = 'En enkel vei inn i demokratiet mellom valgene — med data direkte fra kilden.',
+  description = 'Data fra Stortinget. Stem, høring og innsikt.',
 }: HowItWorksProps) {
   const reduceMotion = useReducedMotion();
   const boardRef = useRef<HTMLDivElement>(null);
@@ -230,6 +231,7 @@ export default function HowItWorks({
           </SoftBlurIn>
           <SoftBlurIn delay={0.08}>
             <h2 className="text-3xl font-bold tracking-tight text-[#001433] sm:text-4xl">{title}</h2>
+            <LandingHeadingRule className="landing-heading-rule--center" />
           </SoftBlurIn>
           <SoftBlurIn delay={0.14}>
             <p className="mt-3 text-[#001433]/65">{description}</p>

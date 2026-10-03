@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { LazyMotion, domAnimation, m, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { LandingHeadingRule } from '@/components/icons/civic';
 import { SoftBlurIn } from '@/components/ui/soft-blur-in';
 import { TextGradient } from '@/components/ui/text-gradient';
 import { TextReveal } from '@/components/ui/text-reveal';
@@ -96,6 +97,7 @@ export default function AboutSection({
               {title}
             </TextGradient>
           </h2>
+          <LandingHeadingRule className="landing-heading-rule--center" />
         </SoftBlurIn>
         {subtitle ? (
           <SoftBlurIn delay={0.14}>
