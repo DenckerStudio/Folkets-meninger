@@ -4,8 +4,10 @@
  * Erstatter Vercel Cron (krever Pro). n8n kaller appens /api/cron/* med x-cron-secret.
  *
  * Sett appBaseUrl og cronSecret i hver «Cron settings*»-node i n8n (ikke commit hemmeligheter).
+ * In-workflow Error Trigger → POST /api/ops/n8n-notify (kilde-fallback).
  */
 import { workflow, node, trigger, sticky } from '@n8n/workflow-sdk';
+import { createInWorkflowErrorNotify } from './in-workflow-error-notify';
 
 const CALL_CRON_JS = `const SETTINGS_NODES = [
   'Cron settings',
@@ -315,8 +317,10 @@ const scheduleDigestWeekly = trigger({
   output: [{}],
 });
 
+const inWorkflowError = createInWorkflowErrorNotify('folkets-app-cron');
+
 sticky(
-  '## App cron (n8n → Folkets Stemme)\\n\\nErstatter Vercel Cron. Fyll inn **cronSecret** (samme som CRON_SECRET i app) og **appBaseUrl** i hver Cron settings-node.',
+  '## App cron (n8n → Folkets Stemme)\\n\\nErstatter Vercel Cron. Fyll inn **cronSecret** (samme som CRON_SECRET i app) og **appBaseUrl** i hver Cron settings-node. Error Trigger POSTer til /api/ops/n8n-notify. n8n-retry kjører hver 2. time.',
   [scheduleSyncIssues, scheduleCategories, scheduleLabels, schedulePackageCounter, scheduleN8nRetry, scheduleDigestDaily, scheduleDigestWeekly],
   { color: 3 }
 );
@@ -335,4 +339,6 @@ export default workflow('folkets-app-cron', 'Folkets Stemme – App cron (n8n)')
   .add(scheduleN8nRetry)
   .to(cronSettingsN8nRetry.to(setN8nRetryPath).to(callCron))
   .add(scheduleDigestWeekly)
-  .to(cronSettingsDigestWeekly.to(setDigestWeeklyPath).to(callCron));
+  .to(cronSettingsDigestWeekly.to(setDigestWeeklyPath).to(callCron))
+  .add(inWorkflowError.errorTrigger)
+  .to(inWorkflowError.formatError.to(inWorkflowError.notifySettings).to(inWorkflowError.notifyAdmin));

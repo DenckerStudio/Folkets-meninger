@@ -11,6 +11,7 @@ import {
   ifElse,
 } from '@n8n/workflow-sdk';
 import { FOLKETS_N8N_BASE, FOLKETS_SUPABASE_CRED, rpcUrl } from './n8n-supabase.shared';
+import { createInWorkflowErrorNotify } from './in-workflow-error-notify';
 import {
   BUILD_SAK_CONTEXT_JS,
   EXPAND_OR_EMPTY_JS,
@@ -667,8 +668,10 @@ const respondWebhookSkipped = node({
   },
 });
 
+const inWorkflowError = createInWorkflowErrorNotify('folkets-ai-summary-backfill');
+
 sticky(
-  '## AI-sammendrag (Ollama)\n\nTom kø avbrytes uten Ollama-kall. Webhook henter `n8n_get_issue_ai_summary_context`. Etter lagring trigges system-poll-utkast.\n\n**Ikke** generer sammendrag uten sak-id.',
+  '## AI-sammendrag (Ollama)\n\nTom kø avbrytes uten Ollama-kall. Webhook henter `n8n_get_issue_ai_summary_context`. Etter lagring trigges system-poll-utkast.\n\n**Ikke** generer sammendrag uten sak-id. Error Trigger POSTer til /api/ops/n8n-notify; app-kø: /api/cron/n8n-retry.',
   [scheduleTrigger, webhookTrigger],
   { color: 4 },
 );
@@ -719,6 +722,8 @@ export default workflow(
       )
       .onFalse(respondWebhookSkipped),
   )
+  .add(inWorkflowError.errorTrigger)
+  .to(inWorkflowError.formatError.to(inWorkflowError.notifySettings).to(inWorkflowError.notifyAdmin))
   .group('Hent manglende saker', [backfillSettingsSchedule, fetchMissingSummaries, expandMissingIssues], {
     description: 'RPC-kø for saker uten AI-sammendrag',
   });
