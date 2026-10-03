@@ -3,14 +3,7 @@
 import type { CSSProperties } from 'react';
 import { useRef } from 'react';
 import { LazyMotion, domAnimation, m, useInView, useReducedMotion } from 'motion/react';
-import { LandingHeadingRule } from '@/components/icons/civic';
-import { LandingTextSettle } from '@/components/landing-text-settle';
-import {
-  LANDING_TEXT_SETTLE_DURATION,
-  LANDING_TEXT_SETTLE_EASE,
-  LANDING_TEXT_SETTLE_OPACITY_FROM,
-  LANDING_TEXT_SETTLE_Y,
-} from '@/lib/landing-text-motion';
+import { SoftBlurIn } from '@/components/ui/soft-blur-in';
 
 interface CardProps {
   number: string;
@@ -26,7 +19,11 @@ interface CardProps {
   };
   reduceMotion?: boolean | null;
   inView?: boolean;
+  index?: number;
 }
+
+/** 21st.dev Reveal / Blur Fade — expo-out, short travel. */
+const SMOOTH_EASE = [0.16, 1, 0.3, 1] as const;
 
 const BOARD_IN_VIEW = {
   once: true,
@@ -35,15 +32,18 @@ const BOARD_IN_VIEW = {
 } as const;
 
 const cardItemVariants = {
-  hidden: { y: LANDING_TEXT_SETTLE_Y, opacity: LANDING_TEXT_SETTLE_OPACITY_FROM },
-  visible: {
-    y: 0,
+  hidden: { opacity: 0, y: 28, scale: 0.97, filter: 'blur(6px)' },
+  visible: (index: number) => ({
     opacity: 1,
+    y: 0,
+    scale: 1,
+    filter: 'blur(0px)',
     transition: {
-      duration: LANDING_TEXT_SETTLE_DURATION,
-      ease: LANDING_TEXT_SETTLE_EASE,
+      delay: 0.06 + index * 0.13,
+      duration: 0.7,
+      ease: SMOOTH_EASE,
     },
-  },
+  }),
 };
 
 const Pin = ({ className }: { className?: string }) => (
@@ -71,6 +71,7 @@ const Card = ({
   colors: customColors,
   reduceMotion = false,
   inView = false,
+  index = 0,
 }: CardProps) => {
   const defaultBgColors = {
     red: 'bg-[#ba0c2f]/[0.07]',
@@ -95,6 +96,7 @@ const Card = ({
   return (
     <div className={`relative w-full md:w-[280px] ${rotate ?? ''} ${className ?? ''}`}>
       <m.div
+        custom={index}
         initial={reduceMotion ? false : 'hidden'}
         animate={reduceMotion || inView ? 'visible' : 'hidden'}
         variants={cardItemVariants}
@@ -223,16 +225,15 @@ export default function HowItWorks({
         <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-white" aria-hidden />
 
         <div className="relative z-10 mx-auto mb-10 max-w-2xl text-center md:mb-14">
-          <LandingTextSettle>
+          <SoftBlurIn>
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">{eyebrow}</p>
-          </LandingTextSettle>
-          <LandingTextSettle>
+          </SoftBlurIn>
+          <SoftBlurIn delay={0.08}>
             <h2 className="text-3xl font-bold tracking-tight text-[#001433] sm:text-4xl">{title}</h2>
-            <LandingHeadingRule className="landing-heading-rule--center" />
-          </LandingTextSettle>
-          <LandingTextSettle>
+          </SoftBlurIn>
+          <SoftBlurIn delay={0.14}>
             <p className="mt-3 text-[#001433]/65">{description}</p>
-          </LandingTextSettle>
+          </SoftBlurIn>
         </div>
 
         <div className="relative z-10 mx-auto max-w-6xl">
@@ -302,6 +303,7 @@ export default function HowItWorks({
                   className={position.className}
                   reduceMotion={reduceMotion}
                   inView={boardInView}
+                  index={index}
                 />
               );
             })}

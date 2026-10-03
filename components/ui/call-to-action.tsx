@@ -1,7 +1,5 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { LandingHeadingRule } from '@/components/icons/civic';
-import { LandingTextSettle } from '@/components/landing-text-settle';
 import { cn } from '@/lib/utils';
 
 export type CallToActionProps = {
@@ -42,17 +40,12 @@ export default function CallToAction({
       </div>
 
       <div className="relative mx-auto flex max-w-3xl flex-col items-center text-center">
-        <LandingTextSettle>
-          <h2 className="text-balance text-3xl font-extrabold tracking-tight text-[#001433] sm:text-4xl md:text-5xl">
-            {title}
-          </h2>
-          <LandingHeadingRule className="landing-heading-rule--center" />
-        </LandingTextSettle>
-        <LandingTextSettle>
-          <p className="mt-5 max-w-2xl text-pretty text-base leading-relaxed text-[#001433]/65 sm:text-lg">
-            {subtitle}
-          </p>
-        </LandingTextSettle>
+        <h2 className="text-balance text-3xl font-extrabold tracking-tight text-[#001433] sm:text-4xl md:text-5xl">
+          {title}
+        </h2>
+        <p className="mt-5 max-w-2xl text-pretty text-base leading-relaxed text-[#001433]/65 sm:text-lg">
+          {subtitle}
+        </p>
 
         <div className="mt-10 flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:items-center">
           <Link

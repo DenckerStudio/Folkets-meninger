@@ -126,7 +126,3 @@ export function CivicTick({ className }: CivicIconProps) {
     </CivicSvg>
   );
 }
-
-export function LandingHeadingRule({ className }: CivicIconProps) {
-  return <span className={cn('landing-heading-rule', className)} aria-hidden />;
-}

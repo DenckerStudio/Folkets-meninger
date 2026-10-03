@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { LogIn } from 'lucide-react';
 import { LandingLogo } from '@/components/landing-logo';
 import { cn } from '@/lib/utils';
@@ -25,7 +24,6 @@ function useScroll(threshold: number) {
 export function LandingHeader() {
   const scrolled = useScroll(10);
   const { user } = useAuth();
-  const pathname = usePathname();
 
   return (
     <header
@@ -36,7 +34,7 @@ export function LandingHeader() {
     >
       <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href={routes.home} className="rounded-md p-1 transition-opacity hover:opacity-90">
-          <LandingLogo clipId="fs-header-bubble" animate={pathname === '/'} />
+          <LandingLogo clipId="fs-header-bubble" />
         </Link>
         <div className="flex items-center gap-1.5 sm:gap-3">
           <a
