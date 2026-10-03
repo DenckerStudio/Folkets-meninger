@@ -1,5 +1,5 @@
 import { emptyPollTotals, pollChoicePercent, isPollVotingOpen } from '@/lib/polls/format';
-import { pollChoiceLabel, pollTrackLabel } from '@/lib/polls/labels';
+import { POLL_BALLOT_CHOICES, pollChoiceLabel, pollTrackLabel } from '@/lib/polls/labels';
 import { isNorwayCountyCode } from '@/lib/polls/norway-counties';
 import type { PollTotals } from '@/lib/polls/types';
 
@@ -30,6 +30,13 @@ const sample: PollTotals = { ja: 1, nei: 0, blank: 0, total: 1 };
 assert(pollChoicePercent(sample, 'nei') === 0, 'zero side');
 assert(pollChoiceLabel('ja') === 'Ja', 'ja label');
 assert(pollChoiceLabel('blank') === 'Blank', 'blank label');
+assert(
+  POLL_BALLOT_CHOICES.length === 3 &&
+    POLL_BALLOT_CHOICES[0] === 'ja' &&
+    POLL_BALLOT_CHOICES[1] === 'nei' &&
+    POLL_BALLOT_CHOICES[2] === 'blank',
+  'public poll ballot is ja/nei/blank',
+);
 assert(pollTrackLabel('citizen') === 'Avviklet', 'citizen track');
 assert(pollTrackLabel('system') === 'Systemgenerert', 'system track');
 assert(pollTrackLabel('stortinget') === 'Stortinget', 'stortinget track');

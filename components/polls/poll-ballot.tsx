@@ -4,12 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { pollChoicePercent } from '@/lib/polls/format';
-import { pollChoiceLabel } from '@/lib/polls/labels';
+import { POLL_BALLOT_CHOICES, pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
-
-const CHOICES: PollChoice[] = ['ja', 'nei', 'blank'];
 
 type PollBallotProps = {
   pollId: string;
@@ -74,7 +72,7 @@ export function PollBallot({
         </>
       )}
       <div className={cn('grid gap-2 sm:grid-cols-3', compact ? 'mt-0' : 'mt-4')}>
-        {CHOICES.map((choice) => {
+        {POLL_BALLOT_CHOICES.map((choice) => {
           const selected = userVote === choice;
           return (
             <button

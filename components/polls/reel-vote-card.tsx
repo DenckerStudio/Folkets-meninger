@@ -7,12 +7,31 @@ import { Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { isPollVotingOpen } from '@/lib/polls/format';
-import { pollChoiceLabel } from '@/lib/polls/labels';
-import type { PollChoice, SystemReelFeedItem } from '@/lib/polls/types';
+import { POLL_BALLOT_CHOICES, pollChoiceLabel } from '@/lib/polls/labels';
+import type { PollChoice, PollTotals, SystemReelFeedItem } from '@/lib/polls/types';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
 const SLIDE = { type: 'spring', stiffness: 90, damping: 18 } as const;
+
+function reelChoiceClassName(choice: PollChoice): string {
+  switch (choice) {
+    case 'ja':
+      return 'bg-brand-accent text-white hover:bg-brand-accent/90';
+    case 'nei':
+      return 'bg-background text-brand hover:bg-background/90';
+    case 'blank':
+      return 'bg-muted text-foreground hover:bg-muted/80';
+    default: {
+      const _exhaustive: never = choice;
+      return _exhaustive;
+    }
+  }
+}
+
+function reelTotalsSummary(totals: PollTotals): string {
+  return `${totals.ja} ja · ${totals.nei} nei · ${totals.blank} blank.`;
+}
 
 type ReelFlagVoteProps = {
   item: SystemReelFeedItem;
@@ -29,7 +48,7 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
   const [busy, setBusy] = useState(false);
   const votingOpen = isPollVotingOpen(item.poll);
 
-  const vote = async (choice: 'ja' | 'nei') => {
+  const vote = async (choice: PollChoice) => {
     if (!votingOpen || userVote || busy) return;
     if (!user) {
       router.push(`${routes.login}?next=${encodeURIComponent(`${routes.utforsk}#reels`)}`);
@@ -57,31 +76,7 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
     }
   };
 
-  const buttons: {
-    key: 'ja' | 'nei' | 'tilbake';
-    label: string;
-    className: string;
-    onClick: () => void;
-  }[] = [
-    {
-      key: 'ja',
-      label: 'Ja',
-      className: 'bg-brand-accent text-white hover:bg-brand-accent/90',
-      onClick: () => void vote('ja'),
-    },
-    {
-      key: 'nei',
-      label: 'Nei',
-      className: 'bg-background text-brand hover:bg-background/90',
-      onClick: () => void vote('nei'),
-    },
-    {
-      key: 'tilbake',
-      label: 'Tilbake',
-      className: 'bg-brand text-brand-foreground hover:bg-brand/90',
-      onClick: onBack,
-    },
-  ];
+  const voteDisabled = busy || Boolean(userVote) || !votingOpen;
 
   return (
     <div className="flex h-full flex-col justify-between gap-4">
@@ -96,7 +91,7 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
         ) : userVote ? (
           <p className="mb-3 text-sm text-white/90">
             Du har stemt {pollChoiceLabel(userVote).toLowerCase()} (anonymt).
-            {totals.total > 0 ? ` ${totals.ja} ja · ${totals.nei} nei.` : ''}
+            {totals.total > 0 ? ` ${reelTotalsSummary(totals)}` : ''}
           </p>
         ) : !user ? (
           <p className="mb-3 text-sm text-white/80">Logg inn for å avgi stemme.</p>
@@ -105,9 +100,9 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
 
         <div className="overflow-hidden rounded-2xl shadow-lg">
           <AnimatePresence>
-            {buttons.map((button, index) => (
+            {POLL_BALLOT_CHOICES.map((choice, index) => (
               <motion.button
-                key={button.key}
+                key={choice}
                 type="button"
                 custom={index}
                 initial={reducedMotion ? false : { opacity: 0, y: 28 }}
@@ -116,19 +111,26 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
                   ...SLIDE,
                   delay: reducedMotion ? 0 : 0.05 + index * 0.07,
                 }}
-                disabled={button.key !== 'tilbake' && (busy || Boolean(userVote) || !votingOpen)}
-                onClick={button.onClick}
+                disabled={voteDisabled}
+                onClick={() => void vote(choice)}
                 className={cn(
-                  'flex w-full items-center justify-center px-4 py-4 text-base font-bold tracking-wide transition-opacity disabled:opacity-60',
-                  button.className,
-                  userVote === button.key ? 'ring-2 ring-inset ring-white/80' : '',
+                  'flex w-full items-center justify-center px-4 py-3.5 text-base font-bold tracking-wide transition-opacity disabled:opacity-60',
+                  reelChoiceClassName(choice),
+                  userVote === choice ? 'ring-2 ring-inset ring-white/80' : '',
                 )}
               >
-                {button.label}
+                {pollChoiceLabel(choice)}
               </motion.button>
             ))}
           </AnimatePresence>
         </div>
+        <button
+          type="button"
+          onClick={onBack}
+          className="mt-3 w-full rounded-xl px-4 py-2 text-sm font-semibold text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+        >
+          Tilbake
+        </button>
       </div>
     </div>
   );

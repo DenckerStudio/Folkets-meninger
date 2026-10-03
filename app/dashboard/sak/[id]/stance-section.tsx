@@ -207,7 +207,7 @@ export default function StanceSection({
       </AnimatePresence>
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        Systemgenererte ja/nei-spørsmål finner du på Utforsk. Andre nasjonale avstemninger ligger under Avstemninger.
+        Systemgenererte ja/nei/blank-spørsmål finner du på Utforsk. Andre nasjonale avstemninger ligger under Avstemninger.
       </p>
     </div>
   );

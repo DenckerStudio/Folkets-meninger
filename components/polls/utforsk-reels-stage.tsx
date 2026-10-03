@@ -182,7 +182,7 @@ function reelsNavCopy(direction: 'forward' | 'back', itemCount: number): ReelsNa
         title: 'Del din mening',
         subtitle:
           itemCount > 0
-            ? 'Si ja eller nei på systemgenererte spørsmål fra stortingssaker.'
+            ? 'Si ja, nei eller blank på systemgenererte spørsmål fra stortingssaker.'
             : 'Ingen Reels er publisert ennå. Åpne for å se status.',
         BadgeIcon: Sparkles,
       };
@@ -281,7 +281,7 @@ function ReelsPanel({
       ) : (
         <CardCarousel
           title="Reels"
-          description="Bla mellom spørsmål. Trykk på et kort for å stemme ja eller nei."
+          description="Bla mellom spørsmål. Trykk på et kort for å stemme ja, nei eller blank."
           badge={
             <>
               <Sparkles className="fill-brand-accent/30 stroke-1 text-brand" /> Systemgenerert
