@@ -187,8 +187,9 @@ function RettsskrivingResultView({ result }: { result: RettsskrivingResult }) {
         </div>
       );
     default: {
-      const _never: never = result.mode;
-      return _never;
+      const _never: never = result;
+      void _never;
+      return null;
     }
   }
 }
