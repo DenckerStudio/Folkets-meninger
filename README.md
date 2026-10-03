@@ -71,11 +71,12 @@ Important constraints:
   created by workflows use the `is_system_thread` path instead.
 - AI summary text is not generated in the Next.js app. The app stores source
   context and triggers n8n; summaries are read back from Supabase.
-- Stemme+ (59 kr/mnd) gates BYOK AI-chat at `/dashboard/chat`. Users store an
-  encrypted LLM key; tools retrieve sak chunks (no embeddings column) and
-  search `https://searxng.heyklever.app`. Stripe checkout is real when keys
-  exist, otherwise the UI says it is not configured. Admin can still grant
-  Stemme+ via `/dashboard/admin/stemme-plus`.
+- Stemme+ (59 kr/mnd) gates BYOK AI-chat from a glowing orb overlay on dashboard
+  chrome (not a sidebar page). `/dashboard/chat` only deep-links the overlay.
+  Users store an encrypted LLM key; tools retrieve sak chunks (no embeddings
+  column) and search `https://searxng.heyklever.app`. Stripe checkout is real
+  when keys exist, otherwise the UI says it is not configured. Admin can still
+  grant Stemme+ via `/dashboard/admin/stemme-plus`.
 
 ## Documentation index
 

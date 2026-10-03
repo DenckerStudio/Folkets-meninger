@@ -347,7 +347,8 @@ SELECT public.grant_stemme_plus_by_email('supporter@example.com', NULL);
 
 Or use `/dashboard/admin/stemme-plus` (also still available on admin Reels).
 Benefits: profile badge, richer digest, realtime/smarter alerts, and BYOK AI-chat
-(`lib/stemme-plus/gates.ts`, `/dashboard/chat`).
+from the dashboard orb overlay (`lib/stemme-plus/gates.ts`; `/dashboard/chat`
+only deep-links the panel).
 
 User LLM keys are AES-256-GCM encrypted in `user_llm_credentials` (service_role
 only). Chat RAG uses `search_issue_document_chunks_text` / `search_stortinget_issues_for_chat`
@@ -355,7 +356,7 @@ and never selects embedding columns.
 
 Deploy `BYOK_ENCRYPTION_KEY` on Coolify/Vercel (never commit the value). Generate
 a 64-hex AES-256 key with `openssl rand -hex 32`, or use a passphrase (scrypt).
-Until the env is set, key storage stays disabled and `/dashboard/chat` reports
+Until the env is set, key storage stays disabled and the chat overlay reports
 that the key is missing. Stripe Checkout stays honestly unconfigured until
 Vercel Marketplace → Stripe supplies `STRIPE_SECRET_KEY` +
 `STRIPE_STEMME_PLUS_PRICE_ID` — do not invent a store or mock checkout.

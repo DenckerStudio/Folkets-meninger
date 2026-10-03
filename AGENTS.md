@@ -179,7 +179,7 @@ The canonical template is `.env.example`.
   Remaining admin surface: `/dashboard/admin/statistikk`,
   `/dashboard/admin/reels`, `/dashboard/admin/stemme-plus`.
 - **Stemme+** (`users.subscription_tier`): supporter badge, richer digest, smarter
-  alerts, and Stemme+-gated BYOK AI-chat (`/dashboard/chat`). Price 59 kr/mnd
+  alerts, and Stemme+-gated BYOK AI-chat (dashboard orb overlay). Price 59 kr/mnd
   (`lib/stemme-plus/constants.ts`). Admin grant via `grant_stemme_plus_by_email`
   / `/dashboard/admin/stemme-plus` (`/api/admin/stemme-plus`). Stripe Checkout
   + webhook (`/api/webhooks/stripe`) run when `STRIPE_SECRET_KEY` and
@@ -188,8 +188,11 @@ The canonical template is `.env.example`.
 
 ### Stemme+ BYOK AI-chat
 
-- Route: `/dashboard/chat` (optional `?sak=<id>`). Sidebar **AI-chat**. Free users
-  see an upgrade empty state, not a broken composer.
+- Floating glowing orb on dashboard chrome opens Stemme+ AI-chat as an overlay
+  (not a page, not a sidebar or primary-nav item). `/dashboard/chat` (optional
+  `?sak=<id>`) only redirects to Utforsk and opens the panel (`?chat=1`). Login
+  + Stemme+ gating stay. Free users see an upgrade empty state, not a broken
+  composer.
 - Users store their own LLM key (OpenAI / Anthropic / OpenAI-compatible / AI
   Gateway) encrypted at rest in `user_llm_credentials` (service-role only).
   Never log keys; never return the secret after save.

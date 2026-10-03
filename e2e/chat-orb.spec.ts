@@ -42,4 +42,30 @@ test.describe('AI-chat orb overlay', () => {
     await expect(page.locator('[data-chat-panel]')).toBeVisible({ timeout: 90_000 });
     await expect(page.getByRole('heading', { name: 'AI-chat', exact: true })).toBeVisible();
   });
+
+  test('floating orb mounts on Utforsk and opens the panel', async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.goto('/dashboard/utforsk');
+    await expect(page.getByRole('heading', { name: 'Utforsk saker' })).toBeVisible({ timeout: 90_000 });
+
+    const orb = page.getByRole('button', { name: 'Åpne AI-chat' });
+    await expect(orb).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Dashbordmeny' }).getByRole('link', { name: 'AI-chat' })).toHaveCount(0);
+    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+
+    await page.screenshot({
+      path: `${ARTIFACTS}/chat-orb-utforsk-closed.png`,
+    });
+
+    await orb.click();
+
+    const panel = page.locator('[data-chat-panel]');
+    await expect(panel).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI-chat', exact: true })).toBeVisible();
+    await expect(page.getByText('Logg inn for å bruke AI-chat')).toBeVisible();
+
+    await page.screenshot({
+      path: `${ARTIFACTS}/chat-panel-utforsk-open.png`,
+    });
+  });
 });
