@@ -65,22 +65,22 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
     onClick: () => void;
   }[] = [
     {
-      key: 'ja',
-      label: 'Ja',
-      className: 'bg-brand-accent text-white hover:bg-brand-accent/90',
-      onClick: () => void vote('ja'),
-    },
-    {
       key: 'nei',
       label: 'Nei',
-      className: 'bg-white text-brand hover:bg-white/90',
+      className: 'bg-[#ba0c2f] text-white hover:bg-[#ba0c2f]/90',
       onClick: () => void vote('nei'),
     },
     {
       key: 'tilbake',
       label: 'Tilbake',
-      className: 'bg-brand text-brand-foreground hover:bg-brand/90',
+      className: 'bg-white text-[#00205b] hover:bg-white/90',
       onClick: onBack,
+    },
+    {
+      key: 'ja',
+      label: 'Ja',
+      className: 'bg-[#00205b] text-white hover:bg-[#00205b]/90',
+      onClick: () => void vote('ja'),
     },
   ];
 
@@ -89,6 +89,9 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
       <div className="space-y-2">
         <p className="text-[11px] font-medium uppercase tracking-wide text-white/70">Hva mener du?</p>
         <h3 className="text-lg font-semibold leading-snug text-white sm:text-xl">{item.poll.title}</h3>
+        {item.poll.neutralSummary ? (
+          <p className="text-sm leading-relaxed text-white/80">{item.poll.neutralSummary}</p>
+        ) : null}
       </div>
 
       <div>
@@ -187,9 +190,6 @@ export function ReelCarouselCard({
           </span>
           <div className="space-y-2">
             <h3 className="text-lg font-semibold leading-snug sm:text-xl">{item.poll.title}</h3>
-            {item.poll.neutralSummary ? (
-              <p className="line-clamp-4 text-sm leading-relaxed text-white/80">{item.poll.neutralSummary}</p>
-            ) : null}
           </div>
           <p className="text-xs font-medium text-white/70">Trykk for å stemme</p>
         </button>
