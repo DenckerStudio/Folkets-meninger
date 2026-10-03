@@ -30,9 +30,6 @@ export async function POST(request: Request) {
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return NextResponse.json({ error: 'Serveren er ikke konfigurert' }, { status: 503 });
-  }
 
   try {
     const payload = (await request.json()) as Record<string, unknown>;
@@ -58,9 +55,6 @@ export async function PATCH(request: Request) {
   const auth = await requireAdmin();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
-  }
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return NextResponse.json({ error: 'Serveren er ikke konfigurert' }, { status: 503 });
   }
 
   try {
@@ -90,9 +84,6 @@ export async function DELETE(request: Request) {
   const auth = await requireAdmin();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
-  }
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return NextResponse.json({ error: 'Serveren er ikke konfigurert' }, { status: 503 });
   }
 
   try {
