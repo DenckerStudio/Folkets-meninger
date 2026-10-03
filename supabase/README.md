@@ -353,6 +353,13 @@ User LLM keys are AES-256-GCM encrypted in `user_llm_credentials` (service_role
 only). Chat RAG uses `search_issue_document_chunks_text` / `search_stortinget_issues_for_chat`
 and never selects embedding columns.
 
+Deploy `BYOK_ENCRYPTION_KEY` on Coolify/Vercel (never commit the value). Generate
+a 64-hex AES-256 key with `openssl rand -hex 32`, or use a passphrase (scrypt).
+Until the env is set, key storage stays disabled and `/dashboard/chat` reports
+that the key is missing. Stripe Checkout stays honestly unconfigured until
+Vercel Marketplace → Stripe supplies `STRIPE_SECRET_KEY` +
+`STRIPE_STEMME_PLUS_PRICE_ID` — do not invent a store or mock checkout.
+
 ### Hearing comments
 
 Høringer themselves are not stored locally; pages fetch
