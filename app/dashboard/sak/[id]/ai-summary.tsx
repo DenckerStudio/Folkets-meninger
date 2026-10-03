@@ -119,7 +119,7 @@ export default function AiSummary({ sakId }: { sakId: string }) {
         open={open}
         onClose={() => setOpen(false)}
         title={
-          <span className="inline-flex items-center gap-2">
+          <span className="inline-flex min-w-0 flex-wrap items-center gap-2">
             <span id={headingId}>AI-sammendrag</span>
             {showTooltips ? (
               <InfoTooltip
@@ -132,6 +132,15 @@ export default function AiSummary({ sakId }: { sakId: string }) {
         }
         description="Generert av AI fra saksdokumentene. Dette er ikke et offisielt Stortinget-sammendrag."
         size="lg"
+        footer={
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="inline-flex w-full items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90 sm:w-auto"
+          >
+            Lukk
+          </button>
+        }
       >
         {loading ? (
           <div className="space-y-4" aria-live="polite">
@@ -169,25 +178,25 @@ function FactTile({
   if (!text.trim()) return null;
 
   return (
-    <article className="rounded-xl border border-border bg-card p-4">
+    <article className="min-w-0 rounded-xl border border-border bg-card p-4">
       <div className="mb-1.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        <Icon className="h-3.5 w-3.5 text-brand" aria-hidden />
-        {label}
+        <Icon className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden />
+        <span className="min-w-0 break-words">{label}</span>
       </div>
-      <p className="text-sm leading-relaxed text-foreground">{text}</p>
+      <p className="text-sm leading-relaxed break-words text-foreground">{text}</p>
     </article>
   );
 }
 
 function V2Summary({ data }: { data: AiSummaryV2 }) {
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {data.labels.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {data.labels.map((label) => (
             <span
               key={label}
-              className="inline-flex rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground"
+              className="inline-flex max-w-full rounded-full border border-border bg-card px-3 py-1 text-xs font-medium break-words text-foreground"
             >
               {label}
             </span>
@@ -196,7 +205,7 @@ function V2Summary({ data }: { data: AiSummaryV2 }) {
       ) : null}
 
       {data.narrative ? (
-        <p className="text-base leading-relaxed text-foreground">{data.narrative}</p>
+        <p className="text-base leading-relaxed break-words text-foreground">{data.narrative}</p>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -217,9 +226,9 @@ function V2Summary({ data }: { data: AiSummaryV2 }) {
 
 function LegacySummary({ data }: { data: AiSummaryLegacy }) {
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {data.hva.trim() ? (
-        <p className="text-base leading-relaxed text-foreground">{data.hva}</p>
+        <p className="text-base leading-relaxed break-words text-foreground">{data.hva}</p>
       ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
         <FactTile icon={Users} label="Hvem berøres?" text={data.hvem} />
