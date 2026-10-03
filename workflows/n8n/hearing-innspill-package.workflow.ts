@@ -54,9 +54,38 @@ return [{
   output: [{ subject: 'Motforslag-innspill' }],
 });
 
+const pipelineErrorTrigger = trigger({
+  type: 'n8n-nodes-base.errorTrigger',
+  version: 1,
+  config: { name: 'Pipeline error' },
+  output: [{ workflow: { name: 'folkets-hearing-innspill-package' }, execution: { id: '0' } }],
+});
+
+const recordPipelineError = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Record pipeline error',
+    parameters: {
+      mode: 'manual',
+      assignments: {
+        assignments: [
+          {
+            id: 'fallback',
+            name: 'appFallback',
+            type: 'string',
+            value: 'App logs webhook failure; motforslag-rapporten ligger i payload og kan sendes på nytt',
+          },
+        ],
+      },
+    },
+  },
+  output: [{ appFallback: 're-post N8N_HEARING_INNSPILL_WEBHOOK_URL' }],
+});
+
 sticky(
-  '## Motforslag → horingsinnspill\\n\\nWebhook fra appen. Send e-post/Slack manuelt i n8n. Ikke et Stortinget-API.',
-  [webhook],
+  '## Motforslag → horingsinnspill\\n\\nWebhook fra appen. Send e-post/Slack manuelt i n8n. Ikke et Stortinget-API. Error Trigger logger; appen dropper ikke rapporten stille (webhook-retry).',
+  [webhook, pipelineErrorTrigger],
   { color: 4 },
 );
 
@@ -65,4 +94,6 @@ export default workflow(
   'Folkets Stemme – Motforslag horingsinnspill',
 )
   .add(webhook)
-  .to(prepare);
+  .to(prepare)
+  .add(pipelineErrorTrigger)
+  .to(recordPipelineError);

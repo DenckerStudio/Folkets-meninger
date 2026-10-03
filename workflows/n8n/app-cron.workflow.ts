@@ -14,6 +14,7 @@ const CALL_CRON_JS = `const SETTINGS_NODES = [
   'Cron settings (digest daily)',
   'Cron settings (digest weekly)',
   'Cron settings (package counter proposals)',
+  'Cron settings (n8n retry)',
 ];
 let settings = {};
 for (const name of SETTINGS_NODES) {
@@ -34,20 +35,27 @@ if (!baseUrl || !secret) {
   return [{ json: { ok: false, error: 'Missing appBaseUrl or cronSecret in Cron settings' } }];
 }
 
-try {
-  const res = await this.helpers.httpRequest({
-    method: 'GET',
-    url: baseUrl + path + query,
-    headers: { 'x-cron-secret': secret },
-    timeout: 300000,
-    json: true,
-  });
-  return [{ json: { ok: true, path, response: res } }];
-} catch (e) {
-  const status = e.statusCode || e.response?.statusCode;
-  const body = e.response?.body || e.message;
-  return [{ json: { ok: false, path, status, error: body } }];
-}`;
+let lastError = null;
+for (let attempt = 1; attempt <= 2; attempt++) {
+  try {
+    const res = await this.helpers.httpRequest({
+      method: 'GET',
+      url: baseUrl + path + query,
+      headers: { 'x-cron-secret': secret },
+      timeout: 300000,
+      json: true,
+    });
+    return [{ json: { ok: true, path, response: res, attempt } }];
+  } catch (e) {
+    lastError = e;
+    if (attempt < 2) {
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+    }
+  }
+}
+const status = lastError.statusCode || lastError.response?.statusCode;
+const body = lastError.response?.body || lastError.message;
+return [{ json: { ok: false, path, status, error: body, retried: true } }];`;
 
 function cronSettingsNode(name: string) {
   return node({
@@ -85,6 +93,7 @@ const cronSettingsLabels = cronSettingsNode('Cron settings (labels)');
 const cronSettingsDigestDaily = cronSettingsNode('Cron settings (digest daily)');
 const cronSettingsDigestWeekly = cronSettingsNode('Cron settings (digest weekly)');
 const cronSettingsPackageCounter = cronSettingsNode('Cron settings (package counter proposals)');
+const cronSettingsN8nRetry = cronSettingsNode('Cron settings (n8n retry)');
 
 const setSyncPath = node({
   type: 'n8n-nodes-base.set',
@@ -170,6 +179,23 @@ const setPackageCounterPath = node({
     },
   },
   output: [{ cronPath: '/api/cron/package-counter-proposals' }],
+});
+
+const setN8nRetryPath = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Path: n8n-retry',
+    parameters: {
+      mode: 'manual',
+      assignments: {
+        assignments: [
+          { id: 'p', name: 'cronPath', value: '/api/cron/n8n-retry', type: 'string' },
+        ],
+      },
+    },
+  },
+  output: [{ cronPath: '/api/cron/n8n-retry' }],
 });
 
 const setDigestWeeklyPath = node({
@@ -264,6 +290,18 @@ const schedulePackageCounter = trigger({
   output: [{}],
 });
 
+const scheduleN8nRetry = trigger({
+  type: 'n8n-nodes-base.scheduleTrigger',
+  version: 1.3,
+  config: {
+    name: 'Every 2 hours n8n-retry',
+    parameters: {
+      rule: { interval: [{ field: 'hours', hoursInterval: 2 }] },
+    },
+  },
+  output: [{}],
+});
+
 const scheduleDigestWeekly = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
   version: 1.3,
@@ -278,7 +316,7 @@ const scheduleDigestWeekly = trigger({
 
 sticky(
   '## App cron (n8n → Folkets Stemme)\\n\\nErstatter Vercel Cron. Fyll inn **cronSecret** (samme som CRON_SECRET i app) og **appBaseUrl** i hver Cron settings-node.',
-  [scheduleSyncIssues, scheduleCategories, scheduleLabels, schedulePackageCounter, scheduleDigestDaily, scheduleDigestWeekly],
+  [scheduleSyncIssues, scheduleCategories, scheduleLabels, schedulePackageCounter, scheduleN8nRetry, scheduleDigestDaily, scheduleDigestWeekly],
   { color: 3 }
 );
 
@@ -293,5 +331,7 @@ export default workflow('folkets-app-cron', 'Folkets Stemme – App cron (n8n)')
   .to(cronSettingsDigestDaily.to(setDigestDailyPath).to(callCron))
   .add(schedulePackageCounter)
   .to(cronSettingsPackageCounter.to(setPackageCounterPath).to(callCron))
+  .add(scheduleN8nRetry)
+  .to(cronSettingsN8nRetry.to(setN8nRetryPath).to(callCron))
   .add(scheduleDigestWeekly)
   .to(cronSettingsDigestWeekly.to(setDigestWeeklyPath).to(callCron));

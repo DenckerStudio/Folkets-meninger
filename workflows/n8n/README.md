@@ -11,7 +11,31 @@ Etter `20260823200000_n8n_postgrest_rpcs.sql` (`supabase db push`) skriver n8n v
 | App cron | Aktiv | https://n8n.heyklever.app/workflow/rwiy05sitrv5QDbQ |
 | Motforslag horingsinnspill | Aktiv | https://n8n.heyklever.app/workflow/VX3uRDi7cVRwpxuQ |
 | System poll (Reels) draft | Aktiv | https://n8n.heyklever.app/workflow/TWTrqNYhvYcWz4UX |
+| n8n error handler | Kilde i repo | [`error-handler.workflow.ts`](error-handler.workflow.ts) |
 | Forum (v9/v12/v13/RSS) | Arkivert | `archive/forum/` |
+
+## Feilhåndtering og app-fallback
+
+Aktive flyter har **per-node retry** (`retryOnFail` / `maxTries`) og `onError` slik at Ollama/webhook-feil ikke river ned hele kjeden.
+
+| Flyt | Ved node-feil | App-backup |
+|------|----------------|------------|
+| AI-sammendrag | Agent `continueErrorOutput` — rad skrives ikke | `ai_summary_requested_at` + `GET /api/cron/n8n-retry` / sak-side poller webhook |
+| Dokument embeddings | Chunk blir stående `embedding_status=pending` | Samme cron re-trigges `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL` |
+| System poll / Reels | Embedding-feil → fallback til AI-sammendrag + dokumentutdrag. Tom/ugyldig Ollama → ingen draft | Cron + admin «Generer utkast» kaller `create_system_poll_draft` via n8n (aldri `ensure_stortinget_poll`) |
+| App cron | HTTP mot `/api/cron/*` retried én gang | Endepunktene er selvstendige (`x-cron-secret`) og kan kalles uten n8n |
+| Motforslag innspill | Error Trigger logger | Appen logger webhook-feil; rapporten kan postes på nytt |
+
+**Error Trigger:** [`error-handler.workflow.ts`](error-handler.workflow.ts) er delt handler. Publiser den i n8n, deretter sett `settings.errorWorkflow` på de fire produksjonsflytene. Samme-workflow Error Trigger ligger også i system-poll, embeddings og hearing-innspill.
+
+**App cron n8n-retry** (hver 2. time i `app-cron.workflow.ts`):
+
+```bash
+curl -sS -H "x-cron-secret: $CRON_SECRET" \
+  "https://www.folkets-stemme.no/api/cron/n8n-retry"
+```
+
+Appen genererer **ikke** LLM-innhold selv. Hvis n8n/Ollama er nede, beholdes pending-flagg og cron/webhook kan kjøres på nytt.
 
 ## AI-sammendrag backfill (Ollama)
 
@@ -86,13 +110,14 @@ Admin publiserer i `/dashboard/admin/reels`. Offentlig feed: `/dashboard/utforsk
 
 Timezone: `Europe/Oslo`. Credential: **Folkets Stemme Self-hosted**. Ollama: **Ollama account** (`gemma4:e2b-it-qat`).
 
-Daglig 06:00 plukker neste pending sak med ready RAG-chunks og uten eksisterende poll. Webhook kan sende `{ "stortinget_issue_id": "…" }` for én sak (samme kø-filter). Tom kø = tom kjøring, ikke feil. Krever `20260823200000_n8n_postgrest_rpcs.sql`.
+Daglig 06:00 plukker neste pending sak uten eksisterende poll. Køen godtar RAG-chunks, AI-sammendrag eller sakssammendrag (`20261003180000_system_poll_source_packaging.sql`). Webhook kan sende `{ "stortinget_issue_id": "…" }` for én sak. Tom kø = tom kjøring, ikke feil. Krever `20260823200000_n8n_postgrest_rpcs.sql`.
 
 | Steg | Beskrivelse |
 |------|-------------|
-| Sak-kø | Pending sak med ready RAG-chunks, uten eksisterende draft/open/closed poll |
-| RAG | Embed tittel+sammendrag → `match_issue_document_chunks` |
-| Agent | Ollama ja/nei-spørsmål (ballot er alltid Ja / Nei / Blank) |
+| Sak-kø | Pending sak uten draft/open/closed poll; RAG, AI-sammendrag eller metadata |
+| Kildepakke | Henvisning, sakstype, komité, AI hva/hvem/kostnad/narrative, dokumentutdrag (uten embeddings-kolonne) |
+| RAG | Embed tittel+sammendrag → `match_issue_document_chunks`. Mangler vektor: bruk `fallback_chunks` |
+| Agent | Ollama ja/nei-spørsmål (40–120 tegn, ikke tittel-sitat). Ballot er alltid Ja / Nei / Blank |
 | Lagring | `create_system_poll_draft(...)` — ikke `ensure_stortinget_poll` (den åpner med en gang) |
 
 ```bash
@@ -257,6 +282,7 @@ Vercel **Hobby** har ikke Cron Jobs (krever Pro). n8n scheduler kaller appens be
 | Daglig 04:00 | `GET /api/cron/categories` |
 | Daglig 04:30 | `GET /api/cron/labels` |
 | Daglig 06:00 | `GET /api/cron/package-counter-proposals` |
+| Hver 2. time | `GET /api/cron/n8n-retry` |
 | Daglig 07:00 | `GET /api/cron/digest?frequency=daily` |
 | Mandag 07:30 | `GET /api/cron/digest?frequency=weekly` |
 

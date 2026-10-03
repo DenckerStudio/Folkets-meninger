@@ -67,6 +67,9 @@ const fetchPendingChunks = node({
   version: 4.2,
   config: {
     name: 'Fetch pending chunks',
+    retryOnFail: true,
+    maxTries: 2,
+    waitBetweenTries: 2000,
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       method: 'POST',
@@ -128,7 +131,10 @@ const embedChunk = node({
   version: 4.2,
   config: {
     name: 'Ollama embeddings',
-    onError: 'continueErrorOutput',
+    onError: 'continueRegularOutput',
+    retryOnFail: true,
+    maxTries: 3,
+    waitBetweenTries: 3000,
     parameters: {
       method: 'POST',
       url: 'https://ollama.heyklever.app/api/embeddings',
@@ -154,6 +160,9 @@ const mapEmbedding = node({
       jsCode: `const chunk = $('Expand pending chunks').item.json;
 const response = $input.item.json;
 const embedding = response.embedding;
+if (!Array.isArray(embedding) || embedding.length === 0) {
+  throw new Error('Missing embedding vector — chunk stays pending for /api/cron/n8n-retry');
+}
 return { json: { ...chunk, embedding } };`,
     },
   },
@@ -186,6 +195,9 @@ const saveEmbedding = node({
   version: 4.2,
   config: {
     name: 'Save embedding',
+    retryOnFail: true,
+    maxTries: 2,
+    waitBetweenTries: 2000,
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       method: 'POST',
@@ -304,9 +316,38 @@ const normalizeWebhook = node({
   output: [{ batchLimit: '12', issueId: '200329' }],
 });
 
+const pipelineErrorTrigger = trigger({
+  type: 'n8n-nodes-base.errorTrigger',
+  version: 1,
+  config: { name: 'Pipeline error' },
+  output: [{ workflow: { name: 'folkets-document-embeddings' }, execution: { id: '0' } }],
+});
+
+const recordPipelineError = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Record pipeline error',
+    parameters: {
+      mode: 'manual',
+      assignments: {
+        assignments: [
+          {
+            id: 'fallback',
+            name: 'appFallback',
+            type: 'string',
+            value: 'Chunks stay embedding_status=pending; GET /api/cron/n8n-retry re-queues webhook',
+          },
+        ],
+      },
+    },
+  },
+  output: [{ appFallback: 'GET /api/cron/n8n-retry' }],
+});
+
 sticky(
-  '## Dokument embeddings (lagringseffektiv RAG)\n\nAppen lagrer ikke HTML-cache; chunk-tekst er én kopi i `document_chunks`. n8n embedder med Ollama og skriver til pgvector (påkrevd for RAG — n8n er ikke vektorlager). Etter embed: `chunks_status=ready` + slett leftover `content_full_text`/`content_html`.\n\nWebhook: `POST /webhook/folkets-document-embeddings` med valgfri `{ "stortinget_issue_id": "…" }`.',
-  [scheduleTrigger, webhookTrigger],
+  '## Dokument embeddings (lagringseffektiv RAG)\n\nAppen lagrer ikke HTML-cache; chunk-tekst er én kopi i `document_chunks`. n8n embedder med Ollama og skriver til pgvector. Ollama-feil: chunk blir stående pending. App-fallback: `/api/cron/n8n-retry`. Webhook: `POST /webhook/folkets-document-embeddings`.',
+  [scheduleTrigger, webhookTrigger, pipelineErrorTrigger],
   { color: 5 }
 );
 
@@ -329,4 +370,6 @@ export default workflow(
   .to(embeddingPipeline)
   .add(webhookTrigger)
   .to(normalizeWebhook)
-  .to(embeddingPipeline);
+  .to(embeddingPipeline)
+  .add(pipelineErrorTrigger)
+  .to(recordPipelineError);

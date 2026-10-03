@@ -500,6 +500,9 @@ const generateSummaryAgent = node({
   config: {
     name: 'Generate summary (Ollama)',
     onError: 'continueErrorOutput',
+    retryOnFail: true,
+    maxTries: 2,
+    waitBetweenTries: 5000,
     parameters: {
       promptType: 'define',
       text: expr('{{ $json.sakContextText }}'),
@@ -748,6 +751,9 @@ const generateSummaryAgentWebhook = node({
   config: {
     name: 'Generate summary (Ollama webhook)',
     onError: 'continueErrorOutput',
+    retryOnFail: true,
+    maxTries: 2,
+    waitBetweenTries: 5000,
     parameters: {
       promptType: 'define',
       text: expr('{{ $json.sakContextText }}'),
