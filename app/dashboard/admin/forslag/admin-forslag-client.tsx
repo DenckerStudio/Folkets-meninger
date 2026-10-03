@@ -4,18 +4,16 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import { Lightbulb } from 'lucide-react';
 import { AdminBackLink } from '@/components/admin/admin-shell';
 import { formatWhen } from '@/components/appens-fremtid/format';
+import { RoadmapEditor } from '@/components/appens-fremtid/roadmap-editor';
 import { SectionTabs } from '@/components/appens-fremtid/section-tabs';
 import {
   APPENS_FREMTID_TITLE,
-  ROADMAP_STATUSES,
   isSuggestionStatus,
-  roadmapStatusLabel,
   suggestionAudienceLabel,
   suggestionCategoryLabel,
   suggestionStatusLabel,
   type ChangelogEntry,
   type RoadmapItem,
-  type RoadmapStatus,
   type SuggestionRecord,
   type SuggestionStatus,
 } from '@/lib/appens-fremtid/constants';
@@ -152,7 +150,7 @@ export default function AdminForslagClient() {
       ) : null}
 
       {tab === 'roadmap' ? (
-        <RoadmapPanel
+        <RoadmapEditor
           items={roadmap}
           pending={pending}
           onChanged={load}
@@ -399,155 +397,3 @@ function ChangelogPanel({
   );
 }
 
-function RoadmapPanel({
-  items,
-  pending,
-  onChanged,
-  onError,
-  startTransition,
-}: {
-  items: RoadmapItem[];
-  pending: boolean;
-  onChanged: () => void;
-  onError: (error: string) => void;
-  startTransition: ReturnType<typeof useTransition>[1];
-}) {
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-  const [status, setStatus] = useState<RoadmapStatus>('planned');
-
-  const publish = () => {
-    startTransition(async () => {
-      onError('');
-      const res = await fetch('/api/admin/roadmap', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, body, status }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        onError(typeof data.error === 'string' ? data.error : 'Kunne ikke publisere veikartpunktet.');
-        return;
-      }
-      setTitle('');
-      setBody('');
-      setStatus('planned');
-      onChanged();
-    });
-  };
-
-  const setItemStatus = (id: string, nextStatus: RoadmapStatus) => {
-    startTransition(async () => {
-      onError('');
-      const res = await fetch('/api/admin/roadmap', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: nextStatus }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        onError(typeof data.error === 'string' ? data.error : 'Kunne ikke oppdatere veikartpunktet.');
-        return;
-      }
-      onChanged();
-    });
-  };
-
-  const remove = (id: string) => {
-    startTransition(async () => {
-      onError('');
-      const res = await fetch('/api/admin/roadmap', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        onError(typeof data.error === 'string' ? data.error : 'Kunne ikke slette veikartpunktet.');
-        return;
-      }
-      onChanged();
-    });
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
-        <h3 className="text-sm font-semibold text-foreground">Publiser veikartpunkt</h3>
-        <input
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="Kort tittel"
-          className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/30"
-        />
-        <textarea
-          value={body}
-          onChange={(event) => setBody(event.target.value)}
-          rows={4}
-          placeholder="Hva skal gjøres?"
-          className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/30"
-        />
-        <select
-          value={status}
-          onChange={(event) => setStatus(event.target.value as RoadmapStatus)}
-          className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/30"
-        >
-          {ROADMAP_STATUSES.map((item) => (
-            <option key={item} value={item}>
-              {roadmapStatusLabel(item)}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={publish}
-          className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90 disabled:opacity-50"
-        >
-          Publiser
-        </button>
-      </div>
-
-      {items.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-          Ingen veikartpunkter ennå.
-        </p>
-      ) : (
-        <ul className="space-y-3">
-          {items.map((item) => (
-            <li key={item.id} className="rounded-2xl border border-border bg-card p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                  <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">{item.body}</p>
-                </div>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => remove(item.id)}
-                  className="text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
-                >
-                  Slett
-                </button>
-              </div>
-              <div className="mt-3">
-                <select
-                  value={item.status}
-                  disabled={pending}
-                  onChange={(event) => setItemStatus(item.id, event.target.value as RoadmapStatus)}
-                  className="rounded-xl border border-border bg-background px-3 py-1.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/30"
-                >
-                  {ROADMAP_STATUSES.map((statusOption) => (
-                    <option key={statusOption} value={statusOption}>
-                      {roadmapStatusLabel(statusOption)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}

@@ -5,9 +5,17 @@ import { LandingHowItWorks } from '@/components/landing-how-it-works';
 import { LandingPopularIssuesLazy } from '@/components/landing-popular-issues-lazy';
 import { LandingRoadmap } from '@/components/landing-roadmap';
 import CallToAction from '@/components/ui/call-to-action';
+import { listAppRoadmapItems } from '@/lib/admin/app-future';
 import { routes } from '@/lib/routes';
 
 export default async function LandingPage() {
+  let roadmap = [] as Awaited<ReturnType<typeof listAppRoadmapItems>>;
+  try {
+    roadmap = await listAppRoadmapItems();
+  } catch {
+    roadmap = [];
+  }
+
   return (
     <LandingExperience>
       <div className="space-y-28 pb-8">
@@ -26,7 +34,7 @@ export default async function LandingPage() {
         </div>
 
         <div data-landing-section>
-          <LandingRoadmap />
+          <LandingRoadmap items={roadmap} />
         </div>
 
         <div data-landing-section>

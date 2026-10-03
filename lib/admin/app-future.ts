@@ -62,6 +62,7 @@ export async function createAppRoadmapItem(
   title: string,
   body: string,
   status: RoadmapStatus,
+  sortOrder?: number,
 ): Promise<string> {
   const service = getServiceSupabase();
   const { data, error } = await service.rpc('create_app_roadmap_item', {
@@ -71,7 +72,40 @@ export async function createAppRoadmapItem(
     p_status: status,
   });
   if (error) throw error;
-  return String(data);
+  const id = String(data);
+  if (sortOrder !== undefined) {
+    await updateAppRoadmapItem(id, { sortOrder });
+  }
+  return id;
+}
+
+export async function updateAppRoadmapItem(
+  itemId: string,
+  patch: {
+    title?: string;
+    body?: string;
+    status?: RoadmapStatus;
+    sortOrder?: number;
+  },
+): Promise<string> {
+  const service = getServiceSupabase();
+  const next: Record<string, string | number> = {};
+  if (patch.title !== undefined) next.title = patch.title;
+  if (patch.body !== undefined) next.body = patch.body;
+  if (patch.status !== undefined) next.status = patch.status;
+  if (patch.sortOrder !== undefined) next.sort_order = patch.sortOrder;
+  if (Object.keys(next).length === 0) {
+    throw new Error('Nothing to update');
+  }
+  const { data, error } = await service
+    .from('app_roadmap_items')
+    .update(next)
+    .eq('id', itemId)
+    .select('id')
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.id) throw new Error('Roadmap item not found');
+  return String(data.id);
 }
 
 export async function setAppRoadmapItemStatus(

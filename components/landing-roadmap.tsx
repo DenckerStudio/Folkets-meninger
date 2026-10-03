@@ -1,76 +1,70 @@
 'use client';
 
-import Link from 'next/link';
-import { Timeline } from '@/components/ui/modern-timeline';
-import { routes } from '@/lib/routes';
+import { EmptyLineState } from '@/components/motion/empty-line';
+import { Timeline, type TimelineItem, type TimelineStatus } from '@/components/ui/modern-timeline';
+import { roadmapStatusLabel, type RoadmapItem, type RoadmapStatus } from '@/lib/appens-fremtid/constants';
+import { sortRoadmapItems } from '@/lib/appens-fremtid/roadmap';
 
-/**
- * Landing roadmap — statuses mirror what is actually shipped in the app today
- * (see AGENTS.md / dashboard routes), plus near-term UX priorities from product review.
- */
-export function LandingRoadmap() {
+function toTimelineStatus(status: RoadmapStatus): TimelineStatus {
+  switch (status) {
+    case 'done':
+      return 'completed';
+    case 'in_progress':
+      return 'current';
+    case 'planned':
+      return 'upcoming';
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
+  }
+}
+
+export function LandingRoadmap({
+  items,
+  selectedId,
+  onSelect,
+}: {
+  items: RoadmapItem[];
+  selectedId?: string | null;
+  onSelect?: (item: RoadmapItem) => void;
+}) {
+  const sorted = sortRoadmapItems(items);
+
+  if (sorted.length === 0) {
+    return (
+      <div id="veien-videre" className="scroll-mt-28">
+        <EmptyLineState className="py-12 text-muted-foreground">
+          Veikartet er tomt ennå.
+        </EmptyLineState>
+      </div>
+    );
+  }
+
+  const timelineItems: TimelineItem[] = sorted.map((item) => ({
+    id: item.id,
+    category: roadmapStatusLabel(item.status),
+    date: '',
+    title: item.title,
+    description: item.body,
+    status: toTimelineStatus(item.status),
+  }));
+
   return (
     <div id="veien-videre" className="scroll-mt-28">
       <Timeline
         title="Veien videre"
         subtitle="Hva som er live, og hva som kommer."
-        items={[
-          {
-            category: 'Fase 1',
-            date: 'Soft launch',
-            title: 'Kjerneplattformen er live',
-            description:
-              'Saker og dokumenter fra Stortinget, AI-sammendrag, sak-stemmer (For/Mot/Avstår), høringer med lokale innspill, politikeroversikt, varsler og offentlige sak-/politiker-sider.',
-            status: 'completed',
-            detail: (
-              <p>
-                Du kan også sende{' '}
-                <Link
-                  href={routes.innspill}
-                  className="font-semibold text-[#00205b] underline-offset-2 hover:text-[#ba0c2f] hover:underline"
-                >
-                  innspill
-                </Link>{' '}
-                direkte fra nettsiden.
-              </p>
-            ),
-          },
-          {
-            category: 'Fase 2',
-            date: 'Nå',
-            title: 'Tillit, synlighet og førsteinntrykk',
-            description:
-              'Reels (Ja/Nei/Blank) ligger på Utforsk. Vi synliggjør spørsmål før innlogging og forbedrer førsteinntrykket.',
-            status: 'current',
-            detail: (
-              <p>
-                <Link
-                  href={routes.utforsk}
-                  className="font-semibold text-[#00205b] underline-offset-2 hover:text-[#ba0c2f] hover:underline"
-                >
-                  Utforsk saker
-                </Link>{' '}
-                og si din mening med ja, nei eller blank — uten å måtte logge inn først.
-              </p>
-            ),
-          },
-          {
-            category: 'Fase 3',
-            date: 'Neste',
-            title: 'Dypere politisk innsikt',
-            description:
-              'Valgomat med parti-sammenligning (når Stortingets stemmedata per parti er tilgjengelig), sporing av valgløfter og åpen innsikt når nok anonyme stemmer er samlet.',
-            status: 'upcoming',
-          },
-          {
-            category: 'Fase 4',
-            date: 'Senere',
-            title: 'Nærmere deg — kommune og fylke',
-            description:
-              'Lokale saker fra kommunestyrer og fylkesting, slik at den samme stemmen også gjelder der beslutningene treffer hverdagen hardest.',
-            status: 'upcoming',
-          },
-        ]}
+        items={timelineItems}
+        selectedId={selectedId ?? undefined}
+        onItemClick={
+          onSelect
+            ? (item) => {
+                const found = sorted.find((row) => row.id === item.id);
+                if (found) onSelect(found);
+              }
+            : undefined
+        }
       />
     </div>
   );

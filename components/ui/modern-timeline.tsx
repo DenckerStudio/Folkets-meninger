@@ -10,6 +10,7 @@ import { TextGradient } from '@/components/ui/text-gradient';
 export type TimelineStatus = 'completed' | 'current' | 'upcoming';
 
 export type TimelineItem = {
+  id?: string;
   title: string;
   description: string;
   date: string;
@@ -23,12 +24,14 @@ export type ModernTimelineProps = {
   title?: string;
   subtitle?: string;
   className?: string;
+  selectedId?: string;
+  onItemClick?: (item: TimelineItem) => void;
 };
 
 const STATUS_LABEL: Record<TimelineStatus, string> = {
   completed: 'Ferdig',
-  current: 'Pågår',
-  upcoming: 'Kommer',
+  current: 'Under arbeid',
+  upcoming: 'Planlagt',
 };
 
 const STATUS_CLASS: Record<TimelineStatus, string> = {
@@ -47,7 +50,14 @@ const DOT_CLASS: Record<TimelineStatus, string> = {
  * Modern Timeline (21st.dev / Caio Bonato).
  * Aesthetic alternating roadmap — typography-led, no card chrome.
  */
-export function Timeline({ items, title, subtitle, className }: ModernTimelineProps) {
+export function Timeline({
+  items,
+  title,
+  subtitle,
+  className,
+  selectedId,
+  onItemClick,
+}: ModernTimelineProps) {
   const reduceMotion = useReducedMotion();
 
   return (
@@ -84,15 +94,34 @@ export function Timeline({ items, title, subtitle, className }: ModernTimelinePr
 
           {items.map((item, index) => {
             const isLeft = index % 2 === 0;
+            const selected = Boolean(selectedId && item.id && selectedId === item.id);
 
             return (
               <m.li
-                key={`${item.date}-${item.title}`}
+                key={item.id ?? `${item.date}-${item.title}`}
                 initial={reduceMotion ? false : { opacity: 0, y: 28 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-60px' }}
                 transition={{ duration: 0.55, delay: index * 0.05, ease: 'easeOut' }}
-                className="relative grid grid-cols-[2rem_minmax(0,1fr)] items-start gap-5 pb-14 last:pb-2 sm:grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] sm:gap-10"
+                role={onItemClick ? 'button' : undefined}
+                tabIndex={onItemClick ? 0 : undefined}
+                aria-pressed={onItemClick ? selected : undefined}
+                onClick={onItemClick ? () => onItemClick(item) : undefined}
+                onKeyDown={
+                  onItemClick
+                    ? (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          onItemClick(item);
+                        }
+                      }
+                    : undefined
+                }
+                className={cn(
+                  'relative grid grid-cols-[2rem_minmax(0,1fr)] items-start gap-5 pb-14 last:pb-2 sm:grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] sm:gap-10',
+                  onItemClick && 'cursor-pointer rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-[#00205b]/30',
+                  selected && 'ring-1 ring-[#00205b]/20',
+                )}
               >
                 <div className="hidden pt-0.5 sm:block">
                   {isLeft ? <TimelineCopy item={item} align="right" /> : <span className="sr-only" />}
@@ -137,10 +166,12 @@ function TimelineCopy({
           align === 'right' && 'sm:justify-end',
         )}
       >
-        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#00205b]/70">
-          {item.category}
-        </span>
-        <span className="text-xs text-[#001433]/45">{item.date}</span>
+        {item.category ? (
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#00205b]/70">
+            {item.category}
+          </span>
+        ) : null}
+        {item.date ? <span className="text-xs text-[#001433]/45">{item.date}</span> : null}
         <span
           className={cn(
             'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold',

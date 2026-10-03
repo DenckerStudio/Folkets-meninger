@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { ChangelogList } from '@/components/appens-fremtid/changelog-list';
-import { RoadmapList } from '@/components/appens-fremtid/roadmap-list';
 import { SectionTabs } from '@/components/appens-fremtid/section-tabs';
+import { LandingRoadmap } from '@/components/landing-roadmap';
 import { SuggestionForm } from '@/components/appens-fremtid/suggestion-form';
 import { VotingList } from '@/components/appens-fremtid/voting-list';
 import { PageHeader } from '@/components/page-header';
@@ -132,7 +132,7 @@ export function AppensFremtidPage() {
       {tab === 'roadmap' ? (
         <section className="space-y-3">
           <p className="text-sm text-muted-foreground">Det vi planlegger, jobber med eller har gjort.</p>
-          <RoadmapList items={roadmap} />
+          <LandingRoadmap items={roadmap} />
         </section>
       ) : null}
     </div>
