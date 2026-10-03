@@ -5,29 +5,16 @@ import {
   sticky,
   newCredential,
   expr,
+  ifElse,
 } from '@n8n/workflow-sdk';
-import { FOLKETS_SUPABASE_CRED, FOLKETS_SUPABASE_REST } from './n8n-supabase.shared';
-
-/**
- * RAG embeddings:
- * - App creates pending document_chunks (no HTML cache; document body cleared after chunking).
- * - n8n embeds with Ollama and writes vectors to Postgres (required for match_issue_document_chunks).
- * - After embed, mark document chunks_status=ready and clear any leftover body text.
- *
- * n8n is not a vector store — embeddings must stay in pgvector.
- */
-
-const PREPARE_EMBEDDING_UPDATE_JS = `const item = $input.item.json;
-const embedding = item.embedding;
-if (!Array.isArray(embedding) || embedding.length === 0) {
-  throw new Error('Missing embedding vector');
-}
-return {
-  json: {
-    ...item,
-    embedding_vector: '[' + embedding.join(',') + ']',
-  },
-};`;
+import {
+  FOLKETS_N8N_BASE,
+  FOLKETS_OLLAMA_EMBEDDINGS_URL,
+  FOLKETS_OLLAMA_EMBED_MODEL,
+  FOLKETS_SUPABASE_CRED,
+  rpcUrl,
+} from './n8n-supabase.shared';
+import { EXPAND_OR_EMPTY_JS } from './n8n-pipeline.shared';
 
 const scheduleTrigger = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
@@ -70,7 +57,7 @@ const fetchPendingChunks = node({
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       method: 'POST',
-      url: `${FOLKETS_SUPABASE_REST}/rpc/n8n_list_pending_document_chunks`,
+      url: rpcUrl('n8n_list_pending_document_chunks'),
       authentication: 'predefinedCredentialType',
       nodeCredentialType: 'supabaseApi',
       sendBody: true,
@@ -100,16 +87,7 @@ const expandPendingChunks = node({
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
-      jsCode: `const raw = $input.first()?.json;
-let rows = [];
-if (Array.isArray(raw)) rows = raw;
-else if (Array.isArray(raw?.data)) rows = raw.data;
-else if (raw && typeof raw === 'object' && raw.id) rows = [raw];
-else {
-  const all = $input.all().map((i) => i.json).filter(Boolean);
-  if (all.length && all.every((r) => r && r.id && !Array.isArray(r))) rows = all;
-}
-return rows.map((r) => ({ json: r }));`,
+      jsCode: EXPAND_OR_EMPTY_JS,
     },
   },
   output: [
@@ -123,6 +101,28 @@ return rows.map((r) => ({ json: r }));`,
   ],
 });
 
+const hasPendingChunk = ifElse({
+  version: 2.2,
+  config: {
+    name: 'Has pending chunk?',
+    parameters: {
+      looseTypeValidation: true,
+      conditions: {
+        combinator: 'and',
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
+        conditions: [
+          {
+            id: 'has-id',
+            leftValue: expr('{{ $json.id }}'),
+            rightValue: '',
+            operator: { type: 'string', operation: 'notEmpty' },
+          },
+        ],
+      },
+    },
+  },
+});
+
 const embedChunk = node({
   type: 'n8n-nodes-base.httpRequest',
   version: 4.2,
@@ -131,11 +131,11 @@ const embedChunk = node({
     onError: 'continueErrorOutput',
     parameters: {
       method: 'POST',
-      url: 'https://ollama.heyklever.app/api/embeddings',
+      url: FOLKETS_OLLAMA_EMBEDDINGS_URL,
       sendBody: true,
       specifyBody: 'json',
       jsonBody: expr(
-        '{"model":"nomic-embed-text:v1.5","prompt":{{ JSON.stringify($json.content) }}}'
+        `{"model":"${FOLKETS_OLLAMA_EMBED_MODEL}","prompt":{{ JSON.stringify($json.content) }}}`,
       ),
       options: { timeout: 120000 },
     },
@@ -154,6 +154,17 @@ const mapEmbedding = node({
       jsCode: `const chunk = $('Expand pending chunks').item.json;
 const response = $input.item.json;
 const embedding = response.embedding;
+if (!Array.isArray(embedding) || embedding.length === 0) {
+  return {
+    json: {
+      ...chunk,
+      skip: true,
+      outcome: 'embed_failed',
+      reason: 'missing_embedding_vector',
+      message: 'Ollama returned no embedding; chunk left pending for retry',
+    },
+  };
+}
 return { json: { ...chunk, embedding } };`,
     },
   },
@@ -175,10 +186,52 @@ const prepareEmbeddingUpdate = node({
     parameters: {
       mode: 'runOnceForEachItem',
       language: 'javaScript',
-      jsCode: PREPARE_EMBEDDING_UPDATE_JS,
+      jsCode: `const item = $input.item.json;
+if (item.skip || item.outcome === 'embed_failed' || item.outcome === 'empty_queue') {
+  return { json: item };
+}
+const embedding = item.embedding;
+if (!Array.isArray(embedding) || embedding.length === 0) {
+  return {
+    json: {
+      ...item,
+      skip: true,
+      outcome: 'embed_failed',
+      reason: 'missing_embedding_vector',
+    },
+  };
+}
+return {
+  json: {
+    ...item,
+    embedding_vector: '[' + embedding.join(',') + ']',
+  },
+};`,
     },
   },
   output: [{ embedding_vector: '[0.1,0.2,0.3]' }],
+});
+
+const hasEmbeddingVector = ifElse({
+  version: 2.2,
+  config: {
+    name: 'Has embedding vector?',
+    parameters: {
+      looseTypeValidation: true,
+      conditions: {
+        combinator: 'and',
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
+        conditions: [
+          {
+            id: 'has-vec',
+            leftValue: expr('{{ $json.embedding_vector }}'),
+            rightValue: '',
+            operator: { type: 'string', operation: 'notEmpty' },
+          },
+        ],
+      },
+    },
+  },
 });
 
 const saveEmbedding = node({
@@ -189,7 +242,7 @@ const saveEmbedding = node({
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       method: 'POST',
-      url: `${FOLKETS_SUPABASE_REST}/rpc/n8n_save_document_embedding`,
+      url: rpcUrl('n8n_save_document_embedding'),
       authentication: 'predefinedCredentialType',
       nodeCredentialType: 'supabaseApi',
       sendBody: true,
@@ -212,7 +265,7 @@ const clearDocumentBody = node({
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       method: 'POST',
-      url: `${FOLKETS_SUPABASE_REST}/rpc/n8n_finalize_document_storage`,
+      url: rpcUrl('n8n_finalize_document_storage'),
       authentication: 'predefinedCredentialType',
       nodeCredentialType: 'supabaseApi',
       sendBody: true,
@@ -224,6 +277,51 @@ const clearDocumentBody = node({
     },
   },
   output: [{ success: true }],
+});
+
+const collectReadyIssues = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Collect ready issues',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      language: 'javaScript',
+      jsCode: `const ids = new Set();
+try {
+  for (const item of $('Prepare embedding update SQL').all()) {
+    const issueId = String(item.json?.issue_id || '').trim();
+    if (issueId && !item.json?.skip) ids.add(issueId);
+  }
+} catch (_) {
+  for (const item of $input.all()) {
+    const issueId = String(item.json?.issue_id || '').trim();
+    if (issueId) ids.add(issueId);
+  }
+}
+if (!ids.size) return [];
+return [...ids].map((stortinget_issue_id) => ({ json: { stortinget_issue_id } }));`,
+    },
+  },
+  output: [{ stortinget_issue_id: '200329' }],
+});
+
+const triggerAiSummary = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
+  config: {
+    name: 'Trigger AI summary',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: `${FOLKETS_N8N_BASE}/webhook/folkets-ai-summary`,
+      sendBody: true,
+      specifyBody: 'json',
+      jsonBody: expr('={{ JSON.stringify({ stortinget_issue_id: $json.stortinget_issue_id }) }}'),
+      options: { timeout: 15000 },
+    },
+  },
+  output: [{ ok: true }],
 });
 
 const rateLimitPause = node({
@@ -248,17 +346,60 @@ const batchRunComplete = node({
       mode: 'manual',
       assignments: {
         assignments: [
+          { id: 'status', name: 'status', value: 'embedding_batch_complete', type: 'string' },
+        ],
+      },
+    },
+  },
+  output: [{ status: 'embedding_batch_complete' }],
+});
+
+const logEmptyEmbeddingQueue = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Log empty embedding queue',
+    parameters: {
+      mode: 'manual',
+      includeOtherFields: true,
+      assignments: {
+        assignments: [
+          { id: 'outcome', name: 'outcome', value: 'empty_queue', type: 'string' },
           {
-            id: 'status',
-            name: 'status',
-            value: 'embedding_batch_complete',
+            id: 'message',
+            name: 'message',
+            value: 'No pending document_chunks to embed',
             type: 'string',
           },
         ],
       },
     },
   },
-  output: [{ status: 'embedding_batch_complete' }],
+  output: [{ outcome: 'empty_queue' }],
+});
+
+const logEmbedFailure = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Log embed failure keep pending',
+    parameters: {
+      mode: 'manual',
+      includeOtherFields: true,
+      assignments: {
+        assignments: [
+          { id: 'outcome', name: 'outcome', value: 'embed_failed', type: 'string' },
+          {
+            id: 'message',
+            name: 'message',
+            value: 'Embedding failed; chunk remains pending for next run',
+            type: 'string',
+          },
+        ],
+      },
+    },
+  },
+  output: [{ outcome: 'embed_failed' }],
 });
 
 const webhookTrigger = trigger({
@@ -285,12 +426,7 @@ const normalizeWebhook = node({
       mode: 'manual',
       assignments: {
         assignments: [
-          {
-            id: 'batch-limit',
-            name: 'batchLimit',
-            value: '12',
-            type: 'string',
-          },
+          { id: 'batch-limit', name: 'batchLimit', value: '12', type: 'string' },
           {
             id: 'issue-id',
             name: 'issueId',
@@ -305,24 +441,31 @@ const normalizeWebhook = node({
 });
 
 sticky(
-  '## Dokument embeddings (lagringseffektiv RAG)\n\nAppen lagrer ikke HTML-cache; chunk-tekst er én kopi i `document_chunks`. n8n embedder med Ollama og skriver til pgvector (påkrevd for RAG — n8n er ikke vektorlager). Etter embed: `chunks_status=ready` + slett leftover `content_full_text`/`content_html`.\n\nWebhook: `POST /webhook/folkets-document-embeddings` med valgfri `{ "stortinget_issue_id": "…" }`.',
+  '## Dokument embeddings (RAG)\n\nPending chunks → Ollama `nomic-embed-text:v1.5` → pgvector. Tom kø er suksess. Etter lagring trigges AI-sammendrag for saken.',
   [scheduleTrigger, webhookTrigger],
-  { color: 5 }
+  { color: 5 },
 );
 
-const embeddingPipeline = fetchPendingChunks
-  .to(expandPendingChunks)
-  .to(embedChunk)
-  .to(mapEmbedding)
-  .to(prepareEmbeddingUpdate)
-  .to(saveEmbedding)
+const savedEmbeddingPath = saveEmbedding
   .to(clearDocumentBody)
+  .to(collectReadyIssues)
+  .to(triggerAiSummary)
   .to(rateLimitPause)
   .to(batchRunComplete);
 
+const embeddingPipeline = fetchPendingChunks.to(expandPendingChunks).to(
+  hasPendingChunk
+    .onTrue(
+      embedChunk.to(mapEmbedding).to(prepareEmbeddingUpdate).to(
+        hasEmbeddingVector.onTrue(savedEmbeddingPath).onFalse(logEmbedFailure),
+      ),
+    )
+    .onFalse(logEmptyEmbeddingQueue),
+);
+
 export default workflow(
   'folkets-document-embeddings',
-  'Folkets Stemme – dokument embeddings (RAG)'
+  'Folkets Stemme – dokument embeddings (RAG)',
 )
   .add(scheduleTrigger)
   .to(embeddingSettings)

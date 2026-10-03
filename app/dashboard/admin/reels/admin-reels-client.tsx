@@ -8,6 +8,7 @@ import { usePollDraftGeneration } from '@/hooks/use-poll-draft-generation';
 import { routes } from '@/lib/routes';
 import { AdminBackLink } from '@/components/admin/admin-shell';
 import type { PollRecord, SakPollCandidate, SakPollCoverage } from '@/lib/polls/types';
+import { pipelineHealthNeedsAttention, type PipelineHealth } from '@/lib/n8n/pipeline-health';
 
 type DraftsResponse = { drafts: PollRecord[] };
 type CandidatesResponse = { candidates: SakPollCandidate[]; coverage: SakPollCoverage };
@@ -68,6 +69,9 @@ export default function AdminReelsClient() {
   const [drafts, setDrafts] = useState<PollRecord[]>([]);
   const [candidates, setCandidates] = useState<SakPollCandidate[]>([]);
   const [coverage, setCoverage] = useState<SakPollCoverage | null>(null);
+  const [pipelineHealth, setPipelineHealth] = useState<PipelineHealth | null>(null);
+  const [pipelineHealthUnavailable, setPipelineHealthUnavailable] = useState(false);
+  const [catchupMessage, setCatchupMessage] = useState('');
   const [error, setError] = useState('');
   const [pending, startTransition] = useTransition();
   const { jobs, startGeneration, dismissJob, getJob, isGenerating } = usePollDraftGeneration();
@@ -76,9 +80,10 @@ export default function AdminReelsClient() {
     startTransition(async () => {
       setError('');
       try {
-        const [draftsRes, candidatesRes] = await Promise.all([
+        const [draftsRes, candidatesRes, healthRes] = await Promise.all([
           fetch('/api/admin/polls'),
           fetch('/api/admin/poll-candidates'),
+          fetch('/api/admin/pipeline-health'),
         ]);
         if (!draftsRes.ok || !candidatesRes.ok) {
           setError('Kunne ikke laste admin-data');
@@ -86,6 +91,14 @@ export default function AdminReelsClient() {
         }
         const draftsJson = (await draftsRes.json()) as DraftsResponse;
         const candidatesJson = (await candidatesRes.json()) as CandidatesResponse;
+        if (healthRes.ok) {
+          const healthJson = (await healthRes.json()) as { health?: PipelineHealth };
+          setPipelineHealth(healthJson.health ?? null);
+          setPipelineHealthUnavailable(false);
+        } else {
+          setPipelineHealth(null);
+          setPipelineHealthUnavailable(true);
+        }
         setDrafts(draftsJson.drafts ?? []);
         setCandidates(candidatesJson.candidates ?? []);
         setCoverage(candidatesJson.coverage ?? null);
@@ -122,6 +135,25 @@ export default function AdminReelsClient() {
     });
   };
 
+  const runPipelineCatchup = () => {
+    startTransition(async () => {
+      setCatchupMessage('');
+      setError('');
+      const res = await fetch('/api/admin/pipeline-health', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(typeof data.error === 'string' ? data.error : 'Kunne ikke starte catch-up');
+        return;
+      }
+      const triggered = data.triggered as { embeddings?: boolean; health?: boolean } | undefined;
+      if (triggered?.embeddings || triggered?.health) {
+        setCatchupMessage('Catch-up er startet. Køene oppdateres i bakgrunnen.');
+      } else {
+        setCatchupMessage('Catch-up er ikke konfigurert (mangler n8n-webhook i miljøet).');
+      }
+    });
+  };
+
   const generate = (issueId?: string) => {
     startTransition(async () => {
       setError('');
@@ -151,6 +183,63 @@ export default function AdminReelsClient() {
         <p className="text-sm text-muted-foreground">
           {coverage.sakCandidates} kandidater · {coverage.pendingWithRag} saker med RAG · {drafts.length} utkast
         </p>
+      ) : null}
+
+      {pipelineHealth ? (
+        <section
+          className={`rounded-2xl border bg-card p-4 ${
+            pipelineHealthNeedsAttention(pipelineHealth)
+              ? 'border-amber-500/40'
+              : 'border-border'
+          }`}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">n8n-pipeline</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {pipelineHealthNeedsAttention(pipelineHealth)
+                  ? 'Køen er stor. Kjør catch-up, eller vent på den daglige sjekken kl. 08:00.'
+                  : 'Flyten er i rute: sync → embeddings → sammendrag → Reels-utkast.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={runPipelineCatchup}
+              disabled={pending}
+              className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+            >
+              Kjør catch-up
+            </button>
+          </div>
+          <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+            <div>
+              <dt className="text-muted-foreground">Pending embeddings</dt>
+              <dd className="font-medium text-foreground">{pipelineHealth.pendingChunks}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Mangler sammendrag</dt>
+              <dd className="font-medium text-foreground">{pipelineHealth.missingSummaries}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Tynne sammendrag</dt>
+              <dd className="font-medium text-foreground">{pipelineHealth.thinSummaries}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Utkast som venter</dt>
+              <dd className="font-medium text-foreground">{pipelineHealth.draftPolls}</dd>
+            </div>
+          </dl>
+          {catchupMessage ? (
+            <p className="mt-3 text-sm text-muted-foreground">{catchupMessage}</p>
+          ) : null}
+        </section>
+      ) : pipelineHealthUnavailable ? (
+        <section className="rounded-2xl border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold text-foreground">n8n-pipeline</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Pipeline-status kommer når migrasjonen `n8n_pipeline_health` er kjørt i databasen.
+          </p>
+        </section>
       ) : null}
 
       {activeGeneratingJobs.length > 0 ? (

@@ -69,6 +69,7 @@ The canonical template is `.env.example`.
 | `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL` | Trigger pending document chunk embeddings |
 | `N8N_HEARING_INNSPILL_WEBHOOK_URL` | Trigger n8n packaging of motforslag hearing reports |
 | `N8N_SYSTEM_POLL_DRAFT_WEBHOOK_URL` | Trigger n8n system-poll (Reels) draft generation from sak RAG |
+| `N8N_PIPELINE_HEALTH_WEBHOOK_URL` | Trigger daily pipeline health/catch-up from admin Reels |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Notification and welcome email delivery |
 | `STORTINGET_SESSION_ID`, `STORTINGET_PERIODE_ID` | Server defaults for Stortinget data |
 | `NEXT_PUBLIC_STORTINGET_SESSION_ID`, `NEXT_PUBLIC_STORTINGET_PERIODE_ID` | Client-visible Stortinget defaults |
@@ -78,9 +79,14 @@ The canonical template is `.env.example`.
 
 ### Stortinget sync and sak cache
 
+- n8n sak-flyt: sync-issues → dokument-embeddings → AI-sammendrag →
+  system-poll-utkast. Tom kø er suksess. Feil går til
+  `workflows/n8n/ops-error-handler.workflow.ts` (error workflow).
+  Helse/catch-up: `workflows/n8n/pipeline-health.workflow.ts` +
+  `/dashboard/admin/reels`. Admin-varsel: `POST /api/ops/n8n-notify`.
 - `GET /api/cron/sync-issues` calls `lib/stortinget-sync.ts`; n8n schedules it
-  in `workflows/n8n/app-cron.workflow.ts`. The result includes `upserted`,
-  `total`, `newIssueIds`, `aiSummaryTriggered`, and `detailsRefreshed`.
+ in `workflows/n8n/app-cron.workflow.ts`. The result includes `upserted`,
+ `total`, `newIssueIds`, `aiSummaryTriggered`, and `detailsRefreshed`.
 - `lib/sak-status.ts` is the source of truth for "Under behandling" vs
   "Ferdigbehandlet"; it merges detail `ferdigbehandlet`, denormalized DB state,
   fresh list `status`, and `innstilling_*` hints because Stortinget list/detail
