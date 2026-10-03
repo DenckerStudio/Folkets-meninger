@@ -170,11 +170,11 @@ The canonical template is `.env.example`.
 - Public activity is opt-in via `users.activity_visibility` (`private` default).
 - Admin access: `public.user_roles` (`role = 'admin'`) via `lib/admin/gate.ts`
   (`is_admin()`). Grant/revoke with `grant_app_role_by_email` /
-  `revoke_app_role_by_email` (service role) or `/dashboard/admin/reels`.
-  Remaining admin surface: `/dashboard/admin/statistikk`, `/dashboard/admin/reels`.
+  `revoke_app_role_by_email` (service role) or `/dashboard/admin/brukere`.
+  Admin hub: Forslag, Reels, Statistikk, Brukere, Stemme+.
 - **Stemme+** (`users.subscription_tier`): supporter badge, richer digest, smarter
   alerts. Stripe checkout is deferred — grant test access via
-  `grant_stemme_plus_by_email` / admin Reels UI (`/api/admin/stemme-plus`).
+  `grant_stemme_plus_by_email` / `/dashboard/admin/stemme-plus`.
   Planned price constant: 59 kr/mnd (`lib/stemme-plus/constants.ts`).
 - Do not mention BankID, MinID, or electronic ID verification anywhere in
   user-facing copy, roadmap items, or marketing text.
@@ -247,6 +247,8 @@ The canonical template is `.env.example`.
 
 ### Admin, stats, and valgomat
 
+- Admin hub is `/dashboard/admin`. Active tools: Forslag, Reels, Statistikk,
+  Brukere, Stemme+. Varsler remains a planned hub card.
 - Government stats exports are available under the admin stats route and apply
   `GOVERNMENT_STATS_MIN_VOTES = 50` before publishing aggregate vote rows.
 - Valgomat party alignment is intentionally disabled until Stortinget per-party
@@ -256,8 +258,10 @@ The canonical template is `.env.example`.
 
 - Dashboard nav **Forslag** → `/dashboard/forslag`. Logged-in users send a short
   suggestion (10–500 tegn) via `POST /api/suggestions`.
-- Stored in `app_suggestions` through `create_app_suggestion`
-  (`supabase/migrations/20261003163035_app_suggestions.sql`). Service-role writes only.
+- Stored in `app_suggestions` through `create_app_suggestion`. Admins list and
+  mark them handled at `/dashboard/admin/forslag` via `list_app_suggestions` /
+  `set_app_suggestion_status`
+  (`20261003163035_app_suggestions.sql`, `20261003175506_app_suggestions_admin.sql`).
 - Public marketing form `/innspill` (`site_feedback`) is separate.
 - Fider is not used by the app. The Coolify Fider server is left running.
 

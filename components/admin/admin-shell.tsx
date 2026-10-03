@@ -100,11 +100,7 @@ export function AdminHubCard({ item }: AdminHubCardProps) {
       {!isComing && item.href ? (
         <span className="mt-4 text-sm font-medium text-brand">Åpne →</span>
       ) : (
-        <p className="mt-4 text-xs text-muted-foreground">
-          {item.id === 'brukere'
-            ? 'Rolle-API finnes — dedikert brukergrensesnitt kommer.'
-            : 'Planlagt admin-verktøy.'}
-        </p>
+        <p className="mt-4 text-xs text-muted-foreground">Planlagt admin-verktøy.</p>
       )}
     </>
   );

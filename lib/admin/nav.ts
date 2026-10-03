@@ -3,6 +3,7 @@ import {
   BarChart3,
   Bell,
   LayoutDashboard,
+  Lightbulb,
   Sparkles,
   Star,
   Users,
@@ -19,6 +20,14 @@ export type AdminNavItem = {
 };
 
 export const adminNavItems: AdminNavItem[] = [
+  {
+    id: 'forslag',
+    title: 'Forslag',
+    description: 'Innkommende forslag fra innloggede brukere',
+    href: routes.adminForslag,
+    icon: Lightbulb,
+    status: 'active',
+  },
   {
     id: 'reels',
     title: 'Reels',
@@ -39,21 +48,23 @@ export const adminNavItems: AdminNavItem[] = [
     id: 'brukere',
     title: 'Brukere',
     description: 'Roller og tilganger for administratorer',
+    href: routes.adminBrukere,
     icon: Users,
-    status: 'coming',
+    status: 'active',
+  },
+  {
+    id: 'stemme-plus',
+    title: 'Stemme+',
+    description: 'Manuell tildeling av støttemedlemskap',
+    href: routes.adminStemmePlus,
+    icon: Star,
+    status: 'active',
   },
   {
     id: 'varsler',
     title: 'Varsler',
     description: 'Utsendelser og varsling til brukere',
     icon: Bell,
-    status: 'coming',
-  },
-  {
-    id: 'stemme-plus',
-    title: 'Stemme+',
-    description: 'Abonnement og premium-funksjoner',
-    icon: Star,
     status: 'coming',
   },
 ];

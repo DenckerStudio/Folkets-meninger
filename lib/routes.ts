@@ -35,6 +35,9 @@ export const routes = {
   admin: `${DASHBOARD_PREFIX}/admin`,
   adminStats: `${DASHBOARD_PREFIX}/admin/statistikk`,
   adminReels: `${DASHBOARD_PREFIX}/admin/reels`,
+  adminForslag: `${DASHBOARD_PREFIX}/admin/forslag`,
+  adminBrukere: `${DASHBOARD_PREFIX}/admin/brukere`,
+  adminStemmePlus: `${DASHBOARD_PREFIX}/admin/stemme-plus`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,
   forslag: `${DASHBOARD_PREFIX}/forslag`,
 } as const;
