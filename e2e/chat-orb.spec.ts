@@ -16,23 +16,22 @@ test.describe('AI-chat orb overlay', () => {
     const orb = page.getByRole('button', { name: 'Åpne AI-chat' });
     await expect(orb).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Dashbordmeny' }).getByRole('link', { name: 'AI-chat' })).toHaveCount(0);
+    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
 
     await page.screenshot({
       path: `${ARTIFACTS}/chat-orb-closed.png`,
-      animations: 'disabled',
     });
 
     await orb.click();
 
     const panel = page.locator('[data-chat-panel]');
     await expect(panel).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'AI-chat' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI-chat', exact: true })).toBeVisible();
     await expect(page.getByText('Logg inn for å bruke AI-chat')).toBeVisible();
     await expect(panel.getByRole('link', { name: 'Logg inn' })).toBeVisible();
 
     await page.screenshot({
       path: `${ARTIFACTS}/chat-panel-open.png`,
-      animations: 'disabled',
     });
   });
 
@@ -41,6 +40,6 @@ test.describe('AI-chat orb overlay', () => {
     await page.goto('/dashboard/chat');
     await expect(page).toHaveURL(/\/dashboard\/utforsk(\?|$)/);
     await expect(page.locator('[data-chat-panel]')).toBeVisible({ timeout: 90_000 });
-    await expect(page.getByRole('heading', { name: 'AI-chat' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI-chat', exact: true })).toBeVisible();
   });
 });
