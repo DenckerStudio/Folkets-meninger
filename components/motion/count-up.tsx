@@ -12,7 +12,7 @@ type CountUpProps = {
 
 export function CountUp({ value, className }: CountUpProps) {
   const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: '-12% 0px' });
+  const inView = useInView(ref, { once: true, amount: 0.2 });
   const reducedMotion = usePrefersReducedMotion();
   const [shown, setShown] = useState(0);
 
