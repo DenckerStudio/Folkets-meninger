@@ -12,10 +12,6 @@ import { pipelineHealthNeedsAttention, type PipelineHealth } from '@/lib/n8n/pip
 
 type DraftsResponse = { drafts: PollRecord[] };
 type CandidatesResponse = { candidates: SakPollCandidate[]; coverage: SakPollCoverage };
-type AdminsResponse = { admins: { userId: string; email: string | null }[] };
-type SupportersResponse = {
-  supporters: { userId: string; email: string | null; subscriptionStatus: string | null }[];
-};
 
 function GenerationStatusBadge({
   issueId,
@@ -73,14 +69,10 @@ export default function AdminReelsClient() {
   const [drafts, setDrafts] = useState<PollRecord[]>([]);
   const [candidates, setCandidates] = useState<SakPollCandidate[]>([]);
   const [coverage, setCoverage] = useState<SakPollCoverage | null>(null);
-  const [admins, setAdmins] = useState<{ userId: string; email: string | null }[]>([]);
-  const [supporters, setSupporters] = useState<{ userId: string; email: string | null }[]>([]);
   const [pipelineHealth, setPipelineHealth] = useState<PipelineHealth | null>(null);
   const [pipelineHealthUnavailable, setPipelineHealthUnavailable] = useState(false);
   const [catchupMessage, setCatchupMessage] = useState('');
   const [error, setError] = useState('');
-  const [email, setEmail] = useState('');
-  const [stemmePlusEmail, setStemmePlusEmail] = useState('');
   const [pending, startTransition] = useTransition();
   const { jobs, startGeneration, dismissJob, getJob, isGenerating } = usePollDraftGeneration();
 
@@ -88,21 +80,17 @@ export default function AdminReelsClient() {
     startTransition(async () => {
       setError('');
       try {
-        const [draftsRes, candidatesRes, adminsRes, supportersRes, healthRes] = await Promise.all([
+        const [draftsRes, candidatesRes, healthRes] = await Promise.all([
           fetch('/api/admin/polls'),
           fetch('/api/admin/poll-candidates'),
-          fetch('/api/admin/roles'),
-          fetch('/api/admin/stemme-plus'),
           fetch('/api/admin/pipeline-health'),
         ]);
-        if (!draftsRes.ok || !candidatesRes.ok || !adminsRes.ok || !supportersRes.ok) {
+        if (!draftsRes.ok || !candidatesRes.ok) {
           setError('Kunne ikke laste admin-data');
           return;
         }
         const draftsJson = (await draftsRes.json()) as DraftsResponse;
         const candidatesJson = (await candidatesRes.json()) as CandidatesResponse;
-        const adminsJson = (await adminsRes.json()) as AdminsResponse;
-        const supportersJson = (await supportersRes.json()) as SupportersResponse;
         if (healthRes.ok) {
           const healthJson = (await healthRes.json()) as { health?: PipelineHealth };
           setPipelineHealth(healthJson.health ?? null);
@@ -114,13 +102,6 @@ export default function AdminReelsClient() {
         setDrafts(draftsJson.drafts ?? []);
         setCandidates(candidatesJson.candidates ?? []);
         setCoverage(candidatesJson.coverage ?? null);
-        setAdmins(adminsJson.admins ?? []);
-        setSupporters(
-          (supportersJson.supporters ?? []).map((row) => ({
-            userId: row.userId,
-            email: row.email,
-          })),
-        );
       } catch {
         setError('Kunne ikke laste admin-data');
       }
@@ -181,80 +162,6 @@ export default function AdminReelsClient() {
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Kunne ikke starte generering');
       }
-    });
-  };
-
-  const grantAdmin = () => {
-    const value = email.trim();
-    if (!value) return;
-    startTransition(async () => {
-      setError('');
-      const res = await fetch('/api/admin/roles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: value }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(typeof data.error === 'string' ? data.error : 'Kunne ikke gi admin-rolle');
-        return;
-      }
-      setEmail('');
-      load();
-    });
-  };
-
-  const revokeAdmin = (adminEmail: string) => {
-    startTransition(async () => {
-      setError('');
-      const res = await fetch('/api/admin/roles', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: adminEmail }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(typeof data.error === 'string' ? data.error : 'Kunne ikke fjerne admin-rolle');
-        return;
-      }
-      load();
-    });
-  };
-
-  const grantStemmePlus = () => {
-    const value = stemmePlusEmail.trim();
-    if (!value) return;
-    startTransition(async () => {
-      setError('');
-      const res = await fetch('/api/admin/stemme-plus', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: value }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(typeof data.error === 'string' ? data.error : 'Kunne ikke gi Stemme+');
-        return;
-      }
-      setStemmePlusEmail('');
-      load();
-    });
-  };
-
-  const revokeStemmePlus = (supporterEmail: string) => {
-    startTransition(async () => {
-      setError('');
-      const res = await fetch('/api/admin/stemme-plus', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: supporterEmail }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(typeof data.error === 'string' ? data.error : 'Kunne ikke fjerne Stemme+');
-        return;
-      }
-      load();
     });
   };
 
@@ -455,107 +362,6 @@ export default function AdminReelsClient() {
             ))}
           </ul>
         )}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-base font-semibold text-foreground">Stemme+ (testing)</h2>
-        <p className="text-sm text-muted-foreground">
-          Gi eller fjern støttemedlemskap manuelt. Stripe-betaling kommer senere.
-        </p>
-        <ul className="space-y-2">
-          {supporters.map((supporter) => (
-            <li
-              key={supporter.userId}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2"
-            >
-              <span className="text-sm text-foreground">{supporter.email || supporter.userId}</span>
-              {supporter.email ? (
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => revokeStemmePlus(supporter.email as string)}
-                  className="text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
-                >
-                  Fjern
-                </button>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-        {supporters.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Ingen aktive Stemme+-støttespillere.</p>
-        ) : null}
-        <form
-          className="flex flex-wrap gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            grantStemmePlus();
-          }}
-        >
-          <input
-            type="email"
-            value={stemmePlusEmail}
-            onChange={(event) => setStemmePlusEmail(event.target.value)}
-            placeholder="epost@domene.no"
-            className="min-w-[12rem] flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
-          />
-          <button
-            type="submit"
-            disabled={pending || !stemmePlusEmail.trim()}
-            className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
-          >
-            Gi Stemme+
-          </button>
-        </form>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-base font-semibold text-foreground">Administratorer</h2>
-        <p className="text-sm text-muted-foreground">
-          Roller lagres i databasen, ikke i miljøvariabler.
-        </p>
-        <ul className="space-y-2">
-          {admins.map((admin) => (
-            <li
-              key={admin.userId}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2"
-            >
-              <span className="text-sm text-foreground">{admin.email || admin.userId}</span>
-              {admin.email ? (
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => revokeAdmin(admin.email as string)}
-                  className="text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
-                >
-                  Fjern
-                </button>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-        <form
-          className="flex flex-wrap gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            grantAdmin();
-          }}
-        >
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="epost@domene.no"
-            className="min-w-[12rem] flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
-          />
-          <button
-            type="submit"
-            disabled={pending || !email.trim()}
-            className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
-          >
-            Gi admin
-          </button>
-        </form>
       </section>
 
       <div className="flex flex-wrap gap-4 text-sm">

@@ -10,7 +10,7 @@ const DASHBOARD_MOBILE_ITEMS = [
   { href: routes.folketsMeninger, label: 'Meninger', icon: MessagesSquare },
   { href: routes.utforsk, label: 'Utforsk', icon: Search },
   { href: routes.horinger, label: 'Høringer', icon: FileEdit },
-  { href: routes.forslag, label: 'Forslag', icon: Lightbulb },
+  { href: routes.forslag, label: 'Appens fremtid', icon: Lightbulb },
   { href: routes.minSide, label: 'Profil', icon: UserRound },
 ] as const;
 
