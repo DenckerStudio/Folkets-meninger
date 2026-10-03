@@ -11,7 +11,7 @@ test.describe('AI-chat orb overlay', () => {
   test('floating orb opens the chat panel on a normal dashboard page', async ({ page }) => {
     test.setTimeout(90_000);
     await page.goto('/dashboard/avstemninger');
-    await expect(page.getByRole('heading', { name: 'Avstemninger' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Avstemninger', exact: true })).toBeVisible();
 
     const orb = page.getByRole('button', { name: 'Åpne AI-chat' });
     await expect(orb).toBeVisible();
@@ -53,7 +53,7 @@ test.describe('AI-chat orb overlay', () => {
     });
 
     await page.goto('/dashboard/avstemninger');
-    await expect(page.getByRole('heading', { name: 'Avstemninger' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Avstemninger', exact: true })).toBeVisible();
 
     const orb = page.getByRole('button', { name: 'Åpne AI-chat' });
     await orb.click();
