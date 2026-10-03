@@ -99,7 +99,7 @@ test.describe('Folkets Stemme smoke', () => {
   test('public avstemninger page loads', async ({ page }) => {
     const res = await page.goto('/dashboard/avstemninger');
     expect(res?.status()).toBeLessThan(500);
-    await expect(page.getByRole('heading', { name: 'Avstemninger' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Avstemninger', exact: true })).toBeVisible();
   });
 
   test('legacy initiativ URLs redirect to utforsk', async ({ page }) => {
