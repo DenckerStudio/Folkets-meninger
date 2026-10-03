@@ -46,10 +46,14 @@ test('folkets meninger is the first core destination', () => {
   assert.equal(coreNavItems[0]?.href, routes.folketsMeninger);
 });
 
-test('AI-chat lives in extended sidebar, not primary nav', () => {
+test('AI-chat is not a sidebar or primary destination', () => {
   assert.equal(
     extendedNavItems.some((item) => item.href === routes.chat),
-    true,
+    false,
+  );
+  assert.equal(
+    dashboardSidebarNavItems.some((item) => item.href === routes.chat),
+    false,
   );
   assert.equal(
     desktopPrimaryNavLinks.some((link) => link.href === routes.chat),

@@ -1,8 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import ShareButton from '@/app/dashboard/sak/[id]/share-button';
-import { routes } from '@/lib/routes';
+import { useChatOverlay } from '@/components/chat/chat-overlay-context';
 
 type SakPageActionsProps = {
   sakId: string;
@@ -11,15 +10,21 @@ type SakPageActionsProps = {
 };
 
 export function SakPageActions({ sakId, title, className = '' }: SakPageActionsProps) {
+  const { openChat } = useChatOverlay();
+
   return (
     <nav
       aria-label="Sakshandlinger"
       className={`flex flex-wrap items-center gap-x-4 gap-y-2 text-sm ${className}`.trim()}
     >
       <ShareButton id={sakId} title={title} />
-      <Link href={`${routes.chat}?sak=${encodeURIComponent(sakId)}`} className="text-brand hover:underline">
+      <button
+        type="button"
+        onClick={() => openChat({ issueId: sakId, issueTitle: title })}
+        className="text-brand hover:underline"
+      >
         Spør AI
-      </Link>
+      </button>
     </nav>
   );
 }

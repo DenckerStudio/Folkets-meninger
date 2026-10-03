@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, isToolUIPart } from 'ai';
 import { Loader2, Send } from 'lucide-react';
@@ -9,9 +10,9 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import { SurfaceCard } from '@/components/dashboard/surface-card';
 import { Button } from '@/components/ui/button';
 import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
+import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
-
-type ChatGateReason = 'free' | 'no-key' | 'ready';
+import type { ChatGateReason } from '@/lib/chat/overlay';
 
 type StemmeChatProps = {
   gate: ChatGateReason;
@@ -19,6 +20,7 @@ type StemmeChatProps = {
   issueTitle?: string | null;
   priceNok: number;
   checkoutConfigured: boolean;
+  variant?: 'page' | 'panel';
 };
 
 function toolLabel(type: string): string {
@@ -42,8 +44,11 @@ export function StemmeChat({
   issueTitle,
   priceNok,
   checkoutConfigured,
+  variant = 'page',
 }: StemmeChatProps) {
+  const pathname = usePathname();
   const [input, setInput] = useState('');
+  const compact = variant === 'panel';
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -55,10 +60,30 @@ export function StemmeChat({
   );
   const { messages, sendMessage, status, error, stop } = useChat({ transport });
   const busy = status === 'submitted' || status === 'streaming';
+  const emptyClassName = compact ? 'border-none bg-transparent px-4 py-8' : undefined;
+
+  if (gate === 'login') {
+    return (
+      <EmptyState
+        className={emptyClassName}
+        title="Logg inn for å bruke AI-chat"
+        description="AI-chat er en Stemme+-funksjon. Logg inn med e-post eller Google for å fortsette."
+        action={
+          <Link
+            href={`${routes.login}?next=${encodeURIComponent(pathname || routes.utforsk)}`}
+            className="inline-flex rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+          >
+            Logg inn
+          </Link>
+        }
+      />
+    );
+  }
 
   if (gate === 'free') {
     return (
       <EmptyState
+        className={emptyClassName}
         title="AI-chat er en Stemme+-funksjon"
         description="Chatboten bruker din egen LLM-nøkkel og våre sakdata. Gratis brukere beholder stemme, utforsk og høringer — uten en ødelagt chat."
         action={
@@ -80,6 +105,7 @@ export function StemmeChat({
   if (gate === 'no-key') {
     return (
       <EmptyState
+        className={emptyClassName}
         title="Lagre en LLM-nøkkel først"
         description="Stemme+ AI-chat kjører på nøkkelen din (OpenAI, Anthropic, AI Gateway eller OpenAI-kompatibel). Vi lagrer den kryptert og sender den aldri tilbake til nettleseren."
         action={
@@ -95,7 +121,10 @@ export function StemmeChat({
   }
 
   return (
-    <SurfaceCard padded={false} className="flex min-h-[32rem] flex-col">
+    <SurfaceCard
+      padded={false}
+      className={cn('flex flex-col', compact ? 'min-h-0 flex-1 border-0 shadow-none' : 'min-h-[32rem]')}
+    >
       <div className="border-b border-border px-4 py-3">
         <p className="text-sm text-muted-foreground">
           {issueId

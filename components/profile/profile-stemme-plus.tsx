@@ -1,15 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { HeartHandshake, Loader2, Sparkles } from 'lucide-react';
+import { useChatOverlay } from '@/components/chat/chat-overlay-context';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { ByokSettings, type ByokMetaView } from '@/components/profile/byok-settings';
 import { ProfileCard } from '@/components/profile/profile-card';
 import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
 import { Button } from '@/components/ui/button';
 import { STEMME_PLUS_BENEFITS, STEMME_PLUS_MONTHLY_PRICE_NOK } from '@/lib/stemme-plus/constants';
-import { routes } from '@/lib/routes';
 import type { LlmProvider } from '@/lib/byok/providers';
 
 type StemmePlusStatus = {
@@ -25,6 +24,7 @@ type StemmePlusStatus = {
 };
 
 export function ProfileStemmePlus() {
+  const { openChat } = useChatOverlay();
   const [status, setStatus] = useState<StemmePlusStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -147,9 +147,13 @@ export function ProfileStemmePlus() {
         <div className="mt-5 space-y-5">
           <div className="flex flex-wrap items-center gap-3">
             <StemmePlusBadge size="md" />
-            <Link href={routes.chat} className="text-sm font-medium text-brand hover:underline">
+            <button
+              type="button"
+              onClick={() => openChat()}
+              className="text-sm font-medium text-brand hover:underline"
+            >
               Åpne AI-chat
-            </Link>
+            </button>
           </div>
           {status.subscription_period_end ? (
             <p className="text-xs text-muted-foreground">

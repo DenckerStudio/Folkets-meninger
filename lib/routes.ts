@@ -68,6 +68,11 @@ export function isPublicDashboardUtforskPath(pathname: string): boolean {
   return pathname === routes.utforsk || pathname.startsWith(`${routes.utforsk}/`);
 }
 
+/** Legacy chat URL — redirects to Utforsk and opens the overlay. */
+export function isPublicDashboardChatPath(pathname: string): boolean {
+  return pathname === routes.chat;
+}
+
 /** Public Folkets meninger list and detail — posting requires login. */
 export function isPublicDashboardFolketsMeningerPath(pathname: string): boolean {
   return (

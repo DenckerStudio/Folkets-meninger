@@ -4,7 +4,6 @@ import {
   Calendar,
   FileEdit,
   Lightbulb,
-  MessageCircle,
   MessagesSquare,
   Search,
   Shield,
@@ -65,9 +64,6 @@ export const isOmOssActive: NavIsActive = (pathname) =>
 export const isInnsiktActive: NavIsActive = (pathname) =>
   pathname === routes.innsikt || pathname.startsWith(`${routes.innsikt}/`);
 
-export const isChatActive: NavIsActive = (pathname) =>
-  pathname === routes.chat || pathname.startsWith(`${routes.chat}/`);
-
 export const isAdminActive: NavIsActive = (pathname) =>
   pathname === routes.admin || pathname.startsWith(`${routes.admin}/`);
 
@@ -122,12 +118,6 @@ export const extendedNavItems: SiteNavLinkItem[] = [
     href: routes.innsikt,
     icon: BarChart2,
     isActive: isInnsiktActive,
-  },
-  {
-    title: 'AI-chat',
-    href: routes.chat,
-    icon: MessageCircle,
-    isActive: isChatActive,
   },
 ];
 

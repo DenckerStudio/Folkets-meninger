@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { checkRateLimit, getRateLimitPolicy } from '@/lib/rate-limit';
 import {
   isPublicDashboardAvstemningPath,
+  isPublicDashboardChatPath,
   isPublicDashboardFolketsMeningerPath,
   isPublicDashboardPolitikerPath,
   isPublicDashboardSakPath,
@@ -51,7 +52,8 @@ export async function middleware(request: NextRequest) {
     isPublicDashboardPolitikerPath(pathname) ||
     isPublicDashboardAvstemningPath(pathname) ||
     isPublicDashboardFolketsMeningerPath(pathname) ||
-    isPublicDashboardUtforskPath(pathname)
+    isPublicDashboardUtforskPath(pathname) ||
+    isPublicDashboardChatPath(pathname)
   ) {
     return refreshSessionCookies(request);
   }

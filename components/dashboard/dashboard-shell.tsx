@@ -1,16 +1,24 @@
+import { Suspense } from 'react';
+import { ChatHost } from '@/components/chat/chat-host';
+import { ChatOverlayProvider } from '@/components/chat/chat-overlay-context';
 import DashboardSidebar from '@/components/dashboard/dashboard-sidebar';
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="max-w-[1280px] mx-auto -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-2 lg:py-4">
-      <div className="grid grid-cols-1 xl:grid-cols-[240px_minmax(0,1fr)] gap-6">
-        <aside className="hidden xl:block">
-          <div className="sticky top-24">
-            <DashboardSidebar />
-          </div>
-        </aside>
-        <div className="min-w-0 overflow-x-clip">{children}</div>
+    <ChatOverlayProvider>
+      <div className="max-w-[1280px] mx-auto -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-2 lg:py-4">
+        <div className="grid grid-cols-1 xl:grid-cols-[240px_minmax(0,1fr)] gap-6">
+          <aside className="hidden xl:block">
+            <div className="sticky top-24">
+              <DashboardSidebar />
+            </div>
+          </aside>
+          <div className="min-w-0 overflow-x-clip">{children}</div>
+        </div>
       </div>
-    </div>
+      <Suspense fallback={null}>
+        <ChatHost />
+      </Suspense>
+    </ChatOverlayProvider>
   );
 }
