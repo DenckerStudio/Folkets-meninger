@@ -62,8 +62,8 @@ export default function SporsmalList({ sporsmal, type, sesjonId }: SporsmalListP
             className={cn(
               'px-4 py-2 rounded-xl text-sm font-semibold border transition-colors',
               t === type
-                ? 'bg-indigo-600 text-white border-indigo-600'
-                : 'bg-card text-foreground border-border hover:bg-muted/50',
+                ? 'bg-muted text-brand border-border'
+                : 'bg-card text-muted-foreground border-border hover:bg-muted/50',
             )}
           >
             {sporsmalTypeLabel(t)}
@@ -128,7 +128,7 @@ export default function SporsmalList({ sporsmal, type, sesjonId }: SporsmalListP
                 {item.id ? (
                   <Link
                     href={routes.sporsmalDetail(String(item.id))}
-                    className="text-sm font-semibold text-foreground hover:text-indigo-600 dark:text-indigo-400 line-clamp-2"
+                    className="text-sm font-semibold text-foreground hover:text-brand line-clamp-2"
                   >
                     {title}
                   </Link>
