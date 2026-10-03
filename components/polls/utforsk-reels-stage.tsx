@@ -8,8 +8,9 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, Compass, Sparkles } from 'lucide-react';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import type { Swiper as SwiperType } from 'swiper';
 import { CardCarousel } from '@/components/ui/card-carousel';
 import { ReelCarouselCard } from '@/components/polls/reel-vote-card';
@@ -18,29 +19,9 @@ import type { SystemReelFeedItem } from '@/lib/polls/types';
 import { cn } from '@/lib/utils';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 
-/** Horizontal track — soft spring so the pane glide feels calm, not snappy. */
-const SLIDE = { type: 'spring', stiffness: 56, damping: 22, mass: 0.92 } as const;
-/** Cross-fade inspired by 21st transition-panel (opacity + blur + slight y). */
-const PANE_EASE = [0.22, 1, 0.36, 1] as const;
-const PANE_TRANSITION = { duration: 0.52, ease: PANE_EASE } as const;
-
-function paneMotion(reelsOpen: boolean, pane: 'saker' | 'reels') {
-  const hidden = pane === 'saker' ? reelsOpen : !reelsOpen;
-  if (hidden) {
-    return {
-      opacity: 0,
-      y: pane === 'saker' ? -10 : 10,
-      filter: 'blur(5px)',
-      scale: 0.988,
-    };
-  }
-  return {
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    scale: 1,
-  };
-}
+/** Quiet fullscreen ease — no lateral slide. */
+const MODAL_EASE = [0.22, 1, 0.36, 1] as const;
+const MODAL_TRANSITION = { duration: 0.36, ease: MODAL_EASE } as const;
 
 function subscribeLocationHash(onStoreChange: () => void) {
   window.addEventListener('hashchange', onStoreChange);
@@ -57,6 +38,14 @@ function getLocationHash() {
 
 function getServerLocationHash() {
   return '';
+}
+
+function useIsMounted() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 }
 
 function notifyHashChanged() {
@@ -93,6 +82,7 @@ type UtforskReelsStageProps = {
 
 export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
   const reducedMotion = usePrefersReducedMotion();
+  const mounted = useIsMounted();
   const hash = useSyncExternalStore(subscribeLocationHash, getLocationHash, getServerLocationHash);
   const reelsOpen = hash === '#reels';
   const [activePollId, setActivePollId] = useState<string | null>(null);
@@ -102,8 +92,7 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
       window.history.pushState(null, '', `${window.location.pathname}${window.location.search}#reels`);
       notifyHashChanged();
     }
-    window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
-  }, [reducedMotion]);
+  }, []);
 
   const closeReels = useCallback(() => {
     setActivePollId(null);
@@ -113,41 +102,60 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
     }
   }, []);
 
+  useEffect(() => {
+    if (!reelsOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [reelsOpen]);
+
+  useEffect(() => {
+    if (!reelsOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeReels();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [reelsOpen, closeReels]);
+
   return (
-    <div className="overflow-hidden">
-      <motion.div
-        className="flex w-[200%] items-start"
-        animate={{ x: reelsOpen ? '-50%' : '0%' }}
-        transition={reducedMotion ? { duration: 0 } : SLIDE}
-      >
-        <motion.div
-          initial={false}
-          animate={paneMotion(reelsOpen, 'saker')}
-          transition={reducedMotion ? { duration: 0 } : PANE_TRANSITION}
-          className="w-1/2 shrink-0 origin-center space-y-8"
-          aria-hidden={reelsOpen}
-          {...(reelsOpen ? { inert: true } : {})}
-        >
-          {children({ openReels, itemCount: items.length })}
-        </motion.div>
-        <motion.div
-          id="reels"
-          initial={false}
-          animate={paneMotion(reelsOpen, 'reels')}
-          transition={reducedMotion ? { duration: 0 } : PANE_TRANSITION}
-          className="w-1/2 shrink-0 origin-center"
-          aria-hidden={!reelsOpen}
-          {...(!reelsOpen ? { inert: true } : {})}
-        >
-          <ReelsPanel
-            active={reelsOpen}
-            items={items}
-            activePollId={activePollId}
-            onSelect={setActivePollId}
-            onClose={closeReels}
-          />
-        </motion.div>
-      </motion.div>
+    <div>
+      <div aria-hidden={reelsOpen} {...(reelsOpen ? { inert: true } : {})}>
+        {children({ openReels, itemCount: items.length })}
+      </div>
+      {mounted
+        ? createPortal(
+            <AnimatePresence>
+              {reelsOpen ? (
+                <motion.div
+                  key="reels-modal"
+                  id="reels"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Reels"
+                  className="fixed inset-0 z-[70] overflow-y-auto bg-background"
+                  initial={reducedMotion ? false : { opacity: 0, scale: 0.985 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={reducedMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.992 }}
+                  transition={reducedMotion ? { duration: 0 } : MODAL_TRANSITION}
+                >
+                  <div className="mx-auto min-h-dvh w-full max-w-3xl px-4 py-6 sm:px-6">
+                    <ReelsPanel
+                      active={reelsOpen}
+                      items={items}
+                      activePollId={activePollId}
+                      onSelect={setActivePollId}
+                      onClose={closeReels}
+                    />
+                  </div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
