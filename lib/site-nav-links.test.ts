@@ -61,6 +61,13 @@ test('AI-chat is not a sidebar or primary destination', () => {
   );
 });
 
+test('appens fremtid is a core destination', () => {
+  const item = coreNavItems.find((entry) => entry.href === routes.forslag);
+  assert.ok(item);
+  assert.equal(item.title, 'Appens fremtid');
+  assert.equal(routes.forslag, '/dashboard/appens-fremtid');
+});
+
 test('avstemninger and politiker-hub are not in dashboard nav', () => {
   assert.equal(
     dashboardSidebarNavItems.some((item) => item.href === routes.avstemninger),

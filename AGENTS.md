@@ -7,7 +7,7 @@
 - Forum is removed from the product. System-generated Reels live under
  Utforsk (`/dashboard/utforsk`) as ja/nei/blank polls. Landing
  after login / `/dashboard` is `utforsk`.
- Primary nav: Folkets meninger / Utforsk / Høringer / Forslag. Default Stortinget period is
+ Primary nav: Folkets meninger / Utforsk / Høringer / Appens fremtid. Default Stortinget period is
   `2025-2029`. Auth is email/password and Google OAuth via Supabase — do not
   mention BankID, MinID, or electronic ID verification in user-facing copy.
   Opt-in `activity_visibility` (`private`|`summary`|`full`). Admin via
@@ -73,7 +73,6 @@ The canonical template is `.env.example`.
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Notification and welcome email delivery |
 | `STORTINGET_SESSION_ID`, `STORTINGET_PERIODE_ID` | Server defaults for Stortinget data |
 | `NEXT_PUBLIC_STORTINGET_SESSION_ID`, `NEXT_PUBLIC_STORTINGET_PERIODE_ID` | Client-visible Stortinget defaults |
-| `FIDER_BASE_URL`, `FIDER_OAUTH_CLIENT_ID`, `FIDER_OAUTH_CLIENT_SECRET` | Fider SSO at `https://feedback.folkets-meninger.no` (`docs/fider-oauth.md`) |
 | `BYOK_ENCRYPTION_KEY` | AES-256-GCM key for user LLM credentials (64 hex chars or passphrase) |
 | `SEARXNG_BASE_URL` | Chat source search; default `https://searxng.heyklever.app` |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_STEMME_PLUS_PRICE_ID` | Stemme+ Stripe checkout/webhook. Honest unconfigured UI if missing |
@@ -172,7 +171,7 @@ The canonical template is `.env.example`.
  immediately); use `create_system_poll_draft` → `publish_poll`. The public feed sits on Utforsk.
 - Fylke breakdowns use `users.fylke_code` only when `fylke_verified` is true.
  Self-declared fylke via the profile picker does not set `fylke_verified`.
-- Primary nav: Folkets meninger / Utforsk / Høringer / Forslag. Post-login fallback is Utforsk.
+- Primary nav: Folkets meninger / Utforsk / Høringer / Appens fremtid. Post-login fallback is Utforsk.
 
 ### Identity, activity, admin
 
@@ -181,9 +180,8 @@ The canonical template is `.env.example`.
 - Public activity is opt-in via `users.activity_visibility` (`private` default).
 - Admin access: `public.user_roles` (`role = 'admin'`) via `lib/admin/gate.ts`
   (`is_admin()`). Grant/revoke with `grant_app_role_by_email` /
-  `revoke_app_role_by_email` (service role) or `/dashboard/admin/reels`.
-  Remaining admin surface: `/dashboard/admin/statistikk`,
-  `/dashboard/admin/reels`, `/dashboard/admin/stemme-plus`.
+  `revoke_app_role_by_email` (service role) or `/dashboard/admin/brukere`.
+  Admin hub: Appens fremtid, Reels, Statistikk, Brukere, Stemme+.
 - **Stemme+** (`users.subscription_tier`): supporter badge, richer digest, smarter
   alerts, and Stemme+-gated BYOK AI-chat (dashboard orb overlay). Price 59 kr/mnd
   (`lib/stemme-plus/constants.ts`). Admin grant via `grant_stemme_plus_by_email`
@@ -287,20 +285,29 @@ The canonical template is `.env.example`.
 
 ### Admin, stats, and valgomat
 
+- Admin hub is `/dashboard/admin`. Active tools: Appens fremtid, Reels, Statistikk,
+  Brukere, Stemme+. Varsler remains a planned hub card.
 - Government stats exports are available under the admin stats route and apply
   `GOVERNMENT_STATS_MIN_VOTES = 50` before publishing aggregate vote rows.
 - Valgomat party alignment is intentionally disabled until Stortinget per-party
   voting data exists (`PARTY_ALIGNMENT_AVAILABLE = false`).
 
-### Fider (feature requests / SSO)
+### Appens fremtid (product feedback)
 
-- Fider runs on Coolify at **https://feedback.folkets-meninger.no** (`FIDER_BASE_URL`; default in
-  `lib/fider/config.ts` when env is unset).
-- SSO uses an app OAuth bridge (`/api/oauth/fider/*`), not Supabase OAuth 2.1 server
-  (`auth.oauth_server.enabled = false` in `supabase/config.toml`).
-- Dashboard nav **Forslag** → `/dashboard/forslag` redirects to Fider (not iframe).
-- Fider OAuth callback: `https://feedback.folkets-meninger.no/oauth/folkets/callback`.
-- Setup runbook: `docs/fider-oauth.md`.
+- Dashboard nav **Appens fremtid** → `/dashboard/appens-fremtid` (old
+  `/dashboard/forslag` redirects here). Login required. Sections: forslag,
+  endringslogg, veikart. Chat stays a floating orb, not a page.
+- Users submit title, description, category, and who it affects via
+  `POST /api/suggestions`. Unvoted inbox items stay admin-only.
+- Admins open selected forslag for voting at `/dashboard/admin/forslag`.
+  Signed-in users can upvote/downvote those only (`POST /api/suggestions/vote`);
+  one vote per user, changeable. Admins also publish changelog and roadmap.
+- Schema: `app_suggestions`, `app_suggestion_votes`, `app_changelog_entries`,
+  `app_roadmap_items`
+  (`20261003163035_app_suggestions.sql`, `20261003175506_app_suggestions_admin.sql`,
+  `20261003200000_appens_fremtid.sql`).
+- Public marketing form `/innspill` (`site_feedback`) is separate.
+- Fider is not used by the app. The Coolify Fider server is left running.
 
 ## Documentation Locations
 

@@ -27,6 +27,8 @@ const nextConfig: NextConfig = {
       { source: '/politiker-hub', destination: '/dashboard/politikere', permanent: true },
       { source: '/dashboard/politiker-hub', destination: '/dashboard/politikere', permanent: true },
       { source: '/dashboard/avstemninger/reels', destination: '/dashboard/utforsk', permanent: true },
+      { source: '/dashboard/forslag', destination: '/dashboard/appens-fremtid', permanent: false },
+      { source: '/forslag', destination: '/dashboard/appens-fremtid', permanent: false },
       { source: '/saksganger', destination: '/dashboard/saksganger', permanent: true },
       { source: '/sporsmal', destination: '/dashboard/sporsmal', permanent: true },
     ];
