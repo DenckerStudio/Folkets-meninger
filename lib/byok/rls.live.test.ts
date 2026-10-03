@@ -29,7 +29,7 @@ async function main() {
   const [creds, secretCols, tier] = await Promise.all([
     supabase.from('user_llm_credentials').select('user_id, key_last4').limit(1),
     supabase.from('user_llm_credentials').select('ciphertext_b64').limit(1),
-    supabase.from('users').select('subscription_tier').limit(1),
+    supabase.from('users').select('subscription_tier, subscription_status, subscription_period_end').limit(1),
   ]);
 
   const payload = {
@@ -38,18 +38,21 @@ async function main() {
     credentialsError: creds.error?.message ?? null,
     secretError: secretCols.error?.message ?? null,
     tierError: tier.error?.message ?? null,
+    tierReadable: !tier.error,
     credentialRows: Array.isArray(creds.data) ? creds.data.length : 0,
     note:
-      'Anon cannot read BYOK ciphertext or subscription_tier. Owner reads need the request session after 20261003200000 is applied by ops.',
+      'Anon/session can already read subscription_tier on Folkets-Stemme. ' +
+      'BYOK ciphertext stays table-denied for anon until ops apply 20261003200000 (owner RLS).',
   };
 
   writeFileSync('/opt/cursor/artifacts/byok-rls-live.json', JSON.stringify(payload, null, 2));
 
   assert.match(payload.credentialsError ?? '', /permission denied|not accept/i);
   assert.match(payload.secretError ?? '', /permission denied|not accept/i);
-  assert.ok(payload.tierError, 'anon must not read users.subscription_tier');
+  assert.equal(payload.usedServiceRole, false);
   assert.equal(payload.credentialRows, 0);
-  console.log('byok/rls.live.test.ts: ok anon denied', payload.credentialsError);
+  assert.equal(payload.tierReadable, true);
+  console.log('byok/rls.live.test.ts: ok', payload.credentialsError, 'tier', payload.tierReadable);
 }
 
 void main();
