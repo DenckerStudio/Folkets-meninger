@@ -23,13 +23,22 @@ function emptySubscription(userId: string): UserSubscriptionSnapshot {
   };
 }
 
-function toSnapshot(userId: string, data: UserSubscriptionRow): UserSubscriptionSnapshot {
+function readOptionalString(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function toSnapshot(userId: string, data: unknown): UserSubscriptionSnapshot {
+  if (!data || typeof data !== 'object') {
+    return emptySubscription(userId);
+  }
+
+  const row = data as Record<string, unknown>;
   return {
     userId,
-    subscription_tier: data.subscription_tier,
-    subscription_status: data.subscription_status,
-    subscription_period_end: data.subscription_period_end,
-    stripe_customer_id: data.stripe_customer_id ?? null,
+    subscription_tier: readOptionalString(row.subscription_tier) ?? 'free',
+    subscription_status: readOptionalString(row.subscription_status),
+    subscription_period_end: readOptionalString(row.subscription_period_end),
+    stripe_customer_id: readOptionalString(row.stripe_customer_id),
   };
 }
 
