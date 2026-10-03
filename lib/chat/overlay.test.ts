@@ -39,6 +39,8 @@ test('chat query opens the overlay for 1 or open', () => {
   assert.equal(shouldOpenChatFromSearchParams(new URLSearchParams('chat=1')), true);
   assert.equal(shouldOpenChatFromSearchParams(new URLSearchParams('chat=open')), true);
   assert.equal(shouldOpenChatFromSearchParams(new URLSearchParams('sak=1')), false);
+  assert.equal(shouldOpenChatFromSearchParams(new URLSearchParams('')), false);
+  assert.equal(shouldOpenChatFromSearchParams(new URLSearchParams('chat=true')), false);
 });
 
 test('issueIdFromPathname reads /dashboard/sak/[id]', () => {
