@@ -108,7 +108,7 @@ function PolitikerCard({ rep, index }: { rep: PolitikerOversikt; index: number }
           </div>
 
           <div className="mb-4">
-            <h3 className="text-xl font-bold text-foreground leading-tight mb-1 group-hover:text-indigo-600 dark:text-indigo-400 transition-colors">
+            <h3 className="text-xl font-bold text-foreground leading-tight mb-1 group-hover:text-brand transition-colors">
               {rep.fornavn} {rep.etternavn}
             </h3>
             <p className="text-sm font-medium text-muted-foreground">{roleLabel}</p>
@@ -206,12 +206,12 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-border rounded-xl leading-5 bg-card placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+              className="block w-full pl-10 pr-3 py-2 border border-border rounded-xl leading-5 bg-card placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-brand/30 focus:border-brand sm:text-sm transition-colors"
               placeholder="Søk etter navn, parti, rolle eller fylke..."
             />
           </div>
           <div className="flex items-center text-sm text-muted-foreground bg-card px-4 py-2 rounded-xl border border-border shadow-sm">
-            <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mr-2" />
+            <ShieldCheck className="w-4 h-4 text-brand mr-2" />
             <span>{filteredPolitikere.length} politikere</span>
           </div>
         </div>

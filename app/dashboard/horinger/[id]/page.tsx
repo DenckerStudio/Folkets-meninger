@@ -211,7 +211,7 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
                       {sak.sak_id && (
                         <Link
                           href={routes.sak(String(sak.sak_id))}
-                          className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                          className="text-sm font-medium text-brand hover:text-brand/80"
                         >
                           Se sak i Folkets Stemme
                         </Link>
