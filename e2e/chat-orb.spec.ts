@@ -35,6 +35,24 @@ test.describe('AI-chat orb overlay', () => {
     });
   });
 
+  test('login next preserves chat+sak deep link', async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.goto('/dashboard/utforsk?chat=1&sak=200417');
+    const panel = page.locator('[data-chat-panel]');
+    await expect(panel).toBeVisible({ timeout: 90_000 });
+    const login = panel.getByRole('link', { name: 'Logg inn' });
+    await expect(login).toBeVisible();
+    const href = await login.getAttribute('href');
+    expect(href).toBeTruthy();
+    const url = new URL(href!, 'http://localhost');
+    expect(url.pathname).toBe('/auth/login');
+    const next = url.searchParams.get('next');
+    expect(next).toBeTruthy();
+    expect(next).toContain('/dashboard/utforsk');
+    expect(next).toContain('chat=1');
+    expect(next).toContain('sak=200417');
+  });
+
   test('legacy /dashboard/chat opens the overlay on Utforsk', async ({ page }) => {
     test.setTimeout(90_000);
     await page.goto('/dashboard/chat');

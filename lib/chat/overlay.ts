@@ -29,3 +29,14 @@ export function chatDeepLinkQuery(issueId?: string | null): string {
   if (sak) params.set('sak', sak);
   return params.toString();
 }
+
+/** Post-login return path that reopens the orb panel (and optional sak). */
+export function buildChatLoginNextPath(
+  pathname: string | null | undefined,
+  issueId?: string | null,
+  fallbackPath = '/dashboard/utforsk',
+): string {
+  const raw = (pathname ?? '').trim() || fallbackPath;
+  const pathOnly = raw.split('?')[0] || fallbackPath;
+  return `${pathOnly}?${chatDeepLinkQuery(issueId)}`;
+}

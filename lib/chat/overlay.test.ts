@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  buildChatLoginNextPath,
   chatDeepLinkQuery,
   resolveChatGate,
   shouldOpenChatFromSearchParams,
@@ -34,4 +35,24 @@ test('chat query opens the overlay for 1 or open', () => {
 test('chatDeepLinkQuery keeps optional sak', () => {
   assert.equal(chatDeepLinkQuery(), 'chat=1');
   assert.equal(chatDeepLinkQuery(' 104 '), 'chat=1&sak=104');
+});
+
+test('buildChatLoginNextPath keeps chat reopen + optional sak', () => {
+  assert.equal(
+    buildChatLoginNextPath('/dashboard/utforsk', null),
+    '/dashboard/utforsk?chat=1',
+  );
+  assert.equal(
+    buildChatLoginNextPath('/dashboard/utforsk', '200417'),
+    '/dashboard/utforsk?chat=1&sak=200417',
+  );
+  assert.equal(
+    buildChatLoginNextPath('/dashboard/sak/200417', '200417'),
+    '/dashboard/sak/200417?chat=1&sak=200417',
+  );
+  // Strip accidental query on pathname input
+  assert.equal(
+    buildChatLoginNextPath('/dashboard/utforsk?foo=1', '104'),
+    '/dashboard/utforsk?chat=1&sak=104',
+  );
 });

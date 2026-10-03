@@ -67,7 +67,9 @@ export async function middleware(request: NextRequest) {
   if (!user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = routes.login;
-    loginUrl.searchParams.set('next', pathname);
+    // Preserve query (e.g. ?sak=&chat=1) so post-login can reopen context.
+    loginUrl.search = '';
+    loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
   }
 
