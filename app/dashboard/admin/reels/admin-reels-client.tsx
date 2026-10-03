@@ -7,6 +7,7 @@ import { pollDraftGenerationStatusLabel } from '@/lib/admin/poll-draft-generatio
 import { usePollDraftGeneration } from '@/hooks/use-poll-draft-generation';
 import { routes } from '@/lib/routes';
 import { AdminBackLink } from '@/components/admin/admin-shell';
+import { ReelCandidateRatings } from '@/components/admin/reel-candidate-ratings';
 import type { PollRecord, SakPollCandidate, SakPollCoverage } from '@/lib/polls/types';
 import { pipelineHealthNeedsAttention, type PipelineHealth } from '@/lib/n8n/pipeline-health';
 
@@ -323,6 +324,7 @@ export default function AdminReelsClient({
                     Sak {poll.stortingetIssueId}
                   </Link>
                 ) : null}
+                <ReelCandidateRatings metadata={poll.generationMetadata} />
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"

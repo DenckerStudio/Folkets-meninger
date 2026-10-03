@@ -32,9 +32,11 @@ type PollRow = {
   generation_metadata?: unknown;
 };
 
-/** Admin/public lists do not need RAG metadata — keep the payload small and avoid optional-column failures. */
+/** Public lists stay lean. Admin draft list includes generation_metadata for stored ratings. */
 const POLL_LIST_SELECT =
   'id, track, status, title, neutral_summary, source_urls, stortinget_issue_id, opens_at, closes_at, created_at';
+
+const POLL_ADMIN_DRAFT_SELECT = `${POLL_LIST_SELECT}, generation_metadata`;
 
 const POLL_SELECT = `${POLL_LIST_SELECT}, citizen_initiative_id, generation_metadata`;
 
@@ -111,8 +113,9 @@ export function parseFylkeTotals(data: unknown): PollFylkeTotals[] {
 async function listPollRows(
   apply: (select: string) => PromiseLike<{ data: unknown; error: { message?: string } | null }>,
   label: string,
+  select = POLL_LIST_SELECT,
 ): Promise<PollRow[]> {
-  const { data, error } = await apply(POLL_LIST_SELECT);
+  const { data, error } = await apply(select);
   if (error) {
     console.error(`[polls] ${label} failed`, error);
     return [];
@@ -167,6 +170,7 @@ export async function listSystemPollDrafts(limit = 50): Promise<PollRecord[]> {
         .order('created_at', { ascending: false })
         .limit(limit),
     'listSystemPollDrafts',
+    POLL_ADMIN_DRAFT_SELECT,
   );
   return rows.map(mapPollRow);
 }
