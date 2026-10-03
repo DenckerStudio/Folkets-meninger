@@ -13,7 +13,7 @@ export function LandingRoadmap() {
     <div id="veien-videre" className="scroll-mt-28">
       <Timeline
         title="Veien videre"
-        subtitle="Slik står plattformen i dag — og hva vi prioriterer for å gjøre det enklere å forstå, stemme og følge med."
+        subtitle="Hva som er live, og hva som kommer."
         items={[
           {
             category: 'Fase 1',

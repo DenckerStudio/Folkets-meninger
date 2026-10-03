@@ -50,8 +50,7 @@ function LandingPopularIssuesEmpty() {
       </div>
       <h2 className="text-2xl font-bold tracking-tight text-[#001433]">Bli med å gjøre sakene synlige</h2>
       <p className="mx-auto mt-3 max-w-lg text-[#001433]/65 leading-relaxed">
-        Når nok innbyggere stemmer, dukker de mest engasjerende sakene opp her. Logg inn, stem på det du
-        bryr deg om — og hjelp andre å se hva som skjer mellom valgene.
+        Når nok innbyggere stemmer, dukker sakene opp her.
       </p>
       <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
         <Link

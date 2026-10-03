@@ -21,7 +21,7 @@ export default async function InnsiktPage() {
           Åpen innsikt
         </h1>
         <p className="text-muted-foreground mt-2">
-          Anonyme stemmetall fra Folkets Stemme. Ingen persondata eller forumtekst.
+          Anonyme stemmetall. Ingen persondata.
         </p>
       </div>
 

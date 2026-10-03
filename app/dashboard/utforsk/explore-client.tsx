@@ -187,7 +187,7 @@ export default function ExploreClient({
       <FadeIn delay={0.1}>
         <PageHeader
           title="Utforsk saker"
-          description="Lovforslag og representantforslag fra Stortinget — kildedokumenter."
+          description="Lovforslag og representantforslag fra Stortinget."
         />
       </FadeIn>
 
