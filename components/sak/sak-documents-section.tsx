@@ -117,7 +117,7 @@ function SakDocumentViewer({
             href={document.sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand/80"
           >
             <ExternalLink className="h-4 w-4" />
             Åpne originalkilde
@@ -127,7 +127,7 @@ function SakDocumentViewer({
     >
       {loading ? (
         <div className="flex min-h-[240px] items-center justify-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin text-indigo-600 dark:text-indigo-400" />
+          <Loader2 className="h-5 w-5 animate-spin text-brand" />
           Laster dokument …
         </div>
       ) : null}
@@ -141,7 +141,7 @@ function SakDocumentViewer({
                 href={document.sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 font-medium text-indigo-700 dark:text-indigo-300 hover:text-indigo-600 dark:text-indigo-400"
+                className="inline-flex items-center gap-1.5 font-medium text-brand hover:text-brand/80"
               >
                 <ExternalLink className="h-4 w-4" />
                 Åpne på ekstern side
@@ -159,7 +159,7 @@ function SakDocumentViewer({
               href={content.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
+              className="inline-flex items-center gap-1.5 font-medium text-brand hover:text-brand/80"
             >
               <ExternalLink className="h-4 w-4" />
               Åpne {content.title}
@@ -178,7 +178,7 @@ function SakDocumentViewer({
               href={content.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
+              className="inline-flex items-center gap-1.5 font-medium text-brand hover:text-brand/80"
             >
               <ExternalLink className="h-4 w-4" />
               Åpne originalkilde
@@ -243,7 +243,7 @@ export function SakDocumentsSection({
     <>
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-4 flex items-center gap-2">
-          <FileText className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+          <FileText className="h-5 w-5 text-brand" />
           <h2 className="text-lg font-bold text-foreground">Tilknyttede dokumenter</h2>
         </div>
 
@@ -259,7 +259,7 @@ export function SakDocumentsSection({
                     <button
                       type="button"
                       onClick={() => setActiveDocument(doc)}
-                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-left transition-colors hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30"
+                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-left transition-colors hover:border-brand/40 hover:bg-brand/5"
                     >
                       <span className="text-sm font-medium text-foreground">{doc.title}</span>
                       <span className="shrink-0 text-xs text-muted-foreground">

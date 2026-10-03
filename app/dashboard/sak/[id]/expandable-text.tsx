@@ -26,7 +26,7 @@ export default function ExpandableText({
 
   return (
     <div className="mb-6 last:mb-0">
-      <h3 className="text-sm font-bold text-indigo-900 dark:text-indigo-200 uppercase tracking-wider mb-2">{title}</h3>
+      <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">{title}</h3>
       <div className="relative">
         <motion.div
           layout
@@ -42,7 +42,7 @@ export default function ExpandableText({
       {isLong && (
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="mt-2 inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+          className="mt-2 inline-flex items-center text-sm font-medium text-brand hover:text-brand/80 transition-colors"
         >
           {isExpanded ? (
             <>

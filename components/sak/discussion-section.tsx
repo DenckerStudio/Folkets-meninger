@@ -192,7 +192,7 @@ export function DiscussionSection({ sakId }: { sakId: string }) {
                 type="button"
                 onClick={submitPost}
                 disabled={busy || !body.trim()}
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand/90 disabled:opacity-50"
               >
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 {busy ? 'Publiserer …' : 'Publiser innlegg'}
@@ -203,7 +203,7 @@ export function DiscussionSection({ sakId }: { sakId: string }) {
           <p className="text-sm text-center text-muted-foreground py-2">
             <Link
               href={`${routes.login}?next=${encodeURIComponent(`${routes.sak(sakId)}#diskusjon`)}`}
-              className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+              className="font-medium text-brand hover:underline"
             >
               Logg inn
             </Link>{' '}
