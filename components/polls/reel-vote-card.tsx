@@ -193,7 +193,7 @@ export function ReelCarouselCard({
           </div>
           <p className="text-xs font-medium text-white/70">Trykk for å stemme</p>
         </button>
-        <div className="h-full w-1/2 bg-brand p-5">
+        <div className={cn('h-full w-1/2 bg-brand p-5', fill && 'pt-16')}>
           <ReelFlagVote key={item.poll.id} item={item} onBack={onBack} />
         </div>
       </motion.div>
