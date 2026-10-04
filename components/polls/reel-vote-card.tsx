@@ -65,22 +65,22 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
     onClick: () => void;
   }[] = [
     {
-      key: 'ja',
-      label: 'Ja',
-      className: 'bg-brand-accent text-white hover:bg-brand-accent/90',
-      onClick: () => void vote('ja'),
-    },
-    {
       key: 'nei',
       label: 'Nei',
-      className: 'bg-white text-brand hover:bg-white/90',
+      className: 'bg-[#ba0c2f] text-white hover:bg-[#ba0c2f]/90',
       onClick: () => void vote('nei'),
     },
     {
       key: 'tilbake',
       label: 'Tilbake',
-      className: 'bg-brand text-brand-foreground hover:bg-brand/90',
+      className: 'bg-white text-[#00205b] hover:bg-white/90',
       onClick: onBack,
+    },
+    {
+      key: 'ja',
+      label: 'Ja',
+      className: 'bg-[#00205b] text-white hover:bg-[#00205b]/90',
+      onClick: () => void vote('ja'),
     },
   ];
 
@@ -89,6 +89,9 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
       <div className="space-y-2">
         <p className="text-[11px] font-medium uppercase tracking-wide text-white/70">Hva mener du?</p>
         <h3 className="text-lg font-semibold leading-snug text-white sm:text-xl">{item.poll.title}</h3>
+        {item.poll.neutralSummary ? (
+          <p className="text-sm leading-relaxed text-white/80">{item.poll.neutralSummary}</p>
+        ) : null}
       </div>
 
       <div>
@@ -143,17 +146,26 @@ export function ReelCarouselCard({
   selected,
   onSelect,
   onBack,
+  fill = false,
 }: {
   item: SystemReelFeedItem;
   selected: boolean;
   onSelect: () => void;
   onBack: () => void;
+  fill?: boolean;
 }) {
   const reducedMotion = usePrefersReducedMotion();
   const pointerStart = useRef({ x: 0, y: 0 });
 
   return (
-    <div className="h-[22rem] w-[17.5rem] overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+    <div
+      className={cn(
+        'overflow-hidden bg-card shadow-sm',
+        fill
+          ? 'h-full w-full rounded-none border-0'
+          : 'h-[22rem] w-[17.5rem] rounded-3xl border border-border',
+      )}
+    >
       <motion.div
         className="flex h-full w-[200%]"
         animate={{ x: selected ? '-50%' : '0%' }}
@@ -178,13 +190,10 @@ export function ReelCarouselCard({
           </span>
           <div className="space-y-2">
             <h3 className="text-lg font-semibold leading-snug sm:text-xl">{item.poll.title}</h3>
-            {item.poll.neutralSummary ? (
-              <p className="line-clamp-4 text-sm leading-relaxed text-white/80">{item.poll.neutralSummary}</p>
-            ) : null}
           </div>
           <p className="text-xs font-medium text-white/70">Trykk for å stemme</p>
         </button>
-        <div className="h-full w-1/2 bg-brand p-5">
+        <div className={cn('h-full w-1/2 bg-brand p-5', fill && 'pt-16')}>
           <ReelFlagVote key={item.poll.id} item={item} onBack={onBack} />
         </div>
       </motion.div>

@@ -103,10 +103,16 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
 
   useEffect(() => {
     if (!reelsOpen) return;
-    const previousOverflow = document.body.style.overflow;
+    const html = document.documentElement;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = html.style.overflow;
+    html.setAttribute('data-reels-open', '');
+    html.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = previousOverflow;
+      html.removeAttribute('data-reels-open');
+      html.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
     };
   }, [reelsOpen]);
 
@@ -134,21 +140,20 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
                   role="dialog"
                   aria-modal="true"
                   aria-label="Reels"
-                  className="fixed inset-0 z-[70] overflow-y-auto bg-background"
-                  initial={reducedMotion ? false : { opacity: 0, scale: 0.972 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={reducedMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.985 }}
+                  className="fixed inset-0 z-[200] flex h-[100dvh] w-screen max-w-none flex-col bg-brand"
+                  style={{ top: 0, right: 0, bottom: 0, left: 0 }}
+                  initial={reducedMotion ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={reducedMotion ? { opacity: 1 } : { opacity: 0 }}
                   transition={reducedMotion ? { duration: 0 } : MODAL_TRANSITION}
                 >
-                  <div className="mx-auto min-h-dvh w-full max-w-3xl px-4 py-6 sm:px-6">
-                    <ReelsPanel
-                      active={reelsOpen}
-                      items={items}
-                      activePollId={activePollId}
-                      onSelect={setActivePollId}
-                      onClose={closeReels}
-                    />
-                  </div>
+                  <ReelsPanel
+                    active={reelsOpen}
+                    items={items}
+                    activePollId={activePollId}
+                    onSelect={setActivePollId}
+                    onClose={closeReels}
+                  />
                 </motion.div>
               ) : null}
             </AnimatePresence>,
@@ -271,30 +276,34 @@ function ReelsPanel({
   }, [active, activePollId]);
 
   return (
-    <div className="space-y-4 pb-8">
-      <ReelsBackCta onBack={onClose} />
+    <div className="relative flex h-full min-h-0 flex-1 flex-col">
+      <div className="absolute left-4 top-[max(0.75rem,env(safe-area-inset-top,0px))] z-20">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Tilbake til saker"
+          className="inline-flex"
+        >
+          <ReelsNavArrow direction="back" />
+          <span className="sr-only">Tilbake til saker</span>
+        </button>
+      </div>
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12">
-          <EmptyLineState>
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10">
-              <CivicBubble className="h-6 w-6 text-brand" />
+        <div className="flex flex-1 items-center justify-center px-6 py-12">
+          <EmptyLineState className="text-white/80">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/15">
+              <CivicBubble className="h-6 w-6 text-white" />
             </div>
-            <h2 className="mt-4 text-lg font-semibold text-foreground">Ingen Reels publisert ennå</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+            <h2 className="mt-4 text-lg font-semibold text-white">Ingen Reels publisert ennå</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-white/75">
               Godkjente spørsmål fra stortingssaker vises her.
             </p>
           </EmptyLineState>
         </div>
       ) : (
         <CardCarousel
-          title="Reels"
-          description="Bla og trykk for å stemme."
-          badge={
-            <>
-              <CivicBubble className="h-4 w-4 text-brand" /> Systemgenerert
-            </>
-          }
+          fill
           autoplayDelay={reducedMotion ? 0 : 2200}
           showPagination
           showNavigation
@@ -305,6 +314,7 @@ function ReelsPanel({
             <ReelCarouselCard
               key={item.poll.id}
               item={item}
+              fill
               selected={activePollId === item.poll.id}
               onSelect={() => onSelect(item.poll.id)}
               onBack={() => onSelect(null)}
@@ -314,7 +324,9 @@ function ReelsPanel({
       )}
 
       {items.length > 0 ? (
-        <p className="px-1 text-xs leading-relaxed text-muted-foreground">{SYSTEM_REEL_DISCLAIMER}</p>
+        <p className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] text-center text-xs leading-relaxed text-white/70">
+          {SYSTEM_REEL_DISCLAIMER}
+        </p>
       ) : null}
     </div>
   );
