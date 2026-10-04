@@ -215,6 +215,54 @@ test.describe('AI-chat orb overlay', () => {
     });
   });
 
+  test('uncached sak query still prefills Hent sakskontekst', async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.route('**/api/stemme-plus/status', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          tier: 'stemme_plus',
+          has_byok: false,
+          monthly_price_nok: 59,
+          checkout_configured: false,
+        }),
+      });
+    });
+    const contextPosts: string[] = [];
+    await page.route('**/api/chat/sak-context', async (route) => {
+      contextPosts.push(route.request().postData() || '');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          issue: null,
+          summary: null,
+          chunks: [],
+          note: 'Fant ingen matching sak i vår cache. Prøv med sak-id eller en mer konkret tittel.',
+          empty: true,
+        }),
+      });
+    });
+
+    await page.goto('/dashboard/utforsk?chat=1&sak=200417');
+    const panel = page.locator('[data-chat-panel]');
+    await expect(panel).toBeVisible({ timeout: 90_000 });
+    await expect(panel.getByPlaceholder('Sak-id eller tittel')).toHaveValue('200417');
+
+    await panel.getByRole('button', { name: 'Hent', exact: true }).click();
+    await expect(panel.getByText('Ingen sak funnet')).toBeVisible();
+    expect(contextPosts.some((body) => body.includes('"issueId":"200417"'))).toBeTruthy();
+
+    await page.addStyleTag({
+      content:
+        'nextjs-portal { display: none !important; } html, body, button, input, p, h2 { font-family: ui-sans-serif, system-ui, sans-serif !important; }',
+    });
+    await page.screenshot({
+      path: `${ARTIFACTS}/hent-sakskontekst-200417-honest-empty.png`,
+    });
+  });
+
   test('Stemme+ panel with BYOK shows a corrected draft from the API', async ({ page }) => {
     test.setTimeout(90_000);
     await page.route('**/api/stemme-plus/status', async (route) => {
