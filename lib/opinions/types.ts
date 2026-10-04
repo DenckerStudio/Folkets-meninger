@@ -17,7 +17,7 @@ export const OPINION_LIST_PAGE_SIZE = 40;
 export const OPINION_POINTS_MIN = 3;
 export const OPINION_POINTS_MAX = 8;
 export const OPINION_POINT_TEXT_MIN = 12;
-export const OPINION_POINT_TEXT_MAX = 180;
+export const OPINION_POINT_TEXT_MAX = 280;
 
 export type OpinionPoint = {
   stance: OpinionPointStance;
