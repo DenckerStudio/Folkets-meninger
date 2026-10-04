@@ -37,6 +37,10 @@ async function main() {
     issueId: '200365',
     query: 'vektgrense førerkort',
   });
+  const missing = await retrieveSakContext({
+    issueId: '200417',
+    query: '200417',
+  });
 
   const payload = {
     urlHost: new URL(url).host,
@@ -50,9 +54,14 @@ async function main() {
       chunkKeys: context.chunks[0] ? Object.keys(context.chunks[0]) : [],
       note: context.note,
     },
+    missing200417: {
+      issueId: missing.issue?.id ?? null,
+      note: missing.note,
+    },
     note:
       'Overlay RAG reads public sak tables with the user session (anon fallback). ' +
-      'Lexical RPCs stay service_role-only and are not required for the orb panel.',
+      'Lexical RPCs stay service_role-only and are not required for the orb panel. ' +
+      '200417 is a live Stortinget sak that may be absent from cache (honest empty).',
   };
 
   writeFileSync('/opt/cursor/artifacts/rag-rpc-live.json', JSON.stringify(payload, null, 2));
@@ -62,6 +71,9 @@ async function main() {
   assert.equal(context.issue?.id, '200365');
   assert.ok(context.chunks.length > 0 || context.summary);
   assert.ok(!payload.retrieve.chunkKeys.includes('embedding'));
+  if (!missing.issue) {
+    assert.match(missing.note ?? '', /ingen matching sak/i);
+  }
   console.log(
     'chat/rag.rpc.live.test.ts: ok',
     payload.retrieve.issueId,

@@ -155,7 +155,9 @@ legacy `citizen_initiatives` tables — no longer exposed in the Next.js app).
 
 System Reels are AI-generated ja/nei/blank questions. n8n inserts drafts via
 `create_system_poll_draft`; admins publish with `publish_poll` or archive with
-`archive_poll`. Do not call `ensure_stortinget_poll` for AI drafts (it opens the
+`archive_poll`. The app calls those RPCs (`lib/polls/service.ts`); a service-role
+row update is only a documented fallback when PostgREST returns PGRST202
+(schema cache miss). Do not call `ensure_stortinget_poll` for AI drafts (it opens the
 poll immediately). `20261003180000_system_poll_source_packaging.sql` widens
 the candidate queue to RAG, AI-sammendrag, or sak-metadata. Coverage helpers:
 `get_sak_poll_coverage()`, `get_sak_poll_candidates()`.

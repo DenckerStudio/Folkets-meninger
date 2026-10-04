@@ -1,8 +1,26 @@
+import { readFileSync } from 'node:fs';
 import { isPostgrestMissingRpcError } from '@/lib/polls/rpc-missing';
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
+
+const serviceSrc = readFileSync(new URL('./service.ts', import.meta.url), 'utf8');
+const publishFn =
+  serviceSrc.match(/export async function publishPoll\([\s\S]*?\n\}/)?.[0] ?? '';
+const archiveFn =
+  serviceSrc.match(/export async function archivePoll\([\s\S]*?\n\}/)?.[0] ?? '';
+assert.match(serviceSrc, /rpc\(rpcName, \{ p_poll_id: pollId \}\)/);
+assert.match(serviceSrc, /return 'publish_poll'/);
+assert.match(serviceSrc, /return 'archive_poll'/);
+assert.match(serviceSrc, /rpc\('create_system_poll_draft'/);
+assert.match(serviceSrc, /isPostgrestMissingRpcError/);
+assert.match(serviceSrc, /never use ensure_stortinget_poll for drafts/);
+assert.match(publishFn, /applyPollStatusViaRpc\(pollId, 'publish'\)/);
+assert.match(archiveFn, /applyPollStatusViaRpc\(pollId, 'archive'\)/);
+assert.doesNotMatch(publishFn, /updatePollStatusRow/);
+assert.doesNotMatch(publishFn, /ensure_stortinget_poll/);
+assert.doesNotMatch(archiveFn, /ensure_stortinget_poll/);
 
 const productionPublish = {
   code: 'PGRST202',
