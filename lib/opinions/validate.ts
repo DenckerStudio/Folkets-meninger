@@ -160,6 +160,56 @@ export function validateReplyDraft(input: { body: string; stance: unknown }): Op
   return errors;
 }
 
+
+export function describeOpinionComposerGaps(input: {
+  issueId: string | null;
+  stance: unknown;
+  body: string;
+  points: unknown;
+}): string {
+  const sentences: string[] = [];
+  const needsSak = !input.issueId?.trim();
+  const needsStance = !isOpinionCreateStance(input.stance);
+
+  if (needsSak && needsStance) {
+    sentences.push('Velg en sak, deretter For eller Imot.');
+  } else if (needsSak) {
+    sentences.push('Velg en sak.');
+  } else if (needsStance) {
+    sentences.push('Velg For eller Imot.');
+  }
+
+  const bodyLength = input.body.trim().length;
+  const remaining = OPINION_BODY_MIN - bodyLength;
+  if (remaining > 0) {
+    sentences.push(`${remaining} tegn igjen til minstekravet.`);
+  }
+
+  const points = parseOpinionPoints(input.points);
+  const hasFor = points.some(
+    (point) => point.stance === 'for' && point.text.length >= OPINION_POINT_TEXT_MIN,
+  );
+  const hasImot = points.some(
+    (point) => point.stance === 'imot' && point.text.length >= OPINION_POINT_TEXT_MIN,
+  );
+  if (!hasFor && !hasImot) {
+    sentences.push('Ta med minst ett punkt for og ett punkt imot.');
+  } else if (!hasFor) {
+    sentences.push('Ta med minst ett punkt for.');
+  } else if (!hasImot) {
+    sentences.push('Ta med minst ett punkt imot.');
+  }
+
+  const shortCount = points.filter((point) => point.text.length < OPINION_POINT_TEXT_MIN).length;
+  if (shortCount === 1) {
+    sentences.push(`Ett kulepunkt er under ${OPINION_POINT_TEXT_MIN} tegn.`);
+  } else if (shortCount > 1) {
+    sentences.push(`${shortCount} kulepunkter er under ${OPINION_POINT_TEXT_MIN} tegn.`);
+  }
+
+  return sentences.join(' ');
+}
+
 export function hasOpinionFieldErrors(errors: OpinionFieldErrors): boolean {
   return Boolean(errors.title || errors.body || errors.stance || errors.points);
 }
