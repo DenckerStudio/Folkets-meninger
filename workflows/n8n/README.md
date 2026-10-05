@@ -34,13 +34,18 @@ Aktive flyter har **per-node retry** (`retryOnFail` / `maxTries`) og `onError` s
 
 | Flyt | Ved node-feil | App-backup |
 |------|----------------|------------|
-| AI-sammendrag | Agent `continueErrorOutput` — rad skrives ikke | `ai_summary_requested_at` + `GET /api/cron/n8n-retry` / sak-side poller webhook |
-| Dokument embeddings | Chunk blir stående `embedding_status=pending` | Samme cron re-trigges `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL` |
-| System poll / Reels | Embedding-feil → fallback til AI-sammendrag + dokumentutdrag. Tom/ugyldig Ollama → ingen draft | Cron + admin «Generer utkast» kaller `create_system_poll_draft` via n8n (aldri `ensure_stortinget_poll`) |
-| App cron | HTTP mot `/api/cron/*` retried én gang | Endepunktene er selvstendige (`x-cron-secret`) og kan kalles uten n8n |
-| Motforslag innspill | Error Trigger logger | Appen logger webhook-feil; rapporten kan postes på nytt |
+| AI-sammendrag | Agent `continueErrorOutput` — rad skrives ikke. In-workflow Error Trigger → `/api/ops/n8n-notify` | `ai_summary_requested_at` + `GET /api/cron/n8n-retry` / sak-side poller webhook |
+| Dokument embeddings | Chunk blir stående `embedding_status=pending`. In-workflow Error Trigger → `/api/ops/n8n-notify` | Samme cron re-trigges `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL` |
+| System poll / Reels | Embedding-feil → fallback til AI-sammendrag + dokumentutdrag. Tom/ugyldig Ollama → ingen draft. In-workflow Error Trigger → `/api/ops/n8n-notify` | Cron + admin «Generer utkast» kaller `create_system_poll_draft` via n8n (aldri `ensure_stortinget_poll`) |
+| App cron | HTTP mot `/api/cron/*` retried én gang. In-workflow Error Trigger → `/api/ops/n8n-notify` | Endepunktene er selvstendige (`x-cron-secret`) og kan kalles uten n8n |
+| Motforslag innspill | In-workflow Error Trigger → `/api/ops/n8n-notify` | Appen logger webhook-feil; rapporten kan postes på nytt |
 
-**Error Trigger:** [`ops-error-handler.workflow.ts`](ops-error-handler.workflow.ts) (samme live-ID som [`error-handler.workflow.ts`](error-handler.workflow.ts)) er publisert som `iBNVwqPIsvf0JmTc`. `settings.errorWorkflow` er satt på AI-sammendrag, embeddings, Reels-utkast, app cron, motforslag og pipeline-helse. Handleren POSTer til `POST /api/ops/n8n-notify` (`x-cron-secret`); appen logger til `n8n_ops_events` og e-poster admin når SMTP er satt. Fyll `cronSecret` i n8n «Notify settings».
+**Error Trigger (to lag):**
+
+1. **I kilde (samme flyt):** hver produksjonsflyt har `Error Trigger` → Format workflow error → Error notify settings → `POST /api/ops/n8n-notify`. Fabrikken ligger i [`in-workflow-error-notify.ts`](in-workflow-error-notify.ts). Dette er fallbacken i repo — ikke console-only. Fyll `cronSecret` i «Error notify settings».
+2. **Live n8n (delt handler):** [`ops-error-handler.workflow.ts`](ops-error-handler.workflow.ts) (samme live-ID som [`error-handler.workflow.ts`](error-handler.workflow.ts)) er publisert som `iBNVwqPIsvf0JmTc`. `settings.errorWorkflow` peker hit på AI-sammendrag, embeddings, Reels-utkast, app cron, motforslag og pipeline-helse. En satt `settings.errorWorkflow` **tar over** for in-workflow Error Trigger i produksjon. Ikke endre live `settings.errorWorkflow` herfra.
+
+Begge POST-er til `POST /api/ops/n8n-notify` (`x-cron-secret`); appen logger til `n8n_ops_events` og e-poster admin når SMTP er satt. Fyll `cronSecret` i n8n «Notify settings» på den delte handleren.
 
 **App cron n8n-retry** (hver 2. time i `app-cron.workflow.ts`):
 
@@ -364,11 +369,13 @@ N8N_PIPELINE_HEALTH_WEBHOOK_URL=https://n8n.heyklever.app/webhook/folkets-pipeli
 
 ## n8n feilvarsling
 
-Workflow-kilde: [`ops-error-handler.workflow.ts`](ops-error-handler.workflow.ts)
+In-workflow-kilde: [`in-workflow-error-notify.ts`](in-workflow-error-notify.ts) — brukt av app-cron, AI-sammendrag, embeddings, system-poll/Reels, motforslag og pipeline-helse.
 
-**Live workflow:** https://n8n.heyklever.app/workflow/iBNVwqPIsvf0JmTc
+Delt handler-kilde: [`ops-error-handler.workflow.ts`](ops-error-handler.workflow.ts)
 
-Publiser denne først, fyll inn `cronSecret`, og sett den som **Error workflow** på de andre Folkets-flytene. Den logger til `n8n_ops_events` og e-poster admin ved produksjonsfeil.
+**Live delt handler:** https://n8n.heyklever.app/workflow/iBNVwqPIsvf0JmTc
+
+Live bruker `settings.errorWorkflow` mot den delte handleren. Kilden har i tillegg Error Trigger → `/api/ops/n8n-notify` i hver produksjonsflyt, så Ollama/HTTP-feil har en dokumentert fallback uten å være console-only. Ikke publish/unpublish og ikke sett live `settings.errorWorkflow` fra denne endringen. Fyll `cronSecret` i «Error notify settings» når flytene synces.
 
 App-side backup (uavhengig av n8n Error Trigger):
 
@@ -381,5 +388,4 @@ curl -sS -H "x-cron-secret: $CRON_SECRET" \
 
 ## Deploy fra repo
 
-Valider og opprett via n8n-mcp: `validate_workflow` → `create_workflow_from_code` → `publish_workflow`.
-Sett `settings.errorWorkflow` til `iBNVwqPIsvf0JmTc` på produksjonsflytene etter publish.
+Valider via n8n-mcp: `validate_workflow`. Opprett/publish (`create_workflow_from_code` → `publish_workflow`) og sett live `settings.errorWorkflow` bare når det er et bevisst deploy-steg — ikke fra kilde-fallback-PRen. In-workflow Error Trigger er allerede i `*.workflow.ts`.

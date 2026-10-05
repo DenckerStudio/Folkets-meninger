@@ -11,6 +11,14 @@ export function hasStemmePlusBadge(row: UserSubscriptionRow | null | undefined):
   return isStemmePlusActive(row);
 }
 
+export function canUseAiChatbot(row: UserSubscriptionRow | null | undefined): boolean {
+  return isStemmePlusActive(row);
+}
+
+export function canManageByok(row: UserSubscriptionRow | null | undefined): boolean {
+  return isStemmePlusActive(row);
+}
+
 export function canUseRealtimeAlerts(row: UserSubscriptionRow | null | undefined): boolean {
   return isStemmePlusActive(row);
 }

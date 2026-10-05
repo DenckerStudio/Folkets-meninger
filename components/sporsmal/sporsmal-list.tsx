@@ -14,6 +14,8 @@ import {
   sporsmalTypeLabel,
   type StortingetSporsmal,
 } from '@/lib/stortinget-sporsmal';
+import { EmptyState } from '@/components/dashboard/empty-state';
+import { dashboardControlClass, dashboardSearchClass } from '@/components/dashboard/filter-field';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -60,8 +62,8 @@ export default function SporsmalList({ sporsmal, type, sesjonId }: SporsmalListP
             className={cn(
               'px-4 py-2 rounded-xl text-sm font-semibold border transition-colors',
               t === type
-                ? 'bg-indigo-600 text-white border-indigo-600'
-                : 'bg-card text-foreground border-border hover:bg-muted/50',
+                ? 'bg-muted text-brand border-border'
+                : 'bg-card text-muted-foreground border-border hover:bg-muted/50',
             )}
           >
             {sporsmalTypeLabel(t)}
@@ -78,14 +80,14 @@ export default function SporsmalList({ sporsmal, type, sesjonId }: SporsmalListP
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Søk i tittel, politiker, minister eller emne…"
             aria-label="Søk i spørsmål"
-            className="w-full rounded-xl border border-border bg-card py-2.5 pl-10 pr-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className={dashboardSearchClass()}
           />
         </div>
         <select
           value={answerFilter}
           onChange={(e) => setAnswerFilter(e.target.value as AnswerFilter)}
           aria-label="Filtrer på svarstatus"
-          className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm md:w-auto"
+          className={dashboardControlClass('md:w-auto')}
         >
           <option value="alle">Alle</option>
           <option value="besvart">Besvart</option>
@@ -126,7 +128,7 @@ export default function SporsmalList({ sporsmal, type, sesjonId }: SporsmalListP
                 {item.id ? (
                   <Link
                     href={routes.sporsmalDetail(String(item.id))}
-                    className="text-sm font-semibold text-foreground hover:text-indigo-600 dark:text-indigo-400 line-clamp-2"
+                    className="text-sm font-semibold text-foreground hover:text-brand line-clamp-2"
                   >
                     {title}
                   </Link>
@@ -157,7 +159,12 @@ export default function SporsmalList({ sporsmal, type, sesjonId }: SporsmalListP
             <div className="px-6 py-4 text-xs text-muted-foreground">Viser første 200 treff. Bruk søk for å finne flere.</div>
           )}
           {filtered.length === 0 && (
-            <div className="px-6 py-10 text-sm text-muted-foreground text-center">Ingen spørsmål matcher filtrene.</div>
+            <EmptyState
+              compact
+              className="m-4"
+              title="Ingen spørsmål matcher filtrene"
+              description="Prøv et annet søk eller filter."
+            />
           )}
         </div>
       </div>

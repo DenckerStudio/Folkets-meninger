@@ -74,7 +74,7 @@ export function ProfileNameSettings() {
         type="button"
         onClick={save}
         disabled={saving}
-        className="inline-flex px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+        className="inline-flex px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand/90 disabled:opacity-50"
       >
         {saving ? 'Lagrer…' : 'Lagre navn'}
       </button>

@@ -115,7 +115,7 @@ export default function StanceSection({
         <div className="mb-6 space-y-2 text-center">
           <Link
             href={`${routes.login}?next=${encodeURIComponent(routes.sak(sakId))}`}
-            className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+            className="inline-flex items-center text-sm font-medium text-brand hover:text-brand/80"
           >
             <LogIn className="mr-1.5 h-4 w-4" />
             Logg inn for å lagre holdning
@@ -199,7 +199,7 @@ export default function StanceSection({
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-2 text-center text-sm font-medium text-indigo-600 dark:text-indigo-400"
+            className="mb-2 text-center text-sm font-medium text-brand"
           >
             Lagret: {ISSUE_STANCE_LABELS[userStance]}. Du kan endre valget når som helst.
           </motion.div>
@@ -207,7 +207,7 @@ export default function StanceSection({
       </AnimatePresence>
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        Systemgenererte ja/nei-spørsmål finner du på Utforsk. Andre nasjonale avstemninger ligger under Avstemninger.
+        Systemgenererte ja/nei/blank-spørsmål finner du på Utforsk. Andre nasjonale avstemninger ligger under Avstemninger.
       </p>
     </div>
   );

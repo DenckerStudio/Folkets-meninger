@@ -1,4 +1,7 @@
-# SearXNG on Heyklever (open-source web search for forum prompts)
+# SearXNG on Heyklever (open-source web search)
+
+Used by the Stemme+ AI-chat `searchUpdatedSources` tool (`lib/chat/searxng.ts`)
+and historically by archived n8n forum-prompt workflows.
 
 Self-hosted meta-search used by the n8n «forum trending prompts» workflow alongside RSS feeds.
 

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { checkRateLimit, getRateLimitPolicy } from '@/lib/rate-limit';
 import {
   isPublicDashboardAvstemningPath,
+  isPublicDashboardChatPath,
   isPublicDashboardFolketsMeningerPath,
   isPublicDashboardPolitikerPath,
   isPublicDashboardSakPath,
@@ -51,7 +52,8 @@ export async function middleware(request: NextRequest) {
     isPublicDashboardPolitikerPath(pathname) ||
     isPublicDashboardAvstemningPath(pathname) ||
     isPublicDashboardFolketsMeningerPath(pathname) ||
-    isPublicDashboardUtforskPath(pathname)
+    isPublicDashboardUtforskPath(pathname) ||
+    isPublicDashboardChatPath(pathname)
   ) {
     return refreshSessionCookies(request);
   }
@@ -65,7 +67,9 @@ export async function middleware(request: NextRequest) {
   if (!user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = routes.login;
-    loginUrl.searchParams.set('next', pathname);
+    // Preserve query (e.g. ?sak=&chat=1) so post-login can reopen context.
+    loginUrl.search = '';
+    loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -84,5 +88,10 @@ export const config = {
     '/api/feedback',
     '/api/suggestions',
     '/api/suggestions/:path*',
+    '/api/chat',
+    '/api/chat/:path*',
+    '/api/byok',
+    '/api/stemme-plus/checkout',
+    '/api/stemme-plus/portal',
   ],
 };

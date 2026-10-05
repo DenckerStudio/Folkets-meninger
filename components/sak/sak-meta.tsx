@@ -102,7 +102,7 @@ export function SakSectionHeading({
 
   return (
     <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-      {Icon ? <Icon className={iconClassName ?? 'w-5 h-5 text-indigo-600 dark:text-indigo-400'} /> : null}
+      {Icon ? <Icon className={iconClassName ?? 'w-5 h-5 text-brand'} /> : null}
       <span>{title}</span>
       {showTooltips && tooltipKey ? (
         <InfoTooltip label={title} description={SAK_META_TOOLTIPS[tooltipKey]} side="bottom" />

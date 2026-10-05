@@ -156,12 +156,12 @@ export default function LoginClient() {
                     placeholder="+47 XXX XX XXX"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand/30 focus:border-brand sm:text-sm"
                   />
                   <button
                     onClick={handleSendOtp}
                     disabled={isLoading || !phone}
-                    className="px-4 py-3 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap"
+                    className="px-4 py-3 bg-brand text-brand-foreground rounded-xl text-sm font-medium hover:bg-brand/90 disabled:opacity-50 whitespace-nowrap"
                   >
                     Send SMS
                   </button>
@@ -181,7 +181,7 @@ export default function LoginClient() {
                     placeholder="123456"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value)}
-                    className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm tracking-widest text-center text-lg"
+                    className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand/30 focus:border-brand sm:text-sm tracking-widest text-center text-lg"
                   />
                 </div>
               </div>
@@ -219,8 +219,8 @@ export default function LoginClient() {
       <FadeIn delay={0.1}>
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <div className="flex justify-center">
-            <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-950/50 rounded-2xl flex items-center justify-center">
-              <ShieldCheck className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+            <div className="w-16 h-16 bg-brand/10 rounded-2xl flex items-center justify-center">
+              <ShieldCheck className="w-8 h-8 text-brand" />
             </div>
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">
@@ -290,7 +290,7 @@ export default function LoginClient() {
                         minLength={2}
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
-                        className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand/30 focus:border-brand sm:text-sm"
                       />
                     </div>
                   </div>
@@ -307,7 +307,7 @@ export default function LoginClient() {
                         minLength={2}
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
-                        className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand/30 focus:border-brand sm:text-sm"
                       />
                     </div>
                   </div>
@@ -327,7 +327,7 @@ export default function LoginClient() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand/30 focus:border-brand sm:text-sm"
                   />
                 </div>
               </div>
@@ -344,7 +344,7 @@ export default function LoginClient() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand/30 focus:border-brand sm:text-sm"
                   />
                 </div>
               </div>
@@ -353,7 +353,7 @@ export default function LoginClient() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-brand-foreground bg-brand hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {isLoading ? (
                     <span className="flex items-center">
@@ -388,7 +388,7 @@ export default function LoginClient() {
                     setIsRegister(!isRegister);
                     setError('');
                   }}
-                  className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
+                  className="text-sm text-brand hover:text-brand/80"
                 >
                   {isRegister ? 'Har du allerede konto? Logg inn her' : 'Trenger du konto? Registrer deg'}
                 </button>

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { EmptyLineState } from '@/components/motion/empty-line';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { MotionList, MotionListRow } from '@/components/motion/list-row';
 import { ProfileCard } from '@/components/profile/profile-card';
 import { routes } from '@/lib/routes';
@@ -23,16 +23,16 @@ export function ProfileVoteHistory({ items, loading }: ProfileVoteHistoryProps) 
       {loading ? (
         <p className="text-center py-8 text-muted-foreground text-sm">Laster stemmehistorikk…</p>
       ) : items.length === 0 ? (
-        <EmptyLineState className="py-8 text-muted-foreground">
-          <p className="font-medium text-foreground">Ingen stemmer ennå</p>
-          <p className="text-sm mt-2">Utforsk saker og stem for å se historikken din her.</p>
-          <Link
-            href={routes.utforsk}
-            className="mt-4 inline-block text-sm font-medium text-brand hover:underline"
-          >
-            Utforsk saker →
-          </Link>
-        </EmptyLineState>
+        <EmptyState
+          compact
+          title="Ingen stemmer ennå"
+          description="Utforsk saker og stem for å se historikken din her."
+          action={
+            <Link href={routes.utforsk} className="text-sm font-medium text-brand hover:underline">
+              Utforsk saker
+            </Link>
+          }
+        />
       ) : (
         <MotionList className="divide-y divide-border rounded-xl border border-border overflow-hidden">
           {items.map((item) => (

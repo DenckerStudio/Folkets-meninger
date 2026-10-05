@@ -46,6 +46,21 @@ test('folkets meninger is the first core destination', () => {
   assert.equal(coreNavItems[0]?.href, routes.folketsMeninger);
 });
 
+test('AI-chat is not a sidebar or primary destination', () => {
+  assert.equal(
+    extendedNavItems.some((item) => item.href === routes.chat),
+    false,
+  );
+  assert.equal(
+    dashboardSidebarNavItems.some((item) => item.href === routes.chat),
+    false,
+  );
+  assert.equal(
+    desktopPrimaryNavLinks.some((link) => link.href === routes.chat),
+    false,
+  );
+});
+
 test('appens fremtid is a core destination', () => {
   const item = coreNavItems.find((entry) => entry.href === routes.forslag);
   assert.ok(item);

@@ -194,7 +194,7 @@ function reelsNavCopy(direction: 'forward' | 'back', itemCount: number): ReelsNa
         subtitle:
           itemCount > 0
             ? 'Ja, nei eller blank på spørsmål fra stortingssaker.'
-            : 'Ingen Reels er publisert ennå.',
+            : 'Ingen systemgenererte ja/nei/blank-Reels er publisert ennå.',
         BadgeIcon: CivicBubble,
       };
     case 'back':
@@ -297,8 +297,8 @@ function ReelsPanel({
             </div>
             <h2 className="mt-4 text-lg font-semibold text-white">Ingen Reels publisert ennå</h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-white/75">
-              Når administratorer har godkjent systemgenererte ja/nei/blank-spørsmål fra stortingssaker, vises de her.
-              Vi viser ikke mock-spørsmål.
+              {SYSTEM_REEL_DISCLAIMER} Godkjente ja/nei/blank-spørsmål fra stortingssaker vises her. Vi viser ikke
+              mock-spørsmål.
             </p>
           </EmptyLineState>
         </div>

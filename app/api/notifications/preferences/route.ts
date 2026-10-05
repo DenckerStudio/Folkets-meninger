@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { getServiceSupabase } from '@/lib/supabase';
 import { normalizeEmailFrequencyByChannel } from '@/lib/notifications/preferences';
 import { normalizeFrequenciesForTier } from '@/lib/stemme-plus/gates';
+import { getOwnSubscription } from '@/lib/stemme-plus/service';
 import { isStemmePlusActive } from '@/lib/stemme-plus/tier';
 
 export const dynamic = 'force-dynamic';
@@ -134,12 +134,5 @@ export async function POST(request: Request) {
 }
 
 async function loadSubscriptionRow(userId: string) {
-  const service = getServiceSupabase();
-  const { data } = await service
-    .from('users')
-    .select('subscription_tier, subscription_status, subscription_period_end')
-    .eq('id', userId)
-    .maybeSingle();
-
-  return data ?? { subscription_tier: 'free' };
+  return getOwnSubscription(userId);
 }

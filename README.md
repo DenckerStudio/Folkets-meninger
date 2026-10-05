@@ -71,6 +71,12 @@ Important constraints:
   created by workflows use the `is_system_thread` path instead.
 - AI summary text is not generated in the Next.js app. The app stores source
   context and triggers n8n; summaries are read back from Supabase.
+- Stemme+ (59 kr/mnd) gates BYOK AI-chat from a glowing orb overlay on dashboard
+  chrome (not a sidebar page). `/dashboard/chat` only deep-links the overlay.
+  Users store an encrypted LLM key; tools retrieve sak chunks (no embeddings
+  column) and search `https://searxng.heyklever.app`. Stripe checkout is real
+  when keys exist, otherwise the UI says it is not configured. Admin can still
+  grant Stemme+ via `/dashboard/admin/stemme-plus`.
 
 ## Documentation index
 
@@ -79,7 +85,7 @@ Important constraints:
 | [`AGENTS.md`](AGENTS.md) | Agent-facing architecture facts, env vars, validation expectations, and operational notes |
 | [`supabase/README.md`](supabase/README.md) | Migration domains, voting RPCs, sak cache, hearing comments, forum schema, notifications, RAG tables, and DB runbooks |
 | [`workflows/n8n/README.md`](workflows/n8n/README.md) | AI summary, forum prompt, document embedding, and app cron workflows |
-| [`infra/searxng/README.md`](infra/searxng/README.md) | SearXNG deployment/configuration used by forum prompt discovery |
+| [`infra/searxng/README.md`](infra/searxng/README.md) | SearXNG used by Stemme+ chat source search (and archived forum workflows) |
 | [`scripts/deploy-forum-prompts-n8n.md`](scripts/deploy-forum-prompts-n8n.md) | Forum prompt workflow deployment notes |
 
 ## Operational scripts

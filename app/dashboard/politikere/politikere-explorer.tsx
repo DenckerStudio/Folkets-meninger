@@ -4,8 +4,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ArrowRight, MapPin, Search, Landmark, ShieldCheck } from 'lucide-react';
-import { EmptyLineState } from '@/components/motion/empty-line';
+import { ArrowRight, Landmark, MapPin, Search, ShieldCheck } from 'lucide-react';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { PartyMark } from '@/components/motion/party-mark';
 import { SectionSettle } from '@/components/motion/section-settle';
 import { PartyLogo } from '@/components/politikere/party-logo';
@@ -238,11 +238,14 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
 
       <SectionSettle>
         {listedPolitikere.length === 0 && !showRegjeringSection ? (
-          <EmptyLineState className="py-12 text-muted-foreground">
-            {selectedParty
-              ? `Ingen politikere funnet for ${selectedParty}${searchQuery.trim() ? ` som matcher "${searchQuery}"` : ''}.`
-              : `Ingen politikere funnet som matcher "${searchQuery}".`}
-          </EmptyLineState>
+          <EmptyState
+            title="Ingen politikere matcher søket"
+            description={
+              selectedParty
+                ? `Ingen politikere funnet for ${selectedParty}${searchQuery.trim() ? ` som matcher «${searchQuery}»` : ''}.`
+                : `Ingen politikere funnet som matcher «${searchQuery}».`
+            }
+          />
         ) : listedPolitikere.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {listedPolitikere.map((rep) => (

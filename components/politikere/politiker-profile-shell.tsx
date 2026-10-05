@@ -41,7 +41,7 @@ function resolveTab(tabParam: string | null): PolitikerTabId {
 
 function SakList({ saker, emptyMessage }: { saker: PolitikerSakItem[]; emptyMessage: string }) {
   if (saker.length === 0) {
-    return <EmptyState title="Ingen saker her" description={emptyMessage} className="py-6" />;
+    return <EmptyState compact title="Ingen saker her" description={emptyMessage} />;
   }
 
   return (
@@ -50,7 +50,7 @@ function SakList({ saker, emptyMessage }: { saker: PolitikerSakItem[]; emptyMess
         <Link
           key={`${sak.role}-${sak.id}`}
           href={routes.sak(sak.id)}
-          className="block rounded-2xl border border-border bg-card p-4 hover:border-brand/40 hover:shadow-sm transition-all"
+          className="block rounded-2xl border border-border bg-card p-4 transition-all hover:border-brand/40 hover:shadow-sm"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -137,12 +137,12 @@ function OverviewPanel({ rep, profile }: PolitikerProfileShellProps) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-muted/40 p-4 sm:p-5">
-        <h2 className="flex items-center gap-2 font-semibold text-foreground">
+      <div className="rounded-2xl border border-brand/20 bg-brand/5 p-4 sm:p-5">
+        <h2 className="flex items-center gap-2 font-semibold text-brand">
           <Info className="h-4 w-4" />
           Om rollen: {rolleInfo.title}
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{rolleInfo.description}</p>
+        <p className="mt-2 text-sm leading-relaxed text-foreground">{rolleInfo.description}</p>
       </div>
 
       {rep.erRegjeringsmedlem ? (
@@ -358,7 +358,11 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
                 Fordeling basert på kategorier i saker der politikeren er forslagstiller eller saksordfører.
               </p>
               {profile.topicStats.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">Ingen temaer å vise ennå.</p>
+                <EmptyState
+                  compact
+                  title="Ingen temaer å vise ennå"
+                  description="Når politikeren er forslagstiller eller saksordfører, vises temaene her."
+                />
               ) : (
                 <div className="space-y-4">
                   {profile.topicStats.map((topic, index) => {
@@ -400,11 +404,15 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
               </div>
 
               {profile.officialResponses.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">
-                  {profile.isPlatformVerified
-                    ? 'Ingen offisielle svar publisert ennå.'
-                    : 'Politikeren har ikke verifisert seg på plattformen, eller har ikke publisert svar ennå.'}
-                </p>
+                <EmptyState
+                  compact
+                  title="Ingen offisielle svar ennå"
+                  description={
+                    profile.isPlatformVerified
+                      ? 'Politikeren har ikke publisert svar på saker i Folkets Stemme ennå.'
+                      : 'Politikeren har ikke verifisert seg på plattformen, eller har ikke publisert svar ennå.'
+                  }
+                />
               ) : (
                 <PoliticianResponseList rep={rep} responses={profile.officialResponses} />
               )}

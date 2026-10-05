@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { Lightbulb } from 'lucide-react';
 import { AdminBackLink } from '@/components/admin/admin-shell';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { formatWhen } from '@/components/appens-fremtid/format';
 import { RoadmapEditor } from '@/components/appens-fremtid/roadmap-editor';
 import { SectionTabs } from '@/components/appens-fremtid/section-tabs';
@@ -199,9 +200,15 @@ function InboxPanel({
       />
 
       {suggestions.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-          {pending ? 'Laster forslag…' : 'Ingen forslag i denne listen ennå.'}
-        </p>
+        <EmptyState
+          compact
+          title={pending ? 'Laster forslag…' : 'Ingen forslag i denne listen ennå'}
+          description={
+            pending
+              ? 'Henter innkommende forslag.'
+              : 'Når noen sender inn et forslag, vises det her.'
+          }
+        />
       ) : (
         <ul className="space-y-3">
           {suggestions.map((suggestion) => {
@@ -365,9 +372,11 @@ function ChangelogPanel({
       </div>
 
       {entries.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-          Ingen endringslogg ennå.
-        </p>
+        <EmptyState
+          compact
+          title="Ingen endringslogg ennå"
+          description="Publiserte endringer vises her."
+        />
       ) : (
         <ul className="space-y-3">
           {entries.map((entry) => (

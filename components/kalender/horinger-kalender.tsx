@@ -12,6 +12,7 @@ import {
   type KalenderEventDto,
   type KalenderEventKind,
 } from '@/lib/kalender-events';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 import type { HoringStatusKind } from '@/lib/stortinget-horinger';
@@ -265,9 +266,11 @@ export default function HoringerKalender({
             {formatDayHeading(selectedKey)}
           </h2>
           {selectedEvents.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-              Ingen høringer denne dagen.
-            </p>
+            <EmptyState
+              compact
+              title="Ingen høringer denne dagen"
+              description="Sesjoner og innspillsfrister som matcher filtrene vises her."
+            />
           ) : (
             <ul className="space-y-3">
               {selectedEvents.map((event) => (

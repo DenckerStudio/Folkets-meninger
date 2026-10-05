@@ -1,5 +1,8 @@
 import type { PollChoice, PollStatus, PollTrack } from '@/lib/polls/types';
 
+/** Public poll ballots are always Ja / Nei / Blank. Sak ballots stay For/Mot/Avstår. */
+export const POLL_BALLOT_CHOICES: PollChoice[] = ['ja', 'nei', 'blank'];
+
 export function pollChoiceLabel(choice: PollChoice): string {
   switch (choice) {
     case 'ja':

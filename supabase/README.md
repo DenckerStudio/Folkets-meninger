@@ -72,7 +72,7 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Anonymous voting (legacy) | `20260528000001_anonymous_voting.sql`, `20260528000002_vote_schema_repair.sql`, `20260618120000_sak_voting_status.sql` | `citizen_votes`, `user_vote_receipts`, `cast_vote`, vote aggregate RPCs — read-only for historical alignment |
 | Issue stances | `20260907120000_issue_stances.sql` | `issue_stances`, `set_issue_stance`, `get_user_stance_*` RPCs |
 | Notifications | `20260528000003_notifications.sql`, `20260906180000_notification_channel_defaults.sql` | `notification_preferences`, `notification_category_subscriptions`, `notifications` |
-| Stemme+ subscription | `20260906200000_stemme_plus_subscription.sql`, `20260906210000_stemme_plus_admin_grant.sql` | `users.subscription_tier`, admin RPCs `grant_stemme_plus_by_email` / `revoke_stemme_plus_by_email` (Stripe checkout deferred) |
+| Stemme+ subscription | `20260906200000_stemme_plus_subscription.sql`, `20260906210000_stemme_plus_admin_grant.sql`, `20261003190000_stemme_plus_byok_chat.sql`, `20261003210000_chat_session_byok_and_tier.sql` | `users.subscription_tier`, admin grant RPCs, encrypted `user_llm_credentials`, owner RLS for chat/BYOK load, lexical chat RAG RPCs, Stripe webhook idempotency |
 | AI summaries | `20260528120000_issue_ai_summaries.sql`, `20260529120000_simplify_issue_ai_summaries.sql`, `20260823210000_n8n_ai_summary_rich_context.sql`, `20261003160000_n8n_pipeline_ops.sql` | `issue_ai_summaries`, `n8n_get_issue_ai_summary_context`, thin-summary refresh in `n8n_list_issues_missing_ai_summary`, `n8n_ops_events`, `n8n_pipeline_health` |
 | Auth/user sync + hearings comments | `20260529150000_users_auth_sync.sql`, `20260601120000_forum_public_identity.sql` | `users`, `ensure_public_user`, `user_has_forum_identity`, `hearing_comments`, `create_hearing_comment` |
 | Forum base/features | `20260530120000_forum_enhancements.sql`, `20260531120000_production_readiness.sql`, `20260531140000_forum_prompts_dedupe.sql` | forum threads/replies/likes/prompts and production indexes |
@@ -155,7 +155,9 @@ legacy `citizen_initiatives` tables — no longer exposed in the Next.js app).
 
 System Reels are AI-generated ja/nei/blank questions. n8n inserts drafts via
 `create_system_poll_draft`; admins publish with `publish_poll` or archive with
-`archive_poll`. Do not call `ensure_stortinget_poll` for AI drafts (it opens the
+`archive_poll`. The app calls those RPCs (`lib/polls/service.ts`); a service-role
+row update is only a documented fallback when PostgREST returns PGRST202
+(schema cache miss). Do not call `ensure_stortinget_poll` for AI drafts (it opens the
 poll immediately). `20261003180000_system_poll_source_packaging.sql` widens
 the candidate queue to RAG, AI-sammendrag, or sak-metadata. Coverage helpers:
 `get_sak_poll_coverage()`, `get_sak_poll_candidates()`.
@@ -337,16 +339,45 @@ truth.
 
 ### Stemme+ (supporter tier)
 
-Stripe self-serve checkout is **not** shipped yet. Tier lives on `users.subscription_tier`
-(`free` | `stemme_plus`). Grant for testing:
+Tier lives on `users.subscription_tier` (`free` | `stemme_plus`). Price is 59 kr/mnd.
+Self-serve Stripe Checkout is wired (`/api/stemme-plus/checkout`, webhook
+`/api/webhooks/stripe`) but stays honestly unconfigured until
+`STRIPE_SECRET_KEY` + `STRIPE_STEMME_PLUS_PRICE_ID` exist. Grant for testing:
 
 ```sql
 SELECT public.grant_stemme_plus_by_email('supporter@example.com', NULL);
 -- Revoke: SELECT public.revoke_stemme_plus_by_email('supporter@example.com');
 ```
 
-Or use **Stemme+ (testing)** on `/dashboard/admin/reels`. Benefits: profile badge,
-richer digest e-mail, realtime/smarter category+label alerts (`lib/stemme-plus/gates.ts`).
+Or use `/dashboard/admin/stemme-plus` (also still available on admin Reels).
+Benefits: profile badge, richer digest, realtime/smarter alerts, and BYOK AI-chat
+from the dashboard orb overlay (`lib/stemme-plus/gates.ts`; `/dashboard/chat`
+only deep-links the panel).
+
+User LLM keys are AES-256-GCM encrypted in `user_llm_credentials`. The owning
+authenticated user can SELECT/INSERT/UPDATE/DELETE their own ciphertext
+(`20261003210000_chat_session_byok_and_tier.sql`); decrypt stays server-side
+with `BYOK_ENCRYPTION_KEY`. Overlay chat, `/api/stemme-plus/status`, min-side
+badge, and notification prefs read the caller's `users.subscription_tier`
+(and status/period end) through the request session — not the service role.
+`has_stripe_customer` is the same session SELECT on `users.stripe_customer_id`
+when that column is visible to the caller; do not GRANT it globally (the
+public display policy is `USING (true)`). Cron/admin cross-user lookups still
+use service role.
+
+Overlay chat RAG (`retrieveSakContext` / `listMatchingSaker`) reads
+`stortinget_issues`, `document_chunks` (`document_id, chunk_index, content`
+only) and `issue_ai_summaries` with the logged-in request session, falling
+back to the anon key. It never selects embedding columns and does not use
+the service-role-only lexical RPCs. The orb panel action `Hent sakskontekst`
+(`POST /api/chat/sak-context`) reuses that path and does not call an LLM.
+
+Deploy `BYOK_ENCRYPTION_KEY` on Coolify/Vercel (never commit the value). Generate
+a 64-hex AES-256 key with `openssl rand -hex 32`, or use a passphrase (scrypt).
+Until the env is set, key storage stays disabled and the chat overlay reports
+that the key is missing. Stripe Checkout stays honestly unconfigured until
+Vercel Marketplace → Stripe supplies `STRIPE_SECRET_KEY` +
+`STRIPE_STEMME_PLUS_PRICE_ID` — do not invent a store or mock checkout.
 
 ### Hearing comments
 

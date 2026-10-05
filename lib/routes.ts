@@ -42,6 +42,7 @@ export const routes = {
   adminStemmePlus: `${DASHBOARD_PREFIX}/admin/stemme-plus`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,
   forslag: `${DASHBOARD_PREFIX}/appens-fremtid`,
+  chat: `${DASHBOARD_PREFIX}/chat`,
 } as const;
 
 export function isDashboardPath(pathname: string): boolean {
@@ -69,6 +70,11 @@ export function isPublicDashboardAvstemningPath(pathname: string): boolean {
 /** Public Utforsk (saker + system Reels) — guests can read; voting requires login. */
 export function isPublicDashboardUtforskPath(pathname: string): boolean {
   return pathname === routes.utforsk || pathname.startsWith(`${routes.utforsk}/`);
+}
+
+/** Legacy chat URL — redirects to Utforsk and opens the overlay. */
+export function isPublicDashboardChatPath(pathname: string): boolean {
+  return pathname === routes.chat;
 }
 
 /** Public Folkets meninger list and detail — posting requires login. */

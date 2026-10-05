@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { BackButton } from '@/components/dashboard/back-button';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { getAnonSupabase } from '@/lib/supabase';
 import {
   fetchStortingetHoringById,
@@ -210,7 +211,7 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
                       {sak.sak_id && (
                         <Link
                           href={routes.sak(String(sak.sak_id))}
-                          className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                          className="text-sm font-medium text-brand hover:text-brand/80"
                         >
                           Se sak i Folkets Stemme
                         </Link>
@@ -261,11 +262,15 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
         </h2>
 
         {comments.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-6 text-center border border-dashed border-border rounded-xl">
-            {open
-              ? 'Ingen innspill ennå. Vær den første til å dele din mening.'
-              : 'Ingen innspill ennå på denne høringen.'}
-          </p>
+          <EmptyState
+            compact
+            title="Ingen innspill ennå"
+            description={
+              open
+                ? 'Vær den første til å dele din mening. Innspill her er offentlige og sendes ikke til Stortinget.'
+                : 'Ingen har delt innspill på denne høringen.'
+            }
+          />
         ) : (
           <div className="space-y-3">
             {comments.map((comment) => (

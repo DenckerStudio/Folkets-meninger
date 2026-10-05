@@ -1,20 +1,24 @@
 'use client';
 
 import { useMemo } from 'react';
+import { usePathname } from 'next/navigation';
 import { InteractiveMenu, type InteractiveMenuItem } from '@/components/ui/interactive-menu';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { adminAccountNavItem, mobileNavItems } from '@/lib/site-nav-links';
 import { routes } from '@/lib/routes';
+import { loginWithNext } from '@/lib/safe-redirect';
 
 export function MobileNav() {
   const { user } = useAuth();
   const isAdminUser = useIsAdmin();
+  const pathname = usePathname();
+  const loginHref = loginWithNext(pathname);
 
   const items: InteractiveMenuItem[] = useMemo(() => {
     const base = mobileNavItems.map((item) =>
       item.href === routes.minSide && !user
-        ? { ...item, href: routes.login, label: 'Logg inn' }
+        ? { ...item, href: loginHref, label: 'Logg inn' }
         : { ...item },
     );
 
@@ -32,7 +36,7 @@ export function MobileNav() {
       },
       profile,
     ];
-  }, [isAdminUser, user]);
+  }, [isAdminUser, loginHref, user]);
 
   return (
     <div className="xl:hidden">

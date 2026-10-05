@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
+import { loginWithNext } from '@/lib/safe-redirect';
 
 export default function HearingCommentForm({
   stortingetHearingId,
@@ -47,7 +48,7 @@ export default function HearingCommentForm({
   if (!user) {
     return (
       <p className="text-sm text-center text-muted-foreground py-4">
-        <Link href={routes.login} className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
+        <Link href={loginWithNext(routes.horing(stortingetHearingId))} className="text-brand font-medium hover:underline">
           Logg inn
         </Link>{' '}
         for å gi innspill.
@@ -72,7 +73,7 @@ export default function HearingCommentForm({
       <button
         type="submit"
         disabled={submitting}
-        className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+        className="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand/90 disabled:opacity-50"
       >
         {submitting ? 'Publiserer…' : 'Publiser innspill'}
       </button>

@@ -8,6 +8,7 @@ import {
   FOLKETS_SUPABASE_CRED,
   rpcUrl,
 } from './n8n-supabase.shared';
+import { createInWorkflowErrorNotify } from './in-workflow-error-notify';
 
 const scheduleTrigger = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
@@ -330,8 +331,10 @@ const logHealthy = node({
   output: [{ outcome: 'healthy' }],
 });
 
+const inWorkflowError = createInWorkflowErrorNotify('folkets-pipeline-health');
+
 sticky(
-  '## Pipeline-helse\n\nDaglig 08:00 + webhook. Catch-up av embeddings og varsel ved stor kø. Fyll inn cronSecret.',
+  '## Pipeline-helse\n\nDaglig 08:00 + webhook. Catch-up av embeddings og varsel ved stor kø. Fyll inn cronSecret. Error Trigger POSTer til /api/ops/n8n-notify.',
   [scheduleTrigger, webhookTrigger],
   { color: 3 },
 );
@@ -353,4 +356,6 @@ export default workflow(
   .add(scheduleTrigger)
   .to(healthBody)
   .add(webhookTrigger)
-  .to(healthBody);
+  .to(healthBody)
+  .add(inWorkflowError.errorTrigger)
+  .to(inWorkflowError.formatError.to(inWorkflowError.notifySettings).to(inWorkflowError.notifyAdmin));

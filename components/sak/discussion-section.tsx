@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Flag, Loader2, MessageSquare } from 'lucide-react';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
 import {
@@ -191,7 +192,7 @@ export function DiscussionSection({ sakId }: { sakId: string }) {
                 type="button"
                 onClick={submitPost}
                 disabled={busy || !body.trim()}
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand/90 disabled:opacity-50"
               >
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 {busy ? 'Publiserer …' : 'Publiser innlegg'}
@@ -202,7 +203,7 @@ export function DiscussionSection({ sakId }: { sakId: string }) {
           <p className="text-sm text-center text-muted-foreground py-2">
             <Link
               href={`${routes.login}?next=${encodeURIComponent(`${routes.sak(sakId)}#diskusjon`)}`}
-              className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+              className="font-medium text-brand hover:underline"
             >
               Logg inn
             </Link>{' '}
@@ -218,9 +219,11 @@ export function DiscussionSection({ sakId }: { sakId: string }) {
       {loading ? (
         <p className="text-sm text-muted-foreground">Laster diskusjon …</p>
       ) : posts.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-          Ingen kommentarer ennå — vær den første.
-        </p>
+        <EmptyState
+          compact
+          title="Ingen kommentarer ennå"
+          description="Vær den første til å dele et synspunkt. Innlegg er offentlige og vises med navn."
+        />
       ) : (
         <ul className="space-y-4">
           {posts.map((post) => (

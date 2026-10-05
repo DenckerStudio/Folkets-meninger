@@ -2,6 +2,7 @@ import { getAnonSupabase, getServiceSupabase } from '@/lib/supabase';
 import { emptyPollTotals } from '@/lib/polls/format';
 import { isPollAlreadyExistsError, normalizePollIssueId } from '@/lib/polls/already-exists';
 import { nextPollStatusForAction, type PollStatusAction } from '@/lib/polls/apply-status';
+import { isPostgrestMissingRpcError } from '@/lib/polls/rpc-missing';
 import { POLL_FYLKE_MIN_VOTES } from '@/lib/polls/norway-counties';
 import type {
   PollChoice,
@@ -362,15 +363,46 @@ export async function updatePollStatusRow(pollId: string, action: PollStatusActi
   return pollId;
 }
 
+function pollStatusRpcName(action: PollStatusAction): 'publish_poll' | 'archive_poll' {
+  switch (action) {
+    case 'publish':
+      return 'publish_poll';
+    case 'archive':
+      return 'archive_poll';
+    default: {
+      const _exhaustive: never = action;
+      throw new Error(`Unhandled poll status action: ${_exhaustive}`);
+    }
+  }
+}
+
+/**
+ * Draft → open/archive must go through publish_poll / archive_poll.
+ * Row update is only a documented fallback when PostgREST has no schema-cache
+ * entry (PGRST202). Never use ensure_stortinget_poll for system drafts.
+ */
+async function applyPollStatusViaRpc(pollId: string, action: PollStatusAction): Promise<string> {
+  const rpcName = pollStatusRpcName(action);
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc(rpcName, { p_poll_id: pollId });
+  if (!error) {
+    return typeof data === 'string' && data.length > 0 ? data : pollId;
+  }
+  if (isPostgrestMissingRpcError(error)) {
+    console.warn(
+      `[polls] ${rpcName}(p_poll_id) missing from PostgREST schema cache. Falling back to a service-role row update. Intended path remains ${rpcName}; never use ensure_stortinget_poll for drafts.`,
+    );
+    return updatePollStatusRow(pollId, action);
+  }
+  throw error;
+}
+
 export async function publishPoll(pollId: string): Promise<string> {
-  // Live PATCH /api/admin/polls failed with PGRST202: PostgREST has no
-  // publish_poll(p_poll_id) / archive_poll(p_poll_id) in its schema cache.
-  // Update the row with the service role instead of calling those RPCs.
-  return updatePollStatusRow(pollId, 'publish');
+  return applyPollStatusViaRpc(pollId, 'publish');
 }
 
 export async function archivePoll(pollId: string): Promise<string> {
-  return updatePollStatusRow(pollId, 'archive');
+  return applyPollStatusViaRpc(pollId, 'archive');
 }
 
 export async function getSakPollCoverage(): Promise<SakPollCoverage> {

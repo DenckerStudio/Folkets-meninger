@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { Users } from 'lucide-react';
 import { AdminEmailGrant } from '@/components/admin/admin-email-grant';
 import { AdminBackLink } from '@/components/admin/admin-shell';
+import { EmptyState } from '@/components/dashboard/empty-state';
 
 type AdminsResponse = { admins: { userId: string; email: string | null }[] };
 
@@ -102,7 +103,11 @@ export default function AdminBrukereClient() {
         ))}
       </ul>
       {admins.length === 0 && !pending ? (
-        <p className="text-sm text-muted-foreground">Ingen administratorer funnet.</p>
+        <EmptyState
+          compact
+          title="Ingen administratorer funnet"
+          description="Gi admin-tilgang med e-post under."
+        />
       ) : null}
 
       <AdminEmailGrant

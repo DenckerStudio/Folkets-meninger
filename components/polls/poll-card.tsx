@@ -1,10 +1,14 @@
 import Link from 'next/link';
 import { pollChoicePercent } from '@/lib/polls/format';
-import { pollChoiceLabel, pollStatusLabel, pollTrackLabel, SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
-import type { PollChoice, PollRecord, PollTotals } from '@/lib/polls/types';
+import {
+  POLL_BALLOT_CHOICES,
+  pollChoiceLabel,
+  pollStatusLabel,
+  pollTrackLabel,
+  SYSTEM_REEL_DISCLAIMER,
+} from '@/lib/polls/labels';
+import type { PollRecord, PollTotals } from '@/lib/polls/types';
 import { routes } from '@/lib/routes';
-
-const CHOICES: PollChoice[] = ['ja', 'nei', 'blank'];
 
 type PollCardProps = {
   poll: PollRecord;
@@ -32,7 +36,7 @@ export function PollCard({ poll, totals }: PollCardProps) {
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{SYSTEM_REEL_DISCLAIMER}</p>
       ) : null}
       <div className="mt-4 grid grid-cols-3 gap-2">
-        {CHOICES.map((choice) => (
+        {POLL_BALLOT_CHOICES.map((choice) => (
           <div key={choice} className="rounded-xl border border-border bg-muted/40 px-3 py-2 text-center">
             <p className="text-xs font-medium text-muted-foreground">{pollChoiceLabel(choice)}</p>
             <p className="text-lg font-semibold text-foreground">{pollChoicePercent(totals, choice)}%</p>

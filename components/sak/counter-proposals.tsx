@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FileSignature, Loader2, Scale } from 'lucide-react';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
 import {
@@ -171,7 +172,12 @@ export function CounterProposals({ sakId }: { sakId: string }) {
           Laster motforslag …
         </div>
       ) : proposals.length === 0 ? (
-        <p className="mt-5 text-sm text-muted-foreground">Ingen motforslag ennå.</p>
+        <EmptyState
+          compact
+          className="mt-5"
+          title="Ingen motforslag ennå"
+          description="Når noen legger inn et motforslag, vises det her."
+        />
       ) : (
         <ul className="mt-5 space-y-3">
           {proposals.map((proposal) => {

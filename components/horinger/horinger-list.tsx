@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Calendar, Clock, MapPin, Search } from 'lucide-react';
+import { ArrowRight, Calendar, Clock, Filter, MapPin, Search } from 'lucide-react';
 import type { StortingetHoring } from '@/lib/stortinget-horinger';
 import {
   formatHoringDeadlineSummary,
@@ -17,6 +17,9 @@ import {
   sortHoringer,
   summarizeHoringer,
 } from '@/lib/stortinget-horinger';
+import { EmptyState } from '@/components/dashboard/empty-state';
+import { dashboardControlClass, dashboardSearchClass } from '@/components/dashboard/filter-field';
+import { SurfaceCard } from '@/components/dashboard/surface-card';
 import { routes } from '@/lib/routes';
 
 type HoringerListProps = {
@@ -100,53 +103,65 @@ export default function HoringerList({ hearings }: HoringerListProps) {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <SurfaceCard className="mb-6 flex flex-col gap-4 p-4 md:flex-row">
+        <div className="relative flex-grow">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <Search className="h-4 w-4 text-muted-foreground" />
+          </div>
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Søk i tittel, dokument eller komité…"
             aria-label="Søk i høringer"
-            className="w-full rounded-xl border border-border bg-card py-2.5 pl-10 pr-3 text-sm text-foreground focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className={dashboardSearchClass()}
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-          aria-label="Filtrer på status"
-          className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground md:w-auto"
-        >
-          <option>Alle statuser</option>
-          <option>Åpen for innspill</option>
-          <option>Planlagt</option>
-          <option>Avholdt</option>
-          <option>Avlyst</option>
-        </select>
-        <select
-          value={committeeFilter}
-          onChange={(e) => setCommitteeFilter(e.target.value)}
-          aria-label="Filtrer på komité"
-          className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground md:w-auto"
-        >
-          {committees.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+            aria-label="Filtrer på status"
+            className={dashboardControlClass()}
+          >
+            <option>Alle statuser</option>
+            <option>Åpen for innspill</option>
+            <option>Planlagt</option>
+            <option>Avholdt</option>
+            <option>Avlyst</option>
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground">
+            <Filter className="h-4 w-4" />
+          </div>
+        </div>
+        <div className="relative">
+          <select
+            value={committeeFilter}
+            onChange={(e) => setCommitteeFilter(e.target.value)}
+            aria-label="Filtrer på komité"
+            className={dashboardControlClass()}
+          >
+            {committees.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground">
+            <Filter className="h-4 w-4" />
+          </div>
+        </div>
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortOption)}
           aria-label="Sorter høringer"
-          className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground md:w-auto"
+          className={dashboardControlClass('md:w-52')}
         >
           <option value="relevant">Mest relevant</option>
           <option value="frist">Tidligste høring</option>
           <option value="nyeste">Nyeste først</option>
         </select>
-      </div>
+      </SurfaceCard>
 
       <p className="text-sm text-muted-foreground mb-4">
         Viser {filtered.length} av {hearings.length} høringer
@@ -154,9 +169,10 @@ export default function HoringerList({ hearings }: HoringerListProps) {
 
       <div className="grid gap-4">
         {filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground rounded-2xl border border-dashed border-border">
-            Ingen høringer matcher filtrene.
-          </div>
+          <EmptyState
+            title="Ingen høringer matcher filtrene"
+            description="Prøv et annet søk, status eller komité."
+          />
         ) : (
           filtered.map((hearing) => {
             const open = isHoringOpen(hearing);

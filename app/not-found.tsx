@@ -10,7 +10,7 @@ export default function NotFound() {
       </p>
       <Link 
         href="/" 
-        className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+        className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-brand-foreground bg-brand hover:bg-brand/90 transition-colors"
       >
         <ArrowLeft className="mr-2 w-5 h-5" />
         Tilbake til forsiden

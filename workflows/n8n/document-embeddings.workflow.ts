@@ -15,6 +15,7 @@ import {
   rpcUrl,
 } from './n8n-supabase.shared';
 import { EXPAND_OR_EMPTY_JS } from './n8n-pipeline.shared';
+import { createInWorkflowErrorNotify } from './in-workflow-error-notify';
 
 const scheduleTrigger = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
@@ -449,38 +450,11 @@ const normalizeWebhook = node({
   output: [{ batchLimit: '12', issueId: '200329' }],
 });
 
-const pipelineErrorTrigger = trigger({
-  type: 'n8n-nodes-base.errorTrigger',
-  version: 1,
-  config: { name: 'Pipeline error' },
-  output: [{ workflow: { name: 'folkets-document-embeddings' }, execution: { id: '0' } }],
-});
-
-const recordPipelineError = node({
-  type: 'n8n-nodes-base.set',
-  version: 3.4,
-  config: {
-    name: 'Record pipeline error',
-    parameters: {
-      mode: 'manual',
-      assignments: {
-        assignments: [
-          {
-            id: 'fallback',
-            name: 'appFallback',
-            type: 'string',
-            value: 'Chunks stay embedding_status=pending; GET /api/cron/n8n-retry re-queues webhook',
-          },
-        ],
-      },
-    },
-  },
-  output: [{ appFallback: 'GET /api/cron/n8n-retry' }],
-});
+const inWorkflowError = createInWorkflowErrorNotify('folkets-document-embeddings');
 
 sticky(
-  '## Dokument embeddings (RAG)\n\nPending chunks → Ollama `nomic-embed-text:v1.5` → pgvector. Tom kø er suksess. Etter lagring trigges AI-sammendrag for saken. Ollama-feil: chunk blir stående pending. App-fallback: `/api/cron/n8n-retry`.',
-  [scheduleTrigger, webhookTrigger, pipelineErrorTrigger],
+  '## Dokument embeddings (RAG)\n\nPending chunks → Ollama `nomic-embed-text:v1.5` → pgvector. Tom kø er suksess. Etter lagring trigges AI-sammendrag for saken. Ollama-feil: chunk blir stående pending. Error Trigger POSTer til /api/ops/n8n-notify. App-fallback: `/api/cron/n8n-retry`.',
+  [scheduleTrigger, webhookTrigger],
   { color: 5 },
 );
 
@@ -511,5 +485,5 @@ export default workflow(
   .add(webhookTrigger)
   .to(normalizeWebhook)
   .to(embeddingPipeline)
-  .add(pipelineErrorTrigger)
-  .to(recordPipelineError);
+  .add(inWorkflowError.errorTrigger)
+  .to(inWorkflowError.formatError.to(inWorkflowError.notifySettings).to(inWorkflowError.notifyAdmin));
