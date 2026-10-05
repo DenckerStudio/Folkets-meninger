@@ -142,13 +142,15 @@ The canonical template is `.env.example`.
   events such as `VOT`, `VEDTAK`, `BEHS`, and related treatment events.
 - If every vote-close event date is in the past, the sak is closed. Missing
   vote-close events still leave the window open (unless `ferdigbehandlet`).
-- `app/api/vote/route.ts` rejects votes when the issue is closed,
-  `ferdigbehandlet` is true, or `voting_closes_at` has passed.
-- `voting-section.tsx` must not reopen a ballot when the server already sent
-  `votingClosed: true`.
+- Per-sak For/Mot/Avstår voting is legacy read-only. `POST /api/vote` returns
+  `410`; `GET /api/vote?issueId=...` still serves historical totals and viewer
+  receipts for old alignment displays.
+- Current sak participation saves `enig`/`uenig`/`ikke_interessert` via
+  `POST /api/stance` and `issue_stances`.
 - `supabase/migrations/20260618120000_sak_voting_status.sql` enforces the same
-  closure rules in the `cast_vote` RPC.
-- Sak ballots stay For/Mot/Avstår. Public Ja/Nei/Blank language is polls only.
+  closure rules in the historical `cast_vote` RPC, but new code should not call
+  `cast_vote`.
+- Public Ja/Nei/Blank language is polls only.
 
 ### Avstemninger
 
@@ -156,7 +158,9 @@ The canonical template is `.env.example`.
   anonymous `poll_votes` and encrypted `poll_vote_receipts`. Ballot choices:
   `ja`/`nei`/`blank`.
 - Schema: `supabase/migrations/20260819210000_direct_democracy_polls.sql` plus
-  `20260821130000_system_poll_reels.sql` for system Reels.
+  `20260821130000_system_poll_reels.sql` for system Reels and
+  `20261003220000_n8n_list_saks_without_blocking_poll.sql` for n8n queue
+  helpers that skip saker with an existing draft/open/closed poll.
 - Public routes: `/dashboard/utforsk` (saker + Reels), `/dashboard/avstemninger`,
  `/dashboard/avstemninger/<id>`. Poll voting requires login. Empty lists are honest — do not seed mock polls.
  Avstemninger is not in primary nav; `/dashboard/avstemninger/reels` redirects to Utforsk.
@@ -168,6 +172,17 @@ The canonical template is `.env.example`.
 - Fylke breakdowns use `users.fylke_code` only when `fylke_verified` is true.
  Self-declared fylke via the profile picker does not set `fylke_verified`.
 - Primary nav: Folkets meninger / Utforsk / Høringer / Appens fremtid. Post-login fallback is Utforsk.
+
+### Folkets meninger (opinions)
+
+- `/dashboard/folkets-meninger` is the dashboard home for public opinions.
+  Authors must be logged in and have `user_has_public_identity` before posting.
+- `POST /api/opinions` creates For/Imot opinions only. Title: 5-200 chars;
+  body: 250-4000 chars; points: 3-8 For/Imot bullets, each 12-280 chars, with
+  at least one For and one Imot point. Replies can be For/Blank/Imot; Blank
+  replies do not require a body.
+- Composer drafts are browser-local (`lib/opinions/draft.ts`,
+  `folkets-meninger:opinion-draft:*`) and are cleared after publish/discard.
 
 ### Identity, activity, admin
 
@@ -206,7 +221,7 @@ The canonical template is `.env.example`.
   (`folkets:impact:profile`). `POST /api/sak/[id]/impact` retrieves document
   chunks (no embeddings column — egress) plus the AI summary and synthesizes a
   personal effect. Kroner amounts are shown only when they appear in the source.
-- **Folkets vilje vs. Stortinget** sits after the ballot. It fetches
+- **Folkets vilje vs. Stortinget** uses historical app vote totals. It fetches
   `data.stortinget.no/eksport/voteringer?sakid=` (1h revalidate), picks a
   substantive votering, and scores gap vs app `get_issue_vote_totals`.
   `ALIGNMENT_MIN_FOLK_VOTES = 5` before claiming folkets vilje. Pending saker
@@ -273,7 +288,8 @@ The canonical template is `.env.example`.
 - Schema: `app_suggestions`, `app_suggestion_votes`, `app_changelog_entries`,
   `app_roadmap_items`
   (`20261003163035_app_suggestions.sql`, `20261003175506_app_suggestions_admin.sql`,
-  `20261003200000_appens_fremtid.sql`).
+  `20261003200000_appens_fremtid.sql`,
+  `20261003234000_planned_roadmap_items.sql`).
 - Public marketing form `/innspill` (`site_feedback`) is separate.
 - Fider is not used by the app. The Coolify Fider server is left running.
 

@@ -103,14 +103,24 @@ Admin publiserer i `/dashboard/admin/reels`. Offentlig feed: `/dashboard/utforsk
 
 Timezone: `Europe/Oslo`. Credential: **Folkets Stemme Self-hosted**. Ollama: **Ollama account** (`gemma4:e2b-it-qat`).
 
-Daglig 06:00 plukker neste pending sak med ready RAG-chunks og uten eksisterende poll. Webhook kan sende `{ "stortinget_issue_id": "…" }` for én sak (samme kø-filter). Tom kø = tom kjøring, ikke feil. Krever `20260823200000_n8n_postgrest_rpcs.sql`.
+Daglig 06:00 plukker neste sak med ready RAG-chunks og uten eksisterende
+draft/open/closed poll. Webhook kan sende `{ "stortinget_issue_id": "…" }` for
+én sak (samme kø-filter). Tom kø = tom kjøring, ikke feil. Krever
+`20260823200000_n8n_postgrest_rpcs.sql` og
+`20261003220000_n8n_list_saks_without_blocking_poll.sql`.
 
 | Steg | Beskrivelse |
 |------|-------------|
-| Sak-kø | Pending sak med ready RAG-chunks, uten eksisterende draft/open/closed poll |
+| Sak-kø | `n8n_list_saks_without_blocking_poll(limit, issue_id)` returnerer saker med ready embedded chunks og ingen draft/open/closed poll |
 | RAG | Embed tittel+sammendrag → `match_issue_document_chunks` |
 | Agent | Ollama ja/nei-spørsmål (ballot er alltid Ja / Nei / Blank) |
 | Lagring | `create_system_poll_draft(...)` — ikke `ensure_stortinget_poll` (den åpner med en gang) |
+
+`n8n_blocking_poll_for_issue(issue_id)` finnes for manuelle kontroller og
+retries. Den regner `draft`, `open` og `closed` som blokkeringer slik at
+workflowen ikke lager en ny poll for en sak som allerede er brukt. Kø-RPC-en
+inkluderer `detail_json`, opptil seks dokumentmetadata-rader og én
+`ready_chunk_id`; den sender ikke embeddings-kolonnen over PostgREST.
 
 ```bash
 N8N_SYSTEM_POLL_DRAFT_WEBHOOK_URL=https://n8n.heyklever.app/webhook/folkets-system-poll-draft
