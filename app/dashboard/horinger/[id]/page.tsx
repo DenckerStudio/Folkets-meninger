@@ -9,6 +9,7 @@ import {
   Users,
 } from 'lucide-react';
 import { BackButton } from '@/components/dashboard/back-button';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { getAnonSupabase } from '@/lib/supabase';
 import {
   fetchStortingetHoringById,
@@ -88,7 +89,7 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
   const skriftligInnspillUrl = getHoringSkriftligInnspillUrl(hearing);
 
   return (
-    <div className="space-y-8 pb-12">
+    <DashboardPage>
       <BackButton fallbackHref={routes.horinger} />
 
       <div className="bg-card border border-border rounded-3xl p-8 shadow-sm space-y-6">
@@ -289,6 +290,6 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
           </p>
         )}
       </section>
-    </div>
+    </DashboardPage>
   );
 }

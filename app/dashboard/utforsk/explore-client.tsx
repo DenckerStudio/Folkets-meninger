@@ -9,7 +9,10 @@ import { SakProcessingBadge } from '@/components/sak/sak-meta';
 import { formatVotingDaysLeftLabel } from '@/lib/sak-voting-window';
 import { useState, useEffect, useMemo } from 'react';
 import { LayoutGroup } from 'motion/react';
-import { EmptyLineState } from '@/components/motion/empty-line';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { EmptyState } from '@/components/dashboard/empty-state';
+import { dashboardControlClass, dashboardSearchClass } from '@/components/dashboard/filter-field';
+import { SurfaceCard } from '@/components/dashboard/surface-card';
 import { MotionList, MotionListRow } from '@/components/motion/list-row';
 import { Pressable } from '@/components/motion/pressable';
 import { SectionSettle } from '@/components/motion/section-settle';
@@ -188,7 +191,7 @@ export default function ExploreClient({
   return (
     <UtforskReelsStage items={reelItems}>
       {({ openReels, itemCount }) => (
-    <div className="space-y-8">
+    <DashboardPage>
       <SectionSettle>
         <PageHeader
           title="Utforsk saker"
@@ -218,14 +221,14 @@ export default function ExploreClient({
             {firstOpenIssue ? (
               <Link
                 href={routes.sak(String(firstOpenIssue.id))}
-                className="inline-flex items-center rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand/90"
+                className="inline-flex items-center rounded-lg bg-brand px-3 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90"
               >
                 Åpne en sak
               </Link>
             ) : issues[0] ? (
               <Link
                 href={routes.sak(String(issues[0].id))}
-                className="inline-flex items-center rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand/90"
+                className="inline-flex items-center rounded-lg bg-brand px-3 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90"
               >
                 Åpne en sak
               </Link>
@@ -241,16 +244,16 @@ export default function ExploreClient({
       ) : null}
 
       <SectionSettle>
-        <div className="bg-card p-4 rounded-2xl shadow-sm border border-border flex flex-col md:flex-row gap-4">
+        <SurfaceCard className="flex flex-col gap-4 p-4 md:flex-row">
           <div className="relative flex-grow">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <Search className="h-5 w-5 text-muted-foreground" />
             </div>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-border rounded-xl leading-5 bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand/30 focus:border-brand sm:text-sm"
+              className={dashboardSearchClass()}
               placeholder="Søk etter saker, stikkord eller saksnummer..."
             />
           </div>
@@ -259,7 +262,7 @@ export default function ExploreClient({
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="block w-full pl-3 pr-10 py-2 text-base border-border focus:outline-none focus:ring-brand/30 focus:border-brand sm:text-sm rounded-xl border appearance-none bg-background text-foreground"
+                className={dashboardControlClass()}
               >
                 <option value="Alle statuser">Alle statuser</option>
                 <option value="Under behandling">Under behandling</option>
@@ -275,7 +278,7 @@ export default function ExploreClient({
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="block w-full pl-3 pr-10 py-2 text-base border-border focus:outline-none focus:ring-brand/30 focus:border-brand sm:text-sm rounded-xl border appearance-none bg-background text-foreground"
+                className={dashboardControlClass()}
               >
                 <option value="Alle kategorier">Alle kategorier</option>
                 {categories.map((cat) => (
@@ -292,7 +295,7 @@ export default function ExploreClient({
               <select
                 value={selectedSakKind}
                 onChange={(e) => setSelectedSakKind(e.target.value)}
-                className="block w-full pl-3 pr-10 py-2 text-base border-border focus:outline-none focus:ring-brand/30 focus:border-brand sm:text-sm rounded-xl border appearance-none bg-background text-foreground"
+                className={dashboardControlClass()}
               >
                 <option value="Alle sakstyper">Alle sakstyper</option>
                 <option value="Lovforslag">Lovforslag</option>
@@ -305,14 +308,14 @@ export default function ExploreClient({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="block w-full pl-3 pr-10 py-2 text-base border-border focus:outline-none focus:ring-brand/30 focus:border-brand sm:text-sm rounded-xl border appearance-none bg-background text-foreground"
+              className={dashboardControlClass()}
             >
               <option value="Nyeste først">Nyeste først</option>
               <option value="Mest engasjement">Mest engasjement</option>
               <option value="Snart votering">Snart votering</option>
             </select>
           </div>
-        </div>
+        </SurfaceCard>
       </SectionSettle>
 
       {popularLabels.length > 0 && (
@@ -329,7 +332,7 @@ export default function ExploreClient({
                     onClick={() => toggleAiLabel(label)}
                     className={`rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
                       active
-                        ? 'bg-brand text-white border-brand'
+                        ? 'bg-brand text-brand-foreground border-brand'
                         : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
                     }`}
                   >
@@ -385,9 +388,10 @@ export default function ExploreClient({
       <SectionSettle>
         <div className="space-y-4">
           {displayedIssues.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-muted-foreground">
-              <EmptyLineState>Ingen saker funnet som matcher dine kriterier.</EmptyLineState>
-            </div>
+            <EmptyState
+              title="Ingen saker matcher filteret"
+              description="Prøv et annet søk, status eller emne. Listen er tom til Stortinget-data matcher."
+            />
           ) : (
             <MotionList className="space-y-4">
             {displayedIssues.map((issue) => {
@@ -477,7 +481,7 @@ export default function ExploreClient({
                       )}
                       <Link
                         href={routes.sak(String(issue.id))}
-                        className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-brand hover:bg-brand/90 rounded-lg shrink-0"
+                        className="inline-flex shrink-0 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90"
                       >
                         {displayedUserStances[String(issue.id)] ? 'Se sak' : 'Marker holdning'}
                         <ArrowRight className="ml-1.5 w-4 h-4" />
@@ -492,7 +496,7 @@ export default function ExploreClient({
           )}
         </div>
       </SectionSettle>
-    </div>
+    </DashboardPage>
       )}
     </UtforskReelsStage>
   );

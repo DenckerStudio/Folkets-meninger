@@ -3,6 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { Bell, CheckCircle, LogIn } from 'lucide-react';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { useAuth } from '@/hooks/use-auth';
 import { PageHeader } from '@/components/page-header';
 import { routes } from '@/lib/routes';
@@ -62,7 +64,7 @@ export default function VarslerPage() {
         <p className="text-muted-foreground">Du må være logget inn for å se in-app varsler.</p>
         <Link
           href={routes.login}
-          className="inline-flex items-center rounded-xl bg-brand px-6 py-3 font-medium text-white transition-colors hover:bg-brand/90"
+          className="inline-flex items-center rounded-xl bg-brand px-6 py-3 font-medium text-brand-foreground transition-colors hover:bg-brand/90"
         >
           <LogIn className="mr-2 h-5 w-5" />
           Logg inn
@@ -72,7 +74,7 @@ export default function VarslerPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 pb-12">
+    <DashboardPage className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <PageHeader
           title="Varsler"
@@ -97,9 +99,7 @@ export default function VarslerPage() {
       </p>
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-12 text-center text-muted-foreground">
-          Ingen varsler ennå.
-        </div>
+        <EmptyState title="Ingen varsler ennå" description="Når noe skjer på saker du følger, vises det her." />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <ul className="divide-y divide-border">
@@ -127,6 +127,6 @@ export default function VarslerPage() {
           </ul>
         </div>
       )}
-    </div>
+    </DashboardPage>
   );
 }

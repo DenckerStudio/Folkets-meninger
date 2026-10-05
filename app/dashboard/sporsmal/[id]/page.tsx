@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Calendar, MessageSquare, User } from 'lucide-react';
 import { BackButton } from '@/components/dashboard/back-button';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { STORTINGET_ACTIVE_SESSION_ID } from '@/lib/stortinget-config';
 import {
   findSporsmalById,
@@ -40,7 +41,7 @@ export default async function SporsmalDetailPage({
   const fullText = question.tittel || question.sporsmal || '';
 
   return (
-    <div className="space-y-8 pb-12">
+    <DashboardPage>
       <BackButton fallbackHref={routes.sporsmal} />
 
       <article className="bg-card rounded-3xl border border-border p-8 shadow-sm space-y-6">
@@ -132,6 +133,6 @@ export default async function SporsmalDetailPage({
           </div>
         )}
       </article>
-    </div>
+    </DashboardPage>
   );
 }

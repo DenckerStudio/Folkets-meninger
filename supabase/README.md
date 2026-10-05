@@ -83,7 +83,7 @@ Or paste `supabase/migrations/*.sql` into the Supabase SQL editor.
 | Appens fremtid | `20261003163035_app_suggestions.sql`, `20261003175506_app_suggestions_admin.sql`, `20261003200000_appens_fremtid.sql` | `app_suggestions` (title/category/audience/voting), `app_suggestion_votes`, `app_changelog_entries`, `app_roadmap_items`, create/list/vote/changelog/roadmap RPCs |
 | Stortinget sak metadata | `20260616120000_stortinget_issue_sak_kind.sql`, `20260618140000_stortinget_issues_category.sql`, `20260702160000_backfill_ferdigbehandlet_from_detail.sql` | `sak_kind`, `henvisning`, `dokumentgruppe`, `category`, `ferdigbehandlet` repair |
 | Sak documents/RAG | `20260617120000_sak_documents_rag.sql`, `20260807112603_document_chunks_storage_efficiency.sql` | `stortinget_issue_documents`, `document_chunks`, `chunks_status`, `match_issue_document_chunks`, reclaim helpers |
-| Direct-democracy polls | `20260819210000_direct_democracy_polls.sql`, `20260821130000_system_poll_reels.sql` | `norway_counties`, `polls` (`stortinget`/`citizen`/`system`), `poll_votes`, `poll_vote_receipts`, `citizen_initiatives`, `citizen_initiative_endorsements`, Ja/Nei/Blank RPCs, system Reels drafts |
+| Direct-democracy polls | `20260819210000_direct_democracy_polls.sql`, `20260821130000_system_poll_reels.sql`, `20261003180000_system_poll_source_packaging.sql` | `norway_counties`, `polls` (`stortinget`/`citizen`/`system`), `poll_votes`, `poll_vote_receipts`, `citizen_initiatives`, `citizen_initiative_endorsements`, Ja/Nei/Blank RPCs, system Reels drafts from RAG / AI-sammendrag / metadata |
 | App RBAC | `20260821120000_app_rbac_user_roles.sql` | `app_roles`, `user_roles`, `is_admin()`, `grant_app_role_by_email`, `revoke_app_role_by_email` |
 | Knowledge + motforslag | `20260822120000_knowledge_and_counter_proposals.sql` | `user_knowledge_quiz_passes`, `user_document_reads`, `user_badges`, `counter_proposals`, `counter_proposal_endorsements`, package RPCs |
 | Folkets meninger | `20260907223000_citizen_opinions.sql`, `20260908120000_citizen_opinion_points.sql`, `20260908153000_blank_stance_optional_body.sql`, `20260908170000_create_opinion_for_imot_only.sql`, `20260908181000_repair_opinion_rpcs.sql` | `citizen_opinions`, `citizen_opinion_replies`, `points` (min. 3 For/Imot-kulepunkter), create For/Imot only, Blank replies without begrunnelse, `create_citizen_opinion`, `create_citizen_opinion_reply` |
@@ -156,8 +156,9 @@ legacy `citizen_initiatives` tables — no longer exposed in the Next.js app).
 System Reels are AI-generated ja/nei/blank questions. n8n inserts drafts via
 `create_system_poll_draft`; admins publish with `publish_poll` or archive with
 `archive_poll`. Do not call `ensure_stortinget_poll` for AI drafts (it opens the
-poll immediately). Coverage helpers: `get_sak_poll_coverage()`,
-`get_sak_poll_candidates()`.
+poll immediately). `20261003180000_system_poll_source_packaging.sql` widens
+the candidate queue to RAG, AI-sammendrag, or sak-metadata. Coverage helpers:
+`get_sak_poll_coverage()`, `get_sak_poll_candidates()`.
 
 Fylke is attached only when `users.fylke_verified` is true.
 `apply_verified_fylke_claim` is service-role only and not wired in the app.

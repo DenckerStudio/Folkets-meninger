@@ -1,4 +1,6 @@
 import { headers } from 'next/headers';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { PageHeader } from '@/components/page-header';
 import HoringerKalender from '@/components/kalender/horinger-kalender';
 import { hearingsToKalenderEvents, toKalenderEventDto } from '@/lib/kalender-events';
@@ -35,16 +37,18 @@ export default async function KalenderPage() {
   const webcalUrl = icsHttpsUrl.replace(/^https:/, 'webcal:').replace(/^http:/, 'webcal:');
 
   return (
-    <div className="space-y-8 pb-12">
+    <DashboardPage>
       <PageHeader
         title="Kalender"
         description="Høringer og innspillsfrister. Abonner, eller bla måned for måned."
       />
 
       {events.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border py-12 text-center text-muted-foreground">
-          Klarte ikke å hente høringer. Prøv igjen senere.
-        </div>
+        <EmptyState
+          title="Klarte ikke å hente høringer"
+          description="Prøv igjen senere. Kilden er Stortingets åpne data."
+          tone="error"
+        />
       ) : (
         <HoringerKalender
           events={events}
@@ -64,6 +68,6 @@ export default async function KalenderPage() {
         </a>
         .
       </p>
-    </div>
+    </DashboardPage>
   );
 }

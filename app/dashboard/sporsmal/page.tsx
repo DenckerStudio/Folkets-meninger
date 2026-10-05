@@ -1,3 +1,4 @@
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import FadeIn from '@/components/fade-in';
 import { PageHeader } from '@/components/page-header';
 import SporsmalList from '@/components/sporsmal/sporsmal-list';
@@ -25,19 +26,17 @@ export default async function SporsmalPage({
   });
 
   return (
-    <div className="space-y-8 pb-12">
+    <DashboardPage>
       <FadeIn delay={0.1}>
-        <div className="bg-card rounded-[2.5rem] shadow-sm border border-border p-8 md:p-12">
-          <PageHeader
-            title="Spørsmål"
-            description={`Skriftlige spørsmål, spørretime og interpellasjoner (${sesjonId}).`}
-          />
-        </div>
+        <PageHeader
+          title="Spørsmål"
+          description={`Skriftlige spørsmål, spørretime og interpellasjoner fra Stortinget (${sesjonId}). Søk, filtrer og les detaljer.`}
+        />
       </FadeIn>
 
       <FadeIn delay={0.2} direction="up">
         <SporsmalList sporsmal={sporsmal} type={type} sesjonId={sesjonId} />
       </FadeIn>
-    </div>
+    </DashboardPage>
   );
 }

@@ -54,6 +54,9 @@ const fetchPendingChunks = node({
   version: 4.2,
   config: {
     name: 'Fetch pending chunks',
+    retryOnFail: true,
+    maxTries: 2,
+    waitBetweenTries: 2000,
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       method: 'POST',
@@ -128,7 +131,10 @@ const embedChunk = node({
   version: 4.2,
   config: {
     name: 'Ollama embeddings',
-    onError: 'continueErrorOutput',
+    onError: 'continueRegularOutput',
+    retryOnFail: true,
+    maxTries: 3,
+    waitBetweenTries: 3000,
     parameters: {
       method: 'POST',
       url: FOLKETS_OLLAMA_EMBEDDINGS_URL,
@@ -161,7 +167,7 @@ if (!Array.isArray(embedding) || embedding.length === 0) {
       skip: true,
       outcome: 'embed_failed',
       reason: 'missing_embedding_vector',
-      message: 'Ollama returned no embedding; chunk left pending for retry',
+      message: 'Ollama returned no embedding; chunk left pending for /api/cron/n8n-retry',
     },
   };
 }
@@ -239,6 +245,9 @@ const saveEmbedding = node({
   version: 4.2,
   config: {
     name: 'Save embedding',
+    retryOnFail: true,
+    maxTries: 2,
+    waitBetweenTries: 2000,
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       method: 'POST',
@@ -440,9 +449,38 @@ const normalizeWebhook = node({
   output: [{ batchLimit: '12', issueId: '200329' }],
 });
 
+const pipelineErrorTrigger = trigger({
+  type: 'n8n-nodes-base.errorTrigger',
+  version: 1,
+  config: { name: 'Pipeline error' },
+  output: [{ workflow: { name: 'folkets-document-embeddings' }, execution: { id: '0' } }],
+});
+
+const recordPipelineError = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Record pipeline error',
+    parameters: {
+      mode: 'manual',
+      assignments: {
+        assignments: [
+          {
+            id: 'fallback',
+            name: 'appFallback',
+            type: 'string',
+            value: 'Chunks stay embedding_status=pending; GET /api/cron/n8n-retry re-queues webhook',
+          },
+        ],
+      },
+    },
+  },
+  output: [{ appFallback: 'GET /api/cron/n8n-retry' }],
+});
+
 sticky(
-  '## Dokument embeddings (RAG)\n\nPending chunks → Ollama `nomic-embed-text:v1.5` → pgvector. Tom kø er suksess. Etter lagring trigges AI-sammendrag for saken.',
-  [scheduleTrigger, webhookTrigger],
+  '## Dokument embeddings (RAG)\n\nPending chunks → Ollama `nomic-embed-text:v1.5` → pgvector. Tom kø er suksess. Etter lagring trigges AI-sammendrag for saken. Ollama-feil: chunk blir stående pending. App-fallback: `/api/cron/n8n-retry`.',
+  [scheduleTrigger, webhookTrigger, pipelineErrorTrigger],
   { color: 5 },
 );
 
@@ -472,4 +510,6 @@ export default workflow(
   .to(embeddingPipeline)
   .add(webhookTrigger)
   .to(normalizeWebhook)
-  .to(embeddingPipeline);
+  .to(embeddingPipeline)
+  .add(pipelineErrorTrigger)
+  .to(recordPipelineError);

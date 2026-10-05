@@ -1,4 +1,8 @@
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { EmptyState } from '@/components/dashboard/empty-state';
+import { SurfaceCard } from '@/components/dashboard/surface-card';
 import FadeIn from '@/components/fade-in';
+import { PageHeader } from '@/components/page-header';
 import Image from 'next/image';
 import { STORTINGET_ACTIVE_PERIODE_ID } from '@/lib/stortinget-config';
 import { headers } from 'next/headers';
@@ -34,49 +38,54 @@ export default async function RepresentanterPage() {
   const sorted = [...data.representanter].sort((a, b) => a.etternavn.localeCompare(b.etternavn, 'no'));
 
   return (
-    <div className="space-y-8 pb-12">
+    <DashboardPage>
       <FadeIn delay={0.1}>
-        <div className="bg-card rounded-[2.5rem] shadow-sm border border-border p-8 md:p-12">
-          <h1 className="text-4xl font-extrabold text-foreground sm:text-5xl tracking-tight">Representanter</h1>
-          <p className="text-muted-foreground mt-3">
-            Oversikt over alle innvalgte representanter for stortingsperioden <span className="font-semibold">{data.periode}</span>.
-          </p>
-        </div>
+        <PageHeader
+          title="Representanter"
+          description={`Innvalgte representanter for stortingsperioden ${data.periode}.`}
+        />
       </FadeIn>
 
       <FadeIn delay={0.2} direction="up">
-        <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">{sorted.length} representanter</div>
-          </div>
-          <div className="divide-y divide-border">
-            {sorted.map((r) => (
-              <div key={r.id} className="px-6 py-4 flex items-center gap-4">
-                <div className="relative w-10 h-10 rounded-full overflow-hidden bg-muted flex-shrink-0">
-                  <Image
-                    src={`https://data.stortinget.no/eksport/personbilde?personid=${encodeURIComponent(r.id)}&storrelse=lite&erstatningsbilde=true`}
-                    alt={`${r.fornavn} ${r.etternavn}`}
-                    fill
-                    className="object-cover"
-                    sizes="40px"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-foreground truncate">
-                    {r.fornavn} {r.etternavn}
+        {sorted.length === 0 ? (
+          <EmptyState
+            title="Ingen representanter funnet"
+            description="Klarte ikke å hente listen. Prøv igjen senere."
+            tone="error"
+          />
+        ) : (
+          <SurfaceCard padded={false} className="overflow-hidden">
+            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+              <div className="text-sm text-muted-foreground">{sorted.length} representanter</div>
+            </div>
+            <div className="divide-y divide-border">
+              {sorted.map((r) => (
+                <div key={r.id} className="flex items-center gap-4 px-6 py-4">
+                  <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-muted">
+                    <Image
+                      src={`https://data.stortinget.no/eksport/personbilde?personid=${encodeURIComponent(r.id)}&storrelse=lite&erstatningsbilde=true`}
+                      alt={`${r.fornavn} ${r.etternavn}`}
+                      fill
+                      className="object-cover"
+                      sizes="40px"
+                    />
                   </div>
-                  <div className="text-sm text-muted-foreground truncate">
-                    {r.parti?.navn || 'Ukjent parti'} · {r.fylke?.navn || 'Ukjent fylke'}
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-semibold text-foreground">
+                      {r.fornavn} {r.etternavn}
+                    </div>
+                    <div className="truncate text-sm text-muted-foreground">
+                      {r.parti?.navn || 'Ukjent parti'} · {r.fylke?.navn || 'Ukjent fylke'}
+                    </div>
                   </div>
+                  <div className="font-mono text-xs text-muted-foreground">{r.id}</div>
                 </div>
-                <div className="text-xs text-muted-foreground font-mono">{r.id}</div>
-              </div>
-            ))}
-            {sorted.length === 0 && <div className="px-6 py-10 text-sm text-muted-foreground">Ingen data.</div>}
-          </div>
-        </div>
+              ))}
+            </div>
+          </SurfaceCard>
+        )}
       </FadeIn>
-    </div>
+    </DashboardPage>
   );
 }
 

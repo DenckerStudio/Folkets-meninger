@@ -2,6 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import { Filter, Search } from 'lucide-react';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
+import { EmptyState } from '@/components/dashboard/empty-state';
+import { dashboardControlClass, dashboardSearchClass } from '@/components/dashboard/filter-field';
+import { SurfaceCard } from '@/components/dashboard/surface-card';
 import FadeIn from '@/components/fade-in';
 import { ComposerBanner } from '@/components/opinions/composer-banner';
 import { OpinionCard } from '@/components/opinions/opinion-card';
@@ -43,9 +47,12 @@ export function FolketsMeningerClient({ opinions, sakOptions }: FolketsMeningerC
   }, [opinions, searchQuery, sortBy, stanceFilter]);
 
   return (
-    <div className="space-y-3 pb-12">
+    <DashboardPage className="space-y-6">
       <FadeIn delay={0.1}>
-        <PageHeader title="Folkets meninger" />
+        <PageHeader
+          title="Folkets meninger"
+          description="Holdninger og begrunnelser fra innloggede brukere. Ingen mock-data."
+        />
       </FadeIn>
 
       <FadeIn delay={0.12} direction="up">
@@ -53,7 +60,7 @@ export function FolketsMeningerClient({ opinions, sakOptions }: FolketsMeningerC
       </FadeIn>
 
       <FadeIn delay={0.18} direction="up">
-        <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm md:flex-row">
+        <SurfaceCard className="flex flex-col gap-4 p-4 md:flex-row">
           <div className="relative flex-grow">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <Search className="h-4 w-4 text-muted-foreground" />
@@ -63,14 +70,14 @@ export function FolketsMeningerClient({ opinions, sakOptions }: FolketsMeningerC
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Søk i folkets meninger"
-              className="block w-full rounded-xl border border-border bg-background py-2 pl-10 pr-3 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-brand/30 sm:text-sm"
+              className={dashboardSearchClass()}
             />
           </div>
           <div className="relative">
             <select
               value={stanceFilter}
               onChange={(event) => setStanceFilter(event.target.value)}
-              className="block w-full appearance-none rounded-xl border border-border bg-background py-2 pl-3 pr-10 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-brand/30 sm:text-sm"
+              className={dashboardControlClass()}
             >
               <option value="Alle">Alle standpunkt</option>
               <option value="For">For</option>
@@ -84,22 +91,25 @@ export function FolketsMeningerClient({ opinions, sakOptions }: FolketsMeningerC
           <select
             value={sortBy}
             onChange={(event) => setSortBy(event.target.value)}
-            className="block w-full appearance-none rounded-xl border border-border bg-background py-2 pl-3 pr-10 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-brand/30 sm:text-sm md:w-52"
+            className={dashboardControlClass('md:w-52')}
           >
             <option value="Nyeste først">Nyeste først</option>
             <option value="Mest engasjement">Mest engasjement</option>
           </select>
-        </div>
+        </SurfaceCard>
       </FadeIn>
 
       <FadeIn delay={0.22} direction="up">
         <div className="space-y-4">
           {displayed.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border px-6 py-12 text-center text-muted-foreground">
-              {opinions.length === 0
-                ? 'Ingen meninger er delt ennå.'
-                : 'Ingen meninger matcher søket.'}
-            </div>
+            <EmptyState
+              title={opinions.length === 0 ? 'Ingen meninger er delt ennå' : 'Ingen meninger matcher søket'}
+              description={
+                opinions.length === 0
+                  ? 'Når noen deler en holdning til en sak, vises den her.'
+                  : 'Prøv et annet søk eller filter.'
+              }
+            />
           ) : (
             displayed.map((opinion, index) => (
               <FadeIn key={opinion.id} delay={0.08 * Math.min(index, 5)} direction="up">
@@ -109,6 +119,6 @@ export function FolketsMeningerClient({ opinions, sakOptions }: FolketsMeningerC
           )}
         </div>
       </FadeIn>
-    </div>
+    </DashboardPage>
   );
 }

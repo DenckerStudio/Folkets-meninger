@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import FadeIn from '@/components/fade-in';
 import { PageHeader } from '@/components/page-header';
 import { getPolitikereOversikt } from '@/lib/stortinget';
@@ -10,17 +11,17 @@ export default async function PolitikerePage() {
   const politikere = await getPolitikereOversikt();
 
   return (
-    <div className="space-y-8 pb-12">
+    <DashboardPage>
       <FadeIn delay={0.1}>
         <PageHeader
           title="Politikere"
-          description="Her finner du oversikt over stortingsrepresentanter og regjeringsmedlemmer. Verifiserte politikere kan svare direkte på saker og se anonymisert statistikk fra sine velgere."
+          description="Stortingsrepresentanter og regjeringsmedlemmer. Verifiserte politikere kan svare på saker og se anonymisert statistikk fra velgerne sine."
         />
       </FadeIn>
 
       <Suspense fallback={null}>
         <PolitikereExplorer politikere={politikere} />
       </Suspense>
-    </div>
+    </DashboardPage>
   );
 }

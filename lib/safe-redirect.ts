@@ -9,7 +9,7 @@ const ALLOWED_PREFIXES = [
 
 /** Prevent open redirects after OAuth — only allow same-origin relative paths. */
 export function sanitizePostLoginPath(next: string | null | undefined): string {
-  const fallback = routes.folketsMeninger;
+  const fallback = routes.utforsk;
   if (!next || typeof next !== 'string') return fallback;
 
   const trimmed = next.trim();

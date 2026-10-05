@@ -63,10 +63,14 @@ export type SakPollCoverage = {
   sakCandidates: number;
 };
 
+export type SakPollSourceKind = 'rag' | 'ai_summary' | 'metadata';
+
 export type SakPollCandidate = {
   issueId: string;
   title: string;
   summary: string;
   lastUpdatedAt: string | null;
   ragChunkCount: number;
+  hasAiSummary: boolean;
+  sourceKind: SakPollSourceKind;
 };

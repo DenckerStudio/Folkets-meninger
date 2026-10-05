@@ -9,6 +9,7 @@ import {
   adminNavItems,
   type AdminNavItem,
 } from '@/lib/admin/nav';
+import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -22,7 +23,7 @@ export function AdminShell({ children }: AdminShellProps) {
   const pathname = usePathname() ?? '';
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+    <DashboardPage className="space-y-6">
       <header className="space-y-1">
         <div className="flex items-center gap-2">
           <Shield className="h-6 w-6 text-brand" aria-hidden />
@@ -61,7 +62,7 @@ export function AdminShell({ children }: AdminShellProps) {
       </nav>
 
       <div>{children}</div>
-    </div>
+    </DashboardPage>
   );
 }
 

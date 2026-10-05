@@ -68,7 +68,7 @@ function ReelsNavArrow({ direction }: { direction: 'forward' | 'back' }) {
   }
 
   return (
-    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white">
+    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-brand-foreground">
       {icon}
     </span>
   );
@@ -297,7 +297,8 @@ function ReelsPanel({
             </div>
             <h2 className="mt-4 text-lg font-semibold text-white">Ingen Reels publisert ennå</h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-white/75">
-              Godkjente spørsmål fra stortingssaker vises her.
+              Når administratorer har godkjent systemgenererte ja/nei/blank-spørsmål fra stortingssaker, vises de her.
+              Vi viser ikke mock-spørsmål.
             </p>
           </EmptyLineState>
         </div>
