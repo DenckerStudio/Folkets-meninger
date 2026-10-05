@@ -7,11 +7,11 @@ function read(rel: string): string {
 }
 
 const reelsStage = read('components/polls/utforsk-reels-stage.tsx');
-assert.match(reelsStage, /from '@\/components\/dashboard\/empty-state'/);
+assert.match(reelsStage, /from '@\/components\/motion\/empty-line'/);
 assert.match(reelsStage, /Ingen Reels publisert ennå/);
 assert.match(reelsStage, /SYSTEM_REEL_DISCLAIMER/);
 assert.match(reelsStage, /ja\/nei\/blank/);
-assert.doesNotMatch(reelsStage, /EmptyLineState/);
+assert.match(reelsStage, /EmptyLineState/);
 assert.doesNotMatch(reelsStage, /border-dashed border-border bg-card px-6 py-12/);
 
 const adminForslag = read('app/dashboard/admin/forslag/admin-forslag-client.tsx');
