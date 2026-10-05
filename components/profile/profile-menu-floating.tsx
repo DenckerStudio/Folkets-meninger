@@ -30,6 +30,7 @@ export function ProfileMenuFloating() {
 
   return (
     <div
+      data-site-chrome
       className="pointer-events-none fixed right-4 bottom-4 z-40 pb-[env(safe-area-inset-bottom,0px)] md:hidden"
       aria-hidden={false}
     >

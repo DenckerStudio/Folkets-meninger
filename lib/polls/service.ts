@@ -1,4 +1,4 @@
-import { getServiceSupabase } from '@/lib/supabase';
+import { getAnonSupabase, getServiceSupabase } from '@/lib/supabase';
 import { emptyPollTotals } from '@/lib/polls/format';
 import { isPollAlreadyExistsError, normalizePollIssueId } from '@/lib/polls/already-exists';
 import { nextPollStatusForAction, type PollStatusAction } from '@/lib/polls/apply-status';
@@ -142,20 +142,30 @@ export async function listOpenPolls(limit = 30): Promise<PollRecord[]> {
 }
 
 export async function listOpenSystemPolls(limit = 30): Promise<PollRecord[]> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
-  const service = getServiceSupabase();
-  const rows = await listPollRows(
-    (select) =>
-      service
-        .from('polls')
-        .select(select)
-        .eq('track', 'system')
-        .in('status', ['open', 'closed'])
-        .order('created_at', { ascending: false })
-        .limit(limit),
-    'listOpenSystemPolls',
-  );
-  return rows.map(mapPollRow);
+  const query = (client: ReturnType<typeof getAnonSupabase>) =>
+    listPollRows(
+      (select) =>
+        client
+          .from('polls')
+          .select(select)
+          .eq('track', 'system')
+          .in('status', ['open', 'closed'])
+          .order('created_at', { ascending: false })
+          .limit(limit),
+      'listOpenSystemPolls',
+    );
+
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const rows = await query(getServiceSupabase());
+      if (rows.length > 0) return rows.map(mapPollRow);
+    } catch {
+      // Dead or mismatched service-role host — fall through to public read.
+    }
+  }
+
+  const publicRows = await query(getAnonSupabase());
+  return publicRows.map(mapPollRow);
 }
 
 export async function listSystemPollDrafts(limit = 50): Promise<PollRecord[]> {
