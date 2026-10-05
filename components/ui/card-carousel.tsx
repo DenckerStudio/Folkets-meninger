@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperType } from 'swiper';
 import { Autoplay, EffectCoverflow, Navigation, Pagination } from 'swiper/modules';
-import { SparklesIcon } from 'lucide-react';
+import { CivicBubble } from '@/components/icons/civic';
 
 import 'swiper/css';
 import 'swiper/css/effect-coverflow';
@@ -31,6 +31,8 @@ type CardCarouselProps = {
   loop?: boolean;
   onSlideClick?: (index: number) => void;
   onSwiper?: (swiper: SwiperType) => void;
+  /** Full-viewport slides for the Reels modal. */
+  fill?: boolean;
 };
 
 export const CardCarousel: React.FC<CardCarouselProps> = ({
@@ -47,6 +49,7 @@ export const CardCarousel: React.FC<CardCarouselProps> = ({
   loop,
   onSlideClick,
   onSwiper,
+  fill = false,
 }) => {
   const uid = useId().replace(/:/g, '');
 
@@ -71,45 +74,64 @@ export const CardCarousel: React.FC<CardCarouselProps> = ({
       : false;
 
   return (
-    <section className={cn('w-full space-y-4', className)}>
+    <section className={cn('w-full', fill ? 'flex h-full min-h-0 flex-col' : 'space-y-4', className)}>
       <style>{`
         .card-carousel-${uid} .swiper {
           width: 100%;
-          padding-bottom: 50px;
+          height: ${fill ? '100%' : 'auto'};
+          padding-bottom: ${fill ? '36px' : '50px'};
         }
         .card-carousel-${uid} .swiper-slide {
           background-position: center;
           background-size: cover;
-          width: 280px;
+          width: ${fill ? '100%' : '280px'};
+          height: ${fill ? '100%' : 'auto'};
         }
         .card-carousel-${uid} .swiper-3d .swiper-slide-shadow-left,
         .card-carousel-${uid} .swiper-3d .swiper-slide-shadow-right {
           background-image: none;
           background: none;
         }
+        .card-carousel-${uid} .swiper-pagination-bullet {
+          background: ${fill ? 'rgba(255,255,255,0.45)' : 'var(--foreground)'};
+        }
         .card-carousel-${uid} .swiper-pagination-bullet-active {
-          background: var(--brand);
+          background: ${fill ? '#ffffff' : 'var(--brand)'};
         }
         .card-carousel-${uid} .swiper-button-next,
         .card-carousel-${uid} .swiper-button-prev {
-          color: var(--brand);
+          color: ${fill ? '#ffffff' : 'var(--brand)'};
         }
       `}</style>
-      <div className="mx-auto w-full max-w-4xl rounded-[24px] border border-border p-2 shadow-sm md:rounded-t-[44px]">
-        <div className="relative mx-auto flex w-full flex-col rounded-[24px] border border-border bg-muted/30 p-2 shadow-sm md:items-start md:gap-8 md:rounded-b-[20px] md:rounded-t-[40px] md:p-2">
-          {badge !== null ? (
+      <div
+        className={cn(
+          'mx-auto w-full',
+          fill
+            ? 'flex h-full min-h-0 flex-col'
+            : 'max-w-4xl rounded-[24px] border border-border p-2 shadow-sm md:rounded-t-[44px]',
+        )}
+      >
+        <div
+          className={cn(
+            'relative mx-auto flex w-full flex-col',
+            fill
+              ? 'h-full min-h-0'
+              : 'rounded-[24px] border border-border bg-muted/30 p-2 shadow-sm md:items-start md:gap-8 md:rounded-b-[20px] md:rounded-t-[40px] md:p-2',
+          )}
+        >
+          {badge !== null && !fill ? (
             <Badge
               variant="outline"
               className="absolute left-4 top-6 rounded-[14px] border border-border bg-card text-base text-foreground md:left-6"
             >
               {badge ?? (
                 <>
-                  <SparklesIcon className="fill-brand-accent/30 stroke-1 text-brand" /> Reels
+                  <CivicBubble className="h-4 w-4 text-brand" /> Reels
                 </>
               )}
             </Badge>
           ) : null}
-          {(title || description) && (
+          {!fill && (title || description) && (
             <div className="flex flex-col justify-center pb-2 pl-4 pt-14 md:items-center">
               <div className="flex gap-2">
                 <div>
@@ -124,30 +146,38 @@ export const CardCarousel: React.FC<CardCarouselProps> = ({
             </div>
           )}
 
-          <div className="flex w-full items-center justify-center gap-4">
-            <div className={cn('w-full', `card-carousel-${uid}`)}>
+          <div className={cn('flex w-full items-center justify-center gap-4', fill && 'min-h-0 flex-1')}>
+            <div className={cn('w-full', fill && 'h-full', `card-carousel-${uid}`)}>
               {contentSlides.length === 0 ? (
                 <div className="flex min-h-[18rem] items-center justify-center px-6 py-12 text-center text-sm text-muted-foreground">
                   Ingen kort å vise ennå.
                 </div>
               ) : (
                 <Swiper
-                  spaceBetween={50}
+                  spaceBetween={fill ? 0 : 50}
                   autoplay={autoplay}
-                  effect="coverflow"
+                  effect={fill ? undefined : 'coverflow'}
                   grabCursor
                   centeredSlides
                   loop={canLoop}
-                  slidesPerView="auto"
-                  coverflowEffect={{
-                    rotate: 0,
-                    stretch: 0,
-                    depth: 100,
-                    modifier: 2.5,
-                  }}
+                  slidesPerView={fill ? 1 : 'auto'}
+                  coverflowEffect={
+                    fill
+                      ? undefined
+                      : {
+                          rotate: 0,
+                          stretch: 0,
+                          depth: 100,
+                          modifier: 2.5,
+                        }
+                  }
                   pagination={showPagination}
                   navigation={showNavigation}
-                  modules={[EffectCoverflow, Autoplay, Pagination, Navigation]}
+                  modules={
+                    fill
+                      ? [Autoplay, Pagination, Navigation]
+                      : [EffectCoverflow, Autoplay, Pagination, Navigation]
+                  }
                   onSwiper={onSwiper}
                 >
                   {contentSlides.map((slide, index) => (

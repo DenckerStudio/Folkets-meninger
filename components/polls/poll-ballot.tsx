@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { pollChoicePercent } from '@/lib/polls/format';
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
+import { VoteFillButton } from '@/components/motion/vote-fill';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -77,24 +78,23 @@ export function PollBallot({
         {CHOICES.map((choice) => {
           const selected = userVote === choice;
           return (
-            <button
+            <VoteFillButton
               key={choice}
-              type="button"
+              selected={selected}
               disabled={!votingOpen || Boolean(userVote) || busy}
-              onClick={() => vote(choice)}
+              onClick={() => void vote(choice)}
               className={cn(
                 'rounded-xl border px-4 py-3 text-sm font-semibold transition-colors',
-                selected
-                  ? 'border-brand bg-brand text-white'
-                  : 'border-border bg-background text-foreground hover:border-brand/40 hover:bg-brand/5',
                 (!votingOpen || userVote) && !selected ? 'opacity-60' : '',
               )}
+              selectedClassName="border-brand text-white"
+              idleClassName="border-border bg-background text-foreground hover:border-brand/40 hover:bg-brand/5"
             >
               {pollChoiceLabel(choice)}
               <span className="mt-1 block text-xs font-normal opacity-80">
                 {pollChoicePercent(totals, choice)}% · {totals[choice]}
               </span>
-            </button>
+            </VoteFillButton>
           );
         })}
       </div>

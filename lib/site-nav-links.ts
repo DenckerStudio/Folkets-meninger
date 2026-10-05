@@ -48,7 +48,10 @@ export const isHoringerActive: NavIsActive = (pathname) =>
   pathname === routes.horinger || pathname.startsWith(`${routes.horinger}/`);
 
 export const isForslagActive: NavIsActive = (pathname) =>
-  pathname === routes.forslag || pathname.startsWith(`${routes.forslag}/`);
+  pathname === routes.forslag ||
+  pathname.startsWith(`${routes.forslag}/`) ||
+  pathname === `${DASHBOARD_PREFIX}/forslag` ||
+  pathname.startsWith(`${DASHBOARD_PREFIX}/forslag/`);
 
 export const isKalenderActive: NavIsActive = (pathname) =>
   pathname === routes.kalender || pathname.startsWith(`${routes.kalender}/`);
@@ -92,7 +95,7 @@ export const coreNavItems: SiteNavLinkItem[] = [
     isActive: isHoringerActive,
   },
   {
-    title: 'Forslag',
+    title: 'Appens fremtid',
     href: routes.forslag,
     icon: Lightbulb,
     isActive: isForslagActive,
@@ -182,7 +185,7 @@ export const mobileNavItems = [
     isActive: isHoringerActive,
   },
   {
-    label: 'Forslag',
+    label: 'Fremtid',
     href: routes.forslag,
     icon: Lightbulb,
     isActive: isForslagActive,

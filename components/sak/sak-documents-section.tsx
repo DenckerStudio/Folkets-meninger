@@ -192,7 +192,7 @@ function SakDocumentViewer({
           <iframe
             title={content.title}
             srcDoc={content.html}
-            className="h-[min(70vh,720px)] w-full bg-white"
+            className="h-[min(50dvh,560px)] w-full max-w-full bg-white"
             sandbox="allow-same-origin"
           />
         </div>
@@ -241,7 +241,7 @@ export function SakDocumentsSection({
 
   return (
     <>
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
         <div className="mb-4 flex items-center gap-2">
           <FileText className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
           <h2 className="text-lg font-bold text-foreground">Tilknyttede dokumenter</h2>
@@ -261,7 +261,7 @@ export function SakDocumentsSection({
                       onClick={() => setActiveDocument(doc)}
                       className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-left transition-colors hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30"
                     >
-                      <span className="text-sm font-medium text-foreground">{doc.title}</span>
+                      <span className="min-w-0 text-sm font-medium break-words text-foreground">{doc.title}</span>
                       <span className="shrink-0 text-xs text-muted-foreground">
                         {statusLabel(doc.ingestStatus, doc.viewable)}
                       </span>

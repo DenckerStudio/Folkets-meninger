@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { OPINION_BODY_MIN, OPINION_POINT_TEXT_MAX } from './types';
 import {
+  describeOpinionComposerGaps,
   emptyOpinionPointDrafts,
   hasOpinionFieldErrors,
   isOpinionCreateStance,
@@ -98,5 +100,87 @@ assert.deepEqual(okReply, {});
 
 const okBlankReply = validateReplyDraft({ body: '', stance: 'blank' });
 assert.deepEqual(okBlankReply, {});
+
+
+assert.equal(OPINION_POINT_TEXT_MAX, 280);
+assert.equal(OPINION_BODY_MIN, 250);
+
+const point280 = 'p'.repeat(280);
+const atPointMax = validateOpinionPoints([
+  { stance: 'for', text: point280 },
+  { stance: 'imot', text: 'Kostnaden kan bli høy uten tydelig finansiering.' },
+  { stance: 'for', text: 'Klimamålene nås raskere med buss og tog.' },
+]);
+assert.equal(atPointMax.error, undefined);
+
+const overPointMax = validateOpinionPoints([
+  { stance: 'for', text: 'p'.repeat(281) },
+  { stance: 'imot', text: 'Kostnaden kan bli høy uten tydelig finansiering.' },
+  { stance: 'for', text: 'Klimamålene nås raskere med buss og tog.' },
+]);
+assert.match(overPointMax.error ?? '', /280/);
+
+const basePoints = [
+  { stance: 'for', text: 'Bedre kollektiv gir flere reisende i distriktene.' },
+  { stance: 'imot', text: 'Kostnaden kan bli høy uten tydelig finansiering.' },
+  { stance: 'for', text: 'Klimamålene nås raskere med buss og tog.' },
+];
+
+const allMissing = describeOpinionComposerGaps({
+  issueId: null,
+  stance: null,
+  body: '',
+  points: emptyOpinionPointDrafts(),
+});
+assert.match(allMissing, /Velg en sak, deretter For eller Imot/);
+assert.match(allMissing, /250 tegn igjen til minstekravet/);
+assert.match(allMissing, /minst ett punkt for og ett punkt imot/);
+assert.doesNotMatch(allMissing, /under 12/);
+
+const ready = describeOpinionComposerGaps({
+  issueId: 'sak-1',
+  stance: 'for',
+  body: 'x'.repeat(250),
+  points: basePoints,
+});
+assert.equal(ready, '');
+
+const bodyLeft = describeOpinionComposerGaps({
+  issueId: 'sak-1',
+  stance: 'imot',
+  body: 'x'.repeat(249),
+  points: basePoints,
+});
+assert.equal(bodyLeft, '1 tegn igjen til minstekravet.');
+assert.doesNotMatch(bodyLeft, /sak/);
+assert.doesNotMatch(bodyLeft, /For eller Imot/);
+
+const needsImot = describeOpinionComposerGaps({
+  issueId: 'sak-1',
+  stance: 'for',
+  body: 'x'.repeat(250),
+  points: [
+    { stance: 'for', text: 'Bedre kollektiv gir flere reisende i distriktene.' },
+    { stance: 'for', text: 'Kort punkt' },
+    { stance: 'for', text: 'Klimamålene nås raskere med buss og tog.' },
+  ],
+});
+assert.match(needsImot, /Ta med minst ett punkt imot/);
+assert.match(needsImot, /Ett kulepunkt er under 12 tegn/);
+assert.doesNotMatch(needsImot, /punkt for og/);
+
+const twoShort = describeOpinionComposerGaps({
+  issueId: 'sak-1',
+  stance: 'for',
+  body: 'x'.repeat(250),
+  points: [
+    { stance: 'for', text: 'Kort for' },
+    { stance: 'imot', text: 'Kort imot' },
+    { stance: 'for', text: 'Klimamålene nås raskere med buss og tog.' },
+  ],
+});
+assert.match(twoShort, /2 kulepunkter er under 12 tegn/);
+assert.match(twoShort, /Ta med minst ett punkt imot/);
+assert.doesNotMatch(twoShort, /punkt for og/);
 
 console.log('opinions/validate.test.ts: ok');

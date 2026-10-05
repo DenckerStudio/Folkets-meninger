@@ -1,3 +1,5 @@
+import type { SakTreatmentStatus } from '@/lib/sak-status';
+
 export const OPINION_STANCES = ['for', 'blank', 'imot'] as const;
 /** Visual order matching the Norwegian flag: red, white, blue. */
 export const OPINION_FLAG_STANCES = ['imot', 'blank', 'for'] as const;
@@ -17,7 +19,7 @@ export const OPINION_LIST_PAGE_SIZE = 40;
 export const OPINION_POINTS_MIN = 3;
 export const OPINION_POINTS_MAX = 8;
 export const OPINION_POINT_TEXT_MIN = 12;
-export const OPINION_POINT_TEXT_MAX = 180;
+export const OPINION_POINT_TEXT_MAX = 280;
 
 export type OpinionPoint = {
   stance: OpinionPointStance;
@@ -68,4 +70,5 @@ export type SakPickerOption = {
   title: string;
   category: string | null;
   henvisning: string | null;
+  status?: SakTreatmentStatus;
 };

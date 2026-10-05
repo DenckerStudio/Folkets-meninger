@@ -34,7 +34,7 @@ Relatert produktarbeid: avstemninger/initiativ (PR #57, `polls` / `citizen_initi
 - Liste topp-kallere:
   - App: `lib/stortinget-saker-cache.ts`, `lib/stortinget-detail-cache.ts`, `lib/forum/queries.ts` (fjernes), document chunks / RAG.
   - n8n: workflows som SELECT fra Postgres uten `LIMIT` (forum-prompts, embeddings, AI summary med `detail_json`).
-- Dokumenter nåværende Coolify-tjenester: n8n, Ollama, SearXNG (`infra/searxng/`), Fider (feature requests).
+- Dokumenter nåværende Coolify-tjenester: n8n, Ollama, SearXNG (`infra/searxng/`). Fider kan fortsatt kjøre på Coolify, men appen bruker det ikke.
 - Definer **SLO**: mål egress % reduksjon etter C1+C2 (f.eks. −30 % mot baseline).
 
 **Leveranse:** tabell «kilde → estimert egress → tiltak» i dette filens appendix (oppdateres etter C0).
@@ -73,15 +73,13 @@ Relatert produktarbeid: avstemninger/initiativ (PR #57, `polls` / `citizen_initi
 ### Fase C3 — Observability og grenser
 
 - Varsel når egress > terskel (Supabase billing eller daglig rapport).
-- Coolify healthchecks for Redis, n8n, Ollama, Fider.
+- Coolify healthchecks for Redis, n8n, Ollama.
 - Runbook: «Redis flush», «n8n workflow paused», «fallback uten cache».
 
-### Fider (feature requests)
+### Fider (ikke i bruk av appen)
 
-- **URL:** `https://feedback.folkets-meninger.no` (`FIDER_BASE_URL` i app + `BASE_URL` i Fider-container).
-- **OAuth callback (Fider admin):** `https://feedback.folkets-meninger.no/oauth/folkets/callback`
-- App SSO-bro: `docs/fider-oauth.md` — authorize/token/userinfo på `folketsstemme.no`, client id/secret i begge env.
-- Dashboard: **Forslag** → `/dashboard/forslag` (redirect, ikke iframe).
+- Coolify kan fortsatt hoste Fider på `https://feedback.folkets-meninger.no`. Denne endringen slår ikke av den tjenesten.
+- Folkets Stemme linker ikke lenger til Fider og har ingen OAuth-bro. **Appens fremtid** i appen er `/dashboard/appens-fremtid` (forslag, endringslogg og veikart i egne tabeller).
 
 ### Fase C4 — (valgfri, senere) self-host Postgres
 

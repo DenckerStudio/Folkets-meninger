@@ -34,9 +34,11 @@ export function InfoTooltip({ label, description, className, side = 'top' }: Inf
         id={tooltipId}
         role="tooltip"
         className={cn(
-          'pointer-events-none absolute z-50 w-64 rounded-lg border border-border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-lg transition-opacity',
-          side === 'top' ? 'bottom-full left-1/2 mb-2 -translate-x-1/2' : 'top-full left-1/2 mt-2 -translate-x-1/2',
-          open ? 'opacity-100' : 'opacity-0',
+          'pointer-events-none absolute z-50 w-[min(16rem,calc(100vw-2.5rem))] max-w-[min(16rem,calc(100vw-2.5rem))] rounded-lg border border-border bg-popover px-3 py-2 text-xs leading-relaxed break-words text-popover-foreground shadow-lg transition-opacity',
+          side === 'top'
+            ? 'bottom-full left-0 mb-2 sm:left-1/2 sm:-translate-x-1/2'
+            : 'top-full left-0 mt-2 sm:left-1/2 sm:-translate-x-1/2',
+          open ? 'opacity-100' : 'invisible opacity-0',
         )}
       >
         {description}

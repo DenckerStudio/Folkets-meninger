@@ -1,4 +1,10 @@
+import type { SakTreatmentStatus } from '@/lib/sak-status';
 import type { SakPickerOption } from './types';
+
+export const SAK_PICKER_BROWSE_PAGE_SIZE = 25;
+export const SAK_PICKER_SEARCH_LIMIT = 50;
+
+export type SakPickerStatusFilter = 'all' | SakTreatmentStatus;
 
 const STOPWORDS = new Set([
   'alle',
@@ -128,4 +134,101 @@ export function rankSakOptions(
     .sort((a, b) => b.score - a.score || a.option.title.localeCompare(b.option.title, 'nb'));
 
   return ranked.slice(0, limit).map((entry) => entry.option);
+}
+
+function compareBrowseOrder(a: SakPickerOption, b: SakPickerOption): number {
+  const aPending = a.status === 'pending' ? 1 : 0;
+  const bPending = b.status === 'pending' ? 1 : 0;
+  if (aPending !== bPending) return bPending - aPending;
+  return a.title.localeCompare(b.title, 'nb');
+}
+
+export function filterSakPickerOptions(
+  options: SakPickerOption[],
+  filters: { status?: SakPickerStatusFilter; category?: string | null },
+): SakPickerOption[] {
+  let next = options;
+  const status = filters.status ?? 'all';
+  if (status !== 'all') {
+    next = next.filter((option) => option.status === status);
+  }
+  const category = filters.category?.trim();
+  if (category) {
+    next = next.filter((option) => (option.category ?? '').toLowerCase() === category.toLowerCase());
+  }
+  return next;
+}
+
+export function topSakPickerCategories(options: SakPickerOption[], max = 10): string[] {
+  const counts = new Map<string, number>();
+  for (const option of options) {
+    const name = option.category?.trim();
+    if (!name) continue;
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'nb'))
+    .slice(0, max)
+    .map(([name]) => name);
+}
+
+export function sortSakOptionsForBrowse(options: SakPickerOption[]): SakPickerOption[] {
+  return [...options].sort(compareBrowseOrder);
+}
+
+export function buildSakPickerResultList(input: {
+  options: SakPickerOption[];
+  searchQuery: string;
+  titleContext: string;
+  statusFilter: SakPickerStatusFilter;
+  categoryFilter: string | null;
+  visibleCount: number;
+}): {
+  rows: SakPickerOption[];
+  listLabel: string;
+  totalMatching: number;
+  hasMore: boolean;
+  suggestionIds: Set<string>;
+} {
+  const filtered = filterSakPickerOptions(input.options, {
+    status: input.statusFilter,
+    category: input.categoryFilter,
+  });
+
+  const trimmedSearch = input.searchQuery.trim();
+  const hasSearch = trimmedSearch.length > 0;
+  const titleContext = input.titleContext.trim();
+  const hasTitleContext = tokenizeOpinionQuery(titleContext).length > 0 || titleContext.length >= 5;
+
+  let base: SakPickerOption[];
+  let listLabel: string;
+  const suggestionIds = new Set<string>();
+
+  if (hasSearch) {
+    const combined = [trimmedSearch, titleContext].filter(Boolean).join(' ');
+    base = rankSakOptions(filtered, combined, SAK_PICKER_SEARCH_LIMIT);
+    listLabel = 'Søketreff';
+  } else if (hasTitleContext) {
+    const suggestions = rankSakOptions(filtered, titleContext, 12);
+    for (const option of suggestions) suggestionIds.add(option.id);
+    const browse = sortSakOptionsForBrowse(
+      filtered.filter((option) => !suggestionIds.has(option.id)),
+    );
+    base = [...suggestions, ...browse];
+    listLabel = suggestions.length > 0 ? 'Forslag ut fra tittelen' : 'Saker du kan knytte til';
+  } else {
+    base = sortSakOptionsForBrowse(filtered);
+    listLabel =
+      input.statusFilter === 'pending'
+        ? 'Saker under behandling'
+        : input.statusFilter === 'closed'
+          ? 'Ferdigbehandlede saker'
+          : 'Alle saker';
+  }
+
+  const totalMatching = base.length;
+  const rows = base.slice(0, input.visibleCount);
+  const hasMore = totalMatching > input.visibleCount;
+
+  return { rows, listLabel, totalMatching, hasMore, suggestionIds };
 }

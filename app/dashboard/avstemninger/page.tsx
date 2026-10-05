@@ -19,7 +19,7 @@ export default async function AvstemningerPage() {
     <DashboardPage>
       <PageHeader
         title="Avstemninger"
-        description="Nasjonale spørsmål med Ja, Nei eller Blank. Stortingssaker som kildedokumenter ligger under Utforsk."
+        description="Ja, nei eller blank. Saker ligger under Utforsk."
       />
       {withTotals.length === 0 ? (
         <EmptyState

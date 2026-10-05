@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import FadeIn from '@/components/fade-in';
 import { PageHeader } from '@/components/page-header';
@@ -18,7 +19,9 @@ export default async function PolitikerePage() {
         />
       </FadeIn>
 
-      <PolitikereExplorer politikere={politikere} />
+      <Suspense fallback={null}>
+        <PolitikereExplorer politikere={politikere} />
+      </Suspense>
     </DashboardPage>
   );
 }

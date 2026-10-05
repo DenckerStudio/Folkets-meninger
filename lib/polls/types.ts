@@ -31,6 +31,7 @@ export type PollGenerationMetadata = {
   rag_chunks?: unknown[];
   political_choice?: string;
   model?: string;
+  candidate_ratings?: unknown;
   [key: string]: unknown;
 };
 

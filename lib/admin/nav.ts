@@ -1,12 +1,12 @@
-import type { LucideIcon } from 'lucide-react';
+import type { ComponentType } from 'react';
 import {
   BarChart3,
   Bell,
   LayoutDashboard,
-  Sparkles,
-  Star,
+  Lightbulb,
   Users,
 } from 'lucide-react';
+import { CivicBubble, CivicHeart } from '@/components/icons/civic';
 import { routes } from '@/lib/routes';
 
 export type AdminNavItem = {
@@ -14,17 +14,25 @@ export type AdminNavItem = {
   title: string;
   description: string;
   href?: string;
-  icon: LucideIcon;
+  icon: ComponentType<{ className?: string }>;
   status: 'active' | 'coming';
 };
 
 export const adminNavItems: AdminNavItem[] = [
   {
+    id: 'appens-fremtid',
+    title: 'Appens fremtid',
+    description: 'Forslag, endringslogg og veikart',
+    href: routes.adminForslag,
+    icon: Lightbulb,
+    status: 'active',
+  },
+  {
     id: 'reels',
     title: 'Reels',
     description: 'Systemgenererte avstemninger fra stortingssaker',
     href: routes.adminReels,
-    icon: Sparkles,
+    icon: CivicBubble,
     status: 'active',
   },
   {
@@ -39,21 +47,23 @@ export const adminNavItems: AdminNavItem[] = [
     id: 'brukere',
     title: 'Brukere',
     description: 'Roller og tilganger for administratorer',
+    href: routes.adminBrukere,
     icon: Users,
-    status: 'coming',
+    status: 'active',
+  },
+  {
+    id: 'stemme-plus',
+    title: 'Stemme+',
+    description: 'Manuell tildeling av støttemedlemskap',
+    href: routes.adminStemmePlus,
+    icon: CivicHeart,
+    status: 'active',
   },
   {
     id: 'varsler',
     title: 'Varsler',
     description: 'Utsendelser og varsling til brukere',
     icon: Bell,
-    status: 'coming',
-  },
-  {
-    id: 'stemme-plus',
-    title: 'Stemme+',
-    description: 'Abonnement og premium-funksjoner',
-    icon: Star,
     status: 'coming',
   },
 ];

@@ -144,7 +144,7 @@ export function ProfileInterests({
       )}
       <ProfileCard
         title="Interesseområder"
-        description="Velg hvilke saksområder du ønsker å følge ekstra nøye med på."
+        description="Saksområder du vil følge."
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {INTEREST_OPTIONS.map((cat) => (
@@ -179,7 +179,7 @@ export function ProfileInterests({
 
       <ProfileCard
         title="AI-emner"
-        description="Abonner på varsler når nye saker får disse AI-genererte emneordene."
+        description="Varsler når nye saker får disse emneordene."
       >
         {popularLabels.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">

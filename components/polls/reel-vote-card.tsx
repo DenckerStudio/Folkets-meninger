@@ -3,7 +3,8 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
-import { Sparkles } from 'lucide-react';
+import { CivicBubble } from '@/components/icons/civic';
+import { VoteFillButton } from '@/components/motion/vote-fill';
 import { useAuth } from '@/hooks/use-auth';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { isPollVotingOpen } from '@/lib/polls/format';
@@ -64,22 +65,22 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
     onClick: () => void;
   }[] = [
     {
-      key: 'ja',
-      label: 'Ja',
-      className: 'bg-brand-accent text-white hover:bg-brand-accent/90',
-      onClick: () => void vote('ja'),
-    },
-    {
       key: 'nei',
       label: 'Nei',
-      className: 'bg-background text-brand hover:bg-background/90',
+      className: 'bg-[#ba0c2f] text-white hover:bg-[#ba0c2f]/90',
       onClick: () => void vote('nei'),
     },
     {
       key: 'tilbake',
       label: 'Tilbake',
-      className: 'bg-brand text-brand-foreground hover:bg-brand/90',
+      className: 'bg-white text-[#00205b] hover:bg-white/90',
       onClick: onBack,
+    },
+    {
+      key: 'ja',
+      label: 'Ja',
+      className: 'bg-[#00205b] text-white hover:bg-[#00205b]/90',
+      onClick: () => void vote('ja'),
     },
   ];
 
@@ -88,6 +89,9 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
       <div className="space-y-2">
         <p className="text-[11px] font-medium uppercase tracking-wide text-white/70">Hva mener du?</p>
         <h3 className="text-lg font-semibold leading-snug text-white sm:text-xl">{item.poll.title}</h3>
+        {item.poll.neutralSummary ? (
+          <p className="text-sm leading-relaxed text-white/80">{item.poll.neutralSummary}</p>
+        ) : null}
       </div>
 
       <div>
@@ -106,9 +110,8 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
         <div className="overflow-hidden rounded-2xl shadow-lg">
           <AnimatePresence>
             {buttons.map((button, index) => (
-              <motion.button
+              <motion.div
                 key={button.key}
-                type="button"
                 custom={index}
                 initial={reducedMotion ? false : { opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -116,16 +119,20 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
                   ...SLIDE,
                   delay: reducedMotion ? 0 : 0.05 + index * 0.07,
                 }}
-                disabled={button.key !== 'tilbake' && (busy || Boolean(userVote) || !votingOpen)}
-                onClick={button.onClick}
-                className={cn(
-                  'flex w-full items-center justify-center px-4 py-4 text-base font-bold tracking-wide transition-opacity disabled:opacity-60',
-                  button.className,
-                  userVote === button.key ? 'ring-2 ring-inset ring-white/80' : '',
-                )}
               >
-                {button.label}
-              </motion.button>
+                <VoteFillButton
+                  selected={userVote === button.key}
+                  disabled={button.key !== 'tilbake' && (busy || Boolean(userVote) || !votingOpen)}
+                  onClick={button.onClick}
+                  className={cn(
+                    'flex w-full items-center justify-center px-4 py-4 text-base font-bold tracking-wide transition-opacity disabled:opacity-60',
+                    button.className,
+                    userVote === button.key ? 'ring-2 ring-inset ring-white/80' : '',
+                  )}
+                >
+                  {button.label}
+                </VoteFillButton>
+              </motion.div>
             ))}
           </AnimatePresence>
         </div>
@@ -139,17 +146,26 @@ export function ReelCarouselCard({
   selected,
   onSelect,
   onBack,
+  fill = false,
 }: {
   item: SystemReelFeedItem;
   selected: boolean;
   onSelect: () => void;
   onBack: () => void;
+  fill?: boolean;
 }) {
   const reducedMotion = usePrefersReducedMotion();
   const pointerStart = useRef({ x: 0, y: 0 });
 
   return (
-    <div className="h-[22rem] w-[17.5rem] overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+    <div
+      className={cn(
+        'overflow-hidden bg-card shadow-sm',
+        fill
+          ? 'h-full w-full rounded-none border-0'
+          : 'h-[22rem] w-[17.5rem] rounded-3xl border border-border',
+      )}
+    >
       <motion.div
         className="flex h-full w-[200%]"
         animate={{ x: selected ? '-50%' : '0%' }}
@@ -169,18 +185,15 @@ export function ReelCarouselCard({
           className="flex h-full w-1/2 flex-col justify-between bg-gradient-to-b from-brand to-brand/80 p-5 text-left text-white"
         >
           <span className="inline-flex items-center gap-1 self-start rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">
-            <Sparkles className="h-3 w-3" aria-hidden />
+            <CivicBubble className="h-3 w-3" />
             Reels
           </span>
           <div className="space-y-2">
             <h3 className="text-lg font-semibold leading-snug sm:text-xl">{item.poll.title}</h3>
-            {item.poll.neutralSummary ? (
-              <p className="line-clamp-4 text-sm leading-relaxed text-white/80">{item.poll.neutralSummary}</p>
-            ) : null}
           </div>
           <p className="text-xs font-medium text-white/70">Trykk for å stemme</p>
         </button>
-        <div className="h-full w-1/2 bg-brand p-5">
+        <div className={cn('h-full w-1/2 bg-brand p-5', fill && 'pt-16')}>
           <ReelFlagVote key={item.poll.id} item={item} onBack={onBack} />
         </div>
       </motion.div>

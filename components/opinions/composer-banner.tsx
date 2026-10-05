@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
@@ -10,16 +10,20 @@ import { STANCE_VISUAL } from '@/lib/opinions/labels';
 import {
   OPINION_BODY_MAX,
   OPINION_BODY_MIN,
-  OPINION_POINTS_MIN,
-  OPINION_POINT_TEXT_MAX,
-  OPINION_POINT_TEXT_MIN,
   OPINION_TITLE_MAX,
   OPINION_TITLE_MIN,
   type OpinionCreateStance,
   type OpinionPoint,
   type SakPickerOption,
 } from '@/lib/opinions/types';
-import { emptyOpinionPointDrafts, validateOpinionPoints } from '@/lib/opinions/validate';
+import {
+  clearOpinionComposerDraft,
+  hasOpinionComposerDraftContent,
+  readOpinionComposerDraft,
+  resolveOpinionComposerDraft,
+  writeOpinionComposerDraft,
+} from '@/lib/opinions/draft';
+import { describeOpinionComposerGaps, emptyOpinionPointDrafts, validateOpinionPoints } from '@/lib/opinions/validate';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -30,7 +34,8 @@ type ComposerBannerProps = {
 };
 
 export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState('');
@@ -41,6 +46,16 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
   const [error, setError] = useState('');
   const [pointsError, setPointsError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
+  const editedRef = useRef(false);
+  const publishedRef = useRef(false);
+  const appliedIdentityRef = useRef<string | undefined>(undefined);
+
+  function markEdited() {
+    editedRef.current = true;
+    publishedRef.current = false;
+  }
+
   const [remoteOptions, setRemoteOptions] = useState<SakPickerOption[]>([]);
   const [loadingSaker, setLoadingSaker] = useState(sakOptions.length === 0);
 
@@ -69,6 +84,44 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
     };
   }, [sakOptions.length]);
 
+  useEffect(() => {
+    if (!draftReady) return;
+    if (appliedIdentityRef.current !== (userId ?? '')) return;
+    const draft = { title, issueId, stance, body, points };
+    if (publishedRef.current || !hasOpinionComposerDraftContent(draft)) {
+      clearOpinionComposerDraft(window.localStorage, userId);
+      return;
+    }
+    writeOpinionComposerDraft(window.localStorage, userId, draft);
+  }, [body, draftReady, issueId, points, stance, title, userId]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    const identity = userId ?? '';
+    if (appliedIdentityRef.current === identity) return;
+    const hadIdentity = appliedIdentityRef.current !== undefined;
+    if (!editedRef.current) {
+      const saved = readOpinionComposerDraft(window.localStorage, userId);
+      const draft = resolveOpinionComposerDraft(false, saved);
+      if (draft) {
+        setTitle(draft.title);
+        setBody(draft.body);
+        setIssueId(draft.issueId);
+        setStance(draft.stance);
+        setPoints(draft.points);
+        setExpanded(true);
+      } else if (hadIdentity) {
+        setTitle('');
+        setBody('');
+        setIssueId(null);
+        setStance(null);
+        setPoints(emptyOpinionPointDrafts());
+      }
+    }
+    appliedIdentityRef.current = identity;
+    setDraftReady(true);
+  }, [authLoading, userId]);
+
   const mergedOptions = useMemo(() => {
     const seen = new Set<string>();
     const merged: SakPickerOption[] = [];
@@ -83,6 +136,8 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
   const titleLength = title.trim().length;
   const bodyLength = body.trim().length;
   const bodyRemaining = Math.max(0, OPINION_BODY_MIN - bodyLength);
+  const missingHint = describeOpinionComposerGaps({ issueId, stance, body, points });
+  const showDiscard = hasOpinionComposerDraftContent({ title, issueId, stance, body, points });
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -135,6 +190,15 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
         return;
       }
       if (data.opinionId) {
+        publishedRef.current = true;
+        clearOpinionComposerDraft(window.localStorage, userId);
+        setTitle('');
+        setBody('');
+        setIssueId(null);
+        setStance(null);
+        setPoints(emptyOpinionPointDrafts());
+        setError('');
+        setPointsError('');
         router.push(routes.opinion(data.opinionId));
         router.refresh();
       }
@@ -150,8 +214,22 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
       setError('Velg en sak før du tar standpunkt.');
       return;
     }
+    markEdited();
     setStance(next);
     setError('');
+  }
+
+  function discardDraft() {
+    markEdited();
+    publishedRef.current = false;
+    setTitle('');
+    setBody('');
+    setIssueId(null);
+    setStance(null);
+    setPoints(emptyOpinionPointDrafts());
+    setError('');
+    setPointsError('');
+    clearOpinionComposerDraft(window.localStorage, userId);
   }
 
   return (
@@ -186,21 +264,33 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
               <h2 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
                 Del din mening
               </h2>
-              <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                Velg saken først, deretter For eller Imot. Tittel: {OPINION_TITLE_MIN}–{OPINION_TITLE_MAX} tegn.
-                Begrunnelse: minst {OPINION_BODY_MIN} tegn. Kulepunkter: minst {OPINION_POINTS_MIN}, hver på{' '}
-                {OPINION_POINT_TEXT_MIN}–{OPINION_POINT_TEXT_MAX} tegn.
-              </p>
+              {missingHint ? (
+                <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                  {missingHint}
+                </p>
+              ) : null}
             </div>
-            <button
-              type="button"
-              data-composer-cta="close"
-              onClick={() => setExpanded(false)}
-              className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-brand hover:underline"
-            >
-              Skjul
-              <ChevronUp className="h-4 w-4" />
-            </button>
+            <div className="flex shrink-0 items-center gap-4">
+              {showDiscard ? (
+                <button
+                  type="button"
+                  data-composer-cta="discard"
+                  onClick={discardDraft}
+                  className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-brand hover:underline"
+                >
+                  Forkast utkast
+                </button>
+              ) : null}
+              <button
+                type="button"
+                data-composer-cta="close"
+                onClick={() => setExpanded(false)}
+                className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-brand hover:underline"
+              >
+                Skjul
+                <ChevronUp className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           <div>
@@ -216,7 +306,10 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
               id="opinion-title"
               type="text"
               value={title}
-              onChange={(event) => setTitle(event.target.value)}
+              onChange={(event) => {
+                markEdited();
+                setTitle(event.target.value);
+              }}
               placeholder="Tittel på meningen"
               maxLength={OPINION_TITLE_MAX}
               className="w-full rounded-2xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-brand/30"
@@ -227,6 +320,7 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
             options={mergedOptions}
             value={issueId}
             onChange={(next) => {
+              markEdited();
               setIssueId(next);
               if (!next) setStance(null);
               setError('');
@@ -290,7 +384,10 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
             <textarea
               id="opinion-body"
               value={body}
-              onChange={(event) => setBody(event.target.value)}
+              onChange={(event) => {
+                markEdited();
+                setBody(event.target.value);
+              }}
               rows={7}
               maxLength={OPINION_BODY_MAX}
               placeholder={`Skriv minst ${OPINION_BODY_MIN} tegn om hvorfor du mener dette.`}
@@ -301,6 +398,7 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
           <OpinionPointsEditor
             value={points}
             onChange={(next) => {
+              markEdited();
               setPoints(next);
               setPointsError('');
             }}

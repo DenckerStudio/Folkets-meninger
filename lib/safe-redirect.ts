@@ -4,7 +4,6 @@ const ALLOWED_PREFIXES = [
   '/dashboard',
   '/auth/login',
   '/innspill',
-  '/api/oauth/fider/authorize',
   '/',
 ] as const;
 

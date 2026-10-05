@@ -44,23 +44,56 @@ export function usePollDraftGeneration() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(issueId ? { stortinget_issue_id: issueId } : {}),
     });
-    const data = await res.json().catch(() => ({}));
+    const data = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      alreadyExists?: boolean;
+      draft?: PollRecord;
+    };
     if (!res.ok) {
       throw new Error(typeof data.error === 'string' ? data.error : 'Kunne ikke starte generering');
     }
 
-    const job: PollDraftGenerationJob = {
-      key,
-      issueId: issueId?.trim() ? issueId.trim() : null,
-      startedAt: Date.now(),
-      status: 'generating',
-      knownDraftIds,
-    };
+    const existingDraft =
+      data.alreadyExists && data.draft
+        ? data.draft
+        : issueId
+          ? findCompletedDraft(
+              {
+                key,
+                issueId: issueId.trim(),
+                startedAt: Date.now(),
+                status: 'generating',
+                knownDraftIds,
+              },
+              currentDrafts,
+            )
+          : null;
+
+    const job: PollDraftGenerationJob = existingDraft
+      ? {
+          key,
+          issueId: issueId?.trim() ? issueId.trim() : existingDraft.stortingetIssueId,
+          startedAt: Date.now(),
+          status: 'ready',
+          knownDraftIds,
+          draftId: existingDraft.id,
+        }
+      : {
+          key,
+          issueId: issueId?.trim() ? issueId.trim() : null,
+          startedAt: Date.now(),
+          status: 'generating',
+          knownDraftIds,
+        };
 
     setJobs((current) => {
       const withoutKey = current.filter((entry) => entry.key !== key);
       return [...withoutKey, job];
     });
+
+    if (existingDraft) {
+      window.dispatchEvent(new CustomEvent('poll-drafts:ready'));
+    }
 
     return job;
   }, []);
