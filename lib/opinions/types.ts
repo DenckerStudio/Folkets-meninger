@@ -1,3 +1,5 @@
+import type { SakTreatmentStatus } from '@/lib/sak-status';
+
 export const OPINION_STANCES = ['for', 'blank', 'imot'] as const;
 /** Visual order matching the Norwegian flag: red, white, blue. */
 export const OPINION_FLAG_STANCES = ['imot', 'blank', 'for'] as const;
@@ -68,4 +70,5 @@ export type SakPickerOption = {
   title: string;
   category: string | null;
   henvisning: string | null;
+  status?: SakTreatmentStatus;
 };

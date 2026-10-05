@@ -24,6 +24,7 @@ import {
   validateOpinionPoints,
   validateReplyDraft,
 } from '@/lib/opinions/validate';
+import { resolveSakListStatus } from '@/lib/sak-status';
 import { getSakerFromMemoryCache, getSakerWithCache } from '@/lib/stortinget-saker-cache';
 import { getAnonSupabase, getServiceSupabase } from '@/lib/supabase';
 
@@ -185,6 +186,7 @@ async function listSakPickerOptionsFromCache(limit: number, live: boolean): Prom
       title: sak.title,
       category: sak.category || null,
       henvisning: sak.henvisning ?? null,
+      status: sak.status,
     });
     if (options.length >= limit) break;
   }
@@ -197,14 +199,14 @@ async function listSakPickerOptionsFromDb(limit: number): Promise<SakPickerOptio
   const supabase = getAnonSupabase();
   const withHenvisning = await supabase
     .from('stortinget_issues')
-    .select('id, title, category, henvisning')
+    .select('id, title, category, henvisning, ferdigbehandlet, status')
     .order('last_synced_at', { ascending: false })
     .limit(limit);
 
   const result = withHenvisning.error
     ? await supabase
         .from('stortinget_issues')
-        .select('id, title, category')
+        .select('id, title, category, ferdigbehandlet, status')
         .order('last_synced_at', { ascending: false })
         .limit(limit)
     : withHenvisning;
@@ -216,12 +218,19 @@ async function listSakPickerOptionsFromDb(limit: number): Promise<SakPickerOptio
 
   return (result.data ?? [])
     .filter((row) => row.id && row.title)
-    .map((row) => ({
-      id: String(row.id),
-      title: String(row.title),
-      category: row.category ? String(row.category) : null,
-      henvisning: 'henvisning' in row && row.henvisning ? String(row.henvisning) : null,
-    }));
+    .map((row) => {
+      const cachedStatus =
+        typeof row.status === 'string' ? row.status : row.status != null ? String(row.status) : null;
+      const ferdigbehandlet =
+        typeof row.ferdigbehandlet === 'boolean' ? row.ferdigbehandlet : null;
+      return {
+        id: String(row.id),
+        title: String(row.title),
+        category: row.category ? String(row.category) : null,
+        henvisning: 'henvisning' in row && row.henvisning ? String(row.henvisning) : null,
+        status: resolveSakListStatus({ ferdigbehandlet, cachedStatus }),
+      };
+    });
 }
 
 export async function listSakPickerOptions(
