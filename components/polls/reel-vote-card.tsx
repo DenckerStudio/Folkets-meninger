@@ -25,7 +25,8 @@ function reelChoiceClassName(choice: PollChoice): string {
     case 'blank':
       return 'bg-white text-[#00205b] hover:bg-white/90';
     case 'ja':
-      return 'bg-[#00205b] text-white hover:bg-[#00205b]/90';
+      // Navy on navy needs a light edge so Ja stays readable on the vote face.
+      return 'bg-[#0a3d9e] text-white ring-1 ring-inset ring-white/45 hover:bg-[#0c4ab8]';
     default: {
       const _exhaustive: never = choice;
       return _exhaustive;

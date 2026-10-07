@@ -45,10 +45,9 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
     () => options.filter((option) => option.status === 'pending').length,
     [options],
   );
+  /** Auto-default only; explicit chip clicks must keep their filter (incl. empty pending). */
   const autoStatus: SakPickerStatusFilter = pendingCount > 0 ? 'pending' : 'all';
   const resolvedStatusFilter: SakPickerStatusFilter = statusFilter ?? autoStatus;
-  const effectiveStatusFilter: SakPickerStatusFilter =
-    resolvedStatusFilter === 'pending' && pendingCount === 0 ? 'all' : resolvedStatusFilter;
 
   const categories = useMemo(() => topSakPickerCategories(options, 12), [options]);
 
@@ -58,11 +57,11 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
         options,
         searchQuery: query,
         titleContext: context,
-        statusFilter: hasQuery ? 'all' : effectiveStatusFilter,
+        statusFilter: hasQuery ? 'all' : resolvedStatusFilter,
         categoryFilter: hasQuery ? categoryFilter : categoryFilter,
         visibleCount,
       }),
-    [options, query, context, effectiveStatusFilter, categoryFilter, visibleCount, hasQuery],
+    [options, query, context, resolvedStatusFilter, categoryFilter, visibleCount, hasQuery],
   );
 
   const { rows, listLabel, totalMatching, hasMore, suggestionIds } = result;
@@ -171,7 +170,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
             {!hasQuery ? (
               <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrer på behandlingsstatus">
                 {STATUS_FILTERS.map((filter) => {
-                  const active = effectiveStatusFilter === filter.id;
+                  const active = resolvedStatusFilter === filter.id;
                   return (
                     <button
                       key={filter.id}
@@ -270,7 +269,11 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
                   ? 'Ingen saker matcher søket. Prøv et annet ord, tema eller saksnummer.'
                   : categoryFilter
                     ? `Ingen saker i «${categoryFilter}» med valgt filter.`
-                    : 'Ingen treff på tittelen ennå. Prøv et mer konkret søk, eller bla i listen over.'}
+                    : resolvedStatusFilter === 'pending'
+                      ? 'Ingen saker under behandling akkurat nå.'
+                      : resolvedStatusFilter === 'closed'
+                        ? 'Ingen ferdigbehandlede saker.'
+                        : 'Ingen treff på tittelen ennå. Prøv et mer konkret søk, eller bla i listen over.'}
               </p>
               {(hasQuery || categoryFilter || statusFilter !== null) && (
                 <button

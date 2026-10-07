@@ -79,6 +79,8 @@ export function CoverflowCarousel({
     pos: number;
     v: number;
     t: number;
+    /** True once movement exceeds threshold; until then clicks reach card children. */
+    moved: boolean;
   } | null>(null);
 
   const [selected, setSelected] = React.useState(0);
@@ -182,13 +184,12 @@ export function CoverflowCarousel({
     [clamp, settle],
   );
 
+  const DRAG_THRESHOLD_PX = 8;
+
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (interactionLocked || count <= 1) return;
-    if (rafRef.current !== null) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    event.currentTarget.setPointerCapture(event.pointerId);
+    // Do not capture yet — immediate capture steals click from centred card buttons
+    // (Space flip worked; mouse/tap on «Trykk for å stemme» did not).
     targetRef.current = posRef.current;
     dragRef.current = {
       id: event.pointerId,
@@ -196,12 +197,24 @@ export function CoverflowCarousel({
       pos: posRef.current,
       v: 0,
       t: performance.now(),
+      moved: false,
     };
   };
 
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag || drag.id !== event.pointerId) return;
+
+    const dx = Math.abs(event.clientX - drag.x);
+    if (!drag.moved) {
+      if (dx < DRAG_THRESHOLD_PX) return;
+      drag.moved = true;
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
 
     const pitch = widthRef.current * (1 + gap);
     if (!pitch) return;
@@ -221,6 +234,8 @@ export function CoverflowCarousel({
     const drag = dragRef.current;
     if (!drag || drag.id !== event.pointerId) return;
     dragRef.current = null;
+    // Tap without drag: leave settle alone so the card's click/tap can flip.
+    if (!drag.moved) return;
     const carried = Math.max(-2, Math.min(2, drag.v * 0.18));
     settle(clamp(Math.round(posRef.current + carried)));
   };
