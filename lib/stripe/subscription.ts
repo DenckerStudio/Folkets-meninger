@@ -14,41 +14,103 @@ export function mapStripeStatusToApp(status: string | null | undefined): string 
   return status;
 }
 
+/** Active paid/trial states that unlock Stemme+. */
+export function isStripeSubscriptionEntitled(status: string | null | undefined): boolean {
+  return status === 'active' || status === 'trialing';
+}
+
+/**
+ * Terminal / unpaid states that should revoke Stemme+.
+ * Incomplete (awaiting first payment) must NOT force `free` — that race left
+ * users on free after checkout.session.completed was recorded but apply failed.
+ */
+export function shouldRevokeStemmePlusTier(status: string | null | undefined): boolean {
+  return (
+    status === 'canceled' ||
+    status === 'unpaid' ||
+    status === 'incomplete_expired'
+  );
+}
+
+export function resolveSubscriptionPeriodEndUnix(
+  subscription: Pick<Stripe.Subscription, 'items'> & {
+    current_period_end?: number | null;
+  },
+): number | null {
+  const fromSub =
+    typeof subscription.current_period_end === 'number' ? subscription.current_period_end : null;
+  if (fromSub && fromSub > 0) return fromSub;
+  const item = subscription.items?.data?.[0] as { current_period_end?: number } | undefined;
+  const fromItem = item?.current_period_end;
+  return typeof fromItem === 'number' && fromItem > 0 ? fromItem : null;
+}
+
+export function resolveSubscriptionTierPatch(
+  status: string | null | undefined,
+): { subscription_tier: 'stemme_plus' | 'free' } | Record<string, never> {
+  if (isStripeSubscriptionEntitled(status)) {
+    return { subscription_tier: 'stemme_plus' };
+  }
+  if (shouldRevokeStemmePlusTier(status)) {
+    return { subscription_tier: 'free' };
+  }
+  // incomplete / past_due / paused: keep existing tier; still store Stripe ids + status
+  return {};
+}
+
 export async function applyStripeSubscriptionToUser(args: {
   userId?: string | null;
   customerId?: string | null;
   subscription: Stripe.Subscription;
 }): Promise<void> {
   const service = getServiceSupabase();
-  const item = args.subscription.items.data[0] as { current_period_end?: number } | undefined;
-  const periodEndUnix = item?.current_period_end;
+  const periodEndUnix = resolveSubscriptionPeriodEndUnix(args.subscription);
   const periodEnd = periodEndUnix ? new Date(periodEndUnix * 1000).toISOString() : null;
-  const active =
-    args.subscription.status === 'active' || args.subscription.status === 'trialing';
-
-  const patch = {
-    stripe_customer_id: typeof args.subscription.customer === 'string'
+  const customerId =
+    typeof args.subscription.customer === 'string'
       ? args.subscription.customer
-      : args.customerId,
+      : args.customerId ?? null;
+
+  const tierPatch = resolveSubscriptionTierPatch(args.subscription.status);
+  const patch = {
+    stripe_customer_id: customerId,
     stripe_subscription_id: args.subscription.id,
     subscription_status: mapStripeStatusToApp(args.subscription.status),
     subscription_period_end: periodEnd,
-    subscription_tier: active ? 'stemme_plus' : 'free',
+    ...tierPatch,
   };
 
-  if (args.userId) {
-    const { error } = await service.from('users').update(patch).eq('id', args.userId);
+  const userId = args.userId?.trim() || null;
+
+  if (userId) {
+    const { data, error } = await service
+      .from('users')
+      .update(patch)
+      .eq('id', userId)
+      .select('id');
     if (error) throw error;
+    if (!data?.length) {
+      throw new Error(`Stripe webhook: no user row for id ${userId}`);
+    }
     return;
   }
 
-  if (patch.stripe_customer_id) {
-    const { error } = await service
+  if (customerId) {
+    const { data, error } = await service
       .from('users')
       .update(patch)
-      .eq('stripe_customer_id', patch.stripe_customer_id);
+      .eq('stripe_customer_id', customerId)
+      .select('id');
     if (error) throw error;
+    if (!data?.length) {
+      throw new Error(
+        `Stripe webhook: no user with stripe_customer_id ${customerId} (missing user_id metadata?)`,
+      );
+    }
+    return;
   }
+
+  throw new Error('Stripe webhook: missing user_id and customer id');
 }
 
 export async function clearStripeSubscription(customerId: string): Promise<void> {

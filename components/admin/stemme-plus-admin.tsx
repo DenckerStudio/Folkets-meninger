@@ -15,6 +15,7 @@ type Supporter = {
 export function StemmePlusAdmin() {
   const [email, setEmail] = useState('');
   const [supporters, setSupporters] = useState<Supporter[]>([]);
+  const [checkoutConfigured, setCheckoutConfigured] = useState<boolean | null>(null);
   const [error, setError] = useState('');
   const [pending, startTransition] = useTransition();
 
@@ -27,6 +28,7 @@ export function StemmePlusAdmin() {
         return;
       }
       setSupporters(Array.isArray(data.supporters) ? data.supporters : []);
+      setCheckoutConfigured(Boolean(data.checkoutConfigured));
     });
   }, []);
 
@@ -71,13 +73,33 @@ export function StemmePlusAdmin() {
     });
   };
 
+  const stripeStatus =
+    checkoutConfigured === null
+      ? 'Sjekker Stripe-status…'
+      : checkoutConfigured
+        ? 'Stripe-kasse er konfigurert — selvbetjent betaling er aktiv.'
+        : 'Stripe-kasse er ikke konfigurert (mangler STRIPE_SECRET_KEY eller STRIPE_STEMME_PLUS_PRICE_ID).';
+
   return (
     <div className="space-y-6">
       <PageHeader
         as="h2"
         title="Stemme+"
-        description={`Tildel eller fjern Stemme+ (${STEMME_PLUS_MONTHLY_PRICE_NOK} kr/mnd). Selvbetjent Stripe aktiveres når STRIPE_SECRET_KEY og STRIPE_STEMME_PLUS_PRICE_ID er satt.`}
+        description={`Tildel eller fjern Stemme+ (${STEMME_PLUS_MONTHLY_PRICE_NOK} kr/mnd). ${stripeStatus}`}
       />
+
+      <p className="text-sm text-muted-foreground">
+        Aktive støttespillere: <span className="font-semibold text-foreground">{supporters.length}</span>
+        {checkoutConfigured === true ? (
+          <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+            Stripe klar
+          </span>
+        ) : checkoutConfigured === false ? (
+          <span className="ml-2 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-200">
+            Stripe ikke konfigurert
+          </span>
+        ) : null}
+      </p>
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
@@ -104,7 +126,11 @@ export function StemmePlusAdmin() {
       {supporters.length === 0 ? (
         <EmptyState
           title="Ingen aktive Stemme+-støttespillere"
-          description="Tildel medlemskap med e-post under. Stripe-kasse forblir ærlig uoppsatt til nøklene finnes."
+          description={
+            checkoutConfigured
+              ? 'Ingen har Stemme+ ennå. Brukere kan kjøpe via Stripe, eller du kan tildele med e-post under.'
+              : 'Tildel medlemskap med e-post under. Stripe-kasse er ikke konfigurert før nøklene finnes.'
+          }
           className="py-8"
         />
       ) : null}

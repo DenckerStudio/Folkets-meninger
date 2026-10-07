@@ -5,6 +5,7 @@ import {
   listStemmePlusSupporters,
   revokeStemmePlusByEmail,
 } from '@/lib/admin/stemme-plus';
+import { isStripeCheckoutConfigured } from '@/lib/stripe/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,11 @@ export async function GET() {
   }
 
   const supporters = await listStemmePlusSupporters();
-  return NextResponse.json({ supporters });
+  return NextResponse.json({
+    supporters,
+    checkoutConfigured: isStripeCheckoutConfigured(),
+    supporterCount: supporters.length,
+  });
 }
 
 export async function POST(request: Request) {

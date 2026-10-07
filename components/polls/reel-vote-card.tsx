@@ -168,15 +168,26 @@ export function ReelCarouselCard({
   return (
     <div
       className={cn(
-        'overflow-hidden bg-card shadow-sm',
+        'relative overflow-hidden bg-card shadow-sm',
         fill
           ? 'h-full w-full rounded-none border-0'
           : 'h-full w-full rounded-2xl border border-white/10',
       )}
     >
+      {/*
+        Absolute stacked faces (not a 200% strip). Coverflow applies overflow-hidden +
+        rotateY on the outer card, which clipped the old horizontal slide so Ja/Nei/Blank
+        stayed in the DOM but never became visible.
+      */}
       <motion.div
-        className="flex h-full w-[200%]"
-        animate={{ x: selected ? '-50%' : '0%' }}
+        aria-hidden={selected}
+        className="absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-[#00205b] to-[#00205b]/80 p-5 text-left text-white"
+        initial={false}
+        animate={{
+          opacity: selected ? 0 : 1,
+          x: selected ? (reducedMotion ? 0 : '-18%') : 0,
+          pointerEvents: selected ? 'none' : 'auto',
+        }}
         transition={reducedMotion ? { duration: 0 } : SLIDE}
       >
         <button
@@ -190,7 +201,7 @@ export function ReelCarouselCard({
             if (dx > 10 || dy > 10) return;
             onSelect();
           }}
-          className="flex h-full w-1/2 flex-col justify-between bg-gradient-to-b from-[#00205b] to-[#00205b]/80 p-5 text-left text-white"
+          className="flex h-full w-full flex-col justify-between text-left"
         >
           {showBadge ? (
             <span className="inline-flex items-center gap-1 self-start rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">
@@ -210,9 +221,20 @@ export function ReelCarouselCard({
           </div>
           <p className="text-xs font-medium text-white/70">Trykk for å stemme</p>
         </button>
-        <div className="h-full w-1/2 bg-[#00205b] p-5">
-          <ReelFlagVote key={item.poll.id} item={item} onBack={onBack} />
-        </div>
+      </motion.div>
+
+      <motion.div
+        aria-hidden={!selected}
+        className="absolute inset-0 bg-[#00205b] p-5"
+        initial={false}
+        animate={{
+          opacity: selected ? 1 : 0,
+          x: selected ? 0 : reducedMotion ? 0 : '18%',
+          pointerEvents: selected ? 'auto' : 'none',
+        }}
+        transition={reducedMotion ? { duration: 0 } : SLIDE}
+      >
+        <ReelFlagVote key={item.poll.id} item={item} onBack={onBack} />
       </motion.div>
     </div>
   );

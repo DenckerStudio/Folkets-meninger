@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { HeartHandshake, Loader2 } from 'lucide-react';
 import { useChatOverlay } from '@/components/chat/chat-overlay-context';
 import { EmptyState } from '@/components/dashboard/empty-state';
@@ -26,10 +27,12 @@ type StemmePlusStatus = {
 
 export function ProfileStemmePlus() {
   const { openChat } = useChatOverlay();
+  const router = useRouter();
   const [status, setStatus] = useState<StemmePlusStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [checkoutBanner, setCheckoutBanner] = useState<'success' | 'cancel' | null>(null);
 
   const loadStatus = useCallback(async () => {
     setLoading(true);
@@ -51,6 +54,21 @@ export function ProfileStemmePlus() {
   useEffect(() => {
     void loadStatus();
   }, [loadStatus]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const checkoutResult = params.get('checkout');
+    if (checkoutResult !== 'success' && checkoutResult !== 'cancel') return;
+    setCheckoutBanner(checkoutResult);
+    if (checkoutResult === 'success') {
+      void loadStatus();
+    }
+    params.delete('checkout');
+    const next = params.toString();
+    const path = window.location.pathname;
+    router.replace(next ? `${path}?${next}` : path, { scroll: false });
+  }, [loadStatus, router]);
 
   const isActive = status?.tier === 'stemme_plus';
   const price = status?.monthly_price_nok ?? STEMME_PLUS_MONTHLY_PRICE_NOK;
@@ -109,6 +127,21 @@ export function ProfileStemmePlus() {
       title="Stemme+"
       description="Støtt utviklingen av Folkets Stemme — demokratiet forblir gratis for alle."
     >
+      {checkoutBanner === 'success' ? (
+        <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100">
+          <p className="font-semibold">Betaling mottatt</p>
+          <p className="mt-1 text-emerald-800/90 dark:text-emerald-100/90">
+            {isActive
+              ? 'Stemme+ er aktivert. Takk for støtten!'
+              : 'Vi aktiverer Stemme+ straks Stripe bekrefter abonnementet. Oppdater siden om litt hvis merket mangler.'}
+          </p>
+        </div>
+      ) : null}
+      {checkoutBanner === 'cancel' ? (
+        <div className="mb-4 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          Betalingen ble avbrutt. Du kan prøve igjen når du vil.
+        </div>
+      ) : null}
       <div className="rounded-xl border border-border bg-muted/30 p-4">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">

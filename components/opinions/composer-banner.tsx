@@ -23,7 +23,13 @@ import {
   resolveOpinionComposerDraft,
   writeOpinionComposerDraft,
 } from '@/lib/opinions/draft';
-import { describeOpinionComposerGaps, emptyOpinionPointDrafts, validateOpinionPoints } from '@/lib/opinions/validate';
+import {
+  describeOpinionComposerGaps,
+  emptyOpinionPointDrafts,
+  hasOpinionFieldErrors,
+  validateOpinionDraft,
+  validateOpinionPoints,
+} from '@/lib/opinions/validate';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -138,6 +144,17 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
   const bodyRemaining = Math.max(0, OPINION_BODY_MIN - bodyLength);
   const missingHint = describeOpinionComposerGaps({ issueId, stance, body, points });
   const showDiscard = hasOpinionComposerDraftContent({ title, issueId, stance, body, points });
+  const fieldErrors = validateOpinionDraft({
+    title,
+    body,
+    stance,
+    points,
+  });
+  const draftValid = Boolean(issueId) && !hasOpinionFieldErrors(fieldErrors);
+  // Signed-out users keep the button enabled so submit can send them to login.
+  const canPublish = !busy && (!user || draftValid);
+  const livePointsError = fieldErrors.points || pointsError;
+  const liveBodyError = bodyLength > 0 && fieldErrors.body ? fieldErrors.body : '';
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -393,6 +410,9 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
               placeholder={`Skriv minst ${OPINION_BODY_MIN} tegn om hvorfor du mener dette.`}
               className="w-full resize-y rounded-2xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-brand/30"
             />
+            {liveBodyError ? (
+              <p className="mt-2 text-sm font-medium text-destructive">{liveBodyError}</p>
+            ) : null}
           </div>
 
           <OpinionPointsEditor
@@ -402,7 +422,7 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
               setPoints(next);
               setPointsError('');
             }}
-            error={pointsError}
+            error={livePointsError}
           />
 
           {error ? (
@@ -414,7 +434,9 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={busy}
+              disabled={!canPublish}
+              aria-disabled={!canPublish}
+              title={!canPublish && missingHint ? missingHint : undefined}
               className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? 'Lagrer…' : 'Publiser mening'}

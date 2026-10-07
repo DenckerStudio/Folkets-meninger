@@ -20,7 +20,7 @@ type OpinionPointsEditorProps = {
 };
 
 export function OpinionPointsEditor({ value, onChange, error }: OpinionPointsEditorProps) {
-  const filledCount = value.filter((point) => point.text.trim().length > 0).length;
+  const validCount = value.filter((point) => point.text.trim().length >= OPINION_POINT_TEXT_MIN).length;
 
   function updatePoint(index: number, patch: Partial<OpinionPoint>) {
     onChange(value.map((point, i) => (i === index ? { ...point, ...patch } : point)));
@@ -43,8 +43,13 @@ export function OpinionPointsEditor({ value, onChange, error }: OpinionPointsEdi
     <div>
       <div className="mb-1.5 flex items-baseline justify-between gap-3">
         <label className="text-sm font-medium text-foreground">Kulepunkter for og imot</label>
-        <span className="text-xs text-muted-foreground">
-          {filledCount}/{OPINION_POINTS_MIN} minst
+        <span
+          className={cn(
+            'text-xs tabular-nums',
+            validCount < OPINION_POINTS_MIN ? 'text-amber-700 dark:text-amber-300' : 'text-muted-foreground',
+          )}
+        >
+          {validCount}/{OPINION_POINTS_MIN} minst
         </span>
       </div>
       <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
@@ -52,56 +57,79 @@ export function OpinionPointsEditor({ value, onChange, error }: OpinionPointsEdi
         Hvert kulepunkt: {OPINION_POINT_TEXT_MIN}–{OPINION_POINT_TEXT_MAX} tegn.
       </p>
       <ul className="space-y-2">
-        {value.map((point, index) => (
-          <li key={index} className="flex items-stretch overflow-hidden rounded-2xl border border-border bg-background">
-            <div className="flex">
-              {OPINION_POINT_STANCES.map((stance) => {
-                const visual = STANCE_VISUAL[stance];
-                const selected = point.stance === stance;
-                return (
+        {value.map((point, index) => {
+          const length = point.text.trim().length;
+          const tooShort = length > 0 && length < OPINION_POINT_TEXT_MIN;
+          const atMax = point.text.length >= OPINION_POINT_TEXT_MAX;
+          return (
+            <li key={index} className="space-y-1">
+              <div className="flex items-stretch overflow-hidden rounded-2xl border border-border bg-background">
+                <div className="flex">
+                  {OPINION_POINT_STANCES.map((stance) => {
+                    const visual = STANCE_VISUAL[stance];
+                    const selected = point.stance === stance;
+                    return (
+                      <button
+                        key={stance}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => updatePoint(index, { stance })}
+                        className={cn(
+                          'min-w-[4.25rem] border-0 px-2.5 text-xs font-semibold',
+                          !selected && (stance === 'imot' ? 'text-brand-accent' : 'text-brand'),
+                        )}
+                        style={
+                          selected
+                            ? { backgroundColor: visual.bg, color: visual.fg, boxShadow: 'none' }
+                            : { boxShadow: 'none' }
+                        }
+                      >
+                        {visual.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <input
+                  type="text"
+                  value={point.text}
+                  maxLength={OPINION_POINT_TEXT_MAX}
+                  onChange={(event) => updatePoint(index, { text: event.target.value })}
+                  placeholder={point.stance === 'for' ? 'Argument for …' : 'Argument imot …'}
+                  className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                  aria-invalid={tooShort || undefined}
+                />
+                <span
+                  className={cn(
+                    'self-center pr-2 text-[11px] tabular-nums',
+                    tooShort || atMax ? 'font-medium text-amber-700 dark:text-amber-300' : 'text-muted-foreground',
+                  )}
+                >
+                  {length}/{OPINION_POINT_TEXT_MAX}
+                </span>
+                {value.length > OPINION_POINTS_MIN ? (
                   <button
-                    key={stance}
                     type="button"
-                    aria-pressed={selected}
-                    onClick={() => updatePoint(index, { stance })}
-                    className={cn(
-                      'min-w-[4.25rem] border-0 px-2.5 text-xs font-semibold',
-                      !selected && (stance === 'imot' ? 'text-brand-accent' : 'text-brand'),
-                    )}
-                    style={
-                      selected
-                        ? { backgroundColor: visual.bg, color: visual.fg, boxShadow: 'none' }
-                        : { boxShadow: 'none' }
-                    }
+                    aria-label="Fjern kulepunkt"
+                    onClick={() => removePoint(index)}
+                    className="px-2.5 text-muted-foreground hover:text-foreground"
                   >
-                    {visual.label}
+                    <X className="h-4 w-4" />
                   </button>
-                );
-              })}
-            </div>
-            <input
-              type="text"
-              value={point.text}
-              maxLength={OPINION_POINT_TEXT_MAX}
-              onChange={(event) => updatePoint(index, { text: event.target.value })}
-              placeholder={point.stance === 'for' ? 'Argument for …' : 'Argument imot …'}
-              className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-            />
-            <span className="self-center pr-2 text-[11px] tabular-nums text-muted-foreground">
-              {point.text.trim().length}/{OPINION_POINT_TEXT_MAX}
-            </span>
-            {value.length > OPINION_POINTS_MIN ? (
-              <button
-                type="button"
-                aria-label="Fjern kulepunkt"
-                onClick={() => removePoint(index)}
-                className="px-2.5 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            ) : null}
-          </li>
-        ))}
+                ) : null}
+              </div>
+              {tooShort ? (
+                <p className="px-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                  Minst {OPINION_POINT_TEXT_MIN} tegn ({OPINION_POINT_TEXT_MIN - length} igjen).
+                </p>
+              ) : null}
+              {atMax ? (
+                <p className="px-1 text-xs text-muted-foreground">
+                  Maks {OPINION_POINT_TEXT_MAX} tegn nådd.
+                </p>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
       {value.length < OPINION_POINTS_MAX ? (
         <button
