@@ -265,7 +265,7 @@ function ReelsNavCta({
 }
 
 function ReelsPanel({
-  active: _active,
+  active,
   items,
   activePollId,
   onSelect,
@@ -279,6 +279,30 @@ function ReelsPanel({
 }) {
   const isDesktop = useIsDesktopMd();
   const cardOpen = Boolean(activePollId);
+  const [centeredIndex, setCenteredIndex] = useState(0);
+
+  useEffect(() => {
+    if (!active) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== ' ' && event.code !== 'Space') return;
+      const target = event.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
+          return;
+        }
+      }
+      event.preventDefault();
+      if (activePollId) {
+        onSelect(null);
+        return;
+      }
+      const item = items[centeredIndex] ?? items[0];
+      if (item) onSelect(item.poll.id);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [active, activePollId, centeredIndex, items, onSelect]);
 
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col">
@@ -325,6 +349,7 @@ function ReelsPanel({
             showPagination
             showNavigation
             interactionLocked={cardOpen}
+            onIndexChange={setCenteredIndex}
             rotate={40}
             depth={0.55}
             perspective={2.8}
@@ -353,6 +378,7 @@ function ReelsPanel({
             showPagination
             showNavigation={false}
             interactionLocked={cardOpen}
+            onIndexChange={setCenteredIndex}
             rotate={28}
             depth={0.45}
             perspective={2.4}

@@ -56,8 +56,12 @@ function SakDocumentViewer({
       setLoading(true);
       setError(null);
 
-      const maxAttempts = 8;
+      const started = Date.now();
+      const hardTimeoutMs = 15_000;
+      const maxAttempts = 5;
+
       for (let attempt = 0; attempt < maxAttempts && !cancelled; attempt += 1) {
+        if (Date.now() - started >= hardTimeoutMs) break;
         try {
           const res = await fetch(`/api/sak/${sakId}/documents/${encodeURIComponent(document.id)}/content`);
           const json = (await res.json().catch(() => ({}))) as DocumentContentResponse;
@@ -72,9 +76,11 @@ function SakDocumentViewer({
 
           const retryAfter =
             typeof json.retry_after_seconds === 'number' && json.retry_after_seconds > 0
-              ? json.retry_after_seconds
-              : 5;
-          await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+              ? Math.min(json.retry_after_seconds, 4)
+              : 3;
+          const remaining = hardTimeoutMs - (Date.now() - started);
+          if (remaining <= 0) break;
+          await new Promise((resolve) => setTimeout(resolve, Math.min(retryAfter * 1000, remaining)));
         } catch {
           if (!cancelled) {
             setError('Kunne ikke laste dokumentet.');
@@ -85,7 +91,7 @@ function SakDocumentViewer({
       }
 
       if (!cancelled) {
-        setError('Dokumentet er ikke klart ennå. Prøv igjen om litt.');
+        setError('Dokumentet tok for lang tid å hente. Prøv igjen, eller åpne originalkilden.');
         setLoading(false);
       }
     }
@@ -210,6 +216,7 @@ export function SakDocumentsSection({
 }) {
   const [documents, setDocuments] = useState(initialDocuments);
   const [activeDocument, setActiveDocument] = useState<DocumentWithStatus | null>(null);
+  const [pendingTimedOut, setPendingTimedOut] = useState(false);
 
   const refreshStatuses = useCallback(async () => {
     try {
@@ -224,16 +231,23 @@ export function SakDocumentsSection({
     }
   }, [sakId]);
 
+  const hasPending = documents.some((doc) => doc.ingestStatus === 'pending');
+
   useEffect(() => {
-    const hasPending = documents.some((doc) => doc.ingestStatus === 'pending');
     if (!hasPending) return;
 
     const timer = window.setInterval(() => {
       void refreshStatuses();
     }, 8_000);
+    const timeout = window.setTimeout(() => {
+      setPendingTimedOut(true);
+    }, 15_000);
 
-    return () => window.clearInterval(timer);
-  }, [documents, refreshStatuses]);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(timeout);
+    };
+  }, [hasPending, refreshStatuses]);
 
   if (documents.length === 0) return null;
 
@@ -263,7 +277,9 @@ export function SakDocumentsSection({
                     >
                       <span className="min-w-0 text-sm font-medium break-words text-foreground">{doc.title}</span>
                       <span className="shrink-0 text-xs text-muted-foreground">
-                        {statusLabel(doc.ingestStatus, doc.viewable)}
+                        {doc.ingestStatus === 'pending' && hasPending && pendingTimedOut
+                          ? 'Tok for lang tid'
+                          : statusLabel(doc.ingestStatus, doc.viewable)}
                       </span>
                     </button>
                   </li>

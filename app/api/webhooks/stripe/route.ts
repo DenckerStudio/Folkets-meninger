@@ -37,11 +37,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Ugyldig Stripe-signatur' }, { status: 400 });
   }
 
-  const first = await recordStripeEvent(event.id, event.type);
-  if (!first) {
-    return NextResponse.json({ ok: true, duplicate: true });
-  }
-
+  // Apply BEFORE recording. Recording first caused permanent free-tier stuck state:
+  // apply failed → event row existed → Stripe retries returned duplicate:true and never re-applied.
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -81,9 +78,14 @@ export async function POST(request: Request) {
       default:
         break;
     }
-  } catch {
-    console.error('[stripe-webhook] handler failed', event.type);
+  } catch (error) {
+    console.error('[stripe-webhook] handler failed', event.type, error);
     return NextResponse.json({ error: 'Webhook-behandling feilet' }, { status: 500 });
+  }
+
+  const first = await recordStripeEvent(event.id, event.type);
+  if (!first) {
+    return NextResponse.json({ ok: true, duplicate: true });
   }
 
   return NextResponse.json({ ok: true });

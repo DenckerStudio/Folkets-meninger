@@ -30,13 +30,25 @@ const STATUS_FILTERS: { id: SakPickerStatusFilter; label: string }[] = [
 export function SakPicker({ options, value, onChange, context = '', loading = false }: SakPickerProps) {
   const [query, setQuery] = useState('');
   const [previewId, setPreviewId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<SakPickerStatusFilter>('pending');
+  /** null = auto (pending when available, else all). */
+  const [statusFilter, setStatusFilter] = useState<SakPickerStatusFilter | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(SAK_PICKER_BROWSE_PAGE_SIZE);
+  /** When true, show the browse UI without clearing the current selection/stance. */
+  const [browsing, setBrowsing] = useState(false);
 
   const selected = value ? options.find((option) => option.id === value) : null;
   const previewOption = previewId ? options.find((option) => option.id === previewId) : null;
   const hasQuery = query.trim().length > 0;
+
+  const pendingCount = useMemo(
+    () => options.filter((option) => option.status === 'pending').length,
+    [options],
+  );
+  const autoStatus: SakPickerStatusFilter = pendingCount > 0 ? 'pending' : 'all';
+  const resolvedStatusFilter: SakPickerStatusFilter = statusFilter ?? autoStatus;
+  const effectiveStatusFilter: SakPickerStatusFilter =
+    resolvedStatusFilter === 'pending' && pendingCount === 0 ? 'all' : resolvedStatusFilter;
 
   const categories = useMemo(() => topSakPickerCategories(options, 12), [options]);
 
@@ -46,11 +58,11 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
         options,
         searchQuery: query,
         titleContext: context,
-        statusFilter: hasQuery ? 'all' : statusFilter,
+        statusFilter: hasQuery ? 'all' : effectiveStatusFilter,
         categoryFilter: hasQuery ? categoryFilter : categoryFilter,
         visibleCount,
       }),
-    [options, query, context, statusFilter, categoryFilter, visibleCount, hasQuery],
+    [options, query, context, effectiveStatusFilter, categoryFilter, visibleCount, hasQuery],
   );
 
   const { rows, listLabel, totalMatching, hasMore, suggestionIds } = result;
@@ -58,7 +70,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
   function resetFilters() {
     setQuery('');
     setCategoryFilter(null);
-    setStatusFilter('pending');
+    setStatusFilter(null);
     setVisibleCount(SAK_PICKER_BROWSE_PAGE_SIZE);
   }
 
@@ -74,7 +86,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
         </p>
       </div>
 
-      {selected ? (
+      {selected && !browsing ? (
         <div className="flex items-start justify-between gap-3 rounded-2xl border border-brand/25 bg-brand-soft/40 px-3 py-3 sm:px-4">
           <div className="min-w-0 space-y-1.5">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-brand">Valgt sak</p>
@@ -98,8 +110,8 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
             <button
               type="button"
               onClick={() => {
-                onChange(null);
                 resetFilters();
+                setBrowsing(true);
               }}
               className="rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-background/80 hover:text-foreground"
             >
@@ -109,6 +121,20 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+          {selected && browsing ? (
+            <div className="flex items-center justify-between gap-2 border-b border-border bg-brand-soft/30 px-3 py-2 sm:px-4">
+              <p className="min-w-0 truncate text-xs text-muted-foreground">
+                Nåværende: <span className="font-medium text-foreground">{selected.title}</span>
+              </p>
+              <button
+                type="button"
+                onClick={() => setBrowsing(false)}
+                className="shrink-0 text-xs font-semibold text-brand hover:underline"
+              >
+                Avbryt
+              </button>
+            </div>
+          ) : null}
           <div className="space-y-3 border-b border-border bg-card/60 px-3 py-3 sm:px-4">
             <div className="relative">
               <Search
@@ -145,7 +171,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
             {!hasQuery ? (
               <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrer på behandlingsstatus">
                 {STATUS_FILTERS.map((filter) => {
-                  const active = statusFilter === filter.id;
+                  const active = effectiveStatusFilter === filter.id;
                   return (
                     <button
                       key={filter.id}
@@ -246,7 +272,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
                     ? `Ingen saker i «${categoryFilter}» med valgt filter.`
                     : 'Ingen treff på tittelen ennå. Prøv et mer konkret søk, eller bla i listen over.'}
               </p>
-              {(hasQuery || categoryFilter || statusFilter !== 'pending') && (
+              {(hasQuery || categoryFilter || statusFilter !== null) && (
                 <button
                   type="button"
                   onClick={resetFilters}
@@ -273,6 +299,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
                           className="flex min-w-0 flex-1 flex-col items-start px-3 py-3 text-left transition-colors hover:bg-muted/70 sm:px-4"
                           onClick={() => {
                             onChange(option.id);
+                            setBrowsing(false);
                             resetFilters();
                           }}
                         >
@@ -336,6 +363,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
           previewId && previewId !== value
             ? (id) => {
                 onChange(id);
+                setBrowsing(false);
                 resetFilters();
               }
             : undefined
