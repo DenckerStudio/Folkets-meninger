@@ -5,8 +5,11 @@ import { Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DEFAULT_MODELS,
-  LLM_PROVIDERS,
+  OTHER_LLM_PROVIDERS,
+  PRIMARY_LLM_PROVIDERS,
   PROVIDER_LABELS,
+  providerNeedsApiKey,
+  providerNeedsBaseUrl,
   type LlmProvider,
 } from '@/lib/byok/providers';
 
@@ -22,14 +25,18 @@ type ByokSettingsProps = {
 };
 
 export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
-  const [provider, setProvider] = useState<LlmProvider>(initial?.provider ?? 'openai');
-  const [model, setModel] = useState(initial?.model ?? DEFAULT_MODELS.openai);
+  const [provider, setProvider] = useState<LlmProvider>(initial?.provider ?? 'google');
+  const [model, setModel] = useState(initial?.model ?? DEFAULT_MODELS.google);
   const [baseUrl, setBaseUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [saved, setSaved] = useState<ByokMetaView>(initial);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const needsBaseUrl = providerNeedsBaseUrl(provider);
+  const needsApiKey = providerNeedsApiKey(provider);
+  const canSave = needsApiKey ? Boolean(apiKey.trim()) : needsBaseUrl ? Boolean(baseUrl.trim()) : true;
 
   const onProviderChange = (next: LlmProvider) => {
     setProvider(next);
@@ -48,7 +55,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
           provider,
           model,
           apiKey,
-          baseUrl: provider === 'openai_compatible' ? baseUrl : undefined,
+          baseUrl: needsBaseUrl ? baseUrl : undefined,
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -122,11 +129,18 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
             onChange={(event) => onProviderChange(event.target.value as LlmProvider)}
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
           >
-            {LLM_PROVIDERS.map((item) => (
+            {PRIMARY_LLM_PROVIDERS.map((item) => (
               <option key={item} value={item}>
                 {PROVIDER_LABELS[item]}
               </option>
             ))}
+            <optgroup label="Annet">
+              {OTHER_LLM_PROVIDERS.map((item) => (
+                <option key={item} value={item}>
+                  {PROVIDER_LABELS[item]}
+                </option>
+              ))}
+            </optgroup>
           </select>
         </label>
         <label className="space-y-1 text-sm">
@@ -140,32 +154,46 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
         </label>
       </div>
 
-      {provider === 'openai_compatible' ? (
+      {needsBaseUrl ? (
         <label className="block space-y-1 text-sm">
-          <span className="text-muted-foreground">Base-URL (https)</span>
+          <span className="text-muted-foreground">
+            {provider === 'ollama' ? 'Base-URL (http eller https)' : 'Base-URL (https)'}
+          </span>
           <input
             value={baseUrl}
             onChange={(event) => setBaseUrl(event.target.value)}
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
-            placeholder="https://api.example.com/v1"
+            placeholder={
+              provider === 'ollama'
+                ? 'http://localhost:11434/v1'
+                : 'https://api.example.com/v1'
+            }
           />
         </label>
       ) : null}
 
       <label className="block space-y-1 text-sm">
-        <span className="text-muted-foreground">API-nøkkel</span>
+        <span className="text-muted-foreground">
+          {needsApiKey ? 'API-nøkkel' : 'API-nøkkel (valgfri for Ollama)'}
+        </span>
         <input
           type="password"
           value={apiKey}
           onChange={(event) => setApiKey(event.target.value)}
           autoComplete="off"
           className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
-          placeholder={saved ? `Ny nøkkel (erstatter …${saved.keyLast4})` : 'Lim inn nøkkelen'}
+          placeholder={
+            saved
+              ? `Ny nøkkel (erstatter …${saved.keyLast4})`
+              : needsApiKey
+                ? 'Lim inn nøkkelen'
+                : 'Valgfri — lar stå tom for lokal Ollama'
+          }
         />
       </label>
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" onClick={() => void save()} disabled={busy || !apiKey.trim()}>
+        <Button type="button" onClick={() => void save()} disabled={busy || !canSave}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           {saved ? 'Bytt nøkkel' : 'Lagre nøkkel'}
         </Button>
