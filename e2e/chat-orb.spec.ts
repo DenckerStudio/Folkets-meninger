@@ -36,6 +36,7 @@ test.describe('Chat orb overlay', () => {
     const panel = await waitForGuestChatPanel(page);
     await expect(page.getByRole('heading', { name: 'Chat', exact: true })).toBeVisible();
     await expect(panel.getByText('Logg inn for å bruke chat')).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Rettskriv' })).toHaveCount(0);
     await expect(panel.getByRole('button', { name: 'Rettskriving' })).toHaveCount(0);
     await expect(panel.getByRole('button', { name: 'Hent sakskontekst' })).toHaveCount(0);
     await expect(panel.getByRole('button', { name: 'Finn oppdaterte kilder' })).toHaveCount(0);
@@ -45,7 +46,7 @@ test.describe('Chat orb overlay', () => {
     });
   });
 
-  test('Stemme+ panel shows rettskriving and source actions without a chat turn', async ({ page }) => {
+  test('Stemme+ panel keeps sak action and hides rettskriv/kilder', async ({ page }) => {
     test.setTimeout(90_000);
     await page.route('**/api/stemme-plus/status', async (route) => {
       await route.fulfill({
@@ -68,56 +69,16 @@ test.describe('Chat orb overlay', () => {
 
     const panel = page.locator('[data-chat-panel]');
     await expect(panel).toBeVisible();
-    await expect(panel.getByRole('button', { name: 'Rettskriving' })).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Hent sakskontekst' })).toBeVisible();
-    await expect(panel.getByRole('button', { name: 'Finn oppdaterte kilder' })).toBeVisible();
-    await expect(panel.getByPlaceholder('Lim inn eller skriv en kladd. Vi publiserer den ikke.')).toBeVisible();
-    await expect(panel.getByRole('button', { name: 'Sjekk kladden' })).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Rettskriv' })).toHaveCount(0);
+    await expect(panel.getByRole('button', { name: 'Rettskriving' })).toHaveCount(0);
+    await expect(panel.getByRole('button', { name: 'Finn oppdaterte kilder' })).toHaveCount(0);
     await expect(page.getByText('Lagre en LLM-nøkkel først')).toBeVisible();
+    await expect(panel.getByText('Hei — hvordan kan jeg hjelpe?')).toHaveCount(0);
 
     await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
     await page.screenshot({
       path: `${ARTIFACTS}/chat-panel-actions-open.png`,
-    });
-
-    await expect(
-      panel.getByText('Uten nøkkel viser vi bare instruksjonen. Vi later ikke som en modell har rettet teksten.'),
-    ).toBeVisible();
-
-    await page.route('**/api/chat/rettskriving', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          original: 'Stortinget bør vurdere forslaget om klima.',
-          context: 'annet',
-          instruction: 'Rett stavemåte, grammatikk og tydelighet. Behold brukerens mening.',
-          published: false,
-          mode: 'instruction',
-          corrected: null,
-          notes: null,
-        }),
-      });
-    });
-
-    await panel.getByPlaceholder('Lim inn eller skriv en kladd. Vi publiserer den ikke.').fill(
-      'Stortinget bør vurdere forslaget om klima.',
-    );
-    await panel.getByRole('button', { name: 'Sjekk kladden' }).click();
-    await expect(panel.locator('[data-rettskriving-result="instruction"]')).toBeVisible();
-    await expect(panel.getByText('Ingen LLM-retting uten nøkkel')).toBeVisible();
-    await expect(panel.locator('[data-rettskriving-result="corrected"]')).toHaveCount(0);
-
-    await page.screenshot({
-      path: `${ARTIFACTS}/chat-panel-rettskriving-no-key.png`,
-    });
-
-    await panel.getByRole('button', { name: 'Finn oppdaterte kilder' }).click();
-    await expect(panel.getByPlaceholder('Søk etter oppdaterte kilder…')).toBeVisible();
-    await expect(panel.getByRole('button', { name: 'Søk' })).toBeVisible();
-
-    await page.screenshot({
-      path: `${ARTIFACTS}/chat-panel-actions-sources.png`,
     });
   });
 
@@ -263,7 +224,40 @@ test.describe('Chat orb overlay', () => {
     });
   });
 
-  test('Stemme+ panel with BYOK shows a corrected draft from the API', async ({ page }) => {
+  test('Stemme+ ready chat shows assistant card welcome without rettskriv/kilder', async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.route('**/api/stemme-plus/status', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          tier: 'stemme_plus',
+          has_byok: true,
+          monthly_price_nok: 59,
+          checkout_configured: false,
+        }),
+      });
+    });
+
+    await page.goto('/dashboard/avstemninger');
+    await expect(page.getByRole('heading', { name: 'Avstemninger', exact: true })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Åpne chat' }).click();
+    const panel = page.locator('[data-chat-panel]');
+    await expect(panel).toBeVisible();
+    await expect(panel.getByText('Hei — hvordan kan jeg hjelpe?')).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Finn lignende saker' })).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Rettskriv' })).toHaveCount(0);
+    await expect(panel.getByRole('button', { name: 'Finn oppdaterte kilder' })).toHaveCount(0);
+    await expect(panel.getByPlaceholder('Spør om en sak eller dokumenter…')).toBeVisible();
+
+    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    await page.screenshot({
+      path: `${ARTIFACTS}/chat-panel-assistant-card-welcome.png`,
+    });
+  });
+
+  test('composer surfaces Rettskriv and Finn oppdaterte kilder for Stemme+', async ({ page }) => {
     test.setTimeout(90_000);
     await page.route('**/api/stemme-plus/status', async (route) => {
       await route.fulfill({
@@ -283,7 +277,7 @@ test.describe('Chat orb overlay', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           original: 'Stortinget burde vurdere forslaget om klima.',
-          context: 'annet',
+          context: 'diskusjon',
           instruction: 'Rett stavemåte, grammatikk og tydelighet. Behold brukerens mening.',
           published: false,
           mode: 'corrected',
@@ -293,29 +287,29 @@ test.describe('Chat orb overlay', () => {
       });
     });
 
-    await page.goto('/dashboard/avstemninger');
-    await expect(page.getByRole('heading', { name: 'Avstemninger', exact: true })).toBeVisible();
+    await page.goto('/dashboard/folkets-meninger');
+    await page.getByRole('button', { name: 'Del din mening' }).first().click();
+    const composer = page.locator('[data-composer][data-expanded="true"]');
+    await expect(composer).toBeVisible({ timeout: 90_000 });
 
-    await page.getByRole('button', { name: 'Åpne chat' }).click();
-    const panel = page.locator('[data-chat-panel]');
-    await expect(panel).toBeVisible();
-    await expect(panel.getByRole('button', { name: 'Rett kladden' })).toBeVisible();
-    await expect(
-      panel.getByText('Vi retter kladden med nøkkelen din. Kladden publiseres ikke.'),
-    ).toBeVisible();
+    await expect(composer.locator('[data-composer-assists="ready"]')).toBeVisible({ timeout: 90_000 });
+    await expect(composer.getByRole('button', { name: 'Rettskriv' })).toBeVisible();
+    await expect(composer.getByRole('button', { name: 'Finn oppdaterte kilder' })).toBeVisible();
 
-    await panel.getByPlaceholder('Lim inn eller skriv en kladd. Vi publiserer den ikke.').fill(
-      'Stortinget burde vurdere forslaget om klima.',
+    await composer.locator('#opinion-body').fill(
+      'Stortinget burde vurdere forslaget om klima i denne saken nå.',
     );
-    await panel.getByRole('button', { name: 'Rett kladden' }).click();
-    await expect(panel.locator('[data-rettskriving-result="corrected"]')).toBeVisible();
-    await expect(panel.getByText('Rettet med nøkkelen din')).toBeVisible();
-    await expect(panel.getByText('Stortinget bør vurdere forslaget om klima.')).toBeVisible();
-    await expect(panel.getByText('Merknader: Byttet burde til bør.')).toBeVisible();
+    await composer.getByRole('button', { name: 'Rettskriv' }).click();
+    await composer.getByRole('button', { name: 'Rett begrunnelsen' }).click();
+    await expect(composer.locator('[data-rettskriving-result="corrected"]')).toBeVisible();
+    await expect(composer.getByText('Stortinget bør vurdere forslaget om klima.')).toBeVisible();
+
+    await composer.getByRole('button', { name: 'Finn oppdaterte kilder' }).click();
+    await expect(composer.getByPlaceholder('Søk etter oppdaterte kilder…')).toBeVisible();
 
     await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
     await page.screenshot({
-      path: `${ARTIFACTS}/chat-panel-rettskriving-keyed.png`,
+      path: `${ARTIFACTS}/composer-stemme-assists.png`,
     });
   });
 
