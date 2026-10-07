@@ -5,7 +5,7 @@ import { readUserSubscription } from '@/lib/stemme-plus/service';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request) {
+export async function POST() {
   const supabase = await getServerSupabase();
   const {
     data: { user },
@@ -23,8 +23,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const origin = new URL(request.url).origin;
-  const result = await createBillingPortalSession({ customerId, origin });
+  const result = await createBillingPortalSession({ customerId });
   if ('error' in result) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
