@@ -85,3 +85,11 @@ export function normalizeBaseUrl(provider: LlmProvider, value: unknown): string 
 export function providerNeedsBaseUrl(provider: LlmProvider): boolean {
   return provider === 'openai_compatible' || provider === 'ollama';
 }
+
+/** Honest invalid-key copy: mention whitespace only when the raw input has it. */
+export function invalidApiKeyMessage(rawInput: string): string {
+  if (/\s/.test(rawInput)) {
+    return 'Nøkkelen ser ugyldig ut. Lim inn en API-nøkkel uten mellomrom.';
+  }
+  return 'Nøkkelen ser ugyldig ut. Sjekk at du limte inn hele nøkkelen.';
+}

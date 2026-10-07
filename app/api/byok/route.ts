@@ -4,6 +4,7 @@ import {
 } from '@/lib/byok/crypto';
 import {
   isLlmProvider,
+  invalidApiKeyMessage,
   looksLikeApiKey,
   normalizeBaseUrl,
   normalizeModel,
@@ -59,23 +60,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Ugyldig leverandør' }, { status: 400 });
   }
 
-  const rawKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : '';
-  let apiKey = rawKey;
+  const rawInput = typeof body.apiKey === 'string' ? body.apiKey : '';
+  let apiKey = rawInput.trim();
   if (providerNeedsApiKey(body.provider)) {
     if (!looksLikeApiKey(apiKey)) {
-      return NextResponse.json(
-        { error: 'Nøkkelen ser ugyldig ut. Lim inn en API-nøkkel uten mellomrom.' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: invalidApiKeyMessage(rawInput) }, { status: 400 });
     }
   } else if (!apiKey) {
     // Ollama often runs without auth; store a stable placeholder so encryption/last4 still work.
     apiKey = OLLAMA_PLACEHOLDER_API_KEY;
   } else if (/\s/.test(apiKey) || apiKey.length > 512) {
-    return NextResponse.json(
-      { error: 'Nøkkelen ser ugyldig ut. Lim inn en API-nøkkel uten mellomrom.' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: invalidApiKeyMessage(rawInput) }, { status: 400 });
   }
 
   const model = normalizeModel(body.provider, body.model);

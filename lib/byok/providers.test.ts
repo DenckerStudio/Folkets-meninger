@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   DEFAULT_MODELS,
   isLlmProvider,
+  invalidApiKeyMessage,
   looksLikeApiKey,
   normalizeBaseUrl,
   normalizeModel,
@@ -17,6 +18,9 @@ assert.equal(isLlmProvider('gemini'), false);
 assert.equal(looksLikeApiKey('sk-abcdefghijklmnopqrstuvwxyz'), true);
 assert.equal(looksLikeApiKey('too short'), false);
 assert.equal(looksLikeApiKey('has space in key value here123'), false);
+assert.match(invalidApiKeyMessage('test'), /ugyldig/);
+assert.doesNotMatch(invalidApiKeyMessage('test'), /mellomrom/);
+assert.match(invalidApiKeyMessage('has space in key'), /mellomrom/);
 assert.equal(normalizeModel('openai', ' gpt-4o '), 'gpt-4o');
 assert.equal(normalizeModel('anthropic', ''), 'claude-sonnet-4-5');
 assert.equal(normalizeModel('google', ''), DEFAULT_MODELS.google);
