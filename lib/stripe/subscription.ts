@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import Stripe from 'stripe';
 import { getServiceSupabase } from '@/lib/supabase';
-import { getStripeRuntimeConfig } from '@/lib/stripe/config';
+import { getStemmePlusAppBaseUrl, getStripeRuntimeConfig } from '@/lib/stripe/config';
 
 export function getStripeClient(): Stripe | null {
   const config = getStripeRuntimeConfig();
@@ -80,7 +80,6 @@ export async function recordStripeEvent(eventId: string, type: string): Promise<
 export async function createStemmePlusCheckoutSession(args: {
   userId: string;
   email: string | null;
-  origin: string;
 }): Promise<{ url: string } | { error: string; status: number }> {
   const config = getStripeRuntimeConfig();
   if (!config.checkoutConfigured || !config.secretKey || !config.priceId) {
@@ -90,12 +89,13 @@ export async function createStemmePlusCheckoutSession(args: {
     };
   }
 
+  const baseUrl = getStemmePlusAppBaseUrl();
   const stripe = new Stripe(config.secretKey);
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     line_items: [{ price: config.priceId, quantity: 1 }],
-    success_url: `${args.origin}/dashboard/min-side?tab=stemme-plus&checkout=success`,
-    cancel_url: `${args.origin}/dashboard/min-side?tab=stemme-plus&checkout=cancel`,
+    success_url: `${baseUrl}/dashboard/min-side?tab=stemme-plus&checkout=success`,
+    cancel_url: `${baseUrl}/dashboard/min-side?tab=stemme-plus&checkout=cancel`,
     client_reference_id: args.userId,
     customer_email: args.email || undefined,
     metadata: { user_id: args.userId },
@@ -116,16 +116,16 @@ export async function createStemmePlusCheckoutSession(args: {
 
 export async function createBillingPortalSession(args: {
   customerId: string;
-  origin: string;
 }): Promise<{ url: string } | { error: string; status: number }> {
   const config = getStripeRuntimeConfig();
   if (!config.secretKey) {
     return { status: 503, error: 'Stripe-kundeportal er ikke konfigurert' };
   }
+  const baseUrl = getStemmePlusAppBaseUrl();
   const stripe = new Stripe(config.secretKey);
   const session = await stripe.billingPortal.sessions.create({
     customer: args.customerId,
-    return_url: `${args.origin}/dashboard/min-side?tab=stemme-plus`,
+    return_url: `${baseUrl}/dashboard/min-side?tab=stemme-plus`,
   });
   return { url: session.url };
 }

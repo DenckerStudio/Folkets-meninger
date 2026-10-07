@@ -6,7 +6,7 @@ import { ownUserHasStemmePlus, readUserSubscription } from '@/lib/stemme-plus/se
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request) {
+export async function POST() {
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
@@ -27,11 +27,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Du har allerede Stemme+' }, { status: 409 });
   }
 
-  const origin = new URL(request.url).origin;
   const result = await createStemmePlusCheckoutSession({
     userId: user.id,
     email: user.email ?? null,
-    origin,
   });
 
   if ('error' in result) {

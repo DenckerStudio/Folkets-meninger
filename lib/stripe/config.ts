@@ -30,3 +30,27 @@ export function getStripeRuntimeConfig(): StripeRuntimeConfig {
 export function isStripeCheckoutConfigured(): boolean {
   return getStripeRuntimeConfig().checkoutConfigured;
 }
+
+/** Canonical public site for Stripe Checkout/portal return URLs. */
+export const STEMME_PLUS_DEFAULT_APP_BASE_URL = 'https://www.folkets-stemme.no';
+
+/**
+ * Prefer NEXT_PUBLIC_APP_URL when it is a valid http(s) URL; otherwise fall back
+ * to www.folkets-stemme.no so Checkout never returns users to folkets-meninger.no.
+ */
+export function getStemmePlusAppBaseUrl(
+  envValue: string | undefined = process.env.NEXT_PUBLIC_APP_URL,
+): string {
+  const raw = envValue?.trim();
+  if (!raw) return STEMME_PLUS_DEFAULT_APP_BASE_URL;
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return STEMME_PLUS_DEFAULT_APP_BASE_URL;
+    }
+    return url.origin;
+  } catch {
+    return STEMME_PLUS_DEFAULT_APP_BASE_URL;
+  }
+}
+
