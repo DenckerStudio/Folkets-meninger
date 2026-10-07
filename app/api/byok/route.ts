@@ -7,6 +7,8 @@ import {
   looksLikeApiKey,
   normalizeBaseUrl,
   normalizeModel,
+  OLLAMA_PLACEHOLDER_API_KEY,
+  providerNeedsApiKey,
   providerNeedsBaseUrl,
 } from '@/lib/byok/providers';
 import {
@@ -57,8 +59,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Ugyldig leverandør' }, { status: 400 });
   }
 
-  const apiKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : '';
-  if (!looksLikeApiKey(apiKey)) {
+  const rawKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : '';
+  let apiKey = rawKey;
+  if (providerNeedsApiKey(body.provider)) {
+    if (!looksLikeApiKey(apiKey)) {
+      return NextResponse.json(
+        { error: 'Nøkkelen ser ugyldig ut. Lim inn en API-nøkkel uten mellomrom.' },
+        { status: 400 },
+      );
+    }
+  } else if (!apiKey) {
+    // Ollama often runs without auth; store a stable placeholder so encryption/last4 still work.
+    apiKey = OLLAMA_PLACEHOLDER_API_KEY;
+  } else if (/\s/.test(apiKey) || apiKey.length > 512) {
     return NextResponse.json(
       { error: 'Nøkkelen ser ugyldig ut. Lim inn en API-nøkkel uten mellomrom.' },
       { status: 400 },
@@ -68,10 +81,11 @@ export async function POST(request: Request) {
   const model = normalizeModel(body.provider, body.model);
   const baseUrl = normalizeBaseUrl(body.provider, body.baseUrl);
   if (providerNeedsBaseUrl(body.provider) && !baseUrl) {
-    return NextResponse.json(
-      { error: 'OpenAI-kompatibel nøkkel krever en https-base-URL.' },
-      { status: 400 },
-    );
+    const hint =
+      body.provider === 'ollama'
+        ? 'Ollama krever en base-URL (http:// eller https://), f.eks. http://localhost:11434/v1.'
+        : 'OpenAI-kompatibel nøkkel krever en https-base-URL.';
+    return NextResponse.json({ error: hint }, { status: 400 });
   }
 
   try {
