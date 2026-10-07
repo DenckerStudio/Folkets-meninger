@@ -23,9 +23,9 @@ export const CHANNEL_UI_COPY: Record<
       'E-post når nye Stortinget-saker dukker opp i komitéområdene du følger under Mine hjertesaker.',
   },
   labels: {
-    label: 'AI-emner',
+    label: 'Emner',
     description:
-      'E-post når nye saker får AI-emneord du abonnerer på under Mine hjertesaker.',
+      'E-post når nye saker får emneord du abonnerer på under Mine hjertesaker.',
   },
 };
 

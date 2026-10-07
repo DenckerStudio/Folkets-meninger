@@ -170,7 +170,7 @@ export function ImpactCalculator({
       </div>
       <p className="mb-6 text-sm text-muted-foreground">
         Velg noen anonyme opplysninger. De lagres bare på denne enheten, og brukes til å slå saken opp mot
-        dokumentene og AI-sammendraget.
+        dokumentene og sammendraget.
       </p>
 
       <div className="space-y-5">
@@ -304,7 +304,7 @@ export function ImpactCalculator({
                   </span>
                 ) : (
                   <span className="rounded-full bg-background px-2.5 py-1 text-muted-foreground ring-1 ring-border">
-                    Basert på AI-sammendrag
+                    Basert på sammendrag
                   </span>
                 )}
               </div>

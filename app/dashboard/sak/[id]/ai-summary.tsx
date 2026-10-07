@@ -83,12 +83,12 @@ export default function AiSummary({ sakId }: { sakId: string }) {
             ? json.retry_after_seconds
             : 15;
 
-        setStatusMessage('Genererer AI-sammendrag (kan ta noen minutter) …');
+        setStatusMessage('Genererer sammendrag (kan ta noen minutter) …');
         setLoading(true);
         await new Promise((r) => setTimeout(r, retryAfterSeconds * 1000));
       } catch (error) {
         console.error('Failed to fetch AI summary', error);
-        setStatusMessage('Venter på AI-sammendrag …');
+        setStatusMessage('Venter på sammendrag …');
         setLoading(true);
         await new Promise((r) => setTimeout(r, 15_000));
       }
@@ -114,7 +114,7 @@ export default function AiSummary({ sakId }: { sakId: string }) {
         aria-expanded={open}
       >
         <CivicBubble className="h-3.5 w-3.5" />
-        Vis AI-sammendrag
+        Vis sammendrag
       </button>
 
       <Dialog
@@ -122,10 +122,10 @@ export default function AiSummary({ sakId }: { sakId: string }) {
         onClose={() => setOpen(false)}
         title={
           <span className="inline-flex min-w-0 flex-wrap items-center gap-2">
-            <span id={headingId}>AI-sammendrag</span>
+            <span id={headingId}>Sammendrag</span>
             {showTooltips ? (
               <InfoTooltip
-                label="AI-sammendraget"
+                label="Sammendraget"
                 description={SAK_META_TOOLTIPS.aiSammendrag}
                 side="bottom"
               />
@@ -160,7 +160,7 @@ export default function AiSummary({ sakId }: { sakId: string }) {
           data.version === 2 ? <V2Summary data={data} /> : <LegacySummary data={data} />
         ) : (
           <p className="rounded-xl border border-border bg-muted/40 px-4 py-4 text-sm text-muted-foreground">
-            {statusMessage ?? 'AI-sammendrag kommer når saken er behandlet av n8n.'}
+            {statusMessage ?? 'Sammendrag kommer når saken er behandlet av n8n.'}
           </p>
         )}
       </Dialog>

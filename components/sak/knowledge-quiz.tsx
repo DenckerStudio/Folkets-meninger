@@ -37,12 +37,12 @@ type QuizResult = {
 
 function contextMessage(level: QuizContextLevel, hasAiSummary: boolean): string | null {
   if (level === 'rich') {
-    return 'Spørsmålene er hentet fra AI-sammendraget og saksgrunnlaget.';
+    return 'Spørsmålene er hentet fra sammendraget og saksgrunnlaget.';
   }
   if (level === 'basic') {
     return hasAiSummary
       ? 'Begrenset saksgrunnlag — noen spørsmål kan være enklere.'
-      : 'AI-sammendrag mangler — spørsmålene bygger på tilgjengelig saksinfo.';
+      : 'Sammendrag mangler — spørsmålene bygger på tilgjengelig saksinfo.';
   }
   return 'Lite saksgrunnlag tilgjengelig. Les dokumentene under fanen Dokumenter for å forstå saken bedre.';
 }
@@ -375,7 +375,7 @@ export function KnowledgeQuiz({ sakId, variant = 'default' }: { sakId: string; v
             ? result.alreadyPassed
               ? `Allerede bestått tidligere. ${result.score}/${result.total} riktige nå.`
               : `Bestått: ${result.score}/${result.total}. Du får 15 poeng og merket Informert borger.`
-            : `Ikke bestått ennå (${result.score}/${result.total}). Les AI-sammendraget og dokumentene, og prøv igjen.`}
+            : `Ikke bestått ennå (${result.score}/${result.total}). Les sammendraget og dokumentene, og prøv igjen.`}
         </div>
       ) : null}
 

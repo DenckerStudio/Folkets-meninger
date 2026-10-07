@@ -112,7 +112,7 @@ export function ProfileInterests({
           {stanceSignals.labels.length > 0 ? (
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-                AI-emner
+                Emner
               </p>
               <div className="flex flex-wrap gap-2">
                 {stanceSignals.labels.map((signal) => {
@@ -178,7 +178,7 @@ export function ProfileInterests({
       </ProfileCard>
 
       <ProfileCard
-        title="AI-emner"
+        title="Emner"
         description="Varsler når nye saker får disse emneordene."
       >
         {popularLabels.length > 0 && (
@@ -243,7 +243,7 @@ export function ProfileInterests({
           disabled={labelsSaving}
           className="inline-flex items-center px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand/90 disabled:opacity-60"
         >
-          {labelsSaving ? 'Lagrer…' : 'Lagre AI-emner'}
+          {labelsSaving ? 'Lagrer…' : 'Lagre emner'}
         </button>
       </ProfileCard>
     </div>

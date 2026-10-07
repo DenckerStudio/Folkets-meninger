@@ -101,7 +101,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
       <div>
         <h4 className="text-sm font-semibold text-foreground">Din LLM-nøkkel (BYOK)</h4>
         <p className="mt-1 text-sm text-muted-foreground">
-          Nøkkelen krypteres på serveren og brukes bare til Stemme+ AI-chat. Vi viser aldri den
+          Nøkkelen krypteres på serveren og brukes bare til Stemme+-chat. Vi viser aldri den
           fulle nøkkelen etter lagring.
         </p>
       </div>

@@ -84,4 +84,4 @@ export const EMPTY_IMPACT_PROFILE: ImpactProfile = {
 };
 
 export const IMPACT_DISCLAIMER =
-  'Anslaget er basert på saksdokumentene og AI-sammendraget. Det er ikke skatteråd, og beløp vises bare når de finnes i kilden.';
+  'Anslaget er basert på saksdokumentene og sammendraget. Det er ikke skatteråd, og beløp vises bare når de finnes i kilden.';

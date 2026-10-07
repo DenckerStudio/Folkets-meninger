@@ -118,7 +118,7 @@ export function ChatOrb() {
       data-open={open ? 'true' : 'false'}
       aria-expanded={open}
       aria-controls="stemme-chat-panel"
-      aria-label={open ? 'Lukk AI-chat' : 'Åpne AI-chat'}
+      aria-label={open ? 'Lukk chat' : 'Åpne chat'}
       onClick={() => {
         if (open) closeChat();
         else {

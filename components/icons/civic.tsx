@@ -18,7 +18,7 @@ function CivicSvg({ className, children }: CivicIconProps & { children: React.Re
   );
 }
 
-/** Speech bubble — system-generated copy, Reels, AI-sammendrag. */
+/** Speech bubble — system-generated copy, Reels, sammendrag. */
 export function CivicBubble({ className }: CivicIconProps) {
   return (
     <CivicSvg className={className}>

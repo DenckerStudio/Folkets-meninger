@@ -67,8 +67,8 @@ export function StemmeChat({
     return (
       <EmptyState
         className={emptyClassName}
-        title="Logg inn for å bruke AI-chat"
-        description="AI-chat er en Stemme+-funksjon. Logg inn med e-post eller Google for å fortsette."
+        title="Logg inn for å bruke chat"
+        description="Chat er en Stemme+-funksjon. Logg inn med e-post eller Google for å fortsette."
         action={
           <Link
             href={chatLoginHref(pathname || routes.utforsk, issueId, routes.utforsk)}
@@ -85,7 +85,7 @@ export function StemmeChat({
     return (
       <EmptyState
         className={emptyClassName}
-        title="AI-chat er en Stemme+-funksjon"
+        title="Chat er en Stemme+-funksjon"
         description="Chatboten bruker din egen LLM-nøkkel og våre sakdata. Gratis brukere beholder stemme, utforsk og høringer — uten en ødelagt chat."
         action={
           <div className="space-y-3">
@@ -109,7 +109,7 @@ export function StemmeChat({
       compact
       className={emptyClassName}
       title="Lagre en LLM-nøkkel først"
-      description="Stemme+ AI-chat kjører på nøkkelen din (OpenAI, Anthropic, AI Gateway eller OpenAI-kompatibel). Uten nøkkel viser rettskriving bare instruksjonen — vi later ikke som en modell har rettet teksten. Sakskontekst og kildesøk fungerer uten nøkkel. Vi lagrer nøkkelen kryptert og sender den aldri tilbake til nettleseren."
+      description="Stemme+-chat kjører på nøkkelen din (OpenAI, Anthropic, AI Gateway eller OpenAI-kompatibel). Uten nøkkel viser rettskriving bare instruksjonen — vi later ikke som en modell har rettet teksten. Sakskontekst og kildesøk fungerer uten nøkkel. Vi lagrer nøkkelen kryptert og sender den aldri tilbake til nettleseren."
       action={
         <Link
           href={`${routes.minSide}?tab=stemme-plus`}
