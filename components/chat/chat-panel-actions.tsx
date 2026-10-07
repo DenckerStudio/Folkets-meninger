@@ -136,7 +136,7 @@ function SakContextResultView({ result }: { result: SakContextActionResult }) {
           title="Ingen sakskontekst ennå"
           description={
             result.note ||
-            'Ingen dokumentutdrag eller sammendrag er indeksert for denne saken ennå.'
+            'Ingen dokumentutdrag eller sammendrag som handler om denne saken er indeksert ennå.'
           }
         />
       </div>
@@ -185,7 +185,7 @@ function SakContextResultView({ result }: { result: SakContextActionResult }) {
           className="border-dashed px-3 py-4"
           title="Ingen dokumentutdrag"
           description={
-            result.note || 'Ingen dokumentutdrag er indeksert for denne saken ennå.'
+            result.note || 'Ingen dokumentutdrag som handler om denne saken er indeksert ennå.'
           }
         />
       )}

@@ -5,7 +5,7 @@ import { getServerSupabase } from '@/lib/supabase-server';
 const MAX_CHUNK_CHARS = 1400;
 const MAX_CHUNKS = 8;
 const ISSUE_COLUMNS = 'id, title, summary, henvisning, ferdigbehandlet';
-const CHUNK_COLUMNS = 'document_id, chunk_index, content';
+const CHUNK_COLUMNS = 'issue_id, document_id, chunk_index, content';
 
 export type ChatRagClient = Pick<SupabaseClient, 'from'>;
 
@@ -57,6 +57,42 @@ function mapIssue(row: Record<string, unknown> | null | undefined): ChatIssueHit
   };
 }
 
+const SAK_STOPWORDS = new Set([
+  'om',
+  'for',
+  'og',
+  'i',
+  'av',
+  'til',
+  'en',
+  'et',
+  'den',
+  'det',
+  'de',
+  'som',
+  'er',
+  'på',
+  'med',
+  'fra',
+  'ved',
+  'eller',
+  'men',
+  'ikke',
+  'skal',
+  'kan',
+  'vil',
+  'har',
+  'var',
+  'lov',
+  'endringer',
+  'forslag',
+  'representantforslag',
+  'stortinget',
+  'innstilling',
+  'proposisjon',
+  'dokument',
+]);
+
 function rankText(content: string, query: string): number {
   const needle = query.toLowerCase().trim();
   if (!needle) return 0;
@@ -64,6 +100,54 @@ function rankText(content: string, query: string): number {
   if (haystack.includes(needle)) return 100;
   const words = needle.split(/\s+/).filter((word) => word.length > 2);
   return words.reduce((score, word) => score + (haystack.includes(word) ? 1 : 0), 0);
+}
+
+/** Contentful tokens from sak title/henvisning — skip boilerplate so multi-sak referater do not “match” on “lov/forslag”. */
+function significantSakTokens(...parts: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of parts) {
+    if (!part) continue;
+    for (const raw of part.toLowerCase().split(/[^\p{L}\p{N}]+/u)) {
+      const word = raw.trim();
+      if (word.length < 4 || SAK_STOPWORDS.has(word) || seen.has(word)) continue;
+      seen.add(word);
+      out.push(word);
+    }
+  }
+  return out;
+}
+
+/**
+ * Score a chunk against the requested sak. Multi-sak meeting minutes often share
+ * one document_id; never treat “first chunk of the referat” as sak-relevant.
+ */
+function rankChunkForSak(
+  content: string,
+  issue: ChatIssueHit,
+  userQuery: string,
+): number {
+  const haystack = content.toLowerCase();
+  let score = 0;
+
+  const issueId = issue.id.trim().toLowerCase();
+  if (issueId && haystack.includes(issueId)) score += 100;
+
+  const henvisning = issue.henvisning?.trim().toLowerCase();
+  if (henvisning && henvisning.length >= 4 && haystack.includes(henvisning)) {
+    score += 80;
+  }
+
+  for (const token of significantSakTokens(issue.title, issue.henvisning)) {
+    if (haystack.includes(token)) score += 10;
+  }
+
+  const query = userQuery.trim();
+  if (query && query.toLowerCase() !== issueId) {
+    score += rankText(content, query);
+  }
+
+  return score;
 }
 
 /**
@@ -143,9 +227,12 @@ export async function loadIssueMeta(
 
 async function searchChunks(
   supabase: ChatRagClient,
-  issueId: string,
+  issue: ChatIssueHit,
   query: string,
 ): Promise<ChatDocumentChunk[]> {
+  const issueId = issue.id.trim();
+  if (!issueId) return [];
+
   const { data, error } = await supabase
     .from('document_chunks')
     .select(CHUNK_COLUMNS)
@@ -156,23 +243,26 @@ async function searchChunks(
   if (error || !Array.isArray(data)) return [];
 
   const mapped = data.flatMap((row) => {
+    const rowIssueId = String(row.issue_id ?? '').trim();
+    // Defense in depth: never surface a chunk that is not for this sak.
+    if (rowIssueId && rowIssueId !== issueId) return [];
     const content = clip(String(row.content ?? ''));
     if (!content) return [];
+    const rank = rankChunkForSak(content, issue, query);
+    if (rank <= 0) return [];
     return [
       {
         documentId: String(row.document_id ?? ''),
         chunkIndex: Number(row.chunk_index ?? 0),
         content,
-        rank: rankText(content, query),
+        rank,
       },
     ];
   });
 
-  const ranked = [...mapped].sort(
-    (a, b) => (b.rank ?? 0) - (a.rank ?? 0) || a.chunkIndex - b.chunkIndex,
-  );
-  const hits = ranked.filter((chunk) => (chunk.rank ?? 0) > 0);
-  return (hits.length > 0 ? hits : ranked).slice(0, MAX_CHUNKS);
+  return [...mapped]
+    .sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0) || a.chunkIndex - b.chunkIndex)
+    .slice(0, MAX_CHUNKS);
 }
 
 async function loadAiSummaryText(
@@ -230,7 +320,7 @@ export async function retrieveSakContext(args: {
   }
 
   const [chunks, summaryText] = await Promise.all([
-    searchChunks(supabase, issueId, args.query),
+    searchChunks(supabase, issue, args.query),
     loadAiSummaryText(supabase, issueId),
   ]);
 
@@ -240,7 +330,7 @@ export async function retrieveSakContext(args: {
     chunks,
     note:
       chunks.length === 0
-        ? 'Ingen dokumentutdrag er indeksert for denne saken ennå. Bruk tittel/sammendrag, og søk etter oppdaterte kilder ved behov.'
+        ? 'Ingen dokumentutdrag som handler om denne saken er indeksert ennå. Bruk tittel/sammendrag, og søk etter oppdaterte kilder ved behov.'
         : null,
   };
 }

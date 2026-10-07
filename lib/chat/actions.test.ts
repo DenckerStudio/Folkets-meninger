@@ -108,7 +108,7 @@ async function main() {
   assert.equal(issueOnly.result.empty, true);
   assert.equal(issueOnly.result.summary, null);
   assert.equal(issueOnly.result.chunks.length, 0);
-  assert.match(issueOnly.result.note ?? '', /ingen dokumentutdrag/i);
+  assert.match(issueOnly.result.note ?? '', /ingen dokumentutdrag som handler om denne saken/i);
 
   const filled = await runSakContextRetrieve({
     issueId: '200365',
@@ -138,7 +138,7 @@ async function main() {
       list: (table) => {
         if (table === 'document_chunks') {
           return {
-            data: [{ document_id: 'd1', chunk_index: 0, content: 'Tekst om vektgrense.' }],
+            data: [{ issue_id: '200365', document_id: 'd1', chunk_index: 0, content: 'Tekst om vektgrense.' }],
             error: null,
           };
         }
@@ -154,6 +154,122 @@ async function main() {
   assert.equal(filled.result.chunks.length, 1);
   assert.equal(filled.result.chunks[0]?.content, 'Tekst om vektgrense.');
   assert.ok(!('embedding' in (filled.result.chunks[0] ?? {})));
+
+  // Multi-sak referat: unrelated meeting excerpt must never surface for this sak,
+  // even when it is stored under the same issue_id (ingest of a full meeting day).
+  const contaminated = await runSakContextRetrieve({
+    issueId: '103102',
+    query: '103102',
+    client: makeRagClient({
+      maybeSingle: (table) => {
+        if (table === 'stortinget_issues') {
+          return {
+            data: {
+              id: '103102',
+              title: 'Endringer i lov om pensjonstrygd for fiskere',
+              summary: 'Lukking av pensjonstrygden for fiskere.',
+              henvisning: 'Prop. 133 L (2024-2025)',
+              ferdigbehandlet: true,
+            },
+            error: null,
+          };
+        }
+        if (table === 'issue_ai_summaries') {
+          return {
+            data: {
+              narrative: 'Saken gjelder pensjonstrygd for fiskere.',
+              hva: null,
+              hvem: null,
+              kostnad: null,
+            },
+            error: null,
+          };
+        }
+        return { data: null, error: null };
+      },
+      list: (table) => {
+        if (table === 'document_chunks') {
+          return {
+            data: [
+              {
+                issue_id: '103102',
+                document_id: 'referat-2025-12-02',
+                chunk_index: 0,
+                content:
+                  'Europautvalget behandlede spørsmål om forsvarssamarbeid og EØS-tilpasninger i møtet.',
+              },
+              {
+                issue_id: '999999',
+                document_id: 'other-sak',
+                chunk_index: 0,
+                content: 'Pensjonstrygd for fiskere omtales her under feil issue_id.',
+              },
+              {
+                issue_id: '103102',
+                document_id: 'prop-133-l',
+                chunk_index: 0,
+                content:
+                  'Prop. 133 L om pensjonstrygd for fiskere foreslår lukking av ordningen.',
+              },
+            ],
+            error: null,
+          };
+        }
+        return { data: [], error: null };
+      },
+    }),
+  });
+  assert.equal(contaminated.ok, true);
+  if (!contaminated.ok) throw new Error('expected contaminated sak ok');
+  assert.equal(contaminated.result.issue?.id, '103102');
+  assert.equal(contaminated.result.empty, false);
+  assert.equal(contaminated.result.chunks.length, 1);
+  assert.match(contaminated.result.chunks[0]?.content ?? '', /pensjonstrygd for fiskere/i);
+  assert.doesNotMatch(contaminated.result.chunks[0]?.content ?? '', /Europautvalget/i);
+
+  const onlyUnrelated = await runSakContextRetrieve({
+    issueId: '103102',
+    query: '103102',
+    client: makeRagClient({
+      maybeSingle: (table) => {
+        if (table === 'stortinget_issues') {
+          return {
+            data: {
+              id: '103102',
+              title: 'Endringer i lov om pensjonstrygd for fiskere',
+              summary: 'Lukking av pensjonstrygden for fiskere.',
+              henvisning: 'Prop. 133 L (2024-2025)',
+              ferdigbehandlet: true,
+            },
+            error: null,
+          };
+        }
+        return { data: null, error: null };
+      },
+      list: (table) => {
+        if (table === 'document_chunks') {
+          return {
+            data: [
+              {
+                issue_id: '103102',
+                document_id: 'referat-2025-12-02',
+                chunk_index: 0,
+                content:
+                  'Europautvalget behandlede spørsmål om forsvarssamarbeid og EØS-tilpasninger i møtet.',
+              },
+            ],
+            error: null,
+          };
+        }
+        return { data: [], error: null };
+      },
+    }),
+  });
+  assert.equal(onlyUnrelated.ok, true);
+  if (!onlyUnrelated.ok) throw new Error('expected onlyUnrelated ok');
+  assert.equal(onlyUnrelated.result.issue?.id, '103102');
+  assert.equal(onlyUnrelated.result.chunks.length, 0);
+  assert.match(onlyUnrelated.result.note ?? '', /ingen dokumentutdrag som handler om denne saken/i);
 
   console.log('chat/actions.test.ts: ok');
 }

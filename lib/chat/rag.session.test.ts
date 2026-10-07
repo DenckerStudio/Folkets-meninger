@@ -17,7 +17,9 @@ const panelSrc = readFileSync(
 assert.doesNotMatch(ragSrc, /getServiceSupabase/);
 assert.match(ragSrc, /getServerSupabase/);
 assert.match(ragSrc, /getAnonSupabase/);
-assert.match(ragSrc, /document_id, chunk_index, content/);
+assert.match(ragSrc, /issue_id, document_id, chunk_index, content/);
+assert.match(ragSrc, /rankChunkForSak/);
+assert.doesNotMatch(ragSrc, /hits\.length > 0 \? hits : ranked/);
 assert.doesNotMatch(ragSrc, /embedding/);
 
 assert.match(toolsSrc, /client: ragClient/);
