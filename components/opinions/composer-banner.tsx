@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { ComposerStemmeAssists } from '@/components/opinions/composer-stemme-assists';
 import { OpinionPointsEditor } from '@/components/opinions/opinion-points-editor';
 import { SakPicker } from '@/components/opinions/sak-picker';
 import { STANCE_VISUAL } from '@/lib/opinions/labels';
@@ -138,6 +139,11 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
     }
     return merged;
   }, [remoteOptions, sakOptions]);
+
+  const selectedIssueTitle = useMemo(() => {
+    if (!issueId) return null;
+    return mergedOptions.find((option) => option.id === issueId)?.title ?? null;
+  }, [issueId, mergedOptions]);
 
   const titleLength = title.trim().length;
   const bodyLength = body.trim().length;
@@ -414,6 +420,16 @@ export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
               <p className="mt-2 text-sm font-medium text-destructive">{liveBodyError}</p>
             ) : null}
           </div>
+
+          <ComposerStemmeAssists
+            body={body}
+            title={title}
+            issueTitle={selectedIssueTitle}
+            onApplyBody={(next) => {
+              markEdited();
+              setBody(next);
+            }}
+          />
 
           <OpinionPointsEditor
             value={points}

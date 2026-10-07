@@ -2,9 +2,10 @@
 
 import { useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, X } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { StemmeChat } from '@/components/chat/stemme-chat';
 import { useChatOverlay } from '@/components/chat/chat-overlay-context';
+import { AiAssistantCard } from '@/components/ui/ai-assistant-card';
 import { STEMME_PLUS_MONTHLY_PRICE_NOK } from '@/lib/stemme-plus/constants';
 import { resolveChatGate, type ChatGateReason } from '@/lib/chat/overlay';
 
@@ -126,6 +127,8 @@ export function ChatPanel() {
 
   if (!open || !mounted) return null;
 
+  const readyGate = gate !== 'loading' ? gate : null;
+
   return createPortal(
     <div className="fixed inset-0 z-[90] flex items-end justify-end p-0 sm:p-4 xl:items-stretch xl:justify-end xl:p-6">
       <button
@@ -141,46 +144,36 @@ export function ChatPanel() {
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="relative z-10 flex h-[min(92vh,44rem)] w-full max-w-full flex-col overflow-hidden rounded-t-2xl border border-border bg-card shadow-xl sm:h-[min(88vh,42rem)] sm:max-w-md sm:rounded-2xl xl:my-2 xl:h-auto xl:max-h-[calc(100vh-4rem)]"
+        className="relative z-10 flex h-[min(92vh,44rem)] w-full max-w-full flex-col sm:h-[min(88vh,42rem)] sm:max-w-md xl:my-2 xl:h-auto xl:max-h-[calc(100vh-4rem)]"
       >
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-4 py-3">
-          <div className="min-w-0">
-            <h2 id={titleId} className="text-base font-semibold text-foreground">
-              Chat
-            </h2>
-            <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
-              Rettskriving, sakskontekst og kilder direkte — samtale på nøkkelen din.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={closeChat}
-            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label="Lukk chat"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </header>
-
-        <div className="flex min-h-0 flex-1 flex-col">
-          {error ? <p className="px-4 pt-3 text-sm text-destructive">{error}</p> : null}
+        <AiAssistantCard
+          titleId={titleId}
+          descriptionId={descriptionId}
+          title="Chat"
+          description="Sakskontekst og samtale på nøkkelen din. Rettskriv og kilder ligger i meningskomponisten."
+          onClose={closeChat}
+          className="h-full max-h-full"
+        >
+          {error ? <p className="px-0 pt-1 text-sm text-destructive">{error}</p> : null}
           {gate === 'loading' && !error ? (
             <p className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Laster chat…
             </p>
-          ) : gate === 'loading' ? null : (
+          ) : null}
+          {readyGate ? (
             <StemmeChat
               key={issue?.issueId ?? 'general'}
-              gate={gate}
+              gate={readyGate}
               issueId={issue?.issueId ?? null}
               issueTitle={issue?.issueTitle ?? null}
               priceNok={meta.priceNok}
               checkoutConfigured={meta.checkoutConfigured}
               variant="panel"
+              embedded
             />
-          )}
-        </div>
+          ) : null}
+        </AiAssistantCard>
       </section>
     </div>,
     document.body,

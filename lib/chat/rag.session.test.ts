@@ -57,4 +57,19 @@ assert.match(panelSrc, /Hent sakskontekst/);
 assert.match(panelSrc, /\/api\/chat\/sak-context/);
 assert.doesNotMatch(panelSrc, /streamText/);
 
+assert.doesNotMatch(panelSrc, /data-chat-action=["']kilder["']/);
+assert.doesNotMatch(panelSrc, /data-chat-action=["']rettskriving["']/);
+assert.doesNotMatch(panelSrc, /\/api\/chat\/rettskriving/);
+assert.doesNotMatch(panelSrc, /\/api\/chat\/sources/);
+
+const composerAssistsSrc = readFileSync(
+  new URL('../../components/opinions/composer-stemme-assists.tsx', import.meta.url),
+  'utf8',
+);
+assert.match(composerAssistsSrc, /Rettskriv/);
+assert.match(composerAssistsSrc, /Finn oppdaterte kilder/);
+assert.match(composerAssistsSrc, /\/api\/chat\/rettskriving/);
+assert.match(composerAssistsSrc, /\/api\/chat\/sources/);
+
+
 console.log('chat/rag.session.test.ts: ok session-bound overlay RAG');
