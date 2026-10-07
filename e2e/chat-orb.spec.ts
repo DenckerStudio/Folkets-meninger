@@ -3,16 +3,16 @@ import fs from 'node:fs';
 
 const ARTIFACTS = '/opt/cursor/artifacts';
 
-/** Panel mounts immediately with "Laster AI-chat…"; wait until the guest gate is settled. */
+/** Panel mounts immediately with "Laster chat…"; wait until the guest gate is settled. */
 async function waitForGuestChatPanel(page: Page) {
   const panel = page.locator('[data-chat-panel]');
   await expect(panel).toBeVisible({ timeout: 90_000 });
   await expect(panel.getByRole('link', { name: 'Logg inn' })).toBeVisible({ timeout: 90_000 });
-  await expect(panel.getByText('Laster AI-chat…')).toHaveCount(0);
+  await expect(panel.getByText('Laster chat…')).toHaveCount(0);
   return panel;
 }
 
-test.describe('AI-chat orb overlay', () => {
+test.describe('Chat orb overlay', () => {
   test.beforeAll(() => {
     fs.mkdirSync(ARTIFACTS, { recursive: true });
   });
@@ -22,9 +22,9 @@ test.describe('AI-chat orb overlay', () => {
     await page.goto('/dashboard/avstemninger');
     await expect(page.getByRole('heading', { name: 'Avstemninger', exact: true })).toBeVisible();
 
-    const orb = page.getByRole('button', { name: 'Åpne AI-chat' });
+    const orb = page.getByRole('button', { name: 'Åpne chat' });
     await expect(orb).toBeVisible();
-    await expect(page.getByRole('navigation', { name: 'Dashbordmeny' }).getByRole('link', { name: 'AI-chat' })).toHaveCount(0);
+    await expect(page.getByRole('navigation', { name: 'Dashbordmeny' }).getByRole('link', { name: 'Chat' })).toHaveCount(0);
     await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
 
     await page.screenshot({
@@ -34,8 +34,8 @@ test.describe('AI-chat orb overlay', () => {
     await orb.click();
 
     const panel = await waitForGuestChatPanel(page);
-    await expect(page.getByRole('heading', { name: 'AI-chat', exact: true })).toBeVisible();
-    await expect(panel.getByText('Logg inn for å bruke AI-chat')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Chat', exact: true })).toBeVisible();
+    await expect(panel.getByText('Logg inn for å bruke chat')).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Rettskriving' })).toHaveCount(0);
     await expect(panel.getByRole('button', { name: 'Hent sakskontekst' })).toHaveCount(0);
     await expect(panel.getByRole('button', { name: 'Finn oppdaterte kilder' })).toHaveCount(0);
@@ -63,7 +63,7 @@ test.describe('AI-chat orb overlay', () => {
     await page.goto('/dashboard/avstemninger');
     await expect(page.getByRole('heading', { name: 'Avstemninger', exact: true })).toBeVisible();
 
-    const orb = page.getByRole('button', { name: 'Åpne AI-chat' });
+    const orb = page.getByRole('button', { name: 'Åpne chat' });
     await orb.click();
 
     const panel = page.locator('[data-chat-panel]');
@@ -147,7 +147,7 @@ test.describe('AI-chat orb overlay', () => {
             henvisning: null,
             ferdigbehandlet: false,
           },
-          summary: 'AI-sammendrag fra saksdokumentene.',
+          summary: 'Sammendrag fra saksdokumentene.',
           chunks: [{ documentId: 'd1', chunkIndex: 0, content: 'Utdrag om vektgrense for førerkort.' }],
           note: null,
           empty: false,
@@ -172,7 +172,7 @@ test.describe('AI-chat orb overlay', () => {
 
     await panel.getByRole('button', { name: 'Hent', exact: true }).click();
     await expect(panel.locator('[data-sak-context-result="ready"]')).toBeVisible();
-    await expect(panel.getByText('AI-sammendrag fra saksdokumentene.')).toBeVisible();
+    await expect(panel.getByText('Sammendrag fra saksdokumentene.')).toBeVisible();
     await expect(panel.getByText('Utdrag om vektgrense for førerkort.')).toBeVisible();
     await expect(panel.locator('[data-sak-context-result="empty"]')).toHaveCount(0);
 
@@ -197,7 +197,7 @@ test.describe('AI-chat orb overlay', () => {
     });
 
     await page.goto('/dashboard/sak/200365');
-    const orb = page.getByRole('button', { name: 'Åpne AI-chat' });
+    const orb = page.getByRole('button', { name: 'Åpne chat' });
     await expect(orb).toBeVisible({ timeout: 90_000 });
     await orb.click();
 
@@ -296,7 +296,7 @@ test.describe('AI-chat orb overlay', () => {
     await page.goto('/dashboard/avstemninger');
     await expect(page.getByRole('heading', { name: 'Avstemninger', exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Åpne AI-chat' }).click();
+    await page.getByRole('button', { name: 'Åpne chat' }).click();
     const panel = page.locator('[data-chat-panel]');
     await expect(panel).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Rett kladden' })).toBeVisible();
@@ -340,7 +340,7 @@ test.describe('AI-chat orb overlay', () => {
     await page.goto('/dashboard/chat');
     await expect(page).toHaveURL(/\/dashboard\/utforsk(\?|$)/);
     await waitForGuestChatPanel(page);
-    await expect(page.getByRole('heading', { name: 'AI-chat', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Chat', exact: true })).toBeVisible();
   });
 
   test('floating orb mounts on Utforsk and opens the panel', async ({ page }) => {
@@ -348,9 +348,9 @@ test.describe('AI-chat orb overlay', () => {
     await page.goto('/dashboard/utforsk');
     await expect(page.getByRole('heading', { name: 'Utforsk saker' })).toBeVisible({ timeout: 90_000 });
 
-    const orb = page.getByRole('button', { name: 'Åpne AI-chat' });
+    const orb = page.getByRole('button', { name: 'Åpne chat' });
     await expect(orb).toBeVisible();
-    await expect(page.getByRole('navigation', { name: 'Dashbordmeny' }).getByRole('link', { name: 'AI-chat' })).toHaveCount(0);
+    await expect(page.getByRole('navigation', { name: 'Dashbordmeny' }).getByRole('link', { name: 'Chat' })).toHaveCount(0);
     await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
 
     await page.screenshot({
@@ -360,8 +360,8 @@ test.describe('AI-chat orb overlay', () => {
     await orb.click();
 
     const panel = await waitForGuestChatPanel(page);
-    await expect(page.getByRole('heading', { name: 'AI-chat', exact: true })).toBeVisible();
-    await expect(panel.getByText('Logg inn for å bruke AI-chat')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Chat', exact: true })).toBeVisible();
+    await expect(panel.getByText('Logg inn for å bruke chat')).toBeVisible();
 
     await page.screenshot({
       path: `${ARTIFACTS}/chat-panel-utforsk-open.png`,

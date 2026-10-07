@@ -89,7 +89,7 @@ export function ChatPanel() {
           checkout_configured?: boolean;
         };
         if (!res.ok) {
-          throw new Error(json.error || 'Kunne ikke hente tilgang til AI-chat.');
+          throw new Error(json.error || 'Kunne ikke hente tilgang til chat.');
         }
 
         setGate(
@@ -111,7 +111,7 @@ export function ChatPanel() {
           checkoutConfigured: false,
         });
         if (!(loadError instanceof DOMException && loadError.name === 'AbortError')) {
-          setError(loadError instanceof Error ? loadError.message : 'Kunne ikke hente tilgang til AI-chat.');
+          setError(loadError instanceof Error ? loadError.message : 'Kunne ikke hente tilgang til chat.');
         }
       }
     };
@@ -131,7 +131,7 @@ export function ChatPanel() {
       <button
         type="button"
         className="absolute inset-0 bg-foreground/40 backdrop-blur-[2px]"
-        aria-label="Lukk AI-chat"
+        aria-label="Lukk chat"
         onClick={closeChat}
       />
       <section
@@ -146,17 +146,17 @@ export function ChatPanel() {
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-4 py-3">
           <div className="min-w-0">
             <h2 id={titleId} className="text-base font-semibold text-foreground">
-              AI-chat
+              Chat
             </h2>
             <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
-              Rettskriving, sakskontekst og kilder direkte — AI-samtale på nøkkelen din.
+              Rettskriving, sakskontekst og kilder direkte — samtale på nøkkelen din.
             </p>
           </div>
           <button
             type="button"
             onClick={closeChat}
             className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label="Lukk AI-chat"
+            aria-label="Lukk chat"
           >
             <X className="h-5 w-5" />
           </button>
@@ -167,7 +167,7 @@ export function ChatPanel() {
           {gate === 'loading' && !error ? (
             <p className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Laster AI-chat…
+              Laster chat…
             </p>
           ) : gate === 'loading' ? null : (
             <StemmeChat

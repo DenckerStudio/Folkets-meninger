@@ -77,7 +77,7 @@ export function ChatPanelActions({
         ))}
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        Direkte handlinger — uten å starte en AI-samtale. Kladden publiseres ikke.
+        Direkte handlinger — uten å starte en samtale. Kladden publiseres ikke.
       </p>
       {renderActionForm(action, { defaultIssueId, issueTitle, hasByok })}
     </div>
@@ -262,7 +262,7 @@ function SakContextForm({ defaultIssueId }: { defaultIssueId: string }) {
       }}
     >
       <p className="text-xs text-muted-foreground">
-        Henter sak, AI-sammendrag og dokumentutdrag fra vår cache. Ingen språkmodell.
+        Henter sak, sammendrag og dokumentutdrag fra vår cache. Ingen språkmodell.
       </p>
       <div className="flex gap-2">
         <label className="min-w-0 flex-1">
@@ -310,7 +310,7 @@ function SakContextResultView({ result }: { result: SakContextActionResult }) {
           title="Ingen sakskontekst ennå"
           description={
             result.note ||
-            'Ingen dokumentutdrag eller AI-sammendrag er indeksert for denne saken ennå.'
+            'Ingen dokumentutdrag eller sammendrag er indeksert for denne saken ennå.'
           }
         />
       </div>
@@ -328,15 +328,15 @@ function SakContextResultView({ result }: { result: SakContextActionResult }) {
           data-sak-context-summary=""
           className="space-y-1 rounded-lg border border-border bg-muted/30 px-3 py-2"
         >
-          <p className="text-xs font-medium text-foreground">AI-sammendrag</p>
+          <p className="text-xs font-medium text-foreground">Sammendrag</p>
           <p className="whitespace-pre-wrap text-sm text-foreground">{result.summary}</p>
         </div>
       ) : (
         <EmptyState
           compact
           className="border-dashed px-3 py-4"
-          title="Ingen AI-sammendrag"
-          description="Saken har dokumentutdrag, men ikke et AI-sammendrag ennå."
+          title="Ingen sammendrag"
+          description="Saken har dokumentutdrag, men ikke et sammendrag ennå."
         />
       )}
       {result.chunks.length > 0 ? (

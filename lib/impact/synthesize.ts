@@ -242,7 +242,7 @@ export function synthesizeImpact(args: {
       args.title ??
       'Dokumentene beskriver saken, men kobler den ikke tydelig til din situasjon.'
     : texts.how ??
-      'Kalkulatoren bruker saksdokumentene og AI-sammendraget til å anslå effekten for deg.';
+      'Kalkulatoren bruker saksdokumentene og sammendraget til å anslå effekten for deg.';
 
   const sourcesUsed = relevant.filter((c) => (c.score ?? 0) > 0).length;
   const grounded = amount != null || Boolean(texts.who || texts.how);

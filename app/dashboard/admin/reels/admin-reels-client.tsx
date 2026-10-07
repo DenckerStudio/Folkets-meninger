@@ -358,7 +358,7 @@ export default function AdminReelsClient({
         {candidates.length === 0 ? (
           <EmptyState
             title="Ingen sak-kandidater"
-            description="Ingen kandidater med RAG, AI-sammendrag eller sakssammendrag akkurat nå."
+            description="Ingen kandidater med RAG, sammendrag eller sakssammendrag akkurat nå."
             className="py-6"
           />
         ) : (
@@ -372,7 +372,7 @@ export default function AdminReelsClient({
                   <p className="text-sm font-medium text-foreground">{candidate.title}</p>
                   <p className="text-xs text-muted-foreground">
                     {candidate.issueId} · {candidate.ragChunkCount} RAG-chunks
-                    {candidate.hasAiSummary ? ' · AI-sammendrag' : ''}
+                    {candidate.hasAiSummary ? ' · Sammendrag' : ''}
                     {candidate.sourceKind === 'metadata' ? ' · metadata' : ''}
                   </p>
                 </div>

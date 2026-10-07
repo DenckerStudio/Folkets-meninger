@@ -46,7 +46,7 @@ test('folkets meninger is the first core destination', () => {
   assert.equal(coreNavItems[0]?.href, routes.folketsMeninger);
 });
 
-test('AI-chat is not a sidebar or primary destination', () => {
+test('Chat is not a sidebar or primary destination', () => {
   assert.equal(
     extendedNavItems.some((item) => item.href === routes.chat),
     false,

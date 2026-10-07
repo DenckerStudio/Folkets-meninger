@@ -32,7 +32,7 @@ export function ProfileNotifications({
       <p className="text-sm text-muted-foreground">
         Abonnement på{' '}
         <Link href={`${routes.minSide}?tab=innstillinger`} className="text-brand hover:underline">
-          hjertesaker og AI-emner
+          hjertesaker og emner
         </Link>{' '}
         styres under Mine hjertesaker.
       </p>

@@ -3,7 +3,6 @@
 import {
   useCallback,
   useEffect,
-  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
@@ -13,8 +12,7 @@ import { ArrowLeft, ArrowRight, Compass } from 'lucide-react';
 import { CivicBubble } from '@/components/icons/civic';
 import { EmptyLineState } from '@/components/motion/empty-line';
 import { AnimatePresence, motion } from 'motion/react';
-import type { Swiper as SwiperType } from 'swiper';
-import { CardCarousel } from '@/components/ui/card-carousel';
+import { CoverflowCarousel } from '@/components/ui/coverflow-carousel';
 import { ReelCarouselCard } from '@/components/polls/reel-vote-card';
 import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import type { SystemReelFeedItem } from '@/lib/polls/types';
@@ -45,6 +43,20 @@ function useIsMounted() {
     () => true,
     () => false,
   );
+}
+
+function subscribeMd(onStoreChange: () => void) {
+  const mq = window.matchMedia('(min-width: 768px)');
+  mq.addEventListener('change', onStoreChange);
+  return () => mq.removeEventListener('change', onStoreChange);
+}
+
+function getMd() {
+  return window.matchMedia('(min-width: 768px)').matches;
+}
+
+function useIsDesktopMd() {
+  return useSyncExternalStore(subscribeMd, getMd, () => false);
 }
 
 function notifyHashChanged() {
@@ -140,7 +152,7 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
                   role="dialog"
                   aria-modal="true"
                   aria-label="Reels"
-                  className="fixed inset-0 z-[200] flex h-[100dvh] w-screen max-w-none flex-col bg-brand"
+                  className="fixed inset-0 z-[200] flex h-[100dvh] w-screen max-w-none flex-col bg-[#00205b]"
                   style={{ top: 0, right: 0, bottom: 0, left: 0 }}
                   initial={reducedMotion ? false : { opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -253,7 +265,7 @@ function ReelsNavCta({
 }
 
 function ReelsPanel({
-  active,
+  active: _active,
   items,
   activePollId,
   onSelect,
@@ -265,28 +277,30 @@ function ReelsPanel({
   onSelect: (id: string | null) => void;
   onClose: () => void;
 }) {
-  const reducedMotion = usePrefersReducedMotion();
-  const swiperRef = useRef<SwiperType | null>(null);
-
-  useEffect(() => {
-    const autoplay = swiperRef.current?.autoplay;
-    if (!autoplay) return;
-    if (!active || activePollId) autoplay.stop();
-    else autoplay.start();
-  }, [active, activePollId]);
+  const isDesktop = useIsDesktopMd();
+  const cardOpen = Boolean(activePollId);
 
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col">
-      <div className="absolute left-4 top-[max(0.75rem,env(safe-area-inset-top,0px))] z-20">
+      {/* Header: back + REELS label so back never covers the card badge */}
+      <div className="relative z-30 flex shrink-0 items-center gap-3 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
         <button
           type="button"
           onClick={onClose}
           aria-label="Tilbake til saker"
           className="inline-flex"
         >
-          <ReelsNavArrow direction="back" />
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#00205b] shadow-sm">
+            <ArrowLeft className="h-5 w-5" aria-hidden />
+          </span>
           <span className="sr-only">Tilbake til saker</span>
         </button>
+        <div className="min-w-0 flex-1">
+          <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-white">
+            <CivicBubble className="h-3.5 w-3.5" aria-hidden />
+            Reels
+          </p>
+        </div>
       </div>
 
       {items.length === 0 ? (
@@ -302,30 +316,67 @@ function ReelsPanel({
             </p>
           </EmptyLineState>
         </div>
+      ) : isDesktop ? (
+        /* Desktop: 21st Coverflow rack — not fullscreen single cards, no sideways peek bleed */
+        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden px-2">
+          <CoverflowCarousel
+            label="Reels"
+            loop={items.length >= 3}
+            showPagination
+            showNavigation
+            interactionLocked={cardOpen}
+            rotate={40}
+            depth={0.55}
+            perspective={2.8}
+            cardWidth="clamp(220px, 28vw, 320px)"
+            cardHeight="clamp(320px, 58vh, 440px)"
+            gap={0.08}
+            cardClassName="rounded-2xl border border-white/10 bg-[#00205b]"
+            slides={items.map((item) => (
+              <ReelCarouselCard
+                key={item.poll.id}
+                item={item}
+                showBadge={false}
+                selected={activePollId === item.poll.id}
+                onSelect={() => onSelect(item.poll.id)}
+                onBack={() => onSelect(null)}
+              />
+            ))}
+          />
+        </div>
       ) : (
-        <CardCarousel
-          fill
-          autoplayDelay={reducedMotion ? 0 : 2200}
-          showPagination
-          showNavigation
-          onSwiper={(swiper) => {
-            swiperRef.current = swiper;
-          }}
-          slides={items.map((item) => (
-            <ReelCarouselCard
-              key={item.poll.id}
-              item={item}
-              fill
-              selected={activePollId === item.poll.id}
-              onSelect={() => onSelect(item.poll.id)}
-              onBack={() => onSelect(null)}
-            />
-          ))}
-        />
+        /* Mobile: fullscreen OK — one centred portrait card, coverflow neighbours faded */
+        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden">
+          <CoverflowCarousel
+            label="Reels"
+            loop={items.length >= 3}
+            showPagination
+            showNavigation={false}
+            interactionLocked={cardOpen}
+            rotate={28}
+            depth={0.45}
+            perspective={2.4}
+            fade={0.22}
+            cardWidth="min(100vw - 1.5rem, 26rem)"
+            cardHeight="min(72dvh, 34rem)"
+            gap={0.12}
+            cardClassName="rounded-2xl border border-white/10 bg-[#00205b]"
+            slides={items.map((item) => (
+              <ReelCarouselCard
+                key={item.poll.id}
+                item={item}
+                showBadge={false}
+                selected={activePollId === item.poll.id}
+                onSelect={() => onSelect(item.poll.id)}
+                onBack={() => onSelect(null)}
+              />
+            ))}
+          />
+        </div>
       )}
 
       {items.length > 0 ? (
-        <p className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] text-center text-xs leading-relaxed text-white/70">
+        <p className="pointer-events-none z-20 shrink-0 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-1 text-center text-xs leading-relaxed text-white/70">
           {SYSTEM_REEL_DISCLAIMER}
         </p>
       ) : null}

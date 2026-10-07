@@ -321,7 +321,7 @@ export default function ExploreClient({
       {popularLabels.length > 0 && (
         <SectionSettle>
           <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">Emne (AI)</p>
+            <p className="text-sm font-medium text-foreground">Emne</p>
             <div className="flex flex-wrap gap-2">
               {popularLabels.map((label) => {
                 const active = activeAiLabels.includes(label);

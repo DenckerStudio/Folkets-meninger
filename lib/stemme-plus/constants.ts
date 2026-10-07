@@ -15,5 +15,5 @@ export const STEMME_PLUS_BENEFITS = [
   'Støttemerke på profilen',
   'Rikere ukentlig nyhetsoppsummering',
   'Sanntidsvarsler og smartere hjertesak-varsler',
-  'AI-chat om saker med din egen LLM-nøkkel (BYOK), RAG og kildesøk',
+  'Chat om saker med din egen LLM-nøkkel (BYOK), RAG og kildesøk',
 ] as const;

@@ -120,7 +120,7 @@ export function ProfileStemmePlus() {
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               Stemme, utforsk og høringer forblir gratis. Stemme+ gir merker, rikere varsler og
-              AI-chat med din egen nøkkel.
+              Chat med din egen nøkkel.
             </p>
           </div>
         </div>
@@ -153,7 +153,7 @@ export function ProfileStemmePlus() {
               onClick={() => openChat()}
               className="text-sm font-medium text-brand hover:underline"
             >
-              Åpne AI-chat
+              Åpne chat
             </button>
           </div>
           {status.subscription_period_end ? (

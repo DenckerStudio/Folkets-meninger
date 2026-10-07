@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChevronDown, Search, Sparkles, X } from 'lucide-react';
+import { ChevronDown, Search, X } from 'lucide-react';
 import { SakPreviewDialog } from '@/components/opinions/sak-preview-dialog';
 import { SakProcessingBadge } from '@/components/sak/sak-meta';
 import {
@@ -222,7 +222,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
           <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2 sm:px-4">
             <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
               {!hasQuery && suggestionIds.size > 0 ? (
-                <Sparkles className="h-3.5 w-3.5 text-brand" aria-hidden />
+                <Search className="h-3.5 w-3.5 text-brand" aria-hidden />
               ) : null}
               {listLabel}
             </p>
