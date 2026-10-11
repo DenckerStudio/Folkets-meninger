@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Trash2 } from 'lucide-react';
+import { KeyRound, Loader2, Trash2 } from 'lucide-react';
+import { ModelPicker } from '@/components/byok/model-picker';
 import { Button } from '@/components/ui/button';
 import { modelExists } from '@/lib/byok/ollama';
 import {
@@ -31,6 +32,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
   const [baseUrl, setBaseUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [saved, setSaved] = useState<ByokMetaView>(initial);
+  const [editing, setEditing] = useState(!initial);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -133,6 +135,9 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
         model: json.credential.model,
         keyLast4: json.credential.keyLast4,
       });
+      setProvider(json.credential.provider);
+      setModel(json.credential.model);
+      setEditing(false);
       setMessage('Nøkkelen er lagret. Den sendes aldri tilbake til nettleseren.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Kunne ikke lagre nøkkelen');
@@ -152,6 +157,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
         throw new Error(typeof json.error === 'string' ? json.error : 'Kunne ikke slette nøkkelen');
       }
       setSaved(null);
+      setEditing(true);
       setMessage('Nøkkelen er slettet.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Kunne ikke slette nøkkelen');
@@ -178,132 +184,208 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
         </p>
       </div>
 
-      {saved ? (
-        <p className="text-sm text-foreground">
-          Lagret {PROVIDER_LABELS[saved.provider]} · {saved.model} · slutter på {saved.keyLast4}
-        </p>
-      ) : (
-        <p className="text-sm text-muted-foreground">Ingen nøkkel er lagret ennå.</p>
-      )}
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="space-y-1 text-sm">
-          <span className="text-muted-foreground">Leverandør</span>
-          <select
-            value={provider}
-            onChange={(event) => onProviderChange(event.target.value as LlmProvider)}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
-          >
-            {PRIMARY_LLM_PROVIDERS.map((item) => (
-              <option key={item} value={item}>
-                {PROVIDER_LABELS[item]}
-              </option>
-            ))}
-            <optgroup label="Annet">
-              {OTHER_LLM_PROVIDERS.map((item) => (
-                <option key={item} value={item}>
-                  {PROVIDER_LABELS[item]}
-                </option>
-              ))}
-            </optgroup>
-          </select>
-        </label>
-        <label className="space-y-1 text-sm">
-          <span className="text-muted-foreground">Modell</span>
-          {provider === 'ollama' && models.length > 0 ? (
-            <select
-              value={modelExists(models, model) ? model : ''}
-              onChange={(event) => setModel(event.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
-            >
-              {modelExists(models, model) ? null : (
-                <option value="" disabled>
-                  Velg modell…
-                </option>
-              )}
-              {models.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              value={model}
-              onChange={(event) => setModel(event.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
-              placeholder={DEFAULT_MODELS[provider]}
-            />
-          )}
-        </label>
-      </div>
-
-      {needsBaseUrl ? (
-        <label className="block space-y-1 text-sm">
-          <span className="text-muted-foreground">
-            {provider === 'ollama' ? 'Base-URL (http eller https)' : 'Base-URL (https)'}
-          </span>
-          <input
-            value={baseUrl}
-            onChange={(event) => setBaseUrl(event.target.value)}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
-            placeholder={
-              provider === 'ollama'
-                ? 'http://localhost:11434/v1'
-                : 'https://api.example.com/v1'
+      {saved && !editing ? (
+        <div
+          data-byok-active=""
+          className="space-y-3 rounded-xl border border-border bg-muted/30 p-4"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <KeyRound className="size-4 text-brand" aria-hidden />
+              Aktiv LLM
+              <span className="font-normal text-muted-foreground">
+                {PROVIDER_LABELS[saved.provider]} · nøkkel slutter på {saved.keyLast4}
+              </span>
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setProvider(saved.provider);
+                  setModel(saved.model);
+                  setEditing(true);
+                  setMessage(null);
+                  setError(null);
+                }}
+              >
+                <KeyRound className="h-4 w-4" data-icon="inline-start" />
+                Bytt nøkkel
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void remove()}
+                disabled={busy}
+              >
+                <Trash2 className="h-4 w-4" data-icon="inline-start" />
+                Slett
+              </Button>
+            </div>
+          </div>
+          <ModelPicker
+            provider={saved.provider}
+            model={saved.model}
+            size="sm"
+            label="Modell i chat"
+            onSwitched={(next) =>
+              setSaved((current) => (current ? { ...current, model: next } : current))
             }
           />
-        </label>
-      ) : null}
-
-      {provider === 'ollama' ? (
-        modelsLoading ? (
-          <p className="text-xs text-muted-foreground">Henter modeller fra /api/tags …</p>
-        ) : modelsError ? (
-          <p className="text-xs text-destructive">{modelsError}</p>
-        ) : models.length > 0 ? (
           <p className="text-xs text-muted-foreground">
-            {models.length} modeller funnet på Ollama-serveren.
+            Samme modell brukes i chat-vinduet. Bytter du her, gjelder det med en gang.
           </p>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Lim inn en base-URL for å hente tilgjengelige modeller.
-          </p>
-        )
-      ) : null}
+        </div>
+      ) : (
+        <>
+          {saved ? (
+            <p className="text-sm text-foreground">
+              Lagret {PROVIDER_LABELS[saved.provider]} · {saved.model} · slutter på {saved.keyLast4}
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Ingen nøkkel er lagret ennå.</p>
+          )}
 
-      <label className="block space-y-1 text-sm">
-        <span className="text-muted-foreground">
-          {needsApiKey ? 'API-nøkkel' : 'API-nøkkel (valgfri for Ollama)'}
-        </span>
-        <input
-          type="password"
-          value={apiKey}
-          onChange={(event) => setApiKey(event.target.value)}
-          autoComplete="off"
-          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
-          placeholder={
-            saved
-              ? `Ny nøkkel (erstatter …${saved.keyLast4})`
-              : needsApiKey
-                ? 'Lim inn nøkkelen'
-                : 'Valgfri — lar stå tom for lokal Ollama'
-          }
-        />
-      </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-1 text-sm">
+              <span className="text-muted-foreground">Leverandør</span>
+              <select
+                value={provider}
+                onChange={(event) => onProviderChange(event.target.value as LlmProvider)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
+              >
+                {PRIMARY_LLM_PROVIDERS.map((item) => (
+                  <option key={item} value={item}>
+                    {PROVIDER_LABELS[item]}
+                  </option>
+                ))}
+                <optgroup label="Annet">
+                  {OTHER_LLM_PROVIDERS.map((item) => (
+                    <option key={item} value={item}>
+                      {PROVIDER_LABELS[item]}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </label>
+            <label className="space-y-1 text-sm">
+              <span className="text-muted-foreground">Modell</span>
+              {provider === 'ollama' && models.length > 0 ? (
+                <select
+                  value={modelExists(models, model) ? model : ''}
+                  onChange={(event) => setModel(event.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
+                >
+                  {modelExists(models, model) ? null : (
+                    <option value="" disabled>
+                      Velg modell…
+                    </option>
+                  )}
+                  {models.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  value={model}
+                  onChange={(event) => setModel(event.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
+                  placeholder={DEFAULT_MODELS[provider]}
+                />
+              )}
+            </label>
+          </div>
+
+          {needsBaseUrl ? (
+            <label className="block space-y-1 text-sm">
+              <span className="text-muted-foreground">
+                {provider === 'ollama' ? 'Base-URL (http eller https)' : 'Base-URL (https)'}
+              </span>
+              <input
+                value={baseUrl}
+                onChange={(event) => setBaseUrl(event.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
+                placeholder={
+                  provider === 'ollama'
+                    ? 'http://localhost:11434/v1'
+                    : 'https://api.example.com/v1'
+                }
+              />
+            </label>
+          ) : null}
+
+          {provider === 'ollama' ? (
+            modelsLoading ? (
+              <p className="text-xs text-muted-foreground">Henter modeller fra /api/tags …</p>
+            ) : modelsError ? (
+              <p className="text-xs text-destructive">{modelsError}</p>
+            ) : models.length > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                {models.length} modeller funnet på Ollama-serveren.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Lim inn en base-URL for å hente tilgjengelige modeller.
+              </p>
+            )
+          ) : null}
+
+          <label className="block space-y-1 text-sm">
+            <span className="text-muted-foreground">
+              {needsApiKey ? 'API-nøkkel' : 'API-nøkkel (valgfri for Ollama)'}
+            </span>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(event) => setApiKey(event.target.value)}
+              autoComplete="off"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
+              placeholder={
+                saved
+                  ? `Ny nøkkel (erstatter …${saved.keyLast4})`
+                  : needsApiKey
+                    ? 'Lim inn nøkkelen'
+                    : 'Valgfri — lar stå tom for lokal Ollama'
+              }
+            />
+          </label>
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" onClick={() => void save()} disabled={busy || !canSave}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {saved ? 'Bytt nøkkel' : 'Lagre nøkkel'}
-        </Button>
-        {saved ? (
-          <Button type="button" variant="outline" onClick={() => void remove()} disabled={busy}>
-            <Trash2 className="h-4 w-4" data-icon="inline-start" />
-            Slett nøkkel
-          </Button>
-        ) : null}
-      </div>
+            <Button type="button" onClick={() => void save()} disabled={busy || !canSave}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {saved ? 'Lagre ny nøkkel' : 'Lagre nøkkel'}
+            </Button>
+            {saved ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEditing(false);
+                    setMessage(null);
+                    setError(null);
+                  }}
+                >
+                  Avbryt
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void remove()}
+                  disabled={busy}
+                >
+                  <Trash2 className="h-4 w-4" data-icon="inline-start" />
+                  Slett nøkkel
+                </Button>
+              </>
+            ) : null}
+          </div>
+        </>
+      )}
 
       {message ? <p className="text-sm text-brand">{message}</p> : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}

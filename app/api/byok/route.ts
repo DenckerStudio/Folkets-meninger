@@ -17,6 +17,7 @@ import {
   deleteByokCredential,
   getByokMeta,
   saveByokCredential,
+  updateByokModel,
 } from '@/lib/byok/service';
 import { requireStemmePlus } from '@/lib/stemme-plus/entitlement';
 
@@ -124,6 +125,76 @@ export async function POST(request: Request) {
     }
     console.error('[byok] save failed:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Kunne ikke lagre nøkkelen' }, { status: 500 });
+  }
+}
+
+/** Switch the model on an already stored credential without re-entering the key. */
+export async function PATCH(request: Request) {
+  const gate = await requireStemmePlus();
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.error }, { status: gate.status });
+  }
+
+  if (!byokStorageReady()) {
+    return NextResponse.json(
+      { error: 'Lagring av nøkler er ikke konfigurert (mangler BYOK_ENCRYPTION_KEY).' },
+      { status: 503 },
+    );
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = (await request.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: 'Ugyldig forespørsel' }, { status: 400 });
+  }
+
+  if (typeof body.model !== 'string' || !body.model.trim()) {
+    return NextResponse.json({ error: 'Velg en modell.' }, { status: 400 });
+  }
+
+  const meta = await getByokMeta(gate.userId);
+  if (!meta) {
+    return NextResponse.json({ error: 'Ingen nøkkel er lagret ennå.' }, { status: 404 });
+  }
+
+  const model = normalizeModel(meta.provider, body.model);
+
+  if (meta.provider === 'ollama') {
+    if (!meta.baseUrl) {
+      return NextResponse.json(
+        { error: 'Ollama mangler base-URL. Lagre nøkkelen på nytt med en gyldig base-URL.' },
+        { status: 400 },
+      );
+    }
+    const available = await listOllamaModels(meta.baseUrl);
+    if (!available.ok) {
+      return NextResponse.json({ error: available.error }, { status: 400 });
+    }
+    if (!modelExists(available.models, model)) {
+      const preview = available.models.slice(0, 5).join(', ');
+      const suffix = available.models.length > 5 ? ' …' : '';
+      return NextResponse.json(
+        {
+          error: `Modellen «${model}» finnes ikke på Ollama-serveren. Tilgjengelige: ${preview}${suffix}`,
+        },
+        { status: 400 },
+      );
+    }
+  }
+
+  try {
+    const credential = await updateByokModel({ userId: gate.userId, model });
+    if (!credential) {
+      return NextResponse.json({ error: 'Ingen nøkkel er lagret ennå.' }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true, credential });
+  } catch (error) {
+    console.error(
+      '[byok] model switch failed:',
+      error instanceof Error ? error.message : error,
+    );
+    return NextResponse.json({ error: 'Kunne ikke bytte modell' }, { status: 500 });
   }
 }
 

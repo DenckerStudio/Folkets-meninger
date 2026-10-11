@@ -3,11 +3,13 @@
 import { useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2 } from 'lucide-react';
+import { ModelPicker } from '@/components/byok/model-picker';
 import { StemmeChat } from '@/components/chat/stemme-chat';
 import { useChatOverlay } from '@/components/chat/chat-overlay-context';
 import { AiAssistantCard } from '@/components/ui/ai-assistant-card';
 import { STEMME_PLUS_MONTHLY_PRICE_NOK } from '@/lib/stemme-plus/constants';
 import { resolveChatGate, type ChatGateReason } from '@/lib/chat/overlay';
+import type { LlmProvider } from '@/lib/byok/providers';
 
 const STATUS_LOAD_TIMEOUT_MS = 8000;
 
@@ -22,6 +24,8 @@ function guestGate(): ChatGateReason {
 type PanelMeta = {
   priceNok: number;
   checkoutConfigured: boolean;
+  provider: LlmProvider | null;
+  model: string | null;
 };
 
 export function ChatPanel() {
@@ -33,6 +37,8 @@ export function ChatPanel() {
   const [meta, setMeta] = useState<PanelMeta>({
     priceNok: STEMME_PLUS_MONTHLY_PRICE_NOK,
     checkoutConfigured: false,
+    provider: null,
+    model: null,
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -78,6 +84,8 @@ export function ChatPanel() {
           setMeta({
             priceNok: STEMME_PLUS_MONTHLY_PRICE_NOK,
             checkoutConfigured: false,
+            provider: null,
+            model: null,
           });
           return;
         }
@@ -88,6 +96,7 @@ export function ChatPanel() {
           has_byok?: boolean;
           monthly_price_nok?: number;
           checkout_configured?: boolean;
+          byok?: { provider?: LlmProvider; model?: string } | null;
         };
         if (!res.ok) {
           throw new Error(json.error || 'Kunne ikke hente tilgang til chat.');
@@ -103,6 +112,8 @@ export function ChatPanel() {
         setMeta({
           priceNok: json.monthly_price_nok ?? STEMME_PLUS_MONTHLY_PRICE_NOK,
           checkoutConfigured: Boolean(json.checkout_configured),
+          provider: json.byok?.provider ?? null,
+          model: json.byok?.model ?? null,
         });
       } catch (loadError) {
         if (cancelled) return;
@@ -110,6 +121,8 @@ export function ChatPanel() {
         setMeta({
           priceNok: STEMME_PLUS_MONTHLY_PRICE_NOK,
           checkoutConfigured: false,
+          provider: null,
+          model: null,
         });
         if (!(loadError instanceof DOMException && loadError.name === 'AbortError')) {
           setError(loadError instanceof Error ? loadError.message : 'Kunne ikke hente tilgang til chat.');
@@ -152,6 +165,19 @@ export function ChatPanel() {
           title="Chat"
           description="Sakskontekst og samtale på nøkkelen din. Rettskriv og kilder ligger i meningskomponisten."
           onClose={closeChat}
+          headerExtra={
+            readyGate === 'ready' && meta.provider && meta.model ? (
+              <div className="mt-2 max-w-[16rem]">
+                <ModelPicker
+                  provider={meta.provider}
+                  model={meta.model}
+                  size="sm"
+                  label="Aktiv modell"
+                  onSwitched={(next) => setMeta((current) => ({ ...current, model: next }))}
+                />
+              </div>
+            ) : null
+          }
           className="h-full max-h-full"
         >
           {error ? <p className="px-0 pt-1 text-sm text-destructive">{error}</p> : null}
@@ -171,6 +197,9 @@ export function ChatPanel() {
               checkoutConfigured={meta.checkoutConfigured}
               variant="panel"
               embedded
+              provider={meta.provider}
+              model={meta.model}
+              onModelSwitched={(next) => setMeta((current) => ({ ...current, model: next }))}
             />
           ) : null}
         </AiAssistantCard>

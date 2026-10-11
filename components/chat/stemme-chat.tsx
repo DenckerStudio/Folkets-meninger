@@ -7,13 +7,16 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, isToolUIPart } from 'ai';
 import {
   FileSearch,
-  Loader2,
+  Globe,
   ListFilter,
+  Loader2,
   MessageCircleQuestion,
   Send,
   Sparkles,
 } from 'lucide-react';
+import { ModelPicker } from '@/components/byok/model-picker';
 import { ChatPanelActions } from '@/components/chat/chat-panel-actions';
+import { ChatToolResult } from '@/components/chat/chat-tool-result';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import {
   AiAssistantCard,
@@ -24,6 +27,7 @@ import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
 import { canUseOverlayActions, chatLoginHref, type ChatGateReason } from '@/lib/chat/overlay';
+import type { LlmProvider } from '@/lib/byok/providers';
 
 type StemmeChatProps = {
   gate: ChatGateReason;
@@ -37,6 +41,10 @@ type StemmeChatProps = {
   onClose?: () => void;
   titleId?: string;
   descriptionId?: string;
+  /** Active BYOK credential — renders the inline model switcher in the header. */
+  provider?: LlmProvider | null;
+  model?: string | null;
+  onModelSwitched?: (model: string) => void;
 };
 
 function toolLabel(type: string): string {
@@ -73,6 +81,11 @@ function buildQuickActions(issueId?: string | null): AssistantQuickAction[] {
     label: 'Finn lignende saker',
     icon: <ListFilter className="h-3.5 w-3.5" />,
   });
+  actions.push({
+    id: 'finn-kilder',
+    label: 'Finn oppdaterte kilder',
+    icon: <Globe className="h-3.5 w-3.5" />,
+  });
   return actions;
 }
 
@@ -90,6 +103,10 @@ function promptForAction(action: AssistantQuickAction, issueTitle?: string | nul
       return issueTitle
         ? `Finn lignende saker som «${issueTitle}».`
         : 'Finn relevante saker i cachen ut fra det jeg spør om.';
+    case 'finn-kilder':
+      return issueTitle
+        ? `Søk etter oppdaterte, offisielle kilder om «${issueTitle}».`
+        : 'Søk etter oppdaterte, offisielle kilder om det vi diskuterer.';
     default:
       return action.label;
   }
@@ -106,6 +123,9 @@ export function StemmeChat({
   onClose,
   titleId,
   descriptionId,
+  provider = null,
+  model = null,
+  onModelSwitched,
 }: StemmeChatProps) {
   const pathname = usePathname();
   const [input, setInput] = useState('');
@@ -200,37 +220,59 @@ export function StemmeChat({
       {messages.map((message) => (
         <article
           key={message.id}
-          className={
-            message.role === 'user'
-              ? 'ml-4 rounded-xl bg-muted/50 px-3 py-2 text-sm text-foreground'
-              : 'mr-2 space-y-2 text-sm text-foreground'
-          }
+          className={cn(
+            'space-y-2',
+            message.role === 'user' ? 'ml-8 pl-3' : 'mr-6 pr-3',
+          )}
         >
-          <p className="text-xs font-medium text-muted-foreground">
-            {message.role === 'user' ? 'Du' : 'Assistent'}
-          </p>
-          {message.parts.map((part, index) => {
-            if (part.type === 'text') {
-              return (
-                <p key={`${message.id}-${index}`} className="whitespace-pre-wrap">
-                  {part.text}
-                </p>
-              );
-            }
-            if (isToolUIPart(part)) {
-              const done = part.state === 'output-available';
-              return (
-                <p
-                  key={`${message.id}-${index}`}
-                  className="rounded-lg border border-border bg-muted/30 px-2 py-1 text-xs text-muted-foreground"
-                >
-                  {done ? 'Ferdig: ' : 'Jobber: '}
-                  {toolLabel(part.type)}
-                </p>
-              );
-            }
-            return null;
-          })}
+          {message.role === 'user' ? (
+            <div className="ml-auto w-fit max-w-[90%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-sm text-primary-foreground">
+              {message.parts.map((part, index) =>
+                part.type === 'text' ? (
+                  <span key={`${message.id}-${index}`} className="whitespace-pre-wrap">
+                    {part.text}
+                  </span>
+                ) : null,
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Sparkles className="size-3.5 shrink-0 text-brand" aria-hidden />
+                Assistent
+              </p>
+              {message.parts.map((part, index) => {
+                if (part.type === 'text') {
+                  return part.text ? (
+                    <p
+                      key={`${message.id}-${index}`}
+                      className="whitespace-pre-wrap text-sm leading-relaxed text-foreground"
+                    >
+                      {part.text}
+                    </p>
+                  ) : null;
+                }
+                if (isToolUIPart(part)) {
+                  const done = part.state === 'output-available';
+                  if (done && part.output !== undefined) {
+                    return (
+                      <ChatToolResult key={`${message.id}-${index}`} toolType={part.type} output={part.output} />
+                    );
+                  }
+                  return (
+                    <p
+                      key={`${message.id}-${index}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-2 py-1 text-xs text-muted-foreground"
+                    >
+                      <Loader2 className="size-3 animate-spin" aria-hidden />
+                      {toolLabel(part.type)}
+                    </p>
+                  );
+                }
+                return null;
+              })}
+            </div>
+          )}
         </article>
       ))}
     </>
@@ -355,6 +397,19 @@ export function StemmeChat({
       title="Chat"
       description="Sakskontekst og samtale på nøkkelen din — rettskriv og kilder ligger i meningskomponisten."
       onClose={onClose}
+      headerExtra={
+        provider && model ? (
+          <div className="mt-2 max-w-xs">
+            <ModelPicker
+              provider={provider}
+              model={model}
+              size="sm"
+              label="Aktiv modell"
+              onSwitched={onModelSwitched}
+            />
+          </div>
+        ) : null
+      }
       className={cn('min-h-[32rem]', compact && 'h-full')}
     >
       {chatBody}

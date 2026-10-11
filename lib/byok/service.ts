@@ -142,6 +142,28 @@ export async function saveByokCredential(args: {
   return toMeta(data);
 }
 
+export async function updateByokModel(args: {
+  userId: string;
+  model: string;
+  client?: ByokClient | null;
+}): Promise<ByokCredentialMeta | null> {
+  const supabase = await byokClient(args.client);
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from('user_llm_credentials')
+    .update({ model: args.model, updated_at: now })
+    .eq('user_id', args.userId)
+    .select(META_COLUMNS)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Kunne ikke oppdatere modellen: ${error.message}`);
+  }
+  if (!data) return null;
+  return toMeta(data);
+}
+
 export async function deleteByokCredential(
   userId: string,
   client?: ByokClient | null,
