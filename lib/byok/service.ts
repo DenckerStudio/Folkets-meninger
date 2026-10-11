@@ -135,7 +135,8 @@ export async function saveByokCredential(args: {
     .single();
 
   if (error || !data) {
-    throw new Error('Kunne ikke lagre nøkkelen');
+    const detail = error?.message ? `: ${error.message}` : '';
+    throw new Error(`Kunne ikke lagre nøkkelen${detail}`);
   }
 
   return toMeta(data);
