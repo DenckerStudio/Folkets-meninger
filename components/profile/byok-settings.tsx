@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { modelExists } from '@/lib/byok/ollama';
 import {
   DEFAULT_MODELS,
   OTHER_LLM_PROVIDERS,
@@ -33,10 +34,74 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [models, setModels] = useState<string[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
 
   const needsBaseUrl = providerNeedsBaseUrl(provider);
   const needsApiKey = providerNeedsApiKey(provider);
-  const canSave = needsApiKey ? Boolean(apiKey.trim()) : needsBaseUrl ? Boolean(baseUrl.trim()) : true;
+  const canSave =
+    (needsApiKey ? Boolean(apiKey.trim()) : true) &&
+    (needsBaseUrl
+      ? provider === 'ollama'
+        ? modelExists(models, model)
+        : Boolean(baseUrl.trim())
+      : true);
+
+  useEffect(() => {
+    if (provider !== 'ollama') {
+      setModels([]);
+      setModelsLoading(false);
+      setModelsError(null);
+      return;
+    }
+
+    const normalized = baseUrl.trim();
+    if (!normalized) {
+      setModels([]);
+      setModelsLoading(false);
+      setModelsError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setModelsLoading(true);
+      setModelsError(null);
+      try {
+        const res = await fetch(
+          `/api/byok/ollama/models?baseUrl=${encodeURIComponent(normalized)}`,
+          { signal: controller.signal },
+        );
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(
+            typeof json.error === 'string' ? json.error : 'Kunne ikke hente modeller fra Ollama.',
+          );
+        }
+        const list = Array.isArray(json.models)
+          ? json.models.filter((item: unknown): item is string => typeof item === 'string')
+          : [];
+        setModels(list);
+        setModel((current) =>
+          list.length > 0 && !modelExists(list, current) ? list[0] : current,
+        );
+      } catch (e) {
+        if (controller.signal.aborted) return;
+        setModels([]);
+        setModelsError(
+          e instanceof Error ? e.message : 'Kunne ikke hente modeller fra Ollama.',
+        );
+      } finally {
+        if (!controller.signal.aborted) setModelsLoading(false);
+      }
+    }, 500);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [provider, baseUrl]);
 
   const onProviderChange = (next: LlmProvider) => {
     setProvider(next);
@@ -145,12 +210,31 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
         </label>
         <label className="space-y-1 text-sm">
           <span className="text-muted-foreground">Modell</span>
-          <input
-            value={model}
-            onChange={(event) => setModel(event.target.value)}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
-            placeholder={DEFAULT_MODELS[provider]}
-          />
+          {provider === 'ollama' && models.length > 0 ? (
+            <select
+              value={modelExists(models, model) ? model : ''}
+              onChange={(event) => setModel(event.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
+            >
+              {modelExists(models, model) ? null : (
+                <option value="" disabled>
+                  Velg modell…
+                </option>
+              )}
+              {models.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              value={model}
+              onChange={(event) => setModel(event.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
+              placeholder={DEFAULT_MODELS[provider]}
+            />
+          )}
         </label>
       </div>
 
@@ -170,6 +254,22 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
             }
           />
         </label>
+      ) : null}
+
+      {provider === 'ollama' ? (
+        modelsLoading ? (
+          <p className="text-xs text-muted-foreground">Henter modeller fra /api/tags …</p>
+        ) : modelsError ? (
+          <p className="text-xs text-destructive">{modelsError}</p>
+        ) : models.length > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            {models.length} modeller funnet på Ollama-serveren.
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Lim inn en base-URL for å hente tilgjengelige modeller.
+          </p>
+        )
       ) : null}
 
       <label className="block space-y-1 text-sm">

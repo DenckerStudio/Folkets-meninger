@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import {
   ByokEncryptionNotConfiguredError,
 } from '@/lib/byok/crypto';
+import { listOllamaModels, modelExists } from '@/lib/byok/ollama';
 import {
   isLlmProvider,
   looksLikeApiKey,
@@ -88,6 +89,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: hint }, { status: 400 });
   }
 
+  if (body.provider === 'ollama' && baseUrl) {
+    const available = await listOllamaModels(baseUrl);
+    if (!available.ok) {
+      return NextResponse.json({ error: available.error }, { status: 400 });
+    }
+    if (!modelExists(available.models, model)) {
+      const preview = available.models.slice(0, 5).join(', ');
+      const suffix = available.models.length > 5 ? ' …' : '';
+      return NextResponse.json(
+        {
+          error: `Modellen «${model}» finnes ikke på Ollama-serveren. Tilgjengelige: ${preview}${suffix}`,
+        },
+        { status: 400 },
+      );
+    }
+  }
+
   try {
     const credential = await saveByokCredential({
       userId: gate.userId,
@@ -104,7 +122,7 @@ export async function POST(request: Request) {
         { status: 503 },
       );
     }
-    console.error('[byok] save failed');
+    console.error('[byok] save failed:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Kunne ikke lagre nøkkelen' }, { status: 500 });
   }
 }
