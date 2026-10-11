@@ -36,6 +36,26 @@ export const PROVIDER_LABELS: Record<LlmProvider, string> = {
   ai_gateway: 'Vercel AI Gateway',
 };
 
+/**
+ * Curated model suggestions for the inline model picker. Not exhaustive — the
+ * picker always offers a free-text fallback, so users can type any model.
+ * Ollama and OpenAI-compatible lists are driven by the server instead.
+ */
+export const SUGGESTED_MODELS: Record<LlmProvider, readonly string[]> = {
+  google: ['gemini-3.8-flash', 'gemini-3.8-pro', 'gemini-2.5-flash'],
+  openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'gpt-4.1'],
+  grok: ['grok-4.7', 'grok-4.7-mini', 'grok-4'],
+  ollama: [],
+  anthropic: ['claude-sonnet-4-5', 'claude-opus-4-1', 'claude-haiku-4-5'],
+  openai_compatible: [],
+  ai_gateway: ['openai/gpt-4o-mini', 'anthropic/claude-sonnet-4-5', 'google/gemini-3.8-flash'],
+};
+
+/** True when the provider's models come from the user's own server, not a preset list. */
+export function providerModelsFromServer(provider: LlmProvider): boolean {
+  return provider === 'ollama' || provider === 'openai_compatible';
+}
+
 /** Stored when Ollama is saved without a real API key (local servers often need none). */
 export const OLLAMA_PLACEHOLDER_API_KEY = 'ollama';
 

@@ -5,8 +5,10 @@ import {
   looksLikeApiKey,
   normalizeBaseUrl,
   normalizeModel,
+  providerModelsFromServer,
   providerNeedsApiKey,
   providerNeedsBaseUrl,
+  SUGGESTED_MODELS,
 } from './providers';
 
 assert.equal(isLlmProvider('openai'), true);
@@ -44,5 +46,20 @@ assert.equal(providerNeedsBaseUrl('openai'), false);
 assert.equal(providerNeedsApiKey('ollama'), false);
 assert.equal(providerNeedsApiKey('google'), true);
 assert.equal(providerNeedsApiKey('grok'), true);
+assert.equal(providerModelsFromServer('ollama'), true);
+assert.equal(providerModelsFromServer('openai_compatible'), true);
+assert.equal(providerModelsFromServer('openai'), false);
+assert.equal(providerModelsFromServer('google'), false);
+
+for (const provider of Object.keys(DEFAULT_MODELS) as Array<keyof typeof DEFAULT_MODELS>) {
+  if (providerModelsFromServer(provider)) {
+    assert.deepEqual(SUGGESTED_MODELS[provider], []);
+    continue;
+  }
+  assert.ok(
+    SUGGESTED_MODELS[provider].includes(DEFAULT_MODELS[provider]),
+    `${provider} must suggest its default model`,
+  );
+}
 
 console.log('byok/providers.test.ts: ok');
