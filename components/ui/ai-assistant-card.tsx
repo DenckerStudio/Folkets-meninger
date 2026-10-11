@@ -73,7 +73,9 @@ export function AiAssistantCard({
             </h2>
           ) : null}
           {description ? (
-            <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
+            // Visually hidden on phones to save vertical space, but kept in the
+            // accessibility tree because the panel points at it via aria-describedby.
+            <p id={descriptionId} className="sr-only sm:mt-1 sm:not-sr-only sm:text-sm sm:text-muted-foreground">
               {description}
             </p>
           ) : null}
@@ -84,11 +86,11 @@ export function AiAssistantCard({
             type="button"
             variant="ghost"
             size="icon"
-            className="size-8 shrink-0"
+            className="size-9 shrink-0 sm:size-8"
             onClick={onClose}
             aria-label="Lukk chat"
           >
-            <X className="h-5 w-5" />
+            <X className="size-5" />
           </Button>
         ) : null}
       </header>
