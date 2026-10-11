@@ -7,7 +7,6 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, isToolUIPart } from 'ai';
 import {
   FileSearch,
-  Globe,
   ListFilter,
   Loader2,
   MessageCircleQuestion,
@@ -81,11 +80,6 @@ function buildQuickActions(issueId?: string | null): AssistantQuickAction[] {
     label: 'Finn lignende saker',
     icon: <ListFilter className="h-3.5 w-3.5" />,
   });
-  actions.push({
-    id: 'finn-kilder',
-    label: 'Finn oppdaterte kilder',
-    icon: <Globe className="h-3.5 w-3.5" />,
-  });
   return actions;
 }
 
@@ -103,10 +97,6 @@ function promptForAction(action: AssistantQuickAction, issueTitle?: string | nul
       return issueTitle
         ? `Finn lignende saker som «${issueTitle}».`
         : 'Finn relevante saker i cachen ut fra det jeg spør om.';
-    case 'finn-kilder':
-      return issueTitle
-        ? `Søk etter oppdaterte, offisielle kilder om «${issueTitle}».`
-        : 'Søk etter oppdaterte, offisielle kilder om det vi diskuterer.';
     default:
       return action.label;
   }
@@ -280,7 +270,7 @@ export function StemmeChat({
 
   const inputFooter = (
     <form
-      className="mt-auto space-y-2 border-t border-border pt-3"
+      className="mt-auto space-y-1.5 border-t border-border pt-2 sm:space-y-2 sm:pt-3"
       onSubmit={(event) => {
         event.preventDefault();
         const text = input.trim();
@@ -296,13 +286,13 @@ export function StemmeChat({
         <textarea
           value={input}
           onChange={(event) => setInput(event.target.value)}
-          rows={3}
+          rows={2}
           placeholder={
             issueId
               ? 'Spør om saken, dokumenter eller bakgrunn…'
               : 'Spør om en sak eller dokumenter…'
           }
-          className="w-full resize-none border-0 bg-transparent px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          className="max-h-32 w-full resize-none border-0 bg-transparent px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
               event.preventDefault();
@@ -314,7 +304,7 @@ export function StemmeChat({
           }}
         />
         <div className="flex items-center justify-between gap-2 px-1 pb-0.5">
-          <p className="text-[11px] text-muted-foreground">
+          <p className="line-clamp-1 text-[11px] text-muted-foreground">
             {issueId ? `Kontekst: ${issueTitle || `sak ${issueId}`}` : 'Ingen sak valgt'}
           </p>
           {busy ? (
@@ -329,7 +319,7 @@ export function StemmeChat({
           )}
         </div>
       </div>
-      <p className="text-center text-[11px] text-muted-foreground">
+      <p className="hidden text-center text-[11px] text-muted-foreground sm:block">
         Samtalen lagres ikke på serveren. Rettskriv og kilder finner du i meningskomponisten.
       </p>
     </form>
@@ -378,7 +368,7 @@ export function StemmeChat({
   const chatBody = (
     <div className="flex min-h-0 flex-1 flex-col">
       {actionsBar}
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-2">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-1 py-2">
         {welcomeBlock}
         {messages.length > 0 ? messageList : null}
       </div>

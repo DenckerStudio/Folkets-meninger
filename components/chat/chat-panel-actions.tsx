@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { ChevronDown, FileSearch, Loader2 } from 'lucide-react';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,6 +21,9 @@ type ChatPanelActionsProps = {
 /**
  * Chat overlay keeps only sak-context as a direct action.
  * Spellcheck + updated-source search live in the opinion composer.
+ *
+ * On phones the form starts collapsed (the conversation gets the height) and the
+ * header acts as a toggle; on wider screens it is always open via `sm:block`.
  */
 export function ChatPanelActions({
   issueId,
@@ -28,21 +31,44 @@ export function ChatPanelActions({
 }: ChatPanelActionsProps) {
   const pathname = usePathname();
   const defaultIssueId = issueId?.trim() || issueIdFromPathname(pathname) || '';
+  const [open, setOpen] = useState(false);
 
   return (
     <div
       data-chat-actions=""
-      className={cn('shrink-0 border-b border-border', compact ? 'px-0 py-3' : 'px-4 py-4')}
+      className={cn('shrink-0 border-b border-border', compact ? 'px-0 py-2 sm:py-3' : 'px-4 py-3')}
     >
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" variant="default" data-chat-action="sak" aria-pressed>
+      <button
+        type="button"
+        data-chat-action="sak"
+        aria-expanded={open}
+        aria-controls="chat-sak-context-form"
+        onClick={() => setOpen((value) => !value)}
+        className="inline-flex w-full items-center justify-between gap-2 rounded-lg px-1 py-1 text-left text-sm font-medium text-foreground"
+      >
+        <span className="inline-flex items-center gap-2">
+          <FileSearch className="h-4 w-4 text-brand" aria-hidden />
           Hent sakskontekst
-        </Button>
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">
+        </span>
+        <ChevronDown
+          className={cn(
+            'h-4 w-4 shrink-0 text-muted-foreground transition-transform sm:hidden',
+            open && 'rotate-180',
+          )}
+          aria-hidden
+        />
+      </button>
+      <p
+        className={cn(
+          'mt-1.5 text-xs text-muted-foreground',
+          open ? 'block' : 'hidden sm:block',
+        )}
+      >
         Direkte handling — uten å starte en samtale.
       </p>
-      <SakContextForm defaultIssueId={defaultIssueId} />
+      <div className={cn(open ? 'block' : 'hidden', 'sm:block')}>
+        <SakContextForm defaultIssueId={defaultIssueId} />
+      </div>
     </div>
   );
 }
@@ -80,7 +106,8 @@ function SakContextForm({ defaultIssueId }: { defaultIssueId: string }) {
 
   return (
     <form
-      className="mt-3 space-y-2"
+      id="chat-sak-context-form"
+      className="mt-2 space-y-2"
       onSubmit={(event) => {
         event.preventDefault();
         if (busy || !canSubmit) return;

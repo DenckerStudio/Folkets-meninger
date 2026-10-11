@@ -75,9 +75,15 @@ export function createChatTools(
       },
     }),
     listMatchingSaker: tool({
-      description: 'List saker i vår cache som matcher en tittel, henvisning eller sak-id.',
+      description:
+        'Finn saker i vår cache ut fra et emne, en sak-tittel, en henvisning eller et sak-id. Tar imot vanlige spørsmål (f.eks. «hva koster innvandringsloven») og deler spørsmålet i søkeord. Bruk når brukeren lete etter en sak, ikke bare én bestemt sak.',
       inputSchema: z.object({
-        query: z.string().min(2).describe('Tittel, henvisning eller sak-id.'),
+        query: z
+          .string()
+          .min(2)
+          .describe(
+            'Sak-id, henvisning, tittel eller et spørsmål/emne brukeren leter etter, f.eks. «hva koster innvandringsloven».',
+          ),
       }),
       execute: async ({ query }) => {
         const issues = await searchIssuesForChat(query, 8, ragClient);

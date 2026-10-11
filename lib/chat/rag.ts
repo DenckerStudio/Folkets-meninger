@@ -1,6 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getAnonSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
+import {
+  buildSearchTerms,
+  escapeIlike,
+  looksLikeIssueId,
+  rankSakRows,
+  significantTokens,
+  type SakSearchRow,
+} from '@/lib/chat/sak-search';
 
 const MAX_CHUNK_CHARS = 1400;
 const MAX_CHUNKS = 8;
@@ -42,10 +50,6 @@ function clip(value: string, max = MAX_CHUNK_CHARS): string {
   return value.replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
-function escapeIlike(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
-}
-
 function mapIssue(row: Record<string, unknown> | null | undefined): ChatIssueHit | null {
   if (!row || typeof row.id !== 'string') return null;
   return {
@@ -57,41 +61,17 @@ function mapIssue(row: Record<string, unknown> | null | undefined): ChatIssueHit
   };
 }
 
-const SAK_STOPWORDS = new Set([
-  'om',
-  'for',
-  'og',
-  'i',
-  'av',
-  'til',
-  'en',
-  'et',
-  'den',
-  'det',
-  'de',
-  'som',
-  'er',
-  'på',
-  'med',
-  'fra',
-  'ved',
-  'eller',
-  'men',
-  'ikke',
-  'skal',
-  'kan',
-  'vil',
-  'har',
-  'var',
-  'lov',
-  'endringer',
-  'forslag',
-  'representantforslag',
-  'stortinget',
-  'innstilling',
-  'proposisjon',
-  'dokument',
-]);
+function mapIssueRow(row: Record<string, unknown> | null | undefined): SakSearchRow | null {
+  const issue = mapIssue(row);
+  if (!issue) return null;
+  return {
+    id: issue.id,
+    title: issue.title,
+    summary: issue.summary,
+    henvisning: issue.henvisning,
+    ferdigbehandlet: issue.ferdigbehandlet,
+  };
+}
 
 function rankText(content: string, query: string): number {
   const needle = query.toLowerCase().trim();
@@ -100,22 +80,6 @@ function rankText(content: string, query: string): number {
   if (haystack.includes(needle)) return 100;
   const words = needle.split(/\s+/).filter((word) => word.length > 2);
   return words.reduce((score, word) => score + (haystack.includes(word) ? 1 : 0), 0);
-}
-
-/** Contentful tokens from sak title/henvisning — skip boilerplate so multi-sak referater do not “match” on “lov/forslag”. */
-function significantSakTokens(...parts: Array<string | null | undefined>): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const part of parts) {
-    if (!part) continue;
-    for (const raw of part.toLowerCase().split(/[^\p{L}\p{N}]+/u)) {
-      const word = raw.trim();
-      if (word.length < 4 || SAK_STOPWORDS.has(word) || seen.has(word)) continue;
-      seen.add(word);
-      out.push(word);
-    }
-  }
-  return out;
 }
 
 /**
@@ -138,7 +102,7 @@ function rankChunkForSak(
     score += 80;
   }
 
-  for (const token of significantSakTokens(issue.title, issue.henvisning)) {
+  for (const token of significantTokens(issue.title, issue.henvisning)) {
     if (haystack.includes(token)) score += 10;
   }
 
@@ -168,45 +132,96 @@ export async function resolveChatRagClient(
   }
 }
 
+/**
+ * Find saker from a free-text question. Splits the question into significant
+ * terms, ORs them across title/henvisning/summary, then ranks by relevance in
+ * `sak-search.ts`. Falls back to the old phrase search so nothing regresses.
+ */
 export async function searchIssuesForChat(
   query: string,
   limit = 6,
   client?: ChatRagClient | null,
 ): Promise<ChatIssueHit[]> {
   const supabase = await resolveChatRagClient(client);
-  const needle = query.trim().slice(0, 80);
+  const needle = query.trim().slice(0, 120);
   if (!supabase || !needle) return [];
 
-  const pattern = `%${escapeIlike(needle)}%`;
-  const [byId, byTitle, byHenvisning, bySummary] = await Promise.all([
-    supabase.from('stortinget_issues').select(ISSUE_COLUMNS).eq('id', needle).maybeSingle(),
-    supabase.from('stortinget_issues').select(ISSUE_COLUMNS).ilike('title', pattern).limit(limit),
+  const candidates: Array<Record<string, unknown> | null> = [];
+  const perTermLimit = Math.min(Math.max(limit * 3, 12), 40);
+
+  // Exact-id lookup stays for numeric input, then union the per-term matches.
+  if (looksLikeIssueId(needle)) {
+    const byId = await supabase
+      .from('stortinget_issues')
+      .select(ISSUE_COLUMNS)
+      .eq('id', needle)
+      .maybeSingle();
+    if (byId.data) candidates.push(byId.data as Record<string, unknown>);
+  }
+
+  const terms = buildSearchTerms(needle);
+  if (terms.length > 0) {
+    const perTerm = await Promise.all(
+      terms.map(async (term) => {
+        const pattern = `%${escapeIlike(term)}%`;
+        const [byTitle, byHenvisning, bySummary] = await Promise.all([
+          supabase
+            .from('stortinget_issues')
+            .select(ISSUE_COLUMNS)
+            .ilike('title', pattern)
+            .limit(perTermLimit),
+          supabase
+            .from('stortinget_issues')
+            .select(ISSUE_COLUMNS)
+            .ilike('henvisning', pattern)
+            .limit(perTermLimit),
+          supabase
+            .from('stortinget_issues')
+            .select(ISSUE_COLUMNS)
+            .ilike('summary', pattern)
+            .limit(perTermLimit),
+        ]);
+        return [
+          ...(Array.isArray(byTitle.data) ? byTitle.data : []),
+          ...(Array.isArray(byHenvisning.data) ? byHenvisning.data : []),
+          ...(Array.isArray(bySummary.data) ? bySummary.data : []),
+        ] as Array<Record<string, unknown>>;
+      }),
+    );
+    for (const group of perTerm) candidates.push(...group);
+  }
+
+  // Whole-phrase search as a safety net (matches when terms individually miss).
+  const phrasePattern = `%${escapeIlike(needle.slice(0, 80))}%`;
+  const [byTitle, byHenvisning, bySummary] = await Promise.all([
+    supabase.from('stortinget_issues').select(ISSUE_COLUMNS).ilike('title', phrasePattern).limit(limit),
     supabase
       .from('stortinget_issues')
       .select(ISSUE_COLUMNS)
-      .ilike('henvisning', pattern)
+      .ilike('henvisning', phrasePattern)
       .limit(limit),
-    supabase.from('stortinget_issues').select(ISSUE_COLUMNS).ilike('summary', pattern).limit(limit),
+    supabase.from('stortinget_issues').select(ISSUE_COLUMNS).ilike('summary', phrasePattern).limit(limit),
   ]);
-
-  const seen = new Set<string>();
-  const hits: ChatIssueHit[] = [];
-  const rows = [
-    byId.data,
+  candidates.push(
     ...(Array.isArray(byTitle.data) ? byTitle.data : []),
     ...(Array.isArray(byHenvisning.data) ? byHenvisning.data : []),
     ...(Array.isArray(bySummary.data) ? bySummary.data : []),
-  ];
+  );
 
-  for (const row of rows) {
-    const issue = mapIssue(row as Record<string, unknown> | null);
-    if (!issue || seen.has(issue.id)) continue;
-    seen.add(issue.id);
-    hits.push(issue);
-    if (hits.length >= limit) break;
-  }
+  const rows = candidates
+    .map((row) => mapIssueRow(row))
+    .filter((row): row is SakSearchRow => row !== null);
 
-  return hits;
+  // Rank purely; drop the exact-id candidate if it did not match any term/phrase.
+  const ranked = rankSakRows(rows, terms.length > 0 ? terms : [needle], needle, limit);
+
+  return ranked.map((row) => ({
+    id: row.id,
+    title: row.title,
+    summary: row.summary,
+    henvisning: row.henvisning,
+    ferdigbehandlet: row.ferdigbehandlet,
+  }));
 }
 
 export async function loadIssueMeta(

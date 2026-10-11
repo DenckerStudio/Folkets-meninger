@@ -143,7 +143,7 @@ export function ChatPanel() {
   const readyGate = gate !== 'loading' ? gate : null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[90] flex items-end justify-end p-0 sm:p-4 xl:items-stretch xl:justify-end xl:p-6">
+    <div className="fixed inset-0 z-[90] flex items-end justify-center sm:justify-end sm:p-4 xl:p-6">
       <button
         type="button"
         className="absolute inset-0 bg-foreground/40 backdrop-blur-[2px]"
@@ -157,7 +157,7 @@ export function ChatPanel() {
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="relative z-10 flex h-[min(92vh,44rem)] w-full max-w-full flex-col sm:h-[min(88vh,42rem)] sm:max-w-md xl:my-2 xl:h-auto xl:max-h-[calc(100vh-4rem)]"
+        className="relative z-10 flex h-[100dvh] w-full max-w-full flex-col pb-[env(safe-area-inset-bottom,0px)] sm:h-[min(88vh,42rem)] sm:max-w-md sm:pb-0 xl:my-2 xl:h-auto xl:max-h-[calc(100dvh-4rem)]"
       >
         <AiAssistantCard
           titleId={titleId}
@@ -167,7 +167,7 @@ export function ChatPanel() {
           onClose={closeChat}
           headerExtra={
             readyGate === 'ready' && meta.provider && meta.model ? (
-              <div className="mt-2 max-w-[16rem]">
+              <div className="mt-1.5 max-w-[16rem]">
                 <ModelPicker
                   provider={meta.provider}
                   model={meta.model}
