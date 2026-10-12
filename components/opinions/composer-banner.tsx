@@ -38,16 +38,20 @@ const CREATE_STANCE_ORDER = ['imot', 'for'] as const satisfies readonly OpinionC
 
 type ComposerBannerProps = {
   sakOptions: SakPickerOption[];
+  initialIssueId?: string | null;
+  initialExpanded?: boolean;
 };
 
-export function ComposerBanner({ sakOptions }: ComposerBannerProps) {
+export function ComposerBanner({ sakOptions, initialIssueId = null, initialExpanded = false }: ComposerBannerProps) {
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id ?? null;
   const router = useRouter();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(Boolean(initialExpanded));
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [issueId, setIssueId] = useState<string | null>(null);
+  const [issueId, setIssueId] = useState<string | null>(
+    initialIssueId && initialIssueId.trim() ? initialIssueId.trim() : null,
+  );
   const [stance, setStance] = useState<OpinionCreateStance | null>(null);
   const [points, setPoints] = useState<OpinionPoint[]>(emptyOpinionPointDrafts);
   const [error, setError] = useState('');
