@@ -1,7 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { ExternalLink, Gavel, Globe, Layers, ListFilter, PenLine, ScrollText } from 'lucide-react';
+import {
+  CalendarClock,
+  Clock,
+  ExternalLink,
+  FileText,
+  Gavel,
+  Globe,
+  Layers,
+  ListFilter,
+  MessageSquare,
+  PenLine,
+  ScrollText,
+  Users,
+} from 'lucide-react';
 import { routes } from '@/lib/routes';
 
 /**
@@ -71,6 +84,80 @@ type VoteResultsOutput = {
   headline?: string;
   summary?: string;
   voteringTema?: string | null;
+};
+
+type HearingItem = {
+  id?: string;
+  title?: string | null;
+  subtitle?: string | null;
+  statusLabel?: string;
+  deadlineLabel?: string;
+  committee?: string | null;
+  skriftligInnspillUrl?: string | null;
+};
+
+type HearingsOutput = {
+  found?: boolean;
+  issueId?: string | null;
+  hearings?: HearingItem[];
+  note?: string | null;
+};
+
+type SakTimelineOutput = {
+  found?: boolean;
+  issueId?: string | null;
+  note?: string | null;
+  title?: string;
+  statusLabel?: string;
+  voting?: {
+    isOpen?: boolean;
+    closesAt?: string | null;
+    daysLeft?: number | null;
+    daysLeftLabel?: string | null;
+  };
+  steps?: Array<{
+    name?: string;
+    events?: Array<{ id?: string | null; date?: string | null; text?: string | null }>;
+  }>;
+};
+
+type SakDocumentsOutput = {
+  found?: boolean;
+  issueId?: string | null;
+  total?: number;
+  note?: string | null;
+  groups?: Array<{
+    kind?: string;
+    label?: string;
+    documents?: Array<{ id?: string; title?: string; sourceUrl?: string | null; viewable?: boolean }>;
+  }>;
+};
+
+type FolketsMeningerOutput = {
+  found?: boolean;
+  issueId?: string | null;
+  total?: number;
+  note?: string | null;
+  counts?: { for?: number; blank?: number; imot?: number; total?: number } | null;
+  latest?: Array<{
+    id?: string;
+    title?: string;
+    stance?: string;
+    authorName?: string | null;
+    createdAt?: string;
+  }>;
+};
+
+type PoliticianOutput = {
+  matches?: Array<{
+    id?: string;
+    name?: string;
+    parti?: string | null;
+    fylke?: string | null;
+    tittel?: string | null;
+    erRegjeringsmedlem?: boolean;
+  }>;
+  note?: string | null;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -362,6 +449,283 @@ function VoteResultsCard({ output }: { output: VoteResultsOutput }) {
   );
 }
 
+function HearingsCard({
+  output,
+  fallbackTitle,
+}: {
+  output: HearingsOutput;
+  fallbackTitle: string;
+}) {
+  const hearings = output.hearings ?? [];
+  if (hearings.length === 0) {
+    return (
+      <ToolCard icon={CalendarClock} title={fallbackTitle} tone="muted">
+        {output.note || 'Ingen høringer funnet.'}
+      </ToolCard>
+    );
+  }
+  return (
+    <ToolCard icon={CalendarClock} title={fallbackTitle} tone="brand">
+      <ul className="space-y-2">
+        {hearings.map((hearing) =>
+          hearing.id ? (
+            <li key={hearing.id} className="space-y-0.5">
+              <Link
+                href={routes.horing(hearing.id)}
+                className="text-xs font-medium text-foreground hover:text-brand hover:underline"
+              >
+                {hearing.title || `Høring ${hearing.id}`}
+              </Link>
+              <p className="text-xs text-muted-foreground">
+                {hearing.statusLabel || 'Høring'}
+                {hearing.deadlineLabel ? ` · ${hearing.deadlineLabel}` : ''}
+                {hearing.committee ? ` · ${hearing.committee}` : ''}
+              </p>
+            </li>
+          ) : null,
+        )}
+      </ul>
+    </ToolCard>
+  );
+}
+
+function SakTimelineCard({ output }: { output: SakTimelineOutput }) {
+  if (output.found === false || !output.issueId) {
+    return (
+      <ToolCard icon={Clock} title="Fant ingen saksgang" tone="muted">
+        {output.note || 'Fant ingen sak å hente saksgang for.'}
+      </ToolCard>
+    );
+  }
+
+  const voting = output.voting ?? {};
+  const steps = output.steps ?? [];
+
+  return (
+    <ToolCard
+      icon={Clock}
+      title={output.title || `Sak ${output.issueId}`}
+      tone="brand"
+      action={
+        <Link
+          href={routes.sak(output.issueId)}
+          className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+        >
+          Åpne sak
+          <ExternalLink className="size-3" aria-hidden />
+        </Link>
+      }
+    >
+      {output.statusLabel ? (
+        <p className="text-xs text-foreground">
+          <span className="font-medium text-muted-foreground">Status: </span>
+          {output.statusLabel}
+        </p>
+      ) : null}
+      {voting.isOpen ? (
+        <p className="text-xs text-muted-foreground">
+          {voting.daysLeftLabel || 'Åpen for stemmer'}
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">Ingen åpen voteringsfrist.</p>
+      )}
+      {steps.length > 0 ? (
+        <ul className="space-y-1">
+          {steps.slice(0, 6).map((step, index) => (
+            <li key={`${step.name ?? 'steg'}-${index}`} className="text-xs">
+              <span className="font-medium text-foreground">{step.name || `Steg ${index + 1}`}</span>
+              {(step.events ?? []).length > 0 ? (
+                <span className="text-muted-foreground">
+                  {' '}
+                  · {(step.events ?? [])
+                    .map((event) => event.text || event.id)
+                    .filter(Boolean)
+                    .slice(0, 3)
+                    .join(', ')}
+                </span>
+              ) : null}
+            </li>
+          ))}
+          {steps.length > 6 ? (
+            <li className="text-xs text-muted-foreground">+ {steps.length - 6} steg til.</li>
+          ) : null}
+        </ul>
+      ) : (
+        <p className="text-xs text-muted-foreground">Ingen saksgang-hendelser er publisert ennå.</p>
+      )}
+    </ToolCard>
+  );
+}
+
+function SakDocumentsCard({ output }: { output: SakDocumentsOutput }) {
+  if (output.found === false || !output.issueId) {
+    return (
+      <ToolCard icon={FileText} title="Fant ingen dokumenter" tone="muted">
+        {output.note || 'Fant ingen sak å hente dokumenter for.'}
+      </ToolCard>
+    );
+  }
+
+  const groups = output.groups ?? [];
+
+  return (
+    <ToolCard
+      icon={FileText}
+      title="Dokumenter i saken"
+      tone="brand"
+      action={
+        <Link
+          href={routes.sak(output.issueId)}
+          className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+        >
+          Åpne sak
+          <ExternalLink className="size-3" aria-hidden />
+        </Link>
+      }
+    >
+      {groups.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {output.note || 'Ingen dokumenter er registrert på saken ennå.'}
+        </p>
+      ) : (
+        groups.map((group, index) => (
+          <div key={group.kind ?? index} className="space-y-0.5">
+            <p className="text-xs font-medium text-muted-foreground">
+              {group.label || group.kind} ({(group.documents ?? []).length})
+            </p>
+            <ul className="space-y-0.5">
+              {(group.documents ?? []).slice(0, 5).map((doc) => (
+                <li key={doc.id ?? doc.title} className="text-xs">
+                  {doc.id ? (
+                    <Link
+                      href={`${routes.sak(output.issueId!)}?dokument=${encodeURIComponent(doc.id)}`}
+                      className="text-foreground hover:text-brand hover:underline"
+                    >
+                      {doc.title || doc.id}
+                    </Link>
+                  ) : (
+                    <span className="text-foreground">{doc.title || 'Dokument'}</span>
+                  )}
+                </li>
+              ))}
+              {(group.documents ?? []).length > 5 ? (
+                <li className="text-xs text-muted-foreground">
+                  + {(group.documents ?? []).length - 5} til.
+                </li>
+              ) : null}
+            </ul>
+          </div>
+        ))
+      )}
+    </ToolCard>
+  );
+}
+
+const STANCE_LABELS: Record<string, string> = {
+  for: 'For',
+  imot: 'Imot',
+  blank: 'Blank',
+};
+
+function FolketsMeningerCard({ output }: { output: FolketsMeningerOutput }) {
+  if (output.found === false || !output.issueId) {
+    return (
+      <ToolCard icon={MessageSquare} title="Fant ingen meninger" tone="muted">
+        {output.note || 'Fant ingen sak å hente meninger for.'}
+      </ToolCard>
+    );
+  }
+
+  const counts = output.counts ?? null;
+  const latest = output.latest ?? [];
+
+  return (
+    <ToolCard
+      icon={MessageSquare}
+      title={`Folkets meninger (${output.total ?? 0})`}
+      tone="brand"
+      action={
+        <Link
+          href={routes.folketsMeningerForSak(output.issueId)}
+          className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+        >
+          Åpne
+          <ExternalLink className="size-3" aria-hidden />
+        </Link>
+      }
+    >
+      {counts ? (
+        <p className="text-xs text-foreground">
+          <span className="font-medium text-muted-foreground">For {counts.for ?? 0} · Blank{' '}
+          {counts.blank ?? 0} · Imot {counts.imot ?? 0}</span>
+        </p>
+      ) : null}
+      {latest.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {output.note || 'Ingen meninger er sendt inn om denne saken ennå.'}
+        </p>
+      ) : (
+        <ul className="space-y-1">
+          {latest.map((opinion) =>
+            opinion.id ? (
+              <li key={opinion.id} className="text-xs">
+                <Link
+                  href={routes.opinion(opinion.id)}
+                  className="font-medium text-foreground hover:text-brand hover:underline"
+                >
+                  {opinion.title || 'Mening'}
+                </Link>
+                <span className="text-muted-foreground">
+                  {opinion.stance ? ` · ${STANCE_LABELS[opinion.stance] ?? opinion.stance}` : ''}
+                  {opinion.authorName ? ` · ${opinion.authorName}` : ''}
+                </span>
+              </li>
+            ) : null,
+          )}
+        </ul>
+      )}
+    </ToolCard>
+  );
+}
+
+function PoliticianCard({ output }: { output: PoliticianOutput }) {
+  const matches = output.matches ?? [];
+  if (matches.length === 0) {
+    return (
+      <ToolCard icon={Users} title="Fant ingen politikere" tone="muted">
+        {output.note || 'Fant ingen politiker som matcher.'}
+      </ToolCard>
+    );
+  }
+  return (
+    <ToolCard icon={Users} title={matches.length === 1 ? 'Politiker' : `${matches.length} politikere`} tone="brand">
+      <ul className="space-y-1">
+        {matches.map((politician) =>
+          politician.id ? (
+            <li key={politician.id} className="text-xs">
+              <Link
+                href={routes.politiker(politician.id)}
+                className="font-medium text-foreground hover:text-brand hover:underline"
+              >
+                {politician.name || 'Politiker'}
+              </Link>
+              <span className="text-muted-foreground">
+                {politician.parti ? ` · ${politician.parti}` : ''}
+                {politician.fylke ? ` · ${politician.fylke}` : ''}
+                {politician.erRegjeringsmedlem
+                  ? ` · ${politician.tittel || 'regjeringsmedlem'}`
+                  : politician.tittel
+                    ? ` · ${politician.tittel}`
+                    : ''}
+              </span>
+            </li>
+          ) : null,
+        )}
+      </ul>
+    </ToolCard>
+  );
+}
+
 function ToolCard({
   icon: Icon,
   title,
@@ -415,6 +779,18 @@ export function ChatToolResult({
       return <TopicContextCard output={output as TopicContextOutput} />;
     case 'tool-getVoteResults':
       return <VoteResultsCard output={output as VoteResultsOutput} />;
+    case 'tool-findHearingsForSak':
+      return <HearingsCard output={output as HearingsOutput} fallbackTitle="Høringer for saken" />;
+    case 'tool-listOpenHearings':
+      return <HearingsCard output={output as HearingsOutput} fallbackTitle="Åpne høringer" />;
+    case 'tool-getSakTimeline':
+      return <SakTimelineCard output={output as SakTimelineOutput} />;
+    case 'tool-listSakDocuments':
+      return <SakDocumentsCard output={output as SakDocumentsOutput} />;
+    case 'tool-getFolketsMeninger':
+      return <FolketsMeningerCard output={output as FolketsMeningerOutput} />;
+    case 'tool-getPolitician':
+      return <PoliticianCard output={output as PoliticianOutput} />;
     case 'tool-searchUpdatedSources':
       return <SourceSearchCard output={output as SourceSearchOutput} />;
     case 'tool-listMatchingSaker':
