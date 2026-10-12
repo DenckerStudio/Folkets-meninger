@@ -28,7 +28,7 @@ assert.match(toolsSrc, /searchIssuesForChat\(query, 8, ragClient\)/);
 assert.match(routeSrc, /requireStemmePlus/);
 assert.match(routeSrc, /getServerSupabase/);
 assert.match(routeSrc, /loadDecryptedByok\(gate\.userId, session\)/);
-assert.match(routeSrc, /createChatTools\(issueId, ragClient\)/);
+assert.match(routeSrc, /createChatTools\(issueId, ragClient, vectorize\)/);
 assert.doesNotMatch(routeSrc, /getServiceSupabase/);
 assert.doesNotMatch(routeSrc, /runtime\s*=\s*['"]edge['"]/);
 
@@ -72,6 +72,28 @@ assert.match(composerAssistsSrc, /Rettskriv/);
 assert.match(composerAssistsSrc, /Finn oppdaterte kilder/);
 assert.match(composerAssistsSrc, /\/api\/chat\/rettskriving/);
 assert.match(composerAssistsSrc, /\/api\/chat\/sources/);
+
+// --- Phase 1: multi-sak + semantic retrieval -------------------------------
+
+const vectorSrc = readFileSync(new URL('./vector-search.ts', import.meta.url), 'utf8');
+const instructionsSrc = readFileSync(new URL('./instructions.ts', import.meta.url), 'utf8');
+
+// rag.ts keeps the session/anon cache path and stays free of the embedding column.
+assert.match(ragSrc, /from '@\/lib\/chat\/vector-search'/);
+assert.match(ragSrc, /retrieveTopicContext/);
+assert.match(ragSrc, /mergeChunks/);
+assert.match(ragSrc, /searchChunksByVector/);
+assert.doesNotMatch(ragSrc, /embedding/);
+
+// Semantic path lives in its own module and only calls the vector RPC.
+assert.match(vectorSrc, /match_issue_document_chunks/);
+assert.match(vectorSrc, /createOllamaVectorizer/);
+assert.doesNotMatch(vectorSrc, /\.select\(/);
+
+assert.match(toolsSrc, /retrieveTopicContext/);
+assert.match(toolsSrc, /vectorize/);
+assert.match(routeSrc, /createOllamaVectorizer/);
+assert.match(instructionsSrc, /retrieveTopicContext/);
 
 
 console.log('chat/rag.session.test.ts: ok session-bound overlay RAG');

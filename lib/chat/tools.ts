@@ -7,13 +7,16 @@ import {
 } from '@/lib/chat/actions';
 import {
   retrieveSakContext,
+  retrieveTopicContext,
   searchIssuesForChat,
   type ChatRagClient,
 } from '@/lib/chat/rag';
+import type { QueryVectorizer } from '@/lib/chat/vector-search';
 
 export function createChatTools(
   preferredIssueId?: string | null,
   ragClient?: ChatRagClient | null,
+  vectorize?: QueryVectorizer | null,
 ) {
   return {
     retrieveSakContext: tool({
@@ -31,6 +34,7 @@ export function createChatTools(
           issueId: issueId || preferredIssueId,
           query,
           client: ragClient,
+          vectorize,
         });
         return {
           issue: context.issue,
@@ -94,6 +98,27 @@ export function createChatTools(
               ? 'Ingen treff i sakcachen. Prøv et mer presist søk eller SearXNG.'
               : null,
         };
+      },
+    }),
+    retrieveTopicContext: tool({
+      description:
+        'Hent kontekst fra flere relevante saker samtidig for et tema eller et bredt spørsmål (f.eks. «hva skjer med strømprisene» eller «hva er sagt om innvandring»). Returnerer de mest relevante sakene med sammendrag og dokumentutdrag, slik at du kan svare på tvers av saker. Bruk retrieveSakContext når én bestemt sak er kjent.',
+      inputSchema: z.object({
+        query: z
+          .string()
+          .min(2)
+          .describe('Temaet eller spørsmålet brukeren vil forstå på tvers av saker.'),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(5)
+          .optional()
+          .describe('Hvor mange saker å hente (1–5, standard 3).'),
+      }),
+      execute: async ({ query, limit }) => {
+        const context = await retrieveTopicContext({ query, limit, client: ragClient, vectorize });
+        return { query: context.query, saker: context.saker, note: context.note };
       },
     }),
   };
