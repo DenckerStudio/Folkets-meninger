@@ -3,6 +3,8 @@ import { createChatTools } from './tools';
 
 async function main() {
   const tools = createChatTools('1234');
+  assert.equal(typeof tools.retrieveSakContext.execute, 'function');
+  assert.equal(typeof tools.retrieveTopicContext.execute, 'function');
   const spelling = await tools.helpRettsskriving.execute(
     {
       draft: 'Stortinget bør vurdere forslaget om klima.',

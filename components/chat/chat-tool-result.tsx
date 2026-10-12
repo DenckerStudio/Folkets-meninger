@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ExternalLink, Globe, ListFilter, PenLine, ScrollText } from 'lucide-react';
+import { ExternalLink, Globe, Layers, ListFilter, PenLine, ScrollText } from 'lucide-react';
 import { routes } from '@/lib/routes';
 
 /**
@@ -37,6 +37,16 @@ type RettskrivingOutput = {
   notes?: string | null;
   instruction?: string;
   published?: false;
+};
+
+type TopicContextOutput = {
+  query?: string;
+  saker?: Array<{
+    issue?: { id?: string; title?: string | null; henvisning?: string | null } | null;
+    summary?: string | null;
+    chunks?: Array<{ documentId?: string; chunkIndex?: number; content?: string }>;
+  }>;
+  note?: string | null;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -184,6 +194,49 @@ function MatchingIssuesCard({ output }: { output: MatchingIssuesOutput }) {
   );
 }
 
+function TopicContextCard({ output }: { output: TopicContextOutput }) {
+  const saker = (output.saker ?? []).filter((sak) => sak?.issue?.id);
+
+  if (saker.length === 0) {
+    return (
+      <ToolCard icon={Layers} title="Fant ingen saker" tone="muted">
+        {output.note || 'Ingen matching saker i vår cache. Prøv et mer konkret spørsmål.'}
+      </ToolCard>
+    );
+  }
+
+  return (
+    <ToolCard
+      icon={Layers}
+      title={saker.length === 1 ? '1 sak' : `${saker.length} saker`}
+      tone="brand"
+    >
+      <ul className="space-y-2">
+        {saker.map((sak) => {
+          const issue = sak.issue!;
+          const id = issue.id!;
+          const chunkCount = (sak.chunks ?? []).length;
+          return (
+            <li key={id} className="space-y-0.5">
+              <Link
+                href={routes.sak(id)}
+                className="text-xs font-medium text-foreground hover:text-brand hover:underline"
+              >
+                {issue.title || `Sak ${id}`}
+              </Link>
+              <p className="text-xs text-muted-foreground">
+                {issue.henvisning ? `${issue.henvisning} · ` : ''}
+                {chunkCount > 0 ? `${chunkCount} dokumentutdrag` : 'kun sammendrag'}
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+      {output.note ? <p className="text-xs text-muted-foreground">{output.note}</p> : null}
+    </ToolCard>
+  );
+}
+
 function RettskrivingCard({ output }: { output: RettskrivingOutput }) {
   return (
     <ToolCard icon={PenLine} title="Rettet forslag" tone="brand">
@@ -253,6 +306,8 @@ export function ChatToolResult({
   switch (toolType) {
     case 'tool-retrieveSakContext':
       return <SakContextCard output={output as SakContextOutput} />;
+    case 'tool-retrieveTopicContext':
+      return <TopicContextCard output={output as TopicContextOutput} />;
     case 'tool-searchUpdatedSources':
       return <SourceSearchCard output={output as SourceSearchOutput} />;
     case 'tool-listMatchingSaker':

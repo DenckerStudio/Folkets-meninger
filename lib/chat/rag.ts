@@ -9,6 +9,11 @@ import {
   significantTokens,
   type SakSearchRow,
 } from '@/lib/chat/sak-search';
+import {
+  searchChunksByVector,
+  type QueryVectorizer,
+  type VectorSearchClient,
+} from '@/lib/chat/vector-search';
 
 const MAX_CHUNK_CHARS = 1400;
 const MAX_CHUNKS = 8;
@@ -240,10 +245,34 @@ export async function loadIssueMeta(
   return mapIssue(data as Record<string, unknown>);
 }
 
-async function searchChunks(
+/** Narrow the resolved cache client to the rpc surface vector search needs. */
+function asVectorClient(client: ChatRagClient): VectorSearchClient {
+  return client as unknown as VectorSearchClient;
+}
+
+/** Merge semantic + lexical chunks, de-duplicating on document position. */
+export function mergeChunks(
+  primary: readonly ChatDocumentChunk[],
+  secondary: readonly ChatDocumentChunk[],
+  limit = MAX_CHUNKS,
+): ChatDocumentChunk[] {
+  const seen = new Set<string>();
+  const out: ChatDocumentChunk[] = [];
+  for (const chunk of [...primary, ...secondary]) {
+    const key = `${chunk.documentId}:${chunk.chunkIndex}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(chunk);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+async function searchChunksLexical(
   supabase: ChatRagClient,
   issue: ChatIssueHit,
   query: string,
+  maxChunks: number,
 ): Promise<ChatDocumentChunk[]> {
   const issueId = issue.id.trim();
   if (!issueId) return [];
@@ -277,7 +306,43 @@ async function searchChunks(
 
   return [...mapped]
     .sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0) || a.chunkIndex - b.chunkIndex)
-    .slice(0, MAX_CHUNKS);
+    .slice(0, maxChunks);
+}
+
+/**
+ * Chunks for one sak. Starts from lexical ranking, then, when a query vectorizer is
+ * available, prepends semantically-ranked chunks and de-duplicates. A failing or
+ * unavailable vector search is swallowed so lexical results always survive.
+ */
+async function searchChunks(
+  supabase: ChatRagClient,
+  issue: ChatIssueHit,
+  query: string,
+  vectorize?: QueryVectorizer | null,
+  maxChunks: number = MAX_CHUNKS,
+): Promise<ChatDocumentChunk[]> {
+  const lexical = await searchChunksLexical(supabase, issue, query, maxChunks);
+  if (!vectorize) return lexical;
+
+  const semantic = await searchChunksByVector(
+    asVectorClient(supabase),
+    issue.id,
+    query,
+    vectorize,
+    maxChunks,
+  );
+  if (!semantic || semantic.length === 0) return lexical;
+
+  return mergeChunks(
+    semantic.map((chunk) => ({
+      documentId: chunk.documentId,
+      chunkIndex: chunk.chunkIndex,
+      content: chunk.content,
+      rank: chunk.similarity,
+    })),
+    lexical,
+    maxChunks,
+  );
 }
 
 async function loadAiSummaryText(
@@ -303,6 +368,7 @@ export async function retrieveSakContext(args: {
   issueId?: string | null;
   query: string;
   client?: ChatRagClient | null;
+  vectorize?: QueryVectorizer | null;
 }): Promise<ChatSakContext> {
   const supabase = await resolveChatRagClient(args.client);
   if (!supabase) {
@@ -335,7 +401,7 @@ export async function retrieveSakContext(args: {
   }
 
   const [chunks, summaryText] = await Promise.all([
-    searchChunks(supabase, issue, args.query),
+    searchChunks(supabase, issue, args.query, args.vectorize),
     loadAiSummaryText(supabase, issueId),
   ]);
 
@@ -347,5 +413,73 @@ export async function retrieveSakContext(args: {
       chunks.length === 0
         ? 'Ingen dokumentutdrag som handler om denne saken er indeksert ennå. Bruk tittel/sammendrag, og søk etter oppdaterte kilder ved behov.'
         : null,
+  };
+}
+
+export type ChatTopicSak = {
+  issue: ChatIssueHit;
+  summary: string | null;
+  chunks: ChatDocumentChunk[];
+};
+
+export type ChatTopicContext = {
+  query: string;
+  saker: ChatTopicSak[];
+  note: string | null;
+};
+
+const MAX_TOPIC_SAKER = 3;
+const MAX_TOPIC_CHUNKS = 4;
+const MAX_TOPIC_SUMMARY_CHARS = 1200;
+
+/**
+ * Gather context from several relevant saker for a broad, topic-level question so
+ * the model can synthesise across them instead of only one sak. Each sak keeps its
+ * own chunks; nothing is merged across saker (meeting-minutes chunks often share a
+ * document_id across saker).
+ */
+export async function retrieveTopicContext(args: {
+  query: string;
+  limit?: number;
+  client?: ChatRagClient | null;
+  vectorize?: QueryVectorizer | null;
+}): Promise<ChatTopicContext> {
+  const supabase = await resolveChatRagClient(args.client);
+  const query = (args.query ?? '').trim();
+  if (!supabase || !query) {
+    return { query, saker: [], note: 'Sakdata er ikke konfigurert i dette miljøet.' };
+  }
+
+  const limit = Math.min(Math.max(args.limit ?? MAX_TOPIC_SAKER, 1), 5);
+  const hits = await searchIssuesForChat(query, limit, supabase);
+  if (hits.length === 0) {
+    return {
+      query,
+      saker: [],
+      note: 'Fant ingen matching saker i vår cache. Prøv en mer konkret tittel eller et kildesøk.',
+    };
+  }
+
+  const saker = await Promise.all(
+    hits.map(async (issue) => {
+      const [chunks, summaryText] = await Promise.all([
+        searchChunks(supabase, issue, query, args.vectorize, MAX_TOPIC_CHUNKS),
+        loadAiSummaryText(supabase, issue.id),
+      ]);
+      return {
+        issue,
+        summary: clip(summaryText || issue.summary || '', MAX_TOPIC_SUMMARY_CHARS) || null,
+        chunks,
+      };
+    }),
+  );
+
+  const hasChunks = saker.some((sak) => sak.chunks.length > 0);
+  return {
+    query,
+    saker,
+    note: hasChunks
+      ? null
+      : 'Ingen dokumentutdrag er indeksert for disse sakene ennå. Bruk tittel/sammendrag og et kildesøk ved behov.',
   };
 }

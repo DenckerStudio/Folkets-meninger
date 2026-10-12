@@ -10,6 +10,7 @@ import { loadDecryptedByok } from '@/lib/byok/service';
 import { buildChatInstructions } from '@/lib/chat/instructions';
 import { createUserLanguageModel } from '@/lib/chat/model';
 import { createChatTools } from '@/lib/chat/tools';
+import { createOllamaVectorizer } from '@/lib/chat/vector-search';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { requireStemmePlus } from '@/lib/stemme-plus/entitlement';
 import { getServerSupabase } from '@/lib/supabase-server';
@@ -77,6 +78,9 @@ export async function POST(request: Request) {
 
   const issueId = readIssueId(request, body);
   const ragClient = session;
+  // Reuse the user's own Ollama server to vectorize queries when that is their
+  // provider; every other provider keeps the lexical chunk search.
+  const vectorize = createOllamaVectorizer(credential);
 
   try {
     const model = createUserLanguageModel(credential);
@@ -84,7 +88,7 @@ export async function POST(request: Request) {
       model,
       instructions: buildChatInstructions(issueId),
       messages: await convertToModelMessages(messages as UIMessage[]),
-      tools: createChatTools(issueId, ragClient),
+      tools: createChatTools(issueId, ragClient, vectorize),
       stopWhen: isStepCount(6),
       onError: ({ error }) => {
         const message = error instanceof Error ? error.message : 'unknown chat error';
