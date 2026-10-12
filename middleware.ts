@@ -83,7 +83,6 @@ export const config = {
     '/api/sak/:path*/ai-summary',
     '/api/sak/:path*/impact',
     '/api/sak/:path*/knowledge',
-    '/api/sak/:path*/counter-proposals',
     '/api/opinions/:path*',
     '/api/feedback',
     '/api/suggestions',

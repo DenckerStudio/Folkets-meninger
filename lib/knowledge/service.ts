@@ -43,8 +43,8 @@ export async function getKnowledgeActivityCounts(userId: string): Promise<Knowle
       .select('document_id', { count: 'exact', head: true })
       .eq('user_id', userId),
     service
-      .from('counter_proposals')
-      .select('id', { count: 'exact', head: true })
+      .from('opinion_innspill')
+      .select('opinion_id', { count: 'exact', head: true })
       .eq('author_user_id', userId)
       .neq('status', 'withdrawn'),
     service

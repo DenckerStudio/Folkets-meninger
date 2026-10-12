@@ -23,6 +23,7 @@ import { SakPageTabs } from '@/components/sak/sak-page-tabs';
 import { ImpactCalculator } from '@/components/sak/impact-calculator';
 import { AlignmentScore } from '@/components/sak/alignment-score';
 import { KnowledgeQuiz } from '@/components/sak/knowledge-quiz';
+import { SakMeningerSection } from '@/components/sak/sak-meninger-section';
 import StanceSection from './stance-section';
 import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
@@ -365,6 +366,8 @@ export default async function SakPage({
               voteringer={voteringer}
               initialFolk={sak.votes}
             />
+
+            <SakMeningerSection sakId={sak.id} />
 
             <PoliticianResponseForm sakId={sak.id} />
           </div>

@@ -51,25 +51,25 @@ export function documentReadAward(userId: string, issueId: string, documentId: s
   });
 }
 
-export function counterProposalCreatedAward(userId: string, proposalId: string) {
+export function opinionInnspillCreatedAward(userId: string, opinionId: string) {
   return awardKnowledgePoints({
     userId,
     delta: KNOWLEDGE_POINT_DELTAS.counterProposalCreated,
     reason: KNOWLEDGE_POINT_REASONS.counterProposalCreated,
-    refType: 'counter_proposal',
-    refKey: `counter:${proposalId}`,
-    refId: proposalId,
+    refType: 'opinion_innspill',
+    refKey: `innspill:${opinionId}`,
+    refId: opinionId,
   });
 }
 
-export function counterProposalEndorsedAward(userId: string, proposalId: string) {
+export function opinionInnspillEndorsedAward(userId: string, opinionId: string) {
   return awardKnowledgePoints({
     userId,
     delta: KNOWLEDGE_POINT_DELTAS.counterProposalEndorsed,
     reason: KNOWLEDGE_POINT_REASONS.counterProposalEndorsed,
-    refType: 'counter_proposal',
-    refKey: `endorse:${proposalId}`,
-    refId: proposalId,
+    refType: 'opinion_innspill',
+    refKey: `endorse:${opinionId}`,
+    refId: opinionId,
   });
 }
 

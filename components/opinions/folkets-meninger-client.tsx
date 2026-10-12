@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Filter, Search } from 'lucide-react';
+import Link from 'next/link';
+import { Filter, Search, X } from 'lucide-react';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { dashboardControlClass, dashboardSearchClass } from '@/components/dashboard/filter-field';
@@ -10,17 +11,30 @@ import FadeIn from '@/components/fade-in';
 import { ComposerBanner } from '@/components/opinions/composer-banner';
 import { OpinionCard } from '@/components/opinions/opinion-card';
 import { PageHeader } from '@/components/page-header';
+import { routes } from '@/lib/routes';
 import type { OpinionListItem, SakPickerOption } from '@/lib/opinions/types';
 
 type FolketsMeningerClientProps = {
   opinions: OpinionListItem[];
   sakOptions: SakPickerOption[];
+  issueId?: string | null;
+  initialCompose?: boolean;
 };
 
-export function FolketsMeningerClient({ opinions, sakOptions }: FolketsMeningerClientProps) {
+export function FolketsMeningerClient({
+  opinions,
+  sakOptions,
+  issueId = null,
+  initialCompose = false,
+}: FolketsMeningerClientProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [stanceFilter, setStanceFilter] = useState('Alle');
   const [sortBy, setSortBy] = useState('Nyeste først');
+
+  const scopedTitle = useMemo(() => {
+    if (!issueId) return null;
+    return sakOptions.find((option) => option.id === issueId)?.title ?? null;
+  }, [issueId, sakOptions]);
 
   const displayed = useMemo(() => {
     let next = opinions;
@@ -56,8 +70,30 @@ export function FolketsMeningerClient({ opinions, sakOptions }: FolketsMeningerC
       </FadeIn>
 
       <FadeIn delay={0.12} direction="up">
-        <ComposerBanner sakOptions={sakOptions} />
+        <ComposerBanner
+          sakOptions={sakOptions}
+          initialIssueId={issueId}
+          initialExpanded={initialCompose}
+        />
       </FadeIn>
+
+      {issueId ? (
+        <FadeIn delay={0.15} direction="up">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-brand/25 bg-brand-soft/40 px-4 py-3">
+            <span className="text-sm text-foreground">
+              Viser meninger om{' '}
+              <strong className="font-semibold">{scopedTitle ?? `Sak ${issueId}`}</strong>
+            </span>
+            <Link
+              href={routes.folketsMeninger}
+              className="ml-auto inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline"
+            >
+              Vis alle meninger
+              <X className="h-4 w-4" />
+            </Link>
+          </div>
+        </FadeIn>
+      ) : null}
 
       <FadeIn delay={0.18} direction="up">
         <SurfaceCard className="flex flex-col gap-4 p-4 md:flex-row">
@@ -103,10 +139,18 @@ export function FolketsMeningerClient({ opinions, sakOptions }: FolketsMeningerC
         <div className="space-y-4">
           {displayed.length === 0 ? (
             <EmptyState
-              title={opinions.length === 0 ? 'Ingen meninger er delt ennå' : 'Ingen meninger matcher søket'}
+              title={
+                opinions.length === 0
+                  ? issueId
+                    ? 'Ingen meninger om denne saken ennå'
+                    : 'Ingen meninger er delt ennå'
+                  : 'Ingen meninger matcher søket'
+              }
               description={
                 opinions.length === 0
-                  ? 'Når noen deler en holdning til en sak, vises den her.'
+                  ? issueId
+                    ? 'Bli den første til å dele en mening om denne saken.'
+                    : 'Når noen deler en holdning til en sak, vises den her.'
                   : 'Prøv et annet søk eller filter.'
               }
             />

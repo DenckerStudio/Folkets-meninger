@@ -242,16 +242,24 @@ export async function listSakPickerOptions(
   return listSakPickerOptionsFromCache(limit, opts?.live === true);
 }
 
-export async function listCitizenOpinions(limit = OPINION_LIST_PAGE_SIZE): Promise<OpinionListItem[]> {
+async function listCitizenOpinionsInternal(
+  limit: number,
+  issueId?: string | null,
+): Promise<OpinionListItem[]> {
   if (!supabaseConfigured()) return [];
 
   const supabase = getAnonSupabase();
-  const { data, error } = await supabase
+  let query = supabase
     .from('citizen_opinions')
     .select(OPINION_SELECT)
     .eq('is_removed', false)
     .order('created_at', { ascending: false })
     .limit(limit);
+  if (issueId) {
+    query = query.eq('stortinget_issue_id', issueId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('listCitizenOpinions error:', error.message);
@@ -272,6 +280,69 @@ export async function listCitizenOpinions(limit = OPINION_LIST_PAGE_SIZE): Promi
     const issueTitle = row.stortinget_issue_id ? issueTitles.get(row.stortinget_issue_id) ?? null : null;
     return mapOpinionRow(row, issueTitle, counts);
   });
+}
+
+export async function listCitizenOpinions(limit = OPINION_LIST_PAGE_SIZE): Promise<OpinionListItem[]> {
+  return listCitizenOpinionsInternal(limit);
+}
+
+export async function listCitizenOpinionsByIssue(
+  issueId: string,
+  limit = OPINION_LIST_PAGE_SIZE,
+): Promise<OpinionListItem[]> {
+  const id = issueId.trim();
+  if (!id) return [];
+  return listCitizenOpinionsInternal(limit, id);
+}
+
+export type IssueOpinionSummary = {
+  total: number;
+  counts: OpinionStanceCounts;
+  latest: OpinionListItem[];
+};
+
+export async function getIssueOpinionSummary(
+  issueId: string,
+  previewLimit = 3,
+): Promise<IssueOpinionSummary> {
+  const opinions = await listCitizenOpinionsByIssue(issueId);
+  const counts = emptyStanceCounts();
+  for (const opinion of opinions) {
+    addStanceCount(counts, opinion.stance);
+  }
+  return {
+    total: opinions.length,
+    counts,
+    latest: opinions.slice(0, Math.max(0, previewLimit)),
+  };
+}
+
+export async function getSakPickerOption(id: string): Promise<SakPickerOption | null> {
+  const sakId = id.trim();
+  if (!sakId || !supabaseConfigured()) return null;
+
+  const supabase = getAnonSupabase();
+  const { data, error } = await supabase
+    .from('stortinget_issues')
+    .select('id, title, category, ferdigbehandlet, status')
+    .eq('id', sakId)
+    .maybeSingle();
+
+  if (error || !data || !data.id || !data.title) {
+    if (error) console.error('getSakPickerOption error:', error.message);
+    return null;
+  }
+
+  const cachedStatus =
+    typeof data.status === 'string' ? data.status : data.status != null ? String(data.status) : null;
+  const ferdigbehandlet = typeof data.ferdigbehandlet === 'boolean' ? data.ferdigbehandlet : null;
+  return {
+    id: String(data.id),
+    title: String(data.title),
+    category: data.category ? String(data.category) : null,
+    henvisning: null,
+    status: resolveSakListStatus({ ferdigbehandlet, cachedStatus }),
+  };
 }
 
 export async function getCitizenOpinion(id: string, viewerUserId?: string | null): Promise<OpinionDetail | null> {

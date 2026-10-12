@@ -6,6 +6,8 @@ export const routes = {
   home: '/',
   dashboard: DASHBOARD_PREFIX,
   folketsMeninger: `${DASHBOARD_PREFIX}/folkets-meninger`,
+  folketsMeningerForSak: (id: string, opts?: { compose?: boolean }) =>
+    `${DASHBOARD_PREFIX}/folkets-meninger?sak=${encodeURIComponent(id)}${opts?.compose ? '&compose=1' : ''}`,
   utforsk: `${DASHBOARD_PREFIX}/utforsk`,
   avstemninger: `${DASHBOARD_PREFIX}/avstemninger`,
   /** @deprecated Reels live on Utforsk; this path redirects there. */

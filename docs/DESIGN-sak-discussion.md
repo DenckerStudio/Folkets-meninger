@@ -1,6 +1,16 @@
 # Design: Sak-scoped discussion (replacement for removed forum)
 
-**Status:** Investigation / recommendation (2026-09-06)  
+> **Superseded (2026-10-12).** The sak-scoped debate layer shipped as
+> `issue_discussions` / `issue_discussion_posts`, but the whole siden ble
+> konsolidert inn i **Folkets meninger** etter brukerens ønske: innspill og
+> diskusjon skal ikke ligge på sak-siden. Motforslag/innspill er nå
+> `opinion_innspill` (en mening som fremmes som høringsinnspill), og debatten
+> er svar-tråden per mening. Se `AGENTS.md` → «Folkets meninger, innspill og
+> rapportering» og `supabase/migrations/20261012140000_opinion_innspill.sql`.
+> Dokumentet beholdes som historikk for designvalget om ikke å gjenopprette
+> `forum_*`.
+
+**Status:** Superseded — consolidated into Folkets meninger (2026-10-12)  
 **Author:** Cloud agent design pass  
 **Audience:** Mathias — product + engineering review before implementation
 

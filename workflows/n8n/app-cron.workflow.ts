@@ -15,7 +15,7 @@ const CALL_CRON_JS = `const SETTINGS_NODES = [
   'Cron settings (labels)',
   'Cron settings (digest daily)',
   'Cron settings (digest weekly)',
-  'Cron settings (package counter proposals)',
+  'Cron settings (package opinion innspill)',
   'Cron settings (n8n retry)',
 ];
 let settings = {};
@@ -95,7 +95,7 @@ const cronSettingsCategories = cronSettingsNode('Cron settings (categories)');
 const cronSettingsLabels = cronSettingsNode('Cron settings (labels)');
 const cronSettingsDigestDaily = cronSettingsNode('Cron settings (digest daily)');
 const cronSettingsDigestWeekly = cronSettingsNode('Cron settings (digest weekly)');
-const cronSettingsPackageCounter = cronSettingsNode('Cron settings (package counter proposals)');
+const cronSettingsPackageInnspill = cronSettingsNode('Cron settings (package opinion innspill)');
 const cronSettingsN8nRetry = cronSettingsNode('Cron settings (n8n retry)');
 
 const setSyncPath = node({
@@ -167,21 +167,21 @@ const setDigestDailyPath = node({
   output: [{ cronPath: '/api/cron/digest', cronQuery: 'frequency=daily' }],
 });
 
-const setPackageCounterPath = node({
+const setPackageInnspillPath = node({
   type: 'n8n-nodes-base.set',
   version: 3.4,
   config: {
-    name: 'Path: package-counter-proposals',
+    name: 'Path: package-opinion-innspill',
     parameters: {
       mode: 'manual',
       assignments: {
         assignments: [
-          { id: 'p', name: 'cronPath', value: '/api/cron/package-counter-proposals', type: 'string' },
+          { id: 'p', name: 'cronPath', value: '/api/cron/package-opinion-innspill', type: 'string' },
         ],
       },
     },
   },
-  output: [{ cronPath: '/api/cron/package-counter-proposals' }],
+  output: [{ cronPath: '/api/cron/package-opinion-innspill' }],
 });
 
 const setN8nRetryPath = node({
@@ -281,11 +281,11 @@ const scheduleDigestDaily = trigger({
   output: [{}],
 });
 
-const schedulePackageCounter = trigger({
+const schedulePackageInnspill = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
   version: 1.3,
   config: {
-    name: 'Daily 06:00 package-counter-proposals',
+    name: 'Daily 06:00 package-opinion-innspill',
     parameters: {
       rule: { interval: [{ field: 'cronExpression', expression: '0 6 * * *' }] },
     },
@@ -321,7 +321,7 @@ const inWorkflowError = createInWorkflowErrorNotify('folkets-app-cron');
 
 sticky(
   '## App cron (n8n → Folkets Stemme)\\n\\nErstatter Vercel Cron. Fyll inn **cronSecret** (samme som CRON_SECRET i app) og **appBaseUrl** i hver Cron settings-node. Error Trigger POSTer til /api/ops/n8n-notify. n8n-retry kjører hver 2. time.',
-  [scheduleSyncIssues, scheduleCategories, scheduleLabels, schedulePackageCounter, scheduleN8nRetry, scheduleDigestDaily, scheduleDigestWeekly],
+  [scheduleSyncIssues, scheduleCategories, scheduleLabels, schedulePackageInnspill, scheduleN8nRetry, scheduleDigestDaily, scheduleDigestWeekly],
   { color: 3 }
 );
 
@@ -334,8 +334,8 @@ export default workflow('folkets-app-cron', 'Folkets Stemme – App cron (n8n)')
   .to(cronSettingsLabels.to(setLabelsPath).to(callCron))
   .add(scheduleDigestDaily)
   .to(cronSettingsDigestDaily.to(setDigestDailyPath).to(callCron))
-  .add(schedulePackageCounter)
-  .to(cronSettingsPackageCounter.to(setPackageCounterPath).to(callCron))
+  .add(schedulePackageInnspill)
+  .to(cronSettingsPackageInnspill.to(setPackageInnspillPath).to(callCron))
   .add(scheduleN8nRetry)
   .to(cronSettingsN8nRetry.to(setN8nRetryPath).to(callCron))
   .add(scheduleDigestWeekly)
