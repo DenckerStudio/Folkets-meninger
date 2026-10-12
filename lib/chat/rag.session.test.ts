@@ -95,5 +95,25 @@ assert.match(toolsSrc, /vectorize/);
 assert.match(routeSrc, /createOllamaVectorizer/);
 assert.match(instructionsSrc, /retrieveTopicContext/);
 
+// --- Phase 2: Stortinget votering + folkets vilje ---------------------------
+
+const voteSrc = readFileSync(new URL('./vote-alignment.ts', import.meta.url), 'utf8');
+const cardSrc = readFileSync(new URL('../../components/chat/chat-tool-result.tsx', import.meta.url), 'utf8');
+
+// Vote totals come from the anon/authenticated RPC, never the service role.
+assert.doesNotMatch(voteSrc, /getServiceSupabase/);
+assert.match(voteSrc, /getServerSupabase/);
+assert.match(voteSrc, /getAnonSupabase/);
+assert.match(voteSrc, /get_issue_vote_totals/);
+assert.match(voteSrc, /buildAlignmentComparison/);
+assert.match(voteSrc, /fetchSakVoteringer/);
+assert.doesNotMatch(voteSrc, /embedding/);
+
+assert.match(toolsSrc, /getVoteResults/);
+assert.match(toolsSrc, /fetchVoteAlignment/);
+assert.match(instructionsSrc, /getVoteResults/);
+assert.match(cardSrc, /tool-getVoteResults/);
+assert.match(cardSrc, /VoteResultsCard/);
+
 
 console.log('chat/rag.session.test.ts: ok session-bound overlay RAG');

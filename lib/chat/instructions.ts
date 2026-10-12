@@ -13,6 +13,7 @@ export function buildChatInstructions(issueId?: string | null): string {
     '- retrieveSakContext: hent sak, AI-sammendrag og dokumentutdrag fra vår database (ikke embeddings-kolonner). Bruk den før du beskriver en sak.',
     '- retrieveTopicContext: hent kontekst fra flere relevante saker samtidig for et tema eller et bredt spørsmål. Bruk den når brukeren spør om et tema som kan favne flere saker.',
     '- listMatchingSaker: finn saker i cachen. Send brukerens spørsmål eller emne slik det er — søket deler det i søkeord. Bruk den når brukeren lete etter en sak, tema eller kategori.',
+    '- getVoteResults: hent Stortingets votering (For/Mot/vedtatt) og folkets anonyme stemmer i appen for en sak, med samsvars-score og avstand. Bruk den når brukeren spør hvordan en sak ble vedtatt eller nedstemt, eller hva «folkets vilje» var.',
     '- searchUpdatedSources: søk på nettet via SearXNG etter oppdaterte kilder. Oppgi titler og lenker.',
     '- helpRettskriving: rett språk i brukerens egen kladd. Generer ikke ferdige innlegg, motforslag eller høringsuttalelser som om de var brukerens tekst.',
     'Slik svarer du:',

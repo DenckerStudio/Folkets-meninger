@@ -11,6 +11,7 @@ import {
   searchIssuesForChat,
   type ChatRagClient,
 } from '@/lib/chat/rag';
+import { fetchVoteAlignment } from '@/lib/chat/vote-alignment';
 import type { QueryVectorizer } from '@/lib/chat/vector-search';
 
 export function createChatTools(
@@ -119,6 +120,39 @@ export function createChatTools(
       execute: async ({ query, limit }) => {
         const context = await retrieveTopicContext({ query, limit, client: ragClient, vectorize });
         return { query: context.query, saker: context.saker, note: context.note };
+      },
+    }),
+    getVoteResults: tool({
+      description:
+        'Hent hvordan Stortinget har votert i en sak (For/Mot/ikke til stede, vedtatt eller nedstemt) og hvordan det står mot folkets anonyme For/Mot/Avstår-stemmer i appen, med samsvars-score og avstand i prosentpoeng. Bruk når brukeren spør hvordan en sak ble vedtatt eller nedstemt, hvordan Stortinget stemte, eller hva «folkets vilje» var.',
+      inputSchema: z.object({
+        issueId: z
+          .string()
+          .optional()
+          .describe('Stortinget sak-id hvis kjent. La stå tom for å søke på tittel.'),
+        query: z
+          .string()
+          .min(2)
+          .optional()
+          .describe('Sak-tittel, henvisning eller spørsmål hvis sak-id ikke er kjent.'),
+      }),
+      execute: async ({ issueId, query }) => {
+        let id = issueId?.trim() || preferredIssueId?.trim() || null;
+        if (!id && query) {
+          const issues = await searchIssuesForChat(query, 1, ragClient);
+          id = issues[0]?.id ?? null;
+        }
+        if (!id) {
+          return {
+            found: false as const,
+            note: 'Fant ingen sak å hente stemmeresultat for. Oppgi sak-id eller en tydeligere tittel.',
+          };
+        }
+        const result = await fetchVoteAlignment({ issueId: id, client: ragClient });
+        if (!result) {
+          return { found: false as const, note: 'Kunne ikke hente stemmeresultat for saken.' };
+        }
+        return { found: true as const, issueId: id, ...result };
       },
     }),
   };
