@@ -27,7 +27,6 @@ export function buildFollowUps(args: {
 
   const followUps: ChatFollowUp[] = [];
   const usedVote = toolsUsed.some((t) => t.includes('getVoteResults'));
-  const usedSources = toolsUsed.some((t) => t.includes('searchUpdatedSources'));
 
   if (!usedVote) {
     followUps.push({
@@ -41,13 +40,6 @@ export function buildFollowUps(args: {
     label: 'Konsekvenser',
     prompt: `Hvilke praktiske konsekvenser har ${subject} for folk i Norge?`,
   });
-  if (!usedSources) {
-    followUps.push({
-      id: 'kilder',
-      label: 'Oppdaterte kilder',
-      prompt: `Finn oppdaterte kilder om ${subject}.`,
-    });
-  }
   followUps.push({
     id: 'motside',
     label: 'Alternativ syn',

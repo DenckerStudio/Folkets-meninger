@@ -246,7 +246,7 @@ test.describe('Chat orb overlay', () => {
     const panel = page.locator('[data-chat-panel]');
     await expect(panel).toBeVisible();
     await expect(panel.getByText('Hei — hvordan kan jeg hjelpe?')).toBeVisible();
-    await expect(panel.getByRole('button', { name: 'Finn lignende saker' })).toBeVisible();
+    await expect(panel.locator('[data-chat-suggestion]').first()).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Rettskriv' })).toHaveCount(0);
     await expect(panel.getByRole('button', { name: 'Finn oppdaterte kilder' })).toHaveCount(0);
     await expect(panel.getByPlaceholder('Spør om en sak eller dokumenter…')).toBeVisible();

@@ -1,35 +1,39 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, isToolUIPart } from 'ai';
-import {
-  FileSearch,
-  ListFilter,
-  Loader2,
-  MessageCircleQuestion,
-  Send,
-  Sparkles,
-} from 'lucide-react';
+import { ArrowUp, Loader2, Sparkles } from 'lucide-react';
 import { ModelPicker } from '@/components/byok/model-picker';
+import { ChatCommandMenu } from '@/components/chat/chat-command-menu';
 import { ChatConversationBar } from '@/components/chat/chat-conversation-bar';
 import { ChatMessageActions, textFromMessageParts } from '@/components/chat/chat-message-actions';
 import { ChatPanelActions } from '@/components/chat/chat-panel-actions';
 import { ChatToolResult } from '@/components/chat/chat-tool-result';
 import { readImpactProfileForChat } from '@/components/chat/impact-profile-for-chat';
 import { EmptyState } from '@/components/dashboard/empty-state';
-import {
-  AiAssistantCard,
-  type AssistantQuickAction,
-} from '@/components/ui/ai-assistant-card';
+import { AiAssistantCard } from '@/components/ui/ai-assistant-card';
 import { Button } from '@/components/ui/button';
 import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
 import { canUseOverlayActions, chatLoginHref, type ChatGateReason } from '@/lib/chat/overlay';
 import { buildFollowUps } from '@/lib/chat/follow-ups';
+import {
+  filterChatCommands,
+  isSlashCommandInput,
+  parseSlashCommand,
+  slashQuery,
+  type ChatCommand,
+} from '@/lib/chat/commands';
+import {
+  buildChatSuggestions,
+  type ChatSuggestion,
+  type ChatUserSignals,
+} from '@/lib/chat/suggestions';
+import { resolveChatView } from '@/lib/chat/view-context';
 import {
   deleteConversation,
   loadConversations,
@@ -57,6 +61,17 @@ type StemmeChatProps = {
   provider?: LlmProvider | null;
   model?: string | null;
   onModelSwitched?: (model: string) => void;
+  /** Server-ranked prompts for the empty state; falls back to view-based ones. */
+  suggestions?: ChatSuggestion[];
+  suggestionsLoading?: boolean;
+};
+
+const EMPTY_SIGNALS: ChatUserSignals = {
+  categories: [],
+  labels: [],
+  recentStances: [],
+  interests: [],
+  ownOpinionTitles: [],
 };
 
 function toolLabel(type: string): string {
@@ -82,47 +97,6 @@ function toolLabel(type: string): string {
   }
 }
 
-function buildQuickActions(issueId?: string | null): AssistantQuickAction[] {
-  const actions: AssistantQuickAction[] = [];
-  if (issueId) {
-    actions.push({
-      id: 'forklar-sak',
-      label: 'Forklar saken',
-      icon: <MessageCircleQuestion className="h-3.5 w-3.5" />,
-    });
-    actions.push({
-      id: 'dokumenter',
-      label: 'Hvilke dokumenter finnes?',
-      icon: <FileSearch className="h-3.5 w-3.5" />,
-    });
-  }
-  actions.push({
-    id: 'finn-saker',
-    label: 'Finn lignende saker',
-    icon: <ListFilter className="h-3.5 w-3.5" />,
-  });
-  return actions;
-}
-
-function promptForAction(action: AssistantQuickAction, issueTitle?: string | null): string {
-  switch (action.id) {
-    case 'forklar-sak':
-      return issueTitle
-        ? `Forklar saken «${issueTitle}» kort og nøytralt ut fra sakskonteksten.`
-        : 'Forklar den aktuelle saken kort og nøytralt ut fra sakskonteksten.';
-    case 'dokumenter':
-      return issueTitle
-        ? `Hvilke dokumentutdrag finnes for «${issueTitle}»?`
-        : 'Hvilke dokumentutdrag finnes for den aktuelle saken?';
-    case 'finn-saker':
-      return issueTitle
-        ? `Finn lignende saker som «${issueTitle}».`
-        : 'Finn relevante saker i cachen ut fra det jeg spør om.';
-    default:
-      return action.label;
-  }
-}
-
 export function StemmeChat({
   gate,
   issueId,
@@ -137,9 +111,13 @@ export function StemmeChat({
   provider = null,
   model = null,
   onModelSwitched,
+  suggestions,
+  suggestionsLoading = false,
 }: StemmeChatProps) {
   const pathname = usePathname();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [input, setInput] = useState('');
+  const [activeCommandIndex, setActiveCommandIndex] = useState(0);
   const compact = variant === 'panel';
   // Restore the most recent saved conversation once, on mount (localStorage only).
   const [initialConversation] = useState<StoredConversation | null>(() => {
@@ -185,7 +163,33 @@ export function StemmeChat({
   });
   const busy = status === 'submitted' || status === 'streaming';
   const emptyClassName = compact ? 'border-none bg-transparent px-4 py-8' : undefined;
-  const quickActions = useMemo(() => buildQuickActions(issueId), [issueId]);
+
+  const view = useMemo(() => resolveChatView(pathname), [pathname]);
+  const effectiveIssueId = issueId ?? (view.kind === 'sak' ? view.id : null);
+  const fallbackSuggestions = useMemo(
+    () =>
+      buildChatSuggestions({
+        context: { kind: view.kind, title: issueTitle ?? null, issueId: effectiveIssueId },
+        signals: EMPTY_SIGNALS,
+      }),
+    [view.kind, issueTitle, effectiveIssueId],
+  );
+  const shownSuggestions = useMemo(() => {
+    const list = suggestions && suggestions.length > 0 ? suggestions : fallbackSuggestions;
+    return compact ? list.slice(0, 4) : list;
+  }, [suggestions, fallbackSuggestions, compact]);
+
+  const commandQuery = slashQuery(input);
+  const matchingCommands = useMemo(
+    () => (commandQuery === null ? [] : filterChatCommands(commandQuery)),
+    [commandQuery],
+  );
+  const menuOpen = isSlashCommandInput(input) && matchingCommands.length > 0;
+
+  useEffect(() => {
+    setActiveCommandIndex(0);
+  }, [commandQuery]);
+
   const lastAssistantId = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       const message = messages[index];
@@ -237,6 +241,68 @@ export function StemmeChat({
     if (conversationId === id) {
       setConversationId(newConversationId());
       setMessages([]);
+    }
+  }
+
+  function applyCommand(command: ChatCommand) {
+    const parsed = parseSlashCommand(input);
+    const argument = parsed?.name === command.name ? parsed.argument : '';
+    if (command.behavior === 'new-chat') {
+      startNewChat();
+      return;
+    }
+    const prompt = command.buildPrompt?.({ issueTitle, argument }) ?? command.label;
+    if (command.behavior === 'compose') {
+      setInput(prompt);
+      requestAnimationFrame(() => {
+        const el = textareaRef.current;
+        if (el) {
+          el.focus();
+          el.setSelectionRange(prompt.length, prompt.length);
+        }
+      });
+      return;
+    }
+    if (busy) return;
+    setInput('');
+    void sendMessage({ text: prompt });
+  }
+
+  function submitInput() {
+    const text = input.trim();
+    if (!text || busy) return;
+    void sendMessage({ text });
+    setInput('');
+  }
+
+  function onInputKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (menuOpen) {
+      const count = matchingCommands.length;
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setActiveCommandIndex((index) => (index + 1) % count);
+        return;
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setActiveCommandIndex((index) => (index - 1 + count) % count);
+        return;
+      }
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault();
+        const command = matchingCommands[activeCommandIndex];
+        if (command) applyCommand(command);
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setInput('');
+        return;
+      }
+    }
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      submitInput();
     }
   }
 
@@ -298,14 +364,12 @@ export function StemmeChat({
     />
   );
 
-  const actionsBar = showActions ? (
-    <ChatPanelActions issueId={issueId} issueTitle={issueTitle} compact={compact} />
-  ) : null;
-
   if (gate === 'no-key') {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
-        {actionsBar}
+        {showActions ? (
+          <ChatPanelActions issueId={issueId} issueTitle={issueTitle} compact={compact} />
+        ) : null}
         {noKeyEmpty}
       </div>
     );
@@ -333,9 +397,9 @@ export function StemmeChat({
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <Sparkles className="size-3.5 shrink-0 text-brand" aria-hidden />
-                Assistent
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-brand">
+                <Sparkles className="size-3.5 shrink-0" aria-hidden />
+                Stemme+
               </p>
               {message.parts.map((part, index) => {
                 if (part.type === 'text') {
@@ -401,98 +465,128 @@ export function StemmeChat({
 
   const inputFooter = (
     <form
-      className="mt-auto space-y-1.5 border-t border-border pt-2 sm:space-y-2 sm:pt-3"
+      className="mt-auto space-y-1.5 border-t border-border pt-2 sm:pt-3"
       onSubmit={(event) => {
         event.preventDefault();
-        const text = input.trim();
-        if (!text || busy) return;
-        void sendMessage({ text });
-        setInput('');
+        submitInput();
       }}
     >
       {error ? (
         <p className="text-sm text-destructive">{error.message || 'Noe gikk galt i samtalen.'}</p>
       ) : null}
-      <div className="rounded-2xl border border-border bg-background p-2 shadow-sm">
-        <textarea
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          rows={2}
-          placeholder={
-            issueId
-              ? 'Spør om saken, dokumenter eller bakgrunn…'
-              : 'Spør om en sak eller dokumenter…'
-          }
-          className="max-h-32 w-full resize-none border-0 bg-transparent px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
-              event.preventDefault();
-              const text = input.trim();
-              if (!text || busy) return;
-              void sendMessage({ text });
-              setInput('');
-            }
-          }}
+      <div className="relative">
+        <ChatCommandMenu
+          id="chat-command-menu"
+          commands={menuOpen ? matchingCommands : []}
+          activeIndex={activeCommandIndex}
+          onSelect={applyCommand}
+          onActiveIndexChange={setActiveCommandIndex}
         />
-        <div className="flex items-center justify-between gap-2 px-1 pb-0.5">
-          <p className="line-clamp-1 text-[11px] text-muted-foreground">
-            {issueId ? `Kontekst: ${issueTitle || `sak ${issueId}`}` : 'Ingen sak valgt'}
-          </p>
-          {busy ? (
-            <Button type="button" size="sm" variant="outline" onClick={() => stop()}>
-              Stopp
-            </Button>
-          ) : (
-            <Button type="submit" size="sm" disabled={!input.trim()}>
-              <Send className="h-4 w-4" />
-              Send
-            </Button>
-          )}
+        <div className="rounded-2xl border border-border bg-card shadow-sm transition-shadow focus-within:border-brand/40 focus-within:shadow-md">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={onInputKeyDown}
+            rows={1}
+            placeholder={
+              issueId
+                ? 'Spør om saken, dokumenter eller bakgrunn…'
+                : 'Spør om en sak eller dokumenter…'
+            }
+            aria-controls={menuOpen ? 'chat-command-menu' : undefined}
+            aria-autocomplete="list"
+            className="max-h-40 w-full resize-none border-0 bg-transparent px-3.5 pt-3 pb-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+          <div className="flex items-center justify-between gap-2 px-2.5 pb-2">
+            <p className="line-clamp-1 text-[11px] text-muted-foreground">
+              {issueId ? (
+                <>Kontekst: {issueTitle || `sak ${issueId}`}</>
+              ) : (
+                <>
+                  Skriv <kbd className="rounded border border-border px-1 font-sans">/</kbd> for kommandoer
+                </>
+              )}
+            </p>
+            {busy ? (
+              <Button type="button" size="sm" variant="outline" onClick={() => stop()}>
+                Stopp
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                size="icon-sm"
+                aria-label="Send"
+                disabled={!input.trim()}
+              >
+                <ArrowUp className="size-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
       <p className="hidden text-center text-[11px] text-muted-foreground sm:block">
-        Samtalen lagres ikke på serveren — kun lokalt i denne nettleseren. Rettskriv og kilder finner du i meningskomponisten.
+        Samtalen lagres kun lokalt i denne nettleseren.
       </p>
     </form>
   );
 
   const welcomeBlock =
     messages.length === 0 ? (
-      <div className="flex flex-col items-center gap-4 px-2 py-8 text-center">
-        <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-foreground">
+      <div className="flex flex-col items-center gap-4 px-1 py-6 text-center">
+        <div className="flex size-11 items-center justify-center rounded-2xl bg-brand/10 text-brand">
           <Sparkles className="h-5 w-5" aria-hidden />
         </div>
-        <div className="space-y-1.5">
-          <p className="text-lg font-semibold tracking-tight text-foreground">
+        <div className="space-y-1">
+          <p className="text-base font-semibold tracking-tight text-foreground">
             Hei — hvordan kan jeg hjelpe?
           </p>
           <p className="mx-auto max-w-sm text-sm text-muted-foreground">
             {issueId
               ? `Spør om ${issueTitle || `sak ${issueId}`}, dokumenter eller lignende saker.`
-              : 'Spør om saker og dokumenter. Samtalene lagres kun i denne nettleseren.'}
+              : 'Spør om saker og dokumenter. Samtalen lagres bare i denne nettleseren.'}
           </p>
         </div>
-        {quickActions.length > 0 ? (
-          <div className="flex flex-wrap justify-center gap-2 pt-1">
-            {quickActions.map((action) => (
+        {suggestionsLoading && shownSuggestions.length === 0 ? (
+          <div className="w-full space-y-1.5 pt-1" aria-hidden>
+            {[0, 1, 2].map((row) => (
+              <div key={row} className="h-11 animate-pulse rounded-xl bg-muted/60" />
+            ))}
+          </div>
+        ) : shownSuggestions.length > 0 ? (
+          <div className="w-full space-y-1.5 pt-1 text-left" data-chat-suggestions="">
+            {shownSuggestions.map((suggestion) => (
               <button
-                key={action.id}
+                key={suggestion.id}
                 type="button"
-                data-chat-quick-action={action.id}
+                data-chat-suggestion={suggestion.id}
                 onClick={() => {
                   if (busy) return;
-                  void sendMessage({ text: promptForAction(action, issueTitle) });
+                  void sendMessage({ text: suggestion.prompt });
                 }}
-                className="inline-flex"
+                className="group flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card/60 px-3 py-2 text-left transition-colors hover:border-brand/40 hover:bg-card"
               >
-                <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-transparent bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80">
-                  {action.icon}
-                  {action.label}
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium text-foreground">
+                    {suggestion.label}
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {suggestion.prompt}
+                  </span>
                 </span>
+                <ArrowUp
+                  className="size-3.5 shrink-0 rotate-45 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-60"
+                  aria-hidden
+                />
               </button>
             ))}
           </div>
         ) : null}
+        <p className="text-[11px] text-muted-foreground">
+          Tips: skriv <kbd className="rounded border border-border px-1 font-sans">/</kbd> for kommandoer som
+          <span className="font-medium text-foreground"> /status</span> og
+          <span className="font-medium text-foreground"> /finn</span>.
+        </p>
       </div>
     ) : null;
 
@@ -510,7 +604,6 @@ export function StemmeChat({
 
   const chatBody = (
     <div className="flex min-h-0 flex-1 flex-col">
-      {actionsBar}
       {conversationBar}
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-1 py-2">
         {welcomeBlock}

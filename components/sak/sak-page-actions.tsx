@@ -23,7 +23,7 @@ export function SakPageActions({ sakId, title, className = '' }: SakPageActionsP
         onClick={() => openChat({ issueId: sakId, issueTitle: title })}
         className="text-brand hover:underline"
       >
-        Spør AI
+        Spør Stemme+
       </button>
     </nav>
   );
