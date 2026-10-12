@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ExternalLink, Globe, Layers, ListFilter, PenLine, ScrollText } from 'lucide-react';
+import { ExternalLink, Gavel, Globe, Layers, ListFilter, PenLine, ScrollText } from 'lucide-react';
 import { routes } from '@/lib/routes';
 
 /**
@@ -47,6 +47,30 @@ type TopicContextOutput = {
     chunks?: Array<{ documentId?: string; chunkIndex?: number; content?: string }>;
   }>;
   note?: string | null;
+};
+
+type VoteResultsOutput = {
+  found?: boolean;
+  issueId?: string;
+  note?: string | null;
+  hasStortingetVote?: boolean;
+  stortinget?: {
+    for?: number;
+    against?: number;
+    absent?: number;
+    decided?: number;
+    adopted?: boolean;
+  } | null;
+  stortingetForPercent?: number | null;
+  stortingetAgainstPercent?: number | null;
+  folk?: { for?: number; against?: number; abstain?: number; total?: number };
+  folkForPercent?: number;
+  folkAgainstPercent?: number;
+  score?: number | null;
+  gapPoints?: number | null;
+  headline?: string;
+  summary?: string;
+  voteringTema?: string | null;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -257,6 +281,77 @@ function RettskrivingCard({ output }: { output: RettskrivingOutput }) {
   );
 }
 
+function VoteResultsCard({ output }: { output: VoteResultsOutput }) {
+  if (output.found === false || !output.issueId) {
+    return (
+      <ToolCard icon={Gavel} title="Fant ingen stemmer" tone="muted">
+        {output.note || 'Fant ingen sak å hente stemmeresultat for.'}
+      </ToolCard>
+    );
+  }
+
+  const stortinget = output.stortinget ?? null;
+  const folk = output.folk ?? {};
+  const folkTotal = folk.total ?? 0;
+
+  return (
+    <ToolCard
+      icon={Gavel}
+      title="Folkets vilje vs. Stortinget"
+      tone="brand"
+      action={
+        <Link
+          href={routes.sak(output.issueId)}
+          className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+        >
+          Åpne sak
+          <ExternalLink className="size-3" aria-hidden />
+        </Link>
+      }
+    >
+      {output.headline ? (
+        <p className="text-sm font-medium text-foreground">{output.headline}</p>
+      ) : null}
+      {output.summary ? <p className="text-xs text-muted-foreground">{output.summary}</p> : null}
+
+      {stortinget && output.stortingetForPercent != null ? (
+        <p className="text-xs text-foreground">
+          <span className="font-medium text-muted-foreground">Stortinget: </span>
+          {stortinget.adopted ? 'vedtok' : 'nedstemte'} · For {output.stortingetForPercent}% · Mot{' '}
+          {output.stortingetAgainstPercent ?? 0}%
+          {stortinget.absent ? ` · ${stortinget.absent} ikke til stede` : ''}
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          {stortinget
+            ? 'Stortinget behandlet saken uten elektronisk personlig votering.'
+            : 'Ingen votering er registrert hos Stortinget for denne saken ennå.'}
+        </p>
+      )}
+
+      {folkTotal > 0 ? (
+        <p className="text-xs text-foreground">
+          <span className="font-medium text-muted-foreground">Folket i appen ({folkTotal}): </span>
+          For {output.folkForPercent ?? 0}% · Mot {output.folkAgainstPercent ?? 0}%
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">Ingen anonyme stemmer i appen ennå.</p>
+      )}
+
+      {output.score != null ? (
+        <p className="text-xs text-muted-foreground">
+          Samsvars-score {output.score}
+          {output.gapPoints != null ? ` · avstand ${output.gapPoints} prosentpoeng` : ''}
+        </p>
+      ) : null}
+
+      {output.voteringTema ? (
+        <p className="text-xs text-muted-foreground">Voteringstema: {output.voteringTema}</p>
+      ) : null}
+    </ToolCard>
+  );
+}
+
 function ToolCard({
   icon: Icon,
   title,
@@ -308,6 +403,8 @@ export function ChatToolResult({
       return <SakContextCard output={output as SakContextOutput} />;
     case 'tool-retrieveTopicContext':
       return <TopicContextCard output={output as TopicContextOutput} />;
+    case 'tool-getVoteResults':
+      return <VoteResultsCard output={output as VoteResultsOutput} />;
     case 'tool-searchUpdatedSources':
       return <SourceSearchCard output={output as SourceSearchOutput} />;
     case 'tool-listMatchingSaker':
