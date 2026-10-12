@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import {
+  Award,
   CalendarClock,
+  Calculator,
   Clock,
   ExternalLink,
   FileText,
@@ -13,7 +15,9 @@ import {
   MessageSquare,
   PenLine,
   ScrollText,
+  UserRound,
   Users,
+  Vote,
 } from 'lucide-react';
 import { routes } from '@/lib/routes';
 
@@ -157,6 +161,88 @@ type PoliticianOutput = {
     tittel?: string | null;
     erRegjeringsmedlem?: boolean;
   }>;
+  note?: string | null;
+};
+
+type PollResultsOutput = {
+  found?: boolean;
+  pollId?: string | null;
+  title?: string | null;
+  summary?: string | null;
+  status?: string | null;
+  track?: string | null;
+  stortingetIssueId?: string | null;
+  isOpen?: boolean;
+  closesAt?: string | null;
+  totals?: { ja?: number; nei?: number; blank?: number; total?: number };
+  percents?: { ja?: number; nei?: number; blank?: number };
+  byFylke?: Array<{
+    code?: string;
+    name?: string;
+    ja?: number | null;
+    nei?: number | null;
+    blank?: number | null;
+    total?: number;
+    sufficientData?: boolean;
+  }>;
+  fylkeMinVotes?: number;
+  note?: string | null;
+};
+
+type MyActivityOutput = {
+  found?: boolean;
+  signedIn?: boolean;
+  points?: number;
+  tierName?: string | null;
+  progress?: {
+    progressLabel?: string;
+    progressPercent?: number;
+    nextUnlock?: string | null;
+    isMaxTier?: boolean;
+  };
+  stanceCount?: number;
+  recentStances?: Array<{
+    issueId?: string;
+    title?: string | null;
+    stance?: string;
+    updatedAt?: string;
+  }>;
+  badges?: Array<{ id?: string; name?: string; earnedAt?: string | null }>;
+  note?: string | null;
+};
+
+type ImpactOutput = {
+  found?: boolean;
+  issueId?: string | null;
+  hasProfile?: boolean;
+  profileLabels?: string[];
+  result?: {
+    headline?: string;
+    personalSummary?: string;
+    annualAmountKr?: number | null;
+    direction?: string;
+    confidence?: string;
+    disclaimer?: string;
+    effects?: Array<{
+      id?: string;
+      title?: string;
+      summary?: string;
+      appliesToUser?: boolean;
+      audienceLabel?: string;
+      direction?: string;
+      annualAmountKr?: number | null;
+      evidence?: string;
+    }>;
+  } | null;
+  note?: string | null;
+};
+
+type PublicProfileOutput = {
+  found?: boolean;
+  signedIn?: boolean;
+  displayName?: string | null;
+  initials?: string | null;
+  isStemmePlusSupporter?: boolean;
   note?: string | null;
 };
 
@@ -726,6 +812,263 @@ function PoliticianCard({ output }: { output: PoliticianOutput }) {
   );
 }
 
+function formatKr(amount: number): string {
+  const sign = amount < 0 ? '−' : '';
+  return `${sign}${Math.abs(amount).toLocaleString('nb-NO')} kr`;
+}
+
+function PollResultsCard({ output }: { output: PollResultsOutput }) {
+  if (output.found === false || !output.pollId) {
+    return (
+      <ToolCard icon={Vote} title="Fant ingen avstemning" tone="muted">
+        {output.note || 'Fant ingen åpen eller avsluttet avstemning som passer.'}
+      </ToolCard>
+    );
+  }
+
+  const totals = output.totals ?? {};
+  const percents = output.percents ?? {};
+  const byFylke = (output.byFylke ?? []).filter((row) => row.sufficientData);
+
+  return (
+    <ToolCard
+      icon={Vote}
+      title={output.title || 'Avstemning'}
+      tone="brand"
+      action={
+        <Link
+          href={routes.poll(output.pollId)}
+          className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+        >
+          Åpne
+          <ExternalLink className="size-3" aria-hidden />
+        </Link>
+      }
+    >
+      {output.summary ? <p className="text-xs text-muted-foreground">{output.summary}</p> : null}
+      <p className="text-xs text-foreground">
+        <span className="font-medium text-muted-foreground">
+          {output.isOpen ? 'Åpen' : 'Avsluttet'}
+          {typeof totals.total === 'number' ? ` · ${totals.total} stemmer` : ''}:{' '}
+        </span>
+        Ja {percents.ja ?? 0}% ({totals.ja ?? 0}) · Nei {percents.nei ?? 0}% ({totals.nei ?? 0}) ·
+        Blank {percents.blank ?? 0}% ({totals.blank ?? 0})
+      </p>
+      {output.note ? <p className="text-xs text-muted-foreground">{output.note}</p> : null}
+      {byFylke.length > 0 ? (
+        <div className="space-y-0.5">
+          <p className="text-xs font-medium text-muted-foreground">
+            Fylke med nok stemmer (minst {output.fylkeMinVotes ?? 0})
+          </p>
+          <ul className="space-y-0.5">
+            {byFylke.slice(0, 8).map((row, index) => (
+              <li key={row.code ?? row.name ?? index} className="text-xs text-foreground">
+                {row.name || row.code || 'Fylke'}
+                <span className="text-muted-foreground">
+                  {' '}
+                  · {row.total ?? 0} stemmer
+                  {row.ja != null ? ` · Ja ${row.ja}` : ''}
+                  {row.nei != null ? ` · Nei ${row.nei}` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {byFylke.length > 8 ? (
+            <p className="text-xs text-muted-foreground">
+              + {byFylke.length - 8} fylker med nok stemmer.
+            </p>
+          ) : null}
+        </div>
+      ) : totals.total ? (
+        <p className="text-xs text-muted-foreground">
+          Ingen fylker har nådd terskelen ennå, så fylkesfordelingen vises ikke.
+        </p>
+      ) : null}
+    </ToolCard>
+  );
+}
+
+function MyActivityCard({ output }: { output: MyActivityOutput }) {
+  if (output.found === false && output.signedIn === false) {
+    return (
+      <ToolCard icon={Award} title="Ikke logget inn" tone="muted">
+        {output.note || 'Logg inn for å se aktiviteten din.'}
+      </ToolCard>
+    );
+  }
+  if (output.found === false) {
+    return (
+      <ToolCard icon={Award} title="Aktivitet utilgjengelig" tone="muted">
+        {output.note || 'Aktivitetsdata er ikke tilgjengelig akkurat nå.'}
+      </ToolCard>
+    );
+  }
+
+  const progress = output.progress ?? {};
+  const stances = output.recentStances ?? [];
+  const badges = output.badges ?? [];
+
+  return (
+    <ToolCard icon={Award} title="Din aktivitet" tone="brand">
+      <p className="text-xs text-foreground">
+        <span className="font-medium text-muted-foreground">Poeng: </span>
+        {output.points ?? 0}
+        {output.tierName ? ` · ${output.tierName}` : ''}
+        {typeof progress.progressPercent === 'number'
+          ? ` · ${progress.progressLabel ?? ''} (${progress.progressPercent}%)`
+          : ''}
+      </p>
+      {!progress.isMaxTier && progress.nextUnlock ? (
+        <p className="text-xs text-muted-foreground">Neste: {progress.nextUnlock}</p>
+      ) : null}
+      <p className="text-xs text-foreground">
+        <span className="font-medium text-muted-foreground">Standpunkter: </span>
+        {output.stanceCount ?? 0}
+      </p>
+      {stances.length > 0 ? (
+        <ul className="space-y-0.5">
+          {stances.map((stance, index) =>
+            stance.issueId ? (
+              <li key={`${stance.issueId}-${index}`} className="text-xs">
+                <Link
+                  href={routes.sak(stance.issueId)}
+                  className="font-medium text-foreground hover:text-brand hover:underline"
+                >
+                  {stance.title || `Sak ${stance.issueId}`}
+                </Link>
+                <span className="text-muted-foreground">
+                  {stance.stance ? ` · ${STANCE_LABELS[stance.stance] ?? stance.stance}` : ''}
+                </span>
+              </li>
+            ) : null,
+          )}
+        </ul>
+      ) : null}
+      {badges.length > 0 ? (
+        <ul className="flex flex-wrap gap-1.5">
+          {badges.map((badge) => (
+            <li
+              key={badge.id ?? badge.name}
+              className="rounded-full border border-brand/25 bg-brand/5 px-2 py-0.5 text-xs font-medium text-brand"
+            >
+              {badge.name || badge.id}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-muted-foreground">{output.note || 'Ingen merker ennå.'}</p>
+      )}
+    </ToolCard>
+  );
+}
+
+function ImpactCard({ output }: { output: ImpactOutput }) {
+  if (output.found === false || !output.issueId) {
+    return (
+      <ToolCard icon={Calculator} title="Fant ingen sak" tone="muted">
+        {output.note || 'Fant ingen sak å beregne konsekvens for.'}
+      </ToolCard>
+    );
+  }
+
+  const result = output.result ?? null;
+
+  return (
+    <ToolCard
+      icon={Calculator}
+      title="Hva betyr saken for deg?"
+      tone="brand"
+      action={
+        <Link
+          href={routes.sak(output.issueId)}
+          className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+        >
+          Åpne sak
+          <ExternalLink className="size-3" aria-hidden />
+        </Link>
+      }
+    >
+      {(output.profileLabels ?? []).length > 0 ? (
+        <ul className="flex flex-wrap gap-1.5">
+          {(output.profileLabels ?? []).map((label) => (
+            <li
+              key={label}
+              className="rounded-full border border-border bg-background/60 px-2 py-0.5 text-xs text-muted-foreground"
+            >
+              {label}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {result?.headline ? (
+        <p className="text-sm font-medium text-foreground">{result.headline}</p>
+      ) : null}
+      {result?.personalSummary ? (
+        <p className="text-xs text-muted-foreground">{result.personalSummary}</p>
+      ) : null}
+      {result?.annualAmountKr != null ? (
+        <p className="text-xs text-foreground">
+          <span className="font-medium text-muted-foreground">Anslag: </span>
+          {formatKr(result.annualAmountKr)} i året
+        </p>
+      ) : null}
+      {(result?.effects ?? []).length > 0 ? (
+        <ul className="space-y-1">
+          {(result?.effects ?? []).slice(0, 4).map((effect, index) => (
+            <li key={effect.id ?? index} className="text-xs">
+              <span className="font-medium text-foreground">{effect.title || 'Effekt'}</span>
+              <span className="text-muted-foreground">
+                {effect.appliesToUser ? ' · gjelder deg' : ''}
+                {effect.annualAmountKr != null ? ` · ${formatKr(effect.annualAmountKr)}` : ''}
+              </span>
+              {effect.summary ? (
+                <p className="mt-0.5 text-muted-foreground">{effect.summary}</p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {result?.disclaimer ? (
+        <p className="text-xs text-muted-foreground">{result.disclaimer}</p>
+      ) : output.note ? (
+        <p className="text-xs text-muted-foreground">{output.note}</p>
+      ) : null}
+    </ToolCard>
+  );
+}
+
+function PublicProfileCard({ output }: { output: PublicProfileOutput }) {
+  if (output.found === false) {
+    return (
+      <ToolCard icon={UserRound} title={output.signedIn === false ? 'Ikke logget inn' : 'Ingen profil'} tone="muted">
+        {output.note || 'Ingen offentlig profil å vise.'}
+      </ToolCard>
+    );
+  }
+
+  return (
+    <ToolCard icon={UserRound} title="Din offentlige profil" tone="brand">
+      <div className="flex items-center gap-2">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-semibold text-brand">
+          {output.initials || '?'}
+        </span>
+        <span className="text-sm font-medium text-foreground">
+          {output.displayName || 'Uten visningsnavn'}
+        </span>
+        {output.isStemmePlusSupporter ? (
+          <span className="rounded-full border border-brand/25 bg-brand/5 px-2 py-0.5 text-xs font-medium text-brand">
+            Stemme+
+          </span>
+        ) : null}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {output.note ||
+          'Dette er feltene andre ser. Bio, parti og aktivitetsdeling styres i profilinnstillingene.'}
+      </p>
+    </ToolCard>
+  );
+}
+
 function ToolCard({
   icon: Icon,
   title,
@@ -791,6 +1134,14 @@ export function ChatToolResult({
       return <FolketsMeningerCard output={output as FolketsMeningerOutput} />;
     case 'tool-getPolitician':
       return <PoliticianCard output={output as PoliticianOutput} />;
+    case 'tool-getPollResults':
+      return <PollResultsCard output={output as PollResultsOutput} />;
+    case 'tool-getMyActivity':
+      return <MyActivityCard output={output as MyActivityOutput} />;
+    case 'tool-getImpact':
+      return <ImpactCard output={output as ImpactOutput} />;
+    case 'tool-getPublicProfile':
+      return <PublicProfileCard output={output as PublicProfileOutput} />;
     case 'tool-searchUpdatedSources':
       return <SourceSearchCard output={output as SourceSearchOutput} />;
     case 'tool-listMatchingSaker':

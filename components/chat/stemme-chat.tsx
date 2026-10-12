@@ -18,6 +18,7 @@ import { ChatConversationBar } from '@/components/chat/chat-conversation-bar';
 import { ChatMessageActions, textFromMessageParts } from '@/components/chat/chat-message-actions';
 import { ChatPanelActions } from '@/components/chat/chat-panel-actions';
 import { ChatToolResult } from '@/components/chat/chat-tool-result';
+import { readImpactProfileForChat } from '@/components/chat/impact-profile-for-chat';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import {
   AiAssistantCard,
@@ -68,6 +69,14 @@ function toolLabel(type: string): string {
       return 'Retter språk i kladden';
     case 'tool-listMatchingSaker':
       return 'Finner saker';
+    case 'tool-getPollResults':
+      return 'Henter avstemningsresultat';
+    case 'tool-getMyActivity':
+      return 'Henter din aktivitet';
+    case 'tool-getImpact':
+      return 'Beregner hva saken betyr for deg';
+    case 'tool-getPublicProfile':
+      return 'Henter din offentlige profil';
     default:
       return 'Bruker verktøy';
   }
@@ -149,6 +158,16 @@ export function StemmeChat({
         api: '/api/chat',
         headers: issueId ? { 'x-sak-id': issueId } : undefined,
         body: issueId ? { issueId } : undefined,
+        prepareSendMessagesRequest: ({ id, messages, body: baseBody, trigger, messageId }) => ({
+          body: {
+            ...baseBody,
+            id,
+            messages,
+            trigger,
+            messageId,
+            impactProfile: readImpactProfileForChat(),
+          },
+        }),
       }),
     [issueId],
   );

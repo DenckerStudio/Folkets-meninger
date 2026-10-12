@@ -28,7 +28,11 @@ assert.match(toolsSrc, /searchIssuesForChat\(query, 8, ragClient\)/);
 assert.match(routeSrc, /requireStemmePlus/);
 assert.match(routeSrc, /getServerSupabase/);
 assert.match(routeSrc, /loadDecryptedByok\(gate\.userId, session\)/);
-assert.match(routeSrc, /createChatTools\(issueId, ragClient, vectorize\)/);
+assert.match(routeSrc, /createChatTools\(\{/);
+assert.match(routeSrc, /ragClient,/);
+assert.match(routeSrc, /userId: gate\.userId/);
+assert.match(routeSrc, /impactProfile: readImpactProfile\(body\)/);
+assert.match(routeSrc, /isStepCount\(8\)/);
 assert.doesNotMatch(routeSrc, /getServiceSupabase/);
 assert.doesNotMatch(routeSrc, /runtime\s*=\s*['"]edge['"]/);
 
@@ -165,5 +169,62 @@ assert.match(cardSrc, /dokument=\$\{encodeURIComponent\(chunk\.documentId\)\}/);
 assert.match(documentsSectionSrc, /initialDocumentId/);
 assert.match(sakPageSrc, /initialDocumentId=\{initialDocumentId\}/);
 
+// --- Phase 4: poll results, my activity, impact, public profile -------------
+
+const pollToolsSrc = readFileSync(new URL('./poll-tools.ts', import.meta.url), 'utf8');
+const personalToolsSrc = readFileSync(new URL('./personal-tools.ts', import.meta.url), 'utf8');
+const pollsServiceSrc = readFileSync(new URL('../polls/service.ts', import.meta.url), 'utf8');
+const publicProfileSrc = readFileSync(new URL('../public-profile.ts', import.meta.url), 'utf8');
+const impactProfileHelperSrc = readFileSync(
+  new URL('../../components/chat/impact-profile-for-chat.ts', import.meta.url),
+  'utf8',
+);
+
+// Tool wiring stays in createChatTools, delegating to the new modules.
+assert.match(toolsSrc, /createPollChatTools/);
+assert.match(toolsSrc, /createPersonalChatTools/);
+assert.match(toolsSrc, /userId: resolved\.userId/);
+
+// Poll aggregates read through the session/anon RPC — never the service role.
+assert.match(pollToolsSrc, /getPollTotals/);
+assert.match(pollToolsSrc, /getPollTotalsByFylke/);
+assert.match(pollToolsSrc, /findPublicPollForIssue/);
+assert.match(pollToolsSrc, /searchPublicPolls/);
+assert.doesNotMatch(pollToolsSrc, /getServiceSupabase/);
+assert.match(pollsServiceSrc, /export async function getPollTotals/);
+assert.match(pollsServiceSrc, /grant EXECUTE|resolvePollReadClient/);
+
+// My activity uses session-derived userId only; no userId tool argument.
+assert.match(personalToolsSrc, /getMyActivity/);
+assert.match(personalToolsSrc, /getImpact/);
+assert.match(personalToolsSrc, /getPublicProfile/);
+assert.match(personalToolsSrc, /getOwnPublicProfilePreview/);
+assert.doesNotMatch(personalToolsSrc, /userId: z\.string/);
+
+// Public profile preview never touches the service role.
+assert.match(publicProfileSrc, /getOwnPublicProfilePreview/);
+assert.match(publicProfileSrc, /getAnonSupabase/);
+assert.doesNotMatch(
+  publicProfileSrc.slice(publicProfileSrc.indexOf('getOwnPublicProfilePreview')),
+  /getServiceSupabase/,
+);
+
+assert.match(instructionsSrc, /getPollResults/);
+assert.match(instructionsSrc, /getMyActivity/);
+assert.match(instructionsSrc, /getImpact/);
+assert.match(instructionsSrc, /getPublicProfile/);
+assert.match(cardSrc, /tool-getPollResults/);
+assert.match(cardSrc, /PollResultsCard/);
+assert.match(cardSrc, /tool-getMyActivity/);
+assert.match(cardSrc, /MyActivityCard/);
+assert.match(cardSrc, /tool-getImpact/);
+assert.match(cardSrc, /ImpactCard/);
+assert.match(cardSrc, /tool-getPublicProfile/);
+assert.match(cardSrc, /PublicProfileCard/);
+
+// Impact profile is read browser-side and forwarded in the request body.
+assert.match(impactProfileHelperSrc, /readImpactProfileForChat/);
+assert.match(stemmeChatSrc, /readImpactProfileForChat/);
+assert.match(stemmeChatSrc, /prepareSendMessagesRequest/);
 
 console.log('chat/rag.session.test.ts: ok session-bound overlay RAG');

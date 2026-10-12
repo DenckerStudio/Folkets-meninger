@@ -1,4 +1,5 @@
-import { getServiceSupabase } from '@/lib/supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { getAnonSupabase, getServiceSupabase } from '@/lib/supabase';
 import { parseActivityVisibility, type ActivityVisibility } from '@/lib/identity/activity-visibility';
 import { listUserBadges } from '@/lib/knowledge/service';
 import type { EarnedBadge } from '@/lib/knowledge/types';
@@ -21,7 +22,7 @@ export type PublicProfile = {
   isStemmePlusSupporter: boolean;
 };
 
-function initialsFromName(name: string): string {
+export function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
@@ -101,5 +102,80 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
     },
     badges: shareActivity ? await listUserBadges(userId) : [],
     isStemmePlusSupporter: isStemmePlusActive(user),
+  };
+}
+
+export type PublicProfilePreview = {
+  userId: string | null;
+  displayName: string | null;
+  initials: string | null;
+  isStemmePlusSupporter: boolean;
+};
+
+const PUBLIC_DISPLAY_COLUMNS = 'id, first_name, last_name, name';
+const OWN_SUBSCRIPTION_COLUMNS = 'subscription_tier, subscription_status, subscription_period_end';
+
+function publicSupabaseConfigured(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim(),
+  );
+}
+
+/**
+ * Public display fields for the signed-in user's own profile, read through the
+ * request session (or the anon key). Only column-level granted fields are
+ * selected (`id, first_name, last_name, name` for everyone; subscription
+ * columns for the owner via `users_select_own_subscription`). Never the service
+ * role, so one user can never read another user's private profile fields.
+ */
+export async function getOwnPublicProfilePreview(
+  client: Pick<SupabaseClient, 'from'> | null | undefined,
+  userId: string | null | undefined,
+): Promise<PublicProfilePreview> {
+  if (!userId) {
+    return { userId: null, displayName: null, initials: null, isStemmePlusSupporter: false };
+  }
+
+  const usable = client ?? (publicSupabaseConfigured() ? getAnonSupabase() : null);
+  if (!usable) {
+    return { userId, displayName: null, initials: null, isStemmePlusSupporter: false };
+  }
+
+  const withSubscription = await usable
+    .from('users')
+    .select(`${PUBLIC_DISPLAY_COLUMNS}, ${OWN_SUBSCRIPTION_COLUMNS}`)
+    .eq('id', userId)
+    .maybeSingle();
+
+  let row: Record<string, unknown> | null = null;
+
+  if (!withSubscription.error) {
+    row = (withSubscription.data as Record<string, unknown> | null) ?? null;
+  } else {
+    const publicOnly = await usable
+      .from('users')
+      .select(PUBLIC_DISPLAY_COLUMNS)
+      .eq('id', userId)
+      .maybeSingle();
+    row = publicOnly.error ? null : ((publicOnly.data as Record<string, unknown> | null) ?? null);
+  }
+
+  if (!row) {
+    return { userId, displayName: null, initials: null, isStemmePlusSupporter: false };
+  }
+
+  const displayName =
+    typeof row.first_name === 'string' && typeof row.last_name === 'string' && row.first_name && row.last_name
+      ? `${row.first_name} ${row.last_name}`.trim()
+      : typeof row.name === 'string' && row.name
+        ? row.name
+        : null;
+
+  return {
+    userId,
+    displayName,
+    initials: displayName ? initialsFromName(displayName) : null,
+    isStemmePlusSupporter: isStemmePlusActive(row),
   };
 }

@@ -19,14 +19,30 @@ import {
   collectSakTimeline,
 } from '@/lib/chat/stortinget-tools';
 import { fetchVoteAlignment } from '@/lib/chat/vote-alignment';
+import { createPollChatTools } from '@/lib/chat/poll-tools';
+import { createPersonalChatTools } from '@/lib/chat/personal-tools';
 import type { QueryVectorizer } from '@/lib/chat/vector-search';
 import { getIssueOpinionSummary } from '@/lib/opinions/service';
 
-export function createChatTools(
-  preferredIssueId?: string | null,
-  ragClient?: ChatRagClient | null,
-  vectorize?: QueryVectorizer | null,
-) {
+export type ChatToolOptions = {
+  preferredIssueId?: string | null;
+  ragClient?: ChatRagClient | null;
+  vectorize?: QueryVectorizer | null;
+  /** Request-session user id. Never taken from the client body or a tool argument. */
+  userId?: string | null;
+  /** Browser-local impact profile forwarded by the chat client. */
+  impactProfile?: unknown;
+};
+
+export function createChatTools(options?: ChatToolOptions | string | null) {
+  const resolved: ChatToolOptions =
+    typeof options === 'string' || options == null
+      ? { preferredIssueId: options ?? null }
+      : options;
+  const preferredIssueId = resolved.preferredIssueId ?? null;
+  const ragClient = resolved.ragClient ?? null;
+  const vectorize = resolved.vectorize ?? null;
+
   const resolveIssueId = async (args: {
     issueId?: string;
     query?: string;
@@ -380,6 +396,13 @@ export function createChatTools(
         }
         return collectPoliticianMatches({ personId, query });
       },
+    }),
+    ...createPollChatTools({ client: ragClient, resolveIssueId }),
+    ...createPersonalChatTools({
+      client: ragClient,
+      userId: resolved.userId ?? null,
+      impactProfile: resolved.impactProfile,
+      resolveIssueId,
     }),
   };
 }

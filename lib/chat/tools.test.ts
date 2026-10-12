@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { createChatTools } from './tools';
+import { collectPollResults, shapeChatPollResults } from './poll-tools';
+import { collectImpact, collectMyActivity, collectPublicProfile } from './personal-tools';
 import {
   matchPolitikere,
   shapeChatHearing,
@@ -7,6 +9,7 @@ import {
   shapeSakTimeline,
 } from './stortinget-tools';
 import type { PolitikerOversikt, StortingetSakDetail } from '@/lib/stortinget';
+import type { PollRecord } from '@/lib/polls/types';
 
 async function main() {
   const tools = createChatTools('1234');
@@ -19,6 +22,64 @@ async function main() {
   assert.equal(typeof tools.listSakDocuments.execute, 'function');
   assert.equal(typeof tools.getFolketsMeninger.execute, 'function');
   assert.equal(typeof tools.getPolitician.execute, 'function');
+  assert.equal(typeof tools.getPollResults.execute, 'function');
+  assert.equal(typeof tools.getMyActivity.execute, 'function');
+  assert.equal(typeof tools.getImpact.execute, 'function');
+  assert.equal(typeof tools.getPublicProfile.execute, 'function');
+
+  // Options object form keeps the string form working (phase 1 callers).
+  const withOptions = createChatTools({ preferredIssueId: '1234', userId: 'user-1' });
+  assert.equal(typeof withOptions.getMyActivity.execute, 'function');
+  assert.equal(typeof withOptions.getPollResults.execute, 'function');
+
+  // Personal tools fail closed without a session-derived user id.
+  const noSessionActivity = await collectMyActivity(null);
+  assert.equal(noSessionActivity.found, false);
+  assert.equal(noSessionActivity.signedIn, false);
+  const noSessionProfile = await collectPublicProfile(null, null);
+  assert.equal(noSessionProfile.found, false);
+  assert.equal(noSessionProfile.signedIn, false);
+  const noIssueImpact = await collectImpact({
+    resolveIssueId: async () => null,
+    profile: { fylkeCode: null, housing: null, hasCar: null, occupation: null },
+  });
+  assert.equal(noIssueImpact.found, false);
+  assert.equal(noIssueImpact.result, null);
+
+  // Poll shaping is pure and derives percentages from aggregate counts.
+  const poll: PollRecord = {
+    id: 'poll-1',
+    track: 'system',
+    status: 'open',
+    title: 'Bør Norge øke vektgrensen?',
+    neutralSummary: 'Kort nøytral oppsummering.',
+    sourceUrls: [],
+    stortingetIssueId: null,
+    citizenInitiativeId: null,
+    opensAt: null,
+    closesAt: null,
+    createdAt: '2099-01-01T00:00:00Z',
+    generationMetadata: {},
+  };
+  const shaped = shapeChatPollResults({
+    poll,
+    totals: { ja: 3, nei: 1, blank: 0, total: 4 },
+  });
+  assert.equal(shaped.found, true);
+  assert.equal(shaped.isOpen, true);
+  assert.equal(shaped.percents.ja, 75);
+  assert.equal(shaped.percents.nei, 25);
+  assert.equal(shaped.percents.blank, 0);
+  assert.equal(shaped.note, null);
+
+  const emptyShaped = shapeChatPollResults({ poll: null });
+  assert.equal(emptyShaped.found, false);
+  assert.equal(emptyShaped.pollId, null);
+  assert.ok(emptyShaped.note);
+
+  // With no poll/issue/query, collection returns the honest empty shape.
+  const noPoll = await collectPollResults({ resolveIssueId: async () => null });
+  assert.equal(noPoll.found, false);
 
   const spelling = await tools.helpRettsskriving.execute(
     {

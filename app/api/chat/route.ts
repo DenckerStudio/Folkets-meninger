@@ -33,6 +33,14 @@ function readIssueId(request: Request, body: Record<string, unknown>): string | 
   return typeof fromBody === 'string' && fromBody.trim() ? fromBody.trim() : null;
 }
 
+/**
+ * Browser-local impact profile, forwarded by the chat client so getImpact can
+ * personalize without ever persisting the profile server-side.
+ */
+function readImpactProfile(body: Record<string, unknown>): unknown {
+  return body.impactProfile ?? null;
+}
+
 export async function POST(request: Request) {
   const gate = await requireStemmePlus();
   if (!gate.ok) {
@@ -88,8 +96,14 @@ export async function POST(request: Request) {
       model,
       instructions: buildChatInstructions(issueId),
       messages: await convertToModelMessages(messages as UIMessage[]),
-      tools: createChatTools(issueId, ragClient, vectorize),
-      stopWhen: isStepCount(6),
+      tools: createChatTools({
+        preferredIssueId: issueId,
+        ragClient,
+        vectorize,
+        userId: gate.userId,
+        impactProfile: readImpactProfile(body),
+      }),
+      stopWhen: isStepCount(8),
       onError: ({ error }) => {
         const message = error instanceof Error ? error.message : 'unknown chat error';
         if (/sk-|api[_-]?key|bearer\s+[a-z0-9-]+/i.test(message)) {
