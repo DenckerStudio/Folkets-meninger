@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
@@ -14,6 +14,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { ModelPicker } from '@/components/byok/model-picker';
+import { ChatConversationBar } from '@/components/chat/chat-conversation-bar';
+import { ChatMessageActions, textFromMessageParts } from '@/components/chat/chat-message-actions';
 import { ChatPanelActions } from '@/components/chat/chat-panel-actions';
 import { ChatToolResult } from '@/components/chat/chat-tool-result';
 import { EmptyState } from '@/components/dashboard/empty-state';
@@ -26,6 +28,16 @@ import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
 import { canUseOverlayActions, chatLoginHref, type ChatGateReason } from '@/lib/chat/overlay';
+import { buildFollowUps } from '@/lib/chat/follow-ups';
+import {
+  deleteConversation,
+  loadConversations,
+  newConversationId,
+  saveConversation,
+  titleFromMessages,
+  toStoredMessages,
+  type StoredConversation,
+} from '@/lib/chat/conversations';
 import type { LlmProvider } from '@/lib/byok/providers';
 
 type StemmeChatProps = {
@@ -120,6 +132,17 @@ export function StemmeChat({
   const pathname = usePathname();
   const [input, setInput] = useState('');
   const compact = variant === 'panel';
+  // Restore the most recent saved conversation once, on mount (localStorage only).
+  const [initialConversation] = useState<StoredConversation | null>(() => {
+    if (variant !== 'panel') return null;
+    return loadConversations()[0] ?? null;
+  });
+  const [conversations, setConversations] = useState<StoredConversation[]>(() =>
+    variant === 'panel' ? loadConversations() : [],
+  );
+  const [conversationId, setConversationId] = useState<string | null>(
+    () => initialConversation?.id ?? null,
+  );
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -129,10 +152,74 @@ export function StemmeChat({
       }),
     [issueId],
   );
-  const { messages, sendMessage, status, error, stop } = useChat({ transport });
+  const {
+    messages,
+    setMessages,
+    sendMessage,
+    regenerate,
+    status,
+    error,
+    stop,
+  } = useChat({
+    transport,
+    messages: (initialConversation?.messages ?? []) as never,
+  });
   const busy = status === 'submitted' || status === 'streaming';
   const emptyClassName = compact ? 'border-none bg-transparent px-4 py-8' : undefined;
   const quickActions = useMemo(() => buildQuickActions(issueId), [issueId]);
+  const lastAssistantId = useMemo(() => {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index];
+      if (message.role === 'assistant' && textFromMessageParts(message.parts)) {
+        return message.id;
+      }
+    }
+    return null;
+  }, [messages]);
+  const followUps = useMemo(() => {
+    if (busy || lastAssistantId === null) return [];
+    const toolsUsed = messages
+      .flatMap((message) => message.parts)
+      .map((part) => ('type' in part ? String(part.type) : ''));
+    return buildFollowUps({ hasIssue: Boolean(issueId), issueTitle, toolsUsed });
+  }, [busy, lastAssistantId, messages, issueId, issueTitle]);
+
+  // Persist the active conversation to localStorage (panel only; page stays ephemeral).
+  useEffect(() => {
+    if (variant !== 'panel') return;
+    if (messages.length === 0) return;
+    const id = conversationId ?? newConversationId();
+    if (!conversationId) setConversationId(id);
+    const stored = toStoredMessages(
+      messages as unknown as Array<{ id: string; role: string; parts: unknown[] }>,
+    );
+    const title = titleFromMessages(stored);
+    const next = saveConversation({ id, title, updatedAt: Date.now(), issueId: issueId ?? null, messages: stored });
+    setConversations(next);
+    // Persist on message changes only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, variant]);
+
+  function startNewChat() {
+    setConversationId(newConversationId());
+    setMessages([]);
+    setInput('');
+  }
+
+  function selectConversation(id: string) {
+    const found = conversations.find((c) => c.id === id);
+    if (!found) return;
+    setConversationId(found.id);
+    setMessages(found.messages as never);
+  }
+
+  function removeConversation(id: string) {
+    setConversations(deleteConversation(id));
+    if (conversationId === id) {
+      setConversationId(newConversationId());
+      setMessages([]);
+    }
+  }
 
   if (gate === 'login') {
     return (
@@ -261,6 +348,31 @@ export function StemmeChat({
                 }
                 return null;
               })}
+              {!busy && textFromMessageParts(message.parts) ? (
+                <ChatMessageActions
+                  text={textFromMessageParts(message.parts)}
+                  busy={busy}
+                  onRegenerate={() => void regenerate({ messageId: message.id })}
+                />
+              ) : null}
+              {message.id === lastAssistantId && followUps.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 pt-1" data-chat-follow-ups="">
+                  {followUps.map((followUp) => (
+                    <button
+                      key={followUp.id}
+                      type="button"
+                      data-chat-follow-up={followUp.id}
+                      onClick={() => {
+                        if (busy) return;
+                        void sendMessage({ text: followUp.prompt });
+                      }}
+                      className="inline-flex rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
+                    >
+                      {followUp.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           )}
         </article>
@@ -320,7 +432,7 @@ export function StemmeChat({
         </div>
       </div>
       <p className="hidden text-center text-[11px] text-muted-foreground sm:block">
-        Samtalen lagres ikke på serveren. Rettskriv og kilder finner du i meningskomponisten.
+        Samtalen lagres ikke på serveren — kun lokalt i denne nettleseren. Rettskriv og kilder finner du i meningskomponisten.
       </p>
     </form>
   );
@@ -338,7 +450,7 @@ export function StemmeChat({
           <p className="mx-auto max-w-sm text-sm text-muted-foreground">
             {issueId
               ? `Spør om ${issueTitle || `sak ${issueId}`}, dokumenter eller lignende saker.`
-              : 'Spør om saker og dokumenter. Ingen samtaler lagres på serveren.'}
+              : 'Spør om saker og dokumenter. Samtalene lagres kun i denne nettleseren.'}
           </p>
         </div>
         {quickActions.length > 0 ? (
@@ -365,9 +477,22 @@ export function StemmeChat({
       </div>
     ) : null;
 
+  const conversationBar =
+    variant === 'panel' ? (
+      <ChatConversationBar
+        conversations={conversations}
+        activeId={conversationId}
+        disabled={busy}
+        onNewChat={startNewChat}
+        onSelect={selectConversation}
+        onDelete={removeConversation}
+      />
+    ) : null;
+
   const chatBody = (
     <div className="flex min-h-0 flex-1 flex-col">
       {actionsBar}
+      {conversationBar}
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-1 py-2">
         {welcomeBlock}
         {messages.length > 0 ? messageList : null}

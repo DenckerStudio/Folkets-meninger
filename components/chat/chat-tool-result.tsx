@@ -119,7 +119,17 @@ function SakContextCard({ output }: { output: SakContextOutput }) {
               className="rounded-lg border border-border bg-background/60 px-2.5 py-1.5 text-xs text-foreground"
             >
               <span className="font-medium text-muted-foreground">
-                Dokumentutdrag {(chunk.chunkIndex ?? index) + 1}
+                {chunk.documentId ? (
+                  <Link
+                    href={`${routes.sak(issue.id!)}?dokument=${encodeURIComponent(chunk.documentId)}`}
+                    className="inline-flex items-center gap-1 hover:text-brand hover:underline"
+                  >
+                    Dokumentutdrag {(chunk.chunkIndex ?? index) + 1}
+                    <ExternalLink className="size-2.5" aria-hidden />
+                  </Link>
+                ) : (
+                  `Dokumentutdrag ${(chunk.chunkIndex ?? index) + 1}`
+                )}
               </span>
               {chunk.content ? (
                 <p className="mt-0.5 line-clamp-4 whitespace-pre-wrap text-foreground">

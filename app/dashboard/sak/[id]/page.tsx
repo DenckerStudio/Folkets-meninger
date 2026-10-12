@@ -101,8 +101,18 @@ function buildSaksgangSteps(
   });
 }
 
-export default async function SakPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function SakPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ dokument?: string | string[] }>;
+}) {
   const resolvedParams = await params;
+  const resolvedSearch = searchParams ? await searchParams : undefined;
+  const dokumentParam = resolvedSearch?.dokument;
+  const initialDocumentId =
+    typeof dokumentParam === 'string' ? dokumentParam.trim() : undefined;
   const bundle = await getSakPageBundle(resolvedParams.id);
 
   if (!bundle) {
@@ -362,7 +372,11 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
         dokumenter={
           <div className="space-y-6">
             {documents.length > 0 ? (
-              <SakDocumentsSection sakId={sak.id} initialDocuments={documents} />
+              <SakDocumentsSection
+                sakId={sak.id}
+                initialDocuments={documents}
+                initialDocumentId={initialDocumentId}
+              />
             ) : (
               <EmptyState
                 compact

@@ -210,12 +210,18 @@ function SakDocumentViewer({
 export function SakDocumentsSection({
   sakId,
   initialDocuments,
+  initialDocumentId,
 }: {
   sakId: string;
   initialDocuments: DocumentWithStatus[];
+  /** Deep link (?dokument=<id>) from chat citations — opens the viewer on mount. */
+  initialDocumentId?: string | null;
 }) {
   const [documents, setDocuments] = useState(initialDocuments);
-  const [activeDocument, setActiveDocument] = useState<DocumentWithStatus | null>(null);
+  const [activeDocument, setActiveDocument] = useState<DocumentWithStatus | null>(() => {
+    if (!initialDocumentId) return null;
+    return initialDocuments.find((doc) => doc.id === initialDocumentId) ?? null;
+  });
   const [pendingTimedOut, setPendingTimedOut] = useState(false);
 
   const refreshStatuses = useCallback(async () => {
