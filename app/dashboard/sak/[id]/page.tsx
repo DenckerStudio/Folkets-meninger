@@ -23,11 +23,7 @@ import { SakPageTabs } from '@/components/sak/sak-page-tabs';
 import { ImpactCalculator } from '@/components/sak/impact-calculator';
 import { AlignmentScore } from '@/components/sak/alignment-score';
 import { KnowledgeQuiz } from '@/components/sak/knowledge-quiz';
-import { CounterProposals } from '@/components/sak/counter-proposals';
-import { DiscussionSection } from '@/components/sak/discussion-section';
-import { SakParticipationFlow } from '@/components/sak/sak-participation-flow';
-import { listCounterProposals, findHearingLinkForSak } from '@/lib/counter-proposals/service';
-import { buildParticipationSummary } from '@/lib/sak-participation';
+import StanceSection from './stance-section';
 import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
@@ -114,13 +110,10 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
   }
 
   const { sak, detail: detailedContent, issueMeta } = bundle;
-  const [documents, voteringer, counterProposals, hearingLink] = await Promise.all([
+  const [documents, voteringer] = await Promise.all([
     getSakDocumentsWithStatus(sak.id, detailedContent),
     fetchSakVoteringer(sak.id),
-    listCounterProposals(sak.id),
-    findHearingLinkForSak(sak.id),
   ]);
-  const participation = buildParticipationSummary(counterProposals, hearingLink);
 
   const innstillingstekst = detailedContent?.innstillingstekst;
   const kortvedtak = detailedContent?.kortvedtak;
@@ -351,11 +344,10 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
 
             <KnowledgeQuiz sakId={sak.id} variant="pre-vote" />
 
-            <SakParticipationFlow
+            <StanceSection
               sakId={sak.id}
               sakTitle={officialTitle}
               sakSummary={descriptionToShow || officialTitle}
-              participation={participation}
             />
 
             <AlignmentScore
@@ -463,8 +455,6 @@ export default async function SakPage({ params }: { params: Promise<{ id: string
             <ImpactCalculator sakId={sak.id} sakTitle={officialTitle} sakSummary={descriptionToShow || officialTitle} />
           </div>
         }
-        motforslag={<CounterProposals sakId={sak.id} />}
-        diskusjon={<DiscussionSection sakId={sak.id} />}
       />
     </DashboardPage>
   );
