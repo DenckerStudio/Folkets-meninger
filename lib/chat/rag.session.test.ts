@@ -115,5 +115,55 @@ assert.match(instructionsSrc, /getVoteResults/);
 assert.match(cardSrc, /tool-getVoteResults/);
 assert.match(cardSrc, /VoteResultsCard/);
 
+// --- Phase 3: actions, follow-ups, local conversations, document citations -----
+
+const stemmeChatSrc = readFileSync(
+  new URL('../../components/chat/stemme-chat.tsx', import.meta.url),
+  'utf8',
+);
+const messageActionsSrc = readFileSync(
+  new URL('../../components/chat/chat-message-actions.tsx', import.meta.url),
+  'utf8',
+);
+const conversationBarSrc = readFileSync(
+  new URL('../../components/chat/chat-conversation-bar.tsx', import.meta.url),
+  'utf8',
+);
+const conversationsSrc = readFileSync(new URL('./conversations.ts', import.meta.url), 'utf8');
+const followUpsSrc = readFileSync(new URL('./follow-ups.ts', import.meta.url), 'utf8');
+const documentsSectionSrc = readFileSync(
+  new URL('../../components/sak/sak-documents-section.tsx', import.meta.url),
+  'utf8',
+);
+const sakPageSrc = readFileSync(
+  new URL('../../app/dashboard/sak/[id]/page.tsx', import.meta.url),
+  'utf8',
+);
+
+// C4: per-message copy + regenerate.
+assert.match(messageActionsSrc, /data-chat-action="copy"/);
+assert.match(messageActionsSrc, /data-chat-action="regenerate"/);
+assert.match(messageActionsSrc, /navigator\.clipboard/);
+assert.match(stemmeChatSrc, /ChatMessageActions/);
+assert.match(stemmeChatSrc, /regenerate\(\{ messageId: message\.id \}\)/);
+
+// C3: follow-up chips on the latest assistant reply.
+assert.match(followUpsSrc, /buildFollowUps/);
+assert.match(stemmeChatSrc, /data-chat-follow-ups/);
+assert.match(stemmeChatSrc, /buildFollowUps/);
+
+// C1: conversations stay in localStorage — never a server transcript.
+assert.match(conversationBarSrc, /data-chat-action="new-chat"/);
+assert.match(conversationsSrc, /folkets:chat:conversations/);
+assert.match(conversationsSrc, /localStorage/);
+assert.doesNotMatch(conversationsSrc, /fetch\(/);
+assert.doesNotMatch(conversationsSrc, /supabase/i);
+assert.match(stemmeChatSrc, /ChatConversationBar/);
+
+// C2: document citations deep-link into the sak viewer.
+assert.match(cardSrc, /dokument=\$\{encodeURIComponent\(chunk\.documentId\)\}/);
+assert.match(documentsSectionSrc, /initialDocumentId/);
+assert.match(sakPageSrc, /initialDocumentId=\{initialDocumentId\}/);
+
 
 console.log('chat/rag.session.test.ts: ok session-bound overlay RAG');
