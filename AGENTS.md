@@ -252,36 +252,50 @@ The canonical template is `.env.example`.
 - `/api/cron/digest?frequency=daily|weekly` sends digest emails with SMTP env
   vars and advances `last_digest_sent_at_by_channel`.
 - `/api/cron/categories`, `/api/cron/sync-issues`, and
-  `/api/cron/package-counter-proposals` are also protected by `CRON_SECRET`.
+  `/api/cron/package-opinion-innspill` are also protected by `CRON_SECRET`.
 
-### Kunnskapspoeng, merker og motforslag
+### Folkets meninger, innspill og rapportering
+
+- **Folkets meninger** (`/dashboard/folkets-meninger`) is the single home for
+  citizen UGC. Structured opinions: title, body, stance (`for`/`blank`/`imot`),
+  3–8 For/Imot points, optional `stortinget_issue_id`, plus one reply per user.
+  Writes go through service-role RPCs `create_citizen_opinion` /
+  `create_citizen_opinion_reply`.
+- **Sak-scoped views**: `?sak=<id>` filters the list to one sak and `?compose=1`
+  opens the composer with that sak preselected
+  (`routes.folketsMeningerForSak`). The sak page embeds a read-only preview
+  (`components/sak/sak-meninger-section.tsx`, server-rendered via
+  `getIssueOpinionSummary`) that links back into Folkets meninger.
+- **Hearing innspill** (`opinion_innspill`): a feeling author promotes their own
+  opinion as an innspill. Others endorse it; at
+  `OPINION_INNSPILL_DEFAULT_THRESHOLD` (10) support the status becomes
+  `threshold_met` and `/api/cron/package-opinion-innspill` packages a
+  Markdown/JSON report and fires `N8N_HEARING_INNSPILL_WEBHOOK_URL`. The payload
+  keeps the retired `motforslag_horingsinnspill` shape so existing n8n workflows
+  keep working. This is **not** a Stortinget submit API — official innspill still
+  goes via stortinget.no. Service layer: `lib/innspill/`. Schema:
+  `supabase/migrations/20261012140000_opinion_innspill.sql`.
+- **Reporting**: opinions and replies report through
+  `POST /api/opinions/report` into `content_reports` via the `report_content`
+  RPC (targets `citizen_opinion`, `citizen_opinion_reply`). Categories live in
+  `lib/moderation/content-report.ts`.
+- Sak pages no longer host innspill or discussion: `counter_proposals`,
+  `counter_proposal_endorsements`, `issue_discussions`, and
+  `issue_discussion_posts` were consolidated into `citizen_opinions` /
+  `opinion_innspill` and their old components, APIs, and cron job removed.
+  `docs/DESIGN-sak-discussion.md` is superseded.
+
+### Kunnskapspoeng og merker
 
 - Knowledge points reuse `award_user_points` (not forum likes). Awards:
-  quiz pass (+15), document read after 8s in the viewer (+5), constructive
-  motforslag (+20) or hearing comment (+10).
+  quiz pass (+15), document read after 8s in the viewer (+5), promoting an
+  innspill (+20), endorsing an innspill (+2), or hearing comment (+10).
 - Badges: Informert borger (1 quiz), Saksforsker (3 document reads),
   Fylkesekspert (self-declared `users.fylke_code` + 1 quiz). `fylke_verified`
   stays false for self-declared fylke.
 - In-app knowledge quiz is grounded in sak title/summary/komité/AI summary.
   Typebot is not wired; the same award path can later accept an external
   webhook.
-- Motforslag live on the sak page (`counter_proposals`). Threshold default 10.
-  When reached, the app packages a Markdown/JSON report and fires
-  `N8N_HEARING_INNSPILL_WEBHOOK_URL`. This is **not** a Stortinget submit API —
-  official innspill still goes via stortinget.no. Schema:
-  `supabase/migrations/20260822120000_knowledge_and_counter_proposals.sql`.
-
-### Sak-diskusjon (Diskusjon tab)
-
-- Greenfield sak-scoped debate — **not** the removed site-wide forum (`forum_*`
-  tables stay dropped; no `/dashboard/forum` nav). Design:
-  `docs/DESIGN-sak-discussion.md`.
-- One room per sak (`issue_discussions` + flat `issue_discussion_posts` for MVP).
-  Public read on sak page; login + `user_has_public_identity` to post via
-  `POST /api/sak/[id]/discussion` (service-role `create_issue_discussion_post`).
-- Sak page tab **Diskusjon** (`#diskusjon`) beside Motforslag. Reports via
-  `POST /api/sak/[id]/discussion/report` → `content_reports`. Lightweight regex
-  check in `lib/moderation/content-check.ts`. No points for posts; no n8n on UGC.
 
 ### Admin, stats, and valgomat
 

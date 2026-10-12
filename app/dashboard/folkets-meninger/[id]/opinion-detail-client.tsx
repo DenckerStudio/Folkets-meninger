@@ -6,6 +6,8 @@ import { useState } from 'react';
 import { BackButton } from '@/components/dashboard/back-button';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { OpinionInnspillPanel } from '@/components/opinions/opinion-innspill-panel';
+import { OpinionReportButton } from '@/components/opinions/opinion-report-button';
 import { OpinionPointsList } from '@/components/opinions/opinion-points-list';
 import { StanceExpandModal } from '@/components/opinions/stance-expand-modal';
 import { useAuth } from '@/hooks/use-auth';
@@ -14,12 +16,23 @@ import { OPINION_REPLY_BODY_MIN, type OpinionDetail, type OpinionStance } from '
 import { routes } from '@/lib/routes';
 import { formatNumber } from '@/lib/utils';
 
+type OpinionInnspillView = {
+  status: string | null;
+  supportCount: number;
+  supportThreshold: number;
+  packagedAt: string | null;
+  hearingTitle: string | null;
+  hearingDeadlineLabel: string | null;
+  endorsedByViewer: boolean;
+};
+
 type OpinionDetailClientProps = {
   opinion: OpinionDetail;
   isAuthor: boolean;
+  innspill: OpinionInnspillView;
 };
 
-export function OpinionDetailClient({ opinion, isAuthor }: OpinionDetailClientProps) {
+export function OpinionDetailClient({ opinion, isAuthor, innspill }: OpinionDetailClientProps) {
   const { user } = useAuth();
   const router = useRouter();
   const [error, setError] = useState('');
@@ -106,6 +119,19 @@ export function OpinionDetailClient({ opinion, isAuthor }: OpinionDetailClientPr
         </div>
       </article>
 
+      <OpinionInnspillPanel
+        opinionId={opinion.id}
+        issueId={opinion.stortingetIssueId}
+        isAuthor={isAuthor}
+        status={innspill.status}
+        supportCount={innspill.supportCount}
+        supportThreshold={innspill.supportThreshold}
+        hearingTitle={innspill.hearingTitle}
+        hearingDeadlineLabel={innspill.hearingDeadlineLabel}
+        endorsedByViewer={innspill.endorsedByViewer}
+        packagedAt={innspill.packagedAt}
+      />
+
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-foreground">Hva mener du?</h2>
         {isAuthor ? (
@@ -158,6 +184,9 @@ export function OpinionDetailClient({ opinion, isAuthor }: OpinionDetailClientPr
                       {reply.authorName ?? 'Innbygger'}
                     </span>
                     <span className="text-xs text-muted-foreground">{formatOpinionDate(reply.createdAt)}</span>
+                    {!isAuthor || reply.authorUserId !== opinion.authorUserId ? (
+                      <OpinionReportButton targetType="citizen_opinion_reply" targetId={reply.id} />
+                    ) : null}
                   </div>
                   <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{reply.body}</p>
                 </li>
