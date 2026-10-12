@@ -68,6 +68,10 @@ async function main() {
   assert.equal(typeof tools.getMyActivity.execute, 'function');
   assert.equal(typeof tools.getImpact.execute, 'function');
   assert.equal(typeof tools.getPublicProfile.execute, 'function');
+  assert.equal(typeof tools.listMyNotifications.execute, 'function');
+  assert.equal(typeof tools.getInnspillStatus.execute, 'function');
+  assert.equal(typeof tools.findHearingsForSak.execute, 'function');
+  assert.equal(typeof tools.getFolketsMeninger.execute, 'function');
 
   const retrieve = await tools.retrieveSakContext.execute(
     { issueId: '200365', query: 'vektgrense førerkort' },
@@ -106,6 +110,39 @@ async function main() {
     { issueId: '200365' },
     { toolCallId: 'impact-1', messages: [], abortSignal: undefined as never },
   );
+
+  const notifications = await tools.listMyNotifications.execute(
+    {},
+    { toolCallId: 'notifications-1', messages: [], abortSignal: undefined as never },
+  );
+  const innspill = await tools.getInnspillStatus.execute(
+    { opinionId: 'does-not-matter' },
+    { toolCallId: 'innspill-1', messages: [], abortSignal: undefined as never },
+  );
+  const hearings = await tools.findHearingsForSak.execute(
+    { issueId: '200365' },
+    { toolCallId: 'hearings-1', messages: [], abortSignal: undefined as never },
+  );
+  const meninger = await tools.getFolketsMeninger.execute(
+    { issueId: '200365' },
+    { toolCallId: 'meninger-1', messages: [], abortSignal: undefined as never },
+  );
+
+  assert.equal(notifications.signedIn, false);
+  assert.deepEqual(notifications.items, []);
+  assert.equal(innspill.found, false);
+  assert.equal(innspill.signedIn, false);
+  assert.ok(Array.isArray(hearings.hearings));
+  for (const hearing of hearings.hearings) {
+    assert.match(hearing.skriftligInnspillUrl, /stortinget\.no/);
+  }
+  assert.equal(typeof meninger.total, 'number');
+  assert.deepEqual(activity.stanceSignals, { categories: [], labels: [] });
+  assert.ok(impact.confidence);
+  assert.ok(impact.source);
+  if (!impact.source?.amountFromDocuments) {
+    assert.equal(impact.result?.annualAmountKr, null);
+  }
 
   assert.equal(spelling.context, 'motforslag');
   assert.match(spelling.instruction, /rettskriving|stavemåte|grammatikk/i);

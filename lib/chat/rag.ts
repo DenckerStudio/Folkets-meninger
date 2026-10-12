@@ -18,7 +18,9 @@ import {
 const MAX_CHUNK_CHARS = 1400;
 const MAX_CHUNKS = 8;
 const ISSUE_COLUMNS = 'id, title, summary, henvisning, ferdigbehandlet';
-const CHUNK_COLUMNS = 'issue_id, document_id, chunk_index, content';
+// `metadata` carries document_title/document_kind set during ingest — cheap
+// provenance so citations can name their source document.
+const CHUNK_COLUMNS = 'issue_id, document_id, chunk_index, content, metadata';
 
 export type ChatRagClient = Pick<SupabaseClient, 'from'>;
 
@@ -26,6 +28,8 @@ export type ChatDocumentChunk = {
   documentId: string;
   chunkIndex: number;
   content: string;
+  documentTitle?: string | null;
+  documentKind?: string | null;
   rank?: number;
 };
 
@@ -36,6 +40,23 @@ export type ChatIssueHit = {
   henvisning: string | null;
   ferdigbehandlet: boolean | null;
 };
+
+/** Document title/kind live in `document_chunks.metadata`; tolerate any shape. */
+function chunkProvenance(metadata: unknown): {
+  documentTitle: string | null;
+  documentKind: string | null;
+} {
+  if (!metadata || typeof metadata !== 'object') {
+    return { documentTitle: null, documentKind: null };
+  }
+  const meta = metadata as { document_title?: unknown; document_kind?: unknown };
+  const title = typeof meta.document_title === 'string' ? meta.document_title.trim() : '';
+  const kind = typeof meta.document_kind === 'string' ? meta.document_kind.trim() : '';
+  return {
+    documentTitle: title || null,
+    documentKind: kind || null,
+  };
+}
 
 export type ChatSakContext = {
   issue: ChatIssueHit | null;
@@ -299,6 +320,7 @@ async function searchChunksLexical(
         documentId: String(row.document_id ?? ''),
         chunkIndex: Number(row.chunk_index ?? 0),
         content,
+        ...chunkProvenance(row.metadata),
         rank,
       },
     ];
@@ -333,16 +355,50 @@ async function searchChunks(
   );
   if (!semantic || semantic.length === 0) return lexical;
 
+  // The ranking RPC does not return `metadata`, so look it up once for the
+  // documents that actually made the cut.
+  const provenance = await loadChunkProvenance(
+    supabase,
+    [...new Set(semantic.map((chunk) => chunk.documentId))],
+  );
+
   return mergeChunks(
     semantic.map((chunk) => ({
       documentId: chunk.documentId,
       chunkIndex: chunk.chunkIndex,
       content: chunk.content,
       rank: chunk.similarity,
+      ...(provenance.get(chunk.documentId) ?? {}),
     })),
     lexical,
     maxChunks,
   );
+}
+
+/** Fetch document title/kind for a set of document ids in one query. */
+async function loadChunkProvenance(
+  supabase: ChatRagClient,
+  documentIds: string[],
+): Promise<Map<string, { documentTitle: string | null; documentKind: string | null }>> {
+  const map = new Map<string, { documentTitle: string | null; documentKind: string | null }>();
+  const ids = [...new Set(documentIds.filter(Boolean))];
+  if (ids.length === 0) return map;
+
+  const { data, error } = await supabase
+    .from('document_chunks')
+    .select('document_id, metadata')
+    .in('document_id', ids)
+    .limit(ids.length * 12);
+
+  if (error || !Array.isArray(data)) return map;
+
+  for (const row of data) {
+    const id = String(row.document_id ?? '');
+    if (!id || map.has(id)) continue;
+    const { documentTitle, documentKind } = chunkProvenance(row.metadata);
+    map.set(id, { documentTitle, documentKind });
+  }
+  return map;
 }
 
 async function loadAiSummaryText(

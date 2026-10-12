@@ -9,7 +9,15 @@ import { listUserBadges } from '@/lib/knowledge/service';
 import { calculateSakImpact } from '@/lib/impact/service';
 import { describeProfile, hasAnyImpactParam, parseImpactProfile } from '@/lib/impact/profile';
 import type { ImpactProfile, ImpactResult } from '@/lib/impact/types';
+import type { ImpactConfidence } from '@/lib/impact/types';
 import { getOwnPublicProfilePreview } from '@/lib/public-profile';
+import { getOpinionInnspill } from '@/lib/innspill/service';
+import {
+  getChatViewerSignals,
+  listChatNotifications,
+  type ChatNotificationItem,
+  type ChatStanceSignals,
+} from '@/lib/chat/personal';
 
 export type ChatActivityStance = {
   issueId: string;
@@ -38,6 +46,8 @@ export type ChatMyActivity = {
   stanceCount: number;
   recentStances: ChatActivityStance[];
   badges: ChatActivityBadge[];
+  /** Topics and labels the user has agreed with (former getMyStanceSignals). */
+  stanceSignals: ChatStanceSignals;
   note: string | null;
 };
 
@@ -47,8 +57,56 @@ export type ChatImpact = {
   hasProfile: boolean;
   profileLabels: string[];
   result: ImpactResult | null;
+  /** Always present when a sak was found. */
+  confidence: ImpactConfidence | null;
+  /** Where the estimate comes from. Amounts only appear when `amountFromDocuments`. */
+  source: ChatImpactSource | null;
   note: string | null;
 };
+
+export type ChatImpactSource = {
+  kind: 'sak-dokumenter' | 'sammendrag' | 'ingen';
+  label: string;
+  sourcesUsed: number;
+  amountFromDocuments: boolean;
+};
+
+/**
+ * Keep kroner figures only when they were extracted from real figures in the
+ * sak documents (scored document chunks). Otherwise strip every amount so
+ * neither the card nor the model can present a guessed number.
+ */
+export function gateImpactAmounts(result: ImpactResult): {
+  result: ImpactResult;
+  source: ChatImpactSource;
+} {
+  const fromDocuments = result.sourcesUsed > 0 && result.grounded;
+  const hasAmount =
+    result.annualAmountKr != null || result.effects.some((e) => e.annualAmountKr != null);
+  const amountFromDocuments = fromDocuments && hasAmount;
+  const gated: ImpactResult = amountFromDocuments
+    ? result
+    : {
+        ...result,
+        annualAmountKr: null,
+        effects: result.effects.map((effect) => ({ ...effect, annualAmountKr: null })),
+      };
+  const kind: ChatImpactSource['kind'] = fromDocuments
+    ? 'sak-dokumenter'
+    : result.grounded
+      ? 'sammendrag'
+      : 'ingen';
+  const label =
+    kind === 'sak-dokumenter'
+      ? `Saksdokumenter (${result.sourcesUsed} utdrag)`
+      : kind === 'sammendrag'
+        ? 'Sakens sammendrag (ingen tall i dokumentene)'
+        : 'Ingen kilde med konkrete tall';
+  return {
+    result: gated,
+    source: { kind, label, sourcesUsed: result.sourcesUsed, amountFromDocuments },
+  };
+}
 
 export type ChatPublicProfile = {
   found: boolean;
@@ -89,6 +147,7 @@ export async function collectMyActivity(
       stanceCount: 0,
       recentStances: [],
       badges: [],
+      stanceSignals: { categories: [], labels: [] },
       note: 'Du er ikke logget inn, så jeg kan ikke hente aktiviteten din.',
     };
   }
@@ -103,6 +162,7 @@ export async function collectMyActivity(
       stanceCount: 0,
       recentStances: [],
       badges: [],
+      stanceSignals: { categories: [], labels: [] },
       note: 'Aktivitetsdata er ikke tilgjengelig akkurat nå.',
     };
   }
@@ -110,11 +170,12 @@ export async function collectMyActivity(
   const service = getServiceSupabase();
   const safeLimit = Math.min(Math.max(limit, 1), 10);
 
-  const [stanceCount, stanceHistory, pointsProfile, badges] = await Promise.all([
+  const [stanceCount, stanceHistory, pointsProfile, badges, stanceSignals] = await Promise.all([
     getUserStanceCount(service, userId).catch(() => 0),
     getUserStanceHistory(service, userId).catch(() => []),
     getUserPointsProfile(userId, safeLimit).catch(() => null),
     listUserBadges(userId).catch(() => []),
+    getChatViewerSignals(userId, service),
   ]);
 
   const points = pointsProfile?.points ?? 0;
@@ -143,6 +204,10 @@ export async function collectMyActivity(
       name: KNOWLEDGE_BADGE_BY_ID[badge.id]?.name ?? badge.id,
       earnedAt: badge.earnedAt,
     })),
+    stanceSignals: {
+      categories: stanceSignals.categories.slice(0, 8),
+      labels: stanceSignals.labels.slice(0, 8),
+    },
     note:
       stanceCount === 0 && badges.length === 0 && points === 0
         ? 'Du har ikke samlet poeng, standpunkt eller merker ennå.'
@@ -169,20 +234,31 @@ export async function collectImpact(args: {
       hasProfile,
       profileLabels,
       result: null,
+      confidence: null,
+      source: null,
       note: 'Fant ingen sak å beregne konsekvens for. Oppgi sak-id eller en tydeligere tittel.',
     };
   }
 
-  const result = await calculateSakImpact(id, args.profile);
+  const raw = await calculateSakImpact(id, args.profile);
+  const { result, source } = gateImpactAmounts(raw);
+  const notes = [
+    hasProfile
+      ? null
+      : 'Ingen påvirkningsprofil er satt i nettleseren, så dette er et generelt anslag.',
+    source.amountFromDocuments
+      ? null
+      : 'Saksdokumentene oppgir ingen konkrete beløp, så det vises ikke noe kronebeløp.',
+  ].filter(Boolean);
   return {
     found: true,
     issueId: id,
     hasProfile,
     profileLabels,
     result,
-    note: hasProfile
-      ? null
-      : 'Ingen påvirkningsprofil er satt i nettleseren, så dette er et generelt anslag.',
+    confidence: result.confidence,
+    source,
+    note: notes.length > 0 ? notes.join(' ') : null,
   };
 }
 
@@ -212,6 +288,94 @@ export async function collectPublicProfile(
       preview.displayName === null
         ? 'Profilen mangler visningsnavn. Fyll ut for- og etternavn under profilen.'
         : null,
+  };
+}
+
+export type ChatMyNotifications = {
+  found: boolean;
+  signedIn: boolean;
+  items: ChatNotificationItem[];
+  note: string | null;
+};
+
+export async function collectMyNotifications(
+  client: ChatRagClient | null | undefined,
+  userId: string | null | undefined,
+  options: { unreadOnly?: boolean; limit?: number } = {},
+): Promise<ChatMyNotifications> {
+  if (!userId) {
+    return {
+      found: false,
+      signedIn: false,
+      items: [],
+      note: 'Du er ikke logget inn, så jeg kan ikke hente varslene dine.',
+    };
+  }
+  if (!client) {
+    return { found: false, signedIn: true, items: [], note: 'Varsler er ikke tilgjengelig akkurat nå.' };
+  }
+  const items = await listChatNotifications(userId, client, options).catch(() => []);
+  return {
+    found: items.length > 0,
+    signedIn: true,
+    items,
+    note: items.length === 0 ? 'Ingen varsler å vise.' : null,
+  };
+}
+
+export type ChatInnspillStatus = {
+  found: boolean;
+  signedIn: boolean;
+  opinionId: string | null;
+  status: string | null;
+  supportCount: number | null;
+  supportThreshold: number | null;
+  packagedAt: string | null;
+  note: string | null;
+};
+
+/**
+ * Status for an innspill the signed-in user authored. Only the author's own
+ * innspill is returned; anything else is reported as not found.
+ */
+export async function collectInnspillStatus(
+  userId: string | null | undefined,
+  opinionId: string,
+  load: typeof getOpinionInnspill = getOpinionInnspill,
+): Promise<ChatInnspillStatus> {
+  const empty = {
+    opinionId: opinionId || null,
+    status: null,
+    supportCount: null,
+    supportThreshold: null,
+    packagedAt: null,
+  };
+  if (!userId) {
+    return {
+      found: false,
+      signedIn: false,
+      ...empty,
+      note: 'Du er ikke logget inn, så jeg kan ikke hente innspillene dine.',
+    };
+  }
+  const innspill = opinionId?.trim() ? await load(opinionId.trim()).catch(() => null) : null;
+  if (!innspill || innspill.authorUserId !== userId) {
+    return {
+      found: false,
+      signedIn: true,
+      ...empty,
+      note: 'Fant ikke noe innspill fra deg for denne meningen. Bare forfatteren kan fremme en mening som innspill, på meningssiden.',
+    };
+  }
+  return {
+    found: true,
+    signedIn: true,
+    opinionId: innspill.opinionId,
+    status: innspill.status,
+    supportCount: innspill.supportCount,
+    supportThreshold: innspill.supportThreshold,
+    packagedAt: innspill.packagedAt,
+    note: null,
   };
 }
 
@@ -260,6 +424,27 @@ export function createPersonalChatTools(args: {
         'Vis den offentlige visningen av den innloggede brukerens egen profil: visningsnavn, initialer og om brukeren er Stemme+-støttespiller. Leser bare egne offentlige felt; kan ikke slå opp andre brukere.',
       inputSchema: z.object({}),
       execute: async () => collectPublicProfile(args.client, args.userId),
+    }),
+    listMyNotifications: tool({
+      description:
+        'Hent den innloggede brukerens egne varsler (ny sak i en kategori de følger, merkelapp-treff, innspill-støtte), nyeste først. Bruk når brukeren spør «er det noe nytt for meg» eller «hvilke varsler har jeg». Leser bare egne varsler.',
+      inputSchema: z.object({
+        unreadOnly: z.boolean().optional().describe('Bare uleste varsler. Standard er alle.'),
+        limit: z.number().int().min(1).max(20).optional().describe('Hvor mange varsler (1–20, standard 8).'),
+      }),
+      execute: async ({ unreadOnly, limit }) =>
+        collectMyNotifications(args.client, args.userId, { unreadOnly, limit }),
+    }),
+    getInnspillStatus: tool({
+      description:
+        'Sjekk status for et høringsinnspill den innloggede brukeren selv har fremmet i Folkets meninger: samler støtte, terskel nådd eller pakket, og hvor mange som støtter. Bruk når brukeren spør om status på sitt eget innspill. Viser ikke andres innspill.',
+      inputSchema: z.object({
+        opinionId: z
+          .string()
+          .min(1)
+          .describe('ID-en til brukerens mening (f.eks. fra en lenke til folkets-meninger/<id>).'),
+      }),
+      execute: async ({ opinionId }) => collectInnspillStatus(args.userId, opinionId),
     }),
   };
 }

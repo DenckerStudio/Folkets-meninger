@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
 import { createChatTools } from './tools';
 import { collectPollResults, shapeChatPollResults } from './poll-tools';
-import { collectImpact, collectMyActivity, collectPublicProfile } from './personal-tools';
+import {
+  collectImpact,
+  collectInnspillStatus,
+  collectMyActivity,
+  collectMyNotifications,
+  collectPublicProfile,
+  gateImpactAmounts,
+} from './personal-tools';
+import type { ImpactResult } from '@/lib/impact/types';
+import type { OpinionInnspillRecord } from '@/lib/innspill/types';
 import {
   matchPolitikere,
   shapeChatHearing,
@@ -26,6 +35,26 @@ async function main() {
   assert.equal(typeof tools.getMyActivity.execute, 'function');
   assert.equal(typeof tools.getImpact.execute, 'function');
   assert.equal(typeof tools.getPublicProfile.execute, 'function');
+  assert.equal(typeof tools.listMyNotifications.execute, 'function');
+  assert.equal(typeof tools.getInnspillStatus.execute, 'function');
+
+  // Dropped duplicates must not come back.
+  for (const dropped of [
+    'calculateSakImpact',
+    'getMyProfile',
+    'getMyStanceSignals',
+    'getOpinionsForSak',
+    'getOfficialInnspillLink',
+  ]) {
+    assert.ok(!(dropped in tools), `${dropped} should not be registered`);
+  }
+
+  // No personal tool may take a user id or profile as a model argument.
+  for (const name of ['getMyActivity', 'getImpact', 'getPublicProfile', 'listMyNotifications', 'getInnspillStatus'] as const) {
+    const shape = (tools[name].inputSchema as { shape?: Record<string, unknown> }).shape ?? {};
+    assert.ok(!('userId' in shape), `${name} must not accept userId`);
+    assert.ok(!('impactProfile' in shape), `${name} must not accept impactProfile`);
+  }
 
   // Options object form keeps the string form working (phase 1 callers).
   const withOptions = createChatTools({ preferredIssueId: '1234', userId: 'user-1' });
@@ -45,6 +74,112 @@ async function main() {
   });
   assert.equal(noIssueImpact.found, false);
   assert.equal(noIssueImpact.result, null);
+  assert.equal(noIssueImpact.confidence, null);
+  assert.equal(noIssueImpact.source, null);
+
+  // getMyActivity: logged out still returns an (empty) stances section.
+  assert.deepEqual(noSessionActivity.stanceSignals, { categories: [], labels: [] });
+
+  // getImpact: kroner only survive when grounded in sak documents.
+  const baseImpact: ImpactResult = {
+    headline: 'h',
+    personalSummary: 's',
+    annualAmountKr: 1200,
+    direction: 'increase',
+    amountKind: 'tax',
+    confidence: 'medium',
+    effects: [
+      {
+        id: 'e1',
+        title: 'Avgift',
+        summary: 'x',
+        appliesToUser: true,
+        audience: 'car_owner',
+        audienceLabel: 'Bileier',
+        direction: 'increase',
+        annualAmountKr: 1200,
+        amountKind: 'tax',
+        evidence: '1 200 kr',
+      },
+    ],
+    grounded: true,
+    sourcesUsed: 2,
+    whoAffected: null,
+    howAffected: null,
+    disclaimer: 'd',
+  };
+  const fromDocs = gateImpactAmounts(baseImpact);
+  assert.equal(fromDocs.result.annualAmountKr, 1200);
+  assert.equal(fromDocs.source.kind, 'sak-dokumenter');
+  assert.equal(fromDocs.source.amountFromDocuments, true);
+  const guessed = gateImpactAmounts({ ...baseImpact, sourcesUsed: 0 });
+  assert.equal(guessed.result.annualAmountKr, null);
+  assert.equal(guessed.result.effects[0].annualAmountKr, null);
+  assert.equal(guessed.source.amountFromDocuments, false);
+  assert.equal(guessed.result.confidence, 'medium');
+  const ungrounded = gateImpactAmounts({ ...baseImpact, grounded: false, sourcesUsed: 0 });
+  assert.equal(ungrounded.source.kind, 'ingen');
+  assert.equal(ungrounded.result.annualAmountKr, null);
+
+  // listMyNotifications: fail closed without session, scoped to own user id.
+  const noSessionNotifications = await collectMyNotifications(null, null);
+  assert.equal(noSessionNotifications.signedIn, false);
+  assert.deepEqual(noSessionNotifications.items, []);
+  const eqCalls: Array<[string, unknown]> = [];
+  const fakeQuery = {
+    select: () => fakeQuery,
+    eq: (column: string, value: unknown) => {
+      eqCalls.push([column, value]);
+      return fakeQuery;
+    },
+    order: () => fakeQuery,
+    limit: () => fakeQuery,
+    is: () => fakeQuery,
+    then: (resolve: (value: unknown) => void) =>
+      resolve({
+        data: [
+          {
+            id: 'n1',
+            title: 'Ny sak',
+            body: null,
+            url: '/sak/1',
+            channel: 'in_app',
+            created_at: '2099-01-01T00:00:00Z',
+            read_at: null,
+          },
+        ],
+        error: null,
+      }),
+  };
+  const fakeClient = { from: () => fakeQuery } as unknown as Parameters<typeof collectMyNotifications>[0];
+  const notifications = await collectMyNotifications(fakeClient, 'user-1');
+  assert.equal(notifications.found, true);
+  assert.equal(notifications.items[0].title, 'Ny sak');
+  assert.equal(notifications.items[0].read, false);
+  assert.deepEqual(eqCalls, [['user_id', 'user-1']]);
+
+  // getInnspillStatus: only the author's own innspill is returned.
+  const record: OpinionInnspillRecord = {
+    opinionId: 'op-1',
+    authorUserId: 'user-1',
+    authorName: null,
+    status: 'gathering',
+    supportThreshold: 10,
+    supportCount: 3,
+    stortingetHearingId: null,
+    hearingDeadlineAt: null,
+    packagedAt: null,
+    createdAt: '2099-01-01T00:00:00Z',
+  } as OpinionInnspillRecord;
+  const load = async () => record;
+  const own = await collectInnspillStatus('user-1', 'op-1', load);
+  assert.equal(own.found, true);
+  assert.equal(own.supportCount, 3);
+  const other = await collectInnspillStatus('user-2', 'op-1', load);
+  assert.equal(other.found, false);
+  assert.equal(other.supportCount, null);
+  const loggedOut = await collectInnspillStatus(null, 'op-1', load);
+  assert.equal(loggedOut.signedIn, false);
 
   // Poll shaping is pure and derives percentages from aggregate counts.
   const poll: PollRecord = {

@@ -3,12 +3,14 @@
 import Link from 'next/link';
 import {
   Award,
+  Bell,
   CalendarClock,
   Calculator,
   Clock,
   ExternalLink,
   FileText,
   Gavel,
+  Send,
   Globe,
   Layers,
   ListFilter,
@@ -28,7 +30,13 @@ import { routes } from '@/lib/routes';
 type SakContextOutput = {
   issue?: { id?: string; title?: string | null; henvisning?: string | null } | null;
   summary?: string | null;
-  chunks?: Array<{ documentId?: string; chunkIndex?: number; content?: string }>;
+  chunks?: Array<{
+    documentId?: string;
+    chunkIndex?: number;
+    content?: string;
+    documentTitle?: string | null;
+    documentKind?: string | null;
+  }>;
   note?: string | null;
 };
 
@@ -61,7 +69,13 @@ type TopicContextOutput = {
   saker?: Array<{
     issue?: { id?: string; title?: string | null; henvisning?: string | null } | null;
     summary?: string | null;
-    chunks?: Array<{ documentId?: string; chunkIndex?: number; content?: string }>;
+    chunks?: Array<{
+    documentId?: string;
+    chunkIndex?: number;
+    content?: string;
+    documentTitle?: string | null;
+    documentKind?: string | null;
+  }>;
   }>;
   note?: string | null;
 };
@@ -208,7 +222,49 @@ type MyActivityOutput = {
     updatedAt?: string;
   }>;
   badges?: Array<{ id?: string; name?: string; earnedAt?: string | null }>;
+  stanceSignals?: {
+    categories?: Array<{ value?: string; count?: number }>;
+    labels?: Array<{ value?: string; count?: number }>;
+  };
   note?: string | null;
+};
+
+type NotificationsOutput = {
+  found?: boolean;
+  signedIn?: boolean;
+  items?: Array<{
+    id?: string;
+    title?: string;
+    body?: string | null;
+    url?: string | null;
+    createdAt?: string;
+    read?: boolean;
+  }>;
+  note?: string | null;
+};
+
+type InnspillStatusOutput = {
+  found?: boolean;
+  signedIn?: boolean;
+  opinionId?: string | null;
+  status?: string | null;
+  supportCount?: number | null;
+  supportThreshold?: number | null;
+  packagedAt?: string | null;
+  note?: string | null;
+};
+
+const INNSPILL_STATUS_LABELS: Record<string, string> = {
+  gathering: 'Samler støtte',
+  threshold_met: 'Terskel nådd',
+  packaged: 'Pakket',
+  withdrawn: 'Trukket',
+};
+
+const CONFIDENCE_LABELS: Record<string, string> = {
+  high: 'Høy',
+  medium: 'Middels',
+  low: 'Lav',
 };
 
 type ImpactOutput = {
@@ -234,6 +290,8 @@ type ImpactOutput = {
       evidence?: string;
     }>;
   } | null;
+  confidence?: string | null;
+  source?: { kind?: string; label?: string; sourcesUsed?: number; amountFromDocuments?: boolean } | null;
   note?: string | null;
 };
 
@@ -297,7 +355,11 @@ function SakContextCard({ output }: { output: SakContextOutput }) {
                     href={`${routes.sak(issue.id!)}?dokument=${encodeURIComponent(chunk.documentId)}`}
                     className="inline-flex items-center gap-1 hover:text-brand hover:underline"
                   >
-                    Dokumentutdrag {(chunk.chunkIndex ?? index) + 1}
+                    {chunk.documentTitle
+                      ? `${chunk.documentTitle}${
+                          chunk.documentKind ? ` (${chunk.documentKind})` : ''
+                        }`
+                      : `Dokumentutdrag ${(chunk.chunkIndex ?? index) + 1}`}
                     <ExternalLink className="size-2.5" aria-hidden />
                   </Link>
                 ) : (
@@ -567,6 +629,17 @@ function HearingsCard({
                 {hearing.deadlineLabel ? ` · ${hearing.deadlineLabel}` : ''}
                 {hearing.committee ? ` · ${hearing.committee}` : ''}
               </p>
+              {hearing.skriftligInnspillUrl ? (
+                <a
+                  href={hearing.skriftligInnspillUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+                >
+                  Send innspill på stortinget.no
+                  <ExternalLink className="size-3" aria-hidden />
+                </a>
+              ) : null}
             </li>
           ) : null,
         )}
@@ -907,6 +980,13 @@ function MyActivityCard({ output }: { output: MyActivityOutput }) {
   const progress = output.progress ?? {};
   const stances = output.recentStances ?? [];
   const badges = output.badges ?? [];
+  const signals = [
+    ...(output.stanceSignals?.categories ?? []),
+    ...(output.stanceSignals?.labels ?? []),
+  ]
+    .filter((signal) => signal.value)
+    .slice(0, 6)
+    .map((signal) => `${signal.value}${signal.count ? ` (${signal.count})` : ''}`);
 
   return (
     <ToolCard icon={Award} title="Din aktivitet" tone="brand">
@@ -943,6 +1023,12 @@ function MyActivityCard({ output }: { output: MyActivityOutput }) {
             ) : null,
           )}
         </ul>
+      ) : null}
+      {signals.length > 0 ? (
+        <p className="text-xs text-foreground">
+          <span className="font-medium text-muted-foreground">Du er ofte enig i: </span>
+          {signals.join(', ')}
+        </p>
       ) : null}
       {badges.length > 0 ? (
         <ul className="flex flex-wrap gap-1.5">
@@ -1028,10 +1114,18 @@ function ImpactCard({ output }: { output: ImpactOutput }) {
           ))}
         </ul>
       ) : null}
+      {output.confidence || output.source ? (
+        <p className="text-xs text-muted-foreground">
+          {output.confidence
+            ? `Sikkerhet: ${CONFIDENCE_LABELS[output.confidence] ?? output.confidence}`
+            : ''}
+          {output.confidence && output.source?.label ? ' · ' : ''}
+          {output.source?.label ? `Kilde: ${output.source.label}` : ''}
+        </p>
+      ) : null}
+      {output.note ? <p className="text-xs text-muted-foreground">{output.note}</p> : null}
       {result?.disclaimer ? (
         <p className="text-xs text-muted-foreground">{result.disclaimer}</p>
-      ) : output.note ? (
-        <p className="text-xs text-muted-foreground">{output.note}</p>
       ) : null}
     </ToolCard>
   );
@@ -1065,6 +1159,66 @@ function PublicProfileCard({ output }: { output: PublicProfileOutput }) {
         {output.note ||
           'Dette er feltene andre ser. Bio, parti og aktivitetsdeling styres i profilinnstillingene.'}
       </p>
+    </ToolCard>
+  );
+}
+
+function NotificationsCard({ output }: { output: NotificationsOutput }) {
+  const items = output.items ?? [];
+  if (output.found === false || items.length === 0) {
+    return (
+      <ToolCard icon={Bell} title={output.signedIn === false ? 'Ikke logget inn' : 'Ingen varsler'} tone="muted">
+        {output.note || 'Ingen varsler å vise.'}
+      </ToolCard>
+    );
+  }
+  return (
+    <ToolCard icon={Bell} title={`Dine varsler (${items.length})`} tone="brand">
+      <ul className="space-y-1">
+        {items.map((item, index) => (
+          <li key={item.id ?? index} className="text-xs">
+            {item.url ? (
+              <Link href={item.url} className="font-medium text-foreground hover:text-brand hover:underline">
+                {item.title || 'Varsel'}
+              </Link>
+            ) : (
+              <span className="font-medium text-foreground">{item.title || 'Varsel'}</span>
+            )}
+            {item.read === false ? <span className="text-brand"> · ulest</span> : null}
+            {item.body ? <p className="mt-0.5 text-muted-foreground">{item.body}</p> : null}
+          </li>
+        ))}
+      </ul>
+    </ToolCard>
+  );
+}
+
+function InnspillStatusCard({ output }: { output: InnspillStatusOutput }) {
+  if (output.found === false) {
+    return (
+      <ToolCard icon={Send} title={output.signedIn === false ? 'Ikke logget inn' : 'Fant ikke innspillet'} tone="muted">
+        {output.note || 'Fant ikke noe innspill fra deg.'}
+      </ToolCard>
+    );
+  }
+  return (
+    <ToolCard icon={Send} title="Status for innspillet ditt" tone="brand">
+      <p className="text-xs text-foreground">
+        <span className="font-medium text-muted-foreground">Status: </span>
+        {output.status ? (INNSPILL_STATUS_LABELS[output.status] ?? output.status) : 'Ukjent'}
+      </p>
+      {output.supportCount != null ? (
+        <p className="text-xs text-foreground">
+          <span className="font-medium text-muted-foreground">Støtte: </span>
+          {output.supportCount}
+          {output.supportThreshold != null ? ` av ${output.supportThreshold}` : ''}
+        </p>
+      ) : null}
+      {output.packagedAt ? (
+        <p className="text-xs text-muted-foreground">
+          Pakket {new Date(output.packagedAt).toLocaleDateString('nb-NO')}
+        </p>
+      ) : null}
     </ToolCard>
   );
 }
@@ -1142,6 +1296,10 @@ export function ChatToolResult({
       return <ImpactCard output={output as ImpactOutput} />;
     case 'tool-getPublicProfile':
       return <PublicProfileCard output={output as PublicProfileOutput} />;
+    case 'tool-listMyNotifications':
+      return <NotificationsCard output={output as NotificationsOutput} />;
+    case 'tool-getInnspillStatus':
+      return <InnspillStatusCard output={output as InnspillStatusOutput} />;
     case 'tool-searchUpdatedSources':
       return <SourceSearchCard output={output as SourceSearchOutput} />;
     case 'tool-listMatchingSaker':
