@@ -57,9 +57,7 @@ export const isKalenderActive: NavIsActive = (pathname) =>
   pathname === routes.kalender || pathname.startsWith(`${routes.kalender}/`);
 
 export const isMinSideActive: NavIsActive = (pathname) =>
-  pathname.startsWith(routes.minSide) ||
-  pathname.startsWith(routes.varsler) ||
-  pathname.startsWith('/auth');
+  pathname.startsWith(routes.minSide) || pathname.startsWith('/auth');
 
 export const isOmOssActive: NavIsActive = (pathname) =>
   pathname === '/' || pathname === routes.home;
