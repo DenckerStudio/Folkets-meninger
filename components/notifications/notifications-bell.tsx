@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Bell } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
@@ -52,6 +52,7 @@ export function NotificationsBell({
 }: NotificationsBellProps) {
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const reduced = useReducedMotion();
   const [open, setOpen] = React.useState(false);
   const [unread, setUnread] = React.useState(0);
@@ -210,7 +211,7 @@ export function NotificationsBell({
   if (!isLoggedIn) {
     return (
       <Link
-        href={loginHref || loginWithNext(routes.varsler)}
+        href={loginHref || loginWithNext(pathname)}
         className={cn(
           'relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background transition-colors hover:bg-accent hover:text-accent-foreground',
           className,
