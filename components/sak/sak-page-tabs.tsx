@@ -9,8 +9,6 @@ export const SAK_PAGE_TAB_IDS = [
   'oversikt',
   'dokumenter',
   'for-deg',
-  'motforslag',
-  'diskusjon',
 ] as const;
 
 export type SakPageTabId = (typeof SAK_PAGE_TAB_IDS)[number];
@@ -19,8 +17,6 @@ const TAB_LABELS: Record<SakPageTabId, string> = {
   oversikt: 'Oversikt',
   dokumenter: 'Dokumenter',
   'for-deg': 'For deg',
-  motforslag: 'Innspill',
-  diskusjon: 'Diskusjon',
 };
 
 const TAB_CHANGE_EVENT = 'sak-tab-change';
@@ -60,14 +56,10 @@ export function SakPageTabs({
   oversikt,
   dokumenter,
   forDeg,
-  motforslag,
-  diskusjon,
 }: {
   oversikt: ReactNode;
   dokumenter: ReactNode;
   forDeg: ReactNode;
-  motforslag: ReactNode;
-  diskusjon: ReactNode;
 }) {
   const active = useSyncExternalStore(subscribeToTab, tabFromHash, () => 'oversikt');
 
@@ -79,8 +71,6 @@ export function SakPageTabs({
     oversikt,
     dokumenter,
     'for-deg': forDeg,
-    motforslag,
-    diskusjon,
   };
 
   return (
