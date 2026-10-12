@@ -15,6 +15,11 @@ import {
 } from '@/lib/stortinget-horinger';
 import { triggerHearingInnspillWebhook } from '@/lib/trigger-hearing-innspill-webhook';
 import {
+  notifyOpinionInnspillEndorsed,
+  notifyOpinionInnspillPackaged,
+  notifyOpinionInnspillThresholdMet,
+} from './notify';
+import {
   buildOpinionInnspillPackage,
   canPackageOpinionInnspill,
   opinionInnspillPackageToMarkdown,
@@ -185,6 +190,34 @@ export async function endorseOpinionInnspill(
     await opinionInnspillEndorsedAward(userId, opinionId).catch((err) =>
       console.warn('opinionInnspillEndorsedAward', err),
     );
+
+    const supportCount = result.support_count ?? 0;
+    const supportThreshold =
+      result.support_threshold ?? OPINION_INNSPILL_DEFAULT_THRESHOLD;
+    const opinion = await getCitizenOpinion(opinionId);
+    const authorUserId = opinion?.authorUserId ?? null;
+
+    if (authorUserId) {
+      await notifyOpinionInnspillEndorsed({
+        authorUserId,
+        endorserUserId: userId,
+        opinionId,
+        sakId: opinion?.stortingetIssueId ?? null,
+        opinionTitle: opinion?.title ?? 'Meningen din',
+        supportCount,
+      }).catch((err) => console.warn('notifyOpinionInnspillEndorsed', err));
+
+      if (result.status === 'threshold_met' && supportCount >= supportThreshold) {
+        await notifyOpinionInnspillThresholdMet({
+          authorUserId,
+          opinionId,
+          sakId: opinion?.stortingetIssueId ?? null,
+          opinionTitle: opinion?.title ?? 'Meningen din',
+          supportCount,
+          supportThreshold,
+        }).catch((err) => console.warn('notifyOpinionInnspillThresholdMet', err));
+      }
+    }
   }
   return {
     opinionId,
@@ -235,6 +268,15 @@ export async function packageOpinionInnspill(options: {
   if (error) {
     console.error('mark_opinion_innspill_packaged', error);
     throw new Error('Kunne ikke pakke innspillet');
+  }
+
+  if (data === true) {
+    await notifyOpinionInnspillPackaged({
+      authorUserId: innspill.authorUserId,
+      opinionId: options.opinionId,
+      sakId: opinion.stortingetIssueId,
+      opinionTitle: opinion.title,
+    }).catch((err) => console.warn('notifyOpinionInnspillPackaged', err));
   }
 
   return {

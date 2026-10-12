@@ -273,8 +273,11 @@ The canonical template is `.env.example`.
   Markdown/JSON report and fires `N8N_HEARING_INNSPILL_WEBHOOK_URL`. The payload
   keeps the retired `motforslag_horingsinnspill` shape so existing n8n workflows
   keep working. This is **not** a Stortinget submit API — official innspill still
-  goes via stortinget.no. Service layer: `lib/innspill/`. Schema:
+  goes via stortinget.no.   Service layer: `lib/innspill/`. Schema:
   `supabase/migrations/20261012140000_opinion_innspill.sql`.
+- **Innspill notifications** (`lib/innspill/notify.ts`) reuse the `labels` channel
+  and link to the opinion detail (not the sak page): endorsed,
+  threshold_met, and packaged.
 - **Reporting**: opinions and replies report through
   `POST /api/opinions/report` into `content_reports` via the `report_content`
   RPC (targets `citizen_opinion`, `citizen_opinion_reply`). Categories live in
