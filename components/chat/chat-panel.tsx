@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { usePathname } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { ModelPicker } from '@/components/byok/model-picker';
 import { StemmeChat } from '@/components/chat/stemme-chat';
@@ -9,6 +10,7 @@ import { useChatOverlay } from '@/components/chat/chat-overlay-context';
 import { AiAssistantCard } from '@/components/ui/ai-assistant-card';
 import { STEMME_PLUS_MONTHLY_PRICE_NOK } from '@/lib/stemme-plus/constants';
 import { resolveChatGate, type ChatGateReason } from '@/lib/chat/overlay';
+import type { ChatSuggestion } from '@/lib/chat/suggestions';
 import type { LlmProvider } from '@/lib/byok/providers';
 
 const STATUS_LOAD_TIMEOUT_MS = 8000;
@@ -30,6 +32,7 @@ type PanelMeta = {
 
 export function ChatPanel() {
   const { open, closeChat, issue } = useChatOverlay();
+  const pathname = usePathname();
   const titleId = useId();
   const descriptionId = useId();
   const [mounted, setMounted] = useState(false);
@@ -41,6 +44,12 @@ export function ChatPanel() {
     model: null,
   });
   const [error, setError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<ChatSuggestion[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [viewContext, setViewContext] = useState<{ issueId: string | null; title: string | null }>({
+    issueId: null,
+    title: null,
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -138,15 +147,70 @@ export function ChatPanel() {
     };
   }, [open]);
 
+  // Context-aware prompts for the empty state. Auth/entitlement failures just
+  // fall back to the view-based prompts StemmeChat derives from the pathname.
+  useEffect(() => {
+    if (!open || gate !== 'ready') return;
+
+    let cancelled = false;
+    const controller = new AbortController();
+    setSuggestionsLoading(true);
+    setViewContext({ issueId: null, title: null });
+
+    const params = new URLSearchParams();
+    if (pathname) params.set('pathname', pathname);
+    const issueId = issue?.issueId?.trim();
+    if (issueId) params.set('issueId', issueId);
+
+    fetch(`/api/chat/suggestions?${params.toString()}`, {
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) return { suggestions: [], context: null };
+        const json = (await res.json()) as {
+          suggestions?: ChatSuggestion[];
+          context?: { issueId?: string | null; title?: string | null };
+        };
+        return {
+          suggestions: Array.isArray(json.suggestions) ? json.suggestions : [],
+          context: json.context ?? null,
+        };
+      })
+      .then(({ suggestions: list, context }) => {
+        if (cancelled) return;
+        setSuggestions(list);
+        if (context) {
+          setViewContext({
+            issueId: context.issueId ?? null,
+            title: context.title ?? null,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSuggestions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSuggestionsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [open, gate, pathname, issue?.issueId]);
+
   if (!open || !mounted) return null;
 
   const readyGate = gate !== 'loading' ? gate : null;
+  const contextIssueId = issue?.issueId ?? viewContext.issueId;
+  const contextIssueTitle = issue?.issueTitle ?? viewContext.title;
 
   return createPortal(
     <div className="fixed inset-0 z-[90] flex items-end justify-center sm:justify-end sm:p-4 xl:p-6">
       <button
         type="button"
-        className="absolute inset-0 bg-foreground/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-foreground/20 backdrop-blur-[1px]"
         aria-label="Lukk chat"
         onClick={closeChat}
       />
@@ -157,7 +221,7 @@ export function ChatPanel() {
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="relative z-10 flex h-[100dvh] w-full max-w-full flex-col pb-[env(safe-area-inset-bottom,0px)] sm:h-[min(88vh,42rem)] sm:max-w-md sm:pb-0 xl:my-2 xl:h-auto xl:max-h-[calc(100dvh-4rem)]"
+        className="relative z-10 flex h-[100dvh] w-full max-w-full flex-col pb-[env(safe-area-inset-bottom,0px)] animate-in fade-in slide-in-from-bottom-4 duration-200 sm:h-[min(88vh,42rem)] sm:max-w-md sm:pb-0 xl:my-2 xl:h-auto xl:max-h-[calc(100dvh-4rem)]"
       >
         <AiAssistantCard
           titleId={titleId}
@@ -189,10 +253,10 @@ export function ChatPanel() {
           ) : null}
           {readyGate ? (
             <StemmeChat
-              key={issue?.issueId ?? 'general'}
+              key={`${issue?.issueId ?? 'general'}:${pathname ?? ''}`}
               gate={readyGate}
-              issueId={issue?.issueId ?? null}
-              issueTitle={issue?.issueTitle ?? null}
+              issueId={contextIssueId}
+              issueTitle={contextIssueTitle}
               priceNok={meta.priceNok}
               checkoutConfigured={meta.checkoutConfigured}
               variant="panel"
@@ -200,6 +264,8 @@ export function ChatPanel() {
               provider={meta.provider}
               model={meta.model}
               onModelSwitched={(next) => setMeta((current) => ({ ...current, model: next }))}
+              suggestions={suggestions}
+              suggestionsLoading={suggestionsLoading}
             />
           ) : null}
         </AiAssistantCard>
