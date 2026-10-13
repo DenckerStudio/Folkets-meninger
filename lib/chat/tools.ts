@@ -11,14 +11,34 @@ import {
   searchIssuesForChat,
   type ChatRagClient,
 } from '@/lib/chat/rag';
+import {
+  collectHearingsForSak,
+  collectOpenHearings,
+  collectPoliticianMatches,
+  collectSakDocumentGroups,
+  collectSakTimeline,
+} from '@/lib/chat/stortinget-tools';
 import { fetchVoteAlignment } from '@/lib/chat/vote-alignment';
 import type { QueryVectorizer } from '@/lib/chat/vector-search';
+import { getIssueOpinionSummary } from '@/lib/opinions/service';
 
 export function createChatTools(
   preferredIssueId?: string | null,
   ragClient?: ChatRagClient | null,
   vectorize?: QueryVectorizer | null,
 ) {
+  const resolveIssueId = async (args: {
+    issueId?: string;
+    query?: string;
+  }): Promise<string | null> => {
+    const direct = args.issueId?.trim() || preferredIssueId?.trim();
+    if (direct) return direct;
+    const needle = args.query?.trim();
+    if (!needle) return null;
+    const hits = await searchIssuesForChat(needle, 1, ragClient);
+    return hits[0]?.id ?? null;
+  };
+
   return {
     retrieveSakContext: tool({
       description:
@@ -153,6 +173,212 @@ export function createChatTools(
           return { found: false as const, note: 'Kunne ikke hente stemmeresultat for saken.' };
         }
         return { found: true as const, issueId: id, ...result };
+      },
+    }),
+    findHearingsForSak: tool({
+      description:
+        'Hent høringer på Stortinget som hører til en sak, med status (åpen/planlagt/avholdt/avlyst), innspillsfrist og lenke til skriftlig innspill. Bruk når brukeren spør om høring, frist eller hvordan de kan gi innspill til en sak.',
+      inputSchema: z.object({
+        issueId: z
+          .string()
+          .optional()
+          .describe('Stortinget sak-id hvis kjent. La stå tom for å søke på tittel.'),
+        query: z
+          .string()
+          .min(2)
+          .optional()
+          .describe('Sak-tittel, henvisning eller spørsmål hvis sak-id ikke er kjent.'),
+      }),
+      execute: async ({ issueId, query }) => {
+        const id = await resolveIssueId({ issueId, query });
+        if (!id) {
+          return {
+            found: false as const,
+            issueId: null,
+            hearings: [],
+            note: 'Fant ingen sak å hente høringer for. Oppgi sak-id eller en tydeligere tittel.',
+          };
+        }
+        const hearings = await collectHearingsForSak(id);
+        return {
+          found: true as const,
+          issueId: id,
+          hearings,
+          note: hearings.length === 0 ? 'Ingen høring er registrert for denne saken.' : null,
+        };
+      },
+    }),
+    listOpenHearings: tool({
+      description:
+        'List åpne og planlagte høringer på Stortinget med neste innspillsfrist. Bruk når brukeren spør hvilke høringer som er åpne nå eller vil gi innspill.',
+      inputSchema: z.object({
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(20)
+          .optional()
+          .describe('Hvor mange høringer å vise (1–20, standard 8).'),
+      }),
+      execute: async ({ limit }) => {
+        const result = await collectOpenHearings(limit ?? 8);
+        return {
+          hearings: result.hearings,
+          summary: result.summary,
+          note:
+            result.hearings.length === 0
+              ? 'Ingen åpne eller planlagte høringer akkurat nå.'
+              : null,
+        };
+      },
+    }),
+    getSakTimeline: tool({
+      description:
+        'Hent saksgangen til en sak (hendelser steg for steg), behandlingsstatus og neste voteringsfrist. Bruk når brukeren spør hva som har skjedd i saken eller hva som skjer videre.',
+      inputSchema: z.object({
+        issueId: z
+          .string()
+          .optional()
+          .describe('Stortinget sak-id hvis kjent. La stå tom for å søke på tittel.'),
+        query: z
+          .string()
+          .min(2)
+          .optional()
+          .describe('Sak-tittel, henvisning eller spørsmål hvis sak-id ikke er kjent.'),
+      }),
+      execute: async ({ issueId, query }) => {
+        const id = await resolveIssueId({ issueId, query });
+        if (!id) {
+          return {
+            found: false as const,
+            issueId: null,
+            note: 'Fant ingen sak å hente saksgang for. Oppgi sak-id eller en tydeligere tittel.',
+          };
+        }
+        const timeline = await collectSakTimeline(id);
+        if (!timeline) {
+          return {
+            found: false as const,
+            issueId: id,
+            note: 'Kunne ikke hente saksdetaljer fra Stortinget for denne saken.',
+          };
+        }
+        return { found: true as const, issueId: id, ...timeline };
+      },
+    }),
+    listSakDocuments: tool({
+      description:
+        'List dokumentene i en sak gruppert etter type (lovforslag, representantforslag, innstilling, referat). Bruk når brukeren spør hvilke dokumenter saken består av eller vil åpne dem.',
+      inputSchema: z.object({
+        issueId: z
+          .string()
+          .optional()
+          .describe('Stortinget sak-id hvis kjent. La stå tom for å søke på tittel.'),
+        query: z
+          .string()
+          .min(2)
+          .optional()
+          .describe('Sak-tittel, henvisning eller spørsmål hvis sak-id ikke er kjent.'),
+      }),
+      execute: async ({ issueId, query }) => {
+        const id = await resolveIssueId({ issueId, query });
+        if (!id) {
+          return {
+            found: false as const,
+            issueId: null,
+            total: 0,
+            groups: [] as const,
+            note: 'Fant ingen sak å hente dokumenter for. Oppgi sak-id eller en tydeligere tittel.',
+          };
+        }
+        const listing = await collectSakDocumentGroups(id);
+        if (!listing) {
+          return {
+            found: false as const,
+            issueId: id,
+            total: 0,
+            groups: [] as const,
+            note: 'Kunne ikke hente saksdetaljer fra Stortinget for denne saken.',
+          };
+        }
+        return {
+          found: true as const,
+          issueId: id,
+          total: listing.total,
+          groups: listing.groups,
+          note: listing.total === 0 ? 'Ingen dokumenter er registrert på saken ennå.' : null,
+        };
+      },
+    }),
+    getFolketsMeninger: tool({
+      description:
+        'Hent folkets meninger (innsendte for/imot/blank-meninger) for en sak, med antall per standpunkt og de nyeste innleggene. Bruk når brukeren spør hva folk mener om en sak i appen.',
+      inputSchema: z.object({
+        issueId: z
+          .string()
+          .optional()
+          .describe('Stortinget sak-id hvis kjent. La stå tom for å søke på tittel.'),
+        query: z
+          .string()
+          .min(2)
+          .optional()
+          .describe('Sak-tittel, henvisning eller spørsmål hvis sak-id ikke er kjent.'),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(8)
+          .optional()
+          .describe('Hvor mange nyeste meninger å vise (1–8, standard 3).'),
+      }),
+      execute: async ({ issueId, query, limit }) => {
+        const id = await resolveIssueId({ issueId, query });
+        if (!id) {
+          return {
+            found: false as const,
+            issueId: null,
+            total: 0,
+            counts: null,
+            latest: [],
+            note: 'Fant ingen sak å hente meninger for. Oppgi sak-id eller en tydeligere tittel.',
+          };
+        }
+        const summary = await getIssueOpinionSummary(id, limit ?? 3);
+        return {
+          found: true as const,
+          issueId: id,
+          total: summary.total,
+          counts: summary.counts,
+          latest: summary.latest.map((opinion) => ({
+            id: opinion.id,
+            title: opinion.title,
+            stance: opinion.stance,
+            authorName: opinion.authorName,
+            createdAt: opinion.createdAt,
+          })),
+          note: summary.total === 0 ? 'Ingen meninger er sendt inn om denne saken ennå.' : null,
+        };
+      },
+    }),
+    getPolitician: tool({
+      description:
+        'Slå opp stortingspolitikere og regjeringsmedlemmer i inneværende periode etter navn eller person-id. Returnerer parti, fylke, verv og eventuell regjeringsrolle. Bruk når brukeren spør hvem en politiker er eller hvilket parti/fylke de tilhører.',
+      inputSchema: z.object({
+        personId: z
+          .string()
+          .optional()
+          .describe('Stortinget person-id hvis kjent.'),
+        query: z
+          .string()
+          .min(2)
+          .optional()
+          .describe('Navn (fornavn og/eller etternavn) å søke etter.'),
+      }),
+      execute: async ({ personId, query }) => {
+        if (!personId?.trim() && !query?.trim()) {
+          return { matches: [], note: 'Oppgi et navn eller en person-id å slå opp.' };
+        }
+        return collectPoliticianMatches({ personId, query });
       },
     }),
   };
