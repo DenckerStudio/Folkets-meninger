@@ -31,12 +31,13 @@ type PollRow = {
   opens_at: string | null;
   closes_at: string | null;
   created_at: string;
+  updated_at: string | null;
   generation_metadata?: unknown;
 };
 
 /** Public lists stay lean. Admin draft list includes generation_metadata for stored ratings. */
 const POLL_LIST_SELECT =
-  'id, track, status, title, neutral_summary, source_urls, stortinget_issue_id, opens_at, closes_at, created_at';
+  'id, track, status, title, neutral_summary, source_urls, stortinget_issue_id, opens_at, closes_at, created_at, updated_at';
 
 const POLL_ADMIN_DRAFT_SELECT = `${POLL_LIST_SELECT}, generation_metadata`;
 
@@ -98,6 +99,7 @@ export function mapPollRow(row: PollRow): PollRecord {
     opensAt: row.opens_at,
     closesAt: row.closes_at,
     createdAt: row.created_at,
+    updatedAt: row.updated_at ?? row.created_at,
     generationMetadata: parseGenerationMetadata(row.generation_metadata),
   };
 }

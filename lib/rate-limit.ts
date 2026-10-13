@@ -31,9 +31,15 @@ export function checkRateLimit(
 }
 
 /** Paths that get write/expensive rate limits (per IP). */
-export function getRateLimitPolicy(pathname: string): { limit: number; windowMs: number } | null {
+export function getRateLimitPolicy(
+  pathname: string,
+  method = 'GET',
+): { limit: number; windowMs: number } | null {
   if (pathname.startsWith('/api/vote') || pathname.startsWith('/api/stance')) {
     return { limit: 30, windowMs: 60_000 };
+  }
+  if (pathname.startsWith('/api/polls') && method.toUpperCase() === 'POST') {
+    return { limit: 10, windowMs: 60_000 };
   }
   if (/^\/api\/sak\/[^/]+\/ai-summary/.test(pathname)) {
     return { limit: 20, windowMs: 60_000 };

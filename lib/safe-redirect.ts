@@ -5,6 +5,7 @@ const ALLOWED_PREFIXES = [
   '/auth/login',
   '/auth/onboarding',
   '/innspill',
+  '/del',
   '/',
 ] as const;
 

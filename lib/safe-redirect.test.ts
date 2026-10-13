@@ -15,10 +15,22 @@ assert.equal(
   sanitizePostLoginPath('/dashboard/sak/123#diskusjon'),
   '/dashboard/sak/123#diskusjon',
 );
+assert.equal(
+  sanitizePostLoginPath('/del/abc-123?valg=ja&ref=fb'),
+  '/del/abc-123?valg=ja&ref=fb',
+);
+assert.equal(sanitizePostLoginPath('/del/abc-123'), '/del/abc-123');
+assert.equal(sanitizePostLoginPath('/del'), '/del');
+assert.equal(sanitizePostLoginPath('/delivery'), routes.utforsk);
+assert.equal(sanitizePostLoginPath('/embed/abc-123'), routes.utforsk);
 
 assert.equal(
   loginWithNext('/dashboard/sak/200417'),
   `${routes.login}?next=${encodeURIComponent('/dashboard/sak/200417')}`,
+);
+assert.equal(
+  loginWithNext('/del/abc-123?valg=ja&ref=fb'),
+  `${routes.login}?next=${encodeURIComponent('/del/abc-123?valg=ja&ref=fb')}`,
 );
 assert.equal(
   loginWithNext('/dashboard/utforsk?chat=1&sak=200417'),
