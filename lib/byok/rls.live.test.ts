@@ -20,7 +20,7 @@ loadFolketsPublicEnv();
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-assert.ok(url && url.includes('qetckokgtzbpunbzslfp'), 'Folkets-Stemme URL missing');
+assert.ok(url && url.includes('qetckokgtzbpunbzslfp'), 'Folkets Meninger URL missing');
 assert.ok(anon, 'Folkets anon key missing');
 assert.equal(process.env.SUPABASE_SERVICE_ROLE_KEY, undefined);
 
@@ -44,7 +44,7 @@ async function main() {
     stripeCustomerReadable: !customer.error,
     credentialRows: Array.isArray(creds.data) ? creds.data.length : 0,
     note:
-      'Anon/session can already read subscription_tier and stripe_customer_id on Folkets-Stemme. ' +
+      'Anon/session can already read subscription_tier and stripe_customer_id on Folkets Meninger. ' +
       'Status returns the real has_stripe_customer boolean from that session SELECT. ' +
       'BYOK ciphertext stays table-denied for anon until ops apply 20261003210000 (owner RLS).',
   };

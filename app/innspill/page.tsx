@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { InnspillForm } from '@/components/innspill-form';
 
 export const metadata: Metadata = {
-  title: 'Gi innspill | Folkets Stemme',
-  description: 'Send idéer, feilmeldinger og tilbakemeldinger til Folkets Stemme.',
+  title: 'Gi innspill | Folkets Meninger',
+  description: 'Send idéer, feilmeldinger og tilbakemeldinger til Folkets Meninger.',
 };
 
 export default function InnspillPage() {
@@ -24,10 +24,10 @@ export default function InnspillPage() {
       <p className="text-center text-sm text-[#001433]/50">
         Du kan også nå oss på{' '}
         <a
-          href="mailto:kontakt@folketsstemme.no"
+          href="mailto:kontakt@folkets-meninger.no"
           className="font-medium text-[#00205b] underline-offset-2 hover:text-[#ba0c2f] hover:underline"
         >
-          kontakt@folketsstemme.no
+          kontakt@folkets-meninger.no
         </a>
         .
       </p>

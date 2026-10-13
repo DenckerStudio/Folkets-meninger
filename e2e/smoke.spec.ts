@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Folkets Stemme smoke', () => {
+test.describe('Folkets Meninger smoke', () => {
   test('landing page loads', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /Folkets Stemme|Slik fungerer det/i }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Folkets Meninger|Slik fungerer det/i }).first()).toBeVisible();
   });
 
   test('landing about section does not mention BankID or MinID', async ({ page }) => {
     await page.goto('/#om-oss');
-    await expect(page.getByText(/Om Folkets Stemme/i)).toBeVisible();
+    await expect(page.getByText(/Om Folkets Meninger/i)).toBeVisible();
     await expect(page.getByText(/BankID|MinID/i)).toHaveCount(0);
   });
 

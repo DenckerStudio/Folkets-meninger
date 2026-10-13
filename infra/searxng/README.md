@@ -18,7 +18,7 @@ Production example used by the n8n workflow source: `https://searxng.heyklever.a
 
 ## n8n configuration
 
-In workflow **Folkets Stemme – Forum trending prompts**, set the **Backfill settings** Set node:
+In workflow **Folkets Meninger – Forum trending prompts**, set the **Backfill settings** Set node:
 
 | Key | Example |
 |-----|---------|

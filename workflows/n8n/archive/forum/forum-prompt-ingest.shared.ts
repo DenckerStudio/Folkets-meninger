@@ -204,7 +204,7 @@ const items = [...rssHeadlines];
 for (const issue of longRunningIssues.slice(0, 8)) {
   items.push({
     title: issue.title,
-    url: 'https://folketsstemme.no/dashboard/sak/' + issue.id,
+    url: 'https://www.folkets-meninger.no/dashboard/sak/' + issue.id,
     outlet: 'Stortinget',
     publishedAt: issue.first_seen_at || null,
     imageUrl: null,

@@ -161,7 +161,7 @@ export function LandingLogo({ className, clipId = 'fs-landing-bubble', animate =
           className="logo-word-stemme text-[0.65rem] leading-none text-[#ba0c2f] sm:text-sm"
           style={animate ? { opacity: 0 } : undefined}
         >
-          STEMME
+          MENINGER
         </span>
       </div>
     </div>

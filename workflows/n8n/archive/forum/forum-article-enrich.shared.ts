@@ -47,7 +47,7 @@ function extractArticleText(html) {
 function isFetchableArticleUrl(url) {
   const u = String(url).toLowerCase();
   if (!/^https?:\\/\\//.test(u)) return false;
-  if (/folketsstemme\\.no|folkets-stemme\\.no/.test(u)) return false;
+  if (/folketsmeninger\\.no|folkets-meninger\\.no/.test(u)) return false;
   if (/tv\\.nrk\\.no|radio\\.nrk\\.no/.test(u)) return false;
   return /(vg\\.no|nrk\\.no|aftenposten\\.no|dagbladet\\.no|e24\\.no|dn\\.no|nettavisen\\.no)/.test(u);
 }
@@ -69,7 +69,7 @@ for (const h of headlines) {
       url: h.url,
       timeout,
       headers: {
-        'User-Agent': 'FolketsStemmeBot/1.0 (+https://folkets-stemme.no; forum-prompts)',
+        'User-Agent': 'FolketsMeningerBot/1.0 (+https://www.folkets-meninger.no; forum-prompts)',
         Accept: 'text/html,application/xhtml+xml',
         'Accept-Language': 'nb-NO,nb;q=0.9',
       },
@@ -150,7 +150,7 @@ function extractArticleText(html) {
 function isFetchableArticleUrl(url) {
   const u = String(url).toLowerCase();
   if (!/^https?:\\/\\//.test(u)) return false;
-  if (/folketsstemme\\.no|folkets-stemme\\.no/.test(u)) return false;
+  if (/folketsmeninger\\.no|folkets-meninger\\.no/.test(u)) return false;
   if (/tv\\.nrk\\.no|radio\\.nrk\\.no/.test(u)) return false;
   return /(vg\\.no|nrk\\.no|aftenposten\\.no|dagbladet\\.no|e24\\.no|dn\\.no|nettavisen\\.no)/.test(u);
 }
@@ -172,7 +172,7 @@ for (const h of headlines) {
       url: h.url,
       timeout,
       headers: {
-        'User-Agent': 'FolketsStemmeBot/1.0 (+https://folkets-stemme.no; forum-prompts)',
+        'User-Agent': 'FolketsMeningerBot/1.0 (+https://www.folkets-meninger.no; forum-prompts)',
         Accept: 'text/html,application/xhtml+xml',
         'Accept-Language': 'nb-NO,nb;q=0.9',
       },

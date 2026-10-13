@@ -209,7 +209,7 @@ return [{
   },
 }];`;
 
-export const SAK_PROMPT_GENERATOR_SYSTEM = `Du er AI-journalist for «Folkets Stemme» (v13 – Stortinget-sak med RAG).
+export const SAK_PROMPT_GENERATOR_SYSTEM = `Du er AI-journalist for «Folkets Meninger» (v13 – Stortinget-sak med RAG).
 
 INPUT: én stortingssak med sammendrag, utdrag og nummererte RAG-chunks [0], [1], …
 Les kildene og lag nøyaktig ETT JA/NEI-spørsmål for forum-avstemning om et konkret politisk valg i saken.

@@ -37,7 +37,7 @@ export const POLITIKER_TABS: {
     id: 'svar',
     label: 'Offisielle svar',
     icon: MessageSquareQuote,
-    description: 'Svar publisert på Folkets Stemme',
+    description: 'Svar publisert på Folkets Meninger',
   },
 ];
 

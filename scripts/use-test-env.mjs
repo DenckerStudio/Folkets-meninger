@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Copy .env.test → .env.local for local/test work against Folkets-Stemme Supabase.
+ * Copy .env.test → .env.local for local/test work against Folkets Meninger Supabase.
  * Preserves any existing SUPABASE_SERVICE_ROLE_KEY / secrets already in .env.local.
  */
 import fs from 'node:fs';

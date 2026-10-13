@@ -1,6 +1,6 @@
-# n8n – Folkets Stemme
+# n8n – Folkets Meninger
 
-Credential i n8n: **Folkets Stemme Self-hosted** (`supabaseApi`). Ikke Postgres-noden / «Fokets Meninger».
+Credential i n8n: **Folkets Meninger Self-hosted** (`supabaseApi`). Ikke Postgres-noden / «Fokets Meninger».
 
 Etter `20260823200000_n8n_postgrest_rpcs.sql` (`supabase db push`) skriver n8n via SECURITY DEFINER-RPC-er. Direkte tabell-INSERT treffer RLS (42501) på self-hosted PostgREST.
 
@@ -51,7 +51,7 @@ Begge POST-er til `POST /api/ops/n8n-notify` (`x-cron-secret`); appen logger til
 
 ```bash
 curl -sS -H "x-cron-secret: $CRON_SECRET" \
-  "https://www.folkets-stemme.no/api/cron/n8n-retry"
+  "https://www.folkets-meninger.no/api/cron/n8n-retry"
 ```
 
 Appen genererer **ikke** LLM-innhold selv. Hvis n8n/Ollama er nede, beholdes pending-flagg og cron/webhook kan kjøres på nytt.
@@ -80,7 +80,7 @@ Etter `20260823210000_n8n_ai_summary_rich_context.sql` henter n8n `ai_summary_so
 | **Ollama credential** | «Ollama Heyklever» | Base URL: `https://ollama.heyklever.app` |
 | **Modell** | Under «Ollama Chat Model» | f.eks. `llama3.2:3b-text-q4_K_M` |
 | **batchLimit** | «Backfill settings (schedule)» | `1` (anbefalt) |
-| **Supabase** | «Folkets Stemme Self-hosted» (supabaseApi) | Supabase URL + service role via n8n Supabase node |
+| **Supabase** | «Folkets Meninger Self-hosted» (supabaseApi) | Supabase URL + service role via n8n Supabase node |
 
 n8n blokkerer `$env` i noder — ikke bruk `$env` for app-URL her.
 
@@ -129,7 +129,7 @@ Admin publiserer i `/dashboard/admin/reels`. Offentlig feed: `/dashboard/utforsk
 
 **Live workflow:** https://n8n.heyklever.app/workflow/TWTrqNYhvYcWz4UX
 
-Timezone: `Europe/Oslo`. Credential: **Folkets Stemme Self-hosted**. Ollama: **Ollama account** (`gemma4:e2b-it-qat`).
+Timezone: `Europe/Oslo`. Credential: **Folkets Meninger Self-hosted**. Ollama: **Ollama account** (`gemma4:e2b-it-qat`).
 
 Daglig 06:00 plukker neste pending sak uten eksisterende poll. Køen godtar RAG-chunks, AI-sammendrag eller sakssammendrag (`20261003180000_system_poll_source_packaging.sql`). Webhook kan sende `{ "stortinget_issue_id": "…" }` for én sak. Tom kø = tom kjøring, ikke feil. Krever `20260823200000_n8n_postgrest_rpcs.sql`.
 
@@ -315,7 +315,7 @@ pending saker som fikk detaljcache oppdatert i samme kjøring.
 
 | Felt | Verdi |
 |------|--------|
-| `appBaseUrl` | Prod-URL: `https://www.folkets-stemme.no` |
+| `appBaseUrl` | Prod-URL: `https://www.folkets-meninger.no` |
 | `cronSecret` | Samme som `CRON_SECRET` i Vercel env (alle fire Cron settings-noder) |
 
 **Live workflow:** https://n8n.heyklever.app/workflow/rwiy05sitrv5QDbQ
@@ -324,7 +324,7 @@ Manuell test:
 
 ```bash
 curl -sS -H "x-cron-secret: $CRON_SECRET" \
-  "https://www.folkets-stemme.no/api/cron/sync-issues"
+  "https://www.folkets-meninger.no/api/cron/sync-issues"
 ```
 
 **Feilsøking (HTTP 500/503 fra app):**
@@ -381,7 +381,7 @@ App-side backup (uavhengig av n8n Error Trigger):
 
 ```bash
 curl -sS -H "x-cron-secret: $CRON_SECRET" \
-  "https://www.folkets-stemme.no/api/cron/n8n-retry"
+  "https://www.folkets-meninger.no/api/cron/n8n-retry"
 ```
 
 `n8n-retry` køer manglende AI-sammendrag, pending embeddings og neste Reels-utkast via eksisterende webhooks (`create_system_poll_draft`, aldri `ensure_stortinget_poll`).

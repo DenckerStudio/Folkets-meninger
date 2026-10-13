@@ -1,5 +1,5 @@
 /**
- * Folkets Stemme – Forum Regjeringen RSS ingest (v12.1)
+ * Folkets Meninger – Forum Regjeringen RSS ingest (v12.1)
  * RSS Feed Trigger + RSS Read → parse/dedupe → insert clusters (status=pending).
  *
  * Webhook: POST folkets-forum-regjeringen-rss
@@ -168,7 +168,7 @@ const ingestPipeline = fetchDedupContext
 
 export default workflow(
   'folkets-forum-regjeringen-rss',
-  'Folkets Stemme – Forum Regjeringen RSS ingest (v12.1)'
+  'Folkets Meninger – Forum Regjeringen RSS ingest (v12.1)'
 )
   .add(rssFeedTrigger)
   .to(ingestPipeline)

@@ -36,6 +36,6 @@ export function opsAlertRecipient(): string {
   return (
     process.env.OPS_ALERT_EMAIL?.trim() ||
     process.env.FEEDBACK_INBOX_EMAIL?.trim() ||
-    'kontakt@folketsstemme.no'
+    'kontakt@folkets-meninger.no'
   );
 }

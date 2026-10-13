@@ -7,11 +7,11 @@ export function LandingAbout() {
   return (
     <AboutSection
       eyebrow="Om oss"
-      title="Om Folkets Stemme"
+      title="Om Folkets Meninger"
       subtitle="En direkte stemme i løpende politiske saker."
       missionTitle="Vår misjon"
       missionParagraphs={[
-        'Mellom valgene fattes tusenvis av beslutninger på Stortinget. Folkets Stemme tetter gapet mellom politikerne og folket i den perioden.',
+        'Mellom valgene fattes tusenvis av beslutninger på Stortinget. Folkets Meninger tetter gapet mellom politikerne og folket i den perioden.',
         'Vi henter saker fra Stortingets åpne API, krever innlogging for å stemme, og viser kun anonym innsikt — trender, ikke personer.',
         'Ærlig statistikk over hva velgerne mener om konkrete spørsmål gir bedre beslutninger.',
       ]}

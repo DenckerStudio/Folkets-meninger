@@ -3,7 +3,7 @@ import { APPENS_FREMTID_TITLE } from '@/lib/appens-fremtid/constants';
 
 export const metadata = {
   title: APPENS_FREMTID_TITLE,
-  description: 'Forslag, endringslogg og veikart for Folkets Stemme.',
+  description: 'Forslag, endringslogg og veikart for Folkets Meninger.',
 };
 
 export default function AppensFremtidRoutePage() {

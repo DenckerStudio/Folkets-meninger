@@ -96,7 +96,7 @@ export async function buildGovernmentStatsSnapshot(options?: {
   const totals = await fetchVoteTotals(ids);
 
   const siteBase =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? 'https://folketsstemme.no';
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? 'https://www.folkets-meninger.no';
 
   const publicRows: PublicVoteStatRow[] = rows
     .map((issue) => {
@@ -128,7 +128,7 @@ export async function buildGovernmentStatsSnapshot(options?: {
 }
 
 export const PUBLIC_STATS_DISCLAIMER =
-  'Folkets Stemme er en uavhengig plattform. Tallene er anonyme aggregater over innloggede brukeres stemmer og inkluderer ikke persondata eller foruminnlegg. Saker med færre enn 50 stemmer vises ikke av personvernhensyn.';
+  'Folkets Meninger er en uavhengig plattform. Tallene er anonyme aggregater over innloggede brukeres stemmer og inkluderer ikke persondata eller foruminnlegg. Saker med færre enn 50 stemmer vises ikke av personvernhensyn.';
 
 export function snapshotToCsv(snapshot: GovernmentStatsSnapshot): string {
   const header = [

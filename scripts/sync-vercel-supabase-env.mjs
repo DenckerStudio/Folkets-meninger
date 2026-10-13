@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Push Supabase settings from `.env.test` (Folkets-Stemme / local test) to Vercel
+ * Push Supabase settings from `.env.test` (Folkets Meninger / local test) to Vercel
  * project environment variables for folkets-inspill.
  *
  * Requires a Vercel token with project env access:
@@ -102,14 +102,14 @@ async function main() {
       value: url,
       type: 'plain',
       target: TARGETS,
-      comment: 'Folkets-Stemme Supabase — synced from .env.test',
+      comment: 'Folkets Meninger Supabase — synced from .env.test',
     },
     {
       key: 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
       value: anon,
       type: 'encrypted',
       target: TARGETS,
-      comment: 'Anon key for Folkets-Stemme Supabase',
+      comment: 'Anon key for Folkets Meninger Supabase',
     },
   ];
 
@@ -119,7 +119,7 @@ async function main() {
       value: publishable,
       type: 'encrypted',
       target: TARGETS,
-      comment: 'Publishable key for Folkets-Stemme Supabase',
+      comment: 'Publishable key for Folkets Meninger Supabase',
     });
   }
 
@@ -129,7 +129,7 @@ async function main() {
       value: serviceRole,
       type: 'sensitive',
       target: TARGETS,
-      comment: 'Service role for Folkets-Stemme Supabase (server-only)',
+      comment: 'Service role for Folkets Meninger Supabase (server-only)',
     });
   } else {
     console.warn(

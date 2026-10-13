@@ -113,7 +113,7 @@ async function main() {
     method: 'PUT',
     headers,
     body: JSON.stringify({
-      name: 'Folkets Stemme – Forum JA/NEI prompt generator (v12)',
+      name: 'Folkets Meninger – Forum JA/NEI prompt generator (v12)',
       nodes,
       connections,
       settings: { executionOrder: 'v1' },

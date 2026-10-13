@@ -1,5 +1,5 @@
 /**
- * Shared n8n error handler for Folkets Stemme production workflows.
+ * Shared n8n error handler for Folkets Meninger production workflows.
  *
  * Live: https://n8n.heyklever.app/workflow/iBNVwqPIsvf0JmTc (published)
  * Wired as settings.errorWorkflow on AI summary, embeddings, Reels draft,
@@ -90,7 +90,7 @@ const notifyAdmin = node({
     name: 'Varsle admin',
     parameters: {
       method: 'POST',
-      url: 'https://www.folkets-stemme.no/api/ops/n8n-notify',
+      url: 'https://www.folkets-meninger.no/api/ops/n8n-notify',
       sendHeaders: true,
       headerParameters: {
         parameters: [
@@ -119,7 +119,7 @@ sticky(
 
 export default workflow(
   'folkets-n8n-error-handler',
-  'Folkets Stemme – n8n feilvarsling',
+  'Folkets Meninger – n8n feilvarsling',
 )
   .add(errorTrigger)
   .to(formatError.to(notifySettings).to(notifyAdmin));

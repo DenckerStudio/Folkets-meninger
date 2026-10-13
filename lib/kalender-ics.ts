@@ -107,5 +107,5 @@ export function resolveKalenderSiteOrigin(requestUrl?: string): string {
       /* ignore */
     }
   }
-  return 'https://folketsstemme.no';
+  return 'https://www.folkets-meninger.no';
 }

@@ -1,5 +1,5 @@
 /**
- * Folkets Stemme – Forum trending prompts v5
+ * Folkets Meninger – Forum trending prompts v5
  * RSS + SearXNG + langvarige saker → Ollama agent (tools + memory) → forum_prompts (alltid draft)
  *
  * Live: https://n8n.heyklever.app/workflow/MloIdsnX7FozM4dv
@@ -19,7 +19,7 @@ import {
   expr,
 } from '@n8n/workflow-sdk';
 
-const PROMPT_SYSTEM = `Du er politisk redaktør for «Folkets Stemme» (norsk borgerdebatt).
+const PROMPT_SYSTEM = `Du er politisk redaktør for «Folkets Meninger» (norsk borgerdebatt).
 
 INPUT: Nummererte nyhetsoverskrifter [0], [1], … med tittel, valgfri kort ingress (Kort:), outlet og URL.
 Du får også EXISTING_PROMPTS – spørsmål som allerede finnes og MÅ unngås (inkl. nær-duplikater).
@@ -258,7 +258,7 @@ const items = [...rssHeadlines];
 for (const issue of longRunningIssues.slice(0, 8)) {
   items.push({
     title: issue.title,
-    url: 'https://folketsstemme.no/dashboard/sak/' + issue.id,
+    url: 'https://www.folkets-meninger.no/dashboard/sak/' + issue.id,
     outlet: 'Stortinget',
     publishedAt: issue.first_seen_at || null,
     imageUrl: null,
@@ -552,8 +552,8 @@ const FALLBACK_TRUSTED_DOMAINS = [
   { domain: 'aftenposten.no', outlet_label: 'Aftenposten' },
   { domain: 'dagbladet.no', outlet_label: 'Dagbladet' },
   { domain: 'stortinget.no', outlet_label: 'Stortinget' },
-  { domain: 'folketsstemme.no', outlet_label: 'Folkets Stemme' },
-  { domain: 'folkets-stemme.no', outlet_label: 'Folkets Stemme' },
+  { domain: 'folkets-meninger.no', outlet_label: 'Folkets Meninger' },
+  { domain: 'folkets-meninger.no', outlet_label: 'Folkets Meninger' },
 ];
 
 function effectiveTrustedList(trustedList) {
@@ -572,7 +572,7 @@ function hostFromUrl(url) {
 function isTrustedSource(url, outlet, trustedList) {
   if (outlet === 'Stortinget') return true;
   const u = String(url || '').toLowerCase();
-  if (u.includes('folketsstemme.no') || u.includes('folkets-stemme.no')) return true;
+  if (u.includes('folkets-meninger.no')) return true;
   const host = hostFromUrl(url);
   if (!host) return false;
   for (const t of trustedList) {
@@ -1310,7 +1310,7 @@ const ingestPipeline = backfillSettings
 
 export default workflow(
   'folkets-forum-trending-prompts',
-  'Folkets Stemme – Forum trending prompts'
+  'Folkets Meninger – Forum trending prompts'
 )
   .add(scheduleTrigger)
   .to(ingestPipeline)

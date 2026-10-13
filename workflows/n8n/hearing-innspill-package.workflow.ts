@@ -161,7 +161,7 @@ sticky(
 
 export default workflow(
   'folkets-hearing-innspill-package',
-  'Folkets Stemme – Motforslag horingsinnspill',
+  'Folkets Meninger – Motforslag horingsinnspill',
 )
   .add(webhook)
   .to(prepare)

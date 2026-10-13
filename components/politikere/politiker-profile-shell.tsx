@@ -252,7 +252,7 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
               {profile.isPlatformVerified ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-semibold text-foreground">
                   <ShieldCheck className="h-3.5 w-3.5" />
-                  Verifisert på Folkets Stemme
+                  Verifisert på Folkets Meninger
                 </span>
               ) : null}
             </div>
@@ -396,7 +396,7 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
               <div>
                 <h2 className="text-xl font-bold text-foreground mb-2 flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-brand" />
-                  Offisielle svar på Folkets Stemme
+                  Offisielle svar på Folkets Meninger
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   Svar publisert av verifiserte politikere direkte på saker i appen.
@@ -409,7 +409,7 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
                   title="Ingen offisielle svar ennå"
                   description={
                     profile.isPlatformVerified
-                      ? 'Politikeren har ikke publisert svar på saker i Folkets Stemme ennå.'
+                      ? 'Politikeren har ikke publisert svar på saker i Folkets Meninger ennå.'
                       : 'Politikeren har ikke verifisert seg på plattformen, eller har ikke publisert svar ennå.'
                   }
                 />

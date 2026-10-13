@@ -73,7 +73,7 @@ export async function deliverOpsNotify(payload: OpsNotifyPayload): Promise<{
     try {
       await sendOpsNotificationEmail({
         to,
-        subject: `[Folkets Stemme] ${payload.subject}`,
+        subject: `[Folkets Meninger] ${payload.subject}`,
         text: payload.text,
       });
       emailsSent += 1;

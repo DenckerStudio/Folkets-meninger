@@ -1,6 +1,6 @@
 /**
  * @deprecated v12 — use forum-regjeringen-rss-ingest.workflow.ts + forum-prompt-generator.workflow.ts
- * Folkets Stemme – Forum story scout (v11.1)
+ * Folkets Meninger – Forum story scout (v11.1)
  * Code: 4 RSS feeds → politics filter → token cluster → debatten prefetch
  * AI: én agent velger 1 sak + SearXNG (fallback)
  * Code: enrich → quality gate → dedup → transactional insert
@@ -729,7 +729,7 @@ const discoveryPipeline = fetchDiscoveryContext
 
 export default workflow(
   'folkets-forum-research-discovery',
-  'Folkets Stemme – Forum story scout (v11.1)'
+  'Folkets Meninger – Forum story scout (v11.1)'
 )
   .add(scheduleTrigger)
   .to(discoveryPipeline)

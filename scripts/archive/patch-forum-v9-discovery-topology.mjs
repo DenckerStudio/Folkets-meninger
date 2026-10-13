@@ -79,7 +79,7 @@ async function main() {
     method: 'PUT',
     headers: { 'X-N8N-API-KEY': key, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      name: 'Folkets Stemme – Forum research discovery (v9)',
+      name: 'Folkets Meninger – Forum research discovery (v9)',
       nodes: wf.nodes,
       connections: wf.connections,
       settings: { executionOrder: wf.settings?.executionOrder || 'v1' },

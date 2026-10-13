@@ -1,5 +1,5 @@
 /**
- * Folkets Stemme – Forum Stortinget-sak RAG prompt generator (v13)
+ * Folkets Meninger – Forum Stortinget-sak RAG prompt generator (v13)
  * Fetch sak + RAG chunks → Ollama JA/NEI → forum_prompts draft.
  *
  * Webhook: POST folkets-forum-sak-prompt-generator
@@ -253,7 +253,7 @@ const sakPipeline = fetchSakForPrompt
 
 export default workflow(
   'folkets-forum-sak-prompt-generator',
-  'Folkets Stemme – Forum Stortinget-sak RAG prompt generator (v13)'
+  'Folkets Meninger – Forum Stortinget-sak RAG prompt generator (v13)'
 )
   .add(scheduleTrigger)
   .to(sakPipeline)

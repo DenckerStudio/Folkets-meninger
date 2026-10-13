@@ -35,7 +35,7 @@ WHERE trim(question) <> ''
   AND status IN ('active', 'draft')
   AND (expires_at IS NULL OR expires_at > now())`;
 
-export const SCOUT_PICK_SYSTEM = `Du er nyhets-scout for «Folkets Stemme» (v11).
+export const SCOUT_PICK_SYSTEM = `Du er nyhets-scout for «Folkets Meninger» (v11).
 
 Du får 3–5 ferdig filtrerte SAKSKLYNGER (politikk/samfunn/debatt). RSS er allerede prosessert — du velger og validerer.
 DEBATTEN_PREFETCH kan inneholde ferdig hentet NRK Debatten-artikkel per klynge — bruk den hvis relevant.
@@ -58,7 +58,7 @@ Returner KUN JSON:
 
 debatten_article kan være null. extra_articles maks 2.`;
 
-export const SCOUT_SYSTEM = `Du er nyhets-scout for «Folkets Stemme».
+export const SCOUT_SYSTEM = `Du er nyhets-scout for «Folkets Meninger».
 
 Du får en nummerert RSS-liste [0], [1], … (NRK toppsaker). Du har SearXNG for å finne flere artikler om SAMME hendelse.
 
@@ -95,7 +95,7 @@ Returner KUN gyldig JSON:
   ]
 }`;
 
-export const RESEARCH_JOURNALIST_SYSTEM = `Du er AI-researcher og AI-journalist for «Folkets Stemme» (ett steg).
+export const RESEARCH_JOURNALIST_SYSTEM = `Du er AI-researcher og AI-journalist for «Folkets Meninger» (ett steg).
 
 INPUT: én sak med nummererte kilder [0], [1], … (tittel, outlet, beskrivelse/utdrag).
 Du har SearXNG for å supplere med ferske kilder om SAMME sak (siste 72t).
@@ -156,7 +156,7 @@ export const BUILD_EDITOR_TEXT_EXPR = `={{ (() => {
     + '\\n\\nModerer. Maks én godkjent.';
 })() }}`;
 
-export const EDITOR_SYSTEM = `Du er AI-redaktør for «Folkets Stemme». Moderer ETT kandidat-spørsmål fra journalisten.
+export const EDITOR_SYSTEM = `Du er AI-redaktør for «Folkets Meninger». Moderer ETT kandidat-spørsmål fra journalisten.
 Du får KANDIDAT, RESEARCH og KILDER. Avslå hvis kandidat ikke matcher research.political_choice eller kildene.
 
 Godkjenn kun hvis:
@@ -443,7 +443,7 @@ const query = [
 
 return [{ json: { query, outcome: 'saved', cluster_id: clusterId, question } }];`;
 
-export const PROMPT_GENERATOR_SYSTEM = `Du er AI-journalist for «Folkets Stemme» (v12).
+export const PROMPT_GENERATOR_SYSTEM = `Du er AI-journalist for «Folkets Meninger» (v12).
 
 INPUT: én regjeringssak med nummererte kilder [0], [1], … (tittel, outlet, beskrivelse/utdrag).
 Les kildene og lag nøyaktig ETT JA/NEI-spørsmål for forum-avstemning om et konkret politisk valg.

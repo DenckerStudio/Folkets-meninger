@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
 
 export const metadata: Metadata = {
-  title: 'Dashboard | Folkets Stemme',
+  title: 'Dashboard | Folkets Meninger',
   description: 'Folkets meninger, saker, avstemninger og høringer.',
 };
 

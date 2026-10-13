@@ -144,7 +144,7 @@ AS $$
         p_user_id::text || coalesce(
           private.get_setting('vote_encryption_secret'),
           current_setting('app.vote_encryption_secret', true),
-          'folkets-stemme-dev-pepper-change-in-production'
+          'folkets-meninger-dev-pepper-change-in-production'
         ),
         'UTF8'
       ),

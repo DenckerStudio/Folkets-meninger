@@ -1,10 +1,10 @@
 /** Shared Supabase credential and PostgREST helpers for Folkets n8n workflows. */
 
-export const FOLKETS_SUPABASE_CRED = 'Folkets Stemme Self-hosted';
+export const FOLKETS_SUPABASE_CRED = 'Folkets Meninger Self-hosted';
 
 export const FOLKETS_SUPABASE_REST = 'https://supabase.heyklever.app/rest/v1';
 
-export const FOLKETS_APP_BASE = 'https://www.folkets-stemme.no';
+export const FOLKETS_APP_BASE = 'https://www.folkets-meninger.no';
 
 export const FOLKETS_N8N_BASE = 'https://n8n.heyklever.app';
 

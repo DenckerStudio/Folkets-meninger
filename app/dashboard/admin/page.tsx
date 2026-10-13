@@ -7,7 +7,7 @@ export default function AdminHubPage() {
       <PageHeader
         as="h2"
         title="Oversikt"
-        description="Velg et verktøy for å administrere Folkets Stemme."
+        description="Velg et verktøy for å administrere Folkets Meninger."
       />
       <AdminHubGrid />
     </div>

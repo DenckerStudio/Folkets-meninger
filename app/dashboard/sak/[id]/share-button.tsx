@@ -19,8 +19,8 @@ export default function ShareButton({ id, title, className = '' }: ShareButtonPr
 
   const handleShare = async () => {
     const shareData = {
-      title: `Folkets Stemme: ${title}`,
-      text: `Se denne saken på Folkets Stemme: ${title}`,
+      title: `Folkets Meninger: ${title}`,
+      text: `Se denne saken på Folkets Meninger: ${title}`,
       url: url,
     };
 

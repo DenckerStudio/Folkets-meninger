@@ -46,7 +46,7 @@ export function Header() {
       <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2 sm:gap-3">
           <Link href={logoHref} className="rounded-md p-1 transition-opacity hover:opacity-90" aria-label="Gå til forsiden">
-            <FolketsStemmeLogo />
+            <FolketsMeningerLogo />
           </Link>
           {!inDashboard ? (
             <nav className="ml-2 hidden items-center gap-1 md:flex" aria-label="Hovedmeny">
@@ -126,7 +126,7 @@ function useScroll(threshold: number) {
   return scrolled;
 }
 
-function FolketsStemmeLogo() {
+function FolketsMeningerLogo() {
   return (
     <div className="flex items-center gap-2.5">
       <svg viewBox="0 0 200 250" className="h-10 w-8 shrink-0" xmlns="http://www.w3.org/2000/svg" aria-hidden>
@@ -153,7 +153,7 @@ function FolketsStemmeLogo() {
       </svg>
       <div className="flex flex-col justify-center font-extrabold tracking-tight">
         <span className="text-brand text-[0.65rem] leading-none sm:text-sm">FOLKETS</span>
-        <span className="text-brand-accent text-[0.65rem] leading-none sm:text-sm">STEMME</span>
+        <span className="text-brand-accent text-[0.65rem] leading-none sm:text-sm">MENINGER</span>
       </div>
     </div>
   );

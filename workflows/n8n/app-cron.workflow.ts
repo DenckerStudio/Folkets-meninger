@@ -1,5 +1,5 @@
 /**
- * Folkets Stemme – App cron (n8n schedule → HTTP)
+ * Folkets Meninger – App cron (n8n schedule → HTTP)
  *
  * Erstatter Vercel Cron (krever Pro). n8n kaller appens /api/cron/* med x-cron-secret.
  *
@@ -73,7 +73,7 @@ function cronSettingsNode(name: string) {
             {
               id: 'app-base-url',
               name: 'appBaseUrl',
-              value: 'https://www.folkets-stemme.no',
+              value: 'https://www.folkets-meninger.no',
               type: 'string',
             },
             {
@@ -86,7 +86,7 @@ function cronSettingsNode(name: string) {
         },
       },
     },
-    output: [{ appBaseUrl: 'https://www.folkets-stemme.no', cronSecret: '' }],
+    output: [{ appBaseUrl: 'https://www.folkets-meninger.no', cronSecret: '' }],
   });
 }
 
@@ -320,12 +320,12 @@ const scheduleDigestWeekly = trigger({
 const inWorkflowError = createInWorkflowErrorNotify('folkets-app-cron');
 
 sticky(
-  '## App cron (n8n → Folkets Stemme)\\n\\nErstatter Vercel Cron. Fyll inn **cronSecret** (samme som CRON_SECRET i app) og **appBaseUrl** i hver Cron settings-node. Error Trigger POSTer til /api/ops/n8n-notify. n8n-retry kjører hver 2. time.',
+  '## App cron (n8n → Folkets Meninger)\\n\\nErstatter Vercel Cron. Fyll inn **cronSecret** (samme som CRON_SECRET i app) og **appBaseUrl** i hver Cron settings-node. Error Trigger POSTer til /api/ops/n8n-notify. n8n-retry kjører hver 2. time.',
   [scheduleSyncIssues, scheduleCategories, scheduleLabels, schedulePackageInnspill, scheduleN8nRetry, scheduleDigestDaily, scheduleDigestWeekly],
   { color: 3 }
 );
 
-export default workflow('folkets-app-cron', 'Folkets Stemme – App cron (n8n)')
+export default workflow('folkets-app-cron', 'Folkets Meninger – App cron (n8n)')
   .add(scheduleSyncIssues)
   .to(cronSettingsSync.to(setSyncPath).to(callCron))
   .add(scheduleCategories)
