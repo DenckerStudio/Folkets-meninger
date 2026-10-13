@@ -126,6 +126,10 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
 ) {
   const pathname = usePathname();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Synchronous guard: `busy` comes from React state and is stale within the
+  // same tick, so two Enter/click events could fire two identical sends and
+  // duplicate the user turn. The ref blocks the second call immediately.
+  const sendLockRef = useRef(false);
   const [input, setInput] = useState('');
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
   const compact = variant === 'panel';
@@ -271,6 +275,15 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
     [conversations, conversationId],
   );
 
+  function sendText(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || busy || sendLockRef.current) return;
+    sendLockRef.current = true;
+    void sendMessage({ text: trimmed }).finally(() => {
+      sendLockRef.current = false;
+    });
+  }
+
   function applyCommand(command: ChatCommand) {
     const parsed = parseSlashCommand(input);
     const argument = parsed?.name === command.name ? parsed.argument : '';
@@ -290,9 +303,8 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
       });
       return;
     }
-    if (busy) return;
     setInput('');
-    void sendMessage({ text: prompt });
+    sendText(prompt);
   }
 
   /** Enter in the slash menu fills the input for editing instead of sending immediately. */
@@ -316,9 +328,9 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
 
   function submitInput() {
     const text = input.trim();
-    if (!text || busy) return;
-    void sendMessage({ text });
+    if (!text) return;
     setInput('');
+    sendText(text);
   }
 
   function onInputKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -486,10 +498,7 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
                       key={followUp.id}
                       type="button"
                       data-chat-follow-up={followUp.id}
-                      onClick={() => {
-                        if (busy) return;
-                        void sendMessage({ text: followUp.prompt });
-                      }}
+                      onClick={() => sendText(followUp.prompt)}
                       className="inline-flex rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
                     >
                       {followUp.label}
@@ -601,10 +610,7 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
                 key={suggestion.id}
                 type="button"
                 data-chat-suggestion={suggestion.id}
-                onClick={() => {
-                  if (busy) return;
-                  void sendMessage({ text: suggestion.prompt });
-                }}
+                onClick={() => sendText(suggestion.prompt)}
                 className="group flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card/60 px-3 py-2 text-left transition-colors hover:border-brand/40 hover:bg-card"
               >
                 <span className="min-w-0">

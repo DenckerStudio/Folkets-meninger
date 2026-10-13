@@ -17,6 +17,8 @@ export function chatErrorMessage(error: unknown): string {
 
   const message = raw.trim().toLowerCase();
 
+  // No message at all, or the AI SDK default, means the server never sent a
+  // specific reason — fall back to the generic copy.
   if (!message || message === 'an error occurred.') return CHAT_ERROR_DEFAULT;
   if (message.includes('rate limit') || message.includes('too many requests')) {
     return CHAT_ERROR_RATE_LIMIT;
@@ -33,5 +35,7 @@ export function chatErrorMessage(error: unknown): string {
     return 'Nøkkelen din ble avvist. Oppdater modellnøkkelen under Stemme+-innstillingene.';
   }
 
-  return CHAT_ERROR_DEFAULT;
+  // Anything else is the server's own user-facing Norwegian message (the chat
+  // route maps provider errors to a specific reason). Pass it through as-is.
+  return raw.trim();
 }

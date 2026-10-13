@@ -13,6 +13,11 @@ assert.equal(chatErrorMessage(new Error('Rate limit exceeded')), CHAT_ERROR_RATE
 assert.equal(chatErrorMessage('Too many requests'), CHAT_ERROR_RATE_LIMIT);
 assert.equal(chatErrorMessage(new TypeError('Failed to fetch')), CHAT_ERROR_NETWORK);
 assert.match(chatErrorMessage(new Error('Unauthorized')), /Nøkkelen/);
-assert.match(chatErrorMessage(new Error('Something odd happened')), /Noe gikk galt/);
+// Server-provided (Norwegian) messages are passed through untouched.
+assert.equal(
+  chatErrorMessage(new Error('Modellen svarte ikke. Prøv igjen, eller sjekk modell og nøkkel under Stemme+.')),
+  'Modellen svarte ikke. Prøv igjen, eller sjekk modell og nøkkel under Stemme+.',
+);
+assert.equal(chatErrorMessage(new Error('Modellen svarte ikke.')), 'Modellen svarte ikke.');
 
 console.log('chat/errors.test.ts: ok');
