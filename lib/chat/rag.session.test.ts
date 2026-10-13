@@ -9,10 +9,6 @@ const routeSrc = readFileSync(new URL('../../app/api/chat/route.ts', import.meta
 const rettSrc = readFileSync(new URL('../../app/api/chat/rettskriving/route.ts', import.meta.url), 'utf8');
 const sourcesSrc = readFileSync(new URL('../../app/api/chat/sources/route.ts', import.meta.url), 'utf8');
 const sakSrc = readFileSync(new URL('../../app/api/chat/sak-context/route.ts', import.meta.url), 'utf8');
-const panelSrc = readFileSync(
-  new URL('../../components/chat/chat-panel-actions.tsx', import.meta.url),
-  'utf8',
-);
 
 assert.doesNotMatch(ragSrc, /getServiceSupabase/);
 assert.match(ragSrc, /getServerSupabase/);
@@ -59,14 +55,6 @@ assert.doesNotMatch(sakSrc, /loadDecryptedByok/);
 assert.doesNotMatch(sakSrc, /streamText/);
 assert.doesNotMatch(sakSrc, /getServiceSupabase/);
 assert.doesNotMatch(sakSrc, /runtime\s*=\s*['"]edge['"]/);
-assert.match(panelSrc, /Hent sakskontekst/);
-assert.match(panelSrc, /\/api\/chat\/sak-context/);
-assert.doesNotMatch(panelSrc, /streamText/);
-
-assert.doesNotMatch(panelSrc, /data-chat-action=["']kilder["']/);
-assert.doesNotMatch(panelSrc, /data-chat-action=["']rettskriving["']/);
-assert.doesNotMatch(panelSrc, /\/api\/chat\/rettskriving/);
-assert.doesNotMatch(panelSrc, /\/api\/chat\/sources/);
 
 const composerAssistsSrc = readFileSync(
   new URL('../../components/opinions/composer-stemme-assists.tsx', import.meta.url),
@@ -129,8 +117,8 @@ const messageActionsSrc = readFileSync(
   new URL('../../components/chat/chat-message-actions.tsx', import.meta.url),
   'utf8',
 );
-const conversationBarSrc = readFileSync(
-  new URL('../../components/chat/chat-conversation-bar.tsx', import.meta.url),
+const conversationMenuSrc = readFileSync(
+  new URL('../../components/chat/chat-conversation-menu.tsx', import.meta.url),
   'utf8',
 );
 const conversationsSrc = readFileSync(new URL('./conversations.ts', import.meta.url), 'utf8');
@@ -157,12 +145,16 @@ assert.match(stemmeChatSrc, /data-chat-follow-ups/);
 assert.match(stemmeChatSrc, /buildFollowUps/);
 
 // C1: conversations stay in localStorage — never a server transcript.
-assert.match(conversationBarSrc, /data-chat-action="new-chat"/);
+assert.match(conversationMenuSrc, /data-chat-action="new-chat"/);
 assert.match(conversationsSrc, /folkets:chat:conversations/);
 assert.match(conversationsSrc, /localStorage/);
 assert.doesNotMatch(conversationsSrc, /fetch\(/);
 assert.doesNotMatch(conversationsSrc, /supabase/i);
-assert.match(stemmeChatSrc, /ChatConversationBar/);
+assert.match(stemmeChatSrc, /ChatConversationMenu/);
+
+// The retired "Hent sakskontekst" block is gone from the chat chrome.
+assert.doesNotMatch(stemmeChatSrc, /Hent sakskontekst/);
+assert.doesNotMatch(conversationMenuSrc, /Hent sakskontekst/);
 
 // C2: document citations deep-link into the sak viewer.
 assert.match(cardSrc, /dokument=\$\{encodeURIComponent\(chunk\.documentId\)\}/);

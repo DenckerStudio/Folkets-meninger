@@ -33,6 +33,22 @@ async function main() {
   const untitled = buildFollowUps({ hasIssue: true });
   assert.match(untitled.find((u) => u.id === 'konsekvenser')!.prompt, /saken/);
 
+  // Vote follow-up only fits sak-like pages.
+  const onPolitician = buildFollowUps({
+    hasIssue: true,
+    issueTitle: 'Strømpriser',
+    contextKind: 'politiker',
+  });
+  assert.ok(!onPolitician.some((u) => u.id === 'stemmer'));
+  assert.ok(!onPolitician.some((u) => /offentlig profil/i.test(u.label)));
+
+  const onSak = buildFollowUps({
+    hasIssue: true,
+    issueTitle: 'Strømpriser',
+    contextKind: 'sak',
+  });
+  assert.ok(onSak.some((u) => u.id === 'stemmer'));
+
   console.log('chat/follow-ups.test.ts: ok');
 }
 

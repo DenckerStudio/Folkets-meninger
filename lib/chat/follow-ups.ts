@@ -2,20 +2,32 @@
  * A tappable follow-up question shown under the latest assistant reply. These are fixed,
  * honest prompts (no invented content) — the assistant fills them via its own tools.
  */
+import type { ChatViewKind } from '@/lib/chat/view-context';
+
 export type ChatFollowUp = {
   id: string;
   label: string;
   prompt: string;
 };
 
+/** View kinds where a "how did Stortinget vote" follow-up is meaningful. */
+const VOTE_CONTEXT_KINDS: ReadonlySet<ChatViewKind> = new Set([
+  'sak',
+  'mening',
+  'reel',
+  'horing',
+]);
+
 export function buildFollowUps(args: {
   hasIssue: boolean;
   issueTitle?: string | null;
   toolsUsed?: string[];
+  contextKind?: ChatViewKind;
 }): ChatFollowUp[] {
-  const { hasIssue, issueTitle, toolsUsed = [] } = args;
+  const { hasIssue, issueTitle, toolsUsed = [], contextKind } = args;
   const title = issueTitle?.trim();
   const subject = title ? `«${title}»` : 'saken';
+  const voteContext = contextKind == null || VOTE_CONTEXT_KINDS.has(contextKind);
 
   if (!hasIssue) {
     return [
@@ -28,7 +40,7 @@ export function buildFollowUps(args: {
   const followUps: ChatFollowUp[] = [];
   const usedVote = toolsUsed.some((t) => t.includes('getVoteResults'));
 
-  if (!usedVote) {
+  if (!usedVote && voteContext) {
     followUps.push({
       id: 'stemmer',
       label: 'Hvordan stemte Stortinget?',

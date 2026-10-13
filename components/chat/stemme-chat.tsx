@@ -1,16 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, isToolUIPart } from 'ai';
 import { ArrowUp, Loader2, Sparkles } from 'lucide-react';
-import { ModelPicker } from '@/components/byok/model-picker';
 import { ChatCommandMenu } from '@/components/chat/chat-command-menu';
-import { ChatConversationBar } from '@/components/chat/chat-conversation-bar';
+import { ChatConversationMenu } from '@/components/chat/chat-conversation-menu';
+import { ChatMarkdown } from '@/components/chat/chat-markdown';
 import { ChatMessageActions, textFromMessageParts } from '@/components/chat/chat-message-actions';
-import { ChatPanelActions } from '@/components/chat/chat-panel-actions';
 import { ChatToolResult } from '@/components/chat/chat-tool-result';
 import { readImpactProfileForChat } from '@/components/chat/impact-profile-for-chat';
 import { EmptyState } from '@/components/dashboard/empty-state';
@@ -19,7 +18,8 @@ import { Button } from '@/components/ui/button';
 import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
-import { canUseOverlayActions, chatLoginHref, type ChatGateReason } from '@/lib/chat/overlay';
+import { chatLoginHref, type ChatGateReason } from '@/lib/chat/overlay';
+import { chatErrorMessage } from '@/lib/chat/errors';
 import { buildFollowUps } from '@/lib/chat/follow-ups';
 import {
   filterChatCommands,
@@ -43,7 +43,18 @@ import {
   toStoredMessages,
   type StoredConversation,
 } from '@/lib/chat/conversations';
-import type { LlmProvider } from '@/lib/byok/providers';
+
+export type StemmeChatConversationsState = {
+  conversations: StoredConversation[];
+  activeId: string | null;
+  busy: boolean;
+};
+
+export type StemmeChatHandle = {
+  startNewChat: () => void;
+  selectConversation: (id: string) => void;
+  removeConversation: (id: string) => void;
+};
 
 type StemmeChatProps = {
   gate: ChatGateReason;
@@ -57,13 +68,11 @@ type StemmeChatProps = {
   onClose?: () => void;
   titleId?: string;
   descriptionId?: string;
-  /** Active BYOK credential — renders the inline model switcher in the header. */
-  provider?: LlmProvider | null;
-  model?: string | null;
-  onModelSwitched?: (model: string) => void;
   /** Server-ranked prompts for the empty state; falls back to view-based ones. */
   suggestions?: ChatSuggestion[];
   suggestionsLoading?: boolean;
+  /** Emits saved-conversation state so the shell can render the header menu. */
+  onConversationsChange?: (state: StemmeChatConversationsState) => void;
 };
 
 const EMPTY_SIGNALS: ChatUserSignals = {
@@ -97,23 +106,24 @@ function toolLabel(type: string): string {
   }
 }
 
-export function StemmeChat({
-  gate,
-  issueId,
-  issueTitle,
-  priceNok,
-  checkoutConfigured,
-  variant = 'page',
-  embedded = false,
-  onClose,
-  titleId,
-  descriptionId,
-  provider = null,
-  model = null,
-  onModelSwitched,
-  suggestions,
-  suggestionsLoading = false,
-}: StemmeChatProps) {
+export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function StemmeChat(
+  {
+    gate,
+    issueId,
+    issueTitle,
+    priceNok,
+    checkoutConfigured,
+    variant = 'page',
+    embedded = false,
+    onClose,
+    titleId,
+    descriptionId,
+    suggestions,
+    suggestionsLoading = false,
+    onConversationsChange,
+  },
+  ref,
+) {
   const pathname = usePathname();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [input, setInput] = useState('');
@@ -204,8 +214,13 @@ export function StemmeChat({
     const toolsUsed = messages
       .flatMap((message) => message.parts)
       .map((part) => ('type' in part ? String(part.type) : ''));
-    return buildFollowUps({ hasIssue: Boolean(issueId), issueTitle, toolsUsed });
-  }, [busy, lastAssistantId, messages, issueId, issueTitle]);
+    return buildFollowUps({
+      hasIssue: Boolean(effectiveIssueId),
+      issueTitle,
+      toolsUsed,
+      contextKind: view.kind,
+    });
+  }, [busy, lastAssistantId, messages, effectiveIssueId, issueTitle, view.kind]);
 
   // Persist the active conversation to localStorage (panel only; page stays ephemeral).
   useEffect(() => {
@@ -244,6 +259,18 @@ export function StemmeChat({
     }
   }
 
+  // Keep the shell's header menu in sync with saved conversations.
+  useEffect(() => {
+    onConversationsChange?.({ conversations, activeId: conversationId, busy });
+  }, [onConversationsChange, conversations, conversationId, busy]);
+
+  useImperativeHandle(
+    ref,
+    () => ({ startNewChat, selectConversation, removeConversation }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [conversations, conversationId],
+  );
+
   function applyCommand(command: ChatCommand) {
     const parsed = parseSlashCommand(input);
     const argument = parsed?.name === command.name ? parsed.argument : '';
@@ -266,6 +293,25 @@ export function StemmeChat({
     if (busy) return;
     setInput('');
     void sendMessage({ text: prompt });
+  }
+
+  /** Enter in the slash menu fills the input for editing instead of sending immediately. */
+  function insertCommandForEdit(command: ChatCommand) {
+    if (command.behavior === 'new-chat') {
+      startNewChat();
+      return;
+    }
+    const parsed = parseSlashCommand(input);
+    const argument = parsed?.name === command.name ? parsed.argument : '';
+    const prompt = command.buildPrompt?.({ issueTitle, argument }) ?? command.label;
+    setInput(prompt);
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (el) {
+        el.focus();
+        el.setSelectionRange(prompt.length, prompt.length);
+      }
+    });
   }
 
   function submitInput() {
@@ -291,7 +337,7 @@ export function StemmeChat({
       if (event.key === 'Enter' || event.key === 'Tab') {
         event.preventDefault();
         const command = matchingCommands[activeCommandIndex];
-        if (command) applyCommand(command);
+        if (command) insertCommandForEdit(command);
         return;
       }
       if (event.key === 'Escape') {
@@ -346,7 +392,6 @@ export function StemmeChat({
     );
   }
 
-  const showActions = canUseOverlayActions(gate);
   const noKeyEmpty = (
     <EmptyState
       compact
@@ -367,9 +412,6 @@ export function StemmeChat({
   if (gate === 'no-key') {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
-        {showActions ? (
-          <ChatPanelActions issueId={issueId} issueTitle={issueTitle} compact={compact} />
-        ) : null}
         {noKeyEmpty}
       </div>
     );
@@ -404,12 +446,11 @@ export function StemmeChat({
               {message.parts.map((part, index) => {
                 if (part.type === 'text') {
                   return part.text ? (
-                    <p
+                    <ChatMarkdown
                       key={`${message.id}-${index}`}
-                      className="whitespace-pre-wrap text-sm leading-relaxed text-foreground"
-                    >
-                      {part.text}
-                    </p>
+                      text={part.text}
+                      className="text-sm leading-relaxed text-foreground"
+                    />
                   ) : null;
                 }
                 if (isToolUIPart(part)) {
@@ -472,7 +513,7 @@ export function StemmeChat({
       }}
     >
       {error ? (
-        <p className="text-sm text-destructive">{error.message || 'Noe gikk galt i samtalen.'}</p>
+        <p className="text-sm text-destructive">{chatErrorMessage(error)}</p>
       ) : null}
       <div className="relative">
         <ChatCommandMenu
@@ -567,10 +608,10 @@ export function StemmeChat({
                 className="group flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card/60 px-3 py-2 text-left transition-colors hover:border-brand/40 hover:bg-card"
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium text-foreground">
+                  <span className="block line-clamp-2 text-sm font-medium text-foreground">
                     {suggestion.label}
                   </span>
-                  <span className="block truncate text-xs text-muted-foreground">
+                  <span className="block line-clamp-2 text-xs text-muted-foreground">
                     {suggestion.prompt}
                   </span>
                 </span>
@@ -590,21 +631,8 @@ export function StemmeChat({
       </div>
     ) : null;
 
-  const conversationBar =
-    variant === 'panel' ? (
-      <ChatConversationBar
-        conversations={conversations}
-        activeId={conversationId}
-        disabled={busy}
-        onNewChat={startNewChat}
-        onSelect={selectConversation}
-        onDelete={removeConversation}
-      />
-    ) : null;
-
   const chatBody = (
     <div className="flex min-h-0 flex-1 flex-col">
-      {conversationBar}
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-1 py-2">
         {welcomeBlock}
         {messages.length > 0 ? messageList : null}
@@ -622,24 +650,21 @@ export function StemmeChat({
       titleId={titleId}
       descriptionId={descriptionId}
       title="Chat"
-      description="Sakskontekst og samtale på nøkkelen din — rettskriv og kilder ligger i meningskomponisten."
+      description="Sakskontekst og samtale på nøkkelen din."
       onClose={onClose}
-      headerExtra={
-        provider && model ? (
-          <div className="mt-2 max-w-xs">
-            <ModelPicker
-              provider={provider}
-              model={model}
-              size="sm"
-              label="Aktiv modell"
-              onSwitched={onModelSwitched}
-            />
-          </div>
-        ) : null
+      headerActions={
+        <ChatConversationMenu
+          conversations={conversations}
+          activeId={conversationId}
+          disabled={busy}
+          onNewChat={startNewChat}
+          onSelect={selectConversation}
+          onDelete={removeConversation}
+        />
       }
       className={cn('min-h-[32rem]', compact && 'h-full')}
     >
       {chatBody}
     </AiAssistantCard>
   );
-}
+});

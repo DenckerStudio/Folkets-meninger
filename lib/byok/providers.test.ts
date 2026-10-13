@@ -42,6 +42,9 @@ assert.equal(
   normalizeBaseUrl('ollama', 'https://ollama.example.com/v1'),
   'https://ollama.example.com/v1',
 );
+assert.equal(normalizeBaseUrl('ollama', 'http://localhost:11434'), 'http://localhost:11434/v1');
+assert.equal(normalizeBaseUrl('ollama', 'http://localhost:11434/'), 'http://localhost:11434/v1');
+assert.equal(normalizeBaseUrl('ollama', 'http://localhost:11434/api'), 'http://localhost:11434/v1');
 assert.equal(normalizeBaseUrl('ollama', 'ftp://localhost:11434'), null);
 assert.equal(normalizeBaseUrl('ollama', ''), null);
 assert.equal(providerNeedsBaseUrl('ollama'), true);
