@@ -289,9 +289,7 @@ export function NotificationsBell({
                       </button>
                       {loading ? (
                         <span className="text-xs text-muted-foreground">Laster…</span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Esc for å lukke</span>
-                      )}
+                      ) : null}
                     </div>
                     <div className="min-h-0 flex-1 overflow-hidden">{panel}</div>
                   </motion.div>

@@ -38,7 +38,7 @@ test('sak without a title falls back to the issue id, never crashes', () => {
   assert.ok(suggestions.some((s) => s.prompt.includes('sak 200365')));
 });
 
-test('signals and stances are added once and never duplicated', () => {
+test('signals and interests are added once and never duplicated', () => {
   const signals: ChatUserSignals = {
     categories: [{ value: 'Energi og miljø', count: 4 }],
     labels: [{ value: 'strømpriser', count: 3 }],
@@ -58,10 +58,36 @@ test('signals and stances are added once and never duplicated', () => {
   const prompts = suggestions.map((s) => s.prompt.toLowerCase());
   assert.equal(new Set(prompts).size, prompts.length, 'prompts must be unique');
   assert.ok(suggestions.some((s) => s.source === 'signal' && s.prompt.includes('Energi og miljø')));
-  assert.ok(suggestions.some((s) => s.source === 'stance' && s.prompt.includes('Forsvaret')));
   assert.ok(suggestions.some((s) => s.source === 'interest' && s.prompt.includes('Helse og omsorg')));
+  // Category labels read naturally.
+  assert.ok(suggestions.some((s) => s.source === 'signal' && s.label.startsWith('Siste saker innen')));
+  // A specific sak is open: never steer toward a different sak.
+  assert.ok(!suggestions.some((s) => s.source === 'stance'));
   // The current issue must not be suggested back to itself.
   assert.ok(!suggestions.some((s) => s.prompt.includes('«Strømpriser», og hva er neste steg')));
+});
+
+test('stance suggestions appear only off a specific sak, with untruncated titles', () => {
+  const longTitle = 'En veldig lang sakstittel som ikke skal klippes av i datalaget i det hele tatt';
+  const signals: ChatUserSignals = {
+    categories: [],
+    labels: [],
+    recentStances: [
+      { issueId: '222', title: 'Forsvaret', stance: 'uenig' },
+      { issueId: '333', title: longTitle, stance: 'enig' },
+    ],
+    interests: [],
+    ownOpinionTitles: [],
+  };
+  const suggestions = buildChatSuggestions({
+    context: context({ kind: 'general' }),
+    signals,
+  });
+  const stance = suggestions.find((s) => s.source === 'stance');
+  assert.ok(stance, 'stance suggestion expected off the sak pages');
+  assert.ok(suggestions.some((s) => s.source === 'stance' && s.prompt.includes('Forsvaret')));
+  assert.ok(suggestions.every((s) => !s.label.includes('…')), 'titles are clamped in the UI, not the data');
+  assert.ok(suggestions.some((s) => s.label.includes(longTitle)));
 });
 
 test('general context with no signals still returns honest fallbacks', () => {

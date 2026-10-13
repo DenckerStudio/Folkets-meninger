@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { FileText, HeartHandshake, PieChart, Settings, Shield, SlidersHorizontal } from 'lucide-react';
+import { FileText, Heart, HeartHandshake, PieChart, Shield, SlidersHorizontal } from 'lucide-react';
 
 export type ProfileTabId =
   | 'historikk'
@@ -30,7 +30,7 @@ export const PROFILE_TABS: {
   {
     id: 'innstillinger',
     label: 'Mine hjertesaker',
-    icon: Settings,
+    icon: Heart,
     description: 'Navn og interesseområder',
   },
   {

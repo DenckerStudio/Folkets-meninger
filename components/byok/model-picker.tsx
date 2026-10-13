@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import { Check, Loader2, TriangleAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { buildModelOptions } from '@/lib/byok/model-options';
+import { buildModelOptions, modelOptionLabel } from '@/lib/byok/model-options';
 import {
   providerModelsFromServer,
+  RECOMMENDED_OLLAMA_MODEL,
   SUGGESTED_MODELS,
   type LlmProvider,
 } from '@/lib/byok/providers';
@@ -126,6 +127,7 @@ export function ModelPicker({
     serverModels: provider === 'ollama' ? serverModels : null,
     presets: SUGGESTED_MODELS[provider],
     current: value,
+    recommended: provider === 'ollama' ? RECOMMENDED_OLLAMA_MODEL : null,
   });
   const freeTextOnly = provider === 'openai_compatible';
   const fieldClass = cn(controlClass, size === 'sm' && 'py-1.5 text-xs');
@@ -205,7 +207,7 @@ export function ModelPicker({
           ) : null}
           {options.map((item) => (
             <option key={item} value={item}>
-              {item}
+              {modelOptionLabel(item)}
             </option>
           ))}
           <option value={CUSTOM}>Egendefinert modell …</option>

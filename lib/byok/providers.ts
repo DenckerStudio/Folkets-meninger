@@ -1,3 +1,5 @@
+import { normalizeOllamaBaseUrl } from '@/lib/byok/ollama';
+
 export const LLM_PROVIDERS = [
   'google',
   'openai',
@@ -59,6 +61,9 @@ export function providerModelsFromServer(provider: LlmProvider): boolean {
 /** Stored when Ollama is saved without a real API key (local servers often need none). */
 export const OLLAMA_PLACEHOLDER_API_KEY = 'ollama';
 
+/** The chat-tuned Ollama model surfaced first and marked as recommended. */
+export const RECOMMENDED_OLLAMA_MODEL = 'stemme-chat:latest';
+
 const MAX_KEY_LENGTH = 512;
 const MIN_KEY_LENGTH = 20;
 const MAX_MODEL_LENGTH = 80;
@@ -89,13 +94,16 @@ export function normalizeBaseUrl(provider: LlmProvider, value: unknown): string 
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
+
+  if (provider === 'ollama') {
+    const normalized = normalizeOllamaBaseUrl(trimmed);
+    return normalized ? normalized.slice(0, MAX_BASE_URL_LENGTH) : null;
+  }
+
   try {
     const url = new URL(trimmed);
-    if (provider === 'ollama') {
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
-    } else if (url.protocol !== 'https:') {
-      return null;
-    }
+    if (url.protocol !== 'https:') return null;
+    url.pathname = url.pathname.replace(/\/+$/, '') || '/';
     return url.toString().slice(0, MAX_BASE_URL_LENGTH);
   } catch {
     return null;

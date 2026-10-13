@@ -1,17 +1,20 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { ModelPicker } from '@/components/byok/model-picker';
-import { StemmeChat } from '@/components/chat/stemme-chat';
+import {
+  StemmeChat,
+  type StemmeChatConversationsState,
+  type StemmeChatHandle,
+} from '@/components/chat/stemme-chat';
+import { ChatConversationMenu } from '@/components/chat/chat-conversation-menu';
 import { useChatOverlay } from '@/components/chat/chat-overlay-context';
 import { AiAssistantCard } from '@/components/ui/ai-assistant-card';
 import { STEMME_PLUS_MONTHLY_PRICE_NOK } from '@/lib/stemme-plus/constants';
 import { resolveChatGate, type ChatGateReason } from '@/lib/chat/overlay';
 import type { ChatSuggestion } from '@/lib/chat/suggestions';
-import type { LlmProvider } from '@/lib/byok/providers';
 
 const STATUS_LOAD_TIMEOUT_MS = 8000;
 
@@ -26,8 +29,6 @@ function guestGate(): ChatGateReason {
 type PanelMeta = {
   priceNok: number;
   checkoutConfigured: boolean;
-  provider: LlmProvider | null;
-  model: string | null;
 };
 
 export function ChatPanel() {
@@ -35,13 +36,17 @@ export function ChatPanel() {
   const pathname = usePathname();
   const titleId = useId();
   const descriptionId = useId();
+  const chatRef = useRef<StemmeChatHandle>(null);
   const [mounted, setMounted] = useState(false);
   const [gate, setGate] = useState<ChatGateReason | 'loading'>('loading');
   const [meta, setMeta] = useState<PanelMeta>({
     priceNok: STEMME_PLUS_MONTHLY_PRICE_NOK,
     checkoutConfigured: false,
-    provider: null,
-    model: null,
+  });
+  const [conversationsState, setConversationsState] = useState<StemmeChatConversationsState>({
+    conversations: [],
+    activeId: null,
+    busy: false,
   });
   const [error, setError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<ChatSuggestion[]>([]);
@@ -93,8 +98,6 @@ export function ChatPanel() {
           setMeta({
             priceNok: STEMME_PLUS_MONTHLY_PRICE_NOK,
             checkoutConfigured: false,
-            provider: null,
-            model: null,
           });
           return;
         }
@@ -105,7 +108,6 @@ export function ChatPanel() {
           has_byok?: boolean;
           monthly_price_nok?: number;
           checkout_configured?: boolean;
-          byok?: { provider?: LlmProvider; model?: string } | null;
         };
         if (!res.ok) {
           throw new Error(json.error || 'Kunne ikke hente tilgang til chat.');
@@ -121,8 +123,6 @@ export function ChatPanel() {
         setMeta({
           priceNok: json.monthly_price_nok ?? STEMME_PLUS_MONTHLY_PRICE_NOK,
           checkoutConfigured: Boolean(json.checkout_configured),
-          provider: json.byok?.provider ?? null,
-          model: json.byok?.model ?? null,
         });
       } catch (loadError) {
         if (cancelled) return;
@@ -130,8 +130,6 @@ export function ChatPanel() {
         setMeta({
           priceNok: STEMME_PLUS_MONTHLY_PRICE_NOK,
           checkoutConfigured: false,
-          provider: null,
-          model: null,
         });
         if (!(loadError instanceof DOMException && loadError.name === 'AbortError')) {
           setError(loadError instanceof Error ? loadError.message : 'Kunne ikke hente tilgang til chat.');
@@ -210,7 +208,7 @@ export function ChatPanel() {
     <div className="fixed inset-0 z-[90] flex items-end justify-center sm:justify-end sm:p-4 xl:p-6">
       <button
         type="button"
-        className="absolute inset-0 bg-foreground/20 backdrop-blur-[1px]"
+        className="absolute inset-0 bg-foreground/10 xl:bg-transparent"
         aria-label="Lukk chat"
         onClick={closeChat}
       />
@@ -227,19 +225,18 @@ export function ChatPanel() {
           titleId={titleId}
           descriptionId={descriptionId}
           title="Chat"
-          description="Sakskontekst og samtale på nøkkelen din. Rettskriv og kilder ligger i meningskomponisten."
+          description="Sakskontekst og samtale på nøkkelen din."
           onClose={closeChat}
-          headerExtra={
-            readyGate === 'ready' && meta.provider && meta.model ? (
-              <div className="mt-1.5 max-w-[16rem]">
-                <ModelPicker
-                  provider={meta.provider}
-                  model={meta.model}
-                  size="sm"
-                  label="Aktiv modell"
-                  onSwitched={(next) => setMeta((current) => ({ ...current, model: next }))}
-                />
-              </div>
+          headerActions={
+            readyGate === 'ready' ? (
+              <ChatConversationMenu
+                conversations={conversationsState.conversations}
+                activeId={conversationsState.activeId}
+                disabled={conversationsState.busy}
+                onNewChat={() => chatRef.current?.startNewChat()}
+                onSelect={(id) => chatRef.current?.selectConversation(id)}
+                onDelete={(id) => chatRef.current?.removeConversation(id)}
+              />
             ) : null
           }
           className="h-full max-h-full"
@@ -253,6 +250,7 @@ export function ChatPanel() {
           ) : null}
           {readyGate ? (
             <StemmeChat
+              ref={chatRef}
               key={`${issue?.issueId ?? 'general'}:${pathname ?? ''}`}
               gate={readyGate}
               issueId={contextIssueId}
@@ -261,11 +259,9 @@ export function ChatPanel() {
               checkoutConfigured={meta.checkoutConfigured}
               variant="panel"
               embedded
-              provider={meta.provider}
-              model={meta.model}
-              onModelSwitched={(next) => setMeta((current) => ({ ...current, model: next }))}
               suggestions={suggestions}
               suggestionsLoading={suggestionsLoading}
+              onConversationsChange={setConversationsState}
             />
           ) : null}
         </AiAssistantCard>

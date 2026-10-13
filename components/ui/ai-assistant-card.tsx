@@ -25,6 +25,7 @@ type AiAssistantCardProps = {
   description?: string;
   onClose?: () => void;
   headerExtra?: ReactNode;
+  headerActions?: ReactNode;
   welcomeTitle?: string;
   welcomeDescription?: string;
   welcomeIcon?: ReactNode;
@@ -45,6 +46,7 @@ export function AiAssistantCard({
   description,
   onClose,
   headerExtra,
+  headerActions,
   welcomeTitle,
   welcomeDescription,
   welcomeIcon,
@@ -81,18 +83,21 @@ export function AiAssistantCard({
           ) : null}
           {headerExtra}
         </div>
-        {onClose ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-9 shrink-0 sm:size-8"
-            onClick={onClose}
-            aria-label="Lukk chat"
-          >
-            <X className="size-5" />
-          </Button>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-1">
+          {headerActions}
+          {onClose ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-9 shrink-0 sm:size-8"
+              onClick={onClose}
+              aria-label="Lukk chat"
+            >
+              <X className="size-5" />
+            </Button>
+          ) : null}
+        </div>
       </header>
 
       {toolbar}

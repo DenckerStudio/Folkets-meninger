@@ -196,7 +196,7 @@ function signalSuggestions(signals: ChatUserSignals, context: ChatSuggestionCont
   if (topCategory) {
     out.push({
       id: `signal-category-${topCategory.value}`,
-      label: `Siste innen ${topCategory.value}`,
+      label: `Siste saker innen ${topCategory.value}`,
       prompt: `Hva er de viktigste sakene på Stortinget innen ${topCategory.value} akkurat nå?`,
       source: 'signal',
     });
@@ -218,13 +218,15 @@ function signalSuggestions(signals: ChatUserSignals, context: ChatSuggestionCont
 }
 
 function stanceSuggestions(signals: ChatUserSignals, context: ChatSuggestionContext): ChatSuggestion[] {
+  // When a specific sak is open, never steer the user toward a different one.
+  if (context.kind === 'sak' || context.issueId) return [];
+
   const out: ChatSuggestion[] = [];
   for (const stance of signals.recentStances) {
     if (!stance.title?.trim()) continue;
-    if (context.issueId && stance.issueId === context.issueId) continue;
     out.push({
       id: `stance-${stance.issueId}`,
-      label: `Status: ${stance.title.length > 40 ? `${stance.title.slice(0, 40)}…` : stance.title}`,
+      label: `Status: ${stance.title}`,
       prompt: `Hva er status i «${stance.title}», og hva er neste steg?`,
       source: 'stance',
     });

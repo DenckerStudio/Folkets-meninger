@@ -34,6 +34,11 @@ export function ollamaTagsUrl(baseUrl: string): string | null {
   return ollamaApiUrl(baseUrl, 'tags');
 }
 
+/**
+ * Canonicalize a user-entered Ollama base URL for the OpenAI-compatible chat
+ * client: strip a trailing slash (and native `/api`-style suffix) and append
+ * `/v1` when missing, so `createOpenAI({ baseURL })` hits `/v1/chat/completions`.
+ */
 export function normalizeOllamaBaseUrl(value: string): string | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -51,6 +56,40 @@ export function normalizeOllamaBaseUrl(value: string): string | null {
     .replace(/\/(?:v1|api\/tags|api|tags)$/i, '');
 
   return `${url.origin}${path}/v1`;
+}
+
+/**
+ * Models that run a chat completion. Ollama reports embedding, code-completion,
+ * speech and vision-only models in the same `/api/tags` list, so drop the ones
+ * that cannot answer a normal chat turn before offering them in the picker.
+ */
+const NON_CHAT_OLLAMA_PATTERNS: RegExp[] = [
+  /embed/i,
+  /(^|[^a-z])bge([^a-z]|$)/i,
+  /e5(-|_|:)/i,
+  /rerank/i,
+  /guard/i,
+  /codellama/i,
+  /codegemma/i,
+  /deepseek-coder/i,
+  /starcoder/i,
+  /\bcoder\b/i,
+  /whisper/i,
+  /\btts\b/i,
+  /speech/i,
+  /stable-diffusion/i,
+  /diffusion/i,
+  /\bflux\b/i,
+  /sdxl/i,
+  /llava/i,
+  /bakllava/i,
+  /moondream/i,
+];
+
+export function isChatCapableOllamaModel(name: string): boolean {
+  const trimmed = name.trim();
+  if (!trimmed) return false;
+  return !NON_CHAT_OLLAMA_PATTERNS.some((pattern) => pattern.test(trimmed));
 }
 
 function readModelNames(payload: unknown): string[] {
@@ -103,9 +142,9 @@ export async function listOllamaModels(
       return { ok: false, error: `Ollama svarte ${response.status} på ${tagsUrl}.` };
     }
 
-    const models = readModelNames(await response.json());
+    const models = readModelNames(await response.json()).filter(isChatCapableOllamaModel);
     if (models.length === 0) {
-      return { ok: false, error: `Fant ingen modeller på Ollama-serveren (${tagsUrl}).` };
+      return { ok: false, error: `Fant ingen chat-modeller på Ollama-serveren (${tagsUrl}).` };
     }
     return { ok: true, models };
   } catch {
