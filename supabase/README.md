@@ -310,7 +310,7 @@ Stortinget export id.
 1-10000 characters, and rejects empty hearing ids. The Next.js route creates
 mention notifications for `@name` matches after the RPC succeeds.
 
-These comments are Folkets Stemme discussion entries only. They are not
+These comments are Folkets Meninger discussion entries only. They are not
 submitted to Stortinget; the høring detail page links users to Stortinget for
 official submissions.
 

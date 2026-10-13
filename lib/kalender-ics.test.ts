@@ -17,10 +17,10 @@ const event: KalenderEvent = {
   statusKind: 'open',
 };
 
-const ics = buildHoringerIcs([event], 'https://folketsstemme.no');
+const ics = buildHoringerIcs([event], 'https://www.folkets-meninger.no');
 assert.ok(ics.startsWith('BEGIN:VCALENDAR'));
 assert.ok(ics.includes('END:VCALENDAR'));
 assert.ok(ics.includes('SUMMARY:Statsbudsjettet'));
-assert.ok(ics.includes('URL:https://folketsstemme.no/dashboard/horinger/42'));
+assert.ok(ics.includes('URL:https://www.folkets-meninger.no/dashboard/horinger/42'));
 assert.ok(ics.includes('LOCATION:Høringssal 1'));
 assert.ok(ics.includes('UID:42-session-0@folketsmeninger'));

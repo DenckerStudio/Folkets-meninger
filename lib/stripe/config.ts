@@ -32,11 +32,11 @@ export function isStripeCheckoutConfigured(): boolean {
 }
 
 /** Canonical public site for Stripe Checkout/portal return URLs. */
-export const STEMME_PLUS_DEFAULT_APP_BASE_URL = 'https://www.folkets-stemme.no';
+export const STEMME_PLUS_DEFAULT_APP_BASE_URL = 'https://www.folkets-meninger.no';
 
 /**
  * Prefer NEXT_PUBLIC_APP_URL when it is a valid http(s) URL; otherwise fall back
- * to www.folkets-stemme.no so Checkout never returns users to folkets-meninger.no.
+ * to the canonical www host so Checkout never returns users to a different origin.
  */
 export function getStemmePlusAppBaseUrl(
   envValue: string | undefined = process.env.NEXT_PUBLIC_APP_URL,

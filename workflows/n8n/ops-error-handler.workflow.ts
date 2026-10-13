@@ -1,5 +1,5 @@
 /**
- * Shared error handler for Folkets Stemme n8n workflows.
+ * Shared error handler for Folkets Meninger n8n workflows.
  * Link from other workflows via settings.errorWorkflow after this is published.
  */
 import { expr, node, sticky, trigger, workflow } from '@n8n/workflow-sdk';
@@ -14,7 +14,7 @@ const errorTrigger = trigger({
   },
   output: [
     {
-      workflow: { id: 'GP666Zq84qc19tcE', name: 'Folkets Stemme – AI-sammendrag backfill' },
+      workflow: { id: 'GP666Zq84qc19tcE', name: 'Folkets Meninger – AI-sammendrag backfill' },
       execution: { id: '100443', url: 'https://n8n.heyklever.app/execution/100443' },
     },
   ],
@@ -106,7 +106,7 @@ sticky(
 
 export default workflow(
   'folkets-ops-error-handler',
-  'Folkets Stemme – n8n feilvarsling',
+  'Folkets Meninger – n8n feilvarsling',
 )
   .add(errorTrigger)
   .to(formatError)

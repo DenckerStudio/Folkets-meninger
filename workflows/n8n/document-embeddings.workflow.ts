@@ -477,7 +477,7 @@ const embeddingPipeline = fetchPendingChunks.to(expandPendingChunks).to(
 
 export default workflow(
   'folkets-document-embeddings',
-  'Folkets Stemme – dokument embeddings (RAG)',
+  'Folkets Meninger – dokument embeddings (RAG)',
 )
   .add(scheduleTrigger)
   .to(embeddingSettings)

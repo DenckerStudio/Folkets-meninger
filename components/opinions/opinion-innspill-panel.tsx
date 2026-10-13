@@ -186,7 +186,7 @@ export function OpinionInnspillPanel({
         </p>
       ) : null}
       <p className="mt-2 text-xs text-muted-foreground">
-        Et innspill fra Folkets Stemme er ikke sendt inn via Stortingets system.
+        Et innspill fra Folkets Meninger er ikke sendt inn via Stortingets system.
       </p>
       {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
     </section>

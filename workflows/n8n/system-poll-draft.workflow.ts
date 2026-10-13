@@ -1,5 +1,5 @@
 /**
- * Folkets Stemme – system poll (Reels) draft generator from Stortinget-sak RAG.
+ * Folkets Meninger – system poll (Reels) draft generator from Stortinget-sak RAG.
  *
  * Webhook: POST folkets-system-poll-draft
  */
@@ -494,7 +494,7 @@ const sakPipeline = normalizePollInput
 
 export default workflow(
   'folkets-system-poll-draft',
-  'Folkets Stemme – system poll (Reels) draft from sak RAG',
+  'Folkets Meninger – system poll (Reels) draft from sak RAG',
 )
   .add(scheduleTrigger)
   .to(sakPipeline)

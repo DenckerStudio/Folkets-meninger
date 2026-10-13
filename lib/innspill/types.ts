@@ -62,7 +62,7 @@ export type OpinionInnspillSummary = {
 };
 
 export const OPINION_INNSPILL_PACKAGE_DISCLAIMER =
-  'Dette er et strukturert borgeraggregat fra Folkets Stemme. Det er ikke sendt inn via et Stortinget-API. Offisielt innspill må lastes opp eller sendes via stortinget.no før innspillsfristen.';
+  'Dette er et strukturert borgeraggregat fra Folkets Meninger. Det er ikke sendt inn via et Stortinget-API. Offisielt innspill må lastes opp eller sendes via stortinget.no før innspillsfristen.';
 
 export const OPINION_INNSPILL_DEFAULT_THRESHOLD = 10;
 

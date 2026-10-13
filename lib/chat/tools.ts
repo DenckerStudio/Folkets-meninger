@@ -58,7 +58,7 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
   return {
     retrieveSakContext: tool({
       description:
-        'Hent sak, AI-sammendrag og dokumentutdrag fra Folkets Stemme (uten embeddings-kolonner). Bruk når brukeren spør om en stortingssak.',
+        'Hent sak, AI-sammendrag og dokumentutdrag fra Folkets Meninger (uten embeddings-kolonner). Bruk når brukeren spør om en stortingssak.',
       inputSchema: z.object({
         issueId: z
           .string()

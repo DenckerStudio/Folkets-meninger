@@ -75,7 +75,7 @@ export function LandingFooter() {
         </div>
 
         <div className="mt-12 flex flex-col gap-3 border-t border-[#00205b]/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-[#001433]/50">© {year} Folkets Stemme. Alle rettigheter forbeholdt.</p>
+          <p className="text-xs text-[#001433]/50">© {year} Folkets Meninger. Alle rettigheter forbeholdt.</p>
           <p className="text-xs text-[#001433]/50">
             Uavhengig initiativ — vi samarbeider ikke med Regjeringen eller Stortinget.
           </p>

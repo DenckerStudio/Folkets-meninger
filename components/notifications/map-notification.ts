@@ -51,7 +51,7 @@ export function mapApiNotification(
 
   return {
     id: n.id,
-    actor: { name: n.title || 'Folkets Stemme' },
+    actor: { name: n.title || 'Folkets Meninger' },
     kind: kindFor(n.channel, n.type),
     body: bodyPieces,
     time: relativeTime(n.created_at),

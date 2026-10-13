@@ -696,7 +696,7 @@ const webhookSavedPath = saveSummaryWebhook.to(triggerPollDraftWebhook).to(respo
 
 export default workflow(
   'folkets-ai-summary-backfill',
-  'Folkets Stemme – AI-sammendrag backfill',
+  'Folkets Meninger – AI-sammendrag backfill',
 )
   .add(scheduleTrigger)
   .to(backfillSettingsSchedule)

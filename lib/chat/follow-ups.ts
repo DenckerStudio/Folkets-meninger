@@ -32,7 +32,7 @@ export function buildFollowUps(args: {
     followUps.push({
       id: 'stemmer',
       label: 'Hvordan stemte Stortinget?',
-      prompt: `Hvordan har Stortinget votert i ${subject}, og hvordan står det mot folkets stemmer?`,
+      prompt: `Hvordan har Stortinget votert i ${subject}, og hvordan står det mot folkets vilje?`,
     });
   }
   followUps.push({

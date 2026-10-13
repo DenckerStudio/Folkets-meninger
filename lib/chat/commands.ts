@@ -48,13 +48,13 @@ export const CHAT_COMMANDS: ChatCommand[] = [
     id: 'cmd-stemmer',
     name: 'stemmer',
     label: 'Hvordan stemte Stortinget?',
-    hint: 'Votering og folkets stemmer',
+    hint: 'Votering og folkets vilje',
     behavior: 'send',
     needsIssue: true,
     buildPrompt: ({ issueTitle }) =>
       issueTitle
-        ? `Hvordan har Stortinget votert i «${issueTitle}», og hvordan står det mot folkets stemmer?`
-        : 'Hvordan har Stortinget votert i saken jeg ser på, og hvordan står det mot folkets stemmer?',
+        ? `Hvordan har Stortinget votert i «${issueTitle}», og hvordan står det mot folkets vilje?`
+        : 'Hvordan har Stortinget votert i saken jeg ser på, og hvordan står det mot folkets vilje?',
   },
   {
     id: 'cmd-konsekvens',

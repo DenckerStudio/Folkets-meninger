@@ -40,10 +40,10 @@ assert.equal(shouldSendDigestEmail([]), false);
 assert.equal(shouldSendDigestEmail([{ title: 'Hei', createdAt: '2026-01-01' }]), true);
 
 assert.equal(
-  toAbsoluteNotificationUrl('/dashboard/sak/1', 'https://folkets-stemme.no'),
-  'https://folkets-stemme.no/dashboard/sak/1',
+  toAbsoluteNotificationUrl('/dashboard/sak/1', 'https://www.folkets-meninger.no'),
+  'https://www.folkets-meninger.no/dashboard/sak/1',
 );
-assert.equal(toAbsoluteNotificationUrl('https://example.com', 'https://folkets-stemme.no'), 'https://example.com');
+assert.equal(toAbsoluteNotificationUrl('https://example.com', 'https://www.folkets-meninger.no'), 'https://example.com');
 
 const cursor = buildDigestCursorUpdate({ categories: 'old' }, ['categories', 'labels'], '2026-02-01T00:00:00.000Z');
 assert.equal(cursor.categories, '2026-02-01T00:00:00.000Z');

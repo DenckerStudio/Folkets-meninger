@@ -1,7 +1,7 @@
 /**
  * Forum Reels v8 – synthesis agents, SQL, and Code (shared).
  */
-export const DEEP_RESEARCH_SYSTEM = `Du er analytiker for «Folkets Stemme». Du får flere artikler om SAMME sak.
+export const DEEP_RESEARCH_SYSTEM = `Du er analytiker for «Folkets Meninger». Du får flere artikler om SAMME sak.
 
 Oppgave:
 1. Les alle Artikkel:-utdrag grundig
@@ -26,7 +26,7 @@ export const JOURNALIST_SYSTEM = `OBLIGATORISK VERKTØYBRUK (før du svarer med 
 - Hvis check_duplicate svarer DUPLICATE: dropp spørsmålet eller lag ny vinkling med repeat_reason.
 - Returner nøyaktig ETT sterkt JA/NEI-spørsmål som JSON {"prompts":[{...}]} – ingen markdown.
 
-Du er politisk redaktør for «Folkets Stemme» (norsk borgerdebatt).
+Du er politisk redaktør for «Folkets Meninger» (norsk borgerdebatt).
 
 INPUT:
 - DEEP_RESEARCH: ferdig analyse (sammenligning mellom kilder, politisk valg, poll_angles)
@@ -56,7 +56,7 @@ KILDEKRAV:
 
 FORBUDT: vage spørsmål, sport/kjendis uten politikk, tema-glidning, duplikater uten repeat_reason.`;
 
-export const EDITOR_SYSTEM = `Du er kvalitetsredaktør for «Folkets Stemme» – modererer AI-genererte avstemningsspørsmål før publisering.
+export const EDITOR_SYSTEM = `Du er kvalitetsredaktør for «Folkets Meninger» – modererer AI-genererte avstemningsspørsmål før publisering.
 
 INPUT:
 - KANDIDAT-SPØRSMÅL: JSON-liste fra genereringsagenten
@@ -473,8 +473,8 @@ const FALLBACK_TRUSTED_DOMAINS = [
   { domain: 'aftenposten.no', outlet_label: 'Aftenposten' },
   { domain: 'dagbladet.no', outlet_label: 'Dagbladet' },
   { domain: 'stortinget.no', outlet_label: 'Stortinget' },
-  { domain: 'folketsstemme.no', outlet_label: 'Folkets Stemme' },
-  { domain: 'folkets-stemme.no', outlet_label: 'Folkets Stemme' },
+  { domain: 'folkets-meninger.no', outlet_label: 'Folkets Meninger' },
+  { domain: 'folkets-meninger.no', outlet_label: 'Folkets Meninger' },
 ];
 
 function effectiveTrustedList(list) {
@@ -488,7 +488,7 @@ function hostFromUrl(url) {
 function isTrustedSource(url, outlet, trustedList) {
   if (outlet === 'Stortinget') return true;
   const u = String(url || '').toLowerCase();
-  if (u.includes('folketsstemme.no') || u.includes('folkets-stemme.no')) return true;
+  if (u.includes('folkets-meninger.no')) return true;
   const host = hostFromUrl(url);
   for (const t of effectiveTrustedList(trustedList)) {
     const d = String(t.domain || '').toLowerCase().replace(/^www\\./, '');

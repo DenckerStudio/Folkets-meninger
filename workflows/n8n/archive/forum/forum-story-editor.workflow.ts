@@ -1,6 +1,6 @@
 /**
  * @deprecated v12 — validation merged into forum-prompt-generator.workflow.ts
- * Folkets Stemme – Forum story editor (v10 step 3)
+ * Folkets Meninger – Forum story editor (v10 step 3)
  * Én AI-redaktør-agent. Ingen Code-noder.
  * Trigger: Execute Workflow (fra research) eller webhook POST folkets-forum-research-editor
  */
@@ -360,7 +360,7 @@ const editorPipeline = normalizeInput.to(
 
 export default workflow(
   'folkets-forum-research-editor',
-  'Folkets Stemme – Forum story editor (v10)'
+  'Folkets Meninger – Forum story editor (v10)'
 )
   .add(executeWorkflowTrigger)
   .to(editorPipeline)

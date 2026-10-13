@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     return new NextResponse(csv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="folkets-stemme-statistikk-${snapshot.generatedAt.slice(0, 10)}.csv"`,
+        'Content-Disposition': `attachment; filename="folkets-meninger-statistikk-${snapshot.generatedAt.slice(0, 10)}.csv"`,
       },
     });
   }

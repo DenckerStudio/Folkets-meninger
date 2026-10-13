@@ -30,13 +30,13 @@ export async function sendWelcomeEmail(input: WelcomeEmailInput) {
   const transporter = getTransporter();
   const { from } = getSmtpConfig();
 
-  const subject = 'Velkommen til Folkets Stemme';
+  const subject = 'Velkommen til Folkets Meninger';
   const greeting = input.name?.trim() ? `Hei ${input.name.trim()}!` : 'Hei!';
   const html = `
     <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5;">
       <h2>${greeting}</h2>
       <p>Takk for at du registrerte deg. Du kan nå følge saker, stemme og få varsler om det du bryr deg om.</p>
-      <p>Hilsen<br/>Folkets Stemme</p>
+      <p>Hilsen<br/>Folkets Meninger</p>
     </div>
   `.trim();
 
@@ -56,7 +56,7 @@ export async function sendRealtimeNotificationEmail(input: RealtimeNotificationE
   const { from } = getSmtpConfig();
 
   const link = input.url
-    ? `<p><a href="${input.url}" target="_blank" rel="noreferrer">Åpne i Folkets Stemme</a></p>`
+    ? `<p><a href="${input.url}" target="_blank" rel="noreferrer">Åpne i Folkets Meninger</a></p>`
     : '';
 
   const html = `
@@ -153,7 +153,7 @@ export type SiteFeedbackEmailInput = {
 export async function sendSiteFeedbackEmail(input: SiteFeedbackEmailInput) {
   const transporter = getTransporter();
   const { from } = getSmtpConfig();
-  const to = process.env.FEEDBACK_INBOX_EMAIL?.trim() || 'kontakt@folketsstemme.no';
+  const to = process.env.FEEDBACK_INBOX_EMAIL?.trim() || 'kontakt@folkets-meninger.no';
 
   const subject = `[Innspill] ${input.category} — ${input.email}`;
   const html = `

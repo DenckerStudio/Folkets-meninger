@@ -213,7 +213,7 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
                           href={routes.sak(String(sak.sak_id))}
                           className="text-sm font-medium text-brand hover:text-brand/80"
                         >
-                          Se sak i Folkets Stemme
+                          Se sak i Folkets Meninger
                         </Link>
                       )}
                       {pubUrl && (
@@ -258,7 +258,7 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
       <section className="space-y-4">
         <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
           <MessageSquare className="w-5 h-5" />
-          Innspill i Folkets Stemme ({comments.length})
+          Innspill i Folkets Meninger ({comments.length})
         </h2>
 
         {comments.length === 0 ? (

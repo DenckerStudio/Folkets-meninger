@@ -125,7 +125,7 @@ export function ProfileStemmePlus() {
   return (
     <ProfileCard
       title="Stemme+"
-      description="Støtt utviklingen av Folkets Stemme — demokratiet forblir gratis for alle."
+      description="Støtt utviklingen av Folkets Meninger — demokratiet forblir gratis for alle."
     >
       {checkoutBanner === 'success' ? (
         <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100">

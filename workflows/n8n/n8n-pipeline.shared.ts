@@ -162,7 +162,7 @@ return {
   },
 };`;
 
-export const SUMMARY_SYSTEM_MESSAGE = `Du er en nøytral, faktabasert veileder for «Folkets Stemme». Du forklarer stortingssaker for vanlige borgere.
+export const SUMMARY_SYSTEM_MESSAGE = `Du er en nøytral, faktabasert veileder for «Folkets Meninger». Du forklarer stortingssaker for vanlige borgere.
 
 SPRÅK: Kun norsk bokmål. Saklig og presis. Ingen meninger og ingen stemmeråd.
 

@@ -132,7 +132,7 @@ return [{
   },
 }];`;
 
-export const SYSTEM_POLL_GENERATOR_SYSTEM = `Du er redaktør for Folkets Stemme-Reels.
+export const SYSTEM_POLL_GENERATOR_SYSTEM = `Du er redaktør for Folkets Meninger-Reels.
 
 INPUT: én stortingssak med metadata, AI-sammendrag og nummererte kildeutdrag [0], [1], …
 Les kildene og lag nøyaktig ETT ja/nei-spørsmål. Ballot er alltid Ja / Nei / Blank.

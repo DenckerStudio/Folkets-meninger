@@ -21,7 +21,7 @@ loadFolketsPublicEnv();
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-assert.ok(url && url.includes('qetckokgtzbpunbzslfp'), 'Folkets-Stemme URL missing');
+assert.ok(url && url.includes('qetckokgtzbpunbzslfp'), 'Folkets Meninger URL missing');
 assert.ok(anon, 'Folkets anon key missing');
 assert.equal(process.env.SUPABASE_SERVICE_ROLE_KEY, undefined);
 

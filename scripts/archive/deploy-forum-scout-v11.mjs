@@ -105,7 +105,7 @@ async function main() {
     method: 'PUT',
     headers,
     body: JSON.stringify({
-      name: 'Folkets Stemme – Forum story scout (v11.1)',
+      name: 'Folkets Meninger – Forum story scout (v11.1)',
       nodes,
       connections: temp.connections,
       settings: { executionOrder: 'v1' },

@@ -21,7 +21,7 @@ export default async function InnsiktPage() {
     <DashboardPage>
       <PageHeader
         title="Åpen innsikt"
-        description="Anonyme stemmetall fra Folkets Stemme. Ingen persondata."
+        description="Anonyme stemmetall fra Folkets Meninger. Ingen persondata."
       />
       <div className="flex items-start gap-2 text-sm text-muted-foreground">
         <BarChart3 className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />

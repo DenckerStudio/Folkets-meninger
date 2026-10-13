@@ -1,5 +1,5 @@
 /**
- * Folkets Stemme – Forum JA/NEI prompt generator (v12)
+ * Folkets Meninger – Forum JA/NEI prompt generator (v12)
  * Fetch pending cluster → én Ollama-agent → transactional save (draft).
  *
  * Webhook: POST folkets-forum-prompt-generator
@@ -229,7 +229,7 @@ const promptPipeline = fetchClusterForPrompt
 
 export default workflow(
   'folkets-forum-prompt-generator',
-  'Folkets Stemme – Forum JA/NEI prompt generator (v12)'
+  'Folkets Meninger – Forum JA/NEI prompt generator (v12)'
 )
   .add(scheduleTrigger)
   .to(promptPipeline)

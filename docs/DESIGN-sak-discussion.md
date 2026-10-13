@@ -16,7 +16,7 @@
 
 ## Executive summary
 
-Folkets Stemme should **not** revive the old site-wide forum. The right product is a **sak- and høring-scoped discussion layer** embedded in existing pages (Utforsk → sak detail, Høringer detail), with **no top-level “Forum” nav** and **no AI prompt/reel pipeline tied to user posts**.
+Folkets Meninger should **not** revive the old site-wide forum. The right product is a **sak- and høring-scoped discussion layer** embedded in existing pages (Utforsk → sak detail, Høringer detail), with **no top-level “Forum” nav** and **no AI prompt/reel pipeline tied to user posts**.
 
 **Recommendation:** **Option B** — greenfield schema (`issue_discussions` + `issue_discussion_posts`) with **Option C’s information architecture** (no separate forum section; a “Diskusjon” tab on sak pages and threaded comments on høring pages). Do **not** attempt to restore dropped `forum_*` tables or archived n8n workflows.
 

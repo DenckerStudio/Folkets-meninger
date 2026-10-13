@@ -31,12 +31,12 @@ assert.equal(getStemmePlusAppBaseUrl(''), STEMME_PLUS_DEFAULT_APP_BASE_URL);
 assert.equal(getStemmePlusAppBaseUrl('not-a-url'), STEMME_PLUS_DEFAULT_APP_BASE_URL);
 assert.equal(getStemmePlusAppBaseUrl('ftp://example.com'), STEMME_PLUS_DEFAULT_APP_BASE_URL);
 assert.equal(
-  getStemmePlusAppBaseUrl('https://www.folkets-stemme.no'),
-  'https://www.folkets-stemme.no',
+  getStemmePlusAppBaseUrl('https://www.folkets-meninger.no'),
+  'https://www.folkets-meninger.no',
 );
 assert.equal(
-  getStemmePlusAppBaseUrl('https://www.folkets-stemme.no/'),
-  'https://www.folkets-stemme.no',
+  getStemmePlusAppBaseUrl('https://www.folkets-meninger.no/'),
+  'https://www.folkets-meninger.no',
 );
 assert.equal(
   getStemmePlusAppBaseUrl('https://preview.example.com/path'),

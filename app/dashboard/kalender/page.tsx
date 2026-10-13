@@ -11,7 +11,7 @@ import { fetchStortingetHoringer } from '@/lib/stortinget-horinger';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Kalender | Folkets Stemme',
+  title: 'Kalender | Folkets Meninger',
   description: 'Høringer og innspillsfrister fra Stortinget i kalendervisning.',
 };
 

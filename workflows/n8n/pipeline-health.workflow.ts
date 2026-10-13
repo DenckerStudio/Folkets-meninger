@@ -131,13 +131,13 @@ const needsSummaryCatchup = Boolean(firstMissingId);
 const needsAlert = pendingChunks >= 40 || missingSummaries >= 15 || draftPolls >= 8;
 const subject = 'Pipeline-status: ' + pendingChunks + ' chunks, ' + missingSummaries + ' sammendrag, ' + draftPolls + ' utkast';
 const text = [
-  'Folkets Stemme n8n-pipeline',
+  'Folkets Meninger n8n-pipeline',
   '',
   'Pending embeddings: ' + pendingChunks,
   'Saker uten AI-sammendrag: ' + missingSummaries,
   'System-poll utkast som venter: ' + draftPolls,
   '',
-  draftPolls ? ('Publiser utkast: https://www.folkets-stemme.no/dashboard/admin/reels') : null,
+  draftPolls ? ('Publiser utkast: https://www.folkets-meninger.no/dashboard/admin/reels') : null,
 ].filter(Boolean).join('\\n');
 return [{
   json: {
@@ -351,7 +351,7 @@ const healthBody = fetchPendingChunks
 
 export default workflow(
   'folkets-pipeline-health',
-  'Folkets Stemme – pipeline-helse',
+  'Folkets Meninger – pipeline-helse',
 )
   .add(scheduleTrigger)
   .to(healthBody)

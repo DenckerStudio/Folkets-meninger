@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const N8N_BASE = process.env.N8N_API_URL || 'https://n8n.heyklever.app';
 const AI_SUMMARY_WORKFLOW_ID = 'GP666Zq84qc19tcE';
-const WORKFLOW_NAME = 'Folkets Stemme – dokument embeddings (RAG)';
+const WORKFLOW_NAME = 'Folkets Meninger – dokument embeddings (RAG)';
 const WEBHOOK_PATH = 'folkets-document-embeddings';
 
 function loadEnv() {
@@ -49,7 +49,7 @@ function findSupabaseCredentialId(nodes) {
   for (const node of nodes) {
     const cred = node?.credentials?.supabaseApi;
     if (cred?.id) {
-      return { id: cred.id, name: cred.name || 'Folkets Stemme Self-hosted' };
+      return { id: cred.id, name: cred.name || 'Folkets Meninger Self-hosted' };
     }
   }
   return null;
@@ -150,9 +150,9 @@ async function main() {
     (process.env.N8N_SUPABASE_CREDENTIAL_ID
       ? {
           id: process.env.N8N_SUPABASE_CREDENTIAL_ID,
-          name: process.env.N8N_SUPABASE_CREDENTIAL_NAME || 'Folkets Stemme Self-hosted',
+          name: process.env.N8N_SUPABASE_CREDENTIAL_NAME || 'Folkets Meninger Self-hosted',
         }
-      : { id: 'DGPnXfRlXSdJG7RL', name: 'Folkets Stemme Self-hosted' });
+      : { id: 'DGPnXfRlXSdJG7RL', name: 'Folkets Meninger Self-hosted' });
   if (!supabaseCred?.id) {
     throw new Error(`Could not find Supabase credential in reference workflow ${AI_SUMMARY_WORKFLOW_ID}`);
   }

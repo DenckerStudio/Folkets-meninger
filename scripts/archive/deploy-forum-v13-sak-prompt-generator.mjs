@@ -18,7 +18,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const N8N_BASE = process.env.N8N_API_URL || 'https://n8n.heyklever.app';
 const AI_SUMMARY_WORKFLOW_ID = 'GP666Zq84qc19tcE';
 const PROMPT_GENERATOR_WORKFLOW_ID = 'vOP2zPflfT0yBvDQ';
-const WORKFLOW_NAME = 'Folkets Stemme – Forum Stortinget-sak RAG prompt generator (v13)';
+const WORKFLOW_NAME = 'Folkets Meninger – Forum Stortinget-sak RAG prompt generator (v13)';
 const WEBHOOK_PATH = 'folkets-forum-sak-prompt-generator';
 
 function loadEnv() {

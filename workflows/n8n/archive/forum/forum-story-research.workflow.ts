@@ -1,6 +1,6 @@
 /**
  * @deprecated v12 — use forum-prompt-generator.workflow.ts
- * Folkets Stemme – Forum story research + journalist (v10.2)
+ * Folkets Meninger – Forum story research + journalist (v10.2)
  * DB-kø: schedule henter status=accepted, webhook for manuell replay.
  */
 import {
@@ -426,7 +426,7 @@ const triggerEditorWorkflow = node({
         __rl: true,
         mode: 'id',
         value: 'YY6u4GmeiZVk5R2e',
-        cachedResultName: 'Folkets Stemme – Forum story editor (v10)',
+        cachedResultName: 'Folkets Meninger – Forum story editor (v10)',
       },
       mode: 'once',
       workflowInputs: {
@@ -472,7 +472,7 @@ const webhookPipeline = setClusterIdFromWebhook
 
 export default workflow(
   'folkets-forum-research-journalist',
-  'Folkets Stemme – Forum story research (v10.2)'
+  'Folkets Meninger – Forum story research (v10.2)'
 )
   .add(scheduleTrigger)
   .to(schedulePipeline)

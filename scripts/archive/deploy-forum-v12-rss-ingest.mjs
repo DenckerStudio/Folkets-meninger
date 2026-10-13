@@ -96,7 +96,7 @@ async function main() {
     method: 'PUT',
     headers,
     body: JSON.stringify({
-      name: 'Folkets Stemme – Forum Regjeringen RSS ingest (v12.1)',
+      name: 'Folkets Meninger – Forum Regjeringen RSS ingest (v12.1)',
       nodes,
       connections: temp.connections,
       settings: { executionOrder: 'v1' },

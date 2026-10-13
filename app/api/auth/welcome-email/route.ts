@@ -48,7 +48,7 @@ export async function POST() {
       user_id: user.id,
       type: 'welcome_email',
       channel: 'categories',
-      title: 'Velkommen til Folkets Stemme',
+      title: 'Velkommen til Folkets Meninger',
       body: 'Takk for at du registrerte deg.',
       url: '/dashboard/utforsk',
       data: {},

@@ -128,7 +128,7 @@ export function AppensFremtidPage() {
 
       {tab === 'changelog' ? (
         <section className="space-y-3">
-          <p className="text-sm text-muted-foreground">Hva som er endret i Folkets Stemme.</p>
+          <p className="text-sm text-muted-foreground">Hva som er endret i Folkets Meninger.</p>
           <ChangelogList entries={changelog} />
         </section>
       ) : null}

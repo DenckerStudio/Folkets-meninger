@@ -27,6 +27,6 @@ VALUES
   ('aftenposten.no', 'Aftenposten', 'approved', now()),
   ('dagbladet.no', 'Dagbladet', 'approved', now()),
   ('stortinget.no', 'Stortinget', 'approved', now()),
-  ('folketsstemme.no', 'Folkets Stemme', 'approved', now()),
-  ('folkets-stemme.no', 'Folkets Stemme', 'approved', now())
+  ('folketsmeninger.no', 'Folkets Meninger', 'approved', now()),
+  ('folkets-meninger.no', 'Folkets Meninger', 'approved', now())
 ON CONFLICT (domain) DO NOTHING;
