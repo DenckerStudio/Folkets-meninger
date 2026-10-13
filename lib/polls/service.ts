@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getAnonSupabase, getServiceSupabase } from '@/lib/supabase';
 import { emptyPollTotals } from '@/lib/polls/format';
 import { isPollAlreadyExistsError, normalizePollIssueId } from '@/lib/polls/already-exists';
@@ -40,6 +41,30 @@ const POLL_LIST_SELECT =
 const POLL_ADMIN_DRAFT_SELECT = `${POLL_LIST_SELECT}, generation_metadata`;
 
 const POLL_SELECT = `${POLL_LIST_SELECT}, citizen_initiative_id, generation_metadata`;
+
+/**
+ * Aggregate poll reads go through SECURITY DEFINER RPCs / public RLS, so the
+ * request session (or the anon key) is enough. Never the service role: totals
+ * are anonymous aggregates and the public policy only exposes open/closed polls.
+ */
+export type PollReadClient = Pick<SupabaseClient, 'rpc' | 'from'>;
+
+function resolvePollReadClient(explicit?: PollReadClient | null): PollReadClient | null {
+  if (explicit) return explicit;
+  if (
+    !(
+      process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
+    )
+  ) {
+    return null;
+  }
+  try {
+    return getAnonSupabase() as unknown as PollReadClient;
+  } catch {
+    return null;
+  }
+}
 
 function parseSourceUrls(value: unknown): PollSourceUrl[] {
   if (!Array.isArray(value)) return [];
@@ -216,26 +241,101 @@ export async function getPollById(pollId: string): Promise<PollRecord | null> {
   return mapPollRow(data as PollRow);
 }
 
-export async function getPollTotals(pollId: string): Promise<PollTotals> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return emptyPollTotals();
-  const service = getServiceSupabase();
-  const { data, error } = await service.rpc('get_poll_totals', { p_poll_id: pollId });
+/**
+ * Anonymous Ja/Nei/Blank aggregates. Reads through the request session/anon key;
+ * `get_poll_totals` is granted to anon/authenticated and returns only counts.
+ */
+export async function getPollTotals(
+  pollId: string,
+  client?: PollReadClient | null,
+): Promise<PollTotals> {
+  const supabase = resolvePollReadClient(client);
+  if (!supabase) return emptyPollTotals();
+  const { data, error } = await supabase.rpc('get_poll_totals', { p_poll_id: pollId });
   if (error) return emptyPollTotals();
   return parsePollTotals(data);
 }
 
+/**
+ * Per-fylke aggregates with the min-votes floor applied server-side. Public
+ * fylke data is only shown when it clears `p_min_votes`, so no small cell leaks.
+ */
 export async function getPollTotalsByFylke(
   pollId: string,
   minVotes = POLL_FYLKE_MIN_VOTES,
+  client?: PollReadClient | null,
 ): Promise<PollFylkeTotals[]> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
-  const service = getServiceSupabase();
-  const { data, error } = await service.rpc('get_poll_totals_by_fylke', {
+  const supabase = resolvePollReadClient(client);
+  if (!supabase) return [];
+  const { data, error } = await supabase.rpc('get_poll_totals_by_fylke', {
     p_poll_id: pollId,
     p_min_votes: minVotes,
   });
   if (error) return [];
   return parseFylkeTotals(data);
+}
+
+/** Public poll lookup by Stortinget issue id. Open/closed only (RLS). */
+export async function findPublicPollForIssue(
+  issueId: string,
+  client?: PollReadClient | null,
+): Promise<PollRecord | null> {
+  const trimmed = normalizePollIssueId(issueId);
+  if (!trimmed) return null;
+  const supabase = resolvePollReadClient(client);
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('polls')
+    .select(POLL_LIST_SELECT)
+    .eq('stortinget_issue_id', trimmed)
+    .in('status', ['open', 'closed'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return mapPollRow(data as PollRow);
+}
+
+/** Case-insensitive public poll search on title. Open/closed only (RLS). */
+export async function searchPublicPolls(
+  query: string,
+  limit = 5,
+  client?: PollReadClient | null,
+): Promise<PollRecord[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+  const supabase = resolvePollReadClient(client);
+  if (!supabase) return [];
+  const pattern = `%${trimmed.replace(/[\\%_]/g, (match) => `\\${match}`)}%`;
+  const { data, error } = await supabase
+    .from('polls')
+    .select(POLL_LIST_SELECT)
+    .in('status', ['open', 'closed'])
+    .ilike('title', pattern)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error || !Array.isArray(data)) return [];
+  return (data as PollRow[]).map(mapPollRow);
+}
+
+/** Public poll lookup by id. Open/closed only (RLS). */
+export async function getPublicPollById(
+  pollId: string,
+  client?: PollReadClient | null,
+): Promise<PollRecord | null> {
+  const supabase = resolvePollReadClient(client);
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('polls')
+    .select(POLL_LIST_SELECT)
+    .eq('id', pollId)
+    .in('status', ['open', 'closed'])
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return mapPollRow(data as PollRow);
 }
 
 export async function getUserPollVote(
