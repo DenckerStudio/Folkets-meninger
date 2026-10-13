@@ -1,7 +1,9 @@
 import { getPolitikereOversikt, getSakDetail, type PolitikerOversikt, type StortingetSakDetail } from '@/lib/stortinget';
 import {
+  STORTINGET_MIN_DATE_MS,
   fetchStortingetHoringer,
   findHoringerForSak,
+  formatDateNb,
   formatHoringDeadlineSummary,
   getHoringInnspillDeadline,
   getHoringSkriftligInnspillUrl,
@@ -29,7 +31,7 @@ export type ChatHearing = {
   deadlineLabel: string;
   startDate: string | null;
   committee: string | null;
-  skriftligInnspillUrl: string;
+  skriftligInnspillUrl: string | null;
 };
 
 /** Pure shape for one Stortinget hearing, honest about missing dates/committees. */
@@ -55,16 +57,139 @@ export type ChatHearingSearch = {
   summary: ReturnType<typeof summarizeHoringer>;
 };
 
+/**
+ * Saksgang event ids that mark a hearing (same labels the sak page timeline
+ * renders). HOER is the hearing itself, HOERFRIST its written-submission
+ * deadline. Text may also carry «høring» when the id is unset.
+ */
+const SAKSGANG_HOERING_EVENTS = new Set(['HOER', 'HOERFRIST']);
+
+function isSaksgangHearingEvent(id: string | undefined, text: string | null | undefined): boolean {
+  if (id && SAKSGANG_HOERING_EVENTS.has(id)) return true;
+  return Boolean(text && /høring/i.test(text));
+}
+
+/** Parse a saksgang event date (`23.04.2025 00:00:00` or `/Date(...)/`). */
+export function parseSaksgangEventDate(raw: string | null | undefined): Date | null {
+  if (!raw?.trim() || raw.startsWith('01.01.0001')) return null;
+
+  const dotnet = raw.match(/\/Date\((-?\d+)(?:[+-]\d+)?\)\//);
+  if (dotnet) {
+    const ms = Number.parseInt(dotnet[1], 10);
+    if (Number.isNaN(ms) || ms <= STORTINGET_MIN_DATE_MS) return null;
+    const date = new Date(ms);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  const parts = raw.trim().match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+  if (parts) {
+    const date = new Date(Number(parts[3]), Number(parts[2]) - 1, Number(parts[1]));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * Extract hearings from the sak detail's own saksgang — the same source as the
+ * Saksgang timeline on the sak page. The Stortinget `horinger` export only
+ * covers current hearings and often omits finished ones, so a sak that clearly
+ * had a hearing in its saksgang (e.g. HOER/HOERFRIST events) must still surface
+ * here. These entries have no public hearing id/url, so `skriftligInnspillUrl`
+ * stays null; the underlying export-linked hearing wins when both exist.
+ */
+export function hearingsFromSaksgang(detail: StortingetSakDetail): ChatHearing[] {
+  const steps = detail.saksgang?.saksgang_steg_liste ?? [];
+  const title = detail.korttittel?.trim() || detail.tittel?.trim() || `Sak ${detail.id}`;
+  const committee =
+    typeof detail.komite === 'string' ? detail.komite : detail.komite?.navn ?? null;
+
+  const hearings: ChatHearing[] = [];
+
+  for (const step of steps) {
+    const events = step.saksgang_hendelse_liste ?? [];
+    const hoerEvents = events
+      .filter((event) => isSaksgangHearingEvent(event.id, event.hendelse_tekst))
+      .map((event) => ({
+        event,
+        date: parseSaksgangEventDate(event.dato),
+        isFrist: event.id === 'HOERFRIST',
+      }))
+      .filter((entry) => entry.date != null);
+
+    const hoer = hoerEvents.filter((entry) => !entry.isFrist);
+    const frister = hoerEvents.filter((entry) => entry.isFrist);
+
+    for (const event of hoer) {
+      const deadline =
+        frister.find((frist) => frist.date!.getTime() >= event.date!.getTime())?.date ?? null;
+      const date = event.date!;
+      hearings.push({
+        id: `saksgang-${detail.id}-${event.event.id ?? 'HOER'}-${date.toISOString().slice(0, 10)}`,
+        title,
+        subtitle: event.event.hendelse_tekst?.trim() || null,
+        statusKind: 'held',
+        statusLabel: 'Avholdt',
+        deadline: deadline ? deadline.toISOString() : null,
+        deadlineLabel: deadline ? `Frist ${formatDateNb(deadline)}` : 'Ingen frist oppgitt',
+        startDate: date.toISOString(),
+        committee,
+        skriftligInnspillUrl: null,
+      });
+    }
+
+    if (hoer.length === 0) {
+      for (const event of frister) {
+        const date = event.date!;
+        const open = date.getTime() >= Date.now();
+        hearings.push({
+          id: `saksgang-${detail.id}-HOERFRIST-${date.toISOString().slice(0, 10)}`,
+          title,
+          subtitle: null,
+          statusKind: open ? 'open' : 'held',
+          statusLabel: open ? 'Åpen for innspill' : 'Frist utløpt',
+          deadline: date.toISOString(),
+          deadlineLabel: `Frist ${formatDateNb(date)}`,
+          startDate: null,
+          committee,
+          skriftligInnspillUrl: null,
+        });
+      }
+    }
+  }
+
+  return hearings;
+}
+
 /** All hearings tied to a sak, newest deadline first. */
 export async function collectHearingsForSak(issueId: string): Promise<ChatHearing[]> {
-  const all = await fetchStortingetHoringer();
-  return findHoringerForSak(all, issueId)
-    .sort((a, b) => {
-      const aDeadline = getHoringInnspillDeadline(a)?.getTime() ?? 0;
-      const bDeadline = getHoringInnspillDeadline(b)?.getTime() ?? 0;
-      return bDeadline - aDeadline;
-    })
-    .map(shapeChatHearing);
+  const [all, detail] = await Promise.all([
+    fetchStortingetHoringer(),
+    getSakDetail(issueId).catch(() => null),
+  ]);
+  const linked = findHoringerForSak(all, issueId).map(shapeChatHearing);
+  const fromSaksgang = detail ? hearingsFromSaksgang(detail) : [];
+
+  const linkedStartDates = new Set(
+    linked
+      .map((hearing) => hearing.startDate?.slice(0, 10) ?? '')
+      .filter(Boolean),
+  );
+  const combined = new Map<string, ChatHearing>();
+  for (const hearing of linked) {
+    combined.set(`hearing:${hearing.id}`, hearing);
+  }
+  for (const hearing of fromSaksgang) {
+    if (hearing.startDate && linkedStartDates.has(hearing.startDate.slice(0, 10))) continue;
+    combined.set(`saksgang:${hearing.id}`, hearing);
+  }
+
+  return [...combined.values()].sort((a, b) => {
+    const aDeadline = a.deadline ? new Date(a.deadline).getTime() : 0;
+    const bDeadline = b.deadline ? new Date(b.deadline).getTime() : 0;
+    return bDeadline - aDeadline;
+  });
 }
 
 /** Open and planned hearings on Stortinget, sorted by status then deadline. */

@@ -13,6 +13,8 @@ import type { ImpactResult } from '@/lib/impact/types';
 import type { OpinionInnspillRecord } from '@/lib/innspill/types';
 import {
   matchPolitikere,
+  parseSaksgangEventDate,
+  hearingsFromSaksgang,
   shapeChatHearing,
   shapeSakDocumentGroups,
   shapeSakTimeline,
@@ -147,6 +149,15 @@ async function main() {
             created_at: '2099-01-01T00:00:00Z',
             read_at: null,
           },
+          {
+            id: 'n1',
+            title: 'Ny sak',
+            body: null,
+            url: '/sak/1',
+            channel: 'in_app',
+            created_at: '2099-01-01T00:00:00Z',
+            read_at: null,
+          },
         ],
         error: null,
       }),
@@ -154,6 +165,7 @@ async function main() {
   const fakeClient = { from: () => fakeQuery } as unknown as Parameters<typeof collectMyNotifications>[0];
   const notifications = await collectMyNotifications(fakeClient, 'user-1');
   assert.equal(notifications.found, true);
+  assert.equal(notifications.items.length, 1, 'duplicate notification rows must dedupe by id');
   assert.equal(notifications.items[0].title, 'Ny sak');
   assert.equal(notifications.items[0].read, false);
   assert.deepEqual(eqCalls, [['user_id', 'user-1']]);
@@ -246,7 +258,7 @@ async function main() {
   assert.equal(hearing.statusLabel, 'Åpen for innspill');
   assert.equal(hearing.committee, 'Justiskomiteen');
   assert.ok(hearing.deadline);
-  assert.ok(hearing.skriftligInnspillUrl.includes('h=99'));
+  assert.equal(hearing.skriftligInnspillUrl?.includes('h=99'), true);
 
   const sentinel = shapeChatHearing({
     id: '100',
@@ -278,6 +290,70 @@ async function main() {
   assert.equal(timeline.steps[0].events[0].id, 'VOT');
   assert.equal(timeline.voting.isOpen, true);
   assert.equal(timeline.statusLabel, 'Under behandling');
+
+  // parseSaksgangEventDate handles the formats the timeline dates use.
+  const parsed = parseSaksgangEventDate('23.04.2025 00:00:00');
+  assert.equal(parsed?.getFullYear(), 2025);
+  assert.equal(parsed?.getMonth(), 3);
+  assert.equal(parsed?.getDate(), 23);
+  assert.equal(parseSaksgangEventDate('01.01.0001 00:00:00'), null);
+  assert.equal(parseSaksgangEventDate(undefined), null);
+
+  // hearingsFromSaksgang surfaces hearings the timeline shows but the horinger
+  // export misses (finished sak with only saksgang evidence).
+  const hearingSak = {
+    id: 103102,
+    korttittel: 'Endringer i lov om pensjonstrygd for fiskere',
+    komite: { navn: 'Næringskomiteen' },
+    saksgang: {
+      saksgang_steg_liste: [
+        {
+          navn: 'Komitebehandling',
+          saksgang_hendelse_liste: [
+            { id: 'SENDT', dato: '23.10.2025 00:00:00' },
+            { id: 'HOER', dato: '23.04.2025 00:00:00' },
+            { id: 'AVGITT', dato: '25.11.2025 00:00:00' },
+          ],
+        },
+      ],
+    },
+  } as StortingetSakDetail;
+  const saksgangHearing = hearingsFromSaksgang(hearingSak);
+  assert.equal(saksgangHearing.length, 1, 'only the HOER event is a hearing');
+  assert.equal(saksgangHearing[0].startDate, '2025-04-23T00:00:00.000Z');
+  assert.equal(saksgangHearing[0].statusKind, 'held');
+  assert.equal(saksgangHearing[0].statusLabel, 'Avholdt');
+  assert.equal(saksgangHearing[0].committee, 'Næringskomiteen');
+  assert.equal(saksgangHearing[0].skriftligInnspillUrl, null);
+  assert.ok(saksgangHearing[0].id.startsWith('saksgang-103102-'));
+
+  // HOERFRIST without a HOER becomes an open/held entry with a real deadline.
+  const fristSak = {
+    id: 999,
+    korttittel: 'Frist-sak',
+    saksgang: {
+      saksgang_steg_liste: [
+        { navn: 'Komitebehandling', saksgang_hendelse_liste: [{ id: 'HOERFRIST', dato: '15.12.2099' }] },
+      ],
+    },
+  } as StortingetSakDetail;
+  const fristHearing = hearingsFromSaksgang(fristSak);
+  assert.equal(fristHearing.length, 1);
+  assert.equal(fristHearing[0].statusKind, 'open');
+  assert.equal(fristHearing[0].statusLabel, 'Åpen for innspill');
+  assert.ok(fristHearing[0].deadline?.startsWith('2099-12-15'));
+
+  // Non-hearing events (VOT, AVGITT …) never become hearings.
+  const noHearingSak = {
+    id: 7,
+    korttittel: 'Uten høring',
+    saksgang: {
+      saksgang_steg_liste: [
+        { navn: 'Votering', saksgang_hendelse_liste: [{ id: 'VOT', dato: '15.05.2099' }] },
+      ],
+    },
+  } as StortingetSakDetail;
+  assert.deepEqual(hearingsFromSaksgang(noHearingSak), []);
 
   const documents = shapeSakDocumentGroups({
     publikasjon_referanse_liste: [
