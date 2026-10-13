@@ -6,7 +6,7 @@ import FadeIn from '@/components/fade-in';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase';
 import { onboardingPathWithNext, shouldStartSignupOnboarding } from '@/lib/onboarding';
-import { sanitizePostLoginPath } from '@/lib/safe-redirect';
+import { toRelativeNext } from '@/lib/safe-redirect';
 
 export default function LoginClient() {
   const [isLoading, setIsLoading] = useState(false);
@@ -21,7 +21,7 @@ export default function LoginClient() {
   const [error, setError] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = sanitizePostLoginPath(searchParams.get('next'));
+  const nextPath = toRelativeNext(searchParams.get('next'));
   const supabase = getBrowserSupabase();
 
   const handleEmailAuth = async (e: React.FormEvent) => {

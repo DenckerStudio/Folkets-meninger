@@ -192,7 +192,13 @@ export function SharePollWidget({
       window.parent.postMessage({ version: 1, pollId, ...payload }, '*');
     post({ type: 'fm:ready' });
 
-    const sendHeight = () => post({ type: 'fm:resize', height: Math.ceil(node.scrollHeight) });
+    let lastHeight = -1;
+    const sendHeight = () => {
+      const height = Math.ceil(node.scrollHeight);
+      if (height === lastHeight) return;
+      lastHeight = height;
+      post({ type: 'fm:resize', height });
+    };
     sendHeight();
     const observer = new ResizeObserver(sendHeight);
     observer.observe(node);
@@ -235,8 +241,13 @@ export function SharePollWidget({
     setError('');
 
     if (variant === 'embed') {
-      // Voting requires login; open the share page in a new tab (choice preserved).
-      const target = buildPollShareRelativePath(pollId, { choice, ref: refCode });
+      // Voting requires login; open the public share page in a new tab with the
+      // choice preserved. Resolve against `shareUrl` so the link targets the app
+      // origin rather than the partner site hosting the iframe.
+      const target = new URL(
+        buildPollShareRelativePath(pollId, { choice, ref: refCode }),
+        shareUrl,
+      ).toString();
       window.open(target, '_blank', 'noopener,noreferrer');
       return;
     }

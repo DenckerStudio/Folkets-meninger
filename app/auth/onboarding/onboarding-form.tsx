@@ -19,7 +19,7 @@ import {
   type OnboardingStepId,
 } from '@/lib/onboarding';
 import { NORWAY_COUNTIES } from '@/lib/polls/norway-counties';
-import { loginWithNext, sanitizePostLoginPath } from '@/lib/safe-redirect';
+import { loginWithNext, toRelativeNext } from '@/lib/safe-redirect';
 import { cn } from '@/lib/utils';
 
 type Direction = 1 | -1;
@@ -28,7 +28,7 @@ export function OnboardingForm() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = sanitizePostLoginPath(searchParams.get('next'));
+  const nextPath = toRelativeNext(searchParams.get('next'));
   const reducedMotion = usePrefersReducedMotion();
 
   const [step, setStep] = useState<OnboardingStepId>('welcome');

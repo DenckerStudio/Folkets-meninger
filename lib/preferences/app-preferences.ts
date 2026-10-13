@@ -66,10 +66,16 @@ export function applyAppPreferencesToDocument(
 
   const root = document.documentElement;
   const forceLight = options?.pathname !== undefined && isLandingPath(options.pathname);
-  const resolvedTheme = forceLight ? 'light' : resolveThemeMode(prefs.theme);
+  // Embed pages may pin an explicit theme; honour it so the provider never
+  // fights the embed's own controller.
+  const embedTheme =
+    root.dataset.embedTheme === 'dark' || root.dataset.embedTheme === 'light'
+      ? root.dataset.embedTheme
+      : null;
+  const resolvedTheme = embedTheme ?? (forceLight ? 'light' : resolveThemeMode(prefs.theme));
   root.classList.toggle('dark', resolvedTheme === 'dark');
   root.classList.toggle('motion-reduce', shouldReduceMotion(prefs.motion));
-  root.dataset.theme = forceLight ? 'light' : prefs.theme;
+  root.dataset.theme = embedTheme ?? (forceLight ? 'light' : prefs.theme);
   root.dataset.motion = prefs.motion;
   root.dataset.landingLight = forceLight ? 'true' : 'false';
 }

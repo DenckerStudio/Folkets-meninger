@@ -25,7 +25,34 @@ function titleFontSize(length: number): number {
   return 44;
 }
 
-function pollButton(icon: string, label: string, background: string, color: string) {
+type ChoiceIconKind = 'check' | 'question' | 'cross';
+
+const CHOICE_ICON_PATHS: Record<ChoiceIconKind, string> = {
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  question:
+    '<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+  cross: '<path d="M18 6 6 18M6 6l12 12"/>',
+};
+
+/**
+ * Renders the ballot glyph as an SVG data URI. The default OG font has no
+ * ✓/✕ glyphs, so drawing them as text produced tofu boxes; a real SVG renders
+ * identically everywhere satori runs.
+ */
+function choiceIconSrc(kind: ChoiceIconKind, color: string): string {
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" ` +
+    `fill="none" stroke="${color}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">` +
+    `${CHOICE_ICON_PATHS[kind]}</svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+function pollButton(
+  kind: ChoiceIconKind,
+  label: string,
+  background: string,
+  color: string,
+) {
   return (
     <div
       style={{
@@ -43,7 +70,8 @@ function pollButton(icon: string, label: string, background: string, color: stri
         fontWeight: 700,
       }}
     >
-      <span style={{ fontSize: 34 }}>{icon}</span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={choiceIconSrc(kind, color)} width={34} height={34} alt="" />
       <span>{label}</span>
     </div>
   );
@@ -161,9 +189,9 @@ export function renderPollShareOgImage(poll: PollRecord | null): ImageResponse {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div style={{ display: 'flex', gap: 18 }}>
-            {pollButton('✓', 'Ja', '#0a3d9e', '#ffffff')}
-            {pollButton('?', 'Vet ikke', '#ffffff', '#00205b')}
-            {pollButton('✕', 'Nei', '#ba0c2f', '#ffffff')}
+            {pollButton('check', 'Ja', '#0a3d9e', '#ffffff')}
+            {pollButton('question', 'Vet ikke', '#ffffff', '#00205b')}
+            {pollButton('cross', 'Nei', '#ba0c2f', '#ffffff')}
           </div>
           <div style={{ display: 'flex', fontSize: 22, color: 'rgba(255,255,255,0.72)' }}>
             folkets-meninger.no · Uoffisiell meningsmåling

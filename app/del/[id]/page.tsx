@@ -7,7 +7,6 @@ import {
   DEFAULT_DESCRIPTION,
   SITE_LOCALE,
   SITE_NAME,
-  getMetadataBase,
   truncateDescription,
 } from '@/lib/seo/metadata';
 import {
@@ -18,6 +17,7 @@ import {
 } from '@/lib/polls/service';
 import {
   buildPollShareUrl,
+  DEFAULT_SITE_ORIGIN,
   isPollChoice,
   isShareablePoll,
   pollSharePath,
@@ -46,7 +46,10 @@ function firstParam(value: string | string[] | undefined): string | null {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const poll = await getPublicPollById(id).catch(() => null);
+  const [poll, origin] = await Promise.all([
+    getPublicPollById(id).catch(() => null),
+    resolveRequestShareOrigin().catch(() => DEFAULT_SITE_ORIGIN),
+  ]);
   const shareable = isShareablePoll(poll) && Boolean(poll);
 
   const title = shareable && poll ? poll.title : SITE_NAME;
@@ -66,7 +69,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 
   return {
-    metadataBase: getMetadataBase(),
+    // Use the origin serving the request so `og:image`, `og:url` and the
+    // canonical link resolve on previews instead of production.
+    metadataBase: new URL(`${origin}/`),
     title: shareable && poll ? `${poll.title} – ${SITE_NAME}` : SITE_NAME,
     description,
     alternates: { canonical },

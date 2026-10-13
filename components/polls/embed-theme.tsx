@@ -4,22 +4,21 @@ import { useEffect } from 'react';
 import type { PollEmbedTheme } from '@/lib/polls/embed';
 
 /**
- * Forces an explicit embed theme by pinning the `dark` class on `<html>` and
- * re-applying it if the app's theme provider changes it. `auto` leaves the
- * system preference (or the stored preference) untouched.
+ * Pins an explicit embed theme by setting `data-embed-theme` (and the `dark`
+ * class) on `<html>` while the embed is mounted. `applyAppPreferencesToDocument`
+ * honours the override, so the app theme provider applies it on its next pass
+ * and no longer fights the embed. `auto` leaves the stored/system preference
+ * untouched.
  */
 export function EmbedThemeController({ theme }: { theme: PollEmbedTheme }) {
   useEffect(() => {
     if (theme === 'auto') return;
     const root = document.documentElement;
-    const apply = () => {
-      if (theme === 'dark') root.classList.add('dark');
-      else root.classList.remove('dark');
+    root.dataset.embedTheme = theme;
+    root.classList.toggle('dark', theme === 'dark');
+    return () => {
+      delete root.dataset.embedTheme;
     };
-    apply();
-    const observer = new MutationObserver(apply);
-    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
   }, [theme]);
 
   return null;
