@@ -239,6 +239,7 @@ function ReelsNavCta({
     <button
       type="button"
       onClick={onNavigate}
+      data-tour={direction === 'forward' ? 'reels' : undefined}
       aria-controls={direction === 'forward' ? 'reels' : undefined}
       aria-label={reversed ? 'Tilbake til saker' : 'Åpne Reels'}
       className="flex w-full items-center justify-between gap-4 rounded-2xl border border-brand/20 bg-brand/5 px-5 py-4 transition-[colors,transform] duration-200 hover:border-brand/40 hover:bg-brand/10 active:scale-[0.995]"

@@ -3,6 +3,7 @@ import { routes } from '@/lib/routes';
 const ALLOWED_PREFIXES = [
   '/dashboard',
   '/auth/login',
+  '/auth/onboarding',
   '/innspill',
   '/',
 ] as const;

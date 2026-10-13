@@ -25,6 +25,7 @@ export const routes = {
   innspill: '/innspill',
   login: '/auth/login',
   completeProfile: '/auth/complete-profile',
+  onboarding: '/auth/onboarding',
   politiker: (id: string) => `${DASHBOARD_PREFIX}/politikere/${id}`,
   parti: (name: string) =>
     `${DASHBOARD_PREFIX}/politikere?parti=${encodeURIComponent(name)}`,
