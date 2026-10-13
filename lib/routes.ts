@@ -13,7 +13,6 @@ export const routes = {
   /** @deprecated Reels live on Utforsk; this path redirects there. */
   avstemningerReels: `${DASHBOARD_PREFIX}/avstemninger/reels`,
   minSide: `${DASHBOARD_PREFIX}/min-side`,
-  varsler: `${DASHBOARD_PREFIX}/varsler`,
   horinger: `${DASHBOARD_PREFIX}/horinger`,
   kalender: `${DASHBOARD_PREFIX}/kalender`,
   horingerIcs: '/api/kalender/horinger.ics',

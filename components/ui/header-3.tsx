@@ -4,7 +4,7 @@ import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Bell, LogIn } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 import { isDashboardPath, isPublicProfilePath, routes } from '@/lib/routes';
@@ -12,6 +12,7 @@ import { loginWithNext } from '@/lib/safe-redirect';
 import { desktopPrimaryNavLinks } from '@/lib/site-nav-links';
 import { DashboardNavMenuButton } from '@/components/dashboard/dashboard-nav-context';
 import { ProfileMenuDropdown } from '@/components/profile/profile-menu-dropdown';
+import { NotificationsBell } from '@/components/notifications/notifications-bell';
 
 export function Header() {
   const scrolled = useScroll(10);
@@ -21,8 +22,6 @@ export function Header() {
   const inDashboard = isDashboardPath(pathname);
   const isLoggedIn = !!user;
   const loginHref = loginWithNext(pathname);
-  const [unreadCount, setUnreadCount] = React.useState(0);
-  const displayUnreadCount = isLoggedIn ? unreadCount : 0;
   const logoHref = isPublicProfilePath(pathname)
     ? routes.home
     : isLoggedIn
@@ -35,26 +34,6 @@ export function Header() {
     router.refresh();
   };
 
-  React.useEffect(() => {
-    if (!isLoggedIn) return;
-
-    let timer: number | undefined;
-    const load = async () => {
-      try {
-        const res = await fetch('/api/notifications/unread-count', { cache: 'no-store' });
-        const json = await res.json();
-        setUnreadCount(Number(json.count || 0));
-      } catch {
-        // ignore
-      }
-    };
-
-    void load();
-    timer = window.setInterval(load, 5 * 60 * 1000);
-    return () => {
-      if (timer) window.clearInterval(timer);
-    };
-  }, [isLoggedIn]);
 
   return (
     <header
@@ -92,18 +71,7 @@ export function Header() {
           ) : null}
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link
-            href={isLoggedIn ? routes.varsler : loginHref}
-            className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
-            aria-label="Varsler"
-          >
-            <Bell className="size-4" />
-            {displayUnreadCount > 0 ? (
-              <span className="absolute -top-1 -right-1 inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-brand px-1.5 text-[11px] font-bold text-white">
-                {displayUnreadCount > 99 ? '99+' : displayUnreadCount}
-              </span>
-            ) : null}
-          </Link>
+          <NotificationsBell enabled={isLoggedIn} loginHref={loginHref} />
           {inDashboard ? (
             <DashboardNavMenuButton className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background text-foreground transition-colors hover:bg-accent hover:text-accent-foreground xl:hidden" />
           ) : null}
