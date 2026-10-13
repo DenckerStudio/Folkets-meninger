@@ -1,5 +1,7 @@
+import type { Metadata } from 'next';
 import { getSakPageBundle, type StortingetSakDetail } from '@/lib/stortinget';
 import { classifySakKind, getSakKindLabel } from '@/lib/stortinget-sak-presentation';
+import { buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { SakMetaCard, SakProcessingBadge, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
 import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS, SAK_TYPE_BADGE_CLASS } from '@/lib/sak-status';
@@ -99,6 +101,56 @@ function buildSaksgangSteps(
       navn: steg.navn,
       events,
     };
+  });
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const bundle = await getSakPageBundle(id).catch(() => null);
+
+  if (!bundle) {
+    return buildPageMetadata({
+      title: 'Sak ikke funnet',
+      description: 'Saken finnes ikke eller er ikke tilgjengelig.',
+      canonicalPath: `/dashboard/sak/${id}`,
+      robots: { index: false, follow: false },
+    });
+  }
+
+  const { sak, detail } = bundle;
+  const title = (detail.korttittel || detail.tittel || sak.title || 'Stortingssak').trim();
+  const descriptionSource = (
+    sak.summary ||
+    detail.innstillingstekst ||
+    detail.kortvedtak ||
+    detail.vedtakstekst ||
+    detail.tittel ||
+    ''
+  ).trim();
+  const description = descriptionSource
+    ? truncateDescription(descriptionSource)
+    : `Les om saken «${truncateDescription(title, 90)}» på Folkets Meninger.`;
+
+  const keywords = [
+    ...(detail.emne_liste ?? []).map((emne) => emne.navn),
+    ...(detail.stikkord_liste ?? []).map((stikkord) =>
+      typeof stikkord === 'string' ? stikkord : stikkord.navn,
+    ),
+  ]
+    .map((keyword) => keyword?.trim())
+    .filter((keyword): keyword is string => Boolean(keyword))
+    .slice(0, 10);
+
+  return buildPageMetadata({
+    title: truncateDescription(title, 70),
+    description,
+    canonicalPath: `/dashboard/sak/${id}`,
+    openGraphType: 'article',
+    ...(keywords.length ? { keywords } : {}),
   });
 }
 

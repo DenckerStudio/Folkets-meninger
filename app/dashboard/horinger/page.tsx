@@ -6,8 +6,16 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import HoringerList from '@/components/horinger/horinger-list';
 import { PageHeader } from '@/components/page-header';
 import { routes } from '@/lib/routes';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata = buildPageMetadata({
+  title: 'Høringer',
+  description:
+    'Åpne og planlagte høringer fra Stortinget. Søk, filtrer og send innspill til saker under behandling.',
+  canonicalPath: '/dashboard/horinger',
+});
 
 export default async function HoringerPage() {
   let hearings: Awaited<ReturnType<typeof fetchStortingetHoringer>> = [];

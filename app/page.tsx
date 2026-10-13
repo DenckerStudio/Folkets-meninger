@@ -5,6 +5,9 @@ import { LandingHowItWorks } from '@/components/landing-how-it-works';
 import { LandingPopularIssuesLazy } from '@/components/landing-popular-issues-lazy';
 import CallToAction from '@/components/ui/call-to-action';
 import { routes } from '@/lib/routes';
+import { homepageMetadata } from '@/lib/seo/metadata';
+
+export const metadata = homepageMetadata();
 
 export default function LandingPage() {
   return (

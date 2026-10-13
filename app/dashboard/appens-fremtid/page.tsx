@@ -1,10 +1,12 @@
 import { AppensFremtidPage } from '@/components/appens-fremtid/appens-fremtid-page';
 import { APPENS_FREMTID_TITLE } from '@/lib/appens-fremtid/constants';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
-export const metadata = {
+export const metadata = buildPageMetadata({
   title: APPENS_FREMTID_TITLE,
   description: 'Forslag, endringslogg og veikart for Folkets Meninger.',
-};
+  canonicalPath: '/dashboard/appens-fremtid',
+});
 
 export default function AppensFremtidRoutePage() {
   return <AppensFremtidPage />;

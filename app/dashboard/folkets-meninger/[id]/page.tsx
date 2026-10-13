@@ -1,7 +1,9 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { OpinionDetailClient } from './opinion-detail-client';
 import { getCitizenOpinion } from '@/lib/opinions/service';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
 import {
   findHearingLinkForSak,
   getOpinionInnspill,
@@ -13,6 +15,33 @@ export const dynamic = 'force-dynamic';
 type PageProps = {
   params: Promise<{ id: string }>;
 };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const opinion = await getCitizenOpinion(id, null).catch(() => null);
+
+  if (!opinion) {
+    return buildPageMetadata({
+      title: 'Mening ikke funnet',
+      description: 'Fant ikke innlegget.',
+      canonicalPath: `/dashboard/folkets-meninger/${id}`,
+      robots: { index: false, follow: false },
+    });
+  }
+
+  const title = (opinion.title || 'Mening').trim();
+  const body = opinion.body ?? '';
+  const description = body
+    ? truncateDescription(body)
+    : `Les meningen «${truncateDescription(title, 90)}» på Folkets Meninger.`;
+
+  return buildPageMetadata({
+    title: truncateDescription(title, 70),
+    description,
+    canonicalPath: `/dashboard/folkets-meninger/${id}`,
+    openGraphType: 'article',
+  });
+}
 
 export default async function OpinionDetailPage({ params }: PageProps) {
   const { id } = await params;

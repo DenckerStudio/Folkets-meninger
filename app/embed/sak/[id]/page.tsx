@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getAiSummaryFromDb } from '@/lib/ai-summary/service';
 import { isAiSummaryV2, type AiSummary } from '@/lib/ai-summary/types';
@@ -10,6 +11,11 @@ import { getCachedSakDetail } from '@/lib/stortinget-detail-cache';
 import { mapSakPresentation } from '@/lib/stortinget-sak-presentation';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Sak | Folkets Meninger',
+  robots: { index: false, follow: false },
+};
 
 type SakEmbedPageProps = {
   params: Promise<{ id: string }>;
