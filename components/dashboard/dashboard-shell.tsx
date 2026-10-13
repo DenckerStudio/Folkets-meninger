@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { ChatHost } from '@/components/chat/chat-host';
 import { ChatOverlayProvider } from '@/components/chat/chat-overlay-context';
+import { ProductTourHost } from '@/components/onboarding/product-tour-host';
 import DashboardSidebar from '@/components/dashboard/dashboard-sidebar';
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -18,6 +19,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </div>
       <Suspense fallback={null}>
         <ChatHost />
+      </Suspense>
+      <Suspense fallback={null}>
+        <ProductTourHost />
       </Suspense>
     </ChatOverlayProvider>
   );

@@ -245,7 +245,7 @@ export function NotificationsBell({
   );
 
   return (
-    <div className={cn('relative', className)}>
+    <div className={cn('relative', className)} data-tour="varsler">
       <button
         ref={triggerRef}
         type="button"

@@ -5,6 +5,7 @@ import { ShieldCheck, ArrowRight, Phone } from 'lucide-react';
 import FadeIn from '@/components/fade-in';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase';
+import { onboardingPathWithNext, shouldStartSignupOnboarding } from '@/lib/onboarding';
 import { sanitizePostLoginPath } from '@/lib/safe-redirect';
 
 export default function LoginClient() {
@@ -45,6 +46,7 @@ export default function LoginClient() {
               first_name: trimmedFirst,
               last_name: trimmedLast,
               full_name: `${trimmedFirst} ${trimmedLast}`,
+              onboarding_pending: true,
             },
           },
         });
@@ -55,7 +57,7 @@ export default function LoginClient() {
         }
         setShowPhoneVerify(true);
       } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
@@ -64,7 +66,11 @@ export default function LoginClient() {
           setIsLoading(false);
           return;
         }
-        router.push(nextPath);
+        if (shouldStartSignupOnboarding(signInData.user)) {
+          router.push(onboardingPathWithNext(nextPath));
+        } else {
+          router.push(nextPath);
+        }
         router.refresh();
       }
     } catch {
@@ -119,7 +125,7 @@ export default function LoginClient() {
     } catch {
       // ignore
     }
-    router.push(nextPath);
+    router.push(onboardingPathWithNext(nextPath));
     router.refresh();
   };
 
@@ -197,10 +203,7 @@ export default function LoginClient() {
               <button
                 type="button"
                 onClick={() => {
-                  const completeNext = nextPath.includes('horinger')
-                    ? `/auth/complete-profile?next=${encodeURIComponent(nextPath)}`
-                    : nextPath;
-                  router.push(completeNext);
+                  router.push(onboardingPathWithNext(nextPath));
                   router.refresh();
                 }}
                 className="w-full text-center text-sm text-muted-foreground hover:text-foreground"

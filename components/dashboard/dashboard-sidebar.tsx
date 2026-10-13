@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { dashboardSidebarNavItemsForAdmin } from '@/lib/site-nav-links';
+import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
 type DashboardSidebarProps = {
@@ -36,6 +37,7 @@ export default function DashboardSidebar({ variant = 'desktop', onNavigate }: Da
             key={item.href}
             href={item.href}
             onClick={onNavigate}
+            data-tour={item.href === routes.utforsk ? 'utforsk' : undefined}
             className={cn(
               'flex items-center gap-3 font-medium transition-colors',
               isDrawer

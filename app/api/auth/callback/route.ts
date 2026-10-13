@@ -3,8 +3,9 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { userHasPublicIdentityInDb } from '@/lib/identity/require-public-identity';
-import { sanitizePostLoginPath } from '@/lib/safe-redirect';
+import { onboardingPathWithNext, shouldStartSignupOnboarding } from '@/lib/onboarding';
 import { routes } from '@/lib/routes';
+import { sanitizePostLoginPath } from '@/lib/safe-redirect';
 
 function requiresPublicIdentity(pathname: string): boolean {
   return pathname.startsWith(`${routes.horinger}/`) || pathname.startsWith('/dashboard/horinger/');
@@ -53,6 +54,9 @@ export async function GET(request: Request) {
           profileUrl.searchParams.set('next', next);
           return NextResponse.redirect(profileUrl.toString());
         }
+      }
+      if (user && shouldStartSignupOnboarding(user)) {
+        return NextResponse.redirect(`${origin}${onboardingPathWithNext(next)}`);
       }
       return NextResponse.redirect(`${origin}${next}`);
     }

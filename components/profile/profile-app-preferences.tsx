@@ -2,6 +2,7 @@
 
 import { Monitor, Moon, Sun, Info } from 'lucide-react';
 import { CivicRings } from '@/components/icons/civic';
+import { ProductTourRestart } from '@/components/onboarding/product-tour-restart';
 import {
   type AppPreferences,
   type MotionPreference,
@@ -166,6 +167,13 @@ export function ProfileAppPreferences() {
             </span>
           </span>
         </label>
+      </PreferenceSection>
+
+      <PreferenceSection
+        title="Omvisning"
+        description="Kort introduksjon til Utforsk, Reels, varsler og Stemme+-chatten."
+      >
+        <ProductTourRestart />
       </PreferenceSection>
     </div>
   );
