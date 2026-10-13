@@ -57,13 +57,14 @@ export async function listChatNotifications(
 ): Promise<ChatNotificationItem[]> {
   if (!userId) return [];
   const limit = Math.min(20, Math.max(1, options.limit ?? 8));
+  const fetchLimit = Math.min(100, limit * 2);
 
   let query = client
     .from('notifications')
     .select('id, title, body, url, channel, created_at, read_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
-    .limit(limit);
+    .limit(fetchLimit);
 
   if (options.unreadOnly) {
     query = query.is('read_at', null);
@@ -72,13 +73,21 @@ export async function listChatNotifications(
   const { data, error } = await query;
   if (error) return [];
 
-  return (data ?? []).map((row) => ({
-    id: String(row.id),
-    title: String(row.title),
-    body: row.body ? String(row.body) : null,
-    url: row.url ? String(row.url) : null,
-    channel: String(row.channel),
-    createdAt: String(row.created_at),
-    read: Boolean(row.read_at),
-  }));
+  const seen = new Set<string>();
+  const items: ChatNotificationItem[] = [];
+  for (const row of data ?? []) {
+    const id = String(row.id);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    items.push({
+      id,
+      title: String(row.title),
+      body: row.body ? String(row.body) : null,
+      url: row.url ? String(row.url) : null,
+      channel: String(row.channel),
+      createdAt: String(row.created_at),
+      read: Boolean(row.read_at),
+    });
+  }
+  return items.slice(0, limit);
 }

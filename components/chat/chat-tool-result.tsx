@@ -618,12 +618,18 @@ function HearingsCard({
         {hearings.map((hearing) =>
           hearing.id ? (
             <li key={hearing.id} className="space-y-0.5">
-              <Link
-                href={routes.horing(hearing.id)}
-                className="text-xs font-medium text-foreground hover:text-brand hover:underline"
-              >
-                {hearing.title || `Høring ${hearing.id}`}
-              </Link>
+              {hearing.skriftligInnspillUrl ? (
+                <Link
+                  href={routes.horing(hearing.id)}
+                  className="text-xs font-medium text-foreground hover:text-brand hover:underline"
+                >
+                  {hearing.title || `Høring ${hearing.id}`}
+                </Link>
+              ) : (
+                <span className="text-xs font-medium text-foreground">
+                  {hearing.title || `Høring ${hearing.id}`}
+                </span>
+              )}
               <p className="text-xs text-muted-foreground">
                 {hearing.statusLabel || 'Høring'}
                 {hearing.deadlineLabel ? ` · ${hearing.deadlineLabel}` : ''}
