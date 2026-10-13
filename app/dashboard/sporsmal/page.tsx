@@ -4,8 +4,16 @@ import { PageHeader } from '@/components/page-header';
 import SporsmalList from '@/components/sporsmal/sporsmal-list';
 import { STORTINGET_ACTIVE_SESSION_ID } from '@/lib/stortinget-config';
 import { getSporsmalListe, type SporsmalType } from '@/lib/stortinget';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
 export const revalidate = 3600;
+
+export const metadata = buildPageMetadata({
+  title: 'Spørsmål',
+  description:
+    'Skriftlige spørsmål, interpellasjoner og spørretimespørsmål fra Stortingets åpne data.',
+  canonicalPath: '/dashboard/sporsmal',
+});
 
 export default async function SporsmalPage({
   searchParams,

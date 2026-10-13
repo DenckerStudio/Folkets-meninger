@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import {
   Calendar,
@@ -32,9 +33,48 @@ import {
 } from '@/lib/stortinget-horinger';
 import { resolveHearingCommentAuthor } from '@/lib/identity/public-identity';
 import { routes } from '@/lib/routes';
+import { buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
 import HearingCommentForm from './comment-form';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const hearing = await fetchStortingetHoringById(id).catch(() => null);
+
+  if (!hearing) {
+    return buildPageMetadata({
+      title: 'Høring ikke funnet',
+      description: 'Fant ikke høringen i Stortingets åpne data.',
+      canonicalPath: `/dashboard/horinger/${id}`,
+      robots: { index: false, follow: false },
+    });
+  }
+
+  const title = getHoringTitle(hearing);
+  const subtitle = getHoringSubtitle(hearing);
+  const komite = hearing.komite?.navn;
+  const description = truncateDescription(
+    [
+      subtitle && subtitle !== title ? subtitle : null,
+      komite ? `Komité: ${komite}.` : null,
+      'Se frister og send innspill på Folkets Meninger.',
+    ]
+      .filter(Boolean)
+      .join(' '),
+  );
+
+  return buildPageMetadata({
+    title,
+    description,
+    canonicalPath: `/dashboard/horinger/${id}`,
+    openGraphType: 'article',
+  });
+}
 
 async function getComments(stortingetHearingId: string) {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {

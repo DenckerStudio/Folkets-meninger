@@ -1,10 +1,11 @@
-import type { Metadata } from 'next';
 import { InnspillForm } from '@/components/innspill-form';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
-export const metadata: Metadata = {
-  title: 'Gi innspill | Folkets Meninger',
+export const metadata = buildPageMetadata({
+  title: 'Gi innspill',
   description: 'Send idéer, feilmeldinger og tilbakemeldinger til Folkets Meninger.',
-};
+  canonicalPath: '/innspill',
+});
 
 export default function InnspillPage() {
   return (

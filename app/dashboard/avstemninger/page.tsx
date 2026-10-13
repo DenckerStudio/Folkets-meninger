@@ -3,8 +3,16 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import { PollCard } from '@/components/polls/poll-card';
 import { PageHeader } from '@/components/page-header';
 import { getPollTotals, listOpenPolls } from '@/lib/polls/service';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata = buildPageMetadata({
+  title: 'Avstemninger',
+  description:
+    'Nasjonale spørsmål med ja, nei eller blank. Se resultatene og delta i avstemninger.',
+  canonicalPath: '/dashboard/avstemninger',
+});
 
 export default async function AvstemningerPage() {
   const polls = await listOpenPolls(40);

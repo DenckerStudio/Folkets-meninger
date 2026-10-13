@@ -5,8 +5,16 @@ import {
   listSakPickerOptions,
 } from '@/lib/opinions/service';
 import { FolketsMeningerClient } from '@/components/opinions/folkets-meninger-client';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata = buildPageMetadata({
+  title: 'Folkets meninger',
+  description:
+    'Les og del meninger om Stortingssaker. Ett innlegg per bruker, med for- og imot-punkter.',
+  canonicalPath: '/dashboard/folkets-meninger',
+});
 
 type PageProps = {
   searchParams?: Promise<{ sak?: string | string[]; compose?: string | string[] }>;

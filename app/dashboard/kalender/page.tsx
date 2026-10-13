@@ -6,14 +6,16 @@ import HoringerKalender from '@/components/kalender/horinger-kalender';
 import { hearingsToKalenderEvents, toKalenderEventDto } from '@/lib/kalender-events';
 import { resolveKalenderSiteOrigin, STORTINGET_HORINGER_ICS_URL } from '@/lib/kalender-ics';
 import { routes } from '@/lib/routes';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 import { fetchStortingetHoringer } from '@/lib/stortinget-horinger';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = {
-  title: 'Kalender | Folkets Meninger',
-  description: 'Høringer og innspillsfrister fra Stortinget i kalendervisning.',
-};
+export const metadata = buildPageMetadata({
+  title: 'Kalender',
+  description: 'Høringer og innspillsfrister fra Stortinget i kalendervisning. Abonner eller bla.',
+  canonicalPath: '/dashboard/kalender',
+});
 
 async function resolveRequestOrigin(): Promise<string> {
   const headerList = await headers();
