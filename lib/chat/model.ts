@@ -4,6 +4,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createXai } from '@ai-sdk/xai';
 import { createGateway } from 'ai';
 import { OLLAMA_PLACEHOLDER_API_KEY } from '@/lib/byok/providers';
+import { normalizeOllamaBaseUrl } from '@/lib/byok/ollama';
 import type { DecryptedByokCredential } from '@/lib/byok/service';
 
 function requireApiKey(credential: DecryptedByokCredential): string {
@@ -23,16 +24,20 @@ export function createUserLanguageModel(credential: DecryptedByokCredential) {
     case 'grok':
       return createXai({ apiKey: requireApiKey(credential) })(credential.model);
     case 'ollama': {
-      const baseURL = credential.baseUrl?.trim();
-      if (!baseURL) {
+      const rawBase = credential.baseUrl?.trim();
+      if (!rawBase) {
         throw new Error('Ollama krever en base-URL (f.eks. http://localhost:11434/v1)');
+      }
+      const baseURL = normalizeOllamaBaseUrl(rawBase);
+      if (!baseURL) {
+        throw new Error('Ollama krever en gyldig base-URL (http:// eller https://).');
       }
       const apiKey = credential.apiKey?.trim() || OLLAMA_PLACEHOLDER_API_KEY;
       return createOpenAI({
         apiKey,
         baseURL,
         name: 'ollama',
-      })(credential.model);
+      }).chat(credential.model);
     }
     case 'anthropic':
       return createAnthropic({ apiKey: requireApiKey(credential) })(credential.model);
@@ -41,7 +46,7 @@ export function createUserLanguageModel(credential: DecryptedByokCredential) {
         apiKey: requireApiKey(credential),
         baseURL: credential.baseUrl ?? undefined,
         name: 'openai-compatible',
-      })(credential.model);
+      }).chat(credential.model);
     case 'ai_gateway':
       return createGateway({ apiKey: requireApiKey(credential) })(credential.model);
     default: {
