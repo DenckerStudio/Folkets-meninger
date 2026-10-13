@@ -115,7 +115,18 @@ export async function POST(request: Request) {
     });
 
     return createUIMessageStreamResponse({
-      stream: toUIMessageStream({ stream: result.stream }),
+      stream: toUIMessageStream({
+        stream: result.stream,
+        onError: (error) => {
+          const message = error instanceof Error ? error.message : String(error ?? '');
+          if (/sk-|api[_-]?key|bearer\s+[a-z0-9-]+/i.test(message)) {
+            console.error('[chat] stream error (redacted)');
+          } else {
+            console.error('[chat] stream error:', message);
+          }
+          return 'Modellen svarte ikke. Prøv igjen, eller sjekk modell og nøkkel under Stemme+.';
+        },
+      }),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : '';

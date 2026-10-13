@@ -45,6 +45,15 @@ assert.throws(
   /Ollama krever en base-URL/,
 );
 
+for (const provider of ['ollama', 'openai_compatible'] as const) {
+  const model = createUserLanguageModel(credential(provider));
+  assert.equal(
+    model.constructor.name,
+    'OpenAIChatLanguageModel',
+    `${provider} should use the OpenAI Chat Completions model`,
+  );
+}
+
 const ollamaNoKey = createUserLanguageModel(
   credential('ollama', { apiKey: '', baseUrl: 'http://127.0.0.1:11434/v1' }),
 );

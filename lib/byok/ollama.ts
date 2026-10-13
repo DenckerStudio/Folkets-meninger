@@ -34,6 +34,25 @@ export function ollamaTagsUrl(baseUrl: string): string | null {
   return ollamaApiUrl(baseUrl, 'tags');
 }
 
+export function normalizeOllamaBaseUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+
+  const path = url.pathname
+    .replace(/\/+$/, '')
+    .replace(/\/(?:v1|api\/tags|api|tags)$/i, '');
+
+  return `${url.origin}${path}/v1`;
+}
+
 function readModelNames(payload: unknown): string[] {
   if (!payload || typeof payload !== 'object') return [];
   const models = (payload as { models?: unknown }).models;
