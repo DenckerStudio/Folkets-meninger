@@ -117,7 +117,11 @@ export function ReelOpinionCard({
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
           });
-          const data = (await res.json()) as { error?: string };
+          const data = (await res.json()) as {
+            error?: string;
+            removed?: boolean;
+            keptReply?: boolean;
+          };
           if (!res.ok) {
             if (res.status === 401) {
               const redirectUrl = buildLoginRedirectUrl(currentPollId ?? opinion.pollId, opinion.id, stance);
@@ -126,8 +130,10 @@ export function ReelOpinionCard({
             }
             throw new Error(data.error || 'Kunne ikke fjerne stemme');
           }
-          // Optimistic update: decrement the count
           setSelectedStance(null);
+          // A written reply on the same item is kept (and still counts); an
+          // already-removed stance is a no-op. Only decrement when removed.
+          if (data.removed === false) return;
           setLocalCounts((prev) => ({
             ...prev,
             [stance]: Math.max(0, prev[stance] - 1),
@@ -140,7 +146,12 @@ export function ReelOpinionCard({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ stance, body: '', quick: true }),
           });
-          const data = (await res.json()) as { error?: string; replyId?: string; code?: string };
+          const data = (await res.json()) as {
+            error?: string;
+            replyId?: string;
+            code?: string;
+            keptReply?: boolean;
+          };
           if (!res.ok) {
             if (res.status === 401) {
               const redirectUrl = buildLoginRedirectUrl(currentPollId ?? opinion.pollId, opinion.id, stance);
@@ -152,6 +163,11 @@ export function ReelOpinionCard({
               return;
             }
             throw new Error(data.error || 'Kunne ikke lagre stemme');
+          }
+          if (data.keptReply) {
+            // The viewer already wrote a reply here; a tap must not replace it.
+            setError('Du har allerede skrevet et svar her. Endre det på meningssiden.');
+            return;
           }
           // Optimistic update: handle switching between stances
           setLocalCounts((prev) => {

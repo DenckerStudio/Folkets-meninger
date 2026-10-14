@@ -7,6 +7,40 @@ import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { PUBLIC_IDENTITY_ERROR } from '@/lib/identity/public-identity';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { getServiceSupabase } from '@/lib/supabase';
+import {
+  planQuickStanceRemoval,
+  planQuickStanceSave,
+  removalResponse,
+  type ExistingReplyRow,
+} from '@/lib/opinions/quick-stance';
+
+/**
+ * The viewer's own reply row for this opinion. Read with the service role and an
+ * explicit author filter (user id from the session): the table only has a
+ * public SELECT policy (NOT is_removed) and no UPDATE policy, so session-client
+ * writes silently affect 0 rows.
+ */
+async function loadOwnReplyRow(opinionId: string, userId: string): Promise<ExistingReplyRow> {
+  const service = getServiceSupabase();
+  const { data, error } = await service
+    .from('citizen_opinion_replies')
+    .select('id, stance, body, is_removed')
+    .eq('opinion_id', opinionId)
+    .eq('author_user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(1);
+  if (error) throw new Error(error.message);
+  const row = data?.[0];
+  return row
+    ? {
+        id: String(row.id),
+        stance: row.stance ?? null,
+        body: row.body ?? null,
+        is_removed: Boolean(row.is_removed),
+      }
+    : null;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -84,6 +118,20 @@ export async function POST(
 
   try {
     await ensurePublicUser(user);
+
+    // A quick tap must never overwrite a written reply (same row) with an empty body.
+    if (isQuickStance) {
+      const plan = planQuickStanceSave(await loadOwnReplyRow(id, user.id));
+      if (plan.action === 'keep-reply') {
+        return NextResponse.json({
+          success: true,
+          replyId: plan.replyId,
+          keptReply: true,
+          stance: plan.stance,
+        });
+      }
+    }
+
     const replyId = await createCitizenOpinionReply(user.id, id, { body: text, stance, quick: isQuickStance });
 
     // Notify users who hold a stance on this sak (B8). Best-effort.
@@ -129,7 +177,7 @@ export async function POST(
 }
 
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -142,39 +190,26 @@ export async function DELETE(
     return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
   }
 
-  // Only allow deleting the user's own quick stance reply (empty body)
-  const { data: reply, error: replyError } = await supabase
-    .from('citizen_opinion_replies')
-    .select('id, body')
-    .eq('opinion_id', id)
-    .eq('author_user_id', user.id)
-    .eq('is_removed', false)
-    .maybeSingle();
-
-  if (replyError) {
-    console.error('Delete stance: fetch reply error:', replyError.message);
-    return NextResponse.json({ error: 'Kunne ikke finne stemme' }, { status: 500 });
-  }
-
-  if (!reply) {
-    return NextResponse.json({ error: 'Ingen stemme å fjerne' }, { status: 404 });
-  }
-
-  // Only allow deletion if body is empty (quick stance)
-  if (reply.body && reply.body.trim().length > 0) {
-    return NextResponse.json({ error: 'Kan ikke fjerne begrunnelse her' }, { status: 400 });
-  }
-
-  // Soft delete by setting is_removed = true
-  const { error: deleteError } = await supabase
-    .from('citizen_opinion_replies')
-    .update({ is_removed: true, updated_at: new Date().toISOString() })
-    .eq('id', reply.id);
-
-  if (deleteError) {
-    console.error('Delete stance error:', deleteError.message);
+  // Un-tap removes only an empty-body quick stance. If the same row carries a
+  // written reply, the reply (and its stance) is left intact and we return 200.
+  try {
+    const plan = planQuickStanceRemoval(await loadOwnReplyRow(id, user.id));
+    if (plan.action === 'remove') {
+      const service = getServiceSupabase();
+      const { error: deleteError } = await service
+        .from('citizen_opinion_replies')
+        .update({ is_removed: true, updated_at: new Date().toISOString() })
+        .eq('id', plan.replyId)
+        .eq('author_user_id', user.id)
+        .eq('body', '');
+      if (deleteError) {
+        console.error('Delete stance error:', deleteError.message);
+        return NextResponse.json({ error: 'Kunne ikke fjerne stemme' }, { status: 500 });
+      }
+    }
+    return NextResponse.json(removalResponse(plan));
+  } catch (error) {
+    console.error('Delete stance: fetch reply error:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Kunne ikke fjerne stemme' }, { status: 500 });
   }
-
-  return NextResponse.json({ success: true });
 }
