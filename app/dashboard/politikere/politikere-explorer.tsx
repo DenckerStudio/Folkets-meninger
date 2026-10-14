@@ -192,27 +192,14 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
     }
     const listEl = listRef.current;
     if (!listEl) return;
-    const scrollContainer = (() => {
-      let el: HTMLElement | null = listEl.parentElement;
-      while (el) {
-        const style = window.getComputedStyle(el);
-        const overflowY = style.overflowY;
-        if ((overflowY === 'auto' || overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
-          return el;
-        }
-        el = el.parentElement;
-      }
-      return null;
-    })();
-    const offsetTop = scrollContainer
-      ? listEl.offsetTop - 96
-      : listEl.getBoundingClientRect().top + window.scrollY - 96;
+    const heading = listEl.querySelector('h2, h3, [role="heading"]') as HTMLElement | null;
     requestAnimationFrame(() => {
-      if (scrollContainer) {
-        scrollContainer.scrollTo({ top: offsetTop, behavior: 'smooth' });
-      } else {
-        window.scrollTo({ top: offsetTop, behavior: 'smooth' });
-      }
+      requestAnimationFrame(() => {
+        const rect = listEl.getBoundingClientRect();
+        const targetY = rect.top + window.scrollY - 96;
+        window.scrollTo({ top: targetY, behavior: 'auto' });
+        heading?.focus?.({ preventScroll: true });
+      });
     });
   }, [currentPage]);
 
@@ -299,7 +286,7 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
       ) : null}
 
       <SectionSettle>
-        <div ref={listRef} className="scroll-mt-24 space-y-6">
+        <div ref={listRef} className="scroll-mt-24 space-y-6" style={{ overflowAnchor: 'none' }}>
           {listedPolitikere.length === 0 && !showRegjeringSection ? (
             <EmptyState
               title="Ingen politikere matcher søket"

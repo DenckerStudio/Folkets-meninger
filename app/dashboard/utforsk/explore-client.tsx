@@ -7,7 +7,7 @@ import { getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS } from '@/lib/sak-status';
 import { SakProcessingBadge } from '@/components/sak/sak-meta';
 import { formatVotingDaysLeftLabel } from '@/lib/sak-voting-window';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { LayoutGroup } from 'motion/react';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
@@ -95,14 +95,29 @@ export default function ExploreClient({
   const activeAiLabels = selectedAiLabels ?? [];
   const firstOpenIssue = issues.find((issue) => issue.votingOpen && issue.status !== 'closed');
 
-  const setSearchQuery = (searchQuery: string) => setFilters((prev) => ({ ...prev, searchQuery }));
-  const setSelectedCategory = (selectedCategory: string) =>
+  // Track if user has interacted with filters this session (excluding searchQuery)
+  const [userTouchedFilters, setUserTouchedFilters] = useState(false);
+  const filtersResetRef = useRef(false);
+
+  const setSelectedCategory = (selectedCategory: string) => {
+    setUserTouchedFilters(true);
     setFilters((prev) => ({ ...prev, selectedCategory }));
-  const setSelectedStatus = (selectedStatus: string) => setFilters((prev) => ({ ...prev, selectedStatus }));
-  const setSelectedSakKind = (selectedSakKind: string) => setFilters((prev) => ({ ...prev, selectedSakKind }));
-  const setSortBy = (sortBy: string) => setFilters((prev) => ({ ...prev, sortBy }));
+  };
+  const setSelectedStatus = (selectedStatus: string) => {
+    setUserTouchedFilters(true);
+    setFilters((prev) => ({ ...prev, selectedStatus }));
+  };
+  const setSelectedSakKind = (selectedSakKind: string) => {
+    setUserTouchedFilters(true);
+    setFilters((prev) => ({ ...prev, selectedSakKind }));
+  };
+  const setSortBy = (sortBy: string) => {
+    setUserTouchedFilters(true);
+    setFilters((prev) => ({ ...prev, sortBy }));
+  };
 
   const toggleAiLabel = (label: string) => {
+    setUserTouchedFilters(true);
     setFilters((prev) => {
       const current = prev.selectedAiLabels ?? [];
       const next = current.includes(label)
@@ -111,6 +126,79 @@ export default function ExploreClient({
       return { ...prev, selectedAiLabels: next };
     });
   };
+
+  const setSearchQuery = (searchQuery: string) => setFilters((prev) => ({ ...prev, searchQuery }));
+
+  // Compute displayed issues based on current filters
+  const computeDisplayedIssues = useCallback(() => {
+    let result = issues;
+    if (selectedCategory !== 'Alle kategorier') {
+      result = result.filter((issue) => issue.category === selectedCategory);
+    }
+    if (selectedStatus === 'Under behandling' || selectedStatus === 'Åpne for stemmer') {
+      result = result.filter((issue) => issue.status !== 'closed');
+    } else if (selectedStatus === 'Ferdigbehandlet / Historikk') {
+      result = result.filter((issue) => issue.status === 'closed');
+    }
+    if (selectedSakKind === 'Lovforslag') {
+      result = result.filter((issue) => issue.sakKind === 'lovforslag');
+    } else if (selectedSakKind === 'Representantforslag') {
+      result = result.filter((issue) => issue.sakKind === 'representantforslag');
+    }
+    if (searchQuery.trim() !== '') {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (issue) =>
+          issue.title.toLowerCase().includes(query) ||
+          issue.summary.toLowerCase().includes(query) ||
+          issue.id.toString().includes(query)
+      );
+    }
+    if (activeAiLabels.length > 0) {
+      result = result.filter((issue) => {
+        const labels = issueLabels[String(issue.id)] ?? [];
+        return activeAiLabels.some((label) => labels.includes(label));
+      });
+    }
+    return [...result].sort((a, b) => {
+      if (sortBy === 'Nyeste først') {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      }
+      if (sortBy === 'Mest engasjement') {
+        return b.votes.total - a.votes.total;
+      }
+      if (sortBy === 'Snart votering') {
+        return votingUrgency(a) - votingUrgency(b);
+      }
+      return 0;
+    });
+  }, [issues, selectedCategory, selectedStatus, selectedSakKind, searchQuery, activeAiLabels, sortBy, issueLabels]);
+
+  const displayedIssues = computeDisplayedIssues();
+
+  // On first mount, if persisted filters (from storage) yield 0 results but issues exist
+  // and user hasn't touched filters this session, reset non-search filters to defaults once
+  useEffect(() => {
+    if (!isMounted) return;
+    if (filtersResetRef.current) return;
+    filtersResetRef.current = true;
+    const allDefaultFilters =
+      searchQuery === '' &&
+      selectedCategory === 'Alle kategorier' &&
+      selectedStatus === 'Alle statuser' &&
+      selectedSakKind === 'Alle sakstyper' &&
+      activeAiLabels.length === 0;
+    if (displayedIssues.length === 0 && issues.length > 0 && !allDefaultFilters && !userTouchedFilters) {
+      setFilters((prev) => ({
+        ...prev,
+        selectedCategory: 'Alle kategorier',
+        selectedStatus: 'Alle statuser',
+        selectedSakKind: 'Alle sakstyper',
+        selectedAiLabels: [],
+        sortBy: 'Nyeste først',
+      }));
+    }
+  }, [isMounted, searchQuery, selectedCategory, selectedStatus, selectedSakKind, activeAiLabels, displayedIssues.length, issues.length, userTouchedFilters, setFilters]);
 
   useEffect(() => {
     if (!user) return;
@@ -177,68 +265,6 @@ export default function ExploreClient({
       onChange: setSelectedSakKind,
     },
   ];
-
-  let displayedIssues = issues;
-
-  if (selectedCategory !== 'Alle kategorier') {
-    displayedIssues = displayedIssues.filter((issue) => issue.category === selectedCategory);
-  }
-
-  if (selectedStatus === 'Under behandling' || selectedStatus === 'Åpne for stemmer') {
-    displayedIssues = displayedIssues.filter((issue) => issue.status !== 'closed');
-  } else if (selectedStatus === 'Ferdigbehandlet / Historikk') {
-    displayedIssues = displayedIssues.filter((issue) => issue.status === 'closed');
-  }
-
-  if (selectedSakKind === 'Lovforslag') {
-    displayedIssues = displayedIssues.filter((issue) => issue.sakKind === 'lovforslag');
-  } else if (selectedSakKind === 'Representantforslag') {
-    displayedIssues = displayedIssues.filter((issue) => issue.sakKind === 'representantforslag');
-  }
-
-  if (searchQuery.trim() !== '') {
-    const query = searchQuery.toLowerCase();
-    displayedIssues = displayedIssues.filter(
-      (issue) =>
-        issue.title.toLowerCase().includes(query) ||
-        issue.summary.toLowerCase().includes(query) ||
-        issue.id.toString().includes(query)
-    );
-  }
-
-  if (activeAiLabels.length > 0) {
-    displayedIssues = displayedIssues.filter((issue) => {
-      const labels = issueLabels[String(issue.id)] ?? [];
-      return activeAiLabels.some((label) => labels.includes(label));
-    });
-  }
-
-  displayedIssues = [...displayedIssues].sort((a, b) => {
-    if (sortBy === 'Nyeste først') {
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
-    }
-    if (sortBy === 'Mest engasjement') {
-      return b.votes.total - a.votes.total;
-    }
-    if (sortBy === 'Snart votering') {
-      return votingUrgency(a) - votingUrgency(b);
-    }
-    return 0;
-  });
-
-  // Ensure Utforsk is not empty by default on mobile: if filters produce no results
-  // but issues exist, reset to default filters (only on client after hydration)
-  const allDefaultFilters =
-    searchQuery === '' &&
-    selectedCategory === 'Alle kategorier' &&
-    selectedStatus === 'Alle statuser' &&
-    selectedSakKind === 'Alle sakstyper' &&
-    activeAiLabels.length === 0;
-  if (displayedIssues.length === 0 && issues.length > 0 && !allDefaultFilters && isMounted) {
-    setFilters(DEFAULT_UTFORSK_FILTERS);
-    // Recompute with default filters
-    displayedIssues = issues;
-  }
 
   return (
     <UtforskReelsStage items={reelItems}>
@@ -397,6 +423,15 @@ export default function ExploreClient({
             <EmptyState
               title="Ingen saker matcher filteret"
               description="Prøv et annet søk, status eller emne. Listen er tom til Stortinget-data matcher."
+              action={
+                <button
+                  type="button"
+                  onClick={() => setFilters(DEFAULT_UTFORSK_FILTERS)}
+                  className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                >
+                  Nullstill filtre
+                </button>
+              }
             />
           ) : (
             <MotionList className="space-y-4">
