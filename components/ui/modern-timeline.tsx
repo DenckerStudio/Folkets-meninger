@@ -1,7 +1,6 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { LazyMotion, domAnimation, m, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { LandingHeadingRule } from '@/components/icons/civic';
 import { SoftBlurIn } from '@/components/ui/soft-blur-in';
@@ -58,8 +57,6 @@ export function Timeline({
   selectedId,
   onItemClick,
 }: ModernTimelineProps) {
-  const reduceMotion = useReducedMotion();
-
   return (
     <section className={cn('relative', className)}>
       {(title || subtitle) && (
@@ -85,68 +82,62 @@ export function Timeline({
         </header>
       )}
 
-      <LazyMotion features={domAnimation}>
-        <ol className="relative mx-auto max-w-5xl">
-          <div
-            className="pointer-events-none absolute bottom-4 left-4 top-4 w-px bg-gradient-to-b from-[#ba0c2f] via-[#00205b]/40 to-transparent sm:left-1/2 sm:-translate-x-px"
-            aria-hidden
-          />
+      <ol className="relative mx-auto max-w-5xl">
+        <div
+          className="pointer-events-none absolute bottom-4 left-4 top-4 w-px bg-gradient-to-b from-[#ba0c2f] via-[#00205b]/40 to-transparent sm:left-1/2 sm:-translate-x-px"
+          aria-hidden
+        />
 
-          {items.map((item, index) => {
-            const isLeft = index % 2 === 0;
-            const selected = Boolean(selectedId && item.id && selectedId === item.id);
+        {items.map((item, index) => {
+          const isLeft = index % 2 === 0;
+          const selected = Boolean(selectedId && item.id && selectedId === item.id);
 
-            return (
-              <m.li
-                key={item.id ?? `${item.date}-${item.title}`}
-                initial={reduceMotion ? false : { opacity: 0, y: 28 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-60px' }}
-                transition={{ duration: 0.55, delay: index * 0.05, ease: 'easeOut' }}
-                role={onItemClick ? 'button' : undefined}
-                tabIndex={onItemClick ? 0 : undefined}
-                aria-pressed={onItemClick ? selected : undefined}
-                onClick={onItemClick ? () => onItemClick(item) : undefined}
-                onKeyDown={
-                  onItemClick
-                    ? (event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          onItemClick(item);
-                        }
+          return (
+            <li
+              key={item.id ?? `${item.date}-${item.title}`}
+              role={onItemClick ? 'button' : undefined}
+              tabIndex={onItemClick ? 0 : undefined}
+              aria-pressed={onItemClick ? selected : undefined}
+              onClick={onItemClick ? () => onItemClick(item) : undefined}
+              onKeyDown={
+                onItemClick
+                  ? (event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        onItemClick(item);
                       }
-                    : undefined
-                }
-                className={cn(
-                  'relative grid grid-cols-[2rem_minmax(0,1fr)] items-start gap-5 pb-14 last:pb-2 sm:grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] sm:gap-10',
-                  onItemClick && 'cursor-pointer rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-[#00205b]/30',
-                  selected && 'ring-1 ring-[#00205b]/20',
-                )}
-              >
-                <div className="hidden pt-0.5 sm:block">
-                  {isLeft ? <TimelineCopy item={item} align="right" /> : <span className="sr-only" />}
-                </div>
+                    }
+                  : undefined
+              }
+              className={cn(
+                'relative grid grid-cols-[2rem_minmax(0,1fr)] items-start gap-5 pb-14 last:pb-2 sm:grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] sm:gap-10',
+                onItemClick && 'cursor-pointer rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-[#00205b]/30',
+                selected && 'ring-1 ring-[#00205b]/20',
+              )}
+            >
+              <div className="hidden pt-0.5 sm:block">
+                {isLeft ? <TimelineCopy item={item} align="right" /> : <span className="sr-only" />}
+              </div>
 
-                <div className="relative z-10 col-start-1 row-start-1 flex justify-center pt-1.5 sm:col-start-2">
-                  <span
-                    className={cn('block h-4 w-4 rounded-full border-2', DOT_CLASS[item.status])}
-                    aria-hidden
-                  />
-                </div>
+              <div className="relative z-10 col-start-1 row-start-1 flex justify-center pt-1.5 sm:col-start-2">
+                <span
+                  className={cn('block h-4 w-4 rounded-full border-2', DOT_CLASS[item.status])}
+                  aria-hidden
+                />
+              </div>
 
-                <div className="col-start-2 row-start-1 sm:col-start-3">
-                  <div className="sm:hidden">
-                    <TimelineCopy item={item} align="left" />
-                  </div>
-                  <div className="hidden sm:block">
-                    {!isLeft ? <TimelineCopy item={item} align="left" /> : null}
-                  </div>
+              <div className="col-start-2 row-start-1 sm:col-start-3">
+                <div className="sm:hidden">
+                  <TimelineCopy item={item} align="left" />
                 </div>
-              </m.li>
-            );
-          })}
-        </ol>
-      </LazyMotion>
+                <div className="hidden sm:block">
+                  {!isLeft ? <TimelineCopy item={item} align="left" /> : null}
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
     </section>
   );
 }
@@ -158,6 +149,10 @@ function TimelineCopy({
   item: TimelineItem;
   align: 'left' | 'right';
 }) {
+  const statusLabel = STATUS_LABEL[item.status];
+  const showCategory = Boolean(item.category) && item.category !== statusLabel;
+  const showStatusBadge = item.category !== statusLabel;
+
   return (
     <article className={cn('max-w-md', align === 'right' && 'sm:ml-auto')}>
       <div
@@ -166,20 +161,22 @@ function TimelineCopy({
           align === 'right' && 'sm:justify-end',
         )}
       >
-        {item.category ? (
+        {showCategory ? (
           <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#00205b]/70">
             {item.category}
           </span>
         ) : null}
         {item.date ? <span className="text-xs text-[#001433]/45">{item.date}</span> : null}
-        <span
-          className={cn(
-            'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold',
-            STATUS_CLASS[item.status],
-          )}
-        >
-          {STATUS_LABEL[item.status]}
-        </span>
+        {showStatusBadge ? (
+          <span
+            className={cn(
+              'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold',
+              STATUS_CLASS[item.status],
+            )}
+          >
+            {statusLabel}
+          </span>
+        ) : null}
       </div>
       <h3 className="mt-2 text-xl font-bold tracking-tight text-[#001433] sm:text-2xl">
         {item.title}

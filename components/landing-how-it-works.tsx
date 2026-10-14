@@ -11,7 +11,7 @@ export function LandingHowItWorks() {
   const reducedMotion = usePrefersReducedMotion();
 
   return (
-    <section className="relative w-[100vw] left-[50%] right-[50%] -ml-[50vw] -mr-[50vw] overflow-hidden">
+    <section className="relative w-full overflow-hidden">
       <div className="pointer-events-none absolute inset-0" aria-hidden>
         {reducedMotion ? (
           <div className="absolute inset-0 bg-gradient-to-b from-[#ba0c2f]/[0.04] via-white to-[#00205b]/[0.05]" />
@@ -31,7 +31,7 @@ export function LandingHowItWorks() {
           </>
         )}
       </div>
-      <div className="relative z-10 mx-auto max-w-7xl px-0">
+      <div className="relative z-10 mx-auto max-w-7xl">
         <HowItWorks />
       </div>
     </section>

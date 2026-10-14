@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ArrowRight, Landmark, MapPin, Search, ShieldCheck } from 'lucide-react';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { Pagination } from '@/components/ui/pagination';
 import { PartyMark } from '@/components/motion/party-mark';
 import { SectionSettle } from '@/components/motion/section-settle';
 import { PartyLogo } from '@/components/politikere/party-logo';
@@ -106,9 +107,16 @@ function matchesSearch(rep: PolitikerOversikt, query: string): boolean {
   );
 }
 
+const PAGE_SIZE = 24;
+
 export default function PolitikereExplorer({ politikere }: PolitikereExplorerProps) {
   const searchParams = useSearchParams();
   const selectedParty = searchParams.get('parti');
+  const [pageState, setPageState] = useState<{ key: string; page: number }>({
+    key: '',
+    page: 1,
+  });
+  const listRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = usePersistedState(
     PREFERENCE_KEYS.politikere.search,
     '',
@@ -153,6 +161,28 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
     const regjeringsIds = new Set(regjeringsmedlemmer.map((p) => p.id));
     return filteredPolitikere.filter((p) => !regjeringsIds.has(p.id));
   }, [filteredPolitikere, regjeringsmedlemmer, showRegjeringSection]);
+
+  const filterKey = `${searchQuery.trim().toLowerCase()}|${selectedParty ?? ''}`;
+  const totalPages = Math.max(1, Math.ceil(listedPolitikere.length / PAGE_SIZE));
+  const currentPage = Math.min(
+    pageState.key === filterKey ? pageState.page : 1,
+    totalPages,
+  );
+  const pagedPolitikere = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return listedPolitikere.slice(start, start + PAGE_SIZE);
+  }, [listedPolitikere, currentPage]);
+
+  const changePage = useCallback(
+    (next: number) => {
+      setPageState({
+        key: filterKey,
+        page: Math.min(Math.max(1, next), totalPages),
+      });
+      listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+    [filterKey, totalPages],
+  );
 
   if (missingLogos.length > 0) {
     return (
@@ -237,22 +267,41 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
       ) : null}
 
       <SectionSettle>
-        {listedPolitikere.length === 0 && !showRegjeringSection ? (
-          <EmptyState
-            title="Ingen politikere matcher søket"
-            description={
-              selectedParty
-                ? `Ingen politikere funnet for ${selectedParty}${searchQuery.trim() ? ` som matcher «${searchQuery}»` : ''}.`
-                : `Ingen politikere funnet som matcher «${searchQuery}».`
-            }
-          />
-        ) : listedPolitikere.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {listedPolitikere.map((rep) => (
-              <PolitikerCard key={rep.id} rep={rep} />
-            ))}
-          </div>
-        ) : null}
+        <div ref={listRef} className="scroll-mt-24 space-y-6">
+          {listedPolitikere.length === 0 && !showRegjeringSection ? (
+            <EmptyState
+              title="Ingen politikere matcher søket"
+              description={
+                selectedParty
+                  ? `Ingen politikere funnet for ${selectedParty}${searchQuery.trim() ? ` som matcher «${searchQuery}»` : ''}.`
+                  : `Ingen politikere funnet som matcher «${searchQuery}».`
+              }
+            />
+          ) : listedPolitikere.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {pagedPolitikere.map((rep) => (
+                  <PolitikerCard key={rep.id} rep={rep} />
+                ))}
+              </div>
+              {totalPages > 1 ? (
+                <div className="space-y-3">
+                  <p className="text-center text-sm text-muted-foreground">
+                    Viser {(currentPage - 1) * PAGE_SIZE + 1}–
+                    {Math.min(currentPage * PAGE_SIZE, listedPolitikere.length)} av{' '}
+                    {listedPolitikere.length} politikere
+                  </p>
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={changePage}
+                    ariaLabel="Paginering for politikere"
+                  />
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </div>
       </SectionSettle>
     </div>
   );

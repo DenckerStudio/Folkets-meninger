@@ -213,7 +213,7 @@ export function NotificationsBell({
       <Link
         href={loginHref || loginWithNext(pathname)}
         className={cn(
-          'relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background transition-colors hover:bg-accent hover:text-accent-foreground',
+          'relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-input bg-background transition-colors hover:bg-accent hover:text-accent-foreground',
           className,
         )}
         aria-label="Varsler"
@@ -253,7 +253,7 @@ export function NotificationsBell({
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((v) => !v)}
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background transition-colors hover:bg-accent hover:text-accent-foreground"
+        className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-input bg-background transition-colors hover:bg-accent hover:text-accent-foreground"
       >
         <Bell className="size-4" />
         {unread > 0 ? (

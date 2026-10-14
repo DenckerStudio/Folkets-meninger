@@ -50,7 +50,7 @@ export default function ShareButton({ id, title, className = '' }: ShareButtonPr
     <button
       type="button"
       onClick={handleShare}
-      className={`inline-flex items-center gap-1.5 font-medium text-muted-foreground transition-colors hover:text-brand ${className}`.trim()}
+      className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-brand ${className}`.trim()}
     >
       {copied ? (
         <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />

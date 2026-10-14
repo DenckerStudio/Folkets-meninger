@@ -306,7 +306,7 @@ export function SmoothDropdown({
     <button
       type="button"
       onClick={() => setIsOpen(true)}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-popover text-muted-foreground shadow-sm transition-colors hover:bg-muted"
+      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-popover text-muted-foreground shadow-sm transition-colors hover:bg-muted"
       aria-label={triggerAriaLabel}
       aria-expanded={isOpen}
     >
@@ -341,7 +341,7 @@ export function SmoothDropdown({
   }
 
   return (
-    <div ref={containerRef} className={cn("relative h-10 w-10 not-prose", className)}>
+    <div ref={containerRef} className={cn("relative h-11 w-11 not-prose", className)}>
       <motion.div
         layout
         initial={false}

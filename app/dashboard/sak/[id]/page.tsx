@@ -249,7 +249,7 @@ export default async function SakPage({
             ) : null}
             <SakProcessingBadge status={treatmentStatus} />
             {lastUpdatedLabel ? (
-              <span className="w-full text-sm text-muted-foreground sm:ml-auto sm:w-auto">
+              <span className="w-full text-sm text-muted-foreground sm:ml-auto sm:w-auto whitespace-nowrap">
                 Sist oppdatert: {lastUpdatedLabel}
               </span>
             ) : null}

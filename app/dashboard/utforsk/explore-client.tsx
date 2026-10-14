@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Search, Filter, ArrowRight } from 'lucide-react';
+import { Search, ArrowRight } from 'lucide-react';
 import type { SakListItem } from '@/lib/stortinget';
 import { getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS } from '@/lib/sak-status';
@@ -11,7 +11,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { LayoutGroup } from 'motion/react';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
-import { dashboardControlClass, dashboardSearchClass } from '@/components/dashboard/filter-field';
+import { dashboardSearchClass } from '@/components/dashboard/filter-field';
+import { FilterTokenBar, type FilterToken } from '@/components/ui/filter-token-bar';
 import { SurfaceCard } from '@/components/dashboard/surface-card';
 import { MotionList, MotionListRow } from '@/components/motion/list-row';
 import { Pressable } from '@/components/motion/pressable';
@@ -140,6 +141,41 @@ export default function ExploreClient({
     return Array.from(cats).sort();
   }, [issues]);
 
+  const filterTokens: FilterToken[] = [
+    {
+      id: 'status',
+      label: 'Status',
+      value: selectedStatus,
+      options: [
+        { value: 'Alle statuser', label: 'Alle statuser' },
+        { value: 'Under behandling', label: 'Under behandling' },
+        { value: 'Ferdigbehandlet / Historikk', label: 'Historikk (Ferdigbehandlet)' },
+      ],
+      onChange: setSelectedStatus,
+    },
+    {
+      id: 'category',
+      label: 'Kategori',
+      value: selectedCategory,
+      options: [
+        { value: 'Alle kategorier', label: 'Alle kategorier' },
+        ...categories.map((cat) => ({ value: cat, label: cat })),
+      ],
+      onChange: setSelectedCategory,
+    },
+    {
+      id: 'sakkind',
+      label: 'Sakstype',
+      value: selectedSakKind,
+      options: [
+        { value: 'Alle sakstyper', label: 'Alle sakstyper' },
+        { value: 'Lovforslag', label: 'Lovforslag' },
+        { value: 'Representantforslag', label: 'Representantforslag' },
+      ],
+      onChange: setSelectedSakKind,
+    },
+  ];
+
   let displayedIssues = issues;
 
   if (selectedCategory !== 'Alle kategorier') {
@@ -244,8 +280,8 @@ export default function ExploreClient({
       ) : null}
 
       <SectionSettle>
-        <SurfaceCard className="flex flex-col gap-4 p-4 md:flex-row">
-          <div className="relative flex-grow">
+        <SurfaceCard className="space-y-3 p-4">
+          <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <Search className="h-5 w-5 text-muted-foreground" />
             </div>
@@ -257,64 +293,7 @@ export default function ExploreClient({
               placeholder="Søk etter saker, stikkord eller saksnummer..."
             />
           </div>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative">
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className={dashboardControlClass()}
-              >
-                <option value="Alle statuser">Alle statuser</option>
-                <option value="Under behandling">Under behandling</option>
-                <option value="Ferdigbehandlet / Historikk">
-                  Historikk (Ferdigbehandlet)
-                </option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground">
-                <Filter className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="relative">
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className={dashboardControlClass()}
-              >
-                <option value="Alle kategorier">Alle kategorier</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground">
-                <Filter className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="relative">
-              <select
-                value={selectedSakKind}
-                onChange={(e) => setSelectedSakKind(e.target.value)}
-                className={dashboardControlClass()}
-              >
-                <option value="Alle sakstyper">Alle sakstyper</option>
-                <option value="Lovforslag">Lovforslag</option>
-                <option value="Representantforslag">Representantforslag</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground">
-                <Filter className="h-4 w-4" />
-              </div>
-            </div>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className={dashboardControlClass()}
-            >
-              <option value="Nyeste først">Nyeste først</option>
-              <option value="Mest engasjement">Mest engasjement</option>
-              <option value="Snart votering">Snart votering</option>
-            </select>
-          </div>
+          <FilterTokenBar tokens={filterTokens} aria-label="Filtrer saker" />
         </SurfaceCard>
       </SectionSettle>
 
@@ -322,7 +301,7 @@ export default function ExploreClient({
         <SectionSettle>
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">Emne</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-x-visible [&::-webkit-scrollbar]:hidden">
               {popularLabels.map((label) => {
                 const active = activeAiLabels.includes(label);
                 return (
@@ -330,7 +309,7 @@ export default function ExploreClient({
                     key={label}
                     type="button"
                     onClick={() => toggleAiLabel(label)}
-                    className={`rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
+                    className={`shrink-0 snap-start rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
                       active
                         ? 'bg-brand text-brand-foreground border-brand'
                         : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
@@ -346,7 +325,7 @@ export default function ExploreClient({
                   onClick={() =>
                     setFilters((prev) => ({ ...prev, selectedAiLabels: [] }))
                   }
-                  className="rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+                  className="shrink-0 snap-start rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
                 >
                   Nullstill emner
                 </button>

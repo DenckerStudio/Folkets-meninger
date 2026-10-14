@@ -127,10 +127,15 @@ export function ChatOrb() {
         }
       }}
     >
-      <span className="chat-orb-halo" aria-hidden />
-      <span className="chat-orb-core">
-        <canvas ref={canvasRef} className="chat-orb-canvas" />
-        <span className="chat-orb-sheen" aria-hidden />
+      <span className="chat-orb-orb" aria-hidden>
+        <span className="chat-orb-halo" />
+        <span className="chat-orb-core">
+          <canvas ref={canvasRef} className="chat-orb-canvas" />
+          <span className="chat-orb-sheen" />
+        </span>
+      </span>
+      <span className="chat-orb-label" aria-hidden>
+        Spør Stemme+
       </span>
     </button>
   );

@@ -15,13 +15,13 @@ export function SakPageActions({ sakId, title, className = '' }: SakPageActionsP
   return (
     <nav
       aria-label="Sakshandlinger"
-      className={`flex flex-wrap items-center gap-x-4 gap-y-2 text-sm ${className}`.trim()}
+      className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-sm ${className}`.trim()}
     >
       <ShareButton id={sakId} title={title} />
       <button
         type="button"
         onClick={() => openChat({ issueId: sakId, issueTitle: title })}
-        className="text-brand hover:underline"
+        className="inline-flex min-h-11 items-center rounded-xl px-3 text-brand transition-colors hover:bg-brand/10 hover:underline"
       >
         Spør Stemme+
       </button>

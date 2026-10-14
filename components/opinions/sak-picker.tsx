@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Search, X } from 'lucide-react';
 import { SakPreviewDialog } from '@/components/opinions/sak-preview-dialog';
 import { SakProcessingBadge } from '@/components/sak/sak-meta';
@@ -36,6 +36,31 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
   const [visibleCount, setVisibleCount] = useState(SAK_PICKER_BROWSE_PAGE_SIZE);
   /** When true, show the browse UI without clearing the current selection/stance. */
   const [browsing, setBrowsing] = useState(false);
+  /** Mobile: the browse UI is shown as a bottom sheet instead of inline. */
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [mobileOpen]);
+
+  function closeMobile() {
+    setMobileOpen(false);
+  }
+
+  function openBrowse() {
+    setBrowsing(true);
+    setMobileOpen(true);
+  }
 
   const selected = value ? options.find((option) => option.id === value) : null;
   const previewOption = previewId ? options.find((option) => option.id === previewId) : null;
@@ -110,7 +135,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
               type="button"
               onClick={() => {
                 resetFilters();
-                setBrowsing(true);
+                openBrowse();
               }}
               className="rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-background/80 hover:text-foreground"
             >
@@ -119,7 +144,41 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
           </div>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+        <div className="space-y-3">
+          <button
+            type="button"
+            data-sak-picker-open=""
+            onClick={openBrowse}
+            className={cn(
+              'min-h-11 w-full items-center justify-between gap-2 rounded-2xl border border-border bg-card px-4 text-sm font-medium text-foreground',
+              mobileOpen ? 'hidden' : 'flex md:hidden',
+            )}
+          >
+            <span className="inline-flex items-center gap-2">
+              <Search className="h-4 w-4 text-brand" aria-hidden />
+              {selected ? 'Bytt sak' : 'Velg sak'}
+            </span>
+            <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden />
+          </button>
+
+          {mobileOpen ? (
+            <button
+              type="button"
+              aria-label="Lukk sakvelger"
+              onClick={closeMobile}
+              className="fixed inset-0 z-40 bg-black/40 md:hidden"
+            />
+          ) : null}
+
+          <div
+            className={cn(
+              'overflow-hidden border border-border bg-background shadow-sm',
+              mobileOpen
+                ? 'fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-3xl rounded-b-none'
+                : 'hidden',
+              'md:static md:inset-auto md:bottom-auto md:z-auto md:block md:max-h-none md:overflow-hidden md:rounded-2xl md:shadow-sm',
+            )}
+          >
           {selected && browsing ? (
             <div className="flex items-center justify-between gap-2 border-b border-border bg-brand-soft/30 px-3 py-2 sm:px-4">
               <p className="min-w-0 truncate text-xs text-muted-foreground">
@@ -127,7 +186,10 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
               </p>
               <button
                 type="button"
-                onClick={() => setBrowsing(false)}
+                onClick={() => {
+                  setBrowsing(false);
+                  closeMobile();
+                }}
                 className="shrink-0 text-xs font-semibold text-brand hover:underline"
               >
                 Avbryt
@@ -287,7 +349,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
             </div>
           ) : (
             <>
-              <ul className="max-h-[min(52vh,28rem)] divide-y divide-border overflow-auto" role="listbox">
+              <ul className="divide-y divide-border md:max-h-[min(52vh,28rem)] md:overflow-auto" role="listbox">
                 {rows.map((option, index) => {
                   const isSuggestion = suggestionIds.has(option.id);
                   const showBestMatch = isSuggestion && index === 0 && !hasQuery;
@@ -304,6 +366,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
                             onChange(option.id);
                             setBrowsing(false);
                             resetFilters();
+                            closeMobile();
                           }}
                         >
                           <span className="flex w-full items-start gap-2">
@@ -355,6 +418,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
               ) : null}
             </>
           )}
+          </div>
         </div>
       )}
 
@@ -368,6 +432,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
                 onChange(id);
                 setBrowsing(false);
                 resetFilters();
+                closeMobile();
               }
             : undefined
         }
