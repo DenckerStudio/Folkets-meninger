@@ -14,7 +14,12 @@ export const metadata = buildPageMetadata({
   canonicalPath: '/dashboard/utforsk',
 });
 
-export default async function ExplorePage() {
+export default async function ExplorePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ poll?: string }>;
+}) {
+  const { poll } = await searchParams;
   const supabase = await getServerSupabase();
   const {
     data: { user },
@@ -24,7 +29,8 @@ export default async function ExplorePage() {
     getSaker(),
     getIssueAiLabelsMap(),
     getPopularAiLabels(),
-    listSystemReelFeedItems(user?.id ?? null),
+    // Legacy ?poll=X#reels deep links: make sure that poll is in the feed.
+    listSystemReelFeedItems(user?.id ?? null, 40, poll ?? null),
   ]);
 
   return (

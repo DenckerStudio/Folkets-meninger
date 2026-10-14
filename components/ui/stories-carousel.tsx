@@ -46,6 +46,8 @@ interface StoriesProps extends HTMLAttributes<HTMLDivElement> {
   autoPlay?: boolean;
   autoPlayDuration?: number;
   onIndexChange?: (index: number) => void;
+  /** Story shown on mount (e.g. deep link). */
+  initialIndex?: number;
 }
 
 const Stories = forwardRef<HTMLDivElement, StoriesProps>(
@@ -57,6 +59,7 @@ const Stories = forwardRef<HTMLDivElement, StoriesProps>(
       autoPlay = false,
       autoPlayDuration = 4000,
       onIndexChange,
+      initialIndex = 0,
       ...props
     },
     ref
@@ -86,7 +89,9 @@ const Stories = forwardRef<HTMLDivElement, StoriesProps>(
       return count;
     }, [children]);
 
-    const [currentIndex, setCurrentIndex] = useState(0);
+    const [currentIndex, setCurrentIndex] = useState(() =>
+      Math.max(0, Math.min(Math.floor(initialIndex), Math.max(0, total - 1))),
+    );
     const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
     const [active, setActive] = useState(true);
     const [progress, setProgress] = useState(0);

@@ -9,8 +9,12 @@ export const routes = {
   folketsMeningerForSak: (id: string, opts?: { compose?: boolean }) =>
     `${DASHBOARD_PREFIX}/folkets-meninger?sak=${encodeURIComponent(id)}${opts?.compose ? '&compose=1' : ''}`,
   utforsk: `${DASHBOARD_PREFIX}/utforsk`,
+  utforskReels: (pollId?: string) =>
+    pollId
+      ? `${DASHBOARD_PREFIX}/utforsk/reels?poll=${encodeURIComponent(pollId)}`
+      : `${DASHBOARD_PREFIX}/utforsk/reels`,
   avstemninger: `${DASHBOARD_PREFIX}/avstemninger`,
-  /** @deprecated Reels live on Utforsk; this path redirects there. */
+  /** @deprecated Reels live on Utforsk; this path redirects to /dashboard/utforsk/reels. */
   avstemningerReels: `${DASHBOARD_PREFIX}/avstemninger/reels`,
   minSide: `${DASHBOARD_PREFIX}/min-side`,
   horinger: `${DASHBOARD_PREFIX}/horinger`,

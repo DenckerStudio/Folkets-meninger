@@ -359,8 +359,14 @@ export async function getUserPollVote(
 export async function listSystemReelFeedItems(
   userId: string | null,
   limit = 40,
+  focusPollId?: string | null,
 ): Promise<SystemReelFeedItem[]> {
-  const polls = await listOpenSystemPolls(limit);
+  let polls = await listOpenSystemPolls(limit);
+  // Deep link (?poll=<id>): if the requested system poll is not in the first page, fetch it and put it first.
+  if (focusPollId && !polls.some((p) => p.id === focusPollId)) {
+    const focus = await getPublicPollById(focusPollId).catch(() => null);
+    if (focus && focus.track === 'system') polls = [focus, ...polls];
+  }
   return Promise.all(
     polls.map(async (poll) => {
       const [totals, voteState] = await Promise.all([
