@@ -405,7 +405,14 @@ function ReelsPanel({
         />
       );
     }
-    return <ReelOpinionCard key={`opinion-${slide.opinion.id}`} opinion={slide.opinion} mode={mode} />;
+    return (
+        <ReelOpinionCard
+          key={`opinion-${slide.opinion.id}`}
+          opinion={slide.opinion}
+          mode={mode}
+          currentPollId={focusPollId ?? items[0]?.poll.id ?? null}
+        />
+      );
   };
 
   return (

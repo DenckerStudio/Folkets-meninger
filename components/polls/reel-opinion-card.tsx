@@ -1,8 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
-import { Check, X } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, useTransition } from 'react';
+import { Check } from 'lucide-react';
 import { opinionSupportCount, stanceLabel } from '@/lib/opinions/labels';
 import type { OpinionListItem, OpinionStanceCounts } from '@/lib/opinions/types';
 import { routes } from '@/lib/routes';
@@ -22,18 +22,63 @@ import { cn } from '@/lib/utils';
 export function ReelOpinionCard({
   opinion,
   mode = 'coverflow',
-}: { opinion: OpinionListItem; mode?: 'coverflow' | 'stories' }) {
+  currentPollId,
+}: { opinion: OpinionListItem; mode?: 'coverflow' | 'stories'; currentPollId?: string | null }) {
   const leadPoint = opinion.points[0]?.text ?? opinion.body;
   const isStories = mode === 'stories';
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const [selectedStance, setSelectedStance] = useState<'for' | 'imot' | 'blank' | null>(
-    opinion.viewerStance ?? null,
-  );
+  const initialStance = opinion.viewerStance === 'for' || opinion.viewerStance === 'imot' ? opinion.viewerStance : null;
+  const [selectedStance, setSelectedStance] = useState<'for' | 'imot' | null>(initialStance);
   const [localCounts, setLocalCounts] = useState<OpinionStanceCounts>(opinion.counts);
   const [error, setError] = useState<string | null>(null);
 
-  const handleQuickStance = async (stance: 'for' | 'imot' | 'blank') => {
+  // Handle quickStance deep link: auto-POST the stance once on mount
+  useEffect(() => {
+    const quickStanceParam = searchParams?.get('quickStance');
+    if (!quickStanceParam) return;
+
+    const [opinionId, stance] = quickStanceParam.split(':');
+    if (opinionId !== opinion.id) return;
+    if (stance !== 'for' && stance !== 'imot') return;
+    if (selectedStance) return; // Already have a stance
+
+    const saved = sessionStorage.getItem(`quickStancePosted:${opinionId}:${stance}`);
+    if (saved) return; // Already posted this session
+
+    startTransition(async () => {
+      try {
+        const res = await fetch(`/api/opinions/${opinion.id}/stance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stance, body: '', quick: true }),
+        });
+        const data = (await res.json()) as { error?: string; replyId?: string };
+        if (!res.ok) {
+          throw new Error(data.error || 'Kunne ikke lagre stemme');
+        }
+        // Optimistic update
+        setSelectedStance(stance);
+        setLocalCounts((prev) => ({
+          ...prev,
+          [stance]: prev[stance] + 1,
+          total: prev.total + 1,
+        }));
+        sessionStorage.setItem(`quickStancePosted:${opinionId}:${stance}`, '1');
+        // Strip the quickStance param from URL
+        const params = new URLSearchParams(window.location.search);
+        params.delete('quickStance');
+        const newSearch = params.toString();
+        const newUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ''}${window.location.hash}`;
+        router.replace(newUrl);
+      } catch {
+        setError('En feil oppstod. Prøv igjen.');
+      }
+    });
+  }, [opinion.id, searchParams, router, selectedStance, startTransition]);
+
+  const handleQuickStance = async (stance: 'for' | 'imot') => {
     const isToggleOff = selectedStance === stance;
     setError(null);
     startTransition(async () => {
@@ -65,9 +110,12 @@ export function ReelOpinionCard({
           const data = (await res.json()) as { error?: string; replyId?: string };
           if (!res.ok) {
             if (res.status === 401) {
-              router.push(
-                `${routes.login}?next=${encodeURIComponent(routes.opinion(opinion.id, { stance }))}`,
-              );
+              // Build deep link back to this Reel with quickStance param
+              const pollId = currentPollId ?? opinion.pollId;
+              const nextUrl = pollId
+                ? `${routes.utforsk}?poll=${pollId}&quickStance=${opinion.id}:${stance}#reels`
+                : `${routes.utforsk}?quickStance=${opinion.id}:${stance}#reels`;
+              router.push(`${routes.login}?next=${encodeURIComponent(nextUrl)}`);
               return;
             }
             throw new Error(data.error || 'Kunne ikke lagre stemme');
@@ -94,24 +142,21 @@ export function ReelOpinionCard({
     });
   };
 
-  const stanceButtonClass = (baseStance: 'for' | 'imot' | 'blank') =>
+  const stanceButtonClass = (baseStance: 'for' | 'imot') =>
     cn(
       'rounded-xl px-3 py-2.5 text-center text-sm font-semibold transition-colors',
       selectedStance === baseStance
         ? 'opacity-100 ring-2 ring-white bg-inherit text-white'
         : baseStance === 'for'
         ? 'bg-[#0a3d9e] hover:bg-[#0c4ab8] text-white'
-        : baseStance === 'imot'
-        ? 'bg-[#ba0c2f] hover:bg-[#ba0c2f]/90 text-white'
-        : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white',
+        : 'bg-[#ba0c2f] hover:bg-[#ba0c2f]/90 text-white',
     );
 
-  const stanceButtonContent = (baseStance: 'for' | 'imot' | 'blank') => (
+  const stanceButtonContent = (baseStance: 'for' | 'imot') => (
     <span className="flex items-center justify-center gap-1.5">
       {selectedStance === baseStance && <Check className="h-4 w-4" aria-hidden />}
       {baseStance === 'for' && 'Enig'}
       {baseStance === 'imot' && 'Uenig'}
-      {baseStance === 'blank' && 'Blank'}
     </span>
   );
 
@@ -141,7 +186,7 @@ export function ReelOpinionCard({
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
           disabled={isPending}
@@ -150,15 +195,6 @@ export function ReelOpinionCard({
           aria-pressed={selectedStance === 'for'}
         >
           {stanceButtonContent('for')}
-        </button>
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => handleQuickStance('blank')}
-          className={stanceButtonClass('blank')}
-          aria-pressed={selectedStance === 'blank'}
-        >
-          {stanceButtonContent('blank')}
         </button>
         <button
           type="button"
