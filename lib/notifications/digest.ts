@@ -53,3 +53,19 @@ export function digestEmailSubject(frequency: DigestFrequency, isTeaser = false)
     ? 'Dine varsler (daglig oppsummering — Stemme+)'
     : 'Dine varsler (ukentlig oppsummering — Stemme+)';
 }
+
+/** Free users' weekly digest: one summarized in-app notification (no e-mail). */
+export function buildInAppDigestSummary(
+  items: Array<{ title: string }>,
+  maxTitles = 3,
+): { title: string; body: string; url: string } {
+  const count = items.length;
+  const titles = items.slice(0, maxTitles).map((i) => `• ${i.title}`);
+  const rest = count - titles.length;
+  const lines = [...titles, ...(rest > 0 ? [`… og ${rest} til`] : [])];
+  return {
+    title: `Ukens oppsummering: ${count} ${count === 1 ? 'nytt varsel' : 'nye varsler'}`,
+    body: lines.join('\n'),
+    url: '/dashboard',
+  };
+}

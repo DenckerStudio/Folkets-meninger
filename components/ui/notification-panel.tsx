@@ -848,14 +848,15 @@ export const NotificationPanel = React.forwardRef<HTMLDivElement, NotificationPa
           </div>
           <button
             type="button"
-            aria-label="Varslingsinnstillinger"
+            aria-label="Preferanser for varsler"
             onClick={onSettings}
             className={cn(
-              "grid h-7 w-7 shrink-0 place-items-center rounded-[8px] text-muted-foreground/75 transition-colors hover:bg-accent hover:text-foreground/90",
+              "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[8px] px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground/90",
               SQUIRCLE,
             )}
           >
-            <Settings2 className="h-4 w-4" />
+            <Settings2 className="h-4 w-4" aria-hidden />
+            <span>Preferanser</span>
           </button>
         </div>
 

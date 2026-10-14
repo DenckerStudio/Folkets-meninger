@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   buildDigestCursorUpdate,
+  buildInAppDigestSummary,
   digestEmailSubject,
   resolveDigestSinceIso,
   shouldSendDigestEmail,
@@ -52,5 +53,12 @@ assert.equal(cursor.labels, '2026-02-01T00:00:00.000Z');
 assert.equal(digestEmailSubject('daily'), 'Dine varsler (daglig oppsummering — Stemme+)');
 assert.equal(digestEmailSubject('weekly'), 'Dine varsler (ukentlig oppsummering — Stemme+)');
 assert.equal(digestEmailSubject('weekly', true), 'Dine varsler (ukentlig smakebit)');
+
+{
+  const s = buildInAppDigestSummary([{ title: 'A' }, { title: 'B' }, { title: 'C' }, { title: 'D' }]);
+  assert.equal(s.title, 'Ukens oppsummering: 4 nye varsler');
+  assert.equal(s.body, '• A\n• B\n• C\n… og 1 til');
+  assert.equal(buildInAppDigestSummary([{ title: 'A' }]).title, 'Ukens oppsummering: 1 nytt varsel');
+}
 
 console.log('notifications/preferences.test.ts: ok');

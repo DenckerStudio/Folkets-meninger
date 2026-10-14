@@ -15,6 +15,7 @@ import {
   type NotificationItem,
 } from '@/components/ui/notification-panel';
 import { mapApiNotification, type ApiNotification } from '@/components/notifications/map-notification';
+import { NotificationPreferencesModal } from '@/components/notifications/notification-preferences-modal';
 
 
 const ARCHIVED_KEY = 'fs-varsler-archived';
@@ -60,6 +61,7 @@ export function NotificationsBell({
   const [loading, setLoading] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
   const [anchor, setAnchor] = React.useState({ top: 64, right: 16 });
+  const [prefsOpen, setPrefsOpen] = React.useState(false);
   const triggerRef = React.useRef<HTMLButtonElement | null>(null);
   const panelRef = React.useRef<HTMLDivElement | null>(null);
   const isLoggedIn = Boolean(user) && enabled;
@@ -205,7 +207,7 @@ export function NotificationsBell({
 
   const onSettings = () => {
     setOpen(false);
-    router.push(`${routes.minSide}?tab=preferanser`);
+    setPrefsOpen(true);
   };
 
   if (!isLoggedIn) {
@@ -319,6 +321,14 @@ export function NotificationsBell({
             document.body,
           )
         : null}
+      <NotificationPreferencesModal
+        open={prefsOpen}
+        onClose={() => {
+          setPrefsOpen(false);
+          // Return focus to the bell (the dropdown with «Preferanser» is closed while the modal is open).
+          window.requestAnimationFrame(() => triggerRef.current?.focus());
+        }}
+      />
     </div>
   );
 }
