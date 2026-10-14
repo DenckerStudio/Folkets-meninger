@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { mobileNavItems, mobileMoreNavItems } from '@/lib/site-nav-links';
 import { useDashboardNavOptional } from '@/components/dashboard/dashboard-nav-context';
+import { routes } from '@/lib/routes';
 
 export function DashboardMobileNav() {
   const pathname = usePathname();
@@ -19,6 +20,24 @@ export function DashboardMobileNav() {
           const active = item.action === 'more' ? isMoreActive : item.isActive?.(pathname) ?? false;
 
           if (item.action === 'more') {
+            if (!nav) {
+              return (
+                <Link
+                  key={item.href}
+                  href={routes.minSide}
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-colors',
+                    active
+                      ? 'border-brand bg-brand text-white'
+                      : 'border-border bg-card text-foreground hover:border-border',
+                  )}
+                >
+                  <item.icon className="h-3.5 w-3.5" />
+                  {item.label}
+                </Link>
+              );
+            }
+
             return (
               <button
                 key={item.href}
@@ -31,7 +50,7 @@ export function DashboardMobileNav() {
                     : 'border-border bg-card text-foreground hover:border-border',
                 )}
                 aria-haspopup="dialog"
-                aria-expanded={nav?.open ?? false}
+                aria-expanded={nav.open ?? false}
                 aria-label="Mer"
               >
                 <item.icon className="h-3.5 w-3.5" />
