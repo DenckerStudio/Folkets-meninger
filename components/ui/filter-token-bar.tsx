@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, ChevronDown, ListFilter } from 'lucide-react';
+import { Check, ChevronDown, ListFilter, Search, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useIsMounted } from '@/hooks/use-is-mounted';
 import { useBodyOverlayFlag } from '@/hooks/use-body-overlay';
@@ -219,28 +219,75 @@ function FilterOptionsList({
   token: FilterToken;
   onSelect: (value: string) => void;
 }) {
+  const [query, setQuery] = useState('');
+  const showSearch = token.options.length > 8;
+  const trimmed = query.trim().toLowerCase();
+  const filtered = trimmed
+    ? token.options.filter((option) => option.label.toLowerCase().includes(trimmed))
+    : token.options;
+
   return (
-    <ul role="listbox" aria-label={token.label} className="space-y-0.5">
-      {token.options.map((option) => {
-        const selected = option.value === token.value;
-        return (
-          <li key={option.value}>
+    <div className="flex min-h-0 flex-col">
+      {showSearch ? (
+        <div className="relative shrink-0 px-1 pt-1 pb-1.5">
+          <Search
+            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <input
+            type="text"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={`Filtrer ${token.label.toLowerCase()}…`}
+            aria-label={`Filtrer ${token.label}`}
+            autoComplete="off"
+            className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-8 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-brand/30"
+          />
+          {query ? (
             <button
               type="button"
-              role="option"
-              aria-selected={selected}
-              onClick={() => onSelect(option.value)}
-              className={cn(
-                'flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
-                selected ? 'bg-brand-soft text-brand' : 'text-foreground hover:bg-muted',
-              )}
+              aria-label="Tøm søk"
+              onClick={() => setQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
             >
-              <span className="min-w-0 truncate">{option.label}</span>
-              {selected ? <Check className="h-4 w-4 shrink-0" aria-hidden /> : null}
+              <X className="h-3.5 w-3.5" />
             </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      <ul
+        role="listbox"
+        aria-label={token.label}
+        className="max-h-[min(60vh,24rem)] space-y-0.5 overflow-y-auto overscroll-contain px-0.5"
+      >
+        {filtered.length === 0 ? (
+          <li key="empty" className="px-3 py-2.5 text-sm text-muted-foreground">
+            Ingen treff
           </li>
-        );
-      })}
-    </ul>
+        ) : (
+          filtered.map((option) => {
+            const selected = option.value === token.value;
+            return (
+              <li key={option.value}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => onSelect(option.value)}
+                  className={cn(
+                    'flex min-h-11 w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
+                    selected ? 'bg-brand-soft text-brand' : 'text-foreground hover:bg-muted',
+                  )}
+                >
+                  <span className="min-w-0 truncate">{option.label}</span>
+                  {selected ? <Check className="h-4 w-4 shrink-0" aria-hidden /> : null}
+                </button>
+              </li>
+            );
+          })
+        )}
+      </ul>
+    </div>
   );
 }

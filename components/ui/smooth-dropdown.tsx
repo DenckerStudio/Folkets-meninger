@@ -382,7 +382,7 @@ export function SmoothDropdown({
           <span className="sr-only">{triggerAriaLabel}</span>
         </motion.div>
 
-        <div ref={contentRef}>
+        <div ref={contentRef} className="max-h-[min(70vh,28rem)] overflow-y-auto overscroll-contain">
           <motion.div
             layout
             initial={false}
