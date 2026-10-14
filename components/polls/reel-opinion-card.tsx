@@ -1,12 +1,12 @@
 import Link from 'next/link';
-import { stanceLabel } from '@/lib/opinions/labels';
+import { opinionSupportCount, stanceLabel } from '@/lib/opinions/labels';
 import type { OpinionListItem } from '@/lib/opinions/types';
 import { routes } from '@/lib/routes';
 
 /**
  * A citizen opinion rendered as a Reel slide (B7). Same card format as the
- * vote cards, with the lead point and Enig/Uenig buttons that link into the
- * opinion thread (where the supported For/Blank/Imot reply flow lives).
+ * vote cards, with the lead point and Enig/Uenig buttons that open the opinion
+ * thread with the reply stance preselected (Enig → For, Uenig → Imot).
  */
 export function ReelOpinionCard({ opinion }: { opinion: OpinionListItem }) {
   const leadPoint = opinion.points[0]?.text ?? opinion.body;
@@ -28,19 +28,19 @@ export function ReelOpinionCard({ opinion }: { opinion: OpinionListItem }) {
           <p className="line-clamp-4 text-sm leading-relaxed text-white/75">{leadPoint}</p>
         ) : null}
         <p className="text-xs text-white/60">
-          {opinion.counts.total} støtter · {opinion.authorName ?? 'En innbygger'}
+          {opinionSupportCount(opinion.counts)} støtter · {opinion.authorName ?? 'En innbygger'}
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <Link
-          href={routes.opinion(opinion.id)}
+          href={routes.opinion(opinion.id, { stance: 'for' })}
           className="rounded-xl bg-[#0a3d9e] px-3 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-[#0c4ab8]"
         >
           Enig
         </Link>
         <Link
-          href={routes.opinion(opinion.id)}
+          href={routes.opinion(opinion.id, { stance: 'imot' })}
           className="rounded-xl bg-[#ba0c2f] px-3 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-[#ba0c2f]/90"
         >
           Uenig

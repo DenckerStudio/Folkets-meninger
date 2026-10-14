@@ -12,7 +12,7 @@ import { ComposerBanner } from '@/components/opinions/composer-banner';
 import { OpinionCard } from '@/components/opinions/opinion-card';
 import { ReelPromoCard, type ReelPromo } from '@/components/opinions/reel-promo-card';
 import { PageHeader } from '@/components/page-header';
-import { interleaveEvery } from '@/lib/feeds/mixed';
+import { interleaveEvenly } from '@/lib/feeds/mixed';
 import { routes } from '@/lib/routes';
 import type { OpinionCreateStance, OpinionListItem, SakPickerOption } from '@/lib/opinions/types';
 
@@ -66,7 +66,7 @@ export function FolketsMeningerClient({
     });
   }, [opinions, searchQuery, sortBy, stanceFilter]);
 
-  const mixed = useMemo(() => interleaveEvery(displayed, reelPromos, 4), [displayed, reelPromos]);
+  const mixed = useMemo(() => interleaveEvenly(displayed, reelPromos), [displayed, reelPromos]);
 
   return (
     <DashboardPage className="space-y-6">

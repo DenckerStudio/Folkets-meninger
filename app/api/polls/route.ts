@@ -92,10 +92,12 @@ export async function POST(request: Request) {
 
     const totals = await castPollVote({ userId: user.id, pollId, choice });
 
-    // A Ja/Nei/Blank vote on a Stortinget-backed poll is the same signal as an
-    // issue stance, so keep the stance history in sync (B2). Best-effort: the
-    // vote is already recorded and must not fail if this write does.
-    if (poll.stortingetIssueId) {
+    // A Ja/Nei vote on a Stortinget-backed poll is the same signal as an issue
+    // stance, so keep the stance history in sync (B2). A blank vote ("Stem
+    // blankt") is an abstention, not the deliberate "ikke interessert" stance,
+    // so it must not overwrite the user's stance history. Best-effort: the vote
+    // is already recorded and must not fail if this write does.
+    if (poll.stortingetIssueId && choice !== 'blank') {
       try {
         await setIssueStance(
           getServiceSupabase(),

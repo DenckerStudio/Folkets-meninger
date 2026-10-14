@@ -133,12 +133,16 @@ async function loadPollIdByIssue(issueIds: string[]): Promise<Map<string, string
   const map = new Map<string, string>();
   if (unique.length === 0 || !supabaseConfigured()) return map;
 
+  // Only link to a poll that is actually reachable in the Reels feed: a system
+  // Reel that is still open for voting (B4/3a). A closed, draft, or non-system
+  // poll has no vote face on Utforsk, so the chip must not point at it.
   const supabase = getAnonSupabase();
   const { data, error } = await supabase
     .from('polls')
     .select('id, stortinget_issue_id, created_at')
     .in('stortinget_issue_id', unique)
-    .in('status', ['open', 'closed'])
+    .eq('track', 'system')
+    .eq('status', 'open')
     .order('created_at', { ascending: false });
 
   if (error) {

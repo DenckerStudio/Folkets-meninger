@@ -1,4 +1,4 @@
-import type { OpinionCreateStance } from '@/lib/opinions/types';
+import type { OpinionCreateStance, OpinionStance } from '@/lib/opinions/types';
 
 /** App routes — dashboard lives under `/dashboard`. */
 
@@ -45,7 +45,10 @@ export const routes = {
     `${DASHBOARD_PREFIX}/politikere?parti=${encodeURIComponent(name)}`,
   sporsmalDetail: (id: string) => `${DASHBOARD_PREFIX}/sporsmal/${id}`,
   sak: (id: string) => `${DASHBOARD_PREFIX}/sak/${id}`,
-  opinion: (id: string) => `${DASHBOARD_PREFIX}/folkets-meninger/${id}`,
+  opinion: (id: string, opts?: { stance?: OpinionStance | null }) =>
+    `${DASHBOARD_PREFIX}/folkets-meninger/${id}${
+      opts?.stance ? `?standpunkt=${opts.stance}` : ''
+    }`,
   sakEmbed: (id: string) => `/embed/sak/${id}`,
   poll: (id: string) => `${DASHBOARD_PREFIX}/avstemninger/${id}`,
   sharePoll: (id: string) => `/del/${encodeURIComponent(id)}`,

@@ -30,10 +30,12 @@ type OpinionInnspillView = {
 type OpinionDetailClientProps = {
   opinion: OpinionDetail;
   isAuthor: boolean;
+  /** Stance preselected from a deep link (e.g. Enig/Uenig from a Reel slide). */
+  initialReplyStance?: OpinionStance | null;
   innspill: OpinionInnspillView;
 };
 
-export function OpinionDetailClient({ opinion, isAuthor, innspill }: OpinionDetailClientProps) {
+export function OpinionDetailClient({ opinion, isAuthor, initialReplyStance = null, innspill }: OpinionDetailClientProps) {
   const { user } = useAuth();
   const router = useRouter();
   const [error, setError] = useState('');
@@ -42,7 +44,9 @@ export function OpinionDetailClient({ opinion, isAuthor, innspill }: OpinionDeta
 
   const submit = async (stance: OpinionStance, body: string) => {
     if (!user) {
-      router.push(`${routes.login}?next=${encodeURIComponent(routes.opinion(opinion.id))}`);
+      router.push(
+        `${routes.login}?next=${encodeURIComponent(routes.opinion(opinion.id, { stance }))}`,
+      );
       return;
     }
     setBusy(true);
@@ -148,8 +152,9 @@ export function OpinionDetailClient({ opinion, isAuthor, innspill }: OpinionDeta
             onSubmit={submit}
             busy={busy}
             error={error}
-            initialStance={opinion.viewerReply?.stance ?? null}
+            initialStance={opinion.viewerReply?.stance ?? initialReplyStance ?? null}
             initialBody={opinion.viewerReply?.body ?? ''}
+            autoExpand={!opinion.viewerReply && Boolean(initialReplyStance)}
             allowBlank
           />
         )}

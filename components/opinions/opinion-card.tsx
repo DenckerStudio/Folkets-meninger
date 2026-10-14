@@ -15,8 +15,17 @@ export function OpinionCard({ opinion }: OpinionCardProps) {
   const visual = STANCE_VISUAL[opinion.stance];
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
-      <Link href={routes.opinion(opinion.id)} className="block p-6 pb-4">
+    <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
+      {/*
+        Stretched link overlay: the whole card is clickable without nesting
+        interactive elements inside an anchor (the Reel chip is itself a link).
+      */}
+      <Link
+        href={routes.opinion(opinion.id)}
+        aria-label={`Les meningen: ${opinion.title}`}
+        className="absolute inset-0 z-10"
+      />
+      <div className="p-6 pb-4">
         <div className="mb-4 flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div className="flex flex-wrap items-center gap-2">
             <span
@@ -30,7 +39,7 @@ export function OpinionCard({ opinion }: OpinionCardProps) {
                 {opinion.issueTitle ?? `Sak ${opinion.stortingetIssueId}`}
               </span>
             ) : null}
-            <OpinionReelChip pollId={opinion.pollId} />
+            <OpinionReelChip pollId={opinion.pollId} className="relative z-20" />
           </div>
           <p className="text-sm text-muted-foreground md:text-right">{formatOpinionDate(opinion.createdAt)}</p>
         </div>
@@ -55,9 +64,9 @@ export function OpinionCard({ opinion }: OpinionCardProps) {
             Les mer <ArrowRight className="ml-1 h-4 w-4" />
           </span>
         </div>
-      </Link>
+      </div>
 
-      <div className="flex flex-col justify-between gap-3 border-t border-border bg-muted/40 px-6 py-4 sm:flex-row sm:items-center">
+      <div className="relative z-20 flex flex-col justify-between gap-3 border-t border-border bg-muted/40 px-6 py-4 sm:flex-row sm:items-center">
         <p className="text-sm text-muted-foreground">
           {opinion.authorName ? (
             <>

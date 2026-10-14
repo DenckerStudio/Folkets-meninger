@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { OpinionDetailClient } from './opinion-detail-client';
 import { getCitizenOpinion } from '@/lib/opinions/service';
+import { isOpinionStance } from '@/lib/opinions/validate';
+import type { OpinionStance } from '@/lib/opinions/types';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
 import {
@@ -14,6 +16,7 @@ export const dynamic = 'force-dynamic';
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ standpunkt?: string | string[] }>;
 };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -43,8 +46,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   });
 }
 
-export default async function OpinionDetailPage({ params }: PageProps) {
+export default async function OpinionDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const resolved = searchParams ? await searchParams : undefined;
+  const stanceParam = resolved?.standpunkt;
+  const initialReplyStance: OpinionStance | null = isOpinionStance(stanceParam)
+    ? stanceParam
+    : null;
+
   const supabase = await getServerSupabase();
   const {
     data: { user },
@@ -63,6 +72,7 @@ export default async function OpinionDetailPage({ params }: PageProps) {
     <OpinionDetailClient
       opinion={opinion}
       isAuthor={Boolean(user && user.id === opinion.authorUserId)}
+      initialReplyStance={initialReplyStance}
       innspill={{
         status: innspill?.status ?? null,
         supportCount: innspill?.supportCount ?? 0,

@@ -12,6 +12,7 @@ import { ReelCandidateRatings } from '@/components/admin/reel-candidate-ratings'
 import { EmptyState } from '@/components/dashboard/empty-state';
 import type { PollRecord, SakPollCandidate, SakPollCoverage } from '@/lib/polls/types';
 import type { OpinionListItem } from '@/lib/opinions/types';
+import { opinionSupportCount } from '@/lib/opinions/labels';
 import { pipelineHealthNeedsAttention, type PipelineHealth } from '@/lib/n8n/pipeline-health';
 
 type DraftsResponse = { drafts: PollRecord[] };
@@ -464,7 +465,7 @@ export default function AdminReelsClient({
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">{opinion.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {opinion.counts.total} støtter
+                      {opinionSupportCount(opinion.counts)} støtter
                       {opinion.issueTitle ? ` · ${opinion.issueTitle}` : ''}
                     </p>
                     <Link

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { stanceLabel } from '@/lib/opinions/labels';
+import { opinionSupportCount, stanceLabel } from '@/lib/opinions/labels';
 import type { IssueOpinionHighlights } from '@/lib/opinions/types';
 import type { PollGenerationMetadata } from '@/lib/polls/types';
 import { routes } from '@/lib/routes';
@@ -30,7 +30,7 @@ export function ReelOpinionHighlights({
             className="block rounded-xl bg-white/10 px-3 py-2 transition-colors hover:bg-white/15"
           >
             <span className="text-[11px] font-semibold text-white/70">
-              {stanceLabel(opinion.stance)} · {opinion.counts.total} støtter
+              {stanceLabel(opinion.stance)} · {opinionSupportCount(opinion.counts)} støtter
             </span>
             <span className="mt-0.5 line-clamp-2 block text-sm leading-snug text-white">
               {opinion.title}

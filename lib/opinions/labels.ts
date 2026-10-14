@@ -36,6 +36,15 @@ export function emptyStanceCounts(): OpinionStanceCounts {
   return { for: 0, blank: 0, imot: 0, total: 0 };
 }
 
+/**
+ * Number of replies that support an opinion. Replies are agreement signals
+ * (Enig → For, Uenig → Imot), so supporters are the `for` replies — not every
+ * reply (`total`), which would also count Blank and Imot.
+ */
+export function opinionSupportCount(counts: OpinionStanceCounts): number {
+  return counts.for;
+}
+
 export function addStanceCount(counts: OpinionStanceCounts, stance: OpinionStance, amount = 1): void {
   switch (stance) {
     case 'for':

@@ -1,4 +1,5 @@
 import { listCitizenOpinions } from '@/lib/opinions/service';
+import { opinionSupportCount } from '@/lib/opinions/labels';
 import type { OpinionListItem } from '@/lib/opinions/types';
 import { buildOpinionReelQuestion, OPINION_REEL_MIN_ENGAGEMENT } from '@/lib/opinions/reel-question';
 import {
@@ -47,7 +48,7 @@ export async function listOpinionReelCandidates(
   const candidates = opinions.filter(
     (opinion) =>
       opinion.stortingetIssueId !== null &&
-      opinion.counts.total >= OPINION_REEL_MIN_ENGAGEMENT,
+      opinionSupportCount(opinion.counts) >= OPINION_REEL_MIN_ENGAGEMENT,
   );
   if (candidates.length === 0) return { available: true, candidates: [] };
 

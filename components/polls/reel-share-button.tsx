@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Share2 } from 'lucide-react';
 import { SHARE_POLLS_ENABLED, buildPollShareText } from '@/lib/share/flag';
 import { routes } from '@/lib/routes';
@@ -19,6 +19,14 @@ type ReelShareButtonProps = {
  */
 export function ReelShareButton({ pollId, title, choice = null }: ReelShareButtonProps) {
   const [copied, setCopied] = useState(false);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+    },
+    [],
+  );
 
   const share = async () => {
     if (typeof window === 'undefined') return;
@@ -36,6 +44,8 @@ export function ReelShareButton({ pollId, title, choice = null }: ReelShareButto
       }
       await navigator.clipboard.writeText(`${text} ${url}`);
       setCopied(true);
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+      resetTimer.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       // Share sheet dismissed or clipboard blocked — nothing to do.
     }
