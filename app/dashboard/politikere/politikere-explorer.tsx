@@ -65,15 +65,15 @@ function PolitikerCard({ rep }: { rep: PolitikerOversikt }) {
           </div>
         </Link>
 
-        <div className="flex flex-col justify-between gap-3 border-t border-border bg-muted/40 px-6 py-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col items-stretch gap-3 border-t border-border bg-muted/40 px-6 py-4">
           <Link
             href={routes.parti(rep.parti.navn)}
-            className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-foreground hover:text-brand"
+            className="flex w-full min-w-0 items-center gap-2 text-sm font-medium text-foreground hover:text-brand"
           >
             <PartyMark label={rep.parti.navn} className="h-8 w-8 shrink-0">
               <PartyLogo partyName={rep.parti.navn} className="h-8 w-8" />
             </PartyMark>
-            <span className="truncate">{rep.parti.navn}</span>
+            <span className="min-w-0 flex-1 break-words">{rep.parti.navn}</span>
           </Link>
           <Link
             href={routes.politiker(String(rep.id))}
@@ -118,6 +118,7 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
   });
   const listRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const hasMountedRef = useRef(false);
   const [searchQuery, setSearchQuery] = usePersistedState(
     PREFERENCE_KEYS.politikere.search,
     '',
@@ -180,10 +181,40 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
         key: filterKey,
         page: Math.min(Math.max(1, next), totalPages),
       });
-      gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     },
     [filterKey, totalPages],
   );
+
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    const listEl = listRef.current;
+    if (!listEl) return;
+    const scrollContainer = (() => {
+      let el: HTMLElement | null = listEl.parentElement;
+      while (el) {
+        const style = window.getComputedStyle(el);
+        const overflowY = style.overflowY;
+        if ((overflowY === 'auto' || overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
+          return el;
+        }
+        el = el.parentElement;
+      }
+      return null;
+    })();
+    const offsetTop = scrollContainer
+      ? listEl.offsetTop - 96
+      : listEl.getBoundingClientRect().top + window.scrollY - 96;
+    requestAnimationFrame(() => {
+      if (scrollContainer) {
+        scrollContainer.scrollTo({ top: offsetTop, behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: offsetTop, behavior: 'smooth' });
+      }
+    });
+  }, [currentPage]);
 
   if (missingLogos.length > 0) {
     return (
