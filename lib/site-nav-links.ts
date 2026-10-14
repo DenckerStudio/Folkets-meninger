@@ -78,9 +78,11 @@ export const isInnsiktActive: NavIsActive = (pathname) =>
 export const isAdminActive: NavIsActive = (pathname) =>
   pathname === routes.admin || pathname.startsWith(`${routes.admin}/`);
 
-/** Combined Utforsk active state for mobile (includes politikere/saker). */
-export const isMobileUtforskActive: NavIsActive = (pathname) =>
-  isUtforskActive(pathname) || isPolitikereActive(pathname);
+/**
+ * Mobile Utforsk active state. Politikere lives under «Mer» on mobile, so it
+ * must NOT light up Utforsk — Mer's isActive covers those sheet routes.
+ */
+export const isMobileUtforskActive: NavIsActive = (pathname) => isUtforskActive(pathname);
 
 /** Core product areas — header primary tabs and top of dashboard sidebar. */
 export const coreNavItems: SiteNavLinkItem[] = [

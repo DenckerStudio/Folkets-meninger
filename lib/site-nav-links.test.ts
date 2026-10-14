@@ -10,9 +10,11 @@ import {
   desktopPrimaryNavLinks,
   extendedNavItems,
   mobileMoreNavItems,
+  isMobileUtforskActive,
+  isUtforskActive,
   mobileNavItems,
 } from '@/lib/site-nav-links';
-import { routes } from '@/lib/routes';
+import { DASHBOARD_PREFIX, routes } from '@/lib/routes';
 
 test('dashboard sidebar is composed from core, extended, and account tiers', () => {
   assert.deepEqual(
@@ -35,6 +37,15 @@ test('primary nav does not repeat sidebar-only destinations', () => {
   for (const href of [...extendedNavItems, ...accountNavItems].map((item) => item.href)) {
     assert.equal(primaryHrefs.has(href), false, `primary nav should not include ${href}`);
   }
+});
+
+test('mobile Utforsk is not active on Mer-sheet routes like Politikere', () => {
+  assert.equal(isMobileUtforskActive(routes.politikere), false);
+  assert.equal(isMobileUtforskActive(`${routes.politikere}/foo`), false);
+  assert.equal(isMobileUtforskActive(routes.utforsk), true);
+  assert.equal(isMobileUtforskActive(`${routes.utforsk}/reels`), true);
+  assert.equal(isUtforskActive(`${DASHBOARD_PREFIX}/sak/123`), true);
+  assert.equal(isMobileUtforskActive(`${DASHBOARD_PREFIX}/sak/123`), true);
 });
 
 test('every sidebar href is registered in dashboardNavHrefs', () => {
