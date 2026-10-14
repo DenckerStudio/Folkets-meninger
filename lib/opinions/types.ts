@@ -48,6 +48,8 @@ export type OpinionListItem = {
   authorName: string | null;
   authorInitials: string;
   counts: OpinionStanceCounts;
+  /** Viewer's quick stance on this opinion (from Reels), if any. */
+  viewerStance: OpinionCreateStance | 'blank' | null;
 };
 
 /** Top for/imot opinions plus total, shown alongside a Reel (B3). */

@@ -101,18 +101,24 @@ assert.deepEqual(okReply, {});
 const okBlankReply = validateReplyDraft({ body: '', stance: 'blank' });
 assert.deepEqual(okBlankReply, {});
 
-// Quick stance: empty body with 'for' or 'imot' is allowed (no min length required)
-const quickFor = validateReplyDraft({ body: '', stance: 'for' });
+// Quick stance: empty body with 'for' or 'imot' is allowed ONLY when quick===true
+const quickFor = validateReplyDraft({ body: '', stance: 'for', quick: true });
 assert.deepEqual(quickFor, {});
-const quickImot = validateReplyDraft({ body: '', stance: 'imot' });
+const quickImot = validateReplyDraft({ body: '', stance: 'imot', quick: true });
 assert.deepEqual(quickImot, {});
 
+// Without quick flag, empty body for for/imot should fail
+const quickForNoFlag = validateReplyDraft({ body: '', stance: 'for' });
+assert.ok(quickForNoFlag.body);
+const quickImotNoFlag = validateReplyDraft({ body: '', stance: 'imot' });
+assert.ok(quickImotNoFlag.body);
+
 // But if user starts writing, they must meet the minimum
-const quickForTooShort = validateReplyDraft({ body: 'for kort', stance: 'for' });
+const quickForTooShort = validateReplyDraft({ body: 'for kort', stance: 'for', quick: true });
 assert.ok(quickForTooShort.body);
 assert.match(quickForTooShort.body ?? '', /80/);
 
-const quickForOk = validateReplyDraft({ body: 'y'.repeat(80), stance: 'for' });
+const quickForOk = validateReplyDraft({ body: 'y'.repeat(80), stance: 'for', quick: true });
 assert.deepEqual(quickForOk, {});
 
 

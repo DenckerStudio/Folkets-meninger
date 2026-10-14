@@ -42,6 +42,9 @@ export function OpinionDetailClient({ opinion, isAuthor, initialReplyStance = nu
   const [busy, setBusy] = useState(false);
   const visual = STANCE_VISUAL[opinion.stance];
 
+  // Filter out empty-body replies (quick stances) for display, but keep counts from opinion.counts
+  const visibleReplies = opinion.replies.filter((reply) => reply.body.trim().length > 0);
+
   const submit = async (stance: OpinionStance, body: string) => {
     if (!user) {
       router.push(
@@ -162,17 +165,17 @@ export function OpinionDetailClient({ opinion, isAuthor, initialReplyStance = nu
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">
-          Begrunnelser ({formatNumber(opinion.replies.length)})
+          Begrunnelser ({formatNumber(visibleReplies.length)})
         </h2>
-        {opinion.replies.length === 0 ? (
+        {visibleReplies.length === 0 ? (
           <EmptyState
             compact
-            title="Ingen har svart ennå"
-            description="Vær den første til å si For, Blank eller Imot."
+            title="Ingen har skrevet begrunnelse ennå"
+            description="Vær den første til å dele en begrunnelse for For, Blank eller Imot."
           />
         ) : (
           <ul className="space-y-3">
-            {opinion.replies.map((reply) => {
+            {visibleReplies.map((reply) => {
               const replyVisual = STANCE_VISUAL[reply.stance];
               return (
                 <li key={reply.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm">

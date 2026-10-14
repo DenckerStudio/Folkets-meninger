@@ -64,7 +64,8 @@ export async function POST(
 
   const text = typeof body.body === 'string' ? body.body : '';
   const stance = body.stance;
-  const fieldErrors = validateReplyDraft({ body: text, stance });
+  const isQuick = body.quick === true;
+  const fieldErrors = validateReplyDraft({ body: text, stance, quick: isQuick });
   if (hasOpinionFieldErrors(fieldErrors)) {
     return NextResponse.json(
       { error: fieldErrors.body || fieldErrors.stance, fieldErrors },
@@ -73,7 +74,7 @@ export async function POST(
   }
 
   // Skip moderation for blank stance or quick stance (empty body with for/imot)
-  const isQuickStance = text.trim() === '' && (stance === 'for' || stance === 'imot');
+  const isQuickStance = isQuick && text.trim() === '' && (stance === 'for' || stance === 'imot');
   if (!(isOpinionStance(stance) && (stance === 'blank' || isQuickStance))) {
     const moderation = checkDiscussionContent(text);
     if (!moderation.approved) {
@@ -117,4 +118,55 @@ export async function POST(
     console.error('Create citizen opinion reply error:', error);
     return NextResponse.json({ error: 'Kunne ikke lagre svaret' }, { status: 500 });
   }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const supabase = await getServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
+  }
+
+  // Only allow deleting the user's own quick stance reply (empty body)
+  const { data: reply, error: replyError } = await supabase
+    .from('citizen_opinion_replies')
+    .select('id, body')
+    .eq('opinion_id', id)
+    .eq('author_user_id', user.id)
+    .eq('is_removed', false)
+    .maybeSingle();
+
+  if (replyError) {
+    console.error('Delete stance: fetch reply error:', replyError.message);
+    return NextResponse.json({ error: 'Kunne ikke finne stemme' }, { status: 500 });
+  }
+
+  if (!reply) {
+    return NextResponse.json({ error: 'Ingen stemme å fjerne' }, { status: 404 });
+  }
+
+  // Only allow deletion if body is empty (quick stance)
+  if (reply.body && reply.body.trim().length > 0) {
+    return NextResponse.json({ error: 'Kan ikke fjerne begrunnelse her' }, { status: 400 });
+  }
+
+  // Soft delete by setting is_removed = true
+  const { error: deleteError } = await supabase
+    .from('citizen_opinion_replies')
+    .update({ is_removed: true, updated_at: new Date().toISOString() })
+    .eq('id', reply.id);
+
+  if (deleteError) {
+    console.error('Delete stance error:', deleteError.message);
+    return NextResponse.json({ error: 'Kunne ikke fjerne stemme' }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
 }

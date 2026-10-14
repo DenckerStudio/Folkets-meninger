@@ -373,7 +373,7 @@ export async function listSystemReelFeedItems(
   const highlightsByIssue = new Map<string, IssueOpinionHighlights>();
   await Promise.all(
     issueIds.map(async (issueId) => {
-      highlightsByIssue.set(issueId, await getIssueOpinionHighlights(issueId));
+      highlightsByIssue.set(issueId, await getIssueOpinionHighlights(issueId, userId));
     }),
   );
 

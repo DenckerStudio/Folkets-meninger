@@ -8,6 +8,7 @@ import {
   OPINION_TITLE_MAX,
   OPINION_TITLE_MIN,
   type IssueOpinionHighlights,
+  type OpinionCreateStance,
   type OpinionDetail,
   type OpinionListItem,
   type OpinionReplyItem,
@@ -75,6 +76,7 @@ function mapOpinionRow(
   issueTitle: string | null,
   counts: OpinionStanceCounts,
   pollId: string | null,
+  viewerStance: OpinionCreateStance | 'blank' | null = null,
 ): OpinionListItem {
   const author = mapAuthor(row.author_user_id, row.users);
   const stance: OpinionStance = isOpinionStance(row.stance) ? row.stance : 'blank';
@@ -92,6 +94,7 @@ function mapOpinionRow(
     authorName: author.name,
     authorInitials: author.initials,
     counts,
+    viewerStance,
   };
 }
 
@@ -184,6 +187,43 @@ async function loadCountsByOpinion(opinionIds: string[]): Promise<Map<string, Op
     const counts = map.get(id) ?? emptyStanceCounts();
     addStanceCount(counts, stance);
     map.set(id, counts);
+  }
+  return map;
+}
+
+async function loadViewerStances(
+  opinionIds: string[],
+  viewerUserId: string | null,
+): Promise<Map<string, OpinionCreateStance | 'blank' | null>> {
+  const map = new Map<string, OpinionCreateStance | 'blank' | null>();
+  for (const id of opinionIds) {
+    map.set(id, null);
+  }
+  if (opinionIds.length === 0 || !viewerUserId || !supabaseConfigured()) return map;
+
+  const supabase = getAnonSupabase();
+  const { data, error } = await supabase
+    .from('citizen_opinion_replies')
+    .select('opinion_id, stance, body')
+    .in('opinion_id', opinionIds)
+    .eq('author_user_id', viewerUserId)
+    .eq('is_removed', false);
+
+  if (error) {
+    console.error('loadViewerStances error:', error.message);
+    return map;
+  }
+
+  for (const row of data ?? []) {
+    const id = String(row.opinion_id);
+    const stance = row.stance;
+    if (!isOpinionStance(stance)) continue;
+    // Only consider quick stances (empty body) or blank as viewer stance for Reels
+    const body = row.body ?? '';
+    const isQuick = body.trim() === '' && (stance === 'for' || stance === 'imot');
+    if (isQuick || stance === 'blank') {
+      map.set(id, stance as OpinionCreateStance | 'blank');
+    }
   }
   return map;
 }
@@ -282,6 +322,7 @@ export async function listSakPickerOptions(
 async function listCitizenOpinionsInternal(
   limit: number,
   issueId?: string | null,
+  viewerUserId?: string | null,
 ): Promise<OpinionListItem[]> {
   if (!supabaseConfigured()) return [];
 
@@ -307,10 +348,12 @@ async function listCitizenOpinionsInternal(
   const issueIds = rows
     .map((row) => row.stortinget_issue_id)
     .filter((id): id is string => Boolean(id));
-  const [issueTitles, countsById, pollIdByIssue] = await Promise.all([
+  const opinionIds = rows.map((row) => row.id);
+  const [issueTitles, countsById, pollIdByIssue, viewerStances] = await Promise.all([
     loadIssueTitles(issueIds),
-    loadCountsByOpinion(rows.map((row) => row.id)),
+    loadCountsByOpinion(opinionIds),
     loadPollIdByIssue(issueIds),
+    loadViewerStances(opinionIds, viewerUserId ?? null),
   ]);
 
   return rows.map((row) => {
@@ -318,21 +361,26 @@ async function listCitizenOpinionsInternal(
     // Do not add the original opinion's stance to counts — "supporters" are replies only (Enig → For).
     const issueTitle = row.stortinget_issue_id ? issueTitles.get(row.stortinget_issue_id) ?? null : null;
     const pollId = row.stortinget_issue_id ? pollIdByIssue.get(row.stortinget_issue_id) ?? null : null;
-    return mapOpinionRow(row, issueTitle, counts, pollId);
+    const viewerStance = viewerStances.get(row.id) ?? null;
+    return mapOpinionRow(row, issueTitle, counts, pollId, viewerStance);
   });
 }
 
-export async function listCitizenOpinions(limit = OPINION_LIST_PAGE_SIZE): Promise<OpinionListItem[]> {
-  return listCitizenOpinionsInternal(limit);
+export async function listCitizenOpinions(
+  limit = OPINION_LIST_PAGE_SIZE,
+  viewerUserId?: string | null,
+): Promise<OpinionListItem[]> {
+  return listCitizenOpinionsInternal(limit, undefined, viewerUserId);
 }
 
 export async function listCitizenOpinionsByIssue(
   issueId: string,
   limit = OPINION_LIST_PAGE_SIZE,
+  viewerUserId?: string | null,
 ): Promise<OpinionListItem[]> {
   const id = issueId.trim();
   if (!id) return [];
-  return listCitizenOpinionsInternal(limit, id);
+  return listCitizenOpinionsInternal(limit, id, viewerUserId);
 }
 
 export type IssueOpinionSummary = {
@@ -346,8 +394,11 @@ export type IssueOpinionSummary = {
  * Shown on the matching Reel so undecided voters can read the best argument
  * on each side before voting (B3).
  */
-export async function getIssueOpinionHighlights(issueId: string): Promise<IssueOpinionHighlights> {
-  const opinions = await listCitizenOpinionsByIssue(issueId, 60);
+export async function getIssueOpinionHighlights(
+  issueId: string,
+  viewerUserId?: string | null,
+): Promise<IssueOpinionHighlights> {
+  const opinions = await listCitizenOpinionsByIssue(issueId, 60, viewerUserId);
   let topFor: OpinionListItem | null = null;
   let topImot: OpinionListItem | null = null;
   for (const opinion of opinions) {
@@ -364,8 +415,9 @@ export async function getIssueOpinionHighlights(issueId: string): Promise<IssueO
 export async function getIssueOpinionSummary(
   issueId: string,
   previewLimit = 3,
+  viewerUserId?: string | null,
 ): Promise<IssueOpinionSummary> {
-  const opinions = await listCitizenOpinionsByIssue(issueId);
+  const opinions = await listCitizenOpinionsByIssue(issueId, previewLimit * 2, viewerUserId);
   const counts = emptyStanceCounts();
   for (const opinion of opinions) {
     addStanceCount(counts, opinion.stance);
