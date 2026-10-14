@@ -12,6 +12,10 @@ export interface InteractiveMenuItem {
   icon: IconComponentType;
   href: string;
   isActive?: (pathname: string) => boolean;
+  /** Render as a button (e.g. «Mer» opening a sheet) instead of a link. */
+  onClick?: () => void;
+  /** Extra ARIA for button items. */
+  ariaExpanded?: boolean;
 }
 
 export interface InteractiveMenuProps {
@@ -26,7 +30,7 @@ function resolveActiveIndex(items: InteractiveMenuItem[], pathname: string): num
   const index = items.findIndex((item) =>
     item.isActive ? item.isActive(pathname) : pathname === item.href || pathname.startsWith(`${item.href}/`),
   );
-  return index >= 0 ? index : 0;
+  return index;
 }
 
 export function InteractiveMenu({ items, accentColor, className }: InteractiveMenuProps) {
@@ -53,7 +57,7 @@ export function InteractiveMenu({ items, accentColor, className }: InteractiveMe
 
   useEffect(() => {
     if (activeIndex >= finalItems.length) {
-      setActiveIndex(0);
+      setActiveIndex(-1);
     }
   }, [finalItems, activeIndex]);
 
@@ -93,6 +97,25 @@ export function InteractiveMenu({ items, accentColor, className }: InteractiveMe
       {finalItems.map((item, index) => {
         const isActive = index === activeIndex;
         const IconComponent = item.icon;
+
+        if (item.onClick) {
+          return (
+            <button
+              key={item.href}
+              type="button"
+              className={`menu__item ${isActive ? 'active' : ''}`}
+              onClick={item.onClick}
+              aria-haspopup="dialog"
+              aria-expanded={item.ariaExpanded ?? false}
+              style={{ '--lineWidth': '0px' } as React.CSSProperties}
+            >
+              <div className="menu__icon">
+                <IconComponent className="icon" />
+              </div>
+              <strong className="menu__text">{item.label}</strong>
+            </button>
+          );
+        }
 
         return (
           <Link
