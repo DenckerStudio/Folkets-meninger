@@ -208,26 +208,27 @@ const StoriesHeader = forwardRef<HTMLDivElement, StoriesHeaderProps>(
 
     return (
       <div ref={ref} className={cn('flex gap-1 p-2', className)} {...props}>
-        {Array.from({ length: total }).map((_, index) => (
-          <div
-            key={index}
-            className="h-0.5 flex-1 rounded-full bg-white/40 overflow-hidden cursor-pointer"
-            onClick={() => goTo(index)}
-          >
+        {Array.from({ length: total }).map((_, index) => {
+          const isCurrent = index === currentIndex;
+          const isViewed = index < currentIndex;
+          const isUpcoming = index > currentIndex;
+          const segmentProgress = isCurrent && progress > 0 ? progress : isCurrent ? 100 : isViewed ? 100 : 0;
+          const segmentColor = isViewed ? 'bg-white/60' : isCurrent ? 'bg-blue-300' : 'bg-white/20';
+          return (
             <div
-              className={cn('h-full transition-[width] duration-50 ease-linear', index < currentIndex ? 'bg-white' : index === currentIndex ? 'bg-blue-300' : 'bg-white/20')}
-              aria-current={index === currentIndex ? 'true' : undefined}
-              style={{
-                width:
-                  index < currentIndex
-                    ? '100%'
-                    : index === currentIndex
-                    ? `${progress}%`
-                    : '0%',
-              }}
-            />
-          </div>
-        ))}
+              key={index}
+              className="h-0.5 flex-1 rounded-full bg-white/40 overflow-hidden cursor-pointer"
+              onClick={() => goTo(index)}
+              aria-label={`Reel ${index + 1} av ${total}`}
+            >
+              <div
+                className={cn('h-full transition-[width] duration-50 ease-linear', segmentColor)}
+                aria-current={isCurrent ? 'true' : undefined}
+                style={{ width: `${segmentProgress}%` }}
+              />
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -488,6 +489,48 @@ const StoriesNavigation = forwardRef<HTMLDivElement, StoriesNavigationProps>(
 );
 StoriesNavigation.displayName = 'StoriesNavigation';
 
+interface StoriesNavigationInlineProps extends HTMLAttributes<HTMLDivElement> {}
+
+const StoriesNavigationInline = forwardRef<HTMLDivElement, StoriesNavigationInlineProps>(
+  ({ className, ...props }, ref) => {
+    const { next, prev } = useStories();
+
+    return (
+      <div
+        ref={ref}
+        className={cn('flex items-center gap-2', className)}
+        {...props}
+      >
+        <Button
+          variant="secondary"
+          size="icon"
+          aria-label="Forrige Reel"
+          className="h-11 w-11 rounded-full bg-white/90 hover:bg-white"
+          onClick={(e) => {
+            e.stopPropagation();
+            prev();
+          }}
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <Button
+          variant="secondary"
+          size="icon"
+          aria-label="Neste Reel"
+          className="h-11 w-11 rounded-full bg-white/90 hover:bg-white"
+          onClick={(e) => {
+            e.stopPropagation();
+            next();
+          }}
+        >
+          <ArrowRight className="h-5 w-5" />
+        </Button>
+      </div>
+    );
+  }
+);
+StoriesNavigationInline.displayName = 'StoriesNavigationInline';
+
 
 interface StoriesCounterProps extends HTMLAttributes<HTMLDivElement> {}
 
@@ -521,5 +564,6 @@ export {
   StoryAuthorImage,
   StoryAuthorName,
   StoriesNavigation,
+  StoriesNavigationInline,
   StoriesCounter,
 };

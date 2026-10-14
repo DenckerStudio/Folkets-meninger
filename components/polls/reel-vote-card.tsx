@@ -113,6 +113,20 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const mounted = useIsMounted();
 
+  // Handle Escape key when "Les mer" sheet is open - capture phase to intercept before others
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        setSheetOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey, { capture: true });
+    return () => window.removeEventListener('keydown', onKey, { capture: true });
+  }, [sheetOpen]);
+
   return (
     <div data-testid="reel-vote-face" className="flex h-full min-h-0 flex-col gap-2">
       <div className="flex min-h-0 flex-col gap-1.5">
@@ -274,6 +288,7 @@ export function ReelCarouselCard({
   onBack,
   fill = false,
   showBadge = true,
+  mode = 'coverflow', // 'coverflow' | 'stories'
 }: {
   item: SystemReelFeedItem;
   selected: boolean;
@@ -282,10 +297,62 @@ export function ReelCarouselCard({
   fill?: boolean;
   /** Hide when the stage header already shows Reels (avoids back covering badge). */
   showBadge?: boolean;
+  /** Render mode: 'coverflow' uses absolute stacked faces; 'stories' uses CSS grid for content-driven height. */
+  mode?: 'coverflow' | 'stories';
 }) {
   const reducedMotion = usePrefersReducedMotion();
   const pointerStart = useRef({ x: 0, y: 0 });
 
+  const isStories = mode === 'stories';
+
+  if (isStories) {
+    // Stories mode: CSS grid for content-driven height, no absolute stacking
+    return (
+      <div
+        className={cn(
+          'bg-card shadow-sm',
+          fill
+            ? 'w-full rounded-none border-0'
+            : 'w-full rounded-2xl border border-white/10',
+        )}
+        style={{ gridArea: '1 / 1' }}
+      >
+        <div className="flex flex-col">
+          {/* Front face - poll preview */}
+          <button
+            type="button"
+            onClick={onSelect}
+            disabled={selected}
+            className="flex flex-col justify-between bg-gradient-to-b from-[#00205b] to-[#00205b]/80 p-5 text-left text-white"
+          >
+            {showBadge ? (
+              <span className="inline-flex items-center gap-1 self-start rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">
+                <CivicBubble className="h-3 w-3" />
+                Reels
+              </span>
+            ) : (
+              <span className="h-5" aria-hidden />
+            )}
+            <div className="space-y-2 flex-1 min-h-0 overflow-hidden">
+              <h3 className="text-lg font-semibold leading-snug sm:text-xl">{item.poll.title}</h3>
+              {item.poll.neutralSummary ? (
+                <p className="line-clamp-3 text-sm leading-relaxed text-white/75">
+                  {item.poll.neutralSummary}
+                </p>
+              ) : null}
+            </div>
+            <p className="text-xs font-medium text-white/70">Trykk for å stemme</p>
+          </button>
+          {/* Back face - vote card (shown when selected) */}
+          {selected && (
+            <ReelFlagVote key={item.poll.id} item={item} onBack={onBack} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Coverflow mode: absolute stacked faces with flip animation
   return (
     <div
       className={cn(

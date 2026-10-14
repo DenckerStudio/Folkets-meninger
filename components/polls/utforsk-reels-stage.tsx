@@ -13,7 +13,7 @@ import { CivicBubble } from '@/components/icons/civic';
 import { EmptyLineState } from '@/components/motion/empty-line';
 import { AnimatePresence, motion } from 'motion/react';
 import { CoverflowCarousel } from '@/components/ui/coverflow-carousel';
-import { Stories, StoriesContent, StoriesHeader, StoriesCounter, StoriesNavigation, Story } from '@/components/ui/stories-carousel';
+import { Stories, StoriesContent, StoriesHeader, StoriesCounter, StoriesNavigationInline, Story } from '@/components/ui/stories-carousel';
 import { ReelCarouselCard } from '@/components/polls/reel-vote-card';
 import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import type { SystemReelFeedItem } from '@/lib/polls/types';
@@ -130,14 +130,7 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
     };
   }, [reelsOpen]);
 
-  useEffect(() => {
-    if (!reelsOpen) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeReels();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [reelsOpen, closeReels]);
+
 
   return (
     <div>
@@ -290,22 +283,19 @@ function ReelsPanel({
     const onKey = (event: KeyboardEvent) => {
       // Escape closes panel or goes back
       if (event.key === 'Escape') {
-        // If sheet is open, let it close; check if any sheet element is in DOM
-        const sheet = document.querySelector('[role="dialog"][aria-modal="true"][class*="z-\[220\]"]');
-        if (sheet) {
+        // Check if disclaimer is open - close only that
+        if (disclaimerOpen) {
           event.preventDefault();
-          event.stopPropagation();
-          // Try to find close button
-          const close = sheet.querySelector('button[aria-label="Lukk"], button[aria-label="Lukk beskrivelsen"]');
-          if (close) (close as HTMLButtonElement).click();
-          else {
-            const backdrop = sheet.querySelector('button[aria-label="Lukk beskrivelsen"]') || sheet.querySelector('button.absolute.inset-0');
-            // simpler: dispatch click on backdrop if exists
-            const backdropBtn = Array.from(sheet.querySelectorAll('button')).find(b => b.getAttribute('aria-label') === 'Lukk beskrivelsen');
-            if (backdropBtn) (backdropBtn as HTMLButtonElement).click();
-          }
+          setDisclaimerOpen(false);
           return;
         }
+        // If card is flipped open, go back to front
+        if (cardOpen) {
+          event.preventDefault();
+          onSelect(null);
+          return;
+        }
+        // Otherwise close Reels
         event.preventDefault();
         onClose();
         return;
@@ -326,7 +316,7 @@ function ReelsPanel({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [active, activePollId, centeredIndex, items, onSelect, onClose]);
+  }, [active, activePollId, cardOpen, centeredIndex, disclaimerOpen, items, onSelect, onClose]);
 
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col">
@@ -410,6 +400,7 @@ function ReelsPanel({
                 selected={activePollId === item.poll.id}
                 onSelect={() => onSelect(item.poll.id)}
                 onBack={() => onSelect(null)}
+                mode="coverflow"
               />
             ))}
           />
@@ -422,6 +413,7 @@ function ReelsPanel({
               <div className="flex items-center justify-between px-2 pb-1">
                 <StoriesHeader className="flex-1 px-0" />
                 <StoriesCounter className="ml-2 shrink-0" />
+                <StoriesNavigationInline className="ml-2 shrink-0" />
               </div>
               <StoriesContent className="flex-1 min-h-0">
                 {items.map((item) => (
@@ -432,11 +424,11 @@ function ReelsPanel({
                       selected={activePollId === item.poll.id}
                       onSelect={() => onSelect(item.poll.id)}
                       onBack={() => onSelect(null)}
+                      mode="stories"
                     />
                   </Story>
                 ))}
               </StoriesContent>
-              <StoriesNavigation showArrows />
             </Stories>
           </div>
         </div>

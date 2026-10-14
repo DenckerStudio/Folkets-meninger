@@ -372,7 +372,7 @@ export function CoverflowCarousel({
           <>
             <button
               type="button"
-              aria-label="Forrige"
+              aria-label="Forrige Reel"
               disabled={interactionLocked}
               onClick={() => nudge(-1)}
               className="absolute left-2 top-1/2 z-[200] -translate-y-1/2 rounded-full bg-[#00205b]/90 p-2 text-white backdrop-blur transition hover:bg-[#00205b] disabled:opacity-40 md:left-3"
@@ -381,7 +381,7 @@ export function CoverflowCarousel({
             </button>
             <button
               type="button"
-              aria-label="Neste"
+              aria-label="Neste Reel"
               disabled={interactionLocked}
               onClick={() => nudge(1)}
               className="absolute right-2 top-1/2 z-[200] -translate-y-1/2 rounded-full bg-[#00205b]/90 p-2 text-white backdrop-blur transition hover:bg-[#00205b] disabled:opacity-40 md:right-3"
