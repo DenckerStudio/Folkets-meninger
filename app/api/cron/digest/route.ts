@@ -5,6 +5,7 @@ import { isSmtpConfigured } from '@/lib/email/smtp-config';
 import { cronAuthResponse, verifyCronAuth } from '@/lib/cron-auth';
 import {
   buildDigestCursorUpdate,
+  buildInAppDigestSummary,
   resolveDigestSinceIso,
   shouldSendDigestEmail,
   toAbsoluteNotificationUrl,
@@ -39,16 +40,11 @@ export async function GET(request: Request) {
   const origin = url.origin;
   const frequency = parseFrequency(url);
 
-  if (!isSmtpConfigured()) {
-    console.warn('Cron digest skipped: SMTP is not configured');
-    return NextResponse.json({
-      ok: true,
-      frequency,
-      usersProcessed: 0,
-      emailsSent: 0,
-      skippedUsers: 0,
-      skipped: 'smtp_not_configured',
-    });
+  // E-mail is Stemme+ only. Free users get the weekly digest as ONE in-app
+  // summary notification, so SMTP only gates the Stemme+ e-mail path.
+  const smtpConfigured = isSmtpConfigured();
+  if (!smtpConfigured) {
+    console.warn('Cron digest: SMTP is not configured, only in-app digests for free users will run');
   }
 
   try {
@@ -76,14 +72,14 @@ export async function GET(request: Request) {
     let usersProcessed = 0;
     let skippedUsers = 0;
     let failedUsers = 0;
+    let inAppDigestsCreated = 0;
     const sentAtIso = new Date().toISOString();
 
     for (const p of prefs || []) {
-      if (!p.email_enabled) continue;
-
-      // Tier is enforced here too: free users only get the weekly digest.
+      // Tier is enforced here too: free users only get the weekly in-app digest, never e-mail.
       const subscription = await getUserSubscription(p.user_id);
       const isPlus = isStemmePlusActive(subscription);
+      if (isPlus && (!p.email_enabled || !smtpConfigured)) continue;
       let channels: string[];
       if (!isPlus) {
         channels = frequency === 'weekly' ? [...NOTIFICATION_CHANNELS] : [];
@@ -99,13 +95,6 @@ export async function GET(request: Request) {
       if (channels.length === 0) continue;
 
       usersProcessed += 1;
-
-      const userRes = await service.auth.admin.getUserById(p.user_id);
-      const email = userRes.data.user?.email;
-      if (!email) {
-        skippedUsers += 1;
-        continue;
-      }
 
       const items: Array<{
         title: string;
@@ -160,6 +149,40 @@ export async function GET(request: Request) {
         continue;
       }
 
+      if (!isPlus) {
+        const summary = buildInAppDigestSummary(items);
+        const { error: insertError } = await service.from('notifications').insert({
+          user_id: p.user_id,
+          type: 'weekly_digest',
+          channel: 'digest',
+          title: summary.title,
+          body: summary.body,
+          url: summary.url,
+          data: { digest: true, frequency: 'weekly', count: items.length },
+        });
+        if (insertError) {
+          failedUsers += 1;
+          console.error('Cron digest in-app insert error', { userId: p.user_id, error: insertError });
+          continue;
+        }
+        inAppDigestsCreated += 1;
+        const { error: cursorError } = await service
+          .from('notification_preferences')
+          .update({ last_digest_sent_at_by_channel: buildDigestCursorUpdate(lastDigest, channels, sentAtIso) })
+          .eq('user_id', p.user_id);
+        if (cursorError) {
+          console.error('Cron digest cursor update error', { userId: p.user_id, error: cursorError });
+        }
+        continue;
+      }
+
+      const userRes = await service.auth.admin.getUserById(p.user_id);
+      const email = userRes.data.user?.email;
+      if (!email) {
+        skippedUsers += 1;
+        continue;
+      }
+
       const preparedDigest = prepareDigestForUser(items, subscription);
 
       try {
@@ -191,6 +214,7 @@ export async function GET(request: Request) {
       emailsSent,
       skippedUsers,
       failedUsers,
+      inAppDigestsCreated,
     });
   } catch (e) {
     console.error('Cron digest error', e);

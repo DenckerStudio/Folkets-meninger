@@ -306,9 +306,9 @@ export function NotificationPreferencesModal({ open, onClose }: Props) {
         <Section icon={<Mail className="h-4 w-4" />} title="Hvor ofte">
           {locked ? (
             <div className="rounded-xl border border-border bg-muted/40 px-3 py-3">
-              <p className="text-sm font-medium text-foreground">Ukentlig sammendrag</p>
+              <p className="text-sm font-medium text-foreground">Ukentlig sammendrag i appen</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Gratis brukere får et ukentlig sammendrag. Med Stemme+ kan du velge med en gang, daglig eller ukentlig.
+                Gratis brukere får ett samlet varsel i appen hver uke (ingen e-post). Med Stemme+ kan du velge e-post med en gang, daglig eller ukentlig.
               </p>
               <Link href={UPGRADE_HREF} className="mt-2 inline-flex text-xs font-semibold text-brand hover:underline">
                 Oppgrader til Stemme+

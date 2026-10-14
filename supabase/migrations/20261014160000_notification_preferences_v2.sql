@@ -3,7 +3,7 @@
 --
 -- Free users: server always uses free defaults for skip_finished, max_case_age_days,
 -- enabled_types, only_followed, channel_email and frequency (weekly).
--- Stemme+ users can change them. channel_in_app / channel_push are open to everyone.
+-- Stemme+ users can change them. Free users never get e-mail; their weekly digest is one in-app notification. channel_in_app / channel_push are open to everyone.
 -- Existing RLS policies on notification_preferences (select/insert/update own row)
 -- cover the new columns; tier rules are enforced in the API and at send time.
 
@@ -42,5 +42,5 @@ COMMENT ON COLUMN public.notification_preferences.enabled_types IS 'Stemme+: ena
 COMMENT ON COLUMN public.notification_preferences.only_followed IS 'Stemme+: only followed themes, parties and cases.';
 COMMENT ON COLUMN public.notification_preferences.channel_in_app IS 'Everyone: in-app channel.';
 COMMENT ON COLUMN public.notification_preferences.channel_push IS 'Everyone: push channel.';
-COMMENT ON COLUMN public.notification_preferences.channel_email IS 'Stemme+: e-mail channel (free: weekly digest only).';
+COMMENT ON COLUMN public.notification_preferences.channel_email IS 'Stemme+: e-mail channel (free: never e-mail).';
 COMMENT ON COLUMN public.notification_preferences.frequency IS 'Stemme+: realtime | daily | weekly (free: weekly).';

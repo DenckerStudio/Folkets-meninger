@@ -62,7 +62,7 @@ async function getPreferences(userId: string) {
     .maybeSingle();
 
   if (error && isMissingColumnError(error)) {
-    // Migration 20261014120000_notification_preferences_v2 not applied yet: fall back to legacy columns.
+    // Migration 20261014160000_notification_preferences_v2 not applied yet: fall back to legacy columns.
     hasV2 = false;
     ({ data, error } = await service
       .from('notification_preferences')
@@ -121,6 +121,11 @@ export async function createNotification(
   if (error) {
     console.error('Failed to insert notification', error);
     return { ok: false, error: error.message };
+  }
+
+  // E-mail is Stemme+ only: free users never get e-mail (their weekly digest is in-app).
+  if (!isPlus) {
+    return { ok: true, id: inserted.id, emailSent: false, emailSkippedReason: 'disabled' };
   }
 
   const preference = prefs.hasV2 ? v2.frequency : (prefs.freq[input.channel] ?? 'daily');
@@ -202,6 +207,10 @@ export async function dispatchNotification(
   const delivery = input.delivery ?? 'both';
 
   if (delivery === 'email_only') {
+    // E-mail is Stemme+ only — enforced for every server-side send path.
+    if (!isStemmePlusActive(await getUserSubscription(input.userId))) {
+      return { ok: false, error: 'E-post er kun for Stemme+' };
+    }
     if (!isSmtpConfigured()) {
       return { ok: false, error: 'SMTP is not configured' };
     }

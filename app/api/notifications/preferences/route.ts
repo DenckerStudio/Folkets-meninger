@@ -26,7 +26,7 @@ async function loadRow(supabase: SupabaseServer, userId: string) {
   if (!full.error || !isMissingColumnError(full.error)) {
     return { data: full.data as Record<string, unknown> | null, error: full.error, hasV2: true };
   }
-  // Migration 20261014120000_notification_preferences_v2 not applied yet.
+  // Migration 20261014160000_notification_preferences_v2 not applied yet.
   const legacy = await supabase
     .from('notification_preferences')
     .select(LEGACY_COLUMNS)
