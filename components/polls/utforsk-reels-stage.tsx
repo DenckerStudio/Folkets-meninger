@@ -277,12 +277,19 @@ function ReelsPanel({
   const cardOpen = Boolean(activePollId);
   const [centeredIndex, setCenteredIndex] = useState(0);
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
     if (!active) return;
     const onKey = (event: KeyboardEvent) => {
       // Escape closes panel or goes back
       if (event.key === 'Escape') {
+        // Check if "Les mer" sheet is open - close only that
+        if (sheetOpen) {
+          event.preventDefault();
+          setSheetOpen(false);
+          return;
+        }
         // Check if disclaimer is open - close only that
         if (disclaimerOpen) {
           event.preventDefault();
@@ -316,7 +323,7 @@ function ReelsPanel({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [active, activePollId, cardOpen, centeredIndex, disclaimerOpen, items, onSelect, onClose]);
+  }, [active, activePollId, cardOpen, centeredIndex, disclaimerOpen, items, onSelect, onClose, sheetOpen]);
 
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col">
@@ -378,42 +385,45 @@ function ReelsPanel({
       ) : isDesktop ? (
         /* Desktop (lg+): 21st Coverflow rack — not fullscreen single cards, no sideways peek bleed */
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
-          <CoverflowCarousel
-            label="Reels"
-            loop={items.length >= 3}
-            showPagination
-            showNavigation
-            interactionLocked={cardOpen}
-            onIndexChange={setCenteredIndex}
-            rotate={40}
-            depth={0.55}
-            perspective={2.8}
-            cardWidth="clamp(220px, 28vw, 320px)"
-            cardHeight="clamp(320px, 58dvh, 440px)"
-            gap={0.08}
-            cardClassName="rounded-2xl border border-white/10 bg-[#00205b]"
-            slides={items.map((item) => (
-              <ReelCarouselCard
-                key={item.poll.id}
-                item={item}
-                showBadge={false}
-                selected={activePollId === item.poll.id}
-                onSelect={() => onSelect(item.poll.id)}
-                onBack={() => onSelect(null)}
-                mode="coverflow"
-              />
-            ))}
-          />
+<CoverflowCarousel
+              label="Reels"
+              loop={items.length >= 3}
+              showPagination
+              showNavigation
+              interactionLocked={cardOpen}
+              onIndexChange={setCenteredIndex}
+              rotate={40}
+              depth={0.55}
+              perspective={2.8}
+              cardWidth="clamp(220px, 28vw, 320px)"
+              cardHeight="clamp(320px, 58dvh, 440px)"
+              gap={0.08}
+              cardClassName="rounded-2xl border border-white/10 bg-[#00205b]"
+              slides={items.map((item) => (
+                <ReelCarouselCard
+                  key={item.poll.id}
+                  item={item}
+                  showBadge={false}
+                  selected={activePollId === item.poll.id}
+                  onSelect={() => onSelect(item.poll.id)}
+                  onBack={() => onSelect(null)}
+                  mode="coverflow"
+                  onSheetOpenChange={setSheetOpen}
+                />
+              ))}
+            />
         </div>
       ) : (
         /* Mobile + tablet (<lg): Stories carousel (vertikal Tiktok-lignende, full høyde) */
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
           <div className="relative mx-auto flex min-h-0 w-full max-w-[26rem] flex-1 flex-col">
             <Stories loop={items.length > 1} onIndexChange={setCenteredIndex}>
-              <div className="flex items-center justify-between px-2 pb-1">
-                <StoriesHeader className="flex-1 px-0" />
-                <StoriesCounter className="ml-2 shrink-0" />
-                <StoriesNavigationInline className="ml-2 shrink-0" />
+              <div className="flex items-center justify-between gap-2 px-2 pb-1">
+                <div className="flex-1 min-w-0 overflow-x-auto pr-2">
+                  <StoriesHeader className="px-0" />
+                </div>
+                <StoriesCounter className="shrink-0 hidden sm:inline-flex" />
+                <StoriesNavigationInline className="shrink-0" />
               </div>
               <StoriesContent className="flex-1 min-h-0">
                 {items.map((item) => (
@@ -425,6 +435,7 @@ function ReelsPanel({
                       onSelect={() => onSelect(item.poll.id)}
                       onBack={() => onSelect(null)}
                       mode="stories"
+                      onSheetOpenChange={setSheetOpen}
                     />
                   </Story>
                 ))}

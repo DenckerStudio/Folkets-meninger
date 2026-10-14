@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
@@ -68,9 +68,10 @@ function reelTotalsSummary(totals: PollTotals): string {
 type ReelFlagVoteProps = {
   item: SystemReelFeedItem;
   onBack: () => void;
+  onSheetOpenChange?: (open: boolean) => void;
 };
 
-export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
+export function ReelFlagVote({ item, onBack, onSheetOpenChange }: ReelFlagVoteProps) {
   const { user } = useAuth();
   const router = useRouter();
   const reducedMotion = usePrefersReducedMotion();
@@ -111,6 +112,14 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
   const voteDisabled = busy || Boolean(userVote) || !votingOpen;
   const { ref: descriptionRef, overflowing } = useOverflow<HTMLDivElement>();
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  const handleSheetOpenChange = useCallback(
+    (open: boolean) => {
+      setSheetOpen(open);
+      onSheetOpenChange?.(open);
+    },
+    [onSheetOpenChange],
+  );
   const mounted = useIsMounted();
 
   // Handle Escape key when "Les mer" sheet is open - capture phase to intercept before others
@@ -120,16 +129,16 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopImmediatePropagation();
-        setSheetOpen(false);
+        handleSheetOpenChange(false);
       }
     };
     window.addEventListener('keydown', onKey, { capture: true });
     return () => window.removeEventListener('keydown', onKey, { capture: true });
-  }, [sheetOpen]);
+  }, [sheetOpen, handleSheetOpenChange]);
 
   return (
     <div data-testid="reel-vote-face" className="flex h-full min-h-0 flex-col gap-2">
-      <div className="flex min-h-0 flex-col gap-1.5">
+      <div className="flex min-h-0 flex-1 flex-col gap-1.5">
         <p className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-white/70">
           Hva mener du?
         </p>
@@ -153,7 +162,7 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
         {overflowing ? (
           <button
             type="button"
-            onClick={() => setSheetOpen(true)}
+            onClick={() => handleSheetOpenChange(true)}
             className="shrink-0 self-start text-xs font-semibold text-white/90 underline decoration-white/40 underline-offset-2 transition-colors hover:text-white"
           >
             Les mer
@@ -241,7 +250,7 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
                   <button
                     type="button"
                     aria-label="Lukk beskrivelsen"
-                    onClick={() => setSheetOpen(false)}
+                    onClick={() => handleSheetOpenChange(false)}
                     className="absolute inset-0 bg-black/60"
                   />
                   <motion.div
@@ -258,12 +267,12 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
                       <h3 className="text-base font-semibold leading-snug sm:text-lg">
                         {item.poll.title}
                       </h3>
-                      <button
-                        type="button"
-                        onClick={() => setSheetOpen(false)}
-                        aria-label="Lukk"
-                        className="shrink-0 rounded-lg p-1.5 text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-                      >
+<button
+                      type="button"
+                      onClick={() => handleSheetOpenChange(false)}
+                      aria-label="Lukk"
+                      className="shrink-0 rounded-lg p-1.5 text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                    >
                         <X className="h-5 w-5" />
                       </button>
                     </div>
@@ -289,6 +298,7 @@ export function ReelCarouselCard({
   fill = false,
   showBadge = true,
   mode = 'coverflow', // 'coverflow' | 'stories'
+  onSheetOpenChange,
 }: {
   item: SystemReelFeedItem;
   selected: boolean;
@@ -299,6 +309,7 @@ export function ReelCarouselCard({
   showBadge?: boolean;
   /** Render mode: 'coverflow' uses absolute stacked faces; 'stories' uses CSS grid for content-driven height. */
   mode?: 'coverflow' | 'stories';
+  onSheetOpenChange?: (open: boolean) => void;
 }) {
   const reducedMotion = usePrefersReducedMotion();
   const pointerStart = useRef({ x: 0, y: 0 });
@@ -359,7 +370,7 @@ export function ReelCarouselCard({
             exit={reducedMotion ? { opacity: 1 } : { opacity: 0, x: -30 }}
             transition={reducedMotion ? { duration: 0 } : SLIDE}
           >
-            <ReelFlagVote item={item} onBack={onBack} />
+            <ReelFlagVote item={item} onBack={onBack} onSheetOpenChange={onSheetOpenChange} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -437,7 +448,7 @@ export function ReelCarouselCard({
         }}
         transition={reducedMotion ? { duration: 0 } : SLIDE}
       >
-        <ReelFlagVote key={item.poll.id} item={item} onBack={onBack} />
+        <ReelFlagVote key={item.poll.id} item={item} onBack={onBack} onSheetOpenChange={onSheetOpenChange} />
       </motion.div>
     </div>
   );

@@ -204,7 +204,7 @@ interface StoriesHeaderProps extends HTMLAttributes<HTMLDivElement> {}
 
 const StoriesHeader = forwardRef<HTMLDivElement, StoriesHeaderProps>(
   ({ className, ...props }, ref) => {
-    const { total, currentIndex, progress, goTo } = useStories();
+    const { total, currentIndex, progress, goTo, active } = useStories();
 
     return (
       <div ref={ref} className={cn('flex gap-1 p-2', className)} {...props}>
@@ -212,7 +212,7 @@ const StoriesHeader = forwardRef<HTMLDivElement, StoriesHeaderProps>(
           const isCurrent = index === currentIndex;
           const isViewed = index < currentIndex;
           const isUpcoming = index > currentIndex;
-          const segmentProgress = isCurrent && progress > 0 ? progress : isCurrent ? 100 : isViewed ? 100 : 0;
+          const segmentProgress = isCurrent && active && progress > 0 ? progress : isViewed ? 100 : 0;
           const segmentColor = isViewed ? 'bg-white/60' : isCurrent ? 'bg-blue-300' : 'bg-white/20';
           return (
             <div
