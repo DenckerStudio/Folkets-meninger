@@ -290,6 +290,22 @@ function ReelsPanel({
     const onKey = (event: KeyboardEvent) => {
       // Escape closes panel or goes back
       if (event.key === 'Escape') {
+        // If sheet is open, let it close; check if any sheet element is in DOM
+        const sheet = document.querySelector('[role="dialog"][aria-modal="true"][class*="z-\[220\]"]');
+        if (sheet) {
+          event.preventDefault();
+          event.stopPropagation();
+          // Try to find close button
+          const close = sheet.querySelector('button[aria-label="Lukk"], button[aria-label="Lukk beskrivelsen"]');
+          if (close) (close as HTMLButtonElement).click();
+          else {
+            const backdrop = sheet.querySelector('button[aria-label="Lukk beskrivelsen"]') || sheet.querySelector('button.absolute.inset-0');
+            // simpler: dispatch click on backdrop if exists
+            const backdropBtn = Array.from(sheet.querySelectorAll('button')).find(b => b.getAttribute('aria-label') === 'Lukk beskrivelsen');
+            if (backdropBtn) (backdropBtn as HTMLButtonElement).click();
+          }
+          return;
+        }
         event.preventDefault();
         onClose();
         return;

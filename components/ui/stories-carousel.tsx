@@ -215,7 +215,8 @@ const StoriesHeader = forwardRef<HTMLDivElement, StoriesHeaderProps>(
             onClick={() => goTo(index)}
           >
             <div
-              className="h-full bg-white transition-[width] duration-50 ease-linear"
+              className={cn('h-full transition-[width] duration-50 ease-linear', index < currentIndex ? 'bg-white' : index === currentIndex ? 'bg-blue-300' : 'bg-white/20')}
+              aria-current={index === currentIndex ? 'true' : undefined}
               style={{
                 width:
                   index < currentIndex
@@ -454,12 +455,13 @@ const StoriesNavigation = forwardRef<HTMLDivElement, StoriesNavigationProps>(
     return (
       <div
         ref={ref}
-        className={cn('absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2 pointer-events-none', className)}
+        className={cn('absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 flex justify-between px-3 pointer-events-none', className)}
         {...props}
       >
         <Button
           variant="secondary"
           size="icon"
+          aria-label="Forrige Reel"
           className="pointer-events-auto h-8 w-8 rounded-full bg-white/90 hover:bg-white"
           onClick={(e) => {
             e.stopPropagation();
@@ -471,6 +473,7 @@ const StoriesNavigation = forwardRef<HTMLDivElement, StoriesNavigationProps>(
         <Button
           variant="secondary"
           size="icon"
+          aria-label="Neste Reel"
           className="pointer-events-auto h-8 w-8 rounded-full bg-white/90 hover:bg-white"
           onClick={(e) => {
             e.stopPropagation();

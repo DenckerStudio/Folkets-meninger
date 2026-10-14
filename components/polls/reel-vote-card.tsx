@@ -115,7 +115,7 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
 
   return (
     <div data-testid="reel-vote-face" className="flex h-full min-h-0 flex-col gap-2">
-      <div className="flex min-h-0 flex-1 flex-col gap-1.5">
+      <div className="flex min-h-0 flex-col gap-1.5">
         <p className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-white/70">
           Hva mener du?
         </p>
@@ -126,7 +126,7 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
           <div
             ref={descriptionRef}
             data-testid="reel-description"
-            className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+            className="min-h-0 overflow-y-auto overscroll-contain"
             style={
               overflowing
                 ? { maskImage: DESCRIPTION_FADE, WebkitMaskImage: DESCRIPTION_FADE }
@@ -135,9 +135,7 @@ export function ReelFlagVote({ item, onBack }: ReelFlagVoteProps) {
           >
             <p className="pr-1 text-sm leading-relaxed text-white/80">{item.poll.neutralSummary}</p>
           </div>
-        ) : (
-          <div className="min-h-0 flex-1" />
-        )}
+        ) : null}
         {overflowing ? (
           <button
             type="button"
