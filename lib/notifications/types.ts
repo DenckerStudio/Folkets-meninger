@@ -16,7 +16,7 @@ export type CreateNotificationSuccess = {
   ok: true;
   id: string;
   emailSent: boolean;
-  emailSkippedReason?: 'disabled' | 'not_realtime' | 'smtp_not_configured' | 'no_email';
+  emailSkippedReason?: 'disabled' | 'not_realtime' | 'smtp_not_configured' | 'no_email' | 'filtered';
 };
 
 export type CreateNotificationFailure = {

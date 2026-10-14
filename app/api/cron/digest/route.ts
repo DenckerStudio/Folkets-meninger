@@ -13,6 +13,13 @@ import { pickDigestChannels } from '@/lib/notifications/preferences';
 import { isDigestFrequency } from '@/lib/notifications/channels';
 import { prepareDigestForUser } from '@/lib/notifications/enrichment';
 import { getUserSubscription } from '@/lib/stemme-plus/service';
+import { isStemmePlusActive } from '@/lib/stemme-plus/tier';
+import { NOTIFICATION_CHANNELS } from '@/lib/notifications/channels';
+import {
+  NOTIFICATION_PREFERENCE_COLUMNS,
+  isMissingColumnError,
+  normalizeNotificationPreferences,
+} from '@/lib/notifications/filters';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,9 +54,18 @@ export async function GET(request: Request) {
   try {
     const service = getServiceSupabase();
 
-    const { data: prefs, error: prefsError } = await service
+    const legacyColumns = 'user_id,email_enabled,email_frequency_by_channel,last_digest_sent_at_by_channel';
+    let hasV2 = true;
+    let { data: prefs, error: prefsError } = await service
       .from('notification_preferences')
-      .select('user_id,email_enabled,email_frequency_by_channel,last_digest_sent_at_by_channel');
+      .select(`${legacyColumns},${NOTIFICATION_PREFERENCE_COLUMNS}`);
+    if (prefsError && isMissingColumnError(prefsError)) {
+      // v2 migration not applied yet.
+      hasV2 = false;
+      ({ data: prefs, error: prefsError } = await service
+        .from('notification_preferences')
+        .select(legacyColumns));
+    }
 
     if (prefsError) {
       console.error('Cron digest preferences query error', prefsError);
@@ -65,10 +81,21 @@ export async function GET(request: Request) {
     for (const p of prefs || []) {
       if (!p.email_enabled) continue;
 
-      const channels = pickDigestChannels(
-        (p.email_frequency_by_channel || {}) as Record<string, unknown>,
-        frequency,
-      );
+      // Tier is enforced here too: free users only get the weekly digest.
+      const subscription = await getUserSubscription(p.user_id);
+      const isPlus = isStemmePlusActive(subscription);
+      let channels: string[];
+      if (!isPlus) {
+        channels = frequency === 'weekly' ? [...NOTIFICATION_CHANNELS] : [];
+      } else if (hasV2) {
+        const v2 = normalizeNotificationPreferences(p as Record<string, unknown>, true);
+        channels = v2.channel_email && v2.frequency === frequency ? [...NOTIFICATION_CHANNELS] : [];
+      } else {
+        channels = pickDigestChannels(
+          (p.email_frequency_by_channel || {}) as Record<string, unknown>,
+          frequency,
+        );
+      }
       if (channels.length === 0) continue;
 
       usersProcessed += 1;
@@ -133,7 +160,6 @@ export async function GET(request: Request) {
         continue;
       }
 
-      const subscription = await getUserSubscription(p.user_id);
       const preparedDigest = prepareDigestForUser(items, subscription);
 
       try {

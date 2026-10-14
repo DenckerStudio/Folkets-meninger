@@ -5,6 +5,14 @@ import { toAbsoluteNotificationUrl } from '@/lib/notifications/digest';
 import { normalizeEmailFrequencyByChannel } from '@/lib/notifications/preferences';
 import { canUseRealtimeAlerts } from '@/lib/stemme-plus/gates';
 import { getUserSubscription } from '@/lib/stemme-plus/service';
+import { isStemmePlusActive } from '@/lib/stemme-plus/tier';
+import {
+  NOTIFICATION_PREFERENCE_COLUMNS,
+  isMissingColumnError,
+  normalizeNotificationPreferences,
+  readCaseInfo,
+  shouldSendNotification,
+} from '@/lib/notifications/filters';
 import type {
   AdminComposeNotificationInput,
   CreateNotificationInput,
@@ -46,23 +54,35 @@ async function getPreferences(userId: string) {
   }
 
   const service = getServiceSupabase();
-  const { data, error } = await service
+  let hasV2 = true;
+  let { data, error } = await service
     .from('notification_preferences')
-    .select('email_enabled,email_frequency_by_channel')
+    .select(`email_enabled,email_frequency_by_channel,${NOTIFICATION_PREFERENCE_COLUMNS}`)
     .eq('user_id', userId)
     .maybeSingle();
+
+  if (error && isMissingColumnError(error)) {
+    // Migration 20261014120000_notification_preferences_v2 not applied yet: fall back to legacy columns.
+    hasV2 = false;
+    ({ data, error } = await service
+      .from('notification_preferences')
+      .select('email_enabled,email_frequency_by_channel')
+      .eq('user_id', userId)
+      .maybeSingle());
+  }
 
   if (error) {
     console.error('Failed to load notification preferences', error);
     return { ok: false as const, error: error.message };
   }
 
-  const emailEnabled = data?.email_enabled ?? true;
+  const row = (data ?? null) as Record<string, unknown> | null;
+  const emailEnabled = (row?.email_enabled as boolean | null | undefined) ?? true;
   const freq = normalizeEmailFrequencyByChannel(
-    (data?.email_frequency_by_channel || {}) as Record<string, unknown>,
+    (row?.email_frequency_by_channel || {}) as Record<string, unknown>,
   );
 
-  return { ok: true as const, emailEnabled, freq };
+  return { ok: true as const, emailEnabled, freq, hasV2, row: hasV2 ? row : null };
 }
 
 export async function createNotification(
@@ -71,6 +91,16 @@ export async function createNotification(
   const prefs = await getPreferences(input.userId);
   if (!prefs.ok) {
     return { ok: false, error: prefs.error };
+  }
+
+  // Server-side enforcement: tier is re-read at send time so a downgraded user
+  // never keeps Stemme+ behaviour (email, realtime, relaxed old-case rule).
+  const subscription = await getUserSubscription(input.userId);
+  const isPlus = isStemmePlusActive(subscription);
+  const v2 = normalizeNotificationPreferences(prefs.row, isPlus);
+
+  if (!shouldSendNotification(v2, isPlus, input.type, readCaseInfo(input.data))) {
+    return { ok: true, id: 'filtered', emailSent: false, emailSkippedReason: 'filtered' };
   }
 
   const service = getServiceSupabase();
@@ -93,14 +123,14 @@ export async function createNotification(
     return { ok: false, error: error.message };
   }
 
-  const preference = prefs.freq[input.channel] ?? 'daily';
-  const subscription = await getUserSubscription(input.userId);
-  if (!prefs.emailEnabled || preference !== 'realtime') {
+  const preference = prefs.hasV2 ? v2.frequency : (prefs.freq[input.channel] ?? 'daily');
+  const emailChannelOn = prefs.hasV2 ? v2.channel_email : true;
+  if (!prefs.emailEnabled || !emailChannelOn || preference !== 'realtime') {
     return {
       ok: true,
       id: inserted.id,
       emailSent: false,
-      emailSkippedReason: !prefs.emailEnabled ? 'disabled' : 'not_realtime',
+      emailSkippedReason: !prefs.emailEnabled || !emailChannelOn ? 'disabled' : 'not_realtime',
     };
   }
 

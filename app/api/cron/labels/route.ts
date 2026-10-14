@@ -3,6 +3,12 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { createNotification } from '@/lib/notifications';
 import { cronAuthResponse, verifyCronAuth } from '@/lib/cron-auth';
 import { buildLabelAlertBody } from '@/lib/notifications/enrichment';
+import {
+  DEFAULT_MAX_CASE_AGE_DAYS,
+  capLastSeenMs,
+  isCaseFinished,
+  isCaseOlderThan,
+} from '@/lib/notifications/filters';
 import { userHasStemmePlus } from '@/lib/stemme-plus/service';
 
 export const dynamic = 'force-dynamic';
@@ -50,7 +56,8 @@ export async function GET(request: Request) {
   try {
     const origin = new URL(request.url).origin;
     const lastSeen = await getLastSeenUpdatedAt();
-    const lastSeenIso = lastSeen ?? new Date(0).toISOString();
+    // Missing/ancient last-seen must never replay every historical case: cap to the last 30 days.
+    const lastSeenIso = new Date(capLastSeenMs(lastSeen ? new Date(lastSeen).getTime() : null)).toISOString();
 
     const service = getServiceSupabase();
     const { data: summaries, error } = await service
@@ -72,10 +79,20 @@ export async function GET(request: Request) {
     const issueIds = summaries.map((s) => s.stortinget_issue_id);
     const { data: issues } = await service
       .from('stortinget_issues')
-      .select('id, title')
+      .select('id, title, status, ferdigbehandlet, last_updated_at')
       .in('id', issueIds);
 
     const titleById = new Map((issues || []).map((i) => [String(i.id), i.title]));
+    const caseById = new Map(
+      (issues || []).map((i) => [
+        String(i.id),
+        {
+          status: (i.status as string | null) ?? null,
+          ferdigbehandlet: typeof i.ferdigbehandlet === 'boolean' ? i.ferdigbehandlet : null,
+          date: (i.last_updated_at as string | null) ?? null,
+        },
+      ]),
+    );
 
     const allLabels = [...new Set(summaries.flatMap((s) => s.labels ?? []))];
     const { data: subs } = await service
@@ -98,8 +115,12 @@ export async function GET(request: Request) {
       const title = titleById.get(issueId) ?? 'Ny sak';
       const labels = summary.labels ?? [];
       const notifiedUsers = new Set<string>();
+      const caseInfo = caseById.get(issueId) ?? { status: null, ferdigbehandlet: null, date: null };
+      // Global old-case rule at the source: never notify about ferdigbehandlet or >30-day-old cases.
+      const skipCase =
+        isCaseFinished(caseInfo) || isCaseOlderThan(caseInfo, DEFAULT_MAX_CASE_AGE_DAYS);
 
-      for (const label of labels) {
+      for (const label of skipCase ? [] : labels) {
         const userIds = byLabel.get(label);
         if (!userIds) continue;
 
@@ -122,7 +143,15 @@ export async function GET(request: Request) {
             title: `Ny sak: ${label}`,
             body: buildLabelAlertBody(title, matchedLabels, isPlus),
             url: `/dashboard/sak/${issueId}`,
-            data: { issueId, label, labels: matchedLabels, stemmePlus: isPlus },
+            data: {
+              issueId,
+              label,
+              labels: matchedLabels,
+              stemmePlus: isPlus,
+              status: caseInfo.status,
+              ferdigbehandlet: caseInfo.ferdigbehandlet,
+              date: caseInfo.date,
+            },
             origin,
           });
           if (result.ok) created += 1;

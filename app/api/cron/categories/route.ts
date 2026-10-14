@@ -4,6 +4,7 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { createNotification } from '@/lib/notifications';
 import { cronAuthResponse, verifyCronAuth } from '@/lib/cron-auth';
 import { buildCategoryAlertBody } from '@/lib/notifications/enrichment';
+import { capLastSeenMs, isCaseFinished, isCaseOlderThan, DEFAULT_MAX_CASE_AGE_DAYS } from '@/lib/notifications/filters';
 import { userHasStemmePlus } from '@/lib/stemme-plus/service';
 
 export const dynamic = 'force-dynamic';
@@ -37,10 +38,17 @@ export async function GET(request: Request) {
   try {
     const origin = new URL(request.url).origin;
     const lastSeen = await getLastSeenDateIso();
-    const lastSeenMs = lastSeen ? new Date(lastSeen).getTime() : 0;
+    // Missing/ancient last-seen must never replay every historical case: cap to the last 30 days.
+    const lastSeenMs = capLastSeenMs(lastSeen ? new Date(lastSeen).getTime() : null);
 
     const issues = await getSaker();
     const fresh = issues.filter((i) => new Date(i.date).getTime() > lastSeenMs);
+    // Global old-case rule at the source: never notify about ferdigbehandlet or >30-day-old cases.
+    const notifiable = fresh.filter(
+      (i) =>
+        !isCaseFinished({ status: i.status }) &&
+        !isCaseOlderThan({ date: i.date }, DEFAULT_MAX_CASE_AGE_DAYS),
+    );
 
     if (fresh.length === 0) {
       return NextResponse.json({ ok: true, newIssues: 0 });
@@ -48,7 +56,7 @@ export async function GET(request: Request) {
 
     const service = getServiceSupabase();
 
-    const categories = [...new Set(fresh.map((i) => i.category).filter(Boolean))];
+    const categories = [...new Set(notifiable.map((i) => i.category).filter(Boolean))];
     const { data: subs } = await service
       .from('notification_category_subscriptions')
       .select('user_id,category')
@@ -62,7 +70,7 @@ export async function GET(request: Request) {
 
     let created = 0;
     let failed = 0;
-    for (const issue of fresh) {
+    for (const issue of notifiable) {
       const userIds = byCategory.get(issue.category);
       if (!userIds || userIds.size === 0) continue;
 
