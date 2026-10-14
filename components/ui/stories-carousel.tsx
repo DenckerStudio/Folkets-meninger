@@ -212,7 +212,7 @@ const StoriesHeader = forwardRef<HTMLDivElement, StoriesHeaderProps>(
           const isCurrent = index === currentIndex;
           const isViewed = index < currentIndex;
           const isUpcoming = index > currentIndex;
-          const segmentProgress = isCurrent && active && progress > 0 ? progress : isViewed ? 100 : 0;
+          const segmentProgress = isViewed ? 100 : isCurrent ? (active ? progress : 100) : 0;
           const segmentColor = isViewed ? 'bg-white/60' : isCurrent ? 'bg-blue-300' : 'bg-white/20';
           return (
             <div
