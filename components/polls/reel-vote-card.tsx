@@ -306,24 +306,26 @@ export function ReelCarouselCard({
   const isStories = mode === 'stories';
 
   if (isStories) {
-    // Stories mode: CSS grid for content-driven height, no absolute stacking
+    // Stories mode: content-driven height, single face with AnimatePresence transition.
+    // Wrapper has max-h-full overflow-y-auto so vote buttons are always reachable on short viewports.
     return (
-      <div
-        className={cn(
-          'bg-card shadow-sm',
-          fill
-            ? 'w-full rounded-none border-0'
-            : 'w-full rounded-2xl border border-white/10',
-        )}
-        style={{ gridArea: '1 / 1' }}
-      >
-        <div className="flex flex-col">
-          {/* Front face - poll preview */}
-          <button
+      <div className="max-h-full min-h-0 overflow-y-auto overscroll-contain">
+        <AnimatePresence mode="wait">
+        {!selected ? (
+          <motion.button
+            key="front"
             type="button"
             onClick={onSelect}
-            disabled={selected}
-            className="flex flex-col justify-between bg-gradient-to-b from-[#00205b] to-[#00205b]/80 p-5 text-left text-white"
+            className={cn(
+              'flex flex-col bg-gradient-to-b from-[#00205b] to-[#00205b]/80 p-5 text-left text-white',
+              fill
+                ? 'w-full rounded-none border-0'
+                : 'w-full rounded-2xl border border-white/10',
+            )}
+            initial={reducedMotion ? false : { opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={reducedMotion ? { opacity: 1 } : { opacity: 0, x: -30 }}
+            transition={reducedMotion ? { duration: 0 } : SLIDE}
           >
             {showBadge ? (
               <span className="inline-flex items-center gap-1 self-start rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">
@@ -342,12 +344,25 @@ export function ReelCarouselCard({
               ) : null}
             </div>
             <p className="text-xs font-medium text-white/70">Trykk for å stemme</p>
-          </button>
-          {/* Back face - vote card (shown when selected) */}
-          {selected && (
-            <ReelFlagVote key={item.poll.id} item={item} onBack={onBack} />
-          )}
-        </div>
+          </motion.button>
+        ) : (
+          <motion.div
+            key="vote"
+            className={cn(
+              'flex flex-col bg-[#00205b] p-5 text-white',
+              fill
+                ? 'w-full rounded-none border-0'
+                : 'w-full rounded-2xl border border-white/10',
+            )}
+            initial={reducedMotion ? false : { opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={reducedMotion ? { opacity: 1 } : { opacity: 0, x: -30 }}
+            transition={reducedMotion ? { duration: 0 } : SLIDE}
+          >
+            <ReelFlagVote item={item} onBack={onBack} />
+          </motion.div>
+        )}
+      </AnimatePresence>
       </div>
     );
   }

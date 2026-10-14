@@ -347,7 +347,7 @@ const StoriesContent = forwardRef<HTMLDivElement, StoriesContentProps>(
             <div
               key={index}
               className={cn(
-                'absolute inset-0 w-full h-full transition-transform duration-300 ease-out',
+                'absolute inset-x-0 top-0 bottom-0 w-full transition-transform duration-300 ease-out',
                 index === currentIndex
                   ? 'translate-x-0'
                   : direction === 'forward'
@@ -378,7 +378,7 @@ const Story = forwardRef<HTMLDivElement, StoryProps>(
   ({ className, children, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('relative w-full h-full flex flex-col bg-[#00205b]', className)}
+      className={cn('relative w-full max-h-full flex flex-col bg-[#00205b] overflow-y-auto overscroll-contain', className)}
       {...props}
     >
       {children}
