@@ -287,6 +287,12 @@ html[data-reels-open] [data-site-chrome] {
   pointer-events: none;
 }
 
+/* The floating assistant orb shares the bottom-right corner with the «Ja» button. */
+html[data-reels-open] .chat-orb {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html:not([data-motion='full']) .civic-draw,
   html.motion-reduce .civic-draw,

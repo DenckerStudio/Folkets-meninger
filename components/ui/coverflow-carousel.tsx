@@ -38,6 +38,12 @@ export interface CoverflowCarouselProps {
   onIndexChange?: (index: number) => void;
   /** Pause drag settling when true (e.g. while a card is expanded). */
   interactionLocked?: boolean;
+  /**
+   * Fill the parent flex column and derive the card height from the measured
+   * frame instead of trusting a fixed length. Cards shrink to fit rather than
+   * being clipped on short viewports.
+   */
+  fitHeight?: boolean;
 }
 
 /**
@@ -62,6 +68,7 @@ export function CoverflowCarousel({
   cardClassName,
   onIndexChange,
   interactionLocked = false,
+  fitHeight = false,
 }: CoverflowCarouselProps) {
   const count = slides.length;
 
@@ -84,6 +91,7 @@ export function CoverflowCarousel({
   } | null>(null);
 
   const [selected, setSelected] = React.useState(0);
+  const [fittedCardHeight, setFittedCardHeight] = React.useState<number | null>(null);
   const onIndexChangeRef = React.useRef(onIndexChange);
 
   React.useEffect(() => {
@@ -257,6 +265,27 @@ export function CoverflowCarousel({
     return () => observer.disconnect();
   }, [paint, slides.length]);
 
+  // Fit mode: measure the frame's content box so the card can shrink to the
+  // available height instead of overflowing and getting clipped.
+  useIsoLayoutEffect(() => {
+    if (!fitHeight) return;
+    const frame = frameRef.current;
+    if (!frame) return;
+
+    const measure = () => {
+      const styles = window.getComputedStyle(frame);
+      const padding =
+        Number.parseFloat(styles.paddingTop || '0') + Number.parseFloat(styles.paddingBottom || '0');
+      const available = Math.round(frame.clientHeight - padding);
+      setFittedCardHeight(available > 0 ? available : null);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(frame);
+    return () => observer.disconnect();
+  }, [fitHeight]);
+
   React.useEffect(
     () => () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
@@ -268,18 +297,21 @@ export function CoverflowCarousel({
     return null;
   }
 
+  const resolvedCardHeight =
+    fitHeight && fittedCardHeight ? `${fittedCardHeight}px` : cardHeight;
+
   return (
     <div
-      className={cn("w-full", className)}
+      className={cn("w-full", fitHeight && "flex h-full min-h-0 flex-col", className)}
       style={{
         ["--cf-card" as string]: cardWidth,
-        ["--cf-card-h" as string]: cardHeight,
+        ["--cf-card-h" as string]: resolvedCardHeight,
       }}
       role="region"
       aria-roledescription="carousel"
       aria-label={label}
     >
-      <div className="relative">
+      <div className={cn("relative", fitHeight && "flex min-h-0 flex-1 flex-col")}>
         <div
           ref={frameRef}
           tabIndex={0}
@@ -298,7 +330,8 @@ export function CoverflowCarousel({
             }
           }}
           className={cn(
-            "overflow-hidden py-8 outline-none ring-ring focus-visible:ring-2 md:py-10",
+            "overflow-hidden outline-none ring-ring focus-visible:ring-2",
+            fitHeight ? "min-h-0 flex-1 py-2" : "py-8 md:py-10",
             interactionLocked ? "cursor-default" : "cursor-grab active:cursor-grabbing",
           )}
           style={{
@@ -339,7 +372,7 @@ export function CoverflowCarousel({
           <>
             <button
               type="button"
-              aria-label="Forrige"
+              aria-label="Forrige Reel"
               disabled={interactionLocked}
               onClick={() => nudge(-1)}
               className="absolute left-2 top-1/2 z-[200] -translate-y-1/2 rounded-full bg-[#00205b]/90 p-2 text-white backdrop-blur transition hover:bg-[#00205b] disabled:opacity-40 md:left-3"
@@ -348,7 +381,7 @@ export function CoverflowCarousel({
             </button>
             <button
               type="button"
-              aria-label="Neste"
+              aria-label="Neste Reel"
               disabled={interactionLocked}
               onClick={() => nudge(1)}
               className="absolute right-2 top-1/2 z-[200] -translate-y-1/2 rounded-full bg-[#00205b]/90 p-2 text-white backdrop-blur transition hover:bg-[#00205b] disabled:opacity-40 md:right-3"
@@ -359,24 +392,44 @@ export function CoverflowCarousel({
         )}
       </div>
 
-      {showPagination && count > 1 && (
-        <div className="mt-2 flex items-center justify-center gap-2 pb-1">
-          {slides.map((_, index) => (
-            <button
-              key={index}
-              type="button"
-              aria-label={`Gå til kort ${index + 1}`}
-              aria-current={index === selected}
-              disabled={interactionLocked}
-              onClick={() => goTo(index)}
-              className={cn(
-                "size-2 rounded-full transition-opacity disabled:opacity-40",
-                index === selected ? "bg-[#ba0c2f] opacity-100" : "bg-white opacity-40",
-              )}
-            />
-          ))}
-        </div>
-      )}
+      {showPagination && count > 1 &&
+        (count > 7 ? (
+          <div className="mt-2 flex shrink-0 items-center justify-center gap-3 px-6 pb-1">
+            <div
+              className="h-1 w-40 max-w-[40vw] overflow-hidden rounded-full bg-white/20"
+              role="progressbar"
+              aria-valuemin={1}
+              aria-valuemax={count}
+              aria-valuenow={selected + 1}
+              aria-label={`Kort ${selected + 1} av ${count}`}
+            >
+              <div
+                className="h-full rounded-full bg-white transition-[width] duration-300"
+                style={{ width: `${((selected + 1) / count) * 100}%` }}
+              />
+            </div>
+            <span className="shrink-0 tabular-nums text-xs font-medium text-white/80">
+              {selected + 1} / {count}
+            </span>
+          </div>
+        ) : (
+          <div className="mt-2 flex shrink-0 items-center justify-center gap-2 pb-1">
+            {slides.map((_, index) => (
+              <button
+                key={index}
+                type="button"
+                aria-label={`Gå til kort ${index + 1}`}
+                aria-current={index === selected}
+                disabled={interactionLocked}
+                onClick={() => goTo(index)}
+                className={cn(
+                  "size-2 rounded-full transition-opacity disabled:opacity-40",
+                  index === selected ? "bg-[#ba0c2f] opacity-100" : "bg-white opacity-40",
+                )}
+              />
+            ))}
+          </div>
+        ))}
     </div>
   );
 }

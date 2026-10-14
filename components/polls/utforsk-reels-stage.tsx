@@ -8,11 +8,12 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ArrowRight, Compass } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Compass, Info } from 'lucide-react';
 import { CivicBubble } from '@/components/icons/civic';
 import { EmptyLineState } from '@/components/motion/empty-line';
 import { AnimatePresence, motion } from 'motion/react';
 import { CoverflowCarousel } from '@/components/ui/coverflow-carousel';
+import { Stories, StoriesContent, StoriesHeader, StoriesCounter, StoriesNavigationInline, Story } from '@/components/ui/stories-carousel';
 import { ReelCarouselCard } from '@/components/polls/reel-vote-card';
 import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import type { SystemReelFeedItem } from '@/lib/polls/types';
@@ -45,18 +46,19 @@ function useIsMounted() {
   );
 }
 
-function subscribeMd(onStoreChange: () => void) {
-  const mq = window.matchMedia('(min-width: 768px)');
+function subscribeLg(onStoreChange: () => void) {
+  const mq = window.matchMedia('(min-width: 1024px)');
   mq.addEventListener('change', onStoreChange);
   return () => mq.removeEventListener('change', onStoreChange);
 }
 
-function getMd() {
-  return window.matchMedia('(min-width: 768px)').matches;
+function getLg() {
+  return window.matchMedia('(min-width: 1024px)').matches;
 }
 
-function useIsDesktopMd() {
-  return useSyncExternalStore(subscribeMd, getMd, () => false);
+/** Tablets (768–1023 px) get the stacked mobile layout, not a narrow coverflow. */
+function useIsDesktopLg() {
+  return useSyncExternalStore(subscribeLg, getLg, () => false);
 }
 
 function notifyHashChanged() {
@@ -128,14 +130,7 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
     };
   }, [reelsOpen]);
 
-  useEffect(() => {
-    if (!reelsOpen) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeReels();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [reelsOpen, closeReels]);
+
 
   return (
     <div>
@@ -278,37 +273,62 @@ function ReelsPanel({
   onSelect: (id: string | null) => void;
   onClose: () => void;
 }) {
-  const isDesktop = useIsDesktopMd();
+  const isDesktop = useIsDesktopLg();
   const cardOpen = Boolean(activePollId);
   const [centeredIndex, setCenteredIndex] = useState(0);
+  const [disclaimerOpen, setDisclaimerOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
     if (!active) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== ' ' && event.code !== 'Space') return;
-      const target = event.target as HTMLElement | null;
-      if (target) {
-        const tag = target.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
+      // Escape closes panel or goes back
+      if (event.key === 'Escape') {
+        // Check if "Les mer" sheet is open - close only that
+        if (sheetOpen) {
+          event.preventDefault();
+          setSheetOpen(false);
           return;
         }
-      }
-      event.preventDefault();
-      if (activePollId) {
-        onSelect(null);
+        // Check if disclaimer is open - close only that
+        if (disclaimerOpen) {
+          event.preventDefault();
+          setDisclaimerOpen(false);
+          return;
+        }
+        // If card is flipped open, go back to front
+        if (cardOpen) {
+          event.preventDefault();
+          onSelect(null);
+          return;
+        }
+        // Otherwise close Reels
+        event.preventDefault();
+        onClose();
         return;
       }
-      const item = items[centeredIndex] ?? items[0];
-      if (item) onSelect(item.poll.id);
+
+      if (event.key === ' ' || event.code === 'Space') {
+        const target = event.target as HTMLElement | null;
+        if (target) {
+          const tag = target.tagName;
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
+            return;
+          }
+        }
+        event.preventDefault();
+        // Don't trigger vote on space - follow existing desktop behavior (space not opening vote)
+        return;
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [active, activePollId, centeredIndex, items, onSelect]);
+  }, [active, activePollId, cardOpen, centeredIndex, disclaimerOpen, items, onSelect, onClose, sheetOpen]);
 
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col">
       {/* Header: back + REELS label so back never covers the card badge */}
-      <div className="relative z-30 flex shrink-0 items-center gap-3 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
+      <div className="relative z-30 flex shrink-0 items-center gap-3 pb-2 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
         <button
           type="button"
           onClick={onClose}
@@ -326,10 +346,31 @@ function ReelsPanel({
             Reels
           </p>
         </div>
+        {items.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => setDisclaimerOpen((value) => !value)}
+            aria-expanded={disclaimerOpen}
+            aria-controls="reels-disclaimer"
+            aria-label={disclaimerOpen ? 'Skjul informasjon om Reels' : 'Vis informasjon om Reels'}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25"
+          >
+            <Info className="h-4 w-4" aria-hidden />
+          </button>
+        ) : null}
       </div>
 
+      {items.length > 0 && disclaimerOpen ? (
+        <p
+          id="reels-disclaimer"
+          className="relative z-20 shrink-0 pb-2 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] text-xs leading-relaxed text-white/75"
+        >
+          {SYSTEM_REEL_DISCLAIMER}
+        </p>
+      ) : null}
+
       {items.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-6 py-12">
+        <div className="flex flex-1 items-center justify-center py-12 pl-[max(1.5rem,env(safe-area-inset-left,0px))] pr-[max(1.5rem,env(safe-area-inset-right,0px))]">
           <EmptyLineState className="text-white/80">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/15">
               <CivicBubble className="h-6 w-6 text-white" />
@@ -342,71 +383,67 @@ function ReelsPanel({
           </EmptyLineState>
         </div>
       ) : isDesktop ? (
-        /* Desktop: 21st Coverflow rack — not fullscreen single cards, no sideways peek bleed */
-        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden px-2">
-          <CoverflowCarousel
-            label="Reels"
-            loop={items.length >= 3}
-            showPagination
-            showNavigation
-            interactionLocked={cardOpen}
-            onIndexChange={setCenteredIndex}
-            rotate={40}
-            depth={0.55}
-            perspective={2.8}
-            cardWidth="clamp(220px, 28vw, 320px)"
-            cardHeight="clamp(320px, 58vh, 440px)"
-            gap={0.08}
-            cardClassName="rounded-2xl border border-white/10 bg-[#00205b]"
-            slides={items.map((item) => (
-              <ReelCarouselCard
-                key={item.poll.id}
-                item={item}
-                showBadge={false}
-                selected={activePollId === item.poll.id}
-                onSelect={() => onSelect(item.poll.id)}
-                onBack={() => onSelect(null)}
-              />
-            ))}
-          />
+        /* Desktop (lg+): 21st Coverflow rack — not fullscreen single cards, no sideways peek bleed */
+        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
+<CoverflowCarousel
+              label="Reels"
+              loop={items.length >= 3}
+              showPagination
+              showNavigation
+              interactionLocked={cardOpen}
+              onIndexChange={setCenteredIndex}
+              rotate={40}
+              depth={0.55}
+              perspective={2.8}
+              cardWidth="clamp(220px, 28vw, 320px)"
+              cardHeight="clamp(320px, 58dvh, 440px)"
+              gap={0.08}
+              cardClassName="rounded-2xl border border-white/10 bg-[#00205b]"
+              slides={items.map((item) => (
+                <ReelCarouselCard
+                  key={item.poll.id}
+                  item={item}
+                  showBadge={false}
+                  selected={activePollId === item.poll.id}
+                  onSelect={() => onSelect(item.poll.id)}
+                  onBack={() => onSelect(null)}
+                  mode="coverflow"
+                  onSheetOpenChange={setSheetOpen}
+                />
+              ))}
+            />
         </div>
       ) : (
-        /* Mobile: fullscreen OK — one centred portrait card, coverflow neighbours faded */
-        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden">
-          <CoverflowCarousel
-            label="Reels"
-            loop={items.length >= 3}
-            showPagination
-            showNavigation={false}
-            interactionLocked={cardOpen}
-            onIndexChange={setCenteredIndex}
-            rotate={28}
-            depth={0.45}
-            perspective={2.4}
-            fade={0.22}
-            cardWidth="min(100vw - 1.5rem, 26rem)"
-            cardHeight="min(72dvh, 34rem)"
-            gap={0.12}
-            cardClassName="rounded-2xl border border-white/10 bg-[#00205b]"
-            slides={items.map((item) => (
-              <ReelCarouselCard
-                key={item.poll.id}
-                item={item}
-                showBadge={false}
-                selected={activePollId === item.poll.id}
-                onSelect={() => onSelect(item.poll.id)}
-                onBack={() => onSelect(null)}
-              />
-            ))}
-          />
+        /* Mobile + tablet (<lg): Stories carousel (vertikal Tiktok-lignende, full høyde) */
+        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
+          <div className="relative mx-auto flex min-h-0 w-full max-w-[26rem] flex-1 flex-col">
+            <Stories loop={items.length > 1} onIndexChange={setCenteredIndex}>
+              <div className="flex items-center justify-between gap-1.5 px-2 pb-1">
+                <div className="flex-1 min-w-0 overflow-x-auto pr-2">
+                  <StoriesHeader className="px-0" />
+                </div>
+                <StoriesCounter className="shrink-0 tabular-nums text-[11px] sm:text-xs" />
+                <StoriesNavigationInline className="shrink-0" />
+              </div>
+              <StoriesContent className="flex-1 min-h-0">
+                {items.map((item) => (
+                  <Story key={item.poll.id} className="flex flex-col">
+                    <ReelCarouselCard
+                      item={item}
+                      showBadge={false}
+                      selected={activePollId === item.poll.id}
+                      onSelect={() => onSelect(item.poll.id)}
+                      onBack={() => onSelect(null)}
+                      mode="stories"
+                      onSheetOpenChange={setSheetOpen}
+                    />
+                  </Story>
+                ))}
+              </StoriesContent>
+            </Stories>
+          </div>
         </div>
       )}
-
-      {items.length > 0 ? (
-        <p className="pointer-events-none z-20 shrink-0 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-1 text-center text-xs leading-relaxed text-white/70">
-          {SYSTEM_REEL_DISCLAIMER}
-        </p>
-      ) : null}
     </div>
   );
 }
