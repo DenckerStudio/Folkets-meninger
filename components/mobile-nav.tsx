@@ -16,16 +16,25 @@ export function MobileNav() {
   const loginHref = loginWithNext(pathname);
 
   const items: InteractiveMenuItem[] = useMemo(() => {
-    const base = mobileNavItems.map((item) =>
+    // Use first 4 mobileNavItems (Meninger, Utforsk, Avstemninger, Høringer) + Profil/Logg inn
+    const baseItems = mobileNavItems.slice(0, 4);
+    const base = baseItems.map((item) =>
       item.href === routes.minSide && !user
         ? { ...item, href: loginHref, label: 'Logg inn' }
         : { ...item },
     );
 
-    if (!isAdminUser) return base;
+    // Add Profil/Logg inn as the 5th item
+    const profileItem: InteractiveMenuItem = user
+      ? { label: 'Profil', href: routes.minSide, icon: mobileNavItems[4].icon, isActive: mobileNavItems[4].isActive }
+      : { label: 'Logg inn', href: loginHref, icon: mobileNavItems[4].icon, isActive: mobileNavItems[4].isActive };
 
-    const profile = base[base.length - 1];
-    const withoutProfile = base.slice(0, -1);
+    const withProfile = [...base, profileItem];
+
+    if (!isAdminUser) return withProfile;
+
+    const profile = withProfile[withProfile.length - 1];
+    const withoutProfile = withProfile.slice(0, -1);
     return [
       ...withoutProfile,
       {

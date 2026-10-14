@@ -4,11 +4,13 @@ import {
   Calendar,
   FileEdit,
   Lightbulb,
+  Menu,
   MessagesSquare,
   Search,
   Shield,
   UserRound,
   Users,
+  Vote,
 } from 'lucide-react';
 import { DASHBOARD_PREFIX, routes } from '@/lib/routes';
 
@@ -26,6 +28,14 @@ export type PrimaryNavLink = {
   label: string;
   href: string;
   isActive: NavIsActive;
+};
+
+export type MobileNavItem = {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  isActive: NavIsActive;
+  action?: 'more';
 };
 
 export const isFolketsMeningerActive: NavIsActive = (pathname) =>
@@ -87,16 +97,16 @@ export const coreNavItems: SiteNavLinkItem[] = [
     isActive: isUtforskActive,
   },
   {
+    title: 'Avstemninger',
+    href: routes.avstemninger,
+    icon: Vote,
+    isActive: isAvstemningerActive,
+  },
+  {
     title: 'Høringer',
     href: routes.horinger,
     icon: FileEdit,
     isActive: isHoringerActive,
-  },
-  {
-    title: 'Appens fremtid',
-    href: routes.forslag,
-    icon: Lightbulb,
-    isActive: isForslagActive,
   },
 ];
 
@@ -119,6 +129,12 @@ export const extendedNavItems: SiteNavLinkItem[] = [
     href: routes.innsikt,
     icon: BarChart2,
     isActive: isInnsiktActive,
+  },
+  {
+    title: 'Appens fremtid',
+    href: routes.forslag,
+    icon: Lightbulb,
+    isActive: isForslagActive,
   },
 ];
 
@@ -162,8 +178,8 @@ export function dashboardSidebarNavItemsForAdmin(isAdmin: boolean): SiteNavLinkI
   return [...dashboardSidebarNavItems, adminAccountNavItem];
 }
 
-/** Mobile bottom nav items (2–5 slots). */
-export const mobileNavItems = [
+/** Mobile bottom nav items (exactly 5 slots). */
+export const mobileNavItems: readonly MobileNavItem[] = [
   {
     label: 'Meninger',
     href: routes.folketsMeninger,
@@ -177,24 +193,59 @@ export const mobileNavItems = [
     isActive: isMobileUtforskActive,
   },
   {
+    label: 'Avstemninger',
+    href: routes.avstemninger,
+    icon: Vote,
+    isActive: isAvstemningerActive,
+  },
+  {
     label: 'Høringer',
     href: routes.horinger,
     icon: FileEdit,
     isActive: isHoringerActive,
   },
   {
-    label: 'Fremtid',
+    label: 'Mer',
+    href: '#mer',
+    icon: Menu,
+    isActive: () => false,
+    action: 'more' as const,
+  },
+] as const;
+
+/** Items shown in the mobile drawer when «Mer» is opened. */
+export const mobileMoreNavItems: SiteNavLinkItem[] = [
+  {
+    title: 'Profil',
+    href: routes.minSide,
+    icon: UserRound,
+    isActive: isMinSideActive,
+  },
+  {
+    title: 'Appens fremtid',
     href: routes.forslag,
     icon: Lightbulb,
     isActive: isForslagActive,
   },
   {
-    label: 'Profil',
-    href: routes.minSide,
-    icon: UserRound,
-    isActive: isMinSideActive,
+    title: 'Politikere',
+    href: routes.politikere,
+    icon: Users,
+    isActive: isPolitikereActive,
   },
-] as const;
+  {
+    title: 'Kalender',
+    href: routes.kalender,
+    icon: Calendar,
+    isActive: isKalenderActive,
+  },
+  {
+    title: 'Innsikt',
+    href: routes.innsikt,
+    icon: BarChart2,
+    isActive: isInnsiktActive,
+  },
+];
 
 /** All dashboard nav hrefs — used to guard against duplicate header entries. */
 export const dashboardNavHrefs = new Set([
