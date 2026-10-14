@@ -261,11 +261,6 @@ export function SharePollWidget({
     }
   };
 
-  const cancelPending = () => {
-    setPending(null);
-    storeChoice(pollId, null);
-  };
-
   const copyToClipboard = useCallback(
     async (value: string, confirmation: string) => {
       setError('');
@@ -333,7 +328,7 @@ export function SharePollWidget({
               key={choice}
               type="button"
               disabled={!votingOpen || Boolean(userVote) || busy}
-              aria-pressed={selectedVote}
+              aria-pressed={selectedVote || isPending}
               onClick={() => handleChoice(choice)}
               className={cn(
                 'flex min-h-[56px] items-center justify-center gap-2 rounded-2xl px-2 py-3 text-sm font-bold tracking-wide shadow-sm transition-all sm:text-base',
@@ -364,30 +359,28 @@ export function SharePollWidget({
         <p className="text-sm text-foreground">
           Takk! Stemmen din er registrert. Ingen andre kan se hva du stemte.
         </p>
-      ) : pending && user ? (
+      ) : user && !loading ? (
         <div className="space-y-3 rounded-2xl border border-border bg-muted/40 p-4">
           <p className="text-sm text-foreground">
-            Du valgte <strong>{sharePollChoiceLabel(pending)}</strong>. Bekreft for å registrere
-            stemmen.
+            {pending ? (
+              <>
+                Du har valgt <strong>{sharePollChoiceLabel(pending)}</strong>. Bekreft for å
+                registrere stemmen. Du kan endre valget ved å trykke på et annet alternativ.
+              </>
+            ) : (
+              <>Velg ett av alternativene over, og bekreft stemmen din.</>
+            )}
           </p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void submitVote(pending)}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#00205b] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#00205b]/90 disabled:opacity-60 dark:bg-[#8fb4ff] dark:text-[#0b1220]"
-            >
-              {busy ? 'Sender…' : 'Bekreft stemmen'}
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={cancelPending}
-              className="inline-flex items-center rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
-            >
-              Endre
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={busy || !pending}
+            onClick={() => {
+              if (pending) void submitVote(pending);
+            }}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#00205b] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#00205b]/90 disabled:opacity-60 dark:bg-[#8fb4ff] dark:text-[#0b1220]"
+          >
+            {busy ? 'Sender…' : 'Bekreft stemmen'}
+          </button>
         </div>
       ) : pending && !user && !loading ? (
         <p className="text-sm text-muted-foreground">
