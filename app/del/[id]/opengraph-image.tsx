@@ -1,4 +1,6 @@
+import { notFound } from 'next/navigation';
 import { getPublicPollById } from '@/lib/polls/service';
+import { isShareablePoll } from '@/lib/polls/share';
 import {
   OG_IMAGE_ALT,
   OG_IMAGE_CONTENT_TYPE,
@@ -17,5 +19,6 @@ type ImageProps = {
 export default async function Image({ params }: ImageProps) {
   const { id } = await params;
   const poll = await getPublicPollById(id).catch(() => null);
+  if (!poll || !isShareablePoll(poll)) notFound();
   return renderPollShareOgImage(poll);
 }

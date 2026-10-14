@@ -1,11 +1,15 @@
 import { ImageResponse } from 'next/og';
-import { SITE_NAME } from '@/lib/seo/metadata';
-import { isShareablePoll } from '@/lib/polls/share';
 import type { PollRecord } from '@/lib/polls/types';
 
 export const OG_IMAGE_SIZE = { width: 1200, height: 630 } as const;
 export const OG_IMAGE_CONTENT_TYPE = 'image/png';
 export const OG_IMAGE_ALT = 'Folkets Meninger med spørsmålet og svarene Ja, Vet ikke og Nei';
+/**
+ * Only shareable polls get a long-lived immutable cache. Unknown, hidden or
+ * legacy `citizen` polls return 404 (see the image routes) so a future poll at
+ * the same id is never stuck behind a year-long cached fallback.
+ */
+export const OG_IMAGE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
 export function pollOgImageAlt(title: string): string {
   return `Spørsmål: ${title.trim()}. Svar Ja, Vet ikke eller Nei på Folkets Meninger.`;
@@ -77,49 +81,13 @@ function pollButton(
   );
 }
 
-/** Generic fallback used for hidden, citizen, draft or missing polls. */
-function renderGenericImage(): ImageResponse {
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '64px',
-          fontFamily: 'sans-serif',
-          color: '#ffffff',
-          background: 'linear-gradient(135deg, #001a4a 0%, #00205b 55%, #0a3d9e 100%)',
-          textAlign: 'center',
-        }}
-      >
-        <div style={{ display: 'flex', fontSize: 44, fontWeight: 800, letterSpacing: -1 }}>
-          <span>Folkets&nbsp;</span>
-          <span style={{ color: '#ff9fb1' }}>Meninger</span>
-        </div>
-        <div style={{ display: 'flex', marginTop: 24, fontSize: 30, fontWeight: 600, color: 'rgba(255,255,255,0.88)' }}>
-          Uoffisiell meningsmåling
-        </div>
-        <div style={{ display: 'flex', marginTop: 12, fontSize: 24, color: 'rgba(255,255,255,0.7)' }}>
-          folkets-meninger.no
-        </div>
-      </div>
-    ),
-    { ...OG_IMAGE_SIZE },
-  );
-}
-
 /**
  * Renders the 1200×630 social preview for a shareable poll: the question plus
- * the Ja / Vet ikke / Nei buttons and Folkets Meninger branding. Hidden or
- * legacy citizen polls fall back to a generic branded image so no question leaks.
+ * the Ja / Vet ikke / Nei buttons and Folkets Meninger branding. The caller is
+ * responsible for rejecting unknown or non-shareable polls with a 404 so no
+ * question leaks and no generic image is cached under a real poll id.
  */
-export function renderPollShareOgImage(poll: PollRecord | null): ImageResponse {
-  if (!isShareablePoll(poll) || !poll) return renderGenericImage();
-
+export function renderPollShareOgImage(poll: PollRecord): ImageResponse {
   const title = clampText(poll.title, 150);
   const showSummary = title.length <= 90 && Boolean(poll.neutralSummary);
   const summary = showSummary ? clampText(poll.neutralSummary, 140) : '';
@@ -199,6 +167,9 @@ export function renderPollShareOgImage(poll: PollRecord | null): ImageResponse {
         </div>
       </div>
     ),
-    { ...OG_IMAGE_SIZE },
+    {
+      ...OG_IMAGE_SIZE,
+      headers: { 'cache-control': OG_IMAGE_CACHE_CONTROL },
+    },
   );
 }
