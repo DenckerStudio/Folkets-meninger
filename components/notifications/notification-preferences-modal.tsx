@@ -124,6 +124,7 @@ function ToggleRow({
 export function NotificationPreferencesModal({ open, onClose }: Props) {
   const reduced = useReducedMotion();
   const isMobile = useIsMobile();
+  const closeBtnRef = React.useRef<HTMLButtonElement | null>(null);
   const [prefs, setPrefs] = React.useState<NotificationPreferencesV2>(FREE_NOTIFICATION_PREFERENCES);
   const [isPlus, setIsPlus] = React.useState(false);
   const [v2Available, setV2Available] = React.useState(true);
@@ -178,6 +179,13 @@ export function NotificationPreferencesModal({ open, onClose }: Props) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+
+  // Move focus into the modal when it opens (Lukk is the first focusable control).
+  React.useEffect(() => {
+    if (!open) return;
+    const id = window.requestAnimationFrame(() => closeBtnRef.current?.focus());
+    return () => window.cancelAnimationFrame(id);
+  }, [open]);
 
   const update = <K extends keyof NotificationPreferencesV2>(key: K, value: NotificationPreferencesV2[K]) => {
     setPrefs((prev) => ({ ...prev, [key]: value }));
@@ -383,6 +391,7 @@ export function NotificationPreferencesModal({ open, onClose }: Props) {
     <div className="flex items-center justify-between border-b border-border px-4 py-3">
       <h2 className="text-base font-semibold">Varslingsinnstillinger</h2>
       <button
+        ref={closeBtnRef}
         type="button"
         onClick={onClose}
         aria-label="Lukk"
