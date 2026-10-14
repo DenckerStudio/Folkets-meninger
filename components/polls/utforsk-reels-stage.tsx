@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ArrowRight, Compass } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Compass, Info } from 'lucide-react';
 import { CivicBubble } from '@/components/icons/civic';
 import { EmptyLineState } from '@/components/motion/empty-line';
 import { AnimatePresence, motion } from 'motion/react';
@@ -45,18 +45,19 @@ function useIsMounted() {
   );
 }
 
-function subscribeMd(onStoreChange: () => void) {
-  const mq = window.matchMedia('(min-width: 768px)');
+function subscribeLg(onStoreChange: () => void) {
+  const mq = window.matchMedia('(min-width: 1024px)');
   mq.addEventListener('change', onStoreChange);
   return () => mq.removeEventListener('change', onStoreChange);
 }
 
-function getMd() {
-  return window.matchMedia('(min-width: 768px)').matches;
+function getLg() {
+  return window.matchMedia('(min-width: 1024px)').matches;
 }
 
-function useIsDesktopMd() {
-  return useSyncExternalStore(subscribeMd, getMd, () => false);
+/** Tablets (768–1023 px) get the stacked mobile layout, not a narrow coverflow. */
+function useIsDesktopLg() {
+  return useSyncExternalStore(subscribeLg, getLg, () => false);
 }
 
 function notifyHashChanged() {
@@ -278,9 +279,10 @@ function ReelsPanel({
   onSelect: (id: string | null) => void;
   onClose: () => void;
 }) {
-  const isDesktop = useIsDesktopMd();
+  const isDesktop = useIsDesktopLg();
   const cardOpen = Boolean(activePollId);
   const [centeredIndex, setCenteredIndex] = useState(0);
+  const [disclaimerOpen, setDisclaimerOpen] = useState(false);
 
   useEffect(() => {
     if (!active) return;
@@ -308,7 +310,7 @@ function ReelsPanel({
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col">
       {/* Header: back + REELS label so back never covers the card badge */}
-      <div className="relative z-30 flex shrink-0 items-center gap-3 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
+      <div className="relative z-30 flex shrink-0 items-center gap-3 pb-2 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
         <button
           type="button"
           onClick={onClose}
@@ -326,10 +328,31 @@ function ReelsPanel({
             Reels
           </p>
         </div>
+        {items.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => setDisclaimerOpen((value) => !value)}
+            aria-expanded={disclaimerOpen}
+            aria-controls="reels-disclaimer"
+            aria-label={disclaimerOpen ? 'Skjul informasjon om Reels' : 'Vis informasjon om Reels'}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25"
+          >
+            <Info className="h-4 w-4" aria-hidden />
+          </button>
+        ) : null}
       </div>
 
+      {items.length > 0 && disclaimerOpen ? (
+        <p
+          id="reels-disclaimer"
+          className="relative z-20 shrink-0 pb-2 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] text-xs leading-relaxed text-white/75"
+        >
+          {SYSTEM_REEL_DISCLAIMER}
+        </p>
+      ) : null}
+
       {items.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-6 py-12">
+        <div className="flex flex-1 items-center justify-center py-12 pl-[max(1.5rem,env(safe-area-inset-left,0px))] pr-[max(1.5rem,env(safe-area-inset-right,0px))]">
           <EmptyLineState className="text-white/80">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/15">
               <CivicBubble className="h-6 w-6 text-white" />
@@ -342,8 +365,8 @@ function ReelsPanel({
           </EmptyLineState>
         </div>
       ) : isDesktop ? (
-        /* Desktop: 21st Coverflow rack — not fullscreen single cards, no sideways peek bleed */
-        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden px-2">
+        /* Desktop (lg+): 21st Coverflow rack — not fullscreen single cards, no sideways peek bleed */
+        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
           <CoverflowCarousel
             label="Reels"
             loop={items.length >= 3}
@@ -355,7 +378,7 @@ function ReelsPanel({
             depth={0.55}
             perspective={2.8}
             cardWidth="clamp(220px, 28vw, 320px)"
-            cardHeight="clamp(320px, 58vh, 440px)"
+            cardHeight="clamp(320px, 58dvh, 440px)"
             gap={0.08}
             cardClassName="rounded-2xl border border-white/10 bg-[#00205b]"
             slides={items.map((item) => (
@@ -371,9 +394,10 @@ function ReelsPanel({
           />
         </div>
       ) : (
-        /* Mobile: fullscreen OK — one centred portrait card, coverflow neighbours faded */
-        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden">
+        /* Mobile + tablet (<lg): one centred portrait card that shrinks to the available height */
+        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
           <CoverflowCarousel
+            fitHeight
             label="Reels"
             loop={items.length >= 3}
             showPagination
@@ -384,8 +408,8 @@ function ReelsPanel({
             depth={0.45}
             perspective={2.4}
             fade={0.22}
-            cardWidth="min(100vw - 1.5rem, 26rem)"
-            cardHeight="min(72dvh, 34rem)"
+            cardWidth="min(calc(100vw - 1.5rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), 26rem)"
+            cardHeight="24rem"
             gap={0.12}
             cardClassName="rounded-2xl border border-white/10 bg-[#00205b]"
             slides={items.map((item) => (
@@ -401,12 +425,6 @@ function ReelsPanel({
           />
         </div>
       )}
-
-      {items.length > 0 ? (
-        <p className="pointer-events-none z-20 shrink-0 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-1 text-center text-xs leading-relaxed text-white/70">
-          {SYSTEM_REEL_DISCLAIMER}
-        </p>
-      ) : null}
     </div>
   );
 }

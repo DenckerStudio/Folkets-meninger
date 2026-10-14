@@ -10,7 +10,7 @@ test.describe('Utforsk Reels empty chrome', () => {
     fs.mkdirSync(ARTIFACTS, { recursive: true });
   });
 
-  test('Reels modal uses shared EmptyState and keeps the orb', async ({ page }) => {
+  test('Reels modal uses shared EmptyState and hides the orb', async ({ page }) => {
     test.setTimeout(90_000);
     await page.goto('/dashboard/utforsk');
     await expect(page.getByRole('heading', { name: 'Utforsk saker' })).toBeVisible({ timeout: 90_000 });
@@ -22,14 +22,18 @@ test.describe('Utforsk Reels empty chrome', () => {
     await page.screenshot({ path: `${ARTIFACTS}/tip_utforsk_orb_closed.png` });
 
     await page.getByRole('button', { name: 'Åpne Reels' }).click();
-    await expect(page.getByRole('heading', { name: 'Ingen Reels publisert ennå' })).toBeVisible();
+    const dialog = page.getByRole('dialog', { name: 'Reels' });
+    await expect(dialog.getByRole('heading', { name: 'Ingen Reels publisert ennå' })).toBeVisible();
     await expect(
       page.getByRole('status').getByText(/Systemgenerert fra stortingssaker/),
     ).toBeVisible();
     await expect(page.getByRole('status').getByText(/ja\/nei\/blank/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Åpne chat' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Åpne chat' })).toBeHidden();
 
     await page.screenshot({ path: `${ARTIFACTS}/tip_utforsk_reels_empty_state.png` });
+
+    await dialog.getByRole('button', { name: 'Tilbake til saker' }).click();
+    await expect(page.getByRole('button', { name: 'Åpne chat' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Åpne chat' }).click();
     const panel = page.locator('[data-chat-panel]');
