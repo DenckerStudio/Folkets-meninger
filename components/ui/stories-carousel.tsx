@@ -61,7 +61,27 @@ const Stories = forwardRef<HTMLDivElement, StoriesProps>(
     ref
   ) => {
     const total = useMemo(() => {
-      const count = Array.isArray(children) ? children.length : 1;
+      if (!Array.isArray(children)) return 1;
+      let count = 0;
+      for (const c of children) {
+        if (c && typeof c === 'object' && 'type' in (c as any)) {
+          const type = (c as any).type;
+          // Check displayName or function name
+          if (type === Story || type?.displayName === 'Story' || type?.name === 'Story') {
+            count++;
+          } else if (c && (c as any).props?.children && Array.isArray((c as any).props.children)) {
+            // maybe StoriesContent contains stories
+            for (const gc of (c as any).props.children) {
+              if (gc && typeof gc === 'object' && 'type' in (gc as any)) {
+                const gtype = (gc as any).type;
+                if (gtype === Story || gtype?.displayName === 'Story' || gtype?.name === 'Story') {
+                  count++;
+                }
+              }
+            }
+          }
+        }
+      }
       return count;
     }, [children]);
 
@@ -299,30 +319,51 @@ const StoriesContent = forwardRef<HTMLDivElement, StoriesContentProps>(
         onKeyUp={handleKeyUp}
         {...props}
       >
-        {Array.isArray(children)
-          ? children.map((child, index) => (
-              <div
-                key={index}
-                className={cn(
-                  'absolute inset-0 w-full h-full transition-transform duration-300 ease-out',
-                  index === currentIndex
-                    ? 'translate-x-0'
-                    : direction === 'forward'
-                    ? index < currentIndex
-                      ? '-translate-x-full'
-                      : 'translate-x-full'
-                    : index > currentIndex
-                    ? 'translate-x-full'
-                    : '-translate-x-full'
-                )}
-                style={{
-                  display: Math.abs(index - currentIndex) <= 1 ? 'block' : 'none',
-                }}
-              >
-                {child}
-              </div>
-            ))
-          : children}
+        {(() => {
+          const stories: React.ReactNode[] = [];
+          const collect = (nodes: any) => {
+            if (!nodes) return;
+            if (Array.isArray(nodes)) {
+              for (const n of nodes) collect(n);
+              return;
+            }
+            if (typeof nodes === 'object' && 'type' in nodes) {
+              const t = (nodes as any).type;
+              if (t === Story || t?.displayName === 'Story' || t?.name === 'Story') {
+                stories.push(nodes);
+                return;
+              }
+              if ((nodes as any).props?.children) {
+                collect((nodes as any).props.children);
+              }
+              return;
+            }
+          };
+          collect(children);
+          if (stories.length === 0 && children) stories.push(children as any);
+          return stories.map((child, index) => (
+            <div
+              key={index}
+              className={cn(
+                'absolute inset-0 w-full h-full transition-transform duration-300 ease-out',
+                index === currentIndex
+                  ? 'translate-x-0'
+                  : direction === 'forward'
+                  ? index < currentIndex
+                    ? '-translate-x-full'
+                    : 'translate-x-full'
+                  : index > currentIndex
+                  ? 'translate-x-full'
+                  : '-translate-x-full'
+              )}
+              style={{
+                display: Math.abs(index - currentIndex) <= 1 ? 'block' : 'none',
+              }}
+            >
+              {child}
+            </div>
+          ));
+        })()}
       </div>
     );
   }
@@ -444,6 +485,28 @@ const StoriesNavigation = forwardRef<HTMLDivElement, StoriesNavigationProps>(
 );
 StoriesNavigation.displayName = 'StoriesNavigation';
 
+
+interface StoriesCounterProps extends HTMLAttributes<HTMLDivElement> {}
+
+const StoriesCounter = forwardRef<HTMLDivElement, StoriesCounterProps>(
+  ({ className, ...props }, ref) => {
+    const { currentIndex, total } = useStories();
+
+    if (total === 0) return null;
+
+    return (
+      <div
+        ref={ref}
+        className={cn('text-xs font-medium text-white/90', className)}
+        {...props}
+      >
+        {currentIndex + 1} / {total}
+      </div>
+    );
+  }
+);
+StoriesCounter.displayName = 'StoriesCounter';
+
 export {
   Stories,
   StoriesHeader,
@@ -455,4 +518,5 @@ export {
   StoryAuthorImage,
   StoryAuthorName,
   StoriesNavigation,
+  StoriesCounter,
 };

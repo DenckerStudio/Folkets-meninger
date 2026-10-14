@@ -13,7 +13,7 @@ import { CivicBubble } from '@/components/icons/civic';
 import { EmptyLineState } from '@/components/motion/empty-line';
 import { AnimatePresence, motion } from 'motion/react';
 import { CoverflowCarousel } from '@/components/ui/coverflow-carousel';
-import { Stories, StoriesContent, StoriesHeader, Story } from '@/components/ui/stories-carousel';
+import { Stories, StoriesContent, StoriesHeader, StoriesCounter, StoriesNavigation, Story } from '@/components/ui/stories-carousel';
 import { ReelCarouselCard } from '@/components/polls/reel-vote-card';
 import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import type { SystemReelFeedItem } from '@/lib/polls/types';
@@ -288,25 +288,29 @@ function ReelsPanel({
   useEffect(() => {
     if (!active) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== ' ' && event.code !== 'Space') return;
-      const target = event.target as HTMLElement | null;
-      if (target) {
-        const tag = target.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
-          return;
-        }
-      }
-      event.preventDefault();
-      if (activePollId) {
-        onSelect(null);
+      // Escape closes panel or goes back
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
         return;
       }
-      const item = items[centeredIndex] ?? items[0];
-      if (item) onSelect(item.poll.id);
+
+      if (event.key === ' ' || event.code === 'Space') {
+        const target = event.target as HTMLElement | null;
+        if (target) {
+          const tag = target.tagName;
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
+            return;
+          }
+        }
+        event.preventDefault();
+        // Don't trigger vote on space - follow existing desktop behavior (space not opening vote)
+        return;
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [active, activePollId, centeredIndex, items, onSelect]);
+  }, [active, activePollId, centeredIndex, items, onSelect, onClose]);
 
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col">
@@ -399,7 +403,10 @@ function ReelsPanel({
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
           <div className="relative mx-auto flex min-h-0 w-full max-w-[26rem] flex-1 flex-col">
             <Stories loop={items.length > 1} onIndexChange={setCenteredIndex}>
-              <StoriesHeader />
+              <div className="flex items-center justify-between px-2 pb-1">
+                <StoriesHeader className="flex-1 px-0" />
+                <StoriesCounter className="ml-2 shrink-0" />
+              </div>
               <StoriesContent className="flex-1 min-h-0">
                 {items.map((item) => (
                   <Story key={item.poll.id} className="flex flex-col">
@@ -413,6 +420,7 @@ function ReelsPanel({
                   </Story>
                 ))}
               </StoriesContent>
+              <StoriesNavigation showArrows />
             </Stories>
           </div>
         </div>
