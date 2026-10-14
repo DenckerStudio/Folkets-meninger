@@ -1,6 +1,7 @@
 import { getSaker } from '@/lib/stortinget';
 import { getIssueAiLabelsMap, getPopularAiLabels } from '@/lib/ai-summary/service';
 import { listSystemReelFeedItems } from '@/lib/polls/service';
+import { listCitizenOpinions } from '@/lib/opinions/service';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import ExploreClient from './explore-client';
@@ -20,11 +21,12 @@ export default async function ExplorePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [initialIssues, issueLabels, popularLabels, reelItems] = await Promise.all([
+  const [initialIssues, issueLabels, popularLabels, reelItems, opinions] = await Promise.all([
     getSaker(),
     getIssueAiLabelsMap(),
     getPopularAiLabels(),
     listSystemReelFeedItems(user?.id ?? null),
+    listCitizenOpinions(12),
   ]);
 
   return (
@@ -33,6 +35,7 @@ export default async function ExplorePage() {
       issueLabels={issueLabels}
       popularLabels={popularLabels}
       reelItems={reelItems}
+      opinions={opinions}
     />
   );
 }

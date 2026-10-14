@@ -26,6 +26,7 @@ import { routes } from '@/lib/routes';
 import { PREFERENCE_KEYS } from '@/lib/preferences/keys';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import type { SystemReelFeedItem } from '@/lib/polls/types';
+import type { OpinionListItem } from '@/lib/opinions/types';
 
 import { ISSUE_STANCE_LABELS, type IssueStance } from '@/lib/stances/types';
 
@@ -72,11 +73,13 @@ export default function ExploreClient({
   issueLabels,
   popularLabels,
   reelItems,
+  opinions,
 }: {
   initialIssues: SakListItem[];
   issueLabels: Record<string, string[]>;
   popularLabels: string[];
   reelItems: SystemReelFeedItem[];
+  opinions: OpinionListItem[];
 }) {
   const [issues] = useState(initialIssues);
   const { user } = useAuth();
@@ -267,7 +270,7 @@ export default function ExploreClient({
   ];
 
   return (
-    <UtforskReelsStage items={reelItems}>
+    <UtforskReelsStage items={reelItems} opinions={opinions}>
       {({ openReels, itemCount }) => (
     <DashboardPage>
       <SectionSettle>

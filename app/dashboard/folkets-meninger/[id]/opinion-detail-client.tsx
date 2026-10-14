@@ -7,6 +7,7 @@ import { BackButton } from '@/components/dashboard/back-button';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { OpinionInnspillPanel } from '@/components/opinions/opinion-innspill-panel';
+import { OpinionReelChip } from '@/components/opinions/opinion-reel-chip';
 import { OpinionReportButton } from '@/components/opinions/opinion-report-button';
 import { OpinionPointsList } from '@/components/opinions/opinion-points-list';
 import { StanceExpandModal } from '@/components/opinions/stance-expand-modal';
@@ -90,6 +91,7 @@ export function OpinionDetailClient({ opinion, isAuthor, innspill }: OpinionDeta
                 {opinion.issueTitle ?? `Sak ${opinion.stortingetIssueId}`}
               </Link>
             ) : null}
+            <OpinionReelChip pollId={opinion.pollId} />
             <span className="text-xs text-muted-foreground">{formatOpinionDate(opinion.createdAt)}</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{opinion.title}</h1>

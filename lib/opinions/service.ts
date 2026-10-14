@@ -7,6 +7,7 @@ import {
   OPINION_REPLY_BODY_MIN,
   OPINION_TITLE_MAX,
   OPINION_TITLE_MIN,
+  type IssueOpinionHighlights,
   type OpinionDetail,
   type OpinionListItem,
   type OpinionReplyItem,
@@ -69,7 +70,12 @@ function mapAuthor(userId: string, users: UserJoin | UserJoin[] | null): { name:
   };
 }
 
-function mapOpinionRow(row: OpinionRow, issueTitle: string | null, counts: OpinionStanceCounts): OpinionListItem {
+function mapOpinionRow(
+  row: OpinionRow,
+  issueTitle: string | null,
+  counts: OpinionStanceCounts,
+  pollId: string | null,
+): OpinionListItem {
   const author = mapAuthor(row.author_user_id, row.users);
   const stance: OpinionStance = isOpinionStance(row.stance) ? row.stance : 'blank';
   return {
@@ -80,6 +86,7 @@ function mapOpinionRow(row: OpinionRow, issueTitle: string | null, counts: Opini
     points: parseOpinionPoints(row.points),
     stortingetIssueId: row.stortinget_issue_id,
     issueTitle,
+    pollId,
     createdAt: row.created_at,
     authorUserId: row.author_user_id,
     authorName: author.name,
@@ -119,6 +126,32 @@ async function loadIssueTitles(issueIds: string[]): Promise<Map<string, string>>
     if (row.id && row.title) titles.set(String(row.id), String(row.title));
   }
   return titles;
+}
+
+async function loadPollIdByIssue(issueIds: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(issueIds.filter(Boolean))];
+  const map = new Map<string, string>();
+  if (unique.length === 0 || !supabaseConfigured()) return map;
+
+  const supabase = getAnonSupabase();
+  const { data, error } = await supabase
+    .from('polls')
+    .select('id, stortinget_issue_id, created_at')
+    .in('stortinget_issue_id', unique)
+    .in('status', ['open', 'closed'])
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('loadPollIdByIssue error:', error.message);
+    return map;
+  }
+
+  for (const row of data ?? []) {
+    const issueId = row.stortinget_issue_id ? String(row.stortinget_issue_id) : null;
+    if (!issueId || map.has(issueId)) continue;
+    map.set(issueId, String(row.id));
+  }
+  return map;
 }
 
 async function loadCountsByOpinion(opinionIds: string[]): Promise<Map<string, OpinionStanceCounts>> {
@@ -267,10 +300,14 @@ async function listCitizenOpinionsInternal(
   }
 
   const rows = (data ?? []) as OpinionRow[];
-  const issueTitles = await loadIssueTitles(
-    rows.map((row) => row.stortinget_issue_id).filter((id): id is string => Boolean(id)),
-  );
-  const countsById = await loadCountsByOpinion(rows.map((row) => row.id));
+  const issueIds = rows
+    .map((row) => row.stortinget_issue_id)
+    .filter((id): id is string => Boolean(id));
+  const [issueTitles, countsById, pollIdByIssue] = await Promise.all([
+    loadIssueTitles(issueIds),
+    loadCountsByOpinion(rows.map((row) => row.id)),
+    loadPollIdByIssue(issueIds),
+  ]);
 
   return rows.map((row) => {
     const counts = countsById.get(row.id) ?? emptyStanceCounts();
@@ -278,7 +315,8 @@ async function listCitizenOpinionsInternal(
       addStanceCount(counts, row.stance);
     }
     const issueTitle = row.stortinget_issue_id ? issueTitles.get(row.stortinget_issue_id) ?? null : null;
-    return mapOpinionRow(row, issueTitle, counts);
+    const pollId = row.stortinget_issue_id ? pollIdByIssue.get(row.stortinget_issue_id) ?? null : null;
+    return mapOpinionRow(row, issueTitle, counts, pollId);
   });
 }
 
@@ -300,6 +338,26 @@ export type IssueOpinionSummary = {
   counts: OpinionStanceCounts;
   latest: OpinionListItem[];
 };
+
+/**
+ * The most-endorsed for and imot opinions for a sak, plus the total count.
+ * Shown on the matching Reel so undecided voters can read the best argument
+ * on each side before voting (B3).
+ */
+export async function getIssueOpinionHighlights(issueId: string): Promise<IssueOpinionHighlights> {
+  const opinions = await listCitizenOpinionsByIssue(issueId, 60);
+  let topFor: OpinionListItem | null = null;
+  let topImot: OpinionListItem | null = null;
+  for (const opinion of opinions) {
+    if (opinion.stance === 'for' && (!topFor || opinion.counts.total > topFor.counts.total)) {
+      topFor = opinion;
+    }
+    if (opinion.stance === 'imot' && (!topImot || opinion.counts.total > topImot.counts.total)) {
+      topImot = opinion;
+    }
+  }
+  return { total: opinions.length, for: topFor, imot: topImot };
+}
 
 export async function getIssueOpinionSummary(
   issueId: string,
@@ -362,8 +420,9 @@ export async function getCitizenOpinion(id: string, viewerUserId?: string | null
   }
 
   const row = data as OpinionRow;
-  const [issueTitles, replyResult] = await Promise.all([
+  const [issueTitles, pollIdByIssue, replyResult] = await Promise.all([
     loadIssueTitles(row.stortinget_issue_id ? [row.stortinget_issue_id] : []),
+    loadPollIdByIssue(row.stortinget_issue_id ? [row.stortinget_issue_id] : []),
     supabase
       .from('citizen_opinion_replies')
       .select(REPLY_SELECT)
@@ -385,7 +444,8 @@ export async function getCitizenOpinion(id: string, viewerUserId?: string | null
   for (const reply of replies) addStanceCount(counts, reply.stance);
 
   const issueTitle = row.stortinget_issue_id ? issueTitles.get(row.stortinget_issue_id) ?? null : null;
-  const listItem = mapOpinionRow(row, issueTitle, counts);
+  const pollId = row.stortinget_issue_id ? pollIdByIssue.get(row.stortinget_issue_id) ?? null : null;
+  const listItem = mapOpinionRow(row, issueTitle, counts, pollId);
   const viewerReply = viewerUserId ? replies.find((reply) => reply.authorUserId === viewerUserId) ?? null : null;
 
   return {

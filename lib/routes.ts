@@ -1,14 +1,28 @@
+import type { OpinionCreateStance } from '@/lib/opinions/types';
+
 /** App routes — dashboard lives under `/dashboard`. */
 
 export const DASHBOARD_PREFIX = '/dashboard';
+
+/** Hash that opens the Reels carousel on Utforsk. */
+export const REELS_HASH = '#reels';
 
 export const routes = {
   home: '/',
   dashboard: DASHBOARD_PREFIX,
   folketsMeninger: `${DASHBOARD_PREFIX}/folkets-meninger`,
-  folketsMeningerForSak: (id: string, opts?: { compose?: boolean }) =>
-    `${DASHBOARD_PREFIX}/folkets-meninger?sak=${encodeURIComponent(id)}${opts?.compose ? '&compose=1' : ''}`,
+  folketsMeningerForSak: (
+    id: string,
+    opts?: { compose?: boolean; stance?: OpinionCreateStance | null },
+  ) =>
+    `${DASHBOARD_PREFIX}/folkets-meninger?sak=${encodeURIComponent(id)}${opts?.compose ? '&compose=1' : ''}${
+      opts?.stance ? `&standpunkt=${opts.stance}` : ''
+    }`,
   utforsk: `${DASHBOARD_PREFIX}/utforsk`,
+  utforskReels: (pollId?: string) =>
+    pollId
+      ? `${DASHBOARD_PREFIX}/utforsk?poll=${encodeURIComponent(pollId)}${REELS_HASH}`
+      : `${DASHBOARD_PREFIX}/utforsk${REELS_HASH}`,
   avstemninger: `${DASHBOARD_PREFIX}/avstemninger`,
   /** @deprecated Reels live on Utforsk; this path redirects there. */
   avstemningerReels: `${DASHBOARD_PREFIX}/avstemninger/reels`,

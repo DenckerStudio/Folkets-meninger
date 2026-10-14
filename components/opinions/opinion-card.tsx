@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { OpinionPointsList } from '@/components/opinions/opinion-points-list';
+import { OpinionReelChip } from '@/components/opinions/opinion-reel-chip';
 import { formatOpinionDate, stanceLabel, STANCE_VISUAL } from '@/lib/opinions/labels';
 import type { OpinionListItem } from '@/lib/opinions/types';
 import { formatNumber } from '@/lib/utils';
@@ -29,6 +30,7 @@ export function OpinionCard({ opinion }: OpinionCardProps) {
                 {opinion.issueTitle ?? `Sak ${opinion.stortingetIssueId}`}
               </span>
             ) : null}
+            <OpinionReelChip pollId={opinion.pollId} />
           </div>
           <p className="text-sm text-muted-foreground md:text-right">{formatOpinionDate(opinion.createdAt)}</p>
         </div>

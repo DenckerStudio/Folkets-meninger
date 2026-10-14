@@ -1,3 +1,5 @@
+import type { IssueOpinionHighlights } from '@/lib/opinions/types';
+
 export type PollTrack = 'stortinget' | 'citizen' | 'system';
 export type PollStatus = 'draft' | 'open' | 'closed' | 'archived';
 export type PollChoice = 'ja' | 'nei' | 'blank';
@@ -32,6 +34,10 @@ export type PollGenerationMetadata = {
   political_choice?: string;
   model?: string;
   candidate_ratings?: unknown;
+  /** True when the draft was triggered by an admin from a citizen opinion (B6). */
+  user_initiated?: boolean;
+  source_opinion_id?: string;
+  source_issue_id?: string;
   [key: string]: unknown;
 };
 
@@ -39,6 +45,8 @@ export type SystemReelFeedItem = {
   poll: PollRecord;
   totals: PollTotals;
   userVote: PollChoice | null;
+  /** Top for/imot opinions for the same sak, when any exist (B3). */
+  opinions?: IssueOpinionHighlights | null;
 };
 
 export type PollRecord = {

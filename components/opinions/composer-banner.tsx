@@ -40,9 +40,15 @@ type ComposerBannerProps = {
   sakOptions: SakPickerOption[];
   initialIssueId?: string | null;
   initialExpanded?: boolean;
+  initialStance?: OpinionCreateStance | null;
 };
 
-export function ComposerBanner({ sakOptions, initialIssueId = null, initialExpanded = false }: ComposerBannerProps) {
+export function ComposerBanner({
+  sakOptions,
+  initialIssueId = null,
+  initialExpanded = false,
+  initialStance = null,
+}: ComposerBannerProps) {
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id ?? null;
   const router = useRouter();
@@ -52,7 +58,9 @@ export function ComposerBanner({ sakOptions, initialIssueId = null, initialExpan
   const [issueId, setIssueId] = useState<string | null>(
     initialIssueId && initialIssueId.trim() ? initialIssueId.trim() : null,
   );
-  const [stance, setStance] = useState<OpinionCreateStance | null>(null);
+  const [stance, setStance] = useState<OpinionCreateStance | null>(
+    initialIssueId ? initialStance : null,
+  );
   const [points, setPoints] = useState<OpinionPoint[]>(emptyOpinionPointDrafts);
   const [error, setError] = useState('');
   const [pointsError, setPointsError] = useState('');

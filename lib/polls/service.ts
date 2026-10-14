@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getAnonSupabase, getServiceSupabase } from '@/lib/supabase';
+import { getIssueOpinionHighlights } from '@/lib/opinions/service';
+import type { IssueOpinionHighlights } from '@/lib/opinions/types';
 import { emptyPollTotals } from '@/lib/polls/format';
 import { isPollAlreadyExistsError, normalizePollIssueId } from '@/lib/polls/already-exists';
 import { nextPollStatusForAction, type PollStatusAction } from '@/lib/polls/apply-status';
@@ -361,6 +363,20 @@ export async function listSystemReelFeedItems(
   limit = 40,
 ): Promise<SystemReelFeedItem[]> {
   const polls = await listOpenSystemPolls(limit);
+  const issueIds = [
+    ...new Set(
+      polls
+        .map((poll) => poll.stortingetIssueId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const highlightsByIssue = new Map<string, IssueOpinionHighlights>();
+  await Promise.all(
+    issueIds.map(async (issueId) => {
+      highlightsByIssue.set(issueId, await getIssueOpinionHighlights(issueId));
+    }),
+  );
+
   return Promise.all(
     polls.map(async (poll) => {
       const [totals, voteState] = await Promise.all([
@@ -369,7 +385,14 @@ export async function listSystemReelFeedItems(
           ? getUserPollVote(userId, poll.id)
           : Promise.resolve({ hasVoted: false, vote: null }),
       ]);
-      return { poll, totals, userVote: voteState.vote };
+      return {
+        poll,
+        totals,
+        userVote: voteState.vote,
+        opinions: poll.stortingetIssueId
+          ? highlightsByIssue.get(poll.stortingetIssueId) ?? null
+          : null,
+      };
     }),
   );
 }

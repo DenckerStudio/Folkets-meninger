@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getServiceSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
 import {
   castPollVote,
@@ -9,6 +10,8 @@ import {
   isPollVotingOpen,
   listOpenPolls,
 } from '@/lib/polls/service';
+import { issueStanceFromPollChoice } from '@/lib/stances/model';
+import { setIssueStance } from '@/lib/stances/service';
 import type { PollChoice } from '@/lib/polls/types';
 
 export const dynamic = 'force-dynamic';
@@ -88,6 +91,25 @@ export async function POST(request: Request) {
     }
 
     const totals = await castPollVote({ userId: user.id, pollId, choice });
+
+    // A Ja/Nei/Blank vote on a Stortinget-backed poll is the same signal as an
+    // issue stance, so keep the stance history in sync (B2). Best-effort: the
+    // vote is already recorded and must not fail if this write does.
+    if (poll.stortingetIssueId) {
+      try {
+        await setIssueStance(
+          getServiceSupabase(),
+          user.id,
+          poll.stortingetIssueId,
+          issueStanceFromPollChoice(choice),
+          poll.title,
+          poll.neutralSummary,
+        );
+      } catch (stanceError) {
+        console.error('Poll stance sync error:', stanceError);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Stemme registrert anonymt',

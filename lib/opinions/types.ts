@@ -41,11 +41,20 @@ export type OpinionListItem = {
   points: OpinionPoint[];
   stortingetIssueId: string | null;
   issueTitle: string | null;
+  /** Open/closed system reel for the same Stortinget issue, when one exists. */
+  pollId: string | null;
   createdAt: string;
   authorUserId: string;
   authorName: string | null;
   authorInitials: string;
   counts: OpinionStanceCounts;
+};
+
+/** Top for/imot opinions plus total, shown alongside a Reel (B3). */
+export type IssueOpinionHighlights = {
+  total: number;
+  for: OpinionListItem | null;
+  imot: OpinionListItem | null;
 };
 
 export type OpinionReplyItem = {

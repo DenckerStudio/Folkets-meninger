@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkDiscussionContent } from '@/lib/moderation/content-check';
-import { createCitizenOpinionReply } from '@/lib/opinions/service';
+import { createCitizenOpinionReply, getCitizenOpinion } from '@/lib/opinions/service';
+import { notifyIssueStanceHoldersOnReply } from '@/lib/opinions/notify-reply';
 import { hasOpinionFieldErrors, isOpinionStance, validateReplyDraft } from '@/lib/opinions/validate';
 import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { PUBLIC_IDENTITY_ERROR } from '@/lib/identity/public-identity';
@@ -81,6 +82,23 @@ export async function POST(
   try {
     await ensurePublicUser(user);
     const replyId = await createCitizenOpinionReply(user.id, id, { body: text, stance });
+
+    // Notify users who hold a stance on this sak (B8). Best-effort.
+    try {
+      const opinion = await getCitizenOpinion(id);
+      if (opinion?.stortingetIssueId) {
+        await notifyIssueStanceHoldersOnReply({
+          replyAuthorUserId: user.id,
+          opinionId: id,
+          opinionTitle: opinion.title,
+          issueId: opinion.stortingetIssueId,
+          issueTitle: opinion.issueTitle,
+        });
+      }
+    } catch (notifyError) {
+      console.error('Opinion reply notification error:', notifyError);
+    }
+
     return NextResponse.json({ success: true, replyId });
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
