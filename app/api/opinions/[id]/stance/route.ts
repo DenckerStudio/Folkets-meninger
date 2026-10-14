@@ -115,6 +115,8 @@ export async function POST(
     if (combined.includes('not found')) {
       return NextResponse.json({ error: 'Meningen ble ikke funnet' }, { status: 404 });
     }
+    // After migration 20261014150000_quick_stance_empty_reply_body.sql is applied,
+    // the DB accepts empty body for quick 'for'/'imot' stances and this 409 falls away.
     if (combined.includes('body must be between 80 and 4000 characters')) {
       return NextResponse.json(
         { error: 'Rask stemme krever en databaseoppdatering', code: 'quick_stance_db_unsupported' },
