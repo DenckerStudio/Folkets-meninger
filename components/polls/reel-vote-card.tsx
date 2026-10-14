@@ -3,14 +3,18 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 import { AnimatePresence, motion } from 'motion/react';
 import { X } from 'lucide-react';
 import { CivicBubble } from '@/components/icons/civic';
+import { ReelOpinionHighlights, ReelSourceBadge } from '@/components/polls/reel-card-extras';
+import { ReelShareButton } from '@/components/polls/reel-share-button';
 import { VoteFillButton } from '@/components/motion/vote-fill';
 import { useAuth } from '@/hooks/use-auth';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { isPollVotingOpen } from '@/lib/polls/format';
 import { pollChoiceLabel } from '@/lib/polls/labels';
+import { opinionCreateStanceFromPollChoice } from '@/lib/stances/model';
 import type { PollChoice, PollTotals, SystemReelFeedItem } from '@/lib/polls/types';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
@@ -138,10 +142,14 @@ export function ReelFlagVote({ item, onBack, onSheetOpenChange }: ReelFlagVotePr
 
   return (
     <div data-testid="reel-vote-face" className="flex h-full min-h-0 flex-col gap-2">
-      <div className="flex min-h-0 flex-1 flex-col gap-1.5">
-        <p className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-white/70">
-          Hva mener du?
-        </p>
+      <div className="flex min-h-0 flex-col gap-1.5">
+        <div className="flex shrink-0 items-start justify-between gap-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-white/70">
+            Hva mener du?
+          </p>
+          <ReelShareButton pollId={item.poll.id} title={item.poll.title} choice={userVote} />
+        </div>
+        <ReelSourceBadge metadata={item.poll.generationMetadata} />
         <h3 className="shrink-0 text-base font-semibold leading-snug text-white sm:text-lg">
           {item.poll.title}
         </h3>
@@ -168,6 +176,9 @@ export function ReelFlagVote({ item, onBack, onSheetOpenChange }: ReelFlagVotePr
             Les mer
           </button>
         ) : null}
+        {item.poll.stortingetIssueId ? (
+          <ReelOpinionHighlights issueId={item.poll.stortingetIssueId} opinions={item.opinions} />
+        ) : null}
       </div>
 
       <div className="shrink-0">
@@ -182,6 +193,18 @@ export function ReelFlagVote({ item, onBack, onSheetOpenChange }: ReelFlagVotePr
           <p className="mb-2 text-sm text-white/80">Logg inn for å avgi stemme.</p>
         ) : null}
         {error ? <p className="mb-2 text-sm text-red-200">{error}</p> : null}
+
+        {userVote && item.poll.stortingetIssueId ? (
+          <Link
+            href={routes.folketsMeningerForSak(item.poll.stortingetIssueId, {
+              compose: true,
+              stance: opinionCreateStanceFromPollChoice(userVote),
+            })}
+            className="mb-3 block w-full rounded-xl bg-white/15 px-4 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-white/25"
+          >
+            Skriv din mening om saken
+          </Link>
+        ) : null}
 
         <div className="grid grid-cols-3 gap-2">
           <VoteFillButton
@@ -433,7 +456,13 @@ export function ReelCarouselCard({
               </p>
             ) : null}
           </div>
-          <p className="text-xs font-medium text-white/70">Trykk for å stemme</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-white/70">Trykk for å stemme</p>
+            <p className="text-[11px] font-medium text-white/60">
+              {item.totals.total} har stemt
+              {item.opinions && item.opinions.total > 0 ? ` · ${item.opinions.total} meninger` : ''}
+            </p>
+          </div>
         </button>
       </motion.div>
 

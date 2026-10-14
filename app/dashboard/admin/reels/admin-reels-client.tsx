@@ -11,10 +11,13 @@ import { AdminBackLink } from '@/components/admin/admin-shell';
 import { ReelCandidateRatings } from '@/components/admin/reel-candidate-ratings';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import type { PollRecord, SakPollCandidate, SakPollCoverage } from '@/lib/polls/types';
+import type { OpinionListItem } from '@/lib/opinions/types';
+import { opinionSupportCount } from '@/lib/opinions/labels';
 import { pipelineHealthNeedsAttention, type PipelineHealth } from '@/lib/n8n/pipeline-health';
 
 type DraftsResponse = { drafts: PollRecord[] };
 type CandidatesResponse = { candidates: SakPollCandidate[]; coverage: SakPollCoverage };
+type OpinionCandidatesResponse = { candidates: OpinionListItem[]; available?: boolean };
 
 function GenerationStatusBadge({
   issueId,
@@ -75,12 +78,15 @@ export default function AdminReelsClient({
 }) {
   const [drafts, setDrafts] = useState<PollRecord[]>(initialDrafts);
   const [candidates, setCandidates] = useState<SakPollCandidate[]>([]);
+  const [opinionCandidates, setOpinionCandidates] = useState<OpinionListItem[]>([]);
+  const [opinionFeatureAvailable, setOpinionFeatureAvailable] = useState(false);
   const [coverage, setCoverage] = useState<SakPollCoverage | null>(null);
   const [pipelineHealth, setPipelineHealth] = useState<PipelineHealth | null>(null);
   const [pipelineHealthUnavailable, setPipelineHealthUnavailable] = useState(false);
   const [catchupMessage, setCatchupMessage] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [opinionPendingId, setOpinionPendingId] = useState('');
   const [pending, startTransition] = useTransition();
   const { jobs, startGeneration, dismissJob, getJob, isGenerating } = usePollDraftGeneration();
 
@@ -88,9 +94,10 @@ export default function AdminReelsClient({
     startTransition(async () => {
       setError('');
       try {
-        const [draftsRes, candidatesRes, healthRes] = await Promise.all([
+        const [draftsRes, candidatesRes, opinionRes, healthRes] = await Promise.all([
           fetch('/api/admin/polls'),
           fetch('/api/admin/poll-candidates'),
+          fetch('/api/admin/reel-from-opinion'),
           fetch('/api/admin/pipeline-health'),
         ]);
         const failures: string[] = [];
@@ -108,6 +115,16 @@ export default function AdminReelsClient({
           setCoverage(candidatesJson.coverage ?? null);
         } else {
           failures.push('sak-kandidater');
+        }
+
+        if (opinionRes.ok) {
+          const opinionJson = (await opinionRes.json()) as OpinionCandidatesResponse;
+          setOpinionCandidates(opinionJson.candidates ?? []);
+          setOpinionFeatureAvailable(opinionJson.available !== false);
+        } else {
+          // Hidden gracefully (e.g. migration 20261014120000 not applied).
+          setOpinionCandidates([]);
+          setOpinionFeatureAvailable(false);
         }
 
         if (healthRes.ok) {
@@ -188,6 +205,30 @@ export default function AdminReelsClient({
   };
 
   const activeGeneratingJobs = jobs.filter((job) => job.status === 'generating');
+
+  const createFromOpinion = (opinionId: string) => {
+    startTransition(async () => {
+      setError('');
+      setSuccess('');
+      setOpinionPendingId(opinionId);
+      try {
+        const res = await fetch('/api/admin/reel-from-opinion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ opinionId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(typeof data.error === 'string' ? data.error : 'Kunne ikke lage utkast');
+          return;
+        }
+        setSuccess('Reel-utkast fra mening opprettet.');
+        load();
+      } finally {
+        setOpinionPendingId('');
+      }
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -399,6 +440,55 @@ export default function AdminReelsClient({
           </ul>
         )}
       </section>
+
+      {opinionFeatureAvailable ? (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold text-foreground">Fra Folkets meninger</h2>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+              Brukerinitiert
+            </span>
+          </div>
+          {opinionCandidates.length === 0 ? (
+            <EmptyState
+              title="Ingen menings-kandidater"
+              description="Ingen populære meninger uten reel akkurat nå."
+              className="py-6"
+            />
+          ) : (
+            <ul className="space-y-2">
+              {opinionCandidates.map((opinion) => (
+                <li
+                  key={opinion.id}
+                  className="flex items-start justify-between gap-3 rounded-xl border border-border px-3 py-2.5"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{opinion.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {opinionSupportCount(opinion.counts)} støtter
+                      {opinion.issueTitle ? ` · ${opinion.issueTitle}` : ''}
+                    </p>
+                    <Link
+                      href={routes.opinion(opinion.id)}
+                      className="mt-1 inline-block text-xs font-medium text-brand hover:underline"
+                    >
+                      Se meningen
+                    </Link>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={pending || opinionPendingId === opinion.id}
+                    onClick={() => createFromOpinion(opinion.id)}
+                    className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+                  >
+                    Lag reel-utkast
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
 
       <div className="flex flex-wrap gap-4 text-sm">
         <Link href={routes.utforsk} className="font-medium text-brand hover:underline">

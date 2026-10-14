@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Filter, Search, X } from 'lucide-react';
+import { Filter, Search, Vote, X } from 'lucide-react';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { dashboardControlClass, dashboardSearchClass } from '@/components/dashboard/filter-field';
@@ -10,15 +10,21 @@ import { SurfaceCard } from '@/components/dashboard/surface-card';
 import FadeIn from '@/components/fade-in';
 import { ComposerBanner } from '@/components/opinions/composer-banner';
 import { OpinionCard } from '@/components/opinions/opinion-card';
+import { ReelPromoCard, type ReelPromo } from '@/components/opinions/reel-promo-card';
 import { PageHeader } from '@/components/page-header';
+import { interleaveEvenly } from '@/lib/feeds/mixed';
 import { routes } from '@/lib/routes';
-import type { OpinionListItem, SakPickerOption } from '@/lib/opinions/types';
+import type { OpinionCreateStance, OpinionListItem, SakPickerOption } from '@/lib/opinions/types';
 
 type FolketsMeningerClientProps = {
   opinions: OpinionListItem[];
   sakOptions: SakPickerOption[];
   issueId?: string | null;
   initialCompose?: boolean;
+  initialStance?: OpinionCreateStance | null;
+  reelPromos?: ReelPromo[];
+  /** Poll IDs of Reels currently in the feed, used to gate the Reel chip. */
+  reelPollIds?: string[];
 };
 
 export function FolketsMeningerClient({
@@ -26,6 +32,9 @@ export function FolketsMeningerClient({
   sakOptions,
   issueId = null,
   initialCompose = false,
+  initialStance = null,
+  reelPromos = [],
+  reelPollIds = [],
 }: FolketsMeningerClientProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [stanceFilter, setStanceFilter] = useState('Alle');
@@ -60,6 +69,9 @@ export function FolketsMeningerClient({
     });
   }, [opinions, searchQuery, sortBy, stanceFilter]);
 
+  const mixed = useMemo(() => interleaveEvenly(displayed, reelPromos), [displayed, reelPromos]);
+  const validReelPollIds = useMemo(() => new Set(reelPollIds), [reelPollIds]);
+
   return (
     <DashboardPage className="space-y-6">
       <FadeIn delay={0.1}>
@@ -74,8 +86,29 @@ export function FolketsMeningerClient({
           sakOptions={sakOptions}
           initialIssueId={issueId}
           initialExpanded={initialCompose}
+          initialStance={initialStance}
         />
       </FadeIn>
+
+      {!issueId ? (
+        <FadeIn delay={0.14} direction="up">
+          <Link
+            href={routes.utforskReels()}
+            className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 transition hover:border-brand/40 hover:bg-muted/40"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+              <Vote className="h-5 w-5" aria-hidden />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-foreground">Stem raskt i Reels</span>
+              <span className="block text-sm text-muted-foreground">
+                Ja, nei eller blank på saker fra Stortinget — og se hva andre mener.
+              </span>
+            </span>
+            <span className="ml-auto shrink-0 text-sm font-medium text-brand">Åpne</span>
+          </Link>
+        </FadeIn>
+      ) : null}
 
       {issueId ? (
         <FadeIn delay={0.15} direction="up">
@@ -155,9 +188,17 @@ export function FolketsMeningerClient({
               }
             />
           ) : (
-            displayed.map((opinion, index) => (
-              <FadeIn key={opinion.id} delay={0.08 * Math.min(index, 5)} direction="up">
-                <OpinionCard opinion={opinion} />
+            mixed.map((item, index) => (
+              <FadeIn
+                key={'stance' in item ? `opinion-${item.id}` : `reel-${item.id}`}
+                delay={0.08 * Math.min(index, 5)}
+                direction="up"
+              >
+                {'stance' in item ? (
+                  <OpinionCard opinion={item} validReelPollIds={validReelPollIds} />
+                ) : (
+                  <ReelPromoCard reel={item} />
+                )}
               </FadeIn>
             ))
           )}

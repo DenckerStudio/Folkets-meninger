@@ -7,6 +7,7 @@ import { BackButton } from '@/components/dashboard/back-button';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { OpinionInnspillPanel } from '@/components/opinions/opinion-innspill-panel';
+import { OpinionReelChip } from '@/components/opinions/opinion-reel-chip';
 import { OpinionReportButton } from '@/components/opinions/opinion-report-button';
 import { OpinionPointsList } from '@/components/opinions/opinion-points-list';
 import { StanceExpandModal } from '@/components/opinions/stance-expand-modal';
@@ -29,19 +30,26 @@ type OpinionInnspillView = {
 type OpinionDetailClientProps = {
   opinion: OpinionDetail;
   isAuthor: boolean;
+  /** Stance preselected from a deep link (e.g. Enig/Uenig from a Reel slide). */
+  initialReplyStance?: OpinionStance | null;
   innspill: OpinionInnspillView;
 };
 
-export function OpinionDetailClient({ opinion, isAuthor, innspill }: OpinionDetailClientProps) {
+export function OpinionDetailClient({ opinion, isAuthor, initialReplyStance = null, innspill }: OpinionDetailClientProps) {
   const { user } = useAuth();
   const router = useRouter();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const visual = STANCE_VISUAL[opinion.stance];
 
+  // Filter out empty-body replies (quick stances) for display, but keep counts from opinion.counts
+  const visibleReplies = opinion.replies.filter((reply) => reply.body.trim().length > 0);
+
   const submit = async (stance: OpinionStance, body: string) => {
     if (!user) {
-      router.push(`${routes.login}?next=${encodeURIComponent(routes.opinion(opinion.id))}`);
+      router.push(
+        `${routes.login}?next=${encodeURIComponent(routes.opinion(opinion.id, { stance }))}`,
+      );
       return;
     }
     setBusy(true);
@@ -90,6 +98,7 @@ export function OpinionDetailClient({ opinion, isAuthor, innspill }: OpinionDeta
                 {opinion.issueTitle ?? `Sak ${opinion.stortingetIssueId}`}
               </Link>
             ) : null}
+            <OpinionReelChip pollId={opinion.pollId} />
             <span className="text-xs text-muted-foreground">{formatOpinionDate(opinion.createdAt)}</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{opinion.title}</h1>
@@ -146,8 +155,9 @@ export function OpinionDetailClient({ opinion, isAuthor, innspill }: OpinionDeta
             onSubmit={submit}
             busy={busy}
             error={error}
-            initialStance={opinion.viewerReply?.stance ?? null}
+            initialStance={opinion.viewerReply?.stance ?? initialReplyStance ?? null}
             initialBody={opinion.viewerReply?.body ?? ''}
+            autoExpand={!opinion.viewerReply && Boolean(initialReplyStance)}
             allowBlank
           />
         )}
@@ -155,17 +165,17 @@ export function OpinionDetailClient({ opinion, isAuthor, innspill }: OpinionDeta
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">
-          Begrunnelser ({formatNumber(opinion.replies.length)})
+          Begrunnelser ({formatNumber(visibleReplies.length)})
         </h2>
-        {opinion.replies.length === 0 ? (
+        {visibleReplies.length === 0 ? (
           <EmptyState
             compact
-            title="Ingen har svart ennå"
-            description="Vær den første til å si For, Blank eller Imot."
+            title="Ingen har skrevet begrunnelse ennå"
+            description="Vær den første til å dele en begrunnelse for For, Blank eller Imot."
           />
         ) : (
           <ul className="space-y-3">
-            {opinion.replies.map((reply) => {
+            {visibleReplies.map((reply) => {
               const replyVisual = STANCE_VISUAL[reply.stance];
               return (
                 <li key={reply.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm">

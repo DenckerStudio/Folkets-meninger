@@ -21,6 +21,8 @@ type StanceExpandModalProps = {
   error?: string;
   initialStance?: OpinionStance | null;
   initialBody?: string;
+  /** Open straight into the expanded composer with `initialStance` picked (deep link). */
+  autoExpand?: boolean;
   disabled?: boolean;
   disabledReason?: string;
   className?: string;
@@ -36,6 +38,7 @@ export function StanceExpandModal({
   error,
   initialStance = null,
   initialBody = '',
+  autoExpand = false,
   disabled = false,
   disabledReason,
   className,
@@ -44,8 +47,12 @@ export function StanceExpandModal({
   const titleId = useId();
   const bodyId = useId();
   const cardRef = useRef<HTMLDivElement>(null);
-  const [phase, setPhase] = useState<Phase>('idle');
-  const [selected, setSelected] = useState<OpinionStance | null>(null);
+  const [phase, setPhase] = useState<Phase>(() =>
+    autoExpand && initialStance ? 'expanded' : 'idle',
+  );
+  const [selected, setSelected] = useState<OpinionStance | null>(() =>
+    autoExpand && initialStance ? initialStance : null,
+  );
   const [fillOrigin, setFillOrigin] = useState<FillOrigin | null>(null);
   const [body, setBody] = useState(initialBody);
   const [localError, setLocalError] = useState('');
@@ -166,13 +173,15 @@ export function StanceExpandModal({
         style={{ maxWidth: '80rem', height: expanded ? undefined : COMPACT_HEIGHT }}
       >
         <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xxl" aria-hidden>
-          {fillOrigin && selected && (filling || expanded) ? (
+          {selected && (filling || expanded) ? (
             <motion.div
               className="absolute inset-0"
               style={{ backgroundColor: fillColor }}
-              initial={{
-                clipPath: `circle(18px at ${fillOrigin.x}px ${fillOrigin.y}px)`,
-              }}
+              initial={
+                fillOrigin
+                  ? { clipPath: `circle(18px at ${fillOrigin.x}px ${fillOrigin.y}px)` }
+                  : { clipPath: 'circle(150% at 50% 50%)' }
+              }
               animate={{
                 clipPath: 'circle(150% at 50% 50%)',
               }}

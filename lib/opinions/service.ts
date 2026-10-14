@@ -7,6 +7,8 @@ import {
   OPINION_REPLY_BODY_MIN,
   OPINION_TITLE_MAX,
   OPINION_TITLE_MIN,
+  type IssueOpinionHighlights,
+  type OpinionCreateStance,
   type OpinionDetail,
   type OpinionListItem,
   type OpinionReplyItem,
@@ -69,7 +71,13 @@ function mapAuthor(userId: string, users: UserJoin | UserJoin[] | null): { name:
   };
 }
 
-function mapOpinionRow(row: OpinionRow, issueTitle: string | null, counts: OpinionStanceCounts): OpinionListItem {
+function mapOpinionRow(
+  row: OpinionRow,
+  issueTitle: string | null,
+  counts: OpinionStanceCounts,
+  pollId: string | null,
+  viewerStance: OpinionCreateStance | 'blank' | null = null,
+): OpinionListItem {
   const author = mapAuthor(row.author_user_id, row.users);
   const stance: OpinionStance = isOpinionStance(row.stance) ? row.stance : 'blank';
   return {
@@ -80,11 +88,13 @@ function mapOpinionRow(row: OpinionRow, issueTitle: string | null, counts: Opini
     points: parseOpinionPoints(row.points),
     stortingetIssueId: row.stortinget_issue_id,
     issueTitle,
+    pollId,
     createdAt: row.created_at,
     authorUserId: row.author_user_id,
     authorName: author.name,
     authorInitials: author.initials,
     counts,
+    viewerStance,
   };
 }
 
@@ -121,6 +131,36 @@ async function loadIssueTitles(issueIds: string[]): Promise<Map<string, string>>
   return titles;
 }
 
+async function loadPollIdByIssue(issueIds: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(issueIds.filter(Boolean))];
+  const map = new Map<string, string>();
+  if (unique.length === 0 || !supabaseConfigured()) return map;
+
+  // Only link to a poll that is actually reachable in the Reels feed: a system
+  // Reel that is still open for voting (B4/3a). A closed, draft, or non-system
+  // poll has no vote face on Utforsk, so the chip must not point at it.
+  const supabase = getAnonSupabase();
+  const { data, error } = await supabase
+    .from('polls')
+    .select('id, stortinget_issue_id, created_at')
+    .in('stortinget_issue_id', unique)
+    .eq('track', 'system')
+    .eq('status', 'open')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('loadPollIdByIssue error:', error.message);
+    return map;
+  }
+
+  for (const row of data ?? []) {
+    const issueId = row.stortinget_issue_id ? String(row.stortinget_issue_id) : null;
+    if (!issueId || map.has(issueId)) continue;
+    map.set(issueId, String(row.id));
+  }
+  return map;
+}
+
 async function loadCountsByOpinion(opinionIds: string[]): Promise<Map<string, OpinionStanceCounts>> {
   const map = new Map<string, OpinionStanceCounts>();
   for (const id of opinionIds) {
@@ -147,6 +187,43 @@ async function loadCountsByOpinion(opinionIds: string[]): Promise<Map<string, Op
     const counts = map.get(id) ?? emptyStanceCounts();
     addStanceCount(counts, stance);
     map.set(id, counts);
+  }
+  return map;
+}
+
+async function loadViewerStances(
+  opinionIds: string[],
+  viewerUserId: string | null,
+): Promise<Map<string, OpinionCreateStance | 'blank' | null>> {
+  const map = new Map<string, OpinionCreateStance | 'blank' | null>();
+  for (const id of opinionIds) {
+    map.set(id, null);
+  }
+  if (opinionIds.length === 0 || !viewerUserId || !supabaseConfigured()) return map;
+
+  const supabase = getAnonSupabase();
+  const { data, error } = await supabase
+    .from('citizen_opinion_replies')
+    .select('opinion_id, stance, body')
+    .in('opinion_id', opinionIds)
+    .eq('author_user_id', viewerUserId)
+    .eq('is_removed', false);
+
+  if (error) {
+    console.error('loadViewerStances error:', error.message);
+    return map;
+  }
+
+  for (const row of data ?? []) {
+    const id = String(row.opinion_id);
+    const stance = row.stance;
+    if (!isOpinionStance(stance)) continue;
+    // Only consider quick stances (empty body) or blank as viewer stance for Reels
+    const body = row.body ?? '';
+    const isQuick = body.trim() === '' && (stance === 'for' || stance === 'imot');
+    if (isQuick || stance === 'blank') {
+      map.set(id, stance as OpinionCreateStance | 'blank');
+    }
   }
   return map;
 }
@@ -245,6 +322,7 @@ export async function listSakPickerOptions(
 async function listCitizenOpinionsInternal(
   limit: number,
   issueId?: string | null,
+  viewerUserId?: string | null,
 ): Promise<OpinionListItem[]> {
   if (!supabaseConfigured()) return [];
 
@@ -267,32 +345,42 @@ async function listCitizenOpinionsInternal(
   }
 
   const rows = (data ?? []) as OpinionRow[];
-  const issueTitles = await loadIssueTitles(
-    rows.map((row) => row.stortinget_issue_id).filter((id): id is string => Boolean(id)),
-  );
-  const countsById = await loadCountsByOpinion(rows.map((row) => row.id));
+  const issueIds = rows
+    .map((row) => row.stortinget_issue_id)
+    .filter((id): id is string => Boolean(id));
+  const opinionIds = rows.map((row) => row.id);
+  const [issueTitles, countsById, pollIdByIssue, viewerStances] = await Promise.all([
+    loadIssueTitles(issueIds),
+    loadCountsByOpinion(opinionIds),
+    loadPollIdByIssue(issueIds),
+    loadViewerStances(opinionIds, viewerUserId ?? null),
+  ]);
 
   return rows.map((row) => {
     const counts = countsById.get(row.id) ?? emptyStanceCounts();
-    if (isOpinionStance(row.stance)) {
-      addStanceCount(counts, row.stance);
-    }
+    // Do not add the original opinion's stance to counts — "supporters" are replies only (Enig → For).
     const issueTitle = row.stortinget_issue_id ? issueTitles.get(row.stortinget_issue_id) ?? null : null;
-    return mapOpinionRow(row, issueTitle, counts);
+    const pollId = row.stortinget_issue_id ? pollIdByIssue.get(row.stortinget_issue_id) ?? null : null;
+    const viewerStance = viewerStances.get(row.id) ?? null;
+    return mapOpinionRow(row, issueTitle, counts, pollId, viewerStance);
   });
 }
 
-export async function listCitizenOpinions(limit = OPINION_LIST_PAGE_SIZE): Promise<OpinionListItem[]> {
-  return listCitizenOpinionsInternal(limit);
+export async function listCitizenOpinions(
+  limit = OPINION_LIST_PAGE_SIZE,
+  viewerUserId?: string | null,
+): Promise<OpinionListItem[]> {
+  return listCitizenOpinionsInternal(limit, undefined, viewerUserId);
 }
 
 export async function listCitizenOpinionsByIssue(
   issueId: string,
   limit = OPINION_LIST_PAGE_SIZE,
+  viewerUserId?: string | null,
 ): Promise<OpinionListItem[]> {
   const id = issueId.trim();
   if (!id) return [];
-  return listCitizenOpinionsInternal(limit, id);
+  return listCitizenOpinionsInternal(limit, id, viewerUserId);
 }
 
 export type IssueOpinionSummary = {
@@ -301,11 +389,35 @@ export type IssueOpinionSummary = {
   latest: OpinionListItem[];
 };
 
+/**
+ * The most-endorsed for and imot opinions for a sak, plus the total count.
+ * Shown on the matching Reel so undecided voters can read the best argument
+ * on each side before voting (B3).
+ */
+export async function getIssueOpinionHighlights(
+  issueId: string,
+  viewerUserId?: string | null,
+): Promise<IssueOpinionHighlights> {
+  const opinions = await listCitizenOpinionsByIssue(issueId, 60, viewerUserId);
+  let topFor: OpinionListItem | null = null;
+  let topImot: OpinionListItem | null = null;
+  for (const opinion of opinions) {
+    if (opinion.stance === 'for' && (!topFor || opinion.counts.total > topFor.counts.total)) {
+      topFor = opinion;
+    }
+    if (opinion.stance === 'imot' && (!topImot || opinion.counts.total > topImot.counts.total)) {
+      topImot = opinion;
+    }
+  }
+  return { total: opinions.length, for: topFor, imot: topImot };
+}
+
 export async function getIssueOpinionSummary(
   issueId: string,
   previewLimit = 3,
+  viewerUserId?: string | null,
 ): Promise<IssueOpinionSummary> {
-  const opinions = await listCitizenOpinionsByIssue(issueId);
+  const opinions = await listCitizenOpinionsByIssue(issueId, previewLimit * 2, viewerUserId);
   const counts = emptyStanceCounts();
   for (const opinion of opinions) {
     addStanceCount(counts, opinion.stance);
@@ -362,8 +474,9 @@ export async function getCitizenOpinion(id: string, viewerUserId?: string | null
   }
 
   const row = data as OpinionRow;
-  const [issueTitles, replyResult] = await Promise.all([
+  const [issueTitles, pollIdByIssue, replyResult] = await Promise.all([
     loadIssueTitles(row.stortinget_issue_id ? [row.stortinget_issue_id] : []),
+    loadPollIdByIssue(row.stortinget_issue_id ? [row.stortinget_issue_id] : []),
     supabase
       .from('citizen_opinion_replies')
       .select(REPLY_SELECT)
@@ -381,11 +494,12 @@ export async function getCitizenOpinion(id: string, viewerUserId?: string | null
     .filter((item): item is OpinionReplyItem => Boolean(item));
 
   const counts = emptyStanceCounts();
-  if (isOpinionStance(row.stance)) addStanceCount(counts, row.stance);
+  // Do not add the original opinion's stance to counts — "supporters" are replies only (Enig → For).
   for (const reply of replies) addStanceCount(counts, reply.stance);
 
   const issueTitle = row.stortinget_issue_id ? issueTitles.get(row.stortinget_issue_id) ?? null : null;
-  const listItem = mapOpinionRow(row, issueTitle, counts);
+  const pollId = row.stortinget_issue_id ? pollIdByIssue.get(row.stortinget_issue_id) ?? null : null;
+  const listItem = mapOpinionRow(row, issueTitle, counts, pollId);
   const viewerReply = viewerUserId ? replies.find((reply) => reply.authorUserId === viewerUserId) ?? null : null;
 
   return {
@@ -446,21 +560,22 @@ export async function createCitizenOpinion(
 export async function createCitizenOpinionReply(
   userId: string,
   opinionId: string,
-  input: { body: string; stance: unknown },
+  input: { body: string; stance: unknown; quick?: boolean },
 ): Promise<string> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Tjenesten er ikke konfigurert');
   }
 
   const body = input.body.trim();
-  const errors = validateReplyDraft({ body, stance: input.stance });
+  const quick = input.quick === true;
+  const errors = validateReplyDraft({ body, stance: input.stance, quick });
   if (hasOpinionFieldErrors(errors) || !isOpinionStance(input.stance)) {
     throw new Error(errors.body || errors.stance || 'Ugyldig svar');
   }
   if (body.length > OPINION_BODY_MAX) {
     throw new Error('Ugyldig begrunnelse');
   }
-  if (requiresOpinionBody(input.stance) && body.length < OPINION_REPLY_BODY_MIN) {
+  if (requiresOpinionBody(input.stance) && body.length < OPINION_REPLY_BODY_MIN && !(quick && (input.stance === 'for' || input.stance === 'imot'))) {
     throw new Error('Ugyldig begrunnelse');
   }
 

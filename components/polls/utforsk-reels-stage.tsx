@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useState,
   useSyncExternalStore,
   type ReactNode,
@@ -15,8 +16,11 @@ import { AnimatePresence, motion } from 'motion/react';
 import { CoverflowCarousel } from '@/components/ui/coverflow-carousel';
 import { Stories, StoriesContent, StoriesHeader, StoriesCounter, StoriesNavigationInline, Story } from '@/components/ui/stories-carousel';
 import { ReelCarouselCard } from '@/components/polls/reel-vote-card';
+import { ReelOpinionCard } from '@/components/polls/reel-opinion-card';
+import { interleaveEvery, rotateToMatch } from '@/lib/feeds/mixed';
 import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import type { SystemReelFeedItem } from '@/lib/polls/types';
+import type { OpinionListItem } from '@/lib/opinions/types';
 import { cn } from '@/lib/utils';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { MODAL_TRANSITION } from '@/lib/motion/tokens';
@@ -65,6 +69,26 @@ function notifyHashChanged() {
   window.dispatchEvent(new Event('hashchange'));
 }
 
+/** Strip `?poll=` while keeping any other query params and the hash. */
+function urlWithPoll(pollId: string | null, hash: string): string {
+  const params = new URLSearchParams(window.location.search);
+  if (pollId) {
+    params.set('poll', pollId);
+  } else {
+    params.delete('poll');
+  }
+  const search = params.toString();
+  return `${window.location.pathname}${search ? `?${search}` : ''}${hash}`;
+}
+
+function readPollParam(): string | null {
+  try {
+    return new URLSearchParams(window.location.search).get('poll');
+  } catch {
+    return null;
+  }
+}
+
 function ReelsNavArrow({ direction }: { direction: 'forward' | 'back' }) {
   const iconClass = 'h-5 w-5';
   let icon: ReactNode;
@@ -90,27 +114,44 @@ function ReelsNavArrow({ direction }: { direction: 'forward' | 'back' }) {
 
 type UtforskReelsStageProps = {
   items: SystemReelFeedItem[];
+  /** Citizen opinions to weave between the Reels slides (B7). */
+  opinions?: OpinionListItem[];
   children: (api: { openReels: () => void; itemCount: number }) => ReactNode;
 };
 
-export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
+export function UtforskReelsStage({ items, opinions = [], children }: UtforskReelsStageProps) {
   const reducedMotion = usePrefersReducedMotion();
   const mounted = useIsMounted();
   const hash = useSyncExternalStore(subscribeLocationHash, getLocationHash, getServerLocationHash);
   const reelsOpen = hash === '#reels';
-  const [activePollId, setActivePollId] = useState<string | null>(null);
+  const [activePollId, setActivePollId] = useState<string | null>(() => readPollParam());
+  const [focusPollId, setFocusPollId] = useState<string | null>(() => readPollParam());
+
+  // Deeplink `?poll=<id>#reels` opens the carousel on that Reel (B4). The
+  // focused poll is seeded above from the query string; here we only normalize
+  // the URL so the hash matches.
+  useEffect(() => {
+    const pollId = readPollParam();
+    if (!pollId) return;
+    if (window.location.hash !== '#reels') {
+      window.history.replaceState(null, '', urlWithPoll(pollId, '#reels'));
+      notifyHashChanged();
+    }
+  }, []);
 
   const openReels = useCallback(() => {
+    setFocusPollId(null);
     if (window.location.hash !== '#reels') {
-      window.history.pushState(null, '', `${window.location.pathname}${window.location.search}#reels`);
+      window.history.pushState(null, '', urlWithPoll(null, '#reels'));
       notifyHashChanged();
     }
   }, []);
 
   const closeReels = useCallback(() => {
     setActivePollId(null);
+    setFocusPollId(null);
     if (window.location.hash === '#reels') {
-      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+      window.history.replaceState(null, '', urlWithPoll(null, ''));
       notifyHashChanged();
     }
   }, []);
@@ -157,6 +198,8 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
                   <ReelsPanel
                     active={reelsOpen}
                     items={items}
+                    opinions={opinions}
+                    focusPollId={focusPollId}
                     activePollId={activePollId}
                     onSelect={setActivePollId}
                     onClose={closeReels}
@@ -260,15 +303,23 @@ function ReelsNavCta({
   );
 }
 
+type ReelSlide =
+  | { kind: 'reel'; item: SystemReelFeedItem }
+  | { kind: 'opinion'; opinion: OpinionListItem };
+
 function ReelsPanel({
   active,
   items,
+  opinions,
+  focusPollId,
   activePollId,
   onSelect,
   onClose,
 }: {
   active: boolean;
   items: SystemReelFeedItem[];
+  opinions: OpinionListItem[];
+  focusPollId: string | null;
   activePollId: string | null;
   onSelect: (id: string | null) => void;
   onClose: () => void;
@@ -278,6 +329,21 @@ function ReelsPanel({
   const [centeredIndex, setCenteredIndex] = useState(0);
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  const slides = useMemo<ReelSlide[]>(() => {
+    const reelSlides: ReelSlide[] = items.map((item) => ({ kind: 'reel', item }));
+    const opinionSlides: ReelSlide[] = opinions.map((opinion) => ({ kind: 'opinion', opinion }));
+    return interleaveEvery(reelSlides, opinionSlides, 4);
+  }, [items, opinions]);
+
+  // Rotate the focused Reel to the front so the coverflow starts on it.
+  const orderedSlides = useMemo(() => {
+    if (!focusPollId) return slides;
+    return rotateToMatch(
+      slides,
+      (slide) => slide.kind === 'reel' && slide.item.poll.id === focusPollId,
+    );
+  }, [slides, focusPollId]);
 
   useEffect(() => {
     if (!active) return;
@@ -325,6 +391,30 @@ function ReelsPanel({
     return () => window.removeEventListener('keydown', onKey);
   }, [active, activePollId, cardOpen, centeredIndex, disclaimerOpen, items, onSelect, onClose, sheetOpen]);
 
+  const renderSlide = (slide: ReelSlide, mode: 'coverflow' | 'stories') => {
+    if (slide.kind === 'reel') {
+      return (
+        <ReelCarouselCard
+          key={`reel-${slide.item.poll.id}`}
+          item={slide.item}
+          showBadge={false}
+          selected={activePollId === slide.item.poll.id}
+          onSelect={() => onSelect(slide.item.poll.id)}
+          onBack={() => onSelect(null)}
+          mode={mode}
+        />
+      );
+    }
+    return (
+        <ReelOpinionCard
+          key={`opinion-${slide.opinion.id}`}
+          opinion={slide.opinion}
+          mode={mode}
+          currentPollId={focusPollId ?? items[0]?.poll.id ?? null}
+        />
+      );
+  };
+
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col">
       {/* Header: back + REELS label so back never covers the card badge */}
@@ -369,7 +459,7 @@ function ReelsPanel({
         </p>
       ) : null}
 
-      {items.length === 0 ? (
+      {orderedSlides.length === 0 ? (
         <div className="flex flex-1 items-center justify-center py-12 pl-[max(1.5rem,env(safe-area-inset-left,0px))] pr-[max(1.5rem,env(safe-area-inset-right,0px))]">
           <EmptyLineState className="text-white/80">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/15">
@@ -385,58 +475,44 @@ function ReelsPanel({
       ) : isDesktop ? (
         /* Desktop (lg+): 21st Coverflow rack — not fullscreen single cards, no sideways peek bleed */
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
-<CoverflowCarousel
-              label="Reels"
-              loop={items.length >= 3}
-              showPagination
-              showNavigation
-              interactionLocked={cardOpen}
-              onIndexChange={setCenteredIndex}
-              rotate={40}
-              depth={0.55}
-              perspective={2.8}
-              cardWidth="clamp(220px, 28vw, 320px)"
-              cardHeight="clamp(320px, 58dvh, 440px)"
-              gap={0.08}
-              cardClassName="rounded-2xl border border-white/10 bg-[#00205b]"
-              slides={items.map((item) => (
-                <ReelCarouselCard
-                  key={item.poll.id}
-                  item={item}
-                  showBadge={false}
-                  selected={activePollId === item.poll.id}
-                  onSelect={() => onSelect(item.poll.id)}
-                  onBack={() => onSelect(null)}
-                  mode="coverflow"
-                  onSheetOpenChange={setSheetOpen}
-                />
-              ))}
-            />
+          <CoverflowCarousel
+            label="Reels"
+            loop={orderedSlides.length >= 3}
+            showPagination
+            showNavigation
+            interactionLocked={cardOpen}
+            onIndexChange={setCenteredIndex}
+            rotate={40}
+            depth={0.55}
+            perspective={2.8}
+            cardWidth="clamp(220px, 28vw, 320px)"
+            cardHeight="clamp(320px, 58dvh, 440px)"
+            gap={0.08}
+            cardClassName="rounded-2xl border border-white/10 bg-[#00205b]"
+            slides={orderedSlides.map((slide) => renderSlide(slide, 'coverflow'))}
+          />
         </div>
       ) : (
         /* Mobile + tablet (<lg): Stories carousel (vertikal Tiktok-lignende, full høyde) */
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
           <div className="relative mx-auto flex min-h-0 w-full max-w-[26rem] flex-1 flex-col">
-            <Stories loop={items.length > 1} onIndexChange={setCenteredIndex}>
-              <div className="flex items-center justify-between gap-1.5 px-2 pb-1">
-                <div className="flex-1 min-w-0 overflow-x-auto pr-2">
-                  <StoriesHeader className="px-0" />
-                </div>
-                <StoriesCounter className="shrink-0 tabular-nums text-[11px] sm:text-xs" />
-                <StoriesNavigationInline className="shrink-0" />
+            <Stories loop={orderedSlides.length > 1} onIndexChange={setCenteredIndex}>
+              <div className="flex items-center justify-between px-2 pb-1">
+                <StoriesHeader className="flex-1 px-0" />
+                <StoriesCounter className="ml-2 shrink-0" />
+                <StoriesNavigationInline className="ml-2 shrink-0" />
               </div>
               <StoriesContent className="flex-1 min-h-0">
-                {items.map((item) => (
-                  <Story key={item.poll.id} className="flex flex-col">
-                    <ReelCarouselCard
-                      item={item}
-                      showBadge={false}
-                      selected={activePollId === item.poll.id}
-                      onSelect={() => onSelect(item.poll.id)}
-                      onBack={() => onSelect(null)}
-                      mode="stories"
-                      onSheetOpenChange={setSheetOpen}
-                    />
+                {orderedSlides.map((slide) => (
+                  <Story
+                    key={
+                      slide.kind === 'reel'
+                        ? `reel-${slide.item.poll.id}`
+                        : `opinion-${slide.opinion.id}`
+                    }
+                    className="flex flex-col"
+                  >
+                    {renderSlide(slide, 'stories')}
                   </Story>
                 ))}
               </StoriesContent>

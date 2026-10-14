@@ -1,7 +1,7 @@
 'use client';
 
 import { Share2, Check } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 type ShareButtonProps = {
   id: string;
@@ -12,10 +12,20 @@ type ShareButtonProps = {
 export default function ShareButton({ id, title, className = '' }: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
   const [url, setUrl] = useState('');
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setUrl(`${window.location.origin}/dashboard/sak/${id}`);
   }, [id]);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimer.current) {
+        clearTimeout(resetTimer.current);
+        resetTimer.current = null;
+      }
+    };
+  }, []);
 
   const handleShare = async () => {
     const shareData = {
@@ -43,7 +53,11 @@ export default function ShareButton({ id, title, className = '' }: ShareButtonPr
     if (!url) return;
     navigator.clipboard.writeText(url);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+    resetTimer.current = setTimeout(() => {
+      setCopied(false);
+      resetTimer.current = null;
+    }, 2500);
   };
 
   return (
