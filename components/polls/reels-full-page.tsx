@@ -13,12 +13,9 @@ type ReelsFullPageProps = {
 
 export default function ReelsFullPage({ items, initialPollId }: ReelsFullPageProps) {
   const router = useRouter();
-  const [activePollId, setActivePollId] = useState<string | null>(() => {
-    if (initialPollId && items.some((item) => item.poll.id === initialPollId)) {
-      return initialPollId;
-    }
-    return null;
-  });
+  // Deep link centres the requested card; it does not flip it into vote mode
+  // (vote mode locks the carousel and left the arrows disabled at 1/N).
+  const [activePollId, setActivePollId] = useState<string | null>(null);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -49,6 +46,7 @@ export default function ReelsFullPage({ items, initialPollId }: ReelsFullPagePro
         active={true}
         items={items}
         activePollId={activePollId}
+        initialPollId={initialPollId ?? null}
         onSelect={setActivePollId}
         onClose={handleClose}
       />

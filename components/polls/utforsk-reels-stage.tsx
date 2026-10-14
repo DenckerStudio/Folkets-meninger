@@ -81,6 +81,7 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
   const pathname = usePathname();
   const reelsOpen = pathname === routes.utforskReels();
   const [activePollId, setActivePollId] = useState<string | null>(null);
+  const [initialPollId, setInitialPollId] = useState<string | null>(null);
   const initializedRef = useRef(false);
 
   const openReels = useCallback(() => {
@@ -110,9 +111,9 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
     const searchParams = new URLSearchParams(window.location.search);
     const pollId = searchParams.get('poll');
     if (pollId && items.some((item) => item.poll.id === pollId)) {
-      // Use a timeout to avoid synchronous setState in effect
+      // Centre the requested card (do not flip it into vote mode). Timeout avoids sync setState in effect.
       setTimeout(() => {
-        setActivePollId(pollId);
+        setInitialPollId(pollId);
       }, 0);
     }
     initializedRef.current = true;
@@ -161,6 +162,7 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
                     active={reelsOpen}
                     items={items}
                     activePollId={activePollId}
+                    initialPollId={initialPollId}
                     onSelect={setActivePollId}
                     onClose={closeReels}
                   />
@@ -267,18 +269,24 @@ export function ReelsPanel({
   active,
   items,
   activePollId,
+  initialPollId = null,
   onSelect,
   onClose,
 }: {
   active: boolean;
   items: SystemReelFeedItem[];
   activePollId: string | null;
+  initialPollId?: string | null;
   onSelect: (id: string | null) => void;
   onClose: () => void;
 }) {
   const isDesktop = useIsDesktopLg();
   const cardOpen = Boolean(activePollId);
-  const [centeredIndex, setCenteredIndex] = useState(0);
+  const initialIndex = Math.max(
+    0,
+    initialPollId ? items.findIndex((item) => item.poll.id === initialPollId) : 0,
+  );
+  const [centeredIndex, setCenteredIndex] = useState(initialIndex);
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -389,6 +397,8 @@ export function ReelsPanel({
         /* Desktop (lg+): 21st Coverflow rack — not fullscreen single cards, no sideways peek bleed */
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
 <CoverflowCarousel
+              key={`coverflow-${initialIndex}`}
+              initialIndex={initialIndex}
               label="Reels"
               loop={items.length >= 3}
               showPagination
@@ -420,7 +430,12 @@ export function ReelsPanel({
         /* Mobile + tablet (<lg): Stories carousel (vertikal Tiktok-lignende, full høyde) */
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
           <div className="relative mx-auto flex min-h-0 w-full max-w-[26rem] flex-1 flex-col">
-            <Stories loop={items.length > 1} onIndexChange={setCenteredIndex}>
+            <Stories
+              key={`stories-${initialIndex}`}
+              initialIndex={initialIndex}
+              loop={items.length > 1}
+              onIndexChange={setCenteredIndex}
+            >
               <div className="flex items-center justify-between gap-1.5 px-2 pb-1">
                 <div className="flex-1 min-w-0 overflow-x-auto pr-2">
                   <StoriesHeader className="px-0" />

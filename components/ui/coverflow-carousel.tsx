@@ -44,6 +44,8 @@ export interface CoverflowCarouselProps {
    * being clipped on short viewports.
    */
   fitHeight?: boolean;
+  /** Card centred on mount (e.g. deep link). Applied synchronously so the first paint is already centred. */
+  initialIndex?: number;
 }
 
 /**
@@ -69,15 +71,17 @@ export function CoverflowCarousel({
   onIndexChange,
   interactionLocked = false,
   fitHeight = false,
+  initialIndex = 0,
 }: CoverflowCarouselProps) {
   const count = slides.length;
+  const startIndex = count > 0 ? Math.min(Math.max(0, Math.floor(initialIndex)), count - 1) : 0;
 
   const frameRef = React.useRef<HTMLDivElement>(null);
   const cardRefs = React.useRef<(HTMLDivElement | null)[]>([]);
   /** Fractional card index at the centre. The single source of truth. */
-  const posRef = React.useRef(0);
+  const posRef = React.useRef(startIndex);
   /** Where the current settle is headed. */
-  const targetRef = React.useRef(0);
+  const targetRef = React.useRef(startIndex);
   const widthRef = React.useRef(0);
   const rafRef = React.useRef<number | null>(null);
   const dragRef = React.useRef<{
@@ -90,7 +94,7 @@ export function CoverflowCarousel({
     moved: boolean;
   } | null>(null);
 
-  const [selected, setSelected] = React.useState(0);
+  const [selected, setSelected] = React.useState(startIndex);
   const [fittedCardHeight, setFittedCardHeight] = React.useState<number | null>(null);
   const onIndexChangeRef = React.useRef(onIndexChange);
 

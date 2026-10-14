@@ -21,8 +21,8 @@ export default async function ReelsPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const reelItems = await listSystemReelFeedItems(user?.id ?? null);
   const { poll } = await searchParams;
+  const reelItems = await listSystemReelFeedItems(user?.id ?? null, 40, poll ?? null);
 
   return <ReelsFullPage items={reelItems} initialPollId={poll} />;
 }
