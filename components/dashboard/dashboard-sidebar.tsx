@@ -39,7 +39,7 @@ export default function DashboardSidebar({ variant = 'desktop', onNavigate }: Da
             onClick={onNavigate}
             data-tour={item.href === routes.utforsk ? 'utforsk' : undefined}
             className={cn(
-              'flex items-center gap-3 font-medium transition-colors',
+              'flex min-h-11 items-center gap-3 font-medium transition-colors',
               isDrawer
                 ? cn(
                     'rounded-lg border-l-[3px] px-3 py-2.5 text-[0.9375rem]',
