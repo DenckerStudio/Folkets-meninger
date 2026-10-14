@@ -21,6 +21,7 @@ import { TabUnderline } from '@/components/motion/tab-underline';
 import { PageHeader } from '@/components/page-header';
 import { UtforskReelsStage, ReelsEntryCta } from '@/components/polls/utforsk-reels-stage';
 import { useAuth } from '@/hooks/use-auth';
+import { useIsMounted } from '@/hooks/use-is-mounted';
 import { routes } from '@/lib/routes';
 import { PREFERENCE_KEYS } from '@/lib/preferences/keys';
 import { usePersistedState } from '@/hooks/use-persisted-state';
@@ -79,6 +80,7 @@ export default function ExploreClient({
 }) {
   const [issues] = useState(initialIssues);
   const { user } = useAuth();
+  const isMounted = useIsMounted();
   const [userStances, setUserStances] = useState<Record<string, IssueStance>>({});
   const [stanceHistoryLoaded, setStanceHistoryLoaded] = useState(false);
 
@@ -223,6 +225,20 @@ export default function ExploreClient({
     }
     return 0;
   });
+
+  // Ensure Utforsk is not empty by default on mobile: if filters produce no results
+  // but issues exist, reset to default filters (only on client after hydration)
+  const allDefaultFilters =
+    searchQuery === '' &&
+    selectedCategory === 'Alle kategorier' &&
+    selectedStatus === 'Alle statuser' &&
+    selectedSakKind === 'Alle sakstyper' &&
+    activeAiLabels.length === 0;
+  if (displayedIssues.length === 0 && issues.length > 0 && !allDefaultFilters && isMounted) {
+    setFilters(DEFAULT_UTFORSK_FILTERS);
+    // Recompute with default filters
+    displayedIssues = issues;
+  }
 
   return (
     <UtforskReelsStage items={reelItems}>
@@ -405,7 +421,7 @@ export default function ExploreClient({
                               {sakKindLabel}
                             </span>
                           ) : null}
-                          {issue.category && issue.category !== sakKindLabel ? (
+                          {issue.category && (!issue.sakKind || issue.category !== sakKindLabel) ? (
                             <span
                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SAK_CATEGORY_BADGE_CLASS}`}
                             >

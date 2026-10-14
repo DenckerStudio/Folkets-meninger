@@ -77,7 +77,10 @@ export function FilterTokenBar({ tokens, leading, className, 'aria-label': ariaL
     }
     const rect = event.currentTarget.getBoundingClientRect();
     const left = Math.max(8, Math.min(rect.left, window.innerWidth - MENU_WIDTH - 8));
-    setMenuPosition({ top: rect.bottom + 8, left });
+    const menuHeight = 384;
+    const spaceBelow = window.innerHeight - rect.bottom - 8;
+    const top = spaceBelow >= menuHeight ? rect.bottom + 8 : rect.top - menuHeight - 8;
+    setMenuPosition({ top: Math.max(8, top), left });
     setOpenId(token.id);
   }
 

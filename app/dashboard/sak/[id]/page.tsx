@@ -239,9 +239,11 @@ export default async function SakPage({
                 className={SAK_KIND_BADGE_CLASS}
               />
             ) : null}
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${SAK_CATEGORY_BADGE_CLASS}`}>
-              {sak.category}
-            </span>
+            {sak.category && (!displaySakKind || sak.category !== getSakKindLabel(displaySakKind)) ? (
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${SAK_CATEGORY_BADGE_CLASS}`}>
+                {sak.category}
+              </span>
+            ) : null}
             {sakType ? (
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${SAK_TYPE_BADGE_CLASS}`}>
                 {sakType}

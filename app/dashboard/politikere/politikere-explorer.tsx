@@ -117,6 +117,7 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
     page: 1,
   });
   const listRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = usePersistedState(
     PREFERENCE_KEYS.politikere.search,
     '',
@@ -179,7 +180,7 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
         key: filterKey,
         page: Math.min(Math.max(1, next), totalPages),
       });
-      listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     },
     [filterKey, totalPages],
   );
@@ -206,17 +207,17 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
                   id={`party-chip-${name}`}
                   href={active ? routes.politikere : routes.parti(name)}
                   className={cn(
-                    'inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium',
+                    'inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium whitespace-nowrap',
                     active
                       ? 'border-brand bg-brand/10 text-brand'
                       : 'border-border bg-card text-foreground hover:border-brand/40',
                   )}
                   aria-current={active ? 'page' : undefined}
                 >
-                  <PartyMark label={name} className="h-8 w-8">
+                  <PartyMark label={name} className="h-8 w-8 shrink-0 overflow-visible">
                     <PartyLogo partyName={name} decorative className="h-8 w-8" />
                   </PartyMark>
-                  <span>{name}</span>
+                  <span className="whitespace-nowrap">{name}</span>
                 </Link>
               );
             })}
@@ -279,7 +280,7 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
             />
           ) : listedPolitikere.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div ref={gridRef} className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {pagedPolitikere.map((rep) => (
                   <PolitikerCard key={rep.id} rep={rep} />
                 ))}
