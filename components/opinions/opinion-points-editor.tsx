@@ -63,59 +63,67 @@ export function OpinionPointsEditor({ value, onChange, error }: OpinionPointsEdi
           const atMax = point.text.length >= OPINION_POINT_TEXT_MAX;
           return (
             <li key={index} className="space-y-1">
-              <div className="flex items-stretch overflow-hidden rounded-2xl border border-border bg-background">
-                <div className="flex">
-                  {OPINION_POINT_STANCES.map((stance) => {
-                    const visual = STANCE_VISUAL[stance];
-                    const selected = point.stance === stance;
-                    return (
-                      <button
-                        key={stance}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() => updatePoint(index, { stance })}
-                        className={cn(
-                          'min-w-[4.25rem] border-0 px-2.5 text-xs font-semibold',
-                          !selected && (stance === 'imot' ? 'text-brand-accent' : 'text-brand'),
-                        )}
-                        style={
-                          selected
-                            ? { backgroundColor: visual.bg, color: visual.fg, boxShadow: 'none' }
-                            : { boxShadow: 'none' }
-                        }
-                      >
-                        {visual.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <input
-                  type="text"
-                  value={point.text}
-                  maxLength={OPINION_POINT_TEXT_MAX}
-                  onChange={(event) => updatePoint(index, { text: event.target.value })}
-                  placeholder={point.stance === 'for' ? 'Argument for …' : 'Argument imot …'}
-                  className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-                  aria-invalid={tooShort || undefined}
-                />
-                <span
-                  className={cn(
-                    'self-center pr-2 text-[11px] tabular-nums',
-                    tooShort || atMax ? 'font-medium text-amber-700 dark:text-amber-300' : 'text-muted-foreground',
-                  )}
-                >
-                  {length}/{OPINION_POINT_TEXT_MAX}
-                </span>
-                {value.length > OPINION_POINTS_MIN ? (
-                  <button
-                    type="button"
-                    aria-label="Fjern kulepunkt"
-                    onClick={() => removePoint(index)}
-                    className="px-2.5 text-muted-foreground hover:text-foreground"
+              <div className="rounded-2xl border border-border bg-background p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div
+                    role="group"
+                    aria-label={`Standpunkt for kulepunkt ${index + 1}`}
+                    className="inline-flex overflow-hidden rounded-xl border border-border"
                   >
-                    <X className="h-4 w-4" />
-                  </button>
-                ) : null}
+                    {OPINION_POINT_STANCES.map((stance) => {
+                      const visual = STANCE_VISUAL[stance];
+                      const selected = point.stance === stance;
+                      return (
+                        <button
+                          key={stance}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => updatePoint(index, { stance })}
+                          className={cn(
+                            'min-h-11 min-w-[4.5rem] border-0 px-3 text-xs font-semibold',
+                            !selected && (stance === 'imot' ? 'text-brand-accent' : 'text-brand'),
+                          )}
+                          style={
+                            selected
+                              ? { backgroundColor: visual.bg, color: visual.fg, boxShadow: 'none' }
+                              : { boxShadow: 'none' }
+                          }
+                        >
+                          {visual.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {value.length > OPINION_POINTS_MIN ? (
+                    <button
+                      type="button"
+                      aria-label="Fjern kulepunkt"
+                      onClick={() => removePoint(index)}
+                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                </div>
+                <div className="relative">
+                  <textarea
+                    value={point.text}
+                    maxLength={OPINION_POINT_TEXT_MAX}
+                    rows={2}
+                    onChange={(event) => updatePoint(index, { text: event.target.value })}
+                    placeholder={point.stance === 'for' ? 'Argument for …' : 'Argument imot …'}
+                    className="w-full resize-y rounded-xl border border-border bg-card px-3 py-2.5 pb-6 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-brand/30"
+                    aria-invalid={tooShort || undefined}
+                  />
+                  <span
+                    className={cn(
+                      'pointer-events-none absolute bottom-2 right-3 text-[11px] tabular-nums',
+                      tooShort || atMax ? 'font-medium text-amber-700 dark:text-amber-300' : 'text-muted-foreground',
+                    )}
+                  >
+                    {length}/{OPINION_POINT_TEXT_MAX}
+                  </span>
+                </div>
               </div>
               {tooShort ? (
                 <p className="px-1 text-xs font-medium text-amber-700 dark:text-amber-300">

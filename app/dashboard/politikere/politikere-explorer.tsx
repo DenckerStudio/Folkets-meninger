@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ArrowRight, Landmark, MapPin, Search, ShieldCheck } from 'lucide-react';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { Pagination } from '@/components/ui/pagination';
 import { PartyMark } from '@/components/motion/party-mark';
 import { SectionSettle } from '@/components/motion/section-settle';
 import { PartyLogo } from '@/components/politikere/party-logo';
@@ -64,15 +65,15 @@ function PolitikerCard({ rep }: { rep: PolitikerOversikt }) {
           </div>
         </Link>
 
-        <div className="flex flex-col justify-between gap-3 border-t border-border bg-muted/40 px-6 py-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col items-stretch gap-3 border-t border-border bg-muted/40 px-6 py-4">
           <Link
             href={routes.parti(rep.parti.navn)}
-            className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-foreground hover:text-brand"
+            className="flex w-full min-w-0 items-center gap-2 text-sm font-medium text-foreground hover:text-brand"
           >
             <PartyMark label={rep.parti.navn} className="h-8 w-8 shrink-0">
               <PartyLogo partyName={rep.parti.navn} className="h-8 w-8" />
             </PartyMark>
-            <span className="truncate">{rep.parti.navn}</span>
+            <span className="min-w-0 flex-1 break-words">{rep.parti.navn}</span>
           </Link>
           <Link
             href={routes.politiker(String(rep.id))}
@@ -106,9 +107,18 @@ function matchesSearch(rep: PolitikerOversikt, query: string): boolean {
   );
 }
 
+const PAGE_SIZE = 24;
+
 export default function PolitikereExplorer({ politikere }: PolitikereExplorerProps) {
   const searchParams = useSearchParams();
   const selectedParty = searchParams.get('parti');
+  const [pageState, setPageState] = useState<{ key: string; page: number }>({
+    key: '',
+    page: 1,
+  });
+  const listRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const hasMountedRef = useRef(false);
   const [searchQuery, setSearchQuery] = usePersistedState(
     PREFERENCE_KEYS.politikere.search,
     '',
@@ -154,6 +164,45 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
     return filteredPolitikere.filter((p) => !regjeringsIds.has(p.id));
   }, [filteredPolitikere, regjeringsmedlemmer, showRegjeringSection]);
 
+  const filterKey = `${searchQuery.trim().toLowerCase()}|${selectedParty ?? ''}`;
+  const totalPages = Math.max(1, Math.ceil(listedPolitikere.length / PAGE_SIZE));
+  const currentPage = Math.min(
+    pageState.key === filterKey ? pageState.page : 1,
+    totalPages,
+  );
+  const pagedPolitikere = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return listedPolitikere.slice(start, start + PAGE_SIZE);
+  }, [listedPolitikere, currentPage]);
+
+  const changePage = useCallback(
+    (next: number) => {
+      setPageState({
+        key: filterKey,
+        page: Math.min(Math.max(1, next), totalPages),
+      });
+    },
+    [filterKey, totalPages],
+  );
+
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    const listEl = listRef.current;
+    if (!listEl) return;
+    const heading = listEl.querySelector('h2, h3, [role="heading"]') as HTMLElement | null;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const rect = listEl.getBoundingClientRect();
+        const targetY = rect.top + window.scrollY - 96;
+        window.scrollTo({ top: targetY, behavior: 'auto' });
+        heading?.focus?.({ preventScroll: true });
+      });
+    });
+  }, [currentPage]);
+
   if (missingLogos.length > 0) {
     return (
       <p className="rounded-2xl border border-border bg-card px-4 py-4 text-sm text-muted-foreground">
@@ -176,17 +225,17 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
                   id={`party-chip-${name}`}
                   href={active ? routes.politikere : routes.parti(name)}
                   className={cn(
-                    'inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium',
+                    'inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium whitespace-nowrap',
                     active
                       ? 'border-brand bg-brand/10 text-brand'
                       : 'border-border bg-card text-foreground hover:border-brand/40',
                   )}
                   aria-current={active ? 'page' : undefined}
                 >
-                  <PartyMark label={name} className="h-8 w-8">
+                  <PartyMark label={name} className="h-8 w-8 shrink-0 overflow-visible">
                     <PartyLogo partyName={name} decorative className="h-8 w-8" />
                   </PartyMark>
-                  <span>{name}</span>
+                  <span className="whitespace-nowrap">{name}</span>
                 </Link>
               );
             })}
@@ -237,22 +286,41 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
       ) : null}
 
       <SectionSettle>
-        {listedPolitikere.length === 0 && !showRegjeringSection ? (
-          <EmptyState
-            title="Ingen politikere matcher søket"
-            description={
-              selectedParty
-                ? `Ingen politikere funnet for ${selectedParty}${searchQuery.trim() ? ` som matcher «${searchQuery}»` : ''}.`
-                : `Ingen politikere funnet som matcher «${searchQuery}».`
-            }
-          />
-        ) : listedPolitikere.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {listedPolitikere.map((rep) => (
-              <PolitikerCard key={rep.id} rep={rep} />
-            ))}
-          </div>
-        ) : null}
+        <div ref={listRef} className="scroll-mt-24 space-y-6" style={{ overflowAnchor: 'none' }}>
+          {listedPolitikere.length === 0 && !showRegjeringSection ? (
+            <EmptyState
+              title="Ingen politikere matcher søket"
+              description={
+                selectedParty
+                  ? `Ingen politikere funnet for ${selectedParty}${searchQuery.trim() ? ` som matcher «${searchQuery}»` : ''}.`
+                  : `Ingen politikere funnet som matcher «${searchQuery}».`
+              }
+            />
+          ) : listedPolitikere.length > 0 ? (
+            <>
+              <div ref={gridRef} className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {pagedPolitikere.map((rep) => (
+                  <PolitikerCard key={rep.id} rep={rep} />
+                ))}
+              </div>
+              {totalPages > 1 ? (
+                <div className="space-y-3">
+                  <p className="text-center text-sm text-muted-foreground">
+                    Viser {(currentPage - 1) * PAGE_SIZE + 1}–
+                    {Math.min(currentPage * PAGE_SIZE, listedPolitikere.length)} av{' '}
+                    {listedPolitikere.length} politikere
+                  </p>
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={changePage}
+                    ariaLabel="Paginering for politikere"
+                  />
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </div>
       </SectionSettle>
     </div>
   );

@@ -7,6 +7,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import useMeasure from "react-use-measure";
 import { MoreHorizontalCircle01Icon } from "@hugeicons/core-free-icons";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useBodyOverlayFlag } from "@/hooks/use-body-overlay";
 import { cn } from "@/lib/utils";
 
 export type SmoothDropdownItem = {
@@ -260,6 +261,7 @@ export function SmoothDropdown({
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [contentRef, contentBounds] = useMeasure();
+  useBodyOverlayFlag(isOpen);
 
   useEffect(() => {
     if (!isOpen || isMobile) return;
@@ -306,7 +308,7 @@ export function SmoothDropdown({
     <button
       type="button"
       onClick={() => setIsOpen(true)}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-popover text-muted-foreground shadow-sm transition-colors hover:bg-muted"
+      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-popover text-muted-foreground shadow-sm transition-colors hover:bg-muted"
       aria-label={triggerAriaLabel}
       aria-expanded={isOpen}
     >
@@ -341,7 +343,7 @@ export function SmoothDropdown({
   }
 
   return (
-    <div ref={containerRef} className={cn("relative h-10 w-10 not-prose", className)}>
+    <div ref={containerRef} className={cn("relative h-11 w-11 not-prose", className)}>
       <motion.div
         layout
         initial={false}
@@ -380,7 +382,7 @@ export function SmoothDropdown({
           <span className="sr-only">{triggerAriaLabel}</span>
         </motion.div>
 
-        <div ref={contentRef}>
+        <div ref={contentRef} className="max-h-[min(70vh,28rem)] overflow-y-auto overscroll-contain">
           <motion.div
             layout
             initial={false}

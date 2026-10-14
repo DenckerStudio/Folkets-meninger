@@ -73,7 +73,7 @@ export function Header() {
         <div className="flex items-center gap-2 sm:gap-3">
           <NotificationsBell enabled={isLoggedIn} loginHref={loginHref} />
           {inDashboard ? (
-            <DashboardNavMenuButton className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background text-foreground transition-colors hover:bg-accent hover:text-accent-foreground xl:hidden" />
+            <DashboardNavMenuButton className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-input bg-background text-foreground transition-colors hover:bg-accent hover:text-accent-foreground xl:hidden" />
           ) : null}
           {isLoggedIn ? (
             <div className="hidden md:block">
@@ -101,7 +101,7 @@ export function Header() {
 function ProfileMenuDropdownFallback() {
   return (
     <div
-      className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-popover"
+      className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-popover"
       aria-hidden
     />
   );

@@ -1,17 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { Search, Filter, ArrowRight } from 'lucide-react';
+import { Search, ArrowRight } from 'lucide-react';
 import type { SakListItem } from '@/lib/stortinget';
 import { getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS } from '@/lib/sak-status';
 import { SakProcessingBadge } from '@/components/sak/sak-meta';
 import { formatVotingDaysLeftLabel } from '@/lib/sak-voting-window';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { LayoutGroup } from 'motion/react';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
-import { dashboardControlClass, dashboardSearchClass } from '@/components/dashboard/filter-field';
+import { dashboardSearchClass } from '@/components/dashboard/filter-field';
+import { FilterTokenBar, type FilterToken } from '@/components/ui/filter-token-bar';
 import { SurfaceCard } from '@/components/dashboard/surface-card';
 import { MotionList, MotionListRow } from '@/components/motion/list-row';
 import { Pressable } from '@/components/motion/pressable';
@@ -20,6 +21,7 @@ import { TabUnderline } from '@/components/motion/tab-underline';
 import { PageHeader } from '@/components/page-header';
 import { UtforskReelsStage, ReelsEntryCta } from '@/components/polls/utforsk-reels-stage';
 import { useAuth } from '@/hooks/use-auth';
+import { useIsMounted } from '@/hooks/use-is-mounted';
 import { routes } from '@/lib/routes';
 import { PREFERENCE_KEYS } from '@/lib/preferences/keys';
 import { usePersistedState } from '@/hooks/use-persisted-state';
@@ -78,6 +80,7 @@ export default function ExploreClient({
 }) {
   const [issues] = useState(initialIssues);
   const { user } = useAuth();
+  const isMounted = useIsMounted();
   const [userStances, setUserStances] = useState<Record<string, IssueStance>>({});
   const [stanceHistoryLoaded, setStanceHistoryLoaded] = useState(false);
 
@@ -92,14 +95,29 @@ export default function ExploreClient({
   const activeAiLabels = selectedAiLabels ?? [];
   const firstOpenIssue = issues.find((issue) => issue.votingOpen && issue.status !== 'closed');
 
-  const setSearchQuery = (searchQuery: string) => setFilters((prev) => ({ ...prev, searchQuery }));
-  const setSelectedCategory = (selectedCategory: string) =>
+  // Track if user has interacted with filters this session (excluding searchQuery)
+  const [userTouchedFilters, setUserTouchedFilters] = useState(false);
+  const filtersResetRef = useRef(false);
+
+  const setSelectedCategory = (selectedCategory: string) => {
+    setUserTouchedFilters(true);
     setFilters((prev) => ({ ...prev, selectedCategory }));
-  const setSelectedStatus = (selectedStatus: string) => setFilters((prev) => ({ ...prev, selectedStatus }));
-  const setSelectedSakKind = (selectedSakKind: string) => setFilters((prev) => ({ ...prev, selectedSakKind }));
-  const setSortBy = (sortBy: string) => setFilters((prev) => ({ ...prev, sortBy }));
+  };
+  const setSelectedStatus = (selectedStatus: string) => {
+    setUserTouchedFilters(true);
+    setFilters((prev) => ({ ...prev, selectedStatus }));
+  };
+  const setSelectedSakKind = (selectedSakKind: string) => {
+    setUserTouchedFilters(true);
+    setFilters((prev) => ({ ...prev, selectedSakKind }));
+  };
+  const setSortBy = (sortBy: string) => {
+    setUserTouchedFilters(true);
+    setFilters((prev) => ({ ...prev, sortBy }));
+  };
 
   const toggleAiLabel = (label: string) => {
+    setUserTouchedFilters(true);
     setFilters((prev) => {
       const current = prev.selectedAiLabels ?? [];
       const next = current.includes(label)
@@ -108,6 +126,79 @@ export default function ExploreClient({
       return { ...prev, selectedAiLabels: next };
     });
   };
+
+  const setSearchQuery = (searchQuery: string) => setFilters((prev) => ({ ...prev, searchQuery }));
+
+  // Compute displayed issues based on current filters
+  const computeDisplayedIssues = useCallback(() => {
+    let result = issues;
+    if (selectedCategory !== 'Alle kategorier') {
+      result = result.filter((issue) => issue.category === selectedCategory);
+    }
+    if (selectedStatus === 'Under behandling' || selectedStatus === 'Åpne for stemmer') {
+      result = result.filter((issue) => issue.status !== 'closed');
+    } else if (selectedStatus === 'Ferdigbehandlet / Historikk') {
+      result = result.filter((issue) => issue.status === 'closed');
+    }
+    if (selectedSakKind === 'Lovforslag') {
+      result = result.filter((issue) => issue.sakKind === 'lovforslag');
+    } else if (selectedSakKind === 'Representantforslag') {
+      result = result.filter((issue) => issue.sakKind === 'representantforslag');
+    }
+    if (searchQuery.trim() !== '') {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (issue) =>
+          issue.title.toLowerCase().includes(query) ||
+          issue.summary.toLowerCase().includes(query) ||
+          issue.id.toString().includes(query)
+      );
+    }
+    if (activeAiLabels.length > 0) {
+      result = result.filter((issue) => {
+        const labels = issueLabels[String(issue.id)] ?? [];
+        return activeAiLabels.some((label) => labels.includes(label));
+      });
+    }
+    return [...result].sort((a, b) => {
+      if (sortBy === 'Nyeste først') {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      }
+      if (sortBy === 'Mest engasjement') {
+        return b.votes.total - a.votes.total;
+      }
+      if (sortBy === 'Snart votering') {
+        return votingUrgency(a) - votingUrgency(b);
+      }
+      return 0;
+    });
+  }, [issues, selectedCategory, selectedStatus, selectedSakKind, searchQuery, activeAiLabels, sortBy, issueLabels]);
+
+  const displayedIssues = computeDisplayedIssues();
+
+  // On first mount, if persisted filters (from storage) yield 0 results but issues exist
+  // and user hasn't touched filters this session, reset non-search filters to defaults once
+  useEffect(() => {
+    if (!isMounted) return;
+    if (filtersResetRef.current) return;
+    filtersResetRef.current = true;
+    const allDefaultFilters =
+      searchQuery === '' &&
+      selectedCategory === 'Alle kategorier' &&
+      selectedStatus === 'Alle statuser' &&
+      selectedSakKind === 'Alle sakstyper' &&
+      activeAiLabels.length === 0;
+    if (displayedIssues.length === 0 && issues.length > 0 && !allDefaultFilters && !userTouchedFilters) {
+      setFilters((prev) => ({
+        ...prev,
+        selectedCategory: 'Alle kategorier',
+        selectedStatus: 'Alle statuser',
+        selectedSakKind: 'Alle sakstyper',
+        selectedAiLabels: [],
+        sortBy: 'Nyeste først',
+      }));
+    }
+  }, [isMounted, searchQuery, selectedCategory, selectedStatus, selectedSakKind, activeAiLabels, displayedIssues.length, issues.length, userTouchedFilters, setFilters]);
 
   useEffect(() => {
     if (!user) return;
@@ -140,53 +231,40 @@ export default function ExploreClient({
     return Array.from(cats).sort();
   }, [issues]);
 
-  let displayedIssues = issues;
-
-  if (selectedCategory !== 'Alle kategorier') {
-    displayedIssues = displayedIssues.filter((issue) => issue.category === selectedCategory);
-  }
-
-  if (selectedStatus === 'Under behandling' || selectedStatus === 'Åpne for stemmer') {
-    displayedIssues = displayedIssues.filter((issue) => issue.status !== 'closed');
-  } else if (selectedStatus === 'Ferdigbehandlet / Historikk') {
-    displayedIssues = displayedIssues.filter((issue) => issue.status === 'closed');
-  }
-
-  if (selectedSakKind === 'Lovforslag') {
-    displayedIssues = displayedIssues.filter((issue) => issue.sakKind === 'lovforslag');
-  } else if (selectedSakKind === 'Representantforslag') {
-    displayedIssues = displayedIssues.filter((issue) => issue.sakKind === 'representantforslag');
-  }
-
-  if (searchQuery.trim() !== '') {
-    const query = searchQuery.toLowerCase();
-    displayedIssues = displayedIssues.filter(
-      (issue) =>
-        issue.title.toLowerCase().includes(query) ||
-        issue.summary.toLowerCase().includes(query) ||
-        issue.id.toString().includes(query)
-    );
-  }
-
-  if (activeAiLabels.length > 0) {
-    displayedIssues = displayedIssues.filter((issue) => {
-      const labels = issueLabels[String(issue.id)] ?? [];
-      return activeAiLabels.some((label) => labels.includes(label));
-    });
-  }
-
-  displayedIssues = [...displayedIssues].sort((a, b) => {
-    if (sortBy === 'Nyeste først') {
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
-    }
-    if (sortBy === 'Mest engasjement') {
-      return b.votes.total - a.votes.total;
-    }
-    if (sortBy === 'Snart votering') {
-      return votingUrgency(a) - votingUrgency(b);
-    }
-    return 0;
-  });
+  const filterTokens: FilterToken[] = [
+    {
+      id: 'status',
+      label: 'Status',
+      value: selectedStatus,
+      options: [
+        { value: 'Alle statuser', label: 'Alle statuser' },
+        { value: 'Under behandling', label: 'Under behandling' },
+        { value: 'Ferdigbehandlet / Historikk', label: 'Historikk (Ferdigbehandlet)' },
+      ],
+      onChange: setSelectedStatus,
+    },
+    {
+      id: 'category',
+      label: 'Kategori',
+      value: selectedCategory,
+      options: [
+        { value: 'Alle kategorier', label: 'Alle kategorier' },
+        ...categories.map((cat) => ({ value: cat, label: cat })),
+      ],
+      onChange: setSelectedCategory,
+    },
+    {
+      id: 'sakkind',
+      label: 'Sakstype',
+      value: selectedSakKind,
+      options: [
+        { value: 'Alle sakstyper', label: 'Alle sakstyper' },
+        { value: 'Lovforslag', label: 'Lovforslag' },
+        { value: 'Representantforslag', label: 'Representantforslag' },
+      ],
+      onChange: setSelectedSakKind,
+    },
+  ];
 
   return (
     <UtforskReelsStage items={reelItems}>
@@ -244,8 +322,8 @@ export default function ExploreClient({
       ) : null}
 
       <SectionSettle>
-        <SurfaceCard className="flex flex-col gap-4 p-4 md:flex-row">
-          <div className="relative flex-grow">
+        <SurfaceCard className="space-y-3 p-4">
+          <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <Search className="h-5 w-5 text-muted-foreground" />
             </div>
@@ -257,64 +335,7 @@ export default function ExploreClient({
               placeholder="Søk etter saker, stikkord eller saksnummer..."
             />
           </div>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative">
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className={dashboardControlClass()}
-              >
-                <option value="Alle statuser">Alle statuser</option>
-                <option value="Under behandling">Under behandling</option>
-                <option value="Ferdigbehandlet / Historikk">
-                  Historikk (Ferdigbehandlet)
-                </option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground">
-                <Filter className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="relative">
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className={dashboardControlClass()}
-              >
-                <option value="Alle kategorier">Alle kategorier</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground">
-                <Filter className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="relative">
-              <select
-                value={selectedSakKind}
-                onChange={(e) => setSelectedSakKind(e.target.value)}
-                className={dashboardControlClass()}
-              >
-                <option value="Alle sakstyper">Alle sakstyper</option>
-                <option value="Lovforslag">Lovforslag</option>
-                <option value="Representantforslag">Representantforslag</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground">
-                <Filter className="h-4 w-4" />
-              </div>
-            </div>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className={dashboardControlClass()}
-            >
-              <option value="Nyeste først">Nyeste først</option>
-              <option value="Mest engasjement">Mest engasjement</option>
-              <option value="Snart votering">Snart votering</option>
-            </select>
-          </div>
+          <FilterTokenBar tokens={filterTokens} aria-label="Filtrer saker" />
         </SurfaceCard>
       </SectionSettle>
 
@@ -322,7 +343,7 @@ export default function ExploreClient({
         <SectionSettle>
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">Emne</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-x-visible [&::-webkit-scrollbar]:hidden">
               {popularLabels.map((label) => {
                 const active = activeAiLabels.includes(label);
                 return (
@@ -330,7 +351,7 @@ export default function ExploreClient({
                     key={label}
                     type="button"
                     onClick={() => toggleAiLabel(label)}
-                    className={`rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
+                    className={`shrink-0 snap-start rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
                       active
                         ? 'bg-brand text-brand-foreground border-brand'
                         : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
@@ -346,7 +367,7 @@ export default function ExploreClient({
                   onClick={() =>
                     setFilters((prev) => ({ ...prev, selectedAiLabels: [] }))
                   }
-                  className="rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+                  className="shrink-0 snap-start rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
                 >
                   Nullstill emner
                 </button>
@@ -381,6 +402,17 @@ export default function ExploreClient({
             Populært
             {sortBy === 'Mest engasjement' ? <TabUnderline layoutId="utforsk-sort" /> : null}
           </Pressable>
+          <Pressable
+            onClick={() => setSortBy('Snart votering')}
+            className={`relative rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
+              sortBy === 'Snart votering'
+                ? 'bg-foreground text-background border-foreground'
+                : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
+            }`}
+          >
+            Snart votering
+            {sortBy === 'Snart votering' ? <TabUnderline layoutId="utforsk-sort" /> : null}
+          </Pressable>
         </div>
         </LayoutGroup>
       </SectionSettle>
@@ -391,6 +423,15 @@ export default function ExploreClient({
             <EmptyState
               title="Ingen saker matcher filteret"
               description="Prøv et annet søk, status eller emne. Listen er tom til Stortinget-data matcher."
+              action={
+                <button
+                  type="button"
+                  onClick={() => setFilters(DEFAULT_UTFORSK_FILTERS)}
+                  className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                >
+                  Nullstill filtre
+                </button>
+              }
             />
           ) : (
             <MotionList className="space-y-4">
@@ -415,7 +456,7 @@ export default function ExploreClient({
                               {sakKindLabel}
                             </span>
                           ) : null}
-                          {issue.category && issue.category !== sakKindLabel ? (
+                          {issue.category && (!issue.sakKind || issue.category !== sakKindLabel) ? (
                             <span
                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SAK_CATEGORY_BADGE_CLASS}`}
                             >

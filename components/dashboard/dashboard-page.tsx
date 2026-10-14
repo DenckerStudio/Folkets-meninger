@@ -8,5 +8,5 @@ type DashboardPageProps = {
 
 /** Shared dashboard content wrapper — consistent vertical rhythm inside the shell. */
 export function DashboardPage({ children, className }: DashboardPageProps) {
-  return <div className={cn('space-y-8 pb-12', className)}>{children}</div>;
+  return <div className={cn('space-y-8 pb-36 md:pb-24', className)}>{children}</div>;
 }

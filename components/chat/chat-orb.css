@@ -1,23 +1,73 @@
 .chat-orb {
   position: fixed;
   right: 1rem;
-  bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
   z-index: 80;
-  display: grid;
-  place-items: center;
-  width: 4rem;
-  height: 4rem;
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 4rem;
+  max-width: 4rem;
+  padding: 0.175rem;
   border: 0;
   border-radius: 999px;
   background: transparent;
   cursor: pointer;
   isolation: isolate;
+  overflow: hidden;
+  transition:
+    max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    padding-right 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
+@media (min-width: 768px) {
+  .chat-orb:hover,
+  .chat-orb:focus-visible {
+    max-width: 16rem;
+    padding-right: 1.1rem;
+    background: color-mix(in oklab, var(--card) 92%, transparent);
+    box-shadow: 0 10px 30px color-mix(in oklab, var(--foreground) 18%, transparent);
+  }
+}
+
+/* Bunnnav (InteractiveMenu) vises opp til xl, så orben holder seg over den. */
 @media (min-width: 1280px) {
   .chat-orb {
-    bottom: 1.5rem;
+    bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.chat-orb-orb {
+  position: relative;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 3.65rem;
+  height: 3.65rem;
+}
+
+.chat-orb-label {
+  max-width: 0;
+  margin-left: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+  transition:
+    max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    margin-left 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.25s ease;
+}
+
+@media (min-width: 768px) {
+  .chat-orb:hover .chat-orb-label,
+  .chat-orb:focus-visible .chat-orb-label {
+    max-width: 12rem;
+    margin-left: 0.35rem;
+    opacity: 1;
   }
 }
 
@@ -31,8 +81,8 @@
 
 .chat-orb-halo {
   pointer-events: none;
-  width: 4.75rem;
-  height: 4.75rem;
+  width: 4.5rem;
+  height: 4.5rem;
   background: radial-gradient(
     circle,
     color-mix(in oklab, var(--brand) 28%, transparent) 0%,
@@ -83,6 +133,18 @@
 }
 
 .chat-orb[data-open='true'] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Skjul orben mens Reels vises fullskjerm. */
+html[data-reels-open] .chat-orb {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Skjul orben når en drawer/sheet/dialog er åpen. */
+body[data-overlay-open='true'] .chat-orb {
   visibility: hidden;
   pointer-events: none;
 }
