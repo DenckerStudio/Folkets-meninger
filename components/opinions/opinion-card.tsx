@@ -9,10 +9,12 @@ import { routes } from '@/lib/routes';
 
 type OpinionCardProps = {
   opinion: OpinionListItem;
+  validReelPollIds?: Set<string>;
 };
 
-export function OpinionCard({ opinion }: OpinionCardProps) {
+export function OpinionCard({ opinion, validReelPollIds }: OpinionCardProps) {
   const visual = STANCE_VISUAL[opinion.stance];
+  const showReelChip = opinion.pollId && (!validReelPollIds || validReelPollIds.has(opinion.pollId));
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
@@ -39,7 +41,7 @@ export function OpinionCard({ opinion }: OpinionCardProps) {
                 {opinion.issueTitle ?? `Sak ${opinion.stortingetIssueId}`}
               </span>
             ) : null}
-            <OpinionReelChip pollId={opinion.pollId} className="relative z-20" />
+            {showReelChip && <OpinionReelChip pollId={opinion.pollId} className="relative z-20" />}
           </div>
           <p className="text-sm text-muted-foreground md:text-right">{formatOpinionDate(opinion.createdAt)}</p>
         </div>

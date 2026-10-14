@@ -50,6 +50,8 @@ export default async function FolketsMeningerPage({ searchParams }: PageProps) {
     neutralSummary: item.poll.neutralSummary,
   }));
 
+  const reelPollIds = reels.map((item) => item.poll.id);
+
   let options = sakOptions;
   if (issueId && !options.some((option) => option.id === issueId)) {
     const scoped = await getSakPickerOption(issueId);
@@ -64,6 +66,7 @@ export default async function FolketsMeningerPage({ searchParams }: PageProps) {
       initialCompose={initialCompose}
       initialStance={initialStance}
       reelPromos={reelPromos}
+      reelPollIds={reelPollIds}
     />
   );
 }

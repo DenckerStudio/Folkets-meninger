@@ -23,6 +23,8 @@ type FolketsMeningerClientProps = {
   initialCompose?: boolean;
   initialStance?: OpinionCreateStance | null;
   reelPromos?: ReelPromo[];
+  /** Poll IDs of Reels currently in the feed, used to gate the Reel chip. */
+  reelPollIds?: string[];
 };
 
 export function FolketsMeningerClient({
@@ -32,6 +34,7 @@ export function FolketsMeningerClient({
   initialCompose = false,
   initialStance = null,
   reelPromos = [],
+  reelPollIds = [],
 }: FolketsMeningerClientProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [stanceFilter, setStanceFilter] = useState('Alle');
@@ -67,6 +70,7 @@ export function FolketsMeningerClient({
   }, [opinions, searchQuery, sortBy, stanceFilter]);
 
   const mixed = useMemo(() => interleaveEvenly(displayed, reelPromos), [displayed, reelPromos]);
+  const validReelPollIds = useMemo(() => new Set(reelPollIds), [reelPollIds]);
 
   return (
     <DashboardPage className="space-y-6">
@@ -190,7 +194,11 @@ export function FolketsMeningerClient({
                 delay={0.08 * Math.min(index, 5)}
                 direction="up"
               >
-                {'stance' in item ? <OpinionCard opinion={item} /> : <ReelPromoCard reel={item} />}
+                {'stance' in item ? (
+                  <OpinionCard opinion={item} validReelPollIds={validReelPollIds} />
+                ) : (
+                  <ReelPromoCard reel={item} />
+                )}
               </FadeIn>
             ))
           )}

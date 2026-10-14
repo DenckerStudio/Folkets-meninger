@@ -315,9 +315,7 @@ async function listCitizenOpinionsInternal(
 
   return rows.map((row) => {
     const counts = countsById.get(row.id) ?? emptyStanceCounts();
-    if (isOpinionStance(row.stance)) {
-      addStanceCount(counts, row.stance);
-    }
+    // Do not add the original opinion's stance to counts — "supporters" are replies only (Enig → For).
     const issueTitle = row.stortinget_issue_id ? issueTitles.get(row.stortinget_issue_id) ?? null : null;
     const pollId = row.stortinget_issue_id ? pollIdByIssue.get(row.stortinget_issue_id) ?? null : null;
     return mapOpinionRow(row, issueTitle, counts, pollId);
@@ -444,7 +442,7 @@ export async function getCitizenOpinion(id: string, viewerUserId?: string | null
     .filter((item): item is OpinionReplyItem => Boolean(item));
 
   const counts = emptyStanceCounts();
-  if (isOpinionStance(row.stance)) addStanceCount(counts, row.stance);
+  // Do not add the original opinion's stance to counts — "supporters" are replies only (Enig → For).
   for (const reply of replies) addStanceCount(counts, reply.stance);
 
   const issueTitle = row.stortinget_issue_id ? issueTitles.get(row.stortinget_issue_id) ?? null : null;
