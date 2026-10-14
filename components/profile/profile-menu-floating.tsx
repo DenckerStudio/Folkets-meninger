@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
@@ -18,8 +18,19 @@ function ProfileMenuFloatingFallback() {
 export function ProfileMenuFloating() {
   const { user } = useAuth();
   const router = useRouter();
+  const [reelsOpen, setReelsOpen] = useState(false);
 
-  if (!user) return null;
+  useEffect(() => {
+    const checkReelsOpen = () => {
+      setReelsOpen(document.documentElement.hasAttribute('data-reels-open'));
+    };
+    checkReelsOpen();
+    const observer = new MutationObserver(checkReelsOpen);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-reels-open'] });
+    return () => observer.disconnect();
+  }, []);
+
+  if (!user || reelsOpen) return null;
 
   const handleSignOut = async () => {
     const { getBrowserSupabase } = await import('@/lib/supabase');

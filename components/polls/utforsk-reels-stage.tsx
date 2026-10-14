@@ -418,11 +418,11 @@ function ReelsPanel({
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
           <div className="relative mx-auto flex min-h-0 w-full max-w-[26rem] flex-1 flex-col">
             <Stories loop={items.length > 1} onIndexChange={setCenteredIndex}>
-              <div className="flex items-center justify-between gap-2 px-2 pb-1">
+              <div className="flex items-center justify-between gap-1.5 px-2 pb-1">
                 <div className="flex-1 min-w-0 overflow-x-auto pr-2">
                   <StoriesHeader className="px-0" />
                 </div>
-                <StoriesCounter className="shrink-0 hidden sm:inline-flex" />
+                <StoriesCounter className="shrink-0 tabular-nums text-[11px] sm:text-xs" />
                 <StoriesNavigationInline className="shrink-0" />
               </div>
               <StoriesContent className="flex-1 min-h-0">

@@ -30,6 +30,7 @@ type StoriesContextValue = {
   active: boolean;
   setActive: (active: boolean) => void;
   progress: number;
+  autoPlay: boolean;
 };
 
 const StoriesContext = createContext<StoriesContextValue | null>(null);
@@ -181,8 +182,9 @@ const Stories = forwardRef<HTMLDivElement, StoriesProps>(
         active,
         setActive,
         progress,
+        autoPlay,
       }),
-      [currentIndex, direction, total, goTo, next, prev, pause, resume, active, progress]
+      [currentIndex, direction, total, goTo, next, prev, pause, resume, active, progress, autoPlay]
     );
 
     return (
@@ -204,7 +206,7 @@ interface StoriesHeaderProps extends HTMLAttributes<HTMLDivElement> {}
 
 const StoriesHeader = forwardRef<HTMLDivElement, StoriesHeaderProps>(
   ({ className, ...props }, ref) => {
-    const { total, currentIndex, progress, goTo, active } = useStories();
+    const { total, currentIndex, progress, goTo, active, autoPlay } = useStories();
 
     return (
       <div ref={ref} className={cn('flex gap-1 p-2', className)} {...props}>
@@ -212,7 +214,7 @@ const StoriesHeader = forwardRef<HTMLDivElement, StoriesHeaderProps>(
           const isCurrent = index === currentIndex;
           const isViewed = index < currentIndex;
           const isUpcoming = index > currentIndex;
-          const segmentProgress = isViewed ? 100 : isCurrent ? (active ? progress : 100) : 0;
+          const segmentProgress = isViewed ? 100 : isCurrent ? (autoPlay && active ? progress : 100) : 0;
           const segmentColor = isViewed ? 'bg-white/60' : isCurrent ? 'bg-blue-300' : 'bg-white/20';
           return (
             <div
