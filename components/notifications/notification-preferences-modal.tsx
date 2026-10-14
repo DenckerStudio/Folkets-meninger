@@ -217,19 +217,27 @@ export function NotificationPreferencesModal({ open, onClose }: Props) {
   const body = (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-4">
-        {loading ? <p className="text-sm text-muted-foreground">Laster innstillinger…</p> : null}
-        {!v2Available ? (
-          <p className="rounded-xl border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-            De nye innstillingene blir tilgjengelige snart. Inntil videre gjelder standardvalgene.
-          </p>
-        ) : null}
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-3 py-3">
+          <div>
+            <p className="text-xs text-muted-foreground">Din plan</p>
+            <p className="text-sm font-semibold text-foreground">{loading ? 'Laster…' : isPlus ? 'Stemme+' : 'Gratis'}</p>
+          </div>
+          {!loading && !isPlus ? (
+            <Link
+              href={UPGRADE_HREF}
+              className="inline-flex min-h-11 items-center rounded-xl bg-brand px-3 text-sm font-semibold text-white"
+            >
+              Oppgrader
+            </Link>
+          ) : null}
+        </div>
 
         <Section icon={<CalendarClock className="h-4 w-4" />} title="Gamle og ferdige saker" locked={locked}>
           <ToggleRow
             id="np-skip-finished"
             label="Ikke varsle om ferdigbehandlede saker"
             checked={locked ? true : prefs.skip_finished}
-            disabled={locked}
+            disabled={locked || !v2Available}
             onChange={(v) => update('skip_finished', v)}
           />
           <label className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-3 py-3">
@@ -238,10 +246,10 @@ export function NotificationPreferencesModal({ open, onClose }: Props) {
               type="number"
               min={MIN_MAX_CASE_AGE_DAYS}
               max={MAX_MAX_CASE_AGE_DAYS}
-              disabled={locked}
+              disabled={locked || !v2Available}
               value={locked ? 30 : prefs.max_case_age_days}
               onChange={(e) => update('max_case_age_days', Number(e.target.value) || 30)}
-              className="w-20 rounded-lg border border-border bg-background px-2 py-1 text-right text-sm"
+              className="h-11 w-20 rounded-lg border border-border bg-background px-2 text-right text-sm"
             />
           </label>
           {locked ? (
@@ -259,7 +267,7 @@ export function NotificationPreferencesModal({ open, onClose }: Props) {
               label={t.label}
               description={t.description}
               checked={locked ? true : prefs.enabled_types.includes(t.id)}
-              disabled={locked}
+              disabled={locked || !v2Available}
               onChange={(v) => toggleType(t.id, v)}
             />
           ))}
@@ -270,7 +278,7 @@ export function NotificationPreferencesModal({ open, onClose }: Props) {
             id="np-only-followed"
             label="Kun temaer, partier og saker jeg følger"
             checked={locked ? false : prefs.only_followed}
-            disabled={locked}
+            disabled={locked || !v2Available}
             onChange={(v) => update('only_followed', v)}
           />
         </Section>
@@ -279,34 +287,36 @@ export function NotificationPreferencesModal({ open, onClose }: Props) {
           <ToggleRow
             id="np-channel-in-app"
             label="I appen"
+            disabled={!v2Available}
             checked={prefs.channel_in_app}
             onChange={(v) => update('channel_in_app', v)}
           />
           <ToggleRow
             id="np-channel-push"
             label="Push-varsler"
+            disabled={!v2Available}
             checked={prefs.channel_push}
             onChange={(v) => update('channel_push', v)}
           />
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
-              <ToggleRow
-                id="np-channel-email"
-                label="E-post"
-                description={locked ? 'E-postvarsler krever Stemme+.' : undefined}
-                checked={locked ? false : prefs.channel_email}
-                disabled={locked}
-                onChange={(v) => update('channel_email', v)}
-              />
-            </div>
-            {locked ? <LockedBadge /> : null}
-          </div>
+          {locked ? (
+            <p className="px-1 text-xs text-muted-foreground">
+              E-postvarsler er kun for Stemme+. <Link href={UPGRADE_HREF} className="font-semibold text-brand hover:underline">Oppgrader</Link>
+            </p>
+          ) : (
+            <ToggleRow
+              id="np-channel-email"
+              label="E-post"
+              checked={prefs.channel_email}
+              disabled={!v2Available}
+              onChange={(v) => update('channel_email', v)}
+            />
+          )}
         </Section>
 
         <Section icon={<Mail className="h-4 w-4" />} title="Hvor ofte">
           {locked ? (
             <div className="rounded-xl border border-border bg-muted/40 px-3 py-3">
-              <p className="text-sm font-medium text-foreground">Ukentlig sammendrag i appen</p>
+              <p className="text-sm font-medium text-foreground">Ukentlig i appen</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 Gratis brukere får ett samlet varsel i appen hver uke (ingen e-post). Med Stemme+ kan du velge e-post med en gang, daglig eller ukentlig.
               </p>
@@ -325,6 +335,7 @@ export function NotificationPreferencesModal({ open, onClose }: Props) {
                   name="np-frequency"
                   className="mt-0.5 h-4 w-4"
                   checked={prefs.frequency === f.id}
+                  disabled={!v2Available}
                   onChange={() => update('frequency', f.id)}
                 />
                 <span>
@@ -350,11 +361,16 @@ export function NotificationPreferencesModal({ open, onClose }: Props) {
       </div>
 
       <div className="border-t border-border px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        {!loading && !v2Available ? (
+          <p className="mb-2 text-xs text-muted-foreground">
+            Lagring er ikke tilgjengelig ennå: databasen mangler oppdateringen for de nye innstillingene. Standardvalgene gjelder til da.
+          </p>
+        ) : null}
         {message ? <p className="mb-2 text-xs text-destructive">{message}</p> : null}
         <button
           type="button"
           onClick={() => void save()}
-          disabled={saving || loading}
+          disabled={saving || loading || !v2Available}
           className="w-full rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
         >
           {saving ? 'Lagrer…' : 'Lagre'}
@@ -370,7 +386,7 @@ export function NotificationPreferencesModal({ open, onClose }: Props) {
         type="button"
         onClick={onClose}
         aria-label="Lukk"
-        className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
       >
         <X className="h-5 w-5" />
       </button>

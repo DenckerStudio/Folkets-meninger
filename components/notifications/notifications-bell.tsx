@@ -321,7 +321,14 @@ export function NotificationsBell({
             document.body,
           )
         : null}
-      <NotificationPreferencesModal open={prefsOpen} onClose={() => setPrefsOpen(false)} />
+      <NotificationPreferencesModal
+        open={prefsOpen}
+        onClose={() => {
+          setPrefsOpen(false);
+          // Return focus to the bell (the dropdown with «Preferanser» is closed while the modal is open).
+          window.requestAnimationFrame(() => triggerRef.current?.focus());
+        }}
+      />
     </div>
   );
 }
