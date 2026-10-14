@@ -142,7 +142,6 @@ export function ReelFlagVote({ item, onBack, onSheetOpenChange }: ReelFlagVotePr
 
   return (
     <div data-testid="reel-vote-face" className="flex h-full min-h-0 flex-col gap-2">
-<<<<<<< HEAD
       <div className="flex min-h-0 flex-col gap-1.5">
         <div className="flex shrink-0 items-start justify-between gap-2">
           <p className="text-[11px] font-medium uppercase tracking-wide text-white/70">

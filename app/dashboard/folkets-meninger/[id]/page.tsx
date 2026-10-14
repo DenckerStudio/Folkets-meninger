@@ -50,8 +50,9 @@ export default async function OpinionDetailPage({ params, searchParams }: PagePr
   const { id } = await params;
   const resolved = searchParams ? await searchParams : undefined;
   const stanceParam = resolved?.standpunkt;
-  const initialReplyStance: OpinionStance | null = isOpinionStance(stanceParam)
-    ? stanceParam
+  const stanceValue = Array.isArray(stanceParam) ? stanceParam[0] : stanceParam;
+  const initialReplyStance: OpinionStance | null = isOpinionStance(stanceValue)
+    ? stanceValue
     : null;
 
   const supabase = await getServerSupabase();

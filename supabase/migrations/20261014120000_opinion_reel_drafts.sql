@@ -89,5 +89,5 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.create_poll_draft_from_opinion(uuid, text, text, jsonb, jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.create_poll_draft_from_opinion(uuid, text, text, jsonb, jsonb) TO service_role;
+REVOKE EXECUTE ON FUNCTION create_poll_draft_from_opinion(uuid,text,text,jsonb,jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION create_poll_draft_from_opinion(uuid,text,text,jsonb,jsonb) TO service_role;

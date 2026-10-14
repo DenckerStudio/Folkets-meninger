@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Vote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
@@ -11,10 +11,17 @@ export function OpinionReelChip({
   pollId: string | null | undefined;
   className?: string;
 }) {
+  const router = useRouter();
   if (!pollId) return null;
+  const handleClick = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    router.push(routes.utforskReels(pollId));
+  };
   return (
-    <Link
-      href={routes.utforskReels(pollId)}
+    <button
+      type="button"
+      onClick={handleClick}
       className={cn(
         'inline-flex items-center gap-1 rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-medium text-brand transition-colors hover:bg-brand/15',
         className,
@@ -22,6 +29,6 @@ export function OpinionReelChip({
     >
       <Vote className="h-3.5 w-3.5" />
       Stem på dette i Reels
-    </Link>
+    </button>
   );
 }

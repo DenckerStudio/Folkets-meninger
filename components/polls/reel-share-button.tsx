@@ -21,12 +21,14 @@ export function ReelShareButton({ pollId, title, choice = null }: ReelShareButto
   const [copied, setCopied] = useState(false);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(
-    () => () => {
-      if (resetTimer.current) clearTimeout(resetTimer.current);
-    },
-    [],
-  );
+  useEffect(() => {
+    return () => {
+      if (resetTimer.current) {
+        clearTimeout(resetTimer.current);
+        resetTimer.current = null;
+      }
+    };
+  }, []);
 
   const share = async () => {
     if (typeof window === 'undefined') return;
@@ -45,7 +47,10 @@ export function ReelShareButton({ pollId, title, choice = null }: ReelShareButto
       await navigator.clipboard.writeText(`${text} ${url}`);
       setCopied(true);
       if (resetTimer.current) clearTimeout(resetTimer.current);
-      resetTimer.current = setTimeout(() => setCopied(false), 2000);
+      resetTimer.current = setTimeout(() => {
+        setCopied(false);
+        resetTimer.current = null;
+      }, 2000);
     } catch {
       // Share sheet dismissed or clipboard blocked — nothing to do.
     }
