@@ -560,21 +560,22 @@ export async function createCitizenOpinion(
 export async function createCitizenOpinionReply(
   userId: string,
   opinionId: string,
-  input: { body: string; stance: unknown },
+  input: { body: string; stance: unknown; quick?: boolean },
 ): Promise<string> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Tjenesten er ikke konfigurert');
   }
 
   const body = input.body.trim();
-  const errors = validateReplyDraft({ body, stance: input.stance });
+  const quick = input.quick === true;
+  const errors = validateReplyDraft({ body, stance: input.stance, quick });
   if (hasOpinionFieldErrors(errors) || !isOpinionStance(input.stance)) {
     throw new Error(errors.body || errors.stance || 'Ugyldig svar');
   }
   if (body.length > OPINION_BODY_MAX) {
     throw new Error('Ugyldig begrunnelse');
   }
-  if (requiresOpinionBody(input.stance) && body.length < OPINION_REPLY_BODY_MIN) {
+  if (requiresOpinionBody(input.stance) && body.length < OPINION_REPLY_BODY_MIN && !(quick && (input.stance === 'for' || input.stance === 'imot'))) {
     throw new Error('Ugyldig begrunnelse');
   }
 

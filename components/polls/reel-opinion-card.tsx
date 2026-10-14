@@ -7,6 +7,13 @@ import { opinionSupportCount, stanceLabel } from '@/lib/opinions/labels';
 import type { OpinionListItem, OpinionStanceCounts } from '@/lib/opinions/types';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
+
+function buildLoginRedirectUrl(pollId: string | null | undefined, opinionId: string, stance: 'for' | 'imot'): string {
+  const pollParam = pollId ? `poll=${encodeURIComponent(pollId)}&` : '';
+  const nextUrl = `${routes.utforsk}?${pollParam}quickStance=${encodeURIComponent(`${opinionId}:${stance}`)}#reels`;
+  return `${routes.login}?next=${encodeURIComponent(nextUrl)}`;
+}
 
 /**
  * A citizen opinion rendered as a Reel slide (B7). Same card format as the
@@ -28,6 +35,7 @@ export function ReelOpinionCard({
   const isStories = mode === 'stories';
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, loading: authLoading } = useAuth();
   const [isPending, startTransition] = useTransition();
   const initialStance = opinion.viewerStance === 'for' || opinion.viewerStance === 'imot' ? opinion.viewerStance : null;
   const [selectedStance, setSelectedStance] = useState<'for' | 'imot' | null>(initialStance);
@@ -47,6 +55,14 @@ export function ReelOpinionCard({
     const saved = sessionStorage.getItem(`quickStancePosted:${opinionId}:${stance}`);
     if (saved) return; // Already posted this session
 
+    if (authLoading) return; // Wait for auth to resolve
+    if (!user) {
+      // Not logged in: redirect to login with deep link
+      const redirectUrl = buildLoginRedirectUrl(currentPollId ?? opinion.pollId, opinionId, stance as 'for' | 'imot');
+      window.location.assign(redirectUrl);
+      return;
+    }
+
     startTransition(async () => {
       try {
         const res = await fetch(`/api/opinions/${opinion.id}/stance`, {
@@ -54,8 +70,12 @@ export function ReelOpinionCard({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ stance, body: '', quick: true }),
         });
-        const data = (await res.json()) as { error?: string; replyId?: string };
+        const data = (await res.json()) as { error?: string; replyId?: string; code?: string };
         if (!res.ok) {
+          if (data.code === 'quick_stance_db_unsupported') {
+            setError('Rask stemme er midlertidig utilgjengelig. Prøv å skrive en begrunnelse i stedet.');
+            return;
+          }
           throw new Error(data.error || 'Kunne ikke lagre stemme');
         }
         // Optimistic update
@@ -76,11 +96,19 @@ export function ReelOpinionCard({
         setError('En feil oppstod. Prøv igjen.');
       }
     });
-  }, [opinion.id, searchParams, router, selectedStance, startTransition]);
+  }, [opinion.id, searchParams, router, selectedStance, startTransition, authLoading, user, currentPollId]);
 
   const handleQuickStance = async (stance: 'for' | 'imot') => {
     const isToggleOff = selectedStance === stance;
     setError(null);
+    
+    if (authLoading) return;
+    if (!user) {
+      const redirectUrl = buildLoginRedirectUrl(currentPollId ?? opinion.pollId, opinion.id, stance);
+      window.location.assign(redirectUrl);
+      return;
+    }
+
     startTransition(async () => {
       try {
         if (isToggleOff) {
@@ -91,6 +119,11 @@ export function ReelOpinionCard({
           });
           const data = (await res.json()) as { error?: string };
           if (!res.ok) {
+            if (res.status === 401) {
+              const redirectUrl = buildLoginRedirectUrl(currentPollId ?? opinion.pollId, opinion.id, stance);
+              window.location.assign(redirectUrl);
+              return;
+            }
             throw new Error(data.error || 'Kunne ikke fjerne stemme');
           }
           // Optimistic update: decrement the count
@@ -107,15 +140,15 @@ export function ReelOpinionCard({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ stance, body: '', quick: true }),
           });
-          const data = (await res.json()) as { error?: string; replyId?: string };
+          const data = (await res.json()) as { error?: string; replyId?: string; code?: string };
           if (!res.ok) {
             if (res.status === 401) {
-              // Build deep link back to this Reel with quickStance param
-              const pollId = currentPollId ?? opinion.pollId;
-              const nextUrl = pollId
-                ? `${routes.utforsk}?poll=${pollId}&quickStance=${opinion.id}:${stance}#reels`
-                : `${routes.utforsk}?quickStance=${opinion.id}:${stance}#reels`;
-              router.push(`${routes.login}?next=${encodeURIComponent(nextUrl)}`);
+              const redirectUrl = buildLoginRedirectUrl(currentPollId ?? opinion.pollId, opinion.id, stance);
+              window.location.assign(redirectUrl);
+              return;
+            }
+            if (data.code === 'quick_stance_db_unsupported') {
+              setError('Rask stemme er midlertidig utilgjengelig. Prøv å skrive en begrunnelse i stedet.');
               return;
             }
             throw new Error(data.error || 'Kunne ikke lagre stemme');
@@ -146,7 +179,11 @@ export function ReelOpinionCard({
     cn(
       'rounded-xl px-3 py-2.5 text-center text-sm font-semibold transition-colors',
       selectedStance === baseStance
-        ? 'opacity-100 ring-2 ring-white bg-inherit text-white'
+        ? baseStance === 'for'
+          ? 'bg-[#0a3d9e] text-white ring-2 ring-white ring-offset-2 ring-offset-[#0b0d1c]'
+          : 'bg-[#ba0c2f] text-white ring-2 ring-white ring-offset-2 ring-offset-[#0b0d1c]'
+        : selectedStance
+        ? 'bg-white/10 text-white/70 hover:bg-white/20'
         : baseStance === 'for'
         ? 'bg-[#0a3d9e] hover:bg-[#0c4ab8] text-white'
         : 'bg-[#ba0c2f] hover:bg-[#ba0c2f]/90 text-white',

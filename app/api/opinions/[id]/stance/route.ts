@@ -84,7 +84,7 @@ export async function POST(
 
   try {
     await ensurePublicUser(user);
-    const replyId = await createCitizenOpinionReply(user.id, id, { body: text, stance });
+    const replyId = await createCitizenOpinionReply(user.id, id, { body: text, stance, quick: isQuickStance });
 
     // Notify users who hold a stance on this sak (B8). Best-effort.
     try {
@@ -114,6 +114,12 @@ export async function POST(
     }
     if (combined.includes('not found')) {
       return NextResponse.json({ error: 'Meningen ble ikke funnet' }, { status: 404 });
+    }
+    if (combined.includes('body must be between 80 and 4000 characters')) {
+      return NextResponse.json(
+        { error: 'Rask stemme krever en databaseoppdatering', code: 'quick_stance_db_unsupported' },
+        { status: 409 },
+      );
     }
     console.error('Create citizen opinion reply error:', error);
     return NextResponse.json({ error: 'Kunne ikke lagre svaret' }, { status: 500 });
