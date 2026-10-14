@@ -34,6 +34,8 @@ export const routes = {
   opinion: (id: string) => `${DASHBOARD_PREFIX}/folkets-meninger/${id}`,
   sakEmbed: (id: string) => `/embed/sak/${id}`,
   poll: (id: string) => `${DASHBOARD_PREFIX}/avstemninger/${id}`,
+  sharePoll: (id: string) => `/del/${encodeURIComponent(id)}`,
+  pollEmbed: (id: string) => `/embed/${encodeURIComponent(id)}`,
   horing: (id: string) => `${DASHBOARD_PREFIX}/horinger/${id}`,
   profile: (id: string) => `/profil/${id}`,
   admin: `${DASHBOARD_PREFIX}/admin`,
@@ -93,4 +95,9 @@ export function isPublicProfilePath(pathname: string): boolean {
 
 export function isEmbedPath(pathname: string): boolean {
   return pathname.startsWith('/embed/');
+}
+
+/** Public shareable poll widget page (Ja / Vet ikke / Nei). */
+export function isSharePollPath(pathname: string): boolean {
+  return /^\/del\/[^/]+$/.test(pathname);
 }

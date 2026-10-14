@@ -1,6 +1,6 @@
 import type {Metadata} from 'next';
 import './globals.css';
-import { Navigation } from '@/components/navigation';
+import { AppShell } from '@/components/app-shell';
 import { ThemeProvider } from '@/components/theme-provider';
 import { THEME_INIT_SCRIPT } from '@/lib/preferences/theme-init-script';
 import { Geist } from "next/font/google";
@@ -23,17 +23,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
       </head>
       <body className="bg-background text-foreground min-h-screen font-sans" suppressHydrationWarning>
         <ThemeProvider>
-          <a
-            href="#main-content"
-            className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-background focus:text-brand focus:rounded-lg focus:shadow"
-          >
-            Hopp til hovedinnhold
-          </a>
-          <Navigation>
-            <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-              {children}
-            </main>
-          </Navigation>
+          <AppShell>{children}</AppShell>
         </ThemeProvider>
       </body>
     </html>

@@ -1,0 +1,194 @@
+import {
+  buildPollEmbedSnippet,
+  buildPollEmbedUrl,
+  buildPollShareChannelUrl,
+  buildPollShareRelativePath,
+  buildPollShareTargetUrl,
+  buildPollShareText,
+  buildPollShareUrl,
+  DEFAULT_SITE_ORIGIN,
+  isPollChoice,
+  isShareablePoll,
+  normalizeOrigin,
+  pollEmbedPath,
+  pollSharePath,
+  POLL_SHARE_CHOICES,
+  resolveShareOrigin,
+  sharePollChoiceLabel,
+} from '@/lib/polls/share';
+import { parsePollEmbedOptions } from '@/lib/polls/embed';
+
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
+}
+
+assert(normalizeOrigin('folkets-meninger.no') === 'https://folkets-meninger.no', 'adds protocol');
+assert(normalizeOrigin('https://www.folkets-meninger.no/') === DEFAULT_SITE_ORIGIN, 'normalizes');
+assert(normalizeOrigin('nonsense') === 'https://nonsense', 'adds protocol to bare host');
+assert(normalizeOrigin('https://') === DEFAULT_SITE_ORIGIN, 'fallback on invalid');
+assert(normalizeOrigin('') === DEFAULT_SITE_ORIGIN, 'fallback on empty');
+
+assert(
+  resolveShareOrigin({ configured: 'https://www.folkets-meninger.no' }) === DEFAULT_SITE_ORIGIN,
+  'configured wins',
+);
+assert(
+  resolveShareOrigin({ host: 'preview.example.no', forwardedProto: 'https' }) ===
+    'https://preview.example.no',
+  'host + proto',
+);
+assert(
+  resolveShareOrigin({ host: 'localhost:3000' }) === 'http://localhost:3000',
+  'localhost uses http',
+);
+assert(resolveShareOrigin({ forwardedProto: 'https' }) === DEFAULT_SITE_ORIGIN, 'default host');
+assert(
+  resolveShareOrigin({
+    vercelEnv: 'production',
+    configured: 'https://www.folkets-meninger.no',
+    host: 'preview.example.no',
+    forwardedProto: 'https',
+  }) === DEFAULT_SITE_ORIGIN,
+  'production prefers configured origin over alias host',
+);
+assert(
+  resolveShareOrigin({
+    vercelEnv: 'preview',
+    configured: 'https://www.folkets-meninger.no',
+    host: 'folkets-inspill-git-feat-share-poll-widget.vercel.app',
+    forwardedProto: 'https',
+  }) === 'https://folkets-inspill-git-feat-share-poll-widget.vercel.app',
+  'preview uses request host instead of configured production origin',
+);
+assert(
+  resolveShareOrigin({
+    vercelEnv: 'preview',
+    configured: 'https://www.folkets-meninger.no',
+    vercelUrl: 'folkets-inspill-git-feat-share-poll-widget.vercel.app',
+  }) === 'https://folkets-inspill-git-feat-share-poll-widget.vercel.app',
+  'preview falls back to VERCEL_URL',
+);
+assert(
+  resolveShareOrigin({ host: 'localhost:3000', vercelEnv: 'development', forwardedProto: 'http' }) ===
+    'http://localhost:3000',
+  'local dev uses request host',
+);
+
+assert(pollSharePath('abc-123') === '/del/abc-123', 'share path');
+assert(pollSharePath('a/b') === '/del/a%2Fb', 'share path encodes');
+assert(pollEmbedPath('abc-123') === '/embed/abc-123', 'embed path');
+assert(
+  buildPollShareUrl('abc-123', 'https://www.folkets-meninger.no') ===
+    `${DEFAULT_SITE_ORIGIN}/del/abc-123`,
+  'absolute share url',
+);
+
+assert(
+  buildPollShareRelativePath('abc-123') === '/del/abc-123',
+  'relative share path without query',
+);
+assert(
+  buildPollShareRelativePath('abc-123', { choice: 'ja', ref: 'fb' }) ===
+    '/del/abc-123?valg=ja&ref=fb',
+  'relative share path carries valg + ref',
+);
+
+const facebookChannel = buildPollShareChannelUrl('abc-123', undefined, 'facebook');
+assert(facebookChannel.includes('utm_source=facebook'), 'facebook utm source');
+assert(facebookChannel.includes('utm_medium=social'), 'facebook utm medium');
+assert(facebookChannel.includes('ref=fb'), 'facebook ref');
+assert(!facebookChannel.includes('?valg='), 'channel url has no valg');
+
+const copyChannel = buildPollShareChannelUrl('abc-123', undefined, 'copy');
+assert(copyChannel.includes('utm_source=copy') && copyChannel.includes('ref=cp'), 'copy channel utm');
+
+const embedChannel = buildPollShareChannelUrl('abc-123', undefined, 'embed');
+assert(embedChannel.includes('ref=embed'), 'embed channel ref');
+assert(!embedChannel.includes('utm_'), 'embed channel has no utm');
+
+const reddit = buildPollShareTargetUrl('reddit', { url: 'https://x.no/del/1', title: 'Test tittel' });
+assert(reddit.startsWith('https://www.reddit.com/submit?'), 'reddit host');
+assert(reddit.includes('url=https%3A%2F%2Fx.no%2Fdel%2F1'), 'reddit url param');
+assert(reddit.includes('title=Test+tittel'), 'reddit title param');
+
+const facebook = buildPollShareTargetUrl('facebook', { url: 'https://x.no/del/1' });
+assert(facebook.startsWith('https://www.facebook.com/sharer/sharer.php?u='), 'facebook sharer');
+
+const linkedin = buildPollShareTargetUrl('linkedin', { url: 'https://x.no/del/1' });
+assert(
+  linkedin === `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://x.no/del/1')}`,
+  'linkedin url',
+);
+
+const x = buildPollShareTargetUrl('x', { url: 'https://x.no/del/1', title: 'Test tittel' });
+assert(x.startsWith('https://x.com/intent/post?'), 'x host');
+assert(x.includes('text=Test+tittel'), 'x text param');
+
+assert(
+  buildPollEmbedUrl('abc-123', 'https://www.folkets-meninger.no', { theme: 'dark', size: 'compact', ref: 'partner' }) ===
+    'https://www.folkets-meninger.no/embed/abc-123?theme=dark&size=compact&ref=partner',
+  'embed url carries validated options',
+);
+
+const snippet = buildPollEmbedSnippet({
+  pollId: 'abc-123',
+  origin: 'https://www.folkets-meninger.no',
+  title: 'Spørsmål <med> "fnutter" & tegn',
+  options: { theme: 'auto', size: 'full' },
+  autoHeight: true,
+});
+assert(snippet.includes('src="https://www.folkets-meninger.no/embed/abc-123?theme=auto&amp;size=full"'), 'snippet src');
+assert(snippet.includes('data-fm-embed'), 'snippet marks embeddable frame');
+assert(snippet.includes('referrerpolicy="strict-origin-when-cross-origin"'), 'snippet referrer policy');
+assert(snippet.includes('&lt;med&gt;'), 'snippet escapes < and >');
+assert(snippet.includes('&amp;'), 'snippet escapes ampersand');
+assert(snippet.includes('&quot;fnutter&quot;'), 'snippet escapes quotes');
+assert(snippet.includes('embed.js'), 'auto-height snippet loads embed.js');
+
+const plainSnippet = buildPollEmbedSnippet({
+  pollId: 'abc-123',
+  origin: 'https://www.folkets-meninger.no',
+  autoHeight: false,
+});
+assert(!plainSnippet.includes('embed.js'), 'plain snippet omits embed.js');
+assert(plainSnippet.startsWith('<iframe') && plainSnippet.endsWith('</iframe>'), 'plain snippet is an iframe');
+
+const options = parsePollEmbedOptions(new URLSearchParams('theme=dark&size=compact&radius=99&ref=Partner!'));
+assert(options.theme === 'dark', 'embed theme parsed');
+assert(options.size === 'compact', 'embed size parsed');
+assert(options.radius === 16, 'invalid radius falls back');
+assert(options.ref === null, 'invalid ref rejected');
+assert(options.summary === false, 'compact hides summary');
+
+const defaults = parsePollEmbedOptions(new URLSearchParams(''));
+assert(defaults.theme === 'auto' && defaults.size === 'full' && defaults.border, 'embed defaults');
+assert(defaults.summary === true, 'full shows summary by default');
+
+assert(isPollChoice('ja') && isPollChoice('blank') && isPollChoice('nei'), 'valid choices');
+assert(!isPollChoice('kanskje'), 'invalid choice');
+
+assert(
+  isShareablePoll({ track: 'stortinget', status: 'open' }) &&
+    isShareablePoll({ track: 'system', status: 'closed' }),
+  'official published polls are shareable',
+);
+assert(!isShareablePoll({ track: 'citizen', status: 'open' }), 'citizen polls are not shareable');
+assert(!isShareablePoll({ track: 'system', status: 'draft' }), 'drafts are not shareable');
+assert(!isShareablePoll(null), 'missing poll is not shareable');
+
+assert(
+  POLL_SHARE_CHOICES.length === 3 &&
+    POLL_SHARE_CHOICES[0] === 'ja' &&
+    POLL_SHARE_CHOICES[1] === 'blank' &&
+    POLL_SHARE_CHOICES[2] === 'nei',
+  'share ballot order ja/blank/nei',
+);
+assert(sharePollChoiceLabel('ja') === 'Ja', 'ja label');
+assert(sharePollChoiceLabel('blank') === 'Vet ikke', 'blank label is vet ikke');
+assert(sharePollChoiceLabel('nei') === 'Nei', 'nei label');
+assert(
+  buildPollShareText('Test?') === 'Test? Hva mener du? Svar Ja, Vet ikke eller Nei.',
+  'share text',
+);
+
+console.log('polls share tests OK');

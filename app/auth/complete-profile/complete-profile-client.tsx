@@ -7,13 +7,13 @@ import { ShieldCheck } from 'lucide-react';
 import FadeIn from '@/components/fade-in';
 import { useAuth } from '@/hooks/use-auth';
 import { routes } from '@/lib/routes';
-import { sanitizePostLoginPath } from '@/lib/safe-redirect';
+import { toRelativeNext } from '@/lib/safe-redirect';
 
 export default function CompleteProfileClient() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = sanitizePostLoginPath(searchParams.get('next'));
+  const nextPath = toRelativeNext(searchParams.get('next'));
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');

@@ -4,6 +4,7 @@ import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { PageHeader } from '@/components/page-header';
 import { PollBallot } from '@/components/polls/poll-ballot';
 import { PollResultView } from '@/components/polls/poll-result-view';
+import { isAdmin } from '@/lib/admin/gate';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { pollStatusLabel, pollTrackLabel, SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import {
@@ -13,6 +14,7 @@ import {
   getUserPollVote,
   isPollVotingOpen,
 } from '@/lib/polls/service';
+import { isSharePollsEnabled } from '@/lib/polls/share-flag';
 import { routes } from '@/lib/routes';
 
 export const dynamic = 'force-dynamic';
@@ -36,6 +38,9 @@ export default async function PollDetailPage({ params }: PageProps) {
     getPollTotalsByFylke(id),
     user ? getUserPollVote(user.id, id) : Promise.resolve({ hasVoted: false, vote: null }),
   ]);
+
+  const shareEnabled =
+    isSharePollsEnabled() || (user ? await isAdmin(user.id, user.email) : false);
 
   return (
     <DashboardPage className="mx-auto max-w-3xl space-y-6">
@@ -83,6 +88,13 @@ export default async function PollDetailPage({ params }: PageProps) {
         initialTotals={totals}
         initialVote={voteState.vote}
       />
+      {shareEnabled ? (
+        <p className="text-sm">
+          <Link href={routes.sharePoll(poll.id)} className="font-medium text-brand hover:underline">
+            Åpne delbar side (Ja / Vet ikke / Nei) →
+          </Link>
+        </p>
+      ) : null}
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-foreground">Resultat per fylke</h2>
         <PollResultView byFylke={byFylke} />

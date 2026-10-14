@@ -5,7 +5,7 @@ import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { userHasPublicIdentityInDb } from '@/lib/identity/require-public-identity';
 import { onboardingPathWithNext, shouldStartSignupOnboarding } from '@/lib/onboarding';
 import { routes } from '@/lib/routes';
-import { sanitizePostLoginPath } from '@/lib/safe-redirect';
+import { toRelativeNext } from '@/lib/safe-redirect';
 
 function requiresPublicIdentity(pathname: string): boolean {
   return pathname.startsWith(`${routes.horinger}/`) || pathname.startsWith('/dashboard/horinger/');
@@ -14,7 +14,7 @@ function requiresPublicIdentity(pathname: string): boolean {
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = sanitizePostLoginPath(searchParams.get('next'));
+  const next = toRelativeNext(searchParams.get('next'));
 
   if (code) {
     const cookieStore = await cookies();

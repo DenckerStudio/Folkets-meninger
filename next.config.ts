@@ -1,6 +1,24 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        // Embeddable widget: open to all hosts (the content is public and
+        // votes cannot be cast inside the iframe).
+        source: '/embed/:path*',
+        headers: [{ key: 'Content-Security-Policy', value: "frame-ancestors *" }],
+      },
+      {
+        // Everything else: block framing (clickjacking protection).
+        source: '/((?!embed).*)',
+        headers: [
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       { source: '/utforsk', destination: '/dashboard/utforsk', permanent: true },

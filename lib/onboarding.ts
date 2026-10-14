@@ -185,7 +185,10 @@ export function postOnboardingDestination(
   options?: { startTour?: boolean },
 ): string {
   const cleaned = stripProductTourQuery(nextPath);
-  const dest = cleaned.startsWith('/dashboard') ? cleaned : '/dashboard/utforsk';
+  const dest =
+    cleaned.startsWith('/dashboard') || cleaned.startsWith('/del')
+      ? cleaned
+      : '/dashboard/utforsk';
   if (!options?.startTour) return dest;
   const sep = dest.includes('?') ? '&' : '?';
   return `${dest}${sep}${PRODUCT_TOUR_QUERY}=1`;

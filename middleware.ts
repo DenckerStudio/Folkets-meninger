@@ -12,7 +12,7 @@ import {
 import { refreshSessionCookies, resolveMiddlewareUser } from '@/lib/supabase-middleware';
 
 function applyRateLimit(request: NextRequest, pathname: string): NextResponse | null {
-  const ratePolicy = getRateLimitPolicy(pathname);
+  const ratePolicy = getRateLimitPolicy(pathname, request.method);
   if (!ratePolicy) {
     return null;
   }
@@ -45,6 +45,12 @@ export async function middleware(request: NextRequest) {
 
   if (pathname.startsWith('/api/')) {
     return NextResponse.next();
+  }
+
+  // Share + embed pages are public, but keep the session fresh so an expired
+  // token does not make a logged-in voter look logged out.
+  if (pathname.startsWith('/del/') || pathname.startsWith('/embed/')) {
+    return refreshSessionCookies(request);
   }
 
   if (
@@ -90,6 +96,9 @@ export const config = {
     '/api/chat',
     '/api/chat/:path*',
     '/api/byok',
+    '/api/polls',
+    '/del/:path*',
+    '/embed/:path*',
     '/api/stemme-plus/checkout',
     '/api/stemme-plus/portal',
   ],

@@ -90,6 +90,11 @@ assert.equal(
   onboardingPathWithNext('/dashboard/utforsk'),
   '/auth/onboarding?next=%2Fdashboard%2Futforsk',
 );
+assert.equal(postOnboardingDestination('/del/abc?valg=ja'), '/del/abc?valg=ja');
+assert.equal(
+  onboardingPathWithNext('/del/abc?valg=ja'),
+  '/auth/onboarding?next=%2Fdel%2Fabc%3Fvalg%3Dja',
+);
 
 const fresh = { user_metadata: { onboarding_pending: true }, created_at: new Date().toISOString() };
 assert.equal(shouldStartSignupOnboarding(fresh), true);
