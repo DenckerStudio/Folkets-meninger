@@ -13,6 +13,7 @@ import { CivicBubble } from '@/components/icons/civic';
 import { EmptyLineState } from '@/components/motion/empty-line';
 import { AnimatePresence, motion } from 'motion/react';
 import { CoverflowCarousel } from '@/components/ui/coverflow-carousel';
+import { Stories, StoriesContent, StoriesHeader, Story } from '@/components/ui/stories-carousel';
 import { ReelCarouselCard } from '@/components/polls/reel-vote-card';
 import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import type { SystemReelFeedItem } from '@/lib/polls/types';
@@ -394,35 +395,26 @@ function ReelsPanel({
           />
         </div>
       ) : (
-        /* Mobile + tablet (<lg): one centred portrait card that shrinks to the available height */
+        /* Mobile + tablet (<lg): Stories carousel (vertikal Tiktok-lignende, full høyde) */
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
-          <CoverflowCarousel
-            fitHeight
-            label="Reels"
-            loop={items.length >= 3}
-            showPagination
-            showNavigation={false}
-            interactionLocked={cardOpen}
-            onIndexChange={setCenteredIndex}
-            rotate={28}
-            depth={0.45}
-            perspective={2.4}
-            fade={0.22}
-            cardWidth="min(calc(100vw - 1.5rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), 26rem)"
-            cardHeight="24rem"
-            gap={0.12}
-            cardClassName="rounded-2xl border border-white/10 bg-[#00205b]"
-            slides={items.map((item) => (
-              <ReelCarouselCard
-                key={item.poll.id}
-                item={item}
-                showBadge={false}
-                selected={activePollId === item.poll.id}
-                onSelect={() => onSelect(item.poll.id)}
-                onBack={() => onSelect(null)}
-              />
-            ))}
-          />
+          <div className="relative mx-auto flex min-h-0 w-full max-w-[26rem] flex-1 flex-col">
+            <Stories loop={items.length > 1} onIndexChange={setCenteredIndex}>
+              <StoriesHeader />
+              <StoriesContent className="flex-1 min-h-0">
+                {items.map((item) => (
+                  <Story key={item.poll.id} className="flex flex-col">
+                    <ReelCarouselCard
+                      item={item}
+                      showBadge={false}
+                      selected={activePollId === item.poll.id}
+                      onSelect={() => onSelect(item.poll.id)}
+                      onBack={() => onSelect(null)}
+                    />
+                  </Story>
+                ))}
+              </StoriesContent>
+            </Stories>
+          </div>
         </div>
       )}
     </div>
