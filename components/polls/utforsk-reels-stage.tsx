@@ -3,10 +3,12 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
+import { usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, Compass, Info } from 'lucide-react';
 import { CivicBubble } from '@/components/icons/civic';
@@ -17,26 +19,10 @@ import { Stories, StoriesContent, StoriesHeader, StoriesCounter, StoriesNavigati
 import { ReelCarouselCard } from '@/components/polls/reel-vote-card';
 import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import type { SystemReelFeedItem } from '@/lib/polls/types';
+import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { MODAL_TRANSITION } from '@/lib/motion/tokens';
-
-function subscribeLocationHash(onStoreChange: () => void) {
-  window.addEventListener('hashchange', onStoreChange);
-  window.addEventListener('popstate', onStoreChange);
-  return () => {
-    window.removeEventListener('hashchange', onStoreChange);
-    window.removeEventListener('popstate', onStoreChange);
-  };
-}
-
-function getLocationHash() {
-  return window.location.hash;
-}
-
-function getServerLocationHash() {
-  return '';
-}
 
 function useIsMounted() {
   return useSyncExternalStore(
@@ -59,10 +45,6 @@ function getLg() {
 /** Tablets (768–1023 px) get the stacked mobile layout, not a narrow coverflow. */
 function useIsDesktopLg() {
   return useSyncExternalStore(subscribeLg, getLg, () => false);
-}
-
-function notifyHashChanged() {
-  window.dispatchEvent(new Event('hashchange'));
 }
 
 function ReelsNavArrow({ direction }: { direction: 'forward' | 'back' }) {
@@ -96,24 +78,46 @@ type UtforskReelsStageProps = {
 export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
   const reducedMotion = usePrefersReducedMotion();
   const mounted = useIsMounted();
-  const hash = useSyncExternalStore(subscribeLocationHash, getLocationHash, getServerLocationHash);
-  const reelsOpen = hash === '#reels';
+  const pathname = usePathname();
+  const reelsOpen = pathname === routes.utforskReels();
   const [activePollId, setActivePollId] = useState<string | null>(null);
+  const [initialPollId, setInitialPollId] = useState<string | null>(null);
+  const initializedRef = useRef(false);
 
   const openReels = useCallback(() => {
-    if (window.location.hash !== '#reels') {
-      window.history.pushState(null, '', `${window.location.pathname}${window.location.search}#reels`);
-      notifyHashChanged();
-    }
+    window.history.pushState(null, '', routes.utforskReels());
   }, []);
 
   const closeReels = useCallback(() => {
     setActivePollId(null);
+    if (pathname === routes.utforskReels()) {
+      window.history.pushState(null, '', routes.utforsk);
+    }
+  }, [pathname]);
+
+  // Legacy shim: redirect from #reels hash to the new route
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     if (window.location.hash === '#reels') {
-      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
-      notifyHashChanged();
+      const searchParams = new URLSearchParams(window.location.search);
+      const poll = searchParams.get('poll') ?? undefined;
+      window.history.replaceState(null, '', routes.utforskReels(poll));
     }
   }, []);
+
+  // Initial selection: when the layer opens and ?poll=X is in the URL and X matches an item's poll.id, setActivePollId(X)
+  useEffect(() => {
+    if (!reelsOpen || initializedRef.current) return;
+    const searchParams = new URLSearchParams(window.location.search);
+    const pollId = searchParams.get('poll');
+    if (pollId && items.some((item) => item.poll.id === pollId)) {
+      // Centre the requested card (do not flip it into vote mode). Timeout avoids sync setState in effect.
+      setTimeout(() => {
+        setInitialPollId(pollId);
+      }, 0);
+    }
+    initializedRef.current = true;
+  }, [reelsOpen, items]);
 
   useEffect(() => {
     if (!reelsOpen) return;
@@ -158,6 +162,7 @@ export function UtforskReelsStage({ items, children }: UtforskReelsStageProps) {
                     active={reelsOpen}
                     items={items}
                     activePollId={activePollId}
+                    initialPollId={initialPollId}
                     onSelect={setActivePollId}
                     onClose={closeReels}
                   />
@@ -260,22 +265,28 @@ function ReelsNavCta({
   );
 }
 
-function ReelsPanel({
+export function ReelsPanel({
   active,
   items,
   activePollId,
+  initialPollId = null,
   onSelect,
   onClose,
 }: {
   active: boolean;
   items: SystemReelFeedItem[];
   activePollId: string | null;
+  initialPollId?: string | null;
   onSelect: (id: string | null) => void;
   onClose: () => void;
 }) {
   const isDesktop = useIsDesktopLg();
   const cardOpen = Boolean(activePollId);
-  const [centeredIndex, setCenteredIndex] = useState(0);
+  const initialIndex = Math.max(
+    0,
+    initialPollId ? items.findIndex((item) => item.poll.id === initialPollId) : 0,
+  );
+  const [centeredIndex, setCenteredIndex] = useState(initialIndex);
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -386,6 +397,8 @@ function ReelsPanel({
         /* Desktop (lg+): 21st Coverflow rack — not fullscreen single cards, no sideways peek bleed */
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
 <CoverflowCarousel
+              key={`coverflow-${initialIndex}`}
+              initialIndex={initialIndex}
               label="Reels"
               loop={items.length >= 3}
               showPagination
@@ -417,7 +430,12 @@ function ReelsPanel({
         /* Mobile + tablet (<lg): Stories carousel (vertikal Tiktok-lignende, full høyde) */
         <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
           <div className="relative mx-auto flex min-h-0 w-full max-w-[26rem] flex-1 flex-col">
-            <Stories loop={items.length > 1} onIndexChange={setCenteredIndex}>
+            <Stories
+              key={`stories-${initialIndex}`}
+              initialIndex={initialIndex}
+              loop={items.length > 1}
+              onIndexChange={setCenteredIndex}
+            >
               <div className="flex items-center justify-between gap-1.5 px-2 pb-1">
                 <div className="flex-1 min-w-0 overflow-x-auto pr-2">
                   <StoriesHeader className="px-0" />

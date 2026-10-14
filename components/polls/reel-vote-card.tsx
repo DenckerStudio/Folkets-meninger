@@ -84,7 +84,7 @@ export function ReelFlagVote({ item, onBack, onSheetOpenChange }: ReelFlagVotePr
   const vote = async (choice: PollChoice) => {
     if (!votingOpen || userVote || busy) return;
     if (!user) {
-      router.push(`${routes.login}?next=${encodeURIComponent(`${routes.utforsk}#reels`)}`);
+      router.push(`${routes.login}?next=${encodeURIComponent(routes.utforskReels(item.poll.id))}`);
       return;
     }
     setBusy(true);
