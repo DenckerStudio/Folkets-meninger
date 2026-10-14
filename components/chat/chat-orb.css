@@ -1,7 +1,7 @@
 .chat-orb {
   position: fixed;
   right: 1rem;
-  bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
   z-index: 80;
   display: inline-flex;
   align-items: center;
@@ -22,16 +22,19 @@
 }
 
 @media (min-width: 768px) {
-  .chat-orb {
-    bottom: 1.5rem;
-  }
-
   .chat-orb:hover,
   .chat-orb:focus-visible {
     max-width: 16rem;
     padding-right: 1.1rem;
     background: color-mix(in oklab, var(--card) 92%, transparent);
     box-shadow: 0 10px 30px color-mix(in oklab, var(--foreground) 18%, transparent);
+  }
+}
+
+/* Bunnnav (InteractiveMenu) vises opp til xl, så orben holder seg over den. */
+@media (min-width: 1280px) {
+  .chat-orb {
+    bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -136,6 +139,12 @@
 
 /* Skjul orben mens Reels vises fullskjerm. */
 html[data-reels-open] .chat-orb {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Skjul orben når en drawer/sheet/dialog er åpen. */
+body[data-overlay-open='true'] .chat-orb {
   visibility: hidden;
   pointer-events: none;
 }

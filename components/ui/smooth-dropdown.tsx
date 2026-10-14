@@ -7,6 +7,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import useMeasure from "react-use-measure";
 import { MoreHorizontalCircle01Icon } from "@hugeicons/core-free-icons";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useBodyOverlayFlag } from "@/hooks/use-body-overlay";
 import { cn } from "@/lib/utils";
 
 export type SmoothDropdownItem = {
@@ -260,6 +261,7 @@ export function SmoothDropdown({
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [contentRef, contentBounds] = useMeasure();
+  useBodyOverlayFlag(isOpen);
 
   useEffect(() => {
     if (!isOpen || isMobile) return;

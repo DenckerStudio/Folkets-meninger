@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { X } from 'lucide-react';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
+import { useBodyOverlayFlag } from '@/hooks/use-body-overlay';
 import { MODAL_TRANSITION } from '@/lib/motion/tokens';
 import { cn } from '@/lib/utils';
 
@@ -52,6 +53,7 @@ export function Dialog({
   const dialogRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePrefersReducedMotion();
   const transition = reducedMotion ? { duration: 0 } : MODAL_TRANSITION;
+  useBodyOverlayFlag(open);
 
   useEffect(() => {
     if (!open) return;

@@ -360,6 +360,17 @@ export default function ExploreClient({
             Populært
             {sortBy === 'Mest engasjement' ? <TabUnderline layoutId="utforsk-sort" /> : null}
           </Pressable>
+          <Pressable
+            onClick={() => setSortBy('Snart votering')}
+            className={`relative rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
+              sortBy === 'Snart votering'
+                ? 'bg-foreground text-background border-foreground'
+                : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
+            }`}
+          >
+            Snart votering
+            {sortBy === 'Snart votering' ? <TabUnderline layoutId="utforsk-sort" /> : null}
+          </Pressable>
         </div>
         </LayoutGroup>
       </SectionSettle>

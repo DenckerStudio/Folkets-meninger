@@ -11,7 +11,7 @@ export default function HeroSection() {
   const reducedMotion = usePrefersReducedMotion();
 
   const sectionClass =
-    'landing-hero relative overflow-hidden text-center py-24 sm:py-32 w-[100vw] left-[50%] right-[50%] -ml-[50vw] -mr-[50vw] border-b border-[#00205b]/10 bg-white -mt-8 mb-12';
+    'landing-hero relative w-full overflow-hidden text-center py-24 sm:py-32 border-b border-[#00205b]/10 bg-white -mt-8 mb-12';
 
   const content = (
     <>
