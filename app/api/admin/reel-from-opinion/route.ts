@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
 import { getCitizenOpinion } from '@/lib/opinions/service';
 import { createOpinionReelDraft, listOpinionReelCandidates } from '@/lib/opinions/reel-candidates';
+import { OpinionReelDraftUnavailableError } from '@/lib/opinions/reel-draft-schema';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,8 +12,8 @@ export async function GET() {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const candidates = await listOpinionReelCandidates(12);
-  return NextResponse.json({ candidates });
+  const { available, candidates } = await listOpinionReelCandidates(12);
+  return NextResponse.json({ candidates, available });
 }
 
 export async function POST(request: Request) {
@@ -42,6 +43,16 @@ export async function POST(request: Request) {
     const draftId = await createOpinionReelDraft(opinion);
     return NextResponse.json({ success: true, draftId });
   } catch (error) {
+    if (error instanceof OpinionReelDraftUnavailableError) {
+      return NextResponse.json(
+        {
+          error:
+            'Reel-utkast fra meninger er ikke tilgjengelig. Kjør migrasjonen 20261014120000_opinion_reel_drafts.sql.',
+        },
+        { status: 503 },
+      );
+    }
+
     const message = error instanceof Error ? error.message : String(error);
     const lower = message.toLowerCase();
 

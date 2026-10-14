@@ -16,7 +16,7 @@ import { pipelineHealthNeedsAttention, type PipelineHealth } from '@/lib/n8n/pip
 
 type DraftsResponse = { drafts: PollRecord[] };
 type CandidatesResponse = { candidates: SakPollCandidate[]; coverage: SakPollCoverage };
-type OpinionCandidatesResponse = { candidates: OpinionListItem[] };
+type OpinionCandidatesResponse = { candidates: OpinionListItem[]; available?: boolean };
 
 function GenerationStatusBadge({
   issueId,
@@ -78,6 +78,7 @@ export default function AdminReelsClient({
   const [drafts, setDrafts] = useState<PollRecord[]>(initialDrafts);
   const [candidates, setCandidates] = useState<SakPollCandidate[]>([]);
   const [opinionCandidates, setOpinionCandidates] = useState<OpinionListItem[]>([]);
+  const [opinionFeatureAvailable, setOpinionFeatureAvailable] = useState(false);
   const [coverage, setCoverage] = useState<SakPollCoverage | null>(null);
   const [pipelineHealth, setPipelineHealth] = useState<PipelineHealth | null>(null);
   const [pipelineHealthUnavailable, setPipelineHealthUnavailable] = useState(false);
@@ -118,8 +119,11 @@ export default function AdminReelsClient({
         if (opinionRes.ok) {
           const opinionJson = (await opinionRes.json()) as OpinionCandidatesResponse;
           setOpinionCandidates(opinionJson.candidates ?? []);
+          setOpinionFeatureAvailable(opinionJson.available !== false);
         } else {
-          failures.push('menings-kandidater');
+          // Hidden gracefully (e.g. migration 20261014120000 not applied).
+          setOpinionCandidates([]);
+          setOpinionFeatureAvailable(false);
         }
 
         if (healthRes.ok) {
@@ -436,52 +440,54 @@ export default function AdminReelsClient({
         )}
       </section>
 
-      <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <h2 className="text-base font-semibold text-foreground">Fra Folkets meninger</h2>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-            Brukerinitiert
-          </span>
-        </div>
-        {opinionCandidates.length === 0 ? (
-          <EmptyState
-            title="Ingen menings-kandidater"
-            description="Ingen populære meninger uten reel akkurat nå."
-            className="py-6"
-          />
-        ) : (
-          <ul className="space-y-2">
-            {opinionCandidates.map((opinion) => (
-              <li
-                key={opinion.id}
-                className="flex items-start justify-between gap-3 rounded-xl border border-border px-3 py-2.5"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{opinion.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {opinion.counts.total} støtter
-                    {opinion.issueTitle ? ` · ${opinion.issueTitle}` : ''}
-                  </p>
-                  <Link
-                    href={routes.opinion(opinion.id)}
-                    className="mt-1 inline-block text-xs font-medium text-brand hover:underline"
-                  >
-                    Se meningen
-                  </Link>
-                </div>
-                <button
-                  type="button"
-                  disabled={pending || opinionPendingId === opinion.id}
-                  onClick={() => createFromOpinion(opinion.id)}
-                  className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+      {opinionFeatureAvailable ? (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold text-foreground">Fra Folkets meninger</h2>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+              Brukerinitiert
+            </span>
+          </div>
+          {opinionCandidates.length === 0 ? (
+            <EmptyState
+              title="Ingen menings-kandidater"
+              description="Ingen populære meninger uten reel akkurat nå."
+              className="py-6"
+            />
+          ) : (
+            <ul className="space-y-2">
+              {opinionCandidates.map((opinion) => (
+                <li
+                  key={opinion.id}
+                  className="flex items-start justify-between gap-3 rounded-xl border border-border px-3 py-2.5"
                 >
-                  Lag reel-utkast
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{opinion.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {opinion.counts.total} støtter
+                      {opinion.issueTitle ? ` · ${opinion.issueTitle}` : ''}
+                    </p>
+                    <Link
+                      href={routes.opinion(opinion.id)}
+                      className="mt-1 inline-block text-xs font-medium text-brand hover:underline"
+                    >
+                      Se meningen
+                    </Link>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={pending || opinionPendingId === opinion.id}
+                    onClick={() => createFromOpinion(opinion.id)}
+                    className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+                  >
+                    Lag reel-utkast
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
 
       <div className="flex flex-wrap gap-4 text-sm">
         <Link href={routes.utforsk} className="font-medium text-brand hover:underline">
