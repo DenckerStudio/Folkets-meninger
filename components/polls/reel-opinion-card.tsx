@@ -1,12 +1,18 @@
-import Link from 'next/link';
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useState, useTransition } from 'react';
 import { opinionSupportCount, stanceLabel } from '@/lib/opinions/labels';
-import type { OpinionListItem } from '@/lib/opinions/types';
+import type { OpinionListItem, OpinionStanceCounts } from '@/lib/opinions/types';
 import { routes } from '@/lib/routes';
+import { cn } from '@/lib/utils';
 
 /**
  * A citizen opinion rendered as a Reel slide (B7). Same card format as the
- * vote cards, with the lead point and Enig/Uenig buttons that open the opinion
- * thread with the reply stance preselected (Enig → For, Uenig → Imot).
+ * vote cards, with the lead point and Enig/Uenig buttons that record a quick
+ * stance (For/Imot) directly via POST /api/opinions/{id}/stance with an empty
+ * body. A secondary "Skriv begrunnelse" link opens the opinion page for a
+ * full reply.
  *
  * In 'stories' mode the card is content-driven (max-h-full overflow-y-auto) so
  * vote buttons stay reachable on short viewports. In 'coverflow' mode it uses
@@ -18,6 +24,54 @@ export function ReelOpinionCard({
 }: { opinion: OpinionListItem; mode?: 'coverflow' | 'stories' }) {
   const leadPoint = opinion.points[0]?.text ?? opinion.body;
   const isStories = mode === 'stories';
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [selectedStance, setSelectedStance] = useState<'for' | 'imot' | null>(null);
+  const [localCounts, setLocalCounts] = useState<OpinionStanceCounts>(opinion.counts);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleQuickStance = async (stance: 'for' | 'imot') => {
+    if (selectedStance) return; // Already voted
+    setError(null);
+    startTransition(async () => {
+      try {
+        const res = await fetch(`/api/opinions/${opinion.id}/stance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stance, body: '' }),
+        });
+        const data = (await res.json()) as { error?: string; replyId?: string };
+        if (!res.ok) {
+          if (res.status === 401) {
+            router.push(
+              `${routes.login}?next=${encodeURIComponent(routes.opinion(opinion.id, { stance }))}`,
+            );
+            return;
+          }
+          throw new Error(data.error || 'Kunne ikke lagre stemme');
+        }
+        // Optimistic update
+        setSelectedStance(stance);
+        setLocalCounts((prev) => ({
+          ...prev,
+          [stance]: prev[stance] + 1,
+          total: prev.total + 1,
+        }));
+      } catch {
+        setError('En feil oppstod. Prøv igjen.');
+      }
+    });
+  };
+
+  const stanceButtonClass = (baseStance: 'for' | 'imot') =>
+    cn(
+      'rounded-xl px-3 py-2.5 text-center text-sm font-semibold text-white transition-colors',
+      selectedStance === baseStance
+        ? 'opacity-70 ring-2 ring-white'
+        : baseStance === 'for'
+        ? 'bg-[#0a3d9e] hover:bg-[#0c4ab8]'
+        : 'bg-[#ba0c2f] hover:bg-[#ba0c2f]/90',
+    );
 
   return (
     <div
@@ -41,24 +95,45 @@ export function ReelOpinionCard({
           <p className="line-clamp-4 text-sm leading-relaxed text-white/75">{leadPoint}</p>
         ) : null}
         <p className="text-xs text-white/60">
-          {opinionSupportCount(opinion.counts)} støtter · {opinion.authorName ?? 'En innbygger'}
+          {opinionSupportCount(localCounts)} støtter · {opinion.authorName ?? 'En innbygger'}
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <Link
-          href={routes.opinion(opinion.id, { stance: 'for' })}
-          className="rounded-xl bg-[#0a3d9e] px-3 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-[#0c4ab8]"
+        <button
+          type="button"
+          disabled={selectedStance !== null || isPending}
+          onClick={() => handleQuickStance('for')}
+          className={stanceButtonClass('for')}
+          aria-pressed={selectedStance === 'for'}
         >
           Enig
-        </Link>
-        <Link
-          href={routes.opinion(opinion.id, { stance: 'imot' })}
-          className="rounded-xl bg-[#ba0c2f] px-3 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-[#ba0c2f]/90"
+        </button>
+        <button
+          type="button"
+          disabled={selectedStance !== null || isPending}
+          onClick={() => handleQuickStance('imot')}
+          className={stanceButtonClass('imot')}
+          aria-pressed={selectedStance === 'imot'}
         >
           Uenig
-        </Link>
+        </button>
       </div>
+
+      {selectedStance ? (
+        <div className="flex justify-center">
+          <a
+            href={routes.opinion(opinion.id, { stance: selectedStance })}
+            className="text-xs text-white/70 underline hover:text-white"
+          >
+            Skriv begrunnelse…
+          </a>
+        </div>
+      ) : error ? (
+        <p className="text-center text-xs text-red-300" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

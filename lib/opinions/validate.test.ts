@@ -101,6 +101,20 @@ assert.deepEqual(okReply, {});
 const okBlankReply = validateReplyDraft({ body: '', stance: 'blank' });
 assert.deepEqual(okBlankReply, {});
 
+// Quick stance: empty body with 'for' or 'imot' is allowed (no min length required)
+const quickFor = validateReplyDraft({ body: '', stance: 'for' });
+assert.deepEqual(quickFor, {});
+const quickImot = validateReplyDraft({ body: '', stance: 'imot' });
+assert.deepEqual(quickImot, {});
+
+// But if user starts writing, they must meet the minimum
+const quickForTooShort = validateReplyDraft({ body: 'for kort', stance: 'for' });
+assert.ok(quickForTooShort.body);
+assert.match(quickForTooShort.body ?? '', /80/);
+
+const quickForOk = validateReplyDraft({ body: 'y'.repeat(80), stance: 'for' });
+assert.deepEqual(quickForOk, {});
+
 
 assert.equal(OPINION_POINT_TEXT_MAX, 280);
 assert.equal(OPINION_BODY_MIN, 250);

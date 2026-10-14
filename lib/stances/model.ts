@@ -11,14 +11,14 @@ import type { IssueStance } from '@/lib/stances/types';
  * A ja/nei vote on a Stortinget-backed poll is the same signal as an
  * issue stance, and maps onto the opinion composer's for/imot stance.
  */
-export function issueStanceFromPollChoice(choice: PollChoice): IssueStance {
+export function issueStanceFromPollChoice(choice: PollChoice): IssueStance | null {
   switch (choice) {
     case 'ja':
       return 'enig';
     case 'nei':
       return 'uenig';
     case 'blank':
-      return 'ikke_interessert';
+      return null;
     default: {
       const _exhaustive: never = choice;
       return _exhaustive;
@@ -76,7 +76,8 @@ export function opinionCreateStanceFromIssueStance(stance: IssueStance): Opinion
 }
 
 export function opinionCreateStanceFromPollChoice(choice: PollChoice): OpinionCreateStance | null {
-  return opinionCreateStanceFromIssueStance(issueStanceFromPollChoice(choice));
+  const issueStance = issueStanceFromPollChoice(choice);
+  return issueStance ? opinionCreateStanceFromIssueStance(issueStance) : null;
 }
 
 /** Query param used to carry a pre-selected stance into the opinion composer. */

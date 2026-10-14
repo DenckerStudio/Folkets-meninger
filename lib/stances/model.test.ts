@@ -11,7 +11,7 @@ import {
 
 assert.equal(issueStanceFromPollChoice('ja'), 'enig');
 assert.equal(issueStanceFromPollChoice('nei'), 'uenig');
-assert.equal(issueStanceFromPollChoice('blank'), 'ikke_interessert');
+assert.equal(issueStanceFromPollChoice('blank'), null);
 
 assert.equal(pollChoiceFromIssueStance('enig'), 'ja');
 assert.equal(pollChoiceFromIssueStance('uenig'), 'nei');
@@ -28,6 +28,9 @@ assert.equal(opinionCreateStanceFromIssueStance('ikke_interessert'), null);
 assert.equal(opinionCreateStanceFromPollChoice('ja'), 'for');
 assert.equal(opinionCreateStanceFromPollChoice('nei'), 'imot');
 assert.equal(opinionCreateStanceFromPollChoice('blank'), null);
+
+// Blank vote must never produce 'ikke_interessert' issue stance
+assert.notEqual(issueStanceFromPollChoice('blank'), 'ikke_interessert');
 
 assert.equal(STANCE_QUERY_PARAM, 'standpunkt');
 assert.equal(parseOpinionCreateStanceParam('for'), 'for');

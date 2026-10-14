@@ -72,7 +72,9 @@ export async function POST(
     );
   }
 
-  if (!(isOpinionStance(stance) && stance === 'blank' && !text.trim())) {
+  // Skip moderation for blank stance or quick stance (empty body with for/imot)
+  const isQuickStance = text.trim() === '' && (stance === 'for' || stance === 'imot');
+  if (!(isOpinionStance(stance) && (stance === 'blank' || isQuickStance))) {
     const moderation = checkDiscussionContent(text);
     if (!moderation.approved) {
       return NextResponse.json({ error: moderation.reason }, { status: 400 });

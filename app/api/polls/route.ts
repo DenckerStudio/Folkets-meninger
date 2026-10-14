@@ -97,18 +97,21 @@ export async function POST(request: Request) {
     // blankt") is an abstention, not the deliberate "ikke interessert" stance,
     // so it must not overwrite the user's stance history. Best-effort: the vote
     // is already recorded and must not fail if this write does.
-    if (poll.stortingetIssueId && choice !== 'blank') {
-      try {
-        await setIssueStance(
-          getServiceSupabase(),
-          user.id,
-          poll.stortingetIssueId,
-          issueStanceFromPollChoice(choice),
-          poll.title,
-          poll.neutralSummary,
-        );
-      } catch (stanceError) {
-        console.error('Poll stance sync error:', stanceError);
+    if (poll.stortingetIssueId) {
+      const issueStance = issueStanceFromPollChoice(choice);
+      if (issueStance) {
+        try {
+          await setIssueStance(
+            getServiceSupabase(),
+            user.id,
+            poll.stortingetIssueId,
+            issueStance,
+            poll.title,
+            poll.neutralSummary,
+          );
+        } catch (stanceError) {
+          console.error('Poll stance sync error:', stanceError);
+        }
       }
     }
 

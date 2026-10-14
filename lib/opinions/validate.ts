@@ -150,7 +150,11 @@ export function validateReplyDraft(input: { body: string; stance: unknown }): Op
   if (body.length > OPINION_BODY_MAX) {
     errors.body = `Begrunnelsen kan ikke være lengre enn ${OPINION_BODY_MAX} tegn`;
   } else if (requiresOpinionBody(input.stance) && body.length < OPINION_REPLY_BODY_MIN) {
-    errors.body = `Begrunnelsen må være minst ${OPINION_REPLY_BODY_MIN} tegn`;
+    // Allow empty body for quick stance (for/imot) from Reel slides — the stance itself is the signal
+    // Only require min length when user explicitly writes a body
+    if (body.length > 0 && body.length < OPINION_REPLY_BODY_MIN) {
+      errors.body = `Begrunnelsen må være minst ${OPINION_REPLY_BODY_MIN} tegn`;
+    }
   }
 
   if (!isOpinionStance(input.stance)) {
