@@ -1,6 +1,5 @@
 'use client';
 
-import { Sparkles } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useChatOverlay } from '@/components/chat/chat-overlay-context';
 import { issueIdFromPathname } from '@/lib/chat/overlay';
@@ -28,8 +27,7 @@ export function ChatOrb() {
         }
       }}
     >
-      <Sparkles className="chat-orb-icon" aria-hidden />
-      <span className="chat-orb-label">Stemme+</span>
+      Stemme+
     </button>
   );
 }

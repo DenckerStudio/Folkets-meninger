@@ -34,12 +34,7 @@ export function Navigation({ children }: NavigationProps) {
   );
 
   if (inDashboard) {
-    return (
-      <DashboardNavProvider>
-        {content}
-        <ProfileMenuFloating />
-      </DashboardNavProvider>
-    );
+    return <DashboardNavProvider>{content}</DashboardNavProvider>;
   }
 
   return (
