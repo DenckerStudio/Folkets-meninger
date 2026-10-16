@@ -10,6 +10,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { isDashboardPath, isPublicProfilePath, routes } from '@/lib/routes';
 import { loginWithNext } from '@/lib/safe-redirect';
 import { desktopPrimaryNavLinks } from '@/lib/site-nav-links';
+import { touchTargetIconButtonClass, touchTargetLinkClass } from '@/lib/touch-target';
 import { DashboardNavMenuButton } from '@/components/dashboard/dashboard-nav-context';
 import { ProfileMenuDropdown } from '@/components/profile/profile-menu-dropdown';
 import { NotificationsBell } from '@/components/notifications/notifications-bell';
@@ -57,7 +58,8 @@ export function Header() {
                     key={link.href}
                     href={link.href}
                     className={cn(
-                      'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      touchTargetLinkClass,
+                      'rounded-lg px-3 text-sm font-medium transition-colors',
                       active
                         ? 'bg-brand/10 text-brand'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -86,17 +88,15 @@ export function Header() {
             <>
               <Button
                 variant="outline"
-                size="sm"
-                className="min-h-11 min-w-11 px-3"
+                className={cn(touchTargetIconButtonClass, 'h-11 gap-1.5 px-4')}
                 aria-label="Logg inn"
                 render={<Link href={loginHref} aria-label="Logg inn" />}
               >
-                <LogIn className="size-3.5 sm:size-4" aria-hidden />
+                <LogIn className="size-4" aria-hidden />
                 <span className="hidden min-[380px]:inline">Logg inn</span>
               </Button>
               <Button
-                size="sm"
-                className="hidden min-h-11 sm:inline-flex"
+                className={cn(touchTargetLinkClass, 'hidden h-11 px-4 sm:inline-flex')}
                 render={<Link href={loginHref} />}
               >
                 Kom i gang
@@ -105,7 +105,10 @@ export function Header() {
           )}
           {inDashboard ? (
             <DashboardNavMenuButton
-              className="inline-flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-input bg-background text-foreground transition-colors hover:bg-accent hover:text-accent-foreground xl:hidden"
+              className={cn(
+                touchTargetIconButtonClass,
+                'rounded-full border border-input bg-background text-foreground transition-colors hover:bg-accent hover:text-accent-foreground xl:hidden',
+              )}
             />
           ) : null}
         </div>
@@ -117,7 +120,7 @@ export function Header() {
 function ProfileMenuDropdownFallback() {
   return (
     <div
-      className="relative flex h-11 w-11 items-center justify-center rounded-full border border-border bg-muted"
+      className={cn(touchTargetIconButtonClass, 'relative rounded-full border border-border bg-muted')}
       aria-hidden
     />
   );

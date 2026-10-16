@@ -1,8 +1,10 @@
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 import { MessageSquarePlus } from 'lucide-react';
 import { LandingLogo } from '@/components/landing-logo';
 import { FlagStripe } from '@/components/motion/flag-stripe';
 import { routes } from '@/lib/routes';
+import { touchTargetLinkClass } from '@/lib/touch-target';
 
 const platformLinks = [
   { href: routes.utforsk, label: 'Utforsk saker' },
@@ -39,7 +41,10 @@ export function LandingFooter() {
             </p>
             <Link
               href={routes.innspill}
-              className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-[#00205b] transition-colors hover:text-[#ba0c2f]"
+              className={cn(
+                touchTargetLinkClass,
+                'mt-5 gap-2 text-sm font-medium text-[#00205b] transition-colors hover:text-[#ba0c2f]',
+              )}
             >
               <MessageSquarePlus className="h-4 w-4" aria-hidden />
               Kontakt oss / gi innspill
@@ -53,7 +58,10 @@ export function LandingFooter() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-[#001433]/70 transition-colors hover:text-[#ba0c2f]"
+                    className={cn(
+                      touchTargetLinkClass,
+                      'text-sm text-[#001433]/70 transition-colors hover:text-[#ba0c2f]',
+                    )}
                   >
                     {link.label}
                   </Link>
@@ -69,7 +77,10 @@ export function LandingFooter() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-[#001433]/70 transition-colors hover:text-[#ba0c2f]"
+                    className={cn(
+                      touchTargetLinkClass,
+                      'text-sm text-[#001433]/70 transition-colors hover:text-[#ba0c2f]',
+                    )}
                   >
                     {link.label}
                   </Link>
@@ -85,7 +96,10 @@ export function LandingFooter() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-[#001433]/70 transition-colors hover:text-[#ba0c2f]"
+                    className={cn(
+                      touchTargetLinkClass,
+                      'text-sm text-[#001433]/70 transition-colors hover:text-[#ba0c2f]',
+                    )}
                   >
                     {link.label}
                   </Link>

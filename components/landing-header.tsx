@@ -8,6 +8,7 @@ import { LandingLogo } from '@/components/landing-logo';
 import { FlagStripe } from '@/components/motion/flag-stripe';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
+import { touchTargetLinkClass } from '@/lib/touch-target';
 import { useAuth } from '@/hooks/use-auth';
 
 function useScroll(threshold: number) {
@@ -48,14 +49,20 @@ export function LandingHeader() {
               document.getElementById('om-oss')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               window.history.replaceState(null, '', '/#om-oss');
             }}
-            className="hidden sm:inline-flex px-3 py-2 text-sm font-medium text-[#001433]/65 transition-colors hover:text-[#ba0c2f]"
+            className={cn(
+              'hidden sm:inline-flex px-3 text-sm font-medium text-[#001433]/65 transition-colors hover:text-[#ba0c2f]',
+              touchTargetLinkClass,
+            )}
           >
             Om oss
           </a>
           {user ? (
             <Link
               href={routes.dashboard}
-              className="inline-flex items-center rounded-full bg-[#00205b] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#ba0c2f] sm:px-4 sm:py-2 sm:text-sm"
+              className={cn(
+                touchTargetLinkClass,
+                'justify-center rounded-full bg-[#00205b] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#ba0c2f]',
+              )}
             >
               <span className="sm:hidden">Dashboard</span>
               <span className="hidden sm:inline">Gå til dashboard</span>
@@ -64,14 +71,20 @@ export function LandingHeader() {
             <>
               <Link
                 href={routes.login}
-                className="inline-flex items-center gap-1 rounded-full border border-[#00205b]/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#00205b] transition-colors hover:border-[#00205b]/40 hover:bg-[#00205b]/[0.04] sm:gap-1.5 sm:px-4 sm:py-2 sm:text-sm"
+                className={cn(
+                  touchTargetLinkClass,
+                  'gap-1.5 rounded-full border border-[#00205b]/15 bg-white px-4 text-sm font-semibold text-[#00205b] transition-colors hover:border-[#00205b]/40 hover:bg-[#00205b]/[0.04]',
+                )}
               >
                 <LogIn className="size-3.5 sm:size-4" />
                 Logg inn
               </Link>
               <Link
                 href={routes.utforsk}
-                className="inline-flex items-center rounded-full bg-[#00205b] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#ba0c2f] sm:px-4 sm:py-2 sm:text-sm"
+                className={cn(
+                  touchTargetLinkClass,
+                  'justify-center rounded-full bg-[#00205b] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#ba0c2f]',
+                )}
               >
                 <span className="sm:hidden">Utforsk</span>
                 <span className="hidden sm:inline">Utforsk saker</span>

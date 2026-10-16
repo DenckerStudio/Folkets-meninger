@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { loginWithNext } from '@/lib/safe-redirect';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
+import { touchTargetIconButtonClass } from '@/lib/touch-target';
 import {
   NotificationPanel,
   type NotificationItem,
@@ -215,7 +216,8 @@ export function NotificationsBell({
       <Link
         href={loginHref || loginWithNext(pathname)}
         className={cn(
-          'relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-input bg-background transition-colors hover:bg-accent hover:text-accent-foreground',
+          touchTargetIconButtonClass,
+          'relative rounded-full border border-input bg-background transition-colors hover:bg-accent hover:text-accent-foreground',
           className,
         )}
         aria-label="Varsler"
@@ -255,7 +257,10 @@ export function NotificationsBell({
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((v) => !v)}
-        className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-input bg-background transition-colors hover:bg-accent hover:text-accent-foreground"
+        className={cn(
+          touchTargetIconButtonClass,
+          'relative rounded-full border border-input bg-background transition-colors hover:bg-accent hover:text-accent-foreground',
+        )}
       >
         <Bell className="size-4" />
         {unread > 0 ? (
