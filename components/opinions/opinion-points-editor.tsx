@@ -11,6 +11,7 @@ import {
   type OpinionPoint,
   type OpinionPointStance,
 } from '@/lib/opinions/types';
+import { CharacterCountTextarea } from '@/components/ui/character-count-textarea';
 import { cn } from '@/lib/utils';
 
 type OpinionPointsEditorProps = {
@@ -64,11 +65,11 @@ export function OpinionPointsEditor({ value, onChange, error }: OpinionPointsEdi
           return (
             <li key={index} className="space-y-1">
               <div className="rounded-2xl border border-border bg-background p-3">
-                <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="mb-2 flex items-start justify-between gap-2">
                   <div
                     role="group"
                     aria-label={`Standpunkt for kulepunkt ${index + 1}`}
-                    className="inline-flex overflow-hidden rounded-xl border border-border"
+                    className="flex min-w-0 flex-1 flex-col gap-1.5"
                   >
                     {OPINION_POINT_STANCES.map((stance) => {
                       const visual = STANCE_VISUAL[stance];
@@ -80,7 +81,8 @@ export function OpinionPointsEditor({ value, onChange, error }: OpinionPointsEdi
                           aria-pressed={selected}
                           onClick={() => updatePoint(index, { stance })}
                           className={cn(
-                            'min-h-11 min-w-[4.5rem] border-0 px-3 text-xs font-semibold',
+                            'min-h-11 w-full rounded-xl border px-3 text-left text-xs font-semibold transition-colors',
+                            selected ? 'border-transparent' : 'border-border',
                             !selected && (stance === 'imot' ? 'text-brand-accent' : 'text-brand'),
                           )}
                           style={
@@ -105,25 +107,14 @@ export function OpinionPointsEditor({ value, onChange, error }: OpinionPointsEdi
                     </button>
                   ) : null}
                 </div>
-                <div className="relative">
-                  <textarea
-                    value={point.text}
-                    maxLength={OPINION_POINT_TEXT_MAX}
-                    rows={2}
-                    onChange={(event) => updatePoint(index, { text: event.target.value })}
-                    placeholder={point.stance === 'for' ? 'Argument for …' : 'Argument imot …'}
-                    className="w-full resize-y rounded-xl border border-border bg-card px-3 py-2.5 pb-6 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-brand/30"
-                    aria-invalid={tooShort || undefined}
-                  />
-                  <span
-                    className={cn(
-                      'pointer-events-none absolute bottom-2 right-3 text-[11px] tabular-nums',
-                      tooShort || atMax ? 'font-medium text-amber-700 dark:text-amber-300' : 'text-muted-foreground',
-                    )}
-                  >
-                    {length}/{OPINION_POINT_TEXT_MAX}
-                  </span>
-                </div>
+                <CharacterCountTextarea
+                  value={point.text}
+                  maxLength={OPINION_POINT_TEXT_MAX}
+                  rows={2}
+                  onChange={(text) => updatePoint(index, { text })}
+                  placeholder={point.stance === 'for' ? 'Argument for …' : 'Argument imot …'}
+                  aria-invalid={tooShort || undefined}
+                />
               </div>
               {tooShort ? (
                 <p className="px-1 text-xs font-medium text-amber-700 dark:text-amber-300">
