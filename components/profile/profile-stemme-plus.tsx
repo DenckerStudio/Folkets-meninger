@@ -87,7 +87,7 @@ export function ProfileStemmePlus() {
         window.location.href = json.url;
         return;
       }
-      throw new Error('Stripe returnerte ingen betalingsside');
+      throw new Error('Fant ingen betalingsside. Prøv igjen om litt.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Kunne ikke starte betaling');
     } finally {
@@ -159,7 +159,7 @@ export function ProfileStemmePlus() {
         </div>
       </div>
 
-      <ul className="mt-4 space-y-2">
+      <ul className="mt-4 space-y-2.5">
         {STEMME_PLUS_BENEFITS.map((benefit) => (
           <li key={benefit} className="flex items-start gap-2 text-sm text-foreground">
             <CivicTick className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
@@ -184,13 +184,13 @@ export function ProfileStemmePlus() {
             <button
               type="button"
               onClick={() => openChat()}
-              className="text-sm font-medium text-brand hover:underline"
+              className="inline-flex min-h-11 items-center px-1 text-sm font-medium text-brand hover:underline"
             >
               Åpne chat
             </button>
           </div>
           {status.subscription_period_end ? (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Gyldig til{' '}
               {new Date(status.subscription_period_end).toLocaleDateString('nb-NO', {
                 day: 'numeric',
@@ -200,12 +200,18 @@ export function ProfileStemmePlus() {
             </p>
           ) : null}
           {status.has_stripe_customer ? (
-            <Button type="button" variant="outline" onClick={() => void openPortal()} disabled={checkoutBusy}>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 w-full sm:w-auto"
+              onClick={() => void openPortal()}
+              disabled={checkoutBusy}
+            >
               Administrer abonnement
             </Button>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Medlemskapet er aktivt (tildelt eller via Stripe når det er satt opp).
+              Medlemskapet ditt er aktivt.
             </p>
           )}
           <ByokSettings
@@ -216,15 +222,20 @@ export function ProfileStemmePlus() {
       ) : (
         <div className="mt-5 space-y-3">
           {checkoutConfigured ? (
-            <Button type="button" onClick={() => void startCheckout()} disabled={checkoutBusy}>
+            <Button
+              type="button"
+              className="min-h-11 w-full sm:w-auto"
+              onClick={() => void startCheckout()}
+              disabled={checkoutBusy}
+            >
               {checkoutBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Bli Stemme+ — {price} kr/mnd
             </Button>
           ) : (
             <EmptyState
               className="py-6"
-              title="Stripe-kasse er ikke konfigurert ennå"
-              description={`Selvbetjent betaling via Vercel Marketplace → Stripe kommer når nøklene er satt (${price} kr/mnd). Fordelene er allerede aktive for brukere med Stemme+ (for eksempel tildelt av admin).`}
+              title="Betaling åpner snart"
+              description={`Du kan snart bli Stemme+ for ${price} kr/mnd rett her. Følg med – vi gir beskjed når betalingen er klar.`}
             />
           )}
         </div>
