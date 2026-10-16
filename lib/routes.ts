@@ -28,6 +28,8 @@ export const routes = {
   omOss: '/#om-oss',
   innspill: '/innspill',
   login: '/auth/login',
+  glemtPassord: '/auth/glemt-passord',
+  tilbakestillPassord: '/auth/tilbakestill-passord',
   completeProfile: '/auth/complete-profile',
   onboarding: '/auth/onboarding',
   politiker: (id: string) => `${DASHBOARD_PREFIX}/politikere/${id}`,
@@ -91,6 +93,16 @@ export function isPublicDashboardFolketsMeningerPath(pathname: string): boolean 
     pathname === routes.folketsMeninger ||
     /^\/dashboard\/folkets-meninger\/[^/]+$/.test(pathname)
   );
+}
+
+/** Stortinget hearings — guests can read; innspill/comments require login. */
+export function isPublicDashboardHoringerPath(pathname: string): boolean {
+  return pathname === routes.horinger || pathname.startsWith(`${routes.horinger}/`);
+}
+
+/** Parliamentary calendar — read-only for guests. */
+export function isPublicDashboardKalenderPath(pathname: string): boolean {
+  return pathname === routes.kalender;
 }
 
 export function isPublicProfilePath(pathname: string): boolean {

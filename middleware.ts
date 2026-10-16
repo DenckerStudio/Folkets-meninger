@@ -4,6 +4,8 @@ import {
   isPublicDashboardAvstemningPath,
   isPublicDashboardChatPath,
   isPublicDashboardFolketsMeningerPath,
+  isPublicDashboardHoringerPath,
+  isPublicDashboardKalenderPath,
   isPublicDashboardPolitikerPath,
   isPublicDashboardSakPath,
   isPublicDashboardUtforskPath,
@@ -58,6 +60,8 @@ export async function middleware(request: NextRequest) {
     isPublicDashboardPolitikerPath(pathname) ||
     isPublicDashboardAvstemningPath(pathname) ||
     isPublicDashboardFolketsMeningerPath(pathname) ||
+    isPublicDashboardHoringerPath(pathname) ||
+    isPublicDashboardKalenderPath(pathname) ||
     isPublicDashboardUtforskPath(pathname) ||
     isPublicDashboardChatPath(pathname)
   ) {

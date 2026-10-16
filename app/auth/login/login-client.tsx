@@ -7,6 +7,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase';
 import { onboardingPathWithNext, shouldStartSignupOnboarding } from '@/lib/onboarding';
 import { toRelativeNext } from '@/lib/safe-redirect';
+import { routes } from '@/lib/routes';
+import Link from 'next/link';
 
 export default function LoginClient() {
   const [isLoading, setIsLoading] = useState(false);
@@ -230,7 +232,9 @@ export default function LoginClient() {
             {isRegister ? 'Registrer ny bruker' : 'Logg inn på din konto'}
           </h2>
             <p className="mt-2 text-center text-sm text-muted-foreground">
-              Logg inn med e-post eller Google for å stemme og delta.
+              {isRegister
+                ? 'Opprett konto med e-post eller Google for å stemme og delta.'
+                : 'Logg inn med e-post eller Google for å stemme og delta.'}
             </p>
         </div>
       </FadeIn>
@@ -350,6 +354,16 @@ export default function LoginClient() {
                     className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand/30 focus:border-brand sm:text-sm"
                   />
                 </div>
+                {!isRegister ? (
+                  <p className="mt-2 text-right">
+                    <Link
+                      href={routes.glemtPassord}
+                      className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:text-brand/80"
+                    >
+                      Glemt passord?
+                    </Link>
+                  </p>
+                ) : null}
               </div>
 
               <div>

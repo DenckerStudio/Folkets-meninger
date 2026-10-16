@@ -6,6 +6,7 @@ import { PollBallot } from '@/components/polls/poll-ballot';
 import { PollResultView } from '@/components/polls/poll-result-view';
 import { isAdmin } from '@/lib/admin/gate';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { formatPollDisplayTitle } from '@/lib/polls/display-title';
 import { pollStatusLabel, pollTrackLabel, SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import {
   getPollById,
@@ -56,7 +57,7 @@ export default async function PollDetailPage({ params }: PageProps) {
           {pollStatusLabel(poll.status)}
         </span>
       </div>
-      <PageHeader title={poll.title} />
+      <PageHeader title={formatPollDisplayTitle(poll.title)} />
       {poll.track === 'system' ? (
         <p className="text-sm text-muted-foreground">{SYSTEM_REEL_DISCLAIMER}</p>
       ) : null}

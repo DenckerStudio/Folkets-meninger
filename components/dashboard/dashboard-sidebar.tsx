@@ -57,7 +57,7 @@ export default function DashboardSidebar({ variant = 'desktop', onNavigate }: Da
             aria-current={active ? 'page' : undefined}
           >
             <Icon className={cn('shrink-0', isDrawer ? 'h-[1.125rem] w-[1.125rem]' : 'h-4 w-4')} />
-            {isDrawer && item.href === routes.folketsMeninger ? 'Meninger' : item.title}
+            {item.title}
           </Link>
         );
       })}

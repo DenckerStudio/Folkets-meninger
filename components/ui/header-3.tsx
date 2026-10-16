@@ -83,13 +83,18 @@ export function Header() {
               <Button
                 variant="outline"
                 size="sm"
-                className="min-h-11 min-w-11 px-3 sm:h-8 sm:min-h-0 sm:min-w-0"
-                render={<Link href={loginHref} />}
+                className="min-h-11 min-w-11 px-3"
+                aria-label="Logg inn"
+                render={<Link href={loginHref} aria-label="Logg inn" />}
               >
-                <LogIn className="size-3.5 sm:size-4" />
+                <LogIn className="size-3.5 sm:size-4" aria-hidden />
                 <span className="hidden min-[380px]:inline">Logg inn</span>
               </Button>
-              <Button size="sm" className="hidden sm:inline-flex sm:h-8" render={<Link href={loginHref} />}>
+              <Button
+                size="sm"
+                className="hidden min-h-11 sm:inline-flex"
+                render={<Link href={loginHref} />}
+              >
                 Kom i gang
               </Button>
             </>

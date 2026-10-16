@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Check, ChevronDown, Code2, HelpCircle, Link2, Share2, X } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Dialog } from '@/components/ui/dialog';
+import { formatStemmerCount } from '@/lib/norwegian-plural';
 import { pollChoicePercent } from '@/lib/polls/format';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
 import {
@@ -436,8 +437,8 @@ export function SharePollWidget({
           })}
           <p className="text-xs text-muted-foreground">
             {lowSample
-              ? `${totals.total} stemmer · For få stemmer til å vise prosent ennå`
-              : `${totals.total} stemmer · Uoffisiell meningsmåling, ikke representativ`}
+              ? `${formatStemmerCount(totals.total)} · For få stemmer til å vise prosent ennå`
+              : `${formatStemmerCount(totals.total)} · Uoffisiell meningsmåling, ikke representativ`}
           </p>
         </div>
       ) : null}
