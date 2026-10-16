@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useSyncExternalStore, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { AnimatedTabs } from '@/components/ui/animated-tabs';
+import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 
 export const SAK_PAGE_TAB_IDS = [
   'oversikt',
@@ -65,6 +67,7 @@ export function SakPageTabs({
   forDeg: ReactNode;
 }) {
   const active = useSyncExternalStore(subscribeToTab, tabFromHash, () => 'oversikt');
+  const reducedMotion = usePrefersReducedMotion();
 
   const selectTab = useCallback((id: string) => {
     if (isSakPageTabId(id)) navigateToSakTab(id);
@@ -93,18 +96,25 @@ export function SakPageTabs({
         />
       </nav>
 
-      {SAK_PAGE_TAB_IDS.map((id) => (
-        <section
-          key={id}
-          id={id}
-          role="tabpanel"
-          aria-labelledby={`sak-tab-${id}`}
-          hidden={active !== id}
-          className={active === id ? 'space-y-6' : 'hidden'}
-        >
-          {panels[id]}
-        </section>
-      ))}
+      <AnimatePresence mode="wait">
+        {SAK_PAGE_TAB_IDS.map((id) =>
+          active === id ? (
+            <motion.section
+              key={id}
+              id={id}
+              role="tabpanel"
+              aria-labelledby={`sak-tab-${id}`}
+              className="space-y-6"
+              initial={reducedMotion ? false : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reducedMotion ? undefined : { opacity: 0, y: -6 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              {panels[id]}
+            </motion.section>
+          ) : null,
+        )}
+      </AnimatePresence>
     </div>
   );
 }
