@@ -17,22 +17,16 @@ test.describe('Chat orb overlay', () => {
     fs.mkdirSync(ARTIFACTS, { recursive: true });
   });
 
-  test('floating orb opens the chat panel on a normal dashboard page', async ({ page }) => {
+  test('guests do not see the Stemme+ pill; chat opens via deep link', async ({ page }) => {
     test.setTimeout(90_000);
     await page.goto('/dashboard/avstemninger');
     await expect(page.getByRole('heading', { name: 'Avstemninger', exact: true })).toBeVisible();
 
-    const orb = page.getByRole('button', { name: 'Åpne chat' });
-    await expect(orb).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Åpne Stemme+' })).toHaveCount(0);
     await expect(page.getByRole('navigation', { name: 'Dashbordmeny' }).getByRole('link', { name: 'Chat' })).toHaveCount(0);
     await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
 
-    await page.screenshot({
-      path: `${ARTIFACTS}/chat-orb-closed.png`,
-    });
-
-    await orb.click();
-
+    await page.goto('/dashboard/avstemninger?chat=1');
     const panel = await waitForGuestChatPanel(page);
     await expect(page.getByRole('heading', { name: 'Chat', exact: true })).toBeVisible();
     await expect(panel.getByText('Logg inn for å bruke chat')).toBeVisible();
@@ -64,7 +58,7 @@ test.describe('Chat orb overlay', () => {
     await page.goto('/dashboard/avstemninger');
     await expect(page.getByRole('heading', { name: 'Avstemninger', exact: true })).toBeVisible();
 
-    const orb = page.getByRole('button', { name: 'Åpne chat' });
+    const orb = page.getByRole('button', { name: 'Åpne Stemme+' });
     await orb.click();
 
     const panel = page.locator('[data-chat-panel]');
@@ -99,7 +93,7 @@ test.describe('Chat orb overlay', () => {
     await page.goto('/dashboard/avstemninger');
     await expect(page.getByRole('heading', { name: 'Avstemninger', exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Åpne chat' }).click();
+    await page.getByRole('button', { name: 'Åpne Stemme+' }).click();
     const panel = page.locator('[data-chat-panel]');
     await expect(panel).toBeVisible();
     await expect(panel.getByText('Hei — hvordan kan jeg hjelpe?')).toBeVisible();
@@ -194,22 +188,16 @@ test.describe('Chat orb overlay', () => {
     await expect(page.getByRole('heading', { name: 'Chat', exact: true })).toBeVisible();
   });
 
-  test('floating orb mounts on Utforsk and opens the panel', async ({ page }) => {
+  test('Utforsk hides Stemme+ pill for guests; chat via deep link', async ({ page }) => {
     test.setTimeout(90_000);
     await page.goto('/dashboard/utforsk');
     await expect(page.getByRole('heading', { name: 'Utforsk saker' })).toBeVisible({ timeout: 90_000 });
 
-    const orb = page.getByRole('button', { name: 'Åpne chat' });
-    await expect(orb).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Åpne Stemme+' })).toHaveCount(0);
     await expect(page.getByRole('navigation', { name: 'Dashbordmeny' }).getByRole('link', { name: 'Chat' })).toHaveCount(0);
     await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
 
-    await page.screenshot({
-      path: `${ARTIFACTS}/chat-orb-utforsk-closed.png`,
-    });
-
-    await orb.click();
-
+    await page.goto('/dashboard/utforsk?chat=1');
     const panel = await waitForGuestChatPanel(page);
     await expect(page.getByRole('heading', { name: 'Chat', exact: true })).toBeVisible();
     await expect(panel.getByText('Logg inn for å bruke chat')).toBeVisible();
