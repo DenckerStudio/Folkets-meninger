@@ -19,15 +19,15 @@ export default function LandingPage() {
           <LandingHowItWorks />
         </div>
 
-        <div data-landing-section>
+        <div data-landing-section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
           <LandingAbout />
         </div>
 
-        <div data-landing-section>
+        <div data-landing-section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
           <LandingPopularIssuesLazy />
         </div>
 
-        <div data-landing-section>
+        <div data-landing-section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
           <CallToAction
             title="Klar til å delta?"
             subtitle="Opprett konto gratis. Én person, én stemme."

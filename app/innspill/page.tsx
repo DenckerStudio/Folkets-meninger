@@ -9,7 +9,7 @@ export const metadata = buildPageMetadata({
 
 export default function InnspillPage() {
   return (
-    <div className="mx-auto max-w-2xl space-y-10 pb-8">
+    <div className="mx-auto max-w-2xl space-y-10 px-4 pb-8 sm:px-6 lg:px-8">
       <div className="space-y-4 pt-4 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">Kontakt</p>
         <h1 className="text-4xl font-extrabold tracking-tight text-[#001433] sm:text-5xl">
