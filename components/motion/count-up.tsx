@@ -34,7 +34,7 @@ export function CountUp({ value, className }: CountUpProps) {
     return () => cancelAnimationFrame(frame);
   }, [inView, reducedMotion, value]);
 
-  const visible = reducedMotion ? value : shown;
+  const visible = !inView || reducedMotion ? value : shown;
 
   return (
     <span ref={ref} className={className}>

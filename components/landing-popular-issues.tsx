@@ -4,6 +4,7 @@ import { routes } from '@/lib/routes';
 import FadeIn from '@/components/fade-in';
 import { LandingHeadingRule } from '@/components/icons/civic';
 import { CountUp } from '@/components/motion/count-up';
+import { formatNumber } from '@/lib/utils';
 
 export type LandingIssue = {
   id: string;
@@ -30,7 +31,7 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
             <h2 className="text-3xl font-bold text-[#001433] tracking-tight sm:text-4xl">Populære saker nå</h2>
             <LandingHeadingRule />
             <p className="mt-2 text-[#001433]/65 max-w-xl">
-              <CountUp value={issues.length} /> saker · <CountUp value={stemmer} /> stemmer
+              {formatNumber(issues.length)} saker · {formatNumber(stemmer)} stemmer
             </p>
           </div>
           <Link
