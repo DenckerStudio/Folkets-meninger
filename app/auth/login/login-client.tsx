@@ -131,7 +131,7 @@ export default function LoginClient() {
 
   if (showPhoneVerify) {
     return (
-      <div className="min-h-[80vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="min-h-[80vh] flex flex-col justify-center px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
         <FadeIn delay={0.1}>
           <div className="sm:mx-auto sm:w-full sm:max-w-md">
             <div className="flex justify-center">
@@ -139,7 +139,7 @@ export default function LoginClient() {
                 <Phone className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">Bekreft telefonnummer</h2>
+            <h2 className="mt-6 text-center text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">Bekreft telefonnummer</h2>
             <p className="mt-2 text-center text-sm text-muted-foreground">
               SMS-bekreftelse er valgfri — du kan hoppe over og fortsette med e-postkontoen.
             </p>
@@ -148,7 +148,7 @@ export default function LoginClient() {
 
         <FadeIn delay={0.2} direction="up">
           <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-            <div className="bg-card py-8 px-4 shadow-sm sm:rounded-3xl sm:px-10 border border-border space-y-6">
+            <div className="bg-card py-6 px-4 shadow-sm rounded-2xl sm:py-8 sm:rounded-3xl sm:px-10 border border-border space-y-6">
               {error && <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-xl text-sm">{error}</div>}
 
               <div>
@@ -167,7 +167,7 @@ export default function LoginClient() {
                   <button
                     onClick={handleSendOtp}
                     disabled={isLoading || !phone}
-                    className="px-4 py-3 bg-brand text-brand-foreground rounded-xl text-sm font-medium hover:bg-brand/90 disabled:opacity-50 whitespace-nowrap"
+                    className="min-h-11 px-4 py-3 bg-brand text-brand-foreground rounded-xl text-sm font-medium hover:bg-brand/90 disabled:opacity-50 whitespace-nowrap"
                   >
                     Send SMS
                   </button>
@@ -197,7 +197,7 @@ export default function LoginClient() {
                 disabled={isLoading || !otp}
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition-colors"
               >
-                {isLoading ? 'Verifiserer...' : 'Bekreft og fortsett'}
+                {isLoading ? 'Bekrefter …' : 'Bekreft og fortsett'}
               </button>
 
               <button
@@ -206,7 +206,7 @@ export default function LoginClient() {
                   router.push(onboardingPathWithNext(nextPath));
                   router.refresh();
                 }}
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+                className="inline-flex min-h-11 w-full items-center justify-center text-sm text-muted-foreground hover:text-foreground"
               >
                 Fortsett uten SMS-verifisering
               </button>
@@ -218,7 +218,7 @@ export default function LoginClient() {
   }
 
   return (
-    <div className="min-h-[80vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-[80vh] flex flex-col justify-center px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
       <FadeIn delay={0.1}>
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <div className="flex justify-center">
@@ -226,7 +226,7 @@ export default function LoginClient() {
               <ShieldCheck className="w-8 h-8 text-brand" />
             </div>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">
+          <h2 className="mt-6 text-center text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
             {isRegister ? 'Registrer ny bruker' : 'Logg inn på din konto'}
           </h2>
             <p className="mt-2 text-center text-sm text-muted-foreground">
@@ -237,7 +237,7 @@ export default function LoginClient() {
 
       <FadeIn delay={0.2} direction="up">
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-card py-8 px-4 shadow-sm sm:rounded-3xl sm:px-10 border border-border">
+          <div className="bg-card py-6 px-4 shadow-sm rounded-2xl sm:py-8 sm:rounded-3xl sm:px-10 border border-border">
             {error && <div className="mb-6 bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-xl text-sm">{error}</div>}
 
             <div className="space-y-3 mb-6">
@@ -373,7 +373,7 @@ export default function LoginClient() {
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         ></path>
                       </svg>
-                      Vennligst vent...
+                      Vent litt …
                     </span>
                   ) : (
                     <span className="flex items-center">
@@ -391,7 +391,7 @@ export default function LoginClient() {
                     setIsRegister(!isRegister);
                     setError('');
                   }}
-                  className="text-sm text-brand hover:text-brand/80"
+                  className="inline-flex min-h-11 items-center px-2 text-sm font-medium text-brand hover:text-brand/80"
                 >
                   {isRegister ? 'Har du allerede konto? Logg inn her' : 'Trenger du konto? Registrer deg'}
                 </button>

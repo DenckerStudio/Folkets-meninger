@@ -396,7 +396,7 @@ function FylkePanel({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-1 block w-full max-w-sm rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
+        className="mt-1 block min-h-11 w-full max-w-sm rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground sm:text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
       >
         <option value="">Vil ikke oppgi</option>
         {NORWAY_COUNTIES.map((county) => (
