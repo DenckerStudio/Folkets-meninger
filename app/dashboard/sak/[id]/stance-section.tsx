@@ -58,7 +58,9 @@ export default function StanceSection({
     if (isSubmitting) return;
 
     if (!user) {
-      setError('Du må logge inn for å lagre holdning.');
+      setError('');
+      const next = `${routes.login}?next=${encodeURIComponent(routes.sak(sakId))}`;
+      window.location.assign(next);
       return;
     }
 
@@ -95,7 +97,7 @@ export default function StanceSection({
     }
   };
 
-  const canChoose = !isLoading && !isSubmitting;
+  const canChoose = !isSubmitting && (!user || !isLoading);
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-8">
