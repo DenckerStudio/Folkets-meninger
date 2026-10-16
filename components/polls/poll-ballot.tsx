@@ -8,6 +8,7 @@ import { POLL_BALLOT_CHOICES, pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
 import { VoteFillButton } from '@/components/motion/vote-fill';
 import { routes } from '@/lib/routes';
+import { NonRepresentativeNotice } from '@/components/trust/non-representative-notice';
 import { cn } from '@/lib/utils';
 
 type PollBallotProps = {
@@ -70,6 +71,7 @@ export function PollBallot({
           <p className="mt-1 text-sm text-muted-foreground">
             Ja, nei eller blank. Stemmen lagres anonymt.
           </p>
+          <NonRepresentativeNotice count={totals.total} countLabel="stemmer" className="mt-2" />
         </>
       )}
       <div className={cn('grid gap-2 sm:grid-cols-3', compact ? 'mt-0' : 'mt-4')}>

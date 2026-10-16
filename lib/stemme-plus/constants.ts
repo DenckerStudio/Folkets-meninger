@@ -11,6 +11,10 @@ export const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'trialing'] as const;
 
 export type SubscriptionStatus = string;
 
+/** Shown wherever Stemme+ is sold — payment must not affect democracy features. */
+export const STEMME_PLUS_NON_INFLUENCE_NOTE =
+  'Betaling påvirker ikke stemmer, vekting, synlighet eller offentlig statistikk. Demokratiske funksjoner forblir gratis.';
+
 export const STEMME_PLUS_BENEFITS = [
   'Støttemerke på profilen',
   'Rikere ukentlig nyhetsoppsummering',

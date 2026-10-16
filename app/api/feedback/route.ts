@@ -6,7 +6,7 @@ import { sendSiteFeedbackEmail } from '@/lib/email/nodemailer';
 
 export const dynamic = 'force-dynamic';
 
-const CATEGORIES = new Set(['idé', 'feil', 'spørsmål', 'annet']);
+const CATEGORIES = new Set(['idé', 'feil', 'spørsmål', 'skjevhet', 'annet']);
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function clientIp(request: Request): string {

@@ -10,7 +10,11 @@ import { ByokSettings, type ByokMetaView } from '@/components/profile/byok-setti
 import { ProfileCard } from '@/components/profile/profile-card';
 import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
 import { Button } from '@/components/ui/button';
-import { STEMME_PLUS_BENEFITS, STEMME_PLUS_MONTHLY_PRICE_NOK } from '@/lib/stemme-plus/constants';
+import {
+  STEMME_PLUS_BENEFITS,
+  STEMME_PLUS_MONTHLY_PRICE_NOK,
+  STEMME_PLUS_NON_INFLUENCE_NOTE,
+} from '@/lib/stemme-plus/constants';
 import type { LlmProvider } from '@/lib/byok/providers';
 
 type StemmePlusStatus = {
@@ -132,7 +136,7 @@ export function ProfileStemmePlus({ checkoutConfigured: serverCheckoutConfigured
   return (
     <ProfileCard
       title="Stemme+"
-      description="Støtt utviklingen av Folkets Meninger — demokratiet forblir gratis for alle."
+      description={`Støtt utviklingen (${STEMME_PLUS_MONTHLY_PRICE_NOK} kr/mnd). ${STEMME_PLUS_NON_INFLUENCE_NOTE}`}
     >
       {checkoutBanner === 'success' ? (
         <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100">
@@ -159,8 +163,8 @@ export function ProfileStemmePlus({ checkoutConfigured: serverCheckoutConfigured
               {isActive ? 'Takk for at du støtter oss!' : `Støttemedlemskap — ${price} kr/mnd`}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Stemme, utforsk og høringer forblir gratis. Stemme+ gir merker, rikere varsler og
-              Chat med din egen nøkkel.
+              Stemme, utforsk og høringer forblir gratis. Stemme+ gir merker, rikere varsler og chat med
+              din egen nøkkel. {STEMME_PLUS_NON_INFLUENCE_NOTE}
             </p>
           </div>
         </div>

@@ -11,6 +11,11 @@ const platformLinks = [
   { href: routes.folketsMeninger, label: 'Folkets meninger' },
 ] as const;
 
+const trustLinks = [
+  { href: routes.personvern, label: 'Personvern og infrastruktur' },
+  { href: routes.omAi, label: 'AI og modeller' },
+] as const;
+
 const aboutLinks = [
   { href: routes.omOss, label: 'Om oss' },
   { href: routes.innspill, label: 'Gi innspill' },
@@ -24,7 +29,7 @@ export function LandingFooter() {
   return (
     <footer className="mt-8 border-t border-[#00205b]/10 bg-[#f7f8fb] text-[#001433]">
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-5 lg:gap-8">
           <div className="lg:col-span-2">
             <Link href={routes.home} className="inline-flex rounded-md transition-opacity hover:opacity-90">
               <LandingLogo clipId="fs-footer-bubble" />
@@ -45,6 +50,22 @@ export function LandingFooter() {
             <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ba0c2f]">Plattform</h2>
             <ul className="mt-4 space-y-3">
               {platformLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-[#001433]/70 transition-colors hover:text-[#ba0c2f]"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ba0c2f]">Tillit</h2>
+            <ul className="mt-4 space-y-3">
+              {trustLinks.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}

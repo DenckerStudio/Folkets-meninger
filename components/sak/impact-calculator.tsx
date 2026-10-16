@@ -18,7 +18,9 @@ import {
 } from '@/lib/impact/profile';
 import { formatKr } from '@/lib/impact/money';
 import { EMPTY_IMPACT_PROFILE, type ImpactProfile, type ImpactResult } from '@/lib/impact/types';
+import { BiasReportLink } from '@/components/trust/bias-report-link';
 import { cn } from '@/lib/utils';
+import { routes } from '@/lib/routes';
 
 function Chip({
   selected,
@@ -168,10 +170,24 @@ export function ImpactCalculator({
           ) : null}
         </h2>
       </div>
-      <p className="mb-6 text-sm text-muted-foreground">
+      <p className="mb-4 text-sm text-muted-foreground">
         Velg noen anonyme opplysninger. De lagres bare på denne enheten, og brukes til å slå saken opp mot
         dokumentene og sammendraget.
       </p>
+
+      <details className="mb-6 rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm">
+        <summary className="cursor-pointer font-medium text-foreground">Antagelser bak anslaget</summary>
+        <ul className="mt-3 list-disc space-y-2 pl-5 text-muted-foreground">
+          <li>Ingen språkmodell — vi matcher nøkkelord i dokumentutdrag og lagret sammendrag mot profilen du velger.</li>
+          <li>Kroner vises bare når beløp finnes i kildeteksten; ellers får du kvalitative formuleringer.</li>
+          <li>Fylke, bolig, bil og yrke er selvrapportert og lagres kun lokalt i nettleseren.</li>
+          <li>Resultatet er et forenklet bilde, ikke skatteråd eller partipolitisk analyse.</li>
+        </ul>
+      </details>
+
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <BiasReportLink pagePath={routes.sak(sakId)} />
+      </div>
 
       <div className="space-y-5">
         <fieldset className="space-y-2">

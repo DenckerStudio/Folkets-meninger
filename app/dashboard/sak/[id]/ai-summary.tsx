@@ -2,10 +2,14 @@
 
 import { useId, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
-import { CircleDollarSign, FileText, Loader2, Users } from 'lucide-react';
+import Link from 'next/link';
+import { CircleDollarSign, ExternalLink, FileText, Loader2, Users } from 'lucide-react';
 import { CivicBubble } from '@/components/icons/civic';
+import { BiasReportLink } from '@/components/trust/bias-report-link';
 import { Dialog } from '@/components/ui/dialog';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { AI_SUMMARY_LABEL } from '@/lib/trust/ai-transparency';
+import { routes } from '@/lib/routes';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { useSakTooltipsEnabled } from '@/components/theme-provider';
 import type { AiSummaryLegacy, AiSummaryV2, TopicCard } from '@/lib/ai-summary/types';
@@ -13,6 +17,11 @@ import type { AiSummaryLegacy, AiSummaryV2, TopicCard } from '@/lib/ai-summary/t
 type SummaryData =
   | ({ version: 2 } & AiSummaryV2 & { cached?: boolean })
   | ({ version: 1 } & AiSummaryLegacy & { cached?: boolean });
+
+type SourceDoc = {
+  title: string;
+  sourceUrl: string;
+};
 
 function isReadySummary(json: Record<string, unknown>): SummaryData | null {
   if (json.version === 2 && typeof json.narrative === 'string') {
@@ -42,19 +51,46 @@ function isReadySummary(json: Record<string, unknown>): SummaryData | null {
   return null;
 }
 
-export default function AiSummary({ sakId }: { sakId: string }) {
+export default function AiSummary({
+  sakId,
+  stortingetPageUrl,
+}: {
+  sakId: string;
+  stortingetPageUrl?: string | null;
+}) {
   const headingId = useId();
   const showTooltips = useSakTooltipsEnabled();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SummaryData | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [sourceDocs, setSourceDocs] = useState<SourceDoc[]>([]);
   const startedRef = useRef(false);
+
+  async function loadSourceDocuments() {
+    try {
+      const res = await fetch(`/api/sak/${sakId}/documents`);
+      const json = (await res.json().catch(() => ({}))) as {
+        documents?: Array<{ title?: string; sourceUrl?: string | null }>;
+      };
+      const docs = (json.documents ?? [])
+        .map((doc) => ({
+          title: String(doc.title ?? 'Dokument').trim(),
+          sourceUrl: typeof doc.sourceUrl === 'string' ? doc.sourceUrl.trim() : '',
+        }))
+        .filter((doc) => doc.sourceUrl.length > 0)
+        .slice(0, 10);
+      setSourceDocs(docs);
+    } catch {
+      setSourceDocs([]);
+    }
+  }
 
   async function loadSummary() {
     if (startedRef.current) return;
     startedRef.current = true;
     setLoading(true);
+    void loadSourceDocuments();
 
     const MAX_ATTEMPTS = 8;
 
@@ -105,7 +141,12 @@ export default function AiSummary({ sakId }: { sakId: string }) {
   }
 
   return (
-    <div>
+    <div className="flex flex-wrap items-center gap-2">
+      <span
+        className="inline-flex items-center rounded-full border border-[#ba0c2f]/25 bg-[#ba0c2f]/[0.06] px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#ba0c2f]"
+      >
+        {AI_SUMMARY_LABEL}
+      </span>
       <button
         type="button"
         onClick={openSummary}
@@ -114,15 +155,21 @@ export default function AiSummary({ sakId }: { sakId: string }) {
         aria-expanded={open}
       >
         <CivicBubble className="h-3.5 w-3.5" />
-        Vis sammendrag
+        Les sammendrag
       </button>
+      <Link
+        href={routes.omAi}
+        className="text-xs font-medium text-muted-foreground underline-offset-2 hover:text-brand hover:underline"
+      >
+        Om modellen
+      </Link>
 
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
         title={
           <span className="inline-flex min-w-0 flex-wrap items-center gap-2">
-            <span id={headingId}>Sammendrag</span>
+            <span id={headingId}>{AI_SUMMARY_LABEL}</span>
             {showTooltips ? (
               <InfoTooltip
                 label="Sammendraget"
@@ -132,18 +179,33 @@ export default function AiSummary({ sakId }: { sakId: string }) {
             ) : null}
           </span>
         }
-        description="Fra saksdokumentene. Ikke et offisielt Stortinget-sammendrag."
+        description="Generert fra saksdokumenter via lokal modell (Ollama/n8n). Ikke offisiell Stortinget-tekst."
         size="lg"
         footer={
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="inline-flex w-full items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90 sm:w-auto"
-          >
-            Lukk
-          </button>
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap gap-2">
+              <BiasReportLink pagePath={routes.sak(sakId)} />
+              <Link
+                href={routes.omAi}
+                className="inline-flex min-h-11 items-center px-2 text-sm font-medium text-brand hover:underline"
+              >
+                AI-transparens
+              </Link>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="inline-flex w-full items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90 sm:w-auto"
+            >
+              Lukk
+            </button>
+          </div>
         }
       >
+        <SummarySources
+          stortingetPageUrl={stortingetPageUrl}
+          sourceDocs={sourceDocs}
+        />
         {loading ? (
           <div className="space-y-4" aria-live="polite">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -164,6 +226,51 @@ export default function AiSummary({ sakId }: { sakId: string }) {
           </p>
         )}
       </Dialog>
+    </div>
+  );
+}
+
+function SummarySources({
+  stortingetPageUrl,
+  sourceDocs,
+}: {
+  stortingetPageUrl?: string | null;
+  sourceDocs: SourceDoc[];
+}) {
+  const hasLinks = Boolean(stortingetPageUrl) || sourceDocs.length > 0;
+  if (!hasLinks) return null;
+
+  return (
+    <div className="mb-4 rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm">
+      <p className="font-medium text-foreground">Kilder på Stortinget</p>
+      <ul className="mt-2 space-y-1.5">
+        {stortingetPageUrl ? (
+          <li>
+            <a
+              href={stortingetPageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-brand hover:underline"
+            >
+              Sak på stortinget.no
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+            </a>
+          </li>
+        ) : null}
+        {sourceDocs.map((doc) => (
+          <li key={doc.sourceUrl}>
+            <a
+              href={doc.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-brand hover:underline"
+            >
+              {doc.title}
+              <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            </a>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

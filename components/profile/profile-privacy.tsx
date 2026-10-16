@@ -29,7 +29,7 @@ export function ProfilePrivacy({ userId }: ProfilePrivacyProps) {
             {
               step: '3',
               title: 'Personvern by design',
-              body: 'Data lagres på sikre servere i tråd med GDPR. Offentlig aktivitet er av som standard.',
+              body: 'Data lagres i Supabase (hostet database). Se personvernsiden for underleverandører og hosting. Offentlig aktivitet er av som standard.',
             },
           ].map((item) => (
             <li key={item.step} className="flex gap-3">
@@ -61,12 +61,20 @@ export function ProfilePrivacy({ userId }: ProfilePrivacyProps) {
               </p>
             </div>
           </div>
-          <Link
-            href={routes.innspill}
-            className="min-h-11 inline-flex shrink-0 items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-          >
-            Kontakt oss
-          </Link>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link
+              href={routes.personvern}
+              className="min-h-11 inline-flex shrink-0 items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              Personvern
+            </Link>
+            <Link
+              href={routes.innspill}
+              className="min-h-11 inline-flex shrink-0 items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              Kontakt oss
+            </Link>
+          </div>
         </div>
       </ProfileCard>
     </div>
