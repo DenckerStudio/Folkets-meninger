@@ -2,6 +2,7 @@ import HeroSection from '@/components/hero-section';
 import { LandingAbout } from '@/components/landing-about';
 import { LandingExperience } from '@/components/landing-experience';
 import { LandingHowItWorks } from '@/components/landing-how-it-works';
+import { LandingHvaErAnnerledes } from '@/components/landing-hva-er-annerledes';
 import { LandingPopularIssuesLazy } from '@/components/landing-popular-issues-lazy';
 import { LandingSectionContainer } from '@/components/landing-section-container';
 import CallToAction from '@/components/ui/call-to-action';
@@ -22,6 +23,10 @@ export default function LandingPage() {
 
         <div data-landing-section>
           <LandingAbout />
+        </div>
+
+        <div data-landing-section>
+          <LandingHvaErAnnerledes />
         </div>
 
         <div data-landing-section>

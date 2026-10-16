@@ -36,8 +36,8 @@ export function LandingAbout() {
             text: 'Stemmen lagres uten kobling til navn eller fødselsnummer.',
           },
           {
-            label: 'Norsk lagring',
-            text: 'Data lagres i Norge eller EU/EØS. Ingen data til tredjeland.',
+            label: 'Lagring og hosting',
+            text: 'Konto og stemmedata ligger i databasen på server i Norge (self-hosted via Coolify). Se personvernsiden for tredjeparter som Stripe og Cloudflare.',
           },
           {
             label: 'Sletting',

@@ -3,6 +3,7 @@ import { ArrowRight, Users } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import FadeIn from '@/components/fade-in';
 import { LandingSectionContainer } from '@/components/landing-section-container';
+import { NonRepresentativeNotice } from '@/components/trust/non-representative-notice';
 import { LandingHeadingRule } from '@/components/icons/civic';
 import { formatNumber } from '@/lib/utils';
 
@@ -34,6 +35,11 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
             <p className="mt-2 min-h-5 text-[#001433]/65 max-w-xl">
               {formatNumber(issues.length)} saker · {formatNumber(deltakere)} holdninger
             </p>
+            <NonRepresentativeNotice
+              count={deltakere}
+              countLabel="holdninger"
+              className="mt-2 max-w-xl text-[#001433]/55"
+            />
           </div>
           <Link
             href={`${routes.login}?next=${encodeURIComponent(routes.utforsk)}`}

@@ -26,6 +26,9 @@ export const routes = {
   saksganger: `${DASHBOARD_PREFIX}/saksganger`,
   sporsmal: `${DASHBOARD_PREFIX}/sporsmal`,
   omOss: '/#om-oss',
+  personvern: '/personvern',
+  omAi: '/om/ai',
+  hvaErAnnerledes: '/#hva-er-annerledes',
   innspill: '/innspill',
   login: '/auth/login',
   glemtPassord: '/auth/glemt-passord',
@@ -111,7 +114,12 @@ export function isPublicProfilePath(pathname: string): boolean {
 
 /** Marketing routes (landing + innspill): marketing header/footer, full-width layout. */
 export function isMarketingPath(pathname: string): boolean {
-  return pathname === routes.home || pathname === routes.innspill;
+  return (
+    pathname === routes.home ||
+    pathname === routes.innspill ||
+    pathname === routes.personvern ||
+    pathname === routes.omAi
+  );
 }
 
 export function isEmbedPath(pathname: string): boolean {

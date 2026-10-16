@@ -7,7 +7,13 @@ export const metadata = buildPageMetadata({
   canonicalPath: '/innspill',
 });
 
-export default function InnspillPage() {
+type InnspillPageProps = {
+  searchParams: Promise<{ kategori?: string; side?: string }>;
+};
+
+export default async function InnspillPage({ searchParams }: InnspillPageProps) {
+  const params = await searchParams;
+
   return (
     <div className="mx-auto max-w-2xl space-y-10 pb-8">
       <div className="space-y-4 pt-4 text-center">
@@ -16,11 +22,11 @@ export default function InnspillPage() {
           Gi innspill
         </h1>
         <p className="mx-auto max-w-xl text-lg leading-relaxed text-[#001433]/65">
-          Idé, feil eller spørsmål? Vi leser alt.
+          Idé, feil, spørsmål — eller meld fra om skjevhet i sammendrag eller konsekvens-tekst.
         </p>
       </div>
 
-      <InnspillForm />
+      <InnspillForm initialCategory={params.kategori} initialPagePath={params.side} />
 
       <p className="text-center text-sm text-[#001433]/50">
         Du kan også nå oss på{' '}
