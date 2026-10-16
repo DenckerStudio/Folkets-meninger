@@ -1,94 +1,56 @@
 .chat-orb {
   position: fixed;
-  right: 1rem;
-  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  right: max(0.75rem, env(safe-area-inset-right, 0px));
+  bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   z-index: 80;
-  min-height: 3.65rem;
-  max-width: 3.65rem;
-  padding: 0.175rem;
-  border: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.75rem;
+  max-height: 2.75rem;
+  padding: 0 0.75rem 0 0.625rem;
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: color-mix(in oklab, var(--card) 92%, transparent) !important;
-  color: var(--foreground) !important;
-  box-shadow: 0 10px 30px color-mix(in oklab, var(--foreground) 14%, transparent);
-  cursor: pointer;
-  isolation: isolate;
-}
-
-.chat-orb[data-open='false']:hover,
-.chat-orb[data-open='false']:focus-visible {
-  background: color-mix(in oklab, var(--card) 96%, transparent);
-  box-shadow: 0 10px 30px color-mix(in oklab, var(--foreground) 18%, transparent);
-}
-
-.chat-orb-orb {
-  position: relative;
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  width: 3.65rem;
-  height: 3.65rem;
-}
-
-.chat-orb-halo,
-.chat-orb-core,
-.chat-orb-sheen,
-.chat-orb-canvas {
-  grid-area: 1 / 1;
-  border-radius: 999px;
-}
-
-.chat-orb-halo {
-  pointer-events: none;
-  width: 4.5rem;
-  height: 4.5rem;
-  background: radial-gradient(
-    circle,
-    color-mix(in oklab, var(--brand) 28%, transparent) 0%,
-    color-mix(in oklab, var(--brand-accent) 18%, transparent) 42%,
-    transparent 72%
-  );
-  filter: blur(6px);
-  animation: chat-orb-glow 5.5s ease-in-out infinite;
-}
-
-.chat-orb-core {
-  position: relative;
-  width: 3.65rem;
-  height: 3.65rem;
-  overflow: hidden;
-  border-radius: 999px;
+  background: var(--card);
+  color: var(--foreground);
   box-shadow:
-    inset 0 0 0 1px color-mix(in oklab, var(--card) 35%, transparent),
-    0 8px 22px color-mix(in oklab, var(--foreground) 16%, transparent);
-  animation: chat-orb-breathe 4.8s ease-in-out infinite;
+    0 4px 14px color-mix(in oklab, var(--foreground) 12%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--background) 40%, transparent);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
 }
 
-.chat-orb-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
+.chat-orb:hover,
+.chat-orb:focus-visible {
+  background: color-mix(in oklab, var(--card) 92%, var(--muted));
+  box-shadow: 0 6px 18px color-mix(in oklab, var(--foreground) 16%, transparent);
 }
 
-.chat-orb-sheen {
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 32% 28%, color-mix(in oklab, var(--card) 55%, transparent), transparent 36%),
-    conic-gradient(
-      from 120deg,
-      color-mix(in oklab, var(--brand) 0%, transparent),
-      color-mix(in oklab, var(--brand) 22%, transparent),
-      color-mix(in oklab, var(--brand-accent) 20%, transparent),
-      transparent 70%
-    );
-  mix-blend-mode: screen;
-  animation: chat-orb-sheen 9s linear infinite;
+.chat-orb:active {
+  transform: scale(0.98);
+}
+
+.chat-orb-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  color: var(--brand);
+}
+
+.chat-orb-label {
+  white-space: nowrap;
+  line-height: 1;
 }
 
 .chat-orb:focus-visible {
   outline: 2px solid var(--ring);
-  outline-offset: 4px;
+  outline-offset: 2px;
 }
 
 .chat-orb[data-open='true'] {
@@ -96,50 +58,22 @@
   pointer-events: none;
 }
 
-/* Skjul orben mens Reels vises fullskjerm. */
 html[data-reels-open] .chat-orb {
   visibility: hidden;
   pointer-events: none;
 }
 
-/* Skjul orben når en drawer/sheet/dialog er åpen. */
 body[data-overlay-open='true'] .chat-orb {
   visibility: hidden;
   pointer-events: none;
 }
 
-@keyframes chat-orb-breathe {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.045);
-  }
-}
-
-@keyframes chat-orb-glow {
-  0%,
-  100% {
-    opacity: 0.72;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.08);
-  }
-}
-
-@keyframes chat-orb-sheen {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .chat-orb-halo,
-  .chat-orb-core,
-  .chat-orb-sheen {
-    animation: none;
+  .chat-orb {
+    transition: none;
+  }
+
+  .chat-orb:active {
+    transform: none;
   }
 }
