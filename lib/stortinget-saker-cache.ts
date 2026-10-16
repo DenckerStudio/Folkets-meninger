@@ -9,6 +9,7 @@ import {
 import { inferFerdigbehandletFromListSak, resolveSakListStatus, resolveSakStatusFromSources, type SakTreatmentStatus } from './sak-status';
 import { parseStortingetDotNetDateToISO, stortingetUrl, type StortingetFormat } from './stortinget-utils';
 import { STORTINGET_ACTIVE_SESSION_ID } from './stortinget-config';
+import { getParticipationTotalsBatch } from './issue-participation-totals';
 import type { SakListItem, SakVoteTotals, StortingetSak } from './stortinget';
 
 const EMPTY_VOTES: SakVoteTotals = { for: 0, against: 0, abstain: 0, total: 0 };
@@ -298,7 +299,7 @@ export async function enrichSakerList(saker: SakListItem[]): Promise<SakListItem
   );
   const [overlays, voteTotals] = await Promise.all([
     getCachedIssueOverlays(issueIds, listNumericStatusById, listInnstillingById),
-    getVoteTotals(issueIds),
+    getParticipationTotalsBatch(issueIds),
   ]);
 
   applyOverlaysToSaker(saker, overlays);
@@ -312,41 +313,8 @@ export async function enrichSakerList(saker: SakListItem[]): Promise<SakListItem
   return saker;
 }
 
-async function getVoteTotals(
-  issueIds: string[],
-): Promise<Record<string, SakVoteTotals>> {
-  const result: Record<string, SakVoteTotals> = {};
-  if (issueIds.length === 0 || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return result;
-  }
-
-  try {
-    const service = getServiceSupabase();
-    const { data, error } = await service.rpc('get_vote_totals_batch', {
-      p_issue_ids: issueIds,
-    });
-
-    if (error || !data || typeof data !== 'object') {
-      return result;
-    }
-
-    const batch = data as Record<string, { for?: number; against?: number; abstain?: number; total?: number }>;
-    for (const [issueId, counts] of Object.entries(batch)) {
-      const forCount = counts.for ?? 0;
-      const againstCount = counts.against ?? 0;
-      const abstainCount = counts.abstain ?? 0;
-      result[issueId] = {
-        for: forCount,
-        against: againstCount,
-        abstain: abstainCount,
-        total: counts.total ?? forCount + againstCount + abstainCount,
-      };
-    }
-  } catch (e) {
-    console.error('Failed to fetch vote totals from Supabase:', e);
-  }
-
-  return result;
+async function getVoteTotals(issueIds: string[]): Promise<Record<string, SakVoteTotals>> {
+  return getParticipationTotalsBatch(issueIds);
 }
 
 async function readSakerListFromDbUncached(): Promise<{ items: SakListItem[]; stale: boolean } | null> {

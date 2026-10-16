@@ -2,13 +2,19 @@
 
 import { usePathname } from 'next/navigation';
 import { useChatOverlay } from '@/components/chat/chat-overlay-context';
+import { useStemmePlusActive } from '@/hooks/use-stemme-plus-active';
 import { issueIdFromPathname } from '@/lib/chat/overlay';
 import './chat-orb.css';
 
-/** Kompakt Stemme+-pill som åpner chat-overlayet (ikke orb). */
+/** Kompakt Stemme+-pill som åpner chat-overlayet (ikke orb). Kun for aktiv Stemme+. */
 export function ChatOrb() {
   const pathname = usePathname();
   const { open, openChat, closeChat } = useChatOverlay();
+  const stemmePlus = useStemmePlusActive();
+
+  if (stemmePlus !== 'active') {
+    return null;
+  }
 
   return (
     <button

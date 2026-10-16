@@ -14,7 +14,7 @@ test.describe('Utforsk Reels empty chrome', () => {
     test.setTimeout(90_000);
     await page.goto('/dashboard/utforsk');
     await expect(page.getByRole('heading', { name: 'Utforsk saker' })).toBeVisible({ timeout: 90_000 });
-    await expect(page.getByRole('button', { name: 'Åpne chat' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Åpne Stemme+' })).toHaveCount(0);
     await expect(page.getByRole('navigation', { name: 'Dashbordmeny' }).getByRole('link', { name: 'Chat' })).toHaveCount(0);
     await expect(page.getByText(/BankID|MinID/i)).toHaveCount(0);
 
@@ -28,14 +28,14 @@ test.describe('Utforsk Reels empty chrome', () => {
       page.getByRole('status').getByText(/Systemgenerert fra stortingssaker/),
     ).toBeVisible();
     await expect(page.getByRole('status').getByText(/ja\/nei\/blank/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Åpne chat' })).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Åpne Stemme+' })).toHaveCount(0);
 
     await page.screenshot({ path: `${ARTIFACTS}/tip_utforsk_reels_empty_state.png` });
 
     await dialog.getByRole('button', { name: 'Tilbake til saker' }).click();
-    await expect(page.getByRole('button', { name: 'Åpne chat' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Åpne Stemme+' })).toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Åpne chat' }).click();
+    await page.goto('/dashboard/utforsk?chat=1');
     const panel = page.locator('[data-chat-panel]');
     await expect(panel).toBeVisible();
     await expect(panel.getByRole('link', { name: 'Logg inn' })).toBeVisible({ timeout: 20_000 });

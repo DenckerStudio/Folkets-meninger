@@ -149,41 +149,9 @@ export interface StortingetParti {
   representert_parti: boolean;
 }
 
-async function getVoteTotals(issueIds: string[]): Promise<Record<string, { for: number; against: number; abstain: number; total: number }>> {
-  const result: Record<string, { for: number; against: number; abstain: number; total: number }> = {};
-
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return result;
-  }
-
-  try {
-    const { getServiceSupabase } = await import('./supabase');
-    const service = getServiceSupabase();
-    const { data, error } = await service.rpc('get_vote_totals_batch', {
-      p_issue_ids: issueIds,
-    });
-
-    if (error || !data || typeof data !== 'object') {
-      return result;
-    }
-
-    const batch = data as Record<string, { for?: number; against?: number; abstain?: number; total?: number }>;
-    for (const [issueId, counts] of Object.entries(batch)) {
-      const forCount = counts.for ?? 0;
-      const againstCount = counts.against ?? 0;
-      const abstainCount = counts.abstain ?? 0;
-      result[issueId] = {
-        for: forCount,
-        against: againstCount,
-        abstain: abstainCount,
-        total: counts.total ?? forCount + againstCount + abstainCount,
-      };
-    }
-  } catch (e) {
-    console.error('Failed to fetch vote totals from Supabase:', e);
-  }
-
-  return result;
+async function getVoteTotals(issueIds: string[]): Promise<Record<string, SakVoteTotals>> {
+  const { getParticipationTotalsBatch } = await import('./issue-participation-totals');
+  return getParticipationTotalsBatch(issueIds);
 }
 
 export async function getSaker(

@@ -24,10 +24,10 @@ function PolitikerCard({ rep }: { rep: PolitikerOversikt }) {
   const locationLabel = rep.departement || rep.fylke.navn;
 
   return (
-    <SectionSettle className="h-full">
-      <div className="flex h-full min-h-[22rem] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
+    <SectionSettle className="h-full w-full min-w-0">
+      <div className="flex h-full min-h-[22rem] w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
         <Link href={routes.politiker(String(rep.id))} className="group block min-w-0 flex-1 p-6 pb-4">
-          <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-2 gap-y-2">
             <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-border bg-muted/40">
               <Image
                 src={getPersonbildeUrl(rep.id, 'lite', true)}
@@ -38,13 +38,13 @@ function PolitikerCard({ rep }: { rep: PolitikerOversikt }) {
               />
             </div>
             {rep.erRegjeringsmedlem ? (
-              <span className="inline-flex max-w-[9rem] items-center rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-xs font-medium text-foreground">
+              <span className="inline-flex max-w-full min-w-0 items-center rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-xs font-medium text-foreground">
                 <Landmark className="mr-1 h-3.5 w-3.5 shrink-0" aria-hidden />
                 <span className="truncate">{roleLabel}</span>
               </span>
             ) : (
-              <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-xs font-medium text-foreground">
-                <ShieldCheck className="mr-1 h-3.5 w-3.5" aria-hidden />
+              <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-xs font-medium text-foreground">
+                <ShieldCheck className="mr-1 h-3.5 w-3.5 shrink-0" aria-hidden />
                 Representant
               </span>
             )}

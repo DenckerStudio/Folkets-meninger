@@ -44,7 +44,7 @@ test.describe('Stemme+ chat send', () => {
     await mockStemmePlusReady(page);
 
     await page.goto('/dashboard/avstemninger');
-    await page.getByRole('button', { name: 'Åpne chat' }).click();
+    await page.getByRole('button', { name: 'Åpne Stemme+' }).click();
     const panel = page.locator('[data-chat-panel]');
     await expect(panel).toBeVisible();
     const textarea = panel.getByPlaceholder('Spør om en sak eller dokumenter…');

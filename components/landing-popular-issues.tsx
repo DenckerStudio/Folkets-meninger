@@ -3,7 +3,6 @@ import { ArrowRight, Users } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import FadeIn from '@/components/fade-in';
 import { LandingHeadingRule } from '@/components/icons/civic';
-import { CountUp } from '@/components/motion/count-up';
 import { formatNumber } from '@/lib/utils';
 
 export type LandingIssue = {
@@ -20,7 +19,7 @@ type LandingPopularIssuesProps = {
 };
 
 export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
-  const stemmer = issues.reduce((sum, issue) => sum + issue.votes.total, 0);
+  const deltakere = issues.reduce((sum, issue) => sum + issue.votes.total, 0);
 
   return (
     <FadeIn delay={0.22} direction="up">
@@ -31,7 +30,7 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
             <h2 className="text-3xl font-bold text-[#001433] tracking-tight sm:text-4xl">Populære saker nå</h2>
             <LandingHeadingRule />
             <p className="mt-2 text-[#001433]/65 max-w-xl">
-              {formatNumber(issues.length)} saker · {formatNumber(stemmer)} stemmer
+              {formatNumber(issues.length)} saker · {formatNumber(deltakere)} holdninger
             </p>
           </div>
           <Link
@@ -43,8 +42,9 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
         </div>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {issues.map((issue) => {
-            const forPercent = Math.round((issue.votes.for / issue.votes.total) * 100) || 0;
-            const againstPercent = Math.round((issue.votes.against / issue.votes.total) * 100) || 0;
+            const total = issue.votes.total;
+            const forPercent = total > 0 ? Math.round((issue.votes.for / total) * 100) : 0;
+            const againstPercent = total > 0 ? Math.round((issue.votes.against / total) * 100) : 0;
 
             return (
               <Link
@@ -65,7 +65,13 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
                   <p className="text-[#001433]/65 line-clamp-2 mb-4">{issue.summary}</p>
                   <div className="flex items-center text-sm text-[#001433]/55">
                     <Users className="w-4 h-4 mr-1.5 shrink-0" />
-                    <CountUp value={issue.votes.total} /> har stemt
+                    {total > 0 ? (
+                      <>
+                        {formatNumber(total)} har tatt stilling
+                      </>
+                    ) : (
+                      'Ingen holdninger ennå'
+                    )}
                   </div>
                 </div>
                 <div className="px-6 py-4 border-t border-[#00205b]/8 bg-[#00205b]/[0.02] flex flex-col gap-3 mt-auto">
@@ -74,7 +80,9 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
                     <div className="bg-[#ba0c2f]" style={{ width: `${againstPercent}%` }} />
                   </div>
                   <div className="flex justify-between items-center w-full">
-                    <span className="text-xs font-medium text-[#001433]/55">{forPercent}% For</span>
+                    <span className="text-xs font-medium text-[#001433]/55">
+                      {total > 0 ? `${forPercent}% Enig` : '—'}
+                    </span>
                     <span className="text-sm font-semibold text-[#00205b] flex items-center transition-colors group-hover:text-[#ba0c2f]">
                       Les mer <ArrowRight className="ml-1 w-4 h-4" />
                     </span>
