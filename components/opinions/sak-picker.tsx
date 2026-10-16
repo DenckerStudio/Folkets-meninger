@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Search, X } from 'lucide-react';
-import { Dialog } from '@/components/ui/dialog';
+import { Drawer } from '@/components/ui/drawer';
+import { ReuiComboboxSearch, ReuiComboboxTrigger } from '@/components/ui/reui-combobox';
 import { SakPreviewDialog } from '@/components/opinions/sak-preview-dialog';
 import { SakProcessingBadge } from '@/components/sak/sak-meta';
 import {
@@ -149,44 +150,32 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
       ) : null}
 
       <div className="space-y-3 border-b border-border bg-card/60 px-3 py-3 sm:px-4">
-        <div className="relative">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden
-          />
-          <input
-            id="sak-picker-search"
-            type="search"
-            role="combobox"
-            aria-expanded
-            aria-controls={listId}
-            aria-autocomplete="list"
-            aria-activedescendant={rows.length ? optionId(activeIndex) : undefined}
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
+        <ReuiComboboxSearch
+          id="sak-picker-search"
+          value={query}
+          listId={listId}
+          activeDescendant={rows.length ? optionId(activeIndex) : undefined}
+          onKeyDown={onComboboxKeyDown}
+          placeholder="Søk på sakstittel, tema eller saksnummer…"
+          onChange={(next) => {
+            setQuery(next);
+            setVisibleCount(SAK_PICKER_BROWSE_PAGE_SIZE);
+            setRawActiveIndex(0);
+          }}
+        />
+        {hasQuery ? (
+          <button
+            type="button"
+            aria-label="Tøm søk"
+            onClick={() => {
+              setQuery('');
               setVisibleCount(SAK_PICKER_BROWSE_PAGE_SIZE);
-              setRawActiveIndex(0);
             }}
-            onKeyDown={onComboboxKeyDown}
-            placeholder="Søk på sakstittel, tema eller saksnummer…"
-            className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-10 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-brand/30"
-            autoComplete="off"
-          />
-          {hasQuery ? (
-            <button
-              type="button"
-              aria-label="Tøm søk"
-              onClick={() => {
-                setQuery('');
-                setVisibleCount(SAK_PICKER_BROWSE_PAGE_SIZE);
-              }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          ) : null}
-        </div>
+            className="-mt-1 text-xs font-medium text-brand hover:underline"
+          >
+            Tøm søk
+          </button>
+        ) : null}
 
         {!hasQuery ? (
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrer på behandlingsstatus">
@@ -439,18 +428,13 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
           </div>
         </div>
       ) : isCompact ? (
-        <button
-          type="button"
+        <ReuiComboboxTrigger
           data-sak-picker-open=""
+          label="Velg sak"
+          value={selected?.title ?? ''}
+          placeholder={selected ? 'Bytt sak' : 'Velg sak'}
           onClick={openBrowse}
-          className="flex min-h-11 w-full items-center justify-between gap-2 rounded-2xl border border-border bg-card px-4 text-sm font-medium text-foreground"
-        >
-          <span className="inline-flex items-center gap-2">
-            <Search className="h-4 w-4 text-brand" aria-hidden />
-            {selected ? 'Bytt sak' : 'Velg sak'}
-          </span>
-          <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden />
-        </button>
+        />
       ) : browseActive ? (
         <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
           {browseBody}
@@ -458,7 +442,7 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
       ) : null}
 
       {isCompact ? (
-        <Dialog
+        <Drawer
           open={drawerOpen}
           onClose={() => {
             setDrawerOpen(false);
@@ -466,10 +450,9 @@ export function SakPicker({ options, value, onChange, context = '', loading = fa
           }}
           title="Velg en sak"
           description="Søk, filtrer og knytt meningen din til en sak fra Stortinget."
-          size="lg"
         >
           {browseBody}
-        </Dialog>
+        </Drawer>
       ) : null}
 
       <SakPreviewDialog
