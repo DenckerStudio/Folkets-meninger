@@ -1,15 +1,15 @@
 'use client';
 
-import { Fragment, useMemo, useRef } from 'react';
-import { LazyMotion, domAnimation, m, useInView, useReducedMotion } from 'motion/react';
+import { Fragment, useMemo } from 'react';
+import { LazyMotion, domAnimation, m, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { useRevealInView } from '@/hooks/use-reveal-in-view';
 
-/** 21st.dev / ddoemonn Text Reveal — expo-out unblur. */
-const EASE = [0.16, 1, 0.3, 1] as const;
-const DURATION = 0.6;
+const EASE_OUT = [0.25, 0.1, 0.25, 1] as const;
+const UNIT_DURATION = 0.55;
 
-const HIDDEN = { opacity: 0, y: 10, filter: 'blur(8px)' } as const;
-const SHOWN = { opacity: 1, y: 0, filter: 'blur(0px)' } as const;
+const HIDDEN = { opacity: 0, y: 8 } as const;
+const SHOWN = { opacity: 1, y: 0 } as const;
 
 export type TextRevealSplit = 'word' | 'character';
 
@@ -30,7 +30,7 @@ export type TextRevealProps = {
   /** Extra delay before the first unit starts (seconds). */
   delay?: number;
   by?: TextRevealSplit;
-  /** Target stagger between units; compressed so total stay under maxDuration. */
+  /** Target stagger between units; compressed so total stays under maxDuration. */
   stagger?: number;
   /** Cap total reveal length for long paragraphs (seconds). */
   maxDuration?: number;
@@ -42,25 +42,23 @@ export type TextRevealProps = {
 };
 
 /**
- * Text Reveal (21st.dev / ddoemonn).
- * One scroll trigger → staggered blur-and-slide per word (or character).
- * Caps duration so long body copy stays readable.
+ * Staggered in-view text reveal: opacity + small rise, ease-out (~400–700ms per unit).
  */
 export function TextReveal({
   text,
   className,
   delay = 0,
   by = 'word',
-  stagger = 0.045,
-  maxDuration = 1.5,
+  stagger = 0.055,
+  maxDuration = 1.8,
   startOnView = true,
   once = true,
-  amount = 0.35,
+  amount = 0.2,
   as: Tag = 'p',
 }: TextRevealProps) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once, amount });
   const reduced = useReducedMotion();
+  const { ref, revealed: inViewRevealed } = useRevealInView<HTMLSpanElement>({ amount, once });
+  const started = !startOnView || inViewRevealed;
 
   const { groups, step } = useMemo(() => {
     const words = text.trim().length ? text.trim().split(/\s+/) : [];
@@ -84,15 +82,13 @@ export function TextReveal({
     });
 
     const total = index;
-    const span = Math.max(0, maxDuration - DURATION);
+    const span = Math.max(0, maxDuration - UNIT_DURATION);
 
     return {
       groups: built,
       step: total > 1 ? Math.min(stagger, span / (total - 1)) : 0,
     };
   }, [text, by, stagger, maxDuration]);
-
-  const started = !startOnView || inView;
 
   return (
     <LazyMotion features={domAnimation}>
@@ -107,14 +103,14 @@ export function TextReveal({
                   <m.span
                     key={unit.key}
                     className="inline-block align-baseline"
-                    initial={reduced ? false : HIDDEN}
+                    initial={reduced ? SHOWN : HIDDEN}
                     animate={started || reduced ? SHOWN : HIDDEN}
                     transition={
                       reduced
                         ? { duration: 0 }
                         : {
-                            duration: DURATION,
-                            ease: EASE,
+                            duration: UNIT_DURATION,
+                            ease: EASE_OUT,
                             delay: started ? delay + unit.index * step : 0,
                           }
                     }

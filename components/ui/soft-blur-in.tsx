@@ -3,36 +3,51 @@
 import type { ReactNode } from 'react';
 import { LazyMotion, domAnimation, m, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { useRevealInView } from '@/hooks/use-reveal-in-view';
 
 type SoftBlurInProps = {
   children: ReactNode;
   className?: string;
   delay?: number;
   duration?: number;
+  amount?: number;
 };
 
-/**
- * 21st.dev Reveal + Magic UI Blur Fade.
- * Expo-out unblur with a short rise; waits until the block is a bit into view.
- */
-const SMOOTH_EASE = [0.16, 1, 0.3, 1] as const;
+const EASE_OUT = [0.25, 0.1, 0.25, 1] as const;
 
+/**
+ * Landing scroll reveal: subtle opacity + translate-y (no blur).
+ * Fades in once when in view; falls back to visible if the observer never fires.
+ */
 export function SoftBlurIn({
   children,
   className,
   delay = 0,
-  duration = 0.7,
+  duration = 0.55,
+  amount = 0.2,
 }: SoftBlurInProps) {
   const reduceMotion = useReducedMotion();
+  const { ref, revealed } = useRevealInView<HTMLDivElement>({ amount, once: true });
+
+  const hidden = { opacity: 0, y: 10 };
+  const shown = { opacity: 1, y: 0 };
 
   return (
     <LazyMotion features={domAnimation}>
       <m.div
+        ref={ref}
         className={cn(className)}
-        initial={reduceMotion ? false : { opacity: 0, filter: 'blur(6px)', y: 10 }}
-        whileInView={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
-        viewport={{ once: true, amount: 0.45, margin: '0px 0px -12% 0px' }}
-        transition={{ duration, delay, ease: SMOOTH_EASE }}
+        initial={reduceMotion ? shown : hidden}
+        animate={revealed || reduceMotion ? shown : hidden}
+        transition={
+          reduceMotion
+            ? { duration: 0 }
+            : {
+                duration,
+                delay: revealed ? delay : 0,
+                ease: EASE_OUT,
+              }
+        }
       >
         {children}
       </m.div>

@@ -7,17 +7,21 @@ import { routes } from '@/lib/routes';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { LandingMeshBackground } from '@/components/landing-mesh-background';
 
+/** Short pitch in the hero info card — keep in sync with product positioning. */
+export const LANDING_HERO_CARD_COPY =
+  'Følg sakene Stortinget stemmer over. Si hva du mener på konkrete forslag, og se hvordan andre har stått — anonymt og uten kobling til navn.';
+
 export default function HeroSection() {
   const reducedMotion = usePrefersReducedMotion();
 
   const sectionClass =
-    'landing-hero relative w-full overflow-hidden text-center py-24 sm:py-32 border-b border-[#00205b]/10 bg-white -mt-8 mb-12';
+    'landing-hero relative flex w-full min-h-[min(88vh,52rem)] items-center overflow-hidden border-b border-[#00205b]/10 bg-white -mt-8 mb-12 py-16 sm:py-20 text-center';
 
   const content = (
     <>
       <LandingMeshBackground />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={reducedMotion ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -72,12 +76,12 @@ export default function HeroSection() {
         <motion.div
           initial={reducedMotion ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.7, ease: 'easeOut' }}
-          className="mt-16 inline-flex items-start text-left rounded-2xl bg-white/75 border border-[#00205b]/10 px-5 py-4 max-w-2xl mx-auto backdrop-blur-md shadow-sm"
+          transition={{ duration: 0.65, delay: 0.7, ease: 'easeOut' }}
+          className="mx-auto mt-12 flex w-full max-w-xl flex-col items-center justify-center rounded-2xl border border-[#00205b]/10 bg-white/80 px-6 py-7 text-center shadow-sm backdrop-blur-md sm:mt-14 sm:px-8 sm:py-8"
         >
-          <Info className="w-4 h-4 text-[#00205b]/50 mr-3 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-[#001433]/70 leading-relaxed">
-            Vi samarbeider ikke med Regjeringen eller Stortinget. Håpet er at politikerne lytter til folket her.
+          <Info className="mb-3 h-5 w-5 shrink-0 text-[#00205b]/55" aria-hidden />
+          <p className="text-pretty text-sm leading-relaxed text-[#001433]/75 sm:text-base">
+            {LANDING_HERO_CARD_COPY}
           </p>
         </motion.div>
       </div>

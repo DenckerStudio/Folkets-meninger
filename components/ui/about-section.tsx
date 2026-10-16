@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { LazyMotion, domAnimation, m, useReducedMotion } from 'motion/react';
+import { useRevealInView } from '@/hooks/use-reveal-in-view';
 import { cn } from '@/lib/utils';
 import { LandingHeadingRule } from '@/components/icons/civic';
 import { SoftBlurIn } from '@/components/ui/soft-blur-in';
@@ -30,12 +31,6 @@ export type AboutSectionProps = {
 /** 21st.dev Reveal / Blur Fade — expo-out, short travel. */
 const SMOOTH_EASE = [0.16, 1, 0.3, 1] as const;
 
-const SCROLL_VIEWPORT = {
-  once: true,
-  amount: 0.35,
-  margin: '0px 0px -14% 0px',
-} as const;
-
 const privacyBlockVariants = {
   hidden: {},
   visible: {
@@ -56,16 +51,13 @@ const privacyListVariants = {
 };
 
 const privacyItemVariants = {
-  hidden: { opacity: 0, y: 12, filter: 'blur(6px)' },
+  hidden: { opacity: 0, y: 10 },
   visible: {
     opacity: 1,
     y: 0,
-    filter: 'blur(0px)',
     transition: {
-      duration: 0.65,
+      duration: 0.55,
       ease: SMOOTH_EASE,
-      opacity: { duration: 0.4, ease: 'easeOut' },
-      filter: { duration: 0.5, ease: 'easeOut' },
     },
   },
 };
@@ -84,6 +76,9 @@ export default function AboutSection({
   className,
 }: AboutSectionProps) {
   const reduceMotion = useReducedMotion();
+  const { ref: privacyRef, revealed: privacyRevealed } = useRevealInView<HTMLDivElement>({
+    amount: 0.15,
+  });
 
   return (
     <section id="om-oss" className={cn('scroll-mt-28', className)}>
@@ -118,9 +113,9 @@ export default function AboutSection({
               key={paragraph.slice(0, 40)}
               text={paragraph}
               by="word"
-              stagger={0.04}
-              maxDuration={1.45}
-              amount={0.4}
+              stagger={0.05}
+              maxDuration={1.7}
+              amount={0.2}
               className="text-xl leading-relaxed text-[#001433] sm:text-2xl sm:leading-relaxed"
             />
           ))}
@@ -130,10 +125,10 @@ export default function AboutSection({
       {privacy ? (
         <LazyMotion features={domAnimation}>
           <m.div
+            ref={privacyRef}
             className="mx-auto mt-20 max-w-3xl border-t border-[#00205b]/10 pt-12"
-            initial={reduceMotion ? false : 'hidden'}
-            whileInView="visible"
-            viewport={SCROLL_VIEWPORT}
+            initial={reduceMotion ? 'visible' : 'hidden'}
+            animate={reduceMotion || privacyRevealed ? 'visible' : 'hidden'}
             variants={privacyBlockVariants}
           >
             <m.h3
