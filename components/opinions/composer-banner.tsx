@@ -286,8 +286,8 @@ export function ComposerBanner({ sakOptions, initialIssueId = null, initialExpan
         </div>
       ) : (
         <form className="relative space-y-5 px-5 py-6 sm:px-8 sm:py-8" onSubmit={submit}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
               <h2 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
                 Del din mening
               </h2>
@@ -297,7 +297,7 @@ export function ComposerBanner({ sakOptions, initialIssueId = null, initialExpan
                 </p>
               ) : null}
             </div>
-            <div className="flex shrink-0 items-center gap-4">
+            <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 sm:shrink-0">
               {showDiscard ? (
                 <button
                   type="button"

@@ -24,8 +24,8 @@ function PolitikerCard({ rep }: { rep: PolitikerOversikt }) {
   const locationLabel = rep.departement || rep.fylke.navn;
 
   return (
-    <SectionSettle>
-      <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
+    <SectionSettle className="h-full">
+      <div className="flex h-full min-h-[22rem] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
         <Link href={routes.politiker(String(rep.id))} className="group block min-w-0 flex-1 p-6 pb-4">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-border bg-muted/40">

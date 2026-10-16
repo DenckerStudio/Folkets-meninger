@@ -29,5 +29,5 @@ export function TeamProfileGridItem({
   children: ReactNode;
   className?: string;
 }) {
-  return <li className={cn('min-w-0 list-none', className)}>{children}</li>;
+  return <li className={cn('flex min-w-0 list-none', className)}>{children}</li>;
 }
