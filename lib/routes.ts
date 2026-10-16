@@ -109,6 +109,11 @@ export function isPublicProfilePath(pathname: string): boolean {
   return /^\/profil\/[^/]+$/.test(pathname);
 }
 
+/** Marketing routes (landing + innspill): marketing header/footer, full-width layout. */
+export function isMarketingPath(pathname: string): boolean {
+  return pathname === routes.home || pathname === routes.innspill;
+}
+
 export function isEmbedPath(pathname: string): boolean {
   return pathname.startsWith('/embed/');
 }
