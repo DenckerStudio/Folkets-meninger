@@ -26,7 +26,11 @@ export default async function InnsiktPage() {
       <div className="flex items-start gap-2 text-sm text-muted-foreground">
         <BarChart3 className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
         <p>
-          Oppdatert {new Date(snapshot.generatedAt).toLocaleString('nb-NO')} · Kun saker med minst{' '}
+          Oppdatert {new Date(snapshot.generatedAt).toLocaleString('nb-NO', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+            timeZone: 'Europe/Oslo',
+          })} · Kun saker med minst{' '}
           {GOVERNMENT_STATS_MIN_VOTES} stemmer
         </p>
       </div>
@@ -39,10 +43,10 @@ export default async function InnsiktPage() {
       {snapshot.issues.length === 0 ? (
         <EmptyState
           title="Ingen offentlig statistikk ennå"
-          description="Saker vises her når de har nok anonyme stemmer."
+          description={`Saker vises her når de har fått minst ${GOVERNMENT_STATS_MIN_VOTES} anonyme stemmer. Stem på saker under Utforsk for å bidra.`}
         />
       ) : (
-        <ul className="space-y-4">
+        <ul className="space-y-3 sm:space-y-4">
           {snapshot.issues.map((issue) => {
             const total = issue.total || 1;
             const forPct = Math.round((issue.for / total) * 100);
@@ -52,11 +56,11 @@ export default async function InnsiktPage() {
             return (
               <li
                 key={issue.stortingetIssueId}
-                className="rounded-xl border border-border bg-card p-5 shadow-sm"
+                className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <h2 className="font-semibold text-foreground pr-4">{issue.title}</h2>
-                  <span className="text-xs text-muted-foreground shrink-0">{issue.total} stemmer</span>
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{issue.total} stemmer</span>
                 </div>
 
                 <div className="mt-4 h-3 rounded-full overflow-hidden flex bg-muted">
@@ -77,16 +81,16 @@ export default async function InnsiktPage() {
                   />
                 </div>
 
-                <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-muted-foreground">
                   <span>For: {issue.for} ({forPct}%)</span>
                   <span>Mot: {issue.against} ({againstPct}%)</span>
                   <span>Avstår: {issue.abstain} ({abstainPct}%)</span>
                 </div>
 
-                <div className="mt-4 flex flex-wrap gap-4 text-sm">
+                <div className="mt-3 flex flex-wrap gap-x-4 text-sm">
                   <Link
                     href={routes.sak(issue.stortingetIssueId)}
-                    className="text-brand hover:underline"
+                    className="inline-flex min-h-11 items-center font-medium text-brand hover:underline"
                   >
                     Se sak →
                   </Link>
@@ -94,7 +98,7 @@ export default async function InnsiktPage() {
                     href={issue.stortingetUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                    className="inline-flex min-h-11 items-center gap-1 text-muted-foreground hover:text-foreground"
                   >
                     Stortinget
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -108,7 +112,7 @@ export default async function InnsiktPage() {
 
       <p className="text-sm text-muted-foreground">
         Maskinlesbar data:{' '}
-        <a href="/api/public/vote-stats" className="text-brand hover:underline">
+        <a href="/api/public/vote-stats" className="inline-flex min-h-11 items-center break-all text-brand hover:underline">
           /api/public/vote-stats
         </a>
       </p>
