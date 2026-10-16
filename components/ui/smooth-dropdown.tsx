@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect, useSyncExternalStore, type ComponentType } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useSyncExternalStore,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -24,6 +31,10 @@ type SmoothDropdownProps = {
   onSelect: (id: string) => void;
   triggerAriaLabel?: string;
   className?: string;
+  /** Replaces the default icon trigger (must be static content inside the button). */
+  triggerContent?: ReactNode;
+  /** Always use the mobile bottom sheet (sidebar / drawer profile row). */
+  preferSheet?: boolean;
 };
 
 const easeOutQuint: [number, number, number, number] = [0.23, 1, 0.32, 1];
@@ -254,8 +265,11 @@ export function SmoothDropdown({
   onSelect,
   triggerAriaLabel = "Åpne meny",
   className,
+  triggerContent,
+  preferSheet = false,
 }: SmoothDropdownProps) {
   const isMobile = useIsMobile();
+  const useSheet = preferSheet || isMobile;
   const isMounted = useIsMounted();
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -308,16 +322,22 @@ export function SmoothDropdown({
     <button
       type="button"
       onClick={() => setIsOpen(true)}
-      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-popover text-muted-foreground shadow-sm transition-colors hover:bg-muted"
+      className={
+        triggerContent
+          ? "inline-flex w-full min-w-0 border-0 bg-transparent p-0 text-left"
+          : "inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-popover text-muted-foreground shadow-sm transition-colors hover:bg-muted"
+      }
       aria-label={triggerAriaLabel}
       aria-expanded={isOpen}
     >
-      <HugeiconsIcon icon={MoreHorizontalCircle01Icon} className="h-6 w-6" aria-hidden />
+      {triggerContent ?? (
+        <HugeiconsIcon icon={MoreHorizontalCircle01Icon} className="h-6 w-6" aria-hidden />
+      )}
     </button>
   );
 
   const mobileSheet =
-    isMounted && isMobile
+    isMounted && useSheet
       ? createPortal(
           <MobileProfileSheet
             isOpen={isOpen}
@@ -333,9 +353,9 @@ export function SmoothDropdown({
         )
       : null;
 
-  if (isMobile) {
+  if (useSheet) {
     return (
-      <div className={cn("not-prose", className)}>
+      <div className={cn("not-prose w-full min-w-0", className)}>
         {triggerButton}
         {mobileSheet}
       </div>

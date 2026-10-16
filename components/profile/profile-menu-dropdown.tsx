@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
 import { LogOut, Shield, UserCircle } from "lucide-react";
+import { ProfileMenuAccountTrigger } from "@/components/profile/profile-menu-account-trigger";
 import { SmoothDropdown, type SmoothDropdownItem } from "@/components/ui/smooth-dropdown";
 import { Dialog } from "@/components/ui/dialog";
 import { PROFILE_TABS, type ProfileTabId } from "@/components/profile/profile-tabs";
@@ -13,11 +15,18 @@ import { routes } from "@/lib/routes";
 type ProfileMenuDropdownProps = {
   onSignOut: () => void | Promise<void>;
   className?: string;
+  trigger?: "icon" | "account";
+  user?: User | null;
 };
 
 const DROPDOWN_TAB_IDS = PROFILE_TABS.map((tab) => tab.id);
 
-export function ProfileMenuDropdown({ onSignOut, className }: ProfileMenuDropdownProps) {
+export function ProfileMenuDropdown({
+  onSignOut,
+  className,
+  trigger = "icon",
+  user = null,
+}: ProfileMenuDropdownProps) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
@@ -118,6 +127,10 @@ export function ProfileMenuDropdown({ onSignOut, className }: ProfileMenuDropdow
         onSelect={handleSelect}
         triggerAriaLabel="Profilmeny"
         className={className}
+        preferSheet={trigger === "account"}
+        triggerContent={
+          trigger === "account" && user ? <ProfileMenuAccountTrigger user={user} /> : undefined
+        }
       />
       <Dialog
         open={logoutOpen}

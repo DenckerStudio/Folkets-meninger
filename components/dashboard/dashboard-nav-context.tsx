@@ -1,15 +1,13 @@
 'use client';
 
-import { createContext, Suspense, useCallback, useContext, useEffect, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { Menu, X } from 'lucide-react';
 import DashboardSidebar from '@/components/dashboard/dashboard-sidebar';
-import { ProfileMenuDropdown } from '@/components/profile/profile-menu-dropdown';
-import { useAuth } from '@/hooks/use-auth';
+import { DashboardSidebarProfile } from '@/components/dashboard/dashboard-sidebar-profile';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { useBodyOverlayFlag } from '@/hooks/use-body-overlay';
-import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
 type DashboardNavContextValue = {
@@ -32,42 +30,6 @@ export function useDashboardNav() {
 
 export function useDashboardNavOptional() {
   return useContext(DashboardNavContext);
-}
-
-function DrawerProfileMenuFallback() {
-  return (
-    <div
-      className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-muted/40"
-      aria-hidden
-    />
-  );
-}
-
-function DrawerProfileMenu({ onNavigate }: { onNavigate: () => void }) {
-  const { user } = useAuth();
-  const router = useRouter();
-
-  if (!user) return null;
-
-  const handleSignOut = async () => {
-    const { getBrowserSupabase } = await import('@/lib/supabase');
-    await getBrowserSupabase().auth.signOut();
-    onNavigate();
-    router.push(routes.home);
-    router.refresh();
-  };
-
-  return (
-    <div className="border-t border-border px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
-      <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">Konto</p>
-      <Suspense fallback={<DrawerProfileMenuFallback />}>
-        <ProfileMenuDropdown
-          onSignOut={handleSignOut}
-          className="[&_button]:h-12 [&_button]:w-12 [&_button]:rounded-full [&_button]:border-border [&_button]:bg-card [&_button]:shadow-sm"
-        />
-      </Suspense>
-    </div>
-  );
 }
 
 function DashboardNavDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -134,7 +96,7 @@ function DashboardNavDrawer({ open, onClose }: { open: boolean; onClose: () => v
               <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-3">
                 <DashboardSidebar variant="drawer" onNavigate={onClose} />
               </div>
-              <DrawerProfileMenu onNavigate={onClose} />
+              <DashboardSidebarProfile variant="drawer" onNavigate={onClose} />
             </div>
           </motion.div>
         </div>

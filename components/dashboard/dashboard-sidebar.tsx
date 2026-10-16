@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { dashboardSidebarNavItemsForAdmin } from '@/lib/site-nav-links';
 import { routes } from '@/lib/routes';
+import { DashboardSidebarProfile } from '@/components/dashboard/dashboard-sidebar-profile';
 import { cn } from '@/lib/utils';
 
 type DashboardSidebarProps = {
@@ -22,13 +23,38 @@ export default function DashboardSidebar({ variant = 'desktop', onNavigate }: Da
     [isAdminUser],
   );
 
+  if (isDrawer) {
+    return (
+      <nav className="space-y-0.5" aria-label="Dashbordmeny">
+        {navItems.map((item) => {
+          const active = item.isActive?.(pathname) ?? false;
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavigate}
+              data-tour={item.href === routes.utforsk ? 'utforsk' : undefined}
+              className={cn(
+                'flex min-h-11 items-center gap-3 font-medium transition-colors rounded-lg border-l-[3px] px-3 py-2.5 text-[0.9375rem]',
+                active
+                  ? 'border-brand bg-brand/10 text-brand'
+                  : 'border-transparent text-foreground/85 hover:bg-muted/70 hover:text-foreground',
+              )}
+              aria-current={active ? 'page' : undefined}
+            >
+              <Icon className="h-[1.125rem] w-[1.125rem] shrink-0" />
+              {item.title}
+            </Link>
+          );
+        })}
+      </nav>
+    );
+  }
+
   return (
-    <nav
-      className={cn(
-        isDrawer ? 'space-y-0.5' : 'space-y-1 rounded-xl border border-border bg-card p-2.5',
-      )}
-      aria-label="Dashbordmeny"
-    >
+    <div className="space-y-1 rounded-xl border border-border bg-card p-2.5">
+      <nav className="space-y-1" aria-label="Dashbordmeny">
       {navItems.map((item) => {
         const active = item.isActive?.(pathname) ?? false;
         const Icon = item.icon;
@@ -39,28 +65,20 @@ export default function DashboardSidebar({ variant = 'desktop', onNavigate }: Da
             onClick={onNavigate}
             data-tour={item.href === routes.utforsk ? 'utforsk' : undefined}
             className={cn(
-              'flex min-h-11 items-center gap-3 font-medium transition-colors',
-              isDrawer
-                ? cn(
-                    'rounded-lg border-l-[3px] px-3 py-2.5 text-[0.9375rem]',
-                    active
-                      ? 'border-brand bg-brand/10 text-brand'
-                      : 'border-transparent text-foreground/85 hover:bg-muted/70 hover:text-foreground',
-                  )
-                : cn(
-                    'rounded-lg px-3 py-2 text-sm',
-                    active
-                      ? 'bg-brand/10 text-brand'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                  ),
+              'flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              active
+                ? 'bg-brand/10 text-brand'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
             )}
             aria-current={active ? 'page' : undefined}
           >
-            <Icon className={cn('shrink-0', isDrawer ? 'h-[1.125rem] w-[1.125rem]' : 'h-4 w-4')} />
+            <Icon className="h-4 w-4 shrink-0" />
             {item.title}
           </Link>
         );
       })}
-    </nav>
+      </nav>
+      <DashboardSidebarProfile variant="desktop" />
+    </div>
   );
 }
