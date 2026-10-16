@@ -27,7 +27,7 @@ export function AdminShell({ children }: AdminShellProps) {
       <header className="space-y-1">
         <div className="flex items-center gap-2">
           <Shield className="h-6 w-6 text-brand" aria-hidden />
-          <h1 className="text-2xl font-bold text-foreground">Admin</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Admin</h1>
         </div>
         <p className="text-sm text-muted-foreground">
           Drift, innhold og statistikk.
@@ -35,7 +35,7 @@ export function AdminShell({ children }: AdminShellProps) {
       </header>
 
       <nav
-        className="flex flex-wrap gap-2 border-b border-border pb-4"
+        className="-mx-1 flex gap-2 overflow-x-auto border-b border-border px-1 pb-4 sm:flex-wrap sm:overflow-visible"
         aria-label="Admin-navigasjon"
       >
         {adminSectionNav.map((item) => {
@@ -47,7 +47,7 @@ export function AdminShell({ children }: AdminShellProps) {
               key={item.id}
               href={item.href}
               className={cn(
-                'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                'inline-flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 active
                   ? 'bg-brand/10 text-brand'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -129,7 +129,7 @@ export function AdminHubGrid() {
 
 export function AdminBackLink() {
   return (
-    <Link href={routes.admin} className="text-sm font-medium text-brand hover:underline">
+    <Link href={routes.admin} className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:underline">
       ← Tilbake til admin
     </Link>
   );
