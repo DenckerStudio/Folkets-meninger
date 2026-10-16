@@ -48,7 +48,7 @@ export default async function KalenderPage() {
       {events.length === 0 ? (
         <EmptyState
           title="Klarte ikke å hente høringer"
-          description="Prøv igjen senere. Kilden er Stortingets åpne data."
+          description="Stortingets åpne data svarer ikke akkurat nå. Prøv igjen om litt."
           tone="error"
         />
       ) : (
@@ -60,11 +60,13 @@ export default async function KalenderPage() {
         />
       )}
 
-      <p className="text-xs text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         Kilde:{' '}
         <a
           href="https://data.stortinget.no/"
-          className="underline hover:text-foreground"
+          className="inline-flex min-h-11 items-center underline hover:text-foreground"
+          target="_blank"
+          rel="noopener noreferrer"
         >
           Stortinget åpne data
         </a>

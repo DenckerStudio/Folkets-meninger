@@ -140,7 +140,7 @@ export default function HoringerKalender({
           value={kindFilter}
           onChange={(e) => setKindFilter(e.target.value as KindFilter)}
           aria-label="Filtrer på type"
-          className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground"
+          className="min-h-11 rounded-xl border border-border bg-card px-3 py-2.5 text-base text-foreground sm:text-sm"
         >
           <option value="all">Alle typer</option>
           <option value="session">Sesjoner</option>
@@ -150,7 +150,7 @@ export default function HoringerKalender({
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
           aria-label="Filtrer på status"
-          className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground"
+          className="min-h-11 rounded-xl border border-border bg-card px-3 py-2.5 text-base text-foreground sm:text-sm"
         >
           <option value="all">Alle statuser</option>
           <option value="open">Åpen for innspill</option>
@@ -160,7 +160,7 @@ export default function HoringerKalender({
           value={committeeFilter}
           onChange={(e) => setCommitteeFilter(e.target.value)}
           aria-label="Filtrer på komité"
-          className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground lg:min-w-56"
+          className="min-h-11 rounded-xl border border-border bg-card px-3 py-2.5 text-base text-foreground sm:text-sm lg:min-w-56"
         >
           {committees.map((name) => (
             <option key={name} value={name}>
@@ -178,7 +178,7 @@ export default function HoringerKalender({
               <button
                 type="button"
                 onClick={() => goMonth(-1)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-foreground hover:bg-muted"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-card text-foreground hover:bg-muted"
                 aria-label="Forrige måned"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -190,14 +190,14 @@ export default function HoringerKalender({
                   setMonth(today.month);
                   setSelectedKey(todayKey);
                 }}
-                className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+                className="inline-flex h-11 items-center rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-muted"
               >
                 I dag
               </button>
               <button
                 type="button"
                 onClick={() => goMonth(1)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-foreground hover:bg-muted"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-card text-foreground hover:bg-muted"
                 aria-label="Neste måned"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -269,7 +269,7 @@ export default function HoringerKalender({
             <EmptyState
               compact
               title="Ingen høringer denne dagen"
-              description="Sesjoner og innspillsfrister som matcher filtrene vises her."
+              description="Velg en annen dag eller juster filtrene for å se høringer og innspillsfrister."
             />
           ) : (
             <ul className="space-y-3">
@@ -317,25 +317,28 @@ export default function HoringerKalender({
       <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:flex-wrap sm:items-center">
         <a
           href={webcalUrl}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90"
+          className="inline-flex items-center justify-center gap-2 min-h-11 rounded-xl bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90"
         >
           <CalendarPlus className="h-4 w-4" />
           Abonner på kalender
         </a>
         <a
           href={icsHttpsUrl}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+          className="inline-flex items-center justify-center gap-2 min-h-11 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
         >
           <Download className="h-4 w-4" />
           Last ned .ics
         </a>
         <a
           href={stortingetIcsUrl}
-          className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+          className="inline-flex min-h-11 items-center justify-center text-sm text-muted-foreground hover:text-foreground hover:underline"
         >
           Full historikk fra Stortinget
         </a>
-        <Link href={routes.horinger} className="text-sm text-muted-foreground hover:text-foreground hover:underline">
+        <Link
+          href={routes.horinger}
+          className="inline-flex min-h-11 items-center justify-center text-sm text-muted-foreground hover:text-foreground hover:underline"
+        >
           Til høringslisten
         </Link>
       </div>
