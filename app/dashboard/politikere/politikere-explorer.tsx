@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { ArrowRight, Landmark, MapPin, Search, ShieldCheck } from 'lucide-react';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { Pagination } from '@/components/ui/pagination';
+import { TeamProfileGrid, TeamProfileGridItem } from '@/components/ui/team-profile-grid';
 import { PartyMark } from '@/components/motion/party-mark';
 import { SectionSettle } from '@/components/motion/section-settle';
 import { PartyLogo } from '@/components/politikere/party-logo';
@@ -276,11 +277,13 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
                 Statsminister, statsråder og regjeringsmedlemmer fra Stortingets åpne data.
               </p>
             </div>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <TeamProfileGrid>
               {regjeringsmedlemmer.map((rep) => (
-                <PolitikerCard key={rep.id} rep={rep} />
+                <TeamProfileGridItem key={rep.id}>
+                  <PolitikerCard rep={rep} />
+                </TeamProfileGridItem>
               ))}
-            </div>
+            </TeamProfileGrid>
           </section>
         </SectionSettle>
       ) : null}
@@ -298,10 +301,14 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
             />
           ) : listedPolitikere.length > 0 ? (
             <>
-              <div ref={gridRef} className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {pagedPolitikere.map((rep) => (
-                  <PolitikerCard key={rep.id} rep={rep} />
-                ))}
+              <div ref={gridRef}>
+                <TeamProfileGrid>
+                  {pagedPolitikere.map((rep) => (
+                    <TeamProfileGridItem key={rep.id}>
+                      <PolitikerCard rep={rep} />
+                    </TeamProfileGridItem>
+                  ))}
+                </TeamProfileGrid>
               </div>
               {totalPages > 1 ? (
                 <div className="space-y-3">
