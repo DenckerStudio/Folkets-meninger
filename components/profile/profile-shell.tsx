@@ -28,7 +28,11 @@ import { PageHeader } from '@/components/page-header';
 import type { EarnedBadge } from '@/lib/knowledge/types';
 import type { UserPointsProgress } from '@/lib/user-points-levels';
 
-export function ProfileShell() {
+type ProfileShellProps = {
+  stemmePlusCheckoutConfigured: boolean;
+};
+
+export function ProfileShell({ stemmePlusCheckoutConfigured }: ProfileShellProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, loading: isPending, signOut } = useAuth();
@@ -145,6 +149,7 @@ export function ProfileShell() {
 
   return (
     <ProfileShellAuthenticated
+      stemmePlusCheckoutConfigured={stemmePlusCheckoutConfigured}
       user={user}
       activeTab={activeTab}
       stanceHistory={stanceHistory}
@@ -242,6 +247,7 @@ function ProfileLoginPrompt() {
 }
 
 type ProfileShellAuthenticatedProps = {
+  stemmePlusCheckoutConfigured: boolean;
   user: SupabaseUser;
   activeTab: ProfileTabId | null;
   stanceHistory: StanceHistoryItem[];
@@ -270,6 +276,7 @@ type ProfileShellAuthenticatedProps = {
 };
 
 function ProfileShellAuthenticated({
+  stemmePlusCheckoutConfigured,
   user,
   activeTab,
   stanceHistory,
@@ -362,7 +369,9 @@ function ProfileShellAuthenticated({
               />
             </div>
           )}
-          {activeTab === 'stemme-plus' && <ProfileStemmePlus />}
+          {activeTab === 'stemme-plus' && (
+            <ProfileStemmePlus checkoutConfigured={stemmePlusCheckoutConfigured} />
+          )}
           {activeTab === 'min-data' && <ProfilePrivacy userId={user.id} />}
         </div>
       )}

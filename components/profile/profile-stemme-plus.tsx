@@ -25,7 +25,12 @@ type StemmePlusStatus = {
   byok: { provider: LlmProvider; model: string; key_last4: string } | null;
 };
 
-export function ProfileStemmePlus() {
+type ProfileStemmePlusProps = {
+  /** Same check as GET /api/stemme-plus/status (`isStripeCheckoutConfigured`). */
+  checkoutConfigured: boolean;
+};
+
+export function ProfileStemmePlus({ checkoutConfigured: serverCheckoutConfigured }: ProfileStemmePlusProps) {
   const { openChat } = useChatOverlay();
   const router = useRouter();
   const [status, setStatus] = useState<StemmePlusStatus | null>(null);
@@ -72,7 +77,9 @@ export function ProfileStemmePlus() {
 
   const isActive = status?.tier === 'stemme_plus';
   const price = status?.monthly_price_nok ?? STEMME_PLUS_MONTHLY_PRICE_NOK;
-  const checkoutConfigured = status?.checkout_configured ?? false;
+  const checkoutConfigured =
+    status != null ? status.checkout_configured : serverCheckoutConfigured;
+  const showPaymentUnavailableNotice = !isActive && !loading && !checkoutConfigured;
 
   const startCheckout = async () => {
     setCheckoutBusy(true);
@@ -226,18 +233,18 @@ export function ProfileStemmePlus() {
               type="button"
               className="min-h-11 w-full sm:w-auto"
               onClick={() => void startCheckout()}
-              disabled={checkoutBusy}
+              disabled={checkoutBusy || loading}
             >
               {checkoutBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Bli Stemme+ — {price} kr/mnd
             </Button>
-          ) : (
+          ) : showPaymentUnavailableNotice ? (
             <EmptyState
               className="py-6"
               title="Betaling åpner snart"
               description={`Du kan snart bli Stemme+ for ${price} kr/mnd rett her. Følg med – vi gir beskjed når betalingen er klar.`}
             />
-          )}
+          ) : null}
         </div>
       )}
     </ProfileCard>

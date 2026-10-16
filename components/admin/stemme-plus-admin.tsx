@@ -12,10 +12,14 @@ type Supporter = {
   subscriptionPeriodEnd: string | null;
 };
 
-export function StemmePlusAdmin() {
+type StemmePlusAdminProps = {
+  checkoutConfigured: boolean;
+};
+
+export function StemmePlusAdmin({ checkoutConfigured: serverCheckoutConfigured }: StemmePlusAdminProps) {
   const [email, setEmail] = useState('');
   const [supporters, setSupporters] = useState<Supporter[]>([]);
-  const [checkoutConfigured, setCheckoutConfigured] = useState<boolean | null>(null);
+  const [checkoutConfigured, setCheckoutConfigured] = useState(serverCheckoutConfigured);
   const [error, setError] = useState('');
   const [pending, startTransition] = useTransition();
 
@@ -73,28 +77,21 @@ export function StemmePlusAdmin() {
     });
   };
 
-  const stripeStatus =
-    checkoutConfigured === null
-      ? 'Sjekker Stripe-status…'
-      : checkoutConfigured
-        ? 'Stripe-kasse er konfigurert — selvbetjent betaling er aktiv.'
-        : 'Stripe-kasse er ikke konfigurert (mangler STRIPE_SECRET_KEY eller STRIPE_STEMME_PLUS_PRICE_ID).';
+  const stripeNotice = checkoutConfigured
+    ? ''
+    : ' Stripe-kasse er ikke konfigurert (mangler STRIPE_SECRET_KEY eller STRIPE_STEMME_PLUS_PRICE_ID).';
 
   return (
     <div className="space-y-6">
       <PageHeader
         as="h2"
         title="Stemme+"
-        description={`Tildel eller fjern Stemme+ (${STEMME_PLUS_MONTHLY_PRICE_NOK} kr/mnd). ${stripeStatus}`}
+        description={`Tildel eller fjern Stemme+ (${STEMME_PLUS_MONTHLY_PRICE_NOK} kr/mnd).${stripeNotice}`}
       />
 
       <p className="text-sm text-muted-foreground">
         Aktive støttespillere: <span className="font-semibold text-foreground">{supporters.length}</span>
-        {checkoutConfigured === true ? (
-          <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-            Stripe klar
-          </span>
-        ) : checkoutConfigured === false ? (
+        {!checkoutConfigured ? (
           <span className="ml-2 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-200">
             Stripe ikke konfigurert
           </span>
@@ -129,7 +126,7 @@ export function StemmePlusAdmin() {
           description={
             checkoutConfigured
               ? 'Ingen har Stemme+ ennå. Brukere kan kjøpe via Stripe, eller du kan tildele med e-post under.'
-              : 'Tildel medlemskap med e-post under. Stripe-kasse er ikke konfigurert før nøklene finnes.'
+              : 'Tildel medlemskap med e-post under. Selvbetjent Stripe-kasse vises her når nøklene er satt.'
           }
           className="py-8"
         />
