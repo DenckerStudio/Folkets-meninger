@@ -1,7 +1,6 @@
 'use client';
 
 import { LandingHeadingRule } from '@/components/icons/civic';
-import { SoftBlurIn } from '@/components/ui/soft-blur-in';
 import { cn } from '@/lib/utils';
 
 export interface Step {
@@ -75,20 +74,10 @@ export default function HowItWorks({
   return (
     <div className={cn('relative w-full px-4 py-14 sm:px-8 sm:py-16 md:py-20', className)}>
       <div className="relative z-10 mx-auto mb-10 max-w-2xl text-center md:mb-14">
-        <SoftBlurIn>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-brand-accent">
-            {eyebrow}
-          </p>
-        </SoftBlurIn>
-        <SoftBlurIn delay={0.08}>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            {title}
-          </h2>
-          <LandingHeadingRule className="landing-heading-rule--center" />
-        </SoftBlurIn>
-        <SoftBlurIn delay={0.14}>
-          <p className="mt-3 text-muted-foreground">{description}</p>
-        </SoftBlurIn>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-brand-accent">{eyebrow}</p>
+        <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{title}</h2>
+        <LandingHeadingRule className="landing-heading-rule--center" />
+        <p className="mt-3 text-muted-foreground">{description}</p>
       </div>
 
       <ol className="relative z-10 mx-auto grid max-w-6xl grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4 xl:gap-6">
