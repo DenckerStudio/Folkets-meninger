@@ -4,7 +4,6 @@ import {
   Calendar,
   FileEdit,
   Lightbulb,
-  Menu,
   MessagesSquare,
   Search,
   Shield,
@@ -28,14 +27,6 @@ export type PrimaryNavLink = {
   label: string;
   href: string;
   isActive: NavIsActive;
-};
-
-export type MobileNavItem = {
-  label: string;
-  href: string;
-  icon: LucideIcon;
-  isActive: NavIsActive;
-  action?: 'more';
 };
 
 export const isFolketsMeningerActive: NavIsActive = (pathname) =>
@@ -77,12 +68,6 @@ export const isInnsiktActive: NavIsActive = (pathname) =>
 
 export const isAdminActive: NavIsActive = (pathname) =>
   pathname === routes.admin || pathname.startsWith(`${routes.admin}/`);
-
-/**
- * Mobile Utforsk active state. Politikere lives under «Mer» on mobile, so it
- * must NOT light up Utforsk — Mer's isActive covers those sheet routes.
- */
-export const isMobileUtforskActive: NavIsActive = (pathname) => isUtforskActive(pathname);
 
 /** Core product areas — header primary tabs and top of dashboard sidebar. */
 export const coreNavItems: SiteNavLinkItem[] = [
@@ -179,75 +164,6 @@ export function dashboardSidebarNavItemsForAdmin(isAdmin: boolean): SiteNavLinkI
   if (!isAdmin) return dashboardSidebarNavItems;
   return [...dashboardSidebarNavItems, adminAccountNavItem];
 }
-
-/** Mobile bottom nav items (exactly 5 slots). */
-export const mobileNavItems: readonly MobileNavItem[] = [
-  {
-    label: 'Meninger',
-    href: routes.folketsMeninger,
-    icon: MessagesSquare,
-    isActive: isFolketsMeningerActive,
-  },
-  {
-    label: 'Utforsk',
-    href: routes.utforsk,
-    icon: Search,
-    isActive: isMobileUtforskActive,
-  },
-  {
-    label: 'Avstemninger',
-    href: routes.avstemninger,
-    icon: Vote,
-    isActive: isAvstemningerActive,
-  },
-  {
-    label: 'Høringer',
-    href: routes.horinger,
-    icon: FileEdit,
-    isActive: isHoringerActive,
-  },
-  {
-    label: 'Mer',
-    href: '#mer',
-    icon: Menu,
-    isActive: () => false,
-    action: 'more' as const,
-  },
-] as const;
-
-/** Items shown in the mobile drawer when «Mer» is opened. */
-export const mobileMoreNavItems: SiteNavLinkItem[] = [
-  {
-    title: 'Profil',
-    href: routes.minSide,
-    icon: UserRound,
-    isActive: isMinSideActive,
-  },
-  {
-    title: 'Appens fremtid',
-    href: routes.forslag,
-    icon: Lightbulb,
-    isActive: isForslagActive,
-  },
-  {
-    title: 'Politikere',
-    href: routes.politikere,
-    icon: Users,
-    isActive: isPolitikereActive,
-  },
-  {
-    title: 'Kalender',
-    href: routes.kalender,
-    icon: Calendar,
-    isActive: isKalenderActive,
-  },
-  {
-    title: 'Innsikt',
-    href: routes.innsikt,
-    icon: BarChart2,
-    isActive: isInnsiktActive,
-  },
-];
 
 /** All dashboard nav hrefs — used to guard against duplicate header entries. */
 export const dashboardNavHrefs = new Set([

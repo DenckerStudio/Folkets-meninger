@@ -10,6 +10,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { isDashboardPath, isPublicProfilePath, routes } from '@/lib/routes';
 import { loginWithNext } from '@/lib/safe-redirect';
 import { desktopPrimaryNavLinks } from '@/lib/site-nav-links';
+import { DashboardNavMenuButton } from '@/components/dashboard/dashboard-nav-context';
 import { ProfileMenuDropdown } from '@/components/profile/profile-menu-dropdown';
 import { NotificationsBell } from '@/components/notifications/notifications-bell';
 
@@ -70,6 +71,11 @@ export function Header() {
           ) : null}
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
+          {inDashboard ? (
+            <DashboardNavMenuButton
+              className="inline-flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-input bg-background text-foreground transition-colors hover:bg-accent hover:text-accent-foreground xl:hidden"
+            />
+          ) : null}
           <NotificationsBell enabled={isLoggedIn} loginHref={loginHref} />
           {isLoggedIn ? (
             <div className="hidden md:block">
@@ -79,7 +85,12 @@ export function Header() {
             </div>
           ) : (
             <>
-              <Button variant="outline" size="sm" className="sm:h-8" render={<Link href={loginHref} />}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="min-h-11 min-w-11 px-3 sm:h-8 sm:min-h-0 sm:min-w-0"
+                render={<Link href={loginHref} />}
+              >
                 <LogIn className="size-3.5 sm:size-4" />
                 <span className="hidden min-[380px]:inline">Logg inn</span>
               </Button>

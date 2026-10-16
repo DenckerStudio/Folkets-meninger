@@ -9,10 +9,7 @@ import {
   dashboardSidebarNavItemsForAdmin,
   desktopPrimaryNavLinks,
   extendedNavItems,
-  mobileMoreNavItems,
-  isMobileUtforskActive,
   isUtforskActive,
-  mobileNavItems,
 } from '@/lib/site-nav-links';
 import { DASHBOARD_PREFIX, routes } from '@/lib/routes';
 
@@ -39,13 +36,10 @@ test('primary nav does not repeat sidebar-only destinations', () => {
   }
 });
 
-test('mobile Utforsk is not active on Mer-sheet routes like Politikere', () => {
-  assert.equal(isMobileUtforskActive(routes.politikere), false);
-  assert.equal(isMobileUtforskActive(`${routes.politikere}/foo`), false);
-  assert.equal(isMobileUtforskActive(routes.utforsk), true);
-  assert.equal(isMobileUtforskActive(`${routes.utforsk}/reels`), true);
+test('utforsk is active on sak pages and reels', () => {
+  assert.equal(isUtforskActive(routes.utforsk), true);
+  assert.equal(isUtforskActive(`${routes.utforsk}/reels`), true);
   assert.equal(isUtforskActive(`${DASHBOARD_PREFIX}/sak/123`), true);
-  assert.equal(isMobileUtforskActive(`${DASHBOARD_PREFIX}/sak/123`), true);
 });
 
 test('every sidebar href is registered in dashboardNavHrefs', () => {
@@ -120,51 +114,4 @@ test('admin nav item highlights admin routes', () => {
   assert.equal(adminAccountNavItem.isActive?.(routes.admin), true);
   assert.equal(adminAccountNavItem.isActive?.(`${routes.admin}/reels`), true);
   assert.equal(adminAccountNavItem.isActive?.(routes.minSide), false);
-});
-
-test('mobile nav has exactly 5 items with correct labels', () => {
-  assert.equal(mobileNavItems.length, 5);
-  const labels = mobileNavItems.map((item) => item.label);
-  assert.deepEqual(labels, ['Meninger', 'Utforsk', 'Avstemninger', 'Høringer', 'Mer']);
-});
-
-test('mobile nav items have correct hrefs and isActive functions', () => {
-  const expectedHrefs = [
-    routes.folketsMeninger,
-    routes.utforsk,
-    routes.avstemninger,
-    routes.horinger,
-    '#mer',
-  ];
-  for (let i = 0; i < mobileNavItems.length; i++) {
-    assert.equal(mobileNavItems[i].href, expectedHrefs[i]);
-    assert.ok(typeof mobileNavItems[i].isActive === 'function');
-  }
-});
-
-test('Mer item has action: more and Menu icon', () => {
-  const merItem = mobileNavItems[4];
-  assert.equal(merItem.label, 'Mer');
-  assert.equal(merItem.action, 'more');
-  assert.equal(merItem.href, '#mer');
-});
-
-test('mobileMoreNavItems has correct hrefs', () => {
-  const expectedHrefs = [
-    routes.minSide,
-    routes.forslag,
-    routes.politikere,
-    routes.kalender,
-    routes.innsikt,
-  ];
-  assert.equal(mobileMoreNavItems.length, 5);
-  for (let i = 0; i < mobileMoreNavItems.length; i++) {
-    assert.equal(mobileMoreNavItems[i].href, expectedHrefs[i]);
-  }
-});
-
-test('mobileMoreNavItems titles match expected order', () => {
-  const expectedTitles = ['Profil', 'Appens fremtid', 'Politikere', 'Kalender', 'Innsikt'];
-  const actualTitles = mobileMoreNavItems.map((item) => item.title);
-  assert.deepEqual(actualTitles, expectedTitles);
 });

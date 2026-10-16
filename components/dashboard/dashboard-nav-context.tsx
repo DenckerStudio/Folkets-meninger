@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Menu, X } from 'lucide-react';
 import DashboardSidebar from '@/components/dashboard/dashboard-sidebar';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
+import { useBodyOverlayFlag } from '@/hooks/use-body-overlay';
 import { cn } from '@/lib/utils';
 
 type DashboardNavContextValue = {
@@ -32,6 +33,7 @@ export function useDashboardNavOptional() {
 
 function DashboardNavDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const reducedMotion = usePrefersReducedMotion();
+  useBodyOverlayFlag(open);
 
   useEffect(() => {
     if (!open) return;
@@ -83,7 +85,7 @@ function DashboardNavDrawer({ open, onClose }: { open: boolean; onClose: () => v
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 aria-label="Lukk"
               >
                 <X className="h-5 w-5" />
@@ -127,7 +129,7 @@ export function DashboardNavMenuButton({ className }: { className?: string }) {
     <button
       type="button"
       onClick={nav.toggle}
-      className={cn(className)}
+      className={cn('min-h-[44px] min-w-[44px]', className)}
       aria-expanded={nav.open}
       aria-label={nav.open ? 'Lukk meny' : 'Åpne meny'}
     >
