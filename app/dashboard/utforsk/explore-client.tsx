@@ -12,6 +12,7 @@ import { LayoutGroup } from 'motion/react';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { dashboardSearchClass } from '@/components/dashboard/filter-field';
+import { ChipGroup } from '@/components/ui/chip-group';
 import { FilterTokenBar, type FilterToken } from '@/components/ui/filter-token-bar';
 import { SurfaceCard } from '@/components/dashboard/surface-card';
 import { MotionList, MotionListRow } from '@/components/motion/list-row';
@@ -343,36 +344,13 @@ export default function ExploreClient({
         <SectionSettle>
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">Emne</p>
-            <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-x-visible [&::-webkit-scrollbar]:hidden">
-              {popularLabels.map((label) => {
-                const active = activeAiLabels.includes(label);
-                return (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => toggleAiLabel(label)}
-                    className={`shrink-0 snap-start rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
-                      active
-                        ? 'bg-brand text-brand-foreground border-brand'
-                        : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-              {activeAiLabels.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFilters((prev) => ({ ...prev, selectedAiLabels: [] }))
-                  }
-                  className="shrink-0 snap-start rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-                >
-                  Nullstill emner
-                </button>
-              )}
-            </div>
+            <ChipGroup
+              ariaLabel="Filtrer på emne"
+              options={popularLabels.map((label) => ({ value: label, label }))}
+              selected={activeAiLabels}
+              onToggle={toggleAiLabel}
+              onClear={() => setFilters((prev) => ({ ...prev, selectedAiLabels: [] }))}
+            />
           </div>
         </SectionSettle>
       )}
