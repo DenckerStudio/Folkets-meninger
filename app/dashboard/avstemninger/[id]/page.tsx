@@ -43,10 +43,10 @@ export default async function PollDetailPage({ params }: PageProps) {
     isSharePollsEnabled() || (user ? await isAdmin(user.id, user.email) : false);
 
   return (
-    <DashboardPage className="mx-auto max-w-3xl space-y-6">
+    <DashboardPage className="mx-auto max-w-3xl space-y-5 sm:space-y-6">
       <Link
         href={poll.track === 'system' ? routes.utforsk : routes.avstemninger}
-        className="text-sm font-medium text-brand hover:underline"
+        className="-ml-1 inline-flex min-h-11 items-center rounded-md px-1 text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
         {poll.track === 'system' ? '← Utforsk' : '← Alle avstemninger'}
       </Link>
@@ -64,18 +64,23 @@ export default async function PollDetailPage({ params }: PageProps) {
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{poll.neutralSummary}</p>
       ) : null}
       {poll.stortingetIssueId ? (
-        <p className="text-sm">
+        <p className="flex flex-wrap items-center gap-x-1 text-sm">
           Kilde:{' '}
-          <Link href={routes.sak(poll.stortingetIssueId)} className="font-medium text-brand hover:underline">
+          <Link
+            href={routes.sak(poll.stortingetIssueId)}
+            className="inline-flex min-h-11 items-center font-medium text-brand hover:underline"
+          >
             Stortingssak {poll.stortingetIssueId}
           </Link>
         </p>
       ) : null}
       {poll.sourceUrls.length > 0 ? (
-        <ul className="list-inside list-disc text-sm text-muted-foreground">
+        <ul className="space-y-1 text-sm text-muted-foreground">
           {poll.sourceUrls.map((source) => (
             <li key={source.url}>
-              <a href={source.url} className="text-brand hover:underline" rel="noreferrer" target="_blank">
+              <a href={source.url} className="inline-flex min-h-11 items-center break-all text-brand hover:underline"
+                rel="noreferrer"
+                target="_blank">
                 {source.label || source.url}
               </a>
             </li>
@@ -90,13 +95,16 @@ export default async function PollDetailPage({ params }: PageProps) {
       />
       {shareEnabled ? (
         <p className="text-sm">
-          <Link href={routes.sharePoll(poll.id)} className="font-medium text-brand hover:underline">
+          <Link
+            href={routes.sharePoll(poll.id)}
+            className="inline-flex min-h-11 items-center font-medium text-brand hover:underline"
+          >
             Åpne delbar side (Ja / Vet ikke / Nei) →
           </Link>
         </p>
       ) : null}
       <section className="space-y-3">
-        <h2 className="text-base font-semibold text-foreground">Resultat per fylke</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">Resultat per fylke</h2>
         <PollResultView byFylke={byFylke} />
       </section>
     </DashboardPage>

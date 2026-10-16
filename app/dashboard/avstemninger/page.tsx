@@ -27,15 +27,15 @@ export default async function AvstemningerPage() {
     <DashboardPage>
       <PageHeader
         title="Avstemninger"
-        description="Ja, nei eller blank. Saker ligger under Utforsk."
+        description="Si ja, nei eller stem blankt på nasjonale spørsmål. Enkeltsaker fra Stortinget finner du under Utforsk."
       />
       {withTotals.length === 0 ? (
         <EmptyState
           title="Ingen avstemninger er publisert ennå"
-          description="Når en stortingssak løftes til nasjonal avstemning, vises den her."
+          description="Når en stortingssak løftes til nasjonal avstemning, dukker den opp her. Kom gjerne tilbake senere."
         />
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-3 sm:gap-4">
           {withTotals.map(({ poll, totals }) => (
             <PollCard key={poll.id} poll={poll} totals={totals} />
           ))}
