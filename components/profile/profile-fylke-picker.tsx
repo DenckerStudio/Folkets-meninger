@@ -55,7 +55,7 @@ export function ProfileFylkePicker({
             value={value}
             onChange={(event) => void save(event.target.value)}
             disabled={saving}
-            className="mt-3 w-full max-w-sm rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground"
+            className="min-h-11 mt-3 w-full max-w-sm rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground"
           >
             <option value="">Velg fylke</option>
             {NORWAY_COUNTIES.map((county) => (

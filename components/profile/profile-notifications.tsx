@@ -77,7 +77,7 @@ export function ProfileNotifications({
                 value={frequencies[channel] ?? 'daily'}
                 onChange={(e) => onFrequencyChange(channel, e.target.value)}
                 disabled={!emailEnabled}
-                className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm disabled:opacity-60"
+                className="min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-sm disabled:opacity-60"
               >
                 <option value="realtime" disabled={!isStemmePlus}>
                   Sanntid (én e-post per varsel){!isStemmePlus ? ' — Stemme+' : ''}
@@ -103,7 +103,7 @@ export function ProfileNotifications({
         type="button"
         onClick={() => void onSave()}
         disabled={saving}
-        className="mt-4 inline-flex items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+        className="min-h-11 mt-4 inline-flex items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
       >
         {saving ? 'Lagrer…' : 'Lagre varsler'}
       </button>

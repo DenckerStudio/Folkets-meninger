@@ -171,7 +171,7 @@ export function ProfileInterests({
           type="button"
           onClick={() => void onSave()}
           disabled={saving}
-          className="inline-flex items-center px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand/90 disabled:opacity-60"
+          className="min-h-11 inline-flex items-center px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand/90 disabled:opacity-60"
         >
           {saving ? 'Lagrer…' : 'Lagre interesseområder'}
         </button>
@@ -220,12 +220,12 @@ export function ProfileInterests({
               }
             }}
             placeholder="Legg til eget emne…"
-            className="flex-1 rounded-lg border border-border px-3 py-2 text-sm"
+            className="min-h-11 flex-1 rounded-lg border border-border px-3 py-2 text-sm"
           />
           <button
             type="button"
             onClick={addCustomLabel}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
+            className="min-h-11 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
           >
             Legg til
           </button>
@@ -241,7 +241,7 @@ export function ProfileInterests({
           type="button"
           onClick={() => void onLabelsSave()}
           disabled={labelsSaving}
-          className="inline-flex items-center px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand/90 disabled:opacity-60"
+          className="min-h-11 inline-flex items-center px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand/90 disabled:opacity-60"
         >
           {labelsSaving ? 'Lagrer…' : 'Lagre emner'}
         </button>

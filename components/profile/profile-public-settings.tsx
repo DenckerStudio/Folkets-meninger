@@ -95,7 +95,7 @@ export function ProfilePublicSettings({ userId }: { userId: string }) {
               id="activity-visibility"
               value={activityVisibility}
               onChange={(e) => setActivityVisibility(parseActivityVisibility(e.target.value))}
-              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+              className="min-h-11 mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
             >
               {ACTIVITY_VISIBILITY_VALUES.map((value) => (
                 <option key={value} value={value}>
@@ -118,7 +118,7 @@ export function ProfilePublicSettings({ userId }: { userId: string }) {
               value={bio}
               maxLength={500}
               onChange={(e) => setBio(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm focus:border-brand focus:ring-brand"
+              className="min-h-11 mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm focus:border-brand focus:ring-brand"
               placeholder="Kort om deg og hva du bryr deg om politisk."
             />
             <p className="mt-1 text-xs text-muted-foreground">{bio.length}/500 tegn</p>
@@ -132,7 +132,7 @@ export function ProfilePublicSettings({ userId }: { userId: string }) {
               id="party-preference"
               value={partyPreference}
               onChange={(e) => setPartyPreference(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm focus:border-brand focus:ring-brand"
+              className="min-h-11 mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm focus:border-brand focus:ring-brand"
               placeholder="Valgfritt, f.eks. Venstre"
             />
             <label className="mt-2 flex items-center gap-2 text-sm text-foreground">
@@ -154,13 +154,13 @@ export function ProfilePublicSettings({ userId }: { userId: string }) {
             type="button"
             onClick={() => void save()}
             disabled={saving}
-            className="inline-flex rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            className="min-h-11 inline-flex rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
           >
             {saving ? 'Lagrer…' : 'Lagre offentlig profil'}
           </button>
           <Link
             href={routes.profile(userId)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
+            className="min-h-11 inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
           >
             Se offentlig profil <ExternalLink className="h-4 w-4" />
           </Link>

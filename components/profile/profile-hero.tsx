@@ -72,7 +72,7 @@ export function ProfileHero({
           <button
             type="button"
             onClick={onSignOut}
-            className="inline-flex items-center justify-center gap-2 self-start sm:self-center px-4 py-2 border border-border rounded-xl text-sm font-medium text-foreground bg-card hover:bg-muted/50 transition-colors"
+            className="min-h-11 inline-flex items-center justify-center gap-2 self-start sm:self-center px-4 py-2 border border-border rounded-xl text-sm font-medium text-foreground bg-card hover:bg-muted/50 transition-colors"
           >
             <LogOut className="w-4 h-4" />
             Logg ut

@@ -254,7 +254,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
               <select
                 value={provider}
                 onChange={(event) => onProviderChange(event.target.value as LlmProvider)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
+                className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
               >
                 {PRIMARY_LLM_PROVIDERS.map((item) => (
                   <option key={item} value={item}>
@@ -276,7 +276,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
                 <select
                   value={modelExists(models, model) ? model : ''}
                   onChange={(event) => setModel(event.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
+                  className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
                 >
                   {modelExists(models, model) ? null : (
                     <option value="" disabled>
@@ -293,7 +293,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
                 <input
                   value={model}
                   onChange={(event) => setModel(event.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
+                  className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
                   placeholder={DEFAULT_MODELS[provider]}
                 />
               )}
@@ -308,7 +308,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
               <input
                 value={baseUrl}
                 onChange={(event) => setBaseUrl(event.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
+                className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
                 placeholder={
                   provider === 'ollama'
                     ? 'http://localhost:11434/v1'
@@ -343,7 +343,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
               autoComplete="off"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
+              className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
               placeholder={
                 saved
                   ? `Ny nøkkel (erstatter …${saved.keyLast4})`
