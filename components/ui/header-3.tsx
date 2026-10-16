@@ -71,14 +71,9 @@ export function Header() {
           ) : null}
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          {inDashboard ? (
-            <DashboardNavMenuButton
-              className="inline-flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-input bg-background text-foreground transition-colors hover:bg-accent hover:text-accent-foreground xl:hidden"
-            />
-          ) : null}
           <NotificationsBell enabled={isLoggedIn} loginHref={loginHref} />
           {isLoggedIn ? (
-            <div className="hidden md:block">
+            <div className={cn(inDashboard ? 'hidden md:block' : 'block')}>
               <Suspense fallback={<ProfileMenuDropdownFallback />}>
                 <ProfileMenuDropdown onSignOut={handleSignOut} />
               </Suspense>
@@ -99,6 +94,11 @@ export function Header() {
               </Button>
             </>
           )}
+          {inDashboard ? (
+            <DashboardNavMenuButton
+              className="inline-flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-input bg-background text-foreground transition-colors hover:bg-accent hover:text-accent-foreground xl:hidden"
+            />
+          ) : null}
         </div>
       </nav>
     </header>
