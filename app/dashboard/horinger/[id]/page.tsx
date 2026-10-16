@@ -247,11 +247,11 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
                     {sak.sak_henvisning && (
                       <p className="text-xs text-muted-foreground mt-1">{sak.sak_henvisning}</p>
                     )}
-                    <div className="mt-2 flex flex-wrap gap-3">
+                    <div className="mt-1 flex flex-wrap gap-x-4">
                       {sak.sak_id && (
                         <Link
                           href={routes.sak(String(sak.sak_id))}
-                          className="text-sm font-medium text-brand hover:text-brand/80"
+                          className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:text-brand/80"
                         >
                           Se sak i Folkets Meninger
                         </Link>
@@ -261,7 +261,7 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
                           href={pubUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
+                          className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
                         >
                           På stortinget.no
                           <ExternalLink className="w-3.5 h-3.5" />
@@ -284,7 +284,7 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
             href={skriftligInnspillUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-background hover:opacity-90"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-foreground px-4 text-sm font-medium text-background hover:opacity-90 sm:w-auto"
           >
             Send innspill til Stortinget
             <ExternalLink className="w-4 h-4" />

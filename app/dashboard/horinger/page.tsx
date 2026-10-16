@@ -40,7 +40,7 @@ export default async function HoringerPage() {
         />
         <Link
           href={routes.kalender}
-          className="inline-flex shrink-0 items-center gap-2 text-sm font-medium text-brand hover:underline"
+          className="inline-flex min-h-11 shrink-0 items-center gap-2 self-start rounded-lg border border-border px-4 text-sm font-medium text-brand hover:bg-muted sm:self-auto"
         >
           <Calendar className="h-4 w-4" aria-hidden />
           Se i kalender
@@ -50,7 +50,7 @@ export default async function HoringerPage() {
       {hearings.length === 0 ? (
         <EmptyState
           title="Klarte ikke å hente høringer"
-          description="Prøv igjen senere. Kilden er Stortingets åpne data."
+          description="Stortingets åpne data svarer ikke akkurat nå. Prøv igjen om litt."
           tone="error"
         />
       ) : (

@@ -37,7 +37,7 @@ export default function HearingCommentForm({
     setSubmitting(false);
 
     if (!res.ok) {
-      setError(data.error || 'Kunne ikke publisere');
+      setError(data.error || 'Kunne ikke publisere innspillet. Prøv igjen.');
       return;
     }
 
@@ -47,8 +47,8 @@ export default function HearingCommentForm({
 
   if (!user) {
     return (
-      <p className="text-sm text-center text-muted-foreground py-4">
-        <Link href={loginWithNext(routes.horing(stortingetHearingId))} className="text-brand font-medium hover:underline">
+      <p className="rounded-xl border border-dashed border-border py-6 text-center text-sm text-muted-foreground">
+        <Link href={loginWithNext(routes.horing(stortingetHearingId))} className="inline-flex min-h-11 items-center font-medium text-brand hover:underline">
           Logg inn
         </Link>{' '}
         for å gi innspill.
@@ -66,14 +66,14 @@ export default function HearingCommentForm({
         rows={4}
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        className="w-full border border-border rounded-lg p-3 text-sm"
+        className="w-full rounded-lg border border-border bg-background p-3 text-base sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         placeholder="Skriv innspillet ditt…"
         required
       />
       <button
         type="submit"
         disabled={submitting}
-        className="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand/90 disabled:opacity-50"
+        className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-5 text-sm font-medium text-white hover:bg-brand/90 disabled:opacity-50 sm:w-auto"
       >
         {submitting ? 'Publiserer…' : 'Publiser innspill'}
       </button>
