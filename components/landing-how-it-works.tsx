@@ -2,6 +2,7 @@
 
 import { GrainGradient } from '@paper-design/shaders-react';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
+import { LandingSectionContainer } from '@/components/landing-section-container';
 import HowItWorks from '@/components/ui/how-it-works';
 
 const GRAIN_COLORS = ['#f4d4db', '#ba0c2f', '#00205b', '#d9e4f5'];
@@ -31,9 +32,9 @@ export function LandingHowItWorks() {
           </>
         )}
       </div>
-      <div className="relative z-10 mx-auto max-w-7xl">
-        <HowItWorks />
-      </div>
+      <LandingSectionContainer className="relative z-10">
+        <HowItWorks className="px-0 sm:px-0" />
+      </LandingSectionContainer>
     </section>
   );
 }

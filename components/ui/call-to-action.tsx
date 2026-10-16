@@ -52,13 +52,13 @@ export default function CallToAction({
         <div className="mt-10 flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:items-center">
           <Link
             href={primaryButtonLink}
-            className="inline-flex items-center justify-center rounded-full bg-[#00205b] px-7 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[#ba0c2f]"
+            className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#00205b] px-7 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[#ba0c2f]"
           >
             {primaryButtonText}
           </Link>
           <Link
             href={secondaryButtonLink}
-            className="inline-flex items-center justify-center rounded-full border border-[#00205b]/15 bg-white/80 px-7 py-3.5 text-sm font-semibold text-[#00205b] transition-colors hover:border-[#00205b]/40 hover:bg-white"
+            className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#00205b]/15 bg-white/80 px-7 py-3.5 text-sm font-semibold text-[#00205b] transition-colors hover:border-[#00205b]/40 hover:bg-white"
           >
             {secondaryButtonText}
             <ArrowRight className="ml-2 h-4 w-4" aria-hidden />

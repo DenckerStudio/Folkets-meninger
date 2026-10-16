@@ -29,8 +29,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           id="main-content"
           className={
             isMarketingPath(pathname)
-              ? 'w-full'
-              : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8'
+              ? 'w-full max-w-none px-0 py-0'
+              : 'mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8'
           }
         >
           {children}

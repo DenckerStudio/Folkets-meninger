@@ -57,13 +57,13 @@ export default function HeroSection() {
         >
           <Link
             href={routes.utforsk}
-            className="inline-flex w-full sm:w-auto items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold text-white bg-[#00205b] shadow-sm transition-colors duration-200 hover:bg-[#ba0c2f] sm:px-7 sm:py-3 sm:text-base"
+            className="inline-flex min-h-11 w-full sm:w-auto items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold text-white bg-[#00205b] shadow-sm transition-colors duration-200 hover:bg-[#ba0c2f] sm:px-7 sm:py-3 sm:text-base"
           >
             Utforsk saker
           </Link>
           <Link
             href={routes.login}
-            className="inline-flex w-full sm:w-auto items-center justify-center rounded-full border border-[#00205b]/15 bg-white/85 px-5 py-2.5 text-sm font-semibold text-[#00205b] backdrop-blur-md transition-colors duration-200 hover:border-[#00205b]/40 hover:bg-white sm:px-7 sm:py-3 sm:text-base"
+            className="inline-flex min-h-11 w-full sm:w-auto items-center justify-center rounded-full border border-[#00205b]/15 bg-white/85 px-5 py-2.5 text-sm font-semibold text-[#00205b] backdrop-blur-md transition-colors duration-200 hover:border-[#00205b]/40 hover:bg-white sm:px-7 sm:py-3 sm:text-base"
           >
             Logg inn
           </Link>

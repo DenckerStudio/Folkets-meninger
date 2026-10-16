@@ -3,6 +3,7 @@ import { LandingAbout } from '@/components/landing-about';
 import { LandingExperience } from '@/components/landing-experience';
 import { LandingHowItWorks } from '@/components/landing-how-it-works';
 import { LandingPopularIssuesLazy } from '@/components/landing-popular-issues-lazy';
+import { LandingSectionContainer } from '@/components/landing-section-container';
 import CallToAction from '@/components/ui/call-to-action';
 import { routes } from '@/lib/routes';
 import { homepageMetadata } from '@/lib/seo/metadata';
@@ -28,14 +29,16 @@ export default function LandingPage() {
         </div>
 
         <div data-landing-section>
-          <CallToAction
-            title="Klar til å delta?"
-            subtitle="Opprett konto gratis. Én person, én stemme."
-            primaryButtonText="Kom i gang"
-            primaryButtonLink={routes.login}
-            secondaryButtonText="Gi innspill"
-            secondaryButtonLink={routes.innspill}
-          />
+          <LandingSectionContainer>
+            <CallToAction
+              title="Klar til å delta?"
+              subtitle="Opprett konto gratis. Én person, én stemme."
+              primaryButtonText="Kom i gang"
+              primaryButtonLink={routes.login}
+              secondaryButtonText="Gi innspill"
+              secondaryButtonLink={routes.innspill}
+            />
+          </LandingSectionContainer>
         </div>
       </div>
     </LandingExperience>

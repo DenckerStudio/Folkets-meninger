@@ -66,7 +66,7 @@ export function LandingExperience({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className="relative min-w-0 overflow-x-hidden">
       {children}
     </div>
   );

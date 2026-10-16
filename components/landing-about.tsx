@@ -1,10 +1,12 @@
 'use client';
 
+import { LandingSectionContainer } from '@/components/landing-section-container';
 import AboutSection from '@/components/ui/about-section';
 
 /** Landing “Om oss” + misjon — typography-first, no cards. */
 export function LandingAbout() {
   return (
+    <LandingSectionContainer>
     <AboutSection
       eyebrow="Om oss"
       title="Om Folkets Meninger"
@@ -44,5 +46,6 @@ export function LandingAbout() {
         ],
       }}
     />
+    </LandingSectionContainer>
   );
 }

@@ -4,16 +4,18 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Vote } from 'lucide-react';
 import { LandingPopularIssues, type LandingIssue } from '@/components/landing-popular-issues';
+import { LandingSectionContainer } from '@/components/landing-section-container';
 import { routes } from '@/lib/routes';
 
 function LandingPopularIssuesSkeleton() {
   return (
-    <section aria-busy="true" aria-label="Laster populære saker">
+    <LandingSectionContainer>
+    <section aria-busy="true" aria-label="Laster populære saker" className="min-h-[28rem] sm:min-h-[26rem]">
       <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div className="space-y-3">
           <div className="h-3 w-24 animate-pulse rounded bg-[#ba0c2f]/15" />
           <div className="h-9 w-64 animate-pulse rounded-lg bg-[#00205b]/10" />
-          <div className="h-5 w-full max-w-xl animate-pulse rounded bg-[#00205b]/8" />
+          <div className="h-5 w-48 max-w-xl animate-pulse rounded bg-[#00205b]/8" aria-hidden />
         </div>
         <div className="h-5 w-40 animate-pulse rounded bg-[#00205b]/8" />
       </div>
@@ -39,11 +41,13 @@ function LandingPopularIssuesSkeleton() {
         ))}
       </div>
     </section>
+    </LandingSectionContainer>
   );
 }
 
 function LandingPopularIssuesEmpty() {
   return (
+    <LandingSectionContainer>
     <section className="rounded-3xl border border-dashed border-[#00205b]/20 bg-gradient-to-br from-[#00205b]/[0.03] via-white to-[#ba0c2f]/[0.04] px-6 py-12 text-center sm:px-10">
       <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#00205b]/[0.06] text-[#00205b]">
         <Vote className="h-6 w-6" aria-hidden />
@@ -55,18 +59,19 @@ function LandingPopularIssuesEmpty() {
       <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
         <Link
           href={routes.login}
-          className="inline-flex items-center justify-center rounded-full bg-[#00205b] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#ba0c2f]"
+          className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#00205b] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#ba0c2f]"
         >
           Logg inn og stem
         </Link>
         <Link
           href={`${routes.login}?next=${encodeURIComponent(routes.utforsk)}`}
-          className="inline-flex items-center text-sm font-semibold text-[#00205b] transition-colors hover:text-[#ba0c2f]"
+          className="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-[#00205b] transition-colors hover:text-[#ba0c2f]"
         >
           Utforsk saker etter innlogging <ArrowRight className="ml-1 h-4 w-4" />
         </Link>
       </div>
     </section>
+    </LandingSectionContainer>
   );
 }
 
