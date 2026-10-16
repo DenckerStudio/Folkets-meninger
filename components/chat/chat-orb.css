@@ -1,41 +1,24 @@
 .chat-orb {
   position: fixed;
   right: 1rem;
-  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
   z-index: 80;
-  display: inline-flex;
-  align-items: center;
-  min-height: 4rem;
-  max-width: 4rem;
+  min-height: 3.65rem;
+  max-width: 3.65rem;
   padding: 0.175rem;
   border: 0;
   border-radius: 999px;
-  background: transparent;
+  background: color-mix(in oklab, var(--card) 92%, transparent) !important;
+  color: var(--foreground) !important;
+  box-shadow: 0 10px 30px color-mix(in oklab, var(--foreground) 14%, transparent);
   cursor: pointer;
   isolation: isolate;
-  overflow: hidden;
-  transition:
-    max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-    padding-right 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-    background-color 0.3s ease,
-    box-shadow 0.3s ease;
 }
 
-@media (min-width: 768px) {
-  .chat-orb:hover,
-  .chat-orb:focus-visible {
-    max-width: 16rem;
-    padding-right: 1.1rem;
-    background: color-mix(in oklab, var(--card) 92%, transparent);
-    box-shadow: 0 10px 30px color-mix(in oklab, var(--foreground) 18%, transparent);
-  }
-}
-
-/* Bunnnav (InteractiveMenu) vises opp til xl, så orben holder seg over den. */
-@media (min-width: 1280px) {
-  .chat-orb {
-    bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
-  }
+.chat-orb[data-open='false']:hover,
+.chat-orb[data-open='false']:focus-visible {
+  background: color-mix(in oklab, var(--card) 96%, transparent);
+  box-shadow: 0 10px 30px color-mix(in oklab, var(--foreground) 18%, transparent);
 }
 
 .chat-orb-orb {
@@ -45,30 +28,6 @@
   place-items: center;
   width: 3.65rem;
   height: 3.65rem;
-}
-
-.chat-orb-label {
-  max-width: 0;
-  margin-left: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  opacity: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--foreground);
-  transition:
-    max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-    margin-left 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.25s ease;
-}
-
-@media (min-width: 768px) {
-  .chat-orb:hover .chat-orb-label,
-  .chat-orb:focus-visible .chat-orb-label {
-    max-width: 12rem;
-    margin-left: 0.35rem;
-    opacity: 1;
-  }
 }
 
 .chat-orb-halo,

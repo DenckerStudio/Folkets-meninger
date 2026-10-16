@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { ExpandableButton } from '@/components/ui/expandable-button';
 import { useChatOverlay } from '@/components/chat/chat-overlay-context';
 import { issueIdFromPathname } from '@/lib/chat/overlay';
 import './chat-orb.css';
@@ -48,44 +49,50 @@ function paintOrb(ctx: CanvasRenderingContext2D, size: number, time: number, bra
     const x = mid + Math.sin(time * blob.speedX + blob.phase) * size * blob.radius;
     const y = mid + Math.cos(time * blob.speedY + blob.phase * 0.8) * size * blob.radius;
     const radius = size * blob.size;
-    const glow = ctx.createRadialGradient(x, y, 0, x, y, radius);
-    glow.addColorStop(0, `oklch(0.86 0.18 ${blob.hue} / 0.72)`);
-    glow.addColorStop(0.45, `oklch(0.7 0.16 ${blob.hue} / 0.28)`);
-    glow.addColorStop(1, 'transparent');
-    ctx.fillStyle = glow;
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    gradient.addColorStop(0, `oklch(0.72 0.14 ${blob.hue})`);
+    gradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.fill();
   }
-
-  ctx.globalCompositeOperation = 'source-over';
-  const shine = ctx.createRadialGradient(size * 0.32, size * 0.28, 0, size * 0.32, size * 0.28, size * 0.28);
-  shine.addColorStop(0, 'oklch(1 0 0 / 0.42)');
-  shine.addColorStop(1, 'transparent');
-  ctx.fillStyle = shine;
-  ctx.fillRect(0, 0, size, size);
   ctx.restore();
+}
+
+function ChatOrbIcon({ canvasRef }: { canvasRef: React.RefObject<HTMLCanvasElement | null> }) {
+  return (
+    <span className="chat-orb-orb" aria-hidden>
+      <span className="chat-orb-halo" />
+      <span className="chat-orb-core">
+        <canvas ref={canvasRef} className="chat-orb-canvas" />
+        <span className="chat-orb-sheen" />
+      </span>
+    </span>
+  );
 }
 
 export function ChatOrb() {
   const pathname = usePathname();
   const { open, openChat, closeChat } = useChatOverlay();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [peekOpen, setPeekOpen] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0;
     let running = true;
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     const resize = () => {
-      const cssSize = canvas.clientWidth || 58;
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const cssSize = 58;
+      const ratio = window.devicePixelRatio || 1;
+      canvas.style.width = `${cssSize}px`;
+      canvas.style.height = `${cssSize}px`;
       canvas.width = Math.round(cssSize * ratio);
       canvas.height = Math.round(cssSize * ratio);
     };
@@ -110,15 +117,23 @@ export function ChatOrb() {
     };
   }, []);
 
+  const expanded = peekOpen && !open;
+
   return (
-    <button
-      type="button"
+    <ExpandableButton
       className="chat-orb"
       data-chat-orb=""
       data-open={open ? 'true' : 'false'}
+      expanded={expanded}
+      toggleOnClick={false}
+      onPointerEnter={() => setPeekOpen(true)}
+      onPointerLeave={() => setPeekOpen(false)}
+      onFocus={() => setPeekOpen(true)}
+      onBlur={() => setPeekOpen(false)}
       aria-expanded={open}
       aria-controls="stemme-chat-panel"
       aria-label={open ? 'Lukk chat' : 'Åpne chat'}
+      icon={<ChatOrbIcon canvasRef={canvasRef} />}
       onClick={() => {
         if (open) closeChat();
         else {
@@ -127,16 +142,7 @@ export function ChatOrb() {
         }
       }}
     >
-      <span className="chat-orb-orb" aria-hidden>
-        <span className="chat-orb-halo" />
-        <span className="chat-orb-core">
-          <canvas ref={canvasRef} className="chat-orb-canvas" />
-          <span className="chat-orb-sheen" />
-        </span>
-      </span>
-      <span className="chat-orb-label" aria-hidden>
-        Spør Stemme+
-      </span>
-    </button>
+      Spør Stemme+
+    </ExpandableButton>
   );
 }
