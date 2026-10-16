@@ -3,7 +3,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { LandingHeadingRule } from '@/components/icons/civic';
-import { SoftBlurIn } from '@/components/ui/soft-blur-in';
 import { TextGradient } from '@/components/ui/text-gradient';
 
 export type TimelineStatus = 'completed' | 'current' | 'upcoming';
@@ -61,24 +60,18 @@ export function Timeline({
     <section className={cn('relative', className)}>
       {(title || subtitle) && (
         <header className="mx-auto mb-16 max-w-3xl text-center">
-          <SoftBlurIn>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">Roadmap</p>
-          </SoftBlurIn>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">Roadmap</p>
           {title ? (
-            <SoftBlurIn delay={0.06}>
+            <>
               <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl">
                 <TextGradient as="span" colors={['#001433', '#00205b', '#ba0c2f', '#001433']} duration={8}>
                   {title}
                 </TextGradient>
               </h2>
               <LandingHeadingRule className="landing-heading-rule--center" />
-            </SoftBlurIn>
+            </>
           ) : null}
-          {subtitle ? (
-            <SoftBlurIn delay={0.12}>
-              <p className="mt-4 text-lg leading-relaxed text-[#001433]/65">{subtitle}</p>
-            </SoftBlurIn>
-          ) : null}
+          {subtitle ? <p className="mt-4 text-lg leading-relaxed text-[#001433]/65">{subtitle}</p> : null}
         </header>
       )}
 
@@ -150,8 +143,7 @@ function TimelineCopy({
   align: 'left' | 'right';
 }) {
   const statusLabel = STATUS_LABEL[item.status];
-  const showCategory = Boolean(item.category) && item.category !== statusLabel;
-  const showStatusBadge = item.category !== statusLabel;
+  const categoryDiffers = Boolean(item.category) && item.category !== statusLabel;
 
   return (
     <article className={cn('max-w-md', align === 'right' && 'sm:ml-auto')}>
@@ -161,22 +153,20 @@ function TimelineCopy({
           align === 'right' && 'sm:justify-end',
         )}
       >
-        {showCategory ? (
+        {categoryDiffers ? (
           <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#00205b]/70">
             {item.category}
           </span>
         ) : null}
         {item.date ? <span className="text-xs text-[#001433]/45">{item.date}</span> : null}
-        {showStatusBadge ? (
-          <span
-            className={cn(
-              'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold',
-              STATUS_CLASS[item.status],
-            )}
-          >
-            {statusLabel}
-          </span>
-        ) : null}
+        <span
+          className={cn(
+            'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold',
+            STATUS_CLASS[item.status],
+          )}
+        >
+          {statusLabel}
+        </span>
       </div>
       <h3 className="mt-2 text-xl font-bold tracking-tight text-[#001433] sm:text-2xl">
         {item.title}
