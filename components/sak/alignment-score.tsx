@@ -22,6 +22,7 @@ import {
   type FolkVoteCounts,
   type SakVotering,
 } from '@/lib/alignment/types';
+import { NonRepresentativeNotice } from '@/components/trust/non-representative-notice';
 import { cn } from '@/lib/utils';
 
 function verdictCopy(verdict: AlignmentVerdict): { label: string; className: string } {
@@ -214,9 +215,10 @@ export function AlignmentScore({
         </span>
       </div>
 
+      <NonRepresentativeNotice count={comparison.folk.total} countLabel="stemmer i appen" className="mb-2" />
       <p className="mb-4 text-xs text-muted-foreground">
-        Viser historiske anonyme For/Mot/Avstår-stemmer fra før holdninger erstattet per-sak stemming. Nye
-        holdninger (enig/uenig) er personlige og inngår ikke her.
+        «Folket i appen» viser historiske anonyme For/Mot/Avstår-stemmer der de finnes. Nye holdninger
+        (enig/uenig) er personlige og inngår ikke her. Stortingets tall er offisielle voteringer.
       </p>
 
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -265,7 +267,9 @@ export function AlignmentScore({
       <div className="mt-6 space-y-5">
         <div>
           <div className="mb-2 flex items-baseline justify-between gap-2">
-            <h3 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Folket i appen</h3>
+            <h3 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+              Brukere av Folkets Meninger
+            </h3>
             <span className="text-xs text-muted-foreground">{comparison.folk.total} stemmer</span>
           </div>
           {comparison.folk.total > 0 ? (

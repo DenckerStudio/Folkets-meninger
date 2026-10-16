@@ -260,7 +260,10 @@ export default async function SakPage({
           <h1 className="text-balance text-2xl font-bold tracking-tight break-words text-foreground sm:text-3xl">
             {officialTitle}
           </h1>
-          <AiSummary sakId={sak.id} />
+          <AiSummary
+            sakId={sak.id}
+            stortingetPageUrl={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
+          />
           {descriptionToShow ? <SakOfficialDescription text={descriptionToShow} /> : null}
           {(sak.henvisning || henvisning) ? (
             <p className="text-sm text-muted-foreground">{sak.henvisning || henvisning}</p>
@@ -291,6 +294,22 @@ export default async function SakPage({
               </div>
             ) : null}
 
+            {innstillingstekst ? (
+              <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
+                <SakSectionHeading
+                  title="Komiteens innstilling (Stortinget)"
+                  tooltipKey="innstilling"
+                  icon="file-text"
+                  iconClassName="w-5 h-5 text-brand"
+                />
+                <p className="mb-3 text-sm text-muted-foreground">
+                  Offisiell innstillingstekst fra Stortingets data — partienes begrunnelser ligger ofte i
+                  dokumentene under fanen Dokumenter.
+                </p>
+                <ExpandableText title="Innstilling" text={innstillingstekst} />
+              </div>
+            ) : null}
+
             {forslagstillere.length > 0 ? (
               <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
                 <SakSectionHeading
@@ -299,6 +318,9 @@ export default async function SakPage({
                   icon="users"
                   iconClassName="w-5 h-5 text-brand"
                 />
+                <p className="mb-3 text-sm text-muted-foreground">
+                  Navn og parti fra Stortingets åpne data — ikke appens vurdering av saken.
+                </p>
                 <div className="flex flex-wrap gap-3">
                   {forslagstillere.map((f: any, i: number) => {
                     const content = (

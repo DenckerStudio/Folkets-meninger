@@ -7,15 +7,28 @@ const CATEGORIES = [
   { value: 'idé', label: 'Idé / ønske' },
   { value: 'feil', label: 'Feil / bug' },
   { value: 'spørsmål', label: 'Spørsmål' },
+  { value: 'skjevhet', label: 'Skjevhet / nøytralitet' },
   { value: 'annet', label: 'Annet' },
 ] as const;
 
+type FeedbackCategory = (typeof CATEGORIES)[number]['value'];
+
+function parseInitialCategory(value: string | undefined): FeedbackCategory {
+  const match = CATEGORIES.find((c) => c.value === value);
+  return match?.value ?? 'idé';
+}
+
 type Status = 'idle' | 'submitting' | 'success' | 'error';
 
-export function InnspillForm() {
+type InnspillFormProps = {
+  initialCategory?: string;
+  initialPagePath?: string;
+};
+
+export function InnspillForm({ initialCategory, initialPagePath }: InnspillFormProps = {}) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [category, setCategory] = useState<(typeof CATEGORIES)[number]['value']>('idé');
+  const [category, setCategory] = useState<FeedbackCategory>(parseInitialCategory(initialCategory));
   const [message, setMessage] = useState('');
   const [company, setCompany] = useState('');
   const [status, setStatus] = useState<Status>('idle');
@@ -37,7 +50,7 @@ export function InnspillForm() {
         category,
         message,
         company,
-        page_path: '/innspill',
+        page_path: initialPagePath?.slice(0, 200) || '/innspill',
       }),
     });
 
