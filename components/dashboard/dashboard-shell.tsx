@@ -14,7 +14,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <DashboardSidebar />
             </div>
           </aside>
-          <div className="min-w-0 overflow-x-clip">{children}</div>
+          <div className="min-w-0 overflow-x-clip xl:pr-[5.75rem] xl:pb-3">{children}</div>
         </div>
       </div>
       <Suspense fallback={null}>
