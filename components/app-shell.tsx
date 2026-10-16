@@ -7,6 +7,7 @@ import { isEmbedPath } from '@/lib/routes';
 /**
  * App chrome wrapper. Embed routes (`/embed/*`) render bare — no navigation,
  * skip-link or outer padding — so the iframe fills the host's container exactly.
+ * The landing page (`/`) renders full width; its sections manage their own containers.
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -24,7 +25,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         Hopp til hovedinnhold
       </a>
       <Navigation>
-        <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        <main
+          id="main-content"
+          className={
+            pathname === '/'
+              ? 'w-full'
+              : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8'
+          }
+        >
           {children}
         </main>
       </Navigation>
