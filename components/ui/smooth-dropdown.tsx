@@ -33,8 +33,12 @@ type SmoothDropdownProps = {
   className?: string;
   /** Replaces the default icon trigger (must be static content inside the button). */
   triggerContent?: ReactNode;
-  /** Always use the mobile bottom sheet (sidebar / drawer profile row). */
+  /** Use bottom sheet on mobile (e.g. drawer profile row). Ignored on desktop. */
   preferSheet?: boolean;
+  /** Shown above menu items when the desktop popup is open. */
+  menuHeader?: ReactNode;
+  /** `account-row` = full-width sidebar row; `avatar` = circular header button. */
+  triggerVariant?: 'default' | 'account-row' | 'avatar';
 };
 
 const easeOutQuint: [number, number, number, number] = [0.23, 1, 0.32, 1];
@@ -267,9 +271,11 @@ export function SmoothDropdown({
   className,
   triggerContent,
   preferSheet = false,
+  menuHeader,
+  triggerVariant = 'default',
 }: SmoothDropdownProps) {
   const isMobile = useIsMobile();
-  const useSheet = preferSheet || isMobile;
+  const useSheet = isMobile && preferSheet;
   const isMounted = useIsMounted();
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -318,15 +324,20 @@ export function SmoothDropdown({
     setIsOpen(false);
   };
 
+  const triggerButtonClassName =
+    triggerVariant === 'account-row'
+      ? 'inline-flex w-full min-w-0 border-0 bg-transparent p-0 text-left'
+      : triggerVariant === 'avatar'
+        ? 'inline-flex h-11 w-11 shrink-0 items-center justify-center border-0 bg-transparent p-0'
+        : triggerContent
+          ? 'inline-flex h-11 w-11 items-center justify-center border-0 bg-transparent p-0'
+          : 'inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-popover text-muted-foreground shadow-sm transition-colors hover:bg-muted';
+
   const triggerButton = (
     <button
       type="button"
       onClick={() => setIsOpen(true)}
-      className={
-        triggerContent
-          ? "inline-flex w-full min-w-0 border-0 bg-transparent p-0 text-left"
-          : "inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-popover text-muted-foreground shadow-sm transition-colors hover:bg-muted"
-      }
+      className={triggerButtonClassName}
       aria-label={triggerAriaLabel}
       aria-expanded={isOpen}
     >
@@ -368,9 +379,9 @@ export function SmoothDropdown({
         layout
         initial={false}
         animate={{
-          width: isOpen ? 240 : 40,
-          height: isOpen ? openHeight : 40,
-          borderRadius: isOpen ? 14 : 12,
+          width: isOpen ? 280 : 44,
+          height: isOpen ? openHeight : 44,
+          borderRadius: isOpen ? 14 : 9999,
         }}
         transition={{
           type: "spring" as const,
@@ -394,11 +405,13 @@ export function SmoothDropdown({
             willChange: "transform",
           }}
         >
-          <HugeiconsIcon
-            icon={MoreHorizontalCircle01Icon}
-            className="h-6 w-6 text-muted-foreground"
-            aria-hidden
-          />
+          {triggerContent ?? (
+            <HugeiconsIcon
+              icon={MoreHorizontalCircle01Icon}
+              className="h-6 w-6 text-muted-foreground"
+              aria-hidden
+            />
+          )}
           <span className="sr-only">{triggerAriaLabel}</span>
         </motion.div>
 
@@ -419,6 +432,9 @@ export function SmoothDropdown({
               willChange: "transform",
             }}
           >
+            {menuHeader ? (
+              <div className="mb-2 border-b border-border px-1 pb-2">{menuHeader}</div>
+            ) : null}
             <MenuList
               items={items}
               activeItemId={activeItemId}

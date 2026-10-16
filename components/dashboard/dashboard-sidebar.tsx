@@ -6,7 +6,6 @@ import { useMemo } from 'react';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { dashboardSidebarNavItemsForAdmin } from '@/lib/site-nav-links';
 import { routes } from '@/lib/routes';
-import { DashboardSidebarProfile } from '@/components/dashboard/dashboard-sidebar-profile';
 import { cn } from '@/lib/utils';
 
 type DashboardSidebarProps = {
@@ -78,7 +77,6 @@ export default function DashboardSidebar({ variant = 'desktop', onNavigate }: Da
         );
       })}
       </nav>
-      <DashboardSidebarProfile variant="desktop" />
     </div>
   );
 }

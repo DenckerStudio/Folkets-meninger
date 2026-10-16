@@ -5,6 +5,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { LogOut, Shield, UserCircle } from "lucide-react";
 import { ProfileMenuAccountTrigger } from "@/components/profile/profile-menu-account-trigger";
+import { ProfileMenuAvatarTrigger } from "@/components/profile/profile-menu-avatar-trigger";
+import { getProfileDisplayName } from "@/lib/profile/user-display";
 import { SmoothDropdown, type SmoothDropdownItem } from "@/components/ui/smooth-dropdown";
 import { Dialog } from "@/components/ui/dialog";
 import { PROFILE_TABS, type ProfileTabId } from "@/components/profile/profile-tabs";
@@ -15,7 +17,7 @@ import { routes } from "@/lib/routes";
 type ProfileMenuDropdownProps = {
   onSignOut: () => void | Promise<void>;
   className?: string;
-  trigger?: "icon" | "account";
+  trigger?: "icon" | "account" | "avatar";
   user?: User | null;
 };
 
@@ -119,6 +121,26 @@ export function ProfileMenuDropdown({
     }
   };
 
+  const displayName = user ? getProfileDisplayName(user) : "";
+  const email = user?.email ?? "";
+
+  const menuHeader =
+    user && trigger === "avatar"
+      ? (
+          <div className="px-2 pt-1">
+            {displayName ? (
+              <p className="truncate text-sm font-semibold text-foreground">{displayName}</p>
+            ) : null}
+            {email ? (
+              <p className="truncate text-xs text-muted-foreground">{email}</p>
+            ) : null}
+          </div>
+        )
+      : undefined;
+
+  const triggerVariant =
+    trigger === "account" ? "account-row" : trigger === "avatar" ? "avatar" : "default";
+
   return (
     <>
       <SmoothDropdown
@@ -128,8 +150,14 @@ export function ProfileMenuDropdown({
         triggerAriaLabel="Profilmeny"
         className={className}
         preferSheet={trigger === "account"}
+        triggerVariant={triggerVariant}
+        menuHeader={menuHeader}
         triggerContent={
-          trigger === "account" && user ? <ProfileMenuAccountTrigger user={user} /> : undefined
+          trigger === "account" && user
+            ? <ProfileMenuAccountTrigger user={user} />
+            : trigger === "avatar" && user
+              ? <ProfileMenuAvatarTrigger user={user} />
+              : undefined
         }
       />
       <Dialog

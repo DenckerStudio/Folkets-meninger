@@ -75,7 +75,11 @@ export function Header() {
           {isLoggedIn ? (
             <div className={cn(inDashboard ? 'hidden md:block' : 'block')}>
               <Suspense fallback={<ProfileMenuDropdownFallback />}>
-                <ProfileMenuDropdown onSignOut={handleSignOut} />
+                <ProfileMenuDropdown
+                  onSignOut={handleSignOut}
+                  user={user}
+                  trigger={inDashboard ? 'avatar' : 'icon'}
+                />
               </Suspense>
             </div>
           ) : (
@@ -113,7 +117,7 @@ export function Header() {
 function ProfileMenuDropdownFallback() {
   return (
     <div
-      className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-popover"
+      className="relative flex h-11 w-11 items-center justify-center rounded-full border border-border bg-muted"
       aria-hidden
     />
   );
