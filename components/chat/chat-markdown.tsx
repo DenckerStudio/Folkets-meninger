@@ -1,10 +1,53 @@
 import type { ReactNode } from 'react';
+import Link from 'next/link';
+import { ExternalLink } from 'lucide-react';
 import { parseMarkdown, type InlineNode } from '@/lib/chat/markdown';
+import type { ChatSourceLink } from '@/lib/chat/source-links';
 import { cn } from '@/lib/utils';
 
-function renderInline(nodes: InlineNode[]): ReactNode[] {
+type SourceMap = ReadonlyMap<number, ChatSourceLink>;
+
+// The chip stays small visually; the ::after overlay plus min-width give a
+// hit area of about 24×28 px so [n] is tappable on a phone.
+const CITATION_CLASS =
+  "relative mx-0.5 inline-flex min-w-[1.5rem] items-center justify-center gap-0.5 rounded bg-brand/10 px-1 py-0.5 align-baseline text-[0.75em] font-semibold text-brand no-underline hover:bg-brand/20 focus-visible:outline-2 focus-visible:outline-brand after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-['']";
+
+const NEW_TAB_TEXT = 'åpnes i ny fane';
+
+function renderCitation(n: number, key: number, sources?: SourceMap): ReactNode {
+  const source = sources?.get(n);
+  if (!source) return <span key={key}>[{n}]</span>;
+  const label = `Kilde ${n}: ${source.title}`;
+  if (source.external) {
+    return (
+      <a
+        key={key}
+        href={source.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={`${label} (${NEW_TAB_TEXT})`}
+        aria-label={`${label} (${NEW_TAB_TEXT})`}
+        data-chat-citation={n}
+        data-external=""
+        className={CITATION_CLASS}
+      >
+        [{n}]
+        <ExternalLink className="size-[0.85em] shrink-0" aria-hidden />
+      </a>
+    );
+  }
+  return (
+    <Link key={key} href={source.href} title={label} aria-label={label} data-chat-citation={n} className={CITATION_CLASS}>
+      [{n}]
+    </Link>
+  );
+}
+
+function renderInline(nodes: InlineNode[], sources?: SourceMap): ReactNode[] {
   return nodes.map((node, index) => {
     switch (node.type) {
+      case 'citation':
+        return renderCitation(node.n, index, sources);
       case 'strong':
         return (
           <strong key={index} className="font-semibold text-foreground">
@@ -32,6 +75,7 @@ function renderInline(nodes: InlineNode[]): ReactNode[] {
             className="text-brand underline underline-offset-2 hover:text-brand/80"
           >
             {node.value}
+            <span className="sr-only"> ({NEW_TAB_TEXT})</span>
           </a>
         );
       default:
@@ -46,7 +90,16 @@ const HEADING_CLASS: Record<number, string> = {
   3: 'text-sm font-semibold',
 };
 
-export function ChatMarkdown({ text, className }: { text: string; className?: string }) {
+export function ChatMarkdown({
+  text,
+  className,
+  sources,
+}: {
+  text: string;
+  className?: string;
+  /** `[n]` → link for this message (see `collectChatSourceLinks`). */
+  sources?: SourceMap;
+}) {
   const blocks = parseMarkdown(text);
 
   return (
@@ -55,7 +108,7 @@ export function ChatMarkdown({ text, className }: { text: string; className?: st
         if (block.type === 'heading') {
           return (
             <p key={index} className={HEADING_CLASS[block.level] ?? 'text-sm font-semibold'}>
-              {renderInline(block.nodes)}
+              {renderInline(block.nodes, sources)}
             </p>
           );
         }
@@ -70,7 +123,7 @@ export function ChatMarkdown({ text, className }: { text: string; className?: st
               )}
             >
               {block.items.map((item, itemIndex) => (
-                <li key={itemIndex}>{renderInline(item)}</li>
+                <li key={itemIndex}>{renderInline(item, sources)}</li>
               ))}
             </ListTag>
           );
@@ -87,7 +140,7 @@ export function ChatMarkdown({ text, className }: { text: string; className?: st
         }
         return (
           <p key={index} className="whitespace-pre-wrap">
-            {renderInline(block.nodes)}
+            {renderInline(block.nodes, sources)}
           </p>
         );
       })}
