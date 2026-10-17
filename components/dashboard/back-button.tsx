@@ -19,7 +19,10 @@ export function BackButton({
   const router = useRouter();
 
   const handleClick = () => {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
+    if (typeof window === 'undefined') return;
+    const referrer = document.referrer;
+    const sameOriginReferrer = referrer !== '' && referrer.startsWith(window.location.origin);
+    if (sameOriginReferrer) {
       router.back();
       return;
     }

@@ -233,14 +233,20 @@ export default function LoginClient() {
     <div className="min-h-[80vh] flex flex-col justify-center px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
       <FadeIn delay={0.1}>
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <Link
+            href={routes.home}
+            className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground hover:text-brand"
+          >
+            ← Til forsiden
+          </Link>
           <div className="flex justify-center">
             <div className="w-16 h-16 bg-brand/10 rounded-2xl flex items-center justify-center">
               <ShieldCheck className="w-8 h-8 text-brand" />
             </div>
           </div>
-          <h2 className="mt-6 text-center text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+          <h1 className="mt-6 text-center text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
             {isRegister ? 'Registrer ny bruker' : 'Logg inn på din konto'}
-          </h2>
+          </h1>
             <p className="mt-2 text-center text-sm text-muted-foreground">
               {isRegister
                 ? 'Opprett konto med e-post eller Google for å stemme og delta.'
@@ -358,6 +364,7 @@ export default function LoginClient() {
                     id="password"
                     name="password"
                     type="password"
+                    autoComplete={isRegister ? 'new-password' : 'current-password'}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -385,7 +392,13 @@ export default function LoginClient() {
                     onChange={(e) => setAgeConfirmed(e.target.checked)}
                     required
                   />
-                  <span>Jeg bekrefter at jeg er 16 år eller eldre</span>
+                  <span className="space-y-1">
+                    <span className="block">Jeg bekrefter at jeg er 16 år eller eldre</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Les vår <Link href={routes.personvern} className="underline hover:text-brand">personvernerklæring</Link>{' '}
+                      og <Link href={routes.vilkar} className="underline hover:text-brand">brukervilkår</Link>.
+                    </span>
+                  </span>
                 </label>
               ) : null}
 

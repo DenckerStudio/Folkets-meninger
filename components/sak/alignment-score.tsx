@@ -22,6 +22,7 @@ import {
   type FolkVoteCounts,
   type SakVotering,
 } from '@/lib/alignment/types';
+import { formatStemmerCount } from '@/lib/norwegian-plural';
 import { NonRepresentativeNotice } from '@/components/trust/non-representative-notice';
 import { cn } from '@/lib/utils';
 
@@ -215,7 +216,7 @@ export function AlignmentScore({
         </span>
       </div>
 
-      <NonRepresentativeNotice count={comparison.folk.total} countLabel="stemmer i appen" className="mb-2" />
+      <NonRepresentativeNotice count={comparison.folk.total} countLabel="stemmer i appen" countLabelSingular="stemme i appen" className="mb-2" />
       <p className="mb-4 text-xs text-muted-foreground">
         «Folket i appen» viser historiske anonyme For/Mot/Avstår-stemmer der de finnes. Nye holdninger
         (enig/uenig) er personlige og inngår ikke her. Stortingets tall er offisielle voteringer.
@@ -270,7 +271,7 @@ export function AlignmentScore({
             <h3 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
               Brukere av Folkets Meninger
             </h3>
-            <span className="text-xs text-muted-foreground">{comparison.folk.total} stemmer</span>
+            <span className="text-xs text-muted-foreground">{formatStemmerCount(comparison.folk.total)}</span>
           </div>
           {comparison.folk.total > 0 ? (
             <>
@@ -296,7 +297,7 @@ export function AlignmentScore({
             <h3 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Stortinget</h3>
             {comparison.stortinget ? (
               <span className="text-xs text-muted-foreground">
-                {comparison.stortinget.decided} avgitte stemmer
+                {comparison.stortinget.decided === 1 ? '1 avgitt stemme' : `${comparison.stortinget.decided} avgitte stemmer`}
               </span>
             ) : null}
           </div>

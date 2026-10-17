@@ -71,7 +71,7 @@ export function PollBallot({
           <p className="mt-1 text-sm text-muted-foreground">
             Ja, nei eller blank. Stemmen telles i samlet statistikk uten navn.
           </p>
-          <NonRepresentativeNotice count={totals.total} countLabel="stemmer" className="mt-2" />
+          <NonRepresentativeNotice count={totals.total} countLabel="stemmer" countLabelSingular="stemme" className="mt-2" />
         </>
       )}
       <div className={cn('grid gap-2 sm:grid-cols-3', compact ? 'mt-0' : 'mt-4')}>
@@ -81,7 +81,7 @@ export function PollBallot({
             <VoteFillButton
               key={choice}
               selected={selected}
-              disabled={!votingOpen || Boolean(userVote) || busy}
+              disabled={!votingOpen || Boolean(userVote) || busy || !user}
               onClick={() => void vote(choice)}
               className={cn(
                 'rounded-xl border px-4 py-3 text-sm font-semibold transition-colors',

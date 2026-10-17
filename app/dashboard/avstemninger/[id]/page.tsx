@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { PageHeader } from '@/components/page-header';
 import { PollBallot } from '@/components/polls/poll-ballot';
@@ -17,12 +18,25 @@ import {
 } from '@/lib/polls/service';
 import { isSharePollsEnabled } from '@/lib/polls/share-flag';
 import { routes } from '@/lib/routes';
+import { buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
 
 export const dynamic = 'force-dynamic';
 
 type PageProps = {
   params: Promise<{ id: string }>;
 };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const poll = await getPollById(id);
+  if (!poll || poll.track === 'citizen') return {};
+  const title = formatPollDisplayTitle(poll.title);
+  return buildPageMetadata({
+    title,
+    description: truncateDescription(poll.neutralSummary || `${title} — stem ja, nei eller blank.`),
+    canonicalPath: routes.poll(poll.id),
+  });
+}
 
 export default async function PollDetailPage({ params }: PageProps) {
   const { id } = await params;
@@ -43,13 +57,17 @@ export default async function PollDetailPage({ params }: PageProps) {
   const shareEnabled =
     isSharePollsEnabled() || (user ? await isAdmin(user.id, user.email) : false);
 
+  const sakUrl = poll.stortingetIssueId ? routes.sak(poll.stortingetIssueId) : null;
+  // Avoid listing the same Stortinget sak twice (Kilde link + sourceUrls).
+  const sourceUrls = poll.sourceUrls.filter((source) => !sakUrl || source.url !== sakUrl);
+
   return (
     <DashboardPage className="mx-auto max-w-3xl space-y-5 sm:space-y-6">
       <Link
-        href={poll.track === 'system' ? routes.utforsk : routes.avstemninger}
+        href={routes.avstemninger}
         className="-ml-1 inline-flex min-h-11 items-center rounded-md px-1 text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
-        {poll.track === 'system' ? '← Utforsk' : '← Alle avstemninger'}
+        ← Alle avstemninger
       </Link>
       <div className="flex flex-wrap gap-2 text-xs font-medium">
         <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-brand">{pollTrackLabel(poll.track)}</span>
@@ -75,9 +93,9 @@ export default async function PollDetailPage({ params }: PageProps) {
           </Link>
         </p>
       ) : null}
-      {poll.sourceUrls.length > 0 ? (
+      {sourceUrls.length > 0 ? (
         <ul className="space-y-1 text-sm text-muted-foreground">
-          {poll.sourceUrls.map((source) => (
+          {sourceUrls.map((source) => (
             <li key={source.url}>
               <a href={source.url} className="inline-flex min-h-11 items-center break-all text-brand hover:underline"
                 rel="noreferrer"

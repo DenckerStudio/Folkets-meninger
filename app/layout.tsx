@@ -23,7 +23,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="no" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
+    <html lang="nb" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>

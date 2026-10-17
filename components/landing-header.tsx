@@ -32,14 +32,14 @@ export function LandingHeader() {
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 w-full bg-white/95 pt-[env(safe-area-inset-top,0px)] supports-[backdrop-filter]:bg-white/85',
+        'sticky top-0 z-50 w-full bg-white pt-[env(safe-area-inset-top,0px)]',
         scrolled ? 'shadow-sm backdrop-blur-lg' : '',
       )}
     >
       <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
           href={routes.home}
-          aria-label="Gå til forsiden"
+          aria-label="Folkets Meninger – til forsiden"
           className="rounded-md p-1 transition-opacity hover:opacity-90"
         >
           <LandingLogo clipId="fs-header-bubble" animate={pathname === '/'} />
@@ -54,7 +54,7 @@ export function LandingHeader() {
               window.history.replaceState(null, '', '/#om-oss');
             }}
             className={cn(
-              'hidden sm:inline-flex px-3 text-sm font-medium text-[#001433]/65 transition-colors hover:text-[#ba0c2f]',
+              'hidden whitespace-nowrap sm:inline-flex px-3 text-sm font-medium text-[#001433]/65 transition-colors hover:text-[#ba0c2f]',
               touchTargetLinkClass,
             )}
           >
@@ -65,7 +65,7 @@ export function LandingHeader() {
               href={routes.dashboard}
               className={cn(
                 touchTargetLinkClass,
-                'justify-center rounded-full bg-[#00205b] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#ba0c2f]',
+                'justify-center whitespace-nowrap rounded-full bg-[#00205b] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#ba0c2f]',
               )}
             >
               <span className="sm:hidden">Dashboard</span>
@@ -77,7 +77,7 @@ export function LandingHeader() {
                 href={routes.login}
                 className={cn(
                   touchTargetLinkClass,
-                  'gap-1.5 rounded-full border border-[#00205b]/15 bg-white px-4 text-sm font-semibold text-[#00205b] transition-colors hover:border-[#00205b]/40 hover:bg-[#00205b]/[0.04]',
+                  'gap-1.5 whitespace-nowrap rounded-full border border-[#00205b]/15 bg-white px-4 text-sm font-semibold text-[#00205b] transition-colors hover:border-[#00205b]/40 hover:bg-[#00205b]/[0.04]',
                 )}
               >
                 <LogIn className="size-3.5 sm:size-4" />
@@ -87,7 +87,7 @@ export function LandingHeader() {
                 href={routes.utforsk}
                 className={cn(
                   touchTargetLinkClass,
-                  'justify-center rounded-full bg-[#00205b] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#ba0c2f]',
+                  'justify-center whitespace-nowrap rounded-full bg-[#00205b] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#ba0c2f]',
                 )}
               >
                 <span className="sm:hidden">Utforsk</span>

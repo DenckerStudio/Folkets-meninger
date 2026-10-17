@@ -112,7 +112,7 @@ export default function HoringerList({ hearings }: HoringerListProps) {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Søk i tittel, dokument eller komité…"
+            placeholder="Søk i høringer"
             aria-label="Søk i høringer"
             className={dashboardSearchClass()}
           />

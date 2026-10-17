@@ -6,6 +6,7 @@ import { Loader2, Search, SpellCheck } from 'lucide-react';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { Button } from '@/components/ui/button';
 import { StemmePlusBadge } from '@/components/profile/stemme-plus-badge';
+import { useAuth } from '@/hooks/use-auth';
 import {
   RETTSSKRIVING_DRAFT_MIN,
   SOURCE_QUERY_MIN,
@@ -37,10 +38,16 @@ export function ComposerStemmeAssists({
   issueTitle,
   className,
 }: ComposerStemmeAssistsProps) {
-  const [gate, setGate] = useState<ChatGateReason | 'loading'>('loading');
+  const { user, loading: authLoading } = useAuth();
+  const [fetchedGate, setFetchedGate] = useState<ChatGateReason | 'loading'>('loading');
   const [tab, setTab] = useState<AssistTab>(null);
 
   useEffect(() => {
+    // Signed-out visitors never get the status endpoint — it only returns 401.
+    if (authLoading || !user) {
+      return;
+    }
+
     let cancelled = false;
     const controller = new AbortController();
     void (async () => {
@@ -51,7 +58,7 @@ export function ComposerStemmeAssists({
         });
         if (cancelled) return;
         if (res.status === 401) {
-          setGate(
+          setFetchedGate(
             resolveChatGate({ authenticated: false, hasStemmePlus: false, hasByok: false }),
           );
           return;
@@ -61,12 +68,12 @@ export function ComposerStemmeAssists({
           has_byok?: boolean;
         };
         if (!res.ok) {
-          setGate(
+          setFetchedGate(
             resolveChatGate({ authenticated: false, hasStemmePlus: false, hasByok: false }),
           );
           return;
         }
-        setGate(
+        setFetchedGate(
           resolveChatGate({
             authenticated: true,
             hasStemmePlus: json.tier === 'stemme_plus',
@@ -75,7 +82,7 @@ export function ComposerStemmeAssists({
         );
       } catch {
         if (!cancelled) {
-          setGate(
+          setFetchedGate(
             resolveChatGate({ authenticated: false, hasStemmePlus: false, hasByok: false }),
           );
         }
@@ -85,7 +92,13 @@ export function ComposerStemmeAssists({
       cancelled = true;
       controller.abort();
     };
-  }, []);
+  }, [user, authLoading]);
+
+  const gate: ChatGateReason | 'loading' = authLoading
+    ? 'loading'
+    : !user
+      ? resolveChatGate({ authenticated: false, hasStemmePlus: false, hasByok: false })
+      : fetchedGate;
 
   if (gate === 'loading') {
     return (

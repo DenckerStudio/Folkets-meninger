@@ -16,7 +16,6 @@ import { ChipGroup } from '@/components/ui/chip-group';
 import { FilterTokenBar, type FilterToken } from '@/components/ui/filter-token-bar';
 import { SurfaceCard } from '@/components/dashboard/surface-card';
 import { MotionList, MotionListRow } from '@/components/motion/list-row';
-import { Pressable } from '@/components/motion/pressable';
 import { SectionSettle } from '@/components/motion/section-settle';
 import { TabUnderline } from '@/components/motion/tab-underline';
 import { PageHeader } from '@/components/page-header';
@@ -31,6 +30,7 @@ import type { SystemReelFeedItem } from '@/lib/polls/types';
 import { ISSUE_STANCE_LABELS, type IssueStance } from '@/lib/stances/types';
 
 const ISSUE_PAGE_SIZE = 24;
+const LABEL_CHIP_LIMIT = 12;
 
 function votingUrgency(issue: SakListItem): number {
   if (issue.votingOpen && issue.votingDaysLeft != null && issue.votingDaysLeft > 0) {
@@ -82,6 +82,7 @@ export default function ExploreClient({
   reelItems: SystemReelFeedItem[];
 }) {
   const [issues] = useState(initialIssues);
+  const [labelsExpanded, setLabelsExpanded] = useState(false);
   const { user } = useAuth();
   const isMounted = useIsMounted();
   const [userStances, setUserStances] = useState<Record<string, IssueStance>>({});
@@ -364,7 +365,7 @@ export default function ExploreClient({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={dashboardSearchClass()}
-              placeholder="Søk etter saker, stikkord eller saksnummer..."
+              placeholder="Søk i saker"
             />
           </div>
           <FilterTokenBar tokens={filterTokens} aria-label="Filtrer saker" />
@@ -377,51 +378,49 @@ export default function ExploreClient({
             <p className="text-sm font-medium text-foreground">Emne</p>
             <ChipGroup
               ariaLabel="Filtrer på emne"
-              options={popularLabels.map((label) => ({ value: label, label }))}
+              options={(labelsExpanded ? popularLabels : popularLabels.slice(0, LABEL_CHIP_LIMIT)).map(
+                (label) => ({ value: label, label }),
+              )}
               selected={activeAiLabels}
               onToggle={toggleAiLabel}
               onClear={() => setFilters((prev) => ({ ...prev, selectedAiLabels: [] }))}
             />
+            {popularLabels.length > LABEL_CHIP_LIMIT ? (
+              <button
+                type="button"
+                onClick={() => setLabelsExpanded((prev) => !prev)}
+                className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:text-brand/80"
+              >
+                {labelsExpanded ? 'Vis færre' : `Vis flere emner (${popularLabels.length})`}
+              </button>
+            ) : null}
           </div>
         </SectionSettle>
       )}
 
       <SectionSettle>
         <LayoutGroup>
-        <div className="flex flex-wrap gap-2">
-          <Pressable
-            onClick={() => setSortBy('Nyeste først')}
-            className={`relative rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
-              sortBy === 'Nyeste først'
-                ? 'bg-foreground text-background border-foreground'
-                : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
-            }`}
-          >
-            Nyeste
-            {sortBy === 'Nyeste først' ? <TabUnderline layoutId="utforsk-sort" /> : null}
-          </Pressable>
-          <Pressable
-            onClick={() => setSortBy('Mest engasjement')}
-            className={`relative rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
-              sortBy === 'Mest engasjement'
-                ? 'bg-foreground text-background border-foreground'
-                : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
-            }`}
-          >
-            Populært
-            {sortBy === 'Mest engasjement' ? <TabUnderline layoutId="utforsk-sort" /> : null}
-          </Pressable>
-          <Pressable
-            onClick={() => setSortBy('Snart votering')}
-            className={`relative rounded-full px-4 py-2 text-sm font-semibold border transition-colors ${
-              sortBy === 'Snart votering'
-                ? 'bg-foreground text-background border-foreground'
-                : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
-            }`}
-          >
-            Snart votering
-            {sortBy === 'Snart votering' ? <TabUnderline layoutId="utforsk-sort" /> : null}
-          </Pressable>
+        <div role="tablist" aria-label="Sorter saker" className="flex flex-wrap gap-2">
+          {(['Nyeste først', 'Mest engasjement', 'Snart votering'] as const).map((option) => {
+            const selected = sortBy === option;
+            return (
+              <button
+                key={option}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => setSortBy(option)}
+                className={`relative rounded-full px-4 py-2 text-sm font-semibold border transition-colors active:scale-[0.98] ${
+                  selected
+                    ? 'bg-foreground text-background border-foreground'
+                    : 'bg-card text-foreground border-border hover:border-muted-foreground/40'
+                }`}
+              >
+                {option === 'Nyeste først' ? 'Nyeste' : option}
+                {selected ? <TabUnderline layoutId="utforsk-sort" /> : null}
+              </button>
+            );
+          })}
         </div>
         </LayoutGroup>
       </SectionSettle>
@@ -430,11 +429,19 @@ export default function ExploreClient({
         <div className="space-y-4">
           {displayedIssues.length === 0 ? (
             <EmptyState
-              title={sortBy === 'Snart votering' ? 'Ingen saker med kjent votering' : 'Ingen saker matcher filteret'}
+              title={
+                sortBy === 'Snart votering'
+                  ? 'Ingen saker med kjent votering'
+                  : searchQuery
+                    ? 'Ingen saker matcher søket ditt'
+                    : 'Ingen saker matcher filtrene'
+              }
               description={
                 sortBy === 'Snart votering'
                   ? 'Stortinget har ikke publisert en framtidig votering for sakene som matcher filtrene dine ennå.'
-                  : 'Prøv et annet søk, status eller emne. Listen er tom til Stortinget-data matcher.'
+                  : searchQuery
+                    ? 'Prøv et annet søk, eller nullstill filtrene for å se alle saker.'
+                    : 'Prøv å endre søk, status eller emne for å se flere saker.'
               }
               action={
                 <button

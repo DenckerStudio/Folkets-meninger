@@ -331,6 +331,23 @@ export function ReelsPanel({
         // Don't trigger vote on space - follow existing desktop behavior (space not opening vote)
         return;
       }
+
+      if (event.key === 'Enter') {
+        if (cardOpen || sheetOpen || disclaimerOpen) return;
+        const target = event.target as HTMLElement | null;
+        if (target) {
+          const tag = target.tagName;
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
+            return;
+          }
+          if (target.closest('button, a, [role="button"], [role="tab"]')) return;
+        }
+        const item = items[centeredIndex];
+        if (!item) return;
+        event.preventDefault();
+        const id = item.poll.id;
+        requestAnimationFrame(() => onSelect(id));
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

@@ -255,7 +255,7 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="block w-full rounded-xl border border-border bg-card py-2 pr-3 pl-10 leading-5 placeholder:text-muted-foreground focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none sm:text-sm"
-              placeholder="Søk etter navn, parti, rolle eller fylke..."
+              placeholder="Søk i politikere"
             />
           </div>
           <div className="flex items-center rounded-xl border border-border bg-card px-4 py-2 text-sm text-muted-foreground shadow-sm">
@@ -315,7 +315,8 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
                   <p className="text-center text-sm text-muted-foreground">
                     Viser {(currentPage - 1) * PAGE_SIZE + 1}–
                     {Math.min(currentPage * PAGE_SIZE, listedPolitikere.length)} av{' '}
-                    {listedPolitikere.length} politikere
+                    {listedPolitikere.length}{' '}
+                    {listedPolitikere.length === 1 ? 'politiker' : 'politikere'}
                   </p>
                   <Pagination
                     currentPage={currentPage}

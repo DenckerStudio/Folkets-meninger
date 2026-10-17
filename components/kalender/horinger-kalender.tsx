@@ -173,7 +173,7 @@ export default function HoringerKalender({
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.9fr)]">
         <div>
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold capitalize text-foreground">{monthTitle(year, month)}</h2>
+            <h2 className="text-lg font-semibold text-foreground">{monthTitle(year, month)}</h2>
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -235,7 +235,7 @@ export default function HoringerKalender({
                     selected && 'ring-1 ring-inset ring-brand bg-brand/5',
                   )}
                   aria-pressed={selected}
-                  aria-label={`${cell.day}. ${count} hendelser`}
+                  aria-label={`${cell.day}. ${count === 1 ? '1 hendelse' : `${count} hendelser`}`}
                 >
                   <span
                     className={cn(
@@ -257,12 +257,12 @@ export default function HoringerKalender({
             })}
           </div>
           <p className="mt-3 text-sm text-muted-foreground">
-            {monthEvents.length} hendelser denne måneden
+            {monthEvents.length === 1 ? '1 hendelse' : `${monthEvents.length} hendelser`} denne måneden
           </p>
         </div>
 
         <aside>
-          <h2 className="mb-3 text-lg font-semibold capitalize text-foreground">
+          <h2 className="mb-3 text-lg font-semibold text-foreground">
             {formatDayHeading(selectedKey)}
           </h2>
           {selectedEvents.length === 0 ? (

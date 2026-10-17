@@ -110,6 +110,7 @@
 }
 
 .dark {
+    color-scheme: dark;
     --brand: #8fb4ff;
     --brand-foreground: #0b1220;
     --brand-accent: #f0718a;

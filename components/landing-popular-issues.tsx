@@ -37,7 +37,7 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
             </p>
             <NonRepresentativeNotice
               count={deltakere}
-              countLabel="holdninger"
+              countLabel="holdninger" countLabelSingular="holdning"
               className="mt-2 max-w-xl text-[#001433]/55"
             />
           </div>

@@ -106,7 +106,7 @@ export function InnspillForm({ initialCategory, initialPagePath }: InnspillFormP
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={80}
-            className="w-full rounded-xl border border-[#00205b]/15 bg-white px-3.5 py-2.5 text-sm text-[#001433] outline-none transition-colors focus:border-[#00205b]/40"
+            className="min-h-11 w-full rounded-xl border border-[#00205b]/15 bg-white px-3.5 py-2.5 text-sm text-[#001433] outline-none transition-colors placeholder:text-[#001433]/70 focus:border-[#00205b]/40"
             placeholder="Ditt navn"
           />
         </label>
@@ -120,7 +120,7 @@ export function InnspillForm({ initialCategory, initialPagePath }: InnspillFormP
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             maxLength={254}
-            className="w-full rounded-xl border border-[#00205b]/15 bg-white px-3.5 py-2.5 text-sm text-[#001433] outline-none transition-colors focus:border-[#00205b]/40"
+            className="min-h-11 w-full rounded-xl border border-[#00205b]/15 bg-white px-3.5 py-2.5 text-sm text-[#001433] outline-none transition-colors placeholder:text-[#001433]/70 focus:border-[#00205b]/40"
             placeholder="deg@epost.no"
           />
         </label>
@@ -132,7 +132,7 @@ export function InnspillForm({ initialCategory, initialPagePath }: InnspillFormP
           name="category"
           value={category}
           onChange={(e) => setCategory(e.target.value as (typeof CATEGORIES)[number]['value'])}
-          className="w-full rounded-xl border border-[#00205b]/15 bg-white px-3.5 py-2.5 text-sm text-[#001433] outline-none transition-colors focus:border-[#00205b]/40"
+          className="min-h-11 w-full rounded-xl border border-[#00205b]/15 bg-white px-3.5 py-2.5 text-sm text-[#001433] outline-none transition-colors placeholder:text-[#001433]/70 focus:border-[#00205b]/40"
         >
           {CATEGORIES.map((item) => (
             <option key={item.value} value={item.value}>
@@ -151,7 +151,7 @@ export function InnspillForm({ initialCategory, initialPagePath }: InnspillFormP
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           maxLength={4000}
-          className="w-full rounded-xl border border-[#00205b]/15 bg-white px-3.5 py-2.5 text-sm text-[#001433] outline-none transition-colors focus:border-[#00205b]/40"
+          className="min-h-11 w-full rounded-xl border border-[#00205b]/15 bg-white px-3.5 py-2.5 text-sm text-[#001433] outline-none transition-colors placeholder:text-[#001433]/70 focus:border-[#00205b]/40"
           placeholder="Beskriv idéen, feilen eller spørsmålet ditt…"
         />
       </label>

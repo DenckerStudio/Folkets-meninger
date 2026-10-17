@@ -5,6 +5,8 @@ import { Suspense } from 'react';
 import LoginClient from './login-client';
 
 export const metadata: Metadata = {
+  title: 'Logg inn',
+  description: 'Logg inn med e-post eller Google for å stemme og delta i Folkets Meninger.',
   robots: { index: false, follow: false },
 };
 

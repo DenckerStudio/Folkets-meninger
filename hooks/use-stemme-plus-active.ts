@@ -1,14 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/use-auth';
 
 /** Resolved Stemme+ chat entitlement for the signed-in session (same source as `/api/stemme-plus/status`). */
 export type StemmePlusActiveState = 'pending' | 'inactive' | 'active';
 
 export function useStemmePlusActive(): StemmePlusActiveState {
   const [state, setState] = useState<StemmePlusActiveState>('pending');
+  const { user, loading } = useAuth();
 
   useEffect(() => {
+    // Avoid the status call entirely while signed out — it only ever returns 401.
+    if (loading || !user) {
+      return;
+    }
+
     let cancelled = false;
     const controller = new AbortController();
 
@@ -32,7 +39,9 @@ export function useStemmePlusActive(): StemmePlusActiveState {
       cancelled = true;
       controller.abort();
     };
-  }, []);
+  }, [user, loading]);
 
+  if (loading) return 'pending';
+  if (!user) return 'inactive';
   return state;
 }
