@@ -79,7 +79,7 @@ export function StemmePlusAdmin({ checkoutConfigured: serverCheckoutConfigured }
 
   const stripeNotice = checkoutConfigured
     ? ''
-    : ' Stripe-kasse er ikke konfigurert (mangler STRIPE_SECRET_KEY eller STRIPE_STEMME_PLUS_PRICE_ID).';
+    : ' Betaling med Stripe er ikke slått på i dette miljøet.';
 
   return (
     <div className="space-y-6">

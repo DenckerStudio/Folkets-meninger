@@ -65,7 +65,7 @@ export function FolketsMeningerClient({
       <FadeIn delay={0.1}>
         <PageHeader
           title="Folkets meninger"
-          description="Holdninger og begrunnelser fra innloggede brukere. Ingen mock-data."
+          description="Holdninger og begrunnelser fra innloggede brukere."
         />
       </FadeIn>
 

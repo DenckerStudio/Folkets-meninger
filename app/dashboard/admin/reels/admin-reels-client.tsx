@@ -171,7 +171,7 @@ export default function AdminReelsClient({
       if (triggered?.embeddings || triggered?.health) {
         setCatchupMessage('Catch-up er startet. Køene oppdateres i bakgrunnen.');
       } else {
-        setCatchupMessage('Catch-up er ikke konfigurert (mangler n8n-webhook i miljøet).');
+        setCatchupMessage('Automatisk oppfrisking er ikke tilgjengelig i dette miljøet.');
       }
     });
   };
@@ -203,7 +203,8 @@ export default function AdminReelsClient({
 
       {coverage ? (
         <p className="text-sm text-muted-foreground">
-          {coverage.sakCandidates} kandidater · {coverage.pendingWithRag} saker med RAG · {drafts.length} utkast
+          {coverage.sakCandidates} kandidater · {coverage.pendingWithRag} saker med dokumentindeks · {drafts.length}{' '}
+          utkast
         </p>
       ) : null}
 
@@ -217,7 +218,7 @@ export default function AdminReelsClient({
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">n8n-pipeline</h2>
+              <h2 className="text-sm font-semibold text-foreground">Bakgrunnsprosess</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 {pipelineHealthNeedsAttention(pipelineHealth)
                   ? 'Køen er stor. Kjør catch-up, eller vent på den daglige sjekken kl. 08:00.'
@@ -235,7 +236,7 @@ export default function AdminReelsClient({
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
             <div>
-              <dt className="text-muted-foreground">Pending embeddings</dt>
+              <dt className="text-muted-foreground">Ventende dokumentindeks</dt>
               <dd className="font-medium text-foreground">{pipelineHealth.pendingChunks}</dd>
             </div>
             <div>
@@ -257,9 +258,9 @@ export default function AdminReelsClient({
         </section>
       ) : pipelineHealthUnavailable ? (
         <section className="rounded-2xl border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-foreground">n8n-pipeline</h2>
+          <h2 className="text-sm font-semibold text-foreground">Bakgrunnsprosess</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Pipeline-status kommer når migrasjonen `n8n_pipeline_health` er kjørt i databasen.
+            Status for automatisk generering vises her når databasen er oppdatert.
           </p>
         </section>
       ) : null}
@@ -274,8 +275,8 @@ export default function AdminReelsClient({
           <div className="space-y-1 text-sm">
             <p className="font-medium text-foreground">
               {activeGeneratingJobs.length === 1
-                ? 'Genererer utkast via n8n…'
-                : `Genererer ${activeGeneratingJobs.length} utkast via n8n…`}
+                ? 'Genererer utkast i bakgrunnen…'
+                : `Genererer ${activeGeneratingJobs.length} utkast i bakgrunnen…`}
             </p>
             <p className="text-muted-foreground">
               Vi sjekker utkastlisten automatisk. Dette kan ta opptil et minutt.
@@ -309,7 +310,7 @@ export default function AdminReelsClient({
         {drafts.length === 0 ? (
           <EmptyState
             title="Ingen utkast"
-            description="Generer fra en sak under, eller vent på n8n-kjøringen. Listen holdes tom til et ekte utkast finnes."
+            description="Generer fra en sak under, eller vent på automatisk kjøring. Listen er tom til et utkast er klart."
             className="py-8"
           />
         ) : (
@@ -358,7 +359,7 @@ export default function AdminReelsClient({
         {candidates.length === 0 ? (
           <EmptyState
             title="Ingen sak-kandidater"
-            description="Ingen kandidater med RAG, sammendrag eller sakssammendrag akkurat nå."
+            description="Ingen kandidater med dokumentindeks, sammendrag eller sakssammendrag akkurat nå."
             className="py-6"
           />
         ) : (
@@ -371,9 +372,9 @@ export default function AdminReelsClient({
                 <div>
                   <p className="text-sm font-medium text-foreground">{candidate.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {candidate.issueId} · {candidate.ragChunkCount} RAG-chunks
+                    {candidate.issueId} · {candidate.ragChunkCount} dokumentutdrag
                     {candidate.hasAiSummary ? ' · Sammendrag' : ''}
-                    {candidate.sourceKind === 'metadata' ? ' · metadata' : ''}
+                    {candidate.sourceKind === 'metadata' ? ' · kun metadata' : ''}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">

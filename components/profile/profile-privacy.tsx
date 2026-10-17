@@ -31,7 +31,7 @@ export function ProfilePrivacy({ userId }: ProfilePrivacyProps) {
             {
               step: '3',
               title: 'Drift og synlighet',
-              body: 'App og database driftes på server i Norge (self-hosted). Offentlig aktivitet på profilen er av som standard. Se personvernerklæringen for underleverandører.',
+              body: 'App og database driftes på server i Norge. Offentlig aktivitet på profilen er av som standard. Se personvernerklæringen for underleverandører.',
             },
           ].map((item) => (
             <li key={item.step} className="flex gap-3">

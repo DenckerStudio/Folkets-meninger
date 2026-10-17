@@ -387,7 +387,7 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
       <EmptyState
         className={emptyClassName}
         title="Chat er en Stemme+-funksjon"
-        description="Chatboten bruker din egen LLM-nøkkel og våre sakdata. Gratis brukere beholder stemme, utforsk og høringer — uten en ødelagt chat."
+        description="Chatboten bruker din egen språkmodellnøkkel og våre sakdata. Gratis brukere beholder stemme, utforsk og høringer — uten en ødelagt chat."
         action={
           <div className="space-y-3">
             <StemmePlusBadge size="md" />
@@ -408,7 +408,7 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
     <EmptyState
       compact
       className={emptyClassName}
-      title="Lagre en LLM-nøkkel først"
+      title="Lagre en språkmodellnøkkel først"
       description="Stemme+-chat kjører på nøkkelen din (OpenAI, Anthropic, AI Gateway eller OpenAI-kompatibel). Uten nøkkel viser rettskriving bare instruksjonen — vi later ikke som en modell har rettet teksten. Sakskontekst og kildesøk fungerer uten nøkkel. Vi lagrer nøkkelen kryptert og sender den aldri tilbake til nettleseren."
       action={
         <Link

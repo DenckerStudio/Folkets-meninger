@@ -536,7 +536,7 @@ export default async function SakPage({
                 className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-brand transition-colors"
               >
                 <ExternalLink className="mr-1.5 w-4 h-4" />
-                Rådata (JSON)
+                Teknisk saksdata fra Stortinget
               </a>
             </div>
           </div>

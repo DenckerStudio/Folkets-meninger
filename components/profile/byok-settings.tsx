@@ -78,7 +78,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
           throw new Error(
-            typeof json.error === 'string' ? json.error : 'Kunne ikke hente modeller fra Ollama.',
+            typeof json.error === 'string' ? json.error : 'Kunne ikke hente modelliste fra serveren.',
           );
         }
         const list = Array.isArray(json.models)
@@ -92,7 +92,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
         if (controller.signal.aborted) return;
         setModels([]);
         setModelsError(
-          e instanceof Error ? e.message : 'Kunne ikke hente modeller fra Ollama.',
+          e instanceof Error ? e.message : 'Kunne ikke hente modelliste fra serveren.',
         );
       } finally {
         if (!controller.signal.aborted) setModelsLoading(false);
@@ -169,7 +169,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
   if (!encryptionReady) {
     return (
       <p className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-        Kryptert nøkkel-lagring er ikke konfigurert i dette miljøet (`BYOK_ENCRYPTION_KEY` mangler).
+        Nøkkellagring er ikke tilgjengelig akkurat nå. Prøv igjen senere eller kontakt oss.
       </p>
     );
   }
@@ -177,7 +177,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
   return (
     <div className="space-y-4">
       <div>
-        <h4 className="text-sm font-semibold text-foreground">Din LLM-nøkkel (BYOK)</h4>
+        <h4 className="text-sm font-semibold text-foreground">Din språkmodellnøkkel</h4>
         <p className="mt-1 text-sm text-muted-foreground">
           Nøkkelen krypteres på serveren og brukes bare til Stemme+-chat. Vi viser aldri den
           fulle nøkkelen etter lagring.
@@ -320,12 +320,12 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
 
           {provider === 'ollama' ? (
             modelsLoading ? (
-              <p className="text-xs text-muted-foreground">Henter modeller fra /api/tags …</p>
+              <p className="text-xs text-muted-foreground">Henter tilgjengelige modeller …</p>
             ) : modelsError ? (
               <p className="text-xs text-destructive">{modelsError}</p>
             ) : models.length > 0 ? (
               <p className="text-xs text-muted-foreground">
-                {models.length} modeller funnet på Ollama-serveren.
+                {models.length} modeller funnet på modellserveren.
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
@@ -336,7 +336,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
 
           <label className="block space-y-1 text-sm">
             <span className="text-muted-foreground">
-              {needsApiKey ? 'API-nøkkel' : 'API-nøkkel (valgfri for Ollama)'}
+              {needsApiKey ? 'API-nøkkel' : 'API-nøkkel (valgfri for lokal modellserver)'}
             </span>
             <input
               type="password"
@@ -349,7 +349,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
                   ? `Ny nøkkel (erstatter …${saved.keyLast4})`
                   : needsApiKey
                     ? 'Lim inn nøkkelen'
-                    : 'Valgfri — lar stå tom for lokal Ollama'
+                    : 'Valgfri — kan stå tom for lokal modellserver'
               }
             />
           </label>

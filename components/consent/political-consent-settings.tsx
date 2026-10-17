@@ -70,7 +70,7 @@ export function PoliticalConsentSettings({ userId }: PoliticalConsentSettingsPro
         <ul className="space-y-2 text-sm text-muted-foreground">
           <li>Lagring av holdninger og stemmer: {state?.storage ? 'Ja' : 'Nei'}</li>
           <li>Valgomat og partimatch: {state?.profiling ? 'Ja' : 'Nei'}</li>
-          <li>Holdningsdata i AI-chat (BYOK): {state?.byokActivity ? 'Ja' : 'Nei'}</li>
+          <li>Holdningsdata i Stemme+-chat: {state?.byokActivity ? 'Ja' : 'Nei'}</li>
           {state?.textVersion && <li className="text-xs">Tekstversjon: {state.textVersion}</li>}
         </ul>
       )}

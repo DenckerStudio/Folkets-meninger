@@ -88,7 +88,7 @@ export function ModelPicker({
         if (controller.signal.aborted) return;
         setServerModels([]);
         if (!(fetchError instanceof DOMException && fetchError.name === 'AbortError')) {
-          setListError('Kunne ikke hente modeller fra Ollama.');
+          setListError('Kunne ikke hente modelliste fra serveren.');
         }
       } finally {
         if (!controller.signal.aborted) setLoading(false);

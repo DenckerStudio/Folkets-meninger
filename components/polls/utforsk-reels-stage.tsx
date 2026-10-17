@@ -405,8 +405,8 @@ export function ReelsPanel({
             </div>
             <h2 className="mt-4 text-lg font-semibold text-white">Ingen Reels publisert ennå</h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-white/75">
-              {SYSTEM_REEL_DISCLAIMER} Godkjente ja/nei/blank-spørsmål fra stortingssaker vises her. Vi viser ikke
-              mock-spørsmål.
+              {SYSTEM_REEL_DISCLAIMER} Godkjente ja/nei/blank-spørsmål fra stortingssaker vises her når de er
+              publisert.
             </p>
           </EmptyLineState>
         </div>
