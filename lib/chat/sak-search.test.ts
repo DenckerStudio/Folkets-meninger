@@ -67,3 +67,16 @@ const deduped = rankSakRows([titleMatch, titleMatch], terms, phrase, 6);
 assert.deepEqual(deduped.map((r) => r.id), ['a']);
 
 console.log('chat/sak-search.test.ts: ok');
+// Norwegian FTS matches (stemmed) survive ranking even without a substring hit.
+{
+  const stemmed = row({ id: 'fts', title: 'Flere barnehageplasser' });
+  const none = row({ id: 'none', title: 'Noe helt annet' });
+  assert.deepEqual(
+    rankSakRows([stemmed, none], ['barnehager'], 'barnehager', 6).map((r) => r.id),
+    [],
+  );
+  assert.deepEqual(
+    rankSakRows([stemmed, none], ['barnehager'], 'barnehager', 6, new Set(['fts'])).map((r) => r.id),
+    ['fts'],
+  );
+}

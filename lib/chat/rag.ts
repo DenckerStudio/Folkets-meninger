@@ -9,6 +9,7 @@ import {
   significantTokens,
   type SakSearchRow,
 } from '@/lib/chat/sak-search';
+import { FTS_COLUMN, FTS_CONFIG, buildOrTsQuery } from '@/lib/search/fts';
 import {
   searchChunksByVector,
   type QueryVectorizer,
@@ -186,6 +187,26 @@ export async function searchIssuesForChat(
   }
 
   const terms = buildSearchTerms(needle);
+
+  // Norwegian full-text search on the generated `fts` column: stemming lets
+  // «barnehager» find «barnehage». Before the migration is applied the column
+  // is missing and the query errors; the ilike paths below still run.
+  const ftsIds = new Set<string>();
+  const orQuery = buildOrTsQuery(terms.length > 0 ? terms : [needle]);
+  if (orQuery) {
+    const fts = await supabase
+      .from('stortinget_issues')
+      .select(ISSUE_COLUMNS)
+      .textSearch(FTS_COLUMN, orQuery, { config: FTS_CONFIG })
+      .limit(perTermLimit);
+    if (!fts.error && Array.isArray(fts.data)) {
+      for (const row of fts.data as Array<Record<string, unknown>>) {
+        if (typeof row.id === 'string') ftsIds.add(row.id);
+        candidates.push(row);
+      }
+    }
+  }
+
   if (terms.length > 0) {
     const perTerm = await Promise.all(
       terms.map(async (term) => {
@@ -239,7 +260,7 @@ export async function searchIssuesForChat(
     .filter((row): row is SakSearchRow => row !== null);
 
   // Rank purely; drop the exact-id candidate if it did not match any term/phrase.
-  const ranked = rankSakRows(rows, terms.length > 0 ? terms : [needle], needle, limit);
+  const ranked = rankSakRows(rows, terms.length > 0 ? terms : [needle], needle, limit, ftsIds);
 
   return ranked.map((row) => ({
     id: row.id,
@@ -289,6 +310,62 @@ export function mergeChunks(
   return out;
 }
 
+type FtsRpcClient = {
+  rpc: (
+    fn: string,
+    args: Record<string, unknown>,
+  ) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+};
+
+function hasRpc(client: ChatRagClient): client is ChatRagClient & FtsRpcClient {
+  return typeof (client as Partial<FtsRpcClient>).rpc === 'function';
+}
+
+/**
+ * Norwegian FTS over the whole sak (`search_document_chunks_fts`, SECURITY
+ * INVOKER). Returns null when the RPC is unavailable (migration not applied)
+ * so the caller falls back to the in-app ranking.
+ */
+async function searchChunksFts(
+  supabase: ChatRagClient,
+  issue: ChatIssueHit,
+  query: string,
+  maxChunks: number,
+): Promise<ChatDocumentChunk[] | null> {
+  if (!hasRpc(supabase) || !query.trim()) return null;
+  const issueId = issue.id.trim();
+  try {
+    const { data, error } = await supabase.rpc('search_document_chunks_fts', {
+      p_issue_id: issueId,
+      p_query: query.slice(0, 400),
+      p_match_count: Math.max(maxChunks * 3, 12),
+    });
+    if (error || !Array.isArray(data)) return null;
+    const mapped = (data as Array<Record<string, unknown>>).flatMap((row) => {
+      const rowIssueId = String(row.issue_id ?? '').trim();
+      if (rowIssueId && rowIssueId !== issueId) return [];
+      const content = clip(String(row.content ?? ''));
+      if (!content) return [];
+      const ftsRank = typeof row.rank === 'number' ? row.rank : 0;
+      return [
+        {
+          documentId: String(row.document_id ?? ''),
+          chunkIndex: Number(row.chunk_index ?? 0),
+          content,
+          ...chunkProvenance(row.metadata),
+          // Keep the referat defence: sak-specific signals dominate, FTS breaks ties.
+          rank: rankChunkForSak(content, issue, query) + ftsRank * 50,
+        },
+      ];
+    });
+    return [...mapped]
+      .sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0) || a.chunkIndex - b.chunkIndex)
+      .slice(0, maxChunks);
+  } catch {
+    return null;
+  }
+}
+
 async function searchChunksLexical(
   supabase: ChatRagClient,
   issue: ChatIssueHit,
@@ -297,6 +374,9 @@ async function searchChunksLexical(
 ): Promise<ChatDocumentChunk[]> {
   const issueId = issue.id.trim();
   if (!issueId) return [];
+
+  const fts = await searchChunksFts(supabase, issue, query, maxChunks);
+  if (fts && fts.length > 0) return fts;
 
   const { data, error } = await supabase
     .from('document_chunks')

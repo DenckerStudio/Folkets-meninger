@@ -189,6 +189,9 @@ export function scoreSakRow(
   return score;
 }
 
+/** Bonus for a stemmed FTS match, roughly one extra matched title term. */
+export const FTS_MATCH_BONUS = 8;
+
 /**
  * Rank already-fetched candidate rows by relevance. Pure, so it is unit tested
  * without a database. Returns at most `limit` rows, best first.
@@ -198,6 +201,8 @@ export function rankSakRows(
   terms: readonly string[],
   phrase: string,
   limit = 6,
+  /** Rows matched by Norwegian full-text search; kept even without a substring hit. */
+  ftsIds?: ReadonlySet<string>,
 ): SakSearchRow[] {
   const scored: Array<{ row: SakSearchRow; score: number; index: number }> = [];
   const seen = new Set<string>();
@@ -206,7 +211,7 @@ export function rankSakRows(
     if (!row || typeof row.id !== 'string' || !row.id) return;
     if (seen.has(row.id)) return;
     seen.add(row.id);
-    const score = scoreSakRow(row, terms, phrase);
+    const score = scoreSakRow(row, terms, phrase) + (ftsIds?.has(row.id) ? FTS_MATCH_BONUS : 0);
     if (score <= 0) return;
     scored.push({ row, score, index });
   });
