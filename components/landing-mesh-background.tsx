@@ -27,11 +27,15 @@ export function LandingMeshBackground({ className }: LandingMeshBackgroundProps)
 
   if (reducedMotion) {
     return (
-      <div className={cn('pointer-events-none absolute inset-0 overflow-hidden bg-white', className)} aria-hidden>
+      <div className={cn('pointer-events-none absolute inset-0 overflow-hidden bg-background', className)} aria-hidden>
         <div className="absolute -top-[25%] -left-[20%] h-[75%] w-[60%] rounded-full bg-[#ba0c2f]/25 blur-[100px]" />
         <div className="absolute top-[5%] -right-[15%] h-[65%] w-[55%] rounded-full bg-[#00205b]/22 blur-[110px]" />
         <div className="absolute bottom-[-20%] left-[15%] h-[55%] w-[50%] rounded-full bg-[#00205b]/15 blur-[120px]" />
-        <div className="absolute top-[30%] left-[30%] h-[45%] w-[45%] rounded-full bg-white/85 blur-[90px]" />
+        <div className="absolute top-[30%] left-[30%] h-[45%] w-[45%] rounded-full bg-background/85 blur-[90px]" />
+        <div
+          className="absolute inset-x-0 bottom-0 h-[min(32%,14rem)] bg-gradient-to-b from-transparent to-background"
+          aria-hidden
+        />
       </div>
     );
   }
@@ -48,8 +52,12 @@ export function LandingMeshBackground({ className }: LandingMeshBackgroundProps)
         grainOverlay={0.04}
         scale={1.15}
       />
-      {/* Soft white veil so hero copy stays readable on the animated mesh */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/55 via-white/35 to-white/60" />
+      {/* Soft veil so hero copy stays readable on the animated mesh */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/55 via-background/35 to-background/45" />
+      <div
+        className="absolute inset-x-0 bottom-0 h-[min(36%,16rem)] bg-gradient-to-b from-transparent via-background/40 to-background"
+        aria-hidden
+      />
     </div>
   );
 }
