@@ -97,13 +97,57 @@ If the SQL editor fails with `unterminated dollar-quoted string` near `$function
 
 1. Apply `20260528000001_anonymous_voting.sql` (requires `pgcrypto` in the `extensions` schema — standard on Supabase).
 2. If voting fails with 500, ambiguous `cast_vote`, or legacy schema errors, run **`20260528000002_vote_schema_repair.sql`**.
-3. Set a strong pepper **without** requiring `ALTER DATABASE` permissions:
+3. **Vote encryption rollout (Coolify production)** — read before applying
+   `20261017122000_vote_encryption_require_secret.sql` and
+   `20261017140000_vote_encryption_legacy_decrypt.sql`:
 
-```sql
-INSERT INTO private.app_settings (key, value)
-VALUES ('vote_encryption_secret', 'your-long-random-secret')
-ON CONFLICT (key) DO UPDATE SET value = excluded.value;
-```
+   Receipts are encrypted in Postgres only:
+
+   `encrypt_vote_choice` → `pgp_sym_encrypt(choice, hex(sha256(user_id || pepper)))`.
+
+   Pepper is resolved as `coalesce(app_settings.vote_encryption_secret, GUC
+   app.vote_encryption_secret, hardcoded fallback inside vote_encryption_key)`.
+   There is **no** app-side pepper. If `vote_encryption_secret` is missing, the
+   fallback string is whatever is **in the live function body** (repo default:
+   `folkets-meninger-dev-pepper-change-in-production`; older hosted DBs used
+   `folkets-stemme-dev-pepper-change-in-production`). Testing decrypt with the
+   wrong fallback looks like “receipts are broken”.
+
+   **Safe order**
+
+   1. Run `scripts/vote-encryption-diagnostics.sql` (receipt counts + function def).
+   2. Generate a new production secret (≥32 bytes), e.g. `openssl rand -hex 32`.
+      Store in your secrets manager; do not commit or paste in chat.
+   3. Insert the primary secret (service role / postgres on DB):
+
+      ```sql
+      INSERT INTO private.app_settings (key, value)
+      VALUES ('vote_encryption_secret', '<paste-generated-secret-here>')
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+      ```
+
+   4. If `user_vote_receipts` / `poll_vote_receipts` already have rows, copy the
+      **exact** third `coalesce` literal from `pg_get_functiondef('public.vote_encryption_key(uuid)')`
+      into legacy storage (one-time, for decrypt-only):
+
+      ```sql
+      INSERT INTO private.app_settings (key, value)
+      VALUES ('vote_encryption_legacy_pepper', '<exact-old-fallback-from-step-1>')
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+      ```
+
+   5. Verify decrypt on a few rows via `get_user_vote_on_issue` / poll receipt RPC
+      **before** applying `20261017122000` (optional if still on old function).
+   6. Apply migrations `20261017122000` then `20261017140000`. New votes/poll
+      ballots use only `vote_encryption_secret`; decrypt tries primary, GUC, then
+      `vote_encryption_legacy_pepper`.
+   7. Re-run diagnostics; confirm new `cast_poll_vote` works and legacy receipts
+      still decrypt.
+
+   Applying `20261017122000` **before** step 3 makes every new
+   `encrypt_vote_choice` fail until a secret exists. Existing receipts encrypted
+   with the old fallback **cannot** be read with the new secret unless
+   `vote_encryption_legacy_pepper` is set (step 4).
 
 4. Ensure `SUPABASE_SERVICE_ROLE_KEY` is set in the Next.js app (server-only).
 
