@@ -1,10 +1,46 @@
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import { parseMarkdown, type InlineNode } from '@/lib/chat/markdown';
+import type { ChatSourceLink } from '@/lib/chat/source-links';
 import { cn } from '@/lib/utils';
 
-function renderInline(nodes: InlineNode[]): ReactNode[] {
+type SourceMap = ReadonlyMap<number, ChatSourceLink>;
+
+const CITATION_CLASS =
+  'mx-0.5 inline-flex items-center rounded bg-brand/10 px-1 align-baseline text-[0.75em] font-semibold text-brand no-underline hover:bg-brand/20';
+
+function renderCitation(n: number, key: number, sources?: SourceMap): ReactNode {
+  const source = sources?.get(n);
+  if (!source) return <span key={key}>[{n}]</span>;
+  const label = `Kilde ${n}: ${source.title}`;
+  if (source.external) {
+    return (
+      <a
+        key={key}
+        href={source.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={label}
+        aria-label={label}
+        data-chat-citation={n}
+        className={CITATION_CLASS}
+      >
+        [{n}]
+      </a>
+    );
+  }
+  return (
+    <Link key={key} href={source.href} title={label} aria-label={label} data-chat-citation={n} className={CITATION_CLASS}>
+      [{n}]
+    </Link>
+  );
+}
+
+function renderInline(nodes: InlineNode[], sources?: SourceMap): ReactNode[] {
   return nodes.map((node, index) => {
     switch (node.type) {
+      case 'citation':
+        return renderCitation(node.n, index, sources);
       case 'strong':
         return (
           <strong key={index} className="font-semibold text-foreground">
@@ -46,7 +82,16 @@ const HEADING_CLASS: Record<number, string> = {
   3: 'text-sm font-semibold',
 };
 
-export function ChatMarkdown({ text, className }: { text: string; className?: string }) {
+export function ChatMarkdown({
+  text,
+  className,
+  sources,
+}: {
+  text: string;
+  className?: string;
+  /** `[n]` → link for this message (see `collectChatSourceLinks`). */
+  sources?: SourceMap;
+}) {
   const blocks = parseMarkdown(text);
 
   return (
@@ -55,7 +100,7 @@ export function ChatMarkdown({ text, className }: { text: string; className?: st
         if (block.type === 'heading') {
           return (
             <p key={index} className={HEADING_CLASS[block.level] ?? 'text-sm font-semibold'}>
-              {renderInline(block.nodes)}
+              {renderInline(block.nodes, sources)}
             </p>
           );
         }
@@ -70,7 +115,7 @@ export function ChatMarkdown({ text, className }: { text: string; className?: st
               )}
             >
               {block.items.map((item, itemIndex) => (
-                <li key={itemIndex}>{renderInline(item)}</li>
+                <li key={itemIndex}>{renderInline(item, sources)}</li>
               ))}
             </ListTag>
           );
@@ -87,7 +132,7 @@ export function ChatMarkdown({ text, className }: { text: string; className?: st
         }
         return (
           <p key={index} className="whitespace-pre-wrap">
-            {renderInline(block.nodes)}
+            {renderInline(block.nodes, sources)}
           </p>
         );
       })}

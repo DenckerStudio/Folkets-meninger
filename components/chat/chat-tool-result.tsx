@@ -352,7 +352,7 @@ function SakContextCard({ output }: { output: SakContextOutput }) {
               <span className="font-medium text-muted-foreground">
                 {chunk.documentId ? (
                   <Link
-                    href={`${routes.sak(issue.id!)}?dokument=${encodeURIComponent(chunk.documentId)}`}
+                    href={`${routes.sak(issue.id!)}?dokument=${encodeURIComponent(chunk.documentId)}#dokumenter`}
                     className="inline-flex items-center gap-1 hover:text-brand hover:underline"
                   >
                     {chunk.documentTitle
@@ -763,7 +763,7 @@ function SakDocumentsCard({ output }: { output: SakDocumentsOutput }) {
                 <li key={doc.id ?? doc.title} className="text-xs">
                   {doc.id ? (
                     <Link
-                      href={`${routes.sak(output.issueId!)}?dokument=${encodeURIComponent(doc.id)}`}
+                      href={`${routes.sak(output.issueId!)}?dokument=${encodeURIComponent(doc.id)}#dokumenter`}
                       className="text-foreground hover:text-brand hover:underline"
                     >
                       {doc.title || doc.id}

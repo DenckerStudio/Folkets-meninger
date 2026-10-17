@@ -10,7 +10,9 @@ export type InlineNode =
   | { type: 'strong'; value: string }
   | { type: 'em'; value: string }
   | { type: 'code'; value: string }
-  | { type: 'link'; href: string; value: string };
+  | { type: 'link'; href: string; value: string }
+  /** Source marker `[n]` from prompt v2; resolved to a link by the renderer. */
+  | { type: 'citation'; n: number };
 
 export type MarkdownBlock =
   | { type: 'paragraph'; nodes: InlineNode[] }
@@ -19,7 +21,7 @@ export type MarkdownBlock =
   | { type: 'code'; value: string };
 
 const INLINE_PATTERN =
-  /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(__[^_\n]+__)|(\*[^*\n]+\*)|(_[^_\n]+_)|(\[[^\]]+\]\(https?:\/\/[^\s)]+\))/;
+  /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(__[^_\n]+__)|(\*[^*\n]+\*)|(_[^_\n]+_)|(\[[^\]]+\]\(https?:\/\/[^\s)]+\))|(\[\d{1,3}\](?!\())/;
 
 function parseInline(value: string): InlineNode[] {
   const nodes: InlineNode[] = [];
@@ -43,6 +45,8 @@ function parseInline(value: string): InlineNode[] {
       nodes.push({ type: 'strong', value: token.slice(2, -2) });
     } else if (token.startsWith('__')) {
       nodes.push({ type: 'strong', value: token.slice(2, -2) });
+    } else if (/^\[\d{1,3}\]$/.test(token)) {
+      nodes.push({ type: 'citation', n: Number(token.slice(1, -1)) });
     } else if (token.startsWith('[')) {
       const linkMatch = /^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/.exec(token);
       if (linkMatch) {

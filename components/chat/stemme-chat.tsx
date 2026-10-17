@@ -9,6 +9,7 @@ import { ArrowUp, Loader2, Sparkles } from 'lucide-react';
 import { ChatCommandMenu } from '@/components/chat/chat-command-menu';
 import { ChatConversationMenu } from '@/components/chat/chat-conversation-menu';
 import { ChatMarkdown } from '@/components/chat/chat-markdown';
+import { collectChatSourceLinks } from '@/lib/chat/source-links';
 import { ChatMessageActions, textFromMessageParts } from '@/components/chat/chat-message-actions';
 import { ChatToolResult } from '@/components/chat/chat-tool-result';
 import { readImpactProfileForChat } from '@/components/chat/impact-profile-for-chat';
@@ -461,6 +462,7 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
                     <ChatMarkdown
                       key={`${message.id}-${index}`}
                       text={part.text}
+                      sources={collectChatSourceLinks(message.parts)}
                       className="text-sm leading-relaxed text-foreground"
                     />
                   ) : null;
