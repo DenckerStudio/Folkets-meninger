@@ -201,7 +201,6 @@ export async function GET(request: Request) {
     kind: view.kind,
     title,
     issueId,
-    entityId: view.id,
   };
 
   const signals = await collectSignals(gate.userId);

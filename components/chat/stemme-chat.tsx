@@ -43,6 +43,7 @@ import {
   type ChatUserSignals,
 } from '@/lib/chat/suggestions';
 import { resolveChatView } from '@/lib/chat/view-context';
+import { pageContextFromView } from '@/lib/chat/page-context';
 import {
   deleteConversation,
   loadConversations,
@@ -156,12 +157,18 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
   const [conversationId, setConversationId] = useState<string | null>(
     () => initialConversation?.id ?? null,
   );
+  // Structured page context for the request body; ids never go into the text.
+  const pageView = useMemo(() => resolveChatView(pathname), [pathname]);
+  const pageContext = useMemo(
+    () => pageContextFromView(pageView, issueId ?? null),
+    [pageView, issueId],
+  );
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: '/api/chat',
         headers: issueId ? { 'x-sak-id': issueId } : undefined,
-        body: issueId ? { issueId } : undefined,
+        body: { ...(issueId ? { issueId } : {}), pageContext },
         prepareSendMessagesRequest: ({ id, messages, body: baseBody, trigger, messageId }) => ({
           body: {
             ...baseBody,
@@ -173,8 +180,9 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
           },
         }),
       }),
-    [issueId],
+    [issueId, pageContext],
   );
+
   const {
     messages,
     setMessages,
@@ -190,15 +198,15 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
   const busy = status === 'submitted' || status === 'streaming';
   const emptyClassName = compact ? 'border-none bg-transparent px-4 py-8' : undefined;
 
-  const view = useMemo(() => resolveChatView(pathname), [pathname]);
+  const view = pageView;
   const effectiveIssueId = issueId ?? (view.kind === 'sak' ? view.id : null);
   const fallbackSuggestions = useMemo(
     () =>
       buildChatSuggestions({
-        context: { kind: view.kind, title: issueTitle ?? null, issueId: effectiveIssueId, entityId: view.id },
+        context: { kind: view.kind, title: issueTitle ?? null, issueId: effectiveIssueId },
         signals: EMPTY_SIGNALS,
       }),
-    [view.kind, view.id, issueTitle, effectiveIssueId],
+    [view.kind, issueTitle, effectiveIssueId],
   );
   const shownSuggestions = useMemo(() => {
     const list = suggestions && suggestions.length > 0 ? suggestions : fallbackSuggestions;
@@ -304,11 +312,16 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
     [conversations, conversationId],
   );
 
-  function sendText(text: string) {
+  function sendText(text: string, contextSakId?: string | null) {
     const trimmed = text.trim();
     if (!trimmed || busy || sendLockRef.current) return;
     sendLockRef.current = true;
-    void sendMessage({ text: trimmed }).finally(() => {
+    // A suggestion about another sak (e.g. a recent stance) carries its id as
+    // structured context for this request only.
+    const options = contextSakId
+      ? { body: { pageContext: { ...pageContext, sakId: contextSakId } } }
+      : undefined;
+    void sendMessage({ text: trimmed }, options).finally(() => {
       sendLockRef.current = false;
     });
   }
@@ -640,7 +653,7 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
                 key={suggestion.id}
                 type="button"
                 data-chat-suggestion={suggestion.id}
-                onClick={() => sendText(suggestion.prompt)}
+                onClick={() => sendText(suggestion.prompt, suggestion.contextSakId)}
                 className="group flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card/60 px-3 py-2 text-left transition-colors hover:border-brand/40 hover:bg-card"
               >
                 <span className="min-w-0">

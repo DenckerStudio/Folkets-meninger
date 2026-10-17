@@ -32,12 +32,13 @@ test('sak context produces grounded, title-aware prompts first', () => {
   assert.ok(suggestions.some((s) => s.prompt.includes('votert')));
 });
 
-test('sak without a title falls back to the issue id, never crashes', () => {
+test('sak without a title says «saken», never the raw id', () => {
   const suggestions = buildChatSuggestions({
     context: context({ kind: 'sak', issueId: '200365' }),
     signals: emptySignals,
   });
-  assert.ok(suggestions.some((s) => s.prompt.includes('sak 200365')));
+  assert.ok(suggestions.some((s) => s.prompt.includes('saken')));
+  assert.ok(suggestions.every((s) => !s.prompt.includes('200365')));
 });
 
 test('signals and interests are added once and never duplicated', () => {
@@ -179,7 +180,7 @@ test('every suggestion maps to tools the chat model actually has', () => {
     for (const issueId of [null, '200365']) {
       for (const signals of [emptySignals, richSignals]) {
         const suggestions = buildChatSuggestions({
-          context: context({ kind, title: 'Tittel', issueId, entityId: '123' }),
+          context: context({ kind, title: 'Tittel', issueId }),
           signals,
         });
         assert.ok(suggestions.length > 0, `${kind} should have suggestions`);
@@ -194,16 +195,55 @@ test('every suggestion maps to tools the chat model actually has', () => {
   }
 });
 
-test('politician and poll prompts carry the entity id and avoid unsourced party lines', () => {
+test('visible labels and sent prompts never contain ids', () => {
+  const ids = ['200365', 'KANO', 'p-123', '10005945', 'op-77'];
+  const idPattern = /\((?:sak|person-id|avstemning|høring|mening|id)\b[^)]*\)|\b(?:person-id|sak-id|poll-id)\b|\bsak \d+|\b\d{5,}\b/i;
+  const signals: ChatUserSignals = {
+    categories: [{ value: 'Energi og miljø', count: 4 }],
+    labels: [],
+    recentStances: [{ issueId: '200365', title: 'Forsvaret', stance: 'for' }],
+    interests: [],
+    ownOpinionTitles: [],
+  };
+  const kinds: ChatViewKind[] = ['sak', 'mening', 'politiker', 'reel', 'horing', 'general'];
+  for (const kind of kinds) {
+    for (const title of [null, 'Kari Nordmann']) {
+      for (const issueId of [null, '200365']) {
+        const suggestions = buildChatSuggestions({ context: context({ kind, title, issueId }), signals });
+        for (const suggestion of suggestions) {
+          for (const text of [suggestion.label, suggestion.prompt]) {
+            assert.doesNotMatch(text, idPattern, `${kind}/${suggestion.id}: «${text}»`);
+            for (const id of ids) assert.ok(!text.includes(id), `${kind}/${suggestion.id} leaks ${id}: «${text}»`);
+          }
+        }
+      }
+    }
+  }
+});
+
+test('stance suggestions carry the sak as structured context, not text', () => {
+  const suggestions = buildChatSuggestions({
+    context: context({ kind: 'general' }),
+    signals: {
+      ...emptySignals,
+      recentStances: [{ issueId: '200365', title: 'Forsvaret', stance: 'for' }],
+    },
+  });
+  const stance = suggestions.find((s) => s.source === 'stance');
+  assert.equal(stance?.contextSakId, '200365');
+  assert.ok(!stance?.prompt.includes('200365'));
+});
+
+test('politician prompts avoid unsourced party lines', () => {
   const politiker = buildChatSuggestions({
-    context: context({ kind: 'politiker', title: 'Kari Nordmann', entityId: 'KANO' }),
+    context: context({ kind: 'politiker', title: 'Kari Nordmann' }),
     signals: emptySignals,
   });
   assert.ok(politiker.every((s) => !/linje/i.test(s.prompt)));
-  assert.ok(politiker.some((s) => s.prompt.includes('person-id KANO') && s.tools.includes('getPolitician')));
+  assert.ok(politiker.some((s) => s.tools.includes('getPolitician')));
   const reel = buildChatSuggestions({
-    context: context({ kind: 'reel', title: 'Fartsgrenser', entityId: 'p1' }),
+    context: context({ kind: 'reel', title: 'Fartsgrenser' }),
     signals: emptySignals,
   });
-  assert.ok(reel.some((s) => s.prompt.includes('avstemning p1') && s.tools.includes('getPollResults')));
+  assert.ok(reel.some((s) => s.tools.includes('getPollResults')));
 });
