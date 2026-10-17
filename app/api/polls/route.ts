@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { ensurePoliticalConsent } from '@/lib/consent/require-api';
 import { getServerSupabase } from '@/lib/supabase-server';
 import {
   castPollVote,
@@ -74,6 +75,9 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Du må være logget inn for å stemme' }, { status: 401 });
     }
+
+    const consentBlock = await ensurePoliticalConsent(user.id, 'political_storage');
+    if (consentBlock) return consentBlock;
 
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return NextResponse.json({ error: 'Stemming er ikke konfigurert på serveren' }, { status: 503 });

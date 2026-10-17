@@ -3,6 +3,7 @@ import { checkDiscussionContent } from '@/lib/moderation/content-check';
 import { createCitizenOpinion, listCitizenOpinions } from '@/lib/opinions/service';
 import { OPINION_LIST_PAGE_SIZE } from '@/lib/opinions/types';
 import { hasOpinionFieldErrors, parseOpinionPoints, validateOpinionDraft } from '@/lib/opinions/validate';
+import { ensurePoliticalConsent } from '@/lib/consent/require-api';
 import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { PUBLIC_IDENTITY_ERROR } from '@/lib/identity/public-identity';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -39,6 +40,9 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
   }
+
+  const consentBlock = await ensurePoliticalConsent(user.id, 'political_storage');
+  if (consentBlock) return consentBlock;
 
   const ip = clientIp(request);
   const ipRate = checkRateLimit(`opinions:create:ip:${ip}`, 12, 60_000);

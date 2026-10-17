@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { isIssueStance } from '@/lib/stances/types';
+import { ensurePoliticalConsent } from '@/lib/consent/require-api';
 import { getUserStanceOnIssue, setIssueStance, StanceServiceError } from '@/lib/stances/service';
 
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,9 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Du må være logget inn for å lagre holdning' }, { status: 401 });
     }
+
+    const consentBlock = await ensurePoliticalConsent(user.id, 'political_storage');
+    if (consentBlock) return consentBlock;
 
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return NextResponse.json(
