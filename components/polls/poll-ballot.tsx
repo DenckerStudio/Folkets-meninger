@@ -51,13 +51,13 @@ export function PollBallot({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(typeof data.error === 'string' ? data.error : 'Kunne ikke registrere stemme');
+        setError(typeof data.error === 'string' ? data.error : 'Stemmen ble ikke registrert. Prøv igjen.');
         return;
       }
       if (data.totals) setTotals(data.totals);
       setUserVote(choice);
     } catch {
-      setError('En feil oppstod');
+      setError('Noe gikk galt. Prøv igjen.');
     } finally {
       setBusy(false);
     }
@@ -105,7 +105,7 @@ export function PollBallot({
           Du har stemt {pollChoiceLabel(userVote).toLowerCase()} (anonymt i statistikken).
         </p>
       ) : !user ? (
-        <p className="mt-3 text-sm text-muted-foreground">Logg inn for å avgi stemme.</p>
+        <p className="mt-3 text-sm text-muted-foreground">Logg inn for å stemme.</p>
       ) : null}
       {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
     </section>

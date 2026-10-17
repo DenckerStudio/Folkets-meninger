@@ -47,7 +47,7 @@ export function LandingFooter() {
               )}
             >
               <MessageSquarePlus className="h-4 w-4" aria-hidden />
-              Kontakt oss / gi innspill
+              Kontakt oss
             </Link>
           </div>
 

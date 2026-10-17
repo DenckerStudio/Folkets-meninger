@@ -29,11 +29,11 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
       <section>
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f] mb-3">Engasjement</p>
-            <h2 className="text-3xl font-bold text-[#001433] tracking-tight sm:text-4xl">Populære saker nå</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f] mb-3">Mest stemt på</p>
+            <h2 className="text-3xl font-bold text-[#001433] tracking-tight sm:text-4xl">Saker folk stemmer på nå</h2>
             <LandingHeadingRule />
             <p className="mt-2 min-h-5 text-[#001433]/65 max-w-xl">
-              {formatNumber(issues.length)} saker · {formatNumber(deltakere)} holdninger
+              {formatNumber(issues.length)} saker · {formatNumber(deltakere)} svar
             </p>
             <NonRepresentativeNotice
               count={deltakere}
@@ -75,10 +75,10 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
                     <Users className="w-4 h-4 mr-1.5 shrink-0" />
                     {total > 0 ? (
                       <>
-                        {formatNumber(total)} har tatt stilling
+                        {formatNumber(total)} har svart
                       </>
                     ) : (
-                      'Ingen holdninger ennå'
+                      'Ingen har svart ennå'
                     )}
                   </div>
                 </div>
@@ -89,7 +89,7 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
                   </div>
                   <div className="flex justify-between items-center w-full">
                     <span className="text-xs font-medium text-[#001433]/55">
-                      {total > 0 ? `${forPercent}% Enig` : '—'}
+                      {total > 0 ? `${forPercent} % enig` : '—'}
                     </span>
                     <span className="text-sm font-semibold text-[#00205b] flex items-center transition-colors group-hover:text-[#ba0c2f]">
                       Les mer <ArrowRight className="ml-1 w-4 h-4" />

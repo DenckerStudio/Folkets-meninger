@@ -65,8 +65,8 @@ const DEFAULT_FEATURES: Step[] = [
 export default function HowItWorks({
   features,
   className,
-  title = 'Fra Stortinget til din stemme',
-  eyebrow = 'Slik fungerer det',
+  title = 'Fire ting du kan gjøre',
+  eyebrow = 'Kort fortalt',
   description = 'Data fra Stortinget. Stem, høring og innsikt.',
 }: HowItWorksProps = {}) {
   const data = features && features.length > 0 ? features : DEFAULT_FEATURES;

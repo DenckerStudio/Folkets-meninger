@@ -17,7 +17,7 @@ export const STEMME_PLUS_NON_INFLUENCE_NOTE =
 
 export const STEMME_PLUS_BENEFITS = [
   'Støttemerke på profilen',
-  'Rikere ukentlig nyhetsoppsummering',
-  'Sanntidsvarsler og smartere hjertesak-varsler',
-  'Chat om saker med din egen LLM-nøkkel (BYOK), RAG og kildesøk',
+  'Lengre ukentlig oppsummering',
+  'Varsler med en gang, også for sakene du følger',
+  'Chat om sakene med din egen AI-nøkkel. Svarene bygger på saksdokumentene og viser kildene.',
 ] as const;

@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { MessageSquarePlus } from 'lucide-react';
 
 const CATEGORIES = [
-  { value: 'idé', label: 'Idé / ønske' },
-  { value: 'feil', label: 'Feil / bug' },
+  { value: 'idé', label: 'Idé eller ønske' },
+  { value: 'feil', label: 'Feil' },
   { value: 'spørsmål', label: 'Spørsmål' },
-  { value: 'skjevhet', label: 'Skjevhet / nøytralitet' },
+  { value: 'skjevhet', label: 'Skjevhet' },
   { value: 'annet', label: 'Annet' },
 ] as const;
 
@@ -77,7 +77,7 @@ export function InnspillForm({ initialCategory, initialPagePath }: InnspillFormP
         </div>
         <h2 className="text-xl font-bold text-[#001433]">Takk for innspillet</h2>
         <p className="mt-2 text-[#001433]/65 leading-relaxed">
-          Vi har mottatt meldingen din og leser alt. Du hører fra oss hvis vi trenger mer info.
+          Takk, meldingen er sendt. Vi tar kontakt hvis vi trenger mer informasjon.
         </p>
         <button
           type="button"

@@ -176,10 +176,10 @@ export function ImpactCalculator({
       </p>
 
       <details className="mb-6 rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm">
-        <summary className="cursor-pointer font-medium text-foreground">Antagelser bak anslaget</summary>
+        <summary className="cursor-pointer font-medium text-foreground">Antakelser bak anslaget</summary>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-muted-foreground">
-          <li>Ingen språkmodell — vi matcher nøkkelord i dokumentutdrag og lagret sammendrag mot profilen du velger.</li>
-          <li>Kroner vises bare når beløp finnes i kildeteksten; ellers får du kvalitative formuleringer.</li>
+          <li>Ingen AI. Vi ser etter nøkkelord i dokumentene og sammendraget som passer med det du har valgt.</li>
+          <li>Vi viser kroner bare når beløpet står i kildeteksten. Ellers får du en beskrivelse.</li>
           <li>Fylke, bolig, bil og yrke er selvrapportert og lagres kun lokalt i nettleseren.</li>
           <li>Resultatet er et forenklet bilde, ikke skatteråd eller partipolitisk analyse.</li>
         </ul>

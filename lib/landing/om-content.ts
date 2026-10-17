@@ -5,7 +5,6 @@ import {
   STEMME_PLUS_MONTHLY_PRICE_NOK,
   STEMME_PLUS_NON_INFLUENCE_NOTE,
 } from '@/lib/stemme-plus/constants';
-import { TRUST_HOSTING_SUMMARY } from '@/lib/trust/subprocessors';
 import { routes } from '@/lib/routes';
 
 /** Stortinget open data base — used across lib/stortinget-*.ts */
@@ -16,9 +15,9 @@ export const OM_INTRO =
 
 export const OM_WHY_POINTS = [
   {
-    title: 'Følg Stortinget',
+    title: 'Kilden er alltid med',
     body:
-      'Saker, dokumenter og høringer hentes fra Stortingets åpne API. Du kan lese kildene og åpne saken på stortinget.no.',
+      'Hver sak lenker til dokumentene og til saken på stortinget.no.',
   },
   {
     title: 'Si din mening',
@@ -34,7 +33,7 @@ export const OM_WHY_POINTS = [
 export const OM_PROCESS_STEPS = [
   {
     title: 'Utforsk saker',
-    body: 'Se aktuelle og behandlede saker på Utforsk og åpne sakssider med dokumenter og AI-sammendrag når det finnes.',
+    body: 'På Utforsk finner du saker som er til behandling og saker som er avgjort. Hver sak har dokumentene, og ofte et AI-sammendrag.',
   },
   {
     title: 'Stem og skriv',
@@ -46,11 +45,11 @@ export const OM_PROCESS_STEPS = [
   },
   {
     title: 'Avstemninger og Reels',
-    body: 'Ja/Nei/Blank-avstemninger og systemgenererte Reels på Utforsk. Reels-utkast lages av admin fra saksdokumenter (AI), merket som systemgenerert.',
+    body: 'I avstemningene svarer du ja, nei eller blank. På Utforsk finner du også korte Reels om sakene. Vi lager dem med AI ut fra saksdokumentene, og de er merket.',
   },
   {
-    title: 'Valgomat 2.0',
-    body: 'På Min side kan du markere holdninger og se partimatch basert på det du har stemt — når partidata finnes i appen.',
+    title: 'Valgomat',
+    body: 'På Min side ser du hvilke partier du står nærmest, ut fra det du har svart. Det krever at vi har partidata for sakene.',
   },
 ] as const;
 
@@ -58,17 +57,17 @@ export const OM_DATA_SOURCES = [
   {
     label: 'Saker og voteringer',
     href: `${STORTINGET_DATA_API}/eksport/saker?format=json`,
-    note: 'Liste og detaljer synkroniseres til appen (lib/stortinget-sync.ts).',
+    note: 'Hentes jevnlig fra Stortinget.',
   },
   {
     label: 'Høringer',
     href: `${STORTINGET_DATA_API}/eksport/horinger?format=json`,
-    note: 'Eksporteres med timebasert cache (lib/stortinget-horinger.ts).',
+    note: 'Hentes fra Stortinget og oppdateres hver time.',
   },
   {
     label: 'Offisielle dokumenter',
     href: 'https://www.stortinget.no/no/Saker-og-publikasjoner/',
-    note: 'Lenker og HTML-visning der Stortinget publiserer dem.',
+    note: 'Vi lenker til dem, og viser dem i appen når Stortinget publiserer dem som HTML.',
   },
 ] as const;
 
@@ -123,13 +122,14 @@ export const OM_FAQ = [
 
 export const OM_FREE_FEATURES = [
   'Les saker, dokumenter og høringer',
-  'Stem på saker og avstemninger (innlogging)',
-  'Folkets meninger og offentlig statistikk med ærlige terskler',
+  'Stem og si din mening (krever innlogging)',
+  'Se statistikken på Innsikt',
 ] as const;
 
 export const OM_STEMME_PLUS_FEATURES = [...STEMME_PLUS_BENEFITS] as const;
 
-export const OM_PRIVACY_SNIPPET = TRUST_HOSTING_SUMMARY;
+export const OM_PRIVACY_SNIPPET =
+  'Hvor data ligger: Appen og databasen driftes på server i Norge. Betaling går via Stripe, som ligger utenfor Norge. Se listen over underleverandører på personvernsiden.';
 
 export const OM_LINKS = {
   personvern: routes.personvern,

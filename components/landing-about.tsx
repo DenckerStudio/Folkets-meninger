@@ -96,17 +96,17 @@ export function LandingAbout() {
           <BentoFeatureGrid tiles={whyTiles} />
         </div>
 
-        <SectionBlock eyebrow="Slik fungerer det" title="Fra sak til din stemme">
+        <SectionBlock eyebrow="Slik fungerer det" title="Fra sak til stemme">
           <div className="mx-auto max-w-2xl">
             <LandingProcessTimeline steps={OM_PROCESS_STEPS} />
           </div>
         </SectionBlock>
 
-        <SectionBlock eyebrow="Tall vi står for" title="Åpne terskler, ikke påstander">
+        <SectionBlock eyebrow="Terskler" title="Når vi viser tall">
           <LandingFactStats items={OM_STAT_FACTS} />
         </SectionBlock>
 
-        <SectionBlock eyebrow="Datakilder" title="Hvor informasjonen kommer fra">
+        <SectionBlock eyebrow="Datakilder" title="Hvor sakene kommer fra">
           <ul className="space-y-4">
             {OM_DATA_SOURCES.map((source) => (
               <li
@@ -126,7 +126,7 @@ export function LandingAbout() {
             ))}
           </ul>
           <p className="mt-4 text-sm text-[#001433]/60">
-            API-base:{' '}
+            Stortingets åpne data:{' '}
             <a
               href={STORTINGET_DATA_API}
               className="font-medium text-[#00205b] hover:underline"
@@ -138,17 +138,16 @@ export function LandingAbout() {
           </p>
         </SectionBlock>
 
-        <SectionBlock eyebrow="Nøytralitet og AI" title="Kilder først, modeller merket">
+        <SectionBlock eyebrow="AI" title="Hvordan vi bruker AI">
           <div className="flex gap-4 rounded-2xl border border-[#00205b]/10 bg-white p-6 shadow-sm">
             <Cpu className="mt-0.5 h-6 w-6 shrink-0 text-[#00205b]" aria-hidden />
             <div className="space-y-3 text-sm leading-relaxed text-[#001433]/75">
               <p>
-                Saksammendrag og system-Reels genereres med self-hosted Ollama (n8n), ikke i nettleseren.
-                Modeller i drift inkluderer blant annet {summaryModels || 'se dokumentasjon'}.
+                Sammendragene og Reels lages av AI-modeller på vår egen server.
               </p>
               <p>
-                Sammendrag er merket «AI-generert» med lenker til Stortinget-dokumenter. Konsekvens-kalkulatoren
-                bruker dokumentutdrag og lagret sammendrag uten egen LLM i appen.
+                De er merket som AI-generert og lenker til dokumentene de bygger på. Konsekvenskalkulatoren bruker
+                ikke AI.
               </p>
               <Link
                 href={OM_LINKS.omAi}
@@ -173,13 +172,13 @@ export function LandingAbout() {
                 href={OM_LINKS.personvern}
                 className="inline-flex font-semibold text-[#00205b] underline-offset-2 hover:text-[#ba0c2f] hover:underline"
               >
-                Personvern og underleverandører →
+                Se alle underleverandører →
               </Link>
             </div>
           </div>
         </SectionBlock>
 
-        <SectionBlock eyebrow="Gratis og Stemme+" title="Demokrati først, støtte valgfritt">
+        <SectionBlock eyebrow="Gratis og Stemme+" title="Det meste er gratis">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="rounded-2xl border border-[#00205b]/10 bg-white p-6 shadow-sm">
               <h4 className="text-lg font-semibold text-[#001433]">Gratis</h4>
@@ -195,7 +194,7 @@ export function LandingAbout() {
             <div className="rounded-2xl border border-[#ba0c2f]/25 bg-[#ba0c2f]/[0.04] p-6 shadow-sm">
               <h4 className="flex items-center gap-2 text-lg font-semibold text-[#001433]">
                 <Sparkles className="h-5 w-5 text-[#ba0c2f]" aria-hidden />
-                Stemme+ ({STEMME_PLUS_MONTHLY_PRICE_NOK} kr/mnd)
+                Stemme+ · {STEMME_PLUS_MONTHLY_PRICE_NOK} kr/mnd
               </h4>
               <ul className="mt-4 space-y-2 text-sm text-[#001433]/70">
                 {OM_STEMME_PLUS_FEATURES.map((line) => (
@@ -210,7 +209,7 @@ export function LandingAbout() {
           </div>
         </SectionBlock>
 
-        <SectionBlock eyebrow="FAQ" title="Spørsmål vi ofte får">
+        <SectionBlock eyebrow="Spørsmål og svar" title="Det folk lurer på">
           <LandingFaqAccordion items={OM_FAQ} />
         </SectionBlock>
 

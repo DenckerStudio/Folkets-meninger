@@ -119,12 +119,12 @@ export default function AiSummary({
             ? json.retry_after_seconds
             : 15;
 
-        setStatusMessage('Genererer sammendrag (kan ta noen minutter) …');
+        setStatusMessage('Lager sammendrag. Det kan ta noen minutter…');
         setLoading(true);
         await new Promise((r) => setTimeout(r, retryAfterSeconds * 1000));
       } catch (error) {
         console.error('Failed to fetch AI summary', error);
-        setStatusMessage('Venter på sammendrag …');
+        setStatusMessage('Venter på sammendraget…');
         setLoading(true);
         await new Promise((r) => setTimeout(r, 15_000));
       }
@@ -179,7 +179,7 @@ export default function AiSummary({
             ) : null}
           </span>
         }
-        description="Generert fra saksdokumenter via lokal modell (Ollama/n8n). Ikke offisiell Stortinget-tekst."
+        description="Laget av AI ut fra saksdokumentene. Ikke en offisiell tekst fra Stortinget."
         size="lg"
         footer={
           <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -210,7 +210,7 @@ export default function AiSummary({
           <div className="space-y-4" aria-live="polite">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin text-brand" aria-hidden />
-              {statusMessage ?? 'Henter sammendrag …'}
+              {statusMessage ?? 'Henter sammendraget…'}
             </div>
             <div className="space-y-2">
               <div className="h-4 w-full animate-pulse rounded bg-muted/80" />
@@ -222,7 +222,7 @@ export default function AiSummary({
           data.version === 2 ? <V2Summary data={data} /> : <LegacySummary data={data} />
         ) : (
           <p className="rounded-xl border border-border bg-muted/40 px-4 py-4 text-sm text-muted-foreground">
-            {statusMessage ?? 'Sammendrag kommer når saken er behandlet av n8n.'}
+            {statusMessage ?? 'Sammendraget er ikke laget ennå.'}
           </p>
         )}
       </Dialog>

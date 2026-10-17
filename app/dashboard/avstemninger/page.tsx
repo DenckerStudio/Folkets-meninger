@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = buildPageMetadata({
   title: 'Avstemninger',
   description:
-    'Nasjonale spørsmål med ja, nei eller blank. Se resultatene og delta i avstemninger.',
+    'Spørsmål for hele landet der du svarer ja, nei eller blank. Se hva andre brukere har svart.',
   canonicalPath: '/dashboard/avstemninger',
 });
 
@@ -31,8 +31,8 @@ export default async function AvstemningerPage() {
       />
       {withTotals.length === 0 ? (
         <EmptyState
-          title="Ingen avstemninger er publisert ennå"
-          description="Når en stortingssak løftes til nasjonal avstemning, dukker den opp her. Kom gjerne tilbake senere."
+          title="Ingen avstemninger ennå"
+          description="Når vi lager en avstemning om en sak fra Stortinget, kommer den her."
         />
       ) : (
         <div className="grid gap-3 sm:gap-4">

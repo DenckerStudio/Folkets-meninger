@@ -144,7 +144,7 @@ export function ProfileStemmePlus({ checkoutConfigured: serverCheckoutConfigured
           <p className="mt-1 text-emerald-800/90 dark:text-emerald-100/90">
             {isActive
               ? 'Stemme+ er aktivert. Takk for støtten!'
-              : 'Vi aktiverer Stemme+ straks Stripe bekrefter abonnementet. Oppdater siden om litt hvis merket mangler.'}
+              : 'Stemme+ blir aktivt når Stripe har bekreftet betalingen. Ser du ikke merket, last siden på nytt om litt.'}
           </p>
         </div>
       ) : null}
@@ -160,11 +160,11 @@ export function ProfileStemmePlus({ checkoutConfigured: serverCheckoutConfigured
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground">
-              {isActive ? 'Takk for at du støtter oss!' : `Støttemedlemskap — ${price} kr/mnd`}
+              {isActive ? 'Takk for støtten!' : `Støttemedlemskap: ${price} kr/mnd`}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Stemme, utforsk og høringer forblir gratis. Stemme+ gir merker, rikere varsler og chat med
-              din egen nøkkel. {STEMME_PLUS_NON_INFLUENCE_NOTE}
+              Det er gratis å stemme, utforske saker og følge høringer. Stemme+ gir et merke på profilen,
+              flere varsler og chat med din egen AI-nøkkel. {STEMME_PLUS_NON_INFLUENCE_NOTE}
             </p>
           </div>
         </div>
@@ -240,13 +240,13 @@ export function ProfileStemmePlus({ checkoutConfigured: serverCheckoutConfigured
               disabled={checkoutBusy || loading}
             >
               {checkoutBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Bli Stemme+ — {price} kr/mnd
+              Bli Stemme+ for {price} kr/mnd
             </Button>
           ) : showPaymentUnavailableNotice ? (
             <EmptyState
               className="py-6"
-              title="Betaling åpner snart"
-              description={`Du kan snart bli Stemme+ for ${price} kr/mnd rett her. Følg med – vi gir beskjed når betalingen er klar.`}
+              title="Betaling kommer snart"
+              description={`Snart kan du bli Stemme+ for ${price} kr/mnd her.`}
             />
           ) : null}
         </div>

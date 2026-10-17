@@ -13,7 +13,7 @@ type ProfilePrivacyProps = {
 export function ProfilePrivacy({ userId }: ProfilePrivacyProps) {
   return (
     <div className="space-y-6">
-      <ProfileCard title="Slik beskytter vi deg">
+      <ProfileCard title="Slik behandler vi dataene dine">
         <ol className="space-y-4">
           {[
             {
@@ -28,8 +28,8 @@ export function ProfilePrivacy({ userId }: ProfilePrivacyProps) {
             },
             {
               step: '3',
-              title: 'Personvern by design',
-              body: 'Data lagres i Supabase (hostet database). Se personvernsiden for underleverandører og hosting. Offentlig aktivitet er av som standard.',
+              title: 'Hvor data ligger',
+              body: 'Appen og databasen driftes på server i Norge. Betaling går via Stripe, som ligger utenfor Norge. Se listen over underleverandører på personvernsiden. Offentlig aktivitet er av til du slår den på.',
             },
           ].map((item) => (
             <li key={item.step} className="flex gap-3">
@@ -49,7 +49,7 @@ export function ProfilePrivacy({ userId }: ProfilePrivacyProps) {
 
       <ProfileCard
         title="Slett konto og data"
-        description="I tråd med norsk lov og GDPR har du rett til å bli glemt."
+        description="Etter GDPR kan du be om at alt om deg slettes."
       >
         <div className="flex flex-col gap-4 rounded-xl border border-border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex gap-3">
