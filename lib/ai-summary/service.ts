@@ -54,7 +54,7 @@ export async function getAiSummaryFromDb(issueId: string): Promise<AiSummary | n
   }
 }
 
-export async function getPopularAiLabels(limit = 40): Promise<string[]> {
+export async function getPopularAiLabels(limit = 200): Promise<string[]> {
   if (!supabaseConfigured()) return [];
 
   try {

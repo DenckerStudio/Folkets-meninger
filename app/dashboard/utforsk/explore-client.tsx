@@ -55,6 +55,10 @@ function votingUrgency(issue: SakListItem): number {
   return Number.POSITIVE_INFINITY;
 }
 
+function issueEngagementTotal(issue: SakListItem): number {
+  return issue.votes?.total ?? 0;
+}
+
 const UTFORSK_SORT_VALUES = ['Nyeste først', 'Mest engasjement', 'Snart votering'] as const;
 type UtforskSort = (typeof UTFORSK_SORT_VALUES)[number];
 
@@ -71,12 +75,29 @@ function readLegacyUtforskSort(): UtforskSort | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(PREFERENCE_KEYS.utforsk.filters);
+    localStorage.removeItem(PREFERENCE_KEYS.utforsk.filters);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { sortBy?: unknown };
-    localStorage.removeItem(PREFERENCE_KEYS.utforsk.filters);
     return isUtforskSort(parsed.sortBy) ? parsed.sortBy : null;
   } catch {
+    localStorage.removeItem(PREFERENCE_KEYS.utforsk.filters);
     return null;
+  }
+}
+
+function clearDeprecatedUtforskStorage(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(PREFERENCE_KEYS.utforsk.filters);
+    const sortRaw = localStorage.getItem(PREFERENCE_KEYS.utforsk.sort);
+    if (sortRaw !== null) {
+      const parsed = JSON.parse(sortRaw) as unknown;
+      if (!isUtforskSort(parsed)) {
+        localStorage.removeItem(PREFERENCE_KEYS.utforsk.sort);
+      }
+    }
+  } catch {
+    localStorage.removeItem(PREFERENCE_KEYS.utforsk.sort);
   }
 }
 
@@ -132,6 +153,7 @@ export default function ExploreClient({
   useEffect(() => {
     if (!isMounted || legacySortMigratedRef.current) return;
     legacySortMigratedRef.current = true;
+    clearDeprecatedUtforskStorage();
     const legacySort = readLegacyUtforskSort();
     if (legacySort) setSortByPersisted(legacySort);
   }, [isMounted, setSortByPersisted]);
@@ -187,7 +209,7 @@ export default function ExploreClient({
         return new Date(b.date).getTime() - new Date(a.date).getTime();
       }
       if (sortBy === 'Mest engasjement') {
-        const voteDiff = b.votes.total - a.votes.total;
+        const voteDiff = issueEngagementTotal(b) - issueEngagementTotal(a);
         if (voteDiff !== 0) return voteDiff;
         return new Date(b.date).getTime() - new Date(a.date).getTime();
       }

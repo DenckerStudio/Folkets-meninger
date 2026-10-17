@@ -15,7 +15,6 @@ import { getPersonbildeUrl } from '@/lib/stortinget-utils';
 import type { PolitikerOversikt } from '@/lib/stortinget';
 import { routes } from '@/lib/routes';
 import { PREFERENCE_KEYS } from '@/lib/preferences/keys';
-import { usePersistedState } from '@/hooks/use-persisted-state';
 import { missingPartyLogos, uniquePartyNames } from '@/lib/party-logos';
 import { cn } from '@/lib/utils';
 
@@ -93,10 +92,6 @@ type PolitikereExplorerProps = {
   politikere: PolitikerOversikt[];
 };
 
-function isSearchString(value: unknown): value is string {
-  return typeof value === 'string';
-}
-
 function matchesSearch(rep: PolitikerOversikt, query: string): boolean {
   return (
     rep.fornavn.toLowerCase().includes(query) ||
@@ -120,11 +115,15 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
   const listRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const hasMountedRef = useRef(false);
-  const [searchQuery, setSearchQuery] = usePersistedState(
-    PREFERENCE_KEYS.politikere.search,
-    '',
-    isSearchString,
-  );
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    try {
+      localStorage.removeItem(PREFERENCE_KEYS.politikere.search);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const partyNames = useMemo(
     () => uniquePartyNames(politikere.map((rep) => rep.parti.navn)),

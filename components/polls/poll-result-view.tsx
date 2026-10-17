@@ -15,7 +15,11 @@ export function PollResultView({ byFylke }: PollResultViewProps) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground sm:hidden">
+        Tabellen kan scrolles sideveis på smale skjermer.
+      </p>
+      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
       <table className="w-full min-w-[32rem] text-left text-sm">
         <caption className="sr-only">Anonyme resultater per fylke</caption>
         <thead className="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
@@ -47,6 +51,7 @@ export function PollResultView({ byFylke }: PollResultViewProps) {
           ))}
         </tbody>
       </table>
+    </div>
     </div>
   );
 }

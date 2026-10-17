@@ -123,7 +123,13 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
   const title = getHoringTitle(hearing);
   const subtitle = getHoringSubtitle(hearing);
   const komite = hearing.komite?.navn ?? 'Ukjent komité';
-  const saker = hearing.horing_sak_info_liste ?? [];
+  const saker = (hearing.horing_sak_info_liste ?? []).filter((sak) => {
+    const sakTitle = (sak.sak_tittel ?? sak.sak_korttittel ?? '').trim();
+    if (!sakTitle) return true;
+    const hearingTitle = title.trim();
+    const hearingSubtitle = subtitle?.trim() ?? '';
+    return sakTitle !== hearingTitle && sakTitle !== hearingSubtitle;
+  });
   const relatedSakLinkChecks = await Promise.all(
     saker.map(async (sak) => {
       const key = String(sak.sak_id ?? sak.sak_tittel ?? '');

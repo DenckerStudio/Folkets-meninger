@@ -272,6 +272,11 @@ export default function LoginClient() {
                 ? 'Opprett konto med e-post eller Google for å stemme og delta.'
                 : 'Logg inn med e-post eller Google for å stemme og delta.'}
             </p>
+            {!isRegister && nextPath !== routes.dashboard ? (
+              <p className="mt-2 text-center text-sm text-muted-foreground">
+                Etter innlogging sendes du tilbake til siden du forsøkte å åpne.
+              </p>
+            ) : null}
         </div>
       </FadeIn>
 

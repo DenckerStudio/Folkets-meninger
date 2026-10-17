@@ -34,6 +34,13 @@ export function PollCard({ poll, totals }: PollCardProps) {
   const href = routes.poll(poll.id);
   const title = formatPollDisplayTitle(poll.title);
   const deadline = formatPollDeadline(poll.closesAt);
+  const published =
+    poll.createdAt &&
+    new Date(poll.createdAt).toLocaleDateString('nb-NO', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
   const open = isPollVotingOpen(poll);
 
   return (
@@ -52,6 +59,8 @@ export function PollCard({ poll, totals }: PollCardProps) {
           <span className="text-muted-foreground">
             {open ? `Stenger ${deadline}` : `Stengte ${deadline}`}
           </span>
+        ) : published ? (
+          <span className="text-muted-foreground">Publisert {published}</span>
         ) : null}
       </div>
       <h2 className="relative mt-3 text-lg font-semibold text-foreground">

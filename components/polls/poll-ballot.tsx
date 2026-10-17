@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { pollChoicePercent } from '@/lib/polls/format';
@@ -108,7 +109,15 @@ export function PollBallot({
           Du har stemt {pollChoiceLabel(userVote).toLowerCase()} (telles uten navn i statistikken).
         </p>
       ) : !user ? (
-        <p className="mt-3 text-sm text-muted-foreground">Logg inn for å avgi stemme.</p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          <Link
+            href={`${routes.login}?next=${encodeURIComponent(loginNext ?? routes.poll(pollId))}`}
+            className="font-medium text-brand underline-offset-2 hover:underline"
+          >
+            Logg inn
+          </Link>{' '}
+          for å avgi stemme.
+        </p>
       ) : null}
       {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
     </section>

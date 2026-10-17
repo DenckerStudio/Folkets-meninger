@@ -15,41 +15,41 @@ export const TRUST_HOSTING_SUMMARY =
   'Appen og databasen driftes på server i Norge.';
 
 /**
- * Kjører på samme self-hosted Coolify-stack (ikke separate SaaS-hostere for app/DB).
+ * Tjenester som kjører på våre egne servere (ikke separate SaaS-hostere for app/DB).
  */
 export const TRUST_COOLIFY_STACK: SubprocessorRow[] = [
   {
-    name: 'Next.js-appen',
+    name: 'Folkets Meninger (nettjeneste)',
     purpose:
-      'Nettside, dashboard, API-ruter (/api/*), middleware og autentisering mot databasen.',
-    hosting: 'Self-hosted via Coolify — server i Norge.',
+      'Nettside og dashboard der du leser saker, stemmer, skriver meninger og bruker avstemninger. Innlogging og sikkerhet håndteres her.',
+    hosting: 'Egne servere i Norge.',
     codeRef: 'package.json, app/, middleware.ts',
   },
   {
-    name: 'Database (PostgreSQL / Supabase-stack)',
+    name: 'Database (PostgreSQL)',
     purpose:
-      'Lagring av kontoer, stemmer, holdninger, avstemninger, saksdata, dokument-chunks og AI-sammendrag. RLS og RPC-er kjører her.',
-    hosting: 'Self-hosted via Coolify — server i Norge (Supabase-klient i appen peker på dette prosjektet).',
+      'Lagring av kontoer, stemmer, holdninger, avstemninger, saksdata, dokumentutdrag og AI-sammendrag.',
+    hosting: 'Egne servere i Norge.',
     codeRef: 'NEXT_PUBLIC_SUPABASE_URL, supabase/migrations/',
   },
   {
-    name: 'n8n',
+    name: 'Automatiserte datajobber',
     purpose:
-      'Automatisering: AI-sammendrag, dokument-embeddings, systempoll-utkast, cron mot /api/cron/*, pipeline-health.',
-    hosting: 'Self-hosted på Coolify — server i Norge.',
+      'Planlagte jobber som henter og oppdaterer data fra Stortinget, lager AI-sammendrag, forbereder søk i dokumenter og systemgenererte avstemninger.',
+    hosting: 'Egne servere i Norge.',
     codeRef: 'workflows/n8n/, .env.example (N8N_*_WEBHOOK_URL)',
   },
   {
-    name: 'Ollama',
+    name: 'Språkmodell (eget oppsett)',
     purpose:
-      'Språkmodeller som kjører lokalt på våre servere for saksammendrag (qwen3), systempoll-utkast (gemma4) og søk i dokumenter (nomic-embed-text).',
-    hosting: 'Self-hosted via Coolify — server i Norge.',
+      'En språkmodell på våre egne servere i Norge brukes til saksammendrag, utkast til systemavstemninger og søk i saksdokumenter.',
+    hosting: 'Egne servere i Norge.',
     codeRef: 'workflows/n8n/ai-summary-backfill.workflow.ts, document-embeddings.workflow.ts',
   },
   {
-    name: 'SearXNG',
-    purpose: 'Kildesøk på nettet for Stemme+ chat.',
-    hosting: 'Self-hosted via Coolify — server i Norge.',
+    name: 'Kildesøk på nettet',
+    purpose: 'Hjelper Stemme+-chat med å finne oppdaterte kilder utenfor Stortingets åpne data.',
+    hosting: 'Egne servere i Norge.',
     codeRef: 'lib/chat/searxng.ts, .env.example',
   },
 ];
@@ -59,7 +59,7 @@ export const TRUST_THIRD_PARTY_PROVIDERS: SubprocessorRow[] = [
   {
     name: 'Cloudflare',
     purpose:
-      'Proxy og CDN foran våre interne tjenester (database, automatiserings- og modelltjenester). Hoveddomenet www.folkets-meninger.no går ikke via Cloudflare.',
+      'Proxy og CDN foran enkelte interne tjenester. Hoveddomenet www.folkets-meninger.no går ikke via Cloudflare.',
     hosting: 'Cloudflare Inc. (globalt edge-nettverk; hovedkontor i USA).',
     codeRef: 'NEXT_PUBLIC_SUPABASE_URL, workflows/n8n/, lib/chat/searxng.ts',
   },
@@ -72,8 +72,8 @@ export const TRUST_THIRD_PARTY_PROVIDERS: SubprocessorRow[] = [
   },
   {
     name: 'Google (OAuth)',
-    purpose: 'Valgfri innlogging via Supabase Auth (Google som OAuth-provider).',
-    hosting: 'Google (globalt; databehandling via Google og Supabase Auth-konfigurasjon).',
+    purpose: 'Valgfri innlogging via Google-konto (OAuth).',
+    hosting: 'Google (globalt; databehandling via Google og innloggingsoppsettet).',
     codeRef: 'app/auth/login/login-client.tsx',
   },
   {
@@ -91,7 +91,7 @@ export const TRUST_THIRD_PARTY_PROVIDERS: SubprocessorRow[] = [
   {
     name: 'Brukerens egen LLM-leverandør (BYOK)',
     purpose:
-      'Stemme+ kan lagre kryptert API-nøkkel og sende chat (og holdninger du samtykker til) til Google, OpenAI, xAI, Ollama, Anthropic eller annen gateway du velger.',
+      'Stemme+ kan lagre kryptert API-nøkkel og sende chat (og holdninger du samtykker til) til leverandøren du velger (for eksempel OpenAI, Anthropic, Google eller annen kompatibel tjeneste).',
     hosting: 'Der leverandøren hoster modellen (ofte USA/EU; utenfor vår kontroll).',
     codeRef: 'lib/byok/, user_llm_credentials, lib/chat/personal-tools.ts',
   },

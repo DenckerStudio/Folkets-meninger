@@ -32,19 +32,19 @@ export function LandingHeader() {
   return (
     <header
       className={cn(
-        'sticky top-0 z-[70] isolate w-full bg-white pt-[env(safe-area-inset-top,0px)]',
+        'sticky top-0 z-[70] isolate w-full overflow-x-clip bg-white pt-[env(safe-area-inset-top,0px)]',
         scrolled ? 'shadow-sm backdrop-blur-lg' : '',
       )}
     >
-      <nav className="relative z-[71] mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <nav className="relative z-[71] mx-auto flex h-16 w-full max-w-7xl min-w-0 items-center justify-between gap-2 px-3 sm:px-6 lg:px-8">
         <Link
           href={routes.home}
           aria-label="Folkets Meninger – til forsiden"
-          className="rounded-md p-1 transition-opacity hover:opacity-90"
+          className="min-w-0 shrink rounded-md p-1 transition-opacity hover:opacity-90"
         >
-          <LandingLogo clipId="fs-header-bubble" animate={pathname === '/'} />
+          <LandingLogo clipId="fs-header-bubble" animate={pathname === '/'} className="max-h-9 w-auto max-w-[min(52vw,11rem)] sm:max-h-none sm:max-w-none" />
         </Link>
-        <div className="relative z-[72] flex items-center gap-1.5 sm:gap-3">
+        <div className="relative z-[72] flex shrink-0 items-center gap-1 sm:gap-3">
           <a
             href={routes.omOss}
             onClick={(event) => {
@@ -75,19 +75,20 @@ export function LandingHeader() {
             <>
               <Link
                 href={routes.login}
+                aria-label="Logg inn"
                 className={cn(
                   touchTargetLinkClass,
-                  'gap-1.5 whitespace-nowrap rounded-full border border-[#00205b]/15 bg-white px-4 text-sm font-semibold text-[#00205b] transition-colors hover:border-[#00205b]/40 hover:bg-[#00205b]/[0.04]',
+                  'gap-1.5 whitespace-nowrap rounded-full border border-[#00205b]/15 bg-white px-3 text-sm font-semibold text-[#00205b] transition-colors hover:border-[#00205b]/40 hover:bg-[#00205b]/[0.04] sm:px-4',
                 )}
               >
-                <LogIn className="size-3.5 sm:size-4" />
-                Logg inn
+                <LogIn className="size-4 shrink-0" />
+                <span className="hidden min-[400px]:inline">Logg inn</span>
               </Link>
               <Link
                 href={routes.utforsk}
                 className={cn(
                   touchTargetLinkClass,
-                  'justify-center whitespace-nowrap rounded-full bg-[#00205b] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#ba0c2f]',
+                  'justify-center whitespace-nowrap rounded-full bg-[#00205b] px-3 text-sm font-semibold text-white transition-colors hover:bg-[#ba0c2f] sm:px-4',
                 )}
               >
                 <span className="sm:hidden">Utforsk</span>

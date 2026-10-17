@@ -14,23 +14,23 @@ export type AiPipelineRow = {
 export const PLATFORM_AI_PIPELINES: AiPipelineRow[] = [
   {
     feature: 'Saksammendrag (AI-sammendrag på sakssider)',
-    model: 'qwen3',
+    model: 'Språkmodell for tekstsammendrag',
     modelId: 'qwen3:4b-q4_K_M',
-    where: 'Våre egne servere i Norge, orkestrert av n8n',
+    where: 'Kjører på våre egne servere i Norge',
     trigger: 'Webhook N8N_AI_SUMMARY_WEBHOOK_URL → workflows/n8n/ai-summary-backfill',
   },
   {
     feature: 'Dokument-embeddings (søk i saksdokumenter)',
-    model: 'nomic-embed-text',
+    model: 'Embeddings-modell for dokumentsøk',
     modelId: 'nomic-embed-text:v1.5',
-    where: 'Våre egne servere i Norge',
+    where: 'Kjører på våre egne servere i Norge',
     trigger: 'N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL → document-embeddings.workflow',
   },
   {
     feature: 'Systempoll-utkast (Utforsk / Reels)',
-    model: 'gemma4',
+    model: 'Språkmodell for spørsmålsutkast',
     modelId: 'gemma4:e2b-it-qat',
-    where: 'Våre egne servere i Norge',
+    where: 'Kjører på våre egne servere i Norge',
     trigger: 'N8N_SYSTEM_POLL_DRAFT_WEBHOOK_URL → system-poll-draft.workflow',
   },
   {

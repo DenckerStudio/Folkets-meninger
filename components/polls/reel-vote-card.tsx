@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
@@ -179,7 +180,15 @@ export function ReelFlagVote({ item, onBack, onSheetOpenChange }: ReelFlagVotePr
             {totals.total > 0 ? ` ${reelTotalsSummary(totals)}` : ''}
           </p>
         ) : !user ? (
-          <p className="mb-2 text-sm text-white/80">Logg inn for å avgi stemme.</p>
+          <p className="mb-2 text-sm text-white/80">
+            <Link
+              href={`${routes.login}?next=${encodeURIComponent(routes.utforskReels(item.poll.id))}`}
+              className="font-semibold text-white underline decoration-white/50 underline-offset-2 hover:decoration-white"
+            >
+              Logg inn
+            </Link>{' '}
+            for å avgi stemme.
+          </p>
         ) : null}
         {error ? <p className="mb-2 text-sm text-red-200">{error}</p> : null}
 
