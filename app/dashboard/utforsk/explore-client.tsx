@@ -55,35 +55,29 @@ function votingUrgency(issue: SakListItem): number {
   return Number.POSITIVE_INFINITY;
 }
 
-type UtforskFilters = {
-  searchQuery: string;
-  selectedCategory: string;
-  selectedStatus: string;
-  selectedSakKind: string;
-  selectedAiLabels: string[];
-  sortBy: string;
-};
+const UTFORSK_SORT_VALUES = ['Nyeste først', 'Mest engasjement', 'Snart votering'] as const;
+type UtforskSort = (typeof UTFORSK_SORT_VALUES)[number];
 
-const DEFAULT_UTFORSK_FILTERS: UtforskFilters = {
-  searchQuery: '',
-  selectedCategory: 'Alle kategorier',
-  selectedStatus: 'Alle statuser',
-  selectedSakKind: 'Alle sakstyper',
-  selectedAiLabels: [],
-  sortBy: 'Nyeste først',
-};
+const UTFORSK_DEFAULT_STATUS = 'Alle statuser';
+const UTFORSK_DEFAULT_SAK_KIND = 'Alle sakstyper';
+const UTFORSK_DEFAULT_SORT: UtforskSort = 'Nyeste først';
 
-function isUtforskFilters(value: unknown): value is UtforskFilters {
-  if (!value || typeof value !== 'object') return false;
-  const v = value as Partial<UtforskFilters>;
-  return (
-    typeof v.searchQuery === 'string' &&
-    typeof v.selectedCategory === 'string' &&
-    typeof v.selectedStatus === 'string' &&
-    typeof v.selectedSakKind === 'string' &&
-    typeof v.sortBy === 'string' &&
-    (v.selectedAiLabels === undefined || Array.isArray(v.selectedAiLabels))
-  );
+function isUtforskSort(value: unknown): value is UtforskSort {
+  return typeof value === 'string' && (UTFORSK_SORT_VALUES as readonly string[]).includes(value);
+}
+
+/** Legacy blob in `folkets:utforsk:filters` — only `sortBy` is migrated. */
+function readLegacyUtforskSort(): UtforskSort | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(PREFERENCE_KEYS.utforsk.filters);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { sortBy?: unknown };
+    localStorage.removeItem(PREFERENCE_KEYS.utforsk.filters);
+    return isUtforskSort(parsed.sortBy) ? parsed.sortBy : null;
+  } catch {
+    return null;
+  }
 }
 
 export default function ExploreClient({
@@ -104,50 +98,59 @@ export default function ExploreClient({
   const [userStances, setUserStances] = useState<Record<string, IssueStance>>({});
   const [stanceHistoryLoaded, setStanceHistoryLoaded] = useState(false);
 
-  const [filters, setFilters] = usePersistedState(
-    PREFERENCE_KEYS.utforsk.filters,
-    DEFAULT_UTFORSK_FILTERS,
-    isUtforskFilters
+  const [sortBy, setSortByPersisted] = usePersistedState(
+    PREFERENCE_KEYS.utforsk.sort,
+    UTFORSK_DEFAULT_SORT,
+    isUtforskSort,
   );
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState(UTFORSK_DEFAULT_STATUS);
+  const [selectedSakKind, setSelectedSakKind] = useState(UTFORSK_DEFAULT_SAK_KIND);
+  const [selectedAiLabels, setSelectedAiLabels] = useState<string[]>([]);
 
   const displayedUserStances = user ? userStances : {};
-  const { searchQuery, selectedCategory, selectedStatus, selectedSakKind, selectedAiLabels, sortBy } = filters;
-  const activeAiLabels = useMemo(() => selectedAiLabels ?? [], [selectedAiLabels]);
+  const activeAiLabels = selectedAiLabels;
   const firstOpenIssue = issues.find((issue) => issue.votingOpen && issue.status !== 'closed');
 
-  // Track if user has interacted with filters this session (excluding searchQuery)
-  const [userTouchedFilters, setUserTouchedFilters] = useState(false);
-  const filtersResetRef = useRef(false);
+  const legacySortMigratedRef = useRef(false);
 
-  const setSelectedCategory = (selectedCategory: string) => {
-    setUserTouchedFilters(true);
-    setFilters((prev) => ({ ...prev, selectedCategory }));
+  const resetUtforskFilters = useCallback(() => {
+    setSearchQuery('');
+    setSelectedStatus(UTFORSK_DEFAULT_STATUS);
+    setSelectedSakKind(UTFORSK_DEFAULT_SAK_KIND);
+    setSelectedAiLabels([]);
+    setSortByPersisted(UTFORSK_DEFAULT_SORT);
+  }, [setSortByPersisted]);
+
+  const hasActiveUtforskFilters =
+    searchQuery.trim() !== '' ||
+    selectedStatus !== UTFORSK_DEFAULT_STATUS ||
+    selectedSakKind !== UTFORSK_DEFAULT_SAK_KIND ||
+    activeAiLabels.length > 0 ||
+    sortBy !== UTFORSK_DEFAULT_SORT;
+
+  useEffect(() => {
+    if (!isMounted || legacySortMigratedRef.current) return;
+    legacySortMigratedRef.current = true;
+    const legacySort = readLegacyUtforskSort();
+    if (legacySort) setSortByPersisted(legacySort);
+  }, [isMounted, setSortByPersisted]);
+
+  const setSelectedStatusFilter = (status: string) => {
+    setSelectedStatus(status);
   };
-  const setSelectedStatus = (selectedStatus: string) => {
-    setUserTouchedFilters(true);
-    setFilters((prev) => ({ ...prev, selectedStatus }));
+  const setSelectedSakKindFilter = (sakKind: string) => {
+    setSelectedSakKind(sakKind);
   };
-  const setSelectedSakKind = (selectedSakKind: string) => {
-    setUserTouchedFilters(true);
-    setFilters((prev) => ({ ...prev, selectedSakKind }));
-  };
-  const setSortBy = (sortBy: string) => {
-    setUserTouchedFilters(true);
-    setFilters((prev) => ({ ...prev, sortBy }));
+  const setSortBy = (next: string) => {
+    if (isUtforskSort(next)) setSortByPersisted(next);
   };
 
   const toggleAiLabel = (label: string) => {
-    setUserTouchedFilters(true);
-    setFilters((prev) => {
-      const current = prev.selectedAiLabels ?? [];
-      const next = current.includes(label)
-        ? current.filter((l) => l !== label)
-        : [...current, label];
-      return { ...prev, selectedAiLabels: next };
-    });
+    setSelectedAiLabels((current) =>
+      current.includes(label) ? current.filter((l) => l !== label) : [...current, label],
+    );
   };
-
-  const setSearchQuery = (searchQuery: string) => setFilters((prev) => ({ ...prev, searchQuery }));
 
   // Compute displayed issues based on current filters
   const computeDisplayedIssues = useCallback(() => {
@@ -202,15 +205,8 @@ export default function ExploreClient({
   const [visibleCount, setVisibleCount] = useState(ISSUE_PAGE_SIZE);
   const filterKey = useMemo(
     () =>
-      JSON.stringify([
-        searchQuery,
-        selectedCategory,
-        selectedStatus,
-        selectedSakKind,
-        sortBy,
-        activeAiLabels,
-      ]),
-    [searchQuery, selectedCategory, selectedStatus, selectedSakKind, sortBy, activeAiLabels],
+      JSON.stringify([searchQuery, selectedStatus, selectedSakKind, sortBy, activeAiLabels]),
+    [searchQuery, selectedStatus, selectedSakKind, sortBy, activeAiLabels],
   );
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
   if (prevFilterKey !== filterKey) {
@@ -220,30 +216,6 @@ export default function ExploreClient({
   const visibleIssues = displayedIssues.slice(0, visibleCount);
   const hasMoreIssues = displayedIssues.length > visibleIssues.length;
   const listScopeFiltered = displayedIssues.length !== issues.length;
-
-  // On first mount, if persisted filters (from storage) yield 0 results but issues exist
-  // and user hasn't touched filters this session, reset non-search filters to defaults once
-  useEffect(() => {
-    if (!isMounted) return;
-    if (filtersResetRef.current) return;
-    filtersResetRef.current = true;
-    const allDefaultFilters =
-      searchQuery === '' &&
-      selectedCategory === 'Alle kategorier' &&
-      selectedStatus === 'Alle statuser' &&
-      selectedSakKind === 'Alle sakstyper' &&
-      activeAiLabels.length === 0;
-    if (displayedIssues.length === 0 && issues.length > 0 && !allDefaultFilters && !userTouchedFilters) {
-      setFilters((prev) => ({
-        ...prev,
-        selectedCategory: 'Alle kategorier',
-        selectedStatus: 'Alle statuser',
-        selectedSakKind: 'Alle sakstyper',
-        selectedAiLabels: [],
-        sortBy: 'Nyeste først',
-      }));
-    }
-  }, [isMounted, searchQuery, selectedCategory, selectedStatus, selectedSakKind, activeAiLabels, displayedIssues.length, issues.length, userTouchedFilters, setFilters]);
 
   useEffect(() => {
     if (!user) return;
@@ -281,7 +253,7 @@ export default function ExploreClient({
         { value: 'Under behandling', label: 'Under behandling' },
         { value: 'Ferdigbehandlet / Historikk', label: 'Historikk (Ferdigbehandlet)' },
       ],
-      onChange: setSelectedStatus,
+      onChange: setSelectedStatusFilter,
     },
     {
       id: 'sakkind',
@@ -293,7 +265,7 @@ export default function ExploreClient({
         { value: 'Representantforslag', label: 'Representantforslag' },
         { value: 'Andre', label: 'Andre' },
       ],
-      onChange: setSelectedSakKind,
+      onChange: setSelectedSakKindFilter,
     },
   ];
 
@@ -364,17 +336,29 @@ export default function ExploreClient({
 
       <SectionSettle>
         <SurfaceCard className="space-y-3 p-4">
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Search className="h-5 w-5 text-muted-foreground" />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative min-w-0 flex-1">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <Search className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={dashboardSearchClass()}
+                placeholder="Søk i saker"
+                autoComplete="off"
+              />
             </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={dashboardSearchClass()}
-              placeholder="Søk i saker"
-            />
+            {hasActiveUtforskFilters ? (
+              <button
+                type="button"
+                onClick={resetUtforskFilters}
+                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/50 px-4 text-sm font-semibold text-foreground hover:bg-muted"
+              >
+                Nullstill
+              </button>
+            ) : null}
           </div>
           <FilterTokenBar tokens={filterTokens} aria-label="Filtrer saker" />
         </SurfaceCard>
@@ -391,7 +375,7 @@ export default function ExploreClient({
               )}
               selected={activeAiLabels}
               onToggle={toggleAiLabel}
-              onClear={() => setFilters((prev) => ({ ...prev, selectedAiLabels: [] }))}
+              onClear={() => setSelectedAiLabels([])}
             />
             {popularLabels.length > LABEL_CHIP_LIMIT ? (
               <button
@@ -454,10 +438,10 @@ export default function ExploreClient({
               action={
                 <button
                   type="button"
-                  onClick={() => setFilters(DEFAULT_UTFORSK_FILTERS)}
+                  onClick={resetUtforskFilters}
                   className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
                 >
-                  Nullstill filtre
+                  Nullstill
                 </button>
               }
             />
