@@ -53,8 +53,16 @@ export function parseStortingetDate(raw: string | undefined): Date | null {
   return d;
 }
 
+/** Norway has one timezone; render every hearing date consistently on server and client. */
+const OSLO_TIME_ZONE = 'Europe/Oslo';
+
 export function formatDateNb(date: Date): string {
-  return date.toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' });
+  return date.toLocaleDateString('nb-NO', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: OSLO_TIME_ZONE,
+  });
 }
 
 export function formatStortingetDate(raw: string | undefined): string | null {
@@ -72,6 +80,7 @@ export function formatStortingetDateTime(raw: string | undefined): string | null
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: OSLO_TIME_ZONE,
   });
 }
 
@@ -177,11 +186,23 @@ export function getHoringStatusBadgeClass(kind: HoringStatusKind): string {
   }
 }
 
+/** Calendar-day number (days since epoch) of a moment's date in Europe/Oslo. */
+function osloDayNumber(date: Date): number {
+  const formatted = new Intl.DateTimeFormat('en-CA', {
+    timeZone: OSLO_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+  const [year, month, day] = formatted.split('-').map((part) => Number.parseInt(part, 10));
+  return Math.round(Date.UTC(year, month - 1, day) / 86_400_000);
+}
+
+/** Whole calendar days (in Europe/Oslo) until the deadline. Today = 0. */
 export function getDaysUntilHoringDeadline(hearing: StortingetHoring): number | null {
   const deadline = getHoringInnspillDeadline(hearing);
   if (!deadline) return null;
-  const diffMs = deadline.getTime() - Date.now();
-  return Math.ceil(diffMs / 86_400_000);
+  return osloDayNumber(deadline) - osloDayNumber(new Date());
 }
 
 export function formatHoringDeadlineSummary(hearing: StortingetHoring): string {
@@ -213,7 +234,51 @@ export function formatHoringDeadlineSummary(hearing: StortingetHoring): string {
 
 export function normalizeStortingetUrl(url: string | undefined): string | null {
   if (!url) return null;
-  return url.startsWith('//') ? `https:${url}` : url;
+  if (url.startsWith('//')) return `https:${url}`;
+  if (url.startsWith('http://')) return `https://${url.slice('http://'.length)}`;
+  return url;
+}
+
+/** Human-readable host for a link label, so we never say "På stortinget.no" for another site. */
+export function getLinkHostLabel(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Stortinget sometimes points `sak_publikasjon` at innstillinger that are not
+ * published yet (404). Verify with a cheap HEAD request (cached 1h) before we
+ * render the link; callers must fall back to the case page link.
+ */
+export async function isPublicationLinkReachable(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, {
+      method: 'HEAD',
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(4_000),
+    });
+    if (res.ok) return true;
+    if (res.status === 405 || res.status === 501) {
+      const fallback = await fetch(url, {
+        headers: { Range: 'bytes=0-0' },
+        next: { revalidate: 3600 },
+        signal: AbortSignal.timeout(4_000),
+      });
+      return fallback.ok || fallback.status === 206;
+    }
+    return false;
+  } catch {
+    // Network trouble: keep the link rather than hide it on a flaky connection.
+    return true;
+  }
+}
+
+/** Human-readable Stortinget case page (always published, unlike publication links). */
+export function getStortingetSakUrl(sakId: string | number): string {
+  return `https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${encodeURIComponent(String(sakId))}`;
 }
 
 export function findHoringerForSak(hearings: StortingetHoring[], sakId: string): StortingetHoring[] {

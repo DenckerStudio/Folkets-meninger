@@ -1,4 +1,5 @@
 import { ALIGNMENT_MIN_FOLK_VOTES } from '@/lib/alignment/types';
+import { DATA_CONTROLLER, formatDataControllerBlock } from '@/lib/legal/controller';
 import { STANCE_AGGREGATE_DISCLOSURE } from '@/lib/copy/stance-privacy';
 import { GOVERNMENT_STATS_MIN_VOTES } from '@/lib/government-stats/snapshot';
 import {
@@ -59,17 +60,17 @@ export const OM_DATA_SOURCES = [
   {
     label: 'Saker og voteringer',
     href: `${STORTINGET_DATA_API}/eksport/saker?format=json`,
-    note: 'Liste og detaljer synkroniseres til appen (lib/stortinget-sync.ts).',
+    note: 'Sakslister og detaljer hentes fra Stortingets åpne API og holdes oppdatert i appen.',
   },
   {
     label: 'Høringer',
     href: `${STORTINGET_DATA_API}/eksport/horinger?format=json`,
-    note: 'Eksporteres med timebasert cache (lib/stortinget-horinger.ts).',
+    note: 'Høringer hentes fra Stortingets åpne API og oppdateres jevnlig.',
   },
   {
     label: 'Offisielle dokumenter',
     href: 'https://www.stortinget.no/no/Saker-og-publikasjoner/',
-    note: 'Lenker og HTML-visning der Stortinget publiserer dem.',
+    note: 'Lenker og dokumentvisning der Stortinget publiserer dem.',
   },
 ] as const;
 
@@ -112,13 +113,12 @@ export const OM_FAQ = [
   {
     id: 'hvem',
     question: 'Hvem står bak Folkets Meninger?',
-    answer:
-      'Folkets Meninger er en uavhengig plattform (samme formulering som i offentlig statistikk i appen). Kontakt oss via innspill-skjemaet eller kontakt@folkets-meninger.no hvis du vil vite mer.',
+    answer: `Folkets Meninger drives av ${formatDataControllerBlock() ?? 'Dencker (enkeltpersonforetak), org.nr. 934538498, Ileveien 10, 1407 Vinterbro'}. Vi er ikke knyttet til Regjeringen eller Stortinget. Kontakt oss via innspill-skjemaet eller ${DATA_CONTROLLER.privacyEmail} hvis du vil vite mer.`,
   },
   {
     id: 'finansiering',
     question: 'Hvordan finansieres dette?',
-    answer: `Grunnfunksjonene er gratis. Valgfritt Stemme+ (${STEMME_PLUS_MONTHLY_PRICE_NOK} kr/mnd via Stripe når det er konfigurert) gir støttemerke, rikere varsler og chat med egen LLM-nøkkel. ${STEMME_PLUS_NON_INFLUENCE_NOTE}`,
+    answer: `Grunnfunksjonene er gratis. Valgfritt Stemme+ (${STEMME_PLUS_MONTHLY_PRICE_NOK} kr/mnd når betaling er aktivert) gir støttemerke, rikere varsler og chat med din egen språkmodellnøkkel. ${STEMME_PLUS_NON_INFLUENCE_NOTE}`,
   },
 ] as const;
 

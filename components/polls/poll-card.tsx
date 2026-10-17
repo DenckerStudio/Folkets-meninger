@@ -25,7 +25,7 @@ export function PollCard({ poll, totals }: PollCardProps) {
     <article className="relative rounded-2xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
       <Link
         href={href}
-        className="absolute inset-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+        className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
         aria-label={`Åpne avstemning: ${title}`}
       />
       <div className="relative flex flex-wrap items-center gap-2 text-xs font-medium">

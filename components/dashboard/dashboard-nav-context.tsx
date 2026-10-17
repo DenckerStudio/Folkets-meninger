@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { Menu, X } from 'lucide-react';
@@ -20,6 +20,16 @@ const DashboardNavContext = createContext<DashboardNavContextValue | null>(null)
 
 const PANEL_EASE = [0.32, 0.72, 0, 1] as const;
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function getFocusableElements(root: HTMLElement | null): HTMLElement[] {
+  if (!root) return [];
+  return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    (el) => el.offsetParent !== null || el.getClientRects().length > 0,
+  );
+}
+
 export function useDashboardNav() {
   const ctx = useContext(DashboardNavContext);
   if (!ctx) {
@@ -35,12 +45,41 @@ export function useDashboardNavOptional() {
 function DashboardNavDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const reducedMotion = usePrefersReducedMotion();
   useBodyOverlayFlag(open);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
+
+    // Move focus into the dialog as soon as it opens.
+    closeButtonRef.current?.focus();
+
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      // Trap Tab inside the dialog.
+      const panel = panelRef.current;
+      if (!panel) return;
+      const items = getFocusableElements(panel);
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const inside = active != null && panel.contains(active);
+
+      if (e.shiftKey && (!inside || active === first)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (!inside || active === last)) {
+        e.preventDefault();
+        first.focus();
+      }
     };
+
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', onKeyDown);
@@ -72,6 +111,7 @@ function DashboardNavDrawer({ open, onClose }: { open: boolean; onClose: () => v
             transition={backdropTransition}
           />
           <motion.div
+            ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-label="Navigasjonsmeny"
@@ -84,6 +124,7 @@ function DashboardNavDrawer({ open, onClose }: { open: boolean; onClose: () => v
             <div className="flex items-center justify-between border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
               <span className="text-sm font-semibold tracking-tight text-foreground">Meny</span>
               <button
+                ref={closeButtonRef}
                 type="button"
                 onClick={onClose}
                 className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -110,11 +151,26 @@ export function DashboardNavProvider({ children }: { children: React.ReactNode }
   const [open, setOpen] = useState(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
   const toggle = useCallback(() => setOpen((v) => !v), []);
+  const wasOpenRef = useRef(false);
 
   if (pathname !== prevPathname) {
     setPrevPathname(pathname);
     setOpen(false);
   }
+
+  // Return focus to the header menu button whenever the drawer closes. The
+  // button is remounted on close, so resolve it by attribute rather than a
+  // context-held ref (the compiler lint rejects refs read through context).
+  useEffect(() => {
+    if (wasOpenRef.current && !open) {
+      const id = window.requestAnimationFrame(() => {
+        document.querySelector<HTMLButtonElement>('[data-nav-toggle]')?.focus();
+      });
+      return () => window.cancelAnimationFrame(id);
+    }
+    wasOpenRef.current = open;
+    return undefined;
+  }, [open]);
 
   return (
     <DashboardNavContext.Provider value={{ open, setOpen, toggle }}>
@@ -126,29 +182,21 @@ export function DashboardNavProvider({ children }: { children: React.ReactNode }
 
 export function DashboardNavMenuButton({ className }: { className?: string }) {
   const nav = useDashboardNavOptional();
-  const reducedMotion = usePrefersReducedMotion();
   if (!nav) return null;
+
+  // Hide the header toggle while the drawer is open so it never floats above
+  // the backdrop; the drawer owns the open/close affordance and focus.
+  if (nav.open) return null;
 
   return (
     <button
+      data-nav-toggle
       type="button"
       onClick={nav.toggle}
       className={cn('min-h-[44px] min-w-[44px]', className)}
-      aria-expanded={nav.open}
-      aria-label={nav.open ? 'Lukk meny' : 'Åpne meny'}
+      aria-label="Åpne meny"
     >
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.span
-          key={nav.open ? 'close' : 'open'}
-          className="inline-flex"
-          initial={reducedMotion ? false : { opacity: 0, scale: 0.92 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={reducedMotion ? undefined : { opacity: 0, scale: 0.92 }}
-          transition={reducedMotion ? { duration: 0 } : { duration: 0.15, ease: 'easeOut' }}
-        >
-          {nav.open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </motion.span>
-      </AnimatePresence>
+      <Menu className="h-5 w-5" />
     </button>
   );
 }

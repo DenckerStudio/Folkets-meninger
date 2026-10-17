@@ -28,6 +28,9 @@ function statusLabel(status: string, viewable: boolean): string {
   return 'Venter';
 }
 
+const STORTINGET_SAK_URL = 'https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=';
+const STATUS_REFRESH_TIMEOUT_MS = 6_000;
+
 function markDocumentRead(sakId: string, documentId: string) {
   void fetch(`/api/sak/${sakId}/knowledge`, {
     method: 'POST',
@@ -225,22 +228,27 @@ export function SakDocumentsSection({
   const [pendingTimedOut, setPendingTimedOut] = useState(false);
 
   const refreshStatuses = useCallback(async () => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), STATUS_REFRESH_TIMEOUT_MS);
     try {
-      const res = await fetch(`/api/sak/${sakId}/documents`);
+      const res = await fetch(`/api/sak/${sakId}/documents`, { signal: controller.signal });
       if (!res.ok) return;
       const json = (await res.json()) as { documents?: DocumentWithStatus[] };
       if (Array.isArray(json.documents)) {
         setDocuments(json.documents);
       }
     } catch {
-      // Keep initial server-rendered list on failure.
+      // Keep initial server-rendered list on failure or timeout.
+    } finally {
+      window.clearTimeout(timeout);
     }
   }, [sakId]);
 
   const hasPending = documents.some((doc) => doc.ingestStatus === 'pending');
 
   useEffect(() => {
-    if (!hasPending) return;
+    // Stop polling once we give up, so the page does not keep hitting the API forever.
+    if (!hasPending || pendingTimedOut) return;
 
     const timer = window.setInterval(() => {
       void refreshStatuses();
@@ -253,9 +261,30 @@ export function SakDocumentsSection({
       window.clearInterval(timer);
       window.clearTimeout(timeout);
     };
-  }, [hasPending, refreshStatuses]);
+  }, [hasPending, pendingTimedOut, refreshStatuses]);
 
-  if (documents.length === 0) return null;
+  if (documents.length === 0) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <FileText className="h-5 w-5 text-brand" />
+          <h2 className="text-lg font-bold text-foreground">Tilknyttede dokumenter</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Vi har ingen dokumentlenker for denne saken ennå.{' '}
+          <a
+            href={`${STORTINGET_SAK_URL}${sakId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-brand underline-offset-2 hover:underline"
+          >
+            Se saken på stortinget.no
+          </a>
+          .
+        </p>
+      </div>
+    );
+  }
 
   const groups = groupSakDocumentsByKind(documents);
 
@@ -284,7 +313,7 @@ export function SakDocumentsSection({
                       <span className="min-w-0 text-sm font-medium break-words text-foreground">{doc.title}</span>
                       <span className="shrink-0 text-xs text-muted-foreground">
                         {doc.ingestStatus === 'pending' && hasPending && pendingTimedOut
-                          ? 'Tok for lang tid'
+                          ? 'Se dokument'
                           : statusLabel(doc.ingestStatus, doc.viewable)}
                       </span>
                     </button>
@@ -294,6 +323,21 @@ export function SakDocumentsSection({
             </div>
           ))}
         </div>
+
+        {hasPending && pendingTimedOut ? (
+          <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+            Noen dokumenter bruker fortsatt lengre tid enn vanlig. Du kan åpne dem her, eller{' '}
+            <a
+              href={`${STORTINGET_SAK_URL}${sakId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-brand underline-offset-2 hover:underline"
+            >
+              se saken på stortinget.no
+            </a>
+            .
+          </p>
+        ) : null}
       </div>
 
       {activeDocument ? (

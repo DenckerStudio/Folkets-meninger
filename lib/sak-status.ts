@@ -10,21 +10,25 @@ type SakDetailStatusFields = {
   status?: number | null;
 };
 
-/** Stortinget list export can keep status=1 while detail has ferdigbehandlet=true. */
+/**
+ * Stortinget status codes (verified against detail exports):
+ *   1 = ferdigbehandlet (closed)
+ *   2 and 3 = under behandling (pending)
+ *
+ * `ferdigbehandlet` is the most reliable source. A fresh numeric list status is
+ * preferred over the cached DB string because list/detail exports can drift.
+ */
 export function resolveSakListStatus(input: {
   ferdigbehandlet?: boolean | null;
   numericStatus?: number | null;
   cachedStatus?: string | null;
 }): SakTreatmentStatus {
   if (input.ferdigbehandlet === true) return 'closed';
-  if (input.ferdigbehandlet === false) {
-    return input.numericStatus === 1 ? 'pending' : 'closed';
-  }
+  if (input.ferdigbehandlet === false) return 'pending';
+  if (input.numericStatus != null) return input.numericStatus === 1 ? 'closed' : 'pending';
   if (input.cachedStatus === 'closed') return 'closed';
-  if (input.numericStatus === 1) return 'pending';
-  if (input.numericStatus != null) return 'closed';
   if (input.cachedStatus === 'pending') return 'pending';
-  return 'closed';
+  return 'pending';
 }
 
 /** Prefer cached detail / DB column over list-export heuristics. */
@@ -48,16 +52,8 @@ export function resolveSakStatusFromSources(input: {
     input.numericStatus ??
     (typeof input.detailJson?.status === 'number' ? input.detailJson.status : null);
 
-  if (typeof effectiveFerdigbehandlet === 'boolean') {
-    return resolveSakListStatus({
-      ferdigbehandlet: effectiveFerdigbehandlet,
-      numericStatus,
-      cachedStatus: input.cachedStatus,
-    });
-  }
-
   return resolveSakListStatus({
-    ferdigbehandlet: inferFerdigbehandletFromListSak(input.listInnstilling ?? {}),
+    ferdigbehandlet: effectiveFerdigbehandlet,
     numericStatus,
     cachedStatus: input.cachedStatus,
   });
@@ -70,18 +66,6 @@ export function resolveSakTreatmentStatus(input: {
   cachedStatus?: string | null;
 }): SakTreatmentStatus {
   return resolveSakListStatus(input);
-}
-
-/** List export keeps status=1 for many finished saker; innstilling fields are a reliable hint. */
-export function inferFerdigbehandletFromListSak(sak: ListSakInnstillingFields): boolean | undefined {
-  if (
-    typeof sak.innstilling_id === 'number' &&
-    sak.innstilling_id > 0 &&
-    (sak.innstilling_kode === 1 || sak.innstilling_kode === 2)
-  ) {
-    return true;
-  }
-  return undefined;
 }
 
 export function getSakTreatmentLabel(status: SakTreatmentStatus): string {

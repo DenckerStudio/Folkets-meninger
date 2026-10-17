@@ -6,7 +6,7 @@ import {
   getSakKindLabel,
   type SakKind,
 } from './stortinget-sak-presentation';
-import { inferFerdigbehandletFromListSak, resolveSakListStatus, resolveSakStatusFromSources, type SakTreatmentStatus } from './sak-status';
+import { resolveSakListStatus, resolveSakStatusFromSources, type SakTreatmentStatus } from './sak-status';
 import { parseStortingetDotNetDateToISO, stortingetUrl, type StortingetFormat } from './stortinget-utils';
 import { STORTINGET_ACTIVE_SESSION_ID } from './stortinget-config';
 import { getParticipationTotalsBatch } from './issue-participation-totals';
@@ -20,6 +20,12 @@ const DB_LIST_LIMIT = 500;
 
 let memoryListCache: { items: SakListItem[]; expiresAt: number } | null = null;
 let rawSakerMemoryCache: { items: StortingetSak[]; expiresAt: number } | null = null;
+/**
+ * `getPopularSaker` returns a small subset. It must never write that subset into
+ * the shared list cache, or the full Utforsk list collapses to just those items
+ * for the whole TTL. Keep popular in its own slot.
+ */
+let popularMemoryCache: { items: SakListItem[]; expiresAt: number } | null = null;
 
 function readMemoryListCache(): SakListItem[] | null {
   if (!memoryListCache || memoryListCache.expiresAt <= Date.now()) {
@@ -31,6 +37,21 @@ function readMemoryListCache(): SakListItem[] | null {
 function writeMemoryListCache(items: SakListItem[]) {
   if (items.length === 0) return;
   memoryListCache = {
+    items,
+    expiresAt: Date.now() + MEMORY_CACHE_TTL_MS,
+  };
+}
+
+function readPopularMemoryCache(): SakListItem[] | null {
+  if (!popularMemoryCache || popularMemoryCache.expiresAt <= Date.now()) {
+    return null;
+  }
+  return popularMemoryCache.items;
+}
+
+function writePopularMemoryCache(items: SakListItem[]) {
+  if (items.length === 0) return;
+  popularMemoryCache = {
     items,
     expiresAt: Date.now() + MEMORY_CACHE_TTL_MS,
   };
@@ -82,7 +103,6 @@ export function mapStortingetSakToListItem(sak: StortingetSak, votes: SakVoteTot
     date: parseStortingetDotNetDateToISO(sak.sist_oppdatert_dato),
     votes,
     status: resolveSakListStatus({
-      ferdigbehandlet: inferFerdigbehandletFromListSak(sak),
       numericStatus: sak.status,
     }),
     stortingetNumericStatus: sak.status,
@@ -274,7 +294,6 @@ async function applyLiveListExportStatuses(saker: SakListItem[]): Promise<SakLis
       item.summary = presentation.summary;
       item.henvisning = presentation.henvisning;
       item.status = resolveSakListStatus({
-        ferdigbehandlet: inferFerdigbehandletFromListSak(raw),
         numericStatus: raw.status,
       });
     }
@@ -661,9 +680,16 @@ function sortPopularSaker(items: SakListItem[]): SakListItem[] {
  */
 export async function getPopularSaker(limit = 10): Promise<SakListItem[]> {
   const cappedLimit = Math.min(Math.max(limit, 1), 20);
+  const popularMemory = readPopularMemoryCache();
+  if (popularMemory?.length) {
+    return popularMemory.slice(0, cappedLimit);
+  }
+
   const memory = readMemoryListCache();
   if (memory?.length) {
-    return sortPopularSaker(memory).slice(0, cappedLimit);
+    const popular = sortPopularSaker(memory).slice(0, cappedLimit);
+    writePopularMemoryCache(popular);
+    return popular;
   }
 
   if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -675,7 +701,7 @@ export async function getPopularSaker(limit = 10): Promise<SakListItem[]> {
           rows.map((row) => mapDbRowToListItem(row, voteTotals[row.id] ?? EMPTY_VOTES)),
         ).slice(0, cappedLimit);
 
-        writeMemoryListCache(popular);
+        writePopularMemoryCache(popular);
         return popular;
       }
     } catch (error) {
@@ -685,7 +711,9 @@ export async function getPopularSaker(limit = 10): Promise<SakListItem[]> {
 
   try {
     const list = await getSakerWithCache({ preferDb: true });
-    return sortPopularSaker(list).slice(0, cappedLimit);
+    const popular = sortPopularSaker(list).slice(0, cappedLimit);
+    writePopularMemoryCache(popular);
+    return popular;
   } catch (error) {
     console.error('getPopularSaker fallback error:', error);
     return [];

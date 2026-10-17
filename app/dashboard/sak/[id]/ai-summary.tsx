@@ -179,7 +179,7 @@ export default function AiSummary({
             ) : null}
           </span>
         }
-        description="Generert fra saksdokumenter via lokal modell (Ollama/n8n). Ikke offisiell Stortinget-tekst."
+        description="Generert fra saksdokumenter av en språkmodell på våre egne servere. Ikke offisiell Stortinget-tekst."
         size="lg"
         footer={
           <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

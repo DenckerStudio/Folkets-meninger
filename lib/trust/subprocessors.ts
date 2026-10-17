@@ -42,15 +42,14 @@ export const TRUST_COOLIFY_STACK: SubprocessorRow[] = [
   {
     name: 'Ollama',
     purpose:
-      'Lokal LLM for saksammendrag (qwen3:4b-q4_K_M), systempoll-utkast (gemma4:e2b-it-qat) og embeddings (nomic-embed-text:v1.5).',
-    hosting: 'Self-hosted på Coolify — server i Norge (n8n kaller Ollama; ikke fra Next.js direkte).',
+      'Språkmodeller som kjører lokalt på våre servere for saksammendrag (qwen3), systempoll-utkast (gemma4) og søk i dokumenter (nomic-embed-text).',
+    hosting: 'Self-hosted via Coolify — server i Norge.',
     codeRef: 'workflows/n8n/ai-summary-backfill.workflow.ts, document-embeddings.workflow.ts',
   },
   {
     name: 'SearXNG',
-    purpose: 'Metasøk for Stemme+ chat (kildesøk utenfor Stortinget) via SEARXNG_BASE_URL.',
-    hosting:
-      'Self-hosted på Coolify (standard i kode: https://searxng.heyklever.app — kan overstyres i env).',
+    purpose: 'Kildesøk på nettet for Stemme+ chat.',
+    hosting: 'Self-hosted via Coolify — server i Norge.',
     codeRef: 'lib/chat/searxng.ts, .env.example',
   },
 ];
@@ -60,14 +59,14 @@ export const TRUST_THIRD_PARTY_PROVIDERS: SubprocessorRow[] = [
   {
     name: 'Cloudflare',
     purpose:
-      'Proxy/CDN for supabase.heyklever.app, n8n, Ollama og SearXNG (*.heyklever.app). Hoveddomenet www.folkets-meninger.no går ikke via Cloudflare.',
+      'Proxy og CDN foran våre interne tjenester (database, automatiserings- og modelltjenester). Hoveddomenet www.folkets-meninger.no går ikke via Cloudflare.',
     hosting: 'Cloudflare Inc. (globalt edge-nettverk; hovedkontor i USA).',
     codeRef: 'NEXT_PUBLIC_SUPABASE_URL, workflows/n8n/, lib/chat/searxng.ts',
   },
   {
     name: 'Stripe',
     purpose:
-      'Valgfritt abonnement Stemme+ (Checkout, kundeportal og webhooks) når STRIPE_* er konfigurert.',
+      'Valgfritt abonnement Stemme+ (betaling, kundeportal og kvitteringer) når betaling er aktivert.',
     hosting: 'Stripe (internasjonal betalingsplattform; typisk USA/EU avhengig av produkt og DPA).',
     codeRef: 'app/api/stemme-plus/, app/api/webhooks/stripe/, lib/stripe/',
   },
@@ -84,9 +83,9 @@ export const TRUST_THIRD_PARTY_PROVIDERS: SubprocessorRow[] = [
     codeRef: 'lib/stortinget*.ts',
   },
   {
-    name: 'SMTP-leverandør',
-    purpose: 'Velkomst- og varsel-e-post når SMTP_* env er satt.',
-    hosting: 'Avhenger av valgt SMTP_HOST (konfigureres i miljø; ikke hardkodet i repo).',
+    name: 'E-postleverandør',
+    purpose: 'Velkomst- og varsel-e-post når e-postvarsler er aktivert.',
+    hosting: 'Avhenger av valgt e-postleverandør.',
     codeRef: '.env.example, lib/email/',
   },
   {
@@ -105,7 +104,7 @@ export const TRUST_SUBPROCESSORS: SubprocessorRow[] = [
 ];
 
 export const TRUST_ANALYTICS_NOTE =
-  'Ingen tredjeparts analytics-bibliotek (f.eks. Google Analytics eller Vercel Analytics) finnes i package.json eller app/layout.tsx. Serverlogger kan finnes på Coolify-serveren i Norge.';
+  'Vi bruker ikke tredjeparts analyseverktøy (som Google Analytics). Det kan finnes tekniske serverlogger på vår egen server i Norge.';
 
 export const TRUST_VERCEL_NOTE =
-  'Produksjon kjører ikke på Vercel. Cron-jobs går via n8n (ikke Vercel Cron). Koden kan lese VERCEL_URL/VERCEL_ENV for delingslenker på eventuelle preview-bygg; det er ikke en produksjonstjeneste vi er avhengige av.';
+  'Produksjonen kjører på våre egne servere i Norge, ikke hos Vercel. Planlagte oppgaver styres av vårt eget automatiseringssystem.';

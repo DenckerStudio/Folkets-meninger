@@ -334,10 +334,7 @@ export function KnowledgeQuiz({ sakId, variant = 'default' }: { sakId: string; v
         </ol>
       ) : currentQuestion ? (
         <div className="mt-2">
-          <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-            {QUIZ_KIND_LABELS[currentQuestion.kind as KnowledgeQuizQuestionKind]}
-          </span>
-          <p className="mt-2 text-sm font-medium text-foreground">{currentQuestion.prompt}</p>
+          <p className="text-sm font-medium text-foreground">{currentQuestion.prompt}</p>
           <div className="mt-3 grid gap-2">
             {currentQuestion.options.map((option) => {
               const selected = answers[currentQuestion.id] === option.id;

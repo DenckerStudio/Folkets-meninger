@@ -143,12 +143,12 @@ export function LandingAbout() {
             <Cpu className="mt-0.5 h-6 w-6 shrink-0 text-[#00205b]" aria-hidden />
             <div className="space-y-3 text-sm leading-relaxed text-[#001433]/75">
               <p>
-                Saksammendrag og system-Reels genereres med self-hosted Ollama (n8n), ikke i nettleseren.
-                Modeller i drift inkluderer blant annet {summaryModels || 'se dokumentasjon'}.
+                Saksammendrag og system-Reels lages av språkmodeller som kjører på våre egne servere, ikke i
+                nettleseren din. Modellfamiliene vi bruker er blant annet {summaryModels || 'se dokumentasjon'}.
               </p>
               <p>
-                Sammendrag er merket «AI-generert» med lenker til Stortinget-dokumenter. Konsekvens-kalkulatoren
-                bruker dokumentutdrag og lagret sammendrag uten egen LLM i appen.
+                Sammendrag merkes «AI-generert» med lenker til Stortinget-dokumenter. Konsekvens-kalkulatoren
+                bygger på dokumentutdrag og lagret sammendrag uten å kalle en språkmodell.
               </p>
               <Link
                 href={OM_LINKS.omAi}

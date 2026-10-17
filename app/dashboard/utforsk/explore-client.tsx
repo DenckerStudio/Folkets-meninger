@@ -30,6 +30,8 @@ import type { SystemReelFeedItem } from '@/lib/polls/types';
 
 import { ISSUE_STANCE_LABELS, type IssueStance } from '@/lib/stances/types';
 
+const ISSUE_PAGE_SIZE = 24;
+
 function votingUrgency(issue: SakListItem): number {
   if (issue.votingOpen && issue.votingDaysLeft != null && issue.votingDaysLeft > 0) {
     return issue.votingDaysLeft;
@@ -93,7 +95,7 @@ export default function ExploreClient({
 
   const displayedUserStances = user ? userStances : {};
   const { searchQuery, selectedCategory, selectedStatus, selectedSakKind, selectedAiLabels, sortBy } = filters;
-  const activeAiLabels = selectedAiLabels ?? [];
+  const activeAiLabels = useMemo(() => selectedAiLabels ?? [], [selectedAiLabels]);
   const firstOpenIssue = issues.find((issue) => issue.votingOpen && issue.status !== 'closed');
 
   // Track if user has interacted with filters this session (excluding searchQuery)
@@ -161,6 +163,10 @@ export default function ExploreClient({
         return activeAiLabels.some((label) => labels.includes(label));
       });
     }
+    if (sortBy === 'Snart votering') {
+      // Only saker with a known upcoming voting deadline belong in this view.
+      result = result.filter((issue) => votingUrgency(issue) !== Number.POSITIVE_INFINITY);
+    }
     return [...result].sort((a, b) => {
       if (sortBy === 'Nyeste først') {
         return new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -176,6 +182,31 @@ export default function ExploreClient({
   }, [issues, selectedCategory, selectedStatus, selectedSakKind, searchQuery, activeAiLabels, sortBy, issueLabels]);
 
   const displayedIssues = computeDisplayedIssues();
+
+  // Reset "show more" pagination whenever the filter/sort combination changes,
+  // deriving it during render rather than via a setState-in-effect.
+  const visibleCountState = useState(ISSUE_PAGE_SIZE);
+  const [visibleCount, setVisibleCount] = visibleCountState;
+  const filterKey = useMemo(
+    () =>
+      JSON.stringify([
+        displayedIssues.length,
+        searchQuery,
+        selectedCategory,
+        selectedStatus,
+        selectedSakKind,
+        sortBy,
+        activeAiLabels,
+      ]),
+    [displayedIssues.length, searchQuery, selectedCategory, selectedStatus, selectedSakKind, sortBy, activeAiLabels],
+  );
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (prevFilterKey !== filterKey) {
+    setPrevFilterKey(filterKey);
+    setVisibleCount(ISSUE_PAGE_SIZE);
+  }
+  const visibleIssues = displayedIssues.slice(0, visibleCount);
+  const hasMoreIssues = displayedIssues.length > visibleIssues.length;
 
   // On first mount, if persisted filters (from storage) yield 0 results but issues exist
   // and user hasn't touched filters this session, reset non-search filters to defaults once
@@ -399,8 +430,12 @@ export default function ExploreClient({
         <div className="space-y-4">
           {displayedIssues.length === 0 ? (
             <EmptyState
-              title="Ingen saker matcher filteret"
-              description="Prøv et annet søk, status eller emne. Listen er tom til Stortinget-data matcher."
+              title={sortBy === 'Snart votering' ? 'Ingen saker med kjent votering' : 'Ingen saker matcher filteret'}
+              description={
+                sortBy === 'Snart votering'
+                  ? 'Stortinget har ikke publisert en framtidig votering for sakene som matcher filtrene dine ennå.'
+                  : 'Prøv et annet søk, status eller emne. Listen er tom til Stortinget-data matcher.'
+              }
               action={
                 <button
                   type="button"
@@ -413,7 +448,7 @@ export default function ExploreClient({
             />
           ) : (
             <MotionList className="space-y-4">
-            {displayedIssues.map((issue) => {
+            {visibleIssues.map((issue) => {
               const sakKindLabel = issue.sakKind
                 ? getSakKindLabel(issue.sakKind)
                 : null;
@@ -513,6 +548,20 @@ export default function ExploreClient({
             })}
             </MotionList>
           )}
+          {hasMoreIssues ? (
+            <div className="flex flex-col items-center gap-2 pt-2">
+              <p className="text-sm text-muted-foreground">
+                Viser {visibleIssues.length} av {displayedIssues.length} saker
+              </p>
+              <button
+                type="button"
+                onClick={() => setVisibleCount((count) => count + ISSUE_PAGE_SIZE)}
+                className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              >
+                Vis flere saker
+              </button>
+            </div>
+          ) : null}
         </div>
       </SectionSettle>
     </DashboardPage>

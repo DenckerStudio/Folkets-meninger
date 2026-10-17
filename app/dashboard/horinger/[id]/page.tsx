@@ -30,6 +30,9 @@ import {
   getHoringSubtitle,
   getHoringTitle,
   isHoringOpen,
+  getLinkHostLabel,
+  getStortingetSakUrl,
+  isPublicationLinkReachable,
   normalizeStortingetUrl,
 } from '@/lib/stortinget-horinger';
 import { resolveHearingCommentAuthor } from '@/lib/identity/public-identity';
@@ -98,11 +101,7 @@ async function getComments(stortingetHearingId: string) {
   return rows.map((c) => ({
     id: c.id,
     body: c.body,
-    createdAt: new Date(c.created_at).toLocaleDateString('nb-NO', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    }),
+    createdAt: formatDateNb(new Date(c.created_at)),
     author: resolveHearingCommentAuthor(authorDisplays.get(c.author_user_id) ?? null),
   }));
 }
@@ -125,6 +124,19 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
   const subtitle = getHoringSubtitle(hearing);
   const komite = hearing.komite?.navn ?? 'Ukjent komité';
   const saker = hearing.horing_sak_info_liste ?? [];
+  const relatedSakLinkChecks = await Promise.all(
+    saker.map(async (sak) => {
+      const key = String(sak.sak_id ?? sak.sak_tittel ?? '');
+      const pubUrl = normalizeStortingetUrl(sak.sak_publikasjon);
+      const reachable = pubUrl ? await isPublicationLinkReachable(pubUrl) : false;
+      return [
+        key,
+        reachable && pubUrl ? { url: pubUrl, host: getLinkHostLabel(pubUrl) } : null,
+      ] as const;
+    }),
+  );
+  const relatedSakLinkMap = new Map(relatedSakLinkChecks);
+  const stortingetHostLabel = getLinkHostLabel('https://www.stortinget.no/');
   const tidspunkter = hearing.horingstidspunkt_liste ?? [];
   const daysLeft = getDaysUntilHoringDeadline(hearing);
   const statusInfo = hearing.status_info_tekst?.trim();
@@ -241,7 +253,8 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
             <h2 className="text-sm font-semibold text-foreground mb-3">Relaterte saker</h2>
             <ul className="space-y-3">
               {saker.map((sak) => {
-                const pubUrl = normalizeStortingetUrl(sak.sak_publikasjon);
+                const link = relatedSakLinkMap.get(String(sak.sak_id ?? sak.sak_tittel ?? ''));
+                const stortingetUrl = sak.sak_id ? getStortingetSakUrl(sak.sak_id) : null;
                 return (
                   <li key={sak.sak_id ?? sak.sak_tittel} className="rounded-xl border border-border p-4">
                     <p className="font-medium text-foreground">{sak.sak_tittel ?? sak.sak_korttittel}</p>
@@ -257,17 +270,28 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
                           Se sak i Folkets Meninger
                         </Link>
                       )}
-                      {pubUrl && (
+                      {stortingetUrl && (
                         <a
-                          href={pubUrl}
+                          href={stortingetUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
                         >
-                          På stortinget.no
+                          {stortingetHostLabel ?? 'stortinget.no'}
                           <ExternalLink className="w-3.5 h-3.5" />
                         </a>
                       )}
+                      {link?.url ? (
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
+                        >
+                          {link.host ? `På ${link.host}` : 'Åpne publikasjon'}
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      ) : null}
                     </div>
                   </li>
                 );

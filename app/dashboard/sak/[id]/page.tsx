@@ -38,14 +38,14 @@ function formatEventDate(dateStr: string | null): string | null {
   const match = dateStr.match(/\/Date\((\d+)[+-]\d+\)\//);
   if (match && match[1]) {
     const d = new Date(parseInt(match[1], 10));
-    return d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Oslo' });
   }
   const parts = dateStr.split(' ')[0];
   if (/^\d{2}\.\d{2}\.\d{4}$/.test(parts)) {
     const [day, month, year] = parts.split('.');
     const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     if (!isNaN(d.getTime())) {
-      return d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' });
+      return d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Oslo' });
     }
   }
   return dateStr;
@@ -521,25 +521,23 @@ export default async function SakPage({
 
             <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:flex-wrap sm:gap-4">
               <a
+                href={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-brand transition-colors"
+              >
+                <ExternalLink className="mr-1.5 w-4 h-4" />
+                Kilde: stortinget.no (sak {sak.id})
+              </a>
+              <a
                 href={`https://data.stortinget.no/eksport/sak?sakid=${sak.id}&format=json`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-brand transition-colors"
               >
                 <ExternalLink className="mr-1.5 w-4 h-4" />
-                Kilde: data.stortinget.no (Sak ID: {sak.id})
+                Rådata (JSON)
               </a>
-              {henvisning ? (
-                <a
-                  href={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-brand transition-colors"
-                >
-                  <ExternalLink className="mr-1.5 w-4 h-4" />
-                  Se på stortinget.no
-                </a>
-              ) : null}
             </div>
           </div>
         }

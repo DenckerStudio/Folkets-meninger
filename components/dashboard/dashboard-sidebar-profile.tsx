@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { LogIn } from 'lucide-react';
 import { ProfileMenuDropdown } from '@/components/profile/profile-menu-dropdown';
 import { useAuth } from '@/hooks/use-auth';
@@ -22,7 +22,8 @@ function ProfileMenuFallback() {
 export function DashboardSidebarProfile({ onNavigate, variant = 'drawer' }: DashboardSidebarProfileProps) {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const loginHref = loginWithNext(routes.utforsk);
+  const pathname = usePathname();
+  const loginHref = loginWithNext(pathname || routes.utforsk);
 
   const handleSignOut = async () => {
     const { getBrowserSupabase } = await import('@/lib/supabase');

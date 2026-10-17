@@ -1,27 +1,34 @@
 import assert from 'node:assert/strict';
 import {
   getSakTreatmentLabel,
-  inferFerdigbehandletFromListSak,
   resolveSakListStatus,
   resolveSakStatusFromSources,
   resolveSakTreatmentStatus,
 } from './sak-status';
 
+// Stortinget status codes: 1 = ferdigbehandlet (closed), 2/3 = under behandling (pending).
 assert.equal(resolveSakListStatus({ ferdigbehandlet: true, numericStatus: 1 }), 'closed');
-assert.equal(resolveSakListStatus({ ferdigbehandlet: false, numericStatus: 2 }), 'closed');
+assert.equal(resolveSakListStatus({ ferdigbehandlet: true, numericStatus: 3 }), 'closed');
 assert.equal(resolveSakListStatus({ ferdigbehandlet: false, numericStatus: 1 }), 'pending');
-assert.equal(resolveSakListStatus({ numericStatus: 1 }), 'pending');
-assert.equal(resolveSakListStatus({ numericStatus: 2 }), 'closed');
+assert.equal(resolveSakListStatus({ ferdigbehandlet: false, numericStatus: 2 }), 'pending');
+assert.equal(resolveSakListStatus({ numericStatus: 1 }), 'closed');
+assert.equal(resolveSakListStatus({ numericStatus: 2 }), 'pending');
+assert.equal(resolveSakListStatus({ numericStatus: 3 }), 'pending');
+assert.equal(resolveSakListStatus({ cachedStatus: 'closed' }), 'closed');
+assert.equal(resolveSakListStatus({ cachedStatus: 'pending' }), 'pending');
+// Fresh list export wins over a stale cached DB string (sak 200461-style: list status=2).
+assert.equal(resolveSakListStatus({ cachedStatus: 'closed', numericStatus: 2 }), 'pending');
 assert.equal(resolveSakListStatus({ cachedStatus: 'closed', numericStatus: 1 }), 'closed');
-assert.equal(inferFerdigbehandletFromListSak({ innstilling_id: 1, innstilling_kode: 1 }), true);
-assert.equal(resolveSakTreatmentStatus({ numericStatus: 2 }), 'closed');
+// Unknown data defaults to "Under behandling" rather than wrongly claiming "Ferdigbehandlet".
+assert.equal(resolveSakListStatus({}), 'pending');
+assert.equal(resolveSakTreatmentStatus({ numericStatus: 2 }), 'pending');
 assert.equal(getSakTreatmentLabel('closed'), 'Ferdigbehandlet');
 assert.equal(getSakTreatmentLabel('pending'), 'Under behandling');
 
+// detail_json.ferdigbehandlet is trusted over the numeric status.
 assert.equal(
   resolveSakStatusFromSources({
     cachedStatus: 'closed',
-    listInnstilling: { innstilling_id: 1, innstilling_kode: 1 },
     detailJson: { ferdigbehandlet: false, status: 1 },
   }),
   'pending',
@@ -30,7 +37,6 @@ assert.equal(
   resolveSakStatusFromSources({
     cachedStatus: 'pending',
     numericStatus: 1,
-    listInnstilling: { innstilling_id: 1, innstilling_kode: 1 },
     detailJson: { ferdigbehandlet: true, status: 1 },
   }),
   'closed',
@@ -38,13 +44,12 @@ assert.equal(
 assert.equal(
   resolveSakStatusFromSources({
     cachedStatus: 'pending',
-    listInnstilling: { innstilling_id: 1, innstilling_kode: 1 },
-    numericStatus: 1,
+    numericStatus: 2,
   }),
-  'closed',
+  'pending',
 );
 
-// Stale cached detail_json (status=1) must not override fresh list export (status=3).
+// Live list status=3 (under behandling) with detail ferdigbehandlet=false stays pending.
 assert.equal(
   resolveSakStatusFromSources({
     ferdigbehandlet: false,
@@ -52,19 +57,7 @@ assert.equal(
     cachedStatus: 'pending',
     numericStatus: 3,
   }),
-  'closed',
-);
-
-// Sak 200391-style: detail ferdigbehandlet=false, stale status=1, live list status=3, no innstilling.
-assert.equal(
-  resolveSakStatusFromSources({
-    ferdigbehandlet: false,
-    detailJson: { ferdigbehandlet: false, status: 1 },
-    cachedStatus: 'pending',
-    numericStatus: 3,
-    listInnstilling: { innstilling_id: -1, innstilling_kode: 0 },
-  }),
-  'closed',
+  'pending',
 );
 
 // Stale DB column (false) must not override cached detail_json (true) — sak 200211.

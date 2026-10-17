@@ -470,7 +470,7 @@ const StoriesNavigation = forwardRef<HTMLDivElement, StoriesNavigationProps>(
           variant="secondary"
           size="icon"
           aria-label="Forrige Reel"
-          className="pointer-events-auto h-8 w-8 rounded-full bg-white/90 hover:bg-white"
+          className="pointer-events-auto h-8 w-8 rounded-full bg-white/90 text-[#00205b] hover:bg-white"
           onClick={(e) => {
             e.stopPropagation();
             prev();
@@ -482,7 +482,7 @@ const StoriesNavigation = forwardRef<HTMLDivElement, StoriesNavigationProps>(
           variant="secondary"
           size="icon"
           aria-label="Neste Reel"
-          className="pointer-events-auto h-8 w-8 rounded-full bg-white/90 hover:bg-white"
+          className="pointer-events-auto h-8 w-8 rounded-full bg-white/90 text-[#00205b] hover:bg-white"
           onClick={(e) => {
             e.stopPropagation();
             next();
@@ -512,7 +512,7 @@ const StoriesNavigationInline = forwardRef<HTMLDivElement, StoriesNavigationInli
           variant="secondary"
           size="icon"
           aria-label="Forrige Reel"
-          className="h-11 w-11 rounded-full bg-white/90 hover:bg-white"
+          className="h-11 w-11 rounded-full bg-white/90 text-[#00205b] hover:bg-white"
           onClick={(e) => {
             e.stopPropagation();
             prev();
@@ -524,7 +524,7 @@ const StoriesNavigationInline = forwardRef<HTMLDivElement, StoriesNavigationInli
           variant="secondary"
           size="icon"
           aria-label="Neste Reel"
-          className="h-11 w-11 rounded-full bg-white/90 hover:bg-white"
+          className="h-11 w-11 rounded-full bg-white/90 text-[#00205b] hover:bg-white"
           onClick={(e) => {
             e.stopPropagation();
             next();

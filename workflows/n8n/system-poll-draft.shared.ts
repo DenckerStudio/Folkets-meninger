@@ -143,6 +143,7 @@ Krav til spørsmålet:
 - ALDRI sitér sakstittel i anførselstegn som selve spørsmålet
 - Unngå semantisk duplikat av EXISTING_PROMPTS
 - 40–120 tegn, grammatisk korrekt bokmål
+- Spørsmålet MÅ ende med spørsmålstegn (?) — aldri punktum eller utropstegn
 - Må dekkes av kildeutdrag eller sammendrag (source_indices)
 - Nøytral: ingen «burde selvsagt» / partipreg
 - Ikke lag egne svaralternativer
@@ -183,7 +184,10 @@ const prompt = out.prompt || {};
 const research = out.research || {};
 
 const issueId = String(sak.issue_id || '').trim();
-const question = String(prompt.question || '').replace(/\\s+/g, ' ').trim();
+let question = String(prompt.question || '').replace(/\\s+/g, ' ').trim();
+if (question && !/[?!]$/.test(question)) {
+  question = (question.endsWith('.') || question.endsWith('!') ? question.slice(0, -1) : question) + '?';
+}
 const summary = String(research.summary || '').trim();
 const confidence = String(research.confidence || 'medium').toLowerCase();
 const pc = String(research.political_choice || '').trim();
