@@ -1,0 +1,383 @@
+{
+  "suite": "chat",
+  "variant": "main-testdb",
+  "ran_at": "2026-10-17T21:51:46.954Z",
+  "elapsed_ms": 29365,
+  "database_host": "qetckokgtzbpunbzslfp.supabase.co",
+  "generate": false,
+  "metrics": {
+    "cases": 40,
+    "sak_recall_at_8": 0.029,
+    "sak_mrr": 0.029,
+    "chunk_recall_at_8": null,
+    "context_fact_coverage": 0.026
+  },
+  "rows": [
+    {
+      "id": "chat-01",
+      "kategori": "sak",
+      "sak_recall_at_8": 1,
+      "sak_mrr": 1,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0.6666666666666666,
+      "retrieved_sak_ids": [
+        "200365"
+      ]
+    },
+    {
+      "id": "chat-02",
+      "kategori": "sak",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-03",
+      "kategori": "sak",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-04",
+      "kategori": "sak",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-05",
+      "kategori": "sak",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-06",
+      "kategori": "sak",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-07",
+      "kategori": "sak",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-08",
+      "kategori": "sak",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": [
+        "200365"
+      ]
+    },
+    {
+      "id": "chat-09",
+      "kategori": "sak",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-10",
+      "kategori": "sak",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-11",
+      "kategori": "sak",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-12",
+      "kategori": "sak",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-13",
+      "kategori": "sak",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-14",
+      "kategori": "sak",
+      "sak_recall_at_8": null,
+      "sak_mrr": null,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-15",
+      "kategori": "sak",
+      "sak_recall_at_8": null,
+      "sak_mrr": null,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0.25,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-16",
+      "kategori": "tema",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-17",
+      "kategori": "tema",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-18",
+      "kategori": "tema",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-19",
+      "kategori": "tema",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-20",
+      "kategori": "tema",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-21",
+      "kategori": "tema",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-22",
+      "kategori": "tema",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-23",
+      "kategori": "tema",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-24",
+      "kategori": "tema",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-25",
+      "kategori": "tema",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-26",
+      "kategori": "høring",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-27",
+      "kategori": "høring",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-28",
+      "kategori": "høring",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-29",
+      "kategori": "høring",
+      "sak_recall_at_8": null,
+      "sak_mrr": null,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-30",
+      "kategori": "høring",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-31",
+      "kategori": "votering",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-32",
+      "kategori": "votering",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-33",
+      "kategori": "votering",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-34",
+      "kategori": "votering",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-35",
+      "kategori": "votering",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": 0,
+      "retrieved_sak_ids": [
+        "local-demo-sak"
+      ]
+    },
+    {
+      "id": "chat-36",
+      "kategori": "felle",
+      "sak_recall_at_8": null,
+      "sak_mrr": null,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": null,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-37",
+      "kategori": "felle",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": null,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-38",
+      "kategori": "felle",
+      "sak_recall_at_8": null,
+      "sak_mrr": null,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": null,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-39",
+      "kategori": "felle",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": null,
+      "retrieved_sak_ids": []
+    },
+    {
+      "id": "chat-40",
+      "kategori": "felle",
+      "sak_recall_at_8": 0,
+      "sak_mrr": 0,
+      "chunk_recall_at_8": null,
+      "context_fact_coverage": null,
+      "retrieved_sak_ids": []
+    }
+  ]
+}

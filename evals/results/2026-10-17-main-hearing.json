@@ -1,0 +1,119 @@
+{
+  "suite": "hearing",
+  "variant": "main",
+  "ran_at": "2026-10-17T21:51:57.924Z",
+  "elapsed_ms": 2512,
+  "source": "data.stortinget.no (live, via lib/chat/stortinget-tools collectHearingsForSak)",
+  "metrics": {
+    "cases": 10,
+    "found": 1,
+    "frist_ok": 1,
+    "komite_ok": 1,
+    "tema_ok": 1,
+    "key_fact_coverage": 1,
+    "ai_hearing_summaries": 0,
+    "ai_hearing_summaries_note": "Høringssammendrag finnes ikke i dag (plan P9/4.3)."
+  },
+  "rows": [
+    {
+      "id": "hor-01",
+      "horing_id": "10005912",
+      "found": true,
+      "frist_ok": true,
+      "komite_ok": true,
+      "tema_ok": true,
+      "innspill_url": "https://www.stortinget.no/no/Hva-skjer-pa-Stortinget/Horing/skriv-skriftlig-innspill/?h=10005912",
+      "error": null
+    },
+    {
+      "id": "hor-02",
+      "horing_id": "10005914",
+      "found": true,
+      "frist_ok": true,
+      "komite_ok": true,
+      "tema_ok": true,
+      "innspill_url": "https://www.stortinget.no/no/Hva-skjer-pa-Stortinget/Horing/skriv-skriftlig-innspill/?h=10005914",
+      "error": null
+    },
+    {
+      "id": "hor-03",
+      "horing_id": "10005952",
+      "found": true,
+      "frist_ok": true,
+      "komite_ok": true,
+      "tema_ok": true,
+      "innspill_url": "https://www.stortinget.no/no/Hva-skjer-pa-Stortinget/Horing/skriv-skriftlig-innspill/?h=10005952",
+      "error": null
+    },
+    {
+      "id": "hor-04",
+      "horing_id": "10005956",
+      "found": true,
+      "frist_ok": true,
+      "komite_ok": true,
+      "tema_ok": true,
+      "innspill_url": "https://www.stortinget.no/no/Hva-skjer-pa-Stortinget/Horing/skriv-skriftlig-innspill/?h=10005956",
+      "error": null
+    },
+    {
+      "id": "hor-05",
+      "horing_id": "10005962",
+      "found": true,
+      "frist_ok": true,
+      "komite_ok": true,
+      "tema_ok": true,
+      "innspill_url": "https://www.stortinget.no/no/Hva-skjer-pa-Stortinget/Horing/skriv-skriftlig-innspill/?h=10005962",
+      "error": null
+    },
+    {
+      "id": "hor-06",
+      "horing_id": "10005974",
+      "found": true,
+      "frist_ok": true,
+      "komite_ok": true,
+      "tema_ok": true,
+      "innspill_url": "https://www.stortinget.no/no/Hva-skjer-pa-Stortinget/Horing/skriv-skriftlig-innspill/?h=10005974",
+      "error": null
+    },
+    {
+      "id": "hor-07",
+      "horing_id": "10005979",
+      "found": true,
+      "frist_ok": true,
+      "komite_ok": true,
+      "tema_ok": true,
+      "innspill_url": "https://www.stortinget.no/no/Hva-skjer-pa-Stortinget/Horing/skriv-skriftlig-innspill/?h=10005979",
+      "error": null
+    },
+    {
+      "id": "hor-08",
+      "horing_id": "10005983",
+      "found": true,
+      "frist_ok": true,
+      "komite_ok": true,
+      "tema_ok": true,
+      "innspill_url": "https://www.stortinget.no/no/Hva-skjer-pa-Stortinget/Horing/skriv-skriftlig-innspill/?h=10005983",
+      "error": null
+    },
+    {
+      "id": "hor-09",
+      "horing_id": "10005951",
+      "found": true,
+      "frist_ok": true,
+      "komite_ok": true,
+      "tema_ok": true,
+      "innspill_url": "https://www.stortinget.no/no/Hva-skjer-pa-Stortinget/Horing/skriv-skriftlig-innspill/?h=10005951",
+      "error": null
+    },
+    {
+      "id": "hor-10",
+      "horing_id": "10005945",
+      "found": true,
+      "frist_ok": true,
+      "komite_ok": true,
+      "tema_ok": true,
+      "innspill_url": "https://www.stortinget.no/no/Hva-skjer-pa-Stortinget/Horing/skriv-skriftlig-innspill/?h=10005945",
+      "error": null
+    }
+  ]
+}

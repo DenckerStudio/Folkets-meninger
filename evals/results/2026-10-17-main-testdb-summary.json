@@ -1,0 +1,162 @@
+{
+  "suite": "summary",
+  "variant": "main-testdb",
+  "ran_at": "2026-10-17T21:51:53.738Z",
+  "elapsed_ms": 5197,
+  "database_host": "qetckokgtzbpunbzslfp.supabase.co",
+  "metrics": {
+    "cases": 20,
+    "with_summary": 1,
+    "fact_coverage": 0.4,
+    "summaries_with_hallucinated_numbers": 0,
+    "summaries_with_danish_forms": 0,
+    "valid_length": 1,
+    "faithfulness": null,
+    "faithfulness_note": "Krever LLM-dommer (åpent spørsmål 7 i planen); ikke målt."
+  },
+  "rows": [
+    {
+      "id": "sak-01",
+      "sak_id": "200331",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-02",
+      "sak_id": "200315",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-03",
+      "sak_id": "200313",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-04",
+      "sak_id": "200330",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-05",
+      "sak_id": "200335",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-06",
+      "sak_id": "200350",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-07",
+      "sak_id": "200351",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-08",
+      "sak_id": "200370",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-09",
+      "sak_id": "200375",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-10",
+      "sak_id": "200063",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-11",
+      "sak_id": "200084",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-12",
+      "sak_id": "200155",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-13",
+      "sak_id": "200112",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-14",
+      "sak_id": "200211",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-15",
+      "sak_id": "200365",
+      "has_summary": true,
+      "valid_length": true,
+      "fact_coverage": 0.4,
+      "hallucinated_numbers": [],
+      "danish_hits": [],
+      "chunks": 5
+    },
+    {
+      "id": "sak-16",
+      "sak_id": "200363",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-17",
+      "sak_id": "200366",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-18",
+      "sak_id": "200321",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-19",
+      "sak_id": "200279",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    },
+    {
+      "id": "sak-20",
+      "sak_id": "200301",
+      "has_summary": false,
+      "issue_in_db": false,
+      "chunks": 0
+    }
+  ]
+}
