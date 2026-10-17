@@ -53,7 +53,7 @@ export function ProfilePrivacy({ userId }: ProfilePrivacyProps) {
 
       <ProfileCard
         title="Slett konto og data"
-        description="Etter GDPR kan du be om at alt om deg slettes."
+        description="I tråd med norsk lov og GDPR har du rett til å bli glemt."
       >
         <div className="flex flex-col gap-4 rounded-xl border border-border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex gap-3">
