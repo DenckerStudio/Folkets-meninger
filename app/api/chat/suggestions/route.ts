@@ -8,6 +8,7 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getUserStanceHistory, getUserStanceSignals } from '@/lib/stances/service';
 import { requireStemmePlus } from '@/lib/stemme-plus/entitlement';
+import { fetchStortingetHoringById, getHoringTitle } from '@/lib/stortinget-horinger';
 import { getPolitikereOversikt } from '@/lib/stortinget';
 
 export const dynamic = 'force-dynamic';
@@ -35,6 +36,21 @@ async function sakTitle(issueId: string | null): Promise<string | null> {
     return typeof data?.title === 'string' && data.title.trim() ? data.title.trim() : null;
   } catch {
     return null;
+  }
+}
+
+/** Hearing title and first linked sak, so hearing prompts can use sak tools. */
+async function hearingContext(id: string): Promise<{ title: string | null; issueId: string | null }> {
+  try {
+    const hearing = await fetchStortingetHoringById(id);
+    if (!hearing) return { title: null, issueId: null };
+    const sakId = hearing.horing_sak_info_liste?.find((sak) => sak.sak_id != null)?.sak_id;
+    return {
+      title: getHoringTitle(hearing).trim() || null,
+      issueId: sakId != null ? String(sakId) : null,
+    };
+  } catch {
+    return { title: null, issueId: null };
   }
 }
 
@@ -175,12 +191,17 @@ export async function GET(request: Request) {
     issueId = issueId ?? poll?.stortingetIssueId ?? null;
   } else if (view.kind === 'politiker') {
     title = await politikerName(view.id);
+  } else if (view.kind === 'horing' && view.id) {
+    const hearing = await hearingContext(view.id);
+    title = hearing.title;
+    issueId = issueId ?? hearing.issueId;
   }
 
   const context: ChatSuggestionContext = {
     kind: view.kind,
     title,
     issueId,
+    entityId: view.id,
   };
 
   const signals = await collectSignals(gate.userId);

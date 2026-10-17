@@ -184,10 +184,10 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
   const fallbackSuggestions = useMemo(
     () =>
       buildChatSuggestions({
-        context: { kind: view.kind, title: issueTitle ?? null, issueId: effectiveIssueId },
+        context: { kind: view.kind, title: issueTitle ?? null, issueId: effectiveIssueId, entityId: view.id },
         signals: EMPTY_SIGNALS,
       }),
-    [view.kind, issueTitle, effectiveIssueId],
+    [view.kind, view.id, issueTitle, effectiveIssueId],
   );
   const shownSuggestions = useMemo(() => {
     const list = suggestions && suggestions.length > 0 ? suggestions : fallbackSuggestions;
