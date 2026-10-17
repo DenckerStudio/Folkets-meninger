@@ -183,11 +183,11 @@ export function ReelFlagVote({ item, onBack, onSheetOpenChange }: ReelFlagVotePr
           <p className="mb-2 text-sm text-white/80">
             <Link
               href={`${routes.login}?next=${encodeURIComponent(routes.utforskReels(item.poll.id))}`}
-              className="font-semibold text-white underline decoration-white/50 underline-offset-2 hover:decoration-white"
+              className="inline-flex min-h-11 items-center py-1 font-semibold text-white underline decoration-white/50 underline-offset-2 hover:decoration-white"
             >
-              Logg inn
-            </Link>{' '}
-            for å avgi stemme.
+              Logg inn for å avgi stemme
+            </Link>
+            .
           </p>
         ) : null}
         {error ? <p className="mb-2 text-sm text-red-200">{error}</p> : null}

@@ -13,32 +13,33 @@ export const metadata = homepageMetadata();
 export default function LandingPage() {
   return (
     <LandingExperience>
-      <div className="space-y-28 pb-8">
+      <div className="bg-background pb-8">
         <HeroSection />
-
         <div data-landing-section>
           <LandingHowItWorks />
         </div>
 
-        <div data-landing-section>
-          <LandingAbout />
-        </div>
+        <div className="mt-28 flex flex-col gap-28">
+          <div data-landing-section>
+            <LandingAbout />
+          </div>
 
-        <div data-landing-section>
-          <LandingPopularIssuesLazy />
-        </div>
+          <div data-landing-section>
+            <LandingPopularIssuesLazy />
+          </div>
 
-        <div data-landing-section>
-          <LandingSectionContainer>
-            <CallToAction
-              title="Klar til å delta?"
-              subtitle="Opprett konto gratis. Én person, én stemme."
-              primaryButtonText="Kom i gang"
-              primaryButtonLink={routes.login}
-              secondaryButtonText="Gi innspill"
-              secondaryButtonLink={routes.innspill}
-            />
-          </LandingSectionContainer>
+          <div data-landing-section>
+            <LandingSectionContainer>
+              <CallToAction
+                title="Klar til å delta?"
+                subtitle="Opprett konto gratis. Én person, én stemme."
+                primaryButtonText="Kom i gang"
+                primaryButtonLink={routes.login}
+                secondaryButtonText="Gi innspill"
+                secondaryButtonLink={routes.innspill}
+              />
+            </LandingSectionContainer>
+          </div>
         </div>
       </div>
     </LandingExperience>

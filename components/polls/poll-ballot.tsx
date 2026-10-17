@@ -112,11 +112,11 @@ export function PollBallot({
         <p className="mt-3 text-sm text-muted-foreground">
           <Link
             href={`${routes.login}?next=${encodeURIComponent(loginNext ?? routes.poll(pollId))}`}
-            className="font-medium text-brand underline-offset-2 hover:underline"
+            className="inline-flex min-h-11 items-center py-1 font-medium text-brand underline-offset-2 hover:underline"
           >
-            Logg inn
-          </Link>{' '}
-          for å avgi stemme.
+            Logg inn for å avgi stemme
+          </Link>
+          .
         </p>
       ) : null}
       {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}

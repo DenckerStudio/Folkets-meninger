@@ -21,6 +21,8 @@ export type SiteNavLinkItem = {
   icon: LucideIcon;
   description?: string;
   isActive?: NavIsActive;
+  /** Shown with a lock for guests — route requires login via middleware. */
+  loginRequired?: boolean;
 };
 
 export type PrimaryNavLink = {
@@ -116,12 +118,14 @@ export const extendedNavItems: SiteNavLinkItem[] = [
     href: routes.innsikt,
     icon: BarChart2,
     isActive: isInnsiktActive,
+    loginRequired: true,
   },
   {
     title: 'Appens fremtid',
     href: routes.forslag,
     icon: Lightbulb,
     isActive: isForslagActive,
+    loginRequired: true,
   },
 ];
 
@@ -132,6 +136,7 @@ export const accountNavItems: SiteNavLinkItem[] = [
     href: routes.minSide,
     icon: UserRound,
     isActive: isMinSideActive,
+    loginRequired: true,
   },
 ];
 
@@ -141,6 +146,7 @@ export const adminAccountNavItem: SiteNavLinkItem = {
   href: routes.admin,
   icon: Shield,
   isActive: isAdminActive,
+  loginRequired: true,
 };
 
 /** Flat desktop primary nav — core items only, no «Mer» overflow. */

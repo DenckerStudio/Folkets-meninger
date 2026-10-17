@@ -294,6 +294,19 @@ export function getHoringSkriftligInnspillUrl(hearing: StortingetHoring | { id: 
   return `https://www.stortinget.no/no/Hva-skjer-pa-Stortinget/Horing/skriv-skriftlig-innspill/?h=${id}`;
 }
 
+/** Stortinget list exports can repeat the same hearing (same id + title). */
+export function dedupeHoringerByIdAndTitle(hearings: StortingetHoring[]): StortingetHoring[] {
+  const seen = new Set<string>();
+  const result: StortingetHoring[] = [];
+  for (const hearing of hearings) {
+    const key = `${String(hearing.id)}:${getHoringTitle(hearing).trim()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(hearing);
+  }
+  return result;
+}
+
 export function sortHoringer(hearings: StortingetHoring[]): StortingetHoring[] {
   return [...hearings].sort((a, b) => {
     const kindOrder: Record<HoringStatusKind, number> = {

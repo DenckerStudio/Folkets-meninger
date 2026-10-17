@@ -6,6 +6,7 @@ import FadeIn from '@/components/fade-in';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase';
 import { onboardingPathWithNext, shouldStartSignupOnboarding } from '@/lib/onboarding';
+import { labelForLoginNext } from '@/lib/login-next-label';
 import { toRelativeNext } from '@/lib/safe-redirect';
 import { routes } from '@/lib/routes';
 import Link from 'next/link';
@@ -27,7 +28,9 @@ export default function LoginClient() {
   const emailLooksValid = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = toRelativeNext(searchParams.get('next'));
+  const rawNextParam = searchParams.get('next');
+  const nextPath = toRelativeNext(rawNextParam);
+  const hasExplicitNext = Boolean(rawNextParam?.trim());
   const supabase = getBrowserSupabase();
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -163,7 +166,7 @@ export default function LoginClient() {
 
   if (showPhoneVerify) {
     return (
-      <div className="min-h-[80vh] flex flex-col justify-center px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
+      <div className="flex flex-col px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
         <FadeIn delay={0.1}>
           <div className="sm:mx-auto sm:w-full sm:max-w-md">
             <div className="flex justify-center">
@@ -250,7 +253,7 @@ export default function LoginClient() {
   }
 
   return (
-    <div className="min-h-[80vh] flex flex-col justify-center px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
+    <div className="flex flex-col px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
       <FadeIn delay={0.1}>
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <Link
@@ -272,9 +275,10 @@ export default function LoginClient() {
                 ? 'Opprett konto med e-post eller Google for å stemme og delta.'
                 : 'Logg inn med e-post eller Google for å stemme og delta.'}
             </p>
-            {!isRegister && nextPath !== routes.dashboard ? (
+            {!isRegister && hasExplicitNext ? (
               <p className="mt-2 text-center text-sm text-muted-foreground">
-                Etter innlogging sendes du tilbake til siden du forsøkte å åpne.
+                Logg inn for å fortsette til{' '}
+                <span className="font-medium text-foreground">{labelForLoginNext(nextPath)}</span>.
               </p>
             ) : null}
         </div>

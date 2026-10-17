@@ -5,7 +5,6 @@ import {
   TRUST_COOLIFY_STACK,
   TRUST_HOSTING_SUMMARY,
   TRUST_THIRD_PARTY_PROVIDERS,
-  TRUST_VERCEL_NOTE,
 } from '@/lib/trust/subprocessors';
 import {
   DATA_CONTROLLER,
@@ -175,7 +174,6 @@ export default function PersonvernPage() {
           </Link>{' '}
           for plattformens AI-sammendrag og systempoll-utkast.
         </p>
-        <p className="text-xs text-muted-foreground">{TRUST_VERCEL_NOTE}</p>
       </section>
 
     </TrustDocLayout>
