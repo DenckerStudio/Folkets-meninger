@@ -5,6 +5,8 @@ import { Shield } from 'lucide-react';
 import { ProfileCard } from '@/components/profile/profile-card';
 import { ProfilePublicSettings } from '@/components/profile/profile-public-settings';
 import { routes } from '@/lib/routes';
+import { STANCE_PROFILE_PRIVACY_SUMMARY } from '@/lib/copy/stance-privacy';
+import { PoliticalConsentSettings } from '@/components/consent/political-consent-settings';
 
 type ProfilePrivacyProps = {
   userId: string;
@@ -18,18 +20,18 @@ export function ProfilePrivacy({ userId }: ProfilePrivacyProps) {
           {[
             {
               step: '1',
-              title: 'Bekreftelse, ikke overvåking',
-              body: 'Identiteten din brukes til å bekrefte at du er en ekte person og forhindre dobbeltstemmer.',
+              title: 'Konto og innlogging',
+              body: 'Navn og e-post brukes til konto, innlogging og navngitte innlegg du selv publiserer. Vi gjør ikke BankID-verifisering.',
             },
             {
               step: '2',
-              title: 'Anonyme stemmer',
-              body: 'Stemmer lagres anonymisert. Ingen kan koble navnet ditt til en spesifikk stemme i statistikken.',
+              title: 'Holdninger og avstemninger',
+              body: STANCE_PROFILE_PRIVACY_SUMMARY,
             },
             {
               step: '3',
-              title: 'Personvern by design',
-              body: 'Data lagres i Supabase (hostet database). Se personvernsiden for underleverandører og hosting. Offentlig aktivitet er av som standard.',
+              title: 'Drift og synlighet',
+              body: 'App og database driftes på server i Norge (self-hosted). Offentlig aktivitet på profilen er av som standard. Se personvernerklæringen for underleverandører.',
             },
           ].map((item) => (
             <li key={item.step} className="flex gap-3">
@@ -44,6 +46,8 @@ export function ProfilePrivacy({ userId }: ProfilePrivacyProps) {
           ))}
         </ol>
       </ProfileCard>
+
+      <PoliticalConsentSettings userId={userId} />
 
       <ProfilePublicSettings userId={userId} />
 

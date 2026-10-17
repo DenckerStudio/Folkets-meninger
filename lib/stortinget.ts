@@ -42,6 +42,8 @@ export interface SakVoteTotals {
   against: number;
   abstain: number;
   total: number;
+  /** True when aggregates are hidden for k-anonymity (below public minimum). */
+  suppressed?: boolean;
 }
 
 export interface SakListItem {

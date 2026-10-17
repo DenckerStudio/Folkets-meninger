@@ -69,7 +69,7 @@ export function PollBallot({
         <>
           <h2 className="text-base font-semibold text-foreground">Hva mener du?</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Ja, nei eller blank. Stemmen lagres anonymt.
+            Ja, nei eller blank. Stemmen telles i samlet statistikk uten navn.
           </p>
           <NonRepresentativeNotice count={totals.total} countLabel="stemmer" className="mt-2" />
         </>
@@ -102,7 +102,7 @@ export function PollBallot({
         <p className="mt-3 text-sm text-muted-foreground">Avstemningen er stengt.</p>
       ) : userVote ? (
         <p className="mt-3 text-sm text-foreground">
-          Du har stemt {pollChoiceLabel(userVote).toLowerCase()} (anonymt i statistikken).
+          Du har stemt {pollChoiceLabel(userVote).toLowerCase()} (telles uten navn i statistikken).
         </p>
       ) : !user ? (
         <p className="mt-3 text-sm text-muted-foreground">Logg inn for å avgi stemme.</p>

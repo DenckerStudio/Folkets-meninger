@@ -74,7 +74,7 @@ export default function CompleteProfileClient() {
           </div>
           <h1 className="text-2xl font-bold text-foreground">Fullfør profilen din</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Offentlige innspill (f.eks. høringer) viser fornavn og etternavn. Stemmer forblir anonyme i statistikken.
+            Offentlige innspill (f.eks. høringer) viser fornavn og etternavn. Avstemninger og holdninger vises bare som aggregater uten navn.
           </p>
         </div>
       </FadeIn>
