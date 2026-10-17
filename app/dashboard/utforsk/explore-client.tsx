@@ -179,9 +179,6 @@ export default function ExploreClient({
       // Only saker with a known upcoming voting deadline belong in this view.
       result = result.filter((issue) => votingUrgency(issue) !== Number.POSITIVE_INFINITY);
     }
-    if (sortBy === 'Mest engasjement') {
-      result = result.filter((issue) => issue.votes.total > 0);
-    }
     return [...result].sort((a, b) => {
       if (sortBy === 'Nyeste først') {
         return new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -202,12 +199,10 @@ export default function ExploreClient({
 
   // Reset "show more" pagination whenever the filter/sort combination changes,
   // deriving it during render rather than via a setState-in-effect.
-  const visibleCountState = useState(ISSUE_PAGE_SIZE);
-  const [visibleCount, setVisibleCount] = visibleCountState;
+  const [visibleCount, setVisibleCount] = useState(ISSUE_PAGE_SIZE);
   const filterKey = useMemo(
     () =>
       JSON.stringify([
-        displayedIssues.length,
         searchQuery,
         selectedCategory,
         selectedStatus,
@@ -215,7 +210,7 @@ export default function ExploreClient({
         sortBy,
         activeAiLabels,
       ]),
-    [displayedIssues.length, searchQuery, selectedCategory, selectedStatus, selectedSakKind, sortBy, activeAiLabels],
+    [searchQuery, selectedCategory, selectedStatus, selectedSakKind, sortBy, activeAiLabels],
   );
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
   if (prevFilterKey !== filterKey) {
@@ -224,6 +219,7 @@ export default function ExploreClient({
   }
   const visibleIssues = displayedIssues.slice(0, visibleCount);
   const hasMoreIssues = displayedIssues.length > visibleIssues.length;
+  const listScopeFiltered = displayedIssues.length !== issues.length;
 
   // On first mount, if persisted filters (from storage) yield 0 results but issues exist
   // and user hasn't touched filters this session, reset non-search filters to defaults once
@@ -319,7 +315,9 @@ export default function ExploreClient({
       <SectionSettle>
         <p className="text-sm text-muted-foreground">
           {issues.length > 0
-            ? `Listen viser ${issues.length} saker fra Stortingets sesjon ${STORTINGET_ACTIVE_SESSION_ID}. Tall under er fra Folkets Meninger og er ikke representative.`
+            ? listScopeFiltered
+              ? `Viser ${displayedIssues.length} av ${issues.length} saker fra Stortingets sesjon ${STORTINGET_ACTIVE_SESSION_ID} (filtre eller sortering er aktive). Tall under er fra Folkets Meninger og er ikke representative.`
+              : `Listen viser ${issues.length} saker fra Stortingets sesjon ${STORTINGET_ACTIVE_SESSION_ID}. Tall under er fra Folkets Meninger og er ikke representative.`
             : 'Saker hentes fra Stortinget. Hvis listen er tom, prøv igjen om litt.'}
         </p>
       </SectionSettle>
@@ -571,18 +569,22 @@ export default function ExploreClient({
             </MotionList>
           )}
           {hasMoreIssues ? (
-            <div className="flex flex-col items-center gap-2 pt-2">
+            <div className="flex flex-col items-center gap-2 border-t border-border pt-6">
               <p className="text-sm text-muted-foreground">
                 Viser {visibleIssues.length} av {displayedIssues.length} saker
               </p>
               <button
                 type="button"
                 onClick={() => setVisibleCount((count) => count + ISSUE_PAGE_SIZE)}
-                className="inline-flex items-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                className="inline-flex min-h-11 items-center rounded-lg border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm hover:bg-muted"
               >
-                Vis flere saker
+                Vis flere saker ({Math.min(ISSUE_PAGE_SIZE, displayedIssues.length - visibleIssues.length)} til)
               </button>
             </div>
+          ) : displayedIssues.length > ISSUE_PAGE_SIZE ? (
+            <p className="border-t border-border pt-4 text-center text-sm text-muted-foreground">
+              Alle {displayedIssues.length} saker er lastet inn.
+            </p>
           ) : null}
         </div>
       </SectionSettle>
