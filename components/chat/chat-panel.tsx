@@ -262,6 +262,7 @@ export function ChatPanel() {
               suggestions={suggestions}
               suggestionsLoading={suggestionsLoading}
               onConversationsChange={setConversationsState}
+              onInAppNavigate={closeChat}
             />
           ) : null}
         </AiAssistantCard>

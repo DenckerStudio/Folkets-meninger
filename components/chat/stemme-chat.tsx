@@ -1,6 +1,14 @@
 'use client';
 
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
@@ -9,7 +17,7 @@ import { ArrowUp, Loader2, Sparkles } from 'lucide-react';
 import { ChatCommandMenu } from '@/components/chat/chat-command-menu';
 import { ChatConversationMenu } from '@/components/chat/chat-conversation-menu';
 import { ChatMarkdown } from '@/components/chat/chat-markdown';
-import { collectChatSourceLinks } from '@/lib/chat/source-links';
+import { collectChatSourceLinks, isInAppNavigationClick } from '@/lib/chat/source-links';
 import { ChatMessageActions, textFromMessageParts } from '@/components/chat/chat-message-actions';
 import { ChatToolResult } from '@/components/chat/chat-tool-result';
 import { readImpactProfileForChat } from '@/components/chat/impact-profile-for-chat';
@@ -74,6 +82,8 @@ type StemmeChatProps = {
   suggestionsLoading?: boolean;
   /** Emits saved-conversation state so the shell can render the header menu. */
   onConversationsChange?: (state: StemmeChatConversationsState) => void;
+  /** Called when a link in a message navigates within the app (the panel closes). */
+  onInAppNavigate?: () => void;
 };
 
 const EMPTY_SIGNALS: ChatUserSignals = {
@@ -122,6 +132,7 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
     suggestions,
     suggestionsLoading = false,
     onConversationsChange,
+    onInAppNavigate,
   },
   ref,
 ) {
@@ -263,6 +274,23 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
       setMessages([]);
     }
   }
+
+  // A [n] source or tool-card link that navigates in this tab closes the panel,
+  // so the user lands on the page instead of a modal over a changed page.
+  const handleMessageLinkClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    const anchor = (event.target as HTMLElement | null)?.closest?.('a');
+    if (!anchor || !event.currentTarget.contains(anchor)) return;
+    const navigates = isInAppNavigationClick(
+      event,
+      {
+        href: anchor.getAttribute('href'),
+        target: anchor.getAttribute('target'),
+        download: anchor.hasAttribute('download'),
+      },
+      window.location.origin,
+    );
+    if (navigates) onInAppNavigate?.();
+  };
 
   // Keep the shell's header menu in sync with saved conversations.
   useEffect(() => {
@@ -641,7 +669,10 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
 
   const chatBody = (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-1 py-2">
+      <div
+        className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-1 py-2"
+        onClick={onInAppNavigate ? handleMessageLinkClick : undefined}
+      >
         {welcomeBlock}
         {messages.length > 0 ? messageList : null}
       </div>

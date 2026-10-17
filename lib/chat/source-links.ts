@@ -2,7 +2,8 @@
  * Map numbered chat sources (`[n]`, see `lib/chat/citations.ts`) to links in
  * the app (plan P3). Saker go to the sak page, documents open the document
  * viewer on the sak page (`?dokument=` deep link), hearings go to the hearing
- * page. Only web results link out of the app.
+ * page, politicians to the politician page and app polls to the poll page.
+ * Only web results link out of the app.
  */
 import type { ChatSource, ChatSourceKind } from '@/lib/chat/citations';
 import { routes } from '@/lib/routes';
@@ -15,7 +16,7 @@ export type ChatSourceLink = {
   kind: ChatSourceKind;
 };
 
-const KINDS: readonly ChatSourceKind[] = ['sak', 'dokument', 'høring', 'nett'];
+const KINDS: readonly ChatSourceKind[] = ['sak', 'dokument', 'høring', 'politiker', 'avstemning', 'nett'];
 
 function safeExternal(url: string | null): string | null {
   if (!url) return null;
@@ -51,6 +52,13 @@ export function chatSourceHref(source: ChatSource): { href: string; external: bo
       const url = safeExternal(source.url);
       return url ? { href: url, external: true } : null;
     }
+    case 'politiker':
+      return source.personId
+        ? { href: routes.politiker(encodeURIComponent(source.personId)), external: false }
+        : null;
+    case 'avstemning':
+      if (source.pollId) return { href: routes.poll(encodeURIComponent(source.pollId)), external: false };
+      return source.issueId ? { href: sakPath(source.issueId), external: false } : null;
     case 'nett': {
       const url = safeExternal(source.url);
       return url ? { href: url, external: true } : null;
@@ -73,6 +81,8 @@ function asSource(value: unknown): ChatSource | null {
     issueId: str('issueId'),
     documentId: str('documentId'),
     hearingId: str('hearingId'),
+    personId: str('personId'),
+    pollId: str('pollId'),
     url: str('url'),
   };
 }
@@ -100,4 +110,39 @@ export function collectChatSourceLinks(parts: readonly unknown[]): Map<number, C
     }
   }
   return links;
+}
+
+export type ChatLinkClick = {
+  button: number;
+  metaKey: boolean;
+  ctrlKey: boolean;
+  shiftKey: boolean;
+  altKey: boolean;
+};
+
+export type ChatLinkAnchor = {
+  href: string | null;
+  target: string | null;
+  download: boolean;
+};
+
+/**
+ * True when a click on a link inside the chat navigates the app in this tab
+ * (a [n] source or a tool card link). The chat panel is a modal over the page,
+ * so the caller closes it; otherwise the page changes behind the panel and the
+ * tap looks dead on mobile. New-tab clicks and external links leave it open.
+ */
+export function isInAppNavigationClick(click: ChatLinkClick, anchor: ChatLinkAnchor, origin: string): boolean {
+  if (click.button !== 0 || click.metaKey || click.ctrlKey || click.shiftKey || click.altKey) return false;
+  if (anchor.download) return false;
+  const target = anchor.target?.trim().toLowerCase();
+  if (target && target !== '_self') return false;
+  const href = anchor.href?.trim();
+  if (!href || href.startsWith('#')) return false;
+  try {
+    const url = new URL(href, origin);
+    return url.origin === origin && (url.protocol === 'http:' || url.protocol === 'https:');
+  } catch {
+    return false;
+  }
 }

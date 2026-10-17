@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { parseMarkdown } from './markdown';
-import { chatSourceHref, collectChatSourceLinks } from './source-links';
+import { chatSourceHref, collectChatSourceLinks, isInAppNavigationClick } from './source-links';
 
 // [n] parses as a citation; markdown links still win.
 const [para] = parseMarkdown('Forslaget gjelder vektgrensen [1][2]. Se [Stortinget](https://stortinget.no) og [3].');
@@ -18,7 +18,7 @@ const [listBlock] = parseMarkdown('- [1] Dokument 8:314 S');
 assert.equal(listBlock.type, 'list');
 
 // Hrefs use the existing app routes.
-const base = { title: 'T', issueId: null, documentId: null, hearingId: null, url: null };
+const base = { title: 'T', issueId: null, documentId: null, hearingId: null, personId: null, pollId: null, url: null };
 assert.deepEqual(chatSourceHref({ ...base, n: 1, kind: 'sak', issueId: '200365' }), {
   href: '/dashboard/sak/200365',
   external: false,
@@ -40,6 +40,27 @@ assert.deepEqual(chatSourceHref({ ...base, n: 5, kind: 'nett', url: 'https://www
   external: true,
 });
 assert.equal(chatSourceHref({ ...base, n: 6, kind: 'nett', url: 'javascript:alert(1)' }), null);
+assert.deepEqual(chatSourceHref({ ...base, n: 7, kind: 'politiker', personId: 'KANO' }), {
+  href: '/dashboard/politikere/KANO',
+  external: false,
+});
+assert.deepEqual(chatSourceHref({ ...base, n: 8, kind: 'avstemning', pollId: 'p1' }), {
+  href: '/dashboard/avstemninger/p1',
+  external: false,
+});
+
+// In-app link taps close the chat; new-tab, modified and external clicks don't.
+const origin = 'https://folketsmeninger.no';
+const click = { button: 0, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false };
+const anchor = { href: '/dashboard/sak/200365', target: null, download: false };
+assert.equal(isInAppNavigationClick(click, anchor, origin), true);
+assert.equal(isInAppNavigationClick(click, { ...anchor, href: `${origin}/dashboard/sak/1#dokumenter` }, origin), true);
+assert.equal(isInAppNavigationClick(click, { ...anchor, target: '_blank' }, origin), false);
+assert.equal(isInAppNavigationClick(click, { ...anchor, href: 'https://www.nrk.no/a' }, origin), false);
+assert.equal(isInAppNavigationClick(click, { ...anchor, href: '#x' }, origin), false);
+assert.equal(isInAppNavigationClick({ ...click, metaKey: true }, anchor, origin), false);
+assert.equal(isInAppNavigationClick({ ...click, button: 1 }, anchor, origin), false);
+assert.equal(isInAppNavigationClick(click, { ...anchor, download: true }, origin), false);
 
 // Collected per message from finished tool parts only.
 const links = collectChatSourceLinks([
