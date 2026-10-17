@@ -31,7 +31,7 @@ export default function LandingPage() {
         <div data-landing-section>
           <LandingSectionContainer>
             <CallToAction
-              title="Klar til å delta?"
+              title="Vil du være med?"
               subtitle="Opprett konto gratis. Én person, én stemme."
               primaryButtonText="Kom i gang"
               primaryButtonLink={routes.login}

@@ -333,7 +333,7 @@ export default function ExploreClient({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={dashboardSearchClass()}
-              placeholder="Søk etter saker, stikkord eller saksnummer..."
+              placeholder="Søk på tittel, stikkord eller saksnummer"
             />
           </div>
           <FilterTokenBar tokens={filterTokens} aria-label="Filtrer saker" />
@@ -399,8 +399,8 @@ export default function ExploreClient({
         <div className="space-y-4">
           {displayedIssues.length === 0 ? (
             <EmptyState
-              title="Ingen saker matcher filteret"
-              description="Prøv et annet søk, status eller emne. Listen er tom til Stortinget-data matcher."
+              title="Ingen saker passer filteret"
+              description="Prøv et annet søk, eller fjern et filter."
               action={
                 <button
                   type="button"
@@ -502,7 +502,7 @@ export default function ExploreClient({
                         href={routes.sak(String(issue.id))}
                         className="inline-flex shrink-0 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90"
                       >
-                        {displayedUserStances[String(issue.id)] ? 'Se sak' : 'Marker holdning'}
+                        {displayedUserStances[String(issue.id)] ? 'Se saken' : 'Si hva du mener'}
                         <ArrowRight className="ml-1.5 w-4 h-4" />
                       </Link>
                     </div>

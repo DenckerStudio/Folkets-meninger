@@ -6,7 +6,7 @@ import { routes } from '@/lib/routes';
 
 export const metadata = buildPageMetadata({
   title: 'AI og modeller',
-  description: 'Hvilke modeller Folkets Meninger bruker, hvor de kjører, og hva som er regelbasert.',
+  description: 'Hvilke AI-modeller Folkets Meninger bruker, og hvor de kjører.',
   canonicalPath: routes.omAi,
 });
 
@@ -14,26 +14,26 @@ export default function OmAiPage() {
   return (
     <TrustDocLayout
       title="AI og modeller"
-      description="Transparens om automatiserte sammendrag, embeddings og valgfri Stemme+-chat."
+      description="Hva vi bruker AI til, hvilke modeller det er, og hva som ikke bruker AI."
     >
       <section className="rounded-2xl border border-[#ba0c2f]/20 bg-[#ba0c2f]/[0.04] p-5 text-sm">
         <p className="font-semibold text-[#001433]">{AI_SUMMARY_LABEL}</p>
         <p className="mt-2 leading-relaxed">
-          Saksammendrag på sakssider er generert av en lokal modell via n8n. De er ikke offisielle
-          Stortinget-tekster. I appen merkes de «{AI_SUMMARY_LABEL}» med lenker til originaldokumenter på
-          stortinget.no der vi har dem.
+          Sammendragene på sakssidene er laget av en AI-modell på vår egen server. De er ikke offisielle
+          tekster fra Stortinget. De er merket «{AI_SUMMARY_LABEL}» og lenker til originaldokumentene når
+          vi har dem.
         </p>
       </section>
 
       <section>
-        <h2 className="text-xl font-bold text-[#001433]">Plattformens pipelines</h2>
+        <h2 className="text-xl font-bold text-[#001433]">Hvor vi bruker AI</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-[#00205b]/15 text-xs uppercase tracking-wide text-[#001433]/60">
                 <th className="py-2 pr-3 font-semibold">Funksjon</th>
                 <th className="py-2 pr-3 font-semibold">Modell</th>
-                <th className="py-2 pr-3 font-semibold">Hvor</th>
+                <th className="py-2 pr-3 font-semibold">Hvor den kjører</th>
               </tr>
             </thead>
             <tbody>
@@ -56,7 +56,7 @@ export default function OmAiPage() {
       <section>
         <h2 className="text-xl font-bold text-[#001433]">Kilder</h2>
         <p className="mt-2 text-sm leading-relaxed">
-          Sammendrag og RAG bygger på saksdokumenter fra{' '}
+          Sammendragene og dokumentsøket bygger på saksdokumentene fra{' '}
           <a
             href="https://data.stortinget.no"
             className="font-medium text-[#00205b] underline-offset-2 hover:underline"
@@ -65,8 +65,7 @@ export default function OmAiPage() {
           >
             data.stortinget.no
           </a>
-          . Vi henter ikke innhold fra lukkede kilder uten at det ligger i Stortingets åpne data eller
-          dokumentlenker.
+          . I Stemme+-chatten kan svarene i tillegg bruke vanlige nettsøk.
         </p>
       </section>
 
@@ -76,7 +75,7 @@ export default function OmAiPage() {
           <Link href={routes.personvern} className="font-medium text-[#00205b] underline-offset-2 hover:underline">
             Personvern og infrastruktur
           </Link>{' '}
-          beskriver Supabase, hosting og underleverandører.
+          viser hvor data ligger, og hvilke leverandører vi bruker.
         </p>
       </section>
     </TrustDocLayout>

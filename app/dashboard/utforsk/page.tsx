@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = buildPageMetadata({
   title: 'Utforsk',
   description:
-    'Utforsk Stortingssaker og systemgenererte Reels. Les saksgang, dokumenter og si din mening.',
+    'Saker fra Stortinget og korte Reels om dem. Les saksgangen og dokumentene, og si hva du mener.',
   canonicalPath: '/dashboard/utforsk',
 });
 

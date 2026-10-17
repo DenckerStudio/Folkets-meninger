@@ -15,7 +15,7 @@ type ProfilePrivacyProps = {
 export function ProfilePrivacy({ userId }: ProfilePrivacyProps) {
   return (
     <div className="space-y-6">
-      <ProfileCard title="Slik beskytter vi deg">
+      <ProfileCard title="Slik behandler vi dataene dine">
         <ol className="space-y-4">
           {[
             {

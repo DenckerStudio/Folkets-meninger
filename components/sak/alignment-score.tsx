@@ -325,8 +325,8 @@ export function AlignmentScore({
           ) : comparison.stortinget ? (
             <p className="text-sm text-muted-foreground">
               {comparison.stortinget.adopted
-                ? 'Saken ble vedtatt uten elektronisk personlig votering (ingen For/Mot-tall fra Stortinget).'
-                : 'Saken ble behandlet uten elektronisk personlig votering (ingen For/Mot-tall fra Stortinget).'}
+                ? 'Saken ble vedtatt uten elektronisk votering, så Stortinget har ingen For/Mot-tall.'
+                : 'Saken ble behandlet uten elektronisk votering, så Stortinget har ingen For/Mot-tall.'}
             </p>
           ) : (
             <p className="text-sm text-muted-foreground">

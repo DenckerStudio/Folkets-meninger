@@ -34,7 +34,7 @@ export default async function HoringerPage() {
           title="Høringer"
           description={
             stats.open > 0
-              ? `${stats.open} åpne for innspill. Søk, filtrer eller del din mening.`
+              ? `${stats.open} er åpne for innspill nå.`
               : 'Planlagte og avholdte høringer fra Stortinget.'
           }
         />
@@ -49,8 +49,8 @@ export default async function HoringerPage() {
 
       {hearings.length === 0 ? (
         <EmptyState
-          title="Klarte ikke å hente høringer"
-          description="Stortingets åpne data svarer ikke akkurat nå. Prøv igjen om litt."
+          title="Fikk ikke hentet høringene"
+          description="Vi fikk ikke kontakt med Stortingets data akkurat nå. Prøv igjen om litt."
           tone="error"
         />
       ) : (

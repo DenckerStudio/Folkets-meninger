@@ -15,7 +15,7 @@ export function TrustDocLayout({ title, description, children, className }: Trus
     <div className={cn('pb-16 pt-6', className)}>
       <LandingSectionContainer>
         <div className="mx-auto max-w-3xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">Tillit og åpenhet</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">Åpenhet</p>
           <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-[#001433] sm:text-4xl">{title}</h1>
           <p className="mt-4 text-lg leading-relaxed text-[#001433]/70">{description}</p>
           <nav className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm font-medium text-[#00205b]">

@@ -3,7 +3,7 @@ import { buildPageMetadata } from '@/lib/seo/metadata';
 
 export const metadata = buildPageMetadata({
   title: 'Gi innspill',
-  description: 'Send idéer, feilmeldinger og tilbakemeldinger til Folkets Meninger.',
+  description: 'Skriv til Folkets Meninger med en idé, en feil eller et spørsmål.',
   canonicalPath: '/innspill',
 });
 
@@ -22,7 +22,7 @@ export default async function InnspillPage({ searchParams }: InnspillPageProps) 
           Gi innspill
         </h1>
         <p className="mx-auto max-w-xl text-lg leading-relaxed text-[#001433]/65">
-          Idé, feil, spørsmål — eller meld fra om skjevhet i sammendrag eller konsekvens-tekst.
+          Send en idé, meld fra om en feil, eller si fra hvis et sammendrag virker skjevt.
         </p>
       </div>
 

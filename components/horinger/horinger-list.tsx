@@ -32,7 +32,7 @@ type StatusFilter = 'Alle statuser' | 'Åpen for innspill' | 'Planlagt' | 'Avhol
 export default function HoringerList({ hearings }: HoringerListProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('Alle statuser');
-  const [committeeFilter, setCommitteeFilter] = useState('Alle departement/komiteer');
+  const [committeeFilter, setCommitteeFilter] = useState('Alle komiteer og departementer');
   const [sortBy, setSortBy] = useState<SortOption>('relevant');
 
   const stats = useMemo(() => summarizeHoringer(hearings), [hearings]);
@@ -43,7 +43,7 @@ export default function HoringerList({ hearings }: HoringerListProps) {
       const name = h.komite?.navn;
       if (name) set.add(name);
     }
-    return ['Alle departement/komiteer', ...Array.from(set).sort()];
+    return ['Alle komiteer og departementer', ...Array.from(set).sort()];
   }, [hearings]);
 
   const filtered = useMemo(() => {
@@ -58,7 +58,7 @@ export default function HoringerList({ hearings }: HoringerListProps) {
       if (statusFilter === 'Planlagt' && kind !== 'planned') return false;
       if (statusFilter === 'Avholdt' && kind !== 'held') return false;
       if (statusFilter === 'Avlyst' && kind !== 'cancelled') return false;
-      if (committeeFilter !== 'Alle departement/komiteer' && komite !== committeeFilter) return false;
+      if (committeeFilter !== 'Alle komiteer og departementer' && komite !== committeeFilter) return false;
       if (q && !title.includes(q) && !subtitle.includes(q) && !komite.toLowerCase().includes(q)) {
         return false;
       }
@@ -170,8 +170,8 @@ export default function HoringerList({ hearings }: HoringerListProps) {
       <div className="grid gap-4">
         {filtered.length === 0 ? (
           <EmptyState
-            title="Ingen høringer matcher filtrene"
-            description="Prøv et annet søk, status eller komité."
+            title="Ingen høringer passer filtrene"
+            description="Prøv et annet søk, eller fjern et filter."
           />
         ) : (
           filtered.map((hearing) => {
