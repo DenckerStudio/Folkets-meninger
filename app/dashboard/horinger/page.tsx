@@ -1,6 +1,11 @@
 import Link from 'next/link';
 import { Calendar } from 'lucide-react';
-import { fetchStortingetHoringer, sortHoringer, summarizeHoringer } from '@/lib/stortinget-horinger';
+import {
+  dedupeHoringerByIdAndTitle,
+  fetchStortingetHoringer,
+  sortHoringer,
+  summarizeHoringer,
+} from '@/lib/stortinget-horinger';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import HoringerList from '@/components/horinger/horinger-list';
@@ -54,7 +59,7 @@ export default async function HoringerPage() {
           tone="error"
         />
       ) : (
-        <HoringerList hearings={sortHoringer(hearings)} />
+        <HoringerList hearings={sortHoringer(dedupeHoringerByIdAndTitle(hearings))} />
       )}
     </DashboardPage>
   );

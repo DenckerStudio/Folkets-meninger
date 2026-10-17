@@ -26,7 +26,7 @@ export const TRUST_COOLIFY_STACK: SubprocessorRow[] = [
     codeRef: 'package.json, app/, middleware.ts',
   },
   {
-    name: 'Database (PostgreSQL)',
+    name: 'Database på våre egne servere i Norge',
     purpose:
       'Lagring av kontoer, stemmer, holdninger, avstemninger, saksdata, dokumentutdrag og AI-sammendrag.',
     hosting: 'Egne servere i Norge.',
@@ -56,13 +56,6 @@ export const TRUST_COOLIFY_STACK: SubprocessorRow[] = [
 
 /**Eksterne tjenester utenfor norsk server — listes separat med hosting. */
 export const TRUST_THIRD_PARTY_PROVIDERS: SubprocessorRow[] = [
-  {
-    name: 'Cloudflare',
-    purpose:
-      'Proxy og CDN foran enkelte interne tjenester. Hoveddomenet www.folkets-meninger.no går ikke via Cloudflare.',
-    hosting: 'Cloudflare Inc. (globalt edge-nettverk; hovedkontor i USA).',
-    codeRef: 'NEXT_PUBLIC_SUPABASE_URL, workflows/n8n/, lib/chat/searxng.ts',
-  },
   {
     name: 'Stripe',
     purpose:
@@ -105,6 +98,3 @@ export const TRUST_SUBPROCESSORS: SubprocessorRow[] = [
 
 export const TRUST_ANALYTICS_NOTE =
   'Vi bruker ikke tredjeparts analyseverktøy (som Google Analytics). Det kan finnes tekniske serverlogger på vår egen server i Norge.';
-
-export const TRUST_VERCEL_NOTE =
-  'Produksjonen kjører på våre egne servere i Norge, ikke hos Vercel. Planlagte oppgaver styres av vårt eget automatiseringssystem.';

@@ -322,9 +322,7 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
             Send innspill til Stortinget
             <ExternalLink className="w-4 h-4" />
           </a>
-          <p className="text-xs text-muted-foreground">
-            Åpner Stortingets skjema for skriftlig høringsinnspill.
-          </p>
+          <p className="text-xs text-muted-foreground">Åpner høringsinnspill på stortinget.no.</p>
         </div>
       </div>
 

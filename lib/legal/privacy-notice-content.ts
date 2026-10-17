@@ -62,10 +62,10 @@ export const PRIVACY_PROCESSING_TABLE = [
 ] as const;
 
 export const PRIVACY_RECIPIENTS_INTRO =
-  'Vi bruker databehandlere der det er nødvendig. Hovednettstedet driftes på server i Norge. Database, automatisering og AI-tjenester kan gå via Cloudflare (USA-selskap). Betaling (Stripe), innlogging (Google) og eventuelle BYOK-leverandører du velger kan behandle data utenfor Norge.';
+  'Vi bruker databehandlere der det er nødvendig. Nettstedet og databasen driftes på våre egne servere i Norge. Betaling (Stripe), innlogging (Google) og eventuelle BYOK-leverandører du velger kan behandle personopplysninger utenfor Norge.';
 
 export const PRIVACY_TRANSFERS =
-  'Overføring utenfor EU/EØS kan skje til Cloudflare, Stripe, Google, OpenAI, xAI og andre BYOK-leverandører. Overføringen bygger på EU–US Data Privacy Framework der leverandøren er sertifisert, ellers standardavtaler (art. 46). Verifiser DPA per leverandør.';
+  'Overføring utenfor EU/EØS kan skje til Stripe, Google og andre BYOK-leverandører du velger (for eksempel OpenAI, Anthropic eller xAI). Overføringen bygger på EU–US Data Privacy Framework der leverandøren er sertifisert, ellers standardavtaler (art. 46).';
 
 export const PRIVACY_RIGHTS =
   'Du har rett til innsyn, retting, sletting, begrensning, dataportabilitet og til å protestere mot behandling basert på berettiget interesse. Du kan når som helst trekke tilbake samtykke uten at det påvirker lovligheten av behandlingen før tilbaketrekkingen. Bruk Min side → Personvern for samtykke og sletting av holdningsdata, eller kontakt oss. Vi svarer innen én måned.';
@@ -74,6 +74,6 @@ export const PRIVACY_COMPLAINT =
   'Du kan klage til Datatilsynet (www.datatilsynet.no, Postboks 458 Sentrum, 0105 Oslo).';
 
 export const PRIVACY_COOKIES =
-  'Vi bruker informasjonskapsler som er nødvendige for innlogging (Supabase auth-token), og lokal lagring for tema, omvisning, utkast, konsekvenskalkulator og chat-samtaler i nettleseren. Vi bruker ikke tredjeparts analyseverktøy på forsiden.';
+  'Vi bruker informasjonskapsler som er nødvendige for innlogging, og lokal lagring for tema, omvisning, utkast, konsekvenskalkulator og chat-samtaler i nettleseren. Vi bruker ikke tredjeparts analyseverktøy på forsiden.';
 
 export const PRIVACY_AGE = `Du må være minst ${MIN_ACCOUNT_AGE_YEARS} år for å opprette konto. Vi gjennomfører ikke aldersverifisering utover det du bekrefter ved registrering.`;
