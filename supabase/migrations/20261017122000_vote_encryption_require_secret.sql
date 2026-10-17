@@ -1,4 +1,6 @@
 -- C1: never derive vote keys from a public repo fallback pepper.
+-- Follow with 20261017140000_vote_encryption_legacy_decrypt.sql after vote_encryption_secret is set.
+-- See supabase/README.md § Vote encryption rollout.
 
 CREATE OR REPLACE FUNCTION public.vote_encryption_key(p_user_id uuid)
 RETURNS text
