@@ -12,23 +12,32 @@ export function LandingHowItWorks() {
   const reducedMotion = usePrefersReducedMotion();
 
   return (
-    <section className="relative w-full overflow-hidden">
-      <div className="pointer-events-none absolute inset-0" aria-hidden>
+    <section className="relative w-full overflow-hidden bg-background">
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, #000 12%, #000 88%, transparent 100%)',
+          maskImage: 'linear-gradient(to bottom, transparent 0%, #000 12%, #000 88%, transparent 100%)',
+          WebkitMaskSize: '100% 100%',
+          maskSize: '100% 100%',
+        }}
+        aria-hidden
+      >
         {reducedMotion ? (
-          <div className="absolute inset-0 bg-gradient-to-b from-[#ba0c2f]/[0.04] via-white to-[#00205b]/[0.05]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#ba0c2f]/[0.04] via-background to-[#00205b]/[0.05]" />
         ) : (
           <>
             <GrainGradient
-              className="absolute inset-0 h-full w-full opacity-50"
+              className="absolute inset-0 h-full w-full opacity-40 dark:opacity-30"
               colors={GRAIN_COLORS}
-              colorBack="#ffffff"
+              colorBack="var(--background)"
               speed={0.25}
               softness={0.75}
               intensity={0.35}
               noise={0.35}
               shape="blob"
             />
-            <div className="absolute inset-0 bg-white/75" />
+            <div className="absolute inset-0 bg-background/70" />
           </>
         )}
       </div>

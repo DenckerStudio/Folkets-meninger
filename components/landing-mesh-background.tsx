@@ -1,5 +1,6 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import { MeshGradient } from '@paper-design/shaders-react';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { cn } from '@/lib/utils';
@@ -14,6 +15,16 @@ const NORWAY_MESH_COLORS = [
   '#6b86b5',
 ];
 
+/** Fade mesh into page background over the lower ~40% of the hero (not an overlay). */
+export const LANDING_MESH_MASK_STYLE: CSSProperties = {
+  WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 58%, transparent 100%)',
+  maskImage: 'linear-gradient(to bottom, #000 0%, #000 58%, transparent 100%)',
+  WebkitMaskSize: '100% 100%',
+  maskSize: '100% 100%',
+  WebkitMaskRepeat: 'no-repeat',
+  maskRepeat: 'no-repeat',
+};
+
 type LandingMeshBackgroundProps = {
   className?: string;
 };
@@ -25,23 +36,22 @@ type LandingMeshBackgroundProps = {
 export function LandingMeshBackground({ className }: LandingMeshBackgroundProps) {
   const reducedMotion = usePrefersReducedMotion();
 
+  const shellClass = cn('pointer-events-none absolute inset-0', className);
+
   if (reducedMotion) {
     return (
-      <div className={cn('pointer-events-none absolute inset-0 overflow-hidden bg-background', className)} aria-hidden>
+      <div className={shellClass} style={LANDING_MESH_MASK_STYLE} aria-hidden>
+        <div className="absolute inset-0 bg-background" />
         <div className="absolute -top-[25%] -left-[20%] h-[75%] w-[60%] rounded-full bg-[#ba0c2f]/25 blur-[100px]" />
         <div className="absolute top-[5%] -right-[15%] h-[65%] w-[55%] rounded-full bg-[#00205b]/22 blur-[110px]" />
         <div className="absolute bottom-[-20%] left-[15%] h-[55%] w-[50%] rounded-full bg-[#00205b]/15 blur-[120px]" />
         <div className="absolute top-[30%] left-[30%] h-[45%] w-[45%] rounded-full bg-background/85 blur-[90px]" />
-        <div
-          className="absolute inset-x-0 bottom-0 h-[min(32%,14rem)] bg-gradient-to-b from-transparent to-background"
-          aria-hidden
-        />
       </div>
     );
   }
 
   return (
-    <div className={cn('pointer-events-none absolute inset-0 overflow-hidden', className)} aria-hidden>
+    <div className={shellClass} style={LANDING_MESH_MASK_STYLE} aria-hidden>
       <MeshGradient
         className="absolute inset-0 h-full w-full"
         colors={NORWAY_MESH_COLORS}
@@ -52,12 +62,8 @@ export function LandingMeshBackground({ className }: LandingMeshBackgroundProps)
         grainOverlay={0.04}
         scale={1.15}
       />
-      {/* Soft veil so hero copy stays readable on the animated mesh */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/55 via-background/35 to-background/45" />
-      <div
-        className="absolute inset-x-0 bottom-0 h-[min(36%,16rem)] bg-gradient-to-b from-transparent via-background/40 to-background"
-        aria-hidden
-      />
+      {/* Readability veil — transparent at bottom so the mask fade reads as page background */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/55 via-background/30 to-transparent" />
     </div>
   );
 }
