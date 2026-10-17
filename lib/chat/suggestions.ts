@@ -15,6 +15,17 @@ export type ChatSuggestion = {
   label: string;
   prompt: string;
   source: ChatSuggestionSource;
+  /**
+   * Chat tools that can answer this prompt. Every name must be in
+   * FOCUSED_CHAT_TOOL_NAMES (lib/chat/tools.ts); suggestions.test.ts enforces it
+   * so a suggestion never leads to «Dette fant jeg ikke i kildene».
+   */
+  tools: readonly string[];
+  /**
+   * Sak the suggestion is about when it differs from the page (stance
+   * suggestions). Sent as structured context with the request, never shown.
+   */
+  contextSakId?: string | null;
 };
 
 export type ChatSuggestionContext = {
@@ -51,37 +62,45 @@ function quote(value: string | null | undefined): string | null {
   return trimmed ? `«${trimmed}»` : null;
 }
 
+const SAK_TOOLS = ['retrieveSakContext'] as const;
+const TOPIC_TOOLS = ['retrieveSakContext', 'retrieveTopicContext'] as const;
+const SEARCH_TOOLS = ['listMatchingSaker', 'retrieveTopicContext'] as const;
+
 function viewSuggestions(context: ChatSuggestionContext): ChatSuggestion[] {
   const title = context.title?.trim() || null;
   const quoted = quote(title);
 
   switch (context.kind) {
     case 'sak': {
-      const subject = quoted ?? (context.issueId ? `sak ${context.issueId}` : 'saken');
+      const subject = quoted ?? 'saken';
       return [
         {
           id: 'sak-forklar',
           label: 'Forklar saken',
           prompt: `Forklar ${subject} kort og nøytralt ut fra sakskonteksten.`,
           source: 'view',
+          tools: SAK_TOOLS,
         },
         {
           id: 'sak-konsekvenser',
           label: 'Hva betyr det for folk?',
           prompt: `Hvilke praktiske konsekvenser har ${subject} for folk i Norge?`,
           source: 'view',
+          tools: SAK_TOOLS,
         },
         {
           id: 'sak-stemmer',
           label: 'Hvordan stemte Stortinget?',
           prompt: `Hvordan har Stortinget votert i ${subject}, og hvordan står det mot folkets vilje?`,
           source: 'view',
+          tools: ['getVoteResults'],
         },
         {
           id: 'sak-mot',
           label: 'Motargumenter',
           prompt: `Hva er de viktigste motargumentene mot ${subject}?`,
           source: 'view',
+          tools: SAK_TOOLS,
         },
       ];
     }
@@ -93,44 +112,46 @@ function viewSuggestions(context: ChatSuggestionContext): ChatSuggestion[] {
           label: 'Se saken fra flere sider',
           prompt: `Hvilke argumenter finnes for og mot synet i ${subject}?`,
           source: 'view',
+          tools: TOPIC_TOOLS,
         },
         {
           id: 'mening-fakta',
           label: 'Fakta å kjenne til',
           prompt: `Hvilke fakta bør jeg kjenne til for å vurdere synet i ${subject}?`,
           source: 'view',
+          tools: TOPIC_TOOLS,
         },
       ];
       if (context.issueId) {
         suggestions.push({
           id: 'mening-status',
           label: 'Status i stortingssaken',
-          prompt: 'Hva er status i stortingssaken denne meningen er knyttet til, og hva er neste steg?',
+          prompt: `Hva er status i stortingssaken denne meningen er knyttet til, og hva er neste steg?`,
           source: 'view',
+          tools: ['getSakTimeline'],
         });
       }
       return suggestions;
     }
     case 'politiker': {
+      // Only what getPolitician (parti, fylke, verv, regjeringsrolle) and the
+      // sak search can back with sources. No «partiets linje»: there is no
+      // neutral source for it in the chat tools.
       const name = title ?? 'representanten';
       return [
         {
+          id: 'politiker-hvem',
+          label: 'Hvem er hen?',
+          prompt: `Hvem er ${name}? Hvilket parti og fylke representerer hen, og hvilke verv har hen?`,
+          source: 'view',
+          tools: ['getPolitician'],
+        },
+        {
           id: 'politiker-saker',
-          label: 'Hvilke saker er viktige for hen?',
-          prompt: `Hvilke saker på Stortinget er ${name} opptatt av akkurat nå?`,
+          label: 'Aktuelle saker for fylket eller departementet',
+          prompt: `Slå opp ${name}, og finn aktuelle saker på Stortinget som angår fylket eller departementet hen er knyttet til.`,
           source: 'view',
-        },
-        {
-          id: 'politiker-finn',
-          label: 'Finn relevante saker',
-          prompt: `Finn saker på Stortinget som er relevante for ${name}.`,
-          source: 'view',
-        },
-        {
-          id: 'politiker-parti',
-          label: 'Partiet og linjene',
-          prompt: `Hva kjennetegner den politiske linjen til partiet til ${name}?`,
-          source: 'view',
+          tools: ['getPolitician', 'listMatchingSaker'],
         },
       ];
     }
@@ -138,16 +159,25 @@ function viewSuggestions(context: ChatSuggestionContext): ChatSuggestion[] {
       const subject = quoted ?? 'denne avstemningen';
       const suggestions: ChatSuggestion[] = [
         {
+          id: 'reel-resultat',
+          label: 'Hva har folk stemt?',
+          prompt: `Hva er resultatet så langt i avstemningen ${subject} i appen?`,
+          source: 'view',
+          tools: ['getPollResults'],
+        },
+        {
           id: 'reel-bakgrunn',
           label: 'Hva handler det om?',
           prompt: `Hva handler avstemningen ${subject} om? Finn bakgrunnen i sakene på Stortinget.`,
           source: 'view',
+          tools: context.issueId ? SAK_TOOLS : ['getPollResults', 'listMatchingSaker'],
         },
         {
           id: 'reel-mot',
           label: 'Argumenter for og mot',
           prompt: `Hvilke argumenter taler for og mot i ${subject}?`,
           source: 'view',
+          tools: TOPIC_TOOLS,
         },
       ];
       if (context.issueId) {
@@ -156,26 +186,39 @@ function viewSuggestions(context: ChatSuggestionContext): ChatSuggestion[] {
           label: 'Konsekvenser',
           prompt: `Hvilke praktiske konsekvenser får ${subject} for folk i Norge?`,
           source: 'view',
+          tools: SAK_TOOLS,
         });
       }
       return suggestions;
     }
     case 'horing': {
       const subject = quoted ?? 'denne høringen';
-      return [
+      const suggestions: ChatSuggestion[] = [
         {
           id: 'horing-forklar',
           label: 'Hva skal høringen belyse?',
           prompt: `Hva skal høringen ${subject} belyse, og hva er hovedspørsmålene?`,
           source: 'view',
-        },
-        {
-          id: 'horing-finn',
-          label: 'Relevante saker',
-          prompt: `Finn stortingssaker som er relevante for høringen ${subject}.`,
-          source: 'view',
+          tools: context.issueId ? ['findHearingsForSak', 'retrieveSakContext'] : ['listOpenHearings', 'listMatchingSaker'],
         },
       ];
+      if (context.issueId) {
+        suggestions.push({
+          id: 'horing-frist',
+          label: 'Frist og innspill',
+          prompt: `Hva er fristen for innspill til høringen ${subject}, og hvordan sender jeg inn?`,
+          source: 'view',
+          tools: ['findHearingsForSak'],
+        });
+      }
+      suggestions.push({
+        id: 'horing-finn',
+        label: 'Relevante saker',
+        prompt: `Finn stortingssaker som er relevante for høringen ${subject}.`,
+        source: 'view',
+        tools: ['listMatchingSaker'],
+      });
+      return suggestions;
     }
     case 'utforsk':
     case 'folkets-meninger':
@@ -199,6 +242,7 @@ function signalSuggestions(signals: ChatUserSignals, context: ChatSuggestionCont
       label: `Siste saker innen ${topCategory.value}`,
       prompt: `Hva er de viktigste sakene på Stortinget innen ${topCategory.value} akkurat nå?`,
       source: 'signal',
+      tools: SEARCH_TOOLS,
     });
   }
 
@@ -211,6 +255,7 @@ function signalSuggestions(signals: ChatUserSignals, context: ChatSuggestionCont
       label: `Finn saker om ${topLabel.value}`,
       prompt: `Finn saker på Stortinget om ${topLabel.value}.`,
       source: 'signal',
+      tools: SEARCH_TOOLS,
     });
   }
 
@@ -229,6 +274,8 @@ function stanceSuggestions(signals: ChatUserSignals, context: ChatSuggestionCont
       label: `Status: ${stance.title}`,
       prompt: `Hva er status i «${stance.title}», og hva er neste steg?`,
       source: 'stance',
+      tools: ['getSakTimeline'],
+      contextSakId: stance.issueId,
     });
     if (out.length >= 2) break;
   }
@@ -246,6 +293,7 @@ function interestSuggestions(signals: ChatUserSignals, context: ChatSuggestionCo
       label: `Hjertesak: ${value}`,
       prompt: `Hva er de ferskeste sakene på Stortinget innen ${value}?`,
       source: 'interest',
+      tools: SEARCH_TOOLS,
     });
     if (out.length >= 2) break;
   }
@@ -259,12 +307,14 @@ function generalSuggestions(): ChatSuggestion[] {
       label: 'Hva skjer på Stortinget nå?',
       prompt: 'Hva er de viktigste sakene på Stortinget akkurat nå?',
       source: 'general',
+      tools: SEARCH_TOOLS,
     },
     {
       id: 'general-finn',
       label: 'Finn en sak om et tema',
       prompt: 'Finn saker på Stortinget om et tema jeg beskriver.',
       source: 'general',
+      tools: SEARCH_TOOLS,
     },
   ];
 }

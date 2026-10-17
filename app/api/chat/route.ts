@@ -8,8 +8,9 @@ import {
 } from 'ai';
 import { loadDecryptedByok } from '@/lib/byok/service';
 import { buildChatInstructions } from '@/lib/chat/instructions';
+import { parseChatPageContext } from '@/lib/chat/page-context';
 import { createUserLanguageModel } from '@/lib/chat/model';
-import { createChatTools } from '@/lib/chat/tools';
+import { createChatTools, selectFocusedChatTools } from '@/lib/chat/tools';
 import { createOllamaVectorizer } from '@/lib/chat/vector-search';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { requireStemmePlus } from '@/lib/stemme-plus/entitlement';
@@ -84,7 +85,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const issueId = readIssueId(request, body);
+  // Structured page context (page type + sakId/personId/pollId/hoeringId/opinionId).
+  // Suggestion text stays free of ids; the model gets them via the instructions.
+  const pageContext = parseChatPageContext(body.pageContext);
+  const issueId = readIssueId(request, body) ?? pageContext?.sakId ?? null;
   const ragClient = session;
   // Reuse the user's own Ollama server to vectorize queries when that is their
   // provider; every other provider keeps the lexical chunk search.
@@ -94,15 +98,18 @@ export async function POST(request: Request) {
     const model = createUserLanguageModel(credential);
     const result = streamText({
       model,
-      instructions: buildChatInstructions(issueId),
+      instructions: buildChatInstructions(issueId, new Date(), pageContext),
       messages: await convertToModelMessages(messages as UIMessage[]),
-      tools: createChatTools({
-        preferredIssueId: issueId,
-        ragClient,
-        vectorize,
-        userId: gate.userId,
-        impactProfile: readImpactProfile(body),
-      }),
+      // Focused Stemme+ tool set (plan P2): fewer tool descriptions for small models.
+      tools: selectFocusedChatTools(
+        createChatTools({
+          preferredIssueId: issueId,
+          ragClient,
+          vectorize,
+          userId: gate.userId,
+          impactProfile: readImpactProfile(body),
+        }),
+      ),
       stopWhen: isStepCount(8),
       onError: ({ error }) => {
         const message = error instanceof Error ? error.message : 'unknown chat error';

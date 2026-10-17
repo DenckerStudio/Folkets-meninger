@@ -182,7 +182,7 @@ export async function collectMyActivity(
       badges: [],
       stanceSignals: { categories: [], labels: [] },
       note:
-        'Holdningsdata sendes ikke til ekstern AI-leverandør uten eget samtykke. Gi samtykke under Min side → Personvern (BYOK / aktivitet i chat).',
+        'Holdningsdata sendes ikke til en ekstern modelleverandør uten eget samtykke. Gi samtykke under Min side → Personvern (BYOK / aktivitet i chat).',
     };
   }
   const safeLimit = Math.min(Math.max(limit, 1), 10);

@@ -6,9 +6,18 @@ import {
   runUpdatedSourceSearch,
 } from '@/lib/chat/actions';
 import {
+  createCitationRegistry,
+  uniqueSources,
+  type ChatSource,
+  type CitationRegistry,
+} from '@/lib/chat/citations';
+import {
+  loadIssueMeta,
   retrieveSakContext,
   retrieveTopicContext,
   searchIssuesForChat,
+  type ChatDocumentChunk,
+  type ChatIssueHit,
   type ChatRagClient,
 } from '@/lib/chat/rag';
 import {
@@ -32,7 +41,54 @@ export type ChatToolOptions = {
   userId?: string | null;
   /** Browser-local impact profile forwarded by the chat client. */
   impactProfile?: unknown;
+  /** Per-request source numbering; a fresh registry is created when omitted. */
+  citations?: CitationRegistry | null;
 };
+
+/**
+ * Focused Stemme+ tool set sent to the model (plan P2, «kort verktøyprofil»).
+ * Core sak/topic/hearing/vote retrieval plus the user's own data. Tools left
+ * out stay available via `createChatTools` for tests and older conversations:
+ * - helpRettsskriving: rettskriving lives in the opinion composer
+ *   (`/api/chat/rettskriving`), next to the text the user is writing.
+ * - listSakDocuments: overlaps retrieveSakContext, whose excerpts now carry
+ *   numbered document sources.
+ * - getFolketsMeninger: individual opinions are user content and must not be
+ *   mixed into factual context (plan 3.1); aggregated votes come from getVoteResults.
+ * - getPublicProfile: only echoes the user's own public display name; no page
+ *   context or suggestion asks for it.
+ * getPolitician and getPollResults stay in: the chat opens with suggestions on
+ * politician and poll pages (lib/chat/suggestions.ts) that only they can answer.
+ * Every view suggestion must map to a tool in this list (suggestions.test.ts).
+ */
+export const FOCUSED_CHAT_TOOL_NAMES = [
+  'retrieveSakContext',
+  'retrieveTopicContext',
+  'listMatchingSaker',
+  'getVoteResults',
+  'getPollResults',
+  'getSakTimeline',
+  'findHearingsForSak',
+  'listOpenHearings',
+  'searchUpdatedSources',
+  'getPolitician',
+  'getMyActivity',
+  'getImpact',
+  'listMyNotifications',
+  'getInnspillStatus',
+] as const;
+
+export type FocusedChatToolName = (typeof FOCUSED_CHAT_TOOL_NAMES)[number];
+
+export function selectFocusedChatTools<T extends Record<FocusedChatToolName, unknown>>(
+  tools: T,
+): Pick<T, FocusedChatToolName> {
+  const picked = {} as Pick<T, FocusedChatToolName>;
+  for (const name of FOCUSED_CHAT_TOOL_NAMES) {
+    picked[name] = tools[name];
+  }
+  return picked;
+}
 
 export function createChatTools(options?: ChatToolOptions | string | null) {
   const resolved: ChatToolOptions =
@@ -42,6 +98,23 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
   const preferredIssueId = resolved.preferredIssueId ?? null;
   const ragClient = resolved.ragClient ?? null;
   const vectorize = resolved.vectorize ?? null;
+  const citations = resolved.citations ?? createCitationRegistry();
+
+  const citeIssue = (issue: Pick<ChatIssueHit, 'id' | 'title'> | null): ChatSource | null =>
+    issue
+      ? citations.cite({ kind: 'sak', title: issue.title || `Sak ${issue.id}`, issueId: issue.id })
+      : null;
+
+  const citeChunks = (issueId: string, chunks: readonly ChatDocumentChunk[]) =>
+    chunks.map((chunk) => {
+      const source = citations.cite({
+        kind: 'dokument',
+        title: chunk.documentTitle || 'Dokument i saken',
+        issueId,
+        documentId: chunk.documentId,
+      });
+      return { chunk: { ...chunk, kilde: source.n }, source };
+    });
 
   const resolveIssueId = async (args: {
     issueId?: string;
@@ -58,7 +131,7 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
   return {
     retrieveSakContext: tool({
       description:
-        'Hent sak, AI-sammendrag og dokumentutdrag fra Folkets Meninger (uten embeddings-kolonner). Bruk når brukeren spør om en stortingssak.',
+        'Hent sak, sammendrag og dokumentutdrag fra Folkets Meninger. Hvert utdrag har et kildenummer (kilde) som du siterer som [n]. Bruk når brukeren spør om en bestemt stortingssak.',
       inputSchema: z.object({
         issueId: z
           .string()
@@ -73,10 +146,16 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
           client: ragClient,
           vectorize,
         });
+        const issueSource = citeIssue(context.issue);
+        const cited = context.issue ? citeChunks(context.issue.id, context.chunks) : [];
         return {
-          issue: context.issue,
+          issue: context.issue ? { ...context.issue, kilde: issueSource?.n ?? null } : null,
           summary: context.summary,
-          chunks: context.chunks,
+          chunks: context.issue ? cited.map((entry) => entry.chunk) : context.chunks,
+          kilder: uniqueSources([
+            ...(issueSource ? [issueSource] : []),
+            ...cited.map((entry) => entry.source),
+          ]),
           note: context.note,
         };
       },
@@ -92,7 +171,14 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
         if (!result.ok) {
           return { unavailable: result.unavailable, error: result.error, results: [] as const };
         }
-        return { unavailable: false, results: result.results };
+        const sources = result.results.map((hit) =>
+          citations.cite({ kind: 'nett', title: hit.title || hit.url, url: hit.url }),
+        );
+        return {
+          unavailable: false,
+          results: result.results.map((hit, index) => ({ ...hit, kilde: sources[index].n })),
+          kilder: uniqueSources(sources),
+        };
       },
     }),
     helpRettsskriving: tool({
@@ -127,9 +213,12 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
           ),
       }),
       execute: async ({ query }) => {
-        const issues = await searchIssuesForChat(query, 8, ragClient);
+        const found = await searchIssuesForChat(query, 8, ragClient);
+        const sources = found.map((issue) => citeIssue(issue)!);
+        const issues = found.map((issue, index) => ({ ...issue, kilde: sources[index].n }));
         return {
           issues,
+          kilder: uniqueSources(sources),
           note:
             issues.length === 0
               ? 'Ingen treff i sakcachen. Prøv et mer presist søk eller SearXNG.'
@@ -155,7 +244,18 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
       }),
       execute: async ({ query, limit }) => {
         const context = await retrieveTopicContext({ query, limit, client: ragClient, vectorize });
-        return { query: context.query, saker: context.saker, note: context.note };
+        const sources: ChatSource[] = [];
+        const saker = context.saker.map((sak) => {
+          const issueSource = citeIssue(sak.issue)!;
+          const cited = citeChunks(sak.issue.id, sak.chunks);
+          sources.push(issueSource, ...cited.map((entry) => entry.source));
+          return {
+            ...sak,
+            issue: { ...sak.issue, kilde: issueSource.n },
+            chunks: cited.map((entry) => entry.chunk),
+          };
+        });
+        return { query: context.query, saker, kilder: uniqueSources(sources), note: context.note };
       },
     }),
     getVoteResults: tool({
@@ -184,11 +284,15 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
             note: 'Fant ingen sak å hente stemmeresultat for. Oppgi sak-id eller en tydeligere tittel.',
           };
         }
-        const result = await fetchVoteAlignment({ issueId: id, client: ragClient });
+        const [result, meta] = await Promise.all([
+          fetchVoteAlignment({ issueId: id, client: ragClient }),
+          loadIssueMeta(id, ragClient),
+        ]);
         if (!result) {
           return { found: false as const, note: 'Kunne ikke hente stemmeresultat for saken.' };
         }
-        return { found: true as const, issueId: id, ...result };
+        const source = citeIssue({ id, title: meta?.title ?? null })!;
+        return { found: true as const, issueId: id, kilde: source.n, kilder: [source], ...result };
       },
     }),
     findHearingsForSak: tool({
@@ -215,11 +319,23 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
             note: 'Fant ingen sak å hente høringer for. Oppgi sak-id eller en tydeligere tittel.',
           };
         }
-        const hearings = await collectHearingsForSak(id);
+        const collected = await collectHearingsForSak(id);
+        const sources = collected.map((hearing) =>
+          citations.cite({
+            kind: 'høring',
+            title: hearing.title,
+            issueId: id,
+            // Saksgang-derived hearings have no public hearing page.
+            hearingId: hearing.id.startsWith('saksgang-') ? null : hearing.id,
+            url: hearing.skriftligInnspillUrl,
+          }),
+        );
+        const hearings = collected.map((hearing, index) => ({ ...hearing, kilde: sources[index].n }));
         return {
           found: true as const,
           issueId: id,
           hearings,
+          kilder: uniqueSources(sources),
           note: hearings.length === 0 ? 'Ingen høring er registrert for denne saken.' : null,
         };
       },
@@ -238,8 +354,17 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
       }),
       execute: async ({ limit }) => {
         const result = await collectOpenHearings(limit ?? 8);
+        const sources = result.hearings.map((hearing) =>
+          citations.cite({
+            kind: 'høring',
+            title: hearing.title,
+            hearingId: hearing.id,
+            url: hearing.skriftligInnspillUrl,
+          }),
+        );
         return {
-          hearings: result.hearings,
+          hearings: result.hearings.map((hearing, index) => ({ ...hearing, kilde: sources[index].n })),
+          kilder: uniqueSources(sources),
           summary: result.summary,
           note:
             result.hearings.length === 0
@@ -279,7 +404,8 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
             note: 'Kunne ikke hente saksdetaljer fra Stortinget for denne saken.',
           };
         }
-        return { found: true as const, issueId: id, ...timeline };
+        const source = citeIssue({ id, title: timeline.title })!;
+        return { found: true as const, issueId: id, kilde: source.n, kilder: [source], ...timeline };
       },
     }),
     listSakDocuments: tool({
@@ -378,7 +504,7 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
     }),
     getPolitician: tool({
       description:
-        'Slå opp stortingspolitikere og regjeringsmedlemmer i inneværende periode etter navn eller person-id. Returnerer parti, fylke, verv og eventuell regjeringsrolle. Bruk når brukeren spør hvem en politiker er eller hvilket parti/fylke de tilhører.',
+        'Slå opp stortingspolitikere og regjeringsmedlemmer i inneværende periode etter navn eller person-id. Returnerer parti, fylke, verv og eventuell regjeringsrolle, med kilde [n] per treff. Bruk når brukeren spør hvem en politiker er eller hvilket parti/fylke de tilhører.',
       inputSchema: z.object({
         personId: z
           .string()
@@ -394,10 +520,18 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
         if (!personId?.trim() && !query?.trim()) {
           return { matches: [], note: 'Oppgi et navn eller en person-id å slå opp.' };
         }
-        return collectPoliticianMatches({ personId, query });
+        const result = await collectPoliticianMatches({ personId, query });
+        const sources = result.matches.map((politician) =>
+          citations.cite({ kind: 'politiker', title: politician.name, personId: politician.id }),
+        );
+        return {
+          ...result,
+          matches: result.matches.map((politician, index) => ({ ...politician, kilde: sources[index].n })),
+          kilder: uniqueSources(sources),
+        };
       },
     }),
-    ...createPollChatTools({ client: ragClient, resolveIssueId }),
+    ...createPollChatTools({ client: ragClient, citations, resolveIssueId }),
     ...createPersonalChatTools({
       client: ragClient,
       userId: resolved.userId ?? null,

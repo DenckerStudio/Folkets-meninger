@@ -13,6 +13,7 @@ import {
 import { isPollVotingOpen, POLL_PUBLIC_PERCENT_MIN_VOTES, pollChoicePercent } from '@/lib/polls/format';
 import { POLL_FYLKE_MIN_VOTES } from '@/lib/polls/norway-counties';
 import type { PollFylkeTotals, PollRecord, PollTotals } from '@/lib/polls/types';
+import type { CitationRegistry } from '@/lib/chat/citations';
 
 export type ChatPollPercents = { ja: number; nei: number; blank: number };
 
@@ -137,6 +138,8 @@ export async function collectPollResults(args: {
 
 export function createPollChatTools(args: {
   client?: ChatRagClient | null;
+  /** Per-request source registry so poll results can be cited as [n]. */
+  citations?: CitationRegistry | null;
   resolveIssueId: (input: { issueId?: string; query?: string }) => Promise<string | null>;
 }) {
   return {
@@ -155,8 +158,23 @@ export function createPollChatTools(args: {
           .optional()
           .describe('Tittel eller spørsmål hvis poll-id eller sak-id ikke er kjent.'),
       }),
-      execute: async ({ pollId, issueId, query }) =>
-        collectPollResults({ pollId, issueId, query, resolveIssueId: args.resolveIssueId, client: args.client }),
+      execute: async ({ pollId, issueId, query }) => {
+        const result = await collectPollResults({
+          pollId,
+          issueId,
+          query,
+          resolveIssueId: args.resolveIssueId,
+          client: args.client,
+        });
+        if (!result.found || !result.pollId || !args.citations) return result;
+        const source = args.citations.cite({
+          kind: 'avstemning',
+          title: result.title || 'Avstemning i appen',
+          pollId: result.pollId,
+          issueId: result.stortingetIssueId,
+        });
+        return { ...result, kilde: source.n, kilder: [source] };
+      },
     }),
   };
 }
