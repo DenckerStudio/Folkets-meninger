@@ -6,6 +6,7 @@
  * every answer (neutrality, no voting advice, `[n]` citations, bokmål) are
  * stated here once.
  */
+import { describeChatPageContext, type ChatPageContext } from '@/lib/chat/page-context';
 
 export const CHAT_PROMPT_VERSION = 'stemme-chat-v2';
 
@@ -29,7 +30,12 @@ function periodeLabel(): string {
   return raw.replace('-', '–');
 }
 
-export function buildChatInstructions(issueId?: string | null, now: Date = new Date()): string {
+export function buildChatInstructions(
+  issueId?: string | null,
+  now: Date = new Date(),
+  pageContext?: ChatPageContext | null,
+): string {
+  const pageLines = describeChatPageContext(pageContext).map((line) => `- ${line}`);
   const sakHint = issueId
     ? `Brukeren har åpnet sak ${issueId}. Hent konteksten med retrieveSakContext før du svarer om innholdet.`
     : 'Når brukeren nevner en bestemt sak, bruk retrieveSakContext. Ved tema på tvers av saker («hva skjer med X»), bruk retrieveTopicContext.';
@@ -49,6 +55,7 @@ export function buildChatInstructions(issueId?: string | null, now: Date = new D
     '- Nevn et tall eller et beløp bare når det står i et verktøyresultat. Finner du ikke svaret i kildene, skriv «Dette fant jeg ikke i kildene.»',
     '- Bruk verktøyene før du konkluderer om en sak. Gjett ikke på innhold du ikke har slått opp.',
     `- ${sakHint}`,
+    ...(pageLines.length > 0 ? ['', 'Siden brukeren står på:', ...pageLines] : []),
     '',
     'Svarform:',
     '- Start med et kort svar på 2–3 setninger. Gi deretter detaljer i punkter når det trengs.',

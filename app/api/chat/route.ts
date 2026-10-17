@@ -8,6 +8,7 @@ import {
 } from 'ai';
 import { loadDecryptedByok } from '@/lib/byok/service';
 import { buildChatInstructions } from '@/lib/chat/instructions';
+import { parseChatPageContext } from '@/lib/chat/page-context';
 import { createUserLanguageModel } from '@/lib/chat/model';
 import { createChatTools, selectFocusedChatTools } from '@/lib/chat/tools';
 import { createOllamaVectorizer } from '@/lib/chat/vector-search';
@@ -84,7 +85,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const issueId = readIssueId(request, body);
+  // Structured page context (page type + sakId/personId/pollId/hoeringId/opinionId).
+  // Suggestion text stays free of ids; the model gets them via the instructions.
+  const pageContext = parseChatPageContext(body.pageContext);
+  const issueId = readIssueId(request, body) ?? pageContext?.sakId ?? null;
   const ragClient = session;
   // Reuse the user's own Ollama server to vectorize queries when that is their
   // provider; every other provider keeps the lexical chunk search.
@@ -94,7 +98,7 @@ export async function POST(request: Request) {
     const model = createUserLanguageModel(credential);
     const result = streamText({
       model,
-      instructions: buildChatInstructions(issueId),
+      instructions: buildChatInstructions(issueId, new Date(), pageContext),
       messages: await convertToModelMessages(messages as UIMessage[]),
       // Focused Stemme+ tool set (plan P2): fewer tool descriptions for small models.
       tools: selectFocusedChatTools(
