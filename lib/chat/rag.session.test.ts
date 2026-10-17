@@ -103,7 +103,8 @@ assert.doesNotMatch(voteSrc, /embedding/);
 
 assert.match(toolsSrc, /getVoteResults/);
 assert.match(toolsSrc, /fetchVoteAlignment/);
-assert.match(instructionsSrc, /getVoteResults/);
+// Prompt v2 keeps tool descriptions in tool(); the focused profile lists the tool.
+assert.match(toolsSrc, /'getVoteResults',/);
 assert.match(cardSrc, /tool-getVoteResults/);
 assert.match(cardSrc, /VoteResultsCard/);
 
@@ -201,10 +202,13 @@ assert.doesNotMatch(
   /getServiceSupabase/,
 );
 
-assert.match(instructionsSrc, /getPollResults/);
-assert.match(instructionsSrc, /getMyActivity/);
+// Prompt v2: personal tools stay in the focused profile; poll and public-profile
+// tools remain defined (cards still render) but are not sent to the model.
+assert.match(toolsSrc, /'getMyActivity',/);
+assert.match(toolsSrc, /'getImpact',/);
 assert.match(instructionsSrc, /getImpact/);
-assert.match(instructionsSrc, /getPublicProfile/);
+assert.match(toolsSrc, /getPollResults/);
+assert.match(toolsSrc, /getPublicProfile/);
 assert.match(cardSrc, /tool-getPollResults/);
 assert.match(cardSrc, /PollResultsCard/);
 assert.match(cardSrc, /tool-getMyActivity/);

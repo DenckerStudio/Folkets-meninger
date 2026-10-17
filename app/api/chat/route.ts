@@ -9,7 +9,7 @@ import {
 import { loadDecryptedByok } from '@/lib/byok/service';
 import { buildChatInstructions } from '@/lib/chat/instructions';
 import { createUserLanguageModel } from '@/lib/chat/model';
-import { createChatTools } from '@/lib/chat/tools';
+import { createChatTools, selectFocusedChatTools } from '@/lib/chat/tools';
 import { createOllamaVectorizer } from '@/lib/chat/vector-search';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { requireStemmePlus } from '@/lib/stemme-plus/entitlement';
@@ -96,13 +96,16 @@ export async function POST(request: Request) {
       model,
       instructions: buildChatInstructions(issueId),
       messages: await convertToModelMessages(messages as UIMessage[]),
-      tools: createChatTools({
-        preferredIssueId: issueId,
-        ragClient,
-        vectorize,
-        userId: gate.userId,
-        impactProfile: readImpactProfile(body),
-      }),
+      // Focused Stemme+ tool set (plan P2): fewer tool descriptions for small models.
+      tools: selectFocusedChatTools(
+        createChatTools({
+          preferredIssueId: issueId,
+          ragClient,
+          vectorize,
+          userId: gate.userId,
+          impactProfile: readImpactProfile(body),
+        }),
+      ),
       stopWhen: isStepCount(8),
       onError: ({ error }) => {
         const message = error instanceof Error ? error.message : 'unknown chat error';
