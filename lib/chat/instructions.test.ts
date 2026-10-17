@@ -30,7 +30,11 @@ assert.deepEqual(Object.keys(focused).sort(), [...FOCUSED_CHAT_TOOL_NAMES].sort(
 for (const name of ['listMyNotifications', 'getInnspillStatus', 'getImpact', 'getMyActivity'] as const) {
   assert.ok(name in focused, `${name} must stay in the focused set`);
 }
-for (const name of ['helpRettsskriving', 'getPollResults', 'getPolitician', 'getPublicProfile']) {
+// Politician and poll pages open with suggestions only these tools can answer.
+for (const name of ['getPolitician', 'getPollResults'] as const) {
+  assert.ok(name in focused, `${name} must stay in the focused set`);
+}
+for (const name of ['helpRettsskriving', 'listSakDocuments', 'getFolketsMeninger', 'getPublicProfile']) {
   assert.ok(!(name in focused), `${name} should not be sent to the model`);
 }
 assert.ok(Object.keys(focused).length < Object.keys(all).length);

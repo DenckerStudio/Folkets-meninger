@@ -8,7 +8,7 @@
  * per source, so several chunks from the same document share one number.
  */
 
-export type ChatSourceKind = 'sak' | 'dokument' | 'høring' | 'nett';
+export type ChatSourceKind = 'sak' | 'dokument' | 'høring' | 'politiker' | 'avstemning' | 'nett';
 
 export type ChatSource = {
   n: number;
@@ -17,14 +17,23 @@ export type ChatSource = {
   issueId: string | null;
   documentId: string | null;
   hearingId: string | null;
+  /** Stortinget person-id for `politiker` sources. */
+  personId: string | null;
+  /** App poll id for `avstemning` sources. */
+  pollId: string | null;
   /** External URL when the tool already has one (web results, Stortinget pages). */
   url: string | null;
 };
 
-export type ChatSourceInput = Omit<ChatSource, 'n' | 'issueId' | 'documentId' | 'hearingId' | 'url'> & {
+export type ChatSourceInput = Omit<
+  ChatSource,
+  'n' | 'issueId' | 'documentId' | 'hearingId' | 'personId' | 'pollId' | 'url'
+> & {
   issueId?: string | null;
   documentId?: string | null;
   hearingId?: string | null;
+  personId?: string | null;
+  pollId?: string | null;
   url?: string | null;
 };
 
@@ -46,6 +55,10 @@ export function chatSourceKey(source: Omit<ChatSource, 'n'>): string {
       return `dokument:${source.issueId ?? ''}:${source.documentId ?? source.title}`;
     case 'høring':
       return `høring:${source.hearingId ?? source.url ?? source.title}`;
+    case 'politiker':
+      return `politiker:${source.personId ?? source.title}`;
+    case 'avstemning':
+      return `avstemning:${source.pollId ?? source.title}`;
     case 'nett':
       return `nett:${source.url ?? source.title}`;
   }
@@ -62,6 +75,8 @@ export function createCitationRegistry(): CitationRegistry {
         issueId: clean(input.issueId),
         documentId: clean(input.documentId),
         hearingId: clean(input.hearingId),
+        personId: clean(input.personId),
+        pollId: clean(input.pollId),
         url: clean(input.url),
       };
       const key = chatSourceKey(normalized);

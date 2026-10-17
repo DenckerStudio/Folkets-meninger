@@ -55,18 +55,23 @@ export type ChatToolOptions = {
  *   numbered document sources.
  * - getFolketsMeninger: individual opinions are user content and must not be
  *   mixed into factual context (plan 3.1); aggregated votes come from getVoteResults.
- * - getPollResults, getPolitician, getPublicProfile: outside sak/høring focus,
- *   and each has its own page in the app.
+ * - getPublicProfile: only echoes the user's own public display name; no page
+ *   context or suggestion asks for it.
+ * getPolitician and getPollResults stay in: the chat opens with suggestions on
+ * politician and poll pages (lib/chat/suggestions.ts) that only they can answer.
+ * Every view suggestion must map to a tool in this list (suggestions.test.ts).
  */
 export const FOCUSED_CHAT_TOOL_NAMES = [
   'retrieveSakContext',
   'retrieveTopicContext',
   'listMatchingSaker',
   'getVoteResults',
+  'getPollResults',
   'getSakTimeline',
   'findHearingsForSak',
   'listOpenHearings',
   'searchUpdatedSources',
+  'getPolitician',
   'getMyActivity',
   'getImpact',
   'listMyNotifications',
@@ -499,7 +504,7 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
     }),
     getPolitician: tool({
       description:
-        'Slå opp stortingspolitikere og regjeringsmedlemmer i inneværende periode etter navn eller person-id. Returnerer parti, fylke, verv og eventuell regjeringsrolle. Bruk når brukeren spør hvem en politiker er eller hvilket parti/fylke de tilhører.',
+        'Slå opp stortingspolitikere og regjeringsmedlemmer i inneværende periode etter navn eller person-id. Returnerer parti, fylke, verv og eventuell regjeringsrolle, med kilde [n] per treff. Bruk når brukeren spør hvem en politiker er eller hvilket parti/fylke de tilhører.',
       inputSchema: z.object({
         personId: z
           .string()
@@ -515,10 +520,18 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
         if (!personId?.trim() && !query?.trim()) {
           return { matches: [], note: 'Oppgi et navn eller en person-id å slå opp.' };
         }
-        return collectPoliticianMatches({ personId, query });
+        const result = await collectPoliticianMatches({ personId, query });
+        const sources = result.matches.map((politician) =>
+          citations.cite({ kind: 'politiker', title: politician.name, personId: politician.id }),
+        );
+        return {
+          ...result,
+          matches: result.matches.map((politician, index) => ({ ...politician, kilde: sources[index].n })),
+          kilder: uniqueSources(sources),
+        };
       },
     }),
-    ...createPollChatTools({ client: ragClient, resolveIssueId }),
+    ...createPollChatTools({ client: ragClient, citations, resolveIssueId }),
     ...createPersonalChatTools({
       client: ragClient,
       userId: resolved.userId ?? null,
