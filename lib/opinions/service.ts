@@ -1,4 +1,5 @@
-import { resolvePublicAuthor } from '@/lib/identity/public-identity';
+import { loadPublicUserDisplays } from '@/lib/identity/public-user-display';
+import { resolvePublicAuthor, type UserNameFields } from '@/lib/identity/public-identity';
 import { addStanceCount, emptyStanceCounts } from '@/lib/opinions/labels';
 import {
   OPINION_BODY_MAX,
@@ -61,7 +62,10 @@ function supabaseConfigured(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
 
-function mapAuthor(userId: string, users: UserJoin | UserJoin[] | null): { name: string | null; initials: string } {
+function mapAuthor(
+  userId: string,
+  users: UserNameFields | UserJoin | UserJoin[] | null | undefined,
+): { name: string | null; initials: string } {
   const author = resolvePublicAuthor({ userId, users });
   return {
     name: author?.name ?? null,
@@ -69,8 +73,20 @@ function mapAuthor(userId: string, users: UserJoin | UserJoin[] | null): { name:
   };
 }
 
-function mapOpinionRow(row: OpinionRow, issueTitle: string | null, counts: OpinionStanceCounts): OpinionListItem {
-  const author = mapAuthor(row.author_user_id, row.users);
+async function attachAuthorDisplays<T extends { author_user_id: string }>(
+  client: ReturnType<typeof getAnonSupabase>,
+  rows: T[],
+): Promise<Map<string, UserNameFields>> {
+  return loadPublicUserDisplays(client, rows.map((row) => row.author_user_id));
+}
+
+function mapOpinionRow(
+  row: OpinionRow,
+  issueTitle: string | null,
+  counts: OpinionStanceCounts,
+  authorDisplays: Map<string, UserNameFields>,
+): OpinionListItem {
+  const author = mapAuthor(row.author_user_id, authorDisplays.get(row.author_user_id) ?? row.users);
   const stance: OpinionStance = isOpinionStance(row.stance) ? row.stance : 'blank';
   return {
     id: row.id,
@@ -88,9 +104,12 @@ function mapOpinionRow(row: OpinionRow, issueTitle: string | null, counts: Opini
   };
 }
 
-function mapReplyRow(row: ReplyRow): OpinionReplyItem | null {
+function mapReplyRow(
+  row: ReplyRow,
+  authorDisplays: Map<string, UserNameFields>,
+): OpinionReplyItem | null {
   if (!isOpinionStance(row.stance)) return null;
-  const author = mapAuthor(row.author_user_id, row.users);
+  const author = mapAuthor(row.author_user_id, authorDisplays.get(row.author_user_id) ?? row.users);
   return {
     id: row.id,
     opinionId: row.opinion_id,
@@ -159,8 +178,7 @@ const OPINION_SELECT = `
   points,
   stortinget_issue_id,
   created_at,
-  author_user_id,
-  users:author_user_id (first_name, last_name, name)
+  author_user_id
 `;
 
 const REPLY_SELECT = `
@@ -170,8 +188,7 @@ const REPLY_SELECT = `
   body,
   created_at,
   updated_at,
-  author_user_id,
-  users:author_user_id (first_name, last_name, name)
+  author_user_id
 `;
 
 async function listSakPickerOptionsFromCache(limit: number, live: boolean): Promise<SakPickerOption[]> {
@@ -267,10 +284,11 @@ async function listCitizenOpinionsInternal(
   }
 
   const rows = (data ?? []) as OpinionRow[];
-  const issueTitles = await loadIssueTitles(
-    rows.map((row) => row.stortinget_issue_id).filter((id): id is string => Boolean(id)),
-  );
-  const countsById = await loadCountsByOpinion(rows.map((row) => row.id));
+  const [issueTitles, countsById, authorDisplays] = await Promise.all([
+    loadIssueTitles(rows.map((row) => row.stortinget_issue_id).filter((id): id is string => Boolean(id))),
+    loadCountsByOpinion(rows.map((row) => row.id)),
+    attachAuthorDisplays(supabase, rows),
+  ]);
 
   return rows.map((row) => {
     const counts = countsById.get(row.id) ?? emptyStanceCounts();
@@ -278,7 +296,7 @@ async function listCitizenOpinionsInternal(
       addStanceCount(counts, row.stance);
     }
     const issueTitle = row.stortinget_issue_id ? issueTitles.get(row.stortinget_issue_id) ?? null : null;
-    return mapOpinionRow(row, issueTitle, counts);
+    return mapOpinionRow(row, issueTitle, counts, authorDisplays);
   });
 }
 
@@ -362,22 +380,28 @@ export async function getCitizenOpinion(id: string, viewerUserId?: string | null
   }
 
   const row = data as OpinionRow;
-  const [issueTitles, replyResult] = await Promise.all([
+  const replyResult = await supabase
+    .from('citizen_opinion_replies')
+    .select(REPLY_SELECT)
+    .eq('opinion_id', id)
+    .eq('is_removed', false)
+    .order('created_at', { ascending: true });
+
+  const replyRows = (replyResult.data ?? []) as ReplyRow[];
+  const [issueTitles, authorDisplays] = await Promise.all([
     loadIssueTitles(row.stortinget_issue_id ? [row.stortinget_issue_id] : []),
-    supabase
-      .from('citizen_opinion_replies')
-      .select(REPLY_SELECT)
-      .eq('opinion_id', id)
-      .eq('is_removed', false)
-      .order('created_at', { ascending: true }),
+    loadPublicUserDisplays(supabase, [
+      row.author_user_id,
+      ...replyRows.map((reply) => reply.author_user_id),
+    ]),
   ]);
 
   if (replyResult.error) {
     console.error('getCitizenOpinion replies error:', replyResult.error.message);
   }
 
-  const replies = ((replyResult.data ?? []) as ReplyRow[])
-    .map(mapReplyRow)
+  const replies = replyRows
+    .map((replyRow) => mapReplyRow(replyRow, authorDisplays))
     .filter((item): item is OpinionReplyItem => Boolean(item));
 
   const counts = emptyStanceCounts();
@@ -385,7 +409,7 @@ export async function getCitizenOpinion(id: string, viewerUserId?: string | null
   for (const reply of replies) addStanceCount(counts, reply.stance);
 
   const issueTitle = row.stortinget_issue_id ? issueTitles.get(row.stortinget_issue_id) ?? null : null;
-  const listItem = mapOpinionRow(row, issueTitle, counts);
+  const listItem = mapOpinionRow(row, issueTitle, counts, authorDisplays);
   const viewerReply = viewerUserId ? replies.find((reply) => reply.authorUserId === viewerUserId) ?? null : null;
 
   return {

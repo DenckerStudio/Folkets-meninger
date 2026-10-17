@@ -26,11 +26,12 @@ assert.equal(process.env.SUPABASE_SERVICE_ROLE_KEY, undefined);
 
 async function main() {
   const supabase = createClient(url, anon);
-  const [creds, secretCols, tier, customer] = await Promise.all([
+  const [creds, secretCols, tier, customer, userList] = await Promise.all([
     supabase.from('user_llm_credentials').select('user_id, key_last4').limit(1),
     supabase.from('user_llm_credentials').select('ciphertext_b64').limit(1),
     supabase.from('users').select('subscription_tier, subscription_status, subscription_period_end').limit(1),
     supabase.from('users').select('stripe_customer_id').limit(1),
+    supabase.from('users').select('id, first_name, last_name').limit(5),
   ]);
 
   const payload = {
@@ -42,11 +43,13 @@ async function main() {
     customerError: customer.error?.message ?? null,
     tierReadable: !tier.error,
     stripeCustomerReadable: !customer.error,
+    userListError: userList.error?.message ?? null,
+    userListRows: Array.isArray(userList.data) ? userList.data.length : 0,
     credentialRows: Array.isArray(creds.data) ? creds.data.length : 0,
     note:
-      'Anon/session can already read subscription_tier and stripe_customer_id on Folkets Meninger. ' +
-      'Status returns the real has_stripe_customer boolean from that session SELECT. ' +
-      'BYOK ciphertext stays table-denied for anon until ops apply 20261003210000 (owner RLS).',
+      'After 20261017120000_revoke_public_users_leak, anon must not list users. ' +
+      'Unauthenticated tier/stripe probes may still error until session is established. ' +
+      'BYOK ciphertext stays table-denied for anon.',
   };
 
   writeFileSync('/opt/cursor/artifacts/byok-rls-live.json', JSON.stringify(payload, null, 2));
@@ -55,8 +58,8 @@ async function main() {
   assert.match(payload.secretError ?? '', /permission denied|not accept/i);
   assert.equal(payload.usedServiceRole, false);
   assert.equal(payload.credentialRows, 0);
-  assert.equal(payload.tierReadable, true);
-  assert.equal(payload.stripeCustomerReadable, true);
+  assert.match(payload.userListError ?? '', /permission denied|not accept|row-level security/i);
+  assert.equal(payload.userListRows, 0);
   console.log(
     'byok/rls.live.test.ts: ok',
     payload.credentialsError,
