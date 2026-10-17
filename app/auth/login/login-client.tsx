@@ -21,6 +21,7 @@ export default function LoginClient() {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = toRelativeNext(searchParams.get('next'));
@@ -33,6 +34,11 @@ export default function LoginClient() {
 
     try {
       if (isRegister) {
+        if (!ageConfirmed) {
+          setError('Du må bekrefte at du er 16 år eller eldre for å registrere deg.');
+          setIsLoading(false);
+          return;
+        }
         const trimmedFirst = firstName.trim();
         const trimmedLast = lastName.trim();
         if (trimmedFirst.length < 2 || trimmedLast.length < 2) {
@@ -83,6 +89,10 @@ export default function LoginClient() {
   };
 
   const handleSocialLogin = async (provider: 'google' | 'github') => {
+    if (isRegister && !ageConfirmed) {
+      setError('Du må bekrefte at du er 16 år eller eldre for å registrere deg.');
+      return;
+    }
     setIsLoading(true);
     setError('');
     const { error } = await supabase.auth.signInWithOAuth({
@@ -247,7 +257,7 @@ export default function LoginClient() {
             <div className="space-y-3 mb-6">
               <button
                 onClick={() => handleSocialLogin('google')}
-                disabled={isLoading}
+                disabled={isLoading || (isRegister && !ageConfirmed)}
                 className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-border rounded-xl shadow-sm text-sm font-medium text-foreground bg-card hover:bg-muted/50 disabled:opacity-50 transition-colors"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -366,10 +376,23 @@ export default function LoginClient() {
                 ) : null}
               </div>
 
+              {isRegister ? (
+                <label className="flex gap-3 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 shrink-0 accent-brand"
+                    checked={ageConfirmed}
+                    onChange={(e) => setAgeConfirmed(e.target.checked)}
+                    required
+                  />
+                  <span>Jeg bekrefter at jeg er 16 år eller eldre</span>
+                </label>
+              ) : null}
+
               <div>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || (isRegister && !ageConfirmed)}
                   className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-brand-foreground bg-brand hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {isLoading ? (
@@ -404,6 +427,7 @@ export default function LoginClient() {
                   onClick={() => {
                     setIsRegister(!isRegister);
                     setError('');
+                    setAgeConfirmed(false);
                   }}
                   className="inline-flex min-h-11 items-center px-2 text-sm font-medium text-brand hover:text-brand/80"
                 >

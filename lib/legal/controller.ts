@@ -1,11 +1,8 @@
-/**
- * Behandlingsansvarlig — fyll inn fra Mathias før offentlig visning.
- * Tomme felt skjules i personvernerklæringen.
- */
+/** Behandlingsansvarlig (vist på /personvern og /vilkar). */
 export const DATA_CONTROLLER = {
-  legalName: '' as string,
-  orgNumber: '' as string,
-  postalAddress: '' as string,
+  legalName: 'Dencker (enkeltpersonforetak)',
+  orgNumber: '934538498',
+  postalAddress: 'Ileveien 10, 1407 Vinterbro',
   privacyEmail: 'kontakt@folkets-meninger.no',
 };
 

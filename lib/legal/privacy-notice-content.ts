@@ -1,3 +1,4 @@
+import { MIN_ACCOUNT_AGE_YEARS } from '@/lib/legal/account-age';
 import { STANCE_PUBLIC_MIN_ENGAGED } from '@/lib/stances/constants';
 import { GOVERNMENT_STATS_MIN_VOTES } from '@/lib/government-stats/snapshot';
 
@@ -75,5 +76,4 @@ export const PRIVACY_COMPLAINT =
 export const PRIVACY_COOKIES =
   'Vi bruker informasjonskapsler som er nødvendige for innlogging (Supabase auth-token), og lokal lagring for tema, omvisning, utkast, konsekvenskalkulator og chat-samtaler i nettleseren. Vi bruker ikke tredjeparts analyseverktøy på forsiden.';
 
-export const PRIVACY_AGE =
-  'Du må være minst 13 år for å opprette konto. Vi gjennomfører ikke aldersverifisering utover det du oppgir ved registrering.';
+export const PRIVACY_AGE = `Du må være minst ${MIN_ACCOUNT_AGE_YEARS} år for å opprette konto. Vi gjennomfører ikke aldersverifisering utover det du bekrefter ved registrering.`;

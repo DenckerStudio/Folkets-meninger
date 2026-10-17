@@ -27,6 +27,7 @@ export const routes = {
   sporsmal: `${DASHBOARD_PREFIX}/sporsmal`,
   omOss: '/#om-oss',
   personvern: '/personvern',
+  vilkar: '/vilkar',
   omAi: '/om/ai',
   innspill: '/innspill',
   login: '/auth/login',
@@ -117,6 +118,7 @@ export function isMarketingPath(pathname: string): boolean {
     pathname === routes.home ||
     pathname === routes.innspill ||
     pathname === routes.personvern ||
+    pathname === routes.vilkar ||
     pathname === routes.omAi
   );
 }

@@ -14,7 +14,8 @@ const platformLinks = [
 ] as const;
 
 const trustLinks = [
-  { href: routes.personvern, label: 'Personvern og infrastruktur' },
+  { href: routes.personvern, label: 'Personvern' },
+  { href: routes.vilkar, label: 'Brukervilkår' },
   { href: routes.omAi, label: 'AI og modeller' },
 ] as const;
 
