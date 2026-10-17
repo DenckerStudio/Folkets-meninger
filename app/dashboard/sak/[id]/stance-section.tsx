@@ -7,6 +7,8 @@ import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 import { ISSUE_STANCE_LABELS, type IssueStance } from '@/lib/stances/types';
 import { routes } from '@/lib/routes';
+import { PoliticalConsentDialog } from '@/components/consent/political-consent-dialog';
+import { usePoliticalConsent } from '@/hooks/use-political-consent';
 
 interface StanceSectionProps {
   sakId: string;
@@ -25,7 +27,10 @@ export default function StanceSection({
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [consentOpen, setConsentOpen] = useState(false);
+  const [pendingStance, setPendingStance] = useState<IssueStance | null>(null);
   const { user } = useAuth();
+  const { hasStorageConsent, refresh: refreshConsent } = usePoliticalConsent(Boolean(user));
 
   useEffect(() => {
     let cancelled = false;
@@ -54,16 +59,7 @@ export default function StanceSection({
     };
   }, [sakId, user?.id, onStanceSaved]);
 
-  const handleStance = async (stance: IssueStance) => {
-    if (isSubmitting) return;
-
-    if (!user) {
-      setError('');
-      const next = `${routes.login}?next=${encodeURIComponent(routes.sak(sakId))}`;
-      window.location.assign(next);
-      return;
-    }
-
+  const submitStance = async (stance: IssueStance) => {
     setIsSubmitting(true);
     setError('');
 
@@ -82,6 +78,12 @@ export default function StanceSection({
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.code === 'POLITICAL_CONSENT_REQUIRED') {
+          setPendingStance(stance);
+          setConsentOpen(true);
+          setIsSubmitting(false);
+          return;
+        }
         setError(data.error || 'Kunne ikke lagre holdning.');
         setIsSubmitting(false);
         return;
@@ -97,6 +99,25 @@ export default function StanceSection({
     }
   };
 
+  const handleStance = async (stance: IssueStance) => {
+    if (isSubmitting) return;
+
+    if (!user) {
+      setError('');
+      const next = `${routes.login}?next=${encodeURIComponent(routes.sak(sakId))}`;
+      window.location.assign(next);
+      return;
+    }
+
+    if (!hasStorageConsent) {
+      setPendingStance(stance);
+      setConsentOpen(true);
+      return;
+    }
+
+    await submitStance(stance);
+  };
+
   const canChoose = !isSubmitting && (!user || !isLoading);
 
   return (
@@ -105,8 +126,8 @@ export default function StanceSection({
         Hva er din holdning?
       </h2>
       <p className="mb-6 text-center text-sm text-muted-foreground">
-        Marker om du er enig, uenig eller ikke interessert. Holdningen er personlig og brukes til
-        Valgomat og hjertesaker — ikke som offentlig stemme.
+        Marker om du er enig, uenig eller ikke interessert. Holdningen lagres på kontoen din og brukes til
+        valgomat og hjertesaker. Andre ser bare samlet statistikk — aldri ditt navn.
       </p>
 
       {isLoading && user && (
@@ -211,6 +232,22 @@ export default function StanceSection({
       <p className="mt-4 text-center text-xs text-muted-foreground">
         Systemgenererte ja/nei/blank-spørsmål finner du på Utforsk. Andre nasjonale avstemninger ligger under Avstemninger.
       </p>
+
+      <PoliticalConsentDialog
+        open={consentOpen}
+        onClose={() => {
+          setConsentOpen(false);
+          setPendingStance(null);
+        }}
+        onAccepted={() => {
+          setConsentOpen(false);
+          void refreshConsent();
+          if (pendingStance) {
+            void submitStance(pendingStance);
+            setPendingStance(null);
+          }
+        }}
+      />
     </div>
   );
 }

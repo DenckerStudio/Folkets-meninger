@@ -40,7 +40,7 @@ export function ProfileNameSettings() {
       <div>
         <h3 className="text-lg font-medium text-foreground">Ditt offentlige navn</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Offentlige innspill viser fornavn og etternavn. Stemmer på saker forblir anonyme i statistikken.
+          Offentlige innspill viser fornavn og etternavn. Holdninger og avstemninger vises bare som aggregater uten navn.
         </p>
       </div>
       <div className="grid sm:grid-cols-2 gap-4">

@@ -12,6 +12,7 @@ import {
 import { BackButton } from '@/components/dashboard/back-button';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { loadPublicUserDisplays } from '@/lib/identity/public-user-display';
 import { getAnonSupabase } from '@/lib/supabase';
 import {
   fetchStortingetHoringById,
@@ -84,17 +85,17 @@ async function getComments(stortingetHearingId: string) {
   const supabase = getAnonSupabase();
   const { data: comments } = await supabase
     .from('hearing_comments')
-    .select(`
-      id,
-      body,
-      created_at,
-      author_user_id,
-      users:author_user_id (first_name, last_name, name)
-    `)
+    .select('id, body, created_at, author_user_id')
     .eq('stortinget_hearing_id', stortingetHearingId)
     .order('created_at', { ascending: true });
 
-  return (comments || []).map((c) => ({
+  const rows = comments ?? [];
+  const authorDisplays = await loadPublicUserDisplays(
+    supabase,
+    rows.map((c) => c.author_user_id),
+  );
+
+  return rows.map((c) => ({
     id: c.id,
     body: c.body,
     createdAt: new Date(c.created_at).toLocaleDateString('nb-NO', {
@@ -102,7 +103,7 @@ async function getComments(stortingetHearingId: string) {
       month: 'long',
       year: 'numeric',
     }),
-    author: resolveHearingCommentAuthor(c.users),
+    author: resolveHearingCommentAuthor(authorDisplays.get(c.author_user_id) ?? null),
   }));
 }
 

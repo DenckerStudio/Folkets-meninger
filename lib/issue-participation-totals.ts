@@ -1,7 +1,14 @@
+import { STANCE_PUBLIC_MIN_ENGAGED } from '@/lib/stances/constants';
 import { getServiceSupabase } from './supabase';
 import type { SakVoteTotals } from './stortinget';
 
-type BatchRow = { for?: number; against?: number; abstain?: number; total?: number };
+type BatchRow = {
+  for?: number;
+  against?: number;
+  abstain?: number;
+  total?: number;
+  suppressed?: boolean;
+};
 
 type StanceRow = { stortinget_issue_id: string; stance: string };
 
@@ -43,6 +50,12 @@ async function aggregateStanceRowsFallback(
     }
   }
 
+  for (const [issueId, bucket] of Object.entries(result)) {
+    if (bucket.total < STANCE_PUBLIC_MIN_ENGAGED) {
+      result[issueId] = { for: 0, against: 0, abstain: 0, total: 0, suppressed: true };
+    }
+  }
+
   return result;
 }
 
@@ -56,14 +69,30 @@ function mapBatchPayload(
 
   const batch = data as Record<string, BatchRow>;
   for (const [issueId, counts] of Object.entries(batch)) {
+    if (counts.suppressed) {
+      result[issueId] = {
+        for: 0,
+        against: 0,
+        abstain: 0,
+        total: 0,
+        suppressed: true,
+      };
+      continue;
+    }
     const forCount = counts.for ?? 0;
     const againstCount = counts.against ?? 0;
     const abstainCount = counts.abstain ?? 0;
+    const total = counts.total ?? forCount + againstCount;
+    if (total < STANCE_PUBLIC_MIN_ENGAGED) {
+      result[issueId] = { for: 0, against: 0, abstain: 0, total: 0, suppressed: true };
+      continue;
+    }
     result[issueId] = {
       for: forCount,
       against: againstCount,
       abstain: abstainCount,
-      total: counts.total ?? forCount + againstCount + abstainCount,
+      total,
+      suppressed: false,
     };
   }
 

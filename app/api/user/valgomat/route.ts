@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { ensurePoliticalConsent } from '@/lib/consent/require-api';
 import { getServerSupabase } from '@/lib/supabase-server';
 import {
   getValgomatForUser,
@@ -16,6 +17,11 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
   }
+
+  const storageConsent = await ensurePoliticalConsent(user.id, 'political_storage');
+  if (storageConsent) return storageConsent;
+  const profilingConsent = await ensurePoliticalConsent(user.id, 'political_profiling');
+  if (profilingConsent) return profilingConsent;
 
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     console.error('valgomat: SUPABASE_SERVICE_ROLE_KEY is not configured');

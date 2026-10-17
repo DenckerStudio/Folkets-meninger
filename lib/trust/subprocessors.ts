@@ -60,9 +60,9 @@ export const TRUST_THIRD_PARTY_PROVIDERS: SubprocessorRow[] = [
   {
     name: 'Cloudflare',
     purpose:
-      'DNS og trafikk for domenet (proxy/CDN). Appen kaller ikke Cloudflare-API direkte; trafikk kan terminere i Cloudflares nettverk før den når serveren i Norge.',
-    hosting: 'Cloudflare (globalt edge-nettverk; selskap med hovedkontor i USA).',
-    codeRef: 'Drift utenfor repo — bekreftet av eier for DNS.',
+      'Proxy/CDN for supabase.heyklever.app, n8n, Ollama og SearXNG (*.heyklever.app). Hoveddomenet www.folkets-meninger.no går ikke via Cloudflare.',
+    hosting: 'Cloudflare Inc. (globalt edge-nettverk; hovedkontor i USA).',
+    codeRef: 'NEXT_PUBLIC_SUPABASE_URL, workflows/n8n/, lib/chat/searxng.ts',
   },
   {
     name: 'Stripe',
@@ -92,9 +92,9 @@ export const TRUST_THIRD_PARTY_PROVIDERS: SubprocessorRow[] = [
   {
     name: 'Brukerens egen LLM-leverandør (BYOK)',
     purpose:
-      'Stemme+ kan lagre kryptert API-nøkkel (OpenAI, Anthropic, OpenAI-kompatibel, Vercel AI Gateway eller annen gateway) for chat — kun hvis brukeren lagrer nøkkel.',
-    hosting: 'Der brukeren/leverandøren hoster modellen (utenfor vår kontroll).',
-    codeRef: 'lib/byok/, user_llm_credentials',
+      'Stemme+ kan lagre kryptert API-nøkkel og sende chat (og holdninger du samtykker til) til Google, OpenAI, xAI, Ollama, Anthropic eller annen gateway du velger.',
+    hosting: 'Der leverandøren hoster modellen (ofte USA/EU; utenfor vår kontroll).',
+    codeRef: 'lib/byok/, user_llm_credentials, lib/chat/personal-tools.ts',
   },
 ];
 

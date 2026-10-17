@@ -10,6 +10,7 @@ import { calculateSakImpact } from '@/lib/impact/service';
 import { describeProfile, hasAnyImpactParam, parseImpactProfile } from '@/lib/impact/profile';
 import type { ImpactProfile, ImpactResult } from '@/lib/impact/types';
 import type { ImpactConfidence } from '@/lib/impact/types';
+import { userHasPoliticalConsent } from '@/lib/consent/service';
 import { getOwnPublicProfilePreview } from '@/lib/public-profile';
 import { getOpinionInnspill } from '@/lib/innspill/service';
 import {
@@ -168,6 +169,22 @@ export async function collectMyActivity(
   }
 
   const service = getServiceSupabase();
+  const byokActivityAllowed = await userHasPoliticalConsent(service, userId, 'political_byok_activity');
+  if (!byokActivityAllowed) {
+    return {
+      found: false,
+      signedIn: true,
+      points: 0,
+      tierName: null,
+      progress: EMPTY_PROGRESS,
+      stanceCount: 0,
+      recentStances: [],
+      badges: [],
+      stanceSignals: { categories: [], labels: [] },
+      note:
+        'Holdningsdata sendes ikke til ekstern AI-leverandør uten eget samtykke. Gi samtykke under Min side → Personvern (BYOK / aktivitet i chat).',
+    };
+  }
   const safeLimit = Math.min(Math.max(limit, 1), 10);
 
   const [stanceCount, stanceHistory, pointsProfile, badges, stanceSignals] = await Promise.all([

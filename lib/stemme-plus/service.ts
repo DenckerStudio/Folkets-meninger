@@ -10,7 +10,7 @@ export type UserSubscriptionSnapshot = UserSubscriptionRow & {
 export type SubscriptionClient = Pick<SupabaseClient, 'from'>;
 
 const TIER_COLUMNS = 'subscription_tier, subscription_status, subscription_period_end';
-/** Own-row read. Do not GRANT stripe_customer_id globally — users_select_public_display is USING (true). */
+/** Own-row read via users_select_own_row (no global user list). */
 const OWN_SUBSCRIPTION_COLUMNS = `${TIER_COLUMNS}, stripe_customer_id`;
 
 function emptySubscription(userId: string): UserSubscriptionSnapshot {

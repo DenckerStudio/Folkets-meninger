@@ -165,8 +165,8 @@ export function LandingAbout() {
             <div className="space-y-3 text-sm leading-relaxed text-[#001433]/75">
               <p className="text-base font-medium text-[#001433]">{OM_PRIVACY_SNIPPET}</p>
               <p>
-                Stemmer og avstemninger lagres uten kobling til navn i offentlige tall. Du kan be om innsyn og
-                sletting via innspill eller e-post.
+                Holdninger og avstemninger lagres på kontoen din; offentlige tall er bare aggregater uten navn.
+                Du kan be om innsyn og sletting via innspill eller e-post, eller trekke samtykke under Min side.
               </p>
               <Link
                 href={OM_LINKS.personvern}

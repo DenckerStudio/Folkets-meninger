@@ -44,7 +44,7 @@ const DEFAULT_FEATURES: Step[] = [
   {
     title: 'Stem Ja, Nei eller Blank',
     description:
-      'Nasjonale spørsmål bruker Ja, Nei eller Blank. Stemmen er anonym i statistikken.',
+      'Nasjonale spørsmål bruker Ja, Nei eller Blank. Stemmen telles uten navn i samlet statistikk.',
     colorTheme: 'blue',
   },
   {

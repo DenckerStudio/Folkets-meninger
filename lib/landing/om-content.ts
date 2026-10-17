@@ -1,10 +1,12 @@
 import { ALIGNMENT_MIN_FOLK_VOTES } from '@/lib/alignment/types';
+import { STANCE_AGGREGATE_DISCLOSURE } from '@/lib/copy/stance-privacy';
 import { GOVERNMENT_STATS_MIN_VOTES } from '@/lib/government-stats/snapshot';
 import {
   STEMME_PLUS_BENEFITS,
   STEMME_PLUS_MONTHLY_PRICE_NOK,
   STEMME_PLUS_NON_INFLUENCE_NOTE,
 } from '@/lib/stemme-plus/constants';
+import { TRUST_HOSTING_SUMMARY } from '@/lib/trust/subprocessors';
 import { routes } from '@/lib/routes';
 
 /** Stortinget open data base — used across lib/stortinget-*.ts */
@@ -26,7 +28,7 @@ export const OM_WHY_POINTS = [
   },
   {
     title: 'Sammenlign med vedtak',
-    body: `På sakssider viser vi «Folkets vilje vs. Stortinget» når voteringer finnes og minst ${ALIGNMENT_MIN_FOLK_VOTES} anonyme stemmer er avgitt i appen.`,
+    body: `På sakssider viser vi «Folkets vilje vs. Stortinget» når voteringer finnes og minst ${ALIGNMENT_MIN_FOLK_VOTES} stemmer er avgitt i appen (samlet, uten navn).`,
   },
 ] as const;
 
@@ -37,7 +39,7 @@ export const OM_PROCESS_STEPS = [
   },
   {
     title: 'Stem og skriv',
-    body: 'Logg inn for å stemme på saker (For/Mot/Avstår) og for å publisere meninger. Stemmer telles anonymt i statistikken.',
+    body: `Logg inn for å markere holdning på saker, delta i avstemninger og publisere meninger. ${STANCE_AGGREGATE_DISCLOSURE}`,
   },
   {
     title: 'Høringer',
@@ -128,8 +130,7 @@ export const OM_FREE_FEATURES = [
 
 export const OM_STEMME_PLUS_FEATURES = [...STEMME_PLUS_BENEFITS] as const;
 
-export const OM_PRIVACY_SNIPPET =
-  'Hvor data ligger: Appen og databasen driftes på server i Norge. Betaling går via Stripe, som ligger utenfor Norge. Se listen over underleverandører på personvernsiden.';
+export const OM_PRIVACY_SNIPPET = TRUST_HOSTING_SUMMARY;
 
 export const OM_LINKS = {
   personvern: routes.personvern,
