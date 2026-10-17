@@ -17,8 +17,8 @@ const NORWAY_MESH_COLORS = [
 
 /** Fade mesh into page background over the lower ~40% of the hero (not an overlay). */
 export const LANDING_MESH_MASK_STYLE: CSSProperties = {
-  WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 58%, transparent 100%)',
-  maskImage: 'linear-gradient(to bottom, #000 0%, #000 58%, transparent 100%)',
+  WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 52%, transparent 100%)',
+  maskImage: 'linear-gradient(to bottom, #000 0%, #000 52%, transparent 100%)',
   WebkitMaskSize: '100% 100%',
   maskSize: '100% 100%',
   WebkitMaskRepeat: 'no-repeat',

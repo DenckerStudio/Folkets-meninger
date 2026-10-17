@@ -16,7 +16,7 @@ export default function HeroSection() {
   const reducedMotion = usePrefersReducedMotion();
 
   const sectionClass =
-    'landing-hero relative z-0 flex w-full min-h-[min(88vh,52rem)] flex-col items-center justify-center bg-background py-16 pb-20 text-center sm:py-20 sm:pb-28';
+    'landing-hero relative z-0 flex w-full min-h-[min(88vh,52rem)] flex-col items-center justify-center bg-background py-16 pb-10 text-center sm:py-20 sm:pb-12';
 
   const content = (
     <>
