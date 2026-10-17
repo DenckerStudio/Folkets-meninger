@@ -27,6 +27,7 @@ export default function OmAiPage() {
 
       <section>
         <h2 className="text-xl font-bold text-foreground">Slik brukes AI</h2>
+        <p className="mt-2 text-xs text-muted-foreground">Tabellen kan scrolles sidelengs på smale skjermer.</p>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
             <thead>

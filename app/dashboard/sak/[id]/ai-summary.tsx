@@ -222,7 +222,7 @@ export default function AiSummary({
           data.version === 2 ? <V2Summary data={data} /> : <LegacySummary data={data} />
         ) : (
           <p className="rounded-xl border border-border bg-muted/40 px-4 py-4 text-sm text-muted-foreground">
-            {statusMessage ?? 'Sammendrag kommer når saken er behandlet av n8n.'}
+            {statusMessage ?? 'Sammendrag genereres når dokumentene er klare. Prøv igjen senere.'}
           </p>
         )}
       </Dialog>

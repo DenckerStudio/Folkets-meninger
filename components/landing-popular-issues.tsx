@@ -6,6 +6,7 @@ import { LandingSectionContainer } from '@/components/landing-section-container'
 import { NonRepresentativeNotice } from '@/components/trust/non-representative-notice';
 import { LandingHeadingRule } from '@/components/icons/civic';
 import { formatNumber } from '@/lib/utils';
+import { STANCE_PUBLIC_MIN_ENGAGED } from '@/lib/stances/constants';
 
 export type LandingIssue = {
   id: string;
@@ -51,8 +52,9 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 items-stretch">
           {issues.map((issue) => {
             const total = issue.votes.total;
-            const forPercent = total > 0 ? Math.round((issue.votes.for / total) * 100) : 0;
-            const againstPercent = total > 0 ? Math.round((issue.votes.against / total) * 100) : 0;
+            const showPercents = total >= STANCE_PUBLIC_MIN_ENGAGED;
+            const forPercent = showPercents ? Math.round((issue.votes.for / total) * 100) : 0;
+            const againstPercent = showPercents ? Math.round((issue.votes.against / total) * 100) : 0;
 
             return (
               <Link
@@ -89,7 +91,7 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
                   </div>
                   <div className="flex justify-between items-center w-full">
                     <span className="text-xs font-medium text-[#001433]/55">
-                      {total > 0 ? `${forPercent}% Enig` : '—'}
+                      {showPercents ? `${forPercent}% enig` : total > 0 ? 'For få til å vise prosent' : '—'}
                     </span>
                     <span className="text-sm font-semibold text-[#00205b] flex items-center transition-colors group-hover:text-[#ba0c2f]">
                       Les mer <ArrowRight className="ml-1 w-4 h-4" />

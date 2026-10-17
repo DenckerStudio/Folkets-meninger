@@ -172,6 +172,20 @@ export default function HoringerList({ hearings }: HoringerListProps) {
           <EmptyState
             title="Ingen høringer matcher filtrene"
             description="Prøv et annet søk, status eller komité."
+            action={
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  setStatusFilter('Alle statuser');
+                  setCommitteeFilter('Alle departement/komiteer');
+                  setSortBy('relevant');
+                }}
+                className="inline-flex min-h-11 items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              >
+                Nullstill filtre
+              </button>
+            }
           />
         ) : (
           filtered.map((hearing) => {

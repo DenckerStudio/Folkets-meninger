@@ -199,16 +199,18 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
               </dd>
             </div>
           </div>
-          <div className="flex gap-2 rounded-xl border border-border bg-muted/30 p-4">
-            <Calendar className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-            <div>
-              <dt className="text-muted-foreground">Søknadsfrist (muntlig deltakelse)</dt>
-              <dd className="font-medium text-foreground">
-                {applicationDeadline ? formatDateNb(applicationDeadline) : 'Ikke publisert'}
-              </dd>
+          {!hearing.skriftlig ? (
+            <div className="flex gap-2 rounded-xl border border-border bg-muted/30 p-4">
+              <Calendar className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+              <div>
+                <dt className="text-muted-foreground">Søknadsfrist (muntlig deltakelse)</dt>
+                <dd className="font-medium text-foreground">
+                  {applicationDeadline ? formatDateNb(applicationDeadline) : 'Ikke publisert'}
+                </dd>
+              </div>
             </div>
-          </div>
-          {startDate ? (
+          ) : null}
+          {startDate && !hearing.skriftlig && tidspunkter.length > 0 ? (
             <div className="flex gap-2 rounded-xl border border-border bg-muted/30 p-4">
               <Calendar className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
               <div>

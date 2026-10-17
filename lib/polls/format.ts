@@ -4,8 +4,11 @@ export function emptyPollTotals(): PollTotals {
   return { ja: 0, nei: 0, blank: 0, total: 0 };
 }
 
-export function pollChoicePercent(totals: PollTotals, choice: PollChoice): number {
-  if (totals.total <= 0) return 0;
+/** Hide misleading 100 % bars until enough votes (matches fylke disclosure). */
+export const POLL_PUBLIC_PERCENT_MIN_VOTES = 5;
+
+export function pollChoicePercent(totals: PollTotals, choice: PollChoice): number | null {
+  if (totals.total < POLL_PUBLIC_PERCENT_MIN_VOTES) return null;
   return Math.round((totals[choice] / totals.total) * 100);
 }
 

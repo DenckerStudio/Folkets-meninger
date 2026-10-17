@@ -32,11 +32,11 @@ export function LandingHeader() {
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 w-full bg-white pt-[env(safe-area-inset-top,0px)]',
+        'sticky top-0 z-[70] isolate w-full bg-white pt-[env(safe-area-inset-top,0px)]',
         scrolled ? 'shadow-sm backdrop-blur-lg' : '',
       )}
     >
-      <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <nav className="relative z-[71] mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
           href={routes.home}
           aria-label="Folkets Meninger – til forsiden"
@@ -44,7 +44,7 @@ export function LandingHeader() {
         >
           <LandingLogo clipId="fs-header-bubble" animate={pathname === '/'} />
         </Link>
-        <div className="flex items-center gap-1.5 sm:gap-3">
+        <div className="relative z-[72] flex items-center gap-1.5 sm:gap-3">
           <a
             href={routes.omOss}
             onClick={(event) => {

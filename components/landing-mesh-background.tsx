@@ -27,7 +27,7 @@ export function LandingMeshBackground({ className }: LandingMeshBackgroundProps)
 
   if (reducedMotion) {
     return (
-      <div className={cn('absolute inset-0 overflow-hidden bg-white', className)} aria-hidden>
+      <div className={cn('pointer-events-none absolute inset-0 overflow-hidden bg-white', className)} aria-hidden>
         <div className="absolute -top-[25%] -left-[20%] h-[75%] w-[60%] rounded-full bg-[#ba0c2f]/25 blur-[100px]" />
         <div className="absolute top-[5%] -right-[15%] h-[65%] w-[55%] rounded-full bg-[#00205b]/22 blur-[110px]" />
         <div className="absolute bottom-[-20%] left-[15%] h-[55%] w-[50%] rounded-full bg-[#00205b]/15 blur-[120px]" />
@@ -37,7 +37,7 @@ export function LandingMeshBackground({ className }: LandingMeshBackgroundProps)
   }
 
   return (
-    <div className={cn('absolute inset-0 overflow-hidden', className)} aria-hidden>
+    <div className={cn('pointer-events-none absolute inset-0 overflow-hidden', className)} aria-hidden>
       <MeshGradient
         className="absolute inset-0 h-full w-full"
         colors={NORWAY_MESH_COLORS}

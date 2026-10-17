@@ -92,7 +92,10 @@ export function PollBallot({
             >
               {pollChoiceLabel(choice)}
               <span className="mt-1 block text-xs font-normal opacity-80">
-                {pollChoicePercent(totals, choice)}% · {totals[choice]}
+                {(() => {
+                  const pct = pollChoicePercent(totals, choice);
+                  return pct != null ? `${pct}% · ${totals[choice]}` : `${totals[choice]} stemmer`;
+                })()}
               </span>
             </VoteFillButton>
           );

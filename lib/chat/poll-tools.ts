@@ -7,11 +7,10 @@ import {
   getPollTotals,
   getPollTotalsByFylke,
   getPublicPollById,
-  pollChoicePercent,
   searchPublicPolls,
   type PollReadClient,
 } from '@/lib/polls/service';
-import { isPollVotingOpen } from '@/lib/polls/format';
+import { isPollVotingOpen, POLL_PUBLIC_PERCENT_MIN_VOTES, pollChoicePercent } from '@/lib/polls/format';
 import { POLL_FYLKE_MIN_VOTES } from '@/lib/polls/norway-counties';
 import type { PollFylkeTotals, PollRecord, PollTotals } from '@/lib/polls/types';
 
@@ -82,16 +81,18 @@ export function shapeChatPollResults(args: {
     closesAt: poll.closesAt,
     totals,
     percents: {
-      ja: pollChoicePercent(totals, 'ja'),
-      nei: pollChoicePercent(totals, 'nei'),
-      blank: pollChoicePercent(totals, 'blank'),
+      ja: pollChoicePercent(totals, 'ja') ?? 0,
+      nei: pollChoicePercent(totals, 'nei') ?? 0,
+      blank: pollChoicePercent(totals, 'blank') ?? 0,
     },
     byFylke: args.byFylke ?? [],
     fylkeMinVotes: POLL_FYLKE_MIN_VOTES,
     note:
       totals.total === 0
         ? 'Ingen har stemt i denne avstemningen ennå.'
-        : null,
+        : totals.total < POLL_PUBLIC_PERCENT_MIN_VOTES
+          ? `Færre enn ${POLL_PUBLIC_PERCENT_MIN_VOTES} stemmer — vis ikke prosentandeler.`
+          : null,
   };
 }
 

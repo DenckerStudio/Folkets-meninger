@@ -82,7 +82,8 @@ export function hearingToKalenderEvents(hearing: StortingetHoring): KalenderEven
     });
   });
 
-  if (!events.some((e) => e.kind === 'session')) {
+  const isWrittenOnly = hearing.skriftlig === true && sessions.length === 0;
+  if (!isWrittenOnly && !events.some((e) => e.kind === 'session')) {
     const startFallback = parseStortingetDate(hearing.start_dato);
     if (startFallback) {
       events.push({

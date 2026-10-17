@@ -62,7 +62,7 @@ export const PRIVACY_PROCESSING_TABLE = [
 ] as const;
 
 export const PRIVACY_RECIPIENTS_INTRO =
-  'Vi bruker databehandlere der det er nødvendig. Hovednettstedet www.folkets-meninger.no går direkte til server i Norge og er ikke proxied via Cloudflare. Database-API (supabase.heyklever.app), n8n, Ollama og SearXNG på heyklever.app går via Cloudflare (USA-selskap, TLS terminert i Cloudflare). Stripe (betaling), Google (OAuth), og BYOK-leverandører du selv velger (Google, OpenAI, xAI, Ollama m.fl.) kan behandle data utenfor Norge.';
+  'Vi bruker databehandlere der det er nødvendig. Hovednettstedet driftes på server i Norge. Database, automatisering og AI-tjenester kan gå via Cloudflare (USA-selskap). Betaling (Stripe), innlogging (Google) og eventuelle BYOK-leverandører du velger kan behandle data utenfor Norge.';
 
 export const PRIVACY_TRANSFERS =
   'Overføring utenfor EU/EØS kan skje til Cloudflare, Stripe, Google, OpenAI, xAI og andre BYOK-leverandører. Overføringen bygger på EU–US Data Privacy Framework der leverandøren er sertifisert, ellers standardavtaler (art. 46). Verifiser DPA per leverandør.';

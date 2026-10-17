@@ -26,8 +26,24 @@ import { routes } from '@/lib/routes';
 import { PREFERENCE_KEYS } from '@/lib/preferences/keys';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import type { SystemReelFeedItem } from '@/lib/polls/types';
+import { STORTINGET_ACTIVE_SESSION_ID } from '@/lib/stortinget-config';
 
 import { ISSUE_STANCE_LABELS, type IssueStance } from '@/lib/stances/types';
+
+function issueMatchesSearch(issue: SakListItem, rawQuery: string): boolean {
+  const query = rawQuery.trim().toLowerCase();
+  if (!query) return true;
+  const compact = query.replace(/\s+/g, '');
+  const henvisning = issue.henvisning?.toLowerCase() ?? '';
+  const henvisningCompact = henvisning.replace(/\s+/g, '');
+  return (
+    issue.title.toLowerCase().includes(query) ||
+    issue.summary.toLowerCase().includes(query) ||
+    issue.id.toString().includes(query) ||
+    henvisning.includes(query) ||
+    (compact.length >= 2 && henvisningCompact.includes(compact))
+  );
+}
 
 const ISSUE_PAGE_SIZE = 24;
 const LABEL_CHIP_LIMIT = 12;
@@ -136,9 +152,6 @@ export default function ExploreClient({
   // Compute displayed issues based on current filters
   const computeDisplayedIssues = useCallback(() => {
     let result = issues;
-    if (selectedCategory !== 'Alle kategorier') {
-      result = result.filter((issue) => issue.category === selectedCategory);
-    }
     if (selectedStatus === 'Under behandling' || selectedStatus === 'Åpne for stemmer') {
       result = result.filter((issue) => issue.status !== 'closed');
     } else if (selectedStatus === 'Ferdigbehandlet / Historikk') {
@@ -148,15 +161,13 @@ export default function ExploreClient({
       result = result.filter((issue) => issue.sakKind === 'lovforslag');
     } else if (selectedSakKind === 'Representantforslag') {
       result = result.filter((issue) => issue.sakKind === 'representantforslag');
+    } else if (selectedSakKind === 'Andre') {
+      result = result.filter(
+        (issue) => issue.sakKind !== 'lovforslag' && issue.sakKind !== 'representantforslag',
+      );
     }
     if (searchQuery.trim() !== '') {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (issue) =>
-          issue.title.toLowerCase().includes(query) ||
-          issue.summary.toLowerCase().includes(query) ||
-          issue.id.toString().includes(query)
-      );
+      result = result.filter((issue) => issueMatchesSearch(issue, searchQuery));
     }
     if (activeAiLabels.length > 0) {
       result = result.filter((issue) => {
@@ -168,19 +179,24 @@ export default function ExploreClient({
       // Only saker with a known upcoming voting deadline belong in this view.
       result = result.filter((issue) => votingUrgency(issue) !== Number.POSITIVE_INFINITY);
     }
+    if (sortBy === 'Mest engasjement') {
+      result = result.filter((issue) => issue.votes.total > 0);
+    }
     return [...result].sort((a, b) => {
       if (sortBy === 'Nyeste først') {
         return new Date(b.date).getTime() - new Date(a.date).getTime();
       }
       if (sortBy === 'Mest engasjement') {
-        return b.votes.total - a.votes.total;
+        const voteDiff = b.votes.total - a.votes.total;
+        if (voteDiff !== 0) return voteDiff;
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
       }
       if (sortBy === 'Snart votering') {
         return votingUrgency(a) - votingUrgency(b);
       }
       return 0;
     });
-  }, [issues, selectedCategory, selectedStatus, selectedSakKind, searchQuery, activeAiLabels, sortBy, issueLabels]);
+  }, [issues, selectedStatus, selectedSakKind, searchQuery, activeAiLabels, sortBy, issueLabels]);
 
   const displayedIssues = computeDisplayedIssues();
 
@@ -259,11 +275,6 @@ export default function ExploreClient({
     };
   }, [user]);
 
-  const categories = useMemo(() => {
-    const cats = new Set(issues.map((issue) => issue.category));
-    return Array.from(cats).sort();
-  }, [issues]);
-
   const filterTokens: FilterToken[] = [
     {
       id: 'status',
@@ -277,16 +288,6 @@ export default function ExploreClient({
       onChange: setSelectedStatus,
     },
     {
-      id: 'category',
-      label: 'Kategori',
-      value: selectedCategory,
-      options: [
-        { value: 'Alle kategorier', label: 'Alle kategorier' },
-        ...categories.map((cat) => ({ value: cat, label: cat })),
-      ],
-      onChange: setSelectedCategory,
-    },
-    {
       id: 'sakkind',
       label: 'Sakstype',
       value: selectedSakKind,
@@ -294,6 +295,7 @@ export default function ExploreClient({
         { value: 'Alle sakstyper', label: 'Alle sakstyper' },
         { value: 'Lovforslag', label: 'Lovforslag' },
         { value: 'Representantforslag', label: 'Representantforslag' },
+        { value: 'Andre', label: 'Andre' },
       ],
       onChange: setSelectedSakKind,
     },
@@ -312,6 +314,14 @@ export default function ExploreClient({
 
       <SectionSettle>
         <ReelsEntryCta onOpen={openReels} itemCount={itemCount} />
+      </SectionSettle>
+
+      <SectionSettle>
+        <p className="text-sm text-muted-foreground">
+          {issues.length > 0
+            ? `Listen viser ${issues.length} saker fra Stortingets sesjon ${STORTINGET_ACTIVE_SESSION_ID}. Tall under er fra Folkets Meninger og er ikke representative.`
+            : 'Saker hentes fra Stortinget. Hvis listen er tom, prøv igjen om litt.'}
+        </p>
       </SectionSettle>
 
       {user &&
@@ -463,49 +473,49 @@ export default function ExploreClient({
                 <MotionListRow id={String(issue.id)} key={issue.id}>
                   <SectionSettle>
                   <div className="bg-card rounded-2xl shadow-sm border border-border hover:shadow-md transition-shadow overflow-hidden">
+                    <div className="flex flex-col gap-3 px-6 pt-6 pb-2 md:flex-row md:items-center md:justify-between">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {issue.sakKind ? (
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SAK_KIND_BADGE_CLASS}`}
+                          >
+                            {sakKindLabel}
+                          </span>
+                        ) : null}
+                        {issue.category && (!issue.sakKind || issue.category !== sakKindLabel) ? (
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SAK_CATEGORY_BADGE_CLASS}`}
+                          >
+                            {issue.category}
+                          </span>
+                        ) : null}
+                        {(issueLabels[String(issue.id)] ?? [])
+                          .slice(0, 3)
+                          .map((label) => (
+                            <span
+                              key={`${issue.id}-${label}`}
+                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand/10 text-brand"
+                            >
+                              {label}
+                            </span>
+                          ))}
+                        <SakProcessingBadge status={issue.status} size="sm" />
+                      </div>
+                      <div className="text-sm text-muted-foreground md:text-right">
+                        {issue.votingOpen && issue.votingDaysLeft ? (
+                          <span className="font-medium text-emerald-700 dark:text-emerald-300">
+                            {formatVotingDaysLeftLabel(issue.votingDaysLeft)}
+                          </span>
+                        ) : issue.date ? (
+                          <span>Sist oppdatert: {issue.date}</span>
+                        ) : null}
+                      </div>
+                    </div>
                     <Link
                       href={`/dashboard/sak/${issue.id}`}
-                      className="block p-6 pb-4 group"
+                      className="block px-6 pb-4 group"
+                      aria-label={`Les sak: ${issue.title}`}
                     >
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          {issue.sakKind ? (
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SAK_KIND_BADGE_CLASS}`}
-                            >
-                              {sakKindLabel}
-                            </span>
-                          ) : null}
-                          {issue.category && (!issue.sakKind || issue.category !== sakKindLabel) ? (
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SAK_CATEGORY_BADGE_CLASS}`}
-                            >
-                              {issue.category}
-                            </span>
-                          ) : null}
-                          {(issueLabels[String(issue.id)] ?? [])
-                            .slice(0, 3)
-                            .map((label) => (
-                              <span
-                                key={`${issue.id}-${label}`}
-                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand/10 text-brand"
-                              >
-                                {label}
-                              </span>
-                            ))}
-                          <SakProcessingBadge status={issue.status} size="sm" />
-                        </div>
-                        <div className="text-sm text-muted-foreground text-right">
-                          {issue.votingOpen && issue.votingDaysLeft ? (
-                            <span className="font-medium text-emerald-700 dark:text-emerald-300">
-                              {formatVotingDaysLeftLabel(issue.votingDaysLeft)}
-                            </span>
-                          ) : issue.date ? (
-                            <span>Sist oppdatert: {issue.date}</span>
-                          ) : null}
-                        </div>
-                      </div>
-
                       <h2 className="text-xl font-semibold text-foreground mb-2 group-hover:text-brand transition-colors">
                         {issue.title}
                       </h2>
@@ -543,6 +553,11 @@ export default function ExploreClient({
                       <Link
                         href={routes.sak(String(issue.id))}
                         className="inline-flex shrink-0 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90"
+                        aria-label={
+                          displayedUserStances[String(issue.id)]
+                            ? `Se sak: ${issue.title}`
+                            : `Marker holdning på sak: ${issue.title}`
+                        }
                       >
                         {displayedUserStances[String(issue.id)] ? 'Se sak' : 'Marker holdning'}
                         <ArrowRight className="ml-1.5 w-4 h-4" />

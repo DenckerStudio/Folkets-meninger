@@ -120,7 +120,19 @@ export default function HoringerKalender({
     [filtered, selectedKey],
   );
 
+  const minMonth = osloParts(new Date(Date.UTC(today.year, today.month - 6, 1, 12)));
+  const maxMonth = osloParts(new Date(Date.UTC(today.year, today.month + 12, 1, 12)));
+
+  function monthIndex(y: number, m: number): number {
+    return y * 12 + m;
+  }
+
   function goMonth(delta: number) {
+    const targetIndex = monthIndex(year, month) + delta;
+    const minIndex = monthIndex(minMonth.year, minMonth.month);
+    const maxIndex = monthIndex(maxMonth.year, maxMonth.month);
+    if (targetIndex < minIndex || targetIndex > maxIndex) return;
+
     const next = new Date(Date.UTC(year, month + delta, 1, 12));
     const parts = osloParts(next);
     setYear(parts.year);

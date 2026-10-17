@@ -21,7 +21,10 @@ export default function LoginClient() {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [ageConfirmed, setAgeConfirmed] = useState(false);
+
+  const emailLooksValid = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = toRelativeNext(searchParams.get('next'));
@@ -31,6 +34,23 @@ export default function LoginClient() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    const nextFieldErrors: { email?: string; password?: string } = {};
+    if (!email.trim()) {
+      nextFieldErrors.email = 'Skriv inn e-postadressen din.';
+    } else if (!emailLooksValid(email)) {
+      nextFieldErrors.email = 'E-postadressen ser ikke gyldig ut.';
+    }
+    if (!password) {
+      nextFieldErrors.password = 'Skriv inn passordet.';
+    } else if (isRegister && password.length < 8) {
+      nextFieldErrors.password = 'Passordet må være minst 8 tegn.';
+    }
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors);
+      setIsLoading(false);
+      return;
+    }
+    setFieldErrors({});
 
     try {
       if (isRegister) {
@@ -297,7 +317,7 @@ export default function LoginClient() {
               </div>
             </div>
 
-            <form className="space-y-6" onSubmit={handleEmailAuth}>
+            <form className="space-y-6" onSubmit={handleEmailAuth} noValidate>
               {isRegister && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -349,9 +369,19 @@ export default function LoginClient() {
                     autoComplete="email"
                     required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                    }}
+                    aria-invalid={fieldErrors.email ? true : undefined}
+                    aria-describedby={fieldErrors.email ? 'email-error' : undefined}
                     className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand/30 focus:border-brand sm:text-sm"
                   />
+                  {fieldErrors.email ? (
+                    <p id="email-error" className="mt-1 text-sm text-destructive" role="alert">
+                      {fieldErrors.email}
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
@@ -367,9 +397,19 @@ export default function LoginClient() {
                     autoComplete={isRegister ? 'new-password' : 'current-password'}
                     required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                    }}
+                    aria-invalid={fieldErrors.password ? true : undefined}
+                    aria-describedby={fieldErrors.password ? 'password-error' : undefined}
                     className="appearance-none block w-full px-3 py-3 border border-border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand/30 focus:border-brand sm:text-sm"
                   />
+                  {fieldErrors.password ? (
+                    <p id="password-error" className="mt-1 text-sm text-destructive" role="alert">
+                      {fieldErrors.password}
+                    </p>
+                  ) : null}
                 </div>
                 {!isRegister ? (
                   <p className="mt-2 text-right">

@@ -260,7 +260,10 @@ export default function PolitikereExplorer({ politikere }: PolitikereExplorerPro
           </div>
           <div className="flex items-center rounded-xl border border-border bg-card px-4 py-2 text-sm text-muted-foreground shadow-sm">
             <ShieldCheck className="mr-2 h-4 w-4 text-brand" />
-            <span>{filteredPolitikere.length} politikere</span>
+            <span>
+              {listedPolitikere.length} i listen
+              {searchQuery.trim() || selectedParty ? ` (av ${politikere.length} totalt)` : ''}
+            </span>
           </div>
         </div>
       </SectionSettle>

@@ -420,7 +420,7 @@ export function SharePollWidget({
                     {sharePollChoiceLabel(choice)}
                   </span>
                   <span className="tabular-nums text-muted-foreground">
-                    {lowSample ? totals[choice] : `${pct}% · ${totals[choice]}`}
+                    {lowSample || pct == null ? totals[choice] : `${pct}% · ${totals[choice]}`}
                   </span>
                 </div>
                 <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-muted">
@@ -429,7 +429,7 @@ export function SharePollWidget({
                       'h-full rounded-full motion-safe:transition-[width] motion-safe:duration-500',
                       CHOICE_BAR[choice],
                     )}
-                    style={{ width: lowSample ? '0%' : `${pct}%` }}
+                    style={{ width: lowSample || pct == null ? '0%' : `${pct}%` }}
                   />
                 </div>
               </div>

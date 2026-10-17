@@ -8,7 +8,11 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 assert(emptyPollTotals().total === 0, 'empty totals');
-assert(pollChoicePercent({ ja: 2, nei: 2, blank: 0, total: 4 }, 'ja') === 50, 'percent');
+assert(
+  pollChoicePercent({ ja: 5, nei: 5, blank: 0, total: 10 }, 'ja') === 50,
+  'percent',
+);
+assert(pollChoicePercent({ ja: 2, nei: 2, blank: 0, total: 4 }, 'ja') === null, 'below min');
 assert(
   isPollVotingOpen({
     status: 'open',
@@ -26,7 +30,7 @@ assert(
   'closed poll',
 );
 
-const sample: PollTotals = { ja: 1, nei: 0, blank: 0, total: 1 };
+const sample: PollTotals = { ja: 5, nei: 0, blank: 0, total: 5 };
 assert(pollChoicePercent(sample, 'nei') === 0, 'zero side');
 assert(pollChoiceLabel('ja') === 'Ja', 'ja label');
 assert(pollChoiceLabel('blank') === 'Blank', 'blank label');

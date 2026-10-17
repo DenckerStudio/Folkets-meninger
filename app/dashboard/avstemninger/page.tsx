@@ -27,7 +27,7 @@ export default async function AvstemningerPage() {
     <DashboardPage>
       <PageHeader
         title="Avstemninger"
-        description="Si ja, nei eller stem blankt på nasjonale spørsmål. Enkeltsaker fra Stortinget finner du under Utforsk."
+        description="Samme ja/nei/blank-spørsmål som under Utforsk → Reels, samlet i liste. Enkeltsaker fra Stortinget finner du under Utforsk."
       />
       {withTotals.length === 0 ? (
         <EmptyState

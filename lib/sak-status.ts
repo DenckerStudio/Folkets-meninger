@@ -11,12 +11,10 @@ type SakDetailStatusFields = {
 };
 
 /**
- * Stortinget status codes (verified against detail exports):
- *   1 = ferdigbehandlet (closed)
- *   2 and 3 = under behandling (pending)
- *
- * `ferdigbehandlet` is the most reliable source. A fresh numeric list status is
- * preferred over the cached DB string because list/detail exports can drift.
+ * Stortinget list/detail status (verified mot data.stortinget.no, sesjon 2025–2029):
+ * - `ferdigbehandlet` på sak-detalj er mest pålitelig.
+ * - Uten det: list `status` 1 henger ofte sammen med ferdig sak, 2/3 med sak under behandling.
+ * - List `status` kan ligge etter; da styrer `ferdigbehandlet` / fersk listekode.
  */
 export function resolveSakListStatus(input: {
   ferdigbehandlet?: boolean | null;
@@ -25,7 +23,9 @@ export function resolveSakListStatus(input: {
 }): SakTreatmentStatus {
   if (input.ferdigbehandlet === true) return 'closed';
   if (input.ferdigbehandlet === false) return 'pending';
-  if (input.numericStatus != null) return input.numericStatus === 1 ? 'closed' : 'pending';
+  if (input.numericStatus != null) {
+    return input.numericStatus === 1 ? 'closed' : 'pending';
+  }
   if (input.cachedStatus === 'closed') return 'closed';
   if (input.cachedStatus === 'pending') return 'pending';
   return 'pending';
