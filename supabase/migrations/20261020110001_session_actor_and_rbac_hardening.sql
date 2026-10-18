@@ -40,7 +40,7 @@ REVOKE ALL ON FUNCTION public.require_admin_user_id(uuid) FROM PUBLIC, anon, aut
 GRANT EXECUTE ON FUNCTION public.require_admin_user_id(uuid) TO service_role;
 
 -- Back-compat name used by older migrations / docs (same semantics).
-CREATE OR REPLACE FUNCTION public.app_future_require_admin(p_actor uuid)
+CREATE OR REPLACE FUNCTION public.app_future_require_admin(p_admin_user_id uuid)
 RETURNS void
 LANGUAGE plpgsql
 STABLE
@@ -48,7 +48,7 @@ SECURITY DEFINER
 SET search_path TO public, auth, pg_temp
 AS $function$
 BEGIN
-  PERFORM public.require_admin_user_id(p_actor);
+  PERFORM public.require_admin_user_id(p_admin_user_id);
 END;
 $function$;
 
