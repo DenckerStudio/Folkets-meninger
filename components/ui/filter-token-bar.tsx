@@ -146,7 +146,7 @@ export function FilterTokenBar({ tokens, leading, className, 'aria-label': ariaL
                     type="button"
                     key="filter-backdrop"
                     aria-label="Lukk filtre"
-                    className="fixed inset-0 z-[65] bg-foreground/45 backdrop-blur-[1px]"
+                    className="fixed inset-0 z-[65] bg-overlay/45 backdrop-blur-[1px] dark:bg-overlay/60"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}

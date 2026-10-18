@@ -79,7 +79,7 @@ export function ProductTour({
         type="button"
         className={cn(
           'absolute inset-0 cursor-default',
-          target ? 'bg-transparent' : 'bg-foreground/55',
+          target ? 'bg-transparent' : 'bg-overlay/55 dark:bg-overlay/65',
         )}
         aria-label="Lukk omvisning"
         onClick={onSkip}
