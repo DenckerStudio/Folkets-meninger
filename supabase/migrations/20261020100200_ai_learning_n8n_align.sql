@@ -445,6 +445,16 @@ BEGIN
   END LOOP;
 END $$;
 
+-- migration-sql-lint: static REVOKE (grants applied in DO block above).
+REVOKE ALL ON FUNCTION public.ai_safe_uuid_from_text(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ai_prompt_version_public_json(public.ai_prompt_versions) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.n8n_get_active_prompt(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.n8n_list_prompt_candidates(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.n8n_record_eval_run(uuid, text, text, uuid, uuid, text, int, jsonb, text, text, timestamptz) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.n8n_record_eval_result(uuid, uuid, text, jsonb, jsonb, boolean, numeric, numeric, jsonb, text, int) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.n8n_ai_weekly_metrics(timestamptz, timestamptz) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.n8n_upsert_issue_ai_summary(text, text, text, text, text, text, text, jsonb, text[], text, text, jsonb) FROM PUBLIC, anon, authenticated;
+
 NOTIFY pgrst, 'reload schema';
 
 COMMIT;

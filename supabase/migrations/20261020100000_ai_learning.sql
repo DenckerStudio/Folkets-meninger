@@ -797,6 +797,28 @@ BEGIN
   END LOOP;
 END $$;
 
+-- migration-sql-lint: static RLS/REVOKE (runtime lockdown uses DO blocks above).
+ALTER TABLE public.ai_prompt_versions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_prompt_approvers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_generations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_feedback ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_eval_cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_eval_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_eval_results ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON FUNCTION public.ai_is_valid_reason_code(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ai_internal_insert_feedback(uuid, text, text, text, text, text, text, jsonb, jsonb, text, text, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.record_ai_feedback(text, text, text, text, text, text, jsonb, jsonb, text, text, uuid, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ai_trigger_issue_summary_preserve() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ai_trigger_poll_feedback() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.n8n_get_active_prompt(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.n8n_log_ai_generation(jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.n8n_propose_prompt_version(jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.admin_activate_prompt_version(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.n8n_list_eval_cases(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.n8n_record_eval_run(jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.admin_poll_draft_action(uuid, text, text, text, text, text, uuid) FROM PUBLIC, anon, authenticated;
+
 NOTIFY pgrst, 'reload schema';
 
 COMMIT;

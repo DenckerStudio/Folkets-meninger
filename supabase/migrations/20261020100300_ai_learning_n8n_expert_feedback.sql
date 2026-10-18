@@ -422,6 +422,11 @@ BEGIN
   END LOOP;
 END $$;
 
+-- migration-sql-lint: static REVOKE (grants applied in DO block above).
+REVOKE ALL ON FUNCTION public.n8n_upsert_issue_ai_summary(text, text, text, text, text, text, text, jsonb, text[], text, text, jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.n8n_upsert_eval_case(text, text, jsonb, jsonb, text, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.n8n_ai_weekly_metrics(timestamptz, timestamptz) FROM PUBLIC, anon, authenticated;
+
 NOTIFY pgrst, 'reload schema';
 
 COMMIT;
