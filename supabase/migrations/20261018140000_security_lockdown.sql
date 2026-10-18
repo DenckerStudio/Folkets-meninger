@@ -1,4 +1,5 @@
 -- =============================================================================
+-- Legacy / CI-kjede. Prod: bruk 20261018150000_security_lockdown_prod_safe.sql (kan kjøres alene).
 -- Sikkerhetslåsing etter revisjon 18.10.2026 (supabase/migrations/20261018140000_security_lockdown.sql).
 -- Sikkerhetsrevisjon 18.10.2026 (Folkets Meninger).
 --
@@ -100,54 +101,71 @@ END;
 $$;
 REVOKE ALL ON FUNCTION audit.log_security_event() FROM PUBLIC, anon, authenticated;
 
-DROP TRIGGER IF EXISTS trg_audit_user_roles ON public.user_roles;
-CREATE TRIGGER trg_audit_user_roles
-  AFTER INSERT OR UPDATE OR DELETE ON public.user_roles
-  FOR EACH ROW EXECUTE FUNCTION audit.log_security_event();
-
-DROP TRIGGER IF EXISTS trg_audit_app_roles ON public.app_roles;
-CREATE TRIGGER trg_audit_app_roles
-  AFTER INSERT OR UPDATE OR DELETE ON public.app_roles
-  FOR EACH ROW EXECUTE FUNCTION audit.log_security_event();
-
--- auth.users eies av supabase_auth_admin; krever at migrasjonen kjøres som en rolle med
--- rett til å lage triggere på auth.users (postgres/supabase_admin på self-hosted).
-DROP TRIGGER IF EXISTS trg_audit_auth_app_metadata ON auth.users;
-CREATE TRIGGER trg_audit_auth_app_metadata
-  AFTER UPDATE OF raw_app_meta_data ON auth.users
-  FOR EACH ROW
-  WHEN (OLD.raw_app_meta_data IS DISTINCT FROM NEW.raw_app_meta_data)
-  EXECUTE FUNCTION audit.log_security_event();
-
--- Abonnement/Stemme+ (endret av åpne RPC-er i dag): logg endringer i tier.
-DROP TRIGGER IF EXISTS trg_audit_users_subscription ON public.users;
-CREATE TRIGGER trg_audit_users_subscription
-  AFTER UPDATE OF subscription_tier, subscription_status ON public.users
-  FOR EACH ROW
-  WHEN (OLD.subscription_tier IS DISTINCT FROM NEW.subscription_tier
-        OR OLD.subscription_status IS DISTINCT FROM NEW.subscription_status)
-  EXECUTE FUNCTION audit.log_security_event();
+DO $$
+BEGIN
+  IF to_regclass('public.user_roles') IS NOT NULL THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_audit_user_roles ON public.user_roles';
+    EXECUTE 'CREATE TRIGGER trg_audit_user_roles
+      AFTER INSERT OR UPDATE OR DELETE ON public.user_roles
+      FOR EACH ROW EXECUTE FUNCTION audit.log_security_event()';
+  END IF;
+  IF to_regclass('public.app_roles') IS NOT NULL THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_audit_app_roles ON public.app_roles';
+    EXECUTE 'CREATE TRIGGER trg_audit_app_roles
+      AFTER INSERT OR UPDATE OR DELETE ON public.app_roles
+      FOR EACH ROW EXECUTE FUNCTION audit.log_security_event()';
+  END IF;
+  IF to_regclass('public.users') IS NOT NULL THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_audit_users_subscription ON public.users';
+    EXECUTE 'CREATE TRIGGER trg_audit_users_subscription
+      AFTER UPDATE OF subscription_tier, subscription_status ON public.users
+      FOR EACH ROW
+      WHEN (OLD.subscription_tier IS DISTINCT FROM NEW.subscription_tier
+            OR OLD.subscription_status IS DISTINCT FROM NEW.subscription_status)
+      EXECUTE FUNCTION audit.log_security_event()';
+  END IF;
+  BEGIN
+    IF to_regclass('auth.users') IS NOT NULL THEN
+      EXECUTE 'DROP TRIGGER IF EXISTS trg_audit_auth_app_metadata ON auth.users';
+      EXECUTE 'CREATE TRIGGER trg_audit_auth_app_metadata
+        AFTER UPDATE OF raw_app_meta_data ON auth.users
+        FOR EACH ROW
+        WHEN (OLD.raw_app_meta_data IS DISTINCT FROM NEW.raw_app_meta_data)
+        EXECUTE FUNCTION audit.log_security_event()';
+    END IF;
+  EXCEPTION WHEN insufficient_privilege OR undefined_table OR invalid_schema_name THEN
+    RAISE NOTICE 'Hopper over audit-trigger på auth.users: %', SQLERRM;
+  END;
+END $$;
 
 -- -----------------------------------------------------------------------------
 -- 1. Hendelsesfiksen kodet inn: user_roles / app_roles / rollefunksjoner
 -- -----------------------------------------------------------------------------
-ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_roles FORCE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.user_roles FROM PUBLIC, anon, authenticated;
-GRANT SELECT ON TABLE public.user_roles TO authenticated;          -- RLS: egen rad / admin
-GRANT ALL    ON TABLE public.user_roles TO service_role;
-
--- app_roles hadde INGEN RLS i repoet og anon har DML i prod.
--- DELETE FROM app_roles WHERE role='admin' kaskaderer og sletter alle admin-rader i user_roles.
-ALTER TABLE public.app_roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.app_roles FORCE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.app_roles FROM PUBLIC, anon, authenticated;
-GRANT ALL ON TABLE public.app_roles TO service_role;
--- Fjern kaskade-sletting av roller (rolle-sletting skal være eksplisitt).
-ALTER TABLE public.user_roles DROP CONSTRAINT IF EXISTS user_roles_role_fkey;
-ALTER TABLE public.user_roles
-  ADD CONSTRAINT user_roles_role_fkey FOREIGN KEY (role)
-  REFERENCES public.app_roles (role) ON UPDATE RESTRICT ON DELETE RESTRICT;
+DO $$
+BEGIN
+  IF to_regclass('public.user_roles') IS NOT NULL THEN
+    EXECUTE 'ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'ALTER TABLE public.user_roles FORCE ROW LEVEL SECURITY';
+    EXECUTE 'REVOKE ALL ON TABLE public.user_roles FROM PUBLIC, anon, authenticated';
+    EXECUTE 'GRANT SELECT ON TABLE public.user_roles TO authenticated';
+    EXECUTE 'GRANT ALL ON TABLE public.user_roles TO service_role';
+  END IF;
+  IF to_regclass('public.app_roles') IS NOT NULL THEN
+    EXECUTE 'ALTER TABLE public.app_roles ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'ALTER TABLE public.app_roles FORCE ROW LEVEL SECURITY';
+    EXECUTE 'REVOKE ALL ON TABLE public.app_roles FROM PUBLIC, anon, authenticated';
+    EXECUTE 'GRANT ALL ON TABLE public.app_roles TO service_role';
+  END IF;
+  IF to_regclass('public.user_roles') IS NOT NULL AND to_regclass('public.app_roles') IS NOT NULL THEN
+    EXECUTE 'ALTER TABLE public.user_roles DROP CONSTRAINT IF EXISTS user_roles_role_fkey';
+    BEGIN
+      EXECUTE 'ALTER TABLE public.user_roles
+        ADD CONSTRAINT user_roles_role_fkey FOREIGN KEY (role)
+        REFERENCES public.app_roles (role) ON UPDATE RESTRICT ON DELETE RESTRICT';
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
+  END IF;
+END $$;
 
 -- Rollefunksjoner: kun service_role (det appen bruker via /api/admin/roles).
 DO $$
@@ -173,11 +191,19 @@ END $$;
 DO $$
 DECLARE r record;
 BEGIN
+  IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'public') THEN
+    EXECUTE 'REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC, anon, authenticated';
+    EXECUTE 'GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO service_role';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'private') THEN
+    EXECUTE 'REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA private FROM PUBLIC, anon, authenticated';
+    EXECUTE 'GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA private TO service_role';
+  END IF;
   FOR r IN
     SELECT p.oid::regprocedure AS sig
     FROM pg_proc p
     JOIN pg_namespace n ON n.oid = p.pronamespace
-    LEFT JOIN pg_depend d ON d.objid = p.oid AND d.deptype = 'e'   -- hopp over extension-funksjoner
+    LEFT JOIN pg_depend d ON d.objid = p.oid AND d.deptype = 'e'
     WHERE n.nspname IN ('public', 'private')
       AND d.objid IS NULL
       AND p.prokind IN ('f', 'p')
@@ -205,7 +231,12 @@ BEGIN
   END LOOP;
 END $$;
 -- is_admin() brukes i RLS-policies (user_roles_select_admin, n8n_ops_events_admin_read).
-GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+DO $$
+BEGIN
+  IF to_regprocedure('public.is_admin()') IS NOT NULL THEN
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated';
+  END IF;
+END $$;
 
 -- -----------------------------------------------------------------------------
 -- 3. Default privileges: nye objekter skal være lukket som standard
@@ -216,6 +247,8 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM anon, authenticated;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   REVOKE USAGE, SELECT, UPDATE ON SEQUENCES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE ALL ON TABLES FROM anon, authenticated;
 -- NB: PUBLIC-EXECUTE er en GLOBAL standard i Postgres; den kan bare fjernes uten «IN SCHEMA».
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres
   REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
@@ -224,7 +257,9 @@ DO $$
 BEGIN
   EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated';
   EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC';
-  EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM anon, authenticated';
+  EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM PUBLIC, anon, authenticated';
+  EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated';
+  EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public REVOKE USAGE, SELECT, UPDATE ON SEQUENCES FROM PUBLIC, anon, authenticated';
 EXCEPTION WHEN insufficient_privilege OR undefined_object THEN
   RAISE NOTICE 'Kunne ikke endre default privileges for supabase_admin (%). Kjør som superuser.', SQLERRM;
 END $$;
@@ -235,45 +270,62 @@ END $$;
 DO $$
 DECLARE r record;
 BEGIN
+  IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'public') THEN
+    EXECUTE 'REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON ALL TABLES IN SCHEMA public FROM PUBLIC, anon, authenticated';
+  END IF;
   FOR r IN
     SELECT c.oid::regclass AS tbl
     FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
   LOOP
     EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', r.tbl);
+    EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', r.tbl);
     EXECUTE format('REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE %s FROM PUBLIC, anon, authenticated', r.tbl);
   END LOOP;
 END $$;
 
--- Skriving via session-klient (RLS-policies finnes allerede, se rapport H-6):
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_llm_credentials           TO authenticated; -- lib/byok/service.ts
-GRANT SELECT, UPDATE                 ON public.notifications                  TO authenticated; -- app/api/notifications/route.ts
-GRANT SELECT, INSERT, UPDATE         ON public.notification_preferences       TO authenticated;
-GRANT SELECT, INSERT, DELETE         ON public.notification_category_subscriptions TO authenticated;
-GRANT SELECT, INSERT, DELETE         ON public.notification_label_subscriptions    TO authenticated;
+DO $$
+BEGIN
+  IF to_regclass('public.user_llm_credentials') IS NOT NULL THEN
+    EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_llm_credentials TO authenticated';
+  END IF;
+  IF to_regclass('public.notifications') IS NOT NULL THEN
+    EXECUTE 'GRANT SELECT, UPDATE ON public.notifications TO authenticated';
+  END IF;
+  IF to_regclass('public.notification_preferences') IS NOT NULL THEN
+    EXECUTE 'GRANT SELECT, INSERT, UPDATE ON public.notification_preferences TO authenticated';
+  END IF;
+  IF to_regclass('public.notification_category_subscriptions') IS NOT NULL THEN
+    EXECUTE 'GRANT SELECT, INSERT, DELETE ON public.notification_category_subscriptions TO authenticated';
+  END IF;
+  IF to_regclass('public.notification_label_subscriptions') IS NOT NULL THEN
+    EXECUTE 'GRANT SELECT, INSERT, DELETE ON public.notification_label_subscriptions TO authenticated';
+  END IF;
+END $$;
 
 -- Ingen klient skal skrive identity_verified selv (WITH CHECK på egen rad).
-DROP POLICY IF EXISTS user_profiles_update_own ON public.user_profiles;
-CREATE POLICY user_profiles_update_own ON public.user_profiles
-  FOR UPDATE TO authenticated
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
-
--- Appens fremtid: changelog/roadmap var skrivbare for authenticated i prod (kun service_role skal skrive).
-DROP POLICY IF EXISTS app_changelog_entries_authenticated_write ON public.app_changelog_entries;
-DROP POLICY IF EXISTS app_roadmap_items_authenticated_write ON public.app_roadmap_items;
-REVOKE INSERT, UPDATE, DELETE ON public.app_changelog_entries FROM PUBLIC, anon, authenticated;
-REVOKE INSERT, UPDATE, DELETE ON public.app_roadmap_items FROM PUBLIC, anon, authenticated;
-DROP POLICY IF EXISTS app_changelog_entries_select_published ON public.app_changelog_entries;
-CREATE POLICY app_changelog_entries_select_published ON public.app_changelog_entries
-  FOR SELECT TO anon, authenticated
-  USING (published_at <= now());
-GRANT SELECT ON public.app_changelog_entries TO anon, authenticated;
-DROP POLICY IF EXISTS app_roadmap_items_select_public ON public.app_roadmap_items;
-CREATE POLICY app_roadmap_items_select_public ON public.app_roadmap_items
-  FOR SELECT TO anon, authenticated
-  USING (true);
-GRANT SELECT ON public.app_roadmap_items TO anon, authenticated;
+DO $$
+BEGIN
+  IF to_regclass('public.user_profiles') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS user_profiles_update_own ON public.user_profiles';
+    EXECUTE 'CREATE POLICY user_profiles_update_own ON public.user_profiles
+      FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)';
+  END IF;
+  IF to_regclass('public.app_changelog_entries') IS NOT NULL THEN
+    EXECUTE 'REVOKE INSERT, UPDATE, DELETE ON public.app_changelog_entries FROM PUBLIC, anon, authenticated';
+    EXECUTE 'DROP POLICY IF EXISTS app_changelog_entries_select_published ON public.app_changelog_entries';
+    EXECUTE 'CREATE POLICY app_changelog_entries_select_published ON public.app_changelog_entries
+      FOR SELECT TO anon, authenticated USING (published_at <= now())';
+    EXECUTE 'GRANT SELECT ON public.app_changelog_entries TO anon, authenticated';
+  END IF;
+  IF to_regclass('public.app_roadmap_items') IS NOT NULL THEN
+    EXECUTE 'REVOKE INSERT, UPDATE, DELETE ON public.app_roadmap_items FROM PUBLIC, anon, authenticated';
+    EXECUTE 'DROP POLICY IF EXISTS app_roadmap_items_select_public ON public.app_roadmap_items';
+    EXECUTE 'CREATE POLICY app_roadmap_items_select_public ON public.app_roadmap_items
+      FOR SELECT TO anon, authenticated USING (true)';
+    EXECUTE 'GRANT SELECT ON public.app_roadmap_items TO anon, authenticated';
+  END IF;
+END $$;
 
 -- Tabeller som ble opprettet utenfor migrasjonene (finnes i prod): sørg for RLS og lesing.
 DO $$
@@ -291,22 +343,34 @@ END $$;
 -- Begrens user_id-eksponering (enumerering av bruker-ID-er brukt mot IDOR-RPC-ene):
 -- user_badges / user_points_balances er i dag lesbare for anon med USING (true).
 -- Vurder om offentlige profiler trenger dette; minimum: bare innloggede.
-DROP POLICY IF EXISTS user_badges_select_public ON public.user_badges;
-DROP POLICY IF EXISTS user_badges_select_own ON public.user_badges;
-CREATE POLICY user_badges_select_own ON public.user_badges
-  FOR SELECT TO authenticated USING (user_id = auth.uid());
-DROP POLICY IF EXISTS user_points_balances_select ON public.user_points_balances;
-DROP POLICY IF EXISTS user_points_balances_select_own ON public.user_points_balances;
-CREATE POLICY user_points_balances_select_own ON public.user_points_balances
-  FOR SELECT TO authenticated USING (user_id = auth.uid());
+DO $$
+BEGIN
+  IF to_regclass('public.user_badges') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS user_badges_select_public ON public.user_badges';
+    EXECUTE 'DROP POLICY IF EXISTS user_badges_select_own ON public.user_badges';
+    EXECUTE 'CREATE POLICY user_badges_select_own ON public.user_badges
+      FOR SELECT TO authenticated USING (user_id = auth.uid())';
+  END IF;
+  IF to_regclass('public.user_points_balances') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS user_points_balances_select ON public.user_points_balances';
+    EXECUTE 'DROP POLICY IF EXISTS user_points_balances_select_own ON public.user_points_balances';
+    EXECUTE 'CREATE POLICY user_points_balances_select_own ON public.user_points_balances
+      FOR SELECT TO authenticated USING (user_id = auth.uid())';
+  END IF;
+END $$;
 -- (Offentlig profilvisning hentes server-side med service_role.)
 
 -- -----------------------------------------------------------------------------
 -- 5. View uten security_invoker
 -- -----------------------------------------------------------------------------
-ALTER VIEW public.n8n_issues_missing_ai_summary SET (security_invoker = true);
-REVOKE ALL ON public.n8n_issues_missing_ai_summary FROM PUBLIC, anon, authenticated;
-GRANT SELECT ON public.n8n_issues_missing_ai_summary TO service_role;
+DO $$
+BEGIN
+  IF to_regclass('public.n8n_issues_missing_ai_summary') IS NOT NULL THEN
+    EXECUTE 'ALTER VIEW public.n8n_issues_missing_ai_summary SET (security_invoker = true)';
+    EXECUTE 'REVOKE ALL ON public.n8n_issues_missing_ai_summary FROM PUBLIC, anon, authenticated';
+    EXECUTE 'GRANT SELECT ON public.n8n_issues_missing_ai_summary TO service_role';
+  END IF;
+END $$;
 
 -- -----------------------------------------------------------------------------
 -- 6. search_path på SECURITY DEFINER: legg pg_temp sist (ellers søkes pg_temp først
