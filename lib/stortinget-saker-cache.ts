@@ -352,16 +352,16 @@ async function readSakerListFromDbUncached(): Promise<{ items: SakListItem[]; st
     const withCategory = await service
       .from('stortinget_issues')
       .select(`${baseSelect}, category`)
-      .not('sak_kind', 'is', null)
-      .order('last_updated_at', { ascending: false, nullsFirst: false })
+      .not('title', 'is', null)
+      .order('last_synced_at', { ascending: false, nullsFirst: false })
       .limit(DB_LIST_LIMIT);
 
     if (withCategory.error?.message?.includes('category')) {
       const withoutCategory = await service
         .from('stortinget_issues')
         .select(baseSelect)
-        .not('sak_kind', 'is', null)
-        .order('last_updated_at', { ascending: false, nullsFirst: false })
+        .not('title', 'is', null)
+        .order('last_synced_at', { ascending: false, nullsFirst: false })
         .limit(DB_LIST_LIMIT);
       data = (withoutCategory.data as DbIssueRow[] | null) ?? null;
       error = withoutCategory.error;

@@ -1,5 +1,4 @@
 import { getAnonSupabase, getServiceSupabase } from '@/lib/supabase';
-import { getServerSupabase } from '@/lib/supabase-server';
 import { mapChangelogRow, mapRoadmapRow } from '@/lib/appens-fremtid/map';
 import type { ChangelogEntry, RoadmapItem, RoadmapStatus } from '@/lib/appens-fremtid/constants';
 
@@ -89,40 +88,20 @@ export async function createAppRoadmapItem(
   status: RoadmapStatus,
   sortOrder?: number,
 ): Promise<string> {
-  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    try {
-      const service = getServiceSupabase();
-      const { data, error } = await service.rpc('create_app_roadmap_item', {
-        p_admin_user_id: adminUserId,
-        p_title: title,
-        p_body: body,
-        p_status: status,
-      });
-      if (!error && data) {
-        const id = String(data);
-        if (sortOrder !== undefined) await updateAppRoadmapItem(id, { sortOrder });
-        return id;
-      }
-    } catch {
-      // Fall through to the signed-in admin client.
-    }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Roadmap-administrasjon krever SUPABASE_SERVICE_ROLE_KEY på serveren.');
   }
-
-  const client = await getServerSupabase();
-  const { data, error } = await client
-    .from('app_roadmap_items')
-    .insert({
-      title,
-      body,
-      status,
-      sort_order: sortOrder ?? 0,
-      created_by: adminUserId,
-    })
-    .select('id')
-    .maybeSingle();
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc('create_app_roadmap_item', {
+    p_admin_user_id: adminUserId,
+    p_title: title,
+    p_body: body,
+    p_status: status,
+  });
   if (error) throw error;
-  if (!data?.id) throw new Error('Could not create roadmap item');
-  return String(data.id);
+  const id = String(data);
+  if (sortOrder !== undefined) await updateAppRoadmapItem(id, { sortOrder });
+  return id;
 }
 
 export async function updateAppRoadmapItem(
@@ -142,23 +121,11 @@ export async function updateAppRoadmapItem(
   if (Object.keys(next).length === 0) {
     throw new Error('Nothing to update');
   }
-  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    try {
-      const service = getServiceSupabase();
-      const { data, error } = await service
-        .from('app_roadmap_items')
-        .update(next)
-        .eq('id', itemId)
-        .select('id')
-        .maybeSingle();
-      if (!error && data?.id) return String(data.id);
-    } catch {
-      // Fall through to the signed-in admin client.
-    }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Roadmap-administrasjon krever SUPABASE_SERVICE_ROLE_KEY på serveren.');
   }
-
-  const client = await getServerSupabase();
-  const { data, error } = await client
+  const service = getServiceSupabase();
+  const { data, error } = await service
     .from('app_roadmap_items')
     .update(next)
     .eq('id', itemId)
@@ -185,27 +152,14 @@ export async function setAppRoadmapItemStatus(
 }
 
 export async function deleteAppRoadmapItem(adminUserId: string, itemId: string): Promise<string> {
-  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    try {
-      const service = getServiceSupabase();
-      const { data, error } = await service.rpc('delete_app_roadmap_item', {
-        p_admin_user_id: adminUserId,
-        p_item_id: itemId,
-      });
-      if (!error && data) return String(data);
-    } catch {
-      // Fall through to the signed-in admin client.
-    }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Roadmap-administrasjon krever SUPABASE_SERVICE_ROLE_KEY på serveren.');
   }
-
-  const client = await getServerSupabase();
-  const { data, error } = await client
-    .from('app_roadmap_items')
-    .delete()
-    .eq('id', itemId)
-    .select('id')
-    .maybeSingle();
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc('delete_app_roadmap_item', {
+    p_admin_user_id: adminUserId,
+    p_item_id: itemId,
+  });
   if (error) throw error;
-  if (!data?.id) throw new Error('Roadmap item not found');
-  return String(data.id);
+  return String(data);
 }
