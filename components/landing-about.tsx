@@ -90,6 +90,18 @@ export function LandingAbout() {
               stagger={0.04}
             />
           </SoftBlurIn>
+          <SoftBlurIn delay={0.18}>
+            <p className="mt-6 text-sm text-[#001433]/65">
+              <Link
+                href={OM_LINKS.blogg}
+                className="font-semibold text-[#00205b] underline-offset-2 hover:text-[#ba0c2f] hover:underline"
+              >
+                Les bloggen
+              </Link>
+              {' '}
+              for forklaringer og oppdateringer uten persondata i teksten.
+            </p>
+          </SoftBlurIn>
         </div>
 
         <div className="mx-auto mt-14 max-w-5xl">

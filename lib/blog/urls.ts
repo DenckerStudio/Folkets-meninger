@@ -1,0 +1,27 @@
+import { absoluteUrl } from '@/lib/seo/metadata';
+
+export const BLOG_BASE_PATH = '/blogg';
+
+export function blogIndexPath(): string {
+  return BLOG_BASE_PATH;
+}
+
+export function blogPostPath(slug: string): string {
+  return `${BLOG_BASE_PATH}/${encodeURIComponent(slug)}`;
+}
+
+export function blogPostCanonicalUrl(slug: string): string {
+  return absoluteUrl(blogPostPath(slug));
+}
+
+export function blogPostOgImagePath(slug: string): string {
+  return `${blogPostPath(slug)}/opengraph-image`;
+}
+
+export function blogRssPath(): string {
+  return `${BLOG_BASE_PATH}/rss.xml`;
+}
+
+export function adminBlogPostUrl(postId: string): string {
+  return absoluteUrl(`/dashboard/admin/blog?post=${encodeURIComponent(postId)}`);
+}

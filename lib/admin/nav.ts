@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import {
   BarChart3,
   Bell,
+  FileText,
   LayoutDashboard,
   Lightbulb,
   Users,
@@ -25,6 +26,14 @@ export const adminNavItems: AdminNavItem[] = [
     description: 'Forslag, endringslogg og veikart',
     href: routes.adminForslag,
     icon: Lightbulb,
+    status: 'active',
+  },
+  {
+    id: 'blog',
+    title: 'Blogg',
+    description: 'Godkjenn og publiser SEO-artikler fra n8n',
+    href: routes.adminBlog,
+    icon: FileText,
     status: 'active',
   },
   {

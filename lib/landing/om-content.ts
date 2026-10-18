@@ -136,4 +136,5 @@ export const OM_LINKS = {
   personvern: routes.personvern,
   omAi: routes.omAi,
   innspill: routes.innspill,
+  blogg: routes.blogg,
 } as const;

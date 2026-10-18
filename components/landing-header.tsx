@@ -45,6 +45,15 @@ export function LandingHeader() {
           <LandingLogo clipId="fs-header-bubble" animate={pathname === '/'} className="max-h-9 w-auto max-w-[min(52vw,11rem)] sm:max-h-none sm:max-w-none" />
         </Link>
         <div className="relative z-[72] flex shrink-0 items-center gap-1 sm:gap-3">
+          <Link
+            href={routes.blogg}
+            className={cn(
+              'hidden whitespace-nowrap sm:inline-flex px-3 text-sm font-medium text-[#001433]/65 transition-colors hover:text-[#ba0c2f]',
+              touchTargetLinkClass,
+            )}
+          >
+            Blogg
+          </Link>
           <a
             href={routes.omOss}
             onClick={(event) => {

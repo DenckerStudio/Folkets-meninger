@@ -17,7 +17,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/dashboard/sporsmal`, changeFrequency: 'weekly', priority: 0.5 },
     { url: `${base}/dashboard/appens-fremtid`, changeFrequency: 'weekly', priority: 0.4 },
     { url: `${base}/innspill`, changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${base}/blogg`, changeFrequency: 'weekly', priority: 0.5 },
   ];
+
+  let blogRoutes: MetadataRoute.Sitemap = [];
+  try {
+    const { listPublishedBlogSlugsForSitemap } = await import('@/lib/blog/service');
+    const slugs = await listPublishedBlogSlugsForSitemap(200);
+    blogRoutes = slugs.map((entry) => ({
+      url: `${base}/blogg/${encodeURIComponent(entry.slug)}`,
+      lastModified: entry.published_at ? new Date(entry.published_at) : undefined,
+      changeFrequency: 'monthly',
+      priority: 0.45,
+    }));
+  } catch (error) {
+    console.error('sitemap: klarte ikke å hente bloggposter', error);
+  }
 
   let sakRoutes: MetadataRoute.Sitemap = [];
   try {
@@ -33,5 +48,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('sitemap: klarte ikke å hente saker', error);
   }
 
-  return [...staticRoutes, ...sakRoutes];
+  return [...staticRoutes, ...blogRoutes, ...sakRoutes];
 }
