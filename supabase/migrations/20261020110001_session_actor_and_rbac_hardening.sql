@@ -658,8 +658,8 @@ GRANT EXECUTE ON FUNCTION public.revoke_app_role_by_email(text, text, uuid) TO s
 
 REVOKE ALL ON FUNCTION public.grant_stemme_plus(uuid, uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.grant_stemme_plus_by_email(text, uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.revoke_stemme_plus(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.revoke_stemme_plus_by_email(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.revoke_stemme_plus(uuid, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.revoke_stemme_plus_by_email(text, uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.grant_stemme_plus(uuid, uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.grant_stemme_plus_by_email(text, uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.revoke_stemme_plus(uuid, uuid) TO service_role;
