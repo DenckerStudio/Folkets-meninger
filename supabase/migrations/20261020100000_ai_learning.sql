@@ -2,6 +2,8 @@
 
 BEGIN;
 
+SET LOCAL lock_timeout = '5s';
+
 -- ---------------------------------------------------------------------------
 -- Reason codes (shared)
 -- ---------------------------------------------------------------------------
@@ -417,12 +419,9 @@ CREATE TRIGGER ai_poll_feedback
   EXECUTE FUNCTION public.ai_trigger_poll_feedback();
 
 -- ---------------------------------------------------------------------------
--- n8n_get_active_prompt
+-- n8n_get_active_prompt (single-arg; 00200 replaces body — no (text,text) overload)
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.n8n_get_active_prompt(
-  p_workflow_key text,
-  p_node_key text DEFAULT 'system'
-)
+CREATE OR REPLACE FUNCTION public.n8n_get_active_prompt(p_workflow_key text)
 RETURNS jsonb
 LANGUAGE sql
 STABLE
@@ -432,10 +431,12 @@ AS $$
   SELECT to_jsonb(p)
   FROM public.ai_prompt_versions p
   WHERE p.workflow_key = p_workflow_key
-    AND p.node_key = coalesce(nullif(btrim(p_node_key), ''), 'system')
+    AND p.node_key = 'system'
     AND p.status = 'active'
   LIMIT 1;
 $$;
+
+DROP FUNCTION IF EXISTS public.n8n_get_active_prompt(text, text);
 
 -- ---------------------------------------------------------------------------
 -- n8n_log_ai_generation
@@ -778,6 +779,21 @@ BEGIN
   LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon, service_role', f);
     EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO authenticated', f);
+  END LOOP;
+
+  FOREACH v_name IN ARRAY ARRAY[
+    'ai_is_valid_reason_code',
+    'ai_trigger_issue_summary_preserve',
+    'ai_trigger_poll_feedback'
+  ]
+  LOOP
+    FOR f IN
+      SELECT p.oid::regprocedure FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = v_name
+    LOOP
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon, authenticated', f);
+    END LOOP;
   END LOOP;
 END $$;
 

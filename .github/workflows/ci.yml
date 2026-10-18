@@ -46,6 +46,11 @@ jobs:
           DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
           DEFAULTS_URL="postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres" \
           ./scripts/run-prod-like-db-security.sh
+      - name: Re-apply AI-learning migrations 00000–00300
+        run: |
+          chmod +x ./scripts/run-ai-learning-migration-chain.sh
+          DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+          ./scripts/run-ai-learning-migration-chain.sh
 
   migration-sql-lint:
     runs-on: ubuntu-latest

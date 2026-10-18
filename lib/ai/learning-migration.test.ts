@@ -17,6 +17,10 @@ assert.match(migration, /GRANT EXECUTE ON FUNCTION %s TO authenticated/);
 assert.match(migration, /ai_issue_summary_preserve/);
 assert.match(migration, /ai_poll_feedback/);
 assert.match(migration, /admin_poll_draft_action/);
+assert.match(migration, /n8n_get_active_prompt\(p_workflow_key text\)/);
+assert.doesNotMatch(migration, /p_node_key text DEFAULT/);
+assert.match(migration, /DROP FUNCTION IF EXISTS public\.n8n_get_active_prompt\(text, text\)/);
+assert.match(migration, /SET LOCAL lock_timeout = '5s'/);
 
 const grants = readFileSync(
   join(process.cwd(), 'supabase/migrations/20261020100100_ai_learning_n8n_grants.sql'),
@@ -39,6 +43,9 @@ assert.match(align, /DROP FUNCTION IF EXISTS public\.n8n_upsert_issue_ai_summary
 assert.match(align, /p_generation_metadata jsonb DEFAULT NULL/);
 assert.match(align, /'sak_summary', 'sak-01'/);
 assert.match(align, /'golden_draft', 'draft'/);
+assert.match(align, /ai_eval_cases_origin_check/);
+assert.match(align, /ON CONFLICT \(workflow_key, case_key\) DO NOTHING/);
+assert.match(align, /SET LOCAL lock_timeout = '5s'/);
 assert.match(align, /NOTIFY pgrst, 'reload schema';/);
 assert.match(align, /REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon, authenticated/);
 
@@ -50,6 +57,9 @@ assert.match(expert, /blog_draft/);
 assert.match(expert, /set_config\('app\.ai_feedback_skip', '1'/);
 assert.match(expert, /'n8n'/);
 assert.match(expert, /count\(DISTINCT ar\.generation_id\)/);
+assert.match(expert, /n8n_upsert_eval_case/);
+assert.match(expert, /p\.track = 'system'/);
+assert.match(expert, /ai_safe_uuid_from_text/);
 
 const rollback = readFileSync(
   join(process.cwd(), 'supabase/rollback/20261020100200_n8n_upsert_issue_ai_summary_9arg.sql'),

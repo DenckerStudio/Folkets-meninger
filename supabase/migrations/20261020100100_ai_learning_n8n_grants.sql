@@ -16,6 +16,7 @@ DECLARE
     'n8n_record_eval_result',
     'n8n_ai_weekly_metrics',
     'n8n_upsert_issue_ai_summary',
+    'n8n_upsert_eval_case',
     'record_ai_feedback',
     'admin_poll_draft_action'
   ];

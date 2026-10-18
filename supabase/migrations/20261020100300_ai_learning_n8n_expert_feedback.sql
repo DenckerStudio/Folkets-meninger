@@ -2,6 +2,8 @@
 
 BEGIN;
 
+SET LOCAL lock_timeout = '5s';
+
 -- blog_draft prompt registry (blog genmeta prompt_id)
 ALTER TABLE public.ai_prompt_versions
   DROP CONSTRAINT IF EXISTS ai_prompt_versions_workflow_key_check;
@@ -76,7 +78,7 @@ DECLARE
   v_new public.issue_ai_summaries%ROWTYPE;
   v_feedback_generation_id uuid;
 BEGIN
-  v_generation_id := nullif(v_meta ->> 'generation_id', '')::uuid;
+  v_generation_id := public.ai_safe_uuid_from_text(v_meta ->> 'generation_id');
   v_feedback_generation_id := v_generation_id;
 
   PERFORM set_config('app.ai_feedback_skip', '1', true);
@@ -172,6 +174,53 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.n8n_upsert_eval_case(
+  p_workflow_key text,
+  p_case_key text,
+  p_input jsonb,
+  p_expected jsonb,
+  p_origin text,
+  p_status text
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_id uuid;
+BEGIN
+  IF p_status IS NULL OR p_status NOT IN ('draft', 'proposed') THEN
+    RAISE EXCEPTION 'status must be draft or proposed';
+  END IF;
+  IF p_workflow_key IS NULL OR btrim(p_workflow_key) = ''
+    OR p_case_key IS NULL OR btrim(p_case_key) = ''
+  THEN
+    RAISE EXCEPTION 'workflow_key and case_key are required';
+  END IF;
+
+  INSERT INTO public.ai_eval_cases (
+    workflow_key, case_key, input, expected, origin, status
+  )
+  VALUES (
+    p_workflow_key,
+    p_case_key,
+    p_input,
+    p_expected,
+    coalesce(p_origin, 'golden_draft'),
+    p_status
+  )
+  ON CONFLICT (workflow_key, case_key) DO UPDATE SET
+    input = EXCLUDED.input,
+    expected = EXCLUDED.expected,
+    origin = EXCLUDED.origin,
+    status = EXCLUDED.status
+  RETURNING id INTO v_id;
+
+  RETURN v_id;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.n8n_ai_weekly_metrics(p_from timestamptz, p_to timestamptz)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -240,13 +289,14 @@ BEGIN
       ORDER BY f.decided_at DESC
       LIMIT 1
     ) lf ON true
-    WHERE NOT EXISTS (
+    WHERE p.track = 'system'
+      AND NOT EXISTS (
       SELECT 1
       FROM public.ai_generations g
       WHERE g.created_at >= p_from AND g.created_at < p_to
         AND g.mode = 'prod'
         AND (
-          g.id = nullif(p.generation_metadata->>'generation_id', '')::uuid
+          g.id = public.ai_safe_uuid_from_text(p.generation_metadata->>'generation_id')
           OR (g.target_type = 'poll' AND g.target_id = p.id::text)
         )
     )
@@ -338,12 +388,34 @@ $$;
 DO $$
 DECLARE
   f regprocedure;
+  v_name text;
 BEGIN
+  FOREACH v_name IN ARRAY ARRAY[
+    'ai_prompt_version_public_json',
+    'ai_is_valid_reason_code',
+    'ai_safe_uuid_from_text',
+    'ai_trigger_issue_summary_preserve',
+    'ai_trigger_poll_feedback'
+  ]
+  LOOP
+    FOR f IN
+      SELECT p.oid::regprocedure FROM pg_proc p
+      JOIN pg_namespace ns ON ns.oid = p.pronamespace
+      WHERE ns.nspname = 'public' AND p.proname = v_name
+    LOOP
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon, authenticated', f);
+    END LOOP;
+  END LOOP;
+
   FOR f IN
     SELECT p.oid::regprocedure FROM pg_proc p
     JOIN pg_namespace ns ON ns.oid = p.pronamespace
     WHERE ns.nspname = 'public'
-      AND p.proname IN ('n8n_upsert_issue_ai_summary', 'n8n_ai_weekly_metrics')
+      AND p.proname IN (
+        'n8n_upsert_issue_ai_summary',
+        'n8n_ai_weekly_metrics',
+        'n8n_upsert_eval_case'
+      )
   LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon, authenticated', f);
     EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO service_role', f);

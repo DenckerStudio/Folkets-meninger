@@ -2,6 +2,46 @@
 
 BEGIN;
 
+SET LOCAL lock_timeout = '5s';
+
+-- Seed uses golden_draft/draft; widen CHECKs before INSERT (00300 repeats idempotently).
+ALTER TABLE public.ai_eval_cases
+  DROP CONSTRAINT IF EXISTS ai_eval_cases_origin_check;
+
+ALTER TABLE public.ai_eval_cases
+  ADD CONSTRAINT ai_eval_cases_origin_check CHECK (origin IN (
+    'golden', 'golden_draft', 'from_rejection', 'from_edit', 'dryrun'
+  ));
+
+ALTER TABLE public.ai_eval_cases
+  DROP CONSTRAINT IF EXISTS ai_eval_cases_status_check;
+
+ALTER TABLE public.ai_eval_cases
+  ADD CONSTRAINT ai_eval_cases_status_check CHECK (status IN (
+    'proposed', 'active', 'retired', 'draft'
+  ));
+
+ALTER TABLE public.ai_prompt_versions
+  DROP CONSTRAINT IF EXISTS ai_prompt_versions_workflow_key_check;
+
+ALTER TABLE public.ai_prompt_versions
+  ADD CONSTRAINT ai_prompt_versions_workflow_key_check CHECK (workflow_key IN (
+    'reels_poll', 'candidate_rating', 'sak_summary', 'blog_outline', 'blog_section',
+    'blog_rank', 'blog_draft', 'aksjon_classify', 'aksjon_draft', 'judge'
+  ));
+
+CREATE OR REPLACE FUNCTION public.ai_safe_uuid_from_text(p text)
+RETURNS uuid
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT CASE
+    WHEN p ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+      THEN p::uuid
+    ELSE NULL
+  END;
+$$;
+
 ALTER TABLE public.issue_ai_summaries
   ADD COLUMN IF NOT EXISTS generation_metadata jsonb NOT NULL DEFAULT '{}'::jsonb;
 
@@ -271,7 +311,7 @@ DECLARE
   v_generation_id uuid;
   v_meta jsonb := coalesce(p_generation_metadata, '{}'::jsonb);
 BEGIN
-  v_generation_id := nullif(v_meta ->> 'generation_id', '')::uuid;
+  v_generation_id := public.ai_safe_uuid_from_text(v_meta ->> 'generation_id');
 
   INSERT INTO public.issue_ai_summaries (
     stortinget_issue_id,
@@ -356,11 +396,7 @@ VALUES
 ('sak_summary', 'sak-18', '{"user_text": "Du skal lage et nøytralt AI-sammendrag (hva/hvem/kostnad) for stortingssak 200321.\n\nKildemateriale:\nRepresentantforslag fra SV om tiltak mot kjønnslemlestelse. Til behandling i justiskomiteen, med høringsfrist 26. oktober 2026.", "source_texts": ["Representantforslag fra SV om tiltak mot kjønnslemlestelse. Til behandling i justiskomiteen, med høringsfrist 26. oktober 2026."], "issue_id": "200321"}'::jsonb, '{"key_facts": ["kjønnslemlestelse", "Sosialistisk Venstreparti|SV", "Justiskomiteen", "Marian Hussein"], "forbidden_numbers": [], "skal_avsta": false, "expected_chunk_ids": []}'::jsonb, 'golden_draft', 'draft'),
 ('sak_summary', 'sak-19', '{"user_text": "Du skal lage et nøytralt AI-sammendrag (hva/hvem/kostnad) for stortingssak 200279.\n\nKildemateriale:\nRiksrevisjonen fant store variasjoner i avslag på henvisninger og ventetid, og mente det var kritikkverdig at Helse- og omsorgsdepartementet ikke i tilstrekkelig grad har sørget for at barn og unge med psykiske plager får hjelp. Komiteen sluttet seg til konklusjonene.", "source_texts": ["Riksrevisjonen fant store variasjoner i avslag på henvisninger og ventetid, og mente det var kritikkverdig at Helse- og omsorgsdepartementet ikke i tilstrekkelig grad har sørget for at barn og unge med psykiske plager får hjelp. Komiteen sluttet seg til konklusjonene."], "issue_id": "200279"}'::jsonb, '{"key_facts": ["Riksrevisjonen", "barn og unge", "psykiske plager", "ventetid", "kritikkverdig", "Helse- og omsorgsdepartementet", "Kontroll- og konstitusjonskomiteen"], "forbidden_numbers": [], "skal_avsta": false, "expected_chunk_ids": []}'::jsonb, 'golden_draft', 'draft'),
 ('sak_summary', 'sak-20', '{"user_text": "Du skal lage et nøytralt AI-sammendrag (hva/hvem/kostnad) for stortingssak 200301.\n\nKildemateriale:\nRiksrevisjonen konkluderte med at dagens bruk av spesialisthelsetjenesten truer bærekraften til sykehusene, og at statlige virkemidler for behandling på rett nivå ikke har fungert godt nok. Komiteen sluttet seg til kritikken.", "source_texts": ["Riksrevisjonen konkluderte med at dagens bruk av spesialisthelsetjenesten truer bærekraften til sykehusene, og at statlige virkemidler for behandling på rett nivå ikke har fungert godt nok. Komiteen sluttet seg til kritikken."], "issue_id": "200301"}'::jsonb, '{"key_facts": ["Riksrevisjonen", "samhandling om eldre", "spesialisthelsetjenesten", "kommunene", "kritikkverdig", "Kontroll- og konstitusjonskomiteen"], "forbidden_numbers": [], "skal_avsta": false, "expected_chunk_ids": []}'::jsonb, 'golden_draft', 'draft')
-ON CONFLICT (workflow_key, case_key) DO UPDATE SET
-  input = EXCLUDED.input,
-  expected = EXCLUDED.expected,
-  origin = EXCLUDED.origin,
-  status = EXCLUDED.status;
+ON CONFLICT (workflow_key, case_key) DO NOTHING;
 
 -- service_role only on n8n-facing RPCs (anon/authenticated revoked).
 DO $$
@@ -378,7 +414,25 @@ DECLARE
     'n8n_propose_prompt_version'
   ];
   v_name text;
+  v_helper text;
 BEGIN
+  FOREACH v_helper IN ARRAY ARRAY[
+    'ai_prompt_version_public_json',
+    'ai_is_valid_reason_code',
+    'ai_safe_uuid_from_text',
+    'ai_trigger_issue_summary_preserve',
+    'ai_trigger_poll_feedback'
+  ]
+  LOOP
+    FOR f IN
+      SELECT p.oid::regprocedure FROM pg_proc p
+      JOIN pg_namespace ns ON ns.oid = p.pronamespace
+      WHERE ns.nspname = 'public' AND p.proname = v_helper
+    LOOP
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon, authenticated', f);
+    END LOOP;
+  END LOOP;
+
   FOREACH v_name IN ARRAY v_names LOOP
     FOR f IN
       SELECT p.oid::regprocedure FROM pg_proc p
