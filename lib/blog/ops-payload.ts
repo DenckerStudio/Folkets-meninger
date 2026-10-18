@@ -40,6 +40,12 @@ export function parseCreateBlogDraftBody(
     return { ok: false, error: 'source_event må være en streng' };
   }
 
+  const suggested_tags = asStringArray(record.suggested_tags, 12);
+  const legacyTags = asStringArray(record.tags, 12);
+
+  const aiRecord =
+    record.ai && typeof record.ai === 'object' ? (record.ai as Record<string, unknown>) : null;
+
   return {
     ok: true,
     input: {
@@ -47,17 +53,30 @@ export function parseCreateBlogDraftBody(
       title,
       excerpt,
       body_md,
-      tags: asStringArray(record.tags, 12),
+      tags: legacyTags,
+      suggested_tags: suggested_tags.length ? suggested_tags : legacyTags,
+      category: typeof record.category === 'string' ? record.category.trim() : undefined,
       related_sak_ids: asStringArray(record.related_sak_ids, 8),
       related_horing_ids: asStringArray(record.related_horing_ids, 8),
       source_event,
+      bluesky_text: typeof record.bluesky_text === 'string' ? record.bluesky_text : undefined,
+      ai: aiRecord
+        ? {
+            model_family:
+              typeof aiRecord.model_family === 'string' ? aiRecord.model_family : undefined,
+            prompt_version:
+              typeof aiRecord.prompt_version === 'string' ? aiRecord.prompt_version : undefined,
+            generated_at:
+              typeof aiRecord.generated_at === 'string' ? aiRecord.generated_at : undefined,
+          }
+        : undefined,
     },
   };
 }
 
 export function parseSocialPostedBody(
   body: unknown,
-): { ok: true; slug: string } | { ok: false; error: string } {
+): { ok: true; slug: string; bluesky_uri?: string } | { ok: false; error: string } {
   if (!body || typeof body !== 'object') {
     return { ok: false, error: 'Ugyldig JSON-body' };
   }
@@ -67,5 +86,7 @@ export function parseSocialPostedBody(
   if (!isValidBlogSlug(slug)) {
     return { ok: false, error: 'slug er påkrevd' };
   }
-  return { ok: true, slug };
+  const bluesky_uri =
+    typeof record.bluesky_uri === 'string' ? record.bluesky_uri.trim() : undefined;
+  return { ok: true, slug, bluesky_uri };
 }

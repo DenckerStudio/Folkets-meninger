@@ -31,7 +31,7 @@ export const adminNavItems: AdminNavItem[] = [
   {
     id: 'blog',
     title: 'Blogg',
-    description: 'Godkjenn og publiser SEO-artikler fra n8n',
+    description: 'Payload CMS — utkast, godkjenning og publisering',
     href: routes.adminBlog,
     icon: FileText,
     status: 'active',

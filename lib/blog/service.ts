@@ -1,128 +1,156 @@
-import { isBlogTableMissing } from '@/lib/blog/errors';
-import { fireBlogPublishedWebhook } from '@/lib/blog/publish-webhook';
+import { mapPayloadCategories, mapPayloadPostToListItem, mapPayloadPostToPublic } from '@/lib/cms/map-post';
+import {
+  getCmsAgentKey,
+  getCmsBaseUrl,
+  isCmsConfigured,
+  payloadFetch,
+  payloadFetchList,
+} from '@/lib/cms/payload-client';
+import type { PayloadCategory, PayloadPost } from '@/lib/cms/types';
 import { isValidBlogSlug, normalizeBlogSlug } from '@/lib/blog/slug';
-import type { BlogPostPublic, BlogPostRow, BlogPostStatus } from '@/lib/blog/types';
-import { getAnonSupabase } from '@/lib/supabase';
-import { getServiceSupabase } from '@/lib/supabase';
+import type { BlogCategory, BlogPostListItem, BlogPostPublic } from '@/lib/blog/types';
+import { BLOG_PAGE_SIZE } from '@/lib/blog/types';
+import { adminBlogPostUrl } from '@/lib/blog/urls';
 
-const PUBLIC_COLUMNS =
-  'slug, title, excerpt, body_md, tags, related_sak_ids, related_horing_ids, published_at';
+const POST_DEPTH = 2;
 
-const ADMIN_COLUMNS =
-  'id, slug, title, excerpt, body_md, tags, related_sak_ids, related_horing_ids, status, source_event, created_at, published_at, social_posted_at';
-
-function mapPublicRow(row: Record<string, unknown>): BlogPostPublic {
+function publishedQuery(extra?: Record<string, string | number>) {
   return {
-    slug: String(row.slug),
-    title: String(row.title),
-    excerpt: String(row.excerpt ?? ''),
-    body_md: String(row.body_md ?? ''),
-    tags: Array.isArray(row.tags) ? row.tags.map(String) : [],
-    related_sak_ids: Array.isArray(row.related_sak_ids) ? row.related_sak_ids.map(String) : [],
-    related_horing_ids: Array.isArray(row.related_horing_ids)
-      ? row.related_horing_ids.map(String)
-      : [],
-    published_at: row.published_at ? String(row.published_at) : null,
-  };
-}
-
-function mapAdminRow(row: Record<string, unknown>): BlogPostRow {
-  return {
-    id: String(row.id),
-    slug: String(row.slug),
-    title: String(row.title),
-    excerpt: String(row.excerpt ?? ''),
-    body_md: String(row.body_md ?? ''),
-    tags: Array.isArray(row.tags) ? row.tags.map(String) : [],
-    related_sak_ids: Array.isArray(row.related_sak_ids) ? row.related_sak_ids.map(String) : [],
-    related_horing_ids: Array.isArray(row.related_horing_ids)
-      ? row.related_horing_ids.map(String)
-      : [],
-    status: String(row.status) as BlogPostStatus,
-    source_event: row.source_event != null ? String(row.source_event) : null,
-    created_at: String(row.created_at),
-    published_at: row.published_at ? String(row.published_at) : null,
-    social_posted_at: row.social_posted_at ? String(row.social_posted_at) : null,
+    depth: POST_DEPTH,
+    sort: '-publishedAt',
+    'where[_status][equals]': 'published',
+    ...(extra ?? {}),
   };
 }
 
 export async function listPublishedBlogPosts(limit = 50): Promise<BlogPostPublic[]> {
-  try {
-    const supabase = getAnonSupabase();
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .select(PUBLIC_COLUMNS)
-      .eq('status', 'published')
-      .order('published_at', { ascending: false, nullsFirst: false })
-      .limit(limit);
-    if (error) {
-      if (isBlogTableMissing(error)) return [];
-      throw error;
-    }
-    return (data ?? []).map((row) => mapPublicRow(row as Record<string, unknown>));
-  } catch (error) {
-    if (isBlogTableMissing(error)) return [];
-    console.error('[blog] listPublishedBlogPosts failed', error);
-    return [];
+  if (!isCmsConfigured()) return [];
+  const data = await payloadFetchList<PayloadPost>('posts', {
+    ...publishedQuery(),
+    limit,
+  });
+  if (!data?.docs?.length) return [];
+  return data.docs.map(mapPayloadPostToPublic);
+}
+
+export async function listPublishedBlogPostsPaginated(args: {
+  page: number;
+  categorySlug?: string | null;
+  pageSize?: number;
+}): Promise<{
+  posts: BlogPostListItem[];
+  totalPages: number;
+  totalDocs: number;
+  page: number;
+}> {
+  const pageSize = args.pageSize ?? BLOG_PAGE_SIZE;
+  const page = Math.max(1, args.page);
+  if (!isCmsConfigured()) {
+    return { posts: [], totalPages: 0, totalDocs: 0, page };
   }
+
+  const query: Record<string, string | number> = {
+    ...publishedQuery(),
+    limit: pageSize,
+    page,
+  };
+
+  if (args.categorySlug) {
+    const categories = await payloadFetchList<PayloadCategory>('categories', {
+      limit: 1,
+      'where[slug][equals]': args.categorySlug,
+    });
+    const categoryId = categories?.docs?.[0]?.id;
+    if (!categoryId) {
+      return { posts: [], totalPages: 0, totalDocs: 0, page };
+    }
+    query['where[category][equals]'] = categoryId;
+  }
+
+  const data = await payloadFetchList<PayloadPost>('posts', query);
+  if (!data) return { posts: [], totalPages: 0, totalDocs: 0, page };
+
+  return {
+    posts: data.docs.map(mapPayloadPostToListItem),
+    totalPages: data.totalPages,
+    totalDocs: data.totalDocs,
+    page: data.page,
+  };
+}
+
+export async function getFeaturedBlogPost(): Promise<BlogPostPublic | null> {
+  if (!isCmsConfigured()) return null;
+  const data = await payloadFetchList<PayloadPost>('posts', {
+    ...publishedQuery(),
+    limit: 1,
+    'where[featured][equals]': 'true',
+  });
+  const post = data?.docs?.[0];
+  return post ? mapPayloadPostToPublic(post) : null;
 }
 
 export async function getPublishedBlogPostBySlug(slug: string): Promise<BlogPostPublic | null> {
-  try {
-    const supabase = getAnonSupabase();
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .select(PUBLIC_COLUMNS)
-      .eq('slug', slug)
-      .eq('status', 'published')
-      .maybeSingle();
-    if (error) {
-      if (isBlogTableMissing(error)) return null;
-      throw error;
-    }
-    if (!data) return null;
-    return mapPublicRow(data as Record<string, unknown>);
-  } catch (error) {
-    if (isBlogTableMissing(error)) return null;
-    console.error('[blog] getPublishedBlogPostBySlug failed', error);
-    return null;
-  }
+  if (!isCmsConfigured()) return null;
+  const data = await payloadFetchList<PayloadPost>('posts', {
+    ...publishedQuery(),
+    limit: 1,
+    'where[slug][equals]': slug,
+  });
+  const post = data?.docs?.[0];
+  return post ? mapPayloadPostToPublic(post) : null;
 }
 
-export async function listAdminBlogDrafts(): Promise<BlogPostRow[]> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
-  try {
-    const supabase = getServiceSupabase();
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .select(ADMIN_COLUMNS)
-      .in('status', ['draft', 'approved'])
-      .order('created_at', { ascending: false });
-    if (error) {
-      if (isBlogTableMissing(error)) return [];
-      throw error;
-    }
-    return (data ?? []).map((row) => mapAdminRow(row as Record<string, unknown>));
-  } catch (error) {
-    if (isBlogTableMissing(error)) return [];
-    throw error;
-  }
+export async function listBlogCategories(): Promise<BlogCategory[]> {
+  if (!isCmsConfigured()) return [];
+  const data = await payloadFetchList<PayloadCategory>('categories', {
+    limit: 20,
+    sort: 'order',
+  });
+  if (!data?.docs?.length) return [];
+  return mapPayloadCategories(data.docs);
 }
 
-export async function getAdminBlogPostById(id: string): Promise<BlogPostRow | null> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
-  const supabase = getServiceSupabase();
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .select(ADMIN_COLUMNS)
-    .eq('id', id)
-    .maybeSingle();
-  if (error) {
-    if (isBlogTableMissing(error)) return null;
-    throw error;
-  }
-  if (!data) return null;
-  return mapAdminRow(data as Record<string, unknown>);
+export async function listPublishedBlogSlugsForSitemap(limit = 200): Promise<
+  { slug: string; published_at: string | null; updated_at: string | null }[]
+> {
+  if (!isCmsConfigured()) return [];
+  const data = await payloadFetchList<PayloadPost>('posts', {
+    ...publishedQuery(),
+    limit,
+    depth: 0,
+  });
+  if (!data?.docs?.length) return [];
+  return data.docs.map((post) => ({
+    slug: post.slug,
+    published_at: post.publishedAt ?? null,
+    updated_at: post.updatedAtDisplay ?? post.updatedAt ?? post.publishedAt ?? null,
+  }));
+}
+
+async function findCategoryId(slug: string): Promise<string | null> {
+  const categories = await payloadFetchList<PayloadCategory>('categories', {
+    limit: 1,
+    'where[slug][equals]': slug,
+  });
+  return categories?.docs?.[0]?.id ?? null;
+}
+
+async function findPostBySourceEvent(sourceEvent: string): Promise<PayloadPost | null> {
+  const data = await payloadFetchList<PayloadPost>('posts', {
+    limit: 1,
+    depth: 0,
+    'where[sourceEvent][equals]': sourceEvent,
+  });
+  return data?.docs?.[0] ?? null;
+}
+
+async function findPostBySlug(slug: string): Promise<PayloadPost | null> {
+  const data = await payloadFetchList<PayloadPost>('posts', {
+    limit: 1,
+    depth: 0,
+    'where[slug][equals]': slug,
+  });
+  return data?.docs?.[0] ?? null;
 }
 
 export type CreateBlogDraftInput = {
@@ -131,21 +159,24 @@ export type CreateBlogDraftInput = {
   excerpt: string;
   body_md: string;
   tags?: string[];
+  suggested_tags?: string[];
+  category?: string;
   related_sak_ids?: string[];
   related_horing_ids?: string[];
   source_event?: string | null;
+  bluesky_text?: string;
+  ai?: { model_family?: string; prompt_version?: string; generated_at?: string };
 };
 
 export type CreateBlogDraftResult =
   | { ok: true; id: string; slug: string; created: boolean; adminUrl: string }
   | { ok: false; status: number; error: string };
 
-export async function createBlogDraft(
-  input: CreateBlogDraftInput,
-  adminUrlFor: (id: string) => string,
-): Promise<CreateBlogDraftResult> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return { ok: false, status: 503, error: 'SUPABASE_SERVICE_ROLE_KEY is not configured' };
+export async function createBlogDraft(input: CreateBlogDraftInput): Promise<CreateBlogDraftResult> {
+  const agentKey = getCmsAgentKey();
+  const base = getCmsBaseUrl();
+  if (!base || !agentKey) {
+    return { ok: false, status: 503, error: 'CMS er ikke konfigurert' };
   }
 
   const slug = normalizeBlogSlug(input.slug);
@@ -153,175 +184,116 @@ export async function createBlogDraft(
     return { ok: false, status: 400, error: 'Ugyldig slug' };
   }
 
-  const title = input.title.trim();
-  const excerpt = input.excerpt.trim();
-  const body_md = input.body_md.trim();
-  if (!title || !body_md) {
-    return { ok: false, status: 400, error: 'Tittel og brødtekst er påkrevd' };
-  }
-
-  const tags = (input.tags ?? []).map((t) => t.trim()).filter(Boolean).slice(0, 12);
-  const related_sak_ids = (input.related_sak_ids ?? []).map((id) => id.trim()).filter(Boolean).slice(0, 8);
-  const related_horing_ids = (input.related_horing_ids ?? [])
-    .map((id) => id.trim())
-    .filter(Boolean)
-    .slice(0, 8);
-  const source_event = input.source_event?.trim() || null;
-
-  const supabase = getServiceSupabase();
-
-  if (source_event) {
-    const { data: existingByEvent } = await supabase
-      .from('blog_posts')
-      .select('id, slug')
-      .eq('source_event', source_event)
-      .maybeSingle();
-    if (existingByEvent?.id) {
+  const sourceEvent = input.source_event?.trim() || null;
+  if (sourceEvent) {
+    const existing = await findPostBySourceEvent(sourceEvent);
+    if (existing?.id) {
       return {
         ok: true,
-        id: String(existingByEvent.id),
-        slug: String(existingByEvent.slug),
+        id: String(existing.id),
+        slug: existing.slug,
         created: false,
-        adminUrl: adminUrlFor(String(existingByEvent.id)),
+        adminUrl: `${base}/admin/collections/posts/${existing.id}`,
       };
     }
   }
 
-  const { data: existingBySlug } = await supabase
-    .from('blog_posts')
-    .select('id, slug')
-    .eq('slug', slug)
-    .maybeSingle();
-  if (existingBySlug?.id) {
+  const existingSlug = await findPostBySlug(slug);
+  if (existingSlug?.id) {
     return {
       ok: true,
-      id: String(existingBySlug.id),
-      slug: String(existingBySlug.slug),
+      id: String(existingSlug.id),
+      slug: existingSlug.slug,
       created: false,
-      adminUrl: adminUrlFor(String(existingBySlug.id)),
+      adminUrl: `${base}/admin/collections/posts/${existingSlug.id}`,
     };
   }
 
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .insert({
-      slug,
-      title,
-      excerpt,
-      body_md,
-      tags,
-      related_sak_ids,
-      related_horing_ids,
-      source_event,
-      status: 'draft',
-    })
-    .select('id, slug')
-    .single();
-
-  if (error) {
-    if (isBlogTableMissing(error)) {
-      return { ok: false, status: 503, error: 'blog_posts-tabellen finnes ikke ennå' };
-    }
-    console.error('[blog] createBlogDraft insert failed', error);
-    return { ok: false, status: 500, error: 'Kunne ikke opprette utkast' };
+  const categorySlug = normalizeBlogSlug(input.category || 'forklart');
+  const categoryId = await findCategoryId(categorySlug);
+  if (!categoryId) {
+    return { ok: false, status: 400, error: 'Ukjent kategori' };
   }
 
-  const id = String(data.id);
+  const suggested = (input.suggested_tags ?? input.tags ?? [])
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+
+  const body = {
+    slug,
+    title: input.title.trim(),
+    excerpt: input.excerpt.trim(),
+    bodyMarkdown: input.body_md,
+    category: categoryId,
+    relatedSakIds: (input.related_sak_ids ?? []).map((id) => ({ id: id.trim() })).filter((row) => row.id),
+    relatedHoringIds: (input.related_horing_ids ?? [])
+      .map((id) => ({ id: id.trim() }))
+      .filter((row) => row.id),
+    suggestedTags: suggested.map((value) => ({ value })),
+    sourceEvent,
+    origin: 'n8n',
+    _status: 'draft',
+    ai: {
+      assisted: true,
+      modelFamily: input.ai?.model_family ?? 'gemma4',
+      promptVersion: input.ai?.prompt_version ?? null,
+      generatedAt: input.ai?.generated_at ?? new Date().toISOString(),
+    },
+    social: {
+      blueskyText: input.bluesky_text?.trim() || input.excerpt.trim(),
+    },
+    review: { state: 'til_vurdering' },
+  };
+
+  const created = await payloadFetch<PayloadPost>('/api/posts?draft=true', {
+    method: 'POST',
+    apiKey: agentKey,
+    body,
+    tags: ['blog'],
+    revalidate: 0,
+  });
+
+  if (!created?.id) {
+    return { ok: false, status: 500, error: 'Kunne ikke opprette utkast i CMS' };
+  }
+
   return {
     ok: true,
-    id,
-    slug: String(data.slug),
+    id: String(created.id),
+    slug: created.slug,
     created: true,
-    adminUrl: adminUrlFor(id),
+    adminUrl: `${base}/admin/collections/posts/${created.id}`,
   };
 }
 
-export async function updateAdminBlogPost(
-  id: string,
-  patch: { title?: string; excerpt?: string; body_md?: string },
-): Promise<void> {
-  const supabase = getServiceSupabase();
-  const updates: Record<string, string> = {};
-  if (patch.title !== undefined) updates.title = patch.title.trim();
-  if (patch.excerpt !== undefined) updates.excerpt = patch.excerpt.trim();
-  if (patch.body_md !== undefined) updates.body_md = patch.body_md.trim();
-  if (Object.keys(updates).length === 0) return;
+export async function markBlogSocialPosted(
+  slug: string,
+  blueskyUri?: string | null,
+): Promise<boolean> {
+  const agentKey = getCmsAgentKey();
+  if (!agentKey) return false;
 
-  const { error } = await supabase.from('blog_posts').update(updates).eq('id', id);
-  if (error) throw error;
+  const post = await findPostBySlug(slug);
+  if (!post?.id) return false;
+
+  const updated = await payloadFetch<PayloadPost>(`/api/posts/${post.id}`, {
+    method: 'PATCH',
+    apiKey: agentKey,
+    body: {
+      social: {
+        socialPostedAt: new Date().toISOString(),
+        blueskyUri: blueskyUri ?? post.social?.blueskyUri ?? null,
+      },
+    },
+    revalidate: 0,
+  });
+
+  return Boolean(updated?.id);
 }
 
-export async function publishAdminBlogPost(id: string): Promise<BlogPostRow> {
-  const supabase = getServiceSupabase();
-  const now = new Date().toISOString();
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .update({ status: 'published', published_at: now })
-    .eq('id', id)
-    .in('status', ['draft', 'approved'])
-    .select(ADMIN_COLUMNS)
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) throw new Error('not found');
-  const row = mapAdminRow(data as Record<string, unknown>);
-  fireBlogPublishedWebhook(row);
-  return row;
-}
-
-export async function rejectAdminBlogPost(id: string): Promise<void> {
-  const supabase = getServiceSupabase();
-  const { error } = await supabase
-    .from('blog_posts')
-    .update({ status: 'rejected' })
-    .eq('id', id)
-    .in('status', ['draft', 'approved']);
-  if (error) throw error;
-}
-
-export async function markBlogSocialPosted(slug: string): Promise<boolean> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return false;
-  const supabase = getServiceSupabase();
-  const now = new Date().toISOString();
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .update({ social_posted_at: now })
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .select('id')
-    .maybeSingle();
-  if (error) {
-    if (isBlogTableMissing(error)) return false;
-    throw error;
-  }
-  return Boolean(data?.id);
-}
-
-export async function listPublishedBlogSlugsForSitemap(limit = 200): Promise<
-  { slug: string; published_at: string | null }[]
-> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return listPublishedBlogPosts(limit).then((posts) =>
-      posts.map((p) => ({ slug: p.slug, published_at: p.published_at })),
-    );
-  }
-  try {
-    const supabase = getServiceSupabase();
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .select('slug, published_at')
-      .eq('status', 'published')
-      .order('published_at', { ascending: false })
-      .limit(limit);
-    if (error) {
-      if (isBlogTableMissing(error)) return [];
-      throw error;
-    }
-    return (data ?? []).map((row) => ({
-      slug: String((row as { slug: string }).slug),
-      published_at: (row as { published_at: string | null }).published_at,
-    }));
-  } catch (error) {
-    if (isBlogTableMissing(error)) return [];
-    return [];
-  }
+export function cmsAdminUrlForPost(id: string): string {
+  const base = getCmsBaseUrl();
+  if (base) return `${base}/admin/collections/posts/${id}`;
+  return adminBlogPostUrl(id);
 }
