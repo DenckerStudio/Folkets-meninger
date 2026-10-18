@@ -31,6 +31,7 @@ Blog content is edited in **Payload CMS 3** (`cms/`), deployed as a separate Coo
 | `REVALIDATE_SECRET` | Shared HMAC secret with `fm-web` |
 | `BLOG_PUBLISHED_WEBHOOK_URL` | n8n inbound webhook on publish |
 | `BLOG_WEBHOOK_SIGNING_SECRET` | HMAC secret for publish webhook |
+| `BLOG_OPS_SIGNING_SECRET` | Optional; HMAC for `/api/blog-ops/social-posted` (defaults to `REVALIDATE_SECRET`) |
 | `MEDIA_LOCAL_DIR` | Optional; persistent volume path for uploads |
 | `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_ENDPOINT`, `S3_REGION`, `S3_FORCE_PATH_STYLE` | Optional Supabase Storage / S3-compatible media |
 | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | One-off `npm run seed` only (never commit) |
@@ -66,3 +67,10 @@ Create CMS users:
 ## Healthcheck
 
 `GET /health` → `200 ok`
+
+## Blog ops API (fm-web / n8n)
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `POST /api/blog-ops/lookup` | Agent API key | Idempotency: slug / `sourceEvent`, all statuses, no cache |
+| `POST /api/blog-ops/social-posted` | HMAC (`x-fm-timestamp`, `x-fm-signature`) | Set `socialPostedAt` + `blueskyUri` on **published** posts only |

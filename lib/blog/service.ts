@@ -11,6 +11,8 @@ import { isValidBlogSlug, normalizeBlogSlug } from '@/lib/blog/slug';
 import type { BlogCategory, BlogPostListItem, BlogPostPublic } from '@/lib/blog/types';
 import { BLOG_PAGE_SIZE } from '@/lib/blog/types';
 import { adminBlogPostUrl } from '@/lib/blog/urls';
+import { cmsBlogOpsLookup, cmsBlogOpsSocialPosted } from '@/lib/cms/blog-ops-client';
+import { normalizeBlogExcerpt, normalizeBlueskyText } from '@/lib/blog/text-limits';
 
 const POST_DEPTH = 2;
 
@@ -135,24 +137,6 @@ async function findCategoryId(slug: string): Promise<string | null> {
   return categories?.docs?.[0]?.id ?? null;
 }
 
-async function findPostBySourceEvent(sourceEvent: string): Promise<PayloadPost | null> {
-  const data = await payloadFetchList<PayloadPost>('posts', {
-    limit: 1,
-    depth: 0,
-    'where[sourceEvent][equals]': sourceEvent,
-  });
-  return data?.docs?.[0] ?? null;
-}
-
-async function findPostBySlug(slug: string): Promise<PayloadPost | null> {
-  const data = await payloadFetchList<PayloadPost>('posts', {
-    limit: 1,
-    depth: 0,
-    'where[slug][equals]': slug,
-  });
-  return data?.docs?.[0] ?? null;
-}
-
 export type CreateBlogDraftInput = {
   slug: string;
   title: string;
@@ -185,27 +169,20 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
   }
 
   const sourceEvent = input.source_event?.trim() || null;
-  if (sourceEvent) {
-    const existing = await findPostBySourceEvent(sourceEvent);
-    if (existing?.id) {
-      return {
-        ok: true,
-        id: String(existing.id),
-        slug: existing.slug,
-        created: false,
-        adminUrl: `${base}/admin/collections/posts/${existing.id}`,
-      };
-    }
+  const existing = await cmsBlogOpsLookup({
+    slug,
+    sourceEvent: sourceEvent ?? undefined,
+  });
+  if (existing === null) {
+    return { ok: false, status: 503, error: 'CMS-oppslag feilet' };
   }
-
-  const existingSlug = await findPostBySlug(slug);
-  if (existingSlug?.id) {
+  if (existing.found) {
     return {
       ok: true,
-      id: String(existingSlug.id),
-      slug: existingSlug.slug,
+      id: existing.id,
+      slug: existing.slug,
       created: false,
-      adminUrl: `${base}/admin/collections/posts/${existingSlug.id}`,
+      adminUrl: existing.adminUrl,
     };
   }
 
@@ -220,10 +197,13 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
     .filter(Boolean)
     .slice(0, 12);
 
+  const excerpt = normalizeBlogExcerpt(input.excerpt);
+  const blueskyText = normalizeBlueskyText(excerpt, input.bluesky_text);
+
   const body = {
     slug,
     title: input.title.trim(),
-    excerpt: input.excerpt.trim(),
+    excerpt,
     bodyMarkdown: input.body_md,
     category: categoryId,
     relatedSakIds: (input.related_sak_ids ?? []).map((id) => ({ id: id.trim() })).filter((row) => row.id),
@@ -241,7 +221,7 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
       generatedAt: input.ai?.generated_at ?? new Date().toISOString(),
     },
     social: {
-      blueskyText: input.bluesky_text?.trim() || input.excerpt.trim(),
+      blueskyText,
     },
     review: { state: 'til_vurdering' },
   };
@@ -271,25 +251,8 @@ export async function markBlogSocialPosted(
   slug: string,
   blueskyUri?: string | null,
 ): Promise<boolean> {
-  const agentKey = getCmsAgentKey();
-  if (!agentKey) return false;
-
-  const post = await findPostBySlug(slug);
-  if (!post?.id) return false;
-
-  const updated = await payloadFetch<PayloadPost>(`/api/posts/${post.id}`, {
-    method: 'PATCH',
-    apiKey: agentKey,
-    body: {
-      social: {
-        socialPostedAt: new Date().toISOString(),
-        blueskyUri: blueskyUri ?? post.social?.blueskyUri ?? null,
-      },
-    },
-    revalidate: 0,
-  });
-
-  return Boolean(updated?.id);
+  if (!getCmsBaseUrl() || !process.env.REVALIDATE_SECRET?.trim()) return false;
+  return cmsBlogOpsSocialPosted(slug, blueskyUri);
 }
 
 export function cmsAdminUrlForPost(id: string): string {

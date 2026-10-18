@@ -8,6 +8,7 @@
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start --port 3001",
     "lint": "./node_modules/.bin/tsc --noEmit",
+    "test:unit": "./node_modules/.bin/tsx src/lib/postLookup.test.ts",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "generate:types": "payload generate:types",
     "migrate": "payload migrate",

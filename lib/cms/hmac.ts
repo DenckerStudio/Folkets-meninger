@@ -5,6 +5,16 @@ export function signPayload(body: string, secret: string, timestamp: string): st
   return createHmac('sha256', secret).update(payload).digest('hex');
 }
 
+export function buildSignedHeaders(body: string, secret: string): Record<string, string> {
+  const timestamp = String(Date.now());
+  const signature = signPayload(body, secret, timestamp);
+  return {
+    'Content-Type': 'application/json',
+    'x-fm-timestamp': timestamp,
+    'x-fm-signature': `sha256=${signature}`,
+  };
+}
+
 export function verifySignedRequest(args: {
   body: string;
   secret: string;

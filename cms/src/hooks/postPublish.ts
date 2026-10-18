@@ -1,5 +1,6 @@
 import type { CollectionAfterChangeHook } from 'payload';
 import { buildSignedHeaders } from '@/lib/hmac';
+import { fetchWithRetry } from '@/lib/fetchWithRetry';
 
 type PostDoc = {
   id: string | number;
@@ -63,13 +64,20 @@ export const postPublishHooks: CollectionAfterChangeHook = async ({
       publishedAt: post.publishedAt ?? new Date().toISOString(),
     };
     const body = JSON.stringify(payload);
-    void fetch(webhookUrl, {
-      method: 'POST',
-      headers: buildSignedHeaders(body, webhookSecret),
-      body,
-    }).catch((error) => {
-      req.payload.logger.error({ msg: 'BLOG_PUBLISHED_WEBHOOK_URL failed', error, slug });
-    });
+    const headers = buildSignedHeaders(body, webhookSecret);
+    void fetchWithRetry(webhookUrl, { method: 'POST', headers, body })
+      .then((res) => {
+        if (!res.ok) {
+          req.payload.logger.error({
+            msg: 'BLOG_PUBLISHED_WEBHOOK_URL non-ok',
+            status: res.status,
+            slug,
+          });
+        }
+      })
+      .catch((error) => {
+        req.payload.logger.error({ msg: 'BLOG_PUBLISHED_WEBHOOK_URL failed', error, slug });
+      });
   }
 
   return doc;

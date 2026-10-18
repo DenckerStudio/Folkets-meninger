@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload';
 import { lexicalEditor } from '@payloadcms/richtext-lexical';
 import { agentDraftGuard } from '@/hooks/agentDraftGuard';
 import { postPublishHooks } from '@/hooks/postPublish';
+import { validatePostText } from '@/hooks/validatePostText';
 import {
   canPublishField,
   editorsOnly,
@@ -42,6 +43,7 @@ export const Posts: CollectionConfig = {
     delete: editorsOnly,
   },
   hooks: {
+    beforeValidate: [validatePostText],
     beforeChange: [agentDraftGuard],
     afterChange: [postPublishHooks],
   },
@@ -52,7 +54,7 @@ export const Posts: CollectionConfig = {
       name: 'excerpt',
       type: 'textarea',
       required: true,
-      maxLength: 320,
+      maxLength: 300,
     },
     {
       name: 'bodyMarkdown',
@@ -203,8 +205,16 @@ export const Posts: CollectionConfig = {
       type: 'group',
       fields: [
         { name: 'blueskyText', type: 'textarea', maxLength: 300 },
-        { name: 'socialPostedAt', type: 'date' },
-        { name: 'blueskyUri', type: 'text' },
+        {
+          name: 'socialPostedAt',
+          type: 'date',
+          access: { update: ({ req }) => isEditor(req.user as { role?: string }) },
+        },
+        {
+          name: 'blueskyUri',
+          type: 'text',
+          access: { update: ({ req }) => isEditor(req.user as { role?: string }) },
+        },
       ],
     },
   ],
