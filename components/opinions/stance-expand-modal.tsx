@@ -135,7 +135,7 @@ export function StanceExpandModal({
           <motion.button
             type="button"
             aria-label="Lukk"
-            className="fixed inset-0 z-40 cursor-default bg-foreground/25 backdrop-blur-[1px]"
+            className="fixed inset-0 z-40 cursor-default bg-overlay/25 backdrop-blur-[1px] dark:bg-overlay/50"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

@@ -88,7 +88,7 @@ export function Dialog({
         >
           <button
             type="button"
-            className="absolute inset-0 bg-foreground/50 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-overlay/50 backdrop-blur-[2px] dark:bg-overlay/60"
             aria-label="Lukk"
             onClick={onClose}
           />
