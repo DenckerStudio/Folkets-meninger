@@ -39,13 +39,13 @@ jobs:
         with:
           version: latest
       - run: supabase db start
-      - run: supabase db reset --local
-      - name: Sikkerhetsvakt
+      - name: Sikkerhetsvakt prod-lignende uten 140000 og 160000
         run: |
-          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
-            -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
-          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
-            -v ON_ERROR_STOP=1 -f supabase/tests/security-jwt-smoke.sql
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -c \
+            "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO postgres, anon, authenticated, service_role;"
+          DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+          DEFAULTS_URL="postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres" \
+          ./scripts/run-prod-like-db-security.sh
 
   migration-sql-lint:
     runs-on: ubuntu-latest

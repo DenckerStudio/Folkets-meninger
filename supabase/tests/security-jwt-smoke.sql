@@ -8,9 +8,9 @@ DECLARE
   anon_ok boolean;
   auth_ok boolean;
 BEGIN
-  -- anon må kunne lese aggregater
+  -- anon må kunne lese aggregater (+ is_admin brukes i RLS for anon)
   FOREACH fn IN ARRAY ARRAY[
-    'get_issue_vote_totals', 'get_poll_totals', 'get_public_user_displays'
+    'get_issue_vote_totals', 'get_poll_totals', 'get_public_user_displays', 'is_admin'
   ] LOOP
     IF NOT EXISTS (
       SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace

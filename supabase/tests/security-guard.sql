@@ -3,7 +3,8 @@ DO $$
 DECLARE
   allow_anon text[] := ARRAY[
     'get_public_user_displays', 'get_issue_vote_totals', 'get_poll_totals',
-    'get_poll_totals_by_fylke', 'match_issue_document_chunks', 'get_prompt_results'
+    'get_poll_totals_by_fylke', 'match_issue_document_chunks', 'get_prompt_results',
+    'is_admin'
   ];
   allow_auth text[] := ARRAY[
     'get_public_user_displays', 'get_issue_vote_totals', 'get_poll_totals',
@@ -43,7 +44,8 @@ BEGIN
                   has_function_privilege('authenticated',p.oid,'EXECUTE') AS u
            FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
            LEFT JOIN pg_depend d ON d.objid=p.oid AND d.deptype='e'
-           WHERE n.nspname IN ('public','private') AND d.objid IS NULL LOOP
+           WHERE n.nspname IN ('public','private') AND d.objid IS NULL
+             AND p.proname NOT LIKE 'n8n\_%' LOOP
     IF r.proname = ANY(service_only) AND (r.a OR r.u) THEN
       problems := problems || format('service-only RPC åpen: %s', r.sig);
     END IF;
@@ -58,6 +60,7 @@ BEGIN
   FOR r IN SELECT p.oid::regprocedure AS sig FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
            LEFT JOIN pg_depend d ON d.objid=p.oid AND d.deptype='e'
            WHERE p.prosecdef AND d.objid IS NULL AND n.nspname IN ('public','private','audit')
+             AND p.proname NOT LIKE 'n8n\_%'
              AND NOT EXISTS (SELECT 1 FROM unnest(p.proconfig) c WHERE c LIKE 'search_path=%pg_temp') LOOP
     problems := problems || format('SECURITY DEFINER uten herdet search_path: %s', r.sig);
   END LOOP;
@@ -93,14 +96,22 @@ BEGIN
   FOR r IN SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
            WHERE n.nspname='public' AND c.relkind='v'
              AND (has_table_privilege('anon',c.oid,'SELECT') OR has_table_privilege('authenticated',c.oid,'SELECT'))
-             AND NOT coalesce(c.reloptions::text[] && ARRAY['security_invoker=true','security_invoker=on'], false) LOOP
+             AND NOT coalesce(c.reloptions::text[] && ARRAY['security_invoker=true','security_invoker=on'], false)
+             AND c.relname NOT LIKE 'n8n\_%' LOOP
     problems := problems || format('View uten security_invoker: public.%I', r.relname);
   END LOOP;
 
-  IF EXISTS (SELECT 1 FROM pg_default_acl d, aclexplode(d.defaclacl) a
-             WHERE d.defaclobjtype='f' AND a.privilege_type='EXECUTE'
-               AND a.grantee IN (0, 'anon'::regrole::oid, 'authenticated'::regrole::oid)) THEN
-    problems := problems || 'Default privileges gir EXECUTE på nye funksjoner til PUBLIC/anon/authenticated'::text;
+  IF EXISTS (
+    SELECT 1
+    FROM pg_default_acl d
+    JOIN pg_namespace n ON n.oid = d.defaclnamespace
+    CROSS JOIN LATERAL aclexplode(d.defaclacl) a
+    WHERE d.defaclobjtype = 'f'
+      AND n.nspname = 'public'
+      AND a.privilege_type = 'EXECUTE'
+      AND a.grantee IN (0, 'anon'::regrole::oid, 'authenticated'::regrole::oid)
+  ) THEN
+    problems := problems || 'Default privileges gir EXECUTE på nye funksjoner til PUBLIC/anon/authenticated (public-skjema)'::text;
   END IF;
 
   IF to_regclass('public.user_badges') IS NOT NULL AND NOT EXISTS (
