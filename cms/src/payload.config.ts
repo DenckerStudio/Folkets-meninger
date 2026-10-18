@@ -4,12 +4,15 @@ import { postgresAdapter } from '@payloadcms/db-postgres';
 import { lexicalEditor } from '@payloadcms/richtext-lexical';
 import { s3Storage } from '@payloadcms/storage-s3';
 import { buildConfig } from 'payload';
+import sharp from 'sharp';
+import { migrations } from './migrations';
 import { Authors } from '@/collections/Authors';
 import { Categories } from '@/collections/Categories';
 import { Media } from '@/collections/Media';
 import { Posts } from '@/collections/Posts';
 import { Tags } from '@/collections/Tags';
 import { Users } from '@/collections/Users';
+import { runSeedOnBoot } from '@/lib/seedOnBoot';
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -58,7 +61,10 @@ export default buildConfig({
       connectionString: process.env.DATABASE_URI,
     },
     schemaName: process.env.PAYLOAD_SCHEMA || 'payload',
+    // Run pending migrations on boot when NODE_ENV=production (runtime image has no payload CLI/tsx/src).
+    prodMigrations: migrations,
   }),
+  sharp,
   plugins,
   cors: [
     process.env.SERVER_URL || 'http://localhost:3001',
@@ -69,4 +75,7 @@ export default buildConfig({
     process.env.WEB_PUBLIC_URL || 'http://localhost:3000',
   ].filter(Boolean),
   serverURL: process.env.SERVER_URL || 'http://localhost:3001',
+  onInit: async (payload) => {
+    await runSeedOnBoot(payload);
+  },
 });

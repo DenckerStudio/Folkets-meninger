@@ -1,5 +1,9 @@
 import type { CollectionConfig } from 'payload';
-import { authenticated, publishedOrAuthenticated } from '@/access/roles';
+import {
+  mediaDeleteAccess,
+  mediaReadAccess,
+  mediaWriteAccess,
+} from '@/access/roles';
 
 export const Media: CollectionConfig = {
   slug: 'media',
@@ -15,10 +19,10 @@ export const Media: CollectionConfig = {
     focalPoint: true,
   },
   access: {
-    read: () => true,
-    create: authenticated,
-    update: authenticated,
-    delete: authenticated,
+    read: mediaReadAccess,
+    create: mediaWriteAccess,
+    update: mediaWriteAccess,
+    delete: mediaDeleteAccess,
   },
   fields: [
     {

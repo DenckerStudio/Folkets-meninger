@@ -1,5 +1,5 @@
 import type { CollectionConfig } from 'payload';
-import { adminsOnly, authenticated } from '@/access/roles';
+import { adminsOnly, usersReadAccess } from '@/access/roles';
 
 export const Users: CollectionConfig = {
   slug: 'users',
@@ -12,7 +12,7 @@ export const Users: CollectionConfig = {
     useAsTitle: 'email',
   },
   access: {
-    read: authenticated,
+    read: usersReadAccess,
     create: adminsOnly,
     update: adminsOnly,
     delete: adminsOnly,

@@ -5,10 +5,11 @@ import { postPublishHooks } from '@/hooks/postPublish';
 import { validatePostText } from '@/hooks/validatePostText';
 import {
   canPublishField,
-  editorsOnly,
-  isAgent,
   isEditor,
-  roleOf,
+  postsCreateAccess,
+  postsDeleteAccess,
+  postsReadAccess,
+  postsUpdateAccess,
 } from '@/access/roles';
 
 export const Posts: CollectionConfig = {
@@ -25,22 +26,10 @@ export const Posts: CollectionConfig = {
     maxPerDoc: 50,
   },
   access: {
-    read: ({ req }) => {
-      const role = roleOf(req.user as { role?: string });
-      if (role === 'admin' || role === 'redaktor') return true;
-      if (role === 'agent') return { _status: { equals: 'draft' } };
-      return { _status: { equals: 'published' } };
-    },
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req, id }) => {
-      if (!req.user) return false;
-      if (isEditor(req.user as { role?: string })) return true;
-      if (isAgent(req.user as { role?: string })) {
-        return { _status: { equals: 'draft' } };
-      }
-      return false;
-    },
-    delete: editorsOnly,
+    read: postsReadAccess,
+    create: postsCreateAccess,
+    update: postsUpdateAccess,
+    delete: postsDeleteAccess,
   },
   hooks: {
     beforeValidate: [validatePostText],

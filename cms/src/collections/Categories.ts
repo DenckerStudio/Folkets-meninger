@@ -1,5 +1,5 @@
 import type { CollectionConfig } from 'payload';
-import { authenticated, publishedOrAuthenticated } from '@/access/roles';
+import { taxonomyReadAccess, taxonomyWriteAccess } from '@/access/roles';
 
 export const Categories: CollectionConfig = {
   slug: 'categories',
@@ -7,10 +7,10 @@ export const Categories: CollectionConfig = {
     useAsTitle: 'name',
   },
   access: {
-    read: () => true,
-    create: authenticated,
-    update: authenticated,
-    delete: authenticated,
+    read: taxonomyReadAccess,
+    create: taxonomyWriteAccess,
+    update: taxonomyWriteAccess,
+    delete: taxonomyWriteAccess,
   },
   fields: [
     { name: 'name', type: 'text', required: true },

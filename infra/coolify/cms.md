@@ -14,7 +14,8 @@ Blog content is edited in **Payload CMS 3** (`cms/`), deployed as a separate Coo
 - Use the **same** hosted Postgres as Supabase/Coolify DB.
 - Payload uses schema **`payload`** (`PAYLOAD_SCHEMA=payload` optional).
 - Create role `payload_app` with privileges **only** on schema `payload` (no `public` access).
-- Run migrations manually after deploy: `cd cms && npm run migrate` (requires approval; not part of `fm-web` deploy).
+- **Migrations:** `prodMigrations` in `payload.config.ts` runs pending SQL migrations automatically on **production boot** (`NODE_ENV=production`). The runtime Docker image has no Payload CLI, `tsx`, or `src/` — do not rely on `npm run migrate` in prod.
+- Local/dev: `cd cms && npm run migrate` when schema changes.
 
 `supabase/migrations/20261018120000_blog_posts.sql` is **superseded** and must not be applied.
 
@@ -31,16 +32,17 @@ Blog content is edited in **Payload CMS 3** (`cms/`), deployed as a separate Coo
 | `REVALIDATE_SECRET` | Shared HMAC secret with `fm-web` |
 | `BLOG_PUBLISHED_WEBHOOK_URL` | n8n inbound webhook on publish |
 | `BLOG_WEBHOOK_SIGNING_SECRET` | HMAC secret for publish webhook |
-| `BLOG_OPS_SIGNING_SECRET` | Optional; HMAC for `/api/blog-ops/social-posted` (defaults to `REVALIDATE_SECRET`) |
+| `BLOG_OPS_SIGNING_SECRET` | Leave **empty** in Coolify — falls back to `REVALIDATE_SECRET` for `/api/blog-ops/social-posted` |
 | `MEDIA_LOCAL_DIR` | Optional; persistent volume path for uploads |
 | `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_ENDPOINT`, `S3_REGION`, `S3_FORCE_PATH_STYLE` | Optional Supabase Storage / S3-compatible media |
-| `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | One-off `npm run seed` only (never commit) |
+| `SEED_ON_BOOT` | Set `true` on first deploy to create admin + default taxonomy when no admin exists |
+| `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Used by `SEED_ON_BOOT` or one-off `npm run seed` (never commit) |
 
 Create CMS users:
 
 - **admin** / **redaktør** — publish in admin UI
 - **agent** — API key for n8n (draft only; access control enforced)
-- **reader** — API key for `fm-web` read of published posts
+- **reader** — API key for `fm-web` read of **published** posts only (cannot create, publish, or delete)
 
 ## fm-web environment variables (blog)
 
@@ -48,7 +50,7 @@ Create CMS users:
 |----------|---------|
 | `CMS_URL` | Internal or public CMS base URL |
 | `CMS_API_KEY` | Payload user API key (`reader` role) |
-| `CMS_AGENT_API_KEY` | Optional; n8n draft writes (else `CMS_API_KEY` if agent) |
+| `CMS_AGENT_API_KEY` | Optional; n8n draft writes |
 | `REVALIDATE_SECRET` | Validates CMS → `/api/revalidate/blog` |
 | `CRON_SECRET` | Existing; protects `/api/ops/blog/*` |
 
@@ -59,10 +61,10 @@ Create CMS users:
 1. Add Coolify app `fm-cms` from repo, base directory `cms`, build Dockerfile, domain + TLS.
 2. Mount volume for `MEDIA_LOCAL_DIR` (or configure S3).
 3. Set env vars above; protect `/admin` with Cloudflare Access or IP allowlist.
-4. Run `payload migrate` once against staging, then production (manual).
-5. Run `npm run seed` once with `SEED_ADMIN_*` to create admin + default categories.
-6. Create agent + reader users; store API keys in Coolify secrets for `fm-web` and n8n.
-7. Set `fm-web` `CMS_URL` + keys; verify `/blogg` empty state, then publish a test post and confirm revalidation + webhook.
+4. First boot: set `SEED_ON_BOOT=true` + `SEED_ADMIN_*` once; migrations run automatically on container start.
+5. Create agent + reader users; store API keys in Coolify secrets for `fm-web` and n8n.
+6. Set `fm-web` `CMS_URL` + keys; verify `/blogg` empty state, then publish a test post and confirm revalidation + webhook.
+7. Turn off `SEED_ON_BOOT` after admin exists.
 
 ## Healthcheck
 
@@ -73,4 +75,4 @@ Create CMS users:
 | Endpoint | Auth | Purpose |
 |----------|------|---------|
 | `POST /api/blog-ops/lookup` | Agent API key | Idempotency: slug / `sourceEvent`, all statuses, no cache |
-| `POST /api/blog-ops/social-posted` | HMAC (`x-fm-timestamp`, `x-fm-signature`) | Set `socialPostedAt` + `blueskyUri` on **published** posts only |
+| `POST /api/blog-ops/social-posted` | HMAC (`x-fm-timestamp`, `x-fm-signature`; secret = `REVALIDATE_SECRET` if `BLOG_OPS_SIGNING_SECRET` unset) | Set `socialPostedAt` + `blueskyUri` on **published** posts only |
