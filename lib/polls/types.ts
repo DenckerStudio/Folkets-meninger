@@ -1,6 +1,8 @@
 export type PollTrack = 'stortinget' | 'citizen' | 'system';
+export type PollKind = 'sak' | 'aksjon';
 export type PollStatus = 'draft' | 'open' | 'closed' | 'archived';
 export type PollChoice = 'ja' | 'nei' | 'blank';
+export type PollScaleUnit = 'medlemmer' | 'underskrifter' | 'deltakere' | 'kroner';
 
 export type PollSourceUrl = {
   label?: string;
@@ -44,12 +46,20 @@ export type SystemReelFeedItem = {
 export type PollRecord = {
   id: string;
   track: PollTrack;
+  pollKind: PollKind;
   status: PollStatus;
   title: string;
   neutralSummary: string;
   sourceUrls: PollSourceUrl[];
   stortingetIssueId: string | null;
   citizenInitiativeId: string | null;
+  actionClusterId: string | null;
+  relatedIssueId: string | null;
+  sourceUrl: string | null;
+  scaleValue: number | null;
+  scaleUnit: PollScaleUnit | null;
+  scaleSourceUrl: string | null;
+  scaleAsOf: string | null;
   opensAt: string | null;
   closesAt: string | null;
   createdAt: string;

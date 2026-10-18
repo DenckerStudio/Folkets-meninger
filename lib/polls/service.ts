@@ -9,7 +9,9 @@ import type {
   PollChoice,
   PollFylkeTotals,
   PollGenerationMetadata,
+  PollKind,
   PollRecord,
+  PollScaleUnit,
   PollSourceUrl,
   PollTotals,
   SakPollCandidate,
@@ -22,12 +24,20 @@ export { emptyPollTotals, isPollVotingOpen, pollChoicePercent } from '@/lib/poll
 type PollRow = {
   id: string;
   track: string;
+  poll_kind?: string | null;
   status: string;
   title: string;
   neutral_summary: string;
   source_urls: unknown;
   stortinget_issue_id: unknown;
   citizen_initiative_id?: string | null;
+  action_cluster_id?: string | null;
+  related_issue_id?: string | null;
+  source_url?: string | null;
+  scale_value?: number | null;
+  scale_unit?: string | null;
+  scale_source_url?: string | null;
+  scale_as_of?: string | null;
   opens_at: string | null;
   closes_at: string | null;
   created_at: string;
@@ -37,7 +47,7 @@ type PollRow = {
 
 /** Public lists stay lean. Admin draft list includes generation_metadata for stored ratings. */
 const POLL_LIST_SELECT =
-  'id, track, status, title, neutral_summary, source_urls, stortinget_issue_id, opens_at, closes_at, created_at, updated_at';
+  'id, track, poll_kind, status, title, neutral_summary, source_urls, stortinget_issue_id, action_cluster_id, related_issue_id, source_url, scale_value, scale_unit, scale_source_url, scale_as_of, opens_at, closes_at, created_at, updated_at';
 
 const POLL_ADMIN_DRAFT_SELECT = `${POLL_LIST_SELECT}, generation_metadata`;
 
@@ -86,16 +96,36 @@ function parseGenerationMetadata(value: unknown): PollGenerationMetadata {
   return value as PollGenerationMetadata;
 }
 
+function parsePollKind(value: unknown): PollKind {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  return raw === 'aksjon' ? 'aksjon' : 'sak';
+}
+
+function parseScaleUnit(value: unknown): PollScaleUnit | null {
+  if (value === 'medlemmer' || value === 'underskrifter' || value === 'deltakere' || value === 'kroner') {
+    return value;
+  }
+  return null;
+}
+
 export function mapPollRow(row: PollRow): PollRecord {
   return {
     id: row.id,
     track: String(row.track).trim() as PollRecord['track'],
+    pollKind: parsePollKind(row.poll_kind),
     status: String(row.status).trim() as PollRecord['status'],
     title: row.title,
     neutralSummary: row.neutral_summary ?? '',
     sourceUrls: parseSourceUrls(row.source_urls),
     stortingetIssueId: normalizePollIssueId(row.stortinget_issue_id),
     citizenInitiativeId: row.citizen_initiative_id ?? null,
+    actionClusterId: row.action_cluster_id ?? null,
+    relatedIssueId: normalizePollIssueId(row.related_issue_id),
+    sourceUrl: row.source_url ?? null,
+    scaleValue: row.scale_value == null ? null : Number(row.scale_value),
+    scaleUnit: parseScaleUnit(row.scale_unit),
+    scaleSourceUrl: row.scale_source_url ?? null,
+    scaleAsOf: row.scale_as_of ?? null,
     opensAt: row.opens_at,
     closesAt: row.closes_at,
     createdAt: row.created_at,
@@ -160,12 +190,40 @@ export async function listOpenPolls(limit = 30): Promise<PollRecord[]> {
         .from('polls')
         .select(select)
         .neq('track', 'citizen')
+        .neq('poll_kind', 'aksjon')
         .in('status', ['open', 'closed'])
         .order('created_at', { ascending: false })
         .limit(limit),
     'listOpenPolls',
   );
   return rows.map(mapPollRow);
+}
+
+export async function listOpenActionPolls(limit = 30): Promise<PollRecord[]> {
+  const query = (client: ReturnType<typeof getAnonSupabase>) =>
+    listPollRows(
+      (select) =>
+        client
+          .from('polls')
+          .select(select)
+          .eq('poll_kind', 'aksjon')
+          .in('status', ['open', 'closed'])
+          .order('created_at', { ascending: false })
+          .limit(limit),
+      'listOpenActionPolls',
+    );
+
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const rows = await query(getServiceSupabase());
+      if (rows.length > 0) return rows.map(mapPollRow);
+    } catch {
+      // fall through
+    }
+  }
+
+  const publicRows = await query(getAnonSupabase());
+  return publicRows.map(mapPollRow);
 }
 
 export async function listOpenSystemPolls(limit = 30): Promise<PollRecord[]> {
@@ -176,6 +234,7 @@ export async function listOpenSystemPolls(limit = 30): Promise<PollRecord[]> {
           .from('polls')
           .select(select)
           .eq('track', 'system')
+          .neq('poll_kind', 'aksjon')
           .in('status', ['open', 'closed'])
           .order('created_at', { ascending: false })
           .limit(limit),
@@ -204,6 +263,7 @@ export async function listSystemPollDrafts(limit = 50): Promise<PollRecord[]> {
         .from('polls')
         .select(select)
         .eq('track', 'system')
+        .neq('poll_kind', 'aksjon')
         .eq('status', 'draft')
         .order('created_at', { ascending: false })
         .limit(limit),
@@ -365,7 +425,7 @@ export async function listSystemReelFeedItems(
   // Deep link (?poll=<id>): if the requested system poll is not in the first page, fetch it and put it first.
   if (focusPollId && !polls.some((p) => p.id === focusPollId)) {
     const focus = await getPublicPollById(focusPollId).catch(() => null);
-    if (focus && focus.track === 'system') polls = [focus, ...polls];
+    if (focus && focus.track === 'system' && focus.pollKind !== 'aksjon') polls = [focus, ...polls];
   }
   return Promise.all(
     polls.map(async (poll) => {

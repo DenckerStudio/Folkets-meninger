@@ -56,6 +56,7 @@ export const routes = {
   adminBrukere: `${DASHBOARD_PREFIX}/admin/brukere`,
   adminStemmePlus: `${DASHBOARD_PREFIX}/admin/stemme-plus`,
   adminBlog: `${DASHBOARD_PREFIX}/admin/blog`,
+  adminAksjoner: `${DASHBOARD_PREFIX}/admin/aksjoner`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,
   forslag: `${DASHBOARD_PREFIX}/appens-fremtid`,
   chat: `${DASHBOARD_PREFIX}/chat`,

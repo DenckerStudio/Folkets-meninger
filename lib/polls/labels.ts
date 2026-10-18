@@ -21,6 +21,9 @@ export function pollChoiceLabel(choice: PollChoice): string {
 export const SYSTEM_REEL_DISCLAIMER =
   'Systemgenerert fra stortingssaker og godkjent av admin. Ikke en offisiell Stortinget-avstemning.';
 
+export const ACTION_POLL_DISCLAIMER =
+  'Automatisk oppdaget, tallene er ikke verifisert.';
+
 export function pollTrackLabel(track: PollTrack): string {
   switch (track) {
     case 'stortinget':
