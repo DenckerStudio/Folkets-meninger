@@ -83,6 +83,8 @@ export const taxonomyWriteAccess: Access = editorsOnly;
 
 export const canPublishField: FieldAccess = ({ req }) => isEditor(req.user as UserLike);
 
+export const versionsReadAccess: Access = editorsOnly;
+
 /** Evaluate sync Payload access helpers in unit tests. */
 export function accessAllows(
   rule: Access,

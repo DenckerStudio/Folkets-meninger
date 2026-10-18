@@ -5,6 +5,7 @@ import { postPublishHooks } from '@/hooks/postPublish';
 import { validatePostText } from '@/hooks/validatePostText';
 import {
   canPublishField,
+  editorsOnly,
   isEditor,
   postsCreateAccess,
   postsDeleteAccess,
@@ -30,6 +31,8 @@ export const Posts: CollectionConfig = {
     create: postsCreateAccess,
     update: postsUpdateAccess,
     delete: postsDeleteAccess,
+    readVersions: editorsOnly,
+    unlock: editorsOnly,
   },
   hooks: {
     beforeValidate: [validatePostText],

@@ -12,7 +12,7 @@ import { Media } from '@/collections/Media';
 import { Posts } from '@/collections/Posts';
 import { Tags } from '@/collections/Tags';
 import { Users } from '@/collections/Users';
-import { runSeedOnBoot } from '@/lib/seedOnBoot';
+import { seedOnBoot } from '@/seed/seedBaseData';
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -76,6 +76,6 @@ export default buildConfig({
   ].filter(Boolean),
   serverURL: process.env.SERVER_URL || 'http://localhost:3001',
   onInit: async (payload) => {
-    await runSeedOnBoot(payload);
+    await seedOnBoot(payload);
   },
 });

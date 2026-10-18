@@ -1,9 +1,13 @@
 import type { CollectionBeforeChangeHook } from 'payload';
-import { isAgent, isEditor } from '@/access/roles';
+import { APIError } from 'payload';
+import { isAgent, isEditor, isReader } from '@/access/roles';
 
 export const agentDraftGuard: CollectionBeforeChangeHook = ({ data, req }) => {
   if (!req.user) return data;
   const user = req.user as { role?: string } | null;
+  if (isReader(user)) {
+    throw new APIError('Leser-nøkkel kan ikke opprette eller endre innlegg', 403);
+  }
   if (isEditor(user)) return data;
   if (!isAgent(user)) return data;
 
