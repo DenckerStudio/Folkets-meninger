@@ -614,34 +614,7 @@ AS $$
   ORDER BY created_at;
 $$;
 
-CREATE OR REPLACE FUNCTION public.n8n_record_eval_run(p jsonb)
-RETURNS uuid
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-DECLARE
-  v_id uuid;
-BEGIN
-  INSERT INTO public.ai_eval_runs (
-    workflow_key, kind, prompt_version_id, baseline_version_id, model, n_cases, summary, verdict, report_md, finished_at
-  )
-  VALUES (
-    p ->> 'workflow_key',
-    coalesce(p ->> 'kind', 'weekly'),
-    (p ->> 'prompt_version_id')::uuid,
-    (p ->> 'baseline_version_id')::uuid,
-    coalesce(p ->> 'model', 'unknown'),
-    (p ->> 'n_cases')::int,
-    p -> 'summary',
-    p ->> 'verdict',
-    p ->> 'report_md',
-    (p ->> 'finished_at')::timestamptz
-  )
-  RETURNING id INTO v_id;
-  RETURN v_id;
-END;
-$$;
+-- n8n_record_eval_run: multi-arg RPC is defined in 20261020100200 (no jsonb stub here).
 
 -- ---------------------------------------------------------------------------
 -- RLS: ai_* tables — service_role only (admin reads via app service client)
@@ -814,10 +787,13 @@ REVOKE ALL ON FUNCTION public.ai_trigger_poll_feedback() FROM PUBLIC, anon, auth
 REVOKE ALL ON FUNCTION public.n8n_get_active_prompt(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.n8n_log_ai_generation(jsonb) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.n8n_propose_prompt_version(jsonb) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.admin_activate_prompt_version(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.admin_activate_prompt_version(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_activate_prompt_version(uuid) TO authenticated;
 REVOKE ALL ON FUNCTION public.n8n_list_eval_cases(text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.n8n_record_eval_run(jsonb) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.admin_poll_draft_action(uuid, text, text, text, text, text, uuid) FROM PUBLIC, anon, authenticated;
+
+-- Idempotent solo re-apply: never leave legacy jsonb overload (canonical sig in 00200).
+DROP FUNCTION IF EXISTS public.n8n_record_eval_run(jsonb);
 
 NOTIFY pgrst, 'reload schema';
 

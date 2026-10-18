@@ -23,3 +23,7 @@ Migrations `20261020100200` and `20261020100300` end with `NOTIFY pgrst, 'reload
 - `issue_ai_summaries.generation_metadata` + extended `n8n_upsert_issue_ai_summary` (12 args).
 - Drops legacy `n8n_upsert_issue_ai_summary` 9-arg and 4-arg overloads and `n8n_record_eval_run(jsonb)`.
 - Seeds 20 `ai_eval_cases` from PR #162 `evals/golden/saker.jsonl`.
+
+## Migration re-apply order
+
+Apply the full chain `20261020100000` → `20261020100300` (see `scripts/run-ai-learning-migration-chain.sh`). Solo re-apply of `00000` or `00200` is supported for repair: both end with `DROP FUNCTION IF EXISTS public.n8n_record_eval_run(jsonb)` so the canonical multi-arg RPC from `00200` is not shadowed by a legacy jsonb overload. `00000` does not create the jsonb stub.

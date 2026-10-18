@@ -215,7 +215,15 @@ BEGIN
     expected = EXCLUDED.expected,
     origin = EXCLUDED.origin,
     status = EXCLUDED.status
+  WHERE ai_eval_cases.status IN ('draft', 'proposed')
   RETURNING id INTO v_id;
+
+  IF v_id IS NULL THEN
+    SELECT c.id INTO v_id
+    FROM public.ai_eval_cases c
+    WHERE c.workflow_key = p_workflow_key
+      AND c.case_key = p_case_key;
+  END IF;
 
   RETURN v_id;
 END;

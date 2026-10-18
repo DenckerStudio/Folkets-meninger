@@ -14,6 +14,16 @@ assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.ai_eval_cases/);
 assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.ai_eval_runs/);
 assert.match(migration, /admin_activate_prompt_version/);
 assert.match(migration, /GRANT EXECUTE ON FUNCTION %s TO authenticated/);
+assert.match(
+  migration,
+  /REVOKE ALL ON FUNCTION public\.admin_activate_prompt_version\(uuid\) FROM PUBLIC, anon;\s*\nGRANT EXECUTE ON FUNCTION public\.admin_activate_prompt_version\(uuid\) TO authenticated;/,
+);
+assert.doesNotMatch(
+  migration,
+  /REVOKE ALL ON FUNCTION public\.admin_activate_prompt_version\(uuid\) FROM PUBLIC, anon, authenticated;/,
+);
+assert.match(migration, /DROP FUNCTION IF EXISTS public\.n8n_record_eval_run\(jsonb\)/);
+assert.doesNotMatch(migration, /CREATE OR REPLACE FUNCTION public\.n8n_record_eval_run\(p jsonb\)/);
 assert.match(migration, /ai_issue_summary_preserve/);
 assert.match(migration, /ai_poll_feedback/);
 assert.match(migration, /admin_poll_draft_action/);
@@ -48,6 +58,11 @@ assert.match(align, /ON CONFLICT \(workflow_key, case_key\) DO NOTHING/);
 assert.match(align, /SET LOCAL lock_timeout = '5s'/);
 assert.match(align, /NOTIFY pgrst, 'reload schema';/);
 assert.match(align, /REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon, authenticated/);
+assert.match(
+  align,
+  /\^\[0-9a-f\]\{8\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}-\[89ab\]/,
+);
+assert.match(align, /DROP FUNCTION IF EXISTS public\.n8n_record_eval_run\(jsonb\)/);
 
 const expert = readFileSync(
   join(process.cwd(), 'supabase/migrations/20261020100300_ai_learning_n8n_expert_feedback.sql'),
@@ -58,6 +73,10 @@ assert.match(expert, /set_config\('app\.ai_feedback_skip', '1'/);
 assert.match(expert, /'n8n'/);
 assert.match(expert, /count\(DISTINCT ar\.generation_id\)/);
 assert.match(expert, /n8n_upsert_eval_case/);
+assert.match(
+  expert,
+  /ON CONFLICT \(workflow_key, case_key\) DO UPDATE SET[\s\S]*WHERE ai_eval_cases\.status IN \('draft', 'proposed'\)/,
+);
 assert.match(expert, /p\.track = 'system'/);
 assert.match(expert, /ai_safe_uuid_from_text/);
 

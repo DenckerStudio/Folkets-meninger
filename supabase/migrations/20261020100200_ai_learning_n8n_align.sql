@@ -36,7 +36,7 @@ LANGUAGE sql
 IMMUTABLE
 AS $$
   SELECT CASE
-    WHEN p ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    WHEN p ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
       THEN p::uuid
     ELSE NULL
   END;
@@ -454,6 +454,9 @@ REVOKE ALL ON FUNCTION public.n8n_record_eval_run(uuid, text, text, uuid, uuid, 
 REVOKE ALL ON FUNCTION public.n8n_record_eval_result(uuid, uuid, text, jsonb, jsonb, boolean, numeric, numeric, jsonb, text, int) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.n8n_ai_weekly_metrics(timestamptz, timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.n8n_upsert_issue_ai_summary(text, text, text, text, text, text, text, jsonb, text[], text, text, jsonb) FROM PUBLIC, anon, authenticated;
+
+-- Solo re-apply after full chain: drop legacy jsonb overload if 00000 was re-run from an older revision.
+DROP FUNCTION IF EXISTS public.n8n_record_eval_run(jsonb);
 
 NOTIFY pgrst, 'reload schema';
 
