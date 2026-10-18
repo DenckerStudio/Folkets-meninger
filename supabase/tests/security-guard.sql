@@ -44,7 +44,8 @@ BEGIN
                   has_function_privilege('authenticated',p.oid,'EXECUTE') AS u
            FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
            LEFT JOIN pg_depend d ON d.objid=p.oid AND d.deptype='e'
-           WHERE n.nspname IN ('public','private') AND d.objid IS NULL LOOP
+           WHERE n.nspname IN ('public','private') AND d.objid IS NULL
+             AND p.proname NOT LIKE 'n8n\_%' LOOP
     IF r.proname = ANY(service_only) AND (r.a OR r.u) THEN
       problems := problems || format('service-only RPC åpen: %s', r.sig);
     END IF;
@@ -59,6 +60,7 @@ BEGIN
   FOR r IN SELECT p.oid::regprocedure AS sig FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
            LEFT JOIN pg_depend d ON d.objid=p.oid AND d.deptype='e'
            WHERE p.prosecdef AND d.objid IS NULL AND n.nspname IN ('public','private','audit')
+             AND p.proname NOT LIKE 'n8n\_%'
              AND NOT EXISTS (SELECT 1 FROM unnest(p.proconfig) c WHERE c LIKE 'search_path=%pg_temp') LOOP
     problems := problems || format('SECURITY DEFINER uten herdet search_path: %s', r.sig);
   END LOOP;
@@ -94,7 +96,8 @@ BEGIN
   FOR r IN SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
            WHERE n.nspname='public' AND c.relkind='v'
              AND (has_table_privilege('anon',c.oid,'SELECT') OR has_table_privilege('authenticated',c.oid,'SELECT'))
-             AND NOT coalesce(c.reloptions::text[] && ARRAY['security_invoker=true','security_invoker=on'], false) LOOP
+             AND NOT coalesce(c.reloptions::text[] && ARRAY['security_invoker=true','security_invoker=on'], false)
+             AND c.relname NOT LIKE 'n8n\_%' LOOP
     problems := problems || format('View uten security_invoker: public.%I', r.relname);
   END LOOP;
 

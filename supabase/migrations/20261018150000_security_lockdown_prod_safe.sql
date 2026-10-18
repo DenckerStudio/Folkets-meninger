@@ -166,9 +166,6 @@ END $$;
 DO $$
 DECLARE r record;
 BEGIN
-  IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'public') THEN
-    EXECUTE 'REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON ALL TABLES IN SCHEMA public FROM PUBLIC, anon, authenticated';
-  END IF;
   FOR r IN
     SELECT c.oid::regclass AS tbl, c.relname
     FROM pg_class c
