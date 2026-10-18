@@ -1,3 +1,4 @@
+import { AdminAksjonNotifications } from '@/components/admin/admin-aksjon-notifications';
 import { AdminHubGrid } from '@/components/admin/admin-shell';
 import { PageHeader } from '@/components/page-header';
 
@@ -9,6 +10,7 @@ export default function AdminHubPage() {
         title="Oversikt"
         description="Velg et verktøy for å administrere Folkets Meninger."
       />
+      <AdminAksjonNotifications />
       <AdminHubGrid />
     </div>
   );

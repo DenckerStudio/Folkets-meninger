@@ -18,6 +18,11 @@ assert.ok(stemmePlus);
 assert.equal(stemmePlus.status, 'active');
 assert.equal(stemmePlus.href, routes.adminStemmePlus);
 
+const aksjoner = adminNavItems.find((item) => item.id === 'aksjoner');
+assert.ok(aksjoner);
+assert.equal(aksjoner.status, 'active');
+assert.equal(aksjoner.href, routes.adminAksjoner);
+
 const varsler = adminNavItems.find((item) => item.id === 'varsler');
 assert.ok(varsler);
 assert.equal(varsler.status, 'coming');

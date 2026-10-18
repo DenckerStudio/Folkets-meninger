@@ -8,7 +8,13 @@ import { PollResultView } from '@/components/polls/poll-result-view';
 import { isAdmin } from '@/lib/admin/gate';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { formatPollDisplayTitle } from '@/lib/polls/display-title';
-import { pollStatusLabel, pollTrackLabel, SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
+import { ActionScaleLine } from '@/components/actions/action-scale-line';
+import {
+  ACTION_POLL_DISCLAIMER,
+  pollStatusLabel,
+  pollTrackLabel,
+  SYSTEM_REEL_DISCLAIMER,
+} from '@/lib/polls/labels';
 import {
   getPollById,
   getPollTotals,
@@ -57,7 +63,8 @@ export default async function PollDetailPage({ params }: PageProps) {
   const shareEnabled =
     isSharePollsEnabled() || (user ? await isAdmin(user.id, user.email) : false);
 
-  const sakUrl = poll.stortingetIssueId ? routes.sak(poll.stortingetIssueId) : null;
+  const isActionPoll = poll.pollKind === 'aksjon';
+  const sakUrl = !isActionPoll && poll.stortingetIssueId ? routes.sak(poll.stortingetIssueId) : null;
   // Avoid listing the same Stortinget sak twice (Kilde link + sourceUrls).
   const sourceUrls = poll.sourceUrls.filter((source) => !sakUrl || source.url !== sakUrl);
 
@@ -70,19 +77,30 @@ export default async function PollDetailPage({ params }: PageProps) {
         ← Alle avstemninger
       </Link>
       <div className="flex flex-wrap gap-2 text-xs font-medium">
-        <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-brand">{pollTrackLabel(poll.track)}</span>
+        {isActionPoll ? (
+          <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-amber-800 dark:text-amber-200">
+            Aksjon
+          </span>
+        ) : (
+          <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-brand">{pollTrackLabel(poll.track)}</span>
+        )}
         <span className="rounded-full bg-muted px-2.5 py-0.5 text-muted-foreground">
           {pollStatusLabel(poll.status)}
         </span>
       </div>
       <PageHeader title={formatPollDisplayTitle(poll.title)} />
-      {poll.track === 'system' ? (
+      {isActionPoll ? (
+        <>
+          <p className="text-sm font-medium text-muted-foreground">{ACTION_POLL_DISCLAIMER}</p>
+          <ActionScaleLine poll={poll} className="text-sm text-foreground" />
+        </>
+      ) : poll.track === 'system' ? (
         <p className="text-sm text-muted-foreground">{SYSTEM_REEL_DISCLAIMER}</p>
       ) : null}
       {poll.neutralSummary ? (
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{poll.neutralSummary}</p>
       ) : null}
-      {poll.stortingetIssueId ? (
+      {!isActionPoll && poll.stortingetIssueId ? (
         <p className="flex flex-wrap items-center gap-x-1 text-sm">
           Kilde:{' '}
           <Link

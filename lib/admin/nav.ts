@@ -5,6 +5,7 @@ import {
   FileText,
   LayoutDashboard,
   Lightbulb,
+  Megaphone,
   Users,
 } from 'lucide-react';
 import { CivicBubble, CivicHeart } from '@/components/icons/civic';
@@ -42,6 +43,14 @@ export const adminNavItems: AdminNavItem[] = [
     description: 'Systemgenererte avstemninger fra stortingssaker',
     href: routes.adminReels,
     icon: CivicBubble,
+    status: 'active',
+  },
+  {
+    id: 'aksjoner',
+    title: 'Aksjoner',
+    description: 'Automatisk oppdagede aksjoner og utkast',
+    href: routes.adminAksjoner,
+    icon: Megaphone,
     status: 'active',
   },
   {
