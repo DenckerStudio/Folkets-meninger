@@ -1,5 +1,5 @@
 import type { CollectionConfig } from 'payload';
-import { adminsOnly, authenticated } from '@/access/roles';
+import { adminOrSelf, adminsOnly, adminsOnlyField, isEditor } from '@/access/roles';
 
 export const Users: CollectionConfig = {
   slug: 'users',
@@ -12,9 +12,13 @@ export const Users: CollectionConfig = {
     useAsTitle: 'email',
   },
   access: {
-    read: authenticated,
+    // Only admin/redaktor may use the admin panel (agent/reader are API-key users).
+    admin: ({ req }) => isEditor(req.user as { role?: string } | null),
+    // Admins see all users; everyone else only themselves (no listing of other users' emails).
+    read: adminOrSelf,
     create: adminsOnly,
-    update: adminsOnly,
+    // Self-update (e.g. own password) is allowed; the role field below is admin-only.
+    update: adminOrSelf,
     delete: adminsOnly,
   },
   fields: [
@@ -30,7 +34,8 @@ export const Users: CollectionConfig = {
         { label: 'Leser (publisert)', value: 'reader' },
       ],
       access: {
-        update: ({ req }) => req.user?.role === 'admin',
+        create: adminsOnlyField,
+        update: adminsOnlyField,
       },
     },
     {

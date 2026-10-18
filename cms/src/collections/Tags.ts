@@ -1,5 +1,5 @@
 import type { CollectionConfig } from 'payload';
-import { authenticated } from '@/access/roles';
+import { contentWriters } from '@/access/roles';
 
 export const Tags: CollectionConfig = {
   slug: 'tags',
@@ -8,9 +8,10 @@ export const Tags: CollectionConfig = {
   },
   access: {
     read: () => true,
-    create: authenticated,
-    update: authenticated,
-    delete: authenticated,
+    // Readers (fm-web CMS_API_KEY) are read-only; only admin/redaktor/agent may write.
+    create: contentWriters,
+    update: contentWriters,
+    delete: contentWriters,
   },
   fields: [
     { name: 'name', type: 'text', required: true },

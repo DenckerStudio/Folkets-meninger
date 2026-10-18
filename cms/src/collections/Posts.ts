@@ -5,6 +5,7 @@ import { postPublishHooks } from '@/hooks/postPublish';
 import { validatePostText } from '@/hooks/validatePostText';
 import {
   canPublishField,
+  contentWriters,
   editorsOnly,
   isAgent,
   isEditor,
@@ -31,8 +32,9 @@ export const Posts: CollectionConfig = {
       if (role === 'agent') return { _status: { equals: 'draft' } };
       return { _status: { equals: 'published' } };
     },
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req, id }) => {
+    // Readers (fm-web CMS_API_KEY) must not create posts; agents are forced to draft by agentDraftGuard.
+    create: contentWriters,
+    update: ({ req }) => {
       if (!req.user) return false;
       if (isEditor(req.user as { role?: string })) return true;
       if (isAgent(req.user as { role?: string })) {
