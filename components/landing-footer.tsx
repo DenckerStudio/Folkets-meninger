@@ -24,11 +24,13 @@ const trustLinks = [
 
 const signedOutAboutLinks = [
   { href: routes.omOss, label: 'Om oss' },
+  { href: routes.blogg, label: 'Blogg' },
   { href: routes.login, label: 'Logg inn' },
 ] as const;
 
 const signedInAboutLinks = [
   { href: routes.omOss, label: 'Om oss' },
+  { href: routes.blogg, label: 'Blogg' },
   { href: routes.dashboard, label: 'Dashboard' },
 ] as const;
 

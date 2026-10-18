@@ -30,6 +30,8 @@ export const routes = {
   vilkar: '/vilkar',
   omAi: '/om/ai',
   innspill: '/innspill',
+  blogg: '/blogg',
+  bloggPost: (slug: string) => `/blogg/${encodeURIComponent(slug)}`,
   login: '/auth/login',
   glemtPassord: '/auth/glemt-passord',
   tilbakestillPassord: '/auth/tilbakestill-passord',
@@ -53,6 +55,7 @@ export const routes = {
   adminForslag: `${DASHBOARD_PREFIX}/admin/forslag`,
   adminBrukere: `${DASHBOARD_PREFIX}/admin/brukere`,
   adminStemmePlus: `${DASHBOARD_PREFIX}/admin/stemme-plus`,
+  adminBlog: `${DASHBOARD_PREFIX}/admin/blog`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,
   forslag: `${DASHBOARD_PREFIX}/appens-fremtid`,
   chat: `${DASHBOARD_PREFIX}/chat`,
@@ -119,7 +122,9 @@ export function isMarketingPath(pathname: string): boolean {
     pathname === routes.innspill ||
     pathname === routes.personvern ||
     pathname === routes.vilkar ||
-    pathname === routes.omAi
+    pathname === routes.omAi ||
+    pathname === routes.blogg ||
+    pathname.startsWith(`${routes.blogg}/`)
   );
 }
 
