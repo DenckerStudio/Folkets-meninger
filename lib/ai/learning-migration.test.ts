@@ -23,5 +23,21 @@ const grants = readFileSync(
   'utf-8',
 );
 assert.match(grants, /admin_poll_draft_action/);
+assert.match(grants, /n8n_list_prompt_candidates/);
+assert.match(grants, /n8n_record_eval_result/);
+assert.match(grants, /n8n_ai_weekly_metrics/);
+
+const align = readFileSync(
+  join(process.cwd(), 'supabase/migrations/20261020100200_ai_learning_n8n_align.sql'),
+  'utf-8',
+);
+assert.match(align, /n8n_list_prompt_candidates\(p_workflow_key text\)/);
+assert.match(align, /n8n_record_eval_run\(/);
+assert.match(align, /n8n_record_eval_result\(/);
+assert.match(align, /n8n_ai_weekly_metrics\(p_from timestamptz, p_to timestamptz\)/);
+assert.match(align, /DROP FUNCTION IF EXISTS public\.n8n_upsert_issue_ai_summary\(/);
+assert.match(align, /p_generation_metadata jsonb DEFAULT NULL/);
+assert.match(align, /'sak_summary', 'sak-01'/);
+assert.match(align, /REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon, authenticated/);
 
 console.log('learning-migration.test.ts: ok');

@@ -8,10 +8,14 @@ DO $$
 DECLARE
   v_names text[] := ARRAY[
     'n8n_get_active_prompt',
+    'n8n_list_prompt_candidates',
     'n8n_log_ai_generation',
     'n8n_propose_prompt_version',
     'n8n_list_eval_cases',
     'n8n_record_eval_run',
+    'n8n_record_eval_result',
+    'n8n_ai_weekly_metrics',
+    'n8n_upsert_issue_ai_summary',
     'record_ai_feedback',
     'admin_poll_draft_action'
   ];
