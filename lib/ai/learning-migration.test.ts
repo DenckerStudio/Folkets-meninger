@@ -38,6 +38,23 @@ assert.match(align, /n8n_ai_weekly_metrics\(p_from timestamptz, p_to timestamptz
 assert.match(align, /DROP FUNCTION IF EXISTS public\.n8n_upsert_issue_ai_summary\(/);
 assert.match(align, /p_generation_metadata jsonb DEFAULT NULL/);
 assert.match(align, /'sak_summary', 'sak-01'/);
+assert.match(align, /'golden_draft', 'draft'/);
+assert.match(align, /NOTIFY pgrst, 'reload schema';/);
 assert.match(align, /REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon, authenticated/);
+
+const expert = readFileSync(
+  join(process.cwd(), 'supabase/migrations/20261020100300_ai_learning_n8n_expert_feedback.sql'),
+  'utf-8',
+);
+assert.match(expert, /blog_draft/);
+assert.match(expert, /set_config\('app\.ai_feedback_skip', '1'/);
+assert.match(expert, /'n8n'/);
+assert.match(expert, /count\(DISTINCT ar\.generation_id\)/);
+
+const rollback = readFileSync(
+  join(process.cwd(), 'supabase/rollback/20261020100200_n8n_upsert_issue_ai_summary_9arg.sql'),
+  'utf-8',
+);
+assert.match(rollback, /n8n_upsert_issue_ai_summary\(/);
 
 console.log('learning-migration.test.ts: ok');
