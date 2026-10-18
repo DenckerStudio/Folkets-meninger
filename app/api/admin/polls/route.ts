@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
-import { archivePoll, listSystemPollDrafts, publishPoll } from '@/lib/polls/service';
+import { isAiFeedbackReasonCode } from '@/lib/ai/reason-codes';
+import { adminPollDraftAction } from '@/lib/ai/poll-draft-action';
+import { listSystemPollDrafts } from '@/lib/polls/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,8 +43,29 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Mangler id eller handling' }, { status: 400 });
     }
 
-    const pollId = action === 'publish' ? await publishPoll(id) : await archivePoll(id);
-    return NextResponse.json({ ok: true, id: pollId, action });
+    const reasonCode = typeof body.reasonCode === 'string' ? body.reasonCode : null;
+    const reasonNote = typeof body.reasonNote === 'string' ? body.reasonNote : null;
+    if (action === 'archive' && (!reasonCode || !isAiFeedbackReasonCode(reasonCode))) {
+      return NextResponse.json({ error: 'Grunnkode er påkrevd ved arkivering' }, { status: 400 });
+    }
+    if (reasonNote && reasonNote.length > 300) {
+      return NextResponse.json({ error: 'Notatet er for langt' }, { status: 400 });
+    }
+
+    const title = typeof body.title === 'string' ? body.title : undefined;
+    const neutralSummary = typeof body.neutralSummary === 'string' ? body.neutralSummary : undefined;
+
+    await adminPollDraftAction({
+      pollId: id,
+      action,
+      title,
+      neutralSummary,
+      reasonCode: reasonCode as typeof reasonCode & string,
+      reasonNote,
+      decidedBy: auth.userId,
+    });
+
+    return NextResponse.json({ ok: true, id, action });
   } catch (error) {
     const message = pollPatchErrorMessage(error);
     if (message.toLowerCase().includes('not a draft') || message.toLowerCase().includes('cannot be archived')) {

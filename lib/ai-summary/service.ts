@@ -111,6 +111,16 @@ export async function getIssueAiLabelsMap(): Promise<Record<string, string[]>> {
   }
 }
 
+export async function getAiSummaryRowForFeedback(
+  issueId: string,
+): Promise<Record<string, unknown> | null> {
+  if (!supabaseConfigured()) return null;
+  const supabase = getServiceSupabase();
+  const { data, error } = await supabase.from('issue_ai_summaries').select('*').eq('stortinget_issue_id', issueId).maybeSingle();
+  if (error || !data) return null;
+  return data as Record<string, unknown>;
+}
+
 export async function deleteAiSummary(issueId: string): Promise<void> {
   if (!supabaseConfigured()) return;
 

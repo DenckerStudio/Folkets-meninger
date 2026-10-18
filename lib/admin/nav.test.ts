@@ -8,6 +8,10 @@ assert.equal(forslag.title, 'Appens fremtid');
 assert.equal(forslag.status, 'active');
 assert.equal(forslag.href, routes.adminForslag);
 
+const aiKvalitet = adminNavItems.find((item) => item.id === 'ai-kvalitet');
+assert.ok(aiKvalitet);
+assert.equal(aiKvalitet.href, routes.adminAiKvalitet);
+
 const brukere = adminNavItems.find((item) => item.id === 'brukere');
 assert.ok(brukere);
 assert.equal(brukere.status, 'active');

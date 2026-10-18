@@ -31,6 +31,9 @@ import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
+import { isAdmin } from '@/lib/admin/gate';
+import { getServerSupabase } from '@/lib/supabase-server';
+import { AdminSummaryRegenerate } from '@/components/admin/admin-summary-regenerate';
 export const dynamic = 'force-dynamic';
 
 function formatEventDate(dateStr: string | null): string | null {
@@ -173,6 +176,12 @@ export default async function SakPage({
   }
 
   const { sak, detail: detailedContent, issueMeta } = bundle;
+  const supabase = await getServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const userIsAdmin = user ? await isAdmin(user.id, user.email) : false;
+
   const [documents, voteringer] = await Promise.all([
     getSakDocumentsWithStatus(sak.id, detailedContent),
     fetchSakVoteringer(sak.id),
@@ -264,6 +273,7 @@ export default async function SakPage({
             sakId={sak.id}
             stortingetPageUrl={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
           />
+          {userIsAdmin ? <AdminSummaryRegenerate sakId={sak.id} /> : null}
           {descriptionToShow ? <SakOfficialDescription text={descriptionToShow} /> : null}
           {(sak.henvisning || henvisning) ? (
             <p className="text-sm text-muted-foreground">{sak.henvisning || henvisning}</p>

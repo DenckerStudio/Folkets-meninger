@@ -7,6 +7,7 @@ import { CivicBubble } from '@/components/icons/civic';
 import { pollDraftGenerationStatusLabel } from '@/lib/admin/poll-draft-generation';
 import { usePollDraftGeneration } from '@/hooks/use-poll-draft-generation';
 import { routes } from '@/lib/routes';
+import { AdminPollDraftReview } from '@/components/admin/admin-poll-draft-review';
 import { AdminBackLink } from '@/components/admin/admin-shell';
 import { ReelCandidateRatings } from '@/components/admin/reel-candidate-ratings';
 import { EmptyState } from '@/components/dashboard/empty-state';
@@ -137,25 +138,6 @@ export default function AdminReelsClient({
     window.addEventListener('poll-drafts:ready', onReady);
     return () => window.removeEventListener('poll-drafts:ready', onReady);
   }, []);
-
-  const patchPoll = (id: string, action: 'publish' | 'archive') => {
-    startTransition(async () => {
-      setError('');
-      setSuccess('');
-      const res = await fetch('/api/admin/polls', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(typeof data.error === 'string' ? data.error : 'Handling feilet');
-        return;
-      }
-      setSuccess(action === 'publish' ? 'Utkastet er publisert.' : 'Utkastet er arkivert.');
-      load();
-    });
-  };
 
   const runPipelineCatchup = () => {
     startTransition(async () => {
@@ -330,24 +312,17 @@ export default function AdminReelsClient({
                   </Link>
                 ) : null}
                 <ReelCandidateRatings metadata={poll.generationMetadata} />
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => patchPoll(poll.id, 'publish')}
-                    className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
-                  >
-                    Publiser
-                  </button>
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => patchPoll(poll.id, 'archive')}
-                    className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
-                  >
-                    Arkiver
-                  </button>
-                </div>
+                <AdminPollDraftReview
+                  pollId={poll.id}
+                  initialTitle={poll.title}
+                  initialSummary={poll.neutralSummary}
+                  disabled={pending}
+                  onSuccess={(message) => {
+                    setSuccess(message);
+                    load();
+                  }}
+                  onError={(message) => setError(message)}
+                />
               </li>
             ))}
           </ul>
