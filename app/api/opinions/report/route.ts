@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
   }
 
-  const ipRate = checkRateLimit(`opinion-report:ip:${clientIp(request)}`, 15, 60_000);
+  const ipRate = await checkRateLimit(`opinion-report:ip:${clientIp(request)}`, 15, 60_000);
   if (!ipRate.ok) {
     return NextResponse.json(
       { error: 'For mange rapporter. Prøv igjen om litt.' },

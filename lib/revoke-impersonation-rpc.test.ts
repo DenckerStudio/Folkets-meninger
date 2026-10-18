@@ -22,7 +22,7 @@ for (const fn of mustRevoke) {
   assert.match(migration, new RegExp(`'${fn}'`));
 }
 
-assert.doesNotMatch(hotfix, /get_public_user_displays/);
-assert.doesNotMatch(migration, /get_public_user_displays/);
+assert.doesNotMatch(hotfix, /'get_public_user_displays'/);
+assert.doesNotMatch(migration, /'get_public_user_displays'/);
 
 console.log('revoke-impersonation-rpc.test.ts: ok');

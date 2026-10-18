@@ -47,6 +47,9 @@ SQL
 echo "Applying 20261018150000_security_lockdown_prod_safe.sql (postgres) ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261018150000_security_lockdown_prod_safe.sql
 
+echo "Re-apply RPC lockdown (150000 re-grants authenticated EXECUTE on user-bound RPCs) ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261020120002_reapply_rpc_execute_lockdown.sql
+
 echo "Running security-lockdown-defaults.sql (supabase_admin connection) ..."
 psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-lockdown-defaults.sql
 

@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
     }
 
-    const rate = checkRateLimit(`hearing-comment:${user.id}`, 8, 60_000);
+    const rate = await checkRateLimit(`hearing-comment:${user.id}`, 8, 60_000);
     if (!rate.ok) {
       return NextResponse.json(
         { error: 'For mange forespørsler. Prøv igjen om litt.' },

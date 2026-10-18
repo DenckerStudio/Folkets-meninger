@@ -48,11 +48,7 @@ No listed RPC is invoked via browser `createBrowserClient` `.rpc()` — only `ge
 | Medium | 6 | 4 |
 | Low | 5 | 3 |
 
-**Open high/critical (action required):**
-
-| ID | Severity | Finding | File / area |
-|----|----------|---------|-------------|
-| H-1 | High | In-memory `checkRateLimit` is not shared across serverless instances (weak global abuse control). | `lib/rate-limit.ts`, `middleware.ts` |
+**Open high/critical:** none after H-1 (Postgres rate limits) and prod hotfix RPC revokes.
 
 ---
 

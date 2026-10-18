@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     return Response.json({ error: gate.error }, { status: gate.status });
   }
 
-  const ipRate = checkRateLimit(`chat-sak-context:ip:${clientIp(request)}`, 20, 60_000);
+  const ipRate = await checkRateLimit(`chat-sak-context:ip:${clientIp(request)}`, 20, 60_000);
   if (!ipRate.ok) {
     return Response.json(
       { error: 'For mange forespørsler. Prøv igjen om litt.' },
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const userRate = checkRateLimit(`chat-sak-context:user:${gate.userId}`, 20, 60_000);
+  const userRate = await checkRateLimit(`chat-sak-context:user:${gate.userId}`, 20, 60_000);
   if (!userRate.ok) {
     return Response.json(
       { error: 'Du sender for mange forespørsler. Vent litt.' },

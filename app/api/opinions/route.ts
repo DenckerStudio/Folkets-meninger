@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   if (consentBlock) return consentBlock;
 
   const ip = clientIp(request);
-  const ipRate = checkRateLimit(`opinions:create:ip:${ip}`, 12, 60_000);
+  const ipRate = await checkRateLimit(`opinions:create:ip:${ip}`, 12, 60_000);
   if (!ipRate.ok) {
     return NextResponse.json(
       { error: 'For mange forespørsler. Prøv igjen om litt.' },
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const userRate = checkRateLimit(`opinions:create:user:${user.id}`, 6, 60_000);
+  const userRate = await checkRateLimit(`opinions:create:user:${user.id}`, 6, 60_000);
   if (!userRate.ok) {
     return NextResponse.json(
       { error: 'Du publiserer for ofte. Vent litt før du deler en ny mening.' },

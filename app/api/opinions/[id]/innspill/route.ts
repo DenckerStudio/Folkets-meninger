@@ -29,7 +29,7 @@ export async function POST(
     return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
   }
 
-  const rate = checkRateLimit(`opinion-innspill:${user.id}`, 10, 60_000);
+  const rate = await checkRateLimit(`opinion-innspill:${user.id}`, 10, 60_000);
   if (!rate.ok) {
     return NextResponse.json(
       { error: 'For mange forsøk. Prøv igjen om litt.' },

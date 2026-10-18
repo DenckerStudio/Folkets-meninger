@@ -24,7 +24,7 @@ DECLARE
     'apply_verified_fylke_claim',
     'get_user_stance_on_issue', 'get_user_stance_history', 'get_user_stance_count',
     'get_user_stance_signals', 'user_has_political_consent', 'assert_rpc_caller_is_user',
-    'require_admin_user_id', 'app_future_require_admin'
+    'require_admin_user_id', 'app_future_require_admin', 'check_api_rate_limit'
   ];
   problems text[] := '{}';
   r record;

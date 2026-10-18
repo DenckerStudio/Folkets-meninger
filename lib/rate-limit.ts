@@ -1,33 +1,73 @@
-type Bucket = { count: number; resetAt: number };
+import { checkRateLimitMemory, type RateLimitResult } from '@/lib/rate-limit-memory';
 
-const buckets = new Map<string, Bucket>();
+export type { RateLimitResult };
 
-export type RateLimitResult =
-  | { ok: true; remaining: number }
-  | { ok: false; retryAfterSeconds: number };
+function parseRpcResult(data: unknown, limit: number): RateLimitResult | null {
+  if (!data || typeof data !== 'object') return null;
+  const row = data as { ok?: boolean; remaining?: number; retryAfterSeconds?: number };
+  if (row.ok === true) {
+    const remaining =
+      typeof row.remaining === 'number' ? row.remaining : Math.max(0, limit - 1);
+    return { ok: true, remaining };
+  }
+  if (row.ok === false) {
+    const retry =
+      typeof row.retryAfterSeconds === 'number' && row.retryAfterSeconds > 0
+        ? row.retryAfterSeconds
+        : 1;
+    return { ok: false, retryAfterSeconds: retry };
+  }
+  return null;
+}
 
-export function checkRateLimit(
+async function checkRateLimitPostgres(
   key: string,
   limit: number,
-  windowMs: number
-): RateLimitResult {
-  const now = Date.now();
-  const bucket = buckets.get(key);
-
-  if (!bucket || now >= bucket.resetAt) {
-    buckets.set(key, { count: 1, resetAt: now + windowMs });
-    return { ok: true, remaining: limit - 1 };
+  windowMs: number,
+): Promise<RateLimitResult | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
+    return null;
   }
 
-  if (bucket.count >= limit) {
-    return {
-      ok: false,
-      retryAfterSeconds: Math.ceil((bucket.resetAt - now) / 1000),
-    };
+  const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
+  try {
+    const res = await fetch(`${url.replace(/\/$/, '')}/rest/v1/rpc/check_api_rate_limit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        p_bucket_key: key,
+        p_limit: limit,
+        p_window_seconds: windowSeconds,
+      }),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      return null;
+    }
+    const data = (await res.json()) as unknown;
+    return parseRpcResult(data, limit);
+  } catch {
+    return null;
   }
+}
 
-  bucket.count += 1;
-  return { ok: true, remaining: limit - bucket.count };
+/** Shared store (Postgres) when service role is configured; else in-memory fallback. */
+export async function checkRateLimit(
+  key: string,
+  limit: number,
+  windowMs: number,
+): Promise<RateLimitResult> {
+  const shared = await checkRateLimitPostgres(key, limit, windowMs);
+  if (shared) {
+    return shared;
+  }
+  return checkRateLimitMemory(key, limit, windowMs);
 }
 
 /** Paths that get write/expensive rate limits (per IP). */
