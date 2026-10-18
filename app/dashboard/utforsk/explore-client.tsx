@@ -29,21 +29,7 @@ import type { SystemReelFeedItem } from '@/lib/polls/types';
 import { STORTINGET_ACTIVE_SESSION_ID } from '@/lib/stortinget-config';
 
 import { ISSUE_STANCE_LABELS, type IssueStance } from '@/lib/stances/types';
-
-function issueMatchesSearch(issue: SakListItem, rawQuery: string): boolean {
-  const query = rawQuery.trim().toLowerCase();
-  if (!query) return true;
-  const compact = query.replace(/\s+/g, '');
-  const henvisning = issue.henvisning?.toLowerCase() ?? '';
-  const henvisningCompact = henvisning.replace(/\s+/g, '');
-  return (
-    issue.title.toLowerCase().includes(query) ||
-    issue.summary.toLowerCase().includes(query) ||
-    issue.id.toString().includes(query) ||
-    henvisning.includes(query) ||
-    (compact.length >= 2 && henvisningCompact.includes(compact))
-  );
-}
+import { issueMatchesStortingetSearch } from '@/lib/stortinget-issue-search';
 
 const ISSUE_PAGE_SIZE = 24;
 const LABEL_CHIP_LIMIT = 12;
@@ -192,7 +178,7 @@ export default function ExploreClient({
       );
     }
     if (searchQuery.trim() !== '') {
-      result = result.filter((issue) => issueMatchesSearch(issue, searchQuery));
+      result = result.filter((issue) => issueMatchesStortingetSearch(issue, searchQuery));
     }
     if (activeAiLabels.length > 0) {
       result = result.filter((issue) => {
