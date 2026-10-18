@@ -138,6 +138,15 @@ BEGIN
   END;
 END $$;
 
+-- Låsing (funksjoner, allowlist, tabell-grants) flyttet til
+-- 20261018150000_security_lockdown_prod_safe.sql — kjør den for prod og full effekt.
+
+COMMIT;
+
+-- =============================================================================
+-- (Alt under er erstattet av 20261018150000 — beholdes ikke i migrasjonskjeden.)
+-- =============================================================================
+/*
 -- -----------------------------------------------------------------------------
 -- 1. Hendelsesfiksen kodet inn: user_roles / app_roles / rollefunksjoner
 -- -----------------------------------------------------------------------------
@@ -404,7 +413,7 @@ END $$;
 -- REVOKE USAGE ON SCHEMA graphql_public FROM anon, authenticated;
 -- eller: DROP EXTENSION IF EXISTS pg_graphql;
 
-COMMIT;
+*/
 
 -- =============================================================================
 -- Oppfølging som IKKE er SQL (se rapport.md):
