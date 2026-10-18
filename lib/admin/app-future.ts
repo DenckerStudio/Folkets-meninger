@@ -1,4 +1,5 @@
 import { getAnonSupabase, getServiceSupabase } from '@/lib/supabase';
+import { getServerSupabase } from '@/lib/supabase-server';
 import { mapChangelogRow, mapRoadmapRow } from '@/lib/appens-fremtid/map';
 import type { ChangelogEntry, RoadmapItem, RoadmapStatus } from '@/lib/appens-fremtid/constants';
 
@@ -26,14 +27,9 @@ export async function listAppChangelogEntries(): Promise<ChangelogEntry[]> {
   return mapChangelog(data);
 }
 
-export async function createAppChangelogEntry(
-  adminUserId: string,
-  title: string,
-  body: string,
-): Promise<string> {
-  const service = getServiceSupabase();
-  const { data, error } = await service.rpc('create_app_changelog_entry', {
-    p_admin_user_id: adminUserId,
+export async function createAppChangelogEntry(title: string, body: string): Promise<string> {
+  const supabase = await getServerSupabase();
+  const { data, error } = await supabase.rpc('create_app_changelog_entry', {
     p_title: title,
     p_body: body,
   });
@@ -41,10 +37,9 @@ export async function createAppChangelogEntry(
   return String(data);
 }
 
-export async function deleteAppChangelogEntry(adminUserId: string, entryId: string): Promise<string> {
-  const service = getServiceSupabase();
-  const { data, error } = await service.rpc('delete_app_changelog_entry', {
-    p_admin_user_id: adminUserId,
+export async function deleteAppChangelogEntry(entryId: string): Promise<string> {
+  const supabase = await getServerSupabase();
+  const { data, error } = await supabase.rpc('delete_app_changelog_entry', {
     p_entry_id: entryId,
   });
   if (error) throw error;
@@ -82,18 +77,13 @@ export async function listAppRoadmapItems(): Promise<RoadmapItem[]> {
 }
 
 export async function createAppRoadmapItem(
-  adminUserId: string,
   title: string,
   body: string,
   status: RoadmapStatus,
   sortOrder?: number,
 ): Promise<string> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('Roadmap-administrasjon krever SUPABASE_SERVICE_ROLE_KEY på serveren.');
-  }
-  const service = getServiceSupabase();
-  const { data, error } = await service.rpc('create_app_roadmap_item', {
-    p_admin_user_id: adminUserId,
+  const supabase = await getServerSupabase();
+  const { data, error } = await supabase.rpc('create_app_roadmap_item', {
     p_title: title,
     p_body: body,
     p_status: status,
@@ -104,7 +94,6 @@ export async function createAppRoadmapItem(
 }
 
 export async function updateAppRoadmapItem(
-  adminUserId: string,
   itemId: string,
   patch: {
     title?: string;
@@ -121,12 +110,8 @@ export async function updateAppRoadmapItem(
   ) {
     throw new Error('Nothing to update');
   }
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('Roadmap-administrasjon krever SUPABASE_SERVICE_ROLE_KEY på serveren.');
-  }
-  const service = getServiceSupabase();
-  const { data, error } = await service.rpc('update_app_roadmap_item', {
-    p_admin_user_id: adminUserId,
+  const supabase = await getServerSupabase();
+  const { data, error } = await supabase.rpc('update_app_roadmap_item', {
     p_item_id: itemId,
     p_title: patch.title ?? null,
     p_body: patch.body ?? null,
@@ -138,13 +123,11 @@ export async function updateAppRoadmapItem(
 }
 
 export async function setAppRoadmapItemStatus(
-  adminUserId: string,
   itemId: string,
   status: RoadmapStatus,
 ): Promise<string> {
-  const service = getServiceSupabase();
-  const { data, error } = await service.rpc('set_app_roadmap_item_status', {
-    p_admin_user_id: adminUserId,
+  const supabase = await getServerSupabase();
+  const { data, error } = await supabase.rpc('set_app_roadmap_item_status', {
     p_item_id: itemId,
     p_status: status,
   });
@@ -152,13 +135,9 @@ export async function setAppRoadmapItemStatus(
   return String(data);
 }
 
-export async function deleteAppRoadmapItem(adminUserId: string, itemId: string): Promise<string> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('Roadmap-administrasjon krever SUPABASE_SERVICE_ROLE_KEY på serveren.');
-  }
-  const service = getServiceSupabase();
-  const { data, error } = await service.rpc('delete_app_roadmap_item', {
-    p_admin_user_id: adminUserId,
+export async function deleteAppRoadmapItem(itemId: string): Promise<string> {
+  const supabase = await getServerSupabase();
+  const { data, error } = await supabase.rpc('delete_app_roadmap_item', {
     p_item_id: itemId,
   });
   if (error) throw error;

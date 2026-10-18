@@ -34,10 +34,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return NextResponse.json({ error: 'Serveren er ikke konfigurert' }, { status: 503 });
-  }
-
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const id = typeof body.id === 'string' ? body.id.trim() : '';
@@ -46,7 +42,7 @@ export async function PATCH(request: Request) {
     }
 
     if (typeof body.votingOpen === 'boolean') {
-      await setAppSuggestionVoting(id, auth.userId, body.votingOpen);
+      await setAppSuggestionVoting(id, body.votingOpen);
       return NextResponse.json({ ok: true, id, votingOpen: body.votingOpen });
     }
 
@@ -54,7 +50,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Mangler forslag eller status' }, { status: 400 });
     }
 
-    await setAppSuggestionStatus(id, auth.userId, body.status);
+    await setAppSuggestionStatus(id, body.status);
     return NextResponse.json({ ok: true, id, status: body.status });
   } catch (error) {
     const message = error instanceof Error ? error.message : '';

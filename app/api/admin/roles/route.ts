@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     if (!email) {
       return NextResponse.json({ error: 'Mangler e-post' }, { status: 400 });
     }
-    const userId = await grantAppRoleByEmail(email, auth.userId);
+    const userId = await grantAppRoleByEmail(email);
     return NextResponse.json({ ok: true, userId, email });
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
