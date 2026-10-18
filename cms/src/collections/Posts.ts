@@ -70,7 +70,7 @@ export const Posts: CollectionConfig = {
       name: 'featured',
       type: 'checkbox',
       defaultValue: false,
-      access: { update: canPublishField },
+      access: { create: canPublishField, update: canPublishField },
     },
     {
       name: 'category',
@@ -122,7 +122,7 @@ export const Posts: CollectionConfig = {
       name: 'publishedAt',
       type: 'date',
       admin: { date: { pickerAppearance: 'dayAndTime' } },
-      access: { update: canPublishField },
+      access: { create: canPublishField, update: canPublishField },
     },
     {
       name: 'updatedAtDisplay',

@@ -14,7 +14,8 @@ Blog content is edited in **Payload CMS 3** (`cms/`), deployed as a separate Coo
 - Use the **same** hosted Postgres as Supabase/Coolify DB.
 - Payload uses schema **`payload`** (`PAYLOAD_SCHEMA=payload` optional).
 - Create role `payload_app` with privileges **only** on schema `payload` (no `public` access).
-- **Migrations:** `prodMigrations` in `payload.config.ts` runs pending SQL migrations automatically on **production boot** (`NODE_ENV=production`). The runtime Docker image has no Payload CLI, `tsx`, or `src/` — do not rely on `npm run migrate` in prod.
+- **Migrations:** `prodMigrations` in `payload.config.ts` runs pending SQL when Payload first connects in **production** (`NODE_ENV=production`). `disableCreateDatabase: true` — the shared Postgres already exists (Supabase/Coolify). The runtime Docker image has no Payload CLI, `tsx`, or `src/` — do not rely on `npm run migrate` in prod.
+- **Boot warmup:** `cms/src/instrumentation.ts` calls `ensurePayloadReady()` on Node server start so migrations and `SEED_ON_BOOT` run **before** traffic, even though `GET /health` stays a cheap liveness probe without touching Payload.
 - Local/dev: `cd cms && npm run migrate` when schema changes.
 
 `supabase/migrations/20261018120000_blog_posts.sql` is **superseded** and must not be applied.
@@ -68,7 +69,12 @@ Create CMS users:
 
 ## Healthcheck
 
-`GET /health` → `200 ok`
+| Route | Purpose |
+|-------|---------|
+| `GET /health` | Liveness only → `200 ok` (no DB/Payload; safe for frequent probes) |
+| Server boot | `instrumentation.ts` → `ensurePayloadReady()` runs migrations + optional `SEED_ON_BOOT` |
+
+Coolify can keep probing `/health`; schema/seed readiness is handled at process start, not on every health ping.
 
 ## Blog ops API (fm-web / n8n)
 

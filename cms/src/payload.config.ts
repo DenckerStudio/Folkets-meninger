@@ -63,6 +63,7 @@ export default buildConfig({
     schemaName: process.env.PAYLOAD_SCHEMA || 'payload',
     // Run pending migrations on boot when NODE_ENV=production (runtime image has no payload CLI/tsx/src).
     prodMigrations: migrations,
+    disableCreateDatabase: true,
   }),
   sharp,
   plugins,

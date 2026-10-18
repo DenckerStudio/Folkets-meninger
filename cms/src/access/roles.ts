@@ -67,7 +67,7 @@ export const postsDeleteAccess: Access = editorsOnly;
 
 export const usersReadAccess: Access = ({ req }) => {
   if (!req.user) return false;
-  if (roleOf(req.user as UserLike) === 'admin') return true;
+  if (isEditor(req.user as UserLike)) return true;
   return { id: { equals: req.user.id } };
 };
 
@@ -82,6 +82,8 @@ export const taxonomyReadAccess: Access = () => true;
 export const taxonomyWriteAccess: Access = editorsOnly;
 
 export const canPublishField: FieldAccess = ({ req }) => isEditor(req.user as UserLike);
+
+export const adminsOnlyField: FieldAccess = ({ req }) => roleOf(req.user as UserLike) === 'admin';
 
 export const versionsReadAccess: Access = editorsOnly;
 

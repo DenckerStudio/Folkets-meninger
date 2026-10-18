@@ -1,5 +1,12 @@
 import type { CollectionConfig } from 'payload';
-import { adminsOnly, usersReadAccess } from '@/access/roles';
+import {
+  adminsOnly,
+  adminsOnlyField,
+  isEditor,
+  usersReadAccess,
+  type UserLike,
+} from '@/access/roles';
+import { stripUserEmailForNonEditors } from '@/hooks/userPrivacy';
 
 export const Users: CollectionConfig = {
   slug: 'users',
@@ -12,10 +19,18 @@ export const Users: CollectionConfig = {
     useAsTitle: 'email',
   },
   access: {
+    admin: ({ req }) => isEditor(req.user as UserLike),
     read: usersReadAccess,
     create: adminsOnly,
-    update: adminsOnly,
+    update: ({ req }) => {
+      if (!req.user) return false;
+      if (req.user.role === 'admin') return true;
+      return { id: { equals: req.user.id } };
+    },
     delete: adminsOnly,
+  },
+  hooks: {
+    afterRead: [stripUserEmailForNonEditors],
   },
   fields: [
     {
@@ -30,7 +45,8 @@ export const Users: CollectionConfig = {
         { label: 'Leser (publisert)', value: 'reader' },
       ],
       access: {
-        update: ({ req }) => req.user?.role === 'admin',
+        create: adminsOnlyField,
+        update: adminsOnlyField,
       },
     },
     {

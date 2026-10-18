@@ -12,6 +12,8 @@ export const agentDraftGuard: CollectionBeforeChangeHook = ({ data, req }) => {
   if (!isAgent(user)) return data;
 
   data._status = 'draft';
+  data.featured = false;
+  delete data.publishedAt;
   if (data.review && typeof data.review === 'object') {
     data.review = { ...data.review, state: 'ny' };
   }

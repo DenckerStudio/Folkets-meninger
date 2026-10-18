@@ -44,7 +44,9 @@ assert.equal(accessAllows(taxonomyWriteAccess, req('reader')), false);
 assert.equal(accessAllows(taxonomyWriteAccess, req('admin')), true);
 
 assert.equal(accessAllows(usersReadAccess, req('admin')), true);
+assert.equal(accessAllows(usersReadAccess, req('redaktor')), true);
 assert.deepEqual(accessAllows(usersReadAccess, req('reader', 42)), { id: { equals: 42 } });
+assert.deepEqual(accessAllows(usersReadAccess, req('agent', 7)), { id: { equals: 7 } });
 
 assert.equal(accessAllows(versionsReadAccess, req('reader')), false);
 assert.equal(accessAllows(versionsReadAccess, req('agent')), false);
