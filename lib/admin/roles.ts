@@ -1,5 +1,4 @@
 import { getServiceSupabase } from '@/lib/supabase';
-import { getServerSupabase } from '@/lib/supabase-server';
 
 export type AppAdminRecord = {
   userId: string;
@@ -30,21 +29,23 @@ export async function listAppAdmins(): Promise<AppAdminRecord[]> {
     .filter((x): x is AppAdminRecord => x != null);
 }
 
-export async function grantAppRoleByEmail(email: string): Promise<string> {
-  const supabase = await getServerSupabase();
-  const { data, error } = await supabase.rpc('grant_app_role_by_email', {
+export async function grantAppRoleByEmail(email: string, grantedBy: string): Promise<string> {
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc('grant_app_role_by_email', {
     p_email: email,
     p_role: 'admin',
+    p_granted_by: grantedBy,
   });
   if (error) throw error;
   return String(data);
 }
 
-export async function revokeAppRoleByEmail(email: string): Promise<string> {
-  const supabase = await getServerSupabase();
-  const { data, error } = await supabase.rpc('revoke_app_role_by_email', {
+export async function revokeAppRoleByEmail(email: string, revokedBy: string): Promise<string> {
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc('revoke_app_role_by_email', {
     p_email: email,
     p_role: 'admin',
+    p_revoked_by: revokedBy,
   });
   if (error) throw error;
   return String(data);

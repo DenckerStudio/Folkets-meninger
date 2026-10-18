@@ -15,10 +15,6 @@ DECLARE
     'get_user_stance_history', 'get_user_stance_count', 'get_user_stance_signals',
     'update_user_profile_names', 'create_citizen_opinion', 'create_citizen_opinion_reply',
     'create_app_suggestion', 'cast_app_suggestion_vote', 'create_hearing_comment',
-    'create_app_changelog_entry', 'delete_app_changelog_entry',
-    'create_app_roadmap_item', 'update_app_roadmap_item', 'delete_app_roadmap_item',
-    'set_app_roadmap_item_status', 'set_app_suggestion_status', 'set_app_suggestion_voting',
-    'grant_app_role_by_email', 'revoke_app_role_by_email',
     'set_user_onboarding_state', 'report_content', 'create_opinion_innspill',
     'endorse_opinion_innspill', 'user_has_political_consent', 'record_political_consent',
     'withdraw_political_consent', 'withdraw_all_political_consents',
@@ -27,7 +23,11 @@ DECLARE
   service_only text[] := ARRAY[
     'grant_stemme_plus', 'grant_stemme_plus_by_email', 'revoke_stemme_plus',
     'revoke_stemme_plus_by_email', 'list_stemme_plus_supporters',
-    'grant_app_role', 'list_app_admins', 'publish_poll', 'archive_poll',
+    'grant_app_role', 'grant_app_role_by_email', 'revoke_app_role', 'revoke_app_role_by_email',
+    'list_app_admins', 'publish_poll', 'archive_poll',
+    'create_app_changelog_entry', 'delete_app_changelog_entry',
+    'create_app_roadmap_item', 'update_app_roadmap_item', 'delete_app_roadmap_item',
+    'set_app_roadmap_item_status', 'set_app_suggestion_status', 'set_app_suggestion_voting',
     'n8n_upsert_issue_ai_summary', 'n8n_save_document_embedding',
     'apply_verified_fylke_claim'
   ];

@@ -29,13 +29,17 @@ export async function POST(request: Request) {
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: 'Serveren er ikke konfigurert' }, { status: 503 });
+  }
+
   try {
     const payload = (await request.json()) as Record<string, unknown>;
     const parsed = validateChangelogInput(payload);
     if ('error' in parsed) {
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
-    const id = await createAppChangelogEntry(parsed.title, parsed.body);
+    const id = await createAppChangelogEntry(auth.userId, parsed.title, parsed.body);
     return NextResponse.json({ ok: true, id });
   } catch (error) {
     console.error('[admin/changelog] create failed', error);
@@ -48,13 +52,17 @@ export async function DELETE(request: Request) {
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: 'Serveren er ikke konfigurert' }, { status: 503 });
+  }
+
   try {
     const payload = (await request.json()) as Record<string, unknown>;
     const id = typeof payload.id === 'string' ? payload.id.trim() : '';
     if (!id) {
       return NextResponse.json({ error: 'Mangler innlegg' }, { status: 400 });
     }
-    await deleteAppChangelogEntry(id);
+    await deleteAppChangelogEntry(auth.userId, id);
     return NextResponse.json({ ok: true, id });
   } catch (error) {
     const message = error instanceof Error ? error.message : '';

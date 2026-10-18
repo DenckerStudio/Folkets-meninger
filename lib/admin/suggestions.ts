@@ -1,5 +1,4 @@
 import { getServiceSupabase } from '@/lib/supabase';
-import { getServerSupabase } from '@/lib/supabase-server';
 import { mapSuggestionRow } from '@/lib/appens-fremtid/map';
 import {
   type SuggestionRecord,
@@ -40,11 +39,13 @@ export async function listVotingAppSuggestions(userId: string): Promise<Suggesti
 
 export async function setAppSuggestionStatus(
   suggestionId: string,
+  adminUserId: string,
   status: SuggestionStatus,
 ): Promise<string> {
-  const supabase = await getServerSupabase();
-  const { data, error } = await supabase.rpc('set_app_suggestion_status', {
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc('set_app_suggestion_status', {
     p_suggestion_id: suggestionId,
+    p_admin_user_id: adminUserId,
     p_status: status,
   });
   if (error) throw error;
@@ -53,11 +54,13 @@ export async function setAppSuggestionStatus(
 
 export async function setAppSuggestionVoting(
   suggestionId: string,
+  adminUserId: string,
   votingOpen: boolean,
 ): Promise<string> {
-  const supabase = await getServerSupabase();
-  const { data, error } = await supabase.rpc('set_app_suggestion_voting', {
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc('set_app_suggestion_voting', {
     p_suggestion_id: suggestionId,
+    p_admin_user_id: adminUserId,
     p_voting_open: votingOpen,
   });
   if (error) throw error;

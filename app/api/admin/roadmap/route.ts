@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
     const id = await createAppRoadmapItem(
+      auth.userId,
       parsed.title,
       parsed.body,
       parsed.status,
@@ -62,7 +63,7 @@ export async function PATCH(request: Request) {
     if ('error' in parsed) {
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
-    await updateAppRoadmapItem(parsed.id, {
+    await updateAppRoadmapItem(auth.userId, parsed.id, {
       title: parsed.title,
       body: parsed.body,
       status: parsed.status,
@@ -91,7 +92,7 @@ export async function DELETE(request: Request) {
     if (!id) {
       return NextResponse.json({ error: 'Mangler punkt' }, { status: 400 });
     }
-    await deleteAppRoadmapItem(id);
+    await deleteAppRoadmapItem(auth.userId, id);
     return NextResponse.json({ ok: true, id });
   } catch (error) {
     const message = error instanceof Error ? error.message : '';

@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     if (!email) {
       return NextResponse.json({ error: 'Mangler e-post' }, { status: 400 });
     }
-    const userId = await grantAppRoleByEmail(email);
+    const userId = await grantAppRoleByEmail(email, auth.userId);
     return NextResponse.json({ ok: true, userId, email });
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
@@ -58,7 +58,7 @@ export async function DELETE(request: Request) {
     if (!email) {
       return NextResponse.json({ error: 'Mangler e-post' }, { status: 400 });
     }
-    const userId = await revokeAppRoleByEmail(email);
+    const userId = await revokeAppRoleByEmail(email, auth.userId);
     return NextResponse.json({ ok: true, userId, email });
   } catch (error) {
     const message = error instanceof Error ? error.message : '';

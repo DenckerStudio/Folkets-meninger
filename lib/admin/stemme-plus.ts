@@ -39,10 +39,11 @@ export async function grantStemmePlusByEmail(email: string, grantedBy: string): 
   return String(data);
 }
 
-export async function revokeStemmePlusByEmail(email: string): Promise<string> {
+export async function revokeStemmePlusByEmail(email: string, revokedBy: string): Promise<string> {
   const service = getServiceSupabase();
   const { data, error } = await service.rpc('revoke_stemme_plus_by_email', {
     p_email: email,
+    p_revoked_by: revokedBy,
   });
   if (error) throw error;
   return String(data);
