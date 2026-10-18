@@ -9,10 +9,6 @@ jobs:
   lint-and-build:
     runs-on: ubuntu-latest
     env:
-      # Test Supabase (Folkets Meninger) — mirrors `.env.test`
-      NEXT_PUBLIC_SUPABASE_URL: https://qetckokgtzbpunbzslfp.supabase.co
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFldGNrb2tndHpicHVuYnpzbGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMDkwOTcsImV4cCI6MjEwMTY4NTA5N30.COJ3FNQw5H5OMFGdJQaLL_eWM030Qb5G9KMLqhGSnpE
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_k_PGVTo33O7eckaeCGNhhA__hB6PepT
       STORTINGET_SESSION_ID: 2025-2026
       STORTINGET_PERIODE_ID: 2025-2029
       NEXT_PUBLIC_STORTINGET_SESSION_ID: 2025-2026
@@ -23,6 +19,45 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Load public test Supabase env
+        run: |
+          set -a
+          source .env.test
+          set +a
+          echo "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" >> "$GITHUB_ENV"
       - run: npm ci --ignore-scripts
       - run: npm run lint
       - run: npm run build
+
+  db-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase db start
+      - run: supabase db reset --local
+      - name: Sikkerhetsvakt
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
+
+  migration-sql-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Sjekk nye migrasjoner for REVOKE/RLS-mønster
+        run: |
+          BASE="${{ github.event.pull_request.base.sha || 'origin/main' }}"
+          git fetch origin main --depth=1 2>/dev/null || true
+          FILES=$(git diff --name-only "$BASE" HEAD -- supabase/migrations/*.sql || true)
+          if [ -z "$FILES" ]; then echo "Ingen nye migrasjoner"; exit 0; fi
+          node scripts/check-migrations.mjs $FILES
