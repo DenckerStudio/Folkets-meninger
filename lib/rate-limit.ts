@@ -59,6 +59,9 @@ export function getRateLimitPolicy(
   if (pathname.startsWith('/api/suggestions')) {
     return { limit: 8, windowMs: 60_000 };
   }
+  if (pathname.startsWith('/api/hearings') && method.toUpperCase() === 'POST') {
+    return { limit: 12, windowMs: 60_000 };
+  }
   if (pathname.startsWith('/api/chat')) {
     return { limit: 20, windowMs: 60_000 };
   }

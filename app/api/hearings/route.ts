@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { ensurePublicUser } from '@/lib/ensure-public-user';
@@ -15,6 +16,14 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
+    }
+
+    const rate = checkRateLimit(`hearing-comment:${user.id}`, 8, 60_000);
+    if (!rate.ok) {
+      return NextResponse.json(
+        { error: 'For mange forespørsler. Prøv igjen om litt.' },
+        { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } },
+      );
     }
 
     await ensurePublicUser(user);

@@ -16,11 +16,15 @@
 | Admin gate | `isAdmin` reads **`user_roles` only** |
 | Security headers | HSTS, Referrer-Policy, Permissions-Policy, CSP (non-embed), X-Content-Type-Options |
 
+## Follow-up audit (2026-10-19)
+
+Full inventory (RPC `p_user_id` binding, API sweep, headers, severities): **[SECURITY-AUDIT-2026-10-19.md](./SECURITY-AUDIT-2026-10-19.md)**.
+
 ## Remaining findings
 
 ### High (not fixed here — needs follow-up)
 
-- **In-memory `checkRateLimit`**: not shared across serverless instances (weak abuse control globally).
+- **In-memory `checkRateLimit`**: not shared across serverless instances (weak abuse control globally). See **H-1** in the 2026-10-19 audit.
 
 ### Medium
 

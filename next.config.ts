@@ -21,6 +21,8 @@ const DEFAULT_CSP =
   "img-src 'self' data: blob: https:; font-src 'self' data: https:; " +
   "connect-src 'self' https: wss:; frame-src 'self' https:;";
 
+const CSP_REPORT_ONLY = DEFAULT_CSP;
+
 const nextConfig: NextConfig = {
   async headers() {
     return [
@@ -37,7 +39,7 @@ const nextConfig: NextConfig = {
         // Everything else: block framing (clickjacking protection).
         source: '/((?!embed).*)',
         headers: [
-          { key: 'Content-Security-Policy', value: DEFAULT_CSP },
+          { key: 'Content-Security-Policy-Report-Only', value: CSP_REPORT_ONLY },
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           ...SECURITY_HEADERS,
         ],
