@@ -26,7 +26,8 @@ DECLARE
     'grant_app_role', 'grant_app_role_by_email', 'revoke_app_role', 'revoke_app_role_by_email',
     'list_app_admins', 'publish_poll', 'archive_poll',
     'create_app_changelog_entry', 'delete_app_changelog_entry',
-    'create_app_roadmap_item', 'delete_app_roadmap_item', 'set_app_roadmap_item_status',
+    'create_app_roadmap_item', 'update_app_roadmap_item', 'delete_app_roadmap_item',
+    'set_app_roadmap_item_status',
     'set_app_suggestion_status', 'n8n_upsert_issue_ai_summary', 'n8n_save_document_embedding',
     'apply_verified_fylke_claim'
   ];

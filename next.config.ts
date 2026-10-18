@@ -1,5 +1,26 @@
 import type {NextConfig} from 'next';
 
+const SECURITY_HEADERS = [
+  {
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains; preload',
+  },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  {
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=(), payment=()',
+  },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+] as const;
+
+const DEFAULT_CSP =
+  "default-src 'self'; base-uri 'self'; form-action 'self'; " +
+  "frame-ancestors 'self'; object-src 'none'; " +
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; " +
+  "style-src 'self' 'unsafe-inline' https:; " +
+  "img-src 'self' data: blob: https:; font-src 'self' data: https:; " +
+  "connect-src 'self' https: wss:; frame-src 'self' https:;";
+
 const nextConfig: NextConfig = {
   async headers() {
     return [
@@ -7,14 +28,18 @@ const nextConfig: NextConfig = {
         // Embeddable widget: open to all hosts (the content is public and
         // votes cannot be cast inside the iframe).
         source: '/embed/:path*',
-        headers: [{ key: 'Content-Security-Policy', value: "frame-ancestors *" }],
+        headers: [
+          { key: 'Content-Security-Policy', value: 'frame-ancestors *' },
+          ...SECURITY_HEADERS,
+        ],
       },
       {
         // Everything else: block framing (clickjacking protection).
         source: '/((?!embed).*)',
         headers: [
-          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+          { key: 'Content-Security-Policy', value: DEFAULT_CSP },
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          ...SECURITY_HEADERS,
         ],
       },
     ];
