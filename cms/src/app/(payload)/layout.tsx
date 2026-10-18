@@ -5,12 +5,14 @@ import type { ServerFunctionClient } from 'payload';
 import config from '@payload-config';
 import { importMap } from './admin/importMap';
 
-const serverFunction: ServerFunctionClient = (clientArgs) =>
-  handleServerFunctions({
+const serverFunction: ServerFunctionClient = async function (args) {
+  'use server';
+  return handleServerFunctions({
+    ...args,
     config,
     importMap,
-    ...clientArgs,
   });
+};
 
 type Args = {
   children: React.ReactNode;
