@@ -39,7 +39,7 @@ jobs:
         with:
           version: latest
       - run: supabase db start
-      - name: Sikkerhetsvakt (prod-lignende: uten 140000/160000, drift-tabeller droppet før 150000)
+      - name: Sikkerhetsvakt prod-lignende uten 140000 og 160000
         run: |
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -c \
             "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO postgres, anon, authenticated, service_role;"
