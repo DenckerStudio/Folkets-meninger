@@ -12,6 +12,7 @@ import {
 import { fetchCentralQueryEmbedding } from '@/lib/chat/query-embed';
 import {
   applyChunkExcerptsForChat,
+  applyTopicWideChunkExcerpts,
   normalizeChunkText,
 } from '@/lib/chat/chunk-excerpt';
 import {
@@ -472,10 +473,15 @@ async function searchChunksLexical(
     .slice(0, maxChunks);
 }
 
+type SearchChunksOptions = {
+  /** When false, return merged full text (caller applies excerpt budget). */
+  applyExcerpts?: boolean;
+};
+
 /**
- * Chunks for one sak. Starts from lexical ranking, then, when a query vectorizer is
- * available, prepends semantically-ranked chunks and de-duplicates. A failing or
- * unavailable vector search is swallowed so lexical results always survive.
+ * Chunks for one sak: hybrid RPC when available, else legacy lexical scan; optional
+ * BYOK Ollama semantic hits prepended via `mergeChunks`. Excerpt budgeting runs
+ * last unless `applyExcerpts` is false (topic context shares one budget across saker).
  */
 async function searchChunks(
   supabase: ChatRagClient,
@@ -483,13 +489,18 @@ async function searchChunks(
   query: string,
   vectorize?: QueryVectorizer | null,
   maxChunks: number = MAX_CHUNKS,
+  options: SearchChunksOptions = {},
 ): Promise<ChatDocumentChunk[]> {
+  const applyExcerpts = options.applyExcerpts !== false;
+  const finish = (chunks: ChatDocumentChunk[]) =>
+    applyExcerpts ? applyChunkExcerptsForChat(chunks, query) : chunks;
+
   const hybrid = await searchChunksHybrid(supabase, issue, query, maxChunks);
   const primary = await primaryChunksFromHybridAttempt(hybrid, () =>
     searchChunksLexical(supabase, issue, query, maxChunks),
   );
 
-  if (!vectorize) return applyChunkExcerptsForChat(primary, query);
+  if (!vectorize) return finish(primary);
 
   const semantic = await searchChunksByVector(
     asVectorClient(supabase),
@@ -498,7 +509,7 @@ async function searchChunks(
     vectorize,
     maxChunks,
   );
-  if (!semantic || semantic.length === 0) return applyChunkExcerptsForChat(primary, query);
+  if (!semantic || semantic.length === 0) return finish(primary);
 
   // nomic (768-dim) path — unchanged until embedding_v2 is populated for all users.
   const provenance = await loadChunkProvenance(
@@ -519,7 +530,7 @@ async function searchChunks(
     maxChunks,
   );
 
-  return applyChunkExcerptsForChat(merged, query);
+  return finish(merged);
 }
 
 /** Fetch document title/kind for a set of document ids in one query. */
@@ -666,7 +677,9 @@ export async function retrieveTopicContext(args: {
   const saker = await Promise.all(
     hits.map(async (issue) => {
       const [chunks, summaryText] = await Promise.all([
-        searchChunks(supabase, issue, query, args.vectorize, MAX_TOPIC_CHUNKS),
+        searchChunks(supabase, issue, query, args.vectorize, MAX_TOPIC_CHUNKS, {
+          applyExcerpts: false,
+        }),
         loadAiSummaryText(supabase, issue.id),
       ]);
       return {
@@ -677,10 +690,19 @@ export async function retrieveTopicContext(args: {
     }),
   );
 
-  const hasChunks = saker.some((sak) => sak.chunks.length > 0);
+  const excerptedBySak = applyTopicWideChunkExcerpts(
+    saker.map((sak) => sak.chunks),
+    query,
+  );
+  const sakerWithBudget = saker.map((sak, index) => ({
+    ...sak,
+    chunks: excerptedBySak[index] ?? [],
+  }));
+
+  const hasChunks = sakerWithBudget.some((sak) => sak.chunks.length > 0);
   return {
     query,
-    saker,
+    saker: sakerWithBudget,
     note: hasChunks
       ? null
       : 'Ingen dokumentutdrag er indeksert for disse sakene ennå. Bruk tittel/sammendrag og et kildesøk ved behov.',

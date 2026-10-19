@@ -27,6 +27,20 @@ assert.deepEqual(
   chatSourceHref({ ...base, n: 2, kind: 'dokument', issueId: '200365', documentId: 'DOK 8/314' }),
   { href: '/dashboard/sak/200365?dokument=DOK%208%2F314#dokumenter', external: false },
 );
+assert.deepEqual(
+  chatSourceHref({
+    ...base,
+    n: 9,
+    kind: 'dokument',
+    issueId: '200365',
+    documentId: 'prop-123',
+    url: 'https://www.stortinget.no/no/Saker-og-publikasjoner/Publikasjoner/Innstillinger/',
+  }),
+  {
+    href: 'https://www.stortinget.no/no/Saker-og-publikasjoner/Publikasjoner/Innstillinger/',
+    external: true,
+  },
+);
 assert.deepEqual(chatSourceHref({ ...base, n: 3, kind: 'høring', hearingId: '10005945' }), {
   href: '/dashboard/horinger/10005945',
   external: false,

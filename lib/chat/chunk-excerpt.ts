@@ -10,6 +10,15 @@ export function normalizeChunkText(text: string): string {
   return text.replace(/\r\n/g, '\n').trim();
 }
 
+/** UI-only: collapse blank lines so line-clamp cards show more substance. */
+export function formatChunkExcerptForDisplay(text: string): string {
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/^\n+/, '')
+    .replace(/\n{2,}/g, '\n')
+    .trimEnd();
+}
+
 function queryTerms(query: string): string[] {
   const needle = query.toLowerCase().trim();
   if (!needle) return [];
@@ -83,6 +92,10 @@ export type RankedChunkExcerpt = {
   chunkIndex?: number;
 };
 
+export type SakIndexedChunk<T extends RankedChunkExcerpt = RankedChunkExcerpt> = T & {
+  sakIndex: number;
+};
+
 /**
  * Apply per-excerpt caps and a total budget in **incoming order** (e.g. semantic
  * before hybrid/lexical from `mergeChunks`). Do not re-sort by `rank` — semantic
@@ -112,4 +125,29 @@ export function applyChunkExcerptsForChat<T extends RankedChunkExcerpt>(
   }
 
   return out;
+}
+
+/**
+ * One shared excerpt budget across several saker (topic context). Preserves sak
+ * hit order: chunks from sak 0, then sak 1, …
+ */
+export function applyTopicWideChunkExcerpts<T extends RankedChunkExcerpt>(
+  sakerChunks: ReadonlyArray<readonly T[]>,
+  query: string,
+  totalBudget: number = CHAT_EXCERPT_TOTAL_BUDGET_CHARS,
+): T[][] {
+  const flat: SakIndexedChunk<T>[] = [];
+  sakerChunks.forEach((chunks, sakIndex) => {
+    for (const chunk of chunks) {
+      flat.push({ ...chunk, sakIndex });
+    }
+  });
+
+  const excerpted = applyChunkExcerptsForChat(flat, query, { totalBudget });
+  const grouped = sakerChunks.map(() => [] as T[]);
+  for (const row of excerpted) {
+    const { sakIndex, ...chunk } = row as SakIndexedChunk<T>;
+    grouped[sakIndex]?.push(chunk as unknown as T);
+  }
+  return grouped;
 }
