@@ -1,7 +1,9 @@
 import { execSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { buildSearchTerms } from '@/lib/chat/sak-search';
 import { createPool, databaseForVariant, type EvalVariant } from './lib/db';
+import { measureEmbedLatencies } from './lib/embed-latency';
 import { retrieveForQuestion } from './lib/retrieval';
 
 type Question = {
@@ -64,7 +66,8 @@ async function issueSearch(
 
   if (variant === 'baseline') return ilike();
 
-  const { rows } = await pool.query(`SELECT * FROM search_issues_fts($1, NULL::text[], 8)`, [query]);
+  const terms = buildSearchTerms(query);
+  const { rows } = await pool.query(`SELECT * FROM search_issues_fts($1, $2::text[], 8)`, [query, terms]);
   const fts = {
     ids: rows.map((r) => String(r.id)),
     titles: rows.map((r) => String(r.title ?? '')),
@@ -84,6 +87,7 @@ async function runLabel(label: RunLabel, variant: EvalVariant): Promise<Record<s
   let chunkEval = 0;
   let falseConfidence = 0;
   let finnesIkke = 0;
+  let finnesIkkeCorrect = 0;
   let issueSearchHits = 0;
   let issueSearchTotal = 0;
   let prefixHits = 0;
@@ -132,6 +136,7 @@ async function runLabel(label: RunLabel, variant: EvalVariant): Promise<Record<s
       finnesIkke += 1;
       const confident = excerpts.length > 0;
       if (confident) falseConfidence += 1;
+      else finnesIkkeCorrect += 1;
       perQuestion.push({ id: q.id, kind: q.kind, excerpts: excerpts.length, confident });
       continue;
     }
@@ -188,6 +193,14 @@ async function runLabel(label: RunLabel, variant: EvalVariant): Promise<Record<s
   const p50 = latencies[Math.floor(latencies.length * 0.5)] ?? 0;
   const p95 = latencies[Math.floor(latencies.length * 0.95)] ?? 0;
 
+  let embedLatency: Record<string, number> = {};
+  if (variant === 'stack' && process.env.RAG_EVAL_MEASURE_EMBED !== '0') {
+    const embedQueries = questions
+      .filter((q) => q.kind === 'sak_chunk' || q.kind === 'hearing_chunk')
+      .map((q) => q.query);
+    embedLatency = await measureEmbedLatencies(embedQueries);
+  }
+
   await pool.end();
 
   return {
@@ -210,8 +223,10 @@ async function runLabel(label: RunLabel, variant: EvalVariant): Promise<Record<s
     issueSearchHitRate: issueSearchTotal ? issueSearchHits / issueSearchTotal : 0,
     prefixHitRate: prefixTotal ? prefixHits / prefixTotal : 0,
     finnesIkkeFalseConfidenceRate: finnesIkke ? falseConfidence / finnesIkke : 0,
+    finnesIkkeCorrectRejectionRate: finnesIkke ? finnesIkkeCorrect / finnesIkke : 0,
     latencyMsP50: p50,
     latencyMsP95: p95,
+    ...embedLatency,
     judge: process.env.JUDGE_URL ? 'configured' : 'pending (LAN)',
     perQuestion,
   };
@@ -219,6 +234,7 @@ async function runLabel(label: RunLabel, variant: EvalVariant): Promise<Record<s
 
 async function main(): Promise<void> {
   const mode = process.env.RAG_EVAL_RUN ?? 'all';
+  const evalLabel = process.env.RAG_EVAL_LABEL ?? null;
   const outDir = join(process.cwd(), 'evals/rag/results');
   mkdirSync(outDir, { recursive: true });
 
@@ -243,16 +259,23 @@ async function main(): Promise<void> {
     }
     console.log(`[eval] running ${label}…`);
     const result = await runLabel(label, variant);
+    if (evalLabel) (result as Record<string, unknown>).roundLabel = evalLabel;
     summary.push(result);
-    writeFileSync(join(outDir, `${label}.json`), JSON.stringify(result, null, 2));
+    const fileName = evalLabel ? `${evalLabel}.json` : `${label}.json`;
+    writeFileSync(join(outDir, fileName), JSON.stringify(result, null, 2));
   }
 
   const md = [
-    '| Run | R@5 | R@10 | MRR | Excerpt hit | Topic excerpt | Topic fair sak | Issue search | Prefix | Finnes-ikke FP | p50 | p95 | Judge |',
+    '| Run | R@5 | R@10 | MRR | Excerpt hit | Topic excerpt | Topic fair sak | Issue search | Prefix | Finnes-ikke reject | p50 | p95 | Judge |',
     '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |',
     ...summary.map((r) => {
       const row = r as Record<string, number | string>;
-      return `| ${row.label} | ${(Number(row.recallAt5) * 100).toFixed(1)}% | ${(Number(row.recallAt10) * 100).toFixed(1)}% | ${Number(row.mrr).toFixed(3)} | ${(Number(row.excerptFactRate) * 100).toFixed(1)}% | ${(Number(row.topicExcerptFactRate) * 100).toFixed(1)}% | ${(Number(row.topicFairSakCoverage) * 100).toFixed(1)}% | ${(Number(row.issueSearchHitRate) * 100).toFixed(1)}% | ${(Number(row.prefixHitRate) * 100).toFixed(1)}% | ${(Number(row.finnesIkkeFalseConfidenceRate) * 100).toFixed(1)}% | ${Number(row.latencyMsP50).toFixed(0)} | ${Number(row.latencyMsP95).toFixed(0)} | ${row.judge} |`;
+      const name = (row.roundLabel as string) ?? row.label;
+      const reject =
+        row.finnesIkkeCorrectRejectionRate !== undefined
+          ? (Number(row.finnesIkkeCorrectRejectionRate) * 100).toFixed(1)
+          : ((1 - Number(row.finnesIkkeFalseConfidenceRate)) * 100).toFixed(1);
+      return `| ${name} | ${(Number(row.recallAt5) * 100).toFixed(1)}% | ${(Number(row.recallAt10) * 100).toFixed(1)}% | ${Number(row.mrr).toFixed(3)} | ${(Number(row.excerptFactRate) * 100).toFixed(1)}% | ${(Number(row.topicExcerptFactRate) * 100).toFixed(1)}% | ${(Number(row.topicFairSakCoverage) * 100).toFixed(1)}% | ${(Number(row.issueSearchHitRate) * 100).toFixed(1)}% | ${(Number(row.prefixHitRate) * 100).toFixed(1)}% | ${reject}% | ${Number(row.latencyMsP50).toFixed(0)} | ${Number(row.latencyMsP95).toFixed(0)} | ${row.judge} |`;
     }),
   ].join('\n');
 

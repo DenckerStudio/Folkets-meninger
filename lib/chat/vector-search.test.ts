@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import {
+  BYOK_OLLAMA_VECTOR_TIMEOUT_MS_DEFAULT,
   OLLAMA_VECTOR_TIMEOUT_MS,
   VECTOR_DIMENSIONS,
   createOllamaVectorizer,
   ollamaVectorUrl,
   readVector,
+  resolveByokOllamaVectorTimeoutMs,
   searchChunksByVector,
   type VectorSearchClient,
 } from './vector-search';
@@ -47,6 +49,16 @@ async function main() {
   }) as unknown as typeof fetch;
 
   assert.equal(OLLAMA_VECTOR_TIMEOUT_MS, 800);
+  assert.equal(BYOK_OLLAMA_VECTOR_TIMEOUT_MS_DEFAULT, 3000);
+  const prevByok = process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_MS;
+  delete process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_MS;
+  delete process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_ADAPTIVE;
+  assert.equal(resolveByokOllamaVectorTimeoutMs(0), 3000);
+  process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_ADAPTIVE = '1';
+  assert.ok(resolveByokOllamaVectorTimeoutMs(200) >= 800);
+  if (prevByok) process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_MS = prevByok;
+  else delete process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_MS;
+  delete process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_ADAPTIVE;
 
   const vectorizer = createOllamaVectorizer(vectorCredential(), { fetchImpl: okFetch });
   assert.ok(vectorizer);

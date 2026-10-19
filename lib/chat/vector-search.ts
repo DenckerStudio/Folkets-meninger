@@ -27,8 +27,30 @@ export const VECTOR_V2_DIMENSIONS = 1024;
 /** Ollama model that produced the stored 768-dim vectors (n8n + Ollama). */
 export const OLLAMA_VECTOR_MODEL = 'nomic-embed-text';
 
-/** Cap BYOK Ollama embed latency so a down server cannot block chat for seconds. */
+/** Minimum / legacy BYOK cap (800 ms). Central {@link fetchCentralQueryEmbedding} keeps its own timeout. */
 export const OLLAMA_VECTOR_TIMEOUT_MS = 800;
+
+/** Default BYOK Ollama embed timeout when {@link BYOK_OLLAMA_VECTOR_TIMEOUT_MS} is unset (~3 s). */
+export const BYOK_OLLAMA_VECTOR_TIMEOUT_MS_DEFAULT = 3000;
+
+/**
+ * BYOK-only embed timeout (separate from `EMBED_QUERY_TIMEOUT_MS` / central bge-m3).
+ * Optional adaptive mode adds up to ~50 ms per 40 query chars, capped by max.
+ */
+export function resolveByokOllamaVectorTimeoutMs(queryLength = 0): number {
+  const raw = process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_MS;
+  const configured = raw ? Number(raw) : BYOK_OLLAMA_VECTOR_TIMEOUT_MS_DEFAULT;
+  const maxMs = Number.isFinite(configured) ? configured : BYOK_OLLAMA_VECTOR_TIMEOUT_MS_DEFAULT;
+  const adaptive =
+    process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_ADAPTIVE === '1' ||
+    process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_ADAPTIVE === 'true';
+  if (!adaptive) return maxMs;
+  const minRaw = process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_MS_MIN ?? String(OLLAMA_VECTOR_TIMEOUT_MS);
+  const minMs = Number(minRaw);
+  const floor = Number.isFinite(minMs) ? minMs : OLLAMA_VECTOR_TIMEOUT_MS;
+  const extra = Math.min(maxMs - floor, Math.floor(queryLength / 40) * 50);
+  return Math.min(maxMs, floor + Math.max(0, extra));
+}
 const MAX_QUERY_CHARS = 500;
 export type QueryVectorizer = (query: string) => Promise<number[] | null>;
 
@@ -75,11 +97,10 @@ export function createOllamaVectorizer(
 
   const model = options.model?.trim() || OLLAMA_VECTOR_MODEL;
   const fetchImpl = options.fetchImpl ?? fetch;
-  const timeoutMs = options.timeoutMs ?? OLLAMA_VECTOR_TIMEOUT_MS;
-
   return async (query: string) => {
     const prompt = (query ?? '').trim().slice(0, MAX_QUERY_CHARS);
     if (!prompt) return null;
+    const timeoutMs = options.timeoutMs ?? resolveByokOllamaVectorTimeoutMs(prompt.length);
     try {
       const response = await fetchImpl(url, {
         method: 'POST',

@@ -37,6 +37,9 @@ JUDGE_URL=http://192.168.50.154:11434 JUDGE_MODEL=gemma4:26b \
 | `JUDGE_URL` / `JUDGE_MODEL` | LAN judge (`judge.ts`) |
 | `RAG_EVAL_EXCERPT_PER_CHUNK` / `RAG_EVAL_EXCERPT_TOTAL` | Excerpt caps (#177) |
 | `RAG_EVAL_CHUNK_CLIP` | Hybrid clip (#179, default 1400) |
+| `RAG_EVAL_MEASURE_EMBED` | Set `0` to skip central vs BYOK embed latency micro-benchmark on stack runs |
+| `EMBED_QUERY_TIMEOUT_MS` | Central bge-m3 embed timeout (default 800 ms) |
+| `BYOK_OLLAMA_VECTOR_TIMEOUT_MS` | BYOK nomic embed timeout (default 3000 ms); harness also reports p95 @ 800 ms vs 3 s |
 
 ## Schema note
 

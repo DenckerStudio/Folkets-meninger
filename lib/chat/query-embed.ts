@@ -3,7 +3,14 @@ import { VECTOR_V2_DIMENSIONS } from '@/lib/chat/vector-search';
 /** Default Ollama model on the central CPU embed service (P5). */
 export const DEFAULT_EMBED_QUERY_MODEL = 'bge-m3';
 
-const DEFAULT_TIMEOUT_MS = 800;
+function centralEmbedTimeoutMs(): number {
+  const raw = process.env.EMBED_QUERY_TIMEOUT_MS;
+  if (raw) {
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return 800;
+}
 const MAX_QUERY_CHARS = 500;
 
 let loggedCentralEmbedFailure = false;
@@ -78,7 +85,7 @@ export async function fetchCentralQueryEmbedding(
 
   const model = (options.model ?? process.env.EMBED_QUERY_MODEL ?? DEFAULT_EMBED_QUERY_MODEL).trim();
   const fetchImpl = options.fetchImpl ?? fetch;
-  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const timeoutMs = options.timeoutMs ?? centralEmbedTimeoutMs();
 
   try {
     const response = await fetchImpl(url, {
