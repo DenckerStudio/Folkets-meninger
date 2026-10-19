@@ -41,6 +41,31 @@ assert.deepEqual(
     external: false,
   },
 );
+// Hearing RAG excerpts cite kind dokument with hearingId only (no sak) — stay in-app.
+assert.deepEqual(
+  chatSourceHref({
+    ...base,
+    n: 11,
+    kind: 'dokument',
+    issueId: null,
+    documentId: 'horingsprogram',
+    hearingId: '10005945',
+    url: null,
+  }),
+  { href: '/dashboard/horinger/10005945', external: false },
+);
+assert.deepEqual(
+  chatSourceHref({
+    ...base,
+    n: 12,
+    kind: 'dokument',
+    issueId: null,
+    documentId: 'horingsprogram',
+    hearingId: '10005945',
+    url: 'https://www.stortinget.no/no/Hva-skjer-pa-Stortinget/Horing/',
+  }),
+  { href: '/dashboard/horinger/10005945', external: false },
+);
 assert.deepEqual(
   chatSourceHref({
     ...base,
