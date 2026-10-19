@@ -213,6 +213,7 @@ export default function AdminOppfangetClient({
             onChange={(e) => setDateFrom(e.target.value)}
             className="w-full rounded-lg border border-border bg-background px-3 py-2"
           />
+          <span className="text-[11px] text-muted-foreground">Format: dd.mm.åååå</span>
         </label>
         <label className="space-y-1 text-sm">
           <span className="text-muted-foreground">Til dato</span>
@@ -223,6 +224,7 @@ export default function AdminOppfangetClient({
             onChange={(e) => setDateTo(e.target.value)}
             className="w-full rounded-lg border border-border bg-background px-3 py-2"
           />
+          <span className="text-[11px] text-muted-foreground">Format: dd.mm.åååå</span>
         </label>
         <label className="space-y-1 text-sm sm:col-span-2 lg:col-span-1">
           <span className="text-muted-foreground">Søk</span>

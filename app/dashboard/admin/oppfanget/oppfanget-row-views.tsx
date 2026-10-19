@@ -127,18 +127,18 @@ export function OppfangetDesktopTable({ rows }: { rows: OppfangetRow[] }) {
       <p className="mb-2 text-xs text-muted-foreground">
         Tabellen kan rulleres horisontalt dersom vinduet er smalt.
       </p>
-      <div className="overflow-x-auto rounded-xl border border-border shadow-[inset_-1rem_0_0.75rem_-0.75rem_hsl(var(--muted))]">
-        <table className="w-full table-fixed text-left text-xs">
-          <thead className="border-b border-border bg-muted/40 text-[11px] uppercase tracking-wide text-muted-foreground">
+      <div className="max-w-full overflow-x-auto rounded-xl border border-border">
+        <table className="w-full min-w-0 table-fixed text-left text-[11px] leading-snug">
+          <thead className="border-b border-border bg-muted/40 text-[10px] uppercase tracking-wide text-muted-foreground">
             <tr>
-              <th className="w-[22%] px-2 py-2 font-medium">Tittel</th>
-              <th className="w-[7%] px-2 py-2 font-medium">Type</th>
-              <th className="w-[11%] px-2 py-2 font-medium">Status</th>
-              <th className="w-[14%] px-2 py-2 font-medium">Kilder</th>
-              <th className="w-[13%] px-2 py-2 font-medium">Dato</th>
-              <th className="w-[14%] px-2 py-2 font-medium">Skala</th>
-              <th className="w-[12%] px-2 py-2 font-medium">Sensitivt tema</th>
-              <th className="w-[7%] px-2 py-2 font-medium">Lenke</th>
+              <th className="w-[24%] px-1.5 py-1.5 font-medium">Tittel</th>
+              <th className="w-[7%] px-1.5 py-1.5 font-medium">Type</th>
+              <th className="w-[10%] px-1.5 py-1.5 font-medium">Status</th>
+              <th className="w-[13%] px-1.5 py-1.5 font-medium">Kilder</th>
+              <th className="w-[14%] px-1.5 py-1.5 font-medium">Dato</th>
+              <th className="w-[14%] px-1.5 py-1.5 font-medium">Skala</th>
+              <th className="w-[12%] px-1.5 py-1.5 font-medium">Sensitivt tema</th>
+              <th className="w-[6%] px-1.5 py-1.5 font-medium">Lenke</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
