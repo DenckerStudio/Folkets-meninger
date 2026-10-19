@@ -78,20 +78,22 @@ function OppfangetPageHeader({ previewMock }: { previewMock?: boolean }) {
 
 export default function AdminOppfangetClient({
   initialData = null,
+  initialFilters,
 }: {
   initialData?: OppfangetListResponse | null;
+  initialFilters?: OppfangetFilterInput;
 }) {
   const [data, setData] = useState<OppfangetListResponse | null>(initialData);
   const [error, setError] = useState('');
   const [pending, startTransition] = useTransition();
   const skipInitialFetch = useRef(Boolean(initialData));
 
-  const [type, setType] = useState<'' | OppfangetDisplayType>('');
-  const [status, setStatus] = useState<'' | OppfangetDisplayStatus>('');
-  const [source, setSource] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [q, setQ] = useState('');
+  const [type, setType] = useState<'' | OppfangetDisplayType>(initialFilters?.type || '');
+  const [status, setStatus] = useState<'' | OppfangetDisplayStatus>(initialFilters?.status || '');
+  const [source, setSource] = useState(initialFilters?.source || '');
+  const [dateFrom, setDateFrom] = useState(initialFilters?.dateFrom || '');
+  const [dateTo, setDateTo] = useState(initialFilters?.dateTo || '');
+  const [q, setQ] = useState(initialFilters?.q || '');
 
   const mockMode = Boolean(data?.previewMock ?? initialData?.previewMock);
 

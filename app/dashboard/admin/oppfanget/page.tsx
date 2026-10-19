@@ -15,7 +15,8 @@ export default async function AdminOppfangetPage({ searchParams }: PageProps) {
 
   const params = await searchParams;
   const preview = typeof params.preview === 'string' ? params.preview : undefined;
-  const initialData = await listOppfangetForAdmin(parseOppfangetFilters(params), preview);
+  const filters = parseOppfangetFilters(params);
+  const initialData = await listOppfangetForAdmin(filters, preview);
 
-  return <AdminOppfangetClient initialData={initialData} />;
+  return <AdminOppfangetClient initialData={initialData} initialFilters={filters} />;
 }
