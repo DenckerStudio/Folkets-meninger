@@ -46,6 +46,7 @@ ALTER TABLE public.hearing_documents
   ADD COLUMN IF NOT EXISTS document_kind text,
   ADD COLUMN IF NOT EXISTS pdf_url text,
   ADD COLUMN IF NOT EXISTS content_markdown text,
+  ADD COLUMN IF NOT EXISTS chunker text,
   ADD COLUMN IF NOT EXISTS page_count int,
   ADD COLUMN IF NOT EXISTS ingest_status text NOT NULL DEFAULT 'pending',
   ADD COLUMN IF NOT EXISTS chunks_status text NOT NULL DEFAULT 'pending',
@@ -75,9 +76,9 @@ DECLARE
   v_raw text;
   v_num int;
 BEGIN
-  IF p_doc ? 'page_count' THEN
-    v_raw := nullif(btrim(coalesce(p_doc->>'page_count', '')), '');
-    IF v_raw IS NULL OR v_raw !~ '^-?\d+$' THEN
+  IF p_doc ? 'page_count' AND p_doc->>'page_count' IS NOT NULL THEN
+    v_raw := btrim(p_doc->>'page_count');
+    IF v_raw = '' OR v_raw !~ '^[0-9]{1,6}$' THEN
       RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'page_count');
     END IF;
     v_num := v_raw::int;
@@ -124,11 +125,11 @@ BEGIN
     END IF;
 
     v_raw := nullif(btrim(v_chunk->>'chunk_index'), '');
-    IF v_raw IS NULL OR v_raw !~ '^-?\d+$' THEN
+    IF v_raw IS NULL OR v_raw !~ '^[0-9]{1,4}$' THEN
       RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'chunk_index');
     END IF;
     v_idx := v_raw::int;
-    IF v_idx < 0 OR v_idx >= 2000 THEN
+    IF v_idx >= 2000 THEN
       RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'chunk_index');
     END IF;
 
@@ -256,9 +257,13 @@ BEGIN
   IF p_doc ? 'content_markdown' THEN
     v_content_markdown := nullif(p_doc->>'content_markdown', '');
     -- Match lib/document-chunking.ts documentContentHash (CRLF → LF, trim, leading BOM).
-    v_normalized_md := regexp_replace(coalesce(v_content_markdown, ''), E'\\r\\n', E'\\n', 'g');
-    v_normalized_md := regexp_replace(v_normalized_md, '^[[:space:]]+|[[:space:]]+$', '', 'g');
-    v_normalized_md := regexp_replace(v_normalized_md, '^' || chr(65279) || '+', '');
+    v_normalized_md := regexp_replace(coalesce(v_content_markdown, ''), E'\r\n', E'\n', 'g');
+    v_normalized_md := regexp_replace(
+      v_normalized_md,
+      '^[[:space:]' || chr(65279) || ']+|[[:space:]' || chr(65279) || ']+$',
+      '',
+      'g'
+    );
     IF v_normalized_md <> '' THEN
       v_computed_hash := encode(sha256(convert_to(v_normalized_md, 'UTF8')), 'hex');
       IF v_content_hash IS NOT NULL AND v_content_hash <> v_computed_hash THEN
@@ -497,15 +502,16 @@ BEGIN
     RETURN jsonb_build_object('status', 'skipped_no_issue');
   END IF;
 
-  SELECT d.content_hash, d.id
-  INTO v_existing_hash, v_hearing_doc_id
+  SELECT d.content_hash, d.id, d.chunker
+  INTO v_existing_hash, v_hearing_doc_id, v_existing_chunker
   FROM public.hearing_documents d
   WHERE d.hearing_id = v_hearing_id
     AND d.external_key = v_document_id;
 
   IF v_content_hash IS NOT NULL
     AND v_existing_hash IS NOT NULL
-    AND v_content_hash = v_existing_hash THEN
+    AND v_content_hash = v_existing_hash
+    AND coalesce(nullif(btrim(v_existing_chunker), ''), 'md-sections-v1') = v_incoming_chunker THEN
     RETURN jsonb_build_object(
       'status', 'unchanged',
       'document_id', v_document_id,
@@ -524,6 +530,7 @@ BEGIN
     markdown,
     content_markdown,
     content_hash,
+    chunker,
     page_count,
     ingest_status,
     chunks_status,
@@ -542,7 +549,11 @@ BEGIN
     v_content_markdown,
     v_content_markdown,
     v_content_hash,
-    CASE WHEN p_doc ? 'page_count' THEN (p_doc->>'page_count')::int ELSE NULL END,
+    v_incoming_chunker,
+    CASE
+      WHEN p_doc ? 'page_count' AND p_doc->>'page_count' IS NOT NULL THEN (p_doc->>'page_count')::int
+      ELSE NULL
+    END,
     coalesce(v_ingest_status, 'pending'),
     'pending',
     'converted',
@@ -589,7 +600,22 @@ BEGIN
     markdown = CASE WHEN p_doc ? 'content_markdown' THEN v_content_markdown ELSE public.hearing_documents.markdown END,
     content_markdown = CASE WHEN p_doc ? 'content_markdown' THEN v_content_markdown ELSE public.hearing_documents.content_markdown END,
     content_hash = coalesce(v_content_hash, public.hearing_documents.content_hash),
-    page_count = CASE WHEN p_doc ? 'page_count' THEN (p_doc->>'page_count')::int ELSE public.hearing_documents.page_count END,
+    chunker = CASE
+      WHEN p_doc ? 'chunker'
+        THEN coalesce(
+          nullif(btrim(coalesce(p_doc->>'chunker', '')), ''),
+          public.hearing_documents.chunker,
+          'md-sections-v1'
+        )
+      ELSE public.hearing_documents.chunker
+    END,
+    page_count = CASE
+      WHEN p_doc ? 'page_count' AND p_doc->>'page_count' IS NOT NULL
+        THEN (p_doc->>'page_count')::int
+      WHEN p_doc ? 'page_count'
+        THEN NULL
+      ELSE public.hearing_documents.page_count
+    END,
     ingest_status = coalesce(v_ingest_status, public.hearing_documents.ingest_status),
     chunks_status = 'pending',
     status = 'converted',

@@ -46,6 +46,7 @@ CREATE TABLE public.hearing_documents (
   markdown text,
   content_markdown text,
   content_hash text,
+  chunker text,
   page_count int,
   ingest_status text NOT NULL DEFAULT 'pending',
   chunks_status text NOT NULL DEFAULT 'pending',

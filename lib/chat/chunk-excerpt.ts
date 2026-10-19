@@ -10,16 +10,18 @@ export function normalizeChunkText(text: string): string {
   return text.replace(/\r\n/g, '\n').trim();
 }
 
-const EMPHASIS_INNER_RE = /^\S(?:.*\S)?$/;
-
 function stripEmphasisMarkers(segment: string): string {
   return segment
-    .replace(/\*\*(\S(?:.*?\S)?)\*\*/g, (match, inner: string) =>
-      EMPHASIS_INNER_RE.test(inner) && !/^\d+$/.test(inner) ? inner : match,
-    )
-    .replace(/(?<!\*)\*(\S(?:.*?\S)?)\*(?!\*)/g, (match, inner: string) =>
-      EMPHASIS_INNER_RE.test(inner) && !/^\d+$/.test(inner) ? inner : match,
-    );
+    .replace(/\*\*([^*]+)\*\*/g, (match, inner: string) => {
+      const trimmed = inner.trim();
+      if (!trimmed || /\s/.test(inner) || /^\d+$/.test(trimmed)) return match;
+      return trimmed;
+    })
+    .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, (match, inner: string) => {
+      const trimmed = inner.trim();
+      if (!trimmed || /\s/.test(inner) || /^\d+$/.test(trimmed)) return match;
+      return trimmed;
+    });
 }
 
 function stripInlineMarkdown(line: string): string {

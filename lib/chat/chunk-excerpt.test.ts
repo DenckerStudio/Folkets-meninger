@@ -128,5 +128,6 @@ assert.doesNotMatch(cardOut, /<!--/);
 assert.match(cardOut, /Viktig og lenke/);
 assert.doesNotMatch(cardOut, /\*\*/);
 assert.equal(formatChunkExcerptForDisplay('Produkt 2*4*6 mm'), 'Produkt 2*4*6 mm');
+assert.equal(formatChunkExcerptForDisplay('a *b* c *d*'), 'a b c d');
 
 console.log('chat/chunk-excerpt.test.ts: ok');

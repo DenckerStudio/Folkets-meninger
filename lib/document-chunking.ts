@@ -594,6 +594,6 @@ export function buildDocumentChunkMetadata(args: {
 }
 
 export function documentContentHash(text: string): string {
-  const normalized = text.replace(/\r\n/g, '\n').trim().replace(/^\uFEFF+/, '');
+  const normalized = text.replace(/\r\n/g, '\n').trim().replace(/^[\uFEFF]+|[\uFEFF]+$/g, '');
   return hashContent(normalized);
 }

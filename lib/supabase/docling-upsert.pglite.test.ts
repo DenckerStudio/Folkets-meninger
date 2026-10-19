@@ -62,6 +62,58 @@ async function main(): Promise<void> {
     { chunk_index: 1, content: 'Avsnitt to.' },
   ];
 
+  const crlfMarkdown = 'Linje én\r\nLinje to';
+  const crlfHash = documentContentHash(crlfMarkdown);
+  const crlfResult = await upsert(
+    db,
+    'sak',
+    {
+      issue_id: 'sak-1',
+      document_id: 'doc-crlf',
+      title: 'CRLF',
+      content_markdown: crlfMarkdown,
+      content_hash: crlfHash,
+      chunker: 'md-sections-v1',
+    },
+    [{ chunk_index: 0, content: 'Linje én' }],
+  );
+  assert.notEqual(crlfResult.error, 'content_hash_mismatch');
+  assert.equal(crlfResult.status, 'upserted');
+
+  const bomMarkdown = 'Tittel med BOM\uFEFF på slutten';
+  const bomHash = documentContentHash(bomMarkdown);
+  const bomResult = await upsert(
+    db,
+    'sak',
+    {
+      issue_id: 'sak-1',
+      document_id: 'doc-bom',
+      title: 'BOM',
+      content_markdown: bomMarkdown,
+      content_hash: bomHash,
+      chunker: 'md-sections-v1',
+    },
+    [{ chunk_index: 0, content: 'BOM test' }],
+  );
+  assert.notEqual(bomResult.error, 'content_hash_mismatch');
+  assert.equal(bomResult.status, 'upserted');
+
+  const nullPageCount = await upsert(
+    db,
+    'sak',
+    {
+      issue_id: 'sak-1',
+      document_id: 'doc-null-pages',
+      title: 'Pages',
+      content_markdown: '# Ny',
+      content_hash: documentContentHash('# Ny'),
+      chunker: 'md-sections-v1',
+      page_count: null,
+    },
+    [{ chunk_index: 0, content: 'Ny' }],
+  );
+  assert.equal(nullPageCount.status, 'upserted');
+
   const first = await upsert(db, 'sak', sakDoc, sakChunks);
   assert.equal(first.status, 'upserted');
   assert.equal(first.chunks, 2);
@@ -120,6 +172,7 @@ async function main(): Promise<void> {
     document_kind: 'notat',
     content_markdown: hearingMarkdown,
     content_hash: hearingHash,
+    chunker: 'md-sections-v1',
   };
   const hearingChunks = [
     { chunk_index: 0, content: 'Del 1' },
