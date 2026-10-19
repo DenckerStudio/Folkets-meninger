@@ -120,6 +120,31 @@ export function significantTokens(
  * token was filtered out (e.g. "Hva er loven?"), so a short question still tries
  * something instead of silently returning nothing.
  */
+/**
+ * Normalized lexemes for prefix FTS (`term:* | …`). Keeps letters/numbers only.
+ */
+export function buildIssuePrefixTsqueryOperands(terms: readonly string[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const term of terms) {
+    const lexeme = term
+      .trim()
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, '');
+    if (lexeme.length < MIN_TERM_LENGTH || seen.has(lexeme)) continue;
+    seen.add(lexeme);
+    out.push(lexeme);
+  }
+  return out;
+}
+
+/** OR-joined prefix operands for `to_tsquery('norwegian', …)` in search_issues_fts. */
+export function formatIssuePrefixTsquery(terms: readonly string[]): string | null {
+  const operands = buildIssuePrefixTsqueryOperands(terms);
+  if (operands.length === 0) return null;
+  return operands.map((term) => `${term}:*`).join(' | ');
+}
+
 export function buildSearchTerms(
   query: string,
   maxTerms: number = MAX_SEARCH_TERMS,
