@@ -1,6 +1,10 @@
 import type { CollectionBeforeChangeHook } from 'payload';
 import { APIError } from 'payload';
-import { isAgent, isEditor, isReader } from '@/access/roles';
+import { isEditor, isReader } from '@/access/roles';
+import {
+  applyNonEditorDraftConstraints,
+  isNonEditorContentWriter,
+} from '@/hooks/nonEditorDraftEnforcement';
 
 export const agentDraftGuard: CollectionBeforeChangeHook = ({ data, req }) => {
   if (!req.user) return data;
@@ -9,13 +13,8 @@ export const agentDraftGuard: CollectionBeforeChangeHook = ({ data, req }) => {
     throw new APIError('Leser-nøkkel kan ikke opprette eller endre innlegg', 403);
   }
   if (isEditor(user)) return data;
-  if (!isAgent(user)) return data;
+  if (!isNonEditorContentWriter(req)) return data;
 
-  data._status = 'draft';
-  data.featured = false;
-  delete data.publishedAt;
-  if (data.review && typeof data.review === 'object') {
-    data.review = { ...data.review, state: 'ny' };
-  }
-  return data;
+  if (!data || typeof data !== 'object') return data;
+  return applyNonEditorDraftConstraints(data as Record<string, unknown>);
 };
