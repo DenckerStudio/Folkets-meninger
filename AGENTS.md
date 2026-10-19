@@ -1,353 +1,235 @@
-## Learned User Preferences
+# AGENTS.md — Folkets Meninger
 
-- Prefer minimal, focused fixes that unblock builds/CI.
-- When asked to commit/push, stage only intended changes and exclude unrelated artifacts.
-- Prefer working on informatively named branches with prefix `cursor/`.
-- Avoid user-visible mock/placeholder data; prefer honest empty/“coming soon” states.
-- Forum is removed from the product. System-generated Reels live under
- Utforsk (`/dashboard/utforsk`) as ja/nei/blank polls. Landing
- after login / `/dashboard` is `utforsk`.
- Primary nav: Folkets meninger / Utforsk / Høringer / Appens fremtid. Default Stortinget period is
-  `2025-2029`. Auth is email/password and Google OAuth via Supabase — do not
-  mention BankID, MinID, or electronic ID verification in user-facing copy.
-  Opt-in `activity_visibility` (`private`|`summary`|`full`). Admin via
-  `user_roles` + `is_admin()` (`lib/admin/gate.ts`). Plan/history:
-  `infra/coolify/README.md`, subagent `.cursor/agents/forum-removal-egress.md`.
+Agent-facing facts and rules. Keep it current; prefer short bullets. Details live in
+co-located READMEs (see [Documentation](#documentation)).
 
-## Learned Workspace Facts
+## Hard rules (read first)
 
-- Single Next.js App Router app (Next.js 15).
-- Auth and DB are Supabase (Postgres); app uses SSR cookies/middleware refresh patterns.
-- Stortinget data comes from `data.stortinget.no` (public API): saker,
-  publications, questions, and høringer.
-- AI summaries are produced externally via n8n + Ollama and stored in Supabase; the app
-  should not assume Gemini for current summary generation.
-- The repo expects validation via `npm run lint` and `npm run build`; no broad automated test suite assumed in workflows.
-- First-time env setup: copy `.env.example` to `.env.local` before `npm run dev` or `npm run build`.
-  For the Folkets Meninger test Supabase, prefer `npm run env:test` (writes `.env.local` from `.env.test`).
- Local Docker Supabase uses `supabase/config.toml` + `npm run supabase:start`.
-- Theme tokens live in `app/globals.css` (`background`/`foreground`/`card`/`muted`/`brand`). Prefer
- semantic classes (`bg-card`, `text-muted-foreground`, `border-border`, `text-brand`) over hard-coded
- gray/white so light and dark mode stay consistent.
+- **Nothing merges to `main` without Mathias' explicit yes.** Work on a branch
+  (`cursor/…`), open a PR to `main`, keep CI green. No force-push to `main`.
+- **Migrations are never auto-applied.** The Coolify Expert applies them manually,
+  and only after Mathias says yes. Never edit a migration that is already applied.
+  Write a new one.
+- **Never put secrets in code, commits, PR text, or logs** (keys, `CRON_SECRET`,
+  BYOK keys, service-role key, Stripe secrets).
+- **Hosting is Coolify.** Vercel is no longer used for hosting. Do not propose
+  moving back to Vercel.
+- User-facing copy is **Norwegian (bokmål)**. Do not mention BankID, MinID, or
+  electronic ID verification anywhere in user-facing copy, roadmap, or marketing.
+- Avoid user-visible mock/placeholder data. Use honest empty or "kommer snart" states.
+- Prefer minimal, focused changes. Stage only intended files.
 
-## Architecture Map
+## Product and domain
+
+- Name: **Folkets Meninger**. Canonical site: `https://www.folkets-meninger.no`
+  (`DEFAULT_SITE_URL` in `lib/seo/metadata.ts`).
+- **Folkets Stemme / folkets-stemme.no is retired.** Do not use it in new copy or
+  URLs. Legacy identifiers can still hold the old name (e.g. the n8n credential
+  «Folkets Stemme Self-hosted»). Leave them unless the task is renaming them.
+- The paid tier keeps the name **Stemme+** (59 kr/mnd, `lib/stemme-plus/constants.ts`).
+- Primary nav: Folkets meninger / Utforsk / Høringer / Appens fremtid. Landing after
+  login and `/dashboard` is Utforsk (`/dashboard/utforsk`). Forum is removed.
+- Auth: email/password and Google OAuth via Supabase Auth.
+
+## Hosting and infrastructure
+
+All on **Coolify, server `klever`**:
+
+| Service | What |
+|---------|------|
+| `fm-web` | This Next.js 15 App Router app. **Auto-deploys from `folkets-meninger:main`.** |
+| `fm-cms` | Payload CMS 3 at `cms.folkets-meninger.no`, from `cms/` in this repo. Uses its own `payload` schema in the same Postgres. **Not on `main` yet**: lives on PR #166 (`cursor/payload-blog-cms-306f`). |
+| `supabase-folkets` | Self-hosted Supabase (Postgres + Auth + PostgREST), the production DB. |
+| n8n, Ollama, SearXNG | Automation, local LLMs, and search for chat (`infra/searxng/`). |
+
+- `infra/coolify/README.md` holds the older Alternativ C / forum-removal plan
+  (historical; it still talks about hosted Supabase and Vercel env).
+- **Legacy Vercel bits still in the repo**: `npm run vercel:env:supabase`
+  (`scripts/sync-vercel-supabase-env.mjs`) and Vercel mentions in `.env.example`.
+  Treat them as legacy. Do not build on them.
+
+## Database rules (Supabase / Postgres)
+
+- Schema lives in `supabase/migrations/`; repair snippets live in `supabase/hotfix/`.
+  Both are applied **manually** by the Coolify Expert, only with Mathias' yes.
+- After the 2026-10-18/19 lockdown, **every new function, table, or view needs
+  explicit privileges**:
+  - `REVOKE ALL … FROM PUBLIC, anon, authenticated`, then `GRANT` only what's needed.
+  - New tables: `ENABLE ROW LEVEL SECURITY`. No `USING (true)` / `WITH CHECK (true)`
+    policies for `anon`/`authenticated`/`public`.
+  - **`n8n_*` RPCs → `service_role` only** (n8n's credential uses the service-role key).
+- **User-bound `SECURITY DEFINER` RPCs** must bind the caller: use `auth.uid()` or
+  `PERFORM assert_rpc_caller_is_user(p_user_id)`. Admin RPCs use
+  `require_admin_user_id(...)`. **Never trust `p_user_id` / `p_admin_user_id` from a
+  client.** The app calls these RPCs server-side with **`service_role`**, passing the
+  session user's id after it has checked auth (`requireAdmin()` for admin routes).
+- The browser client must not `.rpc()` user-bound or admin RPCs. The only exception
+  is `get_public_user_displays` (names only).
+- **CI must be green** (`.github/workflows/ci.yml`):
+  - `lint-and-build`: `npm run lint` + `npm run build`
+  - `db-security`: `scripts/run-prod-like-db-security.sh` (prod-like chain; uses
+    `supabase/tests/security-guard.sql` and its allowlist, see `docs/security-allowlist.md`)
+  - `migration-sql-lint`: `scripts/check-migrations.mjs` on changed migrations
+    (REVOKE pattern, RLS, open policies)
+  - Locally: `scripts/run-local-db-security.sh` / `scripts/run-prod-like-db-security.sh`.
+- Prod is **half-migrated**. `run-prod-like-db-security.sh` skips `20261018140000`,
+  `…150000`, and `…160000` and defers `20261020120000`–`20261020130000`. Check that
+  script and ask before assuming what prod has applied.
+- **2026-10-19 incident**: anon/authenticated could call `SECURITY DEFINER` RPCs that
+  take `p_user_id`, so callers could impersonate other users. Public anon could also
+  call `n8n_*` RPCs. The fix: hotfix `supabase/hotfix/20261019_revoke_impersonation.sql`,
+  migrations `20261020110001` (session actor / RBAC), `20261020120000`
+  (`assert_rpc_caller_is_user`), `20261020120001`/`120002` (EXECUTE revokes),
+  `20261020130000` (Postgres rate limits), and `20261020140000` (n8n lockdown).
+  See `docs/SECURITY-AUDIT-2026-10-19.md` and `docs/SECURITY-SWEEP-2026-10-18.md`.
+  Contract tests: `lib/rpc-caller-bindings.test.ts`, `lib/revoke-impersonation-rpc.test.ts`.
+- **`20261018120000_blog_posts.sql` is superseded. Do not apply it** (see Blog).
+
+## Integrations
+
+- **Stortinget** (`data.stortinget.no`, read-only): saker, publications, questions,
+  høringer, voteringer.
+- **n8n** handles every scheduled and AI job. It calls app endpoints with header
+  `x-cron-secret: $CRON_SECRET` (`/api/cron/*`, `/api/ops/*`) and receives
+  fire-and-forget webhooks from the app. Its jobs:
+  - sak flow: sync-issues → document embeddings → AI summaries → system-poll (Reels) drafts
+  - GP / Reels drafts (`create_system_poll_draft` → admin `publish_poll`)
+  - høringer packaging (`/api/cron/package-opinion-innspill` → `N8N_HEARING_INNSPILL_WEBHOOK_URL`)
+  - blog drafts: `POST /api/ops/blog/drafts` (`verifyOpsSecret`, `x-cron-secret`);
+    `POST /api/ops/blog/social-posted` marks a post as shared
+  - pipeline health (`workflows/n8n/pipeline-health.workflow.ts`); errors go to
+    `workflows/n8n/ops-error-handler.workflow.ts`; admin alerts use `POST /api/ops/n8n-notify`
+- **Ollama** (via n8n, never from the app): target model `gemma4:26b`. Repo workflow
+  configs still pin older ids (e.g. `gemma4:e2b-it-qat` in
+  `workflows/n8n/system-poll-draft.shared.ts`; `qwen3:4b` / `nomic-embed-text` in
+  `lib/trust/ai-transparency.ts`). Verify in n8n before changing anything.
+- **Stripe**: Stemme+ checkout and webhook (`/api/webhooks/stripe`). The UI says
+  "not configured" when `STRIPE_SECRET_KEY` / `STRIPE_STEMME_PLUS_PRICE_ID` are missing.
+- **Bluesky**: blog posts are shared there. On publish the app fires
+  `BLOG_PUBLISHED_WEBHOOK_URL` and n8n posts.
+- **X and Reddit are dropped for now.** Don't add integrations for them.
+- SMTP for notifications and digests. SearXNG for Stemme+ chat source search.
+
+## Blog
+
+- **Payload CMS (`cms/`, `fm-cms`) is the chosen direction.** It is still on PR #166
+  and is **not on `main`**.
+- **Current `main`** reads `public.blog_posts` from Supabase (`lib/blog/service.ts`,
+  `/blogg`, `/blogg/[slug]`, `/blogg/rss.xml`, admin `/dashboard/admin/blog`, ops
+  routes above). If the table is missing, the service returns empty lists
+  (`isBlogTableMissing`).
+- Do **not** apply `20261018120000_blog_posts.sql`, and don't build new features on
+  the Supabase blog table. New blog work targets Payload.
+
+## Architecture map
 
 ```text
-Next.js App Router
-  app/                 public pages, dashboard, API routes, cron endpoints
-  components/          UI components for saker, profile, valgomat, dashboard
-  lib/                 Stortinget clients, Supabase clients, notifications, identity/admin
-  supabase/migrations/ Postgres schema, RLS, RPCs, triggers
-  workflows/n8n/       External automation for AI summaries, embeddings, cron,
-                       and system poll (Reels) drafts
-                       (archived forum pipelines under workflows/n8n/archive/forum/)
+app/                 public pages, /dashboard, /blogg, API routes (/api/cron, /api/ops, /api/admin…)
+components/          UI (saker, polls, profile, chat, blog, dashboard)
+lib/                 Stortinget clients, Supabase clients, services, admin gate, rate limits
+supabase/migrations/ schema, RLS, RPCs (manual apply)
+supabase/hotfix/     one-off prod SQL (manual apply)
+supabase/tests/      security guard / JWT smoke SQL used by db-security
+workflows/n8n/       n8n workflows (forum pipelines archived in archive/forum/)
+infra/               coolify/ (historical plan), searxng/
 ```
 
-External systems:
+## Subsystem notes
 
-- Supabase Auth stores user sessions; middleware refreshes cookies and protects
- `/dashboard/*` except public sak, politiker, utforsk, avstemning, and folkets-meninger pages.
-- Supabase Postgres stores sak votes, poll ballots, hearing
-  comments, notifications, AI summaries, Stortinget issue cache, document chunks,
-  and admin data.
-- Stortinget APIs are read-only sources for sak lists/details, høringer, and
-  publications.
-- n8n calls app cron endpoints with `x-cron-secret` and receives fire-and-forget
-  webhooks from the app for AI summaries, document embeddings, and system poll drafts.
-- Ollama generates AI summaries and embeddings from n8n, not from the app.
+### Saker, stances, sync
 
-## Environment Variables
+- `GET /api/cron/sync-issues` → `lib/stortinget-sync.ts`, scheduled by
+  `workflows/n8n/app-cron.workflow.ts`.
+- `lib/sak-status.ts` decides "Under behandling" vs "Ferdigbehandlet". It merges
+  detail `ferdigbehandlet`, DB state, list `status`, and `innstilling_*`. Quirk: list
+  exports can keep `status=1` after a sak is finished. Treat `innstilling_id > 0` with
+  `innstilling_kode` 1 or 2 as a finished-sak hint. Repair with
+  `npx tsx scripts/backfill-sak-status.ts --pending-only`.
+- **Egress:** list, sync, and overlay queries must not select full `detail_json`.
+  Keep it for sak detail pages and AI source builds. List cache:
+  `lib/stortinget-saker-cache.ts` (returns `[]` during build). Detail cache:
+  `lib/stortinget-detail-cache.ts` (24 h).
+- **Per-sak For/Mot/Avstår voting is retired**: `POST /api/vote` returns 410, and
+  `cast_vote` is service_role only. Users mark a **stance** (`enig` / `uenig` /
+  `ikke_interessert`) via `POST /api/stance` (`lib/stances/`). Public aggregates
+  are k-anonymous (`STANCE_PUBLIC_MIN_ENGAGED`).
+- **Folkets vilje vs. Stortinget**: `data.stortinget.no/eksport/voteringer`, needs at
+  least `ALIGNMENT_MIN_FOLK_VOTES` (5).
 
-The canonical template is `.env.example`.
+### Polls / Reels (Utforsk)
 
-| Variable | Used for |
-|----------|----------|
-| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser/server Supabase client setup. Test defaults: `.env.test` → Folkets Meninger (`qetckokgtzbpunbzslfp`) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server-only DB writes, RPCs, admin reads, document ingest, voting |
-| `CRON_SECRET` | Protects `/api/cron/*` endpoints; n8n sends it as `x-cron-secret` |
-| `N8N_AI_SUMMARY_WEBHOOK_URL` | Trigger missing sak AI summaries |
-| `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL` | Trigger pending document chunk embeddings |
-| `N8N_HEARING_INNSPILL_WEBHOOK_URL` | Trigger n8n packaging of motforslag hearing reports |
-| `N8N_SYSTEM_POLL_DRAFT_WEBHOOK_URL` | Trigger n8n system-poll (Reels) draft generation from sak RAG |
-| `N8N_PIPELINE_HEALTH_WEBHOOK_URL` | Trigger daily pipeline health/catch-up from admin Reels |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Notification and welcome email delivery |
-| `STORTINGET_SESSION_ID`, `STORTINGET_PERIODE_ID` | Server defaults for Stortinget data |
-| `NEXT_PUBLIC_STORTINGET_SESSION_ID`, `NEXT_PUBLIC_STORTINGET_PERIODE_ID` | Client-visible Stortinget defaults |
-| `BYOK_ENCRYPTION_KEY` | AES-256-GCM key for user LLM credentials (64 hex chars or passphrase) |
-| `SEARXNG_BASE_URL` | Chat source search; default `https://searxng.heyklever.app` |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_STEMME_PLUS_PRICE_ID` | Stemme+ Stripe checkout/webhook. Honest unconfigured UI if missing |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Optional Stripe publishable key (checkout uses Checkout Sessions) |
-| `DISABLE_HMR` | Dev-only escape hatch for HMR issues |
-
-## Current Subsystems and Runbooks
-
-### Stortinget sync and sak cache
-
-- n8n sak-flyt: sync-issues → dokument-embeddings → AI-sammendrag →
-  system-poll-utkast. Tom kø er suksess. Feil går til
-  `workflows/n8n/ops-error-handler.workflow.ts` (error workflow).
-  Helse/catch-up: `workflows/n8n/pipeline-health.workflow.ts` +
-  `/dashboard/admin/reels`. Admin-varsel: `POST /api/ops/n8n-notify`.
-- `GET /api/cron/sync-issues` calls `lib/stortinget-sync.ts`; n8n schedules it
- in `workflows/n8n/app-cron.workflow.ts`. The result includes `upserted`,
- `total`, `newIssueIds`, `aiSummaryTriggered`, and `detailsRefreshed`.
-- `lib/sak-status.ts` is the source of truth for "Under behandling" vs
-  "Ferdigbehandlet"; it merges detail `ferdigbehandlet`, denormalized DB state,
-  fresh list `status`, and `innstilling_*` hints because Stortinget list/detail
-  exports can drift.
-- List/sync/overlay queries must **not** select full `detail_json` (egress).
-  Prefer denormalized `ferdigbehandlet`/`status` plus live list overlays; reserve
-  full `detail_json` for sak detail pages and AI source builds.
-- `lib/stortinget-saker-cache.ts` serves the list from 30-minute memory cache,
-  30-minute `unstable_cache` DB reads, optional live list status overlays, and
-  live Stortinget fallback. `getSakerWithCache()` returns `[]` during
-  `NEXT_PHASE=phase-production-build`.
-- `lib/stortinget-detail-cache.ts` stores detail JSON in `stortinget_issues` with
-  a 24-hour max age and refreshes stale pending details.
-- Detail refresh computes `sak_kind`, `henvisning`, `dokumentgruppe`,
-  `ferdigbehandlet`, and `voting_closes_at`, then triggers missing AI summaries
-  and document ingest.
-- `refreshSakStatusOnly` powers one-off metadata repair without AI/doc side
-  effects: `npx tsx scripts/backfill-sak-status.ts --pending-only`.
-- Sak treatment labels use `lib/sak-status.ts`, not a single raw Stortinget
-  field. `resolveSakStatusFromSources` prefers `detail_json.ferdigbehandlet`
-  over the denormalized DB column, then merges numeric Stortinget status and
-  list `innstilling` fields.
-- Known Stortinget quirk: list exports can keep `status=1` while a sak is
-  finished. Treat `innstilling_id > 0` with `innstilling_kode` 1 or 2 as a
-  finished-sak hint when no explicit `ferdigbehandlet` boolean is available.
-- If list and detail pages disagree between "Under behandling" and
-  "Ferdigbehandlet", inspect `stortinget_issues.detail_json`,
-  `ferdigbehandlet`, and fresh list-export innstilling fields. Repair DB drift
-  with `supabase/migrations/20260702160000_backfill_ferdigbehandlet_from_detail.sql`
-  or the backfill script above.
+- `polls` (`stortinget` | `system`; legacy `citizen` rows are hidden), anonymous
+  `poll_votes`, encrypted receipts. Choices are `ja`/`nei`/`blank`. Voting requires login.
+- System Reels are ja/nei/blank questions generated from sak RAG by n8n + Ollama.
+  Use `create_system_poll_draft` → admin `publish_poll`, never
+  `ensure_stortinget_poll` for drafts. Copy must say they are system-generated.
+- Fylke breakdowns only count `users.fylke_code` when `fylke_verified` is true.
 
 ### Høringer
 
-- `/dashboard/horinger` and `/dashboard/horinger/<id>` show Stortinget hearings;
-  `/horinger` redirects to the dashboard path. These routes are login-gated by
-  middleware, unlike public `/dashboard/sak/<id>` pages.
-- `lib/stortinget-horinger.ts` fetches
-  `https://data.stortinget.no/eksport/horinger?format=json` with a 1-hour
-  revalidate and normalizes Stortinget date values.
-- Stortinget may send sentinel dates (`/Date(-62135596800000)/` or
-  `01.01.0001`) when no deadline is published. Treat them as missing dates, not
-  real future/past deadlines.
-- Hearing status kinds are `open`, `planned`, `held`, and `cancelled`, derived
-  from `horing_status` plus innspill/application/session dates.
-- Local hearing comments are public rows in `hearing_comments`; the app posts
-  via `POST /api/hearings`, which calls `create_hearing_comment` with the
-  service role. The RPC enforces `first_name`/`last_name` via
-  `user_has_public_identity`; comments are not submitted to Stortinget.
+- `/dashboard/horinger[/<id>]` requires login. Fetched live from
+  `data.stortinget.no/eksport/horinger` (`lib/stortinget-horinger.ts`). Treat sentinel
+  dates (`/Date(-62135596800000)/`, `01.01.0001`) as missing.
+- Local comments: `POST /api/hearings` → `create_hearing_comment`. Requires public
+  first and last name. Comments are not sent to Stortinget.
 
-### Voting lifecycle
+### Folkets meninger (UGC) and innspill
 
-- `lib/sak-voting-window.ts` derives the next voting deadline from saksgang
-  events such as `VOT`, `VEDTAK`, `BEHS`, and related treatment events.
-- If every vote-close event date is in the past, the sak is closed. Missing
-  vote-close events still leave the window open (unless `ferdigbehandlet`).
-- `app/api/vote/route.ts` rejects votes when the issue is closed,
-  `ferdigbehandlet` is true, or `voting_closes_at` has passed.
-- `voting-section.tsx` must not reopen a ballot when the server already sent
-  `votingClosed: true`.
-- `supabase/migrations/20260618120000_sak_voting_status.sql` enforces the same
-  closure rules in the `cast_vote` RPC.
-- Sak ballots stay For/Mot/Avstår. Public Ja/Nei/Blank language is polls only.
+- `/dashboard/folkets-meninger`: structured opinions plus one reply per user via
+  `create_citizen_opinion` / `create_citizen_opinion_reply`. Sak filter: `?sak=<id>`.
+- Opinion innspill (`lib/innspill/`): endorsement threshold 10, then
+  `/api/cron/package-opinion-innspill` builds the package and calls n8n. This is not
+  a Stortinget submit API.
+- Reporting: `POST /api/opinions/report` → `report_content`.
 
-### Avstemninger
+### Identity, admin, Stemme+
 
-- Polls live in `polls` (`stortinget` | `system`; legacy `citizen` rows stay in DB but are hidden in the app) with
-  anonymous `poll_votes` and encrypted `poll_vote_receipts`. Ballot choices:
-  `ja`/`nei`/`blank`.
-- Schema: `supabase/migrations/20260819210000_direct_democracy_polls.sql` plus
-  `20260821130000_system_poll_reels.sql` for system Reels.
-- Public routes: `/dashboard/utforsk` (saker + Reels), `/dashboard/avstemninger`,
- `/dashboard/avstemninger/<id>`. Poll voting requires login. Empty lists are honest — do not seed mock polls.
- Avstemninger is not in primary nav; `/dashboard/avstemninger/reels` redirects to Utforsk.
- Legacy `/initiativ` URLs redirect to Utforsk.
-- System Reels are AI-generated ja/nei/blank questions from sak RAG (n8n + Ollama),
- stored as `polls` drafts (`track=system`) and published by admin. Copy must state
- they are system-generated. Do not use `ensure_stortinget_poll` for drafts (it opens
- immediately); use `create_system_poll_draft` → `publish_poll`. The public feed sits on Utforsk.
-- Fylke breakdowns use `users.fylke_code` only when `fylke_verified` is true.
- Self-declared fylke via the profile picker does not set `fylke_verified`.
-- Primary nav: Folkets meninger / Utforsk / Høringer / Appens fremtid. Post-login fallback is Utforsk.
+- Admin: `public.user_roles` + `is_admin()` via `lib/admin/gate.ts`. Hub:
+  `/dashboard/admin` (Appens fremtid, Reels, Statistikk, Brukere, Stemme+, Blogg).
+- Public activity is opt-in (`users.activity_visibility`, `private` by default).
+- Stemme+ (`users.subscription_tier`) gates BYOK AI chat (the orb overlay;
+  `/dashboard/chat` only deep-links it). User LLM keys are encrypted in
+  `user_llm_credentials` with `BYOK_ENCRYPTION_KEY`. Never log or return a key.
+  Chat (`POST /api/chat`) uses the request session, not service_role.
 
-### Identity, activity, admin
+### Appens fremtid
 
-- Public first/last name required for hearing comments and similar UGC
-  (`user_has_public_identity`); `/auth/complete-profile` collects missing names.
-- Public activity is opt-in via `users.activity_visibility` (`private` default).
-- Admin access: `public.user_roles` (`role = 'admin'`) via `lib/admin/gate.ts`
-  (`is_admin()`). Grant/revoke with `grant_app_role_by_email` /
-  `revoke_app_role_by_email` (service role) or `/dashboard/admin/brukere`.
-  Admin hub: Appens fremtid, Reels, Statistikk, Brukere, Stemme+.
-- **Stemme+** (`users.subscription_tier`): supporter badge, richer digest, smarter
-  alerts, and Stemme+-gated BYOK AI-chat (dashboard orb overlay). Price 59 kr/mnd
-  (`lib/stemme-plus/constants.ts`). Admin grant via `grant_stemme_plus_by_email`
-  / `/dashboard/admin/stemme-plus` (`/api/admin/stemme-plus`). Stripe Checkout
-  + webhook (`/api/webhooks/stripe`) run when `STRIPE_SECRET_KEY` and
-  `STRIPE_STEMME_PLUS_PRICE_ID` exist; otherwise the UI shows an honest
-  unconfigured state.
+- `/dashboard/appens-fremtid`: forslag, endringslogg, veikart (`app_suggestions*`,
+  `app_changelog_entries`, `app_roadmap_items`). Admins choose which forslag open for
+  voting. Fider is not used by the app.
 
-### Stemme+ BYOK AI-chat
+## Environment
 
-- Floating glowing orb on dashboard chrome opens Stemme+ AI-chat as an overlay
-  (not a page, not a sidebar or primary-nav item). `/dashboard/chat` (optional
-  `?sak=<id>`) only redirects to Utforsk and opens the panel (`?chat=1`). Login
-  + Stemme+ gating stay. Free users see an upgrade empty state, not a broken
-  composer.
-- Users store their own LLM key (OpenAI / Anthropic / OpenAI-compatible / AI
-  Gateway) encrypted at rest in `user_llm_credentials`. The owning authenticated
-  user may load ciphertext via RLS; decrypt stays server-side with
-  `BYOK_ENCRYPTION_KEY`. Never log keys; never return the secret after save.
-- Overlay chat entitlement (`requireStemmePlus`) and BYOK load use the request
-  session (`users.subscription_tier` + owner ciphertext). Do not use the
-  service role for production chat — a mismatched Cloud Agent key fail-closes.
-- Chat API: `POST /api/chat` (Node.js / Fluid Compute, `maxDuration` 120, no
-  `runtime = 'edge'`). AI SDK `streamText` + tools. Transcripts are ephemeral
-  in the browser.
-- Server tools: `retrieveSakContext` (session/anon SELECT of
-  `document_chunks` without embeddings + AI summaries), `searchUpdatedSources`
-  (SearXNG JSON), `helpRettsskriving` (grammar help for the user's own draft —
-  does not post UGC). Overlay panel action **Hent sakskontekst** uses the same
-  `retrieveSakContext` session path (`POST /api/chat/sak-context`) and does not
-  call an LLM. If the overlay opens on `/dashboard/sak/[id]`, that id is the
-  default.
-- Do not mention BankID, MinID, or electronic ID verification anywhere in
-  user-facing copy, roadmap items, or marketing text.
+Canonical template: `.env.example`. Key server-only vars: `SUPABASE_SERVICE_ROLE_KEY`,
+`CRON_SECRET`, `N8N_*_WEBHOOK_URL`, `BLOG_PUBLISHED_WEBHOOK_URL`, `SMTP_*`,
+`BYOK_ENCRYPTION_KEY`, `SEARXNG_BASE_URL`, `STRIPE_*`. Public:
+`NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+`NEXT_PUBLIC_STORTINGET_*`. Prod values live in Coolify, never in the repo.
 
-### Document ingest and RAG
+## Local dev and validation
 
-- `lib/stortinget-document-ingest.ts` parses sak documents, fetches publication
-  HTML where available, stores a short excerpt (no HTML cache), writes pending
-  `document_chunks`, then clears `content_full_text` so chunk text is the single copy.
-- New chunks fire `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL`; n8n embeds pending
-  chunks in Postgres pgvector (required for RAG — n8n is not a vector store)
-  and marks them ready for `match_issue_document_chunks`.
-- Viewer HTML is fetched live from Stortinget via
-  `/api/sak/[id]/documents/[docId]/content` when no legacy `content_html` exists.
-- If DB hits size quota: `scripts/reclaim-document-storage.sql` or
-  `reclaim_document_body_storage()`.
-- Backfill recent cached issues with `npx tsx scripts/backfill-sak-documents.ts 10`.
+- npm only (`package-lock.json`). `.env.local` is required:
+  `npm run env:test` (from `.env.test`) or copy `.env.example`. Local Docker Supabase:
+  `npm run supabase:start`.
+- Validate with `npm run lint`, `npm run build`, `npm run test:unit` (tsx; the first
+  run downloads it), and `npm run test:e2e` (Playwright, `.env.test`).
+- No `npm run eval` script on `main` yet (evals are on open PR #162).
+- `/dashboard/*` is login-gated except sak, politiker, utforsk, avstemninger, and
+  folkets-meninger pages. Sak pages fetch Stortinget live (10–30 s on a cold load).
+- Test logins: email signups need confirmation. Create a pre-confirmed user via the
+  Auth admin API (`email_confirm: true`) with the service role on a **test** project,
+  never prod. `@example.com` is rejected.
+- Theme: use semantic tokens from `app/globals.css` (`bg-card`,
+  `text-muted-foreground`, `border-border`, `text-brand`), not hard-coded grays.
 
-### Konsekvens-kalkulator and samsvars-score
+## Documentation
 
-- Sak page (`/dashboard/sak/<id>`) shows **Hva betyr saken for deg?** after the AI
-  summary. Anonymous fylke/housing/car/occupation stay in localStorage
-  (`folkets:impact:profile`). `POST /api/sak/[id]/impact` retrieves document
-  chunks (no embeddings column — egress) plus the AI summary and synthesizes a
-  personal effect. Kroner amounts are shown only when they appear in the source.
-- **Folkets vilje vs. Stortinget** sits after the ballot. It fetches
-  `data.stortinget.no/eksport/voteringer?sakid=` (1h revalidate), picks a
-  substantive votering, and scores gap vs app `get_issue_vote_totals`.
-  `ALIGNMENT_MIN_FOLK_VOTES = 5` before claiming folkets vilje. Pending saker
-  get an honest “Stortinget har ikke votert ennå” state.
-
-### Notifications and cron
-
-- Notifications use `notification_preferences`,
-  `notification_category_subscriptions`, and `notifications`.
-- Channels in UI: `categories`, `labels` (forum/mentions removed).
-- `/api/cron/digest?frequency=daily|weekly` sends digest emails with SMTP env
-  vars and advances `last_digest_sent_at_by_channel`.
-- `/api/cron/categories`, `/api/cron/sync-issues`, and
-  `/api/cron/package-opinion-innspill` are also protected by `CRON_SECRET`.
-
-### Folkets meninger, innspill og rapportering
-
-- **Folkets meninger** (`/dashboard/folkets-meninger`) is the single home for
-  citizen UGC. Structured opinions: title, body, stance (`for`/`blank`/`imot`),
-  3–8 For/Imot points, optional `stortinget_issue_id`, plus one reply per user.
-  Writes go through service-role RPCs `create_citizen_opinion` /
-  `create_citizen_opinion_reply`.
-- **Sak-scoped views**: `?sak=<id>` filters the list to one sak and `?compose=1`
-  opens the composer with that sak preselected
-  (`routes.folketsMeningerForSak`). The sak page embeds a read-only preview
-  (`components/sak/sak-meninger-section.tsx`, server-rendered via
-  `getIssueOpinionSummary`) that links back into Folkets meninger.
-- **Hearing innspill** (`opinion_innspill`): a feeling author promotes their own
-  opinion as an innspill. Others endorse it; at
-  `OPINION_INNSPILL_DEFAULT_THRESHOLD` (10) support the status becomes
-  `threshold_met` and `/api/cron/package-opinion-innspill` packages a
-  Markdown/JSON report and fires `N8N_HEARING_INNSPILL_WEBHOOK_URL`. The payload
-  keeps the retired `motforslag_horingsinnspill` shape so existing n8n workflows
-  keep working. This is **not** a Stortinget submit API — official innspill still
-  goes via stortinget.no.   Service layer: `lib/innspill/`. Schema:
-  `supabase/migrations/20261012140000_opinion_innspill.sql`.
-- **Innspill notifications** (`lib/innspill/notify.ts`) reuse the `labels` channel
-  and link to the opinion detail (not the sak page): endorsed,
-  threshold_met, and packaged.
-- **Reporting**: opinions and replies report through
-  `POST /api/opinions/report` into `content_reports` via the `report_content`
-  RPC (targets `citizen_opinion`, `citizen_opinion_reply`). Categories live in
-  `lib/moderation/content-report.ts`.
-- Sak pages no longer host innspill or discussion: `counter_proposals`,
-  `counter_proposal_endorsements`, `issue_discussions`, and
-  `issue_discussion_posts` were consolidated into `citizen_opinions` /
-  `opinion_innspill` and their old components, APIs, and cron job removed.
-  `docs/DESIGN-sak-discussion.md` is superseded.
-
-### Kunnskapspoeng og merker
-
-- Knowledge points reuse `award_user_points` (not forum likes). Awards:
-  quiz pass (+15), document read after 8s in the viewer (+5), promoting an
-  innspill (+20), endorsing an innspill (+2), or hearing comment (+10).
-- Badges: Informert borger (1 quiz), Saksforsker (3 document reads),
-  Fylkesekspert (self-declared `users.fylke_code` + 1 quiz). `fylke_verified`
-  stays false for self-declared fylke.
-- In-app knowledge quiz is grounded in sak title/summary/komité/AI summary.
-  Typebot is not wired; the same award path can later accept an external
-  webhook.
-
-### Admin, stats, and valgomat
-
-- Admin hub is `/dashboard/admin`. Active tools: Appens fremtid, Reels, Statistikk,
-  Brukere, Stemme+. Varsler remains a planned hub card.
-- Government stats exports are available under the admin stats route and apply
-  `GOVERNMENT_STATS_MIN_VOTES = 50` before publishing aggregate vote rows.
-- Valgomat party alignment is intentionally disabled until Stortinget per-party
-  voting data exists (`PARTY_ALIGNMENT_AVAILABLE = false`).
-
-### Appens fremtid (product feedback)
-
-- Dashboard nav **Appens fremtid** → `/dashboard/appens-fremtid` (old
-  `/dashboard/forslag` redirects here). Login required. Sections: forslag,
-  endringslogg, veikart. Chat stays a floating orb, not a page.
-- Users submit title, description, category, and who it affects via
-  `POST /api/suggestions`. Unvoted inbox items stay admin-only.
-- Admins open selected forslag for voting at `/dashboard/admin/forslag`.
-  Signed-in users can upvote/downvote those only (`POST /api/suggestions/vote`);
-  one vote per user, changeable. Admins also publish changelog and roadmap.
-- Schema: `app_suggestions`, `app_suggestion_votes`, `app_changelog_entries`,
-  `app_roadmap_items`
-  (`20261003163035_app_suggestions.sql`, `20261003175506_app_suggestions_admin.sql`,
-  `20261003200000_appens_fremtid.sql`).
-- Public marketing form `/innspill` (`site_feedback`) is separate.
-- Fider is not used by the app. The Coolify Fider server is left running.
-
-## Documentation Locations
-
-- Start with `README.md` for setup and repository orientation.
-- Update `supabase/README.md` for schema, RLS, RPCs, migrations, and DB repair
-  notes.
-- Update `workflows/n8n/README.md` for workflow IDs, node settings, webhook
-  payloads, and deployment/runbook notes. Forum workflows live under
-  `workflows/n8n/archive/forum/` (inactive).
-- Alternativ C / egress + forum-removal plan: `infra/coolify/README.md`.
-- Keep subsystem runbooks co-located; avoid adding a new docs tree unless a topic
-  no longer fits an existing README.
-
-## Cursor Cloud specific instructions
-
-- Package manager is npm (only `package-lock.json`). The update script runs `npm ci`, so dependencies are already installed at session start. Scripts live in `package.json`: `dev`, `build`, `lint`, `test:unit`, `test:e2e`.
-- Supabase credentials (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) are provided as Cloud Agent secrets / env vars and point at a real hosted project with all `supabase/migrations/*.sql` applied (voting `vote_encryption_secret` pepper is configured). Browser-side auth from the in-VM Chrome reaches Supabase fine — the full auth/voting flow works end-to-end.
-- **`.env.local` is still required to run the dev server**, because it carries the non-secret `STORTINGET_*` / `NEXT_PUBLIC_STORTINGET_*` defaults (and `middleware.ts` builds a Supabase client on every request, so the `NEXT_PUBLIC_SUPABASE_*` values must be resolvable or every page 500s). It is gitignored; recreate with `npm run env:test` (Folkets Meninger test Supabase) or from `.env.example` if absent. Next.js reads injected `process.env` with higher precedence than `.env.local`, so the injected secrets win even if `.env.local` holds older values.
-- Playwright and CI use the Folkets Meninger test Supabase from `.env.test` / workflow `env` (anon key only). Set `SUPABASE_SERVICE_ROLE_KEY` via secrets when server RPCs are needed.
-- Auth is email/password (`supabase.auth.signUp` / `signInWithPassword`). **Email signups require confirmation**, so a raw signup does NOT create a session. To get a usable test login, create a pre-confirmed user with the admin API and the service role key, then sign in: `POST {SUPABASE_URL}/auth/v1/admin/users` with `{"email":...,"password":...,"email_confirm":true,"user_metadata":{...}}` (the project rejects `@example.com`; use e.g. `@gmail.com`).
-- `/dashboard/*` is gated by middleware (redirects to `/auth/login`) except public
- issue pages `/dashboard/sak/<id>`, politician pages, `/dashboard/utforsk`,
- `/dashboard/avstemninger` (and `/<id>`), and `/dashboard/folkets-meninger`. Issue pages fetch live
- `data.stortinget.no` data and can take 10–30s on first load.
-- Hello-world that exercises core functionality: log in, then open an issue (`/dashboard/sak/<id>`) and cast a "For" vote in the "Hva mener du?" section — the vote persists and the `/dashboard/min-side` vote count updates.
-- `npm run test:unit` shells out to `npx tsx ...`; the first run downloads `tsx` (needs network) and then caches it.
+| File | Covers |
+|------|--------|
+| `README.md` | Setup and orientation |
+| `supabase/README.md` | Schema, RPCs, migrations, DB runbooks |
+| `workflows/n8n/README.md` | Workflow IDs, payloads, deployment |
+| `docs/SECURITY-AUDIT-2026-10-19.md` | RPC/API security matrix, incident fixes |
+| `docs/security-allowlist.md` | db-security allowlist |
+| `infra/coolify/README.md` | Historical Alternativ C / forum-removal plan |
+| `infra/searxng/README.md` | SearXNG for chat search |
