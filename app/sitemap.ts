@@ -18,6 +18,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/dashboard/appens-fremtid`, changeFrequency: 'weekly', priority: 0.4 },
     { url: `${base}/innspill`, changeFrequency: 'monthly', priority: 0.3 },
     { url: `${base}/blogg`, changeFrequency: 'weekly', priority: 0.5 },
+    { url: `${base}/om/ai`, changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${base}/personvern`, changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${base}/vilkar`, changeFrequency: 'monthly', priority: 0.3 },
   ];
 
   let blogRoutes: MetadataRoute.Sitemap = [];
@@ -26,7 +29,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const slugs = await listPublishedBlogSlugsForSitemap(200);
     blogRoutes = slugs.map((entry) => ({
       url: `${base}/blogg/${encodeURIComponent(entry.slug)}`,
-      lastModified: entry.published_at ? new Date(entry.published_at) : undefined,
+      lastModified: entry.updated_at
+        ? new Date(entry.updated_at)
+        : entry.published_at
+          ? new Date(entry.published_at)
+          : undefined,
       changeFrequency: 'monthly',
       priority: 0.45,
     }));

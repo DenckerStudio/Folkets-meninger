@@ -12,10 +12,6 @@ export async function POST(request: Request) {
     return cronAuthResponse(auth);
   }
 
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY is not configured' }, { status: 503 });
-  }
-
   let body: unknown;
   try {
     body = await request.json();
@@ -28,7 +24,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
 
-  const updated = await markBlogSocialPosted(parsed.slug);
+  const updated = await markBlogSocialPosted(parsed.slug, parsed.bluesky_uri);
   if (!updated) {
     return NextResponse.json({ error: 'Fant ikke publisert innlegg med denne slug' }, { status: 404 });
   }

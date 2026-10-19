@@ -45,7 +45,7 @@ All on **Coolify, server `klever`**:
 | Service | What |
 |---------|------|
 | `fm-web` | This Next.js 15 App Router app. **Auto-deploys from `folkets-meninger:main`.** |
-| `fm-cms` | Payload CMS 3 at `cms.folkets-meninger.no`, from `cms/` in this repo. Uses its own `payload` schema in the same Postgres. **Not on `main` yet**: lives on PR #166 (`cursor/payload-blog-cms-306f`). |
+| `fm-cms` | Payload CMS 3 at `cms.folkets-meninger.no`, from `cms/` in this repo (`infra/coolify/cms.md`). Uses its own `payload` schema in the same Postgres. |
 | `supabase-folkets` | Self-hosted Supabase (Postgres + Auth + PostgREST), the production DB. |
 | n8n, Ollama, SearXNG | Automation, local LLMs, and search for chat (`infra/searxng/`). |
 
@@ -65,6 +65,7 @@ All on **Coolify, server `klever`**:
   - New tables: `ENABLE ROW LEVEL SECURITY`. No `USING (true)` / `WITH CHECK (true)`
     policies for `anon`/`authenticated`/`public`.
   - **`n8n_*` RPCs → `service_role` only** (n8n's credential uses the service-role key).
+  - Never grant `anon` (or `authenticated`) anything on the `payload` schema; it belongs to `fm-cms` only.
 - **User-bound `SECURITY DEFINER` RPCs** must bind the caller: use `auth.uid()` or
   `PERFORM assert_rpc_caller_is_user(p_user_id)`. Admin RPCs use
   `require_admin_user_id(...)`. **Never trust `p_user_id` / `p_admin_user_id` from a
@@ -102,8 +103,8 @@ All on **Coolify, server `klever`**:
   - sak flow: sync-issues → document embeddings → AI summaries → system-poll (Reels) drafts
   - GP / Reels drafts (`create_system_poll_draft` → admin `publish_poll`)
   - høringer packaging (`/api/cron/package-opinion-innspill` → `N8N_HEARING_INNSPILL_WEBHOOK_URL`)
-  - blog drafts: `POST /api/ops/blog/drafts` (`verifyOpsSecret`, `x-cron-secret`);
-    `POST /api/ops/blog/social-posted` marks a post as shared
+  - blog drafts: `POST /api/ops/blog/drafts` (`verifyOpsSecret`, `x-cron-secret`) creates a
+    Payload draft; `POST /api/ops/blog/social-posted` marks a Payload post as shared
   - pipeline health (`workflows/n8n/pipeline-health.workflow.ts`); errors go to
     `workflows/n8n/ops-error-handler.workflow.ts`; admin alerts use `POST /api/ops/n8n-notify`
 - **Ollama** (via n8n, never from the app): target model `gemma4:26b`. Repo workflow
@@ -112,21 +113,27 @@ All on **Coolify, server `klever`**:
   `lib/trust/ai-transparency.ts`). Verify in n8n before changing anything.
 - **Stripe**: Stemme+ checkout and webhook (`/api/webhooks/stripe`). The UI says
   "not configured" when `STRIPE_SECRET_KEY` / `STRIPE_STEMME_PLUS_PRICE_ID` are missing.
-- **Bluesky**: blog posts are shared there. On publish the app fires
-  `BLOG_PUBLISHED_WEBHOOK_URL` and n8n posts.
+- **Bluesky**: blog posts are shared there. On publish `fm-cms` fires
+  `BLOG_PUBLISHED_WEBHOOK_URL` (configured on `fm-cms`, not `fm-web`) and n8n posts.
 - **X and Reddit are dropped for now.** Don't add integrations for them.
 - SMTP for notifications and digests. SearXNG for Stemme+ chat source search.
 
 ## Blog
 
-- **Payload CMS (`cms/`, `fm-cms`) is the chosen direction.** It is still on PR #166
-  and is **not on `main`**.
-- **Current `main`** reads `public.blog_posts` from Supabase (`lib/blog/service.ts`,
-  `/blogg`, `/blogg/[slug]`, `/blogg/rss.xml`, admin `/dashboard/admin/blog`, ops
-  routes above). If the table is missing, the service returns empty lists
-  (`isBlogTableMissing`).
-- Do **not** apply `20261018120000_blog_posts.sql`, and don't build new features on
-  the Supabase blog table. New blog work targets Payload.
+- **Payload CMS (`cms/`, Coolify `fm-cms`) is the source of truth for `/blogg`.**
+  `lib/blog/service.ts` reads published posts from Payload via `lib/cms/payload-client.ts`
+  (`Authorization: users API-Key <CMS_API_KEY>`, a `reader`-role Payload user). Routes:
+  `/blogg`, `/blogg/[slug]`, `/blogg/side/[n]`, `/blogg/tema/[slug]`, `/blogg/rss.xml`.
+  If `CMS_URL` / `CMS_API_KEY` are unset, the blog shows honest empty states.
+- **n8n blog drafts go to Payload**: `POST /api/ops/blog/drafts` creates a draft
+  (`_status: draft`, review state `til_vurdering`) with `CMS_AGENT_API_KEY` (`agent` role,
+  falls back to `CMS_API_KEY`). Editors publish in the Payload admin, never n8n.
+  `POST /api/ops/blog/social-posted` calls `fm-cms` `/api/blog-ops/social-posted`
+  signed with HMAC (`REVALIDATE_SECRET`). `fm-cms` calls `/api/revalidate/blog` on publish.
+  `/dashboard/admin/blog` only links to the Payload admin.
+- **`20261018120000_blog_posts.sql` (Supabase `public.blog_posts`) is superseded and must
+  still NOT be applied.** Do not build on the Supabase blog table. All blog work targets Payload.
+- Setup and env: `infra/coolify/cms.md`, `cms/.env.example`.
 
 ## Architecture map
 
@@ -138,7 +145,8 @@ supabase/migrations/ schema, RLS, RPCs (manual apply)
 supabase/hotfix/     one-off prod SQL (manual apply)
 supabase/tests/      security guard / JWT smoke SQL used by db-security
 workflows/n8n/       n8n workflows (forum pipelines archived in archive/forum/)
-infra/               coolify/ (historical plan), searxng/
+cms/                 Payload CMS 3 app (fm-cms): blog posts, categories, media, blog-ops endpoints
+infra/               coolify/ (cms.md + historical plan), searxng/
 ```
 
 ## Subsystem notes
@@ -208,7 +216,8 @@ infra/               coolify/ (historical plan), searxng/
 ## Environment
 
 Canonical template: `.env.example`. Key server-only vars: `SUPABASE_SERVICE_ROLE_KEY`,
-`CRON_SECRET`, `N8N_*_WEBHOOK_URL`, `BLOG_PUBLISHED_WEBHOOK_URL`, `SMTP_*`,
+`CRON_SECRET`, `N8N_*_WEBHOOK_URL`, `CMS_URL` / `CMS_API_KEY` / `CMS_AGENT_API_KEY` /
+`REVALIDATE_SECRET` (blog, see `infra/coolify/cms.md`), `SMTP_*`,
 `BYOK_ENCRYPTION_KEY`, `SEARXNG_BASE_URL`, `STRIPE_*`. Public:
 `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
 `NEXT_PUBLIC_STORTINGET_*`. Prod values live in Coolify, never in the repo.
