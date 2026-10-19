@@ -4,7 +4,7 @@
     "variant": "baseline",
     "stackHeads": {
       "p177": "a38d83d",
-      "p178": "a2abc31",
+      "p178": "9441863",
       "p179": "4c17c84",
       "p181": "1e06816"
     },
@@ -19,8 +19,8 @@
     "issueSearchHitRate": 0.2222222222222222,
     "prefixHitRate": 0,
     "finnesIkkeFalseConfidenceRate": 1,
-    "latencyMsP50": 23.590115999999966,
-    "latencyMsP95": 74.24143400000003,
+    "latencyMsP50": 24.310749999999985,
+    "latencyMsP95": 95.67008700000002,
     "judge": "pending (LAN)",
     "perQuestion": [
       {
@@ -364,7 +364,7 @@
     "variant": "stack",
     "stackHeads": {
       "p177": "a38d83d",
-      "p178": "a2abc31",
+      "p178": "9441863",
       "p179": "4c17c84",
       "p181": "1e06816"
     },
@@ -379,8 +379,8 @@
     "issueSearchHitRate": 0.3333333333333333,
     "prefixHitRate": 0,
     "finnesIkkeFalseConfidenceRate": 1,
-    "latencyMsP50": 90.46827899999994,
-    "latencyMsP95": 212.79802199999995,
+    "latencyMsP50": 87.72117800000024,
+    "latencyMsP95": 214.64693999999963,
     "judge": "pending (LAN)",
     "perQuestion": [
       {
@@ -740,7 +740,7 @@
     "variant": "stack",
     "stackHeads": {
       "p177": "a38d83d",
-      "p178": "a2abc31",
+      "p178": "9441863",
       "p179": "4c17c84",
       "p181": "1e06816"
     },
@@ -755,8 +755,8 @@
     "issueSearchHitRate": 0.3333333333333333,
     "prefixHitRate": 0,
     "finnesIkkeFalseConfidenceRate": 1,
-    "latencyMsP50": 87.67119000000002,
-    "latencyMsP95": 205.3824540000005,
+    "latencyMsP50": 96.32540499999959,
+    "latencyMsP95": 222.4073329999992,
     "judge": "pending (LAN)",
     "perQuestion": [
       {

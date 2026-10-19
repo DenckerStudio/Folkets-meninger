@@ -195,7 +195,7 @@ async function runLabel(label: RunLabel, variant: EvalVariant): Promise<Record<s
     variant,
     stackHeads: {
       p177: 'a38d83d',
-      p178: 'a2abc31',
+      p178: '9441863',
       p179: '4c17c84',
       p181: '1e06816',
     },
