@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2, Radar } from 'lucide-react';
 import { AdminBackLink } from '@/components/admin/admin-shell';
 import { EmptyState } from '@/components/dashboard/empty-state';
@@ -9,6 +10,7 @@ import {
   OPPFANGET_DISPLAY_TYPE_LABELS,
 } from '@/lib/admin/oppfanget/mapping';
 import type { OppfangetFilterInput } from '@/lib/admin/oppfanget/filters';
+import { buildOppfangetAdminPath, buildOppfangetListQueryString } from '@/lib/admin/oppfanget/query';
 import type {
   OppfangetDisplayStatus,
   OppfangetDisplayType,
@@ -94,6 +96,7 @@ export default function AdminOppfangetClient({
   /** Dev-only `preview` query (`mock` | `empty`). */
   devPreview?: string;
 }) {
+  const router = useRouter();
   const [data, setData] = useState<OppfangetListResponse | null>(initialData);
   const [error, setError] = useState('');
   const [pending, startTransition] = useTransition();
@@ -120,18 +123,16 @@ export default function AdminOppfangetClient({
     [type, status, source, dateFrom, dateTo, q],
   );
 
-  const queryString = useMemo(() => {
-    const params = new URLSearchParams();
-    if (type) params.set('type', type);
-    if (status) params.set('status', status);
-    if (source.trim()) params.set('source', source.trim());
-    if (dateFrom) params.set('dateFrom', dateFrom);
-    if (dateTo) params.set('dateTo', dateTo);
-    if (q.trim()) params.set('q', q.trim());
-    if (mockMode || devPreview === 'mock') params.set('preview', 'mock');
-    else if (devPreview === 'empty') params.set('preview', 'empty');
-    return params.toString();
-  }, [type, status, source, dateFrom, dateTo, q, mockMode, devPreview]);
+  const previewParam = useMemo(() => {
+    if (mockMode || devPreview === 'mock') return 'mock';
+    if (devPreview === 'empty') return 'empty';
+    return null;
+  }, [mockMode, devPreview]);
+
+  const queryString = useMemo(
+    () => buildOppfangetListQueryString(filters, previewParam),
+    [filters, previewParam],
+  );
 
   const clearFilters = useCallback(() => {
     setType('');
@@ -140,7 +141,10 @@ export default function AdminOppfangetClient({
     setDateFrom('');
     setDateTo('');
     setQ('');
-  }, []);
+    const clearedPath = buildOppfangetAdminPath({}, previewParam);
+    hydratedQueryRef.current = buildOppfangetListQueryString({}, previewParam);
+    router.replace(clearedPath);
+  }, [previewParam, router]);
 
   const load = useCallback(() => {
     startTransition(async () => {

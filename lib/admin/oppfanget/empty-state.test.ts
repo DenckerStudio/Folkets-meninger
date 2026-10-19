@@ -45,6 +45,8 @@ const client = readFileSync(
   'utf-8',
 );
 assert.match(client, /OPPFANGET_PIPELINE_EMPTY_TITLE/);
+assert.match(client, /router\.replace/);
+assert.match(client, /buildOppfangetAdminPath/);
 assert.equal(OPPFANGET_PIPELINE_EMPTY_TITLE, 'Ingenting oppfanget ennå');
 
 console.log('admin/oppfanget/empty-state.test.ts: ok');
