@@ -69,13 +69,6 @@ function ReelVoteFace({
   const { ref: descriptionClampRef, overflowing: descriptionClipped } = useLineClampOverflow<HTMLParagraphElement>();
   const showLesMer = Boolean(onRequestExpand && item.poll.neutralSummary && descriptionClipped);
 
-  const handleContentActivate = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!onRequestExpand || isExpanded) return;
-    const target = event.target as HTMLElement;
-    if (target.closest('button, a, [role="button"]')) return;
-    onRequestExpand();
-  };
-
   const voteFooter = (
     <div
       className={cn(
@@ -213,11 +206,7 @@ function ReelVoteFace({
   }
 
   return (
-    <div
-      data-testid="reel-vote-face"
-      className="flex h-full min-h-0 flex-col gap-2"
-      onClick={handleContentActivate}
-    >
+    <div data-testid="reel-vote-face" className="flex h-full min-h-0 flex-col gap-2">
       <div className="flex min-h-0 flex-1 flex-col gap-1.5">
         <p className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-white/70">
           Hva mener du?

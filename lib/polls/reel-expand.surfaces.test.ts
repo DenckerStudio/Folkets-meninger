@@ -17,6 +17,7 @@ assert.match(voteCard, /line-clamp-4/);
 assert.match(voteCard, /layoutId/);
 assert.match(voteCard, /ReelExpandedShell/);
 assert.match(voteCard, /Les mer/);
+assert.doesNotMatch(voteCard, /handleContentActivate/);
 
 assert.match(stage, /expandedPollId/);
 assert.match(stage, /LayoutGroup/);
