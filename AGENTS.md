@@ -218,7 +218,8 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 Canonical template: `.env.example`. Key server-only vars: `SUPABASE_SERVICE_ROLE_KEY`,
 `CRON_SECRET`, `N8N_*_WEBHOOK_URL`, `CMS_URL` / `CMS_API_KEY` / `CMS_AGENT_API_KEY` /
 `REVALIDATE_SECRET` (blog, see `infra/coolify/cms.md`), `SMTP_*`,
-`BYOK_ENCRYPTION_KEY`, `SEARXNG_BASE_URL`, `STRIPE_*`. Public:
+`BYOK_ENCRYPTION_KEY`, `SEARXNG_BASE_URL`, `EMBED_QUERY_URL` (optional central
+bge-m3 for hybrid chat RAG; `EMBED_QUERY_MODEL`, default `bge-m3`), `STRIPE_*`. Public:
 `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
 `NEXT_PUBLIC_STORTINGET_*`. Prod values live in Coolify, never in the repo.
 

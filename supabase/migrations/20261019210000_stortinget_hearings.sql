@@ -388,6 +388,58 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.n8n_replace_hearing_document_chunks(
+  p_hearing_document_id uuid,
+  p_hearing_id text,
+  p_document_id text,
+  p_chunks jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_count int;
+BEGIN
+  IF p_hearing_document_id IS NULL OR btrim(coalesce(p_hearing_id, '')) = '' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'missing_ids');
+  END IF;
+
+  DELETE FROM public.document_chunks
+  WHERE hearing_document_id = p_hearing_document_id;
+
+  INSERT INTO public.document_chunks (
+    issue_id,
+    hearing_id,
+    hearing_document_id,
+    document_id,
+    chunk_index,
+    content,
+    embedding_status,
+    metadata
+  )
+  SELECT
+    NULL::text,
+    p_hearing_id,
+    p_hearing_document_id,
+    p_document_id,
+    (elem->>'chunk_index')::int,
+    elem->>'content',
+    coalesce(nullif(btrim(elem->>'embedding_status'), ''), 'pending'),
+    coalesce(elem->'metadata', '{}'::jsonb)
+  FROM jsonb_array_elements(coalesce(p_chunks, '[]'::jsonb)) AS elem;
+
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+
+  UPDATE public.hearing_documents
+  SET status = 'chunked', updated_at = now()
+  WHERE id = p_hearing_document_id;
+
+  RETURN jsonb_build_object('ok', true, 'count', v_count, 'id', p_hearing_document_id);
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.n8n_list_pending_hearing_document_chunks(p_limit int DEFAULT 8)
 RETURNS TABLE (
   id uuid,
@@ -479,6 +531,7 @@ REVOKE ALL ON FUNCTION public.n8n_list_hearing_documents_needing_conversion(int)
 REVOKE ALL ON FUNCTION public.n8n_save_hearing_document_markdown(uuid, text, text, text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.n8n_list_hearing_documents_needing_chunking(int) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.n8n_mark_hearing_document_chunked(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.n8n_replace_hearing_document_chunks(uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.n8n_list_pending_hearing_document_chunks(int) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.n8n_upsert_stortinget_hearing(jsonb) TO service_role;
@@ -487,6 +540,7 @@ GRANT EXECUTE ON FUNCTION public.n8n_list_hearing_documents_needing_conversion(i
 GRANT EXECUTE ON FUNCTION public.n8n_save_hearing_document_markdown(uuid, text, text, text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.n8n_list_hearing_documents_needing_chunking(int) TO service_role;
 GRANT EXECUTE ON FUNCTION public.n8n_mark_hearing_document_chunked(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.n8n_replace_hearing_document_chunks(uuid, text, text, jsonb) TO service_role;
 GRANT EXECUTE ON FUNCTION public.n8n_list_pending_hearing_document_chunks(int) TO service_role;
 
 GRANT EXECUTE ON FUNCTION public.search_hearing_document_chunks_text(text, text, int) TO service_role, anon, authenticated;
@@ -504,6 +558,19 @@ ALTER TABLE public.document_chunks
 
 ALTER TABLE public.document_chunks
   ADD COLUMN IF NOT EXISTS embedding_v2 vector(1024);
+
+DROP FUNCTION IF EXISTS public.search_chunks_hybrid(
+  text,
+  vector,
+  text[],
+  text[],
+  text,
+  text,
+  boolean,
+  timestamptz,
+  text,
+  int
+);
 
 CREATE OR REPLACE FUNCTION public.search_chunks_hybrid(
   query_text text,

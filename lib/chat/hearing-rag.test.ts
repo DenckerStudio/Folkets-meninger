@@ -31,14 +31,13 @@ assert.match(meta.skriftligInnspillUrl, /h=10005933/);
 
 const notIndexed = hearingSearchNoteForEmptyChunks({
   documentsIndexed: false,
-  lexicalRpcMissing: true,
 });
 assert.match(notIndexed.note, /ikke indeksert/i);
+assert.match(notIndexed.note, /findHearingsForSak|listOpenHearings/);
 assert.match(notIndexed.guidance ?? '', /findHearingsForSak|listOpenHearings/);
 
 const indexedEmpty = hearingSearchNoteForEmptyChunks({
   documentsIndexed: true,
-  lexicalRpcMissing: false,
 });
 assert.match(indexedEmpty.note, /Fant ingen dokumentutdrag/);
 assert.equal(indexedEmpty.guidance, null);

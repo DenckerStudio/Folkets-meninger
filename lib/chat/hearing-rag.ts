@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { applyChunkExcerptsForChat, normalizeChunkText } from '@/lib/chat/chunk-excerpt';
 import { getAnonSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
 import type { ChatRagClient } from '@/lib/chat/rag';
@@ -56,10 +57,6 @@ type HybridChunkRow = {
   rank?: number;
 };
 
-function clip(value: string, max = 1400): string {
-  return value.replace(/\s+/g, ' ').trim().slice(0, max);
-}
-
 export function isMissingHearingHybridRpcError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const row = error as { code?: string; message?: string };
@@ -81,18 +78,18 @@ export function isMissingHearingDocumentSearchRpcError(error: unknown): boolean 
 
 export function hearingSearchNoteForEmptyChunks(args: {
   documentsIndexed: boolean;
-  lexicalRpcMissing: boolean;
 }): { note: string; guidance: string | null } {
   if (!args.documentsIndexed) {
     return {
       note:
-        'Høringsdokumentene er ikke indeksert i databasen ennå, så det finnes ingen tekstutdrag å søke i.',
+        'Høringsdokumentene er ikke indeksert i databasen ennå, så det finnes ingen tekstutdrag å søke i. Bruk verktøyene findHearingsForSak eller listOpenHearings for tittel, frist, komité og lenke til skriftlig innspill.',
       guidance:
-        'Bruk findHearingsForSak eller listOpenHearings for tittel, frist, komité og lenke til skriftlig innspill.',
+        'Kall findHearingsForSak eller listOpenHearings for å svare på hva høringen handler om og når fristen er.',
     };
   }
   return {
-    note: 'Fant ingen dokumentutdrag i høringskildene for denne spørringen.',
+    note:
+      'Fant ingen dokumentutdrag i høringskildene som matcher spørringen. Prøv andre søkeord, eller bruk findHearingsForSak / listOpenHearings for oversikt.',
     guidance: null,
   };
 }
@@ -117,9 +114,13 @@ export function hearingMetaFromStortingetExport(
 }
 
 export async function resolveHearingSearchMeta(hearingId: string): Promise<HearingSearchMeta | null> {
-  const hearing = await fetchStortingetHoringById(hearingId);
-  if (!hearing) return null;
-  return hearingMetaFromStortingetExport(hearingId, hearing);
+  try {
+    const hearing = await fetchStortingetHoringById(hearingId);
+    if (!hearing) return null;
+    return hearingMetaFromStortingetExport(hearingId, hearing);
+  } catch {
+    return null;
+  }
 }
 
 async function resolveRagClient(client?: ChatRagClient | null): Promise<ChatRagClient> {
@@ -144,7 +145,7 @@ function mapHybridHearingChunkRow(
   fallbackHearingId: string | null,
 ): HearingChunkHit | null {
   const chunkId = String(row.id ?? row.chunk_id ?? '').trim();
-  const content = clip(String(row.content ?? ''));
+  const content = normalizeChunkText(String(row.content ?? ''));
   if (!chunkId || !content) return null;
 
   const hearingId = String(row.hearing_id ?? fallbackHearingId ?? '').trim();
@@ -161,6 +162,43 @@ function mapHybridHearingChunkRow(
     sourceUrl: row.source_url?.trim() || null,
     rank: Number(row.score_fused ?? row.rank ?? 0),
   };
+}
+
+function mapLexicalHearingChunkRow(
+  row: Record<string, unknown>,
+  hearingId: string | null,
+): HearingChunkHit | null {
+  const content = normalizeChunkText(String(row.content ?? ''));
+  if (!content) return null;
+  return {
+    chunkId: String(row.chunk_id ?? ''),
+    hearingId: String(row.hearing_id ?? hearingId ?? ''),
+    hearingDocumentId: String(row.hearing_document_id ?? ''),
+    documentId: String(row.document_id ?? ''),
+    chunkIndex: Number(row.chunk_index ?? 0),
+    content,
+    documentTitle: typeof row.document_title === 'string' ? row.document_title : null,
+    documentKind: typeof row.document_kind === 'string' ? row.document_kind : null,
+    sourceUrl: typeof row.source_url === 'string' ? row.source_url : null,
+    rank: Number(row.rank ?? 0),
+  };
+}
+
+function excerptHearingChunksForChat(chunks: HearingChunkHit[], query: string): HearingChunkHit[] {
+  return applyChunkExcerptsForChat(chunks, query);
+}
+
+async function hearingHasIndexedChunks(
+  supabase: ChatRagClient,
+  hearingId: string,
+): Promise<boolean> {
+  const client = supabase as SupabaseClient;
+  const { count, error } = await client
+    .from('document_chunks')
+    .select('id', { count: 'exact', head: true })
+    .eq('hearing_id', hearingId);
+  if (error) return false;
+  return (count ?? 0) > 0;
 }
 
 async function trySearchChunksHybrid(
@@ -196,7 +234,7 @@ async function trySearchChunksHybrid(
     .filter((row): row is HearingChunkHit => row != null)
     .filter((row) => isHearingChunkRow({ hearing_id: row.hearingId }, hearingId));
 
-  return hits.length > 0 ? hits : null;
+  return hits.length > 0 ? excerptHearingChunksForChat(hits, query) : null;
 }
 
 async function searchHearingChunksLexical(
@@ -221,21 +259,10 @@ async function searchHearingChunksLexical(
 
   const chunks = data
     .map((row) => row as Record<string, unknown>)
-    .map((row) => ({
-      chunkId: String(row.chunk_id ?? ''),
-      hearingId: String(row.hearing_id ?? hearingId ?? ''),
-      hearingDocumentId: String(row.hearing_document_id ?? ''),
-      documentId: String(row.document_id ?? ''),
-      chunkIndex: Number(row.chunk_index ?? 0),
-      content: clip(String(row.content ?? '')),
-      documentTitle: typeof row.document_title === 'string' ? row.document_title : null,
-      documentKind: typeof row.document_kind === 'string' ? row.document_kind : null,
-      sourceUrl: typeof row.source_url === 'string' ? row.source_url : null,
-      rank: Number(row.rank ?? 0),
-    }))
-    .filter((row) => row.content.length > 0);
+    .map((row) => mapLexicalHearingChunkRow(row, hearingId))
+    .filter((row): row is HearingChunkHit => row != null);
 
-  return { chunks, rpcMissing: false };
+  return { chunks: excerptHearingChunksForChat(chunks, query), rpcMissing: false };
 }
 
 export async function searchHearingDocuments(args: {
@@ -281,11 +308,13 @@ export async function searchHearingDocuments(args: {
     };
   }
 
-  const documentsIndexed = !lexicalRpcMissing;
-  const { note, guidance } = hearingSearchNoteForEmptyChunks({
-    documentsIndexed,
-    lexicalRpcMissing,
-  });
+  let documentsIndexed = !lexicalRpcMissing;
+  if (documentsIndexed && hearingId) {
+    const hasChunks = await hearingHasIndexedChunks(supabase, hearingId);
+    if (!hasChunks) documentsIndexed = false;
+  }
+
+  const { note, guidance } = hearingSearchNoteForEmptyChunks({ documentsIndexed });
 
   return {
     hearing,

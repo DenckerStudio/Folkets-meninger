@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ollamaApiUrl } from '@/lib/byok/ollama';
 import type { DecryptedByokCredential } from '@/lib/byok/service';
+import { normalizeChunkText } from '@/lib/chat/chunk-excerpt';
 
 /**
  * Semantic chunk search for overlay chat.
@@ -20,13 +21,15 @@ import type { DecryptedByokCredential } from '@/lib/byok/service';
 /** Dimensions of `document_chunks.embedding`, i.e. the vectors we must produce. */
 export const VECTOR_DIMENSIONS = 768;
 
+/** Dimensions of `document_chunks.embedding_v2` (bge-m3, P6). */
+export const VECTOR_V2_DIMENSIONS = 1024;
+
 /** Ollama model that produced the stored 768-dim vectors (n8n + Ollama). */
 export const OLLAMA_VECTOR_MODEL = 'nomic-embed-text';
 
-const DEFAULT_TIMEOUT_MS = 8000;
+/** Cap BYOK Ollama embed latency so a down server cannot block chat for seconds. */
+export const OLLAMA_VECTOR_TIMEOUT_MS = 800;
 const MAX_QUERY_CHARS = 500;
-const MAX_CHUNK_CHARS = 1400;
-
 export type QueryVectorizer = (query: string) => Promise<number[] | null>;
 
 export type VectorChunk = {
@@ -72,7 +75,7 @@ export function createOllamaVectorizer(
 
   const model = options.model?.trim() || OLLAMA_VECTOR_MODEL;
   const fetchImpl = options.fetchImpl ?? fetch;
-  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const timeoutMs = options.timeoutMs ?? OLLAMA_VECTOR_TIMEOUT_MS;
 
   return async (query: string) => {
     const prompt = (query ?? '').trim().slice(0, MAX_QUERY_CHARS);
@@ -122,10 +125,7 @@ export async function searchChunksByVector(
 
     return data.flatMap((row) => {
       const record = row as Record<string, unknown>;
-      const content = String(record.content ?? '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, MAX_CHUNK_CHARS);
+      const content = normalizeChunkText(String(record.content ?? ''));
       if (!content) return [];
       return [
         {
