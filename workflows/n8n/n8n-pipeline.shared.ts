@@ -65,10 +65,13 @@ const ragLines = chunks.slice(0, 16).map((chunk, index) => {
   if (!content) return null;
   if (source && source.includes(content.slice(0, 80))) return null;
   const meta = chunk?.metadata && typeof chunk.metadata === 'object' ? chunk.metadata : {};
-  const section =
-    typeof meta.section_title === 'string' && meta.section_title.trim()
-      ? ' [' + meta.section_title.trim() + ']'
-      : '';
+  const headingPath =
+    typeof meta.heading_path === 'string' && meta.heading_path.trim()
+      ? meta.heading_path.trim()
+      : typeof meta.section_title === 'string' && meta.section_title.trim()
+        ? meta.section_title.trim()
+        : '';
+  const section = headingPath ? ' [' + headingPath + ']' : '';
   const src = chunk?.document_id ? ' (kilde: ' + chunk.document_id + section + ')' : section;
   return 'Dokumentutdrag ' + (index + 1) + src + ':\\n' + content;
 }).filter(Boolean);

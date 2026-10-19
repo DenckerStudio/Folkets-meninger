@@ -3,8 +3,13 @@ const segmenter =
     ? new Intl.Segmenter('nb', { granularity: 'grapheme' })
     : null;
 
+export const BLOG_TITLE_MAX = 110;
 export const BLOG_EXCERPT_MAX = 300;
 export const BLOG_BLUESKY_MAX = 300;
+
+export function normalizeBlogTitle(raw: string): string {
+  return raw.trim().slice(0, BLOG_TITLE_MAX);
+}
 
 export function graphemeCount(value: string): number {
   if (!value) return 0;

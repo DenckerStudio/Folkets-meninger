@@ -24,7 +24,7 @@ export type DocumentChunkMetadata = {
   document_id: string;
   document_kind: string;
   document_title: string;
-  section_title: string;
+  section_title: string | null;
   page: number | null;
   page_start: number | null;
   page_end: number | null;
@@ -50,6 +50,9 @@ const TABLE_ROW_RE = /^\|.+\|\s*$/;
 const TABLE_SEP_RE = /^\|[\s:|-]+\|\s*$/;
 const PAGE_MARKER_RE =
   /<!--\s*page(?:\s*number)?[=:\s"]*(\d+)[^>]*-->|<!--\s*page\s+(\d+)\s*-->/i;
+const SIDE_MARKER_RE = /<!--\s*side\s*-->/i;
+/** Dot-leader lines typical in Stortinget TOC blocks (matches n8n md-sections-v1). */
+const DOT_LEADER_TOC_LINE_RE = /.+\.{2,}\s*\d+\s*$/;
 
 function hashContent(value: string): string {
   return createHash('sha256').update(value).digest('hex');
@@ -60,7 +63,39 @@ export function looksLikeMarkdown(text: string): boolean {
   if (/^#{1,6}\s+/m.test(sample)) return true;
   if (/^\|.+\|\s*$/m.test(sample)) return true;
   if (PAGE_MARKER_RE.test(sample)) return true;
+  if (SIDE_MARKER_RE.test(sample)) return true;
   return false;
+}
+
+export function resolveChunkPageFromMetadata(meta: {
+  page?: number | null;
+  page_start?: number | null;
+  page_end?: number | null;
+}): { page: number | null; pageStart: number | null; pageEnd: number | null } {
+  const pageStart =
+    meta.page_start !== undefined && meta.page_start !== null ? meta.page_start : null;
+  const pageEnd = meta.page_end !== undefined && meta.page_end !== null ? meta.page_end : null;
+  const page =
+    meta.page !== undefined && meta.page !== null
+      ? meta.page
+      : pageStart !== null
+        ? pageStart
+        : null;
+  return {
+    page,
+    pageStart: pageStart ?? page,
+    pageEnd: pageEnd ?? pageStart ?? page,
+  };
+}
+
+export function isDotLeaderTocContent(content: string): boolean {
+  const lines = content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length < 2) return false;
+  const dotLeaderLines = lines.filter((line) => DOT_LEADER_TOC_LINE_RE.test(line));
+  return dotLeaderLines.length >= 2 && dotLeaderLines.length * 2 >= lines.length;
 }
 
 type Block = {
@@ -78,8 +113,13 @@ function sectionPathLabel(path: string[]): string {
   return path.filter(Boolean).join(' › ');
 }
 
-function parsePageMarker(line: string): number | null {
-  const match = line.match(PAGE_MARKER_RE);
+function parsePageMarker(line: string, sideState: { count: number }): number | null {
+  const trimmed = line.trim();
+  if (SIDE_MARKER_RE.test(trimmed)) {
+    sideState.count += 1;
+    return sideState.count + 1;
+  }
+  const match = trimmed.match(PAGE_MARKER_RE);
   if (!match) return null;
   const num = Number(match[1] ?? match[2]);
   return Number.isFinite(num) && num > 0 ? num : null;
@@ -166,7 +206,8 @@ function parseMarkdownBlocks(text: string): Block[] {
   const lines = text.replace(/\r\n/g, '\n').split('\n');
   const blocks: Block[] = [];
   const headingStack: Array<{ level: number; title: string }> = [];
-  let currentPage: number | null = null;
+  let currentPage: number | null = 1;
+  const sideState = { count: 0 };
   let skipToc = false;
   let tocMinLevel = 0;
 
@@ -200,7 +241,7 @@ function parseMarkdownBlocks(text: string): Block[] {
     const line = rawLine;
     const trimmed = line.trim();
 
-    const pageNum = parsePageMarker(trimmed);
+    const pageNum = parsePageMarker(trimmed, sideState);
     if (pageNum !== null) {
       flushParagraph();
       flushTable();
@@ -324,6 +365,17 @@ function assembleChunksFromBlocks(blocks: Block[], targetChars: number, overlapR
     const separator = buffer.length > 0 ? '\n\n' : '';
     const candidate = buffer + separator + blockText;
 
+    if (
+      buffer &&
+      block.page !== null &&
+      bufferPageEnd !== null &&
+      block.page > bufferPageEnd
+    ) {
+      emit();
+      startNewBuffer(blockText, block.sectionPath, block.page);
+      continue;
+    }
+
     if (candidate.length <= targetChars) {
       if (!buffer) {
         startNewBuffer(blockText, block.sectionPath, block.page);
@@ -390,7 +442,8 @@ export function chunkDocumentMarkdown(
   const blocks = parseMarkdownBlocks(normalized);
   if (blocks.length === 0) return [];
 
-  return assembleChunksFromBlocks(blocks, targetChars, overlapRatio);
+  const chunks = assembleChunksFromBlocks(blocks, targetChars, overlapRatio);
+  return chunks.filter((chunk) => !isDotLeaderTocContent(chunk.content));
 }
 
 /**
@@ -503,8 +556,8 @@ export function buildDocumentChunkMetadata(args: {
   documentId: string;
   documentKind: string;
   documentTitle: string;
-  sectionTitle: string;
-  page: number | null;
+  sectionTitle?: string | null;
+  page?: number | null;
   pageStart?: number | null;
   pageEnd?: number | null;
   sourceUrl: string | null;
@@ -513,16 +566,25 @@ export function buildDocumentChunkMetadata(args: {
   publishedAt: string | null;
   contentHash: string;
 }): DocumentChunkMetadata {
+  const pages = resolveChunkPageFromMetadata({
+    page: args.page ?? null,
+    page_start: args.pageStart ?? null,
+    page_end: args.pageEnd ?? null,
+  });
+  const sectionTitle =
+    args.sectionTitle !== undefined && args.sectionTitle !== null
+      ? args.sectionTitle.trim() || null
+      : null;
   return {
     issue_id: args.issueId,
     hearing_id: args.hearingId ?? null,
     document_id: args.documentId,
     document_kind: args.documentKind,
     document_title: args.documentTitle,
-    section_title: args.sectionTitle,
-    page: args.pageStart ?? args.page,
-    page_start: args.pageStart ?? args.page,
-    page_end: args.pageEnd ?? args.pageStart ?? args.page,
+    section_title: sectionTitle,
+    page: pages.page,
+    page_start: pages.pageStart,
+    page_end: pages.pageEnd,
     source_url: args.sourceUrl,
     sesjon: args.sesjon,
     komite: args.komite,

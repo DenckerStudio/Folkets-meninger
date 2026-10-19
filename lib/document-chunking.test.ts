@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
 import {
   DOCUMENT_CHUNKER_ID,
+  buildDocumentChunkMetadata,
   chunkDocument,
   chunkDocumentMarkdown,
   chunkDocumentText,
   documentContentHash,
   estimateTokens,
+  isDotLeaderTocContent,
   looksLikeMarkdown,
+  resolveChunkPageFromMetadata,
 } from './document-chunking';
 
 const STORTINGET_FIXTURE = `# Innstilling fra komiteen
@@ -75,9 +78,67 @@ Avsnitt på side 3.
 Mer tekst.
 `;
 const pageChunks = chunkDocumentMarkdown(withPage);
-assert.equal(pageChunks[0]?.page, 3);
-assert.equal(pageChunks[0]?.pageStart, 3);
-assert.equal(pageChunks[0]?.pageEnd, 3);
+const pageThree = pageChunks.find((c) => c.content.includes('Avsnitt på side 3'));
+assert.ok(pageThree);
+assert.equal(pageThree?.pageEnd, 3);
+assert.ok((pageThree?.pageStart ?? 0) <= 3);
+
+const withSideMarkers = `# Forside
+
+Intro på side 1.
+
+<!-- side -->
+
+Kapittel på side 2.
+
+<!-- side -->
+
+Mer på side 3.
+`;
+const sideOnly = chunkDocumentMarkdown('Forside\n\n<!-- side -->\n\nSide to.');
+assert.equal(sideOnly.find((c) => c.content.includes('Side to.'))?.pageStart, 2);
+
+const sideChunks = chunkDocumentMarkdown(withSideMarkers);
+assert.ok(sideChunks.some((c) => c.content.includes('Kapittel på side 2')));
+assert.ok(sideChunks.some((c) => c.content.includes('Mer på side 3') && (c.pageEnd ?? 0) >= 3));
+
+assert.ok(isDotLeaderTocContent('Kapittel 1 .............. 3\nKapittel 2 .............. 7'));
+assert.ok(!isDotLeaderTocContent('Vanlig avsnitt uten punktumleder.'));
+
+const dotLeaderDoc = `# Rapport
+
+Kapittel 1 .............. 3
+Kapittel 2 .............. 7
+
+## Innhold
+
+Dette er ekte innhold etter innholdsfortegnelsen.
+`;
+const dotChunks = chunkDocumentMarkdown(dotLeaderDoc);
+assert.ok(dotChunks.every((c) => !isDotLeaderTocContent(c.content)));
+assert.ok(dotChunks.some((c) => c.content.includes('ekte innhold')));
+
+const metaPages = resolveChunkPageFromMetadata({ page_start: 4, page_end: 6 });
+assert.equal(metaPages.page, 4);
+assert.equal(metaPages.pageEnd, 6);
+
+const metaNullSection = buildDocumentChunkMetadata({
+  issueId: '1',
+  documentId: 'd',
+  documentKind: 'prop',
+  documentTitle: 'T',
+  sectionTitle: null,
+  pageStart: 2,
+  pageEnd: 5,
+  sourceUrl: null,
+  sesjon: null,
+  komite: null,
+  publishedAt: null,
+  contentHash: 'h',
+});
+assert.equal(metaNullSection.section_title, null);
+assert.equal(metaNullSection.page, 2);
+assert.equal(metaNullSection.page_end, 5);
 
 const withToc = `# Rapport
 
