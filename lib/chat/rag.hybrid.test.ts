@@ -4,8 +4,11 @@ import {
   mapHybridChunkRow,
   mergeChunks,
   primaryChunksFromHybridAttempt,
+  primaryIssuesFromFtsAttempt,
   shouldFallbackToLegacyChunks,
+  shouldFallbackToLegacyIssueSearch,
   type ChatDocumentChunk,
+  type ChatIssueHit,
 } from './rag';
 
 async function main() {
@@ -69,6 +72,28 @@ async function main() {
   assert.equal(legacyCalls, 2);
   assert.deepEqual(await primaryChunksFromHybridAttempt([a], legacy), [a]);
   assert.equal(legacyCalls, 2, 'legacy must not run when hybrid has chunks');
+
+  const issueHit: ChatIssueHit = {
+    id: '1',
+    title: 'Innvandringsloven',
+    summary: null,
+    henvisning: null,
+    ferdigbehandlet: null,
+  };
+  assert.equal(shouldFallbackToLegacyIssueSearch(null), true);
+  assert.equal(shouldFallbackToLegacyIssueSearch([]), true);
+  assert.equal(shouldFallbackToLegacyIssueSearch([issueHit]), false);
+
+  let legacyIssueCalls = 0;
+  const legacyIssues = async () => {
+    legacyIssueCalls += 1;
+    return [issueHit];
+  };
+  assert.deepEqual(await primaryIssuesFromFtsAttempt(null, legacyIssues), [issueHit]);
+  assert.deepEqual(await primaryIssuesFromFtsAttempt([], legacyIssues), [issueHit]);
+  assert.equal(legacyIssueCalls, 2);
+  assert.deepEqual(await primaryIssuesFromFtsAttempt([issueHit], legacyIssues), [issueHit]);
+  assert.equal(legacyIssueCalls, 2, 'legacy issue search must not run when FTS has hits');
 
   console.log('chat/rag.hybrid.test.ts: ok');
 }

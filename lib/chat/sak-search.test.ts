@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import {
+  buildIssuePrefixTsqueryOperands,
   buildSearchTerms,
   escapeIlike,
+  formatIssuePrefixTsquery,
   looksLikeIssueId,
   rankSakRows,
   scoreSakRow,
@@ -32,6 +34,13 @@ assert.deepEqual(buildSearchTerms('hva koster innvandringsloven'), [
   'koster',
   'innvandringsloven',
 ]);
+
+assert.deepEqual(buildIssuePrefixTsqueryOperands(['innvandring', 'innvandring']), [
+  'innvandring',
+]);
+assert.equal(formatIssuePrefixTsquery(['innvandring']), 'innvandring:*');
+assert.equal(formatIssuePrefixTsquery(buildSearchTerms('innvandring')), 'innvandring:*');
+assert.match(formatIssuePrefixTsquery(buildSearchTerms('hva sier loven om innvandring')) ?? '', /innvandring:\*/);
 assert.equal(buildSearchTerms('   ').length, 0);
 assert.equal(buildSearchTerms('hva er loven?').length, 1);
 
