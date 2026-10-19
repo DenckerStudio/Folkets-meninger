@@ -75,7 +75,6 @@ function ReelVoteFace({
         'shrink-0',
         isExpanded &&
           'border-t border-white/10 bg-[#00205b] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-3',
-        !isExpanded && 'max-sm:pr-10',
       )}
     >
         {!votingOpen ? (
