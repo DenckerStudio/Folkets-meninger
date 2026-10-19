@@ -9,26 +9,20 @@ import {
   significantTokens,
   type SakSearchRow,
 } from '@/lib/chat/sak-search';
-import { fetchCentralQueryEmbedding } from '@/lib/chat/query-embed';
-import {
-  applyChunkExcerptsForChat,
-  applyTopicWideChunkExcerpts,
-  normalizeChunkText,
-} from '@/lib/chat/chunk-excerpt';
 import {
   searchChunksByVector,
   type QueryVectorizer,
   type VectorSearchClient,
 } from '@/lib/chat/vector-search';
 
+const MAX_CHUNK_CHARS = 1400;
 const MAX_CHUNKS = 8;
-const MAX_SUMMARY_CLIP_CHARS = 1800;
 const ISSUE_COLUMNS = 'id, title, summary, henvisning, ferdigbehandlet';
 // `metadata` carries document_title/document_kind set during ingest — cheap
 // provenance so citations can name their source document.
 const CHUNK_COLUMNS = 'issue_id, document_id, chunk_index, content, metadata';
 
-export type ChatRagClient = Pick<SupabaseClient, 'from' | 'rpc'>;
+export type ChatRagClient = Pick<SupabaseClient, 'from'>;
 
 export type ChatDocumentChunk = {
   documentId: string;
@@ -36,7 +30,6 @@ export type ChatDocumentChunk = {
   content: string;
   documentTitle?: string | null;
   documentKind?: string | null;
-  sourceUrl?: string | null;
   rank?: number;
 };
 
@@ -79,7 +72,7 @@ function publicSupabaseConfigured(): boolean {
   );
 }
 
-function clipSummary(value: string, max = MAX_SUMMARY_CLIP_CHARS): string {
+function clip(value: string, max = MAX_CHUNK_CHARS): string {
   return value.replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
@@ -151,7 +144,7 @@ function rankChunkForSak(
  * Overlay chat RAG uses the logged-in request session when present, then the
  * public anon key. Public sak cache tables already allow SELECT for
  * anon/authenticated. Do not use the service role — a mismatched Cloud Agent
- * key fail-closes. Hybrid FTS RPCs run as SECURITY INVOKER with anon/session.
+ * key fail-closes, and the lexical RPCs are service_role-only.
  */
 export async function resolveChatRagClient(
   explicit?: ChatRagClient | null,
@@ -170,61 +163,15 @@ export async function resolveChatRagClient(
  * terms, ORs them across title/henvisning/summary, then ranks by relevance in
  * `sak-search.ts`. Falls back to the old phrase search so nothing regresses.
  */
-export function isMissingHybridRpcError(error: { message?: string; code?: string } | null): boolean {
-  if (!error) return false;
-  const msg = (error.message ?? '').toLowerCase();
-  return (
-    error.code === 'PGRST202' ||
-    msg.includes('could not find the function') ||
-    msg.includes('schema cache') ||
-    msg.includes('permission denied')
-  );
-}
-
-export function shouldFallbackToLegacyIssueSearch(ftsHits: ChatIssueHit[] | null): boolean {
-  return ftsHits === null || ftsHits.length === 0;
-}
-
-export async function primaryIssuesFromFtsAttempt(
-  ftsHits: ChatIssueHit[] | null,
-  loadLegacy: () => Promise<ChatIssueHit[]>,
+export async function searchIssuesForChat(
+  query: string,
+  limit = 6,
+  client?: ChatRagClient | null,
 ): Promise<ChatIssueHit[]> {
-  if (ftsHits !== null && ftsHits.length > 0) return ftsHits;
-  return loadLegacy();
-}
+  const supabase = await resolveChatRagClient(client);
+  const needle = query.trim().slice(0, 120);
+  if (!supabase || !needle) return [];
 
-async function searchIssuesViaFts(
-  supabase: ChatRagClient,
-  needle: string,
-  limit: number,
-): Promise<ChatIssueHit[] | null> {
-  if (!supabase.rpc) return null;
-  try {
-    const { data, error } = await supabase.rpc('search_issues_fts', {
-      query_text: needle,
-      search_terms: buildSearchTerms(needle),
-      match_count: limit,
-    });
-    if (error) {
-      if (isMissingHybridRpcError(error)) return null;
-      return null;
-    }
-    if (!Array.isArray(data)) return null;
-    const mapped = data.flatMap((row) => {
-      const issue = mapIssue(row as Record<string, unknown>);
-      return issue ? [issue] : [];
-    });
-    return mapped.length > 0 ? mapped : null;
-  } catch {
-    return null;
-  }
-}
-
-async function searchIssuesForChatLegacy(
-  supabase: ChatRagClient,
-  needle: string,
-  limit: number,
-): Promise<ChatIssueHit[]> {
   const candidates: Array<Record<string, unknown> | null> = [];
   const perTermLimit = Math.min(Math.max(limit * 3, 12), 40);
 
@@ -303,26 +250,6 @@ async function searchIssuesForChatLegacy(
   }));
 }
 
-export async function searchIssuesForChat(
-  query: string,
-  limit = 6,
-  client?: ChatRagClient | null,
-): Promise<ChatIssueHit[]> {
-  const supabase = await resolveChatRagClient(client);
-  const needle = query.trim().slice(0, 120);
-  if (!supabase || !needle) return [];
-
-  if (looksLikeIssueId(needle)) {
-    const direct = await loadIssueMeta(needle, supabase);
-    if (direct) return [direct];
-  }
-
-  const ftsHits = await searchIssuesViaFts(supabase, needle, limit);
-  return primaryIssuesFromFtsAttempt(ftsHits, () =>
-    searchIssuesForChatLegacy(supabase, needle, limit),
-  );
-}
-
 export async function loadIssueMeta(
   issueId: string,
   client?: ChatRagClient | null,
@@ -362,92 +289,6 @@ export function mergeChunks(
   return out;
 }
 
-export function mapHybridChunkRow(row: Record<string, unknown>): ChatDocumentChunk | null {
-  const content = normalizeChunkText(String(row.content ?? ''));
-  if (!content) return null;
-  const documentId = String(row.document_id ?? '');
-  if (!documentId) return null;
-  const fused = Number(row.score_fused ?? 0);
-  const lexical = row.score_lexical != null ? Number(row.score_lexical) : null;
-  const rank = Number.isFinite(fused) && fused > 0 ? fused : lexical ?? 0;
-  const sourceUrl =
-    typeof row.source_url === 'string' && row.source_url.trim() ? row.source_url.trim() : null;
-  const documentTitle =
-    typeof row.document_title === 'string' && row.document_title.trim()
-      ? row.document_title.trim()
-      : null;
-  const documentKind =
-    typeof row.document_kind === 'string' && row.document_kind.trim()
-      ? row.document_kind.trim()
-      : null;
-  return {
-    documentId,
-    chunkIndex: Number(row.chunk_index ?? 0),
-    content,
-    documentTitle,
-    documentKind,
-    sourceUrl,
-    rank,
-  };
-}
-
-/** Hybrid RPC succeeded but returned no usable chunks — fall back to legacy scan. */
-export function shouldFallbackToLegacyChunks(hybrid: ChatDocumentChunk[] | null): boolean {
-  return hybrid === null || hybrid.length === 0;
-}
-
-export async function primaryChunksFromHybridAttempt(
-  hybrid: ChatDocumentChunk[] | null,
-  loadLegacy: () => Promise<ChatDocumentChunk[]>,
-): Promise<ChatDocumentChunk[]> {
-  if (hybrid !== null && hybrid.length > 0) return hybrid;
-  return loadLegacy();
-}
-
-async function searchChunksHybrid(
-  supabase: ChatRagClient,
-  issue: ChatIssueHit,
-  query: string,
-  maxChunks: number = MAX_CHUNKS,
-  centralQueryEmbedding?: number[] | null,
-): Promise<ChatDocumentChunk[] | null> {
-  if (!supabase.rpc) return null;
-  const issueId = issue.id.trim();
-  if (!issueId) return null;
-
-  const queryEmbedding =
-    centralQueryEmbedding !== undefined
-      ? centralQueryEmbedding
-      : await fetchCentralQueryEmbedding(query);
-
-  try {
-    const { data, error } = await supabase.rpc('search_chunks_hybrid', {
-      query_text: query,
-      query_embedding: queryEmbedding,
-      filter_issue_ids: [issueId],
-      filter_document_kinds: null,
-      filter_sesjon: null,
-      filter_komite: null,
-      filter_ferdigbehandlet: null,
-      filter_published_after: null,
-      filter_hearing_id: null,
-      match_count: maxChunks,
-    });
-    if (error) {
-      if (isMissingHybridRpcError(error)) return null;
-      return null;
-    }
-    if (!Array.isArray(data)) return null;
-    const mapped = data.flatMap((row) => {
-      const chunk = mapHybridChunkRow(row as Record<string, unknown>);
-      return chunk ? [chunk] : [];
-    });
-    return mapped.length > 0 ? mapped : null;
-  } catch {
-    return null;
-  }
-}
-
 async function searchChunksLexical(
   supabase: ChatRagClient,
   issue: ChatIssueHit,
@@ -470,7 +311,7 @@ async function searchChunksLexical(
     const rowIssueId = String(row.issue_id ?? '').trim();
     // Defense in depth: never surface a chunk that is not for this sak.
     if (rowIssueId && rowIssueId !== issueId) return [];
-    const content = normalizeChunkText(String(row.content ?? ''));
+    const content = clip(String(row.content ?? ''));
     if (!content) return [];
     const rank = rankChunkForSak(content, issue, query);
     if (rank <= 0) return [];
@@ -480,7 +321,6 @@ async function searchChunksLexical(
         chunkIndex: Number(row.chunk_index ?? 0),
         content,
         ...chunkProvenance(row.metadata),
-        sourceUrl: null,
         rank,
       },
     ];
@@ -491,17 +331,10 @@ async function searchChunksLexical(
     .slice(0, maxChunks);
 }
 
-type SearchChunksOptions = {
-  /** When false, return merged full text (caller applies excerpt budget). */
-  applyExcerpts?: boolean;
-  /** Reuse one central embedding across topic saker (avoids duplicate Ollama calls). */
-  centralQueryEmbedding?: number[] | null;
-};
-
 /**
- * Chunks for one sak: hybrid RPC when available, else legacy lexical scan; optional
- * BYOK Ollama semantic hits prepended via `mergeChunks`. Excerpt budgeting runs
- * last unless `applyExcerpts` is false (topic context shares one budget across saker).
+ * Chunks for one sak. Starts from lexical ranking, then, when a query vectorizer is
+ * available, prepends semantically-ranked chunks and de-duplicates. A failing or
+ * unavailable vector search is swallowed so lexical results always survive.
  */
 async function searchChunks(
   supabase: ChatRagClient,
@@ -509,24 +342,9 @@ async function searchChunks(
   query: string,
   vectorize?: QueryVectorizer | null,
   maxChunks: number = MAX_CHUNKS,
-  options: SearchChunksOptions = {},
 ): Promise<ChatDocumentChunk[]> {
-  const applyExcerpts = options.applyExcerpts !== false;
-  const finish = (chunks: ChatDocumentChunk[]) =>
-    applyExcerpts ? applyChunkExcerptsForChat(chunks, query) : chunks;
-
-  const hybrid = await searchChunksHybrid(
-    supabase,
-    issue,
-    query,
-    maxChunks,
-    options.centralQueryEmbedding,
-  );
-  const primary = await primaryChunksFromHybridAttempt(hybrid, () =>
-    searchChunksLexical(supabase, issue, query, maxChunks),
-  );
-
-  if (!vectorize) return finish(primary);
+  const lexical = await searchChunksLexical(supabase, issue, query, maxChunks);
+  if (!vectorize) return lexical;
 
   const semantic = await searchChunksByVector(
     asVectorClient(supabase),
@@ -535,28 +353,26 @@ async function searchChunks(
     vectorize,
     maxChunks,
   );
-  if (!semantic || semantic.length === 0) return finish(primary);
+  if (!semantic || semantic.length === 0) return lexical;
 
-  // nomic (768-dim) path — unchanged until embedding_v2 is populated for all users.
+  // The ranking RPC does not return `metadata`, so look it up once for the
+  // documents that actually made the cut.
   const provenance = await loadChunkProvenance(
     supabase,
     [...new Set(semantic.map((chunk) => chunk.documentId))],
   );
 
-  const merged = mergeChunks(
+  return mergeChunks(
     semantic.map((chunk) => ({
       documentId: chunk.documentId,
       chunkIndex: chunk.chunkIndex,
       content: chunk.content,
       rank: chunk.similarity,
-      sourceUrl: null,
       ...(provenance.get(chunk.documentId) ?? {}),
     })),
-    primary,
+    lexical,
     maxChunks,
   );
-
-  return finish(merged);
 }
 
 /** Fetch document title/kind for a set of document ids in one query. */
@@ -647,7 +463,7 @@ export async function retrieveSakContext(args: {
 
   return {
     issue,
-    summary: clipSummary(summaryText || issue.summary || '') || null,
+    summary: clip(summaryText || issue.summary || '', 1800) || null,
     chunks,
     note:
       chunks.length === 0
@@ -700,38 +516,24 @@ export async function retrieveTopicContext(args: {
     };
   }
 
-  const centralQueryEmbedding = await fetchCentralQueryEmbedding(query);
-
   const saker = await Promise.all(
     hits.map(async (issue) => {
       const [chunks, summaryText] = await Promise.all([
-        searchChunks(supabase, issue, query, args.vectorize, MAX_TOPIC_CHUNKS, {
-          applyExcerpts: false,
-          centralQueryEmbedding,
-        }),
+        searchChunks(supabase, issue, query, args.vectorize, MAX_TOPIC_CHUNKS),
         loadAiSummaryText(supabase, issue.id),
       ]);
       return {
         issue,
-        summary: clipSummary(summaryText || issue.summary || '', MAX_TOPIC_SUMMARY_CHARS) || null,
+        summary: clip(summaryText || issue.summary || '', MAX_TOPIC_SUMMARY_CHARS) || null,
         chunks,
       };
     }),
   );
 
-  const excerptedBySak = applyTopicWideChunkExcerpts(
-    saker.map((sak) => sak.chunks),
-    query,
-  );
-  const sakerWithBudget = saker.map((sak, index) => ({
-    ...sak,
-    chunks: excerptedBySak[index] ?? [],
-  }));
-
-  const hasChunks = sakerWithBudget.some((sak) => sak.chunks.length > 0);
+  const hasChunks = saker.some((sak) => sak.chunks.length > 0);
   return {
     query,
-    saker: sakerWithBudget,
+    saker,
     note: hasChunks
       ? null
       : 'Ingen dokumentutdrag er indeksert for disse sakene ennå. Bruk tittel/sammendrag og et kildesøk ved behov.',
