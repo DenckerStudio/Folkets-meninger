@@ -201,10 +201,16 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 - Chunker id **`md-sections-v1`** in `lib/document-chunking.ts` (~3500 chars, 15% overlap,
   TOC dropped, `page_start` / `page_end` in metadata).
 - Parallel **bge-m3** store: `document_chunks.embedding_v2 vector(1024)` (migration
-  `20261019200000`). Backfill RPCs (`service_role`): `list_chunks_missing_v2`,
-  `save_embeddings_v2`. A/B eval: `match_document_chunks_v2` (anon/authenticated).
+  `20261019200000`). Backfill RPCs (`service_role`): `list_chunks_missing_v2(limit,
+  issue_id?, hearing_id?)`, `save_embeddings_v2` → `{saved, failed}` with
+  `embedding_v2_status` / `embedding_v2_attempts` (skip after 3 failures). A/B eval:
+  `match_document_chunks_v2` (`service_role` only).
+- New Docling chunks keep legacy `embedding_status = 'pending'` until the nomic pipeline
+  or a deliberate cutover; v2 backfill is separate.
 - Legacy nomic `embedding vector(768)` + existing n8n embed workflow stay unchanged until
   eval flips hybrid RAG to v2.
+- **Follow-up:** documents linked to multiple `issue_id`s still upsert under a single
+  `issue_id` per RPC call (n8n may pass `issue_ids[]` later).
 
 ### Folkets meninger (UGC) and innspill
 

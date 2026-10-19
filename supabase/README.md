@@ -487,9 +487,11 @@ trimmed detail context instead of the full JSON blob.
 similarity search.
 
 **Docling ingest (20261019220000):** n8n calls `n8n_upsert_docling_document` with
-markdown + pre-chunked rows (`md-sections-v1`). Hearings use `hearing_documents` from
-`20261019210000`. **embedding_v2 backfill:** `list_chunks_missing_v2` /
-`save_embeddings_v2` (bge-m3, 1024-dim); eval via `match_document_chunks_v2`.
+markdown + pre-chunked rows (`md-sections-v1`). Does not clear `content_full_text` /
+`content_html`. Sets `ingest_status = converted` when markdown is non-empty. Hearing
+chunks may set optional `issue_id`. **embedding_v2 backfill:** `list_chunks_missing_v2`,
+`save_embeddings_v2` → `{saved, failed}`; poison rows marked via `embedding_v2_status` /
+`embedding_v2_attempts`. Eval: `match_document_chunks_v2` (service_role only).
 
 If the DB hits `exceed_db_size_quota`, reclaim with:
 

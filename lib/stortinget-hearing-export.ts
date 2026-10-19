@@ -151,8 +151,10 @@ export type HearingChunkMetadata = {
   document_id: string;
   document_kind: string;
   document_title: string;
-  section_title: string;
+  section_title: string | null;
   page: number | null;
+  page_start: number | null;
+  page_end: number | null;
   source_url: string | null;
   sesjon: string | null;
   komite: string | null;
@@ -177,8 +179,10 @@ export function buildHearingChunkMetadata(args: {
     document_id: args.documentId,
     document_kind: args.documentKind,
     document_title: args.documentTitle,
-    section_title: '',
+    section_title: null,
     page: null,
+    page_start: null,
+    page_end: null,
     source_url: args.sourceUrl,
     sesjon: args.sesjon,
     komite: args.komite,
