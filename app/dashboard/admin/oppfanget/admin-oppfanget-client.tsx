@@ -1,22 +1,24 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import Link from 'next/link';
-import { AlertTriangle, ExternalLink, Loader2, Radar } from 'lucide-react';
+import { Loader2, Radar } from 'lucide-react';
 import { AdminBackLink } from '@/components/admin/admin-shell';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import {
   OPPFANGET_DISPLAY_STATUS_LABELS,
   OPPFANGET_DISPLAY_TYPE_LABELS,
 } from '@/lib/admin/oppfanget/mapping';
+import { listOppfangetMockFiltered } from '@/lib/admin/oppfanget/mock-list';
+import type { OppfangetFilterInput } from '@/lib/admin/oppfanget/filters';
 import type {
   OppfangetDisplayStatus,
   OppfangetDisplayType,
   OppfangetListResponse,
-  OppfangetRow,
 } from '@/lib/admin/oppfanget/types';
-import { routes } from '@/lib/routes';
-import { cn } from '@/lib/utils';
+import {
+  OppfangetDesktopTable,
+  OppfangetMobileCards,
+} from './oppfanget-row-views';
 
 const TYPE_OPTIONS: { value: '' | OppfangetDisplayType; label: string }[] = [
   { value: '', label: 'Alle typer' },
@@ -34,31 +36,6 @@ const STATUS_OPTIONS: { value: '' | OppfangetDisplayStatus; label: string }[] = 
   { value: 'publisert', label: OPPFANGET_DISPLAY_STATUS_LABELS.publisert },
   { value: 'avvist', label: OPPFANGET_DISPLAY_STATUS_LABELS.avvist },
 ];
-
-function formatDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat('nb-NO', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
-}
-
-function formatScale(row: OppfangetRow): string {
-  if (!row.scale?.value) return '—';
-  const unit = row.scale.unit ?? '';
-  const parts = [`ca. ${row.scale.value.toLocaleString('nb-NO')}${unit ? ` ${unit}` : ''}`];
-  if (row.scale.asOf) parts.push(`(${row.scale.asOf})`);
-  return parts.join(' ');
-}
-
-function pollLink(row: OppfangetRow): string | null {
-  if (!row.pollId) return null;
-  if (row.pollStatus === 'draft') return routes.adminReels;
-  return routes.poll(row.pollId);
-}
 
 function StatusPills({ counts }: { counts: OppfangetListResponse['counts'] }) {
   return (
@@ -95,10 +72,19 @@ export default function AdminOppfangetClient({
   const [dateTo, setDateTo] = useState('');
   const [q, setQ] = useState('');
 
-  const previewMock = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    return new URLSearchParams(window.location.search).get('preview') === 'mock';
-  }, []);
+  const mockMode = Boolean(data?.previewMock ?? initialData?.previewMock);
+
+  const filters = useMemo<OppfangetFilterInput>(
+    () => ({
+      type,
+      status,
+      source: source.trim(),
+      dateFrom,
+      dateTo,
+      q: q.trim(),
+    }),
+    [type, status, source, dateFrom, dateTo, q],
+  );
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -108,30 +94,38 @@ export default function AdminOppfangetClient({
     if (dateFrom) params.set('dateFrom', dateFrom);
     if (dateTo) params.set('dateTo', dateTo);
     if (q.trim()) params.set('q', q.trim());
-    if (previewMock) params.set('preview', 'mock');
+    if (mockMode) params.set('preview', 'mock');
     return params.toString();
-  }, [type, status, source, dateFrom, dateTo, q, previewMock]);
+  }, [type, status, source, dateFrom, dateTo, q, mockMode]);
 
   const load = useCallback(() => {
     startTransition(async () => {
       setError('');
+      if (mockMode) {
+        setData(listOppfangetMockFiltered(filters));
+        return;
+      }
+
       try {
         const res = await fetch(`/api/admin/oppfanget${queryString ? `?${queryString}` : ''}`);
         if (res.status === 401 || res.status === 403) {
+          setData(null);
           setError('Ingen tilgang');
           return;
         }
         if (!res.ok) {
+          setData(null);
           setError('Kunne ikke laste oppfanget-liste');
           return;
         }
         const json = (await res.json()) as OppfangetListResponse;
         setData(json);
       } catch {
+        setData(null);
         setError('Kunne ikke laste oppfanget-liste');
       }
     });
-  }, [queryString]);
+  }, [filters, mockMode, queryString]);
 
   useEffect(() => {
     if (skipInitialFetch.current) {
@@ -146,9 +140,10 @@ export default function AdminOppfangetClient({
   }, [initialData]);
 
   const rows = data?.rows ?? [];
+  const showError = Boolean(error) && rows.length === 0 && !pending;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" lang="nb-NO">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
           <Radar className="h-6 w-6 text-brand" aria-hidden />
@@ -213,6 +208,7 @@ export default function AdminOppfangetClient({
           <span className="text-muted-foreground">Fra dato</span>
           <input
             type="date"
+            lang="nb-NO"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
             className="w-full rounded-lg border border-border bg-background px-3 py-2"
@@ -222,6 +218,7 @@ export default function AdminOppfangetClient({
           <span className="text-muted-foreground">Til dato</span>
           <input
             type="date"
+            lang="nb-NO"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
             className="w-full rounded-lg border border-border bg-background px-3 py-2"
@@ -239,7 +236,7 @@ export default function AdminOppfangetClient({
         </label>
       </div>
 
-      {error ? (
+      {showError ? (
         <p className="text-sm text-destructive" role="alert">{error}</p>
       ) : null}
 
@@ -258,120 +255,10 @@ export default function AdminOppfangetClient({
       ) : null}
 
       {rows.length > 0 ? (
-        <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 font-medium">Tittel</th>
-                <th className="px-3 py-2 font-medium">Type</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium">Kilder</th>
-                <th className="px-3 py-2 font-medium">Dato</th>
-                <th className="px-3 py-2 font-medium">Skala</th>
-                <th className="px-3 py-2 font-medium">Sikkerhet</th>
-                <th className="px-3 py-2 font-medium">Utkast</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {rows.map((row) => {
-                const link = pollLink(row);
-                return (
-                  <tr key={row.id} className="align-top hover:bg-muted/20">
-                    <td className="max-w-[14rem] px-3 py-3 font-medium text-foreground">
-                      <div className="flex flex-wrap items-start gap-1.5">
-                        {row.sensitive ? (
-                          <AlertTriangle
-                            className="mt-0.5 h-4 w-4 shrink-0 text-amber-600"
-                            aria-label="Sensitivt tema"
-                          />
-                        ) : null}
-                        <span>{row.title}</span>
-                      </div>
-                      {row.confidence != null ? (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Konfidens: {row.confidence.toFixed(2)}
-                        </p>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      {OPPFANGET_DISPLAY_TYPE_LABELS[row.displayType]}
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <span
-                        className={cn(
-                          'rounded-full px-2 py-0.5 text-xs font-medium',
-                          row.displayStatus === 'avvist' && 'bg-destructive/10 text-destructive',
-                          row.displayStatus === 'publisert' && 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
-                          row.displayStatus === 'utkast_laget' && 'bg-brand/10 text-brand',
-                          row.displayStatus === 'under_terskel' && 'bg-muted text-muted-foreground',
-                          row.displayStatus === 'oppfanget' && 'bg-muted/60 text-foreground',
-                        )}
-                      >
-                        {OPPFANGET_DISPLAY_STATUS_LABELS[row.displayStatus]}
-                      </span>
-                    </td>
-                    <td className="max-w-[12rem] px-3 py-3">
-                      <ul className="space-y-1">
-                        {row.sources.length === 0 ? (
-                          <li className="text-muted-foreground">—</li>
-                        ) : (
-                          row.sources.map((s) => (
-                            <li key={s.id} className="text-xs">
-                              <a
-                                href={s.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-brand hover:underline"
-                              >
-                                {s.publisher ?? 'Kilde'}
-                                <ExternalLink className="h-3 w-3" aria-hidden />
-                              </a>
-                              {s.signalOnly ? (
-                                <span className="ml-1 text-muted-foreground">(signal)</span>
-                              ) : null}
-                            </li>
-                          ))
-                        )}
-                      </ul>
-                    </td>
-                    <td className="px-3 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                      <div>Først: {formatDate(row.firstSeenAt)}</div>
-                      <div>Sist: {formatDate(row.lastSeenAt)}</div>
-                    </td>
-                    <td className="max-w-[10rem] px-3 py-3 text-xs">
-                      <div>{formatScale(row)}</div>
-                      {row.scale?.sourceUrl ? (
-                        <a
-                          href={row.scale.sourceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-1 inline-flex items-center gap-1 text-brand hover:underline"
-                        >
-                          Kilde for tall
-                          <ExternalLink className="h-3 w-3" aria-hidden />
-                        </a>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-3 text-xs text-muted-foreground">
-                      {row.sensitive
-                        ? row.sensitiveCategory ?? 'Sensitivt'
-                        : 'Nei'}
-                    </td>
-                    <td className="px-3 py-3 text-xs">
-                      {link ? (
-                        <Link href={link} className="font-medium text-brand hover:underline">
-                          {row.pollStatus === 'draft' ? 'Åpne utkast' : 'Åpne avstemning'}
-                        </Link>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <OppfangetMobileCards rows={rows} />
+          <OppfangetDesktopTable rows={rows} />
+        </>
       ) : null}
 
       <AdminBackLink />

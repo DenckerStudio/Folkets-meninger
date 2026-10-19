@@ -8,7 +8,7 @@ import {
   mapActionTypeToDisplayType,
   mapClusterAndPollToDisplayStatus,
 } from '@/lib/admin/oppfanget/mapping';
-import { buildOppfangetMockList } from '@/lib/admin/oppfanget/mock-data';
+import { listOppfangetMockFiltered } from '@/lib/admin/oppfanget/mock-list';
 import { isOppfangetMockPreviewAllowed } from '@/lib/admin/oppfanget/preview';
 import type {
   ActionClusterDbStatus,
@@ -119,48 +119,7 @@ export async function listOppfangetForAdmin(
   previewParam?: string | null,
 ): Promise<OppfangetListResponse> {
   if (isOppfangetMockPreviewAllowed(previewParam)) {
-    const mock = buildOppfangetMockList();
-    const filtered = filterOppfangetRows(
-      mock.rows.map((row) => ({
-        id: row.id,
-        title: row.title,
-        actionType: row.actionType,
-        clusterStatus: row.clusterStatus,
-        pollStatus: row.pollStatus,
-        metadata: null,
-        sources: row.sources.map((s) => ({
-          publisher: s.publisher,
-          signalOnly: s.signalOnly,
-          title: s.title,
-        })),
-        firstSeenAt: row.firstSeenAt,
-        lastSeenAt: row.lastSeenAt,
-      })),
-      filters,
-    );
-    const filteredIds = new Set(filtered.map((r) => r.id));
-    const rows = mock.rows.filter((r) => filteredIds.has(r.id));
-    return {
-      ...mock,
-      rows,
-      counts: countOppfangetStatuses(
-        mock.rows.map((row) => ({
-          id: row.id,
-          title: row.title,
-          actionType: row.actionType,
-          clusterStatus: row.clusterStatus,
-          pollStatus: row.pollStatus,
-          metadata: null,
-          sources: row.sources.map((s) => ({
-            publisher: s.publisher,
-            signalOnly: s.signalOnly,
-            title: s.title,
-          })),
-          firstSeenAt: row.firstSeenAt,
-          lastSeenAt: row.lastSeenAt,
-        })),
-      ),
-    };
+    return listOppfangetMockFiltered(filters);
   }
 
   const service = getServiceSupabase();
@@ -186,7 +145,7 @@ export async function listOppfangetForAdmin(
         },
         tableMissing: true,
         tableMissingMessage:
-          'Tabellene action_clusters / action_sources finnes ikke ennå. Coolify Expert må kjøre migrasjon 20261021120000_action_capture_tables.sql før data vises her.',
+          'Tabellene action_clusters / action_sources finnes ikke ennå. Coolify Expert må kjøre migrasjon 20261019235000_action_capture_tables.sql før data vises her.',
         previewMock: false,
       };
     }
