@@ -7,25 +7,28 @@ import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs
 import { join } from 'node:path';
 import { checkTargets, formatTableRow, loadResult, TARGETS } from './scripts/check-targets';
 
-const IMPROVEMENT_ROUNDS = [
+type ImprovementRound = {
+  label: string;
+  level: string;
+  rerank?: boolean;
+  reseedStack?: boolean;
+};
+
+const IMPROVEMENT_ROUNDS: ImprovementRound[] = [
   { label: 'round1-sak-search', level: '1' },
   { label: 'round2-prefix-trgm', level: '2' },
   { label: 'round3-rerank-reject', level: '3', rerank: true },
   { label: 'round4-issue-ilike', level: '4', rerank: true },
-] as const;
+  { label: 'round5-seed-meta', level: '4', rerank: true, reseedStack: true },
+];
 
 const HEADER =
   '| Round | Seed issues | Seed docs | Seed chunks | R@5 | MRR | Prefix | Finnes-ikke reject | Issue search | Retrieval p95 |\n' +
   '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n';
 
 function run(cmd: string, env: Record<string, string> = {}): void {
-  execSync(cmd, {
-    stdio: 'inherit',
-    env: { ...process.env, ...env, PGPASSWORD: process.env.RAG_EVAL_PG_PASSWORD ?? 'rag_eval' } as Record<
-      string,
-      string
-    >,
-  });
+  const mergedEnv = { ...process.env, ...env, PGPASSWORD: process.env.RAG_EVAL_PG_PASSWORD ?? 'rag_eval' };
+  execSync(cmd, { stdio: 'inherit', env: mergedEnv });
 }
 
 function ensureResultsHeader(): void {
@@ -75,13 +78,18 @@ function runBaselineAndStack(): void {
   gitPushRound('stack-previous', 'eval(rag): baseline+stack seed fixture (hillclimb)');
 }
 
-function runImprovementRound(round: (typeof IMPROVEMENT_ROUNDS)[number]): void {
+function runImprovementRound(round: ImprovementRound): void {
   const env: Record<string, string> = {
-    RAG_EVAL_IMPROVEMENT_ONLY: '1',
+    RAG_EVAL_IMPROVEMENT_ONLY: round.reseedStack ? '0' : '1',
     RAG_EVAL_IMPROVEMENT_LEVEL: round.level,
     RAG_EVAL_RUN: 'stack',
     RAG_EVAL_LABEL: round.label,
   };
+  if (round.reseedStack) {
+    env.RAG_EVAL_RESET_DB = '1';
+    run('npx tsx evals/rag/scripts/apply-migrations.ts stack', env);
+    run('RAG_EVAL_VARIANT=stack npx tsx evals/rag/scripts/seed-corpus.ts', env);
+  }
   if (round.rerank) {
     run('npx tsx evals/rag/scripts/calibrate-rejection.ts', env);
     try {

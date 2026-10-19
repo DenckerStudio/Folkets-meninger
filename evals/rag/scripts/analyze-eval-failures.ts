@@ -9,6 +9,8 @@ type PerQ = {
   topicExcerptHit?: boolean;
   ids?: string[];
   titles?: string[];
+  skipped?: boolean;
+  confident?: boolean;
 };
 
 const label = process.argv[2] ?? 'round3-rerank-reject';

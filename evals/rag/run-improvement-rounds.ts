@@ -43,13 +43,13 @@ function loadThreshold(): string | undefined {
 }
 
 function runRound(round: Round): void {
-  const env: Record<string, string> = {
+  const env: NodeJS.ProcessEnv = {
     ...process.env,
     RAG_EVAL_IMPROVEMENT_LEVEL: round.improvementLevel,
     RAG_EVAL_LABEL: round.label,
     PGPASSWORD: process.env.RAG_EVAL_PG_PASSWORD ?? 'rag_eval',
     ...round.extraEnv,
-  } as Record<string, string>;
+  };
 
   if (round.label === 'baseline-main') {
     env.RAG_EVAL_RESET_DB = '1';

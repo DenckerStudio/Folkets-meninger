@@ -1,0 +1,31 @@
+{
+  "label": "round5-seed-meta",
+  "failureCount": 1,
+  "top": [
+    {
+      "id": "year-search-2024-2025",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [
+        "200503",
+        "200413",
+        "103150",
+        "103102",
+        "102800",
+        "102956",
+        "103045",
+        "103200"
+      ],
+      "titles": [
+        "Skatteendringer og avgifter (2024/25)",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Klimapolitikk og kutt i klimagassutslipp",
+        "Endringer i barnetrygd og kontantstøtte",
+        "Representantforslag om arbeidsliv og velferd",
+        "Helsepersonell og bemanning i helsevesenet"
+      ]
+    }
+  ]
+}

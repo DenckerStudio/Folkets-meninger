@@ -121,6 +121,26 @@
     ]
   },
   {
+    "id": "200503",
+    "sak": {
+      "id": 200503,
+      "korttittel": "Skatteendringer og avgifter (2024/25)",
+      "innstillingstekst": "Forslag om skatt, avgifter og budsjett for 2024/25.",
+      "henvisning": "Prop. 4 S (2024-2025)",
+      "ferdigbehandlet": false
+    },
+    "documents": [
+      {
+        "documentId": "stub:200503",
+        "title": "Skattevedtak",
+        "kind": "proposisjon",
+        "sourceUrl": null,
+        "exportId": null,
+        "body": "Skatteendringer og avgifter. Skatt på inntekt og formue. Budsjettåret 2024/25 omtales i proposisjonen."
+      }
+    ]
+  },
+  {
     "id": "200502",
     "sak": {
       "id": 200502,

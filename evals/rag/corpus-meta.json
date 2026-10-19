@@ -1,6 +1,10 @@
 {
-  "variant": "stack",
-  "issueCount": 8,
+  "variant": "baseline",
+  "issues": 25,
+  "documents": 60,
+  "chunks": 507,
+  "hearings": 0,
+  "fixtureFetchedAt": "2026-10-19T20:32:47.376Z",
   "prefixIssueId": "eval-innvandring-prefix",
-  "seededAt": "2026-10-19T20:02:31.857Z"
+  "seededAt": "2026-10-19T20:51:33.333Z"
 }

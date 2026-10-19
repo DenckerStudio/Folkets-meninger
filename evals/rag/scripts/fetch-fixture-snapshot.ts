@@ -82,9 +82,9 @@ async function fetchSakJson(id: string): Promise<Record<string, unknown> | null>
   const url = `https://data.stortinget.no/eksport/sak?sakid=${encodeURIComponent(id)}&format=json`;
   const res = await fetchWithRetry(url);
   if (!res.ok) return null;
-  const data = (await res.json()) as { sak?: Record<string, unknown> } | Record<string, unknown>;
-  const sak = 'sak' in data && data.sak ? data.sak : data;
-  return sak ?? null;
+  const data = (await res.json()) as { sak?: Record<string, unknown> };
+  if (data.sak && typeof data.sak === 'object') return data.sak;
+  return null;
 }
 
 async function fetchIssueIds(sessionId: string, limit: number): Promise<string[]> {

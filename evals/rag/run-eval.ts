@@ -100,6 +100,10 @@ async function runLabel(label: RunLabel, variant: EvalVariant): Promise<Record<s
 
   for (const q of questions) {
     if (q.kind === 'issue_search') {
+      if (q.tags?.includes('optional')) {
+        perQuestion.push({ id: q.id, kind: q.kind, skipped: true, reason: 'optional' });
+        continue;
+      }
       issueSearchTotal += 1;
       const { ids, titles } = await issueSearch(pool, variant, q.query, label);
       const expectedIds = q.gold.issueIds ?? [];

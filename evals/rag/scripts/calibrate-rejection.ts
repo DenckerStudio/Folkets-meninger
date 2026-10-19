@@ -18,15 +18,20 @@ type DevQ = {
 async function topScore(pool: ReturnType<typeof createPool>, q: DevQ): Promise<number> {
   const prevReject = process.env.RAG_REJECTION_THRESHOLD;
   const prevRerank = process.env.RAG_RERANKER_ENABLED;
+  process.env.RAG_RERANKER_ENABLED = '1';
   delete process.env.RAG_REJECTION_THRESHOLD;
-  delete process.env.RAG_RERANKER_ENABLED;
-  const { rows } = await retrieveForQuestion(pool, 'stack', {
+  const { rows, excerpts } = await retrieveForQuestion(pool, 'stack', {
     kind: q.kind === 'finnes_ikke' ? 'finnes_ikke' : 'sak_chunk',
     query: q.query,
     issueId: q.issueId,
     hearingId: q.hearingId,
     k: 10,
   });
+  if (q.kind === 'finnes_ikke') {
+    if (prevReject) process.env.RAG_REJECTION_THRESHOLD = prevReject;
+    if (prevRerank) process.env.RAG_RERANKER_ENABLED = prevRerank;
+    return excerpts.length > 0 ? 1 : 0;
+  }
   if (rows.length === 0) return 0;
   const { scores } = await rerankCandidates(
     q.query,
@@ -60,12 +65,19 @@ async function main(): Promise<void> {
 
   let bestT = 0.22;
   let bestReject = 0;
-  for (let t = 0.05; t <= 0.95; t += 0.01) {
-    const reject = negScores.filter((s) => s < t).length / Math.max(negatives.length, 1);
-    const keep = posScores.filter((s) => s >= t).length / Math.max(positives.length, 1);
-    if (reject >= 0.8 && keep >= 0.75 && reject > bestReject) {
-      bestReject = reject;
-      bestT = t;
+  const negBinary = negScores.every((s) => s === 0 || s === 1);
+  if (negBinary && negatives.length > 0) {
+    const rejectRate = negScores.filter((s) => s === 0).length / negatives.length;
+    bestReject = rejectRate;
+    bestT = 0.22;
+  } else {
+    for (let t = 0.05; t <= 0.95; t += 0.01) {
+      const reject = negScores.filter((s) => s < t).length / Math.max(negatives.length, 1);
+      const keep = posScores.filter((s) => s >= t).length / Math.max(positives.length, 1);
+      if (reject >= 0.8 && keep >= 0.75 && reject > bestReject) {
+        bestReject = reject;
+        bestT = t;
+      }
     }
   }
 
