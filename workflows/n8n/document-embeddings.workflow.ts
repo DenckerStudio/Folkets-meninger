@@ -16,6 +16,7 @@ import {
 } from './n8n-supabase.shared';
 import { EXPAND_OR_EMPTY_JS } from './n8n-pipeline.shared';
 import { createInWorkflowErrorNotify } from './in-workflow-error-notify';
+import { DOCUMENT_CHUNKING_SPEC } from './document-chunking.shared';
 
 const scheduleTrigger = trigger({
   type: 'n8n-nodes-base.scheduleTrigger',
@@ -453,7 +454,7 @@ const normalizeWebhook = node({
 const inWorkflowError = createInWorkflowErrorNotify('folkets-document-embeddings');
 
 sticky(
-  '## Dokument embeddings (RAG)\n\nPending chunks → Ollama `nomic-embed-text:v1.5` → pgvector. Tom kø er suksess. Etter lagring trigges AI-sammendrag for saken. Ollama-feil: chunk blir stående pending. Error Trigger POSTer til /api/ops/n8n-notify. App-fallback: `/api/cron/n8n-retry`.',
+  `## Dokument embeddings (RAG)\n\nPending chunks → Ollama \`nomic-embed-text:v1.5\` → pgvector. Tom kø er suksess. Etter lagring trigges AI-sammendrag for saken. Ollama-feil: chunk blir stående pending. Error Trigger POSTer til /api/ops/n8n-notify. App-fallback: \`/api/cron/n8n-retry\`.\n\n${DOCUMENT_CHUNKING_SPEC}`,
   [scheduleTrigger, webhookTrigger],
   { color: 5 },
 );

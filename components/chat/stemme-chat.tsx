@@ -200,13 +200,19 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
 
   const view = pageView;
   const effectiveIssueId = issueId ?? (view.kind === 'sak' ? view.id : null);
+  const effectiveHoeringId = view.kind === 'horing' ? view.id : null;
   const fallbackSuggestions = useMemo(
     () =>
       buildChatSuggestions({
-        context: { kind: view.kind, title: issueTitle ?? null, issueId: effectiveIssueId },
+        context: {
+          kind: view.kind,
+          title: issueTitle ?? null,
+          issueId: effectiveIssueId,
+          hoeringId: effectiveHoeringId,
+        },
         signals: EMPTY_SIGNALS,
       }),
-    [view.kind, issueTitle, effectiveIssueId],
+    [view.kind, issueTitle, effectiveIssueId, effectiveHoeringId],
   );
   const shownSuggestions = useMemo(() => {
     const list = suggestions && suggestions.length > 0 ? suggestions : fallbackSuggestions;
