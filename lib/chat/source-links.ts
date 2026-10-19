@@ -49,6 +49,9 @@ export function chatSourceHref(source: ChatSource): { href: string; external: bo
       if (source.issueId) {
         return { href: `${sakPath(source.issueId)}#dokumenter`, external: false };
       }
+      if (source.hearingId) {
+        return { href: routes.horing(encodeURIComponent(source.hearingId)), external: false };
+      }
       const publicationUrl = safeExternal(source.url);
       return publicationUrl ? { href: publicationUrl, external: true } : null;
     }
