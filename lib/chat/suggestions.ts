@@ -202,7 +202,7 @@ function viewSuggestions(context: ChatSuggestionContext): ChatSuggestion[] {
           prompt: `Hva skal høringen ${subject} belyse, og hva er hovedspørsmålene?`,
           source: 'view',
           tools: context.hoeringId
-            ? ['searchHearingDocuments', 'findHearingsForSak']
+            ? ['searchHearingDocuments', 'findHearingsForSak', 'listOpenHearings']
             : context.issueId
               ? ['findHearingsForSak', 'searchHearingDocuments', 'retrieveSakContext']
               : ['listOpenHearings', 'listMatchingSaker'],

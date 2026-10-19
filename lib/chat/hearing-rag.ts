@@ -2,11 +2,13 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getAnonSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
 import type { ChatRagClient } from '@/lib/chat/rag';
-import { getHoringSkriftligInnspillUrl, type StortingetHoring } from '@/lib/stortinget-horinger';
 import {
-  hearingDbConfigured,
-  loadStortingetHearingByIdFromDb,
-} from '@/lib/stortinget-hearing-db';
+  fetchStortingetHoringById,
+  getHoringInnspillDeadline,
+  getHoringSkriftligInnspillUrl,
+  getHoringTitle,
+  type StortingetHoring,
+} from '@/lib/stortinget-horinger';
 
 const MAX_CHUNKS = 8;
 
@@ -34,7 +36,9 @@ export type HearingSearchMeta = {
 export type HearingDocumentSearchResult = {
   hearing: HearingSearchMeta | null;
   chunks: HearingChunkHit[];
+  documentsIndexed: boolean;
   note: string | null;
+  guidance: string | null;
 };
 
 type HybridChunkRow = {
@@ -67,6 +71,57 @@ export function isMissingHearingHybridRpcError(error: unknown): boolean {
   return false;
 }
 
+export function isMissingHearingDocumentSearchRpcError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const row = error as { code?: string; message?: string };
+  if (row.code === 'PGRST202') return true;
+  const message = row.message ?? '';
+  return /search_hearing_document_chunks_text/i.test(message) && /not find|schema cache/i.test(message);
+}
+
+export function hearingSearchNoteForEmptyChunks(args: {
+  documentsIndexed: boolean;
+  lexicalRpcMissing: boolean;
+}): { note: string; guidance: string | null } {
+  if (!args.documentsIndexed) {
+    return {
+      note:
+        'Høringsdokumentene er ikke indeksert i databasen ennå, så det finnes ingen tekstutdrag å søke i.',
+      guidance:
+        'Bruk findHearingsForSak eller listOpenHearings for tittel, frist, komité og lenke til skriftlig innspill.',
+    };
+  }
+  return {
+    note: 'Fant ingen dokumentutdrag i høringskildene for denne spørringen.',
+    guidance: null,
+  };
+}
+
+export function hearingChunkDocumentLabel(chunk: Pick<HearingChunkHit, 'documentTitle' | 'hearingId'>): string {
+  if (chunk.documentTitle?.trim()) return chunk.documentTitle.trim();
+  return chunk.hearingId ? 'Høringsdokument' : 'Dokument';
+}
+
+export function hearingMetaFromStortingetExport(
+  hearingId: string,
+  hearing: StortingetHoring,
+): HearingSearchMeta {
+  const deadline = getHoringInnspillDeadline(hearing);
+  return {
+    id: hearingId,
+    title: getHoringTitle(hearing),
+    committee: hearing.komite?.navn?.trim() || null,
+    deadline: deadline ? deadline.toISOString() : null,
+    skriftligInnspillUrl: getHoringSkriftligInnspillUrl(hearing),
+  };
+}
+
+export async function resolveHearingSearchMeta(hearingId: string): Promise<HearingSearchMeta | null> {
+  const hearing = await fetchStortingetHoringById(hearingId);
+  if (!hearing) return null;
+  return hearingMetaFromStortingetExport(hearingId, hearing);
+}
+
 async function resolveRagClient(client?: ChatRagClient | null): Promise<ChatRagClient> {
   if (client) return client;
   try {
@@ -78,6 +133,12 @@ async function resolveRagClient(client?: ChatRagClient | null): Promise<ChatRagC
   return getAnonSupabase();
 }
 
+function isHearingChunkRow(row: HybridChunkRow, filterHearingId: string | null): boolean {
+  if (!filterHearingId) return true;
+  const hearingId = String(row.hearing_id ?? '').trim();
+  return hearingId === filterHearingId;
+}
+
 function mapHybridHearingChunkRow(
   row: HybridChunkRow,
   fallbackHearingId: string | null,
@@ -86,9 +147,11 @@ function mapHybridHearingChunkRow(
   const content = clip(String(row.content ?? ''));
   if (!chunkId || !content) return null;
 
+  const hearingId = String(row.hearing_id ?? fallbackHearingId ?? '').trim();
+
   return {
     chunkId,
-    hearingId: String(row.hearing_id ?? fallbackHearingId ?? ''),
+    hearingId,
     hearingDocumentId: String(row.hearing_document_id ?? ''),
     documentId: String(row.document_id ?? ''),
     chunkIndex: Number(row.chunk_index ?? 0),
@@ -106,6 +169,8 @@ async function trySearchChunksHybrid(
   hearingId: string | null,
   limit: number,
 ): Promise<HearingChunkHit[] | null> {
+  if (!hearingId) return null;
+
   const rpc = supabase as SupabaseClient;
   const { data, error } = await rpc.rpc('search_chunks_hybrid', {
     query_text: query,
@@ -128,7 +193,8 @@ async function trySearchChunksHybrid(
 
   const hits = data
     .map((row) => mapHybridHearingChunkRow(row as HybridChunkRow, hearingId))
-    .filter((row): row is HearingChunkHit => row != null);
+    .filter((row): row is HearingChunkHit => row != null)
+    .filter((row) => isHearingChunkRow({ hearing_id: row.hearingId }, hearingId));
 
   return hits.length > 0 ? hits : null;
 }
@@ -138,7 +204,7 @@ async function searchHearingChunksLexical(
   query: string,
   hearingId: string | null,
   limit: number,
-): Promise<HearingChunkHit[]> {
+): Promise<{ chunks: HearingChunkHit[]; rpcMissing: boolean }> {
   const rpc = supabase as SupabaseClient;
   const { data, error } = await rpc.rpc('search_hearing_document_chunks_text', {
     p_query: query,
@@ -146,9 +212,14 @@ async function searchHearingChunksLexical(
     p_match_count: limit,
   });
 
-  if (error || !Array.isArray(data)) return [];
+  if (error) {
+    return { chunks: [], rpcMissing: isMissingHearingDocumentSearchRpcError(error) };
+  }
+  if (!Array.isArray(data)) {
+    return { chunks: [], rpcMissing: false };
+  }
 
-  return data
+  const chunks = data
     .map((row) => row as Record<string, unknown>)
     .map((row) => ({
       chunkId: String(row.chunk_id ?? ''),
@@ -163,50 +234,8 @@ async function searchHearingChunksLexical(
       rank: Number(row.rank ?? 0),
     }))
     .filter((row) => row.content.length > 0);
-}
 
-async function loadHearingMeta(hearingId: string): Promise<HearingSearchMeta | null> {
-  const hearing: StortingetHoring | null = await loadStortingetHearingByIdFromDb(hearingId);
-
-  let data: Record<string, unknown> | null = null;
-  if (hearingDbConfigured()) {
-    const supabase = getAnonSupabase();
-    const { data: row } = await supabase
-      .from('stortinget_hearings')
-      .select('id, tittel, komite_navn, innspillsfrist, skriftlig_innspill_url')
-      .eq('id', hearingId)
-      .maybeSingle();
-    data = row as Record<string, unknown> | null;
-  }
-
-  if (!data && !hearing) return null;
-
-  const title =
-    (typeof data?.tittel === 'string' && data.tittel.trim()) ||
-    hearing?.horing_sak_info_liste?.[0]?.sak_tittel?.trim() ||
-    `Høring ${hearingId}`;
-
-  const committee =
-    (typeof data?.komite_navn === 'string' && data.komite_navn.trim()) ||
-    hearing?.komite?.navn?.trim() ||
-    null;
-
-  const deadline =
-    typeof data?.innspillsfrist === 'string'
-      ? data.innspillsfrist
-      : hearing?.innspillsfrist ?? null;
-
-  const skriftligUrl =
-    (typeof data?.skriftlig_innspill_url === 'string' && data.skriftlig_innspill_url.trim()) ||
-    (hearing ? getHoringSkriftligInnspillUrl(hearing) : getHoringSkriftligInnspillUrl({ id: hearingId }));
-
-  return {
-    id: hearingId,
-    title,
-    committee,
-    deadline,
-    skriftligInnspillUrl: skriftligUrl,
-  };
+  return { chunks, rpcMissing: false };
 }
 
 export async function searchHearingDocuments(args: {
@@ -219,23 +248,50 @@ export async function searchHearingDocuments(args: {
   const hearingId = args.hearingId?.trim() || null;
   const limit = args.limit ?? MAX_CHUNKS;
 
+  const hearing = hearingId ? await resolveHearingSearchMeta(hearingId) : null;
+
   if (query.length < 2) {
-    return { hearing: null, chunks: [], note: 'Spørringen må ha minst to tegn.' };
+    return {
+      hearing,
+      chunks: [],
+      documentsIndexed: false,
+      note: 'Spørringen må ha minst to tegn.',
+      guidance: null,
+    };
   }
 
   const supabase = await resolveRagClient(args.client ?? null);
   const hybrid = await trySearchChunksHybrid(supabase, query, hearingId, limit);
-  const chunks =
-    hybrid ?? (await searchHearingChunksLexical(supabase, query, hearingId, limit));
+  let lexicalRpcMissing = false;
+  let chunks = hybrid ?? [];
 
-  const hearing = hearingId ? await loadHearingMeta(hearingId) : null;
+  if (chunks.length === 0) {
+    const lexical = await searchHearingChunksLexical(supabase, query, hearingId, limit);
+    lexicalRpcMissing = lexical.rpcMissing;
+    chunks = lexical.chunks;
+  }
+
+  if (chunks.length > 0) {
+    return {
+      hearing,
+      chunks,
+      documentsIndexed: true,
+      note: null,
+      guidance: null,
+    };
+  }
+
+  const documentsIndexed = !lexicalRpcMissing;
+  const { note, guidance } = hearingSearchNoteForEmptyChunks({
+    documentsIndexed,
+    lexicalRpcMissing,
+  });
 
   return {
     hearing,
     chunks,
-    note:
-      chunks.length === 0
-        ? 'Fant ingen dokumentutdrag i høringskildene for denne spørringen.'
-        : null,
+    documentsIndexed,
+    note,
+    guidance,
   };
 }

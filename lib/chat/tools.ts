@@ -31,7 +31,7 @@ import { fetchVoteAlignment } from '@/lib/chat/vote-alignment';
 import { createPollChatTools } from '@/lib/chat/poll-tools';
 import { createPersonalChatTools } from '@/lib/chat/personal-tools';
 import type { QueryVectorizer } from '@/lib/chat/vector-search';
-import { searchHearingDocuments } from '@/lib/chat/hearing-rag';
+import { hearingChunkDocumentLabel, searchHearingDocuments } from '@/lib/chat/hearing-rag';
 import { getIssueOpinionSummary } from '@/lib/opinions/service';
 
 export type ChatToolOptions = {
@@ -367,10 +367,11 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
 
         const sources: ChatSource[] = [];
         const excerpts = result.chunks.map((chunk) => {
+          const title = hearingChunkDocumentLabel(chunk);
           const source = citations.cite({
             kind: 'dokument',
-            title: chunk.documentTitle || 'Høringsdokument',
-            hearingId: chunk.hearingId,
+            title,
+            hearingId: chunk.hearingId || null,
             documentId: chunk.documentId,
             url: chunk.sourceUrl,
           });
@@ -399,7 +400,9 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
           hearing: result.hearing,
           excerpts,
           kilder: uniqueSources(sources),
+          documentsIndexed: result.documentsIndexed,
           note: result.note,
+          guidance: result.guidance,
         };
       },
     }),
