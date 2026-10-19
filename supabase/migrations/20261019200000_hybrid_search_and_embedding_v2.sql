@@ -73,14 +73,13 @@ AS $$
           ELSE to_tsquery('norwegian', prefix_expr)
         END
         FROM (
-          SELECT string_agg(
-            regexp_replace(btrim(t), '[^[:alnum:]]+', '', 'g') || ':*',
-            ' | '
-            ORDER BY t
-          ) AS prefix_expr
-          FROM unnest(search_terms) AS u(t)
-          WHERE char_length(btrim(t)) >= 3
-            AND regexp_replace(btrim(t), '[^[:alnum:]]+', '', 'g') <> ''
+          SELECT string_agg(lexeme || ':*', ' | ' ORDER BY lexeme) AS prefix_expr
+          FROM (
+            SELECT DISTINCT lower(btrim(part)) AS lexeme
+            FROM unnest(search_terms) AS u(t)
+            CROSS JOIN LATERAL regexp_split_to_table(coalesce(t, ''), '[^[:alnum:]]+') AS part
+            WHERE char_length(btrim(part)) >= 3
+          ) splits
         ) built
       )
     END AS tsq
@@ -102,7 +101,7 @@ AS $$
     left(coalesce(i.summary, ''), 400) AS summary,
     i.henvisning,
     i.ferdigbehandlet,
-    ts_rank_cd(i.tsv, q.tsq)::real AS rank
+    ts_rank_cd(i.tsv, q.tsq, 1)::real AS rank
   FROM public.stortinget_issues i
   CROSS JOIN q
   WHERE q.raw IS NOT NULL
