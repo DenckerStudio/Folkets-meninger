@@ -116,7 +116,6 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
         title: chunk.documentTitle || 'Dokument i saken',
         issueId,
         documentId: chunk.documentId,
-        url: chunk.sourceUrl ?? null,
       });
       return { chunk: { ...chunk, kilde: source.n }, source };
     });
