@@ -121,19 +121,19 @@ export function significantTokens(
  * something instead of silently returning nothing.
  */
 /**
- * Normalized lexemes for prefix FTS (`term:* | …`). Keeps letters/numbers only.
+ * Normalized lexemes for prefix FTS (`term:* | …`). Splits on non-alphanumeric
+ * runs (e.g. `2024/25` → `2024`, `25`) and drops pieces shorter than MIN_TERM_LENGTH.
  */
 export function buildIssuePrefixTsqueryOperands(terms: readonly string[]): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   for (const term of terms) {
-    const lexeme = term
-      .trim()
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}]+/gu, '');
-    if (lexeme.length < MIN_TERM_LENGTH || seen.has(lexeme)) continue;
-    seen.add(lexeme);
-    out.push(lexeme);
+    const pieces = term.trim().toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+    for (const lexeme of pieces) {
+      if (lexeme.length < MIN_TERM_LENGTH || seen.has(lexeme)) continue;
+      seen.add(lexeme);
+      out.push(lexeme);
+    }
   }
   return out;
 }
