@@ -43,8 +43,12 @@ CREATE INDEX IF NOT EXISTS document_chunks_embedding_v2_hnsw_idx
 -- Issue search (FTS) — replaces ilike saksøk in chat
 -- -----------------------------------------------------------------------------
 
+DROP FUNCTION IF EXISTS public.search_issues_fts(text, int);
+DROP FUNCTION IF EXISTS public.search_issues_fts(text, text[], int);
+
 CREATE OR REPLACE FUNCTION public.search_issues_fts(
   query_text text,
+  search_terms text[] DEFAULT NULL,
   match_count int DEFAULT 6
 )
 RETURNS TABLE (
@@ -60,13 +64,36 @@ STABLE
 SECURITY INVOKER
 SET search_path = public
 AS $$
-  WITH q AS (
+  WITH prefix_query AS (
+    SELECT CASE
+      WHEN search_terms IS NULL OR cardinality(search_terms) = 0 THEN NULL::tsquery
+      ELSE (
+        SELECT CASE
+          WHEN coalesce(prefix_expr, '') = '' THEN NULL::tsquery
+          ELSE to_tsquery('norwegian', prefix_expr)
+        END
+        FROM (
+          SELECT string_agg(lexeme || ':*', ' | ' ORDER BY lexeme) AS prefix_expr
+          FROM (
+            SELECT DISTINCT lower(btrim(part)) AS lexeme
+            FROM unnest(search_terms) AS u(t)
+            CROSS JOIN LATERAL regexp_split_to_table(coalesce(t, ''), '[^[:alnum:]]+') AS part
+            WHERE char_length(btrim(part)) >= 3
+          ) splits
+        ) built
+      )
+    END AS tsq
+  ),
+  q AS (
     SELECT
       nullif(btrim(coalesce(query_text, '')), '') AS raw,
-      CASE
-        WHEN nullif(btrim(coalesce(query_text, '')), '') IS NULL THEN NULL::tsquery
-        ELSE websearch_to_tsquery('norwegian', nullif(btrim(coalesce(query_text, '')), ''))
-      END AS tsq
+      coalesce(
+        (SELECT tsq FROM prefix_query),
+        CASE
+          WHEN nullif(btrim(coalesce(query_text, '')), '') IS NULL THEN NULL::tsquery
+          ELSE websearch_to_tsquery('norwegian', nullif(btrim(coalesce(query_text, '')), ''))
+        END
+      ) AS tsq
   )
   SELECT
     i.id,
@@ -74,7 +101,7 @@ AS $$
     left(coalesce(i.summary, ''), 400) AS summary,
     i.henvisning,
     i.ferdigbehandlet,
-    ts_rank_cd(i.tsv, q.tsq)::real AS rank
+    ts_rank_cd(i.tsv, q.tsq, 1)::real AS rank
   FROM public.stortinget_issues i
   CROSS JOIN q
   WHERE q.raw IS NOT NULL
@@ -89,8 +116,8 @@ AS $$
   LIMIT GREATEST(coalesce(match_count, 6), 1);
 $$;
 
-REVOKE ALL ON FUNCTION public.search_issues_fts(text, int) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.search_issues_fts(text, int) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.search_issues_fts(text, text[], int) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.search_issues_fts(text, text[], int) TO anon, authenticated;
 
 -- -----------------------------------------------------------------------------
 -- Hybrid chunk search (lexical top 30 + semantic top 30, RRF k=60)

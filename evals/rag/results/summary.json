@@ -1,0 +1,1114 @@
+[
+  {
+    "label": "baseline",
+    "variant": "baseline",
+    "stackHeads": {
+      "p177": "a38d83d",
+      "p178": "9441863",
+      "p179": "4c17c84",
+      "p181": "1e06816"
+    },
+    "chunkQuestions": 30,
+    "recallAt5": 0.43333333333333335,
+    "recallAt10": 0.43333333333333335,
+    "mrr": 0.3622222222222222,
+    "excerptFactRate": 0.43333333333333335,
+    "topicQuestions": 0,
+    "topicExcerptFactRate": 0,
+    "topicFairSakCoverage": 0,
+    "issueSearchHitRate": 0.2222222222222222,
+    "prefixHitRate": 0,
+    "finnesIkkeFalseConfidenceRate": 1,
+    "latencyMsP50": 24.310749999999985,
+    "latencyMsP95": 95.67008700000002,
+    "judge": "pending (LAN)",
+    "perQuestion": [
+      {
+        "id": "sak-103102-pensjon",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.8484847460059003
+      },
+      {
+        "id": "sak-103102-utvalg",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.777593913022387
+      },
+      {
+        "id": "sak-103102-vedtak",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.7305403384056867
+      },
+      {
+        "id": "sak-103102-komite",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.8036542653089385
+      },
+      {
+        "id": "sak-103102-prop",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.8215303687158965
+      },
+      {
+        "id": "hearing-10005964-budsjett",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "hearing-10005968-budsjett",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "hearing-10005964-innspill",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "issue-search-innvandring-prefix",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "issue-search-innvandringsloven",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "issue-search-fisker-pensjon",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "issue-search-prop-133",
+        "kind": "issue_search",
+        "hit": true,
+        "ids": [
+          "103102"
+        ],
+        "titles": [
+          "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)"
+        ]
+      },
+      {
+        "id": "sak-200365-vekt",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.7662993668593531
+      },
+      {
+        "id": "sak-semantic-barnetrygd",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "sak-trygd-generisk",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.7317847641705645
+      },
+      {
+        "id": "sak-parti-votering-gap",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.8176572483403565
+      },
+      {
+        "id": "sak-henvisning",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.6698447785073101
+      },
+      {
+        "id": "sak-ferdigbehandlet",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.7118428558130236
+      },
+      {
+        "id": "finnes-ikke-1",
+        "kind": "finnes_ikke",
+        "excerpts": 10,
+        "confident": true
+      },
+      {
+        "id": "finnes-ikke-2",
+        "kind": "finnes_ikke",
+        "excerpts": 10,
+        "confident": true
+      },
+      {
+        "id": "finnes-ikke-3",
+        "kind": "finnes_ikke",
+        "excerpts": 10,
+        "confident": true
+      },
+      {
+        "id": "finnes-ikke-4",
+        "kind": "finnes_ikke",
+        "excerpts": 5,
+        "confident": true
+      },
+      {
+        "id": "finnes-ikke-5",
+        "kind": "finnes_ikke",
+        "excerpts": 10,
+        "confident": true
+      },
+      {
+        "id": "mixed-lex-semantic-1",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.74669443842893
+      },
+      {
+        "id": "mixed-lex-semantic-2",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.7469483434011557
+      },
+      {
+        "id": "hearing-statsbudsjett-felles",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "sak-dok8",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "sak-klima",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "sak-helse",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "sak-skatt",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.7408925326805189
+      },
+      {
+        "id": "issue-search-trygd",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "issue-search-budsjett",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "sak-long-query",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.8330930979229433
+      },
+      {
+        "id": "sak-referat",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.6719122088863819
+      },
+      {
+        "id": "sak-innstilling",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.7387398272012735
+      },
+      {
+        "id": "hearing-frist",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "sak-200417-missing",
+        "skipped": true
+      },
+      {
+        "id": "prefix-arbeid",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [
+          "103102"
+        ],
+        "titles": [
+          "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)"
+        ]
+      },
+      {
+        "id": "compound-statsbudsjett",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "semantic-only-fisker",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.7130447486212327
+      },
+      {
+        "id": "year-henvisning-2024-25",
+        "kind": "issue_search",
+        "hit": true,
+        "ids": [
+          "103102"
+        ],
+        "titles": [
+          "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)"
+        ]
+      },
+      {
+        "id": "year-session-2024-25",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.7309612153489904
+      },
+      {
+        "id": "statsbudsjettet-2027-explicit",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "statsbudsjettet-2027-energy",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "issue-search-budsjett-2027-phrase",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "topic-trygd-pensjon-multi",
+        "skipped": true,
+        "reason": "topic_stack_only"
+      },
+      {
+        "id": "topic-statsbudsjett-2027-multi",
+        "skipped": true,
+        "reason": "topic_stack_only"
+      },
+      {
+        "id": "topic-representantforslag-2024-25",
+        "skipped": true,
+        "reason": "topic_stack_only"
+      }
+    ]
+  },
+  {
+    "label": "stack",
+    "variant": "stack",
+    "stackHeads": {
+      "p177": "a38d83d",
+      "p178": "9441863",
+      "p179": "4c17c84",
+      "p181": "1e06816"
+    },
+    "chunkQuestions": 30,
+    "recallAt5": 0.6666666666666666,
+    "recallAt10": 0.6666666666666666,
+    "mrr": 0.6444444444444445,
+    "excerptFactRate": 0.6666666666666666,
+    "topicQuestions": 3,
+    "topicExcerptFactRate": 1,
+    "topicFairSakCoverage": 0.8333333333333334,
+    "issueSearchHitRate": 0.3333333333333333,
+    "prefixHitRate": 0,
+    "finnesIkkeFalseConfidenceRate": 1,
+    "latencyMsP50": 87.72117800000024,
+    "latencyMsP95": 214.64693999999963,
+    "judge": "pending (LAN)",
+    "perQuestion": [
+      {
+        "id": "sak-103102-pensjon",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-103102-utvalg",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-103102-vedtak",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-103102-komite",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-103102-prop",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "hearing-10005964-budsjett",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "hearing-10005968-budsjett",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "hearing-10005964-innspill",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "issue-search-innvandring-prefix",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "issue-search-innvandringsloven",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "issue-search-fisker-pensjon",
+        "kind": "issue_search",
+        "hit": true,
+        "ids": [
+          "103102"
+        ],
+        "titles": [
+          "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)"
+        ]
+      },
+      {
+        "id": "issue-search-prop-133",
+        "kind": "issue_search",
+        "hit": true,
+        "ids": [
+          "103102"
+        ],
+        "titles": [
+          "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)"
+        ]
+      },
+      {
+        "id": "sak-200365-vekt",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-semantic-barnetrygd",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "sak-trygd-generisk",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-parti-votering-gap",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-henvisning",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-ferdigbehandlet",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "finnes-ikke-1",
+        "kind": "finnes_ikke",
+        "excerpts": 5,
+        "confident": true
+      },
+      {
+        "id": "finnes-ikke-2",
+        "kind": "finnes_ikke",
+        "excerpts": 5,
+        "confident": true
+      },
+      {
+        "id": "finnes-ikke-3",
+        "kind": "finnes_ikke",
+        "excerpts": 5,
+        "confident": true
+      },
+      {
+        "id": "finnes-ikke-4",
+        "kind": "finnes_ikke",
+        "excerpts": 5,
+        "confident": true
+      },
+      {
+        "id": "finnes-ikke-5",
+        "kind": "finnes_ikke",
+        "excerpts": 5,
+        "confident": true
+      },
+      {
+        "id": "mixed-lex-semantic-1",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.048780486
+      },
+      {
+        "id": "mixed-lex-semantic-2",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "hearing-statsbudsjett-felles",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-dok8",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "sak-klima",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "sak-helse",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "sak-skatt",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "issue-search-trygd",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "issue-search-budsjett",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "sak-long-query",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-referat",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-innstilling",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.048780486
+      },
+      {
+        "id": "hearing-frist",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-200417-missing",
+        "skipped": true
+      },
+      {
+        "id": "prefix-arbeid",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [
+          "103102"
+        ],
+        "titles": [
+          "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)"
+        ]
+      },
+      {
+        "id": "compound-statsbudsjett",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "semantic-only-fisker",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "year-henvisning-2024-25",
+        "kind": "issue_search",
+        "hit": true,
+        "ids": [
+          "103102"
+        ],
+        "titles": [
+          "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)"
+        ]
+      },
+      {
+        "id": "year-session-2024-25",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "statsbudsjettet-2027-explicit",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.048780486
+      },
+      {
+        "id": "statsbudsjettet-2027-energy",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "issue-search-budsjett-2027-phrase",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "topic-trygd-pensjon-multi",
+        "topicExcerptHit": true,
+        "topicFairSakCoverage": 0.5,
+        "sakerWithExcerpts": [
+          3,
+          2
+        ]
+      },
+      {
+        "id": "topic-statsbudsjett-2027-multi",
+        "topicExcerptHit": true,
+        "topicFairSakCoverage": 1,
+        "sakerWithExcerpts": [
+          1,
+          1
+        ]
+      },
+      {
+        "id": "topic-representantforslag-2024-25",
+        "topicExcerptHit": true,
+        "topicFairSakCoverage": 1,
+        "sakerWithExcerpts": [
+          3,
+          2
+        ]
+      }
+    ]
+  },
+  {
+    "label": "improved",
+    "variant": "stack",
+    "stackHeads": {
+      "p177": "a38d83d",
+      "p178": "9441863",
+      "p179": "4c17c84",
+      "p181": "1e06816"
+    },
+    "chunkQuestions": 30,
+    "recallAt5": 0.6666666666666666,
+    "recallAt10": 0.6666666666666666,
+    "mrr": 0.6444444444444445,
+    "excerptFactRate": 0.6666666666666666,
+    "topicQuestions": 3,
+    "topicExcerptFactRate": 1,
+    "topicFairSakCoverage": 0.8333333333333334,
+    "issueSearchHitRate": 0.3333333333333333,
+    "prefixHitRate": 0,
+    "finnesIkkeFalseConfidenceRate": 1,
+    "latencyMsP50": 96.32540499999959,
+    "latencyMsP95": 222.4073329999992,
+    "judge": "pending (LAN)",
+    "perQuestion": [
+      {
+        "id": "sak-103102-pensjon",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-103102-utvalg",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-103102-vedtak",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-103102-komite",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-103102-prop",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "hearing-10005964-budsjett",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "hearing-10005968-budsjett",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "hearing-10005964-innspill",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "issue-search-innvandring-prefix",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "issue-search-innvandringsloven",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "issue-search-fisker-pensjon",
+        "kind": "issue_search",
+        "hit": true,
+        "ids": [
+          "103102"
+        ],
+        "titles": [
+          "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)"
+        ]
+      },
+      {
+        "id": "issue-search-prop-133",
+        "kind": "issue_search",
+        "hit": true,
+        "ids": [
+          "103102"
+        ],
+        "titles": [
+          "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)"
+        ]
+      },
+      {
+        "id": "sak-200365-vekt",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-semantic-barnetrygd",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "sak-trygd-generisk",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-parti-votering-gap",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-henvisning",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-ferdigbehandlet",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "finnes-ikke-1",
+        "kind": "finnes_ikke",
+        "excerpts": 5,
+        "confident": true
+      },
+      {
+        "id": "finnes-ikke-2",
+        "kind": "finnes_ikke",
+        "excerpts": 5,
+        "confident": true
+      },
+      {
+        "id": "finnes-ikke-3",
+        "kind": "finnes_ikke",
+        "excerpts": 5,
+        "confident": true
+      },
+      {
+        "id": "finnes-ikke-4",
+        "kind": "finnes_ikke",
+        "excerpts": 5,
+        "confident": true
+      },
+      {
+        "id": "finnes-ikke-5",
+        "kind": "finnes_ikke",
+        "excerpts": 5,
+        "confident": true
+      },
+      {
+        "id": "mixed-lex-semantic-1",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.048780486
+      },
+      {
+        "id": "mixed-lex-semantic-2",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "hearing-statsbudsjett-felles",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-dok8",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "sak-klima",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "sak-helse",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": null
+      },
+      {
+        "id": "sak-skatt",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "issue-search-trygd",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "issue-search-budsjett",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "sak-long-query",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-referat",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-innstilling",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.048780486
+      },
+      {
+        "id": "hearing-frist",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "sak-200417-missing",
+        "skipped": true
+      },
+      {
+        "id": "prefix-arbeid",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [
+          "103102"
+        ],
+        "titles": [
+          "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)"
+        ]
+      },
+      {
+        "id": "compound-statsbudsjett",
+        "r5": false,
+        "r10": false,
+        "excerptHit": false,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "semantic-only-fisker",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "year-henvisning-2024-25",
+        "kind": "issue_search",
+        "hit": true,
+        "ids": [
+          "103102"
+        ],
+        "titles": [
+          "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)"
+        ]
+      },
+      {
+        "id": "year-session-2024-25",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "statsbudsjettet-2027-explicit",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.048780486
+      },
+      {
+        "id": "statsbudsjettet-2027-energy",
+        "r5": true,
+        "r10": true,
+        "excerptHit": true,
+        "topRank": 0.024390243
+      },
+      {
+        "id": "issue-search-budsjett-2027-phrase",
+        "kind": "issue_search",
+        "hit": false,
+        "ids": [],
+        "titles": []
+      },
+      {
+        "id": "topic-trygd-pensjon-multi",
+        "topicExcerptHit": true,
+        "topicFairSakCoverage": 0.5,
+        "sakerWithExcerpts": [
+          3,
+          2
+        ]
+      },
+      {
+        "id": "topic-statsbudsjett-2027-multi",
+        "topicExcerptHit": true,
+        "topicFairSakCoverage": 1,
+        "sakerWithExcerpts": [
+          1,
+          1
+        ]
+      },
+      {
+        "id": "topic-representantforslag-2024-25",
+        "topicExcerptHit": true,
+        "topicFairSakCoverage": 1,
+        "sakerWithExcerpts": [
+          3,
+          2
+        ]
+      }
+    ]
+  }
+]

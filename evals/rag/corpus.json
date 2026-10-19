@@ -1,0 +1,17 @@
+{
+  "sessionId": "2025-2026",
+  "coreIssues": [
+    "103102",
+    "102956",
+    "103045",
+    "102800",
+    "103200",
+    "200365",
+    "200417",
+    "103150"
+  ],
+  "hearings": ["10005964", "10005968"],
+  "distractorCount": 12,
+  "maxDocumentsPerIssue": 2,
+  "maxPublicationChars": 120000
+}
