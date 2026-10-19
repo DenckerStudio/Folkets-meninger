@@ -405,6 +405,7 @@ async function searchChunksHybrid(
       filter_komite: null,
       filter_ferdigbehandlet: null,
       filter_published_after: null,
+      filter_hearing_id: null,
       match_count: maxChunks,
     });
     if (error) {

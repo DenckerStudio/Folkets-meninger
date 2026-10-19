@@ -105,6 +105,7 @@ CREATE OR REPLACE FUNCTION public.search_chunks_hybrid(
   filter_komite text DEFAULT NULL,
   filter_ferdigbehandlet boolean DEFAULT NULL,
   filter_published_after timestamptz DEFAULT NULL,
+  filter_hearing_id text DEFAULT NULL,
   match_count int DEFAULT 8
 )
 RETURNS TABLE (
@@ -139,7 +140,8 @@ AS $$
       nullif(btrim(coalesce(filter_sesjon, '')), '') AS sesjon,
       nullif(btrim(coalesce(filter_komite, '')), '') AS komite,
       filter_ferdigbehandlet AS ferdig,
-      filter_published_after AS published_after
+      filter_published_after AS published_after,
+      nullif(btrim(coalesce(filter_hearing_id, '')), '') AS hearing_id
   ),
   base AS (
     SELECT
@@ -177,6 +179,10 @@ AS $$
       AND (p.komite IS NULL OR nullif(trim(i.detail_json->'komite'->>'navn'), '') = p.komite)
       AND (p.ferdig IS NULL OR i.ferdigbehandlet IS NOT DISTINCT FROM p.ferdig)
       AND (p.published_after IS NULL OR i.first_seen_at >= p.published_after)
+      AND (
+        p.hearing_id IS NULL
+        OR nullif(btrim(dc.metadata->>'hearing_id'), '') = p.hearing_id
+      )
   ),
   lexical AS (
     SELECT
@@ -290,6 +296,7 @@ REVOKE ALL ON FUNCTION public.search_chunks_hybrid(
   text,
   boolean,
   timestamptz,
+  text,
   int
 ) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.search_chunks_hybrid(
@@ -301,6 +308,7 @@ GRANT EXECUTE ON FUNCTION public.search_chunks_hybrid(
   text,
   boolean,
   timestamptz,
+  text,
   int
 ) TO anon, authenticated;
 
