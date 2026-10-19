@@ -12,7 +12,6 @@ import {
 import { fetchCentralQueryEmbedding } from '@/lib/chat/query-embed';
 import {
   searchChunksByVector,
-  VECTOR_V2_DIMENSIONS,
   type QueryVectorizer,
   type VectorSearchClient,
 } from '@/lib/chat/vector-search';
@@ -373,31 +372,30 @@ export function mapHybridChunkRow(row: Record<string, unknown>): ChatDocumentChu
   };
 }
 
-async function resolveQueryEmbeddingV2(
-  vectorize: QueryVectorizer | null | undefined,
-  query: string,
-): Promise<number[] | null> {
-  const central = await fetchCentralQueryEmbedding(query);
-  if (central) return central;
+/** Hybrid RPC succeeded but returned no usable chunks — fall back to legacy scan. */
+export function shouldFallbackToLegacyChunks(hybrid: ChatDocumentChunk[] | null): boolean {
+  return hybrid === null || hybrid.length === 0;
+}
 
-  if (!vectorize) return null;
-  const vector = await vectorize(query);
-  if (!vector || vector.length !== VECTOR_V2_DIMENSIONS) return null;
-  return vector;
+export async function primaryChunksFromHybridAttempt(
+  hybrid: ChatDocumentChunk[] | null,
+  loadLegacy: () => Promise<ChatDocumentChunk[]>,
+): Promise<ChatDocumentChunk[]> {
+  if (hybrid !== null && hybrid.length > 0) return hybrid;
+  return loadLegacy();
 }
 
 async function searchChunksHybrid(
   supabase: ChatRagClient,
   issue: ChatIssueHit,
   query: string,
-  vectorize?: QueryVectorizer | null,
   maxChunks: number = MAX_CHUNKS,
 ): Promise<ChatDocumentChunk[] | null> {
   if (!supabase.rpc) return null;
   const issueId = issue.id.trim();
   if (!issueId) return null;
 
-  const queryEmbedding = await resolveQueryEmbeddingV2(vectorize, query);
+  const queryEmbedding = await fetchCentralQueryEmbedding(query);
 
   try {
     const { data, error } = await supabase.rpc('search_chunks_hybrid', {
@@ -414,14 +412,14 @@ async function searchChunksHybrid(
     });
     if (error) {
       if (isMissingHybridRpcError(error)) return null;
-      return [];
+      return null;
     }
-    if (!Array.isArray(data)) return [];
+    if (!Array.isArray(data)) return null;
     const mapped = data.flatMap((row) => {
       const chunk = mapHybridChunkRow(row as Record<string, unknown>);
       return chunk ? [chunk] : [];
     });
-    return mapped;
+    return mapped.length > 0 ? mapped : null;
   } catch {
     return null;
   }
@@ -482,10 +480,10 @@ async function searchChunks(
   vectorize?: QueryVectorizer | null,
   maxChunks: number = MAX_CHUNKS,
 ): Promise<ChatDocumentChunk[]> {
-  const hybrid = await searchChunksHybrid(supabase, issue, query, vectorize, maxChunks);
-  const primary =
-    hybrid ??
-    (await searchChunksLexical(supabase, issue, query, maxChunks));
+  const hybrid = await searchChunksHybrid(supabase, issue, query, maxChunks);
+  const primary = await primaryChunksFromHybridAttempt(hybrid, () =>
+    searchChunksLexical(supabase, issue, query, maxChunks),
+  );
 
   if (!vectorize) return primary;
 
