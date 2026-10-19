@@ -10,11 +10,21 @@ export function normalizeChunkText(text: string): string {
   return text.replace(/\r\n/g, '\n').trim();
 }
 
+const EMPHASIS_INNER_RE = /^\S(?:.*\S)?$/;
+
+function stripEmphasisMarkers(segment: string): string {
+  return segment
+    .replace(/\*\*(\S(?:.*?\S)?)\*\*/g, (match, inner: string) =>
+      EMPHASIS_INNER_RE.test(inner) && !/^\d+$/.test(inner) ? inner : match,
+    )
+    .replace(/(?<!\*)\*(\S(?:.*?\S)?)\*(?!\*)/g, (match, inner: string) =>
+      EMPHASIS_INNER_RE.test(inner) && !/^\d+$/.test(inner) ? inner : match,
+    );
+}
+
 function stripInlineMarkdown(line: string): string {
-  return line
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1');
+  const links = line.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+  return stripEmphasisMarkers(links);
 }
 
 /** UI-only: strip Docling markdown noise, then collapse blank lines for line-clamp cards. */
@@ -35,9 +45,7 @@ export function formatChunkExcerptForDisplay(text: string): string {
     }
     if (/^\|.+\|\s*$/.test(trimmed)) {
       if (/^\|[\s:|-]+\|\s*$/.test(trimmed)) continue;
-      const cells = trimmed
-        .split('|')
-        .map((cell) => stripInlineMarkdown(cell.trim()));
+      const cells = trimmed.split('|').map((cell) => stripInlineMarkdown(cell.trim()));
       if (cells.length >= 2 && cells[0] === '' && cells[cells.length - 1] === '') {
         cells.shift();
         cells.pop();

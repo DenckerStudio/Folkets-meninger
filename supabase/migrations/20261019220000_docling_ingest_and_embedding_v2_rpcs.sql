@@ -64,8 +64,41 @@ COMMENT ON COLUMN public.document_chunks.embedding_v2_status IS
   'pending | ready | failed — bge-m3 backfill; skip listing after 3 failed attempts';
 
 -- ---------------------------------------------------------------------------
--- Chunk payload validation (no writes — safe before upsert)
+-- Doc/chunk payload validation (no writes — safe before upsert)
 -- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public._n8n_docling_validate_doc(p_doc jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_raw text;
+  v_num int;
+BEGIN
+  IF p_doc ? 'page_count' THEN
+    v_raw := nullif(btrim(coalesce(p_doc->>'page_count', '')), '');
+    IF v_raw IS NULL OR v_raw !~ '^-?\d+$' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'page_count');
+    END IF;
+    v_num := v_raw::int;
+    IF v_num < 0 OR v_num > 100000 THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'page_count');
+    END IF;
+  END IF;
+
+  IF p_doc ? 'fetched_at' THEN
+    BEGIN
+      PERFORM (p_doc->>'fetched_at')::timestamptz;
+    EXCEPTION
+      WHEN OTHERS THEN
+        RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'fetched_at');
+    END;
+  END IF;
+
+  RETURN NULL;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public._n8n_docling_validate_chunks(p_chunks jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -87,20 +120,20 @@ BEGIN
     END IF;
 
     IF NOT (v_chunk ? 'chunk_index') THEN
-      RETURN jsonb_build_object('status', 'error', 'error', 'missing_chunk_index');
+      RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'chunk_index');
     END IF;
 
     v_raw := nullif(btrim(v_chunk->>'chunk_index'), '');
     IF v_raw IS NULL OR v_raw !~ '^-?\d+$' THEN
-      RETURN jsonb_build_object('status', 'error', 'error', 'invalid_chunk_index');
+      RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'chunk_index');
     END IF;
     v_idx := v_raw::int;
-    IF v_idx < 0 THEN
-      RETURN jsonb_build_object('status', 'error', 'error', 'invalid_chunk_index');
+    IF v_idx < 0 OR v_idx >= 2000 THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'chunk_index');
     END IF;
 
     IF v_idx = ANY (v_seen) THEN
-      RETURN jsonb_build_object('status', 'error', 'error', 'duplicate_chunk_index');
+      RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'chunk_index', 'reason', 'duplicate');
     END IF;
     v_seen := array_append(v_seen, v_idx);
 
@@ -109,21 +142,21 @@ BEGIN
     IF v_chunk ? 'page_start' OR (v_meta ? 'page_start') THEN
       v_raw := nullif(btrim(coalesce(v_meta->>'page_start', v_chunk->>'page_start', '')), '');
       IF v_raw IS NOT NULL AND v_raw !~ '^-?\d+$' THEN
-        RETURN jsonb_build_object('status', 'error', 'error', 'invalid_page_start');
+        RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'page_start');
       END IF;
     END IF;
 
     IF v_chunk ? 'page_end' OR (v_meta ? 'page_end') THEN
       v_raw := nullif(btrim(coalesce(v_meta->>'page_end', v_chunk->>'page_end', '')), '');
       IF v_raw IS NOT NULL AND v_raw !~ '^-?\d+$' THEN
-        RETURN jsonb_build_object('status', 'error', 'error', 'invalid_page_end');
+        RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'page_end');
       END IF;
     END IF;
 
     IF v_chunk ? 'page' OR (v_meta ? 'page') THEN
       v_raw := nullif(btrim(coalesce(v_meta->>'page', v_chunk->>'page', '')), '');
       IF v_raw IS NOT NULL AND v_raw !~ '^-?\d+$' THEN
-        RETURN jsonb_build_object('status', 'error', 'error', 'invalid_page');
+        RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'page');
       END IF;
     END IF;
   END LOOP;
@@ -132,6 +165,7 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public._n8n_docling_validate_doc(jsonb) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public._n8n_docling_validate_chunks(jsonb) FROM PUBLIC, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
@@ -160,6 +194,8 @@ DECLARE
   v_chunk_count int;
   v_nonempty_chunks int;
   v_existing_hash text;
+  v_existing_chunker text;
+  v_incoming_chunker text := 'md-sections-v1';
   v_hearing_doc_id uuid;
   v_inserted int := 0;
   v_kept int[] := '{}';
@@ -205,17 +241,24 @@ BEGIN
     RETURN jsonb_build_object('status', 'error', 'error', 'empty_chunks');
   END IF;
 
+  v_validation := public._n8n_docling_validate_doc(p_doc);
+  IF v_validation IS NOT NULL THEN
+    RETURN v_validation;
+  END IF;
+
   v_validation := public._n8n_docling_validate_chunks(p_chunks);
   IF v_validation IS NOT NULL THEN
     RETURN v_validation;
   END IF;
 
+  v_incoming_chunker := coalesce(nullif(btrim(coalesce(p_doc->>'chunker', '')), ''), 'md-sections-v1');
+
   IF p_doc ? 'content_markdown' THEN
     v_content_markdown := nullif(p_doc->>'content_markdown', '');
-    -- Match lib/document-chunking.ts documentContentHash (CRLF → LF, BOM strip, trim).
+    -- Match lib/document-chunking.ts documentContentHash (CRLF → LF, trim, leading BOM).
     v_normalized_md := regexp_replace(coalesce(v_content_markdown, ''), E'\\r\\n', E'\\n', 'g');
-    v_normalized_md := regexp_replace(v_normalized_md, '^' || chr(65279), '');
     v_normalized_md := regexp_replace(v_normalized_md, '^[[:space:]]+|[[:space:]]+$', '', 'g');
+    v_normalized_md := regexp_replace(v_normalized_md, '^' || chr(65279) || '+', '');
     IF v_normalized_md <> '' THEN
       v_computed_hash := encode(sha256(convert_to(v_normalized_md, 'UTF8')), 'hex');
       IF v_content_hash IS NOT NULL AND v_content_hash <> v_computed_hash THEN
@@ -244,15 +287,16 @@ BEGIN
       RETURN jsonb_build_object('status', 'skipped_no_issue');
     END IF;
 
-    SELECT d.content_hash
-    INTO v_existing_hash
+    SELECT d.content_hash, d.chunker
+    INTO v_existing_hash, v_existing_chunker
     FROM public.stortinget_issue_documents d
     WHERE d.issue_id = v_issue_id
       AND d.document_id = v_document_id;
 
     IF v_content_hash IS NOT NULL
       AND v_existing_hash IS NOT NULL
-      AND v_content_hash = v_existing_hash THEN
+      AND v_content_hash = v_existing_hash
+      AND coalesce(nullif(btrim(v_existing_chunker), ''), 'md-sections-v1') = v_incoming_chunker THEN
       RETURN jsonb_build_object(
         'status', 'unchanged',
         'document_id', v_document_id,

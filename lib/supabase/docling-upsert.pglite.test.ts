@@ -13,7 +13,7 @@ function loadDoclingRpcSql(): string {
     'supabase/migrations/20261019220000_docling_ingest_and_embedding_v2_rpcs.sql',
   );
   const raw = readFileSync(migrationPath, 'utf8');
-  const start = raw.indexOf('CREATE OR REPLACE FUNCTION public._n8n_docling_validate_chunks');
+  const start = raw.indexOf('CREATE OR REPLACE FUNCTION public._n8n_docling_validate_doc');
   const end = raw.indexOf('-- embedding_v2 backfill');
   assert.ok(start >= 0 && end > start, 'docling RPC section missing in migration');
   return raw
@@ -55,6 +55,7 @@ async function main(): Promise<void> {
     document_type: 'innstilling',
     content_markdown: markdown,
     content_hash: hash,
+    chunker: 'md-sections-v1',
   };
   const sakChunks = [
     { chunk_index: 0, content: 'Avsnitt én.' },
@@ -71,8 +72,17 @@ async function main(): Promise<void> {
   const badPage = await upsert(db, 'sak', sakDoc, [
     { chunk_index: 0, content: 'x', page_start: 'nope' },
   ]);
-  assert.equal(badPage.status, 'error');
-  assert.equal(badPage.error, 'invalid_page_start');
+  assert.equal(badPage.ok, false);
+  assert.equal(badPage.error, 'invalid_chunk');
+  assert.equal(badPage.field, 'page_start');
+
+  const badFetchedAt = await upsert(db, 'sak', { ...sakDoc, fetched_at: 'not-a-date' }, sakChunks);
+  assert.equal(badFetchedAt.ok, false);
+  assert.equal(badFetchedAt.field, 'fetched_at');
+
+  const badChunkIndex = await upsert(db, 'sak', sakDoc, [{ chunk_index: 2000, content: 'x' }]);
+  assert.equal(badChunkIndex.ok, false);
+  assert.equal(badChunkIndex.field, 'chunk_index');
 
   const afterBad = await upsert(db, 'sak', sakDoc, sakChunks);
   assert.equal(afterBad.status, 'unchanged', 'invalid payload must not partial-write');
@@ -97,6 +107,9 @@ async function main(): Promise<void> {
     `SELECT title FROM public.stortinget_issue_documents WHERE issue_id = 'sak-1' AND document_id = 'doc-a'`,
   );
   assert.equal(titleRow.rows[0]?.title, 'Første', 'explicit empty title must not wipe');
+
+  const chunkerOnly = await upsert(db, 'sak', { ...sakDoc, chunker: 'md-sections-v2' }, sakChunks);
+  assert.equal(chunkerOnly.status, 'upserted', 'chunker change must re-chunk even when hash matches');
 
   const hearingMarkdown = 'Høringstekst.';
   const hearingHash = documentContentHash(hearingMarkdown);
@@ -140,8 +153,9 @@ async function main(): Promise<void> {
     { chunk_index: 0, content: 'a' },
     { chunk_index: 0, content: 'b' },
   ]);
-  assert.equal(dup.status, 'error');
-  assert.equal(dup.error, 'duplicate_chunk_index');
+  assert.equal(dup.ok, false);
+  assert.equal(dup.error, 'invalid_chunk');
+  assert.equal(dup.reason, 'duplicate');
 
   console.log('docling-upsert.pglite.test.ts: ok');
 }
