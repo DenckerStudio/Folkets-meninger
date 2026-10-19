@@ -25,6 +25,7 @@ import {
 } from '@/lib/blog/service';
 import { blogIndexPath, blogPostOgImagePath, blogPostPath } from '@/lib/blog/urls';
 import { absoluteUrl, buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
+import { blogGenerateStaticParams } from '@/lib/blog/route-segment';
 import { routes } from '@/lib/routes';
 
 export const revalidate = 3600;
@@ -34,9 +35,7 @@ type PageProps = {
 };
 
 export async function generateStaticParams() {
-  const { listPublishedBlogSlugsForSitemap } = await import('@/lib/blog/service');
-  const slugs = await listPublishedBlogSlugsForSitemap(50);
-  return slugs.map((entry) => ({ slug: entry.slug }));
+  return blogGenerateStaticParams();
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

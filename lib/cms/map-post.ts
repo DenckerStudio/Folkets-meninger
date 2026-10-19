@@ -8,6 +8,17 @@ function resolveRelation<T extends { id?: string }>(value: T | string | null | u
   return value;
 }
 
+export function resolvePayloadPublishedAt(post: {
+  publishedAt?: string | null;
+  createdAt?: string | null;
+}): string | null {
+  const published = post.publishedAt?.trim();
+  if (published) return published;
+  const created = post.createdAt?.trim();
+  if (created) return created;
+  return null;
+}
+
 function mediaUrl(media: PayloadMedia | string | null | undefined): string | null {
   if (!media || typeof media === 'string') return null;
   const relative = media.sizes?.card?.url || media.sizes?.hero?.url || media.url;
@@ -35,8 +46,9 @@ export function mapPayloadPostToPublic(post: PayloadPost): BlogPostPublic {
     tags,
     related_sak_ids: (post.relatedSakIds ?? []).map((row) => row.id).filter(Boolean),
     related_horing_ids: (post.relatedHoringIds ?? []).map((row) => row.id).filter(Boolean),
-    published_at: post.publishedAt ?? null,
-    updated_at: post.updatedAtDisplay ?? post.updatedAt ?? post.publishedAt ?? null,
+    published_at: resolvePayloadPublishedAt(post),
+    updated_at:
+      post.updatedAtDisplay ?? post.updatedAt ?? resolvePayloadPublishedAt(post) ?? null,
     category_slug: category?.slug ?? null,
     category_name: category?.name ?? null,
     featured: Boolean(post.featured),

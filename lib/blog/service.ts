@@ -1,4 +1,9 @@
-import { mapPayloadCategories, mapPayloadPostToListItem, mapPayloadPostToPublic } from '@/lib/cms/map-post';
+import {
+  mapPayloadCategories,
+  mapPayloadPostToListItem,
+  mapPayloadPostToPublic,
+  resolvePayloadPublishedAt,
+} from '@/lib/cms/map-post';
 import { payloadCreatePost } from '@/lib/cms/payload-create';
 import {
   getCmsAgentKey,
@@ -19,6 +24,11 @@ import {
 } from '@/lib/blog/text-limits';
 
 const POST_DEPTH = 2;
+const BLOG_READ_CACHE = { allowIsrCache: true, revalidate: 3600 } as const;
+
+function emptyPaginated(page: number) {
+  return { posts: [], totalPages: 0, totalDocs: 0, page };
+}
 
 function publishedQuery(extra?: Record<string, string | number>) {
   return {
@@ -31,11 +41,15 @@ function publishedQuery(extra?: Record<string, string | number>) {
 
 export async function listPublishedBlogPosts(limit = 50): Promise<BlogPostPublic[]> {
   if (!isCmsConfigured()) return [];
-  const data = await payloadFetchList<PayloadPost>('posts', {
-    ...publishedQuery(),
-    limit,
-  });
-  if (!data?.docs?.length) return [];
+  const data = await payloadFetchList<PayloadPost>(
+    'posts',
+    {
+      ...publishedQuery(),
+      limit,
+    },
+    BLOG_READ_CACHE,
+  );
+  if (!data.docs.length) return [];
   return data.docs.map(mapPayloadPostToPublic);
 }
 
@@ -51,9 +65,7 @@ export async function listPublishedBlogPostsPaginated(args: {
 }> {
   const pageSize = args.pageSize ?? BLOG_PAGE_SIZE;
   const page = Math.max(1, args.page);
-  if (!isCmsConfigured()) {
-    return { posts: [], totalPages: 0, totalDocs: 0, page };
-  }
+  if (!isCmsConfigured()) return emptyPaginated(page);
 
   const query: Record<string, string | number> = {
     ...publishedQuery(),
@@ -62,10 +74,14 @@ export async function listPublishedBlogPostsPaginated(args: {
   };
 
   if (args.categorySlug) {
-    const categories = await payloadFetchList<PayloadCategory>('categories', {
-      limit: 1,
-      'where[slug][equals]': args.categorySlug,
-    });
+    const categories = await payloadFetchList<PayloadCategory>(
+      'categories',
+      {
+        limit: 1,
+        'where[slug][equals]': args.categorySlug,
+      },
+      BLOG_READ_CACHE,
+    );
     const categoryId = categories?.docs?.[0]?.id;
     if (!categoryId) {
       return { posts: [], totalPages: 0, totalDocs: 0, page };
@@ -73,8 +89,7 @@ export async function listPublishedBlogPostsPaginated(args: {
     query['where[category][equals]'] = categoryId;
   }
 
-  const data = await payloadFetchList<PayloadPost>('posts', query);
-  if (!data) return { posts: [], totalPages: 0, totalDocs: 0, page };
+  const data = await payloadFetchList<PayloadPost>('posts', query, BLOG_READ_CACHE);
 
   return {
     posts: data.docs.map(mapPayloadPostToListItem),
@@ -86,33 +101,45 @@ export async function listPublishedBlogPostsPaginated(args: {
 
 export async function getFeaturedBlogPost(): Promise<BlogPostPublic | null> {
   if (!isCmsConfigured()) return null;
-  const data = await payloadFetchList<PayloadPost>('posts', {
-    ...publishedQuery(),
-    limit: 1,
-    'where[featured][equals]': 'true',
-  });
+  const data = await payloadFetchList<PayloadPost>(
+    'posts',
+    {
+      ...publishedQuery(),
+      limit: 1,
+      'where[featured][equals]': 'true',
+    },
+    BLOG_READ_CACHE,
+  );
   const post = data?.docs?.[0];
   return post ? mapPayloadPostToPublic(post) : null;
 }
 
 export async function getPublishedBlogPostBySlug(slug: string): Promise<BlogPostPublic | null> {
   if (!isCmsConfigured()) return null;
-  const data = await payloadFetchList<PayloadPost>('posts', {
-    ...publishedQuery(),
-    limit: 1,
-    'where[slug][equals]': slug,
-  });
+  const data = await payloadFetchList<PayloadPost>(
+    'posts',
+    {
+      ...publishedQuery(),
+      limit: 1,
+      'where[slug][equals]': slug,
+    },
+    BLOG_READ_CACHE,
+  );
   const post = data?.docs?.[0];
   return post ? mapPayloadPostToPublic(post) : null;
 }
 
 export async function listBlogCategories(): Promise<BlogCategory[]> {
   if (!isCmsConfigured()) return [];
-  const data = await payloadFetchList<PayloadCategory>('categories', {
-    limit: 20,
-    sort: 'order',
-  });
-  if (!data?.docs?.length) return [];
+  const data = await payloadFetchList<PayloadCategory>(
+    'categories',
+    {
+      limit: 20,
+      sort: 'order',
+    },
+    BLOG_READ_CACHE,
+  );
+  if (!data.docs.length) return [];
   return mapPayloadCategories(data.docs);
 }
 
@@ -120,24 +147,32 @@ export async function listPublishedBlogSlugsForSitemap(limit = 200): Promise<
   { slug: string; published_at: string | null; updated_at: string | null }[]
 > {
   if (!isCmsConfigured()) return [];
-  const data = await payloadFetchList<PayloadPost>('posts', {
-    ...publishedQuery(),
-    limit,
-    depth: 0,
-  });
-  if (!data?.docs?.length) return [];
+  const data = await payloadFetchList<PayloadPost>(
+    'posts',
+    {
+      ...publishedQuery(),
+      limit,
+      depth: 0,
+    },
+    BLOG_READ_CACHE,
+  );
+  if (!data.docs.length) return [];
   return data.docs.map((post) => ({
     slug: post.slug,
-    published_at: post.publishedAt ?? null,
-    updated_at: post.updatedAtDisplay ?? post.updatedAt ?? post.publishedAt ?? null,
+    published_at: resolvePayloadPublishedAt(post),
+    updated_at: post.updatedAtDisplay ?? post.updatedAt ?? resolvePayloadPublishedAt(post) ?? null,
   }));
 }
 
 async function findCategoryId(slug: string): Promise<string | null> {
-  const categories = await payloadFetchList<PayloadCategory>('categories', {
-    limit: 1,
-    'where[slug][equals]': slug,
-  });
+  const categories = await payloadFetchList<PayloadCategory>(
+    'categories',
+    {
+      limit: 1,
+      'where[slug][equals]': slug,
+    },
+    BLOG_READ_CACHE,
+  );
   return categories?.docs?.[0]?.id ?? null;
 }
 
