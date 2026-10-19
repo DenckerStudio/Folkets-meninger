@@ -35,7 +35,7 @@ export function formatSideBySide(dev: EvalJson, test: EvalJson): string {
     '',
     '| Metric | dev | test |',
     '| --- | --- | --- |',
-    `| **Aggregate sak R@5** (n=${dev.chunkQuestions ?? '?'}) | **${(Number(dev.recallAt5) * 100).toFixed(1)}%** | **${(Number(test.recallAt5) * 100).toFixed(1)}%** (target ≥85%) |`,
+    `| **Aggregate sak R@5** (dev n=${dev.chunkQuestions ?? '?'}, test n=${test.chunkQuestions ?? '?'}) | **${(Number(dev.recallAt5) * 100).toFixed(1)}%** | **${(Number(test.recallAt5) * 100).toFixed(1)}%** (target ≥85%) |`,
     `| Prefix (prefiks_delord) | ${(Number(dev.prefixHitRate) * 100).toFixed(1)}% | ${(Number(test.prefixHitRate) * 100).toFixed(1)}% |`,
     `| Finnes-ikke reject | ${(Number(dev.finnesIkkeCorrectRejectionRate) * 100).toFixed(1)}% | ${(Number(test.finnesIkkeCorrectRejectionRate) * 100).toFixed(1)}% |`,
     `| p95 latency (ms) | ${Number(dev.latencyMsP95).toFixed(0)} | ${Number(test.latencyMsP95).toFixed(0)} |`,

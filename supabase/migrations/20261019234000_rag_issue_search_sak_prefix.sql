@@ -212,5 +212,3 @@ REVOKE ALL ON FUNCTION public.search_issues_fts(text, text[], int) FROM PUBLIC, 
 GRANT EXECUTE ON FUNCTION public.search_issues_fts(text, text[], int) TO anon, authenticated;
 
 COMMIT;
-
-COMMIT;
