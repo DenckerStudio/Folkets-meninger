@@ -208,7 +208,7 @@ export function ChatPanel() {
     <div className="fixed inset-0 z-[90] flex items-end justify-center sm:justify-end sm:p-4 xl:p-6">
       <button
         type="button"
-        className="absolute inset-0 bg-foreground/10 xl:bg-transparent"
+        className="absolute inset-0 bg-overlay/10 xl:bg-transparent dark:bg-overlay/40 dark:xl:bg-transparent"
         aria-label="Lukk chat"
         onClick={closeChat}
       />

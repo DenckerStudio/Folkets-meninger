@@ -214,7 +214,7 @@ function MobileProfileSheet({
         <>
           <motion.button
             type="button"
-            className="fixed inset-0 z-[65] bg-foreground/45 backdrop-blur-[1px]"
+            className="fixed inset-0 z-[65] bg-overlay/45 backdrop-blur-[1px] dark:bg-overlay/60"
             aria-label="Lukk meny"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

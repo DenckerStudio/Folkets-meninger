@@ -18,18 +18,45 @@ SKIP_MIGRATIONS=(
   '20261018160000_security_lockdown_n8n.sql'
 )
 
-echo "Applying migrations (excluding 140000, 150000, 160000) ..."
-for f in $(ls -1 supabase/migrations/*.sql | sort); do
-  base=$(basename "$f")
-  skip=false
+# Prod half-migrated: 110001 + hotfix + 160000 + 20140000 n8n applied; 120000+ pending.
+DEFER_MIGRATIONS=(
+  '20261020120000_rpc_caller_user_binding.sql'
+  '20261020120001_revoke_impersonation_rpc_execute.sql'
+  '20261020120002_reapply_rpc_execute_lockdown.sql'
+  '20261020130000_api_rate_limit.sql'
+)
+
+should_skip() {
+  local base="$1"
+  local s
   for s in "${SKIP_MIGRATIONS[@]}"; do
     if [[ "$base" == "$s" ]]; then
-      skip=true
-      break
+      return 0
     fi
   done
-  if $skip; then
+  return 1
+}
+
+should_defer() {
+  local base="$1"
+  local d
+  for d in "${DEFER_MIGRATIONS[@]}"; do
+    if [[ "$base" == "$d" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+echo "Phase 1: migrations through 110001 (defer 120000+) ..."
+for f in $(ls -1 supabase/migrations/*.sql | sort); do
+  base=$(basename "$f")
+  if should_skip "$base"; then
     echo "  -> SKIP $base"
+    continue
+  fi
+  if should_defer "$base"; then
+    echo "  -> DEFER $base"
     continue
   fi
   echo "  -> $base"
@@ -46,6 +73,31 @@ SQL
 
 echo "Applying 20261018150000_security_lockdown_prod_safe.sql (postgres) ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261018150000_security_lockdown_prod_safe.sql
+
+echo "Prod hotfix REVOKEs (manual on prod) ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/hotfix/20261019_revoke_impersonation.sql
+
+if [[ -f supabase/migrations/20261018160000_security_lockdown_n8n.sql ]]; then
+  echo "Applying 20261018160000_security_lockdown_n8n.sql ..."
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261018160000_security_lockdown_n8n.sql
+fi
+
+if [[ -f supabase/migrations/20261020140000_n8n_rpc_anon_lockdown.sql ]]; then
+  echo "Applying 20261020140000_n8n_rpc_anon_lockdown.sql ..."
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261020140000_n8n_rpc_anon_lockdown.sql
+fi
+
+echo "Prod drift seed (record_political_consent default) before 120000 ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/prod-half-migrated-120000-seed.sql
+
+echo "Phase 2: deferred security migrations 120000–130000 ..."
+for d in "${DEFER_MIGRATIONS[@]}"; do
+  echo "  -> $d"
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/$d"
+done
+
+echo "Re-apply RPC lockdown (150000 re-grants authenticated EXECUTE on user-bound RPCs) ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261020120002_reapply_rpc_execute_lockdown.sql
 
 echo "Running security-lockdown-defaults.sql (supabase_admin connection) ..."
 psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-lockdown-defaults.sql

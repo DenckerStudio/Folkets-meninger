@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     return Response.json({ error: gate.error }, { status: gate.status });
   }
 
-  const ipRate = checkRateLimit(`chat-rettskriving:ip:${clientIp(request)}`, 20, 60_000);
+  const ipRate = await checkRateLimit(`chat-rettskriving:ip:${clientIp(request)}`, 20, 60_000);
   if (!ipRate.ok) {
     return Response.json(
       { error: 'For mange forespørsler. Prøv igjen om litt.' },
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const userRate = checkRateLimit(`chat-rettskriving:user:${gate.userId}`, 20, 60_000);
+  const userRate = await checkRateLimit(`chat-rettskriving:user:${gate.userId}`, 20, 60_000);
   if (!userRate.ok) {
     return Response.json(
       { error: 'Du sender for mange forespørsler. Vent litt.' },
