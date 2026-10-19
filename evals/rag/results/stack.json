@@ -3,23 +3,23 @@
   "variant": "stack",
   "stackHeads": {
     "p177": "a38d83d",
-    "p178": "8462349",
+    "p178": "a2abc31",
     "p179": "4c17c84",
     "p181": "1e06816"
   },
   "chunkQuestions": 30,
-  "recallAt5": 0.4666666666666667,
-  "recallAt10": 0.4666666666666667,
-  "mrr": 0.4444444444444445,
-  "excerptFactRate": 0.4666666666666667,
+  "recallAt5": 0.6666666666666666,
+  "recallAt10": 0.6666666666666666,
+  "mrr": 0.6444444444444445,
+  "excerptFactRate": 0.6666666666666666,
   "topicQuestions": 3,
-  "topicExcerptFactRate": 0.6666666666666666,
-  "topicFairSakCoverage": 0.5,
+  "topicExcerptFactRate": 1,
+  "topicFairSakCoverage": 0.8333333333333334,
   "issueSearchHitRate": 0.3333333333333333,
   "prefixHitRate": 0,
   "finnesIkkeFalseConfidenceRate": 1,
-  "latencyMsP50": 1415.3020749999996,
-  "latencyMsP95": 1892.8262109999996,
+  "latencyMsP50": 90.46827899999994,
+  "latencyMsP95": 212.79802199999995,
   "judge": "pending (LAN)",
   "perQuestion": [
     {
@@ -27,56 +27,56 @@
       "r5": true,
       "r10": true,
       "excerptHit": true,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "sak-103102-utvalg",
       "r5": true,
       "r10": true,
       "excerptHit": true,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "sak-103102-vedtak",
       "r5": false,
       "r10": false,
       "excerptHit": false,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "sak-103102-komite",
       "r5": true,
       "r10": true,
       "excerptHit": true,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "sak-103102-prop",
       "r5": true,
       "r10": true,
       "excerptHit": true,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "hearing-10005964-budsjett",
-      "r5": false,
-      "r10": false,
-      "excerptHit": false,
-      "topRank": null
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.024390243
     },
     {
       "id": "hearing-10005968-budsjett",
-      "r5": false,
-      "r10": false,
-      "excerptHit": false,
-      "topRank": null
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.024390243
     },
     {
       "id": "hearing-10005964-innspill",
-      "r5": false,
-      "r10": false,
-      "excerptHit": false,
-      "topRank": null
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.024390243
     },
     {
       "id": "issue-search-innvandring-prefix",
@@ -119,7 +119,7 @@
       "r5": true,
       "r10": true,
       "excerptHit": true,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "sak-semantic-barnetrygd",
@@ -133,28 +133,28 @@
       "r5": true,
       "r10": true,
       "excerptHit": true,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "sak-parti-votering-gap",
       "r5": false,
       "r10": false,
       "excerptHit": false,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "sak-henvisning",
       "r5": true,
       "r10": true,
       "excerptHit": true,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "sak-ferdigbehandlet",
       "r5": false,
       "r10": false,
       "excerptHit": false,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "finnes-ikke-1",
@@ -191,21 +191,21 @@
       "r5": true,
       "r10": true,
       "excerptHit": true,
-      "topRank": 0.032786883
+      "topRank": 0.048780486
     },
     {
       "id": "mixed-lex-semantic-2",
       "r5": true,
       "r10": true,
       "excerptHit": true,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "hearing-statsbudsjett-felles",
-      "r5": false,
-      "r10": false,
-      "excerptHit": false,
-      "topRank": null
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.024390243
     },
     {
       "id": "sak-dok8",
@@ -233,7 +233,7 @@
       "r5": true,
       "r10": true,
       "excerptHit": true,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "issue-search-trygd",
@@ -254,28 +254,28 @@
       "r5": true,
       "r10": true,
       "excerptHit": true,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "sak-referat",
       "r5": false,
       "r10": false,
       "excerptHit": false,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "sak-innstilling",
       "r5": true,
       "r10": true,
       "excerptHit": true,
-      "topRank": 0.032786883
+      "topRank": 0.048780486
     },
     {
       "id": "hearing-frist",
       "r5": false,
       "r10": false,
       "excerptHit": false,
-      "topRank": null
+      "topRank": 0.024390243
     },
     {
       "id": "sak-200417-missing",
@@ -297,14 +297,14 @@
       "r5": false,
       "r10": false,
       "excerptHit": false,
-      "topRank": null
+      "topRank": 0.024390243
     },
     {
       "id": "semantic-only-fisker",
       "r5": true,
       "r10": true,
       "excerptHit": true,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "year-henvisning-2024-25",
@@ -322,21 +322,21 @@
       "r5": true,
       "r10": true,
       "excerptHit": true,
-      "topRank": 0.016393442
+      "topRank": 0.024390243
     },
     {
       "id": "statsbudsjettet-2027-explicit",
-      "r5": false,
-      "r10": false,
-      "excerptHit": false,
-      "topRank": null
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.048780486
     },
     {
       "id": "statsbudsjettet-2027-energy",
-      "r5": false,
-      "r10": false,
-      "excerptHit": false,
-      "topRank": null
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.024390243
     },
     {
       "id": "issue-search-budsjett-2027-phrase",
@@ -356,11 +356,11 @@
     },
     {
       "id": "topic-statsbudsjett-2027-multi",
-      "topicExcerptHit": false,
-      "topicFairSakCoverage": 0,
+      "topicExcerptHit": true,
+      "topicFairSakCoverage": 1,
       "sakerWithExcerpts": [
-        0,
-        0
+        1,
+        1
       ]
     },
     {

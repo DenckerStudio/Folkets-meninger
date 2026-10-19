@@ -3,23 +3,23 @@
   "variant": "stack",
   "stackHeads": {
     "p177": "a38d83d",
-    "p178": "8462349",
+    "p178": "a2abc31",
     "p179": "4c17c84",
     "p181": "1e06816"
   },
   "chunkQuestions": 30,
-  "recallAt5": 0.6333333333333333,
-  "recallAt10": 0.6333333333333333,
-  "mrr": 0.6111111111111112,
-  "excerptFactRate": 0.6333333333333333,
+  "recallAt5": 0.6666666666666666,
+  "recallAt10": 0.6666666666666666,
+  "mrr": 0.6444444444444445,
+  "excerptFactRate": 0.6666666666666666,
   "topicQuestions": 3,
   "topicExcerptFactRate": 1,
   "topicFairSakCoverage": 0.8333333333333334,
   "issueSearchHitRate": 0.3333333333333333,
   "prefixHitRate": 0,
   "finnesIkkeFalseConfidenceRate": 1,
-  "latencyMsP50": 94.12721600000077,
-  "latencyMsP95": 256.213112999998,
+  "latencyMsP50": 87.67119000000002,
+  "latencyMsP95": 205.3824540000005,
   "judge": "pending (LAN)",
   "perQuestion": [
     {
@@ -66,10 +66,10 @@
     },
     {
       "id": "hearing-10005968-budsjett",
-      "r5": false,
-      "r10": false,
-      "excerptHit": false,
-      "topRank": null
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.024390243
     },
     {
       "id": "hearing-10005964-innspill",

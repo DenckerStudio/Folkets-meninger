@@ -3,7 +3,7 @@
   "variant": "baseline",
   "stackHeads": {
     "p177": "a38d83d",
-    "p178": "8462349",
+    "p178": "a2abc31",
     "p179": "4c17c84",
     "p181": "1e06816"
   },
@@ -18,8 +18,8 @@
   "issueSearchHitRate": 0.2222222222222222,
   "prefixHitRate": 0,
   "finnesIkkeFalseConfidenceRate": 1,
-  "latencyMsP50": 1120.5844000000016,
-  "latencyMsP95": 1234.5197120000012,
+  "latencyMsP50": 23.590115999999966,
+  "latencyMsP95": 74.24143400000003,
   "judge": "pending (LAN)",
   "perQuestion": [
     {
