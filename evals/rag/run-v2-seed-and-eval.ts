@@ -25,7 +25,7 @@ export function applyMigrations(variant: 'baseline' | 'stack', reset: boolean): 
     PGPASSWORD: process.env.RAG_EVAL_PG_PASSWORD ?? 'rag_eval',
     RAG_EVAL_VARIANT: variant,
     ...(reset ? { RAG_EVAL_RESET_DB: '1' } : {}),
-    ...(variant === 'stack' ? { RAG_EVAL_IMPROVEMENT_LEVEL: '4' } : {}),
+    ...(variant === 'stack' ? { RAG_EVAL_IMPROVEMENT_LEVEL: '5' } : {}),
   };
   execSync(`npx tsx evals/rag/scripts/apply-migrations.ts ${variant}`, {
     stdio: 'inherit',
