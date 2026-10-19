@@ -1,5 +1,6 @@
 import { chunkDocumentText } from '@/lib/document-chunking';
 import {
+  buildHearingChunkMetadata,
   getHoringsprogramApiUrl,
   hearingDocumentsFromExport,
   mapHearingToDbRow,
@@ -45,6 +46,9 @@ async function upsertHearingChunks(
   kind: string,
   sourceUrl: string | null,
   markdown: string,
+  sesjon: string | null,
+  komite: string | null,
+  contentHash: string,
 ): Promise<number> {
   const service = getServiceSupabase();
   const chunks = chunkDocumentText(markdown);
@@ -58,12 +62,16 @@ async function upsertHearingChunks(
     chunk_index: chunkIndex,
     content,
     embedding_status: 'pending',
-    metadata: {
-      hearing_id: hearingId,
-      document_title: title,
-      document_kind: kind,
-      source_url: sourceUrl,
-    },
+    metadata: buildHearingChunkMetadata({
+      hearingId,
+      documentId,
+      documentKind: kind,
+      documentTitle: title,
+      sourceUrl,
+      sesjon,
+      komite,
+      contentHash,
+    }),
   }));
 
   const { error: deleteError } = await service
@@ -135,6 +143,9 @@ export async function syncStortingetHearingsToDb(): Promise<SyncHearingsResult> 
         draft.kind,
         draft.sourceUrl,
         draft.markdown,
+        row.sesjon,
+        row.komite_navn,
+        draft.contentHash,
       );
       chunksWritten += written;
     }

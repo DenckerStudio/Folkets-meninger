@@ -38,6 +38,7 @@ export type HearingDocumentSearchResult = {
 };
 
 type HybridChunkRow = {
+  id?: string;
   chunk_id?: string;
   hearing_id?: string;
   hearing_document_id?: string;
@@ -47,11 +48,23 @@ type HybridChunkRow = {
   document_title?: string;
   document_kind?: string;
   source_url?: string;
+  score_fused?: number;
   rank?: number;
 };
 
 function clip(value: string, max = 1400): string {
   return value.replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
+export function isMissingHearingHybridRpcError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const row = error as { code?: string; message?: string };
+  if (row.code === 'PGRST202') return true;
+  const message = row.message ?? '';
+  if (/search_chunks_hybrid/i.test(message) && /not find|schema cache|unknown|filter_hearing_id/i.test(message)) {
+    return true;
+  }
+  return false;
 }
 
 async function resolveRagClient(client?: ChatRagClient | null): Promise<ChatRagClient> {
@@ -65,6 +78,28 @@ async function resolveRagClient(client?: ChatRagClient | null): Promise<ChatRagC
   return getAnonSupabase();
 }
 
+function mapHybridHearingChunkRow(
+  row: HybridChunkRow,
+  fallbackHearingId: string | null,
+): HearingChunkHit | null {
+  const chunkId = String(row.id ?? row.chunk_id ?? '').trim();
+  const content = clip(String(row.content ?? ''));
+  if (!chunkId || !content) return null;
+
+  return {
+    chunkId,
+    hearingId: String(row.hearing_id ?? fallbackHearingId ?? ''),
+    hearingDocumentId: String(row.hearing_document_id ?? ''),
+    documentId: String(row.document_id ?? ''),
+    chunkIndex: Number(row.chunk_index ?? 0),
+    content,
+    documentTitle: row.document_title?.trim() || null,
+    documentKind: row.document_kind?.trim() || null,
+    sourceUrl: row.source_url?.trim() || null,
+    rank: Number(row.score_fused ?? row.rank ?? 0),
+  };
+}
+
 async function trySearchChunksHybrid(
   supabase: ChatRagClient,
   query: string,
@@ -73,31 +108,27 @@ async function trySearchChunksHybrid(
 ): Promise<HearingChunkHit[] | null> {
   const rpc = supabase as SupabaseClient;
   const { data, error } = await rpc.rpc('search_chunks_hybrid', {
-    p_query_text: query,
-    p_query_embedding: null,
-    p_hearing_id: hearingId,
-    p_issue_ids: null,
-    p_match_count: limit,
+    query_text: query,
+    query_embedding: null,
+    filter_issue_ids: null,
+    filter_hearing_id: hearingId,
+    filter_document_kinds: null,
+    filter_sesjon: null,
+    filter_komite: null,
+    filter_ferdigbehandlet: null,
+    filter_published_after: null,
+    match_count: limit,
   });
 
-  if (error || !Array.isArray(data)) return null;
+  if (error) {
+    if (isMissingHearingHybridRpcError(error)) return null;
+    return null;
+  }
+  if (!Array.isArray(data)) return null;
 
   const hits = data
-    .map((row) => row as HybridChunkRow)
-    .filter((row) => row.hearing_document_id || row.hearing_id)
-    .map((row) => ({
-      chunkId: String(row.chunk_id ?? ''),
-      hearingId: String(row.hearing_id ?? hearingId ?? ''),
-      hearingDocumentId: String(row.hearing_document_id ?? ''),
-      documentId: String(row.document_id ?? ''),
-      chunkIndex: Number(row.chunk_index ?? 0),
-      content: clip(String(row.content ?? '')),
-      documentTitle: row.document_title?.trim() || null,
-      documentKind: row.document_kind?.trim() || null,
-      sourceUrl: row.source_url?.trim() || null,
-      rank: Number(row.rank ?? 0),
-    }))
-    .filter((row) => row.content.length > 0 && row.chunkId.length > 0);
+    .map((row) => mapHybridHearingChunkRow(row as HybridChunkRow, hearingId))
+    .filter((row): row is HearingChunkHit => row != null);
 
   return hits.length > 0 ? hits : null;
 }

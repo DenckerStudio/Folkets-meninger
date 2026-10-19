@@ -145,6 +145,48 @@ export function hearingDocumentsFromExport(
   return docs;
 }
 
+export type HearingChunkMetadata = {
+  issue_id: string | null;
+  hearing_id: string;
+  document_id: string;
+  document_kind: string;
+  document_title: string;
+  section_title: string;
+  page: number | null;
+  source_url: string | null;
+  sesjon: string | null;
+  komite: string | null;
+  published_at: string | null;
+  content_hash: string;
+};
+
+/** Matches `buildDocumentChunkMetadata` shape in PR #177 (P7 chunking). */
+export function buildHearingChunkMetadata(args: {
+  hearingId: string;
+  documentId: string;
+  documentKind: string;
+  documentTitle: string;
+  sourceUrl: string | null;
+  sesjon: string | null;
+  komite: string | null;
+  contentHash: string;
+}): HearingChunkMetadata {
+  return {
+    issue_id: null,
+    hearing_id: args.hearingId,
+    document_id: args.documentId,
+    document_kind: args.documentKind,
+    document_title: args.documentTitle,
+    section_title: '',
+    page: null,
+    source_url: args.sourceUrl,
+    sesjon: args.sesjon,
+    komite: args.komite,
+    published_at: null,
+    content_hash: args.contentHash,
+  };
+}
+
 export function mapHearingToDbRow(hearing: StortingetHoring, nowIso: string) {
   const id = String(hearing.id);
   const relatedIssueIds = (hearing.horing_sak_info_liste ?? [])
