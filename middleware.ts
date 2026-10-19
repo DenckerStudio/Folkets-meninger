@@ -68,7 +68,7 @@ export async function middleware(request: NextRequest) {
     return refreshSessionCookies(request);
   }
 
-  const isDashboard = pathname === routes.dashboard || pathname.startsWith(`${routes.dashboard}/`);
+const isDashboard = pathname === routes.dashboard || pathname.startsWith(`${routes.dashboard}/`);
   if (!isDashboard) {
     return NextResponse.next();
   }

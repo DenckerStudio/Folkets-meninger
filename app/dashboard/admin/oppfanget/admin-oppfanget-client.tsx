@@ -150,8 +150,7 @@ export default function AdminOppfangetClient({
           Oppfanget
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Meldinger, signaler og aksjoner fra fangstpipelinen (n8n). Tall og kilder er ikke verifisert
-          her.
+          Meldinger, signaler og aksjoner vi har fanget opp. Tall og kilder er ikke verifisert her.
         </p>
         {data?.previewMock ? (
           <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
@@ -175,7 +174,7 @@ export default function AdminOppfangetClient({
           <select
             value={type}
             onChange={(e) => setType(e.target.value as '' | OppfangetDisplayType)}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2"
+            className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           >
             {TYPE_OPTIONS.map((opt) => (
               <option key={opt.label} value={opt.value}>{opt.label}</option>
@@ -187,7 +186,7 @@ export default function AdminOppfangetClient({
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as '' | OppfangetDisplayStatus)}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2"
+            className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           >
             {STATUS_OPTIONS.map((opt) => (
               <option key={opt.label} value={opt.value}>{opt.label}</option>
@@ -201,7 +200,7 @@ export default function AdminOppfangetClient({
             value={source}
             onChange={(e) => setSource(e.target.value)}
             placeholder="f.eks. nrk.no"
-            className="w-full rounded-lg border border-border bg-background px-3 py-2"
+            className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
         </label>
         <label className="space-y-1 text-sm">
@@ -211,9 +210,9 @@ export default function AdminOppfangetClient({
             lang="nb-NO"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2"
+            className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
-          <span className="text-[11px] text-muted-foreground">Format: dd.mm.åååå</span>
+          <span className="text-xs text-muted-foreground">Format: dd.mm.åååå</span>
         </label>
         <label className="space-y-1 text-sm">
           <span className="text-muted-foreground">Til dato</span>
@@ -222,9 +221,9 @@ export default function AdminOppfangetClient({
             lang="nb-NO"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2"
+            className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
-          <span className="text-[11px] text-muted-foreground">Format: dd.mm.åååå</span>
+          <span className="text-xs text-muted-foreground">Format: dd.mm.åååå</span>
         </label>
         <label className="space-y-1 text-sm sm:col-span-2 lg:col-span-1">
           <span className="text-muted-foreground">Søk</span>
@@ -233,7 +232,7 @@ export default function AdminOppfangetClient({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Tittel eller kildetittel"
-            className="w-full rounded-lg border border-border bg-background px-3 py-2"
+            className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
         </label>
       </div>
@@ -252,7 +251,7 @@ export default function AdminOppfangetClient({
       {!pending && data && rows.length === 0 ? (
         <EmptyState
           title="Ingenting oppfanget ennå"
-          description="Når pipelinen lagrer klynger i action_clusters, vises de her med kilder og status."
+          description="Når nye signaler fanges opp, vises de her med kilder og status."
         />
       ) : null}
 

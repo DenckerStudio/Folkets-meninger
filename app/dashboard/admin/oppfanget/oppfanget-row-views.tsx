@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
+import { formatOppfangetConfidence } from '@/lib/admin/oppfanget/format-confidence';
 import {
   OPPFANGET_DISPLAY_STATUS_LABELS,
   OPPFANGET_DISPLAY_TYPE_LABELS,
@@ -11,7 +12,9 @@ import type { OppfangetRow } from '@/lib/admin/oppfanget/types';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
-const cellClass = 'min-w-0 overflow-hidden break-words px-1.5 py-1.5 align-top';
+const cellClass = 'min-w-0 overflow-hidden break-words px-1.5 py-1.5 align-top text-xs';
+const tapLinkClass =
+  'inline-flex min-h-11 max-w-full items-center gap-1 break-words text-brand hover:underline';
 
 export function splitNbDateTime(iso: string): { date: string; time: string } {
   try {
@@ -65,7 +68,7 @@ function StatusBadge({ row }: { row: OppfangetRow }) {
   return (
     <span
       className={cn(
-        'inline-flex max-w-full break-words rounded-full px-2 py-0.5 text-[10px] font-medium leading-snug',
+        'inline-flex max-w-full break-words rounded-full px-2 py-0.5 text-xs font-medium leading-snug',
         row.displayStatus === 'avvist' && 'bg-destructive/10 text-destructive',
         row.displayStatus === 'publisert' && 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
         row.displayStatus === 'utkast_laget' && 'bg-brand/10 text-brand',
@@ -78,22 +81,36 @@ function StatusBadge({ row }: { row: OppfangetRow }) {
   );
 }
 
+function ScaleSourceLink({ url }: { url: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(tapLinkClass, 'text-xs')}
+    >
+      Kilde
+      <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
+    </a>
+  );
+}
+
 function SourcesList({ row }: { row: OppfangetRow }) {
   if (row.sources.length === 0) {
-    return <span className="text-muted-foreground">—</span>;
+    return <span className="text-xs text-muted-foreground">—</span>;
   }
   return (
     <ul className="space-y-0.5">
       {row.sources.map((s) => (
-        <li key={s.id} className="text-[10px] leading-snug">
+        <li key={s.id} className="text-xs leading-snug">
           <a
             href={s.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex max-w-full items-start gap-0.5 break-words text-brand hover:underline"
+            className={tapLinkClass}
           >
             <span className="break-words">{s.publisher ?? 'Kilde'}</span>
-            <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+            <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
           </a>
           {s.signalOnly ? <span className="text-muted-foreground"> (signal)</span> : null}
         </li>
@@ -104,9 +121,9 @@ function SourcesList({ row }: { row: OppfangetRow }) {
 
 function PollLinkCell({ row }: { row: OppfangetRow }) {
   const link = oppfangetPollLink(row);
-  if (!link) return <span className="text-muted-foreground">—</span>;
+  if (!link) return <span className="text-xs text-muted-foreground">—</span>;
   return (
-    <Link href={link} className="font-medium text-brand hover:underline">
+    <Link href={link} className={cn(tapLinkClass, 'font-medium')}>
       Åpne
     </Link>
   );
@@ -118,7 +135,7 @@ function TitleCell({ row, showTypeMeta = false }: { row: OppfangetRow; showTypeM
     metaParts.push(OPPFANGET_DISPLAY_TYPE_LABELS[row.displayType]);
   }
   if (row.confidence != null) {
-    metaParts.push(`Konf. ${row.confidence.toFixed(2)}`);
+    metaParts.push(formatOppfangetConfidence(row.confidence));
   }
 
   return (
@@ -133,7 +150,7 @@ function TitleCell({ row, showTypeMeta = false }: { row: OppfangetRow; showTypeM
         <span className="line-clamp-3 break-words font-medium text-foreground">{row.title}</span>
       </div>
       {metaParts.length > 0 ? (
-        <p className="mt-0.5 break-words text-[10px] text-muted-foreground">{metaParts.join(' · ')}</p>
+        <p className="mt-0.5 break-words text-xs text-muted-foreground">{metaParts.join(' · ')}</p>
       ) : null}
     </div>
   );
@@ -142,10 +159,10 @@ function TitleCell({ row, showTypeMeta = false }: { row: OppfangetRow; showTypeM
 function DateCell({ label, iso }: { label: string; iso: string }) {
   const { date, time } = splitNbDateTime(iso);
   return (
-    <div className="min-w-0 overflow-hidden break-words">
-      <span className="text-[10px] font-medium text-muted-foreground">{label}</span>
+    <div className="min-w-0 overflow-hidden break-words text-xs">
+      <span className="font-medium text-muted-foreground">{label}</span>
       <span className="mt-0.5 block break-words text-foreground">{date}</span>
-      {time ? <span className="block break-words text-[10px] text-muted-foreground">{time}</span> : null}
+      {time ? <span className="block break-words text-muted-foreground">{time}</span> : null}
     </div>
   );
 }
@@ -154,10 +171,10 @@ export function OppfangetDesktopTable({ rows }: { rows: OppfangetRow[] }) {
   return (
     <div className="hidden sm:block">
       <p className="mb-2 text-xs text-muted-foreground lg:hidden">
-        Tabellen kan rulleres horisontalt på smale skjermer.
+        Tabellen kan rulles sideveis på smale skjermer.
       </p>
       <div className="max-w-full overflow-x-auto rounded-xl border border-border lg:overflow-x-visible">
-        <table className="w-full table-fixed text-left text-[11px] leading-snug">
+        <table className="w-full table-fixed text-left text-xs leading-snug">
           <colgroup>
             <col className="w-[30%]" />
             <col className="w-[12%]" />
@@ -198,17 +215,7 @@ export function OppfangetDesktopTable({ rows }: { rows: OppfangetRow[] }) {
                 </td>
                 <td className={cellClass}>
                   <div className="break-words">{formatOppfangetScale(row)}</div>
-                  {row.scale?.sourceUrl ? (
-                    <a
-                      href={row.scale.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-0.5 inline-flex max-w-full items-center gap-0.5 break-words text-brand hover:underline"
-                    >
-                      Kilde
-                      <ExternalLink className="h-3 w-3 shrink-0" aria-hidden />
-                    </a>
-                  ) : null}
+                  {row.scale?.sourceUrl ? <ScaleSourceLink url={row.scale.sourceUrl} /> : null}
                 </td>
                 <td className={cn(cellClass, 'text-muted-foreground')}>
                   {formatSensitiveTemaCell(row.sensitive, row.sensitiveCategory)}
@@ -228,43 +235,61 @@ export function OppfangetDesktopTable({ rows }: { rows: OppfangetRow[] }) {
 export function OppfangetMobileCards({ rows }: { rows: OppfangetRow[] }) {
   return (
     <ul className="space-y-3 sm:hidden">
-      {rows.map((row) => (
-        <li key={row.id} className="rounded-xl border border-border bg-card p-4 text-sm shadow-sm">
-          <TitleCell row={row} showTypeMeta />
-          <div className="mt-2">
-            <StatusBadge row={row} />
-          </div>
-          <dl className="mt-3 space-y-2 text-xs">
-            <div>
-              <dt className="font-medium text-muted-foreground">Kilder</dt>
-              <dd className="mt-0.5">
-                <SourcesList row={row} />
-              </dd>
+      {rows.map((row) => {
+        const pollLink = oppfangetPollLink(row);
+        const sensitiveLabel = row.sensitive
+          ? formatSensitiveTemaCell(row.sensitive, row.sensitiveCategory)
+          : null;
+
+        return (
+          <li key={row.id} className="rounded-xl border border-border bg-card p-4 text-sm shadow-sm">
+            <TitleCell row={row} showTypeMeta />
+            <div className="mt-2">
+              <StatusBadge row={row} />
             </div>
-            <div>
-              <dt className="font-medium text-muted-foreground">Dato</dt>
-              <dd className="mt-0.5 space-y-1 text-muted-foreground">
-                <DateCell label="Først" iso={row.firstSeenAt} />
-                <DateCell label="Sist" iso={row.lastSeenAt} />
-              </dd>
-            </div>
-            <div>
-              <dt className="font-medium text-muted-foreground">Skala</dt>
-              <dd className="mt-0.5 break-words">{formatOppfangetScale(row)}</dd>
-            </div>
-            <div>
-              <dt className="font-medium text-muted-foreground">Sensitivt tema</dt>
-              <dd className="mt-0.5">{formatSensitiveTemaCell(row.sensitive, row.sensitiveCategory)}</dd>
-            </div>
-            <div>
-              <dt className="font-medium text-muted-foreground">Åpne</dt>
-              <dd className="mt-0.5">
-                <PollLinkCell row={row} />
-              </dd>
-            </div>
-          </dl>
-        </li>
-      ))}
+            <dl className="mt-3 space-y-2 text-xs">
+              <div>
+                <dt className="font-medium text-muted-foreground">Kilder</dt>
+                <dd className="mt-0.5">
+                  <SourcesList row={row} />
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-muted-foreground">Dato</dt>
+                <dd className="mt-0.5 space-y-1 text-muted-foreground">
+                  <DateCell label="Først" iso={row.firstSeenAt} />
+                  <DateCell label="Sist" iso={row.lastSeenAt} />
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-muted-foreground">Skala</dt>
+                <dd className="mt-0.5 break-words">
+                  {formatOppfangetScale(row)}
+                  {row.scale?.sourceUrl ? (
+                    <div className="mt-1">
+                      <ScaleSourceLink url={row.scale.sourceUrl} />
+                    </div>
+                  ) : null}
+                </dd>
+              </div>
+              {sensitiveLabel ? (
+                <div>
+                  <dt className="font-medium text-muted-foreground">Sensitivt tema</dt>
+                  <dd className="mt-0.5">{sensitiveLabel}</dd>
+                </div>
+              ) : null}
+              {pollLink ? (
+                <div>
+                  <dt className="font-medium text-muted-foreground">Åpne</dt>
+                  <dd className="mt-0.5">
+                    <PollLinkCell row={row} />
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
+          </li>
+        );
+      })}
     </ul>
   );
 }

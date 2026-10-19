@@ -145,7 +145,7 @@ export async function listOppfangetForAdmin(
         },
         tableMissing: true,
         tableMissingMessage:
-          'Tabellene action_clusters / action_sources finnes ikke ennå. Coolify Expert må kjøre migrasjon 20261019235000_action_capture_tables.sql før data vises her.',
+          'Oppfanget-listen er ikke klar i databasen ennå. En administrator må kjøre den ventende databasemigrasjonen før nye signaler kan vises her.',
         previewMock: false,
       };
     }
