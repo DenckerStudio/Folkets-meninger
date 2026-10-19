@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildSearchTerms } from '@/lib/chat/sak-search';
 import { createPool, databaseForVariant, type EvalVariant } from './lib/db';
@@ -203,9 +203,16 @@ async function runLabel(label: RunLabel, variant: EvalVariant): Promise<Record<s
 
   await pool.end();
 
+  let seedCounts: Record<string, unknown> = {};
+  const metaPath = join(process.cwd(), 'evals/rag/corpus-meta.json');
+  if (existsSync(metaPath)) {
+    seedCounts = JSON.parse(readFileSync(metaPath, 'utf8')) as Record<string, unknown>;
+  }
+
   return {
     label,
     variant,
+    seedCounts,
     stackHeads: {
       p177: 'a38d83d',
       p178: '9441863',

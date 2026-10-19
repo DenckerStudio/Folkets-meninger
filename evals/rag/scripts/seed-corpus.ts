@@ -1,5 +1,6 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { seedFromFixture } from './seed-from-fixture';
 import { chunkDocument } from '@/lib/document-chunking';
 import { buildDocumentChunkMetadata, documentContentHash } from '@/lib/document-chunking';
 import { parseSakDocuments } from '@/lib/stortinget-documents';
@@ -71,6 +72,14 @@ async function fetchHoringsprogramJson(hearingId: string): Promise<StortingetHor
 
 async function main(): Promise<void> {
   const variant = (process.env.RAG_EVAL_VARIANT ?? process.argv[2] ?? 'stack') as EvalVariant;
+  const fixturePath = join(process.cwd(), 'evals/rag/fixtures/corpus-snapshot.json');
+  if (process.env.RAG_EVAL_LIVE_FETCH !== '1' && existsSync(fixturePath)) {
+    const pool = createPool(databaseForVariant(variant));
+    await seedFromFixture(pool, variant);
+    await pool.end();
+    return;
+  }
+
   const cfg = JSON.parse(
     readFileSync(join(process.cwd(), 'evals/rag/corpus.json'), 'utf8'),
   ) as CorpusConfig;

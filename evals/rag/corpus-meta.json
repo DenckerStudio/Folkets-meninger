@@ -1,6 +1,6 @@
 {
-  "variant": "baseline",
-  "issueCount": 20,
-  "prefixIssueId": null,
-  "seededAt": "2026-10-19T19:25:36.231Z"
+  "variant": "stack",
+  "issueCount": 8,
+  "prefixIssueId": "eval-innvandring-prefix",
+  "seededAt": "2026-10-19T20:02:31.857Z"
 }
