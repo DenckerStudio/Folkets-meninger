@@ -23,6 +23,7 @@ import type { SystemReelFeedItem } from '@/lib/polls/types';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
+import { useReelExpandMobile } from '@/hooks/use-reel-expand-mobile';
 import { MODAL_TRANSITION } from '@/lib/motion/tokens';
 
 function useIsMounted() {
@@ -283,6 +284,7 @@ export function ReelsPanel({
 }) {
   const isDesktop = useIsDesktopLg();
   const reducedMotion = usePrefersReducedMotion();
+  const isExpandMobile = useReelExpandMobile();
   const cardOpen = Boolean(activePollId);
   const initialIndex = Math.max(
     0,
@@ -293,6 +295,8 @@ export function ReelsPanel({
   const [expandedPollId, setExpandedPollId] = useState<string | null>(null);
   const [expandPortalEl, setExpandPortalEl] = useState<HTMLDivElement | null>(null);
   const detailExpanded = active && expandedPollId !== null;
+  const hideReelsChrome = detailExpanded && isExpandMobile;
+  const panelMounted = useIsMounted();
 
   const handleCenteredIndexChange = useCallback((index: number) => {
     setCenteredIndex(index);
@@ -393,9 +397,15 @@ export function ReelsPanel({
   ]);
 
   return (
+    <ReelsExpandPortalProvider container={expandPortalEl}>
     <div className="relative flex h-full min-h-0 flex-1 flex-col">
       {/* Header: back + REELS label so back never covers the card badge */}
-      <div className="relative z-30 flex shrink-0 items-center gap-3 pb-2 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
+      <div
+        className={cn(
+          'relative z-30 flex shrink-0 items-center gap-3 pb-2 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] pt-[max(0.75rem,env(safe-area-inset-top,0px))]',
+          hideReelsChrome && 'max-sm:invisible max-sm:pointer-events-none',
+        )}
+      >
         <button
           type="button"
           onClick={handleClose}
@@ -430,7 +440,10 @@ export function ReelsPanel({
       {items.length > 0 && disclaimerOpen ? (
         <p
           id="reels-disclaimer"
-          className="relative z-20 shrink-0 pb-2 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] text-xs leading-relaxed text-white/75"
+          className={cn(
+            'relative z-20 shrink-0 pb-2 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] text-xs leading-relaxed text-white/75',
+            hideReelsChrome && 'max-sm:hidden',
+          )}
         >
           {SYSTEM_REEL_DISCLAIMER}
         </p>
@@ -452,7 +465,6 @@ export function ReelsPanel({
       ) : isDesktop ? (
         /* Desktop (lg+): 21st Coverflow rack — not fullscreen single cards, no sideways peek bleed */
         <LayoutGroup id="reels-coverflow">
-          <ReelsExpandPortalProvider container={expandPortalEl}>
           <motion.div
             className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]"
             animate={{
@@ -499,18 +511,18 @@ export function ReelsPanel({
               ))}
             />
           </motion.div>
-          <div ref={setExpandPortalEl} className="pointer-events-none fixed inset-0 z-[225]" />
-          </ReelsExpandPortalProvider>
         </LayoutGroup>
       ) : (
         /* Mobile + tablet (<lg): Stories carousel (vertikal Tiktok-lignende, full høyde) */
         <LayoutGroup id="reels-stories">
-          <ReelsExpandPortalProvider container={expandPortalEl}>
           <motion.div
-            className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]"
+            className={cn(
+              'flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]',
+              hideReelsChrome && 'max-sm:invisible max-sm:pointer-events-none',
+            )}
             animate={{
-              scale: detailExpanded && !reducedMotion ? 0.96 : 1,
-              opacity: detailExpanded ? 0.45 : 1,
+              scale: detailExpanded && !reducedMotion && !isExpandMobile ? 0.96 : 1,
+              opacity: detailExpanded && !isExpandMobile ? 0.45 : 1,
             }}
             transition={
               reducedMotion
@@ -527,7 +539,12 @@ export function ReelsPanel({
                 loop={items.length > 1}
                 onIndexChange={handleCenteredIndexChange}
               >
-                <div className="flex items-center justify-between gap-1.5 px-2 pb-1">
+                <div
+                  className={cn(
+                    'flex items-center justify-between gap-1.5 px-2 pb-1',
+                    hideReelsChrome && 'max-sm:invisible max-sm:pointer-events-none',
+                  )}
+                >
                   <div className="min-w-0 flex-1 overflow-x-auto pr-2">
                     <StoriesHeader className="px-0" />
                   </div>
@@ -554,10 +571,12 @@ export function ReelsPanel({
               </Stories>
             </div>
           </motion.div>
-          <div ref={setExpandPortalEl} className="pointer-events-none fixed inset-0 z-[225]" />
-          </ReelsExpandPortalProvider>
         </LayoutGroup>
       )}
     </div>
+    {panelMounted
+      ? createPortal(<div ref={setExpandPortalEl} data-reels-expand-portal="" />, document.body)
+      : null}
+    </ReelsExpandPortalProvider>
   );
 }

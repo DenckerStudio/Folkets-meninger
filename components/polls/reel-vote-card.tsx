@@ -8,6 +8,7 @@ import { VoteFillButton } from '@/components/motion/vote-fill';
 import { ReelExpandedShell } from '@/components/polls/reel-expanded-shell';
 import { useReelVote } from '@/components/polls/use-reel-vote';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
+import { useReelExpandMobile } from '@/hooks/use-reel-expand-mobile';
 import { listReelPollSourceLinks } from '@/lib/polls/reel-source-links';
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, SystemReelFeedItem } from '@/lib/polls/types';
@@ -62,86 +63,14 @@ function ReelVoteFace({ item, onBack, mode, voteState, onRequestExpand, lesMerRe
     onRequestExpand();
   };
 
-  return (
+  const voteFooter = (
     <div
-      data-testid="reel-vote-face"
-      className={cn('flex h-full min-h-0 flex-col gap-2', isExpanded && 'gap-3')}
-      onClick={isExpanded ? undefined : handleContentActivate}
+      className={cn(
+        'shrink-0',
+        isExpanded &&
+          'border-t border-white/10 bg-[#00205b] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-3',
+      )}
     >
-      <div
-        className={cn(
-          'flex min-h-0 flex-col gap-1.5',
-          isExpanded ? 'min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-3' : 'flex-1',
-        )}
-      >
-        {!isExpanded ? (
-          <p className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-white/70">
-            Hva mener du?
-          </p>
-        ) : null}
-        <h3
-          className={cn(
-            'shrink-0 font-semibold leading-snug text-white',
-            isExpanded ? 'text-lg sm:text-xl' : 'text-base sm:text-lg',
-          )}
-        >
-          {item.poll.title}
-        </h3>
-        {item.poll.neutralSummary ? (
-          <p
-            data-testid="reel-description"
-            className={cn(
-              'text-sm leading-relaxed text-white/80',
-              isExpanded ? 'whitespace-pre-line' : 'line-clamp-4',
-            )}
-          >
-            {item.poll.neutralSummary}
-          </p>
-        ) : null}
-        {!isExpanded && item.poll.neutralSummary ? (
-          <button
-            ref={lesMerRef}
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onRequestExpand?.();
-            }}
-            className="shrink-0 self-start text-xs font-semibold text-white/90 underline decoration-white/40 underline-offset-2 transition-colors hover:text-white"
-          >
-            Les mer
-          </button>
-        ) : null}
-        {isExpanded && sourceLinks.length > 0 ? (
-          <div className="mt-2 space-y-2 border-t border-white/10 pt-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-white/60">Kilder</p>
-            <ul className="space-y-1.5 text-sm">
-              {sourceLinks.map((link) => (
-                <li key={link.href}>
-                  {link.external ? (
-                    <a
-                      href={link.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:text-white/95"
-                    >
-                      {link.label}
-                    </a>
-                  ) : (
-                    <Link
-                      href={link.href}
-                      className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:text-white/95"
-                    >
-                      {link.label}
-                    </Link>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </div>
-
-      <div className={cn('shrink-0', isExpanded && 'border-t border-white/10 px-4 pb-4 pt-3')}>
         {!votingOpen ? (
           <p className="mb-2 text-sm text-white/80">Avstemningen er stengt.</p>
         ) : userVote ? (
@@ -212,7 +141,89 @@ function ReelVoteFace({ item, onBack, mode, voteState, onRequestExpand, lesMerRe
             Stem blankt
           </button>
         </div>
+    </div>
+  );
+
+  if (isExpanded) {
+    return (
+      <div data-testid="reel-vote-face" className="flex h-full min-h-0 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-3 pt-2">
+          <h3 className="text-lg font-semibold leading-snug text-white sm:text-xl">{item.poll.title}</h3>
+          {item.poll.neutralSummary ? (
+            <p
+              data-testid="reel-description"
+              className="mt-2 whitespace-pre-line text-sm leading-relaxed text-white/80"
+            >
+              {item.poll.neutralSummary}
+            </p>
+          ) : null}
+          {sourceLinks.length > 0 ? (
+            <div className="mt-4 space-y-2 border-t border-white/10 pt-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-white/60">Kilder</p>
+              <ul className="space-y-1.5 text-sm">
+                {sourceLinks.map((link) => (
+                  <li key={link.href}>
+                    {link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:text-white/95"
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:text-white/95"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+        {voteFooter}
       </div>
+    );
+  }
+
+  return (
+    <div
+      data-testid="reel-vote-face"
+      className="flex h-full min-h-0 flex-col gap-2"
+      onClick={handleContentActivate}
+    >
+      <div className="flex min-h-0 flex-1 flex-col gap-1.5">
+        <p className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-white/70">
+          Hva mener du?
+        </p>
+        <h3 className="shrink-0 text-base font-semibold leading-snug text-white sm:text-lg">
+          {item.poll.title}
+        </h3>
+        {item.poll.neutralSummary ? (
+          <p data-testid="reel-description" className="line-clamp-4 text-sm leading-relaxed text-white/80">
+            {item.poll.neutralSummary}
+          </p>
+        ) : null}
+        {item.poll.neutralSummary ? (
+          <button
+            ref={lesMerRef}
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onRequestExpand?.();
+            }}
+            className="shrink-0 self-start text-xs font-semibold text-white/90 underline decoration-white/40 underline-offset-2 transition-colors hover:text-white"
+          >
+            Les mer
+          </button>
+        ) : null}
+      </div>
+      {voteFooter}
     </div>
   );
 }
@@ -241,10 +252,12 @@ export function ReelCarouselCard({
   mode?: 'coverflow' | 'stories';
 }) {
   const reducedMotion = usePrefersReducedMotion();
+  const isExpandMobile = useReelExpandMobile();
   const pointerStart = useRef({ x: 0, y: 0 });
   const lesMerRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const canExpand = selected && isCentered;
+  const useSharedLayout = canExpand && !isExpandMobile && !reducedMotion;
   const layoutId = reelExpandLayoutId(item.poll.id);
   const voteState = useReelVote(item);
 
@@ -313,8 +326,8 @@ export function ReelCarouselCard({
               <div className="h-full min-h-[12rem] w-full" aria-hidden />
             ) : (
               <motion.div
-                layoutId={canExpand ? layoutId : undefined}
-                layout={canExpand && !reducedMotion}
+                layoutId={useSharedLayout ? layoutId : undefined}
+                layout={useSharedLayout}
                 className={cn(
                   'flex h-full min-h-0 flex-col bg-[#00205b] text-white',
                   fill ? 'rounded-none border-0' : 'rounded-2xl border border-white/10',
@@ -394,8 +407,8 @@ export function ReelCarouselCard({
           <div className="h-full w-full" aria-hidden />
         ) : (
           <motion.div
-            layoutId={canExpand ? layoutId : undefined}
-            layout={canExpand && !reducedMotion}
+            layoutId={useSharedLayout ? layoutId : undefined}
+            layout={useSharedLayout}
             className="absolute inset-0 p-5"
           >
             {voteShell}

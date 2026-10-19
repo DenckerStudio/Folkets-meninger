@@ -46,6 +46,10 @@ async function capture(viewport, suffix) {
 
   const expanded = page.getByRole('dialog').filter({ has: page.getByRole('button', { name: 'Lukk' }) }).last();
   await expanded.waitFor({ state: 'visible', timeout: 15_000 });
+  await page.waitForTimeout(900);
+  await expanded.evaluate((el) => {
+    el.style.transform = 'none';
+  });
   const expandedPath = path.join(ARTIFACTS, `${PREFIX}_reels_expanded_${suffix}.png`);
   await page.screenshot({ path: expandedPath, fullPage: false });
 
