@@ -10,13 +10,17 @@ import {
   type SakSearchRow,
 } from '@/lib/chat/sak-search';
 import {
+  applyChunkExcerptsForChat,
+  normalizeChunkText,
+} from '@/lib/chat/chunk-excerpt';
+import {
   searchChunksByVector,
   type QueryVectorizer,
   type VectorSearchClient,
 } from '@/lib/chat/vector-search';
 
-const MAX_CHUNK_CHARS = 1400;
 const MAX_CHUNKS = 8;
+const MAX_SUMMARY_CLIP_CHARS = 1800;
 const ISSUE_COLUMNS = 'id, title, summary, henvisning, ferdigbehandlet';
 // `metadata` carries document_title/document_kind set during ingest — cheap
 // provenance so citations can name their source document.
@@ -72,7 +76,7 @@ function publicSupabaseConfigured(): boolean {
   );
 }
 
-function clip(value: string, max = MAX_CHUNK_CHARS): string {
+function clipSummary(value: string, max = MAX_SUMMARY_CLIP_CHARS): string {
   return value.replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
@@ -311,7 +315,7 @@ async function searchChunksLexical(
     const rowIssueId = String(row.issue_id ?? '').trim();
     // Defense in depth: never surface a chunk that is not for this sak.
     if (rowIssueId && rowIssueId !== issueId) return [];
-    const content = clip(String(row.content ?? ''));
+    const content = normalizeChunkText(String(row.content ?? ''));
     if (!content) return [];
     const rank = rankChunkForSak(content, issue, query);
     if (rank <= 0) return [];
@@ -344,7 +348,7 @@ async function searchChunks(
   maxChunks: number = MAX_CHUNKS,
 ): Promise<ChatDocumentChunk[]> {
   const lexical = await searchChunksLexical(supabase, issue, query, maxChunks);
-  if (!vectorize) return lexical;
+  if (!vectorize) return applyChunkExcerptsForChat(lexical, query);
 
   const semantic = await searchChunksByVector(
     asVectorClient(supabase),
@@ -353,7 +357,7 @@ async function searchChunks(
     vectorize,
     maxChunks,
   );
-  if (!semantic || semantic.length === 0) return lexical;
+  if (!semantic || semantic.length === 0) return applyChunkExcerptsForChat(lexical, query);
 
   // The ranking RPC does not return `metadata`, so look it up once for the
   // documents that actually made the cut.
@@ -362,7 +366,7 @@ async function searchChunks(
     [...new Set(semantic.map((chunk) => chunk.documentId))],
   );
 
-  return mergeChunks(
+  const merged = mergeChunks(
     semantic.map((chunk) => ({
       documentId: chunk.documentId,
       chunkIndex: chunk.chunkIndex,
@@ -373,6 +377,8 @@ async function searchChunks(
     lexical,
     maxChunks,
   );
+
+  return applyChunkExcerptsForChat(merged, query);
 }
 
 /** Fetch document title/kind for a set of document ids in one query. */
@@ -463,7 +469,7 @@ export async function retrieveSakContext(args: {
 
   return {
     issue,
-    summary: clip(summaryText || issue.summary || '', 1800) || null,
+    summary: clipSummary(summaryText || issue.summary || '') || null,
     chunks,
     note:
       chunks.length === 0
@@ -524,7 +530,7 @@ export async function retrieveTopicContext(args: {
       ]);
       return {
         issue,
-        summary: clip(summaryText || issue.summary || '', MAX_TOPIC_SUMMARY_CHARS) || null,
+        summary: clipSummary(summaryText || issue.summary || '', MAX_TOPIC_SUMMARY_CHARS) || null,
         chunks,
       };
     }),
