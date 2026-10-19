@@ -2,7 +2,9 @@ import { isValidBlogSlug, normalizeBlogSlug } from '@/lib/blog/slug';
 import type { CreateBlogDraftInput } from '@/lib/blog/service';
 import {
   BLOG_EXCERPT_MAX,
+  BLOG_TITLE_MAX,
   normalizeBlogExcerpt,
+  normalizeBlogTitle,
   normalizeBlueskyText,
   validateBlueskyGraphemes,
 } from '@/lib/blog/text-limits';
@@ -29,11 +31,15 @@ export function parseCreateBlogDraftBody(
     return { ok: false, error: 'slug må være 2–120 tegn (a-z, 0-9, bindestrek)' };
   }
 
-  const title = typeof record.title === 'string' ? record.title.trim() : '';
+  const titleRaw = typeof record.title === 'string' ? record.title.trim() : '';
+  const title = normalizeBlogTitle(titleRaw);
   const excerptRaw = typeof record.excerpt === 'string' ? record.excerpt.trim() : '';
   const excerpt = normalizeBlogExcerpt(excerptRaw);
   const body_md = typeof record.body_md === 'string' ? record.body_md : '';
   if (!title) return { ok: false, error: 'title er påkrevd' };
+  if (titleRaw.length > BLOG_TITLE_MAX) {
+    return { ok: false, error: `title kan være maks ${BLOG_TITLE_MAX} tegn` };
+  }
   if (!excerpt) return { ok: false, error: 'excerpt er påkrevd' };
   if (excerptRaw.length > BLOG_EXCERPT_MAX) {
     return { ok: false, error: `excerpt kan være maks ${BLOG_EXCERPT_MAX} tegn` };
