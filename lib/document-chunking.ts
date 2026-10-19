@@ -7,6 +7,9 @@ export function estimateTokens(text: string): number {
   return Math.ceil(trimmed.length / 4);
 }
 
+/** Chunker id used by n8n Docling ingest (md-sections-v1). */
+export const DOCUMENT_CHUNKER_ID = 'md-sections-v1';
+
 export const DOCUMENT_CHUNK_DEFAULTS = {
   targetChars: 3500,
   overlapRatio: 0.15,
@@ -23,6 +26,8 @@ export type DocumentChunkMetadata = {
   document_title: string;
   section_title: string;
   page: number | null;
+  page_start: number | null;
+  page_end: number | null;
   source_url: string | null;
   sesjon: string | null;
   komite: string | null;
@@ -34,7 +39,11 @@ export type StructuredDocumentChunk = {
   content: string;
   sectionTitle: string;
   page: number | null;
+  pageStart: number | null;
+  pageEnd: number | null;
 };
+
+const TOC_HEADING_RE = /^(innholdsfortegnelse|table of contents|contents)$/i;
 
 const HEADING_RE = /^(#{1,6})\s+(.+?)\s*$/;
 const TABLE_ROW_RE = /^\|.+\|\s*$/;
@@ -149,11 +158,17 @@ function tableChunks(
   return blocks.length > 0 ? blocks : [{ text: full.slice(0, maxChars), sectionPath, page, kind: 'table' }];
 }
 
+function isTocHeading(title: string): boolean {
+  return TOC_HEADING_RE.test(title.trim());
+}
+
 function parseMarkdownBlocks(text: string): Block[] {
   const lines = text.replace(/\r\n/g, '\n').split('\n');
   const blocks: Block[] = [];
   const headingStack: Array<{ level: number; title: string }> = [];
   let currentPage: number | null = null;
+  let skipToc = false;
+  let tocMinLevel = 0;
 
   let paraLines: string[] = [];
   let tableLines: string[] = [];
@@ -163,7 +178,7 @@ function parseMarkdownBlocks(text: string): Block[] {
   const flushParagraph = () => {
     const joined = paraLines.join('\n').trim();
     paraLines = [];
-    if (!joined) return;
+    if (!joined || skipToc) return;
     blocks.push({
       text: joined,
       sectionPath: [...currentPath()],
@@ -176,6 +191,7 @@ function parseMarkdownBlocks(text: string): Block[] {
     if (tableLines.length === 0) return;
     const tableText = tableLines.join('\n');
     tableLines = [];
+    if (skipToc) return;
     const parts = tableChunks(tableText, DOCUMENT_CHUNK_DEFAULTS.targetChars, currentPath(), currentPage);
     blocks.push(...parts);
   };
@@ -199,10 +215,27 @@ function parseMarkdownBlocks(text: string): Block[] {
       if (!match) continue;
       const level = match[1].length;
       const title = normalizeHeadingTitle(match[2]);
+
+      if (skipToc && level <= tocMinLevel) {
+        skipToc = false;
+      }
+
+      if (isTocHeading(title)) {
+        skipToc = true;
+        tocMinLevel = level;
+        while (headingStack.length > 0 && headingStack[headingStack.length - 1].level >= level) {
+          headingStack.pop();
+        }
+        continue;
+      }
+
       while (headingStack.length > 0 && headingStack[headingStack.length - 1].level >= level) {
         headingStack.pop();
       }
       headingStack.push({ level, title });
+      if (skipToc) {
+        continue;
+      }
       blocks.push({
         text: trimmed,
         sectionPath: [...currentPath()],
@@ -255,7 +288,8 @@ function assembleChunksFromBlocks(blocks: Block[], targetChars: number, overlapR
 
   let buffer = '';
   let bufferSection: string[] = [];
-  let bufferPage: number | null = null;
+  let bufferPageStart: number | null = null;
+  let bufferPageEnd: number | null = null;
 
   const emit = () => {
     const content = buffer.trim();
@@ -264,14 +298,23 @@ function assembleChunksFromBlocks(blocks: Block[], targetChars: number, overlapR
     chunks.push({
       content,
       sectionTitle: sectionPathLabel(bufferSection),
-      page: bufferPage,
+      page: bufferPageStart,
+      pageStart: bufferPageStart,
+      pageEnd: bufferPageEnd ?? bufferPageStart,
     });
   };
 
   const startNewBuffer = (seed: string, sectionPath: string[], page: number | null) => {
     buffer = seed;
     bufferSection = sectionPath;
-    bufferPage = page;
+    bufferPageStart = page;
+    bufferPageEnd = page;
+  };
+
+  const notePage = (page: number | null) => {
+    if (page === null) return;
+    if (bufferPageStart === null) bufferPageStart = page;
+    bufferPageEnd = page;
   };
 
   for (const block of blocks) {
@@ -287,16 +330,22 @@ function assembleChunksFromBlocks(blocks: Block[], targetChars: number, overlapR
       } else {
         buffer = candidate;
         bufferSection = block.sectionPath.length > 0 ? block.sectionPath : bufferSection;
-        if (block.page !== null) bufferPage = block.page;
+        notePage(block.page);
       }
       continue;
     }
 
     if (buffer) {
       const previous = buffer;
+      const prevPageStart = bufferPageStart;
+      const prevPageEnd = bufferPageEnd;
       emit();
       const tail = overlapTail(previous, overlapChars);
       startNewBuffer(tail ? `${tail}\n\n${blockText}` : blockText, block.sectionPath, block.page);
+      if (prevPageStart !== null && bufferPageStart === block.page) {
+        bufferPageStart = prevPageStart;
+        bufferPageEnd = block.page ?? prevPageEnd;
+      }
       if (buffer.length > targetChars) {
         emit();
         startNewBuffer(blockText, block.sectionPath, block.page);
@@ -312,6 +361,8 @@ function assembleChunksFromBlocks(blocks: Block[], targetChars: number, overlapR
           content: slice.trim(),
           sectionTitle: sectionPathLabel(block.sectionPath),
           page: block.page,
+          pageStart: block.page,
+          pageEnd: block.page,
         });
         if (start + targetChars >= blockText.length) break;
         start += targetChars - overlapChars;
@@ -441,6 +492,8 @@ export function chunkDocument(
     content,
     sectionTitle: '',
     page: null,
+    pageStart: null,
+    pageEnd: null,
   }));
 }
 
@@ -452,6 +505,8 @@ export function buildDocumentChunkMetadata(args: {
   documentTitle: string;
   sectionTitle: string;
   page: number | null;
+  pageStart?: number | null;
+  pageEnd?: number | null;
   sourceUrl: string | null;
   sesjon: string | null;
   komite: string | null;
@@ -465,7 +520,9 @@ export function buildDocumentChunkMetadata(args: {
     document_kind: args.documentKind,
     document_title: args.documentTitle,
     section_title: args.sectionTitle,
-    page: args.page,
+    page: args.pageStart ?? args.page,
+    page_start: args.pageStart ?? args.page,
+    page_end: args.pageEnd ?? args.pageStart ?? args.page,
     source_url: args.sourceUrl,
     sesjon: args.sesjon,
     komite: args.komite,

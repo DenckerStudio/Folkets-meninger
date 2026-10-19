@@ -18,7 +18,7 @@ const emptySignals: ChatUserSignals = {
 };
 
 function context(partial: Partial<ChatSuggestionContext>): ChatSuggestionContext {
-  return { kind: 'general', title: null, issueId: null, ...partial };
+  return { kind: 'general', title: null, issueId: null, hoeringId: null, ...partial };
 }
 
 test('sak context produces grounded, title-aware prompts first', () => {

@@ -104,6 +104,7 @@ export async function POST(request: Request) {
       tools: selectFocusedChatTools(
         createChatTools({
           preferredIssueId: issueId,
+          preferredHearingId: pageContext?.hoeringId ?? null,
           ragClient,
           vectorize,
           userId: gate.userId,

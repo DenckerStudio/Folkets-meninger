@@ -31,10 +31,12 @@ import { fetchVoteAlignment } from '@/lib/chat/vote-alignment';
 import { createPollChatTools } from '@/lib/chat/poll-tools';
 import { createPersonalChatTools } from '@/lib/chat/personal-tools';
 import type { QueryVectorizer } from '@/lib/chat/vector-search';
+import { searchHearingDocuments } from '@/lib/chat/hearing-rag';
 import { getIssueOpinionSummary } from '@/lib/opinions/service';
 
 export type ChatToolOptions = {
   preferredIssueId?: string | null;
+  preferredHearingId?: string | null;
   ragClient?: ChatRagClient | null;
   vectorize?: QueryVectorizer | null;
   /** Request-session user id. Never taken from the client body or a tool argument. */
@@ -70,6 +72,7 @@ export const FOCUSED_CHAT_TOOL_NAMES = [
   'getSakTimeline',
   'findHearingsForSak',
   'listOpenHearings',
+  'searchHearingDocuments',
   'searchUpdatedSources',
   'getPolitician',
   'getMyActivity',
@@ -96,6 +99,7 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
       ? { preferredIssueId: options ?? null }
       : options;
   const preferredIssueId = resolved.preferredIssueId ?? null;
+  const preferredHearingId = resolved.preferredHearingId ?? null;
   const ragClient = resolved.ragClient ?? null;
   const vectorize = resolved.vectorize ?? null;
   const citations = resolved.citations ?? createCitationRegistry();
@@ -338,6 +342,65 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
           hearings,
           kilder: uniqueSources(sources),
           note: hearings.length === 0 ? 'Ingen høring er registrert for denne saken.' : null,
+        };
+      },
+    }),
+    searchHearingDocuments: tool({
+      description:
+        'Søk i høringsdokumenter (program, sakspublikasjoner) som er lagret for Stortingets høringer. Returner utdrag med kildenummer, frist, komité og lenker. Bruk når brukeren spør hva en høring handler om, hva som etterspørres i innspill, eller vil ha sitater fra høringskilder. Presenter fakta nøytralt uten å anbefale standpunkt.',
+      inputSchema: z.object({
+        query: z
+          .string()
+          .min(2)
+          .describe('Søkeord eller spørsmål om innholdet i høringsdokumentene.'),
+        hearingId: z
+          .string()
+          .optional()
+          .describe('Stortinget hørings-id hvis kjent. La stå tom på en høringsside.'),
+      }),
+      execute: async ({ query, hearingId }) => {
+        const resolvedHearingId = hearingId?.trim() || preferredHearingId?.trim() || null;
+        const result = await searchHearingDocuments({
+          query,
+          hearingId: resolvedHearingId,
+          client: ragClient,
+        });
+
+        const sources: ChatSource[] = [];
+        const excerpts = result.chunks.map((chunk) => {
+          const source = citations.cite({
+            kind: 'dokument',
+            title: chunk.documentTitle || 'Høringsdokument',
+            hearingId: chunk.hearingId,
+            documentId: chunk.documentId,
+            url: chunk.sourceUrl,
+          });
+          sources.push(source);
+          return {
+            kilde: source.n,
+            content: chunk.content,
+            documentTitle: chunk.documentTitle,
+            documentKind: chunk.documentKind,
+            sourceUrl: chunk.sourceUrl,
+          };
+        });
+
+        if (result.hearing) {
+          sources.push(
+            citations.cite({
+              kind: 'høring',
+              title: result.hearing.title,
+              hearingId: result.hearing.id,
+              url: result.hearing.skriftligInnspillUrl,
+            }),
+          );
+        }
+
+        return {
+          hearing: result.hearing,
+          excerpts,
+          kilder: uniqueSources(sources),
+          note: result.note,
         };
       },
     }),

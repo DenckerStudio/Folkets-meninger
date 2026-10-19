@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  DOCUMENT_CHUNKER_ID,
   chunkDocument,
   chunkDocumentMarkdown,
   chunkDocumentText,
@@ -31,6 +32,7 @@ Stortinget vedtar følgende:
 2. Endringene trer i kraft 1. januar 2027.
 `;
 
+assert.equal(DOCUMENT_CHUNKER_ID, 'md-sections-v1');
 assert.ok(looksLikeMarkdown(STORTINGET_FIXTURE));
 
 const mdChunks = chunkDocumentMarkdown(STORTINGET_FIXTURE);
@@ -74,6 +76,29 @@ Mer tekst.
 `;
 const pageChunks = chunkDocumentMarkdown(withPage);
 assert.equal(pageChunks[0]?.page, 3);
+assert.equal(pageChunks[0]?.pageStart, 3);
+assert.equal(pageChunks[0]?.pageEnd, 3);
+
+const withToc = `# Rapport
+
+## Innholdsfortegnelse
+
+1. Kapittel en
+2. Kapittel to
+
+## Kapittel en
+
+Dette er hovedinnholdet som skal beholdes.
+`;
+const tocChunks = chunkDocumentMarkdown(withToc);
+assert.ok(
+  tocChunks.every((c) => !c.content.includes('Kapittel en\n2. Kapittel to')),
+  'TOC list entries should be dropped',
+);
+assert.ok(
+  tocChunks.some((c) => c.content.includes('Dette er hovedinnholdet')),
+  'content after TOC should remain',
+);
 
 const wideTableRows = [
   '| Kolonne A | Kolonne B |',
