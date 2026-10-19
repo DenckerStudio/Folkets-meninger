@@ -1,6 +1,5 @@
 import type { CollectionConfig } from 'payload';
 import { lexicalEditor } from '@payloadcms/richtext-lexical';
-import { agentDraftGuard } from '@/hooks/agentDraftGuard';
 import { postPublishHooks } from '@/hooks/postPublish';
 import { validatePostText } from '@/hooks/validatePostText';
 import {
@@ -11,7 +10,14 @@ import {
   postsDeleteAccess,
   postsReadAccess,
   postsUpdateAccess,
+  publishStatusFieldAccess,
 } from '@/access/roles';
+import { agentDraftGuard } from '@/hooks/agentDraftGuard';
+import {
+  enforceDraftDataBeforeChange,
+  enforceDraftDataBeforeValidate,
+  enforceDraftQueryForNonEditors,
+} from '@/hooks/nonEditorDraftEnforcement';
 
 export const Posts: CollectionConfig = {
   slug: 'posts',
@@ -35,11 +41,21 @@ export const Posts: CollectionConfig = {
     unlock: editorsOnly,
   },
   hooks: {
-    beforeValidate: [validatePostText],
-    beforeChange: [agentDraftGuard],
+    beforeOperation: [enforceDraftQueryForNonEditors],
+    beforeValidate: [enforceDraftDataBeforeValidate, validatePostText],
+    beforeChange: [agentDraftGuard, enforceDraftDataBeforeChange],
     afterChange: [postPublishHooks],
   },
   fields: [
+    {
+      name: '_status',
+      type: 'select',
+      access: {
+        create: publishStatusFieldAccess,
+        update: publishStatusFieldAccess,
+      },
+      options: [],
+    },
     { name: 'title', type: 'text', required: true, maxLength: 110 },
     { name: 'slug', type: 'text', required: true, unique: true, index: true },
     {

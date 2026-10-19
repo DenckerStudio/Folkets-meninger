@@ -1,9 +1,9 @@
 import { mapPayloadCategories, mapPayloadPostToListItem, mapPayloadPostToPublic } from '@/lib/cms/map-post';
+import { payloadCreatePost } from '@/lib/cms/payload-create';
 import {
   getCmsAgentKey,
   getCmsBaseUrl,
   isCmsConfigured,
-  payloadFetch,
   payloadFetchList,
 } from '@/lib/cms/payload-client';
 import type { PayloadCategory, PayloadPost } from '@/lib/cms/types';
@@ -12,7 +12,11 @@ import type { BlogCategory, BlogPostListItem, BlogPostPublic } from '@/lib/blog/
 import { BLOG_PAGE_SIZE } from '@/lib/blog/types';
 import { adminBlogPostUrl } from '@/lib/blog/urls';
 import { cmsBlogOpsLookup, cmsBlogOpsSocialPosted } from '@/lib/cms/blog-ops-client';
-import { normalizeBlogExcerpt, normalizeBlueskyText } from '@/lib/blog/text-limits';
+import {
+  normalizeBlogExcerpt,
+  normalizeBlogTitle,
+  normalizeBlueskyText,
+} from '@/lib/blog/text-limits';
 
 const POST_DEPTH = 2;
 
@@ -197,19 +201,26 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
     .filter(Boolean)
     .slice(0, 12);
 
+  const relatedSakIds = (input.related_sak_ids ?? [])
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+  const relatedHoringIds = (input.related_horing_ids ?? [])
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+
   const excerpt = normalizeBlogExcerpt(input.excerpt);
   const blueskyText = normalizeBlueskyText(excerpt, input.bluesky_text);
 
   const body = {
     slug,
-    title: input.title.trim(),
+    title: normalizeBlogTitle(input.title),
     excerpt,
     bodyMarkdown: input.body_md,
     category: categoryId,
-    relatedSakIds: (input.related_sak_ids ?? []).map((id) => ({ id: id.trim() })).filter((row) => row.id),
-    relatedHoringIds: (input.related_horing_ids ?? [])
-      .map((id) => ({ id: id.trim() }))
-      .filter((row) => row.id),
+    relatedSakIds: relatedSakIds.map((id) => ({ id })),
+    relatedHoringIds: relatedHoringIds.map((id) => ({ id })),
     suggestedTags: suggested.map((value) => ({ value })),
     sourceEvent,
     origin: 'n8n',
@@ -226,24 +237,31 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
     review: { state: 'til_vurdering' },
   };
 
-  const created = await payloadFetch<PayloadPost>('/api/posts?draft=true', {
-    method: 'POST',
-    apiKey: agentKey,
-    body,
-    tags: ['blog'],
-    revalidate: 0,
-  });
+  const created = await payloadCreatePost('/api/posts?draft=true', body);
+  if (!created.ok) {
+    return { ok: false, status: created.status, error: created.error };
+  }
 
-  if (!created?.id) {
-    return { ok: false, status: 500, error: 'Kunne ikke opprette utkast i CMS' };
+  const { doc } = created;
+  if (doc._status && doc._status !== 'draft') {
+    console.error('[blog] CMS returnerte ikke-utkast ved opprettelse', {
+      id: doc.id,
+      slug: doc.slug,
+      _status: doc._status,
+    });
+    return {
+      ok: false,
+      status: 502,
+      error: 'CMS opprettet innlegget som publisert — utkast ble ikke lagret',
+    };
   }
 
   return {
     ok: true,
-    id: String(created.id),
-    slug: created.slug,
+    id: doc.id,
+    slug: doc.slug,
     created: true,
-    adminUrl: `${base}/admin/collections/posts/${created.id}`,
+    adminUrl: `${base}/admin/collections/posts/${doc.id}`,
   };
 }
 

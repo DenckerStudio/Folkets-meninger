@@ -21,6 +21,12 @@ const longExcerpt = parseCreateBlogDraftBody({
 });
 assert.equal(longExcerpt.ok, false);
 
+const longTitle = parseCreateBlogDraftBody({
+  ...base,
+  title: 'a'.repeat(111),
+});
+assert.equal(longTitle.ok, false);
+
 const longBluesky = parseCreateBlogDraftBody({
   ...base,
   bluesky_text: '🙂'.repeat(400),
