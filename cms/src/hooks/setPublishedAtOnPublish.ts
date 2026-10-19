@@ -4,6 +4,7 @@ import type { PayloadRequest } from 'payload';
 type StatusDoc = {
   _status?: string;
   publishedAt?: string | null;
+  createdAt?: string | null;
 };
 
 function queryFlag(value: unknown): boolean {
@@ -20,14 +21,37 @@ export function isDraftContentSave(data: StatusDoc, req: PayloadRequest): boolea
   return false;
 }
 
-function hasPublishedAt(value: unknown): boolean {
-  if (value == null) return false;
-  if (typeof value === 'string') return value.trim().length > 0;
-  return true;
+function isEmptyPublishedAt(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value === 'string') return value.trim().length === 0;
+  return false;
 }
 
 /**
- * When a document is published, ensure `publishedAt` is set once (editors may omit it in admin).
+ * Pick a non-empty publish timestamp when the post is (or stays) published.
+ * Order: explicit incoming value → previous publish date → document createdAt → now.
+ */
+export function resolvePublishedAtForPublishedPost(
+  data: StatusDoc,
+  originalDoc: StatusDoc | null | undefined,
+): string {
+  if (!isEmptyPublishedAt(data.publishedAt) && typeof data.publishedAt === 'string') {
+    return data.publishedAt.trim();
+  }
+  if (
+    !isEmptyPublishedAt(originalDoc?.publishedAt) &&
+    typeof originalDoc?.publishedAt === 'string'
+  ) {
+    return originalDoc.publishedAt.trim();
+  }
+  if (!isEmptyPublishedAt(originalDoc?.createdAt) && typeof originalDoc?.createdAt === 'string') {
+    return originalDoc.createdAt.trim();
+  }
+  return new Date().toISOString();
+}
+
+/**
+ * When a document is published, ensure `publishedAt` is never left empty (editors may clear the field).
  */
 export function applyPublishedAtOnPublish(
   data: StatusDoc,
@@ -37,15 +61,7 @@ export function applyPublishedAtOnPublish(
   if (options.skip) return data;
   if (data._status !== 'published') return data;
 
-  const previousStatus = originalDoc?._status;
-  const isPublishTransition = previousStatus !== 'published';
-  if (!isPublishTransition) return data;
-
-  if (hasPublishedAt(data.publishedAt) || hasPublishedAt(originalDoc?.publishedAt)) {
-    return data;
-  }
-
-  data.publishedAt = new Date().toISOString();
+  data.publishedAt = resolvePublishedAtForPublishedPost(data, originalDoc);
   return data;
 }
 

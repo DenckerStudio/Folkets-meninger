@@ -252,7 +252,8 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
     return {
       ok: false,
       status: 502,
-      error: 'CMS opprettet innlegget som publisert — utkast ble ikke lagret',
+      error:
+        'Innlegget ble lagret i CMS, men ble publisert — forventet utkast (sjekk CMS-status)',
     };
   }
 

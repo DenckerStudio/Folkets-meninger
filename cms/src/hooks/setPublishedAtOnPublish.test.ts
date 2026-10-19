@@ -4,6 +4,7 @@ import {
   applyPublishedAtOnPublish,
   isAutosaveRequest,
   isDraftContentSave,
+  resolvePublishedAtForPublishedPost,
   setPublishedAtOnPublish,
 } from './setPublishedAtOnPublish';
 
@@ -16,22 +17,54 @@ assert.equal(isDraftContentSave({ _status: 'draft' }, req()), true);
 
 const transition = applyPublishedAtOnPublish(
   { _status: 'published' },
-  { _status: 'draft' },
+  { _status: 'draft', createdAt: '2026-03-01T10:00:00.000Z' },
 );
 assert.equal(transition._status, 'published');
 assert.ok(typeof transition.publishedAt === 'string' && transition.publishedAt.length > 0);
 
-const keepsExisting = applyPublishedAtOnPublish(
+const restoresFromOriginal = applyPublishedAtOnPublish(
   { _status: 'published' },
-  { _status: 'draft', publishedAt: '2026-01-15T12:00:00.000Z' },
+  {
+    _status: 'draft',
+    publishedAt: '2026-01-15T12:00:00.000Z',
+    createdAt: '2026-01-01T00:00:00.000Z',
+  },
 );
-assert.equal(keepsExisting.publishedAt, undefined);
+assert.equal(restoresFromOriginal.publishedAt, '2026-01-15T12:00:00.000Z');
+
+const republishAfterClear = applyPublishedAtOnPublish(
+  { _status: 'published', publishedAt: null },
+  {
+    _status: 'published',
+    publishedAt: '2026-01-15T12:00:00.000Z',
+    createdAt: '2026-01-01T00:00:00.000Z',
+  },
+);
+assert.equal(republishAfterClear.publishedAt, '2026-01-15T12:00:00.000Z');
+
+const republishUsesCreatedAt = applyPublishedAtOnPublish(
+  { _status: 'published', publishedAt: '' },
+  {
+    _status: 'published',
+    publishedAt: null,
+    createdAt: '2026-02-10T08:30:00.000Z',
+  },
+);
+assert.equal(republishUsesCreatedAt.publishedAt, '2026-02-10T08:30:00.000Z');
 
 const keepsExplicit = applyPublishedAtOnPublish(
   { _status: 'published', publishedAt: '2026-02-01T00:00:00.000Z' },
   { _status: 'draft' },
 );
 assert.equal(keepsExplicit.publishedAt, '2026-02-01T00:00:00.000Z');
+
+assert.equal(
+  resolvePublishedAtForPublishedPost(
+    { publishedAt: null },
+    { publishedAt: '2026-01-15T12:00:00.000Z', createdAt: '2026-01-01T00:00:00.000Z' },
+  ),
+  '2026-01-15T12:00:00.000Z',
+);
 
 const draftSave = applyPublishedAtOnPublish(
   { _status: 'draft' },
