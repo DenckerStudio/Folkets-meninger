@@ -74,21 +74,30 @@ async function upsertHearingChunks(
     }),
   }));
 
-  const { error: deleteError } = await service
-    .from('document_chunks')
-    .delete()
-    .eq('hearing_document_id', hearingDocumentId);
-  if (deleteError) throw deleteError;
+  const payload = rows.map((row) => ({
+    chunk_index: row.chunk_index,
+    content: row.content,
+    embedding_status: row.embedding_status,
+    metadata: row.metadata,
+  }));
 
-  const { error: insertError } = await service.from('document_chunks').insert(rows);
-  if (insertError) throw insertError;
+  const { data: replaceResult, error: replaceError } = await service.rpc(
+    'n8n_replace_hearing_document_chunks',
+    {
+      p_hearing_document_id: hearingDocumentId,
+      p_hearing_id: hearingId,
+      p_document_id: documentId,
+      p_chunks: payload,
+    },
+  );
+  if (replaceError) throw replaceError;
 
-  const { error: markError } = await service.rpc('n8n_mark_hearing_document_chunked', {
-    p_document_id: hearingDocumentId,
-  });
-  if (markError) throw markError;
+  const result = replaceResult as { ok?: boolean; count?: number } | null;
+  if (result?.ok === false) {
+    throw new Error('n8n_replace_hearing_document_chunks failed');
+  }
 
-  return rows.length;
+  return Number(result?.count ?? rows.length);
 }
 
 export async function syncStortingetHearingsToDb(): Promise<SyncHearingsResult> {

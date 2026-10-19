@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
-import { isMissingHearingHybridRpcError, type HearingChunkHit } from './hearing-rag';
+import {
+  hearingChunkDocumentLabel,
+  isMissingHearingHybridRpcError,
+  type HearingChunkHit,
+} from './hearing-rag';
 
 assert.equal(isMissingHearingHybridRpcError({ code: 'PGRST202', message: 'x' }), true);
 assert.equal(
@@ -25,5 +29,6 @@ const hit: HearingChunkHit = {
   rank: 0.1,
 };
 assert.equal(hit.hearingId, '100');
+assert.equal(hearingChunkDocumentLabel({ documentTitle: null, hearingId: '' }), 'Dokument');
 
 console.log('chat/hearing-rag.hybrid.test.ts: ok');

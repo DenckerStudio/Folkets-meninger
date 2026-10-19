@@ -11,14 +11,17 @@ import {
 } from '@/lib/chat/sak-search';
 import { fetchCentralQueryEmbedding } from '@/lib/chat/query-embed';
 import {
+  applyChunkExcerptsForChat,
+  normalizeChunkText,
+} from '@/lib/chat/chunk-excerpt';
+import {
   searchChunksByVector,
-  VECTOR_V2_DIMENSIONS,
   type QueryVectorizer,
   type VectorSearchClient,
 } from '@/lib/chat/vector-search';
 
-const MAX_CHUNK_CHARS = 1400;
 const MAX_CHUNKS = 8;
+const MAX_SUMMARY_CLIP_CHARS = 1800;
 const ISSUE_COLUMNS = 'id, title, summary, henvisning, ferdigbehandlet';
 // `metadata` carries document_title/document_kind set during ingest — cheap
 // provenance so citations can name their source document.
@@ -75,7 +78,7 @@ function publicSupabaseConfigured(): boolean {
   );
 }
 
-function clip(value: string, max = MAX_CHUNK_CHARS): string {
+function clipSummary(value: string, max = MAX_SUMMARY_CLIP_CHARS): string {
   return value.replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
@@ -345,7 +348,7 @@ export function mergeChunks(
 }
 
 export function mapHybridChunkRow(row: Record<string, unknown>): ChatDocumentChunk | null {
-  const content = clip(String(row.content ?? ''));
+  const content = normalizeChunkText(String(row.content ?? ''));
   if (!content) return null;
   const documentId = String(row.document_id ?? '');
   if (!documentId) return null;
@@ -373,31 +376,30 @@ export function mapHybridChunkRow(row: Record<string, unknown>): ChatDocumentChu
   };
 }
 
-async function resolveQueryEmbeddingV2(
-  vectorize: QueryVectorizer | null | undefined,
-  query: string,
-): Promise<number[] | null> {
-  const central = await fetchCentralQueryEmbedding(query);
-  if (central) return central;
+/** Hybrid RPC succeeded but returned no usable chunks — fall back to legacy scan. */
+export function shouldFallbackToLegacyChunks(hybrid: ChatDocumentChunk[] | null): boolean {
+  return hybrid === null || hybrid.length === 0;
+}
 
-  if (!vectorize) return null;
-  const vector = await vectorize(query);
-  if (!vector || vector.length !== VECTOR_V2_DIMENSIONS) return null;
-  return vector;
+export async function primaryChunksFromHybridAttempt(
+  hybrid: ChatDocumentChunk[] | null,
+  loadLegacy: () => Promise<ChatDocumentChunk[]>,
+): Promise<ChatDocumentChunk[]> {
+  if (hybrid !== null && hybrid.length > 0) return hybrid;
+  return loadLegacy();
 }
 
 async function searchChunksHybrid(
   supabase: ChatRagClient,
   issue: ChatIssueHit,
   query: string,
-  vectorize?: QueryVectorizer | null,
   maxChunks: number = MAX_CHUNKS,
 ): Promise<ChatDocumentChunk[] | null> {
   if (!supabase.rpc) return null;
   const issueId = issue.id.trim();
   if (!issueId) return null;
 
-  const queryEmbedding = await resolveQueryEmbeddingV2(vectorize, query);
+  const queryEmbedding = await fetchCentralQueryEmbedding(query);
 
   try {
     const { data, error } = await supabase.rpc('search_chunks_hybrid', {
@@ -414,14 +416,14 @@ async function searchChunksHybrid(
     });
     if (error) {
       if (isMissingHybridRpcError(error)) return null;
-      return [];
+      return null;
     }
-    if (!Array.isArray(data)) return [];
+    if (!Array.isArray(data)) return null;
     const mapped = data.flatMap((row) => {
       const chunk = mapHybridChunkRow(row as Record<string, unknown>);
       return chunk ? [chunk] : [];
     });
-    return mapped;
+    return mapped.length > 0 ? mapped : null;
   } catch {
     return null;
   }
@@ -449,7 +451,7 @@ async function searchChunksLexical(
     const rowIssueId = String(row.issue_id ?? '').trim();
     // Defense in depth: never surface a chunk that is not for this sak.
     if (rowIssueId && rowIssueId !== issueId) return [];
-    const content = clip(String(row.content ?? ''));
+    const content = normalizeChunkText(String(row.content ?? ''));
     if (!content) return [];
     const rank = rankChunkForSak(content, issue, query);
     if (rank <= 0) return [];
@@ -482,12 +484,12 @@ async function searchChunks(
   vectorize?: QueryVectorizer | null,
   maxChunks: number = MAX_CHUNKS,
 ): Promise<ChatDocumentChunk[]> {
-  const hybrid = await searchChunksHybrid(supabase, issue, query, vectorize, maxChunks);
-  const primary =
-    hybrid ??
-    (await searchChunksLexical(supabase, issue, query, maxChunks));
+  const hybrid = await searchChunksHybrid(supabase, issue, query, maxChunks);
+  const primary = await primaryChunksFromHybridAttempt(hybrid, () =>
+    searchChunksLexical(supabase, issue, query, maxChunks),
+  );
 
-  if (!vectorize) return primary;
+  if (!vectorize) return applyChunkExcerptsForChat(primary, query);
 
   const semantic = await searchChunksByVector(
     asVectorClient(supabase),
@@ -496,7 +498,7 @@ async function searchChunks(
     vectorize,
     maxChunks,
   );
-  if (!semantic || semantic.length === 0) return primary;
+  if (!semantic || semantic.length === 0) return applyChunkExcerptsForChat(primary, query);
 
   // nomic (768-dim) path — unchanged until embedding_v2 is populated for all users.
   const provenance = await loadChunkProvenance(
@@ -504,7 +506,7 @@ async function searchChunks(
     [...new Set(semantic.map((chunk) => chunk.documentId))],
   );
 
-  return mergeChunks(
+  const merged = mergeChunks(
     semantic.map((chunk) => ({
       documentId: chunk.documentId,
       chunkIndex: chunk.chunkIndex,
@@ -516,6 +518,8 @@ async function searchChunks(
     primary,
     maxChunks,
   );
+
+  return applyChunkExcerptsForChat(merged, query);
 }
 
 /** Fetch document title/kind for a set of document ids in one query. */
@@ -606,7 +610,7 @@ export async function retrieveSakContext(args: {
 
   return {
     issue,
-    summary: clip(summaryText || issue.summary || '', 1800) || null,
+    summary: clipSummary(summaryText || issue.summary || '') || null,
     chunks,
     note:
       chunks.length === 0
@@ -667,7 +671,7 @@ export async function retrieveTopicContext(args: {
       ]);
       return {
         issue,
-        summary: clip(summaryText || issue.summary || '', MAX_TOPIC_SUMMARY_CHARS) || null,
+        summary: clipSummary(summaryText || issue.summary || '', MAX_TOPIC_SUMMARY_CHARS) || null,
         chunks,
       };
     }),
