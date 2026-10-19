@@ -51,7 +51,18 @@ function recallAtK(rows: { content: string }[], goldFacts: string[], k: number):
 async function issueSearch(
   pool: ReturnType<typeof createPool>,
   query: string,
+  variant: EvalVariant,
 ): Promise<{ ids: string[]; titles: string[] }> {
+  if (variant === 'baseline') {
+    const pattern = `%${query.slice(0, 120)}%`;
+    const { rows } = await pool.query<{ id: string; title: string }>(
+      `SELECT id, title FROM stortinget_issues
+       WHERE title ILIKE $1 OR summary ILIKE $1 OR henvisning ILIKE $1
+       ORDER BY id LIMIT 8`,
+      [pattern],
+    );
+    return { ids: rows.map((r) => String(r.id)), titles: rows.map((r) => String(r.title ?? '')) };
+  }
   const terms = buildSearchTerms(query);
   const { rows } = await pool.query(`SELECT * FROM search_issues_fts($1, $2::text[], 8)`, [query, terms]);
   return {
@@ -134,7 +145,7 @@ export async function runEvalV2(split: 'dev' | 'test', variant: EvalVariant = 's
 
     if (q.kind === 'issue_search') {
       catStats[cat].n += 1;
-      const { ids, titles } = await issueSearch(pool, q.query);
+      const { ids, titles } = await issueSearch(pool, q.query, variant);
       const hit = issueSearchHit(q, ids, titles);
       if (hit) catStats[cat].hit += 1;
       perQuestion.push({ id: q.id, category: cat, kind: q.kind, hit, ids, titles });

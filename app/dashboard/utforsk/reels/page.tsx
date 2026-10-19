@@ -14,15 +14,18 @@ export const metadata = buildPageMetadata({
 export default async function ReelsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ poll?: string }>;
+  searchParams: Promise<{ poll?: string; preview?: string }>;
 }) {
   const supabase = await getServerSupabase();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { poll } = await searchParams;
-  const reelItems = await listSystemReelFeedItems(user?.id ?? null, 40, poll ?? null);
+  const { poll, preview } = await searchParams;
+  const reelItems =
+    process.env.NODE_ENV === 'development' && preview === 'mock'
+      ? (await import('@/lib/polls/reels-preview-mock')).REELS_PREVIEW_MOCK_ITEMS
+      : await listSystemReelFeedItems(user?.id ?? null, 40, poll ?? null);
 
   return <ReelsFullPage items={reelItems} initialPollId={poll} />;
 }
