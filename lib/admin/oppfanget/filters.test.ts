@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
-import { countOppfangetStatuses, filterOppfangetRows } from '@/lib/admin/oppfanget/filters';
+import {
+  countOppfangetStatuses,
+  filterOppfangetRows,
+  hasActiveOppfangetFilters,
+} from '@/lib/admin/oppfanget/filters';
 
 const rows = [
   {
@@ -43,5 +47,8 @@ assert.equal(search.length, 1);
 const counts = countOppfangetStatuses(rows);
 assert.equal(counts.under_terskel, 1);
 assert.equal(counts.oppfanget, 1);
+
+assert.equal(hasActiveOppfangetFilters({}), false);
+assert.equal(hasActiveOppfangetFilters({ q: 'test' }), true);
 
 console.log('admin/oppfanget/filters.test.ts: ok');

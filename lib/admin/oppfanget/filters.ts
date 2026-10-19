@@ -21,6 +21,17 @@ export type OppfangetFilterInput = {
   q?: string;
 };
 
+export function hasActiveOppfangetFilters(filters: OppfangetFilterInput): boolean {
+  return Boolean(
+    filters.type ||
+      filters.status ||
+      (filters.source ?? '').trim() ||
+      filters.dateFrom ||
+      filters.dateTo ||
+      (filters.q ?? '').trim(),
+  );
+}
+
 export type OppfangetFilterableRow = {
   id: string;
   title: string;

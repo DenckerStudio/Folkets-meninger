@@ -8,8 +8,10 @@ import {
   OPPFANGET_DISPLAY_STATUS_LABELS,
   OPPFANGET_DISPLAY_TYPE_LABELS,
 } from '@/lib/admin/oppfanget/mapping';
-import { listOppfangetMockFiltered } from '@/lib/admin/oppfanget/mock-list';
-import type { OppfangetFilterInput } from '@/lib/admin/oppfanget/filters';
+import {
+  hasActiveOppfangetFilters,
+  type OppfangetFilterInput,
+} from '@/lib/admin/oppfanget/filters';
 import type {
   OppfangetDisplayStatus,
   OppfangetDisplayType,
@@ -55,6 +57,25 @@ function StatusPills({ counts }: { counts: OppfangetListResponse['counts'] }) {
   );
 }
 
+function OppfangetPageHeader({ previewMock }: { previewMock?: boolean }) {
+  return (
+    <div>
+      <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
+        <Radar className="h-6 w-6 text-brand" aria-hidden />
+        Oppfanget
+      </h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Meldinger, signaler og aksjoner vi har fanget opp. Tall og kilder er ikke verifisert her.
+      </p>
+      {previewMock ? (
+        <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+          Forhåndsvisning med mock-data (kun utvikling).
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export default function AdminOppfangetClient({
   initialData = null,
 }: {
@@ -86,6 +107,8 @@ export default function AdminOppfangetClient({
     [type, status, source, dateFrom, dateTo, q],
   );
 
+  const filtersActive = hasActiveOppfangetFilters(filters);
+
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
     if (type) params.set('type', type);
@@ -98,14 +121,18 @@ export default function AdminOppfangetClient({
     return params.toString();
   }, [type, status, source, dateFrom, dateTo, q, mockMode]);
 
+  const clearFilters = useCallback(() => {
+    setType('');
+    setStatus('');
+    setSource('');
+    setDateFrom('');
+    setDateTo('');
+    setQ('');
+  }, []);
+
   const load = useCallback(() => {
     startTransition(async () => {
       setError('');
-      if (mockMode) {
-        setData(listOppfangetMockFiltered(filters));
-        return;
-      }
-
       try {
         const res = await fetch(`/api/admin/oppfanget${queryString ? `?${queryString}` : ''}`);
         if (res.status === 401 || res.status === 403) {
@@ -125,7 +152,7 @@ export default function AdminOppfangetClient({
         setError('Kunne ikke laste oppfanget-liste');
       }
     });
-  }, [filters, mockMode, queryString]);
+  }, [queryString]);
 
   useEffect(() => {
     if (skipInitialFetch.current) {
@@ -141,32 +168,26 @@ export default function AdminOppfangetClient({
 
   const rows = data?.rows ?? [];
   const showError = Boolean(error) && rows.length === 0 && !pending;
+  const tableMissing = Boolean(data?.tableMissing);
 
-  return (
-    <div className="space-y-6" lang="nb-NO">
-      <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
-          <Radar className="h-6 w-6 text-brand" aria-hidden />
-          Oppfanget
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Meldinger, signaler og aksjoner vi har fanget opp. Tall og kilder er ikke verifisert her.
-        </p>
-        {data?.previewMock ? (
-          <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
-            Forhåndsvisning med mock-data (kun utvikling).
-          </p>
-        ) : null}
-      </div>
-
-      {data?.tableMissing ? (
+  if (tableMissing && data) {
+    return (
+      <div className="space-y-6" lang="nb-NO">
+        <OppfangetPageHeader previewMock={data.previewMock} />
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-foreground">
           <p className="font-medium">Database ikke klar</p>
           <p className="mt-1 text-muted-foreground">{data.tableMissingMessage}</p>
         </div>
-      ) : null}
+        <AdminBackLink />
+      </div>
+    );
+  }
 
-      {data && !data.tableMissing ? <StatusPills counts={data.counts} /> : null}
+  return (
+    <div className="space-y-6" lang="nb-NO">
+      <OppfangetPageHeader previewMock={data?.previewMock} />
+
+      {data ? <StatusPills counts={data.counts} /> : null}
 
       <div className="grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-3">
         <label className="space-y-1 text-sm">
@@ -249,10 +270,26 @@ export default function AdminOppfangetClient({
       ) : null}
 
       {!pending && data && rows.length === 0 ? (
-        <EmptyState
-          title="Ingenting oppfanget ennå"
-          description="Når nye signaler fanges opp, vises de her med kilder og status."
-        />
+        filtersActive ? (
+          <div className="space-y-4">
+            <EmptyState
+              title="Ingen treff for filtrene"
+              description="Prøv å endre eller fjerne filtervalgene."
+            />
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex min-h-11 items-center rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-muted/50"
+            >
+              Nullstill filtre
+            </button>
+          </div>
+        ) : (
+          <EmptyState
+            title="Ingenting oppfanget ennå"
+            description="Når nye signaler fanges opp, vises de her med kilder og status."
+          />
+        )
       ) : null}
 
       {rows.length > 0 ? (

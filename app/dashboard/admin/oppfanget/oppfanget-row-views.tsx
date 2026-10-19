@@ -89,7 +89,7 @@ function ScaleSourceLink({ url }: { url: string }) {
       rel="noopener noreferrer"
       className={cn(tapLinkClass, 'text-xs')}
     >
-      Kilde
+      Tall-kilde
       <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
     </a>
   );
@@ -122,9 +122,15 @@ function SourcesList({ row }: { row: OppfangetRow }) {
 function PollLinkCell({ row }: { row: OppfangetRow }) {
   const link = oppfangetPollLink(row);
   if (!link) return <span className="text-xs text-muted-foreground">—</span>;
+  const isDraft = row.pollStatus === 'draft';
+  const label = isDraft ? 'Utkast' : 'Avstemning';
   return (
-    <Link href={link} className={cn(tapLinkClass, 'font-medium')}>
-      Åpne
+    <Link
+      href={link}
+      className={cn(tapLinkClass, 'font-medium')}
+      aria-label={isDraft ? 'Åpne utkast' : 'Åpne avstemning'}
+    >
+      {label}
     </Link>
   );
 }
@@ -174,7 +180,7 @@ export function OppfangetDesktopTable({ rows }: { rows: OppfangetRow[] }) {
         Tabellen kan rulles sideveis på smale skjermer.
       </p>
       <div className="max-w-full overflow-x-auto rounded-xl border border-border lg:overflow-x-visible">
-        <table className="w-full table-fixed text-left text-xs leading-snug">
+        <table className="w-full min-w-[52rem] table-fixed text-left text-xs leading-snug lg:min-w-0">
           <colgroup>
             <col className="w-[30%]" />
             <col className="w-[12%]" />
