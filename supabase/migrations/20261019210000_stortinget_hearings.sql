@@ -494,7 +494,17 @@ GRANT EXECUTE ON FUNCTION public.search_hearing_document_chunks_text(text, text,
 -- ---------------------------------------------------------------------------
 -- Extend hybrid search so filter_hearing_id queries hearing_document chunks
 -- (PR #179 joins only stortinget_issues and excludes hearing-only rows).
+-- Depends on tsv / embedding_v2 from 20261019200000 when present; ensure columns exist
+-- so this migration applies on branches that land before hybrid search.
 -- ---------------------------------------------------------------------------
+ALTER TABLE public.document_chunks
+  ADD COLUMN IF NOT EXISTS tsv tsvector GENERATED ALWAYS AS (
+    to_tsvector('norwegian', coalesce(content, ''))
+  ) STORED;
+
+ALTER TABLE public.document_chunks
+  ADD COLUMN IF NOT EXISTS embedding_v2 vector(1024);
+
 CREATE OR REPLACE FUNCTION public.search_chunks_hybrid(
   query_text text,
   query_embedding vector(1024) DEFAULT NULL,
