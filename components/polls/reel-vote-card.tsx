@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, type RefObject } from 'react';
+import { useLineClampOverflow } from '@/hooks/use-line-clamp-overflow';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { CivicBubble } from '@/components/icons/civic';
@@ -12,6 +13,7 @@ import { useReelExpandMobile } from '@/hooks/use-reel-expand-mobile';
 import { listReelPollSourceLinks } from '@/lib/polls/reel-source-links';
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, SystemReelFeedItem } from '@/lib/polls/types';
+import { REEL_TEXT_HIT } from '@/lib/polls/reel-tap-targets';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -48,13 +50,24 @@ type ReelVoteFaceProps = {
   mode: 'compact' | 'expanded';
   voteState: ReelVoteState;
   onRequestExpand?: () => void;
+  onCollapseExpand?: () => void;
   lesMerRef?: RefObject<HTMLButtonElement | null>;
 };
 
-function ReelVoteFace({ item, onBack, mode, voteState, onRequestExpand, lesMerRef }: ReelVoteFaceProps) {
+function ReelVoteFace({
+  item,
+  onBack,
+  mode,
+  voteState,
+  onRequestExpand,
+  onCollapseExpand,
+  lesMerRef,
+}: ReelVoteFaceProps) {
   const { user, totals, userVote, error, votingOpen, voteDisabled, vote } = voteState;
   const sourceLinks = listReelPollSourceLinks(item.poll);
   const isExpanded = mode === 'expanded';
+  const { ref: descriptionClampRef, overflowing: descriptionClipped } = useLineClampOverflow<HTMLParagraphElement>();
+  const showLesMer = Boolean(onRequestExpand && item.poll.neutralSummary && descriptionClipped);
 
   const handleContentActivate = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!onRequestExpand || isExpanded) return;
@@ -69,6 +82,7 @@ function ReelVoteFace({ item, onBack, mode, voteState, onRequestExpand, lesMerRe
         'shrink-0',
         isExpanded &&
           'border-t border-white/10 bg-[#00205b] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-3',
+        !isExpanded && 'max-sm:pr-10',
       )}
     >
         {!votingOpen ? (
@@ -107,7 +121,7 @@ function ReelVoteFace({ item, onBack, mode, voteState, onRequestExpand, lesMerRe
 
           <button
             type="button"
-            onClick={onBack}
+            onClick={() => (isExpanded ? onCollapseExpand?.() : onBack())}
             className="flex items-center justify-center rounded-xl border border-white/20 bg-white px-2 py-3.5 text-base font-bold tracking-wide text-[#00205b] transition-colors hover:bg-white/90 sm:py-4 [@media(max-height:700px)]:py-2.5"
           >
             Tilbake
@@ -134,7 +148,8 @@ function ReelVoteFace({ item, onBack, mode, voteState, onRequestExpand, lesMerRe
             onClick={() => void vote('blank')}
             aria-pressed={userVote === 'blank'}
             className={cn(
-              'rounded-md px-2 py-1 text-xs font-semibold underline decoration-white/40 underline-offset-2 transition-colors disabled:cursor-not-allowed',
+              REEL_TEXT_HIT,
+              'justify-center text-xs font-semibold underline decoration-white/40 underline-offset-2 transition-colors disabled:cursor-not-allowed',
               userVote === 'blank' ? 'text-white' : 'text-white/75 hover:text-white',
             )}
           >
@@ -162,20 +177,26 @@ function ReelVoteFace({ item, onBack, mode, voteState, onRequestExpand, lesMerRe
               <p className="text-xs font-semibold uppercase tracking-wide text-white/60">Kilder</p>
               <ul className="space-y-1.5 text-sm">
                 {sourceLinks.map((link) => (
-                  <li key={link.href}>
+                  <li key={link.id}>
                     {link.external ? (
                       <a
                         href={link.href}
                         target="_blank"
                         rel="noreferrer"
-                        className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:text-white/95"
+                        className={cn(
+                          REEL_TEXT_HIT,
+                          'font-medium text-white underline decoration-white/40 underline-offset-2 hover:text-white/95',
+                        )}
                       >
                         {link.label}
                       </a>
                     ) : (
                       <Link
                         href={link.href}
-                        className="font-medium text-white underline decoration-white/40 underline-offset-2 hover:text-white/95"
+                        className={cn(
+                          REEL_TEXT_HIT,
+                          'font-medium text-white underline decoration-white/40 underline-offset-2 hover:text-white/95',
+                        )}
                       >
                         {link.label}
                       </Link>
@@ -205,11 +226,15 @@ function ReelVoteFace({ item, onBack, mode, voteState, onRequestExpand, lesMerRe
           {item.poll.title}
         </h3>
         {item.poll.neutralSummary ? (
-          <p data-testid="reel-description" className="line-clamp-4 text-sm leading-relaxed text-white/80">
+          <p
+            ref={descriptionClampRef}
+            data-testid="reel-description"
+            className="line-clamp-4 text-sm leading-relaxed text-white/80"
+          >
             {item.poll.neutralSummary}
           </p>
         ) : null}
-        {item.poll.neutralSummary ? (
+        {showLesMer ? (
           <button
             ref={lesMerRef}
             type="button"
@@ -217,7 +242,10 @@ function ReelVoteFace({ item, onBack, mode, voteState, onRequestExpand, lesMerRe
               event.stopPropagation();
               onRequestExpand?.();
             }}
-            className="shrink-0 self-start text-xs font-semibold text-white/90 underline decoration-white/40 underline-offset-2 transition-colors hover:text-white"
+            className={cn(
+              REEL_TEXT_HIT,
+              'shrink-0 self-start text-xs font-semibold text-white/90 underline decoration-white/40 underline-offset-2 transition-colors hover:text-white',
+            )}
           >
             Les mer
           </button>
@@ -288,7 +316,13 @@ export function ReelCarouselCard({
       closeButtonRef={closeButtonRef}
       returnFocusRef={lesMerRef}
     >
-      <ReelVoteFace item={item} onBack={onBack} mode="expanded" voteState={voteState} />
+      <ReelVoteFace
+        item={item}
+        onBack={onBack}
+        mode="expanded"
+        voteState={voteState}
+        onCollapseExpand={() => onExpandedChange(false)}
+      />
     </ReelExpandedShell>
   );
 

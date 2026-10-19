@@ -47,11 +47,6 @@
   pointer-events: none;
 }
 
-html[data-reels-open] .chat-orb {
-  visibility: hidden;
-  pointer-events: none;
-}
-
 body[data-overlay-open='true'] .chat-orb {
   visibility: hidden;
   pointer-events: none;

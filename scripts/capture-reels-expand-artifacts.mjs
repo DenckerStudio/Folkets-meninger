@@ -20,9 +20,12 @@ async function openVoteFace(page) {
   const activeCard = reelsDialog.locator('[aria-current="true"]').first();
   const voteCta = activeCard.getByRole('button', { name: 'Trykk for å stemme' });
   if (await voteCta.count()) {
+    await voteCta.scrollIntoViewIfNeeded();
     await voteCta.click();
   } else {
-    await reelsDialog.getByRole('button', { name: 'Trykk for å stemme' }).first().click();
+    const fallback = reelsDialog.getByRole('button', { name: 'Trykk for å stemme' }).first();
+    await fallback.scrollIntoViewIfNeeded();
+    await fallback.click();
   }
   await page.getByTestId('reel-vote-face').waitFor({ state: 'visible' });
   return reelsDialog;

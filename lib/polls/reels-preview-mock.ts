@@ -1,6 +1,6 @@
 import type { SystemReelFeedItem } from '@/lib/polls/types';
 
-/** Deterministic dev/preview fixture for Reels UI capture (not shown in production). */
+/** Deterministic dev-only fixture for Reels UI capture (`?preview=mock` in development). */
 export const REELS_PREVIEW_MOCK_ITEMS: SystemReelFeedItem[] = [
   {
     poll: {

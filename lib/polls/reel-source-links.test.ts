@@ -9,7 +9,9 @@ const poll = {
   neutralSummary: 'Sammendrag',
   sourceUrls: [
     { label: 'Dokument', url: 'https://example.com/doc' },
-    { url: 'https://example.com/dup' },
+    { url: 'https://example.com/doc/' },
+    { url: 'ftp://bad.example/x' },
+    { url: 'javascript:alert(1)' },
   ],
   stortingetIssueId: '12345',
   citizenInitiativeId: null,
@@ -21,7 +23,7 @@ const poll = {
 };
 
 const links = listReelPollSourceLinks(poll);
-assert.equal(links.length, 3);
+assert.equal(links.length, 2);
 assert.equal(links[0].href, '/dashboard/sak/12345');
 assert.equal(links[0].external, false);
 assert.equal(links[1].label, 'Dokument');
@@ -29,8 +31,8 @@ assert.equal(links[1].external, true);
 
 const deduped = listReelPollSourceLinks({
   ...poll,
-  sourceUrls: [{ url: '/dashboard/sak/12345', label: 'Dup' }],
+  sourceUrls: [{ url: 'https://example.com/dup', label: 'A' }, { url: 'https://example.com/dup/' }],
 });
-assert.equal(deduped.length, 1);
+assert.equal(deduped.length, 2);
 
 console.log('reel-source-links tests passed');

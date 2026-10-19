@@ -466,7 +466,7 @@ export function ReelsPanel({
         /* Desktop (lg+): 21st Coverflow rack — not fullscreen single cards, no sideways peek bleed */
         <LayoutGroup id="reels-coverflow">
           <motion.div
-            className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]"
+            className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))] lg:pr-14"
             animate={{
               scale: detailExpanded && !reducedMotion ? 0.94 : 1,
               opacity: detailExpanded ? 0.45 : 1,

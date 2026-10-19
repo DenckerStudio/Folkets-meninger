@@ -26,5 +26,9 @@ assert.match(stage, /ReelsExpandPortalProvider/);
 assert.match(shell, /role="dialog"/);
 assert.match(shell, /aria-modal="true"/);
 assert.match(shell, /useFocusTrap/);
+assert.match(shell, /useBodyOverlayFlag\(open\)/);
+assert.match(shell, /data-reels-expanded/);
+
+assert.match(voteCard, /REEL_TEXT_HIT/);
 
 console.log('reel-expand surfaces tests passed');
