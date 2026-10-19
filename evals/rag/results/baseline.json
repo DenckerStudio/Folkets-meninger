@@ -1,17 +1,25 @@
 {
   "label": "baseline",
   "variant": "baseline",
-  "excerptMode": "stack_buggy",
-  "chunkQuestions": 27,
-  "recallAt5": 0.4444444444444444,
-  "recallAt10": 0.4444444444444444,
-  "mrr": 0.3654320987654321,
-  "excerptFactRate": 0.4444444444444444,
-  "issueSearchHitRate": 0.14285714285714285,
+  "stackHeads": {
+    "p177": "a38d83d",
+    "p178": "8462349",
+    "p179": "4c17c84",
+    "p181": "1e06816"
+  },
+  "chunkQuestions": 30,
+  "recallAt5": 0.43333333333333335,
+  "recallAt10": 0.43333333333333335,
+  "mrr": 0.3622222222222222,
+  "excerptFactRate": 0.43333333333333335,
+  "topicQuestions": 0,
+  "topicExcerptFactRate": 0,
+  "topicFairSakCoverage": 0,
+  "issueSearchHitRate": 0.2222222222222222,
   "prefixHitRate": 0,
   "finnesIkkeFalseConfidenceRate": 1,
-  "latencyMsP50": 24.510421999999835,
-  "latencyMsP95": 89.763193,
+  "latencyMsP50": 1120.5844000000016,
+  "latencyMsP95": 1234.5197120000012,
   "judge": "pending (LAN)",
   "perQuestion": [
     {
@@ -165,7 +173,7 @@
     {
       "id": "finnes-ikke-4",
       "kind": "finnes_ikke",
-      "excerpts": 2,
+      "excerpts": 5,
       "confident": true
     },
     {
@@ -293,6 +301,60 @@
       "r10": true,
       "excerptHit": true,
       "topRank": 0.7130447486212327
+    },
+    {
+      "id": "year-henvisning-2024-25",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "103102"
+      ],
+      "titles": [
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)"
+      ]
+    },
+    {
+      "id": "year-session-2024-25",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.7309612153489904
+    },
+    {
+      "id": "statsbudsjettet-2027-explicit",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": null
+    },
+    {
+      "id": "statsbudsjettet-2027-energy",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": null
+    },
+    {
+      "id": "issue-search-budsjett-2027-phrase",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "topic-trygd-pensjon-multi",
+      "skipped": true,
+      "reason": "topic_stack_only"
+    },
+    {
+      "id": "topic-statsbudsjett-2027-multi",
+      "skipped": true,
+      "reason": "topic_stack_only"
+    },
+    {
+      "id": "topic-representantforslag-2024-25",
+      "skipped": true,
+      "reason": "topic_stack_only"
     }
   ]
 }

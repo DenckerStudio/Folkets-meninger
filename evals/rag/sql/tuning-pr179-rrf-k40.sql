@@ -1,6 +1,19 @@
 -- Eval tuning only (#179): lower RRF k from 60 → 40 for denser fusion tail.
 -- Apply to rag_eval_stack before improved run; production change belongs in 20261019200000 follow-up.
 
+DROP FUNCTION IF EXISTS public.search_chunks_hybrid(
+  text,
+  vector,
+  text[],
+  text[],
+  text,
+  text,
+  boolean,
+  timestamptz,
+  text,
+  int
+);
+
 CREATE OR REPLACE FUNCTION public.search_chunks_hybrid(
   query_text text,
   query_embedding vector(1024) DEFAULT NULL,

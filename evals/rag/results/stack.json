@@ -1,17 +1,25 @@
 {
   "label": "stack",
   "variant": "stack",
-  "excerptMode": "stack_buggy",
-  "chunkQuestions": 27,
-  "recallAt5": 0.4444444444444444,
-  "recallAt10": 0.48148148148148145,
-  "mrr": 0.38800705467372126,
-  "excerptFactRate": 0.5185185185185185,
-  "issueSearchHitRate": 0.2857142857142857,
+  "stackHeads": {
+    "p177": "a38d83d",
+    "p178": "8462349",
+    "p179": "4c17c84",
+    "p181": "1e06816"
+  },
+  "chunkQuestions": 30,
+  "recallAt5": 0.4666666666666667,
+  "recallAt10": 0.4666666666666667,
+  "mrr": 0.4444444444444445,
+  "excerptFactRate": 0.4666666666666667,
+  "topicQuestions": 3,
+  "topicExcerptFactRate": 0.6666666666666666,
+  "topicFairSakCoverage": 0.5,
+  "issueSearchHitRate": 0.3333333333333333,
   "prefixHitRate": 0,
-  "finnesIkkeFalseConfidenceRate": 0,
-  "latencyMsP50": 81.17764299999999,
-  "latencyMsP95": 97.04266700000016,
+  "finnesIkkeFalseConfidenceRate": 1,
+  "latencyMsP50": 1415.3020749999996,
+  "latencyMsP95": 1892.8262109999996,
   "judge": "pending (LAN)",
   "perQuestion": [
     {
@@ -23,7 +31,7 @@
     },
     {
       "id": "sak-103102-utvalg",
-      "r5": false,
+      "r5": true,
       "r10": true,
       "excerptHit": true,
       "topRank": 0.016393442
@@ -32,7 +40,7 @@
       "id": "sak-103102-vedtak",
       "r5": false,
       "r10": false,
-      "excerptHit": true,
+      "excerptHit": false,
       "topRank": 0.016393442
     },
     {
@@ -151,32 +159,32 @@
     {
       "id": "finnes-ikke-1",
       "kind": "finnes_ikke",
-      "excerpts": 8,
-      "confident": false
+      "excerpts": 5,
+      "confident": true
     },
     {
       "id": "finnes-ikke-2",
       "kind": "finnes_ikke",
-      "excerpts": 8,
-      "confident": false
+      "excerpts": 5,
+      "confident": true
     },
     {
       "id": "finnes-ikke-3",
       "kind": "finnes_ikke",
-      "excerpts": 8,
-      "confident": false
+      "excerpts": 5,
+      "confident": true
     },
     {
       "id": "finnes-ikke-4",
       "kind": "finnes_ikke",
-      "excerpts": 10,
-      "confident": false
+      "excerpts": 5,
+      "confident": true
     },
     {
       "id": "finnes-ikke-5",
       "kind": "finnes_ikke",
-      "excerpts": 8,
-      "confident": false
+      "excerpts": 5,
+      "confident": true
     },
     {
       "id": "mixed-lex-semantic-1",
@@ -297,6 +305,72 @@
       "r10": true,
       "excerptHit": true,
       "topRank": 0.016393442
+    },
+    {
+      "id": "year-henvisning-2024-25",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "103102"
+      ],
+      "titles": [
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)"
+      ]
+    },
+    {
+      "id": "year-session-2024-25",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.016393442
+    },
+    {
+      "id": "statsbudsjettet-2027-explicit",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": null
+    },
+    {
+      "id": "statsbudsjettet-2027-energy",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": null
+    },
+    {
+      "id": "issue-search-budsjett-2027-phrase",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "topic-trygd-pensjon-multi",
+      "topicExcerptHit": true,
+      "topicFairSakCoverage": 0.5,
+      "sakerWithExcerpts": [
+        3,
+        2
+      ]
+    },
+    {
+      "id": "topic-statsbudsjett-2027-multi",
+      "topicExcerptHit": false,
+      "topicFairSakCoverage": 0,
+      "sakerWithExcerpts": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "topic-representantforslag-2024-25",
+      "topicExcerptHit": true,
+      "topicFairSakCoverage": 1,
+      "sakerWithExcerpts": [
+        3,
+        2
+      ]
     }
   ]
 }
