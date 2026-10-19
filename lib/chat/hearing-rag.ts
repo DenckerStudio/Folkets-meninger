@@ -62,6 +62,9 @@ export function isMissingHearingHybridRpcError(error: unknown): boolean {
   const row = error as { code?: string; message?: string };
   if (row.code === 'PGRST202') return true;
   const message = row.message ?? '';
+  if (/unknown argument/i.test(message) && /filter_hearing_id/i.test(message)) {
+    return true;
+  }
   if (/search_chunks_hybrid/i.test(message) && /not find|schema cache|unknown|filter_hearing_id/i.test(message)) {
     return true;
   }
