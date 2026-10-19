@@ -14,9 +14,13 @@ assert.doesNotMatch(ragSrc, /getServiceSupabase/);
 assert.match(ragSrc, /getServerSupabase/);
 assert.match(ragSrc, /getAnonSupabase/);
 assert.match(ragSrc, /issue_id, document_id, chunk_index, content/);
-assert.match(ragSrc, /rankChunkForSak/);
+assert.match(ragSrc, /fetchCentralQueryEmbedding/);
+assert.match(ragSrc, /search_chunks_hybrid/);
+assert.match(ragSrc, /search_issues_fts/);
+assert.match(ragSrc, /searchChunksLexical/);
 assert.doesNotMatch(ragSrc, /hits\.length > 0 \? hits : ranked/);
-assert.doesNotMatch(ragSrc, /embedding/);
+assert.doesNotMatch(ragSrc, /\.select\([^)]*\bembedding\b/);
+assert.match(ragSrc, /query_embedding/);
 
 assert.match(toolsSrc, /client: ragClient/);
 assert.match(toolsSrc, /searchIssuesForChat\(query, 8, ragClient\)/);
@@ -70,12 +74,13 @@ assert.match(composerAssistsSrc, /\/api\/chat\/sources/);
 const vectorSrc = readFileSync(new URL('./vector-search.ts', import.meta.url), 'utf8');
 const instructionsSrc = readFileSync(new URL('./instructions.ts', import.meta.url), 'utf8');
 
-// rag.ts keeps the session/anon cache path and stays free of the embedding column.
+// rag.ts keeps the session/anon cache path and never SELECTs embedding columns.
 assert.match(ragSrc, /from '@\/lib\/chat\/vector-search'/);
 assert.match(ragSrc, /retrieveTopicContext/);
 assert.match(ragSrc, /mergeChunks/);
 assert.match(ragSrc, /searchChunksByVector/);
-assert.doesNotMatch(ragSrc, /embedding/);
+assert.doesNotMatch(ragSrc, /\.select\([^)]*\bembedding\b/);
+assert.match(ragSrc, /query_embedding/);
 
 // Semantic path lives in its own module and only calls the vector RPC.
 assert.match(vectorSrc, /match_issue_document_chunks/);

@@ -84,7 +84,9 @@ export type RankedChunkExcerpt = {
 };
 
 /**
- * Apply per-excerpt caps and a total budget, keeping higher-ranked chunks first.
+ * Apply per-excerpt caps and a total budget in **incoming order** (e.g. semantic
+ * before hybrid/lexical from `mergeChunks`). Do not re-sort by `rank` — semantic
+ * similarity is 0–1 while lexical scores are much larger.
  */
 export function applyChunkExcerptsForChat<T extends RankedChunkExcerpt>(
   chunks: readonly T[],
@@ -97,14 +99,10 @@ export function applyChunkExcerptsForChat<T extends RankedChunkExcerpt>(
   const maxPerExcerpt = options.maxPerExcerpt ?? CHAT_EXCERPT_MAX_CHARS;
   const totalBudget = options.totalBudget ?? CHAT_EXCERPT_TOTAL_BUDGET_CHARS;
 
-  const sorted = [...chunks].sort(
-    (a, b) => (b.rank ?? 0) - (a.rank ?? 0) || (a.chunkIndex ?? 0) - (b.chunkIndex ?? 0),
-  );
-
   const out: T[] = [];
   let budget = totalBudget;
 
-  for (const chunk of sorted) {
+  for (const chunk of chunks) {
     if (budget < MIN_EXCERPT_CHARS) break;
     const maxLen = Math.min(maxPerExcerpt, budget);
     const content = excerptChunkForQuery(chunk.content, query, maxLen);
