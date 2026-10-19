@@ -13,10 +13,11 @@ import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, Compass, Info } from 'lucide-react';
 import { CivicBubble } from '@/components/icons/civic';
 import { EmptyLineState } from '@/components/motion/empty-line';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import { CoverflowCarousel } from '@/components/ui/coverflow-carousel';
 import { Stories, StoriesContent, StoriesHeader, StoriesCounter, StoriesNavigationInline, Story } from '@/components/ui/stories-carousel';
 import { ReelCarouselCard } from '@/components/polls/reel-vote-card';
+import { ReelsExpandPortalProvider } from '@/components/polls/reels-expand-portal';
 import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import type { SystemReelFeedItem } from '@/lib/polls/types';
 import { routes } from '@/lib/routes';
@@ -281,6 +282,7 @@ export function ReelsPanel({
   onClose: () => void;
 }) {
   const isDesktop = useIsDesktopLg();
+  const reducedMotion = usePrefersReducedMotion();
   const cardOpen = Boolean(activePollId);
   const initialIndex = Math.max(
     0,
@@ -288,17 +290,43 @@ export function ReelsPanel({
   );
   const [centeredIndex, setCenteredIndex] = useState(initialIndex);
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [expandedPollId, setExpandedPollId] = useState<string | null>(null);
+  const [expandPortalEl, setExpandPortalEl] = useState<HTMLDivElement | null>(null);
+  const detailExpanded = active && expandedPollId !== null;
+
+  const handleCenteredIndexChange = useCallback((index: number) => {
+    setCenteredIndex(index);
+    setExpandedPollId(null);
+  }, []);
+
+  const handlePollSelect = useCallback(
+    (id: string | null) => {
+      if (id !== activePollId) setExpandedPollId(null);
+      onSelect(id);
+    },
+    [activePollId, onSelect],
+  );
+
+  const handleClose = useCallback(() => {
+    setExpandedPollId(null);
+    onClose();
+  }, [onClose]);
 
   useEffect(() => {
     if (!active) return;
     const onKey = (event: KeyboardEvent) => {
+      if (detailExpanded) {
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+          event.preventDefault();
+          return;
+        }
+      }
+
       // Escape closes panel or goes back
       if (event.key === 'Escape') {
-        // Check if "Les mer" sheet is open - close only that
-        if (sheetOpen) {
+        if (detailExpanded) {
           event.preventDefault();
-          setSheetOpen(false);
+          setExpandedPollId(null);
           return;
         }
         // Check if disclaimer is open - close only that
@@ -310,12 +338,12 @@ export function ReelsPanel({
         // If card is flipped open, go back to front
         if (cardOpen) {
           event.preventDefault();
-          onSelect(null);
+          handlePollSelect(null);
           return;
         }
         // Otherwise close Reels
         event.preventDefault();
-        onClose();
+        handleClose();
         return;
       }
 
@@ -333,7 +361,7 @@ export function ReelsPanel({
       }
 
       if (event.key === 'Enter') {
-        if (cardOpen || sheetOpen || disclaimerOpen) return;
+        if (cardOpen || detailExpanded || disclaimerOpen) return;
         const target = event.target as HTMLElement | null;
         if (target) {
           const tag = target.tagName;
@@ -351,7 +379,18 @@ export function ReelsPanel({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [active, activePollId, cardOpen, centeredIndex, disclaimerOpen, items, onSelect, onClose, sheetOpen]);
+  }, [
+    active,
+    activePollId,
+    cardOpen,
+    centeredIndex,
+    detailExpanded,
+    disclaimerOpen,
+    handleClose,
+    handlePollSelect,
+    items,
+    onSelect,
+  ]);
 
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col">
@@ -359,7 +398,7 @@ export function ReelsPanel({
       <div className="relative z-30 flex shrink-0 items-center gap-3 pb-2 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
         <button
           type="button"
-          onClick={onClose}
+          onClick={handleClose}
           aria-label="Tilbake til saker"
           className="inline-flex"
         >
@@ -412,16 +451,31 @@ export function ReelsPanel({
         </div>
       ) : isDesktop ? (
         /* Desktop (lg+): 21st Coverflow rack — not fullscreen single cards, no sideways peek bleed */
-        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
-<CoverflowCarousel
+        <LayoutGroup id="reels-coverflow">
+          <ReelsExpandPortalProvider container={expandPortalEl}>
+          <motion.div
+            className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]"
+            animate={{
+              scale: detailExpanded && !reducedMotion ? 0.94 : 1,
+              opacity: detailExpanded ? 0.45 : 1,
+            }}
+            transition={
+              reducedMotion
+                ? { duration: 0 }
+                : detailExpanded
+                  ? { duration: 0.35 }
+                  : { duration: 0.25 }
+            }
+          >
+            <CoverflowCarousel
               key={`coverflow-${initialIndex}`}
               initialIndex={initialIndex}
               label="Reels"
               loop={items.length >= 3}
               showPagination
               showNavigation
-              interactionLocked={cardOpen}
-              onIndexChange={setCenteredIndex}
+              interactionLocked={cardOpen || detailExpanded}
+              onIndexChange={handleCenteredIndexChange}
               rotate={40}
               depth={0.55}
               perspective={2.8}
@@ -429,55 +483,80 @@ export function ReelsPanel({
               cardHeight="clamp(320px, 58dvh, 440px)"
               gap={0.08}
               cardClassName="rounded-2xl border border-white/10 bg-[#00205b]"
-              slides={items.map((item) => (
+              slides={items.map((item, index) => (
                 <ReelCarouselCard
                   key={item.poll.id}
                   item={item}
                   showBadge={false}
                   selected={activePollId === item.poll.id}
-                  onSelect={() => onSelect(item.poll.id)}
-                  onBack={() => onSelect(null)}
+                  isCentered={index === centeredIndex}
+                  expanded={expandedPollId === item.poll.id}
+                  onSelect={() => handlePollSelect(item.poll.id)}
+                  onBack={() => handlePollSelect(null)}
+                  onExpandedChange={(open) => setExpandedPollId(open ? item.poll.id : null)}
                   mode="coverflow"
-                  onSheetOpenChange={setSheetOpen}
                 />
               ))}
             />
-        </div>
+          </motion.div>
+          <div ref={setExpandPortalEl} className="pointer-events-none fixed inset-0 z-[225]" />
+          </ReelsExpandPortalProvider>
+        </LayoutGroup>
       ) : (
         /* Mobile + tablet (<lg): Stories carousel (vertikal Tiktok-lignende, full høyde) */
-        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]">
-          <div className="relative mx-auto flex min-h-0 w-full max-w-[26rem] flex-1 flex-col">
-            <Stories
-              key={`stories-${initialIndex}`}
-              initialIndex={initialIndex}
-              loop={items.length > 1}
-              onIndexChange={setCenteredIndex}
-            >
-              <div className="flex items-center justify-between gap-1.5 px-2 pb-1">
-                <div className="flex-1 min-w-0 overflow-x-auto pr-2">
-                  <StoriesHeader className="px-0" />
+        <LayoutGroup id="reels-stories">
+          <ReelsExpandPortalProvider container={expandPortalEl}>
+          <motion.div
+            className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden pl-[max(0.5rem,env(safe-area-inset-left,0px))] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))]"
+            animate={{
+              scale: detailExpanded && !reducedMotion ? 0.96 : 1,
+              opacity: detailExpanded ? 0.45 : 1,
+            }}
+            transition={
+              reducedMotion
+                ? { duration: 0 }
+                : detailExpanded
+                  ? { duration: 0.35 }
+                  : { duration: 0.25 }
+            }
+          >
+            <div className="relative mx-auto flex min-h-0 w-full max-w-[26rem] flex-1 flex-col">
+              <Stories
+                key={`stories-${initialIndex}`}
+                initialIndex={initialIndex}
+                loop={items.length > 1}
+                onIndexChange={handleCenteredIndexChange}
+              >
+                <div className="flex items-center justify-between gap-1.5 px-2 pb-1">
+                  <div className="min-w-0 flex-1 overflow-x-auto pr-2">
+                    <StoriesHeader className="px-0" />
+                  </div>
+                  <StoriesCounter className="shrink-0 tabular-nums text-[11px] sm:text-xs" />
+                  <StoriesNavigationInline className="shrink-0" />
                 </div>
-                <StoriesCounter className="shrink-0 tabular-nums text-[11px] sm:text-xs" />
-                <StoriesNavigationInline className="shrink-0" />
-              </div>
-              <StoriesContent className="flex-1 min-h-0">
-                {items.map((item) => (
-                  <Story key={item.poll.id} className="flex flex-col">
-                    <ReelCarouselCard
-                      item={item}
-                      showBadge={false}
-                      selected={activePollId === item.poll.id}
-                      onSelect={() => onSelect(item.poll.id)}
-                      onBack={() => onSelect(null)}
-                      mode="stories"
-                      onSheetOpenChange={setSheetOpen}
-                    />
-                  </Story>
-                ))}
-              </StoriesContent>
-            </Stories>
-          </div>
-        </div>
+                <StoriesContent className="min-h-0 flex-1" interactionLocked={cardOpen || detailExpanded}>
+                  {items.map((item, index) => (
+                    <Story key={item.poll.id} className="flex flex-col">
+                      <ReelCarouselCard
+                        item={item}
+                        showBadge={false}
+                        selected={activePollId === item.poll.id}
+                        isCentered={index === centeredIndex}
+                        expanded={expandedPollId === item.poll.id}
+                        onSelect={() => handlePollSelect(item.poll.id)}
+                        onBack={() => handlePollSelect(null)}
+                        onExpandedChange={(open) => setExpandedPollId(open ? item.poll.id : null)}
+                        mode="stories"
+                      />
+                    </Story>
+                  ))}
+                </StoriesContent>
+              </Stories>
+            </div>
+          </motion.div>
+          <div ref={setExpandPortalEl} className="pointer-events-none fixed inset-0 z-[225]" />
+          </ReelsExpandPortalProvider>
+        </LayoutGroup>
       )}
     </div>
   );
