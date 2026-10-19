@@ -337,8 +337,8 @@ function assembleChunksFromBlocks(blocks: Block[], targetChars: number, overlapR
 
     if (buffer) {
       const previous = buffer;
-      const prevPageStart = bufferPageStart;
-      const prevPageEnd = bufferPageEnd;
+      const prevPageStart: number | null = bufferPageStart;
+      const prevPageEnd: number | null = bufferPageEnd;
       emit();
       const tail = overlapTail(previous, overlapChars);
       startNewBuffer(tail ? `${tail}\n\n${blockText}` : blockText, block.sectionPath, block.page);

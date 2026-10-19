@@ -486,6 +486,11 @@ trimmed detail context instead of the full JSON blob.
 (`match_issue_document_chunks`). Moving chunk *blobs* into n8n would break
 similarity search.
 
+**Docling ingest (20261019220000):** n8n calls `n8n_upsert_docling_document` with
+markdown + pre-chunked rows (`md-sections-v1`). Hearings use `hearing_documents` from
+`20261019210000`. **embedding_v2 backfill:** `list_chunks_missing_v2` /
+`save_embeddings_v2` (bge-m3, 1024-dim); eval via `match_document_chunks_v2`.
+
 If the DB hits `exceed_db_size_quota`, reclaim with:
 
 ```bash
