@@ -147,28 +147,47 @@ function PollLinkCell({ row, mobile = false }: { row: OppfangetRow; mobile?: boo
   );
 }
 
-function TitleCell({ row, showTypeMeta = false }: { row: OppfangetRow; showTypeMeta?: boolean }) {
-  const metaParts: string[] = [];
-  if (showTypeMeta) {
-    metaParts.push(OPPFANGET_DISPLAY_TYPE_LABELS[row.displayType]);
-  }
-  if (row.confidence != null) {
-    metaParts.push(formatOppfangetConfidence(row.confidence));
-  }
+function TitleCell({
+  row,
+  showTypeMeta = false,
+  desktopTable = false,
+}: {
+  row: OppfangetRow;
+  showTypeMeta?: boolean;
+  desktopTable?: boolean;
+}) {
+  const typeLabel = showTypeMeta ? OPPFANGET_DISPLAY_TYPE_LABELS[row.displayType] : null;
+  const confidenceLabel =
+    row.confidence != null ? formatOppfangetConfidence(row.confidence) : null;
+  const showMeta = Boolean(typeLabel || confidenceLabel);
 
   return (
-    <div className="min-w-0 overflow-hidden">
-      <div className="flex items-start gap-1">
+    <div className="min-w-0 overflow-hidden" lang={desktopTable ? 'nb' : undefined}>
+      <div className="flex min-w-0 items-start gap-1">
         {row.sensitive ? (
           <AlertTriangle
             className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600"
             aria-label="Sensitivt tema"
           />
         ) : null}
-        <span className="line-clamp-3 break-words font-medium text-foreground">{row.title}</span>
+        <span
+          title={row.title}
+          className={cn(
+            'min-w-0 font-medium text-foreground break-words hyphens-auto',
+            desktopTable ? 'line-clamp-2' : 'line-clamp-3',
+          )}
+        >
+          {row.title}
+        </span>
       </div>
-      {metaParts.length > 0 ? (
-        <p className="mt-0.5 break-words text-xs text-muted-foreground">{metaParts.join(' · ')}</p>
+      {showMeta ? (
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {typeLabel ? <span className="break-words">{typeLabel}</span> : null}
+          {typeLabel && confidenceLabel ? <span aria-hidden> · </span> : null}
+          {confidenceLabel ? (
+            <span className="whitespace-nowrap">{confidenceLabel}</span>
+          ) : null}
+        </p>
       ) : null}
     </div>
   );
@@ -212,11 +231,11 @@ export function OppfangetDesktopTable({ rows }: { rows: OppfangetRow[] }) {
           <colgroup>
             <col />
             <col className="w-28" />
-            <col className="w-[10.5rem]" />
-            <col className="w-[11.25rem]" />
-            <col className="w-[8.75rem]" />
-            <col className="w-[5.75rem]" />
-            <col className="w-[4.5rem]" />
+            <col className="w-[14%]" />
+            <col className="w-36" />
+            <col className="w-[14%]" />
+            <col className="w-24" />
+            <col className="w-16" />
           </colgroup>
           <thead className="border-b border-border bg-muted/40 text-[10px] uppercase tracking-wide text-muted-foreground">
             <tr>
@@ -233,7 +252,7 @@ export function OppfangetDesktopTable({ rows }: { rows: OppfangetRow[] }) {
             {rows.map((row) => (
               <tr key={row.id} className="hover:bg-muted/20">
                 <td className={cellClass}>
-                  <TitleCell row={row} showTypeMeta />
+                  <TitleCell row={row} showTypeMeta desktopTable />
                 </td>
                 <td className={statusCell}>
                   <StatusBadge row={row} />
