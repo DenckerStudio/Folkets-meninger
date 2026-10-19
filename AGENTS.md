@@ -14,8 +14,15 @@ co-located READMEs (see [Documentation](#documentation)).
   BYOK keys, service-role key, Stripe secrets).
 - **Hosting is Coolify.** Vercel is no longer used for hosting. Do not propose
   moving back to Vercel.
-- User-facing copy is **Norwegian (bokmål)**. Do not mention BankID, MinID, or
-  electronic ID verification anywhere in user-facing copy, roadmap, or marketing.
+
+### Product UI
+
+- **All copy and UI text is Norwegian bokmål.** Do not ship English UI strings.
+  Do not mention BankID, MinID, or electronic ID verification anywhere in
+  user-facing copy, roadmap, or marketing.
+- **No AI labels in the UI** (Mathias decided 2026-10-06): do not show «AI»
+  badges or typical AI icons. Use animated icons instead.
+
 - Avoid user-visible mock/placeholder data. Use honest empty or "kommer snart" states.
 - Prefer minimal, focused changes. Stage only intended files.
 
