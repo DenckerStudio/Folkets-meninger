@@ -3,6 +3,25 @@
 
 BEGIN;
 
+DO $$
+BEGIN
+  IF to_regclass('public.stortinget_hearings') IS NULL THEN
+    RAISE EXCEPTION
+      'Migration 20261019220000 requires public.stortinget_hearings (apply PR #178 / 20261019210000 first).';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'document_chunks'
+      AND column_name = 'embedding_v2'
+  ) THEN
+    RAISE EXCEPTION
+      'Migration 20261019220000 requires document_chunks.embedding_v2 (apply PR #179 / 20261019200000 first).';
+  END IF;
+END $$;
+
 -- ---------------------------------------------------------------------------
 -- Sak documents: Docling markdown ingest columns
 -- ---------------------------------------------------------------------------
@@ -44,16 +63,6 @@ ALTER TABLE public.document_chunks
 COMMENT ON COLUMN public.document_chunks.embedding_v2_status IS
   'pending | ready | failed — bge-m3 backfill; skip listing after 3 failed attempts';
 
--- Hearing chunks may carry optional issue_id for v2 match / filters (P9 allowed issue_id NULL only).
-ALTER TABLE public.document_chunks
-  DROP CONSTRAINT IF EXISTS document_chunks_sak_or_hearing_check;
-
-ALTER TABLE public.document_chunks
-  ADD CONSTRAINT document_chunks_sak_or_hearing_check CHECK (
-    (hearing_document_id IS NULL AND issue_id IS NOT NULL)
-    OR (hearing_document_id IS NOT NULL)
-  );
-
 -- ---------------------------------------------------------------------------
 -- n8n_upsert_docling_document
 -- ---------------------------------------------------------------------------
@@ -65,7 +74,7 @@ CREATE OR REPLACE FUNCTION public.n8n_upsert_docling_document(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_target text := lower(btrim(coalesce(p_target, '')));
@@ -73,12 +82,16 @@ DECLARE
   v_document_id text := nullif(btrim(coalesce(p_doc->>'document_id', '')), '');
   v_hearing_id text := nullif(btrim(coalesce(p_doc->>'hearing_id', '')), '');
   v_content_hash text := nullif(btrim(coalesce(p_doc->>'content_hash', '')), '');
-  v_content_markdown text := nullif(p_doc->>'content_markdown', '');
+  v_content_markdown text;
+  v_normalized_md text;
+  v_computed_hash text;
   v_ingest_status text;
   v_chunk_count int;
+  v_nonempty_chunks int;
   v_existing_hash text;
   v_hearing_doc_id uuid;
   v_inserted int := 0;
+  v_kept int[] := '{}';
   v_chunk jsonb;
   v_idx int;
   v_meta jsonb;
@@ -87,6 +100,8 @@ DECLARE
   v_page int;
   v_page_start int;
   v_page_end int;
+  v_content text;
+  v_raw text;
 BEGIN
   IF v_target NOT IN ('sak', 'horing') THEN
     RETURN jsonb_build_object('status', 'error', 'error', 'invalid_target');
@@ -101,14 +116,46 @@ BEGIN
   END IF;
 
   v_chunk_count := jsonb_array_length(p_chunks);
+  IF v_chunk_count = 0 THEN
+    RETURN jsonb_build_object('status', 'error', 'error', 'empty_chunks');
+  END IF;
+
   IF v_chunk_count > 2000 THEN
     RETURN jsonb_build_object('status', 'error', 'error', 'too_many_chunks');
   END IF;
 
-  v_ingest_status := CASE
-    WHEN coalesce(btrim(v_content_markdown), '') <> '' THEN 'converted'
-    ELSE coalesce(nullif(btrim(coalesce(p_doc->>'ingest_status', '')), ''), 'pending')
-  END;
+  SELECT count(*)::int
+  INTO v_nonempty_chunks
+  FROM jsonb_array_elements(p_chunks) elem
+  WHERE coalesce(btrim(coalesce(elem->>'content', '')), '') <> '';
+
+  IF coalesce(v_nonempty_chunks, 0) = 0 THEN
+    RETURN jsonb_build_object('status', 'error', 'error', 'empty_chunks');
+  END IF;
+
+  IF p_doc ? 'content_markdown' THEN
+    v_content_markdown := nullif(p_doc->>'content_markdown', '');
+    -- Match lib/document-chunking.ts documentContentHash (CRLF → LF, then trim).
+    v_normalized_md := regexp_replace(coalesce(v_content_markdown, ''), E'\\r\\n', E'\\n', 'g');
+    v_normalized_md := regexp_replace(v_normalized_md, '^[[:space:]]+|[[:space:]]+$', '', 'g');
+    IF v_normalized_md <> '' THEN
+      v_computed_hash := encode(digest(v_normalized_md, 'sha256'), 'hex');
+      IF v_content_hash IS NOT NULL AND v_content_hash <> v_computed_hash THEN
+        RETURN jsonb_build_object('status', 'error', 'error', 'content_hash_mismatch');
+      END IF;
+      IF v_content_hash IS NULL THEN
+        v_content_hash := v_computed_hash;
+      END IF;
+    END IF;
+  END IF;
+
+  IF p_doc ? 'content_markdown' AND coalesce(btrim(coalesce(v_content_markdown, '')), '') <> '' THEN
+    v_ingest_status := 'converted';
+  ELSIF p_doc ? 'ingest_status' THEN
+    v_ingest_status := coalesce(nullif(btrim(p_doc->>'ingest_status'), ''), 'pending');
+  ELSE
+    v_ingest_status := NULL;
+  END IF;
 
   IF v_target = 'sak' THEN
     IF v_issue_id IS NULL THEN
@@ -131,7 +178,7 @@ BEGIN
       RETURN jsonb_build_object(
         'status', 'unchanged',
         'document_id', v_document_id,
-        'chunks', v_chunk_count
+        'chunks', v_nonempty_chunks
       );
     END IF;
 
@@ -155,69 +202,93 @@ BEGIN
     VALUES (
       v_issue_id,
       v_document_id,
-      coalesce(nullif(btrim(coalesce(p_doc->>'title', '')), ''), 'Dokument'),
-      coalesce(
-        nullif(btrim(coalesce(p_doc->>'document_kind', p_doc->>'document_type', '')), ''),
-        'unknown'
-      ),
+      nullif(btrim(coalesce(p_doc->>'title', '')), ''),
+      nullif(btrim(coalesce(p_doc->>'document_kind', p_doc->>'document_type', '')), ''),
       nullif(btrim(coalesce(p_doc->>'source_url', '')), ''),
       v_content_hash,
       v_content_markdown,
       nullif(btrim(coalesce(p_doc->>'markdown_source', '')), ''),
-      (p_doc->>'page_count')::int,
+      CASE WHEN p_doc ? 'page_count' THEN (p_doc->>'page_count')::int ELSE NULL END,
       nullif(btrim(coalesce(p_doc->>'ingest_version', '')), ''),
       nullif(btrim(coalesce(p_doc->>'chunker', '')), ''),
       nullif(btrim(coalesce(p_doc->>'pdf_url', '')), ''),
-      v_ingest_status,
+      coalesce(v_ingest_status, 'pending'),
       'pending',
       coalesce((p_doc->>'fetched_at')::timestamptz, now())
     )
     ON CONFLICT (issue_id, document_id) DO UPDATE SET
-      title = EXCLUDED.title,
-      document_type = EXCLUDED.document_type,
-      source_url = coalesce(EXCLUDED.source_url, public.stortinget_issue_documents.source_url),
-      content_hash = coalesce(EXCLUDED.content_hash, public.stortinget_issue_documents.content_hash),
-      content_markdown = EXCLUDED.content_markdown,
-      markdown_source = EXCLUDED.markdown_source,
-      page_count = EXCLUDED.page_count,
-      ingest_version = EXCLUDED.ingest_version,
-      chunker = EXCLUDED.chunker,
-      pdf_url = EXCLUDED.pdf_url,
-      ingest_status = EXCLUDED.ingest_status,
+      title = CASE WHEN p_doc ? 'title' THEN nullif(btrim(p_doc->>'title'), '') ELSE public.stortinget_issue_documents.title END,
+      document_type = CASE
+        WHEN p_doc ? 'document_kind' OR p_doc ? 'document_type'
+          THEN nullif(btrim(coalesce(p_doc->>'document_kind', p_doc->>'document_type', '')), '')
+        ELSE public.stortinget_issue_documents.document_type
+      END,
+      source_url = CASE WHEN p_doc ? 'source_url' THEN nullif(btrim(p_doc->>'source_url'), '') ELSE public.stortinget_issue_documents.source_url END,
+      content_hash = coalesce(v_content_hash, public.stortinget_issue_documents.content_hash),
+      content_markdown = CASE WHEN p_doc ? 'content_markdown' THEN v_content_markdown ELSE public.stortinget_issue_documents.content_markdown END,
+      markdown_source = CASE WHEN p_doc ? 'markdown_source' THEN nullif(btrim(p_doc->>'markdown_source'), '') ELSE public.stortinget_issue_documents.markdown_source END,
+      page_count = CASE WHEN p_doc ? 'page_count' THEN (p_doc->>'page_count')::int ELSE public.stortinget_issue_documents.page_count END,
+      ingest_version = CASE WHEN p_doc ? 'ingest_version' THEN nullif(btrim(p_doc->>'ingest_version'), '') ELSE public.stortinget_issue_documents.ingest_version END,
+      chunker = CASE WHEN p_doc ? 'chunker' THEN nullif(btrim(p_doc->>'chunker'), '') ELSE public.stortinget_issue_documents.chunker END,
+      pdf_url = CASE WHEN p_doc ? 'pdf_url' THEN nullif(btrim(p_doc->>'pdf_url'), '') ELSE public.stortinget_issue_documents.pdf_url END,
+      ingest_status = coalesce(v_ingest_status, public.stortinget_issue_documents.ingest_status),
       chunks_status = 'pending',
-      fetched_at = EXCLUDED.fetched_at;
-
-    DELETE FROM public.document_chunks c
-    WHERE c.issue_id = v_issue_id
-      AND c.document_id = v_document_id;
+      fetched_at = CASE WHEN p_doc ? 'fetched_at' THEN (p_doc->>'fetched_at')::timestamptz ELSE public.stortinget_issue_documents.fetched_at END;
 
     FOR v_chunk IN SELECT value FROM jsonb_array_elements(p_chunks)
     LOOP
-      v_idx := coalesce((v_chunk->>'chunk_index')::int, v_inserted);
+      v_content := coalesce(v_chunk->>'content', '');
+      IF coalesce(btrim(v_content), '') = '' THEN
+        CONTINUE;
+      END IF;
+
+      IF NOT (v_chunk ? 'chunk_index') THEN
+        RETURN jsonb_build_object('status', 'error', 'error', 'missing_chunk_index');
+      END IF;
+
+      v_raw := nullif(btrim(v_chunk->>'chunk_index'), '');
+      IF v_raw IS NULL OR v_raw !~ '^-?\d+$' THEN
+        RETURN jsonb_build_object('status', 'error', 'error', 'invalid_chunk_index');
+      END IF;
+      v_idx := v_raw::int;
+      IF v_idx < 0 THEN
+        RETURN jsonb_build_object('status', 'error', 'error', 'invalid_chunk_index');
+      END IF;
+
       v_meta := coalesce(v_chunk->'metadata', '{}'::jsonb);
 
-      v_heading_path := nullif(
-        btrim(coalesce(v_meta->>'heading_path', v_chunk->>'heading_path', '')),
-        ''
-      );
-      v_section_title := nullif(
-        btrim(coalesce(v_meta->>'section_title', v_chunk->>'section_title', v_heading_path, '')),
-        ''
-      );
+      v_heading_path := nullif(btrim(coalesce(v_meta->>'heading_path', v_chunk->>'heading_path', '')), '');
+      v_section_title := nullif(btrim(coalesce(v_meta->>'section_title', v_chunk->>'section_title', v_heading_path, '')), '');
 
-      v_page_start := coalesce(
-        nullif(v_meta->>'page_start', '')::int,
-        nullif(v_chunk->>'page_start', '')::int
-      );
-      v_page_end := coalesce(
-        nullif(v_meta->>'page_end', '')::int,
-        nullif(v_chunk->>'page_end', '')::int
-      );
-      v_page := coalesce(
-        nullif(v_meta->>'page', '')::int,
-        nullif(v_chunk->>'page', '')::int,
-        v_page_start
-      );
+      v_page_start := NULL;
+      v_page_end := NULL;
+      v_page := NULL;
+
+      IF v_chunk ? 'page_start' OR (v_meta ? 'page_start') THEN
+        v_raw := nullif(btrim(coalesce(v_meta->>'page_start', v_chunk->>'page_start', '')), '');
+        IF v_raw IS NOT NULL AND v_raw !~ '^-?\d+$' THEN
+          RETURN jsonb_build_object('status', 'error', 'error', 'invalid_page_start');
+        END IF;
+        IF v_raw IS NOT NULL THEN v_page_start := v_raw::int; END IF;
+      END IF;
+
+      IF v_chunk ? 'page_end' OR (v_meta ? 'page_end') THEN
+        v_raw := nullif(btrim(coalesce(v_meta->>'page_end', v_chunk->>'page_end', '')), '');
+        IF v_raw IS NOT NULL AND v_raw !~ '^-?\d+$' THEN
+          RETURN jsonb_build_object('status', 'error', 'error', 'invalid_page_end');
+        END IF;
+        IF v_raw IS NOT NULL THEN v_page_end := v_raw::int; END IF;
+      END IF;
+
+      IF v_chunk ? 'page' OR (v_meta ? 'page') THEN
+        v_raw := nullif(btrim(coalesce(v_meta->>'page', v_chunk->>'page', '')), '');
+        IF v_raw IS NOT NULL AND v_raw !~ '^-?\d+$' THEN
+          RETURN jsonb_build_object('status', 'error', 'error', 'invalid_page');
+        END IF;
+        IF v_raw IS NOT NULL THEN v_page := v_raw::int; END IF;
+      END IF;
+
+      v_page := coalesce(v_page, v_page_start);
 
       v_meta := v_meta
         || jsonb_strip_nulls(jsonb_build_object(
@@ -244,13 +315,44 @@ BEGIN
         v_issue_id,
         v_document_id,
         v_idx,
-        coalesce(v_chunk->>'content', ''),
+        v_content,
         'pending',
         'pending',
         v_meta
-      );
+      )
+      ON CONFLICT (issue_id, document_id, chunk_index) DO UPDATE SET
+        content = EXCLUDED.content,
+        metadata = EXCLUDED.metadata,
+        embedding_status = CASE
+          WHEN public.document_chunks.content IS DISTINCT FROM EXCLUDED.content THEN 'pending'
+          ELSE public.document_chunks.embedding_status
+        END,
+        embedding = CASE
+          WHEN public.document_chunks.content IS DISTINCT FROM EXCLUDED.content THEN NULL
+          ELSE public.document_chunks.embedding
+        END,
+        embedding_v2 = CASE
+          WHEN public.document_chunks.content IS DISTINCT FROM EXCLUDED.content THEN NULL
+          ELSE public.document_chunks.embedding_v2
+        END,
+        embedding_v2_status = CASE
+          WHEN public.document_chunks.content IS DISTINCT FROM EXCLUDED.content THEN 'pending'
+          ELSE public.document_chunks.embedding_v2_status
+        END,
+        embedding_v2_attempts = CASE
+          WHEN public.document_chunks.content IS DISTINCT FROM EXCLUDED.content THEN 0
+          ELSE public.document_chunks.embedding_v2_attempts
+        END;
+
+      v_kept := array_append(v_kept, v_idx);
       v_inserted := v_inserted + 1;
     END LOOP;
+
+    DELETE FROM public.document_chunks c
+    WHERE c.issue_id = v_issue_id
+      AND c.document_id = v_document_id
+      AND c.hearing_document_id IS NULL
+      AND NOT (c.chunk_index = ANY (v_kept));
 
     RETURN jsonb_build_object(
       'status', 'upserted',
@@ -259,7 +361,6 @@ BEGIN
     );
   END IF;
 
-  -- p_target = 'horing'
   IF v_hearing_id IS NULL THEN
     RETURN jsonb_build_object('status', 'error', 'error', 'missing_hearing_id');
   END IF;
@@ -285,7 +386,7 @@ BEGIN
     RETURN jsonb_build_object(
       'status', 'unchanged',
       'document_id', v_document_id,
-      'chunks', v_chunk_count
+      'chunks', v_nonempty_chunks
     );
   END IF;
 
@@ -310,68 +411,95 @@ BEGIN
   VALUES (
     v_hearing_id,
     v_document_id,
-    coalesce(nullif(btrim(coalesce(p_doc->>'title', '')), ''), 'Dokument'),
-    coalesce(nullif(btrim(coalesce(p_doc->>'document_kind', p_doc->>'kind', '')), ''), 'unknown'),
-    coalesce(nullif(btrim(coalesce(p_doc->>'document_kind', p_doc->>'kind', '')), ''), 'unknown'),
+    nullif(btrim(coalesce(p_doc->>'title', '')), ''),
+    nullif(btrim(coalesce(p_doc->>'document_kind', p_doc->>'kind', '')), ''),
+    nullif(btrim(coalesce(p_doc->>'document_kind', p_doc->>'kind', '')), ''),
     nullif(btrim(coalesce(p_doc->>'source_url', '')), ''),
     nullif(btrim(coalesce(p_doc->>'pdf_url', '')), ''),
     v_content_markdown,
     v_content_markdown,
     v_content_hash,
-    (p_doc->>'page_count')::int,
-    v_ingest_status,
+    CASE WHEN p_doc ? 'page_count' THEN (p_doc->>'page_count')::int ELSE NULL END,
+    coalesce(v_ingest_status, 'pending'),
     'pending',
     'converted',
     coalesce((p_doc->>'fetched_at')::timestamptz, now()),
     now()
   )
   ON CONFLICT (hearing_id, external_key) DO UPDATE SET
-    title = EXCLUDED.title,
-    kind = EXCLUDED.kind,
-    document_kind = EXCLUDED.document_kind,
-    source_url = coalesce(EXCLUDED.source_url, public.hearing_documents.source_url),
-    pdf_url = EXCLUDED.pdf_url,
-    markdown = EXCLUDED.markdown,
-    content_markdown = EXCLUDED.content_markdown,
-    content_hash = EXCLUDED.content_hash,
-    page_count = EXCLUDED.page_count,
-    ingest_status = EXCLUDED.ingest_status,
+    title = CASE WHEN p_doc ? 'title' THEN nullif(btrim(p_doc->>'title'), '') ELSE public.hearing_documents.title END,
+    kind = CASE WHEN p_doc ? 'document_kind' OR p_doc ? 'kind' THEN nullif(btrim(coalesce(p_doc->>'document_kind', p_doc->>'kind', '')), '') ELSE public.hearing_documents.kind END,
+    document_kind = CASE WHEN p_doc ? 'document_kind' OR p_doc ? 'kind' THEN nullif(btrim(coalesce(p_doc->>'document_kind', p_doc->>'kind', '')), '') ELSE public.hearing_documents.document_kind END,
+    source_url = CASE WHEN p_doc ? 'source_url' THEN nullif(btrim(p_doc->>'source_url'), '') ELSE public.hearing_documents.source_url END,
+    pdf_url = CASE WHEN p_doc ? 'pdf_url' THEN nullif(btrim(p_doc->>'pdf_url'), '') ELSE public.hearing_documents.pdf_url END,
+    markdown = CASE WHEN p_doc ? 'content_markdown' THEN v_content_markdown ELSE public.hearing_documents.markdown END,
+    content_markdown = CASE WHEN p_doc ? 'content_markdown' THEN v_content_markdown ELSE public.hearing_documents.content_markdown END,
+    content_hash = coalesce(v_content_hash, public.hearing_documents.content_hash),
+    page_count = CASE WHEN p_doc ? 'page_count' THEN (p_doc->>'page_count')::int ELSE public.hearing_documents.page_count END,
+    ingest_status = coalesce(v_ingest_status, public.hearing_documents.ingest_status),
     chunks_status = 'pending',
     status = 'converted',
-    fetched_at = EXCLUDED.fetched_at,
+    fetched_at = CASE WHEN p_doc ? 'fetched_at' THEN (p_doc->>'fetched_at')::timestamptz ELSE public.hearing_documents.fetched_at END,
     updated_at = now()
   RETURNING id INTO v_hearing_doc_id;
 
-  DELETE FROM public.document_chunks c
-  WHERE c.hearing_document_id = v_hearing_doc_id;
+  v_kept := '{}';
+  v_inserted := 0;
 
   FOR v_chunk IN SELECT value FROM jsonb_array_elements(p_chunks)
   LOOP
-    v_idx := coalesce((v_chunk->>'chunk_index')::int, v_inserted);
+    v_content := coalesce(v_chunk->>'content', '');
+    IF coalesce(btrim(v_content), '') = '' THEN
+      CONTINUE;
+    END IF;
+
+    IF NOT (v_chunk ? 'chunk_index') THEN
+      RETURN jsonb_build_object('status', 'error', 'error', 'missing_chunk_index');
+    END IF;
+
+    v_raw := nullif(btrim(v_chunk->>'chunk_index'), '');
+    IF v_raw IS NULL OR v_raw !~ '^-?\d+$' THEN
+      RETURN jsonb_build_object('status', 'error', 'error', 'invalid_chunk_index');
+    END IF;
+    v_idx := v_raw::int;
+    IF v_idx < 0 THEN
+      RETURN jsonb_build_object('status', 'error', 'error', 'invalid_chunk_index');
+    END IF;
+
     v_meta := coalesce(v_chunk->'metadata', '{}'::jsonb);
 
-    v_heading_path := nullif(
-      btrim(coalesce(v_meta->>'heading_path', v_chunk->>'heading_path', '')),
-      ''
-    );
-    v_section_title := nullif(
-      btrim(coalesce(v_meta->>'section_title', v_chunk->>'section_title', v_heading_path, '')),
-      ''
-    );
+    v_heading_path := nullif(btrim(coalesce(v_meta->>'heading_path', v_chunk->>'heading_path', '')), '');
+    v_section_title := nullif(btrim(coalesce(v_meta->>'section_title', v_chunk->>'section_title', v_heading_path, '')), '');
 
-    v_page_start := coalesce(
-      nullif(v_meta->>'page_start', '')::int,
-      nullif(v_chunk->>'page_start', '')::int
-    );
-    v_page_end := coalesce(
-      nullif(v_meta->>'page_end', '')::int,
-      nullif(v_chunk->>'page_end', '')::int
-    );
-    v_page := coalesce(
-      nullif(v_meta->>'page', '')::int,
-      nullif(v_chunk->>'page', '')::int,
-      v_page_start
-    );
+    v_page_start := NULL;
+    v_page_end := NULL;
+    v_page := NULL;
+
+    IF v_chunk ? 'page_start' OR (v_meta ? 'page_start') THEN
+      v_raw := nullif(btrim(coalesce(v_meta->>'page_start', v_chunk->>'page_start', '')), '');
+      IF v_raw IS NOT NULL AND v_raw !~ '^-?\d+$' THEN
+        RETURN jsonb_build_object('status', 'error', 'error', 'invalid_page_start');
+      END IF;
+      IF v_raw IS NOT NULL THEN v_page_start := v_raw::int; END IF;
+    END IF;
+
+    IF v_chunk ? 'page_end' OR (v_meta ? 'page_end') THEN
+      v_raw := nullif(btrim(coalesce(v_meta->>'page_end', v_chunk->>'page_end', '')), '');
+      IF v_raw IS NOT NULL AND v_raw !~ '^-?\d+$' THEN
+        RETURN jsonb_build_object('status', 'error', 'error', 'invalid_page_end');
+      END IF;
+      IF v_raw IS NOT NULL THEN v_page_end := v_raw::int; END IF;
+    END IF;
+
+    IF v_chunk ? 'page' OR (v_meta ? 'page') THEN
+      v_raw := nullif(btrim(coalesce(v_meta->>'page', v_chunk->>'page', '')), '');
+      IF v_raw IS NOT NULL AND v_raw !~ '^-?\d+$' THEN
+        RETURN jsonb_build_object('status', 'error', 'error', 'invalid_page');
+      END IF;
+      IF v_raw IS NOT NULL THEN v_page := v_raw::int; END IF;
+    END IF;
+
+    v_page := coalesce(v_page, v_page_start);
 
     v_meta := v_meta
       || jsonb_strip_nulls(jsonb_build_object(
@@ -400,16 +528,45 @@ BEGIN
     VALUES (
       v_hearing_id,
       v_hearing_doc_id,
-      v_issue_id,
+      NULL,
       v_document_id,
       v_idx,
-      coalesce(v_chunk->>'content', ''),
+      v_content,
       'pending',
       'pending',
       v_meta
-    );
+    )
+    ON CONFLICT (hearing_document_id, chunk_index) DO UPDATE SET
+      content = EXCLUDED.content,
+      metadata = EXCLUDED.metadata,
+      embedding_status = CASE
+        WHEN public.document_chunks.content IS DISTINCT FROM EXCLUDED.content THEN 'pending'
+        ELSE public.document_chunks.embedding_status
+      END,
+      embedding = CASE
+        WHEN public.document_chunks.content IS DISTINCT FROM EXCLUDED.content THEN NULL
+        ELSE public.document_chunks.embedding
+      END,
+      embedding_v2 = CASE
+        WHEN public.document_chunks.content IS DISTINCT FROM EXCLUDED.content THEN NULL
+        ELSE public.document_chunks.embedding_v2
+      END,
+      embedding_v2_status = CASE
+        WHEN public.document_chunks.content IS DISTINCT FROM EXCLUDED.content THEN 'pending'
+        ELSE public.document_chunks.embedding_v2_status
+      END,
+      embedding_v2_attempts = CASE
+        WHEN public.document_chunks.content IS DISTINCT FROM EXCLUDED.content THEN 0
+        ELSE public.document_chunks.embedding_v2_attempts
+      END;
+
+    v_kept := array_append(v_kept, v_idx);
     v_inserted := v_inserted + 1;
   END LOOP;
+
+  DELETE FROM public.document_chunks c
+  WHERE c.hearing_document_id = v_hearing_doc_id
+    AND NOT (c.chunk_index = ANY (v_kept));
 
   RETURN jsonb_build_object(
     'status', 'upserted',
@@ -436,7 +593,7 @@ RETURNS TABLE (
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
   SELECT c.id, c.content
   FROM public.document_chunks c
@@ -457,12 +614,17 @@ AS $$
 $$;
 
 DROP FUNCTION IF EXISTS public.save_embeddings_v2(jsonb, text);
+DROP FUNCTION IF EXISTS public.save_embeddings_v2(jsonb, text, boolean);
 
-CREATE OR REPLACE FUNCTION public.save_embeddings_v2(p_rows jsonb, p_model text)
+CREATE OR REPLACE FUNCTION public.save_embeddings_v2(
+  p_rows jsonb,
+  p_model text,
+  p_force boolean DEFAULT false
+)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_row jsonb;
@@ -471,16 +633,31 @@ DECLARE
   v_dims int;
   v_saved int := 0;
   v_failed int := 0;
+  v_skipped int := 0;
 BEGIN
   IF p_rows IS NULL OR jsonb_typeof(p_rows) <> 'array' THEN
-    RAISE EXCEPTION 'p_rows must be a jsonb array';
+    RETURN jsonb_build_object('saved', 0, 'failed', 0, 'skipped', 0, 'error', 'rows_must_be_array');
   END IF;
 
   FOR v_row IN SELECT value FROM jsonb_array_elements(p_rows)
   LOOP
-    v_id := (v_row->>'id')::uuid;
+    BEGIN
+      v_id := (v_row->>'id')::uuid;
+    EXCEPTION
+      WHEN OTHERS THEN
+        v_failed := v_failed + 1;
+        CONTINUE;
+    END;
+
     IF v_id IS NULL THEN
       v_failed := v_failed + 1;
+      CONTINUE;
+    END IF;
+
+    IF NOT p_force AND EXISTS (
+      SELECT 1 FROM public.document_chunks c WHERE c.id = v_id AND c.embedding_v2 IS NOT NULL
+    ) THEN
+      v_skipped := v_skipped + 1;
       CONTINUE;
     END IF;
 
@@ -520,7 +697,8 @@ BEGIN
       embedding_v2_model = nullif(btrim(coalesce(p_model, '')), ''),
       embedding_v2_at = now(),
       embedding_v2_status = 'ready'
-    WHERE c.id = v_id;
+    WHERE c.id = v_id
+      AND (p_force OR c.embedding_v2 IS NULL);
 
     IF FOUND THEN
       v_saved := v_saved + 1;
@@ -529,7 +707,7 @@ BEGIN
     END IF;
   END LOOP;
 
-  RETURN jsonb_build_object('saved', v_saved, 'failed', v_failed);
+  RETURN jsonb_build_object('saved', v_saved, 'failed', v_failed, 'skipped', v_skipped);
 END;
 $$;
 
@@ -553,7 +731,7 @@ RETURNS TABLE (
 LANGUAGE sql
 STABLE
 SECURITY INVOKER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
   SELECT
     dc.id,
@@ -570,6 +748,7 @@ AS $$
       filter_issue_ids IS NULL
       OR cardinality(filter_issue_ids) = 0
       OR dc.issue_id = ANY (filter_issue_ids)
+      OR dc.metadata->>'issue_id' = ANY (filter_issue_ids)
     )
     AND (
       nullif(btrim(coalesce(filter_hearing_id, '')), '') IS NULL
@@ -581,12 +760,12 @@ $$;
 
 REVOKE ALL ON FUNCTION public.n8n_upsert_docling_document(text, jsonb, jsonb) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.list_chunks_missing_v2(int, text, text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.save_embeddings_v2(jsonb, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.save_embeddings_v2(jsonb, text, boolean) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.match_document_chunks_v2(vector, int, text[], text) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.n8n_upsert_docling_document(text, jsonb, jsonb) TO service_role;
 GRANT EXECUTE ON FUNCTION public.list_chunks_missing_v2(int, text, text) TO service_role;
-GRANT EXECUTE ON FUNCTION public.save_embeddings_v2(jsonb, text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.save_embeddings_v2(jsonb, text, boolean) TO service_role;
 GRANT EXECUTE ON FUNCTION public.match_document_chunks_v2(vector, int, text[], text) TO service_role;
 
 NOTIFY pgrst, 'reload schema';

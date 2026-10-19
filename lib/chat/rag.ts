@@ -440,6 +440,7 @@ async function searchChunksLexical(
     .from('document_chunks')
     .select(CHUNK_COLUMNS)
     .eq('issue_id', issueId)
+    .is('hearing_document_id', null)
     .order('chunk_index', { ascending: true })
     .limit(40);
 
@@ -531,6 +532,7 @@ async function loadChunkProvenance(
     .from('document_chunks')
     .select('document_id, metadata')
     .in('document_id', ids)
+    .is('hearing_document_id', null)
     .limit(ids.length * 12);
 
   if (error || !Array.isArray(data)) return map;

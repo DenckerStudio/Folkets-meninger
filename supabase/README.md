@@ -486,12 +486,16 @@ trimmed detail context instead of the full JSON blob.
 (`match_issue_document_chunks`). Moving chunk *blobs* into n8n would break
 similarity search.
 
-**Docling ingest (20261019220000):** n8n calls `n8n_upsert_docling_document` with
-markdown + pre-chunked rows (`md-sections-v1`). Does not clear `content_full_text` /
-`content_html`. Sets `ingest_status = converted` when markdown is non-empty. Hearing
-chunks may set optional `issue_id`. **embedding_v2 backfill:** `list_chunks_missing_v2`,
-`save_embeddings_v2` → `{saved, failed}`; poison rows marked via `embedding_v2_status` /
-`embedding_v2_attempts`. Eval: `match_document_chunks_v2` (service_role only).
+**Docling ingest (20261019220000):** Requires `stortinget_hearings` (#178) and
+`document_chunks.embedding_v2` (#179) — fails at migration start with a clear message if
+missing. n8n calls `n8n_upsert_docling_document` with markdown + pre-chunked rows
+(`md-sections-v1`). Empty `p_chunks` → error (no wipe). Omitted doc fields are preserved.
+`content_hash` = `documentContentHash` in `lib/document-chunking.ts`. Hearing chunks keep
+`issue_id` NULL; sak link lives in `metadata`. Re-ingest keeps legacy embeddings until
+chunk text changes. **embedding_v2 backfill:** `list_chunks_missing_v2`,
+`save_embeddings_v2(rows, model, force?)` → `{saved, failed, skipped}`; poison rows via
+`embedding_v2_status` / `embedding_v2_attempts`. Eval: `match_document_chunks_v2`
+(service_role only).
 
 If the DB hits `exceed_db_size_quota`, reclaim with:
 
