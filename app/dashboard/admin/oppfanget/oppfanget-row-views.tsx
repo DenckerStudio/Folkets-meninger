@@ -173,8 +173,8 @@ function TitleCell({
         <span
           title={row.title}
           className={cn(
-            'min-w-0 font-medium text-foreground break-words hyphens-auto',
-            desktopTable ? 'line-clamp-2' : 'line-clamp-3',
+            'min-w-0 font-medium text-foreground',
+            desktopTable ? 'line-clamp-2 break-normal hyphens-auto' : 'line-clamp-3 break-words',
           )}
         >
           {row.title}
