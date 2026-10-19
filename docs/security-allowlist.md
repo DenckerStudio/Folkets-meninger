@@ -3,6 +3,15 @@
 Kilde for låsing: `supabase/migrations/20261018150000_security_lockdown_prod_safe.sql`.  
 Oppdater denne filen og migrasjonen sammen når nye `rpc` / tabell-skriv legges til.
 
+## Nye migrasjoner (etter lockdown)
+
+`security-lockdown-defaults.sql` + migrasjon `150000` fjerner default `GRANT` til `anon` /
+`authenticated` på nye objekter i `public`. **Hver ny migrasjon** som oppretter tabeller eller
+RPC-er i `public` må inkludere eksplisitte `GRANT` som matcher RLS (minst privilegium) og
+`GRANT EXECUTE` på RPC-er klienten kaller via PostgREST. Ikke gi `anon` tilgang til
+`payload`-skjemaet (Payload bruker egen DB-rolle). CI `migration-sql-lint` advarer når
+`CREATE TABLE` / `CREATE FUNCTION` i `public` mangler matchende `GRANT` i samme fil.
+
 Generer hint fra kode: `node scripts/build-security-allowlist.mjs` (heuristikk — ikke autoritativ).
 
 ## RPC `EXECUTE` — `anon`

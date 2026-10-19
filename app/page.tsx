@@ -6,6 +6,8 @@ import { LandingPopularIssuesLazy } from '@/components/landing-popular-issues-la
 import { LandingSectionContainer } from '@/components/landing-section-container';
 import CallToAction from '@/components/ui/call-to-action';
 import { routes } from '@/lib/routes';
+import { JsonLd } from '@/components/blog/json-ld';
+import { siteOrganizationJsonLd, siteWebSiteJsonLd } from '@/lib/blog/json-ld';
 import { homepageMetadata } from '@/lib/seo/metadata';
 
 export const metadata = homepageMetadata();
@@ -13,6 +15,7 @@ export const metadata = homepageMetadata();
 export default function LandingPage() {
   return (
     <LandingExperience>
+      <JsonLd data={[siteOrganizationJsonLd(), siteWebSiteJsonLd()]} />
       <div className="bg-background pb-8">
         <HeroSection />
         <div data-landing-section>
