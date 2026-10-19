@@ -13,9 +13,10 @@ assert.match(
   'assert_rpc_caller_is_user must allow service_role and bind JWT callers',
 );
 
+assert.match(migration, /DROP FUNCTION IF EXISTS public\.cast_prompt_vote/);
+assert.match(migration, /DROP FUNCTION IF EXISTS public\.suggest_trusted_news_source/);
+
 for (const fn of [
-  'cast_prompt_vote',
-  'suggest_trusted_news_source',
   'promote_citizen_initiative_to_poll',
   'get_user_stance_on_issue',
   'user_has_political_consent',
