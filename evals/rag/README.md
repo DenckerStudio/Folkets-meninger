@@ -23,9 +23,18 @@ Results land in `evals/rag/results/summary.md` and JSON per run.
 Generation/judge is not run in CI/cloud by default. After saving answers JSON:
 
 ```bash
+# 1) Generate stub answers from retrieval excerpts (no external LLM)
+RAG_EVAL_LABEL=round3-rerank-reject npm run eval:rag:answers
+# → evals/rag/results/round3-rerank-reject-answers.json
+
+# 2) Faithfulness judge (LAN Ollama gemma4:26b)
 JUDGE_URL=http://192.168.50.154:11434 JUDGE_MODEL=gemma4:26b \
-  npm run eval:rag:judge -- evals/rag/results/stack-answers.json
+  npm run eval:rag:judge -- evals/rag/results/round3-rerank-reject-answers.json
+# → evals/rag/results/round3-rerank-reject-answers.judged.json
+# → evals/rag/results/round3-rerank-reject-answers-judged-summary.json
 ```
+
+Improvement rounds table: `npm run eval:rag:rounds` → `evals/rag/results/improvement-rounds.md`.
 
 ## Environment
 
