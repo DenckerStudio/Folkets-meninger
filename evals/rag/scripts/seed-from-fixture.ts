@@ -155,7 +155,19 @@ export async function seedFromFixture(pool: pg.Pool, variant: EvalVariant): Prom
           JSON.stringify(h.hearing),
         ],
       );
-      for (const doc of h.documents) {
+      const hearingDocs =
+        h.documents.length > 0
+          ? h.documents
+          : [
+              {
+                externalKey: 'synthetic:overview',
+                title: String((h.hearing.tittel as string) ?? 'Høring'),
+                kind: 'horingsoversikt',
+                sourceUrl: null,
+                markdown: `# ${String((h.hearing.tittel as string) ?? 'Høring')}\n\nStatsbudsjettet 2027. Innspill etterspørres.`,
+              },
+            ];
+      for (const doc of hearingDocs) {
         documentCount += 1;
         const docId = `hearing-${h.id}-${doc.externalKey}`;
         const hash = documentContentHash(doc.markdown);

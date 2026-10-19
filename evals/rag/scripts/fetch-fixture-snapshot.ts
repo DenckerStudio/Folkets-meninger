@@ -1,7 +1,7 @@
 /**
  * Fetch Stortinget corpus once (retry on 429) → evals/rag/fixtures/corpus-snapshot.json
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseSakDocuments } from '@/lib/stortinget-documents';
 import { fetchPublikasjonHtml } from '@/lib/stortinget-publikasjon';
@@ -136,7 +136,30 @@ async function main(): Promise<void> {
       });
       await new Promise((r) => setTimeout(r, 400));
     }
-    if (documents.length === 0) continue;
+    if (documents.length === 0) {
+      const fallbackBody = [
+        String(sak.innstillingstekst ?? ''),
+        String(sak.kortvedtak ?? ''),
+        String(sak.korttittel ?? ''),
+        String(sak.henvisning ?? ''),
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+        .trim();
+      if (fallbackBody.length < 80) {
+        console.warn(`[fixture] skip issue ${id} — no publication and thin sak text`);
+        continue;
+      }
+      documents.push({
+        documentId: `synthetic:${id}`,
+        title: String(sak.korttittel ?? `Sak ${id}`),
+        kind: 'synthetic_sak_text',
+        sourceUrl: null,
+        exportId: null,
+        body: fallbackBody.slice(0, cfg.maxPublicationChars),
+      });
+      console.log(`[fixture] issue ${id} synthetic doc (${fallbackBody.length} chars)`);
+    }
     issues.push({ id, sak, documents });
     console.log(`[fixture] issue ${id} docs=${documents.length}`);
   }
@@ -186,8 +209,32 @@ async function main(): Promise<void> {
         markdown: markdown.slice(0, cfg.maxPublicationChars),
       });
     }
+    if (documents.length === 0) {
+      const sak = hearing.horing_sak_info_liste?.[0];
+      const title = sak?.sak_korttittel?.trim() || sak?.sak_tittel?.trim() || hearing.tittel || 'Høring';
+      documents.push({
+        externalKey: 'synthetic:overview',
+        title: title ?? 'Høring',
+        kind: 'horingsoversikt',
+        sourceUrl: null,
+        markdown: `# ${title}\n\nStatsbudsjettet 2027. Innspill etterspørres.`,
+      });
+    }
     hearings.push({ id: hearingId, hearing: hearing as Record<string, unknown>, documents });
     console.log(`[fixture] hearing ${hearingId} docs=${documents.length}`);
+  }
+
+  const stubPath = join(root, 'evals/rag/fixtures/unavailable-sak-stubs.json');
+  if (existsSync(stubPath)) {
+    const stubs = JSON.parse(readFileSync(stubPath, 'utf8')) as FixtureIssue[];
+    const have = new Set(issues.map((i) => i.id));
+    for (const stub of stubs) {
+      if (!have.has(stub.id)) {
+        issues.push(stub);
+        have.add(stub.id);
+        console.log(`[fixture] merged API-unavailable stub ${stub.id}`);
+      }
+    }
   }
 
   const snapshot: CorpusSnapshot = {

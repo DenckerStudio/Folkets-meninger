@@ -14,6 +14,7 @@ const IMPROVEMENT_MIGRATIONS = [
   '20261019230000_rag_issue_search_sak_aggregate.sql',
   '20261019231000_rag_hybrid_prefix_trgm.sql',
   '20261019232000_rag_unaccent_short_title_tsv.sql',
+  '20261019233000_rag_issue_search_ilike_boost.sql',
 ];
 
 function parseArgs(): { variant: Variant; database: string } {

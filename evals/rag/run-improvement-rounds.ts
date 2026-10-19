@@ -21,6 +21,14 @@ const ROUNDS: Round[] = [
       RAG_RERANKER_ENABLED: '1',
     },
   },
+  {
+    label: 'round4-issue-ilike',
+    improvementLevel: '4',
+    extraEnv: {
+      RAG_EVAL_RUN: 'stack',
+      RAG_RERANKER_ENABLED: '1',
+    },
+  },
 ];
 
 function loadThreshold(): string | undefined {
@@ -53,7 +61,7 @@ function runRound(round: Round): void {
     env.RAG_EVAL_IMPROVEMENT_ONLY = '1';
     delete env.RAG_EVAL_RESET_DB;
   }
-  if (round.label === 'round3-rerank-reject') {
+  if (round.label === 'round3-rerank-reject' || round.label === 'round4-issue-ilike') {
     try {
       execSync('npx tsx evals/rag/scripts/calibrate-rejection.ts', { stdio: 'inherit', env });
     } catch {
@@ -90,7 +98,14 @@ function main(): void {
   for (const round of ROUNDS) {
     console.log(`\n[rounds] === ${round.label} ===\n`);
     runRound(round);
-    const result = JSON.parse(readFileSync(join(outDir, `${round.label}.json`), 'utf8')) as Record<string, number>;
+    const result = JSON.parse(readFileSync(join(outDir, `${round.label}.json`), 'utf8')) as Record<
+      string,
+      number | Record<string, unknown>
+    >;
+    const seed = (result.seedCounts ?? {}) as Record<string, number>;
+    const seedIssues = seed.issues ?? seed.issueCount ?? '—';
+    const seedDocs = seed.documents ?? '—';
+    const seedChunks = seed.chunks ?? '—';
     const reject =
       result.finnesIkkeCorrectRejectionRate !== undefined
         ? (Number(result.finnesIkkeCorrectRejectionRate) * 100).toFixed(1)
@@ -99,12 +114,12 @@ function main(): void {
     const byokOffP95 = Number(result.byokEmbedOffMsP95 ?? 0).toFixed(0);
     const byokOnP95 = Number(result.byokEmbedOnMsP95 ?? 0).toFixed(0);
     table.push(
-      `| ${round.label} | ${(Number(result.recallAt5) * 100).toFixed(1)}% | ${Number(result.mrr).toFixed(3)} | ${(Number(result.prefixHitRate) * 100).toFixed(1)}% | ${reject}% | ${(Number(result.issueSearchHitRate) * 100).toFixed(1)}% | ${Number(result.latencyMsP95).toFixed(0)} | ${centralP95} | ${byokOffP95} | ${byokOnP95} |`,
+      `| ${round.label} | ${seedIssues} | ${seedDocs} | ${seedChunks} | ${(Number(result.recallAt5) * 100).toFixed(1)}% | ${Number(result.mrr).toFixed(3)} | ${(Number(result.prefixHitRate) * 100).toFixed(1)}% | ${reject}% | ${(Number(result.issueSearchHitRate) * 100).toFixed(1)}% | ${Number(result.latencyMsP95).toFixed(0)} | ${centralP95} | ${byokOffP95} | ${byokOnP95} |`,
     );
   }
   const md = [
-    '| Round | R@5 | MRR | Prefix | Finnes-ikke reject | Issue search | Retrieval p95 | Central embed p95 | BYOK p95 @800ms | BYOK p95 @3s |',
-    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+    '| Round | Seed issues | Seed docs | Seed chunks | R@5 | MRR | Prefix | Finnes-ikke reject | Issue search | Retrieval p95 | Central embed p95 | BYOK p95 @800ms | BYOK p95 @3s |',
+    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
     ...table,
   ].join('\n');
   writeFileSync(join(outDir, 'improvement-rounds.md'), `${md}\n`);

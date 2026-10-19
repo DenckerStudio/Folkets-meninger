@@ -21,6 +21,7 @@
     "eval:rag:analyze": "npx tsx evals/rag/scripts/analyze-eval-failures.ts",
     "eval:rag": "npx tsx evals/rag/run-eval.ts",
     "eval:rag:rounds": "npx tsx evals/rag/run-improvement-rounds.ts",
+    "eval:rag:hillclimb": "npx tsx evals/rag/run-continuous-hillclimb.ts",
     "eval:rag:judge": "npx tsx evals/rag/judge.ts",
     "eval:rag:answers": "npx tsx evals/rag/export-answers.ts",
     "eval:rag:calibrate": "npx tsx evals/rag/scripts/calibrate-rejection.ts"
