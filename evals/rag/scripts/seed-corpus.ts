@@ -72,6 +72,14 @@ async function fetchHoringsprogramJson(hearingId: string): Promise<StortingetHor
 
 async function main(): Promise<void> {
   const variant = (process.env.RAG_EVAL_VARIANT ?? process.argv[2] ?? 'stack') as EvalVariant;
+  if (process.env.RAG_EVAL_DATASET === 'v2') {
+    const { createPool, databaseForVariant } = await import('../lib/db');
+    const { seedCorpusV2 } = await import('./seed-corpus-v2');
+    const pool = createPool(databaseForVariant(variant));
+    await seedCorpusV2(pool, variant);
+    await pool.end();
+    return;
+  }
   const fixturePath = join(process.cwd(), 'evals/rag/fixtures/corpus-snapshot.json');
   if (process.env.RAG_EVAL_LIVE_FETCH !== '1' && existsSync(fixturePath)) {
     const pool = createPool(databaseForVariant(variant));

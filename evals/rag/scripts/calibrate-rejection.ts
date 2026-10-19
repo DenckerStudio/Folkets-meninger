@@ -48,8 +48,11 @@ async function topScore(pool: ReturnType<typeof createPool>, q: DevQ): Promise<n
 }
 
 async function main(): Promise<void> {
-  const path = join(process.cwd(), 'evals/rag/questions-dev.json');
-  const questions = JSON.parse(readFileSync(path, 'utf8')) as DevQ[];
+  const path =
+    process.env.RAG_EVAL_DATASET === 'v2'
+      ? join(process.cwd(), 'evals/rag/datasets/v2/questions-v2-dev.json')
+      : join(process.cwd(), 'evals/rag/questions-dev.json');
+  const questions = (JSON.parse(readFileSync(path, 'utf8')) as DevQ[]).filter((q) => q.kind === 'finnes_ikke' || q.kind === 'sak_chunk');
   const pool = createPool(databaseForVariant('stack'));
   const positives = questions.filter((q) => q.kind !== 'finnes_ikke');
   const negatives = questions.filter((q) => q.kind === 'finnes_ikke');

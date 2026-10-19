@@ -1,0 +1,1325 @@
+{
+  "generatedAt": "2026-10-19",
+  "source": "data.stortinget.no",
+  "sessionId": "2025-2026",
+  "rawExports": {
+    "saker": "https://data.stortinget.no/eksport/saker?sesjonid=2025-2026&format=json",
+    "horinger": "https://data.stortinget.no/eksport/horinger?sesjonid=2025-2026&format=json",
+    "voteringer": "https://data.stortinget.no/eksport/voteringer?sakid=<id>&format=json",
+    "voteringsresultat": "https://data.stortinget.no/eksport/voteringsresultat?voteringid=<id>&format=json",
+    "finnesIkkeCheckedAgainst": [
+      "saker 2025-2026",
+      "saker 2026-2027",
+      "horinger 2025-2026",
+      "horinger 2026-2027"
+    ]
+  },
+  "corpusCounts": {
+    "saker2025_2026": 662,
+    "horinger2025_2026": 351,
+    "saker2026_2027": 192,
+    "horinger2026_2027": 64
+  },
+  "issues": [
+    {
+      "id": "99386",
+      "tittel": "Grunnlovsframlegg frå Sveinung Rotevatn, Åse Kristin Ask Bakke, Liv Kari Eskeland, Sigbjørn Gjelsvik, Ingrid Fiskaa, Sofie Marhaug, Lan Marie Nguyen Berg og Kjell Ingolf Ropstad om ny § 120 b (om norsk som nasjonalt hovudspråk)",
+      "henvisning": "Dokument 12:4 (2023-2024)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "99388",
+      "tittel": "Grunnlovsforslag fra Kathy Lie og Grete Wold om ny § 107 (om fri vitenskapelig forskning)",
+      "henvisning": "Dokument 12:5 (2023-2024)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "100009",
+      "tittel": "Grunnlovsforslag fra Masud Gharahkhani, Svein Harberg, Nils T. Bjørke, Morten Wold, Kari Henriksen og Ingrid Fiskaa om endring i Grunnlovens tittel og i §§ 2, 3, 6, 9, 13, 16, 17, 21, 26, 28, 30, 45, 67, 74, 80, 86, 88, 90, 114, 115 og 121 (om retting av språklige feil og inkonsistenser)",
+      "henvisning": "Dokument 12:10 (2023-2024)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "100014",
+      "tittel": "Grunnlovsforslag fra Peter Frølich, Svein Harberg, Frode Jacobsen, Nils T. Bjørke, Carl I. Hagen, Audun Lysbakken, Seher Aydar, Grunde Almeland og Lan Marie Nguyen Berg om endring i § 121 (om prosedyren for grunnlovsendringer)",
+      "henvisning": "Dokument 12:15 (2023-2024), Innst. 88 S (2025-2026)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "100026",
+      "tittel": "Grunnlovsforslag fra Carl I. Hagen om endring i § 59 (om høyere sperregrense for utjevningsmandater)",
+      "henvisning": "Dokument 12:27 (2023-2024)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "100029",
+      "tittel": "Grunnlovsforslag fra Frode Jacobsen, Kari Henriksen, Kirsti Leirtrø, Anette Trettebergstuen, Ingvild Kjerkol og Kamzy Gunaratnam om ny § 103 (om rett til selvbestemt abort)",
+      "henvisning": "Dokument 12:30 (2023-2024)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "100036",
+      "tittel": "Grunnlovsforslag fra Audun Lysbakken, Marian Hussein, Kari Elisabeth Kaski og Torgeir Knag Fylkesnes om endring i § 49 og ny § 75 a (om folkeforslag og folkeavstemninger)",
+      "henvisning": "Dokument 12:37 (2023-2024)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "100038",
+      "tittel": "Grunnlovsforslag fra Peter Frølich og Audun Lysbakken om endring i § 90 (om dommerutnevnelser)",
+      "henvisning": "Dokument 12:39 (2023-2024)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "100039",
+      "tittel": "Grunnlovsforslag fra Per Olaf Lundteigen om endring i § 121 (om prosedyren for grunnlovsendring)",
+      "henvisning": "Dokument 12:40 (2023-2024), Innst. 88 S (2025-2026)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "103814",
+      "tittel": "Riksrevisjonens undersøking om reduksjon av klimagassutslepp frå jordbruket",
+      "henvisning": "Dokument 3:13 (2024-2025), Innst. 69 S (2025-2026)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "103840",
+      "tittel": "Eksport av forsvarsmateriell fra Norge i 2024, eksportkontroll og internasjonalt ikke-spredningssamarbeid",
+      "henvisning": "Meld. St. 29 (2024-2025), Innst. 39 S (2025-2026)",
+      "komite": "Utenriks- og forsvarskomiteen"
+    },
+    {
+      "id": "103871",
+      "tittel": "Status, fremdrift, utfordringer og risiko i gjennomføring av langtidsplanen for forsvarssektoren 2025-2036",
+      "henvisning": "Meld. St. 33 (2024-2025), Innst. 432 S (2025-2026)",
+      "komite": "Utenriks- og forsvarskomiteen"
+    },
+    {
+      "id": "103874",
+      "tittel": "Riksrevisjonens undersøking av arbeidet til styresmaktene med samanhengande digitale tenester",
+      "henvisning": "Dokument 3:14 (2024-2025), Innst. 81 S (2025-2026)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "103996",
+      "tittel": "Endringer i verdipapirhandelloven mv. (kapitalkrav for verdipapirforetak) og samtykke til godkjenning av EØS-komiteens beslutning nr. 70/2025 om innlemmelse i EØS-avtalen av direktiv (EU) 2019/2034 og forordning (EU) 2019/2033",
+      "henvisning": "Prop. 156 LS (2024-2025), Innst. 60 S (2025-2026)",
+      "komite": "Finanskomiteen"
+    },
+    {
+      "id": "104002",
+      "tittel": "Endringer i helsepersonelloven og pasientjournalloven mv. (taushetsplikt og tilgjengeliggjøring av pasientopplysninger)",
+      "henvisning": "Prop. 154 L (2024-2025), Innst. 71 L (2025-2026), Lovvedtak 20 (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "104644",
+      "tittel": "Lov om folkefinansiering av næringsvirksomhet (folkefinansieringsloven) og samtykke til godkjenning av EØS-komiteens beslutning nr. 30/2024 om innlemmelse i EØS-avtalen av forordning (EU) 2020/1503",
+      "henvisning": "Prop. 167 LS (2024-2025), Innst. 62 S (2025-2026)",
+      "komite": "Finanskomiteen"
+    },
+    {
+      "id": "104646",
+      "tittel": "Endringer i husleieloven (omorganisering av Husleietvistutvalget)",
+      "henvisning": "Prop. 168 L (2024-2025), Innst. 45 L (2025-2026), Lovvedtak 6 (2025-2026)",
+      "komite": "Kommunal- og forvaltningskomiteen"
+    },
+    {
+      "id": "104765",
+      "tittel": "Redegjørelse av justis- og beredskapsministeren om endringene i kriminalitetsbildet",
+      "henvisning": "Innst. 176 S (2025-2026)",
+      "komite": "Justiskomiteen"
+    },
+    {
+      "id": "104870",
+      "tittel": "Representantforslag fra stortingsrepresentantene Grunde Almeland, Guri Melby og Abid Raja om en ny næringspolitikk for en ny tid",
+      "henvisning": "Dokument 8:1 S (2025-2026), Innst. 34 S (2025-2026)",
+      "komite": "Næringskomiteen"
+    },
+    {
+      "id": "104873",
+      "tittel": "Representantforslag fra stortingsrepresentantene Tone Wilhelmsen Trøen, Haagen Poppe, Mahmoud Farahmand, Tage Pettersen, Mudassar Kapur og Mathilde Tybring-Gjedde om økonomisk likebehandling av barnevernet i Oslo",
+      "henvisning": "Dokument 8:2 S (2025-2026), Innst. 134 S (2025-2026)",
+      "komite": "Familie- og kulturkomiteen"
+    },
+    {
+      "id": "104877",
+      "tittel": "Representantforslag fra stortingsrepresentantene Maren Grøthe og Trygve Slagsvold Vedum om å stanse innføringen av ny EU-avgift på drivstoff i Norge",
+      "henvisning": "Dokument 8:8 S (2025-2026), Innst. 58 S (2025-2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "104880",
+      "tittel": "Representantforslag fra stortingsrepresentantene Sylvi Listhaug, Kristian August Eilertsen, Julia Brännström Nordtug, Stig Atle Abrahamsen og Anne Grethe Hauan om en ny finansieringsmodell for sykehus",
+      "henvisning": "Dokument 8:5 S (2025-2026), Innst. 102 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "104895",
+      "tittel": "Statsbudsjettet 2026",
+      "henvisning": "Prop. 1 S (2025-2026), Innst. 2 S (2025-2026), Prop. 1 S (2025-2026)",
+      "komite": "Finanskomiteen"
+    },
+    {
+      "id": "104906",
+      "tittel": "Statsbudsjettet 2026",
+      "henvisning": "Prop. 1 S (2025-2026), Innst. 13 S (2025-2026)",
+      "komite": "Transport- og kommunikasjonskomiteen"
+    },
+    {
+      "id": "104908",
+      "tittel": "Statsbudsjettet 2026",
+      "henvisning": "Prop. 1 S (2025-2026), Innst. 15 S (2025-2026)",
+      "komite": "Arbeids- og sosialkomiteen"
+    },
+    {
+      "id": "104911",
+      "tittel": "Innst. 3 S Skatte-, avgifts- og tollinntekter 2026",
+      "henvisning": "Prop. 1 S (2025-2026), Innst. 3 S (2025-2026)",
+      "komite": "Finanskomiteen"
+    },
+    {
+      "id": "104914",
+      "tittel": "Representantforslag fra stortingsrepresentant Lars Haltbrekken om å pålegge oljeselskapene å kutte CO2-utslippene ved å bruke flytende havvind og gasskraft som fanger og lagrer CO2",
+      "henvisning": "Dokument 8:15 S (2025-2026), Innst. 100 S (2025-2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "104915",
+      "tittel": "lnnst. 3 S Skatter og avgifter 2026",
+      "henvisning": "Prop. 1 LS (2025-2026), Innst. 3 S (2025-2026)",
+      "komite": "Finanskomiteen"
+    },
+    {
+      "id": "105070",
+      "tittel": "Representantforslag fra stortingsrepresentantene Guri Melby, Abid Raja og Marit Vea om å tillate kommunene å regulere bruk av elektriske sparkesykler på fortau",
+      "henvisning": "Dokument 8:20 S (2025-2026), Innst. 73 S (2025-2026)",
+      "komite": "Transport- og kommunikasjonskomiteen"
+    },
+    {
+      "id": "105072",
+      "tittel": "Representantforslag fra stortingsrepresentantene Mudassar Kapur, Tage Pettersen, Henrik Gottfries Kierulf og Anne Kristine Linnestad om en ny nasjonal boligsosial strategi",
+      "henvisning": "Dokument 8:23 S (2025-2026), Innst. 145 S (2025-2026)",
+      "komite": "Kommunal- og forvaltningskomiteen"
+    },
+    {
+      "id": "105076",
+      "tittel": "Representantforslag fra stortingsrepresentantene Tage Pettersen, Erna Solberg, Haagen Poppe, Kari Sofie Bjørnsen, Mahmoud Farahmand og Anne Kristine Linnestad om Norges handlingsrom innenfor EUs reviderte avløpsdirektiv",
+      "henvisning": "Dokument 8:24 S (2025-2026), Innst. 144 S (2025-2026)",
+      "komite": "Kommunal- og forvaltningskomiteen"
+    },
+    {
+      "id": "105078",
+      "tittel": "Representantforslag fra stortingsrepresentantene Aleksander Stokkebø, Amalie Gunnufsen, Erlend Svardal Bøe, Ove Trellevik, Margret Hagerup og Kari Sofie Bjørnsen om en ny petroleumsmelding om utvikling og forutsigbarhet for Norges største næring",
+      "henvisning": "Dokument 8:25 S (2025-2026), Innst. 99 S (2025-2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "105111",
+      "tittel": "Valg av medlemmer og varamedlemmer til Stortingets delegasjon til det parlamentariske partnerskapet Asia-Europa (ASEP) og til ASEANs interparlamentariske forsamling (AIPA)",
+      "henvisning": "Innst. 21 S (2025-2026)",
+      "komite": "Valgkomiteen"
+    },
+    {
+      "id": "105112",
+      "tittel": "Valg av medlemmer og varamedlemmer til Stortingets delegasjon til NATOs parlamentariske forsamling",
+      "henvisning": "Innst. 22 S (2025-2026)",
+      "komite": "Valgkomiteen"
+    },
+    {
+      "id": "105209",
+      "tittel": "Samtykke til ratifikasjon av konvensjon om skiping av ein mellomstatleg organisasjon for utvikling og utnytting av digitale havsystem og informasjonstenester (Mercator internasjonale senter for havet) av 23. april 2025",
+      "henvisning": "Prop. 5 S (2025-2026), Innst. 66 S (2025-2026)",
+      "komite": "Næringskomiteen"
+    },
+    {
+      "id": "105259",
+      "tittel": "Representantforslag fra stortingsrepresentantene Ine Eriksen Søreide, Peter Frølich, Trond Helleland, Anne Kristine Linnestad, Erlend Larsen og Mahmoud Farahmand om å styrke norske myndigheters kapasitet til å oppdage og avbryte uautorisert droneflyvning",
+      "henvisning": "Dokument 8:27 S (2025-2026), Innst. 94 S (2025-2026)",
+      "komite": "Transport- og kommunikasjonskomiteen"
+    },
+    {
+      "id": "105273",
+      "tittel": "Representantforslag frå stortingsrepresentantane Kjersti Toppe og Bengt Fasteraune om ei ny og offensiv satsing på arbeidsretta rehabilitering",
+      "henvisning": "Dokument 8:30 S (2025-2026), Innst. 95 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "105340",
+      "tittel": "Endringer i sentralbankloven (adgang for staten til å innhente kreditt for likviditetsformål mv.)",
+      "henvisning": "Prop. 9 L (2025-2026), Innst. 122 L (2025-2026), Lovvedtak 30 (2025-2026)",
+      "komite": "Finanskomiteen"
+    },
+    {
+      "id": "105387",
+      "tittel": "Representantforslag fra stortingsrepresentantene Aleksander Stokkebø, Nikolai Astrup, Tor Mikkel Wara, Martin Virkesdal Jonsterhaug, Maren Grøthe, Bjørn Arild Gram, Hans Edvard Askjer, Jørgen H. Kristiansen, Grunde Almeland og Abid Raja om stabile rammevilkår for mer småkraft",
+      "henvisning": "Dokument 8:31 S (2025-2026), Innst. 129 S (2025-2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "105424",
+      "tittel": "Representantforslag fra stortingsrepresentant Geir Inge Lien om å bevare og videreutvikle Steinberg stasjon",
+      "henvisning": "Dokument 8:40 S (2025-2026), Innst. 91 S (2025-2026)",
+      "komite": "Transport- og kommunikasjonskomiteen"
+    },
+    {
+      "id": "105527",
+      "tittel": "Representantforslag fra stortingsrepresentantene Anna Molberg, Amalie Gunnufsen, Erlend Svardal Bøe, Margret Hagerup, Henrik Asheim, Henrik Gottfries Kierulf og Mahmoud Farahmand om regler for innleie av arbeidskraft",
+      "henvisning": "Dokument 8:43 S (2025-2026), Innst. 97 S (2025-2026)",
+      "komite": "Arbeids- og sosialkomiteen"
+    },
+    {
+      "id": "105528",
+      "tittel": "Representantforslag fra stortingsrepresentant Hilde Marie Gaebpie Danielsen om manglende ressurser ved energiutbyggingssaker",
+      "henvisning": "Dokument 8:44 S (2025-2026), Innst. 141 S (2025-2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "105583",
+      "tittel": "Endringar i statsbudsjettet 2025 under Utanriksdepartementet",
+      "henvisning": "Prop. 21 S (2025-2026), Innst. 75 S (2025-2026)",
+      "komite": "Finanskomiteen"
+    },
+    {
+      "id": "105661",
+      "tittel": "Representantforslag fra stortingsrepresentantene Tone Wilhelmsen Trøen, Mahmoud Farahmand, Haagen Poppe og Margret Hagerup om å innføre en ordning med rett til informasjon, for å beskytte kvinner mot voldelige partnere",
+      "henvisning": "Dokument 8:50 S (2025-2026), Innst. 172 S (2025-2026)",
+      "komite": "Justiskomiteen"
+    },
+    {
+      "id": "105664",
+      "tittel": "Representantforslag fra stortingsrepresentantene Guri Melby, Abid Raja og Grunde Almeland om å utrede og innføre lobbyregister for Storting og regjering",
+      "henvisning": "Dokument 8:53 S (2025-2026), Innst. 135 S (2025-2026)",
+      "komite": "Stortingets presidentskap"
+    },
+    {
+      "id": "105667",
+      "tittel": "Riksrevisjonens undersøkelse av bistand til klimatilpasning i utviklingsland",
+      "henvisning": "Dokument 3:4 (2025-2026), Innst. 152 S (2025-2026)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "105669",
+      "tittel": "Riksrevisjonens oppfølging av forvaltningsrevisjoner som er behandlet av Stortinget",
+      "henvisning": "Dokument 3:1 (2025-2026), Innst. 153 S (2025-2026)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "105694",
+      "tittel": "Representantforslag fra stortingsrepresentantene Tor André Johnsen, Stig Even Lillestøl, Bengt Rune Strifeldt, Erlend Wiborg, Kristoffer Sivertsen, May Helen Hetland Ervik og Pål Morten Borgli om å ikke bruke metanhemmere i norsk landbruk",
+      "henvisning": "Dokument 8:57 S (2025-2026), Innst. 132 S (2025-2026)",
+      "komite": "Næringskomiteen"
+    },
+    {
+      "id": "105696",
+      "tittel": "Representantforslag fra stortingsrepresentantene Erling Sande, Geir Pollestad, Bengt Fasteraune, Helge André Njåstad, Erlend Wiborg, Kristian August Eilertsen, Erlend Svardal Bøe, Bård Ludvig Thorheim, Grunde Almeland og Marius Langballe Dalin om alkoholsal i fjernbetente butikkar",
+      "henvisning": "Dokument 8:59 S (2025-2026), Innst. 113 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "105845",
+      "tittel": "Anskaffelse av ytterligere ubåter og langtrekkende presisjonsild",
+      "henvisning": "Prop. 29 S (2025-2026), Innst. 86 S (2025-2026)",
+      "komite": "Utenriks- og forsvarskomiteen"
+    },
+    {
+      "id": "105849",
+      "tittel": "Valg av medlemmer til Norges Banks representantskap",
+      "henvisning": "Innst. 50 S (2025-2026)",
+      "komite": "Valgkomiteen"
+    },
+    {
+      "id": "105884",
+      "tittel": "Representantforslag fra stortingsrepresentantene Anna Molberg, Amalie Gunnufsen, Mahmoud Farahmand og Henrik Asheim om en forenklingsreform i Nav",
+      "henvisning": "Dokument 8:64 S (2025-2026), Innst. 143 S (2025-2026)",
+      "komite": "Arbeids- og sosialkomiteen"
+    },
+    {
+      "id": "105971",
+      "tittel": "Riksrevisjonens undersøkelse av myndighetenes ansvar i forbindelse med Alexander L. Kielland-ulykken",
+      "henvisning": "Dokument 3:7 (2025-2026), Innst. 156 S (2025-2026)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "106016",
+      "tittel": "Representantforslag fra stortingsrepresentantene Helge André Njåstad, Linda Monsen Merkesdal, Ove Trellevik, Marthe Hammer, Kjersti Toppe, Sofie Marhaug, Frøya Skjold Sjursæther og Joel Ystebø om håndtering av kvikksølv og torpedoer ved U-864",
+      "henvisning": "Dokument 8:72 S (2025-2026), Innst. 107 S (2025-2026)",
+      "komite": "Transport- og kommunikasjonskomiteen"
+    },
+    {
+      "id": "106053",
+      "tittel": "Representantforslag fra stortingsrepresentantene Kathy Lie, Marian Hussein og Anne Lise Gjerstad Fredlund om et bedre tilbud innen psykisk helsevern",
+      "henvisning": "Dokument 8:74 S (2025-2026), Innst. 171 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "106054",
+      "tittel": "Representantforslag fra stortingsrepresentantene Kathy Lie, Anne Lise Gjerstad Fredlund, Sunniva Holmås Eidsvoll og Ingrid Fiskaa om mer forutsigbare og langsiktige tilskuddsordninger for frivillige og ideelle organisasjoner i helsefeltet",
+      "henvisning": "Dokument 8:75 S (2025-2026), Innst. 166 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "106055",
+      "tittel": "Representantforslag fra stortingsrepresentantene Bård Ludvig Thorheim og Erlend Larsen om å sikre Norge mot forstyrrelser av satellittnavigasjon",
+      "henvisning": "Dokument 8:76 S (2025-2026), Innst. 197 S (2025-2026)",
+      "komite": "Kommunal- og forvaltningskomiteen"
+    },
+    {
+      "id": "106217",
+      "tittel": "Representantforslag frå stortingsrepresentantane Trine Fagervik og Kjersti Toppe om gratis legemiddel på kvit resept for barn opp til seks år",
+      "henvisning": "Dokument 8:79 S (2025-2026), Innst. 204 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "106245",
+      "tittel": "Representantforslag fra stortingsrepresentantene Henrik Asheim, Erlend Svardal Bøe, Margret Hagerup, Anne Kristine Linnestad, Erna Solberg og Tone Wilhelmsen Trøen om et helhetlig løft for kvinnehelse og overgangsalderen",
+      "henvisning": "Dokument 8:80 S (2025-2026), Innst. 191 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "106246",
+      "tittel": "Representantforslag fra stortingsrepresentantene Sylvi Listhaug og Erlend Wiborg om en utvisningsreform for kriminelle innvandrere",
+      "henvisning": "Dokument 8:81 S (2025-2026), Innst. 205 S (2025-2026)",
+      "komite": "Kommunal- og forvaltningskomiteen"
+    },
+    {
+      "id": "106367",
+      "tittel": "Representantforslag fra stortingsrepresentantene Sylvi Listhaug, Kristian August Eilertsen, Julia Brännström Nordtug, Stig Atle Abrahamsen, Bård Hoksrud, Anne Grethe Hauan og Kristoffer Sivertsen om å sikre pasienter med ALS en reell tilgang til ordningen med godkjenningsfritak for legemidler i tidlig fase",
+      "henvisning": "Dokument 8:86 S (2025-2026), Innst. 159 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "106959",
+      "tittel": "Redegjørelse av kunnskapsministeren om status for regjeringens barnehagepolitikk og arbeidet med styring og finansiering av barnehagesektoren",
+      "henvisning": null,
+      "komite": null
+    },
+    {
+      "id": "107923",
+      "tittel": "Mandat, navn og sammensetning av granskingskommisjon for å undersøke forhold som har blitt aktualisert gjennom offentliggjøringen av Epstein-dokumentene",
+      "henvisning": "Innst. 200 S (2025-2026)",
+      "komite": "Stortingets presidentskap"
+    },
+    {
+      "id": "108095",
+      "tittel": "Meddelelse fra stortingsrepresentant Jørgen H. Kristiansen i Stortingets møte 9. april 2026 om at han trekker tilbake forslag fra Jonas Andersen Sayed, Hans Edvard Askjer og seg selv om avgiftskutt i lys av de høye drivstoffprisene, jf. Dokument 8:189 S (2025-2026)",
+      "henvisning": "Innst. 260 S (2025-2026)",
+      "komite": "Finanskomiteen"
+    },
+    {
+      "id": "109130",
+      "tittel": "Godtgjøring for stortingsrepresentanter og regjeringsmedlemmer",
+      "henvisning": "Innst. 463 S (2025-2026)",
+      "komite": "Stortingets presidentskap"
+    },
+    {
+      "id": "200005",
+      "tittel": "Representantforslag fra stortingsrepresentantene Seher Aydar og Mímir Kristjánsson om å redde sykehusdriften i Egersund",
+      "henvisning": "Dokument 8:88 S (2025-2026), Innst. 206 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "200007",
+      "tittel": "Representantforslag fra stortingsrepresentantene Henrik Asheim og Ola Svenneby om lavere og mer forutsigbar skatt på folks bolig",
+      "henvisning": "Dokument 8:94 S (2025-2026), Innst. 188 S (2025-2026)",
+      "komite": "Finanskomiteen"
+    },
+    {
+      "id": "200008",
+      "tittel": "Representantforslag fra stortingsrepresentantene Lars Haltbrekken, Sofie Marhaug, Siren Julianne Jensen, Frøya Skjold Sjursæther og Marit Vea om tilbaketrekning av utslippstillatelsen for gruveavfall i Repparfjorden",
+      "henvisning": "Dokument 8:92 S (2025-2026), Innst. 187 S (2025-2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "200010",
+      "tittel": "Representantforslag fra stortingsrepresentantene Mudassar Kapur, Anna Molberg, Mathilde Tybring-Gjedde og Tage Pettersen om borgerkontrakt",
+      "henvisning": "Dokument 8:90 S (2025-2026), Innst. 221 S (2025-2026)",
+      "komite": "Kommunal- og forvaltningskomiteen"
+    },
+    {
+      "id": "200012",
+      "tittel": "Representantforslag fra stortingsrepresentantene Guri Melby, Abid Raja og Marit Vea om å midlertidig suspendere den nye modellen for beregning av formuesverdi av bolig",
+      "henvisning": "Dokument 8:97 S (2025-2026), Innst. 188 S (2025-2026)",
+      "komite": "Finanskomiteen"
+    },
+    {
+      "id": "200014",
+      "tittel": "Representantforslag fra stortingsrepresentantene Geir Pollestad, Trygve Slagsvold Vedum og Bengt Fasteraune om kompensasjonsordning for grønnsaksprodusenter som rammes av nye grenseverdier for kadmium",
+      "henvisning": "Dokument 8:99 S (2025-2026), Innst. 163 S (2025-2026)",
+      "komite": "Næringskomiteen"
+    },
+    {
+      "id": "200015",
+      "tittel": "Representantforslag fra stortingsrepresentantene Hans Edvard Askjer, Bent-Joacim Bentzen, Anette Carnarius Elseth og Mari Holm Lønseth om sikkerhet for et nasjonalt avhopperprogram",
+      "henvisning": "Dokument 8:95 S (2025-2026), Innst. 253 S (2025-2026)",
+      "komite": "Justiskomiteen"
+    },
+    {
+      "id": "200016",
+      "tittel": "Representantforslag frå stortingsrepresentantane Kjersti Toppe, Erling Sande og Bent-Joacim Bentzen om å sikre tilfluktsrom på norske sjukehus",
+      "henvisning": "Dokument 8:103 S (2025-2026), Innst. 215 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "200023",
+      "tittel": "Representantforslag fra stortingsrepresentantene Kari Sofie Bjørnsen, Aleksander Stokkebø, Erlend Larsen, Tage Pettersen og Ove Trellevik om en plan for håndtering av sprengstoff og ammunisjon i norsk natur og i kystnære farvann",
+      "henvisning": "Dokument 8:104 S (2025-2026), Innst. 201 S (2025-2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "200030",
+      "tittel": "Endring av fylkestilhørighet for Gran kommune fra Innlandet fylke til Akershus fylke og endringer i valgloven (endringer i valgdistriktene)",
+      "henvisning": "Prop. 34 LS (2025-2026), Innst. 228 S (2025-2026)",
+      "komite": "Kommunal- og forvaltningskomiteen"
+    },
+    {
+      "id": "200033",
+      "tittel": "Representantforslag fra stortingsrepresentantene Erlend Svardal Bøe, Henrik Asheim og Margret Hagerup om en bedre gjennomføring og forvaltning av pasientreiser",
+      "henvisning": "Dokument 8:114 S (2025-2026), Innst. 226 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "200035",
+      "tittel": "Representantforslag fra stortingsrepresentantene Bård Hoksrud, Dagfinn Henrik Olsen, Frank Edvard Sve, May Helen Hetland Ervik, Mats Henriksen, Lill Harriet Sandaune og Rikard Spets om redusert bompengebelastning på E6 Ulsberg-Melhus",
+      "henvisning": "Dokument 8:115 S (2025-2026), Innst. 218 S (2025-2026)",
+      "komite": "Transport- og kommunikasjonskomiteen"
+    },
+    {
+      "id": "200036",
+      "tittel": "Representantforslag fra stortingsrepresentantene Ingrid Fiskaa, Marthe Hammer, Sunniva Holmås Eidsvoll, Mirell Høyer-Berntsen, Kirsti Bergstø og Anne Lise Gjerstad Fredlund om digital suverenitet i en urolig tid",
+      "henvisning": "Dokument 8:119 S (2025-2026), Innst. 225 S (2025-2026)",
+      "komite": "Kommunal- og forvaltningskomiteen"
+    },
+    {
+      "id": "200039",
+      "tittel": "Representantforslag fra stortingsrepresentantene Kjersti Toppe og Geir Inge Lien om ein betre pasientreiseordning",
+      "henvisning": "Dokument 8:117 S (2025-2026), Innst. 226 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "200041",
+      "tittel": "Representantforslag fra stortingsrepresentantene Kirsti Bergstø, Marian Hussein, Marthe Hammer, Mirell Høyer-Berntsen, Ingrid Fiskaa, Kathy Lie og Anne Lise Gjerstad Fredlund om å kutte sykefravær, ikke sykelønn",
+      "henvisning": "Dokument 8:125 S (2025-2026), Innst. 212 S (2025-2026)",
+      "komite": "Arbeids- og sosialkomiteen"
+    },
+    {
+      "id": "200042",
+      "tittel": "Representantforslag fra stortingsrepresentantene Bård Hoksrud, Dagfinn Henrik Olsen, Frank Edvard Sve, May Helen Hetland Ervik og Mats Henriksen om stans i bruk av dagens synsfelttest som grunnlag for tap av førerkort samt endring av regelverket for vurdering av kjøreevne",
+      "henvisning": "Dokument 8:120 S (2025-2026), Innst. 220 S (2025-2026)",
+      "komite": "Transport- og kommunikasjonskomiteen"
+    },
+    {
+      "id": "200054",
+      "tittel": "Representantforslag frå stortingsrepresentantane Sylvi Listhaug, Frank Edvard Sve, Joakim Myklebost Tangen, Monica Molvær og Harry Valderhaug om redusert bompengebelastning på Nordøyvegen",
+      "henvisning": "Dokument 8:131 S (2025-2026), Innst. 222 S (2025-2026)",
+      "komite": "Transport- og kommunikasjonskomiteen"
+    },
+    {
+      "id": "200066",
+      "tittel": "Representantforslag fra stortingsrepresentantene Seher Aydar, Marie Sneve Martinussen, Remi Sølvberg og Hege Bae Nyholt om å reservere anbud for ideelle aktører",
+      "henvisning": "Dokument 8:145 S (2025-2026), Innst. 219 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "200067",
+      "tittel": "Representantforslag fra stortingsrepresentantene Bengt Fasteraune og Bent-Joacim Bentzen om bedre integrering av familieinnvandrere",
+      "henvisning": "Dokument 8:141 S (2025-2026), Innst. 230 S (2025-2026)",
+      "komite": "Kommunal- og forvaltningskomiteen"
+    },
+    {
+      "id": "200069",
+      "tittel": "Representantforslag fra stortingsrepresentantene Stian Storbukås, Finn Krokeide, Anette Carnarius Elseth og Jon Engen-Helgheim om mer effektiv kamp mot organisert bedrageri og registerkriminalitet",
+      "henvisning": "Dokument 8:142 S (2025-2026), Innst. 290 S (2025-2026)",
+      "komite": "Justiskomiteen"
+    },
+    {
+      "id": "200070",
+      "tittel": "Representantforslag fra stortingsrepresentantene Marie Sneve Martinussen og Hege Bae Nyholt om en ny makt- og demokratiutredning",
+      "henvisning": "Dokument 8:143 S (2025-2026), Innst. 385 S (2025-2026)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "200076",
+      "tittel": "Representantforslag fra stortingsrepresentantene Ingrid Liland, Marius Langballe Dalin, Oda Indgaard om å ta tomme bygg og boliger i bruk",
+      "henvisning": "Dokument 8:152 S (2025-2026), Innst. 248 S (2025-2026)",
+      "komite": "Kommunal- og forvaltningskomiteen"
+    },
+    {
+      "id": "200077",
+      "tittel": "Representantforslag fra stortingsrepresentantene Geir Jørgensen, Hanne Beate Stenvaag og Remi Sølvberg om å heve vraket av fregatten KNM Bergen utenfor Andøya",
+      "henvisning": "Dokument 8:153 S (2025-2026), Innst. 289 S (2025-2026)",
+      "komite": "Utenriks- og forsvarskomiteen"
+    },
+    {
+      "id": "200081",
+      "tittel": "Representantforslag fra stortingsrepresentantene Marie Sneve Martinussen og Seher Aydar om å reversere tidligere svekkelser i arbeidsmiljøloven og styrke tillitsvalgtes myndighet",
+      "henvisning": "Dokument 8:157 LS (2025-2026), Innst. 247 L (2025-2026)",
+      "komite": "Arbeids- og sosialkomiteen"
+    },
+    {
+      "id": "200085",
+      "tittel": "Representantforslag fra stortingsrepresentantene Bård Hoksrud, Dagfinn Henrik Olsen, Frank Edvard Sve, May Helen Hetland Ervik, Mats Henriksen, Tor André Johnsen, Per-Willy Amundsen og Kristian August Eilertsen om å stanse innføring av overtredelsesgebyr ved avrenning fra kjøretøy",
+      "henvisning": "Dokument 8:159 S (2025-2026), Innst. 245 S (2025-2026)",
+      "komite": "Transport- og kommunikasjonskomiteen"
+    },
+    {
+      "id": "200087",
+      "tittel": "Representantforslag fra stortingsrepresentantene Tom Staahle, Erlend Wiborg, Jon Engen-Helgheim og Himanshu Gulati om en plan- og bygningslov for krig og krise",
+      "henvisning": "Dokument 8:162 S (2025-2026), Innst. 266 S (2025-2026)",
+      "komite": "Kommunal- og forvaltningskomiteen"
+    },
+    {
+      "id": "200092",
+      "tittel": "Representantforslag frå stortingsrepresentantane Geir Pollestad og Kjersti Toppe om ei offensiv satsing på norsk legemiddelproduksjon og -beredskap",
+      "henvisning": "Dokument 8:167 S (2025-2026), Innst. 317 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "200096",
+      "tittel": "Representantforslag fra stortingsrepresentantene Frøya Skjold Sjursæther og Oda Indgaard om å slå ned på grov miljøkriminalitet",
+      "henvisning": "Dokument 8:172 S (2025-2026), Innst. 286 S (2025-2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "200101",
+      "tittel": "Representantforslag fra stortingsrepresentantene Kristian August Eilertsen, Per-Willy Amundsen og Bård Hoksrud om å sette i gang et forprosjekt for ny innfartsveg til Tromsø",
+      "henvisning": "Dokument 8:177 S (2025-2026), Innst. 241 S (2025-2026)",
+      "komite": "Transport- og kommunikasjonskomiteen"
+    },
+    {
+      "id": "200102",
+      "tittel": "Representantforslag fra stortingsrepresentantene Frøya Skjold Sjursæther, Julie E. Stuestøl, Marius Langballe Dalin og Une Bastholm om en tryggere og mer dyrevennlig nyttårsfeiring",
+      "henvisning": "Dokument 8:176 S (2025-2026), Innst. 320 S (2025-2026)",
+      "komite": "Justiskomiteen"
+    },
+    {
+      "id": "200103",
+      "tittel": "Representantforslag fra stortingsrepresentantene Morten Stordalen, Rikard Spets, Pål Morten Borgli, Sylvi Listhaug, Kristoffer Sivertsen, Kristian August Eilertsen, Bjørn Larsen og Tor Mikkel Wara om det neste oljeeventyret på norsk sokkel",
+      "henvisning": "Dokument 8:175 S (2025-2026), Innst. 284 S (2025-2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "200107",
+      "tittel": "Representantforslag fra stortingsrepresentant Geir Pollestad om fleksibel innføring av ny gjødselforskrift",
+      "henvisning": "Dokument 8:195 S (2025-2026), Innst. 427 S (2025-2026)",
+      "komite": "Næringskomiteen"
+    },
+    {
+      "id": "200108",
+      "tittel": "Representantforslag fra stortingsrepresentantene Geir Pollestad og Trygve Slagsvold Vedum om beredskapslagring av diesel og flybensin",
+      "henvisning": "Dokument 8:178 S (2025-2026), Innst. 295 S (2025-2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "200111",
+      "tittel": "Representantforslag fra stortingsrepresentantene Geir Inge Lien, Bent-Joacim Bentzen og Erling Sande om å sikre mobildekning på alle offentlige veier",
+      "henvisning": "Dokument 8:194 S (2025-2026), Innst. 239 S (2025-2026)",
+      "komite": "Kommunal- og forvaltningskomiteen"
+    },
+    {
+      "id": "200131",
+      "tittel": "Samtykke til ratifikasjon av økonomisk partnerskapsavtale av 23. juni 2025 mellom EFTA-statene og Malaysia",
+      "henvisning": "Prop. 48 S (2025-2026), Innst. 409 S (2025-2026)",
+      "komite": "Næringskomiteen"
+    },
+    {
+      "id": "200138",
+      "tittel": "Samtykke til ratifikasjon av frihandelsavtale mellom EFTA-statene og MERCOSUR av 16. september 2025",
+      "henvisning": "Prop. 46 S (2025-2026), Innst. 406 S (2025-2026)",
+      "komite": "Næringskomiteen"
+    },
+    {
+      "id": "200143",
+      "tittel": "Representantforslag fra stortingsrepresentantene Geir Inge Lien, Geir Pollestad og Siv Sætran om kompensasjonsordning for bedrifter utan høve til omstilling",
+      "henvisning": "Dokument 8:198 S (2025-2026), Innst. 405 S (2025-2026)",
+      "komite": "Næringskomiteen"
+    },
+    {
+      "id": "200144",
+      "tittel": "Representantforslag frå stortingsrepresentantane Kjersti Toppe og Erling Sande om å utdanne og rekruttere legar til den offentlige helsetenesta i heile landet",
+      "henvisning": "Dokument 8:207 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "200145",
+      "tittel": "Representantforslag fra stortingsrepresentantene Seher Aydar og Marie Sneve Martinussen om å sikre pauserom for sykehusansatte",
+      "henvisning": "Dokument 8:199 S (2025-2026), Innst. 324 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "200146",
+      "tittel": "Representantforslag fra stortingsrepresentantene Marian Hussein og Ingrid Fiskaa om at arbeidsfolk skal ha god pensjon",
+      "henvisning": "Dokument 8:206 S (2025-2026), Innst. 263 S (2025-2026)",
+      "komite": "Finanskomiteen"
+    },
+    {
+      "id": "200153",
+      "tittel": "Representantforslag fra stortingsrepresentantene Erlend Wiborg, Bjørn Larsen, Helge André Njåstad, Rune Midtun, Simen Velle, Silje Hjemdal og Lill Harriet Sandaune om å forby barnehijab i barnehage og grunnskole",
+      "henvisning": "Dokument 8:197 S (2025-2026), Innst. 237 S (2025-2026)",
+      "komite": "Utdannings- og forskningskomiteen"
+    },
+    {
+      "id": "200157",
+      "tittel": "Representantforslag fra stortingsrepresentantene Tor André Johnsen, Rune Midtun, På Morten Borgli, Morten Kolbjørnsen, Bjørnar Laabak, May Helen Hetland Ervik og Kristoffer Sivertsen om gjødselbrukforskriften",
+      "henvisning": "Dokument 8:224 S (2025-2026), Innst. 427 S (2025-2026)",
+      "komite": "Næringskomiteen"
+    },
+    {
+      "id": "200158",
+      "tittel": "Representantforslag fra stortingsrepresentantene Bengt Fasteraune, Ole Herman Sveian og Geir Inge Lien om en utredning av konsekvensene ved en eventuell stenging av Spranget parkering i Sel kommune",
+      "henvisning": "Dokument 8:223 S (2025-2026), Innst. 404 S (2025-2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "200160",
+      "tittel": "Representantforslag fra stortingsrepresentantene Siv Sætran og Erling Sande om å innføre forenkling og redusert byråkrati som selvstendige hensyn i utredningsinstruksen",
+      "henvisning": "Dokument 8:211 S (2025-2026), Innst. 264 S (2025-2026)",
+      "komite": "Finanskomiteen"
+    },
+    {
+      "id": "200164",
+      "tittel": "Representantforslag fra stortingsrepresentantene Erling Sande, Bengt Fasteraune og Ole Herman Sveian om ei treårig lærarutdanning som bidrag til fleire kvalifiserte lærarar i norske klasserom",
+      "henvisning": "Dokument 8:218 S (2025-2026), Innst. 314 S (2025-2026)",
+      "komite": "Utdannings- og forskningskomiteen"
+    },
+    {
+      "id": "200165",
+      "tittel": "Representantforslag fra stortingsrepresentantene Nikolai Astrup, Aleksander Stokkebø og Kari Sofie Bjørnsen om kvalitetssikring av støtte til flytende havvind",
+      "henvisning": "Dokument 8:213 S (2025-2026), Innst. 401 S (2025-2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "200170",
+      "tittel": "Melding for året 2025 fra Sivilombudet",
+      "henvisning": "Dokument 4 (2025-2026), Innst. 400 S (2025-2026)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "200172",
+      "tittel": "Representantforslag fra stortingsrepresentantene Guri Melby, Abid Raja og Grunde Almeland om å sikre fullføring og kvalitet i videregående opplæring",
+      "henvisning": "Dokument 8:273 S (2025-2026), Innst. 270 S (2025-2026)",
+      "komite": "Utdannings- og forskningskomiteen"
+    },
+    {
+      "id": "200173",
+      "tittel": "Representantforslag fra stortingsrepresentantene Bjørn Larsen, Tor Mikkel Wara, Kristoffer Sivertsen, Rikard Spets og Morten Stordalen om å styrke nasjonal og alliert forsyningssikkerhet samt strategiske interesser gjennom utvinning av havbunnsmineraler på norsk sokkel",
+      "henvisning": "Dokument 8:272 S (2025-2026), Innst. 399 S (2025-2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "200174",
+      "tittel": "Representantforslag fra stortingsrepresentantene Mathilde Tybring-Gjedde, Monica Molvær og Ola Svenneby om å beholde og forbedre nasjonale prøver og kartleggingsprøver",
+      "henvisning": "Dokument 8:240 S (2025-2026), Innst. 236 S (2025-2026)",
+      "komite": "Utdannings- og forskningskomiteen"
+    },
+    {
+      "id": "200183",
+      "tittel": "Representantforslag fra stortingsrepresentantene Remi Sølvberg og Marie Sneve Martinussen om en god posttjeneste for framtiden",
+      "henvisning": "Dokument 8:229 S (2025-2026), Innst. 280 S (2025-2026)",
+      "komite": "Transport- og kommunikasjonskomiteen"
+    },
+    {
+      "id": "200191",
+      "tittel": "Representantforslag fra stortingsrepresentantene Geir Inge Lien, Bent-Joacim Bentzen og Ole Herman Sveian om å kompensere fylkeskommunene for utgifter som følge av statlige krav om nullutslippsteknologi",
+      "henvisning": "Dokument 8:247 S (2025-2026), Innst. 410 S (2025-2026)",
+      "komite": "Kommunal- og forvaltningskomiteen"
+    },
+    {
+      "id": "200195",
+      "tittel": "Representantforslag fra stortingsrepresentantene Guri Melby, Abid Raja og Grunde Almeland om et langsiktig løft for bemanningen i norske barnehager",
+      "henvisning": "Dokument 8:263 S (2025-2026), Innst. 299 S (2025-2026)",
+      "komite": "Utdannings- og forskningskomiteen"
+    },
+    {
+      "id": "200198",
+      "tittel": "Representantforslag fra stortingsrepresentantene Sylvi Listhaug, Bård Hoksrud, Dagfinn Henrik Olsen, Frank Edvard Sve, May Helen Hetland Ervik, Mats Henriksen, Bjørnar Laabak og Tom Staahle om å avslutte byvekstavtaler og avvikle nullvekstmålet",
+      "henvisning": "Dokument 8:232 S (2025-2026), Innst. 301 S (2025-2026)",
+      "komite": "Transport- og kommunikasjonskomiteen"
+    },
+    {
+      "id": "200199",
+      "tittel": "Representantforslag fra stortingsrepresentant Kjersti Toppe om å øke andelen institusjonsplasser i ideelle barnevernsinstitusjoner",
+      "henvisning": "Dokument 8:250 S (2025-2026), Innst. 329 S (2025-2026)",
+      "komite": "Familie- og kulturkomiteen"
+    },
+    {
+      "id": "200202",
+      "tittel": "Representantforslag fra stortingsrepresentantene Margit Bye, Une Bastholm, Frøya Skjold Sjursæther, Julie E. Stuestøl, Ingrid Liland og Marius Langballe Dalin om sterkere beskyttelse av naturverdiene i Oslofjorden og en egen oslofjordlov",
+      "henvisning": "Dokument 8:251 S (2025-2026), Innst. 375 S (2025-2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "200206",
+      "tittel": "Representantforslag fra stortingsrepresentantene Bård Hoksrud, Frank Edvard Sve, Mats Henriksen, May Helen Hetland Ervik og Dagfinn Henrik Olsen om å stanse liberaliseringen av lospliktforskriften og farledsbevisordningen",
+      "henvisning": "Dokument 8:234 S (2025-2026), Innst. 303 S (2025-2026)",
+      "komite": "Transport- og kommunikasjonskomiteen"
+    },
+    {
+      "id": "200207",
+      "tittel": "Representantforslag fra stortingsrepresentantene Kristian August Eilertsen, Julia Brännström Nordtug, Stig Atle Abrahamsen og Anne Grethe Hauan om å redusere ventetider for utredning, tilpasning og oppfølging av høreapparat",
+      "henvisning": "Dokument 8:258 S (2025-2026), Innst. 413 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "200214",
+      "tittel": "Representantforslag fra stortingsrepresentantene Ida Lindtveit Røse, Jorunn Gleditsch Lossius, Jørgen H. Kristiansen og Harry Valderhaug om å innføre 13-årsgrense på kjøp av smarttelefon",
+      "henvisning": "Dokument 8:236 S (2025-2026), Innst. 330 S (2025-2026)",
+      "komite": "Familie- og kulturkomiteen"
+    },
+    {
+      "id": "200216",
+      "tittel": "Representantforslag fra stortingsrepresentantene Kristian August Eilertsen, Julia Brännström Nordtug, Bård Hoksrud, Stig Atle Abrahamsen og Anne Grethe Hauan om beskyttelse av spedbarn mot RS-virus",
+      "henvisning": "Dokument 8:237 S (2025-2026), Innst. 415 S (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "200239",
+      "tittel": "Samisk språk, kultur og samfunnsliv",
+      "henvisning": "Meld. St. 8 (2025-2026), Innst. 417 S (2025-2026)",
+      "komite": "Kommunal- og forvaltningskomiteen"
+    },
+    {
+      "id": "200242",
+      "tittel": "Endringer i åndsverkloven mv. (gjennomføring av nett- og videresendingsdirektivet og digitalmarkedsdirektivet) og samtykke til godkjenning av EØS-komiteens beslutning nr. 332/2023 og 333/2023 om innlemmelse i EØS-avtalen av direktiv (EU) 2019/789 og (EU) 2019/790, og samtykke til tiltredelse til WIPO-traktatene av 20. desember 1996 om opphavsrett (WCT) og om fremføringer og fonogrammer (WPPT)",
+      "henvisning": "Prop. 41 LS (2025-2026)",
+      "komite": "Familie- og kulturkomiteen"
+    },
+    {
+      "id": "200244",
+      "tittel": "Endringer i bærekraftige produkter-loven (hjemmel for bærekrafts- og utslippsreduksjonskriterier i EUs fornybardirektiv)",
+      "henvisning": "Prop. 67 L (2025-2026), Innst. 338 L (2025-2026), Lovvedtak 74 (2025-2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "200246",
+      "tittel": "Endringer i konkursloven mv. (rekonstruksjonsforhandling)",
+      "henvisning": "Prop. 56 L (2025-2026), Innst. 355 L (2025-2026), Lovvedtak 79 (2025-2026)",
+      "komite": "Justiskomiteen"
+    },
+    {
+      "id": "200250",
+      "tittel": "Endringer i opplæringslova og barnehageloven mv. (samleproposisjon)",
+      "henvisning": "Prop. 79 L (2025-2026), Innst. 356 L (2025-2026), Lovvedtak 67 (2025-2026)",
+      "komite": "Utdannings- og forskningskomiteen"
+    },
+    {
+      "id": "200254",
+      "tittel": "Forsvarsløftet - Økte rammer og prioriteringer i Langtidsplanen for forsvarssektoren",
+      "henvisning": "Prop. 68 S (2025-2026), Innst. 440 S (2025-2026)",
+      "komite": "Utenriks- og forsvarskomiteen"
+    },
+    {
+      "id": "200270",
+      "tittel": "Representantforslag fra stortingsrepresentantene Kirsti Bergstø, Lars Haltbrekken, Anne Lise Gjerstad Fredlund, Marthe Hammer og Mirell Høyer-Berntsen om kontroll av drivstoffkjedene og deres prissetting",
+      "henvisning": "Dokument 8:274 S (2025-2026), Innst. 446 S (2025-2026)",
+      "komite": "Næringskomiteen"
+    },
+    {
+      "id": "200278",
+      "tittel": "Midlertidig endring av alkoholloven (unntak fra maksimaltiden for skjenking under fotball-VM for herrer 2026)",
+      "henvisning": "Prop. 88 L (2025-2026), Innst. 296 L (2025-2026), Lovvedtak 41 (2025-2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "200288",
+      "tittel": "Representantforslag fra stortingsrepresentantene Marthe Hammer og Kirsti Bergstø om å nedsette en forskjellskommisjon",
+      "henvisning": "Dokument 8:279 S (2025-2026)",
+      "komite": "Finanskomiteen"
+    },
+    {
+      "id": "200294",
+      "tittel": "Representantforslag fra stortingsrepresentantene Guri Melby, Abid Raja og Grunde Almeland om bedre togtilbud og gjenåpning av togstrekninger på Østlandet",
+      "henvisning": "Dokument 8:282 S (2025-2026), Innst. 358 S (2025-2026)",
+      "komite": "Transport- og kommunikasjonskomiteen"
+    },
+    {
+      "id": "200314",
+      "tittel": "Revidert nasjonalbudsjett 2026",
+      "henvisning": "Meld. St. 2 (2025-2026), Innst. 450 S (2025-2026)",
+      "komite": "Finanskomiteen"
+    },
+    {
+      "id": "200329",
+      "tittel": "Endringer i Stortingets forretningsorden",
+      "henvisning": "Innst. 434 S (2025-2026)",
+      "komite": "Stortingets presidentskap"
+    },
+    {
+      "id": "200337",
+      "tittel": "Riksrevisjonens undersøkelse av myndighetenes arbeid med å sikre effektiv ressursbruk i offentlig sektor",
+      "henvisning": "Dokument 3:15 (2025-2026)",
+      "komite": "Kontroll- og konstitusjonskomiteen"
+    },
+    {
+      "id": "200339",
+      "tittel": "Representantforslag fra stortingsrepresentantene Kathy Lie, Mirell Høyer-Berntsen og Anne Lise Gjerstad Fredlund om innføring av makspris på egenandeler knyttet til praktisk bistand",
+      "henvisning": "Dokument 8:298 S (2025–2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "200343",
+      "tittel": "Representantforslag fra stortingsrepresentantene Anne Lise Gjerstad Fredlund, Mirell Høyer-Berntsen, Andreas Sjalg Unneland, Kathy Lie, Lars Haltbrekken og Sunniva Holmås Eidsvoll om likebehandling av husholdningsforbruk i kommunale boliger i ordningene for Norgespris og strømstøtte",
+      "henvisning": "Dokument 8:300 S (2025–2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "200360",
+      "tittel": "Representantforslag fra stortingsrepresentantene Guri Melby, Grunde Almeland og Ane Breivik om å styrke kvinners tilgang på medikamentell abort utenfor sykehus",
+      "henvisning": "Dokument 8:309 S (2025–2026)",
+      "komite": "Helse- og omsorgskomiteen"
+    },
+    {
+      "id": "200369",
+      "tittel": "Representantforslag fra stortingsrepresentantene Simen Velle, Lill Harriet Sandaune, Line Marlene Haugen og Joakim Myklebost Tangen om å styrke private barnehagers medvirkning, klageadgang og rettssikkerhet gjennom konkrete endringer i finansieringsforskriften",
+      "henvisning": "Dokument 8:318 S (2025–2026)",
+      "komite": "Utdannings- og forskningskomiteen"
+    },
+    {
+      "id": "200377",
+      "tittel": "Endringer i finansmarkedslovgivningen (etablering av felles europeisk tilgangspunkt) og samtykke til godkjenning av EØS-komiteens beslutninger nr. 303/2025, 304/2025 og 305/2025",
+      "henvisning": "Prop. 107 LS (2025–2026)",
+      "komite": "Finanskomiteen"
+    },
+    {
+      "id": "200384",
+      "tittel": "Representantforslag fra stortingsrepresentantene Kari Sofie Bjørnsen, Amalie Gunnufsen, Haagen Poppe, Mahmoud Farahmand og Aleksander Stokkebø om likere strømpriser og et sterkere forbrukervern",
+      "henvisning": "Dokument 8:324 S (2025–2026)",
+      "komite": "Energi- og miljøkomiteen"
+    },
+    {
+      "id": "200409",
+      "tittel": "Innberetning fra valgkomiteen om endringer i de faste komiteers sammensetning",
+      "henvisning": "Innberetning 5 (2025–2026)",
+      "komite": "Valgkomiteen"
+    }
+  ],
+  "hearings": [
+    {
+      "id": "10005544",
+      "sakIds": [
+        "104908"
+      ],
+      "tittel": "statsbudsjettet 2026 (kapitler fordelt til arbeids- og sosialkomiteen) statsbudsjettet 2026 (kapitler fordelt til arbeids- og sosialkomiteen)",
+      "komite": "Arbeids- og sosialkomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005552",
+      "sakIds": [
+        "104906"
+      ],
+      "tittel": "statsbudsjettet 2026 (kapitler fordelt til transport- og kommunikasjonskomiteen) statsbudsjettet 2026 (kapitler fordelt til transport- og kommunikasjonskomiteen)",
+      "komite": "Transport- og kommunikasjonskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005566",
+      "sakIds": [
+        "104870"
+      ],
+      "tittel": "representantforslag om en ny næringspolitikk for en ny tid representantforslag om en ny næringspolitikk for en ny tid",
+      "komite": "Næringskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005577",
+      "sakIds": [
+        "103840"
+      ],
+      "tittel": "eksport av forsvarsmateriell fra norge i 2024, eksportkontroll og internasjonalt ikke-spredningssamarbeid eksport av forsvarsmateriell fra norge i 2024, eksportkontroll og internasjonalt ikke-spredningssamarbeid",
+      "komite": "Utenriks- og forsvarskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005579",
+      "sakIds": [
+        "104646"
+      ],
+      "tittel": "endringer i husleieloven (omorganisering av husleietvistutvalget) endringer i husleieloven (omorganisering av husleietvistutvalget)",
+      "komite": "Kommunal- og forvaltningskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005582",
+      "sakIds": [
+        "104002"
+      ],
+      "tittel": "endringer i helsepersonelloven og pasientjournalloven mv. (taushetsplikt og tilgjengeliggjøring av pasientopplysninger) endringer i helsepersonelloven og pasientjournalloven mv. (taushetsplikt og tilgjengeliggjøring av pasientopplysninger)",
+      "komite": "Helse- og omsorgskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005607",
+      "sakIds": [
+        "105340"
+      ],
+      "tittel": "endringer i sentralbankloven (adgang for staten til å innhente kreditt for likviditetsformål mv.) endringer i sentralbankloven (adgang for staten til å innhente kreditt for likviditetsformål mv.)",
+      "komite": "Finanskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005638",
+      "sakIds": [
+        "105528"
+      ],
+      "tittel": "representantforslag om manglende ressurser ved energiutbyggingssaker representantforslag om manglende ressurser ved energiutbyggingssaker",
+      "komite": "Energi- og miljøkomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005666",
+      "sakIds": [
+        "106053"
+      ],
+      "tittel": "representantforslag om et bedre tilbud innen psykisk helsevern representantforslag om et bedre tilbud innen psykisk helsevern",
+      "komite": "Helse- og omsorgskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005673",
+      "sakIds": [
+        "106245"
+      ],
+      "tittel": "representantforslag om et helhetlig løft for kvinnehelse og overgangsalderen representantforslag om et helhetlig løft for kvinnehelse og overgangsalderen",
+      "komite": "Helse- og omsorgskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005710",
+      "sakIds": [
+        "200054"
+      ],
+      "tittel": "representantforslag om redusert bompengebelastning på nordøyvegen representantforslag om redusert bompengebelastning på nordøyvegen",
+      "komite": "Transport- og kommunikasjonskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005713",
+      "sakIds": [
+        "200030"
+      ],
+      "tittel": "endring av fylkestilhørighet for gran kommune fra innlandet fylke til akershus fylke endring av fylkestilhørighet for gran kommune fra innlandet fylke til akershus fylke",
+      "komite": "Kommunal- og forvaltningskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005720",
+      "sakIds": [
+        "200067"
+      ],
+      "tittel": "representantforslag om bedre integrering av familieinnvandrere representantforslag om bedre integrering av familieinnvandrere",
+      "komite": "Kommunal- og forvaltningskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005726",
+      "sakIds": [
+        "200076"
+      ],
+      "tittel": "representantforslag om å ta tomme bygg og boliger i bruk representantforslag om å ta tomme bygg og boliger i bruk",
+      "komite": "Kommunal- og forvaltningskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005731",
+      "sakIds": [
+        "200081"
+      ],
+      "tittel": "representantforslag om å reversere tidligere svekkelser i arbeidsmiljøloven og styrke tillitsvalgtes myndighet (lov-delen) representantforslag om å reversere tidligere svekkelser i arbeidsmiljøloven og styrke tillitsvalgtes myndighet (lov-delen)",
+      "komite": "Arbeids- og sosialkomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005749",
+      "sakIds": [
+        "200102"
+      ],
+      "tittel": "representantforslag om en tryggere og mer dyrevennlig nyttårsfeiring representantforslag om en tryggere og mer dyrevennlig nyttårsfeiring",
+      "komite": "Justiskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005759",
+      "sakIds": [
+        "200103"
+      ],
+      "tittel": "representantforslag om det neste oljeeventyret på norsk sokkel representantforslag om det neste oljeeventyret på norsk sokkel",
+      "komite": "Energi- og miljøkomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005760",
+      "sakIds": [
+        "200108"
+      ],
+      "tittel": "representantforslag om beredskapslagring av diesel og flybensin representantforslag om beredskapslagring av diesel og flybensin",
+      "komite": "Energi- og miljøkomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005778",
+      "sakIds": [
+        "200254"
+      ],
+      "tittel": "forsvarsløftet - økte rammer og prioriteringer i langtidsplanen for forsvarssektoren forsvarsløftet - økte rammer og prioriteringer i langtidsplanen for forsvarssektoren",
+      "komite": "Utenriks- og forsvarskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005795",
+      "sakIds": [
+        "200172"
+      ],
+      "tittel": "representantforslag om å sikre fullføring og kvalitet i videregående opplæring representantforslag om å sikre fullføring og kvalitet i videregående opplæring",
+      "komite": "Utdannings- og forskningskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005796",
+      "sakIds": [
+        "200244"
+      ],
+      "tittel": "endringer i bærekraftige produkter-loven (hjemmel for bærekrafts- og utslippsreduksjonskriterier i eus fornybardirektiv) endringer i bærekraftige produkter-loven (hjemmel for bærekrafts- og utslippsreduksjonskriterier i eus fornybardirektiv)",
+      "komite": "Energi- og miljøkomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005799",
+      "sakIds": [
+        "200202"
+      ],
+      "tittel": "representantforslag om sterkere beskyttelse av naturverdiene i oslofjorden og en egen oslofjordlov representantforslag om sterkere beskyttelse av naturverdiene i oslofjorden og en egen oslofjordlov",
+      "komite": "Energi- og miljøkomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005812",
+      "sakIds": [
+        "200199"
+      ],
+      "tittel": "representantforslag om å øke andelen institusjonsplasser i ideelle barnevernsinstitusjoner representantforslag om å øke andelen institusjonsplasser i ideelle barnevernsinstitusjoner",
+      "komite": "Familie- og kulturkomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005837",
+      "sakIds": [
+        "200143"
+      ],
+      "tittel": "representantforslag om kompensasjonsordning for bedrifter utan høve til omstilling representantforslag om kompensasjonsordning for bedrifter utan høve til omstilling",
+      "komite": "Næringskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005848",
+      "sakIds": [
+        "200138"
+      ],
+      "tittel": "samtykke til ratifikasjon av frihandelsavtale mellom efta-statene og mercosur av 16. september 2025 samtykke til ratifikasjon av frihandelsavtale mellom efta-statene og mercosur av 16. september 2025",
+      "komite": "Næringskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005865",
+      "sakIds": [
+        "200278"
+      ],
+      "tittel": "midlertidig endring av alkoholloven (unntak fra maksimaltiden for skjenking under fotball-vm for herrer 2026) midlertidig endring av alkoholloven (unntak fra maksimaltiden for skjenking under fotball-vm for herrer 2026)",
+      "komite": "Helse- og omsorgskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005883",
+      "sakIds": [
+        "200246"
+      ],
+      "tittel": "endringer i konkursloven mv. (rekonstruksjonsforhandling) endringer i konkursloven mv. (rekonstruksjonsforhandling)",
+      "komite": "Justiskomiteen",
+      "status": "Avholdt"
+    },
+    {
+      "id": "10005920",
+      "sakIds": [
+        "200144"
+      ],
+      "tittel": "representantforslag om å utdanne og rekruttere legar til den offentlige helsetenesta i heile landet representantforslag om å utdanne og rekruttere legar til den offentlige helsetenesta i heile landet",
+      "komite": "Helse- og omsorgskomiteen",
+      "status": "Aktiv"
+    }
+  ],
+  "voteringer": [
+    {
+      "id": "26483",
+      "sakId": "104895",
+      "tema": "Forslag nr. 86, 89, 90, 92 og 95 - 97 på vegne av V.",
+      "vedtatt": false
+    },
+    {
+      "id": "26607",
+      "sakId": "104906",
+      "tema": "Innstillingens tilråding, stor bokstav A.",
+      "vedtatt": true
+    },
+    {
+      "id": "26617",
+      "sakId": "104915",
+      "tema": "Rammeområde 21 med romertall I, II, III, IV, V, VI, VII, VIII, IX, X, XI, XII, XIII, XIV, XV, XVI, XVII, XVIII, XIX, XX, XXI, XXII, XXIII, XXIV, XXV, XXVI, XXVII, XXVIII, XXIX, XXX, XXXI, XXXII, XXXIII, XXXIV og XXXV.",
+      "vedtatt": true
+    },
+    {
+      "id": "26677",
+      "sakId": "103996",
+      "tema": "Innstillingens tilråding",
+      "vedtatt": true
+    },
+    {
+      "id": "26686",
+      "sakId": "105070",
+      "tema": "Forslag nr. 1 - 3 på vegne av A, Sp, R og MDG.",
+      "vedtatt": true
+    },
+    {
+      "id": "26707",
+      "sakId": "105845",
+      "tema": "Forslag nr. 1 på vegne av SV, Sp og KrF.",
+      "vedtatt": false
+    },
+    {
+      "id": "26789",
+      "sakId": "104914",
+      "tema": "Forslag nr. 20 på vegne av R.",
+      "vedtatt": false
+    },
+    {
+      "id": "26834",
+      "sakId": "105259",
+      "tema": "Forslag nr. 1 og 2 på vegne av H, Sp og MDG.",
+      "vedtatt": false
+    },
+    {
+      "id": "26883",
+      "sakId": "104880",
+      "tema": "Forslag nr. 4 på vegne av FrP, SV, Sp, R, MDG og KrF.",
+      "vedtatt": false
+    },
+    {
+      "id": "26896",
+      "sakId": "105696",
+      "tema": "Forslag nr. 1 på vegne av A, FrP, H, SV, Sp, MDG og V.",
+      "vedtatt": true
+    },
+    {
+      "id": "27092",
+      "sakId": "200014",
+      "tema": "Det voteres alternativt mellom innstillingen  og forslag nr..1 fra A og H",
+      "vedtatt": true
+    },
+    {
+      "id": "27115",
+      "sakId": "105661",
+      "tema": "Forslag nr. 2 på vegne av H og KrF.",
+      "vedtatt": false
+    },
+    {
+      "id": "27201",
+      "sakId": "106055",
+      "tema": "Forslag nr. 2 på vegne av H og Sp.",
+      "vedtatt": false
+    },
+    {
+      "id": "27251",
+      "sakId": "200008",
+      "tema": "Alternativ mellom innstillingen og forslag nr.1 fra SV, R, MDG og V",
+      "vedtatt": true
+    },
+    {
+      "id": "27257",
+      "sakId": "105664",
+      "tema": "Forslag nr. 4 på vegne av MDG.",
+      "vedtatt": false
+    },
+    {
+      "id": "27428",
+      "sakId": "200010",
+      "tema": "Forslag nr. 3 på vegne av H.",
+      "vedtatt": false
+    },
+    {
+      "id": "27445",
+      "sakId": "200039",
+      "tema": "Forslag nr. 4 på vegne av SV og R.",
+      "vedtatt": false
+    },
+    {
+      "id": "27650",
+      "sakId": "200096",
+      "tema": "Forslag nr. 12 på vegne av SV, MDG og V.",
+      "vedtatt": false
+    },
+    {
+      "id": "27672",
+      "sakId": "200183",
+      "tema": "Forslag nr. 3 på vegne av R og MDG.",
+      "vedtatt": false
+    },
+    {
+      "id": "27750",
+      "sakId": "200015",
+      "tema": "Innstillingens tilråding",
+      "vedtatt": true
+    },
+    {
+      "id": "27920",
+      "sakId": "200069",
+      "tema": "Forslag nr. 2 og 3 på vegne av FrP og KrF.",
+      "vedtatt": false
+    },
+    {
+      "id": "28019",
+      "sakId": "200239",
+      "tema": "Forslag nr. 13 og 16 på vegne av SV og R.",
+      "vedtatt": false
+    },
+    {
+      "id": "28117",
+      "sakId": "200202",
+      "tema": "Forslag nr. 2 og 3 på vegne av SV, R, MDG og V.",
+      "vedtatt": false
+    },
+    {
+      "id": "28244",
+      "sakId": "200216",
+      "tema": "Alternativ votering mellom innstillingen og forslag 1 fra A og MDG.",
+      "vedtatt": true
+    },
+    {
+      "id": "28266",
+      "sakId": "200207",
+      "tema": "Alternativ votering mellom innstillingen og forslagene 1 - 3 fra FrP.",
+      "vedtatt": true
+    },
+    {
+      "id": "28347",
+      "sakId": "200199",
+      "tema": "Forslag nr. 9 på vegne av KrF.",
+      "vedtatt": false
+    },
+    {
+      "id": "28389",
+      "sakId": "200294",
+      "tema": "Forslag nr. 5 og 6 på vegne av V.",
+      "vedtatt": false
+    },
+    {
+      "id": "28448",
+      "sakId": "109130",
+      "tema": "Forslag nr. 8 på vegne av R.",
+      "vedtatt": false
+    },
+    {
+      "id": "28470",
+      "sakId": "200314",
+      "tema": "Forslag nr. 56 på vegne av KrF.",
+      "vedtatt": false
+    }
+  ]
+}

@@ -1,0 +1,1393 @@
+[
+  {
+    "id": "v2-eksakt-sak-002",
+    "kind": "issue_search",
+    "category": "eksakt_sak",
+    "query": "sak 105849",
+    "gold": {
+      "issueIds": [
+        "105849"
+      ],
+      "titleMustContain": [
+        "norges bank"
+      ]
+    },
+    "tags": [
+      "v2",
+      "eksakt_sak",
+      "exact_id",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-eksakt-sak-004",
+    "kind": "issue_search",
+    "category": "eksakt_sak",
+    "query": "innst 176 s kriminalitet",
+    "gold": {
+      "issueIds": [
+        "104765"
+      ],
+      "titleMustContain": [
+        "kriminalitetsbildet"
+      ]
+    },
+    "tags": [
+      "v2",
+      "eksakt_sak",
+      "year_format",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-eksakt-sak-005",
+    "kind": "issue_search",
+    "category": "eksakt_sak",
+    "query": "sak 100026",
+    "gold": {
+      "issueIds": [
+        "100026"
+      ],
+      "titleMustContain": [
+        "sperregrense"
+      ]
+    },
+    "tags": [
+      "v2",
+      "eksakt_sak",
+      "exact_id",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-eksakt-sak-006",
+    "kind": "issue_search",
+    "category": "eksakt_sak",
+    "query": "riksrevisjonen ressursbruk",
+    "gold": {
+      "issueIds": [
+        "200337"
+      ],
+      "titleMustContain": [
+        "ressursbruk"
+      ]
+    },
+    "tags": [
+      "v2",
+      "eksakt_sak",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-eksakt-sak-011",
+    "kind": "issue_search",
+    "category": "eksakt_sak",
+    "query": "plan bygningslov krig",
+    "gold": {
+      "issueIds": [
+        "200087"
+      ],
+      "titleMustContain": [
+        "bygningslov"
+      ]
+    },
+    "tags": [
+      "v2",
+      "eksakt_sak",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-eksakt-sak-015",
+    "kind": "issue_search",
+    "category": "eksakt_sak",
+    "query": "gjødselforskrift fleksibel",
+    "gold": {
+      "issueIds": [
+        "200107"
+      ],
+      "titleMustContain": [
+        "gjødselforskrift"
+      ]
+    },
+    "tags": [
+      "v2",
+      "eksakt_sak",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-eksakt-sak-018",
+    "kind": "issue_search",
+    "category": "eksakt_sak",
+    "query": "stortinget forretningsorden",
+    "gold": {
+      "issueIds": [
+        "200329"
+      ],
+      "titleMustContain": [
+        "forretningsorden"
+      ]
+    },
+    "tags": [
+      "v2",
+      "eksakt_sak",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-eksakt-sak-019",
+    "kind": "issue_search",
+    "category": "eksakt_sak",
+    "query": "alexander kielland",
+    "gold": {
+      "issueIds": [
+        "105971"
+      ],
+      "titleMustContain": [
+        "kielland"
+      ]
+    },
+    "tags": [
+      "v2",
+      "eksakt_sak",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-eksakt-sak-023",
+    "kind": "issue_search",
+    "category": "eksakt_sak",
+    "query": "mercator havet",
+    "gold": {
+      "issueIds": [
+        "105209"
+      ],
+      "titleMustContain": [
+        "mercator"
+      ]
+    },
+    "tags": [
+      "v2",
+      "eksakt_sak",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-tema-031",
+    "kind": "topic",
+    "category": "tema",
+    "query": "bompenger e6 ulsberg melhus",
+    "gold": {
+      "facts": [
+        "storting"
+      ],
+      "issueIds": [
+        "200035",
+        "200111"
+      ]
+    },
+    "tags": [
+      "v2",
+      "tema",
+      "topic_multi_sak",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-tema-032",
+    "kind": "topic",
+    "category": "tema",
+    "query": "hvorfor vil stortinget redusere bompenger på e6?",
+    "gold": {
+      "facts": [
+        "storting"
+      ],
+      "issueIds": [
+        "200035",
+        "200111"
+      ]
+    },
+    "tags": [
+      "v2",
+      "tema",
+      "topic_multi_sak"
+    ]
+  },
+  {
+    "id": "v2-tema-042",
+    "kind": "topic",
+    "category": "tema",
+    "query": "hvilke delegasjoner har stortingsrepresentanter valgte til?",
+    "gold": {
+      "facts": [
+        "delegasjon"
+      ],
+      "issueIds": [
+        "105112",
+        "105111"
+      ]
+    },
+    "tags": [
+      "v2",
+      "tema",
+      "topic_multi_sak"
+    ]
+  },
+  {
+    "id": "v2-tema-045",
+    "kind": "topic",
+    "category": "tema",
+    "query": "forsvar langsiktig plan 2025",
+    "gold": {
+      "facts": [
+        "forsvar"
+      ],
+      "issueIds": [
+        "200087",
+        "103871"
+      ]
+    },
+    "tags": [
+      "v2",
+      "tema",
+      "topic_multi_sak",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-tema-046",
+    "kind": "topic",
+    "category": "tema",
+    "query": "hva er stattus på forsvarssektorens langsiktige plan?",
+    "gold": {
+      "facts": [
+        "forsvar"
+      ],
+      "issueIds": [
+        "200087",
+        "103871"
+      ]
+    },
+    "tags": [
+      "v2",
+      "tema",
+      "topic_multi_sak"
+    ]
+  },
+  {
+    "id": "v2-tema-049",
+    "kind": "topic",
+    "category": "tema",
+    "query": "elektrisitet havvind stokkebø",
+    "gold": {
+      "facts": [
+        "stokkebø"
+      ],
+      "issueIds": [
+        "200165",
+        "105387"
+      ]
+    },
+    "tags": [
+      "v2",
+      "tema",
+      "topic_multi_sak",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-tema-050",
+    "kind": "topic",
+    "category": "tema",
+    "query": "hvorfor vil stortinget sikkre kvalitet på støtte til flytende havvind?",
+    "gold": {
+      "facts": [
+        "stokkebø"
+      ],
+      "issueIds": [
+        "200165",
+        "105387"
+      ]
+    },
+    "tags": [
+      "v2",
+      "tema",
+      "topic_multi_sak"
+    ]
+  },
+  {
+    "id": "v2-tema-051",
+    "kind": "topic",
+    "category": "tema",
+    "query": "statsforvaltning forenklingsreform nav",
+    "gold": {
+      "facts": [
+        "forenkling"
+      ],
+      "issueIds": [
+        "105884",
+        "200160"
+      ]
+    },
+    "tags": [
+      "v2",
+      "tema",
+      "topic_multi_sak",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-tema-052",
+    "kind": "topic",
+    "category": "tema",
+    "query": "hvilke forenklinger vil stortinget innføre i nav?",
+    "gold": {
+      "facts": [
+        "forenkling"
+      ],
+      "issueIds": [
+        "105884",
+        "200160"
+      ]
+    },
+    "tags": [
+      "v2",
+      "tema",
+      "topic_multi_sak"
+    ]
+  },
+  {
+    "id": "v2-tema-053",
+    "kind": "topic",
+    "category": "tema",
+    "query": "stortinget grunnlov endring §121",
+    "gold": {
+      "facts": [
+        "grunnlov"
+      ],
+      "issueIds": [
+        "100014",
+        "107923"
+      ]
+    },
+    "tags": [
+      "v2",
+      "tema",
+      "topic_multi_sak",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-prefiks-delord-003",
+    "kind": "issue_search",
+    "category": "prefiks_delord",
+    "query": "klimag",
+    "gold": {
+      "titleMustContain": [
+        "klimag"
+      ],
+      "issueIds": [
+        "103814"
+      ]
+    },
+    "tags": [
+      "v2",
+      "prefiks_delord",
+      "prefix",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-prefiks-delord-004",
+    "kind": "issue_search",
+    "category": "prefiks_delord",
+    "query": "innfartsv",
+    "gold": {
+      "titleMustContain": [
+        "innfartsv"
+      ],
+      "issueIds": [
+        "200101"
+      ]
+    },
+    "tags": [
+      "v2",
+      "prefiks_delord",
+      "prefix",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-prefiks-delord-008",
+    "kind": "issue_search",
+    "category": "prefiks_delord",
+    "query": "utvisn",
+    "gold": {
+      "titleMustContain": [
+        "utvisn"
+      ],
+      "issueIds": [
+        "106246"
+      ]
+    },
+    "tags": [
+      "v2",
+      "prefiks_delord",
+      "prefix",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-prefiks-delord-012",
+    "kind": "issue_search",
+    "category": "prefiks_delord",
+    "query": "formues",
+    "gold": {
+      "titleMustContain": [
+        "formues"
+      ],
+      "issueIds": [
+        "200012"
+      ]
+    },
+    "tags": [
+      "v2",
+      "prefiks_delord",
+      "prefix",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-prefiks-delord-013",
+    "kind": "issue_search",
+    "category": "prefiks_delord",
+    "query": "strømpr",
+    "gold": {
+      "titleMustContain": [
+        "strømpr"
+      ],
+      "issueIds": [
+        "200384"
+      ]
+    },
+    "tags": [
+      "v2",
+      "prefiks_delord",
+      "prefix",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-prefiks-delord-015",
+    "kind": "issue_search",
+    "category": "prefiks_delord",
+    "query": "pensjon",
+    "gold": {
+      "titleMustContain": [
+        "pensjon"
+      ],
+      "issueIds": [
+        "200146"
+      ]
+    },
+    "tags": [
+      "v2",
+      "prefiks_delord",
+      "prefix",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-prefiks-delord-022",
+    "kind": "issue_search",
+    "category": "prefiks_delord",
+    "query": "partners",
+    "gold": {
+      "titleMustContain": [
+        "partners"
+      ],
+      "issueIds": [
+        "200131"
+      ]
+    },
+    "tags": [
+      "v2",
+      "prefiks_delord",
+      "prefix",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-prefiks-delord-025",
+    "kind": "issue_search",
+    "category": "prefiks_delord",
+    "query": "sivilom",
+    "gold": {
+      "titleMustContain": [
+        "sivilom"
+      ],
+      "issueIds": [
+        "200170"
+      ]
+    },
+    "tags": [
+      "v2",
+      "prefiks_delord",
+      "prefix",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-sammensatte-ord-002",
+    "kind": "issue_search",
+    "category": "sammensatte_ord",
+    "query": "statsbudsjettet 2025 utanriks",
+    "gold": {
+      "issueIds": [
+        "105583"
+      ],
+      "titleMustContain": [
+        "statsbudsjettet"
+      ]
+    },
+    "tags": [
+      "v2",
+      "sammensatte_ord",
+      "compound",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-sammensatte-ord-003",
+    "kind": "issue_search",
+    "category": "sammensatte_ord",
+    "query": "makspris egenandeler",
+    "gold": {
+      "issueIds": [
+        "200339"
+      ],
+      "titleMustContain": [
+        "egenandeler"
+      ]
+    },
+    "tags": [
+      "v2",
+      "sammensatte_ord",
+      "compound",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-sammensatte-ord-004",
+    "kind": "issue_search",
+    "category": "sammensatte_ord",
+    "query": "hva har de bestemt om strømstotte",
+    "gold": {
+      "issueIds": [
+        "200343"
+      ],
+      "titleMustContain": [
+        "strømstøtte"
+      ]
+    },
+    "tags": [
+      "v2",
+      "sammensatte_ord",
+      "compound",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "v2-sammensatte-ord-010",
+    "kind": "issue_search",
+    "category": "sammensatte_ord",
+    "query": "klimatilpasning utviklingsland",
+    "gold": {
+      "issueIds": [
+        "105667"
+      ],
+      "titleMustContain": [
+        "klimatilpasning"
+      ]
+    },
+    "tags": [
+      "v2",
+      "sammensatte_ord",
+      "compound",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-sammensatte-ord-011",
+    "kind": "issue_search",
+    "category": "sammensatte_ord",
+    "query": "byvekstavtaler nullvekstmalet",
+    "gold": {
+      "issueIds": [
+        "200198"
+      ],
+      "titleMustContain": [
+        "byvekstavtaler"
+      ]
+    },
+    "tags": [
+      "v2",
+      "sammensatte_ord",
+      "compound",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-sammensatte-ord-016",
+    "kind": "issue_search",
+    "category": "sammensatte_ord",
+    "query": "selvbestemt abort",
+    "gold": {
+      "issueIds": [
+        "100029"
+      ],
+      "titleMustContain": [
+        "selvbestemt abort"
+      ]
+    },
+    "tags": [
+      "v2",
+      "sammensatte_ord",
+      "compound",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-sammensatte-ord-017",
+    "kind": "issue_search",
+    "category": "sammensatte_ord",
+    "query": "godkjenningsfritak legemidler",
+    "gold": {
+      "issueIds": [
+        "106367"
+      ],
+      "titleMustContain": [
+        "godkjenningsfritak"
+      ]
+    },
+    "tags": [
+      "v2",
+      "sammensatte_ord",
+      "compound",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-sammensatte-ord-021",
+    "kind": "issue_search",
+    "category": "sammensatte_ord",
+    "query": "eu avgift drivstoff",
+    "gold": {
+      "issueIds": [
+        "104877"
+      ],
+      "titleMustContain": [
+        "eu-avgift"
+      ]
+    },
+    "tags": [
+      "v2",
+      "sammensatte_ord",
+      "compound",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-sammensatte-ord-022",
+    "kind": "issue_search",
+    "category": "sammensatte_ord",
+    "query": "tilfluktsrom sjukehus",
+    "gold": {
+      "issueIds": [
+        "200016"
+      ],
+      "titleMustContain": [
+        "tilfluktsrom"
+      ]
+    },
+    "tags": [
+      "v2",
+      "sammensatte_ord",
+      "compound",
+      "friction_fts",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-voteringer-parti-002",
+    "kind": "sak_chunk",
+    "category": "voteringer_parti",
+    "query": "hvem stemte for sparkesykler på fortau",
+    "issueId": "105070",
+    "gold": {
+      "facts": [
+        "sparkesykler"
+      ],
+      "documentKinds": [],
+      "voteringId": "26686",
+      "vedtatt": true,
+      "antallFor": 58,
+      "antallMot": 41,
+      "partyPositions": {
+        "A": "for",
+        "FrP": "mot",
+        "H": "mot",
+        "KrF": "for",
+        "R": "for",
+        "MDG": "for",
+        "Sp": "for",
+        "SV": "for",
+        "V": "for"
+      }
+    },
+    "tags": [
+      "v2",
+      "voteringer_parti",
+      "party_votering"
+    ]
+  },
+  {
+    "id": "v2-voteringer-parti-005",
+    "kind": "sak_chunk",
+    "category": "voteringer_parti",
+    "query": "hoyre stemte mot skatter 2026",
+    "issueId": "104915",
+    "gold": {
+      "facts": [
+        "skatter"
+      ],
+      "documentKinds": [],
+      "voteringId": "26617",
+      "vedtatt": true,
+      "antallFor": 53,
+      "antallMot": 49,
+      "partyPositions": {
+        "A": "for",
+        "FrP": "mot",
+        "H": "mot",
+        "KrF": "mot",
+        "R": "for",
+        "MDG": "for",
+        "Sp": "for",
+        "SV": "for",
+        "V": "mot"
+      },
+      "askedParties": [
+        "H"
+      ]
+    },
+    "tags": [
+      "v2",
+      "voteringer_parti",
+      "party_votering"
+    ]
+  },
+  {
+    "id": "v2-voteringer-parti-008",
+    "kind": "sak_chunk",
+    "category": "voteringer_parti",
+    "query": "organisert bedrageri hvem stemte for",
+    "issueId": "200069",
+    "gold": {
+      "facts": [
+        "bedrageri"
+      ],
+      "documentKinds": [],
+      "voteringId": "27920",
+      "vedtatt": false,
+      "antallFor": 33,
+      "antallMot": 68,
+      "partyPositions": {
+        "A": "mot",
+        "FrP": "for",
+        "V": "mot",
+        "H": "mot",
+        "KrF": "for",
+        "R": "mot",
+        "MDG": "mot",
+        "Sp": "mot",
+        "SV": "mot"
+      }
+    },
+    "tags": [
+      "v2",
+      "voteringer_parti",
+      "party_votering"
+    ]
+  },
+  {
+    "id": "v2-voteringer-parti-010",
+    "kind": "sak_chunk",
+    "category": "voteringer_parti",
+    "query": "togtilbud ostlandet vedtatt",
+    "issueId": "200294",
+    "gold": {
+      "facts": [
+        "togtilbud"
+      ],
+      "documentKinds": [],
+      "voteringId": "28389",
+      "vedtatt": false,
+      "antallFor": 2,
+      "antallMot": 99,
+      "partyPositions": {
+        "A": "mot",
+        "FrP": "mot",
+        "V": "for",
+        "H": "mot",
+        "KrF": "mot",
+        "R": "mot",
+        "MDG": "mot",
+        "Sp": "mot",
+        "SV": "mot"
+      }
+    },
+    "tags": [
+      "v2",
+      "voteringer_parti",
+      "party_votering",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-voteringer-parti-020",
+    "kind": "sak_chunk",
+    "category": "voteringer_parti",
+    "query": "revidert budsjett krf stemte",
+    "issueId": "200314",
+    "gold": {
+      "facts": [
+        "revidert"
+      ],
+      "documentKinds": [],
+      "voteringId": "28470",
+      "vedtatt": false,
+      "antallFor": 33,
+      "antallMot": 69,
+      "partyPositions": {
+        "A": "mot",
+        "FrP": "for",
+        "V": "mot",
+        "H": "mot",
+        "KrF": "for",
+        "R": "mot",
+        "MDG": "mot",
+        "Sp": "mot",
+        "SV": "mot"
+      },
+      "askedParties": [
+        "KrF"
+      ]
+    },
+    "tags": [
+      "v2",
+      "voteringer_parti",
+      "party_votering",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-voteringer-parti-021",
+    "kind": "sak_chunk",
+    "category": "voteringer_parti",
+    "query": "godtgjøring rødt stemte for",
+    "issueId": "109130",
+    "gold": {
+      "facts": [
+        "godtgjøring"
+      ],
+      "documentKinds": [],
+      "voteringId": "28448",
+      "vedtatt": false,
+      "antallFor": 26,
+      "antallMot": 143,
+      "partyPositions": {
+        "A": "mot",
+        "FrP": "mot",
+        "V": "mot",
+        "H": "mot",
+        "KrF": "mot",
+        "R": "for",
+        "MDG": "for",
+        "Sp": "mot",
+        "SV": "for"
+      },
+      "askedParties": [
+        "R"
+      ]
+    },
+    "tags": [
+      "v2",
+      "voteringer_parti",
+      "party_votering",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-voteringer-parti-024",
+    "kind": "sak_chunk",
+    "category": "voteringer_parti",
+    "query": "satellittnavigasjon hoyre stemte",
+    "issueId": "106055",
+    "gold": {
+      "facts": [
+        "satellittnavigasjon"
+      ],
+      "documentKinds": [],
+      "voteringId": "27201",
+      "vedtatt": false,
+      "antallFor": 25,
+      "antallMot": 76,
+      "partyPositions": {
+        "A": "mot",
+        "FrP": "mot",
+        "V": "for",
+        "H": "for",
+        "KrF": "for",
+        "R": "mot",
+        "MDG": "mot",
+        "Sp": "for",
+        "SV": "mot"
+      },
+      "askedParties": [
+        "H"
+      ]
+    },
+    "tags": [
+      "v2",
+      "voteringer_parti",
+      "party_votering",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-voteringer-parti-025",
+    "kind": "sak_chunk",
+    "category": "voteringer_parti",
+    "query": "borgerkontrakt hoyre stemte for",
+    "issueId": "200010",
+    "gold": {
+      "facts": [
+        "borgerkontrakt"
+      ],
+      "documentKinds": [],
+      "voteringId": "27428",
+      "vedtatt": false,
+      "antallFor": 19,
+      "antallMot": 82,
+      "partyPositions": {
+        "A": "mot",
+        "FrP": "mot",
+        "V": "mot",
+        "H": "for",
+        "KrF": "for",
+        "R": "mot",
+        "MDG": "mot",
+        "Sp": "mot",
+        "SV": "mot"
+      },
+      "askedParties": [
+        "H"
+      ]
+    },
+    "tags": [
+      "v2",
+      "voteringer_parti",
+      "party_votering",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-voteringer-parti-027",
+    "kind": "sak_chunk",
+    "category": "voteringer_parti",
+    "query": "alkoholsal fjernbutikk vedtatt",
+    "issueId": "105696",
+    "gold": {
+      "facts": [
+        "alkoholsal"
+      ],
+      "documentKinds": [],
+      "voteringId": "26896",
+      "vedtatt": true,
+      "antallFor": 92,
+      "antallMot": 10,
+      "partyPositions": {
+        "A": "for",
+        "FrP": "for",
+        "V": "for",
+        "H": "for",
+        "KrF": "mot",
+        "R": "mot",
+        "MDG": "for",
+        "Sp": "for",
+        "SV": "for"
+      }
+    },
+    "tags": [
+      "v2",
+      "voteringer_parti",
+      "party_votering",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-horinger-001",
+    "kind": "hearing_chunk",
+    "category": "horinger",
+    "query": "høring om frihandelsavtale efta mercosur",
+    "hearingId": "10005848",
+    "gold": {
+      "facts": [
+        "frihandelsavtale",
+        "mercosur"
+      ],
+      "documentKinds": [],
+      "issueIds": [
+        "200138"
+      ]
+    },
+    "tags": [
+      "v2",
+      "horinger",
+      "hearing"
+    ]
+  },
+  {
+    "id": "v2-horinger-002",
+    "kind": "hearing_chunk",
+    "category": "horinger",
+    "query": "kan jeg sende innspill til kvinnehelse høring",
+    "hearingId": "10005673",
+    "gold": {
+      "facts": [
+        "kvinnehelse",
+        "overgangsalderen"
+      ],
+      "documentKinds": [],
+      "issueIds": [
+        "106245"
+      ]
+    },
+    "tags": [
+      "v2",
+      "horinger",
+      "hearing"
+    ]
+  },
+  {
+    "id": "v2-horinger-008",
+    "kind": "hearing_chunk",
+    "category": "horinger",
+    "query": "bompenge nordøyvegen",
+    "hearingId": "10005710",
+    "gold": {
+      "facts": [
+        "bompengebelastning",
+        "nordøyvegen"
+      ],
+      "documentKinds": [],
+      "issueIds": [
+        "200054"
+      ]
+    },
+    "tags": [
+      "v2",
+      "horinger",
+      "hearing",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-horinger-014",
+    "kind": "hearing_chunk",
+    "category": "horinger",
+    "query": "forsvarsløftet langtidsplanen",
+    "hearingId": "10005778",
+    "gold": {
+      "facts": [
+        "forsvarsløftet",
+        "langtidsplanen"
+      ],
+      "documentKinds": [],
+      "issueIds": [
+        "200254"
+      ]
+    },
+    "tags": [
+      "v2",
+      "horinger",
+      "hearing",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-horinger-015",
+    "kind": "hearing_chunk",
+    "category": "horinger",
+    "query": "eksport forsvarsmateriell",
+    "hearingId": "10005577",
+    "gold": {
+      "facts": [
+        "eksport",
+        "forsvarsmateriell"
+      ],
+      "documentKinds": [],
+      "issueIds": [
+        "103840"
+      ]
+    },
+    "tags": [
+      "v2",
+      "horinger",
+      "hearing",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-horinger-023",
+    "kind": "hearing_chunk",
+    "category": "horinger",
+    "query": "konkursloven rekonstruksjon",
+    "hearingId": "10005883",
+    "gold": {
+      "facts": [
+        "konkursloven",
+        "rekonstruksjonsforhandling"
+      ],
+      "documentKinds": [],
+      "issueIds": [
+        "200246"
+      ]
+    },
+    "tags": [
+      "v2",
+      "horinger",
+      "hearing",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-horinger-025",
+    "kind": "hearing_chunk",
+    "category": "horinger",
+    "query": "videregaende opplæring kvalitet",
+    "hearingId": "10005795",
+    "gold": {
+      "facts": [
+        "videregående opplæring",
+        "kvalitet"
+      ],
+      "documentKinds": [],
+      "issueIds": [
+        "200172"
+      ]
+    },
+    "tags": [
+      "v2",
+      "horinger",
+      "hearing",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-horinger-027",
+    "kind": "hearing_chunk",
+    "category": "horinger",
+    "query": "psykisk helsevern tilbud",
+    "hearingId": "10005666",
+    "gold": {
+      "facts": [
+        "psykisk helsevern"
+      ],
+      "documentKinds": [],
+      "issueIds": [
+        "106053"
+      ]
+    },
+    "tags": [
+      "v2",
+      "horinger",
+      "hearing",
+      "short_query"
+    ]
+  },
+  {
+    "id": "v2-finnes-ikke-002",
+    "kind": "finnes_ikke",
+    "category": "finnes_ikke",
+    "query": "stemte hoyre for lavere skatt på elbiler",
+    "gold": {
+      "facts": [
+        "elbiler"
+      ]
+    },
+    "tags": [
+      "v2"
+    ]
+  },
+  {
+    "id": "v2-finnes-ikke-007",
+    "kind": "finnes_ikke",
+    "category": "finnes_ikke",
+    "query": "høring om forbud mot engangsplast i matbutikker",
+    "gold": {
+      "facts": [
+        "engangsplast"
+      ]
+    },
+    "tags": [
+      "v2"
+    ]
+  },
+  {
+    "id": "v2-finnes-ikke-008",
+    "kind": "finnes_ikke",
+    "category": "finnes_ikke",
+    "query": "stemte frp for fjerning av arveavgift",
+    "gold": {
+      "facts": [
+        "arveavgift"
+      ]
+    },
+    "tags": [
+      "v2"
+    ]
+  },
+  {
+    "id": "v2-finnes-ikke-013",
+    "kind": "finnes_ikke",
+    "category": "finnes_ikke",
+    "query": "stemte mdg mot utbygging av ny motorveg",
+    "gold": {
+      "facts": [
+        "motorveg"
+      ]
+    },
+    "tags": [
+      "v2"
+    ]
+  },
+  {
+    "id": "v2-finnes-ikke-014",
+    "kind": "finnes_ikke",
+    "category": "finnes_ikke",
+    "query": "vedtak om obligatorisk førstehjelpskurs for førerkort",
+    "gold": {
+      "facts": [
+        "førstehjelp",
+        "førerkort"
+      ]
+    },
+    "tags": [
+      "v2"
+    ]
+  },
+  {
+    "id": "v2-finnes-ikke-015",
+    "kind": "finnes_ikke",
+    "category": "finnes_ikke",
+    "query": "hva bestemte stortinget om skatt på streamingtjenester",
+    "gold": {
+      "facts": [
+        "streaming"
+      ]
+    },
+    "tags": [
+      "v2"
+    ]
+  },
+  {
+    "id": "v2-finnes-ikke-016",
+    "kind": "finnes_ikke",
+    "category": "finnes_ikke",
+    "query": "stemte venstre for økt støtte til lokaljournalistikk",
+    "gold": {
+      "facts": [
+        "lokaljournalistikk"
+      ]
+    },
+    "tags": [
+      "v2"
+    ]
+  },
+  {
+    "id": "v2-finnes-ikke-018",
+    "kind": "finnes_ikke",
+    "category": "finnes_ikke",
+    "query": "høring om regulering av bruk av ansiktsgjenkjenning",
+    "gold": {
+      "facts": [
+        "ansiktsgjenkjenning"
+      ]
+    },
+    "tags": [
+      "v2"
+    ]
+  },
+  {
+    "id": "v2-finnes-ikke-020",
+    "kind": "finnes_ikke",
+    "category": "finnes_ikke",
+    "query": "vedtak om gratis tannhelse for ungdom under 25",
+    "gold": {
+      "facts": [
+        "tannhelse"
+      ]
+    },
+    "tags": [
+      "v2"
+    ]
+  },
+  {
+    "id": "v2-finnes-ikke-022",
+    "kind": "finnes_ikke",
+    "category": "finnes_ikke",
+    "query": "høring om krav til energimerking av eldre boliger",
+    "gold": {
+      "facts": [
+        "energimerking",
+        "boliger"
+      ]
+    },
+    "tags": [
+      "v2"
+    ]
+  },
+  {
+    "id": "v2-finnes-ikke-023",
+    "kind": "finnes_ikke",
+    "category": "finnes_ikke",
+    "query": "stemte rødt for nasjonalisering av strømnettet",
+    "gold": {
+      "facts": [
+        "nasjonalisering",
+        "strømnett"
+      ]
+    },
+    "tags": [
+      "v2"
+    ]
+  }
+]
