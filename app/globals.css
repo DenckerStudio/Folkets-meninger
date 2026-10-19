@@ -296,6 +296,7 @@ html[data-reels-open] [data-site-chrome] {
 
 /* Reels: keep Stemme+ pill clear of Ja/blank and desktop «Neste Reel» chevron. */
 html[data-reels-open]:not([data-reels-expanded]) .chat-orb {
+  z-index: 210;
   bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
   right: max(0.75rem, env(safe-area-inset-right, 0px));
 }

@@ -73,6 +73,7 @@ const browser = await chromium.launch();
     btn.type = 'button';
     btn.className = 'chat-orb';
     btn.setAttribute('data-chat-orb', '');
+    btn.setAttribute('data-open', 'false');
     btn.setAttribute('aria-label', 'Åpne Stemme+');
     btn.textContent = 'Stemme+';
     document.body.appendChild(btn);
