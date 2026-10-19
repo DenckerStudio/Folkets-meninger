@@ -9,7 +9,10 @@ import {
   mapClusterAndPollToDisplayStatus,
 } from '@/lib/admin/oppfanget/mapping';
 import { listOppfangetMockFiltered } from '@/lib/admin/oppfanget/mock-list';
-import { isOppfangetMockPreviewAllowed } from '@/lib/admin/oppfanget/preview';
+import {
+  isOppfangetEmptyPreviewAllowed,
+  isOppfangetMockPreviewAllowed,
+} from '@/lib/admin/oppfanget/preview';
 import type {
   ActionClusterDbStatus,
   ActionTypeDb,
@@ -118,6 +121,22 @@ export async function listOppfangetForAdmin(
   filters: OppfangetFilterInput,
   previewParam?: string | null,
 ): Promise<OppfangetListResponse> {
+  if (isOppfangetEmptyPreviewAllowed(previewParam)) {
+    return {
+      rows: [],
+      counts: {
+        oppfanget: 0,
+        under_terskel: 0,
+        utkast_laget: 0,
+        publisert: 0,
+        avvist: 0,
+      },
+      tableMissing: false,
+      tableMissingMessage: null,
+      previewMock: false,
+    };
+  }
+
   if (isOppfangetMockPreviewAllowed(previewParam)) {
     return listOppfangetMockFiltered(filters);
   }

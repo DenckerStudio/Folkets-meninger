@@ -18,5 +18,11 @@ export default async function AdminOppfangetPage({ searchParams }: PageProps) {
   const filters = parseOppfangetFilters(params);
   const initialData = await listOppfangetForAdmin(filters, preview);
 
-  return <AdminOppfangetClient initialData={initialData} initialFilters={filters} />;
+  return (
+    <AdminOppfangetClient
+      initialData={initialData}
+      initialFilters={filters}
+      devPreview={preview}
+    />
+  );
 }

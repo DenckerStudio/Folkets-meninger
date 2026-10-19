@@ -9,6 +9,7 @@ import {
 } from '@/lib/admin/oppfanget/mapping';
 import { formatSensitiveTemaCell } from '@/lib/admin/oppfanget/sensitive-category';
 import type { OppfangetRow } from '@/lib/admin/oppfanget/types';
+import { REEL_TEXT_HIT } from '@/lib/polls/reel-tap-targets';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -37,7 +38,7 @@ export function splitNbDateTime(iso: string): { date: string; time: string } {
 
 export function formatOppfangetDateTime(iso: string): string {
   const { date, time } = splitNbDateTime(iso);
-  return time ? `${date}, ${time}` : date;
+  return time ? `${date} ${time}` : date;
 }
 
 function formatAsOfDate(value: string): string {
@@ -68,7 +69,7 @@ function StatusBadge({ row }: { row: OppfangetRow }) {
   return (
     <span
       className={cn(
-        'inline-flex max-w-full break-words rounded-full px-2 py-0.5 text-xs font-medium leading-snug',
+        'inline-flex max-w-full whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium leading-snug',
         row.displayStatus === 'avvist' && 'bg-destructive/10 text-destructive',
         row.displayStatus === 'publisert' && 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
         row.displayStatus === 'utkast_laget' && 'bg-brand/10 text-brand',
@@ -95,10 +96,11 @@ function ScaleSourceLink({ url }: { url: string }) {
   );
 }
 
-function SourcesList({ row }: { row: OppfangetRow }) {
+function SourcesList({ row, mobile = false }: { row: OppfangetRow; mobile?: boolean }) {
   if (row.sources.length === 0) {
     return <span className="text-xs text-muted-foreground">—</span>;
   }
+  const linkClass = mobile ? cn(REEL_TEXT_HIT, 'gap-1 break-words text-brand hover:underline') : tapLinkClass;
   return (
     <ul className="space-y-0.5">
       {row.sources.map((s) => (
@@ -107,7 +109,7 @@ function SourcesList({ row }: { row: OppfangetRow }) {
             href={s.url}
             target="_blank"
             rel="noopener noreferrer"
-            className={tapLinkClass}
+            className={linkClass}
           >
             <span className="break-words">{s.publisher ?? 'Kilde'}</span>
             <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -119,15 +121,21 @@ function SourcesList({ row }: { row: OppfangetRow }) {
   );
 }
 
-function PollLinkCell({ row }: { row: OppfangetRow }) {
+function PollLinkCell({ row, mobile = false }: { row: OppfangetRow; mobile?: boolean }) {
   const link = oppfangetPollLink(row);
   if (!link) return <span className="text-xs text-muted-foreground">—</span>;
   const isDraft = row.pollStatus === 'draft';
-  const label = isDraft ? 'Utkast' : 'Avstemning';
+  const label = mobile
+    ? isDraft
+      ? 'Åpne utkast'
+      : 'Åpne avstemning'
+    : isDraft
+      ? 'Utkast'
+      : 'Avstemning';
   return (
     <Link
       href={link}
-      className={cn(tapLinkClass, 'font-medium')}
+      className={cn(mobile ? REEL_TEXT_HIT : tapLinkClass, 'font-medium')}
       aria-label={isDraft ? 'Åpne utkast' : 'Åpne avstemning'}
     >
       {label}
@@ -169,6 +177,15 @@ function DateCell({ label, iso }: { label: string; iso: string }) {
       <span className="font-medium text-muted-foreground">{label}</span>
       <span className="mt-0.5 block break-words text-foreground">{date}</span>
       {time ? <span className="block break-words text-muted-foreground">{time}</span> : null}
+    </div>
+  );
+}
+
+function MobileDateLines({ firstSeenAt, lastSeenAt }: { firstSeenAt: string; lastSeenAt: string }) {
+  return (
+    <div className="space-y-1 text-muted-foreground">
+      <p>Først {formatOppfangetDateTime(firstSeenAt)}</p>
+      <p>Sist {formatOppfangetDateTime(lastSeenAt)}</p>
     </div>
   );
 }
@@ -257,14 +274,13 @@ export function OppfangetMobileCards({ rows }: { rows: OppfangetRow[] }) {
               <div>
                 <dt className="font-medium text-muted-foreground">Kilder</dt>
                 <dd className="mt-0.5">
-                  <SourcesList row={row} />
+                  <SourcesList row={row} mobile />
                 </dd>
               </div>
               <div>
                 <dt className="font-medium text-muted-foreground">Dato</dt>
-                <dd className="mt-0.5 space-y-1 text-muted-foreground">
-                  <DateCell label="Først" iso={row.firstSeenAt} />
-                  <DateCell label="Sist" iso={row.lastSeenAt} />
+                <dd className="mt-0.5">
+                  <MobileDateLines firstSeenAt={row.firstSeenAt} lastSeenAt={row.lastSeenAt} />
                 </dd>
               </div>
               <div>
@@ -285,12 +301,9 @@ export function OppfangetMobileCards({ rows }: { rows: OppfangetRow[] }) {
                 </div>
               ) : null}
               {pollLink ? (
-                <div>
-                  <dt className="font-medium text-muted-foreground">Åpne</dt>
-                  <dd className="mt-0.5">
-                    <PollLinkCell row={row} />
-                  </dd>
-                </div>
+                <dd className="mt-1">
+                  <PollLinkCell row={row} mobile />
+                </dd>
               ) : null}
             </dl>
           </li>

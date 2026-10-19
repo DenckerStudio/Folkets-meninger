@@ -8,15 +8,22 @@ import {
   OPPFANGET_DISPLAY_STATUS_LABELS,
   OPPFANGET_DISPLAY_TYPE_LABELS,
 } from '@/lib/admin/oppfanget/mapping';
-import {
-  hasActiveOppfangetFilters,
-  type OppfangetFilterInput,
-} from '@/lib/admin/oppfanget/filters';
+import type { OppfangetFilterInput } from '@/lib/admin/oppfanget/filters';
 import type {
   OppfangetDisplayStatus,
   OppfangetDisplayType,
   OppfangetListResponse,
 } from '@/lib/admin/oppfanget/types';
+import {
+  isOppfangetListResponse,
+  normalizeOppfangetCounts,
+  OPPFANGET_FILTER_EMPTY_DESCRIPTION,
+  OPPFANGET_FILTER_EMPTY_TITLE,
+  OPPFANGET_PIPELINE_EMPTY_DESCRIPTION,
+  OPPFANGET_PIPELINE_EMPTY_TITLE,
+  shouldShowOppfangetFilterEmpty,
+  shouldShowOppfangetPipelineEmpty,
+} from '@/lib/admin/oppfanget/view-state';
 import {
   OppfangetDesktopTable,
   OppfangetMobileCards,
@@ -40,16 +47,17 @@ const STATUS_OPTIONS: { value: '' | OppfangetDisplayStatus; label: string }[] = 
 ];
 
 function StatusPills({ counts }: { counts: OppfangetListResponse['counts'] }) {
+  const safeCounts = normalizeOppfangetCounts(counts);
   return (
     <div className="flex flex-wrap gap-2">
-      {(Object.keys(counts) as OppfangetDisplayStatus[]).map((key) => (
+      {(Object.keys(safeCounts) as OppfangetDisplayStatus[]).map((key) => (
         <span
           key={key}
           className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-foreground"
         >
           {OPPFANGET_DISPLAY_STATUS_LABELS[key]}
           <span className="rounded-full bg-background px-1.5 py-0.5 text-[11px] tabular-nums">
-            {counts[key]}
+            {safeCounts[key]}
           </span>
         </span>
       ))}
@@ -79,14 +87,17 @@ function OppfangetPageHeader({ previewMock }: { previewMock?: boolean }) {
 export default function AdminOppfangetClient({
   initialData = null,
   initialFilters,
+  devPreview,
 }: {
   initialData?: OppfangetListResponse | null;
   initialFilters?: OppfangetFilterInput;
+  /** Dev-only `preview` query (`mock` | `empty`). */
+  devPreview?: string;
 }) {
   const [data, setData] = useState<OppfangetListResponse | null>(initialData);
   const [error, setError] = useState('');
   const [pending, startTransition] = useTransition();
-  const skipInitialFetch = useRef(Boolean(initialData));
+  const hydratedQueryRef = useRef<string | null>(initialData ? '__hydrated__' : null);
 
   const [type, setType] = useState<'' | OppfangetDisplayType>(initialFilters?.type || '');
   const [status, setStatus] = useState<'' | OppfangetDisplayStatus>(initialFilters?.status || '');
@@ -109,8 +120,6 @@ export default function AdminOppfangetClient({
     [type, status, source, dateFrom, dateTo, q],
   );
 
-  const filtersActive = hasActiveOppfangetFilters(filters);
-
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
     if (type) params.set('type', type);
@@ -119,9 +128,10 @@ export default function AdminOppfangetClient({
     if (dateFrom) params.set('dateFrom', dateFrom);
     if (dateTo) params.set('dateTo', dateTo);
     if (q.trim()) params.set('q', q.trim());
-    if (mockMode) params.set('preview', 'mock');
+    if (mockMode || devPreview === 'mock') params.set('preview', 'mock');
+    else if (devPreview === 'empty') params.set('preview', 'empty');
     return params.toString();
-  }, [type, status, source, dateFrom, dateTo, q, mockMode]);
+  }, [type, status, source, dateFrom, dateTo, q, mockMode, devPreview]);
 
   const clearFilters = useCallback(() => {
     setType('');
@@ -138,31 +148,39 @@ export default function AdminOppfangetClient({
       try {
         const res = await fetch(`/api/admin/oppfanget${queryString ? `?${queryString}` : ''}`);
         if (res.status === 401 || res.status === 403) {
-          setData(null);
           setError('Ingen tilgang');
           return;
         }
         if (!res.ok) {
-          setData(null);
           setError('Kunne ikke laste oppfanget-liste');
           return;
         }
-        const json = (await res.json()) as OppfangetListResponse;
-        setData(json);
+        const json: unknown = await res.json();
+        if (!isOppfangetListResponse(json)) {
+          setError('Kunne ikke laste oppfanget-liste');
+          return;
+        }
+        setData({
+          ...json,
+          counts: normalizeOppfangetCounts(json.counts),
+        });
       } catch {
-        setData(null);
         setError('Kunne ikke laste oppfanget-liste');
       }
     });
   }, [queryString]);
 
   useEffect(() => {
-    if (skipInitialFetch.current) {
-      skipInitialFetch.current = false;
+    if (hydratedQueryRef.current === '__hydrated__') {
+      hydratedQueryRef.current = queryString;
       return;
     }
+    if (hydratedQueryRef.current === queryString) {
+      return;
+    }
+    hydratedQueryRef.current = queryString;
     load();
-  }, [load]);
+  }, [load, queryString]);
 
   useEffect(() => {
     setData(initialData);
@@ -235,7 +253,6 @@ export default function AdminOppfangetClient({
             onChange={(e) => setDateFrom(e.target.value)}
             className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
-          <span className="text-xs text-muted-foreground">Format: dd.mm.åååå</span>
         </label>
         <label className="space-y-1 text-sm">
           <span className="text-muted-foreground">Til dato</span>
@@ -246,7 +263,6 @@ export default function AdminOppfangetClient({
             onChange={(e) => setDateTo(e.target.value)}
             className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
-          <span className="text-xs text-muted-foreground">Format: dd.mm.åååå</span>
         </label>
         <label className="space-y-1 text-sm sm:col-span-2 lg:col-span-1">
           <span className="text-muted-foreground">Søk</span>
@@ -271,27 +287,27 @@ export default function AdminOppfangetClient({
         </p>
       ) : null}
 
-      {!pending && data && rows.length === 0 ? (
-        filtersActive ? (
-          <div className="space-y-4">
-            <EmptyState
-              title="Ingen treff for filtrene"
-              description="Prøv å endre eller fjerne filtervalgene."
-            />
+      {shouldShowOppfangetFilterEmpty(data, filters, pending) ? (
+        <EmptyState
+          title={OPPFANGET_FILTER_EMPTY_TITLE}
+          description={OPPFANGET_FILTER_EMPTY_DESCRIPTION}
+          action={
             <button
               type="button"
               onClick={clearFilters}
-              className="inline-flex min-h-11 items-center rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-muted/50"
+              className="inline-flex min-h-11 items-center rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground hover:bg-muted/50"
             >
               Nullstill filtre
             </button>
-          </div>
-        ) : (
-          <EmptyState
-            title="Ingenting oppfanget ennå"
-            description="Når nye signaler fanges opp, vises de her med kilder og status."
-          />
-        )
+          }
+        />
+      ) : null}
+
+      {shouldShowOppfangetPipelineEmpty(data, filters, pending) ? (
+        <EmptyState
+          title={OPPFANGET_PIPELINE_EMPTY_TITLE}
+          description={OPPFANGET_PIPELINE_EMPTY_DESCRIPTION}
+        />
       ) : null}
 
       {rows.length > 0 ? (
