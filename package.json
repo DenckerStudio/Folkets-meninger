@@ -18,14 +18,10 @@
     "eval:rag:db": "npx tsx evals/rag/scripts/apply-migrations.ts stack && npx tsx evals/rag/scripts/apply-migrations.ts baseline",
     "eval:rag:seed": "RAG_EVAL_VARIANT=baseline npx tsx evals/rag/scripts/seed-corpus.ts && RAG_EVAL_VARIANT=stack npx tsx evals/rag/scripts/seed-corpus.ts",
     "eval:rag": "npx tsx evals/rag/run-eval.ts",
-<<<<<<< HEAD
     "eval:rag:rounds": "npx tsx evals/rag/run-improvement-rounds.ts",
     "eval:rag:judge": "npx tsx evals/rag/judge.ts",
     "eval:rag:answers": "npx tsx evals/rag/export-answers.ts",
     "eval:rag:calibrate": "npx tsx evals/rag/scripts/calibrate-rejection.ts"
-=======
-    "eval:rag:judge": "npx tsx evals/rag/judge.ts"
->>>>>>> origin/cursor/rag-eval-offline-5738
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.71",

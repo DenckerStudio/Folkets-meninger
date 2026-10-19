@@ -15,7 +15,7 @@ const ROUNDS: Round[] = [
   { label: 'round2-prefix-trgm', improvementLevel: '2', extraEnv: { RAG_EVAL_RUN: 'stack' } },
   {
     label: 'round3-rerank-reject',
-    improvementLevel: '2',
+    improvementLevel: '3',
     extraEnv: {
       RAG_EVAL_RUN: 'stack',
       RAG_RERANKER_ENABLED: '1',
@@ -35,14 +35,30 @@ function loadThreshold(): string | undefined {
 }
 
 function runRound(round: Round): void {
-  const env = {
+  const env: Record<string, string> = {
     ...process.env,
     RAG_EVAL_IMPROVEMENT_LEVEL: round.improvementLevel,
     RAG_EVAL_LABEL: round.label,
     PGPASSWORD: process.env.RAG_EVAL_PG_PASSWORD ?? 'rag_eval',
     ...round.extraEnv,
-  };
+  } as Record<string, string>;
+
+  if (round.label === 'baseline-main') {
+    env.RAG_EVAL_RESET_DB = '1';
+    delete env.RAG_EVAL_IMPROVEMENT_ONLY;
+  } else if (round.label === 'stack-previous') {
+    env.RAG_EVAL_RESET_DB = '1';
+    delete env.RAG_EVAL_IMPROVEMENT_ONLY;
+  } else {
+    env.RAG_EVAL_IMPROVEMENT_ONLY = '1';
+    delete env.RAG_EVAL_RESET_DB;
+  }
   if (round.label === 'round3-rerank-reject') {
+    try {
+      execSync('npx tsx evals/rag/scripts/calibrate-rejection.ts', { stdio: 'inherit', env });
+    } catch {
+      console.warn('[rounds] calibrate-rejection failed; using config/default threshold');
+    }
     const t = loadThreshold();
     if (t) env.RAG_REJECTION_THRESHOLD = t;
     else env.RAG_REJECTION_THRESHOLD = '0.018';
@@ -51,6 +67,18 @@ function runRound(round: Round): void {
     execSync('npx tsx evals/rag/scripts/apply-migrations.ts baseline', { stdio: 'inherit', env });
   } else {
     execSync('npx tsx evals/rag/scripts/apply-migrations.ts stack', { stdio: 'inherit', env });
+  }
+  if (round.label === 'baseline-main') {
+    execSync('RAG_EVAL_VARIANT=baseline npx tsx evals/rag/scripts/seed-corpus.ts', {
+      stdio: 'inherit',
+      env,
+    });
+  }
+  if (round.label === 'stack-previous') {
+    execSync('RAG_EVAL_VARIANT=stack npx tsx evals/rag/scripts/seed-corpus.ts', {
+      stdio: 'inherit',
+      env,
+    });
   }
   execSync('npx tsx evals/rag/run-eval.ts', { stdio: 'inherit', env });
 }
@@ -71,12 +99,12 @@ function main(): void {
     const byokOffP95 = Number(result.byokEmbedOffMsP95 ?? 0).toFixed(0);
     const byokOnP95 = Number(result.byokEmbedOnMsP95 ?? 0).toFixed(0);
     table.push(
-      `| ${round.label} | ${(Number(result.issueSearchHitRate) * 100).toFixed(1)}% | ${(Number(result.prefixHitRate) * 100).toFixed(1)}% | ${reject}% | ${(Number(result.recallAt5) * 100).toFixed(1)}% | ${Number(result.latencyMsP95).toFixed(0)} | ${centralP95} | ${byokOffP95} | ${byokOnP95} |`,
+      `| ${round.label} | ${(Number(result.recallAt5) * 100).toFixed(1)}% | ${Number(result.mrr).toFixed(3)} | ${(Number(result.prefixHitRate) * 100).toFixed(1)}% | ${reject}% | ${(Number(result.issueSearchHitRate) * 100).toFixed(1)}% | ${Number(result.latencyMsP95).toFixed(0)} | ${centralP95} | ${byokOffP95} | ${byokOnP95} |`,
     );
   }
   const md = [
-    '| Round | Issue search | Prefix | Finnes-ikke reject | R@5 | Retrieval p95 | Central embed p95 | BYOK embed p95 (800ms) | BYOK embed p95 (3s) |',
-    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+    '| Round | R@5 | MRR | Prefix | Finnes-ikke reject | Issue search | Retrieval p95 | Central embed p95 | BYOK p95 @800ms | BYOK p95 @3s |',
+    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
     ...table,
   ].join('\n');
   writeFileSync(join(outDir, 'improvement-rounds.md'), `${md}\n`);

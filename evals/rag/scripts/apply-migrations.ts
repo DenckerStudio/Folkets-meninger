@@ -10,6 +10,12 @@ const STACK_MIGRATIONS = [
   '20261019220000_docling_ingest_and_embedding_v2_rpcs.sql',
 ];
 
+const IMPROVEMENT_MIGRATIONS = [
+  '20261019230000_rag_issue_search_sak_aggregate.sql',
+  '20261019231000_rag_hybrid_prefix_trgm.sql',
+  '20261019232000_rag_unaccent_short_title_tsv.sql',
+];
+
 function parseArgs(): { variant: Variant; database: string } {
   const variant = (process.env.RAG_EVAL_VARIANT ?? process.argv[2] ?? 'stack') as Variant;
   if (variant !== 'baseline' && variant !== 'stack') {
@@ -21,12 +27,16 @@ function parseArgs(): { variant: Variant; database: string } {
   return { variant, database };
 }
 
-function psql(database: string, file: string): void {
-  const conn = {
+function pgEnv() {
+  return {
     host: process.env.RAG_EVAL_PG_HOST ?? 'localhost',
     user: process.env.RAG_EVAL_PG_USER ?? 'rag_eval',
     password: process.env.RAG_EVAL_PG_PASSWORD ?? 'rag_eval',
   };
+}
+
+function psql(database: string, file: string): void {
+  const conn = pgEnv();
   const env = { ...process.env, PGPASSWORD: conn.password };
   execSync(
     `psql -h ${conn.host} -U ${conn.user} -d ${database} -v ON_ERROR_STOP=1 -q -f ${JSON.stringify(file)}`,
@@ -34,17 +44,46 @@ function psql(database: string, file: string): void {
   );
 }
 
+function resetDatabase(database: string): void {
+  const conn = pgEnv();
+  const env = { ...process.env, PGPASSWORD: conn.password };
+  execSync(
+    `psql -h ${conn.host} -U ${conn.user} -d postgres -v ON_ERROR_STOP=1 -q -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${database}' AND pid <> pg_backend_pid();"`,
+    { stdio: 'inherit', env },
+  );
+  execSync(`dropdb -h ${conn.host} -U ${conn.user} --if-exists ${database}`, { stdio: 'inherit', env });
+  execSync(`createdb -h ${conn.host} -U ${conn.user} ${database}`, { stdio: 'inherit', env });
+}
+
 function main(): void {
   const root = process.cwd();
   const { variant, database } = parseArgs();
-  psql(database, join(root, 'evals', 'rag', 'scripts', 'bootstrap-pg.sql'));
-  psql(database, join(root, 'evals', 'rag', 'sql', 'baseline.sql'));
-  if (variant === 'stack') {
-    for (const name of STACK_MIGRATIONS) {
-      psql(database, join(root, 'supabase', 'migrations', name));
+  const improvementOnly = process.env.RAG_EVAL_IMPROVEMENT_ONLY === '1';
+
+  if (process.env.RAG_EVAL_RESET_DB === '1') {
+    resetDatabase(database);
+  }
+
+  if (!improvementOnly) {
+    psql(database, join(root, 'evals', 'rag', 'scripts', 'bootstrap-pg.sql'));
+    psql(database, join(root, 'evals', 'rag', 'sql', 'baseline.sql'));
+    if (variant === 'stack') {
+      for (const name of STACK_MIGRATIONS) {
+        psql(database, join(root, 'supabase', 'migrations', name));
+      }
     }
   }
-  console.log(`[apply-migrations] variant=${variant} db=${database} ok`);
+
+  if (variant === 'stack') {
+    const level = Number(process.env.RAG_EVAL_IMPROVEMENT_LEVEL ?? '0');
+    for (let i = 0; i < level && i < IMPROVEMENT_MIGRATIONS.length; i += 1) {
+      psql(database, join(root, 'supabase', 'migrations', IMPROVEMENT_MIGRATIONS[i]!));
+    }
+  }
+
+  console.log(
+    `[apply-migrations] variant=${variant} db=${database} improvementOnly=${improvementOnly} level=${process.env.RAG_EVAL_IMPROVEMENT_LEVEL ?? '0'} ok`,
+  );
 }
 
 main();

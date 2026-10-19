@@ -3,6 +3,8 @@ import {
   applyChunkExcerptsForChat,
   applyTopicWideChunkExcerpts,
 } from '@/lib/chat/chunk-excerpt';
+import { buildSearchTerms } from '@/lib/chat/sak-search';
+import { rerankCandidates, rerankerEnabled, shouldRejectRetrieval } from './rerank';
 function clipContent(value: string, max = 1400): string {
   return value.replace(/\s+/g, ' ').trim().slice(0, max);
 }
@@ -13,6 +15,25 @@ import type { EvalVariant } from './db';
 export type RetrievedRow = ChatDocumentChunk & { chunkId?: string };
 
 const MAX_CHUNKS = 10;
+
+async function applyRetrievalGate(
+  query: string,
+  rows: RetrievedRow[],
+  excerpts: RetrievedRow[],
+): Promise<{ rows: RetrievedRow[]; excerpts: RetrievedRow[] }> {
+  if (rows.length === 0) return { rows, excerpts };
+  const gate = rerankerEnabled() || process.env.RAG_REJECTION_THRESHOLD;
+  if (!gate) return { rows, excerpts };
+
+  const top = rows.slice(0, 30);
+  const { scores } = await rerankCandidates(
+    query,
+    top.map((r) => ({ id: `${r.documentId}:${r.chunkIndex}`, content: r.content, fusedScore: r.rank })),
+  );
+  const best = scores.length > 0 ? Math.max(...scores) : 0;
+  if (shouldRejectRetrieval(best)) return { rows: [], excerpts: [] };
+  return { rows, excerpts };
+}
 
 async function hybridSearch(
   pool: pg.Pool,
@@ -121,7 +142,8 @@ async function searchIssueIds(pool: pg.Pool, variant: EvalVariant, query: string
     );
     return rows.map((r) => String(r.id));
   }
-  const { rows } = await pool.query(`SELECT id FROM search_issues_fts($1, NULL::text[], $2)`, [query, limit]);
+  const terms = buildSearchTerms(query);
+  const { rows } = await pool.query(`SELECT id FROM search_issues_fts($1, $2::text[], $3)`, [query, terms, limit]);
   return rows.map((r) => String(r.id));
 }
 
@@ -201,8 +223,16 @@ export async function retrieveForQuestion(
   if (args.kind === 'finnes_ikke') {
     const issueId = args.issueId ?? '103102';
     if (variant === 'stack') {
-      const rows = await hybridSearch(pool, args.query, { issueIds: [issueId] }, limit);
-      return { rows, excerpts: excerptRows(rows, args.query), ms: performance.now() - start };
+      const hearingId = args.hearingId;
+      const rows = await hybridSearch(
+        pool,
+        args.query,
+        hearingId ? { hearingId } : { issueIds: [issueId] },
+        limit,
+      );
+      const excerpts = excerptRows(rows, args.query);
+      const gated = await applyRetrievalGate(args.query, rows, excerpts);
+      return { ...gated, ms: performance.now() - start };
     }
     const issue: ChatIssueHit = {
       id: issueId,

@@ -1,10 +1,17 @@
 /**
- * Standalone LLM judge over saved answer JSON (run after eval on LAN Ollama).
+ * Faithfulness judge over saved answer JSON (LAN Ollama gemma4:26b).
  *
+ * Generate answers (repo root):
+ *   RAG_EVAL_LABEL=round3-rerank-reject npm run eval:rag:answers
+ *
+ * Run judge:
  *   JUDGE_URL=http://192.168.50.154:11434 JUDGE_MODEL=gemma4:26b \
- *     npx tsx evals/rag/judge.ts evals/rag/results/stack-answers.json
+ *     npm run eval:rag:judge -- evals/rag/results/round3-rerank-reject-answers.json
+ *
+ * Output: same path with `.judged.json` suffix + `*-judged-summary.json` alongside.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 const JUDGE_URL = (process.env.JUDGE_URL ?? 'http://192.168.50.154:11434').replace(/\/$/, '');
 const JUDGE_MODEL = process.env.JUDGE_MODEL ?? 'gemma4:26b';
@@ -17,7 +24,14 @@ type AnswerRow = {
   goldFacts: string[];
 };
 
-async function judgeRow(row: AnswerRow): Promise<{ faithfulness: number; quality: number; note: string }> {
+type JudgedRow = {
+  id: string;
+  faithfulness: number;
+  quality: number;
+  note: string;
+};
+
+async function judgeRow(row: AnswerRow): Promise<JudgedRow> {
   const prompt = `Du er en streng fakta-sjekker for Stortinget-RAG.
 Spørsmål: ${row.query}
 Gull-fakta (skal støttes av utdrag): ${row.goldFacts.join(', ') || '(ingen)'}
@@ -36,21 +50,43 @@ Gi JSON: {"faithfulness":0-1,"quality":0-1,"note":"kort"}`;
   const payload = (await res.json()) as { response?: string };
   const text = payload.response ?? '';
   const match = text.match(/\{[\s\S]*\}/);
-  if (!match) return { faithfulness: 0, quality: 0, note: 'parse_fail' };
-  return JSON.parse(match[0]) as { faithfulness: number; quality: number; note: string };
+  if (!match) return { id: row.id, faithfulness: 0, quality: 0, note: 'parse_fail' };
+  const parsed = JSON.parse(match[0]) as { faithfulness: number; quality: number; note: string };
+  return { id: row.id, faithfulness: parsed.faithfulness, quality: parsed.quality, note: parsed.note };
+}
+
+function summarize(rows: JudgedRow[]): Record<string, number> {
+  const n = rows.length || 1;
+  const faith = rows.reduce((s, r) => s + r.faithfulness, 0) / n;
+  const qual = rows.reduce((s, r) => s + r.quality, 0) / n;
+  const pass = rows.filter((r) => r.faithfulness >= 0.7).length / n;
+  return {
+    count: rows.length,
+    faithfulnessMean: faith,
+    qualityMean: qual,
+    faithfulnessPassRate: pass,
+  };
 }
 
 async function main(): Promise<void> {
   const path = process.argv[2];
   if (!path) throw new Error('Usage: npx tsx evals/rag/judge.ts <answers.json>');
   const rows = JSON.parse(readFileSync(path, 'utf8')) as AnswerRow[];
-  const out = [];
+  const out: JudgedRow[] = [];
   for (const row of rows) {
-    out.push({ id: row.id, ...(await judgeRow(row)) });
+    process.stdout.write(`[judge] ${row.id}…\n`);
+    out.push(await judgeRow(row));
   }
   const outPath = path.replace(/\.json$/, '.judged.json');
   writeFileSync(outPath, JSON.stringify(out, null, 2));
+  const summaryPath = join(dirname(path), path.split('/').pop()!.replace(/\.json$/, '-judged-summary.json'));
+  const summary = { model: JUDGE_MODEL, judgeUrl: JUDGE_URL, ...summarize(out), rows: out };
+  writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
   console.log(`Wrote ${outPath}`);
+  console.log(`Wrote ${summaryPath}`);
+  console.log(
+    `Summary: faithfulness mean=${summary.faithfulnessMean.toFixed(3)} pass@${'≥'}0.7=${(summary.faithfulnessPassRate * 100).toFixed(1)}%`,
+  );
 }
 
 main().catch((err) => {

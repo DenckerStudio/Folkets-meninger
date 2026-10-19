@@ -350,9 +350,43 @@ async function main(): Promise<void> {
     }
   }
 
-  const prefixRow = await pool.query<{ id: string }>(
+  let prefixRow = await pool.query<{ id: string }>(
     `SELECT id FROM stortinget_issues WHERE title ILIKE '%innvandrings%' OR title ILIKE '%innvandring%' LIMIT 1`,
   );
+  if (prefixRow.rows.length === 0 && !hearingsOnly) {
+    const synthId = 'eval-innvandring-prefix';
+    const title = 'Innvandringsloven (eval seed)';
+    const body =
+      'Lov om utlendingers adgang til riket og deres opphold og virksomhet her (innvandringsloven). Kapittel om innvandring og opphold.';
+    await pool.query(
+      `INSERT INTO stortinget_issues (id, title, summary, henvisning, ferdigbehandlet, detail_json, last_synced_at)
+       VALUES ($1,$2,$3,'Prop. 99 L (eval)',false,'{}',now()) ON CONFLICT (id) DO NOTHING`,
+      [synthId, title, body.slice(0, 200)],
+    );
+    const chunks = variant === 'baseline' ? chunkDocumentTextBaseline(body) : chunkDocument(body).map((c) => c.content);
+    for (let i = 0; i < Math.min(chunks.length, 4); i += 1) {
+      const content = typeof chunks[i] === 'string' ? chunks[i] : chunks[i].content;
+      if (variant === 'baseline') {
+        const embedding = await embedNomic(content);
+        await pool.query(
+          `INSERT INTO document_chunks (issue_id, document_id, chunk_index, content, embedding, embedding_status, metadata)
+           VALUES ($1,'doc1',$2,$3,$4::vector,'ready','{}') ON CONFLICT DO NOTHING`,
+          [synthId, i, content, `[${embedding.join(',')}]`],
+        );
+      } else {
+        const embeddingV2 = await embedBgeM3(content);
+        await pool.query(
+          `INSERT INTO document_chunks (issue_id, document_id, chunk_index, content, embedding_status, metadata, embedding_v2)
+           VALUES ($1,'doc1',$2,$3,'ready','{}',$4::vector) ON CONFLICT DO NOTHING`,
+          [synthId, i, content, `[${embeddingV2.join(',')}]`],
+        );
+      }
+    }
+    console.log(`  synthetic prefix sak ${synthId}`);
+    prefixRow = await pool.query<{ id: string }>(
+      `SELECT id FROM stortinget_issues WHERE title ILIKE '%innvandring%' LIMIT 1`,
+    );
+  }
   const meta = {
     variant,
     issueCount: issueIds.length,

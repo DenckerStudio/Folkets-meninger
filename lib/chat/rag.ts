@@ -20,6 +20,7 @@ import {
   type QueryVectorizer,
   type VectorSearchClient,
 } from '@/lib/chat/vector-search';
+import { rerankCandidates, rerankerEnabled, shouldRejectRetrieval } from '@/lib/chat/rerank';
 
 const MAX_CHUNKS = 8;
 const MAX_SUMMARY_CLIP_CHARS = 1800;
@@ -442,7 +443,15 @@ async function searchChunksHybrid(
       const chunk = mapHybridChunkRow(row as Record<string, unknown>);
       return chunk ? [chunk] : [];
     });
-    return mapped.length > 0 ? mapped : null;
+    if (mapped.length === 0) return null;
+    if (!rerankerEnabled() && !process.env.RAG_REJECTION_THRESHOLD) return mapped;
+    const { scores } = await rerankCandidates(
+      query,
+      mapped.map((c) => ({ id: `${c.documentId}:${c.chunkIndex}`, content: c.content, fusedScore: c.rank })),
+    );
+    const best = scores.length ? Math.max(...scores) : 0;
+    if (shouldRejectRetrieval(best)) return [];
+    return mapped;
   } catch {
     return null;
   }

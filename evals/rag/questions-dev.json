@@ -1,0 +1,264 @@
+[
+  {
+    "id": "issue-prefix-innvand",
+    "kind": "issue_search",
+    "query": "innvand",
+    "gold": {
+      "titleMustContain": [
+        "innvand"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-arbeids",
+    "kind": "issue_search",
+    "query": "arbeids",
+    "gold": {
+      "titleMustContain": [
+        "arbeids"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-statsb",
+    "kind": "issue_search",
+    "query": "statsb",
+    "gold": {
+      "titleMustContain": [
+        "stats"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-pensj",
+    "kind": "issue_search",
+    "query": "pensj",
+    "gold": {
+      "titleMustContain": [
+        "pensj"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-trygd",
+    "kind": "issue_search",
+    "query": "trygd",
+    "gold": {
+      "titleMustContain": [
+        "trygd"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-skatt",
+    "kind": "issue_search",
+    "query": "skatt",
+    "gold": {
+      "titleMustContain": [
+        "skatt"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-helse",
+    "kind": "issue_search",
+    "query": "helse",
+    "gold": {
+      "titleMustContain": [
+        "helse"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-klima",
+    "kind": "issue_search",
+    "query": "klima",
+    "gold": {
+      "titleMustContain": [
+        "klima"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-forsv",
+    "kind": "issue_search",
+    "query": "forsv",
+    "gold": {
+      "titleMustContain": [
+        "forsv"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-energ",
+    "kind": "issue_search",
+    "query": "energ",
+    "gold": {
+      "titleMustContain": [
+        "energ"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-1",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 1 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt1"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-2",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 2 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt2"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-3",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 3 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt3"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-4",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 4 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt4"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-5",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 5 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt5"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-6",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 6 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt6"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-7",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 7 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt7"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-8",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 8 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt8"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  }
+]

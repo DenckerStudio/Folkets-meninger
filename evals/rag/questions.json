@@ -4,131 +4,285 @@
     "kind": "sak_chunk",
     "query": "Hva skjedde med pensjonstrygd for fiskere og lukking av ordningen?",
     "issueId": "103102",
-    "gold": { "facts": ["pensjonstrygd", "fiskere"], "documentKinds": ["lovforslag", "innstilling"] },
-    "tags": ["core_sak"]
+    "gold": {
+      "facts": [
+        "pensjonstrygd",
+        "fiskere"
+      ],
+      "documentKinds": [
+        "lovforslag",
+        "innstilling"
+      ]
+    },
+    "tags": [
+      "core_sak"
+    ]
   },
   {
     "id": "sak-103102-utvalg",
     "kind": "sak_chunk",
     "query": "Ble det nedsatt et partssammensatt utvalg for å modernisere fiskerpensjonen?",
     "issueId": "103102",
-    "gold": { "facts": ["utvalg", "moderniser"], "documentKinds": ["innstilling", "referat"] },
-    "tags": ["core_sak", "semantic_lexical"]
+    "gold": {
+      "facts": [
+        "utvalg",
+        "moderniser"
+      ],
+      "documentKinds": [
+        "innstilling",
+        "referat"
+      ]
+    },
+    "tags": [
+      "core_sak",
+      "semantic_lexical"
+    ]
   },
   {
     "id": "sak-103102-vedtak",
     "kind": "sak_chunk",
     "query": "Vedtok Stortinget lovendringer om lukking av pensjonstrygden?",
     "issueId": "103102",
-    "gold": { "facts": ["vedtak", "lovendring"], "documentKinds": ["innstilling"] },
-    "tags": ["core_sak"]
+    "gold": {
+      "facts": [
+        "vedtak",
+        "lovendring"
+      ],
+      "documentKinds": [
+        "innstilling"
+      ]
+    },
+    "tags": [
+      "core_sak"
+    ]
   },
   {
     "id": "sak-103102-komite",
     "kind": "sak_chunk",
     "query": "Hvilken komité behandlet pensjonstrygd for fiskere?",
     "issueId": "103102",
-    "gold": { "facts": ["arbeids", "sosial"], "documentKinds": [] },
-    "tags": ["core_sak"]
+    "gold": {
+      "facts": [
+        "arbeids",
+        "sosial"
+      ],
+      "documentKinds": []
+    },
+    "tags": [
+      "core_sak"
+    ]
   },
   {
     "id": "sak-103102-prop",
     "kind": "sak_chunk",
     "query": "Hva står i proposisjonen om endringer i lov om pensjonstrygd for fiskere?",
     "issueId": "103102",
-    "gold": { "facts": ["proposisjon", "pensjon"], "documentKinds": ["lovforslag"] },
-    "tags": ["semantic_lexical"]
+    "gold": {
+      "facts": [
+        "proposisjon",
+        "pensjon"
+      ],
+      "documentKinds": [
+        "lovforslag"
+      ]
+    },
+    "tags": [
+      "semantic_lexical"
+    ]
   },
   {
     "id": "hearing-10005964-budsjett",
     "kind": "hearing_chunk",
     "query": "Hva er hovedtemaet i høringen om statsbudsjettet 2027 (10005964)?",
     "hearingId": "10005964",
-    "gold": { "facts": ["statsbudsjett", "2027"], "documentKinds": ["program"] },
-    "tags": ["hearing", "core_sak"]
+    "gold": {
+      "facts": [
+        "statsbudsjett",
+        "2027"
+      ],
+      "documentKinds": [
+        "program"
+      ]
+    },
+    "tags": [
+      "hearing",
+      "core_sak"
+    ]
   },
   {
     "id": "hearing-10005968-budsjett",
     "kind": "hearing_chunk",
     "query": "Hvilke prioriteringer omtales i høringen om statsbudsjettet 2027 (10005968)?",
     "hearingId": "10005968",
-    "gold": { "facts": ["budsjett", "2027"], "documentKinds": ["program"] },
-    "tags": ["hearing", "core_sak"]
+    "gold": {
+      "facts": [
+        "budsjett",
+        "2027"
+      ],
+      "documentKinds": [
+        "program"
+      ]
+    },
+    "tags": [
+      "hearing",
+      "core_sak"
+    ]
   },
   {
     "id": "hearing-10005964-innspill",
     "kind": "hearing_chunk",
     "query": "Hva etterspør høringen av innspill om statsbudsjettet?",
     "hearingId": "10005964",
-    "gold": { "facts": ["innspill"], "documentKinds": ["program"] },
-    "tags": ["hearing"]
+    "gold": {
+      "facts": [
+        "innspill"
+      ],
+      "documentKinds": [
+        "program"
+      ]
+    },
+    "tags": [
+      "hearing"
+    ]
   },
   {
     "id": "issue-search-innvandring-prefix",
     "kind": "issue_search",
     "query": "innvandring",
-    "gold": { "titleMustContain": ["innvandring"], "issueIds": [] },
-    "tags": ["friction_fts", "prefix"]
+    "gold": {
+      "titleMustContain": [
+        "innvandring"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "friction_fts",
+      "prefix"
+    ]
   },
   {
     "id": "issue-search-innvandringsloven",
     "kind": "issue_search",
     "query": "innvandringsloven",
-    "gold": { "titleMustContain": ["innvandring"], "issueIds": [] },
-    "tags": ["friction_fts", "prefix", "compound"]
+    "gold": {
+      "titleMustContain": [
+        "innvandring"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "friction_fts",
+      "prefix",
+      "compound"
+    ]
   },
   {
     "id": "issue-search-fisker-pensjon",
     "kind": "issue_search",
     "query": "pensjonstrygd fiskere",
-    "gold": { "issueIds": ["103102"] },
-    "tags": ["issue_fts"]
+    "gold": {
+      "issueIds": [
+        "103102"
+      ]
+    },
+    "tags": [
+      "issue_fts"
+    ]
   },
   {
     "id": "issue-search-prop-133",
     "kind": "issue_search",
     "query": "Prop. 133 L",
-    "gold": { "issueIds": ["103102"] },
-    "tags": ["issue_fts"]
+    "gold": {
+      "issueIds": [
+        "103102"
+      ]
+    },
+    "tags": [
+      "issue_fts"
+    ]
   },
   {
     "id": "sak-200365-vekt",
     "kind": "sak_chunk",
     "query": "Hva sier saken om vektgrense for førerkort?",
     "issueId": "200365",
-    "gold": { "facts": ["vekt", "førerkort"], "documentKinds": [] },
-    "tags": ["distractor_overlap"]
+    "gold": {
+      "facts": [
+        "vekt",
+        "førerkort"
+      ],
+      "documentKinds": []
+    },
+    "tags": [
+      "distractor_overlap"
+    ]
   },
   {
     "id": "sak-semantic-barnetrygd",
     "kind": "sak_chunk",
     "query": "Endringer i barnetrygd og kontantstøtte",
     "issueId": "102956",
-    "gold": { "facts": ["barnetrygd"], "documentKinds": [] },
-    "tags": ["semantic_lexical", "cross_theme"]
+    "gold": {
+      "facts": [
+        "barnetrygd"
+      ],
+      "documentKinds": []
+    },
+    "tags": [
+      "semantic_lexical",
+      "cross_theme"
+    ]
   },
   {
     "id": "sak-trygd-generisk",
     "kind": "sak_chunk",
     "query": "Hvilke trygdeordninger omtales i saken?",
     "issueId": "103102",
-    "gold": { "facts": ["trygd", "pensjon"], "documentKinds": [] },
-    "tags": ["semantic_lexical"]
+    "gold": {
+      "facts": [
+        "trygd",
+        "pensjon"
+      ],
+      "documentKinds": []
+    },
+    "tags": [
+      "semantic_lexical"
+    ]
   },
   {
     "id": "sak-parti-votering-gap",
     "kind": "sak_chunk",
     "query": "Hvordan stemte partiene i voteringen om saken?",
     "issueId": "103102",
-    "gold": { "facts": ["votering", "stemte"], "documentKinds": ["referat", "innstilling"] },
-    "tags": ["party_votering"]
+    "gold": {
+      "facts": [
+        "votering",
+        "stemte"
+      ],
+      "documentKinds": [
+        "referat",
+        "innstilling"
+      ]
+    },
+    "tags": [
+      "party_votering"
+    ]
   },
   {
     "id": "sak-henvisning",
     "kind": "sak_chunk",
     "query": "Hva er henvisningen Innst. 37 L?",
     "issueId": "103102",
-    "gold": { "facts": ["Innst", "37"], "documentKinds": ["innstilling"] },
+    "gold": {
+      "facts": [
+        "Innst",
+        "37"
+      ],
+      "documentKinds": [
+        "innstilling"
+      ]
+    },
     "tags": []
   },
   {
@@ -136,7 +290,13 @@
     "kind": "sak_chunk",
     "query": "Er saken ferdigbehandlet i Stortinget?",
     "issueId": "103102",
-    "gold": { "facts": ["ferdig", "behandlet"], "documentKinds": [] },
+    "gold": {
+      "facts": [
+        "ferdig",
+        "behandlet"
+      ],
+      "documentKinds": []
+    },
     "tags": []
   },
   {
@@ -144,69 +304,134 @@
     "kind": "finnes_ikke",
     "query": "Hva er Stortingets vedtak om månebase-skatt for marsboere?",
     "issueId": "103102",
-    "gold": { "facts": ["månebase", "marsboere"] },
-    "tags": ["finnes_ikke"]
+    "gold": {
+      "facts": [
+        "månebase",
+        "marsboere"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
   },
   {
     "id": "finnes-ikke-2",
     "kind": "finnes_ikke",
     "query": "Når innfører Norge obligatorisk undervannsspråk i grunnskolen?",
-    "gold": { "facts": ["undervannsspråk"] },
-    "tags": ["finnes_ikke"]
+    "gold": {
+      "facts": [
+        "undervannsspråk"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
   },
   {
     "id": "finnes-ikke-3",
     "kind": "finnes_ikke",
     "query": "Hvor mange kroner bevilger statsbudsjettet til tidsreiseforskning?",
     "hearingId": "10005964",
-    "gold": { "facts": ["tidsreise"] },
-    "tags": ["finnes_ikke"]
+    "gold": {
+      "facts": [
+        "tidsreise"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
   },
   {
     "id": "finnes-ikke-4",
     "kind": "finnes_ikke",
     "query": "Hvilken lovparagraf regulerer teleportering mellom fylker?",
     "issueId": "200365",
-    "gold": { "facts": ["teleportering"] },
-    "tags": ["finnes_ikke"]
+    "gold": {
+      "facts": [
+        "teleportering"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
   },
   {
     "id": "finnes-ikke-5",
     "kind": "finnes_ikke",
     "query": "Stortingets posisjon på import av enhjørninger som kjæledyr",
-    "gold": { "facts": ["enhjørning"] },
-    "tags": ["finnes_ikke"]
+    "gold": {
+      "facts": [
+        "enhjørning"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
   },
   {
     "id": "mixed-lex-semantic-1",
     "kind": "sak_chunk",
     "query": "statsgaranti innskuddsbasert ordning fiskere",
     "issueId": "103102",
-    "gold": { "facts": ["statsgaranti", "innskudds"], "documentKinds": [] },
-    "tags": ["semantic_lexical", "friction_excerpt"]
+    "gold": {
+      "facts": [
+        "statsgaranti",
+        "innskudds"
+      ],
+      "documentKinds": []
+    },
+    "tags": [
+      "semantic_lexical",
+      "friction_excerpt"
+    ]
   },
   {
     "id": "mixed-lex-semantic-2",
     "kind": "sak_chunk",
     "query": "Pensjonsordningen for arbeidstakere til sjøs som modell",
     "issueId": "103102",
-    "gold": { "facts": ["sjøs", "pensjonsordning"], "documentKinds": [] },
-    "tags": ["semantic_lexical"]
+    "gold": {
+      "facts": [
+        "sjøs",
+        "pensjonsordning"
+      ],
+      "documentKinds": []
+    },
+    "tags": [
+      "semantic_lexical"
+    ]
   },
   {
     "id": "hearing-statsbudsjett-felles",
     "kind": "hearing_chunk",
     "query": "Samlet vurdering av statsbudsjett 2027 på tvers av høringer",
     "hearingId": "10005968",
-    "gold": { "facts": ["statsbudsjett"], "documentKinds": ["program"] },
-    "tags": ["hearing", "cross_theme"]
+    "gold": {
+      "facts": [
+        "statsbudsjett"
+      ],
+      "documentKinds": [
+        "program"
+      ]
+    },
+    "tags": [
+      "hearing",
+      "cross_theme"
+    ]
   },
   {
     "id": "sak-dok8",
     "kind": "sak_chunk",
     "query": "Representantforslag i saken",
     "issueId": "103045",
-    "gold": { "facts": ["representant"], "documentKinds": ["representantforslag"] },
+    "gold": {
+      "facts": [
+        "representant"
+      ],
+      "documentKinds": [
+        "representantforslag"
+      ]
+    },
     "tags": []
   },
   {
@@ -214,15 +439,28 @@
     "kind": "sak_chunk",
     "query": "Klimagassutslipp og kutt i saken",
     "issueId": "102800",
-    "gold": { "facts": ["klima", "utslipp"], "documentKinds": [] },
-    "tags": ["cross_theme"]
+    "gold": {
+      "facts": [
+        "klima",
+        "utslipp"
+      ],
+      "documentKinds": []
+    },
+    "tags": [
+      "cross_theme"
+    ]
   },
   {
     "id": "sak-helse",
     "kind": "sak_chunk",
     "query": "Helsepersonell og bemanning",
     "issueId": "103200",
-    "gold": { "facts": ["helse"], "documentKinds": [] },
+    "gold": {
+      "facts": [
+        "helse"
+      ],
+      "documentKinds": []
+    },
     "tags": []
   },
   {
@@ -230,37 +468,72 @@
     "kind": "sak_chunk",
     "query": "Skatteendringer og avgifter",
     "issueId": "103150",
-    "gold": { "facts": ["skatt"], "documentKinds": [] },
+    "gold": {
+      "facts": [
+        "skatt"
+      ],
+      "documentKinds": []
+    },
     "tags": []
   },
   {
     "id": "issue-search-trygd",
     "kind": "issue_search",
     "query": "trygder fiskeri",
-    "gold": { "issueIds": ["103102"] },
-    "tags": ["issue_fts"]
+    "gold": {
+      "issueIds": [
+        "103102"
+      ]
+    },
+    "tags": [
+      "issue_fts"
+    ]
   },
   {
     "id": "issue-search-budsjett",
     "kind": "issue_search",
     "query": "statsbudsjett 2027",
-    "gold": { "titleMustContain": ["budsjett"], "issueIds": [] },
-    "tags": ["issue_fts", "hearing_related"]
+    "gold": {
+      "titleMustContain": [
+        "budsjett"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "issue_fts",
+      "hearing_related"
+    ]
   },
   {
     "id": "sak-long-query",
     "kind": "sak_chunk",
     "query": "Kan du forklare konsekvensene av å lukke pensjonstrygden for fiskere og hvilke alternativer Stortinget vurderte?",
     "issueId": "103102",
-    "gold": { "facts": ["lukk", "pensjonstrygd"], "documentKinds": [] },
-    "tags": ["semantic_lexical"]
+    "gold": {
+      "facts": [
+        "lukk",
+        "pensjonstrygd"
+      ],
+      "documentKinds": []
+    },
+    "tags": [
+      "semantic_lexical"
+    ]
   },
   {
     "id": "sak-referat",
     "kind": "sak_chunk",
     "query": "Hva står i komitéens referat?",
     "issueId": "103102",
-    "gold": { "facts": ["komité", "referat"], "documentKinds": ["referat"] },
+    "gold": {
+      "facts": [
+        "komité",
+        "referat"
+      ],
+      "documentKinds": [
+        "referat"
+      ]
+    },
     "tags": []
   },
   {
@@ -268,114 +541,687 @@
     "kind": "sak_chunk",
     "query": "Innstilling fra arbeids- og sosialkomiteen",
     "issueId": "103102",
-    "gold": { "facts": ["innstilling", "arbeids"], "documentKinds": ["innstilling"] },
-    "tags": ["semantic_lexical"]
+    "gold": {
+      "facts": [
+        "innstilling",
+        "arbeids"
+      ],
+      "documentKinds": [
+        "innstilling"
+      ]
+    },
+    "tags": [
+      "semantic_lexical"
+    ]
   },
   {
     "id": "hearing-frist",
     "kind": "hearing_chunk",
     "query": "Når er fristen for innspill i høringen?",
     "hearingId": "10005964",
-    "gold": { "facts": ["frist", "innspill"], "documentKinds": ["program"] },
-    "tags": ["hearing"]
+    "gold": {
+      "facts": [
+        "frist",
+        "innspill"
+      ],
+      "documentKinds": [
+        "program"
+      ]
+    },
+    "tags": [
+      "hearing"
+    ]
   },
   {
     "id": "sak-200417-missing",
     "kind": "sak_chunk",
     "query": "Oppsummer saken 200417",
     "issueId": "200417",
-    "gold": { "facts": [], "optional": true },
-    "tags": ["sparse_corpus"]
+    "gold": {
+      "facts": [],
+      "optional": true
+    },
+    "tags": [
+      "sparse_corpus"
+    ]
   },
   {
     "id": "prefix-arbeid",
     "kind": "issue_search",
     "query": "arbeids",
-    "gold": { "titleMustContain": ["arbeid"], "issueIds": [] },
-    "tags": ["prefix", "friction_fts"]
+    "gold": {
+      "titleMustContain": [
+        "arbeid"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
   },
   {
     "id": "compound-statsbudsjett",
     "kind": "hearing_chunk",
     "query": "statsbudsjettets prioriteringer for forsvar og sikkerhet",
     "hearingId": "10005968",
-    "gold": { "facts": ["forsvar", "budsjett"], "documentKinds": ["program"] },
-    "tags": ["compound", "hearing"]
+    "gold": {
+      "facts": [
+        "forsvar",
+        "budsjett"
+      ],
+      "documentKinds": [
+        "program"
+      ]
+    },
+    "tags": [
+      "compound",
+      "hearing"
+    ]
   },
   {
     "id": "semantic-only-fisker",
     "kind": "sak_chunk",
     "query": "livsopphold for kystfiskere etter pensjonsalder",
     "issueId": "103102",
-    "gold": { "facts": ["fisker", "pensjon"], "documentKinds": [] },
-    "tags": ["semantic_lexical", "friction_excerpt"]
+    "gold": {
+      "facts": [
+        "fisker",
+        "pensjon"
+      ],
+      "documentKinds": []
+    },
+    "tags": [
+      "semantic_lexical",
+      "friction_excerpt"
+    ]
   },
   {
     "id": "year-henvisning-2024-25",
     "kind": "issue_search",
     "query": "Prop. 133 L (2024-2025)",
-    "gold": { "issueIds": ["103102"] },
-    "tags": ["year_format", "issue_fts"]
+    "gold": {
+      "issueIds": [
+        "103102"
+      ]
+    },
+    "tags": [
+      "year_format",
+      "issue_fts"
+    ]
   },
   {
     "id": "year-session-2024-25",
     "kind": "sak_chunk",
     "query": "Hva gjelder saken i stortingsperioden 2024/25?",
     "issueId": "103102",
-    "gold": { "facts": ["2024", "2025"], "documentKinds": [] },
-    "tags": ["year_format"]
+    "gold": {
+      "facts": [
+        "2024",
+        "2025"
+      ],
+      "documentKinds": []
+    },
+    "tags": [
+      "year_format"
+    ]
   },
   {
     "id": "statsbudsjettet-2027-explicit",
     "kind": "hearing_chunk",
     "query": "statsbudsjettet 2027 kommunal- og forvaltningskomiteen",
     "hearingId": "10005964",
-    "gold": { "facts": ["statsbudsjett", "2027"], "documentKinds": [] },
-    "tags": ["hearing", "year_format"]
+    "gold": {
+      "facts": [
+        "statsbudsjett",
+        "2027"
+      ],
+      "documentKinds": []
+    },
+    "tags": [
+      "hearing",
+      "year_format"
+    ]
   },
   {
     "id": "statsbudsjettet-2027-energy",
     "kind": "hearing_chunk",
     "query": "Hva omhandler statsbudsjettet 2027 for energi og miljø?",
     "hearingId": "10005968",
-    "gold": { "facts": ["statsbudsjett", "2027"], "documentKinds": [] },
-    "tags": ["hearing", "year_format", "compound"]
+    "gold": {
+      "facts": [
+        "statsbudsjett",
+        "2027"
+      ],
+      "documentKinds": []
+    },
+    "tags": [
+      "hearing",
+      "year_format",
+      "compound"
+    ]
   },
   {
     "id": "issue-search-budsjett-2027-phrase",
     "kind": "issue_search",
     "query": "statsbudsjettet 2027",
-    "gold": { "titleMustContain": ["statsbudsjett", "2027"], "issueIds": [] },
-    "tags": ["year_format", "hearing_related"]
+    "gold": {
+      "titleMustContain": [
+        "statsbudsjett",
+        "2027"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "year_format",
+      "hearing_related"
+    ]
   },
   {
     "id": "topic-trygd-pensjon-multi",
     "kind": "topic",
     "query": "Hvordan behandler Stortinget pensjon og trygd for fiskere sammenlignet med andre saker?",
     "gold": {
-      "facts": ["pensjon", "trygd"],
-      "issueIds": ["103102", "200365"]
+      "facts": [
+        "pensjon",
+        "trygd"
+      ],
+      "issueIds": [
+        "103102",
+        "200365"
+      ]
     },
-    "tags": ["topic_multi_sak", "semantic_lexical"]
+    "tags": [
+      "topic_multi_sak",
+      "semantic_lexical"
+    ]
   },
   {
     "id": "topic-statsbudsjett-2027-multi",
     "kind": "topic",
     "query": "statsbudsjettet 2027: hva skiller komitéhøringene?",
     "gold": {
-      "facts": ["statsbudsjett", "2027"],
-      "issueIds": ["10005964", "10005968"]
+      "facts": [
+        "statsbudsjett",
+        "2027"
+      ],
+      "issueIds": [
+        "10005964",
+        "10005968"
+      ]
     },
-    "tags": ["topic_multi_sak", "year_format", "hearing"]
+    "tags": [
+      "topic_multi_sak",
+      "year_format",
+      "hearing"
+    ]
   },
   {
     "id": "topic-representantforslag-2024-25",
     "kind": "topic",
     "query": "Representantforslag i stortingsperioden 2024/25 om transport og førerkort",
     "gold": {
-      "facts": ["representant", "førerkort"],
-      "issueIds": ["200365", "200364"]
+      "facts": [
+        "representant",
+        "førerkort"
+      ],
+      "issueIds": [
+        "200365",
+        "200364"
+      ]
     },
-    "tags": ["topic_multi_sak", "year_format"]
+    "tags": [
+      "topic_multi_sak",
+      "year_format"
+    ]
+  },
+  {
+    "id": "issue-prefix-innvand",
+    "kind": "issue_search",
+    "query": "innvand",
+    "gold": {
+      "titleMustContain": [
+        "innvand"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-arbeids",
+    "kind": "issue_search",
+    "query": "arbeids",
+    "gold": {
+      "titleMustContain": [
+        "arbeids"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-statsb",
+    "kind": "issue_search",
+    "query": "statsb",
+    "gold": {
+      "titleMustContain": [
+        "stats"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-pensj",
+    "kind": "issue_search",
+    "query": "pensj",
+    "gold": {
+      "titleMustContain": [
+        "pensj"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-trygd",
+    "kind": "issue_search",
+    "query": "trygd",
+    "gold": {
+      "titleMustContain": [
+        "trygd"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-skatt",
+    "kind": "issue_search",
+    "query": "skatt",
+    "gold": {
+      "titleMustContain": [
+        "skatt"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-helse",
+    "kind": "issue_search",
+    "query": "helse",
+    "gold": {
+      "titleMustContain": [
+        "helse"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-klima",
+    "kind": "issue_search",
+    "query": "klima",
+    "gold": {
+      "titleMustContain": [
+        "klima"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-forsv",
+    "kind": "issue_search",
+    "query": "forsv",
+    "gold": {
+      "titleMustContain": [
+        "forsv"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "issue-prefix-energ",
+    "kind": "issue_search",
+    "query": "energ",
+    "gold": {
+      "titleMustContain": [
+        "energ"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "prefix",
+      "friction_fts"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-1",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 1 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt1"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-2",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 2 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt2"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-3",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 3 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt3"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-4",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 4 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt4"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-5",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 5 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt5"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-6",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 6 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt6"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-7",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 7 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt7"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-8",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 8 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt8"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-9",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 9 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt9"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-10",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 10 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt10"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-11",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 11 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt11"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "finnes-ikke-extra-12",
+    "kind": "finnes_ikke",
+    "query": "Hva er Stortingets vedtak om fiktivt tema 12 med unicorns og tidsreise?",
+    "issueId": "103102",
+    "gold": {
+      "facts": [
+        "fiktivt12"
+      ]
+    },
+    "tags": [
+      "finnes_ikke"
+    ]
+  },
+  {
+    "id": "year-search-2024-25",
+    "kind": "issue_search",
+    "query": "2024/25",
+    "gold": {
+      "titleMustContain": [
+        "budsjett"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "year_format",
+      "issue_fts"
+    ]
+  },
+  {
+    "id": "year-search-2024-2025",
+    "kind": "issue_search",
+    "query": "2024-2025",
+    "gold": {
+      "titleMustContain": [
+        "budsjett"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "year_format",
+      "issue_fts"
+    ]
+  },
+  {
+    "id": "year-search-2025-26",
+    "kind": "issue_search",
+    "query": "2025/26",
+    "gold": {
+      "titleMustContain": [
+        "budsjett"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "year_format",
+      "issue_fts"
+    ]
+  },
+  {
+    "id": "year-search-statsbudsjettet-2027",
+    "kind": "issue_search",
+    "query": "statsbudsjettet 2027",
+    "gold": {
+      "titleMustContain": [
+        "budsjett"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "year_format",
+      "issue_fts"
+    ]
+  },
+  {
+    "id": "year-search-budsjett-2027",
+    "kind": "issue_search",
+    "query": "budsjett 2027",
+    "gold": {
+      "titleMustContain": [
+        "budsjett"
+      ],
+      "issueIds": []
+    },
+    "tags": [
+      "year_format",
+      "issue_fts"
+    ]
+  },
+  {
+    "id": "issue-id-103102",
+    "kind": "issue_search",
+    "query": "103102",
+    "gold": {
+      "issueIds": [
+        "103102"
+      ]
+    },
+    "tags": [
+      "issue_fts",
+      "exact_id"
+    ]
+  },
+  {
+    "id": "issue-id-200365",
+    "kind": "issue_search",
+    "query": "200365",
+    "gold": {
+      "issueIds": [
+        "200365"
+      ]
+    },
+    "tags": [
+      "issue_fts",
+      "exact_id"
+    ]
+  },
+  {
+    "id": "issue-id-102956",
+    "kind": "issue_search",
+    "query": "102956",
+    "gold": {
+      "issueIds": [
+        "102956"
+      ]
+    },
+    "tags": [
+      "issue_fts",
+      "exact_id"
+    ]
+  },
+  {
+    "id": "prefix-as-place",
+    "kind": "issue_search",
+    "query": "Ås",
+    "gold": { "titleMustContain": ["Ås"], "issueIds": [] },
+    "tags": ["prefix", "short_place", "optional"]
+  },
+  {
+    "id": "year-2024-25-slash",
+    "kind": "issue_search",
+    "query": "2024/25 budsjett",
+    "gold": { "titleMustContain": ["2024"], "issueIds": [] },
+    "tags": ["year_format", "issue_fts"]
   }
 ]

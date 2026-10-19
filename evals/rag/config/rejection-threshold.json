@@ -1,0 +1,4 @@
+{
+  "threshold": 0.018,
+  "note": "Run npm run eval:rag:calibrate on questions-dev.json to replace before round3."
+}
