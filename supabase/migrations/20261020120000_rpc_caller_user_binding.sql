@@ -21,43 +21,41 @@ $function$;
 REVOKE ALL ON FUNCTION public.assert_rpc_caller_is_user(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.assert_rpc_caller_is_user(uuid) TO service_role;
 
--- DROP overloads before CREATE: Postgres rejects CREATE OR REPLACE when parameter defaults/names change.
+-- DROP before CREATE: Postgres rejects CREATE OR REPLACE when parameter defaults/names or the
+-- return type differ (prod: record_political_consent has a DEFAULT the repo never defined).
+-- Drop ONLY the exact identity signatures recreated below. Other overloads with the same name
+-- (e.g. legacy create_hearing_comment(uuid, uuid, text)) are left untouched.
+-- Grants are re-applied at the end of this file.
 DO $$
 DECLARE
-  f regprocedure;
-  v_name text;
-  v_names text[] := ARRAY[
-    'cast_vote',
-    'cast_poll_vote',
-    'get_user_poll_vote',
-    'set_issue_stance',
-    'create_citizen_opinion',
-    'create_citizen_opinion_reply',
-    'create_hearing_comment',
-    'create_app_suggestion',
-    'cast_app_suggestion_vote',
-    'set_user_onboarding_state',
-    'create_opinion_innspill',
-    'endorse_opinion_innspill',
-    'report_content',
-    'record_political_consent',
-    'withdraw_political_consent',
-    'withdraw_all_political_consents',
-    'purge_political_processing_data',
-    'update_user_profile_names',
-    'get_user_vote_on_issue',
-    'get_user_vote_history'
+  v_sig text;
+  v_sigs text[] := ARRAY[
+    'public.cast_vote(uuid,text,text,text,text)',
+    'public.cast_poll_vote(uuid,uuid,text)',
+    'public.get_user_poll_vote(uuid,uuid)',
+    'public.set_issue_stance(uuid,text,text,text,text)',
+    'public.create_citizen_opinion(uuid,text,text,text,text,jsonb)',
+    'public.create_citizen_opinion_reply(uuid,uuid,text,text)',
+    'public.create_hearing_comment(uuid,text,text)',
+    'public.create_app_suggestion(uuid,text,text,text,text)',
+    'public.cast_app_suggestion_vote(uuid,uuid,text)',
+    'public.set_user_onboarding_state(uuid,boolean,boolean,boolean)',
+    'public.create_opinion_innspill(uuid,uuid,text,timestamp with time zone,integer)',
+    'public.endorse_opinion_innspill(uuid,uuid)',
+    'public.report_content(uuid,text,uuid,text,text)',
+    'public.record_political_consent(uuid,text,text)',
+    'public.withdraw_political_consent(uuid,text)',
+    'public.withdraw_all_political_consents(uuid)',
+    'public.purge_political_processing_data(uuid)',
+    'public.update_user_profile_names(uuid,text,text)',
+    'public.get_user_vote_on_issue(uuid,text)',
+    'public.get_user_vote_history(uuid)'
   ];
 BEGIN
-  FOREACH v_name IN ARRAY v_names LOOP
-    FOR f IN
-      SELECT p.oid::regprocedure
-      FROM pg_proc p
-      JOIN pg_namespace n ON n.oid = p.pronamespace
-      WHERE n.nspname = 'public' AND p.proname = v_name
-    LOOP
-      EXECUTE format('DROP FUNCTION IF EXISTS %s', f);
-    END LOOP;
+  FOREACH v_sig IN ARRAY v_sigs LOOP
+    IF to_regprocedure(v_sig) IS NOT NULL THEN
+      EXECUTE format('DROP FUNCTION IF EXISTS %s', to_regprocedure(v_sig));
+    END IF;
   END LOOP;
 END $$;
 
