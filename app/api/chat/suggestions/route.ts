@@ -201,6 +201,7 @@ export async function GET(request: Request) {
     kind: view.kind,
     title,
     issueId,
+    hoeringId: view.kind === 'horing' ? view.id : null,
   };
 
   const signals = await collectSignals(gate.userId);

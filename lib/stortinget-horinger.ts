@@ -84,7 +84,7 @@ export function formatStortingetDateTime(raw: string | undefined): string | null
   });
 }
 
-export async function fetchStortingetHoringer(): Promise<StortingetHoring[]> {
+export async function fetchStortingetHoringerLive(): Promise<StortingetHoring[]> {
   const res = await fetch('https://data.stortinget.no/eksport/horinger?format=json', {
     next: { revalidate: 3600 },
   });
@@ -93,8 +93,19 @@ export async function fetchStortingetHoringer(): Promise<StortingetHoring[]> {
   return (data.horinger_liste ?? []) as StortingetHoring[];
 }
 
+export async function fetchStortingetHoringer(): Promise<StortingetHoring[]> {
+  // Dynamic import avoids pulling Supabase into unit tests that only need date helpers.
+  const { loadStortingetHearingsFromDb } = await import('@/lib/stortinget-hearing-db');
+  const cached = await loadStortingetHearingsFromDb();
+  if (cached && cached.length > 0) return cached;
+  return fetchStortingetHoringerLive();
+}
+
 export async function fetchStortingetHoringById(id: string): Promise<StortingetHoring | null> {
-  const list = await fetchStortingetHoringer();
+  const { loadStortingetHearingByIdFromDb } = await import('@/lib/stortinget-hearing-db');
+  const cached = await loadStortingetHearingByIdFromDb(id);
+  if (cached) return cached;
+  const list = await fetchStortingetHoringerLive();
   return list.find((h) => String(h.id) === String(id)) ?? null;
 }
 
