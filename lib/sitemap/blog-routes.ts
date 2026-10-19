@@ -1,5 +1,4 @@
 import type { MetadataRoute } from 'next';
-import { CmsFetchError } from '@/lib/cms/cms-fetch-error';
 
 export type BlogSitemapSlug = {
   slug: string;
@@ -32,10 +31,7 @@ export async function loadBlogSitemapEntriesWithCmsFallback(
     const slugs = await loadSlugs();
     return mapBlogSlugsToSitemapEntries(base, slugs);
   } catch (error) {
-    if (error instanceof CmsFetchError) {
-      log.error('sitemap: blogg utilgjengelig i CMS — beholder statiske og sak-URL-er uten bloggposter', error);
-      return [];
-    }
-    throw error;
+    log.error('sitemap: klarte ikke å hente bloggposter — beholder statiske og sak-URL-er', error);
+    return [];
   }
 }

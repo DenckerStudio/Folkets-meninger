@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import Link from 'next/link';
 
 export default function GlobalError({
   error,
@@ -30,12 +29,12 @@ export default function GlobalError({
             >
               Prøv igjen
             </button>
-            <Link
+            <a
               href="/"
               className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#00205b]/20 px-5 text-sm font-semibold text-[#00205b] hover:bg-[#00205b]/5"
             >
               Til forsiden
-            </Link>
+            </a>
           </div>
         </div>
       </body>

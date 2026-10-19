@@ -1,6 +1,6 @@
 import type { Payload } from 'payload';
 
-export type PostCmsStatus = 'draft' | 'published';
+export type PostCmsStatus = 'draft' | 'published' | 'unknown';
 
 export type PostLookupHit = {
   id: string;
@@ -9,7 +9,9 @@ export type PostLookupHit = {
 };
 
 function resolveCmsStatus(value: unknown): PostCmsStatus {
-  return value === 'published' ? 'published' : 'draft';
+  if (value === 'published') return 'published';
+  if (value === 'draft') return 'draft';
+  return 'unknown';
 }
 
 export async function findPostBySlugOrSourceEvent(

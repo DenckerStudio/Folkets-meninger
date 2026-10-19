@@ -15,14 +15,25 @@ void (async () => {
   assert.equal(entries[0]?.url, `${base}/blogg/test`);
 
   const logs: unknown[][] = [];
-  const empty = await loadBlogSitemapEntriesWithCmsFallback(
+  const cmsError = await loadBlogSitemapEntriesWithCmsFallback(
     base,
     async () => {
       throw new CmsFetchError('feil', 'network');
     },
     { error: (...args: unknown[]) => logs.push(args) },
   );
-  assert.deepEqual(empty, []);
+  assert.deepEqual(cmsError, []);
+  assert.equal(logs.length, 1);
+
+  logs.length = 0;
+  const genericError = await loadBlogSitemapEntriesWithCmsFallback(
+    base,
+    async () => {
+      throw new Error('timeout');
+    },
+    { error: (...args: unknown[]) => logs.push(args) },
+  );
+  assert.deepEqual(genericError, []);
   assert.equal(logs.length, 1);
 
   const ok = await loadBlogSitemapEntriesWithCmsFallback(base, async () => [

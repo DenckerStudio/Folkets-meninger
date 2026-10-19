@@ -34,4 +34,14 @@ const draftRetry = existingDraftApiBody({
 
 assert.equal(draftRetry.cmsStatus, 'draft');
 
+const unknownRetry = existingDraftApiBody({
+  found: true,
+  id: '7',
+  slug: 'eldre',
+  adminUrl: 'https://cms/admin/7',
+  cmsStatus: 'unknown',
+});
+
+assert.equal(unknownRetry.cmsStatus, 'unknown');
+
 console.log('lib/blog/draft-api-response.test.ts ok');

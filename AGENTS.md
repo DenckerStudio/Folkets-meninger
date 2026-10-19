@@ -104,7 +104,8 @@ All on **Coolify, server `klever`**:
   - GP / Reels drafts (`create_system_poll_draft` → admin `publish_poll`)
   - høringer packaging (`/api/cron/package-opinion-innspill` → `N8N_HEARING_INNSPILL_WEBHOOK_URL`)
   - blog drafts: `POST /api/ops/blog/drafts` (`verifyOpsSecret`, `x-cron-secret`) creates a
-    Payload draft; `POST /api/ops/blog/social-posted` marks a Payload post as shared
+    Payload draft; on `200` + `created: false` n8n must read `cmsStatus` (see Blog below).
+    `POST /api/ops/blog/social-posted` marks a Payload post as shared
   - pipeline health (`workflows/n8n/pipeline-health.workflow.ts`); errors go to
     `workflows/n8n/ops-error-handler.workflow.ts`; admin alerts use `POST /api/ops/n8n-notify`
 - **Ollama** (via n8n, never from the app): target model `gemma4:26b`. Repo workflow
@@ -128,9 +129,19 @@ All on **Coolify, server `klever`**:
 - **n8n blog drafts go to Payload**: `POST /api/ops/blog/drafts` creates a draft
   (`_status: draft`, review state `til_vurdering`) with `CMS_AGENT_API_KEY` (`agent` role,
   falls back to `CMS_API_KEY`). Editors publish in the Payload admin, never n8n.
+  Response JSON includes `id`, `slug`, `adminUrl`, `created`, and `cmsStatus`
+  (`draft` | `published` | `unknown`). **n8n must inspect `cmsStatus` on HTTP 200 when
+  `created: false`** (idempotent retry / duplicate `source_event`): treat `published` as an
+  ops alert (mistaken publish), not a silent success. Error responses may also include
+  `id` / `adminUrl` / `cmsStatus` when the post exists in CMS.
   `POST /api/ops/blog/social-posted` calls `fm-cms` `/api/blog-ops/social-posted`
   signed with HMAC (`REVALIDATE_SECRET`). `fm-cms` calls `/api/revalidate/blog` on publish.
   `/dashboard/admin/blog` only links to the Payload admin.
+- **Blog ISR / build**: runtime CMS failures on `/blogg` throw so ISR keeps the last good HTML.
+  During `next build`, if CMS is down, blog index routes render «midlertidig utilgjengelig» via
+  `BlogCmsUnavailableShell` (`unstable_noStore`) and **`/blogg` stays dynamic (ƒ) for that
+  deployment** until a later build succeeds with CMS up. Sitemap omits blog post URLs on loader
+  errors but keeps static and sak entries.
 - **`20261018120000_blog_posts.sql` (Supabase `public.blog_posts`) is superseded and must
   still NOT be applied.** Do not build on the Supabase blog table. All blog work targets Payload.
 - Setup and env: `infra/coolify/cms.md`, `cms/.env.example`.
