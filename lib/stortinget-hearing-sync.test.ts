@@ -49,4 +49,18 @@ assert.equal(row.id, '10005933');
 assert.deepEqual(row.related_issue_ids, ['200365']);
 assert.match(row.skriftlig_innspill_url, /h=10005933/);
 
+const meta = buildHearingChunkMetadata({
+  hearingId: '10005933',
+  documentId: 'doc-uuid',
+  documentKind: 'horingsprogram',
+  documentTitle: 'Program',
+  sourceUrl: 'https://example.com',
+  sesjon: '2025-2029',
+  komite: 'Justiskomiteen',
+  contentHash: 'abc',
+});
+assert.equal(meta.hearing_id, '10005933');
+assert.equal(meta.issue_id, null);
+assert.equal(meta.content_hash, 'abc');
+
 console.log('stortinget-hearing-sync.test.ts ok');
