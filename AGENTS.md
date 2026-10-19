@@ -19,8 +19,9 @@
 - Single Next.js App Router app (Next.js 15).
 - Auth and DB are Supabase (Postgres); app uses SSR cookies/middleware refresh patterns.
 - After `20261018150000_security_lockdown_prod_safe.sql` + `security-lockdown-defaults.sql`,
-  new `public` tables/functions need explicit `GRANT`s matching RLS (and `GRANT EXECUTE` on
-  client RPCs); do not grant `anon` on the `payload` schema. See `docs/security-allowlist.md`.
+  new `public` tables/functions need explicit `GRANT`s in the same migration file matching RLS
+  (prefer `service_role`-only `EXECUTE` on session-bound RPCs, see `20261020120000`); never edit
+  already-applied migrations; do not grant `anon` on the `payload` schema. See `docs/security-allowlist.md`.
 - Stortinget data comes from `data.stortinget.no` (public API): saker,
   publications, questions, and høringer.
 - AI summaries are produced externally via n8n + Ollama and stored in Supabase; the app

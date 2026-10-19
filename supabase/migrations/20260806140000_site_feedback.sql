@@ -25,5 +25,4 @@ CREATE POLICY site_feedback_service ON public.site_feedback
   USING (true)
   WITH CHECK (true);
 
-REVOKE ALL ON TABLE public.site_feedback FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT ON TABLE public.site_feedback TO service_role;
+GRANT SELECT, INSERT ON public.site_feedback TO service_role;

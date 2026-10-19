@@ -412,16 +412,3 @@ COMMENT ON TABLE public.opinion_innspill IS
   'Hearing-innspill promotion for a Folkets meninger opinion. Replaces the old counter_proposals table.';
 COMMENT ON TABLE public.opinion_innspill_endorsements IS
   'User support ("støtte") for an opinion submitted as a hearing innspill.';
-
--- Explicit grants (required when this migration runs after 20261018150000 lockdown).
-REVOKE ALL ON TABLE public.opinion_innspill FROM PUBLIC;
-GRANT SELECT ON TABLE public.opinion_innspill TO anon, authenticated;
-GRANT ALL ON TABLE public.opinion_innspill TO service_role;
-
-REVOKE ALL ON TABLE public.opinion_innspill_endorsements FROM PUBLIC;
-GRANT SELECT ON TABLE public.opinion_innspill_endorsements TO authenticated;
-GRANT ALL ON TABLE public.opinion_innspill_endorsements TO service_role;
-
-GRANT EXECUTE ON FUNCTION public.create_opinion_innspill(uuid, uuid, text, timestamptz, integer)
-  TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.endorse_opinion_innspill(uuid, uuid) TO authenticated, service_role;
