@@ -6,20 +6,31 @@ export type BlogSitemapSlug = {
   updated_at: string | null;
 };
 
+function sitemapLastModified(
+  updatedAt: string | null,
+  publishedAt: string | null,
+): Date | undefined {
+  for (const raw of [updatedAt, publishedAt]) {
+    if (!raw?.trim()) continue;
+    const date = new Date(raw);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+  return undefined;
+}
+
 export function mapBlogSlugsToSitemapEntries(
   base: string,
   slugs: BlogSitemapSlug[],
 ): MetadataRoute.Sitemap {
-  return slugs.map((entry) => ({
-    url: `${base}/blogg/${encodeURIComponent(entry.slug)}`,
-    lastModified: entry.updated_at
-      ? new Date(entry.updated_at)
-      : entry.published_at
-        ? new Date(entry.published_at)
-        : undefined,
-    changeFrequency: 'monthly' as const,
-    priority: 0.45,
-  }));
+  return slugs.map((entry) => {
+    const lastModified = sitemapLastModified(entry.updated_at, entry.published_at);
+    return {
+      url: `${base}/blogg/${encodeURIComponent(entry.slug)}`,
+      ...(lastModified ? { lastModified } : {}),
+      changeFrequency: 'monthly' as const,
+      priority: 0.45,
+    };
+  });
 }
 
 export async function loadBlogSitemapEntriesWithCmsFallback(

@@ -130,9 +130,10 @@ All on **Coolify, server `klever`**:
   (`_status: draft`, review state `til_vurdering`) with `CMS_AGENT_API_KEY` (`agent` role,
   falls back to `CMS_API_KEY`). Editors publish in the Payload admin, never n8n.
   Response JSON includes `id`, `slug`, `adminUrl`, `created`, and `cmsStatus`
-  (`draft` | `published` | `unknown`). **n8n must inspect `cmsStatus` on HTTP 200 when
-  `created: false`** (idempotent retry / duplicate `source_event`): treat `published` as an
-  ops alert (mistaken publish), not a silent success. Error responses may also include
+  (`draft` | `published` | `unknown`).   **n8n must inspect `cmsStatus` on HTTP 200 when
+  `created: false`** (idempotent retry / duplicate `source_event`): only `draft` means a draft
+  exists and the retry can stop quietly. Treat `published` and `unknown` as ops alert / manual
+  CMS check (same class as mistaken publish), not as «utkast finnes». Error responses may also include
   `id` / `adminUrl` / `cmsStatus` when the post exists in CMS.
   `POST /api/ops/blog/social-posted` calls `fm-cms` `/api/blog-ops/social-posted`
   signed with HMAC (`REVALIDATE_SECRET`). `fm-cms` calls `/api/revalidate/blog` on publish.

@@ -392,7 +392,7 @@ App-endepunkt (ikke fm-cms direkte): `POST https://www.folkets-meninger.no/api/o
 
 Suksess (`200`): `{ id, slug, adminUrl, created, cmsStatus }` hvor `cmsStatus` er `draft`, `published` eller `unknown`.
 
-**Idempotent retry:** samme `source_event` kan gi `created: false` og `200`. Flyten **må** sjekke `cmsStatus` — `published` betyr at innlegget allerede er publisert i Payload (feil/varsling), ikke stille suksess. `draft` / `unknown` kan behandles som «utkast finnes» avhengig av flyt.
+**Idempotent retry:** samme `source_event` kan gi `created: false` og `200`. Flyten **må** sjekke `cmsStatus` — bare `draft` betyr at utkastet finnes og retry kan avsluttes stille. `published` og `unknown` skal varsles / manuell sjekk i CMS (som utilsiktet publisering), ikke behandles som «utkast finnes».
 
 Feil (`4xx`/`5xx`): JSON `{ error, id?, slug?, adminUrl?, cmsStatus? }` når CMS har lagret en rad (f.eks. utkast forventet men `published`).
 

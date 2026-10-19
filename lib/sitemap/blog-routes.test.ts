@@ -14,6 +14,21 @@ void (async () => {
   assert.equal(entries.length, 1);
   assert.equal(entries[0]?.url, `${base}/blogg/test`);
 
+  const invalidUpdated = mapBlogSlugsToSitemapEntries(base, [
+    {
+      slug: 'bad-updated',
+      published_at: '2026-02-01T00:00:00.000Z',
+      updated_at: 'not-a-date',
+    },
+  ]);
+  assert.equal(invalidUpdated.length, 1);
+  assert.equal(invalidUpdated[0]?.lastModified?.toISOString(), '2026-02-01T00:00:00.000Z');
+
+  const noValidDates = mapBlogSlugsToSitemapEntries(base, [
+    { slug: 'no-dates', published_at: 'nope', updated_at: 'also-nope' },
+  ]);
+  assert.equal(noValidDates[0]?.lastModified, undefined);
+
   const logs: unknown[][] = [];
   const cmsError = await loadBlogSitemapEntriesWithCmsFallback(
     base,
