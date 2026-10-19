@@ -10,6 +10,15 @@ export function normalizeChunkText(text: string): string {
   return text.replace(/\r\n/g, '\n').trim();
 }
 
+/** UI-only: collapse blank lines so line-clamp cards show more substance. */
+export function formatChunkExcerptForDisplay(text: string): string {
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/^\n+/, '')
+    .replace(/\n\s*\n/g, '\n')
+    .trimEnd();
+}
+
 function queryTerms(query: string): string[] {
   const needle = query.toLowerCase().trim();
   if (!needle) return [];
@@ -83,6 +92,10 @@ export type RankedChunkExcerpt = {
   chunkIndex?: number;
 };
 
+export type SakIndexedChunk<T extends RankedChunkExcerpt = RankedChunkExcerpt> = T & {
+  sakIndex: number;
+};
+
 /**
  * Apply per-excerpt caps and a total budget in **incoming order** (e.g. semantic
  * before hybrid/lexical from `mergeChunks`). Do not re-sort by `rank` — semantic
@@ -112,4 +125,32 @@ export function applyChunkExcerptsForChat<T extends RankedChunkExcerpt>(
   }
 
   return out;
+}
+
+/**
+ * One shared excerpt budget across several saker (topic context). Chunks are
+ * budgeted round-robin (chunk 0 from every sak, then chunk 1, …) so one sak
+ * cannot consume the entire 16k before others get an excerpt.
+ */
+export function applyTopicWideChunkExcerpts<T extends RankedChunkExcerpt>(
+  sakerChunks: ReadonlyArray<readonly T[]>,
+  query: string,
+  totalBudget: number = CHAT_EXCERPT_TOTAL_BUDGET_CHARS,
+): T[][] {
+  const flat: SakIndexedChunk<T>[] = [];
+  const maxChunks = Math.max(0, ...sakerChunks.map((chunks) => chunks.length));
+  for (let chunkIndex = 0; chunkIndex < maxChunks; chunkIndex += 1) {
+    for (let sakIndex = 0; sakIndex < sakerChunks.length; sakIndex += 1) {
+      const chunk = sakerChunks[sakIndex]?.[chunkIndex];
+      if (chunk) flat.push({ ...chunk, sakIndex });
+    }
+  }
+
+  const excerpted = applyChunkExcerptsForChat(flat, query, { totalBudget });
+  const grouped = sakerChunks.map(() => [] as T[]);
+  for (const row of excerpted) {
+    const { sakIndex, ...chunk } = row as SakIndexedChunk<T>;
+    grouped[sakIndex]?.push(chunk as unknown as T);
+  }
+  return grouped;
 }

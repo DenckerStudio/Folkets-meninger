@@ -3,7 +3,9 @@ import {
   CHAT_EXCERPT_MAX_CHARS,
   CHAT_EXCERPT_TOTAL_BUDGET_CHARS,
   applyChunkExcerptsForChat,
+  applyTopicWideChunkExcerpts,
   excerptChunkForQuery,
+  formatChunkExcerptForDisplay,
 } from './chunk-excerpt';
 
 const prefix = 'A'.repeat(2000);
@@ -66,6 +68,45 @@ assert.notEqual(
   wouldDropSemantic[0]?.rank,
   0.91,
   're-sorting by rank would prefer lexical and drop BYOK semantic hits',
+);
+
+const threeSaker = [
+  [{ content: `sak0 ${'a'.repeat(9000)}`, rank: 1, chunkIndex: 0 }],
+  [{ content: `sak1 ${'b'.repeat(9000)}`, rank: 1, chunkIndex: 0 }],
+  [{ content: `sak2 ${'c'.repeat(9000)}`, rank: 1, chunkIndex: 0 }],
+];
+const topicWide = applyTopicWideChunkExcerpts(threeSaker, 'sak0', CHAT_EXCERPT_TOTAL_BUDGET_CHARS);
+const topicTotal = topicWide.flat().reduce((sum, chunk) => sum + chunk.content.length, 0);
+assert.ok(topicTotal <= CHAT_EXCERPT_TOTAL_BUDGET_CHARS, 'topic context shares one 16k budget');
+for (let sakIndex = 0; sakIndex < threeSaker.length; sakIndex += 1) {
+  assert.ok(topicWide[sakIndex].length >= 1, `sak ${sakIndex} with chunks must get at least one excerpt`);
+}
+
+const sixK = 'x'.repeat(6000);
+const threeByFour = [0, 1, 2].map((sakIndex) =>
+  [0, 1, 2, 3].map((chunkIndex) => ({
+    content: `sak${sakIndex}-c${chunkIndex} ${sixK}`,
+    rank: 1,
+    chunkIndex,
+  })),
+);
+const heavyTopic = applyTopicWideChunkExcerpts(threeByFour, 'query', CHAT_EXCERPT_TOTAL_BUDGET_CHARS);
+const heavyTotal = heavyTopic.flat().reduce((sum, chunk) => sum + chunk.content.length, 0);
+assert.ok(heavyTotal <= CHAT_EXCERPT_TOTAL_BUDGET_CHARS);
+for (let sakIndex = 0; sakIndex < 3; sakIndex += 1) {
+  assert.ok(
+    heavyTopic[sakIndex].length >= 1,
+    `3x4x6k: sak ${sakIndex} must not be left with kun sammendrag`,
+  );
+}
+assert.ok(
+  heavyTopic[1].length >= 1 && heavyTopic[2].length >= 1,
+  '3x4x6k: round-robin must not let sak 0 consume entire budget',
+);
+
+assert.equal(
+  formatChunkExcerptForDisplay('\n\n…\n\n## Komiteens merknader\n\nAvsnitt.'),
+  '…\n## Komiteens merknader\nAvsnitt.',
 );
 
 console.log('chat/chunk-excerpt.test.ts: ok');
