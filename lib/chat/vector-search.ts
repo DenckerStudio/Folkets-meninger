@@ -20,6 +20,9 @@ import type { DecryptedByokCredential } from '@/lib/byok/service';
 /** Dimensions of `document_chunks.embedding`, i.e. the vectors we must produce. */
 export const VECTOR_DIMENSIONS = 768;
 
+/** Dimensions of `document_chunks.embedding_v2` (bge-m3, P6). */
+export const VECTOR_V2_DIMENSIONS = 1024;
+
 /** Ollama model that produced the stored 768-dim vectors (n8n + Ollama). */
 export const OLLAMA_VECTOR_MODEL = 'nomic-embed-text';
 
