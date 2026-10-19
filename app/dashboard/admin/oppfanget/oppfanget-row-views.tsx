@@ -13,7 +13,11 @@ import { REEL_TEXT_HIT } from '@/lib/polls/reel-tap-targets';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
-const cellClass = 'min-w-0 overflow-hidden break-words px-1.5 py-1.5 align-top text-xs';
+const cellClass = 'min-w-0 overflow-hidden break-words px-2 py-1.5 align-top text-xs';
+const mobileTextLinkClass = cn(
+  REEL_TEXT_HIT,
+  'gap-1 text-xs font-medium text-brand hover:underline',
+);
 const tapLinkClass =
   'inline-flex min-h-11 max-w-full items-center gap-1 break-words text-brand hover:underline';
 
@@ -82,13 +86,13 @@ function StatusBadge({ row }: { row: OppfangetRow }) {
   );
 }
 
-function ScaleSourceLink({ url }: { url: string }) {
+function ScaleSourceLink({ url, mobile = false }: { url: string; mobile?: boolean }) {
   return (
     <a
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className={cn(tapLinkClass, 'text-xs')}
+      className={mobile ? mobileTextLinkClass : cn(tapLinkClass, 'text-xs')}
     >
       Tall-kilde
       <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -100,7 +104,7 @@ function SourcesList({ row, mobile = false }: { row: OppfangetRow; mobile?: bool
   if (row.sources.length === 0) {
     return <span className="text-xs text-muted-foreground">—</span>;
   }
-  const linkClass = mobile ? cn(REEL_TEXT_HIT, 'gap-1 break-words text-brand hover:underline') : tapLinkClass;
+  const linkClass = mobile ? cn(mobileTextLinkClass, 'break-words') : tapLinkClass;
   return (
     <ul className="space-y-0.5">
       {row.sources.map((s) => (
@@ -135,7 +139,7 @@ function PollLinkCell({ row, mobile = false }: { row: OppfangetRow; mobile?: boo
   return (
     <Link
       href={link}
-      className={cn(mobile ? REEL_TEXT_HIT : tapLinkClass, 'font-medium')}
+      className={mobile ? mobileTextLinkClass : cn(tapLinkClass, 'font-medium')}
       aria-label={isDraft ? 'Åpne utkast' : 'Åpne avstemning'}
     >
       {label}
@@ -170,13 +174,17 @@ function TitleCell({ row, showTypeMeta = false }: { row: OppfangetRow; showTypeM
   );
 }
 
-function DateCell({ label, iso }: { label: string; iso: string }) {
-  const { date, time } = splitNbDateTime(iso);
+function DesktopDateLines({ firstSeenAt, lastSeenAt }: { firstSeenAt: string; lastSeenAt: string }) {
   return (
-    <div className="min-w-0 overflow-hidden break-words text-xs">
-      <span className="font-medium text-muted-foreground">{label}</span>
-      <span className="mt-0.5 block break-words text-foreground">{date}</span>
-      {time ? <span className="block break-words text-muted-foreground">{time}</span> : null}
+    <div className="space-y-1 text-xs">
+      <p className="whitespace-nowrap text-muted-foreground">
+        <span className="font-medium">Først </span>
+        <span className="text-foreground">{formatOppfangetDateTime(firstSeenAt)}</span>
+      </p>
+      <p className="whitespace-nowrap text-muted-foreground">
+        <span className="font-medium">Sist </span>
+        <span className="text-foreground">{formatOppfangetDateTime(lastSeenAt)}</span>
+      </p>
     </div>
   );
 }
@@ -191,31 +199,34 @@ function MobileDateLines({ firstSeenAt, lastSeenAt }: { firstSeenAt: string; las
 }
 
 export function OppfangetDesktopTable({ rows }: { rows: OppfangetRow[] }) {
+  const statusCell = cn(cellClass, 'w-28 max-w-[7rem] pr-3');
+  const headBase = 'px-2 py-1.5 font-medium';
+
   return (
     <div className="hidden sm:block">
-      <p className="mb-2 text-xs text-muted-foreground lg:hidden">
+      <p className="mb-2 text-xs text-muted-foreground md:hidden">
         Tabellen kan rulles sideveis på smale skjermer.
       </p>
-      <div className="max-w-full overflow-x-auto rounded-xl border border-border lg:overflow-x-visible">
-        <table className="w-full min-w-[52rem] table-fixed text-left text-xs leading-snug lg:min-w-0">
+      <div className="max-w-full overflow-x-auto rounded-xl border border-border md:overflow-x-visible">
+        <table className="w-full table-fixed text-left text-xs leading-snug">
           <colgroup>
-            <col className="w-[30%]" />
-            <col className="w-[12%]" />
-            <col className="w-[18%]" />
-            <col className="w-[14%]" />
-            <col className="w-[16%]" />
-            <col className="w-[14%]" />
-            <col className="w-[6%]" />
+            <col />
+            <col className="w-28" />
+            <col className="w-[10.5rem]" />
+            <col className="w-[11.25rem]" />
+            <col className="w-[8.75rem]" />
+            <col className="w-[5.75rem]" />
+            <col className="w-[4.5rem]" />
           </colgroup>
           <thead className="border-b border-border bg-muted/40 text-[10px] uppercase tracking-wide text-muted-foreground">
             <tr>
-              <th className="px-1.5 py-1.5 font-medium">Tittel</th>
-              <th className="px-1.5 py-1.5 font-medium">Status</th>
-              <th className="px-1.5 py-1.5 font-medium">Kilder</th>
-              <th className="px-1.5 py-1.5 font-medium">Dato</th>
-              <th className="px-1.5 py-1.5 font-medium">Skala</th>
-              <th className="px-1.5 py-1.5 font-medium">Sensitivt tema</th>
-              <th className="px-1.5 py-1.5 font-medium">Åpne</th>
+              <th className={headBase}>Tittel</th>
+              <th className={cn(headBase, 'w-28 pr-3')}>Status</th>
+              <th className={headBase}>Kilder</th>
+              <th className={headBase}>Dato</th>
+              <th className={headBase}>Skala</th>
+              <th className={headBase}>Sensitivt tema</th>
+              <th className={headBase}>Åpne</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -224,17 +235,14 @@ export function OppfangetDesktopTable({ rows }: { rows: OppfangetRow[] }) {
                 <td className={cellClass}>
                   <TitleCell row={row} showTypeMeta />
                 </td>
-                <td className={cellClass}>
+                <td className={statusCell}>
                   <StatusBadge row={row} />
                 </td>
                 <td className={cellClass}>
                   <SourcesList row={row} />
                 </td>
-                <td className={cn(cellClass, 'text-muted-foreground')}>
-                  <DateCell label="Først" iso={row.firstSeenAt} />
-                  <div className="mt-1.5">
-                    <DateCell label="Sist" iso={row.lastSeenAt} />
-                  </div>
+                <td className={cellClass}>
+                  <DesktopDateLines firstSeenAt={row.firstSeenAt} lastSeenAt={row.lastSeenAt} />
                 </td>
                 <td className={cellClass}>
                   <div className="break-words">{formatOppfangetScale(row)}</div>
@@ -288,9 +296,7 @@ export function OppfangetMobileCards({ rows }: { rows: OppfangetRow[] }) {
                 <dd className="mt-0.5 break-words">
                   {formatOppfangetScale(row)}
                   {row.scale?.sourceUrl ? (
-                    <div className="mt-1">
-                      <ScaleSourceLink url={row.scale.sourceUrl} />
-                    </div>
+                    <ScaleSourceLink url={row.scale.sourceUrl} mobile />
                   ) : null}
                 </dd>
               </div>
