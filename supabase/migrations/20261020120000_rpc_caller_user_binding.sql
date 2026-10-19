@@ -21,6 +21,45 @@ $function$;
 REVOKE ALL ON FUNCTION public.assert_rpc_caller_is_user(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.assert_rpc_caller_is_user(uuid) TO service_role;
 
+-- DROP overloads before CREATE: Postgres rejects CREATE OR REPLACE when parameter defaults/names change.
+DO $$
+DECLARE
+  f regprocedure;
+  v_name text;
+  v_names text[] := ARRAY[
+    'cast_vote',
+    'cast_poll_vote',
+    'get_user_poll_vote',
+    'set_issue_stance',
+    'create_citizen_opinion',
+    'create_citizen_opinion_reply',
+    'create_hearing_comment',
+    'create_app_suggestion',
+    'cast_app_suggestion_vote',
+    'set_user_onboarding_state',
+    'create_opinion_innspill',
+    'endorse_opinion_innspill',
+    'report_content',
+    'record_political_consent',
+    'withdraw_political_consent',
+    'withdraw_all_political_consents',
+    'purge_political_processing_data',
+    'update_user_profile_names',
+    'get_user_vote_on_issue',
+    'get_user_vote_history'
+  ];
+BEGIN
+  FOREACH v_name IN ARRAY v_names LOOP
+    FOR f IN
+      SELECT p.oid::regprocedure
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = v_name
+    LOOP
+      EXECUTE format('DROP FUNCTION IF EXISTS %s', f);
+    END LOOP;
+  END LOOP;
+END $$;
 
 CREATE OR REPLACE FUNCTION public.cast_vote(
   p_user_id uuid,
@@ -947,16 +986,44 @@ BEGIN
 END;
 $$;
 
--- SQL-language read RPCs: service_role only (no authenticated EXECUTE).
+-- Re-apply service_role EXECUTE after DROP (prod hotfix + half-migrated state).
 DO $$
-DECLARE f regprocedure;
+DECLARE
+  f regprocedure;
   v_name text;
   v_names text[] := ARRAY[
-    'get_user_stance_on_issue','get_user_stance_history','get_user_stance_count','get_user_stance_signals','user_has_political_consent'
+    'cast_vote',
+    'cast_poll_vote',
+    'get_user_poll_vote',
+    'set_issue_stance',
+    'create_citizen_opinion',
+    'create_citizen_opinion_reply',
+    'create_hearing_comment',
+    'create_app_suggestion',
+    'cast_app_suggestion_vote',
+    'set_user_onboarding_state',
+    'create_opinion_innspill',
+    'endorse_opinion_innspill',
+    'report_content',
+    'record_political_consent',
+    'withdraw_political_consent',
+    'withdraw_all_political_consents',
+    'purge_political_processing_data',
+    'update_user_profile_names',
+    'get_user_vote_on_issue',
+    'get_user_vote_history',
+    'get_user_stance_on_issue',
+    'get_user_stance_history',
+    'get_user_stance_count',
+    'get_user_stance_signals',
+    'user_has_political_consent'
   ];
 BEGIN
   FOREACH v_name IN ARRAY v_names LOOP
-    FOR f IN SELECT p.oid::regprocedure FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    FOR f IN
+      SELECT p.oid::regprocedure
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
       WHERE n.nspname = 'public' AND p.proname = v_name
     LOOP
       EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon, authenticated', f);

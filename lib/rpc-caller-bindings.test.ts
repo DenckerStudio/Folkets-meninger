@@ -7,6 +7,8 @@ const migration = readFileSync(
   'utf-8',
 );
 
+assert.match(migration, /DROP FUNCTION IF EXISTS %s/, '120000 must drop overloads before CREATE');
+
 const mustAssert = [
   'cast_vote',
   'cast_poll_vote',
