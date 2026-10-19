@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import {
-  OLLAMA_VECTOR_TIMEOUT_MS,
   VECTOR_DIMENSIONS,
   createOllamaVectorizer,
   ollamaVectorUrl,
@@ -45,8 +44,6 @@ async function main() {
     captured = { url, body: JSON.parse(String(init.body)) };
     return { ok: true, json: async () => ({ embedding: embed }) };
   }) as unknown as typeof fetch;
-
-  assert.equal(OLLAMA_VECTOR_TIMEOUT_MS, 800);
 
   const vectorizer = createOllamaVectorizer(vectorCredential(), { fetchImpl: okFetch });
   assert.ok(vectorizer);

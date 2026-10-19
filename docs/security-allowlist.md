@@ -23,8 +23,6 @@ Generer hint fra kode: `node scripts/build-security-allowlist.mjs` (heuristikk �
 | `get_poll_totals` | anon (`lib/polls/service.ts`) | Ja/nei/blank-telling |
 | `get_poll_totals_by_fylke` | anon | Fylke-breakdown |
 | `match_issue_document_chunks` | session / anon | RAG (Stemme+ / chat) |
-| `search_chunks_hybrid` | session / anon | Hybrid FTS + optional embedding_v2 (chat RAG) |
-| `search_issues_fts` | session / anon | FTS saksøk (chat) |
 | `get_prompt_results` | legacy | Forum-prompt, hvis tabell finnes |
 
 ## RPC `EXECUTE` — `authenticated` (inkl. anon-listen over)
@@ -50,10 +48,8 @@ Generer hint fra kode: `node scripts/build-security-allowlist.mjs` (heuristikk �
 | `report_content` | API | |
 | `create_opinion_innspill` / `endorse_opinion_innspill` | API | |
 | `user_has_political_consent` / `record_*` / `withdraw_*` | API | Samtykke |
-| `search_stortinget_issues_for_chat` | session RAG | legacy (service_role i n8n) |
-| `search_issue_document_chunks_text` | session RAG | legacy (service_role i n8n) |
-| `search_issues_fts` | session RAG | erstatter ilike saksøk |
-| `search_chunks_hybrid` | session RAG | erstatter «første 40 chunks» |
+| `search_stortinget_issues_for_chat` | session RAG | |
+| `search_issue_document_chunks_text` | session RAG | |
 
 **Dynamisk:** Alle `public.*`-funksjoner som nevnes i `pg_policies.qual` / `with_check` for `anon` eller `authenticated` får `GRANT EXECUTE` i migrasjonen.
 
