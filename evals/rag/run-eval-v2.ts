@@ -184,8 +184,8 @@ export async function runEvalV2(split: 'dev' | 'test', variant: EvalVariant = 's
         partyHits += 1;
         catStats[cat].hit += 1;
       }
-      const r5 = recallAtK(rows, q.gold.facts ?? [], 5);
       chunkEval += 1;
+      const r5 = recallAtK(rows, q.gold.facts ?? [], 5);
       if (r5) recall5 += 1;
       perQuestion.push({ id: q.id, category: cat, partyHit, r5 });
       continue;

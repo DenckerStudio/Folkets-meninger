@@ -1,0 +1,1574 @@
+{
+  "dataset": "v2",
+  "split": "test",
+  "variant": "stack",
+  "seedCounts": {
+    "dataset": "v2",
+    "variant": "stack",
+    "issues": 145,
+    "documents": 151,
+    "chunks": 186,
+    "hearings": 6,
+    "excludedHearings": [
+      {
+        "id": "10005566",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005579",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005607",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005638",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005666",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005673",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005710",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005713",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005720",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005726",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005749",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005759",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005760",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005795",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005796",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005799",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005812",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005837",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005848",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005865",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005883",
+        "reason": "no_hearing_documents_in_export"
+      },
+      {
+        "id": "10005920",
+        "reason": "no_hearing_documents_in_export"
+      }
+    ],
+    "voteringChunks": 29,
+    "fixtureFetchedAt": "2026-10-19T21:24:05.343Z",
+    "seededAt": "2026-10-19T21:25:46.090Z"
+  },
+  "excludedQuestionHearings": [
+    "10005566",
+    "10005579",
+    "10005607",
+    "10005638",
+    "10005666",
+    "10005673",
+    "10005710",
+    "10005713",
+    "10005720",
+    "10005726",
+    "10005749",
+    "10005759",
+    "10005760",
+    "10005795",
+    "10005796",
+    "10005799",
+    "10005812",
+    "10005837",
+    "10005848",
+    "10005865",
+    "10005883",
+    "10005920"
+  ],
+  "recallAt5": 1,
+  "chunkQuestions": 24,
+  "partyHitRate": 0.6470588235294118,
+  "partyQuestions": 17,
+  "prefixHitRate": 1,
+  "finnesIkkeCorrectRejectionRate": 1,
+  "finnesIkkeFullTextHits": [],
+  "finnesIkkeNotes": "finnes_ikke GT checks titles/korttitler only; fullTextMatch flags corpus hits not reflected in title-only GT",
+  "byCategory": {
+    "eksakt_sak": {
+      "n": 19,
+      "rate": 1
+    },
+    "tema": {
+      "n": 24,
+      "rate": 1
+    },
+    "prefiks_delord": {
+      "n": 17,
+      "rate": 1
+    },
+    "sammensatte_ord": {
+      "n": 16,
+      "rate": 1
+    },
+    "voteringer_parti": {
+      "n": 20,
+      "rate": 0.7
+    },
+    "horinger": {
+      "n": 4,
+      "rate": 1
+    },
+    "finnes_ikke": {
+      "n": 25,
+      "rate": 1
+    }
+  },
+  "latencyMsP95": 181.83829800000012,
+  "perQuestion": [
+    {
+      "id": "v2-eksakt-sak-001",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200143",
+        "104911",
+        "104915",
+        "109130",
+        "200329",
+        "104906",
+        "104908",
+        "200314"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Geir Inge Lien, Geir Pollestad og Siv Sætran om kompensasjonsordning for bedrifter utan høve til omstilling",
+        "Innst. 3 S Skatte-, avgifts- og tollinntekter 2026",
+        "lnnst. 3 S Skatter og avgifter 2026",
+        "Godtgjøring for stortingsrepresentanter og regjeringsmedlemmer",
+        "Endringer i Stortingets forretningsorden",
+        "Statsbudsjettet 2026",
+        "Statsbudsjettet 2026",
+        "Revidert nasjonalbudsjett 2026"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-003",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "100039",
+        "100014",
+        "99386",
+        "100009",
+        "100026",
+        "100038",
+        "99388",
+        "200092"
+      ],
+      "titles": [
+        "Grunnlovsforslag fra Per Olaf Lundteigen om endring i § 121 (om prosedyren for grunnlovsendring)",
+        "Grunnlovsforslag fra Peter Frølich, Svein Harberg, Frode Jacobsen, Nils T. Bjørke, Carl I. Hagen, Audun Lysbakken, Seher Aydar, Grunde Almeland og Lan Marie Nguyen Berg om endring i § 121 (om prosedyren for grunnlovsendringer)",
+        "Grunnlovsframlegg frå Sveinung Rotevatn, Åse Kristin Ask Bakke, Liv Kari Eskeland, Sigbjørn Gjelsvik, Ingrid Fiskaa, Sofie Marhaug, Lan Marie Nguyen Berg og Kjell Ingolf Ropstad om ny § 120 b (om norsk som nasjonalt hovudspråk)",
+        "Grunnlovsforslag fra Masud Gharahkhani, Svein Harberg, Nils T. Bjørke, Morten Wold, Kari Henriksen og Ingrid Fiskaa om endring i Grunnlovens tittel og i §§ 2, 3, 6, 9, 13, 16, 17, 21, 26, 28, 30, 45, 67, 74, 80, 86, 88, 90, 114, 115 og 121 (om retting av språklige feil og inkonsistenser)",
+        "Grunnlovsforslag fra Carl I. Hagen om endring i § 59 (om høyere sperregrense for utjevningsmandater)",
+        "Grunnlovsforslag fra Peter Frølich og Audun Lysbakken om endring i § 90 (om dommerutnevnelser)",
+        "Grunnlovsforslag fra Kathy Lie og Grete Wold om ny § 107 (om fri vitenskapelig forskning)",
+        "Representantforslag frå stortingsrepresentantane Geir Pollestad og Kjersti Toppe om ei offensiv satsing på norsk legemiddelproduksjon og -beredskap"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-007",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200314",
+        "200174",
+        "105072",
+        "200015",
+        "105209",
+        "200173",
+        "99386"
+      ],
+      "titles": [
+        "Revidert nasjonalbudsjett 2026",
+        "Representantforslag fra stortingsrepresentantene Mathilde Tybring-Gjedde, Monica Molvær og Ola Svenneby om å beholde og forbedre nasjonale prøver og kartleggingsprøver",
+        "Representantforslag fra stortingsrepresentantene Mudassar Kapur, Tage Pettersen, Henrik Gottfries Kierulf og Anne Kristine Linnestad om en ny nasjonal boligsosial strategi",
+        "Representantforslag fra stortingsrepresentantene Hans Edvard Askjer, Bent-Joacim Bentzen, Anette Carnarius Elseth og Mari Holm Lønseth om sikkerhet for et nasjonalt avhopperprogram",
+        "Samtykke til ratifikasjon av konvensjon om skiping av ein mellomstatleg organisasjon for utvikling og utnytting av digitale havsystem og informasjonstenester (Mercator internasjonale senter for havet) av 23. april 2025",
+        "Representantforslag fra stortingsrepresentantene Bjørn Larsen, Tor Mikkel Wara, Kristoffer Sivertsen, Rikard Spets og Morten Stordalen om å styrke nasjonal og alliert forsyningssikkerhet samt strategiske interesser gjennom utvinning av havbunnsmineraler på norsk sokkel",
+        "Grunnlovsframlegg frå Sveinung Rotevatn, Åse Kristin Ask Bakke, Liv Kari Eskeland, Sigbjørn Gjelsvik, Ingrid Fiskaa, Sofie Marhaug, Lan Marie Nguyen Berg og Kjell Ingolf Ropstad om ny § 120 b (om norsk som nasjonalt hovudspråk)"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-008",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "100039",
+        "100036",
+        "100014",
+        "100009",
+        "100026",
+        "100038",
+        "99388",
+        "100029"
+      ],
+      "titles": [
+        "Grunnlovsforslag fra Per Olaf Lundteigen om endring i § 121 (om prosedyren for grunnlovsendring)",
+        "Grunnlovsforslag fra Audun Lysbakken, Marian Hussein, Kari Elisabeth Kaski og Torgeir Knag Fylkesnes om endring i § 49 og ny § 75 a (om folkeforslag og folkeavstemninger)",
+        "Grunnlovsforslag fra Peter Frølich, Svein Harberg, Frode Jacobsen, Nils T. Bjørke, Carl I. Hagen, Audun Lysbakken, Seher Aydar, Grunde Almeland og Lan Marie Nguyen Berg om endring i § 121 (om prosedyren for grunnlovsendringer)",
+        "Grunnlovsforslag fra Masud Gharahkhani, Svein Harberg, Nils T. Bjørke, Morten Wold, Kari Henriksen og Ingrid Fiskaa om endring i Grunnlovens tittel og i §§ 2, 3, 6, 9, 13, 16, 17, 21, 26, 28, 30, 45, 67, 74, 80, 86, 88, 90, 114, 115 og 121 (om retting av språklige feil og inkonsistenser)",
+        "Grunnlovsforslag fra Carl I. Hagen om endring i § 59 (om høyere sperregrense for utjevningsmandater)",
+        "Grunnlovsforslag fra Peter Frølich og Audun Lysbakken om endring i § 90 (om dommerutnevnelser)",
+        "Grunnlovsforslag fra Kathy Lie og Grete Wold om ny § 107 (om fri vitenskapelig forskning)",
+        "Grunnlovsforslag fra Frode Jacobsen, Kari Henriksen, Kirsti Leirtrø, Anette Trettebergstuen, Ingvild Kjerkol og Kamzy Gunaratnam om ny § 103 (om rett til selvbestemt abort)"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-009",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "105669",
+        "104911",
+        "104915",
+        "200077",
+        "109130",
+        "200329",
+        "104906",
+        "104908"
+      ],
+      "titles": [
+        "Riksrevisjonens oppfølging av forvaltningsrevisjoner som er behandlet av Stortinget",
+        "Innst. 3 S Skatte-, avgifts- og tollinntekter 2026",
+        "lnnst. 3 S Skatter og avgifter 2026",
+        "Representantforslag fra stortingsrepresentantene Geir Jørgensen, Hanne Beate Stenvaag og Remi Sølvberg om å heve vraket av fregatten KNM Bergen utenfor Andøya",
+        "Godtgjøring for stortingsrepresentanter og regjeringsmedlemmer",
+        "Endringer i Stortingets forretningsorden",
+        "Statsbudsjettet 2026",
+        "Statsbudsjettet 2026"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-010",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "105527",
+        "200081"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Anna Molberg, Amalie Gunnufsen, Erlend Svardal Bøe, Margret Hagerup, Henrik Asheim, Henrik Gottfries Kierulf og Mahmoud Farahmand om regler for innleie av arbeidskraft",
+        "Representantforslag fra stortingsrepresentantene Marie Sneve Martinussen og Seher Aydar om å reversere tidligere svekkelser i arbeidsmiljøloven og styrke tillitsvalgtes myndighet"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-012",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200096",
+        "104765",
+        "200069"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Frøya Skjold Sjursæther og Oda Indgaard om å slå ned på grov miljøkriminalitet",
+        "Redegjørelse av justis- og beredskapsministeren om endringene i kriminalitetsbildet",
+        "Representantforslag fra stortingsrepresentantene Stian Storbukås, Finn Krokeide, Anette Carnarius Elseth og Jon Engen-Helgheim om mer effektiv kamp mot organisert bedrageri og registerkriminalitet"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-013",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200158",
+        "200160",
+        "100029"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Bengt Fasteraune, Ole Herman Sveian og Geir Inge Lien om en utredning av konsekvensene ved en eventuell stenging av Spranget parkering i Sel kommune",
+        "Representantforslag fra stortingsrepresentantene Siv Sætran og Erling Sande om å innføre forenkling og redusert byråkrati som selvstendige hensyn i utredningsinstruksen",
+        "Grunnlovsforslag fra Frode Jacobsen, Kari Henriksen, Kirsti Leirtrø, Anette Trettebergstuen, Ingvild Kjerkol og Kamzy Gunaratnam om ny § 103 (om rett til selvbestemt abort)"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-014",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "106959",
+        "200369",
+        "200250",
+        "200195",
+        "104880",
+        "200153",
+        "104644",
+        "200377"
+      ],
+      "titles": [
+        "Redegjørelse av kunnskapsministeren om status for regjeringens barnehagepolitikk og arbeidet med styring og finansiering av barnehagesektoren",
+        "Representantforslag fra stortingsrepresentantene Simen Velle, Lill Harriet Sandaune, Line Marlene Haugen og Joakim Myklebost Tangen om å styrke private barnehagers medvirkning, klageadgang og rettssikkerhet gjennom konkrete endringer i finansieringsforskriften",
+        "Endringer i opplæringslova og barnehageloven mv. (samleproposisjon)",
+        "Representantforslag fra stortingsrepresentantene Guri Melby, Abid Raja og Grunde Almeland om et langsiktig løft for bemanningen i norske barnehager",
+        "Representantforslag fra stortingsrepresentantene Sylvi Listhaug, Kristian August Eilertsen, Julia Brännström Nordtug, Stig Atle Abrahamsen og Anne Grethe Hauan om en ny finansieringsmodell for sykehus",
+        "Representantforslag fra stortingsrepresentantene Erlend Wiborg, Bjørn Larsen, Helge André Njåstad, Rune Midtun, Simen Velle, Silje Hjemdal og Lill Harriet Sandaune om å forby barnehijab i barnehage og grunnskole",
+        "Lov om folkefinansiering av næringsvirksomhet (folkefinansieringsloven) og samtykke til godkjenning av EØS-komiteens beslutning nr. 30/2024 om innlemmelse i EØS-avtalen av forordning (EU) 2020/1503",
+        "Endringer i finansmarkedslovgivningen (etablering av felles europeisk tilgangspunkt) og samtykke til godkjenning av EØS-komiteens beslutninger nr. 303/2025, 304/2025 og 305/2025"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-016",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200085"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Bård Hoksrud, Dagfinn Henrik Olsen, Frank Edvard Sve, May Helen Hetland Ervik, Mats Henriksen, Tor André Johnsen, Per-Willy Amundsen og Kristian August Eilertsen om å stanse innføring av overtredelsesgebyr ved avrenning fra kjøretøy"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-017",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200214"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Ida Lindtveit Røse, Jorunn Gleditsch Lossius, Jørgen H. Kristiansen og Harry Valderhaug om å innføre 13-årsgrense på kjøp av smarttelefon"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-020",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200023",
+        "200202"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Kari Sofie Bjørnsen, Aleksander Stokkebø, Erlend Larsen, Tage Pettersen og Ove Trellevik om en plan for håndtering av sprengstoff og ammunisjon i norsk natur og i kystnære farvann",
+        "Representantforslag fra stortingsrepresentantene Margit Bye, Une Bastholm, Frøya Skjold Sjursæther, Julie E. Stuestøl, Ingrid Liland og Marius Langballe Dalin om sterkere beskyttelse av naturverdiene i Oslofjorden og en egen oslofjordlov"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-021",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "104644",
+        "104880",
+        "106959",
+        "200369"
+      ],
+      "titles": [
+        "Lov om folkefinansiering av næringsvirksomhet (folkefinansieringsloven) og samtykke til godkjenning av EØS-komiteens beslutning nr. 30/2024 om innlemmelse i EØS-avtalen av forordning (EU) 2020/1503",
+        "Representantforslag fra stortingsrepresentantene Sylvi Listhaug, Kristian August Eilertsen, Julia Brännström Nordtug, Stig Atle Abrahamsen og Anne Grethe Hauan om en ny finansieringsmodell for sykehus",
+        "Redegjørelse av kunnskapsministeren om status for regjeringens barnehagepolitikk og arbeidet med styring og finansiering av barnehagesektoren",
+        "Representantforslag fra stortingsrepresentantene Simen Velle, Lill Harriet Sandaune, Line Marlene Haugen og Joakim Myklebost Tangen om å styrke private barnehagers medvirkning, klageadgang og rettssikkerhet gjennom konkrete endringer i finansieringsforskriften"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-022",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200066",
+        "200199",
+        "106054"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Seher Aydar, Marie Sneve Martinussen, Remi Sølvberg og Hege Bae Nyholt om å reservere anbud for ideelle aktører",
+        "Representantforslag fra stortingsrepresentant Kjersti Toppe om å øke andelen institusjonsplasser i ideelle barnevernsinstitusjoner",
+        "Representantforslag fra stortingsrepresentantene Kathy Lie, Anne Lise Gjerstad Fredlund, Sunniva Holmås Eidsvoll og Ingrid Fiskaa om mer forutsigbare og langsiktige tilskuddsordninger for frivillige og ideelle organisasjoner i helsefeltet"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-024",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200377"
+      ],
+      "titles": [
+        "Endringer i finansmarkedslovgivningen (etablering av felles europeisk tilgangspunkt) og samtykke til godkjenning av EØS-komiteens beslutninger nr. 303/2025, 304/2025 og 305/2025"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-025",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "100038",
+        "100039",
+        "100014",
+        "100009",
+        "100026",
+        "99388",
+        "100029",
+        "100036"
+      ],
+      "titles": [
+        "Grunnlovsforslag fra Peter Frølich og Audun Lysbakken om endring i § 90 (om dommerutnevnelser)",
+        "Grunnlovsforslag fra Per Olaf Lundteigen om endring i § 121 (om prosedyren for grunnlovsendring)",
+        "Grunnlovsforslag fra Peter Frølich, Svein Harberg, Frode Jacobsen, Nils T. Bjørke, Carl I. Hagen, Audun Lysbakken, Seher Aydar, Grunde Almeland og Lan Marie Nguyen Berg om endring i § 121 (om prosedyren for grunnlovsendringer)",
+        "Grunnlovsforslag fra Masud Gharahkhani, Svein Harberg, Nils T. Bjørke, Morten Wold, Kari Henriksen og Ingrid Fiskaa om endring i Grunnlovens tittel og i §§ 2, 3, 6, 9, 13, 16, 17, 21, 26, 28, 30, 45, 67, 74, 80, 86, 88, 90, 114, 115 og 121 (om retting av språklige feil og inkonsistenser)",
+        "Grunnlovsforslag fra Carl I. Hagen om endring i § 59 (om høyere sperregrense for utjevningsmandater)",
+        "Grunnlovsforslag fra Kathy Lie og Grete Wold om ny § 107 (om fri vitenskapelig forskning)",
+        "Grunnlovsforslag fra Frode Jacobsen, Kari Henriksen, Kirsti Leirtrø, Anette Trettebergstuen, Ingvild Kjerkol og Kamzy Gunaratnam om ny § 103 (om rett til selvbestemt abort)",
+        "Grunnlovsforslag fra Audun Lysbakken, Marian Hussein, Kari Elisabeth Kaski og Torgeir Knag Fylkesnes om endring i § 49 og ny § 75 a (om folkeforslag og folkeavstemninger)"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-026",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "100009",
+        "100039",
+        "100014",
+        "100026",
+        "100038",
+        "99388",
+        "100029",
+        "100036"
+      ],
+      "titles": [
+        "Grunnlovsforslag fra Masud Gharahkhani, Svein Harberg, Nils T. Bjørke, Morten Wold, Kari Henriksen og Ingrid Fiskaa om endring i Grunnlovens tittel og i §§ 2, 3, 6, 9, 13, 16, 17, 21, 26, 28, 30, 45, 67, 74, 80, 86, 88, 90, 114, 115 og 121 (om retting av språklige feil og inkonsistenser)",
+        "Grunnlovsforslag fra Per Olaf Lundteigen om endring i § 121 (om prosedyren for grunnlovsendring)",
+        "Grunnlovsforslag fra Peter Frølich, Svein Harberg, Frode Jacobsen, Nils T. Bjørke, Carl I. Hagen, Audun Lysbakken, Seher Aydar, Grunde Almeland og Lan Marie Nguyen Berg om endring i § 121 (om prosedyren for grunnlovsendringer)",
+        "Grunnlovsforslag fra Carl I. Hagen om endring i § 59 (om høyere sperregrense for utjevningsmandater)",
+        "Grunnlovsforslag fra Peter Frølich og Audun Lysbakken om endring i § 90 (om dommerutnevnelser)",
+        "Grunnlovsforslag fra Kathy Lie og Grete Wold om ny § 107 (om fri vitenskapelig forskning)",
+        "Grunnlovsforslag fra Frode Jacobsen, Kari Henriksen, Kirsti Leirtrø, Anette Trettebergstuen, Ingvild Kjerkol og Kamzy Gunaratnam om ny § 103 (om rett til selvbestemt abort)",
+        "Grunnlovsforslag fra Audun Lysbakken, Marian Hussein, Kari Elisabeth Kaski og Torgeir Knag Fylkesnes om endring i § 49 og ny § 75 a (om folkeforslag og folkeavstemninger)"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-027",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200183"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Remi Sølvberg og Marie Sneve Martinussen om en god posttjeneste for framtiden"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-028",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200242",
+        "103996"
+      ],
+      "titles": [
+        "Endringer i åndsverkloven mv. (gjennomføring av nett- og videresendingsdirektivet og digitalmarkedsdirektivet) og samtykke til godkjenning av EØS-komiteens beslutning nr. 332/2023 og 333/2023 om innlemmelse i EØS-avtalen av direktiv (EU) 2019/789 og (EU) 2019/790, og samtykke til tiltredelse til WIPO-traktatene av 20. desember 1996 om opphavsrett (WCT) og om fremføringer og fonogrammer (WPPT)",
+        "Endringer i verdipapirhandelloven mv. (kapitalkrav for verdipapirforetak) og samtykke til godkjenning av EØS-komiteens beslutning nr. 70/2025 om innlemmelse i EØS-avtalen av direktiv (EU) 2019/2034 og forordning (EU) 2019/2033"
+      ]
+    },
+    {
+      "id": "v2-tema-001",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-002",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-003",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-007",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-009",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-010",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-011",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-014",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-015",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-017",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-019",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-021",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-023",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-024",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-026",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-027",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-033",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-034",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-035",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-036",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-037",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-038",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-040",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-059",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-prefiks-delord-001",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "106959",
+        "200153",
+        "200195",
+        "200250",
+        "200369",
+        "104873",
+        "200199",
+        "106217"
+      ],
+      "titles": [
+        "Redegjørelse av kunnskapsministeren om status for regjeringens barnehagepolitikk og arbeidet med styring og finansiering av barnehagesektoren",
+        "Representantforslag fra stortingsrepresentantene Erlend Wiborg, Bjørn Larsen, Helge André Njåstad, Rune Midtun, Simen Velle, Silje Hjemdal og Lill Harriet Sandaune om å forby barnehijab i barnehage og grunnskole",
+        "Representantforslag fra stortingsrepresentantene Guri Melby, Abid Raja og Grunde Almeland om et langsiktig løft for bemanningen i norske barnehager",
+        "Endringer i opplæringslova og barnehageloven mv. (samleproposisjon)",
+        "Representantforslag fra stortingsrepresentantene Simen Velle, Lill Harriet Sandaune, Line Marlene Haugen og Joakim Myklebost Tangen om å styrke private barnehagers medvirkning, klageadgang og rettssikkerhet gjennom konkrete endringer i finansieringsforskriften",
+        "Representantforslag fra stortingsrepresentantene Tone Wilhelmsen Trøen, Haagen Poppe, Mahmoud Farahmand, Tage Pettersen, Mudassar Kapur og Mathilde Tybring-Gjedde om økonomisk likebehandling av barnevernet i Oslo",
+        "Representantforslag fra stortingsrepresentant Kjersti Toppe om å øke andelen institusjonsplasser i ideelle barnevernsinstitusjoner",
+        "Representantforslag frå stortingsrepresentantane Trine Fagervik og Kjersti Toppe om gratis legemiddel på kvit resept for barn opp til seks år"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-002",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "104880",
+        "200005",
+        "200145",
+        "200360",
+        "200041"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Sylvi Listhaug, Kristian August Eilertsen, Julia Brännström Nordtug, Stig Atle Abrahamsen og Anne Grethe Hauan om en ny finansieringsmodell for sykehus",
+        "Representantforslag fra stortingsrepresentantene Seher Aydar og Mímir Kristjánsson om å redde sykehusdriften i Egersund",
+        "Representantforslag fra stortingsrepresentantene Seher Aydar og Marie Sneve Martinussen om å sikre pauserom for sykehusansatte",
+        "Representantforslag fra stortingsrepresentantene Guri Melby, Grunde Almeland og Ane Breivik om å styrke kvinners tilgang på medikamentell abort utenfor sykehus",
+        "Representantforslag fra stortingsrepresentantene Kirsti Bergstø, Marian Hussein, Marthe Hammer, Mirell Høyer-Berntsen, Ingrid Fiskaa, Kathy Lie og Anne Lise Gjerstad Fredlund om å kutte sykefravær, ikke sykelønn"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-005",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200023",
+        "103840"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Kari Sofie Bjørnsen, Aleksander Stokkebø, Erlend Larsen, Tage Pettersen og Ove Trellevik om en plan for håndtering av sprengstoff og ammunisjon i norsk natur og i kystnære farvann",
+        "Eksport av forsvarsmateriell fra Norge i 2024, eksportkontroll og internasjonalt ikke-spredningssamarbeid"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-006",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "100039",
+        "100014",
+        "100009",
+        "100026",
+        "100029",
+        "100036",
+        "100038",
+        "99386"
+      ],
+      "titles": [
+        "Grunnlovsforslag fra Per Olaf Lundteigen om endring i § 121 (om prosedyren for grunnlovsendring)",
+        "Grunnlovsforslag fra Peter Frølich, Svein Harberg, Frode Jacobsen, Nils T. Bjørke, Carl I. Hagen, Audun Lysbakken, Seher Aydar, Grunde Almeland og Lan Marie Nguyen Berg om endring i § 121 (om prosedyren for grunnlovsendringer)",
+        "Grunnlovsforslag fra Masud Gharahkhani, Svein Harberg, Nils T. Bjørke, Morten Wold, Kari Henriksen og Ingrid Fiskaa om endring i Grunnlovens tittel og i §§ 2, 3, 6, 9, 13, 16, 17, 21, 26, 28, 30, 45, 67, 74, 80, 86, 88, 90, 114, 115 og 121 (om retting av språklige feil og inkonsistenser)",
+        "Grunnlovsforslag fra Carl I. Hagen om endring i § 59 (om høyere sperregrense for utjevningsmandater)",
+        "Grunnlovsforslag fra Frode Jacobsen, Kari Henriksen, Kirsti Leirtrø, Anette Trettebergstuen, Ingvild Kjerkol og Kamzy Gunaratnam om ny § 103 (om rett til selvbestemt abort)",
+        "Grunnlovsforslag fra Audun Lysbakken, Marian Hussein, Kari Elisabeth Kaski og Torgeir Knag Fylkesnes om endring i § 49 og ny § 75 a (om folkeforslag og folkeavstemninger)",
+        "Grunnlovsforslag fra Peter Frølich og Audun Lysbakken om endring i § 90 (om dommerutnevnelser)",
+        "Grunnlovsframlegg frå Sveinung Rotevatn, Åse Kristin Ask Bakke, Liv Kari Eskeland, Sigbjørn Gjelsvik, Ingrid Fiskaa, Sofie Marhaug, Lan Marie Nguyen Berg og Kjell Ingolf Ropstad om ny § 120 b (om norsk som nasjonalt hovudspråk)"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-007",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "106217",
+        "106367",
+        "200092",
+        "200144"
+      ],
+      "titles": [
+        "Representantforslag frå stortingsrepresentantane Trine Fagervik og Kjersti Toppe om gratis legemiddel på kvit resept for barn opp til seks år",
+        "Representantforslag fra stortingsrepresentantene Sylvi Listhaug, Kristian August Eilertsen, Julia Brännström Nordtug, Stig Atle Abrahamsen, Bård Hoksrud, Anne Grethe Hauan og Kristoffer Sivertsen om å sikre pasienter med ALS en reell tilgang til ordningen med godkjenningsfritak for legemidler i tidlig fase",
+        "Representantforslag frå stortingsrepresentantane Geir Pollestad og Kjersti Toppe om ei offensiv satsing på norsk legemiddelproduksjon og -beredskap",
+        "Representantforslag frå stortingsrepresentantane Kjersti Toppe og Erling Sande om å utdanne og rekruttere legar til den offentlige helsetenesta i heile landet"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-009",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "105424",
+        "107923",
+        "200077",
+        "200158",
+        "200202",
+        "200384"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentant Geir Inge Lien om å bevare og videreutvikle Steinberg stasjon",
+        "Mandat, navn og sammensetning av granskingskommisjon for å undersøke forhold som har blitt aktualisert gjennom offentliggjøringen av Epstein-dokumentene",
+        "Representantforslag fra stortingsrepresentantene Geir Jørgensen, Hanne Beate Stenvaag og Remi Sølvberg om å heve vraket av fregatten KNM Bergen utenfor Andøya",
+        "Representantforslag fra stortingsrepresentantene Bengt Fasteraune, Ole Herman Sveian og Geir Inge Lien om en utredning av konsekvensene ved en eventuell stenging av Spranget parkering i Sel kommune",
+        "Representantforslag fra stortingsrepresentantene Margit Bye, Une Bastholm, Frøya Skjold Sjursæther, Julie E. Stuestøl, Ingrid Liland og Marius Langballe Dalin om sterkere beskyttelse av naturverdiene i Oslofjorden og en egen oslofjordlov",
+        "Representantforslag fra stortingsrepresentantene Kari Sofie Bjørnsen, Amalie Gunnufsen, Haagen Poppe, Mahmoud Farahmand og Aleksander Stokkebø om likere strømpriser og et sterkere forbrukervern"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-010",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200036",
+        "103874",
+        "105209",
+        "200242"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Ingrid Fiskaa, Marthe Hammer, Sunniva Holmås Eidsvoll, Mirell Høyer-Berntsen, Kirsti Bergstø og Anne Lise Gjerstad Fredlund om digital suverenitet i en urolig tid",
+        "Riksrevisjonens undersøking av arbeidet til styresmaktene med samanhengande digitale tenester",
+        "Samtykke til ratifikasjon av konvensjon om skiping av ein mellomstatleg organisasjon for utvikling og utnytting av digitale havsystem og informasjonstenester (Mercator internasjonale senter for havet) av 23. april 2025",
+        "Endringer i åndsverkloven mv. (gjennomføring av nett- og videresendingsdirektivet og digitalmarkedsdirektivet) og samtykke til godkjenning av EØS-komiteens beslutning nr. 332/2023 og 333/2023 om innlemmelse i EØS-avtalen av direktiv (EU) 2019/789 og (EU) 2019/790, og samtykke til tiltredelse til WIPO-traktatene av 20. desember 1996 om opphavsrett (WCT) og om fremføringer og fonogrammer (WPPT)"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-011",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200042",
+        "200160"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Bård Hoksrud, Dagfinn Henrik Olsen, Frank Edvard Sve, May Helen Hetland Ervik og Mats Henriksen om stans i bruk av dagens synsfelttest som grunnlag for tap av førerkort samt endring av regelverket for vurdering av kjøreevne",
+        "Representantforslag fra stortingsrepresentantene Siv Sætran og Erling Sande om å innføre forenkling og redusert byråkrati som selvstendige hensyn i utredningsinstruksen"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-014",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200041",
+        "104870",
+        "104873",
+        "104877",
+        "104880",
+        "104914",
+        "105070",
+        "105072"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Kirsti Bergstø, Marian Hussein, Marthe Hammer, Mirell Høyer-Berntsen, Ingrid Fiskaa, Kathy Lie og Anne Lise Gjerstad Fredlund om å kutte sykefravær, ikke sykelønn",
+        "Representantforslag fra stortingsrepresentantene Grunde Almeland, Guri Melby og Abid Raja om en ny næringspolitikk for en ny tid",
+        "Representantforslag fra stortingsrepresentantene Tone Wilhelmsen Trøen, Haagen Poppe, Mahmoud Farahmand, Tage Pettersen, Mudassar Kapur og Mathilde Tybring-Gjedde om økonomisk likebehandling av barnevernet i Oslo",
+        "Representantforslag fra stortingsrepresentantene Maren Grøthe og Trygve Slagsvold Vedum om å stanse innføringen av ny EU-avgift på drivstoff i Norge",
+        "Representantforslag fra stortingsrepresentantene Sylvi Listhaug, Kristian August Eilertsen, Julia Brännström Nordtug, Stig Atle Abrahamsen og Anne Grethe Hauan om en ny finansieringsmodell for sykehus",
+        "Representantforslag fra stortingsrepresentant Lars Haltbrekken om å pålegge oljeselskapene å kutte CO2-utslippene ved å bruke flytende havvind og gasskraft som fanger og lagrer CO2",
+        "Representantforslag fra stortingsrepresentantene Guri Melby, Abid Raja og Marit Vea om å tillate kommunene å regulere bruk av elektriske sparkesykler på fortau",
+        "Representantforslag fra stortingsrepresentantene Mudassar Kapur, Tage Pettersen, Henrik Gottfries Kierulf og Anne Kristine Linnestad om en ny nasjonal boligsosial strategi"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-016",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200242"
+      ],
+      "titles": [
+        "Endringer i åndsverkloven mv. (gjennomføring av nett- og videresendingsdirektivet og digitalmarkedsdirektivet) og samtykke til godkjenning av EØS-komiteens beslutning nr. 332/2023 og 333/2023 om innlemmelse i EØS-avtalen av direktiv (EU) 2019/789 og (EU) 2019/790, og samtykke til tiltredelse til WIPO-traktatene av 20. desember 1996 om opphavsrett (WCT) og om fremføringer og fonogrammer (WPPT)"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-017",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200409",
+        "105111",
+        "105112",
+        "105849",
+        "200030",
+        "200054",
+        "200214"
+      ],
+      "titles": [
+        "Innberetning fra valgkomiteen om endringer i de faste komiteers sammensetning",
+        "Valg av medlemmer og varamedlemmer til Stortingets delegasjon til det parlamentariske partnerskapet Asia-Europa (ASEP) og til ASEANs interparlamentariske forsamling (AIPA)",
+        "Valg av medlemmer og varamedlemmer til Stortingets delegasjon til NATOs parlamentariske forsamling",
+        "Valg av medlemmer til Norges Banks representantskap",
+        "Endring av fylkestilhørighet for Gran kommune fra Innlandet fylke til Akershus fylke og endringer i valgloven (endringer i valgdistriktene)",
+        "Representantforslag frå stortingsrepresentantane Sylvi Listhaug, Frank Edvard Sve, Joakim Myklebost Tangen, Monica Molvær og Harry Valderhaug om redusert bompengebelastning på Nordøyvegen",
+        "Representantforslag fra stortingsrepresentantene Ida Lindtveit Røse, Jorunn Gleditsch Lossius, Jørgen H. Kristiansen og Harry Valderhaug om å innføre 13-årsgrense på kjøp av smarttelefon"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-018",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "99388"
+      ],
+      "titles": [
+        "Grunnlovsforslag fra Kathy Lie og Grete Wold om ny § 107 (om fri vitenskapelig forskning)"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-019",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "104002",
+        "106367",
+        "200033",
+        "200039"
+      ],
+      "titles": [
+        "Endringer i helsepersonelloven og pasientjournalloven mv. (taushetsplikt og tilgjengeliggjøring av pasientopplysninger)",
+        "Representantforslag fra stortingsrepresentantene Sylvi Listhaug, Kristian August Eilertsen, Julia Brännström Nordtug, Stig Atle Abrahamsen, Bård Hoksrud, Anne Grethe Hauan og Kristoffer Sivertsen om å sikre pasienter med ALS en reell tilgang til ordningen med godkjenningsfritak for legemidler i tidlig fase",
+        "Representantforslag fra stortingsrepresentantene Erlend Svardal Bøe, Henrik Asheim og Margret Hagerup om en bedre gjennomføring og forvaltning av pasientreiser",
+        "Representantforslag fra stortingsrepresentantene Kjersti Toppe og Geir Inge Lien om ein betre pasientreiseordning"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-020",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "105694"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Tor André Johnsen, Stig Even Lillestøl, Bengt Rune Strifeldt, Erlend Wiborg, Kristoffer Sivertsen, May Helen Hetland Ervik og Pål Morten Borgli om å ikke bruke metanhemmere i norsk landbruk"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-021",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200173",
+        "104914",
+        "105209",
+        "200165"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Bjørn Larsen, Tor Mikkel Wara, Kristoffer Sivertsen, Rikard Spets og Morten Stordalen om å styrke nasjonal og alliert forsyningssikkerhet samt strategiske interesser gjennom utvinning av havbunnsmineraler på norsk sokkel",
+        "Representantforslag fra stortingsrepresentant Lars Haltbrekken om å pålegge oljeselskapene å kutte CO2-utslippene ved å bruke flytende havvind og gasskraft som fanger og lagrer CO2",
+        "Samtykke til ratifikasjon av konvensjon om skiping av ein mellomstatleg organisasjon for utvikling og utnytting av digitale havsystem og informasjonstenester (Mercator internasjonale senter for havet) av 23. april 2025",
+        "Representantforslag fra stortingsrepresentantene Nikolai Astrup, Aleksander Stokkebø og Kari Sofie Bjørnsen om kvalitetssikring av støtte til flytende havvind"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-023",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200077",
+        "103871",
+        "106053",
+        "106054",
+        "200036",
+        "200041",
+        "200242",
+        "200270"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Geir Jørgensen, Hanne Beate Stenvaag og Remi Sølvberg om å heve vraket av fregatten KNM Bergen utenfor Andøya",
+        "Status, fremdrift, utfordringer og risiko i gjennomføring av langtidsplanen for forsvarssektoren 2025-2036",
+        "Representantforslag fra stortingsrepresentantene Kathy Lie, Marian Hussein og Anne Lise Gjerstad Fredlund om et bedre tilbud innen psykisk helsevern",
+        "Representantforslag fra stortingsrepresentantene Kathy Lie, Anne Lise Gjerstad Fredlund, Sunniva Holmås Eidsvoll og Ingrid Fiskaa om mer forutsigbare og langsiktige tilskuddsordninger for frivillige og ideelle organisasjoner i helsefeltet",
+        "Representantforslag fra stortingsrepresentantene Ingrid Fiskaa, Marthe Hammer, Sunniva Holmås Eidsvoll, Mirell Høyer-Berntsen, Kirsti Bergstø og Anne Lise Gjerstad Fredlund om digital suverenitet i en urolig tid",
+        "Representantforslag fra stortingsrepresentantene Kirsti Bergstø, Marian Hussein, Marthe Hammer, Mirell Høyer-Berntsen, Ingrid Fiskaa, Kathy Lie og Anne Lise Gjerstad Fredlund om å kutte sykefravær, ikke sykelønn",
+        "Endringer i åndsverkloven mv. (gjennomføring av nett- og videresendingsdirektivet og digitalmarkedsdirektivet) og samtykke til godkjenning av EØS-komiteens beslutning nr. 332/2023 og 333/2023 om innlemmelse i EØS-avtalen av direktiv (EU) 2019/789 og (EU) 2019/790, og samtykke til tiltredelse til WIPO-traktatene av 20. desember 1996 om opphavsrett (WCT) og om fremføringer og fonogrammer (WPPT)",
+        "Representantforslag fra stortingsrepresentantene Kirsti Bergstø, Lars Haltbrekken, Anne Lise Gjerstad Fredlund, Marthe Hammer og Mirell Høyer-Berntsen om kontroll av drivstoffkjedene og deres prissetting"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-024",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200158",
+        "105070",
+        "105111",
+        "105112",
+        "105661",
+        "200131"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Bengt Fasteraune, Ole Herman Sveian og Geir Inge Lien om en utredning av konsekvensene ved en eventuell stenging av Spranget parkering i Sel kommune",
+        "Representantforslag fra stortingsrepresentantene Guri Melby, Abid Raja og Marit Vea om å tillate kommunene å regulere bruk av elektriske sparkesykler på fortau",
+        "Valg av medlemmer og varamedlemmer til Stortingets delegasjon til det parlamentariske partnerskapet Asia-Europa (ASEP) og til ASEANs interparlamentariske forsamling (AIPA)",
+        "Valg av medlemmer og varamedlemmer til Stortingets delegasjon til NATOs parlamentariske forsamling",
+        "Representantforslag fra stortingsrepresentantene Tone Wilhelmsen Trøen, Mahmoud Farahmand, Haagen Poppe og Margret Hagerup om å innføre en ordning med rett til informasjon, for å beskytte kvinner mot voldelige partnere",
+        "Samtykke til ratifikasjon av økonomisk partnerskapsavtale av 23. juni 2025 mellom EFTA-statene og Malaysia"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-001",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "104873",
+        "200202",
+        "200199",
+        "200153"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Tone Wilhelmsen Trøen, Haagen Poppe, Mahmoud Farahmand, Tage Pettersen, Mudassar Kapur og Mathilde Tybring-Gjedde om økonomisk likebehandling av barnevernet i Oslo",
+        "Representantforslag fra stortingsrepresentantene Margit Bye, Une Bastholm, Frøya Skjold Sjursæther, Julie E. Stuestøl, Ingrid Liland og Marius Langballe Dalin om sterkere beskyttelse av naturverdiene i Oslofjorden og en egen oslofjordlov",
+        "Representantforslag fra stortingsrepresentant Kjersti Toppe om å øke andelen institusjonsplasser i ideelle barnevernsinstitusjoner",
+        "Representantforslag fra stortingsrepresentantene Erlend Wiborg, Bjørn Larsen, Helge André Njåstad, Rune Midtun, Simen Velle, Silje Hjemdal og Lill Harriet Sandaune om å forby barnehijab i barnehage og grunnskole"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-005",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "108095",
+        "104877",
+        "200270"
+      ],
+      "titles": [
+        "Meddelelse fra stortingsrepresentant Jørgen H. Kristiansen i Stortingets møte 9. april 2026 om at han trekker tilbake forslag fra Jonas Andersen Sayed, Hans Edvard Askjer og seg selv om avgiftskutt i lys av de høye drivstoffprisene, jf. Dokument 8:189 S (2025-2026)",
+        "Representantforslag fra stortingsrepresentantene Maren Grøthe og Trygve Slagsvold Vedum om å stanse innføringen av ny EU-avgift på drivstoff i Norge",
+        "Representantforslag fra stortingsrepresentantene Kirsti Bergstø, Lars Haltbrekken, Anne Lise Gjerstad Fredlund, Marthe Hammer og Mirell Høyer-Berntsen om kontroll av drivstoffkjedene og deres prissetting"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-006",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200270",
+        "108095"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Kirsti Bergstø, Lars Haltbrekken, Anne Lise Gjerstad Fredlund, Marthe Hammer og Mirell Høyer-Berntsen om kontroll av drivstoffkjedene og deres prissetting",
+        "Meddelelse fra stortingsrepresentant Jørgen H. Kristiansen i Stortingets møte 9. april 2026 om at han trekker tilbake forslag fra Jonas Andersen Sayed, Hans Edvard Askjer og seg selv om avgiftskutt i lys av de høye drivstoffprisene, jf. Dokument 8:189 S (2025-2026)"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-007",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200206",
+        "200157",
+        "200369"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Bård Hoksrud, Frank Edvard Sve, Mats Henriksen, May Helen Hetland Ervik og Dagfinn Henrik Olsen om å stanse liberaliseringen av lospliktforskriften og farledsbevisordningen",
+        "Representantforslag fra stortingsrepresentantene Tor André Johnsen, Rune Midtun, På Morten Borgli, Morten Kolbjørnsen, Bjørnar Laabak, May Helen Hetland Ervik og Kristoffer Sivertsen om gjødselbrukforskriften",
+        "Representantforslag fra stortingsrepresentantene Simen Velle, Lill Harriet Sandaune, Line Marlene Haugen og Joakim Myklebost Tangen om å styrke private barnehagers medvirkning, klageadgang og rettssikkerhet gjennom konkrete endringer i finansieringsforskriften"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-008",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "105424"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentant Geir Inge Lien om å bevare og videreutvikle Steinberg stasjon"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-009",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200042"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Bård Hoksrud, Dagfinn Henrik Olsen, Frank Edvard Sve, May Helen Hetland Ervik og Mats Henriksen om stans i bruk av dagens synsfelttest som grunnlag for tap av førerkort samt endring av regelverket for vurdering av kjøreevne"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-012",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200039",
+        "200033",
+        "104002"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Kjersti Toppe og Geir Inge Lien om ein betre pasientreiseordning",
+        "Representantforslag fra stortingsrepresentantene Erlend Svardal Bøe, Henrik Asheim og Margret Hagerup om en bedre gjennomføring og forvaltning av pasientreiser",
+        "Endringer i helsepersonelloven og pasientjournalloven mv. (taushetsplikt og tilgjengeliggjøring av pasientopplysninger)"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-013",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200157",
+        "200107",
+        "200206",
+        "200369"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Tor André Johnsen, Rune Midtun, På Morten Borgli, Morten Kolbjørnsen, Bjørnar Laabak, May Helen Hetland Ervik og Kristoffer Sivertsen om gjødselbrukforskriften",
+        "Representantforslag fra stortingsrepresentant Geir Pollestad om fleksibel innføring av ny gjødselforskrift",
+        "Representantforslag fra stortingsrepresentantene Bård Hoksrud, Frank Edvard Sve, Mats Henriksen, May Helen Hetland Ervik og Dagfinn Henrik Olsen om å stanse liberaliseringen av lospliktforskriften og farledsbevisordningen",
+        "Representantforslag fra stortingsrepresentantene Simen Velle, Lill Harriet Sandaune, Line Marlene Haugen og Joakim Myklebost Tangen om å styrke private barnehagers medvirkning, klageadgang og rettssikkerhet gjennom konkrete endringer i finansieringsforskriften"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-014",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200070"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Marie Sneve Martinussen og Hege Bae Nyholt om en ny makt- og demokratiutredning"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-015",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "105273"
+      ],
+      "titles": [
+        "Representantforslag frå stortingsrepresentantane Kjersti Toppe og Bengt Fasteraune om ei ny og offensiv satsing på arbeidsretta rehabilitering"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-018",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200173",
+        "200103",
+        "200092",
+        "200195",
+        "200016",
+        "200164",
+        "200023",
+        "105259"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Bjørn Larsen, Tor Mikkel Wara, Kristoffer Sivertsen, Rikard Spets og Morten Stordalen om å styrke nasjonal og alliert forsyningssikkerhet samt strategiske interesser gjennom utvinning av havbunnsmineraler på norsk sokkel",
+        "Representantforslag fra stortingsrepresentantene Morten Stordalen, Rikard Spets, Pål Morten Borgli, Sylvi Listhaug, Kristoffer Sivertsen, Kristian August Eilertsen, Bjørn Larsen og Tor Mikkel Wara om det neste oljeeventyret på norsk sokkel",
+        "Representantforslag frå stortingsrepresentantane Geir Pollestad og Kjersti Toppe om ei offensiv satsing på norsk legemiddelproduksjon og -beredskap",
+        "Representantforslag fra stortingsrepresentantene Guri Melby, Abid Raja og Grunde Almeland om et langsiktig løft for bemanningen i norske barnehager",
+        "Representantforslag frå stortingsrepresentantane Kjersti Toppe, Erling Sande og Bent-Joacim Bentzen om å sikre tilfluktsrom på norske sjukehus",
+        "Representantforslag fra stortingsrepresentantene Erling Sande, Bengt Fasteraune og Ole Herman Sveian om ei treårig lærarutdanning som bidrag til fleire kvalifiserte lærarar i norske klasserom",
+        "Representantforslag fra stortingsrepresentantene Kari Sofie Bjørnsen, Aleksander Stokkebø, Erlend Larsen, Tage Pettersen og Ove Trellevik om en plan for håndtering av sprengstoff og ammunisjon i norsk natur og i kystnære farvann",
+        "Representantforslag fra stortingsrepresentantene Ine Eriksen Søreide, Peter Frølich, Trond Helleland, Anne Kristine Linnestad, Erlend Larsen og Mahmoud Farahmand om å styrke norske myndigheters kapasitet til å oppdage og avbryte uautorisert droneflyvning"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-019",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200007",
+        "100036",
+        "104644",
+        "104915",
+        "104911",
+        "200076",
+        "200012",
+        "105072"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Henrik Asheim og Ola Svenneby om lavere og mer forutsigbar skatt på folks bolig",
+        "Grunnlovsforslag fra Audun Lysbakken, Marian Hussein, Kari Elisabeth Kaski og Torgeir Knag Fylkesnes om endring i § 49 og ny § 75 a (om folkeforslag og folkeavstemninger)",
+        "Lov om folkefinansiering av næringsvirksomhet (folkefinansieringsloven) og samtykke til godkjenning av EØS-komiteens beslutning nr. 30/2024 om innlemmelse i EØS-avtalen av forordning (EU) 2020/1503",
+        "lnnst. 3 S Skatter og avgifter 2026",
+        "Innst. 3 S Skatte-, avgifts- og tollinntekter 2026",
+        "Representantforslag fra stortingsrepresentantene Ingrid Liland, Marius Langballe Dalin, Oda Indgaard om å ta tomme bygg og boliger i bruk",
+        "Representantforslag fra stortingsrepresentantene Guri Melby, Abid Raja og Marit Vea om å midlertidig suspendere den nye modellen for beregning av formuesverdi av bolig",
+        "Representantforslag fra stortingsrepresentantene Mudassar Kapur, Tage Pettersen, Henrik Gottfries Kierulf og Anne Kristine Linnestad om en ny nasjonal boligsosial strategi"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-020",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200288",
+        "107923"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Marthe Hammer og Kirsti Bergstø om å nedsette en forskjellskommisjon",
+        "Mandat, navn og sammensetning av granskingskommisjon for å undersøke forhold som har blitt aktualisert gjennom offentliggjøringen av Epstein-dokumentene"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-023",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200164"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Erling Sande, Bengt Fasteraune og Ole Herman Sveian om ei treårig lærarutdanning som bidrag til fleire kvalifiserte lærarar i norske klasserom"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-024",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "105076",
+        "103996",
+        "200242",
+        "200244"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Tage Pettersen, Erna Solberg, Haagen Poppe, Kari Sofie Bjørnsen, Mahmoud Farahmand og Anne Kristine Linnestad om Norges handlingsrom innenfor EUs reviderte avløpsdirektiv",
+        "Endringer i verdipapirhandelloven mv. (kapitalkrav for verdipapirforetak) og samtykke til godkjenning av EØS-komiteens beslutning nr. 70/2025 om innlemmelse i EØS-avtalen av direktiv (EU) 2019/2034 og forordning (EU) 2019/2033",
+        "Endringer i åndsverkloven mv. (gjennomføring av nett- og videresendingsdirektivet og digitalmarkedsdirektivet) og samtykke til godkjenning av EØS-komiteens beslutning nr. 332/2023 og 333/2023 om innlemmelse i EØS-avtalen av direktiv (EU) 2019/789 og (EU) 2019/790, og samtykke til tiltredelse til WIPO-traktatene av 20. desember 1996 om opphavsrett (WCT) og om fremføringer og fonogrammer (WPPT)",
+        "Endringer i bærekraftige produkter-loven (hjemmel for bærekrafts- og utslippsreduksjonskriterier i EUs fornybardirektiv)"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-025",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "106054",
+        "105209"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Kathy Lie, Anne Lise Gjerstad Fredlund, Sunniva Holmås Eidsvoll og Ingrid Fiskaa om mer forutsigbare og langsiktige tilskuddsordninger for frivillige og ideelle organisasjoner i helsefeltet",
+        "Samtykke til ratifikasjon av konvensjon om skiping av ein mellomstatleg organisasjon for utvikling og utnytting av digitale havsystem og informasjonstenester (Mercator internasjonale senter for havet) av 23. april 2025"
+      ]
+    },
+    {
+      "id": "v2-voteringer-parti-001",
+      "category": "voteringer_parti",
+      "partyHit": true,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-003",
+      "category": "voteringer_parti",
+      "partyHit": true,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-004",
+      "category": "voteringer_parti",
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-006",
+      "category": "voteringer_parti",
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-007",
+      "category": "voteringer_parti",
+      "partyHit": true,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-009",
+      "category": "voteringer_parti",
+      "partyHit": false,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-011",
+      "category": "voteringer_parti",
+      "partyHit": true,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-012",
+      "category": "voteringer_parti",
+      "partyHit": false,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-013",
+      "category": "voteringer_parti",
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-014",
+      "category": "voteringer_parti",
+      "partyHit": false,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-015",
+      "category": "voteringer_parti",
+      "partyHit": false,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-016",
+      "category": "voteringer_parti",
+      "partyHit": true,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-017",
+      "category": "voteringer_parti",
+      "partyHit": true,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-018",
+      "category": "voteringer_parti",
+      "partyHit": false,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-019",
+      "category": "voteringer_parti",
+      "partyHit": true,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-022",
+      "category": "voteringer_parti",
+      "partyHit": true,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-023",
+      "category": "voteringer_parti",
+      "partyHit": false,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-026",
+      "category": "voteringer_parti",
+      "partyHit": true,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-028",
+      "category": "voteringer_parti",
+      "partyHit": true,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-029",
+      "category": "voteringer_parti",
+      "partyHit": true,
+      "r5": true
+    },
+    {
+      "id": "v2-horinger-006",
+      "category": "horinger",
+      "r5": true
+    },
+    {
+      "id": "v2-horinger-010",
+      "category": "horinger",
+      "r5": true
+    },
+    {
+      "id": "v2-horinger-021",
+      "category": "horinger",
+      "r5": true
+    },
+    {
+      "id": "v2-horinger-026",
+      "category": "horinger",
+      "r5": true
+    },
+    {
+      "id": "v2-finnes-ikke-001",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-003",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-005",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-006",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-009",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-017",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-019",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-021",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-024",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-025",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-026",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-028",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-029",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-030",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-031",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-032",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-033",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-034",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-035",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-036",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-037",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-038",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-039",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-040",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-041",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    }
+  ]
+}

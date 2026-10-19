@@ -5,7 +5,7 @@ import { chunkDocument } from '@/lib/document-chunking';
 import { buildDocumentChunkMetadata, documentContentHash } from '@/lib/document-chunking';
 import { parseSakDocuments } from '@/lib/stortinget-documents';
 import { fetchPublikasjonHtml } from '@/lib/stortinget-publikasjon';
-import { fetchStortingetHoringerLive } from '@/lib/stortinget-horinger';
+import type { StortingetHoring } from '@/lib/stortinget-horinger';
 import {
   getHoringsprogramApiUrl,
   hearingDocumentsFromExport,
@@ -75,6 +75,14 @@ async function fetchSakJson(id: string): Promise<Record<string, unknown> | null>
   return data.sak ?? null;
 }
 
+async function fetchHearingsForSession(sessionId: string): Promise<StortingetHoring[]> {
+  const url = `https://data.stortinget.no/eksport/horinger?sesjonid=${encodeURIComponent(sessionId)}&format=json`;
+  const res = await fetchWithRetry(url);
+  if (!res.ok) return [];
+  const data = (await res.json()) as { horinger_liste?: StortingetHoring[] };
+  return data.horinger_liste ?? [];
+}
+
 async function fetchPublication(exportId: string, maxChars: number): Promise<string | null> {
   for (let i = 0; i < 4; i += 1) {
     const pub = await fetchPublikasjonHtml(exportId);
@@ -111,8 +119,46 @@ async function loadOrBuildBodies(
   hearingIds: string[],
 ): Promise<V2BodiesFixture> {
   const fixturePath = v2FixtureBodiesPath();
+  let cached: V2BodiesFixture | null = null;
   if (existsSync(fixturePath) && process.env.RAG_EVAL_V2_LIVE_FETCH !== '1') {
-    return JSON.parse(readFileSync(fixturePath, 'utf8')) as V2BodiesFixture;
+    cached = JSON.parse(readFileSync(fixturePath, 'utf8')) as V2BodiesFixture;
+    if (process.env.RAG_EVAL_V2_SKIP_ISSUE_FETCH === '1') {
+      const liveHearings = await fetchHearingsForSession(cfg.sessionId);
+      const liveIds = new Set(liveHearings.map((h) => String(h.id)));
+      const hearingBodies: Record<string, string> = {};
+      const excludedHearings: Array<{ id: string; reason: string }> = [];
+      for (const hearingId of hearingIds) {
+        if (!liveIds.has(hearingId)) {
+          excludedHearings.push({ id: hearingId, reason: 'missing_from_live_horinger_export' });
+          continue;
+        }
+        const hearing = liveHearings.find((h) => String(h.id) === hearingId)!;
+        let program: StortingetHoringsprogram | null = null;
+        try {
+          const res = await fetchWithRetry(getHoringsprogramApiUrl(hearingId));
+          if (res.ok) program = (await res.json()) as StortingetHoringsprogram;
+        } catch {
+          program = null;
+        }
+        const drafts = hearingDocumentsFromExport(hearing, program);
+        const parts: string[] = [];
+        for (const draft of drafts) {
+          let markdown = draft.markdown;
+          if (!markdown && draft.sourceUrl) {
+            const m = draft.sourceUrl.match(/publikasjonid=([^&]+)/i);
+            if (m?.[1]) markdown = await fetchPublication(m[1], cfg.maxPublicationChars);
+          }
+          if (markdown) parts.push(markdown.slice(0, cfg.maxPublicationChars));
+        }
+        if (parts.length === 0) {
+          excludedHearings.push({ id: hearingId, reason: 'no_hearing_documents_in_export' });
+          continue;
+        }
+        hearingBodies[hearingId] = parts.join('\n\n');
+      }
+      return { ...cached, hearingBodies, excludedHearings, fetchedAt: new Date().toISOString() };
+    }
+    return cached;
   }
 
   const issueMap = new Map(snapshotIssues.map((i) => [i.id, i]));
@@ -152,7 +198,7 @@ async function loadOrBuildBodies(
     if (issues.length % 10 === 0) console.log(`[v2-seed] fetched issues ${issues.length}/${cfg.coreIssues.length}`);
   }
 
-  const liveHearings = await fetchStortingetHoringerLive();
+  const liveHearings = await fetchHearingsForSession(cfg.sessionId);
   const liveIds = new Set(liveHearings.map((h) => String(h.id)));
   const hearingBodies: Record<string, string> = {};
   const excludedHearings: Array<{ id: string; reason: string }> = [];
@@ -305,7 +351,7 @@ export async function seedCorpusV2(pool: pg.Pool, variant: EvalVariant): Promise
       }
     }
 
-    const liveHearings = await fetchStortingetHoringerLive();
+    const liveHearings = await fetchHearingsForSession(cfg.sessionId);
     for (const hearingId of cfg.hearings) {
       if (bodies.excludedHearings.some((e) => e.id === hearingId)) continue;
       const markdown = bodies.hearingBodies[hearingId];

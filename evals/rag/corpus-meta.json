@@ -1,10 +1,101 @@
 {
-  "variant": "baseline",
-  "issues": 25,
-  "documents": 60,
-  "chunks": 507,
-  "hearings": 0,
-  "fixtureFetchedAt": "2026-10-19T20:32:47.376Z",
-  "prefixIssueId": "eval-innvandring-prefix",
-  "seededAt": "2026-10-19T20:51:33.333Z"
+  "dataset": "v2",
+  "variant": "stack",
+  "issues": 145,
+  "documents": 151,
+  "chunks": 186,
+  "hearings": 6,
+  "excludedHearings": [
+    {
+      "id": "10005566",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005579",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005607",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005638",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005666",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005673",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005710",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005713",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005720",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005726",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005749",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005759",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005760",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005795",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005796",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005799",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005812",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005837",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005848",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005865",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005883",
+      "reason": "no_hearing_documents_in_export"
+    },
+    {
+      "id": "10005920",
+      "reason": "no_hearing_documents_in_export"
+    }
+  ],
+  "voteringChunks": 29,
+  "fixtureFetchedAt": "2026-10-19T21:24:05.343Z",
+  "seededAt": "2026-10-19T21:25:46.090Z"
 }
