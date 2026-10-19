@@ -7,6 +7,7 @@ const STACK_MIGRATIONS = [
   '20261019200000_hybrid_search_and_embedding_v2.sql',
   '20261019203000_document_chunk_metadata_content_hash.sql',
   '20261019210000_stortinget_hearings.sql',
+  '20261019220000_docling_ingest_and_embedding_v2_rpcs.sql',
 ];
 
 function parseArgs(): { variant: Variant; database: string } {
