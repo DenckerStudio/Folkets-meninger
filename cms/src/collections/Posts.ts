@@ -18,6 +18,7 @@ import {
   enforceDraftDataBeforeValidate,
   enforceDraftQueryForNonEditors,
 } from '@/hooks/nonEditorDraftEnforcement';
+import { setPublishedAtOnPublish } from '@/hooks/setPublishedAtOnPublish';
 
 export const Posts: CollectionConfig = {
   slug: 'posts',
@@ -43,7 +44,7 @@ export const Posts: CollectionConfig = {
   hooks: {
     beforeOperation: [enforceDraftQueryForNonEditors],
     beforeValidate: [enforceDraftDataBeforeValidate, validatePostText],
-    beforeChange: [agentDraftGuard, enforceDraftDataBeforeChange],
+    beforeChange: [agentDraftGuard, enforceDraftDataBeforeChange, setPublishedAtOnPublish],
     afterChange: [postPublishHooks],
   },
   fields: [
