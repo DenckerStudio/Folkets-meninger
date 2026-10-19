@@ -1,6 +1,9 @@
 import { notFound } from 'next/navigation';
+import { BlogCmsUnavailable } from '@/components/blog/blog-cms-unavailable';
 import { BlogIndexView } from '@/components/blog/blog-index-view';
-import { listBlogCategories, listPublishedBlogPostsPaginated } from '@/lib/blog/service';
+import { blogCmsOrUnavailable } from '@/lib/blog/cms-read-runtime';
+import { loadBlogIndexPageData } from '@/lib/blog/index-page-loaders';
+import { isBlogPageOutOfRange } from '@/lib/blog/pagination';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { routes } from '@/lib/routes';
 
@@ -13,7 +16,10 @@ type PageProps = {
 export async function generateMetadata({ params }: PageProps) {
   const { slug, n } = await params;
   const page = Number.parseInt(n, 10);
-  const categories = await listBlogCategories();
+  const loaded = await blogCmsOrUnavailable(() =>
+    loadBlogIndexPageData({ page, categorySlug: slug }),
+  );
+  const categories = loaded.unavailable ? [] : loaded.data.categories;
   const category = categories.find((item) => item.slug === slug);
   const base = `${routes.blogg}/tema/${encodeURIComponent(slug)}`;
   return buildPageMetadata({
@@ -28,16 +34,15 @@ export default async function BloggTemaPageNumber({ params }: PageProps) {
   const page = Number.parseInt(n, 10);
   if (!Number.isFinite(page) || page < 2) notFound();
 
-  const categories = await listBlogCategories();
+  const loaded = await blogCmsOrUnavailable(() =>
+    loadBlogIndexPageData({ page, categorySlug: slug }),
+  );
+  if (loaded.unavailable) return <BlogCmsUnavailable />;
+
+  const { posts, totalPages, categories } = loaded.data;
   const category = categories.find((item) => item.slug === slug);
   if (!category) notFound();
-
-  const { posts, totalPages } = await listPublishedBlogPostsPaginated({
-    page,
-    categorySlug: slug,
-  });
-
-  if (page > totalPages && totalPages > 0) notFound();
+  if (isBlogPageOutOfRange(page, totalPages)) notFound();
 
   const basePath = `${routes.blogg}/tema/${encodeURIComponent(slug)}`;
 

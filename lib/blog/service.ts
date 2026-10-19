@@ -5,6 +5,7 @@ import {
   resolvePayloadPublishedAt,
 } from '@/lib/cms/map-post';
 import { payloadCreatePost } from '@/lib/cms/payload-create';
+import { CmsFetchError } from '@/lib/cms/cms-fetch-error';
 import {
   getCmsAgentKey,
   getCmsBaseUrl,
@@ -193,13 +194,26 @@ export type CreateBlogDraftInput = {
 
 export type CreateBlogDraftResult =
   | { ok: true; id: string; slug: string; created: boolean; adminUrl: string }
-  | { ok: false; status: number; error: string };
+  | {
+      ok: false;
+      status: number;
+      error: string;
+      id?: string;
+      slug?: string;
+      adminUrl?: string;
+    };
 
 export async function createBlogDraft(input: CreateBlogDraftInput): Promise<CreateBlogDraftResult> {
-  const agentKey = getCmsAgentKey();
   const base = getCmsBaseUrl();
-  if (!base || !agentKey) {
-    return { ok: false, status: 503, error: 'CMS er ikke konfigurert' };
+  const agentKey = getCmsAgentKey();
+  if (!base) {
+    return { ok: false, status: 503, error: 'CMS_URL mangler på app-serveren' };
+  }
+  if (!process.env.CMS_API_KEY?.trim()) {
+    return { ok: false, status: 503, error: 'CMS_API_KEY mangler på app-serveren' };
+  }
+  if (!agentKey) {
+    return { ok: false, status: 503, error: 'CMS_AGENT_API_KEY eller CMS_API_KEY mangler for utkast' };
   }
 
   const slug = normalizeBlogSlug(input.slug);
@@ -226,7 +240,15 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
   }
 
   const categorySlug = normalizeBlogSlug(input.category || 'forklart');
-  const categoryId = await findCategoryId(categorySlug);
+  let categoryId: string | null;
+  try {
+    categoryId = await findCategoryId(categorySlug);
+  } catch (error) {
+    if (error instanceof CmsFetchError) {
+      return { ok: false, status: 503, error: 'CMS-kategorioppslag feilet' };
+    }
+    throw error;
+  }
   if (!categoryId) {
     return { ok: false, status: 400, error: 'Ukjent kategori' };
   }
@@ -284,11 +306,15 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
       slug: doc.slug,
       _status: doc._status,
     });
+    const adminUrl = `${base}/admin/collections/posts/${doc.id}`;
     return {
       ok: false,
       status: 502,
       error:
         'Innlegget ble lagret i CMS, men ble publisert — forventet utkast (sjekk CMS-status)',
+      id: doc.id,
+      slug: doc.slug,
+      adminUrl,
     };
   }
 

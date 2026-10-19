@@ -19,6 +19,8 @@ import {
   loadBlogRelatedHoringCards,
   loadBlogRelatedSakCards,
 } from '@/lib/blog/related-context';
+import { BlogCmsUnavailable } from '@/components/blog/blog-cms-unavailable';
+import { blogCmsOrUnavailable } from '@/lib/blog/cms-read-runtime';
 import {
   getPublishedBlogPostBySlug,
   listPublishedBlogPostsPaginated,
@@ -62,14 +64,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function BlogPostPage({ params }: PageProps) {
   const { slug } = await params;
-  const post = await getPublishedBlogPostBySlug(slug);
-  if (!post) notFound();
+  const loaded = await blogCmsOrUnavailable(async () => {
+    const post = await getPublishedBlogPostBySlug(slug);
+    if (!post) return null;
+    const [saker, horinger, morePosts] = await Promise.all([
+      loadBlogRelatedSakCards(post.related_sak_ids),
+      loadBlogRelatedHoringCards(post.related_horing_ids),
+      listPublishedBlogPostsPaginated({ page: 1, pageSize: 3 }),
+    ]);
+    return { post, saker, horinger, morePosts };
+  });
 
-  const [saker, horinger, morePosts] = await Promise.all([
-    loadBlogRelatedSakCards(post.related_sak_ids),
-    loadBlogRelatedHoringCards(post.related_horing_ids),
-    listPublishedBlogPostsPaginated({ page: 1, pageSize: 3 }),
-  ]);
+  if (loaded.unavailable) return <BlogCmsUnavailable />;
+  if (!loaded.data) notFound();
+
+  const { post, saker, horinger, morePosts } = loaded.data;
 
   const headings = extractMarkdownHeadings(post.body_md);
   const primarySak = post.related_sak_ids[0];

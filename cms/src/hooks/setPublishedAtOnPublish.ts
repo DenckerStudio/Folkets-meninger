@@ -27,9 +27,14 @@ function isEmptyPublishedAt(value: unknown): boolean {
   return false;
 }
 
+function wasPreviouslyPublished(originalDoc: StatusDoc | null | undefined): boolean {
+  return originalDoc?._status === 'published';
+}
+
 /**
  * Pick a non-empty publish timestamp when the post is (or stays) published.
- * Order: explicit incoming value → previous publish date → document createdAt → now.
+ * Order: explicit incoming → previous publish date → createdAt only for legacy already-published
+ * docs → now on first draft→published (agent drafts approved later must not be backdated).
  */
 export function resolvePublishedAtForPublishedPost(
   data: StatusDoc,
@@ -44,7 +49,11 @@ export function resolvePublishedAtForPublishedPost(
   ) {
     return originalDoc.publishedAt.trim();
   }
-  if (!isEmptyPublishedAt(originalDoc?.createdAt) && typeof originalDoc?.createdAt === 'string') {
+  if (
+    wasPreviouslyPublished(originalDoc) &&
+    !isEmptyPublishedAt(originalDoc?.createdAt) &&
+    typeof originalDoc?.createdAt === 'string'
+  ) {
     return originalDoc.createdAt.trim();
   }
   return new Date().toISOString();

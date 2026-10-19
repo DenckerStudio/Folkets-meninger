@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { CmsFetchError } from '@/lib/cms/cms-fetch-error';
 import { getSiteUrl } from '@/lib/seo/metadata';
 
 export const dynamic = 'force-dynamic';
@@ -23,9 +24,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/vilkar`, changeFrequency: 'monthly', priority: 0.3 },
   ];
 
-  let blogRoutes: MetadataRoute.Sitemap = [];
+  const { listPublishedBlogSlugsForSitemap } = await import('@/lib/blog/service');
+  let blogRoutes: MetadataRoute.Sitemap;
   try {
-    const { listPublishedBlogSlugsForSitemap } = await import('@/lib/blog/service');
     const slugs = await listPublishedBlogSlugsForSitemap(200);
     blogRoutes = slugs.map((entry) => ({
       url: `${base}/blogg/${encodeURIComponent(entry.slug)}`,
@@ -38,7 +39,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.45,
     }));
   } catch (error) {
-    console.error('sitemap: klarte ikke å hente bloggposter', error);
+    if (error instanceof CmsFetchError) {
+      console.error('sitemap: blogg utilgjengelig i CMS — beholder ikke stille tom liste', error);
+      throw error;
+    }
+    console.error('sitemap: uventet feil ved blogg', error);
+    throw error;
   }
 
   let sakRoutes: MetadataRoute.Sitemap = [];
