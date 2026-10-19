@@ -71,7 +71,7 @@ CREATE OR REPLACE FUNCTION public.cast_vote(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, extensions
+SET search_path = public, extensions, pg_temp
 AS $$
 BEGIN
   PERFORM public.assert_rpc_caller_is_user(p_user_id);
@@ -135,7 +135,7 @@ CREATE OR REPLACE FUNCTION public.cast_poll_vote(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, extensions
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
   v_poll public.polls%ROWTYPE;
@@ -196,7 +196,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_encrypted bytea;
@@ -230,7 +230,7 @@ CREATE OR REPLACE FUNCTION public.set_issue_stance(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   PERFORM public.assert_rpc_caller_is_user(p_user_id);
@@ -269,7 +269,7 @@ CREATE OR REPLACE FUNCTION public.create_citizen_opinion(
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'public', 'auth'
+SET search_path TO public, auth, pg_temp
 AS $$
 DECLARE
   v_id uuid;
@@ -369,7 +369,7 @@ CREATE OR REPLACE FUNCTION public.create_citizen_opinion_reply(
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'public', 'auth'
+SET search_path TO public, auth, pg_temp
 AS $$
 DECLARE
   v_id uuid;
@@ -447,7 +447,7 @@ CREATE OR REPLACE FUNCTION public.create_hearing_comment(
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'public', 'auth'
+SET search_path TO public, auth, pg_temp
 AS $function$
 DECLARE
   v_comment_id uuid;
@@ -487,7 +487,7 @@ CREATE OR REPLACE FUNCTION public.create_app_suggestion(
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'public', 'auth'
+SET search_path TO public, auth, pg_temp
 AS $function$
 DECLARE
   v_id uuid;
@@ -535,7 +535,7 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'public', 'auth'
+SET search_path TO public, auth, pg_temp
 AS $function$
 DECLARE
   v_vote text := btrim(coalesce(p_vote, ''));
@@ -586,7 +586,7 @@ CREATE OR REPLACE FUNCTION public.set_user_onboarding_state(
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'public', 'auth'
+SET search_path TO public, auth, pg_temp
 AS $function$
 BEGIN
   PERFORM public.assert_rpc_caller_is_user(p_user_id);
@@ -626,7 +626,7 @@ CREATE OR REPLACE FUNCTION public.create_opinion_innspill(
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'public', 'auth'
+SET search_path TO public, auth, pg_temp
 AS $$
 DECLARE
   v_author uuid;
@@ -687,7 +687,7 @@ CREATE OR REPLACE FUNCTION public.endorse_opinion_innspill(
 RETURNS TABLE (support_count integer, support_threshold integer, status text, endorsed boolean)
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'public', 'auth'
+SET search_path TO public, auth, pg_temp
 AS $$
 DECLARE
   v_threshold integer;
@@ -754,7 +754,7 @@ CREATE OR REPLACE FUNCTION public.report_content(
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'public', 'auth'
+SET search_path TO public, auth, pg_temp
 AS $$
 DECLARE
   v_target_type text;
@@ -832,7 +832,7 @@ CREATE OR REPLACE FUNCTION public.record_political_consent(
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   PERFORM public.assert_rpc_caller_is_user(p_user_id);
@@ -853,7 +853,7 @@ CREATE OR REPLACE FUNCTION public.withdraw_political_consent(p_user_id uuid, p_p
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   PERFORM public.assert_rpc_caller_is_user(p_user_id);
@@ -869,7 +869,7 @@ CREATE OR REPLACE FUNCTION public.withdraw_all_political_consents(p_user_id uuid
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   PERFORM public.assert_rpc_caller_is_user(p_user_id);
@@ -886,7 +886,7 @@ CREATE OR REPLACE FUNCTION public.purge_political_processing_data(p_user_id uuid
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   PERFORM public.assert_rpc_caller_is_user(p_user_id);
@@ -904,7 +904,7 @@ CREATE OR REPLACE FUNCTION public.update_user_profile_names(
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'public', 'auth'
+SET search_path TO public, auth, pg_temp
 AS $function$
 DECLARE
   v_first text;
@@ -934,7 +934,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public, extensions
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
   v_encrypted bytea;
@@ -963,7 +963,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   PERFORM public.assert_rpc_caller_is_user(p_user_id);

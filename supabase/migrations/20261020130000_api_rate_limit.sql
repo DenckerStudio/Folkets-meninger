@@ -15,6 +15,8 @@ COMMENT ON TABLE public.api_rate_limit_buckets IS
 REVOKE ALL ON TABLE public.api_rate_limit_buckets FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.api_rate_limit_buckets TO service_role;
 
+ALTER TABLE public.api_rate_limit_buckets ENABLE ROW LEVEL SECURITY;
+
 CREATE OR REPLACE FUNCTION public.check_api_rate_limit(
   p_bucket_key text,
   p_limit integer,
