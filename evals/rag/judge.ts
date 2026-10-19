@@ -80,12 +80,13 @@ async function main(): Promise<void> {
   const outPath = path.replace(/\.json$/, '.judged.json');
   writeFileSync(outPath, JSON.stringify(out, null, 2));
   const summaryPath = join(dirname(path), path.split('/').pop()!.replace(/\.json$/, '-judged-summary.json'));
-  const summary = { model: JUDGE_MODEL, judgeUrl: JUDGE_URL, ...summarize(out), rows: out };
+  const stats = summarize(out);
+  const summary = { model: JUDGE_MODEL, judgeUrl: JUDGE_URL, ...stats, rows: out };
   writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
   console.log(`Wrote ${outPath}`);
   console.log(`Wrote ${summaryPath}`);
   console.log(
-    `Summary: faithfulness mean=${summary.faithfulnessMean.toFixed(3)} pass@${'≥'}0.7=${(summary.faithfulnessPassRate * 100).toFixed(1)}%`,
+    `Summary: faithfulness mean=${stats.faithfulnessMean.toFixed(3)} pass@${'≥'}0.7=${(stats.faithfulnessPassRate * 100).toFixed(1)}%`,
   );
 }
 
