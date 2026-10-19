@@ -1,7 +1,13 @@
 import type { ChatDocumentChunk, ChatIssueHit } from '@/lib/chat/rag';
+import {
+  applyChunkExcerptsForChat,
+  applyTopicWideChunkExcerpts,
+} from '@/lib/chat/chunk-excerpt';
+function clipContent(value: string, max = 1400): string {
+  return value.replace(/\s+/g, ' ').trim().slice(0, max);
+}
 import type pg from 'pg';
 import { embedBgeM3, embedNomic } from './embed';
-import { applyChunkExcerptsForChat, clipChunkContent, type ExcerptMode } from './excerpt';
 import type { EvalVariant } from './db';
 
 export type RetrievedRow = ChatDocumentChunk & { chunkId?: string };
@@ -29,19 +35,13 @@ async function hybridSearch(
       $4::text,
       $5::int
     )`,
-    [
-      query,
-      vector,
-      filters.issueIds ?? null,
-      filters.hearingId ?? null,
-      limit,
-    ],
+    [query, vector, filters.issueIds ?? null, filters.hearingId ?? null, limit],
   );
   return rows.map((row) => ({
     chunkId: String(row.id),
     documentId: String(row.document_id),
     chunkIndex: Number(row.chunk_index),
-    content: clipChunkContent(String(row.content ?? '')),
+    content: String(row.content ?? ''),
     documentTitle: row.document_title as string | null,
     documentKind: row.document_kind as string | null,
     sourceUrl: row.source_url as string | null,
@@ -61,9 +61,9 @@ async function baselineLexical(
   );
   const needle = query.toLowerCase();
   const words = needle.split(/\s+/).filter((w) => w.length > 2);
-  const scored = rows
+  return rows
     .map((row) => {
-      const content = clipChunkContent(String(row.content ?? ''));
+      const content = clipContent(String(row.content ?? ''));
       const hay = content.toLowerCase();
       let rank = hay.includes(needle) ? 100 : 0;
       for (const w of words) if (hay.includes(w)) rank += 1;
@@ -72,18 +72,11 @@ async function baselineLexical(
         chunkIndex: Number(row.chunk_index),
         content,
         rank,
-        metadata: row.metadata,
       };
     })
     .filter((r) => r.rank > 0)
     .sort((a, b) => b.rank - a.rank || a.chunkIndex - b.chunkIndex)
     .slice(0, limit);
-  return scored.map((r) => ({
-    documentId: r.documentId,
-    chunkIndex: r.chunkIndex,
-    content: r.content,
-    rank: r.rank,
-  }));
 }
 
 async function baselineVector(
@@ -101,7 +94,7 @@ async function baselineVector(
     chunkId: String(row.id),
     documentId: String(row.document_id),
     chunkIndex: Number(row.chunk_index),
-    content: clipChunkContent(String(row.content ?? '')),
+    content: clipContent(String(row.content ?? '')),
     rank: Number(row.similarity),
   }));
 }
@@ -119,6 +112,19 @@ function mergeChunks(primary: RetrievedRow[], secondary: RetrievedRow[], limit: 
   return out;
 }
 
+async function searchIssueIds(pool: pg.Pool, variant: EvalVariant, query: string, limit: number): Promise<string[]> {
+  if (variant === 'baseline') {
+    const pattern = `%${query.slice(0, 80)}%`;
+    const { rows } = await pool.query(
+      `SELECT id FROM stortinget_issues WHERE title ILIKE $1 OR summary ILIKE $1 OR henvisning ILIKE $1 LIMIT $2`,
+      [pattern, limit],
+    );
+    return rows.map((r) => String(r.id));
+  }
+  const { rows } = await pool.query(`SELECT id FROM search_issues_fts($1, NULL::text[], $2)`, [query, limit]);
+  return rows.map((r) => String(r.id));
+}
+
 export async function retrieveForQuestion(
   pool: pg.Pool,
   variant: EvalVariant,
@@ -127,17 +133,49 @@ export async function retrieveForQuestion(
     query: string;
     issueId?: string;
     hearingId?: string;
-    excerptMode: ExcerptMode;
+    issueIds?: string[];
     k: number;
+    useLegacyExcerptBug?: boolean;
   },
-): Promise<{ rows: RetrievedRow[]; excerpts: RetrievedRow[]; issueHits?: ChatIssueHit[]; ms: number }> {
+): Promise<{ rows: RetrievedRow[]; excerpts: RetrievedRow[]; topicBySak?: RetrievedRow[][]; ms: number }> {
   const start = performance.now();
   const limit = Math.max(args.k, MAX_CHUNKS);
 
+  const excerptRows = (rows: RetrievedRow[], query: string): RetrievedRow[] => {
+    if (args.useLegacyExcerptBug) {
+      const sorted = [...rows].sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
+      return applyChunkExcerptsForChat(sorted, query);
+    }
+    return applyChunkExcerptsForChat(rows, query);
+  };
+
+  if ((args.kind === 'topic' || args.kind === 'hearing_topic') && variant === 'stack') {
+    const ids =
+      args.issueIds && args.issueIds.length > 0
+        ? args.issueIds
+        : await searchIssueIds(pool, variant, args.query, 3);
+    const perSak: RetrievedRow[][] = [];
+    for (const id of ids) {
+      const rows =
+        args.kind === 'hearing_topic'
+          ? await hybridSearch(pool, args.query, { hearingId: id }, 4)
+          : await hybridSearch(pool, args.query, { issueIds: [id] }, 4);
+      perSak.push(rows);
+    }
+    const excerptedBySak = applyTopicWideChunkExcerpts(perSak, args.query);
+    const flatExcerpts = excerptedBySak.flat();
+    const flatRows = perSak.flat();
+    return {
+      rows: flatRows,
+      excerpts: flatExcerpts,
+      topicBySak: excerptedBySak,
+      ms: performance.now() - start,
+    };
+  }
+
   if (args.kind === 'hearing_chunk' && variant === 'stack' && args.hearingId) {
     const rows = await hybridSearch(pool, args.query, { hearingId: args.hearingId }, limit);
-    const excerpts = applyChunkExcerptsForChat(rows, args.excerptMode);
-    return { rows, excerpts, ms: performance.now() - start };
+    return { rows, excerpts: excerptRows(rows, args.query), ms: performance.now() - start };
   }
 
   if (args.kind === 'sak_chunk' && args.issueId) {
@@ -150,22 +188,21 @@ export async function retrieveForQuestion(
     };
     if (variant === 'stack') {
       const rows = await hybridSearch(pool, args.query, { issueIds: [args.issueId] }, limit);
-      const excerpts = applyChunkExcerptsForChat(rows, args.excerptMode);
-      return { rows, excerpts, ms: performance.now() - start };
+      return { rows, excerpts: excerptRows(rows, args.query), ms: performance.now() - start };
     }
-    const lexical = await baselineLexical(pool, issue, args.query, limit);
-    const semantic = await baselineVector(pool, args.issueId, args.query, limit);
-    const rows = mergeChunks(semantic, lexical, limit);
-    const excerpts = applyChunkExcerptsForChat(rows, 'stack_buggy');
-    return { rows, excerpts, ms: performance.now() - start };
+    const rows = mergeChunks(
+      await baselineVector(pool, args.issueId, args.query, limit),
+      await baselineLexical(pool, issue, args.query, limit),
+      limit,
+    );
+    return { rows, excerpts: excerptRows(rows, args.query), ms: performance.now() - start };
   }
 
   if (args.kind === 'finnes_ikke') {
     const issueId = args.issueId ?? '103102';
     if (variant === 'stack') {
       const rows = await hybridSearch(pool, args.query, { issueIds: [issueId] }, limit);
-      const excerpts = applyChunkExcerptsForChat(rows, args.excerptMode);
-      return { rows, excerpts, ms: performance.now() - start };
+      return { rows, excerpts: excerptRows(rows, args.query), ms: performance.now() - start };
     }
     const issue: ChatIssueHit = {
       id: issueId,

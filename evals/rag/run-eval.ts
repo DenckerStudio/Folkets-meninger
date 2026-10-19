@@ -3,7 +3,6 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createPool, databaseForVariant, type EvalVariant } from './lib/db';
 import { retrieveForQuestion } from './lib/retrieval';
-import type { ExcerptMode } from './lib/excerpt';
 
 type Question = {
   id: string;
@@ -29,7 +28,7 @@ function loadQuestions(): Question[] {
 
 function factHit(text: string, facts: string[]): boolean {
   const hay = text.toLowerCase();
-  return facts.every((f) => hay.includes(f.toLowerCase()));
+  return facts.length > 0 && facts.every((f) => hay.includes(f.toLowerCase()));
 }
 
 function recallAtK(rows: { documentId: string; chunkIndex: number }[], goldFacts: string[], contents: string[], k: number): boolean {
@@ -74,11 +73,7 @@ async function issueSearch(
   return fts;
 }
 
-async function runLabel(
-  label: RunLabel,
-  variant: EvalVariant,
-  excerptMode: ExcerptMode,
-): Promise<Record<string, unknown>> {
+async function runLabel(label: RunLabel, variant: EvalVariant): Promise<Record<string, unknown>> {
   const pool = createPool(databaseForVariant(variant));
   const questions = loadQuestions();
   const latencies: number[] = [];
@@ -93,7 +88,11 @@ async function runLabel(
   let issueSearchTotal = 0;
   let prefixHits = 0;
   let prefixTotal = 0;
+  let topicTotal = 0;
+  let topicExcerptHits = 0;
+  let topicFairSakCoverage = 0;
   const perQuestion: Record<string, unknown>[] = [];
+  const useLegacyExcerptBug = false;
 
   for (const q of questions) {
     if (q.kind === 'issue_search') {
@@ -114,13 +113,15 @@ async function runLabel(
       continue;
     }
 
-    const { rows, excerpts, ms } = await retrieveForQuestion(pool, variant, {
-      kind: q.kind,
+    const isHearingTopic = q.kind === 'topic' && q.tags?.includes('hearing');
+    const { rows, excerpts, topicBySak, ms } = await retrieveForQuestion(pool, variant, {
+      kind: isHearingTopic ? 'hearing_topic' : q.kind,
       query: q.query,
       issueId: q.issueId,
       hearingId: q.hearingId,
-      excerptMode,
+      issueIds: q.gold.issueIds,
       k: 10,
+      useLegacyExcerptBug,
     });
     latencies.push(ms);
 
@@ -129,7 +130,7 @@ async function runLabel(
 
     if (q.kind === 'finnes_ikke') {
       finnesIkke += 1;
-      const confident = excerpts.length > 0 && excerpts.some((e) => e.rank && e.rank > 0.15);
+      const confident = excerpts.length > 0;
       if (confident) falseConfidence += 1;
       perQuestion.push({ id: q.id, kind: q.kind, excerpts: excerpts.length, confident });
       continue;
@@ -137,6 +138,32 @@ async function runLabel(
 
     if (q.gold.optional) {
       perQuestion.push({ id: q.id, skipped: true });
+      continue;
+    }
+
+    if (q.kind === 'topic') {
+      if (variant !== 'stack') {
+        perQuestion.push({ id: q.id, skipped: true, reason: 'topic_stack_only' });
+        continue;
+      }
+      topicTotal += 1;
+      const excerptText = excerpts.map((e) => e.content).join(' ');
+      const hit = factHit(excerptText, facts);
+      if (hit) topicExcerptHits += 1;
+      const expectedSaker = q.gold.issueIds ?? [];
+      const covered = expectedSaker.filter((_, idx) => {
+        const sakExcerpts = topicBySak?.[idx] ?? [];
+        const text = sakExcerpts.map((e) => e.content).join(' ');
+        return facts.some((f) => text.toLowerCase().includes(f.toLowerCase()));
+      }).length;
+      const fair = expectedSaker.length > 0 ? covered / expectedSaker.length : 0;
+      topicFairSakCoverage += fair;
+      perQuestion.push({
+        id: q.id,
+        topicExcerptHit: hit,
+        topicFairSakCoverage: fair,
+        sakerWithExcerpts: topicBySak?.map((s) => s.length) ?? [],
+      });
       continue;
     }
 
@@ -166,12 +193,20 @@ async function runLabel(
   return {
     label,
     variant,
-    excerptMode,
+    stackHeads: {
+      p177: 'a38d83d',
+      p178: '8462349',
+      p179: '4c17c84',
+      p181: '1e06816',
+    },
     chunkQuestions: chunkEval,
     recallAt5: chunkEval ? recall5 / chunkEval : 0,
     recallAt10: chunkEval ? recall10 / chunkEval : 0,
     mrr: chunkEval ? mrrSum / chunkEval : 0,
     excerptFactRate: chunkEval ? excerptHits / chunkEval : 0,
+    topicQuestions: topicTotal,
+    topicExcerptFactRate: topicTotal ? topicExcerptHits / topicTotal : 0,
+    topicFairSakCoverage: topicTotal ? topicFairSakCoverage / topicTotal : 0,
     issueSearchHitRate: issueSearchTotal ? issueSearchHits / issueSearchTotal : 0,
     prefixHitRate: prefixTotal ? prefixHits / prefixTotal : 0,
     finnesIkkeFalseConfidenceRate: finnesIkke ? falseConfidence / finnesIkke : 0,
@@ -199,7 +234,6 @@ async function main(): Promise<void> {
   const summary: Record<string, unknown>[] = [];
   for (const label of runs) {
     const variant: EvalVariant = label === 'baseline' ? 'baseline' : 'stack';
-    const excerptMode: ExcerptMode = label === 'improved' ? 'stack_fixed' : 'stack_buggy';
     if (label === 'improved') {
       const tuning = join(process.cwd(), 'evals/rag/sql/tuning-pr179-rrf-k40.sql');
       execSync(
@@ -208,17 +242,17 @@ async function main(): Promise<void> {
       );
     }
     console.log(`[eval] running ${label}…`);
-    const result = await runLabel(label, variant, excerptMode);
+    const result = await runLabel(label, variant);
     summary.push(result);
     writeFileSync(join(outDir, `${label}.json`), JSON.stringify(result, null, 2));
   }
 
   const md = [
-    '| Run | Recall@5 | Recall@10 | MRR | Excerpt fact hit | Issue search hit | Prefix hit | Finnes-ikke false conf. | p50 ms | p95 ms | Judge |',
-    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |',
+    '| Run | R@5 | R@10 | MRR | Excerpt hit | Topic excerpt | Topic fair sak | Issue search | Prefix | Finnes-ikke FP | p50 | p95 | Judge |',
+    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |',
     ...summary.map((r) => {
       const row = r as Record<string, number | string>;
-      return `| ${row.label} | ${(Number(row.recallAt5) * 100).toFixed(1)}% | ${(Number(row.recallAt10) * 100).toFixed(1)}% | ${Number(row.mrr).toFixed(3)} | ${(Number(row.excerptFactRate) * 100).toFixed(1)}% | ${(Number(row.issueSearchHitRate) * 100).toFixed(1)}% | ${(Number(row.prefixHitRate) * 100).toFixed(1)}% | ${(Number(row.finnesIkkeFalseConfidenceRate) * 100).toFixed(1)}% | ${Number(row.latencyMsP50).toFixed(0)} | ${Number(row.latencyMsP95).toFixed(0)} | ${row.judge} |`;
+      return `| ${row.label} | ${(Number(row.recallAt5) * 100).toFixed(1)}% | ${(Number(row.recallAt10) * 100).toFixed(1)}% | ${Number(row.mrr).toFixed(3)} | ${(Number(row.excerptFactRate) * 100).toFixed(1)}% | ${(Number(row.topicExcerptFactRate) * 100).toFixed(1)}% | ${(Number(row.topicFairSakCoverage) * 100).toFixed(1)}% | ${(Number(row.issueSearchHitRate) * 100).toFixed(1)}% | ${(Number(row.prefixHitRate) * 100).toFixed(1)}% | ${(Number(row.finnesIkkeFalseConfidenceRate) * 100).toFixed(1)}% | ${Number(row.latencyMsP50).toFixed(0)} | ${Number(row.latencyMsP95).toFixed(0)} | ${row.judge} |`;
     }),
   ].join('\n');
 

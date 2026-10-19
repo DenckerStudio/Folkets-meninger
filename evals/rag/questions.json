@@ -347,5 +347,35 @@
     "query": "statsbudsjettet 2027",
     "gold": { "titleMustContain": ["statsbudsjett", "2027"], "issueIds": [] },
     "tags": ["year_format", "hearing_related"]
+  },
+  {
+    "id": "topic-trygd-pensjon-multi",
+    "kind": "topic",
+    "query": "Hvordan behandler Stortinget pensjon og trygd for fiskere sammenlignet med andre saker?",
+    "gold": {
+      "facts": ["pensjon", "trygd"],
+      "issueIds": ["103102", "200365"]
+    },
+    "tags": ["topic_multi_sak", "semantic_lexical"]
+  },
+  {
+    "id": "topic-statsbudsjett-2027-multi",
+    "kind": "topic",
+    "query": "statsbudsjettet 2027: hva skiller komitéhøringene?",
+    "gold": {
+      "facts": ["statsbudsjett", "2027"],
+      "issueIds": ["10005964", "10005968"]
+    },
+    "tags": ["topic_multi_sak", "year_format", "hearing"]
+  },
+  {
+    "id": "topic-representantforslag-2024-25",
+    "kind": "topic",
+    "query": "Representantforslag i stortingsperioden 2024/25 om transport og førerkort",
+    "gold": {
+      "facts": ["representant", "førerkort"],
+      "issueIds": ["200365", "200364"]
+    },
+    "tags": ["topic_multi_sak", "year_format"]
   }
 ]
