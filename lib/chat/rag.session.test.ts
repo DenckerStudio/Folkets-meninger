@@ -14,6 +14,7 @@ assert.doesNotMatch(ragSrc, /getServiceSupabase/);
 assert.match(ragSrc, /getServerSupabase/);
 assert.match(ragSrc, /getAnonSupabase/);
 assert.match(ragSrc, /issue_id, document_id, chunk_index, content/);
+assert.match(ragSrc, /fetchCentralQueryEmbedding/);
 assert.match(ragSrc, /search_chunks_hybrid/);
 assert.match(ragSrc, /search_issues_fts/);
 assert.match(ragSrc, /searchChunksLexical/);

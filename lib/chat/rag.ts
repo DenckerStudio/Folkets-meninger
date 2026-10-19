@@ -9,6 +9,7 @@ import {
   significantTokens,
   type SakSearchRow,
 } from '@/lib/chat/sak-search';
+import { fetchCentralQueryEmbedding } from '@/lib/chat/query-embed';
 import {
   searchChunksByVector,
   VECTOR_V2_DIMENSIONS,
@@ -376,6 +377,9 @@ async function resolveQueryEmbeddingV2(
   vectorize: QueryVectorizer | null | undefined,
   query: string,
 ): Promise<number[] | null> {
+  const central = await fetchCentralQueryEmbedding(query);
+  if (central) return central;
+
   if (!vectorize) return null;
   const vector = await vectorize(query);
   if (!vector || vector.length !== VECTOR_V2_DIMENSIONS) return null;
