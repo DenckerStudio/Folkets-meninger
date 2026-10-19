@@ -40,11 +40,12 @@ export async function grantAppRoleByEmail(email: string, grantedBy: string): Pro
   return String(data);
 }
 
-export async function revokeAppRoleByEmail(email: string): Promise<string> {
+export async function revokeAppRoleByEmail(email: string, revokedBy: string): Promise<string> {
   const service = getServiceSupabase();
   const { data, error } = await service.rpc('revoke_app_role_by_email', {
     p_email: email,
     p_role: 'admin',
+    p_revoked_by: revokedBy,
   });
   if (error) throw error;
   return String(data);

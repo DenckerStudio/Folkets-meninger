@@ -21,11 +21,8 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- authenticated må kunne bruker-RPC-er (JWT / PostgREST)
-  FOREACH fn IN ARRAY ARRAY[
-    'cast_poll_vote', 'update_user_profile_names', 'set_issue_stance',
-    'create_citizen_opinion', 'is_admin', 'user_has_public_identity'
-  ] LOOP
+  -- authenticated: session helpers only (user-bound writes go via service_role API)
+  FOREACH fn IN ARRAY ARRAY['is_admin', 'get_public_user_displays'] LOOP
     IF EXISTS (
       SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
       WHERE n.nspname = 'public' AND p.proname = fn
@@ -35,6 +32,19 @@ BEGIN
         AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
     ) THEN
       problems := problems || format('authenticated mangler EXECUTE på %s', fn);
+    END IF;
+  END LOOP;
+
+  FOREACH fn IN ARRAY ARRAY[
+    'cast_poll_vote', 'cast_vote', 'get_user_vote_on_issue', 'set_issue_stance',
+    'create_citizen_opinion', 'user_has_public_identity'
+  ] LOOP
+    IF EXISTS (
+      SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = fn
+        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+    ) THEN
+      problems := problems || format('authenticated må ikke kjøre %s (bruk API/service_role)', fn);
     END IF;
   END LOOP;
 

@@ -32,7 +32,7 @@ export async function POST(
   }
 
   const ip = clientIp(request);
-  const ipRate = checkRateLimit(`opinions:reply:ip:${ip}`, 20, 60_000);
+  const ipRate = await checkRateLimit(`opinions:reply:ip:${ip}`, 20, 60_000);
   if (!ipRate.ok) {
     return NextResponse.json(
       { error: 'For mange forespørsler. Prøv igjen om litt.' },
@@ -43,7 +43,7 @@ export async function POST(
     );
   }
 
-  const userRate = checkRateLimit(`opinions:reply:user:${user.id}`, 10, 60_000);
+  const userRate = await checkRateLimit(`opinions:reply:user:${user.id}`, 10, 60_000);
   if (!userRate.ok) {
     return NextResponse.json(
       { error: 'Du svarer for ofte. Vent litt før du publiserer på nytt.' },

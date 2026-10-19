@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { castAppSuggestionVote } from '@/lib/admin/suggestions';
 import { isSuggestionVote } from '@/lib/appens-fremtid/constants';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,17 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
+  }
+
+  const rate = await checkRateLimit(`suggestion-vote:${user.id}`, 30, 60_000);
+  if (!rate.ok) {
+    return NextResponse.json(
+      { error: 'For mange forespørsler. Prøv igjen om litt.' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(rate.retryAfterSeconds) },
+      },
+    );
   }
 
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {

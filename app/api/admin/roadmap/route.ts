@@ -63,7 +63,7 @@ export async function PATCH(request: Request) {
     if ('error' in parsed) {
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
-    await updateAppRoadmapItem(parsed.id, {
+    await updateAppRoadmapItem(auth.userId, parsed.id, {
       title: parsed.title,
       body: parsed.body,
       status: parsed.status,

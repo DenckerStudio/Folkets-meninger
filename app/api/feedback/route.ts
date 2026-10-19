@@ -18,7 +18,7 @@ function clientIp(request: Request): string {
 }
 
 export async function POST(request: Request) {
-  const rate = checkRateLimit(`feedback:${clientIp(request)}`, 5, 60_000);
+  const rate = await checkRateLimit(`feedback:${clientIp(request)}`, 5, 60_000);
   if (!rate.ok) {
     return NextResponse.json(
       { error: 'For mange forespørsler. Prøv igjen om litt.' },

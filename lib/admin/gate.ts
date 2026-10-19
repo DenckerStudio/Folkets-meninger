@@ -29,13 +29,7 @@ export async function isAdmin(userId: string, _email?: string | null): Promise<b
     .eq('user_id', userId)
     .eq('role', 'admin')
     .maybeSingle();
-  if (roleRow) return true;
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user || user.id !== userId) return false;
-  return user.app_metadata?.role === 'admin';
+  return Boolean(roleRow);
 }
 
 export async function requireAdmin(): Promise<
