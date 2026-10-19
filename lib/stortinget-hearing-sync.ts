@@ -2,10 +2,10 @@ import { chunkDocumentText } from '@/lib/document-chunking';
 import {
   buildHearingChunkMetadata,
   getHoringsprogramApiUrl,
-  hearingDocumentsFromExport,
   mapHearingToDbRow,
   type StortingetHoringsprogram,
 } from '@/lib/stortinget-hearing-export';
+import { resolveHearingDocumentsForIngest } from '@/lib/stortinget-hearing-document-fetch';
 import { fetchStortingetHoringerLive } from '@/lib/stortinget-horinger';
 import { getServiceSupabase } from '@/lib/supabase';
 
@@ -120,9 +120,9 @@ export async function syncStortingetHearingsToDb(): Promise<SyncHearingsResult> 
     hearingsUpserted += 1;
 
     const program = await fetchHoringsprogram(hearingId);
-    const drafts = hearingDocumentsFromExport(hearing, program);
+    const resolved = await resolveHearingDocumentsForIngest(hearing, program, 120_000);
 
-    for (const draft of drafts) {
+    for (const { draft, markdown } of resolved) {
       const { data: docRow, error: docError } = await service.rpc('n8n_upsert_hearing_document', {
         p_payload: {
           hearing_id: hearingId,
@@ -130,8 +130,8 @@ export async function syncStortingetHearingsToDb(): Promise<SyncHearingsResult> 
           title: draft.title,
           kind: draft.kind,
           source_url: draft.sourceUrl,
-          markdown: draft.markdown,
-          status: draft.status,
+          markdown,
+          status: 'converted',
           content_hash: draft.contentHash,
         },
       });
@@ -142,7 +142,7 @@ export async function syncStortingetHearingsToDb(): Promise<SyncHearingsResult> 
         typeof docRow === 'object' && docRow && 'id' in docRow
           ? String((docRow as { id: string }).id)
           : null;
-      if (!documentId || !draft.markdown) continue;
+      if (!documentId || !markdown) continue;
 
       const written = await upsertHearingChunks(
         hearingId,
@@ -151,7 +151,7 @@ export async function syncStortingetHearingsToDb(): Promise<SyncHearingsResult> 
         draft.title,
         draft.kind,
         draft.sourceUrl,
-        draft.markdown,
+        markdown,
         row.sesjon,
         row.komite_navn,
         draft.contentHash,

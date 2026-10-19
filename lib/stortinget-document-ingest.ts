@@ -8,6 +8,7 @@ import { parseSakDocuments, type SakDocumentRef } from '@/lib/stortinget-documen
 import type { StortingetSakDetail } from '@/lib/stortinget';
 import { getServiceSupabase } from '@/lib/supabase';
 import { triggerDocumentEmbeddingsWebhook } from '@/lib/trigger-document-embeddings-webhook';
+import { fetchVoteringRagSummariesForSak } from '@/lib/stortinget-votering-rag';
 import { persistAiSummarySource } from '@/lib/ai-summary/persist-source';
 import { triggerAiSummaryWebhook } from '@/lib/trigger-ai-summary-webhook';
 
@@ -188,6 +189,58 @@ async function upsertDocumentChunks(args: {
   return created;
 }
 
+async function upsertVoteringRagChunks(
+  service: ReturnType<typeof getServiceSupabase>,
+  issueId: string,
+  issueContext: { sesjon: string | null; komite: string | null; publishedAt: string | null },
+): Promise<number> {
+  const summaries = await fetchVoteringRagSummariesForSak(issueId);
+  let created = 0;
+  for (const { voteringId, text } of summaries) {
+    const documentId = `votering:${voteringId}`;
+    const hash = contentHash(text);
+    const chunks = chunkDocument(text);
+    if (chunks.length === 0) continue;
+
+    const rows = chunks.map((chunk, chunkIndex) => {
+      const metadata = buildDocumentChunkMetadata({
+        issueId,
+        documentId,
+        documentKind: 'votering',
+        documentTitle: `Votering ${voteringId}`,
+        sectionTitle: chunk.sectionTitle,
+        page: chunk.page,
+        pageStart: chunk.pageStart,
+        pageEnd: chunk.pageEnd,
+        sourceUrl: null,
+        sesjon: issueContext.sesjon,
+        komite: issueContext.komite,
+        publishedAt: issueContext.publishedAt,
+        contentHash: hash,
+      });
+      return {
+        issue_id: issueId,
+        document_id: documentId,
+        chunk_index: chunkIndex,
+        content: chunk.content,
+        embedding_status: 'pending' as const,
+        metadata,
+        embedding: null,
+      };
+    });
+
+    const { error } = await service.from('document_chunks').upsert(rows, {
+      onConflict: 'issue_id,document_id,chunk_index',
+    });
+    if (error) {
+      console.warn('[document-ingest] votering chunk upsert failed:', error.message);
+      continue;
+    }
+    created += rows.length;
+  }
+  return created;
+}
+
 async function ingestOneDocument(args: {
   service: ReturnType<typeof getServiceSupabase>;
   issueId: string;
@@ -347,6 +400,12 @@ export async function ingestSakDocuments(
     }
 
     await sleep(INGEST_DELAY_MS);
+  }
+
+  const voteringChunks = await upsertVoteringRagChunks(service, issueId, issueContext);
+  if (voteringChunks > 0) {
+    result.chunksCreated += voteringChunks;
+    shouldTriggerEmbeddings = true;
   }
 
   if (shouldTriggerEmbeddings) {
