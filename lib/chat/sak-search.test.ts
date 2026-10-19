@@ -38,6 +38,9 @@ assert.deepEqual(buildSearchTerms('hva koster innvandringsloven'), [
 assert.deepEqual(buildIssuePrefixTsqueryOperands(['innvandring', 'innvandring']), [
   'innvandring',
 ]);
+assert.deepEqual(buildIssuePrefixTsqueryOperands(['2024/25']), ['2024']);
+assert.deepEqual(buildIssuePrefixTsqueryOperands(['x', 'ab']), []);
+assert.equal(formatIssuePrefixTsquery(['2024/25']), '2024:*');
 assert.equal(formatIssuePrefixTsquery(['innvandring']), 'innvandring:*');
 assert.equal(formatIssuePrefixTsquery(buildSearchTerms('innvandring')), 'innvandring:*');
 assert.match(formatIssuePrefixTsquery(buildSearchTerms('hva sier loven om innvandring')) ?? '', /innvandring:\*/);
