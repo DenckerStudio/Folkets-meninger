@@ -12,7 +12,6 @@ import {
 import { fetchCentralQueryEmbedding } from '@/lib/chat/query-embed';
 import {
   searchChunksByVector,
-  VECTOR_V2_DIMENSIONS,
   type QueryVectorizer,
   type VectorSearchClient,
 } from '@/lib/chat/vector-search';
@@ -177,6 +176,18 @@ export function isMissingHybridRpcError(error: { message?: string; code?: string
   );
 }
 
+export function shouldFallbackToLegacyIssueSearch(ftsHits: ChatIssueHit[] | null): boolean {
+  return ftsHits === null || ftsHits.length === 0;
+}
+
+export async function primaryIssuesFromFtsAttempt(
+  ftsHits: ChatIssueHit[] | null,
+  loadLegacy: () => Promise<ChatIssueHit[]>,
+): Promise<ChatIssueHit[]> {
+  if (ftsHits !== null && ftsHits.length > 0) return ftsHits;
+  return loadLegacy();
+}
+
 async function searchIssuesViaFts(
   supabase: ChatRagClient,
   needle: string,
@@ -186,17 +197,19 @@ async function searchIssuesViaFts(
   try {
     const { data, error } = await supabase.rpc('search_issues_fts', {
       query_text: needle,
+      search_terms: buildSearchTerms(needle),
       match_count: limit,
     });
     if (error) {
       if (isMissingHybridRpcError(error)) return null;
-      return [];
+      return null;
     }
-    if (!Array.isArray(data)) return [];
-    return data.flatMap((row) => {
+    if (!Array.isArray(data)) return null;
+    const mapped = data.flatMap((row) => {
       const issue = mapIssue(row as Record<string, unknown>);
       return issue ? [issue] : [];
     });
+    return mapped.length > 0 ? mapped : null;
   } catch {
     return null;
   }
@@ -300,9 +313,9 @@ export async function searchIssuesForChat(
   }
 
   const ftsHits = await searchIssuesViaFts(supabase, needle, limit);
-  if (ftsHits !== null) return ftsHits;
-
-  return searchIssuesForChatLegacy(supabase, needle, limit);
+  return primaryIssuesFromFtsAttempt(ftsHits, () =>
+    searchIssuesForChatLegacy(supabase, needle, limit),
+  );
 }
 
 export async function loadIssueMeta(
@@ -373,31 +386,34 @@ export function mapHybridChunkRow(row: Record<string, unknown>): ChatDocumentChu
   };
 }
 
-async function resolveQueryEmbeddingV2(
-  vectorize: QueryVectorizer | null | undefined,
-  query: string,
-): Promise<number[] | null> {
-  const central = await fetchCentralQueryEmbedding(query);
-  if (central) return central;
+/** Hybrid RPC succeeded but returned no usable chunks — fall back to legacy scan. */
+export function shouldFallbackToLegacyChunks(hybrid: ChatDocumentChunk[] | null): boolean {
+  return hybrid === null || hybrid.length === 0;
+}
 
-  if (!vectorize) return null;
-  const vector = await vectorize(query);
-  if (!vector || vector.length !== VECTOR_V2_DIMENSIONS) return null;
-  return vector;
+export async function primaryChunksFromHybridAttempt(
+  hybrid: ChatDocumentChunk[] | null,
+  loadLegacy: () => Promise<ChatDocumentChunk[]>,
+): Promise<ChatDocumentChunk[]> {
+  if (hybrid !== null && hybrid.length > 0) return hybrid;
+  return loadLegacy();
 }
 
 async function searchChunksHybrid(
   supabase: ChatRagClient,
   issue: ChatIssueHit,
   query: string,
-  vectorize?: QueryVectorizer | null,
   maxChunks: number = MAX_CHUNKS,
+  centralQueryEmbedding?: number[] | null,
 ): Promise<ChatDocumentChunk[] | null> {
   if (!supabase.rpc) return null;
   const issueId = issue.id.trim();
   if (!issueId) return null;
 
-  const queryEmbedding = await resolveQueryEmbeddingV2(vectorize, query);
+  const queryEmbedding =
+    centralQueryEmbedding !== undefined
+      ? centralQueryEmbedding
+      : await fetchCentralQueryEmbedding(query);
 
   try {
     const { data, error } = await supabase.rpc('search_chunks_hybrid', {
@@ -414,14 +430,14 @@ async function searchChunksHybrid(
     });
     if (error) {
       if (isMissingHybridRpcError(error)) return null;
-      return [];
+      return null;
     }
-    if (!Array.isArray(data)) return [];
+    if (!Array.isArray(data)) return null;
     const mapped = data.flatMap((row) => {
       const chunk = mapHybridChunkRow(row as Record<string, unknown>);
       return chunk ? [chunk] : [];
     });
-    return mapped;
+    return mapped.length > 0 ? mapped : null;
   } catch {
     return null;
   }
@@ -482,11 +498,18 @@ async function searchChunks(
   query: string,
   vectorize?: QueryVectorizer | null,
   maxChunks: number = MAX_CHUNKS,
+  centralQueryEmbedding?: number[] | null,
 ): Promise<ChatDocumentChunk[]> {
-  const hybrid = await searchChunksHybrid(supabase, issue, query, vectorize, maxChunks);
-  const primary =
-    hybrid ??
-    (await searchChunksLexical(supabase, issue, query, maxChunks));
+  const hybrid = await searchChunksHybrid(
+    supabase,
+    issue,
+    query,
+    maxChunks,
+    centralQueryEmbedding,
+  );
+  const primary = await primaryChunksFromHybridAttempt(hybrid, () =>
+    searchChunksLexical(supabase, issue, query, maxChunks),
+  );
 
   if (!vectorize) return primary;
 
@@ -652,6 +675,7 @@ export async function retrieveTopicContext(args: {
   }
 
   const limit = Math.min(Math.max(args.limit ?? MAX_TOPIC_SAKER, 1), 5);
+  const centralQueryEmbedding = await fetchCentralQueryEmbedding(query);
   const hits = await searchIssuesForChat(query, limit, supabase);
   if (hits.length === 0) {
     return {
@@ -664,7 +688,14 @@ export async function retrieveTopicContext(args: {
   const saker = await Promise.all(
     hits.map(async (issue) => {
       const [chunks, summaryText] = await Promise.all([
-        searchChunks(supabase, issue, query, args.vectorize, MAX_TOPIC_CHUNKS),
+        searchChunks(
+          supabase,
+          issue,
+          query,
+          args.vectorize,
+          MAX_TOPIC_CHUNKS,
+          centralQueryEmbedding,
+        ),
         loadAiSummaryText(supabase, issue.id),
       ]);
       return {

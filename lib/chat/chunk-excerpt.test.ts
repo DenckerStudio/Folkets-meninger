@@ -8,6 +8,9 @@ const sample = `## Komiteens merknader
 | Post | Beløp |
 | --- | ---: |
 | Drift | 45 |
+| Tom | |
+
+**Viktig** og [lenke](https://example.com).
 
 Vanlig avsnitt.
 `;
@@ -17,6 +20,9 @@ assert.match(out, /Komiteens merknader/);
 assert.doesNotMatch(out, /<!--/);
 assert.doesNotMatch(out, /^\|/m);
 assert.match(out, /Drift · 45/);
+assert.match(out, /Tom ·/);
+assert.match(out, /Viktig og lenke/);
+assert.doesNotMatch(out, /\*\*/);
 assert.match(out, /Vanlig avsnitt/);
 
 console.log('chunk-excerpt.test.ts: ok');
