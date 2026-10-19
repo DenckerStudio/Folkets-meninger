@@ -160,8 +160,37 @@ async function main(): Promise<void> {
   );
   assert.equal(titleRow.rows[0]?.title, 'Første', 'explicit empty title must not wipe');
 
-  const chunkerOnly = await upsert(db, 'sak', { ...sakDoc, chunker: 'md-sections-v2' }, sakChunks);
-  assert.equal(chunkerOnly.status, 'upserted', 'chunker change must re-chunk even when hash matches');
+  const chunkerMarkdown = markdown;
+  const chunkerHash = hash;
+  const chunkerDoc = {
+    issue_id: 'sak-1',
+    document_id: 'doc-chunker-loop',
+    title: 'Chunker',
+    content_markdown: chunkerMarkdown,
+    content_hash: chunkerHash,
+    chunker: 'md-sections-v2',
+  };
+  const chunkerChunks = [{ chunk_index: 0, content: 'Avsnitt én.' }];
+  assert.equal((await upsert(db, 'sak', chunkerDoc, chunkerChunks)).status, 'upserted');
+  const omit1 = await upsert(db, 'sak', {
+    issue_id: 'sak-1',
+    document_id: 'doc-chunker-loop',
+    title: 'Chunker',
+    content_markdown: chunkerMarkdown,
+    content_hash: chunkerHash,
+  }, chunkerChunks);
+  assert.equal(omit1.status, 'unchanged', 'chunkerless payload keeps stored chunker for compare');
+  const omit2 = await upsert(db, 'sak', {
+    issue_id: 'sak-1',
+    document_id: 'doc-chunker-loop',
+    content_markdown: chunkerMarkdown,
+    content_hash: chunkerHash,
+  }, chunkerChunks);
+  assert.equal(omit2.status, 'unchanged');
+  const explicitV2 = await upsert(db, 'sak', { ...chunkerDoc, chunker: 'md-sections-v2' }, chunkerChunks);
+  assert.equal(explicitV2.status, 'unchanged');
+  const bumpV1 = await upsert(db, 'sak', { ...chunkerDoc, chunker: 'md-sections-v1' }, chunkerChunks);
+  assert.equal(bumpV1.status, 'upserted', 'explicit chunker change must re-chunk');
 
   const hearingMarkdown = 'Høringstekst.';
   const hearingHash = documentContentHash(hearingMarkdown);

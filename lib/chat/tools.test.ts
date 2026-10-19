@@ -210,7 +210,7 @@ async function main() {
   };
   const shaped = shapeChatPollResults({
     poll,
-    totals: { ja: 3, nei: 1, blank: 0, total: 4 },
+    totals: { ja: 15, nei: 5, blank: 0, total: 20 },
   });
   assert.equal(shaped.found, true);
   assert.equal(shaped.isOpen, true);
@@ -218,6 +218,13 @@ async function main() {
   assert.equal(shaped.percents.nei, 25);
   assert.equal(shaped.percents.blank, 0);
   assert.equal(shaped.note, null);
+
+  const belowMin = shapeChatPollResults({
+    poll,
+    totals: { ja: 3, nei: 1, blank: 0, total: 4 },
+  });
+  assert.equal(belowMin.percents.ja, 0);
+  assert.match(belowMin.note ?? '', /Færre enn/);
 
   const emptyShaped = shapeChatPollResults({ poll: null });
   assert.equal(emptyShaped.found, false);

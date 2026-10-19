@@ -112,6 +112,7 @@ DECLARE
   v_idx int;
   v_seen int[] := '{}';
   v_meta jsonb;
+  v_page_num int;
 BEGIN
   FOR v_chunk IN SELECT value FROM jsonb_array_elements(p_chunks)
   LOOP
@@ -142,22 +143,31 @@ BEGIN
 
     IF v_chunk ? 'page_start' OR (v_meta ? 'page_start') THEN
       v_raw := nullif(btrim(coalesce(v_meta->>'page_start', v_chunk->>'page_start', '')), '');
-      IF v_raw IS NOT NULL AND v_raw !~ '^-?\d+$' THEN
-        RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'page_start');
+      IF v_raw IS NOT NULL THEN
+        IF v_raw !~ '^[0-9]{1,6}$' THEN
+          RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'page_start');
+        END IF;
+        v_page_num := v_raw::int;
       END IF;
     END IF;
 
     IF v_chunk ? 'page_end' OR (v_meta ? 'page_end') THEN
       v_raw := nullif(btrim(coalesce(v_meta->>'page_end', v_chunk->>'page_end', '')), '');
-      IF v_raw IS NOT NULL AND v_raw !~ '^-?\d+$' THEN
-        RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'page_end');
+      IF v_raw IS NOT NULL THEN
+        IF v_raw !~ '^[0-9]{1,6}$' THEN
+          RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'page_end');
+        END IF;
+        v_page_num := v_raw::int;
       END IF;
     END IF;
 
     IF v_chunk ? 'page' OR (v_meta ? 'page') THEN
       v_raw := nullif(btrim(coalesce(v_meta->>'page', v_chunk->>'page', '')), '');
-      IF v_raw IS NOT NULL AND v_raw !~ '^-?\d+$' THEN
-        RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'page');
+      IF v_raw IS NOT NULL THEN
+        IF v_raw !~ '^[0-9]{1,6}$' THEN
+          RETURN jsonb_build_object('ok', false, 'error', 'invalid_chunk', 'field', 'page');
+        END IF;
+        v_page_num := v_raw::int;
       END IF;
     END IF;
   END LOOP;
@@ -252,11 +262,8 @@ BEGIN
     RETURN v_validation;
   END IF;
 
-  v_incoming_chunker := coalesce(nullif(btrim(coalesce(p_doc->>'chunker', '')), ''), 'md-sections-v1');
-
   IF p_doc ? 'content_markdown' THEN
     v_content_markdown := nullif(p_doc->>'content_markdown', '');
-    -- Match lib/document-chunking.ts documentContentHash (CRLF → LF, trim, leading BOM).
     v_normalized_md := regexp_replace(coalesce(v_content_markdown, ''), E'\r\n', E'\n', 'g');
     v_normalized_md := regexp_replace(
       v_normalized_md,
@@ -297,6 +304,13 @@ BEGIN
     FROM public.stortinget_issue_documents d
     WHERE d.issue_id = v_issue_id
       AND d.document_id = v_document_id;
+
+    -- Chunkerless payload keeps stored chunker for compare/write; first insert defaults to md-sections-v1.
+    IF p_doc ? 'chunker' THEN
+      v_incoming_chunker := coalesce(nullif(btrim(coalesce(p_doc->>'chunker', '')), ''), 'md-sections-v1');
+    ELSE
+      v_incoming_chunker := coalesce(nullif(btrim(v_existing_chunker), ''), 'md-sections-v1');
+    END IF;
 
     IF v_content_hash IS NOT NULL
       AND v_existing_hash IS NOT NULL
@@ -340,7 +354,7 @@ BEGIN
       nullif(btrim(coalesce(p_doc->>'markdown_source', '')), ''),
       CASE WHEN p_doc ? 'page_count' THEN (p_doc->>'page_count')::int ELSE NULL END,
       nullif(btrim(coalesce(p_doc->>'ingest_version', '')), ''),
-      nullif(btrim(coalesce(p_doc->>'chunker', '')), ''),
+      v_incoming_chunker,
       nullif(btrim(coalesce(p_doc->>'pdf_url', '')), ''),
       coalesce(v_ingest_status, 'pending'),
       'pending',
@@ -378,7 +392,7 @@ BEGIN
       markdown_source = CASE WHEN p_doc ? 'markdown_source' THEN nullif(btrim(p_doc->>'markdown_source'), '') ELSE public.stortinget_issue_documents.markdown_source END,
       page_count = CASE WHEN p_doc ? 'page_count' THEN (p_doc->>'page_count')::int ELSE public.stortinget_issue_documents.page_count END,
       ingest_version = CASE WHEN p_doc ? 'ingest_version' THEN nullif(btrim(p_doc->>'ingest_version'), '') ELSE public.stortinget_issue_documents.ingest_version END,
-      chunker = CASE WHEN p_doc ? 'chunker' THEN nullif(btrim(p_doc->>'chunker'), '') ELSE public.stortinget_issue_documents.chunker END,
+      chunker = v_incoming_chunker,
       pdf_url = CASE WHEN p_doc ? 'pdf_url' THEN nullif(btrim(p_doc->>'pdf_url'), '') ELSE public.stortinget_issue_documents.pdf_url END,
       ingest_status = coalesce(v_ingest_status, public.stortinget_issue_documents.ingest_status),
       chunks_status = 'pending',
@@ -508,6 +522,12 @@ BEGIN
   WHERE d.hearing_id = v_hearing_id
     AND d.external_key = v_document_id;
 
+  IF p_doc ? 'chunker' THEN
+    v_incoming_chunker := coalesce(nullif(btrim(coalesce(p_doc->>'chunker', '')), ''), 'md-sections-v1');
+  ELSE
+    v_incoming_chunker := coalesce(nullif(btrim(v_existing_chunker), ''), 'md-sections-v1');
+  END IF;
+
   IF v_content_hash IS NOT NULL
     AND v_existing_hash IS NOT NULL
     AND v_content_hash = v_existing_hash
@@ -600,15 +620,7 @@ BEGIN
     markdown = CASE WHEN p_doc ? 'content_markdown' THEN v_content_markdown ELSE public.hearing_documents.markdown END,
     content_markdown = CASE WHEN p_doc ? 'content_markdown' THEN v_content_markdown ELSE public.hearing_documents.content_markdown END,
     content_hash = coalesce(v_content_hash, public.hearing_documents.content_hash),
-    chunker = CASE
-      WHEN p_doc ? 'chunker'
-        THEN coalesce(
-          nullif(btrim(coalesce(p_doc->>'chunker', '')), ''),
-          public.hearing_documents.chunker,
-          'md-sections-v1'
-        )
-      ELSE public.hearing_documents.chunker
-    END,
+    chunker = v_incoming_chunker,
     page_count = CASE
       WHEN p_doc ? 'page_count' AND p_doc->>'page_count' IS NOT NULL
         THEN (p_doc->>'page_count')::int

@@ -127,7 +127,9 @@ assert.match(cardOut, /Komiteens merknader/);
 assert.doesNotMatch(cardOut, /<!--/);
 assert.match(cardOut, /Viktig og lenke/);
 assert.doesNotMatch(cardOut, /\*\*/);
-assert.equal(formatChunkExcerptForDisplay('Produkt 2*4*6 mm'), 'Produkt 2*4*6 mm');
 assert.equal(formatChunkExcerptForDisplay('a *b* c *d*'), 'a b c d');
+assert.equal(formatChunkExcerptForDisplay('**to ord**'), 'to ord');
+assert.equal(formatChunkExcerptForDisplay('*a b*'), 'a b');
+assert.equal(formatChunkExcerptForDisplay('Produkt 2*4*6 mm'), 'Produkt 2*4*6 mm');
 
 console.log('chat/chunk-excerpt.test.ts: ok');
