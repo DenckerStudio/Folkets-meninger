@@ -178,6 +178,8 @@
     "10005920"
   ],
   "distractorCount": 12,
+  "distractorSessionIds": ["2023-2024", "2024-2025", "2025-2026", "2026-2027", "2022-2023"],
+  "hearingSessionIds": ["2024-2025", "2025-2026", "2026-2027"],
   "maxDocumentsPerIssue": 2,
   "maxPublicationChars": 120000
 }

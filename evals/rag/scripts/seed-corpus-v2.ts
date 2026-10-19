@@ -5,26 +5,26 @@ import { chunkDocument } from '@/lib/document-chunking';
 import { buildDocumentChunkMetadata, documentContentHash } from '@/lib/document-chunking';
 import { parseSakDocuments } from '@/lib/stortinget-documents';
 import { fetchPublikasjonHtml } from '@/lib/stortinget-publikasjon';
-import type { StortingetHoring } from '@/lib/stortinget-horinger';
 import {
-  getHoringsprogramApiUrl,
-  hearingDocumentsFromExport,
-  mapHearingToDbRow,
-  type StortingetHoringsprogram,
-} from '@/lib/stortinget-hearing-export';
+  fetchStortingetHoringerForSessions,
+  type StortingetHoring,
+} from '@/lib/stortinget-horinger';
+import { getHoringsprogramApiUrl, type StortingetHoringsprogram } from '@/lib/stortinget-hearing-export';
+import { resolveHearingDocumentsForIngest } from '@/lib/stortinget-hearing-document-fetch';
+import { fetchVoteringRagSummaryText } from '@/lib/stortinget-votering-rag';
+import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 import { chunkDocumentTextBaseline } from '../lib/baseline-chunking';
 import type { EvalVariant } from '../lib/db';
 import { embedBgeM3, embedNomic } from '../lib/embed';
-import {
-  aggregatePartyStancesFromVoteringRows,
-  formatVoteringSummary,
-} from '../lib/v2-party-score';
+import { seedDistractorIssues, loadDistractorManifest } from '../lib/seed-v2-distractors';
 import { v2CorpusConfigPath, v2FixtureBodiesPath, v2SnapshotPath } from '../lib/v2-paths';
 
 type CorpusV2Config = {
   sessionId: string;
   coreIssues: string[];
   hearings: string[];
+  distractorSessionIds?: string[];
+  hearingSessionIds?: string[];
   maxDocumentsPerIssue: number;
   maxPublicationChars: number;
 };
@@ -75,14 +75,6 @@ async function fetchSakJson(id: string): Promise<Record<string, unknown> | null>
   return data.sak ?? null;
 }
 
-async function fetchHearingsForSession(sessionId: string): Promise<StortingetHoring[]> {
-  const url = `https://data.stortinget.no/eksport/horinger?sesjonid=${encodeURIComponent(sessionId)}&format=json`;
-  const res = await fetchWithRetry(url);
-  if (!res.ok) return [];
-  const data = (await res.json()) as { horinger_liste?: StortingetHoring[] };
-  return data.horinger_liste ?? [];
-}
-
 async function fetchPublication(exportId: string, maxChars: number): Promise<string | null> {
   for (let i = 0; i < 4; i += 1) {
     const pub = await fetchPublikasjonHtml(exportId);
@@ -92,70 +84,52 @@ async function fetchPublication(exportId: string, maxChars: number): Promise<str
   return null;
 }
 
-async function fetchVoteringSummaryText(voteringId: string, tema: string): Promise<string | null> {
-  const url = `https://data.stortinget.no/eksport/voteringsresultat?voteringid=${encodeURIComponent(voteringId)}&format=json`;
-  const res = await fetchWithRetry(url);
-  if (!res.ok) return null;
-  const data = (await res.json()) as {
-    voteringsresultat_liste?: Array<{ votering?: number; representant?: { parti?: { id?: string } } }>;
-  };
-  const rows =
-    data.voteringsresultat_liste?.map((r) => ({
-      partiId: String(r.representant?.parti?.id ?? ''),
-      votering: Number(r.votering ?? 0),
-    })) ?? [];
-  const stances = aggregatePartyStancesFromVoteringRows(rows.filter((r) => r.partiId));
-  if (Object.keys(stances).length === 0) return null;
-  return formatVoteringSummary(voteringId, tema, stances);
-}
-
 function snapshotFallbackBody(issue: SnapshotIssue): string {
   return [issue.tittel, issue.henvisning ?? '', issue.komite ?? ''].filter(Boolean).join('\n\n').trim();
+}
+
+async function buildHearingBodies(
+  cfg: CorpusV2Config,
+  hearingIds: string[],
+  liveById: Map<string, StortingetHoring>,
+): Promise<{ hearingBodies: Record<string, string>; excludedHearings: Array<{ id: string; reason: string }> }> {
+  const hearingBodies: Record<string, string> = {};
+  const excludedHearings: Array<{ id: string; reason: string }> = [];
+  for (const hearingId of hearingIds) {
+    const hearing = liveById.get(hearingId);
+    if (!hearing) {
+      excludedHearings.push({ id: hearingId, reason: 'missing_from_live_horinger_export' });
+      continue;
+    }
+    let program: StortingetHoringsprogram | null = null;
+    try {
+      const res = await fetchWithRetry(getHoringsprogramApiUrl(hearingId));
+      if (res.ok) program = (await res.json()) as StortingetHoringsprogram;
+    } catch {
+      program = null;
+    }
+    const resolved = await resolveHearingDocumentsForIngest(hearing, program, cfg.maxPublicationChars);
+    if (resolved.length === 0) {
+      excludedHearings.push({ id: hearingId, reason: 'no_hearing_documents_in_export' });
+      continue;
+    }
+    hearingBodies[hearingId] = resolved.map((r) => r.markdown).join('\n\n');
+  }
+  return { hearingBodies, excludedHearings };
 }
 
 async function loadOrBuildBodies(
   cfg: CorpusV2Config,
   snapshotIssues: SnapshotIssue[],
   hearingIds: string[],
+  liveById: Map<string, StortingetHoring>,
 ): Promise<V2BodiesFixture> {
   const fixturePath = v2FixtureBodiesPath();
   let cached: V2BodiesFixture | null = null;
   if (existsSync(fixturePath) && process.env.RAG_EVAL_V2_LIVE_FETCH !== '1') {
     cached = JSON.parse(readFileSync(fixturePath, 'utf8')) as V2BodiesFixture;
     if (process.env.RAG_EVAL_V2_SKIP_ISSUE_FETCH === '1') {
-      const liveHearings = await fetchHearingsForSession(cfg.sessionId);
-      const liveIds = new Set(liveHearings.map((h) => String(h.id)));
-      const hearingBodies: Record<string, string> = {};
-      const excludedHearings: Array<{ id: string; reason: string }> = [];
-      for (const hearingId of hearingIds) {
-        if (!liveIds.has(hearingId)) {
-          excludedHearings.push({ id: hearingId, reason: 'missing_from_live_horinger_export' });
-          continue;
-        }
-        const hearing = liveHearings.find((h) => String(h.id) === hearingId)!;
-        let program: StortingetHoringsprogram | null = null;
-        try {
-          const res = await fetchWithRetry(getHoringsprogramApiUrl(hearingId));
-          if (res.ok) program = (await res.json()) as StortingetHoringsprogram;
-        } catch {
-          program = null;
-        }
-        const drafts = hearingDocumentsFromExport(hearing, program);
-        const parts: string[] = [];
-        for (const draft of drafts) {
-          let markdown = draft.markdown;
-          if (!markdown && draft.sourceUrl) {
-            const m = draft.sourceUrl.match(/publikasjonid=([^&]+)/i);
-            if (m?.[1]) markdown = await fetchPublication(m[1], cfg.maxPublicationChars);
-          }
-          if (markdown) parts.push(markdown.slice(0, cfg.maxPublicationChars));
-        }
-        if (parts.length === 0) {
-          excludedHearings.push({ id: hearingId, reason: 'no_hearing_documents_in_export' });
-          continue;
-        }
-        hearingBodies[hearingId] = parts.join('\n\n');
-      }
+      const { hearingBodies, excludedHearings } = await buildHearingBodies(cfg, hearingIds, liveById);
       return { ...cached, hearingBodies, excludedHearings, fetchedAt: new Date().toISOString() };
     }
     return cached;
@@ -198,39 +172,7 @@ async function loadOrBuildBodies(
     if (issues.length % 10 === 0) console.log(`[v2-seed] fetched issues ${issues.length}/${cfg.coreIssues.length}`);
   }
 
-  const liveHearings = await fetchHearingsForSession(cfg.sessionId);
-  const liveIds = new Set(liveHearings.map((h) => String(h.id)));
-  const hearingBodies: Record<string, string> = {};
-  const excludedHearings: Array<{ id: string; reason: string }> = [];
-  for (const hearingId of hearingIds) {
-    if (!liveIds.has(hearingId)) {
-      excludedHearings.push({ id: hearingId, reason: 'missing_from_live_horinger_export' });
-      continue;
-    }
-    const hearing = liveHearings.find((h) => String(h.id) === hearingId)!;
-    let program: StortingetHoringsprogram | null = null;
-    try {
-      const res = await fetchWithRetry(getHoringsprogramApiUrl(hearingId));
-      if (res.ok) program = (await res.json()) as StortingetHoringsprogram;
-    } catch {
-      program = null;
-    }
-    const drafts = hearingDocumentsFromExport(hearing, program);
-    const parts: string[] = [];
-    for (const draft of drafts) {
-      let markdown = draft.markdown;
-      if (!markdown && draft.sourceUrl) {
-        const m = draft.sourceUrl.match(/publikasjonid=([^&]+)/i);
-        if (m?.[1]) markdown = await fetchPublication(m[1], cfg.maxPublicationChars);
-      }
-      if (markdown) parts.push(markdown.slice(0, cfg.maxPublicationChars));
-    }
-    if (parts.length === 0) {
-      excludedHearings.push({ id: hearingId, reason: 'no_hearing_documents_in_export' });
-      continue;
-    }
-    hearingBodies[hearingId] = parts.join('\n\n');
-  }
+  const { hearingBodies, excludedHearings } = await buildHearingBodies(cfg, hearingIds, liveById);
 
   const fixture: V2BodiesFixture = {
     fetchedAt: new Date().toISOString(),
@@ -251,7 +193,12 @@ export async function seedCorpusV2(pool: pg.Pool, variant: EvalVariant): Promise
     voteringer: SnapshotVotering[];
   };
 
-  const bodies = await loadOrBuildBodies(cfg, snapshot.issues, cfg.hearings);
+  const hearingSessions =
+    cfg.hearingSessionIds ?? ['2024-2025', '2025-2026', '2026-2027', cfg.sessionId];
+  const liveHearings = await fetchStortingetHoringerForSessions(hearingSessions);
+  const liveById = new Map(liveHearings.map((h) => [String(h.id), h]));
+
+  const bodies = await loadOrBuildBodies(cfg, snapshot.issues, cfg.hearings, liveById);
   const issueMeta = new Map(snapshot.issues.map((i) => [i.id, i]));
   let documentCount = 0;
   let chunkCount = 0;
@@ -326,6 +273,18 @@ export async function seedCorpusV2(pool: pg.Pool, variant: EvalVariant): Promise
     }
   }
 
+  const coreSet = new Set(cfg.coreIssues.map(String));
+  let distractorStats = { issues: 0, chunks: 0, documents: 0 };
+  if (process.env.RAG_EVAL_V2_SKIP_DISTRACTOR_SEED !== '1') {
+    distractorStats = await seedDistractorIssues({
+      pool,
+      variant,
+      coreIssueIds: coreSet,
+      maxPublicationChars: cfg.maxPublicationChars,
+      maxDocumentsPerIssue: cfg.maxDocumentsPerIssue,
+    });
+  }
+
   if (variant === 'stack') {
     const voteringBySak = new Map<string, SnapshotVotering[]>();
     for (const v of snapshot.voteringer) {
@@ -333,9 +292,21 @@ export async function seedCorpusV2(pool: pg.Pool, variant: EvalVariant): Promise
       list.push(v);
       voteringBySak.set(v.sakId, list);
     }
+    if (process.env.RAG_EVAL_V2_VOTERING_ALL_CORE === '1') {
+      for (const sakId of cfg.coreIssues) {
+        const live = await fetchSakVoteringer(String(sakId));
+        for (const v of live) {
+          const id = String(v.votering_id);
+          if (voteringBySak.get(String(sakId))?.some((x) => x.id === id)) continue;
+          const list = voteringBySak.get(String(sakId)) ?? [];
+          list.push({ id, sakId: String(sakId), tema: v.votering_tema ?? 'Votering', vedtatt: Boolean(v.vedtatt) });
+          voteringBySak.set(String(sakId), list);
+        }
+      }
+    }
     for (const [sakId, voteringer] of voteringBySak) {
       for (const v of voteringer) {
-        const summary = await fetchVoteringSummaryText(v.id, v.tema);
+        const summary = await fetchVoteringRagSummaryText(v.id, v.tema);
         if (!summary) continue;
         const docId = `votering:${v.id}`;
         await pool.query(`DELETE FROM document_chunks WHERE issue_id=$1 AND document_id=$2`, [sakId, docId]);
@@ -351,12 +322,11 @@ export async function seedCorpusV2(pool: pg.Pool, variant: EvalVariant): Promise
       }
     }
 
-    const liveHearings = await fetchHearingsForSession(cfg.sessionId);
     for (const hearingId of cfg.hearings) {
       if (bodies.excludedHearings.some((e) => e.id === hearingId)) continue;
       const markdown = bodies.hearingBodies[hearingId];
       if (!markdown) continue;
-      const hearing = liveHearings.find((h) => String(h.id) === hearingId);
+      const hearing = liveById.get(hearingId);
       if (!hearing) continue;
       await pool.query(
         `INSERT INTO stortinget_hearings (id, tittel, sesjon, komite_navn, skriftlig_innspill_url, detail_json, last_synced_at)
@@ -394,12 +364,18 @@ export async function seedCorpusV2(pool: pg.Pool, variant: EvalVariant): Promise
     }
   }
 
+  const manifest = loadDistractorManifest();
+  const totalIssuesInIndex = manifest.issueCount;
   const meta = {
     dataset: 'v2',
     variant,
-    issues: bodies.issues.length,
-    documents: documentCount,
-    chunks: chunkCount,
+    coreIssues: bodies.issues.length,
+    distractorIssues: distractorStats.issues,
+    issues: bodies.issues.length + distractorStats.issues,
+    corpusIssues: totalIssuesInIndex,
+    distractorManifestSessions: manifest.sessions,
+    documents: documentCount + distractorStats.documents,
+    chunks: chunkCount + distractorStats.chunks,
     hearings: Object.keys(bodies.hearingBodies).length,
     excludedHearings: bodies.excludedHearings,
     voteringChunks,

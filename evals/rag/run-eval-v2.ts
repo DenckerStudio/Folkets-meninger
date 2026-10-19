@@ -106,7 +106,11 @@ export async function runEvalV2(split: 'dev' | 'test', variant: EvalVariant = 's
   );
 
   const pool = createPool(databaseForVariant(variant));
-  const questions = loadQuestions(split).filter((q) => !q.hearingId || !excludedHearings.has(q.hearingId));
+  const allQuestions = loadQuestions(split);
+  const skippedHearingQuestions = allQuestions.filter(
+    (q) => q.hearingId && excludedHearings.has(q.hearingId),
+  ).length;
+  const questions = allQuestions.filter((q) => !q.hearingId || !excludedHearings.has(q.hearingId));
   const titleCorpus = await loadTitleCorpus(pool);
   const fullTextCorpus = await loadFullTextCorpus(pool);
 
@@ -229,6 +233,8 @@ export async function runEvalV2(split: 'dev' | 'test', variant: EvalVariant = 's
     variant,
     seedCounts,
     excludedQuestionHearings: [...excludedHearings],
+    skippedQuestions: skippedHearingQuestions,
+    totalQuestions: allQuestions.length,
     recallAt5: chunkEval ? recall5 / chunkEval : 0,
     chunkQuestions: chunkEval,
     partyHitRate: partyEval ? partyHits / partyEval : 0,

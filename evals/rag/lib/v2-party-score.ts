@@ -1,5 +1,15 @@
 /** Party vote scoring for voteringer_parti (from retrieved text, not questions.json). */
 
+import type { PartyStance } from '@/lib/stortinget-votering-rag';
+import {
+  aggregatePartyStancesFromVoteringRows,
+  formatVoteringRagSummary,
+} from '@/lib/stortinget-votering-rag';
+
+export type { PartyStance };
+export { aggregatePartyStancesFromVoteringRows };
+export const formatVoteringSummary = formatVoteringRagSummary;
+
 const PARTY_ALIASES: Record<string, string[]> = {
   A: ['arbeiderpartiet', ' arbeider', ' ap '],
   H: ['høyre', 'hoyre', ' h '],
@@ -11,35 +21,6 @@ const PARTY_ALIASES: Record<string, string[]> = {
   KrF: ['kristelig folkeparti', 'krf', ' krf '],
   V: [' venstre', ' v '],
 };
-
-export type PartyStance = 'for' | 'mot';
-
-export function aggregatePartyStancesFromVoteringRows(
-  rows: Array<{ partiId: string; votering: number }>,
-): Record<string, PartyStance> {
-  const counts: Record<string, { for: number; mot: number }> = {};
-  for (const row of rows) {
-    const p = row.partiId;
-    if (!counts[p]) counts[p] = { for: 0, mot: 0 };
-    if (row.votering === 1) counts[p].for += 1;
-    else if (row.votering === 3) counts[p].mot += 1;
-  }
-  const out: Record<string, PartyStance> = {};
-  for (const [p, c] of Object.entries(counts)) {
-    if (c.for === 0 && c.mot === 0) continue;
-    out[p] = c.mot >= c.for ? 'mot' : 'for';
-  }
-  return out;
-}
-
-export function formatVoteringSummary(
-  voteringId: string,
-  tema: string,
-  stances: Record<string, PartyStance>,
-): string {
-  const lines = Object.entries(stances).map(([p, s]) => `${p}: ${s}`);
-  return `Votering ${voteringId}. ${tema}\nPartiene stemte: ${lines.join(', ')}.`;
-}
 
 export function scorePartyPositionsInText(
   text: string,
@@ -58,8 +39,12 @@ export function scorePartyPositionsInText(
       const idx = hay.indexOf(needle);
       if (idx < 0) continue;
       const window = hay.slice(Math.max(0, idx - 60), idx + needle.length + 80);
-      const hasFor = /\bfor\b|:\s*for|stemte for|votering[:\s]+1/.test(window);
-      const hasMot = /\bmot\b|:\s*mot|stemte mot|votering[:\s]+3/.test(window);
+      const hasFor = /\bfor\b|:\s*for|stemte for|votering[:\s]+1|arbeiderpartiet \(a\): for|høyre \(h\): for/i.test(
+        window,
+      );
+      const hasMot = /\bmot\b|:\s*mot|stemte mot|votering[:\s]+3|arbeiderpartiet \(a\): mot|høyre \(h\): mot/i.test(
+        window,
+      );
       if (expected === 'for' && hasFor) found = true;
       if (expected === 'mot' && hasMot) found = true;
       if (found) break;
