@@ -2,9 +2,9 @@ import type { ComponentType } from 'react';
 import {
   BarChart3,
   Bell,
-  FileText,
   LayoutDashboard,
   Lightbulb,
+  Radar,
   Users,
 } from 'lucide-react';
 import { CivicBubble, CivicHeart } from '@/components/icons/civic';
@@ -29,11 +29,11 @@ export const adminNavItems: AdminNavItem[] = [
     status: 'active',
   },
   {
-    id: 'blog',
-    title: 'Blogg',
-    description: 'Payload CMS — utkast, godkjenning og publisering',
-    href: routes.adminBlog,
-    icon: FileText,
+    id: 'oppfanget',
+    title: 'Oppfanget',
+    description: 'Meldinger og aksjoner fra fangstpipelinen',
+    href: routes.adminOppfanget,
+    icon: Radar,
     status: 'active',
   },
   {

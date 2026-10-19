@@ -22,6 +22,9 @@ export function blogRssPath(): string {
   return `${BLOG_BASE_PATH}/rss.xml`;
 }
 
+/** Fallback when CMS_URL is unset (e.g. local dev). */
 export function adminBlogPostUrl(postId: string): string {
-  return absoluteUrl(`/dashboard/admin/blog?post=${encodeURIComponent(postId)}`);
+  const base = process.env.CMS_URL?.replace(/\/+$/, '');
+  if (base) return `${base}/admin/collections/posts/${postId}`;
+  return absoluteUrl(`/blogg`);
 }
