@@ -21,6 +21,7 @@ import {
   Users,
   Vote,
 } from 'lucide-react';
+import { formatChunkExcerptForDisplay } from '@/lib/chat/chunk-excerpt';
 import { routes } from '@/lib/routes';
 
 /**
@@ -368,7 +369,7 @@ function SakContextCard({ output }: { output: SakContextOutput }) {
               </span>
               {chunk.content ? (
                 <p className="mt-0.5 line-clamp-4 whitespace-pre-wrap text-foreground">
-                  {chunk.content}
+                  {formatChunkExcerptForDisplay(chunk.content)}
                 </p>
               ) : null}
             </li>
