@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { BlogCmsUnavailable } from '@/components/blog/blog-cms-unavailable';
+import { BlogCmsUnavailableShell } from '@/components/blog/blog-cms-unavailable-shell';
 import { BlogIndexView } from '@/components/blog/blog-index-view';
 import { blogCmsOrUnavailable } from '@/lib/blog/cms-read-runtime';
 import { loadBlogIndexPageData } from '@/lib/blog/index-page-loaders';
@@ -29,7 +29,7 @@ export default async function BloggPageNumber({ params }: PageProps) {
   if (!Number.isFinite(page) || page < 2) notFound();
 
   const loaded = await blogCmsOrUnavailable(() => loadBlogIndexPageData({ page }));
-  if (loaded.unavailable) return <BlogCmsUnavailable />;
+  if (loaded.unavailable) return <BlogCmsUnavailableShell />;
 
   const { posts, totalPages, categories } = loaded.data;
   if (isBlogPageOutOfRange(page, totalPages)) notFound();

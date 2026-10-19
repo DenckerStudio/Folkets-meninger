@@ -1,9 +1,11 @@
 import { buildSignedHeaders } from '@/lib/cms/hmac';
 import { getCmsAgentKey, getCmsBaseUrl } from '@/lib/cms/payload-client';
 
+export type BlogPostCmsStatus = 'draft' | 'published';
+
 export type BlogOpsLookupResult =
   | { found: false }
-  | { found: true; id: string; slug: string; adminUrl: string };
+  | { found: true; id: string; slug: string; adminUrl: string; cmsStatus: BlogPostCmsStatus };
 
 export async function cmsBlogOpsLookup(args: {
   slug?: string;
@@ -27,8 +29,16 @@ export async function cmsBlogOpsLookup(args: {
       cache: 'no-store',
     });
     if (!res.ok) return null;
-    const json = (await res.json()) as BlogOpsLookupResult;
-    return json;
+    const json = (await res.json()) as BlogOpsLookupResult & { cmsStatus?: string };
+    if (!json || typeof json !== 'object') return null;
+    if (json.found !== true) return { found: false };
+    return {
+      found: true,
+      id: json.id,
+      slug: json.slug,
+      adminUrl: json.adminUrl,
+      cmsStatus: json.cmsStatus === 'published' ? 'published' : 'draft',
+    };
   } catch (error) {
     console.error('[cms] blog-ops lookup failed', error);
     return null;

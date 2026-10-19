@@ -32,6 +32,7 @@ export async function POST(request: Request) {
           ...(result.id ? { id: result.id } : {}),
           ...(result.slug ? { slug: result.slug } : {}),
           ...(result.adminUrl ? { adminUrl: result.adminUrl } : {}),
+          ...(result.cmsStatus ? { cmsStatus: result.cmsStatus } : {}),
         },
         { status: result.status },
       );
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
       slug: result.slug,
       created: result.created,
       adminUrl: result.adminUrl,
+      cmsStatus: result.cmsStatus,
     });
   } catch (error) {
     console.error('[ops/blog/drafts]', error);

@@ -12,7 +12,7 @@ export function BlogCmsUnavailable() {
         <h1 className="text-2xl font-bold text-[#001433]">Bloggen er midlertidig utilgjengelig</h1>
         <p className="mt-4 text-sm leading-relaxed text-[#001433]/70">
           Vi klarte ikke å hente artikler fra redaksjonssystemet akkurat nå. Prøv igjen om litt, eller gå
-          tilbake til forsiden.
+          tilbake til bloggforsiden.
         </p>
         <Link
           href={routes.blogg}

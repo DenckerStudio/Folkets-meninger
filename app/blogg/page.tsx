@@ -1,4 +1,4 @@
-import { BlogCmsUnavailable } from '@/components/blog/blog-cms-unavailable';
+import { BlogCmsUnavailableShell } from '@/components/blog/blog-cms-unavailable-shell';
 import { BlogIndexView } from '@/components/blog/blog-index-view';
 import { blogCmsOrUnavailable } from '@/lib/blog/cms-read-runtime';
 import { loadBlogIndexPageData } from '@/lib/blog/index-page-loaders';
@@ -16,7 +16,7 @@ export const metadata = buildPageMetadata({
 
 export default async function BloggIndexPage() {
   const loaded = await blogCmsOrUnavailable(() => loadBlogIndexPageData({ page: 1 }));
-  if (loaded.unavailable) return <BlogCmsUnavailable />;
+  if (loaded.unavailable) return <BlogCmsUnavailableShell />;
 
   const { posts, totalPages, categories, featured } = loaded.data;
 

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { BlogCmsUnavailable } from '@/components/blog/blog-cms-unavailable';
+import { BlogCmsUnavailableShell } from '@/components/blog/blog-cms-unavailable-shell';
 import { BlogIndexView } from '@/components/blog/blog-index-view';
 import { blogCmsOrUnavailable } from '@/lib/blog/cms-read-runtime';
 import { loadBlogIndexPageData } from '@/lib/blog/index-page-loaders';
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function BloggTemaPage({ params }: PageProps) {
   const { slug } = await params;
   const loaded = await blogCmsOrUnavailable(() => loadBlogIndexPageData({ page: 1, categorySlug: slug }));
-  if (loaded.unavailable) return <BlogCmsUnavailable />;
+  if (loaded.unavailable) return <BlogCmsUnavailableShell />;
 
   const { posts, totalPages, categories } = loaded.data;
   const category = categories.find((item) => item.slug === slug);

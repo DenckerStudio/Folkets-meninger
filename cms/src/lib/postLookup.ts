@@ -1,9 +1,16 @@
 import type { Payload } from 'payload';
 
+export type PostCmsStatus = 'draft' | 'published';
+
 export type PostLookupHit = {
   id: string;
   slug: string;
+  cmsStatus: PostCmsStatus;
 };
+
+function resolveCmsStatus(value: unknown): PostCmsStatus {
+  return value === 'published' ? 'published' : 'draft';
+}
 
 export async function findPostBySlugOrSourceEvent(
   payload: Payload,
@@ -23,7 +30,11 @@ export async function findPostBySlugOrSourceEvent(
     });
     const doc = byEvent.docs[0];
     if (doc?.id) {
-      return { id: String(doc.id), slug: String(doc.slug) };
+      return {
+        id: String(doc.id),
+        slug: String(doc.slug),
+        cmsStatus: resolveCmsStatus((doc as { _status?: string })._status),
+      };
     }
   }
 
@@ -38,7 +49,11 @@ export async function findPostBySlugOrSourceEvent(
     });
     const doc = bySlug.docs[0];
     if (doc?.id) {
-      return { id: String(doc.id), slug: String(doc.slug) };
+      return {
+        id: String(doc.id),
+        slug: String(doc.slug),
+        cmsStatus: resolveCmsStatus((doc as { _status?: string })._status),
+      };
     }
   }
 

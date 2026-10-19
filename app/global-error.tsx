@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 
 export default function GlobalError({
   error,
@@ -19,15 +20,23 @@ export default function GlobalError({
         <div className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center px-4 py-16 text-center">
           <h1 className="text-2xl font-bold tracking-tight">Noe gikk galt</h1>
           <p className="mt-3 text-sm leading-relaxed text-[#001433]/70">
-            En uventet feil oppstod. Prøv å laste siden på nytt.
+            En uventet feil oppstod. Prøv å laste siden på nytt, eller gå til forsiden.
           </p>
-          <button
-            type="button"
-            onClick={reset}
-            className="mt-8 inline-flex min-h-11 items-center justify-center rounded-full bg-[#00205b] px-5 text-sm font-semibold text-white hover:bg-[#00205b]/90"
-          >
-            Prøv igjen
-          </button>
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={reset}
+              className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#00205b] px-5 text-sm font-semibold text-white hover:bg-[#00205b]/90"
+            >
+              Prøv igjen
+            </button>
+            <Link
+              href="/"
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#00205b]/20 px-5 text-sm font-semibold text-[#00205b] hover:bg-[#00205b]/5"
+            >
+              Til forsiden
+            </Link>
+          </div>
         </div>
       </body>
     </html>

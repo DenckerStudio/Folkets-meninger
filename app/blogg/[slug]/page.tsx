@@ -19,7 +19,7 @@ import {
   loadBlogRelatedHoringCards,
   loadBlogRelatedSakCards,
 } from '@/lib/blog/related-context';
-import { BlogCmsUnavailable } from '@/components/blog/blog-cms-unavailable';
+import { BlogCmsUnavailableShell } from '@/components/blog/blog-cms-unavailable-shell';
 import { blogCmsOrUnavailable } from '@/lib/blog/cms-read-runtime';
 import {
   getPublishedBlogPostBySlug,
@@ -75,7 +75,7 @@ export default async function BlogPostPage({ params }: PageProps) {
     return { post, saker, horinger, morePosts };
   });
 
-  if (loaded.unavailable) return <BlogCmsUnavailable />;
+  if (loaded.unavailable) return <BlogCmsUnavailableShell />;
   if (!loaded.data) notFound();
 
   const { post, saker, horinger, morePosts } = loaded.data;

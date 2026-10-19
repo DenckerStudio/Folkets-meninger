@@ -17,7 +17,11 @@ import { isValidBlogSlug, normalizeBlogSlug } from '@/lib/blog/slug';
 import type { BlogCategory, BlogPostListItem, BlogPostPublic } from '@/lib/blog/types';
 import { BLOG_PAGE_SIZE } from '@/lib/blog/types';
 import { adminBlogPostUrl } from '@/lib/blog/urls';
-import { cmsBlogOpsLookup, cmsBlogOpsSocialPosted } from '@/lib/cms/blog-ops-client';
+import {
+  cmsBlogOpsLookup,
+  cmsBlogOpsSocialPosted,
+  type BlogPostCmsStatus,
+} from '@/lib/cms/blog-ops-client';
 import {
   normalizeBlogExcerpt,
   normalizeBlogTitle,
@@ -193,7 +197,14 @@ export type CreateBlogDraftInput = {
 };
 
 export type CreateBlogDraftResult =
-  | { ok: true; id: string; slug: string; created: boolean; adminUrl: string }
+  | {
+      ok: true;
+      id: string;
+      slug: string;
+      created: boolean;
+      adminUrl: string;
+      cmsStatus: BlogPostCmsStatus;
+    }
   | {
       ok: false;
       status: number;
@@ -201,6 +212,7 @@ export type CreateBlogDraftResult =
       id?: string;
       slug?: string;
       adminUrl?: string;
+      cmsStatus?: BlogPostCmsStatus;
     };
 
 export async function createBlogDraft(input: CreateBlogDraftInput): Promise<CreateBlogDraftResult> {
@@ -236,6 +248,7 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
       slug: existing.slug,
       created: false,
       adminUrl: existing.adminUrl,
+      cmsStatus: existing.cmsStatus,
     };
   }
 
@@ -315,6 +328,7 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
       id: doc.id,
       slug: doc.slug,
       adminUrl,
+      cmsStatus: 'published',
     };
   }
 
@@ -324,6 +338,7 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
     slug: doc.slug,
     created: true,
     adminUrl: `${base}/admin/collections/posts/${doc.id}`,
+    cmsStatus: 'draft',
   };
 }
 
