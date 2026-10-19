@@ -31,7 +31,8 @@
     "eval:rag:v2": "RAG_EVAL_DATASET=v2 npx tsx evals/rag/run-eval-v2.ts",
     "eval:rag:v2:harness": "RAG_EVAL_V2_FAST_CI=1 npx tsx evals/rag/run-v2-harness.ts",
     "eval:rag:v2:full": "npx tsx evals/rag/run-v2-full-harness.ts",
-    "eval:rag:v2:compare": "npx tsx evals/rag/run-v2-compare-harness.ts"
+    "eval:rag:v2:compare": "npx tsx evals/rag/run-v2-compare-harness.ts",
+    "eval:rag:v2:baseline": "npx tsx evals/rag/run-v2-baseline-eval-only.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.71",

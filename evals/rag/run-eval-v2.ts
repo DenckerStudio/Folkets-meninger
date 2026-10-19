@@ -84,12 +84,20 @@ function issueSearchHit(q: V2Question, ids: string[], titles: string[]): boolean
   return ids.length > 0;
 }
 
-async function loadTitleCorpus(pool: ReturnType<typeof createPool>): Promise<string> {
+async function loadTitleCorpus(pool: ReturnType<typeof createPool>, variant: EvalVariant): Promise<string> {
   const { rows: issues } = await pool.query<{ title: string; summary: string }>(
     `SELECT title, summary FROM stortinget_issues`,
   );
-  const { rows: hearings } = await pool.query<{ tittel: string }>(`SELECT tittel FROM stortinget_hearings`);
-  return [...issues.map((r) => `${r.title} ${r.summary}`), ...hearings.map((r) => r.tittel)].join('\n').toLowerCase();
+  let hearingTitles: string[] = [];
+  if (variant === 'stack') {
+    try {
+      const { rows: hearings } = await pool.query<{ tittel: string }>(`SELECT tittel FROM stortinget_hearings`);
+      hearingTitles = hearings.map((r) => r.tittel);
+    } catch {
+      hearingTitles = [];
+    }
+  }
+  return [...issues.map((r) => `${r.title} ${r.summary}`), ...hearingTitles].join('\n').toLowerCase();
 }
 
 async function loadFullTextCorpus(pool: ReturnType<typeof createPool>): Promise<string> {
@@ -122,7 +130,7 @@ export async function runEvalV2(split: 'dev' | 'test', variant: EvalVariant = 's
     (q) => q.hearingId && excludedHearings.has(q.hearingId),
   ).length;
   const questions = allQuestions.filter((q) => !q.hearingId || !excludedHearings.has(q.hearingId));
-  const titleCorpus = await loadTitleCorpus(pool);
+  const titleCorpus = await loadTitleCorpus(pool, variant);
   const fullTextCorpus = await loadFullTextCorpus(pool);
 
   const latencies: number[] = [];

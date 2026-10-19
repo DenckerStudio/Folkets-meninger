@@ -7,7 +7,7 @@ import { formatSideBySide, writeFinalReport } from './run-v2-report-utils';
 
 async function main(): Promise<void> {
   process.env.RAG_EVAL_V2_FAST_CI = process.env.RAG_EVAL_V2_FAST_CI ?? '1';
-  applyMigrations('stack', true);
+  applyMigrations('stack', true); // improvement level 5 (incl. sak-prefix search)
   seedCorpus('stack');
   execSync('npx tsx evals/rag/scripts/calibrate-rejection.ts', {
     stdio: 'inherit',

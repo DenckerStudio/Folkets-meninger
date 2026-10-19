@@ -12,11 +12,11 @@
     "2025-2026",
     "2026-2027"
   ],
-  "documents": 173,
-  "chunks": 800,
+  "documents": 2493,
+  "chunks": 3113,
   "hearings": 28,
   "excludedHearings": [],
-  "voteringChunks": 452,
-  "fixtureFetchedAt": "2026-10-19T21:44:45.304Z",
-  "seededAt": "2026-10-19T22:03:55.153Z"
+  "voteringChunks": 445,
+  "fixtureFetchedAt": "2026-10-19T22:43:00.399Z",
+  "seededAt": "2026-10-19T23:08:27.403Z"
 }
