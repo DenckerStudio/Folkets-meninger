@@ -18,6 +18,21 @@ npm run eval:rag
 
 Results land in `evals/rag/results/summary.md` and JSON per run.
 
+### Fixture seed (deterministic)
+
+```bash
+npm run eval:rag:fixture   # refresh evals/rag/fixtures/corpus-snapshot.json (429 backoff)
+npm run eval:rag:seed      # both DB variants from fixture unless RAG_EVAL_LIVE_FETCH=1
+```
+
+Seed uses **only** fixture document bodies and Stortinget export fields in the snapshot — no `questions.json` labels and no eval-only sak-meta chunks.
+
+### Internal vs held-out metrics
+
+Current `questions.json` is an **internal** smoke set (~80). Do **not** treat harness numbers as product targets until the held-out Stortinget corpus (169+, dev/test split) is checked in. Always **calibrate rejection on `questions-dev.json`** and report **`questions.json` as test**.
+
+Authoritative improvement row today: **`round4-issue-ilike`** in `evals/rag/results/improvement-rounds.md`.
+
 ## Judge (LAN Ollama, optional)
 
 Generation/judge is not run in CI/cloud by default. After saving answers JSON:

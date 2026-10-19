@@ -19,7 +19,6 @@ const IMPROVEMENT_ROUNDS: ImprovementRound[] = [
   { label: 'round2-prefix-trgm', level: '2' },
   { label: 'round3-rerank-reject', level: '3', rerank: true },
   { label: 'round4-issue-ilike', level: '4', rerank: true },
-  { label: 'round5-seed-meta', level: '4', rerank: true, reseedStack: true },
 ];
 
 const HEADER =

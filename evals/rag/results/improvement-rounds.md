@@ -1,3 +1,9 @@
+**Internal dataset only** (`questions.json`, ~80 items). Not a held-out target until the Stortinget-derived set (169+) lands. Calibrate on `questions-dev.json`; report test without claiming product targets.
+
+**Authoritative stack status (no seed leakage):** `round4-issue-ilike` — R@5 **80.0%** (below 85% goal on this thin set).
+
+`round5-seed-meta` is **withdrawn** (eval-only sak-meta / hearing keyword injection; not production ingest).
+
 | Round | Seed issues | Seed docs | Seed chunks | R@5 | MRR | Prefix | Finnes-ikke reject | Issue search | Retrieval p95 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | baseline-main | 24 | 35 | 482 | 60.0% | 0.528 | 85.7% | 0.0% | 48.3% | 44 |
@@ -6,4 +12,4 @@
 | round2-prefix-trgm | 24 | 37 | 449 | 80.0% | 0.783 | 85.7% | 0.0% | 75.9% | 188 |
 | round3-rerank-reject | 24 | 37 | 449 | 80.0% | 0.783 | 85.7% | 100.0% | 79.3% | 201 |
 | round4-issue-ilike | 24 | 37 | 449 | 80.0% | 0.783 | 85.7% | 100.0% | 89.7% | 191 |
-| round5-seed-meta | 25 | 62 | 474 | 100.0% | 0.983 | 100.0% | 100.0% | 96.4% | 177 |
+| ~~round5-seed-meta~~ | — | — | — | ~~invalid~~ | — | — | — | — | — |
