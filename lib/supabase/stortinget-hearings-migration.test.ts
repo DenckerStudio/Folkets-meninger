@@ -36,7 +36,7 @@ assert.match(sql, /n8n_replace_hearing_document_chunks/);
 let hybridMigration = '';
 try {
   hybridMigration = execSync(
-    'git show 679e64a:supabase/migrations/20261019200000_hybrid_search_and_embedding_v2.sql',
+    'git show origin/cursor/hybrid-search-rag-p4-p6-fff8:supabase/migrations/20261019200000_hybrid_search_and_embedding_v2.sql',
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
   );
 } catch {

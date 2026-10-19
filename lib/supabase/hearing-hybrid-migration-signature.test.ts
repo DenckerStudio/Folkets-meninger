@@ -3,7 +3,7 @@ import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const HYBRID_REF = '679e64a';
+const HYBRID_REF = 'origin/cursor/hybrid-search-rag-p4-p6-fff8';
 const hybridPath =
   'supabase/migrations/20261019200000_hybrid_search_and_embedding_v2.sql';
 const hearingPath = 'supabase/migrations/20261019210000_stortinget_hearings.sql';
@@ -49,14 +49,17 @@ const dropTypes = extractDropArgTypes(hearingSql, 'search_chunks_hybrid');
 assert.equal(
   dropTypes,
   grantTypes,
-  'DROP FUNCTION arg types must match #179 REVOKE/GRANT signature at 679e64a',
+  'DROP FUNCTION arg types must match #179 REVOKE/GRANT signature on cursor/hybrid-search-rag-p4-p6-fff8',
 );
 
 assert.match(hybridSql, /filter_hearing_id text DEFAULT NULL/);
 assert.doesNotMatch(
   hybridSql,
   /DROP FUNCTION IF EXISTS public\.search_chunks_hybrid/,
-  '#179 must not drop search_chunks_hybrid before #178 extends return type',
+  '#179 must not drop search_chunks_hybrid; #178 drops before extending return type',
 );
+
+assert.match(hybridSql, /DROP FUNCTION IF EXISTS public\.search_issues_fts\(text, int\)/);
+assert.match(hybridSql, /search_terms text\[\] DEFAULT NULL/);
 
 console.log('supabase/hearing-hybrid-migration-signature.test.ts: ok');
