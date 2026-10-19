@@ -43,6 +43,9 @@ CREATE INDEX IF NOT EXISTS document_chunks_embedding_v2_hnsw_idx
 -- Issue search (FTS) — replaces ilike saksøk in chat
 -- -----------------------------------------------------------------------------
 
+DROP FUNCTION IF EXISTS public.search_issues_fts(text, int);
+DROP FUNCTION IF EXISTS public.search_issues_fts(text, text[], int);
+
 CREATE OR REPLACE FUNCTION public.search_issues_fts(
   query_text text,
   search_terms text[] DEFAULT NULL,

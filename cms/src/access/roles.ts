@@ -83,6 +83,9 @@ export const taxonomyWriteAccess: Access = editorsOnly;
 
 export const canPublishField: FieldAccess = ({ req }) => isEditor(req.user as UserLike);
 
+/** Draft/publish status — editors only (agents must not set published via API). */
+export const publishStatusFieldAccess: FieldAccess = ({ req }) => isEditor(req.user as UserLike);
+
 export const adminsOnlyField: FieldAccess = ({ req }) => roleOf(req.user as UserLike) === 'admin';
 
 export const versionsReadAccess: Access = editorsOnly;
