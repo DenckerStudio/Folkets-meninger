@@ -4,6 +4,7 @@ import {
   OLLAMA_VECTOR_TIMEOUT_MS,
   createOllamaVectorizer,
 } from '@/lib/chat/vector-search';
+import { embedBgeM3 } from './embed';
 
 function percentile(sorted: number[], p: number): number {
   if (sorted.length === 0) return 0;
@@ -59,6 +60,16 @@ export async function measureEmbedLatencies(queries: string[]): Promise<{
   }
 
   const embedBase = (process.env.EMBED_QUERY_URL ?? process.env.OLLAMA_BASE_URL ?? '').trim();
+
+  async function centralEmbed(query: string): Promise<number[] | null> {
+    const fromCentral = await fetchCentralQueryEmbedding(query, { embedBaseUrl: embedBase || null });
+    if (fromCentral) return fromCentral;
+    try {
+      return await embedBgeM3(query);
+    } catch {
+      return null;
+    }
+  }
   const credential = { provider: 'ollama' as const, baseUrl: ollamaByokBaseUrl() };
   const vectorizerOff = createOllamaVectorizer(credential, { timeoutMs: OLLAMA_VECTOR_TIMEOUT_MS });
   const vectorizerOn = createOllamaVectorizer(credential);
@@ -70,9 +81,7 @@ export async function measureEmbedLatencies(queries: string[]): Promise<{
   let onOk = 0;
 
   for (const q of samples) {
-    const central = await timeEmbed(() =>
-      fetchCentralQueryEmbedding(q, { embedBaseUrl: embedBase || null }),
-    );
+    const central = await timeEmbed(() => centralEmbed(q));
     if (central.ok) centralMs.push(central.ms);
 
     if (vectorizerOff) {
