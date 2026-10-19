@@ -11,16 +11,24 @@ export function normalizeChunkText(text: string): string {
 }
 
 const EMPHASIS_INNER_RE = /^\S(?:[^*]*\S)?$/;
+/** Do not treat `2*4*6` / `x*y*z` as markdown emphasis. */
+const EMPHASIS_EDGE = /[A-Za-z0-9]/;
 
 function stripEmphasisMarkers(segment: string): string {
   return segment
-    .replace(/\*\*([^*]+)\*\*/g, (match, inner: string) => {
+    .replace(/\*\*([^*]+)\*\*/g, (match, inner: string, offset: number) => {
       const trimmed = inner.trim();
+      const before = offset > 0 ? segment[offset - 1] : '';
+      const after = segment[offset + match.length] ?? '';
+      if (EMPHASIS_EDGE.test(before) || EMPHASIS_EDGE.test(after)) return match;
       if (!EMPHASIS_INNER_RE.test(inner) || /^\d+$/.test(trimmed)) return match;
       return trimmed;
     })
-    .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, (match, inner: string) => {
+    .replace(/\*([^*]+)\*/g, (match, inner: string, offset: number) => {
       const trimmed = inner.trim();
+      const before = offset > 0 ? segment[offset - 1] : '';
+      const after = segment[offset + match.length] ?? '';
+      if (EMPHASIS_EDGE.test(before) || EMPHASIS_EDGE.test(after)) return match;
       if (!EMPHASIS_INNER_RE.test(inner) || /^\d+$/.test(trimmed)) return match;
       return trimmed;
     });
