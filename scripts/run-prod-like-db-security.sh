@@ -108,4 +108,7 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
 echo "Running security-jwt-smoke.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-jwt-smoke.sql
 
+echo "Running security-definer-caller-guard.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-definer-caller-guard.sql
+
 echo "=== Prod-like test OK ==="
