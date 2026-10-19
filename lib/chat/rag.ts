@@ -691,7 +691,6 @@ export async function retrieveTopicContext(args: {
   }
 
   const limit = Math.min(Math.max(args.limit ?? MAX_TOPIC_SAKER, 1), 5);
-  const centralQueryEmbedding = await fetchCentralQueryEmbedding(query);
   const hits = await searchIssuesForChat(query, limit, supabase);
   if (hits.length === 0) {
     return {
@@ -700,6 +699,8 @@ export async function retrieveTopicContext(args: {
       note: 'Fant ingen matching saker i vår cache. Prøv en mer konkret tittel eller et kildesøk.',
     };
   }
+
+  const centralQueryEmbedding = await fetchCentralQueryEmbedding(query);
 
   const saker = await Promise.all(
     hits.map(async (issue) => {

@@ -34,6 +34,20 @@ assert.deepEqual(
     kind: 'dokument',
     issueId: '200365',
     documentId: 'prop-123',
+    url: 'https://www.stortinget.no/no/Sak/?p=200365',
+  }),
+  {
+    href: '/dashboard/sak/200365?dokument=prop-123#dokumenter',
+    external: false,
+  },
+);
+assert.deepEqual(
+  chatSourceHref({
+    ...base,
+    n: 10,
+    kind: 'dokument',
+    issueId: null,
+    documentId: null,
     url: 'https://www.stortinget.no/no/Saker-og-publikasjoner/Publikasjoner/Innstillinger/',
   }),
   {

@@ -15,7 +15,7 @@ export function formatChunkExcerptForDisplay(text: string): string {
   return text
     .replace(/\r\n/g, '\n')
     .replace(/^\n+/, '')
-    .replace(/\n{2,}/g, '\n')
+    .replace(/\n\s*\n/g, '\n')
     .trimEnd();
 }
 
@@ -128,8 +128,9 @@ export function applyChunkExcerptsForChat<T extends RankedChunkExcerpt>(
 }
 
 /**
- * One shared excerpt budget across several saker (topic context). Preserves sak
- * hit order: chunks from sak 0, then sak 1, …
+ * One shared excerpt budget across several saker (topic context). Chunks are
+ * budgeted round-robin (chunk 0 from every sak, then chunk 1, …) so one sak
+ * cannot consume the entire 16k before others get an excerpt.
  */
 export function applyTopicWideChunkExcerpts<T extends RankedChunkExcerpt>(
   sakerChunks: ReadonlyArray<readonly T[]>,
@@ -137,11 +138,13 @@ export function applyTopicWideChunkExcerpts<T extends RankedChunkExcerpt>(
   totalBudget: number = CHAT_EXCERPT_TOTAL_BUDGET_CHARS,
 ): T[][] {
   const flat: SakIndexedChunk<T>[] = [];
-  sakerChunks.forEach((chunks, sakIndex) => {
-    for (const chunk of chunks) {
-      flat.push({ ...chunk, sakIndex });
+  const maxChunks = Math.max(0, ...sakerChunks.map((chunks) => chunks.length));
+  for (let chunkIndex = 0; chunkIndex < maxChunks; chunkIndex += 1) {
+    for (let sakIndex = 0; sakIndex < sakerChunks.length; sakIndex += 1) {
+      const chunk = sakerChunks[sakIndex]?.[chunkIndex];
+      if (chunk) flat.push({ ...chunk, sakIndex });
     }
-  });
+  }
 
   const excerpted = applyChunkExcerptsForChat(flat, query, { totalBudget });
   const grouped = sakerChunks.map(() => [] as T[]);

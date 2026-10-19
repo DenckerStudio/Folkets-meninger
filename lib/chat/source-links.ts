@@ -37,17 +37,17 @@ export function chatSourceHref(source: ChatSource): { href: string; external: bo
     case 'sak':
       return source.issueId ? { href: sakPath(source.issueId), external: false } : null;
     case 'dokument': {
-      const publicationUrl = safeExternal(source.url);
-      if (publicationUrl) {
-        return { href: publicationUrl, external: true };
-      }
       if (source.issueId && source.documentId) {
         return {
           href: `${sakPath(source.issueId)}?dokument=${encodeURIComponent(source.documentId)}#dokumenter`,
           external: false,
         };
       }
-      return source.issueId ? { href: `${sakPath(source.issueId)}#dokumenter`, external: false } : null;
+      if (source.issueId) {
+        return { href: `${sakPath(source.issueId)}#dokumenter`, external: false };
+      }
+      const publicationUrl = safeExternal(source.url);
+      return publicationUrl ? { href: publicationUrl, external: true } : null;
     }
     case 'høring': {
       if (source.hearingId) {

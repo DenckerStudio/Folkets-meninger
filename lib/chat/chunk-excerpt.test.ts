@@ -78,10 +78,30 @@ const threeSaker = [
 const topicWide = applyTopicWideChunkExcerpts(threeSaker, 'sak0', CHAT_EXCERPT_TOTAL_BUDGET_CHARS);
 const topicTotal = topicWide.flat().reduce((sum, chunk) => sum + chunk.content.length, 0);
 assert.ok(topicTotal <= CHAT_EXCERPT_TOTAL_BUDGET_CHARS, 'topic context shares one 16k budget');
-assert.ok(topicWide[0].length > 0, 'first sak gets excerpt budget before later saker');
+for (let sakIndex = 0; sakIndex < threeSaker.length; sakIndex += 1) {
+  assert.ok(topicWide[sakIndex].length >= 1, `sak ${sakIndex} with chunks must get at least one excerpt`);
+}
+
+const sixK = 'x'.repeat(6000);
+const threeByFour = [0, 1, 2].map((sakIndex) =>
+  [0, 1, 2, 3].map((chunkIndex) => ({
+    content: `sak${sakIndex}-c${chunkIndex} ${sixK}`,
+    rank: 1,
+    chunkIndex,
+  })),
+);
+const heavyTopic = applyTopicWideChunkExcerpts(threeByFour, 'query', CHAT_EXCERPT_TOTAL_BUDGET_CHARS);
+const heavyTotal = heavyTopic.flat().reduce((sum, chunk) => sum + chunk.content.length, 0);
+assert.ok(heavyTotal <= CHAT_EXCERPT_TOTAL_BUDGET_CHARS);
+for (let sakIndex = 0; sakIndex < 3; sakIndex += 1) {
+  assert.ok(
+    heavyTopic[sakIndex].length >= 1,
+    `3x4x6k: sak ${sakIndex} must not be left with kun sammendrag`,
+  );
+}
 assert.ok(
-  topicWide[2].length === 0 || topicTotal < CHAT_EXCERPT_TOTAL_BUDGET_CHARS - 500,
-  'later saker are trimmed when budget is exhausted',
+  heavyTopic[1].length >= 1 && heavyTopic[2].length >= 1,
+  '3x4x6k: round-robin must not let sak 0 consume entire budget',
 );
 
 assert.equal(
