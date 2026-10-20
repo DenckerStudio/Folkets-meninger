@@ -79,6 +79,16 @@ const nextConfig: NextConfig = {
       { source: '/forslag', destination: '/dashboard/appens-fremtid', permanent: false },
       { source: '/saksganger', destination: '/dashboard/saksganger', permanent: true },
       { source: '/sporsmal', destination: '/dashboard/sporsmal', permanent: true },
+      {
+        source: '/dashboard/admin/oppfanget',
+        destination: '/dashboard/admin/research',
+        permanent: true,
+      },
+      {
+        source: '/dashboard/admin/oppfanget/:path*',
+        destination: '/dashboard/admin/research/:path*',
+        permanent: true,
+      },
     ];
   },
   reactStrictMode: true,
@@ -107,6 +117,18 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'upload.wikimedia.org',
         port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cms.folkets-meninger.no',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3001',
         pathname: '/**',
       },
     ],

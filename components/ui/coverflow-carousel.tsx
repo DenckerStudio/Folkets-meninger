@@ -379,7 +379,7 @@ export function CoverflowCarousel({
               aria-label="Forrige Reel"
               disabled={interactionLocked}
               onClick={() => nudge(-1)}
-              className="absolute left-2 top-1/2 z-[200] -translate-y-1/2 rounded-full bg-[#00205b]/90 p-2 text-white backdrop-blur transition hover:bg-[#00205b] disabled:opacity-40 md:left-3"
+              className="absolute left-2 top-1/2 z-[200] flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[#00205b]/90 text-white backdrop-blur transition hover:bg-[#00205b] disabled:opacity-40 md:left-3"
             >
               <ChevronLeft className="size-5" />
             </button>
@@ -388,7 +388,7 @@ export function CoverflowCarousel({
               aria-label="Neste Reel"
               disabled={interactionLocked}
               onClick={() => nudge(1)}
-              className="absolute right-2 top-1/2 z-[200] -translate-y-1/2 rounded-full bg-[#00205b]/90 p-2 text-white backdrop-blur transition hover:bg-[#00205b] disabled:opacity-40 md:right-3"
+              className="absolute right-2 top-1/2 z-[200] flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-full bg-[#00205b]/90 text-white backdrop-blur transition hover:bg-[#00205b] disabled:opacity-40 md:right-3"
             >
               <ChevronRight className="size-5" />
             </button>

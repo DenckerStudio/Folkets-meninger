@@ -294,8 +294,21 @@ html[data-reels-open] [data-site-chrome] {
   pointer-events: none;
 }
 
-/* The floating assistant orb shares the bottom-right corner with the «Ja» button. */
-html[data-reels-open] .chat-orb {
+/* Reels: keep Stemme+ pill clear of Ja/blank and desktop «Neste Reel» chevron. */
+html[data-reels-open]:not([data-reels-expanded]) .chat-orb {
+  z-index: 210;
+  bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  right: max(0.75rem, env(safe-area-inset-right, 0px));
+}
+
+@media (min-width: 1024px) {
+  html[data-reels-open]:not([data-reels-expanded]) .chat-orb {
+    bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px));
+    right: max(1.25rem, env(safe-area-inset-right, 0px));
+  }
+}
+
+html[data-reels-expanded] .chat-orb {
   visibility: hidden;
   pointer-events: none;
 }

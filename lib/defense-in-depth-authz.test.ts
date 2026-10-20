@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const migration = readFileSync(
-  join(process.cwd(), 'supabase/migrations/20261020150000_defense_in_depth_rpc_authz.sql'),
+  join(process.cwd(), 'supabase/migrations/20261021160000_defense_in_depth_rpc_authz.sql'),
   'utf-8',
 );
 

@@ -3,6 +3,15 @@
 Kilde for låsing: `supabase/migrations/20261018150000_security_lockdown_prod_safe.sql`.  
 Oppdater denne filen og migrasjonen sammen når nye `rpc` / tabell-skriv legges til.
 
+## Nye migrasjoner (etter lockdown)
+
+`security-lockdown-defaults.sql` + migrasjon `150000` fjerner default `GRANT` til `anon` /
+`authenticated` på nye objekter i `public`. **Hver ny migrasjon** som oppretter tabeller eller
+RPC-er i `public` må inkludere eksplisitte `GRANT` som matcher RLS (minst privilegium) og
+`GRANT EXECUTE` på RPC-er klienten kaller via PostgREST. Ikke gi `anon` tilgang til
+`payload`-skjemaet (Payload bruker egen DB-rolle). CI `migration-sql-lint` advarer når
+`CREATE TABLE` / `CREATE FUNCTION` i `public` mangler matchende `GRANT` i samme fil.
+
 Generer hint fra kode: `node scripts/build-security-allowlist.mjs` (heuristikk — ikke autoritativ).
 
 ## RPC `EXECUTE` — `anon`
@@ -48,7 +57,7 @@ Generer hint fra kode: `node scripts/build-security-allowlist.mjs` (heuristikk �
 
 Admin, n8n, Stemme+, app-fremtid-skriv, batch/intern:
 
-`grant_stemme_plus*`, `revoke_stemme_plus*`, `list_stemme_plus_supporters`, `grant_app_role*`, `revoke_app_role*`, `list_app_admins`, `publish_poll`, `archive_poll`, `create_app_changelog_entry`, `delete_app_changelog_entry`, `list_app_changelog_entries`, `create_app_roadmap_item`, `delete_app_roadmap_item`, `list_app_roadmap_items`, `set_app_roadmap_item_status`, `set_app_suggestion_status`, `set_app_suggestion_voting`, `list_app_suggestions`, `list_voting_app_suggestions`, `n8n_*` (skriv/liste), `apply_verified_fylke_claim`, `award_user_points`, `ensure_public_user`, `get_stance_totals_batch`, `get_vote_totals_batch`, `mark_opinion_innspill_packaged`, `purge_political_processing_data`, `user_has_public_display_eligibility`, `reclaim_document_body_storage`, osv.
+`grant_stemme_plus*`, `revoke_stemme_plus*`, `list_stemme_plus_supporters`, `grant_app_role*`, `revoke_app_role*`, `list_app_admins`, `publish_poll`, `archive_poll`, `create_app_changelog_entry`, `delete_app_changelog_entry`, `list_app_changelog_entries`, `create_app_roadmap_item`, `delete_app_roadmap_item`, `list_app_roadmap_items`, `set_app_roadmap_item_status`, `set_app_suggestion_status`, `set_app_suggestion_voting`, `list_app_suggestions`, `list_voting_app_suggestions`, `n8n_*` (skriv/liste), `upsert_action_capture`, `set_action_cluster_verdict`, `apply_verified_fylke_claim`, `award_user_points`, `ensure_public_user`, `get_stance_totals_batch`, `get_vote_totals_batch`, `mark_opinion_innspill_packaged`, `purge_political_processing_data`, `user_has_public_display_eligibility`, `reclaim_document_body_storage`, osv.
 
 ## Tabell-DML
 
