@@ -31,7 +31,7 @@ export const adminNavItems: AdminNavItem[] = [
   {
     id: 'research',
     title: 'Research',
-    description: 'Klynger, kilder og research fra fangstpipelinen',
+    description: 'Saker og aksjoner vi har fanget opp, med kilder',
     href: routes.adminResearch,
     icon: Radar,
     status: 'active',

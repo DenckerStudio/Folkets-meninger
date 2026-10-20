@@ -105,7 +105,7 @@ function OppfangetPageHeader({ previewMock }: { previewMock?: boolean }) {
         Research
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Klynger, kilder og research fra fangstpipelinen. Tall og kilder er ikke verifisert her.
+        Saker og aksjoner vi har fanget opp, med kilder. Tall og kilder er ikke verifisert her.
       </p>
       {previewMock ? (
         <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
