@@ -86,6 +86,18 @@ async function runQueueOnce(payload: Payload): Promise<void> {
   });
 }
 
+async function waitForJobIdle(payload: Payload, id: string | number): Promise<Awaited<ReturnType<typeof findJob>>> {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const job = await findJob(payload, id);
+    if (!job.processing) {
+      return job;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  return findJob(payload, id);
+}
+
 async function main() {
   if (!runIntegration) {
     console.log(
@@ -107,7 +119,7 @@ async function main() {
 
   const retryJobId = await queueJob(payload);
   await runQueueOnce(payload);
-  let retryJob = await findJob(payload, retryJobId);
+  let retryJob = await waitForJobIdle(payload, retryJobId);
   assert.equal(retryMock.getHits(), 1);
   assert.equal(retryJob.hasError, false);
   assert.ok(retryJob.waitUntil);
@@ -132,17 +144,16 @@ async function main() {
 
   const clientJobId = await queueJob(payload);
   await runQueueOnce(payload);
-  const clientJob = await findJob(payload, clientJobId);
+  const clientJob = await waitForJobIdle(payload, clientJobId);
   assert.equal(clientMock.getHits(), 1);
   assert.equal(clientJob.hasError, true);
-  assert.equal(clientMock.getHits(), 1);
   await closeServer(clientMock.server);
 
   delete process.env.CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET;
   delete process.env.REVALIDATE_SECRET;
   const configJobId = await queueJob(payload);
   await runQueueOnce(payload);
-  const configJob = await findJob(payload, configJobId);
+  const configJob = await waitForJobIdle(payload, configJobId);
   assert.equal(configJob.hasError, true);
   assert.ok(configJob.id != null);
 
