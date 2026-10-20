@@ -61,8 +61,9 @@ BEGIN
     RAISE EXCEPTION 'forventet regeneration_requested_at etter reject';
   END IF;
 
-  SELECT id INTO v_pick
-  FROM public.n8n_list_issues_missing_ai_summary(1)
+  SELECT q.id INTO v_pick
+  FROM public.n8n_list_issues_missing_ai_summary(200) q
+  WHERE q.id IN (v_issue_a, v_issue_b)
   LIMIT 1;
 
   IF v_pick <> v_issue_b THEN
