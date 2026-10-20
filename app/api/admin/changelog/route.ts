@@ -40,7 +40,15 @@ export async function POST(request: Request) {
     if ('error' in parsed) {
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
-    const id = await createAppChangelogEntry(auth.userId, parsed.title, parsed.body, parsed.publish);
+    const idempotencyKey =
+      typeof payload.idempotencyKey === 'string' ? payload.idempotencyKey.trim() : '';
+    const id = await createAppChangelogEntry(
+      auth.userId,
+      parsed.title,
+      parsed.body,
+      parsed.publish,
+      idempotencyKey || null,
+    );
     return NextResponse.json({ ok: true, id });
   } catch (error) {
     console.error('[admin/changelog] create failed', error);
@@ -63,7 +71,7 @@ export async function PATCH(request: Request) {
     if ('error' in parsed) {
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
-    await updateAppChangelogEntry(parsed.id, {
+    await updateAppChangelogEntry(auth.userId, parsed.id, {
       title: parsed.title,
       body: parsed.body,
       published: parsed.published,

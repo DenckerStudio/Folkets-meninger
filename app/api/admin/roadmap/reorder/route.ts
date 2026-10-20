@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     if (orderedIds.length === 0) {
       return NextResponse.json({ error: 'Mangler rekkefølge' }, { status: 400 });
     }
-    await reorderAppRoadmapItems(orderedIds);
+    await reorderAppRoadmapItems(auth.userId, orderedIds);
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('[admin/roadmap/reorder] failed', error);

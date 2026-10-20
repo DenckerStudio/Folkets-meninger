@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, type TransitionStartFunction } from 'react';
-import { GripVertical, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CharacterCountTextarea } from '@/components/ui/character-count-textarea';
@@ -183,6 +183,16 @@ export function RoadmapAdminPanel({
     persistOrder(next);
   };
 
+  const moveItem = (itemId: string, direction: -1 | 1) => {
+    const from = sorted.findIndex((row) => row.id === itemId);
+    const to = from + direction;
+    if (from < 0 || to < 0 || to >= sorted.length) return;
+    const next = sorted.slice();
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    persistOrder(next);
+  };
+
   const sheetFooter = (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex flex-wrap gap-2">
@@ -253,6 +263,30 @@ export function RoadmapAdminPanel({
                 </div>
                 <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{item.body}</p>
               </button>
+              <div className="flex flex-col gap-1 self-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={pending || sorted.findIndex((row) => row.id === item.id) === 0}
+                  onClick={() => moveItem(item.id, -1)}
+                  aria-label="Flytt opp"
+                >
+                  <ChevronUp className="size-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={
+                    pending || sorted.findIndex((row) => row.id === item.id) === sorted.length - 1
+                  }
+                  onClick={() => moveItem(item.id, 1)}
+                  aria-label="Flytt ned"
+                >
+                  <ChevronDown className="size-3.5" />
+                </Button>
+              </div>
               <Button type="button" variant="ghost" size="icon-sm" onClick={() => openEdit(item)} aria-label="Rediger">
                 <Pencil className="size-3.5" />
               </Button>

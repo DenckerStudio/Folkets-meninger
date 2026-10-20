@@ -59,7 +59,7 @@ export function validateChangelogInput(
   if (titleError) return { error: titleError };
   const bodyError = lengthError('Teksten', body, CHANGELOG_BODY_MIN, CHANGELOG_BODY_MAX);
   if (bodyError) return { error: bodyError };
-  const publish = input.publish !== false;
+  const publish = input.publish === true;
   return { title, body, publish };
 }
 

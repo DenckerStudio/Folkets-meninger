@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type TransitionStartFunction } from 'react';
+import { useMemo, useRef, useState, type TransitionStartFunction } from 'react';
 import { Eye, EyeOff, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,11 @@ import { MarkdownLite } from '@/components/admin/app-future/markdown-lite';
 import { ResponsiveEditorSheet } from '@/components/admin/app-future/responsive-editor-sheet';
 import { formatWhen } from '@/components/appens-fremtid/format';
 import { EmptyState } from '@/components/dashboard/empty-state';
-import { changelogPublishLabel, isChangelogPublished } from '@/lib/appens-fremtid/changelog';
+import {
+  changelogDisplayWhen,
+  changelogPublishLabel,
+  isChangelogPublished,
+} from '@/lib/appens-fremtid/changelog';
 import {
   CHANGELOG_BODY_MAX,
   CHANGELOG_TITLE_MAX,
@@ -27,7 +31,7 @@ type Draft = {
 };
 
 function emptyDraft(): Draft {
-  return { id: null, title: '', body: '', publish: true };
+  return { id: null, title: '', body: '', publish: false };
 }
 
 export function ChangelogAdminPanel({
@@ -56,6 +60,10 @@ export function ChangelogAdminPanel({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [deleteTarget, setDeleteTarget] = useState<ChangelogEntry | null>(null);
+  const [publishTarget, setPublishTarget] = useState<ChangelogEntry | null>(null);
+  const [sheetError, setSheetError] = useState('');
+  const createIdempotencyKey = useRef(crypto.randomUUID());
+  const [baseline, setBaseline] = useState<Draft>(emptyDraft);
 
   const validation = validateChangelogInput({
     title: draft.title,
@@ -65,31 +73,49 @@ export function ChangelogAdminPanel({
   const canSave = !('error' in validation) && !pending;
 
   const openNew = () => {
-    setDraft(emptyDraft());
+    const next = emptyDraft();
+    createIdempotencyKey.current = crypto.randomUUID();
+    setDraft(next);
+    setBaseline(next);
+    setSheetError('');
     setSheetOpen(true);
     onError('');
   };
 
   const openEdit = (entry: ChangelogEntry) => {
-    setDraft({
+    const next = {
       id: entry.id,
       title: entry.title,
       body: entry.body,
       publish: isChangelogPublished(entry),
-    });
+    };
+    setDraft(next);
+    setBaseline(next);
+    setSheetError('');
     setSheetOpen(true);
     onError('');
   };
 
-  const closeSheet = () => setSheetOpen(false);
+  const isDirty =
+    draft.title !== baseline.title || draft.body !== baseline.body || draft.publish !== baseline.publish;
+
+  const requestCloseSheet = () => {
+    if (isDirty && !window.confirm('Du har ulagrede endringer. Vil du lukke uten å lagre?')) {
+      return;
+    }
+    setSheetOpen(false);
+    setSheetError('');
+  };
 
   const save = () => {
     if ('error' in validation) {
+      setSheetError(validation.error);
       onError(validation.error);
       return;
     }
     startTransition(async () => {
       onError('');
+      setSheetError('');
       const res = await fetch('/api/admin/changelog', {
         method: draft.id ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -105,22 +131,25 @@ export function ChangelogAdminPanel({
                 title: validation.title,
                 body: validation.body,
                 publish: validation.publish,
+                idempotencyKey: createIdempotencyKey.current,
               },
         ),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        onError(data.error ?? 'Kunne ikke lagre innlegget.');
+        const message = data.error ?? 'Kunne ikke lagre innlegget.';
+        setSheetError(message);
+        onError(message);
         toast('Lagring feilet', 'error');
         return;
       }
       toast(draft.id ? 'Endringslogg oppdatert' : validation.publish ? 'Endring publisert' : 'Utkast lagret');
-      closeSheet();
+      setSheetOpen(false);
       onChanged();
     });
   };
 
-  const togglePublish = (entry: ChangelogEntry) => {
+  const applyPublishToggle = (entry: ChangelogEntry) => {
     const published = !isChangelogPublished(entry);
     startTransition(async () => {
       onError('');
@@ -137,6 +166,7 @@ export function ChangelogAdminPanel({
       toast(published ? 'Publisert' : 'Avpublisert');
       onChanged();
     });
+    setPublishTarget(null);
   };
 
   const remove = () => {
@@ -172,7 +202,7 @@ export function ChangelogAdminPanel({
         Publiser med lagring
       </label>
       <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" size="sm" disabled={pending} onClick={closeSheet}>
+        <Button type="button" variant="outline" size="sm" disabled={pending} onClick={requestCloseSheet}>
           Avbryt
         </Button>
         <Button id="admin-editor-save" type="button" size="sm" disabled={!canSave} onClick={save}>
@@ -209,7 +239,7 @@ export function ChangelogAdminPanel({
                         {changelogPublishLabel(entry)}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
-                        {formatWhen(entry.publishedAt || entry.createdAt)}
+                        {formatWhen(changelogDisplayWhen(entry))}
                       </span>
                     </div>
                     <h3 className="mt-2 text-sm font-semibold text-foreground">{entry.title}</h3>
@@ -220,7 +250,13 @@ export function ChangelogAdminPanel({
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      onClick={() => togglePublish(entry)}
+                      onClick={() => {
+                        if (!published) {
+                          setPublishTarget(entry);
+                          return;
+                        }
+                        applyPublishToggle(entry);
+                      }}
                       aria-label={published ? 'Avpubliser' : 'Publiser'}
                     >
                       {published ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
@@ -247,11 +283,16 @@ export function ChangelogAdminPanel({
 
       <ResponsiveEditorSheet
         open={sheetOpen}
-        onClose={closeSheet}
+        onClose={requestCloseSheet}
         title={draft.id ? 'Rediger endringslogg' : 'Nytt endringslogg-innlegg'}
         description="Tittel fungerer som versjon/overskrift. Cmd/Ctrl+S lagrer."
         footer={sheetFooter}
       >
+        {sheetError ? (
+          <p className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+            {sheetError}
+          </p>
+        ) : null}
         <div className="grid gap-5 lg:grid-cols-2">
           <div className="space-y-4">
             <div className="space-y-1.5">
@@ -313,6 +354,33 @@ export function ChangelogAdminPanel({
       >
         <p className="text-sm text-muted-foreground">
           Du sletter <strong className="text-foreground">{deleteTarget?.title ?? 'dette innlegget'}</strong>.
+        </p>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(publishTarget)}
+        onClose={() => setPublishTarget(null)}
+        title="Publisere innlegg?"
+        description="Innlegget blir synlig på den offentlige Appens fremtid-siden."
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setPublishTarget(null)}>
+              Avbryt
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={pending}
+              onClick={() => publishTarget && applyPublishToggle(publishTarget)}
+            >
+              Publiser
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Du publiserer <strong className="text-foreground">{publishTarget?.title ?? 'dette innlegget'}</strong>.
         </p>
       </Dialog>
 

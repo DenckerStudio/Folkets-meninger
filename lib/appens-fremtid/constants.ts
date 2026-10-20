@@ -48,12 +48,16 @@ export type SuggestionRecord = {
   myVote: SuggestionVote | null;
 };
 
+export const CHANGELOG_PUBLICATION_STATUSES = ['draft', 'published'] as const;
+export type ChangelogPublicationStatus = (typeof CHANGELOG_PUBLICATION_STATUSES)[number];
+
 export type ChangelogEntry = {
   id: string;
   title: string;
   body: string;
   createdAt: string;
   publishedAt: string | null;
+  publicationStatus: ChangelogPublicationStatus;
 };
 
 export type RoadmapItem = {

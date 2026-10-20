@@ -1,5 +1,4 @@
 import { getAnonSupabase, getServiceSupabase } from '@/lib/supabase';
-import { CHANGELOG_DRAFT_PUBLISHED_AT } from '@/lib/appens-fremtid/changelog';
 import { mapChangelogRow, mapRoadmapRow } from '@/lib/appens-fremtid/map';
 import type { ChangelogEntry, RoadmapItem, RoadmapStatus } from '@/lib/appens-fremtid/constants';
 
@@ -27,72 +26,63 @@ export async function listAppChangelogEntries(): Promise<ChangelogEntry[]> {
   return mapChangelog(data);
 }
 
+export async function listPublicAppChangelogEntries(): Promise<ChangelogEntry[]> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc('list_public_app_changelog_entries');
+  if (error) throw error;
+  return mapChangelog(data);
+}
+
 export async function createAppChangelogEntry(
   adminUserId: string,
   title: string,
   body: string,
-  publish = true,
+  publish = false,
+  idempotencyKey?: string | null,
 ): Promise<string> {
   const service = getServiceSupabase();
   const { data, error } = await service.rpc('create_app_changelog_entry', {
     p_admin_user_id: adminUserId,
     p_title: title,
     p_body: body,
+    p_publish: publish,
+    p_idempotency_key: idempotencyKey ?? null,
   });
   if (error) throw error;
-  const id = String(data);
-  if (!publish) {
-    await setAppChangelogPublishedAt(id, CHANGELOG_DRAFT_PUBLISHED_AT);
-  }
-  return id;
-}
-
-async function setAppChangelogPublishedAt(entryId: string, publishedAt: string): Promise<void> {
-  const service = getServiceSupabase();
-  const { error } = await service
-    .from('app_changelog_entries')
-    .update({ published_at: publishedAt })
-    .eq('id', entryId);
-  if (error) throw error;
+  return String(data);
 }
 
 export async function updateAppChangelogEntry(
+  adminUserId: string,
   entryId: string,
   patch: { title?: string; body?: string; published?: boolean },
 ): Promise<string> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Endringslogg-administrasjon krever SUPABASE_SERVICE_ROLE_KEY på serveren.');
   }
-  const next: Record<string, string> = {};
-  if (patch.title !== undefined) next.title = patch.title;
-  if (patch.body !== undefined) next.body = patch.body;
-  if (patch.published === true) next.published_at = new Date().toISOString();
-  if (patch.published === false) next.published_at = CHANGELOG_DRAFT_PUBLISHED_AT;
-  if (Object.keys(next).length === 0) {
-    throw new Error('Nothing to update');
-  }
   const service = getServiceSupabase();
-  const { data, error } = await service
-    .from('app_changelog_entries')
-    .update(next)
-    .eq('id', entryId)
-    .select('id')
-    .maybeSingle();
+  const { data, error } = await service.rpc('update_app_changelog_entry', {
+    p_admin_user_id: adminUserId,
+    p_entry_id: entryId,
+    p_title: patch.title ?? null,
+    p_body: patch.body ?? null,
+    p_publish: patch.published ?? null,
+  });
   if (error) throw error;
-  if (!data?.id) throw new Error('Changelog entry not found');
-  return String(data.id);
+  return String(data);
 }
 
-export async function reorderAppRoadmapItems(orderedIds: string[]): Promise<void> {
+export async function reorderAppRoadmapItems(adminUserId: string, orderedIds: string[]): Promise<void> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Roadmap-administrasjon krever SUPABASE_SERVICE_ROLE_KEY på serveren.');
   }
   const service = getServiceSupabase();
-  for (let index = 0; index < orderedIds.length; index += 1) {
-    const id = orderedIds[index];
-    const { error } = await service.from('app_roadmap_items').update({ sort_order: index }).eq('id', id);
-    if (error) throw error;
-  }
+  const { error } = await service.rpc('reorder_app_roadmap_items', {
+    p_admin_user_id: adminUserId,
+    p_ordered_ids: orderedIds,
+  });
+  if (error) throw error;
 }
 
 export async function deleteAppChangelogEntry(adminUserId: string, entryId: string): Promise<string> {

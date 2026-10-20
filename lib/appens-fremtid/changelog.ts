@@ -1,9 +1,8 @@
 import type { ChangelogEntry } from '@/lib/appens-fremtid/constants';
 
-/** Fremtidig `published_at` — skjules av RLS-policy `published_at <= now()`. */
-export const CHANGELOG_DRAFT_PUBLISHED_AT = '2099-12-31T23:59:59.000Z';
-
 export function isChangelogPublished(entry: ChangelogEntry): boolean {
+  if (entry.publicationStatus === 'published') return true;
+  if (entry.publicationStatus === 'draft') return false;
   const at = entry.publishedAt ?? entry.createdAt;
   if (!at) return false;
   return new Date(at).getTime() <= Date.now();
@@ -11,4 +10,10 @@ export function isChangelogPublished(entry: ChangelogEntry): boolean {
 
 export function changelogPublishLabel(entry: ChangelogEntry): 'Publisert' | 'Utkast' {
   return isChangelogPublished(entry) ? 'Publisert' : 'Utkast';
+}
+
+/** Display timestamp for admin list (never shows sentinel draft dates). */
+export function changelogDisplayWhen(entry: ChangelogEntry): string {
+  if (isChangelogPublished(entry) && entry.publishedAt) return entry.publishedAt;
+  return entry.createdAt;
 }
