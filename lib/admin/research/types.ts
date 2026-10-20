@@ -74,6 +74,8 @@ export type ResearchWebhookBody = {
     status: string;
     sources: ResearchWebhookClusterSource[];
   };
+  /** Seneste fullførte utdyp-brief for klyngen; null hvis ingen. */
+  source_request_id?: string | null;
   latest_brief?: {
     summary: string | null;
     perspectives: ResearchPerspective[];

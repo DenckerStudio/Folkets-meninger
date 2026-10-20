@@ -40,6 +40,8 @@ assert.match(migration, /FOR UPDATE/i);
 assert.match(migration, /error = 'tidsavbrudd'/i);
 assert.match(migration, /'origin', 'research'/i);
 assert.match(migration, /create_system_poll_draft/i);
+assert.match(migration, /n8n_get_research_brief[\s\S]*?RETURN NULL;/i);
+assert.match(migration, /'poll_id', v_poll_id,\s*\n\s*'created', true/i);
 
 assert.match(
   migration,
@@ -62,6 +64,9 @@ assert.match(doc, /n8n_create_research_reel_draft/);
 assert.match(doc, /research_briefs_expire_stale/);
 assert.match(doc, /independent/);
 assert.match(doc, /snapshot/i);
+assert.match(doc, /source_request_id/);
+assert.match(doc, /arbeidsflyt_utilgjengelig/);
+assert.match(doc, /"poll_id".*"created"/i);
 assert.match(doc, /source_event.*research:/i);
 assert.match(doc, /review_note/);
 
@@ -79,5 +84,8 @@ const service = readFileSync(
 assert.match(service, /research_briefs_expire_stale/);
 assert.match(service, /ignoreDuplicates:\s*true/);
 assert.match(service, /onConflict:\s*'request_id'/);
+assert.match(service, /source_request_id/);
+assert.match(service, /getLatestDoneDeepenRequestIdForCluster/);
+assert.match(service, /arbeidsflyt_utilgjengelig/);
 
 console.log('n8n/research-brief-rpc.test.ts: ok');

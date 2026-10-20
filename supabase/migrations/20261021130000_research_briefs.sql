@@ -228,10 +228,24 @@ BEGIN
   WHERE request_id = p_request_id;
 
   IF NOT FOUND THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'not_found', 'request_id', p_request_id);
+    RETURN NULL;
   END IF;
 
-  RETURN public.research_brief_row_to_jsonb(v_row);
+  RETURN jsonb_build_object(
+    'request_id', v_row.request_id,
+    'cluster_id', v_row.cluster_id,
+    'kind', v_row.kind,
+    'status', v_row.status,
+    'summary', v_row.summary,
+    'details', v_row.details,
+    'perspectives', v_row.perspectives,
+    'sources', v_row.sources,
+    'output_ref', v_row.output_ref,
+    'error', v_row.error,
+    'requested_by', v_row.requested_by,
+    'created_at', v_row.created_at,
+    'updated_at', v_row.updated_at
+  );
 END;
 $$;
 
@@ -412,7 +426,8 @@ BEGIN
   FOR UPDATE;
 
   IF NOT FOUND THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'not_found', 'request_id', p_request_id);
+    RAISE EXCEPTION 'research_brief not_found: ukjent request_id %', p_request_id
+      USING ERRCODE = 'P0002';
   END IF;
 
   IF v_row.kind <> 'reel' THEN
@@ -422,10 +437,7 @@ BEGIN
 
   IF v_row.output_ref IS NOT NULL AND btrim(v_row.output_ref) <> '' THEN
     RETURN jsonb_build_object(
-      'ok', true,
-      'request_id', v_row.request_id,
-      'output_ref', v_row.output_ref,
-      'poll_id', v_row.output_ref,
+      'poll_id', v_row.output_ref::uuid,
       'created', false
     );
   END IF;
@@ -454,12 +466,8 @@ BEGIN
   RETURNING * INTO v_row;
 
   RETURN jsonb_build_object(
-    'ok', true,
-    'request_id', v_row.request_id,
-    'output_ref', v_row.output_ref,
-    'poll_id', v_poll_id::text,
-    'created', true,
-    'status', v_row.status
+    'poll_id', v_poll_id,
+    'created', true
   );
 END;
 $$;

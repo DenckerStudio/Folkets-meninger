@@ -6,11 +6,14 @@ import {
   type ResearchApiAction,
 } from '@/lib/admin/research/actions';
 
-export function getResearchWebhookConfig(): {
+export type ResearchWebhookConfig = {
   baseUrl: string;
   secret: string;
   token: string;
-} | null {
+};
+
+/** Krever base, HMAC-secret og egen Header Auth-token (aldri logg token). */
+export function getResearchWebhookConfig(): ResearchWebhookConfig | null {
   const baseUrl = process.env.N8N_RESEARCH_WEBHOOK_BASE?.replace(/\/+$/, '');
   const secret = process.env.N8N_RESEARCH_WEBHOOK_SECRET?.trim();
   const token = process.env.N8N_RESEARCH_WEBHOOK_TOKEN?.trim();
@@ -32,13 +35,15 @@ export function signResearchWebhookPayload(
 export async function postResearchWebhook(
   action: ResearchApiAction,
   body: ResearchWebhookBody,
-): Promise<{ ok: true } | { ok: false; status: number }> {
+): Promise<
+  { ok: true } | { ok: false; reason: 'not_configured' | 'http'; status?: number }
+> {
   if (!isResearchApiAction(action)) {
-    return { ok: false, status: 400 };
+    return { ok: false, reason: 'http', status: 400 };
   }
   const config = getResearchWebhookConfig();
   if (!config) {
-    return { ok: false, status: 503 };
+    return { ok: false, reason: 'not_configured' };
   }
 
   const rawBody = JSON.stringify(body);
@@ -62,8 +67,8 @@ export async function postResearchWebhook(
     if (res.status === 202 || res.ok) {
       return { ok: true };
     }
-    return { ok: false, status: res.status };
+    return { ok: false, reason: 'http', status: res.status };
   } catch {
-    return { ok: false, status: 502 };
+    return { ok: false, reason: 'http', status: 502 };
   }
 }

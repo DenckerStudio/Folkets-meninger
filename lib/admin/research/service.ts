@@ -41,6 +41,24 @@ export async function expireStaleResearchBriefs(
   await supabase.rpc('research_briefs_expire_stale', { p_minutes: minutes });
 }
 
+export async function getLatestDoneDeepenRequestIdForCluster(
+  clusterId: string,
+): Promise<string | null> {
+  await expireStaleResearchBriefs();
+  const supabase = getServiceSupabase();
+  const { data, error } = await supabase
+    .from('research_briefs')
+    .select('request_id')
+    .eq('cluster_id', clusterId)
+    .eq('kind', 'deepen')
+    .eq('status', 'done')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return String(data.request_id);
+}
+
 export async function getLatestResearchBriefForCluster(
   clusterId: string,
 ): Promise<ResearchBriefRow | null> {
@@ -111,12 +129,15 @@ export async function buildResearchWebhookBody(
     },
   };
 
-  if (latest && (kind === 'blog' || kind === 'reel')) {
-    body.latest_brief = {
-      summary: latest.summary,
-      perspectives: latest.perspectives,
-      sources: latest.sources,
-    };
+  if (kind === 'blog' || kind === 'reel') {
+    body.source_request_id = await getLatestDoneDeepenRequestIdForCluster(clusterId);
+    if (latest) {
+      body.latest_brief = {
+        summary: latest.summary,
+        perspectives: latest.perspectives,
+        sources: latest.sources,
+      };
+    }
   }
 
   return body;
@@ -282,11 +303,18 @@ export async function enqueueResearchJob(
 
   const webhook = await postResearchWebhook(action, webhookBody);
   if (!webhook.ok) {
+    const briefError =
+      webhook.reason === 'not_configured'
+        ? 'arbeidsflyt_utilgjengelig'
+        : `webhook_http_${webhook.status ?? 502}`;
     await supabase
       .from('research_briefs')
-      .update({ status: 'failed', error: `webhook_http_${webhook.status}` })
+      .update({ status: 'failed', error: briefError })
       .eq('request_id', requestId);
-    return { ok: false, code: webhook.status === 503 ? 'not_configured' : 'webhook_failed' };
+    return {
+      ok: false,
+      code: webhook.reason === 'not_configured' ? 'not_configured' : 'webhook_failed',
+    };
   }
 
   return {

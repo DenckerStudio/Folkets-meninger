@@ -8,7 +8,9 @@ Miljø på **fm-web** (Coolify):
 |----------|-------------|
 | `N8N_RESEARCH_WEBHOOK_BASE` | Base-URL uten avsluttende `/`, f.eks. `https://n8n.example/webhook` |
 | `N8N_RESEARCH_WEBHOOK_SECRET` | HMAC-nøkkel for `X-FM-Signature` (aldri logg eller vis) |
-| `N8N_RESEARCH_WEBHOOK_TOKEN` | Statisk token for `X-FM-Webhook-Token` (n8n Webhook Header Auth, uten env i Code-noder) |
+| `N8N_RESEARCH_WEBHOOK_TOKEN` | **Egen** statisk token for `X-FM-Webhook-Token` — ikke samme verdi som `N8N_RESEARCH_WEBHOOK_SECRET`. Brukes i n8n Webhook Header Auth (uten env i Code-noder). Aldri logg. |
+
+Mangler base, secret eller token: fm-web **kaller ikke** webhook; brief settes til `failed` med generisk `error=arbeidsflyt_utilgjengelig`.
 
 ## Utkøring fra admin
 
@@ -43,6 +45,8 @@ n8n avviser forespørsler med klokkeskew > 300 s.
 
 ## Request body (JSON)
 
+Felter felles for alle `kind`:
+
 ```json
 {
   "request_id": "uuid",
@@ -64,16 +68,36 @@ n8n avviser forespørsler med klokkeskew > 300 s.
         "source_type": "news_rss"
       }
     ]
-  },
-  "latest_brief": {
-    "summary": "…",
-    "perspectives": [],
-    "sources": []
   }
 }
 ```
 
-`latest_brief` sendes for `kind` **blog** og **reel** når en tidligere brief finnes. Det er et **snapshot** for kontekst i n8n — ikke autoritativ kilde. Bruk `n8n_get_research_brief` for gjeldende rad.
+For **`kind` blog og reel** legges til:
+
+| Felt | Type | Beskrivelse |
+|------|------|-------------|
+| `source_request_id` | `uuid` \| `null` | `request_id` for **seneste** `deepen`-brief med `status=done` på samme `cluster_id`. `null` hvis ingen slik brief finnes. |
+| `latest_brief` | objekt (valgfritt) | **Snapshot** av seneste brief på klyngen (uavhengig av kind) når den finnes — kun `summary`, `perspectives`, `sources`. Ikke autoritativ; bruk `n8n_get_research_brief` for gjeldende rad. |
+
+Eksempel (blog/reel):
+
+```json
+{
+  "request_id": "…",
+  "kind": "blog",
+  "cluster_id": "…",
+  "source_request_id": "uuid-av-siste-fullførte-utdyp",
+  "latest_brief": {
+    "summary": "…",
+    "perspectives": [],
+    "sources": []
+  },
+  "action_key": "…",
+  "requested_by": "…",
+  "requested_at": "…",
+  "cluster": { }
+}
+```
 
 ## Respons fra n8n
 
@@ -97,7 +121,11 @@ n8n avviser forespørsler med klokkeskew > 300 s.
 { "p_request_id": "uuid" }
 ```
 
-Returnerer `jsonb` med hele raden (`ok`, `status`, `details`, …) eller `{ "ok": false, "error": "not_found" }`.
+Returnerer **`jsonb` eller SQL `NULL`** (PostgREST: `null` i JSON) når raden ikke finnes.
+
+Når funnet, nøyaktig disse nøklene (ingen `ok` / `id`):
+
+`request_id`, `cluster_id`, `kind`, `status`, `summary`, `details`, `perspectives`, `sources`, `output_ref`, `error`, `requested_by`, `created_at`, `updated_at`
 
 ### Oppdater status / innhold
 
@@ -196,7 +224,19 @@ n8n oppretter Payload-utkast via `POST /api/ops/blog/drafts` (fm-web, `x-cron-se
 }
 ```
 
-Låser brief-raden (`FOR UPDATE`). Hvis `output_ref` allerede er satt, returneres den (dedupe). Ellers kalles `create_system_poll_draft` med `generation_metadata` som inkluderer `origin: "research"` og `research_request_id`. Setter `output_ref` til poll-uuid og `status=done`.
+Låser brief-raden (`FOR UPDATE`) i **én transaksjon**. Hvis `output_ref` allerede er satt: returnerer `{ "poll_id": "<uuid>", "created": false }` med eksisterende poll. Ellers kalles `create_system_poll_draft` med `generation_metadata` som inkluderer `origin: "research"` og `research_request_id`, deretter settes `output_ref = poll_id` og `status = done` på brief-raden.
+
+**Retur (kun disse nøklene):**
+
+```json
+{ "poll_id": "uuid", "created": true }
+```
+
+eller ved duplikat:
+
+```json
+{ "poll_id": "uuid", "created": false }
+```
 
 ### Timeout
 

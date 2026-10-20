@@ -141,8 +141,12 @@ BEGIN
   END IF;
 
   r := public.n8n_get_research_brief(v_request_id);
-  IF r ->> 'request_id' IS DISTINCT FROM v_request_id::text THEN
+  IF r IS NULL OR r ->> 'request_id' IS DISTINCT FROM v_request_id::text THEN
     RAISE EXCEPTION 'n8n_get_research_brief feilet: %', r;
+  END IF;
+
+  IF public.n8n_get_research_brief('00000000-0000-4000-8000-000000000099') IS NOT NULL THEN
+    RAISE EXCEPTION 'n8n_get_research_brief skulle returnere NULL for ukjent id';
   END IF;
 
   ALTER TABLE public.research_briefs DISABLE TRIGGER research_briefs_updated_at;
@@ -179,7 +183,7 @@ BEGIN
       jsonb_build_object('confidence', 0.9)
     );
 
-    IF coalesce(r ->> 'ok', 'false') <> 'true' OR r ->> 'poll_id' IS NULL THEN
+    IF r ->> 'created' <> 'true' OR r ->> 'poll_id' IS NULL THEN
       RAISE EXCEPTION 'n8n_create_research_reel_draft feilet: %', r;
     END IF;
 
