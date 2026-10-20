@@ -7,7 +7,9 @@ import { Children } from 'react';
 import { CircleDollarSign, ExternalLink, FileText, HandHeart, Loader2, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CivicBubble } from '@/components/icons/civic';
+import { ContentFeedbackPanel } from '@/components/admin/content-feedback-panel';
 import { BiasReportLink } from '@/components/trust/bias-report-link';
+import { useIsAdmin } from '@/hooks/use-is-admin';
 import { Dialog } from '@/components/ui/dialog';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { AI_SUMMARY_LABEL } from '@/lib/trust/ai-transparency';
@@ -74,6 +76,8 @@ export default function AiSummary({
   const [data, setData] = useState<SummaryData | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [sourceDocs, setSourceDocs] = useState<SourceDoc[]>([]);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const isAdmin = useIsAdmin();
   const startedRef = useRef(false);
 
   async function loadSourceDocuments() {
@@ -172,6 +176,29 @@ export default function AiSummary({
       >
         Om modellen
       </Link>
+      {isAdmin ? (
+        <button
+          type="button"
+          disabled={loading || !data}
+          onClick={() => setShowFeedback((value) => !value)}
+          className="inline-flex min-h-11 items-center rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-brand/40 hover:text-brand disabled:cursor-not-allowed disabled:opacity-50"
+          title={!data && !loading ? 'Sammendraget må lastes først' : undefined}
+        >
+          Vurder sammendrag
+        </button>
+      ) : null}
+
+      {isAdmin && showFeedback && data ? (
+        <ContentFeedbackPanel
+          className="mt-2 w-full"
+          contentType="ai_summary"
+          contentId={sakId}
+          title="Vurder sammendraget"
+          description="Godkjenn eller avvis sammendraget. Ved avvisning settes saken i kø for ny generering."
+          onSkip={() => setShowFeedback(false)}
+          onSaved={() => setShowFeedback(false)}
+        />
+      ) : null}
 
       <Dialog
         open={open}

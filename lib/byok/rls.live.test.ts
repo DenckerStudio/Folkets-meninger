@@ -1,9 +1,15 @@
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 
+if (process.env.CI === 'true' && process.env.SUPABASE_RUN_LIVE_TESTS !== '1') {
+  console.log('byok/rls.live.test.ts: skipped in CI');
+  process.exit(0);
+}
+
 function loadFolketsPublicEnv() {
-  const text = readFileSync('/workspace/.env.test', 'utf8');
+  const text = readFileSync(join(process.cwd(), '.env.test'), 'utf8');
   for (const line of text.split(/\r?\n/)) {
     if (!line || line.startsWith('#') || !line.includes('=')) continue;
     const i = line.indexOf('=');
@@ -52,7 +58,10 @@ async function main() {
       'BYOK ciphertext stays table-denied for anon.',
   };
 
-  writeFileSync('/opt/cursor/artifacts/byok-rls-live.json', JSON.stringify(payload, null, 2));
+  const artifactDir =
+    process.env.CURSOR_ARTIFACTS_DIR ?? join(process.cwd(), 'artifacts', 'ci-live-tests');
+  mkdirSync(artifactDir, { recursive: true });
+  writeFileSync(join(artifactDir, 'byok-rls-live.json'), JSON.stringify(payload, null, 2));
 
   assert.match(payload.credentialsError ?? '', /permission denied|not accept/i);
   assert.match(payload.secretError ?? '', /permission denied|not accept/i);

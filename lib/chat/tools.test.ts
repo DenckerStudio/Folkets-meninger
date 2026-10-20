@@ -210,7 +210,7 @@ async function main() {
   };
   const shaped = shapeChatPollResults({
     poll,
-    totals: { ja: 3, nei: 1, blank: 0, total: 4 },
+    totals: { ja: 15, nei: 5, blank: 0, total: 20 },
   });
   assert.equal(shaped.found, true);
   assert.equal(shaped.isOpen, true);

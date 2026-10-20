@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { searchSearxng } from './searxng';
+
+if (process.env.CI === 'true' && process.env.SEARXNG_RUN_LIVE_TESTS !== '1') {
+  console.log('chat/searxng.live.test.ts: skipped in CI');
+  process.exit(0);
+}
 
 async function main() {
   const result = await searchSearxng('Stortinget statsbudsjettet', { timeoutMs: 15000, limit: 4 });
@@ -9,8 +15,11 @@ async function main() {
   assert.ok(result.results.length > 0, 'SearXNG returned no hits');
   assert.ok(result.results.every((hit) => hit.title && hit.url.startsWith('http')));
 
+  const artifactDir =
+    process.env.CURSOR_ARTIFACTS_DIR ?? join(process.cwd(), 'artifacts', 'ci-live-tests');
+  mkdirSync(artifactDir, { recursive: true });
   writeFileSync(
-    '/opt/cursor/artifacts/searxng-live.json',
+    join(artifactDir, 'searxng-live.json'),
     JSON.stringify(
       { ok: true, count: result.results.length, titles: result.results.map((hit) => hit.title) },
       null,
