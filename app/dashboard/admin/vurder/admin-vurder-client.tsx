@@ -6,6 +6,7 @@ import { ClipboardCheck, ExternalLink, Loader2 } from 'lucide-react';
 import { AdminBackLink } from '@/components/admin/admin-shell';
 import { ContentFeedbackPanel } from '@/components/admin/content-feedback-panel';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { formatBlogReviewState } from '@/lib/admin/blog-review-labels';
 import type { BlogDraftReviewItem } from '@/lib/admin/blog-review';
 
 type DraftsResponse = {
@@ -70,8 +71,8 @@ export default function AdminVurderClient() {
           onClick={() => setTab('blogg')}
           className={
             tab === 'blogg'
-              ? 'rounded-lg bg-brand/10 px-3 py-1.5 text-sm font-medium text-brand'
-              : 'rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted/50'
+              ? 'inline-flex min-h-11 items-center rounded-lg bg-brand/10 px-4 py-2.5 text-sm font-medium text-brand'
+              : 'inline-flex min-h-11 items-center rounded-lg px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted/50'
           }
         >
           Blogginnlegg
@@ -82,8 +83,8 @@ export default function AdminVurderClient() {
         <section className="space-y-4">
           {!cmsConfigured ? (
             <EmptyState
-              title="CMS er ikke konfigurert"
-              description="Sett CMS_URL og CMS_API_KEY for å se bloggutkast her."
+              title="Blogg er ikke tilgjengelig"
+              description="Bloggsystemet er ikke koblet til ennå."
               className="py-8"
             />
           ) : null}
@@ -97,7 +98,7 @@ export default function AdminVurderClient() {
           {!pending && cmsConfigured && drafts.length === 0 ? (
             <EmptyState
               title="Ingen utkast til vurdering"
-              description="Når agenten legger inn bloggutkast med status «til vurdering», vises de her."
+              description="Når nye bloggutkast er klare til vurdering, vises de her."
               className="py-8"
             />
           ) : null}
@@ -111,7 +112,7 @@ export default function AdminVurderClient() {
                       <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{draft.excerpt}</p>
                     ) : null}
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {draft.reviewState ? `Status: ${draft.reviewState}` : 'Utkast'}
+                      {formatBlogReviewState(draft.reviewState) ?? 'Utkast'}
                       {draft.updatedAt ? ` · Oppdatert ${new Date(draft.updatedAt).toLocaleString('nb-NO')}` : ''}
                     </p>
                   </div>
@@ -121,9 +122,9 @@ export default function AdminVurderClient() {
                         href={draft.payloadAdminUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50"
+                        className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50"
                       >
-                        Åpne i Payload
+                        Rediger utkast
                         <ExternalLink className="h-3.5 w-3.5" aria-hidden />
                       </a>
                     ) : null}
@@ -137,7 +138,7 @@ export default function AdminVurderClient() {
                           payloadAdminUrl: draft.payloadAdminUrl,
                         })
                       }
-                      className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-brand-foreground hover:opacity-90"
+                      className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90"
                     >
                       Vurder
                     </button>
@@ -148,6 +149,7 @@ export default function AdminVurderClient() {
                     className="mt-4"
                     contentType="blog_post"
                     contentId={draft.id}
+                    contentSubjectTitle={draft.title}
                     title="Vurder blogginnlegg"
                     description="Hva fungerte med utkastet, og hva bør justeres før publisering?"
                     snapshot={{

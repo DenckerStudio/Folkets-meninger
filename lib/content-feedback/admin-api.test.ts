@@ -74,7 +74,7 @@ assert.equal(badType.ok, false);
 
 assert.equal(
   validateRejectionDetail('reject', {}, []),
-  'Ved avvisning må minst ett aspekt merkes med 👎 eller minst én grunn velges.',
+  'Ved avvisning må minst ett aspekt merkes med tommel ned eller minst én grunn velges.',
 );
 assert.equal(validateRejectionDetail('approve', {}, []), null);
 
@@ -84,5 +84,8 @@ const panelSrc = readFileSync(
 );
 assert.match(panelSrc, /Hopp over/);
 assert.match(panelSrc, /rejectionIncomplete/);
+assert.match(panelSrc, /tommel ned/);
+assert.match(panelSrc, /ThumbsUp/);
+assert.doesNotMatch(panelSrc, /👍|👎/);
 
 console.log('content-feedback/admin-api.test.ts: ok');

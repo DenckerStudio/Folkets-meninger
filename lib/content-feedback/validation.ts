@@ -63,7 +63,7 @@ export function validateRejectionDetail(
 ): string | null {
   if (!rejectionRequiresDetail(verdict, aspects, reasonTags)) {
     if (verdict === 'reject') {
-      return 'Ved avvisning må minst ett aspekt merkes med 👎 eller minst én grunn velges.';
+      return 'Ved avvisning må minst ett aspekt merkes med tommel ned eller minst én grunn velges.';
     }
   }
   return null;

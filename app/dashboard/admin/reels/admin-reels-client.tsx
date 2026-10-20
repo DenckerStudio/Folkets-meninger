@@ -86,6 +86,7 @@ export default function AdminReelsClient({
   const [feedbackTarget, setFeedbackTarget] = useState<{
     pollId: string;
     verdict: ContentFeedbackVerdict;
+    subjectTitle: string;
     snapshot: Record<string, unknown>;
   } | null>(null);
   const [pending, startTransition] = useTransition();
@@ -163,6 +164,7 @@ export default function AdminReelsClient({
       setFeedbackTarget({
         pollId: poll.id,
         verdict: action === 'publish' ? 'approve' : 'reject',
+        subjectTitle: poll.title,
         snapshot: {
           title: poll.title,
           neutral_summary: poll.neutralSummary,
@@ -313,6 +315,7 @@ export default function AdminReelsClient({
           contentType="reel"
           contentId={feedbackTarget.pollId}
           lockedVerdict={feedbackTarget.verdict}
+          contentSubjectTitle={feedbackTarget.subjectTitle}
           title="Hva fungerte med utkastet?"
           description="Valgfritt, men hjelper oss å forbedre neste generering."
           snapshot={feedbackTarget.snapshot}
