@@ -119,23 +119,30 @@ BEGIN
     RAISE EXCEPTION 'låst drafted-status skal ikke overskrives, fikk %', r ->> 'status';
   END IF;
 
-  r := public.set_action_cluster_verdict(v_action_key, 'rejected', '[]'::jsonb);
-  IF coalesce(r ->> 'ok', 'false') = 'true' THEN
-    RAISE EXCEPTION 'forventet status_locked på drafted klynge';
-  END IF;
-  IF r ->> 'error' <> 'status_locked' THEN
-    RAISE EXCEPTION 'forventet error status_locked, fikk %', r;
-  END IF;
+  BEGIN
+    PERFORM public.set_action_cluster_verdict(v_action_key, 'rejected', '[]'::jsonb);
+    RAISE EXCEPTION 'forventet status_locked exception på drafted klynge';
+  EXCEPTION
+    WHEN sqlstate '22023' THEN
+      IF position('status_locked' in SQLERRM) = 0 THEN
+        RAISE EXCEPTION 'forventet status_locked i melding, fikk: %', SQLERRM;
+      END IF;
+  END;
 
   DELETE FROM public.action_clusters WHERE action_key = v_action_key;
 
-  r := public.upsert_action_capture(
-    jsonb_build_object('action_key', v_action_key),
-    '[]'::jsonb
-  );
-  IF r ->> 'error' <> 'invalid_action_type' THEN
-    RAISE EXCEPTION 'forventet invalid_action_type på tom insert, fikk %', r;
-  END IF;
+  BEGIN
+    PERFORM public.upsert_action_capture(
+      jsonb_build_object('action_key', v_action_key),
+      '[]'::jsonb
+    );
+    RAISE EXCEPTION 'forventet invalid_action_type exception på tom insert';
+  EXCEPTION
+    WHEN sqlstate '22023' THEN
+      IF position('invalid_action_type' in SQLERRM) = 0 THEN
+        RAISE EXCEPTION 'forventet invalid_action_type i melding, fikk: %', SQLERRM;
+      END IF;
+  END;
 
   RAISE NOTICE 'action_capture_rpcs.sql: OK';
 END $$;

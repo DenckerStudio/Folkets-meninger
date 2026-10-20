@@ -105,6 +105,9 @@ psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-lockdown-defa
 echo "Running action_capture_rpcs.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/action_capture_rpcs.sql
 
+echo "Running action_capture_atomic.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/action_capture_atomic.sql
+
 echo "Running content_feedback_rpcs.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/content_feedback_rpcs.sql
 
