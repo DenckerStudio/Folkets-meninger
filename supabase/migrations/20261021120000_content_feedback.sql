@@ -9,14 +9,17 @@ SET LOCAL lock_timeout = '5s';
 CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 
 DO $vector_schema$
+DECLARE
+  v_schema text;
 BEGIN
-  IF EXISTS (
-    SELECT 1
-    FROM pg_extension e
-    JOIN pg_namespace n ON n.oid = e.extnamespace
-    WHERE e.extname = 'vector' AND n.nspname IS DISTINCT FROM 'public'
-  ) THEN
-    ALTER EXTENSION vector SET SCHEMA public;
+  SELECT n.nspname
+  INTO v_schema
+  FROM pg_extension e
+  JOIN pg_namespace n ON n.oid = e.extnamespace
+  WHERE e.extname = 'vector';
+
+  IF v_schema IS NULL OR v_schema IS DISTINCT FROM 'public' THEN
+    RAISE EXCEPTION 'vector-extension må ligge i public (fant %)', coalesce(v_schema, '<mangler>');
   END IF;
 END;
 $vector_schema$;
