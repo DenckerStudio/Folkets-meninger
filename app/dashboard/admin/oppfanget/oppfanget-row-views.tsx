@@ -288,7 +288,6 @@ export function OppfangetDesktopTable({
                 <td className={cellClass}>
                   <ResearchRowActions
                     clusterId={row.id}
-                    userId={adminUserId}
                     variant="table-compact"
                     initialBriefsByKind={researchBriefsByCluster[row.id] ?? {}}
                   />
@@ -363,7 +362,6 @@ export function OppfangetMobileCards({
                 <dd className="mt-1">
                   <ResearchRowActions
                     clusterId={row.id}
-                    userId={adminUserId}
                     variant="full"
                     initialBriefsByKind={researchBriefsByCluster[row.id] ?? {}}
                   />

@@ -485,6 +485,29 @@ $$;
 REVOKE ALL ON FUNCTION public.research_briefs_validate_reel_source_urls(jsonb)
   FROM PUBLIC, anon, authenticated;
 
+CREATE OR REPLACE FUNCTION public.research_briefs_parse_poll_output_ref(p_output_ref text)
+RETURNS uuid
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_ref text;
+BEGIN
+  v_ref := btrim(coalesce(p_output_ref, ''));
+  IF v_ref = '' THEN
+    PERFORM public.research_briefs_raise_invalid_input('output_ref');
+  END IF;
+  IF v_ref !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
+    PERFORM public.research_briefs_raise_invalid_input('output_ref');
+  END IF;
+  RETURN v_ref::uuid;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.research_briefs_parse_poll_output_ref(text)
+  FROM PUBLIC, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.research_briefs_expire_stale(p_minutes int DEFAULT 30)
 RETURNS int
 LANGUAGE plpgsql
@@ -611,6 +634,12 @@ BEGIN
       PERFORM public.research_briefs_raise_invalid_input('status');
     END IF;
     IF public.research_briefs_is_backwards_status(v_row.status, p_status) THEN
+      IF v_row.status IN ('queued', 'running') AND p_status IN ('queued', 'running') THEN
+        UPDATE public.research_briefs
+        SET updated_at = now()
+        WHERE request_id = p_request_id
+        RETURNING * INTO v_row;
+      END IF;
       RETURN public.research_brief_row_to_jsonb(v_row);
     END IF;
     v_next_status := p_status;
@@ -772,7 +801,7 @@ BEGIN
 
   IF v_row.output_ref IS NOT NULL AND btrim(v_row.output_ref) <> '' THEN
     RETURN jsonb_build_object(
-      'poll_id', v_row.output_ref::uuid,
+      'poll_id', public.research_briefs_parse_poll_output_ref(v_row.output_ref),
       'created', false
     );
   END IF;

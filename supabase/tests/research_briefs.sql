@@ -28,7 +28,8 @@ DECLARE
     'public.research_briefs_normalize_error(text)',
     'public.research_briefs_validate_reel_source_urls(jsonb)',
     'public.research_briefs_raise_invalid_input(text)',
-    'public.research_briefs_assert_request_scope(public.research_briefs,uuid,text)'
+    'public.research_briefs_assert_request_scope(public.research_briefs,uuid,text)',
+    'public.research_briefs_parse_poll_output_ref(text)'
   ];
   v_name text;
 BEGIN
@@ -212,6 +213,28 @@ BEGIN
     RAISE EXCEPTION 'heartbeat-brief skulle ikke utløpe (status=%)', v_status;
   END IF;
 
+  ALTER TABLE public.research_briefs DISABLE TRIGGER research_briefs_updated_at;
+  UPDATE public.research_briefs
+  SET updated_at = now() - interval '2 hours'
+  WHERE request_id = v_heartbeat_request_id;
+  ALTER TABLE public.research_briefs ENABLE TRIGGER research_briefs_updated_at;
+
+  r := public.n8n_upsert_research_brief(
+    v_heartbeat_request_id,
+    'queued',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL
+  );
+  SELECT status, updated_at INTO v_status, v_updated_at
+  FROM public.research_briefs
+  WHERE request_id = v_heartbeat_request_id;
+  IF v_status <> 'running' OR v_updated_at < now() - interval '5 minutes' THEN
+    RAISE EXCEPTION 'queued heartbeat på running skulle beholde status og oppdatere updated_at';
+  END IF;
+
   BEGIN
     PERFORM public.n8n_upsert_research_brief(
       v_heartbeat_request_id,
@@ -362,6 +385,31 @@ BEGIN
     IF coalesce(r ->> 'created', 'true') = 'true' THEN
       RAISE EXCEPTION 'andre kall skulle returnere eksisterende output_ref';
     END IF;
+
+    UPDATE public.research_briefs
+    SET status = 'failed', error = 'tidsavbrudd', output_ref = NULL
+    WHERE request_id = v_reel_request_id;
+
+    UPDATE public.research_briefs
+    SET status = 'running', error = NULL, output_ref = 'not-a-valid-poll-uuid'
+    WHERE request_id = v_reel_request_id;
+
+    BEGIN
+      PERFORM public.n8n_create_research_reel_draft(
+        v_reel_request_id,
+        NULL,
+        'Skal feile output_ref',
+        'x',
+        '[]'::jsonb,
+        '{}'::jsonb
+      );
+      RAISE EXCEPTION 'forventet invalid output_ref ved eksisterende poll';
+    EXCEPTION
+      WHEN OTHERS THEN
+        IF SQLERRM NOT LIKE '%research_invalid_input%' THEN
+          RAISE;
+        END IF;
+    END;
 
     UPDATE public.research_briefs
     SET status = 'failed', error = 'tidsavbrudd', output_ref = NULL

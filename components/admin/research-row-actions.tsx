@@ -15,8 +15,17 @@ import {
 import {
   RESEARCH_ACTION_CONFIRM,
   RESEARCH_ACTION_LABELS,
+  RESEARCH_KIND_LABELS,
   researchBriefOutputLink,
 } from '@/lib/admin/research/labels';
+import {
+  mergeActiveBriefFromConflict,
+  resolveResearchEnqueueConflict,
+} from '@/lib/admin/research/enqueue-response';
+import {
+  hasActiveResearchBriefs,
+  RESEARCH_BRIEF_POLL_MS,
+} from '@/lib/admin/research/polling';
 import type { ResearchBriefSnapshot, ResearchBriefsByKind } from '@/lib/admin/research/service';
 import type { ResearchBriefStatus } from '@/lib/admin/research/types';
 import { cn } from '@/lib/utils';
@@ -42,9 +51,9 @@ function isBusyStatus(status: ResearchBriefStatus | undefined): boolean {
   return status === 'queued' || status === 'running';
 }
 
-function isDoneWithoutRerun(brief?: ResearchBriefSnapshot): boolean {
+function isDoneWithoutRerun(brief?: ResearchBriefSnapshot, clusterId?: string): boolean {
   if (!brief || brief.status !== 'done') return false;
-  return !researchBriefOutputLink(brief.kind, brief.output_ref, brief.status);
+  return !researchBriefOutputLink(brief.kind, brief.output_ref, brief.status, { clusterId });
 }
 
 function statusPriority(status: ResearchBriefStatus | undefined): number {
@@ -80,6 +89,7 @@ function pickHighlightBrief(briefsByKind: ResearchBriefsByKind): ResearchBriefSn
 function buildTableMenuItem(
   action: ResearchApiAction,
   brief?: ResearchBriefSnapshot,
+  clusterId?: string,
 ): SmoothDropdownItem {
   const status = brief?.status;
   const baseLabel = RESEARCH_ACTION_LABELS[action];
@@ -97,11 +107,12 @@ function buildTableMenuItem(
 
   if (status === 'done') {
     const output =
-      brief && researchBriefOutputLink(brief.kind, brief.output_ref, brief.status);
+      brief &&
+      researchBriefOutputLink(brief.kind, brief.output_ref, brief.status, { clusterId });
     if (output) {
       return {
         id: action,
-        label: DONE_MENU_LABELS[action],
+        label: output.label,
         icon: ACTION_ICONS[action],
         type: 'item',
         href: output.href,
@@ -109,7 +120,7 @@ function buildTableMenuItem(
     }
     return {
       id: action,
-      label: action === 'deepen' ? DONE_MENU_LABELS.deepen : 'Ferdig',
+      label: 'Ferdig',
       icon: ACTION_ICONS[action],
       type: 'item',
       disabled: true,
@@ -119,7 +130,7 @@ function buildTableMenuItem(
   if (status === 'failed') {
     return {
       id: action,
-      label: `Prøv igjen: ${baseLabel}`,
+      label: `${RESEARCH_KIND_LABELS[action]} feilet – Prøv igjen`,
       icon: ACTION_ICONS[action],
       type: 'item',
       destructive: true,
@@ -154,11 +165,13 @@ function mergeBriefFromResponse(
 function ResearchActionButton({
   action,
   brief,
+  clusterId,
   pendingAction,
   onRequest,
 }: {
   action: ResearchApiAction;
   brief?: ResearchBriefSnapshot;
+  clusterId: string;
   pendingAction: ResearchApiAction | null;
   onRequest: (action: ResearchApiAction) => void;
 }) {
@@ -166,18 +179,20 @@ function ResearchActionButton({
   const busy = isBusyStatus(status);
   const failed = status === 'failed';
   const done = status === 'done';
-  const output = brief ? researchBriefOutputLink(brief.kind, brief.output_ref, brief.status) : null;
+  const output = brief
+    ? researchBriefOutputLink(brief.kind, brief.output_ref, brief.status, { clusterId })
+    : null;
   const showSpinner = pendingAction === action || status === 'running';
 
   let label = RESEARCH_ACTION_LABELS[action];
-  if (status === 'queued') label = 'I kø';
-  else if (status === 'running') label = 'Kjører';
+  if (status === 'queued') label = `${RESEARCH_KIND_LABELS[action]} · I kø`;
+  else if (status === 'running') label = `${RESEARCH_KIND_LABELS[action]} · Kjører`;
   else if (done && output) label = output.label;
   else if (done && action === 'deepen') label = DONE_MENU_LABELS.deepen;
   else if (done) label = 'Ferdig';
-  else if (failed) label = 'Prøv igjen';
+  else if (failed) label = `${RESEARCH_KIND_LABELS[action]} feilet – Prøv igjen`;
 
-  const doneBlocked = isDoneWithoutRerun(brief);
+  const doneBlocked = isDoneWithoutRerun(brief, clusterId);
   const disabled =
     busy || doneBlocked || (pendingAction !== null && pendingAction !== action);
   const destructive = failed && !busy;
@@ -225,12 +240,10 @@ function ResearchActionButton({
 
 export function ResearchRowActions({
   clusterId,
-  userId,
   variant = 'full',
   initialBriefsByKind = {},
 }: {
   clusterId: string;
-  userId?: string;
   variant?: 'full' | 'table-compact';
   initialBriefsByKind?: ResearchBriefsByKind;
 }) {
@@ -244,6 +257,40 @@ export function ResearchRowActions({
   useEffect(() => {
     setBriefsByKind(initialBriefsByKind);
   }, [initialBriefsByKind]);
+
+  const hasActiveBriefs = useMemo(() => hasActiveResearchBriefs(briefsByKind), [briefsByKind]);
+
+  useEffect(() => {
+    if (!hasActiveBriefs) return;
+
+    let cancelled = false;
+
+    const pollBriefs = async () => {
+      if (document.visibilityState === 'hidden' || cancelled) return;
+      try {
+        const res = await fetch(`/api/admin/research/clusters/${clusterId}/briefs`);
+        if (!res.ok || cancelled) return;
+        const body = (await res.json()) as { briefs_by_kind?: ResearchBriefsByKind };
+        const next = body.briefs_by_kind ?? {};
+        setBriefsByKind((prev) => ({ ...prev, ...next }));
+        if (!hasActiveResearchBriefs(next)) {
+          router.refresh();
+        }
+      } catch {
+        // Ignorer nettverksfeil ved polling
+      }
+    };
+
+    void pollBriefs();
+    const intervalId = window.setInterval(() => {
+      void pollBriefs();
+    }, RESEARCH_BRIEF_POLL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [clusterId, hasActiveBriefs, router]);
 
   const runAction = useCallback(
     async (action: ResearchApiAction, requestId: string) => {
@@ -267,26 +314,30 @@ export function ResearchRowActions({
           setError('Ingen tilgang');
           return;
         }
-        if (
-          res.status === 409 &&
-          (body.request_id ||
-            body.error === RESEARCH_API_ERROR_CODES.requestConflict)
-        ) {
-          const conflictMessage =
-            body.message ??
-            (body.error === RESEARCH_API_ERROR_CODES.requestConflict ||
-            body.error === RESEARCH_API_ERROR_CODES.briefActive
-              ? researchApiErrorMessage(
-                  body.error as
-                    | typeof RESEARCH_API_ERROR_CODES.briefActive
-                    | typeof RESEARCH_API_ERROR_CODES.requestConflict,
-                )
-              : body.error);
-          setError(conflictMessage ?? researchApiErrorMessage(RESEARCH_API_ERROR_CODES.briefActive));
-          setBriefsByKind((prev) =>
-            mergeBriefFromResponse(prev, action, body.status ?? 'queued', body.request_id!),
+        if (res.status === 409) {
+          const conflict = resolveResearchEnqueueConflict(
+            action,
+            body,
+            body.error === RESEARCH_API_ERROR_CODES.requestConflict
+              ? researchApiErrorMessage(RESEARCH_API_ERROR_CODES.requestConflict)
+              : researchApiErrorMessage(RESEARCH_API_ERROR_CODES.briefActive),
           );
-          return;
+          if (conflict.kind === 'message_only') {
+            setError(conflict.message);
+            return;
+          }
+          if (conflict.kind === 'sync_active') {
+            setError(conflict.message);
+            setBriefsByKind((prev) =>
+              mergeActiveBriefFromConflict(
+                prev,
+                conflict.action,
+                conflict.requestId,
+                conflict.status,
+              ),
+            );
+            return;
+          }
         }
         if (!res.ok) {
           setError(body.error ?? 'Kunne ikke starte oppgaven');
@@ -313,11 +364,11 @@ export function ResearchRowActions({
   const onRequest = useCallback(
     (action: ResearchApiAction) => {
       const brief = briefsByKind[action];
-      if (isBusyStatus(brief?.status) || isDoneWithoutRerun(brief)) return;
+      if (isBusyStatus(brief?.status) || isDoneWithoutRerun(brief, clusterId)) return;
       setPendingRequestId(crypto.randomUUID());
       setConfirmAction(action);
     },
-    [briefsByKind],
+    [briefsByKind, clusterId],
   );
 
   const confirmAndRun = useCallback(() => {
@@ -328,8 +379,9 @@ export function ResearchRowActions({
   }, [confirmAction, pendingRequestId, runAction]);
 
   const tableMenuItems = useMemo(
-    () => ACTIONS.map((action) => buildTableMenuItem(action, briefsByKind[action])),
-    [briefsByKind],
+    () =>
+      ACTIONS.map((action) => buildTableMenuItem(action, briefsByKind[action], clusterId)),
+    [briefsByKind, clusterId],
   );
 
   const highlightBrief = useMemo(() => pickHighlightBrief(briefsByKind), [briefsByKind]);
@@ -349,7 +401,7 @@ export function ResearchRowActions({
         {variant === 'table-compact' ? (
           <>
             {highlightBrief ? (
-              <ResearchBriefStatusBadge status={highlightBrief.status} />
+              <ResearchBriefStatusBadge status={highlightBrief.status} kind={highlightBrief.kind} />
             ) : null}
             <SmoothDropdown
               items={tableMenuItems}
@@ -367,6 +419,7 @@ export function ResearchRowActions({
               key={action}
               action={action}
               brief={briefsByKind[action]}
+              clusterId={clusterId}
               pendingAction={pendingAction}
               onRequest={onRequest}
             />

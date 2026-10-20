@@ -65,7 +65,6 @@ export function ResearchClusterDetailView({
         <div className="mt-3 max-w-sm">
           <ResearchRowActions
             clusterId={row.id}
-            userId={adminUserId}
             variant="full"
             initialBriefsByKind={initialBriefsByKind}
           />
@@ -105,7 +104,9 @@ export function ResearchClusterDetailView({
         ) : (
           <ul className="space-y-2 text-sm">
             {briefs.map((brief) => {
-              const link = researchBriefOutputLink(brief.kind, brief.output_ref, brief.status);
+              const link = researchBriefOutputLink(brief.kind, brief.output_ref, brief.status, {
+                clusterId,
+              });
               return (
                 <li
                   key={brief.id}
@@ -113,7 +114,7 @@ export function ResearchClusterDetailView({
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium">{RESEARCH_KIND_LABELS[brief.kind]}</p>
-                    <ResearchBriefStatusBadge status={brief.status} />
+                    <ResearchBriefStatusBadge status={brief.status} kind={brief.kind} />
                   </div>
                   {brief.error ? (
                     <p className="mt-1 text-destructive">

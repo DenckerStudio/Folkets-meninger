@@ -174,6 +174,13 @@ export type ResearchBriefsByKind = Partial<
   Record<ResearchApiAction, ResearchBriefSnapshot>
 >;
 
+export async function getResearchBriefsByKindForCluster(
+  clusterId: string,
+): Promise<Partial<Record<ResearchBriefKind, ResearchBriefSnapshot>>> {
+  const map = await getLatestResearchBriefsByClusterIds([clusterId]);
+  return map[clusterId] ?? {};
+}
+
 export async function getLatestResearchBriefsByClusterIds(
   clusterIds: string[],
 ): Promise<Record<string, Partial<Record<ResearchBriefKind, ResearchBriefSnapshot>>>> {
@@ -275,10 +282,23 @@ export async function enqueueResearchJob(
     }
     if (parsed.code === RESEARCH_API_ERROR_CODES.briefActive) {
       let activeRequestId = parsed.requestId;
-      let activeStatus: ResearchBriefRow['status'] | undefined;
       if (!activeRequestId) {
         const active = await findActiveResearchBrief(clusterId, kind, requestId);
         activeRequestId = active?.request_id;
+      }
+      let activeStatus: ResearchBriefRow['status'] | undefined;
+      if (activeRequestId) {
+        const { data: activeRow } = await supabase
+          .from('research_briefs')
+          .select('status')
+          .eq('request_id', activeRequestId)
+          .maybeSingle();
+        if (activeRow?.status) {
+          activeStatus = activeRow.status as ResearchBriefRow['status'];
+        }
+      }
+      if (!activeStatus) {
+        const active = await findActiveResearchBrief(clusterId, kind, requestId);
         activeStatus = active?.status;
       }
       return {

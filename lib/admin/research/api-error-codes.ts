@@ -9,9 +9,9 @@ export type ResearchApiErrorCode =
 export function researchApiErrorMessage(code: ResearchApiErrorCode): string {
   switch (code) {
     case RESEARCH_API_ERROR_CODES.requestConflict:
-      return 'request_id er allerede knyttet til en annen oppgave';
+      return 'Denne forespørselen gjelder en annen research-oppgave. Prøv igjen med en ny handling.';
     case RESEARCH_API_ERROR_CODES.briefActive:
-      return 'Denne handlingen kjører allerede.';
+      return 'Det kjører allerede en oppgave av denne typen for saken.';
     default: {
       const _exhaustive: never = code;
       return _exhaustive;

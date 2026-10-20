@@ -87,6 +87,7 @@ assert.match(doc, /webhook_http_/);
 assert.match(doc, /minst hvert 20\. minutt/i);
 assert.match(doc, /research_brief_failed/);
 assert.match(doc, /felt p_generation_metadata/);
+assert.match(migration, /research_briefs_parse_poll_output_ref/);
 
 const webhook = readFileSync(
   join(process.cwd(), 'lib/admin/research/webhook.ts'),

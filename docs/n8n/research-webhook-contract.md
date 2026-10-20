@@ -110,7 +110,7 @@ Eksempel (blog/reel):
 - `done` og `failed` er **terminale**. Ny kjøring = ny `request_id` fra admin.
 - Forsøk på bakovergang (f.eks. `running` etter `done`) er **no-op**: RPC returnerer gjeldende rad uten endring.
 - Alle `p_*` i `n8n_upsert_research_brief`: **NULL = behold lagret verdi** (`COALESCE`).
-- **Heartbeat:** n8n skal sende heartbeat **minst hvert 20. minutt** (`n8n_upsert_research_brief` med `p_status=running` eller `queued` og NULL på andre felt). Utløp (`research_briefs_expire_stale`, standard **30 min** uten aktivitet på `updated_at`) tåler typisk n8n-gap på inntil ~15 min.
+- **Heartbeat:** n8n skal sende heartbeat **minst hvert 20. minutt** (`n8n_upsert_research_brief` med `p_status=running` eller `queued` og NULL på andre felt). Utløp (`research_briefs_expire_stale`, standard **30 min** uten aktivitet på `updated_at`) tåler typisk n8n-gap på inntil ~15 min. Et bakovergående status-kall (f.eks. `queued` på en `running`-rad) er **no-op** for status, men oppdaterer likevel `updated_at`.
 - Valgfritt på alle n8n-RPC-er: `p_cluster_id` / `p_kind` — når satt, må de matche raden; ellers `research_request_conflict` (`P0001`).
 
 ## Feilkoder (n8n + fm-web)

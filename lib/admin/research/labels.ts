@@ -30,21 +30,40 @@ export const RESEARCH_ACTION_CONFIRM: Record<ResearchApiAction, string> = {
 
 export type ResearchBriefOutputLink = { href: string; label: string };
 
+export function adminReelDraftUrl(pollId: string): string {
+  return `${routes.adminReels}?pollId=${encodeURIComponent(pollId)}`;
+}
+
 export function researchBriefOutputLink(
   kind: ResearchBriefKind,
   outputRef: string | null,
   status: ResearchBriefStatus,
+  options?: { clusterId?: string },
 ): ResearchBriefOutputLink | null {
-  if (!outputRef || status !== 'done') return null;
+  if (status !== 'done') return null;
   if (kind === 'blog') {
+    if (!outputRef) return null;
     const href = adminBlogPostUrl(outputRef);
     if (!href) return null;
     return { href, label: 'Åpne bloggutkast' };
   }
   if (kind === 'reel') {
-    return { href: routes.adminReels, label: 'Åpne Reel-utkast' };
+    if (!outputRef) return null;
+    return { href: adminReelDraftUrl(outputRef), label: 'Åpne Reel-utkast' };
   }
-  if (outputRef.startsWith('http://') || outputRef.startsWith('https://')) {
+  if (kind === 'deepen') {
+    if (outputRef?.startsWith('http://') || outputRef?.startsWith('https://')) {
+      return { href: outputRef, label: 'Åpne resultat' };
+    }
+    if (options?.clusterId) {
+      return {
+        href: routes.adminResearchCluster(options.clusterId),
+        label: 'Se utdyping',
+      };
+    }
+    return null;
+  }
+  if (outputRef?.startsWith('http://') || outputRef?.startsWith('https://')) {
     return { href: outputRef, label: 'Åpne resultat' };
   }
   return null;

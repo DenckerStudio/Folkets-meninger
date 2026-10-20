@@ -1,8 +1,23 @@
-import { RESEARCH_BRIEF_STATUS_LABELS } from '@/lib/admin/research/labels';
-import type { ResearchBriefStatus } from '@/lib/admin/research/types';
+import {
+  RESEARCH_BRIEF_STATUS_LABELS,
+  RESEARCH_KIND_LABELS,
+} from '@/lib/admin/research/labels';
+import type { ResearchBriefKind, ResearchBriefStatus } from '@/lib/admin/research/types';
 import { cn } from '@/lib/utils';
 
-export function ResearchBriefStatusBadge({ status }: { status: ResearchBriefStatus }) {
+export function ResearchBriefStatusBadge({
+  status,
+  kind,
+}: {
+  status: ResearchBriefStatus;
+  kind?: ResearchBriefKind;
+}) {
+  const statusLabel = RESEARCH_BRIEF_STATUS_LABELS[status];
+  const label =
+    kind && (status === 'queued' || status === 'running' || status === 'failed')
+      ? `${RESEARCH_KIND_LABELS[kind]} · ${statusLabel}`
+      : statusLabel;
+
   return (
     <span
       className={cn(
@@ -13,7 +28,7 @@ export function ResearchBriefStatusBadge({ status }: { status: ResearchBriefStat
         status === 'queued' && 'bg-muted text-muted-foreground',
       )}
     >
-      {RESEARCH_BRIEF_STATUS_LABELS[status]}
+      {label}
     </span>
   );
 }
