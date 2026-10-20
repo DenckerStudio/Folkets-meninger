@@ -1,29 +1,16 @@
-# LLM faithfulness judge (v2-final)
+# LLM faithfulness judge (v2-final) — robust metrics
 
-## Root cause (klever judge quality 0.075 — pre-fix)
+## Klever / Coolify Expert (rag-eval-pg seeded)
 
-The judged run used **stub answers**, not failed LLM synthesis:
+Use a **different judge model** than the answer model (default guard). Recommended on klever:
 
-| Evidence | Meaning |
-| --- | --- |
-| Almost every answer starts with **`Basert på utdrag:`** and repeats excerpt text | Intentional template in `export-answers-v2.ts` (removed in `0f91547`) |
-| **009 / 023** cut off mid-sentence | **`.slice(0, 1200)`** on concatenated excerpts — not `num_predict` |
-| **010 / 011 / 015** repeat irrelevant hits | No LLM step to say “cannot answer from sources” — stub always dumps retrieval |
-| No `generationError` rows | No swallowed timeout; **no `/api/generate` call** in the old export path |
+- **Answers:** `gemma4:26b` (`think: false`)
+- **Judge:** `qwen2.5:32b` (or another non-gemma model installed on Ollama)
 
-**Prod:** Stemme+ chat uses `streamText` + BYOK in `app/api/chat/route.ts` — **not** this export stub. Prod is unaffected.
-
-**Fix:** `evals/rag/lib/generate-rag-answer.ts` calls Ollama `/api/generate` with a synthesis prompt; excerpt passthrough is rejected; export exits non-zero on `generationError`. Regression: `export-answers.regression.test.ts`, `generate-rag-answer.test.ts`.
-
-Regenerate answers after pulling the fix, then re-judge.
-
----
-
-Run on **klever** (LAN Ollama). Requires stack eval DB seeded (`npm run eval:rag:v2:seed` or full harness).
-
-## 1) Generate answers (Ollama synthesis)
+### 1) Generate answers
 
 ```bash
+cd /path/to/Folkets-meninger
 export ANSWER_LLM_URL=http://192.168.50.154:11434
 export ANSWER_LLM_MODEL=gemma4:26b
 export ANSWER_LLM_TIMEOUT_MS=600000
@@ -34,25 +21,44 @@ export RAG_EVAL_LABEL=v2-final
 npm run eval:rag:answers:v2
 ```
 
-Output: `evals/rag/results/v2-final-answers.json` (exits non-zero if any row has `generationError`).
+Writes `evals/rag/results/v2-final-answers.json` (includes `retrievalSourceKeys`, `retrievalDocumentIds` per row).
 
-Optional smoke (3 rows): `RAG_EVAL_V2_ANSWER_SAMPLE=3` with the same env.
-
-## 2) Faithfulness judge
+### 2) Judge + deterministic metrics
 
 ```bash
 export JUDGE_URL=http://192.168.50.154:11434
-export JUDGE_MODEL=gemma4:26b
+export JUDGE_MODEL=qwen2.5:32b
 export JUDGE_TIMEOUT_MS=900000
 export JUDGE_THINK=false
+# Do NOT set ALLOW_SAME_JUDGE unless debugging self-judge inflation
 
 npm run eval:rag:judge -- evals/rag/results/v2-final-answers.json
 ```
 
-Produces `v2-final-answers.judged.json` and `v2-final-answers-judged-summary.json`.
+Optional fail CI locally: `RAG_EVAL_ENFORCE_TARGETS=1` (same command).
 
-**Targets (after rerun):** quality ≥ 0.7, faithfulness ≥ 0.85.
+Outputs:
 
-### v2-tema-002 empty retrieval (klever smoke)
+- `v2-final-answers.judged.json` — per-row LLM scores (0.25 steps) + deterministic block
+- `v2-final-answers-judged-summary.json` — aggregates + **calibration warning** if >90% rows score 1/1
 
-Gold expects `avløpsdirektiv` in chunks for issues **200191** and **105076** (seeded in v2 corpus). The metrics harness passes `gold.issueIds` into `retrieveForQuestion`; **answer export did not** (only FTS top-3 for `forurensningstiltak`), so hybrid search could return no excerpts → fallback «Fant ingen kilde…». Fixed: `export-answers-v2.ts` now passes `issueIds: q.gold?.issueIds` like `run-eval-v2.ts`. Not a missing seed when the full v2 stack is seeded.
+### Targets
+
+| Metric | Target |
+| --- | --- |
+| Deterministic **goldFacts** mean hit rate (answer text) | ≥ **0.6** |
+| **incorrectRefusalRate** (refusal while gold facts exist) | ≤ **0.1** |
+| LLM faithfulness mean | ≥ **0.85** |
+| LLM quality mean | ≥ **0.7** |
+
+Trust **deterministic goldFacts + refusal** over LLM 1.0/1.0 when the judge model matches the answer model.
+
+### Retrieval diversity (8:15 S / same dokument)
+
+Topic retrieval used to return many chunks from the **same `document_id`** (list metadata + votering text repeats `Dokument 8:15 S` across saker). Fix: `capChunksPerDocument` (default **1** per document, `RAG_EVAL_MAX_CHUNKS_PER_DOCUMENT`) before excerpts — hybrid fetches 8, keeps top distinct documents per sak.
+
+### Smoke (3 rows)
+
+```bash
+RAG_EVAL_V2_ANSWER_SAMPLE=3 npm run eval:rag:answers:v2
+```

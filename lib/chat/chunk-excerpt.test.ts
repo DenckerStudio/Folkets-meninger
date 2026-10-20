@@ -4,6 +4,7 @@ import {
   CHAT_EXCERPT_TOTAL_BUDGET_CHARS,
   applyChunkExcerptsForChat,
   applyTopicWideChunkExcerpts,
+  capChunksPerDocument,
   excerptChunkForQuery,
   formatChunkExcerptForDisplay,
 } from './chunk-excerpt';
@@ -108,5 +109,15 @@ assert.equal(
   formatChunkExcerptForDisplay('\n\n…\n\n## Komiteens merknader\n\nAvsnitt.'),
   '…\n## Komiteens merknader\nAvsnitt.',
 );
+
+const duped = capChunksPerDocument(
+  [
+    { documentId: 'doc-a', chunkIndex: 0, content: 'a', rank: 1 },
+    { documentId: 'doc-a', chunkIndex: 1, content: 'b', rank: 0.9 },
+    { documentId: 'doc-b', chunkIndex: 0, content: 'c', rank: 0.8 },
+  ],
+  1,
+);
+assert.equal(duped.length, 2);
 
 console.log('chat/chunk-excerpt.test.ts: ok');

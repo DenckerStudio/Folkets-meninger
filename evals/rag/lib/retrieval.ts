@@ -11,6 +11,7 @@ function clipContent(value: string, max = 1400): string {
 import type pg from 'pg';
 import { embedBgeM3, embedNomic } from './embed';
 import type { EvalVariant } from './db';
+import { capChunksPerDocument } from '@/lib/chat/chunk-excerpt';
 
 export type RetrievedRow = ChatDocumentChunk & { chunkId?: string };
 
@@ -163,12 +164,17 @@ export async function retrieveForQuestion(
   const start = performance.now();
   const limit = Math.max(args.k, MAX_CHUNKS);
 
+  const maxPerDocument = Number(process.env.RAG_EVAL_MAX_CHUNKS_PER_DOCUMENT ?? '1');
+  const dedupeRows = (rows: RetrievedRow[]) =>
+    maxPerDocument > 0 ? capChunksPerDocument(rows, maxPerDocument) : rows;
+
   const excerptRows = (rows: RetrievedRow[], query: string): RetrievedRow[] => {
+    const input = dedupeRows(rows);
     if (args.useLegacyExcerptBug) {
-      const sorted = [...rows].sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
+      const sorted = [...input].sort((a, b) => (b.rank ?? 0) - (a.rank ?? 0));
       return applyChunkExcerptsForChat(sorted, query);
     }
-    return applyChunkExcerptsForChat(rows, query);
+    return applyChunkExcerptsForChat(input, query);
   };
 
   if ((args.kind === 'topic' || args.kind === 'hearing_topic') && variant === 'stack') {
@@ -178,11 +184,11 @@ export async function retrieveForQuestion(
         : await searchIssueIds(pool, variant, args.query, 3);
     const perSak: RetrievedRow[][] = [];
     for (const id of ids) {
-      const rows =
+      const raw =
         args.kind === 'hearing_topic'
-          ? await hybridSearch(pool, args.query, { hearingId: id }, 4)
-          : await hybridSearch(pool, args.query, { issueIds: [id] }, 4);
-      perSak.push(rows);
+          ? await hybridSearch(pool, args.query, { hearingId: id }, 8)
+          : await hybridSearch(pool, args.query, { issueIds: [id] }, 8);
+      perSak.push(dedupeRows(raw));
     }
     const excerptedBySak = applyTopicWideChunkExcerpts(perSak, args.query);
     const flatExcerpts = excerptedBySak.flat();

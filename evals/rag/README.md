@@ -53,9 +53,9 @@ export RAG_EVAL_LABEL=v2-final
 npm run eval:rag:answers:v2
 # → evals/rag/results/v2-final-answers.json
 
-# 2) Faithfulness judge (LAN Ollama gemma4:26b; default 15 min/row timeout)
+# 2) Judge + deterministic metrics (use a different model than answers; default qwen2.5:32b)
 export JUDGE_URL=http://192.168.50.154:11434
-export JUDGE_MODEL=gemma4:26b
+export JUDGE_MODEL=qwen2.5:32b
 export JUDGE_TIMEOUT_MS=900000
 export JUDGE_THINK=false
 npm run eval:rag:judge -- evals/rag/results/v2-final-answers.json
@@ -76,7 +76,10 @@ Improvement rounds table: `npm run eval:rag:rounds` → `evals/rag/results/impro
 | `ANSWER_LLM_TIMEOUT_MS` | Answer synthesis timeout (default `600000`) |
 | `ANSWER_LLM_NUM_PREDICT` | Ollama `num_predict` for answers (default `768`) |
 | `ANSWER_LLM_THINK` | Ollama `think` for answer synthesis (default `false`; gemma4 uses hidden thinking tokens if true) |
-| `JUDGE_URL` / `JUDGE_MODEL` | LAN judge (`judge.ts`) |
+| `JUDGE_URL` / `JUDGE_MODEL` | LAN judge (`judge.ts`; default `qwen2.5:32b`, must differ from answer model) |
+| `ALLOW_SAME_JUDGE` | Set `1` only to allow judge model = answer model (inflates scores) |
+| `RAG_EVAL_ENFORCE_TARGETS` | Set `1` to exit non-zero if gold/refusal/LLM targets miss |
+| `RAG_EVAL_MAX_CHUNKS_PER_DOCUMENT` | Cap hybrid chunks per `document_id` before excerpts (default `1`) |
 | `JUDGE_TIMEOUT_MS` | Per-row Ollama generate timeout (default `900000`; invalid/non-positive → default) |
 | `JUDGE_THINK` | Ollama `think` for judge (default `false`) |
 | `RAG_EVAL_EXCERPT_PER_CHUNK` / `RAG_EVAL_EXCERPT_TOTAL` | Excerpt caps (#177) |

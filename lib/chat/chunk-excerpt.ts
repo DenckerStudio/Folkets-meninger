@@ -90,7 +90,25 @@ export type RankedChunkExcerpt = {
   content: string;
   rank?: number;
   chunkIndex?: number;
+  documentId?: string;
 };
+
+/** Avoid filling context with many chunks from the same document (hybrid often repeats list/votering metadata). */
+export function capChunksPerDocument<T extends RankedChunkExcerpt>(
+  chunks: readonly T[],
+  maxPerDocument = 1,
+): T[] {
+  const counts = new Map<string, number>();
+  const out: T[] = [];
+  for (const chunk of chunks) {
+    const docKey = chunk.documentId?.trim() || `idx:${chunk.chunkIndex ?? 0}`;
+    const n = counts.get(docKey) ?? 0;
+    if (n >= maxPerDocument) continue;
+    counts.set(docKey, n + 1);
+    out.push(chunk);
+  }
+  return out;
+}
 
 export type SakIndexedChunk<T extends RankedChunkExcerpt = RankedChunkExcerpt> = T & {
   sakIndex: number;

@@ -12,6 +12,7 @@ import {
 import { fetchCentralQueryEmbedding } from '@/lib/chat/query-embed';
 import {
   applyChunkExcerptsForChat,
+  capChunksPerDocument,
   applyTopicWideChunkExcerpts,
   normalizeChunkText,
 } from '@/lib/chat/chunk-excerpt';
@@ -521,8 +522,10 @@ async function searchChunks(
   options: SearchChunksOptions = {},
 ): Promise<ChatDocumentChunk[]> {
   const applyExcerpts = options.applyExcerpts !== false;
-  const finish = (chunks: ChatDocumentChunk[]) =>
-    applyExcerpts ? applyChunkExcerptsForChat(chunks, query) : chunks;
+  const finish = (chunks: ChatDocumentChunk[]) => {
+    const deduped = capChunksPerDocument(chunks, 1);
+    return applyExcerpts ? applyChunkExcerptsForChat(deduped, query) : deduped;
+  };
 
   const hybrid = await searchChunksHybrid(
     supabase,

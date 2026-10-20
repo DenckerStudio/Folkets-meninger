@@ -4,6 +4,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createPool, databaseForVariant } from './lib/db';
+import { extractSourceKeys } from './lib/answer-metrics';
 import { generateRagAnswer, resolveAnswerLlmConfig } from './lib/generate-rag-answer';
 import { retrieveForQuestion } from './lib/retrieval';
 import { v2QuestionsPath } from './lib/v2-paths';
@@ -29,6 +30,8 @@ type AnswerRow = {
   generationError?: string;
   answerModel?: string;
   answerLlmUrl?: string;
+  retrievalDocumentIds?: string[];
+  retrievalSourceKeys?: string[];
 };
 
 async function main(): Promise<void> {
@@ -47,7 +50,7 @@ async function main(): Promise<void> {
   for (const q of sample) {
     const isHearingTopic = q.kind === 'topic' && q.tags?.includes('hearing');
     const kind = isHearingTopic ? 'hearing_topic' : q.kind;
-    const { excerpts } = await retrieveForQuestion(pool, 'stack', {
+    const { excerpts, rows: retrievedRows } = await retrieveForQuestion(pool, 'stack', {
       kind,
       query: q.query,
       issueId: q.issueId,
@@ -56,6 +59,8 @@ async function main(): Promise<void> {
       k: 8,
     });
     const excerptTexts = excerpts.map((e) => e.content);
+    const retrievalSourceKeys = extractSourceKeys(excerptTexts.join('\n'));
+    const retrievalDocumentIds = [...new Set(retrievedRows.map((r) => r.documentId).filter(Boolean))];
     const row: AnswerRow = {
       id: q.id,
       category: q.category,
@@ -65,6 +70,8 @@ async function main(): Promise<void> {
       goldFacts: q.gold?.facts ?? [],
       answerModel: llm.model,
       answerLlmUrl: llm.baseUrl,
+      retrievalDocumentIds,
+      retrievalSourceKeys,
     };
     try {
       row.answer = await generateRagAnswer({
