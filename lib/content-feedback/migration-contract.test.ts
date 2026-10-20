@@ -28,6 +28,7 @@ for (const table of tables) {
 }
 
 assert.match(migration, /CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public/i);
+assert.match(migration, /ALTER EXTENSION vector SET SCHEMA public/i);
 assert.doesNotMatch(migration, /extensions\.vector/i);
 assert.match(migration, /vector\(1024\)/i);
 assert.match(migration, /bge-m3/i);

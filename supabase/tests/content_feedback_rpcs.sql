@@ -16,6 +16,7 @@ DECLARE
   v_emb_model text;
   v_title text;
   v_excerpt text;
+  v_vec_dist double precision;
 BEGIN
   IF to_regclass('public.content_feedback') IS NULL THEN
     RAISE NOTICE 'content_feedback_rpcs.sql: hopper over (tabell finnes ikke)';
@@ -32,8 +33,10 @@ BEGIN
   END IF;
 
   -- Cosine-operator (<=>) må løses uten extensions.-prefiks (samme som i n8n SECURITY DEFINER-RPC-er)
-  IF (SELECT (v_vec::vector(1024) <=> v_vec::vector(1024))) IS DISTINCT FROM 0::double precision THEN
-    RAISE EXCEPTION 'vector cosine operator (<=>) løses ikke i public search_path';
+  PERFORM set_config('search_path', 'public', true);
+  v_vec_dist := (v_vec::vector(1024) <=> v_vec::vector(1024));
+  IF v_vec_dist IS NULL OR abs(v_vec_dist) > 1e-9 THEN
+    RAISE EXCEPTION 'vector cosine operator (<=>) løses ikke i public search_path (dist=%)', v_vec_dist;
   END IF;
 
   -- Privilegier: anon/authenticated uten skriv/execute, service_role inn
