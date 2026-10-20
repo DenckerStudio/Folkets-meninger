@@ -105,7 +105,7 @@ export function ResearchClusterDetailView({
           <ul className="space-y-2 text-sm">
             {briefs.map((brief) => {
               const link = researchBriefOutputLink(brief.kind, brief.output_ref, brief.status, {
-                clusterId,
+                clusterId: row.id,
               });
               return (
                 <li
