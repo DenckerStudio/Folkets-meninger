@@ -408,7 +408,7 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1
-    FROM public.n8n_list_source_items('utenfilter.no', NULL, 10) l
+    FROM public.n8n_list_source_items('utenfilter.no', NULL, 500) l
     WHERE l.external_id = 'ci-123' AND l.excerpt = 'Ny ingress'
   ) THEN
     RAISE EXCEPTION 'n8n_list_source_items skal returnere excerpt';
