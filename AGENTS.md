@@ -130,6 +130,11 @@ All on **Coolify, server `klever`**:
   falls back to `CMS_API_KEY`). Editors publish in the Payload admin, never n8n.
   `POST /api/ops/blog/social-posted` calls `fm-cms` `/api/blog-ops/social-posted`
   signed with HMAC (`REVALIDATE_SECRET`). `fm-cms` calls `/api/revalidate/blog` on publish.
+  **Auto content-feedback:** n8n-utkast (`origin: n8n`) trigger en fire-and-forget-hook i
+  fm-cms (`afterChange` / `afterDelete`) mot `POST /api/ops/content-feedback` på fm-web
+  (HMAC `x-fm-timestamp` + `x-fm-signature`; secret `CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET`,
+  ellers `REVALIDATE_SECRET`). CMS trenger `FM_WEB_URL` (eller `WEB_PUBLIC_URL`).
+  fm-cms pinnes manuelt i Coolify — ekspert må oppdatere pin og env ved deploy.
   Blogg redigeres i Payload (`CMS_URL`/admin), ikke i fm-web admin-hub.
 - **`20261018120000_blog_posts.sql` (Supabase `public.blog_posts`) is superseded and must
   still NOT be applied.** Do not build on the Supabase blog table. All blog work targets Payload.

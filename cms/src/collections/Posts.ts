@@ -1,6 +1,10 @@
 import type { CollectionConfig } from 'payload';
 import { lexicalEditor } from '@payloadcms/richtext-lexical';
 import { postPublishHooks } from '@/hooks/postPublish';
+import {
+  contentFeedbackAfterChange,
+  contentFeedbackAfterDelete,
+} from '@/hooks/contentFeedbackWebhook';
 import { validatePostText } from '@/hooks/validatePostText';
 import {
   canPublishField,
@@ -45,7 +49,8 @@ export const Posts: CollectionConfig = {
     beforeOperation: [enforceDraftQueryForNonEditors],
     beforeValidate: [enforceDraftDataBeforeValidate, validatePostText],
     beforeChange: [agentDraftGuard, enforceDraftDataBeforeChange, setPublishedAtOnPublish],
-    afterChange: [postPublishHooks],
+    afterChange: [postPublishHooks, contentFeedbackAfterChange],
+    afterDelete: [contentFeedbackAfterDelete],
   },
   fields: [
     {
