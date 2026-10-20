@@ -59,6 +59,10 @@ for f in $(ls -1 supabase/migrations/*.sql | sort); do
     echo "  -> DEFER $base"
     continue
   fi
+  if [[ "$base" == '20261021120000_content_feedback.sql' ]]; then
+    echo "  -> CI prep: pgvector i public (før content_feedback) ..."
+    psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/tests/ci-ensure-pgvector-public.sql
+  fi
   echo "  -> $base"
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
 done

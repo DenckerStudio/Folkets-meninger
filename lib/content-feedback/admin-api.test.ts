@@ -8,11 +8,23 @@ const routeSrc = readFileSync(
   join(process.cwd(), 'app/api/admin/content-feedback/route.ts'),
   'utf8',
 );
+const f1Migration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/20261021120000_content_feedback.sql'),
+  'utf8',
+);
 
 assert.match(routeSrc, /requireAdmin\(\)/);
 assert.match(routeSrc, /status: auth\.status/);
 assert.match(routeSrc, /parseAdminContentFeedbackBody/);
 assert.match(routeSrc, /submitAdminContentFeedback/);
+
+assert.match(f1Migration, /IF v_existing_id IS NOT NULL AND v_existing_source = 'auto' THEN/i);
+assert.match(f1Migration, /source = 'admin'/i);
+assert.match(f1Migration, /SET superseded_at = now\(\)/i);
+assert.doesNotMatch(
+  f1Migration,
+  /IF v_existing_id IS NOT NULL AND v_existing_source = 'auto' THEN[\s\S]*?UPDATE public\.content_feedback[\s\S]*?WHERE id = v_existing_id;[\s\S]*?IF v_existing_id IS NOT NULL AND v_existing_source = 'admin'/i,
+);
 
 const rejectWithoutDetail = parseAdminContentFeedbackBody({
   content_type: 'reel',
