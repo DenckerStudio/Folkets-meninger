@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createLocalReq, getPayload, type Payload } from 'payload';
 import config from '@/payload.config';
+import { seedTaxonomy } from '@/seed/seedBaseData';
 
 const databaseUri = process.env.DATABASE_URI?.trim();
 const runIntegration = process.env.CMS_INTEGRATION_TESTS === '1' && Boolean(databaseUri);
@@ -42,6 +43,7 @@ async function main() {
   process.env.PAYLOAD_SECRET = process.env.PAYLOAD_SECRET || 'ci-test-secret';
 
   const payload = await getPayload({ config });
+  await seedTaxonomy(payload);
   const categoryId = await getFirstCategoryId(payload);
   const slug = `cf-outbox-${Date.now()}`;
 
