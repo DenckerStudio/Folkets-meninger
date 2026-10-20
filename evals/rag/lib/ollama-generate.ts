@@ -23,6 +23,7 @@ export function buildOllamaGenerateBody(args: {
   think: boolean;
   stream?: boolean;
   numPredict?: number;
+  format?: 'json';
 }): Record<string, unknown> {
   const body: Record<string, unknown> = {
     model: args.model,
@@ -30,6 +31,9 @@ export function buildOllamaGenerateBody(args: {
     stream: args.stream ?? false,
     think: args.think,
   };
+  if (args.format === 'json') {
+    body.format = 'json';
+  }
   if (args.numPredict !== undefined) {
     body.options = { num_predict: args.numPredict };
   }

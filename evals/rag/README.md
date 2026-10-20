@@ -58,9 +58,13 @@ export JUDGE_URL=http://192.168.50.154:11434
 export JUDGE_MODEL=qwen2.5:32b
 export JUDGE_TIMEOUT_MS=900000
 export JUDGE_THINK=false
+npm run eval:rag:metrics -- evals/rag/results/v2-final-answers.json
+# → *-metrics.json + *-metrics-summary.json (goldFacts, refusal, diversity — no LLM)
+
 npm run eval:rag:judge -- evals/rag/results/v2-final-answers.json
 # → evals/rag/results/v2-final-answers.judged.json
 # → evals/rag/results/v2-final-answers-judged-summary.json
+# Resume: npm run eval:rag:judge -- --resume evals/rag/results/v2-final-answers.json
 ```
 
 Improvement rounds table: `npm run eval:rag:rounds` → `evals/rag/results/improvement-rounds.md`.

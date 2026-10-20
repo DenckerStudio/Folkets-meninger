@@ -1,19 +1,20 @@
 /**
- * Faithfulness judge + deterministic answer metrics over saved answer JSON.
+ * Faithfulness judge (LLM) + optional merge with deterministic metrics summary.
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import {
-  GOLD_FACTS_HIT_TARGET,
-  quantizeScore025,
-  REFUSAL_RATE_TARGET,
-  scoreDeterministicRow,
-  summarizeGoldFacts,
-  summarizeRefusals,
-  summarizeSourceDiversity,
-  type PerRowDeterministicMetrics,
-} from './lib/answer-metrics';
+import { buildDeterministicReport, type AnswerInputRow } from './lib/deterministic-metrics-report';
 import { assertJudgeDiffersFromAnswerModel, resolveJudgeModel } from './lib/judge-model-guard';
+import {
+  buildJudgeRetryPrompt,
+  parseJudgeScoresJson,
+} from './lib/judge-parse';
+import {
+  applyParsedJudgeScores,
+  isResumeCompleteRow,
+  summarizeLlmJudged,
+  type JudgedRowOutput,
+} from './lib/judge-scoring';
 import {
   buildOllamaGenerateBody,
   ollamaEmptyResponseError,
@@ -36,28 +37,16 @@ function resolveJudgeTimeoutMs(): number {
 const JUDGE_TIMEOUT_MS = resolveJudgeTimeoutMs();
 const JUDGE_THINK = resolveOllamaThinkFlag('JUDGE_THINK', false);
 
-type AnswerRow = {
-  id: string;
-  category?: string;
-  query: string;
-  answer: string;
-  excerpts: string[];
-  goldFacts: string[];
-  generationError?: string;
-  answerModel?: string;
+type AnswerRow = AnswerInputRow & {
   retrievalSourceKeys?: string[];
 };
 
-type JudgedRow = {
-  id: string;
-  faithfulness: number;
-  quality: number;
-  note: string;
-  faithfulnessRaw?: number;
-  qualityRaw?: number;
-  deterministic: PerRowDeterministicMetrics;
-  incorrectRefusalOverride: boolean;
-};
+function parseCliArgs(argv: string[]): { answersPath: string; resume: boolean } {
+  const resume = argv.includes('--resume');
+  const path = argv.find((a) => !a.startsWith('--'));
+  if (!path) throw new Error('Usage: npx tsx evals/rag/judge.ts [--resume] <answers.json>');
+  return { answersPath: path, resume };
+}
 
 function buildJudgePrompt(row: AnswerRow): string {
   return `Du er en uavhengig, streng evaluator for Stortinget-RAG (ikke svarmodellen).
@@ -78,16 +67,20 @@ Straff eksplisitt:
 - quality maks 0.25 hvis svaret sier at kildene ikke inneholder info uten å prøve å svare
 - faithfulness maks 0.5 hvis viktige påstander ikke kan spores til utdrag
 
-Gi KUN JSON (ingen markdown):
-{"faithfulness":0|0.25|0.5|0.75|1,"quality":0|0.25|0.5|0.75|1,"justification":"2-4 setninger som nevner gull-fakta og kilder"}`;
+Returner KUN gyldig JSON med nøklene faithfulness, quality, justification (ingen markdown).`;
 }
 
-async function judgeRow(row: AnswerRow, deterministic: PerRowDeterministicMetrics): Promise<JudgedRow> {
+async function fetchJudgeText(prompt: string, useJsonFormat: boolean): Promise<string> {
   const res = await fetch(`${JUDGE_URL}/api/generate`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(
-      buildOllamaGenerateBody({ model: JUDGE_MODEL, prompt: buildJudgePrompt(row), think: JUDGE_THINK }),
+      buildOllamaGenerateBody({
+        model: JUDGE_MODEL,
+        prompt,
+        think: JUDGE_THINK,
+        format: useJsonFormat ? 'json' : undefined,
+      }),
     ),
     signal: AbortSignal.timeout(JUDGE_TIMEOUT_MS),
   });
@@ -97,90 +90,54 @@ async function judgeRow(row: AnswerRow, deterministic: PerRowDeterministicMetric
   if (!text.trim()) {
     throw ollamaEmptyResponseError('judge', payload);
   }
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) {
-    return {
-      id: row.id,
-      faithfulness: 0,
-      quality: 0,
-      note: 'parse_fail',
-      deterministic,
-      incorrectRefusalOverride: false,
-    };
-  }
-  const parsed = JSON.parse(match[0]) as {
-    faithfulness: number;
-    quality: number;
-    justification?: string;
-    note?: string;
-  };
-  let faithRaw = Number(parsed.faithfulness);
-  let qualRaw = Number(parsed.quality);
-  if (!Number.isFinite(faithRaw)) faithRaw = 0;
-  if (!Number.isFinite(qualRaw)) qualRaw = 0;
-
-  let incorrectRefusalOverride = false;
-  if (deterministic.incorrectRefusal) {
-    qualRaw = 0;
-    incorrectRefusalOverride = true;
-  }
-  if (row.goldFacts.length > 0 && !deterministic.goldFactsHit && qualRaw > 0.25) {
-    qualRaw = 0.25;
-  }
-
-  const faithfulness = quantizeScore025(faithRaw);
-  const quality = quantizeScore025(qualRaw);
-  const note = (parsed.justification ?? parsed.note ?? '').trim() || 'no_justification';
-
-  return {
-    id: row.id,
-    faithfulness,
-    quality,
-    faithfulnessRaw: faithRaw,
-    qualityRaw: qualRaw,
-    note,
-    deterministic,
-    incorrectRefusalOverride,
-  };
+  return text;
 }
 
-function summarizeLlm(rows: JudgedRow[]): Record<string, number> {
-  const n = rows.length || 1;
-  const faith = rows.reduce((s, r) => s + r.faithfulness, 0) / n;
-  const qual = rows.reduce((s, r) => s + r.quality, 0) / n;
-  const pass = rows.filter((r) => r.faithfulness >= 0.7).length / n;
-  const maxBoth = rows.filter((r) => r.faithfulness === 1 && r.quality === 1).length / n;
-  return {
-    count: rows.length,
-    faithfulnessMean: faith,
-    qualityMean: qual,
-    faithfulnessPassRate: pass,
-    maxScoreFraction: maxBoth,
-  };
+async function judgeRowLlm(row: AnswerRow, deterministic: JudgedRowOutput['deterministic']): Promise<JudgedRowOutput> {
+  let text = await fetchJudgeText(buildJudgePrompt(row), true);
+  let parsed = parseJudgeScoresJson(text);
+  if (!parsed) {
+    text = await fetchJudgeText(
+      buildJudgeRetryPrompt({ query: row.query, priorResponse: text }),
+      true,
+    );
+    parsed = parseJudgeScoresJson(text);
+  }
+  if (!parsed) {
+    return {
+      id: row.id,
+      deterministic,
+      judgeError: `judge JSON parse failed after retry (response length ${text.length})`,
+    };
+  }
+  return applyParsedJudgeScores(row, deterministic, parsed);
+}
+
+function loadResumeMap(judgedPath: string): Map<string, JudgedRowOutput> {
+  if (!existsSync(judgedPath)) return new Map();
+  const prev = JSON.parse(readFileSync(judgedPath, 'utf8')) as JudgedRowOutput[];
+  const map = new Map<string, JudgedRowOutput>();
+  for (const row of prev) {
+    if (row.id) map.set(row.id, row);
+  }
+  return map;
 }
 
 async function main(): Promise<void> {
-  const path = process.argv[2];
-  if (!path) throw new Error('Usage: npx tsx evals/rag/judge.ts <answers.json>');
-
-  const rows = JSON.parse(readFileSync(path, 'utf8')) as AnswerRow[];
+  const { answersPath, resume } = parseCliArgs(process.argv.slice(2));
+  const rows = JSON.parse(readFileSync(answersPath, 'utf8')) as AnswerRow[];
   const answerModel = rows.find((r) => r.answerModel)?.answerModel;
   assertJudgeDiffersFromAnswerModel({ judgeModel: JUDGE_MODEL, answerModel });
 
-  const categoryById = new Map(rows.map((r) => [r.id, r.category ?? '']));
-  const deterministicRows = rows.map((r) =>
-    scoreDeterministicRow({
-      id: r.id,
-      category: r.category,
-      query: r.query,
-      answer: r.answer,
-      excerpts: r.excerpts,
-      goldFacts: r.goldFacts,
-    }),
-  );
+  const deterministicReport = buildDeterministicReport(rows);
+  const detById = new Map(deterministicReport.perRow.map((d) => [d.id, d]));
 
-  const out: JudgedRow[] = [];
+  const outPath = answersPath.replace(/\.json$/, '.judged.json');
+  const resumeMap = resume ? loadResumeMap(outPath) : new Map<string, JudgedRowOutput>();
+
+  const out: JudgedRowOutput[] = [];
   const skipped: string[] = [];
+
   for (const row of rows) {
     if (row.generationError) {
       skipped.push(`${row.id}: ${row.generationError}`);
@@ -190,69 +147,83 @@ async function main(): Promise<void> {
       skipped.push(`${row.id}: empty answer`);
       continue;
     }
-    const det = deterministicRows.find((d) => d.id === row.id)!;
+    const det = detById.get(row.id);
+    if (!det) {
+      skipped.push(`${row.id}: missing deterministic row`);
+      continue;
+    }
+
+    const cached = resumeMap.get(row.id);
+    if (resume && cached && isResumeCompleteRow(cached)) {
+      process.stdout.write(`[judge] ${row.id} (resume skip)\n`);
+      out.push({ ...cached, deterministic: det });
+      continue;
+    }
+
     process.stdout.write(`[judge] ${row.id}…\n`);
-    out.push(await judgeRow(row, det));
+    try {
+      out.push(await judgeRowLlm(row, det));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[judge] ${row.id} ERROR: ${message}\n`);
+      out.push({ id: row.id, deterministic: det, judgeError: message });
+    }
   }
+
   if (skipped.length > 0) {
     throw new Error(
       `Answers file has ${skipped.length} row(s) with generation errors or empty answers — fix export first:\n${skipped.join('\n')}`,
     );
   }
 
-  const goldSummary = summarizeGoldFacts(deterministicRows);
-  const refusalSummary = summarizeRefusals(deterministicRows);
-  const diversity = summarizeSourceDiversity(deterministicRows, categoryById);
-  const llmStats = summarizeLlm(out);
+  const llmStats = summarizeLlmJudged(out);
 
   let calibrationWarning: string | null = null;
-  if (llmStats.maxScoreFraction > 0.9) {
+  if (llmStats.count > 0 && llmStats.maxScoreFraction > 0.9) {
     calibrationWarning =
-      `LLM judge gave faithfulness=1 and quality=1 on ${(llmStats.maxScoreFraction * 100).toFixed(0)}% of rows (>90%). ` +
-      'Scores are likely inflated — prefer deterministic goldFacts/refusal metrics and a judge model different from the answer model.';
+      `LLM judge gave faithfulness=1 and quality=1 on ${(llmStats.maxScoreFraction * 100).toFixed(0)}% of judged rows (>90%). ` +
+      'Scores are likely inflated — prefer deterministic metrics and a judge model different from the answer model.';
   }
 
   const targets = {
-    goldFactsHitRateMin: GOLD_FACTS_HIT_TARGET,
-    goldFactsHitRateMet: goldSummary.meanHitRate >= GOLD_FACTS_HIT_TARGET,
-    refusalRateMax: REFUSAL_RATE_TARGET,
-    refusalRateMet: refusalSummary.incorrectRefusalRate <= REFUSAL_RATE_TARGET,
+    ...deterministicReport.targets,
     faithfulnessMin: 0.85,
-    faithfulnessMet: llmStats.faithfulnessMean >= 0.85,
+    faithfulnessMet: llmStats.count > 0 && llmStats.faithfulnessMean >= 0.85,
     qualityMin: 0.7,
-    qualityMet: llmStats.qualityMean >= 0.7,
+    qualityMet: llmStats.count > 0 && llmStats.qualityMean >= 0.7,
   };
 
-  const outPath = path.replace(/\.json$/, '.judged.json');
-  writeFileSync(outPath, JSON.stringify(out, null, 2));
-  const summaryPath = join(dirname(path), path.split('/').pop()!.replace(/\.json$/, '-judged-summary.json'));
+  const summaryPath = join(
+    dirname(answersPath),
+    answersPath.split('/').pop()!.replace(/\.json$/, '-judged-summary.json'),
+  );
   const summary = {
     judgeModel: JUDGE_MODEL,
     answerModel: answerModel ?? null,
     judgeUrl: JUDGE_URL,
     judgeTimeoutMs: JUDGE_TIMEOUT_MS,
     judgeThink: JUDGE_THINK,
+    resume,
     deterministic: {
-      goldFacts: goldSummary,
-      refusals: refusalSummary,
-      sourceDiversity: diversity,
+      goldFacts: deterministicReport.goldFacts,
+      refusals: deterministicReport.refusals,
+      sourceDiversity: deterministicReport.sourceDiversity,
+      targets: deterministicReport.targets,
     },
     targets,
     calibrationWarning,
     ...llmStats,
     rows: out,
   };
+  writeFileSync(outPath, JSON.stringify(out, null, 2));
   writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
   console.log(`Wrote ${outPath}`);
   console.log(`Wrote ${summaryPath}`);
   console.log(
-    `Deterministic goldFacts mean hit rate=${goldSummary.meanHitRate.toFixed(3)} (target ≥${GOLD_FACTS_HIT_TARGET})`,
+    `Deterministic goldFacts mean hit rate=${deterministicReport.goldFacts.meanHitRate.toFixed(3)} (run npm run eval:rag:metrics for details)`,
   );
   console.log(
-    `Incorrect refusal rate=${refusalSummary.incorrectRefusalRate.toFixed(3)} on rows with gold (target ≤${REFUSAL_RATE_TARGET})`,
-  );
-  console.log(
-    `LLM faithfulness mean=${llmStats.faithfulnessMean.toFixed(3)} quality mean=${llmStats.qualityMean.toFixed(3)}`,
+    `LLM judged=${llmStats.count} errors=${llmStats.judgeErrorCount} (${(llmStats.judgeErrorRate * 100).toFixed(1)}%) faithfulness=${llmStats.faithfulnessMean.toFixed(3)} quality=${llmStats.qualityMean.toFixed(3)}`,
   );
   if (calibrationWarning) console.warn(`CALIBRATION: ${calibrationWarning}`);
   if (process.env.RAG_EVAL_ENFORCE_TARGETS === '1') {

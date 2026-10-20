@@ -35,7 +35,19 @@ export JUDGE_THINK=false
 npm run eval:rag:judge -- evals/rag/results/v2-final-answers.json
 ```
 
-Optional fail CI locally: `RAG_EVAL_ENFORCE_TARGETS=1` (same command).
+Resume after a partial judge run (keeps completed rows):
+
+```bash
+npm run eval:rag:judge -- --resume evals/rag/results/v2-final-answers.json
+```
+
+Deterministic metrics only (no LLM):
+
+```bash
+npm run eval:rag:metrics -- evals/rag/results/v2-final-answers.json
+```
+
+Optional fail CI locally: `RAG_EVAL_ENFORCE_TARGETS=1` (metrics or judge command).
 
 Outputs:
 

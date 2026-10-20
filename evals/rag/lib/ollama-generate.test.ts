@@ -12,4 +12,12 @@ const serialized = JSON.stringify(body);
 assert.ok(serialized.includes('"think":false'), 'Ollama generate body must set think:false for gemma4');
 assert.equal(body.think, false);
 
+const jsonBody = buildOllamaGenerateBody({
+  model: 'gemma4:26b',
+  prompt: 'test',
+  think: false,
+  format: 'json',
+});
+assert.equal(jsonBody.format, 'json');
+
 console.log('ollama-generate.test.ts: ok');
