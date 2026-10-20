@@ -21,6 +21,7 @@ import type {
   OppfangetDisplayType,
   OppfangetListResponse,
 } from '@/lib/admin/oppfanget/types';
+import type { ResearchBriefsByKind } from '@/lib/admin/research/service';
 import {
   isOppfangetListResponse,
   normalizeOppfangetCounts,
@@ -120,11 +121,15 @@ export default function AdminOppfangetClient({
   initialData = null,
   initialFilters,
   devPreview,
+  adminUserId,
+  initialResearchBriefsByCluster = {},
 }: {
   initialData?: OppfangetListResponse | null;
   initialFilters?: OppfangetFilterInput;
   /** Dev-only `preview` query (`mock` | `empty`). */
   devPreview?: string;
+  adminUserId?: string;
+  initialResearchBriefsByCluster?: Record<string, ResearchBriefsByKind>;
 }) {
   const router = useRouter();
   const [data, setData] = useState<OppfangetListResponse | null>(initialData);
@@ -374,8 +379,16 @@ export default function AdminOppfangetClient({
 
       {rows.length > 0 ? (
         <>
-          <OppfangetMobileCards rows={rows} />
-          <OppfangetDesktopTable rows={rows} />
+          <OppfangetMobileCards
+            rows={rows}
+            adminUserId={adminUserId}
+            researchBriefsByCluster={initialResearchBriefsByCluster}
+          />
+          <OppfangetDesktopTable
+            rows={rows}
+            adminUserId={adminUserId}
+            researchBriefsByCluster={initialResearchBriefsByCluster}
+          />
         </>
       ) : null}
 
