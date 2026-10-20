@@ -98,6 +98,22 @@ async function waitForJobIdle(payload: Payload, id: string | number): Promise<Aw
   return findJob(payload, id);
 }
 
+async function waitForJobTerminal(
+  payload: Payload,
+  id: string | number,
+  expectError: boolean,
+): Promise<Awaited<ReturnType<typeof findJob>>> {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const job = await waitForJobIdle(payload, id);
+    if (expectError ? job.hasError : !job.hasError) {
+      return job;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  return waitForJobIdle(payload, id);
+}
+
 async function main() {
   if (!runIntegration) {
     console.log(
@@ -126,7 +142,7 @@ async function main() {
   await payload.update({
     collection: 'payload-jobs',
     id: retryJobId,
-    data: { waitUntil: null, processing: false },
+    data: { waitUntil: null, processing: false, hasError: false, error: null },
     overrideAccess: true,
   });
 
@@ -144,7 +160,7 @@ async function main() {
 
   const clientJobId = await queueJob(payload);
   await runQueueOnce(payload);
-  const clientJob = await waitForJobIdle(payload, clientJobId);
+  const clientJob = await waitForJobTerminal(payload, clientJobId, true);
   assert.equal(clientMock.getHits(), 1);
   assert.equal(clientJob.hasError, true);
   await closeServer(clientMock.server);
@@ -153,7 +169,7 @@ async function main() {
   delete process.env.REVALIDATE_SECRET;
   const configJobId = await queueJob(payload);
   await runQueueOnce(payload);
-  const configJob = await waitForJobIdle(payload, configJobId);
+  const configJob = await waitForJobTerminal(payload, configJobId, true);
   assert.equal(configJob.hasError, true);
   assert.ok(configJob.id != null);
 
