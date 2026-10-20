@@ -32,6 +32,49 @@ const SNAPSHOT_TEXT_KEYS = [
 
 export const SNAPSHOT_MAX_BYTES = 8 * 1024;
 
+/** Shortens on grapheme boundaries so emoji and combining marks are not split. */
+export function truncateToGraphemes(text: string, maxGraphemes: number): string {
+  if (maxGraphemes <= 0) return '';
+  if (text.length <= maxGraphemes) {
+    return text;
+  }
+
+  const Segmenter = (
+    globalThis as { Intl?: { Segmenter?: new (locale: string, options: { granularity: 'grapheme' }) => {
+      segment: (input: string) => Iterable<{ segment: string }>;
+    } } }
+  ).Intl?.Segmenter;
+
+  if (Segmenter) {
+    const segmenter = new Segmenter('nb', { granularity: 'grapheme' });
+    let count = 0;
+    let out = '';
+    for (const part of segmenter.segment(text)) {
+      if (count >= maxGraphemes) break;
+      out += part.segment;
+      count += 1;
+    }
+    return out;
+  }
+
+  let i = 0;
+  let graphemes = 0;
+  while (i < text.length && graphemes < maxGraphemes) {
+    const code = text.charCodeAt(i);
+    if (code >= 0xd800 && code <= 0xdbff && i + 1 < text.length) {
+      const next = text.charCodeAt(i + 1);
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        i += 2;
+        graphemes += 1;
+        continue;
+      }
+    }
+    i += 1;
+    graphemes += 1;
+  }
+  return text.slice(0, i);
+}
+
 export function sanitizeSnapshotInput(raw: Record<string, unknown> | undefined): Record<string, unknown> {
   if (!raw) return {};
   const out: Record<string, unknown> = {};
@@ -65,7 +108,7 @@ export function fitSnapshotToMaxBytes(
     for (const key of SNAPSHOT_TEXT_KEYS) {
       const value = out[key];
       if (typeof value === 'string' && value.length > maxChars) {
-        out[key] = `${value.slice(0, maxChars)}…`;
+        out[key] = `${truncateToGraphemes(value, maxChars)}…`;
         truncated = true;
       }
     }
@@ -83,7 +126,7 @@ export function fitSnapshotToMaxBytes(
     minimal.issue_id = snapshot.issue_id;
   }
   if (typeof snapshot.title === 'string') {
-    minimal.title = snapshot.title.slice(0, 120);
+    minimal.title = truncateToGraphemes(snapshot.title, 120);
   }
   return minimal;
 }

@@ -22,4 +22,11 @@ const minimal = fitSnapshotToMaxBytes({ narrative: huge, title: 'T', issue_id: '
 assert.ok(snapshotByteLength(minimal) <= SNAPSHOT_MAX_BYTES);
 assert.equal(minimal.truncated, true);
 
+const emojiBoundary = '🙂'.repeat(5000);
+const emojiFitted = fitSnapshotToMaxBytes({ narrative: emojiBoundary, issue_id: 'e' });
+assert.ok(snapshotByteLength(emojiFitted) <= SNAPSHOT_MAX_BYTES);
+const emojiNarrative = emojiFitted.narrative as string;
+assert.ok(!emojiNarrative.includes('\uD83D') || emojiNarrative.endsWith('…'));
+assert.ok(emojiNarrative.endsWith('…'));
+
 console.log('content-feedback/snapshot.test.ts: ok');

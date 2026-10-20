@@ -27,12 +27,12 @@ DECLARE
     'require_admin_user_id', 'app_future_require_admin', 'check_api_rate_limit',
     'upsert_action_capture', 'set_action_cluster_verdict',
     'upsert_content_feedback', 'log_blog_content_feedback',
-    'admin_submit_content_feedback'
+    'admin_submit_content_feedback',
+    'admin_list_ai_summary_queue_gave_up', 'admin_reset_ai_summary_queue_attempts'
   ];
   n8n_hardened text[] := ARRAY[
     'n8n_list_issues_missing_ai_summary',
-    'n8n_upsert_issue_ai_summary',
-    'n8n_mark_issue_ai_summary_regeneration_attempt'
+    'n8n_upsert_issue_ai_summary'
   ];
   problems text[] := '{}';
   r record;

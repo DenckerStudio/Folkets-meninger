@@ -152,5 +152,55 @@ BEGIN
   DELETE FROM public.issue_ai_summaries
   WHERE stortinget_issue_id IN (v_issue_a, v_issue_b);
   DELETE FROM public.stortinget_issues WHERE id IN (v_issue_a, v_issue_b);
+
+  -- Claim øker regeneration_attempts atomisk
+  v_issue_a := 'cf-regen-claim-a';
+  v_issue_b := 'cf-regen-claim-b';
+
+  INSERT INTO public.stortinget_issues (id, title, status, first_seen_at, last_synced_at)
+  VALUES
+    (v_issue_a, 'Claim A', 'pending', now(), now()),
+    (v_issue_b, 'Claim B', 'pending', now(), now())
+  ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title;
+
+  DELETE FROM public.issue_ai_summaries
+  WHERE stortinget_issue_id IN (v_issue_a, v_issue_b);
+
+  INSERT INTO public.issue_ai_summaries (
+    stortinget_issue_id, hva, hvem, kostnad, narrative, who_affected, how_affected,
+    regeneration_requested_at, regeneration_attempts, regeneration_last_attempt_at
+  )
+  VALUES
+    (
+      v_issue_a,
+      repeat('x', 200), 'Test', 'Test', repeat('x', 200), 'Test', 'Test',
+      now() - interval '2 hours', 0, NULL
+    ),
+    (
+      v_issue_b,
+      repeat('y', 200), 'Test', 'Test', repeat('y', 200), 'Test', 'Test',
+      now() - interval '3 hours', 0, NULL
+    );
+
+  UPDATE public.issue_ai_summaries
+  SET regeneration_last_attempt_at = now() - interval '20 minutes'
+  WHERE stortinget_issue_id = v_issue_a;
+
+  SELECT q.id INTO v_pick
+  FROM public.n8n_list_issues_missing_ai_summary(1) q;
+
+  IF v_pick IS DISTINCT FROM v_issue_b THEN
+    RAISE EXCEPTION 'claim: forventet B (%), fikk %', v_issue_b, v_pick;
+  END IF;
+
+  IF (
+    SELECT regeneration_attempts FROM public.issue_ai_summaries WHERE stortinget_issue_id = v_issue_b
+  ) <> 1 THEN
+    RAISE EXCEPTION 'claim: forventet regeneration_attempts=1 på B';
+  END IF;
+
+  DELETE FROM public.issue_ai_summaries
+  WHERE stortinget_issue_id IN (v_issue_a, v_issue_b);
+  DELETE FROM public.stortinget_issues WHERE id IN (v_issue_a, v_issue_b);
 END;
 $$;

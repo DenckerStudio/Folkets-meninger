@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Loader2, ThumbsDown, ThumbsUp } from 'lucide-react';
 import {
   CONTENT_FEEDBACK_ASPECT_KEYS,
@@ -24,17 +24,7 @@ const REJECTION_HINT =
 const SUCCESS_MESSAGE = 'Takk, tilbakemeldingen er lagret.';
 const VERDICT_REQUIRED = 'Velg en dom før du lagrer.';
 
-const SAVE_CLOSE_DELAY_MS = 2500;
-const SAVE_CLOSE_DELAY_REDUCED_MS = 800;
-
-function scheduleAfterSuccessfulSave(onSaved?: () => void) {
-  if (!onSaved) return;
-  const reduced =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const delay = reduced ? SAVE_CLOSE_DELAY_REDUCED_MS : SAVE_CLOSE_DELAY_MS;
-  window.setTimeout(onSaved, delay);
-}
+const SAVE_CLOSE_DELAY_MS = 4000;
 
 export type ContentFeedbackPanelProps = {
   contentType: ContentFeedbackType;
@@ -79,10 +69,32 @@ export function ContentFeedbackPanel({
   const [showAdminReviewedBadge, setShowAdminReviewedBadge] = useState(false);
   const [aspectsExpanded, setAspectsExpanded] = useState(false);
   const [rejectSubmitAttempted, setRejectSubmitAttempted] = useState(false);
+  const [saveSucceeded, setSaveSucceeded] = useState(false);
+  const closeTimerRef = useRef<number | null>(null);
 
   const effectiveVerdict = lockedVerdict ?? verdict;
   const isReject = effectiveVerdict === 'reject';
   const isApprove = effectiveVerdict === 'approve';
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (closeTimerRef.current !== null) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setSaveSucceeded(false);
+    setSuccess('');
+    setError('');
+    setRejectSubmitAttempted(false);
+  }, [contentType, contentId]);
 
   useEffect(() => {
     if (lockedVerdict) {
@@ -217,13 +229,22 @@ export function ContentFeedbackPanel({
       }
       setShowAdminReviewedBadge(true);
       setSuccess(SUCCESS_MESSAGE);
-      scheduleAfterSuccessfulSave(onSaved);
+      setSaveSucceeded(true);
+      if (onSaved) {
+        closeTimerRef.current = window.setTimeout(() => {
+          closeTimerRef.current = null;
+          onSaved();
+        }, SAVE_CLOSE_DELAY_MS);
+      }
     } catch {
       setError('Kunne ikke lagre');
     } finally {
       setSaving(false);
     }
   }
+
+  const saveLocked = saving || saveSucceeded;
+  const liveStatus = success || error;
 
   const showAspectList = isReject || aspectsExpanded;
   const showRejectAlert = isReject && rejectionIncomplete && rejectSubmitAttempted;
@@ -238,19 +259,31 @@ export function ContentFeedbackPanel({
     >
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 id={titleId} className="text-sm font-semibold text-foreground">
-            {title}
-          </h3>
+          {contentSubjectTitle ? (
+            <>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {title}
+              </p>
+              <h3 id={titleId} className="text-sm font-semibold text-foreground">
+                {contentSubjectTitle}
+              </h3>
+            </>
+          ) : (
+            <h3 id={titleId} className="text-sm font-semibold text-foreground">
+              {title}
+            </h3>
+          )}
           {showAdminReviewedBadge ? (
             <span className="rounded-full border border-border bg-card px-2 py-0.5 text-xs font-medium text-muted-foreground">
               Vurdert
             </span>
           ) : null}
         </div>
-        {contentSubjectTitle ? (
-          <p className="text-sm font-medium text-foreground">{contentSubjectTitle}</p>
-        ) : null}
         <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {liveStatus}
       </div>
 
       {loadingExisting ? (
@@ -329,7 +362,16 @@ export function ContentFeedbackPanel({
               Skjul merking
             </button>
           ) : null}
-          <p className="text-sm font-medium text-foreground">Hva fungerte?</p>
+          <p className="text-sm font-medium text-foreground">
+            {isReject ? (
+              <>
+                Merk deler{' '}
+                <span className="text-xs font-normal text-muted-foreground">(påkrevd)</span>
+              </>
+            ) : (
+              'Merk deler (valgfritt)'
+            )}
+          </p>
           <ul
             className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card lg:grid lg:grid-cols-2 lg:divide-y-0"
           >
@@ -376,7 +418,7 @@ export function ContentFeedbackPanel({
                       className={cn(
                         'inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border',
                         mark === '-'
-                          ? 'border-brand bg-brand/10 text-brand'
+                          ? 'border-destructive/40 bg-destructive/10 text-destructive'
                           : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted/60',
                       )}
                     >
@@ -391,16 +433,20 @@ export function ContentFeedbackPanel({
       ) : null}
 
       {!loadingExisting && isReject ? (
-        <div className="mt-4 space-y-2" aria-describedby={rejectHintId}>
-          <p className="text-sm font-medium text-foreground">Vanlige grunner</p>
+        <div className="mt-4 space-y-2">
+          <p className="text-sm font-medium text-foreground">
+            Vanlige grunner{' '}
+            <span className="text-xs font-normal text-muted-foreground">(påkrevd)</span>
+          </p>
           <div className="flex flex-wrap gap-2">
-            {CONTENT_FEEDBACK_REASON_TAGS.map((item) => {
+            {CONTENT_FEEDBACK_REASON_TAGS.map((item, index) => {
               const active = reasonTags.includes(item.tag);
               return (
                 <button
                   key={item.tag}
                   type="button"
                   aria-pressed={active}
+                  aria-describedby={index === 0 ? rejectHintId : undefined}
                   onClick={() => toggleReason(item.tag)}
                   className={cn(
                     'inline-flex min-h-11 items-center rounded-full border px-3 py-2 text-sm font-medium transition-colors',
@@ -451,16 +497,14 @@ export function ContentFeedbackPanel({
         </p>
       ) : null}
       {success ? (
-        <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-400" role="status">
-          {success}
-        </p>
+        <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-400">{success}</p>
       ) : null}
 
       <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button
           type="button"
           onClick={onSkip}
-          disabled={saving}
+          disabled={saveLocked}
           className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
         >
           Hopp over
@@ -468,7 +512,7 @@ export function ContentFeedbackPanel({
         <button
           type="button"
           onClick={() => void save()}
-          disabled={saving || loadingExisting}
+          disabled={saveLocked || loadingExisting}
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}

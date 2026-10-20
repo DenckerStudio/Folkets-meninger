@@ -13,7 +13,12 @@ import { ReelCandidateRatings } from '@/components/admin/reel-candidate-ratings'
 import type { ContentFeedbackVerdict } from '@/lib/content-feedback/types';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import type { PollRecord, SakPollCandidate, SakPollCoverage } from '@/lib/polls/types';
-import { pipelineHealthNeedsAttention, type PipelineHealth } from '@/lib/n8n/pipeline-health';
+import {
+  aiSummaryQueueGaveUpKindLabel,
+  pipelineHealthNeedsAttention,
+  type AiSummaryQueueGaveUpItem,
+  type PipelineHealth,
+} from '@/lib/n8n/pipeline-health';
 
 type DraftsResponse = { drafts: PollRecord[] };
 type CandidatesResponse = { candidates: SakPollCandidate[]; coverage: SakPollCoverage };
@@ -80,6 +85,8 @@ export default function AdminReelsClient({
   const [coverage, setCoverage] = useState<SakPollCoverage | null>(null);
   const [pipelineHealth, setPipelineHealth] = useState<PipelineHealth | null>(null);
   const [pipelineHealthUnavailable, setPipelineHealthUnavailable] = useState(false);
+  const [gaveUpQueue, setGaveUpQueue] = useState<AiSummaryQueueGaveUpItem[]>([]);
+  const [resettingIssueId, setResettingIssueId] = useState<string | null>(null);
   const [catchupMessage, setCatchupMessage] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -95,10 +102,11 @@ export default function AdminReelsClient({
     startTransition(async () => {
       setError('');
       try {
-        const [draftsRes, candidatesRes, healthRes] = await Promise.all([
+        const [draftsRes, candidatesRes, healthRes, gaveUpRes] = await Promise.all([
           fetch('/api/admin/polls'),
           fetch('/api/admin/poll-candidates'),
           fetch('/api/admin/pipeline-health'),
+          fetch('/api/admin/ai-summary-queue'),
         ]);
         const failures: string[] = [];
 
@@ -124,6 +132,29 @@ export default function AdminReelsClient({
         } else {
           setPipelineHealth(null);
           setPipelineHealthUnavailable(true);
+        }
+
+        if (gaveUpRes.ok) {
+          const gaveUpJson = (await gaveUpRes.json()) as {
+            gaveUp?: Array<{
+              issue_id: string;
+              title: string | null;
+              kind: AiSummaryQueueGaveUpItem['kind'];
+              attempts: number;
+              last_attempt_at: string | null;
+            }>;
+          };
+          setGaveUpQueue(
+            (gaveUpJson.gaveUp ?? []).map((row) => ({
+              issueId: row.issue_id,
+              title: row.title,
+              kind: row.kind,
+              attempts: row.attempts,
+              lastAttemptAt: row.last_attempt_at,
+            })),
+          );
+        } else {
+          setGaveUpQueue([]);
         }
 
         if (failures.length > 0) {
@@ -166,6 +197,29 @@ export default function AdminReelsClient({
         subjectTitle: poll.title,
       });
       load();
+    });
+  };
+
+  const resetQueueAttempts = (issueId: string) => {
+    startTransition(async () => {
+      setResettingIssueId(issueId);
+      setError('');
+      try {
+        const res = await fetch('/api/admin/ai-summary-queue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ issue_id: issueId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(typeof data.error === 'string' ? data.error : 'Kunne ikke nullstille forsøk');
+          return;
+        }
+        setSuccess('Forsøkstall er nullstilt. Saken kan plukkes på nytt.');
+        load();
+      } finally {
+        setResettingIssueId(null);
+      }
     });
   };
 
@@ -266,6 +320,50 @@ export default function AdminReelsClient({
           </dl>
           {catchupMessage ? (
             <p className="mt-3 text-sm text-muted-foreground">{catchupMessage}</p>
+          ) : null}
+          {gaveUpQueue.length > 0 ? (
+            <div className="mt-4 border-t border-border pt-4">
+              <h3 className="text-sm font-semibold text-foreground">
+                Gitt opp ({gaveUpQueue.length})
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Saker med fem eller flere mislykkede forsøk på sammendrag. Nullstill for å prøve på nytt.
+              </p>
+              <ul className="mt-3 space-y-2">
+                {gaveUpQueue.map((row) => (
+                  <li
+                    key={`${row.kind}-${row.issueId}`}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground">
+                        {row.title ?? row.issueId}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {aiSummaryQueueGaveUpKindLabel(row.kind)} · {row.attempts} forsøk ·{' '}
+                        {row.issueId}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <Link
+                        href={routes.sak(row.issueId)}
+                        className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/50"
+                      >
+                        Åpne sak
+                      </Link>
+                      <button
+                        type="button"
+                        disabled={pending || resettingIssueId === row.issueId}
+                        onClick={() => resetQueueAttempts(row.issueId)}
+                        className="inline-flex min-h-11 items-center rounded-lg bg-muted px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/80 disabled:opacity-50"
+                      >
+                        {resettingIssueId === row.issueId ? 'Nullstiller…' : 'Nullstill'}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
         </section>
       ) : pipelineHealthUnavailable ? (

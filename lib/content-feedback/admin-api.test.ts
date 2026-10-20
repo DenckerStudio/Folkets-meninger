@@ -134,10 +134,11 @@ assert.match(panelSrc, /showAdminReviewedBadge/);
 assert.match(panelSrc, /source !== 'admin'/);
 assert.match(panelSrc, /\(påkrevd\)/);
 assert.match(panelSrc, /Velg en dom/);
-assert.match(panelSrc, /scheduleAfterSuccessfulSave/);
-assert.match(panelSrc, /prefers-reduced-motion/);
+assert.match(panelSrc, /SAVE_CLOSE_DELAY_MS = 4000/);
+assert.match(panelSrc, /aria-live="polite"/);
 assert.match(panelSrc, /rejectHintId/);
-assert.match(panelSrc, /disabled=\{saving \|\| loadingExisting\}/);
+assert.match(panelSrc, /saveLocked/);
+assert.match(panelSrc, /Merk deler/);
 assert.doesNotMatch(panelSrc, /snapshot/);
 assert.doesNotMatch(panelSrc, /👍|👎/);
 

@@ -6,6 +6,29 @@ export type PipelineHealth = {
   recentOpsEvents: number;
 };
 
+export type AiSummaryQueueGaveUpItem = {
+  issueId: string;
+  title: string | null;
+  kind: 'mangler_sammendrag' | 'regenerering' | 'tynt_sammendrag';
+  attempts: number;
+  lastAttemptAt: string | null;
+};
+
+export function aiSummaryQueueGaveUpKindLabel(kind: AiSummaryQueueGaveUpItem['kind']): string {
+  switch (kind) {
+    case 'mangler_sammendrag':
+      return 'Mangler sammendrag';
+    case 'regenerering':
+      return 'Regenerering';
+    case 'tynt_sammendrag':
+      return 'Tynt sammendrag';
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
 export function normalizePipelineHealth(raw: unknown): PipelineHealth {
   const row = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const num = (value: unknown) => {

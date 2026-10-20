@@ -16,6 +16,9 @@ const sha =
 const baseUrl = process.env.SCREENSHOT_BASE_URL ?? 'http://127.0.0.1:3460';
 
 const VURDERT_ID = '00000000-0000-4000-8000-000000000003';
+const INTERACTIVE_ID = '00000000-0000-4000-8000-000000000004';
+const ERROR_ID = '00000000-0000-4000-8000-000000000006';
+const SKELETON_ID = '00000000-0000-4000-8000-000000000005';
 
 const pageTsx = `'use client';
 
@@ -53,6 +56,36 @@ export default function Pr195CapturePage() {
           contentSubjectTitle="Skal offentlig sektor kreve grønn innkjøpsstandard?"
           title="Hva fungerte med utkastet?"
           description="Valgfritt, men hjelper oss å forbedre neste generering."
+          onSkip={() => undefined}
+        />
+      </section>
+      <section id="panel-interactive" aria-label="Interaktiv">
+        <ContentFeedbackPanel
+          contentType="reel"
+          contentId="${INTERACTIVE_ID}"
+          contentSubjectTitle="Skal Norge innføre obligatorisk kildesortering?"
+          title="Tilbakemelding"
+          description="Merker hva som fungerte eller ikke."
+          onSkip={() => undefined}
+        />
+      </section>
+      <section id="panel-error" aria-label="Feil">
+        <ContentFeedbackPanel
+          contentType="reel"
+          contentId="${ERROR_ID}"
+          contentSubjectTitle="Skal avgiften på elbiler økes?"
+          title="Tilbakemelding"
+          description="Merker hva som fungerte eller ikke."
+          onSkip={() => undefined}
+        />
+      </section>
+      <section id="panel-skeleton" aria-label="Skeleton">
+        <ContentFeedbackPanel
+          contentType="reel"
+          contentId="${SKELETON_ID}"
+          contentSubjectTitle="Laster eksempelspørsmål …"
+          title="Tilbakemelding"
+          description="Merker hva som fungerte eller ikke."
           onSkip={() => undefined}
         />
       </section>
@@ -113,14 +146,34 @@ async function waitPanelReady(page, panelId) {
   await assertTailwindApplied(page, `#${panelId} section`);
 }
 
-async function mockContentFeedbackGet(page) {
+async function mockContentFeedbackGet(page, options = {}) {
+  const { slowContentId = SKELETON_ID } = options;
   await page.route('**/api/admin/content-feedback**', async (route) => {
+    const url = new URL(route.request().url());
+    const contentId = url.searchParams.get('content_id') ?? '';
+    if (route.request().method() === 'POST') {
+      if (contentId === ERROR_ID) {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Kunne ikke lagre' }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true }),
+      });
+      return;
+    }
     if (route.request().method() !== 'GET') {
       await route.continue();
       return;
     }
-    const url = new URL(route.request().url());
-    const contentId = url.searchParams.get('content_id') ?? '';
+    if (slowContentId && contentId === slowContentId) {
+      await new Promise((r) => setTimeout(r, 30_000));
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -215,22 +268,95 @@ for (const viewport of [
   await page.close();
 }
 
-{
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+async function shotPanel(page, panelId, name, viewportTag, { waitReady = true } = {}) {
+  if (waitReady) {
+    await waitPanelReady(page, panelId);
+  }
+  const locator = page.locator(`#${panelId}`);
+  await locator.scrollIntoViewIfNeeded();
+  const filename = `${sha}-${name}-${viewportTag}.png`;
+  for (const path of [join(storeDir, filename), join(artifactDir, filename)]) {
+    await locator.screenshot({ path });
+  }
+  console.log('Wrote', filename);
+}
+
+for (const viewport of [
+  { tag: '1280', width: 1280, height: 900 },
+  { tag: '390', width: 390, height: 844 },
+]) {
+  const page = await browser.newPage({
+    viewport: { width: viewport.width, height: viewport.height },
+  });
   await mockContentFeedbackGet(page);
   await page.goto(`${baseUrl}/dev/pr195-capture`, {
     waitUntil: 'domcontentloaded',
     timeout: 120_000,
   });
   await page.waitForTimeout(800);
-  await waitPanelReady(page, 'panel-vurdert');
-  await page.getByText('Vurdert', { exact: true }).waitFor({ timeout: 10_000 });
-  const locator = page.locator('#panel-vurdert');
-  const filename = `${sha}-content-feedback-vurdert-1280.png`;
-  for (const path of [join(storeDir, filename), join(artifactDir, filename)]) {
-    await locator.screenshot({ path });
-  }
-  console.log('Wrote', filename);
+  await shotPanel(page, 'panel-vurdert', 'content-feedback-vurdert', viewport.tag);
+  await page.close();
+}
+
+for (const viewport of [
+  { tag: '1280', width: 1280, height: 900 },
+  { tag: '390', width: 390, height: 844 },
+]) {
+  const page = await browser.newPage({
+    viewport: { width: viewport.width, height: viewport.height },
+  });
+  await mockContentFeedbackGet(page);
+  await page.goto(`${baseUrl}/dev/pr195-capture`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 120_000,
+  });
+  const panel = page.locator('#panel-interactive');
+  await panel.locator('section').first().waitFor({ state: 'visible' });
+  await page.locator('#panel-interactive').getByRole('button', { name: 'Godkjenn' }).click();
+  await page.locator('#panel-interactive').getByRole('button', { name: 'Lagre tilbakemelding' }).click();
+  await page.locator('#panel-interactive').getByText('Takk, tilbakemeldingen er lagret.').waitFor({ timeout: 15_000 });
+  await shotPanel(page, 'panel-interactive', 'content-feedback-success', viewport.tag);
+  await page.close();
+}
+
+for (const viewport of [
+  { tag: '1280', width: 1280, height: 900 },
+  { tag: '390', width: 390, height: 844 },
+]) {
+  const page = await browser.newPage({
+    viewport: { width: viewport.width, height: viewport.height },
+  });
+  await mockContentFeedbackGet(page);
+  await page.goto(`${baseUrl}/dev/pr195-capture`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 120_000,
+  });
+  const panel = page.locator('#panel-error');
+  await panel.locator('section').first().waitFor({ state: 'visible' });
+  await page.locator('#panel-error').getByRole('button', { name: 'Godkjenn' }).click();
+  await page.locator('#panel-error').getByRole('button', { name: 'Lagre tilbakemelding' }).click();
+  await page.locator('#panel-error').getByText('Kunne ikke lagre').waitFor({ timeout: 15_000 });
+  await shotPanel(page, 'panel-error', 'content-feedback-error', viewport.tag);
+  await page.close();
+}
+
+for (const viewport of [
+  { tag: '1280', width: 1280, height: 900 },
+  { tag: '390', width: 390, height: 844 },
+]) {
+  const page = await browser.newPage({
+    viewport: { width: viewport.width, height: viewport.height },
+  });
+  await mockContentFeedbackGet(page, { slowContentId: SKELETON_ID });
+  await page.goto(`${baseUrl}/dev/pr195-capture#panel-skeleton`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 120_000,
+  });
+  const panel = page.locator('#panel-skeleton');
+  await panel.getByText('Laster tidligere tilbakemelding').waitFor({ timeout: 15_000 });
+  await shotPanel(page, 'panel-skeleton', 'content-feedback-skeleton', viewport.tag, {
+    waitReady: false,
+  });
   await page.close();
 }
 
