@@ -337,12 +337,11 @@ export function SmoothDropdown({
   preferSheet = false,
   menuHeader,
   triggerVariant = 'default',
-  defaultOpen = false,
 }: SmoothDropdownProps) {
   const isMobile = useIsMobile();
   const useSheet = isMobile && preferSheet;
   const isMounted = useIsMounted();
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [isOpen, setIsOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [contentRef, contentBounds] = useMeasure();

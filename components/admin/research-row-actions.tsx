@@ -208,14 +208,11 @@ export function ResearchRowActions({
   userId,
   variant = 'full',
   initialBriefsByKind = {},
-  defaultMenuOpen = false,
 }: {
   clusterId: string;
   userId?: string;
   variant?: 'full' | 'table-compact';
   initialBriefsByKind?: ResearchBriefsByKind;
-  /** Kun for lokal forhåndsvisning; ikke bruk i prod. */
-  defaultMenuOpen?: boolean;
 }) {
   const router = useRouter();
   const [briefsByKind, setBriefsByKind] = useState<ResearchBriefsByKind>(initialBriefsByKind);
@@ -322,7 +319,6 @@ export function ResearchRowActions({
               items={tableMenuItems}
               onSelect={onTableMenuSelect}
               triggerAriaLabel="Handlinger"
-              defaultOpen={defaultMenuOpen}
               triggerContent={
                 <span className="text-xs font-medium text-foreground">Handlinger</span>
               }
