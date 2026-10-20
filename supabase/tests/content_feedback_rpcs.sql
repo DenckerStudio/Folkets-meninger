@@ -406,8 +406,38 @@ BEGIN
     RAISE EXCEPTION 'n8n_list_source_items skal returnere metadata uten embedding';
   END IF;
 
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.n8n_list_source_items('utenfilter.no', NULL, 10) l
+    WHERE l.external_id = 'ci-123' AND l.excerpt = 'Ny ingress'
+  ) THEN
+    RAISE EXCEPTION 'n8n_list_source_items skal returnere excerpt';
+  END IF;
+
   IF NOT has_function_privilege('service_role', 'public.n8n_list_source_items(text,timestamptz,int)', 'EXECUTE') THEN
     RAISE EXCEPTION 'service_role mangler EXECUTE på n8n_list_source_items';
+  END IF;
+
+  IF has_function_privilege('anon', 'public.n8n_list_source_items(text,timestamptz,int)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'anon skal ikke kunne kjøre n8n_list_source_items';
+  END IF;
+
+  IF NOT has_function_privilege('service_role', 'public.n8n_match_source_items(vector,int,int)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'service_role mangler EXECUTE på n8n_match_source_items';
+  END IF;
+
+  IF has_function_privilege('anon', 'public.n8n_match_source_items(vector,int,int)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'anon skal ikke kunne kjøre n8n_match_source_items';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.n8n_match_source_items(v_vec::vector(1024), 365, 20) m
+    WHERE m.external_id = 'ci-123'
+      AND m.excerpt = 'Ny ingress'
+      AND m.seen_at IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'n8n_match_source_items skal returnere excerpt og seen_at';
   END IF;
 
   IF has_function_privilege('anon', 'public.log_blog_content_feedback(text,text,text,timestamptz,jsonb)', 'EXECUTE') THEN

@@ -122,6 +122,20 @@ export type LogBlogContentFeedbackResult = {
   id: string;
 };
 
+/** Rad fra `n8n_list_source_items` */
+export type N8nListSourceItemRow = {
+  id: string;
+  domain: string;
+  external_id: string;
+  url: string;
+  title: string;
+  excerpt: string | null;
+  categories: string[];
+  published_at: string | null;
+  modified_at: string | null;
+  has_embedding: boolean;
+};
+
 export type N8nMatchSourceItemRow = {
   id: string;
   domain: string;
@@ -134,4 +148,5 @@ export type N8nMatchSourceItemRow = {
   tier: ContentSourceTier;
   base_weight: number;
   similarity: number;
+  seen_at: string | null;
 };
