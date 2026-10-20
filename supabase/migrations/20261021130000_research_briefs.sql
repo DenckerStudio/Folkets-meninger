@@ -34,6 +34,9 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public.research_briefs_set_updated_at()
+  FROM PUBLIC, anon, authenticated;
+
 DROP TRIGGER IF EXISTS research_briefs_updated_at ON public.research_briefs;
 CREATE TRIGGER research_briefs_updated_at
   BEFORE UPDATE ON public.research_briefs
