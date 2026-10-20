@@ -23,7 +23,10 @@ export function LandingHvaErAnnerledes() {
       body: (
         <>
           Se Stortingets høringer og skriv kommentarer i appen — de sendes ikke automatisk til Stortinget. I{' '}
-          <Link href={routes.folketsMeninger} className="font-medium text-[#00205b] underline-offset-2 hover:underline">
+          <Link
+            href={routes.folketsMeninger}
+            className="font-medium text-[#00205b] underline underline-offset-4"
+          >
             Folkets Meninger
           </Link>{' '}
           kan du formulere meninger og samle støtte til høringsinnspill du selv kan bruke videre.
@@ -47,8 +50,8 @@ export function LandingHvaErAnnerledes() {
       accentClassName: 'text-[#00205b]',
       body: (
         <>
-          Stemmer og avstemninger lagres uten kobling til navn i offentlige tall. Høringer og navngitte meninger
-          krever identitet der Stortinget eller fellesskapet trenger det.
+          Offentlige tall viser aldri hvem som stemte. Høringer og navngitte meninger krever identitet der
+          Stortinget eller fellesskapet trenger det.
         </>
       ),
     },
@@ -59,7 +62,8 @@ export function LandingHvaErAnnerledes() {
       className: 'sm:col-span-2',
       body: (
         <>
-          Valgfritt støttemedlemskap gir merker, rikere varsler og chat med egen nøkkel. {STEMME_PLUS_NON_INFLUENCE_NOTE}
+          Valgfritt støttemedlemskap gir merker, rikere varsler og mulighet til å bruke din egen språkmodell-tilgang.{' '}
+          {STEMME_PLUS_NON_INFLUENCE_NOTE}
         </>
       ),
     },
