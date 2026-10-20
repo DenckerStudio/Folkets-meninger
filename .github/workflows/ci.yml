@@ -95,6 +95,7 @@ jobs:
           CMS_INTEGRATION_TESTS: '1'
           NODE_ENV: test
         run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d cms_test -c 'CREATE SCHEMA IF NOT EXISTS payload;'
           npx payload migrate
           npm run test:integration
 
