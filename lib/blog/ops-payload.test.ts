@@ -33,6 +33,19 @@ const longBluesky = parseCreateBlogDraftBody({
 });
 assert.equal(longBluesky.ok, false);
 
+const researchBlog = parseCreateBlogDraftBody({
+  ...base,
+  category: 'forklart',
+  source_event: 'research:550e8400-e29b-41d4-a716-446655440000',
+  review_note: 'Fra research-utkast',
+});
+assert.equal(researchBlog.ok, true);
+if (researchBlog.ok) {
+  assert.equal(researchBlog.input.category, 'forklart');
+  assert.equal(researchBlog.input.source_event, 'research:550e8400-e29b-41d4-a716-446655440000');
+  assert.equal(researchBlog.input.review_note, 'Fra research-utkast');
+}
+
 const social = parseSocialPostedBody({ slug: 'test-innlegg', bluesky_uri: 'at://x' });
 assert.equal(social.ok, true);
 

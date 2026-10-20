@@ -9,6 +9,7 @@ import { join } from 'node:path';
 
 const root = join(process.cwd(), 'app/dev/pr195-capture');
 const reelsRoot = join(process.cwd(), 'app/dev/pr195-reels-capture');
+const vurderRoot = join(process.cwd(), 'app/dev/pr195-vurder-capture');
 const storeDir = '/cursor/stores/self/pr195';
 const artifactDir = '/opt/cursor/artifacts/pr195';
 const sha =
@@ -217,6 +218,73 @@ export default function Pr195ReelsPipelineCapturePage() {
 }
 `;
 
+const vurderPageTsx = `'use client';
+
+import { ContentFeedbackPanel } from '@/components/admin/content-feedback-panel';
+
+export default function Pr195VurderCapturePage() {
+  return (
+    <main className="mx-auto max-w-3xl space-y-6 p-4 sm:p-8">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Vurder</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Gi strukturert tilbakemelding på bloggutkast.
+        </p>
+      </div>
+      <section id="vurder-panel" aria-label="Vurder blogginnlegg">
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <p className="font-medium text-foreground">Klima og næringsliv i distriktene</p>
+          <p className="mt-1 text-sm text-muted-foreground">Utkast · Oppdatert 20.10.2026</p>
+          <ContentFeedbackPanel
+            className="mt-4"
+            contentType="blog_post"
+            contentId="00000000-0000-4000-8000-000000000010"
+            contentSubjectTitle="Klima og næringsliv i distriktene"
+            title="Vurder blogginnlegg"
+            description="Hva fungerte med utkastet, og hva bør justeres før publisering?"
+            onSkip={() => undefined}
+          />
+        </div>
+      </section>
+    </main>
+  );
+}
+`;
+
+const reelsFeedbackPageTsx = `'use client';
+
+import { ContentFeedbackPanel } from '@/components/admin/content-feedback-panel';
+
+export default function Pr195ReelsFeedbackCapturePage() {
+  return (
+    <main className="mx-auto max-w-3xl space-y-8 p-4 sm:p-8">
+      <section id="reels-feedback-approve" aria-label="Reels godkjenn">
+        <ContentFeedbackPanel
+          contentType="reel"
+          contentId="00000000-0000-4000-8000-000000000011"
+          lockedVerdict="approve"
+          contentSubjectTitle="Bør Norge forby salg av engangsplast?"
+          title="Hva fungerte bra?"
+          description="Valgfritt — hjelper oss med neste generering."
+          onSkip={() => undefined}
+        />
+      </section>
+      <section id="reels-feedback-reject" aria-label="Reels arkiver">
+        <ContentFeedbackPanel
+          contentType="reel"
+          contentId="00000000-0000-4000-8000-000000000012"
+          lockedVerdict="reject"
+          contentSubjectTitle="Bør staten øke støtten til næringslivet i distriktene?"
+          title="Hva kunne vært bedre?"
+          description="Valgfritt — hjelper oss å unngå lignende utkast."
+          onSkip={() => undefined}
+        />
+      </section>
+    </main>
+  );
+}
+`;
+
 function feedbackMockFor(contentId) {
   if (contentId === VURDERT_ID) {
     return {
@@ -254,14 +322,24 @@ async function assertTailwindApplied(page, selector) {
 
 async function waitPanelReady(page, panelId) {
   const shell = page.locator(`#${panelId}`);
-  await shell.waitFor({ state: 'attached', timeout: 60_000 });
-  const panel = shell.locator('section').first();
+  await shell.waitFor({ state: 'visible', timeout: 120_000 });
+  const panel = shell.locator(':scope > section').first();
   await panel.waitFor({ state: 'visible', timeout: 60_000 });
+  await panel.getByRole('heading', { level: 3 }).waitFor({ state: 'visible', timeout: 30_000 });
   const loading = panel.getByText('Laster tidligere tilbakemelding');
-  if (await loading.count()) {
-    await loading.waitFor({ state: 'detached', timeout: 30_000 });
+  if (await loading.isVisible().catch(() => false)) {
+    await loading.waitFor({ state: 'hidden', timeout: 45_000 });
   }
-  await assertTailwindApplied(page, `#${panelId} section`);
+  await assertTailwindApplied(page, `#${panelId} > section`);
+}
+
+async function gotoCapture(page, path) {
+  const url = `${baseUrl.replace(/\/$/, '')}${path}`;
+  const res = await page.goto(url, { waitUntil: 'networkidle', timeout: 120_000 });
+  const status = res?.status() ?? 0;
+  if (status >= 400) {
+    throw new Error(`Capture route ${path} returned HTTP ${status}`);
+  }
 }
 
 async function mockContentFeedbackGet(page, options = {}) {
@@ -314,12 +392,25 @@ await mkdir(artifactDir, { recursive: true });
 if (process.env.SCREENSHOT_SKIP_ROUTE_WRITE !== '1') {
   await rm(root, { recursive: true, force: true });
   await rm(reelsRoot, { recursive: true, force: true });
+  await rm(vurderRoot, { recursive: true, force: true });
   await mkdir(root, { recursive: true });
   await mkdir(reelsRoot, { recursive: true });
+  await mkdir(join(process.cwd(), 'app/dev/pr195-reels-feedback-capture'), { recursive: true });
+  await mkdir(vurderRoot, { recursive: true });
   await writeFile(join(root, 'page.tsx'), pageTsx);
   await writeFile(join(root, 'layout.tsx'), layout);
   await writeFile(join(reelsRoot, 'page.tsx'), reelsPageTsx);
   await writeFile(join(reelsRoot, 'layout.tsx'), layout);
+  await writeFile(
+    join(process.cwd(), 'app/dev/pr195-reels-feedback-capture/page.tsx'),
+    reelsFeedbackPageTsx,
+  );
+  await writeFile(
+    join(process.cwd(), 'app/dev/pr195-reels-feedback-capture/layout.tsx'),
+    layout,
+  );
+  await writeFile(join(vurderRoot, 'page.tsx'), vurderPageTsx);
+  await writeFile(join(vurderRoot, 'layout.tsx'), layout);
 }
 
 const useDev = process.env.SCREENSHOT_USE_DEV === '1';
@@ -391,10 +482,7 @@ for (const viewport of [
     viewport: { width: viewport.width, height: viewport.height },
   });
   await mockContentFeedbackGet(page);
-  await page.goto(`${baseUrl}/dev/pr195-capture`, {
-    waitUntil: 'domcontentloaded',
-    timeout: 120_000,
-  });
+  await gotoCapture(page, '/dev/pr195-capture');
   await page.waitForTimeout(800);
   for (const shot of shots) {
     await waitPanelReady(page, shot.id);
@@ -516,10 +604,14 @@ for (const viewport of [
   await page.close();
 }
 
-for (const shot of [
-  { id: 'pipeline-gave-up-empty', name: 'reels-pipeline-gave-up-empty' },
-  { id: 'pipeline-gave-up-list', name: 'reels-pipeline-gave-up-list' },
-]) {
+const pixelShots = [
+  { path: '/dev/pr195-reels-feedback-capture', id: 'reels-feedback-approve', name: 'reels-feedback-approve' },
+  { path: '/dev/pr195-reels-feedback-capture', id: 'reels-feedback-reject', name: 'reels-feedback-reject' },
+  { path: '/dev/pr195-vurder-capture', id: 'vurder-panel', name: 'vurder-blogg-panel', direct: true },
+  { id: 'pipeline-gave-up-list', name: 'reels-pipeline-gave-up-list', path: '/dev/pr195-reels-capture' },
+];
+
+for (const shot of pixelShots) {
   for (const viewport of [
     { tag: '1280', width: 1280, height: 900 },
     { tag: '390', width: 390, height: 844 },
@@ -527,14 +619,19 @@ for (const shot of [
     const page = await browser.newPage({
       viewport: { width: viewport.width, height: viewport.height },
     });
-    await page.goto(`${baseUrl}/dev/pr195-reels-capture`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 120_000,
-    });
+    if (shot.path.includes('feedback') || shot.path.includes('vurder')) {
+      await mockContentFeedbackGet(page);
+    }
+    await gotoCapture(page, shot.path);
     await page.waitForTimeout(800);
+    if (shot.id === 'vurder-panel') {
+      await page.locator('#vurder-panel').getByRole('heading', { name: 'Vurder blogginnlegg' }).waitFor({
+        timeout: 60_000,
+      });
+    }
     await shotPanel(page, shot.id, shot.name, viewport.tag, {
-      waitReady: false,
-      direct: true,
+      waitReady: shot.id.startsWith('reels-feedback'),
+      direct: shot.direct ?? true,
     });
     await page.close();
   }
@@ -550,4 +647,6 @@ if (serverProc?.pid) {
 }
 await rm(root, { recursive: true, force: true });
 await rm(reelsRoot, { recursive: true, force: true });
+await rm(vurderRoot, { recursive: true, force: true });
+await rm(join(process.cwd(), 'app/dev/pr195-reels-feedback-capture'), { recursive: true, force: true });
 console.log('Done — screenshots in', storeDir);
