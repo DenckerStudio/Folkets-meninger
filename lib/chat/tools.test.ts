@@ -210,7 +210,7 @@ async function main() {
   };
   const belowK = shapeChatPollResults({
     poll,
-    totals: { ja: 15, nei: 5, blank: 0, total: 20 },
+    totals: { ja: 2, nei: 1, blank: 0, total: 3 },
   });
   assert.equal(belowK.percents.ja, 0);
   assert.ok(belowK.note?.includes('Færre enn'));
