@@ -145,9 +145,11 @@ BEGIN
     RAISE EXCEPTION 'n8n_get_research_brief feilet: %', r;
   END IF;
 
+  ALTER TABLE public.research_briefs DISABLE TRIGGER research_briefs_updated_at;
   UPDATE public.research_briefs
   SET status = 'queued', updated_at = now() - interval '2 hours', error = NULL
   WHERE request_id = v_request_id;
+  ALTER TABLE public.research_briefs ENABLE TRIGGER research_briefs_updated_at;
 
   v_expired := public.research_briefs_expire_stale(30);
   IF v_expired < 1 THEN
