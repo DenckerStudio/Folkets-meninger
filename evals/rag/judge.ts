@@ -33,6 +33,7 @@ type AnswerRow = {
   answer: string;
   excerpts: string[];
   goldFacts: string[];
+  generationError?: string;
 };
 
 type JudgedRow = {
@@ -84,9 +85,23 @@ async function main(): Promise<void> {
   if (!path) throw new Error('Usage: npx tsx evals/rag/judge.ts <answers.json>');
   const rows = JSON.parse(readFileSync(path, 'utf8')) as AnswerRow[];
   const out: JudgedRow[] = [];
+  const skipped: string[] = [];
   for (const row of rows) {
+    if (row.generationError) {
+      skipped.push(`${row.id}: ${row.generationError}`);
+      continue;
+    }
+    if (!row.answer?.trim()) {
+      skipped.push(`${row.id}: empty answer`);
+      continue;
+    }
     process.stdout.write(`[judge] ${row.id}…\n`);
     out.push(await judgeRow(row));
+  }
+  if (skipped.length > 0) {
+    throw new Error(
+      `Answers file has ${skipped.length} row(s) with generation errors or empty answers — fix export first:\n${skipped.join('\n')}`,
+    );
   }
   const outPath = path.replace(/\.json$/, '.judged.json');
   writeFileSync(outPath, JSON.stringify(out, null, 2));

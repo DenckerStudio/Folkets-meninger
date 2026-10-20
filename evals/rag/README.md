@@ -35,18 +35,30 @@ Authoritative improvement row today: **`round4-issue-ilike`** in `evals/rag/resu
 
 ## Judge (LAN Ollama, optional)
 
-Generation/judge is not run in CI/cloud by default. After saving answers JSON:
+Generation/judge is not run in CI/cloud by default. Answers require a reachable Ollama `/api/generate` (no excerpt passthrough).
 
 ```bash
-# 1) Generate stub answers from retrieval excerpts (no external LLM)
-RAG_EVAL_LABEL=round3-rerank-reject npm run eval:rag:answers
+# 1) Synthesize answers from retrieved excerpts (klever / LAN)
+export ANSWER_LLM_URL=http://192.168.50.154:11434
+export ANSWER_LLM_MODEL=gemma4:26b
+export ANSWER_LLM_TIMEOUT_MS=600000
+export ANSWER_LLM_NUM_PREDICT=768
+export RAG_EVAL_LABEL=round3-rerank-reject
+npm run eval:rag:answers
 # → evals/rag/results/round3-rerank-reject-answers.json
 
+# v2 held-out sample
+export RAG_EVAL_LABEL=v2-final
+npm run eval:rag:answers:v2
+# → evals/rag/results/v2-final-answers.json
+
 # 2) Faithfulness judge (LAN Ollama gemma4:26b; default 15 min/row timeout)
-JUDGE_URL=http://192.168.50.154:11434 JUDGE_MODEL=gemma4:26b JUDGE_TIMEOUT_MS=900000 \
-  npm run eval:rag:judge -- evals/rag/results/round3-rerank-reject-answers.json
-# → evals/rag/results/round3-rerank-reject-answers.judged.json
-# → evals/rag/results/round3-rerank-reject-answers-judged-summary.json
+export JUDGE_URL=http://192.168.50.154:11434
+export JUDGE_MODEL=gemma4:26b
+export JUDGE_TIMEOUT_MS=900000
+npm run eval:rag:judge -- evals/rag/results/v2-final-answers.json
+# → evals/rag/results/v2-final-answers.judged.json
+# → evals/rag/results/v2-final-answers-judged-summary.json
 ```
 
 Improvement rounds table: `npm run eval:rag:rounds` → `evals/rag/results/improvement-rounds.md`.
@@ -58,6 +70,9 @@ Improvement rounds table: `npm run eval:rag:rounds` → `evals/rag/results/impro
 | `RAG_EVAL_VARIANT` | `baseline` \| `stack` (seed) |
 | `RAG_EVAL_RUN` | `all` \| `baseline` \| `stack` \| `improved` |
 | `OLLAMA_BASE_URL` | Default `http://127.0.0.1:11434` |
+| `ANSWER_LLM_URL` / `ANSWER_LLM_MODEL` | Required for `eval:rag:answers` / `eval:rag:answers:v2` (falls back `OLLAMA_BASE_URL` for URL only) |
+| `ANSWER_LLM_TIMEOUT_MS` | Answer synthesis timeout (default `600000`) |
+| `ANSWER_LLM_NUM_PREDICT` | Ollama `num_predict` for answers (default `768`) |
 | `JUDGE_URL` / `JUDGE_MODEL` | LAN judge (`judge.ts`) |
 | `JUDGE_TIMEOUT_MS` | Per-row Ollama generate timeout (default `900000`; invalid/non-positive → default) |
 | `RAG_EVAL_EXCERPT_PER_CHUNK` / `RAG_EVAL_EXCERPT_TOTAL` | Excerpt caps (#177) |
