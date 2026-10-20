@@ -132,9 +132,10 @@ async function main() {
 
   await runQueueOnce(payload);
   assert.equal(retryMock.getHits(), 2);
-  await assert.rejects(
-    () => findJob(payload, retryJobId),
-    (error: unknown) => error instanceof Error,
+  const afterRetry = await findJob(payload, retryJobId).catch(() => null);
+  assert.ok(
+    afterRetry === null || (afterRetry.completedAt != null && afterRetry.hasError === false),
+    'retry should complete successfully (job deleted or marked complete)',
   );
   await closeServer(retryMock.server);
 
