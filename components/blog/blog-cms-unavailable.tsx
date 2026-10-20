@@ -13,7 +13,9 @@ export function BlogCmsUnavailable() {
     <BloggStatusPanel
       title="Bloggen er midlertidig utilgjengelig"
       description="Vi klarte ikke å hente artikler fra redaksjonssystemet akkurat nå. Prøv igjen om litt."
-      onRetry={() => router.refresh()}
+      onRetry={() => {
+        router.refresh();
+      }}
       secondaryHref={secondary.href}
       secondaryLabel={secondary.label}
     />

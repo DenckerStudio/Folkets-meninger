@@ -3,6 +3,7 @@ import {
   mapPayloadPostToListItem,
   mapPayloadPostToPublic,
   resolvePayloadPublishedAt,
+  sortPayloadPostsByDisplayDate,
 } from '@/lib/cms/map-post';
 import { payloadCreatePost } from '@/lib/cms/payload-create';
 import { CmsFetchError } from '@/lib/cms/cms-fetch-error';
@@ -55,7 +56,7 @@ export async function listPublishedBlogPosts(limit = 50): Promise<BlogPostPublic
     BLOG_READ_CACHE,
   );
   if (!data.docs.length) return [];
-  return data.docs.map(mapPayloadPostToPublic);
+  return sortPayloadPostsByDisplayDate(data.docs).map(mapPayloadPostToPublic);
 }
 
 export async function listPublishedBlogPostsPaginated(args: {
@@ -97,7 +98,7 @@ export async function listPublishedBlogPostsPaginated(args: {
   const data = await payloadFetchList<PayloadPost>('posts', query, BLOG_READ_CACHE);
 
   return {
-    posts: data.docs.map(mapPayloadPostToListItem),
+    posts: sortPayloadPostsByDisplayDate(data.docs).map(mapPayloadPostToListItem),
     totalPages: data.totalPages,
     totalDocs: data.totalDocs,
     page: data.page,

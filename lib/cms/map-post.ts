@@ -19,6 +19,23 @@ export function resolvePayloadPublishedAt(post: {
   return null;
 }
 
+/** Same chronology as list sort (`-publishedAt` with createdAt fallback). */
+export function payloadPostSortTimestamp(post: {
+  publishedAt?: string | null;
+  createdAt?: string | null;
+}): number {
+  const at = resolvePayloadPublishedAt(post);
+  if (!at) return 0;
+  const ms = new Date(at).getTime();
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+export function sortPayloadPostsByDisplayDate<T extends { publishedAt?: string | null; createdAt?: string | null }>(
+  docs: T[],
+): T[] {
+  return docs.slice().sort((a, b) => payloadPostSortTimestamp(b) - payloadPostSortTimestamp(a));
+}
+
 function mediaUrl(media: PayloadMedia | string | null | undefined): string | null {
   if (!media || typeof media === 'string') return null;
   const relative = media.sizes?.card?.url || media.sizes?.hero?.url || media.url;

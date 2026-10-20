@@ -22,7 +22,9 @@ void (async () => {
     },
   ]);
   assert.equal(invalidUpdated.length, 1);
-  assert.equal(invalidUpdated[0]?.lastModified?.toISOString(), '2026-02-01T00:00:00.000Z');
+  const invalidLastModified = invalidUpdated[0]?.lastModified;
+  assert.ok(invalidLastModified instanceof Date);
+  assert.equal(invalidLastModified.toISOString(), '2026-02-01T00:00:00.000Z');
 
   const noValidDates = mapBlogSlugsToSitemapEntries(base, [
     { slug: 'no-dates', published_at: 'nope', updated_at: 'also-nope' },

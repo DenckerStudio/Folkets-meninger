@@ -58,6 +58,7 @@ export async function payloadFetch<T>(
         ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       },
       body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: AbortSignal.timeout(8000),
       cache: options.allowIsrCache ? undefined : 'no-store',
       next: options.allowIsrCache
         ? {
