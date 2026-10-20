@@ -95,7 +95,7 @@ function ScaleSourceLink({ url, mobile = false }: { url: string; mobile?: boolea
       className={mobile ? mobileTextLinkClass : cn(tapLinkClass, 'text-xs')}
     >
       Tall-kilde
-      <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      <ExternalLink className="ml-1.5 h-3.5 w-3.5 shrink-0" aria-hidden />
     </a>
   );
 }

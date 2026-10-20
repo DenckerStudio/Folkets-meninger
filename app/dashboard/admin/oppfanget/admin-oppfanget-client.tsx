@@ -48,23 +48,44 @@ const STATUS_OPTIONS: { value: '' | OppfangetDisplayStatus; label: string }[] = 
   { value: 'avvist', label: OPPFANGET_DISPLAY_STATUS_LABELS.avvist },
 ];
 
-function StatusPills({ counts }: { counts: OppfangetListResponse['counts'] }) {
+const pillClass =
+  'inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-foreground';
+
+function StatusPills({
+  counts,
+  filteredTotal,
+}: {
+  counts: OppfangetListResponse['counts'];
+  filteredTotal: number;
+}) {
   const safeCounts = normalizeOppfangetCounts(counts);
   return (
     <div className="flex flex-wrap gap-2">
       {(Object.keys(safeCounts) as OppfangetDisplayStatus[]).map((key) => (
-        <span
-          key={key}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-foreground"
-        >
+        <span key={key} className={pillClass}>
           {OPPFANGET_DISPLAY_STATUS_LABELS[key]}
           <span className="rounded-full bg-background px-1.5 py-0.5 text-[11px] tabular-nums">
             {safeCounts[key]}
           </span>
         </span>
       ))}
+      <span className={pillClass}>
+        Totalt
+        <span className="rounded-full bg-background px-1.5 py-0.5 text-[11px] tabular-nums">
+          {filteredTotal}
+        </span>
+      </span>
     </div>
   );
+}
+
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+  return debounced;
 }
 
 function OppfangetPageHeader({ previewMock }: { previewMock?: boolean }) {
@@ -108,6 +129,8 @@ export default function AdminOppfangetClient({
   const [dateFrom, setDateFrom] = useState(initialFilters?.dateFrom || '');
   const [dateTo, setDateTo] = useState(initialFilters?.dateTo || '');
   const [q, setQ] = useState(initialFilters?.q || '');
+  const debouncedQ = useDebouncedValue(q, 300);
+  const urlSyncReadyRef = useRef(false);
 
   const mockMode = Boolean(data?.previewMock ?? initialData?.previewMock);
 
@@ -134,6 +157,18 @@ export default function AdminOppfangetClient({
     [filters, previewParam],
   );
 
+  const urlFilters = useMemo<OppfangetFilterInput>(
+    () => ({
+      type,
+      status,
+      source: source.trim(),
+      dateFrom,
+      dateTo,
+      q: debouncedQ.trim(),
+    }),
+    [type, status, source, dateFrom, dateTo, debouncedQ],
+  );
+
   const clearFilters = useCallback(() => {
     setType('');
     setStatus('');
@@ -143,8 +178,22 @@ export default function AdminOppfangetClient({
     setQ('');
     const clearedPath = buildOppfangetAdminPath({}, previewParam);
     hydratedQueryRef.current = buildOppfangetListQueryString({}, previewParam);
-    router.replace(clearedPath);
+    router.replace(clearedPath, { scroll: false });
   }, [previewParam, router]);
+
+  useEffect(() => {
+    const path = buildOppfangetAdminPath(urlFilters, previewParam);
+    if (!urlSyncReadyRef.current) {
+      urlSyncReadyRef.current = true;
+      if (typeof window !== 'undefined') {
+        const current =
+          window.location.pathname +
+          (window.location.search ? window.location.search : '');
+        if (path === current) return;
+      }
+    }
+    router.replace(path, { scroll: false });
+  }, [urlFilters, previewParam, router]);
 
   const load = useCallback(() => {
     startTransition(async () => {
@@ -211,7 +260,7 @@ export default function AdminOppfangetClient({
     <div className="space-y-6" lang="nb-NO">
       <OppfangetPageHeader previewMock={data?.previewMock} />
 
-      {data ? <StatusPills counts={data.counts} /> : null}
+      {data ? <StatusPills counts={data.counts} filteredTotal={rows.length} /> : null}
 
       <div className="grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-3">
         <label className="space-y-1 text-sm">
