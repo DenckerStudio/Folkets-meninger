@@ -3,6 +3,11 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { searchSearxng } from './searxng';
 
+if (process.env.CI === 'true' && process.env.SEARXNG_RUN_LIVE_TESTS !== '1') {
+  console.log('chat/searxng.live.test.ts: skipped in CI');
+  process.exit(0);
+}
+
 async function main() {
   const result = await searchSearxng('Stortinget statsbudsjettet', { timeoutMs: 15000, limit: 4 });
   assert.equal(result.ok, true, result.ok ? '' : result.error);

@@ -4,6 +4,11 @@ import { join } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import { retrieveSakContext, searchIssuesForChat } from '@/lib/chat/rag';
 
+if (process.env.CI === 'true' && process.env.SUPABASE_RUN_LIVE_TESTS !== '1') {
+  console.log('chat/rag.rpc.live.test.ts: skipped in CI');
+  process.exit(0);
+}
+
 function loadFolketsPublicEnv() {
   const text = readFileSync(join(process.cwd(), '.env.test'), 'utf8');
   for (const line of text.split(/\r?\n/)) {
