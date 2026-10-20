@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 import { routes } from '@/lib/routes';
 
 export const dynamic = 'force-dynamic';
@@ -21,5 +21,5 @@ export default async function AdminOppfangetLegacyRedirect({ searchParams }: Pag
     }
   }
   const query = qs.toString();
-  redirect(query ? `${routes.adminResearch}?${query}` : routes.adminResearch);
+  permanentRedirect(query ? `${routes.adminResearch}?${query}` : routes.adminResearch);
 }
