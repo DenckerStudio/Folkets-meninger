@@ -5,6 +5,7 @@ import {
   CONTENT_FEEDBACK_REASON_TAGS,
   hasNegativeAspect,
 } from '@/lib/content-feedback/constants';
+import { isValidContentId } from '@/lib/content-feedback/content-id';
 import type { ContentFeedbackAspects, ContentFeedbackVerdict } from '@/lib/content-feedback/types';
 
 const aspectValueSchema = z.union([z.literal('+'), z.literal('-'), z.null()]).optional();
@@ -26,24 +27,39 @@ const reasonTagSchema = z.enum(
   ],
 );
 
-export const adminContentFeedbackBodySchema = z.object({
-  content_type: z.enum(ADMIN_CONTENT_FEEDBACK_TYPES),
-  content_id: z.string().trim().min(1).max(200),
-  verdict: z.enum(['approve', 'reject', 'neutral']),
-  aspects: aspectsSchema,
-  reason_tags: z.array(reasonTagSchema).max(20).optional().default([]),
-  note: z
-    .string()
-    .max(1000)
-    .optional()
-    .nullable()
-    .transform((value) => {
-      if (value == null) return null;
-      const trimmed = value.trim();
-      return trimmed.length > 0 ? trimmed : null;
-    }),
-  snapshot: z.record(z.string(), z.unknown()).optional().default({}),
-});
+export const adminContentFeedbackBodySchema = z
+  .object({
+    content_type: z.enum(ADMIN_CONTENT_FEEDBACK_TYPES),
+    content_id: z.string().trim().min(1).max(200),
+    verdict: z.enum(['approve', 'reject']),
+    aspects: aspectsSchema,
+    reason_tags: z
+      .array(reasonTagSchema)
+      .max(20)
+      .optional()
+      .default([])
+      .transform((tags) => [...new Set(tags)]),
+    note: z
+      .string()
+      .max(1000)
+      .optional()
+      .nullable()
+      .transform((value) => {
+        if (value == null) return null;
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+      }),
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    if (!isValidContentId(data.content_type, data.content_id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Ugyldig content_id for innholdstype',
+        path: ['content_id'],
+      });
+    }
+  });
 
 export type AdminContentFeedbackBody = z.infer<typeof adminContentFeedbackBodySchema>;
 

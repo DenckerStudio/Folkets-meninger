@@ -21,7 +21,7 @@ export default function Pr195CapturePage() {
       <section id="panel-approve" aria-label="Godkjenn">
         <ContentFeedbackPanel
           contentType="reel"
-          contentId="preview-approve"
+          contentId="00000000-0000-4000-8000-000000000001"
           lockedVerdict="approve"
           contentSubjectTitle="Bør Norge forby salg av engangsplast?"
           title="Hva fungerte med utkastet?"
@@ -32,7 +32,7 @@ export default function Pr195CapturePage() {
       <section id="panel-reject" aria-label="Avvis">
         <ContentFeedbackPanel
           contentType="reel"
-          contentId="preview-reject"
+          contentId="00000000-0000-4000-8000-000000000002"
           lockedVerdict="reject"
           contentSubjectTitle="Bør staten øke støtten til næringslivet i distriktene?"
           title="Hva fungerte med utkastet?"

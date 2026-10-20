@@ -3,11 +3,7 @@ import {
   validateRejectionDetail,
   type AdminContentFeedbackBody,
 } from '@/lib/content-feedback/validation';
-import {
-  clearAiSummaryRegenerationRequest,
-  markAiSummaryRegenerationRequested,
-  upsertAdminContentFeedback,
-} from '@/lib/content-feedback/service';
+import { submitAdminContentFeedbackRpc } from '@/lib/content-feedback/service';
 
 export type SubmitAdminContentFeedbackResult =
   | { ok: true; id: string }
@@ -43,19 +39,10 @@ export async function submitAdminContentFeedback(
   }
 
   try {
-    const { id } = await upsertAdminContentFeedback(adminUserId, body);
-
-    if (body.content_type === 'ai_summary') {
-      if (body.verdict === 'reject') {
-        await markAiSummaryRegenerationRequested(body.content_id);
-      } else if (body.verdict === 'approve') {
-        await clearAiSummaryRegenerationRequest(body.content_id);
-      }
-    }
-
+    const { id } = await submitAdminContentFeedbackRpc(adminUserId, body);
     return { ok: true, id };
   } catch (error) {
-    console.error('content-feedback upsert failed', error);
+    console.error('content-feedback submit failed', error);
     return { ok: false, status: 500, error: 'Kunne ikke lagre tilbakemelding' };
   }
 }

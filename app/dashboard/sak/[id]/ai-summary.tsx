@@ -170,24 +170,22 @@ export default function AiSummary({
       {isAdmin ? (
         <button
           type="button"
+          disabled={loading || !data}
           onClick={() => setShowFeedback((value) => !value)}
-          className="inline-flex min-h-11 items-center rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-brand/40 hover:text-brand"
+          className="inline-flex min-h-11 items-center rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-brand/40 hover:text-brand disabled:cursor-not-allowed disabled:opacity-50"
+          title={!data && !loading ? 'Sammendraget må lastes først' : undefined}
         >
           Vurder sammendrag
         </button>
       ) : null}
 
-      {isAdmin && showFeedback ? (
+      {isAdmin && showFeedback && data ? (
         <ContentFeedbackPanel
           className="mt-2 w-full"
           contentType="ai_summary"
           contentId={sakId}
           title="Vurder sammendraget"
           description="Godkjenn eller avvis sammendraget. Ved avvisning settes saken i kø for ny generering."
-          snapshot={{
-            issue_id: sakId,
-            narrative: data?.version === 2 ? data.narrative : data?.hva,
-          }}
           onSkip={() => setShowFeedback(false)}
           onSaved={() => setShowFeedback(false)}
         />

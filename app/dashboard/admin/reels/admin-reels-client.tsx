@@ -87,7 +87,6 @@ export default function AdminReelsClient({
     pollId: string;
     verdict: ContentFeedbackVerdict;
     subjectTitle: string;
-    snapshot: Record<string, unknown>;
   } | null>(null);
   const [pending, startTransition] = useTransition();
   const { jobs, startGeneration, dismissJob, getJob, isGenerating } = usePollDraftGeneration();
@@ -165,11 +164,6 @@ export default function AdminReelsClient({
         pollId: poll.id,
         verdict: action === 'publish' ? 'approve' : 'reject',
         subjectTitle: poll.title,
-        snapshot: {
-          title: poll.title,
-          neutral_summary: poll.neutralSummary,
-          issue_id: poll.stortingetIssueId,
-        },
       });
       load();
     });
@@ -312,13 +306,13 @@ export default function AdminReelsClient({
 
       {feedbackTarget ? (
         <ContentFeedbackPanel
+          key={feedbackTarget.pollId}
           contentType="reel"
           contentId={feedbackTarget.pollId}
           lockedVerdict={feedbackTarget.verdict}
           contentSubjectTitle={feedbackTarget.subjectTitle}
           title="Hva fungerte med utkastet?"
           description="Valgfritt, men hjelper oss å forbedre neste generering."
-          snapshot={feedbackTarget.snapshot}
           onSkip={() => setFeedbackTarget(null)}
           onSaved={() => setFeedbackTarget(null)}
         />

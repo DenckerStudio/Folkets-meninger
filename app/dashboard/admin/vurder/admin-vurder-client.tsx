@@ -36,12 +36,14 @@ export default function AdminVurderClient() {
         const res = await fetch('/api/admin/blog-drafts');
         const json = (await res.json()) as DraftsResponse & { error?: string };
         if (!res.ok) {
+          setDrafts([]);
           setError(typeof json.error === 'string' ? json.error : 'Kunne ikke laste utkast');
           return;
         }
         setDrafts(json.drafts ?? []);
         setCmsConfigured(json.cmsConfigured !== false);
       } catch {
+        setDrafts([]);
         setError('Kunne ikke laste utkast');
       }
     });
@@ -88,14 +90,18 @@ export default function AdminVurderClient() {
               className="py-8"
             />
           ) : null}
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          ) : null}
           {pending && drafts.length === 0 ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
               Laster utkast …
             </div>
           ) : null}
-          {!pending && cmsConfigured && drafts.length === 0 ? (
+          {!pending && !error && cmsConfigured && drafts.length === 0 ? (
             <EmptyState
               title="Ingen utkast til vurdering"
               description="Når nye bloggutkast er klare til vurdering, vises de her."
@@ -146,18 +152,13 @@ export default function AdminVurderClient() {
                 </div>
                 {active?.id === draft.id ? (
                   <ContentFeedbackPanel
+                    key={draft.id}
                     className="mt-4"
                     contentType="blog_post"
                     contentId={draft.id}
                     contentSubjectTitle={draft.title}
                     title="Vurder blogginnlegg"
                     description="Hva fungerte med utkastet, og hva bør justeres før publisering?"
-                    snapshot={{
-                      title: draft.title,
-                      excerpt: draft.excerpt,
-                      slug: draft.slug,
-                      review_state: draft.reviewState,
-                    }}
                     onSkip={() => setActive(null)}
                     onSaved={() => {
                       setActive(null);

@@ -21,16 +21,16 @@ type AspectMark = '+' | '-';
 
 const REJECTION_HINT =
   'Ved avvisning må minst ett aspekt merkes med tommel ned eller minst én grunn velges.';
+const SUCCESS_MESSAGE = 'Takk, tilbakemeldingen er lagret.';
+const VERDICT_REQUIRED = 'Velg godkjenn eller avvis før du lagrer.';
 
 export type ContentFeedbackPanelProps = {
   contentType: ContentFeedbackType;
   contentId: string;
   /** When set, verdict cannot be changed (e.g. after Reels publish/archive). */
   lockedVerdict?: ContentFeedbackVerdict;
-  initialVerdict?: ContentFeedbackVerdict;
   /** Shown under the panel title (e.g. Reels-utkastets tittel). */
   contentSubjectTitle?: string;
-  snapshot?: Record<string, unknown>;
   title?: string;
   description?: string;
   onSkip: () => void;
@@ -42,9 +42,7 @@ export function ContentFeedbackPanel({
   contentType,
   contentId,
   lockedVerdict,
-  initialVerdict = 'neutral',
   contentSubjectTitle,
-  snapshot,
   title = 'Tilbakemelding',
   description = 'Merker hva som fungerte eller ikke, slik at vi kan forbedre innholdet.',
   onSkip,
@@ -53,19 +51,84 @@ export function ContentFeedbackPanel({
 }: ContentFeedbackPanelProps) {
   const titleId = useId();
   const noteId = useId();
-  const [verdict, setVerdict] = useState<ContentFeedbackVerdict>(
-    lockedVerdict ?? initialVerdict,
+  const verdictGroupId = useId();
+  const [verdict, setVerdict] = useState<ContentFeedbackVerdict | null>(
+    lockedVerdict ?? null,
   );
   const [aspects, setAspects] = useState<ContentFeedbackAspects>(() => emptyAspects());
   const [reasonTags, setReasonTags] = useState<string[]>([]);
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
+  const [verdictError, setVerdictError] = useState('');
+  const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(true);
+  const [reviewed, setReviewed] = useState(false);
   const [aspectsExpanded, setAspectsExpanded] = useState(false);
 
   const effectiveVerdict = lockedVerdict ?? verdict;
   const isReject = effectiveVerdict === 'reject';
   const isApprove = effectiveVerdict === 'approve';
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingExisting(true);
+    setError('');
+    const params = new URLSearchParams({
+      content_type: contentType,
+      content_id: contentId,
+    });
+    void fetch(`/api/admin/content-feedback?${params.toString()}`)
+      .then(async (res) => {
+        const json = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          feedback?: {
+            verdict: ContentFeedbackVerdict;
+            aspects?: ContentFeedbackAspects;
+            reason_tags?: string[];
+            note?: string | null;
+          } | null;
+        };
+        if (cancelled) return;
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            return;
+          }
+          setError(typeof json.error === 'string' ? json.error : 'Kunne ikke laste tilbakemelding');
+          return;
+        }
+        const row = json.feedback;
+        if (!row || lockedVerdict) {
+          return;
+        }
+        setReviewed(true);
+        if (row.verdict === 'approve' || row.verdict === 'reject') {
+          setVerdict(row.verdict);
+        }
+        if (row.aspects) {
+          setAspects({ ...emptyAspects(), ...row.aspects });
+        }
+        if (Array.isArray(row.reason_tags)) {
+          setReasonTags(row.reason_tags);
+        }
+        if (typeof row.note === 'string') {
+          setNote(row.note);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError('Kunne ikke laste tilbakemelding');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingExisting(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [contentType, contentId, lockedVerdict]);
 
   useEffect(() => {
     if (isReject) {
@@ -84,6 +147,8 @@ export function ContentFeedbackPanel({
     return !hasNegativeAspect(aspects) && reasonTags.length === 0;
   }, [aspects, isReject, reasonTags]);
 
+  const verdictMissing = !lockedVerdict && verdict == null;
+
   function toggleAspectMark(key: ContentFeedbackAspectKey, mark: AspectMark) {
     setAspects((prev) => {
       const current = prev[key] ?? null;
@@ -100,6 +165,12 @@ export function ContentFeedbackPanel({
 
   async function save() {
     setError('');
+    setVerdictError('');
+    setSuccess('');
+    if (verdictMissing) {
+      setVerdictError(VERDICT_REQUIRED);
+      return;
+    }
     if (rejectionIncomplete) {
       return;
     }
@@ -116,7 +187,6 @@ export function ContentFeedbackPanel({
           aspects,
           reason_tags: reasonTags,
           note: note.trim() || null,
-          snapshot: snapshot ?? {},
         }),
       });
       const json = (await res.json().catch(() => ({}))) as { error?: string };
@@ -124,6 +194,8 @@ export function ContentFeedbackPanel({
         setError(typeof json.error === 'string' ? json.error : 'Kunne ikke lagre');
         return;
       }
+      setReviewed(true);
+      setSuccess(SUCCESS_MESSAGE);
       onSaved?.();
     } catch {
       setError('Kunne ikke lagre');
@@ -143,38 +215,66 @@ export function ContentFeedbackPanel({
       aria-labelledby={titleId}
     >
       <div className="space-y-1">
-        <h3 id={titleId} className="text-sm font-semibold text-foreground">
-          {title}
-        </h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 id={titleId} className="text-sm font-semibold text-foreground">
+            {title}
+          </h3>
+          {reviewed ? (
+            <span className="rounded-full border border-border bg-card px-2 py-0.5 text-xs font-medium text-muted-foreground">
+              Vurdert
+            </span>
+          ) : null}
+        </div>
         {contentSubjectTitle ? (
           <p className="text-sm font-medium text-foreground">{contentSubjectTitle}</p>
         ) : null}
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
 
+      {loadingExisting ? (
+        <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          Laster tidligere tilbakemelding …
+        </p>
+      ) : null}
+
       {!lockedVerdict ? (
-        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Dom">
-          {(
-            [
-              { value: 'approve' as const, label: 'Godkjenn' },
-              { value: 'reject' as const, label: 'Avvis' },
-            ] as const
-          ).map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={verdict === option.value}
-              onClick={() => setVerdict(option.value)}
-              className={cn(
-                'inline-flex min-h-11 items-center rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors',
-                verdict === option.value
-                  ? 'border-brand bg-brand/15 text-brand'
-                  : 'border-border bg-card text-muted-foreground hover:bg-muted/50',
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
+        <div className="mt-4 space-y-1">
+          <p id={verdictGroupId} className="text-sm font-medium text-foreground">
+            Dom <span className="text-destructive" aria-hidden>*</span>
+            <span className="sr-only"> (påkrevd)</span>
+          </p>
+          <div className="flex flex-wrap gap-2" role="group" aria-labelledby={verdictGroupId}>
+            {(
+              [
+                { value: 'approve' as const, label: 'Godkjenn' },
+                { value: 'reject' as const, label: 'Avvis' },
+              ] as const
+            ).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={verdict === option.value}
+                onClick={() => {
+                  setVerdict(option.value);
+                  setVerdictError('');
+                }}
+                className={cn(
+                  'inline-flex min-h-11 items-center rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors',
+                  verdict === option.value
+                    ? 'border-brand bg-brand/15 text-brand'
+                    : 'border-border bg-card text-muted-foreground hover:bg-muted/50',
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          {verdictError ? (
+            <p className="text-sm text-destructive" role="alert">
+              {verdictError}
+            </p>
+          ) : null}
         </div>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">
@@ -299,6 +399,7 @@ export function ContentFeedbackPanel({
         </label>
         <textarea
           id={noteId}
+          name="note"
           value={note}
           maxLength={1000}
           rows={3}
@@ -310,11 +411,20 @@ export function ContentFeedbackPanel({
       </div>
 
       {rejectionIncomplete ? (
-        <p className="mt-2 text-sm text-destructive" role="status" aria-live="polite">
+        <p className="mt-2 text-sm text-destructive" role="alert">
           {REJECTION_HINT}
         </p>
       ) : null}
-      {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="mt-2 text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {success ? (
+        <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-400" role="status">
+          {success}
+        </p>
+      ) : null}
 
       <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button
@@ -328,7 +438,7 @@ export function ContentFeedbackPanel({
         <button
           type="button"
           onClick={() => void save()}
-          disabled={saving || rejectionIncomplete}
+          disabled={saving || rejectionIncomplete || verdictMissing || loadingExisting}
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}

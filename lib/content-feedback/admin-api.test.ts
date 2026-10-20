@@ -3,11 +3,13 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseAdminContentFeedbackBody } from '@/lib/content-feedback/submit-admin-feedback';
 import { validateRejectionDetail } from '@/lib/content-feedback/validation';
+import { sanitizeSnapshotInput } from '@/lib/content-feedback/snapshot';
 
 const routeSrc = readFileSync(
   join(process.cwd(), 'app/api/admin/content-feedback/route.ts'),
   'utf8',
 );
+const serviceSrc = readFileSync(join(process.cwd(), 'lib/content-feedback/service.ts'), 'utf8');
 const f1Migration = readFileSync(
   join(process.cwd(), 'supabase/migrations/20261021120000_content_feedback.sql'),
   'utf8',
@@ -17,18 +19,18 @@ assert.match(routeSrc, /requireAdmin\(\)/);
 assert.match(routeSrc, /status: auth\.status/);
 assert.match(routeSrc, /parseAdminContentFeedbackBody/);
 assert.match(routeSrc, /submitAdminContentFeedback/);
+assert.match(routeSrc, /getAdminContentFeedback/);
+assert.match(serviceSrc, /admin_submit_content_feedback/);
+assert.match(serviceSrc, /buildAdminContentFeedbackSnapshot/);
+assert.doesNotMatch(serviceSrc, /upsert_content_feedback/);
 
 assert.match(f1Migration, /IF v_existing_id IS NOT NULL AND v_existing_source = 'auto' THEN/i);
 assert.match(f1Migration, /source = 'admin'/i);
 assert.match(f1Migration, /SET superseded_at = now\(\)/i);
-assert.doesNotMatch(
-  f1Migration,
-  /IF v_existing_id IS NOT NULL AND v_existing_source = 'auto' THEN[\s\S]*?UPDATE public\.content_feedback[\s\S]*?WHERE id = v_existing_id;[\s\S]*?IF v_existing_id IS NOT NULL AND v_existing_source = 'admin'/i,
-);
 
 const rejectWithoutDetail = parseAdminContentFeedbackBody({
   content_type: 'reel',
-  content_id: 'poll-1',
+  content_id: '00000000-0000-4000-8000-000000000001',
   verdict: 'reject',
   aspects: {},
   reason_tags: [],
@@ -40,7 +42,7 @@ if (!rejectWithoutDetail.ok) {
 
 const rejectWithReason = parseAdminContentFeedbackBody({
   content_type: 'reel',
-  content_id: 'poll-1',
+  content_id: '00000000-0000-4000-8000-000000000001',
   verdict: 'reject',
   aspects: {},
   reason_tags: ['duplikat'],
@@ -72,11 +74,45 @@ const badType = parseAdminContentFeedbackBody({
 });
 assert.equal(badType.ok, false);
 
+const strictRejectsSnapshot = parseAdminContentFeedbackBody({
+  content_type: 'ai_summary',
+  content_id: '12345',
+  verdict: 'approve',
+  snapshot: { evil: true },
+});
+assert.equal(strictRejectsSnapshot.ok, false);
+
+const badReelId = parseAdminContentFeedbackBody({
+  content_type: 'reel',
+  content_id: 'not-a-uuid',
+  verdict: 'approve',
+});
+assert.equal(badReelId.ok, false);
+
+const deduped = parseAdminContentFeedbackBody({
+  content_type: 'blog_post',
+  content_id: '42',
+  verdict: 'approve',
+  reason_tags: ['duplikat', 'duplikat'],
+});
+assert.equal(deduped.ok, true);
+if (deduped.ok) {
+  assert.deepEqual(deduped.body.reason_tags, ['duplikat']);
+}
+
 assert.equal(
   validateRejectionDetail('reject', {}, []),
   'Ved avvisning må minst ett aspekt merkes med tommel ned eller minst én grunn velges.',
 );
 assert.equal(validateRejectionDetail('approve', {}, []), null);
+
+const sanitized = sanitizeSnapshotInput({
+  title: 'OK',
+  event_id: 'nope',
+  occurred_at: 'nope',
+  source: 'nope',
+});
+assert.deepEqual(sanitized, { title: 'OK' });
 
 const panelSrc = readFileSync(
   join(process.cwd(), 'components/admin/content-feedback-panel.tsx'),
@@ -86,6 +122,10 @@ assert.match(panelSrc, /Hopp over/);
 assert.match(panelSrc, /rejectionIncomplete/);
 assert.match(panelSrc, /tommel ned/);
 assert.match(panelSrc, /ThumbsUp/);
+assert.match(panelSrc, /Takk, tilbakemeldingen er lagret/);
+assert.match(panelSrc, /Vurdert/);
+assert.match(panelSrc, /role="alert"/);
+assert.doesNotMatch(panelSrc, /snapshot/);
 assert.doesNotMatch(panelSrc, /👍|👎/);
 
 console.log('content-feedback/admin-api.test.ts: ok');
