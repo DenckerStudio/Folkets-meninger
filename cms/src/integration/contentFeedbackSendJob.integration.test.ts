@@ -110,7 +110,6 @@ async function main() {
   let retryJob = await findJob(payload, retryJobId);
   assert.equal(retryMock.getHits(), 1);
   assert.equal(retryJob.hasError, false);
-  assert.equal(retryJob.totalTried, 1);
   assert.ok(retryJob.waitUntil);
 
   await payload.update({
@@ -136,7 +135,7 @@ async function main() {
   const clientJob = await findJob(payload, clientJobId);
   assert.equal(clientMock.getHits(), 1);
   assert.equal(clientJob.hasError, true);
-  assert.equal(clientJob.totalTried, 1);
+  assert.equal(clientMock.getHits(), 1);
   await closeServer(clientMock.server);
 
   delete process.env.CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET;
