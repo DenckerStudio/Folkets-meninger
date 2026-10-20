@@ -430,11 +430,29 @@ BEGIN
     RAISE EXCEPTION 'anon skal ikke kunne kjøre n8n_match_source_items';
   END IF;
 
+  r := public.n8n_upsert_source_items(
+    jsonb_build_array(
+      jsonb_build_object(
+        'domain', 'utenfilter.no',
+        'external_id', 'ci-match-seen',
+        'url', 'https://utenfilter.no/match-seen',
+        'title', 'Match seen_at',
+        'excerpt', 'Match ingress',
+        'published_at', now(),
+        'embedding', v_vec,
+        'embedding_model', 'bge-m3'
+      )
+    )
+  );
+  IF (r ->> 'upserted')::int <> 1 THEN
+    RAISE EXCEPTION 'forberedelse for n8n_match_source_items feilet: %', r;
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1
     FROM public.n8n_match_source_items(v_vec::vector(1024), 365, 20) m
-    WHERE m.external_id = 'ci-123'
-      AND m.excerpt = 'Ny ingress'
+    WHERE m.external_id = 'ci-match-seen'
+      AND m.excerpt = 'Match ingress'
       AND m.seen_at IS NOT NULL
   ) THEN
     RAISE EXCEPTION 'n8n_match_source_items skal returnere excerpt og seen_at';
