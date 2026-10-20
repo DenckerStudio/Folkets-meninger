@@ -206,3 +206,197 @@ BEGIN
   DELETE FROM public.action_clusters WHERE action_key = v_action_key;
   RAISE NOTICE 'action_capture_atomic.sql: merge/null OK';
 END $$;
+
+-- metadata merge beholder eksisterende nøkler; metadata uten is_signal endrer ikke signal_only.
+DO $$
+DECLARE
+  v_action_key text := 'test:cursor-action-capture-metadata-signal';
+  v_meta jsonb;
+  v_sig boolean;
+BEGIN
+  IF to_regprocedure('public.upsert_action_capture(jsonb,jsonb)') IS NULL THEN
+    RETURN;
+  END IF;
+
+  DELETE FROM public.action_clusters WHERE action_key = v_action_key;
+
+  PERFORM public.upsert_action_capture(
+    jsonb_build_object(
+      'action_key', v_action_key,
+      'action_type', 'opprop',
+      'action_name', 'Meta-test',
+      'description_nb', 'Beskrivelse',
+      'metadata', jsonb_build_object('behold', 'ja', 'versjon', 1)
+    ),
+    jsonb_build_array(
+      jsonb_build_object(
+        'item_key', 'news_rss:https://example.com/meta-sig',
+        'url_canonical', 'https://example.com/meta-sig',
+        'source_type', 'news_rss',
+        'signal_only', true,
+        'title', 'Opprinnelig tittel'
+      )
+    )
+  );
+
+  PERFORM public.upsert_action_capture(
+    jsonb_build_object(
+      'action_key', v_action_key,
+      'metadata', jsonb_build_object('ny', 'felt')
+    ),
+    jsonb_build_array(
+      jsonb_build_object(
+        'item_key', 'news_rss:https://example.com/meta-sig',
+        'url_canonical', 'https://example.com/meta-sig',
+        'source_type', 'news_rss',
+        'metadata', jsonb_build_object('note', 'uten is_signal')
+      )
+    )
+  );
+
+  SELECT metadata INTO v_meta FROM public.action_clusters WHERE action_key = v_action_key;
+  IF v_meta ->> 'behold' IS DISTINCT FROM 'ja' OR v_meta ->> 'versjon' IS DISTINCT FROM '1' OR v_meta ->> 'ny' IS DISTINCT FROM 'felt' THEN
+    RAISE EXCEPTION 'metadata merge feilet, fikk %', v_meta;
+  END IF;
+
+  SELECT signal_only INTO v_sig FROM public.action_sources WHERE item_key = 'news_rss:https://example.com/meta-sig';
+  IF v_sig IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'signal_only skulle ikke nullstilles av metadata uten is_signal';
+  END IF;
+
+  PERFORM public.upsert_action_capture(
+    jsonb_build_object('action_key', v_action_key),
+    jsonb_build_array(
+      jsonb_build_object(
+        'item_key', 'news_rss:https://example.com/meta-sig',
+        'url_canonical', 'https://example.com/meta-sig',
+        'source_type', 'news_rss',
+        'title', ''
+      )
+    )
+  );
+
+  IF (SELECT title FROM public.action_sources WHERE item_key = 'news_rss:https://example.com/meta-sig')
+    IS DISTINCT FROM 'Opprinnelig tittel' THEN
+    RAISE EXCEPTION 'tom tittel-streng skulle ikke slette lagret tittel';
+  END IF;
+
+  DELETE FROM public.action_clusters WHERE action_key = v_action_key;
+  RAISE NOTICE 'action_capture_atomic.sql: metadata/signal_only OK';
+END $$;
+
+-- Flytting av kilde til annen klynge: gammel klynge får oppdatert independent_publishers.
+DO $$
+DECLARE
+  v_key_a text := 'test:cursor-action-capture-move-a';
+  v_key_b text := 'test:cursor-action-capture-move-b';
+  v_item text := 'news_rss:https://example.com/move-shared';
+  v_id_a uuid;
+  v_id_b uuid;
+  v_pub_a text[];
+BEGIN
+  IF to_regprocedure('public.upsert_action_capture(jsonb,jsonb)') IS NULL THEN
+    RETURN;
+  END IF;
+
+  DELETE FROM public.action_clusters WHERE action_key IN (v_key_a, v_key_b);
+
+  PERFORM public.upsert_action_capture(
+    jsonb_build_object(
+      'action_key', v_key_a,
+      'action_type', 'opprop',
+      'action_name', 'Klynge A',
+      'description_nb', 'A'
+    ),
+    jsonb_build_array(
+      jsonb_build_object(
+        'item_key', v_item,
+        'url_canonical', 'https://example.com/move-shared',
+        'source_type', 'news_rss',
+        'publisher', 'vg.no',
+        'signal_only', false,
+        'confidence', 0.5
+      )
+    )
+  );
+
+  PERFORM public.upsert_action_capture(
+    jsonb_build_object(
+      'action_key', v_key_b,
+      'action_type', 'opprop',
+      'action_name', 'Klynge B',
+      'description_nb', 'B'
+    ),
+    '[]'::jsonb
+  );
+
+  SELECT id INTO v_id_a FROM public.action_clusters WHERE action_key = v_key_a;
+  SELECT id INTO v_id_b FROM public.action_clusters WHERE action_key = v_key_b;
+
+  PERFORM public.upsert_action_capture(
+    jsonb_build_object('action_key', v_key_b),
+    jsonb_build_array(
+      jsonb_build_object(
+        'item_key', v_item,
+        'url_canonical', 'https://example.com/move-shared',
+        'source_type', 'news_rss',
+        'publisher', 'vg.no',
+        'signal_only', false,
+        'confidence', 0.5
+      )
+    )
+  );
+
+  SELECT independent_publishers INTO v_pub_a FROM public.action_clusters WHERE id = v_id_a;
+  IF v_pub_a IS NOT NULL AND array_length(v_pub_a, 1) IS NOT NULL THEN
+    RAISE EXCEPTION 'klynge A skulle miste vg.no etter flytt, fikk %', v_pub_a;
+  END IF;
+
+  IF (SELECT cluster_id FROM public.action_sources WHERE item_key = v_item) IS DISTINCT FROM v_id_b THEN
+    RAISE EXCEPTION 'kilde skulle tilhøre klynge B';
+  END IF;
+
+  DELETE FROM public.action_clusters WHERE action_key IN (v_key_a, v_key_b);
+  RAISE NOTICE 'action_capture_atomic.sql: source move OK';
+END $$;
+
+-- Samme action_key: eksisterende rad + upsert (ON CONFLICT DO NOTHING på insert) skal ikke feile.
+DO $$
+DECLARE
+  v_action_key text := 'test:cursor-action-capture-insert-race';
+BEGIN
+  IF to_regprocedure('public.upsert_action_capture(jsonb,jsonb)') IS NULL THEN
+    RETURN;
+  END IF;
+
+  DELETE FROM public.action_clusters WHERE action_key = v_action_key;
+
+  INSERT INTO public.action_clusters (
+    action_key,
+    action_type,
+    action_name,
+    description_nb,
+    status
+  )
+  VALUES (v_action_key, 'opprop', 'Eksisterende', 'Fra annen sesjon', 'candidate');
+
+  PERFORM public.upsert_action_capture(
+    jsonb_build_object(
+      'action_key', v_action_key,
+      'action_type', 'opprop',
+      'action_name', 'Parallell insert',
+      'description_nb', 'Skal falle tilbake til update'
+    ),
+    '[]'::jsonb
+  );
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.action_clusters
+    WHERE action_key = v_action_key AND action_name = 'Parallell insert'
+  ) THEN
+    RAISE EXCEPTION 'upsert etter eksisterende action_key skulle oppdatere klynge';
+  END IF;
+
+  DELETE FROM public.action_clusters WHERE action_key = v_action_key;
+  RAISE NOTICE 'action_capture_atomic.sql: insert race OK';
+END $$;
