@@ -330,6 +330,7 @@ if (useDev) {
 } else if (process.env.SCREENSHOT_SKIP_BUILD !== '1') {
   console.log(`SHA ${sha} — production build with ephemeral route …`);
   execSync('npm run build', { stdio: 'inherit' });
+  process.env.SCREENSHOT_RESTART_AFTER_BUILD = '1';
 } else {
   console.log(`SHA ${sha} — skip build (SCREENSHOT_SKIP_BUILD); using existing .next output`);
 }
@@ -353,7 +354,15 @@ async function waitForServer(maxMs = 120_000) {
 
 /** @type {import('node:child_process').ChildProcess | null} */
 let serverProc = null;
-if (process.env.SCREENSHOT_SKIP_START !== '1') {
+const shouldStartServer =
+  process.env.SCREENSHOT_SKIP_START !== '1' ||
+  process.env.SCREENSHOT_RESTART_AFTER_BUILD === '1';
+if (shouldStartServer) {
+  try {
+    execSync(`bash -c 'fuser -k ${port}/tcp 2>/dev/null || true'`);
+  } catch {
+    // ignore
+  }
   serverProc = spawn('npm', ['start'], {
     cwd: process.cwd(),
     env: { ...process.env, PORT: port, HOSTNAME: '127.0.0.1' },
@@ -361,6 +370,9 @@ if (process.env.SCREENSHOT_SKIP_START !== '1') {
     detached: true,
   });
   serverProc.unref();
+  if (process.env.SCREENSHOT_RESTART_AFTER_BUILD === '1') {
+    await new Promise((r) => setTimeout(r, 10_000));
+  }
 }
 await waitForServer();
 console.log(`Server ready on ${baseUrl}`);
