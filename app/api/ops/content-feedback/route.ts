@@ -39,6 +39,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     id: result.id,
+    status: result.status,
     duplicate: result.duplicate,
     applied: result.applied,
   });
