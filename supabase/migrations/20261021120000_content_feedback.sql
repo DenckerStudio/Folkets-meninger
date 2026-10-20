@@ -137,7 +137,7 @@ CREATE OR REPLACE FUNCTION public.build_poll_reel_feedback_snapshot(p_poll publi
 RETURNS jsonb
 LANGUAGE sql
 STABLE
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
   SELECT jsonb_strip_nulls(
     jsonb_build_object(
@@ -154,7 +154,7 @@ CREATE OR REPLACE FUNCTION public.log_poll_content_feedback()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
   v_verdict text;
@@ -227,7 +227,7 @@ CREATE OR REPLACE FUNCTION public.upsert_content_feedback(
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
   v_content_type text;
@@ -337,7 +337,7 @@ CREATE OR REPLACE FUNCTION public.assert_bge_m3_embedding(p_embedding vector)
 RETURNS vector(1024)
 LANGUAGE plpgsql
 IMMUTABLE
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
 BEGIN
   IF p_embedding IS NULL THEN
@@ -355,7 +355,7 @@ CREATE OR REPLACE FUNCTION public.parse_source_item_categories(p_categories json
 RETURNS text[]
 LANGUAGE plpgsql
 IMMUTABLE
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
   v_categories jsonb;
@@ -389,7 +389,7 @@ CREATE OR REPLACE FUNCTION public.normalize_content_source_domain(p_domain text)
 RETURNS text
 LANGUAGE sql
 IMMUTABLE
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
   SELECT CASE
     WHEN p_domain IS NULL OR btrim(p_domain) = '' THEN NULL
@@ -406,7 +406,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
   v_type text;
@@ -512,7 +512,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
   v_type text;
@@ -559,7 +559,7 @@ CREATE OR REPLACE FUNCTION public.n8n_upsert_source_items(p_items jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
   v_item jsonb;
@@ -801,7 +801,7 @@ RETURNS TABLE (
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
   WITH query AS (
     SELECT public.assert_bge_m3_embedding(p_embedding) AS emb
@@ -847,7 +847,7 @@ RETURNS TABLE (
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
   SELECT
     si.id,
@@ -877,7 +877,7 @@ CREATE OR REPLACE FUNCTION public.n8n_upsert_feedback_profile(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
   v_type text;
@@ -914,7 +914,7 @@ CREATE OR REPLACE FUNCTION public.n8n_set_feedback_embedding(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
   v_updated int;
