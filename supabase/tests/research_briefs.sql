@@ -190,6 +190,23 @@ BEGIN
     INSERT INTO public.research_briefs (request_id, cluster_id, kind, status)
     VALUES (v_reel_request_id, v_cluster_id, 'reel', 'running');
 
+    BEGIN
+      PERFORM public.n8n_create_research_reel_draft(
+        v_reel_request_id,
+        NULL,
+        'Skal feile metadata',
+        'x',
+        '[]'::jsonb,
+        '[]'::jsonb
+      );
+      RAISE EXCEPTION 'forventet exception ved ugyldig generation_metadata';
+    EXCEPTION
+      WHEN OTHERS THEN
+        IF SQLERRM NOT LIKE '%invalid_generation_metadata%' THEN
+          RAISE;
+        END IF;
+    END;
+
     r := public.n8n_create_research_reel_draft(
       v_reel_request_id,
       NULL,
