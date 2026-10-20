@@ -27,13 +27,18 @@ type SourceDoc = {
 };
 
 function isReadySummary(json: Record<string, unknown>): SummaryData | null {
-  if (json.version === 2 && typeof json.narrative === 'string') {
+  const narrative =
+    typeof json.narrative === 'string' ? json.narrative.trim() : '';
+  if (json.version === 2 && narrative) {
     return {
       version: 2,
-      narrative: json.narrative,
+      narrative,
       who_affected: String(json.who_affected ?? ''),
       how_affected: String(json.how_affected ?? ''),
       kostnad: typeof json.kostnad === 'string' ? json.kostnad : '',
+      forslag: Array.isArray(json.forslag)
+        ? json.forslag.map((item) => String(item ?? '').trim()).filter(Boolean)
+        : [],
       topic_cards: Array.isArray(json.topic_cards)
         ? (json.topic_cards as TopicCard[])
         : [],
@@ -337,8 +342,25 @@ function V2Summary({ data }: { data: AiSummaryV2 }) {
         <p className="text-base leading-relaxed break-words text-foreground">{data.narrative}</p>
       ) : null}
 
+      {data.forslag.length > 0 ? (
+        <section className="min-w-0 rounded-xl border border-border bg-card p-4">
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Forslagene ({data.forslag.length})
+          </h3>
+          <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-foreground">
+            {data.forslag.map((item, index) => (
+              <li key={`${index}-${item.slice(0, 48)}`} className="break-words pl-1">
+                {item}
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+
       <FactTileGrid>
-        <FactTile icon={Users} label="Hvem berøres?" text={data.who_affected} />
+        {data.who_affected.trim() ? (
+          <FactTile icon={Users} label="Hvem berøres?" text={data.who_affected} />
+        ) : null}
         {data.how_affected.trim() ? (
           <FactTile icon={HandHeart} label="Hvordan berøres de?" text={data.how_affected} />
         ) : null}

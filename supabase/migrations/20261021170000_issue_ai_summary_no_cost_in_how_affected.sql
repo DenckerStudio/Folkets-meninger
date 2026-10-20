@@ -1,7 +1,27 @@
 -- Stop copying kostnad into how_affected when how_affected is empty (R4).
+-- Add forslag jsonb for numbered proposal lists (n8n p_forslag).
 
 BEGIN;
 SET LOCAL lock_timeout = '5s';
+
+ALTER TABLE public.issue_ai_summaries
+  ADD COLUMN IF NOT EXISTS forslag jsonb;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'issue_ai_summaries_forslag_array'
+      AND conrelid = 'public.issue_ai_summaries'::regclass
+  ) THEN
+    ALTER TABLE public.issue_ai_summaries
+      ADD CONSTRAINT issue_ai_summaries_forslag_array
+      CHECK (forslag IS NULL OR jsonb_typeof(forslag) = 'array');
+  END IF;
+END $$;
+
+DROP FUNCTION IF EXISTS public.n8n_upsert_issue_ai_summary(text, text, text, text, text, text, text, jsonb, text[]);
 
 CREATE OR REPLACE FUNCTION public.n8n_upsert_issue_ai_summary(
   p_issue_id text,
@@ -12,7 +32,8 @@ CREATE OR REPLACE FUNCTION public.n8n_upsert_issue_ai_summary(
   p_who_affected text DEFAULT NULL,
   p_how_affected text DEFAULT NULL,
   p_topic_cards jsonb DEFAULT '[]'::jsonb,
-  p_labels text[] DEFAULT '{}'::text[]
+  p_labels text[] DEFAULT '{}'::text[],
+  p_forslag jsonb DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -27,7 +48,14 @@ DECLARE
   v_who text := coalesce(nullif(trim(p_who_affected), ''), v_hvem);
   v_how text := nullif(trim(p_how_affected), '');
   v_labels text[] := coalesce(p_labels, '{}'::text[]);
+  v_forslag_insert jsonb;
 BEGIN
+  IF p_forslag IS NOT NULL AND jsonb_typeof(p_forslag) <> 'array' THEN
+    RAISE EXCEPTION 'p_forslag must be a JSON array or NULL';
+  END IF;
+
+  v_forslag_insert := CASE WHEN p_forslag IS NULL THEN '[]'::jsonb ELSE p_forslag END;
+
   INSERT INTO public.issue_ai_summaries (
     stortinget_issue_id,
     hva,
@@ -38,6 +66,7 @@ BEGIN
     how_affected,
     topic_cards,
     labels,
+    forslag,
     updated_at
   )
   VALUES (
@@ -50,6 +79,7 @@ BEGIN
     v_how,
     coalesce(p_topic_cards, '[]'::jsonb),
     v_labels,
+    v_forslag_insert,
     now()
   )
   ON CONFLICT (stortinget_issue_id) DO UPDATE SET
@@ -61,6 +91,10 @@ BEGIN
     how_affected = EXCLUDED.how_affected,
     topic_cards = EXCLUDED.topic_cards,
     labels = EXCLUDED.labels,
+    forslag = CASE
+      WHEN p_forslag IS NULL THEN public.issue_ai_summaries.forslag
+      ELSE EXCLUDED.forslag
+    END,
     updated_at = now();
 
   UPDATE public.stortinget_issues
@@ -78,8 +112,8 @@ WHERE how_affected IS NOT NULL
   AND kostnad IS NOT NULL
   AND btrim(how_affected) = btrim(kostnad);
 
-REVOKE ALL ON FUNCTION public.n8n_upsert_issue_ai_summary(text, text, text, text, text, text, text, jsonb, text[]) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.n8n_upsert_issue_ai_summary(text, text, text, text, text, text, text, jsonb, text[]) TO service_role;
+REVOKE ALL ON FUNCTION public.n8n_upsert_issue_ai_summary(text, text, text, text, text, text, text, jsonb, text[], jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.n8n_upsert_issue_ai_summary(text, text, text, text, text, text, text, jsonb, text[], jsonb) TO service_role;
 
 COMMIT;
 
