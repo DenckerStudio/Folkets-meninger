@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState, type TransitionStartFunction } from 'react';
-import { Eye, EyeOff, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CharacterCountTextarea } from '@/components/ui/character-count-textarea';
@@ -22,6 +22,8 @@ import {
   type ChangelogEntry,
 } from '@/lib/appens-fremtid/constants';
 import { validateChangelogInput } from '@/lib/appens-fremtid/validate';
+
+const ADMIN_ICON_BTN = 'max-sm:size-11';
 
 type Draft = {
   id: string | null;
@@ -61,6 +63,7 @@ export function ChangelogAdminPanel({
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [deleteTarget, setDeleteTarget] = useState<ChangelogEntry | null>(null);
   const [publishTarget, setPublishTarget] = useState<ChangelogEntry | null>(null);
+  const [discardOpen, setDiscardOpen] = useState(false);
   const [sheetError, setSheetError] = useState('');
   const createIdempotencyKey = useRef(crypto.randomUUID());
   const [baseline, setBaseline] = useState<Draft>(emptyDraft);
@@ -99,12 +102,18 @@ export function ChangelogAdminPanel({
   const isDirty =
     draft.title !== baseline.title || draft.body !== baseline.body || draft.publish !== baseline.publish;
 
-  const requestCloseSheet = () => {
-    if (isDirty && !window.confirm('Du har ulagrede endringer. Vil du lukke uten å lagre?')) {
-      return;
-    }
+  const closeSheetWithoutSave = () => {
+    setDiscardOpen(false);
     setSheetOpen(false);
     setSheetError('');
+  };
+
+  const requestCloseSheet = () => {
+    if (isDirty) {
+      setDiscardOpen(true);
+      return;
+    }
+    closeSheetWithoutSave();
   };
 
   const save = () => {
@@ -245,11 +254,12 @@ export function ChangelogAdminPanel({
                     <h3 className="mt-2 text-sm font-semibold text-foreground">{entry.title}</h3>
                     <MarkdownLite source={entry.body} className="mt-2 text-muted-foreground" />
                   </div>
-                  <div className="flex shrink-0 flex-wrap gap-1">
+                  <div className="flex shrink-0 flex-wrap items-center gap-1">
                     <Button
                       type="button"
-                      variant="ghost"
-                      size="icon-sm"
+                      variant="outline"
+                      size="sm"
+                      className="min-h-11 max-sm:px-3"
                       onClick={() => {
                         if (!published) {
                           setPublishTarget(entry);
@@ -257,17 +267,24 @@ export function ChangelogAdminPanel({
                         }
                         applyPublishToggle(entry);
                       }}
-                      aria-label={published ? 'Avpubliser' : 'Publiser'}
                     >
-                      {published ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                      {published ? 'Avpubliser' : 'Publiser'}
                     </Button>
-                    <Button type="button" variant="ghost" size="icon-sm" onClick={() => openEdit(entry)} aria-label="Rediger">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className={ADMIN_ICON_BTN}
+                      onClick={() => openEdit(entry)}
+                      aria-label="Rediger"
+                    >
                       <Pencil className="size-3.5" />
                     </Button>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon-sm"
+                      className={ADMIN_ICON_BTN}
                       onClick={() => setDeleteTarget(entry)}
                       aria-label="Slett"
                     >
@@ -354,6 +371,28 @@ export function ChangelogAdminPanel({
       >
         <p className="text-sm text-muted-foreground">
           Du sletter <strong className="text-foreground">{deleteTarget?.title ?? 'dette innlegget'}</strong>.
+        </p>
+      </Dialog>
+
+      <Dialog
+        open={discardOpen}
+        onClose={() => setDiscardOpen(false)}
+        title="Lukke uten å lagre?"
+        description="Du har ulagrede endringer i redigeringsvinduet."
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setDiscardOpen(false)}>
+              Fortsett redigering
+            </Button>
+            <Button type="button" variant="destructive" size="sm" onClick={closeSheetWithoutSave}>
+              Lukk uten å lagre
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Endringene du har gjort blir ikke lagret hvis du lukker nå.
         </p>
       </Dialog>
 

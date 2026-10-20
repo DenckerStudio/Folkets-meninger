@@ -32,7 +32,7 @@ export function RoadmapItemPreview({
     >
       <div className="flex flex-wrap items-center gap-2">
         <Badge className={cn('border-0', STATUS_BADGE[status])}>{roadmapStatusLabel(status)}</Badge>
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Forhåndsvisning
         </span>
       </div>

@@ -26,6 +26,8 @@ import { nextRoadmapSortOrder, sortRoadmapItems } from '@/lib/appens-fremtid/roa
 import { validateRoadmapInput } from '@/lib/appens-fremtid/validate';
 import { cn } from '@/lib/utils';
 
+const ADMIN_ICON_BTN = 'max-sm:size-11';
+
 type Draft = {
   id: string | null;
   title: string;
@@ -268,6 +270,7 @@ export function RoadmapAdminPanel({
                   type="button"
                   variant="ghost"
                   size="icon-sm"
+                  className={ADMIN_ICON_BTN}
                   disabled={pending || sorted.findIndex((row) => row.id === item.id) === 0}
                   onClick={() => moveItem(item.id, -1)}
                   aria-label="Flytt opp"
@@ -278,6 +281,7 @@ export function RoadmapAdminPanel({
                   type="button"
                   variant="ghost"
                   size="icon-sm"
+                  className={ADMIN_ICON_BTN}
                   disabled={
                     pending || sorted.findIndex((row) => row.id === item.id) === sorted.length - 1
                   }
@@ -287,7 +291,14 @@ export function RoadmapAdminPanel({
                   <ChevronDown className="size-3.5" />
                 </Button>
               </div>
-              <Button type="button" variant="ghost" size="icon-sm" onClick={() => openEdit(item)} aria-label="Rediger">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className={ADMIN_ICON_BTN}
+                onClick={() => openEdit(item)}
+                aria-label="Rediger"
+              >
                 <Pencil className="size-3.5" />
               </Button>
             </li>
