@@ -12,6 +12,7 @@ import { Media } from '@/collections/Media';
 import { Posts } from '@/collections/Posts';
 import { Tags } from '@/collections/Tags';
 import { Users } from '@/collections/Users';
+import { resolveCmsServerUrl, trustedPayloadOrigins } from '@/lib/serverOrigins';
 import { seedOnBoot } from '@/seed/seedBaseData';
 
 const filename = fileURLToPath(import.meta.url);
@@ -67,15 +68,13 @@ export default buildConfig({
   }),
   sharp,
   plugins,
-  cors: [
-    process.env.SERVER_URL || 'http://localhost:3001',
-    process.env.WEB_PUBLIC_URL || 'http://localhost:3000',
-  ].filter(Boolean),
-  csrf: [
-    process.env.SERVER_URL || 'http://localhost:3001',
-    process.env.WEB_PUBLIC_URL || 'http://localhost:3000',
-  ].filter(Boolean),
-  serverURL: process.env.SERVER_URL || 'http://localhost:3001',
+  cors: trustedPayloadOrigins(),
+  csrf: trustedPayloadOrigins(),
+  serverURL: resolveCmsServerUrl(),
+  graphQL: {
+    disablePlaygroundInProduction: true,
+    disableIntrospectionInProduction: true,
+  },
   onInit: async (payload) => {
     await seedOnBoot(payload);
   },
