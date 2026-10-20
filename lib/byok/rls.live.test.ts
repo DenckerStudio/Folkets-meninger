@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
@@ -44,7 +44,11 @@ async function main() {
     note: 'Anon must not read user_llm_credentials (metadata or ciphertext).',
   };
 
-  writeFileSync('/opt/cursor/artifacts/byok-rls-live.json', JSON.stringify(payload, null, 2));
+  const artifactDir = existsSync('/opt/cursor/artifacts')
+    ? '/opt/cursor/artifacts'
+    : path.join(process.cwd(), '.artifacts');
+  mkdirSync(artifactDir, { recursive: true });
+  writeFileSync(path.join(artifactDir, 'byok-rls-live.json'), JSON.stringify(payload, null, 2));
 
   assert.match(payload.credentialsError ?? '', /permission denied|not accept/i);
   assert.match(payload.secretError ?? '', /permission denied|not accept/i);

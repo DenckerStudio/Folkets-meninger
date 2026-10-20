@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import { searchSearxng } from './searxng';
 
 async function main() {
@@ -9,8 +10,12 @@ async function main() {
   assert.ok(result.results.length > 0, 'SearXNG returned no hits');
   assert.ok(result.results.every((hit) => hit.title && hit.url.startsWith('http')));
 
+  const artifactDir = existsSync('/opt/cursor/artifacts')
+    ? '/opt/cursor/artifacts'
+    : path.join(process.cwd(), '.artifacts');
+  mkdirSync(artifactDir, { recursive: true });
   writeFileSync(
-    '/opt/cursor/artifacts/searxng-live.json',
+    path.join(artifactDir, 'searxng-live.json'),
     JSON.stringify(
       { ok: true, count: result.results.length, titles: result.results.map((hit) => hit.title) },
       null,

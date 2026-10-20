@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
@@ -68,7 +68,11 @@ async function main() {
       '200417 is a live Stortinget sak that may be absent from cache (honest empty).',
   };
 
-  writeFileSync('/opt/cursor/artifacts/rag-rpc-live.json', JSON.stringify(payload, null, 2));
+  const artifactDir = existsSync('/opt/cursor/artifacts')
+    ? '/opt/cursor/artifacts'
+    : path.join(process.cwd(), '.artifacts');
+  mkdirSync(artifactDir, { recursive: true });
+  writeFileSync(path.join(artifactDir, 'rag-rpc-live.json'), JSON.stringify(payload, null, 2));
 
   assert.match(rpc.error?.message ?? '', /permission denied/i);
   assert.ok(listed.some((issue) => issue.id === '200365'));
