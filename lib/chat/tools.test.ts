@@ -208,9 +208,16 @@ async function main() {
     createdAt: '2099-01-01T00:00:00Z',
     generationMetadata: {},
   };
-  const shaped = shapeChatPollResults({
+  const belowK = shapeChatPollResults({
     poll,
     totals: { ja: 3, nei: 1, blank: 0, total: 4 },
+  });
+  assert.equal(belowK.percents.ja, 0);
+  assert.ok(belowK.note?.includes('Færre enn'));
+
+  const shaped = shapeChatPollResults({
+    poll,
+    totals: { ja: 15, nei: 5, blank: 0, total: 20 },
   });
   assert.equal(shaped.found, true);
   assert.equal(shaped.isOpen, true);
