@@ -22,6 +22,7 @@ function makeRagClient(handlers: {
       const chain = {
         select: () => chain,
         eq: () => chain,
+        is: () => chain,
         ilike: () => chain,
         order: () => chain,
         limit: () => chain,

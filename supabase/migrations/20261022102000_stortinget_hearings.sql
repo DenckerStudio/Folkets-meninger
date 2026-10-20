@@ -1,5 +1,5 @@
 -- P9: Cache Stortinget hearings + hearing documents for RAG (docling pipeline, n8n sync).
--- Additive with parallel migrations 20261019200000 (hybrid search) and 20261019203000 (chunking).
+-- Additive with parallel migrations 20261022100000 (hybrid search) and 20261022101000 (chunking).
 
 BEGIN;
 
@@ -152,7 +152,7 @@ CREATE OR REPLACE FUNCTION public.n8n_upsert_stortinget_hearing(p_payload jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_id text := btrim(coalesce(p_payload->>'id', ''));
@@ -238,7 +238,7 @@ CREATE OR REPLACE FUNCTION public.n8n_upsert_hearing_document(p_payload jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_hearing_id text := btrim(coalesce(p_payload->>'hearing_id', ''));
@@ -309,7 +309,7 @@ RETURNS SETOF public.hearing_documents
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
   SELECT d.*
   FROM public.hearing_documents d
@@ -329,7 +329,7 @@ CREATE OR REPLACE FUNCTION public.n8n_save_hearing_document_markdown(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   UPDATE public.hearing_documents
@@ -354,7 +354,7 @@ RETURNS SETOF public.hearing_documents
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
   SELECT d.*
   FROM public.hearing_documents d
@@ -373,7 +373,7 @@ CREATE OR REPLACE FUNCTION public.n8n_mark_hearing_document_chunked(p_document_i
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   UPDATE public.hearing_documents
@@ -397,7 +397,7 @@ CREATE OR REPLACE FUNCTION public.n8n_replace_hearing_document_chunks(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_count int;
@@ -452,7 +452,7 @@ RETURNS TABLE (
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
   SELECT
     c.id,
@@ -488,7 +488,7 @@ RETURNS TABLE (
 LANGUAGE sql
 STABLE
 SECURITY INVOKER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
   WITH q AS (
     SELECT nullif(btrim(coalesce(p_query, '')), '') AS query
@@ -543,12 +543,13 @@ GRANT EXECUTE ON FUNCTION public.n8n_mark_hearing_document_chunked(uuid) TO serv
 GRANT EXECUTE ON FUNCTION public.n8n_replace_hearing_document_chunks(uuid, text, text, jsonb) TO service_role;
 GRANT EXECUTE ON FUNCTION public.n8n_list_pending_hearing_document_chunks(int) TO service_role;
 
-GRANT EXECUTE ON FUNCTION public.search_hearing_document_chunks_text(text, text, int) TO service_role, anon, authenticated;
+REVOKE ALL ON FUNCTION public.search_hearing_document_chunks_text(text, text, int) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.search_hearing_document_chunks_text(text, text, int) TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
 -- Extend hybrid search so filter_hearing_id queries hearing_document chunks
 -- (PR #179 joins only stortinget_issues and excludes hearing-only rows).
--- Depends on tsv / embedding_v2 from 20261019200000 when present; ensure columns exist
+-- Depends on tsv / embedding_v2 from 20261022100000 when present; ensure columns exist
 -- so this migration applies on branches that land before hybrid search.
 -- ---------------------------------------------------------------------------
 ALTER TABLE public.document_chunks
@@ -601,8 +602,8 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 STABLE
-SECURITY INVOKER
-SET search_path = public
+SECURITY DEFINER
+SET search_path = public, extensions, pg_temp
 AS $$
   WITH params AS (
     SELECT
@@ -825,7 +826,7 @@ GRANT EXECUTE ON FUNCTION public.search_chunks_hybrid(
   timestamptz,
   text,
   int
-) TO anon, authenticated;
+) TO authenticated, service_role;
 
 NOTIFY pgrst, 'reload schema';
 

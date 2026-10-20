@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 const migrationPath = join(
   process.cwd(),
-  'supabase/migrations/20261019210000_stortinget_hearings.sql',
+  'supabase/migrations/20261022102000_stortinget_hearings.sql',
 );
 const sql = readFileSync(migrationPath, 'utf8');
 

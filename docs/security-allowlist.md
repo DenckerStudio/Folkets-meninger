@@ -48,8 +48,11 @@ Generer hint fra kode: `node scripts/build-security-allowlist.mjs` (heuristikk ‚
 | `report_content` | API | |
 | `create_opinion_innspill` / `endorse_opinion_innspill` | API | |
 | `user_has_political_consent` / `record_*` / `withdraw_*` | API | Samtykke |
-| `search_stortinget_issues_for_chat` | session RAG | |
-| `search_issue_document_chunks_text` | session RAG | |
+| `search_stortinget_issues_for_chat` | session RAG | legacy phrase search |
+| `search_issue_document_chunks_text` | session RAG | legacy chunk scan |
+| `search_issues_fts` | session RAG | SECURITY DEFINER hybrid sak search |
+| `search_chunks_hybrid` | session RAG | SECURITY DEFINER hybrid chunks |
+| `search_hearing_document_chunks_text` | session RAG | hearing document FTS |
 
 **Dynamisk:** Alle `public.*`-funksjoner som nevnes i `pg_policies.qual` / `with_check` for `anon` eller `authenticated` f√•r `GRANT EXECUTE` i migrasjonen.
 

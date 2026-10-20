@@ -1,5 +1,5 @@
 -- Docling ingest RPC (n8n) + bge-m3 embedding_v2 backfill RPCs.
--- Builds on 20261019200000 (embedding_v2), 20261019203000 (chunk metadata), 20261019210000 (hearings).
+-- Builds on 20261022100000 (embedding_v2), 20261022101000 (chunk metadata), 20261022102000 (hearings).
 
 BEGIN;
 
@@ -7,7 +7,7 @@ DO $$
 BEGIN
   IF to_regclass('public.stortinget_hearings') IS NULL THEN
     RAISE EXCEPTION
-      'Migration 20261019220000 requires public.stortinget_hearings (apply PR #178 / 20261019210000 first).';
+      'Migration 20261022103000 requires public.stortinget_hearings (apply PR #178 / 20261022102000 first).';
   END IF;
 
   IF NOT EXISTS (
@@ -18,7 +18,7 @@ BEGIN
       AND column_name = 'embedding_v2'
   ) THEN
     RAISE EXCEPTION
-      'Migration 20261019220000 requires document_chunks.embedding_v2 (apply PR #179 / 20261019200000 first).';
+      'Migration 20261022103000 requires document_chunks.embedding_v2 (apply PR #179 / 20261022100000 first).';
   END IF;
 END $$;
 
@@ -224,6 +224,10 @@ DECLARE
 BEGIN
   IF v_target NOT IN ('sak', 'horing') THEN
     RETURN jsonb_build_object('status', 'error', 'error', 'invalid_target');
+  END IF;
+
+  IF p_doc IS NULL OR jsonb_typeof(p_doc) <> 'object' THEN
+    RETURN jsonb_build_object('status', 'error', 'error', 'invalid_doc');
   END IF;
 
   IF v_document_id IS NULL THEN

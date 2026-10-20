@@ -486,7 +486,7 @@ trimmed detail context instead of the full JSON blob.
 (`match_issue_document_chunks`). Moving chunk *blobs* into n8n would break
 similarity search.
 
-**Docling ingest (20261019220000):** Requires `stortinget_hearings` (#178) and
+**Docling ingest (20261022103000):** Requires `stortinget_hearings` (#178) and
 `document_chunks.embedding_v2` (#179) — fails at migration start with a clear message if
 missing. n8n calls `n8n_upsert_docling_document` with markdown + pre-chunked rows
 (`md-sections-v1`). Empty `p_chunks` → error (no wipe). Omitted doc fields are preserved.

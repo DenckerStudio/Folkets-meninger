@@ -195,7 +195,7 @@ infra/               coolify/ (cms.md + historical plan), searxng/
   dates (`/Date(-62135596800000)/`, `01.01.0001`) as missing.
 - Local comments: `POST /api/hearings` → `create_hearing_comment`. Requires public
   first and last name. Comments are not sent to Stortinget.
-- Cached hearings for RAG (migration `20261019210000`): `stortinget_hearings`,
+- Cached hearings for RAG (migration `20261022102000`): `stortinget_hearings`,
   `hearing_documents`, `document_chunks.hearing_id` / `hearing_document_id`. n8n sync:
   `n8n_upsert_stortinget_hearing`, `n8n_*_hearing_document*` RPCs (`service_role` only).
 
@@ -214,7 +214,7 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 - Chunker id **`md-sections-v1`** in `lib/document-chunking.ts` (~3500 chars, 15% overlap,
   TOC dropped, `page_start` / `page_end` in metadata).
 - Parallel **bge-m3** store: `document_chunks.embedding_v2 vector(1024)` (migration
-  `20261019200000`). Backfill RPCs (`service_role`): `list_chunks_missing_v2(limit,
+  `20261022100000`). Backfill RPCs (`service_role`): `list_chunks_missing_v2(limit,
   issue_id?, hearing_id?)`, `save_embeddings_v2(rows, model, force?)` →
   `{saved, failed, skipped}` — skips rows that already have `embedding_v2` unless
   `p_force`; bad ids count as `failed` without aborting the batch. Poison rows via

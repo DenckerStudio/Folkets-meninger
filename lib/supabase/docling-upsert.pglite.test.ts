@@ -10,7 +10,7 @@ const repoRoot = path.resolve(import.meta.dirname, '../..');
 function loadDoclingRpcSql(): string {
   const migrationPath = path.join(
     repoRoot,
-    'supabase/migrations/20261019220000_docling_ingest_and_embedding_v2_rpcs.sql',
+    'supabase/migrations/20261022103000_docling_ingest_and_embedding_v2_rpcs.sql',
   );
   const raw = readFileSync(migrationPath, 'utf8');
   const start = raw.indexOf('CREATE OR REPLACE FUNCTION public._n8n_docling_validate_doc');

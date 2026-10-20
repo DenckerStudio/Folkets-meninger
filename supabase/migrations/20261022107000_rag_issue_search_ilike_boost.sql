@@ -19,8 +19,8 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 STABLE
-SECURITY INVOKER
-SET search_path = public, extensions
+SECURITY DEFINER
+SET search_path = public, extensions, pg_temp
 AS $$
   WITH prefix_query AS (
     SELECT CASE
@@ -31,7 +31,7 @@ AS $$
           ELSE to_tsquery('norwegian', prefix_expr)
         END
         FROM (
-          SELECT string_agg(unaccent(lexeme) || ':*', ' | ' ORDER BY lexeme) AS prefix_expr
+          SELECT string_agg(public.fm_unaccent(lexeme) || ':*', ' | ' ORDER BY lexeme) AS prefix_expr
           FROM (
             SELECT DISTINCT lower(btrim(part)) AS lexeme
             FROM unnest(search_terms) AS u(t)
@@ -45,12 +45,12 @@ AS $$
   q AS (
     SELECT
       nullif(btrim(coalesce(query_text, '')), '') AS raw,
-      lower(nullif(btrim(coalesce(unaccent(query_text), '')), '')) AS raw_lower,
+      lower(nullif(btrim(coalesce(public.fm_unaccent(query_text), '')), '')) AS raw_lower,
       coalesce(
         (SELECT tsq FROM prefix_query),
         CASE
           WHEN nullif(btrim(coalesce(query_text, '')), '') IS NULL THEN NULL::tsquery
-          ELSE websearch_to_tsquery('norwegian', unaccent(nullif(btrim(coalesce(query_text, '')), '')))
+          ELSE websearch_to_tsquery('norwegian', public.fm_unaccent(nullif(btrim(coalesce(query_text, '')), '')))
         END
       ) AS tsq
   ),
@@ -107,10 +107,10 @@ AS $$
     CROSS JOIN q
     WHERE char_length(q.raw) = 2
       AND (
-        lower(unaccent(i.title)) = q.raw_lower
-        OR lower(unaccent(i.title)) LIKE q.raw_lower || ' %'
-        OR lower(unaccent(i.title)) LIKE '% ' || q.raw_lower || ' %'
-        OR lower(unaccent(i.title)) LIKE '% ' || q.raw_lower
+        lower(public.fm_unaccent(i.title)) = q.raw_lower
+        OR lower(public.fm_unaccent(i.title)) LIKE q.raw_lower || ' %'
+        OR lower(public.fm_unaccent(i.title)) LIKE '% ' || q.raw_lower || ' %'
+        OR lower(public.fm_unaccent(i.title)) LIKE '% ' || q.raw_lower
       )
   ),
   fts_issue AS (
@@ -207,7 +207,7 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION public.search_issues_fts(text, text[], int) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.search_issues_fts(text, text[], int) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.search_issues_fts(text, text[], int) TO authenticated, service_role;
 
 COMMIT;
 

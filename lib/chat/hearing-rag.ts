@@ -4,6 +4,11 @@ import { getAnonSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
 import type { ChatRagClient } from '@/lib/chat/rag';
 import {
+  isMissingRpcByName,
+  isMissingSearchChunksHybridRpcError,
+  warnChatRpcError,
+} from '@/lib/chat/rag-rpc-error';
+import {
   fetchStortingetHoringById,
   getHoringInnspillDeadline,
   getHoringSkriftligInnspillUrl,
@@ -58,34 +63,18 @@ type HybridChunkRow = {
 };
 
 function warnHearingRpcError(context: string, error: unknown): void {
-  if (!error || typeof error !== 'object') return;
-  const row = error as { code?: string; message?: string };
-  console.warn(`[hearing-rag] ${context}`, {
-    code: row.code ?? 'unknown',
-    message: row.message ?? 'unknown',
-  });
+  warnChatRpcError(`hearing-rag:${context}`, error as { code?: string; message?: string });
 }
 
 export function isMissingHearingHybridRpcError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const row = error as { code?: string; message?: string };
-  if (row.code === 'PGRST202' || row.code === '42883') return true;
-  const message = row.message ?? '';
-  if (/filter_hearing_id/i.test(message) && /unknown argument/i.test(message)) {
-    return true;
-  }
-  if (/search_chunks_hybrid/i.test(message) && /not find|schema cache|unknown/i.test(message)) {
-    return true;
-  }
-  return false;
+  return isMissingSearchChunksHybridRpcError(error as { code?: string; message?: string });
 }
 
 export function isMissingHearingDocumentSearchRpcError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const row = error as { code?: string; message?: string };
-  if (row.code === 'PGRST202') return true;
-  const message = row.message ?? '';
-  return /search_hearing_document_chunks_text/i.test(message) && /not find|schema cache/i.test(message);
+  return isMissingRpcByName(
+    error as { code?: string; message?: string },
+    'search_hearing_document_chunks_text',
+  );
 }
 
 export function hearingSearchNoteForEmptyChunks(args: {

@@ -12,12 +12,25 @@ import {
 } from './rag';
 
 async function main() {
-  assert.equal(isMissingHybridRpcError({ code: 'PGRST202', message: 'x' }), true);
+  assert.equal(
+    isMissingHybridRpcError({
+      code: 'PGRST202',
+      message: 'Could not find the function public.search_issues_fts',
+    }),
+    true,
+  );
   assert.equal(
     isMissingHybridRpcError({ message: 'Could not find the function public.search_chunks_hybrid' }),
     true,
   );
-  assert.equal(isMissingHybridRpcError({ message: 'permission denied for function search_issues_fts' }), true);
+  assert.equal(
+    isMissingHybridRpcError({ message: 'permission denied for function search_issues_fts' }),
+    false,
+  );
+  assert.equal(
+    isMissingHybridRpcError({ code: '42883', message: 'function search_issues_fts() does not exist' }),
+    true,
+  );
   assert.equal(isMissingHybridRpcError(null), false);
   assert.equal(isMissingHybridRpcError({ message: 'timeout' }), false);
 
@@ -58,7 +71,7 @@ async function main() {
   assert.equal(merged[0].sourceUrl, 'https://example.com/a');
 
   assert.equal(shouldFallbackToLegacyChunks(null), true);
-  assert.equal(shouldFallbackToLegacyChunks([]), true);
+  assert.equal(shouldFallbackToLegacyChunks([]), false);
   assert.equal(shouldFallbackToLegacyChunks([a]), false);
 
   let legacyCalls = 0;
@@ -68,10 +81,10 @@ async function main() {
   };
   assert.deepEqual(await primaryChunksFromHybridAttempt(null, legacy), [b]);
   assert.equal(legacyCalls, 1);
-  assert.deepEqual(await primaryChunksFromHybridAttempt([], legacy), [b]);
-  assert.equal(legacyCalls, 2);
+  assert.deepEqual(await primaryChunksFromHybridAttempt([], legacy), []);
+  assert.equal(legacyCalls, 1);
   assert.deepEqual(await primaryChunksFromHybridAttempt([a], legacy), [a]);
-  assert.equal(legacyCalls, 2, 'legacy must not run when hybrid has chunks');
+  assert.equal(legacyCalls, 1, 'legacy must not run when hybrid has chunks');
 
   const issueHit: ChatIssueHit = {
     id: '1',

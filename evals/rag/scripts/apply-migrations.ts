@@ -4,18 +4,18 @@ import { join } from 'node:path';
 type Variant = 'baseline' | 'stack';
 
 const STACK_MIGRATIONS = [
-  '20261019200000_hybrid_search_and_embedding_v2.sql',
-  '20261019203000_document_chunk_metadata_content_hash.sql',
-  '20261019210000_stortinget_hearings.sql',
-  '20261019220000_docling_ingest_and_embedding_v2_rpcs.sql',
+  '20261022100000_hybrid_search_and_embedding_v2.sql',
+  '20261022101000_document_chunk_metadata_content_hash.sql',
+  '20261022102000_stortinget_hearings.sql',
+  '20261022103000_docling_ingest_and_embedding_v2_rpcs.sql',
 ];
 
 const IMPROVEMENT_MIGRATIONS = [
-  '20261019230000_rag_issue_search_sak_aggregate.sql',
-  '20261019231000_rag_hybrid_prefix_trgm.sql',
-  '20261019232000_rag_unaccent_short_title_tsv.sql',
-  '20261019233000_rag_issue_search_ilike_boost.sql',
-  '20261019234000_rag_issue_search_sak_prefix.sql',
+  '20261022104000_rag_issue_search_sak_aggregate.sql',
+  '20261022105000_rag_hybrid_prefix_trgm.sql',
+  '20261022106000_rag_unaccent_short_title_tsv.sql',
+  '20261022107000_rag_issue_search_ilike_boost.sql',
+  '20261022108000_rag_issue_search_sak_prefix.sql',
 ];
 
 function parseArgs(): { variant: Variant; database: string } {

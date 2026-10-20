@@ -21,8 +21,8 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 STABLE
-SECURITY INVOKER
-SET search_path = public
+SECURITY DEFINER
+SET search_path = public, extensions, pg_temp
 AS $$
   WITH prefix_query AS (
     SELECT CASE
@@ -183,6 +183,6 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION public.search_issues_fts(text, text[], int) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.search_issues_fts(text, text[], int) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.search_issues_fts(text, text[], int) TO authenticated, service_role;
 
 COMMIT;

@@ -1,26 +1,6 @@
--- RAG improvement: unaccent for FTS queries + korttittel in issue tsv (setweight A).
-
+-- RAG round4: ILIKE + trgm + sak ID prefix in issue search.
 BEGIN;
 
-CREATE EXTENSION IF NOT EXISTS unaccent;
-
-DROP INDEX IF EXISTS public.stortinget_issues_tsv_gin_idx;
-
-ALTER TABLE public.stortinget_issues
-  DROP COLUMN IF EXISTS tsv;
-
-ALTER TABLE public.stortinget_issues
-  ADD COLUMN tsv tsvector GENERATED ALWAYS AS (
-    setweight(to_tsvector('norwegian', coalesce(title, '')), 'A')
-    || setweight(to_tsvector('norwegian', coalesce(detail_json->>'korttittel', '')), 'A')
-    || setweight(to_tsvector('norwegian', coalesce(henvisning, '')), 'A')
-    || setweight(to_tsvector('norwegian', coalesce(summary, '')), 'B')
-  ) STORED;
-
-CREATE INDEX IF NOT EXISTS stortinget_issues_tsv_gin_idx
-  ON public.stortinget_issues USING gin (tsv);
-
--- Re-apply issue search so q.tsq uses unaccent on websearch + prefix operands.
 DROP FUNCTION IF EXISTS public.search_issues_fts(text, int);
 DROP FUNCTION IF EXISTS public.search_issues_fts(text, text[], int);
 
@@ -39,8 +19,8 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 STABLE
-SECURITY INVOKER
-SET search_path = public, extensions
+SECURITY DEFINER
+SET search_path = public, extensions, pg_temp
 AS $$
   WITH prefix_query AS (
     SELECT CASE
@@ -51,7 +31,7 @@ AS $$
           ELSE to_tsquery('norwegian', prefix_expr)
         END
         FROM (
-          SELECT string_agg(unaccent(lexeme) || ':*', ' | ' ORDER BY lexeme) AS prefix_expr
+          SELECT string_agg(public.fm_unaccent(lexeme) || ':*', ' | ' ORDER BY lexeme) AS prefix_expr
           FROM (
             SELECT DISTINCT lower(btrim(part)) AS lexeme
             FROM unnest(search_terms) AS u(t)
@@ -65,12 +45,12 @@ AS $$
   q AS (
     SELECT
       nullif(btrim(coalesce(query_text, '')), '') AS raw,
-      lower(nullif(btrim(coalesce(unaccent(query_text), '')), '')) AS raw_lower,
+      lower(nullif(btrim(coalesce(public.fm_unaccent(query_text), '')), '')) AS raw_lower,
       coalesce(
         (SELECT tsq FROM prefix_query),
         CASE
           WHEN nullif(btrim(coalesce(query_text, '')), '') IS NULL THEN NULL::tsquery
-          ELSE websearch_to_tsquery('norwegian', unaccent(nullif(btrim(coalesce(query_text, '')), '')))
+          ELSE websearch_to_tsquery('norwegian', public.fm_unaccent(nullif(btrim(coalesce(query_text, '')), '')))
         END
       ) AS tsq
   ),
@@ -78,6 +58,7 @@ AS $$
     SELECT
       q.raw,
       (regexp_match(q.raw, '^\s*(\d{4,10})\s*$'))[1] AS issue_id,
+      (regexp_match(q.raw, '(?:^|\s)sak\s+(\d{4,10})(?:\s|$)', 'i'))[1] AS sak_issue_id,
       (regexp_match(q.raw, '^\s*(\d{7,12})\s*$'))[1] AS hearing_id,
       (regexp_match(q.raw, 'prop\.?\s*(\d+)\s*([a-z])?', 'i')) AS prop_m,
       (regexp_match(q.raw, 'innst\.?\s*(\d+)\s*([a-z])?', 'i')) AS innst_m,
@@ -89,7 +70,8 @@ AS $$
       1000::real AS rank
     FROM public.stortinget_issues i
     CROSS JOIN refs r
-    WHERE r.issue_id IS NOT NULL AND i.id = r.issue_id
+    WHERE (r.issue_id IS NOT NULL AND i.id = r.issue_id)
+       OR (r.sak_issue_id IS NOT NULL AND i.id = r.sak_issue_id)
   ),
   hearing_issues AS (
     SELECT i.id, i.title, left(coalesce(i.summary, ''), 400) AS summary, i.henvisning, i.ferdigbehandlet,
@@ -107,8 +89,12 @@ AS $$
     CROSS JOIN refs r
     WHERE (
       (r.prop_m IS NOT NULL AND (
-        coalesce(i.henvisning, '') ILIKE '%Prop. ' || r.prop_m[1] || '%'
-        OR coalesce(i.title, '') ILIKE '%Prop. ' || r.prop_m[1] || '%'
+        coalesce(i.henvisning, '') ~* (
+          '(?i)prop\.\s*' || r.prop_m[1] || '(\s|[^0-9]|$)'
+        )
+        OR coalesce(i.title, '') ~* (
+          '(?i)prop\.\s*' || r.prop_m[1] || '(\s|[^0-9]|$)'
+        )
       ))
       OR (r.innst_m IS NOT NULL AND (
         coalesce(i.henvisning, '') ILIKE '%Innst. ' || r.innst_m[1] || '%'
@@ -127,10 +113,10 @@ AS $$
     CROSS JOIN q
     WHERE char_length(q.raw) = 2
       AND (
-        lower(unaccent(i.title)) = q.raw_lower
-        OR lower(unaccent(i.title)) LIKE q.raw_lower || ' %'
-        OR lower(unaccent(i.title)) LIKE '% ' || q.raw_lower || ' %'
-        OR lower(unaccent(i.title)) LIKE '% ' || q.raw_lower
+        lower(public.fm_unaccent(i.title)) = q.raw_lower
+        OR lower(public.fm_unaccent(i.title)) LIKE q.raw_lower || ' %'
+        OR lower(public.fm_unaccent(i.title)) LIKE '% ' || q.raw_lower || ' %'
+        OR lower(public.fm_unaccent(i.title)) LIKE '% ' || q.raw_lower
       )
   ),
   fts_issue AS (
@@ -164,6 +150,30 @@ AS $$
     WHERE q.tsq IS NOT NULL AND dc.tsv @@ q.tsq AND dc.issue_id IS NOT NULL
     GROUP BY dc.issue_id
   ),
+
+  ilike_hits AS (
+    SELECT
+      i.id,
+      i.title,
+      left(coalesce(i.summary, ''), 400) AS summary,
+      i.henvisning,
+      i.ferdigbehandlet,
+      greatest(
+        0.55::real,
+        similarity(coalesce(i.title, ''), q.raw)::real,
+        word_similarity(q.raw, coalesce(i.title, ''))::real
+      ) AS rank
+    FROM public.stortinget_issues i
+    CROSS JOIN q
+    WHERE q.raw IS NOT NULL
+      AND length(q.raw) >= 2
+      AND (
+        coalesce(i.title, '') ILIKE '%' || replace(q.raw, '%', '') || '%'
+        OR coalesce(i.henvisning, '') ILIKE '%' || replace(q.raw, '%', '') || '%'
+        OR similarity(coalesce(i.title, ''), q.raw) > 0.2
+        OR word_similarity(q.raw, coalesce(i.title, '')) > 0.35
+      )
+  ),
   chunk_boosted AS (
     SELECT
       i.id,
@@ -187,6 +197,8 @@ AS $$
     SELECT * FROM fts_issue
     UNION ALL
     SELECT * FROM chunk_boosted
+    UNION ALL
+    SELECT * FROM ilike_hits
   ),
   deduped AS (
     SELECT DISTINCT ON (m.id)
@@ -201,6 +213,6 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION public.search_issues_fts(text, text[], int) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.search_issues_fts(text, text[], int) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.search_issues_fts(text, text[], int) TO authenticated, service_role;
 
 COMMIT;

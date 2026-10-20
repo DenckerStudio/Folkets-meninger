@@ -1,26 +1,65 @@
 /**
- * Executes search_issues_fts from the hybrid migration against PGlite (real Postgres FTS).
+ * Executes search_issues_fts from the RAG migration stack against PGlite (real Postgres FTS).
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
 
-function loadSearchIssuesFtsSql(): string {
-  const migrationPath = path.join(
-    process.cwd(),
-    'supabase/migrations/20261019200000_hybrid_search_and_embedding_v2.sql',
-  );
+function sliceMigration(file: string, startMarker: string, endMarker: string): string {
+  const migrationPath = path.join(process.cwd(), file);
   const sql = fs.readFileSync(migrationPath, 'utf8');
-  const start = sql.indexOf('DROP FUNCTION IF EXISTS public.search_issues_fts(text, int);');
-  assert.ok(start >= 0, 'search_issues_fts DROP block missing from migration');
-  const end = sql.indexOf('-- Hybrid chunk search', start);
-  assert.ok(end > start, 'search_issues_fts end marker missing from migration');
+  const start = sql.indexOf(startMarker);
+  assert.ok(start >= 0, `${startMarker} missing from ${file}`);
+  const end = sql.indexOf(endMarker, start);
+  assert.ok(end > start, `${endMarker} missing from ${file}`);
   return sql.slice(start, end);
+}
+
+const FM_UNACCENT_STUB = `
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE OR REPLACE FUNCTION extensions.unaccent(regdictionary, text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+AS $$
+  SELECT translate(lower($2), 'æøå', 'aoa');
+$$;
+CREATE OR REPLACE FUNCTION public.fm_unaccent(text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+STRICT
+AS $$
+  SELECT translate(lower($1), 'æøå', 'aoa')
+$$;
+`;
+
+function loadSearchIssuesFtsSql(): string {
+  let sql = sliceMigration(
+    'supabase/migrations/20261022100000_hybrid_search_and_embedding_v2.sql',
+    'DROP FUNCTION IF EXISTS public.search_issues_fts(text, int);',
+    '-- Hybrid chunk search',
+  );
+  sql = sql.replace(
+    "string_agg(lexeme || ':*'",
+    "string_agg(public.fm_unaccent(lexeme) || ':*'",
+  );
+  sql = sql.replace(
+    "ELSE websearch_to_tsquery('norwegian', nullif(btrim(coalesce(query_text, '')), ''))",
+    "ELSE websearch_to_tsquery('norwegian', public.fm_unaccent(nullif(btrim(coalesce(query_text, '')), '')))",
+  );
+  sql = sql.replace('char_length(btrim(part)) >= 3', 'char_length(btrim(part)) >= 2');
+  return sql
+    .replace(/^REVOKE ALL ON FUNCTION[\s\S]*?;$/m, '')
+    .replace(/^GRANT EXECUTE ON FUNCTION[\s\S]*?;$/m, '');
 }
 
 async function main() {
   const db = new PGlite();
+  await db.exec(FM_UNACCENT_STUB);
   await db.exec(`
     DO $$ BEGIN
       CREATE ROLE anon;
@@ -35,13 +74,15 @@ async function main() {
       henvisning text,
       ferdigbehandlet boolean,
       last_synced_at timestamptz,
+      detail_json jsonb,
       tsv tsvector GENERATED ALWAYS AS (
-        setweight(to_tsvector('norwegian', coalesce(title, '')), 'A')
-        || setweight(to_tsvector('norwegian', coalesce(henvisning, '')), 'A')
-        || setweight(to_tsvector('norwegian', coalesce(summary, '')), 'B')
+        setweight(to_tsvector('norwegian', coalesce(public.fm_unaccent(title), '')), 'A')
+        || setweight(to_tsvector('norwegian', coalesce(public.fm_unaccent(henvisning), '')), 'A')
+        || setweight(to_tsvector('norwegian', coalesce(public.fm_unaccent(summary), '')), 'B')
       ) STORED
     );
   `);
+
   await db.exec(loadSearchIssuesFtsSql());
 
   const paddedSummary =
@@ -53,7 +94,8 @@ async function main() {
       ('bud-2024', 'Statsbudsjett 2024', 'Kort om perioden 2024 og videre.', NULL, false, now()),
       ('veg', 'Vegvedlikehold', 'Ingen budsjettreferanse.', NULL, false, now()),
       ('innv-title', 'Innvandringsloven', 'Kort.', NULL, false, now()),
-      ('innv-summary', 'Skattereform', $1, NULL, false, now())
+      ('innv-summary', 'Skattereform', $1, NULL, false, now()),
+      ('miljo-sak', 'Klima og miljø', 'Kort om tiltak.', NULL, false, now())
     `,
     [paddedSummary],
   );
@@ -110,6 +152,18 @@ async function main() {
   assert.ok(
     titleRow!.rank > summaryRow!.rank,
     `A-weight title should outrank B-weight mention in padded summary (ranks ${titleRow!.rank} vs ${summaryRow!.rank})`,
+  );
+
+  const miljoUtf8 = await fts('miljø', ['miljø']);
+  assert.ok(
+    miljoUtf8.some((r) => r.id === 'miljo-sak'),
+    `miljø should match title with miljø, got: ${JSON.stringify(miljoUtf8)}`,
+  );
+
+  const miljoAscii = await fts('miljo', ['miljo']);
+  assert.ok(
+    miljoAscii.some((r) => r.id === 'miljo-sak'),
+    `miljo (ascii) should match title with miljø, got: ${JSON.stringify(miljoAscii)}`,
   );
 
   console.log('chat/search-issues-fts.pglite.test.ts: ok');

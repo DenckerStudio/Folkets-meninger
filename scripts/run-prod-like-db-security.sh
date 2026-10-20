@@ -45,6 +45,9 @@ should_defer() {
       return 0
     fi
   done
+  if [[ "$base" == 202610221* ]]; then
+    return 0
+  fi
   return 1
 }
 
@@ -98,6 +101,12 @@ done
 
 echo "Re-apply RPC lockdown (150000 re-grants authenticated EXECUTE on user-bound RPCs) ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261020120002_reapply_rpc_execute_lockdown.sql
+
+echo "Phase 3: RAG search stack (20261022100000–080000) after lockdown ..."
+for f in $(ls -1 supabase/migrations/202610221*.sql | sort); do
+  echo "  -> $(basename "$f")"
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
+done
 
 echo "Running security-lockdown-defaults.sql (supabase_admin connection) ..."
 psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-lockdown-defaults.sql

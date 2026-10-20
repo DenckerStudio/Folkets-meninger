@@ -1,127 +1,26 @@
--- P4 hybrid search (Norwegian FTS + optional embedding_v2 semantic) and P6 prep (bge-m3 column + HNSW).
--- Existing nomic embedding vector(768) is unchanged.
-
+-- RAG improvement round 2: prefix FTS last-token :*, pg_trgm lexical fallback.
 BEGIN;
 
--- -----------------------------------------------------------------------------
--- Full-text search columns (Norwegian)
--- -----------------------------------------------------------------------------
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-ALTER TABLE public.document_chunks
-  ADD COLUMN IF NOT EXISTS tsv tsvector GENERATED ALWAYS AS (
-    to_tsvector('norwegian', coalesce(content, ''))
-  ) STORED;
+CREATE INDEX IF NOT EXISTS stortinget_issues_title_trgm_idx
+  ON public.stortinget_issues USING gin (title gin_trgm_ops);
 
-CREATE INDEX IF NOT EXISTS document_chunks_tsv_gin_idx
-  ON public.document_chunks USING gin (tsv);
+CREATE INDEX IF NOT EXISTS document_chunks_content_trgm_idx
+  ON public.document_chunks USING gin (content gin_trgm_ops);
 
-ALTER TABLE public.stortinget_issues
-  ADD COLUMN IF NOT EXISTS tsv tsvector GENERATED ALWAYS AS (
-    setweight(to_tsvector('norwegian', coalesce(title, '')), 'A')
-    || setweight(to_tsvector('norwegian', coalesce(henvisning, '')), 'A')
-    || setweight(to_tsvector('norwegian', coalesce(summary, '')), 'B')
-  ) STORED;
-
-CREATE INDEX IF NOT EXISTS stortinget_issues_tsv_gin_idx
-  ON public.stortinget_issues USING gin (tsv);
-
--- -----------------------------------------------------------------------------
--- P6 prep: parallel embedding store (bge-m3 / 1024-dim)
--- -----------------------------------------------------------------------------
-
-ALTER TABLE public.document_chunks
-  ADD COLUMN IF NOT EXISTS embedding_v2 vector(1024),
-  ADD COLUMN IF NOT EXISTS embedding_model text;
-
-CREATE INDEX IF NOT EXISTS document_chunks_embedding_v2_hnsw_idx
-  ON public.document_chunks
-  USING hnsw (embedding_v2 vector_cosine_ops)
-  WITH (m = 16, ef_construction = 64)
-  WHERE embedding_v2 IS NOT NULL;
-
--- -----------------------------------------------------------------------------
--- Issue search (FTS) — replaces ilike saksøk in chat
--- -----------------------------------------------------------------------------
-
-DROP FUNCTION IF EXISTS public.search_issues_fts(text, int);
-DROP FUNCTION IF EXISTS public.search_issues_fts(text, text[], int);
-
-CREATE OR REPLACE FUNCTION public.search_issues_fts(
-  query_text text,
-  search_terms text[] DEFAULT NULL,
-  match_count int DEFAULT 6
-)
-RETURNS TABLE (
-  id text,
-  title text,
-  summary text,
-  henvisning text,
-  ferdigbehandlet boolean,
-  rank real
-)
-LANGUAGE sql
-STABLE
-SECURITY INVOKER
-SET search_path = public
-AS $$
-  WITH prefix_query AS (
-    SELECT CASE
-      WHEN search_terms IS NULL OR cardinality(search_terms) = 0 THEN NULL::tsquery
-      ELSE (
-        SELECT CASE
-          WHEN coalesce(prefix_expr, '') = '' THEN NULL::tsquery
-          ELSE to_tsquery('norwegian', prefix_expr)
-        END
-        FROM (
-          SELECT string_agg(lexeme || ':*', ' | ' ORDER BY lexeme) AS prefix_expr
-          FROM (
-            SELECT DISTINCT lower(btrim(part)) AS lexeme
-            FROM unnest(search_terms) AS u(t)
-            CROSS JOIN LATERAL regexp_split_to_table(coalesce(t, ''), '[^[:alnum:]]+') AS part
-            WHERE char_length(btrim(part)) >= 3
-          ) splits
-        ) built
-      )
-    END AS tsq
-  ),
-  q AS (
-    SELECT
-      nullif(btrim(coalesce(query_text, '')), '') AS raw,
-      coalesce(
-        (SELECT tsq FROM prefix_query),
-        CASE
-          WHEN nullif(btrim(coalesce(query_text, '')), '') IS NULL THEN NULL::tsquery
-          ELSE websearch_to_tsquery('norwegian', nullif(btrim(coalesce(query_text, '')), ''))
-        END
-      ) AS tsq
-  )
-  SELECT
-    i.id,
-    i.title,
-    left(coalesce(i.summary, ''), 400) AS summary,
-    i.henvisning,
-    i.ferdigbehandlet,
-    ts_rank_cd(i.tsv, q.tsq, 1)::real AS rank
-  FROM public.stortinget_issues i
-  CROSS JOIN q
-  WHERE q.raw IS NOT NULL
-    AND (
-      i.id = q.raw
-      OR (q.tsq IS NOT NULL AND i.tsv @@ q.tsq)
-    )
-  ORDER BY
-    CASE WHEN i.id = q.raw THEN 0 ELSE 1 END,
-    rank DESC,
-    i.last_synced_at DESC NULLS LAST
-  LIMIT GREATEST(coalesce(match_count, 6), 1);
-$$;
-
-REVOKE ALL ON FUNCTION public.search_issues_fts(text, text[], int) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.search_issues_fts(text, text[], int) TO anon, authenticated;
-
--- -----------------------------------------------------------------------------
--- Hybrid chunk search (lexical top 30 + semantic top 30, RRF k=60)
--- -----------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.search_chunks_hybrid(
+  text,
+  vector,
+  text[],
+  text[],
+  text,
+  text,
+  boolean,
+  timestamptz,
+  text,
+  int
+);
 
 CREATE OR REPLACE FUNCTION public.search_chunks_hybrid(
   query_text text,
@@ -138,6 +37,8 @@ CREATE OR REPLACE FUNCTION public.search_chunks_hybrid(
 RETURNS TABLE (
   id uuid,
   issue_id text,
+  hearing_id text,
+  hearing_document_id uuid,
   document_id text,
   document_title text,
   document_kind text,
@@ -150,8 +51,8 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 STABLE
-SECURITY INVOKER
-SET search_path = public
+SECURITY DEFINER
+SET search_path = public, extensions, pg_temp
 AS $$
   WITH params AS (
     SELECT
@@ -160,6 +61,15 @@ AS $$
         WHEN nullif(btrim(coalesce(query_text, '')), '') IS NULL THEN NULL::tsquery
         ELSE websearch_to_tsquery('norwegian', nullif(btrim(coalesce(query_text, '')), ''))
       END AS tsq,
+      CASE
+        WHEN nullif(btrim(coalesce(query_text, '')), '') IS NULL THEN NULL::tsquery
+        ELSE (
+          SELECT CASE WHEN lt IS NULL OR char_length(lt) < 2 THEN NULL::tsquery
+            ELSE to_tsquery('norwegian', lt || ':*') END
+          FROM (SELECT (regexp_match(nullif(btrim(coalesce(query_text, '')), ''), '([[:alnum:]]+)$'))[1] AS lt) x
+        )
+      END AS tsq_prefix,
+      nullif(btrim(coalesce(query_text, '')), '') AS qtext_full,
       GREATEST(coalesce(match_count, 8), 1) AS k,
       query_embedding AS qemb,
       filter_issue_ids AS issue_ids,
@@ -174,6 +84,8 @@ AS $$
     SELECT
       dc.id,
       dc.issue_id,
+      dc.hearing_id,
+      dc.hearing_document_id,
       dc.document_id,
       dc.chunk_index,
       dc.content,
@@ -194,7 +106,9 @@ AS $$
     LEFT JOIN public.stortinget_issue_documents d
       ON d.issue_id = dc.issue_id AND d.document_id = dc.document_id
     CROSS JOIN params p
-    WHERE (p.issue_ids IS NULL OR dc.issue_id = ANY (p.issue_ids))
+    WHERE p.hearing_id IS NULL
+      AND dc.hearing_document_id IS NULL
+      AND (p.issue_ids IS NULL OR dc.issue_id = ANY (p.issue_ids))
       AND (
         p.doc_kinds IS NULL
         OR coalesce(d.document_type, dc.metadata->>'document_kind') = ANY (p.doc_kinds)
@@ -206,29 +120,66 @@ AS $$
       AND (p.komite IS NULL OR nullif(trim(i.detail_json->'komite'->>'navn'), '') = p.komite)
       AND (p.ferdig IS NULL OR i.ferdigbehandlet IS NOT DISTINCT FROM p.ferdig)
       AND (p.published_after IS NULL OR i.first_seen_at >= p.published_after)
+    UNION ALL
+    SELECT
+      dc.id,
+      dc.issue_id,
+      dc.hearing_id,
+      dc.hearing_document_id,
+      dc.document_id,
+      dc.chunk_index,
+      dc.content,
+      dc.tsv,
+      dc.embedding_v2,
+      coalesce(hd.title, dc.metadata->>'document_title') AS document_title,
+      coalesce(hd.kind, dc.metadata->>'document_kind') AS document_kind,
+      hd.source_url,
+      NULL::boolean AS ferdigbehandlet,
+      NULL::timestamptz AS first_seen_at,
+      NULL::text AS issue_sesjon,
+      NULL::text AS issue_komite
+    FROM public.document_chunks dc
+    JOIN public.hearing_documents hd ON hd.id = dc.hearing_document_id
+    CROSS JOIN params p
+    WHERE p.hearing_id IS NOT NULL
+      AND dc.hearing_id = p.hearing_id
       AND (
-        p.hearing_id IS NULL
-        OR nullif(btrim(dc.metadata->>'hearing_id'), '') = p.hearing_id
+        p.doc_kinds IS NULL
+        OR coalesce(hd.kind, dc.metadata->>'document_kind') = ANY (p.doc_kinds)
       )
   ),
   lexical AS (
     SELECT
       b.id,
       b.issue_id,
+      b.hearing_id,
+      b.hearing_document_id,
       b.document_id,
       b.chunk_index,
       b.content,
       b.document_title,
       b.document_kind,
       b.source_url,
-      ts_rank_cd(b.tsv, p.tsq)::real AS score_lexical,
+      greatest(
+        coalesce(ts_rank_cd(b.tsv, p.tsq), 0),
+        coalesce(ts_rank_cd(b.tsv, p.tsq_prefix), 0),
+        greatest(extensions.similarity(b.content, p.qtext_full), extensions.word_similarity(p.qtext_full, b.content))::real * 0.5
+      )::real AS score_lexical,
       row_number() OVER (
-        ORDER BY ts_rank_cd(b.tsv, p.tsq) DESC, b.chunk_index ASC
+        ORDER BY greatest(
+          coalesce(ts_rank_cd(b.tsv, p.tsq), 0),
+          coalesce(ts_rank_cd(b.tsv, p.tsq_prefix), 0),
+          greatest(extensions.similarity(b.content, p.qtext_full), extensions.word_similarity(p.qtext_full, b.content))::real * 0.5
+        ) DESC, b.chunk_index ASC
       )::int AS lex_rank
     FROM base b
     CROSS JOIN params p
-    WHERE p.tsq IS NOT NULL
-      AND b.tsv @@ p.tsq
+    WHERE p.qtext_full IS NOT NULL
+      AND (
+        (p.tsq IS NOT NULL AND b.tsv @@ p.tsq)
+        OR (p.tsq_prefix IS NOT NULL AND b.tsv @@ p.tsq_prefix)
+        OR greatest(extensions.similarity(b.content, p.qtext_full), extensions.word_similarity(p.qtext_full, b.content)) > 0.32
+      )
     ORDER BY score_lexical DESC, b.chunk_index ASC
     LIMIT 30
   ),
@@ -236,6 +187,8 @@ AS $$
     SELECT
       b.id,
       b.issue_id,
+      b.hearing_id,
+      b.hearing_document_id,
       b.document_id,
       b.chunk_index,
       b.content,
@@ -257,6 +210,8 @@ AS $$
     SELECT
       coalesce(l.id, s.id) AS id,
       coalesce(l.issue_id, s.issue_id) AS issue_id,
+      coalesce(l.hearing_id, s.hearing_id) AS hearing_id,
+      coalesce(l.hearing_document_id, s.hearing_document_id) AS hearing_document_id,
       coalesce(l.document_id, s.document_id) AS document_id,
       coalesce(l.chunk_index, s.chunk_index) AS chunk_index,
       coalesce(l.content, s.content) AS content,
@@ -276,6 +231,8 @@ AS $$
     SELECT
       b.id,
       b.issue_id,
+      b.hearing_id,
+      b.hearing_document_id,
       b.document_id,
       b.chunk_index,
       b.content,
@@ -296,6 +253,8 @@ AS $$
   SELECT
     f.id,
     f.issue_id,
+    f.hearing_id,
+    f.hearing_document_id,
     f.document_id,
     f.document_title,
     f.document_kind,
@@ -337,7 +296,7 @@ GRANT EXECUTE ON FUNCTION public.search_chunks_hybrid(
   timestamptz,
   text,
   int
-) TO anon, authenticated;
+) TO authenticated, service_role;
 
-NOTIFY pgrst, 'reload schema';
+
 COMMIT;

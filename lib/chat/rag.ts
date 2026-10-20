@@ -22,6 +22,17 @@ import {
   type VectorSearchClient,
 } from '@/lib/chat/vector-search';
 import { rerankCandidates, rerankerEnabled, shouldRejectRetrieval } from '@/lib/chat/rerank';
+import {
+  isMissingSearchChunksHybridRpcError,
+  isMissingSearchIssuesFtsRpcError,
+  warnChatRpcError,
+} from '@/lib/chat/rag-rpc-error';
+
+export {
+  isMissingHybridRpcError,
+  isMissingSearchChunksHybridRpcError,
+  isMissingSearchIssuesFtsRpcError,
+} from '@/lib/chat/rag-rpc-error';
 
 const MAX_CHUNKS = 8;
 const MAX_SUMMARY_CLIP_CHARS = 1800;
@@ -153,7 +164,8 @@ function rankChunkForSak(
  * Overlay chat RAG uses the logged-in request session when present, then the
  * public anon key. Public sak cache tables already allow SELECT for
  * anon/authenticated. Do not use the service role — a mismatched Cloud Agent
- * key fail-closes. Hybrid FTS RPCs run as SECURITY INVOKER with anon/session.
+ * key fail-closes. Hybrid search RPCs are SECURITY DEFINER with EXECUTE for
+ * authenticated (session) and service_role.
  */
 export async function resolveChatRagClient(
   explicit?: ChatRagClient | null,
@@ -172,17 +184,6 @@ export async function resolveChatRagClient(
  * terms, ORs them across title/henvisning/summary, then ranks by relevance in
  * `sak-search.ts`. Falls back to the old phrase search so nothing regresses.
  */
-export function isMissingHybridRpcError(error: { message?: string; code?: string } | null): boolean {
-  if (!error) return false;
-  const msg = (error.message ?? '').toLowerCase();
-  return (
-    error.code === 'PGRST202' ||
-    msg.includes('could not find the function') ||
-    msg.includes('schema cache') ||
-    msg.includes('permission denied')
-  );
-}
-
 export function shouldFallbackToLegacyIssueSearch(ftsHits: ChatIssueHit[] | null): boolean {
   return ftsHits === null || ftsHits.length === 0;
 }
@@ -208,7 +209,8 @@ async function searchIssuesViaFts(
       match_count: limit,
     });
     if (error) {
-      if (isMissingHybridRpcError(error)) return null;
+      if (isMissingSearchIssuesFtsRpcError(error)) return null;
+      warnChatRpcError('search_issues_fts', error);
       return null;
     }
     if (!Array.isArray(data)) return null;
@@ -393,16 +395,16 @@ export function mapHybridChunkRow(row: Record<string, unknown>): ChatDocumentChu
   };
 }
 
-/** Hybrid RPC succeeded but returned no usable chunks — fall back to legacy scan. */
+/** Only a missing/failed hybrid RPC should trigger the legacy table scan. */
 export function shouldFallbackToLegacyChunks(hybrid: ChatDocumentChunk[] | null): boolean {
-  return hybrid === null || hybrid.length === 0;
+  return hybrid === null;
 }
 
 export async function primaryChunksFromHybridAttempt(
   hybrid: ChatDocumentChunk[] | null,
   loadLegacy: () => Promise<ChatDocumentChunk[]>,
 ): Promise<ChatDocumentChunk[]> {
-  if (hybrid !== null && hybrid.length > 0) return hybrid;
+  if (hybrid !== null) return hybrid;
   return loadLegacy();
 }
 
@@ -436,7 +438,8 @@ async function searchChunksHybrid(
       match_count: maxChunks,
     });
     if (error) {
-      if (isMissingHybridRpcError(error)) return null;
+      if (isMissingSearchChunksHybridRpcError(error)) return null;
+      warnChatRpcError('search_chunks_hybrid', error);
       return null;
     }
     if (!Array.isArray(data)) return null;
@@ -444,7 +447,7 @@ async function searchChunksHybrid(
       const chunk = mapHybridChunkRow(row as Record<string, unknown>);
       return chunk ? [chunk] : [];
     });
-    if (mapped.length === 0) return null;
+    if (mapped.length === 0) return [];
     if (!rerankerEnabled() && !process.env.RAG_REJECTION_THRESHOLD) return mapped;
     const { scores } = await rerankCandidates(
       query,
