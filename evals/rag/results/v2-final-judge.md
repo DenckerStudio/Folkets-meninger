@@ -97,7 +97,7 @@ Harness **topicExcerptHit** is true for all four in `v2-final-test.json` (gold i
 | **036** | `hvorfor` + barn / legemiddel | Causal “why” not stated verbatim; strict grounding → refusal. |
 | **038** | `hvorfor` + drivstoffkjeder | Same as 036 for drivstoff/prissetting narrative. |
 
-**capChunksPerDocument(1)** is unlikely the primary driver here (excerpt hit already true). **Eval-only** prompt tweak in `generate-rag-answer.ts`: allow short partial answers when excerpts mention the topic; reserve blanket refusal for truly irrelevant excerpts. Prod chat (`lib/chat/instructions.ts`) already uses a different refusal phrase; no prod change unless we align copy later.
+**capChunksPerDocument(1)** is unlikely the primary driver here (excerpt hit already true). Grounding rules (partial answers, cautious «hvorfor», no blanket refusal when excerpts are relevant) live in **`lib/chat/grounded-answer.ts`** and apply to both Stemme+ chat and eval export.
 
 ### qualityMean ~0.48 (qwen3.5 judge)
 

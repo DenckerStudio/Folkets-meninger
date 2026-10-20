@@ -1,8 +1,9 @@
 /**
  * Synthesize a short Norwegian RAG answer from retrieved excerpts via Ollama /generate.
- * Used by eval answer export — not the production Stemme+ chat path.
+ * Prompt text is shared with prod via `lib/chat/grounded-answer.ts`.
  */
 
+import { buildEvalRagAnswerPrompt } from '@/lib/chat/grounded-answer';
 import {
   buildOllamaGenerateBody,
   ollamaEmptyResponseError,
@@ -75,28 +76,8 @@ export function resolveAnswerLlmConfig(): {
   };
 }
 
-export function buildRagAnswerPrompt(query: string, excerpts: string[]): string {
-  const context = excerpts
-    .map((text, i) => `--- Kilde ${i + 1} ---\n${text}`)
-    .join('\n\n');
-  return `Du er en saklig assistent for Folkets Meninger om Stortinget.
-
-Spørsmål fra brukeren:
-${query}
-
-Kilder (kun disse — ikke bruk annen kunnskap):
-${context || '(ingen kilder)'}
-
-Skriv et kort svar på norsk bokmål (2–5 setninger) som besvarer spørsmålet.
-- Bruk bare fakta som står i kildene.
-- Nevn kort hvilken sak/kilde du bygger på (tittel eller henvisning fra kilden).
-- Ikke kopier lange avsnitt ordrett fra kildene, og ikke lim sammen flere kildetekster.
-- Gi et kort svar ut fra det som faktisk står i kildene, også når svaret bare delvis dekker spørsmålet.
-- Si bare at kildene ikke besvarer spørsmålet når ingen kilde har relevant innhold (ikke gjenta irrelevant tekst).
-- Ikke start med "Basert på utdrag".
-
-Svar:`;
-}
+/** @deprecated Use `buildEvalRagAnswerPrompt` from `@/lib/chat/grounded-answer`. */
+export const buildRagAnswerPrompt = buildEvalRagAnswerPrompt;
 
 function normalizeWs(text: string): string {
   return text.replace(/\s+/g, ' ').trim().toLowerCase();
@@ -142,7 +123,7 @@ export async function generateRagAnswer(opts: GenerateRagAnswerOptions): Promise
     return 'Fant ingen kilde i dokumentene for dette spørsmålet.';
   }
 
-  const prompt = buildRagAnswerPrompt(opts.query, opts.excerpts);
+  const prompt = buildEvalRagAnswerPrompt(opts.query, opts.excerpts);
   const res = await fetch(`${opts.baseUrl}/api/generate`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

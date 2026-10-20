@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
-import {
-  buildRagAnswerPrompt,
-  isDisallowedExcerptPassthrough,
-} from './generate-rag-answer';
+import { buildEvalRagAnswerPrompt } from '@/lib/chat/grounded-answer';
+import { isDisallowedExcerptPassthrough } from './generate-rag-answer';
 
 const excerpts = [
   'Representantforslag om forurensningsfri fotballglede\n\nDokument 8:265 S',
@@ -39,7 +37,7 @@ assert.equal(
   false,
 );
 
-const prompt = buildRagAnswerPrompt('hva gjør stortinget med forurensning', excerpts);
+const prompt = buildEvalRagAnswerPrompt('hva gjør stortinget med forurensning', excerpts);
 assert.match(prompt, /Ikke kopier lange avsnitt ordrett/);
 assert.match(prompt, /Ikke start med "Basert på utdrag"/);
 assert.match(prompt, /bare delvis dekker spørsmålet/);
