@@ -4,6 +4,7 @@ BEGIN;
 
 SET lock_timeout = '5s';
 
+CREATE SCHEMA IF NOT EXISTS extensions;
 CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA extensions;
 
 CREATE OR REPLACE FUNCTION public.fm_unaccent(text)
@@ -16,6 +17,9 @@ SET search_path = public, extensions, pg_temp
 AS $$
   SELECT extensions.unaccent('unaccent', $1)
 $$;
+
+REVOKE ALL ON FUNCTION public.fm_unaccent(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fm_unaccent(text) TO authenticated, service_role;
 
 DROP INDEX IF EXISTS public.stortinget_issues_tsv_gin_idx;
 

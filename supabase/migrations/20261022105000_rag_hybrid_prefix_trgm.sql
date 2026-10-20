@@ -1,7 +1,8 @@
 -- RAG improvement round 2: prefix FTS last-token :*, pg_trgm lexical fallback.
 BEGIN;
 
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA extensions;
 
 CREATE INDEX IF NOT EXISTS stortinget_issues_title_trgm_idx
   ON public.stortinget_issues USING gin (title gin_trgm_ops);

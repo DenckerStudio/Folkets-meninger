@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 import { retrieveSakContext, searchIssuesForChat } from '@/lib/chat/rag';
 
+const envTestPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../.env.test');
+
 function loadFolketsPublicEnv() {
-  const text = readFileSync('/workspace/.env.test', 'utf8');
+  const text = readFileSync(envTestPath, 'utf8');
   for (const line of text.split(/\r?\n/)) {
     if (!line || line.startsWith('#') || !line.includes('=')) continue;
     const i = line.indexOf('=');

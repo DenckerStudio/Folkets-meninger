@@ -103,6 +103,7 @@ echo "Re-apply RPC lockdown (150000 re-grants authenticated EXECUTE on user-boun
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261020120002_reapply_rpc_execute_lockdown.sql
 
 echo "Phase 3: RAG search stack (20261022100000–080000) after lockdown ..."
+echo "  (prod may ship pg_trgm/unaccent without CREATE EXTENSION — migrations install into extensions schema)"
 for f in $(ls -1 supabase/migrations/202610221*.sql | sort); do
   echo "  -> $(basename "$f")"
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"

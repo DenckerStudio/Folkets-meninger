@@ -46,11 +46,13 @@ jobs:
           cache: npm
       - name: Load public test Supabase env
         run: |
+          test -f .env.test
           set -a
           source .env.test
           set +a
           echo "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" >> "$GITHUB_ENV"
       - run: npm ci --ignore-scripts
       - run: npm run test:unit
 

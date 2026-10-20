@@ -178,6 +178,8 @@ $$;
 
 REVOKE ALL ON FUNCTION public._n8n_docling_validate_doc(jsonb) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public._n8n_docling_validate_chunks(jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public._n8n_docling_validate_doc(jsonb) TO service_role;
+GRANT EXECUTE ON FUNCTION public._n8n_docling_validate_chunks(jsonb) TO service_role;
 
 -- ---------------------------------------------------------------------------
 -- n8n_upsert_docling_document
