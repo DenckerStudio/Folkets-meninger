@@ -23,9 +23,9 @@ export const RESEARCH_BRIEF_STATUS_LABELS: Record<ResearchBriefStatus, string> =
 };
 
 export const RESEARCH_ACTION_CONFIRM: Record<ResearchApiAction, string> = {
-  deepen: 'Starte utdyping av denne klyngen?',
-  blog: 'Opprette bloggutkast fra denne klyngen?',
-  reel: 'Opprette Reel-utkast fra denne klyngen?',
+  deepen: 'Starte utdyping av denne saken?',
+  blog: 'Opprette bloggutkast fra denne saken?',
+  reel: 'Opprette Reel-utkast fra denne saken?',
 };
 
 export type ResearchBriefOutputLink = { href: string; label: string };

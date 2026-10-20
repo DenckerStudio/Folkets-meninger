@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BookOpen, Clapperboard, Loader2, Microscope } from 'lucide-react';
+import { ResearchBriefStatusBadge } from '@/components/admin/research-brief-status-badge';
 import { Dialog } from '@/components/ui/dialog';
-import { SmoothDropdown } from '@/components/ui/smooth-dropdown';
+import { SmoothDropdown, type SmoothDropdownItem } from '@/components/ui/smooth-dropdown';
 import type { ResearchApiAction } from '@/lib/admin/research/actions';
 import {
   RESEARCH_ACTION_CONFIRM,
@@ -18,6 +19,12 @@ import { cn } from '@/lib/utils';
 
 const ACTIONS: ResearchApiAction[] = ['deepen', 'blog', 'reel'];
 
+const DONE_MENU_LABELS: Record<ResearchApiAction, string> = {
+  deepen: 'Se utdyping',
+  blog: 'Åpne bloggutkast',
+  reel: 'Åpne Reel',
+};
+
 const ACTION_ICONS: Record<ResearchApiAction, typeof Microscope> = {
   deepen: Microscope,
   blog: BookOpen,
@@ -29,6 +36,93 @@ const actionButtonClass =
 
 function isBusyStatus(status: ResearchBriefStatus | undefined): boolean {
   return status === 'queued' || status === 'running';
+}
+
+function statusPriority(status: ResearchBriefStatus | undefined): number {
+  switch (status) {
+    case 'running':
+      return 0;
+    case 'queued':
+      return 1;
+    case 'failed':
+      return 2;
+    case 'done':
+      return 3;
+    default:
+      return 4;
+  }
+}
+
+function pickHighlightBrief(briefsByKind: ResearchBriefsByKind): ResearchBriefSnapshot | null {
+  let best: ResearchBriefSnapshot | null = null;
+  let bestPriority = 4;
+  for (const action of ACTIONS) {
+    const brief = briefsByKind[action];
+    if (!brief) continue;
+    const priority = statusPriority(brief.status);
+    if (priority < bestPriority) {
+      bestPriority = priority;
+      best = brief;
+    }
+  }
+  return best;
+}
+
+function buildTableMenuItem(
+  action: ResearchApiAction,
+  brief?: ResearchBriefSnapshot,
+): SmoothDropdownItem {
+  const status = brief?.status;
+  const baseLabel = RESEARCH_ACTION_LABELS[action];
+
+  if (status === 'queued' || status === 'running') {
+    const suffix = status === 'queued' ? 'I kø' : 'Kjører';
+    return {
+      id: action,
+      label: `${baseLabel} · ${suffix}`,
+      icon: ACTION_ICONS[action],
+      type: 'item',
+      disabled: true,
+    };
+  }
+
+  if (status === 'done') {
+    const output =
+      brief && researchBriefOutputLink(brief.kind, brief.output_ref, brief.status);
+    if (output) {
+      return {
+        id: action,
+        label: DONE_MENU_LABELS[action],
+        icon: ACTION_ICONS[action],
+        type: 'item',
+        href: output.href,
+      };
+    }
+    return {
+      id: action,
+      label: 'Ferdig',
+      icon: ACTION_ICONS[action],
+      type: 'item',
+      disabled: true,
+    };
+  }
+
+  if (status === 'failed') {
+    return {
+      id: action,
+      label: `Prøv igjen: ${baseLabel}`,
+      icon: ACTION_ICONS[action],
+      type: 'item',
+      destructive: true,
+    };
+  }
+
+  return {
+    id: action,
+    label: baseLabel,
+    icon: ACTION_ICONS[action],
+    type: 'item',
+  };
 }
 
 function mergeBriefFromResponse(
@@ -114,11 +208,14 @@ export function ResearchRowActions({
   userId,
   variant = 'full',
   initialBriefsByKind = {},
+  defaultMenuOpen = false,
 }: {
   clusterId: string;
   userId?: string;
   variant?: 'full' | 'table-compact';
   initialBriefsByKind?: ResearchBriefsByKind;
+  /** Kun for lokal forhåndsvisning; ikke bruk i prod. */
+  defaultMenuOpen?: boolean;
 }) {
   const router = useRouter();
   const [briefsByKind, setBriefsByKind] = useState<ResearchBriefsByKind>(initialBriefsByKind);
@@ -197,26 +294,41 @@ export function ResearchRowActions({
     void runAction(confirmAction, requestId);
   }, [confirmAction, pendingRequestId, runAction]);
 
-  const tableMenuItems = ACTIONS.map((action) => ({
-    id: action,
-    label: RESEARCH_ACTION_LABELS[action],
-    icon: ACTION_ICONS[action],
-    type: 'item' as const,
-  }));
+  const tableMenuItems = useMemo(
+    () => ACTIONS.map((action) => buildTableMenuItem(action, briefsByKind[action])),
+    [briefsByKind],
+  );
+
+  const highlightBrief = useMemo(() => pickHighlightBrief(briefsByKind), [briefsByKind]);
+
+  const onTableMenuSelect = useCallback(
+    (id: string) => {
+      const item = tableMenuItems.find((entry) => entry.id === id);
+      if (item?.disabled || item?.href) return;
+      onRequest(id as ResearchApiAction);
+    },
+    [onRequest, tableMenuItems],
+  );
 
   return (
     <>
       <div className={cn(variant === 'table-compact' ? 'flex items-center gap-2' : 'flex flex-col gap-2')}>
         {variant === 'table-compact' ? (
-          <SmoothDropdown
-            items={tableMenuItems}
-            onSelect={(id) => onRequest(id as ResearchApiAction)}
-            triggerAriaLabel="Handlinger"
-            triggerContent={
-              <span className="text-xs font-medium text-foreground">Handlinger</span>
-            }
-            className="shrink-0"
-          />
+          <>
+            {highlightBrief ? (
+              <ResearchBriefStatusBadge status={highlightBrief.status} />
+            ) : null}
+            <SmoothDropdown
+              items={tableMenuItems}
+              onSelect={onTableMenuSelect}
+              triggerAriaLabel="Handlinger"
+              defaultOpen={defaultMenuOpen}
+              triggerContent={
+                <span className="text-xs font-medium text-foreground">Handlinger</span>
+              }
+              className="shrink-0 !h-11 !w-auto min-w-[6.75rem]"
+            />
+          </>
         ) : (
           ACTIONS.map((action) => (
             <ResearchActionButton
@@ -229,7 +341,7 @@ export function ResearchRowActions({
           ))
         )}
         {error ? (
-          <p className={cn('text-destructive', variant === 'full' ? 'text-xs' : 'text-xs')} role="alert">
+          <p className="text-xs text-destructive" role="alert">
             {error}
           </p>
         ) : null}
@@ -250,7 +362,7 @@ export function ResearchRowActions({
               type="button"
               onClick={() => setConfirmAction(null)}
               disabled={pendingAction !== null}
-              className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
             >
               Avbryt
             </button>
@@ -258,7 +370,7 @@ export function ResearchRowActions({
               type="button"
               onClick={() => confirmAndRun()}
               disabled={pendingAction !== null}
-              className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand/90 disabled:opacity-50"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand/90 disabled:opacity-50"
             >
               {pendingAction !== null ? 'Starter…' : 'Fortsett'}
             </button>
