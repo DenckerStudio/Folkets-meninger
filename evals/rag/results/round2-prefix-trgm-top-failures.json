@@ -1,0 +1,71 @@
+{
+  "label": "round2-prefix-trgm",
+  "failureCount": 30,
+  "top": [
+    {
+      "id": "sak-103102-vedtak",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "sak-parti-votering-gap",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.016393442
+    },
+    {
+      "id": "sak-ferdigbehandlet",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.031778056
+    },
+    {
+      "id": "finnes-ikke-1",
+      "kind": "finnes_ikke",
+      "excerpts": 5,
+      "confident": true
+    },
+    {
+      "id": "finnes-ikke-2",
+      "kind": "finnes_ikke",
+      "excerpts": 5,
+      "confident": true
+    },
+    {
+      "id": "finnes-ikke-3",
+      "kind": "finnes_ikke",
+      "excerpts": 1,
+      "confident": true
+    },
+    {
+      "id": "finnes-ikke-4",
+      "kind": "finnes_ikke",
+      "excerpts": 5,
+      "confident": true
+    },
+    {
+      "id": "finnes-ikke-5",
+      "kind": "finnes_ikke",
+      "excerpts": 5,
+      "confident": true
+    },
+    {
+      "id": "sak-referat",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.016393442
+    },
+    {
+      "id": "hearing-frist",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.016393442
+    }
+  ]
+}

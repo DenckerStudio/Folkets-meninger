@@ -1,0 +1,1012 @@
+{
+  "label": "stack",
+  "variant": "stack",
+  "seedCounts": {
+    "variant": "stack",
+    "issues": 24,
+    "documents": 37,
+    "chunks": 449,
+    "hearings": 2,
+    "fixtureFetchedAt": "2026-10-19T20:12:34.437Z",
+    "prefixIssueId": "eval-innvandring-prefix",
+    "seededAt": "2026-10-19T20:26:21.314Z"
+  },
+  "stackHeads": {
+    "p177": "a38d83d",
+    "p178": "9441863",
+    "p179": "4c17c84",
+    "p181": "1e06816"
+  },
+  "chunkQuestions": 30,
+  "recallAt5": 0.8,
+  "recallAt10": 0.8,
+  "mrr": 0.7833333333333333,
+  "excerptFactRate": 0.8,
+  "topicQuestions": 3,
+  "topicExcerptFactRate": 1,
+  "topicFairSakCoverage": 0.8333333333333334,
+  "issueSearchHitRate": 0.896551724137931,
+  "prefixHitRate": 0.8571428571428571,
+  "finnesIkkeFalseConfidenceRate": 0,
+  "finnesIkkeCorrectRejectionRate": 1,
+  "latencyMsP50": 105.73555299999953,
+  "latencyMsP95": 191.0871229999998,
+  "centralEmbedMsP50": 233.3988109999991,
+  "centralEmbedMsP95": 255.0302410000004,
+  "byokEmbedOffMsP50": 195.27191700000003,
+  "byokEmbedOffMsP95": 216.71220600000015,
+  "byokEmbedOnMsP50": 43.91928300000018,
+  "byokEmbedOnMsP95": 61.93498399999953,
+  "byokSuccessRateOff": 1,
+  "byokSuccessRateOn": 1,
+  "byokTimeoutMsOn": 3000,
+  "byokTimeoutMsOff": 800,
+  "judge": "pending (LAN)",
+  "perQuestion": [
+    {
+      "id": "sak-103102-pensjon",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032266457
+    },
+    {
+      "id": "sak-103102-utvalg",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "sak-103102-vedtak",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "sak-103102-komite",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032002047
+    },
+    {
+      "id": "sak-103102-prop",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "hearing-10005964-budsjett",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "hearing-10005968-budsjett",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "hearing-10005964-innspill",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "issue-search-innvandring-prefix",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "eval-innvandring-prefix",
+        "200417",
+        "200413"
+      ],
+      "titles": [
+        "Innvandringsloven (eval fixture)",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026"
+      ]
+    },
+    {
+      "id": "issue-search-innvandringsloven",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "eval-innvandring-prefix",
+        "200417",
+        "200413"
+      ],
+      "titles": [
+        "Innvandringsloven (eval fixture)",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026"
+      ]
+    },
+    {
+      "id": "issue-search-fisker-pensjon",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "103102",
+        "200413",
+        "200417",
+        "103150"
+      ],
+      "titles": [
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff"
+      ]
+    },
+    {
+      "id": "issue-search-prop-133",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "103102",
+        "200502",
+        "eval-innvandring-prefix",
+        "200501",
+        "200500",
+        "102800",
+        "200417",
+        "200413"
+      ],
+      "titles": [
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Energiomlegging og kraftmarked",
+        "Innvandringsloven (eval fixture)",
+        "Forsvarssektoren og langtidsplan for forsvar",
+        "Statsbudsjettet 2026 og nasjonalbudsjettet",
+        "Klimapolitikk og kutt i klimagassutslipp",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026"
+      ]
+    },
+    {
+      "id": "sak-200365-vekt",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "sak-semantic-barnetrygd",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "sak-trygd-generisk",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.03201844
+    },
+    {
+      "id": "sak-parti-votering-gap",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.016393442
+    },
+    {
+      "id": "sak-henvisning",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "sak-ferdigbehandlet",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.031778056
+    },
+    {
+      "id": "finnes-ikke-1",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "finnes-ikke-2",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "finnes-ikke-3",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "finnes-ikke-4",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "finnes-ikke-5",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "mixed-lex-semantic-1",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.03201844
+    },
+    {
+      "id": "mixed-lex-semantic-2",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "hearing-statsbudsjett-felles",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "sak-dok8",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "sak-klima",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "sak-helse",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "sak-skatt",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.03175403
+    },
+    {
+      "id": "issue-search-trygd",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "103102",
+        "200413",
+        "200417",
+        "103150"
+      ],
+      "titles": [
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff"
+      ]
+    },
+    {
+      "id": "issue-search-budsjett",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200500",
+        "200417",
+        "200413",
+        "103102",
+        "200365",
+        "103150",
+        "200362",
+        "200363"
+      ],
+      "titles": [
+        "Statsbudsjettet 2026 og nasjonalbudsjettet",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Representantforslag om å øke vektgrensen for førerkortklasse B",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Representantforslag om å gi stortingsrepresentanter og regjeringsmedlemmer vigselsrett",
+        "Representantforslag om endringer i engangsavgiften for kjøretøy"
+      ]
+    },
+    {
+      "id": "sak-long-query",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032522473
+    },
+    {
+      "id": "sak-referat",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.016393442
+    },
+    {
+      "id": "sak-innstilling",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "hearing-frist",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.016393442
+    },
+    {
+      "id": "sak-200417-missing",
+      "skipped": true
+    },
+    {
+      "id": "prefix-arbeid",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "103045",
+        "200413",
+        "200417",
+        "103102",
+        "200409",
+        "103150",
+        "200366",
+        "200362"
+      ],
+      "titles": [
+        "Representantforslag om arbeidsliv og velferd",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Innberetning fra valgkomiteen om endringer i de faste komiteers sammensetning",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Representantforslag om å styrke ytringsfriheten for lærere",
+        "Representantforslag om å gi stortingsrepresentanter og regjeringsmedlemmer vigselsrett"
+      ]
+    },
+    {
+      "id": "compound-statsbudsjett",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.016393442
+    },
+    {
+      "id": "semantic-only-fisker",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032258064
+    },
+    {
+      "id": "year-henvisning-2024-25",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "103102",
+        "102800",
+        "103150",
+        "200502",
+        "eval-innvandring-prefix",
+        "103045",
+        "200501",
+        "102956"
+      ],
+      "titles": [
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Klimapolitikk og kutt i klimagassutslipp",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Energiomlegging og kraftmarked",
+        "Innvandringsloven (eval fixture)",
+        "Representantforslag om arbeidsliv og velferd",
+        "Forsvarssektoren og langtidsplan for forsvar",
+        "Endringer i barnetrygd og kontantstøtte"
+      ]
+    },
+    {
+      "id": "year-session-2024-25",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.016393442
+    },
+    {
+      "id": "statsbudsjettet-2027-explicit",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "statsbudsjettet-2027-energy",
+      "r5": true,
+      "r10": true,
+      "excerptHit": true,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "issue-search-budsjett-2027-phrase",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200500",
+        "200417",
+        "200413",
+        "103102",
+        "200365",
+        "103150",
+        "200362",
+        "200363"
+      ],
+      "titles": [
+        "Statsbudsjettet 2026 og nasjonalbudsjettet",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Representantforslag om å øke vektgrensen for førerkortklasse B",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Representantforslag om å gi stortingsrepresentanter og regjeringsmedlemmer vigselsrett",
+        "Representantforslag om endringer i engangsavgiften for kjøretøy"
+      ]
+    },
+    {
+      "id": "topic-trygd-pensjon-multi",
+      "topicExcerptHit": true,
+      "topicFairSakCoverage": 0.5,
+      "sakerWithExcerpts": [
+        3,
+        2
+      ]
+    },
+    {
+      "id": "topic-statsbudsjett-2027-multi",
+      "topicExcerptHit": true,
+      "topicFairSakCoverage": 1,
+      "sakerWithExcerpts": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "topic-representantforslag-2024-25",
+      "topicExcerptHit": true,
+      "topicFairSakCoverage": 1,
+      "sakerWithExcerpts": [
+        3,
+        2
+      ]
+    },
+    {
+      "id": "issue-prefix-innvand",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "eval-innvandring-prefix",
+        "200401",
+        "200409",
+        "200413",
+        "200417"
+      ],
+      "titles": [
+        "Innvandringsloven (eval fixture)",
+        "Innberetning fra valgkomiteen om endringer i de faste komiteers sammensetning",
+        "Innberetning fra valgkomiteen om endringer i de faste komiteers sammensetning",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)"
+      ]
+    },
+    {
+      "id": "issue-prefix-arbeids",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "103045",
+        "200413",
+        "200417",
+        "103102",
+        "200409",
+        "103150",
+        "200366",
+        "200362"
+      ],
+      "titles": [
+        "Representantforslag om arbeidsliv og velferd",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Innberetning fra valgkomiteen om endringer i de faste komiteers sammensetning",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Representantforslag om å styrke ytringsfriheten for lærere",
+        "Representantforslag om å gi stortingsrepresentanter og regjeringsmedlemmer vigselsrett"
+      ]
+    },
+    {
+      "id": "issue-prefix-statsb",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200500",
+        "200417",
+        "200413",
+        "103150",
+        "200362",
+        "200363",
+        "200364",
+        "200365"
+      ],
+      "titles": [
+        "Statsbudsjettet 2026 og nasjonalbudsjettet",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Representantforslag om å gi stortingsrepresentanter og regjeringsmedlemmer vigselsrett",
+        "Representantforslag om endringer i engangsavgiften for kjøretøy",
+        "Representantforslag om rammebetingelser for entusiastkjøretøy",
+        "Representantforslag om å øke vektgrensen for førerkortklasse B"
+      ]
+    },
+    {
+      "id": "issue-prefix-pensj",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "103102",
+        "200413",
+        "200417"
+      ],
+      "titles": [
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)"
+      ]
+    },
+    {
+      "id": "issue-prefix-trygd",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "102956",
+        "103102",
+        "200413"
+      ],
+      "titles": [
+        "Endringer i barnetrygd og kontantstøtte",
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026"
+      ]
+    },
+    {
+      "id": "issue-prefix-skatt",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [
+        "200417",
+        "200413",
+        "103150",
+        "200362",
+        "200363",
+        "200364",
+        "200365",
+        "200366"
+      ],
+      "titles": [
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Representantforslag om å gi stortingsrepresentanter og regjeringsmedlemmer vigselsrett",
+        "Representantforslag om endringer i engangsavgiften for kjøretøy",
+        "Representantforslag om rammebetingelser for entusiastkjøretøy",
+        "Representantforslag om å øke vektgrensen for førerkortklasse B",
+        "Representantforslag om å styrke ytringsfriheten for lærere"
+      ]
+    },
+    {
+      "id": "issue-prefix-helse",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "103200",
+        "200385",
+        "200386",
+        "200413",
+        "200417",
+        "200409",
+        "200362",
+        "200363"
+      ],
+      "titles": [
+        "Helsepersonell og bemanning i helsevesenet",
+        "Riksrevisjonens undersøkelse av Program Felles IKT-tjenester for departementsfellesskapet",
+        "Riksrevisjonens undersøkelse av Bane NORs eiendomsvirksomhet",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Innberetning fra valgkomiteen om endringer i de faste komiteers sammensetning",
+        "Representantforslag om å gi stortingsrepresentanter og regjeringsmedlemmer vigselsrett",
+        "Representantforslag om endringer i engangsavgiften for kjøretøy"
+      ]
+    },
+    {
+      "id": "issue-prefix-klima",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "102800",
+        "103150",
+        "200413",
+        "200417",
+        "200362",
+        "200363",
+        "200364",
+        "200365"
+      ],
+      "titles": [
+        "Klimapolitikk og kutt i klimagassutslipp",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Representantforslag om å gi stortingsrepresentanter og regjeringsmedlemmer vigselsrett",
+        "Representantforslag om endringer i engangsavgiften for kjøretøy",
+        "Representantforslag om rammebetingelser for entusiastkjøretøy",
+        "Representantforslag om å øke vektgrensen for førerkortklasse B"
+      ]
+    },
+    {
+      "id": "issue-prefix-forsv",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200501",
+        "200406",
+        "200407",
+        "103102",
+        "200363",
+        "200364",
+        "200365",
+        "200366"
+      ],
+      "titles": [
+        "Forsvarssektoren og langtidsplan for forsvar",
+        "Valg av nytt medlem til Stortingets delegasjon til konferansen for overvåking av EUs utenriks-, sikkerhets- og forsvarspolitikk",
+        "Valg av nytt medlem til Stortingets ombudsnemnd for Forsvaret",
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Representantforslag om endringer i engangsavgiften for kjøretøy",
+        "Representantforslag om rammebetingelser for entusiastkjøretøy",
+        "Representantforslag om å øke vektgrensen for førerkortklasse B",
+        "Representantforslag om å styrke ytringsfriheten for lærere"
+      ]
+    },
+    {
+      "id": "issue-prefix-energ",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200502",
+        "103150",
+        "200413",
+        "200409",
+        "200417",
+        "102800",
+        "200362",
+        "200363"
+      ],
+      "titles": [
+        "Energiomlegging og kraftmarked",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Innberetning fra valgkomiteen om endringer i de faste komiteers sammensetning",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Klimapolitikk og kutt i klimagassutslipp",
+        "Representantforslag om å gi stortingsrepresentanter og regjeringsmedlemmer vigselsrett",
+        "Representantforslag om endringer i engangsavgiften for kjøretøy"
+      ]
+    },
+    {
+      "id": "finnes-ikke-extra-1",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "finnes-ikke-extra-2",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "finnes-ikke-extra-3",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "finnes-ikke-extra-4",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "finnes-ikke-extra-5",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "finnes-ikke-extra-6",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "finnes-ikke-extra-7",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "finnes-ikke-extra-8",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "finnes-ikke-extra-9",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "finnes-ikke-extra-10",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "finnes-ikke-extra-11",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "finnes-ikke-extra-12",
+      "kind": "finnes_ikke",
+      "excerpts": 0,
+      "confident": false
+    },
+    {
+      "id": "year-search-2024-25",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200413",
+        "200500",
+        "103150",
+        "103045",
+        "102956",
+        "103200",
+        "102800",
+        "103102"
+      ],
+      "titles": [
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Statsbudsjettet 2026 og nasjonalbudsjettet",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Representantforslag om arbeidsliv og velferd",
+        "Endringer i barnetrygd og kontantstøtte",
+        "Helsepersonell og bemanning i helsevesenet",
+        "Klimapolitikk og kutt i klimagassutslipp",
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)"
+      ]
+    },
+    {
+      "id": "year-search-2024-2025",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200413",
+        "103150",
+        "103102",
+        "102800",
+        "102956",
+        "103045",
+        "103200",
+        "200500"
+      ],
+      "titles": [
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Klimapolitikk og kutt i klimagassutslipp",
+        "Endringer i barnetrygd og kontantstøtte",
+        "Representantforslag om arbeidsliv og velferd",
+        "Helsepersonell og bemanning i helsevesenet",
+        "Statsbudsjettet 2026 og nasjonalbudsjettet"
+      ]
+    },
+    {
+      "id": "year-search-2025-26",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200413",
+        "200500",
+        "200364",
+        "200502",
+        "200363",
+        "200366",
+        "200501",
+        "200386"
+      ],
+      "titles": [
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Statsbudsjettet 2026 og nasjonalbudsjettet",
+        "Representantforslag om rammebetingelser for entusiastkjøretøy",
+        "Energiomlegging og kraftmarked",
+        "Representantforslag om endringer i engangsavgiften for kjøretøy",
+        "Representantforslag om å styrke ytringsfriheten for lærere",
+        "Forsvarssektoren og langtidsplan for forsvar",
+        "Riksrevisjonens undersøkelse av Bane NORs eiendomsvirksomhet"
+      ]
+    },
+    {
+      "id": "year-search-statsbudsjettet-2027",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200500",
+        "200417",
+        "200413",
+        "103102",
+        "200365",
+        "103150",
+        "200362",
+        "200363"
+      ],
+      "titles": [
+        "Statsbudsjettet 2026 og nasjonalbudsjettet",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Representantforslag om å øke vektgrensen for førerkortklasse B",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Representantforslag om å gi stortingsrepresentanter og regjeringsmedlemmer vigselsrett",
+        "Representantforslag om endringer i engangsavgiften for kjøretøy"
+      ]
+    },
+    {
+      "id": "year-search-budsjett-2027",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200500",
+        "200417",
+        "200413",
+        "103102",
+        "200365",
+        "103150",
+        "200362",
+        "200363"
+      ],
+      "titles": [
+        "Statsbudsjettet 2026 og nasjonalbudsjettet",
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Representantforslag om å øke vektgrensen for førerkortklasse B",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Representantforslag om å gi stortingsrepresentanter og regjeringsmedlemmer vigselsrett",
+        "Representantforslag om endringer i engangsavgiften for kjøretøy"
+      ]
+    },
+    {
+      "id": "issue-id-103102",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "103102"
+      ],
+      "titles": [
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)"
+      ]
+    },
+    {
+      "id": "issue-id-200365",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200365"
+      ],
+      "titles": [
+        "Representantforslag om å øke vektgrensen for førerkortklasse B"
+      ]
+    },
+    {
+      "id": "issue-id-102956",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "102956"
+      ],
+      "titles": [
+        "Endringer i barnetrygd og kontantstøtte"
+      ]
+    },
+    {
+      "id": "prefix-as-place",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [
+        "200410",
+        "200413",
+        "200366",
+        "200362",
+        "200363",
+        "200364",
+        "200365",
+        "200385"
+      ],
+      "titles": [
+        "Suppleringsvalg til internasjonale delegasjoner",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Representantforslag om å styrke ytringsfriheten for lærere",
+        "Representantforslag om å gi stortingsrepresentanter og regjeringsmedlemmer vigselsrett",
+        "Representantforslag om endringer i engangsavgiften for kjøretøy",
+        "Representantforslag om rammebetingelser for entusiastkjøretøy",
+        "Representantforslag om å øke vektgrensen for førerkortklasse B",
+        "Riksrevisjonens undersøkelse av Program Felles IKT-tjenester for departementsfellesskapet"
+      ]
+    },
+    {
+      "id": "year-2024-25-slash",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [
+        "200500",
+        "103150",
+        "103045",
+        "102956",
+        "103200",
+        "102800",
+        "103102",
+        "200365"
+      ],
+      "titles": [
+        "Statsbudsjettet 2026 og nasjonalbudsjettet",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Representantforslag om arbeidsliv og velferd",
+        "Endringer i barnetrygd og kontantstøtte",
+        "Helsepersonell og bemanning i helsevesenet",
+        "Klimapolitikk og kutt i klimagassutslipp",
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Representantforslag om å øke vektgrensen for førerkortklasse B"
+      ]
+    }
+  ],
+  "roundLabel": "round4-issue-ilike"
+}

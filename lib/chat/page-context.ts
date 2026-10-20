@@ -98,7 +98,9 @@ export function describeChatPageContext(context: ChatPageContext | null | undefi
     case 'horing':
       if (context.hoeringId) {
         lines.push(
-          `Brukeren ser på høringen ${context.hoeringId}.${sak ? ` Den hører til sak ${sak}: bruk findHearingsForSak (issueId ${sak}) for frist og innspill, og retrieveSakContext for innholdet.` : ' Finn den med listOpenHearings.'}`,
+          sak
+            ? `Brukeren ser på høringen ${context.hoeringId}. Den hører til sak ${sak}: bruk searchHearingDocuments (hearingId ${context.hoeringId}) for høringskilder, findHearingsForSak (issueId ${sak}) for frist og innspill, og retrieveSakContext for sakens dokumenter.`
+            : `Brukeren ser på høringen ${context.hoeringId}. Bruk searchHearingDocuments (hearingId ${context.hoeringId}) for høringskilder, ellers listOpenHearings.`,
         );
       }
       break;

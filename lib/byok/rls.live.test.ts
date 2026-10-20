@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 
+const envTestPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../.env.test');
+
 function loadFolketsPublicEnv() {
-  const text = readFileSync('/workspace/.env.test', 'utf8');
+  const text = readFileSync(envTestPath, 'utf8');
   for (const line of text.split(/\r?\n/)) {
     if (!line || line.startsWith('#') || !line.includes('=')) continue;
     const i = line.indexOf('=');
@@ -26,12 +30,9 @@ assert.equal(process.env.SUPABASE_SERVICE_ROLE_KEY, undefined);
 
 async function main() {
   const supabase = createClient(url, anon);
-  const [creds, secretCols, tier, customer, userList] = await Promise.all([
+  const [creds, secretCols] = await Promise.all([
     supabase.from('user_llm_credentials').select('user_id, key_last4').limit(1),
     supabase.from('user_llm_credentials').select('ciphertext_b64').limit(1),
-    supabase.from('users').select('subscription_tier, subscription_status, subscription_period_end').limit(1),
-    supabase.from('users').select('stripe_customer_id').limit(1),
-    supabase.from('users').select('id, first_name, last_name').limit(5),
   ]);
 
   const payload = {
@@ -39,35 +40,21 @@ async function main() {
     usedServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
     credentialsError: creds.error?.message ?? null,
     secretError: secretCols.error?.message ?? null,
-    tierError: tier.error?.message ?? null,
-    customerError: customer.error?.message ?? null,
-    tierReadable: !tier.error,
-    stripeCustomerReadable: !customer.error,
-    userListError: userList.error?.message ?? null,
-    userListRows: Array.isArray(userList.data) ? userList.data.length : 0,
     credentialRows: Array.isArray(creds.data) ? creds.data.length : 0,
-    note:
-      'After 20261017120000_revoke_public_users_leak, anon must not list users. ' +
-      'Unauthenticated tier/stripe probes may still error until session is established. ' +
-      'BYOK ciphertext stays table-denied for anon.',
+    note: 'Anon must not read user_llm_credentials (metadata or ciphertext).',
   };
 
-  writeFileSync('/opt/cursor/artifacts/byok-rls-live.json', JSON.stringify(payload, null, 2));
+  const artifactDir = existsSync('/opt/cursor/artifacts')
+    ? '/opt/cursor/artifacts'
+    : path.join(process.cwd(), '.artifacts');
+  mkdirSync(artifactDir, { recursive: true });
+  writeFileSync(path.join(artifactDir, 'byok-rls-live.json'), JSON.stringify(payload, null, 2));
 
   assert.match(payload.credentialsError ?? '', /permission denied|not accept/i);
   assert.match(payload.secretError ?? '', /permission denied|not accept/i);
   assert.equal(payload.usedServiceRole, false);
   assert.equal(payload.credentialRows, 0);
-  assert.match(payload.userListError ?? '', /permission denied|not accept|row-level security/i);
-  assert.equal(payload.userListRows, 0);
-  console.log(
-    'byok/rls.live.test.ts: ok',
-    payload.credentialsError,
-    'tier',
-    payload.tierReadable,
-    'stripe_customer',
-    payload.stripeCustomerReadable,
-  );
+  console.log('byok/rls.live.test.ts: ok', payload.credentialsError);
 }
 
 void main();

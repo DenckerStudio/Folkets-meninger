@@ -34,6 +34,8 @@ export type ChatSuggestionContext = {
   title: string | null;
   /** Stortinget issue id to scope the conversation, when known. */
   issueId: string | null;
+  /** Stortinget hearing id when the user is on a høring page. */
+  hoeringId: string | null;
 };
 
 export type ChatSignal = {
@@ -199,7 +201,11 @@ function viewSuggestions(context: ChatSuggestionContext): ChatSuggestion[] {
           label: 'Hva skal høringen belyse?',
           prompt: `Hva skal høringen ${subject} belyse, og hva er hovedspørsmålene?`,
           source: 'view',
-          tools: context.issueId ? ['findHearingsForSak', 'retrieveSakContext'] : ['listOpenHearings', 'listMatchingSaker'],
+          tools: context.hoeringId
+            ? ['searchHearingDocuments', 'findHearingsForSak', 'listOpenHearings']
+            : context.issueId
+              ? ['findHearingsForSak', 'searchHearingDocuments', 'retrieveSakContext']
+              : ['listOpenHearings', 'listMatchingSaker'],
         },
       ];
       if (context.issueId) {

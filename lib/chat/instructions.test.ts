@@ -7,7 +7,7 @@ import { FOCUSED_CHAT_TOOL_NAMES, createChatTools, selectFocusedChatTools } from
 const now = new Date('2026-10-17T10:00:00Z');
 const prompt = buildChatInstructions(null, now);
 
-assert.equal(CHAT_PROMPT_VERSION, 'stemme-chat-v2');
+assert.equal(CHAT_PROMPT_VERSION, 'stemme-chat-v2-grounded');
 assert.match(prompt, /Dagens dato er lørdag 17\. oktober 2026/);
 assert.match(prompt, /Stortingsperioden er 2025–2029/);
 assert.match(prompt, /politisk nøytral/);
@@ -19,7 +19,8 @@ assert.match(prompt, /bokmål/);
 // No «AI» self-label and no tool catalogue in the prompt.
 assert.doesNotMatch(prompt, /\bAI\b/);
 assert.doesNotMatch(prompt, /- retrieveTopicContext:/);
-assert.ok(prompt.length < 4500, `prompt too long: ${prompt.length}`);
+assert.match(prompt, /bare delvis dekker spørsmålet/);
+assert.ok(prompt.length < 5200, `prompt too long: ${prompt.length}`);
 
 assert.match(buildChatInstructions('200365', now), /åpnet sak 200365/);
 

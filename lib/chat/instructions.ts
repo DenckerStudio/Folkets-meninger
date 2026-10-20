@@ -7,8 +7,9 @@
  * stated here once.
  */
 import { describeChatPageContext, type ChatPageContext } from '@/lib/chat/page-context';
+import { groundedAnswerBehaviorLines } from '@/lib/chat/grounded-answer';
 
-export const CHAT_PROMPT_VERSION = 'stemme-chat-v2';
+export const CHAT_PROMPT_VERSION = 'stemme-chat-v2-grounded';
 
 const DEFAULT_PERIODE = '2025-2029';
 
@@ -52,7 +53,9 @@ export function buildChatInstructions(
     'Kilder:',
     '- Verktøyene nummererer kildene sine (feltet «kilde» og listen «kilder»). Sett kildenummeret i hakeparentes rett etter hver faktapåstand fra et verktøy, for eksempel [1] eller [2][3].',
     '- Bruk bare numre som står i verktøyresultatene i dette svaret. Finn aldri opp kildenumre, sitater, tall, stemmetall eller dokumentinnhold.',
-    '- Nevn et tall eller et beløp bare når det står i et verktøyresultat. Finner du ikke svaret i kildene, skriv «Dette fant jeg ikke i kildene.»',
+    '- Nevn et tall eller et beløp bare når det står i et verktøyresultat.',
+    ...groundedAnswerBehaviorLines(),
+    '- Når verktøyresultater ikke inneholder relevant innhold, skriv «Dette fant jeg ikke i kildene.»',
     '- Bruk verktøyene før du konkluderer om en sak. Gjett ikke på innhold du ikke har slått opp.',
     `- ${sakHint}`,
     ...(pageLines.length > 0 ? ['', 'Siden brukeren står på:', ...pageLines] : []),

@@ -1,0 +1,58 @@
+{
+  "raw": 283,
+  "afterGtValidation": 247,
+  "final": 205,
+  "removed": {
+    "eksakt_henvisning_ambiguous": 2,
+    "prefix_matches_no_title": 2,
+    "prefix_is_full_word": 2,
+    "prefix_bad_length": 1,
+    "compound_titleMustContain_not_in_title": 1,
+    "compound_no_compound_word": 1,
+    "votering_sak_mismatch": 1,
+    "finnes_ikke_matches_existing_title": 24,
+    "finnes_ikke_no_distinct_terms": 2,
+    "near_duplicate": 3,
+    "duplicate_exact_normalized": 3,
+    "finnes_ikke_same_topic_cap2": 5,
+    "category_balance_trim": 31
+  },
+  "removedTotal": 78,
+  "repairs": {
+    "facts_repaired": 3,
+    "facts_derived": 3,
+    "prefix_gt_recomputed": 3
+  },
+  "dev": {
+    "eksakt_sak": 9,
+    "tema": 10,
+    "prefiks_delord": 8,
+    "sammensatte_ord": 9,
+    "voteringer_parti": 9,
+    "horinger": 8,
+    "finnes_ikke": 11
+  },
+  "test": {
+    "eksakt_sak": 19,
+    "tema": 24,
+    "prefiks_delord": 17,
+    "sammensatte_ord": 16,
+    "voteringer_parti": 20,
+    "horinger": 20,
+    "finnes_ikke": 25
+  },
+  "devTotal": 64,
+  "testTotal": 141,
+  "leakageSharedIds": [],
+  "leakageNearDupPairs": [],
+  "groups": 145,
+  "largestGroup": 36,
+  "usedIssues": 145,
+  "usedHearings": 28,
+  "usedVoteringer": 29,
+  "notes": {
+    "generation": "Questions generated through OpenCode sessions (openrouter/deepseek/deepseek-chat-v3.1 batch 1; openrouter/nvidia/nemotron-3-super-120b-a12b:free batch 2 for tema+finnes_ikke). Validation/split deterministic via validate.py on the box.",
+    "finnesIkkeCheck": "titles/korttitler of all saker + hearing sak titles, sessions 2025-2026 and 2026-2027; document full text NOT checked",
+    "leakageKeys": "all GT sak IDs, hearing IDs, prefix strings, finnes_ikke fact-sets, query similarity >=0.75 (difflib, diacritic-folded)"
+  }
+}

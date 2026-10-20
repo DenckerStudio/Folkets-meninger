@@ -16,7 +16,7 @@ assert.match(ragSrc, /getAnonSupabase/);
 assert.match(ragSrc, /issue_id, document_id, chunk_index, content/);
 assert.match(ragSrc, /rankChunkForSak/);
 assert.doesNotMatch(ragSrc, /hits\.length > 0 \? hits : ranked/);
-assert.doesNotMatch(ragSrc, /embedding/);
+assert.doesNotMatch(ragSrc, /\.select\([^)]*embedding/);
 
 assert.match(toolsSrc, /client: ragClient/);
 assert.match(toolsSrc, /searchIssuesForChat\(query, 8, ragClient\)/);
@@ -75,7 +75,7 @@ assert.match(ragSrc, /from '@\/lib\/chat\/vector-search'/);
 assert.match(ragSrc, /retrieveTopicContext/);
 assert.match(ragSrc, /mergeChunks/);
 assert.match(ragSrc, /searchChunksByVector/);
-assert.doesNotMatch(ragSrc, /embedding/);
+assert.doesNotMatch(ragSrc, /\.select\([^)]*embedding/);
 
 // Semantic path lives in its own module and only calls the vector RPC.
 assert.match(vectorSrc, /match_issue_document_chunks/);
