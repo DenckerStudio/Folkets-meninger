@@ -273,7 +273,7 @@ export async function markBlogSocialPosted(
   return cmsBlogOpsSocialPosted(slug, blueskyUri);
 }
 
-export function cmsAdminUrlForPost(id: string): string {
+export function cmsAdminUrlForPost(id: string): string | null {
   const base = getCmsBaseUrl();
   if (base) return `${base}/admin/collections/posts/${id}`;
   return adminBlogPostUrl(id);

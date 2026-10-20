@@ -14,7 +14,8 @@ Blog content is edited in **Payload CMS 3** (`cms/`), deployed as a separate Coo
 - Use the **same** hosted Postgres as Supabase/Coolify DB.
 - Payload uses schema **`payload`** (`PAYLOAD_SCHEMA=payload` optional).
 - Create role `payload_app` with privileges **only** on schema `payload` (no `public` access).
-- **Migrations:** `prodMigrations` in `payload.config.ts` runs pending SQL when Payload first connects in **production** (`NODE_ENV=production`). `disableCreateDatabase: true` — the shared Postgres already exists (Supabase/Coolify). The runtime Docker image has no Payload CLI, `tsx`, or `src/` — do not rely on `npm run migrate` in prod.
+- **Migrations:** `prodMigrations` in `payload.config.ts` runs pending SQL when Payload first connects in **production** (`NODE_ENV=production`), triggered on server boot via `instrumentation.ts` → `ensurePayloadReady()`. No separate manual migrate step on deploy unless you are fixing a failed migration. `disableCreateDatabase: true` — the shared Postgres already exists (Supabase/Coolify). The runtime Docker image has no Payload CLI, `tsx`, or `src/` — do not rely on `npm run migrate` in prod.
+- **Login rate limit IP:** `POST /api/users/login` uses `X-Real-Ip` when set by Traefik; otherwise the **rightmost** hop in `X-Forwarded-For` (not the client-spoofable leftmost value).
 - **Boot warmup:** `cms/src/instrumentation.ts` calls `ensurePayloadReady()` on Node server start so migrations and `SEED_ON_BOOT` run **before** traffic, even though `GET /health` stays a cheap liveness probe without touching Payload.
 - Local/dev: `cd cms && npm run migrate` when schema changes.
 
