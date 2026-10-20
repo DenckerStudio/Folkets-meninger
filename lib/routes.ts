@@ -61,6 +61,7 @@ export const routes = {
   adminResearch: `${DASHBOARD_PREFIX}/admin/research`,
   adminResearchCluster: (id: string) =>
     `${DASHBOARD_PREFIX}/admin/research/${encodeURIComponent(id)}`,
+  adminVurder: `${DASHBOARD_PREFIX}/admin/vurder`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,
   forslag: `${DASHBOARD_PREFIX}/appens-fremtid`,
   chat: `${DASHBOARD_PREFIX}/chat`,

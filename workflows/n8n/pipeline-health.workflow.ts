@@ -57,22 +57,22 @@ const fetchPendingChunks = node({
   output: [],
 });
 
-const fetchMissingSummaries = node({
+const fetchPipelineHealth = node({
   type: 'n8n-nodes-base.httpRequest',
   version: 4.2,
   config: {
-    name: 'Count missing summaries',
+    name: 'Fetch pipeline health',
     alwaysOutputData: true,
     executeOnce: true,
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       method: 'POST',
-      url: rpcUrl('n8n_list_issues_missing_ai_summary'),
+      url: rpcUrl('n8n_pipeline_health'),
       authentication: 'predefinedCredentialType',
       nodeCredentialType: 'supabaseApi',
       sendBody: true,
       specifyBody: 'json',
-      jsonBody: '{"p_limit":20}',
+      jsonBody: '{}',
       options: { timeout: 60000 },
     },
   },
@@ -120,12 +120,16 @@ function rowsFrom(name) {
   }
 }
 const chunks = rowsFrom('Count pending chunks');
-const missing = rowsFrom('Count missing summaries').filter((r) => r && r.id);
 const drafts = rowsFrom('List draft polls').filter((r) => r && r.id);
 const pendingChunks = chunks.filter((r) => r && r.id).length;
-const missingSummaries = missing.length;
 const draftPolls = drafts.length;
-const firstMissingId = String(missing[0]?.id || '').trim();
+const healthRaw = rowsFrom('Fetch pipeline health')[0] ?? {};
+const missingSummaries = Number(
+  healthRaw.summary_queue_depth ?? healthRaw.missing_summaries ?? 0,
+);
+const firstMissingId = String(
+  healthRaw.first_summary_queue_issue_id ?? '',
+).trim();
 const needsCatchup = pendingChunks > 0;
 const needsSummaryCatchup = Boolean(firstMissingId);
 const needsAlert = pendingChunks >= 40 || missingSummaries >= 15 || draftPolls >= 8;
@@ -343,7 +347,7 @@ const alertPath = needsAlert.onTrue(notifyAdmin).onFalse(logHealthy);
 const summaryCatchupPath = needsSummaryCatchup.onTrue(triggerSummaries.to(alertPath)).onFalse(alertPath);
 
 const healthBody = fetchPendingChunks
-  .to(fetchMissingSummaries)
+  .to(fetchPipelineHealth)
   .to(fetchDraftPolls)
   .to(summarizeHealth)
   .to(notifySettings)

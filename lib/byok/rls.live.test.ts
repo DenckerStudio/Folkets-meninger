@@ -65,21 +65,11 @@ async function main() {
   assert.equal(payload.credentialRows, 0);
 
   if (process.env.FM_LIVE_TEST_STRICT_RLS === '1') {
-    assert.match(payload.userListError ?? '', /permission denied|not accept|row-level security/i);
+    assert.match(payload.userListError ?? '', /permission denied|not accept/i);
     assert.equal(payload.userListRows, 0);
-  } else if (payload.userListRows > 0 && !payload.userListError) {
-    console.warn(
-      `byok/rls.live.test.ts: anon listed ${payload.userListRows} users — set FM_LIVE_TEST_STRICT_RLS=1 after 20261017120000 is on prod`,
-    );
   }
-  console.log(
-    'byok/rls.live.test.ts: ok',
-    payload.credentialsError,
-    'tier',
-    payload.tierReadable,
-    'stripe_customer',
-    payload.stripeCustomerReadable,
-  );
+
+  console.log('byok/rls.live.test.ts: ok', payload.urlHost);
 }
 
 void main();
