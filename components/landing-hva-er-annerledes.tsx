@@ -24,7 +24,7 @@ export function LandingHvaErAnnerledes() {
         <>
           Se Stortingets høringer og skriv kommentarer i appen — de sendes ikke automatisk til Stortinget. I{' '}
           <Link href={routes.folketsMeninger} className="font-medium text-[#00205b] underline-offset-2 hover:underline">
-            Folkets meninger
+            Folkets Meninger
           </Link>{' '}
           kan du formulere meninger og samle støtte til høringsinnspill du selv kan bruke videre.
         </>
@@ -70,7 +70,7 @@ export function LandingHvaErAnnerledes() {
       <section id="hva-er-annerledes" className="scroll-mt-28">
         <div className="mx-auto max-w-3xl text-center">
           <SoftBlurIn>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">Til differensiering</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">Slik skiller vi oss ut</p>
           </SoftBlurIn>
           <SoftBlurIn delay={0.08}>
             <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-[#001433] sm:text-4xl md:text-5xl">
@@ -89,7 +89,7 @@ export function LandingHvaErAnnerledes() {
         </div>
 
         <SoftBlurIn delay={0.2} className="mx-auto mt-12 max-w-5xl">
-          <BentoFeatureGrid tiles={tiles} />
+          <BentoFeatureGrid tiles={tiles} tileGapClassName="gap-0" tileContentClassName="mt-3" />
         </SoftBlurIn>
 
         <SoftBlurIn delay={0.28} className="mt-8 text-center text-sm text-[#001433]/60">
@@ -98,7 +98,7 @@ export function LandingHvaErAnnerledes() {
           </Link>
           {' · '}
           <Link href={routes.omAi} className="font-medium text-[#00205b] hover:text-[#ba0c2f]">
-            AI og modeller
+            Språkmodeller og data
           </Link>
         </SoftBlurIn>
       </section>
