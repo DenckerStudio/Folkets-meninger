@@ -335,7 +335,7 @@ async function waitPanelReady(page, panelId) {
 
 async function gotoCapture(page, path) {
   const url = `${baseUrl.replace(/\/$/, '')}${path}`;
-  const res = await page.goto(url, { waitUntil: 'networkidle', timeout: 120_000 });
+  const res = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120_000 });
   const status = res?.status() ?? 0;
   if (status >= 400) {
     throw new Error(`Capture route ${path} returned HTTP ${status}`);
@@ -468,34 +468,38 @@ if (shouldStartServer) {
 await waitForServer();
 console.log(`Server ready on ${baseUrl}`);
 
+const pixelOnly = process.env.SCREENSHOT_PIXEL_ONLY === '1';
+
 const browser = await chromium.launch();
 const shots = [
   { id: 'panel-approve', name: 'content-feedback-approve' },
   { id: 'panel-reject', name: 'content-feedback-reject' },
 ];
 
-for (const viewport of [
-  { tag: '1280', width: 1280, height: 900 },
-  { tag: '390', width: 390, height: 844 },
-]) {
-  const page = await browser.newPage({
-    viewport: { width: viewport.width, height: viewport.height },
-  });
-  await mockContentFeedbackGet(page);
-  await gotoCapture(page, '/dev/pr195-capture');
-  await page.waitForTimeout(800);
-  for (const shot of shots) {
-    await waitPanelReady(page, shot.id);
-    const locator = page.locator(`#${shot.id}`);
-    await locator.scrollIntoViewIfNeeded();
-    const filename = `${sha}-${shot.name}-${viewport.tag}.png`;
-    const paths = [join(storeDir, filename), join(artifactDir, filename)];
-    for (const path of paths) {
-      await locator.screenshot({ path });
+if (!pixelOnly) {
+  for (const viewport of [
+    { tag: '1280', width: 1280, height: 900 },
+    { tag: '390', width: 390, height: 844 },
+  ]) {
+    const page = await browser.newPage({
+      viewport: { width: viewport.width, height: viewport.height },
+    });
+    await mockContentFeedbackGet(page);
+    await gotoCapture(page, '/dev/pr195-capture');
+    await page.waitForTimeout(800);
+    for (const shot of shots) {
+      await waitPanelReady(page, shot.id);
+      const locator = page.locator(`#${shot.id}`);
+      await locator.scrollIntoViewIfNeeded();
+      const filename = `${sha}-${shot.name}-${viewport.tag}.png`;
+      const paths = [join(storeDir, filename), join(artifactDir, filename)];
+      for (const path of paths) {
+        await locator.screenshot({ path });
+      }
+      console.log('Wrote', filename);
     }
-    console.log('Wrote', filename);
+    await page.close();
   }
-  await page.close();
 }
 
 async function shotPanel(
@@ -505,7 +509,7 @@ async function shotPanel(
   viewportTag,
   { waitReady = true, direct = false } = {},
 ) {
-  if (waitReady && !direct) {
+  if (waitReady) {
     await waitPanelReady(page, panelId);
   }
   const locator = direct
@@ -519,23 +523,23 @@ async function shotPanel(
   console.log('Wrote', filename);
 }
 
-for (const viewport of [
-  { tag: '1280', width: 1280, height: 900 },
-  { tag: '390', width: 390, height: 844 },
-]) {
-  const page = await browser.newPage({
-    viewport: { width: viewport.width, height: viewport.height },
-  });
-  await mockContentFeedbackGet(page);
-  await page.goto(`${baseUrl}/dev/pr195-capture`, {
-    waitUntil: 'domcontentloaded',
-    timeout: 120_000,
-  });
-  await page.waitForTimeout(800);
-  await shotPanel(page, 'panel-vurdert', 'content-feedback-vurdert', viewport.tag);
-  await page.close();
+if (!pixelOnly) {
+  for (const viewport of [
+    { tag: '1280', width: 1280, height: 900 },
+    { tag: '390', width: 390, height: 844 },
+  ]) {
+    const page = await browser.newPage({
+      viewport: { width: viewport.width, height: viewport.height },
+    });
+    await mockContentFeedbackGet(page);
+    await gotoCapture(page, '/dev/pr195-capture');
+    await page.waitForTimeout(800);
+    await shotPanel(page, 'panel-vurdert', 'content-feedback-vurdert', viewport.tag);
+    await page.close();
+  }
 }
 
+if (!pixelOnly) {
 for (const viewport of [
   { tag: '1280', width: 1280, height: 900 },
   { tag: '390', width: 390, height: 844 },
@@ -603,6 +607,7 @@ for (const viewport of [
   });
   await page.close();
 }
+}
 
 const pixelShots = [
   { path: '/dev/pr195-reels-feedback-capture', id: 'reels-feedback-approve', name: 'reels-feedback-approve' },
@@ -625,9 +630,14 @@ for (const shot of pixelShots) {
     await gotoCapture(page, shot.path);
     await page.waitForTimeout(800);
     if (shot.id === 'vurder-panel') {
-      await page.locator('#vurder-panel').getByRole('heading', { name: 'Vurder blogginnlegg' }).waitFor({
-        timeout: 60_000,
-      });
+      await page
+        .locator('#vurder-panel')
+        .getByText('Tilbakemelding', { exact: true })
+        .waitFor({ timeout: 60_000 });
+      await page
+        .locator('#vurder-panel')
+        .getByRole('heading', { name: 'Klima og næringsliv i distriktene' })
+        .waitFor({ timeout: 30_000 });
     }
     await shotPanel(page, shot.id, shot.name, viewport.tag, {
       waitReady: shot.id.startsWith('reels-feedback'),
