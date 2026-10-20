@@ -227,7 +227,7 @@ export default function AdminOppfangetClient({
           counts: normalizeOppfangetCounts(json.counts),
         });
       } catch {
-        setError('Kunne ikke laste oppfanget-liste');
+        setError('Kunne ikke laste Research-listen');
       }
     });
   }, [queryString]);
