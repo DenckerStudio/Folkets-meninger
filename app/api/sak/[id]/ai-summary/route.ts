@@ -30,6 +30,7 @@ export async function GET(
         how_affected: result.how_affected,
         topic_cards: result.topic_cards,
         labels: result.labels,
+        kostnad: result.kostnad ?? '',
         cached: result.cached,
       });
     }

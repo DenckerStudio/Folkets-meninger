@@ -3,7 +3,7 @@
 import { useId, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
 import Link from 'next/link';
-import { CircleDollarSign, ExternalLink, FileText, Loader2, Users } from 'lucide-react';
+import { CircleDollarSign, ExternalLink, FileText, HandHeart, Loader2, Users } from 'lucide-react';
 import { CivicBubble } from '@/components/icons/civic';
 import { BiasReportLink } from '@/components/trust/bias-report-link';
 import { Dialog } from '@/components/ui/dialog';
@@ -30,6 +30,7 @@ function isReadySummary(json: Record<string, unknown>): SummaryData | null {
       narrative: json.narrative,
       who_affected: String(json.who_affected ?? ''),
       how_affected: String(json.how_affected ?? ''),
+      kostnad: typeof json.kostnad === 'string' ? json.kostnad : '',
       topic_cards: Array.isArray(json.topic_cards)
         ? (json.topic_cards as TopicCard[])
         : [],
@@ -319,7 +320,12 @@ function V2Summary({ data }: { data: AiSummaryV2 }) {
 
       <div className="grid gap-3 sm:grid-cols-2">
         <FactTile icon={Users} label="Hvem berøres?" text={data.who_affected} />
-        <FactTile icon={CircleDollarSign} label="Hvordan berøres de?" text={data.how_affected} />
+        {data.how_affected.trim() ? (
+          <FactTile icon={HandHeart} label="Hvordan berøres de?" text={data.how_affected} />
+        ) : null}
+        {data.kostnad?.trim() ? (
+          <FactTile icon={CircleDollarSign} label="Økonomi og kostnad" text={data.kostnad} />
+        ) : null}
       </div>
 
       {data.topic_cards.length > 0 ? (

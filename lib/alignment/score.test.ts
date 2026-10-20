@@ -63,4 +63,23 @@ const aligned = buildAlignmentComparison(
 assert.equal(aligned.verdict, 'aligned');
 assert.ok((aligned.score ?? 0) >= 70);
 
+const innstillingRejected = buildAlignmentComparison(
+  { for: 10, against: 5, abstain: 0, total: 15 },
+  [
+    {
+      votering_id: 200148,
+      votering_tema: 'Innstillingen',
+      vedtatt: true,
+      antall_for: 79,
+      antall_mot: 21,
+      personlig_votering: true,
+    },
+  ],
+  { kortvedtak: 'Forslaget ble ikke vedtatt.' },
+);
+assert.match(innstillingRejected.headline, /Forslaget ble ikke vedtatt/);
+assert.match(innstillingRejected.headline, /Voteringen: 79 % For, 21 % Mot/);
+assert.doesNotMatch(innstillingRejected.headline, /vedtok forslaget/i);
+assert.equal(innstillingRejected.stortinget?.adopted, false);
+
 console.log('alignment score tests passed');
