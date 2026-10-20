@@ -371,7 +371,12 @@ function V2Summary({ data }: { data: AiSummaryV2 }) {
           <FactTile icon={Users} label="Hvem berøres?" text={data.who_affected} />
         ) : null}
         {data.how_affected.trim() ? (
-          <FactTile icon={HandHeart} label="Hvordan berøres de?" text={data.how_affected} />
+          <FactTile
+            icon={HandHeart}
+            label="Hvordan berøres de?"
+            text={data.how_affected}
+            bodyClassName="whitespace-pre-line"
+          />
         ) : null}
         {isDisplayableAiSummaryKostnad(data.kostnad) ? (
           <FactTile icon={CircleDollarSign} label="Økonomi og kostnad" text={data.kostnad!} />
