@@ -18,6 +18,12 @@ for (const file of ['export-answers.ts', 'export-answers-v2.ts']) {
     src.includes('generateRagAnswer'),
     `${file} must synthesize answers via generateRagAnswer`,
   );
+  if (file === 'export-answers-v2.ts') {
+    assert.ok(
+      src.includes('issueIds: q.gold?.issueIds'),
+      `${file} must pass gold issueIds for topic retrieval (eval parity)`,
+    );
+  }
 }
 
 console.log('export-answers.regression.test.ts: ok');

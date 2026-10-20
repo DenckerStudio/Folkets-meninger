@@ -13,7 +13,7 @@ type Question = {
   query: string;
   issueId?: string;
   hearingId?: string;
-  gold?: { facts?: string[] };
+  gold?: { facts?: string[]; issueIds?: string[] };
 };
 
 type AnswerRow = {
@@ -50,6 +50,7 @@ async function main(): Promise<void> {
       query: q.query,
       issueId: q.issueId,
       hearingId: q.hearingId,
+      issueIds: q.gold?.issueIds,
       k: 8,
     });
     const excerptTexts = excerpts.map((e) => e.content);
@@ -70,6 +71,7 @@ async function main(): Promise<void> {
         model: llm.model,
         timeoutMs: llm.timeoutMs,
         numPredict: llm.numPredict,
+        think: llm.think,
       });
     } catch (err) {
       failures += 1;

@@ -3,6 +3,13 @@
  * Used by eval answer export — not the production Stemme+ chat path.
  */
 
+import {
+  buildOllamaGenerateBody,
+  ollamaEmptyResponseError,
+  type OllamaGeneratePayload,
+  resolveOllamaThinkFlag,
+} from './ollama-generate';
+
 export const DEFAULT_ANSWER_LLM_TIMEOUT_MS = 600_000;
 export const DEFAULT_ANSWER_LLM_NUM_PREDICT = 768;
 
@@ -15,7 +22,12 @@ export type GenerateRagAnswerOptions = {
   model: string;
   timeoutMs: number;
   numPredict: number;
+  think: boolean;
 };
+
+export function resolveAnswerLlmThink(): boolean {
+  return resolveOllamaThinkFlag('ANSWER_LLM_THINK', false);
+}
 
 export function resolveAnswerLlmTimeoutMs(): number {
   const raw = process.env.ANSWER_LLM_TIMEOUT_MS;
@@ -33,7 +45,13 @@ export function resolveAnswerLlmNumPredict(): number {
   return Math.floor(n);
 }
 
-export function resolveAnswerLlmConfig(): { baseUrl: string; model: string; timeoutMs: number; numPredict: number } {
+export function resolveAnswerLlmConfig(): {
+  baseUrl: string;
+  model: string;
+  timeoutMs: number;
+  numPredict: number;
+  think: boolean;
+} {
   const baseUrl = (
     process.env.ANSWER_LLM_URL ??
     process.env.OLLAMA_BASE_URL ??
@@ -53,6 +71,7 @@ export function resolveAnswerLlmConfig(): { baseUrl: string; model: string; time
     model: model.trim(),
     timeoutMs: resolveAnswerLlmTimeoutMs(),
     numPredict: resolveAnswerLlmNumPredict(),
+    think: resolveAnswerLlmThink(),
   };
 }
 
@@ -126,22 +145,24 @@ export async function generateRagAnswer(opts: GenerateRagAnswerOptions): Promise
   const res = await fetch(`${opts.baseUrl}/api/generate`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      model: opts.model,
-      prompt,
-      stream: false,
-      options: { num_predict: opts.numPredict },
-    }),
+    body: JSON.stringify(
+      buildOllamaGenerateBody({
+        model: opts.model,
+        prompt,
+        think: opts.think,
+        numPredict: opts.numPredict,
+      }),
+    ),
     signal: AbortSignal.timeout(opts.timeoutMs),
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
     throw new Error(`answer LLM HTTP ${res.status}${detail ? `: ${detail.slice(0, 200)}` : ''}`);
   }
-  const payload = (await res.json()) as { response?: string };
+  const payload = (await res.json()) as OllamaGeneratePayload;
   const answer = (payload.response ?? '').trim();
   if (!answer) {
-    throw new Error('answer LLM returned empty response');
+    throw ollamaEmptyResponseError('answer LLM', payload);
   }
   if (isDisallowedExcerptPassthrough(answer, opts.excerpts)) {
     throw new Error('answer LLM produced disallowed excerpt passthrough');

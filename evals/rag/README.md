@@ -43,6 +43,7 @@ export ANSWER_LLM_URL=http://192.168.50.154:11434
 export ANSWER_LLM_MODEL=gemma4:26b
 export ANSWER_LLM_TIMEOUT_MS=600000
 export ANSWER_LLM_NUM_PREDICT=768
+export ANSWER_LLM_THINK=false
 export RAG_EVAL_LABEL=round3-rerank-reject
 npm run eval:rag:answers
 # → evals/rag/results/round3-rerank-reject-answers.json
@@ -56,6 +57,7 @@ npm run eval:rag:answers:v2
 export JUDGE_URL=http://192.168.50.154:11434
 export JUDGE_MODEL=gemma4:26b
 export JUDGE_TIMEOUT_MS=900000
+export JUDGE_THINK=false
 npm run eval:rag:judge -- evals/rag/results/v2-final-answers.json
 # → evals/rag/results/v2-final-answers.judged.json
 # → evals/rag/results/v2-final-answers-judged-summary.json
@@ -73,8 +75,10 @@ Improvement rounds table: `npm run eval:rag:rounds` → `evals/rag/results/impro
 | `ANSWER_LLM_URL` / `ANSWER_LLM_MODEL` | Required for `eval:rag:answers` / `eval:rag:answers:v2` (falls back `OLLAMA_BASE_URL` for URL only) |
 | `ANSWER_LLM_TIMEOUT_MS` | Answer synthesis timeout (default `600000`) |
 | `ANSWER_LLM_NUM_PREDICT` | Ollama `num_predict` for answers (default `768`) |
+| `ANSWER_LLM_THINK` | Ollama `think` for answer synthesis (default `false`; gemma4 uses hidden thinking tokens if true) |
 | `JUDGE_URL` / `JUDGE_MODEL` | LAN judge (`judge.ts`) |
 | `JUDGE_TIMEOUT_MS` | Per-row Ollama generate timeout (default `900000`; invalid/non-positive → default) |
+| `JUDGE_THINK` | Ollama `think` for judge (default `false`) |
 | `RAG_EVAL_EXCERPT_PER_CHUNK` / `RAG_EVAL_EXCERPT_TOTAL` | Excerpt caps (#177) |
 | `RAG_EVAL_CHUNK_CLIP` | Hybrid clip (#179, default 1400) |
 | `RAG_EVAL_MEASURE_EMBED` | Set `0` to skip central vs BYOK embed latency micro-benchmark on stack runs |

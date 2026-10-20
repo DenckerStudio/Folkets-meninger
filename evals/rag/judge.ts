@@ -12,6 +12,12 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import {
+  buildOllamaGenerateBody,
+  ollamaEmptyResponseError,
+  type OllamaGeneratePayload,
+  resolveOllamaThinkFlag,
+} from './lib/ollama-generate';
 
 const JUDGE_URL = (process.env.JUDGE_URL ?? 'http://192.168.50.154:11434').replace(/\/$/, '');
 const JUDGE_MODEL = process.env.JUDGE_MODEL ?? 'gemma4:26b';
@@ -26,6 +32,7 @@ function resolveJudgeTimeoutMs(): number {
 }
 
 const JUDGE_TIMEOUT_MS = resolveJudgeTimeoutMs();
+const JUDGE_THINK = resolveOllamaThinkFlag('JUDGE_THINK', false);
 
 type AnswerRow = {
   id: string;
@@ -55,12 +62,17 @@ Gi JSON: {"faithfulness":0-1,"quality":0-1,"note":"kort"}`;
   const res = await fetch(`${JUDGE_URL}/api/generate`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ model: JUDGE_MODEL, prompt, stream: false }),
+    body: JSON.stringify(
+      buildOllamaGenerateBody({ model: JUDGE_MODEL, prompt, think: JUDGE_THINK }),
+    ),
     signal: AbortSignal.timeout(JUDGE_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`judge HTTP ${res.status}`);
-  const payload = (await res.json()) as { response?: string };
+  const payload = (await res.json()) as OllamaGeneratePayload;
   const text = payload.response ?? '';
+  if (!text.trim()) {
+    throw ollamaEmptyResponseError('judge', payload);
+  }
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) return { id: row.id, faithfulness: 0, quality: 0, note: 'parse_fail' };
   const parsed = JSON.parse(match[0]) as { faithfulness: number; quality: number; note: string };
@@ -107,7 +119,14 @@ async function main(): Promise<void> {
   writeFileSync(outPath, JSON.stringify(out, null, 2));
   const summaryPath = join(dirname(path), path.split('/').pop()!.replace(/\.json$/, '-judged-summary.json'));
   const stats = summarize(out);
-  const summary = { model: JUDGE_MODEL, judgeUrl: JUDGE_URL, judgeTimeoutMs: JUDGE_TIMEOUT_MS, ...stats, rows: out };
+  const summary = {
+    model: JUDGE_MODEL,
+    judgeUrl: JUDGE_URL,
+    judgeTimeoutMs: JUDGE_TIMEOUT_MS,
+    judgeThink: JUDGE_THINK,
+    ...stats,
+    rows: out,
+  };
   writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
   console.log(`Wrote ${outPath}`);
   console.log(`Wrote ${summaryPath}`);

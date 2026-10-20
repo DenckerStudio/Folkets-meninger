@@ -28,6 +28,7 @@ export ANSWER_LLM_URL=http://192.168.50.154:11434
 export ANSWER_LLM_MODEL=gemma4:26b
 export ANSWER_LLM_TIMEOUT_MS=600000
 export ANSWER_LLM_NUM_PREDICT=768
+export ANSWER_LLM_THINK=false
 export RAG_EVAL_LABEL=v2-final
 
 npm run eval:rag:answers:v2
@@ -43,6 +44,7 @@ Optional smoke (3 rows): `RAG_EVAL_V2_ANSWER_SAMPLE=3` with the same env.
 export JUDGE_URL=http://192.168.50.154:11434
 export JUDGE_MODEL=gemma4:26b
 export JUDGE_TIMEOUT_MS=900000
+export JUDGE_THINK=false
 
 npm run eval:rag:judge -- evals/rag/results/v2-final-answers.json
 ```
@@ -50,3 +52,7 @@ npm run eval:rag:judge -- evals/rag/results/v2-final-answers.json
 Produces `v2-final-answers.judged.json` and `v2-final-answers-judged-summary.json`.
 
 **Targets (after rerun):** quality ≥ 0.7, faithfulness ≥ 0.85.
+
+### v2-tema-002 empty retrieval (klever smoke)
+
+Gold expects `avløpsdirektiv` in chunks for issues **200191** and **105076** (seeded in v2 corpus). The metrics harness passes `gold.issueIds` into `retrieveForQuestion`; **answer export did not** (only FTS top-3 for `forurensningstiltak`), so hybrid search could return no excerpts → fallback «Fant ingen kilde…». Fixed: `export-answers-v2.ts` now passes `issueIds: q.gold?.issueIds` like `run-eval-v2.ts`. Not a missing seed when the full v2 stack is seeded.
