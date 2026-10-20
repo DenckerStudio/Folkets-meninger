@@ -40,12 +40,13 @@ export async function retryPendingN8nJobs(): Promise<N8nRetryResult> {
   }
 
   const service = getServiceSupabase();
-  const cutoff = new Date(Date.now() - AI_SUMMARY_COOLDOWN_MS).toISOString();
+  const cutoffMs = Date.now() - AI_SUMMARY_COOLDOWN_MS;
 
   const { data: pendingIssues, error: issueError } = await service
     .from('stortinget_issues')
     .select('id, ai_summary_requested_at')
     .eq('status', 'pending')
+    .order('ai_summary_requested_at', { ascending: true, nullsFirst: true })
     .order('last_synced_at', { ascending: true })
     .limit(AI_SUMMARY_PENDING_SCAN_LIMIT);
 
@@ -80,9 +81,11 @@ export async function retryPendingN8nJobs(): Promise<N8nRetryResult> {
   for (const issue of pendingIssues ?? []) {
     if (result.aiSummariesQueued >= AI_SUMMARY_QUEUE_PER_RUN) break;
     if (!issue?.id || haveSummary.has(issue.id)) continue;
-    const requestedAt =
-      typeof issue.ai_summary_requested_at === 'string' ? issue.ai_summary_requested_at : null;
-    if (requestedAt && requestedAt >= cutoff) continue;
+    const requestedMs =
+      typeof issue.ai_summary_requested_at === 'string'
+        ? Date.parse(issue.ai_summary_requested_at)
+        : Number.NaN;
+    if (Number.isFinite(requestedMs) && requestedMs >= cutoffMs) continue;
 
     const requestedNow = new Date().toISOString();
     const { error: markError } = await service

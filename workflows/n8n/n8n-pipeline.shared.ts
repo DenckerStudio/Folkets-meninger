@@ -418,17 +418,76 @@ else if (last) { gate_reason = 'context_changed'; }
 return [{ json: { ...ctx, regenerate, gate_reason, last_context_hash: last ? last.h : '', last_generated_at: last ? last.at : '' }, pairedItem: { item: 0 } }];
 `;
 
+export const ATTACH_EXTRA_CONTEXT_SCHEDULE_JS = `const listed = $('Process one issue').first()?.json || {};
+const extraRaw = $('Load issue source').first()?.json;
+const extra = Array.isArray(extraRaw) ? (extraRaw[0] || {}) : (extraRaw || {});
+const chunkRaw = $input.first()?.json;
+let chunks = [];
+if (Array.isArray(chunkRaw)) chunks = chunkRaw;
+else if (chunkRaw && Array.isArray(chunkRaw.data)) chunks = chunkRaw.data;
+else chunks = $input.all().map((i) => i.json).filter((r) => r && r.content);
+return [{ json: { ...listed, ...extra, document_chunks: chunks.filter((c) => c && c.content) } }];
+`;
+
+export const ATTACH_EXTRA_CONTEXT_WEBHOOK_JS = `const sak = $('Fetch issue by ID').first()?.json || {};
+const raw = $input.first()?.json;
+let chunks = [];
+if (Array.isArray(raw)) chunks = raw;
+else if (raw && Array.isArray(raw.data)) chunks = raw.data;
+else chunks = $input.all().map((i) => i.json).filter((r) => r && r.content);
+return [{ json: { ...sak, document_chunks: chunks.filter((c) => c && c.content) } }];
+`;
+
+export const PREPARE_UPSERT_SQL_JS = `// genmeta v1 – prompt_version sak-summary-v3-quickfix (2026-10-20). prompt_sha256 dekker systemprompt + «Build sak context» + validator.
+// Lagres i kjøringsdata (customData) til PR #171 stage B er migrert.
+const GEN_META = {
+  schema: 'fm.genmeta/v1', prompt_id: 'sak_summary', node_key: 'system', prompt_version: 'sak-summary-v3-quickfix',
+  prompt_sha256: '601b452c294a', prompt_source: 'inline', prompt_version_id: null,
+  model: 'gemma4:26b', model_params: {"num_ctx": 16384, "num_predict": 2200, "temperature": 0.2, "think": false, "format": "json"},
+  workflow_id: (typeof $workflow !== 'undefined' && $workflow.id) ? String($workflow.id) : 'GP666Zq84qc19tcE', workflow_version_id: null,
+  n8n_execution_id: (typeof $execution !== 'undefined' && $execution.id) ? String($execution.id) : null,
+  generated_at: new Date().toISOString(),
+};
+const item = $input.item.json;
+try { if (typeof $execution !== 'undefined' && $execution.customData) { $execution.customData.set('prompt_version', GEN_META.prompt_version); $execution.customData.set('prompt_sha256', GEN_META.prompt_sha256); $execution.customData.set('model', GEN_META.model); $execution.customData.set('issue_id', String(item.issueId || item.rejectedIssueId || '')); $execution.customData.set('outcome', item.skip ? String(item.reason || 'skipped') : 'saved'); } } catch (_) {}
+if (item.skip || !item.issueId) {
+  return { json: { ...item, skip: true, issueId: '', gen_meta: GEN_META } };
+}
+const { issueId, hva, hvem, kostnad, narrative, who_affected, how_affected, topic_cards, labels, quality, contextHash, sourceHash, promptVersion, outcomeStage, forslag } = item;
+return { json: { issueId, hva, hvem, kostnad, narrative, who_affected, how_affected, topic_cards, labels, forslag, quality, contextHash, sourceHash, promptVersion, outcomeStage, gen_meta: GEN_META } };
+`;
+
 /** Lagrer kontekst-hash etter vellykket lagring (hash-gate). Workflow static data, maks 6000 saker. */
-export const STORE_GENERATION_HASH_WEBHOOK_JS = `const store = $getWorkflowStaticData('global');
+export const STORE_GENERATION_HASH_SCHEDULE_JS = `// Lagrer kontekst-hash etter vellykket lagring (hash-gate). Workflow static data, maks 6000 saker.
+const store = $getWorkflowStaticData('global');
 if (!store.aiSummaryHashes || typeof store.aiSummaryHashes !== 'object') store.aiSummaryHashes = {};
 const map = store.aiSummaryHashes;
 const out = [];
 for (let i = 0; i < $input.all().length; i++) {
   let p = {};
-  try { p = $('Map agent output (webhook)').itemMatching(i).json || {}; } catch (_) { try { p = $('Map agent output (webhook)').all()[i].json || {}; } catch (_) {} }
+  try { p = $('Prepare upsert SQL').itemMatching(i).json || {}; } catch (_) { try { p = $('Prepare upsert SQL').all()[i].json || {}; } catch (_) {} }
   const id = String(p.issueId || '');
   if (id && p.contextHash) {
-    map[id] = { h: p.contextHash, at: new Date().toISOString(), pv: p.promptVersion || '', m: '', o: p.outcomeStage || '' };
+    map[id] = { h: p.contextHash, at: new Date().toISOString(), pv: (p.gen_meta && p.gen_meta.prompt_version) || '', m: (p.gen_meta && p.gen_meta.model) || '', o: p.outcomeStage || '' };
+  }
+  out.push({ json: { issueId: id, hashStored: Boolean(id && p.contextHash), contextHash: p.contextHash || '', quality: p.quality || {} }, pairedItem: { item: i } });
+}
+const keys = Object.keys(map);
+if (keys.length > 6000) { keys.sort((a, b) => String(map[a].at).localeCompare(String(map[b].at))); for (const k of keys.slice(0, keys.length - 6000)) delete map[k]; }
+return out;
+`;
+
+export const STORE_GENERATION_HASH_WEBHOOK_JS = `// Lagrer kontekst-hash etter vellykket lagring (hash-gate). Workflow static data, maks 6000 saker.
+const store = $getWorkflowStaticData('global');
+if (!store.aiSummaryHashes || typeof store.aiSummaryHashes !== 'object') store.aiSummaryHashes = {};
+const map = store.aiSummaryHashes;
+const out = [];
+for (let i = 0; i < $input.all().length; i++) {
+  let p = {};
+  try { p = $('Prepare upsert SQL (webhook)').itemMatching(i).json || {}; } catch (_) { try { p = $('Prepare upsert SQL (webhook)').all()[i].json || {}; } catch (_) {} }
+  const id = String(p.issueId || '');
+  if (id && p.contextHash) {
+    map[id] = { h: p.contextHash, at: new Date().toISOString(), pv: (p.gen_meta && p.gen_meta.prompt_version) || '', m: (p.gen_meta && p.gen_meta.model) || '', o: p.outcomeStage || '' };
   }
   out.push({ json: { issueId: id, hashStored: Boolean(id && p.contextHash), contextHash: p.contextHash || '', quality: p.quality || {} }, pairedItem: { item: i } });
 }

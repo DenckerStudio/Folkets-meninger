@@ -10,13 +10,17 @@ import {
   expr,
   ifElse,
 } from '@n8n/workflow-sdk';
-import { FOLKETS_N8N_BASE, FOLKETS_SUPABASE_CRED, rpcUrl } from './n8n-supabase.shared';
+import { FOLKETS_SUPABASE_CRED, FOLKETS_SUPABASE_REST, rpcUrl } from './n8n-supabase.shared';
 import { createInWorkflowErrorNotify } from './in-workflow-error-notify';
 import {
+  ATTACH_EXTRA_CONTEXT_SCHEDULE_JS,
+  ATTACH_EXTRA_CONTEXT_WEBHOOK_JS,
   BUILD_SAK_CONTEXT_JS,
   EXPAND_OR_EMPTY_JS,
   HASH_GATE_WEBHOOK_JS,
   MAP_SUMMARY_OUTPUT_JS,
+  PREPARE_UPSERT_SQL_JS,
+  STORE_GENERATION_HASH_SCHEDULE_JS,
   STORE_GENERATION_HASH_WEBHOOK_JS,
   SUMMARY_SYSTEM_MESSAGE,
 } from './n8n-pipeline.shared';
@@ -28,7 +32,7 @@ const ollamaChatModel = languageModel({
     name: 'Ollama Chat Model',
     credentials: { ollamaApi: newCredential('Ollama account') },
     parameters: {
-      model: 'qwen3:4b-q4_K_M',
+      model: 'gemma4:26b',
       options: {
         think: false,
         temperature: 0.2,
@@ -77,6 +81,10 @@ const fetchMissingSummaries = node({
   version: 4.2,
   config: {
     name: 'Fetch issues without summary',
+    alwaysOutputData: true,
+    retryOnFail: true,
+    maxTries: 3,
+    waitBetweenTries: 3000,
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       method: 'POST',
@@ -172,19 +180,76 @@ const hasUsableContext = ifElse({
   },
 });
 
+const loadIssueSource = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
+  config: {
+    name: 'Load issue source',
+    alwaysOutputData: true,
+    retryOnFail: true,
+    maxTries: 3,
+    waitBetweenTries: 2000,
+    credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
+    parameters: {
+      method: 'GET',
+      url: expr(
+        `={{ '${FOLKETS_SUPABASE_REST}/stortinget_issues?id=eq.' + encodeURIComponent($('Process one issue').item.json.id) + '&select=id,title,summary,henvisning,ai_summary_source_context,ai_summary_source_hash' }}`,
+      ),
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'supabaseApi',
+      options: { timeout: 60000 },
+    },
+  },
+  output: [{ id: '200329', title: 'Example sak', ai_summary_source_context: 'Kontekst' }],
+});
+
+const loadDocumentChunks = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
+  config: {
+    name: 'Load document chunks',
+    alwaysOutputData: true,
+    retryOnFail: true,
+    maxTries: 3,
+    waitBetweenTries: 2000,
+    credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
+    parameters: {
+      method: 'GET',
+      url: expr(
+        `={{ '${FOLKETS_SUPABASE_REST}/document_chunks?issue_id=eq.' + encodeURIComponent($('Process one issue').item.json.id) + '&select=document_id,chunk_index,content&order=document_id.asc,chunk_index.asc&limit=80' }}`,
+      ),
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'supabaseApi',
+      options: { timeout: 60000 },
+    },
+  },
+  output: [{ document_id: 'doc-1', chunk_index: 0, content: 'Utdrag' }],
+});
+
+const attachExtraContext = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Attach extra context',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      language: 'javaScript',
+      jsCode: ATTACH_EXTRA_CONTEXT_SCHEDULE_JS,
+    },
+  },
+  output: [{ id: '200329', title: 'Example sak', document_chunks: [] }],
+});
+
 const generateSummaryAgent = node({
   type: '@n8n/n8n-nodes-langchain.agent',
   version: 3.1,
   config: {
     name: 'Generate summary (Ollama)',
     onError: 'continueErrorOutput',
-    retryOnFail: true,
-    maxTries: 2,
-    waitBetweenTries: 5000,
     parameters: {
       promptType: 'define',
       text: expr('{{ $json.sakContextText }}'),
-      hasOutputParser: false,
+      hasOutputParser: true,
       options: {
         systemMessage: SUMMARY_SYSTEM_MESSAGE,
         maxIterations: 4,
@@ -224,10 +289,24 @@ const mapAgentOutput = node({
   ],
 });
 
-const hasValidSummary = ifElse({
+const prepareUpsertSql = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Prepare upsert SQL',
+    parameters: {
+      mode: 'runOnceForEachItem',
+      language: 'javaScript',
+      jsCode: PREPARE_UPSERT_SQL_JS,
+    },
+  },
+  output: [{ issueId: '200329', hva: 'Sakens innhold', gen_meta: { model: 'gemma4:26b' } }],
+});
+
+const hasIssueIdToSave = ifElse({
   version: 2.2,
   config: {
-    name: 'Has valid summary?',
+    name: 'Has issue id to save?',
     parameters: {
       looseTypeValidation: true,
       conditions: {
@@ -240,12 +319,6 @@ const hasValidSummary = ifElse({
             rightValue: '',
             operator: { type: 'string', operation: 'notEmpty' },
           },
-          {
-            id: 'not-skip',
-            leftValue: expr('{{ $json.skip }}'),
-            rightValue: true,
-            operator: { type: 'boolean', operation: 'notEquals' },
-          },
         ],
       },
     },
@@ -257,6 +330,9 @@ const saveSummaryToDb = node({
   version: 4.2,
   config: {
     name: 'Save summary to Supabase',
+    retryOnFail: true,
+    maxTries: 3,
+    waitBetweenTries: 2000,
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       method: 'POST',
@@ -274,24 +350,43 @@ const saveSummaryToDb = node({
   output: [{ ok: true }],
 });
 
-const triggerPollDraft = node({
-  type: 'n8n-nodes-base.httpRequest',
-  version: 4.2,
+const storeGenerationHash = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
   config: {
-    name: 'Trigger system poll draft',
+    name: 'Store generation hash',
     onError: 'continueRegularOutput',
     parameters: {
-      method: 'POST',
-      url: `${FOLKETS_N8N_BASE}/webhook/folkets-system-poll-draft`,
-      sendBody: true,
-      specifyBody: 'json',
-      jsonBody: expr(
-        '={{ JSON.stringify({ stortinget_issue_id: $("Map agent output").item.json.issueId }) }}',
-      ),
-      options: { timeout: 15000 },
+      mode: 'runOnceForAllItems',
+      language: 'javaScript',
+      jsCode: STORE_GENERATION_HASH_SCHEDULE_JS,
     },
   },
-  output: [{ ok: true }],
+  output: [{ issueId: '200329', hashStored: true }],
+});
+
+const logSkippedSave = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Log skipped save',
+    parameters: {
+      mode: 'manual',
+      includeOtherFields: true,
+      assignments: {
+        assignments: [
+          { id: 'outcome', name: 'outcome', value: 'skipped', type: 'string' },
+          {
+            id: 'message',
+            name: 'message',
+            value: 'Skipped AI summary save (no issue id)',
+            type: 'string',
+          },
+        ],
+      },
+    },
+  },
+  output: [{ outcome: 'skipped' }],
 });
 
 const logSummaryResult = node({
@@ -407,76 +502,79 @@ const normalizeIssueId = node({
             ),
             type: 'string',
           },
-        ],
-      },
-    },
-  },
-  output: [{ id: '200329' }],
-});
-
-const hasWebhookIssueId = ifElse({
-  version: 2.2,
-  config: {
-    name: 'Has webhook issue id?',
-    parameters: {
-      looseTypeValidation: true,
-      conditions: {
-        combinator: 'and',
-        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
-        conditions: [
           {
-            id: 'has-id',
-            leftValue: expr('{{ $json.id }}'),
-            rightValue: '',
-            operator: { type: 'string', operation: 'notEmpty' },
+            id: 'force',
+            name: 'force',
+            value: expr(
+              "{{ $json.body?.force === true || $json.body?.force === 'true' || $json.query?.force === 'true' }}",
+            ),
+            type: 'boolean',
           },
         ],
       },
     },
   },
+  output: [{ id: '200329', force: false }],
 });
 
-const fetchIssueContext = node({
+const fetchIssueById = node({
   type: 'n8n-nodes-base.httpRequest',
   version: 4.2,
   config: {
-    name: 'Fetch issue context',
+    name: 'Fetch issue by ID',
+    alwaysOutputData: true,
+    retryOnFail: true,
+    maxTries: 3,
+    waitBetweenTries: 2000,
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
-      method: 'POST',
-      url: rpcUrl('n8n_get_issue_ai_summary_context'),
+      method: 'GET',
+      url: expr(
+        `={{ '${FOLKETS_SUPABASE_REST}/stortinget_issues?id=eq.' + encodeURIComponent($json.id) + '&select=id,title,summary,henvisning,ai_summary_source_context,ai_summary_source_hash' }}`,
+      ),
       authentication: 'predefinedCredentialType',
       nodeCredentialType: 'supabaseApi',
-      sendBody: true,
-      specifyBody: 'json',
-      jsonBody: expr(
-        '={{ JSON.stringify({ p_issue_id: $("Normalize issue ID").item.json.id }) }}',
-      ),
       options: { timeout: 60000 },
     },
   },
-  output: [
-    {
-      id: '200329',
-      title: 'Example sak',
-      summary: 'Kort',
-      ai_summary_source_context: 'Kontekst',
-    },
-  ],
+  output: [{ id: '200329', title: 'Example sak', ai_summary_source_context: 'Kontekst' }],
 });
 
-const expandWebhookIssue = node({
+const loadDocumentChunksWebhook = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.2,
+  config: {
+    name: 'Load document chunks (webhook)',
+    alwaysOutputData: true,
+    retryOnFail: true,
+    maxTries: 3,
+    waitBetweenTries: 2000,
+    credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
+    parameters: {
+      method: 'GET',
+      url: expr(
+        `={{ '${FOLKETS_SUPABASE_REST}/document_chunks?issue_id=eq.' + encodeURIComponent($('Fetch issue by ID').item.json.id) + '&select=document_id,chunk_index,content&order=document_id.asc,chunk_index.asc&limit=80' }}`,
+      ),
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'supabaseApi',
+      options: { timeout: 60000 },
+    },
+  },
+  output: [{ document_id: 'doc-1', chunk_index: 0, content: 'Utdrag' }],
+});
+
+const attachExtraContextWebhook = node({
   type: 'n8n-nodes-base.code',
   version: 2,
   config: {
-    name: 'Expand webhook issue',
+    name: 'Attach extra context (webhook)',
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
-      jsCode: EXPAND_OR_EMPTY_JS,
+      jsCode: ATTACH_EXTRA_CONTEXT_WEBHOOK_JS,
     },
   },
-  output: [{ id: '200329', title: 'Example sak' }],
+  output: [{ id: '200329', title: 'Example sak', document_chunks: [] }],
 });
 
 const buildSakContextWebhook = node({
@@ -557,47 +655,16 @@ const logWebhookSkipped = node({
   output: [{ ok: true, skipped: true, reason: 'skipped' }],
 });
 
-const hasWebhookContext = ifElse({
-  version: 2.2,
-  config: {
-    name: 'Has webhook context?',
-    parameters: {
-      looseTypeValidation: true,
-      conditions: {
-        combinator: 'and',
-        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
-        conditions: [
-          {
-            id: 'has-id',
-            leftValue: expr('{{ $json.id }}'),
-            rightValue: '',
-            operator: { type: 'string', operation: 'notEmpty' },
-          },
-          {
-            id: 'enough-context',
-            leftValue: expr('{{ $json.contextChars }}'),
-            rightValue: 40,
-            operator: { type: 'number', operation: 'gt' },
-          },
-        ],
-      },
-    },
-  },
-});
-
 const generateSummaryAgentWebhook = node({
   type: '@n8n/n8n-nodes-langchain.agent',
   version: 3.1,
   config: {
     name: 'Generate summary (Ollama webhook)',
     onError: 'continueErrorOutput',
-    retryOnFail: true,
-    maxTries: 2,
-    waitBetweenTries: 5000,
     parameters: {
       promptType: 'define',
       text: expr('{{ $json.sakContextText }}'),
-      hasOutputParser: false,
+      hasOutputParser: true,
       options: {
         systemMessage: SUMMARY_SYSTEM_MESSAGE,
         maxIterations: 4,
@@ -637,10 +704,24 @@ const mapAgentOutputWebhook = node({
   ],
 });
 
-const hasValidWebhookSummary = ifElse({
+const prepareUpsertSqlWebhook = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Prepare upsert SQL (webhook)',
+    parameters: {
+      mode: 'runOnceForEachItem',
+      language: 'javaScript',
+      jsCode: PREPARE_UPSERT_SQL_JS,
+    },
+  },
+  output: [{ issueId: '200329', hva: 'Sakens innhold', gen_meta: { model: 'gemma4:26b' } }],
+});
+
+const hasWebhookIssueIdToSave = ifElse({
   version: 2.2,
   config: {
-    name: 'Has valid webhook summary?',
+    name: 'Has webhook issue id to save?',
     parameters: {
       looseTypeValidation: true,
       conditions: {
@@ -653,12 +734,6 @@ const hasValidWebhookSummary = ifElse({
             rightValue: '',
             operator: { type: 'string', operation: 'notEmpty' },
           },
-          {
-            id: 'not-skip',
-            leftValue: expr('{{ $json.skip }}'),
-            rightValue: true,
-            operator: { type: 'boolean', operation: 'notEquals' },
-          },
         ],
       },
     },
@@ -670,6 +745,7 @@ const storeGenerationHashWebhook = node({
   version: 2,
   config: {
     name: 'Store generation hash (webhook)',
+    onError: 'continueRegularOutput',
     parameters: {
       mode: 'runOnceForAllItems',
       language: 'javaScript',
@@ -684,6 +760,9 @@ const saveSummaryWebhook = node({
   version: 4.2,
   config: {
     name: 'Save summary (webhook)',
+    retryOnFail: true,
+    maxTries: 3,
+    waitBetweenTries: 2000,
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       method: 'POST',
@@ -701,66 +780,50 @@ const saveSummaryWebhook = node({
   output: [{ ok: true }],
 });
 
-const triggerPollDraftWebhook = node({
-  type: 'n8n-nodes-base.httpRequest',
-  version: 4.2,
-  config: {
-    name: 'Trigger system poll draft (webhook)',
-    onError: 'continueRegularOutput',
-    parameters: {
-      method: 'POST',
-      url: `${FOLKETS_N8N_BASE}/webhook/folkets-system-poll-draft`,
-      sendBody: true,
-      specifyBody: 'json',
-      jsonBody: expr(
-        '={{ JSON.stringify({ stortinget_issue_id: $("Map agent output (webhook)").item.json.issueId }) }}',
-      ),
-      options: { timeout: 15000 },
-    },
-  },
-  output: [{ ok: true }],
-});
-
 const inWorkflowError = createInWorkflowErrorNotify('folkets-ai-summary-backfill');
 
 sticky(
-  '## AI-sammendrag (Ollama)\n\nTom kø avbrytes uten Ollama-kall. Webhook henter `n8n_get_issue_ai_summary_context`. Etter lagring trigges system-poll-utkast.\n\n**Ikke** generer sammendrag uten sak-id. Error Trigger POSTer til /api/ops/n8n-notify; app-kø: /api/cron/n8n-retry.',
+  '## AI-sammendrag (Ollama)\n\nTom kø avbrytes uten Ollama-kall. Webhook henter sak + chunks via PostgREST GET. Hash-gate i workflow static data.\n\n**Ikke** generer sammendrag uten sak-id. Error Trigger POSTer til /api/ops/n8n-notify; app-kø: /api/cron/n8n-retry.',
   [scheduleTrigger, webhookTrigger],
   { color: 4 },
 );
 
+const afterSkippedSave = logSkippedSave.to(rateLimitPause).to(nextBatch(processOneIssue));
+
 const savedSchedulePath = saveSummaryToDb
-  .to(triggerPollDraft)
+  .to(storeGenerationHash)
   .to(logSummaryResult)
   .to(rateLimitPause)
   .to(nextBatch(processOneIssue));
 
-const summaryPipeline = buildSakContext.to(
-  hasUsableContext
-    .onTrue(
-      generateSummaryAgent.to(
-        mapAgentOutput.to(hasValidSummary.onTrue(savedSchedulePath).onFalse(logSkipSummary.to(nextBatch(processOneIssue)))),
-      ),
-    )
-    .onFalse(logSkipSummary.to(nextBatch(processOneIssue))),
-);
+const saveOrSkipSchedule = hasIssueIdToSave.onTrue(savedSchedulePath).onFalse(afterSkippedSave);
 
-const webhookSavedPath = saveSummaryWebhook
-  .to(storeGenerationHashWebhook)
-  .to(triggerPollDraftWebhook);
+const mapAndSaveSchedule = mapAgentOutput
+  .to(prepareUpsertSql)
+  .to(saveOrSkipSchedule);
 
-const webhookSummaryPipeline = hasWebhookContext
-  .onTrue(
-    generateSummaryAgentWebhook.to(
-      mapAgentOutputWebhook.to(
-        hasValidWebhookSummary.onTrue(webhookSavedPath).onFalse(logWebhookSkipped),
-      ),
-    ),
-  )
+const summaryPipeline = loadIssueSource
+  .to(loadDocumentChunks)
+  .to(attachExtraContext)
+  .to(buildSakContext)
+  .to(
+    hasUsableContext
+      .onTrue(generateSummaryAgent.to(mapAndSaveSchedule))
+      .onFalse(logSkipSummary.to(nextBatch(processOneIssue))),
+  );
+
+const webhookSavedPath = saveSummaryWebhook.to(storeGenerationHashWebhook);
+
+const webhookSaveOrSkip = hasWebhookIssueIdToSave
+  .onTrue(webhookSavedPath)
   .onFalse(logWebhookSkipped);
 
+const webhookMapAndSave = mapAgentOutputWebhook.to(prepareUpsertSqlWebhook).to(webhookSaveOrSkip);
+
+const webhookGeneratePath = generateSummaryAgentWebhook.to(webhookMapAndSave);
+
 const webhookAfterHashGate = shouldRegenerateWebhook
-  .onTrue(webhookSummaryPipeline)
+  .onTrue(webhookGeneratePath)
   .onFalse(logUnchangedWebhook);
 
 export default workflow(
@@ -774,17 +837,12 @@ export default workflow(
   .to(processOneIssue.onDone(batchRunComplete).onEachBatch(summaryPipeline))
   .add(webhookTrigger)
   .to(normalizeIssueId)
-  .to(
-    hasWebhookIssueId
-      .onTrue(
-        fetchIssueContext
-          .to(expandWebhookIssue)
-          .to(buildSakContextWebhook)
-          .to(hashGateWebhook)
-          .to(webhookAfterHashGate),
-      )
-      .onFalse(logWebhookSkipped),
-  )
+  .to(fetchIssueById)
+  .to(loadDocumentChunksWebhook)
+  .to(attachExtraContextWebhook)
+  .to(buildSakContextWebhook)
+  .to(hashGateWebhook)
+  .to(webhookAfterHashGate)
   .add(inWorkflowError.errorTrigger)
   .to(inWorkflowError.formatError.to(inWorkflowError.notifySettings).to(inWorkflowError.notifyAdmin))
   .group('Hent manglende saker', [backfillSettingsSchedule, fetchMissingSummaries, expandMissingIssues], {
