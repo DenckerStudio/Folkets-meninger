@@ -71,10 +71,15 @@ ${context || '(ingen kilder)'}
 Skriv et kort svar på norsk bokmål (2–5 setninger) som besvarer spørsmålet.
 - Bruk bare fakta som står i kildene.
 - Nevn kort hvilken sak/kilde du bygger på (tittel eller henvisning fra kilden).
-- Ikke kopier lange avsnitt ordrett fra kildene.
+- Ikke kopier lange avsnitt ordrett fra kildene, og ikke lim sammen flere kildetekster.
+- Hvis kildene ikke inneholder nok for å svare, si det eksplisitt i én setning (ikke gjenta irrelevant tekst).
 - Ikke start med "Basert på utdrag".
 
 Svar:`;
+}
+
+function normalizeWs(text: string): string {
+  return text.replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
 /** Detects the legacy eval harness that concatenated excerpts (incl. 1200-char chop). */
@@ -82,12 +87,33 @@ export function isDisallowedExcerptPassthrough(answer: string, excerpts: string[
   if (!answer.trim()) return false;
   if (DISALLOWED_PASSTHROUGH_PREFIX.test(answer)) return true;
   if (excerpts.length === 0) return false;
-  const joined = excerpts.join(' ').slice(0, 1200).trim();
+
   const body = answer.replace(DISALLOWED_PASSTHROUGH_PREFIX, '').trim();
+  const joined = excerpts.join(' ').slice(0, 1200).trim();
   if (joined.length > 40 && body === joined) return true;
-  if (joined.length > 200 && body.startsWith(joined.slice(0, Math.min(200, joined.length)))) {
+
+  const na = normalizeWs(body);
+  const nj = normalizeWs(joined);
+  if (nj.length > 200 && na.startsWith(nj.slice(0, Math.min(200, nj.length)))) {
     return true;
   }
+  // Mid-sentence chop at 1200 chars (klever judge pattern on v2-tema-009 / 023).
+  if (
+    na.length >= 400 &&
+    nj.startsWith(na) &&
+    na.length < nj.length &&
+    !/[.!?…][)"']?$/.test(body.trim())
+  ) {
+    return true;
+  }
+
+  let embeddedHeads = 0;
+  for (const ex of excerpts) {
+    const head = normalizeWs(ex).slice(0, 100);
+    if (head.length >= 40 && na.includes(head)) embeddedHeads += 1;
+  }
+  if (embeddedHeads >= 2 && na.length >= 250) return true;
+
   return false;
 }
 
