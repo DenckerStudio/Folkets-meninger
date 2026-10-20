@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
-import { createLocalReq, getPayload, type Payload } from 'payload';
+import { createLocalReq, getPayload, type Payload, type PayloadRequest } from 'payload';
 import config from '@/payload.config';
 import { seedTaxonomy } from '@/seed/seedBaseData';
 
 const databaseUri = process.env.DATABASE_URI?.trim();
 const runIntegration = process.env.CMS_INTEGRATION_TESTS === '1' && Boolean(databaseUri);
 
-async function countContentFeedbackJobs(payload: Payload): Promise<number> {
+async function countContentFeedbackJobs(
+  payload: Payload,
+  req?: PayloadRequest,
+): Promise<number> {
   const result = await payload.find({
     collection: 'payload-jobs',
     where: {
@@ -17,6 +20,7 @@ async function countContentFeedbackJobs(payload: Payload): Promise<number> {
     limit: 0,
     pagination: false,
     overrideAccess: true,
+    req,
   });
   return result.totalDocs;
 }
@@ -93,7 +97,7 @@ async function main() {
     req,
   });
 
-  const jobsInTx = await countContentFeedbackJobs(payload);
+  const jobsInTx = await countContentFeedbackJobs(payload, req);
   assert.equal(jobsInTx, jobsBeforeTx + 1);
 
   await payload.db.rollbackTransaction(tx);
