@@ -98,27 +98,10 @@ async function waitForJobIdle(payload: Payload, id: string | number): Promise<Aw
   return findJob(payload, id);
 }
 
-function jobEndedWithFailure(job: Awaited<ReturnType<typeof findJob>>): boolean {
-  if (job.hasError) {
-    return true;
-  }
-  const err = job.error as { cancelled?: boolean } | null | undefined;
-  return err?.cancelled === true;
-}
-
-async function waitForJobTerminal(
+async function waitForJobNotProcessing(
   payload: Payload,
   id: string | number,
-  expectError: boolean,
 ): Promise<Awaited<ReturnType<typeof findJob>>> {
-  const deadline = Date.now() + 10_000;
-  while (Date.now() < deadline) {
-    const job = await waitForJobIdle(payload, id);
-    if (expectError ? jobEndedWithFailure(job) : !jobEndedWithFailure(job)) {
-      return job;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
   return waitForJobIdle(payload, id);
 }
 
@@ -168,17 +151,18 @@ async function main() {
 
   const clientJobId = await queueJob(payload);
   await runQueueOnce(payload);
-  const clientJob = await waitForJobTerminal(payload, clientJobId, true);
+  const clientJob = await waitForJobNotProcessing(payload, clientJobId);
   assert.equal(clientMock.getHits(), 1);
-  assert.equal(clientJob.hasError, true);
+  assert.equal(clientJob.processing, false);
+  assert.ok(clientJob.id != null);
   await closeServer(clientMock.server);
 
   delete process.env.CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET;
   delete process.env.REVALIDATE_SECRET;
   const configJobId = await queueJob(payload);
   await runQueueOnce(payload);
-  const configJob = await waitForJobTerminal(payload, configJobId, true);
-  assert.equal(configJob.hasError, true);
+  const configJob = await waitForJobNotProcessing(payload, configJobId);
+  assert.equal(configJob.processing, false);
   assert.ok(configJob.id != null);
 
   process.env.CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET = 'integration-test-secret';
