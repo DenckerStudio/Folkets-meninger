@@ -102,10 +102,10 @@ function OppfangetPageHeader({ previewMock }: { previewMock?: boolean }) {
     <div>
       <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
         <Radar className="h-6 w-6 text-brand" aria-hidden />
-        Oppfanget
+        Research
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Meldinger, signaler og aksjoner vi har fanget opp. Tall og kilder er ikke verifisert her.
+        Klynger, kilder og research fra fangstpipelinen. Tall og kilder er ikke verifisert her.
       </p>
       {previewMock ? (
         <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
@@ -214,12 +214,12 @@ export default function AdminOppfangetClient({
           return;
         }
         if (!res.ok) {
-          setError('Kunne ikke laste oppfanget-liste');
+          setError('Kunne ikke laste research-liste');
           return;
         }
         const json: unknown = await res.json();
         if (!isOppfangetListResponse(json)) {
-          setError('Kunne ikke laste oppfanget-liste');
+          setError('Kunne ikke laste research-liste');
           return;
         }
         setData({

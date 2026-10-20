@@ -11,13 +11,13 @@ assert.equal(buildOppfangetListQueryString({}, 'mock'), 'preview=mock');
 
 assert.equal(
   buildOppfangetAdminPath({ q: 'zzz' }, 'mock'),
-  '/dashboard/admin/oppfanget?q=zzz&preview=mock',
+  '/dashboard/admin/research?q=zzz&preview=mock',
 );
 assert.equal(
   buildOppfangetAdminPath({}, 'mock'),
-  '/dashboard/admin/oppfanget?preview=mock',
+  '/dashboard/admin/research?preview=mock',
 );
-assert.equal(buildOppfangetAdminPath({}, null), '/dashboard/admin/oppfanget');
+assert.equal(buildOppfangetAdminPath({}, null), '/dashboard/admin/research');
 
 assert.deepEqual(
   parseOppfangetFilters({

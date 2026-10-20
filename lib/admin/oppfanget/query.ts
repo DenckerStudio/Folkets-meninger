@@ -65,5 +65,5 @@ export function buildOppfangetAdminPath(
   preview?: string | null,
 ): string {
   const query = buildOppfangetListQueryString(filters, preview);
-  return query ? `${routes.adminOppfanget}?${query}` : routes.adminOppfanget;
+  return query ? `${routes.adminResearch}?${query}` : routes.adminResearch;
 }
