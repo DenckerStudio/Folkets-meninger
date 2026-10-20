@@ -96,6 +96,7 @@ async function main() {
 
   process.env.PAYLOAD_SECRET = process.env.PAYLOAD_SECRET || 'ci-test-secret';
   process.env.CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET = 'integration-test-secret';
+  process.env.FM_WEB_URL = 'http://127.0.0.1';
 
   const payload = await getPayload({ config });
 
