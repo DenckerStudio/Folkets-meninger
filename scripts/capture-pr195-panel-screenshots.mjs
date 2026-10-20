@@ -13,7 +13,7 @@ const artifactDir = '/opt/cursor/artifacts/pr195';
 const sha =
   process.env.SCREENSHOT_SHA?.trim() ||
   execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
-const baseUrl = process.env.SCREENSHOT_BASE_URL ?? 'http://127.0.0.1:3456';
+const baseUrl = process.env.SCREENSHOT_BASE_URL ?? 'http://127.0.0.1:3460';
 
 const VURDERT_ID = '00000000-0000-4000-8000-000000000003';
 
@@ -132,11 +132,19 @@ async function mockContentFeedbackGet(page) {
 await mkdir(storeDir, { recursive: true });
 await mkdir(artifactDir, { recursive: true });
 
-if (process.env.SCREENSHOT_SKIP_BUILD !== '1') {
+if (process.env.SCREENSHOT_SKIP_ROUTE_WRITE !== '1') {
   await rm(root, { recursive: true, force: true });
   await mkdir(root, { recursive: true });
   await writeFile(join(root, 'page.tsx'), pageTsx);
   await writeFile(join(root, 'layout.tsx'), layout);
+}
+
+const useDev = process.env.SCREENSHOT_USE_DEV === '1';
+
+if (useDev) {
+  console.log(`SHA ${sha} — dev server capture (${baseUrl}); waiting for compile …`);
+  await new Promise((r) => setTimeout(r, 18_000));
+} else if (process.env.SCREENSHOT_SKIP_BUILD !== '1') {
   console.log(`SHA ${sha} — production build with ephemeral route …`);
   execSync('npm run build', { stdio: 'inherit' });
 } else {
@@ -151,7 +159,7 @@ async function waitForServer(maxMs = 120_000) {
   while (Date.now() - start < maxMs) {
     try {
       const res = await fetch(healthUrl);
-      if (res.ok || res.status === 404) return;
+      if (res.status >= 200 && res.status < 600) return;
     } catch {
       // retry
     }
@@ -189,9 +197,10 @@ for (const viewport of [
   });
   await mockContentFeedbackGet(page);
   await page.goto(`${baseUrl}/dev/pr195-capture`, {
-    waitUntil: 'networkidle',
+    waitUntil: 'domcontentloaded',
     timeout: 120_000,
   });
+  await page.waitForTimeout(800);
   for (const shot of shots) {
     await waitPanelReady(page, shot.id);
     const locator = page.locator(`#${shot.id}`);
@@ -210,9 +219,10 @@ for (const viewport of [
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await mockContentFeedbackGet(page);
   await page.goto(`${baseUrl}/dev/pr195-capture`, {
-    waitUntil: 'networkidle',
+    waitUntil: 'domcontentloaded',
     timeout: 120_000,
   });
+  await page.waitForTimeout(800);
   await waitPanelReady(page, 'panel-vurdert');
   await page.getByText('Vurdert', { exact: true }).waitFor({ timeout: 10_000 });
   const locator = page.locator('#panel-vurdert');
@@ -232,7 +242,5 @@ if (serverProc?.pid) {
     // already stopped
   }
 }
-if (process.env.SCREENSHOT_SKIP_BUILD !== '1') {
-  await rm(root, { recursive: true, force: true });
-}
+await rm(root, { recursive: true, force: true });
 console.log('Done — screenshots in', storeDir);
