@@ -27,7 +27,8 @@ for (const table of tables) {
   );
 }
 
-assert.match(migration, /CREATE EXTENSION IF NOT EXISTS vector/i);
+assert.match(migration, /CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public/i);
+assert.doesNotMatch(migration, /extensions\.vector/i);
 assert.match(migration, /vector\(1024\)/i);
 assert.match(migration, /bge-m3/i);
 assert.match(migration, /embedding_model/i);

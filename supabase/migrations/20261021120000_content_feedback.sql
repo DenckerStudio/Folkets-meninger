@@ -5,7 +5,8 @@
 BEGIN;
 SET LOCAL lock_timeout = '5s';
 
-CREATE EXTENSION IF NOT EXISTS vector;
+-- Prod (supabase-folkets): pgvector 0.8.0 i public — unqualified vector(1024) / vector_cosine_ops.
+CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 
 -- ---------------------------------------------------------------------------
 -- Tabeller

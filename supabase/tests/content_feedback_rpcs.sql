@@ -22,6 +22,20 @@ BEGIN
     RETURN;
   END IF;
 
+  IF (
+    SELECT n.nspname
+    FROM pg_extension e
+    JOIN pg_namespace n ON n.oid = e.extnamespace
+    WHERE e.extname = 'vector'
+  ) IS DISTINCT FROM 'public' THEN
+    RAISE EXCEPTION 'pgvector må være installert i public (ikke extensions-skjema)';
+  END IF;
+
+  -- Cosine-operator (<=>) må løses uten extensions.-prefiks (samme som i n8n SECURITY DEFINER-RPC-er)
+  IF (SELECT 1 - (v_vec::vector(1024) <=> v_vec::vector(1024))) <> 1 THEN
+    RAISE EXCEPTION 'vector cosine operator (<=>) løses ikke i public search_path';
+  END IF;
+
   -- Privilegier: anon/authenticated uten skriv/execute, service_role inn
   IF has_table_privilege('anon', 'public.content_feedback', 'INSERT,UPDATE,DELETE,TRUNCATE') THEN
     RAISE EXCEPTION 'anon skal ikke kunne skrive i content_feedback';
