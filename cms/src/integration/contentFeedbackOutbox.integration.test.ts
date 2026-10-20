@@ -133,11 +133,8 @@ async function main() {
     overrideAccess: true,
   });
 
-  if (typeof payload.db.destroy === 'function') {
-    await payload.db.destroy();
-  }
-
   console.log('cms integration/contentFeedbackOutbox.integration.test.ts ok');
+  process.exit(0);
 }
 
 void main().catch((error) => {

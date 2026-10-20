@@ -228,7 +228,8 @@ export const contentFeedbackAfterChange: CollectionAfterChangeHook = async ({
     }
 
     const main = await loadMainPost(req, postId);
-    const currentMainStatus = main?._status ?? 'draft';
+    const currentMainStatus =
+      typeof post._status === 'string' ? post._status : (main?._status ?? 'draft');
 
     const { becamePublished, becameArchived } = detectContentFeedbackTransition(
       before.status,
@@ -240,7 +241,7 @@ export const contentFeedbackAfterChange: CollectionAfterChangeHook = async ({
     }
 
     const categories = await categoryLabels(post, req);
-    const merged = { ...main, ...post, id: postId, origin: before.origin };
+    const merged = { ...(main ?? post), ...post, id: postId, origin: before.origin };
 
     if (becamePublished) {
       await queueContentFeedbackJob(req, buildJobInput('published', merged, categories));
