@@ -14,6 +14,7 @@ import { AI_SUMMARY_LABEL } from '@/lib/trust/ai-transparency';
 import { routes } from '@/lib/routes';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { useSakTooltipsEnabled } from '@/components/theme-provider';
+import { isDisplayableAiSummaryKostnad } from '@/lib/ai-summary/display-kostnad';
 import type { AiSummaryLegacy, AiSummaryV2, TopicCard } from '@/lib/ai-summary/types';
 
 type SummaryData =
@@ -341,8 +342,8 @@ function V2Summary({ data }: { data: AiSummaryV2 }) {
         {data.how_affected.trim() ? (
           <FactTile icon={HandHeart} label="Hvordan berøres de?" text={data.how_affected} />
         ) : null}
-        {data.kostnad?.trim() ? (
-          <FactTile icon={CircleDollarSign} label="Økonomi og kostnad" text={data.kostnad} />
+        {isDisplayableAiSummaryKostnad(data.kostnad) ? (
+          <FactTile icon={CircleDollarSign} label="Økonomi og kostnad" text={data.kostnad!} />
         ) : null}
       </FactTileGrid>
 
@@ -365,7 +366,9 @@ function LegacySummary({ data }: { data: AiSummaryLegacy }) {
       ) : null}
       <FactTileGrid>
         <FactTile icon={Users} label="Hvem berøres?" text={data.hvem} />
-        <FactTile icon={CircleDollarSign} label="Økonomi og kostnad" text={data.kostnad} />
+        {isDisplayableAiSummaryKostnad(data.kostnad) ? (
+          <FactTile icon={CircleDollarSign} label="Økonomi og kostnad" text={data.kostnad} />
+        ) : null}
       </FactTileGrid>
     </div>
   );

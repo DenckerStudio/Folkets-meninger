@@ -71,6 +71,13 @@ BEGIN
 END;
 $$;
 
+-- Backfill: RPC fallback previously copied kostnad into how_affected (idempotent).
+UPDATE public.issue_ai_summaries
+SET how_affected = NULL
+WHERE how_affected IS NOT NULL
+  AND kostnad IS NOT NULL
+  AND btrim(how_affected) = btrim(kostnad);
+
 REVOKE ALL ON FUNCTION public.n8n_upsert_issue_ai_summary(text, text, text, text, text, text, text, jsonb, text[]) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.n8n_upsert_issue_ai_summary(text, text, text, text, text, text, text, jsonb, text[]) TO service_role;
 

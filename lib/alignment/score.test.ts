@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { alignmentScore, buildAlignmentComparison } from './score';
+import { stortingetForShareForFolkAlignment } from './sak-vedtak';
 import type { SakVotering } from './types';
 
 assert.equal(alignmentScore(0.78, 0.7, true), 92);
@@ -77,12 +78,40 @@ const innstillingRejected = buildAlignmentComparison(
   ],
   { kortvedtak: 'Forslaget ble ikke vedtatt.' },
 );
-assert.match(innstillingRejected.headline, /Forslaget ble ikke vedtatt/);
+assert.match(innstillingRejected.headline, /«Forslaget ble ikke vedtatt»/);
 assert.match(innstillingRejected.headline, /79 % stemte for innstillingen, 21 % mot/);
 assert.doesNotMatch(innstillingRejected.headline, /vedtok forslaget/i);
 assert.doesNotMatch(innstillingRejected.headline, /Voteringen: 79 % For/i);
+assert.doesNotMatch(innstillingRejected.headline, /\.\./);
 assert.equal(innstillingRejected.stortinget?.adopted, false);
 assert.equal(innstillingRejected.stortingetBarLabels.for, 'For innstillingen');
 assert.equal(innstillingRejected.stortingetBarLabels.against, 'Mot innstillingen');
+
+const proposalVoteRejected = buildAlignmentComparison(
+  { for: 20, against: 80, abstain: 0, total: 100 },
+  [
+    {
+      votering_id: 2,
+      vedtatt: false,
+      antall_for: 30,
+      antall_mot: 70,
+      personlig_votering: true,
+      votering_tema: 'Forslaget',
+    },
+  ],
+  { kortvedtak: 'Forslaget ble ikke vedtatt.' },
+);
+assert.equal(
+  stortingetForShareForFolkAlignment({
+    stFor: 30,
+    stAgainst: 70,
+    stDecided: 100,
+    hasElectronicCounts: true,
+    proposalAdopted: false,
+    innstillingVote: false,
+  }),
+  0.3,
+);
+assert.ok((proposalVoteRejected.score ?? 0) >= 85);
 
 console.log('alignment score tests passed');

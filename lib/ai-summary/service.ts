@@ -28,12 +28,12 @@ export async function getAiSummaryFromDb(issueId: string): Promise<AiSummary | n
     const who_affected = data.who_affected?.trim();
     const how_affected = data.how_affected?.trim();
 
-    if (narrative && who_affected && how_affected) {
+    if (narrative && who_affected) {
       return {
         version: 2,
         narrative,
         who_affected,
-        how_affected,
+        how_affected: how_affected ?? '',
         topic_cards: parseTopicCards(data.topic_cards),
         labels: normalizeAiLabels(data.labels),
         hva: data.hva?.trim() || narrative,
