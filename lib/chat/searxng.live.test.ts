@@ -10,8 +10,11 @@ async function main() {
   assert.ok(result.results.length > 0, 'SearXNG returned no hits');
   assert.ok(result.results.every((hit) => hit.title && hit.url.startsWith('http')));
 
+  const artifactDir =
+    process.env.CURSOR_ARTIFACTS_DIR ?? join(process.cwd(), 'artifacts', 'ci-live-tests');
+  mkdirSync(artifactDir, { recursive: true });
   writeFileSync(
-    '/opt/cursor/artifacts/searxng-live.json',
+    join(artifactDir, 'searxng-live.json'),
     JSON.stringify(
       { ok: true, count: result.results.length, titles: result.results.map((hit) => hit.title) },
       null,
