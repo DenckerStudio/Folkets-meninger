@@ -24,9 +24,9 @@ assert.equal(mapClusterAndPollToDisplayStatus('blocked', null), 'avvist');
 assert.equal(
   inferIsSignalRow({
     clusterStatus: 'candidate',
-    metadata: { record_kind: 'signal' },
-    sourcesSignalOnly: false,
-    hasNonSignalSource: true,
+    metadata: null,
+    sourcesSignalOnly: true,
+    hasNonSignalSource: false,
   }),
   true,
 );

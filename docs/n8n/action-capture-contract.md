@@ -1,6 +1,6 @@
 # n8n — aksjonsfangst (action capture)
 
-Kontrakt mellom n8n-pipeline og Supabase `action_clusters` / `action_sources` (migrasjon `20261019235000_action_capture_tables.sql` + `20261021100000_action_capture_rpcs.sql`). **Ikke auto-appliert på prod** — Coolify Expert kjører SQL manuelt etter godkjenning.
+Kontrakt mellom n8n-pipeline og Supabase `action_clusters` / `action_sources` (migrasjoner `20261019235000_action_capture_tables.sql`, `20261021100000_action_capture_rpcs.sql`, `20261021110000_action_capture_atomic.sql`). **Ikke auto-appliert på prod** — Coolify Expert kjører SQL manuelt etter godkjenning.
 
 Admin-visning: `/dashboard/admin/oppfanget` (leser tabellene via `service_role` i fm-web).
 
@@ -18,7 +18,7 @@ Ingen anon/authenticated: RPC-ene er kun `GRANT EXECUTE` til `service_role`.
 ## Rekkefølge i pipeline
 
 1. **Innhenting** — RSS / Reddit / petition / SearXNG-noder produserer normaliserte kildeobjekter.
-2. **Klynging + klassifisering** — LLM/regler setter `action_key`, `action_type`, `action_name`, `description_nb`, ev. `sensitive_category`, `max_confidence`, `best_scale`, `independent_publishers`.
+2. **Klynging + klassifisering** — LLM/regler setter `action_key`, `action_type`, `action_name`, `description_nb`, ev. `sensitive_category`, `best_scale`.
 3. **`upsert_action_capture`** — skriv klynge + kilder (kan kjøres flere ganger per klynge når nye kilder dukker opp).
 4. **`set_action_cluster_verdict`** (valgfritt) — etter klassifisering/terskel-steg: sett `status` + `verdict_reasons` uten å overskrive admin-låste rader.
 5. **Senere** (utenfor denne migrasjonen) — system-poll / admin `publish_poll` kobler `poll_id` og setter `drafted` med `decided_by`.
@@ -62,6 +62,7 @@ Body (PostgREST):
       "pipeline_run_id": "n8n-run-uuid",
       "is_signal": false
     },
+    "first_seen_at": "2026-10-17T08:00:00Z",
     "last_seen_at": "2026-10-19T14:30:00Z"
   },
   "p_sources": [
@@ -94,10 +95,14 @@ Body (PostgREST):
 }
 ```
 
-### Feilkoder (`ok: false`)
+### Feil (validering)
 
-| `error` | Betydning |
-|---------|-----------|
+Ved valideringsfeil kaster RPC-en `RAISE EXCEPTION` med SQLSTATE **`22023`** (`invalid_parameter_value`). PostgREST svarer med **HTTP 400** og JSON som inneholder `code`, `message` og `details` — **ikke** `{ "ok": false, ... }`. Hele transaksjonen rulles tilbake (ingen delvise rader i `action_clusters` / `action_sources`).
+
+Meldingen starter med `action_capture <kode>:` (f.eks. `action_capture missing_item_key: kilde index 1 mangler item_key`). Kilder valideres **alle** før første skriv.
+
+| Kode i melding | Betydning |
+|----------------|-----------|
 | `invalid_cluster` | `p_cluster` er ikke et JSON-objekt |
 | `missing_action_key` | Mangler `action_key` |
 | `invalid_sources` | `p_sources` er ikke en array |
@@ -105,8 +110,9 @@ Body (PostgREST):
 | `missing_action_name` | Ny klynge uten `action_name` |
 | `missing_description_nb` | Ny klynge uten `description_nb` |
 | `invalid_cluster_status` | `status` utenfor CHECK-listen |
-| `missing_item_key` | Kilde uten `item_key` |
-| `invalid_source_type` | `source_type` må være `news_rss`, `reddit`, `petition`, `searxng` eller utelates |
+| `missing_item_key` | Kilde uten `item_key` (inkl. array-index) |
+| `missing_source_type` | Kilde uten `source_type` |
+| `invalid_source_type` | `source_type` må være `news_rss`, `reddit`, `petition`, `searxng` |
 | `missing_url_canonical` | Kilde uten URL |
 
 ## HTTP: `set_action_cluster_verdict` (valgfritt)
@@ -125,8 +131,10 @@ POST {SUPABASE_URL}/rest/v1/rpc/set_action_cluster_verdict
 
 Suksess: `{ "ok": true, "cluster_id": "uuid", "status": "below_threshold" }`
 
-| `error` | Betydning |
-|---------|-----------|
+Validerings- og forretningsfeil: samme som over — **HTTP 400**, SQLSTATE `22023`, melding `action_capture <kode>: ...` (ingen `ok: false`).
+
+| Kode i melding | Betydning |
+|----------------|-----------|
 | `missing_action_key` | Tom `p_action_key` |
 | `invalid_cluster_status` | Ugyldig `p_status` |
 | `invalid_verdict_reasons` | Ikke array/objekt |
@@ -151,14 +159,24 @@ Eksempel: `demonstrasjon:klimapolitikk-stortinget:2026`
 
 ### `item_key`
 
-Én rad per unik kilde uansett klynge:
+Én rad per unik kilde uansett klynge. **Anbefalt format:**
 
 ```text
-{source_type}:{url_canonical_normalisert}
+{source_type}:{stabil_id}
 ```
 
-- `url_canonical` — scheme + host + path, lowercase host, uten fragment, uten trailing `?`/`#` query der det er trygt (RSS: bruk canonical link; petition: side-URL; Reddit: full permalink; SearXNG: mål-URL etter redirect-oppløsning).
-- Samme artikkel som oppdateres skal beholde samme `item_key` (upsert).
+Eksempler: `reddit:t3_abc123`, `petition:change-12345`, `news_rss:guid-eller-hash`
+
+**Fallback** (hvis `item_key` utelates i payload): RPC genererer
+
+```text
+{source_type}:url:{url_canonical_normalisert}
+```
+
+(`url_canonical` lowercaset, trailing `/` fjernet.) Oppgitt `item_key` må starte med `{source_type}:`.
+
+- `url_canonical` — scheme + host + path, lowercase host, uten fragment der det er trygt.
+- Samme artikkel skal beholde samme `item_key` over tid (upsert).
 
 ## Feltmapping fra workflow-kilder
 
@@ -178,10 +196,26 @@ Klyngefelter fra klassifisering:
 | norsk sammendrag | `description_nb` |
 | tema / mål | `topic`, `target`, `target_kind` |
 | sensitiv kategori | `sensitive_category` |
-| modell-score | `max_confidence` (RPC tar høyeste verdi over tid) |
 | signaturer/medlemmer | `best_scale` jsonb |
-| unike domener | `independent_publishers` (union i RPC) |
 | nasjonal dekning | `national_coverage` |
+| første observasjon | `first_seen_at` (valgfri ISO-tid; backfill) |
+
+Etter hver upsert beregner RPC **`independent_publishers`** og **`max_confidence`** på nytt fra `action_sources` for klyngen: distinkte `publisher` der `signal_only = false`, og `max(confidence)` over kilder. Verdier i `p_cluster` for disse feltene brukes ikke til å akkumulere.
+
+### Signal (`signal_only`)
+
+**Eneste kilde i admin/Oppfanget:** kolonnen `action_sources.signal_only`. RPC setter den til `true` hvis minst én av disse i kilde-JSON:
+
+- `signal_only: true`
+- `record_kind: "signal"`
+- `metadata.is_signal: true` (eller toppnivå `is_signal: true` inntil n8n kun sender `metadata`)
+
+Ved re-upsert uten signal-felt i payload beholdes eksisterende `signal_only`.
+
+### Delvise oppdateringer / JSON `null`
+
+- Felt som **mangler** i `p_cluster` / kilde-objekt, eller er eksplisitt JSON-`null`, **overskriver ikke** lagrede verdier på cluster- eller kilde-rad (f.eks. `best_scale: null` tømmer ikke gammel skala).
+- Unntak: `signal_only` oppdateres bare når signal-indikatorer sendes (se over).
 
 ## Statusregler (viktig)
 
@@ -190,7 +224,18 @@ RPC **oppdaterer ikke** `status` / `verdict_reasons` på eksisterende klynge nå
 - `decided_by IS NOT NULL`, eller
 - `status IN ('drafted', 'rejected')`.
 
-Andre felt (navn, beskrivelse, `max_confidence`, kilder, `last_seen_at`, publisher-union) oppdateres fortsatt.
+Andre felt (navn, beskrivelse, kilder, `first_seen_at` / `last_seen_at`, recalc fra kilder) oppdateres fortsatt.
+
+### Dagstak (n8n klassifisering)
+
+Når daglig kvote for auto-utkast er nådd, sett via `set_action_cluster_verdict` (eller cluster `status` i capture der ikke låst):
+
+- `status`: `would_draft`
+- `verdict_reasons`: må inneholde strengen **`dagstak`** (f.eks. `["dagstak"]`) slik at admin kan filtrere senere.
+
+## Klyngesammenslåing (fremtid)
+
+Se `docs/n8n/action-cluster-merge-proposal.md` — **ikke** implementert ennå.
 
 ## Signaturer (Postgres)
 
