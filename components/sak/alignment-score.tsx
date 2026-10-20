@@ -15,7 +15,7 @@ import {
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { useSakTooltipsEnabled } from '@/components/theme-provider';
-import { buildAlignmentComparison } from '@/lib/alignment/score';
+import { buildAlignmentComparison, type SakVedtakContext } from '@/lib/alignment/score';
 import {
   ALIGNMENT_MIN_FOLK_VOTES,
   type AlignmentVerdict,
@@ -145,17 +145,19 @@ export function AlignmentScore({
   sakId,
   voteringer,
   initialFolk,
+  sakVedtak,
 }: {
   sakId: string;
   voteringer: SakVotering[];
   initialFolk: FolkVoteCounts;
+  sakVedtak?: SakVedtakContext;
 }) {
   const showTooltips = useSakTooltipsEnabled();
   const mounted = useIsClient();
   const [folk, setFolk] = useState<FolkVoteCounts>(initialFolk);
   const comparison = useMemo(
-    () => buildAlignmentComparison(folk, voteringer),
-    [folk, voteringer],
+    () => buildAlignmentComparison(folk, voteringer, sakVedtak),
+    [folk, voteringer, sakVedtak],
   );
   const badge = verdictCopy(comparison.verdict);
 
@@ -309,17 +311,17 @@ export function AlignmentScore({
                 restPercent={0}
                 restLabel="Ikke til stede"
               />
-              <div className="mt-2 flex justify-between text-xs font-medium text-muted-foreground">
+              <div className="mt-2 flex justify-between gap-2 text-xs font-medium text-muted-foreground">
                 <span className="text-emerald-600 dark:text-emerald-400">
-                  For {comparison.stortingetForPercent}%
+                  {comparison.stortingetBarLabels.for} {comparison.stortingetForPercent}%
                 </span>
-                <span>
+                <span className="text-center">
                   {comparison.stortinget.absent > 0
                     ? `${comparison.stortinget.absent} ikke til stede`
                     : 'Alle til stede stemte'}
                 </span>
                 <span className="text-rose-600 dark:text-rose-400">
-                  Mot {comparison.stortingetAgainstPercent}%
+                  {comparison.stortingetBarLabels.against} {comparison.stortingetAgainstPercent}%
                 </span>
               </div>
             </>
