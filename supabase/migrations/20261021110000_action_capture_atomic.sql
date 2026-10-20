@@ -29,12 +29,20 @@ DECLARE
   v_src jsonb;
   v_item_key text;
   v_source_type text;
+  v_url_canonical text;
   v_excerpt text;
-  v_publishers text[];
-  v_incoming_publishers text[];
-  v_incoming_confidence numeric(3, 2);
   v_is_insert boolean;
   v_src_idx int := 0;
+  v_signal_only boolean;
+  v_incoming_first_seen timestamptz;
+  v_incoming_last_seen timestamptz;
+  v_publisher text;
+  v_title text;
+  v_published_at timestamptz;
+  v_fetched_at timestamptz;
+  v_src_status text;
+  v_confidence numeric(3, 2);
+  v_classification jsonb;
 BEGIN
   IF p_cluster IS NULL OR jsonb_typeof(p_cluster) <> 'object' THEN
     RAISE EXCEPTION 'action_capture invalid_cluster: p_cluster må være et JSON-objekt'
@@ -58,7 +66,6 @@ BEGIN
   v_action_name := nullif(btrim(p_cluster ->> 'action_name'), '');
   v_description_nb := nullif(btrim(p_cluster ->> 'description_nb'), '');
   v_incoming_status := nullif(btrim(p_cluster ->> 'status'), '');
-  v_incoming_confidence := NULLIF(p_cluster ->> 'max_confidence', '')::numeric(3, 2);
 
   IF v_incoming_status IS NOT NULL
     AND v_incoming_status NOT IN (
@@ -75,10 +82,22 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
-  IF p_cluster ? 'independent_publishers'
+  IF (p_cluster ? 'independent_publishers')
     AND jsonb_typeof(p_cluster -> 'independent_publishers') <> 'array' THEN
     RAISE EXCEPTION 'action_capture invalid_independent_publishers: må være JSON-array'
       USING ERRCODE = '22023';
+  END IF;
+
+  IF (p_cluster ? 'first_seen_at')
+    AND jsonb_typeof(p_cluster -> 'first_seen_at') <> 'null'
+    AND nullif(btrim(p_cluster ->> 'first_seen_at'), '') IS NOT NULL THEN
+    v_incoming_first_seen := (p_cluster ->> 'first_seen_at')::timestamptz;
+  END IF;
+
+  IF (p_cluster ? 'last_seen_at')
+    AND jsonb_typeof(p_cluster -> 'last_seen_at') <> 'null'
+    AND nullif(btrim(p_cluster ->> 'last_seen_at'), '') IS NOT NULL THEN
+    v_incoming_last_seen := (p_cluster ->> 'last_seen_at')::timestamptz;
   END IF;
 
   SELECT * INTO v_existing
@@ -110,16 +129,12 @@ BEGIN
   END IF;
 
   FOR v_src IN SELECT value FROM jsonb_array_elements(p_sources) AS t(value) LOOP
-    v_item_key := btrim(v_src ->> 'item_key');
     v_source_type := nullif(btrim(v_src ->> 'source_type'), '');
-
-    IF v_item_key IS NULL OR v_item_key = '' THEN
-      RAISE EXCEPTION 'action_capture missing_item_key: kilde index % mangler item_key', v_src_idx
-        USING ERRCODE = '22023';
-    END IF;
+    v_url_canonical := nullif(btrim(v_src ->> 'url_canonical'), '');
+    v_item_key := nullif(btrim(v_src ->> 'item_key'), '');
 
     IF v_source_type IS NULL THEN
-      RAISE EXCEPTION 'action_capture missing_source_type: kilde index % (item_key=%) mangler source_type', v_src_idx, v_item_key
+      RAISE EXCEPTION 'action_capture missing_source_type: kilde index % mangler source_type', v_src_idx
         USING ERRCODE = '22023';
     END IF;
 
@@ -128,25 +143,22 @@ BEGIN
         USING ERRCODE = '22023';
     END IF;
 
-    IF nullif(btrim(v_src ->> 'url_canonical'), '') IS NULL THEN
-      RAISE EXCEPTION 'action_capture missing_url_canonical: kilde index % (item_key=%) mangler url_canonical', v_src_idx, v_item_key
+    IF v_url_canonical IS NULL THEN
+      RAISE EXCEPTION 'action_capture missing_url_canonical: kilde index % mangler url_canonical', v_src_idx
+        USING ERRCODE = '22023';
+    END IF;
+
+    IF v_item_key IS NULL THEN
+      v_item_key := v_source_type || ':url:' || lower(regexp_replace(v_url_canonical, '/$', ''));
+    ELSIF position(v_source_type || ':' in v_item_key) <> 1 THEN
+      RAISE EXCEPTION 'action_capture invalid_item_key: kilde index % item_key må starte med %:', v_src_idx, v_source_type
         USING ERRCODE = '22023';
     END IF;
 
     v_src_idx := v_src_idx + 1;
   END LOOP;
 
-  -- Skriv fase (alle kilder validert)
   IF v_is_new THEN
-    v_incoming_publishers := COALESCE(
-      (
-        SELECT array_agg(btrim(value))
-        FROM jsonb_array_elements_text(COALESCE(p_cluster -> 'independent_publishers', '[]'::jsonb)) AS t(value)
-        WHERE btrim(value) <> ''
-      ),
-      '{}'::text[]
-    );
-
     INSERT INTO public.action_clusters (
       action_key,
       action_type,
@@ -165,30 +177,69 @@ BEGIN
       related_issue_id,
       related_similarity,
       metadata,
+      first_seen_at,
       last_seen_at
     )
     VALUES (
       v_action_key,
       v_action_type,
       v_action_name,
-      nullif(btrim(p_cluster ->> 'topic'), ''),
-      nullif(btrim(p_cluster ->> 'target'), ''),
-      nullif(btrim(p_cluster ->> 'target_kind'), ''),
+      CASE
+        WHEN (p_cluster ? 'topic') AND jsonb_typeof(p_cluster -> 'topic') <> 'null'
+        THEN nullif(btrim(p_cluster ->> 'topic'), '')
+        ELSE NULL
+      END,
+      CASE
+        WHEN (p_cluster ? 'target') AND jsonb_typeof(p_cluster -> 'target') <> 'null'
+        THEN nullif(btrim(p_cluster ->> 'target'), '')
+        ELSE NULL
+      END,
+      CASE
+        WHEN (p_cluster ? 'target_kind') AND jsonb_typeof(p_cluster -> 'target_kind') <> 'null'
+        THEN nullif(btrim(p_cluster ->> 'target_kind'), '')
+        ELSE NULL
+      END,
       v_description_nb,
-      nullif(btrim(p_cluster ->> 'sensitive_category'), ''),
+      CASE
+        WHEN (p_cluster ? 'sensitive_category') AND jsonb_typeof(p_cluster -> 'sensitive_category') <> 'null'
+        THEN nullif(btrim(p_cluster ->> 'sensitive_category'), '')
+        ELSE NULL
+      END,
       COALESCE(v_incoming_status, 'candidate'),
-      COALESCE(p_cluster -> 'verdict_reasons', '[]'::jsonb),
-      v_incoming_publishers,
-      COALESCE((p_cluster ->> 'national_coverage')::boolean, false),
-      v_incoming_confidence,
-      p_cluster -> 'best_scale',
-      nullif(btrim(p_cluster ->> 'related_issue_id'), ''),
-      NULLIF(p_cluster ->> 'related_similarity', '')::numeric(4, 3),
-      COALESCE(p_cluster -> 'metadata', '{}'::jsonb),
-      COALESCE(
-        NULLIF(p_cluster ->> 'last_seen_at', '')::timestamptz,
-        now()
-      )
+      CASE
+        WHEN (p_cluster ? 'verdict_reasons') AND jsonb_typeof(p_cluster -> 'verdict_reasons') <> 'null'
+        THEN p_cluster -> 'verdict_reasons'
+        ELSE '[]'::jsonb
+      END,
+      '{}'::text[],
+      CASE
+        WHEN (p_cluster ? 'national_coverage') AND jsonb_typeof(p_cluster -> 'national_coverage') <> 'null'
+        THEN (p_cluster ->> 'national_coverage')::boolean
+        ELSE false
+      END,
+      NULL,
+      CASE
+        WHEN (p_cluster ? 'best_scale') AND jsonb_typeof(p_cluster -> 'best_scale') <> 'null'
+        THEN p_cluster -> 'best_scale'
+        ELSE NULL
+      END,
+      CASE
+        WHEN (p_cluster ? 'related_issue_id') AND jsonb_typeof(p_cluster -> 'related_issue_id') <> 'null'
+        THEN nullif(btrim(p_cluster ->> 'related_issue_id'), '')
+        ELSE NULL
+      END,
+      CASE
+        WHEN (p_cluster ? 'related_similarity') AND jsonb_typeof(p_cluster -> 'related_similarity') <> 'null'
+        THEN (p_cluster ->> 'related_similarity')::numeric(4, 3)
+        ELSE NULL
+      END,
+      CASE
+        WHEN (p_cluster ? 'metadata') AND jsonb_typeof(p_cluster -> 'metadata') <> 'null'
+        THEN p_cluster -> 'metadata'
+        ELSE '{}'::jsonb
+      END,
+      COALESCE(v_incoming_first_seen, now()),
+      COALESCE(v_incoming_last_seen, now())
     )
     RETURNING id, status INTO v_cluster_id, v_result_status;
   ELSE
@@ -197,33 +248,31 @@ BEGIN
       OR v_existing.status IN ('drafted', 'rejected');
     v_result_status := v_existing.status;
 
-    v_incoming_publishers := COALESCE(
-      (
-        SELECT array_agg(btrim(value))
-        FROM jsonb_array_elements_text(COALESCE(p_cluster -> 'independent_publishers', '[]'::jsonb)) AS t(value)
-        WHERE btrim(value) <> ''
-      ),
-      '{}'::text[]
-    );
-
-    v_publishers := (
-      SELECT COALESCE(array_agg(DISTINCT x ORDER BY x), '{}'::text[])
-      FROM unnest(v_existing.independent_publishers || v_incoming_publishers) AS x
-      WHERE x IS NOT NULL AND btrim(x) <> ''
-    );
-
     UPDATE public.action_clusters
     SET
       action_type = COALESCE(v_action_type, action_type),
       action_name = COALESCE(v_action_name, action_name),
-      topic = COALESCE(nullif(btrim(p_cluster ->> 'topic'), ''), topic),
-      target = COALESCE(nullif(btrim(p_cluster ->> 'target'), ''), target),
-      target_kind = COALESCE(nullif(btrim(p_cluster ->> 'target_kind'), ''), target_kind),
+      topic = CASE
+        WHEN (p_cluster ? 'topic') AND jsonb_typeof(p_cluster -> 'topic') <> 'null'
+        THEN nullif(btrim(p_cluster ->> 'topic'), '')
+        ELSE topic
+      END,
+      target = CASE
+        WHEN (p_cluster ? 'target') AND jsonb_typeof(p_cluster -> 'target') <> 'null'
+        THEN nullif(btrim(p_cluster ->> 'target'), '')
+        ELSE target
+      END,
+      target_kind = CASE
+        WHEN (p_cluster ? 'target_kind') AND jsonb_typeof(p_cluster -> 'target_kind') <> 'null'
+        THEN nullif(btrim(p_cluster ->> 'target_kind'), '')
+        ELSE target_kind
+      END,
       description_nb = COALESCE(v_description_nb, description_nb),
-      sensitive_category = COALESCE(
-        nullif(btrim(p_cluster ->> 'sensitive_category'), ''),
-        sensitive_category
-      ),
+      sensitive_category = CASE
+        WHEN (p_cluster ? 'sensitive_category') AND jsonb_typeof(p_cluster -> 'sensitive_category') <> 'null'
+        THEN nullif(btrim(p_cluster ->> 'sensitive_category'), '')
+        ELSE sensitive_category
+      END,
       status = CASE
         WHEN v_locked THEN status
         WHEN v_incoming_status IS NOT NULL THEN v_incoming_status
@@ -231,40 +280,97 @@ BEGIN
       END,
       verdict_reasons = CASE
         WHEN v_locked THEN verdict_reasons
-        WHEN p_cluster ? 'verdict_reasons' THEN COALESCE(p_cluster -> 'verdict_reasons', '[]'::jsonb)
+        WHEN (p_cluster ? 'verdict_reasons') AND jsonb_typeof(p_cluster -> 'verdict_reasons') <> 'null'
+        THEN p_cluster -> 'verdict_reasons'
         ELSE verdict_reasons
       END,
-      independent_publishers = v_publishers,
       national_coverage = CASE
-        WHEN p_cluster ? 'national_coverage' THEN COALESCE((p_cluster ->> 'national_coverage')::boolean, national_coverage)
+        WHEN (p_cluster ? 'national_coverage') AND jsonb_typeof(p_cluster -> 'national_coverage') <> 'null'
+        THEN (p_cluster ->> 'national_coverage')::boolean
         ELSE national_coverage
       END,
-      max_confidence = (
-        SELECT max(v)
-        FROM unnest(ARRAY[max_confidence, v_incoming_confidence]) AS t(v)
-        WHERE v IS NOT NULL
-      ),
-      best_scale = COALESCE(p_cluster -> 'best_scale', best_scale),
-      related_issue_id = COALESCE(nullif(btrim(p_cluster ->> 'related_issue_id'), ''), related_issue_id),
-      related_similarity = COALESCE(
-        NULLIF(p_cluster ->> 'related_similarity', '')::numeric(4, 3),
-        related_similarity
-      ),
+      best_scale = CASE
+        WHEN (p_cluster ? 'best_scale') AND jsonb_typeof(p_cluster -> 'best_scale') <> 'null'
+        THEN p_cluster -> 'best_scale'
+        ELSE best_scale
+      END,
+      related_issue_id = CASE
+        WHEN (p_cluster ? 'related_issue_id') AND jsonb_typeof(p_cluster -> 'related_issue_id') <> 'null'
+        THEN nullif(btrim(p_cluster ->> 'related_issue_id'), '')
+        ELSE related_issue_id
+      END,
+      related_similarity = CASE
+        WHEN (p_cluster ? 'related_similarity') AND jsonb_typeof(p_cluster -> 'related_similarity') <> 'null'
+        THEN (p_cluster ->> 'related_similarity')::numeric(4, 3)
+        ELSE related_similarity
+      END,
       metadata = CASE
-        WHEN p_cluster ? 'metadata' THEN COALESCE(metadata, '{}'::jsonb) || COALESCE(p_cluster -> 'metadata', '{}'::jsonb)
+        WHEN (p_cluster ? 'metadata') AND jsonb_typeof(p_cluster -> 'metadata') <> 'null'
+        THEN metadata || p_cluster -> 'metadata'
         ELSE metadata
+      END,
+      first_seen_at = CASE
+        WHEN v_incoming_first_seen IS NOT NULL THEN LEAST(first_seen_at, v_incoming_first_seen)
+        ELSE first_seen_at
       END,
       last_seen_at = GREATEST(
         last_seen_at,
-        COALESCE(NULLIF(p_cluster ->> 'last_seen_at', '')::timestamptz, now())
+        COALESCE(v_incoming_last_seen, now())
       )
     WHERE id = v_cluster_id
     RETURNING status INTO v_result_status;
   END IF;
 
   FOR v_src IN SELECT value FROM jsonb_array_elements(p_sources) AS t(value) LOOP
-    v_item_key := btrim(v_src ->> 'item_key');
+    v_source_type := nullif(btrim(v_src ->> 'source_type'), '');
+    v_url_canonical := btrim(v_src ->> 'url_canonical');
+    v_item_key := nullif(btrim(v_src ->> 'item_key'), '');
+    IF v_item_key IS NULL THEN
+      v_item_key := v_source_type || ':url:' || lower(regexp_replace(v_url_canonical, '/$', ''));
+    END IF;
+
+    v_signal_only := COALESCE((v_src ->> 'signal_only')::boolean, false)
+      OR nullif(btrim(v_src ->> 'record_kind'), '') = 'signal'
+      OR COALESCE((v_src -> 'metadata' ->> 'is_signal')::boolean, false)
+      OR COALESCE((v_src ->> 'is_signal')::boolean, false);
+
     v_excerpt := left(btrim(COALESCE(v_src ->> 'excerpt', '')), 300);
+
+    v_publisher := CASE
+      WHEN (v_src ? 'publisher') AND jsonb_typeof(v_src -> 'publisher') <> 'null'
+      THEN nullif(btrim(v_src ->> 'publisher'), '')
+      ELSE NULL
+    END;
+    v_title := CASE
+      WHEN (v_src ? 'title') AND jsonb_typeof(v_src -> 'title') <> 'null'
+      THEN nullif(btrim(v_src ->> 'title'), '')
+      ELSE NULL
+    END;
+    v_published_at := CASE
+      WHEN (v_src ? 'published_at') AND jsonb_typeof(v_src -> 'published_at') <> 'null'
+      THEN nullif(v_src ->> 'published_at', '')::timestamptz
+      ELSE NULL
+    END;
+    v_fetched_at := CASE
+      WHEN (v_src ? 'fetched_at') AND jsonb_typeof(v_src -> 'fetched_at') <> 'null'
+      THEN nullif(v_src ->> 'fetched_at', '')::timestamptz
+      ELSE now()
+    END;
+    v_src_status := CASE
+      WHEN (v_src ? 'status') AND jsonb_typeof(v_src -> 'status') <> 'null'
+      THEN nullif(btrim(v_src ->> 'status'), '')
+      ELSE NULL
+    END;
+    v_confidence := CASE
+      WHEN (v_src ? 'confidence') AND jsonb_typeof(v_src -> 'confidence') <> 'null'
+      THEN nullif(v_src ->> 'confidence', '')::numeric(3, 2)
+      ELSE NULL
+    END;
+    v_classification := CASE
+      WHEN (v_src ? 'classification') AND jsonb_typeof(v_src -> 'classification') <> 'null'
+      THEN v_src -> 'classification'
+      ELSE NULL
+    END;
 
     WITH upserted AS (
       INSERT INTO public.action_sources (
@@ -285,31 +391,38 @@ BEGIN
       VALUES (
         v_cluster_id,
         v_item_key,
-        btrim(v_src ->> 'url_canonical'),
-        nullif(btrim(v_src ->> 'source_type'), ''),
-        nullif(btrim(v_src ->> 'publisher'), ''),
-        COALESCE((v_src ->> 'signal_only')::boolean, false),
-        nullif(btrim(v_src ->> 'title'), ''),
+        v_url_canonical,
+        v_source_type,
+        v_publisher,
+        v_signal_only,
+        v_title,
         NULLIF(v_excerpt, ''),
-        NULLIF(v_src ->> 'published_at', '')::timestamptz,
-        COALESCE(NULLIF(v_src ->> 'fetched_at', '')::timestamptz, now()),
-        nullif(btrim(v_src ->> 'status'), ''),
-        NULLIF(v_src ->> 'confidence', '')::numeric(3, 2),
-        v_src -> 'classification'
+        v_published_at,
+        v_fetched_at,
+        v_src_status,
+        v_confidence,
+        v_classification
       )
       ON CONFLICT (item_key) DO UPDATE SET
         cluster_id = EXCLUDED.cluster_id,
-        url_canonical = EXCLUDED.url_canonical,
-        source_type = EXCLUDED.source_type,
-        publisher = EXCLUDED.publisher,
-        signal_only = EXCLUDED.signal_only,
-        title = EXCLUDED.title,
-        excerpt = EXCLUDED.excerpt,
-        published_at = EXCLUDED.published_at,
-        fetched_at = EXCLUDED.fetched_at,
-        status = EXCLUDED.status,
-        confidence = EXCLUDED.confidence,
-        classification = EXCLUDED.classification
+        url_canonical = COALESCE(EXCLUDED.url_canonical, action_sources.url_canonical),
+        source_type = COALESCE(EXCLUDED.source_type, action_sources.source_type),
+        publisher = COALESCE(EXCLUDED.publisher, action_sources.publisher),
+        signal_only = CASE
+          WHEN (v_src ? 'signal_only')
+            OR (v_src ? 'record_kind')
+            OR (v_src ? 'metadata')
+            OR (v_src ? 'is_signal')
+          THEN EXCLUDED.signal_only
+          ELSE action_sources.signal_only
+        END,
+        title = COALESCE(EXCLUDED.title, action_sources.title),
+        excerpt = COALESCE(EXCLUDED.excerpt, action_sources.excerpt),
+        published_at = COALESCE(EXCLUDED.published_at, action_sources.published_at),
+        fetched_at = COALESCE(EXCLUDED.fetched_at, action_sources.fetched_at),
+        status = COALESCE(EXCLUDED.status, action_sources.status),
+        confidence = COALESCE(EXCLUDED.confidence, action_sources.confidence),
+        classification = COALESCE(EXCLUDED.classification, action_sources.classification)
       RETURNING (xmax = 0) AS inserted
     )
     SELECT inserted INTO v_is_insert FROM upserted;
@@ -320,6 +433,26 @@ BEGIN
       v_updated := v_updated + 1;
     END IF;
   END LOOP;
+
+  UPDATE public.action_clusters c
+  SET
+    independent_publishers = COALESCE(
+      (
+        SELECT array_agg(DISTINCT s.publisher ORDER BY s.publisher)
+        FROM public.action_sources s
+        WHERE s.cluster_id = c.id
+          AND s.signal_only = false
+          AND s.publisher IS NOT NULL
+          AND btrim(s.publisher) <> ''
+      ),
+      '{}'::text[]
+    ),
+    max_confidence = (
+      SELECT max(s.confidence)
+      FROM public.action_sources s
+      WHERE s.cluster_id = c.id
+    )
+  WHERE c.id = v_cluster_id;
 
   RETURN jsonb_build_object(
     'ok', true,

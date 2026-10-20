@@ -95,3 +95,114 @@ BEGIN
 
   RAISE NOTICE 'action_capture_atomic.sql: OK';
 END $$;
+
+-- JSON null / manglende felt: ikke overskriv lagrede verdier (best_scale, kilde-felt).
+DO $$
+DECLARE
+  v_action_key text := 'test:cursor-action-capture-merge-null';
+  v_scale jsonb := jsonb_build_object('value', 99, 'unit', 'stk');
+  v_title text;
+  v_sig boolean;
+  v_first_seen timestamptz;
+  v_publishers text[];
+  v_max_conf numeric;
+BEGIN
+  IF to_regprocedure('public.upsert_action_capture(jsonb,jsonb)') IS NULL THEN
+    RETURN;
+  END IF;
+
+  DELETE FROM public.action_clusters WHERE action_key = v_action_key;
+
+  PERFORM public.upsert_action_capture(
+    jsonb_build_object(
+      'action_key', v_action_key,
+      'action_type', 'opprop',
+      'action_name', 'Null-test',
+      'description_nb', 'Beskrivelse',
+      'best_scale', v_scale,
+      'first_seen_at', '2020-01-01T00:00:00Z'
+    ),
+    jsonb_build_array(
+      jsonb_build_object(
+        'item_key', 'news_rss:https://example.com/null-a',
+        'url_canonical', 'https://example.com/null-a',
+        'source_type', 'news_rss',
+        'publisher', 'nrk.no',
+        'title', 'Behold tittel',
+        'confidence', 0.4,
+        'signal_only', false
+      ),
+      jsonb_build_object(
+        'item_key', 'reddit:t3_signal',
+        'url_canonical', 'https://reddit.com/r/x/comments/abc',
+        'source_type', 'reddit',
+        'publisher', 'reddit.com',
+        'record_kind', 'signal',
+        'confidence', 0.9
+      )
+    )
+  );
+
+  PERFORM public.upsert_action_capture(
+    jsonb_build_object('action_key', v_action_key, 'best_scale', jsonb_null),
+    jsonb_build_array(
+      jsonb_build_object(
+        'item_key', 'news_rss:https://example.com/null-a',
+        'url_canonical', 'https://example.com/null-a',
+        'source_type', 'news_rss'
+      )
+    )
+  );
+
+  SELECT best_scale INTO v_scale FROM public.action_clusters WHERE action_key = v_action_key;
+  IF v_scale IS NULL OR (v_scale ->> 'value')::int <> 99 THEN
+    RAISE EXCEPTION 'best_scale skulle ikke nullstilles av json null, fikk %', v_scale;
+  END IF;
+
+  SELECT title INTO v_title
+  FROM public.action_sources
+  WHERE item_key = 'news_rss:https://example.com/null-a';
+
+  IF v_title IS DISTINCT FROM 'Behold tittel' THEN
+    RAISE EXCEPTION 'kilde-tittel skulle bevares ved delvis upsert, fikk %', v_title;
+  END IF;
+
+  SELECT signal_only INTO v_sig FROM public.action_sources WHERE item_key = 'reddit:t3_signal';
+  IF v_sig IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'record_kind=signal skal sette signal_only=true';
+  END IF;
+
+  SELECT independent_publishers, max_confidence
+  INTO v_publishers, v_max_conf
+  FROM public.action_clusters
+  WHERE action_key = v_action_key;
+
+  IF v_publishers IS NULL OR NOT ('nrk.no' = ANY (v_publishers)) OR array_length(v_publishers, 1) <> 1 THEN
+    RAISE EXCEPTION 'independent_publishers skal kun telle ikke-signal kilder, fikk %', v_publishers;
+  END IF;
+
+  IF v_max_conf IS NULL OR v_max_conf <> 0.9 THEN
+    RAISE EXCEPTION 'max_confidence skal være max fra kilder (0.9), fikk %', v_max_conf;
+  END IF;
+
+  SELECT first_seen_at INTO v_first_seen FROM public.action_clusters WHERE action_key = v_action_key;
+  IF v_first_seen::date <> date '2020-01-01' THEN
+    RAISE EXCEPTION 'first_seen_at fra insert skulle være 2020-01-01, fikk %', v_first_seen;
+  END IF;
+
+  PERFORM public.upsert_action_capture(
+    jsonb_build_object(
+      'action_key', v_action_key,
+      'first_seen_at', '2019-06-01T12:00:00Z'
+    ),
+    '[]'::jsonb
+  );
+
+  SELECT first_seen_at INTO v_first_seen FROM public.action_clusters WHERE action_key = v_action_key;
+  IF v_first_seen::date <> date '2019-06-01' THEN
+    RAISE EXCEPTION 'first_seen_at skulle LEAST til 2019-06-01, fikk %', v_first_seen;
+  END IF;
+
+  DELETE FROM public.action_clusters WHERE action_key = v_action_key;
+  RAISE NOTICE 'action_capture_atomic.sql: merge/null OK';
+END $$;
