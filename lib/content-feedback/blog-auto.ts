@@ -1,5 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServiceSupabase } from '@/lib/supabase';
+import type {
+  LogBlogContentFeedbackResult,
+  LogBlogContentFeedbackStatus,
+} from '@/lib/content-feedback/types';
 
 export type BlogContentFeedbackEvent = 'published' | 'deleted' | 'archived';
 
@@ -15,21 +19,8 @@ export type BlogContentFeedbackPayload = {
   occurred_at: string;
 };
 
-export type BlogAutoFeedbackStatus =
-  | 'inserted'
-  | 'updated'
-  | 'duplicate'
-  | 'stale'
-  | 'skipped_admin';
-
 export type RecordBlogAutoFeedbackResult =
-  | {
-      ok: true;
-      id: string;
-      status: BlogAutoFeedbackStatus;
-      duplicate: boolean;
-      applied: boolean;
-    }
+  | { ok: true; rpc: LogBlogContentFeedbackResult }
   | { ok: false; error: string };
 
 function snapshotForRpc(payload: BlogContentFeedbackPayload): Record<string, unknown> {
@@ -42,7 +33,7 @@ function snapshotForRpc(payload: BlogContentFeedbackPayload): Record<string, unk
   };
 }
 
-function mapRpcStatus(status: string): BlogAutoFeedbackStatus | null {
+function mapRpcStatus(status: string): LogBlogContentFeedbackStatus | null {
   switch (status) {
     case 'inserted':
     case 'updated':
@@ -53,6 +44,15 @@ function mapRpcStatus(status: string): BlogAutoFeedbackStatus | null {
     default:
       return null;
   }
+}
+
+function parseLogBlogContentFeedbackResult(data: unknown): LogBlogContentFeedbackResult | null {
+  if (!data || typeof data !== 'object') return null;
+  const row = data as { status?: unknown; id?: unknown };
+  const status = mapRpcStatus(String(row.status ?? ''));
+  const id = String(row.id ?? '').trim();
+  if (!status || !id) return null;
+  return { status, id };
 }
 
 export async function recordBlogAutoContentFeedbackWithClient(
@@ -82,17 +82,12 @@ export async function recordBlogAutoContentFeedbackWithClient(
     return { ok: false, error: error.message };
   }
 
-  const row = data as { status?: string; id?: string } | null;
-  const status = mapRpcStatus(String(row?.status ?? ''));
-  const id = String(row?.id ?? '');
-  if (!status || !id) {
+  const rpc = parseLogBlogContentFeedbackResult(data);
+  if (!rpc) {
     return { ok: false, error: 'Ugyldig svar fra log_blog_content_feedback' };
   }
 
-  const duplicate = status === 'duplicate';
-  const applied = status === 'inserted' || status === 'updated';
-
-  return { ok: true, id, status, duplicate, applied };
+  return { ok: true, rpc };
 }
 
 export async function recordBlogAutoContentFeedback(

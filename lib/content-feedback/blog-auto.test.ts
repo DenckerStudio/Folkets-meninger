@@ -68,15 +68,14 @@ async function run() {
   const first = await recordBlogAutoContentFeedbackWithClient(mock.client as never, published);
   assert.equal(first.ok, true);
   if (first.ok) {
-    assert.equal(first.applied, true);
-    assert.equal(first.status, 'inserted');
+    assert.equal(first.rpc.status, 'inserted');
+    assert.equal(first.rpc.id, 'row-1');
   }
 
   const duplicate = await recordBlogAutoContentFeedbackWithClient(mock.client as never, published);
   assert.equal(duplicate.ok, true);
   if (duplicate.ok) {
-    assert.equal(duplicate.duplicate, true);
-    assert.equal(duplicate.applied, false);
+    assert.equal(duplicate.rpc.status, 'duplicate');
   }
 
   const archived = {
@@ -88,8 +87,7 @@ async function run() {
   const afterArchive = await recordBlogAutoContentFeedbackWithClient(mock.client as never, archived);
   assert.equal(afterArchive.ok, true);
   if (afterArchive.ok) {
-    assert.equal(afterArchive.applied, true);
-    assert.equal(afterArchive.status, 'updated');
+    assert.equal(afterArchive.rpc.status, 'updated');
   }
 
   const ignored = await recordBlogAutoContentFeedbackWithClient(mock.client as never, {
@@ -100,8 +98,7 @@ async function run() {
   });
   assert.equal(ignored.ok, true);
   if (ignored.ok) {
-    assert.equal(ignored.status, 'skipped_admin');
-    assert.equal(ignored.applied, false);
+    assert.equal(ignored.rpc.status, 'skipped_admin');
   }
 
   console.log('content-feedback/blog-auto.test.ts: ok');

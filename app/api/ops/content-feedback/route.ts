@@ -37,11 +37,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Kunne ikke lagre tilbakemelding' }, { status: 500 });
   }
 
-  return NextResponse.json({
-    ok: true,
-    id: result.id,
-    status: result.status,
-    duplicate: result.duplicate,
-    applied: result.applied,
+  console.info('[content-feedback] log_blog_content_feedback', {
+    post_id: parsed.payload.post_id,
+    event: parsed.payload.event,
+    event_id: parsed.payload.event_id,
+    rpc_status: result.rpc.status,
+    content_feedback_id: result.rpc.id,
   });
+
+  return NextResponse.json({ ok: true }, { status: 200 });
 }

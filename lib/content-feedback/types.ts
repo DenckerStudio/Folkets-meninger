@@ -97,10 +97,29 @@ export type N8nFeedbackSimilarityResult = {
   n_rejected_similar: number;
 };
 
+export type N8nUpsertSourceItemsSkippedItem = {
+  index: number;
+  external_id: string | null;
+  reason: string;
+};
+
+/** jsonb fra `n8n_upsert_source_items` */
 export type N8nUpsertSourceItemsResult = {
-  ok: boolean;
-  inserted: number;
-  updated: number;
+  upserted: number;
+  skipped: N8nUpsertSourceItemsSkippedItem[];
+};
+
+export type LogBlogContentFeedbackStatus =
+  | 'inserted'
+  | 'updated'
+  | 'duplicate'
+  | 'stale'
+  | 'skipped_admin';
+
+/** jsonb fra `log_blog_content_feedback` */
+export type LogBlogContentFeedbackResult = {
+  status: LogBlogContentFeedbackStatus;
+  id: string;
 };
 
 export type N8nMatchSourceItemRow = {
