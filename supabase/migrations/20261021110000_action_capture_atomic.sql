@@ -329,10 +329,13 @@ BEGIN
       v_item_key := v_source_type || ':url:' || lower(regexp_replace(v_url_canonical, '/$', ''));
     END IF;
 
-    v_signal_only := COALESCE((v_src ->> 'signal_only')::boolean, false)
-      OR nullif(btrim(v_src ->> 'record_kind'), '') = 'signal'
-      OR COALESCE((v_src -> 'metadata' ->> 'is_signal')::boolean, false)
-      OR COALESCE((v_src ->> 'is_signal')::boolean, false);
+    v_signal_only := COALESCE(
+      COALESCE((v_src ->> 'signal_only')::boolean, false)
+        OR nullif(btrim(v_src ->> 'record_kind'), '') = 'signal'
+        OR COALESCE((v_src -> 'metadata' ->> 'is_signal')::boolean, false)
+        OR COALESCE((v_src ->> 'is_signal')::boolean, false),
+      false
+    );
 
     v_excerpt := left(btrim(COALESCE(v_src ->> 'excerpt', '')), 300);
 
