@@ -110,6 +110,7 @@ Eksempel (blog/reel):
 - `done` og `failed` er **terminale**. Ny kjøring = ny `request_id` fra admin.
 - Forsøk på bakovergang (f.eks. `running` etter `done`) er **no-op**: RPC returnerer gjeldende rad uten endring.
 - Alle `p_*` i `n8n_upsert_research_brief`: **NULL = behold lagret verdi** (`COALESCE`).
+- **Heartbeat:** n8n kan kalle upsert med `p_status=running` (eller `queued`) og NULL på andre felt for å holde jobben i live. Samme status oppdaterer alltid `updated_at`; kun `done`/`failed` returnerer tidlig uten endring.
 
 ## Skriving tilbake (service_role)
 
@@ -144,6 +145,16 @@ Når funnet, nøyaktig disse nøklene (ingen `ok` / `id`):
 ```
 
 `p_status` ∈ `queued` | `running` | `done` | `failed`. Rad må finnes (opprettet av fm-web). Returnerer **hele raden** som `jsonb` (ikke exception ved duplikat-kall).
+
+**`p_error`** (valgfritt, maks **500** tegn): enten en **kjent kode** (lagres som-is) eller **kort fri norsk tekst** (vises i admin som ren tekst, ikke HTML). fm-web mapper kjente koder til norske meldinger (`lib/admin/research/error-messages.ts`).
+
+| Kode | Betydning i UI |
+|------|----------------|
+| `tidsavbrudd` | Oppgaven ble avbrutt etter for lang ventetid i kø. |
+| `arbeidsflyt_utilgjengelig` | Arbeidsflyten er ikke tilgjengelig akkurat nå. |
+| `webhook_http_<status>` | Kunne ikke nå arbeidsflyten (fm-web ved webhook-feil). |
+
+Andre strenger behandles som fri feilmelding fra n8n (trimmes, maks 500 tegn).
 
 **perspectives** (JSON-array, ukjente nøkler tillates):
 
@@ -219,10 +230,15 @@ n8n oppretter Payload-utkast via `POST /api/ops/blog/drafts` (fm-web, `x-cron-se
   "p_issue_id": "valgfri stortinget-sak-id",
   "p_title": "…",
   "p_neutral_summary": "…",
-  "p_source_urls": ["https://…"],
+  "p_source_urls": [
+    { "label": "NRK", "url": "https://…" },
+    { "url": "/dashboard/saker/12345" }
+  ],
   "p_generation_metadata": {}
 }
 ```
+
+`p_source_urls`: JSON-array (maks **20** elementer), samme format som `create_system_poll_draft` / Reels-workflow: objekter med påkrevd `url` (`http://`, `https://` eller app-sti som starter med `/`). Valgfritt `label` (streng).
 
 Låser brief-raden (`FOR UPDATE`) i **én transaksjon**. Hvis `output_ref` allerede er satt: returnerer `{ "poll_id": "<uuid>", "created": false }` med eksisterende poll. Ellers kalles `create_system_poll_draft` med `generation_metadata` som inkluderer `origin: "research"` og `research_request_id`, deretter settes `output_ref = poll_id` og `status = done` på brief-raden.
 
@@ -246,7 +262,7 @@ eller ved duplikat:
 { "p_minutes": 30 }
 ```
 
-Setter `queued`/`running` med `updated_at` eldre enn N minutter til `failed` / `error=tidsavbrudd`.
+Setter `queued`/`running` med **`updated_at`** eldre enn N minutter til `failed` / `error=tidsavbrudd` (ikke `created_at` — heartbeats via upsert teller).
 
 - **n8n:** schedule hvert 10. minutt (service_role).
 - **fm-web:** kun ved `POST /api/admin/research/...` (før ny rad opprettes).
@@ -257,7 +273,8 @@ Maks én `queued`/`running` per `(cluster_id, kind)` (partial unique index). fm-
 
 ### Payload-grenser (n8n_upsert_research_brief)
 
-- `summary` / `error`: maks 20 000 tegn
+- `summary`: maks 20 000 tegn
+- `error`: maks 500 tegn (kjent kode eller fri tekst)
 - `perspectives` / `sources` / `details`: maks 64 KB (`octet_length` på JSON)
 
 ## Migrasjon

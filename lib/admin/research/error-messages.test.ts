@@ -8,5 +8,9 @@ assert.equal(
 );
 assert.match(formatResearchBriefError('webhook_http_502') ?? '', /Kunne ikke nå arbeidsflyten/);
 assert.equal(formatResearchBriefError(null), null);
+assert.equal(
+  formatResearchBriefError('Modellen returnerte ugyldig JSON.'),
+  'Modellen returnerte ugyldig JSON.',
+);
 
 console.log('admin/research/error-messages.test.ts: ok');

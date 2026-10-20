@@ -45,6 +45,9 @@ assert.match(migration, /research_briefs_assert_field_sizes/i);
 assert.match(migration, /IF v_row\.status IN \('done', 'failed'\)/i);
 assert.match(migration, /terminal_failed/i);
 assert.match(migration, /research_briefs_normalize_generation_metadata/i);
+assert.match(migration, /research_briefs_normalize_error/i);
+assert.match(migration, /research_briefs_validate_reel_source_urls/i);
+assert.match(migration, /updated_at < now\(\) - make_interval/i);
 assert.match(migration, /n8n_get_research_brief[\s\S]*?RETURN NULL;/i);
 assert.match(migration, /'poll_id', v_poll_id,\s*\n\s*'created', true/i);
 
@@ -74,6 +77,9 @@ assert.match(doc, /arbeidsflyt_utilgjengelig/);
 assert.match(doc, /"poll_id".*"created"/i);
 assert.match(doc, /source_event.*research:/i);
 assert.match(doc, /review_note/);
+assert.match(doc, /"label": "NRK"/);
+assert.match(doc, /webhook_http_/);
+assert.match(doc, /heartbeats via upsert/i);
 
 const webhook = readFileSync(
   join(process.cwd(), 'lib/admin/research/webhook.ts'),

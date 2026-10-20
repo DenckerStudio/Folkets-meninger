@@ -8,6 +8,8 @@ DECLARE
   v_status text;
   v_summary text;
   v_expired int;
+  v_heartbeat_request_id uuid := 'f6666666-6666-4666-8666-666666666606';
+  v_updated_at timestamptz;
   v_fn regprocedure;
   v_fns text[] := ARRAY[
     'public.n8n_upsert_research_brief(uuid,text,text,jsonb,jsonb,jsonb,text)',
@@ -20,7 +22,9 @@ DECLARE
     'public.research_brief_status_rank(text)',
     'public.research_briefs_is_backwards_status(text,text)',
     'public.research_briefs_assert_field_sizes(text,jsonb,jsonb,jsonb,text)',
-    'public.research_briefs_normalize_generation_metadata(jsonb)'
+    'public.research_briefs_normalize_generation_metadata(jsonb)',
+    'public.research_briefs_normalize_error(text)',
+    'public.research_briefs_validate_reel_source_urls(jsonb)'
   ];
   v_name text;
 BEGIN
@@ -166,6 +170,94 @@ BEGIN
     RAISE EXCEPTION 'n8n_get_research_brief skulle returnere NULL for ukjent id';
   END IF;
 
+  DELETE FROM public.research_briefs WHERE request_id = v_heartbeat_request_id;
+  INSERT INTO public.research_briefs (request_id, cluster_id, kind, status)
+  VALUES (v_heartbeat_request_id, v_cluster_id, 'deepen', 'running');
+
+  ALTER TABLE public.research_briefs DISABLE TRIGGER research_briefs_updated_at;
+  UPDATE public.research_briefs
+  SET updated_at = now() - interval '2 hours'
+  WHERE request_id = v_heartbeat_request_id;
+  ALTER TABLE public.research_briefs ENABLE TRIGGER research_briefs_updated_at;
+
+  r := public.n8n_upsert_research_brief(
+    v_heartbeat_request_id,
+    'running',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL
+  );
+  IF r ->> 'status' <> 'running' THEN
+    RAISE EXCEPTION 'heartbeat running upsert feilet: %', r;
+  END IF;
+
+  SELECT updated_at INTO v_updated_at
+  FROM public.research_briefs
+  WHERE request_id = v_heartbeat_request_id;
+  IF v_updated_at < now() - interval '5 minutes' THEN
+    RAISE EXCEPTION 'heartbeat skulle oppdatere updated_at';
+  END IF;
+
+  v_expired := public.research_briefs_expire_stale(30);
+  SELECT status INTO v_status
+  FROM public.research_briefs
+  WHERE request_id = v_heartbeat_request_id;
+  IF v_status <> 'running' THEN
+    RAISE EXCEPTION 'heartbeat-brief skulle ikke utløpe (status=%)', v_status;
+  END IF;
+
+  BEGIN
+    PERFORM public.research_briefs_validate_reel_source_urls(
+      jsonb_build_array('https://example.com/ikke-objekt')
+    );
+    RAISE EXCEPTION 'forventet exception ved streng i source_urls-array';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%invalid_source_urls%' THEN
+        RAISE;
+      END IF;
+  END;
+
+  BEGIN
+    PERFORM public.research_briefs_validate_reel_source_urls(
+      jsonb_build_array(jsonb_build_object('url', 'ftp://example.com'))
+    );
+    RAISE EXCEPTION 'forventet exception ved ugyldig url-protokoll';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%invalid_source_urls%' THEN
+        RAISE;
+      END IF;
+  END;
+
+  PERFORM public.research_briefs_validate_reel_source_urls(
+    jsonb_build_array(
+      jsonb_build_object('label', 'NRK', 'url', 'https://example.com/kilde'),
+      jsonb_build_object('url', '/dashboard/saker/123')
+    )
+  );
+
+  IF public.research_briefs_normalize_error('  tidsavbrudd  ') <> 'tidsavbrudd' THEN
+    RAISE EXCEPTION 'normalize_error skulle trimme kjente koder';
+  END IF;
+
+  r := public.n8n_upsert_research_brief(
+    v_heartbeat_request_id,
+    'failed',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    'Kort norsk feilmelding fra n8n'
+  );
+  IF r ->> 'status' <> 'failed'
+    OR (SELECT error FROM public.research_briefs WHERE request_id = v_heartbeat_request_id)
+      <> 'Kort norsk feilmelding fra n8n' THEN
+    RAISE EXCEPTION 'fri p_error-tekst skulle lagres ved failed';
+  END IF;
+
   ALTER TABLE public.research_briefs DISABLE TRIGGER research_briefs_updated_at;
   UPDATE public.research_briefs
   SET status = 'queued', updated_at = now() - interval '2 hours', error = NULL
@@ -192,14 +284,7 @@ BEGIN
     VALUES (v_reel_request_id, v_cluster_id, 'reel', 'running');
 
     BEGIN
-      PERFORM public.n8n_create_research_reel_draft(
-        v_reel_request_id,
-        NULL,
-        'Skal feile metadata',
-        'x',
-        '[]'::jsonb,
-        '[]'::jsonb
-      );
+      PERFORM public.research_briefs_normalize_generation_metadata('[]'::jsonb);
       RAISE EXCEPTION 'forventet exception ved ugyldig generation_metadata';
     EXCEPTION
       WHEN OTHERS THEN
@@ -213,7 +298,9 @@ BEGIN
       NULL,
       'Test Reel fra research',
       'Nøytralt sammendrag',
-      jsonb_build_array('https://example.com/c'),
+      jsonb_build_array(
+        jsonb_build_object('label', 'Kilde', 'url', 'https://example.com/c')
+      ),
       jsonb_build_object('confidence', 0.9)
     );
 
@@ -281,6 +368,7 @@ BEGIN
   WHERE request_id IN (
     v_request_id,
     v_reel_request_id,
+    v_heartbeat_request_id,
     'd4444444-4444-4444-8444-444444444444'
   );
   DELETE FROM public.action_clusters WHERE id = v_cluster_id;

@@ -199,8 +199,8 @@ BEGIN
     RAISE EXCEPTION 'research_brief payload_too_large: summary over 20000 tegn'
       USING ERRCODE = '22023';
   END IF;
-  IF p_error IS NOT NULL AND char_length(p_error) > 20000 THEN
-    RAISE EXCEPTION 'research_brief payload_too_large: error over 20000 tegn'
+  IF p_error IS NOT NULL AND char_length(p_error) > 500 THEN
+    RAISE EXCEPTION 'research_brief payload_too_large: error over 500 tegn'
       USING ERRCODE = '22023';
   END IF;
   IF p_perspectives IS NOT NULL AND octet_length(p_perspectives::text) > 65536 THEN
@@ -240,6 +240,83 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.research_briefs_normalize_generation_metadata(jsonb)
+  FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.research_briefs_normalize_error(p_error text)
+RETURNS text
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_error text;
+BEGIN
+  IF p_error IS NULL THEN
+    RETURN NULL;
+  END IF;
+  v_error := btrim(p_error);
+  IF v_error = '' THEN
+    RETURN NULL;
+  END IF;
+  IF v_error IN ('tidsavbrudd', 'arbeidsflyt_utilgjengelig')
+    OR v_error LIKE 'webhook_http_%' THEN
+    RETURN v_error;
+  END IF;
+  IF char_length(v_error) > 500 THEN
+    RAISE EXCEPTION 'research_brief invalid_error: fri tekst over 500 tegn'
+      USING ERRCODE = '22023';
+  END IF;
+  RETURN v_error;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.research_briefs_normalize_error(text)
+  FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.research_briefs_validate_reel_source_urls(p_value jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_item jsonb;
+  v_url text;
+  v_len int;
+BEGIN
+  IF p_value IS NULL THEN
+    RETURN '[]'::jsonb;
+  END IF;
+  IF jsonb_typeof(p_value) <> 'array' THEN
+    RAISE EXCEPTION 'research_brief invalid_source_urls: må være JSON-array'
+      USING ERRCODE = '22023';
+  END IF;
+  v_len := jsonb_array_length(p_value);
+  IF v_len > 20 THEN
+    RAISE EXCEPTION 'research_brief invalid_source_urls: maks 20 elementer'
+      USING ERRCODE = '22023';
+  END IF;
+  FOR v_item IN SELECT value FROM jsonb_array_elements(p_value)
+  LOOP
+    IF jsonb_typeof(v_item) <> 'object' THEN
+      RAISE EXCEPTION 'research_brief invalid_source_urls: hvert element må være et objekt'
+        USING ERRCODE = '22023';
+    END IF;
+    v_url := btrim(v_item ->> 'url');
+    IF v_url IS NULL OR v_url = '' THEN
+      RAISE EXCEPTION 'research_brief invalid_source_urls: url er påkrevd'
+        USING ERRCODE = '22023';
+    END IF;
+    IF v_url !~ '^(https?://|/)' THEN
+      RAISE EXCEPTION 'research_brief invalid_source_urls: url må være http(s) eller app-sti'
+        USING ERRCODE = '22023';
+    END IF;
+  END LOOP;
+  RETURN p_value;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.research_briefs_validate_reel_source_urls(jsonb)
   FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.research_briefs_expire_stale(p_minutes int DEFAULT 30)
@@ -349,6 +426,7 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'error', 'not_found', 'request_id', p_request_id);
   END IF;
 
+  -- Terminal: ingen feltoppdatering uten statusendring (heartbeats på queued/running oppdaterer alltid updated_at).
   IF v_row.status IN ('done', 'failed') THEN
     RETURN public.research_brief_row_to_jsonb(v_row);
   END IF;
@@ -364,6 +442,10 @@ BEGIN
       RETURN public.research_brief_row_to_jsonb(v_row);
     END IF;
     v_next_status := p_status;
+  END IF;
+
+  IF p_error IS NOT NULL THEN
+    p_error := public.research_briefs_normalize_error(p_error);
   END IF;
 
   IF p_perspectives IS NOT NULL
@@ -523,14 +605,7 @@ BEGIN
     );
   END IF;
 
-  IF p_generation_metadata IS NULL THEN
-    v_meta := '{}'::jsonb;
-  ELSIF jsonb_typeof(p_generation_metadata) <> 'object' THEN
-    RAISE EXCEPTION 'research_brief invalid_generation_metadata: må være JSON-objekt'
-      USING ERRCODE = '22023';
-  ELSE
-    v_meta := p_generation_metadata;
-  END IF;
+  v_meta := public.research_briefs_normalize_generation_metadata(p_generation_metadata);
 
   v_meta := v_meta
     || jsonb_build_object(
@@ -542,7 +617,7 @@ BEGIN
     p_issue_id,
     p_title,
     coalesce(p_neutral_summary, ''),
-    coalesce(p_source_urls, '[]'::jsonb),
+    public.research_briefs_validate_reel_source_urls(p_source_urls),
     v_meta
   );
 
