@@ -55,6 +55,14 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Load public test Supabase env
+        run: |
+          set -a
+          source .env.test
+          set +a
+          echo "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" >> "$GITHUB_ENV"
       - run: npm ci --ignore-scripts
       - run: npm run test:unit
       - name: fm-cms unit tests
