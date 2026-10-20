@@ -70,6 +70,10 @@ BEGIN
     RAISE EXCEPTION 'forventet issue uten sammendrag (%) før regenereringskø (%), fikk %', v_issue_b, v_issue_a, v_pick;
   END IF;
 
+  UPDATE public.stortinget_issues
+  SET ai_summary_generation_attempts = 0, ai_summary_last_attempt_at = NULL
+  WHERE id = v_issue_b;
+
   PERFORM public.n8n_upsert_issue_ai_summary(
     v_issue_a,
     repeat('y', 200),
@@ -88,8 +92,9 @@ BEGIN
     RAISE EXCEPTION 'forventet regeneration_requested_at null etter n8n upsert';
   END IF;
 
-  SELECT id INTO v_pick
-  FROM public.n8n_list_issues_missing_ai_summary(1)
+  SELECT q.id INTO v_pick
+  FROM public.n8n_list_issues_missing_ai_summary(200) q
+  WHERE q.id IN (v_issue_a, v_issue_b)
   LIMIT 1;
 
   IF v_pick IS DISTINCT FROM v_issue_b THEN
@@ -188,7 +193,9 @@ BEGIN
   WHERE stortinget_issue_id = v_issue_a;
 
   SELECT q.id INTO v_pick
-  FROM public.n8n_list_issues_missing_ai_summary(1) q;
+  FROM public.n8n_list_issues_missing_ai_summary(200) q
+  WHERE q.id IN (v_issue_a, v_issue_b)
+  LIMIT 1;
 
   IF v_pick IS DISTINCT FROM v_issue_b THEN
     RAISE EXCEPTION 'claim: forventet B (%), fikk %', v_issue_b, v_pick;
