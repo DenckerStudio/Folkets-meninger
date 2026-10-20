@@ -105,4 +105,26 @@ assert.match(migration, /ON CONFLICT \(domain\) DO NOTHING/i);
 assert.match(migration, /base_url[\s\S]*https:\/\/www\.utenfilter\.no/i);
 assert.match(migration, /'upserted', v_upserted/i);
 
+const sourceItemsN8n = readFileSync(
+  join(process.cwd(), 'supabase/migrations/20261021150000_source_items_n8n_fields.sql'),
+  'utf-8',
+);
+assert.match(sourceItemsN8n, /DROP FUNCTION IF EXISTS public\.n8n_list_source_items\(text, timestamptz, int\)/i);
+assert.match(sourceItemsN8n, /si\.excerpt/i);
+assert.match(sourceItemsN8n, /seen_at timestamptz/i);
+assert.match(sourceItemsN8n, /coalesce\(si\.published_at, si\.fetched_at\) AS seen_at/i);
+for (const fn of ['n8n_list_source_items', 'n8n_match_source_items']) {
+  assert.match(
+    sourceItemsN8n,
+    new RegExp(
+      `REVOKE ALL ON FUNCTION public\\.${fn}[\\s\\S]*?FROM PUBLIC, anon, authenticated`,
+      'i',
+    ),
+  );
+  assert.match(
+    sourceItemsN8n,
+    new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${fn}[\\s\\S]*?TO service_role`, 'i'),
+  );
+}
+
 console.log('content-feedback/migration-contract.test.ts: ok');

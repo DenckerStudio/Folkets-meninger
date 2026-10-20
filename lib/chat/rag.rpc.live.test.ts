@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { writeLiveTestArtifact } from '@/lib/test/write-live-artifact';
+import { exitIfCiSkipsProdLive } from '@/lib/test/skip-in-ci-live';
 import { createClient } from '@supabase/supabase-js';
 import { retrieveSakContext, searchIssuesForChat } from '@/lib/chat/rag';
 
-if (process.env.CI === 'true' && process.env.SUPABASE_RUN_LIVE_TESTS !== '1') {
-  console.log('chat/rag.rpc.live.test.ts: skipped in CI');
-  process.exit(0);
-}
+exitIfCiSkipsProdLive('chat/rag.rpc.live.test.ts');
 
 function loadFolketsPublicEnv() {
   const text = readFileSync(join(process.cwd(), '.env.test'), 'utf8');
@@ -70,10 +69,7 @@ async function main() {
       '200417 is a live Stortinget sak that may be absent from cache (honest empty).',
   };
 
-  const artifactDir =
-    process.env.CURSOR_ARTIFACTS_DIR ?? join(process.cwd(), 'artifacts', 'ci-live-tests');
-  mkdirSync(artifactDir, { recursive: true });
-  writeFileSync(join(artifactDir, 'rag-rpc-live.json'), JSON.stringify(payload, null, 2));
+  writeLiveTestArtifact('rag-rpc-live.json', payload);
 
   assert.match(rpc.error?.message ?? '', /permission denied/i);
   assert.ok(listed.some((issue) => issue.id === '200365'));
