@@ -1,5 +1,7 @@
 name: CI
 
+# pull_request: lint-and-build, test-unit, db-security, migration-sql-lint
+
 on:
   push:
     branches: [main]
