@@ -1,4 +1,5 @@
 -- Runtime checks for assert_rpc_caller_is_user / assert_rpc_caller_is_actor and ERRCODE 42501.
+-- EXECUTE on assert helpers is service_role-only; tests set JWT claims while connected as postgres.
 
 DO $$
 DECLARE
@@ -11,16 +12,14 @@ BEGIN
   PERFORM public.assert_rpc_caller_is_user(v_user);
   PERFORM public.assert_rpc_caller_is_actor(v_user);
 
-  -- service_role JWT: trusted
+  -- service_role JWT: trusted (still postgres session)
   PERFORM set_config(
     'request.jwt.claims',
     '{"role":"service_role"}',
     true
   );
-  SET LOCAL ROLE service_role;
   PERFORM public.assert_rpc_caller_is_user(v_other);
   PERFORM public.assert_rpc_caller_is_actor(v_other);
-  RESET ROLE;
 
   -- authenticated, matching user
   PERFORM set_config(
@@ -28,10 +27,8 @@ BEGIN
     format('{"sub":"%s","role":"authenticated"}', v_user),
     true
   );
-  SET LOCAL ROLE authenticated;
   PERFORM public.assert_rpc_caller_is_user(v_user);
   PERFORM public.assert_rpc_caller_is_actor(v_user);
-  RESET ROLE;
 
   -- authenticated, wrong user -> 42501
   PERFORM set_config(
@@ -39,7 +36,6 @@ BEGIN
     format('{"sub":"%s","role":"authenticated"}', v_user),
     true
   );
-  SET LOCAL ROLE authenticated;
   BEGIN
     PERFORM public.assert_rpc_caller_is_user(v_other);
     RAISE EXCEPTION 'expected forbidden for authenticated impersonation';
@@ -52,11 +48,9 @@ BEGIN
         RAISE;
       END IF;
   END;
-  RESET ROLE;
 
   -- anon with user id param -> 42501
   PERFORM set_config('request.jwt.claims', '{"role":"anon"}', true);
-  SET LOCAL ROLE anon;
   BEGIN
     PERFORM public.assert_rpc_caller_is_user(v_user);
     RAISE EXCEPTION 'expected forbidden for anon impersonation';
@@ -69,17 +63,10 @@ BEGIN
         RAISE;
       END IF;
   END;
-  RESET ROLE;
 
-  -- service_role via RPC: get_user_stance_count (no rows ok)
-  PERFORM set_config(
-    'request.jwt.claims',
-    '{"role":"service_role"}',
-    true
-  );
-  SET LOCAL ROLE service_role;
+  -- stance RPC under trusted postgres (empty claims)
+  PERFORM set_config('request.jwt.claims', '', true);
   PERFORM public.get_user_stance_count(v_user);
-  RESET ROLE;
 
   PERFORM set_config('request.jwt.claims', '', true);
   RAISE NOTICE 'rpc-caller-authz-runtime: ok';
