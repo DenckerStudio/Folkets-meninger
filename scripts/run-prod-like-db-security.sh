@@ -115,6 +115,9 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/action_capture_atomic.sql
 echo "Running n8n_upsert_issue_ai_summary.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/n8n_upsert_issue_ai_summary.sql
 
+echo "Running research_briefs.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/research_briefs.sql
+
 echo "Running content_feedback_rpcs.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/content_feedback_rpcs.sql
 

@@ -1,0 +1,493 @@
+-- Integrasjonstest for research_briefs og n8n-RPC-er (CI db-security).
+DO $$
+DECLARE
+  v_cluster_id uuid := 'a1111111-1111-4111-8111-111111111101';
+  v_request_id uuid := 'b2222222-2222-4222-8222-222222222202';
+  v_reel_request_id uuid := 'c3333333-3333-4333-8333-333333333303';
+  r jsonb;
+  v_status text;
+  v_summary text;
+  v_expired int;
+  v_heartbeat_request_id uuid := 'f6666666-6666-4666-8666-666666666606';
+  v_updated_at timestamptz;
+  v_pg_detail text;
+  v_fn regprocedure;
+  v_fns text[] := ARRAY[
+    'public.n8n_upsert_research_brief(uuid,text,text,jsonb,jsonb,jsonb,text,uuid,text)',
+    'public.n8n_set_research_output(uuid,text,uuid,text)',
+    'public.n8n_get_research_brief(uuid,uuid,text)',
+    'public.n8n_create_research_reel_draft(uuid,text,text,text,jsonb,jsonb,uuid,text)',
+    'public.research_briefs_enqueue(uuid,uuid,text,uuid)',
+    'public.research_briefs_expire_stale(int)',
+    'public.research_briefs_validate_perspectives(jsonb)',
+    'public.research_briefs_validate_sources(jsonb)',
+    'public.research_brief_status_rank(text)',
+    'public.research_briefs_is_backwards_status(text,text)',
+    'public.research_briefs_assert_field_sizes(text,jsonb,jsonb,jsonb,text)',
+    'public.research_briefs_normalize_generation_metadata(jsonb)',
+    'public.research_briefs_normalize_error(text)',
+    'public.research_briefs_validate_reel_source_urls(jsonb)',
+    'public.research_briefs_raise_invalid_input(text)',
+    'public.research_briefs_assert_request_scope(public.research_briefs,uuid,text)',
+    'public.research_briefs_parse_poll_output_ref(text)'
+  ];
+  v_name text;
+BEGIN
+  IF to_regclass('public.research_briefs') IS NULL THEN
+    RAISE EXCEPTION 'research_briefs.sql: forventet tabell research_briefs';
+  END IF;
+
+  IF to_regclass('public.action_clusters') IS NULL THEN
+    RAISE EXCEPTION 'research_briefs.sql: forventet tabell action_clusters';
+  END IF;
+
+  INSERT INTO public.action_clusters (
+    id,
+    action_key,
+    action_type,
+    action_name,
+    description_nb
+  )
+  VALUES (
+    v_cluster_id,
+    'ci-research-briefs-' || v_cluster_id::text,
+    'opprop',
+    'CI research briefs',
+    'Testklynge for research_briefs.sql'
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    action_name = EXCLUDED.action_name,
+    description_nb = EXCLUDED.description_nb;
+
+  FOREACH v_name IN ARRAY v_fns
+  LOOP
+    v_fn := to_regprocedure(v_name);
+    IF v_fn IS NULL THEN
+      RAISE EXCEPTION 'research_briefs.sql: mangler funksjon %', v_name;
+    END IF;
+    IF has_function_privilege('anon', v_fn, 'EXECUTE') THEN
+      RAISE EXCEPTION 'anon har EXECUTE på %', v_name;
+    END IF;
+    IF has_function_privilege('authenticated', v_fn, 'EXECUTE') THEN
+      RAISE EXCEPTION 'authenticated har EXECUTE på %', v_name;
+    END IF;
+    IF NOT has_function_privilege('service_role', v_fn, 'EXECUTE') THEN
+      RAISE EXCEPTION 'service_role mangler EXECUTE på %', v_name;
+    END IF;
+  END LOOP;
+
+  DELETE FROM public.research_briefs WHERE request_id IN (v_request_id, v_reel_request_id);
+
+  INSERT INTO public.research_briefs (request_id, cluster_id, kind, status)
+  VALUES (v_request_id, v_cluster_id, 'deepen', 'queued');
+
+  r := public.n8n_upsert_research_brief(
+    v_request_id,
+    'running',
+    'Kort sammendrag',
+    jsonb_build_array(
+      jsonb_build_object(
+        'actor', 'Testpartiet',
+        'actor_type', 'parti',
+        'stance', 'for',
+        'summary', 'Støtter',
+        'independent', true,
+        'quotes', jsonb_build_array(
+          jsonb_build_object('text', 'Sitat', 'url', 'https://example.com/a', 'publisher', 'nrk.no')
+        )
+      )
+    ),
+    jsonb_build_array(
+      jsonb_build_object(
+        'url', 'https://example.com/b',
+        'publisher', 'nrk.no',
+        'title', 'Artikkel',
+        'published_at', '2026-01-01T00:00:00Z',
+        'excerpt', 'Utdrag',
+        'source_kind', 'news_rss',
+        'used', true
+      )
+    ),
+    jsonb_build_object('open_questions', jsonb_build_array('Hva med X?'), 'unverified', jsonb_build_array()),
+    NULL
+  );
+
+  IF coalesce(r ->> 'ok', 'false') <> 'true' OR r ->> 'status' <> 'running' THEN
+    RAISE EXCEPTION 'n8n_upsert_research_brief running feilet: %', r;
+  END IF;
+
+  r := public.n8n_upsert_research_brief(v_request_id, 'running', NULL, NULL, NULL, NULL, NULL);
+  SELECT summary INTO v_summary FROM public.research_briefs WHERE request_id = v_request_id;
+  IF v_summary IS DISTINCT FROM 'Kort sammendrag' THEN
+    RAISE EXCEPTION 'summary skulle bevares ved null-felter';
+  END IF;
+
+  r := public.n8n_upsert_research_brief(v_request_id, 'done', NULL, NULL, NULL, NULL, NULL);
+  IF r ->> 'status' <> 'done' THEN
+    RAISE EXCEPTION 'forventet done: %', r;
+  END IF;
+
+  r := public.n8n_upsert_research_brief(
+    v_request_id,
+    NULL,
+    'Skulle ikke overskrive terminal',
+    NULL,
+    NULL,
+    NULL,
+    'hack'
+  );
+  SELECT summary INTO v_summary FROM public.research_briefs WHERE request_id = v_request_id;
+  IF v_summary <> 'Kort sammendrag'
+    OR (SELECT error FROM public.research_briefs WHERE request_id = v_request_id) IS NOT NULL THEN
+    RAISE EXCEPTION 'terminal done skulle ikke oppdateres uten statusendring';
+  END IF;
+
+  r := public.n8n_upsert_research_brief(
+    v_request_id,
+    'running',
+    'Skulle ikke lagres',
+    jsonb_build_array(
+      jsonb_build_object(
+        'actor', 'X',
+        'actor_type', 'parti',
+        'stance', 'mot',
+        'summary', 'Ny'
+      )
+    ),
+    NULL,
+    NULL,
+    NULL
+  );
+  IF r ->> 'status' <> 'done' THEN
+    RAISE EXCEPTION 'bakovergående status skulle være no-op: %', r;
+  END IF;
+  SELECT summary INTO v_summary FROM public.research_briefs WHERE request_id = v_request_id;
+  IF v_summary <> 'Kort sammendrag' THEN
+    RAISE EXCEPTION 'sent summary skulle ikke oppdateres ved bakovergående status';
+  END IF;
+
+  r := public.n8n_get_research_brief(v_request_id);
+  IF r IS NULL OR r ->> 'request_id' IS DISTINCT FROM v_request_id::text THEN
+    RAISE EXCEPTION 'n8n_get_research_brief feilet: %', r;
+  END IF;
+
+  IF public.n8n_get_research_brief('00000000-0000-4000-8000-000000000099') IS NOT NULL THEN
+    RAISE EXCEPTION 'n8n_get_research_brief skulle returnere NULL for ukjent id';
+  END IF;
+
+  DELETE FROM public.research_briefs WHERE request_id = v_heartbeat_request_id;
+  INSERT INTO public.research_briefs (request_id, cluster_id, kind, status)
+  VALUES (v_heartbeat_request_id, v_cluster_id, 'deepen', 'running');
+
+  ALTER TABLE public.research_briefs DISABLE TRIGGER research_briefs_updated_at;
+  UPDATE public.research_briefs
+  SET updated_at = now() - interval '2 hours'
+  WHERE request_id = v_heartbeat_request_id;
+  ALTER TABLE public.research_briefs ENABLE TRIGGER research_briefs_updated_at;
+
+  r := public.n8n_upsert_research_brief(
+    v_heartbeat_request_id,
+    'running',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL
+  );
+  IF r ->> 'status' <> 'running' THEN
+    RAISE EXCEPTION 'heartbeat running upsert feilet: %', r;
+  END IF;
+
+  SELECT updated_at INTO v_updated_at
+  FROM public.research_briefs
+  WHERE request_id = v_heartbeat_request_id;
+  IF v_updated_at < now() - interval '5 minutes' THEN
+    RAISE EXCEPTION 'heartbeat skulle oppdatere updated_at';
+  END IF;
+
+  v_expired := public.research_briefs_expire_stale(30);
+  SELECT status INTO v_status
+  FROM public.research_briefs
+  WHERE request_id = v_heartbeat_request_id;
+  IF v_status <> 'running' THEN
+    RAISE EXCEPTION 'heartbeat-brief skulle ikke utløpe (status=%)', v_status;
+  END IF;
+
+  ALTER TABLE public.research_briefs DISABLE TRIGGER research_briefs_updated_at;
+  UPDATE public.research_briefs
+  SET updated_at = now() - interval '2 hours'
+  WHERE request_id = v_heartbeat_request_id;
+  ALTER TABLE public.research_briefs ENABLE TRIGGER research_briefs_updated_at;
+
+  r := public.n8n_upsert_research_brief(
+    v_heartbeat_request_id,
+    'queued',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL
+  );
+  SELECT status, updated_at INTO v_status, v_updated_at
+  FROM public.research_briefs
+  WHERE request_id = v_heartbeat_request_id;
+  IF v_status <> 'running' OR v_updated_at < now() - interval '5 minutes' THEN
+    RAISE EXCEPTION 'queued heartbeat på running skulle beholde status og oppdatere updated_at';
+  END IF;
+
+  BEGIN
+    PERFORM public.n8n_upsert_research_brief(
+      v_heartbeat_request_id,
+      'running',
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      v_cluster_id,
+      'blog'
+    );
+    RAISE EXCEPTION 'forventet research_request_conflict fra upsert scope';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%research_request_conflict%' THEN
+        RAISE;
+      END IF;
+  END;
+
+  BEGIN
+    PERFORM public.research_briefs_raise_invalid_input('generation_metadata');
+    RAISE EXCEPTION 'forventet research_invalid_input';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%research_invalid_input%' OR SQLSTATE <> '22023' THEN
+        RAISE;
+      END IF;
+      GET STACKED DIAGNOSTICS v_pg_detail = PG_EXCEPTION_DETAIL;
+      IF v_pg_detail IS DISTINCT FROM 'felt p_generation_metadata' THEN
+        RAISE EXCEPTION 'forventet DETAIL felt p_generation_metadata, fikk %', v_pg_detail;
+      END IF;
+  END;
+
+  BEGIN
+    PERFORM public.research_briefs_validate_reel_source_urls(
+      jsonb_build_array('https://example.com/ikke-objekt')
+    );
+    RAISE EXCEPTION 'forventet exception ved streng i source_urls-array';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%research_invalid_input%' THEN
+        RAISE;
+      END IF;
+      GET STACKED DIAGNOSTICS v_pg_detail = PG_EXCEPTION_DETAIL;
+      IF v_pg_detail IS DISTINCT FROM 'felt p_source_urls' THEN
+        RAISE EXCEPTION 'forventet DETAIL felt p_source_urls, fikk %', v_pg_detail;
+      END IF;
+  END;
+
+  BEGIN
+    PERFORM public.research_briefs_validate_reel_source_urls(
+      jsonb_build_array(jsonb_build_object('url', 'ftp://example.com'))
+    );
+    RAISE EXCEPTION 'forventet exception ved ugyldig url-protokoll';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%research_invalid_input%' THEN
+        RAISE;
+      END IF;
+  END;
+
+  PERFORM public.research_briefs_validate_reel_source_urls(
+    jsonb_build_array(
+      jsonb_build_object('label', 'NRK', 'url', 'https://example.com/kilde'),
+      jsonb_build_object('url', '/dashboard/saker/123')
+    )
+  );
+
+  IF public.research_briefs_normalize_error('  tidsavbrudd  ') <> 'tidsavbrudd' THEN
+    RAISE EXCEPTION 'normalize_error skulle trimme kjente koder';
+  END IF;
+
+  r := public.n8n_upsert_research_brief(
+    v_heartbeat_request_id,
+    'failed',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    'Kort norsk feilmelding fra n8n'
+  );
+  IF r ->> 'status' <> 'failed'
+    OR (SELECT error FROM public.research_briefs WHERE request_id = v_heartbeat_request_id)
+      <> 'Kort norsk feilmelding fra n8n' THEN
+    RAISE EXCEPTION 'fri p_error-tekst skulle lagres ved failed';
+  END IF;
+
+  ALTER TABLE public.research_briefs DISABLE TRIGGER research_briefs_updated_at;
+  UPDATE public.research_briefs
+  SET status = 'queued', updated_at = now() - interval '2 hours', error = NULL
+  WHERE request_id = v_request_id;
+  ALTER TABLE public.research_briefs ENABLE TRIGGER research_briefs_updated_at;
+
+  v_expired := public.research_briefs_expire_stale(30);
+  IF v_expired < 1 THEN
+    RAISE EXCEPTION 'forventet minst én utløpt brief, fikk %', v_expired;
+  END IF;
+
+  SELECT status INTO v_status FROM public.research_briefs WHERE request_id = v_request_id;
+  IF v_status <> 'failed' THEN
+    RAISE EXCEPTION 'forventet failed etter timeout, fikk %', v_status;
+  END IF;
+
+  IF (SELECT error FROM public.research_briefs WHERE request_id = v_request_id) <> 'tidsavbrudd' THEN
+    RAISE EXCEPTION 'forventet error tidsavbrudd';
+  END IF;
+
+  IF to_regprocedure('public.n8n_create_research_reel_draft(uuid,text,text,text,jsonb,jsonb)') IS NOT NULL
+    AND to_regprocedure('public.create_system_poll_draft(text,text,text,jsonb,jsonb)') IS NOT NULL THEN
+    INSERT INTO public.research_briefs (request_id, cluster_id, kind, status)
+    VALUES (v_reel_request_id, v_cluster_id, 'reel', 'running');
+
+    BEGIN
+      PERFORM public.research_briefs_normalize_generation_metadata('[]'::jsonb);
+      RAISE EXCEPTION 'forventet exception ved ugyldig generation_metadata';
+    EXCEPTION
+      WHEN OTHERS THEN
+        IF SQLERRM NOT LIKE '%research_invalid_input%' THEN
+          RAISE;
+        END IF;
+    END;
+
+    r := public.n8n_create_research_reel_draft(
+      v_reel_request_id,
+      NULL,
+      'Test Reel fra research',
+      'Nøytralt sammendrag',
+      jsonb_build_array(
+        jsonb_build_object('label', 'Kilde', 'url', 'https://example.com/c')
+      ),
+      jsonb_build_object('confidence', 0.9)
+    );
+
+    IF r ->> 'created' <> 'true' OR r ->> 'poll_id' IS NULL THEN
+      RAISE EXCEPTION 'n8n_create_research_reel_draft feilet: %', r;
+    END IF;
+
+    r := public.n8n_create_research_reel_draft(
+      v_reel_request_id,
+      NULL,
+      'Test Reel fra research',
+      'Nøytralt sammendrag',
+      '[]'::jsonb,
+      '{}'::jsonb
+    );
+
+    IF coalesce(r ->> 'created', 'true') = 'true' THEN
+      RAISE EXCEPTION 'andre kall skulle returnere eksisterende output_ref';
+    END IF;
+
+    UPDATE public.research_briefs
+    SET status = 'failed', error = 'tidsavbrudd', output_ref = NULL
+    WHERE request_id = v_reel_request_id;
+
+    UPDATE public.research_briefs
+    SET status = 'running', error = NULL, output_ref = 'not-a-valid-poll-uuid'
+    WHERE request_id = v_reel_request_id;
+
+    BEGIN
+      PERFORM public.n8n_create_research_reel_draft(
+        v_reel_request_id,
+        NULL,
+        'Skal feile output_ref',
+        'x',
+        '[]'::jsonb,
+        '{}'::jsonb
+      );
+      RAISE EXCEPTION 'forventet invalid output_ref ved eksisterende poll';
+    EXCEPTION
+      WHEN OTHERS THEN
+        IF SQLERRM NOT LIKE '%research_invalid_input%' THEN
+          RAISE;
+        END IF;
+    END;
+
+    UPDATE public.research_briefs
+    SET status = 'failed', error = 'tidsavbrudd', output_ref = NULL
+    WHERE request_id = v_reel_request_id;
+
+    BEGIN
+      PERFORM public.n8n_create_research_reel_draft(
+        v_reel_request_id,
+        NULL,
+        'Skal feile',
+        'x',
+        '[]'::jsonb,
+        '{}'::jsonb
+      );
+      RAISE EXCEPTION 'forventet exception ved reel draft på failed brief';
+    EXCEPTION
+      WHEN OTHERS THEN
+        IF SQLERRM NOT LIKE '%research_brief_failed%' THEN
+          RAISE;
+        END IF;
+    END;
+  END IF;
+
+  INSERT INTO public.research_briefs (request_id, cluster_id, kind, status)
+  VALUES (
+    'd4444444-4444-4444-8444-444444444444',
+    v_cluster_id,
+    'blog',
+    'queued'
+  );
+
+  BEGIN
+    PERFORM public.research_briefs_enqueue(
+      'e5555555-5555-4555-8555-555555555555',
+      v_cluster_id,
+      'blog',
+      NULL
+    );
+    RAISE EXCEPTION 'forventet research_brief_active ved aktiv blog';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%research_brief_active%' THEN
+        RAISE;
+      END IF;
+  END;
+
+  INSERT INTO public.research_briefs (request_id, cluster_id, kind, status)
+  VALUES (
+    'a9999999-9999-4999-8999-999999999909',
+    v_cluster_id,
+    'deepen',
+    'done'
+  );
+
+  BEGIN
+    PERFORM public.research_briefs_enqueue(
+      'a9999999-9999-4999-8999-999999999909',
+      v_cluster_id,
+      'blog',
+      NULL
+    );
+    RAISE EXCEPTION 'forventet research_request_conflict';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%research_request_conflict%' THEN
+        RAISE;
+      END IF;
+  END;
+
+  DELETE FROM public.research_briefs
+  WHERE request_id IN (
+    v_request_id,
+    v_reel_request_id,
+    v_heartbeat_request_id,
+    'd4444444-4444-4444-8444-444444444444',
+    'e5555555-5555-4555-8555-555555555555',
+    'a9999999-9999-4999-8999-999999999909'
+  );
+  DELETE FROM public.action_clusters WHERE id = v_cluster_id;
+  RAISE NOTICE 'research_briefs.sql: OK';
+END $$;

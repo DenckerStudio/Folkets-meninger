@@ -152,6 +152,7 @@ export type CreateBlogDraftInput = {
   related_sak_ids?: string[];
   related_horing_ids?: string[];
   source_event?: string | null;
+  review_note?: string;
   bluesky_text?: string;
   ai?: { model_family?: string; prompt_version?: string; generated_at?: string };
 };
@@ -234,7 +235,10 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
     social: {
       blueskyText,
     },
-    review: { state: 'til_vurdering' },
+    review: {
+      state: 'til_vurdering',
+      ...(input.review_note ? { note: input.review_note } : {}),
+    },
   };
 
   const created = await payloadCreatePost('/api/posts?draft=true', body);
