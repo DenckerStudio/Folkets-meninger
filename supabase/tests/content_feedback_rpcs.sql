@@ -522,25 +522,24 @@ BEGIN
     RAISE EXCEPTION 'admin blog_post-rad skulle være uendret';
   END IF;
 
-  BEGIN
-    r := public.n8n_upsert_source_items(
-      jsonb_build_array(
-        jsonb_build_object(
-          'domain', 'utenfilter.no',
-          'external_id', 'ci-bad-dim',
-          'url', 'https://utenfilter.no/bad',
-          'title', 'Bad dim',
-          'embedding', v_vec_bad
-        )
+  r := public.n8n_upsert_source_items(
+    jsonb_build_array(
+      jsonb_build_object(
+        'domain', 'utenfilter.no',
+        'external_id', 'ci-bad-dim',
+        'url', 'https://utenfilter.no/bad',
+        'title', 'Bad dim',
+        'embedding', v_vec_bad
       )
-    );
-    RAISE EXCEPTION 'forventet RAISE ved source_items embedding dim 768';
-  EXCEPTION
-    WHEN OTHERS THEN
-      IF SQLERRM NOT LIKE '%1024%' AND SQLERRM NOT LIKE '%bge-m3%' AND SQLERRM NOT LIKE '%dimensjon%' THEN
-        RAISE EXCEPTION 'feil dimensjon på source_items ga uventet feil: %', SQLERRM;
-      END IF;
-  END;
+    )
+  );
+  IF (r ->> 'upserted')::int <> 0 OR jsonb_array_length(coalesce(r -> 'skipped', '[]'::jsonb)) <> 1 THEN
+    RAISE EXCEPTION '768-dim embedding skulle telles som skipped, fikk %', r;
+  END IF;
+  IF coalesce(r -> 'skipped' -> 0 ->> 'reason', '') NOT LIKE '%1024%'
+    AND coalesce(r -> 'skipped' -> 0 ->> 'reason', '') NOT LIKE '%dimensjon%' THEN
+    RAISE EXCEPTION 'skip-grunn for feil dimensjon uventet: %', r;
+  END IF;
 
   PERFORM public.n8n_set_feedback_embedding(v_feedback_id, v_vec::vector(1024));
 
