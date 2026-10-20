@@ -41,7 +41,7 @@ export const contentFeedbackSendTask: TaskConfig = {
     { name: 'occurredAt', type: 'text', required: true },
     { name: 'snapshot', type: 'json', required: true },
   ],
-  handler: async ({ input, req }) => {
+  handler: async ({ input, req, job }) => {
     if (!input) {
       throw new Error('contentFeedbackSend: missing job input');
     }
@@ -64,6 +64,21 @@ export const contentFeedbackSendTask: TaskConfig = {
       );
     } catch (error) {
       if (error instanceof ContentFeedbackWebhookError && error.kind !== 'retryable') {
+        await req.payload.update({
+          collection: 'payload-jobs',
+          id: job.id,
+          data: {
+            hasError: true,
+            processing: false,
+            waitUntil: null,
+            error: {
+              cancelled: true,
+              message: error.message,
+            },
+          },
+          overrideAccess: true,
+          req,
+        });
         throw new JobCancelledError(error.message);
       }
       throw error;
