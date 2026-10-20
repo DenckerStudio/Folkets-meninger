@@ -130,7 +130,7 @@ All on **Coolify, server `klever`**:
   falls back to `CMS_API_KEY`). Editors publish in the Payload admin, never n8n.
   `POST /api/ops/blog/social-posted` calls `fm-cms` `/api/blog-ops/social-posted`
   signed with HMAC (`REVALIDATE_SECRET`). `fm-cms` calls `/api/revalidate/blog` on publish.
-  `/dashboard/admin/blog` only links to the Payload admin.
+  Blogg redigeres i Payload (`CMS_URL`/admin), ikke i fm-web admin-hub.
 - **`20261018120000_blog_posts.sql` (Supabase `public.blog_posts`) is superseded and must
   still NOT be applied.** Do not build on the Supabase blog table. All blog work targets Payload.
 - Setup and env: `infra/coolify/cms.md`, `cms/.env.example`. **`SERVER_URL`**
@@ -208,7 +208,7 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 ### Identity, admin, Stemme+
 
 - Admin: `public.user_roles` + `is_admin()` via `lib/admin/gate.ts`. Hub:
-  `/dashboard/admin` (Appens fremtid, Reels, Statistikk, Brukere, Stemme+, Blogg).
+  `/dashboard/admin` (Appens fremtid, Oppfanget, Reels, Statistikk, Brukere, Stemme+).
 - Public activity is opt-in (`users.activity_visibility`, `private` by default).
 - Stemme+ (`users.subscription_tier`) gates BYOK AI chat (the orb overlay;
   `/dashboard/chat` only deep-links it). User LLM keys are encrypted in
