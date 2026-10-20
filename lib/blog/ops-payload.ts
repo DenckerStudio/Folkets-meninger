@@ -70,6 +70,17 @@ export function parseCreateBlogDraftBody(
   const aiRecord =
     record.ai && typeof record.ai === 'object' ? (record.ai as Record<string, unknown>) : null;
 
+  const review_note =
+    record.review_note === undefined || record.review_note === null
+      ? undefined
+      : typeof record.review_note === 'string'
+        ? record.review_note.trim()
+        : '';
+
+  if (record.review_note != null && review_note === '') {
+    return { ok: false, error: 'review_note må være en streng' };
+  }
+
   return {
     ok: true,
     input: {
@@ -83,6 +94,7 @@ export function parseCreateBlogDraftBody(
       related_sak_ids: asStringArray(record.related_sak_ids, 8),
       related_horing_ids: asStringArray(record.related_horing_ids, 8),
       source_event,
+      review_note,
       bluesky_text: bluesky_raw
         ? normalizeBlueskyText(excerpt, bluesky_raw)
         : normalizeBlueskyText(excerpt),

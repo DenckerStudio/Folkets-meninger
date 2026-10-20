@@ -79,6 +79,16 @@ const nextConfig: NextConfig = {
       { source: '/forslag', destination: '/dashboard/appens-fremtid', permanent: false },
       { source: '/saksganger', destination: '/dashboard/saksganger', permanent: true },
       { source: '/sporsmal', destination: '/dashboard/sporsmal', permanent: true },
+      {
+        source: '/dashboard/admin/oppfanget',
+        destination: '/dashboard/admin/research',
+        permanent: true,
+      },
+      {
+        source: '/dashboard/admin/oppfanget/:path*',
+        destination: '/dashboard/admin/research/:path*',
+        permanent: true,
+      },
     ];
   },
   reactStrictMode: true,

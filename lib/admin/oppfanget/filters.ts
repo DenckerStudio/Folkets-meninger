@@ -12,9 +12,17 @@ import type {
   OppfangetStatusCounts,
 } from '@/lib/admin/oppfanget/types';
 
+/** Cluster DB status exposed as an explicit admin status filter (hidden by default). */
+export const OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION = 'not_action' as const;
+
+export type OppfangetStatusFilter =
+  | OppfangetDisplayStatus
+  | typeof OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION
+  | '';
+
 export type OppfangetFilterInput = {
   type?: OppfangetDisplayType | '';
-  status?: OppfangetDisplayStatus | '';
+  status?: OppfangetStatusFilter;
   source?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -89,13 +97,27 @@ function matchesSearch(row: OppfangetFilterableRow, q?: string): boolean {
   return row.sources.some((s) => (s.title ?? '').toLowerCase().includes(needle));
 }
 
+function matchesStatusFilter(row: OppfangetFilterableRow, status: OppfangetStatusFilter | undefined): boolean {
+  const filter = status ?? '';
+  if (row.clusterStatus === OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION) {
+    return filter === OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION;
+  }
+  if (filter === OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION) {
+    return false;
+  }
+  if (filter && rowDisplayStatus(row) !== filter) {
+    return false;
+  }
+  return true;
+}
+
 export function filterOppfangetRows<T extends OppfangetFilterableRow>(
   rows: T[],
   filters: OppfangetFilterInput,
 ): T[] {
   return rows.filter((row) => {
     if (filters.type && rowDisplayType(row) !== filters.type) return false;
-    if (filters.status && rowDisplayStatus(row) !== filters.status) return false;
+    if (!matchesStatusFilter(row, filters.status)) return false;
     if (!matchesSource(row, filters.source ?? '')) return false;
     if (!matchesDate(row, filters.dateFrom, filters.dateTo)) return false;
     if (!matchesSearch(row, filters.q)) return false;
@@ -112,6 +134,9 @@ export function countOppfangetStatuses(rows: OppfangetFilterableRow[]): Oppfange
     avvist: 0,
   };
   for (const row of rows) {
+    if (row.clusterStatus === OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION) {
+      continue;
+    }
     counts[rowDisplayStatus(row)] += 1;
   }
   return counts;

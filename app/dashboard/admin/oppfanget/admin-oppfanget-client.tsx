@@ -8,14 +8,20 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import {
   OPPFANGET_DISPLAY_STATUS_LABELS,
   OPPFANGET_DISPLAY_TYPE_LABELS,
+  OPPFANGET_FILTER_STATUS_LABEL_NOT_ACTION,
 } from '@/lib/admin/oppfanget/mapping';
-import type { OppfangetFilterInput } from '@/lib/admin/oppfanget/filters';
+import {
+  OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION,
+  type OppfangetFilterInput,
+  type OppfangetStatusFilter,
+} from '@/lib/admin/oppfanget/filters';
 import { buildOppfangetAdminPath, buildOppfangetListQueryString } from '@/lib/admin/oppfanget/query';
 import type {
   OppfangetDisplayStatus,
   OppfangetDisplayType,
   OppfangetListResponse,
 } from '@/lib/admin/oppfanget/types';
+import type { ResearchBriefsByKind } from '@/lib/admin/research/service';
 import {
   isOppfangetListResponse,
   normalizeOppfangetCounts,
@@ -39,32 +45,57 @@ const TYPE_OPTIONS: { value: '' | OppfangetDisplayType; label: string }[] = [
   { value: 'boikott', label: OPPFANGET_DISPLAY_TYPE_LABELS.boikott },
 ];
 
-const STATUS_OPTIONS: { value: '' | OppfangetDisplayStatus; label: string }[] = [
+const STATUS_OPTIONS: { value: OppfangetStatusFilter; label: string }[] = [
   { value: '', label: 'Alle statuser' },
   { value: 'oppfanget', label: OPPFANGET_DISPLAY_STATUS_LABELS.oppfanget },
   { value: 'under_terskel', label: OPPFANGET_DISPLAY_STATUS_LABELS.under_terskel },
   { value: 'utkast_laget', label: OPPFANGET_DISPLAY_STATUS_LABELS.utkast_laget },
   { value: 'publisert', label: OPPFANGET_DISPLAY_STATUS_LABELS.publisert },
   { value: 'avvist', label: OPPFANGET_DISPLAY_STATUS_LABELS.avvist },
+  {
+    value: OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION,
+    label: OPPFANGET_FILTER_STATUS_LABEL_NOT_ACTION,
+  },
 ];
 
-function StatusPills({ counts }: { counts: OppfangetListResponse['counts'] }) {
+const pillClass =
+  'inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-foreground';
+
+function StatusPills({
+  counts,
+  filteredTotal,
+}: {
+  counts: OppfangetListResponse['counts'];
+  filteredTotal: number;
+}) {
   const safeCounts = normalizeOppfangetCounts(counts);
   return (
     <div className="flex flex-wrap gap-2">
       {(Object.keys(safeCounts) as OppfangetDisplayStatus[]).map((key) => (
-        <span
-          key={key}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-foreground"
-        >
+        <span key={key} className={pillClass}>
           {OPPFANGET_DISPLAY_STATUS_LABELS[key]}
           <span className="rounded-full bg-background px-1.5 py-0.5 text-[11px] tabular-nums">
             {safeCounts[key]}
           </span>
         </span>
       ))}
+      <span className={pillClass}>
+        Totalt
+        <span className="rounded-full bg-background px-1.5 py-0.5 text-[11px] tabular-nums">
+          {filteredTotal}
+        </span>
+      </span>
     </div>
   );
+}
+
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+  return debounced;
 }
 
 function OppfangetPageHeader({ previewMock }: { previewMock?: boolean }) {
@@ -72,10 +103,10 @@ function OppfangetPageHeader({ previewMock }: { previewMock?: boolean }) {
     <div>
       <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
         <Radar className="h-6 w-6 text-brand" aria-hidden />
-        Oppfanget
+        Research
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Meldinger, signaler og aksjoner vi har fanget opp. Tall og kilder er ikke verifisert her.
+        Saker og aksjoner vi har fanget opp, med kilder. Tall og kilder er ikke verifisert her.
       </p>
       {previewMock ? (
         <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
@@ -90,11 +121,15 @@ export default function AdminOppfangetClient({
   initialData = null,
   initialFilters,
   devPreview,
+  adminUserId,
+  initialResearchBriefsByCluster = {},
 }: {
   initialData?: OppfangetListResponse | null;
   initialFilters?: OppfangetFilterInput;
   /** Dev-only `preview` query (`mock` | `empty`). */
   devPreview?: string;
+  adminUserId?: string;
+  initialResearchBriefsByCluster?: Record<string, ResearchBriefsByKind>;
 }) {
   const router = useRouter();
   const [data, setData] = useState<OppfangetListResponse | null>(initialData);
@@ -103,11 +138,13 @@ export default function AdminOppfangetClient({
   const hydratedQueryRef = useRef<string | null>(initialData ? '__hydrated__' : null);
 
   const [type, setType] = useState<'' | OppfangetDisplayType>(initialFilters?.type || '');
-  const [status, setStatus] = useState<'' | OppfangetDisplayStatus>(initialFilters?.status || '');
+  const [status, setStatus] = useState<OppfangetStatusFilter>(initialFilters?.status || '');
   const [source, setSource] = useState(initialFilters?.source || '');
   const [dateFrom, setDateFrom] = useState(initialFilters?.dateFrom || '');
   const [dateTo, setDateTo] = useState(initialFilters?.dateTo || '');
   const [q, setQ] = useState(initialFilters?.q || '');
+  const debouncedQ = useDebouncedValue(q, 300);
+  const urlSyncReadyRef = useRef(false);
 
   const mockMode = Boolean(data?.previewMock ?? initialData?.previewMock);
 
@@ -134,6 +171,18 @@ export default function AdminOppfangetClient({
     [filters, previewParam],
   );
 
+  const urlFilters = useMemo<OppfangetFilterInput>(
+    () => ({
+      type,
+      status,
+      source: source.trim(),
+      dateFrom,
+      dateTo,
+      q: debouncedQ.trim(),
+    }),
+    [type, status, source, dateFrom, dateTo, debouncedQ],
+  );
+
   const clearFilters = useCallback(() => {
     setType('');
     setStatus('');
@@ -143,8 +192,22 @@ export default function AdminOppfangetClient({
     setQ('');
     const clearedPath = buildOppfangetAdminPath({}, previewParam);
     hydratedQueryRef.current = buildOppfangetListQueryString({}, previewParam);
-    router.replace(clearedPath);
+    router.replace(clearedPath, { scroll: false });
   }, [previewParam, router]);
+
+  useEffect(() => {
+    const path = buildOppfangetAdminPath(urlFilters, previewParam);
+    if (!urlSyncReadyRef.current) {
+      urlSyncReadyRef.current = true;
+      if (typeof window !== 'undefined') {
+        const current =
+          window.location.pathname +
+          (window.location.search ? window.location.search : '');
+        if (path === current) return;
+      }
+    }
+    router.replace(path, { scroll: false });
+  }, [urlFilters, previewParam, router]);
 
   const load = useCallback(() => {
     startTransition(async () => {
@@ -156,12 +219,12 @@ export default function AdminOppfangetClient({
           return;
         }
         if (!res.ok) {
-          setError('Kunne ikke laste oppfanget-liste');
+          setError('Kunne ikke laste research-liste');
           return;
         }
         const json: unknown = await res.json();
         if (!isOppfangetListResponse(json)) {
-          setError('Kunne ikke laste oppfanget-liste');
+          setError('Kunne ikke laste research-liste');
           return;
         }
         setData({
@@ -169,7 +232,7 @@ export default function AdminOppfangetClient({
           counts: normalizeOppfangetCounts(json.counts),
         });
       } catch {
-        setError('Kunne ikke laste oppfanget-liste');
+        setError('Kunne ikke laste Research-listen');
       }
     });
   }, [queryString]);
@@ -211,7 +274,7 @@ export default function AdminOppfangetClient({
     <div className="space-y-6" lang="nb-NO">
       <OppfangetPageHeader previewMock={data?.previewMock} />
 
-      {data ? <StatusPills counts={data.counts} /> : null}
+      {data ? <StatusPills counts={data.counts} filteredTotal={rows.length} /> : null}
 
       <div className="grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-3">
         <label className="space-y-1 text-sm">
@@ -230,7 +293,7 @@ export default function AdminOppfangetClient({
           <span className="text-muted-foreground">Status</span>
           <select
             value={status}
-            onChange={(e) => setStatus(e.target.value as '' | OppfangetDisplayStatus)}
+            onChange={(e) => setStatus(e.target.value as OppfangetStatusFilter)}
             className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           >
             {STATUS_OPTIONS.map((opt) => (
@@ -316,8 +379,16 @@ export default function AdminOppfangetClient({
 
       {rows.length > 0 ? (
         <>
-          <OppfangetMobileCards rows={rows} />
-          <OppfangetDesktopTable rows={rows} />
+          <OppfangetMobileCards
+            rows={rows}
+            adminUserId={adminUserId}
+            researchBriefsByCluster={initialResearchBriefsByCluster}
+          />
+          <OppfangetDesktopTable
+            rows={rows}
+            adminUserId={adminUserId}
+            researchBriefsByCluster={initialResearchBriefsByCluster}
+          />
         </>
       ) : null}
 

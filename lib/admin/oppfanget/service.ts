@@ -77,7 +77,7 @@ function parseBestScale(raw: Record<string, unknown> | null): OppfangetScale | n
   return { value, unit, sourceUrl, asOf };
 }
 
-function mapClusterToRow(
+export function mapClusterToRow(
   cluster: ClusterRow,
   sources: SourceRow[],
   pollStatus: string | null,
@@ -164,7 +164,7 @@ export async function listOppfangetForAdmin(
         },
         tableMissing: true,
         tableMissingMessage:
-          'Oppfanget-listen er ikke klar i databasen ennå. En administrator må kjøre den ventende databasemigrasjonen før nye signaler kan vises her.',
+          'Research-listen er ikke klar i databasen ennå. En administrator må kjøre den ventende databasemigrasjonen før nye signaler kan vises her.',
         previewMock: false,
       };
     }

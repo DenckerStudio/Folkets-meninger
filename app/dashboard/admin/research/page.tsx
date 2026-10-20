@@ -1,0 +1,39 @@
+import AdminOppfangetClient from '../oppfanget/admin-oppfanget-client';
+import { requireAdminPage } from '@/lib/admin/gate';
+import { parseOppfangetFilters } from '@/lib/admin/oppfanget/query';
+import { listOppfangetForAdmin } from '@/lib/admin/oppfanget/service';
+import { getLatestResearchBriefsByClusterIds } from '@/lib/admin/research/service';
+import { routes } from '@/lib/routes';
+import { getServerSupabase } from '@/lib/supabase-server';
+
+export const dynamic = 'force-dynamic';
+
+type PageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function AdminResearchPage({ searchParams }: PageProps) {
+  await requireAdminPage(routes.adminResearch);
+
+  const params = await searchParams;
+  const preview = typeof params.preview === 'string' ? params.preview : undefined;
+  const filters = parseOppfangetFilters(params);
+  const initialData = await listOppfangetForAdmin(filters, preview);
+  const researchBriefsByCluster = await getLatestResearchBriefsByClusterIds(
+    initialData.rows.map((row) => row.id),
+  );
+  const supabase = await getServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return (
+    <AdminOppfangetClient
+      initialData={initialData}
+      initialFilters={filters}
+      devPreview={preview}
+      adminUserId={user?.id}
+      initialResearchBriefsByCluster={researchBriefsByCluster}
+    />
+  );
+}
