@@ -150,8 +150,16 @@ async function mockContentFeedbackGet(page, options = {}) {
   const { slowContentId = SKELETON_ID } = options;
   await page.route('**/api/admin/content-feedback**', async (route) => {
     const url = new URL(route.request().url());
-    const contentId = url.searchParams.get('content_id') ?? '';
+    let contentId = url.searchParams.get('content_id') ?? '';
     if (route.request().method() === 'POST') {
+      try {
+        const body = route.request().postDataJSON();
+        if (body && typeof body.content_id === 'string') {
+          contentId = body.content_id;
+        }
+      } catch {
+        // ignore
+      }
       if (contentId === ERROR_ID) {
         await route.fulfill({
           status: 500,
@@ -314,7 +322,10 @@ for (const viewport of [
   await panel.locator('section').first().waitFor({ state: 'visible' });
   await page.locator('#panel-interactive').getByRole('button', { name: 'Godkjenn' }).click();
   await page.locator('#panel-interactive').getByRole('button', { name: 'Lagre tilbakemelding' }).click();
-  await page.locator('#panel-interactive').getByText('Takk, tilbakemeldingen er lagret.').waitFor({ timeout: 15_000 });
+  await page
+    .locator('#panel-interactive p.text-emerald-700, #panel-interactive p.dark\\:text-emerald-400')
+    .filter({ hasText: 'Takk, tilbakemeldingen er lagret.' })
+    .waitFor({ timeout: 15_000 });
   await shotPanel(page, 'panel-interactive', 'content-feedback-success', viewport.tag);
   await page.close();
 }
@@ -335,7 +346,10 @@ for (const viewport of [
   await panel.locator('section').first().waitFor({ state: 'visible' });
   await page.locator('#panel-error').getByRole('button', { name: 'Godkjenn' }).click();
   await page.locator('#panel-error').getByRole('button', { name: 'Lagre tilbakemelding' }).click();
-  await page.locator('#panel-error').getByText('Kunne ikke lagre').waitFor({ timeout: 15_000 });
+  await page
+    .locator('#panel-error p.text-destructive')
+    .filter({ hasText: 'Kunne ikke lagre' })
+    .waitFor({ timeout: 15_000 });
   await shotPanel(page, 'panel-error', 'content-feedback-error', viewport.tag);
   await page.close();
 }
