@@ -242,25 +242,30 @@ const StoriesHeader = forwardRef<HTMLDivElement, StoriesHeaderProps>(
 );
 StoriesHeader.displayName = 'StoriesHeader';
 
-interface StoriesContentProps extends HTMLAttributes<HTMLDivElement> {}
+interface StoriesContentProps extends HTMLAttributes<HTMLDivElement> {
+  interactionLocked?: boolean;
+}
 
 const StoriesContent = forwardRef<HTMLDivElement, StoriesContentProps>(
-  ({ className, children, ...props }, ref) => {
+  ({ className, children, interactionLocked = false, ...props }, ref) => {
     const { currentIndex, direction, pause, resume, next, prev } = useStories();
     const [touchStart, setTouchStart] = useState<number | null>(null);
     const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
     const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+      if (interactionLocked) return;
       setTouchStart(e.targetTouches[0].clientX);
       setTouchEnd(null);
       pause();
     };
 
     const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+      if (interactionLocked) return;
       setTouchEnd(e.targetTouches[0].clientX);
     };
 
     const handleTouchEnd = () => {
+      if (interactionLocked) return;
       if (!touchStart || !touchEnd) return;
       const distance = touchStart - touchEnd;
       const minSwipe = 50;
@@ -272,15 +277,18 @@ const StoriesContent = forwardRef<HTMLDivElement, StoriesContentProps>(
     };
 
     const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+      if (interactionLocked) return;
       setTouchStart(e.clientX);
       pause();
     };
 
     const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+      if (interactionLocked) return;
       if (touchStart !== null) setTouchEnd(e.clientX);
     };
 
     const handleMouseUp = () => {
+      if (interactionLocked) return;
       if (!touchStart || !touchEnd) {
         resume();
         setTouchStart(null);
@@ -297,6 +305,7 @@ const StoriesContent = forwardRef<HTMLDivElement, StoriesContentProps>(
     };
 
     const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+      if (interactionLocked) return;
       if (e.key === 'ArrowRight') next();
       if (e.key === 'ArrowLeft') prev();
       if (e.key === ' ') {

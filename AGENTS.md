@@ -137,15 +137,23 @@ All on **Coolify, server `klever`**:
   `id` / `adminUrl` / `cmsStatus` when the post exists in CMS.
   `POST /api/ops/blog/social-posted` calls `fm-cms` `/api/blog-ops/social-posted`
   signed with HMAC (`REVALIDATE_SECRET`). `fm-cms` calls `/api/revalidate/blog` on publish.
-  `/dashboard/admin/blog` only links to the Payload admin.
+  Blogg redigeres i Payload (`CMS_URL`/admin), ikke i fm-web admin-hub.
 - **Blog ISR / build**: runtime CMS failures on `/blogg` throw so ISR keeps the last good HTML.
   During `next build`, if CMS is down, blog index routes render «midlertidig utilgjengelig» via
-  `BlogCmsUnavailableShell` (`unstable_noStore`) and **`/blogg` stays dynamic (ƒ) for that
-  deployment** until a later build succeeds with CMS up. Sitemap omits blog post URLs on loader
-  errors but keeps static and sak entries.
+  `BlogCmsUnavailableShell` (`unstable_noStore`) og **`/blogg` forblir dynamisk (ƒ) for den
+  deployen** til en senere build lykkes med CMS oppe. Sitemap utelater blogg-URL-er ved
+  loader-feil, men beholder statiske og sak-oppføringer.
 - **`20261018120000_blog_posts.sql` (Supabase `public.blog_posts`) is superseded and must
   still NOT be applied.** Do not build on the Supabase blog table. All blog work targets Payload.
-- Setup and env: `infra/coolify/cms.md`, `cms/.env.example`.
+- Setup and env: `infra/coolify/cms.md`, `cms/.env.example`. **`SERVER_URL`**
+  must be the public CMS origin (`https://cms.folkets-meninger.no`); optional
+  aliases `PAYLOAD_PUBLIC_SERVER_URL` / `NEXT_PUBLIC_SERVER_URL`. **`WEB_PUBLIC_URL`**
+  is included in Payload `cors`/`csrf` with `SERVER_URL` (no wildcards). Admin
+  login: per-account lockout (5 attempts / 15 min) plus IP+email throttle on
+  `POST /api/users/login` (Traefik `X-Real-Ip` / rightmost `X-Forwarded-For`);
+  API keys (`useAPIKey`) unchanged for agent/reader roles. Payload SQL migrations
+  in `cms/src/migrations/` run automatically on **fm-cms** boot in production
+  (`prodMigrations` + `instrumentation.ts`).
 
 ## Architecture map
 
@@ -212,7 +220,7 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 ### Identity, admin, Stemme+
 
 - Admin: `public.user_roles` + `is_admin()` via `lib/admin/gate.ts`. Hub:
-  `/dashboard/admin` (Appens fremtid, Reels, Statistikk, Brukere, Stemme+, Blogg).
+  `/dashboard/admin` (Appens fremtid, Oppfanget, Reels, Statistikk, Brukere, Stemme+).
 - Public activity is opt-in (`users.activity_visibility`, `private` by default).
 - Stemme+ (`users.subscription_tier`) gates BYOK AI chat (the orb overlay;
   `/dashboard/chat` only deep-links it). User LLM keys are encrypted in

@@ -1,28 +1,28 @@
 import { REST_POST } from '@payloadcms/next/routes';
 import config from '@payload-config';
+import { loginIdentifierFromBody } from '@/lib/loginBody';
 import { checkLoginRateLimit } from '@/lib/loginRateLimit';
+import { LOGIN_IP_RATE_LIMIT_MESSAGE_NB } from '@/lib/loginMessages';
+import { localizeLoginResponse } from '@/lib/localizeLoginResponse';
+import { trustedClientIp } from '@/lib/trustedClientIp';
 
 const payloadPost = REST_POST(config);
 
-function clientIp(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) {
-    const first = forwarded.split(',')[0]?.trim();
-    if (first) return first;
-  }
-  const realIp = request.headers.get('x-real-ip')?.trim();
-  if (realIp) return realIp;
-  return 'unknown';
-}
-
 export async function POST(request: Request) {
-  const limit = checkLoginRateLimit(clientIp(request));
+  const bodyText = await request.text();
+  let identifier = '';
+  try {
+    identifier = loginIdentifierFromBody(JSON.parse(bodyText) as unknown);
+  } catch {
+    identifier = '';
+  }
+
+  const ip = trustedClientIp(request);
+  const limit = checkLoginRateLimit(ip, identifier);
   if (!limit.allowed) {
     return Response.json(
       {
-        errors: [
-          { message: 'For mange innloggingsforsøk fra denne IP-adressen. Prøv igjen senere.' },
-        ],
+        errors: [{ message: LOGIN_IP_RATE_LIMIT_MESSAGE_NB }],
       },
       {
         status: 429,
@@ -31,5 +31,14 @@ export async function POST(request: Request) {
     );
   }
 
-  return payloadPost(request, { params: Promise.resolve({ slug: ['users', 'login'] }) });
+  const loginRequest = new Request(request.url, {
+    method: 'POST',
+    headers: request.headers,
+    body: bodyText,
+  });
+
+  const response = await payloadPost(loginRequest, {
+    params: Promise.resolve({ slug: ['users', 'login'] }),
+  });
+  return localizeLoginResponse(response);
 }

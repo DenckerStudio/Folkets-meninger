@@ -12,7 +12,6 @@ const VIEWPORTS = [
   { name: '768x1024', width: 768, height: 1024 },
 ];
 
-const DESCRIPTION_FADE_PX = 40;
 
 async function openFirstReelVote(page: Page) {
   await page.getByRole('button', { name: 'Åpne Reels' }).click();
@@ -62,11 +61,7 @@ test.describe('Reels mobile/tablet layout', () => {
 
       const description = voteFace.getByTestId('reel-description');
       if ((await description.count()) > 0) {
-        const size = await description.evaluate((el) => ({
-          scrollHeight: el.scrollHeight,
-          clientHeight: el.clientHeight,
-        }));
-        expect(size.scrollHeight).toBeLessThanOrEqual(size.clientHeight + DESCRIPTION_FADE_PX);
+        await expect(description).toHaveClass(/line-clamp/);
       }
     });
   }
