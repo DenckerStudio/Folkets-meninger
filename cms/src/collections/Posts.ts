@@ -4,10 +4,10 @@ import { postPublishHooks } from '@/hooks/postPublish';
 import {
   contentFeedbackAfterChange,
   contentFeedbackAfterDelete,
-  contentFeedbackAfterOperation,
   contentFeedbackBeforeOperation,
   contentFeedbackCaptureMainStatusBeforeChange,
 } from '@/hooks/contentFeedbackWebhook';
+import { preservePostOrigin } from '@/hooks/preservePostOrigin';
 import { validatePostText } from '@/hooks/validatePostText';
 import {
   canPublishField,
@@ -53,13 +53,13 @@ export const Posts: CollectionConfig = {
     beforeValidate: [enforceDraftDataBeforeValidate, validatePostText],
     beforeChange: [
       contentFeedbackCaptureMainStatusBeforeChange,
+      preservePostOrigin,
       agentDraftGuard,
       enforceDraftDataBeforeChange,
       setPublishedAtOnPublish,
     ],
     afterChange: [postPublishHooks, contentFeedbackAfterChange],
     afterDelete: [contentFeedbackAfterDelete],
-    afterOperation: [contentFeedbackAfterOperation],
   },
   fields: [
     {
@@ -172,6 +172,9 @@ export const Posts: CollectionConfig = {
       name: 'origin',
       type: 'select',
       defaultValue: 'manual',
+      access: {
+        update: () => false,
+      },
       options: [
         { label: 'Manuell', value: 'manual' },
         { label: 'n8n', value: 'n8n' },

@@ -2,17 +2,12 @@ import { randomUUID } from 'node:crypto';
 import type {
   CollectionAfterChangeHook,
   CollectionAfterDeleteHook,
-  CollectionAfterOperationHook,
   CollectionBeforeChangeHook,
   CollectionBeforeOperationHook,
-  Payload,
   PayloadRequest,
 } from 'payload';
-import {
-  sendContentFeedbackWebhook,
-  type ContentFeedbackWebhookBody,
-  type ContentFeedbackWebhookEvent,
-} from '@/lib/contentFeedbackWebhook';
+import type { ContentFeedbackWebhookEvent } from '@/lib/contentFeedbackWebhook';
+import type { ContentFeedbackSendInput } from '@/jobs/contentFeedbackSend';
 
 type PostDoc = {
   id: string | number;
@@ -24,17 +19,13 @@ type PostDoc = {
   category?: { name?: string; slug?: string; title?: string } | string | number;
 };
 
-type PendingContentFeedback = ContentFeedbackWebhookBody;
+type MainDocSnapshot = {
+  status: string;
+  origin: string;
+};
 
-const MAIN_STATUS_BEFORE_KEY = 'contentFeedbackMainStatusBefore';
-const PENDING_BY_ID_KEY = 'contentFeedbackPendingById';
-
-type MainStatusMap = Record<string, string>;
-type PendingMap = Record<string, PendingContentFeedback>;
-
-function isAgentOrigin(doc: PostDoc | null | undefined): boolean {
-  return doc?.origin === 'n8n';
-}
+const MAIN_SNAPSHOT_KEY = 'contentFeedbackMainSnapshotBefore';
+const CREATE_ORIGIN_KEY = 'contentFeedbackCreateOrigin';
 
 export function isDraftOrAutosaveSave(req: PayloadRequest): boolean {
   const q = req.query as Record<string, unknown>;
@@ -43,47 +34,51 @@ export function isDraftOrAutosaveSave(req: PayloadRequest): boolean {
   return false;
 }
 
-async function mainVersionStatus(
-  req: PayloadRequest,
-  id: string | number,
-): Promise<string | undefined> {
+async function loadMainPost(req: PayloadRequest, id: string | number): Promise<PostDoc | null> {
   try {
-    const main = await req.payload.findByID({
+    return (await req.payload.findByID({
       collection: 'posts',
       id,
       draft: false,
       depth: 0,
       req,
-    });
-    return (main as PostDoc)._status;
+    })) as PostDoc;
   } catch {
-    return undefined;
+    return null;
   }
 }
 
-export function recordContentFeedbackMainStatusBefore(
+function snapshotMap(req: PayloadRequest): Record<string, MainDocSnapshot> {
+  const existing = req.context[MAIN_SNAPSHOT_KEY] as Record<string, MainDocSnapshot> | undefined;
+  if (!existing) {
+    req.context[MAIN_SNAPSHOT_KEY] = {};
+    return req.context[MAIN_SNAPSHOT_KEY] as Record<string, MainDocSnapshot>;
+  }
+  return existing;
+}
+
+export function recordMainDocSnapshot(
   req: PayloadRequest,
   docId: string,
-  status: string,
+  snapshot: MainDocSnapshot,
 ): void {
-  const map = req.context[MAIN_STATUS_BEFORE_KEY] as MainStatusMap | undefined;
-  if (!map) {
-    req.context[MAIN_STATUS_BEFORE_KEY] = { [docId]: status };
-    return;
-  }
-  map[docId] = status;
+  snapshotMap(req)[docId] = snapshot;
 }
 
-export function readContentFeedbackMainStatusBefore(
+export function readMainDocSnapshot(
   req: PayloadRequest,
   docId: string,
   operation: 'create' | 'update',
-): string {
-  const map = req.context[MAIN_STATUS_BEFORE_KEY] as MainStatusMap | undefined;
-  if (map && map[docId] !== undefined) {
-    return map[docId];
+): MainDocSnapshot {
+  const snap = snapshotMap(req)[docId];
+  if (snap) {
+    return snap;
   }
-  return operation === 'create' ? 'draft' : 'draft';
+  if (operation === 'create') {
+    const origin = String(req.context[CREATE_ORIGIN_KEY] ?? 'manual');
+    return { status: 'draft', origin };
+  }
+  return { status: 'draft', origin: 'manual' };
 }
 
 export function detectContentFeedbackTransition(
@@ -97,12 +92,12 @@ export function detectContentFeedbackTransition(
   return { becamePublished, becameArchived };
 }
 
-async function captureMainStatusForId(
-  req: PayloadRequest,
-  id: string | number,
-): Promise<void> {
-  const status = await mainVersionStatus(req, id);
-  recordContentFeedbackMainStatusBefore(req, String(id), status ?? 'draft');
+async function captureMainDocSnapshot(req: PayloadRequest, id: string | number): Promise<void> {
+  const main = await loadMainPost(req, id);
+  recordMainDocSnapshot(req, String(id), {
+    status: main?._status ?? 'draft',
+    origin: main?.origin ?? 'manual',
+  });
 }
 
 export const contentFeedbackBeforeOperation: CollectionBeforeOperationHook<'posts'> = async ({
@@ -114,10 +109,10 @@ export const contentFeedbackBeforeOperation: CollectionBeforeOperationHook<'post
     if (isDraftOrAutosaveSave(req)) {
       return args;
     }
-    if (operation === 'updateByID' && args && typeof args === 'object' && 'id' in args) {
+    if (operation === 'update' && args && typeof args === 'object' && 'id' in args) {
       const id = (args as { id?: string | number }).id;
       if (id != null) {
-        await captureMainStatusForId(req, id);
+        await captureMainDocSnapshot(req, id);
       }
     }
   } catch (error) {
@@ -130,15 +125,22 @@ export const contentFeedbackCaptureMainStatusBeforeChange: CollectionBeforeChang
   data,
   req,
   originalDoc,
+  operation,
 }) => {
   try {
     if (isDraftOrAutosaveSave(req)) {
       return data;
     }
+
     const id = (data as PostDoc)?.id ?? (originalDoc as PostDoc)?.id;
-    if (id != null) {
-      await captureMainStatusForId(req, id);
+    if (id == null) {
+      if (operation === 'create') {
+        req.context[CREATE_ORIGIN_KEY] = (data as PostDoc)?.origin ?? 'manual';
+      }
+      return data;
     }
+
+    await captureMainDocSnapshot(req, id);
   } catch (error) {
     req.payload.logger.error({ msg: 'content-feedback beforeChange capture failed', error });
   }
@@ -172,103 +174,40 @@ async function categoryLabels(doc: PostDoc, req: PayloadRequest): Promise<string
   return [];
 }
 
-export function queueContentFeedbackPending(
-  req: PayloadRequest,
-  docId: string | number,
-  body: PendingContentFeedback,
-): void {
-  const key = String(docId);
-  const existing = req.context[PENDING_BY_ID_KEY] as PendingMap | undefined;
-  if (!existing) {
-    req.context[PENDING_BY_ID_KEY] = { [key]: body };
-    return;
-  }
-  existing[key] = body;
-}
-
-export function takeAllContentFeedbackPending(req: PayloadRequest): PendingContentFeedback[] {
-  const map = req.context[PENDING_BY_ID_KEY] as PendingMap | undefined;
-  if (!map) {
-    return [];
-  }
-  delete req.context[PENDING_BY_ID_KEY];
-  return Object.values(map);
-}
-
-function buildBody(
+function buildJobInput(
   event: ContentFeedbackWebhookEvent,
   doc: PostDoc,
   categories: string[],
-): PendingContentFeedback {
+): ContentFeedbackSendInput {
   return {
+    postId: String(doc.id),
     event,
-    event_id: randomUUID(),
-    post_id: String(doc.id),
-    slug: doc.slug?.trim() ?? '',
-    title: doc.title?.trim() ?? '',
-    excerpt: doc.excerpt?.trim() ?? '',
-    categories,
-    origin: doc.origin?.trim() ?? 'manual',
-    occurred_at: new Date().toISOString(),
+    eventId: randomUUID(),
+    occurredAt: new Date().toISOString(),
+    snapshot: {
+      slug: doc.slug?.trim() ?? '',
+      title: doc.title?.trim() ?? '',
+      excerpt: doc.excerpt?.trim() ?? '',
+      categories,
+      origin: doc.origin?.trim() ?? 'n8n',
+    },
   };
 }
 
-export type DeferredSendFn = typeof sendContentFeedbackWebhook;
-
-export async function runDeferredContentFeedbackSend(
-  payload: Payload,
-  body: PendingContentFeedback,
-  send: DeferredSendFn = sendContentFeedbackWebhook,
-): Promise<boolean> {
-  const log = payload.logger;
-
-  if (body.event === 'deleted') {
-    try {
-      await payload.findByID({
-        collection: 'posts',
-        id: body.post_id,
-        draft: false,
-        depth: 0,
-      });
-      return false;
-    } catch {
-      send(body, log);
-      return true;
-    }
-  }
-
-  const main = await payload.findByID({
-    collection: 'posts',
-    id: body.post_id,
-    draft: false,
-    depth: 0,
-  });
-  const post = main as PostDoc;
-  if (!isAgentOrigin(post)) {
-    return false;
-  }
-
-  const expectedStatus = body.event === 'published' ? 'published' : 'draft';
-  if (post._status !== expectedStatus) {
-    return false;
-  }
-
-  send(body, log);
-  return true;
-}
-
-function scheduleSendAfterCommit(req: PayloadRequest, body: PendingContentFeedback): void {
-  const payload = req.payload;
-  setImmediate(() => {
-    void runDeferredContentFeedbackSend(payload, body).catch((error) => {
-      payload.logger.error({ msg: 'content-feedback deferred send failed', error });
-    });
+async function queueContentFeedbackJob(
+  req: PayloadRequest,
+  input: ContentFeedbackSendInput,
+): Promise<void> {
+  await req.payload.jobs.queue({
+    task: 'contentFeedbackSend',
+    input,
+    queue: 'content-feedback',
+    req,
   });
 }
 
 export const contentFeedbackAfterChange: CollectionAfterChangeHook = async ({
   doc,
-  previousDoc,
   req,
   operation,
 }) => {
@@ -278,26 +217,21 @@ export const contentFeedbackAfterChange: CollectionAfterChangeHook = async ({
     }
 
     const post = doc as PostDoc;
-    const prev = previousDoc as PostDoc | undefined;
-    if (!isAgentOrigin(post) && !isAgentOrigin(prev)) {
+    const postId = post.id;
+    if (postId == null) {
       return doc;
     }
 
-    const originDoc = isAgentOrigin(post) ? post : prev;
-    if (!originDoc) return doc;
+    const before = readMainDocSnapshot(req, String(postId), operation);
+    if (before.origin !== 'n8n') {
+      return doc;
+    }
 
-    const postId = post.id ?? prev?.id;
-    if (postId == null) return doc;
-
-    const prevMainStatus = readContentFeedbackMainStatusBefore(
-      req,
-      String(postId),
-      operation,
-    );
-    const currentMainStatus = (await mainVersionStatus(req, postId)) ?? 'draft';
+    const main = await loadMainPost(req, postId);
+    const currentMainStatus = main?._status ?? 'draft';
 
     const { becamePublished, becameArchived } = detectContentFeedbackTransition(
-      prevMainStatus,
+      before.status,
       currentMainStatus,
     );
 
@@ -306,12 +240,12 @@ export const contentFeedbackAfterChange: CollectionAfterChangeHook = async ({
     }
 
     const categories = await categoryLabels(post, req);
-    const merged = { ...originDoc, ...post, id: postId };
+    const merged = { ...main, ...post, id: postId, origin: before.origin };
 
     if (becamePublished) {
-      queueContentFeedbackPending(req, postId, buildBody('published', merged, categories));
+      await queueContentFeedbackJob(req, buildJobInput('published', merged, categories));
     } else if (becameArchived) {
-      queueContentFeedbackPending(req, postId, buildBody('archived', merged, categories));
+      await queueContentFeedbackJob(req, buildJobInput('archived', merged, categories));
     }
   } catch (error) {
     req.payload.logger.error({ msg: 'content-feedback afterChange failed', error });
@@ -320,29 +254,15 @@ export const contentFeedbackAfterChange: CollectionAfterChangeHook = async ({
   return doc;
 };
 
-export const contentFeedbackAfterOperation: CollectionAfterOperationHook<'posts'> = ({
-  req,
-  result,
-}) => {
-  try {
-    const pending = takeAllContentFeedbackPending(req);
-    for (const body of pending) {
-      scheduleSendAfterCommit(req, body);
-    }
-  } catch (error) {
-    req.payload.logger.error({ msg: 'content-feedback afterOperation failed', error });
-  }
-  return result;
-};
-
 export const contentFeedbackAfterDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
   try {
     const post = doc as PostDoc;
-    if (!isAgentOrigin(post)) return doc;
+    if (post.origin !== 'n8n') {
+      return doc;
+    }
 
     const categories = await categoryLabels(post, req);
-    const body = buildBody('deleted', post, categories);
-    scheduleSendAfterCommit(req, body);
+    await queueContentFeedbackJob(req, buildJobInput('deleted', post, categories));
   } catch (error) {
     req.payload.logger.error({ msg: 'content-feedback afterDelete failed', error });
   }

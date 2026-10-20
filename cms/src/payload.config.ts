@@ -13,6 +13,7 @@ import { Posts } from '@/collections/Posts';
 import { Tags } from '@/collections/Tags';
 import { Users } from '@/collections/Users';
 import { resolveCmsServerUrl, trustedPayloadOrigins } from '@/lib/serverOrigins';
+import { contentFeedbackSendTask } from '@/jobs/contentFeedbackSend';
 import { seedOnBoot } from '@/seed/seedBaseData';
 
 const filename = fileURLToPath(import.meta.url);
@@ -75,7 +76,24 @@ export default buildConfig({
     disablePlaygroundInProduction: true,
     disableIntrospectionInProduction: true,
   },
+  jobs: {
+    tasks: [contentFeedbackSendTask],
+    deleteJobOnComplete: true,
+    autoRun: [
+      {
+        cron: '* * * * *',
+        queue: 'content-feedback',
+      },
+    ],
+  },
   onInit: async (payload) => {
     await seedOnBoot(payload);
+    if (process.env.NODE_ENV !== 'test') {
+      void payload.jobs
+        .run({ queue: 'content-feedback', limit: 25, overrideAccess: true })
+        .catch((error) => {
+          payload.logger.warn({ msg: 'content-feedback job runner on boot failed', error });
+        });
+    }
   },
 });

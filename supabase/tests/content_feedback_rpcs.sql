@@ -618,7 +618,8 @@ BEGIN
       'ci-null-cat',
       'ci-456',
       'ci-batch-1',
-      'ci-batch-2'
+      'ci-batch-2',
+      'ci-match-seen'
     );
   DELETE FROM public.content_feedback
   WHERE content_id IN (v_poll_id::text, v_poll_archive_id::text, v_poll_admin_id::text)
