@@ -1,5 +1,12 @@
 import assert from 'node:assert/strict';
-import { createLocalReq, getPayload, type Payload, type PayloadRequest } from 'payload';
+import {
+  createLocalReq,
+  getPayload,
+  initTransaction,
+  killTransaction,
+  type Payload,
+  type PayloadRequest,
+} from 'payload';
 import config from '@/payload.config';
 import { seedTaxonomy } from '@/seed/seedBaseData';
 
@@ -84,9 +91,9 @@ async function main() {
   const jobsAfterFlips = await countContentFeedbackJobs(payload);
   assert.equal(jobsAfterFlips - jobsBeforeFlips, 30);
 
-  const tx = await payload.db.beginTransaction();
-  assert.ok(tx, 'forventer database-transaksjon');
-  const req = await createLocalReq({ req: { transactionID: tx } }, payload);
+  const req = await createLocalReq({}, payload);
+  const startedTx = await initTransaction(req);
+  assert.ok(startedTx, 'forventer ny transaksjon');
   const jobsBeforeTx = await countContentFeedbackJobs(payload);
 
   await payload.update({
@@ -100,7 +107,7 @@ async function main() {
   const jobsInTx = await countContentFeedbackJobs(payload, req);
   assert.equal(jobsInTx, jobsBeforeTx + 1);
 
-  await payload.db.rollbackTransaction(tx);
+  await killTransaction(req);
   const jobsAfterRollback = await countContentFeedbackJobs(payload);
   assert.equal(jobsAfterRollback, jobsBeforeTx);
 
@@ -125,6 +132,10 @@ async function main() {
     id: postId,
     overrideAccess: true,
   });
+
+  if (typeof payload.db.destroy === 'function') {
+    await payload.db.destroy();
+  }
 
   console.log('cms integration/contentFeedbackOutbox.integration.test.ts ok');
 }
