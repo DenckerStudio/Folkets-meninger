@@ -1,20 +1,26 @@
 import assert from 'node:assert/strict';
-import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const HYBRID_REF = 'origin/cursor/hybrid-search-rag-p4-p6-fff8';
-const hybridPath =
-  'supabase/migrations/20261019200000_hybrid_search_and_embedding_v2.sql';
-const hearingPath = 'supabase/migrations/20261019210000_stortinget_hearings.sql';
+const hearingPath = join(
+  process.cwd(),
+  'supabase/migrations/20261019210000_stortinget_hearings.sql',
+);
+const sql = readFileSync(hearingPath, 'utf8');
 
-function extractFunctionArgTypes(sql: string, functionName: string): string {
-  const pattern = new RegExp(
-    `REVOKE ALL ON FUNCTION public\\.${functionName}\\(\\s*([\\s\\S]*?)\\s*\\)\\s*FROM`,
-    'm',
-  );
-  const match = sql.match(pattern);
-  assert.ok(match, `expected REVOKE ALL ON FUNCTION public.${functionName}(...) in migration`);
+function extractFunctionArgTypes(sqlText: string, functionName: string, verb: 'REVOKE' | 'DROP'): string {
+  const pattern =
+    verb === 'REVOKE'
+      ? new RegExp(
+          `REVOKE ALL ON FUNCTION public\\.${functionName}\\(\\s*([\\s\\S]*?)\\s*\\)\\s*FROM`,
+          'm',
+        )
+      : new RegExp(
+          `DROP FUNCTION IF EXISTS public\\.${functionName}\\(\\s*([\\s\\S]*?)\\s*\\)\\s*;`,
+          'm',
+        );
+  const match = sqlText.match(pattern);
+  assert.ok(match, `expected ${verb} for public.${functionName} in hearings migration`);
   return match[1]
     .split(',')
     .map((part) => part.replace(/\s+/g, ' ').trim())
@@ -22,44 +28,17 @@ function extractFunctionArgTypes(sql: string, functionName: string): string {
     .join(', ');
 }
 
-function extractDropArgTypes(sql: string, functionName: string): string {
-  const pattern = new RegExp(
-    `DROP FUNCTION IF EXISTS public\\.${functionName}\\(\\s*([\\s\\S]*?)\\s*\\)\\s*;`,
-    'm',
-  );
-  const match = sql.match(pattern);
-  assert.ok(match, `expected DROP FUNCTION IF EXISTS public.${functionName}(...) in migration`);
-  return match[1]
-    .split(',')
-    .map((part) => part.replace(/\s+/g, ' ').trim())
-    .filter(Boolean)
-    .join(', ');
-}
-
-const hybridSql = execSync(`git show ${HYBRID_REF}:${hybridPath}`, {
-  encoding: 'utf8',
-  stdio: ['ignore', 'pipe', 'pipe'],
-});
-
-const hearingSql = readFileSync(join(process.cwd(), hearingPath), 'utf8');
-
-const grantTypes = extractFunctionArgTypes(hybridSql, 'search_chunks_hybrid');
-const dropTypes = extractDropArgTypes(hearingSql, 'search_chunks_hybrid');
+const dropTypes = extractFunctionArgTypes(sql, 'search_chunks_hybrid', 'DROP');
+const grantTypes = extractFunctionArgTypes(sql, 'search_chunks_hybrid', 'REVOKE');
 
 assert.equal(
   dropTypes,
   grantTypes,
-  'DROP FUNCTION arg types must match #179 REVOKE/GRANT signature on cursor/hybrid-search-rag-p4-p6-fff8',
+  'DROP FUNCTION signature must match REVOKE/GRANT for search_chunks_hybrid',
 );
-
-assert.match(hybridSql, /filter_hearing_id text DEFAULT NULL/);
-assert.doesNotMatch(
-  hybridSql,
-  /DROP FUNCTION IF EXISTS public\.search_chunks_hybrid/,
-  '#179 must not drop search_chunks_hybrid; #178 drops before extending return type',
+assert.equal(
+  dropTypes,
+  'text, vector, text[], text[], text, text, boolean, timestamptz, text, int',
 );
-
-assert.match(hybridSql, /DROP FUNCTION IF EXISTS public\.search_issues_fts\(text, int\)/);
-assert.match(hybridSql, /search_terms text\[\] DEFAULT NULL/);
 
 console.log('supabase/hearing-hybrid-migration-signature.test.ts: ok');

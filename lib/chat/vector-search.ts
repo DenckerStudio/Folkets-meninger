@@ -1,7 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ollamaApiUrl } from '@/lib/byok/ollama';
 import type { DecryptedByokCredential } from '@/lib/byok/service';
-import { normalizeChunkText } from '@/lib/chat/chunk-excerpt';
 
 /**
  * Semantic chunk search for overlay chat.
@@ -52,6 +51,8 @@ export function resolveByokOllamaVectorTimeoutMs(queryLength = 0): number {
   return Math.min(maxMs, floor + Math.max(0, extra));
 }
 const MAX_QUERY_CHARS = 500;
+const MAX_CHUNK_CHARS = 1400;
+
 export type QueryVectorizer = (query: string) => Promise<number[] | null>;
 
 export type VectorChunk = {
@@ -146,7 +147,10 @@ export async function searchChunksByVector(
 
     return data.flatMap((row) => {
       const record = row as Record<string, unknown>;
-      const content = normalizeChunkText(String(record.content ?? ''));
+      const content = String(record.content ?? '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, MAX_CHUNK_CHARS);
       if (!content) return [];
       return [
         {

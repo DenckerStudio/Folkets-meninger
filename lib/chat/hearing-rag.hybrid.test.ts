@@ -10,9 +10,10 @@ assert.equal(
   isMissingHearingHybridRpcError({ message: 'Could not find the function public.search_chunks_hybrid' }),
   true,
 );
+assert.equal(isMissingHearingHybridRpcError({ code: '42883', message: 'undefined_function' }), true);
 assert.equal(
   isMissingHearingHybridRpcError({ message: 'Unknown argument filter_hearing_id' }),
-  true,
+  false,
 );
 assert.equal(isMissingHearingHybridRpcError(null), false);
 

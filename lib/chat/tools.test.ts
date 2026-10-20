@@ -210,7 +210,7 @@ async function main() {
   };
   const shaped = shapeChatPollResults({
     poll,
-    totals: { ja: 3, nei: 1, blank: 0, total: 4 },
+    totals: { ja: 15, nei: 5, blank: 0, total: 20 },
   });
   assert.equal(shaped.found, true);
   assert.equal(shaped.isOpen, true);
@@ -218,6 +218,13 @@ async function main() {
   assert.equal(shaped.percents.nei, 25);
   assert.equal(shaped.percents.blank, 0);
   assert.equal(shaped.note, null);
+
+  const belowMin = shapeChatPollResults({
+    poll,
+    totals: { ja: 3, nei: 1, blank: 0, total: 4 },
+  });
+  assert.equal(belowMin.percents.ja, 0);
+  assert.match(belowMin.note ?? '', /Færre enn/);
 
   const emptyShaped = shapeChatPollResults({ poll: null });
   assert.equal(emptyShaped.found, false);
@@ -293,9 +300,9 @@ async function main() {
 
   // parseSaksgangEventDate handles the formats the timeline dates use.
   const parsed = parseSaksgangEventDate('23.04.2025 00:00:00');
-  assert.equal(parsed?.getFullYear(), 2025);
-  assert.equal(parsed?.getMonth(), 3);
-  assert.equal(parsed?.getDate(), 23);
+  assert.equal(parsed?.getUTCFullYear(), 2025);
+  assert.equal(parsed?.getUTCMonth(), 3);
+  assert.equal(parsed?.getUTCDate(), 23);
   assert.equal(parseSaksgangEventDate('01.01.0001 00:00:00'), null);
   assert.equal(parseSaksgangEventDate(undefined), null);
 

@@ -57,12 +57,21 @@ type HybridChunkRow = {
   rank?: number;
 };
 
+function warnHearingRpcError(context: string, error: unknown): void {
+  if (!error || typeof error !== 'object') return;
+  const row = error as { code?: string; message?: string };
+  console.warn(`[hearing-rag] ${context}`, {
+    code: row.code ?? 'unknown',
+    message: row.message ?? 'unknown',
+  });
+}
+
 export function isMissingHearingHybridRpcError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const row = error as { code?: string; message?: string };
-  if (row.code === 'PGRST202') return true;
+  if (row.code === 'PGRST202' || row.code === '42883') return true;
   const message = row.message ?? '';
-  if (/search_chunks_hybrid/i.test(message) && /not find|schema cache|unknown|filter_hearing_id/i.test(message)) {
+  if (/search_chunks_hybrid/i.test(message) && /not find|schema cache/i.test(message)) {
     return true;
   }
   return false;
@@ -225,6 +234,7 @@ async function trySearchChunksHybrid(
 
   if (error) {
     if (isMissingHearingHybridRpcError(error)) return null;
+    warnHearingRpcError('search_chunks_hybrid', error);
     return null;
   }
   if (!Array.isArray(data)) return null;
