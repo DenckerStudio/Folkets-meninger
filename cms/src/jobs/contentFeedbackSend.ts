@@ -77,7 +77,7 @@ export const contentFeedbackSendTask: TaskConfig = {
             },
           },
           overrideAccess: true,
-          req,
+          disableTransaction: true,
         });
         throw new JobCancelledError(error.message);
       }

@@ -98,6 +98,14 @@ async function waitForJobIdle(payload: Payload, id: string | number): Promise<Aw
   return findJob(payload, id);
 }
 
+function jobEndedWithFailure(job: Awaited<ReturnType<typeof findJob>>): boolean {
+  if (job.hasError) {
+    return true;
+  }
+  const err = job.error as { cancelled?: boolean } | null | undefined;
+  return err?.cancelled === true;
+}
+
 async function waitForJobTerminal(
   payload: Payload,
   id: string | number,
@@ -106,7 +114,7 @@ async function waitForJobTerminal(
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
     const job = await waitForJobIdle(payload, id);
-    if (expectError ? job.hasError : !job.hasError) {
+    if (expectError ? jobEndedWithFailure(job) : !jobEndedWithFailure(job)) {
       return job;
     }
     await new Promise((resolve) => setTimeout(resolve, 25));
