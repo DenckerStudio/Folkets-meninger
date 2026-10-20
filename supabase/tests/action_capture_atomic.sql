@@ -144,7 +144,7 @@ BEGIN
   );
 
   PERFORM public.upsert_action_capture(
-    jsonb_build_object('action_key', v_action_key, 'best_scale', jsonb_null),
+    jsonb_build_object('action_key', v_action_key, 'best_scale', 'null'::jsonb),
     jsonb_build_array(
       jsonb_build_object(
         'item_key', 'news_rss:https://example.com/null-a',
