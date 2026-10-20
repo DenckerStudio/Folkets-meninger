@@ -47,21 +47,27 @@ $$;
 REVOKE ALL ON FUNCTION public.get_politiker_saker_from_cache(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_politiker_saker_from_cache(text) TO service_role;
 
--- One official response per politician per sak
-CREATE UNIQUE INDEX IF NOT EXISTS politician_responses_profile_issue_uidx
-  ON public.politician_responses (politician_profile_id, stortinget_issue_id);
-
--- Prefer Supabase auth.uid() over legacy next_auth.uid() for inserts
-DROP POLICY IF EXISTS politician_responses_insert_verified ON public.politician_responses;
-CREATE POLICY politician_responses_insert_verified
-  ON public.politician_responses
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1
-      FROM public.politician_profiles pp
-      WHERE pp.id = politician_profile_id
-        AND pp.user_id = auth.uid()
-    )
-  );
+-- One official response per politician per sak (tabell kan mangle på eldre / delvise skjema)
+DO $$
+BEGIN
+  IF to_regclass('public.politician_responses') IS NULL THEN
+    RETURN;
+  END IF;
+  EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS politician_responses_profile_issue_uidx
+    ON public.politician_responses (politician_profile_id, stortinget_issue_id)';
+  EXECUTE 'DROP POLICY IF EXISTS politician_responses_insert_verified ON public.politician_responses';
+  EXECUTE $pol$
+    CREATE POLICY politician_responses_insert_verified
+      ON public.politician_responses
+      FOR INSERT
+      TO authenticated
+      WITH CHECK (
+        EXISTS (
+          SELECT 1
+          FROM public.politician_profiles pp
+          WHERE pp.id = politician_profile_id
+            AND pp.user_id = auth.uid()
+        )
+      )
+  $pol$;
+END $$;

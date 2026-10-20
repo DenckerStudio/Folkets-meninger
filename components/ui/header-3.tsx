@@ -88,6 +88,7 @@ export function Header() {
             <>
               <Button
                 variant="outline"
+                nativeButton={false}
                 className={cn(touchTargetIconButtonClass, 'h-11 gap-1.5 px-4')}
                 aria-label="Logg inn"
                 render={<Link href={loginHref} aria-label="Logg inn" />}
@@ -96,6 +97,7 @@ export function Header() {
                 <span className="hidden min-[380px]:inline">Logg inn</span>
               </Button>
               <Button
+                nativeButton={false}
                 className={cn(touchTargetLinkClass, 'hidden h-11 px-4 sm:inline-flex')}
                 render={<Link href={loginHref} />}
               >

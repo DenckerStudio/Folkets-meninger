@@ -26,7 +26,7 @@ export default function DashboardError({
         <Button type="button" onClick={reset}>
           Prøv igjen
         </Button>
-        <Button variant="outline" render={<Link href={routes.utforsk} />}>
+        <Button variant="outline" nativeButton={false} render={<Link href={routes.utforsk} />}>
           Gå til utforsk
         </Button>
       </div>

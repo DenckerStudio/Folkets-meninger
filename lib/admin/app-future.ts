@@ -151,14 +151,14 @@ export async function createAppRoadmapItem(
     p_title: title,
     p_body: body,
     p_status: status,
+    p_sort_order: sortOrder ?? null,
   });
   if (error) throw error;
-  const id = String(data);
-  if (sortOrder !== undefined) await updateAppRoadmapItem(id, { sortOrder });
-  return id;
+  return String(data);
 }
 
 export async function updateAppRoadmapItem(
+  adminUserId: string,
   itemId: string,
   patch: {
     title?: string;
@@ -167,27 +167,28 @@ export async function updateAppRoadmapItem(
     sortOrder?: number;
   },
 ): Promise<string> {
-  const next: Record<string, string | number> = {};
-  if (patch.title !== undefined) next.title = patch.title;
-  if (patch.body !== undefined) next.body = patch.body;
-  if (patch.status !== undefined) next.status = patch.status;
-  if (patch.sortOrder !== undefined) next.sort_order = patch.sortOrder;
-  if (Object.keys(next).length === 0) {
+  if (
+    patch.title === undefined &&
+    patch.body === undefined &&
+    patch.status === undefined &&
+    patch.sortOrder === undefined
+  ) {
     throw new Error('Nothing to update');
   }
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Roadmap-administrasjon krever SUPABASE_SERVICE_ROLE_KEY på serveren.');
   }
   const service = getServiceSupabase();
-  const { data, error } = await service
-    .from('app_roadmap_items')
-    .update(next)
-    .eq('id', itemId)
-    .select('id')
-    .maybeSingle();
+  const { data, error } = await service.rpc('update_app_roadmap_item', {
+    p_admin_user_id: adminUserId,
+    p_item_id: itemId,
+    p_title: patch.title ?? null,
+    p_body: patch.body ?? null,
+    p_status: patch.status ?? null,
+    p_sort_order: patch.sortOrder ?? null,
+  });
   if (error) throw error;
-  if (!data?.id) throw new Error('Roadmap item not found');
-  return String(data.id);
+  return String(data);
 }
 
 export async function setAppRoadmapItemStatus(

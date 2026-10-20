@@ -55,7 +55,11 @@ export const routes = {
   adminForslag: `${DASHBOARD_PREFIX}/admin/forslag`,
   adminBrukere: `${DASHBOARD_PREFIX}/admin/brukere`,
   adminStemmePlus: `${DASHBOARD_PREFIX}/admin/stemme-plus`,
-  adminBlog: `${DASHBOARD_PREFIX}/admin/blog`,
+  /** @deprecated Bruk adminResearch; oppfanget-URL redirecter permanent. */
+  adminOppfanget: `${DASHBOARD_PREFIX}/admin/oppfanget`,
+  adminResearch: `${DASHBOARD_PREFIX}/admin/research`,
+  adminResearchCluster: (id: string) =>
+    `${DASHBOARD_PREFIX}/admin/research/${encodeURIComponent(id)}`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,
   forslag: `${DASHBOARD_PREFIX}/appens-fremtid`,
   chat: `${DASHBOARD_PREFIX}/chat`,

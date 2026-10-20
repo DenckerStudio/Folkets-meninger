@@ -13,7 +13,7 @@ import {
 } from '@/lib/routes';
 import { refreshSessionCookies, resolveMiddlewareUser } from '@/lib/supabase-middleware';
 
-function applyRateLimit(request: NextRequest, pathname: string): NextResponse | null {
+async function applyRateLimit(request: NextRequest, pathname: string): Promise<NextResponse | null> {
   const ratePolicy = getRateLimitPolicy(pathname, request.method);
   if (!ratePolicy) {
     return null;
@@ -23,7 +23,7 @@ function applyRateLimit(request: NextRequest, pathname: string): NextResponse | 
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('x-real-ip') ||
     'unknown';
-  const rate = checkRateLimit(`${pathname}:${ip}`, ratePolicy.limit, ratePolicy.windowMs);
+  const rate = await checkRateLimit(`${pathname}:${ip}`, ratePolicy.limit, ratePolicy.windowMs);
   if (!rate.ok) {
     return NextResponse.json(
       { error: 'For mange forespørsler. Prøv igjen om litt.' },
@@ -40,7 +40,7 @@ function applyRateLimit(request: NextRequest, pathname: string): NextResponse | 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const rateLimited = applyRateLimit(request, pathname);
+  const rateLimited = await applyRateLimit(request, pathname);
   if (rateLimited) {
     return rateLimited;
   }

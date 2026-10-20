@@ -162,7 +162,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
 
-  const ipRate = checkRateLimit(`chat-suggestions:ip:${clientIp(request)}`, 60, 60_000);
+  const ipRate = await checkRateLimit(`chat-suggestions:ip:${clientIp(request)}`, 60, 60_000);
   if (!ipRate.ok) {
     return NextResponse.json(
       { error: 'For mange forespørsler. Prøv igjen om litt.' },

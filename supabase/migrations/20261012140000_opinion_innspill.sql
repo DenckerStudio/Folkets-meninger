@@ -236,6 +236,7 @@ GRANT EXECUTE ON FUNCTION public.mark_opinion_innspill_packaged(uuid, jsonb, boo
 -- ---------------------------------------------------------------------------
 -- 4) report_content: accept opinions and opinion replies
 -- ---------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.report_content(uuid, text, uuid, text, text);
 CREATE OR REPLACE FUNCTION public.report_content(
   p_reporter_user_id uuid,
   p_target_type text,
