@@ -221,6 +221,27 @@ $$;
 REVOKE ALL ON FUNCTION public.research_briefs_assert_field_sizes(text, jsonb, jsonb, jsonb, text)
   FROM PUBLIC, anon, authenticated;
 
+CREATE OR REPLACE FUNCTION public.research_briefs_normalize_generation_metadata(p_value jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF p_value IS NULL THEN
+    RETURN '{}'::jsonb;
+  END IF;
+  IF jsonb_typeof(p_value) <> 'object' THEN
+    RAISE EXCEPTION 'research_brief invalid_generation_metadata: må være JSON-objekt'
+      USING ERRCODE = '22023';
+  END IF;
+  RETURN p_value;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.research_briefs_normalize_generation_metadata(jsonb)
+  FROM PUBLIC, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.research_briefs_expire_stale(p_minutes int DEFAULT 30)
 RETURNS int
 LANGUAGE plpgsql

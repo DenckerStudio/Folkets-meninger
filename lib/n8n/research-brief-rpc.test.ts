@@ -44,7 +44,7 @@ assert.match(migration, /research_briefs_one_active_per_cluster_kind_idx/i);
 assert.match(migration, /research_briefs_assert_field_sizes/i);
 assert.match(migration, /IF v_row\.status IN \('done', 'failed'\)/i);
 assert.match(migration, /terminal_failed/i);
-assert.match(migration, /invalid_generation_metadata/i);
+assert.match(migration, /research_briefs_normalize_generation_metadata/i);
 assert.match(migration, /n8n_get_research_brief[\s\S]*?RETURN NULL;/i);
 assert.match(migration, /'poll_id', v_poll_id,\s*\n\s*'created', true/i);
 

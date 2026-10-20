@@ -19,7 +19,8 @@ DECLARE
     'public.research_briefs_validate_sources(jsonb)',
     'public.research_brief_status_rank(text)',
     'public.research_briefs_is_backwards_status(text,text)',
-    'public.research_briefs_assert_field_sizes(text,jsonb,jsonb,jsonb,text)'
+    'public.research_briefs_assert_field_sizes(text,jsonb,jsonb,jsonb,text)',
+    'public.research_briefs_normalize_generation_metadata(jsonb)'
   ];
   v_name text;
 BEGIN
@@ -232,23 +233,6 @@ BEGIN
     IF coalesce(r ->> 'created', 'true') = 'true' THEN
       RAISE EXCEPTION 'andre kall skulle returnere eksisterende output_ref';
     END IF;
-
-    BEGIN
-      PERFORM public.n8n_create_research_reel_draft(
-        v_reel_request_id,
-        NULL,
-        'Skal feile metadata',
-        'x',
-        '[]'::jsonb,
-        '[]'::jsonb
-      );
-      RAISE EXCEPTION 'forventet exception ved ugyldig generation_metadata';
-    EXCEPTION
-      WHEN OTHERS THEN
-        IF SQLERRM NOT LIKE '%invalid_generation_metadata%' THEN
-          RAISE;
-        END IF;
-    END;
 
     UPDATE public.research_briefs
     SET status = 'failed', error = 'tidsavbrudd', output_ref = NULL
