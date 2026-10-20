@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import {
+  assertProductionCmsConfig,
+  hasExplicitCmsServerUrl,
   resolveCmsServerUrl,
   resolveWebPublicUrl,
   trustedPayloadOrigins,
@@ -37,5 +39,21 @@ assert.deepEqual(
   }),
   ['https://cms.folkets-meninger.no', 'https://www.folkets-meninger.no'],
 );
+
+assert.equal(hasExplicitCmsServerUrl({}), false);
+assert.equal(hasExplicitCmsServerUrl({ SERVER_URL: 'https://cms.test' }), true);
+
+assert.throws(
+  () =>
+    assertProductionCmsConfig({
+      NODE_ENV: 'production',
+    }),
+  /SERVER_URL/,
+);
+
+assertProductionCmsConfig({
+  NODE_ENV: 'production',
+  SERVER_URL: 'https://cms.folkets-meninger.no',
+});
 
 console.log('cms/src/lib/serverOrigins.test.ts ok');

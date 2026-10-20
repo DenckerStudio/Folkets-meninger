@@ -137,8 +137,11 @@ All on **Coolify, server `klever`**:
   must be the public CMS origin (`https://cms.folkets-meninger.no`); optional
   aliases `PAYLOAD_PUBLIC_SERVER_URL` / `NEXT_PUBLIC_SERVER_URL`. **`WEB_PUBLIC_URL`**
   is included in Payload `cors`/`csrf` with `SERVER_URL` (no wildcards). Admin
-  login: per-account lockout (5 attempts / 15 min) plus IP throttle on
-  `POST /api/users/login`; API keys (`useAPIKey`) unchanged for agent/reader roles.
+  login: per-account lockout (5 attempts / 15 min) plus IP+email throttle on
+  `POST /api/users/login` (Traefik `X-Real-Ip` / rightmost `X-Forwarded-For`);
+  API keys (`useAPIKey`) unchanged for agent/reader roles. Payload SQL migrations
+  in `cms/src/migrations/` run automatically on **fm-cms** boot in production
+  (`prodMigrations` + `instrumentation.ts`).
 
 ## Architecture map
 
