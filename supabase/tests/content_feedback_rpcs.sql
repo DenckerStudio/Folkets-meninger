@@ -9,7 +9,8 @@ DECLARE
   v_historic int;
   v_sources int;
   r jsonb;
-  v_vec text := '[' || repeat('0,', 1023) || '0]';
+  -- Nullvektor gir NaN for cosinus-avstand; bruk enhetlig ikke-nullvektor i tester
+  v_vec text := '[1' || repeat(',0', 1023) || ']';
   v_vec_bad text := '[' || repeat('0,', 767) || '0]';
   v_modified_before timestamptz;
   v_modified_after timestamptz;
