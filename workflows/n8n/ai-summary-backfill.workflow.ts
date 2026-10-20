@@ -15,7 +15,9 @@ import { createInWorkflowErrorNotify } from './in-workflow-error-notify';
 import {
   BUILD_SAK_CONTEXT_JS,
   EXPAND_OR_EMPTY_JS,
+  HASH_GATE_WEBHOOK_JS,
   MAP_SUMMARY_OUTPUT_JS,
+  STORE_GENERATION_HASH_WEBHOOK_JS,
   SUMMARY_SYSTEM_MESSAGE,
 } from './n8n-pipeline.shared';
 
@@ -380,7 +382,8 @@ const webhookTrigger = trigger({
     parameters: {
       httpMethod: 'POST',
       path: 'folkets-ai-summary',
-      responseMode: 'responseNode',
+      responseMode: 'onReceived',
+      options: { responseCode: { values: { responseCode: 'customCode', customCode: 202 } }, responseData: '{"ok":true,"queued":true}' },
     },
   },
   output: [{ body: { stortinget_issue_id: '200329' } }],
@@ -488,6 +491,70 @@ const buildSakContextWebhook = node({
     },
   },
   output: [{ id: '200329', sakContextText: 'Sak ID: 200329', contextChars: 18 }],
+});
+
+const hashGateWebhook = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Hash gate (webhook)',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      language: 'javaScript',
+      jsCode: HASH_GATE_WEBHOOK_JS,
+    },
+  },
+  output: [{ id: '200329', regenerate: true, gate_reason: 'no_previous_hash', contextChars: 18 }],
+});
+
+const shouldRegenerateWebhook = ifElse({
+  version: 2.2,
+  config: {
+    name: 'Regenerate? (webhook)',
+    parameters: {
+      looseTypeValidation: true,
+      conditions: {
+        combinator: 'and',
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
+        conditions: [
+          {
+            id: 'regenerate',
+            leftValue: expr('{{ $json.regenerate }}'),
+            rightValue: true,
+            operator: { type: 'boolean', operation: 'equals' },
+          },
+        ],
+      },
+    },
+  },
+});
+
+const logUnchangedWebhook = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Log unchanged (webhook)',
+    parameters: {
+      mode: 'runOnceForEachItem',
+      language: 'javaScript',
+      jsCode: `return { json: { ok: true, skipped: true, reason: $json.gate_reason || 'unchanged_context_hash', issueId: $json.id || '' } };`,
+    },
+  },
+  output: [{ ok: true, skipped: true, reason: 'unchanged_context_hash' }],
+});
+
+const logWebhookSkipped = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Log skipped (webhook)',
+    parameters: {
+      mode: 'runOnceForEachItem',
+      language: 'javaScript',
+      jsCode: `return { json: { ok: true, skipped: true, reason: $json.reason || $json.gate_reason || 'skipped', issueId: $json.id || $json.rejectedIssueId || '' } };`,
+    },
+  },
+  output: [{ ok: true, skipped: true, reason: 'skipped' }],
 });
 
 const hasWebhookContext = ifElse({
@@ -598,6 +665,20 @@ const hasValidWebhookSummary = ifElse({
   },
 });
 
+const storeGenerationHashWebhook = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Store generation hash (webhook)',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      language: 'javaScript',
+      jsCode: STORE_GENERATION_HASH_WEBHOOK_JS,
+    },
+  },
+  output: [{ issueId: '200329', hashStored: true }],
+});
+
 const saveSummaryWebhook = node({
   type: 'n8n-nodes-base.httpRequest',
   version: 4.2,
@@ -640,34 +721,6 @@ const triggerPollDraftWebhook = node({
   output: [{ ok: true }],
 });
 
-const respondToWebhook = node({
-  type: 'n8n-nodes-base.respondToWebhook',
-  version: 1.5,
-  config: {
-    name: 'Respond to Webhook',
-    parameters: {
-      respondWith: 'json',
-      responseBody: expr(
-        '{{ { ok: true, issueId: $("Map agent output (webhook)").item.json.issueId, saved: true, hva: $("Map agent output (webhook)").item.json.hva } }}',
-      ),
-    },
-  },
-});
-
-const respondWebhookSkipped = node({
-  type: 'n8n-nodes-base.respondToWebhook',
-  version: 1.5,
-  config: {
-    name: 'Respond skipped',
-    parameters: {
-      respondWith: 'json',
-      responseBody: expr(
-        '{{ { ok: true, skipped: true, reason: $json.reason || "missing_or_thin_issue" } }}',
-      ),
-    },
-  },
-});
-
 const inWorkflowError = createInWorkflowErrorNotify('folkets-ai-summary-backfill');
 
 sticky(
@@ -692,7 +745,23 @@ const summaryPipeline = buildSakContext.to(
     .onFalse(logSkipSummary.to(nextBatch(processOneIssue))),
 );
 
-const webhookSavedPath = saveSummaryWebhook.to(triggerPollDraftWebhook).to(respondToWebhook);
+const webhookSavedPath = saveSummaryWebhook
+  .to(storeGenerationHashWebhook)
+  .to(triggerPollDraftWebhook);
+
+const webhookSummaryPipeline = hasWebhookContext
+  .onTrue(
+    generateSummaryAgentWebhook.to(
+      mapAgentOutputWebhook.to(
+        hasValidWebhookSummary.onTrue(webhookSavedPath).onFalse(logWebhookSkipped),
+      ),
+    ),
+  )
+  .onFalse(logWebhookSkipped);
+
+const webhookAfterHashGate = shouldRegenerateWebhook
+  .onTrue(webhookSummaryPipeline)
+  .onFalse(logUnchangedWebhook);
 
 export default workflow(
   'folkets-ai-summary-backfill',
@@ -708,19 +777,13 @@ export default workflow(
   .to(
     hasWebhookIssueId
       .onTrue(
-        fetchIssueContext.to(expandWebhookIssue).to(buildSakContextWebhook).to(
-          hasWebhookContext
-            .onTrue(
-              generateSummaryAgentWebhook.to(
-                mapAgentOutputWebhook.to(
-                  hasValidWebhookSummary.onTrue(webhookSavedPath).onFalse(respondWebhookSkipped),
-                ),
-              ),
-            )
-            .onFalse(respondWebhookSkipped),
-        ),
+        fetchIssueContext
+          .to(expandWebhookIssue)
+          .to(buildSakContextWebhook)
+          .to(hashGateWebhook)
+          .to(webhookAfterHashGate),
       )
-      .onFalse(respondWebhookSkipped),
+      .onFalse(logWebhookSkipped),
   )
   .add(inWorkflowError.errorTrigger)
   .to(inWorkflowError.formatError.to(inWorkflowError.notifySettings).to(inWorkflowError.notifyAdmin))
