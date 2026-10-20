@@ -32,7 +32,6 @@ export function inferIsSignalRow(input: {
   sourcesSignalOnly: boolean;
   hasNonSignalSource: boolean;
 }): boolean {
-  if (input.metadata?.record_kind === 'signal') return true;
   if (input.clusterStatus === 'not_action' && input.sourcesSignalOnly) return true;
   if (!input.hasNonSignalSource && input.sourcesSignalOnly) return true;
   return false;
