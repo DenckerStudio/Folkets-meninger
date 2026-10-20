@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { writeLiveTestArtifact } from '@/lib/test/write-live-artifact';
 import { createClient } from '@supabase/supabase-js';
 
 function loadFolketsPublicEnv() {
@@ -53,7 +54,7 @@ async function main() {
       'BYOK ciphertext stays table-denied for anon.',
   };
 
-  writeFileSync('/opt/cursor/artifacts/byok-rls-live.json', JSON.stringify(payload, null, 2));
+  writeLiveTestArtifact('byok-rls-live.json', payload);
 
   assert.match(payload.credentialsError ?? '', /permission denied|not accept/i);
   assert.match(payload.secretError ?? '', /permission denied|not accept/i);
