@@ -8,7 +8,9 @@ import { pollDraftGenerationStatusLabel } from '@/lib/admin/poll-draft-generatio
 import { usePollDraftGeneration } from '@/hooks/use-poll-draft-generation';
 import { routes } from '@/lib/routes';
 import { AdminBackLink } from '@/components/admin/admin-shell';
+import { ContentFeedbackPanel } from '@/components/admin/content-feedback-panel';
 import { ReelCandidateRatings } from '@/components/admin/reel-candidate-ratings';
+import type { ContentFeedbackVerdict } from '@/lib/content-feedback/types';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import type { PollRecord, SakPollCandidate, SakPollCoverage } from '@/lib/polls/types';
 import { pipelineHealthNeedsAttention, type PipelineHealth } from '@/lib/n8n/pipeline-health';
@@ -81,6 +83,11 @@ export default function AdminReelsClient({
   const [catchupMessage, setCatchupMessage] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [feedbackTarget, setFeedbackTarget] = useState<{
+    pollId: string;
+    verdict: ContentFeedbackVerdict;
+    snapshot: Record<string, unknown>;
+  } | null>(null);
   const [pending, startTransition] = useTransition();
   const { jobs, startGeneration, dismissJob, getJob, isGenerating } = usePollDraftGeneration();
 
@@ -138,14 +145,14 @@ export default function AdminReelsClient({
     return () => window.removeEventListener('poll-drafts:ready', onReady);
   }, []);
 
-  const patchPoll = (id: string, action: 'publish' | 'archive') => {
+  const patchPoll = (poll: PollRecord, action: 'publish' | 'archive') => {
     startTransition(async () => {
       setError('');
       setSuccess('');
       const res = await fetch('/api/admin/polls', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action }),
+        body: JSON.stringify({ id: poll.id, action }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -153,6 +160,15 @@ export default function AdminReelsClient({
         return;
       }
       setSuccess(action === 'publish' ? 'Utkastet er publisert.' : 'Utkastet er arkivert.');
+      setFeedbackTarget({
+        pollId: poll.id,
+        verdict: action === 'publish' ? 'approve' : 'reject',
+        snapshot: {
+          title: poll.title,
+          neutral_summary: poll.neutralSummary,
+          issue_id: poll.stortingetIssueId,
+        },
+      });
       load();
     });
   };
@@ -292,6 +308,19 @@ export default function AdminReelsClient({
         </p>
       ) : null}
 
+      {feedbackTarget ? (
+        <ContentFeedbackPanel
+          contentType="reel"
+          contentId={feedbackTarget.pollId}
+          lockedVerdict={feedbackTarget.verdict}
+          title="Hva fungerte med utkastet?"
+          description="Valgfritt, men hjelper oss å forbedre neste generering."
+          snapshot={feedbackTarget.snapshot}
+          onSkip={() => setFeedbackTarget(null)}
+          onSaved={() => setFeedbackTarget(null)}
+        />
+      ) : null}
+
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold text-foreground">Utkast</h2>
@@ -334,7 +363,7 @@ export default function AdminReelsClient({
                   <button
                     type="button"
                     disabled={pending}
-                    onClick={() => patchPoll(poll.id, 'publish')}
+                    onClick={() => patchPoll(poll, 'publish')}
                     className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
                   >
                     Publiser
@@ -342,7 +371,7 @@ export default function AdminReelsClient({
                   <button
                     type="button"
                     disabled={pending}
-                    onClick={() => patchPoll(poll.id, 'archive')}
+                    onClick={() => patchPoll(poll, 'archive')}
                     className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
                   >
                     Arkiver

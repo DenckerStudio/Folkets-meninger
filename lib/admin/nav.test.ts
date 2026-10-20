@@ -21,7 +21,12 @@ assert.equal(stemmePlus.href, routes.adminStemmePlus);
 const oppfanget = adminNavItems.find((item) => item.id === 'oppfanget');
 assert.ok(oppfanget);
 assert.equal(oppfanget.href, routes.adminOppfanget);
+
+const vurder = adminNavItems.find((item) => item.id === 'vurder');
+assert.ok(vurder);
+assert.equal(vurder.href, routes.adminVurder);
 assert.equal(adminNavItems.some((item) => item.id === 'blog'), false);
+assert.equal(adminNavItems.some((item) => item.id === 'blogg'), false);
 
 const varsler = adminNavItems.find((item) => item.id === 'varsler');
 assert.ok(varsler);
