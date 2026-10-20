@@ -8,8 +8,13 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import {
   OPPFANGET_DISPLAY_STATUS_LABELS,
   OPPFANGET_DISPLAY_TYPE_LABELS,
+  OPPFANGET_FILTER_STATUS_LABEL_NOT_ACTION,
 } from '@/lib/admin/oppfanget/mapping';
-import type { OppfangetFilterInput } from '@/lib/admin/oppfanget/filters';
+import {
+  OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION,
+  type OppfangetFilterInput,
+  type OppfangetStatusFilter,
+} from '@/lib/admin/oppfanget/filters';
 import { buildOppfangetAdminPath, buildOppfangetListQueryString } from '@/lib/admin/oppfanget/query';
 import type {
   OppfangetDisplayStatus,
@@ -39,13 +44,17 @@ const TYPE_OPTIONS: { value: '' | OppfangetDisplayType; label: string }[] = [
   { value: 'boikott', label: OPPFANGET_DISPLAY_TYPE_LABELS.boikott },
 ];
 
-const STATUS_OPTIONS: { value: '' | OppfangetDisplayStatus; label: string }[] = [
+const STATUS_OPTIONS: { value: OppfangetStatusFilter; label: string }[] = [
   { value: '', label: 'Alle statuser' },
   { value: 'oppfanget', label: OPPFANGET_DISPLAY_STATUS_LABELS.oppfanget },
   { value: 'under_terskel', label: OPPFANGET_DISPLAY_STATUS_LABELS.under_terskel },
   { value: 'utkast_laget', label: OPPFANGET_DISPLAY_STATUS_LABELS.utkast_laget },
   { value: 'publisert', label: OPPFANGET_DISPLAY_STATUS_LABELS.publisert },
   { value: 'avvist', label: OPPFANGET_DISPLAY_STATUS_LABELS.avvist },
+  {
+    value: OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION,
+    label: OPPFANGET_FILTER_STATUS_LABEL_NOT_ACTION,
+  },
 ];
 
 const pillClass =
@@ -124,7 +133,7 @@ export default function AdminOppfangetClient({
   const hydratedQueryRef = useRef<string | null>(initialData ? '__hydrated__' : null);
 
   const [type, setType] = useState<'' | OppfangetDisplayType>(initialFilters?.type || '');
-  const [status, setStatus] = useState<'' | OppfangetDisplayStatus>(initialFilters?.status || '');
+  const [status, setStatus] = useState<OppfangetStatusFilter>(initialFilters?.status || '');
   const [source, setSource] = useState(initialFilters?.source || '');
   const [dateFrom, setDateFrom] = useState(initialFilters?.dateFrom || '');
   const [dateTo, setDateTo] = useState(initialFilters?.dateTo || '');
@@ -279,7 +288,7 @@ export default function AdminOppfangetClient({
           <span className="text-muted-foreground">Status</span>
           <select
             value={status}
-            onChange={(e) => setStatus(e.target.value as '' | OppfangetDisplayStatus)}
+            onChange={(e) => setStatus(e.target.value as OppfangetStatusFilter)}
             className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           >
             {STATUS_OPTIONS.map((opt) => (

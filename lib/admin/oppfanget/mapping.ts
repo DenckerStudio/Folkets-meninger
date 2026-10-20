@@ -65,6 +65,9 @@ export const OPPFANGET_DISPLAY_STATUS_LABELS: Record<OppfangetDisplayStatus, str
   avvist: 'Avvist',
 };
 
+/** Admin status filter for clusters classified as not_action (hidden unless selected). */
+export const OPPFANGET_FILTER_STATUS_LABEL_NOT_ACTION = 'Ikke aksjon';
+
 export const OPPFANGET_DISPLAY_TYPE_LABELS: Record<OppfangetDisplayType, string> = {
   melding: 'Melding',
   opprop: 'Opprop',

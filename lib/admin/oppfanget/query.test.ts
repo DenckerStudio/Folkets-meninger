@@ -38,6 +38,8 @@ assert.deepEqual(
   },
 );
 
+assert.deepEqual(parseOppfangetFilters({ status: 'not_action' }).status, 'not_action');
+
 assert.deepEqual(parseOppfangetFilters({ type: 'not-a-type', status: 'bogus' }), {
   type: '',
   status: '',
