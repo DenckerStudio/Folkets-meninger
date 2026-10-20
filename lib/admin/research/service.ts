@@ -44,7 +44,6 @@ export async function expireStaleResearchBriefs(
 export async function getLatestDoneDeepenRequestIdForCluster(
   clusterId: string,
 ): Promise<string | null> {
-  await expireStaleResearchBriefs();
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('research_briefs')
@@ -62,7 +61,6 @@ export async function getLatestDoneDeepenRequestIdForCluster(
 export async function getLatestResearchBriefForCluster(
   clusterId: string,
 ): Promise<ResearchBriefRow | null> {
-  await expireStaleResearchBriefs();
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('research_briefs')
@@ -76,7 +74,6 @@ export async function getLatestResearchBriefForCluster(
 }
 
 export async function listResearchBriefsForCluster(clusterId: string): Promise<ResearchBriefRow[]> {
-  await expireStaleResearchBriefs();
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('research_briefs')
@@ -156,7 +153,6 @@ export async function getLatestResearchBriefsByClusterIds(
   clusterIds: string[],
 ): Promise<Record<string, Partial<Record<ResearchBriefKind, ResearchBriefSnapshot>>>> {
   if (clusterIds.length === 0) return {};
-  await expireStaleResearchBriefs();
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('research_briefs')
@@ -224,6 +220,7 @@ export async function enqueueResearchJob(
         | 'not_configured'
         | 'db_error'
         | 'already_active'
+        | 'request_id_conflict'
         | 'invalid_request_id';
       requestId?: string;
       status?: ResearchBriefRow['status'];
@@ -233,6 +230,30 @@ export async function enqueueResearchJob(
   const supabase = getServiceSupabase();
 
   await expireStaleResearchBriefs();
+
+  const { data: existingByRequest, error: existingByRequestError } = await supabase
+    .from('research_briefs')
+    .select('request_id, cluster_id, kind, status')
+    .eq('request_id', requestId)
+    .maybeSingle();
+
+  if (existingByRequestError) {
+    return { ok: false, code: 'db_error' };
+  }
+
+  if (existingByRequest) {
+    if (
+      String(existingByRequest.cluster_id) !== clusterId ||
+      existingByRequest.kind !== kind
+    ) {
+      return {
+        ok: false,
+        code: 'request_id_conflict',
+        requestId: String(existingByRequest.request_id),
+        status: existingByRequest.status as ResearchBriefRow['status'],
+      };
+    }
+  }
 
   const active = await findActiveResearchBrief(clusterId, kind, requestId);
   if (active) {
@@ -266,13 +287,30 @@ export async function enqueueResearchJob(
 
   if (insertError) {
     if (insertError.code === '23505') {
+      const activeAfterRace = await findActiveResearchBrief(clusterId, kind, requestId);
+      if (activeAfterRace) {
+        return {
+          ok: false,
+          code: 'already_active',
+          requestId: activeAfterRace.request_id,
+          status: activeAfterRace.status,
+        };
+      }
       const { data: existing, error: loadError } = await supabase
         .from('research_briefs')
-        .select('request_id, status')
+        .select('request_id, cluster_id, kind, status')
         .eq('request_id', requestId)
         .maybeSingle();
       if (loadError || !existing) {
         return { ok: false, code: 'db_error' };
+      }
+      if (String(existing.cluster_id) !== clusterId || existing.kind !== kind) {
+        return {
+          ok: false,
+          code: 'request_id_conflict',
+          requestId: String(existing.request_id),
+          status: existing.status as ResearchBriefRow['status'],
+        };
       }
       return {
         ok: true,

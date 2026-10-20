@@ -5,6 +5,7 @@ import { ResearchBriefStatusBadge } from '@/components/admin/research-brief-stat
 import { ResearchRowActions } from '@/components/admin/research-row-actions';
 import { formatOppfangetDateTime } from '@/app/dashboard/admin/oppfanget/oppfanget-row-views';
 import type { OppfangetRow } from '@/lib/admin/oppfanget/types';
+import { formatResearchBriefError } from '@/lib/admin/research/error-messages';
 import {
   RESEARCH_KIND_LABELS,
   researchBriefOutputLink,
@@ -115,7 +116,9 @@ export function ResearchClusterDetailView({
                     <ResearchBriefStatusBadge status={brief.status} />
                   </div>
                   {brief.error ? (
-                    <p className="mt-1 text-destructive">{brief.error}</p>
+                    <p className="mt-1 text-destructive">
+                      {formatResearchBriefError(brief.error) ?? brief.error}
+                    </p>
                   ) : null}
                   {link ? (
                     <Link href={link.href} className="mt-1 inline-block text-brand hover:underline">

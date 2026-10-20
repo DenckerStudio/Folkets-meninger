@@ -40,6 +40,11 @@ assert.match(migration, /FOR UPDATE/i);
 assert.match(migration, /error = 'tidsavbrudd'/i);
 assert.match(migration, /'origin', 'research'/i);
 assert.match(migration, /create_system_poll_draft/i);
+assert.match(migration, /research_briefs_one_active_per_cluster_kind_idx/i);
+assert.match(migration, /research_briefs_assert_field_sizes/i);
+assert.match(migration, /IF v_row\.status IN \('done', 'failed'\)/i);
+assert.match(migration, /terminal_failed/i);
+assert.match(migration, /invalid_generation_metadata/i);
 assert.match(migration, /n8n_get_research_brief[\s\S]*?RETURN NULL;/i);
 assert.match(migration, /'poll_id', v_poll_id,\s*\n\s*'created', true/i);
 
@@ -82,6 +87,12 @@ const service = readFileSync(
   'utf-8',
 );
 assert.match(service, /research_briefs_expire_stale/);
+const listClusterBriefsBody =
+  service.split('export async function listResearchBriefsForCluster')[1]?.split(
+    'export async function buildResearchWebhookBody',
+  )[0] ?? '';
+assert.equal(listClusterBriefsBody.includes('expireStaleResearchBriefs'), false);
+assert.match(service, /request_id_conflict/);
 assert.match(service, /ignoreDuplicates:\s*true/);
 assert.match(service, /onConflict:\s*'request_id'/);
 assert.match(service, /source_request_id/);

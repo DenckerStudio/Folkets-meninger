@@ -18,6 +18,8 @@ assert.match(actionRoute, /isResearchApiAction\(action\)/);
 assert.match(actionRoute, /status: 502/);
 assert.match(actionRoute, /status: 409/);
 assert.match(actionRoute, /already_active/);
+assert.match(actionRoute, /RESEARCH_ALREADY_RUNNING_MESSAGE/);
+assert.match(actionRoute, /request_id_conflict/);
 assert.match(actionRoute, /parseClientResearchRequestId/);
 assert.match(actionRoute, /created: result\.created/);
 assert.match(feedbackRoute, /requireAdmin\(\)/);

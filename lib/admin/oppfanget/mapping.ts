@@ -57,7 +57,7 @@ export function mapClusterAndPollToDisplayStatus(
 }
 
 export const OPPFANGET_DISPLAY_STATUS_LABELS: Record<OppfangetDisplayStatus, string> = {
-  oppfanget: 'Oppfanget',
+  oppfanget: 'Research',
   under_terskel: 'Under terskel',
   utkast_laget: 'Utkast laget',
   publisert: 'Publisert',

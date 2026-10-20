@@ -1,6 +1,6 @@
 import { mapClusterToRow } from '@/lib/admin/oppfanget/service';
 import type { OppfangetRow } from '@/lib/admin/oppfanget/types';
-import { expireStaleResearchBriefs, listResearchBriefsForCluster } from '@/lib/admin/research/service';
+import { listResearchBriefsForCluster } from '@/lib/admin/research/service';
 import type { ResearchBriefRow } from '@/lib/admin/research/types';
 import { getServiceSupabase } from '@/lib/supabase';
 
@@ -12,7 +12,6 @@ export type ResearchClusterDetail = {
 export async function loadResearchClusterDetail(
   clusterId: string,
 ): Promise<ResearchClusterDetail | null> {
-  await expireStaleResearchBriefs();
   const supabase = getServiceSupabase();
   const { data: cluster, error } = await supabase
     .from('action_clusters')

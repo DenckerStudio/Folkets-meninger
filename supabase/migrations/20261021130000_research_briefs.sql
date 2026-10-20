@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS public.research_briefs (
 CREATE INDEX IF NOT EXISTS research_briefs_cluster_created_idx
   ON public.research_briefs (cluster_id, created_at DESC);
 
+CREATE UNIQUE INDEX IF NOT EXISTS research_briefs_one_active_per_cluster_kind_idx
+  ON public.research_briefs (cluster_id, kind)
+  WHERE status IN ('queued', 'running');
+
 CREATE OR REPLACE FUNCTION public.research_briefs_set_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -178,6 +182,45 @@ $$;
 REVOKE ALL ON FUNCTION public.research_briefs_is_backwards_status(text, text)
   FROM PUBLIC, anon, authenticated;
 
+CREATE OR REPLACE FUNCTION public.research_briefs_assert_field_sizes(
+  p_summary text,
+  p_perspectives jsonb,
+  p_sources jsonb,
+  p_details jsonb,
+  p_error text
+)
+RETURNS void
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF p_summary IS NOT NULL AND char_length(p_summary) > 20000 THEN
+    RAISE EXCEPTION 'research_brief payload_too_large: summary over 20000 tegn'
+      USING ERRCODE = '22023';
+  END IF;
+  IF p_error IS NOT NULL AND char_length(p_error) > 20000 THEN
+    RAISE EXCEPTION 'research_brief payload_too_large: error over 20000 tegn'
+      USING ERRCODE = '22023';
+  END IF;
+  IF p_perspectives IS NOT NULL AND octet_length(p_perspectives::text) > 65536 THEN
+    RAISE EXCEPTION 'research_brief payload_too_large: perspectives over 64 KB'
+      USING ERRCODE = '22023';
+  END IF;
+  IF p_sources IS NOT NULL AND octet_length(p_sources::text) > 65536 THEN
+    RAISE EXCEPTION 'research_brief payload_too_large: sources over 64 KB'
+      USING ERRCODE = '22023';
+  END IF;
+  IF p_details IS NOT NULL AND octet_length(p_details::text) > 65536 THEN
+    RAISE EXCEPTION 'research_brief payload_too_large: details over 64 KB'
+      USING ERRCODE = '22023';
+  END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.research_briefs_assert_field_sizes(text, jsonb, jsonb, jsonb, text)
+  FROM PUBLIC, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.research_briefs_expire_stale(p_minutes int DEFAULT 30)
 RETURNS int
 LANGUAGE plpgsql
@@ -285,6 +328,10 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'error', 'not_found', 'request_id', p_request_id);
   END IF;
 
+  IF v_row.status IN ('done', 'failed') THEN
+    RETURN public.research_brief_row_to_jsonb(v_row);
+  END IF;
+
   v_next_status := v_row.status;
   IF p_status IS NOT NULL THEN
     p_status := btrim(p_status);
@@ -314,6 +361,14 @@ BEGIN
     RAISE EXCEPTION 'research_brief invalid_details: må være JSON-objekt'
       USING ERRCODE = '22023';
   END IF;
+
+  PERFORM public.research_briefs_assert_field_sizes(
+    p_summary,
+    p_perspectives,
+    p_sources,
+    p_details,
+    p_error
+  );
 
   UPDATE public.research_briefs
   SET
@@ -435,6 +490,11 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
+  IF v_row.status = 'failed' THEN
+    RAISE EXCEPTION 'research_brief terminal_failed: brief er failed'
+      USING ERRCODE = '22023';
+  END IF;
+
   IF v_row.output_ref IS NOT NULL AND btrim(v_row.output_ref) <> '' THEN
     RETURN jsonb_build_object(
       'poll_id', v_row.output_ref::uuid,
@@ -442,7 +502,16 @@ BEGIN
     );
   END IF;
 
-  v_meta := coalesce(p_generation_metadata, '{}'::jsonb)
+  IF p_generation_metadata IS NULL THEN
+    v_meta := '{}'::jsonb;
+  ELSIF jsonb_typeof(p_generation_metadata) <> 'object' THEN
+    RAISE EXCEPTION 'research_brief invalid_generation_metadata: må være JSON-objekt'
+      USING ERRCODE = '22023';
+  ELSE
+    v_meta := p_generation_metadata;
+  END IF;
+
+  v_meta := v_meta
     || jsonb_build_object(
       'origin', 'research',
       'research_request_id', p_request_id::text

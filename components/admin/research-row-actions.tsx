@@ -8,6 +8,7 @@ import { ResearchBriefStatusBadge } from '@/components/admin/research-brief-stat
 import { Dialog } from '@/components/ui/dialog';
 import { SmoothDropdown, type SmoothDropdownItem } from '@/components/ui/smooth-dropdown';
 import type { ResearchApiAction } from '@/lib/admin/research/actions';
+import { RESEARCH_ALREADY_RUNNING_MESSAGE } from '@/lib/admin/research/error-messages';
 import {
   RESEARCH_ACTION_CONFIRM,
   RESEARCH_ACTION_LABELS,
@@ -36,6 +37,11 @@ const actionButtonClass =
 
 function isBusyStatus(status: ResearchBriefStatus | undefined): boolean {
   return status === 'queued' || status === 'running';
+}
+
+function isDoneWithoutRerun(brief?: ResearchBriefSnapshot): boolean {
+  if (!brief || brief.status !== 'done') return false;
+  return !researchBriefOutputLink(brief.kind, brief.output_ref, brief.status);
 }
 
 function statusPriority(status: ResearchBriefStatus | undefined): number {
@@ -100,7 +106,7 @@ function buildTableMenuItem(
     }
     return {
       id: action,
-      label: 'Ferdig',
+      label: action === 'deepen' ? DONE_MENU_LABELS.deepen : 'Ferdig',
       icon: ACTION_ICONS[action],
       type: 'item',
       disabled: true,
@@ -164,10 +170,13 @@ function ResearchActionButton({
   if (status === 'queued') label = 'I kø';
   else if (status === 'running') label = 'Kjører';
   else if (done && output) label = output.label;
+  else if (done && action === 'deepen') label = DONE_MENU_LABELS.deepen;
   else if (done) label = 'Ferdig';
   else if (failed) label = 'Prøv igjen';
 
-  const disabled = busy || (pendingAction !== null && pendingAction !== action);
+  const doneBlocked = isDoneWithoutRerun(brief);
+  const disabled =
+    busy || doneBlocked || (pendingAction !== null && pendingAction !== action);
   const destructive = failed && !busy;
 
   if (done && output) {
@@ -182,6 +191,14 @@ function ResearchActionButton({
       >
         {label}
       </Link>
+    );
+  }
+
+  if (doneBlocked) {
+    return (
+      <button type="button" disabled className={cn(actionButtonClass, 'opacity-60')}>
+        <span>{label}</span>
+      </button>
     );
   }
 
@@ -247,6 +264,7 @@ export function ResearchRowActions({
           return;
         }
         if (res.status === 409 && body.request_id) {
+          setError(body.error ?? RESEARCH_ALREADY_RUNNING_MESSAGE);
           setBriefsByKind((prev) =>
             mergeBriefFromResponse(prev, action, body.status ?? 'queued', body.request_id!),
           );
@@ -277,7 +295,7 @@ export function ResearchRowActions({
   const onRequest = useCallback(
     (action: ResearchApiAction) => {
       const brief = briefsByKind[action];
-      if (isBusyStatus(brief?.status)) return;
+      if (isBusyStatus(brief?.status) || isDoneWithoutRerun(brief)) return;
       setPendingRequestId(crypto.randomUUID());
       setConfirmAction(action);
     },

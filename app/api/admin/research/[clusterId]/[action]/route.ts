@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
 import { isResearchApiAction } from '@/lib/admin/research/actions';
 import { parseClientResearchRequestId } from '@/lib/admin/research/request-id';
+import { RESEARCH_ALREADY_RUNNING_MESSAGE } from '@/lib/admin/research/error-messages';
 import { enqueueResearchJob } from '@/lib/admin/research/service';
 
 export const dynamic = 'force-dynamic';
@@ -35,10 +36,17 @@ export async function POST(request: Request, context: RouteContext) {
 
   const result = await enqueueResearchJob(clusterId.trim(), action, auth.userId, requestId);
   if (!result.ok) {
-    if (result.code === 'already_active' && result.requestId) {
+    if (
+      (result.code === 'already_active' || result.code === 'request_id_conflict') &&
+      result.requestId
+    ) {
+      const message =
+        result.code === 'request_id_conflict'
+          ? 'request_id er allerede knyttet til en annen oppgave'
+          : RESEARCH_ALREADY_RUNNING_MESSAGE;
       return NextResponse.json(
         {
-          error: 'Oppgaven kjører allerede',
+          error: message,
           request_id: result.requestId,
           status: result.status ?? 'queued',
         },

@@ -18,7 +18,8 @@ DECLARE
     'public.research_briefs_validate_perspectives(jsonb)',
     'public.research_briefs_validate_sources(jsonb)',
     'public.research_brief_status_rank(text)',
-    'public.research_briefs_is_backwards_status(text,text)'
+    'public.research_briefs_is_backwards_status(text,text)',
+    'public.research_briefs_assert_field_sizes(text,jsonb,jsonb,jsonb,text)'
   ];
   v_name text;
 BEGIN
@@ -118,6 +119,21 @@ BEGIN
 
   r := public.n8n_upsert_research_brief(
     v_request_id,
+    NULL,
+    'Skulle ikke overskrive terminal',
+    NULL,
+    NULL,
+    NULL,
+    'hack'
+  );
+  SELECT summary INTO v_summary FROM public.research_briefs WHERE request_id = v_request_id;
+  IF v_summary <> 'Kort sammendrag'
+    OR (SELECT error FROM public.research_briefs WHERE request_id = v_request_id) IS NOT NULL THEN
+    RAISE EXCEPTION 'terminal done skulle ikke oppdateres uten statusendring';
+  END IF;
+
+  r := public.n8n_upsert_research_brief(
+    v_request_id,
     'running',
     'Skulle ikke lagres',
     jsonb_build_array(
@@ -199,9 +215,73 @@ BEGIN
     IF coalesce(r ->> 'created', 'true') = 'true' THEN
       RAISE EXCEPTION 'andre kall skulle returnere eksisterende output_ref';
     END IF;
+
+    UPDATE public.research_briefs
+    SET status = 'failed', error = 'tidsavbrudd', output_ref = NULL
+    WHERE request_id = v_reel_request_id;
+
+    BEGIN
+      PERFORM public.n8n_create_research_reel_draft(
+        v_reel_request_id,
+        NULL,
+        'Skal feile',
+        'x',
+        '[]'::jsonb,
+        '{}'::jsonb
+      );
+      RAISE EXCEPTION 'forventet exception ved reel draft på failed brief';
+    EXCEPTION
+      WHEN OTHERS THEN
+        IF SQLERRM NOT LIKE '%terminal_failed%' THEN
+          RAISE;
+        END IF;
+    END;
+
+    BEGIN
+      PERFORM public.n8n_create_research_reel_draft(
+        v_reel_request_id,
+        NULL,
+        'Skal feile metadata',
+        'x',
+        '[]'::jsonb,
+        '[]'::jsonb
+      );
+      RAISE EXCEPTION 'forventet exception ved ugyldig generation_metadata';
+    EXCEPTION
+      WHEN OTHERS THEN
+        IF SQLERRM NOT LIKE '%invalid_generation_metadata%' THEN
+          RAISE;
+        END IF;
+    END;
   END IF;
 
-  DELETE FROM public.research_briefs WHERE request_id IN (v_request_id, v_reel_request_id);
+  BEGIN
+    INSERT INTO public.research_briefs (request_id, cluster_id, kind, status)
+    VALUES (
+      'd4444444-4444-4444-8444-444444444444',
+      v_cluster_id,
+      'blog',
+      'queued'
+    );
+    INSERT INTO public.research_briefs (request_id, cluster_id, kind, status)
+    VALUES (
+      'e5555555-5555-4555-8555-555555555555',
+      v_cluster_id,
+      'blog',
+      'queued'
+    );
+    RAISE EXCEPTION 'forventet unique violation på aktiv blog per klynge';
+  EXCEPTION
+    WHEN unique_violation THEN
+      NULL;
+  END;
+
+  DELETE FROM public.research_briefs
+  WHERE request_id IN (
+    v_request_id,
+    v_reel_request_id,
+    'd4444444-4444-4444-8444-444444444444'
+  );
   DELETE FROM public.action_clusters WHERE id = v_cluster_id;
   RAISE NOTICE 'research_briefs.sql: OK';
 END $$;

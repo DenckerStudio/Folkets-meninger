@@ -21,7 +21,7 @@ Mangler base, secret eller token: fm-web **kaller ikke** webhook; brief settes t
 3. POST til n8n (se under).
 4. Ved webhook-feil: `status=failed`, fm-web returnerer **502**.
 
-fm-web kaller også `research_briefs_expire_stale` før lesing på Research-liste og klynge-detalj.
+**Utløpte jobber:** fm-web kaller `research_briefs_expire_stale` kun ved **ny bestilling** (steg 1). Lesing av Research-liste og klynge-detalj gjør **ikke** expire. n8n skal kjøre `research_briefs_expire_stale` på **fast schedule** (anbefalt hvert **10. minutt**, `p_minutes: 30`) med service_role.
 
 ## Webhook-URL
 
@@ -246,7 +246,19 @@ eller ved duplikat:
 { "p_minutes": 30 }
 ```
 
-Setter `queued`/`running` med `updated_at` eldre enn N minutter til `failed` / `error=tidsavbrudd`. Kalles også fra fm-web før lesing og ny bestilling.
+Setter `queued`/`running` med `updated_at` eldre enn N minutter til `failed` / `error=tidsavbrudd`.
+
+- **n8n:** schedule hvert 10. minutt (service_role).
+- **fm-web:** kun ved `POST /api/admin/research/...` (før ny rad opprettes).
+
+### Aktiv jobb per klynge+kind
+
+Maks én `queued`/`running` per `(cluster_id, kind)` (partial unique index). fm-web returnerer **409** med eksisterende brief når en annen aktiv jobb finnes.
+
+### Payload-grenser (n8n_upsert_research_brief)
+
+- `summary` / `error`: maks 20 000 tegn
+- `perspectives` / `sources` / `details`: maks 64 KB (`octet_length` på JSON)
 
 ## Migrasjon
 
