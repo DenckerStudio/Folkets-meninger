@@ -71,6 +71,10 @@ export function ContentFeedbackPanel({
   const isApprove = effectiveVerdict === 'approve';
 
   useEffect(() => {
+    if (lockedVerdict) {
+      setLoadingExisting(false);
+      return;
+    }
     let cancelled = false;
     setLoadingExisting(true);
     setError('');
@@ -129,6 +133,7 @@ export function ContentFeedbackPanel({
       cancelled = true;
     };
   }, [contentType, contentId, lockedVerdict]);
+
 
   useEffect(() => {
     if (isReject) {
@@ -308,7 +313,9 @@ export function ContentFeedbackPanel({
             </button>
           ) : null}
           <p className="text-sm font-medium text-foreground">Hva fungerte?</p>
-          <ul className="overflow-hidden rounded-xl border border-border bg-card lg:grid lg:grid-cols-2">
+          <ul
+            className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card lg:grid lg:grid-cols-2 lg:divide-y-0"
+          >
             {CONTENT_FEEDBACK_ASPECT_KEYS.map((key, index) => {
               const mark = aspects[key] ?? null;
               return (
@@ -316,8 +323,8 @@ export function ContentFeedbackPanel({
                   key={key}
                   className={cn(
                     'flex min-h-11 flex-row items-center justify-between gap-3 px-3 py-2',
-                    'border-b border-border',
-                    index === CONTENT_FEEDBACK_ASPECT_KEYS.length - 1 && 'border-b-0',
+                    'lg:border-b lg:border-border',
+                    index === CONTENT_FEEDBACK_ASPECT_KEYS.length - 1 && 'lg:border-b-0',
                     index >= CONTENT_FEEDBACK_ASPECT_KEYS.length - 2 && 'lg:border-b-0',
                     index % 2 === 1 && 'lg:border-l lg:border-border',
                   )}
@@ -411,7 +418,7 @@ export function ContentFeedbackPanel({
       </div>
 
       {rejectionIncomplete ? (
-        <p className="mt-2 text-sm text-destructive" role="alert">
+        <p className="mt-2 text-sm text-destructive" role="status" aria-live="polite">
           {REJECTION_HINT}
         </p>
       ) : null}

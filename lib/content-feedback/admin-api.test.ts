@@ -121,7 +121,14 @@ const panelSrc = readFileSync(
 assert.match(panelSrc, /Hopp over/);
 assert.match(panelSrc, /rejectionIncomplete/);
 assert.match(panelSrc, /tommel ned/);
+assert.match(panelSrc, /divide-y divide-border/);
+assert.match(panelSrc, /lg:grid-cols-2/);
+assert.match(panelSrc, /Merk deler \(valgfritt\)/);
+assert.match(panelSrc, /aria-pressed/);
+assert.match(panelSrc, /min-h-11/);
+assert.match(panelSrc, /tommel ned/);
 assert.match(panelSrc, /ThumbsUp/);
+assert.doesNotMatch(panelSrc, /neutral/);
 assert.match(panelSrc, /Takk, tilbakemeldingen er lagret/);
 assert.match(panelSrc, /Vurdert/);
 assert.match(panelSrc, /role="alert"/);
