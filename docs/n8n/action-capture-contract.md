@@ -94,10 +94,14 @@ Body (PostgREST):
 }
 ```
 
-### Feilkoder (`ok: false`)
+### Feil (validering)
 
-| `error` | Betydning |
-|---------|-----------|
+Ved valideringsfeil kaster RPC-en `RAISE EXCEPTION` med SQLSTATE **`22023`** (`invalid_parameter_value`). PostgREST svarer med **HTTP 400** og JSON som inneholder `code`, `message` og `details` — **ikke** `{ "ok": false, ... }`. Hele transaksjonen rulles tilbake (ingen delvise rader i `action_clusters` / `action_sources`).
+
+Meldingen starter med `action_capture <kode>:` (f.eks. `action_capture missing_item_key: kilde index 1 mangler item_key`). Kilder valideres **alle** før første skriv.
+
+| Kode i melding | Betydning |
+|----------------|-----------|
 | `invalid_cluster` | `p_cluster` er ikke et JSON-objekt |
 | `missing_action_key` | Mangler `action_key` |
 | `invalid_sources` | `p_sources` er ikke en array |
@@ -105,8 +109,9 @@ Body (PostgREST):
 | `missing_action_name` | Ny klynge uten `action_name` |
 | `missing_description_nb` | Ny klynge uten `description_nb` |
 | `invalid_cluster_status` | `status` utenfor CHECK-listen |
-| `missing_item_key` | Kilde uten `item_key` |
-| `invalid_source_type` | `source_type` må være `news_rss`, `reddit`, `petition`, `searxng` eller utelates |
+| `missing_item_key` | Kilde uten `item_key` (inkl. array-index) |
+| `missing_source_type` | Kilde uten `source_type` |
+| `invalid_source_type` | `source_type` må være `news_rss`, `reddit`, `petition`, `searxng` |
 | `missing_url_canonical` | Kilde uten URL |
 
 ## HTTP: `set_action_cluster_verdict` (valgfritt)
@@ -125,8 +130,10 @@ POST {SUPABASE_URL}/rest/v1/rpc/set_action_cluster_verdict
 
 Suksess: `{ "ok": true, "cluster_id": "uuid", "status": "below_threshold" }`
 
-| `error` | Betydning |
-|---------|-----------|
+Validerings- og forretningsfeil: samme som over — **HTTP 400**, SQLSTATE `22023`, melding `action_capture <kode>: ...` (ingen `ok: false`).
+
+| Kode i melding | Betydning |
+|----------------|-----------|
 | `missing_action_key` | Tom `p_action_key` |
 | `invalid_cluster_status` | Ugyldig `p_status` |
 | `invalid_verdict_reasons` | Ikke array/objekt |
