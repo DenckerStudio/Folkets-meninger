@@ -133,7 +133,12 @@ All on **Coolify, server `klever`**:
   `/dashboard/admin/blog` only links to the Payload admin.
 - **`20261018120000_blog_posts.sql` (Supabase `public.blog_posts`) is superseded and must
   still NOT be applied.** Do not build on the Supabase blog table. All blog work targets Payload.
-- Setup and env: `infra/coolify/cms.md`, `cms/.env.example`.
+- Setup and env: `infra/coolify/cms.md`, `cms/.env.example`. **`SERVER_URL`**
+  must be the public CMS origin (`https://cms.folkets-meninger.no`); optional
+  aliases `PAYLOAD_PUBLIC_SERVER_URL` / `NEXT_PUBLIC_SERVER_URL`. **`WEB_PUBLIC_URL`**
+  is included in Payload `cors`/`csrf` with `SERVER_URL` (no wildcards). Admin
+  login: per-account lockout (5 attempts / 15 min) plus IP throttle on
+  `POST /api/users/login`; API keys (`useAPIKey`) unchanged for agent/reader roles.
 
 ## Architecture map
 
