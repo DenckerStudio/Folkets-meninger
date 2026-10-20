@@ -12,10 +12,11 @@ DECLARE
   v_updated_at timestamptz;
   v_fn regprocedure;
   v_fns text[] := ARRAY[
-    'public.n8n_upsert_research_brief(uuid,text,text,jsonb,jsonb,jsonb,text)',
-    'public.n8n_set_research_output(uuid,text)',
-    'public.n8n_get_research_brief(uuid)',
-    'public.n8n_create_research_reel_draft(uuid,text,text,text,jsonb,jsonb)',
+    'public.n8n_upsert_research_brief(uuid,text,text,jsonb,jsonb,jsonb,text,uuid,text)',
+    'public.n8n_set_research_output(uuid,text,uuid,text)',
+    'public.n8n_get_research_brief(uuid,uuid,text)',
+    'public.n8n_create_research_reel_draft(uuid,text,text,text,jsonb,jsonb,uuid,text)',
+    'public.research_briefs_enqueue(uuid,uuid,text,uuid)',
     'public.research_briefs_expire_stale(int)',
     'public.research_briefs_validate_perspectives(jsonb)',
     'public.research_briefs_validate_sources(jsonb)',
@@ -24,7 +25,9 @@ DECLARE
     'public.research_briefs_assert_field_sizes(text,jsonb,jsonb,jsonb,text)',
     'public.research_briefs_normalize_generation_metadata(jsonb)',
     'public.research_briefs_normalize_error(text)',
-    'public.research_briefs_validate_reel_source_urls(jsonb)'
+    'public.research_briefs_validate_reel_source_urls(jsonb)',
+    'public.research_briefs_raise_invalid_input(text)',
+    'public.research_briefs_assert_request_scope(public.research_briefs,uuid,text)'
   ];
   v_name text;
 BEGIN
@@ -209,13 +212,33 @@ BEGIN
   END IF;
 
   BEGIN
+    PERFORM public.n8n_upsert_research_brief(
+      v_heartbeat_request_id,
+      'running',
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      v_cluster_id,
+      'blog'
+    );
+    RAISE EXCEPTION 'forventet research_request_conflict fra upsert scope';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%research_request_conflict%' THEN
+        RAISE;
+      END IF;
+  END;
+
+  BEGIN
     PERFORM public.research_briefs_validate_reel_source_urls(
       jsonb_build_array('https://example.com/ikke-objekt')
     );
     RAISE EXCEPTION 'forventet exception ved streng i source_urls-array';
   EXCEPTION
     WHEN OTHERS THEN
-      IF SQLERRM NOT LIKE '%invalid_source_urls%' THEN
+      IF SQLERRM NOT LIKE '%research_invalid_input%' THEN
         RAISE;
       END IF;
   END;
@@ -227,7 +250,7 @@ BEGIN
     RAISE EXCEPTION 'forventet exception ved ugyldig url-protokoll';
   EXCEPTION
     WHEN OTHERS THEN
-      IF SQLERRM NOT LIKE '%invalid_source_urls%' THEN
+      IF SQLERRM NOT LIKE '%research_invalid_input%' THEN
         RAISE;
       END IF;
   END;
@@ -288,7 +311,7 @@ BEGIN
       RAISE EXCEPTION 'forventet exception ved ugyldig generation_metadata';
     EXCEPTION
       WHEN OTHERS THEN
-        IF SQLERRM NOT LIKE '%invalid_generation_metadata%' THEN
+        IF SQLERRM NOT LIKE '%research_invalid_input%' THEN
           RAISE;
         END IF;
     END;
@@ -337,31 +360,56 @@ BEGIN
       RAISE EXCEPTION 'forventet exception ved reel draft på failed brief';
     EXCEPTION
       WHEN OTHERS THEN
-        IF SQLERRM NOT LIKE '%terminal_failed%' THEN
+        IF SQLERRM NOT LIKE '%research_brief_failed%' THEN
           RAISE;
         END IF;
     END;
   END IF;
 
+  INSERT INTO public.research_briefs (request_id, cluster_id, kind, status)
+  VALUES (
+    'd4444444-4444-4444-8444-444444444444',
+    v_cluster_id,
+    'blog',
+    'queued'
+  );
+
   BEGIN
-    INSERT INTO public.research_briefs (request_id, cluster_id, kind, status)
-    VALUES (
-      'd4444444-4444-4444-8444-444444444444',
-      v_cluster_id,
-      'blog',
-      'queued'
-    );
-    INSERT INTO public.research_briefs (request_id, cluster_id, kind, status)
-    VALUES (
+    PERFORM public.research_briefs_enqueue(
       'e5555555-5555-4555-8555-555555555555',
       v_cluster_id,
       'blog',
-      'queued'
+      NULL
     );
-    RAISE EXCEPTION 'forventet unique violation på aktiv blog per klynge';
+    RAISE EXCEPTION 'forventet research_brief_active ved aktiv blog';
   EXCEPTION
-    WHEN unique_violation THEN
-      NULL;
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%research_brief_active%' THEN
+        RAISE;
+      END IF;
+  END;
+
+  INSERT INTO public.research_briefs (request_id, cluster_id, kind, status)
+  VALUES (
+    'a9999999-9999-4999-8999-999999999909',
+    v_cluster_id,
+    'deepen',
+    'done'
+  );
+
+  BEGIN
+    PERFORM public.research_briefs_enqueue(
+      'a9999999-9999-4999-8999-999999999909',
+      v_cluster_id,
+      'blog',
+      NULL
+    );
+    RAISE EXCEPTION 'forventet research_request_conflict';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%research_request_conflict%' THEN
+        RAISE;
+      END IF;
   END;
 
   DELETE FROM public.research_briefs
@@ -369,7 +417,9 @@ BEGIN
     v_request_id,
     v_reel_request_id,
     v_heartbeat_request_id,
-    'd4444444-4444-4444-8444-444444444444'
+    'd4444444-4444-4444-8444-444444444444',
+    'e5555555-5555-4555-8555-555555555555',
+    'a9999999-9999-4999-8999-999999999909'
   );
   DELETE FROM public.action_clusters WHERE id = v_cluster_id;
   RAISE NOTICE 'research_briefs.sql: OK';

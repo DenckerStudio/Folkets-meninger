@@ -182,6 +182,169 @@ $$;
 REVOKE ALL ON FUNCTION public.research_briefs_is_backwards_status(text, text)
   FROM PUBLIC, anon, authenticated;
 
+CREATE OR REPLACE FUNCTION public.research_briefs_raise_invalid_input(p_field text)
+RETURNS void
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  RAISE EXCEPTION 'research_invalid_input'
+    USING ERRCODE = '22023',
+    DETAIL = p_field;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.research_briefs_raise_invalid_input(text)
+  FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.research_briefs_assert_request_scope(
+  p_row public.research_briefs,
+  p_cluster_id uuid,
+  p_kind text
+)
+RETURNS void
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF p_cluster_id IS NOT NULL AND p_row.cluster_id IS DISTINCT FROM p_cluster_id THEN
+    RAISE EXCEPTION 'research_request_conflict'
+      USING ERRCODE = 'P0001';
+  END IF;
+  IF p_kind IS NOT NULL AND p_row.kind IS DISTINCT FROM p_kind THEN
+    RAISE EXCEPTION 'research_request_conflict'
+      USING ERRCODE = 'P0001';
+  END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.research_briefs_assert_request_scope(public.research_briefs, uuid, text)
+  FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.research_briefs_enqueue(
+  p_request_id uuid,
+  p_cluster_id uuid,
+  p_kind text,
+  p_requested_by uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_existing public.research_briefs%ROWTYPE;
+  v_active_request_id uuid;
+  v_row public.research_briefs%ROWTYPE;
+BEGIN
+  IF p_request_id IS NULL THEN
+    PERFORM public.research_briefs_raise_invalid_input('request_id');
+  END IF;
+  IF p_cluster_id IS NULL THEN
+    PERFORM public.research_briefs_raise_invalid_input('cluster_id');
+  END IF;
+  IF p_kind IS NULL THEN
+    PERFORM public.research_briefs_raise_invalid_input('kind');
+  END IF;
+
+  IF p_kind NOT IN ('deepen', 'blog', 'reel') THEN
+    PERFORM public.research_briefs_raise_invalid_input('kind');
+  END IF;
+
+  SELECT * INTO v_existing
+  FROM public.research_briefs
+  WHERE request_id = p_request_id;
+
+  IF FOUND THEN
+    IF v_existing.cluster_id IS DISTINCT FROM p_cluster_id
+      OR v_existing.kind IS DISTINCT FROM p_kind THEN
+      RAISE EXCEPTION 'research_request_conflict'
+        USING ERRCODE = 'P0001';
+    END IF;
+    RETURN jsonb_build_object(
+      'request_id', v_existing.request_id,
+      'status', v_existing.status,
+      'created', false
+    );
+  END IF;
+
+  SELECT rb.request_id INTO v_active_request_id
+  FROM public.research_briefs rb
+  WHERE rb.cluster_id = p_cluster_id
+    AND rb.kind = p_kind
+    AND rb.status IN ('queued', 'running')
+  ORDER BY rb.created_at DESC
+  LIMIT 1;
+
+  IF v_active_request_id IS NOT NULL THEN
+    RAISE EXCEPTION 'research_brief_active'
+      USING ERRCODE = 'P0001',
+      DETAIL = v_active_request_id::text;
+  END IF;
+
+  BEGIN
+    INSERT INTO public.research_briefs (
+      request_id,
+      cluster_id,
+      kind,
+      status,
+      requested_by
+    )
+    VALUES (
+      p_request_id,
+      p_cluster_id,
+      p_kind,
+      'queued',
+      p_requested_by
+    )
+    RETURNING * INTO v_row;
+  EXCEPTION
+    WHEN unique_violation THEN
+      SELECT * INTO v_existing
+      FROM public.research_briefs
+      WHERE request_id = p_request_id;
+
+      IF FOUND THEN
+        IF v_existing.cluster_id IS DISTINCT FROM p_cluster_id
+          OR v_existing.kind IS DISTINCT FROM p_kind THEN
+          RAISE EXCEPTION 'research_request_conflict'
+            USING ERRCODE = 'P0001';
+        END IF;
+        RETURN jsonb_build_object(
+          'request_id', v_existing.request_id,
+          'status', v_existing.status,
+          'created', false
+        );
+      END IF;
+
+      SELECT rb.request_id INTO v_active_request_id
+      FROM public.research_briefs rb
+      WHERE rb.cluster_id = p_cluster_id
+        AND rb.kind = p_kind
+        AND rb.status IN ('queued', 'running')
+      ORDER BY rb.created_at DESC
+      LIMIT 1;
+
+      RAISE EXCEPTION 'research_brief_active'
+        USING ERRCODE = 'P0001',
+        DETAIL = coalesce(v_active_request_id::text, '');
+  END;
+
+  RETURN jsonb_build_object(
+    'request_id', v_row.request_id,
+    'status', v_row.status,
+    'created', true
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.research_briefs_enqueue(uuid, uuid, text, uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.research_briefs_enqueue(uuid, uuid, text, uuid)
+  TO service_role;
+
 CREATE OR REPLACE FUNCTION public.research_briefs_assert_field_sizes(
   p_summary text,
   p_perspectives jsonb,
@@ -196,24 +359,19 @@ SET search_path = public, pg_temp
 AS $$
 BEGIN
   IF p_summary IS NOT NULL AND char_length(p_summary) > 20000 THEN
-    RAISE EXCEPTION 'research_brief payload_too_large: summary over 20000 tegn'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('summary');
   END IF;
   IF p_error IS NOT NULL AND char_length(p_error) > 500 THEN
-    RAISE EXCEPTION 'research_brief payload_too_large: error over 500 tegn'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('error');
   END IF;
   IF p_perspectives IS NOT NULL AND octet_length(p_perspectives::text) > 65536 THEN
-    RAISE EXCEPTION 'research_brief payload_too_large: perspectives over 64 KB'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('perspectives');
   END IF;
   IF p_sources IS NOT NULL AND octet_length(p_sources::text) > 65536 THEN
-    RAISE EXCEPTION 'research_brief payload_too_large: sources over 64 KB'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('sources');
   END IF;
   IF p_details IS NOT NULL AND octet_length(p_details::text) > 65536 THEN
-    RAISE EXCEPTION 'research_brief payload_too_large: details over 64 KB'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('details');
   END IF;
 END;
 $$;
@@ -232,8 +390,7 @@ BEGIN
     RETURN '{}'::jsonb;
   END IF;
   IF jsonb_typeof(p_value) <> 'object' THEN
-    RAISE EXCEPTION 'research_brief invalid_generation_metadata: må være JSON-objekt'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('generation_metadata');
   END IF;
   RETURN p_value;
 END;
@@ -258,13 +415,19 @@ BEGIN
   IF v_error = '' THEN
     RETURN NULL;
   END IF;
-  IF v_error IN ('tidsavbrudd', 'arbeidsflyt_utilgjengelig')
-    OR v_error LIKE 'webhook_http_%' THEN
+  IF v_error IN (
+    'tidsavbrudd',
+    'arbeidsflyt_utilgjengelig',
+    'modell_feil',
+    'kilder_mangler',
+    'cms_feil',
+    'ugyldig_svar',
+    'avbrutt'
+  ) THEN
     RETURN v_error;
   END IF;
   IF char_length(v_error) > 500 THEN
-    RAISE EXCEPTION 'research_brief invalid_error: fri tekst over 500 tegn'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('error');
   END IF;
   RETURN v_error;
 END;
@@ -288,28 +451,23 @@ BEGIN
     RETURN '[]'::jsonb;
   END IF;
   IF jsonb_typeof(p_value) <> 'array' THEN
-    RAISE EXCEPTION 'research_brief invalid_source_urls: må være JSON-array'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('source_urls');
   END IF;
   v_len := jsonb_array_length(p_value);
   IF v_len > 20 THEN
-    RAISE EXCEPTION 'research_brief invalid_source_urls: maks 20 elementer'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('source_urls');
   END IF;
   FOR v_item IN SELECT value FROM jsonb_array_elements(p_value)
   LOOP
     IF jsonb_typeof(v_item) <> 'object' THEN
-      RAISE EXCEPTION 'research_brief invalid_source_urls: hvert element må være et objekt'
-        USING ERRCODE = '22023';
+      PERFORM public.research_briefs_raise_invalid_input('source_urls');
     END IF;
     v_url := btrim(v_item ->> 'url');
     IF v_url IS NULL OR v_url = '' THEN
-      RAISE EXCEPTION 'research_brief invalid_source_urls: url er påkrevd'
-        USING ERRCODE = '22023';
+      PERFORM public.research_briefs_raise_invalid_input('source_urls');
     END IF;
     IF v_url !~ '^(https?://|/)' THEN
-      RAISE EXCEPTION 'research_brief invalid_source_urls: url må være http(s) eller app-sti'
-        USING ERRCODE = '22023';
+      PERFORM public.research_briefs_raise_invalid_input('source_urls');
     END IF;
   END LOOP;
   RETURN p_value;
@@ -329,8 +487,7 @@ DECLARE
   v_count int;
 BEGIN
   IF p_minutes IS NULL OR p_minutes < 1 THEN
-    RAISE EXCEPTION 'research_brief invalid_minutes: p_minutes må være >= 1'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('p_minutes');
   END IF;
 
   UPDATE public.research_briefs
@@ -350,7 +507,11 @@ REVOKE ALL ON FUNCTION public.research_briefs_expire_stale(int)
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.research_briefs_expire_stale(int) TO service_role;
 
-CREATE OR REPLACE FUNCTION public.n8n_get_research_brief(p_request_id uuid)
+CREATE OR REPLACE FUNCTION public.n8n_get_research_brief(
+  p_request_id uuid,
+  p_cluster_id uuid DEFAULT NULL,
+  p_kind text DEFAULT NULL
+)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -360,8 +521,7 @@ DECLARE
   v_row public.research_briefs%ROWTYPE;
 BEGIN
   IF p_request_id IS NULL THEN
-    RAISE EXCEPTION 'research_brief missing_request_id: p_request_id er påkrevd'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('request_id');
   END IF;
 
   SELECT * INTO v_row
@@ -371,6 +531,8 @@ BEGIN
   IF NOT FOUND THEN
     RETURN NULL;
   END IF;
+
+  PERFORM public.research_briefs_assert_request_scope(v_row, p_cluster_id, p_kind);
 
   RETURN jsonb_build_object(
     'request_id', v_row.request_id,
@@ -390,9 +552,9 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.n8n_get_research_brief(uuid)
+REVOKE ALL ON FUNCTION public.n8n_get_research_brief(uuid, uuid, text)
   FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.n8n_get_research_brief(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.n8n_get_research_brief(uuid, uuid, text) TO service_role;
 
 CREATE OR REPLACE FUNCTION public.n8n_upsert_research_brief(
   p_request_id uuid,
@@ -401,7 +563,9 @@ CREATE OR REPLACE FUNCTION public.n8n_upsert_research_brief(
   p_perspectives jsonb DEFAULT NULL,
   p_sources jsonb DEFAULT NULL,
   p_details jsonb DEFAULT NULL,
-  p_error text DEFAULT NULL
+  p_error text DEFAULT NULL,
+  p_cluster_id uuid DEFAULT NULL,
+  p_kind text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -413,8 +577,7 @@ DECLARE
   v_next_status text;
 BEGIN
   IF p_request_id IS NULL THEN
-    RAISE EXCEPTION 'research_brief missing_request_id: p_request_id er påkrevd'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('request_id');
   END IF;
 
   SELECT * INTO v_row
@@ -426,6 +589,8 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'error', 'not_found', 'request_id', p_request_id);
   END IF;
 
+  PERFORM public.research_briefs_assert_request_scope(v_row, p_cluster_id, p_kind);
+
   -- Terminal: ingen feltoppdatering uten statusendring (heartbeats på queued/running oppdaterer alltid updated_at).
   IF v_row.status IN ('done', 'failed') THEN
     RETURN public.research_brief_row_to_jsonb(v_row);
@@ -435,8 +600,7 @@ BEGIN
   IF p_status IS NOT NULL THEN
     p_status := btrim(p_status);
     IF p_status NOT IN ('queued', 'running', 'done', 'failed') THEN
-      RAISE EXCEPTION 'research_brief invalid_status: ugyldig status %', p_status
-        USING ERRCODE = '22023';
+      PERFORM public.research_briefs_raise_invalid_input('status');
     END IF;
     IF public.research_briefs_is_backwards_status(v_row.status, p_status) THEN
       RETURN public.research_brief_row_to_jsonb(v_row);
@@ -450,19 +614,16 @@ BEGIN
 
   IF p_perspectives IS NOT NULL
     AND NOT public.research_briefs_validate_perspectives(p_perspectives) THEN
-    RAISE EXCEPTION 'research_brief invalid_perspectives: må være array med påkrevde felt'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('perspectives');
   END IF;
 
   IF p_sources IS NOT NULL
     AND NOT public.research_briefs_validate_sources(p_sources) THEN
-    RAISE EXCEPTION 'research_brief invalid_sources: må være array med url'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('sources');
   END IF;
 
   IF p_details IS NOT NULL AND jsonb_typeof(p_details) <> 'object' THEN
-    RAISE EXCEPTION 'research_brief invalid_details: må være JSON-objekt'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('details');
   END IF;
 
   PERFORM public.research_briefs_assert_field_sizes(
@@ -489,14 +650,16 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.n8n_upsert_research_brief(uuid, text, text, jsonb, jsonb, jsonb, text)
+REVOKE ALL ON FUNCTION public.n8n_upsert_research_brief(uuid, text, text, jsonb, jsonb, jsonb, text, uuid, text)
   FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.n8n_upsert_research_brief(uuid, text, text, jsonb, jsonb, jsonb, text)
+GRANT EXECUTE ON FUNCTION public.n8n_upsert_research_brief(uuid, text, text, jsonb, jsonb, jsonb, text, uuid, text)
   TO service_role;
 
 CREATE OR REPLACE FUNCTION public.n8n_set_research_output(
   p_request_id uuid,
-  p_output_ref text
+  p_output_ref text,
+  p_cluster_id uuid DEFAULT NULL,
+  p_kind text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -507,14 +670,12 @@ DECLARE
   v_row public.research_briefs%ROWTYPE;
 BEGIN
   IF p_request_id IS NULL THEN
-    RAISE EXCEPTION 'research_brief missing_request_id: p_request_id er påkrevd'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('request_id');
   END IF;
 
   p_output_ref := nullif(btrim(p_output_ref), '');
   IF p_output_ref IS NULL THEN
-    RAISE EXCEPTION 'research_brief missing_output_ref: p_output_ref er påkrevd'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('output_ref');
   END IF;
 
   SELECT * INTO v_row
@@ -525,6 +686,8 @@ BEGIN
   IF NOT FOUND THEN
     RETURN jsonb_build_object('ok', false, 'error', 'not_found', 'request_id', p_request_id);
   END IF;
+
+  PERFORM public.research_briefs_assert_request_scope(v_row, p_cluster_id, p_kind);
 
   IF v_row.status = 'done' AND v_row.output_ref IS NOT NULL THEN
     IF v_row.output_ref = p_output_ref THEN
@@ -550,9 +713,9 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.n8n_set_research_output(uuid, text)
+REVOKE ALL ON FUNCTION public.n8n_set_research_output(uuid, text, uuid, text)
   FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.n8n_set_research_output(uuid, text)
+GRANT EXECUTE ON FUNCTION public.n8n_set_research_output(uuid, text, uuid, text)
   TO service_role;
 
 CREATE OR REPLACE FUNCTION public.n8n_create_research_reel_draft(
@@ -561,7 +724,9 @@ CREATE OR REPLACE FUNCTION public.n8n_create_research_reel_draft(
   p_title text,
   p_neutral_summary text,
   p_source_urls jsonb,
-  p_generation_metadata jsonb
+  p_generation_metadata jsonb,
+  p_cluster_id uuid DEFAULT NULL,
+  p_kind text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -574,8 +739,7 @@ DECLARE
   v_meta jsonb;
 BEGIN
   IF p_request_id IS NULL THEN
-    RAISE EXCEPTION 'research_brief missing_request_id: p_request_id er påkrevd'
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('request_id');
   END IF;
 
   SELECT * INTO v_row
@@ -584,18 +748,18 @@ BEGIN
   FOR UPDATE;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'research_brief not_found: ukjent request_id %', p_request_id
-      USING ERRCODE = 'P0002';
+    RETURN jsonb_build_object('ok', false, 'error', 'not_found', 'request_id', p_request_id);
   END IF;
 
+  PERFORM public.research_briefs_assert_request_scope(v_row, p_cluster_id, p_kind);
+
   IF v_row.kind <> 'reel' THEN
-    RAISE EXCEPTION 'research_brief invalid_kind: forventet reel, fikk %', v_row.kind
-      USING ERRCODE = '22023';
+    PERFORM public.research_briefs_raise_invalid_input('kind');
   END IF;
 
   IF v_row.status = 'failed' THEN
-    RAISE EXCEPTION 'research_brief terminal_failed: brief er failed'
-      USING ERRCODE = '22023';
+    RAISE EXCEPTION 'research_brief_failed'
+      USING ERRCODE = 'P0001';
   END IF;
 
   IF v_row.output_ref IS NOT NULL AND btrim(v_row.output_ref) <> '' THEN
@@ -637,9 +801,9 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.n8n_create_research_reel_draft(uuid, text, text, text, jsonb, jsonb)
+REVOKE ALL ON FUNCTION public.n8n_create_research_reel_draft(uuid, text, text, text, jsonb, jsonb, uuid, text)
   FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.n8n_create_research_reel_draft(uuid, text, text, text, jsonb, jsonb)
+GRANT EXECUTE ON FUNCTION public.n8n_create_research_reel_draft(uuid, text, text, text, jsonb, jsonb, uuid, text)
   TO service_role;
 
 COMMIT;

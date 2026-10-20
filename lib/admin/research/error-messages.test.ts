@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { formatResearchBriefError } from '@/lib/admin/research/error-messages';
 
+assert.equal(formatResearchBriefError('modell_feil'), 'Modellen kunne ikke fullføre oppgaven.');
 assert.equal(formatResearchBriefError('tidsavbrudd'), 'Oppgaven ble avbrutt etter for lang ventetid i kø.');
 assert.equal(
   formatResearchBriefError('arbeidsflyt_utilgjengelig'),

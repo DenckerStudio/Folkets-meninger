@@ -110,7 +110,28 @@ Eksempel (blog/reel):
 - `done` og `failed` er **terminale**. Ny kjøring = ny `request_id` fra admin.
 - Forsøk på bakovergang (f.eks. `running` etter `done`) er **no-op**: RPC returnerer gjeldende rad uten endring.
 - Alle `p_*` i `n8n_upsert_research_brief`: **NULL = behold lagret verdi** (`COALESCE`).
-- **Heartbeat:** n8n kan kalle upsert med `p_status=running` (eller `queued`) og NULL på andre felt for å holde jobben i live. Samme status oppdaterer alltid `updated_at`; kun `done`/`failed` returnerer tidlig uten endring.
+- **Heartbeat:** n8n skal sende heartbeat **minst hvert 20. minutt** (`n8n_upsert_research_brief` med `p_status=running` eller `queued` og NULL på andre felt). Utløp (`research_briefs_expire_stale`, standard **30 min** uten aktivitet på `updated_at`) tåler typisk n8n-gap på inntil ~15 min.
+- Valgfritt på alle n8n-RPC-er: `p_cluster_id` / `p_kind` — når satt, må de matche raden; ellers `research_request_conflict` (`P0001`).
+
+## Feilkoder (n8n + fm-web)
+
+n8n kan matche på **eksakt** `RAISE EXCEPTION`-melding (PostgREST `message`) og SQLSTATE.
+
+| Melding | SQLSTATE | Når |
+|---------|----------|-----|
+| `research_brief_failed` | `P0001` | `n8n_create_research_reel_draft` på brief med `status=failed` |
+| `research_request_conflict` | `P0001` | `request_id` finnes med annen `cluster_id` eller `kind` (RPC scope eller `research_briefs_enqueue`) |
+| `research_brief_active` | `P0001` | Aktiv `queued`/`running` finnes for samme `(cluster_id, kind)` (`research_briefs_enqueue`; `DETAIL` = aktiv `request_id`) |
+| `research_invalid_input` | `22023` | Ugyldig input; `DETAIL` = feltnavn (f.eks. `generation_metadata`, `source_urls`, `summary`) |
+
+**fm-web admin** `POST /api/admin/research/{clusterId}/{action}` ved 409:
+
+| `error` | Body |
+|---------|------|
+| `research_request_conflict` | `{ "error": "research_request_conflict" }` |
+| `research_brief_active` | `{ "error": "research_brief_active", "request_id": "<uuid>" }` |
+
+fm-web oppretter rader via `research_briefs_enqueue` (service_role), ikke direkte `INSERT`.
 
 ## Skriving tilbake (service_role)
 
@@ -119,7 +140,11 @@ Eksempel (blog/reel):
 `POST /rest/v1/rpc/n8n_get_research_brief`
 
 ```json
-{ "p_request_id": "uuid" }
+{
+  "p_request_id": "uuid",
+  "p_cluster_id": "uuid (valgfritt)",
+  "p_kind": "deepen | blog | reel (valgfritt)"
+}
 ```
 
 Returnerer **`jsonb` eller SQL `NULL`** (PostgREST: `null` i JSON) når raden ikke finnes.
@@ -140,7 +165,9 @@ Når funnet, nøyaktig disse nøklene (ingen `ok` / `id`):
   "p_perspectives": [],
   "p_sources": [],
   "p_details": { "open_questions": [], "unverified": [] },
-  "p_error": null
+  "p_error": null,
+  "p_cluster_id": "uuid (valgfritt)",
+  "p_kind": "deepen | blog | reel (valgfritt)"
 }
 ```
 
@@ -152,9 +179,13 @@ Når funnet, nøyaktig disse nøklene (ingen `ok` / `id`):
 |------|----------------|
 | `tidsavbrudd` | Oppgaven ble avbrutt etter for lang ventetid i kø. |
 | `arbeidsflyt_utilgjengelig` | Arbeidsflyten er ikke tilgjengelig akkurat nå. |
-| `webhook_http_<status>` | Kunne ikke nå arbeidsflyten (fm-web ved webhook-feil). |
+| `modell_feil` | Modellen kunne ikke fullføre oppgaven. |
+| `kilder_mangler` | Det mangler kilder for å fullføre oppgaven. |
+| `cms_feil` | Kunne ikke opprette eller oppdatere innhold i CMS. |
+| `ugyldig_svar` | Arbeidsflyten returnerte et ugyldig svar. |
+| `avbrutt` | Oppgaven ble avbrutt. |
 
-Andre strenger behandles som fri feilmelding fra n8n (trimmes, maks 500 tegn).
+Andre strenger behandles som fri feilmelding (trimmes, maks 500 tegn). fm-web kan sette `webhook_http_<status>` ved webhook-feil; UI mapper prefikset til generisk nettverksmelding.
 
 **perspectives** (JSON-array, ukjente nøkler tillates):
 
@@ -262,9 +293,9 @@ eller ved duplikat:
 { "p_minutes": 30 }
 ```
 
-Setter `queued`/`running` med **`updated_at`** eldre enn N minutter til `failed` / `error=tidsavbrudd` (ikke `created_at` — heartbeats via upsert teller).
+Setter `queued`/`running` med **`updated_at`** eldre enn N minutter til `failed` / `error=tidsavbrudd` (ikke `created_at` — heartbeats via upsert teller). Standard **N=30**; n8n heartbeat **minst hvert 20. minutt**.
 
-- **n8n:** schedule hvert 10. minutt (service_role).
+- **n8n:** schedule expire hvert 10. minutt (service_role, `p_minutes: 30`).
 - **fm-web:** kun ved `POST /api/admin/research/...` (før ny rad opprettes).
 
 ### Aktiv jobb per klynge+kind

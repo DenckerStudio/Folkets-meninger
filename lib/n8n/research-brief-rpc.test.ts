@@ -43,7 +43,11 @@ assert.match(migration, /create_system_poll_draft/i);
 assert.match(migration, /research_briefs_one_active_per_cluster_kind_idx/i);
 assert.match(migration, /research_briefs_assert_field_sizes/i);
 assert.match(migration, /IF v_row\.status IN \('done', 'failed'\)/i);
-assert.match(migration, /terminal_failed/i);
+assert.match(migration, /research_brief_failed/i);
+assert.match(migration, /research_request_conflict/i);
+assert.match(migration, /research_brief_active/i);
+assert.match(migration, /research_invalid_input/i);
+assert.match(migration, /research_briefs_enqueue/i);
 assert.match(migration, /research_briefs_normalize_generation_metadata/i);
 assert.match(migration, /research_briefs_normalize_error/i);
 assert.match(migration, /research_briefs_validate_reel_source_urls/i);
@@ -53,7 +57,7 @@ assert.match(migration, /'poll_id', v_poll_id,\s*\n\s*'created', true/i);
 
 assert.match(
   migration,
-  /n8n_upsert_research_brief\(uuid, text, text, jsonb, jsonb, jsonb, text\)/i,
+  /n8n_upsert_research_brief\(uuid, text, text, jsonb, jsonb, jsonb, text, uuid, text\)/i,
 );
 
 assert.match(migration, /ENABLE ROW LEVEL SECURITY/i);
@@ -79,7 +83,9 @@ assert.match(doc, /source_event.*research:/i);
 assert.match(doc, /review_note/);
 assert.match(doc, /"label": "NRK"/);
 assert.match(doc, /webhook_http_/);
-assert.match(doc, /heartbeats via upsert/i);
+assert.match(doc, /minst hvert 20\. minutt/i);
+assert.match(doc, /research_brief_failed/);
+assert.match(doc, /research_invalid_input/);
 
 const webhook = readFileSync(
   join(process.cwd(), 'lib/admin/research/webhook.ts'),
@@ -98,9 +104,9 @@ const listClusterBriefsBody =
     'export async function buildResearchWebhookBody',
   )[0] ?? '';
 assert.equal(listClusterBriefsBody.includes('expireStaleResearchBriefs'), false);
-assert.match(service, /request_id_conflict/);
-assert.match(service, /ignoreDuplicates:\s*true/);
-assert.match(service, /onConflict:\s*'request_id'/);
+assert.match(service, /research_briefs_enqueue/);
+assert.match(service, /research_request_conflict/);
+assert.match(service, /research_brief_active/);
 assert.match(service, /source_request_id/);
 assert.match(service, /getLatestDoneDeepenRequestIdForCluster/);
 assert.match(service, /arbeidsflyt_utilgjengelig/);

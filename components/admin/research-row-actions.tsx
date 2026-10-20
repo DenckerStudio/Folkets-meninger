@@ -8,7 +8,10 @@ import { ResearchBriefStatusBadge } from '@/components/admin/research-brief-stat
 import { Dialog } from '@/components/ui/dialog';
 import { SmoothDropdown, type SmoothDropdownItem } from '@/components/ui/smooth-dropdown';
 import type { ResearchApiAction } from '@/lib/admin/research/actions';
-import { RESEARCH_ALREADY_RUNNING_MESSAGE } from '@/lib/admin/research/error-messages';
+import {
+  RESEARCH_API_ERROR_CODES,
+  researchApiErrorMessage,
+} from '@/lib/admin/research/api-error-codes';
 import {
   RESEARCH_ACTION_CONFIRM,
   RESEARCH_ACTION_LABELS,
@@ -255,6 +258,7 @@ export function ResearchRowActions({
         });
         const body = (await res.json().catch(() => ({}))) as {
           error?: string;
+          message?: string;
           request_id?: string;
           status?: ResearchBriefStatus;
           created?: boolean;
@@ -263,8 +267,22 @@ export function ResearchRowActions({
           setError('Ingen tilgang');
           return;
         }
-        if (res.status === 409 && body.request_id) {
-          setError(body.error ?? RESEARCH_ALREADY_RUNNING_MESSAGE);
+        if (
+          res.status === 409 &&
+          (body.request_id ||
+            body.error === RESEARCH_API_ERROR_CODES.requestConflict)
+        ) {
+          const conflictMessage =
+            body.message ??
+            (body.error === RESEARCH_API_ERROR_CODES.requestConflict ||
+            body.error === RESEARCH_API_ERROR_CODES.briefActive
+              ? researchApiErrorMessage(
+                  body.error as
+                    | typeof RESEARCH_API_ERROR_CODES.briefActive
+                    | typeof RESEARCH_API_ERROR_CODES.requestConflict,
+                )
+              : body.error);
+          setError(conflictMessage ?? researchApiErrorMessage(RESEARCH_API_ERROR_CODES.briefActive));
           setBriefsByKind((prev) =>
             mergeBriefFromResponse(prev, action, body.status ?? 'queued', body.request_id!),
           );

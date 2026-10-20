@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
 import { isResearchApiAction } from '@/lib/admin/research/actions';
 import { parseClientResearchRequestId } from '@/lib/admin/research/request-id';
-import { RESEARCH_ALREADY_RUNNING_MESSAGE } from '@/lib/admin/research/error-messages';
+import {
+  RESEARCH_API_ERROR_CODES,
+  researchApiErrorMessage,
+} from '@/lib/admin/research/api-error-codes';
 import { enqueueResearchJob } from '@/lib/admin/research/service';
 
 export const dynamic = 'force-dynamic';
@@ -36,17 +39,20 @@ export async function POST(request: Request, context: RouteContext) {
 
   const result = await enqueueResearchJob(clusterId.trim(), action, auth.userId, requestId);
   if (!result.ok) {
-    if (
-      (result.code === 'already_active' || result.code === 'request_id_conflict') &&
-      result.requestId
-    ) {
-      const message =
-        result.code === 'request_id_conflict'
-          ? 'request_id er allerede knyttet til en annen oppgave'
-          : RESEARCH_ALREADY_RUNNING_MESSAGE;
+    if (result.code === RESEARCH_API_ERROR_CODES.requestConflict) {
       return NextResponse.json(
         {
-          error: message,
+          error: RESEARCH_API_ERROR_CODES.requestConflict,
+          message: researchApiErrorMessage(RESEARCH_API_ERROR_CODES.requestConflict),
+        },
+        { status: 409 },
+      );
+    }
+    if (result.code === RESEARCH_API_ERROR_CODES.briefActive && result.requestId) {
+      return NextResponse.json(
+        {
+          error: RESEARCH_API_ERROR_CODES.briefActive,
+          message: researchApiErrorMessage(RESEARCH_API_ERROR_CODES.briefActive),
           request_id: result.requestId,
           status: result.status ?? 'queued',
         },

@@ -9,6 +9,31 @@ import {
   researchApiActionToKind,
   type ResearchApiAction,
 } from '@/lib/admin/research/actions';
+import { RESEARCH_API_ERROR_CODES } from '@/lib/admin/research/api-error-codes';
+
+function parseResearchBriefsEnqueueError(error: {
+  message?: string;
+  details?: string;
+}): {
+  code: 'research_request_conflict' | 'research_brief_active' | 'db_error';
+  requestId?: string;
+} {
+  const message = error.message ?? '';
+  if (message.includes('research_request_conflict')) {
+    return { code: RESEARCH_API_ERROR_CODES.requestConflict };
+  }
+  if (message.includes('research_brief_active')) {
+    const detail = error.details?.trim();
+    const uuidMatch = detail?.match(
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
+    );
+    return {
+      code: RESEARCH_API_ERROR_CODES.briefActive,
+      requestId: uuidMatch?.[0],
+    };
+  }
+  return { code: 'db_error' };
+}
 
 function parseBriefRow(raw: Record<string, unknown>): ResearchBriefRow {
   return {
@@ -219,8 +244,8 @@ export async function enqueueResearchJob(
         | 'webhook_failed'
         | 'not_configured'
         | 'db_error'
-        | 'already_active'
-        | 'request_id_conflict'
+        | 'research_brief_active'
+        | 'research_request_conflict'
         | 'invalid_request_id';
       requestId?: string;
       status?: ResearchBriefRow['status'];
@@ -231,110 +256,55 @@ export async function enqueueResearchJob(
 
   await expireStaleResearchBriefs();
 
-  const { data: existingByRequest, error: existingByRequestError } = await supabase
-    .from('research_briefs')
-    .select('request_id, cluster_id, kind, status')
-    .eq('request_id', requestId)
-    .maybeSingle();
-
-  if (existingByRequestError) {
-    return { ok: false, code: 'db_error' };
-  }
-
-  if (existingByRequest) {
-    if (
-      String(existingByRequest.cluster_id) !== clusterId ||
-      existingByRequest.kind !== kind
-    ) {
-      return {
-        ok: false,
-        code: 'request_id_conflict',
-        requestId: String(existingByRequest.request_id),
-        status: existingByRequest.status as ResearchBriefRow['status'],
-      };
-    }
-  }
-
-  const active = await findActiveResearchBrief(clusterId, kind, requestId);
-  if (active) {
-    return {
-      ok: false,
-      code: 'already_active',
-      requestId: active.request_id,
-      status: active.status,
-    };
-  }
-
   const webhookBody = await buildResearchWebhookBody(clusterId, requestId, kind, requestedBy);
   if (!webhookBody) {
     return { ok: false, code: 'not_found' };
   }
 
-  const { data: inserted, error: insertError } = await supabase
-    .from('research_briefs')
-    .upsert(
-      {
-        request_id: requestId,
-        cluster_id: clusterId,
-        kind,
-        status: 'queued',
-        requested_by: requestedBy,
-      },
-      { onConflict: 'request_id', ignoreDuplicates: true },
-    )
-    .select('request_id, status')
-    .maybeSingle();
+  const { data: enqueued, error: enqueueError } = await supabase.rpc('research_briefs_enqueue', {
+    p_request_id: requestId,
+    p_cluster_id: clusterId,
+    p_kind: kind,
+    p_requested_by: requestedBy,
+  });
 
-  if (insertError) {
-    if (insertError.code === '23505') {
-      const activeAfterRace = await findActiveResearchBrief(clusterId, kind, requestId);
-      if (activeAfterRace) {
-        return {
-          ok: false,
-          code: 'already_active',
-          requestId: activeAfterRace.request_id,
-          status: activeAfterRace.status,
-        };
-      }
-      const { data: existing, error: loadError } = await supabase
-        .from('research_briefs')
-        .select('request_id, cluster_id, kind, status')
-        .eq('request_id', requestId)
-        .maybeSingle();
-      if (loadError || !existing) {
-        return { ok: false, code: 'db_error' };
-      }
-      if (String(existing.cluster_id) !== clusterId || existing.kind !== kind) {
-        return {
-          ok: false,
-          code: 'request_id_conflict',
-          requestId: String(existing.request_id),
-          status: existing.status as ResearchBriefRow['status'],
-        };
+  if (enqueueError) {
+    const parsed = parseResearchBriefsEnqueueError(enqueueError);
+    if (parsed.code === RESEARCH_API_ERROR_CODES.requestConflict) {
+      return { ok: false, code: RESEARCH_API_ERROR_CODES.requestConflict };
+    }
+    if (parsed.code === RESEARCH_API_ERROR_CODES.briefActive) {
+      let activeRequestId = parsed.requestId;
+      let activeStatus: ResearchBriefRow['status'] | undefined;
+      if (!activeRequestId) {
+        const active = await findActiveResearchBrief(clusterId, kind, requestId);
+        activeRequestId = active?.request_id;
+        activeStatus = active?.status;
       }
       return {
-        ok: true,
-        requestId: String(existing.request_id),
-        status: existing.status as ResearchBriefRow['status'],
-        created: false,
+        ok: false,
+        code: RESEARCH_API_ERROR_CODES.briefActive,
+        requestId: activeRequestId,
+        status: activeStatus,
       };
     }
     return { ok: false, code: 'db_error' };
   }
 
-  if (!inserted) {
-    const { data: existing, error: loadError } = await supabase
-      .from('research_briefs')
-      .select('request_id, status')
-      .eq('request_id', requestId)
-      .maybeSingle();
-    if (loadError || !existing) {
-      return { ok: false, code: 'db_error' };
-    }
+  const enqueuedRow = enqueued as {
+    request_id?: string;
+    status?: ResearchBriefRow['status'];
+    created?: boolean;
+  } | null;
+  const resolvedRequestId = String(enqueuedRow?.request_id ?? requestId);
+  const resolvedStatus = enqueuedRow?.status ?? 'queued';
+  const created = enqueuedRow?.created === true;
+
+  if (!created) {
     return {
       ok: true,
-      requestId: String(existing.request_id),
-      status: existing.status as ResearchBriefRow['status'],
+      requestId: resolvedRequestId,
+      status: resolvedStatus,
       created: false,
     };
   }
@@ -357,8 +327,8 @@ export async function enqueueResearchJob(
 
   return {
     ok: true,
-    requestId,
-    status: 'queued',
+    requestId: resolvedRequestId,
+    status: resolvedStatus,
     created: true,
   };
 }

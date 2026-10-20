@@ -1,6 +1,11 @@
 const RESEARCH_BRIEF_ERROR_LABELS: Record<string, string> = {
   tidsavbrudd: 'Oppgaven ble avbrutt etter for lang ventetid i kø.',
   arbeidsflyt_utilgjengelig: 'Arbeidsflyten er ikke tilgjengelig akkurat nå. Prøv igjen senere.',
+  modell_feil: 'Modellen kunne ikke fullføre oppgaven.',
+  kilder_mangler: 'Det mangler kilder for å fullføre oppgaven.',
+  cms_feil: 'Kunne ikke opprette eller oppdatere innhold i CMS.',
+  ugyldig_svar: 'Arbeidsflyten returnerte et ugyldig svar.',
+  avbrutt: 'Oppgaven ble avbrutt.',
 };
 
 export function formatResearchBriefError(error: string | null | undefined): string | null {
