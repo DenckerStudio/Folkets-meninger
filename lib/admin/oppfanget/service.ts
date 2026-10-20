@@ -77,7 +77,7 @@ function parseBestScale(raw: Record<string, unknown> | null): OppfangetScale | n
   return { value, unit, sourceUrl, asOf };
 }
 
-function mapClusterToRow(
+export function mapClusterToRow(
   cluster: ClusterRow,
   sources: SourceRow[],
   pollStatus: string | null,

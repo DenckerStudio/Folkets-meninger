@@ -106,6 +106,9 @@ All on **Coolify, server `klever`**:
   - blog drafts: `POST /api/ops/blog/drafts` (`verifyOpsSecret`, `x-cron-secret`) creates a
     Payload draft; on `200` + `created: false` n8n must read `cmsStatus` (see Blog below).
     `POST /api/ops/blog/social-posted` marks a Payload post as shared
+  - admin Research jobs: fm-web `POST` HMAC webhooks to `N8N_RESEARCH_WEBHOOK_BASE/{deepen|blog|reel}`;
+    n8n writes back via `n8n_upsert_research_brief` / `n8n_set_research_output` (service_role).
+    Contract: `docs/n8n/research-webhook-contract.md`
   - pipeline health (`workflows/n8n/pipeline-health.workflow.ts`); errors go to
     `workflows/n8n/ops-error-handler.workflow.ts`; admin alerts use `POST /api/ops/n8n-notify`
 - **Ollama** (via n8n, never from the app): target model `gemma4:26b`. Repo workflow
@@ -220,7 +223,13 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 ### Identity, admin, Stemme+
 
 - Admin: `public.user_roles` + `is_admin()` via `lib/admin/gate.ts`. Hub:
-  `/dashboard/admin` (Appens fremtid, Oppfanget, Reels, Statistikk, Brukere, Stemme+).
+  `/dashboard/admin` (Appens fremtid, Research, Reels, Statistikk, Brukere, Stemme+).
+- **Research** (`/dashboard/admin/research`, cluster detail `/dashboard/admin/research/[id]`):
+  action clusters from action capture (`lib/admin/oppfanget/` list/filters; UI label Research).
+  Admin actions deepen/blog/reel → `lib/admin/research/` + `POST /api/admin/research/...`;
+  rows in `public.research_briefs` (`20261021130000_research_briefs.sql`, manual apply).
+  No embedding column yet; if added later use **bge-m3** → `vector(1024)`. Legacy
+  `/dashboard/admin/oppfanget` redirects with query preserved.
 - Public activity is opt-in (`users.activity_visibility`, `private` by default).
 - Stemme+ (`users.subscription_tier`) gates BYOK AI chat (the orb overlay;
   `/dashboard/chat` only deep-links it). User LLM keys are encrypted in
@@ -236,7 +245,8 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 ## Environment
 
 Canonical template: `.env.example`. Key server-only vars: `SUPABASE_SERVICE_ROLE_KEY`,
-`CRON_SECRET`, `N8N_*_WEBHOOK_URL`, `CMS_URL` / `CMS_API_KEY` / `CMS_AGENT_API_KEY` /
+`CRON_SECRET`, `N8N_*_WEBHOOK_URL`, `N8N_RESEARCH_WEBHOOK_BASE` / `N8N_RESEARCH_WEBHOOK_SECRET` / `N8N_RESEARCH_WEBHOOK_TOKEN`,
+`CMS_URL` / `CMS_API_KEY` / `CMS_AGENT_API_KEY` /
 `REVALIDATE_SECRET` (blog, see `infra/coolify/cms.md`), `SMTP_*`,
 `BYOK_ENCRYPTION_KEY`, `SEARXNG_BASE_URL`, `STRIPE_*`. Public:
 `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
