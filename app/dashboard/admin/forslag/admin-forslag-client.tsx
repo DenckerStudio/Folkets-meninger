@@ -5,7 +5,8 @@ import { Lightbulb } from 'lucide-react';
 import { AdminBackLink } from '@/components/admin/admin-shell';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { formatWhen } from '@/components/appens-fremtid/format';
-import { RoadmapEditor } from '@/components/appens-fremtid/roadmap-editor';
+import { ChangelogAdminPanel } from '@/components/admin/app-future/changelog-admin-panel';
+import { RoadmapAdminPanel } from '@/components/admin/app-future/roadmap-admin-panel';
 import { SectionTabs } from '@/components/appens-fremtid/section-tabs';
 import {
   APPENS_FREMTID_TITLE,
@@ -140,18 +141,17 @@ export default function AdminForslagClient() {
       ) : null}
 
       {tab === 'changelog' ? (
-        <ChangelogPanel
+        <ChangelogAdminPanel
           entries={changelog}
           pending={pending}
-          onCreated={load}
-          onDeleted={load}
+          onChanged={load}
           onError={setError}
           startTransition={startTransition}
         />
       ) : null}
 
       {tab === 'roadmap' ? (
-        <RoadmapEditor
+        <RoadmapAdminPanel
           items={roadmap}
           pending={pending}
           onChanged={load}
@@ -284,122 +284,6 @@ function InboxPanel({
               </li>
             );
           })}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function ChangelogPanel({
-  entries,
-  pending,
-  onCreated,
-  onDeleted,
-  onError,
-  startTransition,
-}: {
-  entries: ChangelogEntry[];
-  pending: boolean;
-  onCreated: () => void;
-  onDeleted: () => void;
-  onError: (error: string) => void;
-  startTransition: ReturnType<typeof useTransition>[1];
-}) {
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-
-  const publish = () => {
-    startTransition(async () => {
-      onError('');
-      const res = await fetch('/api/admin/changelog', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, body }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        onError(typeof data.error === 'string' ? data.error : 'Kunne ikke publisere innlegget.');
-        return;
-      }
-      setTitle('');
-      setBody('');
-      onCreated();
-    });
-  };
-
-  const remove = (id: string) => {
-    startTransition(async () => {
-      onError('');
-      const res = await fetch('/api/admin/changelog', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        onError(typeof data.error === 'string' ? data.error : 'Kunne ikke slette innlegget.');
-        return;
-      }
-      onDeleted();
-    });
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
-        <h3 className="text-sm font-semibold text-foreground">Publiser endring</h3>
-        <input
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="Kort tittel"
-          className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/30"
-        />
-        <textarea
-          value={body}
-          onChange={(event) => setBody(event.target.value)}
-          rows={4}
-          placeholder="Hva er nytt?"
-          className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/30"
-        />
-        <button
-          type="button"
-          disabled={pending}
-          onClick={publish}
-          className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90 disabled:opacity-50"
-        >
-          Publiser
-        </button>
-      </div>
-
-      {entries.length === 0 ? (
-        <EmptyState
-          compact
-          title="Ingen endringslogg ennå"
-          description="Publiserte endringer vises her."
-        />
-      ) : (
-        <ul className="space-y-3">
-          {entries.map((entry) => (
-            <li key={entry.id} className="rounded-2xl border border-border bg-card p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{entry.title}</p>
-                  <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">{entry.body}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatWhen(entry.publishedAt || entry.createdAt)}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => remove(entry.id)}
-                  className="text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
-                >
-                  Slett
-                </button>
-              </div>
-            </li>
-          ))}
         </ul>
       )}
     </div>

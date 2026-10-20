@@ -26,19 +26,63 @@ export async function listAppChangelogEntries(): Promise<ChangelogEntry[]> {
   return mapChangelog(data);
 }
 
+export async function listPublicAppChangelogEntries(): Promise<ChangelogEntry[]> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc('list_public_app_changelog_entries');
+  if (error) throw error;
+  return mapChangelog(data);
+}
+
 export async function createAppChangelogEntry(
   adminUserId: string,
   title: string,
   body: string,
+  publish = false,
+  idempotencyKey?: string | null,
 ): Promise<string> {
   const service = getServiceSupabase();
   const { data, error } = await service.rpc('create_app_changelog_entry', {
     p_admin_user_id: adminUserId,
     p_title: title,
     p_body: body,
+    p_publish: publish,
+    p_idempotency_key: idempotencyKey ?? null,
   });
   if (error) throw error;
   return String(data);
+}
+
+export async function updateAppChangelogEntry(
+  adminUserId: string,
+  entryId: string,
+  patch: { title?: string; body?: string; published?: boolean },
+): Promise<string> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Endringslogg-administrasjon krever SUPABASE_SERVICE_ROLE_KEY på serveren.');
+  }
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc('update_app_changelog_entry', {
+    p_admin_user_id: adminUserId,
+    p_entry_id: entryId,
+    p_title: patch.title ?? null,
+    p_body: patch.body ?? null,
+    p_publish: patch.published ?? null,
+  });
+  if (error) throw error;
+  return String(data);
+}
+
+export async function reorderAppRoadmapItems(adminUserId: string, orderedIds: string[]): Promise<void> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Roadmap-administrasjon krever SUPABASE_SERVICE_ROLE_KEY på serveren.');
+  }
+  const service = getServiceSupabase();
+  const { error } = await service.rpc('reorder_app_roadmap_items', {
+    p_admin_user_id: adminUserId,
+    p_ordered_ids: orderedIds,
+  });
+  if (error) throw error;
 }
 
 export async function deleteAppChangelogEntry(adminUserId: string, entryId: string): Promise<string> {
