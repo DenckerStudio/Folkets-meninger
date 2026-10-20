@@ -29,6 +29,7 @@ export const routes = {
   personvern: '/personvern',
   vilkar: '/vilkar',
   omAi: '/om/ai',
+  hvaErAnnerledes: '/#hva-er-annerledes',
   innspill: '/innspill',
   blogg: '/blogg',
   bloggPost: (slug: string) => `/blogg/${encodeURIComponent(slug)}`,
