@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.research_briefs (
   summary text,
   perspectives jsonb NOT NULL DEFAULT '[]'::jsonb,
   sources jsonb NOT NULL DEFAULT '[]'::jsonb,
+  details jsonb NOT NULL DEFAULT '{}'::jsonb,
   output_ref text,
   error text,
   requested_by uuid REFERENCES auth.users (id) ON DELETE SET NULL,
@@ -55,14 +56,160 @@ CREATE POLICY research_briefs_admin_select ON public.research_briefs
   TO authenticated
   USING (public.is_admin());
 
-CREATE OR REPLACE FUNCTION public.n8n_upsert_research_brief(
-  p_request_id uuid,
-  p_status text,
-  p_summary text DEFAULT NULL,
-  p_perspectives jsonb DEFAULT '[]'::jsonb,
-  p_sources jsonb DEFAULT '[]'::jsonb,
-  p_error text DEFAULT NULL
+CREATE OR REPLACE FUNCTION public.research_brief_row_to_jsonb(p_row public.research_briefs)
+RETURNS jsonb
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+  SELECT jsonb_build_object(
+    'ok', true,
+    'id', p_row.id,
+    'request_id', p_row.request_id,
+    'cluster_id', p_row.cluster_id,
+    'kind', p_row.kind,
+    'status', p_row.status,
+    'summary', p_row.summary,
+    'perspectives', p_row.perspectives,
+    'sources', p_row.sources,
+    'details', p_row.details,
+    'output_ref', p_row.output_ref,
+    'error', p_row.error,
+    'requested_by', p_row.requested_by,
+    'created_at', p_row.created_at,
+    'updated_at', p_row.updated_at
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.research_brief_row_to_jsonb(public.research_briefs)
+  FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.research_briefs_validate_perspectives(p_value jsonb)
+RETURNS boolean
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_item jsonb;
+BEGIN
+  IF p_value IS NULL OR jsonb_typeof(p_value) <> 'array' THEN
+    RETURN false;
+  END IF;
+  FOR v_item IN SELECT value FROM jsonb_array_elements(p_value)
+  LOOP
+    IF jsonb_typeof(v_item) <> 'object' THEN
+      RETURN false;
+    END IF;
+    IF NOT (v_item ? 'actor' AND v_item ? 'actor_type' AND v_item ? 'stance' AND v_item ? 'summary') THEN
+      RETURN false;
+    END IF;
+    IF v_item ? 'quotes' AND jsonb_typeof(v_item -> 'quotes') <> 'array' THEN
+      RETURN false;
+    END IF;
+  END LOOP;
+  RETURN true;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.research_briefs_validate_perspectives(jsonb)
+  FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.research_briefs_validate_sources(p_value jsonb)
+RETURNS boolean
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_item jsonb;
+BEGIN
+  IF p_value IS NULL OR jsonb_typeof(p_value) <> 'array' THEN
+    RETURN false;
+  END IF;
+  FOR v_item IN SELECT value FROM jsonb_array_elements(p_value)
+  LOOP
+    IF jsonb_typeof(v_item) <> 'object' OR NOT (v_item ? 'url') THEN
+      RETURN false;
+    END IF;
+  END LOOP;
+  RETURN true;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.research_briefs_validate_sources(jsonb)
+  FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.research_brief_status_rank(p_status text)
+RETURNS int
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+  SELECT CASE p_status
+    WHEN 'queued' THEN 1
+    WHEN 'running' THEN 2
+    WHEN 'done' THEN 3
+    WHEN 'failed' THEN 3
+    ELSE 0
+  END;
+$$;
+
+REVOKE ALL ON FUNCTION public.research_brief_status_rank(text)
+  FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.research_briefs_is_backwards_status(
+  p_current text,
+  p_next text
 )
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+  SELECT
+    p_current IS DISTINCT FROM p_next
+    AND (
+      public.research_brief_status_rank(p_current) > public.research_brief_status_rank(p_next)
+      OR (p_current IN ('done', 'failed') AND p_next IS DISTINCT FROM p_current)
+    );
+$$;
+
+REVOKE ALL ON FUNCTION public.research_briefs_is_backwards_status(text, text)
+  FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.research_briefs_expire_stale(p_minutes int DEFAULT 30)
+RETURNS int
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_count int;
+BEGIN
+  IF p_minutes IS NULL OR p_minutes < 1 THEN
+    RAISE EXCEPTION 'research_brief invalid_minutes: p_minutes må være >= 1'
+      USING ERRCODE = '22023';
+  END IF;
+
+  UPDATE public.research_briefs
+  SET
+    status = 'failed',
+    error = 'tidsavbrudd',
+    updated_at = now()
+  WHERE status IN ('queued', 'running')
+    AND updated_at < now() - make_interval(mins => p_minutes);
+
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  RETURN v_count;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.research_briefs_expire_stale(int)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.research_briefs_expire_stale(int) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.n8n_get_research_brief(p_request_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -76,46 +223,104 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
-  p_status := btrim(p_status);
-  IF p_status IS NULL
-    OR p_status NOT IN ('queued', 'running', 'done', 'failed') THEN
-    RAISE EXCEPTION 'research_brief invalid_status: ugyldig status %', p_status
+  SELECT * INTO v_row
+  FROM public.research_briefs
+  WHERE request_id = p_request_id;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'not_found', 'request_id', p_request_id);
+  END IF;
+
+  RETURN public.research_brief_row_to_jsonb(v_row);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.n8n_get_research_brief(uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.n8n_get_research_brief(uuid) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.n8n_upsert_research_brief(
+  p_request_id uuid,
+  p_status text DEFAULT NULL,
+  p_summary text DEFAULT NULL,
+  p_perspectives jsonb DEFAULT NULL,
+  p_sources jsonb DEFAULT NULL,
+  p_details jsonb DEFAULT NULL,
+  p_error text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_row public.research_briefs%ROWTYPE;
+  v_next_status text;
+BEGIN
+  IF p_request_id IS NULL THEN
+    RAISE EXCEPTION 'research_brief missing_request_id: p_request_id er påkrevd'
       USING ERRCODE = '22023';
   END IF;
 
-  IF p_perspectives IS NULL OR jsonb_typeof(p_perspectives) <> 'array' THEN
-    RAISE EXCEPTION 'research_brief invalid_perspectives: må være JSON-array'
+  SELECT * INTO v_row
+  FROM public.research_briefs
+  WHERE request_id = p_request_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'not_found', 'request_id', p_request_id);
+  END IF;
+
+  IF p_perspectives IS NOT NULL
+    AND NOT public.research_briefs_validate_perspectives(p_perspectives) THEN
+    RAISE EXCEPTION 'research_brief invalid_perspectives: må være array med påkrevde felt'
       USING ERRCODE = '22023';
   END IF;
 
-  IF p_sources IS NULL OR jsonb_typeof(p_sources) <> 'array' THEN
-    RAISE EXCEPTION 'research_brief invalid_sources: må være JSON-array'
+  IF p_sources IS NOT NULL
+    AND NOT public.research_briefs_validate_sources(p_sources) THEN
+    RAISE EXCEPTION 'research_brief invalid_sources: må være array med url'
       USING ERRCODE = '22023';
+  END IF;
+
+  IF p_details IS NOT NULL AND jsonb_typeof(p_details) <> 'object' THEN
+    RAISE EXCEPTION 'research_brief invalid_details: må være JSON-objekt'
+      USING ERRCODE = '22023';
+  END IF;
+
+  v_next_status := v_row.status;
+  IF p_status IS NOT NULL THEN
+    p_status := btrim(p_status);
+    IF p_status NOT IN ('queued', 'running', 'done', 'failed') THEN
+      RAISE EXCEPTION 'research_brief invalid_status: ugyldig status %', p_status
+        USING ERRCODE = '22023';
+    END IF;
+    IF public.research_briefs_is_backwards_status(v_row.status, p_status) THEN
+      RETURN public.research_brief_row_to_jsonb(v_row);
+    END IF;
+    v_next_status := p_status;
   END IF;
 
   UPDATE public.research_briefs
   SET
-    status = p_status,
+    status = v_next_status,
     summary = COALESCE(p_summary, summary),
-    perspectives = p_perspectives,
-    sources = p_sources,
-    error = p_error,
+    perspectives = COALESCE(p_perspectives, perspectives),
+    sources = COALESCE(p_sources, sources),
+    details = COALESCE(p_details, details),
+    error = COALESCE(p_error, error),
     updated_at = now()
   WHERE request_id = p_request_id
   RETURNING * INTO v_row;
 
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'research_brief not_found: ingen brief med request_id=%', p_request_id
-      USING ERRCODE = '22023';
-  END IF;
-
-  RETURN jsonb_build_object(
-    'ok', true,
-    'request_id', v_row.request_id,
-    'status', v_row.status
-  );
+  RETURN public.research_brief_row_to_jsonb(v_row);
 END;
 $$;
+
+REVOKE ALL ON FUNCTION public.n8n_upsert_research_brief(uuid, text, text, jsonb, jsonb, jsonb, text)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.n8n_upsert_research_brief(uuid, text, text, jsonb, jsonb, jsonb, text)
+  TO service_role;
 
 CREATE OR REPLACE FUNCTION public.n8n_set_research_output(
   p_request_id uuid,
@@ -140,6 +345,26 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
+  SELECT * INTO v_row
+  FROM public.research_briefs
+  WHERE request_id = p_request_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'not_found', 'request_id', p_request_id);
+  END IF;
+
+  IF v_row.status = 'done' AND v_row.output_ref IS NOT NULL THEN
+    IF v_row.output_ref = p_output_ref THEN
+      RETURN public.research_brief_row_to_jsonb(v_row);
+    END IF;
+    RETURN public.research_brief_row_to_jsonb(v_row);
+  END IF;
+
+  IF v_row.status = 'failed' THEN
+    RETURN public.research_brief_row_to_jsonb(v_row);
+  END IF;
+
   UPDATE public.research_briefs
   SET
     output_ref = p_output_ref,
@@ -149,28 +374,99 @@ BEGIN
   WHERE request_id = p_request_id
   RETURNING * INTO v_row;
 
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'research_brief not_found: ingen brief med request_id=%', p_request_id
+  RETURN public.research_brief_row_to_jsonb(v_row);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.n8n_set_research_output(uuid, text)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.n8n_set_research_output(uuid, text)
+  TO service_role;
+
+CREATE OR REPLACE FUNCTION public.n8n_create_research_reel_draft(
+  p_request_id uuid,
+  p_issue_id text,
+  p_title text,
+  p_neutral_summary text,
+  p_source_urls jsonb,
+  p_generation_metadata jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_row public.research_briefs%ROWTYPE;
+  v_poll_id uuid;
+  v_meta jsonb;
+BEGIN
+  IF p_request_id IS NULL THEN
+    RAISE EXCEPTION 'research_brief missing_request_id: p_request_id er påkrevd'
       USING ERRCODE = '22023';
   END IF;
+
+  SELECT * INTO v_row
+  FROM public.research_briefs
+  WHERE request_id = p_request_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'not_found', 'request_id', p_request_id);
+  END IF;
+
+  IF v_row.kind <> 'reel' THEN
+    RAISE EXCEPTION 'research_brief invalid_kind: forventet reel, fikk %', v_row.kind
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF v_row.output_ref IS NOT NULL AND btrim(v_row.output_ref) <> '' THEN
+    RETURN jsonb_build_object(
+      'ok', true,
+      'request_id', v_row.request_id,
+      'output_ref', v_row.output_ref,
+      'poll_id', v_row.output_ref,
+      'created', false
+    );
+  END IF;
+
+  v_meta := coalesce(p_generation_metadata, '{}'::jsonb)
+    || jsonb_build_object(
+      'origin', 'research',
+      'research_request_id', p_request_id::text
+    );
+
+  v_poll_id := public.create_system_poll_draft(
+    p_issue_id,
+    p_title,
+    coalesce(p_neutral_summary, ''),
+    coalesce(p_source_urls, '[]'::jsonb),
+    v_meta
+  );
+
+  UPDATE public.research_briefs
+  SET
+    output_ref = v_poll_id::text,
+    status = 'done',
+    error = NULL,
+    updated_at = now()
+  WHERE request_id = p_request_id
+  RETURNING * INTO v_row;
 
   RETURN jsonb_build_object(
     'ok', true,
     'request_id', v_row.request_id,
     'output_ref', v_row.output_ref,
+    'poll_id', v_poll_id::text,
+    'created', true,
     'status', v_row.status
   );
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.n8n_upsert_research_brief(uuid, text, text, jsonb, jsonb, text)
+REVOKE ALL ON FUNCTION public.n8n_create_research_reel_draft(uuid, text, text, text, jsonb, jsonb)
   FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.n8n_set_research_output(uuid, text)
-  FROM PUBLIC, anon, authenticated;
-
-GRANT EXECUTE ON FUNCTION public.n8n_upsert_research_brief(uuid, text, text, jsonb, jsonb, text)
-  TO service_role;
-GRANT EXECUTE ON FUNCTION public.n8n_set_research_output(uuid, text)
+GRANT EXECUTE ON FUNCTION public.n8n_create_research_reel_draft(uuid, text, text, text, jsonb, jsonb)
   TO service_role;
 
 COMMIT;

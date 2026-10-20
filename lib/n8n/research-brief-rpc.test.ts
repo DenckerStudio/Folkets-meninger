@@ -7,7 +7,15 @@ const migration = readFileSync(
   'utf-8',
 );
 
-for (const fn of ['n8n_upsert_research_brief', 'n8n_set_research_output']) {
+const serviceRoleFns = [
+  'n8n_upsert_research_brief',
+  'n8n_set_research_output',
+  'n8n_get_research_brief',
+  'n8n_create_research_reel_draft',
+  'research_briefs_expire_stale',
+];
+
+for (const fn of serviceRoleFns) {
   assert.match(migration, new RegExp(`FUNCTION public\\.${fn}`, 'i'));
   assert.match(
     migration,
@@ -18,10 +26,25 @@ for (const fn of ['n8n_upsert_research_brief', 'n8n_set_research_output']) {
   );
   assert.match(
     migration,
-    new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${fn}[\\s\\S]*?TO service_role`, 'i',
-    ),
+    new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${fn}[\\s\\S]*?TO service_role`, 'i'),
   );
 }
+
+assert.match(migration, /details jsonb NOT NULL DEFAULT '\{\}'::jsonb/i);
+assert.match(migration, /p_details jsonb DEFAULT NULL/i);
+assert.match(migration, /research_briefs_validate_perspectives/i);
+assert.match(migration, /research_briefs_is_backwards_status/i);
+assert.match(migration, /COALESCE\(p_summary, summary\)/i);
+assert.match(migration, /COALESCE\(p_perspectives, perspectives\)/i);
+assert.match(migration, /FOR UPDATE/i);
+assert.match(migration, /error = 'tidsavbrudd'/i);
+assert.match(migration, /'origin', 'research'/i);
+assert.match(migration, /create_system_poll_draft/i);
+
+assert.match(
+  migration,
+  /n8n_upsert_research_brief\(uuid, text, text, jsonb, jsonb, jsonb, text\)/i,
+);
 
 assert.match(migration, /ENABLE ROW LEVEL SECURITY/i);
 assert.match(migration, /REVOKE ALL ON TABLE public.research_briefs FROM PUBLIC, anon, authenticated/i);
@@ -32,6 +55,27 @@ const doc = readFileSync(
   'utf-8',
 );
 assert.match(doc, /N8N_RESEARCH_WEBHOOK_BASE/);
-assert.match(doc, /n8n_upsert_research_brief/);
+assert.match(doc, /N8N_RESEARCH_WEBHOOK_TOKEN/);
+assert.match(doc, /X-FM-Webhook-Token/);
+assert.match(doc, /n8n_get_research_brief/);
+assert.match(doc, /n8n_create_research_reel_draft/);
+assert.match(doc, /research_briefs_expire_stale/);
+assert.match(doc, /independent/);
+assert.match(doc, /snapshot/i);
+assert.match(doc, /source_event.*research:/i);
+assert.match(doc, /review_note/);
+
+const webhook = readFileSync(
+  join(process.cwd(), 'lib/admin/research/webhook.ts'),
+  'utf-8',
+);
+assert.match(webhook, /N8N_RESEARCH_WEBHOOK_TOKEN/);
+assert.match(webhook, /X-FM-Webhook-Token/);
+
+const service = readFileSync(
+  join(process.cwd(), 'lib/admin/research/service.ts'),
+  'utf-8',
+);
+assert.match(service, /research_briefs_expire_stale/);
 
 console.log('n8n/research-brief-rpc.test.ts: ok');

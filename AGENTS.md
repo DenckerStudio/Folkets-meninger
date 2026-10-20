@@ -233,7 +233,7 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 ## Environment
 
 Canonical template: `.env.example`. Key server-only vars: `SUPABASE_SERVICE_ROLE_KEY`,
-`CRON_SECRET`, `N8N_*_WEBHOOK_URL`, `N8N_RESEARCH_WEBHOOK_BASE` / `N8N_RESEARCH_WEBHOOK_SECRET`,
+`CRON_SECRET`, `N8N_*_WEBHOOK_URL`, `N8N_RESEARCH_WEBHOOK_BASE` / `N8N_RESEARCH_WEBHOOK_SECRET` / `N8N_RESEARCH_WEBHOOK_TOKEN`,
 `CMS_URL` / `CMS_API_KEY` / `CMS_AGENT_API_KEY` /
 `REVALIDATE_SECRET` (blog, see `infra/coolify/cms.md`), `SMTP_*`,
 `BYOK_ENCRYPTION_KEY`, `SEARXNG_BASE_URL`, `STRIPE_*`. Public:

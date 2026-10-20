@@ -9,11 +9,13 @@ import {
 export function getResearchWebhookConfig(): {
   baseUrl: string;
   secret: string;
+  token: string;
 } | null {
   const baseUrl = process.env.N8N_RESEARCH_WEBHOOK_BASE?.replace(/\/+$/, '');
   const secret = process.env.N8N_RESEARCH_WEBHOOK_SECRET?.trim();
-  if (!baseUrl || !secret) return null;
-  return { baseUrl, secret };
+  const token = process.env.N8N_RESEARCH_WEBHOOK_TOKEN?.trim();
+  if (!baseUrl || !secret || !token) return null;
+  return { baseUrl, secret, token };
 }
 
 export function signResearchWebhookPayload(
@@ -52,6 +54,7 @@ export async function postResearchWebhook(
         'Content-Type': 'application/json',
         'X-FM-Timestamp': timestamp,
         'X-FM-Signature': signature,
+        'X-FM-Webhook-Token': config.token,
       },
       body: rawBody,
     });

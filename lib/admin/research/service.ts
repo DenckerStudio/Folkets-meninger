@@ -21,6 +21,10 @@ function parseBriefRow(raw: Record<string, unknown>): ResearchBriefRow {
     summary: typeof raw.summary === 'string' ? raw.summary : null,
     perspectives: Array.isArray(raw.perspectives) ? (raw.perspectives as ResearchBriefRow['perspectives']) : [],
     sources: Array.isArray(raw.sources) ? (raw.sources as ResearchBriefRow['sources']) : [],
+    details:
+      raw.details && typeof raw.details === 'object' && !Array.isArray(raw.details)
+        ? (raw.details as ResearchBriefRow['details'])
+        : {},
     output_ref: typeof raw.output_ref === 'string' ? raw.output_ref : null,
     error: typeof raw.error === 'string' ? raw.error : null,
     requested_by: typeof raw.requested_by === 'string' ? raw.requested_by : null,
@@ -29,9 +33,19 @@ function parseBriefRow(raw: Record<string, unknown>): ResearchBriefRow {
   };
 }
 
+const RESEARCH_BRIEF_STALE_MINUTES = 30;
+
+export async function expireStaleResearchBriefs(
+  minutes: number = RESEARCH_BRIEF_STALE_MINUTES,
+): Promise<void> {
+  const supabase = getServiceSupabase();
+  await supabase.rpc('research_briefs_expire_stale', { p_minutes: minutes });
+}
+
 export async function getLatestResearchBriefForCluster(
   clusterId: string,
 ): Promise<ResearchBriefRow | null> {
+  await expireStaleResearchBriefs();
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('research_briefs')
@@ -45,6 +59,7 @@ export async function getLatestResearchBriefForCluster(
 }
 
 export async function listResearchBriefsForCluster(clusterId: string): Promise<ResearchBriefRow[]> {
+  await expireStaleResearchBriefs();
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('research_briefs')
@@ -121,6 +136,7 @@ export async function getLatestResearchBriefsByClusterIds(
   clusterIds: string[],
 ): Promise<Record<string, Partial<Record<ResearchBriefKind, ResearchBriefSnapshot>>>> {
   if (clusterIds.length === 0) return {};
+  await expireStaleResearchBriefs();
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('research_briefs')
@@ -189,6 +205,8 @@ export async function enqueueResearchJob(
 > {
   const kind = researchApiActionToKind(action);
   const supabase = getServiceSupabase();
+
+  await expireStaleResearchBriefs();
 
   const active = await findActiveResearchBrief(clusterId, kind);
   if (active) {

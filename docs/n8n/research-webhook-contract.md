@@ -8,14 +8,18 @@ Miljø på **fm-web** (Coolify):
 |----------|-------------|
 | `N8N_RESEARCH_WEBHOOK_BASE` | Base-URL uten avsluttende `/`, f.eks. `https://n8n.example/webhook` |
 | `N8N_RESEARCH_WEBHOOK_SECRET` | HMAC-nøkkel for `X-FM-Signature` (aldri logg eller vis) |
+| `N8N_RESEARCH_WEBHOOK_TOKEN` | Statisk token for `X-FM-Webhook-Token` (n8n Webhook Header Auth, uten env i Code-noder) |
 
 ## Utkøring fra admin
 
 `POST /api/admin/research/{clusterId}/{action}` med `action` ∈ `deepen` | `blog` | `reel`.
 
-1. Oppretter rad i `research_briefs` (`status=queued`, ny `request_id`).
-2. POST til n8n (se under).
-3. Ved webhook-feil: `status=failed`, fm-web returnerer **502**.
+1. Kjører `research_briefs_expire_stale` (standard 30 min) slik at gamle `queued`/`running` blir `failed` med `error=tidsavbrudd`.
+2. Oppretter rad i `research_briefs` (`status=queued`, ny `request_id`) hvis ingen aktiv jobb for samme klynge+kind.
+3. POST til n8n (se under).
+4. Ved webhook-feil: `status=failed`, fm-web returnerer **502**.
+
+fm-web kaller også `research_briefs_expire_stale` før lesing på Research-liste og klynge-detalj.
 
 ## Webhook-URL
 
@@ -27,12 +31,13 @@ Miljø på **fm-web** (Coolify):
 | blog | `blogg-fra-research` |
 | reel | `reel-fra-research` |
 
-## Signatur
+## Signatur og auth
 
 Headers:
 
 - `X-FM-Timestamp` — Unix-tid i sekunder (streng).
 - `X-FM-Signature` — `sha256=<hex>` hvor hex = HMAC-SHA256(`N8N_RESEARCH_WEBHOOK_SECRET`, ``${timestamp}.${rawBody}``) og `rawBody` er eksakt JSON-body (UTF-8).
+- `X-FM-Webhook-Token` — verdien av `N8N_RESEARCH_WEBHOOK_TOKEN` (Header Auth i n8n Webhook-node).
 
 n8n avviser forespørsler med klokkeskew > 300 s.
 
@@ -68,13 +73,31 @@ n8n avviser forespørsler med klokkeskew > 300 s.
 }
 ```
 
-`latest_brief` sendes for `kind` **blog** og **reel** når en tidligere brief finnes; utelates ellers.
+`latest_brief` sendes for `kind` **blog** og **reel** når en tidligere brief finnes. Det er et **snapshot** for kontekst i n8n — ikke autoritativ kilde. Bruk `n8n_get_research_brief` for gjeldende rad.
 
 ## Respons fra n8n
 
 **202 Accepted** umiddelbart (asynkron jobb). Ingen publisering skjer automatisk.
 
+## Livssyklus (alle kinds)
+
+`queued` → `running` → `done` | `failed`
+
+- `done` og `failed` er **terminale**. Ny kjøring = ny `request_id` fra admin.
+- Forsøk på bakovergang (f.eks. `running` etter `done`) er **no-op**: RPC returnerer gjeldende rad uten endring.
+- Alle `p_*` i `n8n_upsert_research_brief`: **NULL = behold lagret verdi** (`COALESCE`).
+
 ## Skriving tilbake (service_role)
+
+### Les brief
+
+`POST /rest/v1/rpc/n8n_get_research_brief`
+
+```json
+{ "p_request_id": "uuid" }
+```
+
+Returnerer `jsonb` med hele raden (`ok`, `status`, `details`, …) eller `{ "ok": false, "error": "not_found" }`.
 
 ### Oppdater status / innhold
 
@@ -87,13 +110,16 @@ n8n avviser forespørsler med klokkeskew > 300 s.
   "p_summary": "…",
   "p_perspectives": [],
   "p_sources": [],
+  "p_details": { "open_questions": [], "unverified": [] },
   "p_error": null
 }
 ```
 
-`p_status` ∈ `queued` | `running` | `done` | `failed`. Idempotent på `request_id` (rad må finnes fra fm-web).
+`p_status` ∈ `queued` | `running` | `done` | `failed`. Rad må finnes (opprettet av fm-web). Returnerer **hele raden** som `jsonb` (ikke exception ved duplikat-kall).
 
-**perspectives** (JSON-array):
+**perspectives** (JSON-array, ukjente nøkler tillates):
+
+Påkrevd per element: `actor`, `actor_type`, `stance`, `summary`. Valgfritt bl.a. `quotes` (array), **`independent`** (bool, om perspektivet er uavhengig av klyngen).
 
 ```json
 [
@@ -102,6 +128,7 @@ n8n avviser forespørsler med klokkeskew > 300 s.
     "actor_type": "parti",
     "stance": "for",
     "summary": "…",
+    "independent": false,
     "quotes": [
       { "text": "…", "url": "https://…", "publisher": "nrk.no" }
     ]
@@ -112,7 +139,9 @@ n8n avviser forespørsler med klokkeskew > 300 s.
 `actor_type` ∈ `parti` | `organisasjon` | `medie` | `person` | `annet`  
 `stance` ∈ `for` | `mot` | `nøytral`
 
-**sources** (JSON-array):
+**sources** (JSON-array, ukjente nøkler tillates):
+
+Påkrevd per element: `url`. Valgfritt bl.a. `publisher`, `title`, `published_at`, `excerpt`, `source_kind`, `domain`, `used`, `text_status`, `source_urls`, `basis`.
 
 ```json
 [
@@ -121,10 +150,13 @@ n8n avviser forespørsler med klokkeskew > 300 s.
     "publisher": "nrk.no",
     "title": "…",
     "published_at": "2026-01-01T00:00:00Z",
-    "excerpt": "…"
+    "excerpt": "…",
+    "used": true
   }
 ]
 ```
+
+**details** (JSON-objekt, valgfritt): f.eks. `open_questions[]`, `unverified[]`.
 
 ### Output-referanse (utkast)
 
@@ -137,16 +169,45 @@ n8n avviser forespørsler med klokkeskew > 300 s.
 }
 ```
 
-Setter `output_ref` og `status=done`.
+Setter `output_ref` og `status=done` når ikke allerede terminalt. Idempotent når samme `output_ref` finnes.
 
 ### Blogg
 
-n8n oppretter Payload-utkast via eksisterende `POST /api/ops/blog/drafts` (fm-web). `p_output_ref` = Payload post-id. Redaktør godkjenner i Payload-admin.
+n8n oppretter Payload-utkast via `POST /api/ops/blog/drafts` (fm-web, `x-cron-secret`):
+
+- `category`: `forklart` (standard om utelatt)
+- `source_event`: `research:<request_id>` (idempotent oppslag)
+- `review_note`: valgfri tekst til Payload `review.note`
+
+`p_output_ref` = Payload post-id etter opprettelse. Redaktør godkjenner i Payload-admin.
 
 ### Reel
 
-n8n oppretter system-poll-utkast via `create_system_poll_draft`. `p_output_ref` = poll-id. Admin godkjenner i Reels-admin som i dag.
+`POST /rest/v1/rpc/n8n_create_research_reel_draft`
+
+```json
+{
+  "p_request_id": "uuid",
+  "p_issue_id": "valgfri stortinget-sak-id",
+  "p_title": "…",
+  "p_neutral_summary": "…",
+  "p_source_urls": ["https://…"],
+  "p_generation_metadata": {}
+}
+```
+
+Låser brief-raden (`FOR UPDATE`). Hvis `output_ref` allerede er satt, returneres den (dedupe). Ellers kalles `create_system_poll_draft` med `generation_metadata` som inkluderer `origin: "research"` og `research_request_id`. Setter `output_ref` til poll-uuid og `status=done`.
+
+### Timeout
+
+`POST /rest/v1/rpc/research_briefs_expire_stale`
+
+```json
+{ "p_minutes": 30 }
+```
+
+Setter `queued`/`running` med `updated_at` eldre enn N minutter til `failed` / `error=tidsavbrudd`. Kalles også fra fm-web før lesing og ny bestilling.
 
 ## Migrasjon
 
-`supabase/migrations/20261021130000_research_briefs.sql` — **manuell apply** på prod (samme regler som andre migrasjoner). Ingen embedding-kolonner i v1; hvis de legges til senere, bruk **bge-m3** og `vector(1024)`.
+`supabase/migrations/20261021130000_research_briefs.sql` — **manuell apply** på prod. Ingen embedding-kolonner i v1; hvis de legges til senere, bruk **bge-m3** og `vector(1024)`.

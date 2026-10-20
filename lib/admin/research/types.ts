@@ -18,6 +18,8 @@ export type ResearchPerspective = {
   stance: ResearchPerspectiveStance;
   summary: string;
   quotes: ResearchPerspectiveQuote[];
+  /** Om perspektivet er uavhengig av klyngen (valgfritt, fra n8n). */
+  independent?: boolean;
 };
 
 export type ResearchBriefSource = {
@@ -26,6 +28,12 @@ export type ResearchBriefSource = {
   title: string | null;
   published_at: string | null;
   excerpt: string | null;
+};
+
+export type ResearchBriefDetails = {
+  open_questions?: string[];
+  unverified?: string[];
+  [key: string]: unknown;
 };
 
 export type ResearchBriefRow = {
@@ -37,6 +45,7 @@ export type ResearchBriefRow = {
   summary: string | null;
   perspectives: ResearchPerspective[];
   sources: ResearchBriefSource[];
+  details: ResearchBriefDetails;
   output_ref: string | null;
   error: string | null;
   requested_by: string | null;
