@@ -1,4 +1,5 @@
 -- F1: content_feedback, kilder, n8n-RPC-er og auto-logging for system-Reels.
+-- Embeddings: bge-m3, vector(1024) (Mathias' team, overstyrer plan §2.1 nomic/768).
 -- Krever manuell apply på supabase-folkets (Mathias' ja).
 
 BEGIN;
@@ -21,7 +22,7 @@ CREATE TABLE IF NOT EXISTS public.content_feedback (
   reason_tags text[] NOT NULL DEFAULT '{}',
   note text CHECK (note IS NULL OR char_length(note) <= 1000),
   snapshot jsonb NOT NULL DEFAULT '{}'::jsonb,
-  embedding vector(768),
+  embedding vector(1024),
   source text NOT NULL DEFAULT 'admin' CHECK (source IN ('admin', 'historic', 'auto')),
   admin_id uuid REFERENCES auth.users (id),
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -59,7 +60,9 @@ CREATE TABLE IF NOT EXISTS public.source_items (
   categories text[] NOT NULL DEFAULT '{}',
   published_at timestamptz,
   fetched_at timestamptz NOT NULL DEFAULT now(),
-  embedding vector(768),
+  modified_at timestamptz NOT NULL DEFAULT now(),
+  embedding vector(1024),
+  embedding_model text,
   UNIQUE (domain, external_id)
 );
 
@@ -319,12 +322,29 @@ END;
 $$;
 
 -- ---------------------------------------------------------------------------
--- n8n RPC-er
+-- n8n RPC-er (bge-m3 / vector(1024))
 -- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.assert_bge_m3_embedding(p_embedding vector)
+RETURNS vector(1024)
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF p_embedding IS NULL THEN
+    RAISE EXCEPTION 'embedding er påkrevd';
+  END IF;
+  IF vector_dims(p_embedding) <> 1024 THEN
+    RAISE EXCEPTION 'embedding må ha dimensjon 1024 (bge-m3), fikk %', vector_dims(p_embedding);
+  END IF;
+  RETURN p_embedding::vector(1024);
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION public.n8n_feedback_examples(
   p_type text,
-  p_query_embedding vector(768),
+  p_query_embedding vector(1024),
   p_k int DEFAULT 3
 )
 RETURNS jsonb
@@ -348,6 +368,8 @@ BEGIN
   IF p_query_embedding IS NULL THEN
     RAISE EXCEPTION 'p_query_embedding er påkrevd';
   END IF;
+
+  PERFORM public.assert_bge_m3_embedding(p_query_embedding);
 
   v_k := greatest(1, least(coalesce(p_k, 3), 20));
 
@@ -429,7 +451,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION public.n8n_feedback_similarity(
   p_type text,
-  p_embedding vector(768)
+  p_embedding vector(1024)
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -453,6 +475,8 @@ BEGIN
   IF p_embedding IS NULL THEN
     RAISE EXCEPTION 'p_embedding er påkrevd';
   END IF;
+
+  PERFORM public.assert_bge_m3_embedding(p_embedding);
 
   SELECT
     coalesce(max(1 - (cf.embedding <=> p_embedding)) FILTER (WHERE cf.verdict = 'approve'), 0),
@@ -489,6 +513,15 @@ DECLARE
   v_inserted int := 0;
   v_updated int := 0;
   v_is_insert boolean;
+  v_url text;
+  v_title text;
+  v_excerpt text;
+  v_embedding vector(1024);
+  v_embedding_model text;
+  v_has_embedding boolean;
+  v_modified_at timestamptz;
+  v_published_at timestamptz;
+  v_fetched_at timestamptz;
 BEGIN
   IF p_items IS NULL OR jsonb_typeof(p_items) <> 'array' THEN
     RAISE EXCEPTION 'p_items må være en JSON-array';
@@ -510,13 +543,51 @@ BEGIN
       RAISE EXCEPTION 'Ukjent domene i content_sources: %', v_domain;
     END IF;
 
-    IF nullif(btrim(v_item ->> 'url'), '') IS NULL THEN
+    v_url := nullif(btrim(v_item ->> 'url'), '');
+    IF v_url IS NULL THEN
       RAISE EXCEPTION 'url er påkrevd for %/%', v_domain, v_external_id;
     END IF;
 
-    IF nullif(btrim(v_item ->> 'title'), '') IS NULL THEN
+    v_title := nullif(btrim(v_item ->> 'title'), '');
+    IF v_title IS NULL THEN
       RAISE EXCEPTION 'title er påkrevd for %/%', v_domain, v_external_id;
     END IF;
+
+    v_excerpt := NULLIF(left(btrim(coalesce(v_item ->> 'excerpt', '')), 400), '');
+
+    v_has_embedding := (v_item ? 'embedding')
+      AND v_item ->> 'embedding' IS NOT NULL
+      AND btrim(v_item ->> 'embedding') <> ''
+      AND btrim(v_item ->> 'embedding') <> 'null';
+
+    v_embedding := NULL;
+    IF v_has_embedding THEN
+      BEGIN
+        v_embedding := public.assert_bge_m3_embedding((v_item ->> 'embedding')::vector);
+      EXCEPTION
+        WHEN OTHERS THEN
+          RAISE EXCEPTION 'Ugyldig embedding for %/% (forventet bge-m3 vector(1024)): %',
+            v_domain, v_external_id, SQLERRM;
+      END;
+    END IF;
+
+    IF (v_item ? 'embedding_model')
+      AND jsonb_typeof(v_item -> 'embedding_model') <> 'null' THEN
+      v_embedding_model := nullif(btrim(v_item ->> 'embedding_model'), '');
+    ELSE
+      v_embedding_model := NULL;
+    END IF;
+
+    IF (v_item ? 'modified_at')
+      AND jsonb_typeof(v_item -> 'modified_at') <> 'null'
+      AND nullif(btrim(v_item ->> 'modified_at'), '') IS NOT NULL THEN
+      v_modified_at := (v_item ->> 'modified_at')::timestamptz;
+    ELSE
+      v_modified_at := now();
+    END IF;
+
+    v_published_at := NULLIF(v_item ->> 'published_at', '')::timestamptz;
+    v_fetched_at := coalesce(NULLIF(v_item ->> 'fetched_at', '')::timestamptz, now());
 
     WITH upserted AS (
       INSERT INTO public.source_items (
@@ -528,14 +599,16 @@ BEGIN
         categories,
         published_at,
         fetched_at,
-        embedding
+        modified_at,
+        embedding,
+        embedding_model
       )
       VALUES (
         v_domain,
         v_external_id,
-        btrim(v_item ->> 'url'),
-        btrim(v_item ->> 'title'),
-        left(btrim(coalesce(v_item ->> 'excerpt', '')), 400),
+        v_url,
+        v_title,
+        v_excerpt,
         coalesce(
           (
             SELECT array_agg(btrim(value))
@@ -544,22 +617,34 @@ BEGIN
           ),
           '{}'::text[]
         ),
-        NULLIF(v_item ->> 'published_at', '')::timestamptz,
-        coalesce(NULLIF(v_item ->> 'fetched_at', '')::timestamptz, now()),
-        CASE
-          WHEN v_item ? 'embedding' AND v_item ->> 'embedding' IS NOT NULL
-            THEN (v_item ->> 'embedding')::vector(768)
-          ELSE NULL
-        END
+        v_published_at,
+        v_fetched_at,
+        v_modified_at,
+        v_embedding,
+        v_embedding_model
       )
       ON CONFLICT (domain, external_id) DO UPDATE SET
-        url = EXCLUDED.url,
-        title = EXCLUDED.title,
-        excerpt = EXCLUDED.excerpt,
-        categories = EXCLUDED.categories,
-        published_at = EXCLUDED.published_at,
-        fetched_at = EXCLUDED.fetched_at,
-        embedding = coalesce(EXCLUDED.embedding, public.source_items.embedding)
+        url = COALESCE(EXCLUDED.url, public.source_items.url),
+        title = COALESCE(EXCLUDED.title, public.source_items.title),
+        excerpt = CASE
+          WHEN v_excerpt IS NOT NULL THEN v_excerpt
+          ELSE public.source_items.excerpt
+        END,
+        categories = CASE
+          WHEN v_item ? 'categories' THEN EXCLUDED.categories
+          ELSE public.source_items.categories
+        END,
+        published_at = COALESCE(EXCLUDED.published_at, public.source_items.published_at),
+        fetched_at = COALESCE(EXCLUDED.fetched_at, public.source_items.fetched_at),
+        modified_at = v_modified_at,
+        embedding = CASE
+          WHEN v_has_embedding THEN v_embedding
+          ELSE public.source_items.embedding
+        END,
+        embedding_model = CASE
+          WHEN v_embedding_model IS NOT NULL THEN v_embedding_model
+          ELSE public.source_items.embedding_model
+        END
       RETURNING (xmax = 0) AS inserted
     )
     SELECT inserted INTO v_is_insert FROM upserted;
@@ -580,7 +665,7 @@ END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.n8n_match_source_items(
-  p_embedding vector(768),
+  p_embedding vector(1024),
   p_days int DEFAULT 14,
   p_k int DEFAULT 5
 )
@@ -602,6 +687,9 @@ STABLE
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
+  WITH query AS (
+    SELECT public.assert_bge_m3_embedding(p_embedding) AS emb
+  )
   SELECT
     si.id,
     si.domain,
@@ -613,13 +701,14 @@ AS $$
     si.published_at,
     cs.tier,
     cs.base_weight,
-    1 - (si.embedding <=> p_embedding) AS similarity
+    1 - (si.embedding <=> query.emb) AS similarity
   FROM public.source_items si
   JOIN public.content_sources cs ON cs.domain = si.domain
+  CROSS JOIN query
   WHERE si.embedding IS NOT NULL
     AND cs.tier <> 'blocked'
     AND si.published_at >= now() - make_interval(days => greatest(coalesce(p_days, 14), 1))
-  ORDER BY si.embedding <=> p_embedding
+  ORDER BY si.embedding <=> query.emb
   LIMIT greatest(coalesce(p_k, 5), 1);
 $$;
 
@@ -663,7 +752,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION public.n8n_set_feedback_embedding(
   p_id uuid,
-  p_embedding vector(768)
+  p_embedding vector(1024)
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -680,6 +769,8 @@ BEGIN
   IF p_embedding IS NULL THEN
     RAISE EXCEPTION 'p_embedding er påkrevd';
   END IF;
+
+  PERFORM public.assert_bge_m3_embedding(p_embedding);
 
   UPDATE public.content_feedback
   SET embedding = p_embedding

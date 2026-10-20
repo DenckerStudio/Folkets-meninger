@@ -28,7 +28,11 @@ for (const table of tables) {
 }
 
 assert.match(migration, /CREATE EXTENSION IF NOT EXISTS vector/i);
-assert.match(migration, /vector\(768\)/i);
+assert.match(migration, /vector\(1024\)/i);
+assert.match(migration, /bge-m3/i);
+assert.match(migration, /embedding_model/i);
+assert.match(migration, /modified_at/i);
+assert.match(migration, /assert_bge_m3_embedding/i);
 assert.match(migration, /hnsw \(embedding vector_cosine_ops\)/i);
 assert.match(migration, /polls_content_feedback_trg/i);
 assert.match(migration, /NOTIFY pgrst, 'reload schema'/i);

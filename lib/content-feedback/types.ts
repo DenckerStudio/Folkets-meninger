@@ -1,5 +1,9 @@
 /** DB-typer for content_feedback / kilder (F1). Speiler supabase/migrations/20261021120000_content_feedback.sql */
 
+/** bge-m3 (Mathias' team — ikke nomic 768) */
+export const CONTENT_FEEDBACK_EMBEDDING_DIM = 1024;
+export const CONTENT_FEEDBACK_EMBEDDING_MODEL = 'bge-m3';
+
 export type ContentFeedbackType =
   | 'reel'
   | 'ai_summary'
@@ -63,7 +67,9 @@ export type SourceItemRow = {
   categories: string[];
   published_at: string | null;
   fetched_at: string;
+  modified_at: string;
   embedding: string | null;
+  embedding_model: string | null;
 };
 
 export type FeedbackProfileRow = {

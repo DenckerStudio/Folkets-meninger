@@ -7,7 +7,13 @@ DECLARE
   v_historic int;
   v_sources int;
   r jsonb;
-  v_vec text := '[' || repeat('0,', 767) || '0]';
+  v_vec text := '[' || repeat('0,', 1023) || '0]';
+  v_vec_bad text := '[' || repeat('0,', 767) || '0]';
+  v_modified_before timestamptz;
+  v_modified_after timestamptz;
+  v_emb_model text;
+  v_title text;
+  v_excerpt text;
 BEGIN
   IF to_regclass('public.content_feedback') IS NULL THEN
     RAISE NOTICE 'content_feedback_rpcs.sql: hopper over (tabell finnes ikke)';
@@ -38,6 +44,13 @@ BEGIN
   SELECT count(*) INTO v_sources FROM public.content_sources WHERE domain = 'utenfilter.no';
   IF v_sources <> 1 THEN
     RAISE EXCEPTION 'forventet utenfilter.no i content_sources';
+  END IF;
+
+  IF (SELECT tier FROM public.content_sources WHERE domain = 'utenfilter.no') <> 'primary' THEN
+    RAISE EXCEPTION 'utenfilter.no skal ha tier primary';
+  END IF;
+  IF (SELECT base_weight FROM public.content_sources WHERE domain = 'utenfilter.no')::numeric <> 1.50 THEN
+    RAISE EXCEPTION 'utenfilter.no skal ha base_weight 1.5';
   END IF;
 
   SELECT count(*) INTO v_historic
@@ -123,6 +136,17 @@ BEGIN
     RAISE EXCEPTION 'auto-rad skulle oppgraderes til admin med aspekter';
   END IF;
 
+  -- Feil embedding-dimensjon (768) skal feile
+  BEGIN
+    PERFORM public.n8n_set_feedback_embedding(v_feedback_id, v_vec_bad::vector);
+    RAISE EXCEPTION 'forventet RAISE ved embedding dim 768';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%1024%' AND SQLERRM NOT LIKE '%dimension%' AND SQLERRM NOT LIKE '%dimensjon%' THEN
+        RAISE EXCEPTION 'feil dimensjon ga uventet feil: %', SQLERRM;
+      END IF;
+  END;
+
   r := public.n8n_upsert_source_items(
     jsonb_build_array(
       jsonb_build_object(
@@ -131,12 +155,27 @@ BEGIN
         'url', 'https://utenfilter.no/ci-test',
         'title', 'CI artikkel',
         'excerpt', 'Ingress',
-        'categories', jsonb_build_array('Test')
+        'categories', jsonb_build_array('Test'),
+        'embedding', v_vec,
+        'embedding_model', 'bge-m3'
       )
     )
   );
   IF coalesce(r ->> 'ok', 'false') <> 'true' THEN
     RAISE EXCEPTION 'n8n_upsert_source_items feilet: %', r;
+  END IF;
+
+  SELECT modified_at, embedding_model
+  INTO v_modified_before, v_emb_model
+  FROM public.source_items
+  WHERE domain = 'utenfilter.no' AND external_id = 'ci-123';
+
+  IF v_emb_model <> 'bge-m3' THEN
+    RAISE EXCEPTION 'forventet embedding_model bge-m3, fikk %', v_emb_model;
+  END IF;
+
+  IF (SELECT embedding IS NULL FROM public.source_items WHERE domain = 'utenfilter.no' AND external_id = 'ci-123') THEN
+    RAISE EXCEPTION 'forventet embedding etter insert';
   END IF;
 
   r := public.n8n_upsert_source_items(
@@ -145,7 +184,10 @@ BEGIN
         'domain', 'utenfilter.no',
         'external_id', 'ci-123',
         'url', 'https://utenfilter.no/ci-test-2',
-        'title', 'CI artikkel oppdatert'
+        'title', 'CI artikkel oppdatert',
+        'excerpt', 'Ny ingress',
+        'embedding', null,
+        'embedding_model', ''
       )
     )
   );
@@ -153,14 +195,59 @@ BEGIN
     RAISE EXCEPTION 'forventet dedupe-oppdatering på source_items';
   END IF;
 
-  PERFORM public.n8n_set_feedback_embedding(v_feedback_id, v_vec::vector(768));
+  SELECT modified_at, embedding_model, title, excerpt
+  INTO v_modified_after, v_emb_model, v_title, v_excerpt
+  FROM public.source_items
+  WHERE domain = 'utenfilter.no' AND external_id = 'ci-123';
 
-  r := public.n8n_feedback_similarity('reel', v_vec::vector(768));
+  IF v_modified_after < v_modified_before THEN
+    RAISE EXCEPTION 'modified_at skulle oppdateres ved re-upsert';
+  END IF;
+
+  IF v_emb_model <> 'bge-m3' THEN
+    RAISE EXCEPTION 'tom embedding_model skal ikke overskrive eksisterende';
+  END IF;
+
+  IF (SELECT embedding IS NULL FROM public.source_items WHERE domain = 'utenfilter.no' AND external_id = 'ci-123') THEN
+    RAISE EXCEPTION 'null embedding skal ikke overskrive eksisterende';
+  END IF;
+
+  IF v_title <> 'CI artikkel oppdatert' THEN
+    RAISE EXCEPTION 'title skulle oppdateres';
+  END IF;
+
+  IF v_excerpt <> 'Ny ingress' THEN
+    RAISE EXCEPTION 'excerpt skulle oppdateres';
+  END IF;
+
+  BEGIN
+    r := public.n8n_upsert_source_items(
+      jsonb_build_array(
+        jsonb_build_object(
+          'domain', 'utenfilter.no',
+          'external_id', 'ci-bad-dim',
+          'url', 'https://utenfilter.no/bad',
+          'title', 'Bad dim',
+          'embedding', v_vec_bad
+        )
+      )
+    );
+    RAISE EXCEPTION 'forventet RAISE ved source_items embedding dim 768';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%1024%' AND SQLERRM NOT LIKE '%bge-m3%' AND SQLERRM NOT LIKE '%dimensjon%' THEN
+        RAISE EXCEPTION 'feil dimensjon på source_items ga uventet feil: %', SQLERRM;
+      END IF;
+  END;
+
+  PERFORM public.n8n_set_feedback_embedding(v_feedback_id, v_vec::vector(1024));
+
+  r := public.n8n_feedback_similarity('reel', v_vec::vector(1024));
   IF NOT (r ? 'max_sim_approved') THEN
     RAISE EXCEPTION 'n8n_feedback_similarity mangler felt';
   END IF;
 
-  r := public.n8n_feedback_examples('reel', v_vec::vector(768), 2);
+  r := public.n8n_feedback_examples('reel', v_vec::vector(1024), 2);
   IF jsonb_typeof(r -> 'similar') <> 'object' THEN
     RAISE EXCEPTION 'n8n_feedback_examples returnerte ugyldig similar';
   END IF;
@@ -174,7 +261,7 @@ BEGIN
   END IF;
   RESET ROLE;
 
-  DELETE FROM public.source_items WHERE external_id = 'ci-123' AND domain = 'utenfilter.no';
+  DELETE FROM public.source_items WHERE domain = 'utenfilter.no' AND external_id IN ('ci-123', 'ci-bad-dim');
   DELETE FROM public.content_feedback WHERE content_id = v_poll_id::text;
   DELETE FROM public.polls WHERE id = v_poll_id;
 
