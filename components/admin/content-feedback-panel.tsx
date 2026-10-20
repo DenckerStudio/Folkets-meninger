@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Loader2, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { AlertCircle, ChevronDown, Loader2, ThumbsDown, ThumbsUp } from 'lucide-react';
 import {
   CONTENT_FEEDBACK_ASPECT_KEYS,
   CONTENT_FEEDBACK_ASPECT_LABELS,
@@ -21,7 +21,9 @@ type AspectMark = '+' | '-';
 
 const REJECTION_HINT =
   'Ved avvisning må minst ett aspekt merkes med tommel ned eller minst én grunn velges.';
+const EYEBROW_LABEL = 'Tilbakemelding';
 const SUCCESS_MESSAGE = 'Takk, tilbakemeldingen er lagret.';
+const SAVE_ERROR_MESSAGE = 'Kunne ikke lagre. Prøv igjen.';
 const VERDICT_REQUIRED = 'Velg en dom før du lagrer.';
 
 const SAVE_CLOSE_DELAY_MS = 4000;
@@ -224,7 +226,7 @@ export function ContentFeedbackPanel({
       });
       const json = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setError(typeof json.error === 'string' ? json.error : 'Kunne ikke lagre');
+        setError(SAVE_ERROR_MESSAGE);
         return;
       }
       setShowAdminReviewedBadge(true);
@@ -237,14 +239,14 @@ export function ContentFeedbackPanel({
         }, SAVE_CLOSE_DELAY_MS);
       }
     } catch {
-      setError('Kunne ikke lagre');
+      setError(SAVE_ERROR_MESSAGE);
     } finally {
       setSaving(false);
     }
   }
 
   const saveLocked = saving || saveSucceeded;
-  const liveStatus = success || error;
+  const headingText = contentSubjectTitle ?? title;
 
   const showAspectList = isReject || aspectsExpanded;
   const showRejectAlert = isReject && rejectionIncomplete && rejectSubmitAttempted;
@@ -259,20 +261,12 @@ export function ContentFeedbackPanel({
     >
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          {contentSubjectTitle ? (
-            <>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {title}
-              </p>
-              <h3 id={titleId} className="text-sm font-semibold text-foreground">
-                {contentSubjectTitle}
-              </h3>
-            </>
-          ) : (
-            <h3 id={titleId} className="text-sm font-semibold text-foreground">
-              {title}
-            </h3>
-          )}
+          <p className="w-full text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {EYEBROW_LABEL}
+          </p>
+          <h3 id={titleId} className="text-sm font-semibold text-foreground">
+            {headingText}
+          </h3>
           {showAdminReviewedBadge ? (
             <span className="rounded-full border border-border bg-card px-2 py-0.5 text-xs font-medium text-muted-foreground">
               Vurdert
@@ -282,8 +276,16 @@ export function ContentFeedbackPanel({
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
 
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
-        {liveStatus}
+      <div className="mt-2 min-h-[1.25rem]" aria-live="polite" aria-atomic="true">
+        {success ? (
+          <p className="text-sm text-emerald-700 dark:text-emerald-400">{success}</p>
+        ) : null}
+        {error ? (
+          <p className="flex items-start gap-2 text-sm text-destructive" role="alert">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span>{error}</span>
+          </p>
+        ) : null}
       </div>
 
       {loadingExisting ? (
@@ -349,8 +351,12 @@ export function ContentFeedbackPanel({
         </button>
       ) : null}
 
+      {!loadingExisting && isReject ? (
+        <p className="mt-4 text-sm text-muted-foreground">(minst ett av disse)</p>
+      ) : null}
+
       {!loadingExisting && showAspectList ? (
-        <div className="mt-4 space-y-2">
+        <div className={cn('space-y-2', isReject ? 'mt-2' : 'mt-4')}>
           {isApprove ? (
             <button
               type="button"
@@ -363,14 +369,7 @@ export function ContentFeedbackPanel({
             </button>
           ) : null}
           <p className="text-sm font-medium text-foreground">
-            {isReject ? (
-              <>
-                Merk deler{' '}
-                <span className="text-xs font-normal text-muted-foreground">(påkrevd)</span>
-              </>
-            ) : (
-              'Merk deler (valgfritt)'
-            )}
+            {isReject ? 'Merk deler' : 'Merk deler (valgfritt)'}
           </p>
           <ul
             className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card lg:grid lg:grid-cols-2 lg:divide-y-0"
@@ -434,10 +433,7 @@ export function ContentFeedbackPanel({
 
       {!loadingExisting && isReject ? (
         <div className="mt-4 space-y-2">
-          <p className="text-sm font-medium text-foreground">
-            Vanlige grunner{' '}
-            <span className="text-xs font-normal text-muted-foreground">(påkrevd)</span>
-          </p>
+          <p className="text-sm font-medium text-foreground">Vanlige grunner</p>
           <div className="flex flex-wrap gap-2">
             {CONTENT_FEEDBACK_REASON_TAGS.map((item, index) => {
               const active = reasonTags.includes(item.tag);
@@ -489,15 +485,6 @@ export function ContentFeedbackPanel({
           />
           <p className="text-right text-xs text-muted-foreground">{note.length}/1000</p>
         </div>
-      ) : null}
-
-      {error ? (
-        <p className="mt-2 text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {success ? (
-        <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-400">{success}</p>
       ) : null}
 
       <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

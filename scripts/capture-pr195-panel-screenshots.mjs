@@ -8,6 +8,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const root = join(process.cwd(), 'app/dev/pr195-capture');
+const reelsRoot = join(process.cwd(), 'app/dev/pr195-reels-capture');
 const storeDir = '/cursor/stores/self/pr195';
 const artifactDir = '/opt/cursor/artifacts/pr195';
 const sha =
@@ -33,7 +34,6 @@ export default function Pr195CapturePage() {
           contentId="00000000-0000-4000-8000-000000000001"
           lockedVerdict="approve"
           contentSubjectTitle="Bør Norge forby salg av engangsplast?"
-          title="Hva fungerte med utkastet?"
           description="Valgfritt, men hjelper oss å forbedre neste generering."
           onSkip={() => undefined}
         />
@@ -44,7 +44,6 @@ export default function Pr195CapturePage() {
           contentId="00000000-0000-4000-8000-000000000002"
           lockedVerdict="reject"
           contentSubjectTitle="Bør staten øke støtten til næringslivet i distriktene?"
-          title="Hva fungerte med utkastet?"
           description="Valgfritt, men hjelper oss å forbedre neste generering."
           onSkip={() => undefined}
         />
@@ -54,7 +53,6 @@ export default function Pr195CapturePage() {
           contentType="reel"
           contentId="${VURDERT_ID}"
           contentSubjectTitle="Skal offentlig sektor kreve grønn innkjøpsstandard?"
-          title="Hva fungerte med utkastet?"
           description="Valgfritt, men hjelper oss å forbedre neste generering."
           onSkip={() => undefined}
         />
@@ -96,6 +94,126 @@ export default function Pr195CapturePage() {
 
 const layout = `export default function Layout({ children }: { children: React.ReactNode }) {
   return children;
+}
+`;
+
+const reelsPageTsx = `'use client';
+
+import Link from 'next/link';
+import { aiSummaryQueueGaveUpKindLabel } from '@/lib/n8n/pipeline-health';
+import { routes } from '@/lib/routes';
+
+type GaveUpRow = {
+  issueId: string;
+  title: string;
+  kind: 'mangler_sammendrag' | 'regenerering' | 'tynt_sammendrag';
+  attempts: number;
+};
+
+function PipelineSection({
+  sectionId,
+  gaveUp,
+}: {
+  sectionId: string;
+  gaveUp: GaveUpRow[];
+}) {
+  return (
+    <section
+      id={sectionId}
+      className="rounded-2xl border border-border bg-card p-4"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Bakgrunnsprosess</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Flyten er i rute: sync → embeddings → sammendrag → Reels-utkast.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50"
+        >
+          Kjør catch-up
+        </button>
+      </div>
+      <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+        <div>
+          <dt className="text-muted-foreground">Ventende dokumentindeks</dt>
+          <dd className="font-medium text-foreground">12</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Mangler sammendrag</dt>
+          <dd className="font-medium text-foreground">3</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Tynne sammendrag</dt>
+          <dd className="font-medium text-foreground">1</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Utkast som venter</dt>
+          <dd className="font-medium text-foreground">2</dd>
+        </div>
+      </dl>
+      {gaveUp.length > 0 ? (
+        <div className="mt-4 border-t border-border pt-4">
+          <h3 className="text-sm font-semibold text-foreground">
+            Gitt opp ({gaveUp.length})
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Saker med fem eller flere mislykkede forsøk på sammendrag. Nullstill for å prøve på nytt.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {gaveUp.map((row) => (
+              <li
+                key={\`\${row.kind}-\${row.issueId}\`}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground">{row.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {aiSummaryQueueGaveUpKindLabel(row.kind)} · {row.attempts} forsøk · {row.issueId}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Link
+                    href={routes.sak(row.issueId)}
+                    className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/50"
+                  >
+                    Åpne sak
+                  </Link>
+                  <button
+                    type="button"
+                    className="inline-flex min-h-11 items-center rounded-lg bg-muted px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/80"
+                  >
+                    Nullstill
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+export default function Pr195ReelsPipelineCapturePage() {
+  return (
+    <main className="mx-auto max-w-3xl space-y-8 p-4 sm:p-8">
+      <PipelineSection sectionId="pipeline-gave-up-empty" gaveUp={[]} />
+      <PipelineSection
+        sectionId="pipeline-gave-up-list"
+        gaveUp={[
+          {
+            issueId: '2025010001',
+            title: 'Representantforslag om obligatorisk kildesortering',
+            kind: 'regenerering',
+            attempts: 5,
+          },
+        ]}
+      />
+    </main>
+  );
 }
 `;
 
@@ -195,9 +313,13 @@ await mkdir(artifactDir, { recursive: true });
 
 if (process.env.SCREENSHOT_SKIP_ROUTE_WRITE !== '1') {
   await rm(root, { recursive: true, force: true });
+  await rm(reelsRoot, { recursive: true, force: true });
   await mkdir(root, { recursive: true });
+  await mkdir(reelsRoot, { recursive: true });
   await writeFile(join(root, 'page.tsx'), pageTsx);
   await writeFile(join(root, 'layout.tsx'), layout);
+  await writeFile(join(reelsRoot, 'page.tsx'), reelsPageTsx);
+  await writeFile(join(reelsRoot, 'layout.tsx'), layout);
 }
 
 const useDev = process.env.SCREENSHOT_USE_DEV === '1';
@@ -276,11 +398,19 @@ for (const viewport of [
   await page.close();
 }
 
-async function shotPanel(page, panelId, name, viewportTag, { waitReady = true } = {}) {
-  if (waitReady) {
+async function shotPanel(
+  page,
+  panelId,
+  name,
+  viewportTag,
+  { waitReady = true, direct = false } = {},
+) {
+  if (waitReady && !direct) {
     await waitPanelReady(page, panelId);
   }
-  const locator = page.locator(`#${panelId}`);
+  const locator = direct
+    ? page.locator(`#${panelId}`)
+    : page.locator(`#${panelId}`).locator('section').first();
   await locator.scrollIntoViewIfNeeded();
   const filename = `${sha}-${name}-${viewportTag}.png`;
   for (const path of [join(storeDir, filename), join(artifactDir, filename)]) {
@@ -348,7 +478,7 @@ for (const viewport of [
   await page.locator('#panel-error').getByRole('button', { name: 'Lagre tilbakemelding' }).click();
   await page
     .locator('#panel-error p.text-destructive')
-    .filter({ hasText: 'Kunne ikke lagre' })
+    .filter({ hasText: 'Kunne ikke lagre. Prøv igjen.' })
     .waitFor({ timeout: 15_000 });
   await shotPanel(page, 'panel-error', 'content-feedback-error', viewport.tag);
   await page.close();
@@ -374,6 +504,30 @@ for (const viewport of [
   await page.close();
 }
 
+for (const shot of [
+  { id: 'pipeline-gave-up-empty', name: 'reels-pipeline-gave-up-empty' },
+  { id: 'pipeline-gave-up-list', name: 'reels-pipeline-gave-up-list' },
+]) {
+  for (const viewport of [
+    { tag: '1280', width: 1280, height: 900 },
+    { tag: '390', width: 390, height: 844 },
+  ]) {
+    const page = await browser.newPage({
+      viewport: { width: viewport.width, height: viewport.height },
+    });
+    await page.goto(`${baseUrl}/dev/pr195-reels-capture`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 120_000,
+    });
+    await page.waitForTimeout(800);
+    await shotPanel(page, shot.id, shot.name, viewport.tag, {
+      waitReady: false,
+      direct: true,
+    });
+    await page.close();
+  }
+}
+
 await browser.close();
 if (serverProc?.pid) {
   try {
@@ -383,4 +537,5 @@ if (serverProc?.pid) {
   }
 }
 await rm(root, { recursive: true, force: true });
+await rm(reelsRoot, { recursive: true, force: true });
 console.log('Done — screenshots in', storeDir);
