@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { routes } from '@/lib/routes';
+import { usePathname } from 'next/navigation';
+import { BloggStatusPanel } from '@/components/blog/blogg-status-panel';
+import { getBloggSecondaryAction } from '@/lib/blog/blogg-secondary-action';
 
 export default function BloggError({
   error,
@@ -12,24 +12,20 @@ export default function BloggError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const pathname = usePathname();
+  const secondary = getBloggSecondaryAction(pathname);
+
   useEffect(() => {
     console.error('[blogg]', error);
   }, [error]);
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-16 text-center">
-      <h1 className="text-2xl font-bold tracking-tight text-[#001433]">Bloggen kunne ikke lastes</h1>
-      <p className="mt-3 text-sm leading-relaxed text-[#001433]/70">
-        Det oppstod en feil ved henting av artikler. Prøv igjen, eller gå tilbake til bloggforsiden.
-      </p>
-      <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-        <Button type="button" onClick={reset}>
-          Prøv igjen
-        </Button>
-        <Button variant="outline" render={<Link href={routes.blogg} />}>
-          Til bloggforsiden
-        </Button>
-      </div>
-    </div>
+    <BloggStatusPanel
+      title="Bloggen kunne ikke lastes"
+      description="Det oppstod en feil ved henting av artikler. Prøv igjen, eller gå videre."
+      onRetry={reset}
+      secondaryHref={secondary.href}
+      secondaryLabel={secondary.label}
+    />
   );
 }
