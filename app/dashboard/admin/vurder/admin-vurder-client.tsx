@@ -115,7 +115,7 @@ export default function AdminVurderClient() {
             {error}
           </p>
         ) : null}
-        {initialLoad && pending ? <VurderDraftListSkeleton /> : null}
+        {initialLoad ? <VurderDraftListSkeleton /> : null}
         {!initialLoad && !error && cmsConfigured && drafts.length === 0 ? (
           <EmptyState
             title="Ingen utkast til vurdering"

@@ -207,6 +207,19 @@ BEGIN
     RAISE EXCEPTION 'claim: forventet regeneration_attempts=1 på B';
   END IF;
 
+  PERFORM public.n8n_list_issues_missing_ai_summary(1);
+  IF (
+    SELECT regeneration_attempts FROM public.issue_ai_summaries WHERE stortinget_issue_id = v_issue_b
+  ) <> 1 THEN
+    RAISE EXCEPTION 'double-claim: andre list-kall skal ikke øke attempts på B';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.n8n_list_issues_missing_ai_summary(5) q WHERE q.id = v_issue_b
+  ) THEN
+    RAISE EXCEPTION 'double-claim: B skal ikke returneres igjen innen backoff';
+  END IF;
+
   DELETE FROM public.issue_ai_summaries
   WHERE stortinget_issue_id IN (v_issue_a, v_issue_b);
   DELETE FROM public.stortinget_issues WHERE id IN (v_issue_a, v_issue_b);

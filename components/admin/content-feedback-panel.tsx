@@ -73,6 +73,8 @@ export function ContentFeedbackPanel({
   const [rejectSubmitAttempted, setRejectSubmitAttempted] = useState(false);
   const [saveSucceeded, setSaveSucceeded] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
+  const skipRef = useRef<HTMLButtonElement>(null);
+  const aspectsPanelRef = useRef<HTMLDivElement>(null);
 
   const effectiveVerdict = lockedVerdict ?? verdict;
   const isReject = effectiveVerdict === 'reject';
@@ -175,6 +177,14 @@ export function ContentFeedbackPanel({
     }
   }, [isApprove]);
 
+  useEffect(() => {
+    if (!aspectsExpanded || !isApprove) return;
+    const firstControl = aspectsPanelRef.current?.querySelector<HTMLElement>(
+      'button[aria-label*="tommel"]',
+    );
+    firstControl?.focus();
+  }, [aspectsExpanded, isApprove]);
+
   const rejectionIncomplete = useMemo(() => {
     if (!isReject) return false;
     return !hasNegativeAspect(aspects) && reasonTags.length === 0;
@@ -235,6 +245,7 @@ export function ContentFeedbackPanel({
       if (onSaved) {
         closeTimerRef.current = window.setTimeout(() => {
           closeTimerRef.current = null;
+          skipRef.current?.focus();
           onSaved();
         }, SAVE_CLOSE_DELAY_MS);
       }
@@ -250,6 +261,10 @@ export function ContentFeedbackPanel({
 
   const showAspectList = isReject || aspectsExpanded;
   const showRejectAlert = isReject && rejectionIncomplete && rejectSubmitAttempted;
+  const statusMessage =
+    error ||
+    verdictError ||
+    (showRejectAlert ? REJECTION_HINT : '');
 
   return (
     <section
@@ -280,10 +295,10 @@ export function ContentFeedbackPanel({
         {success ? (
           <p className="text-sm text-emerald-700 dark:text-emerald-400">{success}</p>
         ) : null}
-        {error ? (
-          <p className="flex items-start gap-2 text-sm text-destructive" role="alert">
+        {statusMessage ? (
+          <p className="flex items-start gap-2 text-sm text-destructive">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            <span>{error}</span>
+            <span>{statusMessage}</span>
           </p>
         ) : null}
       </div>
@@ -327,11 +342,6 @@ export function ContentFeedbackPanel({
               </button>
             ))}
           </div>
-          {verdictError ? (
-            <p className="text-sm text-destructive" role="alert">
-              {verdictError}
-            </p>
-          ) : null}
         </div>
       ) : lockedVerdict ? (
         <p className="mt-3 text-sm text-muted-foreground">
@@ -356,7 +366,10 @@ export function ContentFeedbackPanel({
       ) : null}
 
       {!loadingExisting && showAspectList ? (
-        <div className={cn('space-y-2', isReject ? 'mt-2' : 'mt-4')}>
+        <div
+          ref={aspectsPanelRef}
+          className={cn('space-y-2', isReject ? 'mt-2' : 'mt-4')}
+        >
           {isApprove ? (
             <button
               type="button"
@@ -460,11 +473,7 @@ export function ContentFeedbackPanel({
             <p id={rejectHintId} className="text-sm text-muted-foreground">
               {REJECTION_HINT}
             </p>
-          ) : (
-            <p className="text-sm text-destructive" role="alert">
-              {REJECTION_HINT}
-            </p>
-          )}
+          ) : null}
         </div>
       ) : null}
 
@@ -489,6 +498,7 @@ export function ContentFeedbackPanel({
 
       <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button
+          ref={skipRef}
           type="button"
           onClick={onSkip}
           disabled={saveLocked}

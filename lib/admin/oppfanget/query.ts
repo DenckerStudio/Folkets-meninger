@@ -1,4 +1,8 @@
-import type { OppfangetFilterInput } from '@/lib/admin/oppfanget/filters';
+import {
+  OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION,
+  type OppfangetFilterInput,
+  type OppfangetStatusFilter,
+} from '@/lib/admin/oppfanget/filters';
 import type { OppfangetDisplayStatus, OppfangetDisplayType } from '@/lib/admin/oppfanget/types';
 import { routes } from '@/lib/routes';
 import {
@@ -13,8 +17,11 @@ function parseDisplayType(value: string | undefined): OppfangetDisplayType | '' 
     : '';
 }
 
-function parseDisplayStatus(value: string | undefined): OppfangetDisplayStatus | '' {
+function parseStatusFilter(value: string | undefined): OppfangetStatusFilter {
   if (!value) return '';
+  if (value === OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION) {
+    return OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION;
+  }
   return ALL_OPPFANGET_DISPLAY_STATUSES.includes(value as OppfangetDisplayStatus)
     ? (value as OppfangetDisplayStatus)
     : '';
@@ -29,7 +36,7 @@ export function parseOppfangetFilters(
   };
   return {
     type: parseDisplayType(pick('type')),
-    status: parseDisplayStatus(pick('status')),
+    status: parseStatusFilter(pick('status')),
     source: pick('source'),
     dateFrom: pick('dateFrom'),
     dateTo: pick('dateTo'),
@@ -58,5 +65,5 @@ export function buildOppfangetAdminPath(
   preview?: string | null,
 ): string {
   const query = buildOppfangetListQueryString(filters, preview);
-  return query ? `${routes.adminOppfanget}?${query}` : routes.adminOppfanget;
+  return query ? `${routes.adminResearch}?${query}` : routes.adminResearch;
 }

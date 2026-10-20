@@ -28,7 +28,26 @@ const rows = [
     firstSeenAt: '2026-10-19T08:00:00.000Z',
     lastSeenAt: '2026-10-19T09:00:00.000Z',
   },
+  {
+    id: '3',
+    title: 'Støy i feeden',
+    actionType: 'kampanje' as const,
+    clusterStatus: 'not_action' as const,
+    pollStatus: null,
+    metadata: null,
+    sources: [{ publisher: 'example.com', signalOnly: true, title: 'Notis' }],
+    firstSeenAt: '2026-10-19T08:00:00.000Z',
+    lastSeenAt: '2026-10-19T09:00:00.000Z',
+  },
 ];
+
+const defaultList = filterOppfangetRows(rows, {});
+assert.equal(defaultList.length, 2);
+assert.equal(defaultList.some((r) => r.id === '3'), false);
+
+const notActionOnly = filterOppfangetRows(rows, { status: 'not_action' });
+assert.equal(notActionOnly.length, 1);
+assert.equal(notActionOnly[0]?.id, '3');
 
 const boikottOnly = filterOppfangetRows(rows, { type: 'boikott' });
 assert.equal(boikottOnly.length, 1);
@@ -47,6 +66,9 @@ assert.equal(search.length, 1);
 const counts = countOppfangetStatuses(rows);
 assert.equal(counts.under_terskel, 1);
 assert.equal(counts.oppfanget, 1);
+
+const oppfangetDisplay = filterOppfangetRows(rows, { status: 'oppfanget' });
+assert.equal(oppfangetDisplay.some((r) => r.id === '3'), false);
 
 assert.equal(hasActiveOppfangetFilters({}), false);
 assert.equal(hasActiveOppfangetFilters({ q: 'test' }), true);

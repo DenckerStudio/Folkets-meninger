@@ -57,7 +57,7 @@ DECLARE
   v_limit int := greatest(1, least(coalesce(p_limit, 1), 50));
 BEGIN
   RETURN QUERY
-  WITH eligible AS (
+  WITH candidates AS (
     SELECT
       i.id AS issue_id,
       CASE
@@ -111,25 +111,41 @@ BEGIN
     FOR UPDATE OF i SKIP LOCKED
     LIMIT v_limit
   ),
-  bump_issue AS (
+  claim_issue AS (
     UPDATE public.stortinget_issues i
     SET
       ai_summary_generation_attempts = i.ai_summary_generation_attempts + 1,
       ai_summary_last_attempt_at = now()
-    FROM eligible e
-    WHERE i.id = e.issue_id
-      AND e.tier IN (0, 2)
+    FROM candidates c
+    WHERE i.id = c.issue_id
+      AND c.tier IN (0, 2)
+      AND coalesce(i.ai_summary_generation_attempts, 0) < 5
+      AND (
+        i.ai_summary_last_attempt_at IS NULL
+        OR i.ai_summary_last_attempt_at < now() - interval '15 minutes'
+      )
     RETURNING i.id
   ),
-  bump_regen AS (
+  claim_regen AS (
     UPDATE public.issue_ai_summaries s
     SET
       regeneration_attempts = coalesce(s.regeneration_attempts, 0) + 1,
       regeneration_last_attempt_at = now()
-    FROM eligible e
-    WHERE s.stortinget_issue_id = e.issue_id
-      AND e.tier = 1
-    RETURNING s.stortinget_issue_id
+    FROM candidates c
+    WHERE s.stortinget_issue_id = c.issue_id
+      AND c.tier = 1
+      AND s.regeneration_requested_at IS NOT NULL
+      AND coalesce(s.regeneration_attempts, 0) < 5
+      AND (
+        s.regeneration_last_attempt_at IS NULL
+        OR s.regeneration_last_attempt_at < now() - interval '15 minutes'
+      )
+    RETURNING s.stortinget_issue_id AS id
+  ),
+  claimed AS (
+    SELECT id FROM claim_issue
+    UNION ALL
+    SELECT id FROM claim_regen
   )
   SELECT
     ctx.id,
@@ -141,10 +157,117 @@ BEGIN
     ctx.ai_summary_source_context,
     ctx.documents,
     ctx.document_chunks
-  FROM eligible e
-  JOIN LATERAL public.n8n_get_issue_ai_summary_context(e.issue_id) ctx ON true;
+  FROM claimed cl
+  JOIN LATERAL public.n8n_get_issue_ai_summary_context(cl.id) ctx ON true;
 END;
 $$;
+
+-- ---------------------------------------------------------------------------
+-- n8n_pipeline_health — read-only køtelling (pipeline-health.workflow.ts)
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.n8n_pipeline_health()
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  WITH queue AS (
+    SELECT
+      i.id AS issue_id,
+      CASE
+        WHEN s.stortinget_issue_id IS NULL THEN 0
+        WHEN s.regeneration_requested_at IS NOT NULL THEN 1
+        ELSE 2
+      END AS tier,
+      s.regeneration_requested_at,
+      i.last_synced_at
+    FROM public.stortinget_issues i
+    LEFT JOIN public.issue_ai_summaries s ON s.stortinget_issue_id = i.id
+    WHERE (
+      s.stortinget_issue_id IS NULL
+      AND coalesce(i.ai_summary_generation_attempts, 0) < 5
+      AND (
+        i.ai_summary_last_attempt_at IS NULL
+        OR i.ai_summary_last_attempt_at < now() - interval '15 minutes'
+      )
+    )
+    OR (
+      s.regeneration_requested_at IS NOT NULL
+      AND coalesce(s.regeneration_attempts, 0) < 5
+      AND (
+        s.regeneration_last_attempt_at IS NULL
+        OR s.regeneration_last_attempt_at < now() - interval '15 minutes'
+      )
+    )
+    OR (
+      s.stortinget_issue_id IS NOT NULL
+      AND s.regeneration_requested_at IS NULL
+      AND length(trim(coalesce(s.hva, ''))) < 180
+      AND s.updated_at < now() - interval '12 hours'
+      AND EXISTS (
+        SELECT 1
+        FROM public.document_chunks dc
+        WHERE dc.issue_id = i.id
+          AND dc.embedding_status = 'ready'
+      )
+      AND coalesce(i.ai_summary_generation_attempts, 0) < 5
+      AND (
+        i.ai_summary_last_attempt_at IS NULL
+        OR i.ai_summary_last_attempt_at < now() - interval '15 minutes'
+      )
+    )
+  ),
+  ordered AS (
+    SELECT issue_id
+    FROM queue
+    ORDER BY
+      tier,
+      regeneration_requested_at ASC NULLS LAST,
+      last_synced_at DESC NULLS LAST
+  )
+  SELECT jsonb_build_object(
+    'pending_chunks', (
+      SELECT count(*)::int
+      FROM public.document_chunks
+      WHERE embedding_status = 'pending'
+    ),
+    'missing_summaries', (
+      SELECT count(*)::int
+      FROM public.stortinget_issues i
+      LEFT JOIN public.issue_ai_summaries s ON s.stortinget_issue_id = i.id
+      WHERE s.stortinget_issue_id IS NULL
+    ),
+    'thin_summaries', (
+      SELECT count(*)::int
+      FROM public.issue_ai_summaries s
+      WHERE length(trim(coalesce(s.hva, ''))) < 180
+        AND EXISTS (
+          SELECT 1
+          FROM public.document_chunks dc
+          WHERE dc.issue_id = s.stortinget_issue_id
+            AND dc.embedding_status = 'ready'
+        )
+    ),
+    'draft_polls', (
+      SELECT count(*)::int
+      FROM public.polls
+      WHERE track = 'system'
+        AND status = 'draft'
+    ),
+    'recent_ops_events', (
+      SELECT count(*)::int
+      FROM public.n8n_ops_events
+      WHERE created_at > now() - interval '24 hours'
+    ),
+    'summary_queue_depth', (SELECT count(*)::int FROM queue),
+    'first_summary_queue_issue_id', (SELECT issue_id FROM ordered LIMIT 1)
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.n8n_pipeline_health() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.n8n_pipeline_health() TO service_role;
 
 -- ---------------------------------------------------------------------------
 -- n8n_upsert_issue_ai_summary — samme signatur/retur; nuller regenereringsflagg
@@ -234,13 +357,23 @@ $$;
 -- admin_list_ai_summary_queue_gave_up / admin_reset_ai_summary_queue_attempts
 -- ---------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION public.admin_list_ai_summary_queue_gave_up(p_limit int DEFAULT 50)
+DROP FUNCTION IF EXISTS public.admin_list_ai_summary_queue_gave_up(int);
+DROP FUNCTION IF EXISTS public.admin_reset_ai_summary_queue_attempts(text);
+
+CREATE OR REPLACE FUNCTION public.admin_list_ai_summary_queue_gave_up(
+  p_admin_user_id uuid,
+  p_limit int DEFAULT 50
+)
 RETURNS jsonb
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
+BEGIN
+  PERFORM public.require_admin_user_id(p_admin_user_id);
+
+  RETURN (
   SELECT coalesce(
     jsonb_agg(
       jsonb_build_object(
@@ -293,16 +426,38 @@ AS $$
       AND length(trim(coalesce(s.hva, ''))) < 180
       AND i.ai_summary_generation_attempts >= 5
   ) row
-  LIMIT greatest(1, least(coalesce(p_limit, 1), 200));
+  LIMIT greatest(1, least(coalesce(p_limit, 1), 200))
+  );
+END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.admin_reset_ai_summary_queue_attempts(p_issue_id text)
-RETURNS void
+CREATE OR REPLACE FUNCTION public.admin_reset_ai_summary_queue_attempts(
+  p_admin_user_id uuid,
+  p_issue_id text
+)
+RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
+DECLARE
+  v_actor uuid;
+  v_issue_attempts int;
+  v_regen_attempts int;
 BEGIN
+  v_actor := public.require_admin_user_id(p_admin_user_id);
+
+  SELECT i.ai_summary_generation_attempts,
+         coalesce(s.regeneration_attempts, 0)
+  INTO v_issue_attempts, v_regen_attempts
+  FROM public.stortinget_issues i
+  LEFT JOIN public.issue_ai_summaries s ON s.stortinget_issue_id = i.id
+  WHERE i.id = p_issue_id;
+
+  IF NOT FOUND THEN
+    RETURN false;
+  END IF;
+
   UPDATE public.stortinget_issues
   SET
     ai_summary_generation_attempts = 0,
@@ -314,6 +469,30 @@ BEGIN
     regeneration_attempts = 0,
     regeneration_last_attempt_at = NULL
   WHERE stortinget_issue_id = p_issue_id;
+
+  INSERT INTO audit.security_events (
+    table_name,
+    operation,
+    target_id,
+    old_data,
+    new_data,
+    jwt_role,
+    jwt_sub
+  )
+  VALUES (
+    'rpc.admin_reset_ai_summary_queue_attempts',
+    'RESET',
+    p_issue_id,
+    jsonb_build_object(
+      'ai_summary_generation_attempts', v_issue_attempts,
+      'regeneration_attempts', v_regen_attempts
+    ),
+    jsonb_build_object('reset_by', v_actor),
+    'service_role',
+    v_actor::text
+  );
+
+  RETURN true;
 END;
 $$;
 
@@ -382,13 +561,13 @@ GRANT EXECUTE ON FUNCTION public.n8n_upsert_issue_ai_summary(
   text, text, text, text, text, text, text, jsonb, text[]
 ) TO service_role;
 
-REVOKE ALL ON FUNCTION public.admin_list_ai_summary_queue_gave_up(int)
+REVOKE ALL ON FUNCTION public.admin_list_ai_summary_queue_gave_up(uuid, int)
   FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_list_ai_summary_queue_gave_up(int) TO service_role;
+GRANT EXECUTE ON FUNCTION public.admin_list_ai_summary_queue_gave_up(uuid, int) TO service_role;
 
-REVOKE ALL ON FUNCTION public.admin_reset_ai_summary_queue_attempts(text)
+REVOKE ALL ON FUNCTION public.admin_reset_ai_summary_queue_attempts(uuid, text)
   FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_reset_ai_summary_queue_attempts(text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.admin_reset_ai_summary_queue_attempts(uuid, text) TO service_role;
 
 REVOKE ALL ON FUNCTION public.admin_submit_content_feedback(
   text, text, text, jsonb, text[], text, uuid, jsonb

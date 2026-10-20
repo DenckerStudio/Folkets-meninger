@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
+import { parseResetAiSummaryQueueBody } from '@/lib/content-feedback/ai-summary-queue-admin';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -48,6 +49,7 @@ export async function GET() {
 
   const service = getServiceSupabase();
   const { data, error } = await service.rpc('admin_list_ai_summary_queue_gave_up', {
+    p_admin_user_id: auth.userId,
     p_limit: 50,
   });
   if (error) {
@@ -69,19 +71,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Serveren er ikke konfigurert' }, { status: 503 });
   }
 
-  const body = (await request.json().catch(() => ({}))) as { issue_id?: string };
-  const issueId = typeof body.issue_id === 'string' ? body.issue_id.trim() : '';
-  if (!issueId) {
-    return NextResponse.json({ error: 'issue_id mangler' }, { status: 400 });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Ugyldig JSON' }, { status: 400 });
+  }
+
+  const parsed = parseResetAiSummaryQueueBody(body);
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: parsed.status });
   }
 
   const service = getServiceSupabase();
-  const { error } = await service.rpc('admin_reset_ai_summary_queue_attempts', {
-    p_issue_id: issueId,
+  const { data, error } = await service.rpc('admin_reset_ai_summary_queue_attempts', {
+    p_admin_user_id: auth.userId,
+    p_issue_id: parsed.issueId,
   });
   if (error) {
     console.error('[ai-summary-queue] reset feilet:', error);
     return NextResponse.json({ error: 'Kunne ikke nullstille forsøk' }, { status: 500 });
+  }
+
+  if (data !== true) {
+    return NextResponse.json({ error: 'Saken finnes ikke' }, { status: 404 });
   }
 
   return NextResponse.json({ ok: true });

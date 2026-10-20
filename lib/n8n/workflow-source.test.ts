@@ -23,6 +23,10 @@ for (const file of productionFlows) {
   assert.match(src, /\/api\/ops\/n8n-notify/, `${file} must notify via /api/ops/n8n-notify`);
 }
 
+const pipelineHealth = readWorkflow('pipeline-health.workflow.ts');
+assert.doesNotMatch(pipelineHealth, /n8n_list_issues_missing_ai_summary/);
+assert.match(pipelineHealth, /n8n_pipeline_health/);
+
 const cron = readWorkflow('app-cron.workflow.ts');
 assert.match(cron, /\/api\/cron\/n8n-retry/);
 assert.match(cron, /Every 2 hours n8n-retry/);

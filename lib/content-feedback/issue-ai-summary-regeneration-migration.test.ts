@@ -29,6 +29,13 @@ assert.doesNotMatch(
 assert.match(migration, /DROP FUNCTION IF EXISTS public\.n8n_mark_issue_ai_summary_regeneration_attempt/i);
 assert.match(migration, /admin_list_ai_summary_queue_gave_up/i);
 assert.match(migration, /admin_reset_ai_summary_queue_attempts/i);
+assert.match(migration, /require_admin_user_id\(p_admin_user_id\)/i);
+assert.match(migration, /audit\.security_events/i);
+assert.match(migration, /CREATE OR REPLACE FUNCTION public\.n8n_pipeline_health/i);
+assert.match(migration, /first_summary_queue_issue_id/i);
+assert.match(migration, /claim_regen AS/i);
+assert.match(migration, /FROM claimed cl/i);
+assert.doesNotMatch(migration, /FROM eligible e[\s\S]*JOIN LATERAL public\.n8n_get_issue_ai_summary_context\(e\.issue_id\)/);
 
 assert.match(
   migration,
