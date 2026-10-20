@@ -1,5 +1,6 @@
-import type { TaskConfig } from 'payload';
+import { JobCancelledError, type TaskConfig } from 'payload';
 import {
+  ContentFeedbackWebhookError,
   sendContentFeedbackWebhook,
   type ContentFeedbackWebhookEvent,
 } from '@/lib/contentFeedbackWebhook';
@@ -45,20 +46,29 @@ export const contentFeedbackSendTask: TaskConfig = {
       throw new Error('contentFeedbackSend: missing job input');
     }
     const snapshot = input.snapshot as ContentFeedbackSendInput['snapshot'];
-    sendContentFeedbackWebhook(
-      {
-        event: input.event as ContentFeedbackWebhookEvent,
-        event_id: input.eventId,
-        post_id: input.postId,
-        slug: snapshot.slug ?? '',
-        title: snapshot.title ?? '',
-        excerpt: snapshot.excerpt ?? '',
-        categories: Array.isArray(snapshot.categories) ? snapshot.categories : [],
-        origin: snapshot.origin ?? 'n8n',
-        occurred_at: input.occurredAt,
-      },
-      req.payload.logger,
-    );
+
+    try {
+      await sendContentFeedbackWebhook(
+        {
+          event: input.event as ContentFeedbackWebhookEvent,
+          event_id: input.eventId,
+          post_id: input.postId,
+          slug: snapshot.slug ?? '',
+          title: snapshot.title ?? '',
+          excerpt: snapshot.excerpt ?? '',
+          categories: Array.isArray(snapshot.categories) ? snapshot.categories : [],
+          origin: snapshot.origin ?? 'n8n',
+          occurred_at: input.occurredAt,
+        },
+        req.payload.logger,
+      );
+    } catch (error) {
+      if (error instanceof ContentFeedbackWebhookError && error.kind !== 'retryable') {
+        throw new JobCancelledError(error.message);
+      }
+      throw error;
+    }
+
     return { output: { ok: true } };
   },
 };

@@ -8,6 +8,7 @@ import {
   type PayloadRequest,
 } from 'payload';
 import config from '@/payload.config';
+import { POST_ORIGIN_CONTEXT_KEY } from '@/hooks/preservePostOrigin';
 import { seedTaxonomy } from '@/seed/seedBaseData';
 
 const databaseUri = process.env.DATABASE_URI?.trim();
@@ -60,6 +61,7 @@ async function main() {
 
   const created = await payload.create({
     collection: 'posts',
+    context: { [POST_ORIGIN_CONTEXT_KEY]: 'n8n' },
     data: {
       title: 'Outbox test',
       slug,

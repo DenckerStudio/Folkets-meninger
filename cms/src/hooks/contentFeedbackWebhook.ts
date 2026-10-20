@@ -81,6 +81,11 @@ export function readMainDocSnapshot(
   return { status: 'draft', origin: 'manual' };
 }
 
+/** Main published doc `_status` only (never a draft version row's `_status`). */
+export function currentMainDocStatus(main: PostDoc | null | undefined): string {
+  return main?._status ?? 'draft';
+}
+
 export function detectContentFeedbackTransition(
   prevMainStatus: string,
   currentMainStatus: string,
@@ -228,8 +233,7 @@ export const contentFeedbackAfterChange: CollectionAfterChangeHook = async ({
     }
 
     const main = await loadMainPost(req, postId);
-    const currentMainStatus =
-      typeof post._status === 'string' ? post._status : (main?._status ?? 'draft');
+    const currentMainStatus = currentMainDocStatus(main);
 
     const { becamePublished, becameArchived } = detectContentFeedbackTransition(
       before.status,

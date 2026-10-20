@@ -14,10 +14,32 @@ export type ContentFeedbackWebhookBody = {
   occurred_at: string;
 };
 
-const WEBHOOK_TIMEOUT_MS = 3_000;
+export const CONTENT_FEEDBACK_WEBHOOK_TIMEOUT_MS = 10_000;
+
+export type ContentFeedbackWebhookFailureKind = 'config' | 'client' | 'retryable';
+
+export class ContentFeedbackWebhookError extends Error {
+  readonly kind: ContentFeedbackWebhookFailureKind;
+  readonly httpStatus?: number;
+
+  constructor(
+    message: string,
+    kind: ContentFeedbackWebhookFailureKind,
+    httpStatus?: number,
+  ) {
+    super(message);
+    this.name = 'ContentFeedbackWebhookError';
+    this.kind = kind;
+    this.httpStatus = httpStatus;
+  }
+}
 
 export function contentFeedbackSigningSecret(): string | null {
-  return process.env.CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET?.trim() || null;
+  return (
+    process.env.CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET?.trim() ||
+    process.env.REVALIDATE_SECRET?.trim() ||
+    null
+  );
 }
 
 export function contentFeedbackWebhookUrl(): string | null {
@@ -28,50 +50,76 @@ export function contentFeedbackWebhookUrl(): string | null {
   return `${webBase}${CONTENT_FEEDBACK_OPS_PATH}`;
 }
 
-/** Fire-and-forget; never throws. Logs only HTTP status on failure. */
-export function sendContentFeedbackWebhook(
+type WebhookLogger = {
+  error: (obj: Record<string, unknown>) => void;
+};
+
+/**
+ * POST signed content-feedback payload. Throws on misconfiguration, retryable HTTP/network errors,
+ * or non-retryable 4xx (after logging status).
+ */
+export async function sendContentFeedbackWebhook(
   body: ContentFeedbackWebhookBody,
-  log: {
-    error: (obj: Record<string, unknown>) => void;
-    warn?: (obj: Record<string, unknown>) => void;
-  },
-): void {
+  log?: WebhookLogger,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
   const secret = contentFeedbackSigningSecret();
-  const url = contentFeedbackWebhookUrl();
   if (!secret) {
-    log.warn?.({ msg: 'content-feedback webhook skipped: signing secret not configured' });
-    return;
+    throw new ContentFeedbackWebhookError(
+      'content-feedback webhook: signing secret not configured',
+      'config',
+    );
   }
+
+  const url = contentFeedbackWebhookUrl();
   if (!url) {
-    log.warn?.({ msg: 'content-feedback webhook skipped: FM_WEB_URL not configured' });
-    return;
+    throw new ContentFeedbackWebhookError(
+      'content-feedback webhook: FM_WEB_URL not configured',
+      'config',
+    );
   }
 
   const payload = JSON.stringify(body);
   const headers = buildContentFeedbackSignedHeaders(payload, secret);
 
-  void fetch(url, {
-    method: 'POST',
-    headers,
-    body: payload,
-    signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
-  })
-    .then((res) => {
-      if (!res.ok) {
-        log.error({
-          msg: 'content-feedback webhook non-ok',
-          status: res.status,
-          event: body.event,
-          post_id: body.post_id,
-        });
-      }
-    })
-    .catch((error) => {
-      log.error({
-        msg: 'content-feedback webhook failed',
-        error,
-        event: body.event,
-        post_id: body.post_id,
-      });
+  let response: Response;
+  try {
+    response = await fetchImpl(url, {
+      method: 'POST',
+      headers,
+      body: payload,
+      signal: AbortSignal.timeout(CONTENT_FEEDBACK_WEBHOOK_TIMEOUT_MS),
     });
+  } catch {
+    throw new ContentFeedbackWebhookError(
+      'content-feedback webhook: network or timeout error',
+      'retryable',
+    );
+  }
+
+  if (response.ok) {
+    return;
+  }
+
+  const status = response.status;
+  if (status === 429 || status >= 500) {
+    throw new ContentFeedbackWebhookError(
+      `content-feedback webhook: HTTP ${status}`,
+      'retryable',
+      status,
+    );
+  }
+
+  log?.error({
+    msg: 'content-feedback webhook non-retryable client error',
+    status,
+    event: body.event,
+    post_id: body.post_id,
+  });
+
+  throw new ContentFeedbackWebhookError(
+    `content-feedback webhook: HTTP ${status}`,
+    'client',
+    status,
+  );
 }
