@@ -303,6 +303,7 @@ async function main() {
   assert.equal(parsed?.getUTCFullYear(), 2025);
   assert.equal(parsed?.getUTCMonth(), 3);
   assert.equal(parsed?.getUTCDate(), 23);
+  assert.equal(parsed?.toISOString(), '2025-04-23T00:00:00.000Z');
   assert.equal(parseSaksgangEventDate('01.01.0001 00:00:00'), null);
   assert.equal(parseSaksgangEventDate(undefined), null);
 

@@ -107,7 +107,7 @@ assert.ok(
 
 assert.equal(
   formatChunkExcerptForDisplay('\n\n…\n\n## Komiteens merknader\n\nAvsnitt.'),
-  '…\n## Komiteens merknader\nAvsnitt.',
+  '…\nKomiteens merknader\nAvsnitt.',
 );
 
 const duped = capChunksPerDocument(
@@ -119,5 +119,29 @@ const duped = capChunksPerDocument(
   1,
 );
 assert.equal(duped.length, 2);
+
+const doclingCard = `## Komiteens merknader
+
+<!-- image -->
+
+| Post | Beløp |
+| --- | ---: |
+| Drift | 45 |
+| Tom | |
+
+**Viktig** og [lenke](https://example.com).
+
+Vanlig avsnitt.
+`;
+const cardOut = formatChunkExcerptForDisplay(doclingCard);
+assert.match(cardOut, /Komiteens merknader/);
+assert.doesNotMatch(cardOut, /<!--/);
+assert.match(cardOut, /Viktig og lenke/);
+assert.doesNotMatch(cardOut, /\*\*/);
+assert.equal(formatChunkExcerptForDisplay('a *b* c *d*'), 'a b c d');
+assert.equal(formatChunkExcerptForDisplay('**to ord**'), 'to ord');
+assert.equal(formatChunkExcerptForDisplay('*a b*'), 'a b');
+assert.equal(formatChunkExcerptForDisplay('Produkt 2*4*6 mm'), 'Produkt 2*4*6 mm');
+assert.equal(formatChunkExcerptForDisplay('x*y*z'), 'x*y*z');
 
 console.log('chat/chunk-excerpt.test.ts: ok');

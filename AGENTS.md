@@ -203,14 +203,21 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 
 - Sak/hearing markdown ingest from n8n Docling: `n8n_upsert_docling_document(p_target,
   p_doc, p_chunks)` with `p_target` `sak` | `horing`. Writes `content_markdown` on
-  `stortinget_issue_documents` (never `content_full_text`), replaces `document_chunks`
-  with `embedding_status = 'pending'`, sets `chunks_status = 'pending'`. Same
-  `content_hash` → `{status:'unchanged'}`; unknown `issue_id` → `{status:'skipped_no_issue'}`.
+  `stortinget_issue_documents` (never `content_full_text`). Rejects empty or all-blank
+  `p_chunks` (`{status:'error'}`) — never deletes chunks without replacements. Omitted
+  doc fields keep existing values (no `Dokument`/`unknown` defaults). `content_hash` must
+  match `documentContentHash` (SHA-256 of markdown after CRLF→LF and trim). Same hash as
+  stored → `{status:'unchanged'}` (legacy `embedding` / `embedding_v2` untouched). On
+  re-ingest, chunk rows keep legacy embeddings until content changes (then re-embed).
+  Hearing chunks: `issue_id` NULL per #178 CHECK; optional sak link in `metadata.issue_id`.
+  Unknown `issue_id` on sak path → `{status:'skipped_no_issue'}`.
 - Chunker id **`md-sections-v1`** in `lib/document-chunking.ts` (~3500 chars, 15% overlap,
   TOC dropped, `page_start` / `page_end` in metadata).
 - Parallel **bge-m3** store: `document_chunks.embedding_v2 vector(1024)` (migration
   `20261019200000`). Backfill RPCs (`service_role`): `list_chunks_missing_v2(limit,
-  issue_id?, hearing_id?)`, `save_embeddings_v2` → `{saved, failed}` with
+  issue_id?, hearing_id?)`, `save_embeddings_v2(rows, model, force?)` →
+  `{saved, failed, skipped}` — skips rows that already have `embedding_v2` unless
+  `p_force`; bad ids count as `failed` without aborting the batch. Poison rows via
   `embedding_v2_status` / `embedding_v2_attempts` (skip after 3 failures). A/B eval:
   `match_document_chunks_v2` (`service_role` only).
 - New Docling chunks keep legacy `embedding_status = 'pending'` until the nomic pipeline

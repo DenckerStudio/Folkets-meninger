@@ -10,10 +10,66 @@ export function normalizeChunkText(text: string): string {
   return text.replace(/\r\n/g, '\n').trim();
 }
 
-/** UI-only: collapse blank lines so line-clamp cards show more substance. */
+const EMPHASIS_INNER_RE = /^\S(?:[^*]*\S)?$/;
+/** Do not treat `2*4*6` / `x*y*z` as markdown emphasis. */
+const EMPHASIS_EDGE = /[A-Za-z0-9]/;
+
+function stripEmphasisMarkers(segment: string): string {
+  return segment
+    .replace(/\*\*([^*]+)\*\*/g, (match, inner: string, offset: number) => {
+      const trimmed = inner.trim();
+      const before = offset > 0 ? segment[offset - 1] : '';
+      const after = segment[offset + match.length] ?? '';
+      if (EMPHASIS_EDGE.test(before) || EMPHASIS_EDGE.test(after)) return match;
+      if (!EMPHASIS_INNER_RE.test(inner) || /^\d+$/.test(trimmed)) return match;
+      return trimmed;
+    })
+    .replace(/\*([^*]+)\*/g, (match, inner: string, offset: number) => {
+      const trimmed = inner.trim();
+      const before = offset > 0 ? segment[offset - 1] : '';
+      const after = segment[offset + match.length] ?? '';
+      if (EMPHASIS_EDGE.test(before) || EMPHASIS_EDGE.test(after)) return match;
+      if (!EMPHASIS_INNER_RE.test(inner) || /^\d+$/.test(trimmed)) return match;
+      return trimmed;
+    });
+}
+
+function stripInlineMarkdown(line: string): string {
+  const links = line.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+  return stripEmphasisMarkers(links);
+}
+
+/** UI-only: strip Docling markdown noise, then collapse blank lines for line-clamp cards. */
 export function formatChunkExcerptForDisplay(text: string): string {
-  return text
-    .replace(/\r\n/g, '\n')
+  const withoutComments = text.replace(/<!--[\s\S]*?-->/g, '');
+  const lines = withoutComments.replace(/\r\n/g, '\n').split('\n');
+  const out: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      out.push('');
+      continue;
+    }
+    if (/^#{1,6}\s+/.test(trimmed)) {
+      out.push(stripInlineMarkdown(trimmed.replace(/^#{1,6}\s+/, '').trim()));
+      continue;
+    }
+    if (/^\|.+\|\s*$/.test(trimmed)) {
+      if (/^\|[\s:|-]+\|\s*$/.test(trimmed)) continue;
+      const cells = trimmed.split('|').map((cell) => stripInlineMarkdown(cell.trim()));
+      if (cells.length >= 2 && cells[0] === '' && cells[cells.length - 1] === '') {
+        cells.shift();
+        cells.pop();
+      }
+      out.push(cells.join(' · '));
+      continue;
+    }
+    out.push(stripInlineMarkdown(trimmed));
+  }
+
+  return out
+    .join('\n')
     .replace(/^\n+/, '')
     .replace(/\n\s*\n/g, '\n')
     .trimEnd();

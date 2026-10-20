@@ -23,8 +23,8 @@ import {
 } from '@/lib/chat/vector-search';
 import { rerankCandidates, rerankerEnabled, shouldRejectRetrieval } from '@/lib/chat/rerank';
 
-const MAX_CHUNK_CHARS = 1400;
 const MAX_CHUNKS = 8;
+const MAX_SUMMARY_CLIP_CHARS = 1800;
 const ISSUE_COLUMNS = 'id, title, summary, henvisning, ferdigbehandlet';
 // `metadata` carries document_title/document_kind set during ingest — cheap
 // provenance so citations can name their source document.
@@ -81,7 +81,7 @@ function publicSupabaseConfigured(): boolean {
   );
 }
 
-function clip(value: string, max = MAX_CHUNK_CHARS): string {
+function clipSummary(value: string, max = MAX_SUMMARY_CLIP_CHARS): string {
   return value.replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
@@ -471,6 +471,7 @@ async function searchChunksLexical(
     .from('document_chunks')
     .select(CHUNK_COLUMNS)
     .eq('issue_id', issueId)
+    .is('hearing_document_id', null)
     .order('chunk_index', { ascending: true })
     .limit(40);
 
@@ -480,7 +481,7 @@ async function searchChunksLexical(
     const rowIssueId = String(row.issue_id ?? '').trim();
     // Defense in depth: never surface a chunk that is not for this sak.
     if (rowIssueId && rowIssueId !== issueId) return [];
-    const content = clip(String(row.content ?? ''));
+    const content = normalizeChunkText(String(row.content ?? ''));
     if (!content) return [];
     const rank = rankChunkForSak(content, issue, query);
     if (rank <= 0) return [];
@@ -501,10 +502,17 @@ async function searchChunksLexical(
     .slice(0, maxChunks);
 }
 
+type SearchChunksOptions = {
+  /** When false, return merged full text (caller applies excerpt budget). */
+  applyExcerpts?: boolean;
+  /** Reuse one central embedding across topic saker (avoids duplicate Ollama calls). */
+  centralQueryEmbedding?: number[] | null;
+};
+
 /**
- * Chunks for one sak. Starts from lexical ranking, then, when a query vectorizer is
- * available, prepends semantically-ranked chunks and de-duplicates. A failing or
- * unavailable vector search is swallowed so lexical results always survive.
+ * Chunks for one sak: hybrid RPC when available, else legacy lexical scan; optional
+ * BYOK Ollama semantic hits prepended via `mergeChunks`. Excerpt budgeting runs
+ * last unless `applyExcerpts` is false (topic context shares one budget across saker).
  */
 async function searchChunks(
   supabase: ChatRagClient,
@@ -548,7 +556,7 @@ async function searchChunks(
     [...new Set(semantic.map((chunk) => chunk.documentId))],
   );
 
-  return mergeChunks(
+  const merged = mergeChunks(
     semantic.map((chunk) => ({
       documentId: chunk.documentId,
       chunkIndex: chunk.chunkIndex,
@@ -560,6 +568,8 @@ async function searchChunks(
     primary,
     maxChunks,
   );
+
+  return finish(merged);
 }
 
 /** Fetch document title/kind for a set of document ids in one query. */
@@ -575,6 +585,7 @@ async function loadChunkProvenance(
     .from('document_chunks')
     .select('document_id, metadata')
     .in('document_id', ids)
+    .is('hearing_document_id', null)
     .limit(ids.length * 12);
 
   if (error || !Array.isArray(data)) return map;
@@ -650,7 +661,7 @@ export async function retrieveSakContext(args: {
 
   return {
     issue,
-    summary: clip(summaryText || issue.summary || '', 1800) || null,
+    summary: clipSummary(summaryText || issue.summary || '') || null,
     chunks,
     note:
       chunks.length === 0
@@ -703,6 +714,8 @@ export async function retrieveTopicContext(args: {
     };
   }
 
+  const centralQueryEmbedding = await fetchCentralQueryEmbedding(query);
+
   const saker = await Promise.all(
     hits.map(async (issue) => {
       const [chunks, summaryText] = await Promise.all([
@@ -714,16 +727,25 @@ export async function retrieveTopicContext(args: {
       ]);
       return {
         issue,
-        summary: clip(summaryText || issue.summary || '', MAX_TOPIC_SUMMARY_CHARS) || null,
+        summary: clipSummary(summaryText || issue.summary || '', MAX_TOPIC_SUMMARY_CHARS) || null,
         chunks,
       };
     }),
   );
 
-  const hasChunks = saker.some((sak) => sak.chunks.length > 0);
+  const excerptedBySak = applyTopicWideChunkExcerpts(
+    saker.map((sak) => sak.chunks),
+    query,
+  );
+  const sakerWithBudget = saker.map((sak, index) => ({
+    ...sak,
+    chunks: excerptedBySak[index] ?? [],
+  }));
+
+  const hasChunks = sakerWithBudget.some((sak) => sak.chunks.length > 0);
   return {
     query,
-    saker,
+    saker: sakerWithBudget,
     note: hasChunks
       ? null
       : 'Ingen dokumentutdrag er indeksert for disse sakene ennå. Bruk tittel/sammendrag og et kildesøk ved behov.',
