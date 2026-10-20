@@ -35,8 +35,8 @@ Blog content is edited in **Payload CMS 3** (`cms/`), deployed as a separate Coo
 | `BLOG_PUBLISHED_WEBHOOK_URL` | n8n inbound webhook on publish |
 | `BLOG_WEBHOOK_SIGNING_SECRET` | HMAC secret for publish webhook |
 | `BLOG_OPS_SIGNING_SECRET` | Leave **empty** in Coolify — falls back to `REVALIDATE_SECRET` for `/api/blog-ops/social-posted` |
-| `FM_WEB_URL` | Public `fm-web` origin for CMS hooks (defaults to `WEB_PUBLIC_URL`) |
-| `CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET` | HMAC for CMS → `fm-web` `/api/ops/content-feedback` (falls back to `REVALIDATE_SECRET`) |
+| `FM_WEB_URL` | Public `fm-web` origin for content-feedback webhook (required; no-op + warning if unset) |
+| `CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET` | Dedicated HMAC for CMS → `/api/ops/content-feedback` (required; signs `ts.POST./api/ops/content-feedback.body`) |
 | `MEDIA_LOCAL_DIR` | Optional; persistent volume path for uploads |
 | `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_ENDPOINT`, `S3_REGION`, `S3_FORCE_PATH_STYLE` | Optional Supabase Storage / S3-compatible media |
 | `SEED_ON_BOOT` | Set `true` on first deploy to create admin + default taxonomy when no admin exists |
@@ -56,7 +56,7 @@ Create CMS users:
 | `CMS_API_KEY` | Payload user API key (`reader` role) |
 | `CMS_AGENT_API_KEY` | Optional; n8n draft writes |
 | `REVALIDATE_SECRET` | Validates CMS → `/api/revalidate/blog` |
-| `CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET` | Optional dedicated HMAC for CMS → `/api/ops/content-feedback` (else `REVALIDATE_SECRET`) |
+| `CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET` | Required HMAC for CMS → `/api/ops/content-feedback` (same value on fm-cms) |
 | `CRON_SECRET` | Existing; protects `/api/ops/blog/*` |
 
 `BLOG_PUBLISHED_WEBHOOK_URL` is configured on **fm-cms**, not `fm-web`.

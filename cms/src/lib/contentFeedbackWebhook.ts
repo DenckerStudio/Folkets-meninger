@@ -1,9 +1,10 @@
-import { buildSignedHeaders } from '@/lib/hmac';
+import { buildContentFeedbackSignedHeaders, CONTENT_FEEDBACK_OPS_PATH } from '@/lib/contentFeedbackHmac';
 
 export type ContentFeedbackWebhookEvent = 'published' | 'deleted' | 'archived';
 
 export type ContentFeedbackWebhookBody = {
   event: ContentFeedbackWebhookEvent;
+  event_id: string;
   post_id: string;
   slug: string;
   title: string;
@@ -16,35 +17,38 @@ export type ContentFeedbackWebhookBody = {
 const WEBHOOK_TIMEOUT_MS = 3_000;
 
 export function contentFeedbackSigningSecret(): string | null {
-  return (
-    process.env.CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET?.trim() ||
-    process.env.REVALIDATE_SECRET?.trim() ||
-    null
-  );
+  return process.env.CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET?.trim() || null;
 }
 
 export function contentFeedbackWebhookUrl(): string | null {
-  const webBase = (
-    process.env.FM_WEB_URL?.trim() ||
-    process.env.WEB_PUBLIC_URL?.trim() ||
-    'https://www.folkets-meninger.no'
-  ).replace(/\/+$/, '');
+  const webBase = process.env.FM_WEB_URL?.trim()?.replace(/\/+$/, '');
+  if (!webBase) return null;
   const explicit = process.env.CMS_CONTENT_FEEDBACK_WEBHOOK_URL?.trim();
   if (explicit) return explicit;
-  return `${webBase}/api/ops/content-feedback`;
+  return `${webBase}${CONTENT_FEEDBACK_OPS_PATH}`;
 }
 
 /** Fire-and-forget; never throws. Logs only HTTP status on failure. */
 export function sendContentFeedbackWebhook(
   body: ContentFeedbackWebhookBody,
-  log: { error: (obj: Record<string, unknown>) => void },
+  log: {
+    error: (obj: Record<string, unknown>) => void;
+    warn?: (obj: Record<string, unknown>) => void;
+  },
 ): void {
   const secret = contentFeedbackSigningSecret();
   const url = contentFeedbackWebhookUrl();
-  if (!secret || !url) return;
+  if (!secret) {
+    log.warn?.({ msg: 'content-feedback webhook skipped: signing secret not configured' });
+    return;
+  }
+  if (!url) {
+    log.warn?.({ msg: 'content-feedback webhook skipped: FM_WEB_URL not configured' });
+    return;
+  }
 
   const payload = JSON.stringify(body);
-  const headers = buildSignedHeaders(payload, secret);
+  const headers = buildContentFeedbackSignedHeaders(payload, secret);
 
   void fetch(url, {
     method: 'POST',

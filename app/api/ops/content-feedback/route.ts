@@ -6,12 +6,8 @@ import { parseBlogContentFeedbackWebhook } from '@/lib/content-feedback/parse-op
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
-  const secret = contentFeedbackWebhookSecret();
-  if (!secret) {
-    return NextResponse.json(
-      { error: 'CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET er ikke konfigurert' },
-      { status: 503 },
-    );
+  if (!contentFeedbackWebhookSecret()) {
+    return NextResponse.json({ error: 'Tjenesten er ikke tilgjengelig' }, { status: 503 });
   }
 
   const rawBody = await request.text();
@@ -33,7 +29,12 @@ export async function POST(request: Request) {
 
   const result = await recordBlogAutoContentFeedback(parsed.payload);
   if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 500 });
+    console.error('[content-feedback] log_blog_content_feedback failed', {
+      post_id: parsed.payload.post_id,
+      event: parsed.payload.event,
+      message: result.error,
+    });
+    return NextResponse.json({ error: 'Kunne ikke lagre tilbakemelding' }, { status: 500 });
   }
 
   return NextResponse.json({

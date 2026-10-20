@@ -132,8 +132,8 @@ All on **Coolify, server `klever`**:
   signed with HMAC (`REVALIDATE_SECRET`). `fm-cms` calls `/api/revalidate/blog` on publish.
   **Auto content-feedback:** n8n-utkast (`origin: n8n`) trigger en fire-and-forget-hook i
   fm-cms (`afterChange` / `afterDelete`) mot `POST /api/ops/content-feedback` på fm-web
-  (HMAC `x-fm-timestamp` + `x-fm-signature`; secret `CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET`,
-  ellers `REVALIDATE_SECRET`). CMS trenger `FM_WEB_URL` (eller `WEB_PUBLIC_URL`).
+  (HMAC `x-fm-timestamp` + `x-fm-signature` over `ts.POST./api/ops/content-feedback.body`;
+  secret **kun** `CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET`). CMS trenger `FM_WEB_URL` (ingen fallback).
   fm-cms pinnes manuelt i Coolify — ekspert må oppdatere pin og env ved deploy.
   Blogg redigeres i Payload (`CMS_URL`/admin), ikke i fm-web admin-hub.
 - **`20261018120000_blog_posts.sql` (Supabase `public.blog_posts`) is superseded and must

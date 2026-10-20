@@ -2,6 +2,9 @@ import type { BlogContentFeedbackEvent, BlogContentFeedbackPayload } from '@/lib
 
 const EVENTS: BlogContentFeedbackEvent[] = ['published', 'deleted', 'archived'];
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export function parseBlogContentFeedbackWebhook(
   body: unknown,
 ): { ok: true; payload: BlogContentFeedbackPayload } | { ok: false; error: string } {
@@ -20,6 +23,11 @@ export function parseBlogContentFeedbackWebhook(
     return { ok: false, error: 'post_id er påkrevd' };
   }
 
+  const eventId = typeof record.event_id === 'string' ? record.event_id.trim() : '';
+  if (!eventId || !UUID_RE.test(eventId)) {
+    return { ok: false, error: 'event_id er påkrevd' };
+  }
+
   const categories = Array.isArray(record.categories)
     ? record.categories
         .filter((item): item is string => typeof item === 'string')
@@ -36,6 +44,7 @@ export function parseBlogContentFeedbackWebhook(
     ok: true,
     payload: {
       event: event as BlogContentFeedbackEvent,
+      event_id: eventId,
       post_id: postId,
       slug: typeof record.slug === 'string' ? record.slug.trim() : '',
       title: typeof record.title === 'string' ? record.title.trim() : '',

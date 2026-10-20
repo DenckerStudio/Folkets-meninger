@@ -8,18 +8,18 @@ SET LOCAL lock_timeout = '5s';
 -- Prod (supabase-folkets): pgvector 0.8.0 i public — unqualified vector(1024) / vector_cosine_ops.
 CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 
-DO $$
+DO $vector_schema$
 BEGIN
   IF EXISTS (
     SELECT 1
     FROM pg_extension e
     JOIN pg_namespace n ON n.oid = e.extnamespace
-    WHERE e.extname = 'vector'
-      AND n.nspname IS DISTINCT FROM 'public'
+    WHERE e.extname = 'vector' AND n.nspname IS DISTINCT FROM 'public'
   ) THEN
     ALTER EXTENSION vector SET SCHEMA public;
   END IF;
-END $$;
+END;
+$vector_schema$;
 
 -- ---------------------------------------------------------------------------
 -- Tabeller

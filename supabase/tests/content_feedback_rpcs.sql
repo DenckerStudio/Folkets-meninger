@@ -9,13 +9,15 @@ DECLARE
   v_historic int;
   v_sources int;
   r jsonb;
-  v_vec text := '[' || repeat('0,', 1023) || '0]';
+  -- Nullvektor gir NaN for cosinus-avstand; bruk enhetlig ikke-nullvektor i tester
+  v_vec text := '[1' || repeat(',0', 1023) || ']';
   v_vec_bad text := '[' || repeat('0,', 767) || '0]';
   v_modified_before timestamptz;
   v_modified_after timestamptz;
   v_emb_model text;
   v_title text;
   v_excerpt text;
+  v_vec_dist double precision;
 BEGIN
   IF to_regclass('public.content_feedback') IS NULL THEN
     RAISE NOTICE 'content_feedback_rpcs.sql: hopper over (tabell finnes ikke)';
@@ -32,8 +34,10 @@ BEGIN
   END IF;
 
   -- Cosine-operator (<=>) må løses uten extensions.-prefiks (samme som i n8n SECURITY DEFINER-RPC-er)
-  IF (SELECT (v_vec::vector(1024) <=> v_vec::vector(1024))) IS DISTINCT FROM 0::double precision THEN
-    RAISE EXCEPTION 'vector cosine operator (<=>) løses ikke i public search_path';
+  PERFORM set_config('search_path', 'public', true);
+  v_vec_dist := (v_vec::vector(1024) <=> v_vec::vector(1024));
+  IF v_vec_dist IS NULL OR abs(v_vec_dist) > 1e-9 THEN
+    RAISE EXCEPTION 'vector cosine operator (<=>) løses ikke i public search_path (dist=%)', v_vec_dist;
   END IF;
 
   -- Privilegier: anon/authenticated uten skriv/execute, service_role inn
@@ -518,25 +522,24 @@ BEGIN
     RAISE EXCEPTION 'admin blog_post-rad skulle være uendret';
   END IF;
 
-  BEGIN
-    r := public.n8n_upsert_source_items(
-      jsonb_build_array(
-        jsonb_build_object(
-          'domain', 'utenfilter.no',
-          'external_id', 'ci-bad-dim',
-          'url', 'https://utenfilter.no/bad',
-          'title', 'Bad dim',
-          'embedding', v_vec_bad
-        )
+  r := public.n8n_upsert_source_items(
+    jsonb_build_array(
+      jsonb_build_object(
+        'domain', 'utenfilter.no',
+        'external_id', 'ci-bad-dim',
+        'url', 'https://utenfilter.no/bad',
+        'title', 'Bad dim',
+        'embedding', v_vec_bad
       )
-    );
-    RAISE EXCEPTION 'forventet RAISE ved source_items embedding dim 768';
-  EXCEPTION
-    WHEN OTHERS THEN
-      IF SQLERRM NOT LIKE '%1024%' AND SQLERRM NOT LIKE '%bge-m3%' AND SQLERRM NOT LIKE '%dimensjon%' THEN
-        RAISE EXCEPTION 'feil dimensjon på source_items ga uventet feil: %', SQLERRM;
-      END IF;
-  END;
+    )
+  );
+  IF (r ->> 'upserted')::int <> 0 OR jsonb_array_length(coalesce(r -> 'skipped', '[]'::jsonb)) <> 1 THEN
+    RAISE EXCEPTION '768-dim embedding skulle telles som skipped, fikk %', r;
+  END IF;
+  IF coalesce(r -> 'skipped' -> 0 ->> 'reason', '') NOT LIKE '%1024%'
+    AND coalesce(r -> 'skipped' -> 0 ->> 'reason', '') NOT LIKE '%dimensjon%' THEN
+    RAISE EXCEPTION 'skip-grunn for feil dimensjon uventet: %', r;
+  END IF;
 
   PERFORM public.n8n_set_feedback_embedding(v_feedback_id, v_vec::vector(1024));
 

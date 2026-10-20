@@ -1,6 +1,13 @@
-import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, PayloadRequest } from 'payload';
+import { randomUUID } from 'node:crypto';
+import type {
+  CollectionAfterChangeHook,
+  CollectionAfterDeleteHook,
+  CollectionAfterOperationHook,
+  PayloadRequest,
+} from 'payload';
 import {
   sendContentFeedbackWebhook,
+  type ContentFeedbackWebhookBody,
   type ContentFeedbackWebhookEvent,
 } from '@/lib/contentFeedbackWebhook';
 
@@ -14,20 +21,44 @@ type PostDoc = {
   category?: { name?: string; slug?: string; title?: string } | string | number;
 };
 
+type PendingContentFeedback = ContentFeedbackWebhookBody;
+
+const PENDING_KEY = 'contentFeedbackPending';
+
 function isAgentOrigin(doc: PostDoc | null | undefined): boolean {
   return doc?.origin === 'n8n';
 }
 
-async function categoryLabels(
-  doc: PostDoc,
+export function isDraftOrAutosaveSave(req: PayloadRequest): boolean {
+  const q = req.query as Record<string, unknown>;
+  if (q.draft === 'true' || q.draft === true) return true;
+  if (q.autosave === 'true' || q.autosave === true) return true;
+  return false;
+}
+
+async function mainVersionStatus(
   req: PayloadRequest,
-): Promise<string[]> {
+  id: string | number,
+): Promise<string | undefined> {
+  try {
+    const main = await req.payload.findByID({
+      collection: 'posts',
+      id,
+      draft: false,
+      depth: 0,
+      req,
+    });
+    return (main as PostDoc)._status;
+  } catch {
+    return undefined;
+  }
+}
+
+async function categoryLabels(doc: PostDoc, req: PayloadRequest): Promise<string[]> {
   const category = doc.category;
   if (category && typeof category === 'object') {
     const label =
-      category.name?.trim() ||
-      category.title?.trim() ||
-      category.slug?.trim();
+      category.name?.trim() || category.title?.trim() || category.slug?.trim();
     if (label) return [label];
   }
   if (typeof category === 'string' || typeof category === 'number') {
@@ -50,13 +81,26 @@ async function categoryLabels(
   return [];
 }
 
+function queuePending(req: PayloadRequest, body: PendingContentFeedback): void {
+  req.context[PENDING_KEY] = body;
+}
+
+function takePending(req: PayloadRequest): PendingContentFeedback | null {
+  const pending = req.context[PENDING_KEY] as PendingContentFeedback | undefined;
+  if (pending) {
+    delete req.context[PENDING_KEY];
+  }
+  return pending ?? null;
+}
+
 function buildBody(
   event: ContentFeedbackWebhookEvent,
   doc: PostDoc,
   categories: string[],
-): Parameters<typeof sendContentFeedbackWebhook>[0] {
+): PendingContentFeedback {
   return {
     event,
+    event_id: randomUUID(),
     post_id: String(doc.id),
     slug: doc.slug?.trim() ?? '',
     title: doc.title?.trim() ?? '',
@@ -67,13 +111,10 @@ function buildBody(
   };
 }
 
-function notify(
-  event: ContentFeedbackWebhookEvent,
-  doc: PostDoc,
-  categories: string[],
-  req: PayloadRequest,
-): void {
-  sendContentFeedbackWebhook(buildBody(event, doc, categories), req.payload.logger);
+function scheduleSendAfterCommit(req: PayloadRequest, body: PendingContentFeedback): void {
+  setImmediate(() => {
+    sendContentFeedbackWebhook(body, req.payload.logger);
+  });
 }
 
 export const contentFeedbackAfterChange: CollectionAfterChangeHook = async ({
@@ -81,39 +122,75 @@ export const contentFeedbackAfterChange: CollectionAfterChangeHook = async ({
   previousDoc,
   req,
 }) => {
-  const post = doc as PostDoc;
-  const prev = previousDoc as PostDoc | undefined;
-  if (!isAgentOrigin(post) && !isAgentOrigin(prev)) {
-    return doc;
-  }
+  try {
+    if (isDraftOrAutosaveSave(req)) {
+      return doc;
+    }
 
-  const originDoc = isAgentOrigin(post) ? post : prev;
-  if (!originDoc) return doc;
+    const post = doc as PostDoc;
+    const prev = previousDoc as PostDoc | undefined;
+    if (!isAgentOrigin(post) && !isAgentOrigin(prev)) {
+      return doc;
+    }
 
-  const becamePublished =
-    post._status === 'published' && prev?._status !== 'published';
-  const becameArchived =
-    prev?._status === 'published' && post._status === 'draft';
+    const originDoc = isAgentOrigin(post) ? post : prev;
+    if (!originDoc) return doc;
 
-  if (!becamePublished && !becameArchived) {
-    return doc;
-  }
+    const postId = post.id ?? prev?.id;
+    if (postId == null) return doc;
 
-  const categories = await categoryLabels(post, req);
-  if (becamePublished) {
-    notify('published', { ...originDoc, ...post }, categories, req);
-  } else if (becameArchived) {
-    notify('archived', { ...originDoc, ...post }, categories, req);
+    const prevMainStatus = prev?._status ?? 'draft';
+    const currentMainStatus = await mainVersionStatus(req, postId);
+
+    const becamePublished =
+      currentMainStatus === 'published' && prevMainStatus !== 'published';
+    const becameArchived =
+      prevMainStatus === 'published' && currentMainStatus === 'draft';
+
+    if (!becamePublished && !becameArchived) {
+      return doc;
+    }
+
+    const categories = await categoryLabels(post, req);
+    const merged = { ...originDoc, ...post, id: postId };
+
+    if (becamePublished) {
+      queuePending(req, buildBody('published', merged, categories));
+    } else if (becameArchived) {
+      queuePending(req, buildBody('archived', merged, categories));
+    }
+  } catch (error) {
+    req.payload.logger.error({ msg: 'content-feedback afterChange failed', error });
   }
 
   return doc;
 };
 
-export const contentFeedbackAfterDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
-  const post = doc as PostDoc;
-  if (!isAgentOrigin(post)) return doc;
+export const contentFeedbackAfterOperation: CollectionAfterOperationHook<'posts'> = ({
+  req,
+  result,
+}) => {
+  try {
+    const pending = takePending(req);
+    if (pending) {
+      scheduleSendAfterCommit(req, pending);
+    }
+  } catch (error) {
+    req.payload.logger.error({ msg: 'content-feedback afterOperation failed', error });
+  }
+  return result;
+};
 
-  const categories = await categoryLabels(post, req);
-  notify('deleted', post, categories, req);
+export const contentFeedbackAfterDelete: CollectionAfterDeleteHook = async ({ doc, req }) => {
+  try {
+    const post = doc as PostDoc;
+    if (!isAgentOrigin(post)) return doc;
+
+    const categories = await categoryLabels(post, req);
+    const body = buildBody('deleted', post, categories);
+    scheduleSendAfterCommit(req, body);
+  } catch (error) {
+    req.payload.logger.error({ msg: 'content-feedback afterDelete failed', error });
+  }
   return doc;
 };

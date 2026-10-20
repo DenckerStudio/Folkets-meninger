@@ -5,6 +5,7 @@ export type BlogContentFeedbackEvent = 'published' | 'deleted' | 'archived';
 
 export type BlogContentFeedbackPayload = {
   event: BlogContentFeedbackEvent;
+  event_id: string;
   post_id: string;
   slug: string;
   title: string;
@@ -31,10 +32,6 @@ export type RecordBlogAutoFeedbackResult =
     }
   | { ok: false; error: string };
 
-function eventIdForPayload(payload: BlogContentFeedbackPayload): string {
-  return `${payload.post_id.trim()}:${payload.event}`;
-}
-
 function snapshotForRpc(payload: BlogContentFeedbackPayload): Record<string, unknown> {
   return {
     slug: payload.slug,
@@ -45,7 +42,7 @@ function snapshotForRpc(payload: BlogContentFeedbackPayload): Record<string, unk
   };
 }
 
-function mapRpcStatus(status: string): BlogAutoFeedbackStatus {
+function mapRpcStatus(status: string): BlogAutoFeedbackStatus | null {
   switch (status) {
     case 'inserted':
     case 'updated':
@@ -54,7 +51,7 @@ function mapRpcStatus(status: string): BlogAutoFeedbackStatus {
     case 'skipped_admin':
       return status;
     default:
-      return 'inserted';
+      return null;
   }
 }
 
@@ -63,8 +60,12 @@ export async function recordBlogAutoContentFeedbackWithClient(
   payload: BlogContentFeedbackPayload,
 ): Promise<RecordBlogAutoFeedbackResult> {
   const postId = payload.post_id.trim();
+  const eventId = payload.event_id.trim();
   if (!postId) {
     return { ok: false, error: 'post_id er påkrevd' };
+  }
+  if (!eventId) {
+    return { ok: false, error: 'event_id er påkrevd' };
   }
 
   const occurredAt = payload.occurred_at.trim() || new Date().toISOString();
@@ -72,7 +73,7 @@ export async function recordBlogAutoContentFeedbackWithClient(
   const { data, error } = await supabase.rpc('log_blog_content_feedback', {
     p_post_id: postId,
     p_event: payload.event,
-    p_event_id: eventIdForPayload(payload),
+    p_event_id: eventId,
     p_occurred_at: occurredAt,
     p_snapshot: snapshotForRpc(payload),
   });
@@ -84,8 +85,8 @@ export async function recordBlogAutoContentFeedbackWithClient(
   const row = data as { status?: string; id?: string } | null;
   const status = mapRpcStatus(String(row?.status ?? ''));
   const id = String(row?.id ?? '');
-  if (!id) {
-    return { ok: false, error: 'log_blog_content_feedback returnerte ikke id' };
+  if (!status || !id) {
+    return { ok: false, error: 'Ugyldig svar fra log_blog_content_feedback' };
   }
 
   const duplicate = status === 'duplicate';

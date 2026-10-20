@@ -47,6 +47,22 @@ jobs:
           DEFAULTS_URL="postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres" \
           ./scripts/run-prod-like-db-security.sh
 
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run test:unit
+      - name: fm-cms unit tests
+        working-directory: cms
+        run: |
+          npm ci --ignore-scripts
+          npm run test:unit
+
   migration-sql-lint:
     runs-on: ubuntu-latest
     steps:

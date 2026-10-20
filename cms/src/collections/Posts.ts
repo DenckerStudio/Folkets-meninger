@@ -4,6 +4,7 @@ import { postPublishHooks } from '@/hooks/postPublish';
 import {
   contentFeedbackAfterChange,
   contentFeedbackAfterDelete,
+  contentFeedbackAfterOperation,
 } from '@/hooks/contentFeedbackWebhook';
 import { validatePostText } from '@/hooks/validatePostText';
 import {
@@ -51,6 +52,7 @@ export const Posts: CollectionConfig = {
     beforeChange: [agentDraftGuard, enforceDraftDataBeforeChange, setPublishedAtOnPublish],
     afterChange: [postPublishHooks, contentFeedbackAfterChange],
     afterDelete: [contentFeedbackAfterDelete],
+    afterOperation: [contentFeedbackAfterOperation],
   },
   fields: [
     {

@@ -14,10 +14,12 @@ globalThis.fetch = (async () => {
   throw new Error('network down');
 }) as typeof fetch;
 
+const warnings: Record<string, unknown>[] = [];
 const errors: Record<string, unknown>[] = [];
 sendContentFeedbackWebhook(
   {
     event: 'published',
+    event_id: 'aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee',
     post_id: '1',
     slug: 's',
     title: 't',
@@ -30,6 +32,9 @@ sendContentFeedbackWebhook(
     error: (obj) => {
       errors.push(obj);
     },
+    warn: (obj) => {
+      warnings.push(obj);
+    },
   },
 );
 
@@ -39,6 +44,26 @@ async function run() {
   assert.equal(fetchCalls, 1);
   assert.equal(errors.length, 1);
   assert.equal(errors[0]?.msg, 'content-feedback webhook failed');
+
+  delete process.env.CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET;
+  sendContentFeedbackWebhook(
+    {
+      event: 'published',
+      event_id: 'aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee',
+      post_id: '2',
+      slug: 's',
+      title: 't',
+      excerpt: 'e',
+      categories: [],
+      origin: 'n8n',
+      occurred_at: new Date().toISOString(),
+    },
+    {
+      error: (obj) => errors.push(obj),
+      warn: (obj) => warnings.push(obj),
+    },
+  );
+  assert.equal(warnings.some((w) => w.msg?.toString().includes('signing secret')), true);
 
   globalThis.fetch = originalFetch;
   if (originalSecret === undefined) {
