@@ -122,7 +122,7 @@ n8n kan matche på **eksakt** `RAISE EXCEPTION`-melding (PostgREST `message`) og
 | `research_brief_failed` | `P0001` | `n8n_create_research_reel_draft` på brief med `status=failed` |
 | `research_request_conflict` | `P0001` | `request_id` finnes med annen `cluster_id` eller `kind` (RPC scope eller `research_briefs_enqueue`) |
 | `research_brief_active` | `P0001` | Aktiv `queued`/`running` finnes for samme `(cluster_id, kind)` (`research_briefs_enqueue`; `DETAIL` = aktiv `request_id`) |
-| `research_invalid_input` | `22023` | Ugyldig input; `DETAIL` = feltnavn (f.eks. `generation_metadata`, `source_urls`, `summary`) |
+| `research_invalid_input` | `22023` | Ugyldig input; `DETAIL` **eksakt** `felt p_<navn>` (n8n parser feltnavnet derfra), f.eks. `felt p_generation_metadata`, `felt p_source_urls`, `felt p_summary` |
 
 **fm-web admin** `POST /api/admin/research/{clusterId}/{action}` ved 409:
 

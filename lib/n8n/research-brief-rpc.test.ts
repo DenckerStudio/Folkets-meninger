@@ -47,6 +47,7 @@ assert.match(migration, /research_brief_failed/i);
 assert.match(migration, /research_request_conflict/i);
 assert.match(migration, /research_brief_active/i);
 assert.match(migration, /research_invalid_input/i);
+assert.match(migration, /DETAIL = 'felt ' \|\| v_param/i);
 assert.match(migration, /research_briefs_enqueue/i);
 assert.match(migration, /research_briefs_normalize_generation_metadata/i);
 assert.match(migration, /research_briefs_normalize_error/i);
@@ -85,7 +86,7 @@ assert.match(doc, /"label": "NRK"/);
 assert.match(doc, /webhook_http_/);
 assert.match(doc, /minst hvert 20\. minutt/i);
 assert.match(doc, /research_brief_failed/);
-assert.match(doc, /research_invalid_input/);
+assert.match(doc, /felt p_generation_metadata/);
 
 const webhook = readFileSync(
   join(process.cwd(), 'lib/admin/research/webhook.ts'),

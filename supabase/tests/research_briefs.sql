@@ -10,6 +10,7 @@ DECLARE
   v_expired int;
   v_heartbeat_request_id uuid := 'f6666666-6666-4666-8666-666666666606';
   v_updated_at timestamptz;
+  v_pg_detail text;
   v_fn regprocedure;
   v_fns text[] := ARRAY[
     'public.n8n_upsert_research_brief(uuid,text,text,jsonb,jsonb,jsonb,text,uuid,text)',
@@ -232,6 +233,20 @@ BEGIN
   END;
 
   BEGIN
+    PERFORM public.research_briefs_raise_invalid_input('generation_metadata');
+    RAISE EXCEPTION 'forventet research_invalid_input';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%research_invalid_input%' OR SQLSTATE <> '22023' THEN
+        RAISE;
+      END IF;
+      GET STACKED DIAGNOSTICS v_pg_detail = PG_EXCEPTION_DETAIL;
+      IF v_pg_detail IS DISTINCT FROM 'felt p_generation_metadata' THEN
+        RAISE EXCEPTION 'forventet DETAIL felt p_generation_metadata, fikk %', v_pg_detail;
+      END IF;
+  END;
+
+  BEGIN
     PERFORM public.research_briefs_validate_reel_source_urls(
       jsonb_build_array('https://example.com/ikke-objekt')
     );
@@ -240,6 +255,10 @@ BEGIN
     WHEN OTHERS THEN
       IF SQLERRM NOT LIKE '%research_invalid_input%' THEN
         RAISE;
+      END IF;
+      GET STACKED DIAGNOSTICS v_pg_detail = PG_EXCEPTION_DETAIL;
+      IF v_pg_detail IS DISTINCT FROM 'felt p_source_urls' THEN
+        RAISE EXCEPTION 'forventet DETAIL felt p_source_urls, fikk %', v_pg_detail;
       END IF;
   END;
 

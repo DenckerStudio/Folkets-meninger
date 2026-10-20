@@ -182,16 +182,24 @@ $$;
 REVOKE ALL ON FUNCTION public.research_briefs_is_backwards_status(text, text)
   FROM PUBLIC, anon, authenticated;
 
-CREATE OR REPLACE FUNCTION public.research_briefs_raise_invalid_input(p_field text)
+CREATE OR REPLACE FUNCTION public.research_briefs_raise_invalid_input(p_param text)
 RETURNS void
 LANGUAGE plpgsql
 IMMUTABLE
 SET search_path = public, pg_temp
 AS $$
+DECLARE
+  v_param text;
 BEGIN
+  v_param := btrim(p_param);
+  IF v_param = '' THEN
+    v_param := 'p_unknown';
+  ELSIF v_param NOT LIKE 'p\_%' THEN
+    v_param := 'p_' || v_param;
+  END IF;
   RAISE EXCEPTION 'research_invalid_input'
     USING ERRCODE = '22023',
-    DETAIL = p_field;
+    DETAIL = 'felt ' || v_param;
 END;
 $$;
 
