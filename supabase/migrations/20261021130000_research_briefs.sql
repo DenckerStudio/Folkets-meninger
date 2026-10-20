@@ -271,6 +271,19 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'error', 'not_found', 'request_id', p_request_id);
   END IF;
 
+  v_next_status := v_row.status;
+  IF p_status IS NOT NULL THEN
+    p_status := btrim(p_status);
+    IF p_status NOT IN ('queued', 'running', 'done', 'failed') THEN
+      RAISE EXCEPTION 'research_brief invalid_status: ugyldig status %', p_status
+        USING ERRCODE = '22023';
+    END IF;
+    IF public.research_briefs_is_backwards_status(v_row.status, p_status) THEN
+      RETURN public.research_brief_row_to_jsonb(v_row);
+    END IF;
+    v_next_status := p_status;
+  END IF;
+
   IF p_perspectives IS NOT NULL
     AND NOT public.research_briefs_validate_perspectives(p_perspectives) THEN
     RAISE EXCEPTION 'research_brief invalid_perspectives: må være array med påkrevde felt'
@@ -286,19 +299,6 @@ BEGIN
   IF p_details IS NOT NULL AND jsonb_typeof(p_details) <> 'object' THEN
     RAISE EXCEPTION 'research_brief invalid_details: må være JSON-objekt'
       USING ERRCODE = '22023';
-  END IF;
-
-  v_next_status := v_row.status;
-  IF p_status IS NOT NULL THEN
-    p_status := btrim(p_status);
-    IF p_status NOT IN ('queued', 'running', 'done', 'failed') THEN
-      RAISE EXCEPTION 'research_brief invalid_status: ugyldig status %', p_status
-        USING ERRCODE = '22023';
-    END IF;
-    IF public.research_briefs_is_backwards_status(v_row.status, p_status) THEN
-      RETURN public.research_brief_row_to_jsonb(v_row);
-    END IF;
-    v_next_status := p_status;
   END IF;
 
   UPDATE public.research_briefs

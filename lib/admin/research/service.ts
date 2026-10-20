@@ -9,7 +9,6 @@ import {
   researchApiActionToKind,
   type ResearchApiAction,
 } from '@/lib/admin/research/actions';
-import { randomUUID } from 'node:crypto';
 
 function parseBriefRow(raw: Record<string, unknown>): ResearchBriefRow {
   return {
@@ -165,17 +164,21 @@ export async function getLatestResearchBriefsByClusterIds(
 async function findActiveResearchBrief(
   clusterId: string,
   kind: ResearchBriefKind,
+  excludeRequestId?: string,
 ): Promise<ResearchBriefSnapshot | null> {
   const supabase = getServiceSupabase();
-  const { data, error } = await supabase
+  let query = supabase
     .from('research_briefs')
     .select('kind, status, output_ref, request_id')
     .eq('cluster_id', clusterId)
     .eq('kind', kind)
     .in('status', ['queued', 'running'])
     .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+  if (excludeRequestId) {
+    query = query.neq('request_id', excludeRequestId);
+  }
+  const { data, error } = await query.maybeSingle();
   if (error || !data) return null;
   return {
     kind: data.kind as ResearchBriefKind,
@@ -189,8 +192,9 @@ export async function enqueueResearchJob(
   clusterId: string,
   action: ResearchApiAction,
   requestedBy: string,
+  requestId: string,
 ): Promise<
-  | { ok: true; requestId: string }
+  | { ok: true; requestId: string; status: ResearchBriefRow['status']; created: boolean }
   | {
       ok: false;
       code:
@@ -198,7 +202,8 @@ export async function enqueueResearchJob(
         | 'webhook_failed'
         | 'not_configured'
         | 'db_error'
-        | 'already_active';
+        | 'already_active'
+        | 'invalid_request_id';
       requestId?: string;
       status?: ResearchBriefRow['status'];
     }
@@ -208,7 +213,7 @@ export async function enqueueResearchJob(
 
   await expireStaleResearchBriefs();
 
-  const active = await findActiveResearchBrief(clusterId, kind);
+  const active = await findActiveResearchBrief(clusterId, kind, requestId);
   if (active) {
     return {
       ok: false,
@@ -218,23 +223,61 @@ export async function enqueueResearchJob(
     };
   }
 
-  const requestId = randomUUID();
-
   const webhookBody = await buildResearchWebhookBody(clusterId, requestId, kind, requestedBy);
   if (!webhookBody) {
     return { ok: false, code: 'not_found' };
   }
 
-  const { error: insertError } = await supabase.from('research_briefs').insert({
-    request_id: requestId,
-    cluster_id: clusterId,
-    kind,
-    status: 'queued',
-    requested_by: requestedBy,
-  });
+  const { data: inserted, error: insertError } = await supabase
+    .from('research_briefs')
+    .upsert(
+      {
+        request_id: requestId,
+        cluster_id: clusterId,
+        kind,
+        status: 'queued',
+        requested_by: requestedBy,
+      },
+      { onConflict: 'request_id', ignoreDuplicates: true },
+    )
+    .select('request_id, status')
+    .maybeSingle();
 
   if (insertError) {
+    if (insertError.code === '23505') {
+      const { data: existing, error: loadError } = await supabase
+        .from('research_briefs')
+        .select('request_id, status')
+        .eq('request_id', requestId)
+        .maybeSingle();
+      if (loadError || !existing) {
+        return { ok: false, code: 'db_error' };
+      }
+      return {
+        ok: true,
+        requestId: String(existing.request_id),
+        status: existing.status as ResearchBriefRow['status'],
+        created: false,
+      };
+    }
     return { ok: false, code: 'db_error' };
+  }
+
+  if (!inserted) {
+    const { data: existing, error: loadError } = await supabase
+      .from('research_briefs')
+      .select('request_id, status')
+      .eq('request_id', requestId)
+      .maybeSingle();
+    if (loadError || !existing) {
+      return { ok: false, code: 'db_error' };
+    }
+    return {
+      ok: true,
+      requestId: String(existing.request_id),
+      status: existing.status as ResearchBriefRow['status'],
+      created: false,
+    };
   }
 
   const webhook = await postResearchWebhook(action, webhookBody);
@@ -246,7 +289,12 @@ export async function enqueueResearchJob(
     return { ok: false, code: webhook.status === 503 ? 'not_configured' : 'webhook_failed' };
   }
 
-  return { ok: true, requestId };
+  return {
+    ok: true,
+    requestId,
+    status: 'queued',
+    created: true,
+  };
 }
 
 export async function markResearchBriefFailed(requestId: string, message: string): Promise<void> {

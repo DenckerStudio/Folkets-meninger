@@ -1,29 +1,69 @@
 -- Integrasjonstest for research_briefs og n8n-RPC-er (CI db-security).
 DO $$
 DECLARE
-  v_cluster_id uuid;
-  v_request_id uuid := gen_random_uuid();
-  v_reel_request_id uuid := gen_random_uuid();
+  v_cluster_id uuid := 'a1111111-1111-4111-8111-111111111101';
+  v_request_id uuid := 'b2222222-2222-4222-8222-222222222202';
+  v_reel_request_id uuid := 'c3333333-3333-4333-8333-333333333303';
   r jsonb;
   v_status text;
   v_summary text;
   v_expired int;
+  v_fn regprocedure;
+  v_fns text[] := ARRAY[
+    'public.n8n_upsert_research_brief(uuid,text,text,jsonb,jsonb,jsonb,text)',
+    'public.n8n_set_research_output(uuid,text)',
+    'public.n8n_get_research_brief(uuid)',
+    'public.n8n_create_research_reel_draft(uuid,text,text,text,jsonb,jsonb)',
+    'public.research_briefs_expire_stale(int)',
+    'public.research_briefs_validate_perspectives(jsonb)',
+    'public.research_briefs_validate_sources(jsonb)',
+    'public.research_brief_status_rank(text)',
+    'public.research_briefs_is_backwards_status(text,text)'
+  ];
+  v_name text;
 BEGIN
   IF to_regclass('public.research_briefs') IS NULL THEN
-    RAISE NOTICE 'research_briefs.sql: hopper over (tabell finnes ikke)';
-    RETURN;
+    RAISE EXCEPTION 'research_briefs.sql: forventet tabell research_briefs';
   END IF;
 
-  IF to_regprocedure('public.n8n_upsert_research_brief(uuid,text,text,jsonb,jsonb,jsonb,text)') IS NULL THEN
-    RAISE NOTICE 'research_briefs.sql: hopper over (RPC finnes ikke)';
-    RETURN;
+  IF to_regclass('public.action_clusters') IS NULL THEN
+    RAISE EXCEPTION 'research_briefs.sql: forventet tabell action_clusters';
   END IF;
 
-  SELECT id INTO v_cluster_id FROM public.action_clusters LIMIT 1;
-  IF v_cluster_id IS NULL THEN
-    RAISE NOTICE 'research_briefs.sql: hopper over (ingen klynger)';
-    RETURN;
-  END IF;
+  INSERT INTO public.action_clusters (
+    id,
+    action_key,
+    action_type,
+    action_name,
+    description_nb
+  )
+  VALUES (
+    v_cluster_id,
+    'ci-research-briefs-' || v_cluster_id::text,
+    'opprop',
+    'CI research briefs',
+    'Testklynge for research_briefs.sql'
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    action_name = EXCLUDED.action_name,
+    description_nb = EXCLUDED.description_nb;
+
+  FOREACH v_name IN ARRAY v_fns
+  LOOP
+    v_fn := to_regprocedure(v_name);
+    IF v_fn IS NULL THEN
+      RAISE EXCEPTION 'research_briefs.sql: mangler funksjon %', v_name;
+    END IF;
+    IF has_function_privilege('anon', v_fn, 'EXECUTE') THEN
+      RAISE EXCEPTION 'anon har EXECUTE på %', v_name;
+    END IF;
+    IF has_function_privilege('authenticated', v_fn, 'EXECUTE') THEN
+      RAISE EXCEPTION 'authenticated har EXECUTE på %', v_name;
+    END IF;
+    IF NOT has_function_privilege('service_role', v_fn, 'EXECUTE') THEN
+      RAISE EXCEPTION 'service_role mangler EXECUTE på %', v_name;
+    END IF;
+  END LOOP;
 
   DELETE FROM public.research_briefs WHERE request_id IN (v_request_id, v_reel_request_id);
 
@@ -76,9 +116,28 @@ BEGIN
     RAISE EXCEPTION 'forventet done: %', r;
   END IF;
 
-  r := public.n8n_upsert_research_brief(v_request_id, 'running', 'Nytt', NULL, NULL, NULL, NULL);
-  IF r ->> 'status' <> 'done' OR (r ->> 'summary') <> 'Kort sammendrag' THEN
+  r := public.n8n_upsert_research_brief(
+    v_request_id,
+    'running',
+    'Skulle ikke lagres',
+    jsonb_build_array(
+      jsonb_build_object(
+        'actor', 'X',
+        'actor_type', 'parti',
+        'stance', 'mot',
+        'summary', 'Ny'
+      )
+    ),
+    NULL,
+    NULL,
+    NULL
+  );
+  IF r ->> 'status' <> 'done' THEN
     RAISE EXCEPTION 'bakovergående status skulle være no-op: %', r;
+  END IF;
+  SELECT summary INTO v_summary FROM public.research_briefs WHERE request_id = v_request_id;
+  IF v_summary <> 'Kort sammendrag' THEN
+    RAISE EXCEPTION 'sent summary skulle ikke oppdateres ved bakovergående status';
   END IF;
 
   r := public.n8n_get_research_brief(v_request_id);
@@ -104,7 +163,8 @@ BEGIN
     RAISE EXCEPTION 'forventet error tidsavbrudd';
   END IF;
 
-  IF to_regprocedure('public.n8n_create_research_reel_draft(uuid,text,text,text,jsonb,jsonb)') IS NOT NULL THEN
+  IF to_regprocedure('public.n8n_create_research_reel_draft(uuid,text,text,text,jsonb,jsonb)') IS NOT NULL
+    AND to_regprocedure('public.create_system_poll_draft(text,text,text,jsonb,jsonb)') IS NOT NULL THEN
     INSERT INTO public.research_briefs (request_id, cluster_id, kind, status)
     VALUES (v_reel_request_id, v_cluster_id, 'reel', 'running');
 
@@ -136,5 +196,6 @@ BEGIN
   END IF;
 
   DELETE FROM public.research_briefs WHERE request_id IN (v_request_id, v_reel_request_id);
+  DELETE FROM public.action_clusters WHERE id = v_cluster_id;
   RAISE NOTICE 'research_briefs.sql: OK';
 END $$;

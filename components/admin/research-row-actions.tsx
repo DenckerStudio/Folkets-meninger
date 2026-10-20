@@ -3,18 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  BookOpen,
-  Clapperboard,
-  Loader2,
-  Microscope,
-  ThumbsDown,
-  ThumbsUp,
-} from 'lucide-react';
+import { BookOpen, Clapperboard, Loader2, Microscope } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import { SmoothDropdown } from '@/components/ui/smooth-dropdown';
 import type { ResearchApiAction } from '@/lib/admin/research/actions';
-import type { ClusterFeedbackValue } from '@/lib/admin/research/feedback-adapter';
 import {
   RESEARCH_ACTION_CONFIRM,
   RESEARCH_ACTION_LABELS,
@@ -31,9 +23,6 @@ const ACTION_ICONS: Record<ResearchApiAction, typeof Microscope> = {
   blog: BookOpen,
   reel: Clapperboard,
 };
-
-const feedbackButtonClass =
-  'inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border hover:bg-muted/50 aria-pressed:border-brand aria-pressed:bg-brand/10 aria-pressed:text-brand';
 
 const actionButtonClass =
   'inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-left text-xs font-medium hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60';
@@ -57,62 +46,6 @@ function mergeBriefFromResponse(
       request_id: requestId,
     },
   };
-}
-
-function ResearchFeedbackButtons({
-  clusterId,
-  userId,
-}: {
-  clusterId: string;
-  userId?: string;
-}) {
-  const [feedback, setFeedback] = useState<ClusterFeedbackValue | null>(null);
-
-  const onFeedback = useCallback(
-    async (value: ClusterFeedbackValue) => {
-      if (!userId) return;
-      const previous = feedback;
-      setFeedback(value);
-      try {
-        const res = await fetch('/api/admin/research/feedback', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ clusterId, value }),
-        });
-        if (!res.ok) {
-          setFeedback(previous);
-        }
-      } catch {
-        setFeedback(previous);
-      }
-    },
-    [clusterId, feedback, userId],
-  );
-
-  return (
-    <div className="flex items-center gap-1">
-      <button
-        type="button"
-        title="Lik"
-        aria-label="Lik"
-        aria-pressed={feedback === 'like'}
-        onClick={() => onFeedback('like')}
-        className={feedbackButtonClass}
-      >
-        <ThumbsUp className="h-4 w-4" aria-hidden />
-      </button>
-      <button
-        type="button"
-        title="Ikke lik"
-        aria-label="Ikke lik"
-        aria-pressed={feedback === 'dislike'}
-        onClick={() => onFeedback('dislike')}
-        className={feedbackButtonClass}
-      >
-        <ThumbsDown className="h-4 w-4" aria-hidden />
-      </button>
-    </div>
-  );
 }
 
 function ResearchActionButton({
@@ -191,6 +124,7 @@ export function ResearchRowActions({
   const [briefsByKind, setBriefsByKind] = useState<ResearchBriefsByKind>(initialBriefsByKind);
   const [pendingAction, setPendingAction] = useState<ResearchApiAction | null>(null);
   const [confirmAction, setConfirmAction] = useState<ResearchApiAction | null>(null);
+  const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -198,15 +132,21 @@ export function ResearchRowActions({
   }, [initialBriefsByKind]);
 
   const runAction = useCallback(
-    async (action: ResearchApiAction) => {
+    async (action: ResearchApiAction, requestId: string) => {
       setError('');
       setPendingAction(action);
+      setPendingRequestId(requestId);
       try {
-        const res = await fetch(`/api/admin/research/${clusterId}/${action}`, { method: 'POST' });
+        const res = await fetch(`/api/admin/research/${clusterId}/${action}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ request_id: requestId }),
+        });
         const body = (await res.json().catch(() => ({}))) as {
           error?: string;
           request_id?: string;
           status?: ResearchBriefStatus;
+          created?: boolean;
         };
         if (res.status === 401 || res.status === 403) {
           setError('Ingen tilgang');
@@ -222,14 +162,18 @@ export function ResearchRowActions({
           setError(body.error ?? 'Kunne ikke starte oppgaven');
           return;
         }
-        const requestId =
-          typeof body.request_id === 'string' ? body.request_id : crypto.randomUUID();
-        setBriefsByKind((prev) => mergeBriefFromResponse(prev, action, 'queued', requestId));
-        router.refresh();
+        const resolvedId =
+          typeof body.request_id === 'string' ? body.request_id : requestId;
+        const status = body.status ?? 'queued';
+        setBriefsByKind((prev) => mergeBriefFromResponse(prev, action, status, resolvedId));
+        if (body.created !== false) {
+          router.refresh();
+        }
       } catch {
         setError('Kunne ikke starte oppgaven');
       } finally {
         setPendingAction(null);
+        setPendingRequestId(null);
         setConfirmAction(null);
       }
     },
@@ -240,6 +184,7 @@ export function ResearchRowActions({
     (action: ResearchApiAction) => {
       const brief = briefsByKind[action];
       if (isBusyStatus(brief?.status)) return;
+      setPendingRequestId(crypto.randomUUID());
       setConfirmAction(action);
     },
     [briefsByKind],
@@ -247,8 +192,10 @@ export function ResearchRowActions({
 
   const confirmAndRun = useCallback(() => {
     if (!confirmAction) return;
-    void runAction(confirmAction);
-  }, [confirmAction, runAction]);
+    const requestId = pendingRequestId ?? crypto.randomUUID();
+    if (!pendingRequestId) setPendingRequestId(requestId);
+    void runAction(confirmAction, requestId);
+  }, [confirmAction, pendingRequestId, runAction]);
 
   const tableMenuItems = ACTIONS.map((action) => ({
     id: action,
@@ -260,7 +207,6 @@ export function ResearchRowActions({
   return (
     <>
       <div className={cn(variant === 'table-compact' ? 'flex items-center gap-2' : 'flex flex-col gap-2')}>
-        <ResearchFeedbackButtons clusterId={clusterId} userId={userId} />
         {variant === 'table-compact' ? (
           <SmoothDropdown
             items={tableMenuItems}

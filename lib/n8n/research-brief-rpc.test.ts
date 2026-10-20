@@ -77,5 +77,7 @@ const service = readFileSync(
   'utf-8',
 );
 assert.match(service, /research_briefs_expire_stale/);
+assert.match(service, /ignoreDuplicates:\s*true/);
+assert.match(service, /onConflict:\s*'request_id'/);
 
 console.log('n8n/research-brief-rpc.test.ts: ok');

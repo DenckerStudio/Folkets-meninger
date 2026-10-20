@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
 import { isResearchApiAction } from '@/lib/admin/research/actions';
+import { parseClientResearchRequestId } from '@/lib/admin/research/request-id';
 import { enqueueResearchJob } from '@/lib/admin/research/service';
 
 export const dynamic = 'force-dynamic';
@@ -9,7 +10,7 @@ type RouteContext = {
   params: Promise<{ clusterId: string; action: string }>;
 };
 
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   const auth = await requireAdmin();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -20,7 +21,19 @@ export async function POST(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Ugyldig forespørsel' }, { status: 400 });
   }
 
-  const result = await enqueueResearchJob(clusterId.trim(), action, auth.userId);
+  let body: unknown = null;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Ugyldig JSON-body' }, { status: 400 });
+  }
+
+  const requestId = parseClientResearchRequestId(body);
+  if (!requestId) {
+    return NextResponse.json({ error: 'request_id må være en gyldig UUID' }, { status: 400 });
+  }
+
+  const result = await enqueueResearchJob(clusterId.trim(), action, auth.userId, requestId);
   if (!result.ok) {
     if (result.code === 'already_active' && result.requestId) {
       return NextResponse.json(
@@ -50,5 +63,10 @@ export async function POST(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Kunne ikke opprette research-oppgave' }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, request_id: result.requestId, status: 'queued' });
+  return NextResponse.json({
+    ok: true,
+    request_id: result.requestId,
+    status: result.status,
+    created: result.created,
+  });
 }

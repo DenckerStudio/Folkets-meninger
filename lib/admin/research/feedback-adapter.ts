@@ -1,7 +1,8 @@
 /**
- * TODO(content_feedback): Bytt til `content_feedback` med content_type='action'
- * når migrasjon 20261021120000 er på plass. Ikke opprett egen feedback-tabell her.
+ * content_feedback wiring lands after #192. Keep this interface for the follow-up PR.
  */
+export const RESEARCH_CLUSTER_FEEDBACK_ENABLED = false;
+
 export type ClusterFeedbackValue = 'like' | 'dislike';
 
 export async function saveClusterFeedback(_input: {
