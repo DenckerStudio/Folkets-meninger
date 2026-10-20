@@ -159,38 +159,46 @@ AS $$
 DECLARE
   v_verdict text;
 BEGIN
-  IF TG_OP <> 'UPDATE' OR OLD.status IS NOT DISTINCT FROM NEW.status THEN
-    RETURN NEW;
-  END IF;
+  BEGIN
+    IF TG_OP <> 'UPDATE' OR OLD.status IS NOT DISTINCT FROM NEW.status THEN
+      RETURN NEW;
+    END IF;
 
-  IF NEW.track <> 'system' THEN
-    RETURN NEW;
-  END IF;
+    IF NEW.track <> 'system' THEN
+      RETURN NEW;
+    END IF;
 
-  IF NEW.status = 'open' AND OLD.status = 'draft' THEN
-    v_verdict := 'approve';
-  ELSIF NEW.status = 'archived' AND OLD.status IN ('draft', 'open') THEN
-    v_verdict := 'reject';
-  ELSE
-    RETURN NEW;
-  END IF;
+    IF NEW.status = 'open' AND OLD.status = 'draft' THEN
+      v_verdict := 'approve';
+    ELSIF NEW.status = 'archived' AND OLD.status IN ('draft', 'open') THEN
+      v_verdict := 'reject';
+    ELSE
+      RETURN NEW;
+    END IF;
 
-  INSERT INTO public.content_feedback (
-    content_type,
-    content_id,
-    verdict,
-    source,
-    snapshot
-  )
-  VALUES (
-    'reel',
-    NEW.id::text,
-    v_verdict,
-    'auto',
-    public.build_poll_reel_feedback_snapshot(NEW)
-  )
-  ON CONFLICT (content_type, content_id) WHERE superseded_at IS NULL
-  DO NOTHING;
+    INSERT INTO public.content_feedback (
+      content_type,
+      content_id,
+      verdict,
+      source,
+      snapshot
+    )
+    VALUES (
+      'reel',
+      NEW.id::text,
+      v_verdict,
+      'auto',
+      public.build_poll_reel_feedback_snapshot(NEW)
+    )
+    ON CONFLICT (content_type, content_id) WHERE superseded_at IS NULL
+    DO UPDATE SET
+      verdict = EXCLUDED.verdict,
+      snapshot = EXCLUDED.snapshot
+    WHERE public.content_feedback.source = 'auto';
+  EXCEPTION
+    WHEN OTHERS THEN
+      RAISE WARNING 'log_poll_content_feedback: % (poll_id=%)', SQLERRM, NEW.id;
+  END;
 
   RETURN NEW;
 END;
@@ -340,6 +348,53 @@ BEGIN
   END IF;
   RETURN p_embedding::vector(1024);
 END;
+$$;
+
+-- categories: utelatt eller JSON null → tom array; JSON-array → parse; annen type → feil
+CREATE OR REPLACE FUNCTION public.parse_source_item_categories(p_categories jsonb)
+RETURNS text[]
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_categories jsonb;
+BEGIN
+  IF p_categories IS NULL THEN
+    RETURN '{}'::text[];
+  END IF;
+
+  v_categories := nullif(p_categories, 'null'::jsonb);
+  IF v_categories IS NULL THEN
+    RETURN '{}'::text[];
+  END IF;
+
+  IF jsonb_typeof(v_categories) <> 'array' THEN
+    RAISE EXCEPTION 'categories må være JSON-array eller utelates/null, fikk %', jsonb_typeof(v_categories);
+  END IF;
+
+  RETURN coalesce(
+    (
+      SELECT array_agg(btrim(value))
+      FROM jsonb_array_elements_text(v_categories) AS t(value)
+      WHERE btrim(value) <> ''
+    ),
+    '{}'::text[]
+  );
+END;
+$$;
+
+-- Kanonisk domene-nøkkel: lower-case, uten ledende «www.»
+CREATE OR REPLACE FUNCTION public.normalize_content_source_domain(p_domain text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+  SELECT CASE
+    WHEN p_domain IS NULL OR btrim(p_domain) = '' THEN NULL
+    ELSE regexp_replace(lower(btrim(p_domain)), '^www\.', '')
+  END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.n8n_feedback_examples(
@@ -508,11 +563,12 @@ SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_item jsonb;
+  v_idx int;
   v_domain text;
+  v_canonical_domain text;
   v_external_id text;
-  v_inserted int := 0;
-  v_updated int := 0;
-  v_is_insert boolean;
+  v_upserted int := 0;
+  v_skipped jsonb := '[]'::jsonb;
   v_url text;
   v_title text;
   v_excerpt text;
@@ -522,144 +578,204 @@ DECLARE
   v_modified_at timestamptz;
   v_published_at timestamptz;
   v_fetched_at timestamptz;
+  v_has_modified_at boolean;
+  v_has_fetched_at boolean;
+  v_has_published_at boolean;
+  v_has_excerpt boolean;
+  v_exists boolean;
+  v_categories text[];
+  v_update_categories boolean;
+  v_reason text;
 BEGIN
   IF p_items IS NULL OR jsonb_typeof(p_items) <> 'array' THEN
     RAISE EXCEPTION 'p_items må være en JSON-array';
   END IF;
 
-  FOR v_item IN SELECT value FROM jsonb_array_elements(p_items) AS t(value) LOOP
-    v_domain := btrim(v_item ->> 'domain');
-    v_external_id := btrim(v_item ->> 'external_id');
+  FOR v_idx, v_item IN
+    SELECT (t.ordinality - 1)::int, t.value
+    FROM jsonb_array_elements(p_items) WITH ORDINALITY AS t(value, ordinality)
+  LOOP
+    v_external_id := nullif(btrim(v_item ->> 'external_id'), '');
+    BEGIN
+      v_domain := public.normalize_content_source_domain(v_item ->> 'domain');
+      IF v_domain IS NULL THEN
+        RAISE EXCEPTION 'domain er påkrevd';
+      END IF;
 
-    IF v_domain IS NULL OR v_domain = '' THEN
-      RAISE EXCEPTION 'Hvert element må ha domain';
-    END IF;
+      IF v_external_id IS NULL THEN
+        RAISE EXCEPTION 'external_id er påkrevd';
+      END IF;
 
-    IF v_external_id IS NULL OR v_external_id = '' THEN
-      RAISE EXCEPTION 'Hvert element må ha external_id';
-    END IF;
+      SELECT cs.domain
+      INTO v_canonical_domain
+      FROM public.content_sources cs
+      WHERE cs.domain = v_domain;
 
-    IF NOT EXISTS (SELECT 1 FROM public.content_sources cs WHERE cs.domain = v_domain) THEN
-      RAISE EXCEPTION 'Ukjent domene i content_sources: %', v_domain;
-    END IF;
+      IF v_canonical_domain IS NULL THEN
+        RAISE EXCEPTION 'Ukjent domene i content_sources: %', v_domain;
+      END IF;
 
-    v_url := nullif(btrim(v_item ->> 'url'), '');
-    IF v_url IS NULL THEN
-      RAISE EXCEPTION 'url er påkrevd for %/%', v_domain, v_external_id;
-    END IF;
+      SELECT EXISTS (
+        SELECT 1
+        FROM public.source_items si
+        WHERE si.domain = v_canonical_domain AND si.external_id = v_external_id
+      )
+      INTO v_exists;
 
-    v_title := nullif(btrim(v_item ->> 'title'), '');
-    IF v_title IS NULL THEN
-      RAISE EXCEPTION 'title er påkrevd for %/%', v_domain, v_external_id;
-    END IF;
+      v_url := nullif(btrim(v_item ->> 'url'), '');
+      v_title := nullif(btrim(v_item ->> 'title'), '');
 
-    v_excerpt := NULLIF(left(btrim(coalesce(v_item ->> 'excerpt', '')), 400), '');
+      IF NOT v_exists THEN
+        IF v_url IS NULL THEN
+          RAISE EXCEPTION 'url er påkrevd for ny rad %/%', v_canonical_domain, v_external_id;
+        END IF;
+        IF v_title IS NULL THEN
+          RAISE EXCEPTION 'title er påkrevd for ny rad %/%', v_canonical_domain, v_external_id;
+        END IF;
+      END IF;
 
-    v_has_embedding := (v_item ? 'embedding')
-      AND v_item ->> 'embedding' IS NOT NULL
-      AND btrim(v_item ->> 'embedding') <> ''
-      AND btrim(v_item ->> 'embedding') <> 'null';
+      v_has_excerpt := (v_item ? 'excerpt');
+      IF v_has_excerpt THEN
+        v_excerpt := NULLIF(left(btrim(coalesce(v_item ->> 'excerpt', '')), 400), '');
+      ELSE
+        v_excerpt := NULL;
+      END IF;
 
-    v_embedding := NULL;
-    IF v_has_embedding THEN
-      BEGIN
+      v_has_embedding := (v_item ? 'embedding')
+        AND v_item ->> 'embedding' IS NOT NULL
+        AND btrim(v_item ->> 'embedding') <> ''
+        AND btrim(v_item ->> 'embedding') <> 'null';
+
+      v_embedding := NULL;
+      IF v_has_embedding THEN
         v_embedding := public.assert_bge_m3_embedding((v_item ->> 'embedding')::vector);
-      EXCEPTION
-        WHEN OTHERS THEN
-          RAISE EXCEPTION 'Ugyldig embedding for %/% (forventet bge-m3 vector(1024)): %',
-            v_domain, v_external_id, SQLERRM;
-      END;
-    END IF;
+      END IF;
 
-    IF (v_item ? 'embedding_model')
-      AND jsonb_typeof(v_item -> 'embedding_model') <> 'null' THEN
-      v_embedding_model := nullif(btrim(v_item ->> 'embedding_model'), '');
-    ELSE
-      v_embedding_model := NULL;
-    END IF;
+      v_has_modified_at := (v_item ? 'modified_at')
+        AND jsonb_typeof(v_item -> 'modified_at') <> 'null'
+        AND nullif(btrim(v_item ->> 'modified_at'), '') IS NOT NULL;
+      IF v_has_modified_at THEN
+        v_modified_at := (v_item ->> 'modified_at')::timestamptz;
+      ELSE
+        v_modified_at := NULL;
+      END IF;
 
-    IF (v_item ? 'modified_at')
-      AND jsonb_typeof(v_item -> 'modified_at') <> 'null'
-      AND nullif(btrim(v_item ->> 'modified_at'), '') IS NOT NULL THEN
-      v_modified_at := (v_item ->> 'modified_at')::timestamptz;
-    ELSE
-      v_modified_at := now();
-    END IF;
+      v_has_published_at := (v_item ? 'published_at')
+        AND jsonb_typeof(v_item -> 'published_at') <> 'null'
+        AND nullif(btrim(v_item ->> 'published_at'), '') IS NOT NULL;
+      IF v_has_published_at THEN
+        v_published_at := (v_item ->> 'published_at')::timestamptz;
+      ELSE
+        v_published_at := NULL;
+      END IF;
 
-    v_published_at := NULLIF(v_item ->> 'published_at', '')::timestamptz;
-    v_fetched_at := coalesce(NULLIF(v_item ->> 'fetched_at', '')::timestamptz, now());
+      v_has_fetched_at := (v_item ? 'fetched_at')
+        AND jsonb_typeof(v_item -> 'fetched_at') <> 'null'
+        AND nullif(btrim(v_item ->> 'fetched_at'), '') IS NOT NULL;
+      IF v_has_fetched_at THEN
+        v_fetched_at := (v_item ->> 'fetched_at')::timestamptz;
+      ELSE
+        v_fetched_at := NULL;
+      END IF;
 
-    WITH upserted AS (
-      INSERT INTO public.source_items (
-        domain,
-        external_id,
-        url,
-        title,
-        excerpt,
-        categories,
-        published_at,
-        fetched_at,
-        modified_at,
-        embedding,
-        embedding_model
-      )
-      VALUES (
-        v_domain,
-        v_external_id,
-        v_url,
-        v_title,
-        v_excerpt,
-        coalesce(
-          (
-            SELECT array_agg(btrim(value))
-            FROM jsonb_array_elements_text(coalesce(v_item -> 'categories', '[]'::jsonb)) AS t(value)
-            WHERE btrim(value) <> ''
-          ),
-          '{}'::text[]
-        ),
-        v_published_at,
-        v_fetched_at,
-        v_modified_at,
-        v_embedding,
-        v_embedding_model
-      )
-      ON CONFLICT (domain, external_id) DO UPDATE SET
-        url = COALESCE(EXCLUDED.url, public.source_items.url),
-        title = COALESCE(EXCLUDED.title, public.source_items.title),
-        excerpt = CASE
-          WHEN v_excerpt IS NOT NULL THEN v_excerpt
-          ELSE public.source_items.excerpt
-        END,
-        categories = CASE
-          WHEN v_item ? 'categories' THEN EXCLUDED.categories
-          ELSE public.source_items.categories
-        END,
-        published_at = COALESCE(EXCLUDED.published_at, public.source_items.published_at),
-        fetched_at = COALESCE(EXCLUDED.fetched_at, public.source_items.fetched_at),
-        modified_at = v_modified_at,
-        embedding = CASE
-          WHEN v_has_embedding THEN v_embedding
-          ELSE public.source_items.embedding
-        END,
-        embedding_model = CASE
-          WHEN v_embedding_model IS NOT NULL THEN v_embedding_model
-          ELSE public.source_items.embedding_model
-        END
-      RETURNING (xmax = 0) AS inserted
-    )
-    SELECT inserted INTO v_is_insert FROM upserted;
+      IF (v_item ? 'embedding_model')
+        AND jsonb_typeof(v_item -> 'embedding_model') <> 'null' THEN
+        v_embedding_model := nullif(btrim(v_item ->> 'embedding_model'), '');
+      ELSE
+        v_embedding_model := NULL;
+      END IF;
 
-    IF v_is_insert THEN
-      v_inserted := v_inserted + 1;
-    ELSE
-      v_updated := v_updated + 1;
-    END IF;
+      v_update_categories := (v_item ? 'categories')
+        AND v_item -> 'categories' IS NOT NULL
+        AND jsonb_typeof(v_item -> 'categories') <> 'null';
+
+      IF v_update_categories THEN
+        v_categories := public.parse_source_item_categories(v_item -> 'categories');
+      ELSE
+        v_categories := '{}'::text[];
+      END IF;
+
+      IF NOT v_exists THEN
+        INSERT INTO public.source_items (
+          domain,
+          external_id,
+          url,
+          title,
+          excerpt,
+          categories,
+          published_at,
+          fetched_at,
+          modified_at,
+          embedding,
+          embedding_model
+        )
+        VALUES (
+          v_canonical_domain,
+          v_external_id,
+          v_url,
+          v_title,
+          v_excerpt,
+          v_categories,
+          v_published_at,
+          coalesce(v_fetched_at, now()),
+          coalesce(v_modified_at, now()),
+          v_embedding,
+          v_embedding_model
+        );
+      ELSE
+        UPDATE public.source_items
+        SET
+          url = COALESCE(v_url, url),
+          title = COALESCE(v_title, title),
+          excerpt = CASE
+            WHEN v_has_excerpt THEN COALESCE(v_excerpt, excerpt)
+            ELSE excerpt
+          END,
+          categories = CASE
+            WHEN v_update_categories THEN v_categories
+            ELSE categories
+          END,
+          published_at = CASE
+            WHEN v_has_published_at THEN COALESCE(v_published_at, published_at)
+            ELSE published_at
+          END,
+          fetched_at = CASE
+            WHEN v_has_fetched_at THEN COALESCE(v_fetched_at, fetched_at)
+            ELSE fetched_at
+          END,
+          modified_at = CASE
+            WHEN v_has_modified_at THEN COALESCE(v_modified_at, modified_at)
+            ELSE modified_at
+          END,
+          embedding = CASE
+            WHEN v_has_embedding THEN v_embedding
+            ELSE embedding
+          END,
+          embedding_model = CASE
+            WHEN v_embedding_model IS NOT NULL THEN v_embedding_model
+            ELSE embedding_model
+          END
+        WHERE domain = v_canonical_domain
+          AND external_id = v_external_id;
+      END IF;
+
+      v_upserted := v_upserted + 1;
+    EXCEPTION
+      WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS v_reason = MESSAGE_TEXT;
+        v_skipped := v_skipped || jsonb_build_array(
+          jsonb_build_object(
+            'index', v_idx,
+            'external_id', coalesce(v_external_id, ''),
+            'reason', v_reason
+          )
+        );
+    END;
   END LOOP;
 
   RETURN jsonb_build_object(
-    'ok', true,
-    'inserted', v_inserted,
-    'updated', v_updated
+    'upserted', v_upserted,
+    'skipped', v_skipped
   );
 END;
 $$;
@@ -707,9 +823,50 @@ AS $$
   CROSS JOIN query
   WHERE si.embedding IS NOT NULL
     AND cs.tier <> 'blocked'
-    AND si.published_at >= now() - make_interval(days => greatest(coalesce(p_days, 14), 1))
+    AND coalesce(si.published_at, si.fetched_at) >= now() - make_interval(days => greatest(coalesce(p_days, 14), 1))
   ORDER BY si.embedding <=> query.emb
   LIMIT greatest(coalesce(p_k, 5), 1);
+$$;
+
+CREATE OR REPLACE FUNCTION public.n8n_list_source_items(
+  p_domain text,
+  p_since timestamptz DEFAULT NULL,
+  p_limit int DEFAULT 500
+)
+RETURNS TABLE (
+  id uuid,
+  domain text,
+  external_id text,
+  url text,
+  title text,
+  categories text[],
+  published_at timestamptz,
+  modified_at timestamptz,
+  has_embedding boolean
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT
+    si.id,
+    si.domain,
+    si.external_id,
+    si.url,
+    si.title,
+    si.categories,
+    si.published_at,
+    si.modified_at,
+    (si.embedding IS NOT NULL) AS has_embedding
+  FROM public.source_items si
+  WHERE si.domain = public.normalize_content_source_domain(p_domain)
+    AND (
+      p_since IS NULL
+      OR coalesce(si.modified_at, si.published_at, si.fetched_at) >= p_since
+    )
+  ORDER BY coalesce(si.modified_at, si.published_at, si.fetched_at) DESC NULLS LAST
+  LIMIT greatest(1, least(coalesce(p_limit, 500), 5000));
 $$;
 
 CREATE OR REPLACE FUNCTION public.n8n_upsert_feedback_profile(
@@ -786,6 +943,11 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public.build_poll_reel_feedback_snapshot(public.polls) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.assert_bge_m3_embedding(vector) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.parse_source_item_categories(jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.normalize_content_source_domain(text) FROM PUBLIC, anon, authenticated;
+
 REVOKE ALL ON FUNCTION public.upsert_content_feedback(
   text, text, text, jsonb, text[], text, uuid, jsonb
 ) FROM PUBLIC, anon, authenticated;
@@ -804,6 +966,9 @@ GRANT EXECUTE ON FUNCTION public.n8n_upsert_source_items(jsonb) TO service_role;
 
 REVOKE ALL ON FUNCTION public.n8n_match_source_items(vector, int, int) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.n8n_match_source_items(vector, int, int) TO service_role;
+
+REVOKE ALL ON FUNCTION public.n8n_list_source_items(text, timestamptz, int) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.n8n_list_source_items(text, timestamptz, int) TO service_role;
 
 REVOKE ALL ON FUNCTION public.n8n_upsert_feedback_profile(text, jsonb, jsonb) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.n8n_upsert_feedback_profile(text, jsonb, jsonb) TO service_role;
@@ -824,8 +989,10 @@ VALUES
     jsonb_build_object(
       'kind',
       'wp_json',
+      'base_url',
+      'https://www.utenfilter.no',
       'url',
-      'https://utenfilter.no/wp-json/wp/v2/posts?per_page=20'
+      'https://www.utenfilter.no/wp-json/wp/v2/posts?per_page=20'
     )
   ),
   ('document.no', 'signal_only', 0.50, '{}'::jsonb),

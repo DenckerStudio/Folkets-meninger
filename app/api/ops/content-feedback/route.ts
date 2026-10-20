@@ -40,5 +40,6 @@ export async function POST(request: Request) {
     ok: true,
     id: result.id,
     duplicate: result.duplicate,
+    applied: result.applied,
   });
 }

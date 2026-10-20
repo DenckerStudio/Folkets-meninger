@@ -2,6 +2,8 @@
 DO $$
 DECLARE
   v_poll_id uuid;
+  v_poll_archive_id uuid;
+  v_poll_admin_id uuid;
   v_feedback_id uuid;
   v_count int;
   v_historic int;
@@ -41,6 +43,16 @@ BEGIN
     RAISE EXCEPTION 'service_role mangler EXECUTE på n8n_upsert_source_items';
   END IF;
 
+  IF has_function_privilege('anon', 'public.assert_bge_m3_embedding(vector)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'anon skal ikke kunne kjøre assert_bge_m3_embedding';
+  END IF;
+  IF has_function_privilege('authenticated', 'public.parse_source_item_categories(jsonb)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'authenticated skal ikke kunne kjøre parse_source_item_categories';
+  END IF;
+  IF has_function_privilege('anon', 'public.build_poll_reel_feedback_snapshot(public.polls)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'anon skal ikke kunne kjøre build_poll_reel_feedback_snapshot';
+  END IF;
+
   SELECT count(*) INTO v_sources FROM public.content_sources WHERE domain = 'utenfilter.no';
   IF v_sources <> 1 THEN
     RAISE EXCEPTION 'forventet utenfilter.no i content_sources';
@@ -51,6 +63,14 @@ BEGIN
   END IF;
   IF (SELECT base_weight FROM public.content_sources WHERE domain = 'utenfilter.no')::numeric <> 1.50 THEN
     RAISE EXCEPTION 'utenfilter.no skal ha base_weight 1.5';
+  END IF;
+  IF (SELECT ingest ->> 'base_url' FROM public.content_sources WHERE domain = 'utenfilter.no')
+    <> 'https://www.utenfilter.no' THEN
+    RAISE EXCEPTION 'utenfilter.no ingest.base_url skal være https://www.utenfilter.no';
+  END IF;
+
+  IF has_function_privilege('anon', 'public.normalize_content_source_domain(text)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'anon skal ikke kunne kjøre normalize_content_source_domain';
   END IF;
 
   SELECT count(*) INTO v_historic
@@ -110,6 +130,60 @@ BEGIN
     RAISE EXCEPTION 'publish_poll skulle skrive én auto approve-rad, fant %', v_count;
   END IF;
 
+  -- publish → archive på system-reel: auto-rad skal bli reject (ikke bli approve)
+  v_poll_archive_id := public.create_system_poll_draft(
+    'ci-content-feedback-archive-' || substr(gen_random_uuid()::text, 1, 8),
+    'CI archive test-reel',
+    'Sammendrag',
+    '[]'::jsonb,
+    '{}'::jsonb
+  );
+  DELETE FROM public.content_feedback WHERE content_id = v_poll_archive_id::text;
+  PERFORM public.publish_poll(v_poll_archive_id);
+  PERFORM public.archive_poll(v_poll_archive_id);
+  IF NOT EXISTS (
+    SELECT 1 FROM public.content_feedback
+    WHERE content_type = 'reel'
+      AND content_id = v_poll_archive_id::text
+      AND source = 'auto'
+      AND verdict = 'reject'
+      AND superseded_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'publish→archive skulle gi auto reject';
+  END IF;
+
+  -- admin-rad skal ikke overskrives av archive-trigger
+  v_poll_admin_id := public.create_system_poll_draft(
+    'ci-content-feedback-admin-' || substr(gen_random_uuid()::text, 1, 8),
+    'CI admin guard reel',
+    'Sammendrag',
+    '[]'::jsonb,
+    '{}'::jsonb
+  );
+  DELETE FROM public.content_feedback WHERE content_id = v_poll_admin_id::text;
+  PERFORM public.publish_poll(v_poll_admin_id);
+  PERFORM public.upsert_content_feedback(
+    'reel',
+    v_poll_admin_id::text,
+    'approve',
+    jsonb_build_object('title', '+'),
+    ARRAY['behold']::text[],
+    'Admin-notat',
+    NULL,
+    '{}'::jsonb
+  );
+  PERFORM public.archive_poll(v_poll_admin_id);
+  IF NOT EXISTS (
+    SELECT 1 FROM public.content_feedback
+    WHERE content_type = 'reel'
+      AND content_id = v_poll_admin_id::text
+      AND source = 'admin'
+      AND verdict = 'approve'
+      AND superseded_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'archive skal ikke overskrive admin content_feedback-rad';
+  END IF;
+
   v_feedback_id := public.upsert_content_feedback(
     'reel',
     v_poll_id::text,
@@ -161,8 +235,8 @@ BEGIN
       )
     )
   );
-  IF coalesce(r ->> 'ok', 'false') <> 'true' THEN
-    RAISE EXCEPTION 'n8n_upsert_source_items feilet: %', r;
+  IF (r ->> 'upserted')::int <> 1 OR jsonb_array_length(coalesce(r -> 'skipped', '[]'::jsonb)) <> 0 THEN
+    RAISE EXCEPTION 'n8n_upsert_source_items insert feilet: %', r;
   END IF;
 
   SELECT modified_at, embedding_model
@@ -191,8 +265,8 @@ BEGIN
       )
     )
   );
-  IF (r ->> 'updated')::int <> 1 THEN
-    RAISE EXCEPTION 'forventet dedupe-oppdatering på source_items';
+  IF (r ->> 'upserted')::int <> 1 THEN
+    RAISE EXCEPTION 'forventet dedupe-oppdatering på source_items: %', r;
   END IF;
 
   SELECT modified_at, embedding_model, title, excerpt
@@ -200,8 +274,8 @@ BEGIN
   FROM public.source_items
   WHERE domain = 'utenfilter.no' AND external_id = 'ci-123';
 
-  IF v_modified_after < v_modified_before THEN
-    RAISE EXCEPTION 'modified_at skulle oppdateres ved re-upsert';
+  IF v_modified_after <> v_modified_before THEN
+    RAISE EXCEPTION 'modified_at skal ikke endres når feltet utelates ved oppdatering';
   END IF;
 
   IF v_emb_model <> 'bge-m3' THEN
@@ -218,6 +292,104 @@ BEGIN
 
   IF v_excerpt <> 'Ny ingress' THEN
     RAISE EXCEPTION 'excerpt skulle oppdateres';
+  END IF;
+
+  -- categories JSON null i batch skal ikke feile hele kallet
+  r := public.n8n_upsert_source_items(
+    jsonb_build_array(
+      jsonb_build_object(
+        'domain', 'utenfilter.no',
+        'external_id', 'ci-null-cat',
+        'url', 'https://utenfilter.no/null-cat',
+        'title', 'Null kategori',
+        'categories', null
+      ),
+      jsonb_build_object(
+        'domain', 'utenfilter.no',
+        'external_id', 'ci-456',
+        'url', 'https://utenfilter.no/ci-456',
+        'title', 'Med kategori',
+        'categories', jsonb_build_array('EU')
+      )
+    )
+  );
+  IF (r ->> 'upserted')::int <> 2 THEN
+    RAISE EXCEPTION 'batch med categories null feilet: %', r;
+  END IF;
+  IF (SELECT categories FROM public.source_items WHERE external_id = 'ci-null-cat') <> '{}'::text[] THEN
+    RAISE EXCEPTION 'JSON null categories skulle bli tom array';
+  END IF;
+
+  -- delvis oppdatering uten url/title på eksisterende rad
+  r := public.n8n_upsert_source_items(
+    jsonb_build_array(
+      jsonb_build_object(
+        'domain', 'utenfilter.no',
+        'external_id', 'ci-123',
+        'excerpt', 'Kun excerpt'
+      )
+    )
+  );
+  IF (r ->> 'upserted')::int <> 1 THEN
+    RAISE EXCEPTION 'delvis oppdatering uten url/title feilet: %', r;
+  END IF;
+  IF (SELECT excerpt FROM public.source_items WHERE external_id = 'ci-123') <> 'Kun excerpt' THEN
+    RAISE EXCEPTION 'excerpt skulle oppdateres uten url/title';
+  END IF;
+
+  r := public.n8n_upsert_source_items(
+    jsonb_build_array(
+      jsonb_build_object(
+        'domain', 'utenfilter.no',
+        'external_id', 'ci-new-missing-url',
+        'title', 'Mangler url'
+      )
+    )
+  );
+  IF (r ->> 'upserted')::int <> 0 OR jsonb_array_length(r -> 'skipped') <> 1 THEN
+    RAISE EXCEPTION 'ny rad uten url skal telles som skipped, fikk %', r;
+  END IF;
+
+  -- batch: 1 ugyldig + 2 gyldige → upserted 2, skipped 1
+  r := public.n8n_upsert_source_items(
+    jsonb_build_array(
+      jsonb_build_object(
+        'domain', 'www.Utenfilter.no',
+        'external_id', 'ci-batch-1',
+        'url', 'https://www.utenfilter.no/b1',
+        'title', 'Batch 1'
+      ),
+      jsonb_build_object(
+        'domain', 'utenfilter.no',
+        'external_id', 'ci-batch-bad',
+        'title', 'Mangler url'
+      ),
+      jsonb_build_object(
+        'domain', 'WWW.utenfilter.no',
+        'external_id', 'ci-batch-2',
+        'url', 'https://www.utenfilter.no/b2',
+        'title', 'Batch 2'
+      )
+    )
+  );
+  IF (r ->> 'upserted')::int <> 2 OR jsonb_array_length(r -> 'skipped') <> 1 THEN
+    RAISE EXCEPTION 'batch 2+1 feilet: %', r;
+  END IF;
+
+  IF (SELECT count(*) FROM public.n8n_list_source_items('www.utenfilter.no')) < 1 THEN
+    RAISE EXCEPTION 'n8n_list_source_items skal finne rader for www-domene';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.n8n_list_source_items('utenfilter.no', NULL, 10) l
+    WHERE l.external_id = 'ci-batch-1' AND l.has_embedding IS FALSE
+  ) THEN
+    RAISE EXCEPTION 'n8n_list_source_items skal returnere metadata uten embedding';
+  END IF;
+
+  IF NOT has_function_privilege('service_role', 'public.n8n_list_source_items(text,timestamptz,int)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'service_role mangler EXECUTE på n8n_list_source_items';
   END IF;
 
   BEGIN
@@ -261,9 +433,20 @@ BEGIN
   END IF;
   RESET ROLE;
 
-  DELETE FROM public.source_items WHERE domain = 'utenfilter.no' AND external_id IN ('ci-123', 'ci-bad-dim');
-  DELETE FROM public.content_feedback WHERE content_id = v_poll_id::text;
-  DELETE FROM public.polls WHERE id = v_poll_id;
+  DELETE FROM public.source_items
+  WHERE domain = 'utenfilter.no'
+    AND external_id IN (
+      'ci-123',
+      'ci-bad-dim',
+      'ci-null-cat',
+      'ci-456',
+      'ci-batch-1',
+      'ci-batch-2'
+    );
+  DELETE FROM public.content_feedback
+  WHERE content_id IN (v_poll_id::text, v_poll_archive_id::text, v_poll_admin_id::text);
+  DELETE FROM public.polls
+  WHERE id IN (v_poll_id, v_poll_archive_id, v_poll_admin_id);
 
   RAISE NOTICE 'content_feedback_rpcs.sql: OK';
 END $$;

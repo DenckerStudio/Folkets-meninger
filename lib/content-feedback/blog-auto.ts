@@ -29,8 +29,27 @@ function verdictForEvent(event: BlogContentFeedbackEvent): ContentFeedbackVerdic
   }
 }
 
+function snapshotForPayload(payload: BlogContentFeedbackPayload): Record<string, unknown> {
+  return {
+    auto_event: payload.event,
+    slug: payload.slug,
+    title: payload.title,
+    excerpt: payload.excerpt,
+    categories: payload.categories,
+    origin: payload.origin,
+    occurred_at: payload.occurred_at,
+  };
+}
+
+function autoEventFromSnapshot(snapshot: unknown): string {
+  if (!snapshot || typeof snapshot !== 'object' || !('auto_event' in snapshot)) {
+    return '';
+  }
+  return String((snapshot as { auto_event?: unknown }).auto_event ?? '');
+}
+
 export type RecordBlogAutoFeedbackResult =
-  | { ok: true; id: string; duplicate: boolean }
+  | { ok: true; id: string; duplicate: boolean; applied: boolean }
   | { ok: false; error: string };
 
 export async function recordBlogAutoContentFeedbackWithClient(
@@ -42,9 +61,12 @@ export async function recordBlogAutoContentFeedbackWithClient(
     return { ok: false, error: 'post_id er påkrevd' };
   }
 
+  const snapshot = snapshotForPayload(payload);
+  const verdict = verdictForEvent(payload.event);
+
   const { data: existing, error: readError } = await supabase
     .from('content_feedback')
-    .select('id, snapshot')
+    .select('id, snapshot, source, verdict')
     .eq('content_type', 'blog_post')
     .eq('content_id', postId)
     .is('superseded_at', null)
@@ -54,43 +76,40 @@ export async function recordBlogAutoContentFeedbackWithClient(
     return { ok: false, error: readError.message };
   }
 
-  const existingEvent =
-    existing?.snapshot &&
-    typeof existing.snapshot === 'object' &&
-    'auto_event' in existing.snapshot
-      ? String((existing.snapshot as { auto_event?: unknown }).auto_event ?? '')
-      : '';
-
-  if (existing && existingEvent === payload.event) {
-    return { ok: true, id: existing.id, duplicate: true };
+  if (existing && existing.source !== 'auto') {
+    return { ok: true, id: existing.id, duplicate: false, applied: false };
   }
 
-  if (existing?.id) {
-    const { error: supersedeError } = await supabase
-      .from('content_feedback')
-      .update({ superseded_at: new Date().toISOString() })
-      .eq('id', existing.id);
-    if (supersedeError) {
-      return { ok: false, error: supersedeError.message };
+  if (existing?.source === 'auto') {
+    const existingEvent = autoEventFromSnapshot(existing.snapshot);
+    if (existingEvent === payload.event) {
+      return { ok: true, id: existing.id, duplicate: true, applied: false };
     }
-  }
 
-  const snapshot = {
-    auto_event: payload.event,
-    slug: payload.slug,
-    title: payload.title,
-    excerpt: payload.excerpt,
-    categories: payload.categories,
-    origin: payload.origin,
-    occurred_at: payload.occurred_at,
-  };
+    const { data: updated, error: updateError } = await supabase
+      .from('content_feedback')
+      .update({ verdict, snapshot })
+      .eq('id', existing.id)
+      .eq('source', 'auto')
+      .select('id')
+      .maybeSingle();
+
+    if (updateError) {
+      return { ok: false, error: updateError.message };
+    }
+    if (!updated?.id) {
+      return { ok: false, error: 'Kunne ikke oppdatere auto content_feedback' };
+    }
+
+    return { ok: true, id: updated.id, duplicate: false, applied: true };
+  }
 
   const { data: inserted, error: insertError } = await supabase
     .from('content_feedback')
     .insert({
       content_type: 'blog_post',
       content_id: postId,
-      verdict: verdictForEvent(payload.event),
+      verdict,
       aspects: {},
       reason_tags: [],
       note: null,
@@ -105,7 +124,7 @@ export async function recordBlogAutoContentFeedbackWithClient(
     return { ok: false, error: insertError.message };
   }
 
-  return { ok: true, id: inserted.id, duplicate: false };
+  return { ok: true, id: inserted.id, duplicate: false, applied: true };
 }
 
 export async function recordBlogAutoContentFeedback(

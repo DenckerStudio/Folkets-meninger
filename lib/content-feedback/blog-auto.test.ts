@@ -23,7 +23,6 @@ function makeMockSupabase() {
         const state: {
           filters: Array<(row: Row) => boolean>;
           updatePayload?: Record<string, unknown>;
-          idFilter?: string;
         } = { filters: [] };
 
         const api = {
@@ -31,11 +30,7 @@ function makeMockSupabase() {
             return api;
           },
           eq(column: string, value: string) {
-            if (column === 'id') {
-              state.idFilter = value;
-            } else {
-              state.filters.push((row) => row[column as keyof Row] === value);
-            }
+            state.filters.push((row) => row[column as keyof Row] === value);
             return api;
           },
           is(column: string, value: null) {
@@ -50,15 +45,23 @@ function makeMockSupabase() {
           },
           update(payload: Record<string, unknown>) {
             state.updatePayload = payload;
-            return {
-              eq: async (_column: string, value: string) => {
-                const match = rows.find((row) => row.id === value);
+            const updateApi = {
+              eq(column: string, value: string) {
+                state.filters.push((row) => row[column as keyof Row] === value);
+                return updateApi;
+              },
+              select() {
+                return updateApi;
+              },
+              maybeSingle: async () => {
+                const match = rows.find((row) => state.filters.every((fn) => fn(row)));
                 if (match && state.updatePayload) {
                   Object.assign(match, state.updatePayload);
                 }
-                return { error: null };
+                return { data: match ? { id: match.id } : null, error: null };
               },
             };
+            return updateApi;
           },
           insert(payload: Record<string, unknown>) {
             return {
@@ -88,8 +91,7 @@ function makeMockSupabase() {
   };
 }
 
-const payload = {
-  event: 'published' as const,
+const basePayload = {
   post_id: 'cms-1',
   slug: 'test-slug',
   title: 'Tittel',
@@ -99,23 +101,59 @@ const payload = {
   occurred_at: '2026-10-20T10:00:00.000Z',
 };
 
-const mock = makeMockSupabase();
-
 async function run() {
-  const first = await recordBlogAutoContentFeedbackWithClient(mock.client as never, payload);
+  const mock = makeMockSupabase();
+  const published = { ...basePayload, event: 'published' as const };
+
+  const first = await recordBlogAutoContentFeedbackWithClient(mock.client as never, published);
   assert.equal(first.ok, true);
   if (first.ok) {
     assert.equal(first.duplicate, false);
+    assert.equal(first.applied, true);
   }
   assert.equal(mock.rows.length, 1);
   assert.equal(mock.rows[0]?.verdict, 'approve');
 
-  const second = await recordBlogAutoContentFeedbackWithClient(mock.client as never, payload);
-  assert.equal(second.ok, true);
-  if (second.ok) {
-    assert.equal(second.duplicate, true);
+  const duplicate = await recordBlogAutoContentFeedbackWithClient(mock.client as never, published);
+  assert.equal(duplicate.ok, true);
+  if (duplicate.ok) {
+    assert.equal(duplicate.duplicate, true);
+    assert.equal(duplicate.applied, false);
   }
   assert.equal(mock.rows.length, 1);
+
+  const archived = { ...basePayload, event: 'archived' as const, occurred_at: '2026-10-20T11:00:00.000Z' };
+  const afterArchive = await recordBlogAutoContentFeedbackWithClient(mock.client as never, archived);
+  assert.equal(afterArchive.ok, true);
+  if (afterArchive.ok) {
+    assert.equal(afterArchive.duplicate, false);
+    assert.equal(afterArchive.applied, true);
+    assert.equal(afterArchive.id, mock.rows[0]?.id);
+  }
+  assert.equal(mock.rows.length, 1);
+  assert.equal(mock.rows[0]?.verdict, 'reject');
+  assert.equal(mock.rows[0]?.snapshot.auto_event, 'archived');
+
+  const adminMock = makeMockSupabase();
+  adminMock.rows.push({
+    id: 'admin-row',
+    content_type: 'blog_post',
+    content_id: 'cms-2',
+    superseded_at: null,
+    snapshot: { title: 'Admin' },
+    verdict: 'approve',
+    source: 'admin',
+  });
+  const adminPayload = { ...basePayload, post_id: 'cms-2', event: 'archived' as const };
+  const ignored = await recordBlogAutoContentFeedbackWithClient(adminMock.client as never, adminPayload);
+  assert.equal(ignored.ok, true);
+  if (ignored.ok) {
+    assert.equal(ignored.applied, false);
+    assert.equal(ignored.id, 'admin-row');
+  }
+  assert.equal(adminMock.rows.length, 1);
+  assert.equal(adminMock.rows[0]?.verdict, 'approve');
+  assert.equal(adminMock.rows[0]?.source, 'admin');
 
   console.log('content-feedback/blog-auto.test.ts: ok');
 }
