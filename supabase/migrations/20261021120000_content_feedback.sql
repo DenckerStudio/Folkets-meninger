@@ -5,7 +5,8 @@
 BEGIN;
 SET LOCAL lock_timeout = '5s';
 
-CREATE EXTENSION IF NOT EXISTS vector;
+-- Prod (supabase-folkets): pgvector 0.8.0 i public — unqualified vector(1024) / vector_cosine_ops.
+CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 
 -- ---------------------------------------------------------------------------
 -- Tabeller
@@ -209,6 +210,141 @@ CREATE TRIGGER polls_content_feedback_trg
   AFTER UPDATE OF status ON public.polls
   FOR EACH ROW
   EXECUTE FUNCTION public.log_poll_content_feedback();
+
+-- Blogg (Payload webhook / fm-web ops): idempotent auto-feedback per post_id
+CREATE OR REPLACE FUNCTION public.log_blog_content_feedback(
+  p_post_id text,
+  p_event text,
+  p_event_id text,
+  p_occurred_at timestamptz,
+  p_snapshot jsonb DEFAULT '{}'::jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_post_id text;
+  v_event text;
+  v_event_id text;
+  v_verdict text;
+  v_snapshot jsonb;
+  v_row public.content_feedback%ROWTYPE;
+  v_stored_occurred timestamptz;
+  v_conflict_event_id text;
+  v_id uuid;
+BEGIN
+  v_post_id := btrim(coalesce(p_post_id, ''));
+  v_event := btrim(coalesce(p_event, ''));
+  v_event_id := btrim(coalesce(p_event_id, ''));
+
+  IF v_post_id = '' THEN
+    RAISE EXCEPTION 'p_post_id er påkrevd';
+  END IF;
+  IF v_event NOT IN ('published', 'archived', 'deleted') THEN
+    RAISE EXCEPTION 'Ugyldig p_event: % (forventet published|archived|deleted)', p_event;
+  END IF;
+  IF v_event_id = '' THEN
+    RAISE EXCEPTION 'p_event_id er påkrevd';
+  END IF;
+  IF p_occurred_at IS NULL THEN
+    RAISE EXCEPTION 'p_occurred_at er påkrevd';
+  END IF;
+  IF p_snapshot IS NULL OR jsonb_typeof(p_snapshot) <> 'object' THEN
+    RAISE EXCEPTION 'p_snapshot må være et JSON-objekt';
+  END IF;
+
+  v_verdict := CASE
+    WHEN v_event = 'published' THEN 'approve'
+    ELSE 'reject'
+  END;
+
+  v_snapshot := coalesce(p_snapshot, '{}'::jsonb) || jsonb_build_object(
+    'event', v_event,
+    'event_id', v_event_id,
+    'occurred_at', to_jsonb(p_occurred_at)
+  );
+
+  SELECT cf.*
+  INTO v_row
+  FROM public.content_feedback cf
+  WHERE cf.content_type = 'blog_post'
+    AND cf.content_id = v_post_id
+    AND cf.superseded_at IS NULL
+  FOR UPDATE;
+
+  IF FOUND THEN
+    IF v_row.source <> 'auto' THEN
+      RETURN jsonb_build_object('status', 'skipped_admin', 'id', v_row.id);
+    END IF;
+
+    IF coalesce(v_row.snapshot ->> 'event_id', '') = v_event_id THEN
+      RETURN jsonb_build_object('status', 'duplicate', 'id', v_row.id);
+    END IF;
+
+    v_stored_occurred := NULLIF(v_row.snapshot ->> 'occurred_at', '')::timestamptz;
+    IF v_stored_occurred IS NOT NULL AND p_occurred_at < v_stored_occurred THEN
+      RETURN jsonb_build_object('status', 'stale', 'id', v_row.id);
+    END IF;
+
+    UPDATE public.content_feedback
+    SET
+      verdict = v_verdict,
+      snapshot = v_snapshot
+    WHERE id = v_row.id
+    RETURNING id INTO v_id;
+
+    RETURN jsonb_build_object('status', 'updated', 'id', v_id);
+  END IF;
+
+  INSERT INTO public.content_feedback (
+    content_type,
+    content_id,
+    verdict,
+    source,
+    snapshot
+  )
+  VALUES (
+    'blog_post',
+    v_post_id,
+    v_verdict,
+    'auto',
+    v_snapshot
+  )
+  ON CONFLICT (content_type, content_id) WHERE superseded_at IS NULL
+  DO UPDATE SET
+    verdict = EXCLUDED.verdict,
+    snapshot = EXCLUDED.snapshot
+  WHERE public.content_feedback.source = 'auto'
+    AND coalesce(public.content_feedback.snapshot ->> 'event_id', '') IS DISTINCT FROM v_event_id
+    AND (
+      NULLIF(public.content_feedback.snapshot ->> 'occurred_at', '')::timestamptz IS NULL
+      OR p_occurred_at >= NULLIF(public.content_feedback.snapshot ->> 'occurred_at', '')::timestamptz
+    )
+  RETURNING id INTO v_id;
+
+  IF v_id IS NULL THEN
+    SELECT
+      cf.id,
+      cf.snapshot ->> 'event_id',
+      NULLIF(cf.snapshot ->> 'occurred_at', '')::timestamptz
+    INTO v_id, v_conflict_event_id, v_stored_occurred
+    FROM public.content_feedback cf
+    WHERE cf.content_type = 'blog_post'
+      AND cf.content_id = v_post_id
+      AND cf.superseded_at IS NULL;
+
+    IF coalesce(v_conflict_event_id, '') = v_event_id THEN
+      RETURN jsonb_build_object('status', 'duplicate', 'id', v_id);
+    END IF;
+
+    RETURN jsonb_build_object('status', 'stale', 'id', v_id);
+  END IF;
+
+  RETURN jsonb_build_object('status', 'inserted', 'id', v_id);
+END;
+$$;
 
 -- ---------------------------------------------------------------------------
 -- Admin upsert (fm-web /api/admin/content-feedback via service_role)
@@ -947,6 +1083,13 @@ REVOKE ALL ON FUNCTION public.build_poll_reel_feedback_snapshot(public.polls) FR
 REVOKE ALL ON FUNCTION public.assert_bge_m3_embedding(vector) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.parse_source_item_categories(jsonb) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.normalize_content_source_domain(text) FROM PUBLIC, anon, authenticated;
+
+REVOKE ALL ON FUNCTION public.log_blog_content_feedback(
+  text, text, text, timestamptz, jsonb
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.log_blog_content_feedback(
+  text, text, text, timestamptz, jsonb
+) TO service_role;
 
 REVOKE ALL ON FUNCTION public.upsert_content_feedback(
   text, text, text, jsonb, text[], text, uuid, jsonb

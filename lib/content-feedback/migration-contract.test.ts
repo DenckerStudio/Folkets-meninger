@@ -27,7 +27,8 @@ for (const table of tables) {
   );
 }
 
-assert.match(migration, /CREATE EXTENSION IF NOT EXISTS vector/i);
+assert.match(migration, /CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public/i);
+assert.doesNotMatch(migration, /extensions\.vector/i);
 assert.match(migration, /vector\(1024\)/i);
 assert.match(migration, /bge-m3/i);
 assert.match(migration, /embedding_model/i);
@@ -49,12 +50,16 @@ for (const fn of [
   );
 }
 assert.match(migration, /WHERE public\.content_feedback\.source = 'auto'/i);
+assert.match(migration, /FUNCTION public\.log_blog_content_feedback/i);
+assert.match(migration, /'skipped_admin'/i);
+assert.match(migration, /'duplicate'/i);
+assert.match(migration, /'stale'/i);
 assert.match(migration, /RAISE WARNING 'log_poll_content_feedback/i);
 assert.match(migration, /hnsw \(embedding vector_cosine_ops\)/i);
 assert.match(migration, /polls_content_feedback_trg/i);
 assert.match(migration, /NOTIFY pgrst, 'reload schema'/i);
 
-for (const fn of ['upsert_content_feedback']) {
+for (const fn of ['upsert_content_feedback', 'log_blog_content_feedback']) {
   assert.match(migration, new RegExp(`FUNCTION public\\.${fn}`, 'i'));
   assert.match(
     migration,

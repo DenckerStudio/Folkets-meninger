@@ -22,6 +22,20 @@ BEGIN
     RETURN;
   END IF;
 
+  IF (
+    SELECT n.nspname
+    FROM pg_extension e
+    JOIN pg_namespace n ON n.oid = e.extnamespace
+    WHERE e.extname = 'vector'
+  ) IS DISTINCT FROM 'public' THEN
+    RAISE EXCEPTION 'pgvector må være installert i public (ikke extensions-skjema)';
+  END IF;
+
+  -- Cosine-operator (<=>) må løses uten extensions.-prefiks (samme som i n8n SECURITY DEFINER-RPC-er)
+  IF (SELECT (v_vec::vector(1024) <=> v_vec::vector(1024))) IS DISTINCT FROM 0::double precision THEN
+    RAISE EXCEPTION 'vector cosine operator (<=>) løses ikke i public search_path';
+  END IF;
+
   -- Privilegier: anon/authenticated uten skriv/execute, service_role inn
   IF has_table_privilege('anon', 'public.content_feedback', 'INSERT,UPDATE,DELETE,TRUNCATE') THEN
     RAISE EXCEPTION 'anon skal ikke kunne skrive i content_feedback';
@@ -392,6 +406,118 @@ BEGIN
     RAISE EXCEPTION 'service_role mangler EXECUTE på n8n_list_source_items';
   END IF;
 
+  IF has_function_privilege('anon', 'public.log_blog_content_feedback(text,text,text,timestamptz,jsonb)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'anon skal ikke kunne kjøre log_blog_content_feedback';
+  END IF;
+  IF has_function_privilege('authenticated', 'public.log_blog_content_feedback(text,text,text,timestamptz,jsonb)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'authenticated skal ikke kunne kjøre log_blog_content_feedback';
+  END IF;
+  IF NOT has_function_privilege('service_role', 'public.log_blog_content_feedback(text,text,text,timestamptz,jsonb)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'service_role mangler EXECUTE på log_blog_content_feedback';
+  END IF;
+
+  -- log_blog_content_feedback: publish → archive → reject, idempotens og rekkefølge
+  DELETE FROM public.content_feedback WHERE content_type = 'blog_post' AND content_id = 'ci-blog-post-1';
+
+  r := public.log_blog_content_feedback(
+    'ci-blog-post-1',
+    'published',
+    'evt-pub-1',
+    timestamptz '2026-10-20 12:00:00+00',
+    jsonb_build_object('title', 'Blogg A')
+  );
+  IF r ->> 'status' NOT IN ('inserted', 'updated') THEN
+    RAISE EXCEPTION 'blog publish skulle inserte, fikk %', r;
+  END IF;
+
+  r := public.log_blog_content_feedback(
+    'ci-blog-post-1',
+    'published',
+    'evt-pub-1',
+    timestamptz '2026-10-20 12:00:00+00',
+    jsonb_build_object('title', 'Blogg A')
+  );
+  IF r ->> 'status' <> 'duplicate' THEN
+    RAISE EXCEPTION 'duplikat event_id skulle gi duplicate, fikk %', r;
+  END IF;
+
+  r := public.log_blog_content_feedback(
+    'ci-blog-post-1',
+    'archived',
+    'evt-arch-1',
+    timestamptz '2026-10-20 11:00:00+00',
+    jsonb_build_object('title', 'Blogg A')
+  );
+  IF r ->> 'status' <> 'stale' THEN
+    RAISE EXCEPTION 'eldre occurred_at skulle gi stale, fikk %', r;
+  END IF;
+
+  r := public.log_blog_content_feedback(
+    'ci-blog-post-1',
+    'archived',
+    'evt-arch-2',
+    timestamptz '2026-10-20 13:00:00+00',
+    jsonb_build_object('title', 'Blogg A arkivert')
+  );
+  IF r ->> 'status' <> 'updated' THEN
+    RAISE EXCEPTION 'archive etter publish skulle oppdatere, fikk %', r;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.content_feedback
+    WHERE content_type = 'blog_post'
+      AND content_id = 'ci-blog-post-1'
+      AND source = 'auto'
+      AND verdict = 'reject'
+      AND snapshot ->> 'event_id' = 'evt-arch-2'
+      AND superseded_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'publish→archive skulle gi auto reject';
+  END IF;
+
+  -- samme event_id etter oppdatering (idempotent / «concurrent»-sikkerhet)
+  r := public.log_blog_content_feedback(
+    'ci-blog-post-1',
+    'archived',
+    'evt-arch-2',
+    timestamptz '2026-10-20 13:00:00+00',
+    '{}'::jsonb
+  );
+  IF r ->> 'status' <> 'duplicate' THEN
+    RAISE EXCEPTION 'duplikat archive event_id skulle gi duplicate, fikk %', r;
+  END IF;
+
+  DELETE FROM public.content_feedback WHERE content_type = 'blog_post' AND content_id = 'ci-blog-admin';
+  PERFORM public.upsert_content_feedback(
+    'blog_post',
+    'ci-blog-admin',
+    'approve',
+    '{}'::jsonb,
+    '{}'::text[],
+    NULL,
+    NULL,
+    jsonb_build_object('title', 'Admin blogg')
+  );
+  r := public.log_blog_content_feedback(
+    'ci-blog-admin',
+    'published',
+    'evt-admin-skip',
+    timestamptz '2026-10-20 12:00:00+00',
+    '{}'::jsonb
+  );
+  IF r ->> 'status' <> 'skipped_admin' THEN
+    RAISE EXCEPTION 'admin-rad skulle ikke overskrives av log_blog, fikk %', r;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.content_feedback
+    WHERE content_type = 'blog_post'
+      AND content_id = 'ci-blog-admin'
+      AND source = 'admin'
+      AND verdict = 'approve'
+      AND superseded_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'admin blog_post-rad skulle være uendret';
+  END IF;
+
   BEGIN
     r := public.n8n_upsert_source_items(
       jsonb_build_array(
@@ -444,7 +570,8 @@ BEGIN
       'ci-batch-2'
     );
   DELETE FROM public.content_feedback
-  WHERE content_id IN (v_poll_id::text, v_poll_archive_id::text, v_poll_admin_id::text);
+  WHERE content_id IN (v_poll_id::text, v_poll_archive_id::text, v_poll_admin_id::text)
+    OR (content_type = 'blog_post' AND content_id IN ('ci-blog-post-1', 'ci-blog-admin'));
   DELETE FROM public.polls
   WHERE id IN (v_poll_id, v_poll_archive_id, v_poll_admin_id);
 
