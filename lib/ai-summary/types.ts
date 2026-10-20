@@ -14,6 +14,8 @@ export type AiSummaryV2 = {
   narrative: string;
   who_affected: string;
   how_affected: string;
+  /** Resolved proposal list; empty when none. Legacy rows may be filled from topic card. */
+  forslag: string[];
   topic_cards: TopicCard[];
   labels: string[];
   /** Legacy fields kept for compatibility */
