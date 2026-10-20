@@ -8,6 +8,7 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -23,6 +24,8 @@ export type SmoothDropdownItem = {
   icon: ComponentType<{ className?: string }> | null;
   type?: "item" | "divider";
   destructive?: boolean;
+  disabled?: boolean;
+  href?: string;
 };
 
 type SmoothDropdownProps = {
@@ -92,12 +95,17 @@ function MenuList({
         const Icon = item.icon;
         const isActive = activeItemId === item.id;
         const isLogout = item.destructive ?? item.id === "logout";
-        const showIndicator = hoveredItem ? hoveredItem === item.id : isActive;
+        const isDisabled = item.disabled === true;
+        const showIndicator =
+          !isDisabled && (hoveredItem ? hoveredItem === item.id : isActive);
         const itemDuration = isLogout ? 0.12 : 0.15;
         const itemDelay = isOpen ? 0.06 + index * 0.02 : 0;
 
         const itemClassName = cn(
-          "relative m-0! flex cursor-pointer items-center gap-3 rounded-lg py-2.5! pl-3! text-sm transition-colors duration-200 ease-out",
+          "relative m-0! flex items-center gap-3 rounded-lg py-2.5! pl-3! text-sm transition-colors duration-200 ease-out",
+          isDisabled
+            ? "cursor-not-allowed opacity-50"
+            : "cursor-pointer",
           isLogout && showIndicator
             ? "text-red-600 dark:text-red-400"
             : isActive
@@ -105,6 +113,7 @@ function MenuList({
               : isLogout
                 ? "text-muted-foreground hover:text-red-600 dark:hover:text-red-400"
                 : "text-muted-foreground hover:text-foreground",
+          item.href && !isDisabled && "text-brand",
         );
 
         const content = (
@@ -144,7 +153,44 @@ function MenuList({
           </>
         );
 
+        const selectItem = () => {
+          if (isDisabled || item.href) return;
+          onSelect(item.id);
+        };
+
         if (animated) {
+          if (item.href && !isDisabled) {
+            return (
+              <motion.li
+                key={item.id}
+                initial={{ opacity: 0, x: 8 }}
+                animate={{
+                  opacity: isOpen ? 1 : 0,
+                  x: isOpen ? 0 : 8,
+                }}
+                transition={{
+                  delay: itemDelay,
+                  duration: itemDuration,
+                  ease: easeOutQuint,
+                }}
+                className={itemClassName}
+              >
+                <Link
+                  href={item.href}
+                  className="relative flex w-full items-center gap-3"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelect(item.id);
+                  }}
+                  onMouseEnter={() => onHover(item.id)}
+                  onMouseLeave={() => onHover(null)}
+                >
+                  {content}
+                </Link>
+              </motion.li>
+            );
+          }
+
           return (
             <motion.li
               key={item.id}
@@ -160,14 +206,31 @@ function MenuList({
               }}
               onClick={(event) => {
                 event.stopPropagation();
-                onSelect(item.id);
+                selectItem();
               }}
-              onMouseEnter={() => onHover(item.id)}
+              onMouseEnter={() => !isDisabled && onHover(item.id)}
               onMouseLeave={() => onHover(null)}
               className={itemClassName}
+              aria-disabled={isDisabled || undefined}
             >
               {content}
             </motion.li>
+          );
+        }
+
+        if (item.href && !isDisabled) {
+          return (
+            <li key={item.id}>
+              <Link
+                href={item.href}
+                onClick={() => onSelect(item.id)}
+                onMouseEnter={() => onHover(item.id)}
+                onMouseLeave={() => onHover(null)}
+                className={cn(itemClassName, "w-full")}
+              >
+                {content}
+              </Link>
+            </li>
           );
         }
 
@@ -175,8 +238,9 @@ function MenuList({
           <li key={item.id}>
             <button
               type="button"
-              onClick={() => onSelect(item.id)}
-              onMouseEnter={() => onHover(item.id)}
+              disabled={isDisabled}
+              onClick={() => selectItem()}
+              onMouseEnter={() => !isDisabled && onHover(item.id)}
               onMouseLeave={() => onHover(null)}
               className={cn(itemClassName, "w-full text-left")}
             >
@@ -320,6 +384,8 @@ export function SmoothDropdown({
   const openHeight = Math.max(40, Math.ceil(contentBounds.height));
 
   const handleItemSelect = (id: string) => {
+    const item = items.find((entry) => entry.id === id);
+    if (item?.disabled) return;
     onSelect(id);
     setIsOpen(false);
   };

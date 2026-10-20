@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { AlertCircle, CheckCircle2, Loader2, X } from 'lucide-react';
 import { CivicBubble } from '@/components/icons/civic';
 import { pollDraftGenerationStatusLabel } from '@/lib/admin/poll-draft-generation';
@@ -73,6 +74,9 @@ export default function AdminReelsClient({
 }: {
   initialDrafts?: PollRecord[];
 }) {
+  const searchParams = useSearchParams();
+  const highlightPollId = searchParams.get('pollId')?.trim() ?? '';
+  const highlightedRef = useRef(false);
   const [drafts, setDrafts] = useState<PollRecord[]>(initialDrafts);
   const [candidates, setCandidates] = useState<SakPollCandidate[]>([]);
   const [coverage, setCoverage] = useState<SakPollCoverage | null>(null);
@@ -83,6 +87,15 @@ export default function AdminReelsClient({
   const [success, setSuccess] = useState('');
   const [pending, startTransition] = useTransition();
   const { jobs, startGeneration, dismissJob, getJob, isGenerating } = usePollDraftGeneration();
+
+  useEffect(() => {
+    if (!highlightPollId || highlightedRef.current || drafts.length === 0) return;
+    const el = document.getElementById(`reel-draft-${highlightPollId}`);
+    if (!el) return;
+    highlightedRef.current = true;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('ring-2', 'ring-brand');
+  }, [drafts, highlightPollId]);
 
   const load = () => {
     startTransition(async () => {
@@ -316,7 +329,11 @@ export default function AdminReelsClient({
         ) : (
           <ul className="space-y-3">
             {drafts.map((poll) => (
-              <li key={poll.id} className="rounded-2xl border border-border bg-card p-4">
+              <li
+                key={poll.id}
+                id={`reel-draft-${poll.id}`}
+                className="rounded-2xl border border-border bg-card p-4"
+              >
                 <p className="font-medium text-foreground">{poll.title}</p>
                 {poll.neutralSummary ? (
                   <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{poll.neutralSummary}</p>
