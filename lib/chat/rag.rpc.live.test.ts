@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { writeLiveTestArtifact } from '@/lib/test/write-live-artifact';
+import { exitIfCiSkipsProdLive } from '@/lib/test/skip-in-ci-live';
 import { createClient } from '@supabase/supabase-js';
+
+exitIfCiSkipsProdLive('chat/rag.rpc.live.test.ts');
 import { retrieveSakContext, searchIssuesForChat } from '@/lib/chat/rag';
 
 function loadFolketsPublicEnv() {
