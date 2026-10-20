@@ -178,6 +178,8 @@ BEGIN
 END;
 $function$;
 
+DROP FUNCTION IF EXISTS public.list_app_changelog_entries();
+
 CREATE OR REPLACE FUNCTION public.list_app_changelog_entries()
 RETURNS TABLE (
   id uuid,
