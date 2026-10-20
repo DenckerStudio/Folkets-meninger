@@ -143,9 +143,9 @@ BEGIN
     RETURNING s.stortinget_issue_id AS id
   ),
   claimed AS (
-    SELECT id FROM claim_issue
+    SELECT claim_issue.id AS issue_id FROM claim_issue
     UNION ALL
-    SELECT id FROM claim_regen
+    SELECT claim_regen.id AS issue_id FROM claim_regen
   )
   SELECT
     ctx.id,
@@ -158,7 +158,7 @@ BEGIN
     ctx.documents,
     ctx.document_chunks
   FROM claimed cl
-  JOIN LATERAL public.n8n_get_issue_ai_summary_context(cl.id) ctx ON true;
+  JOIN LATERAL public.n8n_get_issue_ai_summary_context(cl.issue_id) ctx ON true;
 END;
 $$;
 
