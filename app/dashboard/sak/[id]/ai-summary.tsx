@@ -304,10 +304,12 @@ function FactTile({
   icon: Icon,
   label,
   text,
+  bodyClassName,
 }: {
   icon: ComponentType<{ className?: string }>;
   label: string;
   text: string;
+  bodyClassName?: string;
 }) {
   if (!text.trim()) return null;
 
@@ -317,7 +319,14 @@ function FactTile({
         <Icon className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden />
         <span className="min-w-0 break-words">{label}</span>
       </div>
-      <p className="text-sm leading-relaxed break-words text-foreground">{text}</p>
+      <p
+        className={cn(
+          'text-sm leading-relaxed break-words text-foreground',
+          bodyClassName,
+        )}
+      >
+        {text}
+      </p>
     </article>
   );
 }
