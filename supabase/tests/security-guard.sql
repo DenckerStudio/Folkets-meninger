@@ -26,7 +26,7 @@ DECLARE
     'get_user_stance_signals', 'user_has_political_consent', 'assert_rpc_caller_is_user',
     'require_admin_user_id', 'app_future_require_admin', 'check_api_rate_limit',
     'upsert_action_capture', 'set_action_cluster_verdict',
-    'assert_rpc_caller_is_actor'
+    'assert_rpc_caller_is_actor', 'rpc_caller_is_trusted_server'
   ];
   problems text[] := '{}';
   r record;

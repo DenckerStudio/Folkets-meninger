@@ -3,6 +3,29 @@
 BEGIN;
 SET LOCAL lock_timeout = '5s';
 
+CREATE OR REPLACE FUNCTION public.rpc_caller_is_trusted_server()
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, auth, pg_temp
+AS $function$
+DECLARE
+  v_claims text := coalesce(nullif(current_setting('request.jwt.claims', true), ''), '');
+BEGIN
+  IF coalesce(auth.role(), '') = 'service_role' THEN
+    RETURN true;
+  END IF;
+  IF v_claims = '' AND session_user::text IN ('postgres', 'supabase_admin', 'service_role') THEN
+    RETURN true;
+  END IF;
+  RETURN false;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.rpc_caller_is_trusted_server() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.rpc_caller_is_trusted_server() TO service_role;
+
 CREATE OR REPLACE FUNCTION public.assert_rpc_caller_is_user(p_user_id uuid)
 RETURNS void
 LANGUAGE plpgsql
@@ -14,9 +37,11 @@ BEGIN
   IF p_user_id IS NULL THEN
     RAISE EXCEPTION 'Missing user id';
   END IF;
-  IF coalesce(auth.role(), '') IS DISTINCT FROM 'service_role'
-     AND p_user_id IS DISTINCT FROM auth.uid() THEN
-    RAISE EXCEPTION 'forbidden';
+  IF public.rpc_caller_is_trusted_server() THEN
+    RETURN;
+  END IF;
+  IF auth.uid() IS NULL OR p_user_id IS DISTINCT FROM auth.uid() THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 END;
 $function$;
@@ -32,10 +57,11 @@ SECURITY DEFINER
 SET search_path = public, auth, pg_temp
 AS $function$
 BEGIN
-  IF coalesce(auth.role(), '') IS DISTINCT FROM 'service_role' THEN
-    IF p_actor_user_id IS NULL OR p_actor_user_id IS DISTINCT FROM auth.uid() THEN
-      RAISE EXCEPTION 'forbidden';
-    END IF;
+  IF public.rpc_caller_is_trusted_server() THEN
+    RETURN;
+  END IF;
+  IF p_actor_user_id IS NULL OR p_actor_user_id IS DISTINCT FROM auth.uid() THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 END;
 $function$;
@@ -56,7 +82,7 @@ RETURNS TABLE (
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
   SELECT u.id, u.first_name, u.last_name, u.name
   FROM public.users u
@@ -76,7 +102,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   result jsonb := '[]'::jsonb;
@@ -139,7 +165,7 @@ RETURNS boolean
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   PERFORM public.assert_rpc_caller_is_user(p_user_id);
@@ -161,7 +187,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   PERFORM public.assert_rpc_caller_is_user(p_user_id);
@@ -187,7 +213,7 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   PERFORM public.assert_rpc_caller_is_user(p_user_id);
@@ -209,7 +235,7 @@ RETURNS integer
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   PERFORM public.assert_rpc_caller_is_user(p_user_id);
@@ -227,7 +253,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   PERFORM public.assert_rpc_caller_is_user(p_user_id);
@@ -277,7 +303,7 @@ CREATE OR REPLACE FUNCTION public.promote_citizen_initiative_to_poll(
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_init public.citizen_initiatives%ROWTYPE;
