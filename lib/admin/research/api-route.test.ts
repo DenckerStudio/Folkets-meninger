@@ -16,6 +16,8 @@ const feedbackRoute = readFileSync(
 assert.match(actionRoute, /requireAdmin\(\)/);
 assert.match(actionRoute, /isResearchApiAction\(action\)/);
 assert.match(actionRoute, /status: 502/);
+assert.match(actionRoute, /status: 409/);
+assert.match(actionRoute, /already_active/);
 assert.match(feedbackRoute, /requireAdmin\(\)/);
 
 assert.deepEqual(RESEARCH_API_ACTIONS, ['deepen', 'blog', 'reel']);

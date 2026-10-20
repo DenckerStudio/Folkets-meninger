@@ -11,6 +11,7 @@ import { formatSensitiveTemaCell } from '@/lib/admin/oppfanget/sensitive-categor
 import type { OppfangetRow } from '@/lib/admin/oppfanget/types';
 import { REEL_TEXT_HIT } from '@/lib/polls/reel-tap-targets';
 import { ResearchRowActions } from '@/components/admin/research-row-actions';
+import type { ResearchBriefsByKind } from '@/lib/admin/research/service';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -222,9 +223,11 @@ function MobileDateLines({ firstSeenAt, lastSeenAt }: { firstSeenAt: string; las
 export function OppfangetDesktopTable({
   rows,
   adminUserId,
+  researchBriefsByCluster = {},
 }: {
   rows: OppfangetRow[];
   adminUserId?: string;
+  researchBriefsByCluster?: Record<string, ResearchBriefsByKind>;
 }) {
   const statusCell = cn(cellClass, 'w-28 max-w-[7rem] pr-3');
   const headBase = 'px-2 py-1.5 font-medium';
@@ -240,11 +243,10 @@ export function OppfangetDesktopTable({
             <col />
             <col className="w-28" />
             <col className="w-[14%]" />
-            <col className="w-36" />
             <col className="w-[14%]" />
             <col className="w-24" />
             <col className="w-16" />
-            <col className="w-36" />
+            <col className="w-[7.5rem]" />
           </colgroup>
           <thead className="border-b border-border bg-muted/40 text-[10px] uppercase tracking-wide text-muted-foreground">
             <tr>
@@ -284,7 +286,12 @@ export function OppfangetDesktopTable({
                   <PollLinkCell row={row} />
                 </td>
                 <td className={cellClass}>
-                  <ResearchRowActions clusterId={row.id} userId={adminUserId} />
+                  <ResearchRowActions
+                    clusterId={row.id}
+                    userId={adminUserId}
+                    variant="table-compact"
+                    initialBriefsByKind={researchBriefsByCluster[row.id] ?? {}}
+                  />
                 </td>
               </tr>
             ))}
@@ -298,9 +305,11 @@ export function OppfangetDesktopTable({
 export function OppfangetMobileCards({
   rows,
   adminUserId,
+  researchBriefsByCluster = {},
 }: {
   rows: OppfangetRow[];
   adminUserId?: string;
+  researchBriefsByCluster?: Record<string, ResearchBriefsByKind>;
 }) {
   return (
     <ul className="space-y-3 sm:hidden">
@@ -352,7 +361,12 @@ export function OppfangetMobileCards({
               <div>
                 <dt className="font-medium text-muted-foreground">Research</dt>
                 <dd className="mt-1">
-                  <ResearchRowActions clusterId={row.id} userId={adminUserId} />
+                  <ResearchRowActions
+                    clusterId={row.id}
+                    userId={adminUserId}
+                    variant="full"
+                    initialBriefsByKind={researchBriefsByCluster[row.id] ?? {}}
+                  />
                 </dd>
               </div>
             </dl>

@@ -1,12 +1,17 @@
 'use client';
 
 import Link from 'next/link';
+import { ResearchBriefStatusBadge } from '@/components/admin/research-brief-status-badge';
 import { ResearchRowActions } from '@/components/admin/research-row-actions';
 import { formatOppfangetDateTime } from '@/app/dashboard/admin/oppfanget/oppfanget-row-views';
 import type { OppfangetRow } from '@/lib/admin/oppfanget/types';
+import {
+  RESEARCH_KIND_LABELS,
+  researchBriefOutputLink,
+} from '@/lib/admin/research/labels';
 import type { ResearchBriefRow, ResearchPerspective } from '@/lib/admin/research/types';
-import { adminBlogPostUrl } from '@/lib/blog/urls';
-import { routes } from '@/lib/routes';
+import type { ResearchApiAction } from '@/lib/admin/research/actions';
+import type { ResearchBriefsByKind } from '@/lib/admin/research/service';
 
 const STANCE_LABELS: Record<ResearchPerspective['stance'], string> = {
   for: 'For',
@@ -14,24 +19,20 @@ const STANCE_LABELS: Record<ResearchPerspective['stance'], string> = {
   nøytral: 'Nøytral',
 };
 
-const STATUS_LABELS: Record<ResearchBriefRow['status'], string> = {
-  queued: 'I kø',
-  running: 'Kjører',
-  done: 'Ferdig',
-  failed: 'Feilet',
-};
-
-function outputLink(brief: ResearchBriefRow): { href: string; label: string } | null {
-  if (!brief.output_ref || brief.status !== 'done') return null;
-  if (brief.kind === 'blog') {
-    const href = adminBlogPostUrl(brief.output_ref);
-    if (!href) return null;
-    return { href, label: 'Åpne bloggutkast i Payload' };
+function briefsToByKind(briefs: ResearchBriefRow[]): ResearchBriefsByKind {
+  const out: ResearchBriefsByKind = {};
+  for (const brief of briefs) {
+    const action = brief.kind as ResearchApiAction;
+    if (!out[action]) {
+      out[action] = {
+        kind: brief.kind,
+        status: brief.status,
+        output_ref: brief.output_ref,
+        request_id: brief.request_id,
+      };
+    }
   }
-  if (brief.kind === 'reel') {
-    return { href: routes.adminReels, label: 'Åpne Reels-admin (utkast)' };
-  }
-  return null;
+  return out;
 }
 
 export function ResearchClusterDetailView({
@@ -54,12 +55,19 @@ export function ResearchClusterDetailView({
     if (p.stance in byStance) byStance[p.stance].push(p);
   }
 
+  const initialBriefsByKind = briefsToByKind(briefs);
+
   return (
     <div className="space-y-8">
       <section className="rounded-xl border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">Handlinger</h2>
         <div className="mt-3 max-w-sm">
-          <ResearchRowActions clusterId={row.id} userId={adminUserId} />
+          <ResearchRowActions
+            clusterId={row.id}
+            userId={adminUserId}
+            variant="full"
+            initialBriefsByKind={initialBriefsByKind}
+          />
         </div>
       </section>
 
@@ -96,15 +104,16 @@ export function ResearchClusterDetailView({
         ) : (
           <ul className="space-y-2 text-sm">
             {briefs.map((brief) => {
-              const link = outputLink(brief);
+              const link = researchBriefOutputLink(brief.kind, brief.output_ref, brief.status);
               return (
                 <li
                   key={brief.id}
                   className="rounded-lg border border-border bg-muted/20 px-3 py-2"
                 >
-                  <p className="font-medium">
-                    {brief.kind} · {STATUS_LABELS[brief.status]}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{RESEARCH_KIND_LABELS[brief.kind]}</p>
+                    <ResearchBriefStatusBadge status={brief.status} />
+                  </div>
                   {brief.error ? (
                     <p className="mt-1 text-destructive">{brief.error}</p>
                   ) : null}

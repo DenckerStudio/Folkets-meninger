@@ -31,7 +31,7 @@ export default async function AdminResearchClusterPage({ params }: PageProps) {
             Research
           </Link>
           <span aria-hidden> / </span>
-          <span className="text-foreground">Klynge</span>
+          <span className="line-clamp-1 text-foreground">{detail.row.title || 'Detaljer'}</span>
         </p>
         <h1 className="mt-2 text-2xl font-bold text-foreground">{detail.row.title}</h1>
       </div>

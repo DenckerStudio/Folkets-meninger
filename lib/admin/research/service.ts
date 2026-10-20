@@ -108,17 +108,99 @@ export async function buildResearchWebhookBody(
   return body;
 }
 
+export type ResearchBriefSnapshot = Pick<
+  ResearchBriefRow,
+  'kind' | 'status' | 'output_ref' | 'request_id'
+>;
+
+export type ResearchBriefsByKind = Partial<
+  Record<ResearchApiAction, ResearchBriefSnapshot>
+>;
+
+export async function getLatestResearchBriefsByClusterIds(
+  clusterIds: string[],
+): Promise<Record<string, Partial<Record<ResearchBriefKind, ResearchBriefSnapshot>>>> {
+  if (clusterIds.length === 0) return {};
+  const supabase = getServiceSupabase();
+  const { data, error } = await supabase
+    .from('research_briefs')
+    .select('cluster_id, kind, status, output_ref, request_id, created_at')
+    .in('cluster_id', clusterIds)
+    .order('created_at', { ascending: false });
+  if (error || !data) return {};
+
+  const out: Record<string, Partial<Record<ResearchBriefKind, ResearchBriefSnapshot>>> = {};
+  for (const row of data) {
+    const clusterId = String(row.cluster_id);
+    const kind = row.kind as ResearchBriefKind;
+    const bucket = out[clusterId] ?? {};
+    if (bucket[kind]) continue;
+    bucket[kind] = {
+      kind,
+      status: row.status as ResearchBriefRow['status'],
+      output_ref: typeof row.output_ref === 'string' ? row.output_ref : null,
+      request_id: String(row.request_id),
+    };
+    out[clusterId] = bucket;
+  }
+  return out;
+}
+
+async function findActiveResearchBrief(
+  clusterId: string,
+  kind: ResearchBriefKind,
+): Promise<ResearchBriefSnapshot | null> {
+  const supabase = getServiceSupabase();
+  const { data, error } = await supabase
+    .from('research_briefs')
+    .select('kind, status, output_ref, request_id')
+    .eq('cluster_id', clusterId)
+    .eq('kind', kind)
+    .in('status', ['queued', 'running'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return {
+    kind: data.kind as ResearchBriefKind,
+    status: data.status as ResearchBriefRow['status'],
+    output_ref: typeof data.output_ref === 'string' ? data.output_ref : null,
+    request_id: String(data.request_id),
+  };
+}
+
 export async function enqueueResearchJob(
   clusterId: string,
   action: ResearchApiAction,
   requestedBy: string,
 ): Promise<
   | { ok: true; requestId: string }
-  | { ok: false; code: 'not_found' | 'webhook_failed' | 'not_configured' | 'db_error' }
+  | {
+      ok: false;
+      code:
+        | 'not_found'
+        | 'webhook_failed'
+        | 'not_configured'
+        | 'db_error'
+        | 'already_active';
+      requestId?: string;
+      status?: ResearchBriefRow['status'];
+    }
 > {
   const kind = researchApiActionToKind(action);
-  const requestId = randomUUID();
   const supabase = getServiceSupabase();
+
+  const active = await findActiveResearchBrief(clusterId, kind);
+  if (active) {
+    return {
+      ok: false,
+      code: 'already_active',
+      requestId: active.request_id,
+      status: active.status,
+    };
+  }
+
+  const requestId = randomUUID();
 
   const webhookBody = await buildResearchWebhookBody(clusterId, requestId, kind, requestedBy);
   if (!webhookBody) {

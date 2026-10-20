@@ -22,6 +22,16 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const result = await enqueueResearchJob(clusterId.trim(), action, auth.userId);
   if (!result.ok) {
+    if (result.code === 'already_active' && result.requestId) {
+      return NextResponse.json(
+        {
+          error: 'Oppgaven kjører allerede',
+          request_id: result.requestId,
+          status: result.status ?? 'queued',
+        },
+        { status: 409 },
+      );
+    }
     if (result.code === 'not_found') {
       return NextResponse.json({ error: 'Klyngen finnes ikke' }, { status: 404 });
     }
