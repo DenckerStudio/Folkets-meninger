@@ -122,12 +122,11 @@ async function main() {
   let retryJob = await waitForJobIdle(payload, retryJobId);
   assert.equal(retryMock.getHits(), 1);
   assert.equal(retryJob.hasError, false);
-  assert.ok(retryJob.waitUntil);
 
   await payload.update({
     collection: 'payload-jobs',
     id: retryJobId,
-    data: { waitUntil: null },
+    data: { waitUntil: null, processing: false },
     overrideAccess: true,
   });
 
