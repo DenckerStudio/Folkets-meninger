@@ -19,6 +19,10 @@ for f in $(ls -1 supabase/migrations/*.sql | sort); do
     echo "  -> SKIP $base"
     continue
   fi
+  if [[ "$base" == '20261021120000_content_feedback.sql' ]]; then
+    echo "  -> CI prep: pgvector i public (før content_feedback) ..."
+    psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/tests/ci-ensure-pgvector-public.sql
+  fi
   echo "  -> $base"
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
 done
@@ -35,6 +39,9 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/action_capture_rpcs.sql
 
 echo "Running action_capture_atomic.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/action_capture_atomic.sql
+
+echo "Running content_feedback_rpcs.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/content_feedback_rpcs.sql
 
 echo "Running security-guard.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql

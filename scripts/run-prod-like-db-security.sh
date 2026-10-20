@@ -18,7 +18,7 @@ SKIP_MIGRATIONS=(
   '20261018160000_security_lockdown_n8n.sql'
 )
 
-# Prod half-migrated: 110001 + hotfix + 160000 + 20140000 n8n applied; 120000+ pending.
+# Prod half-migrated: through 20150000, 21120000 (content_feedback) applied; 120000–130000 security chain pending.
 DEFER_MIGRATIONS=(
   '20261020120000_rpc_caller_user_binding.sql'
   '20261020120001_revoke_impersonation_rpc_execute.sql'
@@ -64,6 +64,10 @@ for f in $(ls -1 supabase/migrations/*.sql | sort); do
     echo "  -> DEFER $base"
     continue
   fi
+  if [[ "$base" == '20261021120000_content_feedback.sql' ]]; then
+    echo "  -> CI prep: pgvector i public (før content_feedback) ..."
+    psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/tests/ci-ensure-pgvector-public.sql
+  fi
   echo "  -> $base"
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
 done
@@ -104,7 +108,7 @@ done
 echo "Re-apply RPC lockdown (150000 re-grants authenticated EXECUTE on user-bound RPCs) ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261020120002_reapply_rpc_execute_lockdown.sql
 
-echo "Phase 3: defense-in-depth RPC authz (after 120000 binding) ..."
+echo "Phase 3: defense-in-depth RPC authz (after 120000 binding; must follow 20150000/21120000 from phase 1) ..."
 for d in "${POST_DEFER_MIGRATIONS[@]}"; do
   echo "  -> $d"
   psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/$d"
@@ -118,6 +122,9 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/action_capture_rpcs.sql
 
 echo "Running action_capture_atomic.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/action_capture_atomic.sql
+
+echo "Running content_feedback_rpcs.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/content_feedback_rpcs.sql
 
 echo "Running security-guard.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
