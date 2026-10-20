@@ -18,5 +18,7 @@ assert.match(doc, /n8n_upsert_source_items/);
 assert.match(doc, /"upserted"/);
 assert.match(doc, /bge-m3/);
 assert.match(doc, /vector\(1024\)/);
+assert.match(migration, /log_blog_content_feedback/i);
+assert.match(doc, /log_blog_content_feedback/);
 
 console.log('n8n/content-feedback-rpc.test.ts: ok');

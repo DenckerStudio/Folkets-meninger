@@ -13,7 +13,7 @@ Embeddings: **bge-m3**, `vector(1024)` (ikke nomic/768).
 | Header | `Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>` |
 | Content-Type | `application/json` |
 
-Alle `n8n_*`-RPC-er og `upsert_content_feedback` er kun `GRANT EXECUTE` til `service_role`.
+Alle `n8n_*`-RPC-er, `upsert_content_feedback` og `log_blog_content_feedback` er kun `GRANT EXECUTE` til `service_role`.
 
 ## Domener
 
@@ -115,3 +115,34 @@ Alle embedding-parametre valideres til dimensjon **1024**.
 ## fm-web (ikke n8n)
 
 `upsert_content_feedback` — admin-tilbakemelding via `/api/admin/content-feedback` (F2), `service_role` + `requireAdmin()`.
+
+## HTTP: `log_blog_content_feedback`
+
+Kalles fra fm-web (Payload webhook / blog-ops) med `service_role` etter publisering, arkivering eller sletting av bloggpost.
+
+```http
+POST {SUPABASE_URL}/rest/v1/rpc/log_blog_content_feedback
+```
+
+```json
+{
+  "p_post_id": "<payload-post-id>",
+  "p_event": "published",
+  "p_event_id": "<unik hendelses-id>",
+  "p_occurred_at": "2026-10-20T12:00:00Z",
+  "p_snapshot": { "title": "…", "slug": "…" }
+}
+```
+
+`p_event`: `published` | `archived` | `deleted`. `published` → `approve`; `archived` / `deleted` → `reject`.
+
+**Retur** (jsonb):
+
+| `status` | Betydning |
+|----------|-----------|
+| `inserted` / `updated` | Auto-rad skrevet eller oppdatert (`source = auto`) |
+| `duplicate` | Samme `p_event_id` som lagret i snapshot (idempotent) |
+| `stale` | `p_occurred_at` eldre enn lagret `occurred_at` |
+| `skipped_admin` | Eksisterende rad har `source <> auto` — ikke endret |
+
+`event_id` og `occurred_at` lagres i `snapshot` sammen med webhook-feltene. Kun auto-rader oppdateres (`ON CONFLICT … WHERE source = 'auto'`).
