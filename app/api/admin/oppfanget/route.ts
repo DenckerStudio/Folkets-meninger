@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     );
     return NextResponse.json(payload);
   } catch (error) {
-    console.error('oppfanget list failed', error);
-    return NextResponse.json({ error: 'Kunne ikke hente oppfanget-liste' }, { status: 500 });
+    console.error('research list failed', error);
+    return NextResponse.json({ error: 'Kunne ikke hente Research-liste' }, { status: 500 });
   }
 }

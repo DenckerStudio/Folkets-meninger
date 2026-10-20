@@ -1,7 +1,4 @@
-import AdminOppfangetClient from './admin-oppfanget-client';
-import { requireAdminPage } from '@/lib/admin/gate';
-import { parseOppfangetFilters } from '@/lib/admin/oppfanget/query';
-import { listOppfangetForAdmin } from '@/lib/admin/oppfanget/service';
+import { permanentRedirect } from 'next/navigation';
 import { routes } from '@/lib/routes';
 
 export const dynamic = 'force-dynamic';
@@ -10,19 +7,19 @@ type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function AdminOppfangetPage({ searchParams }: PageProps) {
-  await requireAdminPage(routes.adminOppfanget);
-
+/** Permanent redirect; query params (filtre) bevares. */
+export default async function AdminOppfangetLegacyRedirect({ searchParams }: PageProps) {
   const params = await searchParams;
-  const preview = typeof params.preview === 'string' ? params.preview : undefined;
-  const filters = parseOppfangetFilters(params);
-  const initialData = await listOppfangetForAdmin(filters, preview);
-
-  return (
-    <AdminOppfangetClient
-      initialData={initialData}
-      initialFilters={filters}
-      devPreview={preview}
-    />
-  );
+  const qs = new URLSearchParams();
+  for (const [key, raw] of Object.entries(params)) {
+    if (typeof raw === 'string') {
+      qs.set(key, raw);
+    } else if (Array.isArray(raw)) {
+      for (const part of raw) {
+        qs.append(key, part);
+      }
+    }
+  }
+  const query = qs.toString();
+  permanentRedirect(query ? `${routes.adminResearch}?${query}` : routes.adminResearch);
 }

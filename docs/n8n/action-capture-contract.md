@@ -2,7 +2,7 @@
 
 Kontrakt mellom n8n-pipeline og Supabase `action_clusters` / `action_sources` (migrasjoner `20261019235000_action_capture_tables.sql`, `20261021100000_action_capture_rpcs.sql`, `20261021110000_action_capture_atomic.sql`). **Ikke auto-appliert på prod** — Coolify Expert kjører SQL manuelt etter godkjenning.
 
-Admin-visning: `/dashboard/admin/oppfanget` (leser tabellene via `service_role` i fm-web).
+Admin-visning: `/dashboard/admin/research` (leser tabellene via `service_role` i fm-web).
 
 ## Autentisering
 

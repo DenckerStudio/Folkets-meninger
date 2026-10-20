@@ -164,7 +164,7 @@ export async function listOppfangetForAdmin(
         },
         tableMissing: true,
         tableMissingMessage:
-          'Oppfanget-listen er ikke klar i databasen ennå. En administrator må kjøre den ventende databasemigrasjonen før nye signaler kan vises her.',
+          'Research-listen er ikke klar i databasen ennå. En administrator må kjøre den ventende databasemigrasjonen før nye signaler kan vises her.',
         previewMock: false,
       };
     }
