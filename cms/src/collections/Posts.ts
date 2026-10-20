@@ -5,6 +5,8 @@ import {
   contentFeedbackAfterChange,
   contentFeedbackAfterDelete,
   contentFeedbackAfterOperation,
+  contentFeedbackBeforeOperation,
+  contentFeedbackCaptureMainStatusBeforeChange,
 } from '@/hooks/contentFeedbackWebhook';
 import { validatePostText } from '@/hooks/validatePostText';
 import {
@@ -47,9 +49,14 @@ export const Posts: CollectionConfig = {
     unlock: editorsOnly,
   },
   hooks: {
-    beforeOperation: [enforceDraftQueryForNonEditors],
+    beforeOperation: [enforceDraftQueryForNonEditors, contentFeedbackBeforeOperation],
     beforeValidate: [enforceDraftDataBeforeValidate, validatePostText],
-    beforeChange: [agentDraftGuard, enforceDraftDataBeforeChange, setPublishedAtOnPublish],
+    beforeChange: [
+      contentFeedbackCaptureMainStatusBeforeChange,
+      agentDraftGuard,
+      enforceDraftDataBeforeChange,
+      setPublishedAtOnPublish,
+    ],
     afterChange: [postPublishHooks, contentFeedbackAfterChange],
     afterDelete: [contentFeedbackAfterDelete],
     afterOperation: [contentFeedbackAfterOperation],

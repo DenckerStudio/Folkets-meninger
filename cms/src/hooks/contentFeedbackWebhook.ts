@@ -3,6 +3,9 @@ import type {
   CollectionAfterChangeHook,
   CollectionAfterDeleteHook,
   CollectionAfterOperationHook,
+  CollectionBeforeChangeHook,
+  CollectionBeforeOperationHook,
+  Payload,
   PayloadRequest,
 } from 'payload';
 import {
@@ -23,7 +26,11 @@ type PostDoc = {
 
 type PendingContentFeedback = ContentFeedbackWebhookBody;
 
-const PENDING_KEY = 'contentFeedbackPending';
+const MAIN_STATUS_BEFORE_KEY = 'contentFeedbackMainStatusBefore';
+const PENDING_BY_ID_KEY = 'contentFeedbackPendingById';
+
+type MainStatusMap = Record<string, string>;
+type PendingMap = Record<string, PendingContentFeedback>;
 
 function isAgentOrigin(doc: PostDoc | null | undefined): boolean {
   return doc?.origin === 'n8n';
@@ -54,6 +61,90 @@ async function mainVersionStatus(
   }
 }
 
+export function recordContentFeedbackMainStatusBefore(
+  req: PayloadRequest,
+  docId: string,
+  status: string,
+): void {
+  const map = req.context[MAIN_STATUS_BEFORE_KEY] as MainStatusMap | undefined;
+  if (!map) {
+    req.context[MAIN_STATUS_BEFORE_KEY] = { [docId]: status };
+    return;
+  }
+  map[docId] = status;
+}
+
+export function readContentFeedbackMainStatusBefore(
+  req: PayloadRequest,
+  docId: string,
+  operation: 'create' | 'update',
+): string {
+  const map = req.context[MAIN_STATUS_BEFORE_KEY] as MainStatusMap | undefined;
+  if (map && map[docId] !== undefined) {
+    return map[docId];
+  }
+  return operation === 'create' ? 'draft' : 'draft';
+}
+
+export function detectContentFeedbackTransition(
+  prevMainStatus: string,
+  currentMainStatus: string,
+): { becamePublished: boolean; becameArchived: boolean } {
+  const becamePublished =
+    currentMainStatus === 'published' && prevMainStatus !== 'published';
+  const becameArchived =
+    prevMainStatus === 'published' && currentMainStatus === 'draft';
+  return { becamePublished, becameArchived };
+}
+
+async function captureMainStatusForId(
+  req: PayloadRequest,
+  id: string | number,
+): Promise<void> {
+  const status = await mainVersionStatus(req, id);
+  recordContentFeedbackMainStatusBefore(req, String(id), status ?? 'draft');
+}
+
+export const contentFeedbackBeforeOperation: CollectionBeforeOperationHook<'posts'> = async ({
+  operation,
+  args,
+  req,
+}) => {
+  try {
+    if (isDraftOrAutosaveSave(req)) {
+      return args;
+    }
+    if (operation === 'updateByID' && args && typeof args === 'object' && 'id' in args) {
+      const id = (args as { id?: string | number }).id;
+      if (id != null) {
+        await captureMainStatusForId(req, id);
+      }
+    }
+  } catch (error) {
+    req.payload.logger.error({ msg: 'content-feedback beforeOperation failed', error });
+  }
+  return args;
+};
+
+export const contentFeedbackCaptureMainStatusBeforeChange: CollectionBeforeChangeHook = async ({
+  data,
+  req,
+  originalDoc,
+}) => {
+  try {
+    if (isDraftOrAutosaveSave(req)) {
+      return data;
+    }
+    const id = (data as PostDoc)?.id ?? (originalDoc as PostDoc)?.id;
+    if (id != null) {
+      await captureMainStatusForId(req, id);
+    }
+  } catch (error) {
+    req.payload.logger.error({ msg: 'content-feedback beforeChange capture failed', error });
+  }
+  return data;
+};
+
 async function categoryLabels(doc: PostDoc, req: PayloadRequest): Promise<string[]> {
   const category = doc.category;
   if (category && typeof category === 'object') {
@@ -81,16 +172,27 @@ async function categoryLabels(doc: PostDoc, req: PayloadRequest): Promise<string
   return [];
 }
 
-function queuePending(req: PayloadRequest, body: PendingContentFeedback): void {
-  req.context[PENDING_KEY] = body;
+export function queueContentFeedbackPending(
+  req: PayloadRequest,
+  docId: string | number,
+  body: PendingContentFeedback,
+): void {
+  const key = String(docId);
+  const existing = req.context[PENDING_BY_ID_KEY] as PendingMap | undefined;
+  if (!existing) {
+    req.context[PENDING_BY_ID_KEY] = { [key]: body };
+    return;
+  }
+  existing[key] = body;
 }
 
-function takePending(req: PayloadRequest): PendingContentFeedback | null {
-  const pending = req.context[PENDING_KEY] as PendingContentFeedback | undefined;
-  if (pending) {
-    delete req.context[PENDING_KEY];
+export function takeAllContentFeedbackPending(req: PayloadRequest): PendingContentFeedback[] {
+  const map = req.context[PENDING_BY_ID_KEY] as PendingMap | undefined;
+  if (!map) {
+    return [];
   }
-  return pending ?? null;
+  delete req.context[PENDING_BY_ID_KEY];
+  return Object.values(map);
 }
 
 function buildBody(
@@ -111,9 +213,56 @@ function buildBody(
   };
 }
 
+export type DeferredSendFn = typeof sendContentFeedbackWebhook;
+
+export async function runDeferredContentFeedbackSend(
+  payload: Payload,
+  body: PendingContentFeedback,
+  send: DeferredSendFn = sendContentFeedbackWebhook,
+): Promise<boolean> {
+  const log = payload.logger;
+
+  if (body.event === 'deleted') {
+    try {
+      await payload.findByID({
+        collection: 'posts',
+        id: body.post_id,
+        draft: false,
+        depth: 0,
+      });
+      return false;
+    } catch {
+      send(body, log);
+      return true;
+    }
+  }
+
+  const main = await payload.findByID({
+    collection: 'posts',
+    id: body.post_id,
+    draft: false,
+    depth: 0,
+  });
+  const post = main as PostDoc;
+  if (!isAgentOrigin(post)) {
+    return false;
+  }
+
+  const expectedStatus = body.event === 'published' ? 'published' : 'draft';
+  if (post._status !== expectedStatus) {
+    return false;
+  }
+
+  send(body, log);
+  return true;
+}
+
 function scheduleSendAfterCommit(req: PayloadRequest, body: PendingContentFeedback): void {
+  const payload = req.payload;
   setImmediate(() => {
-    sendContentFeedbackWebhook(body, req.payload.logger);
+    void runDeferredContentFeedbackSend(payload, body).catch((error) => {
+      payload.logger.error({ msg: 'content-feedback deferred send failed', error });
+    });
   });
 }
 
@@ -121,6 +270,7 @@ export const contentFeedbackAfterChange: CollectionAfterChangeHook = async ({
   doc,
   previousDoc,
   req,
+  operation,
 }) => {
   try {
     if (isDraftOrAutosaveSave(req)) {
@@ -139,13 +289,17 @@ export const contentFeedbackAfterChange: CollectionAfterChangeHook = async ({
     const postId = post.id ?? prev?.id;
     if (postId == null) return doc;
 
-    const prevMainStatus = prev?._status ?? 'draft';
-    const currentMainStatus = await mainVersionStatus(req, postId);
+    const prevMainStatus = readContentFeedbackMainStatusBefore(
+      req,
+      String(postId),
+      operation,
+    );
+    const currentMainStatus = (await mainVersionStatus(req, postId)) ?? 'draft';
 
-    const becamePublished =
-      currentMainStatus === 'published' && prevMainStatus !== 'published';
-    const becameArchived =
-      prevMainStatus === 'published' && currentMainStatus === 'draft';
+    const { becamePublished, becameArchived } = detectContentFeedbackTransition(
+      prevMainStatus,
+      currentMainStatus,
+    );
 
     if (!becamePublished && !becameArchived) {
       return doc;
@@ -155,9 +309,9 @@ export const contentFeedbackAfterChange: CollectionAfterChangeHook = async ({
     const merged = { ...originDoc, ...post, id: postId };
 
     if (becamePublished) {
-      queuePending(req, buildBody('published', merged, categories));
+      queueContentFeedbackPending(req, postId, buildBody('published', merged, categories));
     } else if (becameArchived) {
-      queuePending(req, buildBody('archived', merged, categories));
+      queueContentFeedbackPending(req, postId, buildBody('archived', merged, categories));
     }
   } catch (error) {
     req.payload.logger.error({ msg: 'content-feedback afterChange failed', error });
@@ -171,9 +325,9 @@ export const contentFeedbackAfterOperation: CollectionAfterOperationHook<'posts'
   result,
 }) => {
   try {
-    const pending = takePending(req);
-    if (pending) {
-      scheduleSendAfterCommit(req, pending);
+    const pending = takeAllContentFeedbackPending(req);
+    for (const body of pending) {
+      scheduleSendAfterCommit(req, body);
     }
   } catch (error) {
     req.payload.logger.error({ msg: 'content-feedback afterOperation failed', error });
