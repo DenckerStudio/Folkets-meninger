@@ -1,8 +1,17 @@
 import {
-  formatStortingetVoteringTall,
+  classifyStortingetVoteSubject,
   resolveSakProposalAdopted,
+  STORTINGET_BAR_LABELS,
+  stortingetVotePhrase,
 } from '@/lib/alignment/sak-vedtak';
-import { ALIGNMENT_MIN_FOLK_VOTES, type AlignmentComparison, type AlignmentSide, type AlignmentVerdict, type FolkVoteCounts, type SakVotering } from './types';
+import {
+  ALIGNMENT_MIN_FOLK_VOTES,
+  type AlignmentComparison,
+  type AlignmentSide,
+  type AlignmentVerdict,
+  type FolkVoteCounts,
+  type SakVotering,
+} from './types';
 import { pickPrimaryVotering, voteringDecidedCount } from '@/lib/stortinget-voteringer';
 
 export type SakVedtakContext = {
@@ -55,28 +64,56 @@ export function alignmentScore(folkForShare: number, stortingetForShare: number,
 
 function buildStortingetHeadlineParts(args: {
   kortvedtak?: string | null;
+  vedtakstekst?: string | null;
+  votering: SakVotering;
   hasElectronicCounts: boolean;
   stForPercent: number | null;
   stAgainstPercent: number | null;
   proposalAdopted: boolean;
-}): { outcome: string | null; votePhrase: string } {
-  const { kortvedtak, hasElectronicCounts, stForPercent, stAgainstPercent, proposalAdopted } =
-    args;
+}): { outcome: string | null; votePhrase: string; barLabels: { for: string; against: string } } {
+  const {
+    kortvedtak,
+    vedtakstekst,
+    votering,
+    hasElectronicCounts,
+    stForPercent,
+    stAgainstPercent,
+    proposalAdopted,
+  } = args;
   const outcome = kortvedtak?.trim() || null;
   const adoptedLabel = proposalAdopted ? 'vedtok forslaget' : 'nedstemte forslaget';
 
   if (hasElectronicCounts && stForPercent != null && stAgainstPercent != null) {
-    const votePhrase = outcome
-      ? formatStortingetVoteringTall(stForPercent, stAgainstPercent)
-      : proposalAdopted
-        ? `Stortinget vedtok forslaget med ${stForPercent} % For og ${stAgainstPercent} % Mot`
-        : `Stortinget nedstemte forslaget med ${stAgainstPercent} % Mot og ${stForPercent} % For`;
-    return { outcome, votePhrase };
+    const subject = classifyStortingetVoteSubject({
+      kortvedtak,
+      vedtakstekst,
+      votering,
+      hasElectronicCounts,
+    });
+    const barLabels = STORTINGET_BAR_LABELS[subject];
+
+    if (outcome) {
+      return {
+        outcome,
+        votePhrase: stortingetVotePhrase(subject, stForPercent, stAgainstPercent),
+        barLabels,
+      };
+    }
+
+    const votePhrase =
+      subject === 'forslag'
+        ? proposalAdopted
+          ? `Stortinget vedtok forslaget med ${stForPercent} % For og ${stAgainstPercent} % Mot`
+          : `Stortinget nedstemte forslaget med ${stAgainstPercent} % Mot og ${stForPercent} % For`
+        : stortingetVotePhrase(subject, stForPercent, stAgainstPercent);
+
+    return { outcome, votePhrase, barLabels };
   }
 
   return {
     outcome,
     votePhrase: `Stortinget ${adoptedLabel} uten elektronisk personlig votering.`,
+    barLabels: STORTINGET_BAR_LABELS.neutral,
   };
 }
 
@@ -111,6 +148,7 @@ export function buildAlignmentComparison(
       stortingetForPercent: null,
       stortingetAgainstPercent: null,
       stortingetSide: null,
+      stortingetBarLabels: STORTINGET_BAR_LABELS.neutral,
       score: null,
       gapPoints: null,
       verdict: 'pending',
@@ -158,6 +196,8 @@ export function buildAlignmentComparison(
 
   const stHeadlineParts = buildStortingetHeadlineParts({
     kortvedtak: sakVedtak?.kortvedtak,
+    vedtakstekst: sakVedtak?.vedtakstekst,
+    votering,
     hasElectronicCounts,
     stForPercent,
     stAgainstPercent,
@@ -179,6 +219,7 @@ export function buildAlignmentComparison(
       stortingetForPercent: stForPercent,
       stortingetAgainstPercent: stAgainstPercent,
       stortingetSide: stSide,
+      stortingetBarLabels: stHeadlineParts.barLabels,
       score: null,
       gapPoints: null,
       verdict: 'insufficient',
@@ -232,6 +273,7 @@ export function buildAlignmentComparison(
     stortingetForPercent: stForPercent,
     stortingetAgainstPercent: stAgainstPercent,
     stortingetSide: stSide,
+    stortingetBarLabels: stHeadlineParts.barLabels,
     score,
     gapPoints,
     verdict,

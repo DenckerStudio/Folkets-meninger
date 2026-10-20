@@ -78,8 +78,11 @@ const innstillingRejected = buildAlignmentComparison(
   { kortvedtak: 'Forslaget ble ikke vedtatt.' },
 );
 assert.match(innstillingRejected.headline, /Forslaget ble ikke vedtatt/);
-assert.match(innstillingRejected.headline, /Voteringen: 79 % For, 21 % Mot/);
+assert.match(innstillingRejected.headline, /79 % stemte for innstillingen, 21 % mot/);
 assert.doesNotMatch(innstillingRejected.headline, /vedtok forslaget/i);
+assert.doesNotMatch(innstillingRejected.headline, /Voteringen: 79 % For/i);
 assert.equal(innstillingRejected.stortinget?.adopted, false);
+assert.equal(innstillingRejected.stortingetBarLabels.for, 'For innstillingen');
+assert.equal(innstillingRejected.stortingetBarLabels.against, 'Mot innstillingen');
 
 console.log('alignment score tests passed');

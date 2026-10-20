@@ -1,9 +1,11 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import Link from 'next/link';
+import { Children } from 'react';
 import { CircleDollarSign, ExternalLink, FileText, HandHeart, Loader2, Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { CivicBubble } from '@/components/icons/civic';
 import { BiasReportLink } from '@/components/trust/bias-report-link';
 import { Dialog } from '@/components/ui/dialog';
@@ -276,6 +278,22 @@ function SummarySources({
   );
 }
 
+function FactTileGrid({ children }: { children: ReactNode }) {
+  const tiles = Children.toArray(children);
+  const oddLastSpan = tiles.length % 2 === 1;
+
+  return (
+    <div
+      className={cn(
+        'grid gap-3 sm:grid-cols-2',
+        oddLastSpan && 'sm:[&>*:last-child]:col-span-2',
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 function FactTile({
   icon: Icon,
   label,
@@ -318,7 +336,7 @@ function V2Summary({ data }: { data: AiSummaryV2 }) {
         <p className="text-base leading-relaxed break-words text-foreground">{data.narrative}</p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <FactTileGrid>
         <FactTile icon={Users} label="Hvem berøres?" text={data.who_affected} />
         {data.how_affected.trim() ? (
           <FactTile icon={HandHeart} label="Hvordan berøres de?" text={data.how_affected} />
@@ -326,7 +344,7 @@ function V2Summary({ data }: { data: AiSummaryV2 }) {
         {data.kostnad?.trim() ? (
           <FactTile icon={CircleDollarSign} label="Økonomi og kostnad" text={data.kostnad} />
         ) : null}
-      </div>
+      </FactTileGrid>
 
       {data.topic_cards.length > 0 ? (
         <div className="grid gap-3 md:grid-cols-3">
@@ -345,10 +363,10 @@ function LegacySummary({ data }: { data: AiSummaryLegacy }) {
       {data.hva.trim() ? (
         <p className="text-base leading-relaxed break-words text-foreground">{data.hva}</p>
       ) : null}
-      <div className="grid gap-3 sm:grid-cols-2">
+      <FactTileGrid>
         <FactTile icon={Users} label="Hvem berøres?" text={data.hvem} />
         <FactTile icon={CircleDollarSign} label="Økonomi og kostnad" text={data.kostnad} />
-      </div>
+      </FactTileGrid>
     </div>
   );
 }

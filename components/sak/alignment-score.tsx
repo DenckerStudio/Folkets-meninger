@@ -311,17 +311,17 @@ export function AlignmentScore({
                 restPercent={0}
                 restLabel="Ikke til stede"
               />
-              <div className="mt-2 flex justify-between text-xs font-medium text-muted-foreground">
+              <div className="mt-2 flex justify-between gap-2 text-xs font-medium text-muted-foreground">
                 <span className="text-emerald-600 dark:text-emerald-400">
-                  For {comparison.stortingetForPercent}%
+                  {comparison.stortingetBarLabels.for} {comparison.stortingetForPercent}%
                 </span>
-                <span>
+                <span className="text-center">
                   {comparison.stortinget.absent > 0
                     ? `${comparison.stortinget.absent} ikke til stede`
                     : 'Alle til stede stemte'}
                 </span>
                 <span className="text-rose-600 dark:text-rose-400">
-                  Mot {comparison.stortingetAgainstPercent}%
+                  {comparison.stortingetBarLabels.against} {comparison.stortingetAgainstPercent}%
                 </span>
               </div>
             </>
