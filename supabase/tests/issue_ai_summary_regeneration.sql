@@ -132,12 +132,21 @@ BEGIN
       now() - interval '1 hour', 0, NULL
     );
 
-  SELECT id INTO v_pick
-  FROM public.n8n_list_issues_missing_ai_summary(1)
+  SELECT q.id INTO v_pick
+  FROM public.n8n_list_issues_missing_ai_summary(200) q
+  WHERE q.id IN (v_issue_a, v_issue_b)
   LIMIT 1;
 
-  IF v_pick <> v_issue_b THEN
-    RAISE EXCEPTION 'backoff: forventet B (%), fikk %', v_issue_b, v_pick;
+  IF v_pick IS DISTINCT FROM v_issue_b THEN
+    RAISE EXCEPTION 'backoff: forventet B (%) før A i køen, fikk %', v_issue_b, v_pick;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.n8n_list_issues_missing_ai_summary(200) q
+    WHERE q.id = v_issue_a
+  ) THEN
+    RAISE EXCEPTION 'backoff: A skal være utelatt mens last_attempt er innen 15 min';
   END IF;
 
   DELETE FROM public.issue_ai_summaries
