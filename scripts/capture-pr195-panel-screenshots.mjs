@@ -70,6 +70,7 @@ function feedbackMockFor(contentId) {
   if (contentId === VURDERT_ID) {
     return {
       feedback: {
+        source: 'admin',
         verdict: 'approve',
         aspects: { title: '+', language: '+' },
         reason_tags: [],
@@ -101,12 +102,14 @@ async function assertTailwindApplied(page, selector) {
 }
 
 async function waitPanelReady(page, panelId) {
-  const panel = page.locator(`#${panelId}`);
+  const shell = page.locator(`#${panelId}`);
+  await shell.waitFor({ state: 'attached', timeout: 60_000 });
+  const panel = shell.locator('section').first();
   await panel.waitFor({ state: 'visible', timeout: 60_000 });
-  await panel.getByText('Laster tidligere tilbakemelding').waitFor({
-    state: 'detached',
-    timeout: 30_000,
-  });
+  const loading = panel.getByText('Laster tidligere tilbakemelding');
+  if (await loading.count()) {
+    await loading.waitFor({ state: 'detached', timeout: 30_000 });
+  }
   await assertTailwindApplied(page, `#${panelId} section`);
 }
 
@@ -126,19 +129,18 @@ async function mockContentFeedbackGet(page) {
   });
 }
 
-await rm(root, { recursive: true, force: true });
-await mkdir(root, { recursive: true });
-await writeFile(join(root, 'page.tsx'), pageTsx);
-await writeFile(join(root, 'layout.tsx'), layout);
 await mkdir(storeDir, { recursive: true });
 await mkdir(artifactDir, { recursive: true });
 
 if (process.env.SCREENSHOT_SKIP_BUILD !== '1') {
+  await rm(root, { recursive: true, force: true });
+  await mkdir(root, { recursive: true });
+  await writeFile(join(root, 'page.tsx'), pageTsx);
+  await writeFile(join(root, 'layout.tsx'), layout);
   console.log(`SHA ${sha} — production build with ephemeral route …`);
   execSync('npm run build', { stdio: 'inherit' });
 } else {
-  console.log(`SHA ${sha} — skip build (SCREENSHOT_SKIP_BUILD); waiting for dev HMR …`);
-  await new Promise((r) => setTimeout(r, 15_000));
+  console.log(`SHA ${sha} — skip build (SCREENSHOT_SKIP_BUILD); using existing .next output`);
 }
 
 const port = new URL(baseUrl).port || '3456';
@@ -230,5 +232,7 @@ if (serverProc?.pid) {
     // already stopped
   }
 }
-await rm(root, { recursive: true, force: true });
+if (process.env.SCREENSHOT_SKIP_BUILD !== '1') {
+  await rm(root, { recursive: true, force: true });
+}
 console.log('Done — screenshots in', storeDir);

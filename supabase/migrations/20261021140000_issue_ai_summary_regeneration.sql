@@ -5,10 +5,18 @@ BEGIN;
 SET LOCAL lock_timeout = '5s';
 
 ALTER TABLE public.issue_ai_summaries
-  ADD COLUMN IF NOT EXISTS regeneration_requested_at timestamptz;
+  ADD COLUMN IF NOT EXISTS regeneration_requested_at timestamptz,
+  ADD COLUMN IF NOT EXISTS regeneration_attempts int NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS regeneration_last_attempt_at timestamptz;
 
 COMMENT ON COLUMN public.issue_ai_summaries.regeneration_requested_at IS
   'Satt ved admin_submit_content_feedback reject (ai_summary); null ved approve eller nytt sammendrag fra n8n.';
+
+COMMENT ON COLUMN public.issue_ai_summaries.regeneration_attempts IS
+  'Antall n8n-forsøk på regenerering; nullstilles ved vellykket upsert eller ny admin-avvisning.';
+
+COMMENT ON COLUMN public.issue_ai_summaries.regeneration_last_attempt_at IS
+  'Sist n8n forsøkte regenerering; brukes til backoff (15 min) så én feilende sak ikke blokkerer køen.';
 
 -- ---------------------------------------------------------------------------
 -- n8n_list_issues_missing_ai_summary
@@ -49,7 +57,14 @@ AS $$
   LEFT JOIN public.issue_ai_summaries s ON s.stortinget_issue_id = i.id
   JOIN LATERAL public.n8n_get_issue_ai_summary_context(i.id) ctx ON true
   WHERE s.stortinget_issue_id IS NULL
-     OR s.regeneration_requested_at IS NOT NULL
+     OR (
+       s.regeneration_requested_at IS NOT NULL
+       AND coalesce(s.regeneration_attempts, 0) < 5
+       AND (
+         s.regeneration_last_attempt_at IS NULL
+         OR s.regeneration_last_attempt_at < now() - interval '15 minutes'
+       )
+     )
      OR (
        length(trim(coalesce(s.hva, ''))) < 180
        AND s.updated_at < now() - interval '12 hours'
@@ -111,6 +126,8 @@ BEGIN
     topic_cards,
     labels,
     regeneration_requested_at,
+    regeneration_attempts,
+    regeneration_last_attempt_at,
     updated_at
   )
   VALUES (
@@ -124,6 +141,8 @@ BEGIN
     coalesce(p_topic_cards, '[]'::jsonb),
     v_labels,
     NULL,
+    0,
+    NULL,
     now()
   )
   ON CONFLICT (stortinget_issue_id) DO UPDATE SET
@@ -136,6 +155,8 @@ BEGIN
     topic_cards = EXCLUDED.topic_cards,
     labels = EXCLUDED.labels,
     regeneration_requested_at = NULL,
+    regeneration_attempts = 0,
+    regeneration_last_attempt_at = NULL,
     updated_at = now();
 
   UPDATE public.stortinget_issues
@@ -143,6 +164,26 @@ BEGIN
   WHERE id = p_issue_id;
 
   RETURN jsonb_build_object('ok', true, 'stortinget_issue_id', p_issue_id);
+END;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- n8n_mark_issue_ai_summary_regeneration_attempt — backoff ved feilet generering
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.n8n_mark_issue_ai_summary_regeneration_attempt(p_issue_id text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  UPDATE public.issue_ai_summaries
+  SET
+    regeneration_attempts = coalesce(regeneration_attempts, 0) + 1,
+    regeneration_last_attempt_at = now()
+  WHERE stortinget_issue_id = p_issue_id
+    AND regeneration_requested_at IS NOT NULL;
 END;
 $$;
 
@@ -182,11 +223,17 @@ BEGIN
   IF p_content_type = 'ai_summary' THEN
     IF p_verdict = 'reject' THEN
       UPDATE public.issue_ai_summaries
-      SET regeneration_requested_at = now()
+      SET
+        regeneration_requested_at = now(),
+        regeneration_attempts = 0,
+        regeneration_last_attempt_at = NULL
       WHERE stortinget_issue_id = p_content_id;
     ELSIF p_verdict = 'approve' THEN
       UPDATE public.issue_ai_summaries
-      SET regeneration_requested_at = NULL
+      SET
+        regeneration_requested_at = NULL,
+        regeneration_attempts = 0,
+        regeneration_last_attempt_at = NULL
       WHERE stortinget_issue_id = p_content_id;
     END IF;
   END IF;
@@ -204,6 +251,11 @@ REVOKE ALL ON FUNCTION public.n8n_upsert_issue_ai_summary(
 GRANT EXECUTE ON FUNCTION public.n8n_upsert_issue_ai_summary(
   text, text, text, text, text, text, text, jsonb, text[]
 ) TO service_role;
+
+REVOKE ALL ON FUNCTION public.n8n_mark_issue_ai_summary_regeneration_attempt(text)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.n8n_mark_issue_ai_summary_regeneration_attempt(text)
+  TO service_role;
 
 REVOKE ALL ON FUNCTION public.admin_submit_content_feedback(
   text, text, text, jsonb, text[], text, uuid, jsonb

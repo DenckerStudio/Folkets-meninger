@@ -31,7 +31,8 @@ DECLARE
   ];
   n8n_hardened text[] := ARRAY[
     'n8n_list_issues_missing_ai_summary',
-    'n8n_upsert_issue_ai_summary'
+    'n8n_upsert_issue_ai_summary',
+    'n8n_mark_issue_ai_summary_regeneration_attempt'
   ];
   problems text[] := '{}';
   r record;

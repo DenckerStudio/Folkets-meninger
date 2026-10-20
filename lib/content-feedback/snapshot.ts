@@ -11,6 +11,7 @@ const ALLOWED_SNAPSHOT_KEYS = new Set([
   'review_state',
   'narrative',
   'hva',
+  'truncated',
 ]);
 
 const FORBIDDEN_SNAPSHOT_KEYS = new Set([
@@ -20,6 +21,14 @@ const FORBIDDEN_SNAPSHOT_KEYS = new Set([
   'event',
   'admin_id',
 ]);
+
+const SNAPSHOT_TEXT_KEYS = [
+  'title',
+  'neutral_summary',
+  'excerpt',
+  'narrative',
+  'hva',
+] as const;
 
 export const SNAPSHOT_MAX_BYTES = 8 * 1024;
 
@@ -35,11 +44,48 @@ export function sanitizeSnapshotInput(raw: Record<string, unknown> | undefined):
   return out;
 }
 
-export function assertSnapshotSize(snapshot: Record<string, unknown>): void {
-  const bytes = Buffer.byteLength(JSON.stringify(snapshot), 'utf8');
-  if (bytes > SNAPSHOT_MAX_BYTES) {
-    throw new Error('Snapshot er for stort');
+export function snapshotByteLength(snapshot: Record<string, unknown>): number {
+  return Buffer.byteLength(JSON.stringify(snapshot), 'utf8');
+}
+
+/** Truncates long text fields until JSON fits; sets truncated: true when shortened. */
+export function fitSnapshotToMaxBytes(
+  snapshot: Record<string, unknown>,
+  maxBytes: number = SNAPSHOT_MAX_BYTES,
+): Record<string, unknown> {
+  let out: Record<string, unknown> = { ...snapshot };
+  if (snapshotByteLength(out) <= maxBytes) {
+    return out;
   }
+
+  let maxChars = 4000;
+  while (maxChars > 32) {
+    out = { ...snapshot };
+    let truncated = false;
+    for (const key of SNAPSHOT_TEXT_KEYS) {
+      const value = out[key];
+      if (typeof value === 'string' && value.length > maxChars) {
+        out[key] = `${value.slice(0, maxChars)}…`;
+        truncated = true;
+      }
+    }
+    if (truncated) {
+      out.truncated = true;
+    }
+    if (snapshotByteLength(out) <= maxBytes) {
+      return out;
+    }
+    maxChars = Math.floor(maxChars * 0.65);
+  }
+
+  const minimal: Record<string, unknown> = { truncated: true };
+  if (typeof snapshot.issue_id === 'string') {
+    minimal.issue_id = snapshot.issue_id;
+  }
+  if (typeof snapshot.title === 'string') {
+    minimal.title = snapshot.title.slice(0, 120);
+  }
+  return minimal;
 }
 
 export async function buildAdminContentFeedbackSnapshot(
@@ -99,6 +145,5 @@ export async function buildAdminContentFeedbackSnapshot(
   }
 
   const cleaned = sanitizeSnapshotInput(snapshot);
-  assertSnapshotSize(cleaned);
-  return cleaned;
+  return fitSnapshotToMaxBytes(cleaned);
 }

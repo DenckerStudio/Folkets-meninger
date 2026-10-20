@@ -31,6 +31,11 @@ assert.match(migration, /s\.regeneration_requested_at ASC NULLS LAST/i);
 assert.match(migration, /SET search_path = public, pg_temp/i);
 assert.match(migration, /regeneration_requested_at = NULL/i);
 assert.match(migration, /CREATE OR REPLACE FUNCTION public\.admin_submit_content_feedback/i);
+assert.match(migration, /regeneration_attempts int NOT NULL DEFAULT 0/i);
+assert.match(migration, /regeneration_last_attempt_at timestamptz/i);
+assert.match(migration, /n8n_mark_issue_ai_summary_regeneration_attempt/i);
+assert.match(migration, /interval '15 minutes'/i);
+assert.match(migration, /regeneration_attempts, 0\) < 5|coalesce\(s\.regeneration_attempts, 0\) < 5/i);
 
 assert.match(
   migration,

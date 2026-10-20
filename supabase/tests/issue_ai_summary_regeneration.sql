@@ -102,5 +102,46 @@ BEGIN
   WHERE stortinget_issue_id IN (v_issue_a, v_issue_b);
 
   DELETE FROM public.stortinget_issues WHERE id IN (v_issue_a, v_issue_b);
+
+  -- Backoff: nylig forsøk på A skal ikke blokkere regenerering av B
+  v_issue_a := 'cf-regen-backoff-a';
+  v_issue_b := 'cf-regen-backoff-b';
+
+  INSERT INTO public.stortinget_issues (id, title, status, first_seen_at, last_synced_at)
+  VALUES
+    (v_issue_a, 'Backoff A', 'pending', now(), now()),
+    (v_issue_b, 'Backoff B', 'pending', now(), now())
+  ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title;
+
+  DELETE FROM public.issue_ai_summaries
+  WHERE stortinget_issue_id IN (v_issue_a, v_issue_b);
+
+  INSERT INTO public.issue_ai_summaries (
+    stortinget_issue_id, hva, hvem, kostnad, narrative, who_affected, how_affected,
+    regeneration_requested_at, regeneration_attempts, regeneration_last_attempt_at
+  )
+  VALUES
+    (
+      v_issue_a,
+      repeat('x', 200), 'Test', 'Test', repeat('x', 200), 'Test', 'Test',
+      now(), 1, now()
+    ),
+    (
+      v_issue_b,
+      repeat('y', 200), 'Test', 'Test', repeat('y', 200), 'Test', 'Test',
+      now() - interval '1 hour', 0, NULL
+    );
+
+  SELECT id INTO v_pick
+  FROM public.n8n_list_issues_missing_ai_summary(1)
+  LIMIT 1;
+
+  IF v_pick <> v_issue_b THEN
+    RAISE EXCEPTION 'backoff: forventet B (%), fikk %', v_issue_b, v_pick;
+  END IF;
+
+  DELETE FROM public.issue_ai_summaries
+  WHERE stortinget_issue_id IN (v_issue_a, v_issue_b);
+  DELETE FROM public.stortinget_issues WHERE id IN (v_issue_a, v_issue_b);
 END;
 $$;

@@ -22,7 +22,19 @@ type AspectMark = '+' | '-';
 const REJECTION_HINT =
   'Ved avvisning må minst ett aspekt merkes med tommel ned eller minst én grunn velges.';
 const SUCCESS_MESSAGE = 'Takk, tilbakemeldingen er lagret.';
-const VERDICT_REQUIRED = 'Velg godkjenn eller avvis før du lagrer.';
+const VERDICT_REQUIRED = 'Velg en dom før du lagrer.';
+
+const SAVE_CLOSE_DELAY_MS = 2500;
+const SAVE_CLOSE_DELAY_REDUCED_MS = 800;
+
+function scheduleAfterSuccessfulSave(onSaved?: () => void) {
+  if (!onSaved) return;
+  const reduced =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const delay = reduced ? SAVE_CLOSE_DELAY_REDUCED_MS : SAVE_CLOSE_DELAY_MS;
+  window.setTimeout(onSaved, delay);
+}
 
 export type ContentFeedbackPanelProps = {
   contentType: ContentFeedbackType;
@@ -52,6 +64,7 @@ export function ContentFeedbackPanel({
   const titleId = useId();
   const noteId = useId();
   const verdictGroupId = useId();
+  const rejectHintId = useId();
   const [verdict, setVerdict] = useState<ContentFeedbackVerdict | null>(
     lockedVerdict ?? null,
   );
@@ -63,8 +76,9 @@ export function ContentFeedbackPanel({
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(true);
-  const [reviewed, setReviewed] = useState(false);
+  const [showAdminReviewedBadge, setShowAdminReviewedBadge] = useState(false);
   const [aspectsExpanded, setAspectsExpanded] = useState(false);
+  const [rejectSubmitAttempted, setRejectSubmitAttempted] = useState(false);
 
   const effectiveVerdict = lockedVerdict ?? verdict;
   const isReject = effectiveVerdict === 'reject';
@@ -87,6 +101,7 @@ export function ContentFeedbackPanel({
         const json = (await res.json().catch(() => ({}))) as {
           error?: string;
           feedback?: {
+            source?: string;
             verdict: ContentFeedbackVerdict;
             aspects?: ContentFeedbackAspects;
             reason_tags?: string[];
@@ -102,10 +117,10 @@ export function ContentFeedbackPanel({
           return;
         }
         const row = json.feedback;
-        if (!row || lockedVerdict) {
+        if (!row || lockedVerdict || row.source !== 'admin') {
           return;
         }
-        setReviewed(true);
+        setShowAdminReviewedBadge(true);
         if (row.verdict === 'approve' || row.verdict === 'reject') {
           setVerdict(row.verdict);
         }
@@ -133,7 +148,6 @@ export function ContentFeedbackPanel({
       cancelled = true;
     };
   }, [contentType, contentId, lockedVerdict]);
-
 
   useEffect(() => {
     if (isReject) {
@@ -172,11 +186,13 @@ export function ContentFeedbackPanel({
     setError('');
     setVerdictError('');
     setSuccess('');
+
     if (verdictMissing) {
       setVerdictError(VERDICT_REQUIRED);
       return;
     }
     if (rejectionIncomplete) {
+      setRejectSubmitAttempted(true);
       return;
     }
 
@@ -199,9 +215,9 @@ export function ContentFeedbackPanel({
         setError(typeof json.error === 'string' ? json.error : 'Kunne ikke lagre');
         return;
       }
-      setReviewed(true);
+      setShowAdminReviewedBadge(true);
       setSuccess(SUCCESS_MESSAGE);
-      onSaved?.();
+      scheduleAfterSuccessfulSave(onSaved);
     } catch {
       setError('Kunne ikke lagre');
     } finally {
@@ -210,6 +226,7 @@ export function ContentFeedbackPanel({
   }
 
   const showAspectList = isReject || aspectsExpanded;
+  const showRejectAlert = isReject && rejectionIncomplete && rejectSubmitAttempted;
 
   return (
     <section
@@ -224,7 +241,7 @@ export function ContentFeedbackPanel({
           <h3 id={titleId} className="text-sm font-semibold text-foreground">
             {title}
           </h3>
-          {reviewed ? (
+          {showAdminReviewedBadge ? (
             <span className="rounded-full border border-border bg-card px-2 py-0.5 text-xs font-medium text-muted-foreground">
               Vurdert
             </span>
@@ -243,11 +260,11 @@ export function ContentFeedbackPanel({
         </p>
       ) : null}
 
-      {!lockedVerdict ? (
+      {!lockedVerdict && !loadingExisting ? (
         <div className="mt-4 space-y-1">
           <p id={verdictGroupId} className="text-sm font-medium text-foreground">
-            Dom <span className="text-destructive" aria-hidden>*</span>
-            <span className="sr-only"> (påkrevd)</span>
+            Dom{' '}
+            <span className="text-xs font-normal text-muted-foreground">(påkrevd)</span>
           </p>
           <div className="flex flex-wrap gap-2" role="group" aria-labelledby={verdictGroupId}>
             {(
@@ -281,13 +298,13 @@ export function ContentFeedbackPanel({
             </p>
           ) : null}
         </div>
-      ) : (
+      ) : lockedVerdict ? (
         <p className="mt-3 text-sm text-muted-foreground">
           {lockedVerdict === 'approve' ? 'Du publiserte dette utkastet.' : 'Du arkiverte dette utkastet.'}
         </p>
-      )}
+      ) : null}
 
-      {isApprove && !showAspectList ? (
+      {!loadingExisting && isApprove && !showAspectList ? (
         <button
           type="button"
           onClick={() => setAspectsExpanded(true)}
@@ -299,7 +316,7 @@ export function ContentFeedbackPanel({
         </button>
       ) : null}
 
-      {showAspectList ? (
+      {!loadingExisting && showAspectList ? (
         <div className="mt-4 space-y-2">
           {isApprove ? (
             <button
@@ -373,8 +390,8 @@ export function ContentFeedbackPanel({
         </div>
       ) : null}
 
-      {isReject ? (
-        <div className="mt-4 space-y-2">
+      {!loadingExisting && isReject ? (
+        <div className="mt-4 space-y-2" aria-describedby={rejectHintId}>
           <p className="text-sm font-medium text-foreground">Vanlige grunner</p>
           <div className="flex flex-wrap gap-2">
             {CONTENT_FEEDBACK_REASON_TAGS.map((item) => {
@@ -397,31 +414,37 @@ export function ContentFeedbackPanel({
               );
             })}
           </div>
+          {!showRejectAlert ? (
+            <p id={rejectHintId} className="text-sm text-muted-foreground">
+              {REJECTION_HINT}
+            </p>
+          ) : (
+            <p className="text-sm text-destructive" role="alert">
+              {REJECTION_HINT}
+            </p>
+          )}
         </div>
       ) : null}
 
-      <div className="mt-4 space-y-2">
-        <label htmlFor={noteId} className="text-sm font-medium text-foreground">
-          Notat (valgfritt)
-        </label>
-        <textarea
-          id={noteId}
-          name="note"
-          value={note}
-          maxLength={1000}
-          rows={3}
-          onChange={(event) => setNote(event.target.value)}
-          className="w-full min-h-11 rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-          placeholder="Utdyp kort hvis det hjelper neste generering …"
-        />
-        <p className="text-right text-xs text-muted-foreground">{note.length}/1000</p>
-      </div>
-
-      {rejectionIncomplete ? (
-        <p className="mt-2 text-sm text-destructive" role="status" aria-live="polite">
-          {REJECTION_HINT}
-        </p>
+      {!loadingExisting ? (
+        <div className="mt-4 space-y-2">
+          <label htmlFor={noteId} className="text-sm font-medium text-foreground">
+            Notat (valgfritt)
+          </label>
+          <textarea
+            id={noteId}
+            name="note"
+            value={note}
+            maxLength={1000}
+            rows={3}
+            onChange={(event) => setNote(event.target.value)}
+            className="w-full min-h-11 rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            placeholder="Utdyp kort hvis det hjelper neste generering …"
+          />
+          <p className="text-right text-xs text-muted-foreground">{note.length}/1000</p>
+        </div>
       ) : null}
+
       {error ? (
         <p className="mt-2 text-sm text-destructive" role="alert">
           {error}
@@ -445,7 +468,7 @@ export function ContentFeedbackPanel({
         <button
           type="button"
           onClick={() => void save()}
-          disabled={saving || rejectionIncomplete || verdictMissing || loadingExisting}
+          disabled={saving || loadingExisting}
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}

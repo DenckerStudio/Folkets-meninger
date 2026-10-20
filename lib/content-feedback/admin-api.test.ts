@@ -130,8 +130,14 @@ assert.match(panelSrc, /tommel ned/);
 assert.match(panelSrc, /ThumbsUp/);
 assert.doesNotMatch(panelSrc, /neutral/);
 assert.match(panelSrc, /Takk, tilbakemeldingen er lagret/);
-assert.match(panelSrc, /Vurdert/);
-assert.match(panelSrc, /role="alert"/);
+assert.match(panelSrc, /showAdminReviewedBadge/);
+assert.match(panelSrc, /source !== 'admin'/);
+assert.match(panelSrc, /\(påkrevd\)/);
+assert.match(panelSrc, /Velg en dom/);
+assert.match(panelSrc, /scheduleAfterSuccessfulSave/);
+assert.match(panelSrc, /prefers-reduced-motion/);
+assert.match(panelSrc, /rejectHintId/);
+assert.match(panelSrc, /disabled=\{saving \|\| loadingExisting\}/);
 assert.doesNotMatch(panelSrc, /snapshot/);
 assert.doesNotMatch(panelSrc, /👍|👎/);
 
