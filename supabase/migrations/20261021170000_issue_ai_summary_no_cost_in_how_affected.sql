@@ -67,6 +67,9 @@ BEGIN
     topic_cards,
     labels,
     forslag,
+    regeneration_requested_at,
+    regeneration_attempts,
+    regeneration_last_attempt_at,
     updated_at
   )
   VALUES (
@@ -80,6 +83,9 @@ BEGIN
     coalesce(p_topic_cards, '[]'::jsonb),
     v_labels,
     v_forslag_insert,
+    NULL,
+    0,
+    NULL,
     now()
   )
   ON CONFLICT (stortinget_issue_id) DO UPDATE SET
@@ -95,10 +101,16 @@ BEGIN
       WHEN p_forslag IS NULL THEN public.issue_ai_summaries.forslag
       ELSE EXCLUDED.forslag
     END,
+    regeneration_requested_at = NULL,
+    regeneration_attempts = 0,
+    regeneration_last_attempt_at = NULL,
     updated_at = now();
 
   UPDATE public.stortinget_issues
-  SET ai_labels = v_labels
+  SET
+    ai_labels = v_labels,
+    ai_summary_generation_attempts = 0,
+    ai_summary_last_attempt_at = NULL
   WHERE id = p_issue_id;
 
   RETURN jsonb_build_object('ok', true, 'stortinget_issue_id', p_issue_id);
