@@ -1,0 +1,77 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const migration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/20261021120000_content_feedback.sql'),
+  'utf-8',
+);
+
+const guard = readFileSync(join(process.cwd(), 'supabase/tests/security-guard.sql'), 'utf-8');
+
+const tables = [
+  'content_feedback',
+  'content_sources',
+  'source_items',
+  'feedback_profile',
+];
+
+for (const table of tables) {
+  assert.match(
+    migration,
+    new RegExp(`ALTER TABLE public\\.${table} ENABLE ROW LEVEL SECURITY`, 'i'),
+  );
+  assert.match(
+    migration,
+    new RegExp(`REVOKE ALL ON TABLE public\\.${table} FROM PUBLIC, anon, authenticated`, 'i'),
+  );
+}
+
+assert.match(migration, /CREATE EXTENSION IF NOT EXISTS vector/i);
+assert.match(migration, /vector\(768\)/i);
+assert.match(migration, /hnsw \(embedding vector_cosine_ops\)/i);
+assert.match(migration, /polls_content_feedback_trg/i);
+assert.match(migration, /NOTIFY pgrst, 'reload schema'/i);
+
+for (const fn of ['upsert_content_feedback']) {
+  assert.match(migration, new RegExp(`FUNCTION public\\.${fn}`, 'i'));
+  assert.match(
+    migration,
+    new RegExp(
+      `REVOKE ALL ON FUNCTION public\\.${fn}[\\s\\S]*?FROM PUBLIC, anon, authenticated`,
+      'i',
+    ),
+  );
+  assert.match(
+    migration,
+    new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${fn}[\\s\\S]*?TO service_role`, 'i'),
+  );
+  assert.match(guard, new RegExp(`'${fn}'`));
+}
+
+for (const fn of [
+  'n8n_feedback_examples',
+  'n8n_feedback_similarity',
+  'n8n_upsert_source_items',
+  'n8n_match_source_items',
+  'n8n_upsert_feedback_profile',
+  'n8n_set_feedback_embedding',
+]) {
+  assert.match(migration, new RegExp(`FUNCTION public\\.${fn}`, 'i'));
+  assert.match(
+    migration,
+    new RegExp(
+      `REVOKE ALL ON FUNCTION public\\.${fn}[\\s\\S]*?FROM PUBLIC, anon, authenticated`,
+      'i',
+    ),
+  );
+  assert.match(
+    migration,
+    new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${fn}[\\s\\S]*?TO service_role`, 'i'),
+  );
+}
+
+assert.match(migration, /utenfilter\.no[\s\S]*primary[\s\S]*1\.50/i);
+assert.match(migration, /ON CONFLICT \(domain\) DO NOTHING/i);
+
+console.log('content-feedback/migration-contract.test.ts: ok');
