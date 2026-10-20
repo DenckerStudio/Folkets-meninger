@@ -1,6 +1,6 @@
 import { REST_POST } from '@payloadcms/next/routes';
 import config from '@payload-config';
-import { loginIdentifierFromBody, loginRateLimitKey } from '@/lib/loginBody';
+import { loginIdentifierFromBody } from '@/lib/loginBody';
 import { checkLoginRateLimit } from '@/lib/loginRateLimit';
 import { LOGIN_IP_RATE_LIMIT_MESSAGE_NB } from '@/lib/loginMessages';
 import { localizeLoginResponse } from '@/lib/localizeLoginResponse';
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   }
 
   const ip = trustedClientIp(request);
-  const limit = checkLoginRateLimit(loginRateLimitKey(ip, identifier));
+  const limit = checkLoginRateLimit(ip, identifier);
   if (!limit.allowed) {
     return Response.json(
       {

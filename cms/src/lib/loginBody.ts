@@ -8,8 +8,3 @@ export function loginIdentifierFromBody(body: unknown): string {
     typeof record.username === 'string' ? record.username.trim().toLowerCase() : '';
   return username;
 }
-
-export function loginRateLimitKey(ip: string, identifier: string): string {
-  const id = identifier || '_';
-  return `${ip.trim() || 'unknown'}|${id}`;
-}
