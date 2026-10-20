@@ -7,13 +7,19 @@ import {
   type UserLike,
 } from '@/access/roles';
 import { stripUserEmailForNonEditors } from '@/hooks/userPrivacy';
+import { isProductionNodeEnv } from '@/lib/serverOrigins';
 
 export const Users: CollectionConfig = {
   slug: 'users',
   auth: {
     useAPIKey: true,
-    // Account lockout disabled — login abuse is throttled per IP in middleware.
-    maxLoginAttempts: 0,
+    maxLoginAttempts: 5,
+    lockTime: 900_000,
+    tokenExpiration: 7200,
+    cookies: {
+      secure: isProductionNodeEnv(),
+      sameSite: 'Lax',
+    },
   },
   admin: {
     useAsTitle: 'email',

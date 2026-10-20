@@ -133,7 +133,15 @@ All on **Coolify, server `klever`**:
   Blogg redigeres i Payload (`CMS_URL`/admin), ikke i fm-web admin-hub.
 - **`20261018120000_blog_posts.sql` (Supabase `public.blog_posts`) is superseded and must
   still NOT be applied.** Do not build on the Supabase blog table. All blog work targets Payload.
-- Setup and env: `infra/coolify/cms.md`, `cms/.env.example`.
+- Setup and env: `infra/coolify/cms.md`, `cms/.env.example`. **`SERVER_URL`**
+  must be the public CMS origin (`https://cms.folkets-meninger.no`); optional
+  aliases `PAYLOAD_PUBLIC_SERVER_URL` / `NEXT_PUBLIC_SERVER_URL`. **`WEB_PUBLIC_URL`**
+  is included in Payload `cors`/`csrf` with `SERVER_URL` (no wildcards). Admin
+  login: per-account lockout (5 attempts / 15 min) plus IP+email throttle on
+  `POST /api/users/login` (Traefik `X-Real-Ip` / rightmost `X-Forwarded-For`);
+  API keys (`useAPIKey`) unchanged for agent/reader roles. Payload SQL migrations
+  in `cms/src/migrations/` run automatically on **fm-cms** boot in production
+  (`prodMigrations` + `instrumentation.ts`).
 
 ## Architecture map
 
