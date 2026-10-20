@@ -30,6 +30,9 @@ if [[ "$DB_URL" != *"@127.0.0.1:54330/"* ]]; then
 fi
 psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-lockdown-defaults.sql
 
+echo "Running action_capture_rpcs.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/action_capture_rpcs.sql
+
 echo "Running security-guard.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
 
