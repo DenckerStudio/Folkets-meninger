@@ -10,6 +10,7 @@ import {
 import { formatSensitiveTemaCell } from '@/lib/admin/oppfanget/sensitive-category';
 import type { OppfangetRow } from '@/lib/admin/oppfanget/types';
 import { REEL_TEXT_HIT } from '@/lib/polls/reel-tap-targets';
+import { ResearchRowActions } from '@/components/admin/research-row-actions';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -170,15 +171,16 @@ function TitleCell({
             aria-label="Sensitivt tema"
           />
         ) : null}
-        <span
+        <Link
+          href={routes.adminResearchCluster(row.id)}
           title={row.title}
           className={cn(
-            'min-w-0 font-medium text-foreground',
+            'min-w-0 font-medium text-brand hover:underline',
             desktopTable ? 'line-clamp-2 break-normal hyphens-auto' : 'line-clamp-3 break-words',
           )}
         >
           {row.title}
-        </span>
+        </Link>
       </div>
       {showMeta ? (
         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -217,7 +219,13 @@ function MobileDateLines({ firstSeenAt, lastSeenAt }: { firstSeenAt: string; las
   );
 }
 
-export function OppfangetDesktopTable({ rows }: { rows: OppfangetRow[] }) {
+export function OppfangetDesktopTable({
+  rows,
+  adminUserId,
+}: {
+  rows: OppfangetRow[];
+  adminUserId?: string;
+}) {
   const statusCell = cn(cellClass, 'w-28 max-w-[7rem] pr-3');
   const headBase = 'px-2 py-1.5 font-medium';
 
@@ -236,6 +244,7 @@ export function OppfangetDesktopTable({ rows }: { rows: OppfangetRow[] }) {
             <col className="w-[14%]" />
             <col className="w-24" />
             <col className="w-16" />
+            <col className="w-36" />
           </colgroup>
           <thead className="border-b border-border bg-muted/40 text-[10px] uppercase tracking-wide text-muted-foreground">
             <tr>
@@ -246,6 +255,7 @@ export function OppfangetDesktopTable({ rows }: { rows: OppfangetRow[] }) {
               <th className={headBase}>Skala</th>
               <th className={headBase}>Sensitivt tema</th>
               <th className={headBase}>Åpne</th>
+              <th className={headBase}>Research</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -273,6 +283,9 @@ export function OppfangetDesktopTable({ rows }: { rows: OppfangetRow[] }) {
                 <td className={cellClass}>
                   <PollLinkCell row={row} />
                 </td>
+                <td className={cellClass}>
+                  <ResearchRowActions clusterId={row.id} userId={adminUserId} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -282,7 +295,13 @@ export function OppfangetDesktopTable({ rows }: { rows: OppfangetRow[] }) {
   );
 }
 
-export function OppfangetMobileCards({ rows }: { rows: OppfangetRow[] }) {
+export function OppfangetMobileCards({
+  rows,
+  adminUserId,
+}: {
+  rows: OppfangetRow[];
+  adminUserId?: string;
+}) {
   return (
     <ul className="space-y-3 sm:hidden">
       {rows.map((row) => {
@@ -330,6 +349,12 @@ export function OppfangetMobileCards({ rows }: { rows: OppfangetRow[] }) {
                   <PollLinkCell row={row} mobile />
                 </dd>
               ) : null}
+              <div>
+                <dt className="font-medium text-muted-foreground">Research</dt>
+                <dd className="mt-1">
+                  <ResearchRowActions clusterId={row.id} userId={adminUserId} />
+                </dd>
+              </div>
             </dl>
           </li>
         );

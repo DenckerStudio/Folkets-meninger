@@ -120,11 +120,13 @@ export default function AdminOppfangetClient({
   initialData = null,
   initialFilters,
   devPreview,
+  adminUserId,
 }: {
   initialData?: OppfangetListResponse | null;
   initialFilters?: OppfangetFilterInput;
   /** Dev-only `preview` query (`mock` | `empty`). */
   devPreview?: string;
+  adminUserId?: string;
 }) {
   const router = useRouter();
   const [data, setData] = useState<OppfangetListResponse | null>(initialData);
@@ -374,8 +376,8 @@ export default function AdminOppfangetClient({
 
       {rows.length > 0 ? (
         <>
-          <OppfangetMobileCards rows={rows} />
-          <OppfangetDesktopTable rows={rows} />
+          <OppfangetMobileCards rows={rows} adminUserId={adminUserId} />
+          <OppfangetDesktopTable rows={rows} adminUserId={adminUserId} />
         </>
       ) : null}
 
