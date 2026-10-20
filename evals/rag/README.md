@@ -42,8 +42,8 @@ Generation/judge is not run in CI/cloud by default. After saving answers JSON:
 RAG_EVAL_LABEL=round3-rerank-reject npm run eval:rag:answers
 # → evals/rag/results/round3-rerank-reject-answers.json
 
-# 2) Faithfulness judge (LAN Ollama gemma4:26b)
-JUDGE_URL=http://192.168.50.154:11434 JUDGE_MODEL=gemma4:26b \
+# 2) Faithfulness judge (LAN Ollama gemma4:26b; default 15 min/row timeout)
+JUDGE_URL=http://192.168.50.154:11434 JUDGE_MODEL=gemma4:26b JUDGE_TIMEOUT_MS=900000 \
   npm run eval:rag:judge -- evals/rag/results/round3-rerank-reject-answers.json
 # → evals/rag/results/round3-rerank-reject-answers.judged.json
 # → evals/rag/results/round3-rerank-reject-answers-judged-summary.json
@@ -59,6 +59,7 @@ Improvement rounds table: `npm run eval:rag:rounds` → `evals/rag/results/impro
 | `RAG_EVAL_RUN` | `all` \| `baseline` \| `stack` \| `improved` |
 | `OLLAMA_BASE_URL` | Default `http://127.0.0.1:11434` |
 | `JUDGE_URL` / `JUDGE_MODEL` | LAN judge (`judge.ts`) |
+| `JUDGE_TIMEOUT_MS` | Per-row Ollama generate timeout (default `900000`; invalid/non-positive → default) |
 | `RAG_EVAL_EXCERPT_PER_CHUNK` / `RAG_EVAL_EXCERPT_TOTAL` | Excerpt caps (#177) |
 | `RAG_EVAL_CHUNK_CLIP` | Hybrid clip (#179, default 1400) |
 | `RAG_EVAL_MEASURE_EMBED` | Set `0` to skip central vs BYOK embed latency micro-benchmark on stack runs |

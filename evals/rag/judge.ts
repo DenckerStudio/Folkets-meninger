@@ -4,8 +4,8 @@
  * Generate answers (repo root):
  *   RAG_EVAL_LABEL=round3-rerank-reject npm run eval:rag:answers
  *
- * Run judge:
- *   JUDGE_URL=http://192.168.50.154:11434 JUDGE_MODEL=gemma4:26b \
+ * Run judge (gemma4:26b can take 75s+ per row — raise timeout if needed):
+ *   JUDGE_URL=http://192.168.50.154:11434 JUDGE_MODEL=gemma4:26b JUDGE_TIMEOUT_MS=900000 \
  *     npm run eval:rag:judge -- evals/rag/results/round3-rerank-reject-answers.json
  *
  * Output: same path with `.judged.json` suffix + `*-judged-summary.json` alongside.
@@ -15,6 +15,17 @@ import { dirname, join } from 'node:path';
 
 const JUDGE_URL = (process.env.JUDGE_URL ?? 'http://192.168.50.154:11434').replace(/\/$/, '');
 const JUDGE_MODEL = process.env.JUDGE_MODEL ?? 'gemma4:26b';
+const DEFAULT_JUDGE_TIMEOUT_MS = 900_000;
+
+function resolveJudgeTimeoutMs(): number {
+  const raw = process.env.JUDGE_TIMEOUT_MS;
+  if (raw === undefined || raw === '') return DEFAULT_JUDGE_TIMEOUT_MS;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return DEFAULT_JUDGE_TIMEOUT_MS;
+  return n;
+}
+
+const JUDGE_TIMEOUT_MS = resolveJudgeTimeoutMs();
 
 type AnswerRow = {
   id: string;
@@ -44,7 +55,7 @@ Gi JSON: {"faithfulness":0-1,"quality":0-1,"note":"kort"}`;
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ model: JUDGE_MODEL, prompt, stream: false }),
-    signal: AbortSignal.timeout(120_000),
+    signal: AbortSignal.timeout(JUDGE_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`judge HTTP ${res.status}`);
   const payload = (await res.json()) as { response?: string };
@@ -81,7 +92,7 @@ async function main(): Promise<void> {
   writeFileSync(outPath, JSON.stringify(out, null, 2));
   const summaryPath = join(dirname(path), path.split('/').pop()!.replace(/\.json$/, '-judged-summary.json'));
   const stats = summarize(out);
-  const summary = { model: JUDGE_MODEL, judgeUrl: JUDGE_URL, ...stats, rows: out };
+  const summary = { model: JUDGE_MODEL, judgeUrl: JUDGE_URL, judgeTimeoutMs: JUDGE_TIMEOUT_MS, ...stats, rows: out };
   writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
   console.log(`Wrote ${outPath}`);
   console.log(`Wrote ${summaryPath}`);

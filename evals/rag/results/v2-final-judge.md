@@ -20,7 +20,7 @@ Output: `evals/rag/results/v2-final-answers.json` (24 non–issue_search rows in
 ## Run judge
 
 ```bash
-JUDGE_URL=http://192.168.50.154:11434 JUDGE_MODEL=gemma4:26b \
+JUDGE_URL=http://192.168.50.154:11434 JUDGE_MODEL=gemma4:26b JUDGE_TIMEOUT_MS=900000 \
   npm run eval:rag:judge -- evals/rag/results/v2-final-answers.json
 ```
 

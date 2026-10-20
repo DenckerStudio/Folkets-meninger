@@ -31,4 +31,4 @@
   - `v2-eksakt-sak-003` `grunnlov norsk hovudspråk` → gold `99386` (many Grunnlovsforslag outrank on FTS).
   - `v2-eksakt-sak-007` `nasjonale prøver skole` → gold `200174`.
   - `v2-eksakt-sak-008` `folkeforslag grunnlov` → gold `100036`.
-- **LLM judge:** see `v2-final-judge.md` (LAN Ollama unreachable from CI VM).
+- **LLM judge:** see `v2-final-judge.md` (LAN Ollama unreachable from CI VM). Use `JUDGE_TIMEOUT_MS=900000` (default) for gemma4:26b (~75s+ per row).
