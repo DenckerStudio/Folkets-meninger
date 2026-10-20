@@ -18,8 +18,12 @@ export type PerRowDeterministicMetrics = {
   goldFactHits: boolean[];
   goldFactsHitRate: number;
   goldFactsHit: boolean;
+  goldFactsInExcerpts: boolean;
   isRefusal: boolean;
+  /** Refusal while retrieved excerpts contain all gold facts (answer model fault). */
   incorrectRefusal: boolean;
+  /** Refusal when excerpts lack gold facts (retrieval / chunking). */
+  retrievalMissRefusal: boolean;
   correctRefusal: boolean;
   retrievalSourceKeys: string[];
   answerSourceKeys: string[];
@@ -53,6 +57,12 @@ export function fuzzyFactInText(text: string, fact: string): boolean {
   if (compactNeedle.length >= 4 && compactHay.includes(compactNeedle)) return true;
   const alt = needle.replace(/-/g, ' ');
   return alt !== needle && hay.includes(alt);
+}
+
+export function goldFactsPresentInExcerpts(excerpts: string[], goldFacts: string[]): boolean {
+  if (goldFacts.length === 0) return true;
+  const combined = excerpts.join('\n');
+  return goldFacts.every((f) => fuzzyFactInText(combined, f));
 }
 
 export function scoreGoldFactsInAnswer(answer: string, goldFacts: string[]): {
@@ -101,6 +111,7 @@ export function scoreDeterministicRow(row: AnswerMetricsRow): PerRowDeterministi
   const { perFact, hitRate, hit } = scoreGoldFactsInAnswer(row.answer, row.goldFacts);
   const refusal = isRefusalAnswer(row.answer);
   const hasGold = row.goldFacts.length > 0;
+  const goldInExcerpts = goldFactsPresentInExcerpts(row.excerpts, row.goldFacts);
   return {
     id: row.id,
     category: row.category,
@@ -108,8 +119,10 @@ export function scoreDeterministicRow(row: AnswerMetricsRow): PerRowDeterministi
     goldFactHits: perFact,
     goldFactsHitRate: hitRate,
     goldFactsHit: hit,
+    goldFactsInExcerpts: goldInExcerpts,
     isRefusal: refusal,
-    incorrectRefusal: refusal && hasGold,
+    incorrectRefusal: refusal && hasGold && goldInExcerpts,
+    retrievalMissRefusal: refusal && hasGold && !goldInExcerpts,
     correctRefusal: refusal && !hasGold,
     retrievalSourceKeys: extractSourceKeys(row.excerpts.join('\n')),
     answerSourceKeys: extractSourceKeys(row.answer),
@@ -132,6 +145,7 @@ export function summarizeGoldFacts(rows: PerRowDeterministicMetrics[]): {
 
 export function summarizeRefusals(rows: PerRowDeterministicMetrics[]): {
   incorrectRefusalRate: number;
+  retrievalMissRefusalRate: number;
   correctRefusalRate: number;
   rowsWithGold: number;
   rowsWithoutGold: number;
@@ -143,6 +157,8 @@ export function summarizeRefusals(rows: PerRowDeterministicMetrics[]): {
     rowsWithoutGold: withoutGold.length,
     incorrectRefusalRate:
       withGold.length === 0 ? 0 : withGold.filter((r) => r.incorrectRefusal).length / withGold.length,
+    retrievalMissRefusalRate:
+      withGold.length === 0 ? 0 : withGold.filter((r) => r.retrievalMissRefusal).length / withGold.length,
     correctRefusalRate:
       withoutGold.length === 0 ? 0 : withoutGold.filter((r) => r.correctRefusal).length / withoutGold.length,
   };

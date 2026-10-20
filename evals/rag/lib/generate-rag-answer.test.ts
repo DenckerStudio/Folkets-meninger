@@ -42,7 +42,8 @@ assert.equal(
 const prompt = buildRagAnswerPrompt('hva gjør stortinget med forurensning', excerpts);
 assert.match(prompt, /Ikke kopier lange avsnitt ordrett/);
 assert.match(prompt, /Ikke start med "Basert på utdrag"/);
-assert.match(prompt, /ikke inneholder nok for å svare/);
+assert.match(prompt, /bare delvis dekker spørsmålet/);
+assert.match(prompt, /kildene ikke besvarer spørsmålet/);
 assert.match(prompt, /hva gjør stortinget med forurensning/);
 
 console.log('generate-rag-answer.test.ts: ok');

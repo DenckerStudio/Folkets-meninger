@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { buildOllamaGenerateBody } from './ollama-generate';
+import { buildOllamaGenerateBody, resolveOllamaGenerateText } from './ollama-generate';
 
 const body = buildOllamaGenerateBody({
   model: 'gemma4:26b',
@@ -19,5 +19,10 @@ const jsonBody = buildOllamaGenerateBody({
   format: 'json',
 });
 assert.equal(jsonBody.format, 'json');
+
+assert.equal(
+  resolveOllamaGenerateText({ response: '', thinking: '{"a":1}' }),
+  '{"a":1}',
+);
 
 console.log('ollama-generate.test.ts: ok');

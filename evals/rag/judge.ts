@@ -16,8 +16,11 @@ import {
   type JudgedRowOutput,
 } from './lib/judge-scoring';
 import {
-  buildOllamaGenerateBody,
-  ollamaEmptyResponseError,
+  buildJudgeGenerateBody,
+  cascadeJudgeOllamaText,
+  resolveJudgeMaxErrorRate,
+} from './lib/judge-ollama';
+import {
   type OllamaGeneratePayload,
   resolveOllamaThinkFlag,
 } from './lib/ollama-generate';
@@ -70,37 +73,39 @@ Straff eksplisitt:
 Returner KUN gyldig JSON med nøklene faithfulness, quality, justification (ingen markdown).`;
 }
 
-async function fetchJudgeText(prompt: string, useJsonFormat: boolean): Promise<string> {
+async function callJudgeOllama(
+  prompt: string,
+  opts: { formatJson: boolean; think: boolean },
+): Promise<OllamaGeneratePayload> {
   const res = await fetch(`${JUDGE_URL}/api/generate`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(
-      buildOllamaGenerateBody({
+      buildJudgeGenerateBody({
         model: JUDGE_MODEL,
         prompt,
-        think: JUDGE_THINK,
-        format: useJsonFormat ? 'json' : undefined,
+        formatJson: opts.formatJson,
+        think: opts.think,
       }),
     ),
     signal: AbortSignal.timeout(JUDGE_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`judge HTTP ${res.status}`);
-  const payload = (await res.json()) as OllamaGeneratePayload;
-  const text = payload.response ?? '';
-  if (!text.trim()) {
-    throw ollamaEmptyResponseError('judge', payload);
-  }
+  return (await res.json()) as OllamaGeneratePayload;
+}
+
+async function fetchJudgeText(prompt: string): Promise<string> {
+  const { text } = await cascadeJudgeOllamaText(({ formatJson, think }) =>
+    callJudgeOllama(prompt, { formatJson, think }),
+  );
   return text;
 }
 
 async function judgeRowLlm(row: AnswerRow, deterministic: JudgedRowOutput['deterministic']): Promise<JudgedRowOutput> {
-  let text = await fetchJudgeText(buildJudgePrompt(row), true);
+  let text = await fetchJudgeText(buildJudgePrompt(row));
   let parsed = parseJudgeScoresJson(text);
   if (!parsed) {
-    text = await fetchJudgeText(
-      buildJudgeRetryPrompt({ query: row.query, priorResponse: text }),
-      true,
-    );
+    text = await fetchJudgeText(buildJudgeRetryPrompt({ query: row.query, priorResponse: text }));
     parsed = parseJudgeScoresJson(text);
   }
   if (!parsed) {
@@ -197,12 +202,15 @@ async function main(): Promise<void> {
     dirname(answersPath),
     answersPath.split('/').pop()!.replace(/\.json$/, '-judged-summary.json'),
   );
+  const judgeMaxErrorRate = resolveJudgeMaxErrorRate();
+
   const summary = {
     judgeModel: JUDGE_MODEL,
     answerModel: answerModel ?? null,
     judgeUrl: JUDGE_URL,
     judgeTimeoutMs: JUDGE_TIMEOUT_MS,
     judgeThink: JUDGE_THINK,
+    judgeMaxErrorRate,
     resume,
     deterministic: {
       goldFacts: deterministicReport.goldFacts,
@@ -226,6 +234,11 @@ async function main(): Promise<void> {
     `LLM judged=${llmStats.count} errors=${llmStats.judgeErrorCount} (${(llmStats.judgeErrorRate * 100).toFixed(1)}%) faithfulness=${llmStats.faithfulnessMean.toFixed(3)} quality=${llmStats.qualityMean.toFixed(3)}`,
   );
   if (calibrationWarning) console.warn(`CALIBRATION: ${calibrationWarning}`);
+  if (llmStats.judgeErrorRate > judgeMaxErrorRate) {
+    throw new Error(
+      `Judge error rate ${(llmStats.judgeErrorRate * 100).toFixed(1)}% exceeds JUDGE_MAX_ERROR_RATE=${judgeMaxErrorRate} (${llmStats.judgeErrorCount}/${rows.length} rows)`,
+    );
+  }
   if (process.env.RAG_EVAL_ENFORCE_TARGETS === '1') {
     const failed = Object.entries(targets)
       .filter(([k, v]) => k.endsWith('Met') && v === false)

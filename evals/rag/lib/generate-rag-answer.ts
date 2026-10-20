@@ -91,7 +91,8 @@ Skriv et kort svar på norsk bokmål (2–5 setninger) som besvarer spørsmålet
 - Bruk bare fakta som står i kildene.
 - Nevn kort hvilken sak/kilde du bygger på (tittel eller henvisning fra kilden).
 - Ikke kopier lange avsnitt ordrett fra kildene, og ikke lim sammen flere kildetekster.
-- Hvis kildene ikke inneholder nok for å svare, si det eksplisitt i én setning (ikke gjenta irrelevant tekst).
+- Gi et kort svar ut fra det som faktisk står i kildene, også når svaret bare delvis dekker spørsmålet.
+- Si bare at kildene ikke besvarer spørsmålet når ingen kilde har relevant innhold (ikke gjenta irrelevant tekst).
 - Ikke start med "Basert på utdrag".
 
 Svar:`;

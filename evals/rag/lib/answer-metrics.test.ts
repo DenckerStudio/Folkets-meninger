@@ -14,10 +14,20 @@ const row = scoreDeterministicRow({
   id: 't',
   query: 'q',
   answer: 'Kildene inneholder ikke informasjon om X.',
-  excerpts: ['foo'],
+  excerpts: ['avløpsdirektiv i EU'],
   goldFacts: ['avløpsdirektiv'],
 });
 assert.equal(row.incorrectRefusal, true);
+
+const miss = scoreDeterministicRow({
+  id: 't2',
+  query: 'q',
+  answer: 'Kildene inneholder ikke informasjon om havvind.',
+  excerpts: ['kun co2 og forurensning'],
+  goldFacts: ['havvind'],
+});
+assert.equal(miss.incorrectRefusal, false);
+assert.equal(miss.retrievalMissRefusal, true);
 
 const keys = extractSourceKeys('Dokument 8:15 S (2025-2026), Innst. 100 S');
 assert.ok(keys.includes('dok:8:15:S'));

@@ -4,9 +4,17 @@
 
 export type OllamaGeneratePayload = {
   response?: string;
+  thinking?: string;
   eval_count?: number;
   done_reason?: string;
 };
+
+/** Prefer `response`; fall back to `thinking` (qwen3-vl / thinking models with empty response). */
+export function resolveOllamaGenerateText(payload: OllamaGeneratePayload): string {
+  const response = (payload.response ?? '').trim();
+  if (response) return response;
+  return (payload.thinking ?? '').trim();
+}
 
 export function resolveOllamaThinkFlag(envKey: string, defaultThink = false): boolean {
   const raw = process.env[envKey];

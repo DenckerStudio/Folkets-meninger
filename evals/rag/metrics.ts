@@ -40,6 +40,7 @@ function main(): void {
   console.log(
     `incorrectRefusal rate=${report.refusals.incorrectRefusalRate.toFixed(3)} (target ≤${report.targets.refusalRateMax})`,
   );
+  console.log(`retrievalMissRefusal rate=${report.refusals.retrievalMissRefusalRate.toFixed(3)}`);
   if (process.env.RAG_EVAL_ENFORCE_TARGETS === '1' && !report.targets.goldFactsHitRateMet) {
     process.exit(1);
   }
