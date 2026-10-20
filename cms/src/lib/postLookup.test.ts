@@ -8,7 +8,7 @@ const payload = {
   find: async (args: { where: Record<string, unknown> }) => {
     if ('sourceEvent' in (args.where as { sourceEvent?: unknown })) {
       calls.push('sourceEvent');
-      return { docs: [{ id: 1, slug: 'fra-event' }] };
+      return { docs: [{ id: 1, slug: 'fra-event', _status: 'published' }] };
     }
     calls.push('slug');
     return { docs: [] };
@@ -21,6 +21,7 @@ void (async () => {
     sourceEvent: 'evt-1',
   });
   assert.equal(hit?.slug, 'fra-event');
+  assert.equal(hit?.cmsStatus, 'published');
   assert.deepEqual(calls, ['sourceEvent']);
 
   calls.length = 0;

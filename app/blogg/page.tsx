@@ -1,9 +1,7 @@
+import { BlogCmsUnavailableShell } from '@/components/blog/blog-cms-unavailable-shell';
 import { BlogIndexView } from '@/components/blog/blog-index-view';
-import {
-  getFeaturedBlogPost,
-  listBlogCategories,
-  listPublishedBlogPostsPaginated,
-} from '@/lib/blog/service';
+import { blogCmsOrUnavailable } from '@/lib/blog/cms-read-runtime';
+import { loadBlogIndexPageData } from '@/lib/blog/index-page-loaders';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 
 export const revalidate = 3600;
@@ -17,11 +15,10 @@ export const metadata = buildPageMetadata({
 });
 
 export default async function BloggIndexPage() {
-  const [{ posts, totalPages }, categories, featured] = await Promise.all([
-    listPublishedBlogPostsPaginated({ page: 1 }),
-    listBlogCategories(),
-    getFeaturedBlogPost(),
-  ]);
+  const loaded = await blogCmsOrUnavailable(() => loadBlogIndexPageData({ page: 1 }));
+  if (loaded.unavailable) return <BlogCmsUnavailableShell />;
+
+  const { posts, totalPages, categories, featured } = loaded.data;
 
   return (
     <BlogIndexView

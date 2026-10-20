@@ -68,8 +68,8 @@ export function BlogIndexView({
           >
             <p className="text-lg font-semibold text-[#001433]">Ingen artikler ennå</p>
             <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[#001433]/65">
-              Vi publiserer forklaringer her når de er godkjent i redaksjonen. RSS-feeden er klar, og siden
-              oppdateres automatisk når CMS-et er koblet til.
+              Vi publiserer forklaringer her når de er godkjent i redaksjonen. Følg med via RSS-feeden
+              under overskriften.
             </p>
           </div>
         ) : (
