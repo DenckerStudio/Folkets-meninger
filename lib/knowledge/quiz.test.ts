@@ -78,6 +78,7 @@ const v2Source = {
     narrative: 'Regjeringen foreslår å øke klimaavgiftene for veitrafikk og industri.',
     who_affected: 'Bilister og industribedrifter blir berørt av endringene.',
     how_affected: 'Ingen konkret kronesum er oppgitt, men kostnadene forventes å øke.',
+    forslag: [],
     topic_cards: [],
     labels: [],
   },
