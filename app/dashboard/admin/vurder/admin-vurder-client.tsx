@@ -172,6 +172,10 @@ export default function AdminVurderClient() {
                   contentType="blog_post"
                   contentId={draft.id}
                   contentSubjectTitle={draft.title}
+                  preview={{
+                    title: draft.title,
+                    summary: draft.excerpt,
+                  }}
                   title="Vurder blogginnlegg"
                   description="Hva fungerte med utkastet, og hva bør justeres før publisering?"
                   onSkip={() => setActive(null)}

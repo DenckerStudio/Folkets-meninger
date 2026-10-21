@@ -14,6 +14,7 @@ import { ReelCandidateRatings } from '@/components/admin/reel-candidate-ratings'
 import type { ContentFeedbackVerdict } from '@/lib/content-feedback/types';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import type { PollRecord, SakPollCandidate, SakPollCoverage } from '@/lib/polls/types';
+import { listReelPollSourceLinks } from '@/lib/polls/reel-source-links';
 import {
   aiSummaryQueueGaveUpKindLabel,
   pipelineHealthNeedsAttention,
@@ -98,9 +99,8 @@ export default function AdminReelsClient({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [feedbackTarget, setFeedbackTarget] = useState<{
-    pollId: string;
+    poll: PollRecord;
     verdict: ContentFeedbackVerdict;
-    subjectTitle: string;
   } | null>(null);
   const [pending, startTransition] = useTransition();
   const { jobs, startGeneration, dismissJob, getJob, isGenerating } = usePollDraftGeneration();
@@ -219,9 +219,8 @@ export default function AdminReelsClient({
       }
       setSuccess(action === 'publish' ? 'Utkastet er publisert.' : 'Utkastet er arkivert.');
       setFeedbackTarget({
-        pollId: poll.id,
+        poll,
         verdict: action === 'publish' ? 'approve' : 'reject',
-        subjectTitle: poll.title,
       });
       load();
     });
@@ -446,11 +445,20 @@ export default function AdminReelsClient({
 
       {feedbackTarget ? (
         <ContentFeedbackPanel
-          key={feedbackTarget.pollId}
+          key={feedbackTarget.poll.id}
           contentType="reel"
-          contentId={feedbackTarget.pollId}
+          contentId={feedbackTarget.poll.id}
           lockedVerdict={feedbackTarget.verdict}
-          contentSubjectTitle={feedbackTarget.subjectTitle}
+          contentSubjectTitle={feedbackTarget.poll.title}
+          preview={{
+            title: feedbackTarget.poll.title,
+            summary: feedbackTarget.poll.neutralSummary,
+            links: listReelPollSourceLinks(feedbackTarget.poll).map((link) => ({
+              href: link.href,
+              label: link.label,
+              external: link.external,
+            })),
+          }}
           title={
             feedbackTarget.verdict === 'reject'
               ? 'Hva kunne vært bedre?'
@@ -458,8 +466,8 @@ export default function AdminReelsClient({
           }
           description={
             feedbackTarget.verdict === 'reject'
-              ? 'Valgfritt — hjelper oss å unngå lignende utkast.'
-              : 'Valgfritt — hjelper oss med neste generering.'
+              ? 'Avvisning krever minst én grunn eller tommel ned. Utkastet ligger over skjemaet.'
+              : 'Valgfritt — merk det som fungerte, så blir neste generering bedre.'
           }
           onSkip={() => setFeedbackTarget(null)}
           onSaved={() => setFeedbackTarget(null)}

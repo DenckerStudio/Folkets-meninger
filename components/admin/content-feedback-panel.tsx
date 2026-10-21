@@ -28,6 +28,19 @@ const VERDICT_REQUIRED = 'Velg en dom før du lagrer.';
 
 const SAVE_CLOSE_DELAY_MS = 4000;
 
+export type ContentFeedbackPreviewLink = {
+  href: string;
+  label: string;
+  external?: boolean;
+};
+
+/** What the reviewer is judging — title, beskrivelse and kilder. */
+export type ContentFeedbackPreview = {
+  title?: string | null;
+  summary?: string | null;
+  links?: ContentFeedbackPreviewLink[];
+};
+
 export type ContentFeedbackPanelProps = {
   contentType: ContentFeedbackType;
   contentId: string;
@@ -35,6 +48,8 @@ export type ContentFeedbackPanelProps = {
   lockedVerdict?: ContentFeedbackVerdict;
   /** Shown under the panel title (e.g. Reels-utkastets tittel). */
   contentSubjectTitle?: string;
+  /** The content under review, kept visible after the source card leaves the list. */
+  preview?: ContentFeedbackPreview;
   title?: string;
   description?: string;
   onSkip: () => void;
@@ -47,6 +62,7 @@ export function ContentFeedbackPanel({
   contentId,
   lockedVerdict,
   contentSubjectTitle,
+  preview,
   title = 'Tilbakemelding',
   description = 'Merker hva som fungerte eller ikke, slik at vi kan forbedre innholdet.',
   onSkip,
@@ -192,7 +208,16 @@ export function ContentFeedbackPanel({
 
   const verdictMissing = !lockedVerdict && verdict == null;
 
-  function toggleAspectMark(key: ContentFeedbackAspectKey, mark: AspectMark) {
+  function aspectsForSubmit(value: ContentFeedbackAspects): ContentFeedbackAspects {
+  const out: ContentFeedbackAspects = {};
+  for (const key of CONTENT_FEEDBACK_ASPECT_KEYS) {
+    const mark = value[key];
+    if (mark === '+' || mark === '-') out[key] = mark;
+  }
+  return out;
+}
+
+function toggleAspectMark(key: ContentFeedbackAspectKey, mark: AspectMark) {
     setAspects((prev) => {
       const current = prev[key] ?? null;
       const next = current === mark ? null : mark;
@@ -229,14 +254,18 @@ export function ContentFeedbackPanel({
           content_type: contentType,
           content_id: contentId,
           verdict: effectiveVerdict,
-          aspects,
+          aspects: aspectsForSubmit(aspects),
           reason_tags: reasonTags,
           note: note.trim() || null,
         }),
       });
       const json = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setError(SAVE_ERROR_MESSAGE);
+        setError(
+          typeof json.error === 'string' && json.error.trim()
+            ? json.error
+            : SAVE_ERROR_MESSAGE,
+        );
         return;
       }
       setShowAdminReviewedBadge(true);
@@ -290,6 +319,49 @@ export function ContentFeedbackPanel({
         </div>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
+
+      {preview && (preview.title || preview.summary || (preview.links && preview.links.length > 0)) ? (
+        <div className="mt-4 space-y-2 rounded-xl border border-border bg-card p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Dette vurderer du
+          </p>
+          {preview.title ? (
+            <p className="text-sm font-semibold text-foreground">{preview.title}</p>
+          ) : null}
+          {preview.summary ? (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Beskrivelse</p>
+              <p className="mt-0.5 whitespace-pre-wrap text-sm text-foreground">{preview.summary}</p>
+            </div>
+          ) : null}
+          {preview.links ? (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Kilder</p>
+              {preview.links.length > 0 ? (
+                <ul className="mt-1 space-y-1">
+                  {preview.links.map((link) => (
+                    <li key={link.href}>
+                      <a
+                        href={link.href}
+                        className="text-sm font-medium text-brand hover:underline"
+                        {...(link.external
+                          ? { target: '_blank', rel: 'noopener noreferrer' }
+                          : {})}
+                      >
+                        {link.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Ingen kilder er lagret på utkastet.
+                </p>
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mt-2 min-h-[1.25rem]" aria-live="polite" aria-atomic="true">
         {success ? (

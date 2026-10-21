@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { isMissingContentFeedbackRpc } from '@/lib/content-feedback/service';
 import { parseAdminContentFeedbackBody } from '@/lib/content-feedback/submit-admin-feedback';
 import { validateRejectionDetail } from '@/lib/content-feedback/validation';
 import { sanitizeSnapshotInput } from '@/lib/content-feedback/snapshot';
@@ -21,8 +22,9 @@ assert.match(routeSrc, /parseAdminContentFeedbackBody/);
 assert.match(routeSrc, /submitAdminContentFeedback/);
 assert.match(routeSrc, /getAdminContentFeedback/);
 assert.match(serviceSrc, /admin_submit_content_feedback/);
+assert.match(serviceSrc, /upsert_content_feedback/);
+assert.match(serviceSrc, /isMissingContentFeedbackRpc/);
 assert.match(serviceSrc, /buildAdminContentFeedbackSnapshot/);
-assert.doesNotMatch(serviceSrc, /upsert_content_feedback/);
 
 assert.match(f1Migration, /IF v_existing_id IS NOT NULL AND v_existing_source = 'auto' THEN/i);
 assert.match(f1Migration, /source = 'admin'/i);
@@ -105,6 +107,11 @@ assert.equal(
   'Ved avvisning må minst ett aspekt merkes med tommel ned eller minst én grunn velges.',
 );
 assert.equal(validateRejectionDetail('approve', {}, []), null);
+assert.equal(
+  isMissingContentFeedbackRpc({ code: 'PGRST202', message: 'Could not find the function' }),
+  true,
+);
+assert.equal(isMissingContentFeedbackRpc({ code: '23505', message: 'duplicate' }), false);
 
 const sanitized = sanitizeSnapshotInput({
   title: 'OK',
@@ -144,6 +151,8 @@ assert.match(panelSrc, /minst ett av disse/);
 assert.match(panelSrc, /rejectHintId/);
 assert.match(panelSrc, /saveLocked/);
 assert.match(panelSrc, /Merk deler/);
+assert.match(panelSrc, /Dette vurderer du/);
+assert.match(panelSrc, /aspectsForSubmit/);
 assert.doesNotMatch(panelSrc, /Vanlige grunner[\s\S]*\(påkrevd\)/);
 assert.doesNotMatch(panelSrc, /snapshot/);
 assert.doesNotMatch(panelSrc, /👍|👎/);

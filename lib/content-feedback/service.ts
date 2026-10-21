@@ -48,14 +48,28 @@ export async function getAdminContentFeedback(
   };
 }
 
+type RpcErrorLike = { code?: string; message?: string };
+
+/** PostgREST/Postgres when the newer admin RPC is not applied yet. */
+export function isMissingContentFeedbackRpc(error: RpcErrorLike): boolean {
+  const code = error.code ?? '';
+  const message = (error.message ?? '').toLowerCase();
+  return (
+    code === 'PGRST202' ||
+    code === '42883' ||
+    message.includes('could not find the function') ||
+    message.includes('schema cache') ||
+    (message.includes('admin_submit_content_feedback') && message.includes('does not exist'))
+  );
+}
+
 export async function submitAdminContentFeedbackRpc(
   adminUserId: string,
   body: AdminContentFeedbackBody,
 ): Promise<{ id: string }> {
   const supabase = getServiceSupabase();
   const snapshot = await buildAdminContentFeedbackSnapshot(body.content_type, body.content_id);
-
-  const { data, error } = await supabase.rpc('admin_submit_content_feedback', {
+  const args = {
     p_content_type: body.content_type,
     p_content_id: body.content_id,
     p_verdict: body.verdict,
@@ -64,7 +78,17 @@ export async function submitAdminContentFeedbackRpc(
     p_note: body.note,
     p_admin_id: adminUserId,
     p_snapshot: snapshot,
-  });
+  };
+
+  const primary = await supabase.rpc('admin_submit_content_feedback', args);
+  let data = primary.data;
+  let error = primary.error;
+
+  if (error && isMissingContentFeedbackRpc(error)) {
+    const fallback = await supabase.rpc('upsert_content_feedback', args);
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     throw error;
@@ -72,7 +96,7 @@ export async function submitAdminContentFeedbackRpc(
 
   const id = typeof data === 'string' ? data : String(data ?? '');
   if (!id) {
-    throw new Error('Manglende id fra admin_submit_content_feedback');
+    throw new Error('Manglende id fra content feedback');
   }
 
   return { id };
