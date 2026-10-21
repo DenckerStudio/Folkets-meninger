@@ -20,5 +20,8 @@ assert.match(doc, /bge-m3/);
 assert.match(doc, /vector\(1024\)/);
 assert.match(migration, /log_blog_content_feedback/i);
 assert.match(doc, /log_blog_content_feedback/);
+assert.match(doc, /`excerpt`/);
+assert.match(doc, /`seen_at`/);
+assert.match(doc, /COALESCE\(modified_at, published_at, fetched_at\)/);
 
 console.log('n8n/content-feedback-rpc.test.ts: ok');

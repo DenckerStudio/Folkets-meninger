@@ -209,15 +209,15 @@ export function ContentFeedbackPanel({
   const verdictMissing = !lockedVerdict && verdict == null;
 
   function aspectsForSubmit(value: ContentFeedbackAspects): ContentFeedbackAspects {
-  const out: ContentFeedbackAspects = {};
-  for (const key of CONTENT_FEEDBACK_ASPECT_KEYS) {
-    const mark = value[key];
-    if (mark === '+' || mark === '-') out[key] = mark;
+    const out: ContentFeedbackAspects = {};
+    for (const key of CONTENT_FEEDBACK_ASPECT_KEYS) {
+      const mark = value[key];
+      if (mark === '+' || mark === '-') out[key] = mark;
+    }
+    return out;
   }
-  return out;
-}
 
-function toggleAspectMark(key: ContentFeedbackAspectKey, mark: AspectMark) {
+  function toggleAspectMark(key: ContentFeedbackAspectKey, mark: AspectMark) {
     setAspects((prev) => {
       const current = prev[key] ?? null;
       const next = current === mark ? null : mark;
