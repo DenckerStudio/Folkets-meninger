@@ -1,76 +1,53 @@
 'use client';
 
-import { useEffect, useId, useState, useTransition } from 'react';
-import Link from 'next/link';
-import { ClipboardCheck, ExternalLink } from 'lucide-react';
+import { useId } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ClipboardCheck } from 'lucide-react';
 import { AdminBackLink } from '@/components/admin/admin-shell';
-import { ContentFeedbackPanel } from '@/components/admin/content-feedback-panel';
-import { EmptyState } from '@/components/dashboard/empty-state';
-import { formatBlogReviewState } from '@/lib/admin/blog-review-labels';
-import type { BlogDraftReviewItem } from '@/lib/admin/blog-review';
+import { AiSummaryReview } from '@/components/admin/ai-summary-review';
+import { BlogDraftReview } from '@/components/admin/blog-draft-review';
+import { ReelDraftReview } from '@/components/admin/reel-draft-review';
+import { parseVurderTab, VURDER_TABS, type VurderTabId } from '@/lib/admin/vurder-tabs';
+import { routes } from '@/lib/routes';
+import { cn } from '@/lib/utils';
 
-type DraftsResponse = {
-  drafts?: BlogDraftReviewItem[];
-  cmsConfigured?: boolean;
-};
-
-type ActiveReview = {
-  id: string;
-  title: string;
-  excerpt: string;
-  payloadAdminUrl: string | null;
-};
-
-function VurderDraftListSkeleton() {
+export function VurderPageSkeleton() {
   return (
-    <div className="space-y-3" aria-busy="true" aria-label="Laster bloggutkast">
-      {[0, 1, 2].map((key) => (
-        <div key={key} className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <div className="h-5 w-3/4 max-w-md animate-pulse rounded bg-muted/60" />
-          <div className="h-4 w-full animate-pulse rounded bg-muted/40" />
-          <div className="h-4 w-2/3 animate-pulse rounded bg-muted/30" />
-        </div>
-      ))}
+    <div className="space-y-6" aria-busy="true" aria-label="Laster vurdering">
+      <div className="h-8 w-40 animate-pulse rounded bg-muted/60" />
+      <div className="h-12 w-full max-w-lg animate-pulse rounded-xl bg-muted/40" />
+      <div className="h-28 animate-pulse rounded-2xl bg-muted/30" />
     </div>
   );
 }
 
+function VurderPanel({ tab }: { tab: VurderTabId }) {
+  switch (tab) {
+    case 'reels':
+      return <ReelDraftReview />;
+    case 'blogg':
+      return <BlogDraftReview />;
+    case 'sammendrag':
+      return <AiSummaryReview />;
+    default: {
+      const unreachable: never = tab;
+      return unreachable;
+    }
+  }
+}
+
 export default function AdminVurderClient() {
-  const tab = 'blogg' as const;
-  const bloggTabId = useId();
-  const bloggPanelId = useId();
-  const [drafts, setDrafts] = useState<BlogDraftReviewItem[]>([]);
-  const [cmsConfigured, setCmsConfigured] = useState(true);
-  const [error, setError] = useState('');
-  const [active, setActive] = useState<ActiveReview | null>(null);
-  const [pending, startTransition] = useTransition();
-  const [initialLoad, setInitialLoad] = useState(true);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tablistId = useId();
+  const tab = parseVurderTab(searchParams.get('fane'));
 
-  const loadDrafts = () => {
-    startTransition(async () => {
-      setError('');
-      try {
-        const res = await fetch('/api/admin/blog-drafts');
-        const json = (await res.json()) as DraftsResponse & { error?: string };
-        if (!res.ok) {
-          setDrafts([]);
-          setError(typeof json.error === 'string' ? json.error : 'Kunne ikke laste utkast');
-          return;
-        }
-        setDrafts(json.drafts ?? []);
-        setCmsConfigured(json.cmsConfigured !== false);
-      } catch {
-        setDrafts([]);
-        setError('Kunne ikke laste utkast');
-      } finally {
-        setInitialLoad(false);
-      }
-    });
-  };
-
-  useEffect(() => {
-    loadDrafts();
-  }, []);
+  function selectTab(next: VurderTabId) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('fane', next);
+    if (next !== 'reels') params.delete('pollId');
+    router.replace(`${routes.adminVurder}?${params.toString()}`, { scroll: false });
+  }
 
   return (
     <div className="space-y-8">
@@ -80,118 +57,48 @@ export default function AdminVurderClient() {
           Vurder
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Gi strukturert tilbakemelding på innhold som skal forbedres over tid.
+          Samlet vurdering av reels, blogginnlegg og sammendrag.
         </p>
       </div>
 
-      <div className="flex gap-2 border-b border-border pb-3" role="tablist" aria-label="Vurderingsfaner">
-        <button
-          type="button"
-          id={bloggTabId}
-          role="tab"
-          aria-selected={true}
-          aria-controls={bloggPanelId}
-          className="inline-flex min-h-11 items-center rounded-lg bg-brand/10 px-4 py-2.5 text-sm font-medium text-brand"
-        >
-          Blogginnlegg
-        </button>
+      <div
+        className="flex flex-wrap gap-1 rounded-xl bg-muted/50 p-1"
+        role="tablist"
+        aria-label="Innhold som skal vurderes"
+      >
+        {VURDER_TABS.map((item) => {
+          const selected = tab === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              id={`${tablistId}-${item.id}`}
+              role="tab"
+              aria-selected={selected}
+              aria-controls={`${tablistId}-${item.id}-panel`}
+              onClick={() => selectTab(item.id)}
+              className={cn(
+                'inline-flex min-h-11 min-w-[8.5rem] flex-1 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-colors',
+                selected
+                  ? 'bg-card text-brand shadow-sm'
+                  : 'text-muted-foreground hover:bg-card/60 hover:text-foreground',
+              )}
+            >
+              {item.label}
+            </button>
+          );
+        })}
       </div>
 
       <section
-        id={bloggPanelId}
+        id={`${tablistId}-${tab}-panel`}
         role="tabpanel"
-        aria-labelledby={bloggTabId}
-        className="space-y-4"
+        aria-labelledby={`${tablistId}-${tab}`}
       >
-        {!cmsConfigured ? (
-          <EmptyState
-            title="Blogg er ikke tilgjengelig"
-            description="Bloggsystemet er ikke koblet til ennå."
-            className="py-8"
-          />
-        ) : null}
-        {error ? (
-          <p className="text-sm text-destructive" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {initialLoad ? <VurderDraftListSkeleton /> : null}
-        {!initialLoad && !error && cmsConfigured && drafts.length === 0 ? (
-          <EmptyState
-            title="Ingen utkast til vurdering"
-            description="Når nye bloggutkast er klare til vurdering, vises de her."
-            className="py-8"
-          />
-        ) : null}
-        <ul className="space-y-3">
-          {drafts.map((draft) => (
-            <li key={draft.id} className="rounded-2xl border border-border bg-card p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-medium text-foreground">{draft.title}</p>
-                  {draft.excerpt ? (
-                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{draft.excerpt}</p>
-                  ) : null}
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatBlogReviewState(draft.reviewState) ?? 'Utkast'}
-                    {draft.updatedAt ? ` · Oppdatert ${new Date(draft.updatedAt).toLocaleString('nb-NO')}` : ''}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {draft.payloadAdminUrl ? (
-                    <a
-                      href={draft.payloadAdminUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50"
-                    >
-                      Rediger utkast
-                      <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                    </a>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setActive({
-                        id: draft.id,
-                        title: draft.title,
-                        excerpt: draft.excerpt,
-                        payloadAdminUrl: draft.payloadAdminUrl,
-                      })
-                    }
-                    className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90"
-                  >
-                    Vurder
-                  </button>
-                </div>
-              </div>
-              {active?.id === draft.id ? (
-                <ContentFeedbackPanel
-                  key={draft.id}
-                  className="mt-4"
-                  contentType="blog_post"
-                  contentId={draft.id}
-                  contentSubjectTitle={draft.title}
-                  title="Vurder blogginnlegg"
-                  description="Hva fungerte med utkastet, og hva bør justeres før publisering?"
-                  onSkip={() => setActive(null)}
-                  onSaved={() => {
-                    loadDrafts();
-                    setActive(null);
-                  }}
-                />
-              ) : null}
-            </li>
-          ))}
-        </ul>
+        <VurderPanel tab={tab} />
       </section>
 
-      <div className="flex flex-wrap gap-4 text-sm">
-        <AdminBackLink />
-        <Link href="/blogg" className="font-medium text-brand hover:underline">
-          Offentlig blogg
-        </Link>
-      </div>
+      <AdminBackLink />
     </div>
   );
 }

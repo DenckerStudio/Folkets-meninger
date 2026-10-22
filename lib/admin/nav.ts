@@ -40,7 +40,7 @@ export const adminNavItems: AdminNavItem[] = [
   {
     id: 'reels',
     title: 'Reels',
-    description: 'Systemgenererte avstemninger fra stortingssaker',
+    description: 'Generering og kø for systemutkast',
     href: routes.adminReels,
     icon: CivicBubble,
     status: 'active',
@@ -48,7 +48,7 @@ export const adminNavItems: AdminNavItem[] = [
   {
     id: 'vurder',
     title: 'Vurder',
-    description: 'Tilbakemelding på sammendrag, blogg og annet innhold',
+    description: 'Reels, blogginnlegg og sammendrag',
     href: routes.adminVurder,
     icon: ClipboardCheck,
     status: 'active',

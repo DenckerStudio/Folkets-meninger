@@ -141,7 +141,7 @@ const text = [
   'Saker uten AI-sammendrag: ' + missingSummaries,
   'System-poll utkast som venter: ' + draftPolls,
   '',
-  draftPolls ? ('Publiser utkast: https://www.folkets-meninger.no/dashboard/admin/reels') : null,
+  draftPolls ? ('Publiser utkast: https://www.folkets-meninger.no/dashboard/admin/vurder?fane=reels') : null,
 ].filter(Boolean).join('\\n');
 return [{
   json: {
