@@ -12,6 +12,7 @@ import type { OppfangetRow } from '@/lib/admin/oppfanget/types';
 import { REEL_TEXT_HIT } from '@/lib/polls/reel-tap-targets';
 import { ResearchRowActions } from '@/components/admin/research-row-actions';
 import type { ResearchBriefsByKind } from '@/lib/admin/research/service';
+import { adminReelDraftUrl } from '@/lib/admin/research/labels';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -67,7 +68,7 @@ export function formatOppfangetScale(row: OppfangetRow): string {
 
 export function oppfangetPollLink(row: OppfangetRow): string | null {
   if (!row.pollId) return null;
-  if (row.pollStatus === 'draft') return routes.adminReels;
+  if (row.pollStatus === 'draft') return adminReelDraftUrl(row.pollId);
   return routes.poll(row.pollId);
 }
 

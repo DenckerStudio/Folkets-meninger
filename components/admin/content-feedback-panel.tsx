@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AlertCircle, ChevronDown, Loader2, ThumbsDown, ThumbsUp } from 'lucide-react';
 import {
   CONTENT_FEEDBACK_ASPECT_KEYS,
@@ -35,6 +35,8 @@ export type ContentFeedbackPanelProps = {
   lockedVerdict?: ContentFeedbackVerdict;
   /** Shown under the panel title (e.g. Reels-utkastets tittel). */
   contentSubjectTitle?: string;
+  /** Innholdet som ble vurdert. Vises i kortet etter at utkastet er borte fra listen. */
+  preview?: ReactNode;
   title?: string;
   description?: string;
   onSkip: () => void;
@@ -47,6 +49,7 @@ export function ContentFeedbackPanel({
   contentId,
   lockedVerdict,
   contentSubjectTitle,
+  preview,
   title = 'Tilbakemelding',
   description = 'Merker hva som fungerte eller ikke, slik at vi kan forbedre innholdet.',
   onSkip,
@@ -257,7 +260,7 @@ export function ContentFeedbackPanel({
   }
 
   const saveLocked = saving || saveSucceeded;
-  const headingText = contentSubjectTitle ?? title;
+  const headingText = preview ? title : (contentSubjectTitle ?? title);
 
   const showAspectList = isReject || aspectsExpanded;
   const showRejectAlert = isReject && rejectionIncomplete && rejectSubmitAttempted;
@@ -290,6 +293,10 @@ export function ContentFeedbackPanel({
         </div>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
+
+      {preview ? (
+        <div className="mt-4 rounded-xl border border-border bg-card p-4">{preview}</div>
+      ) : null}
 
       <div className="mt-2 min-h-[1.25rem]" aria-live="polite" aria-atomic="true">
         {success ? (

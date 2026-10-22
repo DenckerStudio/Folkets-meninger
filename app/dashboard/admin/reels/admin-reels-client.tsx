@@ -2,16 +2,13 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { AlertCircle, CheckCircle2, Loader2, X } from 'lucide-react';
 import { CivicBubble } from '@/components/icons/civic';
 import { pollDraftGenerationStatusLabel } from '@/lib/admin/poll-draft-generation';
+import { adminVurderHref } from '@/lib/admin/vurder-tabs';
 import { usePollDraftGeneration } from '@/hooks/use-poll-draft-generation';
 import { routes } from '@/lib/routes';
 import { AdminBackLink } from '@/components/admin/admin-shell';
-import { ContentFeedbackPanel } from '@/components/admin/content-feedback-panel';
-import { ReelCandidateRatings } from '@/components/admin/reel-candidate-ratings';
-import type { ContentFeedbackVerdict } from '@/lib/content-feedback/types';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import type { PollRecord, SakPollCandidate, SakPollCoverage } from '@/lib/polls/types';
 import {
@@ -77,14 +74,11 @@ function GenerationStatusBadge({
 }
 
 export default function AdminReelsClient({
-  initialDrafts = [],
+  initialDraftCount = 0,
 }: {
-  initialDrafts?: PollRecord[];
+  initialDraftCount?: number;
 }) {
-  const searchParams = useSearchParams();
-  const highlightPollId = searchParams.get('pollId')?.trim() ?? '';
-  const highlightedRef = useRef(false);
-  const [drafts, setDrafts] = useState<PollRecord[]>(initialDrafts);
+  const [draftCount, setDraftCount] = useState(initialDraftCount);
   const [candidates, setCandidates] = useState<SakPollCandidate[]>([]);
   const [coverage, setCoverage] = useState<SakPollCoverage | null>(null);
   const [pipelineHealth, setPipelineHealth] = useState<PipelineHealth | null>(null);
@@ -97,22 +91,8 @@ export default function AdminReelsClient({
   const [catchupMessage, setCatchupMessage] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [feedbackTarget, setFeedbackTarget] = useState<{
-    pollId: string;
-    verdict: ContentFeedbackVerdict;
-    subjectTitle: string;
-  } | null>(null);
   const [pending, startTransition] = useTransition();
   const { jobs, startGeneration, dismissJob, getJob, isGenerating } = usePollDraftGeneration();
-
-  useEffect(() => {
-    if (!highlightPollId || highlightedRef.current || drafts.length === 0) return;
-    const el = document.getElementById(`reel-draft-${highlightPollId}`);
-    if (!el) return;
-    highlightedRef.current = true;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.classList.add('ring-2', 'ring-brand');
-  }, [drafts, highlightPollId]);
 
   const load = () => {
     startTransition(async () => {
@@ -128,7 +108,7 @@ export default function AdminReelsClient({
 
         if (draftsRes.ok) {
           const draftsJson = (await draftsRes.json()) as DraftsResponse;
-          setDrafts(draftsJson.drafts ?? []);
+          setDraftCount(draftsJson.drafts?.length ?? 0);
         } else {
           failures.push('utkast');
         }
@@ -203,30 +183,6 @@ export default function AdminReelsClient({
     return () => window.removeEventListener('poll-drafts:ready', onReady);
   }, []);
 
-  const patchPoll = (poll: PollRecord, action: 'publish' | 'archive') => {
-    startTransition(async () => {
-      setError('');
-      setSuccess('');
-      const res = await fetch('/api/admin/polls', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: poll.id, action }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(typeof data.error === 'string' ? data.error : 'Handling feilet');
-        return;
-      }
-      setSuccess(action === 'publish' ? 'Utkastet er publisert.' : 'Utkastet er arkivert.');
-      setFeedbackTarget({
-        pollId: poll.id,
-        verdict: action === 'publish' ? 'approve' : 'reject',
-        subjectTitle: poll.title,
-      });
-      load();
-    });
-  };
-
   const resetQueueAttempts = (issueId: string) => {
     resetFocusRef.current = issueId;
     startTransition(async () => {
@@ -287,6 +243,11 @@ export default function AdminReelsClient({
   };
 
   const activeGeneratingJobs = jobs.filter((job) => job.status === 'generating');
+  const nextDraftJob = getJob();
+  const vurderHref =
+    nextDraftJob?.status === 'ready' && nextDraftJob.draftId
+      ? adminVurderHref('reels', nextDraftJob.draftId)
+      : adminVurderHref('reels');
 
   return (
     <div className="space-y-8">
@@ -296,13 +257,13 @@ export default function AdminReelsClient({
           Reels-utkast
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Publiser til Reels-feeden, eller arkiver.
+          Generer utkast og følg køen. Publisering og tilbakemelding skjer under Vurder.
         </p>
       </div>
 
       {coverage ? (
         <p className="text-sm text-muted-foreground">
-          {coverage.sakCandidates} kandidater · {coverage.pendingWithRag} saker med dokumentindeks · {drafts.length}{' '}
+          {coverage.sakCandidates} kandidater · {coverage.pendingWithRag} saker med dokumentindeks · {draftCount}{' '}
           utkast
         </p>
       ) : null}
@@ -444,92 +405,34 @@ export default function AdminReelsClient({
         </p>
       ) : null}
 
-      {feedbackTarget ? (
-        <ContentFeedbackPanel
-          key={feedbackTarget.pollId}
-          contentType="reel"
-          contentId={feedbackTarget.pollId}
-          lockedVerdict={feedbackTarget.verdict}
-          contentSubjectTitle={feedbackTarget.subjectTitle}
-          title={
-            feedbackTarget.verdict === 'reject'
-              ? 'Hva kunne vært bedre?'
-              : 'Hva fungerte bra?'
-          }
-          description={
-            feedbackTarget.verdict === 'reject'
-              ? 'Valgfritt — hjelper oss å unngå lignende utkast.'
-              : 'Valgfritt — hjelper oss med neste generering.'
-          }
-          onSkip={() => setFeedbackTarget(null)}
-          onSaved={() => setFeedbackTarget(null)}
-        />
-      ) : null}
-
-      <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-foreground">Utkast</h2>
-          <div className="flex items-center gap-2">
+      <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Utkast til vurdering</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {draftCount === 0
+                ? 'Ingen utkast venter. Generer fra en sak under, eller vent på automatisk kjøring.'
+                : `${draftCount} utkast venter på publisering eller arkivering.`}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             {getJob() ? <GenerationStatusBadge getJob={getJob} onDismiss={dismissJob} /> : null}
             <button
               type="button"
               onClick={() => generate()}
               disabled={pending || isGenerating()}
-              className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+              className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
             >
               Generer neste
             </button>
+            <Link
+              href={vurderHref}
+              className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90"
+            >
+              Vurder utkast
+            </Link>
           </div>
         </div>
-        {drafts.length === 0 ? (
-          <EmptyState
-            title="Ingen utkast"
-            description="Generer fra en sak under, eller vent på automatisk kjøring. Listen er tom til et utkast er klart."
-            className="py-8"
-          />
-        ) : (
-          <ul className="space-y-3">
-            {drafts.map((poll) => (
-              <li
-                key={poll.id}
-                id={`reel-draft-${poll.id}`}
-                className="rounded-2xl border border-border bg-card p-4"
-              >
-                <p className="font-medium text-foreground">{poll.title}</p>
-                {poll.neutralSummary ? (
-                  <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{poll.neutralSummary}</p>
-                ) : null}
-                {poll.stortingetIssueId ? (
-                  <Link
-                    href={routes.sak(poll.stortingetIssueId)}
-                    className="mt-2 inline-block text-sm font-medium text-brand hover:underline"
-                  >
-                    Sak {poll.stortingetIssueId}
-                  </Link>
-                ) : null}
-                <ReelCandidateRatings metadata={poll.generationMetadata} />
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => patchPoll(poll, 'publish')}
-                    className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
-                  >
-                    Publiser
-                  </button>
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => patchPoll(poll, 'archive')}
-                    className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
-                  >
-                    Arkiver
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
       </section>
 
       <section className="space-y-3">
@@ -580,6 +483,9 @@ export default function AdminReelsClient({
       </section>
 
       <div className="flex flex-wrap gap-4 text-sm">
+        <Link href={adminVurderHref('reels')} className="font-medium text-brand hover:underline">
+          Vurder reels
+        </Link>
         <Link href={routes.utforsk} className="font-medium text-brand hover:underline">
           Offentlig Reels-feed
         </Link>

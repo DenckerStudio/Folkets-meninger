@@ -194,6 +194,9 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 - System Reels are ja/nei/blank questions generated from sak RAG by n8n + Ollama.
   Use `create_system_poll_draft` → admin `publish_poll`, never
   `ensure_stortinget_poll` for drafts. Copy must say they are system-generated.
+  Publisering, arkivering og tilbakemelding ligger under `/dashboard/admin/vurder`
+  (fane Reels). `/dashboard/admin/reels` er generering og pipeline; `?pollId=`
+  redirecter til vurder.
 - Fylke breakdowns only count `users.fylke_code` when `fylke_verified` is true.
 
 ### Høringer
@@ -216,7 +219,10 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 ### Identity, admin, Stemme+
 
 - Admin: `public.user_roles` + `is_admin()` via `lib/admin/gate.ts`. Hub:
-  `/dashboard/admin` (Appens fremtid, Research, Reels, Statistikk, Brukere, Stemme+).
+  `/dashboard/admin` (Appens fremtid, Research, Reels, Vurder, Statistikk, Brukere, Stemme+).
+  **Vurder** (`/dashboard/admin/vurder?fane=reels|blogg|sammendrag`) samler vurdering av
+  reel-utkast, bloggutkast og AI-sammendrag. Etter publiser/arkiver av en reel blir
+  tittel, beskrivelse og kilder stående i tilbakemeldingskortet.
 - **Research** (`/dashboard/admin/research`, cluster detail `/dashboard/admin/research/[id]`):
   action clusters from action capture (`lib/admin/oppfanget/` list/filters; UI label Research).
   Admin actions deepen/blog/reel → `lib/admin/research/` + `POST /api/admin/research/...`;
