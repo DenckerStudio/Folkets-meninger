@@ -1,30 +1,18 @@
-import { isLegacyEmbeddingsRetryEnabled } from '@/lib/n8n/legacy-embeddings-retry';
-import { listPendingLegacyEmbeddingIssueIds } from '@/lib/n8n/legacy-embedding-pending-issues';
 import { postN8nWebhook } from '@/lib/n8n/trigger-webhook';
-import { getServiceSupabase } from '@/lib/supabase';
 
 export const PIPELINE_EMBEDDING_CATCHUP_CONCURRENCY = 4;
 
 export type PipelineCatchupResult = {
-  /** Legacy document-embeddings webhook is configured and enabled (independent of pending queue). */
+  /** Document-embeddings webhook URL is set (ingest path); admin catch-up does not sweep pending v1 chunks. */
   embeddingsConfigured: boolean;
-  /** True when at least one pending sak was queued for catch-up. */
+  /** Always false — legacy nomic backfill sweep removed; use ingest webhooks per sak. */
   embeddings: boolean;
   health: boolean;
   embeddingsIssuesTriggered: number;
 };
 
-function supabaseConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
-  );
-}
-
 export function isEmbeddingsCatchupConfigured(): boolean {
-  const embeddingsUrl = process.env.N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL?.trim();
-  return Boolean(
-    isLegacyEmbeddingsRetryEnabled() && embeddingsUrl && supabaseConfigured(),
-  );
+  return Boolean(process.env.N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL?.trim());
 }
 
 async function runWithConcurrency<T>(
@@ -83,11 +71,7 @@ export async function preparePipelineCatchup(): Promise<{
   const embeddingsConfigured = isEmbeddingsCatchupConfigured();
   const healthUrl = process.env.N8N_PIPELINE_HEALTH_WEBHOOK_URL?.trim();
 
-  let embeddingIssueIds: string[] = [];
-  if (embeddingsConfigured) {
-    const service = getServiceSupabase();
-    embeddingIssueIds = await listPendingLegacyEmbeddingIssueIds(service);
-  }
+  const embeddingIssueIds: string[] = [];
 
   if (healthUrl) {
     const controller = new AbortController();

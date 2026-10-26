@@ -4,11 +4,12 @@ import { join } from 'node:path';
 
 const src = readFileSync(join(process.cwd(), 'lib/n8n/pipeline-catchup.ts'), 'utf8');
 
-assert.match(src, /isLegacyEmbeddingsRetryEnabled\(\)/);
-assert.match(src, /listPendingLegacyEmbeddingIssueIds/);
+assert.doesNotMatch(src, /listPendingLegacyEmbeddingIssueIds/);
+assert.doesNotMatch(src, /isLegacyEmbeddingsRetryEnabled/);
 assert.match(src, /PIPELINE_EMBEDDING_CATCHUP_CONCURRENCY/);
 assert.match(src, /embeddingsConfigured/);
 assert.match(src, /runEmbeddingCatchupWebhooks/);
+assert.match(src, /embeddingIssueIds: string\[\] = \[\]/);
 assert.doesNotMatch(src, /for \(const issueId of issueIds\)[\s\S]*triggerDocumentEmbeddingsWebhook/);
 
 const triggerSrc = readFileSync(
