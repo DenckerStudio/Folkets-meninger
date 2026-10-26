@@ -94,6 +94,7 @@ Important constraints:
 |--------|-----|
 | `scripts/backfill-sak-status.ts` | Refresh `ferdigbehandlet`, `voting_closes_at`, and sak metadata from Stortinget detail data |
 | `scripts/backfill-sak-documents.ts` | Ingest recent sak documents and create pending RAG chunks |
+| `scripts/backfill-embedding-v2.ts` | Coolify one-off: fyll `embedding_v2` (bge-m3) med to baner og busy-pause mot chat-embed |
 | `scripts/deploy-document-embeddings-n8n.mjs` | Deploy/update the document embeddings workflow in n8n |
 | `scripts/archive-misaligned-forum-prompts.sql` | Archive active forum prompts that should no longer be shown |
 
@@ -102,6 +103,34 @@ Example status refresh:
 ```bash
 npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
 ```
+
+### embedding_v2 backfill (Coolify one-off)
+
+Krever migrasjon `20261026110000` + `20261026110100` (etter RAG fase B). Sett
+`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` og `EMBED_BACKFILL_URL` (Ollama
+`/api/embed`, typisk samme CPU-instans som `EMBED_QUERY_URL` på `:11435`).
+Målt throughput på klever er ~**55 chunks/min** med `--batch 16` og én worker
+(CPU mettet). Grovestimat for ~380k pending: **380 000 / 55 ≈ 6 900 min ≈ 5 døgn**
+ved full fart døgnet rundt.
+
+```bash
+# Tørrkjør
+EMBED_BACKFILL_URL=http://192.168.50.154:11435 \
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
+npx tsx scripts/backfill-embedding-v2.ts --dry-run
+
+# Produksjon (busy-pause på automatisk når URL deler chat-instansen)
+EMBED_BACKFILL_URL=http://192.168.50.154:11435 \
+EMBED_QUERY_URL=http://192.168.50.154:11435 \
+npx tsx scripts/backfill-embedding-v2.ts \
+  --workers 1 --batch 16 \
+  --schedule '22-07:full,07-22:throttle' \
+  --max-batches-per-min 3 \
+  --stop-file /data/backfill-v2.stop
+```
+
+`:11434` (GPU / gemma) avvises med mindre `--allow-gpu`. Valgfritt:
+`--busy-pause=off`, `--probe-before-batch`, `--summary-on-sak-complete`.
 
 Focused unit coverage for recently fragile source parsers/status logic lives in
 `lib/sak-status.test.ts` and `lib/stortinget-horinger.test.ts`; both run through
