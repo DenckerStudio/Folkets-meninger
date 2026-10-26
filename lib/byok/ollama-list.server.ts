@@ -11,9 +11,9 @@ import { createByokPinnedFetch, type ByokOutboundFetch } from '@/lib/byok/pinned
 import {
   isChatCapableOllamaModel,
   ollamaTagsUrl,
+  readModelNamesFromTagsPayload,
   type OllamaModelsResult,
 } from '@/lib/byok/ollama';
-import { readModelNamesFromTagsPayload } from '@/lib/byok/ollama';
 
 const DEFAULT_TIMEOUT_MS = 8000;
 
