@@ -14,9 +14,17 @@ function centralEmbedTimeoutMs(): number {
 const MAX_QUERY_CHARS = 500;
 
 let loggedCentralEmbedFailure = false;
+let loggedEmbedQueryUrlMissing = false;
 
 export function resetCentralEmbedFailureLogForTests(): void {
   loggedCentralEmbedFailure = false;
+  loggedEmbedQueryUrlMissing = false;
+}
+
+function logEmbedQueryUrlMissingOnce(): void {
+  if (loggedEmbedQueryUrlMissing) return;
+  loggedEmbedQueryUrlMissing = true;
+  console.warn('[embed] EMBED_QUERY_URL mangler – sentral spørringsembedding er av');
 }
 
 function logCentralEmbedFailureOnce(reason: string): void {
@@ -72,7 +80,12 @@ export async function fetchCentralQueryEmbedding(
   options: CentralQueryEmbedOptions = {},
 ): Promise<number[] | null> {
   const baseUrl = (options.embedBaseUrl ?? process.env.EMBED_QUERY_URL ?? '').trim();
-  if (!baseUrl) return null;
+  if (!baseUrl) {
+    if (options.embedBaseUrl === undefined && !(process.env.EMBED_QUERY_URL ?? '').trim()) {
+      logEmbedQueryUrlMissingOnce();
+    }
+    return null;
+  }
 
   const url = embedQueryApiUrl(baseUrl);
   if (!url) {

@@ -8,6 +8,21 @@ Migrations are applied **manually** by the Coolify Expert, only after Mathias ap
 
 **fm-web** auto-deploys on push to `main` — merge PR **only after** this runbook completes and verification passes.
 
+## Før merge (fm-web env — ikke SQL)
+
+**Ny seksjon (2026-10-26):** dokumentasjon only. Phase A/B SQL-steg under er **uendret** (byte-identisk med Coolify-godkjent versjon).
+
+Før PR **#185** merges til `main`, Coolify Expert må sette på **fm-web** (kun med Mathias' ja), fordi appen auto-deployer ved push til `main`:
+
+| Variabel | Verdi (prod LAN) |
+| --- | --- |
+| `RERANKER_URL` | `http://192.168.50.154:11434` |
+| `EMBED_QUERY_URL` | `http://192.168.50.154:11435` |
+
+Uten disse logger fm-web én gang per prosess og kjører hybrid uten sentral embed/rerank (leksikalsk rekkefølge / ingen rerank) — **ikke** `localhost` eller offentlig URL.
+
+Etter env er på plass: fortsett med SQL phase A/B nedenfor, deretter merge.
+
 ## Maintenance windows (two phases)
 
 | Phase | Migrations | Pause n8n ingest? | Planned duration |
