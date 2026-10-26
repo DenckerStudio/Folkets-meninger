@@ -8,7 +8,6 @@ import {
   ifElse,
 } from '@n8n/workflow-sdk';
 import {
-  FOLKETS_N8N_BASE,
   FOLKETS_OLLAMA_EMBEDDINGS_URL,
   FOLKETS_OLLAMA_EMBED_MODEL,
   FOLKETS_SUPABASE_CRED,
@@ -23,6 +22,7 @@ const scheduleTrigger = trigger({
   version: 1.3,
   config: {
     name: 'Every 60 minutes',
+    disabled: true,
     parameters: {
       rule: {
         interval: [{ field: 'hours', hoursInterval: 1 }],
@@ -317,24 +317,6 @@ return [...ids].map((stortinget_issue_id) => ({ json: { stortinget_issue_id } })
   output: [{ stortinget_issue_id: '200329' }],
 });
 
-const triggerAiSummary = node({
-  type: 'n8n-nodes-base.httpRequest',
-  version: 4.2,
-  config: {
-    name: 'Trigger AI summary',
-    onError: 'continueRegularOutput',
-    parameters: {
-      method: 'POST',
-      url: `${FOLKETS_N8N_BASE}/webhook/folkets-ai-summary`,
-      sendBody: true,
-      specifyBody: 'json',
-      jsonBody: expr('={{ JSON.stringify({ stortinget_issue_id: $json.stortinget_issue_id }) }}'),
-      options: { timeout: 15000 },
-    },
-  },
-  output: [{ ok: true }],
-});
-
 const rateLimitPause = node({
   type: 'n8n-nodes-base.wait',
   version: 1.1,
@@ -428,6 +410,52 @@ const webhookTrigger = trigger({
   output: [{ body: { stortinget_issue_id: '200329' } }],
 });
 
+const hasIssueId = ifElse({
+  version: 2.2,
+  config: {
+    name: 'Has issue id?',
+    id: 'guard-has-issue-id',
+    parameters: {
+      looseTypeValidation: true,
+      conditions: {
+        combinator: 'and',
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
+        conditions: [
+          {
+            id: 'has-issue',
+            leftValue: expr('{{ $json.issueId }}'),
+            rightValue: '',
+            operator: { type: 'string', operation: 'notEmpty' },
+          },
+        ],
+      },
+    },
+  },
+});
+
+const skipGlobalDrain = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Skip global drain (no issue id)',
+    parameters: {
+      mode: 'manual',
+      includeOtherFields: true,
+      assignments: {
+        assignments: [
+          {
+            id: 'outcome',
+            name: 'outcome',
+            value: 'skipped_global_nomic_drain',
+            type: 'string',
+          },
+        ],
+      },
+    },
+  },
+  output: [{ outcome: 'skipped_global_nomic_drain' }],
+});
+
 const normalizeWebhook = node({
   type: 'n8n-nodes-base.set',
   version: 3.4,
@@ -454,7 +482,7 @@ const normalizeWebhook = node({
 const inWorkflowError = createInWorkflowErrorNotify('folkets-document-embeddings');
 
 sticky(
-  `## Dokument embeddings (RAG)\n\nPending chunks → Ollama \`nomic-embed-text:v1.5\` → pgvector. Tom kø er suksess. Etter lagring trigges AI-sammendrag for saken. Ollama-feil: chunk blir stående pending. Error Trigger POSTer til /api/ops/n8n-notify. App-fallback: \`/api/cron/n8n-retry\`.\n\n${DOCUMENT_CHUNKING_SPEC}`,
+  `## Dokument embeddings (legacy nomic)\n\nKun **per sak** via webhook med \`stortinget_issue_id\`. Timeplan av (schedule disabled). Global nomic-drenering er stoppet — \`embedding_v2\` eies av \`scripts/backfill-embedding-v2.ts\`. Ingen AI-sammendrag per batch. Ollama-feil: chunk pending. Error Trigger → /api/ops/n8n-notify.\n\n${DOCUMENT_CHUNKING_SPEC}`,
   [scheduleTrigger, webhookTrigger],
   { color: 5 },
 );
@@ -462,7 +490,6 @@ sticky(
 const savedEmbeddingPath = saveEmbedding
   .to(clearDocumentBody)
   .to(collectReadyIssues)
-  .to(triggerAiSummary)
   .to(rateLimitPause)
   .to(batchRunComplete);
 
@@ -476,15 +503,17 @@ const embeddingPipeline = fetchPendingChunks.to(expandPendingChunks).to(
     .onFalse(logEmptyEmbeddingQueue),
 );
 
+const issueGatedPipeline = hasIssueId.onTrue(embeddingPipeline).onFalse(skipGlobalDrain);
+
 export default workflow(
   'folkets-document-embeddings',
   'Folkets Meninger – dokument embeddings (RAG)',
 )
   .add(scheduleTrigger)
   .to(embeddingSettings)
-  .to(embeddingPipeline)
+  .to(issueGatedPipeline)
   .add(webhookTrigger)
   .to(normalizeWebhook)
-  .to(embeddingPipeline)
+  .to(issueGatedPipeline)
   .add(inWorkflowError.errorTrigger)
   .to(inWorkflowError.formatError.to(inWorkflowError.notifySettings).to(inWorkflowError.notifyAdmin));

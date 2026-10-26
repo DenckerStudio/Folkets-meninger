@@ -13,9 +13,10 @@
         }
       },
       "id": "schedule-trigger-node",
-      "name": "Every 15 minutes",
+      "name": "Every 60 minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
+      "disabled": true,
       "position": [240, 300]
     },
     {

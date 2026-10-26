@@ -55,6 +55,9 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/issue_ai_summary_regeneratio
 echo "Running embedding_v2_queue_rpcs.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/embedding_v2_queue_rpcs.sql
 
+echo "Running embedding_backlog_health_explain.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/embedding_backlog_health_explain.sql
+
 echo "Running security-guard.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
 

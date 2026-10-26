@@ -1,10 +1,15 @@
+import { isLegacyEmbeddingsRetryEnabled } from '@/lib/n8n/legacy-embeddings-retry';
 import { triggerDocumentEmbeddingsWebhook } from '@/lib/trigger-document-embeddings-webhook';
 
 export function triggerPipelineCatchup(): { embeddings: boolean; health: boolean } {
   const embeddingsUrl = process.env.N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL?.trim();
   const healthUrl = process.env.N8N_PIPELINE_HEALTH_WEBHOOK_URL?.trim();
 
-  triggerDocumentEmbeddingsWebhook();
+  let embeddings = false;
+  if (isLegacyEmbeddingsRetryEnabled()) {
+    triggerDocumentEmbeddingsWebhook();
+    embeddings = Boolean(embeddingsUrl);
+  }
 
   if (healthUrl) {
     const controller = new AbortController();
@@ -25,7 +30,7 @@ export function triggerPipelineCatchup(): { embeddings: boolean; health: boolean
   }
 
   return {
-    embeddings: Boolean(embeddingsUrl),
+    embeddings,
     health: Boolean(healthUrl),
   };
 }
