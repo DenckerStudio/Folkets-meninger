@@ -228,9 +228,10 @@ infra/               coolify/ (cms.md + historical plan), searxng/
   raden via `upsert_content_feedback`. Regenerering av avviste sammendrag starter
   først når den migrasjonen er lagt inn.
 - Sak-sammendrag vises fra `issue_ai_summaries` uavhengig av vurdering.
-  `getAiSummaryFromDb` prøver kolonnen `forslag` og, ved 42703/PGRST204 for den
-  kolonnen (`20261021170000` ikke lagt inn), henter raden uten den. Kolonnesvikt
-  er ikke «mangler sammendrag» og skal ikke trigge genererings-webhook.
+  `readAiSummaryFromDb` / `getAiSummaryFromDb` prøver kolonnen `forslag` og, ved
+  Postgres `42703` (`20261021170000` ikke lagt inn), henter raden uten den.
+  Kolonnesvikt er ikke «mangler sammendrag»; lesefeil (`read_failed`) skal ikke
+  trigge genererings-webhook.
 - **Research** (`/dashboard/admin/research`, cluster detail `/dashboard/admin/research/[id]`):
   action clusters from action capture (`lib/admin/oppfanget/` list/filters; UI label Research).
   Admin actions deepen/blog/reel → `lib/admin/research/` + `POST /api/admin/research/...`;
