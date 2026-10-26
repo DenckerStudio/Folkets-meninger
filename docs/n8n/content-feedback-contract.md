@@ -87,7 +87,13 @@ POST {SUPABASE_URL}/rest/v1/rpc/n8n_list_source_items
 }
 ```
 
-Returnerer rader med `id`, `domain`, `external_id`, `url`, `title`, `categories`, `published_at`, `modified_at`, `has_embedding` (ingen rå vektor). Sortering: `COALESCE(modified_at, published_at)` DESC.
+Returnerer rader med `id`, `domain`, `external_id`, `url`, `title`, `excerpt`, `categories`, `published_at`, `modified_at`, `has_embedding` (ingen rå vektor).
+
+**Filter `p_since`:** rader der `COALESCE(modified_at, published_at, fetched_at) >= p_since` (alle tre tidsstempler inngår; `fetched_at` brukes når `modified_at` og `published_at` er null).
+
+**Sortering (nyeste først):** `ORDER BY COALESCE(modified_at, published_at, fetched_at) DESC NULLS LAST` — samme tre-felts `COALESCE` som filteret, inkludert `fetched_at`.
+
+Migrasjon `20261021150000_source_items_n8n_fields.sql` legger til `excerpt` i returtypen.
 
 ## HTTP: `n8n_match_source_items`
 
@@ -99,7 +105,13 @@ Returnerer rader med `id`, `domain`, `external_id`, `url`, `title`, `categories`
 }
 ```
 
-Tidsvindu: `COALESCE(published_at, fetched_at)` (rader uten `published_at` faller ikke ut).
+Returnerer `id`, `domain`, `external_id`, `url`, `title`, `excerpt`, `categories`, `published_at`, `tier`, `base_weight`, `similarity`, **`seen_at`** (`COALESCE(published_at, fetched_at)`).
+
+**Tidsvindu (WHERE):** `COALESCE(published_at, fetched_at) >= now() - p_days` — rader uten `published_at` faller ikke ut så lenge `fetched_at` er satt.
+
+**Sortering:** cosine-avstand på embedding (`ORDER BY embedding <=> query`).
+
+Migrasjon `20261021150000_source_items_n8n_fields.sql` legger til `seen_at` sist i returtypen.
 
 ## Andre n8n-RPC-er
 

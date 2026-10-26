@@ -81,5 +81,9 @@ export type PayloadPost = {
     blueskyUri?: string | null;
   } | null;
   sourceEvent?: string | null;
+  review?: {
+    state?: 'ny' | 'til_vurdering' | 'godkjent' | 'avvist' | string | null;
+    note?: string | null;
+  } | null;
   _status?: 'draft' | 'published';
 };

@@ -29,6 +29,7 @@ jobs:
           echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" >> "$GITHUB_ENV"
       - run: npm ci --ignore-scripts
       - run: npm run lint
+      - run: npm run test:unit
       - run: npm run build
 
   db-security:
@@ -47,29 +48,57 @@ jobs:
           DEFAULTS_URL="postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres" \
           ./scripts/run-prod-like-db-security.sh
 
-  fm-cms:
+  unit-tests:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: cms
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cms_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: cms/package-lock.json
-      - run: npm ci
-      - run: npm run test:unit
-      - run: npm run lint
-      - name: Build fm-cms
+      - name: Load public test Supabase env
+        run: |
+          set -a
+          source .env.test
+          set +a
+          echo "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" >> "$GITHUB_ENV"
+      - run: npm ci --ignore-scripts
+      - name: Run unit tests
+        run: npm run test:unit
         env:
-          PAYLOAD_SECRET: ci-payload-secret-for-fm-cms-build-only-32c
-          DATABASE_URI: postgresql://postgres:postgres@127.0.0.1:5432/postgres?search_path=payload
-          PAYLOAD_SCHEMA: payload
-          SERVER_URL: http://localhost:3001
-          WEB_PUBLIC_URL: http://localhost:3000
-        run: npm run build
+          CI: true
+      - name: fm-cms unit tests
+        working-directory: cms
+        run: |
+          npm ci --ignore-scripts
+          npm run test:unit
+      - name: fm-cms integration tests (Payload outbox)
+        working-directory: cms
+        env:
+          DATABASE_URI: postgresql://postgres:postgres@localhost:5432/cms_test?search_path=payload
+          PAYLOAD_SECRET: ci-test-secret
+          CMS_INTEGRATION_TESTS: '1'
+          NODE_ENV: test
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d cms_test -c 'CREATE SCHEMA IF NOT EXISTS payload;'
+          npx payload migrate
+          npm run test:integration
 
   migration-sql-lint:
     runs-on: ubuntu-latest

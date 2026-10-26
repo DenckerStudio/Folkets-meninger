@@ -1,6 +1,13 @@
 import type { CollectionConfig } from 'payload';
 import { lexicalEditor } from '@payloadcms/richtext-lexical';
 import { postPublishHooks } from '@/hooks/postPublish';
+import {
+  contentFeedbackAfterChange,
+  contentFeedbackAfterDelete,
+  contentFeedbackBeforeOperation,
+  contentFeedbackCaptureMainStatusBeforeChange,
+} from '@/hooks/contentFeedbackWebhook';
+import { preservePostOrigin } from '@/hooks/preservePostOrigin';
 import { validatePostText } from '@/hooks/validatePostText';
 import {
   canPublishField,
@@ -42,10 +49,17 @@ export const Posts: CollectionConfig = {
     unlock: editorsOnly,
   },
   hooks: {
-    beforeOperation: [enforceDraftQueryForNonEditors],
+    beforeOperation: [enforceDraftQueryForNonEditors, contentFeedbackBeforeOperation],
     beforeValidate: [enforceDraftDataBeforeValidate, validatePostText],
-    beforeChange: [agentDraftGuard, enforceDraftDataBeforeChange, setPublishedAtOnPublish],
-    afterChange: [postPublishHooks],
+    beforeChange: [
+      contentFeedbackCaptureMainStatusBeforeChange,
+      preservePostOrigin,
+      agentDraftGuard,
+      enforceDraftDataBeforeChange,
+      setPublishedAtOnPublish,
+    ],
+    afterChange: [postPublishHooks, contentFeedbackAfterChange],
+    afterDelete: [contentFeedbackAfterDelete],
   },
   fields: [
     {
@@ -158,6 +172,9 @@ export const Posts: CollectionConfig = {
       name: 'origin',
       type: 'select',
       defaultValue: 'manual',
+      access: {
+        update: () => false,
+      },
       options: [
         { label: 'Manuell', value: 'manual' },
         { label: 'n8n', value: 'n8n' },

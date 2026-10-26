@@ -14,4 +14,5 @@ tsconfig.tsbuildinfo
 .vercel
 .env*.local
 test-results/
+.test-artifacts/
 .tmp/

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { migrations } from './index';
+import { migrations } from '../migrations/index';
 
-const migrationDir = fileURLToPath(new URL('.', import.meta.url));
+const migrationDir = fileURLToPath(new URL('../migrations/', import.meta.url));
 const sqlSource = readFileSync(
   `${migrationDir}20261020_120000_users_account_lock_columns.ts`,
   'utf8',
@@ -16,4 +16,4 @@ assert.equal(
   true,
 );
 
-console.log('cms/src/migrations/accountLockColumns.migration.test.ts ok');
+console.log('cms/src/migration-tests/accountLockColumns.migration.test.ts ok');

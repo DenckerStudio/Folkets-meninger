@@ -1,17 +1,22 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import Link from 'next/link';
-import { CircleDollarSign, ExternalLink, FileText, Loader2, Users } from 'lucide-react';
+import { Children } from 'react';
+import { CircleDollarSign, ExternalLink, FileText, HandHeart, Loader2, Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { CivicBubble } from '@/components/icons/civic';
+import { ContentFeedbackPanel } from '@/components/admin/content-feedback-panel';
 import { BiasReportLink } from '@/components/trust/bias-report-link';
+import { useIsAdmin } from '@/hooks/use-is-admin';
 import { Dialog } from '@/components/ui/dialog';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { AI_SUMMARY_LABEL } from '@/lib/trust/ai-transparency';
 import { routes } from '@/lib/routes';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { useSakTooltipsEnabled } from '@/components/theme-provider';
+import { isDisplayableAiSummaryKostnad } from '@/lib/ai-summary/display-kostnad';
 import type { AiSummaryLegacy, AiSummaryV2, TopicCard } from '@/lib/ai-summary/types';
 
 type SummaryData =
@@ -24,12 +29,18 @@ type SourceDoc = {
 };
 
 function isReadySummary(json: Record<string, unknown>): SummaryData | null {
-  if (json.version === 2 && typeof json.narrative === 'string') {
+  const narrative =
+    typeof json.narrative === 'string' ? json.narrative.trim() : '';
+  if (json.version === 2 && narrative) {
     return {
       version: 2,
-      narrative: json.narrative,
+      narrative,
       who_affected: String(json.who_affected ?? ''),
       how_affected: String(json.how_affected ?? ''),
+      kostnad: typeof json.kostnad === 'string' ? json.kostnad : '',
+      forslag: Array.isArray(json.forslag)
+        ? json.forslag.map((item) => String(item ?? '').trim()).filter(Boolean)
+        : [],
       topic_cards: Array.isArray(json.topic_cards)
         ? (json.topic_cards as TopicCard[])
         : [],
@@ -65,6 +76,8 @@ export default function AiSummary({
   const [data, setData] = useState<SummaryData | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [sourceDocs, setSourceDocs] = useState<SourceDoc[]>([]);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const isAdmin = useIsAdmin();
   const startedRef = useRef(false);
 
   async function loadSourceDocuments() {
@@ -163,6 +176,29 @@ export default function AiSummary({
       >
         Om modellen
       </Link>
+      {isAdmin ? (
+        <button
+          type="button"
+          disabled={loading || !data}
+          onClick={() => setShowFeedback((value) => !value)}
+          className="inline-flex min-h-11 items-center rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-brand/40 hover:text-brand disabled:cursor-not-allowed disabled:opacity-50"
+          title={!data && !loading ? 'Sammendraget må lastes først' : undefined}
+        >
+          Vurder sammendrag
+        </button>
+      ) : null}
+
+      {isAdmin && showFeedback && data ? (
+        <ContentFeedbackPanel
+          className="mt-2 w-full"
+          contentType="ai_summary"
+          contentId={sakId}
+          title="Vurder sammendraget"
+          description="Godkjenn eller avvis sammendraget. Ved avvisning settes saken i kø for ny generering."
+          onSkip={() => setShowFeedback(false)}
+          onSaved={() => setShowFeedback(false)}
+        />
+      ) : null}
 
       <Dialog
         open={open}
@@ -275,14 +311,32 @@ function SummarySources({
   );
 }
 
+function FactTileGrid({ children }: { children: ReactNode }) {
+  const tiles = Children.toArray(children);
+  const oddLastSpan = tiles.length % 2 === 1;
+
+  return (
+    <div
+      className={cn(
+        'grid gap-3 sm:grid-cols-2',
+        oddLastSpan && 'sm:[&>*:last-child]:col-span-2',
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 function FactTile({
   icon: Icon,
   label,
   text,
+  bodyClassName,
 }: {
   icon: ComponentType<{ className?: string }>;
   label: string;
   text: string;
+  bodyClassName?: string;
 }) {
   if (!text.trim()) return null;
 
@@ -292,7 +346,14 @@ function FactTile({
         <Icon className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden />
         <span className="min-w-0 break-words">{label}</span>
       </div>
-      <p className="text-sm leading-relaxed break-words text-foreground">{text}</p>
+      <p
+        className={cn(
+          'text-sm leading-relaxed break-words text-foreground',
+          bodyClassName,
+        )}
+      >
+        {text}
+      </p>
     </article>
   );
 }
@@ -317,10 +378,37 @@ function V2Summary({ data }: { data: AiSummaryV2 }) {
         <p className="text-base leading-relaxed break-words text-foreground">{data.narrative}</p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <FactTile icon={Users} label="Hvem berøres?" text={data.who_affected} />
-        <FactTile icon={CircleDollarSign} label="Hvordan berøres de?" text={data.how_affected} />
-      </div>
+      {data.forslag.length > 0 ? (
+        <section className="min-w-0 rounded-xl border border-border bg-card p-4">
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Forslagene ({data.forslag.length})
+          </h3>
+          <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-foreground">
+            {data.forslag.map((item, index) => (
+              <li key={`${index}-${item.slice(0, 48)}`} className="break-words pl-1">
+                {item}
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+
+      <FactTileGrid>
+        {data.who_affected.trim() ? (
+          <FactTile icon={Users} label="Hvem berøres?" text={data.who_affected} />
+        ) : null}
+        {data.how_affected.trim() ? (
+          <FactTile
+            icon={HandHeart}
+            label="Hvordan berøres de?"
+            text={data.how_affected}
+            bodyClassName="whitespace-pre-line"
+          />
+        ) : null}
+        {isDisplayableAiSummaryKostnad(data.kostnad) ? (
+          <FactTile icon={CircleDollarSign} label="Økonomi og kostnad" text={data.kostnad!} />
+        ) : null}
+      </FactTileGrid>
 
       {data.topic_cards.length > 0 ? (
         <div className="grid gap-3 md:grid-cols-3">
@@ -339,10 +427,12 @@ function LegacySummary({ data }: { data: AiSummaryLegacy }) {
       {data.hva.trim() ? (
         <p className="text-base leading-relaxed break-words text-foreground">{data.hva}</p>
       ) : null}
-      <div className="grid gap-3 sm:grid-cols-2">
+      <FactTileGrid>
         <FactTile icon={Users} label="Hvem berøres?" text={data.hvem} />
-        <FactTile icon={CircleDollarSign} label="Økonomi og kostnad" text={data.kostnad} />
-      </div>
+        {isDisplayableAiSummaryKostnad(data.kostnad) ? (
+          <FactTile icon={CircleDollarSign} label="Økonomi og kostnad" text={data.kostnad} />
+        ) : null}
+      </FactTileGrid>
     </div>
   );
 }

@@ -113,7 +113,7 @@ export const OM_FAQ = [
   {
     id: 'hvem',
     question: 'Hvem står bak Folkets Meninger?',
-    answer: `Folkets Meninger drives av ${formatDataControllerBlock() ?? 'Dencker (enkeltpersonforetak), org.nr. 934538498, Ileveien 10, 1407 Vinterbro'}. Vi er ikke knyttet til Regjeringen eller Stortinget. Kontakt oss via innspill-skjemaet eller ${DATA_CONTROLLER.privacyEmail} hvis du vil vite mer.`,
+    answer: `Folkets Meninger drives av ${formatDataControllerBlock() ?? 'Dencker (enkeltpersonforetak), org.nr. 934538498'}. Vi er ikke knyttet til Regjeringen eller Stortinget. Kontakt oss via innspill-skjemaet eller ${DATA_CONTROLLER.privacyEmail} hvis du vil vite mer.`,
   },
   {
     id: 'finansiering',
