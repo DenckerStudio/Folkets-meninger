@@ -5,7 +5,7 @@
  * Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (trimmed), EMBED_BACKFILL_URL (required),
  *      optional EMBED_QUERY_URL (chat instance detection).
  */
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { LatencyBackoff, effectiveMaxBatchesPerMinute, shouldSleepForBatchRate } from '../lib/backfill-embedding-v2/busy-pause';
 import { buildSaveRows, fetchEmbedBatch, type EmbedRow } from '../lib/backfill-embedding-v2/embed-batch';
 import { loadScheduleWindows, parseBackfillArgv } from '../lib/backfill-embedding-v2/parse-args';
@@ -167,7 +167,7 @@ async function main(): Promise<void> {
 }
 
 async function listIssues(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   tier: number,
   cli: ReturnType<typeof parseBackfillArgv>,
 ): Promise<PriorityIssue[]> {
@@ -184,7 +184,7 @@ async function listIssues(
 }
 
 async function drainIssue(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   issueId: string,
   cli: ReturnType<typeof parseBackfillArgv>,
   embedUrl: string,
