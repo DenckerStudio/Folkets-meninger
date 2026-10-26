@@ -15,9 +15,11 @@
 | 3 | `20261026110300_embedding_v2_chunk_leases.sql` | Transactional | `embedding_v2_claimed_*` columns (metadata-only), `n8n_claim_chunks_missing_v2`, `save_embeddings_v2` lease checks |
 | 4 | `20261026110000_document_chunks_v2_pending_issue_idx_concurrent.sql` | **CONCURRENTLY** | Partial index on pending v2 chunks per issue |
 
-Step **4** may run **before or after** steps 1–3 on prod (index does not reference lease columns). **Recommended:** transactional **1 → 2 → 3**, then concurrent **4**, so backfill scripts can use claim RPCs immediately after step 3 even if step 4 is still building.
+**Apply order is fixed:** transactional steps **1 → 2 → 3**, then concurrent step **4** (do not run `26110000` before `26110300`). After step 3, claim/save RPCs exist for backfill #206; step 4 can still build while backfill runs, but Coolify should follow this sequence.
 
-CI (`scripts/run-prod-like-db-security.sh`) applies **1–3** then **4** explicitly.
+Each transactional file is its own `psql -f` with phase-A session settings (see below); do not merge 1–3 into one transaction unless you accept all-or-nothing rollback.
+
+CI (`scripts/run-prod-like-db-security.sh`) applies **1–3** then **4** in that order.
 
 ## Maintenance window
 

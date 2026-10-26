@@ -249,16 +249,16 @@ WHERE n.nspname = 'public'
 SELECT id, title FROM search_issues_fts('statsbudsjett', NULL, 3);
 ```
 
-## Phase D — v2 backfill queue (`26110000`–`26110100`)
+## Phase D — v2 embedding queue (PR #207)
 
-Apply **after** phase B indexes are valid. Order:
+Apply **after** phase B indexes are valid. **Use [`EMBEDDING_V2_QUEUE_APPLY.md`](./EMBEDDING_V2_QUEUE_APPLY.md) as the only apply checklist** (session GUCs, n8n pause, verification, rollbacks). Fixed order:
 
-1. `20261026110000_document_chunks_v2_pending_issue_idx_concurrent.sql` — **outside** `BEGIN` (same session GUCs as phase B).
-2. After each CONCURRENTLY file: invalid-index check (see phase B). Rollback: `DROP INDEX CONCURRENTLY IF EXISTS public.document_chunks_v2_pending_issue_idx;`
-3. `20261026110100_embedding_v2_queue_and_gates.sql` — transactional RPCs + gates.
-4. `20261026110200_embedding_backlog_health_perf.sql` — fast health RPC (estimated totals + exact tier-0).
+1. `20261026110100_embedding_v2_queue_and_gates.sql` — transactional (`BEGIN`/`COMMIT`; one `psql -f` per file).
+2. `20261026110200_embedding_backlog_health_perf.sql` — transactional.
+3. `20261026110300_embedding_v2_chunk_leases.sql` — transactional (lease columns + `n8n_claim_chunks_missing_v2`; required for backfill #206).
+4. `20261026110000_document_chunks_v2_pending_issue_idx_concurrent.sql` — **never inside** `BEGIN`/`COMMIT`; phase B GUCs (`statement_timeout = 0`, `maintenance_work_mem`, `max_parallel_maintenance_workers = 0`); invalid-index check after apply; rollback `DROP INDEX CONCURRENTLY IF EXISTS public.document_chunks_v2_pending_issue_idx;` then re-run step 4.
 
-Then start `scripts/backfill-embedding-v2.ts` (see README).
+Then start `scripts/backfill-embedding-v2.ts` (README § embedding_v2 backfill).
 
 ## CI / prod-like test
 
