@@ -1,6 +1,8 @@
 import { parseSchedule } from './schedule';
+import { parseBackfillProvider, type BackfillProvider } from './provider';
 
 export type BackfillCli = {
+  provider?: BackfillProvider;
   maxBatchesPerMin: number;
   fullMaxBatchesPerMin: number;
   fastLaneMinBatchesPerMin: number;
@@ -63,7 +65,11 @@ export function parseBackfillArgv(argv: string[]): BackfillCli {
     Math.min(3600, Number(readValue(argv, '--lease-seconds') ?? '300') || 300),
   );
 
+  const providerRaw = readValue(argv, '--provider');
+  const provider = providerRaw ? parseBackfillProvider(providerRaw) : undefined;
+
   return {
+    provider,
     maxBatchesPerMin,
     fullMaxBatchesPerMin,
     fastLaneMinBatchesPerMin,

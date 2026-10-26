@@ -1,6 +1,8 @@
+import { validateEmbeddingVector } from './embed-batch';
 import { cosineSimilarity } from './cosine';
 import { fetchLmStudioEmbedVectors } from './lmstudio';
 import { fetchOllamaEmbedVectors } from './ollama-embed';
+import { safeErrorMessage } from './secrets';
 import { fetchOllamaShowSummary } from './ollama-show';
 import { PREFLIGHT_TEXTS, PREFLIGHT_TEXT_COUNT } from './preflight-texts';
 import type { BackfillProvider } from './provider';
@@ -27,33 +29,52 @@ export async function runEmbeddingPreflight(options: {
   log?: (line: string) => void;
 }): Promise<PreflightResult> {
   const texts = options.texts ?? PREFLIGHT_TEXTS.slice(0, PREFLIGHT_TEXT_COUNT);
+  if (texts.length !== PREFLIGHT_TEXT_COUNT) {
+    throw new Error(`Preflight: forventet ${PREFLIGHT_TEXT_COUNT} tekster, fikk ${texts.length}`);
+  }
   const fetchImpl = options.fetchImpl ?? fetch;
   const apiModel = options.apiModel;
+  const secrets = options.apiKey?.trim() ? [options.apiKey.trim()] : [];
 
   let backfillVectors: number[][];
-  if (options.provider === 'lmstudio') {
-    const res = await fetchLmStudioEmbedVectors(options.backfillUrl, texts, {
-      fetchImpl,
-      apiKey: options.apiKey,
-      apiModel,
-    });
-    backfillVectors = res.vectors;
-  } else {
-    const res = await fetchOllamaEmbedVectors(options.backfillUrl, texts, {
-      fetchImpl,
-      apiModel,
-    });
-    backfillVectors = res.vectors;
-  }
+  let queryVectors: number[][];
+  try {
+    if (options.provider === 'lmstudio') {
+      const res = await fetchLmStudioEmbedVectors(options.backfillUrl, texts, {
+        fetchImpl,
+        apiKey: options.apiKey,
+        apiModel,
+      });
+      backfillVectors = res.vectors;
+    } else {
+      const res = await fetchOllamaEmbedVectors(options.backfillUrl, texts, {
+        fetchImpl,
+        apiModel,
+      });
+      backfillVectors = res.vectors;
+    }
 
-  const queryRes = await fetchOllamaEmbedVectors(options.queryUrl, texts, {
-    fetchImpl,
-    apiModel,
-  });
-  const queryVectors = queryRes.vectors;
+    const queryRes = await fetchOllamaEmbedVectors(options.queryUrl, texts, {
+      fetchImpl,
+      apiModel,
+    });
+    queryVectors = queryRes.vectors;
+  } catch (err) {
+    throw new Error(safeErrorMessage(err, secrets));
+  }
 
   if (backfillVectors.length !== queryVectors.length) {
     throw new Error('Preflight: ulikt antall vektorer fra backfill og query');
+  }
+
+  for (let i = 0; i < texts.length; i += 1) {
+    const backVec = validateEmbeddingVector({ embedding: backfillVectors[i] });
+    const queryVec = validateEmbeddingVector({ embedding: queryVectors[i] });
+    if (!backVec || !queryVec) {
+      throw new Error(`Preflight: ugyldig eller ikke-finite vektor for tekst ${i}`);
+    }
+    backfillVectors[i] = backVec;
+    queryVectors[i] = queryVec;
   }
 
   const dim = backfillVectors[0]?.length ?? 0;

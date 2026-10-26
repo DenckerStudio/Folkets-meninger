@@ -1,5 +1,6 @@
 import { OLLAMA_EMBED_API_MODEL } from './provider';
 import { validateEmbeddingVector, type EmbedRow } from './embed-batch';
+import { safeErrorMessage } from './secrets';
 
 export function buildOpenAiEmbeddingsUrl(baseUrl: string): string {
   const parsed = new URL(baseUrl.trim());
@@ -74,11 +75,19 @@ export async function fetchLmStudioEmbedVectors(
   });
 
   if (!res.ok) {
-    throw new Error(`LM Studio embed feilet: HTTP ${res.status}`);
+    const secrets = options.apiKey?.trim() ? [options.apiKey.trim()] : [];
+    throw new Error(
+      safeErrorMessage(new Error(`LM Studio embed feilet: HTTP ${res.status}`), secrets),
+    );
   }
 
-  const payload = await res.json();
-  return parseOpenAiEmbeddingsResponse(payload, texts.length);
+  try {
+    const payload = await res.json();
+    return parseOpenAiEmbeddingsResponse(payload, texts.length);
+  } catch (err) {
+    const secrets = options.apiKey?.trim() ? [options.apiKey.trim()] : [];
+    throw new Error(safeErrorMessage(err, secrets));
+  }
 }
 
 export async function fetchLmStudioEmbedBatch(

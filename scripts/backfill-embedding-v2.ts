@@ -8,7 +8,11 @@
  */
 import { createBackfillSupabase } from '../lib/backfill-embedding-v2/supabase-client';
 import { existsSync } from 'node:fs';
-import { loadEndpointConfigs, finalizeEndpoints } from '../lib/backfill-embedding-v2/endpoints';
+import {
+  loadEndpointConfigs,
+  finalizeEndpoints,
+} from '../lib/backfill-embedding-v2/endpoints';
+import { installBackfillSignalHandlers } from '../lib/backfill-embedding-v2/shutdown';
 import { loadScheduleWindows, parseBackfillArgv } from '../lib/backfill-embedding-v2/parse-args';
 import { runEmbeddingPreflight } from '../lib/backfill-embedding-v2/preflight';
 import { SharedDbPressure } from '../lib/backfill-embedding-v2/shared-pressure';
@@ -105,7 +109,7 @@ async function main(): Promise<void> {
   const serviceKey = requiredEnv('SUPABASE_SERVICE_ROLE_KEY');
   const embedQueryUrl = requiredEnv('EMBED_QUERY_URL');
 
-  const endpointInputs = loadEndpointConfigs(argv);
+  const endpointInputs = loadEndpointConfigs(argv, { providerCli: cli.provider });
   const endpoints = finalizeEndpoints(endpointInputs);
   const secrets = endpointSecrets(endpoints);
   const log = (line: string) => console.log(line);
@@ -147,12 +151,7 @@ async function main(): Promise<void> {
     }
   };
 
-  process.on('SIGINT', () => {
-    void requestStop().finally(() => process.exit(0));
-  });
-  process.on('SIGTERM', () => {
-    void requestStop().finally(() => process.exit(0));
-  });
+  installBackfillSignalHandlers(requestStop);
 
   const coordinator = (async () => {
     while (!stopping) {

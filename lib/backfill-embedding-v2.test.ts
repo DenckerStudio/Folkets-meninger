@@ -26,9 +26,10 @@ async function main(): Promise<void> {
   const windows = parseSchedule('22-07:full,07-22:throttle');
   assert.equal(windows.length, 2);
 
-  const cli = parseBackfillArgv(['--lease-seconds', '300', '--preflight-only']);
+  const cli = parseBackfillArgv(['--lease-seconds', '300', '--preflight-only', '--provider', 'lmstudio']);
   assert.equal(cli.leaseSeconds, 300);
   assert.equal(cli.preflightOnly, true);
+  assert.equal(cli.provider, 'lmstudio');
 
   assert.throws(() => requireBackfillUrl('lmstudio', ''));
   assert.throws(() => checkEmbedUrlsAtStartup('http://gpu:11434', '', false, false));

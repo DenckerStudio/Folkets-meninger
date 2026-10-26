@@ -155,7 +155,38 @@ npx tsx scripts/backfill-embedding-v2.ts \
 (~55 chunks/min). `:11434` (GPU/gemma) avvises uten `--allow-gpu`.
 
 Enkel endpoint uten JSON: `EMBED_BACKFILL_PROVIDER=lmstudio`, `EMBED_BACKFILL_URL=…` (primary).
-Valgfritt: `--busy-pause=off`, `--probe-before-batch`, `--lease-seconds 300`.
+Valgfritt: `--busy-pause=off`, `--probe-before-batch`, `--lease-seconds 300`, `--provider lmstudio`.
+
+#### Gaming-PC worker (background, LM Studio)
+
+Eksempel-env (kun placeholders): `scripts/backfill-embedding-v2.gaming-pc.env.example`.
+API-nøkkel **kun** via `LMSTUDIO_API_KEY` (aldri som `apiKey` i JSON).
+
+1. Kopier env-filen lokalt og fyll inn `SUPABASE_*`, `EMBED_QUERY_URL` (Ollama **:11435** for chat/preflight),
+   `EMBED_BACKFILL_URL` (LM Studio på PC-en), `LMSTUDIO_API_KEY`.
+2. Preflight (må bestå før claiming):
+
+```bash
+set -a && source /path/to/gaming-pc.env && set +a
+npx tsx scripts/backfill-embedding-v2.ts --provider lmstudio --preflight-only
+```
+
+3. Kjør background-worker med lav concurrency og busy-pause:
+
+```bash
+npx tsx scripts/backfill-embedding-v2.ts \
+  --provider lmstudio \
+  --schedule '22-07:full,07-22:throttle' \
+  --max-batches-per-min 2 \
+  --full-max-batches-per-min 8 \
+  --busy-pause=on \
+  --busy-latency-ms 1500 \
+  --lease-seconds 300 \
+  --stop-file /tmp/backfill-v2-gaming-pc.stop
+```
+
+**Stopp trygt:** `touch` stop-filen (coordinator frigir leases), eller `SIGINT`/`SIGTERM` (frigir via
+`n8n_release_embedding_v2_claims`). `--dry-run` claimer og frigir uten `save_embeddings_v2`.
 
 Focused unit coverage for recently fragile source parsers/status logic lives in
 `lib/sak-status.test.ts` and `lib/stortinget-horinger.test.ts`; both run through

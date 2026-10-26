@@ -64,7 +64,9 @@ export function resolveEndpointConfig(input: EndpointConfigInput): ResolvedEndpo
     Math.min(64, input.batch ?? defaultBatchForProvider(provider)),
   );
 
-  const apiKeyEnv = input.apiKeyEnv?.trim() || undefined;
+  const apiKeyEnv =
+    input.apiKeyEnv?.trim() ||
+    (provider === 'lmstudio' ? 'LMSTUDIO_API_KEY' : undefined);
   const apiKey = resolveApiKeyFromEnvVarName(apiKeyEnv);
 
   const envModelTag = input.modelTagEnv
@@ -101,7 +103,10 @@ export function parseEndpointJson(raw: string, source: string): EndpointConfigIn
   if (!parsed || typeof parsed !== 'object') {
     throw new Error(`Endpoint-config må være et objekt (${source})`);
   }
-  const obj = parsed as EndpointConfigInput;
+  const obj = parsed as EndpointConfigInput & { apiKey?: string };
+  if (obj.apiKey !== undefined && String(obj.apiKey).trim() !== '') {
+    throw new Error(`apiKey i endpoint-config er ikke tillatt (${source}) — bruk apiKeyEnv`);
+  }
   if (!obj.url?.trim()) {
     throw new Error(`Endpoint mangler url (${source})`);
   }
@@ -111,7 +116,10 @@ export function parseEndpointJson(raw: string, source: string): EndpointConfigIn
   return obj;
 }
 
-export function loadEndpointConfigs(argv: string[]): EndpointConfigInput[] {
+export function loadEndpointConfigs(
+  argv: string[],
+  options: { providerCli?: string } = {},
+): EndpointConfigInput[] {
   const fromArgv: EndpointConfigInput[] = [];
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--endpoint' && argv[i + 1]) {
@@ -145,7 +153,9 @@ export function loadEndpointConfigs(argv: string[]): EndpointConfigInput[] {
     });
   }
 
-  const provider = parseBackfillProvider(process.env.EMBED_BACKFILL_PROVIDER);
+  const provider = parseBackfillProvider(
+    options.providerCli ?? process.env.EMBED_BACKFILL_PROVIDER,
+  );
   const url = requireBackfillUrl(provider, process.env.EMBED_BACKFILL_URL);
   return [
     {

@@ -110,6 +110,18 @@ async function main(): Promise<void> {
     }),
   );
 
+  assert.throws(() =>
+    parseEndpointJson(
+      JSON.stringify({
+        name: 'bad',
+        provider: 'lmstudio',
+        url: 'https://pc.example/v1',
+        apiKey: 'inline-secret',
+      }),
+      'test',
+    ),
+  );
+
   const epJson = parseEndpointJson(
     JSON.stringify({
       name: 'gaming-pc',
@@ -126,6 +138,14 @@ async function main(): Promise<void> {
   ]);
   assert.equal(endpoints[1].apiKey, secret);
   assert.ok(!JSON.stringify(epJson).includes(secret));
+
+  const lmDefault = resolveEndpointConfig({
+    name: 'srv',
+    provider: 'lmstudio',
+    url: 'https://srv/v1',
+    primary: true,
+  });
+  assert.equal(lmDefault.apiKeyEnv, 'LMSTUDIO_API_KEY');
 
   const logs: string[] = [];
   const err = new Error(`Auth failed Bearer ${secret}`);
