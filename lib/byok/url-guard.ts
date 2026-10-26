@@ -1,18 +1,44 @@
 import { lookup as dnsLookup } from 'node:dns/promises';
+import ipaddr from 'ipaddr.js';
 
 /** Client-safe copy when an outbound BYOK URL cannot be used (no URL/status/body). */
 export const BYOK_OLLAMA_UNREACHABLE_NB =
-  'Kunne ikke nå Ollama-serveren. Sjekk adressen.';
+  'Kunne ikke nå Ollama-serveren. Sjekk adressen under Profil → Stemme+ (BYOK).';
 
 export const BYOK_BASE_URL_REJECTED_NB =
-  'Base-URL-en er ikke tillatt. Sjekk adressen du skrev inn.';
+  'Adressen må være en offentlig http(s)-adresse. localhost og lokale nettverk (192.168.x, 10.x) støttes ikke.';
+
+/** Uniform probe response for GET /api/byok/ollama/models (no oracle). */
+export const BYOK_OLLAMA_PROBE_ERROR_NB =
+  'Kunne ikke hente modellene. Sjekk at adressen er offentlig og tilgjengelig.';
+
+export const BYOK_OLLAMA_PROBE_HTTP_STATUS = 400;
 
 const DEFAULT_HTTP_PORT = 80;
 const DEFAULT_HTTPS_PORT = 443;
 
 const ALLOWED_EXPLICIT_PORTS = new Set([80, 443, 11434, 11435, 1234]);
 
-const BLOCKED_HOSTNAMES = new Set(['localhost']);
+const METADATA_IPV4 = '169.254.169.254';
+const METADATA_IPV6 = 'fd00:ec2::254';
+
+const PRIVATE_IPV4_CIDRS = [
+  '10.0.0.0/8',
+  '172.16.0.0/12',
+  '192.168.0.0/16',
+  '100.64.0.0/10',
+] as const;
+
+const PRIVATE_IPV6_CIDR = 'fc00::/7';
+
+const BLOCKED_IPV6_CIDRS = [
+  '::/96',
+  '64:ff9b::/96',
+  '2002::/16',
+  '2001::/32',
+  '100::/64',
+  '::ffff:0:0/96',
+] as const;
 
 const METADATA_HOST_PATTERNS = [
   /^metadata$/i,
@@ -79,7 +105,8 @@ function originKey(url: URL): string {
   const port =
     url.port ||
     (url.protocol === 'https:' ? String(DEFAULT_HTTPS_PORT) : String(DEFAULT_HTTP_PORT));
-  return `${url.protocol}//${url.hostname.toLowerCase()}:${port}`;
+  const host = normalizeHostnameForCheck(url.hostname);
+  return `${url.protocol}//${host}:${port}`;
 }
 
 function resolvePort(url: URL): number {
@@ -98,9 +125,18 @@ function assertAllowedPort(url: URL): void {
   }
 }
 
+/** Strip trailing dot and lowercase for hostname policy checks. */
+export function normalizeHostnameForCheck(host: string): string {
+  let normalized = host.trim().toLowerCase();
+  while (normalized.endsWith('.')) {
+    normalized = normalized.slice(0, -1);
+  }
+  return normalized;
+}
+
 function isBlockedHostname(host: string): boolean {
-  const lower = host.toLowerCase();
-  if (BLOCKED_HOSTNAMES.has(lower)) return true;
+  const lower = normalizeHostnameForCheck(host);
+  if (lower === 'localhost' || lower.endsWith('.localhost')) return true;
   if (lower.endsWith('.local')) return true;
   if (lower.endsWith('.internal')) return true;
   if (METADATA_HOST_PATTERNS.some((pattern) => pattern.test(lower))) return true;
@@ -108,10 +144,11 @@ function isBlockedHostname(host: string): boolean {
 }
 
 function isSingleLabelHostname(host: string): boolean {
-  if (host.includes(':')) return false;
-  if (host.startsWith('[') && host.endsWith(']')) return false;
-  if (host.includes('.')) return false;
-  if (isIpv4Literal(host)) return false;
+  const normalized = normalizeHostnameForCheck(host);
+  if (normalized.includes(':')) return false;
+  if (normalized.startsWith('[') && normalized.endsWith(']')) return false;
+  if (normalized.includes('.')) return false;
+  if (isIpv4Literal(normalized)) return false;
   return true;
 }
 
@@ -166,108 +203,93 @@ function ipv4FromUint32(value: number): string {
   ].join('.');
 }
 
-function parseIpv6Address(address: string): bigint | null {
-  const lower = address.toLowerCase();
-  if (lower.includes('.')) {
-    const lastColon = lower.lastIndexOf(':');
-    if (lastColon === -1) return null;
-    const v4 = parseIpv4Literal(lower.slice(lastColon + 1));
-    if (!v4) return null;
-    const v4Parts = v4.split('.').map((p) => Number.parseInt(p, 10));
-    const high = ((v4Parts[0] << 8) | v4Parts[1]) & 0xffff;
-    const low = ((v4Parts[2] << 8) | v4Parts[3]) & 0xffff;
-    const mapped = `::ffff:${high.toString(16)}:${low.toString(16)}`;
-    return parseIpv6Address(mapped);
-  }
-
-  const [head, tail] = lower.split('::');
-  const headParts = head ? head.split(':').filter(Boolean) : [];
-  const tailParts = tail ? tail.split(':').filter(Boolean) : [];
-  const missing = 8 - (headParts.length + tailParts.length);
-  if (missing < 0) return null;
-  const full = [...headParts, ...Array(missing).fill('0'), ...tailParts];
-  if (full.length !== 8) return null;
-
-  let value = BigInt(0);
-  for (const part of full) {
-    const piece = Number.parseInt(part, 16);
-    if (!Number.isFinite(piece) || piece < 0 || piece > 0xffff) return null;
-    value = (value << BigInt(16)) + BigInt(piece);
-  }
-  return value;
-}
-
-type IpBlockReason =
-  | 'loopback'
-  | 'unspecified'
-  | 'private'
-  | 'link_local'
-  | 'cgnat'
-  | 'multicast'
-  | 'reserved'
-  | 'metadata';
-
-function classifyIpv4(octets: number[]): IpBlockReason | null {
-  const [a, b] = octets;
-  if (a === 127) return 'loopback';
-  if (a === 0) return 'unspecified';
-  if (a === 10) return 'private';
-  if (a === 172 && b >= 16 && b <= 31) return 'private';
-  if (a === 192 && b === 168) return 'private';
-  if (a === 169 && b === 254) return 'link_local';
-  if (a === 100 && b >= 64 && b <= 127) return 'cgnat';
-  if (a >= 224 && a <= 239) return 'multicast';
-  if (a >= 240) return 'reserved';
-  return null;
-}
-
-function classifyIpv6(value: bigint): IpBlockReason | null {
-  if (value === BigInt(0)) return 'unspecified';
-  if (value === BigInt(1)) return 'loopback';
-  const mappedPrefix = value >> BigInt(32);
-  if (mappedPrefix === BigInt(0xffff)) {
-    const v4 = Number(value & BigInt(0xffffffff));
-    const octets = [
-      (v4 >>> 24) & 0xff,
-      (v4 >>> 16) & 0xff,
-      (v4 >>> 8) & 0xff,
-      v4 & 0xff,
-    ];
-    return classifyIpv4(octets);
-  }
-  const firstHextet = Number(value >> BigInt(112)) & 0xffff;
-  if ((firstHextet & 0xfe00) === 0xfc00) return 'private';
-  if ((firstHextet & 0xffc0) === 0xfe80) return 'link_local';
-  if ((firstHextet & 0xff00) === 0xff00) return 'multicast';
-  return null;
-}
-
-function classifyIpAddress(address: string): IpBlockReason | null {
-  const v4 = parseIpv4Literal(address);
-  if (v4) {
-    const octets = v4.split('.').map((p) => Number.parseInt(p, 10));
-    const reason = classifyIpv4(octets);
-    if (reason === 'link_local' && octets[0] === 169 && octets[1] === 254 && octets[2] === 169 && octets[3] === 254) {
-      return 'metadata';
+function isMetadataIpAddress(address: string): boolean {
+  const lower = address.trim().toLowerCase();
+  if (lower === METADATA_IPV4) return true;
+  if (lower === METADATA_IPV6) return true;
+  try {
+    const parsed = ipaddr.parse(address);
+    if (parsed.kind() === 'ipv6' && parsed.toString().toLowerCase() === METADATA_IPV6) {
+      return true;
     }
-    return reason;
+  } catch {
+    return false;
   }
-
-  const v6 = parseIpv6Address(address);
-  if (v6 !== null) {
-    return classifyIpv6(v6);
-  }
-  return 'reserved';
+  return false;
 }
 
-function assertIpAllowed(address: string, allowPrivate: boolean): void {
-  const reason = classifyIpAddress(address);
-  if (!reason) return;
-  if (reason === 'metadata') {
-    throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `metadata address ${address}`);
+function isPrivateUnicast(ip: ipaddr.IPv4 | ipaddr.IPv6): boolean {
+  if (ip.kind() === 'ipv4') {
+    return PRIVATE_IPV4_CIDRS.some((cidr) => ip.match(ipaddr.parseCIDR(cidr)));
   }
-  if (allowPrivate && reason === 'private') return;
-  throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `blocked ${reason} ${address}`);
+  return ip.match(ipaddr.parseCIDR(PRIVATE_IPV6_CIDR));
+}
+
+/** @internal Exported for tests. */
+export function assertIpAllowedSync(address: string, allowPrivate: boolean): void {
+  if (isMetadataIpAddress(address)) {
+    throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `metadata ${address}`);
+  }
+
+  let ip: ipaddr.IPv4 | ipaddr.IPv6;
+  try {
+    ip = ipaddr.parse(address);
+  } catch {
+    throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `invalid ip ${address}`);
+  }
+
+  if (ip.kind() === 'ipv6') {
+    const v6 = ip as ipaddr.IPv6;
+    if (BLOCKED_IPV6_CIDRS.some((cidr) => v6.match(ipaddr.parseCIDR(cidr)))) {
+      throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `blocked ipv6 cidr ${address}`);
+    }
+    if (v6.isIPv4MappedAddress()) {
+      ip = v6.toIPv4Address();
+    }
+  }
+
+  if (isMetadataIpAddress(ip.toString())) {
+    throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `metadata ${address}`);
+  }
+
+  const range = ip.range();
+  const alwaysBlocked = new Set([
+    'loopback',
+    'linkLocal',
+    'multicast',
+    'broadcast',
+    'reserved',
+    'unspecified',
+  ]);
+  if (alwaysBlocked.has(range)) {
+    throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `non-unicast ${range} ${address}`);
+  }
+
+  if (allowPrivate && range === 'private') {
+    return;
+  }
+
+  if (range !== 'unicast') {
+    throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `non-unicast ${range} ${address}`);
+  }
+
+  if (!allowPrivate && isPrivateUnicast(ip)) {
+    throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `private ${address}`);
+  }
+}
+
+export function createValidatingDnsLookup(
+  access: ByokOutboundAccess,
+  allowPrivate: boolean,
+): DnsLookupFn {
+  const underlying = access.lookup ?? defaultLookup;
+  return async (hostname, options) => {
+    const results = await underlying(hostname, options);
+    for (const entry of results) {
+      assertIpAllowedSync(entry.address, allowPrivate);
+    }
+    return results;
+  };
 }
 
 export function privateAllowlistPermitsUrl(
@@ -316,7 +338,7 @@ export async function assertSafeOutboundUrl(
 
   assertAllowedPort(url);
 
-  const host = url.hostname;
+  const host = normalizeHostnameForCheck(url.hostname);
   if (!host) {
     throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, 'empty host');
   }
@@ -329,13 +351,18 @@ export async function assertSafeOutboundUrl(
 
   const literalV4 = parseIpv4Literal(host);
   if (literalV4) {
-    assertIpAllowed(literalV4, options.allowPrivate);
+    assertIpAllowedSync(literalV4, options.allowPrivate);
     return;
   }
 
   if (host.startsWith('[') && host.endsWith(']')) {
     const inner = host.slice(1, -1);
-    assertIpAllowed(inner, options.allowPrivate);
+    assertIpAllowedSync(inner, options.allowPrivate);
+    return;
+  }
+
+  if (ipaddr.isValid(host)) {
+    assertIpAllowedSync(host, options.allowPrivate);
     return;
   }
 
@@ -345,7 +372,7 @@ export async function assertSafeOutboundUrl(
     throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `no dns for ${host}`);
   }
   for (const entry of results) {
-    assertIpAllowed(entry.address, options.allowPrivate);
+    assertIpAllowedSync(entry.address, options.allowPrivate);
   }
 }
 
@@ -358,25 +385,6 @@ export async function assertSafeByokBaseUrl(
     throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, 'empty base url');
   }
   const allowPrivate = resolveAllowPrivateForUrl(trimmed, access);
-  await assertSafeOutboundUrl(trimmed, { allowPrivate, lookup: access.lookup });
-}
-
-export function createSsrfGuardedFetch(
-  validate: (url: string) => Promise<void>,
-  fetchImpl: typeof fetch = fetch,
-): typeof fetch {
-  return async (input, init) => {
-    const href =
-      typeof input === 'string'
-        ? input
-        : input instanceof URL
-          ? input.href
-          : input.url;
-    await validate(href);
-    const response = await fetchImpl(input, { ...init, redirect: 'manual' });
-    if (response.status >= 300 && response.status < 400) {
-      throw new Error('redirect blocked');
-    }
-    return response;
-  };
+  const lookup = createValidatingDnsLookup(access, allowPrivate);
+  await assertSafeOutboundUrl(trimmed, { allowPrivate, lookup });
 }

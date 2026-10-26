@@ -6,13 +6,11 @@ import { createGateway } from 'ai';
 import { normalizeOllamaBaseUrl } from '@/lib/byok/ollama';
 import { OLLAMA_PLACEHOLDER_API_KEY } from '@/lib/byok/providers';
 import type { DecryptedByokCredential } from '@/lib/byok/service';
+import { createByokPinnedFetch } from '@/lib/byok/pinned-fetch.server';
 import {
   BYOK_OLLAMA_UNREACHABLE_NB,
   type ByokOutboundAccess,
   assertSafeByokBaseUrl,
-  assertSafeOutboundUrl,
-  createSsrfGuardedFetch,
-  resolveAllowPrivateForUrl,
 } from '@/lib/byok/url-guard';
 
 function requireApiKey(credential: DecryptedByokCredential): string {
@@ -53,15 +51,12 @@ export async function createUserLanguageModel(
         throw new Error(BYOK_OLLAMA_UNREACHABLE_NB);
       }
       const apiKey = credential.apiKey?.trim() || OLLAMA_PLACEHOLDER_API_KEY;
-      const allowPrivate = resolveAllowPrivateForUrl(baseURL, outbound);
-      const guardedFetch = createSsrfGuardedFetch((url) =>
-        assertSafeOutboundUrl(url, { allowPrivate, lookup: outbound.lookup }),
-      );
+      const pinnedFetch = createByokPinnedFetch(outbound, baseURL);
       return createOpenAI({
         apiKey,
         baseURL,
         name: 'ollama',
-        fetch: guardedFetch,
+        fetch: pinnedFetch,
       }).chat(credential.model);
     }
     case 'anthropic':
@@ -80,15 +75,12 @@ export async function createUserLanguageModel(
         );
         throw new Error(BYOK_OLLAMA_UNREACHABLE_NB);
       }
-      const allowPrivate = resolveAllowPrivateForUrl(baseURL, outbound);
-      const guardedFetch = createSsrfGuardedFetch((url) =>
-        assertSafeOutboundUrl(url, { allowPrivate, lookup: outbound.lookup }),
-      );
+      const pinnedFetch = createByokPinnedFetch(outbound, baseURL);
       return createOpenAI({
         apiKey: requireApiKey(credential),
         baseURL,
         name: 'openai-compatible',
-        fetch: guardedFetch,
+        fetch: pinnedFetch,
       }).chat(credential.model);
     }
     case 'ai_gateway':

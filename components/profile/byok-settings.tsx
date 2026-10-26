@@ -315,6 +315,12 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
                     : 'https://api.example.com/v1'
                 }
               />
+              {provider === 'ollama' ? (
+                <p className="text-xs text-muted-foreground">
+                  Adressen må være en offentlig http(s)-adresse. localhost og lokale nettverk
+                  (192.168.x, 10.x) støttes ikke.
+                </p>
+              ) : null}
             </label>
           ) : null}
 
@@ -322,7 +328,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
             modelsLoading ? (
               <p className="text-xs text-muted-foreground">Henter tilgjengelige modeller …</p>
             ) : modelsError ? (
-              <p className="text-xs text-destructive">{modelsError}</p>
+              <p className="text-xs text-destructive" role="alert">{modelsError}</p>
             ) : models.length > 0 ? (
               <p className="text-xs text-muted-foreground">
                 {models.length} modeller funnet på modellserveren.
@@ -388,7 +394,9 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
       )}
 
       {message ? <p className="text-sm text-brand">{message}</p> : null}
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-destructive" role="alert">{error}</p>
+      ) : null}
     </div>
   );
 }

@@ -1,12 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ollamaApiUrl } from '@/lib/byok/ollama';
 import type { DecryptedByokCredential } from '@/lib/byok/service';
-import {
-  type ByokOutboundAccess,
-  assertSafeByokBaseUrl,
-  assertSafeOutboundUrl,
-  resolveAllowPrivateForUrl,
-} from '@/lib/byok/url-guard';
+import { createByokPinnedFetch } from '@/lib/byok/pinned-fetch.server';
+import type { ByokOutboundAccess } from '@/lib/byok/url-guard';
 
 /**
  * Semantic chunk search for overlay chat.
@@ -83,18 +79,16 @@ export function createOllamaVectorizer(
   if (!url) return null;
 
   const model = options.model?.trim() || OLLAMA_VECTOR_MODEL;
-  const fetchImpl = options.fetchImpl ?? fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const outbound = options.outbound ?? { isAdmin: false };
+  const pinnedFetch =
+    options.fetchImpl ?? createByokPinnedFetch(outbound, baseUrl);
 
   return async (query: string) => {
     const prompt = (query ?? '').trim().slice(0, MAX_QUERY_CHARS);
     if (!prompt) return null;
     try {
-      await assertSafeByokBaseUrl(baseUrl, outbound);
-      const allowPrivate = resolveAllowPrivateForUrl(baseUrl, outbound);
-      await assertSafeOutboundUrl(url, { allowPrivate, lookup: outbound.lookup });
-      const response = await fetchImpl(url, {
+      const response = await pinnedFetch(url, {
         method: 'POST',
         headers: { 'content-type': 'application/json', accept: 'application/json' },
         body: JSON.stringify({ model, prompt }),
