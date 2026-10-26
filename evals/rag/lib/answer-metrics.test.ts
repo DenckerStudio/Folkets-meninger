@@ -63,6 +63,12 @@ const yearInParens = auditAnswerCitationSupport('Forslaget fra 2019 (Kilde 1).',
 ]);
 assert.equal(yearInParens.citationSupportPass, true);
 
+const wrongYearWithKilde = auditAnswerCitationSupport('Forslaget fra 2019 (Kilde 1).', [
+  'Representantforslag fra 2020 om klima.',
+]);
+assert.equal(wrongYearWithKilde.citationSupportPass, false);
+assert.ok(wrongYearWithKilde.unsupportedNumbers.some((n) => n.includes('2019')));
+
 const wrongYear = auditAnswerCitationSupport('Saken ble behandlet i 2030.', [
   'Stortinget behandlet saken i 2025.',
 ]);

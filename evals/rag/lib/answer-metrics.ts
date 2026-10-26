@@ -51,12 +51,20 @@ function excerptHaystack(excerpts: string[]): string {
   return normalizeMetricText(excerpts.join('\n'));
 }
 
+const CITE_INDEX = String.raw`\d{1,2}(?!\d)`;
+
 /** Bracket citations [n] and short «Kilde N» lists are not factual numeric claims. */
 export function stripCitationReferenceNumbersForAudit(answer: string): string {
   let s = answer;
-  s = s.replace(/\(\s*Kilde\s+(?:\d{1,2}\s*,\s*)*\d{1,2}\s*\)/gi, '(Kilde)');
-  s = s.replace(/Kilde\s+\d{1,2}(?:\s*,\s*(?:Kilde\s+)?\d{1,2})*/gi, 'Kilde');
-  s = s.replace(/\[(?:\d{1,2})\](?:\[(?:\d{1,2})\])*/g, '[]');
+  s = s.replace(
+    new RegExp(String.raw`\(\s*Kilde\s+(?:${CITE_INDEX}\s*,\s*)*${CITE_INDEX}\s*\)`, 'gi'),
+    '(Kilde)',
+  );
+  s = s.replace(
+    new RegExp(String.raw`Kilde\s+${CITE_INDEX}(?:\s*,\s*(?:Kilde\s+)?${CITE_INDEX})*`, 'gi'),
+    'Kilde',
+  );
+  s = s.replace(new RegExp(String.raw`\[(?:${CITE_INDEX})\](?:\[(?:${CITE_INDEX})\])*`, 'g'), '[]');
   return s;
 }
 

@@ -1,5 +1,6 @@
 export {
   rerankCandidates,
+  shouldRejectAfterRerank,
   shouldRejectRetrieval,
   rejectionThreshold,
   rerankerEnabled,
