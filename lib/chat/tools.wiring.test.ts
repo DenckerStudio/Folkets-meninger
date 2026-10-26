@@ -1,8 +1,5 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { exitIfCiSkipsProdLive } from '@/lib/test/skip-in-ci-live';
-
-exitIfCiSkipsProdLive('chat/tools.wiring.test.ts');
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
