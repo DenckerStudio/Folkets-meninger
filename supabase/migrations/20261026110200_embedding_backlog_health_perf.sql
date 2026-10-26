@@ -1,3 +1,4 @@
+-- TRANSACTIONAL (BEGIN/COMMIT). Apply order: see EMBEDDING_V2_QUEUE_APPLY.md (step 2 of 4).
 -- Faster n8n_embedding_backlog_health: estimated totals at scale, exact tier-0 via partial index.
 
 BEGIN;

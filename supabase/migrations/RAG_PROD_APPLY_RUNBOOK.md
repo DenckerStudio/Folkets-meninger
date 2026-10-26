@@ -92,7 +92,7 @@ Measured on a **copy** (`rag-eval-pg`) on the same host (**klever**), PostgreSQL
 
 | Work | How | Locking |
 | --- | --- | --- |
-| **`embedding_v2` (bge-m3 / 1024)** | Coolify one-off `scripts/backfill-embedding-v2.ts` → `save_embeddings_v2`; RPCs `n8n_list_v2_priority_issues`, `n8n_list_chunks_missing_v2_for_issue`, `n8n_embedding_backlog_health`, `list_chunks_missing_v2` | Row-level updates; batches after phase B + `26110000` index |
+| **`embedding_v2` (bge-m3 / 1024)** | Coolify one-off `scripts/backfill-embedding-v2.ts` → `n8n_claim_chunks_missing_v2` + `save_embeddings_v2` (with worker lease); health `n8n_embedding_backlog_health` | Row-level updates; after **#185** phase B + **[`EMBEDDING_V2_QUEUE_APPLY.md`](./EMBEDDING_V2_QUEUE_APPLY.md)** (`26110100`–`26110300`, then `26110000` index) |
 | **`tsv` on chunks** | **GENERATED** after `22100000` — no separate SQL backfill | One-time heap rewrite on column add |
 | **Legacy `embedding` (768)** | Unchanged | — |
 
