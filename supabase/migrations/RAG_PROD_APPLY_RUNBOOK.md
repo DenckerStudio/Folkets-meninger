@@ -2,6 +2,8 @@
 
 **Read-only prod snapshot (2026-10-26):** none of #185 objects exist yet. `vector` **0.8.0** is installed in **`public`**. `pg_trgm` and `unaccent` are **available but not installed**. `document_chunks` ≈ **380 299** rows / **814 MB**. `stortinget_issues` ≈ **480** rows, **no `tsv` column** today.
 
+**Coolify Expert prod GUC / container check (read-only, same date):** `maintenance_work_mem` **64MB**; `max_parallel_maintenance_workers` **2**; `shared_buffers` **128MB**; `max_wal_size` **1GB**; **`/dev/shm` only 64MB** in the `supabase-db` container. Realtime replication slot **`cainophile_vlftkp89`** was **~2.1GB behind** (retains WAL). Re-check slot lag and disk before phase A/B.
+
 Migrations are applied **manually** by the Coolify Expert, only after Mathias approves. Do not use `supabase db push` blindly on prod.
 
 **fm-web** auto-deploys on push to `main` — merge PR **only after** this runbook completes and verification passes.
@@ -100,20 +102,44 @@ Optional batched manual chunk `tsv` refresh (only if GENERATED is ever dropped):
 
 Each file is **one** `CREATE INDEX CONCURRENTLY IF NOT EXISTS`. Do **not** wrap in `BEGIN`/`COMMIT`. Do **not** reuse phase A `statement_timeout = '10min'` — long GIN builds will be killed.
 
-**`maintenance_work_mem`:** GIN build time (especially `22109000` on `document_chunks.tsv`) scales with this setting. Coolify Expert checks the **prod** value read-only (`SHOW maintenance_work_mem;`) before the window; do not change prod GUCs during apply unless Mathias approves a separate tuning change.
+Apply the **same session GUCs for every index file** (`22109000`–`22109500`), including HNSW **`22109200`**:
 
-Before **each** index file:
+- **`maintenance_work_mem = '1GB'`** — prod default is **64MB**; raising it per session speeds GIN builds without a server restart.
+- **`max_parallel_maintenance_workers = 0`** — prod default is **2**, but parallel maintenance workers use **`/dev/shm`**. The `supabase-db` container only has **64MB** `/dev/shm`; Coolify hit **`could not resize shared memory segment` / `No space left on device`** on the bench when parallel workers were left enabled.
+
+Before **each** index file (session `SET` **or** equivalent `PGOPTIONS`):
 
 ```sql
 SET lock_timeout = '30s';
 SET statement_timeout = 0;   -- preferred: no server-side cap on index build
 -- Alternative if policy forbids 0: SET statement_timeout = '60min';
+SET maintenance_work_mem = '1GB';
+SET max_parallel_maintenance_workers = 0;
 ```
 
 ```bash
-export PGOPTIONS='-c lock_timeout=30s -c statement_timeout=0'
+export PGOPTIONS='-c lock_timeout=30s -c statement_timeout=0 -c maintenance_work_mem=1GB -c max_parallel_maintenance_workers=0'
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/<index-file>.sql
 ```
+
+### Watch during phase A and B — WAL, replication, disk
+
+Phase A heap rewrite and phase B index builds generate WAL. The **realtime** slot **`cainophile_vlftkp89`** was **~2.1GB lagging** on the read-only check and **holds WAL** until it catches up.
+
+During and after apply, monitor:
+
+```sql
+SELECT slot_name, active, pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS retained_wal
+FROM pg_replication_slots
+WHERE slot_name = 'cainophile_vlftkp89';
+```
+
+Also watch **disk free** on the Postgres volume (`max_wal_size` is **1GB** on prod; lagging slots can push retained WAL well beyond that). Coordinate with whoever owns realtime if lag grows during the window.
+
+### Out of scope for this apply (not blockers; Mathias decides separately)
+
+- **Raise `shm_size`** on the `supabase-db` container (would allow parallel maintenance workers; needs container config change).
+- **Raise `shared_buffers`** (prod **128MB** today) — requires **Postgres restart**.
 
 | Order | File | Index name | Measured / expected duration |
 | --- | --- | --- | --- |
