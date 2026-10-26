@@ -3,6 +3,7 @@
  */
 import { expr, ifElse, newCredential, node, sticky, trigger, workflow } from '@n8n/workflow-sdk';
 import {
+  FOLKETS_AI_SUMMARY_WEBHOOK_CRED,
   FOLKETS_APP_BASE,
   FOLKETS_N8N_BASE,
   FOLKETS_SUPABASE_CRED,
@@ -248,9 +249,12 @@ const triggerSummaries = node({
   config: {
     name: 'Catch-up AI summaries',
     onError: 'continueRegularOutput',
+    credentials: { httpHeaderAuth: newCredential(FOLKETS_AI_SUMMARY_WEBHOOK_CRED) },
     parameters: {
       method: 'POST',
       url: `${FOLKETS_N8N_BASE}/webhook/folkets-ai-summary`,
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
       sendBody: true,
       specifyBody: 'json',
       jsonBody: expr(
