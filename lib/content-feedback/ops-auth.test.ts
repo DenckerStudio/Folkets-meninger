@@ -116,21 +116,26 @@ withSecrets(undefined, () => {
   assert.equal(contentFeedbackWebhookSecret(), null);
 });
 
-assert.equal(
-  verifyContentFeedbackRequest({
+{
+  const ts = String(Date.now());
+  const signed = signContentFeedbackRequest({
     secret: 's',
     method: 'POST',
     path: CONTENT_FEEDBACK_OPS_PATH,
     body: '{}',
-    timestampHeader: String(Date.now()),
-    signatureHeader: signContentFeedbackRequest({
+    timestamp: ts,
+  });
+  assert.equal(
+    verifyContentFeedbackRequest({
       secret: 's',
       method: 'POST',
       path: CONTENT_FEEDBACK_OPS_PATH,
       body: '{}',
-    })['x-fm-signature'],
-  }),
-  true,
-);
+      timestampHeader: ts,
+      signatureHeader: signed['x-fm-signature'],
+    }),
+    true,
+  );
+}
 
 console.log('content-feedback/ops-auth.test.ts: ok');
