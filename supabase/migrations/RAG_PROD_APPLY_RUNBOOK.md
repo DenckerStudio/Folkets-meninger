@@ -10,17 +10,18 @@ Migrations are applied **manually** by the Coolify Expert, only after Mathias ap
 
 ## Før merge (fm-web env — ikke SQL)
 
-**Ny seksjon (2026-10-26):** dokumentasjon only. Phase A/B SQL-steg under er **uendret** (byte-identisk med Coolify-godkjent versjon).
+**Ny seksjon (2026-10-26):** dokumentasjon only. Phase A/B SQL-steg under (filer `22100000`–`22109500`) er **uendret** bortsett fra **`20261022109600`**: sha256 **`866ef511f3f471c917cbecd14ddd4bf312762f8c6d00b37a1622f5f3bbb82072`** (var `7849a2ad…` ved 1d9f182e). Coolify Expert må **re-godkjenne** denne filen; den har `to_regprocedure`-guard rundt `search_stortinget_issues_for_chat` (prod-effekt uendret når funksjonen finnes).
 
 Før PR **#185** merges til `main`, Coolify Expert må sette på **fm-web** (kun med Mathias' ja), fordi appen auto-deployer ved push til `main`:
 
-| Variabel | Verdi (prod LAN) |
-| --- | --- |
-| `RERANKER_URL` | `http://192.168.50.154:11434` |
-| `EMBED_QUERY_URL` | `http://192.168.50.154:11435` |
-| `N8N_AI_SUMMARY_WEBHOOK_TOKEN` | Egen hemmelig token (samme verdi som n8n Header Auth **«FM AI Summary Webhook Token»** på `folkets-ai-summary`) |
+| Variabel | Verdi (prod LAN) | Merknad |
+| --- | --- | --- |
+| `EMBED_QUERY_URL` | `http://192.168.50.154:11435` | Påkrevd for hybrid vektor-søk (bge-m3). |
+| `RERANKER_URL` | `http://192.168.50.154:11434` | Påkrevd **kun** når rerank er på (se under). |
+| `RAG_RERANKER_ENABLED` | `1` eller utelat | **Standard av** (variabel utelatt / ikke `1`/`true`). Uten `1` brukes ikke cross-encoder rerank selv om `RERANKER_URL` er satt. Sett `1` når Ollama rerank skal brukes. |
+| `N8N_AI_SUMMARY_WEBHOOK_TOKEN` | Egen hemmelig token | Samme verdi som n8n Header Auth **«FM AI Summary Webhook Token»** på `folkets-ai-summary`. |
 
-Uten `RERANKER_URL` / `EMBED_QUERY_URL` logger fm-web én gang per prosess og kjører hybrid uten sentral embed/rerank (leksikalsk rekkefølge / ingen rerank) — **ikke** `localhost` eller offentlig URL.
+Uten `EMBED_QUERY_URL` / (ved rerank på) `RERANKER_URL` logger fm-web én gang per prosess og kjører hybrid uten sentral embed eller uten rerank — **ikke** `localhost` eller offentlig URL.
 
 Uten `N8N_AI_SUMMARY_WEBHOOK_TOKEN` på fm-web **før** `ai-summary-backfill` / `pipeline-health` publiseres eller aktiveres, får webhook-kall **401** (workflow-kilden krever `headerAuth`).
 
@@ -95,7 +96,7 @@ Apply after main is at `20261021170000_issue_ai_summary_no_cost_in_how_affected.
 | 7 | `20261022106000_rag_unaccent_short_title_tsv.sql` | **unaccent** + issue `tsv` rebuild + `search_issues_fts` |
 | 8 | `20261022107000_rag_issue_search_ilike_boost.sql` | |
 | 9 | `20261022108000_rag_issue_search_sak_prefix.sql` | `chunk_sak` uses `websearch_to_tsquery('norwegian', raw)` on chunk `tsv` (not `fm_unaccent`) |
-| 10 | `20261022109600_rag_search_rpc_service_role_only.sql` | REVOKE search RPCs + `fm_unaccent` / `fm_escape_ilike` from anon/authenticated |
+| 10 | `20261022109600_rag_search_rpc_service_role_only.sql` | REVOKE search RPCs + `fm_unaccent` / `fm_escape_ilike` from anon/authenticated. **sha256:** `866ef511f3f471c917cbecd14ddd4bf312762f8c6d00b37a1622f5f3bbb82072` (`to_regprocedure`-guard for legacy `search_stortinget_issues_for_chat`) |
 
 ### Locking — `document_chunks.tsv` (`20261022100000`)
 

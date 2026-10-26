@@ -30,7 +30,7 @@ function logRerankerMissingOnce(): void {
 
 /** Ollama rerank base URL from env only (no localhost or other fallback). */
 export function resolveRerankerBaseUrl(): string | null {
-  const raw = (process.env.RERANKER_URL ?? process.env.OLLAMA_BASE_URL ?? '').trim();
+  const raw = (process.env.RERANKER_URL || process.env.OLLAMA_BASE_URL || '').trim();
   if (!raw) return null;
   return raw.replace(/\/$/, '');
 }
@@ -107,4 +107,10 @@ export async function rerankCandidates(query: string, candidates: RerankCandidat
 
 export function shouldRejectRetrieval(topScore: number, threshold = rejectionThreshold()): boolean {
   return topScore < threshold;
+}
+
+/** Rejection threshold applies only to cross-encoder scores, not RRF fused fallbacks. */
+export function shouldRejectAfterRerank(usedReranker: boolean, topScore: number): boolean {
+  if (!usedReranker) return false;
+  return shouldRejectRetrieval(topScore);
 }

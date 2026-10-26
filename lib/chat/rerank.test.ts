@@ -4,6 +4,7 @@ import {
   rerankerEnabled,
   resetRerankerMissingLogForTests,
   resolveRerankerBaseUrl,
+  shouldRejectAfterRerank,
 } from './rerank';
 
 const prevRerankEnabled = process.env.RAG_RERANKER_ENABLED;
@@ -19,10 +20,19 @@ function restoreEnv(): void {
   else process.env.OLLAMA_BASE_URL = prevOllama;
 }
 
-assert.equal(resolveRerankerBaseUrl(), null);
+assert.equal(shouldRejectAfterRerank(false, 0.01), false);
+assert.equal(shouldRejectAfterRerank(true, 0.5), false);
+assert.equal(shouldRejectAfterRerank(true, 0.01), true);
 
 delete process.env.RERANKER_URL;
+delete process.env.OLLAMA_BASE_URL;
+assert.equal(resolveRerankerBaseUrl(), null);
+
 process.env.OLLAMA_BASE_URL = 'http://192.168.50.154:11434/';
+assert.equal(resolveRerankerBaseUrl(), 'http://192.168.50.154:11434');
+
+process.env.RERANKER_URL = '';
+process.env.OLLAMA_BASE_URL = 'http://192.168.50.154:11434';
 assert.equal(resolveRerankerBaseUrl(), 'http://192.168.50.154:11434');
 
 process.env.RERANKER_URL = 'http://rerank.local:11434';

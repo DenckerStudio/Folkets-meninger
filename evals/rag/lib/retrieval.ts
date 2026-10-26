@@ -4,7 +4,7 @@ import {
   applyTopicWideChunkExcerpts,
 } from '@/lib/chat/chunk-excerpt';
 import { buildSearchTerms } from '@/lib/chat/sak-search';
-import { rerankCandidates, rerankerEnabled, shouldRejectRetrieval } from './rerank';
+import { rerankCandidates, rerankerEnabled, shouldRejectAfterRerank } from './rerank';
 function clipContent(value: string, max = 1400): string {
   return value.replace(/\s+/g, ' ').trim().slice(0, max);
 }
@@ -27,12 +27,12 @@ async function applyRetrievalGate(
   if (!gate) return { rows, excerpts };
 
   const top = rows.slice(0, 30);
-  const { scores } = await rerankCandidates(
+  const { scores, usedReranker } = await rerankCandidates(
     query,
     top.map((r) => ({ id: `${r.documentId}:${r.chunkIndex}`, content: r.content, fusedScore: r.rank })),
   );
   const best = scores.length > 0 ? Math.max(...scores) : 0;
-  if (shouldRejectRetrieval(best)) return { rows: [], excerpts: [] };
+  if (shouldRejectAfterRerank(usedReranker, best)) return { rows: [], excerpts: [] };
   return { rows, excerpts };
 }
 
