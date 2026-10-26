@@ -17,6 +17,7 @@ import { RoadmapStatusField } from '@/components/admin/app-future/roadmap-status
 import { EmptyState } from '@/components/dashboard/empty-state';
 import {
   ROADMAP_BODY_MAX,
+  ROADMAP_TITLE_MIN,
   ROADMAP_TITLE_MAX,
   roadmapStatusLabel,
   type RoadmapItem,
@@ -70,6 +71,7 @@ export function RoadmapAdminPanel({
     status: draft.status,
   });
   const canSave = !('error' in validation) && !pending;
+  const titleMissing = sheetOpen && draft.title.trim().length < ROADMAP_TITLE_MIN;
 
   const openNew = () => {
     setDraft(emptyDraft());
@@ -329,7 +331,9 @@ export function RoadmapAdminPanel({
                 className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/30"
                 aria-invalid={'error' in validation && validation.error.includes('Tittelen')}
               />
-              {'error' in validation && validation.error.includes('Tittelen') ? (
+              {titleMissing ? (
+                <p className="text-xs text-destructive" role="alert">Tittel mangler</p>
+              ) : 'error' in validation && validation.error.includes('Tittelen') ? (
                 <p className="text-xs text-destructive">{validation.error}</p>
               ) : null}
             </div>

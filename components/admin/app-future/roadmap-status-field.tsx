@@ -25,7 +25,7 @@ export function RoadmapStatusField({
 }) {
   return (
     <div
-      className="flex flex-wrap gap-2"
+      className="flex flex-wrap gap-2 max-sm:flex-col"
       role="group"
       aria-label="Status"
     >
@@ -40,7 +40,7 @@ export function RoadmapStatusField({
             aria-pressed={active}
             onClick={() => onChange(status)}
             className={cn(
-              'inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:min-w-[7.5rem]',
+              'inline-flex min-h-11 w-full flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition-colors max-sm:flex-col max-sm:py-2.5 sm:flex-none sm:min-w-[7.5rem]',
               active
                 ? 'border-brand bg-brand/10 text-brand'
                 : 'border-border bg-card text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground',

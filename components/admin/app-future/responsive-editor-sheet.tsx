@@ -38,7 +38,11 @@ export function ResponsiveEditorSheet({
     return (
       <Drawer open={open} onClose={onClose} title={title} description={description}>
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">{children}</div>
-        {footer ? <div className="border-t border-border px-4 py-3">{footer}</div> : null}
+        {footer ? (
+          <div className="border-t border-border px-4 py-3 [&_[data-slot=button]]:max-sm:min-h-11">
+            {footer}
+          </div>
+        ) : null}
       </Drawer>
     );
   }

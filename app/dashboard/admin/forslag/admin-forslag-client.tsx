@@ -35,12 +35,11 @@ export default function AdminForslagClient() {
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
   const [roadmap, setRoadmap] = useState<RoadmapItem[]>([]);
   const [filter, setFilter] = useState<InboxFilter>('all');
-  const [error, setError] = useState('');
+  const [inboxError, setInboxError] = useState('');
   const [pending, startTransition] = useTransition();
 
   const load = () => {
     startTransition(async () => {
-      setError('');
       const [suggestionsRes, changelogRes, roadmapRes] = await Promise.all([
         fetch('/api/admin/suggestions'),
         fetch('/api/admin/changelog'),
@@ -59,19 +58,21 @@ export default function AdminForslagClient() {
         error?: string;
       };
 
-      if (!suggestionsRes.ok || !changelogRes.ok || !roadmapRes.ok) {
-        setError(
-          suggestionsData.error ||
-            changelogData.error ||
-            roadmapData.error ||
-            'Kunne ikke laste Appens fremtid.',
+      if (!suggestionsRes.ok) {
+        setInboxError(
+          typeof suggestionsData.error === 'string' ? suggestionsData.error : 'Kunne ikke laste forslag.',
         );
-        return;
+      } else {
+        setInboxError('');
+        setSuggestions(Array.isArray(suggestionsData.suggestions) ? suggestionsData.suggestions : []);
       }
 
-      setSuggestions(Array.isArray(suggestionsData.suggestions) ? suggestionsData.suggestions : []);
-      setChangelog(Array.isArray(changelogData.entries) ? changelogData.entries : []);
-      setRoadmap(Array.isArray(roadmapData.items) ? roadmapData.items : []);
+      if (changelogRes.ok) {
+        setChangelog(Array.isArray(changelogData.entries) ? changelogData.entries : []);
+      }
+      if (roadmapRes.ok) {
+        setRoadmap(Array.isArray(roadmapData.items) ? roadmapData.items : []);
+      }
     });
   };
 
@@ -81,7 +82,7 @@ export default function AdminForslagClient() {
 
   const patchSuggestion = (payload: Record<string, unknown>) => {
     startTransition(async () => {
-      setError('');
+      setInboxError('');
       const res = await fetch('/api/admin/suggestions', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -89,7 +90,7 @@ export default function AdminForslagClient() {
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setError(typeof data.error === 'string' ? data.error : 'Kunne ikke oppdatere forslaget.');
+        setInboxError(typeof data.error === 'string' ? data.error : 'Kunne ikke oppdatere forslaget.');
         return;
       }
       load();
@@ -126,8 +127,6 @@ export default function AdminForslagClient() {
 
       <SectionTabs items={PAGE_TABS} value={tab} onChange={setTab} label="Admin Appens fremtid" />
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
       {tab === 'inbox' ? (
         <InboxPanel
           counts={counts}
@@ -135,6 +134,7 @@ export default function AdminForslagClient() {
           onFilter={setFilter}
           pending={pending}
           suggestions={visible}
+          inboxError={inboxError}
           onStatus={(id, status) => patchSuggestion({ id, status })}
           onVoting={(id, votingOpen) => patchSuggestion({ id, votingOpen })}
         />
@@ -145,7 +145,7 @@ export default function AdminForslagClient() {
           entries={changelog}
           pending={pending}
           onChanged={load}
-          onError={setError}
+          onError={() => {}}
           startTransition={startTransition}
         />
       ) : null}
@@ -155,7 +155,7 @@ export default function AdminForslagClient() {
           items={roadmap}
           pending={pending}
           onChanged={load}
-          onError={setError}
+          onError={() => {}}
           startTransition={startTransition}
         />
       ) : null}
@@ -171,6 +171,7 @@ function InboxPanel({
   onFilter,
   pending,
   suggestions,
+  inboxError,
   onStatus,
   onVoting,
 }: {
@@ -179,11 +180,13 @@ function InboxPanel({
   onFilter: (filter: InboxFilter) => void;
   pending: boolean;
   suggestions: SuggestionRecord[];
+  inboxError: string;
   onStatus: (id: string, status: SuggestionStatus) => void;
   onVoting: (id: string, votingOpen: boolean) => void;
 }) {
   return (
     <div className="space-y-4">
+      {inboxError ? <p className="text-sm text-destructive" role="alert">{inboxError}</p> : null}
       <p className="text-sm text-muted-foreground">
         Forslag som ikke er lagt ut til stemming blir her. Åpne et forslag for stemming når andre skal kunne stemme.
       </p>

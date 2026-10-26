@@ -59,11 +59,7 @@ export function RoadmapAdminTimelinePreview({
   const sorted = sortRoadmapItems(items);
 
   if (sorted.length === 0) {
-    return (
-      <p className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
-        Ingen veikartpunkter ennå. Legg til det første punktet.
-      </p>
-    );
+    return null;
   }
 
   return (
