@@ -12,7 +12,7 @@ export const BYOK_OLLAMA_BASE_URL_HINT_NB =
 
 /** Ollama base-URL hint for admins (private URLs via server allowlist only). */
 export const BYOK_OLLAMA_BASE_URL_HINT_ADMIN_NB =
-  'Som admin kan du bruke en lokal adresse hvis den står på serverens godkjentliste. Det er serveren som kobler til adressen, ikke nettleseren din.';
+  'Offentlige http(s)-adresser fungerer alltid. Som admin kan du bruke en lokal adresse hvis den står på serverens godkjentliste. Det er serveren som kobler til adressen, ikke nettleseren din.';
 
 export function ollamaBaseUrlHintNb(isAdmin: boolean): string {
   return isAdmin ? BYOK_OLLAMA_BASE_URL_HINT_ADMIN_NB : BYOK_OLLAMA_BASE_URL_HINT_NB;

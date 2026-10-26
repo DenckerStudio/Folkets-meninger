@@ -10,7 +10,6 @@ import {
   BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB,
   ollamaBaseUrlHintNb,
 } from '@/lib/byok/messages';
-import { useIsAdmin } from '@/hooks/use-is-admin';
 import {
   DEFAULT_MODELS,
   OTHER_LLM_PROVIDERS,
@@ -37,10 +36,10 @@ export type ByokMetaView = {
 type ByokSettingsProps = {
   encryptionReady: boolean;
   initial: ByokMetaView;
+  isAdmin: boolean;
 };
 
-export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
-  const isAdmin = useIsAdmin();
+export function ByokSettings({ encryptionReady, initial, isAdmin }: ByokSettingsProps) {
   const [provider, setProvider] = useState<LlmProvider>(initial?.provider ?? 'google');
   const [model, setModel] = useState(initial?.model ?? DEFAULT_MODELS.google);
   const [baseUrl, setBaseUrl] = useState('');
