@@ -11,7 +11,7 @@ import {
   ifElse,
 } from '@n8n/workflow-sdk';
 import {
-  FOLKETS_AI_SUMMARY_WEBHOOK_CRED,
+  FOLKETS_AI_SUMMARY_WEBHOOK_HEADER_CRED,
   FOLKETS_SUPABASE_CRED,
   FOLKETS_SUPABASE_REST,
   rpcUrl,
@@ -479,13 +479,15 @@ const webhookTrigger = trigger({
   version: 2.1,
   config: {
     name: 'Webhook new issue',
-    credentials: { httpHeaderAuth: newCredential(FOLKETS_AI_SUMMARY_WEBHOOK_CRED) },
+    credentials: { httpHeaderAuth: newCredential(FOLKETS_AI_SUMMARY_WEBHOOK_HEADER_CRED) },
     parameters: {
       httpMethod: 'POST',
       path: 'folkets-ai-summary',
       responseMode: 'onReceived',
       authentication: 'headerAuth',
       options: { responseCode: { values: { responseCode: 'customCode', customCode: 202 } }, responseData: '{"ok":true,"queued":true}' },
+      // Header Auth (X-FM-Webhook-Token) på denne noden er bevisst IKKE aktivert i repo ennå.
+      // Se utrulling steg 4 i workflows/n8n/README.md (etter fm-web har N8N_AI_SUMMARY_WEBHOOK_TOKEN + deploy).
     },
   },
   output: [{ body: { stortinget_issue_id: '200329' } }],
