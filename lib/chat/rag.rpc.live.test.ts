@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { writeLiveTestArtifact } from '@/lib/test/write-live-artifact';
+import { exitIfCiSkipsProdLive } from '@/lib/test/skip-in-ci-live';
 import { createClient } from '@supabase/supabase-js';
 import { retrieveSakContext, searchIssuesForChat } from '@/lib/chat/rag';
 
+exitIfCiSkipsProdLive('chat/rag.rpc.live.test.ts');
+
 function loadFolketsPublicEnv() {
-  const text = readFileSync('/workspace/.env.test', 'utf8');
+  const text = readFileSync(join(process.cwd(), '.env.test'), 'utf8');
   for (const line of text.split(/\r?\n/)) {
     if (!line || line.startsWith('#') || !line.includes('=')) continue;
     const i = line.indexOf('=');
@@ -64,7 +69,7 @@ async function main() {
       '200417 is a live Stortinget sak that may be absent from cache (honest empty).',
   };
 
-  writeFileSync('/opt/cursor/artifacts/rag-rpc-live.json', JSON.stringify(payload, null, 2));
+  writeLiveTestArtifact('rag-rpc-live.json', payload);
 
   assert.match(rpc.error?.message ?? '', /permission denied/i);
   assert.ok(listed.some((issue) => issue.id === '200365'));

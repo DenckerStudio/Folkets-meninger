@@ -441,6 +441,10 @@ export default async function SakPage({
               sakId={sak.id}
               voteringer={voteringer}
               initialFolk={sak.votes}
+              sakVedtak={{
+                kortvedtak: kortvedtak ?? null,
+                vedtakstekst: vedtakstekst ?? null,
+              }}
             />
 
             <SakMeningerSection sakId={sak.id} />

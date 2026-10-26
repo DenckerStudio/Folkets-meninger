@@ -13,6 +13,9 @@ import { Posts } from '@/collections/Posts';
 import { Tags } from '@/collections/Tags';
 import { Users } from '@/collections/Users';
 import { resolveCmsServerUrl, trustedPayloadOrigins } from '@/lib/serverOrigins';
+import { roleOf } from '@/access/roles';
+import { contentFeedbackSendTask } from '@/jobs/contentFeedbackSend';
+import { pruneFailedPayloadJobs } from '@/jobs/pruneFailedPayloadJobs';
 import { seedOnBoot } from '@/seed/seedBaseData';
 
 const filename = fileURLToPath(import.meta.url);
@@ -75,7 +78,34 @@ export default buildConfig({
     disablePlaygroundInProduction: true,
     disableIntrospectionInProduction: true,
   },
+  jobs: {
+    tasks: [contentFeedbackSendTask],
+    deleteJobOnComplete: true,
+    autoRun: [
+      {
+        cron: '* * * * *',
+        queue: 'content-feedback',
+      },
+    ],
+    access: {
+      run: ({ req }) => roleOf(req.user) === 'admin',
+      queue: ({ req }) => roleOf(req.user) === 'admin',
+      cancel: ({ req }) => roleOf(req.user) === 'admin',
+    },
+  },
   onInit: async (payload) => {
     await seedOnBoot(payload);
+    if (process.env.NODE_ENV !== 'test') {
+      try {
+        await pruneFailedPayloadJobs(payload);
+      } catch (error) {
+        payload.logger.warn({ msg: 'payload-jobs prune failed', error });
+      }
+      void payload.jobs
+        .run({ queue: 'content-feedback', limit: 25, overrideAccess: true })
+        .catch((error) => {
+          payload.logger.warn({ msg: 'content-feedback job runner on boot failed', error });
+        });
+    }
   },
 });

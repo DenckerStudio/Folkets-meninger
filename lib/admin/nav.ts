@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import {
   BarChart3,
   Bell,
+  ClipboardCheck,
   LayoutDashboard,
   Lightbulb,
   Radar,
@@ -39,9 +40,17 @@ export const adminNavItems: AdminNavItem[] = [
   {
     id: 'reels',
     title: 'Reels',
-    description: 'Systemgenererte avstemninger fra stortingssaker',
+    description: 'Generering og kø for systemutkast',
     href: routes.adminReels,
     icon: CivicBubble,
+    status: 'active',
+  },
+  {
+    id: 'vurder',
+    title: 'Vurder',
+    description: 'Reels, blogginnlegg og sammendrag',
+    href: routes.adminVurder,
+    icon: ClipboardCheck,
     status: 'active',
   },
   {

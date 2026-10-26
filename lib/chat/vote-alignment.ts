@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getAnonSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { buildAlignmentComparison } from '@/lib/alignment/score';
+import { fetchSakVedtakContext } from '@/lib/alignment/sak-vedtak';
 import type { AlignmentComparison, FolkVoteCounts } from '@/lib/alignment/types';
 import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 import type { ChatRagClient } from '@/lib/chat/rag';
@@ -101,9 +102,10 @@ export async function fetchVoteAlignment(args: {
 }): Promise<VoteAlignmentResult | null> {
   const issueId = args.issueId.trim();
   if (!issueId) return null;
-  const [voteringer, folk] = await Promise.all([
+  const [voteringer, folk, sakVedtak] = await Promise.all([
     fetchSakVoteringer(issueId),
     fetchFolkTotals(issueId, args.client),
+    fetchSakVedtakContext(issueId),
   ]);
-  return shapeVoteAlignment(buildAlignmentComparison(folk, voteringer));
+  return shapeVoteAlignment(buildAlignmentComparison(folk, voteringer, sakVedtak));
 }

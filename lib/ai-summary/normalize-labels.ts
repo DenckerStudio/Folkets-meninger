@@ -24,6 +24,11 @@ export function normalizeAiLabels(raw: unknown): string[] {
   return out;
 }
 
+import { isForslageneTopicCard } from '@/lib/ai-summary/forslag';
+
+const TOPIC_CARD_BODY_MAX = 600;
+const TOPIC_CARD_MAX = 4;
+
 export function parseTopicCards(raw: unknown): { title: string; body: string }[] {
   if (!Array.isArray(raw)) return [];
 
@@ -34,11 +39,12 @@ export function parseTopicCards(raw: unknown): { title: string; body: string }[]
       const title = String(c.title ?? '').trim();
       const body = String(c.body ?? '').trim();
       if (!title || !body) return null;
+      const bodyLimit = isForslageneTopicCard(title) ? body.length : TOPIC_CARD_BODY_MAX;
       return {
         title: title.slice(0, 80),
-        body: body.slice(0, 600),
+        body: body.slice(0, bodyLimit),
       };
     })
     .filter((c): c is { title: string; body: string } => c !== null)
-    .slice(0, 3);
+    .slice(0, TOPIC_CARD_MAX);
 }
