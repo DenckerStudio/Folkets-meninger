@@ -1,4 +1,5 @@
 import type { BackfillSupabase } from './supabase-client';
+import { collectSensitiveEnvValues, redactSensitiveLogText } from './secrets';
 import { releaseWorkerClaims } from './worker';
 
 export async function releaseAllWorkerClaims(
@@ -22,7 +23,16 @@ export function installBackfillSignalHandlers(onStop: () => Promise<void>): void
       return;
     }
     exitScheduled = true;
-    void stopPromise.finally(() => process.exit(0));
+    void stopPromise
+      .then(() => process.exit(0))
+      .catch((err) => {
+        const message = redactSensitiveLogText(
+          err instanceof Error ? err.message : String(err),
+          collectSensitiveEnvValues(),
+        );
+        console.error('[backfill-v2] Avslutning feilet:', message);
+        process.exit(1);
+      });
   };
   process.on('SIGINT', handle);
   process.on('SIGTERM', handle);

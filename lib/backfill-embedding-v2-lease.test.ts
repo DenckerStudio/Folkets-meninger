@@ -142,6 +142,20 @@ async function main(): Promise<void> {
   assert.equal(stopCalls, 1);
   assert.equal(released, 3);
 
+  const secretStop = 'stop-fail-secret-key-xyz';
+  let stopFailExit: number | null = null;
+  const originalExit2 = process.exit;
+  process.exit = ((code?: number) => {
+    stopFailExit = code ?? 0;
+  }) as typeof process.exit;
+  installBackfillSignalHandlers(async () => {
+    throw new Error(`Bearer ${secretStop}`);
+  });
+  process.emit('SIGTERM');
+  await sleep(80);
+  process.exit = originalExit2;
+  assert.equal(stopFailExit, 1);
+
   const child = spawn(
     'npx',
     ['tsx', join(process.cwd(), 'lib/backfill-embedding-v2/signal-smoke-child.ts')],
@@ -149,11 +163,19 @@ async function main(): Promise<void> {
   );
   const stdout = await new Promise<string>((resolve, reject) => {
     let buf = '';
+    const timeout = setTimeout(() => {
+      child.kill('SIGTERM');
+      reject(new Error('signal-smoke-child timed out after 15s'));
+    }, 15_000);
     child.stdout?.on('data', (chunk) => {
       buf += String(chunk);
     });
-    child.on('error', reject);
+    child.on('error', (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
     child.on('close', (code) => {
+      clearTimeout(timeout);
       if (code !== 0) {
         reject(new Error(`signal-smoke-child exit ${code}: ${buf}`));
         return;
