@@ -63,12 +63,31 @@ function feedbackRowId(data: unknown, rpcName: string): string {
  * upsert_content_feedback, which has the same arguments and is already granted
  * to service_role. Regeneration stays off until the admin RPC exists.
  */
+export const CONTENT_FEEDBACK_FALLBACK_REGENERATION_HINT =
+  'Tilbakemeldingen er lagret, men nytt sammendrag ble ikke bestilt. Regenerering starter når tilbakemelding-migrasjonen er lagt inn i databasen.';
+
+export type SubmitAdminContentFeedbackRpcResult = {
+  id: string;
+  regeneration: boolean;
+  regeneration_hint?: string;
+};
+
+type ContentFeedbackRpcClient = Pick<
+  ReturnType<typeof getServiceSupabase>,
+  'rpc'
+>;
+
 export async function submitAdminContentFeedbackRpc(
   adminUserId: string,
   body: AdminContentFeedbackBody,
-): Promise<{ id: string }> {
-  const supabase = getServiceSupabase();
-  const snapshot = await buildAdminContentFeedbackSnapshot(body.content_type, body.content_id);
+  deps: {
+    supabase?: ContentFeedbackRpcClient;
+    buildSnapshot?: typeof buildAdminContentFeedbackSnapshot;
+  } = {},
+): Promise<SubmitAdminContentFeedbackRpcResult> {
+  const supabase = deps.supabase ?? getServiceSupabase();
+  const buildSnapshot = deps.buildSnapshot ?? buildAdminContentFeedbackSnapshot;
+  const snapshot = await buildSnapshot(body.content_type, body.content_id);
   const args = {
     p_content_type: body.content_type,
     p_content_id: body.content_id,
@@ -82,7 +101,12 @@ export async function submitAdminContentFeedbackRpc(
 
   const primary = await supabase.rpc('admin_submit_content_feedback', args);
   if (!primary.error) {
-    return { id: feedbackRowId(primary.data, 'admin_submit_content_feedback') };
+    const regeneration =
+      body.content_type === 'ai_summary' && body.verdict === 'reject';
+    return {
+      id: feedbackRowId(primary.data, 'admin_submit_content_feedback'),
+      regeneration,
+    };
   }
 
   if (!isPostgrestMissingRpcError(primary.error)) {
@@ -98,5 +122,15 @@ export async function submitAdminContentFeedbackRpc(
     throw fallback.error;
   }
 
-  return { id: feedbackRowId(fallback.data, 'upsert_content_feedback') };
+  const regeneration = false;
+  const regeneration_hint =
+    body.content_type === 'ai_summary' && body.verdict === 'reject'
+      ? CONTENT_FEEDBACK_FALLBACK_REGENERATION_HINT
+      : undefined;
+
+  return {
+    id: feedbackRowId(fallback.data, 'upsert_content_feedback'),
+    regeneration,
+    regeneration_hint,
+  };
 }

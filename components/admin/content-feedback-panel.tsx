@@ -237,13 +237,21 @@ export function ContentFeedbackPanel({
           note: note.trim() || null,
         }),
       });
-      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      const json = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        regeneration?: boolean;
+        regeneration_hint?: string | null;
+      };
       if (!res.ok) {
         setError(SAVE_ERROR_MESSAGE);
         return;
       }
       setShowAdminReviewedBadge(true);
-      setSuccess(SUCCESS_MESSAGE);
+      const savedMessage =
+        json.regeneration === false && json.regeneration_hint
+          ? json.regeneration_hint
+          : SUCCESS_MESSAGE;
+      setSuccess(savedMessage);
       setSaveSucceeded(true);
       if (onSaved) {
         closeTimerRef.current = window.setTimeout(() => {

@@ -133,6 +133,8 @@ assert.match(panelSrc, /tommel ned/);
 assert.match(panelSrc, /ThumbsUp/);
 assert.doesNotMatch(panelSrc, /neutral/);
 assert.match(panelSrc, /Takk, tilbakemeldingen er lagret/);
+assert.match(panelSrc, /regeneration_hint/);
+assert.match(panelSrc, /json\.regeneration === false/);
 assert.match(panelSrc, /showAdminReviewedBadge/);
 assert.match(panelSrc, /source !== 'admin'/);
 assert.match(panelSrc, /Dom[\s\S]*\(påkrevd\)/);

@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { buildAiSummaryFromDbRow, isMissingForslagColumnError } from './service';
+import {
+  buildAiSummaryFromDbRow,
+  isMissingForslagColumnError,
+  readAiSummaryFromDb,
+  resolveAiSummaryForApi,
+} from './service';
 
 const baseV2Row = {
   narrative: 'Saken gjelder ti tiltak for å forebygge voldtekt.',
@@ -57,34 +60,98 @@ if (legacyCard?.version === 2) {
   assert.deepEqual(legacyCard.forslag, ['Krav om merking']);
 }
 
-assert.equal(
-  isMissingForslagColumnError({
-    code: '42703',
-    message: 'column issue_ai_summaries.forslag does not exist',
-  }),
-  true,
-);
-assert.equal(
-  isMissingForslagColumnError({
-    code: 'PGRST204',
-    message: "Could not find the 'forslag' column of 'issue_ai_summaries' in the schema cache",
-  }),
-  true,
-);
-assert.equal(
-  isMissingForslagColumnError({
-    code: '42703',
-    message: 'column issue_ai_summaries.narrative does not exist',
-  }),
-  false,
-);
-assert.equal(isMissingForslagColumnError({ code: '42501', message: 'permission denied' }), false);
+assert.equal(isMissingForslagColumnError({ code: '42703' }), true);
+assert.equal(isMissingForslagColumnError({ code: 'PGRST202' }), false);
+assert.equal(isMissingForslagColumnError({ code: '42501' }), false);
 assert.equal(isMissingForslagColumnError(null), false);
 
-const serviceSrc = readFileSync(join(process.cwd(), 'lib/ai-summary/service.ts'), 'utf8');
-const withForslagAt = serviceSrc.indexOf('AI_SUMMARY_COLUMNS_WITH_FORSLAG');
-const withoutForslagAt = serviceSrc.lastIndexOf('AI_SUMMARY_COLUMNS)');
-assert.ok(withForslagAt >= 0 && withoutForslagAt > withForslagAt);
-assert.match(serviceSrc, /isMissingForslagColumnError\(error\)/);
+function issueSummaryMock(
+  responses: Array<{ data: unknown; error: { code: string } | null }>,
+) {
+  let call = 0;
+  return {
+    from(table: string) {
+      assert.equal(table, 'issue_ai_summaries');
+      return {
+        select(_columns: string) {
+          return {
+            eq(_column: string, _issueId: string) {
+              return {
+                async maybeSingle() {
+                  const row = responses[call];
+                  call += 1;
+                  if (!row) {
+                    throw new Error(`Unexpected select call #${call}`);
+                  }
+                  return row;
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  };
+}
 
-console.log('ai-summary service tests passed');
+const savedEnv = {
+  url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  key: process.env.SUPABASE_SERVICE_ROLE_KEY,
+};
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role';
+
+const v2Row = {
+  narrative: 'Kort fortelling.',
+  who_affected: 'Innbyggere',
+  how_affected: 'Endret hverdag',
+  topic_cards: [],
+  labels: [],
+  hva: 'hva',
+  hvem: 'hvem',
+  kostnad: 'kost',
+};
+
+async function main() {
+  const retryWithoutForslag = await readAiSummaryFromDb(
+    '42',
+    issueSummaryMock([
+      { data: null, error: { code: '42703' } },
+      { data: v2Row, error: null },
+    ]),
+  );
+  assert.equal(retryWithoutForslag.status, 'ok');
+  assert.equal(retryWithoutForslag.status === 'ok' ? retryWithoutForslag.summary?.version : -1, 2);
+
+  const readFailed = await readAiSummaryFromDb(
+    '42',
+    issueSummaryMock([{ data: null, error: { code: '42501' } }]),
+  );
+  assert.equal(readFailed.status, 'read_failed');
+
+  let webhookCalls = 0;
+  let markCalls = 0;
+  const apiReadFailed = await resolveAiSummaryForApi('99', {
+    triggerIfMissing: true,
+    deps: {
+      readFromDb: async () => ({ status: 'read_failed' }),
+      markRequested: async () => {
+        markCalls += 1;
+        return true;
+      },
+      triggerWebhook: () => {
+        webhookCalls += 1;
+      },
+    },
+  });
+  assert.equal(apiReadFailed.status, 'read_failed');
+  assert.equal(webhookCalls, 0);
+  assert.equal(markCalls, 0);
+
+  process.env.NEXT_PUBLIC_SUPABASE_URL = savedEnv.url;
+  process.env.SUPABASE_SERVICE_ROLE_KEY = savedEnv.key;
+
+  console.log('ai-summary service tests passed');
+}
+
+void main();

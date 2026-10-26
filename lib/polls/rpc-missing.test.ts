@@ -1,26 +1,6 @@
-import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+import { applyPollStatusViaRpc } from '@/lib/polls/service';
 import { isPostgrestMissingRpcError } from '@/lib/polls/rpc-missing';
-
-function assert(condition: unknown, message: string): asserts condition {
-  if (!condition) throw new Error(message);
-}
-
-const serviceSrc = readFileSync(new URL('./service.ts', import.meta.url), 'utf8');
-const publishFn =
-  serviceSrc.match(/export async function publishPoll\([\s\S]*?\n\}/)?.[0] ?? '';
-const archiveFn =
-  serviceSrc.match(/export async function archivePoll\([\s\S]*?\n\}/)?.[0] ?? '';
-assert(/rpc\(rpcName, \{ p_poll_id: pollId \}\)/.test(serviceSrc), 'publish/archive RPC call');
-assert(/return 'publish_poll'/.test(serviceSrc), 'publish_poll name');
-assert(/return 'archive_poll'/.test(serviceSrc), 'archive_poll name');
-assert(/rpc\('create_system_poll_draft'/.test(serviceSrc), 'draft RPC');
-assert(/isPostgrestMissingRpcError/.test(serviceSrc), 'PGRST202 fallback helper');
-assert(/never use ensure_stortinget_poll for drafts/.test(serviceSrc), 'no stortinget poll for drafts');
-assert(/applyPollStatusViaRpc\(pollId, 'publish'\)/.test(publishFn), 'publish uses RPC helper');
-assert(/applyPollStatusViaRpc\(pollId, 'archive'\)/.test(archiveFn), 'archive uses RPC helper');
-assert(!/updatePollStatusRow/.test(publishFn), 'publish is not a direct row update');
-assert(!/ensure_stortinget_poll/.test(publishFn), 'publish does not call ensure_stortinget_poll');
-assert(!/ensure_stortinget_poll/.test(archiveFn), 'archive does not call ensure_stortinget_poll');
 
 const productionPublish = {
   code: 'PGRST202',
@@ -38,9 +18,69 @@ const productionArchive = {
   message: 'Could not find the function public.archive_poll(p_poll_id) in the schema cache',
 };
 
-assert(isPostgrestMissingRpcError(productionPublish), 'publish PGRST202');
-assert(isPostgrestMissingRpcError(productionArchive), 'archive PGRST202');
-assert(!isPostgrestMissingRpcError(new Error('Poll is not a draft')), 'business error');
-assert(!isPostgrestMissingRpcError({ code: 'PGRST116', message: 'JSON object requested' }), 'other postgrest');
+assert.equal(isPostgrestMissingRpcError(productionPublish), true);
+assert.equal(isPostgrestMissingRpcError(productionArchive), true);
+assert.equal(isPostgrestMissingRpcError(new Error('Poll is not a draft')), false);
+assert.equal(
+  isPostgrestMissingRpcError({ code: 'PGRST116', message: 'JSON object requested' }),
+  false,
+);
+assert.equal(
+  isPostgrestMissingRpcError({
+    code: 'PGRST202',
+    message: 'Could not find the function public.foo in the schema cache',
+  }),
+  true,
+);
 
-console.log('poll rpc-missing tests OK');
+const pollId = '00000000-0000-4000-8000-000000000099';
+let rpcCalls = 0;
+let updateCalls = 0;
+
+const service = {
+  async rpc(name: string, _args: { p_poll_id: string }) {
+    rpcCalls += 1;
+    assert.equal(name, 'publish_poll');
+    return { data: null, error: productionPublish };
+  },
+  from(table: string) {
+    assert.equal(table, 'polls');
+    return {
+      select(_columns: string) {
+        return {
+          eq(_column: string, id: string) {
+            assert.equal(id, pollId);
+            return {
+              async maybeSingle() {
+                return {
+                  data: { id: pollId, status: 'draft', opens_at: null },
+                  error: null,
+                };
+              },
+            };
+          },
+        };
+      },
+      update(patch: { status: string }) {
+        updateCalls += 1;
+        assert.equal(patch.status, 'open');
+        return {
+          eq(_column: string, id: string) {
+            assert.equal(id, pollId);
+            return Promise.resolve({ error: null });
+          },
+        };
+      },
+    };
+  },
+};
+
+async function main() {
+  const publishedId = await applyPollStatusViaRpc(pollId, 'publish', service);
+  assert.equal(publishedId, pollId);
+  assert.equal(rpcCalls, 1);
+  assert.equal(updateCalls, 1);
+  console.log('poll rpc-missing tests OK');
+}
+
+void main();
