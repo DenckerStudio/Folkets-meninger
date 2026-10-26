@@ -9,6 +9,13 @@ DECLARE
   v_vec text;
   v_claimed int;
   v_save jsonb;
+  v_row record;
+  v_i int;
+  v_expected_order text[] := ARRAY[
+    'embed-v2-order-t1',
+    'embed-v2-order-t2b',
+    'embed-v2-order-t2a'
+  ];
 BEGIN
   IF to_regprocedure('public.n8n_claim_chunks_missing_v2(text,int,text,int)') IS NULL THEN
     RAISE NOTICE 'embedding_v2_claim_leases.sql: hopper over (migrasjon 26110300 ikke kjørt)';
@@ -188,15 +195,17 @@ BEGIN
 
     PERFORM public.n8n_release_embedding_v2_claims('lane-fast');
 
-    IF (
-      SELECT array_agg(row.issue_id)
-      FROM public.n8n_claim_chunks_missing_v2('background', 10, 'lane-bg', 300) row
-    ) IS DISTINCT FROM ARRAY[
-      'embed-v2-order-t1',
-      'embed-v2-order-t2b',
-      'embed-v2-order-t2a'
-    ] THEN
-      RAISE EXCEPTION 'background: feil tier/doc-type rekkefølge';
+    v_i := 0;
+    FOR v_row IN
+      SELECT * FROM public.n8n_claim_chunks_missing_v2('background', 10, 'lane-bg', 300)
+    LOOP
+      v_i := v_i + 1;
+      IF v_row.issue_id IS DISTINCT FROM v_expected_order[v_i] THEN
+        RAISE EXCEPTION 'background: pos % forventet %, fikk %', v_i, v_expected_order[v_i], v_row.issue_id;
+      END IF;
+    END LOOP;
+    IF v_i <> array_length(v_expected_order, 1) THEN
+      RAISE EXCEPTION 'background: forventet % claims, fikk %', array_length(v_expected_order, 1), v_i;
     END IF;
 
     PERFORM public.n8n_release_embedding_v2_claims('lane-bg');
