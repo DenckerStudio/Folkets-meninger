@@ -38,10 +38,11 @@ assert.doesNotMatch(pipelineHealth, /Catch-up embeddings/);
 assert.match(pipelineHealth, /n8n_pipeline_health/);
 assert.match(pipelineHealth, /n8n_embedding_backlog_health/);
 assert.match(pipelineHealth, /\$getWorkflowStaticData/);
-assert.match(pipelineHealth, /FOLKETS_AI_SUMMARY_WEBHOOK_CRED/);
+assert.match(pipelineHealth, /httpHeaderAuth/);
+assert.match(pipelineHealth, /FOLKETS_AI_SUMMARY_WEBHOOK_HEADER_CRED/);
 assert.match(pipelineHealth, /genericAuthType: 'httpHeaderAuth'/);
 
-assert.match(aiSummary, /FOLKETS_AI_SUMMARY_WEBHOOK_CRED/);
+assert.match(aiSummary, /FOLKETS_AI_SUMMARY_WEBHOOK_HEADER_CRED/);
 assert.match(aiSummary, /authentication: 'headerAuth'/);
 assert.match(readWorkflow('n8n-supabase.shared.ts'), /FM AI Summary Webhook Token/);
 

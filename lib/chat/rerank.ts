@@ -14,11 +14,26 @@ export type RerankResult = {
   usedReranker: boolean;
 };
 
-const RERANKER_URL = (process.env.RERANKER_URL ?? process.env.OLLAMA_BASE_URL ?? 'http://127.0.0.1:11434').replace(
-  /\/$/,
-  '',
-);
 const RERANKER_MODEL = process.env.RERANKER_MODEL ?? 'bge-reranker-v2-m3';
+
+let loggedRerankerMissing = false;
+
+export function resetRerankerMissingLogForTests(): void {
+  loggedRerankerMissing = false;
+}
+
+function logRerankerMissingOnce(): void {
+  if (loggedRerankerMissing) return;
+  loggedRerankerMissing = true;
+  console.warn('[rerank] RERANKER_URL mangler – reranking er av');
+}
+
+/** Ollama rerank base URL from env only (no localhost or other fallback). */
+export function resolveRerankerBaseUrl(): string | null {
+  const raw = (process.env.RERANKER_URL ?? process.env.OLLAMA_BASE_URL ?? '').trim();
+  if (!raw) return null;
+  return raw.replace(/\/$/, '');
+}
 
 export function rejectionThreshold(): number {
   const raw = process.env.RAG_REJECTION_THRESHOLD;
@@ -54,8 +69,13 @@ async function rerankViaHttp(query: string, docs: string[]): Promise<number[] | 
 
 /** Ollama experimental rerank: POST /api/rerank when available. */
 async function rerankViaOllama(query: string, docs: string[]): Promise<number[] | null> {
+  const baseUrl = resolveRerankerBaseUrl();
+  if (!baseUrl) {
+    logRerankerMissingOnce();
+    return null;
+  }
   try {
-    const res = await fetch(`${RERANKER_URL}/api/rerank`, {
+    const res = await fetch(`${baseUrl}/api/rerank`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ model: RERANKER_MODEL, query, documents: docs }),

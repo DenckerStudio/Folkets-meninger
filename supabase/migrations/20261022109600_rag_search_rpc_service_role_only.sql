@@ -14,8 +14,13 @@ GRANT EXECUTE ON FUNCTION public.search_chunks_hybrid(
 REVOKE ALL ON FUNCTION public.search_hearing_document_chunks_text(text, text, int) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.search_hearing_document_chunks_text(text, text, int) TO service_role;
 
-REVOKE ALL ON FUNCTION public.search_stortinget_issues_for_chat(text, int) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.search_stortinget_issues_for_chat(text, int) TO service_role;
+DO $$
+BEGIN
+  IF to_regprocedure('public.search_stortinget_issues_for_chat(text,integer)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.search_stortinget_issues_for_chat(text, int) FROM PUBLIC, anon, authenticated;
+    GRANT EXECUTE ON FUNCTION public.search_stortinget_issues_for_chat(text, int) TO service_role;
+  END IF;
+END $$;
 
 REVOKE ALL ON FUNCTION public.search_issue_document_chunks_text(text, text, int) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.search_issue_document_chunks_text(text, text, int) TO service_role;

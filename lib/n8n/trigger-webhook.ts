@@ -1,3 +1,5 @@
+import { buildN8nWebhookHeaders } from '@/lib/n8n/n8n-webhook-headers';
+
 export type N8nWebhookKind =
   | 'ai-summary'
   | 'document-embeddings'
@@ -8,6 +10,8 @@ export type TriggerN8nWebhookOptions = {
   kind: N8nWebhookKind;
   url: string | undefined;
   body: unknown;
+  /** When set, sends `X-FM-Webhook-Token` (never log this value). */
+  webhookToken?: string;
   timeoutMs?: number;
   attempts?: number;
 };
@@ -25,6 +29,7 @@ export async function postN8nWebhook(
   kind: N8nWebhookKind,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   attempts = DEFAULT_ATTEMPTS,
+  webhookToken?: string,
 ): Promise<boolean> {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const controller = new AbortController();
@@ -32,7 +37,7 @@ export async function postN8nWebhook(
     try {
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildN8nWebhookHeaders(webhookToken),
         body: JSON.stringify(body ?? {}),
         signal: controller.signal,
       });
@@ -74,6 +79,7 @@ export function triggerN8nWebhook(options: TriggerN8nWebhookOptions): boolean {
     options.kind,
     options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     options.attempts ?? DEFAULT_ATTEMPTS,
+    options.webhookToken,
   );
   return true;
 }

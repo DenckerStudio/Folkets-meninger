@@ -88,17 +88,34 @@ n8n blokkerer `$env` i noder — ikke bruk `$env` for app-URL her.
 
 ```bash
 N8N_AI_SUMMARY_WEBHOOK_URL=https://n8n.heyklever.app/webhook/folkets-ai-summary
+# Valgfritt til n8n aktiverer Header Auth på webhooken (samme mønster som Research):
+N8N_AI_SUMMARY_WEBHOOK_TOKEN=
 ```
 
-Prod (#205): webhooken krever header **`X-FM-Webhook-Token`**. I n8n brukes Header Auth-credential **`FM AI Summary Webhook Token`**
-(kun navn i workflow-kilde — ikke token-verdi). Mottaker: `ai-summary-backfill` (GP666). Utgående POST fra
-`pipeline-health` («Catch-up AI summaries») bruker samme credential.
+| Variabel | Beskrivelse |
+|----------|-------------|
+| `N8N_AI_SUMMARY_WEBHOOK_URL` | Full webhook-URL til `folkets-ai-summary` |
+| `N8N_AI_SUMMARY_WEBHOOK_TOKEN` | Egen statisk token for header `X-FM-Webhook-Token` — ikke logg. Uten verdi sender fm-web ingen ekstra header (bakoverkompatibel). Se også [`docs/n8n/research-webhook-contract.md`](../../docs/n8n/research-webhook-contract.md) (`N8N_RESEARCH_WEBHOOK_TOKEN`). |
 
-`lib/trigger-ai-summary-webhook.ts` kalles når sak synkes uten sammendrag, og fra `GET /api/sak/[id]/ai-summary` mens rad mangler.
-(fm-web må sende token når app-env er konfigurert — se `.env.example`.)
+`lib/trigger-ai-summary-webhook.ts` kalles når sak synkes uten sammendrag, og fra `GET /api/sak/[id]/ai-summary` mens rad mangler. Cron `n8n-retry` bruker samme path via `lib/n8n/retry-pending.ts`.
 
-**Andre kilder:** Ingen annen workflow-kilde i repo POSTer til `folkets-ai-summary` (Docling-ingest lever kun i n8n, ikke i
-`workflows/n8n/*.workflow.ts`). `scripts/backfill-ai-summaries-v2.mjs` POSTer direkte — oppdateres separat ved behov.
+**n8n (interne HTTP-noder):** `pipeline-health` («Catch-up AI summaries») bruker Header Auth-credential «FM AI Summary Webhook Token» (`X-FM-Webhook-Token`) mot `folkets-ai-summary` — ikke `$env` i Code-noder. `document-embeddings` har **ingen** POST til `folkets-ai-summary` i repo-kilden (schedule disabled; global nomic drain stoppet — v2 backfill eier køen).
+
+**Mottaker-webhook i `ai-summary-backfill.workflow.ts`:** Header Auth på noden `Webhook new issue` (`folkets-ai-summary`) er **bevisst ikke** slått på i repo-kilden ennå. Det er utrulling steg 4 (etter fm-web har `N8N_AI_SUMMARY_WEBHOOK_TOKEN` satt og er deployet).
+
+**Andre kilder:** Ingen annen workflow-kilde i repo POSTer til `folkets-ai-summary`. `scripts/backfill-ai-summaries-v2.mjs` POSTer direkte — oppdateres separat ved behov.
+
+### Utrulling Header Auth (folkets-ai-summary)
+
+1. Opprett n8n **Header Auth**-credential med header-navn `X-FM-Webhook-Token` (navn i n8n: **FM AI Summary Webhook Token**).
+2. Sett `N8N_AI_SUMMARY_WEBHOOK_TOKEN` på **fm-web** i Coolify og **redeploy** fm-web (samme verdi som i credential).
+3. Koble credential til interne HTTP-noder som POSTer til `folkets-ai-summary` (`pipeline-health` — allerede i workflow-kilde).
+4. Aktiver **Header Auth** på mottaker-webhooken `Webhook new issue` i `ai-summary-backfill` (live n8n; ikke påkrevd i repo før dette steget).
+5. Verifiser én trigger fra fm-web (sak uten sammendrag / `GET /api/sak/[id]/ai-summary`) og én fra cron (`GET /api/cron/n8n-retry`).
+
+**Rollback:** Slå av Header Auth på mottaker-webhooken (steg 4). fm-web uten token eller med feil token vil da feile mot en beskyttet webhook — ved rollback kan token env fjernes eller webhooken åpnes igjen.
+
+Regenerer deploy-JSON fra TypeScript: `npx tsx scripts/export-document-embeddings-workflow-json.mjs`.
 
 ## Triggere
 
@@ -114,6 +131,7 @@ Tom kø / manglende sak-id avbrytes **før** Ollama. `n8n_upsert_issue_ai_summar
 ```bash
 curl -X POST "$N8N_AI_SUMMARY_WEBHOOK_URL" \
   -H "Content-Type: application/json" \
+  ${N8N_AI_SUMMARY_WEBHOOK_TOKEN:+-H "X-FM-Webhook-Token: $N8N_AI_SUMMARY_WEBHOOK_TOKEN"} \
   -d '{"stortinget_issue_id":"200329"}'
 ```
 

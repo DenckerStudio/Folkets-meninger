@@ -26,6 +26,23 @@ async function main() {
   resetCentralEmbedFailureLogForTests();
   assert.equal(await fetchCentralQueryEmbedding('test', { embedBaseUrl: '' }), null);
 
+  const embedWarnings: string[] = [];
+  const prevWarn = console.warn;
+  console.warn = (msg: string) => {
+    embedWarnings.push(msg);
+  };
+  const prevEmbedUrl = process.env.EMBED_QUERY_URL;
+  delete process.env.EMBED_QUERY_URL;
+  resetCentralEmbedFailureLogForTests();
+  assert.equal(await fetchCentralQueryEmbedding('test'), null);
+  assert.equal(embedWarnings.filter((w) => w.includes('[embed]')).length, 1);
+  assert.match(embedWarnings[0], /EMBED_QUERY_URL mangler/);
+  await fetchCentralQueryEmbedding('test');
+  assert.equal(embedWarnings.filter((w) => w.includes('[embed]')).length, 1);
+  if (prevEmbedUrl === undefined) delete process.env.EMBED_QUERY_URL;
+  else process.env.EMBED_QUERY_URL = prevEmbedUrl;
+  console.warn = prevWarn;
+
   let captured: { url: string; body: Record<string, unknown> } | null = null;
   const okFetch = (async (url: string, init: { body?: string }) => {
     captured = { url, body: JSON.parse(String(init.body)) };
