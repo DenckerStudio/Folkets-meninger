@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { listAppChangelogEntries, listAppRoadmapItems } from '@/lib/admin/app-future';
+import { isChangelogPublished } from '@/lib/appens-fremtid/changelog';
+import { listAppRoadmapItems, listPublicAppChangelogEntries } from '@/lib/admin/app-future';
 import { listVotingAppSuggestions } from '@/lib/admin/suggestions';
 import { getServerSupabase } from '@/lib/supabase-server';
 
@@ -17,10 +18,11 @@ export async function GET() {
   try {
     const [suggestions, changelog, roadmap] = await Promise.all([
       listVotingAppSuggestions(user.id).catch(() => []),
-      listAppChangelogEntries().catch(() => []),
+      listPublicAppChangelogEntries().catch(() => []),
       listAppRoadmapItems().catch(() => []),
     ]);
-    return NextResponse.json({ suggestions, changelog, roadmap });
+    const publicChangelog = changelog.filter(isChangelogPublished);
+    return NextResponse.json({ suggestions, changelog: publicChangelog, roadmap });
   } catch (error) {
     console.error('[appens-fremtid] list failed', error);
     return NextResponse.json(
