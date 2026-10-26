@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   isChatCapableOllamaModel,
-  listOllamaModels,
+  fetchOllamaChatModels,
   modelExists,
   normalizeOllamaBaseUrl,
   ollamaTagsUrl,
@@ -49,7 +49,7 @@ assert.equal(isChatCapableOllamaModel('llava:latest'), false);
 assert.equal(isChatCapableOllamaModel('whisper:latest'), false);
 
 async function main() {
-  const ok = await listOllamaModels('https://ollama.example/v1', {
+  const ok = await fetchOllamaChatModels('https://ollama.example/v1', {
     fetchImpl: (async () =>
       new Response(
         JSON.stringify({ models: [{ name: 'a' }, { model: 'b' }, { name: 'a' }] }),
@@ -58,29 +58,34 @@ async function main() {
   });
   assert.deepEqual(ok, { ok: true, models: ['a', 'b'] });
 
-  const down = await listOllamaModels('https://ollama.example/v1', {
+  const down = await fetchOllamaChatModels('https://ollama.example/v1', {
     fetchImpl: (async () => new Response('nope', { status: 502 })) as typeof fetch,
   });
   assert.equal(down.ok, false);
+  if (!down.ok) {
+    assert.match(down.error, /Kunne ikke nå Ollama-serveren/);
+    assert.doesNotMatch(down.error, /502/);
+    assert.doesNotMatch(down.error, /ollama\.example/);
+  }
 
-  const empty = await listOllamaModels('https://ollama.example/v1', {
+  const empty = await fetchOllamaChatModels('https://ollama.example/v1', {
     fetchImpl: (async () =>
       new Response(JSON.stringify({ models: [] }), { status: 200 })) as typeof fetch,
   });
   assert.equal(empty.ok, false);
 
-  const thrown = await listOllamaModels('https://ollama.example/v1', {
+  const thrown = await fetchOllamaChatModels('https://ollama.example/v1', {
     fetchImpl: (async () => {
       throw new Error('boom');
     }) as unknown as typeof fetch,
   });
   assert.equal(thrown.ok, false);
 
-  const invalid = await listOllamaModels('not a url');
+  const invalid = await fetchOllamaChatModels('not a url');
   assert.equal(invalid.ok, false);
 
   // A server with only embedding/code models reports no usable chat models.
-  const nonChat = await listOllamaModels('https://ollama.example/v1', {
+  const nonChat = await fetchOllamaChatModels('https://ollama.example/v1', {
     fetchImpl: (async () =>
       new Response(
         JSON.stringify({ models: [{ name: 'nomic-embed-text' }, { name: 'qwen2.5-coder:7b' }] }),

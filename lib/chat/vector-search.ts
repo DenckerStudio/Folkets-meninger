@@ -1,6 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ollamaApiUrl } from '@/lib/byok/ollama';
 import type { DecryptedByokCredential } from '@/lib/byok/service';
+import {
+  type ByokOutboundAccess,
+  assertSafeByokBaseUrl,
+  assertSafeOutboundUrl,
+  resolveAllowPrivateForUrl,
+} from '@/lib/byok/url-guard';
 
 /**
  * Semantic chunk search for overlay chat.
@@ -64,27 +70,39 @@ export function readVector(payload: unknown): number[] | null {
  */
 export function createOllamaVectorizer(
   credential: Pick<DecryptedByokCredential, 'provider' | 'baseUrl'> | null | undefined,
-  options: { fetchImpl?: typeof fetch; timeoutMs?: number; model?: string } = {},
+  options: {
+    fetchImpl?: typeof fetch;
+    timeoutMs?: number;
+    model?: string;
+    outbound?: ByokOutboundAccess;
+  } = {},
 ): QueryVectorizer | null {
   if (!credential || credential.provider !== 'ollama') return null;
-  const url = ollamaVectorUrl(credential.baseUrl ?? '');
+  const baseUrl = credential.baseUrl ?? '';
+  const url = ollamaVectorUrl(baseUrl);
   if (!url) return null;
 
   const model = options.model?.trim() || OLLAMA_VECTOR_MODEL;
   const fetchImpl = options.fetchImpl ?? fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const outbound = options.outbound ?? { isAdmin: false };
 
   return async (query: string) => {
     const prompt = (query ?? '').trim().slice(0, MAX_QUERY_CHARS);
     if (!prompt) return null;
     try {
+      await assertSafeByokBaseUrl(baseUrl, outbound);
+      const allowPrivate = resolveAllowPrivateForUrl(baseUrl, outbound);
+      await assertSafeOutboundUrl(url, { allowPrivate, lookup: outbound.lookup });
       const response = await fetchImpl(url, {
         method: 'POST',
         headers: { 'content-type': 'application/json', accept: 'application/json' },
         body: JSON.stringify({ model, prompt }),
         signal: AbortSignal.timeout(timeoutMs),
         cache: 'no-store',
+        redirect: 'manual',
       });
+      if (response.status >= 300 && response.status < 400) return null;
       if (!response.ok) return null;
       const vector = readVector(await response.json());
       return vector && vector.length === VECTOR_DIMENSIONS ? vector : null;

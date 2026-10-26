@@ -1,5 +1,8 @@
 /** Ollama discovery helpers for BYOK. Stored base URLs are OpenAI-compatible (`…/v1`). */
 
+export const BYOK_OLLAMA_UNREACHABLE_NB =
+  'Kunne ikke nå Ollama-serveren. Sjekk adressen.';
+
 const DEFAULT_TIMEOUT_MS = 8000;
 const MAX_MODELS = 200;
 
@@ -120,13 +123,13 @@ export function modelExists(models: readonly string[], model: string): boolean {
   return models.includes(`${wanted}:latest`);
 }
 
-export async function listOllamaModels(
+export async function fetchOllamaChatModels(
   baseUrl: string,
   options: { fetchImpl?: typeof fetch; timeoutMs?: number } = {},
 ): Promise<OllamaModelsResult> {
   const tagsUrl = ollamaTagsUrl(baseUrl);
   if (!tagsUrl) {
-    return { ok: false, error: 'Ugyldig Ollama-URL. Bruk http:// eller https://.' };
+    return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_NB };
   }
 
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -137,17 +140,27 @@ export async function listOllamaModels(
       headers: { accept: 'application/json' },
       signal: AbortSignal.timeout(timeoutMs),
       cache: 'no-store',
+      redirect: 'manual',
     });
+    if (response.status >= 300 && response.status < 400) {
+      console.warn('[byok/ollama] redirect blocked for tags fetch');
+      return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_NB };
+    }
     if (!response.ok) {
-      return { ok: false, error: `Ollama svarte ${response.status} på ${tagsUrl}.` };
+      console.warn('[byok/ollama] tags fetch failed with status', response.status);
+      return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_NB };
     }
 
     const models = readModelNames(await response.json()).filter(isChatCapableOllamaModel);
     if (models.length === 0) {
-      return { ok: false, error: `Fant ingen chat-modeller på Ollama-serveren (${tagsUrl}).` };
+      return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_NB };
     }
     return { ok: true, models };
-  } catch {
-    return { ok: false, error: `Kunne ikke nå Ollama på ${tagsUrl}.` };
+  } catch (error) {
+    console.warn(
+      '[byok/ollama] tags fetch error:',
+      error instanceof Error ? error.message : error,
+    );
+    return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_NB };
   }
 }

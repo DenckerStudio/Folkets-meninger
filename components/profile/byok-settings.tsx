@@ -311,7 +311,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
                 className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
                 placeholder={
                   provider === 'ollama'
-                    ? 'http://localhost:11434/v1'
+                    ? 'https://din-ollama.example.no/v1'
                     : 'https://api.example.com/v1'
                 }
               />

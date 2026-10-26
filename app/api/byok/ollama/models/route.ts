@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
-import { listOllamaModels } from '@/lib/byok/ollama';
+import { listOllamaModels } from '@/lib/byok/ollama-list.server';
 import { normalizeBaseUrl } from '@/lib/byok/providers';
+import {
+  BYOK_BASE_URL_REJECTED_NB,
+  BYOK_OLLAMA_UNREACHABLE_NB,
+  ByokUrlRejectedError,
+  assertSafeByokBaseUrl,
+} from '@/lib/byok/url-guard';
+import { byokOutboundForUser } from '@/lib/byok/outbound';
 import { requireStemmePlus } from '@/lib/stemme-plus/entitlement';
 
 export const dynamic = 'force-dynamic';
@@ -20,9 +27,19 @@ export async function GET(request: Request) {
     );
   }
 
-  const result = await listOllamaModels(baseUrl);
+  const outbound = await byokOutboundForUser(gate.userId);
+  try {
+    await assertSafeByokBaseUrl(baseUrl, outbound);
+  } catch (error) {
+    if (error instanceof ByokUrlRejectedError) {
+      return NextResponse.json({ error: BYOK_BASE_URL_REJECTED_NB }, { status: 400 });
+    }
+    throw error;
+  }
+
+  const result = await listOllamaModels(baseUrl, { outbound });
   if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
+    return NextResponse.json({ error: BYOK_OLLAMA_UNREACHABLE_NB }, { status: 400 });
   }
 
   return NextResponse.json({ models: result.models });
