@@ -1,9 +1,9 @@
 import { installBackfillSignalHandlers } from './shutdown';
 
 installBackfillSignalHandlers(async () => {
-  console.log('signal-smoke: ok');
+  process.stdout.write('signal-smoke: ok\n');
 });
 
 setImmediate(() => {
-  process.kill(process.pid, 'SIGTERM');
+  process.emit('SIGTERM');
 });
