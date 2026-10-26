@@ -26,6 +26,7 @@ DECLARE
     'get_user_stance_signals', 'user_has_political_consent', 'assert_rpc_caller_is_user',
     'require_admin_user_id', 'app_future_require_admin', 'check_api_rate_limit',
     'upsert_action_capture', 'set_action_cluster_verdict',
+    'assert_rpc_caller_is_actor', 'rpc_caller_is_trusted_server',
     'upsert_content_feedback', 'log_blog_content_feedback',
     'admin_submit_content_feedback',
     'admin_list_ai_summary_queue_gave_up', 'admin_reset_ai_summary_queue_attempts'

@@ -1,5 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { buildAdminContentFeedbackSnapshot } from '@/lib/content-feedback/snapshot';
+import { isPostgrestMissingRpcError } from '@/lib/polls/rpc-missing';
 import type { AdminContentFeedbackBody } from '@/lib/content-feedback/validation';
 import type {
   ContentFeedbackAspects,
@@ -48,14 +49,27 @@ export async function getAdminContentFeedback(
   };
 }
 
+function feedbackRowId(data: unknown, rpcName: string): string {
+  const id = typeof data === 'string' ? data : String(data ?? '');
+  if (!id) {
+    throw new Error(`Manglende id fra ${rpcName}`);
+  }
+  return id;
+}
+
+/**
+ * Primary path is admin_submit_content_feedback (feedback + AI-summary regeneration).
+ * Prod may not have applied 20261021140000 yet. PGRST202 then falls back to
+ * upsert_content_feedback, which has the same arguments and is already granted
+ * to service_role. Regeneration stays off until the admin RPC exists.
+ */
 export async function submitAdminContentFeedbackRpc(
   adminUserId: string,
   body: AdminContentFeedbackBody,
 ): Promise<{ id: string }> {
   const supabase = getServiceSupabase();
   const snapshot = await buildAdminContentFeedbackSnapshot(body.content_type, body.content_id);
-
-  const { data, error } = await supabase.rpc('admin_submit_content_feedback', {
+  const args = {
     p_content_type: body.content_type,
     p_content_id: body.content_id,
     p_verdict: body.verdict,
@@ -64,16 +78,25 @@ export async function submitAdminContentFeedbackRpc(
     p_note: body.note,
     p_admin_id: adminUserId,
     p_snapshot: snapshot,
-  });
+  };
 
-  if (error) {
-    throw error;
+  const primary = await supabase.rpc('admin_submit_content_feedback', args);
+  if (!primary.error) {
+    return { id: feedbackRowId(primary.data, 'admin_submit_content_feedback') };
   }
 
-  const id = typeof data === 'string' ? data : String(data ?? '');
-  if (!id) {
-    throw new Error('Manglende id fra admin_submit_content_feedback');
+  if (!isPostgrestMissingRpcError(primary.error)) {
+    throw primary.error;
   }
 
-  return { id };
+  console.warn(
+    '[content-feedback] admin_submit_content_feedback mangler i PostgREST. Lagrer via upsert_content_feedback. Regenerering av AI-sammendrag starter når 20261021140000 er lagt inn.',
+  );
+
+  const fallback = await supabase.rpc('upsert_content_feedback', args);
+  if (fallback.error) {
+    throw fallback.error;
+  }
+
+  return { id: feedbackRowId(fallback.data, 'upsert_content_feedback') };
 }
