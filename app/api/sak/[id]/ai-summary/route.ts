@@ -21,6 +21,16 @@ export async function GET(
 
   const result = await resolveAiSummaryForApi(id, { triggerIfMissing: true });
 
+  if (result.status === 'read_failed') {
+    return NextResponse.json(
+      {
+        status: 'read_failed',
+        retry_after_seconds: result.retry_after_seconds,
+      },
+      { status: 503 },
+    );
+  }
+
   if (result.status === 'ready') {
     if (isAiSummaryV2(result)) {
       return NextResponse.json({

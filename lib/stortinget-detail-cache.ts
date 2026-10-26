@@ -2,6 +2,7 @@ import { getServiceSupabase } from './supabase';
 import { getSakDetail, type StortingetSakDetail } from './stortinget';
 import { resolveSakListStatus, resolveSakStatusFromSources } from './sak-status';
 import { mapSakPresentation } from './stortinget-sak-presentation';
+import { shouldTriggerMissingSummaryWebhook } from './ai-summary/webhook-eligibility';
 import { triggerAiSummaryWebhook } from './trigger-ai-summary-webhook';
 import { buildAiSummarySource, type AiSummaryChunkSource, type AiSummaryDocumentSource } from './ai-summary/source-context';
 import { ingestSakDocuments } from './stortinget-document-ingest';
@@ -170,13 +171,15 @@ export async function getCachedSakDetail(
     { onConflict: 'id' },
   );
 
-  const { data: existingSummary } = await service
+  const { data: existingSummary, error: summaryReadError } = await service
     .from('issue_ai_summaries')
     .select('stortinget_issue_id')
     .eq('stortinget_issue_id', sakId)
     .maybeSingle();
 
-  if (!existingSummary) {
+  if (summaryReadError) {
+    console.error('[detail-cache] Kunne ikke sjekke om sammendrag finnes:', summaryReadError);
+  } else if (shouldTriggerMissingSummaryWebhook(null, existingSummary)) {
     triggerAiSummaryWebhook(sakId);
   }
 
