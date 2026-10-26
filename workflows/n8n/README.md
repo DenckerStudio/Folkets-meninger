@@ -252,7 +252,7 @@ node scripts/build-n8n-forum-prompts-topology-ops.mjs /tmp/n8n-forum-prompts-top
 | Nøkkel | Backfill settings |
 |--------|-------------------|
 | `batchLimit` | `10` (maks 8 per kjøring) |
-| `searxngBaseUrl` | f.eks. `https://searxng.heyklever.app` |
+| `searxngBaseUrl` | f.eks. `http://192.168.50.154:8002` (arkiverte forum-workflows) |
 | `longRunningMinDays` | `14` |
 
 Webhook: `POST /webhook/folkets-forum-prompts` (env `N8N_FORUM_PROMPTS_WEBHOOK_URL`).
