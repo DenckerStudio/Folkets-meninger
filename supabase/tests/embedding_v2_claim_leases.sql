@@ -12,7 +12,6 @@ DECLARE
   v_row record;
   v_i int;
   v_expected_order text[] := ARRAY[
-    'embed-v2-order-t1',
     'embed-v2-order-t2b',
     'embed-v2-order-t2a'
   ];
@@ -127,10 +126,16 @@ BEGIN
       embedding_v2_claimed_by = NULL
     WHERE embedding_v2 IS NULL;
 
+    DELETE FROM public.polls
+    WHERE stortinget_issue_id IN (
+      'embed-v2-fast-tier0',
+      'embed-v2-order-t2a',
+      'embed-v2-order-t2b'
+    );
+
     INSERT INTO public.stortinget_issues (id, title, last_synced_at, ferdigbehandlet, detail_json)
     VALUES
       ('embed-v2-fast-tier0', 'Fast', now(), false, '{"sak_sesjon":"2025-2026"}'::jsonb),
-      ('embed-v2-order-t1', 'T1', now() - interval '60 days', true, '{"sak_sesjon":"2025-2026"}'::jsonb),
       ('embed-v2-order-t2a', 'T2a', now() - interval '60 days', true, '{"sak_sesjon":"1999-2000"}'::jsonb),
       ('embed-v2-order-t2b', 'T2b', now() - interval '60 days', true, '{"sak_sesjon":"1999-2000"}'::jsonb)
     ON CONFLICT (id) DO UPDATE SET
@@ -141,7 +146,6 @@ BEGIN
     DELETE FROM public.stortinget_issue_documents
     WHERE issue_id IN (
       'embed-v2-fast-tier0',
-      'embed-v2-order-t1',
       'embed-v2-order-t2a',
       'embed-v2-order-t2b'
     );
@@ -149,14 +153,12 @@ BEGIN
     INSERT INTO public.stortinget_issue_documents (issue_id, document_id, title, document_type, ingest_status, chunks_status)
     VALUES
       ('embed-v2-fast-tier0', 'doc-fast', 'Hoved', 'hoveddokument', 'ready', 'pending'),
-      ('embed-v2-order-t1', 'doc-t1', 'Innst', 'innstilling', 'ready', 'pending'),
       ('embed-v2-order-t2a', 'doc-t2a', 'Hoved', 'hoveddokument', 'ready', 'pending'),
       ('embed-v2-order-t2b', 'doc-t2b', 'Innst', 'innstilling', 'ready', 'pending');
 
     DELETE FROM public.document_chunks
     WHERE issue_id IN (
       'embed-v2-fast-tier0',
-      'embed-v2-order-t1',
       'embed-v2-order-t2a',
       'embed-v2-order-t2b'
     );
@@ -164,7 +166,6 @@ BEGIN
     INSERT INTO public.document_chunks (issue_id, document_id, chunk_index, content, embedding_status, embedding_v2_status)
     VALUES
       ('embed-v2-fast-tier0', 'doc-fast', 0, 'fast lane', 'pending', 'pending'),
-      ('embed-v2-order-t1', 'doc-t1', 0, 'tier1 chunk', 'pending', 'pending'),
       ('embed-v2-order-t2a', 'doc-t2a', 0, 'tier2 hoved', 'pending', 'pending'),
       ('embed-v2-order-t2b', 'doc-t2b', 0, 'tier2 innst', 'pending', 'pending');
 
@@ -173,10 +174,13 @@ BEGIN
       AND embedding_v2_status = 'pending'
       AND issue_id NOT IN (
         'embed-v2-fast-tier0',
-        'embed-v2-order-t1',
         'embed-v2-order-t2a',
         'embed-v2-order-t2b'
       );
+
+    IF public.fm_embedding_v2_issue_tier('embed-v2-fast-tier0') IS DISTINCT FROM 0 THEN
+      RAISE EXCEPTION 'fixture: fast-tier0 må være tier 0';
+    END IF;
 
     IF (
       SELECT c.issue_id
@@ -194,6 +198,11 @@ BEGIN
     END IF;
 
     PERFORM public.n8n_release_embedding_v2_claims('lane-fast');
+
+    IF coalesce(public.fm_embedding_v2_issue_tier('embed-v2-order-t2a'), -1)
+      IS DISTINCT FROM coalesce(public.fm_embedding_v2_issue_tier('embed-v2-order-t2b'), -1) THEN
+      RAISE EXCEPTION 'fixture: t2a/t2b må ha samme tier for doc-type rekkefølgetest';
+    END IF;
 
     v_i := 0;
     FOR v_row IN
@@ -213,7 +222,6 @@ BEGIN
     DELETE FROM public.document_chunks
     WHERE issue_id IN (
       'embed-v2-fast-tier0',
-      'embed-v2-order-t1',
       'embed-v2-order-t2a',
       'embed-v2-order-t2b'
     );
