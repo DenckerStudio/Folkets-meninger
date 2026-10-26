@@ -1,6 +1,5 @@
 /** Ollama discovery helpers for BYOK. Stored base URLs are OpenAI-compatible (`…/v1`). */
 
-const DEFAULT_TIMEOUT_MS = 8000;
 const MAX_MODELS = 200;
 
 export type OllamaModelsResult =
@@ -92,7 +91,7 @@ export function isChatCapableOllamaModel(name: string): boolean {
   return !NON_CHAT_OLLAMA_PATTERNS.some((pattern) => pattern.test(trimmed));
 }
 
-function readModelNames(payload: unknown): string[] {
+export function readModelNamesFromTagsPayload(payload: unknown): string[] {
   if (!payload || typeof payload !== 'object') return [];
   const models = (payload as { models?: unknown }).models;
   if (!Array.isArray(models)) return [];
@@ -120,34 +119,3 @@ export function modelExists(models: readonly string[], model: string): boolean {
   return models.includes(`${wanted}:latest`);
 }
 
-export async function listOllamaModels(
-  baseUrl: string,
-  options: { fetchImpl?: typeof fetch; timeoutMs?: number } = {},
-): Promise<OllamaModelsResult> {
-  const tagsUrl = ollamaTagsUrl(baseUrl);
-  if (!tagsUrl) {
-    return { ok: false, error: 'Ugyldig Ollama-URL. Bruk http:// eller https://.' };
-  }
-
-  const fetchImpl = options.fetchImpl ?? fetch;
-  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-
-  try {
-    const response = await fetchImpl(tagsUrl, {
-      headers: { accept: 'application/json' },
-      signal: AbortSignal.timeout(timeoutMs),
-      cache: 'no-store',
-    });
-    if (!response.ok) {
-      return { ok: false, error: `Ollama svarte ${response.status} på ${tagsUrl}.` };
-    }
-
-    const models = readModelNames(await response.json()).filter(isChatCapableOllamaModel);
-    if (models.length === 0) {
-      return { ok: false, error: `Fant ingen chat-modeller på Ollama-serveren (${tagsUrl}).` };
-    }
-    return { ok: true, models };
-  } catch {
-    return { ok: false, error: `Kunne ikke nå Ollama på ${tagsUrl}.` };
-  }
-}

@@ -2,6 +2,7 @@ import { ByokEncryptionNotConfiguredError } from '@/lib/byok/crypto';
 import { loadDecryptedByok } from '@/lib/byok/service';
 import { isSpellingContext } from '@/lib/chat/actions';
 import { resolveRettsskrivingResult } from '@/lib/chat/rettskriving';
+import { byokOutboundForUser } from '@/lib/byok/outbound';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { requireStemmePlus } from '@/lib/stemme-plus/entitlement';
 import { getServerSupabase } from '@/lib/supabase-server';
@@ -77,7 +78,8 @@ export async function POST(request: Request) {
     }
   }
 
-  const result = await resolveRettsskrivingResult({ draft, context, credential });
+  const outbound = credential ? await byokOutboundForUser(gate.userId) : undefined;
+  const result = await resolveRettsskrivingResult({ draft, context, credential, outbound });
   if (!result.ok) {
     return Response.json(
       { error: result.error },
