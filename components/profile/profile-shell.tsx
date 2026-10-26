@@ -30,9 +30,10 @@ import type { UserPointsProgress } from '@/lib/user-points-levels';
 
 type ProfileShellProps = {
   stemmePlusCheckoutConfigured: boolean;
+  viewerIsAdmin: boolean;
 };
 
-export function ProfileShell({ stemmePlusCheckoutConfigured }: ProfileShellProps) {
+export function ProfileShell({ stemmePlusCheckoutConfigured, viewerIsAdmin }: ProfileShellProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, loading: isPending, signOut } = useAuth();
@@ -150,6 +151,7 @@ export function ProfileShell({ stemmePlusCheckoutConfigured }: ProfileShellProps
   return (
     <ProfileShellAuthenticated
       stemmePlusCheckoutConfigured={stemmePlusCheckoutConfigured}
+      viewerIsAdmin={viewerIsAdmin}
       user={user}
       activeTab={activeTab}
       stanceHistory={stanceHistory}
@@ -248,6 +250,7 @@ function ProfileLoginPrompt() {
 
 type ProfileShellAuthenticatedProps = {
   stemmePlusCheckoutConfigured: boolean;
+  viewerIsAdmin: boolean;
   user: SupabaseUser;
   activeTab: ProfileTabId | null;
   stanceHistory: StanceHistoryItem[];
@@ -277,6 +280,7 @@ type ProfileShellAuthenticatedProps = {
 
 function ProfileShellAuthenticated({
   stemmePlusCheckoutConfigured,
+  viewerIsAdmin,
   user,
   activeTab,
   stanceHistory,
@@ -370,7 +374,10 @@ function ProfileShellAuthenticated({
             </div>
           )}
           {activeTab === 'stemme-plus' && (
-            <ProfileStemmePlus checkoutConfigured={stemmePlusCheckoutConfigured} />
+            <ProfileStemmePlus
+              checkoutConfigured={stemmePlusCheckoutConfigured}
+              isAdmin={viewerIsAdmin}
+            />
           )}
           {activeTab === 'min-data' && <ProfilePrivacy userId={user.id} />}
         </div>

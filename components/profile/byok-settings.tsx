@@ -8,6 +8,7 @@ import { modelExists } from '@/lib/byok/ollama';
 import {
   BYOK_OLLAMA_UNREACHABLE_NB,
   BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB,
+  ollamaBaseUrlHintNb,
 } from '@/lib/byok/messages';
 import {
   DEFAULT_MODELS,
@@ -35,9 +36,10 @@ export type ByokMetaView = {
 type ByokSettingsProps = {
   encryptionReady: boolean;
   initial: ByokMetaView;
+  isAdmin: boolean;
 };
 
-export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
+export function ByokSettings({ encryptionReady, initial, isAdmin }: ByokSettingsProps) {
   const [provider, setProvider] = useState<LlmProvider>(initial?.provider ?? 'google');
   const [model, setModel] = useState(initial?.model ?? DEFAULT_MODELS.google);
   const [baseUrl, setBaseUrl] = useState('');
@@ -333,10 +335,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
                 }
               />
               {provider === 'ollama' ? (
-                <p className="text-xs text-muted-foreground">
-                  Adressen må være en offentlig http(s)-adresse. Lokale adresser som localhost og
-                  192.168.x/10.x støttes ikke.
-                </p>
+                <p className="text-xs text-muted-foreground">{ollamaBaseUrlHintNb(isAdmin)}</p>
               ) : null}
             </label>
           ) : null}

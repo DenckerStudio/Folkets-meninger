@@ -32,9 +32,13 @@ type StemmePlusStatus = {
 type ProfileStemmePlusProps = {
   /** Same check as GET /api/stemme-plus/status (`isStripeCheckoutConfigured`). */
   checkoutConfigured: boolean;
+  isAdmin: boolean;
 };
 
-export function ProfileStemmePlus({ checkoutConfigured: serverCheckoutConfigured }: ProfileStemmePlusProps) {
+export function ProfileStemmePlus({
+  checkoutConfigured: serverCheckoutConfigured,
+  isAdmin,
+}: ProfileStemmePlusProps) {
   const { openChat } = useChatOverlay();
   const router = useRouter();
   const [status, setStatus] = useState<StemmePlusStatus | null>(null);
@@ -228,6 +232,7 @@ export function ProfileStemmePlus({ checkoutConfigured: serverCheckoutConfigured
           <ByokSettings
             encryptionReady={status.byok_encryption_ready}
             initial={byokInitial}
+            isAdmin={isAdmin}
           />
         </div>
       ) : (
