@@ -4,26 +4,50 @@
 
 Migrations are applied **manually** by the Coolify Expert, only after Mathias approves. Do not use `supabase db push` blindly on prod.
 
-**Maintenance window:** plan **15 minutes** end-to-end (measured on prod host, ~380k `document_chunks`). **fm-web** auto-deploys on push to `main` — merge PR **only after** this runbook completes and verification passes.
+**fm-web** auto-deploys on push to `main` — merge PR **only after** this runbook completes and verification passes.
 
-## Session settings (every `psql` session)
+## Maintenance windows (two phases)
+
+| Phase | Migrations | Pause n8n ingest? | Planned duration |
+| --- | --- | --- | --- |
+| **A — transactional** | `20261022100000`–`20261022108000` + `20261022109600` | **Yes** — no document ingest / embedding writes to `document_chunks` | **~15 minutes** (bench: `22100000` ~74 s ACCESS EXCLUSIVE on ~380k rows; expect **1.5–3 min** under load; +523 MB table, ~1.2 GB WAL) |
+| **B — concurrent indexes** | `20261022109000`–`20261022109500` (six files, one `psql` session each) | **Yes (recommended)** — see [n8n during index phase](#n8n-during-the-index-phase) | **≥ 60 minutes** wall clock (sum of builds + invalid-index checks; IO-bound) |
+
+Do **not** use a single 15-minute window for the full stack. Schedule phase B as its own block.
+
+## Order of operations (do not reorder)
+
+1. **Pause n8n** workflows that ingest documents or run embedding batches (`dokument-embeddings`, embedding_v2 queue, pipeline health catch-up that writes `document_chunks`).
+2. **Phase A — transactional** (`22100000`–`22108000`, then **`22109600`**) with [transactional session settings](#phase-a--transactional-session-settings).
+3. **Phase B — indexes** (`22109000`–`22109500`) with [concurrent-index session settings](#phase-b--concurrent-index-session-settings). After **each** file: [invalid-index check](#after-each-concurrent-index-file); if invalid → `DROP INDEX CONCURRENTLY` → re-run that file.
+4. **Verify** (extensions, columns, all indexes valid, grants, smoke `search_issues_fts` as service role).
+5. **Resume n8n**, then **merge** PR (app already calls search RPCs via service role after Stemme+ gate).
+
+CI `scripts/run-prod-like-db-security.sh` applies all `202610221*.sql` in **filename sort** (`22109600` runs after concurrent indexes). On prod, apply **`22109600` immediately after `22108000`** and **before** phase B.
+
+### n8n during the index phase
+
+**Keep ingest and embedding pipelines paused through phase B** (do not resume n8n between `22109600` and a clean invalid-index check after `22109500`).
+
+- **Why:** `CREATE INDEX CONCURRENTLY` on ~380k `document_chunks` rows is IO-heavy (GIN `tsv` alone is often **10–45 min** worst case). Competing chunk inserts/updates and embedding batch writes increase WAL and autovacuum work, stretch build times, and make the **≥ 60 min** index window unreliable.
+- **Why not “resume early”:** Hybrid RAG is not production-ready until all six indexes are **valid** (`indisvalid = true`). Partial or invalid indexes (`IF NOT EXISTS` can exit 0 on a broken index) are worse than waiting.
+- **After phase B:** Resume n8n; `embedding_v2` backfill and docling ingest can run with indexes in place (row-level updates; consider `REINDEX INDEX CONCURRENTLY` on HNSW after large backfill).
+
+## Phase A — transactional session settings
+
+Use before **every** `psql -f` for `20261022100000` through `20261022108000` and `20261022109600`:
 
 ```sql
 SET lock_timeout = '30s';
 SET statement_timeout = '10min';
 ```
 
-Use the same settings before each transactional file and each `CREATE INDEX CONCURRENTLY` file.
+```bash
+export PGOPTIONS='-c lock_timeout=30s -c statement_timeout=10min'
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/<transactional-file>.sql
+```
 
-## Order of operations (do not reorder)
-
-1. **Pause n8n** workflows that ingest documents or run embedding batches (`dokument-embeddings`, embedding_v2 queue, pipeline health catch-up that writes chunks). Empty queue is fine; avoid new chunk writes during `22100000` heap rewrite.
-2. **Transactional migrations** `20261022100000` through `20261022108000`, then **`20261022109600_rag_search_rpc_service_role_only.sql`** (search RPCs + `fm_unaccent` / `fm_escape_ilike` → **service_role only**).
-3. **Index migrations** `20261022109000` through `20261022109500` (one file per session, **no transaction**).
-4. **Verify** (extensions, columns, indexes valid, grants, smoke `search_issues_fts` as service role).
-5. **Resume n8n**, then **merge** PR / deploy app (chat already calls RPCs with service role after Stemme+ gate).
-
-CI `scripts/run-prod-like-db-security.sh` applies all `202610221*.sql` in **filename sort** (`22109600` runs after concurrent indexes). That is acceptable for grants; on prod, apply **`22109600` immediately after `22108000`** and before step 3.
+**Rollback (per transactional file):** only practical if the migration failed before `COMMIT` — restore from snapshot / PITR. Do not drop `document_chunks.tsv` / `embedding_v2` after a successful `22100000` without a new window.
 
 ## Extensions (transactional migrations)
 
@@ -34,7 +58,7 @@ CI `scripts/run-prod-like-db-security.sh` applies all `202610221*.sql` in **file
 
 `vector` stays in `public` (already installed). RAG RPCs use `search_path = public, extensions, pg_temp`.
 
-## Transactional RAG migrations (run in order, normal `psql -f`)
+## Transactional RAG migrations (phase A files)
 
 Apply after main is at `20261021170000_issue_ai_summary_no_cost_in_how_affected.sql` (or later main head):
 
@@ -60,45 +84,78 @@ Coolify Expert bench on prod host (~380k rows):
 
 `stortinget_issues.tsv` (~480 rows) is cheap in the same file.
 
-**Rollback (22100000):** only if migration failed before `COMMIT` — restore from snapshot / PITR. After commit, dropping `tsv` / `embedding_v2` is a new maintenance window (not recommended).
-
 ### Backfills (not in migrations)
 
 | Work | How | Locking |
 | --- | --- | --- |
-| **`embedding_v2` (bge-m3 / 1024)** | n8n → `n8n_list_pending_embedding_v2` / `n8n_save_document_embedding_v2` | Row-level updates; batches via pipeline |
+| **`embedding_v2` (bge-m3 / 1024)** | n8n → `n8n_list_pending_embedding_v2` / `n8n_save_document_embedding_v2` | Row-level updates; batches via pipeline (after phase B) |
 | **`tsv` on chunks** | **GENERATED** after `22100000` — no separate SQL backfill | One-time heap rewrite on column add |
 | **Legacy `embedding` (768)** | Unchanged | — |
 
 Optional batched manual chunk `tsv` refresh (only if GENERATED is ever dropped): `supabase/hotfix/20261022_document_chunks_tsv_batch_template.sql`.
 
-## Index migrations — **RUN OUTSIDE A TRANSACTION**
+## Phase B — concurrent index session settings
 
-Each file is a **single** `CREATE INDEX CONCURRENTLY IF NOT EXISTS`. Do **not** wrap in `BEGIN`/`COMMIT`.
+Each file is **one** `CREATE INDEX CONCURRENTLY IF NOT EXISTS`. Do **not** wrap in `BEGIN`/`COMMIT`. Do **not** reuse phase A `statement_timeout = '10min'` — long GIN builds will be killed.
 
-```bash
-export PGOPTIONS='-c lock_timeout=30s -c statement_timeout=10min'
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/<file>.sql
+Before **each** index file:
+
+```sql
+SET lock_timeout = '30s';
+SET statement_timeout = 0;   -- preferred: no server-side cap on index build
+-- Alternative if policy forbids 0: SET statement_timeout = '60min';
 ```
 
-After **each** index file, run **invalid-index check** (see Verification). If an index is invalid, `CREATE INDEX CONCURRENTLY IF NOT EXISTS` may **exit 0** and leave a broken index — drop and rebuild.
+```bash
+export PGOPTIONS='-c lock_timeout=30s -c statement_timeout=0'
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/<index-file>.sql
+```
 
-| Order | File | Index | Measured / expected duration |
+| Order | File | Index name | Measured / expected duration |
 | --- | --- | --- | --- |
-| A | `20261022109000_rag_index_document_chunks_tsv_gin_concurrent.sql` | GIN on `document_chunks.tsv` | **~10–45 min** (380k rows; IO-bound) |
-| B | `20261022109100_rag_index_stortinget_issues_tsv_gin_concurrent.sql` | GIN on `stortinget_issues.tsv` | **&lt;1 min** |
-| C | `20261022109200_rag_index_document_chunks_embedding_v2_hnsw_concurrent.sql` | partial HNSW on `embedding_v2` | **minutes** (empty at first; reindex after large backfill) |
-| D | `20261022109300_rag_index_document_chunks_content_trgm_concurrent.sql` | GIN trgm on `content` | **~98 s** trgm GIN on prod bench; allow headroom under load |
-| E | `20261022109400_rag_index_stortinget_issues_title_trgm_concurrent.sql` | GIN trgm on `title` | **&lt;1 min** |
-| F | `20261022109500_rag_index_document_chunks_metadata_hash_concurrent.sql` | btree on `(issue_id, document_id, content_hash)` | **~5–20 min** |
+| A | `20261022109000_rag_index_document_chunks_tsv_gin_concurrent.sql` | `document_chunks_tsv_gin_idx` | **10–45 min** worst case on ~380k rows; **5–20 min** typical (IO-bound) |
+| B | `20261022109100_rag_index_stortinget_issues_tsv_gin_concurrent.sql` | `stortinget_issues_tsv_gin_idx` | **&lt;1 min** |
+| C | `20261022109200_rag_index_document_chunks_embedding_v2_hnsw_concurrent.sql` | `document_chunks_embedding_v2_hnsw_idx` | **minutes** (empty at first; reindex after large backfill) |
+| D | `20261022109300_rag_index_document_chunks_content_trgm_concurrent.sql` | `document_chunks_content_trgm_idx` | **~98 s** on prod bench copy; allow headroom under load |
+| E | `20261022109400_rag_index_stortinget_issues_title_trgm_concurrent.sql` | `stortinget_issues_title_trgm_idx` | **&lt;1 min** |
+| F | `20261022109500_rag_index_document_chunks_metadata_hash_concurrent.sql` | `document_chunks_metadata_content_hash_idx` | **5–20 min** typical |
 
-**Rollback per concurrent index step:** `DROP INDEX CONCURRENTLY IF EXISTS <indexname>;` then re-run the matching migration file after fixing the failure (disk, `statement_timeout`, duplicate invalid index).
+**Phase B wall clock:** plan **≥ 60 minutes** for all six steps plus invalid-index checks (dominated by `22109000` GIN on `document_chunks.tsv`).
+
+### After each concurrent index file
+
+```sql
+SET lock_timeout = '30s';
+SET statement_timeout = '10min';
+
+SELECT c.relname AS index_name, i.indisvalid
+FROM pg_index i
+JOIN pg_class c ON c.oid = i.indexrelid
+JOIN pg_class t ON t.oid = i.indrelid
+JOIN pg_namespace n ON n.oid = t.relnamespace
+WHERE n.nspname = 'public'
+  AND NOT i.indisvalid
+  AND c.relname = '<index_name_from_table_above>';
+```
+
+- **Expected:** zero rows for the index you just built.
+- **If `indisvalid = false`:** `CREATE INDEX CONCURRENTLY IF NOT EXISTS` may have exited **0** anyway. Fix:
+
+```sql
+SET lock_timeout = '30s';
+SET statement_timeout = 0;
+DROP INDEX CONCURRENTLY IF EXISTS public.<index_name>;
+```
+
+Then re-run **only** that migration file with phase B `PGOPTIONS`, and repeat the invalid-index check.
+
+**Rollback per index step:** `DROP INDEX CONCURRENTLY IF EXISTS public.<index_name>;` then re-run the matching `20261022109*.sql` file.
 
 `CONCURRENTLY` avoids long **ACCESS EXCLUSIVE** locks on `document_chunks`; builds still use CPU/IO. Monitor `pg_stat_progress_create_index`.
 
 Apply **A** before heavy hybrid FTS load; **C** can precede or follow embedding_v2 backfill. If HNSW was built empty and millions of rows are backfilled later, consider `REINDEX INDEX CONCURRENTLY` on `document_chunks_embedding_v2_hnsw_idx` during a window.
 
-## Verification queries
+## Final verification (after phase B)
 
 ```sql
 SET lock_timeout = '30s';
@@ -164,4 +221,4 @@ SELECT id, title FROM search_issues_fts('statsbudsjett', NULL, 3);
 
 ## CI / prod-like test
 
-`scripts/run-prod-like-db-security.sh` applies `202610221*.sql` in phase 3 on an empty test DB (small data); concurrent index files are included in sort order and run without an explicit transaction wrapper.
+`scripts/run-prod-like-db-security.sh` applies `202610221*.sql` in phase 4 on an empty test DB (small data); concurrent index files are included in sort order and run without an explicit transaction wrapper.

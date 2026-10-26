@@ -6,7 +6,9 @@ import type { ChatRagClient } from '@/lib/chat/rag';
  * Call only from server routes that already passed requireStemmePlus (or equivalent).
  */
 export function getChatRagRpcClient(): ChatRagClient | null {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? '';
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? '';
+  if (!url || !serviceKey) {
     return null;
   }
   return getServiceSupabase();
