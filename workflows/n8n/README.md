@@ -90,7 +90,15 @@ n8n blokkerer `$env` i noder — ikke bruk `$env` for app-URL her.
 N8N_AI_SUMMARY_WEBHOOK_URL=https://n8n.heyklever.app/webhook/folkets-ai-summary
 ```
 
+Prod (#205): webhooken krever header **`X-FM-Webhook-Token`**. I n8n brukes Header Auth-credential **`FM AI Summary Webhook Token`**
+(kun navn i workflow-kilde — ikke token-verdi). Mottaker: `ai-summary-backfill` (GP666). Utgående POST fra
+`pipeline-health` («Catch-up AI summaries») bruker samme credential.
+
 `lib/trigger-ai-summary-webhook.ts` kalles når sak synkes uten sammendrag, og fra `GET /api/sak/[id]/ai-summary` mens rad mangler.
+(fm-web må sende token når app-env er konfigurert — se `.env.example`.)
+
+**Andre kilder:** Ingen annen workflow-kilde i repo POSTer til `folkets-ai-summary` (Docling-ingest lever kun i n8n, ikke i
+`workflows/n8n/*.workflow.ts`). `scripts/backfill-ai-summaries-v2.mjs` POSTer direkte — oppdateres separat ved behov.
 
 ## Triggere
 
