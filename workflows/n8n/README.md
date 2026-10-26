@@ -99,19 +99,20 @@ N8N_AI_SUMMARY_WEBHOOK_TOKEN=
 
 `lib/trigger-ai-summary-webhook.ts` kalles når sak synkes uten sammendrag, og fra `GET /api/sak/[id]/ai-summary` mens rad mangler. Cron `n8n-retry` bruker samme path via `lib/n8n/retry-pending.ts`.
 
-**n8n (interne HTTP-noder):** `pipeline-health.workflow.ts` og `document-embeddings.workflow.ts` bruker Header Auth-credential «FM AI Summary Webhook Token» (`X-FM-Webhook-Token`) mot `folkets-ai-summary` — ikke `$env` i Code-noder.
+**n8n (interne HTTP-noder):** `pipeline-health` («Catch-up AI summaries») bruker Header Auth-credential «FM AI Summary Webhook Token» (`X-FM-Webhook-Token`) mot `folkets-ai-summary` — ikke `$env` i Code-noder. `document-embeddings` har **ingen** POST til `folkets-ai-summary` i repo-kilden (schedule disabled; global nomic drain stoppet — v2 backfill eier køen).
 
-**Mottaker-webhook i `ai-summary-backfill.workflow.ts`:** Header Auth på noden `Webhook new issue` (`folkets-ai-summary`) er **bevisst ikke** slått på i repo-kilden ennå. Det er utrulling steg 4 (etter fm-web har `N8N_AI_SUMMARY_WEBHOOK_TOKEN` satt og er deployet).
+**Mottaker-webhook i `ai-summary-backfill.workflow.ts`:** Noden `Webhook new issue` (`folkets-ai-summary`) bruker `headerAuth` og credential **«FM AI Summary Webhook Token»** (samme som `pipeline-health`). **`N8N_AI_SUMMARY_WEBHOOK_TOKEN` må være satt på fm-web og deployet før workflowen publiseres eller aktiveres** — ellers får kallere 401.
+
+**Andre kilder:** Ingen annen workflow-kilde i repo POSTer til `folkets-ai-summary`. `scripts/backfill-ai-summaries-v2.mjs` POSTer direkte — oppdateres separat ved behov.
 
 ### Utrulling Header Auth (folkets-ai-summary)
 
 1. Opprett n8n **Header Auth**-credential med header-navn `X-FM-Webhook-Token` (navn i n8n: **FM AI Summary Webhook Token**).
-2. Sett `N8N_AI_SUMMARY_WEBHOOK_TOKEN` på **fm-web** i Coolify og **redeploy** fm-web (samme verdi som i credential).
-3. Koble credential til interne HTTP-noder som POSTer til `folkets-ai-summary` (`pipeline-health`, `document-embeddings` — allerede i workflow-kilde).
-4. Aktiver **Header Auth** på mottaker-webhooken `Webhook new issue` i `ai-summary-backfill` (live n8n; ikke påkrevd i repo før dette steget).
-5. Verifiser én trigger fra fm-web (sak uten sammendrag / `GET /api/sak/[id]/ai-summary`) og én fra cron (`GET /api/cron/n8n-retry`).
+2. Sett `N8N_AI_SUMMARY_WEBHOOK_TOKEN` på **fm-web** i Coolify og **redeploy** fm-web (samme verdi som i credential) **før** du publiserer/aktiverer `ai-summary-backfill` eller `pipeline-health` mot prod.
+3. Koble credential i live n8n til nodene som allerede refererer til det i repo (`pipeline-health` «Catch-up AI summaries», `ai-summary-backfill` «Webhook new issue»).
+4. Verifiser én trigger fra fm-web (sak uten sammendrag / `GET /api/sak/[id]/ai-summary`) og én fra cron (`GET /api/cron/n8n-retry`).
 
-**Rollback:** Slå av Header Auth på mottaker-webhooken (steg 4). fm-web uten token eller med feil token vil da feile mot en beskyttet webhook — ved rollback kan token env fjernes eller webhooken åpnes igjen.
+**Rollback:** Deaktiver workflowene eller slå av Header Auth på webhook-noden i live n8n. fm-web uten token eller med feil token gir 401 mot en beskyttet webhook.
 
 Regenerer deploy-JSON fra TypeScript: `npx tsx scripts/export-document-embeddings-workflow-json.mjs`.
 

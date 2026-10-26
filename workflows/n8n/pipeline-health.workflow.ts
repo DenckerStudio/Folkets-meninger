@@ -1,10 +1,10 @@
 /**
- * Daily pipeline health: catch up missed webhooks and notify when queues stall.
+ * Daily pipeline health: backlog RPCs + deduped admin alerts (no embedding catch-up).
  */
 import { expr, ifElse, newCredential, node, sticky, trigger, workflow } from '@n8n/workflow-sdk';
 import {
-  FOLKETS_APP_BASE,
   FOLKETS_AI_SUMMARY_WEBHOOK_HEADER_CRED,
+  FOLKETS_APP_BASE,
   FOLKETS_N8N_BASE,
   FOLKETS_SUPABASE_CRED,
   rpcUrl,
@@ -37,27 +37,6 @@ const webhookTrigger = trigger({
   output: [{}],
 });
 
-const fetchPendingChunks = node({
-  type: 'n8n-nodes-base.httpRequest',
-  version: 4.2,
-  config: {
-    name: 'Count pending chunks',
-    alwaysOutputData: true,
-    credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
-    parameters: {
-      method: 'POST',
-      url: rpcUrl('n8n_list_pending_document_chunks'),
-      authentication: 'predefinedCredentialType',
-      nodeCredentialType: 'supabaseApi',
-      sendBody: true,
-      specifyBody: 'json',
-      jsonBody: '{"p_issue_id":null,"p_limit":50}',
-      options: { timeout: 60000 },
-    },
-  },
-  output: [],
-});
-
 const fetchPipelineHealth = node({
   type: 'n8n-nodes-base.httpRequest',
   version: 4.2,
@@ -65,6 +44,7 @@ const fetchPipelineHealth = node({
     name: 'Fetch pipeline health',
     alwaysOutputData: true,
     executeOnce: true,
+    onError: 'continueRegularOutput',
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
       method: 'POST',
@@ -80,19 +60,23 @@ const fetchPipelineHealth = node({
   output: [],
 });
 
-const fetchDraftPolls = node({
+const fetchEmbeddingBacklogHealth = node({
   type: 'n8n-nodes-base.httpRequest',
   version: 4.2,
   config: {
-    name: 'List draft polls',
+    name: 'Fetch embedding backlog health',
     alwaysOutputData: true,
     executeOnce: true,
+    onError: 'continueRegularOutput',
     credentials: { supabaseApi: newCredential(FOLKETS_SUPABASE_CRED) },
     parameters: {
-      method: 'GET',
-      url: 'https://supabase.heyklever.app/rest/v1/polls?track=eq.system&status=eq.draft&select=id,title,stortinget_issue_id,created_at&order=created_at.desc&limit=20',
+      method: 'POST',
+      url: rpcUrl('n8n_embedding_backlog_health'),
       authentication: 'predefinedCredentialType',
       nodeCredentialType: 'supabaseApi',
+      sendBody: true,
+      specifyBody: 'json',
+      jsonBody: '{}',
       options: { timeout: 60000 },
     },
   },
@@ -110,7 +94,7 @@ const summarizeHealth = node({
       jsCode: `function asRows(raw) {
   if (Array.isArray(raw)) return raw;
   if (Array.isArray(raw?.data)) return raw.data;
-  if (raw && typeof raw === 'object' && (raw.id || raw.issue_id)) return [raw];
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) return [raw];
   return [];
 }
 function rowsFrom(name) {
@@ -120,41 +104,107 @@ function rowsFrom(name) {
     return [];
   }
 }
-const chunks = rowsFrom('Count pending chunks');
-const drafts = rowsFrom('List draft polls').filter((r) => r && r.id);
-const pendingChunks = chunks.filter((r) => r && r.id).length;
-const draftPolls = drafts.length;
-const healthRaw = rowsFrom('Fetch pipeline health')[0] ?? {};
-const missingSummaries = Number(
-  healthRaw.summary_queue_depth ?? healthRaw.missing_summaries ?? 0,
-);
-const firstMissingId = String(
-  healthRaw.first_summary_queue_issue_id ?? '',
-).trim();
-const needsCatchup = pendingChunks > 0;
+function num(v) {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+const staticData = $getWorkflowStaticData('global');
+const pipelineItems = rowsFrom('Fetch pipeline health');
+const backlogItems = rowsFrom('Fetch embedding backlog health');
+const pipeline = pipelineItems[0] ?? {};
+const backlog = backlogItems[0] ?? {};
+const pipelineOk = pipelineItems.length > 0 && Object.keys(pipeline).length > 0;
+const backlogOk = backlogItems.length > 0 && Object.keys(backlog).length > 0;
+
+const missingSummaries = num(pipeline.summary_queue_depth ?? pipeline.missing_summaries);
+const draftPolls = num(pipeline.draft_polls);
+const pendingChunks = num(backlog.pending_v2_total ?? backlog.pending_legacy_total);
+const oldestActive = num(backlog.oldest_pending_active_age_s);
+const failedV2 = num(backlog.failed_v2);
+const pendingV2 = num(backlog.pending_v2_total);
+
+const prevFailed = num(staticData.lastFailedV2);
+const failedIncreasing = backlogOk && failedV2 > prevFailed;
+
+const now = Date.now();
+if (!staticData.pendingV2Sample || typeof staticData.pendingV2Sample !== 'object') {
+  staticData.pendingV2Sample = { value: pendingV2, at: now };
+}
+let pendingStalled = false;
+const sample = staticData.pendingV2Sample;
+const twentyHoursMs = 20 * 60 * 60 * 1000;
+if (backlogOk && pendingV2 > 0 && now - Number(sample.at || 0) >= twentyHoursMs) {
+  if (pendingV2 >= num(sample.value)) pendingStalled = true;
+  staticData.pendingV2Sample = { value: pendingV2, at: now };
+} else if (pendingV2 < num(sample.value)) {
+  staticData.pendingV2Sample = { value: pendingV2, at: now };
+}
+
+const firstMissingId = String(pipeline.first_summary_queue_issue_id ?? '').trim();
 const needsSummaryCatchup = Boolean(firstMissingId);
-const needsAlert = pendingChunks >= 40 || missingSummaries >= 15 || draftPolls >= 8;
-const subject = 'Pipeline-status: ' + pendingChunks + ' chunks, ' + missingSummaries + ' sammendrag, ' + draftPolls + ' utkast';
+
+const reasons = [];
+if (!pipelineOk) reasons.push('pipeline_health_rpc_failed');
+if (!backlogOk) reasons.push('embedding_backlog_health_rpc_failed');
+if (oldestActive > 1800) reasons.push('oldest_pending_active_age_s=' + oldestActive);
+if (failedIncreasing) reasons.push('failed_v2_increasing');
+if (pendingStalled) reasons.push('pending_v2_total_stalled_20h');
+if (missingSummaries >= 15) reasons.push('summary_queue_depth>=' + missingSummaries);
+if (draftPolls >= 8) reasons.push('draft_polls>=' + draftPolls);
+
+const reasonKey = reasons.slice().sort().join('|');
+const lastAlertAt = num(staticData.lastAlertAt);
+const lastReasons = String(staticData.lastReasons || '');
+const needsAlert =
+  reasons.length > 0 &&
+  (reasonKey !== lastReasons || now - lastAlertAt >= 24 * 60 * 60 * 1000);
+
+if (needsAlert) {
+  staticData.lastAlertAt = now;
+  staticData.lastReasons = reasonKey;
+}
+staticData.lastFailedV2 = failedV2;
+
+const subject =
+  'Pipeline-status: ' +
+  pendingChunks +
+  ' v2-pending, ' +
+  missingSummaries +
+  ' sammendrag, ' +
+  draftPolls +
+  ' utkast';
 const text = [
   'Folkets Meninger n8n-pipeline',
   '',
-  'Pending embeddings: ' + pendingChunks,
-  'Saker uten AI-sammendrag: ' + missingSummaries,
-  'System-poll utkast som venter: ' + draftPolls,
+  'pending_v2_total: ' + pendingV2 + (backlog.pending_v2_total_is_estimate ? ' (estimat)' : ''),
+  'oldest_pending_active_age_s: ' + oldestActive,
+  'failed_v2: ' + failedV2,
+  'Sammendrag-kø (summary_queue_depth): ' + missingSummaries,
+  'System-poll utkast: ' + draftPolls,
+  reasons.length ? ('Varselgrunner: ' + reasons.join(', ')) : 'Ingen varselgrunner',
   '',
-  draftPolls ? ('Publiser utkast: https://www.folkets-meninger.no/dashboard/admin/vurder?fane=reels') : null,
+  draftPolls ? 'Publiser utkast: https://www.folkets-meninger.no/dashboard/admin/vurder?fane=reels' : null,
 ].filter(Boolean).join('\\n');
+
 return [{
   json: {
     pendingChunks,
     missingSummaries,
     draftPolls,
     firstMissingId,
-    needsCatchup,
     needsSummaryCatchup,
     needsAlert,
     subject,
     text,
+    meta: {
+      pendingChunks,
+      missingSummaries,
+      draftPolls,
+      oldestPendingActiveAgeS: oldestActive,
+      failedV2,
+      pendingV2Total: pendingV2,
+      alertReasons: reasons,
+    },
   },
 }];`,
     },
@@ -165,51 +215,10 @@ return [{
       missingSummaries: 0,
       draftPolls: 0,
       firstMissingId: '',
-      needsCatchup: false,
       needsSummaryCatchup: false,
       needsAlert: false,
     },
   ],
-});
-
-const needsCatchup = ifElse({
-  version: 2.2,
-  config: {
-    name: 'Needs embedding catch-up?',
-    parameters: {
-      looseTypeValidation: true,
-      conditions: {
-        combinator: 'and',
-        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 2 },
-        conditions: [
-          {
-            id: 'catchup',
-            leftValue: expr('{{ $json.needsCatchup }}'),
-            rightValue: true,
-            operator: { type: 'boolean', operation: 'equals' },
-          },
-        ],
-      },
-    },
-  },
-});
-
-const triggerEmbeddings = node({
-  type: 'n8n-nodes-base.httpRequest',
-  version: 4.2,
-  config: {
-    name: 'Catch-up embeddings',
-    onError: 'continueRegularOutput',
-    parameters: {
-      method: 'POST',
-      url: `${FOLKETS_N8N_BASE}/webhook/folkets-document-embeddings`,
-      sendBody: true,
-      specifyBody: 'json',
-      jsonBody: '{}',
-      options: { timeout: 15000 },
-    },
-  },
-  output: [{ ok: true }],
 });
 
 const needsSummaryCatchup = ifElse({
@@ -313,7 +322,7 @@ const notifyAdmin = node({
       sendBody: true,
       specifyBody: 'json',
       jsonBody: expr(
-        '={{ JSON.stringify({ kind: "health", subject: $("Summarize health").item.json.subject, text: $("Summarize health").item.json.text, meta: { pendingChunks: $("Summarize health").item.json.pendingChunks, missingSummaries: $("Summarize health").item.json.missingSummaries, draftPolls: $("Summarize health").item.json.draftPolls } }) }}',
+        '={{ JSON.stringify({ kind: "health", subject: $("Summarize health").item.json.subject, text: $("Summarize health").item.json.text, meta: $("Summarize health").item.json.meta }) }}',
       ),
       options: { timeout: 30000 },
     },
@@ -342,20 +351,15 @@ const logHealthy = node({
 const inWorkflowError = createInWorkflowErrorNotify('folkets-pipeline-health');
 
 sticky(
-  '## Pipeline-helse\n\nDaglig 08:00 + webhook. Catch-up av embeddings og varsel ved stor kø. Fyll inn cronSecret. Error Trigger POSTer til /api/ops/n8n-notify.',
+  '## Pipeline-helse\n\nDaglig 08:00 + webhook. Leser `n8n_pipeline_health` og `n8n_embedding_backlog_health` (ingen global embedding catch-up). Varsler ved endrede grunner eller etter 24t. Fyll inn cronSecret.',
   [scheduleTrigger, webhookTrigger],
   { color: 3 },
 );
 
-const alertPath = needsAlert.onTrue(notifyAdmin).onFalse(logHealthy);
+const alertPath = needsAlert.onTrue(notifySettings.to(notifyAdmin)).onFalse(logHealthy);
 const summaryCatchupPath = needsSummaryCatchup.onTrue(triggerSummaries.to(alertPath)).onFalse(alertPath);
 
-const healthBody = fetchPendingChunks
-  .to(fetchPipelineHealth)
-  .to(fetchDraftPolls)
-  .to(summarizeHealth)
-  .to(notifySettings)
-  .to(needsCatchup.onTrue(triggerEmbeddings.to(summaryCatchupPath)).onFalse(summaryCatchupPath));
+const healthBody = fetchPipelineHealth.to(fetchEmbeddingBacklogHealth).to(summarizeHealth).to(summaryCatchupPath);
 
 export default workflow(
   'folkets-pipeline-health',

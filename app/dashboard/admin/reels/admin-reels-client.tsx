@@ -222,8 +222,12 @@ export default function AdminReelsClient({
         setError(typeof data.error === 'string' ? data.error : 'Kunne ikke starte catch-up');
         return;
       }
-      const triggered = data.triggered as { embeddings?: boolean; health?: boolean } | undefined;
-      if (triggered?.embeddings || triggered?.health) {
+      const triggered = data.triggered as
+        | { embeddings?: boolean; embeddingsConfigured?: boolean; health?: boolean }
+        | undefined;
+      const catchupAvailable =
+        Boolean(triggered?.embeddingsConfigured) || Boolean(triggered?.health);
+      if (catchupAvailable) {
         setCatchupMessage('Catch-up er startet. Køene oppdateres i bakgrunnen.');
       } else {
         setCatchupMessage('Automatisk oppfrisking er ikke tilgjengelig i dette miljøet.');

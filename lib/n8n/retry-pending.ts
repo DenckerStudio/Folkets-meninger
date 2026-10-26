@@ -1,5 +1,7 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { triggerAiSummaryWebhook } from '@/lib/trigger-ai-summary-webhook';
+import { isLegacyEmbeddingsRetryEnabled } from '@/lib/n8n/legacy-embeddings-retry';
+import { listPendingLegacyEmbeddingIssueIds } from '@/lib/n8n/legacy-embedding-pending-issues';
 import { triggerDocumentEmbeddingsWebhook } from '@/lib/trigger-document-embeddings-webhook';
 import { triggerSystemPollDraftWebhook } from '@/lib/trigger-system-poll-draft-webhook';
 
@@ -105,23 +107,11 @@ export async function retryPendingN8nJobs(): Promise<N8nRetryResult> {
     result.aiSummariesQueued += 1;
   }
 
-  const { data: pendingChunks, error: chunkError } = await service
-    .from('document_chunks')
-    .select('issue_id')
-    .eq('embedding_status', 'pending')
-    .limit(20);
-
-  if (chunkError) {
-    console.warn('[n8n-retry] Could not list pending chunks:', chunkError.message);
-  } else {
-    const issueIds = new Set(
-      (pendingChunks ?? [])
-        .map((row) => (typeof row.issue_id === 'string' ? row.issue_id : null))
-        .filter((id): id is string => Boolean(id)),
-    );
-    result.embeddingsPendingIssues = issueIds.size;
-    if (issueIds.size > 0) {
-      const firstIssueId = issueIds.values().next().value;
+  if (isLegacyEmbeddingsRetryEnabled()) {
+    const issueIds = await listPendingLegacyEmbeddingIssueIds(service, 50);
+    result.embeddingsPendingIssues = issueIds.length;
+    const firstIssueId = issueIds[0];
+    if (firstIssueId) {
       result.embeddingsQueued = true;
       triggerDocumentEmbeddingsWebhook(firstIssueId);
     }

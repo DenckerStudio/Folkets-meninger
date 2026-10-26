@@ -10,7 +10,12 @@ import {
   expr,
   ifElse,
 } from '@n8n/workflow-sdk';
-import { FOLKETS_SUPABASE_CRED, FOLKETS_SUPABASE_REST, rpcUrl } from './n8n-supabase.shared';
+import {
+  FOLKETS_AI_SUMMARY_WEBHOOK_HEADER_CRED,
+  FOLKETS_SUPABASE_CRED,
+  FOLKETS_SUPABASE_REST,
+  rpcUrl,
+} from './n8n-supabase.shared';
 import { createInWorkflowErrorNotify } from './in-workflow-error-notify';
 import {
   ATTACH_EXTRA_CONTEXT_SCHEDULE_JS,
@@ -474,13 +479,15 @@ const webhookTrigger = trigger({
   version: 2.1,
   config: {
     name: 'Webhook new issue',
+    credentials: { httpHeaderAuth: newCredential(FOLKETS_AI_SUMMARY_WEBHOOK_HEADER_CRED) },
     parameters: {
       httpMethod: 'POST',
       path: 'folkets-ai-summary',
       responseMode: 'onReceived',
+      authentication: 'headerAuth',
       options: { responseCode: { values: { responseCode: 'customCode', customCode: 202 } }, responseData: '{"ok":true,"queued":true}' },
-      // Header Auth (X-FM-Webhook-Token) på denne noden er bevisst IKKE aktivert i repo ennå.
-      // Se utrulling steg 4 i workflows/n8n/README.md (etter fm-web har N8N_AI_SUMMARY_WEBHOOK_TOKEN + deploy).
+      // Krever n8n-credential «FM AI Summary Webhook Token» (X-FM-Webhook-Token), samme verdi som fm-web
+      // N8N_AI_SUMMARY_WEBHOOK_TOKEN. Sett env og redeploy fm-web FØR workflow publiseres/aktiveres — ellers 401.
     },
   },
   output: [{ body: { stortinget_issue_id: '200329' } }],
