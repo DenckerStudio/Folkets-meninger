@@ -12,6 +12,9 @@ assert.match(src, /Date\.parse\(issue\.ai_summary_requested_at\)/);
 assert.match(src, /ai_summary_requested_at: requestedNow/);
 assert.doesNotMatch(src, /\.from\('issue_ai_summaries'\)\.select\('stortinget_issue_id'\)\s*;/);
 assert.match(src, /isLegacyEmbeddingsRetryEnabled/);
-assert.match(src, /N8N_RETRY_LEGACY_EMBEDDINGS/);
+assert.match(
+  readFileSync(join(process.cwd(), 'lib/n8n/legacy-embeddings-retry.ts'), 'utf8'),
+  /N8N_RETRY_LEGACY_EMBEDDINGS/,
+);
 
 console.log('retry-pending.test.ts: ok');
