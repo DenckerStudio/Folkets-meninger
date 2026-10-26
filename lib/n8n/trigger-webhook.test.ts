@@ -41,6 +41,21 @@ async function run(): Promise<void> {
     assert.equal(calls[0]?.init?.method, 'POST');
     const headers = calls[0]?.init?.headers as Record<string, string> | undefined;
     assert.equal(headers?.['Content-Type'], 'application/json');
+    assert.equal(headers?.['X-FM-Webhook-Token'], undefined, 'no token header by default');
+
+    calls.length = 0;
+    const secretToken = 'test-ai-summary-token-do-not-log';
+    const withToken = await postN8nWebhook(
+      'https://n8n.example/webhook',
+      { id: '1' },
+      'ai-summary',
+      200,
+      1,
+      secretToken,
+    );
+    assert.equal(withToken, true);
+    const tokenHeaders = calls[0]?.init?.headers as Record<string, string> | undefined;
+    assert.equal(tokenHeaders?.['X-FM-Webhook-Token'], secretToken);
 
     calls.length = 0;
     failCount = 2;
@@ -51,8 +66,31 @@ async function run(): Promise<void> {
       200,
       2,
     );
-    assert.equal(exhausted, false, 'returns false after retries');
-    assert.equal(calls.length, 2, 'exhausted both attempts');
+    const logLines: string[] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => {
+      logLines.push(args.map((a) => String(a)).join(' '));
+    };
+    try {
+      assert.equal(exhausted, false, 'returns false after retries');
+      assert.equal(calls.length, 2, 'exhausted both attempts');
+
+      calls.length = 0;
+      failCount = 0;
+      globalThis.fetch = (async () => new Response('', { status: 500 })) as typeof fetch;
+      await postN8nWebhook(
+        'https://n8n.example/webhook',
+        {},
+        'ai-summary',
+        200,
+        1,
+        secretToken,
+      );
+      const combinedLogs = logLines.join('\n');
+      assert.doesNotMatch(combinedLogs, /test-ai-summary-token-do-not-log/);
+    } finally {
+      console.warn = originalWarn;
+    }
   } finally {
     globalThis.fetch = originalFetch;
   }

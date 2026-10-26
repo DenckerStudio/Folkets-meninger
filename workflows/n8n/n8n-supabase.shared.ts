@@ -8,6 +8,9 @@ export const FOLKETS_APP_BASE = 'https://www.folkets-meninger.no';
 
 export const FOLKETS_N8N_BASE = 'https://n8n.heyklever.app';
 
+/** n8n Header Auth (header name X-FM-Webhook-Token) for POST folkets-ai-summary. */
+export const FOLKETS_AI_SUMMARY_WEBHOOK_HEADER_CRED = 'FM AI Summary Webhook Token';
+
 /** Placeholder only — live n8n keeps the real Ollama embeddings URL in the workflow node. */
 export const FOLKETS_OLLAMA_EMBEDDINGS_URL = 'http://127.0.0.1:11434/api/embeddings';
 

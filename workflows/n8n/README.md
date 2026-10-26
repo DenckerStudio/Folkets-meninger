@@ -88,9 +88,18 @@ n8n blokkerer `$env` i noder — ikke bruk `$env` for app-URL her.
 
 ```bash
 N8N_AI_SUMMARY_WEBHOOK_URL=https://n8n.heyklever.app/webhook/folkets-ai-summary
+# Valgfritt til n8n aktiverer Header Auth på webhooken (samme mønster som Research):
+N8N_AI_SUMMARY_WEBHOOK_TOKEN=
 ```
 
-`lib/trigger-ai-summary-webhook.ts` kalles når sak synkes uten sammendrag, og fra `GET /api/sak/[id]/ai-summary` mens rad mangler.
+| Variabel | Beskrivelse |
+|----------|-------------|
+| `N8N_AI_SUMMARY_WEBHOOK_URL` | Full webhook-URL til `folkets-ai-summary` |
+| `N8N_AI_SUMMARY_WEBHOOK_TOKEN` | Egen statisk token for header `X-FM-Webhook-Token` — ikke logg. Uten verdi sender fm-web ingen ekstra header (bakoverkompatibel). Se også [`docs/n8n/research-webhook-contract.md`](../../docs/n8n/research-webhook-contract.md) (`N8N_RESEARCH_WEBHOOK_TOKEN`). |
+
+`lib/trigger-ai-summary-webhook.ts` kalles når sak synkes uten sammendrag, og fra `GET /api/sak/[id]/ai-summary` mens rad mangler. Cron `n8n-retry` bruker samme path via `lib/n8n/retry-pending.ts`.
+
+**n8n (interne HTTP-noder):** `pipeline-health.workflow.ts` og `document-embeddings.workflow.ts` bruker Header Auth-credential «FM AI Summary Webhook Token» (`X-FM-Webhook-Token`) mot `folkets-ai-summary` — ikke `$env` i Code-noder.
 
 ## Triggere
 
@@ -106,6 +115,7 @@ Tom kø / manglende sak-id avbrytes **før** Ollama. `n8n_upsert_issue_ai_summar
 ```bash
 curl -X POST "$N8N_AI_SUMMARY_WEBHOOK_URL" \
   -H "Content-Type: application/json" \
+  ${N8N_AI_SUMMARY_WEBHOOK_TOKEN:+-H "X-FM-Webhook-Token: $N8N_AI_SUMMARY_WEBHOOK_TOKEN"} \
   -d '{"stortinget_issue_id":"200329"}'
 ```
 

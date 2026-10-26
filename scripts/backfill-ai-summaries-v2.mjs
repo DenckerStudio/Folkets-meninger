@@ -6,6 +6,7 @@
  * - NEXT_PUBLIC_SUPABASE_URL
  * - SUPABASE_SERVICE_ROLE_KEY
  * - N8N_AI_SUMMARY_WEBHOOK_URL
+ * - N8N_AI_SUMMARY_WEBHOOK_TOKEN (optional; X-FM-Webhook-Token when set)
  *
  * Usage:
  *   node scripts/backfill-ai-summaries-v2.mjs [--limit=20] [--delay-ms=8000]
@@ -65,10 +66,19 @@ async function supabaseFetch(table, query) {
   return res.json();
 }
 
-async function triggerWebhook(issueId, webhookUrl) {
+function webhookHeaders(webhookToken) {
+  const headers = { 'Content-Type': 'application/json' };
+  const token = webhookToken?.trim();
+  if (token) {
+    headers['X-FM-Webhook-Token'] = token;
+  }
+  return headers;
+}
+
+async function triggerWebhook(issueId, webhookUrl, webhookToken) {
   const res = await fetch(webhookUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: webhookHeaders(webhookToken),
     body: JSON.stringify({ stortinget_issue_id: issueId }),
   });
   if (!res.ok) {
@@ -88,6 +98,7 @@ async function main() {
   if (!webhookUrl) {
     throw new Error('Missing N8N_AI_SUMMARY_WEBHOOK_URL');
   }
+  const webhookToken = process.env.N8N_AI_SUMMARY_WEBHOOK_TOKEN;
 
   const select = 'stortinget_issue_id,labels,narrative,updated_at';
   const order = 'order=updated_at.asc';
@@ -106,7 +117,7 @@ async function main() {
   for (let i = 0; i < batch.length; i += 1) {
     const issueId = String(batch[i].stortinget_issue_id);
     console.log(`[${i + 1}/${batch.length}] Trigger ${issueId}`);
-    await triggerWebhook(issueId, webhookUrl);
+    await triggerWebhook(issueId, webhookUrl, webhookToken);
     if (i < batch.length - 1) {
       await sleep(delayMs);
     }
