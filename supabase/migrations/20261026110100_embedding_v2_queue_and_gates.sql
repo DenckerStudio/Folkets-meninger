@@ -1,3 +1,4 @@
+-- TRANSACTIONAL (BEGIN/COMMIT). Apply order: see EMBEDDING_V2_QUEUE_APPLY.md (step 1 of 4).
 -- v2 embedding queue RPCs, health, DB pressure probe, and P6/P7 gates.
 -- Tier predicates (documented):
 --   Tier 0: issue has pending v2 chunks AND (
