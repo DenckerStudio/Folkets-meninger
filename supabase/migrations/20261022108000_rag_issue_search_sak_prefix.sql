@@ -12,6 +12,9 @@ AS $$
   SELECT replace(replace(replace(coalesce($1, ''), E'\\', E'\\\\'), '%', E'\\%'), '_', E'\\_')
 $$;
 
+REVOKE ALL ON FUNCTION public.fm_escape_ilike(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fm_escape_ilike(text) TO service_role;
+
 DROP FUNCTION IF EXISTS public.search_issues_fts(text, int);
 DROP FUNCTION IF EXISTS public.search_issues_fts(text, text[], int);
 
