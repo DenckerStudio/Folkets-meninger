@@ -4,11 +4,7 @@ BEGIN;
 CREATE SCHEMA IF NOT EXISTS extensions;
 CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA extensions;
 
-CREATE INDEX IF NOT EXISTS stortinget_issues_title_trgm_idx
-  ON public.stortinget_issues USING gin (title gin_trgm_ops);
-
-CREATE INDEX IF NOT EXISTS document_chunks_content_trgm_idx
-  ON public.document_chunks USING gin (content gin_trgm_ops);
+-- GIN (pg_trgm): 20261022109300 / 20261022109400 (CONCURRENTLY)
 
 DROP FUNCTION IF EXISTS public.search_chunks_hybrid(
   text,

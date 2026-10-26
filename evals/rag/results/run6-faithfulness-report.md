@@ -28,3 +28,9 @@ npm run eval:rag:run6
 ```
 
 Prior independent-judge baseline on the same stack (run4b @ klever, 24 tema rows): faithfulness **0.917** with `qwen3.5:4b-q4_K_M` before `grounded-answer-v2` and citation cap. Run6 adds stricter combined scoring; re-judge after v2 prompts is expected to clear **0.85** on `faithfulnessCombinedMean`.
+
+## Production apply (Coolify)
+
+Prod today: **no #185 objects**; `vector` 0.8.0 in `public`; `pg_trgm` / `unaccent` available but **not installed**; `document_chunks` ~380k rows; `stortinget_issues` without `tsv`.
+
+**Runbook:** `supabase/migrations/RAG_PROD_APPLY_RUNBOOK.md` — transactional chain `20261022100000`–`080000`, extensions in `20261022105000` / `20261022106000`, then **six** `CREATE INDEX CONCURRENTLY` files `20261022109000`–`095000` (one statement each, **outside transaction**). `embedding_v2` backfill via n8n batches, not a single migration transaction.

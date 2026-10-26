@@ -9,13 +9,12 @@ SET lock_timeout = '5s';
 -- Full-text search columns (Norwegian)
 -- -----------------------------------------------------------------------------
 
+-- document_chunks.tsv: GENERATED STORED rewrites ~380k rows (ACCESS EXCLUSIVE). Apply in a
+-- maintenance window; GIN/HNSW indexes are in 20261022109* (CONCURRENTLY, no transaction).
 ALTER TABLE public.document_chunks
   ADD COLUMN IF NOT EXISTS tsv tsvector GENERATED ALWAYS AS (
     to_tsvector('norwegian', coalesce(content, ''))
   ) STORED;
-
-CREATE INDEX IF NOT EXISTS document_chunks_tsv_gin_idx
-  ON public.document_chunks USING gin (tsv);
 
 ALTER TABLE public.stortinget_issues
   ADD COLUMN IF NOT EXISTS tsv tsvector GENERATED ALWAYS AS (
@@ -23,9 +22,6 @@ ALTER TABLE public.stortinget_issues
     || setweight(to_tsvector('norwegian', coalesce(henvisning, '')), 'A')
     || setweight(to_tsvector('norwegian', coalesce(summary, '')), 'B')
   ) STORED;
-
-CREATE INDEX IF NOT EXISTS stortinget_issues_tsv_gin_idx
-  ON public.stortinget_issues USING gin (tsv);
 
 -- -----------------------------------------------------------------------------
 -- P6 prep: parallel embedding store (bge-m3 / 1024-dim)
@@ -35,11 +31,7 @@ ALTER TABLE public.document_chunks
   ADD COLUMN IF NOT EXISTS embedding_v2 vector(1024),
   ADD COLUMN IF NOT EXISTS embedding_model text;
 
-CREATE INDEX IF NOT EXISTS document_chunks_embedding_v2_hnsw_idx
-  ON public.document_chunks
-  USING hnsw (embedding_v2 vector_cosine_ops)
-  WITH (m = 16, ef_construction = 64)
-  WHERE embedding_v2 IS NOT NULL;
+-- HNSW on embedding_v2: 20261022109200_rag_index_document_chunks_embedding_v2_hnsw_concurrent.sql
 
 -- -----------------------------------------------------------------------------
 -- Issue search (FTS) — replaces ilike saksøk in chat

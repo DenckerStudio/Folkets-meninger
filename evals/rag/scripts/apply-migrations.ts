@@ -8,6 +8,12 @@ const STACK_MIGRATIONS = [
   '20261022101000_document_chunk_metadata_content_hash.sql',
   '20261022102000_stortinget_hearings.sql',
   '20261022103000_docling_ingest_and_embedding_v2_rpcs.sql',
+  '20261022109000_rag_index_document_chunks_tsv_gin_concurrent.sql',
+  '20261022109100_rag_index_stortinget_issues_tsv_gin_concurrent.sql',
+  '20261022109200_rag_index_document_chunks_embedding_v2_hnsw_concurrent.sql',
+  '20261022109300_rag_index_document_chunks_content_trgm_concurrent.sql',
+  '20261022109400_rag_index_stortinget_issues_title_trgm_concurrent.sql',
+  '20261022109500_rag_index_document_chunks_metadata_hash_concurrent.sql',
 ];
 
 const IMPROVEMENT_MIGRATIONS = [

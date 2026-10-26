@@ -21,6 +21,7 @@ $$;
 REVOKE ALL ON FUNCTION public.fm_unaccent(text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.fm_unaccent(text) TO authenticated, service_role;
 
+-- Drop non-concurrent GIN if a partial apply created it; concurrent rebuild in 20261022109100.
 DROP INDEX IF EXISTS public.stortinget_issues_tsv_gin_idx;
 
 ALTER TABLE public.stortinget_issues
@@ -34,8 +35,7 @@ ALTER TABLE public.stortinget_issues
     || setweight(to_tsvector('norwegian', coalesce(public.fm_unaccent(summary), '')), 'B')
   ) STORED;
 
-CREATE INDEX IF NOT EXISTS stortinget_issues_tsv_gin_idx
-  ON public.stortinget_issues USING gin (tsv);
+-- GIN on stortinget_issues.tsv: 20261022109100 (CONCURRENTLY; ~480 rows, fast)
 
 -- Re-apply issue search so q.tsq uses unaccent on websearch + prefix operands.
 DROP FUNCTION IF EXISTS public.search_issues_fts(text, int);

@@ -94,4 +94,4 @@ Improvement rounds table: `npm run eval:rag:rounds` → `evals/rag/results/impro
 
 ## Schema note
 
-Full Supabase migrations are not applied locally (auth roles). `evals/rag/sql/baseline.sql` plus stack migrations `20261022100000`–`20261022108000` mirror production RAG RPCs.
+Full Supabase migrations are not applied locally (auth roles). `evals/rag/sql/baseline.sql` plus stack migrations `20261022100000`–`20261022108000` and concurrent index files `20261022109000`–`20261022109500` mirror production RAG RPCs. Prod apply order: `supabase/migrations/RAG_PROD_APPLY_RUNBOOK.md`.
