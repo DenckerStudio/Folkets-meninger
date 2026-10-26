@@ -19,8 +19,11 @@ Før PR **#185** merges til `main`, Coolify Expert må sette på **fm-web** (kun
 | `EMBED_QUERY_URL` | `http://192.168.50.154:11435` | Påkrevd for hybrid vektor-søk (bge-m3). |
 | `RERANKER_URL` | `http://192.168.50.154:11434` | Påkrevd **kun** når rerank er på (se under). |
 | `RAG_RERANKER_ENABLED` | `1` eller utelat | **Standard av** (variabel utelatt / ikke `1`/`true`). Uten `1` brukes ikke cross-encoder rerank selv om `RERANKER_URL` er satt. Sett `1` når Ollama rerank skal brukes. |
+| `N8N_AI_SUMMARY_WEBHOOK_TOKEN` | Egen hemmelig token | Samme verdi som n8n Header Auth **«FM AI Summary Webhook Token»** på `folkets-ai-summary`. |
 
 Uten `EMBED_QUERY_URL` / (ved rerank på) `RERANKER_URL` logger fm-web én gang per prosess og kjører hybrid uten sentral embed eller uten rerank — **ikke** `localhost` eller offentlig URL.
+
+Uten `N8N_AI_SUMMARY_WEBHOOK_TOKEN` på fm-web **før** `ai-summary-backfill` / `pipeline-health` publiseres eller aktiveres, får webhook-kall **401** (workflow-kilden krever `headerAuth`).
 
 Etter env er på plass: fortsett med SQL phase A/B nedenfor, deretter merge.
 
@@ -108,7 +111,7 @@ Measured on a **copy** (`rag-eval-pg`) on the same host (**klever**), PostgreSQL
 
 | Work | How | Locking |
 | --- | --- | --- |
-| **`embedding_v2` (bge-m3 / 1024)** | n8n → `n8n_list_pending_embedding_v2` / `n8n_save_document_embedding_v2` | Row-level updates; batches via pipeline (after phase B) |
+| **`embedding_v2` (bge-m3 / 1024)** | Coolify one-off `scripts/backfill-embedding-v2.ts` → `n8n_claim_chunks_missing_v2` + `save_embeddings_v2` (with worker lease); health `n8n_embedding_backlog_health` | Row-level updates; after **#185** phase B + **[`EMBEDDING_V2_QUEUE_APPLY.md`](./EMBEDDING_V2_QUEUE_APPLY.md)** (`26110100`–`26110300`, then `26110000` index) |
 | **`tsv` on chunks** | **GENERATED** after `22100000` — no separate SQL backfill | One-time heap rewrite on column add |
 | **Legacy `embedding` (768)** | Unchanged | — |
 
@@ -264,6 +267,17 @@ WHERE n.nspname = 'public'
 -- Sample FTS (service_role session / direct SQL as postgres)
 SELECT id, title FROM search_issues_fts('statsbudsjett', NULL, 3);
 ```
+
+## Phase D — v2 embedding queue (PR #207)
+
+Apply **after** phase B indexes are valid. **Use [`EMBEDDING_V2_QUEUE_APPLY.md`](./EMBEDDING_V2_QUEUE_APPLY.md) as the only apply checklist** (session GUCs, n8n pause, verification, rollbacks). Fixed order:
+
+1. `20261026110100_embedding_v2_queue_and_gates.sql` — transactional (`BEGIN`/`COMMIT`; one `psql -f` per file).
+2. `20261026110200_embedding_backlog_health_perf.sql` — transactional.
+3. `20261026110300_embedding_v2_chunk_leases.sql` — transactional (lease columns + `n8n_claim_chunks_missing_v2`; required for backfill #206).
+4. `20261026110000_document_chunks_v2_pending_issue_idx_concurrent.sql` — **never inside** `BEGIN`/`COMMIT`; phase B GUCs (`statement_timeout = 0`, `maintenance_work_mem`, `max_parallel_maintenance_workers = 0`); invalid-index check after apply; rollback `DROP INDEX CONCURRENTLY IF EXISTS public.document_chunks_v2_pending_issue_idx;` then re-run step 4.
+
+Then start `scripts/backfill-embedding-v2.ts` (README § embedding_v2 backfill).
 
 ## CI / prod-like test
 

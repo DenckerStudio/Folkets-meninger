@@ -33,13 +33,28 @@ for (const file of productionFlows) {
 
 const pipelineHealth = readWorkflow('pipeline-health.workflow.ts');
 assert.doesNotMatch(pipelineHealth, /n8n_list_issues_missing_ai_summary/);
+assert.doesNotMatch(pipelineHealth, /n8n_list_pending_document_chunks/);
+assert.doesNotMatch(pipelineHealth, /Catch-up embeddings/);
 assert.match(pipelineHealth, /n8n_pipeline_health/);
+assert.match(pipelineHealth, /n8n_embedding_backlog_health/);
+assert.match(pipelineHealth, /\$getWorkflowStaticData/);
 assert.match(pipelineHealth, /httpHeaderAuth/);
 assert.match(pipelineHealth, /FOLKETS_AI_SUMMARY_WEBHOOK_HEADER_CRED/);
+assert.match(pipelineHealth, /genericAuthType: 'httpHeaderAuth'/);
 
-const docEmbeddings = readWorkflow('document-embeddings.workflow.ts');
-assert.match(docEmbeddings, /httpHeaderAuth/);
-assert.match(docEmbeddings, /folkets-ai-summary/);
+assert.match(aiSummary, /FOLKETS_AI_SUMMARY_WEBHOOK_HEADER_CRED/);
+assert.match(aiSummary, /authentication: 'headerAuth'/);
+assert.match(readWorkflow('n8n-supabase.shared.ts'), /FM AI Summary Webhook Token/);
+
+const docEmb = readWorkflow('document-embeddings.workflow.ts');
+assert.match(docEmb, /guard-has-issue-id/);
+assert.match(docEmb, /Has issue id\?/);
+assert.match(docEmb, /body\?\.stortinget_issue_id/);
+assert.match(docEmb, /\\d\+\$/);
+assert.match(docEmb, /skipped_global_nomic_drain/);
+assert.doesNotMatch(docEmb, /scheduleTrigger/);
+assert.doesNotMatch(docEmb, /Every 60 minutes/);
+assert.doesNotMatch(docEmb, /Trigger AI summary/);
 
 const cron = readWorkflow('app-cron.workflow.ts');
 assert.match(cron, /\/api\/cron\/n8n-retry/);

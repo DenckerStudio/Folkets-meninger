@@ -53,6 +53,9 @@ should_defer() {
   if [[ "$base" == 202610221* ]]; then
     return 0
   fi
+  if [[ "$base" == 202610261* ]]; then
+    return 0
+  fi
   return 1
 }
 
@@ -124,6 +127,19 @@ for f in $(ls -1 supabase/migrations/202610221*.sql | sort); do
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
 done
 
+echo "Phase 5a: embedding v2 queue transactional (26110100–26110300) ..."
+for f in $(ls -1 supabase/migrations/20261026110[1-3]*.sql 2>/dev/null | sort); do
+  echo "  -> $(basename "$f")"
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
+done
+
+echo "Phase 5b: embedding v2 pending partial index (26110000 CONCURRENTLY) ..."
+if [[ -f supabase/migrations/20261026110000_document_chunks_v2_pending_issue_idx_concurrent.sql ]]; then
+  export PGOPTIONS="${PGOPTIONS:--c lock_timeout=30s -c statement_timeout=0 -c maintenance_work_mem=256MB -c max_parallel_maintenance_workers=0}"
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261026110000_document_chunks_v2_pending_issue_idx_concurrent.sql
+  unset PGOPTIONS
+fi
+
 echo "Running security-lockdown-defaults.sql (supabase_admin connection) ..."
 psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-lockdown-defaults.sql
 
@@ -144,6 +160,15 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/content_feedback_rpcs.sql
 
 echo "Running issue_ai_summary_regeneration.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/issue_ai_summary_regeneration.sql
+
+echo "Running embedding_v2_queue_rpcs.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/embedding_v2_queue_rpcs.sql
+
+echo "Running embedding_backlog_health_explain.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/embedding_backlog_health_explain.sql
+
+echo "Running embedding_v2_claim_leases.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/embedding_v2_claim_leases.sql
 
 echo "Running security-guard.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
