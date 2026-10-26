@@ -32,7 +32,7 @@ const API_KEY_PAIR_RE = /\b(?:api[_-]?key|x-api-key)\s*[=:]\s*[^\s&;,]+/gi;
 
 /** Strip URLs with embedded credentials, auth headers, and known secrets. */
 export function redactSensitiveLogText(text: string, secrets: string[] = []): string {
-  let out = redactKnownSecrets(text, secrets);
+  let out = text;
   out = out.replace(URL_WITH_CREDENTIALS_RE, (match) => {
     const at = match.indexOf('@');
     if (at < 0) return match;
@@ -43,7 +43,7 @@ export function redactSensitiveLogText(text: string, secrets: string[] = []): st
   out = out.replace(BEARER_TOKEN_RE, `Bearer ${MASK}`);
   out = out.replace(AUTHORIZATION_HEADER_RE, `Authorization: ${MASK}`);
   out = out.replace(API_KEY_PAIR_RE, (m) => m.replace(/[=:]\s*[^\s&;,]+/, `=${MASK}`));
-  return out;
+  return redactKnownSecrets(out, secrets);
 }
 
 const SENSITIVE_ENV_NAMES = [

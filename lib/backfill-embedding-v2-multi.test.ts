@@ -131,7 +131,9 @@ async function main(): Promise<void> {
   const err = new Error(`Auth failed Bearer ${secret}`);
   logs.push(safeErrorMessage(err, [secret]));
   assert.ok(!logs.join('').includes(secret));
-  assert.ok(logs.join('').includes(maskSecret(secret)));
+  assert.ok(
+    logs.join('').includes(maskSecret(secret)) || logs.join('').includes('Bearer ***'),
+  );
 
   const db = new MockClaimDb();
   db.chunks = [
