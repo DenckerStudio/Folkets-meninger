@@ -13,10 +13,24 @@ function loadSearchIssuesFtsFrom080(): string {
     'supabase/migrations/20261022108000_rag_issue_search_sak_prefix.sql',
   );
   const sql = fs.readFileSync(migrationPath, 'utf8');
-  const start = sql.indexOf('CREATE OR REPLACE FUNCTION public.fm_escape_ilike');
-  const end = sql.indexOf('REVOKE ALL ON FUNCTION public.search_issues_fts');
-  assert.ok(start >= 0 && end > start, 'could not slice search_issues_fts from 080 migration');
-  return sql.slice(start, end);
+  const start = sql.indexOf('DROP FUNCTION IF EXISTS public.search_issues_fts(text, int);');
+  const fnEnd = sql.indexOf('LIMIT GREATEST(coalesce(match_count, 6), 1);', start);
+  assert.ok(start >= 0 && fnEnd > start, 'could not slice search_issues_fts from 080 migration');
+  const fnClose = sql.indexOf('$$;', fnEnd);
+  assert.ok(fnClose > fnEnd, 'search_issues_fts body terminator missing');
+  const escapeFn = `
+CREATE OR REPLACE FUNCTION public.fm_escape_ilike(pattern text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+STRICT
+SET search_path = public, pg_temp
+AS $$
+  SELECT replace(replace(replace(coalesce($1, ''), E'\\\\', E'\\\\\\\\'), '%', E'\\\\%'), '_', E'\\\\_')
+$$;
+`;
+  return `${escapeFn}\n${sql.slice(start, fnClose + 4)}`;
 }
 
 const FM_UNACCENT_STUB = `
