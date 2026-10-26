@@ -83,7 +83,9 @@ export function parseSaksgangEventDate(raw: string | null | undefined): Date | n
 
   const parts = raw.trim().match(/^(\d{2})\.(\d{2})\.(\d{4})/);
   if (parts) {
-    const date = new Date(Number(parts[3]), Number(parts[2]) - 1, Number(parts[1]));
+    const date = new Date(
+      Date.UTC(Number(parts[3]), Number(parts[2]) - 1, Number(parts[1])),
+    );
     return Number.isNaN(date.getTime()) ? null : date;
   }
 

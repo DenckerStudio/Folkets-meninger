@@ -1,0 +1,163 @@
+[
+  {
+    "id": "102956",
+    "sak": {
+      "id": 102956,
+      "korttittel": "Endringer i barnetrygd og kontantstøtte",
+      "kortvedtak": "Forslag om endringer i barnetrygd og kontantstøtteordningene.",
+      "innstillingstekst": "Representantforslag om barnetrygd, kontantstøtte og familiepolitikk. Barnetrygd skal justeres og kontantstøtten vurderes.",
+      "henvisning": "Dokument 8:1 (2024-2025)",
+      "ferdigbehandlet": false
+    },
+    "documents": [
+      {
+        "documentId": "stub:102956",
+        "title": "Representantforslag om barnetrygd",
+        "kind": "representantforslag",
+        "sourceUrl": null,
+        "exportId": null,
+        "body": "Representantforslag om endringer i barnetrygd og kontantstøtte. Barnetrygd er en universell ytelse til foreldre. Kontantstøtte gis når barnet er mellom ett og to år. Familiepolitikk og barnetrygd står sentralt i forslaget."
+      }
+    ]
+  },
+  {
+    "id": "103045",
+    "sak": {
+      "id": 103045,
+      "korttittel": "Representantforslag om arbeidsliv og velferd",
+      "innstillingstekst": "Representantforslag fra stortingsrepresentanter om arbeidsliv.",
+      "henvisning": "Dokument 8:2 (2024-2025)",
+      "ferdigbehandlet": false
+    },
+    "documents": [
+      {
+        "documentId": "stub:103045",
+        "title": "Representantforslag",
+        "kind": "representantforslag",
+        "sourceUrl": null,
+        "exportId": null,
+        "body": "Representantforslag om arbeidsliv. Representantene fremmer forslag om styrking av arbeidsmiljø og representantforslag etter dokument 8-prosedyren."
+      }
+    ]
+  },
+  {
+    "id": "102800",
+    "sak": {
+      "id": 102800,
+      "korttittel": "Klimapolitikk og kutt i klimagassutslipp",
+      "innstillingstekst": "Forslag om klimagassutslipp, utslippskutt og grønn omstilling.",
+      "henvisning": "Prop. 50 L (2024-2025)",
+      "ferdigbehandlet": false
+    },
+    "documents": [
+      {
+        "documentId": "stub:102800",
+        "title": "Klima- og miljøtiltak",
+        "kind": "proposisjon",
+        "sourceUrl": null,
+        "exportId": null,
+        "body": "Klimagassutslipp må reduseres. Klimaendringer krever utslippskutt i alle sektorer. Norge skal nå klimamålene gjennom energiomlegging og kutt i utslipp."
+      }
+    ]
+  },
+  {
+    "id": "103200",
+    "sak": {
+      "id": 103200,
+      "korttittel": "Helsepersonell og bemanning i helsevesenet",
+      "innstillingstekst": "Forslag om helse, helsepersonell og bemanning.",
+      "henvisning": "Innst. 120 S (2024-2025)",
+      "ferdigbehandlet": false
+    },
+    "documents": [
+      {
+        "documentId": "stub:103200",
+        "title": "Helse- og omsorgsdepartementet",
+        "kind": "innstilling",
+        "sourceUrl": null,
+        "exportId": null,
+        "body": "Helsevesenet trenger flere helsepersonell. Bemanning i sykehus og kommunehelsetjenesten er utfordrende. Helsepolitikk og rekruttering av helsepersonell prioriteres."
+      }
+    ]
+  },
+  {
+    "id": "200500",
+    "sak": {
+      "id": 200500,
+      "korttittel": "Statsbudsjettet 2026 og nasjonalbudsjettet",
+      "innstillingstekst": "Innstilling om statsbudsjett og makroøkonomiske rammer.",
+      "henvisning": "Prop. 1 S (2025-2026)",
+      "ferdigbehandlet": false
+    },
+    "documents": [
+      {
+        "documentId": "stub:200500",
+        "title": "Statsbudsjett",
+        "kind": "proposisjon",
+        "sourceUrl": null,
+        "exportId": null,
+        "body": "Statsbudsjettet for 2026. Nasjonalbudsjett og statsbudsjettspørsmål. Makroøkonomi og offentlige utgifter."
+      }
+    ]
+  },
+  {
+    "id": "200501",
+    "sak": {
+      "id": 200501,
+      "korttittel": "Forsvarssektoren og langtidsplan for forsvar",
+      "innstillingstekst": "Forsvarspolitikk og investeringer i forsvar.",
+      "henvisning": "Prop. 2 S (2025-2026)",
+      "ferdigbehandlet": false
+    },
+    "documents": [
+      {
+        "documentId": "stub:200501",
+        "title": "Forsvar",
+        "kind": "proposisjon",
+        "sourceUrl": null,
+        "exportId": null,
+        "body": "Forsvaret og forsvarspolitikk. Langtidsplan for forsvar og forsvarsinvesteringer."
+      }
+    ]
+  },
+  {
+    "id": "200503",
+    "sak": {
+      "id": 200503,
+      "korttittel": "Skatteendringer og avgifter (2024/25)",
+      "innstillingstekst": "Forslag om skatt, avgifter og budsjett for 2024/25.",
+      "henvisning": "Prop. 4 S (2024-2025)",
+      "ferdigbehandlet": false
+    },
+    "documents": [
+      {
+        "documentId": "stub:200503",
+        "title": "Skattevedtak",
+        "kind": "proposisjon",
+        "sourceUrl": null,
+        "exportId": null,
+        "body": "Skatteendringer og avgifter. Skatt på inntekt og formue. Budsjettåret 2024/25 omtales i proposisjonen."
+      }
+    ]
+  },
+  {
+    "id": "200502",
+    "sak": {
+      "id": 200502,
+      "korttittel": "Energiomlegging og kraftmarked",
+      "innstillingstekst": "Energi, energiomlegging og kraftproduksjon.",
+      "henvisning": "Prop. 3 S (2025-2026)",
+      "ferdigbehandlet": false
+    },
+    "documents": [
+      {
+        "documentId": "stub:200502",
+        "title": "Energi",
+        "kind": "proposisjon",
+        "sourceUrl": null,
+        "exportId": null,
+        "body": "Energiomlegging og energipolitikk. Kraftmarked, energi og fornybar energi."
+      }
+    ]
+  }
+]

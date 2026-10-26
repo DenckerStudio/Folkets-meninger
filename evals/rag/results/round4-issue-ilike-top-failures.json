@@ -1,0 +1,123 @@
+{
+  "label": "round4-issue-ilike",
+  "failureCount": 9,
+  "top": [
+    {
+      "id": "sak-103102-vedtak",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.032786883
+    },
+    {
+      "id": "sak-parti-votering-gap",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.016393442
+    },
+    {
+      "id": "sak-ferdigbehandlet",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.031778056
+    },
+    {
+      "id": "sak-referat",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.016393442
+    },
+    {
+      "id": "hearing-frist",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.016393442
+    },
+    {
+      "id": "compound-statsbudsjett",
+      "r5": false,
+      "r10": false,
+      "excerptHit": false,
+      "topRank": 0.016393442
+    },
+    {
+      "id": "issue-prefix-skatt",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [
+        "200417",
+        "200413",
+        "103150",
+        "200362",
+        "200363",
+        "200364",
+        "200365",
+        "200366"
+      ],
+      "titles": [
+        "Endringer i utlendingsloven (overføring av driften av utlendingsinternatet fra politiet til kriminalomsorgen, restriksjoner under oppholdet mv.)",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Representantforslag om å gi stortingsrepresentanter og regjeringsmedlemmer vigselsrett",
+        "Representantforslag om endringer i engangsavgiften for kjøretøy",
+        "Representantforslag om rammebetingelser for entusiastkjøretøy",
+        "Representantforslag om å øke vektgrensen for førerkortklasse B",
+        "Representantforslag om å styrke ytringsfriheten for lærere"
+      ]
+    },
+    {
+      "id": "prefix-as-place",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [
+        "200410",
+        "200413",
+        "200366",
+        "200362",
+        "200363",
+        "200364",
+        "200365",
+        "200385"
+      ],
+      "titles": [
+        "Suppleringsvalg til internasjonale delegasjoner",
+        "Saker som Stortinget ikke har behandlet i sesjonen 2025-2026",
+        "Representantforslag om å styrke ytringsfriheten for lærere",
+        "Representantforslag om å gi stortingsrepresentanter og regjeringsmedlemmer vigselsrett",
+        "Representantforslag om endringer i engangsavgiften for kjøretøy",
+        "Representantforslag om rammebetingelser for entusiastkjøretøy",
+        "Representantforslag om å øke vektgrensen for førerkortklasse B",
+        "Riksrevisjonens undersøkelse av Program Felles IKT-tjenester for departementsfellesskapet"
+      ]
+    },
+    {
+      "id": "year-2024-25-slash",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [
+        "200500",
+        "103150",
+        "103045",
+        "102956",
+        "103200",
+        "102800",
+        "103102",
+        "200365"
+      ],
+      "titles": [
+        "Statsbudsjettet 2026 og nasjonalbudsjettet",
+        "Representantforslag om større utslippskutt fra bruk av biodrivstoff",
+        "Representantforslag om arbeidsliv og velferd",
+        "Endringer i barnetrygd og kontantstøtte",
+        "Helsepersonell og bemanning i helsevesenet",
+        "Klimapolitikk og kutt i klimagassutslipp",
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Representantforslag om å øke vektgrensen for førerkortklasse B"
+      ]
+    }
+  ]
+}

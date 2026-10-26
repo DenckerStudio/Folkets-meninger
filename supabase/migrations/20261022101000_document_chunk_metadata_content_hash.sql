@@ -1,0 +1,2 @@
+-- P7: support ops/backfill when matching chunks to document content_hash in metadata.
+-- B-tree index: 20261022109500_rag_index_document_chunks_metadata_hash_concurrent.sql

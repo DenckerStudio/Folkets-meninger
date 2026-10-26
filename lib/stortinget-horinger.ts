@@ -84,7 +84,7 @@ export function formatStortingetDateTime(raw: string | undefined): string | null
   });
 }
 
-export async function fetchStortingetHoringer(): Promise<StortingetHoring[]> {
+export async function fetchStortingetHoringerLive(): Promise<StortingetHoring[]> {
   const res = await fetch('https://data.stortinget.no/eksport/horinger?format=json', {
     next: { revalidate: 3600 },
   });
@@ -93,8 +93,44 @@ export async function fetchStortingetHoringer(): Promise<StortingetHoring[]> {
   return (data.horinger_liste ?? []) as StortingetHoring[];
 }
 
+const DEFAULT_HEARING_SESSIONS = ['2023-2024', '2024-2025', '2025-2026', '2026-2027'] as const;
+
+export async function fetchStortingetHoringerForSession(sessionId: string): Promise<StortingetHoring[]> {
+  const url = `https://data.stortinget.no/eksport/horinger?sesjonid=${encodeURIComponent(sessionId)}&format=json`;
+  const res = await fetch(url, { next: { revalidate: 3600 }, signal: AbortSignal.timeout(60_000) });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { horinger_liste?: StortingetHoring[] };
+  return data.horinger_liste ?? [];
+}
+
+/** Merge høringer from several sessions (first session wins on duplicate ids). */
+export async function fetchStortingetHoringerForSessions(
+  sessionIds: string[] = [...DEFAULT_HEARING_SESSIONS],
+): Promise<StortingetHoring[]> {
+  const byId = new Map<string, StortingetHoring>();
+  for (const sessionId of sessionIds) {
+    const list = await fetchStortingetHoringerForSession(sessionId);
+    for (const hearing of list) {
+      const id = String(hearing.id);
+      if (!byId.has(id)) byId.set(id, hearing);
+    }
+  }
+  return [...byId.values()];
+}
+
+export async function fetchStortingetHoringer(): Promise<StortingetHoring[]> {
+  // Dynamic import avoids pulling Supabase into unit tests that only need date helpers.
+  const { loadStortingetHearingsFromDb } = await import('@/lib/stortinget-hearing-db');
+  const cached = await loadStortingetHearingsFromDb();
+  if (cached && cached.length > 0) return cached;
+  return fetchStortingetHoringerLive();
+}
+
 export async function fetchStortingetHoringById(id: string): Promise<StortingetHoring | null> {
-  const list = await fetchStortingetHoringer();
+  const { loadStortingetHearingByIdFromDb } = await import('@/lib/stortinget-hearing-db');
+  const cached = await loadStortingetHearingByIdFromDb(id);
+  if (cached) return cached;
+  const list = await fetchStortingetHoringerLive();
   return list.find((h) => String(h.id) === String(id)) ?? null;
 }
 

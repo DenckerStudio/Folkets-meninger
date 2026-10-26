@@ -1,9 +1,12 @@
 name: CI
 
+# pull_request: lint-and-build, test-unit, db-security, migration-sql-lint
+
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   lint-and-build:
@@ -29,8 +32,34 @@ jobs:
           echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" >> "$GITHUB_ENV"
       - run: npm ci --ignore-scripts
       - run: npm run lint
+      - run: npm run typecheck:evals
       - run: npm run test:unit
       - run: npm run build
+
+  test-unit:
+    runs-on: ubuntu-latest
+    env:
+      STORTINGET_SESSION_ID: 2025-2026
+      STORTINGET_PERIODE_ID: 2025-2029
+      NEXT_PUBLIC_STORTINGET_SESSION_ID: 2025-2026
+      NEXT_PUBLIC_STORTINGET_PERIODE_ID: 2025-2029
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Load public test Supabase env
+        run: |
+          test -f .env.test
+          set -a
+          source .env.test
+          set +a
+          echo "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" >> "$GITHUB_ENV"
+      - run: npm ci --ignore-scripts
+      - run: npm run test:unit
 
   db-security:
     runs-on: ubuntu-latest

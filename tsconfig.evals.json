@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["esnext", "dom"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "evals/rag/eval-next.d.ts",
+    "evals/rag/lib/**/*.ts",
+    "evals/rag/judge.ts",
+    "evals/rag/metrics.ts",
+    "evals/rag/export-answers.ts",
+    "evals/rag/export-answers-v2.ts",
+    "evals/rag/run-eval.ts",
+    "evals/rag/run-eval-v2.ts"
+  ],
+  "exclude": ["node_modules", "evals/rag/scripts/**"]
+}

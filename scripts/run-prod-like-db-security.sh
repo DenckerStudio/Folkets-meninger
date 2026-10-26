@@ -50,6 +50,9 @@ should_defer() {
       return 0
     fi
   done
+  if [[ "$base" == 202610221* ]]; then
+    return 0
+  fi
   return 1
 }
 
@@ -112,6 +115,13 @@ echo "Phase 3: defense-in-depth RPC authz (after 120000 binding; must follow 201
 for d in "${POST_DEFER_MIGRATIONS[@]}"; do
   echo "  -> $d"
   psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/$d"
+done
+
+echo "Phase 4: RAG search stack (20261022100000–096000; 09* = CONCURRENTLY, no BEGIN) ..."
+echo "  (prod may ship pg_trgm/unaccent without CREATE EXTENSION — migrations install into extensions schema)"
+for f in $(ls -1 supabase/migrations/202610221*.sql | sort); do
+  echo "  -> $(basename "$f")"
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
 done
 
 echo "Running security-lockdown-defaults.sql (supabase_admin connection) ..."

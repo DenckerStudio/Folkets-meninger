@@ -9,10 +9,12 @@ DECLARE
   allow_auth text[] := ARRAY[
     'get_public_user_displays', 'get_issue_vote_totals', 'get_poll_totals',
     'get_poll_totals_by_fylke', 'match_issue_document_chunks', 'get_prompt_results',
-    'is_admin',
-    'search_stortinget_issues_for_chat', 'search_issue_document_chunks_text'
+    'is_admin'
   ];
   service_only text[] := ARRAY[
+    'search_stortinget_issues_for_chat', 'search_issue_document_chunks_text',
+    'search_issues_fts', 'search_chunks_hybrid', 'search_hearing_document_chunks_text',
+    'fm_unaccent', 'fm_escape_ilike',
     'grant_stemme_plus', 'grant_stemme_plus_by_email', 'revoke_stemme_plus',
     'revoke_stemme_plus_by_email', 'list_stemme_plus_supporters',
     'grant_app_role', 'grant_app_role_by_email', 'revoke_app_role', 'revoke_app_role_by_email',

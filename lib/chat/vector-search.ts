@@ -3,6 +3,7 @@ import { ollamaApiUrl } from '@/lib/byok/ollama';
 import type { DecryptedByokCredential } from '@/lib/byok/service';
 import { createByokPinnedFetch } from '@/lib/byok/pinned-fetch.server';
 import type { ByokOutboundAccess } from '@/lib/byok/url-guard';
+import { normalizeChunkText } from '@/lib/chat/chunk-excerpt';
 
 /**
  * Semantic chunk search for overlay chat.
@@ -22,13 +23,37 @@ import type { ByokOutboundAccess } from '@/lib/byok/url-guard';
 /** Dimensions of `document_chunks.embedding`, i.e. the vectors we must produce. */
 export const VECTOR_DIMENSIONS = 768;
 
+/** Dimensions of `document_chunks.embedding_v2` (bge-m3, P6). */
+export const VECTOR_V2_DIMENSIONS = 1024;
+
 /** Ollama model that produced the stored 768-dim vectors (n8n + Ollama). */
 export const OLLAMA_VECTOR_MODEL = 'nomic-embed-text';
 
-const DEFAULT_TIMEOUT_MS = 8000;
-const MAX_QUERY_CHARS = 500;
-const MAX_CHUNK_CHARS = 1400;
+/** Minimum / legacy BYOK cap (800 ms). Central {@link fetchCentralQueryEmbedding} keeps its own timeout. */
+export const OLLAMA_VECTOR_TIMEOUT_MS = 800;
 
+/** Default BYOK Ollama embed timeout when {@link BYOK_OLLAMA_VECTOR_TIMEOUT_MS} is unset (~3 s). */
+export const BYOK_OLLAMA_VECTOR_TIMEOUT_MS_DEFAULT = 3000;
+
+/**
+ * BYOK-only embed timeout (separate from `EMBED_QUERY_TIMEOUT_MS` / central bge-m3).
+ * Optional adaptive mode adds up to ~50 ms per 40 query chars, capped by max.
+ */
+export function resolveByokOllamaVectorTimeoutMs(queryLength = 0): number {
+  const raw = process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_MS;
+  const configured = raw ? Number(raw) : BYOK_OLLAMA_VECTOR_TIMEOUT_MS_DEFAULT;
+  const maxMs = Number.isFinite(configured) ? configured : BYOK_OLLAMA_VECTOR_TIMEOUT_MS_DEFAULT;
+  const adaptive =
+    process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_ADAPTIVE === '1' ||
+    process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_ADAPTIVE === 'true';
+  if (!adaptive) return maxMs;
+  const minRaw = process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_MS_MIN ?? String(OLLAMA_VECTOR_TIMEOUT_MS);
+  const minMs = Number(minRaw);
+  const floor = Number.isFinite(minMs) ? minMs : OLLAMA_VECTOR_TIMEOUT_MS;
+  const extra = Math.min(maxMs - floor, Math.floor(queryLength / 40) * 50);
+  return Math.min(maxMs, floor + Math.max(0, extra));
+}
+const MAX_QUERY_CHARS = 500;
 export type QueryVectorizer = (query: string) => Promise<number[] | null>;
 
 export type VectorChunk = {
@@ -79,7 +104,6 @@ export function createOllamaVectorizer(
   if (!url) return null;
 
   const model = options.model?.trim() || OLLAMA_VECTOR_MODEL;
-  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const outbound = options.outbound ?? { isAdmin: false };
   const pinnedFetch =
     options.fetchImpl ?? createByokPinnedFetch(outbound, baseUrl);
@@ -87,6 +111,7 @@ export function createOllamaVectorizer(
   return async (query: string) => {
     const prompt = (query ?? '').trim().slice(0, MAX_QUERY_CHARS);
     if (!prompt) return null;
+    const timeoutMs = options.timeoutMs ?? resolveByokOllamaVectorTimeoutMs(prompt.length);
     try {
       const response = await pinnedFetch(url, {
         method: 'POST',
@@ -134,10 +159,7 @@ export async function searchChunksByVector(
 
     return data.flatMap((row) => {
       const record = row as Record<string, unknown>;
-      const content = String(record.content ?? '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, MAX_CHUNK_CHARS);
+      const content = normalizeChunkText(String(record.content ?? ''));
       if (!content) return [];
       return [
         {

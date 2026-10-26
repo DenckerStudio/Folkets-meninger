@@ -1,0 +1,887 @@
+{
+  "dataset": "v2",
+  "split": "dev",
+  "variant": "stack",
+  "seedCounts": {
+    "dataset": "v2",
+    "variant": "stack",
+    "coreIssues": 145,
+    "distractorIssues": 2320,
+    "issues": 2465,
+    "corpusIssues": 2465,
+    "distractorManifestSessions": [
+      "2022-2023",
+      "2023-2024",
+      "2024-2025",
+      "2025-2026",
+      "2026-2027"
+    ],
+    "documents": 2493,
+    "chunks": 3114,
+    "hearings": 28,
+    "excludedHearings": [],
+    "voteringChunks": 446,
+    "fixtureFetchedAt": "2026-10-19T22:13:01.518Z",
+    "seededAt": "2026-10-19T22:38:23.794Z"
+  },
+  "excludedQuestionHearings": [],
+  "skippedQuestions": 0,
+  "totalQuestions": 64,
+  "recallAt5": 0.9411764705882353,
+  "chunkQuestions": 17,
+  "partyHitRate": 0.8,
+  "partyQuestions": 5,
+  "prefixHitRate": 0.875,
+  "finnesIkkeCorrectRejectionRate": 1,
+  "finnesIkkeFullTextHits": [],
+  "finnesIkkeNotes": "finnes_ikke GT checks titles/korttitler only; fullTextMatch flags corpus hits not reflected in title-only GT",
+  "byCategory": {
+    "eksakt_sak": {
+      "n": 9,
+      "rate": 1
+    },
+    "tema": {
+      "n": 10,
+      "rate": 1
+    },
+    "prefiks_delord": {
+      "n": 8,
+      "rate": 0.875
+    },
+    "sammensatte_ord": {
+      "n": 9,
+      "rate": 0.8888888888888888
+    },
+    "voteringer_parti": {
+      "n": 9,
+      "rate": 0.8888888888888888
+    },
+    "horinger": {
+      "n": 8,
+      "rate": 1
+    },
+    "finnes_ikke": {
+      "n": 11,
+      "rate": 1
+    }
+  },
+  "latencyMsP95": 533.5464989999309,
+  "perQuestion": [
+    {
+      "id": "v2-eksakt-sak-002",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "105849",
+        "105053",
+        "91576"
+      ],
+      "titles": [
+        "Valg av medlemmer til Norges Banks representantskap",
+        "Sak behandlet 15. august 2025 i den utvidede utenriks- og forsvarskomité (sak 1: Oljefondets investeringer i israelske selskaper), og innbrakt for Stortinget i medhold av forretningsordenen § 16 sjuende ledd.",
+        "Sak om regjeringens håndtering av krigen i Ukraina"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-004",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "104765",
+        "91947",
+        "96113",
+        "99387",
+        "104762",
+        "108584",
+        "104059",
+        "200471"
+      ],
+      "titles": [
+        "Redegjørelse av justis- og beredskapsministeren om endringene i kriminalitetsbildet",
+        "Representantforslag om å stanse eksport av våpen, forsvarsmateriell og flerbruksvarer til Qatar",
+        "Riksrevisjonens årlige rapport om revisjon - fra statsbudsjett til statsregnskap 2022",
+        "Representantforslag om en nordisk produktivitetskommisjon",
+        "Innstilling fra fullmaktskomiteen om representantenes fullmakter",
+        "Innstilling fra valgkomiteen om endringer i de faste komiteers sammensetning",
+        "Innstilling fra Stortingets godtgjøringsutvalg om å tette inntektsgapet mellom folk og folkevalgte",
+        "Innstilling fra valgkomiteen om valg av medlemmer og varamedlemmer til Nordisk råd"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-005",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "100026",
+        "105053",
+        "91576"
+      ],
+      "titles": [
+        "Grunnlovsforslag fra Carl I. Hagen om endring i § 59 (om høyere sperregrense for utjevningsmandater)",
+        "Sak behandlet 15. august 2025 i den utvidede utenriks- og forsvarskomité (sak 1: Oljefondets investeringer i israelske selskaper), og innbrakt for Stortinget i medhold av forretningsordenen § 16 sjuende ledd.",
+        "Sak om regjeringens håndtering av krigen i Ukraina"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-006",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "105899",
+        "200337",
+        "96762",
+        "200340",
+        "103296",
+        "98499",
+        "200386",
+        "102323"
+      ],
+      "titles": [
+        "Riksrevisjonens undersøkelse av ressursbruk og effektivitet i Politiets sikkerhetstjeneste (PST)",
+        "Riksrevisjonens undersøkelse av myndighetenes arbeid med å sikre effektiv ressursbruk i offentlig sektor",
+        "Riksrevisjonens undersøkelse av Forsvarsdepartementets etterlevelse av krav til levetidskostnader for F-35, og Oppfølging av Dokument 3:11 (2018-2019) Riksrevisjonens undersøkelse av infrastruktur og støttefunksjoner for kampflyvåpenets operative evne",
+        "Riksrevisjonens årsmelding 2025",
+        "Riksrevisjonens årsrapport 2024",
+        "Riksrevisjonens årsrapport 2023",
+        "Riksrevisjonens undersøkelse av Bane NORs eiendomsvirksomhet",
+        "Riksrevisjonens undersøkelse av kapasiteten i strømnettet"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-011",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "104480",
+        "200087",
+        "94072",
+        "89667",
+        "103016",
+        "103138",
+        "98494",
+        "102336"
+      ],
+      "titles": [
+        "Endringer i plan- og bygningsloven (planbestemmelser om borettslag)",
+        "Representantforslag fra stortingsrepresentantene Tom Staahle, Erlend Wiborg, Jon Engen-Helgheim og Himanshu Gulati om en plan- og bygningslov for krig og krise",
+        "Endringer i energiloven og plan- og bygningsloven (vindkraft på land)",
+        "Endringar i plan- og bygningsloven (reglar om handtering av overvatn i byggjesaker mv.)",
+        "Representantforslag om dispensasjoner, innsigelser og forenklinger i plan og bygningsloven for å skape vekst",
+        "Endringer i plan- og bygningsloven og matrikkellova (nye virkemidler ved fortetting og transformasjon, grunneierfinansiering av infrastruktur mv.)",
+        "Endringer i plan- og bygningsloven og åndsverkloven (plikt til innrapportering av grunnundersøkelser og naturfareutredninger til offentlige registre mv.)",
+        "Representantforslag om midlertidig lovhjemmel om unntak i plan- og bygningsloven ved kriser, katastrofer eller andre ekstraordinære situasjoner i fredstid"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-015",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200357",
+        "94385",
+        "200107",
+        "98739",
+        "92791",
+        "100843",
+        "200157",
+        "96060"
+      ],
+      "titles": [
+        "Representantforslag om fleksibel skolestart",
+        "Representantforslag om et mer fleksibelt uføresystem",
+        "Representantforslag fra stortingsrepresentant Geir Pollestad om fleksibel innføring av ny gjødselforskrift",
+        "Representantforslag om å gi flere muligheter til og mer kunnskap om konsekvenser av fleksibel skolestart",
+        "Representantforslag om en fleksibel sykepengeordning for kreftpasienter og andre i lengre behandling",
+        "Representantforslag om et kvalitetsløft i skolen: kortere skoledager, høyere lærerlønninger, mer tid for lærerne til å se elevene og foreldrene, mer fleksibel arbeidstid for lærerne, førskole for seksåringene og flere trykte lærebøker",
+        "Representantforslag fra stortingsrepresentantene Tor André Johnsen, Rune Midtun, På Morten Borgli, Morten Kolbjørnsen, Bjørnar Laabak, May Helen Hetland Ervik og Kristoffer Sivertsen om gjødselbrukforskriften",
+        "Samtykke til godkjenning av EØS-komiteens beslutning nr. 77/2023 av 28. april 2023 om innlemmelse i EØS-avtalen av forordning (EU) 2019/1009 om fastsettelse av regler for tilgjengeliggjøring på markedet av EU-gjødselvarer mv. (gjødselforordningen)"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-018",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "102295",
+        "200329",
+        "105053",
+        "100011",
+        "100024",
+        "100031",
+        "100032",
+        "100181"
+      ],
+      "titles": [
+        "Rapport fra reglementskomiteen om endringer i Stortingets forretningsorden mv.",
+        "Endringer i Stortingets forretningsorden",
+        "Sak behandlet 15. august 2025 i den utvidede utenriks- og forsvarskomité (sak 1: Oljefondets investeringer i israelske selskaper), og innbrakt for Stortinget i medhold av forretningsordenen § 16 sjuende ledd.",
+        "Grunnlovsforslag om endringer i §§ 25 og 26 (om krav om Stortingets samtykke for bruk av norske styrker i utlandet og om konsultasjoner mellom Stortinget og regjeringen i viktige utenriks- og forsvarssaker)",
+        "Grunnlovsforslag om endring i § 112 (om at saker om inngrep i natur av særlig verdi skal behandles av Stortinget)",
+        "Grunnlovsforslag om endring i § 50 og ny bokstav n i § 75 (om at folk kan fremme borgerforslag for behandling i Stortinget)",
+        "Grunnlovsforslag om endring i §§ 25 og 26 (om bruk av forsvarsmakten utenfor rikets grenser og regjeringens plikt til å konsultere Stortinget)",
+        "Valg av nytt medlem til Stortingets delegasjon til Organisasjonen for sikkerhet og samarbeid i Europas (OSSEs) parlamentariske forsamling"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-019",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "105971",
+        "102848"
+      ],
+      "titles": [
+        "Riksrevisjonens undersøkelse av myndighetenes ansvar i forbindelse med Alexander L. Kielland-ulykken",
+        "Representantforslag om erstatning til overlevende og etterlatte etter Alexander L. Kielland-ulykken"
+      ]
+    },
+    {
+      "id": "v2-eksakt-sak-023",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "105209",
+        "98342",
+        "93581",
+        "106384",
+        "94609",
+        "93582",
+        "103178",
+        "103595"
+      ],
+      "titles": [
+        "Samtykke til ratifikasjon av konvensjon om skiping av ein mellomstatleg organisasjon for utvikling og utnytting av digitale havsystem og informasjonstenester (Mercator internasjonale senter for havet) av 23. april 2025",
+        "Helhetlige forvaltningsplaner for de norske havområdene - Barentshavet og havområdene utenfor Lofoten, Norskehavet, og Nordsjøen og Skagerrak",
+        "Grunnrenteskatt på havbruk",
+        "Redegjørelse av fiskeri- og havministeren om ivaretakelse av fiskere i Oslofjorden",
+        "Myndighetenes arbeid med fiskehelse og fiskevelferd i havbruksnæringen",
+        "Grunnrenteskatt på havbruk (lov-delen)",
+        "Fremtidens havbruk - Bærekraftig vekst og mat til verden",
+        "Riksrevisjonens undersøkelse om sikring av havneanlegg for å trygge samfunnssikkerheten"
+      ]
+    },
+    {
+      "id": "v2-tema-031",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-032",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-042",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-045",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-046",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-049",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-050",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-051",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-052",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-tema-053",
+      "category": "tema",
+      "topicExcerptHit": true
+    },
+    {
+      "id": "v2-prefiks-delord-003",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "103814",
+        "95753",
+        "100889",
+        "100927",
+        "102699",
+        "102923",
+        "102978",
+        "102984"
+      ],
+      "titles": [
+        "Riksrevisjonens undersøking om reduksjon av klimagassutslepp frå jordbruket",
+        "Representantforslag om å måle og redusere klimagassutslipp fra forbruk",
+        "Endringer i statsbudsjettet 2024 under Klima- og miljødepartementet",
+        "Endringer i statsbudsjettet 2024 under Klima- og miljødepartementet",
+        "Representantforslag om å oppheve klimasymbolske reguleringer og standardkrav for anleggsbransjen",
+        "Endringer i klimakvoteloven (utvidet virkeområde - nytt klimakvotesystem m.m.)",
+        "Representantforslag om å redusere negative klima- og miljøeffekter av bunntrål og snurrevad i norske farvann",
+        "Representantforslag om en klimaplan som virker, kutter utslipp og gjør det mulig å omstille Norge"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-004",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200101",
+        "100034",
+        "101688",
+        "101689",
+        "101690",
+        "101914",
+        "102087",
+        "102119"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Kristian August Eilertsen, Per-Willy Amundsen og Bård Hoksrud om å sette i gang et forprosjekt for ny innfartsveg til Tromsø",
+        "Grunnlovsforslag om endring i §§ 12, 50 og 61 (om innføring av 16 års stemmerettsalder)",
+        "Representantforslag om tilpasninger i eller reservasjon mot innføring av EUs fremtidige direktiv om blyforbud på skytebaner",
+        "Representantforslag om tilpasninger i eller stans av innføring av EUs avløpsdirektiv",
+        "Representantforslag om tilpasninger i eller stans av innføring av EUs reviderte bygningsenergidirektiv",
+        "Representantforslag om innføring av nullutslippssoner",
+        "Representantforslag om å bedre ofres rettigheter ved vold i nære relasjoner og innføre permanent besøksforbud",
+        "Representantforslag om å innføre en tredje kjønnskategori i pass og identifikasjonsdokumenter"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-008",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "106246",
+        "93846",
+        "96812",
+        "98185",
+        "100219",
+        "100465",
+        "101804",
+        "102073"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Sylvi Listhaug og Erlend Wiborg om en utvisningsreform for kriminelle innvandrere",
+        "Endringer i utlendingsloven (utvisning av hensyn til grunnleggende nasjonale interesser og frister ved frihetsberøvelse av mindreårige)",
+        "Endringer i utlendingsloven (utvisning på grunn av omgåelsesekteskap)",
+        "Representantforslag om å stille alle utvisningssaker der barn er involvert, i bero",
+        "Representantforslag om å utvide den økonomiske støtten til Ukraina, ut over regjeringens varslede økning, med 100 mrd. kroner fordelt på 2025 og 2026",
+        "Redegjørelse av utviklingsministeren om utviklingspolitikk",
+        "Endringer i opplæringslova og privatskolelova (utvidelse av adgangen til fysisk inngripen)",
+        "Initiativdebatt om utviklingen av politiet (initiativ fra justiskomiteen)"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-012",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200012",
+        "91659",
+        "96004",
+        "100001",
+        "100002",
+        "100008",
+        "100010",
+        "100011"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Guri Melby, Abid Raja og Marit Vea om å midlertidig suspendere den nye modellen for beregning av formuesverdi av bolig",
+        "Endringer i skatteloven (endret formuesverdsetting av akvakulturtillatelser for inntektsåret 2022)",
+        "Skatteetatens arbeid med å avdekke norske skattepliktiges inntekter og formuer i utlandet samt kryptovaluta",
+        "Endringer i statsbudsjettet 2024 under Arbeids- og inkluderingsdepartementet (endringer i permitteringsregelverket for fiskeindustrien)",
+        "Bærekraftig bruk og bevaring av natur - Norsk handlingsplan for naturmangfold",
+        "Grunnlovsforslag om endring i §§ 115 og 26 (om å avklare terskelen for suverenitetsavståelse)",
+        "Grunnlovsforslag om endring i §§ 25, 26 og 75 bokstav g (om forsvarsmakten og utenriksstyret)",
+        "Grunnlovsforslag om endringer i §§ 25 og 26 (om krav om Stortingets samtykke for bruk av norske styrker i utlandet og om konsultasjoner mellom Stortinget og regjeringen i viktige utenriks- og forsvarssaker)"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-013",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200384",
+        "90469",
+        "90471",
+        "91873",
+        "95756",
+        "100678",
+        "101684",
+        "102323"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Kari Sofie Bjørnsen, Amalie Gunnufsen, Haagen Poppe, Mahmoud Farahmand og Aleksander Stokkebø om likere strømpriser og et sterkere forbrukervern",
+        "Representantforslag om ekstraordinære tiltak som følge av strømpriskrisen",
+        "Representantforslag om strakstiltak mot de høye strømprisene og for å øke forsyningssikkerheten",
+        "Representantforslag om konkurransedyktige strømpriser i Norge",
+        "Representantforslag om tiltak mot strømpriskrisen",
+        "Endringer i midlertidig lov om stønad til husholdninger som følge av ekstraordinære strømutgifter",
+        "Representantforslag om sterkere kontroll over strømeksporten",
+        "Riksrevisjonens undersøkelse av kapasiteten i strømnettet"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-015",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [
+        "96906",
+        "103838",
+        "200335",
+        "94543",
+        "99237",
+        "103102",
+        "102934",
+        "89636"
+      ],
+      "titles": [
+        "Endringer i lov om avtalefestet pensjon for medlemmer av Statens pensjonskasse og enkelte andre lover (ny avtalefestet pensjon)",
+        "Regulering av pensjonar i 2025 og inntektstilhøve for pensjonistar",
+        "Regulering av pensjonar i 2026 og inntektstilhøve for pensjonistar",
+        "Regulering av pensjonar i 2023 og inntektstilhøve for pensjonistar",
+        "Regulering av pensjonar i 2024 og inntektstilhøve for pensjonistar",
+        "Endringer i lov om pensjonstrygd for fiskere (lukking av pensjonstrygden)",
+        "Endringer i lov om avtalefestet pensjon for medlemmer av Statens pensjonskasse (kostnadsfordelingsavtale m.m.)",
+        "Representantforslag om å avvikle den urettferdige avkortningen i pensjon for gifte og samboende pensjonister"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-022",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "100305",
+        "105111",
+        "200131",
+        "100890",
+        "103084",
+        "105661",
+        "88977",
+        "91616"
+      ],
+      "titles": [
+        "Samtykke til ratifikasjon av avtale om handel og økonomisk partnerskap mellom EFTA-statene og India av 10. mars 2024",
+        "Valg av medlemmer og varamedlemmer til Stortingets delegasjon til det parlamentariske partnerskapet Asia-Europa (ASEP) og til ASEANs interparlamentariske forsamling (AIPA)",
+        "Samtykke til ratifikasjon av økonomisk partnerskapsavtale av 23. juni 2025 mellom EFTA-statene og Malaysia",
+        "Lov om Statens kommisjon for partnerdrap",
+        "Representantforslag om styrket handel og samarbeid med Europa og andre strategiske partnere",
+        "Representantforslag fra stortingsrepresentantene Tone Wilhelmsen Trøen, Mahmoud Farahmand, Haagen Poppe og Margret Hagerup om å innføre en ordning med rett til informasjon, for å beskytte kvinner mot voldelige partnere",
+        "Representantforslag om bedre forebygging og bekjempelse av partnerdrap",
+        "Representantforslag om reversering av botidskrav og bedre vern mot partnervold"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-025",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "93993",
+        "102293",
+        "200170",
+        "89665",
+        "93630",
+        "98180",
+        "100788",
+        "200317"
+      ],
+      "titles": [
+        "Brev fra Sivilombudet til Stortingets presidentskap om Oppfølging av Dokument 21 (2020-2021) - bevisførsel om opplysning underlagt taushetsplikt hos Sivilombudet, datert 20. april 2023",
+        "Melding for året 2024 fra Sivilombudet",
+        "Melding for året 2025 fra Sivilombudet",
+        "Endringar i lovgjevinga som følgje av innføring av ny kjønnsnøytral tittel på Sivilombodsmannen",
+        "Melding for året 2022 fra Sivilombudet",
+        "Melding for året 2023 fra Sivilombudet",
+        "Endringer i sivilbeskyttelsesloven (sivil arbeidskraftberedskap)",
+        "Riksrevisjonens undersøkelse av Norads kontroll og oppfølging av tilskudd til sivil støtte gjennom Nansen-programmet"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-002",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "105583",
+        "105741",
+        "105582",
+        "105588",
+        "105589",
+        "105595",
+        "102094",
+        "103532"
+      ],
+      "titles": [
+        "Endringar i statsbudsjettet 2025 under Utanriksdepartementet",
+        "Ny saldering av statsbudsjettet 2025",
+        "Endringar i statsbudsjettet 2025 under Samferdselsdepartementet",
+        "Endringar i statsbudsjettet 2025 under Energidepartementet",
+        "Endringar i statsbudsjettet 2025 under Forsvarsdepartementet",
+        "Endringar i statsbudsjettet 2025 under Kunnskapsdepartementet",
+        "Endringer i statsbudsjettet 2025 under Landbruks- og matdepartementet (Jordbruksoppgjøret 2025)",
+        "Endringer i statsbudsjettet 2025 under Landbruks- og matdepartementet (Reindriftsavtalen 2025/2026)"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-003",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200339",
+        "89770",
+        "102973",
+        "105657",
+        "98488"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Kathy Lie, Mirell Høyer-Berntsen og Anne Lise Gjerstad Fredlund om innføring av makspris på egenandeler knyttet til praktisk bistand",
+        "Representantforslag om å sikre ungdom helserettigheter gjennom å utvide egenandelsfritaket",
+        "Representantforslag om makspris på strøm, avgiftskutt og mer rettferdig nettleie",
+        "Representantforslag om å endre forskrift om makspriser for drosjebilkjøring, slik at øvre grense for påslag for rullestol gjelder i alle kommuner",
+        "Endringer i lov 13. desember 1946 nr. 21 om krigspensjonering for militærpersoner og lov 13. desember 1946 nr. 22 om krigspensjonering for hjemmestyrkepersonell og sivilpersoner - (refusjon av egenandeler ved varig innleggelse i institusjon i utlandet)"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-004",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-sammensatte-ord-010",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "105667",
+        "92976"
+      ],
+      "titles": [
+        "Riksrevisjonens undersøkelse av bistand til klimatilpasning i utviklingsland",
+        "Endringer i statsbudsjettet 2023 under Utenriksdepartementet og Forsvarsdepartementet (nytt Nansen-program for Ukraina og ettårig ekstrabevilgning til utviklingsland som er særlig rammet av krigens ringvirkninger)"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-011",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200198",
+        "200097",
+        "93655",
+        "94005"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Sylvi Listhaug, Bård Hoksrud, Dagfinn Henrik Olsen, Frank Edvard Sve, May Helen Hetland Ervik, Mats Henriksen, Bjørnar Laabak og Tom Staahle om å avslutte byvekstavtaler og avvikle nullvekstmålet",
+        "Representantforslag om å stimulere til økt bruk av samkjøring for å nå nullvekstmålet",
+        "Representantforslag om å utvide nullvekstmålet",
+        "Representantforslag om å avvikle nullvekstmålet i veitrafikken"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-016",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "99661",
+        "100029",
+        "200192",
+        "200323",
+        "200360"
+      ],
+      "titles": [
+        "Lov om abort (abortloven)",
+        "Grunnlovsforslag fra Frode Jacobsen, Kari Henriksen, Kirsti Leirtrø, Anette Trettebergstuen, Ingvild Kjerkol og Kamzy Gunaratnam om ny § 103 (om rett til selvbestemt abort)",
+        "Representantforslag om utredning av selvbestemt livsavslutning",
+        "Representantforslag om en handlingsplan for å redusere antall aborter",
+        "Representantforslag fra stortingsrepresentantene Guri Melby, Grunde Almeland og Ane Breivik om å styrke kvinners tilgang på medikamentell abort utenfor sykehus"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-017",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "106367",
+        "200215",
+        "100676",
+        "101836",
+        "102396",
+        "102398",
+        "102769",
+        "102912"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Sylvi Listhaug, Kristian August Eilertsen, Julia Brännström Nordtug, Stig Atle Abrahamsen, Bård Hoksrud, Anne Grethe Hauan og Kristoffer Sivertsen om å sikre pasienter med ALS en reell tilgang til ordningen med godkjenningsfritak for legemidler i tidlig fase",
+        "Representantforslag om justering av terskelverdien for legemidler",
+        "Lov om den europeiske arbeidsmarknadsstyresmakta (ELA-lova) og samtykke til godkjenning av EØS-komiteen si avgjerd nr. 319/2023 om innlemming i EØS-avtala av forordning (EU) 2019/1149",
+        "Samtykke til godkjenning av EØS-komiteens beslutning nr. 145/2024 og nr. 170/2024 om innlemmelse i EØS-avtalen av rettsakter på finansmarkedsområdet",
+        "Samtykke til godkjenning av to beslutninger i EØS-komiteen om innlemmelse i EØS-avtalen av forordning (EU) 2022/2554, direktiv (EU) 2022/2556 og forordning (EU) 2023/1113",
+        "Samtykke til godkjenning av EØS-komiteens beslutning nr. 41/2025 av 20. februar 2025 om innlemmelse i EØS-avtalen av forordning (EU) 2023/1114",
+        "Samtykke til godkjenning av EØS-komiteens beslutning nr. 68/2025 om innlemmelse i EØS-avtalen av direktiv (EU) 2021/2118",
+        "Samtykke til godkjenning av EØS-komiteens beslutning om innlemmelse i EØS-avtalen av forordning og EØS-komiteens beslutning om innlemmelse i EØS-avtalen av forordning om bagatellmessig støtte til tjenester av allmenn økonomisk betydning"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-021",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200123",
+        "104877",
+        "108095",
+        "101169",
+        "103526",
+        "200435",
+        "200450",
+        "96860"
+      ],
+      "titles": [
+        "Representantforslag om avgiftskutt i lys av de høye drivstoffprisene",
+        "Representantforslag fra stortingsrepresentantene Maren Grøthe og Trygve Slagsvold Vedum om å stanse innføringen av ny EU-avgift på drivstoff i Norge",
+        "Meddelelse fra stortingsrepresentant Jørgen H. Kristiansen i Stortingets møte 9. april 2026 om at han trekker tilbake forslag fra Jonas Andersen Sayed, Hans Edvard Askjer og seg selv om avgiftskutt i lys av de høye drivstoffprisene, jf. Dokument 8:189 S (2025-2026)",
+        "Skatter og avgifter 2025",
+        "Endringar i skatte- og avgiftslovgivinga",
+        "Skatte- og avgiftsinntekter 2027",
+        "Skatter og avgifter 2027",
+        "Skatter og avgifter 2024"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-022",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200118",
+        "200016",
+        "200208",
+        "102366",
+        "200056"
+      ],
+      "titles": [
+        "Representantforslag om å gjennomføre ei ekstern evaluering av sjukehusplanar og sjukehusbygging i Noreg",
+        "Representantforslag frå stortingsrepresentantane Kjersti Toppe, Erling Sande og Bent-Joacim Bentzen om å sikre tilfluktsrom på norske sjukehus",
+        "Representantforslag om desentralisering av sjukehustilbodet og sikring av lokalsjukehus med breiddekompetanse i heile landet",
+        "Representantforslag om å styrke den akuttmedisinske beredskapen utanfor sjukehus, inkludert legevakt og ambulanse",
+        "Representantforslag om utvikling av mindre sjukehus, desentralisering av polikliniske tenester og kortare reiseveg for å få helsehjelp"
+      ]
+    },
+    {
+      "id": "v2-voteringer-parti-002",
+      "category": "voteringer_parti",
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-005",
+      "category": "voteringer_parti",
+      "partyHit": true,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-008",
+      "category": "voteringer_parti",
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-010",
+      "category": "voteringer_parti",
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-020",
+      "category": "voteringer_parti",
+      "partyHit": true,
+      "r5": false
+    },
+    {
+      "id": "v2-voteringer-parti-021",
+      "category": "voteringer_parti",
+      "partyHit": false,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-024",
+      "category": "voteringer_parti",
+      "partyHit": true,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-025",
+      "category": "voteringer_parti",
+      "partyHit": true,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-027",
+      "category": "voteringer_parti",
+      "r5": true
+    },
+    {
+      "id": "v2-horinger-001",
+      "category": "horinger",
+      "r5": true
+    },
+    {
+      "id": "v2-horinger-002",
+      "category": "horinger",
+      "r5": true
+    },
+    {
+      "id": "v2-horinger-008",
+      "category": "horinger",
+      "r5": true
+    },
+    {
+      "id": "v2-horinger-014",
+      "category": "horinger",
+      "r5": true
+    },
+    {
+      "id": "v2-horinger-015",
+      "category": "horinger",
+      "r5": true
+    },
+    {
+      "id": "v2-horinger-023",
+      "category": "horinger",
+      "r5": true
+    },
+    {
+      "id": "v2-horinger-025",
+      "category": "horinger",
+      "r5": true
+    },
+    {
+      "id": "v2-horinger-027",
+      "category": "horinger",
+      "r5": true
+    },
+    {
+      "id": "v2-finnes-ikke-002",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": true,
+      "fullTextMatch": true,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-007",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-008",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-013",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-014",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-015",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-016",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-018",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-020",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": true,
+      "fullTextMatch": true,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-022",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-023",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    }
+  ]
+}

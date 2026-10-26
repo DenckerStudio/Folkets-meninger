@@ -218,6 +218,37 @@ infra/               coolify/ (cms.md + historical plan), searxng/
   dates (`/Date(-62135596800000)/`, `01.01.0001`) as missing.
 - Local comments: `POST /api/hearings` → `create_hearing_comment`. Requires public
   first and last name. Comments are not sent to Stortinget.
+- Cached hearings for RAG (migration `20261022102000`): `stortinget_hearings`,
+  `hearing_documents`, `document_chunks.hearing_id` / `hearing_document_id`. n8n sync:
+  `n8n_upsert_stortinget_hearing`, `n8n_*_hearing_document*` RPCs (`service_role` only).
+
+### Document ingest (Docling + embeddings)
+
+- Sak/hearing markdown ingest from n8n Docling: `n8n_upsert_docling_document(p_target,
+  p_doc, p_chunks)` with `p_target` `sak` | `horing`. Writes `content_markdown` on
+  `stortinget_issue_documents` (never `content_full_text`). Rejects empty or all-blank
+  `p_chunks` (`{status:'error'}`) — never deletes chunks without replacements. Omitted
+  doc fields keep existing values (no `Dokument`/`unknown` defaults). `content_hash` must
+  match `documentContentHash` (SHA-256 of markdown after CRLF→LF and trim). Same hash as
+  stored → `{status:'unchanged'}` (legacy `embedding` / `embedding_v2` untouched). On
+  re-ingest, chunk rows keep legacy embeddings until content changes (then re-embed).
+  Hearing chunks: `issue_id` NULL per #178 CHECK; optional sak link in `metadata.issue_id`.
+  Unknown `issue_id` on sak path → `{status:'skipped_no_issue'}`.
+- Chunker id **`md-sections-v1`** in `lib/document-chunking.ts` (~3500 chars, 15% overlap,
+  TOC dropped, `page_start` / `page_end` in metadata).
+- Parallel **bge-m3** store: `document_chunks.embedding_v2 vector(1024)` (migration
+  `20261022100000`). Backfill RPCs (`service_role`): `list_chunks_missing_v2(limit,
+  issue_id?, hearing_id?)`, `save_embeddings_v2(rows, model, force?)` →
+  `{saved, failed, skipped}` — skips rows that already have `embedding_v2` unless
+  `p_force`; bad ids count as `failed` without aborting the batch. Poison rows via
+  `embedding_v2_status` / `embedding_v2_attempts` (skip after 3 failures). A/B eval:
+  `match_document_chunks_v2` (`service_role` only).
+- New Docling chunks keep legacy `embedding_status = 'pending'` until the nomic pipeline
+  or a deliberate cutover; v2 backfill is separate.
+- Legacy nomic `embedding vector(768)` + existing n8n embed workflow stay unchanged until
+  eval flips hybrid RAG to v2.
+- **Follow-up:** documents linked to multiple `issue_id`s still upsert under a single
+  `issue_id` per RPC call (n8n may pass `issue_ids[]` later).
 
 ### Folkets meninger (UGC) and innspill
 

@@ -441,6 +441,21 @@
       }
     },
     {
+      "parameters": {
+        "height": 300,
+        "width": 400,
+        "content": "## Dokument embeddings (RAG)\\n\\nPending chunks → Ollama `nomic-embed-text:v1.5` → pgvector. Chunking skjer i appen (`lib/document-chunking.ts`): ~800–1000 tokens (~3500 tegn), 15 % overlapp, `metadata.section_title`. Re-chunk når `content_hash` endres; deretter webhook eller timeplan.\\n\\nWebhook: `POST /webhook/folkets-document-embeddings` med valgfri `{ \"stortinget_issue_id\": \"…\" }`."
+      },
+      "id": "sticky-note-node",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        80
+      ]
+    },
+    {
       "id": "82976e5d-8d7b-4ee5-a64a-35dcf9cdcef6",
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",

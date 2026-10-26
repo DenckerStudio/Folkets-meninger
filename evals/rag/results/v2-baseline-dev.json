@@ -1,0 +1,589 @@
+{
+  "dataset": "v2",
+  "split": "dev",
+  "variant": "baseline",
+  "seedCounts": {
+    "dataset": "v2",
+    "variant": "stack",
+    "coreIssues": 145,
+    "distractorIssues": 2320,
+    "issues": 2465,
+    "corpusIssues": 2465,
+    "distractorManifestSessions": [
+      "2022-2023",
+      "2023-2024",
+      "2024-2025",
+      "2025-2026",
+      "2026-2027"
+    ],
+    "documents": 2493,
+    "chunks": 3113,
+    "hearings": 28,
+    "excludedHearings": [],
+    "voteringChunks": 445,
+    "fixtureFetchedAt": "2026-10-19T22:43:00.399Z",
+    "seededAt": "2026-10-19T23:08:27.403Z"
+  },
+  "excludedQuestionHearings": [],
+  "skippedQuestions": 0,
+  "totalQuestions": 64,
+  "recallAt5": 0.5294117647058824,
+  "chunkQuestions": 17,
+  "partyHitRate": 0,
+  "partyQuestions": 5,
+  "prefixHitRate": 0.875,
+  "finnesIkkeCorrectRejectionRate": 0.45454545454545453,
+  "finnesIkkeFullTextHits": [],
+  "finnesIkkeNotes": "finnes_ikke GT checks titles/korttitler only; fullTextMatch flags corpus hits not reflected in title-only GT",
+  "byCategory": {
+    "eksakt_sak": {
+      "n": 9,
+      "rate": 0
+    },
+    "tema": {
+      "n": 10,
+      "rate": 0
+    },
+    "prefiks_delord": {
+      "n": 8,
+      "rate": 0.875
+    },
+    "sammensatte_ord": {
+      "n": 9,
+      "rate": 0.1111111111111111
+    },
+    "voteringer_parti": {
+      "n": 9,
+      "rate": 0.4444444444444444
+    },
+    "horinger": {
+      "n": 8,
+      "rate": 0
+    },
+    "finnes_ikke": {
+      "n": 11,
+      "rate": 0.45454545454545453
+    }
+  },
+  "latencyMsP95": 551.9347470000002,
+  "perQuestion": [
+    {
+      "id": "v2-eksakt-sak-002",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-eksakt-sak-004",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-eksakt-sak-005",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-eksakt-sak-006",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-eksakt-sak-011",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-eksakt-sak-015",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-eksakt-sak-018",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-eksakt-sak-019",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-eksakt-sak-023",
+      "category": "eksakt_sak",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-tema-031",
+      "category": "tema",
+      "topicExcerptHit": false
+    },
+    {
+      "id": "v2-tema-032",
+      "category": "tema",
+      "topicExcerptHit": false
+    },
+    {
+      "id": "v2-tema-042",
+      "category": "tema",
+      "topicExcerptHit": false
+    },
+    {
+      "id": "v2-tema-045",
+      "category": "tema",
+      "topicExcerptHit": false
+    },
+    {
+      "id": "v2-tema-046",
+      "category": "tema",
+      "topicExcerptHit": false
+    },
+    {
+      "id": "v2-tema-049",
+      "category": "tema",
+      "topicExcerptHit": false
+    },
+    {
+      "id": "v2-tema-050",
+      "category": "tema",
+      "topicExcerptHit": false
+    },
+    {
+      "id": "v2-tema-051",
+      "category": "tema",
+      "topicExcerptHit": false
+    },
+    {
+      "id": "v2-tema-052",
+      "category": "tema",
+      "topicExcerptHit": false
+    },
+    {
+      "id": "v2-tema-053",
+      "category": "tema",
+      "topicExcerptHit": false
+    },
+    {
+      "id": "v2-prefiks-delord-003",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "103814",
+        "95753"
+      ],
+      "titles": [
+        "Riksrevisjonens undersøking om reduksjon av klimagassutslepp frå jordbruket",
+        "Representantforslag om å måle og redusere klimagassutslipp fra forbruk"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-004",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200101"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Kristian August Eilertsen, Per-Willy Amundsen og Bård Hoksrud om å sette i gang et forprosjekt for ny innfartsveg til Tromsø"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-008",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "106246",
+        "93846",
+        "96812",
+        "98185"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Sylvi Listhaug og Erlend Wiborg om en utvisningsreform for kriminelle innvandrere",
+        "Endringer i utlendingsloven (utvisning av hensyn til grunnleggende nasjonale interesser og frister ved frihetsberøvelse av mindreårige)",
+        "Endringer i utlendingsloven (utvisning på grunn av omgåelsesekteskap)",
+        "Representantforslag om å stille alle utvisningssaker der barn er involvert, i bero"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-012",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200012",
+        "91659"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Guri Melby, Abid Raja og Marit Vea om å midlertidig suspendere den nye modellen for beregning av formuesverdi av bolig",
+        "Endringer i skatteloven (endret formuesverdsetting av akvakulturtillatelser for inntektsåret 2022)"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-013",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "200384",
+        "90469",
+        "90471",
+        "91873",
+        "95756"
+      ],
+      "titles": [
+        "Representantforslag fra stortingsrepresentantene Kari Sofie Bjørnsen, Amalie Gunnufsen, Haagen Poppe, Mahmoud Farahmand og Aleksander Stokkebø om likere strømpriser og et sterkere forbrukervern",
+        "Representantforslag om ekstraordinære tiltak som følge av strømpriskrisen",
+        "Representantforslag om strakstiltak mot de høye strømprisene og for å øke forsyningssikkerheten",
+        "Representantforslag om konkurransedyktige strømpriser i Norge",
+        "Representantforslag om tiltak mot strømpriskrisen"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-015",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [
+        "100236",
+        "102062",
+        "102353",
+        "102764",
+        "102926",
+        "102934",
+        "102935",
+        "103101"
+      ],
+      "titles": [
+        "Tilfeldige utgifter og inntekter, finansadministrasjon, utbytte, 90-poster, Statens pensjonsfond utland",
+        "Representantforslag om å styrke obligatorisk tjenestepensjon (OTP)",
+        "Representantforslag om å åpne opp for at Statens pensjonsfond utland (SPU) kan investere i våpenprodusenter som produserer komponenter til kjernevåpen",
+        "Endringer i arbeidsmiljøloven, lov om aldersgrenser for statsansatte m.fl. og lov om Statens pensjonskasse (avvikling av bedriftsinterne aldersgrenser og økning av den alminnelige aldersgrensen i staten)",
+        "Pensjonar frå statskassa",
+        "Endringer i lov om avtalefestet pensjon for medlemmer av Statens pensjonskasse (kostnadsfordelingsavtale m.m.)",
+        "Årsmelding 2024 for pensjonsordninga for stortingsrepresentantar og regjeringsmedlemer",
+        "Endringer i lov om Statens pensjonskasse og enkelte andre lover (nye pensjonsregler for personer med særaldersgrense)"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-022",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "100305",
+        "105111",
+        "200131"
+      ],
+      "titles": [
+        "Samtykke til ratifikasjon av avtale om handel og økonomisk partnerskap mellom EFTA-statene og India av 10. mars 2024",
+        "Valg av medlemmer og varamedlemmer til Stortingets delegasjon til det parlamentariske partnerskapet Asia-Europa (ASEP) og til ASEANs interparlamentariske forsamling (AIPA)",
+        "Samtykke til ratifikasjon av økonomisk partnerskapsavtale av 23. juni 2025 mellom EFTA-statene og Malaysia"
+      ]
+    },
+    {
+      "id": "v2-prefiks-delord-025",
+      "category": "prefiks_delord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "102293",
+        "200170",
+        "89665",
+        "93630",
+        "93993",
+        "98180"
+      ],
+      "titles": [
+        "Melding for året 2024 fra Sivilombudet",
+        "Melding for året 2025 fra Sivilombudet",
+        "Endringar i lovgjevinga som følgje av innføring av ny kjønnsnøytral tittel på Sivilombodsmannen",
+        "Melding for året 2022 fra Sivilombudet",
+        "Brev fra Sivilombudet til Stortingets presidentskap om Oppfølging av Dokument 21 (2020-2021) - bevisførsel om opplysning underlagt taushetsplikt hos Sivilombudet, datert 20. april 2023",
+        "Melding for året 2023 fra Sivilombudet"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-002",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-sammensatte-ord-003",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-sammensatte-ord-004",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-sammensatte-ord-010",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-sammensatte-ord-011",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-sammensatte-ord-016",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": true,
+      "ids": [
+        "100029"
+      ],
+      "titles": [
+        "Grunnlovsforslag fra Frode Jacobsen, Kari Henriksen, Kirsti Leirtrø, Anette Trettebergstuen, Ingvild Kjerkol og Kamzy Gunaratnam om ny § 103 (om rett til selvbestemt abort)"
+      ]
+    },
+    {
+      "id": "v2-sammensatte-ord-017",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-sammensatte-ord-021",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-sammensatte-ord-022",
+      "category": "sammensatte_ord",
+      "kind": "issue_search",
+      "hit": false,
+      "ids": [],
+      "titles": []
+    },
+    {
+      "id": "v2-voteringer-parti-002",
+      "category": "voteringer_parti",
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-005",
+      "category": "voteringer_parti",
+      "partyHit": false,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-008",
+      "category": "voteringer_parti",
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-010",
+      "category": "voteringer_parti",
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-020",
+      "category": "voteringer_parti",
+      "partyHit": false,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-021",
+      "category": "voteringer_parti",
+      "partyHit": false,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-024",
+      "category": "voteringer_parti",
+      "partyHit": false,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-025",
+      "category": "voteringer_parti",
+      "partyHit": false,
+      "r5": true
+    },
+    {
+      "id": "v2-voteringer-parti-027",
+      "category": "voteringer_parti",
+      "r5": true
+    },
+    {
+      "id": "v2-horinger-001",
+      "category": "horinger",
+      "r5": false
+    },
+    {
+      "id": "v2-horinger-002",
+      "category": "horinger",
+      "r5": false
+    },
+    {
+      "id": "v2-horinger-008",
+      "category": "horinger",
+      "r5": false
+    },
+    {
+      "id": "v2-horinger-014",
+      "category": "horinger",
+      "r5": false
+    },
+    {
+      "id": "v2-horinger-015",
+      "category": "horinger",
+      "r5": false
+    },
+    {
+      "id": "v2-horinger-023",
+      "category": "horinger",
+      "r5": false
+    },
+    {
+      "id": "v2-horinger-025",
+      "category": "horinger",
+      "r5": false
+    },
+    {
+      "id": "v2-horinger-027",
+      "category": "horinger",
+      "r5": false
+    },
+    {
+      "id": "v2-finnes-ikke-002",
+      "category": "finnes_ikke",
+      "confident": true,
+      "titleWouldMatch": true,
+      "fullTextMatch": true,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-007",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-008",
+      "category": "finnes_ikke",
+      "confident": true,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-013",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-014",
+      "category": "finnes_ikke",
+      "confident": true,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-015",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-016",
+      "category": "finnes_ikke",
+      "confident": true,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-018",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-020",
+      "category": "finnes_ikke",
+      "confident": true,
+      "titleWouldMatch": true,
+      "fullTextMatch": true,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-022",
+      "category": "finnes_ikke",
+      "confident": false,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    },
+    {
+      "id": "v2-finnes-ikke-023",
+      "category": "finnes_ikke",
+      "confident": true,
+      "titleWouldMatch": false,
+      "fullTextMatch": false,
+      "note": "finnes_ikke scored on retrieval rejection; GT validated titles only"
+    }
+  ]
+}

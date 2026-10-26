@@ -1,0 +1,25 @@
+{
+  "run": "run6",
+  "stack": "cursor/rag-improve-drastisk-5738 post-main-merge",
+  "judgeModel": "qwen3.5:4b-q4_K_M",
+  "answerModel": "gemma4:26b",
+  "judgeIndependentOfAnswer": true,
+  "deterministicCitationRule": "unsupported numbers/quotes in answer vs excerpts cap faithfulnessCombined",
+  "groundedAnswerRules": "grounded-answer-v2",
+  "run5": {
+    "faithfulnessMean": 0.833,
+    "note": "Same-model / lenient judge inflation (user-reported gate miss at 0.85)"
+  },
+  "run6": {
+    "recallAt5": 0.975,
+    "recallAt5Source": "evals/rag/results/v2-final-test.json (stack unchanged; re-validate on Klever after merge)",
+    "faithfulnessMean": null,
+    "faithfulnessCombinedMean": null,
+    "goldFactsMeanHitRate": null,
+    "incorrectRefusalRate": null,
+    "qualityMean": null,
+    "exportCommand": "RAG_EVAL_LABEL=run6 ANSWER_LLM_MODEL=gemma4:26b npm run eval:rag:answers:v2",
+    "judgeCommand": "JUDGE_MODEL=qwen3.5:4b-q4_K_M npm run eval:rag:judge -- evals/rag/results/run6-answers.json",
+    "kleverRequired": true
+  }
+}
