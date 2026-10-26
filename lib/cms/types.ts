@@ -56,6 +56,7 @@ export type PayloadPost = {
   bodyMarkdown: string;
   featured?: boolean | null;
   publishedAt?: string | null;
+  createdAt?: string | null;
   updatedAt?: string;
   updatedAtDisplay?: string | null;
   readingTimeMinutes?: number | null;

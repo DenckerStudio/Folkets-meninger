@@ -447,8 +447,13 @@ export async function createSystemPollDraft(input: {
   return String(data);
 }
 
-export async function updatePollStatusRow(pollId: string, action: PollStatusAction): Promise<string> {
-  const service = getServiceSupabase();
+type PollStatusServiceClient = Pick<SupabaseClient, 'rpc' | 'from'>;
+
+export async function updatePollStatusRow(
+  pollId: string,
+  action: PollStatusAction,
+  service: PollStatusServiceClient = getServiceSupabase(),
+): Promise<string> {
   const { data: row, error: readError } = await service
     .from('polls')
     .select('id, status, opens_at')
@@ -489,9 +494,12 @@ function pollStatusRpcName(action: PollStatusAction): 'publish_poll' | 'archive_
  * Row update is only a documented fallback when PostgREST has no schema-cache
  * entry (PGRST202). Never use ensure_stortinget_poll for system drafts.
  */
-async function applyPollStatusViaRpc(pollId: string, action: PollStatusAction): Promise<string> {
+export async function applyPollStatusViaRpc(
+  pollId: string,
+  action: PollStatusAction,
+  service: PollStatusServiceClient = getServiceSupabase(),
+): Promise<string> {
   const rpcName = pollStatusRpcName(action);
-  const service = getServiceSupabase();
   const { data, error } = await service.rpc(rpcName, { p_poll_id: pollId });
   if (!error) {
     return typeof data === 'string' && data.length > 0 ? data : pollId;
@@ -500,7 +508,7 @@ async function applyPollStatusViaRpc(pollId: string, action: PollStatusAction): 
     console.warn(
       `[polls] ${rpcName}(p_poll_id) missing from PostgREST schema cache. Falling back to a service-role row update. Intended path remains ${rpcName}; never use ensure_stortinget_poll for drafts.`,
     );
-    return updatePollStatusRow(pollId, action);
+    return updatePollStatusRow(pollId, action, service);
   }
   throw error;
 }

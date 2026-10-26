@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
+import { listPublishedBlogSlugsForSitemap } from '@/lib/blog/service';
 import { getSiteUrl } from '@/lib/seo/metadata';
+import { loadBlogSitemapEntriesWithCmsFallback } from '@/lib/sitemap/blog-routes';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,23 +25,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/vilkar`, changeFrequency: 'monthly', priority: 0.3 },
   ];
 
-  let blogRoutes: MetadataRoute.Sitemap = [];
-  try {
-    const { listPublishedBlogSlugsForSitemap } = await import('@/lib/blog/service');
-    const slugs = await listPublishedBlogSlugsForSitemap(200);
-    blogRoutes = slugs.map((entry) => ({
-      url: `${base}/blogg/${encodeURIComponent(entry.slug)}`,
-      lastModified: entry.updated_at
-        ? new Date(entry.updated_at)
-        : entry.published_at
-          ? new Date(entry.published_at)
-          : undefined,
-      changeFrequency: 'monthly',
-      priority: 0.45,
-    }));
-  } catch (error) {
-    console.error('sitemap: klarte ikke å hente bloggposter', error);
-  }
+  const blogRoutes = await loadBlogSitemapEntriesWithCmsFallback(base, () =>
+    listPublishedBlogSlugsForSitemap(200),
+  );
 
   let sakRoutes: MetadataRoute.Sitemap = [];
   try {

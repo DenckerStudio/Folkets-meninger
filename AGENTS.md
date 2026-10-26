@@ -104,7 +104,8 @@ All on **Coolify, server `klever`**:
   - GP / Reels drafts (`create_system_poll_draft` → admin `publish_poll`)
   - høringer packaging (`/api/cron/package-opinion-innspill` → `N8N_HEARING_INNSPILL_WEBHOOK_URL`)
   - blog drafts: `POST /api/ops/blog/drafts` (`verifyOpsSecret`, `x-cron-secret`) creates a
-    Payload draft; `POST /api/ops/blog/social-posted` marks a Payload post as shared
+    Payload draft; on `200` + `created: false` n8n must read `cmsStatus` (see Blog below).
+    `POST /api/ops/blog/social-posted` marks a Payload post as shared
   - admin Research jobs: fm-web `POST` HMAC webhooks to `N8N_RESEARCH_WEBHOOK_BASE/{deepen|blog|reel}`;
     n8n writes back via `n8n_upsert_research_brief` / `n8n_set_research_output` (service_role).
     Contract: `docs/n8n/research-webhook-contract.md`
@@ -131,6 +132,12 @@ All on **Coolify, server `klever`**:
 - **n8n blog drafts go to Payload**: `POST /api/ops/blog/drafts` creates a draft
   (`_status: draft`, review state `til_vurdering`) with `CMS_AGENT_API_KEY` (`agent` role,
   falls back to `CMS_API_KEY`). Editors publish in the Payload admin, never n8n.
+  Response JSON includes `id`, `slug`, `adminUrl`, `created`, and `cmsStatus`
+  (`draft` | `published` | `unknown`).   **n8n must inspect `cmsStatus` on HTTP 200 when
+  `created: false`** (idempotent retry / duplicate `source_event`): only `draft` means a draft
+  exists and the retry can stop quietly. Treat `published` and `unknown` as ops alert / manual
+  CMS check (same class as mistaken publish), not as «utkast finnes». Error responses may also include
+  `id` / `adminUrl` / `cmsStatus` when the post exists in CMS.
   `POST /api/ops/blog/social-posted` calls `fm-cms` `/api/blog-ops/social-posted`
   signed with HMAC (`REVALIDATE_SECRET`). `fm-cms` calls `/api/revalidate/blog` on publish.
   **Auto content-feedback:** n8n-utkast (`origin: n8n`) trigger en fire-and-forget-hook i
@@ -139,6 +146,11 @@ All on **Coolify, server `klever`**:
   secret **kun** `CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET`). CMS trenger `FM_WEB_URL` (ingen fallback).
   fm-cms pinnes manuelt i Coolify — ekspert må oppdatere pin og env ved deploy.
   Blogg redigeres i Payload (`CMS_URL`/admin), ikke i fm-web admin-hub.
+- **Blog ISR / build**: runtime CMS failures on `/blogg` throw so ISR keeps the last good HTML.
+  During `next build`, if CMS is down, blog index routes render «midlertidig utilgjengelig» via
+  `BlogCmsUnavailableShell` (`unstable_noStore`) og **`/blogg` forblir dynamisk (ƒ) for den
+  deployen** til en senere build lykkes med CMS oppe. Sitemap utelater blogg-URL-er ved
+  loader-feil, men beholder statiske og sak-oppføringer.
 - **`20261018120000_blog_posts.sql` (Supabase `public.blog_posts`) is superseded and must
   still NOT be applied.** Do not build on the Supabase blog table. All blog work targets Payload.
 - Setup and env: `infra/coolify/cms.md`, `cms/.env.example`. **`SERVER_URL`**
@@ -228,9 +240,10 @@ infra/               coolify/ (cms.md + historical plan), searxng/
   raden via `upsert_content_feedback`. Regenerering av avviste sammendrag starter
   først når den migrasjonen er lagt inn.
 - Sak-sammendrag vises fra `issue_ai_summaries` uavhengig av vurdering.
-  `getAiSummaryFromDb` prøver kolonnen `forslag` og, ved 42703/PGRST204 for den
-  kolonnen (`20261021170000` ikke lagt inn), henter raden uten den. Kolonnesvikt
-  er ikke «mangler sammendrag» og skal ikke trigge genererings-webhook.
+  `readAiSummaryFromDb` / `getAiSummaryFromDb` prøver kolonnen `forslag` og, ved
+  Postgres `42703` (`20261021170000` ikke lagt inn), henter raden uten den.
+  Kolonnesvikt er ikke «mangler sammendrag»; lesefeil (`read_failed`) skal ikke
+  trigge genererings-webhook.
 - **Research** (`/dashboard/admin/research`, cluster detail `/dashboard/admin/research/[id]`):
   action clusters from action capture (`lib/admin/oppfanget/` list/filters; UI label Research).
   Admin actions deepen/blog/reel → `lib/admin/research/` + `POST /api/admin/research/...`;

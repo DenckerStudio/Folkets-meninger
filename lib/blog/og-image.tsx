@@ -10,6 +10,13 @@ function truncate(text: string, max: number): string {
   return `${normalized.slice(0, max - 1).trimEnd()}…`;
 }
 
+export function renderBlogCmsUnavailableOgImage() {
+  return renderBlogPostOgImage(
+    'Bloggen er midlertidig utilgjengelig',
+    'Vi klarte ikke å hente artikkelen fra redaksjonssystemet akkurat nå.',
+  );
+}
+
 export function renderBlogPostOgImage(title: string, excerpt: string) {
   return new ImageResponse(
     (
