@@ -64,7 +64,7 @@ function feedbackRowId(data: unknown, rpcName: string): string {
  * to service_role. Regeneration stays off until the admin RPC exists.
  */
 export const CONTENT_FEEDBACK_FALLBACK_REGENERATION_HINT =
-  'Tilbakemeldingen er lagret, men nytt sammendrag ble ikke bestilt. Regenerering starter når tilbakemelding-migrasjonen er lagt inn i databasen.';
+  'Tilbakemeldingen er lagret, men nytt sammendrag ble ikke bestilt. Kontakt en utvikler hvis dette fortsetter.';
 
 export type SubmitAdminContentFeedbackRpcResult = {
   id: string;

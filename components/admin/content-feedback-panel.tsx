@@ -28,6 +28,13 @@ const VERDICT_REQUIRED = 'Velg en dom før du lagrer.';
 
 const SAVE_CLOSE_DELAY_MS = 4000;
 
+const AI_SUMMARY_DESCRIPTION_DEFAULT =
+  'Godkjenn eller avvis sammendraget.';
+const AI_SUMMARY_DESCRIPTION_WITH_REGEN =
+  'Godkjenn eller avvis sammendraget. Ved avvisning settes saken i kø for ny generering.';
+const AI_SUMMARY_DESCRIPTION_WITHOUT_REGEN =
+  'Godkjenn eller avvis sammendraget. Tilbakemeldingen lagres; nytt sammendrag bestilles ikke automatisk før systemet er oppdatert.';
+
 export type ContentFeedbackPanelProps = {
   contentType: ContentFeedbackType;
   contentId: string;
@@ -75,6 +82,9 @@ export function ContentFeedbackPanel({
   const [aspectsExpanded, setAspectsExpanded] = useState(false);
   const [rejectSubmitAttempted, setRejectSubmitAttempted] = useState(false);
   const [saveSucceeded, setSaveSucceeded] = useState(false);
+  const [regenerationOnRejectAvailable, setRegenerationOnRejectAvailable] = useState<
+    boolean | null
+  >(null);
   const closeTimerRef = useRef<number | null>(null);
   const skipRef = useRef<HTMLButtonElement>(null);
   const aspectsPanelRef = useRef<HTMLDivElement>(null);
@@ -169,6 +179,34 @@ export function ContentFeedbackPanel({
   }, [contentType, contentId, lockedVerdict]);
 
   useEffect(() => {
+    if (contentType !== 'ai_summary') {
+      setRegenerationOnRejectAvailable(null);
+      return;
+    }
+    let cancelled = false;
+    void fetch('/api/admin/content-feedback/capabilities')
+      .then(async (res) => {
+        const json = (await res.json().catch(() => ({}))) as {
+          regeneration_on_reject?: boolean;
+        };
+        if (cancelled) return;
+        if (!res.ok) {
+          setRegenerationOnRejectAvailable(null);
+          return;
+        }
+        setRegenerationOnRejectAvailable(json.regeneration_on_reject === true);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRegenerationOnRejectAvailable(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [contentType]);
+
+  useEffect(() => {
     if (isReject) {
       setAspectsExpanded(true);
     }
@@ -194,6 +232,15 @@ export function ContentFeedbackPanel({
   }, [aspects, isReject, reasonTags]);
 
   const verdictMissing = !lockedVerdict && verdict == null;
+
+  const effectiveDescription =
+    contentType === 'ai_summary'
+      ? regenerationOnRejectAvailable === true
+        ? AI_SUMMARY_DESCRIPTION_WITH_REGEN
+        : regenerationOnRejectAvailable === false
+          ? AI_SUMMARY_DESCRIPTION_WITHOUT_REGEN
+          : AI_SUMMARY_DESCRIPTION_DEFAULT
+      : description;
 
   function toggleAspectMark(key: ContentFeedbackAspectKey, mark: AspectMark) {
     setAspects((prev) => {
@@ -247,13 +294,17 @@ export function ContentFeedbackPanel({
         return;
       }
       setShowAdminReviewedBadge(true);
-      const savedMessage =
-        json.regeneration === false && json.regeneration_hint
-          ? json.regeneration_hint
-          : SUCCESS_MESSAGE;
+      const showRegenerationHint =
+        json.regeneration === false && Boolean(json.regeneration_hint);
+      const savedMessage = showRegenerationHint
+        ? json.regeneration_hint!
+        : SUCCESS_MESSAGE;
       setSuccess(savedMessage);
       setSaveSucceeded(true);
-      if (onSaved) {
+      if (showRegenerationHint) {
+        setRegenerationOnRejectAvailable(false);
+      }
+      if (onSaved && !showRegenerationHint) {
         closeTimerRef.current = window.setTimeout(() => {
           closeTimerRef.current = null;
           skipRef.current?.focus();
@@ -299,7 +350,7 @@ export function ContentFeedbackPanel({
             </span>
           ) : null}
         </div>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="text-sm text-muted-foreground">{effectiveDescription}</p>
       </div>
 
       {preview ? (

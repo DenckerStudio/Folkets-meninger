@@ -14,47 +14,96 @@ const rejectBody = {
   note: null,
 };
 
-let rpcCalls: string[] = [];
-const supabase = {
-  async rpc(name: string) {
-    rpcCalls.push(name);
-    if (name === 'admin_submit_content_feedback') {
-      return { data: null, error: { code: 'PGRST202' } };
-    }
-    if (name === 'upsert_content_feedback') {
-      return { data: 'fb-id', error: null };
-    }
-    throw new Error(`Unexpected rpc ${name}`);
-  },
-};
+const snapshotPayload = { title: 'Sammendrag' };
+
+type RpcCall = { name: string; args: Record<string, unknown> };
+
+function makeRpcRecorder(
+  handlers: Record<string, (args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>>,
+) {
+  const calls: RpcCall[] = [];
+  const supabase = {
+    async rpc(name: string, args: Record<string, unknown>) {
+      calls.push({ name, args });
+      const handler = handlers[name];
+      if (!handler) {
+        throw new Error(`Unexpected rpc ${name}`);
+      }
+      return handler(args);
+    },
+  };
+  return { supabase, calls };
+}
 
 async function main() {
-  const fallbackResult = await submitAdminContentFeedbackRpc(adminId, rejectBody, {
-    supabase,
-    buildSnapshot: async () => ({}),
+  const fallbackRecorder = makeRpcRecorder({
+    admin_submit_content_feedback: async () => ({ data: null, error: { code: 'PGRST202' } }),
+    upsert_content_feedback: async () => ({ data: 'fb-id', error: null }),
   });
-  assert.deepEqual(rpcCalls, ['admin_submit_content_feedback', 'upsert_content_feedback']);
+
+  const fallbackResult = await submitAdminContentFeedbackRpc(adminId, rejectBody, {
+    supabase: fallbackRecorder.supabase,
+    buildSnapshot: async () => snapshotPayload,
+  });
+  assert.deepEqual(
+    fallbackRecorder.calls.map((call) => call.name),
+    ['admin_submit_content_feedback', 'upsert_content_feedback'],
+  );
+  assert.deepEqual(fallbackRecorder.calls[0].args, fallbackRecorder.calls[1].args);
   assert.equal(fallbackResult.regeneration, false);
   assert.equal(fallbackResult.regeneration_hint, CONTENT_FEEDBACK_FALLBACK_REGENERATION_HINT);
 
-  rpcCalls = [];
-  const primarySupabase = {
-    async rpc(name: string) {
-      rpcCalls.push(name);
-      if (name === 'admin_submit_content_feedback') {
-        return { data: 'fb-primary', error: null };
-      }
-      throw new Error(`Unexpected rpc ${name}`);
-    },
-  };
+  const primaryRecorder = makeRpcRecorder({
+    admin_submit_content_feedback: async () => ({ data: 'fb-primary', error: null }),
+  });
 
   const primaryResult = await submitAdminContentFeedbackRpc(adminId, rejectBody, {
-    supabase: primarySupabase,
-    buildSnapshot: async () => ({}),
+    supabase: primaryRecorder.supabase,
+    buildSnapshot: async () => snapshotPayload,
   });
-  assert.deepEqual(rpcCalls, ['admin_submit_content_feedback']);
+  assert.deepEqual(primaryRecorder.calls.map((call) => call.name), [
+    'admin_submit_content_feedback',
+  ]);
   assert.equal(primaryResult.regeneration, true);
   assert.equal(primaryResult.regeneration_hint, undefined);
+
+  for (const primaryError of [
+    { code: '42501', message: 'permission denied' },
+    { code: 'PGRST301', message: 'JWT expired' },
+    new Error('network down'),
+  ]) {
+    let upsertTouched = false;
+    const rejecting = makeRpcRecorder({
+      admin_submit_content_feedback: async () => ({ data: null, error: primaryError }),
+      upsert_content_feedback: async () => {
+        upsertTouched = true;
+        return { data: 'nope', error: null };
+      },
+    });
+    await assert.rejects(
+      () =>
+        submitAdminContentFeedbackRpc(adminId, rejectBody, {
+          supabase: rejecting.supabase,
+          buildSnapshot: async () => snapshotPayload,
+        }),
+    );
+    assert.equal(upsertTouched, false);
+  }
+
+  const upsertFails = makeRpcRecorder({
+    admin_submit_content_feedback: async () => ({ data: null, error: { code: 'PGRST202' } }),
+    upsert_content_feedback: async () => ({
+      data: null,
+      error: { code: '23505', message: 'duplicate' },
+    }),
+  });
+  await assert.rejects(
+    () =>
+      submitAdminContentFeedbackRpc(adminId, rejectBody, {
+        supabase: upsertFails.supabase,
+        buildSnapshot: async () => snapshotPayload,
+      }),
+  );
 
   console.log('content-feedback/service.behavior.test.ts: ok');
 }

@@ -32,6 +32,13 @@ assert.equal(
   }),
   true,
 );
+assert.equal(
+  isPostgrestMissingRpcError({
+    message:
+      'Could not find the function public.publish_poll(p_poll_id) in the schema cache',
+  }),
+  false,
+);
 
 const pollId = '00000000-0000-4000-8000-000000000099';
 let rpcCalls = 0;
