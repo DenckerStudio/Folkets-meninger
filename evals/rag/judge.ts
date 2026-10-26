@@ -51,7 +51,7 @@ function parseCliArgs(argv: string[]): { answersPath: string; resume: boolean } 
   return { answersPath: path, resume };
 }
 
-function buildJudgePrompt(row: AnswerRow): string {
+function buildJudgePrompt(row: AnswerRow, citationNote: string): string {
   return `Du er en uavhengig, streng evaluator for Stortinget-RAG (ikke svarmodellen).
 
 Spørsmål: ${row.query}
@@ -61,16 +61,28 @@ ${row.excerpts.join('\n---\n')}
 Kandidatsvar:
 ${row.answer}
 
+Deterministisk sitat/tall-sjekk (kjørt før deg): ${citationNote}
+
 Rubric (bruk KUN disse nivåene: 0, 0.25, 0.5, 0.75, 1):
-- faithfulness: støttes alle påstander i svaret av utdragene? Trekk ned for hallusinasjoner eller påstander uten kilde.
+- faithfulness: støttes alle påstander i svaret av utdragene? Trekk ned for hallusinasjoner, tall/år uten kilde, eller sitater som ikke finnes i utdragene.
 - quality: besvarer svaret spørsmålet kort og tydelig på norsk? Trekk ned hvis det bare gjentar utdrag, mangler gull-fakta, eller nekter å svare når kildene faktisk inneholder relevant info.
 
 Straff eksplisitt:
+- faithfulness maks 0.25 hvis deterministisk sjekk fant usupportede tall eller sitater
 - quality maks 0.25 hvis gull-fakta mangler i svaret men finnes i utdragene
 - quality maks 0.25 hvis svaret sier at kildene ikke inneholder info uten å prøve å svare
 - faithfulness maks 0.5 hvis viktige påstander ikke kan spores til utdrag
 
 Returner KUN gyldig JSON med nøklene faithfulness, quality, justification (ingen markdown).`;
+}
+
+function citationNoteForRow(det: JudgedRowOutput['deterministic']): string {
+  const { unsupportedNumbers, unsupportedQuotes, citationSupportPass } = det.citationAudit;
+  if (citationSupportPass) return 'PASS (alle tall/sitater i svaret finnes i utdragene).';
+  const parts: string[] = [];
+  if (unsupportedNumbers.length) parts.push(`usupportede tall: ${unsupportedNumbers.join(', ')}`);
+  if (unsupportedQuotes.length) parts.push(`usupportede sitater: ${unsupportedQuotes.map((q) => `«${q}»`).join('; ')}`);
+  return `FAIL — ${parts.join('; ')}`;
 }
 
 async function callJudgeOllama(
@@ -102,7 +114,8 @@ async function fetchJudgeText(prompt: string): Promise<string> {
 }
 
 async function judgeRowLlm(row: AnswerRow, deterministic: JudgedRowOutput['deterministic']): Promise<JudgedRowOutput> {
-  let text = await fetchJudgeText(buildJudgePrompt(row));
+  const citationNote = citationNoteForRow(deterministic);
+  let text = await fetchJudgeText(buildJudgePrompt(row, citationNote));
   let parsed = parseJudgeScoresJson(text);
   if (!parsed) {
     text = await fetchJudgeText(buildJudgeRetryPrompt({ query: row.query, priorResponse: text }));
@@ -193,7 +206,8 @@ async function main(): Promise<void> {
   const targets = {
     ...deterministicReport.targets,
     faithfulnessMin: 0.85,
-    faithfulnessMet: llmStats.count > 0 && llmStats.faithfulnessMean >= 0.85,
+    faithfulnessMet:
+      llmStats.count > 0 && llmStats.faithfulnessCombinedMean >= 0.85,
     qualityMin: 0.7,
     qualityMet: llmStats.count > 0 && llmStats.qualityMean >= 0.7,
   };
@@ -231,7 +245,7 @@ async function main(): Promise<void> {
     `Deterministic goldFacts mean hit rate=${deterministicReport.goldFacts.meanHitRate.toFixed(3)} (run npm run eval:rag:metrics for details)`,
   );
   console.log(
-    `LLM judged=${llmStats.count} errors=${llmStats.judgeErrorCount} (${(llmStats.judgeErrorRate * 100).toFixed(1)}%) faithfulness=${llmStats.faithfulnessMean.toFixed(3)} quality=${llmStats.qualityMean.toFixed(3)}`,
+    `LLM judged=${llmStats.count} errors=${llmStats.judgeErrorCount} (${(llmStats.judgeErrorRate * 100).toFixed(1)}%) faithfulness=${llmStats.faithfulnessMean.toFixed(3)} combined=${llmStats.faithfulnessCombinedMean.toFixed(3)} citationPass=${(llmStats.citationSupportPassRate * 100).toFixed(0)}% quality=${llmStats.qualityMean.toFixed(3)}`,
   );
   if (calibrationWarning) console.warn(`CALIBRATION: ${calibrationWarning}`);
   if (llmStats.judgeErrorRate > judgeMaxErrorRate) {

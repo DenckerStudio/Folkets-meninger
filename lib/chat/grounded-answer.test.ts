@@ -5,7 +5,7 @@ import {
   groundedAnswerBehaviorLines,
 } from './grounded-answer';
 
-assert.equal(GROUNDED_ANSWER_RULES_VERSION, 'grounded-answer-v1');
+assert.equal(GROUNDED_ANSWER_RULES_VERSION, 'grounded-answer-v2');
 assert.ok(groundedAnswerBehaviorLines().length >= 3);
 
 const excerpts = [
@@ -17,6 +17,7 @@ assert.match(prompt, /bare delvis dekker spørsmålet/);
 assert.match(prompt, /«hvorfor»/);
 assert.match(prompt, /Dette fant jeg ikke i kildene/);
 assert.match(prompt, /Kilde 1/);
+assert.match(prompt, /Hvert tall, årstall og sitat/);
 assert.match(prompt, /Ikke start med "Basert på utdrag"/);
 
 console.log('lib/chat/grounded-answer.test.ts ok');

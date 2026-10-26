@@ -23,7 +23,7 @@ App cron 03:00  →  sync-issues
                  →  embeddings-webhook
                  →  (chunks ready) AI-sammendrag-webhook
                  →  (sammendrag lagret) system-poll-utkast
-                 →  admin publiserer i /dashboard/admin/reels
+                 →  admin publiserer i /dashboard/admin/vurder?fane=reels
 ```
 
 Tom kø er suksess (ikke Ollama-kall). Tynne sammendrag (< 180 tegn) med ferdig RAG plukkes på nytt av `n8n_list_issues_missing_ai_summary`. Pipeline-helse kl 08:00 tar catch-up og varsler admin ved stor kø.
@@ -125,7 +125,7 @@ Kjør `supabase db push` etter pull.
 Workflow-kilde: [`system-poll-draft.workflow.ts`](system-poll-draft.workflow.ts) · [`system-poll-draft.shared.ts`](system-poll-draft.shared.ts)
 
 Lager **utkast** (`polls.track = 'system'`, `status = 'draft'`) fra stortingssak + RAG.
-Admin publiserer i `/dashboard/admin/reels`. Offentlig feed: `/dashboard/utforsk`.
+Admin publiserer i `/dashboard/admin/vurder?fane=reels`. Offentlig feed: `/dashboard/utforsk`. Generering og kø: `/dashboard/admin/reels`.
 
 **Live workflow:** https://n8n.heyklever.app/workflow/TWTrqNYhvYcWz4UX
 

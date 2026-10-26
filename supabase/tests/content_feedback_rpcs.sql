@@ -406,8 +406,56 @@ BEGIN
     RAISE EXCEPTION 'n8n_list_source_items skal returnere metadata uten embedding';
   END IF;
 
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.n8n_list_source_items('utenfilter.no', NULL, 500) l
+    WHERE l.external_id = 'ci-123' AND l.excerpt = 'Kun excerpt'
+  ) THEN
+    RAISE EXCEPTION 'n8n_list_source_items skal returnere excerpt';
+  END IF;
+
   IF NOT has_function_privilege('service_role', 'public.n8n_list_source_items(text,timestamptz,int)', 'EXECUTE') THEN
     RAISE EXCEPTION 'service_role mangler EXECUTE på n8n_list_source_items';
+  END IF;
+
+  IF has_function_privilege('anon', 'public.n8n_list_source_items(text,timestamptz,int)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'anon skal ikke kunne kjøre n8n_list_source_items';
+  END IF;
+
+  IF NOT has_function_privilege('service_role', 'public.n8n_match_source_items(vector,int,int)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'service_role mangler EXECUTE på n8n_match_source_items';
+  END IF;
+
+  IF has_function_privilege('anon', 'public.n8n_match_source_items(vector,int,int)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'anon skal ikke kunne kjøre n8n_match_source_items';
+  END IF;
+
+  r := public.n8n_upsert_source_items(
+    jsonb_build_array(
+      jsonb_build_object(
+        'domain', 'utenfilter.no',
+        'external_id', 'ci-match-seen',
+        'url', 'https://utenfilter.no/match-seen',
+        'title', 'Match seen_at',
+        'excerpt', 'Match ingress',
+        'published_at', now(),
+        'embedding', v_vec,
+        'embedding_model', 'bge-m3'
+      )
+    )
+  );
+  IF (r ->> 'upserted')::int <> 1 THEN
+    RAISE EXCEPTION 'forberedelse for n8n_match_source_items feilet: %', r;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.n8n_match_source_items(v_vec::vector(1024), 365, 20) m
+    WHERE m.external_id = 'ci-match-seen'
+      AND m.excerpt = 'Match ingress'
+      AND m.seen_at IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'n8n_match_source_items skal returnere excerpt og seen_at';
   END IF;
 
   IF has_function_privilege('anon', 'public.log_blog_content_feedback(text,text,text,timestamptz,jsonb)', 'EXECUTE') THEN
@@ -570,7 +618,8 @@ BEGIN
       'ci-null-cat',
       'ci-456',
       'ci-batch-1',
-      'ci-batch-2'
+      'ci-batch-2',
+      'ci-match-seen'
     );
   DELETE FROM public.content_feedback
   WHERE content_id IN (v_poll_id::text, v_poll_archive_id::text, v_poll_admin_id::text)

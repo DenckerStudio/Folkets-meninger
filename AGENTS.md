@@ -133,6 +133,11 @@ All on **Coolify, server `klever`**:
   falls back to `CMS_API_KEY`). Editors publish in the Payload admin, never n8n.
   `POST /api/ops/blog/social-posted` calls `fm-cms` `/api/blog-ops/social-posted`
   signed with HMAC (`REVALIDATE_SECRET`). `fm-cms` calls `/api/revalidate/blog` on publish.
+  **Auto content-feedback:** n8n-utkast (`origin: n8n`) trigger en fire-and-forget-hook i
+  fm-cms (`afterChange` / `afterDelete`) mot `POST /api/ops/content-feedback` på fm-web
+  (HMAC `x-fm-timestamp` + `x-fm-signature` over `ts.POST./api/ops/content-feedback.body`;
+  secret **kun** `CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET`). CMS trenger `FM_WEB_URL` (ingen fallback).
+  fm-cms pinnes manuelt i Coolify — ekspert må oppdatere pin og env ved deploy.
   Blogg redigeres i Payload (`CMS_URL`/admin), ikke i fm-web admin-hub.
 - **`20261018120000_blog_posts.sql` (Supabase `public.blog_posts`) is superseded and must
   still NOT be applied.** Do not build on the Supabase blog table. All blog work targets Payload.
@@ -189,6 +194,9 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 - System Reels are ja/nei/blank questions generated from sak RAG by n8n + Ollama.
   Use `create_system_poll_draft` → admin `publish_poll`, never
   `ensure_stortinget_poll` for drafts. Copy must say they are system-generated.
+  Publisering, arkivering og tilbakemelding ligger under `/dashboard/admin/vurder`
+  (fane Reels). `/dashboard/admin/reels` er generering og pipeline; `?pollId=`
+  redirecter til vurder.
 - Fylke breakdowns only count `users.fylke_code` when `fylke_verified` is true.
 
 ### Høringer
@@ -242,7 +250,10 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 ### Identity, admin, Stemme+
 
 - Admin: `public.user_roles` + `is_admin()` via `lib/admin/gate.ts`. Hub:
-  `/dashboard/admin` (Appens fremtid, Research, Reels, Statistikk, Brukere, Stemme+).
+  `/dashboard/admin` (Appens fremtid, Research, Reels, Vurder, Statistikk, Brukere, Stemme+).
+  **Vurder** (`/dashboard/admin/vurder?fane=reels|blogg|sammendrag`) samler vurdering av
+  reel-utkast, bloggutkast og AI-sammendrag. Etter publiser/arkiver av en reel blir
+  tittel, beskrivelse og kilder stående i tilbakemeldingskortet.
 - **Research** (`/dashboard/admin/research`, cluster detail `/dashboard/admin/research/[id]`):
   action clusters from action capture (`lib/admin/oppfanget/` list/filters; UI label Research).
   Admin actions deepen/blog/reel → `lib/admin/research/` + `POST /api/admin/research/...`;

@@ -1,4 +1,5 @@
-export const DEFAULT_JUDGE_MODEL = 'qwen2.5:32b';
+/** Independent of default answer models (e.g. gemma4:26b). */
+export const DEFAULT_JUDGE_MODEL = 'qwen3.5:4b-q4_K_M';
 
 export function resolveJudgeModel(): string {
   const model = (process.env.JUDGE_MODEL ?? DEFAULT_JUDGE_MODEL).trim();

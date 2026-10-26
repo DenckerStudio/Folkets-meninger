@@ -32,6 +32,11 @@ export type FolkVoteCounts = {
   total: number;
 };
 
+export type StortingetVoteBarLabels = {
+  for: string;
+  against: string;
+};
+
 export type AlignmentComparison = {
   folk: FolkVoteCounts;
   folkForPercent: number;
@@ -42,6 +47,7 @@ export type AlignmentComparison = {
   stortingetForPercent: number | null;
   stortingetAgainstPercent: number | null;
   stortingetSide: AlignmentSide | null;
+  stortingetBarLabels: StortingetVoteBarLabels;
   score: number | null;
   gapPoints: number | null;
   verdict: AlignmentVerdict;

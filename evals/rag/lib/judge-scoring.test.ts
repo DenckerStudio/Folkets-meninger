@@ -17,6 +17,21 @@ const ok = applyParsedJudgeScores({ id: 't', goldFacts: ['fact'] }, det, {
 });
 assert.equal(ok.judgeError, undefined);
 assert.equal(ok.faithfulness, 0.75);
+assert.equal(ok.faithfulnessCombined, 0.75);
+
+const detBad = scoreDeterministicRow({
+  id: 't3',
+  query: 'q',
+  answer: 'Kostnaden er 9 milliarder.',
+  excerpts: ['Ingen tall her.'],
+  goldFacts: [],
+});
+const capped = applyParsedJudgeScores({ id: 't3', goldFacts: [] }, detBad, {
+  faithfulness: 1,
+  quality: 1,
+  justification: 'generous',
+});
+assert.equal(capped.faithfulnessCombined, 0.5);
 
 const stats = summarizeLlmJudged([
   ok,

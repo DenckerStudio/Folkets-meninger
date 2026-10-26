@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  auditAnswerCitationSupport,
   extractSourceKeys,
   isRefusalAnswer,
   scoreDeterministicRow,
@@ -32,5 +33,12 @@ assert.equal(miss.retrievalMissRefusal, true);
 const keys = extractSourceKeys('Dokument 8:15 S (2025-2026), Innst. 100 S');
 assert.ok(keys.includes('dok:8:15:S'));
 assert.ok(keys.includes('innst:100:S'));
+
+const citeFail = auditAnswerCitationSupport('Beløpet er 500 millioner kr.', ['Ingen beløp nevnt.']);
+assert.equal(citeFail.citationSupportPass, false);
+assert.ok(citeFail.unsupportedNumbers.some((n) => n.includes('500')));
+
+const citeOk = auditAnswerCitationSupport('Saken gjelder 2025.', ['Stortinget behandlet saken i 2025.']);
+assert.equal(citeOk.citationSupportPass, true);
 
 console.log('answer-metrics.test.ts: ok');

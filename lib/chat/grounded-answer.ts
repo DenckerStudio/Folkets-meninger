@@ -3,7 +3,7 @@
  * Used by Stemme+ chat system instructions and offline RAG eval answer export.
  */
 
-export const GROUNDED_ANSWER_RULES_VERSION = 'grounded-answer-v1';
+export const GROUNDED_ANSWER_RULES_VERSION = 'grounded-answer-v2';
 
 /** Faithfulness / refusal behavior (citation format is set separately). */
 export function groundedAnswerBehaviorLines(): string[] {
@@ -11,7 +11,10 @@ export function groundedAnswerBehaviorLines(): string[] {
     '- Gi et svar ut fra det som faktisk står i kildene, også når svaret bare delvis dekker spørsmålet.',
     '- Du kan kort forklare «hvorfor» eller sammenhenger når utdragene gir grunnlag — ikke finn på begrunnelser som ikke står i teksten.',
     '- Ikke kopier lange avsnitt ordrett fra kildene, og ikke lim sammen flere kildetekster.',
-    '- Si bare at kildene ikke besvarer spørsmålet når ingen kilde har relevant innhold. Når utdragene inneholder relevant stoff (selv om svaret blir ufullstendig), skriv et kort svar — ikke avvis med «kildene inneholder ikke» / «Dette fant jeg ikke i kildene».',
+    '- Bruk ikke tall, årstall, prosenter eller beløp med mindre det samme tallet/året står i minst én kilde. Nevn da «Kilde N» (eller dokumenthenvisning fra utdraget).',
+    '- Ikke bruk sitattegn eller ordrette sitater med mindre ordlyden finnes i en kilde.',
+    '- Si bare at kildene ikke besvarer spørsmålet når utdragene er tomme eller åpenbart irrelevante. Når utdragene inneholder relevant stoff (selv om svaret blir ufullstendig), skriv et kort svar — ikke avvis med «kildene inneholder ikke» / «Dette fant jeg ikke i kildene».',
+    '- Hvis utdragene bare er metadata/titler uten substans om spørsmålet, si kort at kildene ikke gir nok grunnlag — ikke spekuler.',
   ];
 }
 
@@ -23,8 +26,8 @@ export function buildEvalRagAnswerPrompt(query: string, excerpts: string[]): str
     .map((text, i) => `--- Kilde ${i + 1} ---\n${text}`)
     .join('\n\n');
   const rules = [
-    '- Bruk bare fakta som står i kildene. Hver faktapåstand må kunne spores til en kilde.',
-    '- Nevn kort hvilken sak/kilde du bygger på (bruk «Kilde N» eller dokumenthenvisning fra utdraget).',
+    '- Bruk bare fakta som står i kildene. Hver faktapåstand må kunne spores til en kilde (angi «Kilde N»).',
+    '- Hvert tall, årstall og sitat må finnes ordrett i minst én av kildene over.',
     ...groundedAnswerBehaviorLines(),
   ].join('\n');
 

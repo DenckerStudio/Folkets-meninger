@@ -1,5 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { triggerAiSummaryWebhook } from '@/lib/trigger-ai-summary-webhook';
+import { parseForslagJsonb, resolveForslagForSummary } from './forslag';
 import { normalizeAiLabels, parseTopicCards } from './normalize-labels';
 import type { AiSummary } from './types';
 
@@ -7,6 +8,52 @@ function supabaseConfigured(): boolean {
   return Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   );
+}
+
+export type IssueAiSummaryRow = {
+  narrative?: string | null;
+  who_affected?: string | null;
+  how_affected?: string | null;
+  topic_cards?: unknown;
+  labels?: unknown;
+  forslag?: unknown;
+  hva?: string | null;
+  hvem?: string | null;
+  kostnad?: string | null;
+};
+
+/** Map DB row to API shape. v2 when narrative is non-empty (who_affected may be empty). */
+export function buildAiSummaryFromDbRow(data: IssueAiSummaryRow): AiSummary | null {
+  const narrative = data.narrative?.trim();
+  const who_affected = data.who_affected?.trim() ?? '';
+  const how_affected = data.how_affected?.trim() ?? '';
+
+  if (narrative) {
+    const topic_cards = parseTopicCards(data.topic_cards);
+    const { forslag, topic_cards: cards } = resolveForslagForSummary(
+      parseForslagJsonb(data.forslag),
+      topic_cards,
+    );
+    return {
+      version: 2,
+      narrative,
+      who_affected,
+      how_affected,
+      forslag,
+      topic_cards: cards,
+      labels: normalizeAiLabels(data.labels),
+      hva: data.hva?.trim() || narrative,
+      hvem: data.hvem?.trim() || who_affected,
+      kostnad: data.kostnad?.trim() || undefined,
+    };
+  }
+
+  const hva = data.hva?.trim();
+  const hvem = data.hvem?.trim();
+  const kostnad = data.kostnad?.trim();
+  if (!hva || !hvem || !kostnad) return null;
+
+  return { version: 1, hva, hvem, kostnad };
 }
 
 export async function getAiSummaryFromDb(issueId: string): Promise<AiSummary | null> {
@@ -17,37 +64,14 @@ export async function getAiSummaryFromDb(issueId: string): Promise<AiSummary | n
     const { data, error } = await supabase
       .from('issue_ai_summaries')
       .select(
-        'narrative, who_affected, how_affected, topic_cards, labels, hva, hvem, kostnad'
+        'narrative, who_affected, how_affected, topic_cards, labels, hva, hvem, kostnad, forslag'
       )
       .eq('stortinget_issue_id', issueId)
       .maybeSingle();
 
     if (error || !data) return null;
 
-    const narrative = data.narrative?.trim();
-    const who_affected = data.who_affected?.trim();
-    const how_affected = data.how_affected?.trim();
-
-    if (narrative && who_affected && how_affected) {
-      return {
-        version: 2,
-        narrative,
-        who_affected,
-        how_affected,
-        topic_cards: parseTopicCards(data.topic_cards),
-        labels: normalizeAiLabels(data.labels),
-        hva: data.hva?.trim() || narrative,
-        hvem: data.hvem?.trim() || who_affected,
-        kostnad: data.kostnad?.trim() || undefined,
-      };
-    }
-
-    const hva = data.hva?.trim();
-    const hvem = data.hvem?.trim();
-    const kostnad = data.kostnad?.trim();
-    if (!hva || !hvem || !kostnad) return null;
-
-    return { version: 1, hva, hvem, kostnad };
+    return buildAiSummaryFromDbRow(data);
   } catch (e) {
     console.error('[ai-summary] Kunne ikke hente sammendrag:', e);
     return null;

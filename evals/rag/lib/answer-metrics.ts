@@ -11,6 +11,14 @@ export type AnswerMetricsRow = {
   goldFacts: string[];
 };
 
+export type CitationAuditResult = {
+  /** Numbers/years in the answer that do not appear in any excerpt (after normalization). */
+  unsupportedNumbers: string[];
+  /** Quoted spans in the answer that do not appear in excerpts. */
+  unsupportedQuotes: string[];
+  citationSupportPass: boolean;
+};
+
 export type PerRowDeterministicMetrics = {
   id: string;
   category?: string;
@@ -27,7 +35,82 @@ export type PerRowDeterministicMetrics = {
   correctRefusal: boolean;
   retrievalSourceKeys: string[];
   answerSourceKeys: string[];
+  citationAudit: CitationAuditResult;
 };
+
+const NUMBER_TOKEN =
+  /\b(?:\d{1,3}(?:[ \u00a0]?\d{3})*(?:[,.]\d+)?|\d+(?:[,.]\d+)?)\s*(?:kr|kroner|millioner|milliarder|%|prosent)?\b/gi;
+const YEAR_TOKEN = /\b(?:19|20)\d{2}\b/g;
+const QUOTE_PATTERNS = [
+  /«([^»]{6,200})»/g,
+  /"([^"]{6,200})"/g,
+  /"([^"]{6,200})"/g,
+];
+
+function excerptHaystack(excerpts: string[]): string {
+  return normalizeMetricText(excerpts.join('\n'));
+}
+
+function numberAppearsInHaystack(token: string, hay: string): boolean {
+  const n = normalizeMetricText(token).replace(/\s/g, '');
+  const compactHay = hay.replace(/\s/g, '');
+  if (n.length < 2) return true;
+  if (compactHay.includes(n)) return true;
+  const digitsOnly = n.replace(/[^\d]/g, '');
+  if (digitsOnly.length >= 3 && compactHay.includes(digitsOnly)) return true;
+  return false;
+}
+
+/** Deterministic faithfulness guard: uncited numbers and quotes must appear in excerpts. */
+export function auditAnswerCitationSupport(answer: string, excerpts: string[]): CitationAuditResult {
+  const hay = excerptHaystack(excerpts);
+  const unsupportedNumbers: string[] = [];
+  const unsupportedQuotes: string[] = [];
+
+  const numberMatches = new Set<string>();
+  let m: RegExpExecArray | null;
+  const numRe = new RegExp(NUMBER_TOKEN.source, 'gi');
+  while ((m = numRe.exec(answer)) !== null) {
+    const tok = m[0].trim();
+    if (tok.length < 2) continue;
+    numberMatches.add(tok);
+  }
+  const yearRe = new RegExp(YEAR_TOKEN.source, 'g');
+  while ((m = yearRe.exec(answer)) !== null) {
+    numberMatches.add(m[0]);
+  }
+
+  for (const tok of numberMatches) {
+    if (!numberAppearsInHaystack(tok, hay)) unsupportedNumbers.push(tok);
+  }
+
+  for (const pattern of QUOTE_PATTERNS) {
+    const re = new RegExp(pattern.source, pattern.flags);
+    while ((m = re.exec(answer)) !== null) {
+      const quote = m[1].trim();
+      if (!quote) continue;
+      const qn = normalizeMetricText(quote);
+      if (qn.length < 8) continue;
+      if (!hay.includes(qn) && !fuzzyFactInText(hay, quote)) {
+        unsupportedQuotes.push(quote.slice(0, 120));
+      }
+    }
+  }
+
+  return {
+    unsupportedNumbers,
+    unsupportedQuotes,
+    citationSupportPass: unsupportedNumbers.length === 0 && unsupportedQuotes.length === 0,
+  };
+}
+
+export function citationRuleFaithfulnessCap(audit: CitationAuditResult): number {
+  if (audit.citationSupportPass) return 1;
+  const violations = audit.unsupportedNumbers.length + audit.unsupportedQuotes.length;
+  if (violations >= 3) return 0.25;
+  if (violations >= 1) return 0.5;
+  return 1;
+}
 
 const REFUSAL_PATTERNS = [
   /\bkildene\s+inneholder\s+ikke\b/i,
@@ -112,6 +195,7 @@ export function scoreDeterministicRow(row: AnswerMetricsRow): PerRowDeterministi
   const refusal = isRefusalAnswer(row.answer);
   const hasGold = row.goldFacts.length > 0;
   const goldInExcerpts = goldFactsPresentInExcerpts(row.excerpts, row.goldFacts);
+  const citationAudit = auditAnswerCitationSupport(row.answer, row.excerpts);
   return {
     id: row.id,
     category: row.category,
@@ -126,6 +210,7 @@ export function scoreDeterministicRow(row: AnswerMetricsRow): PerRowDeterministi
     correctRefusal: refusal && !hasGold,
     retrievalSourceKeys: extractSourceKeys(row.excerpts.join('\n')),
     answerSourceKeys: extractSourceKeys(row.answer),
+    citationAudit,
   };
 }
 
