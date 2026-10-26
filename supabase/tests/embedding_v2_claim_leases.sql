@@ -114,6 +114,12 @@ BEGIN
     DELETE FROM public.document_chunks
     WHERE issue_id IN ('embed-v2-test-issue', 'explain-tier0');
 
+    UPDATE public.document_chunks
+    SET
+      embedding_v2_claimed_at = NULL,
+      embedding_v2_claimed_by = NULL
+    WHERE embedding_v2 IS NULL;
+
     INSERT INTO public.stortinget_issues (id, title, last_synced_at, ferdigbehandlet, detail_json)
     VALUES
       ('embed-v2-fast-tier0', 'Fast', now(), false, '{"sak_sesjon":"2025-2026"}'::jsonb),
@@ -125,13 +131,20 @@ BEGIN
       ferdigbehandlet = EXCLUDED.ferdigbehandlet,
       detail_json = EXCLUDED.detail_json;
 
+    DELETE FROM public.stortinget_issue_documents
+    WHERE issue_id IN (
+      'embed-v2-fast-tier0',
+      'embed-v2-order-t1',
+      'embed-v2-order-t2a',
+      'embed-v2-order-t2b'
+    );
+
     INSERT INTO public.stortinget_issue_documents (issue_id, document_id, title, document_type, ingest_status, chunks_status)
     VALUES
       ('embed-v2-fast-tier0', 'doc-fast', 'Hoved', 'hoveddokument', 'ready', 'pending'),
       ('embed-v2-order-t1', 'doc-t1', 'Innst', 'innstilling', 'ready', 'pending'),
       ('embed-v2-order-t2a', 'doc-t2a', 'Hoved', 'hoveddokument', 'ready', 'pending'),
-      ('embed-v2-order-t2b', 'doc-t2b', 'Innst', 'innstilling', 'ready', 'pending')
-    ON CONFLICT DO NOTHING;
+      ('embed-v2-order-t2b', 'doc-t2b', 'Innst', 'innstilling', 'ready', 'pending');
 
     DELETE FROM public.document_chunks
     WHERE issue_id IN (
@@ -147,6 +160,16 @@ BEGIN
       ('embed-v2-order-t1', 'doc-t1', 0, 'tier1 chunk', 'pending', 'pending'),
       ('embed-v2-order-t2a', 'doc-t2a', 0, 'tier2 hoved', 'pending', 'pending'),
       ('embed-v2-order-t2b', 'doc-t2b', 0, 'tier2 innst', 'pending', 'pending');
+
+    DELETE FROM public.document_chunks
+    WHERE embedding_v2 IS NULL
+      AND embedding_v2_status = 'pending'
+      AND issue_id NOT IN (
+        'embed-v2-fast-tier0',
+        'embed-v2-order-t1',
+        'embed-v2-order-t2a',
+        'embed-v2-order-t2b'
+      );
 
     IF (
       SELECT c.issue_id
@@ -166,7 +189,7 @@ BEGIN
     PERFORM public.n8n_release_embedding_v2_claims('lane-fast');
 
     IF (
-      SELECT array_agg(row.issue_id ORDER BY row.chunk_index, row.issue_id)
+      SELECT array_agg(row.issue_id)
       FROM public.n8n_claim_chunks_missing_v2('background', 10, 'lane-bg', 300) row
     ) IS DISTINCT FROM ARRAY[
       'embed-v2-order-t1',
