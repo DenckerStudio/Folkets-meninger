@@ -3,7 +3,7 @@
   "name": "Folkets Meninger – dokument embeddings (RAG)",
   "nodes": [
     {
-      "id": "a1857773-2ac8-4274-952e-8ca433171094",
+      "id": "55a11469-e09b-44ff-bf5b-3ac872e35bb5",
       "name": "Every 60 minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
@@ -23,7 +23,7 @@
       }
     },
     {
-      "id": "ba0b4c00-2e67-495a-bf6c-f1098ccbbfcd",
+      "id": "eac9e0c0-4b2b-49f1-8800-171db33140fd",
       "name": "Embedding settings",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -53,7 +53,7 @@
       }
     },
     {
-      "id": "86e75435-9bb4-4915-ae1e-9d6ddf35a26c",
+      "id": "8c67fb23-8020-4224-a148-1d63e3d3a7e4",
       "name": "Fetch pending chunks",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -77,7 +77,7 @@
       "retryOnFail": true
     },
     {
-      "id": "6df93885-ca8f-4619-90bd-f897ad047116",
+      "id": "b1eef7bc-ab3e-49ea-8c17-bb1a1df6fec1",
       "name": "Expand pending chunks",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -92,7 +92,7 @@
       }
     },
     {
-      "id": "6727b502-2ccc-4834-bbc7-a7afe21afff8",
+      "id": "ee4ed0d9-503b-40cd-971c-63e2842bcac7",
       "name": "Has pending chunk?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -125,7 +125,7 @@
       }
     },
     {
-      "id": "47df60ea-8c1c-4932-b22c-d68e9aaf01ff",
+      "id": "ff8e039f-2fb1-476b-a05e-33d9ebd1569a",
       "name": "Ollama embeddings",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -147,7 +147,7 @@
       "onError": "continueRegularOutput"
     },
     {
-      "id": "73abc0f4-03f9-4343-9dd9-083215e645b3",
+      "id": "dc3705d0-b0a6-47b2-a937-668db69111bc",
       "name": "Map embedding vector",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -162,7 +162,7 @@
       }
     },
     {
-      "id": "487825e5-4279-4590-b7d4-3d2d79b37ea6",
+      "id": "85bf3bb4-7ab9-49bc-ba73-1302ace4b6a1",
       "name": "Prepare embedding update SQL",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -177,7 +177,7 @@
       }
     },
     {
-      "id": "055553a1-3b9f-4d04-8ac6-b660b7646cb8",
+      "id": "28d0c3f0-517e-4d99-98db-c55ce873d42f",
       "name": "Has embedding vector?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -210,7 +210,7 @@
       }
     },
     {
-      "id": "e788f7d0-8319-4c22-9274-7c80025fd52b",
+      "id": "4f389265-2bc0-43b9-8c69-100d970bc88f",
       "name": "Save embedding",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -234,7 +234,7 @@
       "retryOnFail": true
     },
     {
-      "id": "948d7aed-62df-4c0b-9ab0-1ff35444dda4",
+      "id": "cbb4fce0-ffa4-4142-8c98-52bf8a36f4c9",
       "name": "Clear document body storage",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -258,7 +258,7 @@
       "onError": "continueRegularOutput"
     },
     {
-      "id": "6524b4a8-2cc1-4ddc-9b90-d0465d7e4b55",
+      "id": "8efadadd-d498-4d8f-99fd-c61c8adc9dc0",
       "name": "Collect ready issues",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -273,7 +273,7 @@
       }
     },
     {
-      "id": "fc54e3bc-3921-4820-aff0-b761fa50241d",
+      "id": "1de54b26-08fc-40c7-a92d-dc060f1f3041",
       "name": "Trigger AI summary",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -297,7 +297,7 @@
       "onError": "continueRegularOutput"
     },
     {
-      "id": "6c4abd33-de5b-4147-ad8a-482495e43a41",
+      "id": "0dd30f6c-cc56-426f-9543-7efdf5c094fa",
       "name": "Rate limit pause",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -312,7 +312,7 @@
       }
     },
     {
-      "id": "0829337a-914a-49c2-96ec-e6cbb5981111",
+      "id": "5dc56819-0599-4a45-9931-e37ff9f2e28d",
       "name": "Batch run complete",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -335,7 +335,7 @@
       }
     },
     {
-      "id": "f501dbb9-1fe9-483b-9a4c-75470056b032",
+      "id": "6f7d29e2-b6ab-48fc-8a78-d49140c90042",
       "name": "Log embed failure keep pending",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -365,7 +365,7 @@
       }
     },
     {
-      "id": "7f64fa4b-0309-4ab8-95c9-edc1ebf8d4e4",
+      "id": "2edae567-dffd-4372-995f-14f2503bead0",
       "name": "Log empty embedding queue",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -395,7 +395,7 @@
       }
     },
     {
-      "id": "4466f2cf-be5e-4851-8aa0-b41d53f06804",
+      "id": "d6549f66-5db7-45e4-bb55-ad5f68cda802",
       "name": "Webhook document embeddings",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
@@ -409,10 +409,10 @@
         "responseMode": "onReceived",
         "responseData": "allEntries"
       },
-      "webhookId": "06d7aba1-daf8-401d-9196-38d097b8bcd5"
+      "webhookId": "e1a06c5f-55d9-4f81-aa14-2d48a9929a18"
     },
     {
-      "id": "49646afb-3b69-4cca-a99d-18f2f4f5348d",
+      "id": "05df1d77-20fc-4810-a056-7b9fa95b5cef",
       "name": "Normalize webhook payload",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -441,7 +441,7 @@
       }
     },
     {
-      "id": "7a34738f-10ca-4fc6-af76-292fdc69e9ff",
+      "id": "82976e5d-8d7b-4ee5-a64a-35dcf9cdcef6",
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
@@ -452,7 +452,7 @@
       "parameters": {}
     },
     {
-      "id": "a434d7c2-d4e0-42af-b0af-f6928f021dc8",
+      "id": "9dea137e-c8ad-4ad6-bfe4-16217e29d391",
       "name": "Format workflow error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -467,7 +467,7 @@
       }
     },
     {
-      "id": "526c194e-2de0-4fc9-afc8-52ac764f5eaf",
+      "id": "b6bf61c5-c641-40fd-a685-d74dc21e9530",
       "name": "Error notify settings",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -491,7 +491,7 @@
       }
     },
     {
-      "id": "32813e8c-c71a-4d3e-a701-bfc1d0246bd9",
+      "id": "59684305-9bdb-40a5-b7ca-cf0dc7202f76",
       "name": "Varsle admin om feil",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
