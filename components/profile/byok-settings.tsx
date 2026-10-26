@@ -6,6 +6,10 @@ import { ModelPicker } from '@/components/byok/model-picker';
 import { Button } from '@/components/ui/button';
 import { modelExists } from '@/lib/byok/ollama';
 import {
+  BYOK_OLLAMA_UNREACHABLE_NB,
+  BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB,
+} from '@/lib/byok/messages';
+import {
   DEFAULT_MODELS,
   OTHER_LLM_PROVIDERS,
   PRIMARY_LLM_PROVIDERS,
@@ -14,6 +18,13 @@ import {
   providerNeedsBaseUrl,
   type LlmProvider,
 } from '@/lib/byok/providers';
+
+function ollamaErrorForSettings(message: string): string {
+  if (message === BYOK_OLLAMA_UNREACHABLE_NB) {
+    return BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB;
+  }
+  return message;
+}
 
 export type ByokMetaView = {
   provider: LlmProvider;
@@ -77,9 +88,9 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
         );
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error(
-            typeof json.error === 'string' ? json.error : 'Kunne ikke hente modelliste fra serveren.',
-          );
+          const raw =
+            typeof json.error === 'string' ? json.error : 'Kunne ikke hente modelliste fra serveren.';
+          throw new Error(ollamaErrorForSettings(raw));
         }
         const list = Array.isArray(json.models)
           ? json.models.filter((item: unknown): item is string => typeof item === 'string')
@@ -92,7 +103,9 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
         if (controller.signal.aborted) return;
         setModels([]);
         setModelsError(
-          e instanceof Error ? e.message : 'Kunne ikke hente modelliste fra serveren.',
+          ollamaErrorForSettings(
+            e instanceof Error ? e.message : 'Kunne ikke hente modelliste fra serveren.',
+          ),
         );
       } finally {
         if (!controller.signal.aborted) setModelsLoading(false);
@@ -127,7 +140,9 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(typeof json.error === 'string' ? json.error : 'Kunne ikke lagre nøkkelen');
+        const raw =
+          typeof json.error === 'string' ? json.error : 'Kunne ikke lagre nøkkelen';
+        throw new Error(ollamaErrorForSettings(raw));
       }
       setApiKey('');
       setSaved({
@@ -140,7 +155,9 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
       setEditing(false);
       setMessage('Nøkkelen er lagret. Den sendes aldri tilbake til nettleseren.');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Kunne ikke lagre nøkkelen');
+      setError(
+        ollamaErrorForSettings(e instanceof Error ? e.message : 'Kunne ikke lagre nøkkelen'),
+      );
     } finally {
       setBusy(false);
     }
@@ -311,10 +328,16 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
                 className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
                 placeholder={
                   provider === 'ollama'
-                    ? 'http://localhost:11434/v1'
+                    ? 'https://din-ollama.example.no/v1'
                     : 'https://api.example.com/v1'
                 }
               />
+              {provider === 'ollama' ? (
+                <p className="text-xs text-muted-foreground">
+                  Adressen må være en offentlig http(s)-adresse. Lokale adresser som localhost og
+                  192.168.x/10.x støttes ikke.
+                </p>
+              ) : null}
             </label>
           ) : null}
 
@@ -322,7 +345,7 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
             modelsLoading ? (
               <p className="text-xs text-muted-foreground">Henter tilgjengelige modeller …</p>
             ) : modelsError ? (
-              <p className="text-xs text-destructive">{modelsError}</p>
+              <p className="text-xs text-destructive" role="alert">{modelsError}</p>
             ) : models.length > 0 ? (
               <p className="text-xs text-muted-foreground">
                 {models.length} modeller funnet på modellserveren.
@@ -388,7 +411,9 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
       )}
 
       {message ? <p className="text-sm text-brand">{message}</p> : null}
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-destructive" role="alert">{error}</p>
+      ) : null}
     </div>
   );
 }
