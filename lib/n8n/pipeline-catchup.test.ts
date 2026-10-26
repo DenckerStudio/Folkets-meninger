@@ -6,9 +6,10 @@ const src = readFileSync(join(process.cwd(), 'lib/n8n/pipeline-catchup.ts'), 'ut
 
 assert.match(src, /isLegacyEmbeddingsRetryEnabled\(\)/);
 assert.match(src, /listPendingLegacyEmbeddingIssueIds/);
-assert.match(src, /for \(const issueId of issueIds\)/);
-assert.match(src, /triggerDocumentEmbeddingsWebhook\(issueId\)/);
-assert.doesNotMatch(src, /triggerDocumentEmbeddingsWebhook\(\s*\)/);
+assert.match(src, /PIPELINE_EMBEDDING_CATCHUP_CONCURRENCY/);
+assert.match(src, /embeddingsConfigured/);
+assert.match(src, /runEmbeddingCatchupWebhooks/);
+assert.doesNotMatch(src, /for \(const issueId of issueIds\)[\s\S]*triggerDocumentEmbeddingsWebhook/);
 
 const triggerSrc = readFileSync(
   join(process.cwd(), 'lib/trigger-document-embeddings-webhook.ts'),
@@ -16,5 +17,13 @@ const triggerSrc = readFileSync(
 );
 assert.match(triggerSrc, /stortinget_issue_id:\s*stortingetIssueId/);
 assert.match(src, /N8N_PIPELINE_HEALTH_WEBHOOK_URL/);
+
+const routeSrc = readFileSync(
+  join(process.cwd(), 'app/api/admin/pipeline-health/route.ts'),
+  'utf8',
+);
+assert.match(routeSrc, /after\(/);
+assert.match(routeSrc, /runEmbeddingCatchupWebhooks/);
+assert.match(routeSrc, /status:\s*502/);
 
 console.log('pipeline-catchup.test.ts: ok');
