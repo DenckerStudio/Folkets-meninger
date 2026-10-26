@@ -3,6 +3,7 @@ import { applyChunkExcerptsForChat, normalizeChunkText } from '@/lib/chat/chunk-
 import { getAnonSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
 import type { ChatRagClient } from '@/lib/chat/rag';
+import { getChatRagRpcClient } from '@/lib/chat/rag-rpc-client';
 import {
   isMissingRpcByName,
   isMissingSearchChunksHybridRpcError,
@@ -203,14 +204,13 @@ async function hearingHasIndexedChunks(
 }
 
 async function trySearchChunksHybrid(
-  supabase: ChatRagClient,
   query: string,
   hearingId: string | null,
   limit: number,
 ): Promise<HearingChunkHit[] | null> {
   if (!hearingId) return null;
 
-  const rpc = supabase as SupabaseClient;
+  const rpc = getChatRagRpcClient() as SupabaseClient;
   const { data, error } = await rpc.rpc('search_chunks_hybrid', {
     query_text: query,
     query_embedding: null,
@@ -240,12 +240,11 @@ async function trySearchChunksHybrid(
 }
 
 async function searchHearingChunksLexical(
-  supabase: ChatRagClient,
   query: string,
   hearingId: string | null,
   limit: number,
 ): Promise<{ chunks: HearingChunkHit[]; rpcMissing: boolean }> {
-  const rpc = supabase as SupabaseClient;
+  const rpc = getChatRagRpcClient() as SupabaseClient;
   const { data, error } = await rpc.rpc('search_hearing_document_chunks_text', {
     p_query: query,
     p_hearing_id: hearingId,
@@ -290,12 +289,12 @@ export async function searchHearingDocuments(args: {
   }
 
   const supabase = await resolveRagClient(args.client ?? null);
-  const hybrid = await trySearchChunksHybrid(supabase, query, hearingId, limit);
+  const hybrid = await trySearchChunksHybrid(query, hearingId, limit);
   let lexicalRpcMissing = false;
   let chunks = hybrid ?? [];
 
   if (chunks.length === 0) {
-    const lexical = await searchHearingChunksLexical(supabase, query, hearingId, limit);
+    const lexical = await searchHearingChunksLexical(query, hearingId, limit);
     lexicalRpcMissing = lexical.rpcMissing;
     chunks = lexical.chunks;
   }

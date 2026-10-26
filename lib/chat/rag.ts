@@ -27,6 +27,7 @@ import {
   isMissingSearchIssuesFtsRpcError,
   warnChatRpcError,
 } from '@/lib/chat/rag-rpc-error';
+import { getChatRagRpcClient } from '@/lib/chat/rag-rpc-client';
 
 export {
   isMissingHybridRpcError,
@@ -161,11 +162,9 @@ function rankChunkForSak(
 }
 
 /**
- * Overlay chat RAG uses the logged-in request session when present, then the
- * public anon key. Public sak cache tables already allow SELECT for
- * anon/authenticated. Do not use the service role — a mismatched Cloud Agent
- * key fail-closes. Hybrid search RPCs are SECURITY DEFINER with EXECUTE for
- * authenticated (session) and service_role.
+ * Table reads use the logged-in session (or anon) on public sak cache tables.
+ * Hybrid search RPCs are service_role-only; server chat routes call them via
+ * `getChatRagRpcClient()` after requireStemmePlus.
  */
 export async function resolveChatRagClient(
   explicit?: ChatRagClient | null,
@@ -197,13 +196,13 @@ export async function primaryIssuesFromFtsAttempt(
 }
 
 async function searchIssuesViaFts(
-  supabase: ChatRagClient,
   needle: string,
   limit: number,
 ): Promise<ChatIssueHit[] | null> {
-  if (!supabase.rpc) return null;
+  const rpcClient = getChatRagRpcClient();
+  if (!rpcClient.rpc) return null;
   try {
-    const { data, error } = await supabase.rpc('search_issues_fts', {
+    const { data, error } = await rpcClient.rpc('search_issues_fts', {
       query_text: needle,
       search_terms: buildSearchTerms(needle),
       match_count: limit,
@@ -321,7 +320,7 @@ export async function searchIssuesForChat(
     if (direct) return [direct];
   }
 
-  const ftsHits = await searchIssuesViaFts(supabase, needle, limit);
+  const ftsHits = await searchIssuesViaFts(needle, limit);
   return primaryIssuesFromFtsAttempt(ftsHits, () =>
     searchIssuesForChatLegacy(supabase, needle, limit),
   );
@@ -409,13 +408,13 @@ export async function primaryChunksFromHybridAttempt(
 }
 
 async function searchChunksHybrid(
-  supabase: ChatRagClient,
   issue: ChatIssueHit,
   query: string,
   maxChunks: number = MAX_CHUNKS,
   centralQueryEmbedding?: number[] | null,
 ): Promise<ChatDocumentChunk[] | null> {
-  if (!supabase.rpc) return null;
+  const rpcClient = getChatRagRpcClient();
+  if (!rpcClient.rpc) return null;
   const issueId = issue.id.trim();
   if (!issueId) return null;
 
@@ -425,7 +424,7 @@ async function searchChunksHybrid(
       : await fetchCentralQueryEmbedding(query);
 
   try {
-    const { data, error } = await supabase.rpc('search_chunks_hybrid', {
+    const { data, error } = await rpcClient.rpc('search_chunks_hybrid', {
       query_text: query,
       query_embedding: queryEmbedding,
       filter_issue_ids: [issueId],
@@ -532,7 +531,6 @@ async function searchChunks(
   };
 
   const hybrid = await searchChunksHybrid(
-    supabase,
     issue,
     query,
     maxChunks,

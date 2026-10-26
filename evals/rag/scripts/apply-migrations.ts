@@ -22,6 +22,7 @@ const IMPROVEMENT_MIGRATIONS = [
   '20261022106000_rag_unaccent_short_title_tsv.sql',
   '20261022107000_rag_issue_search_ilike_boost.sql',
   '20261022108000_rag_issue_search_sak_prefix.sql',
+  '20261022109600_rag_search_rpc_service_role_only.sql',
 ];
 
 function parseArgs(): { variant: Variant; database: string } {

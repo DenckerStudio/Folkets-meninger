@@ -1,6 +1,17 @@
 -- RAG round4: ILIKE + trgm + sak ID prefix in issue search.
 BEGIN;
 
+CREATE OR REPLACE FUNCTION public.fm_escape_ilike(pattern text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+STRICT
+SET search_path = public, pg_temp
+AS $$
+  SELECT replace(replace(replace(coalesce($1, ''), E'\\', E'\\\\'), '%', E'\\%'), '_', E'\\_')
+$$;
+
 DROP FUNCTION IF EXISTS public.search_issues_fts(text, int);
 DROP FUNCTION IF EXISTS public.search_issues_fts(text, text[], int);
 
@@ -52,7 +63,11 @@ AS $$
           WHEN nullif(btrim(coalesce(query_text, '')), '') IS NULL THEN NULL::tsquery
           ELSE websearch_to_tsquery('norwegian', public.fm_unaccent(nullif(btrim(coalesce(query_text, '')), '')))
         END
-      ) AS tsq
+      ) AS tsq,
+      CASE
+        WHEN nullif(btrim(coalesce(query_text, '')), '') IS NULL THEN NULL::tsquery
+        ELSE websearch_to_tsquery('norwegian', nullif(btrim(coalesce(query_text, '')), ''))
+      END AS chunk_tsq
   ),
   refs AS (
     SELECT
@@ -144,10 +159,12 @@ AS $$
   chunk_sak AS (
     SELECT
       dc.issue_id AS id,
-      max(ts_rank_cd(dc.tsv, q.tsq, 1))::real AS chunk_rank
+      max(ts_rank_cd(dc.tsv, q.chunk_tsq, 1))::real AS chunk_rank
     FROM public.document_chunks dc
     CROSS JOIN q
-    WHERE q.tsq IS NOT NULL AND dc.tsv @@ q.tsq AND dc.issue_id IS NOT NULL
+    WHERE q.chunk_tsq IS NOT NULL
+      AND dc.tsv @@ q.chunk_tsq
+      AND dc.issue_id IS NOT NULL
     GROUP BY dc.issue_id
   ),
 
@@ -159,7 +176,6 @@ AS $$
       i.henvisning,
       i.ferdigbehandlet,
       greatest(
-        0.55::real,
         similarity(coalesce(i.title, ''), q.raw)::real,
         word_similarity(q.raw, coalesce(i.title, ''))::real
       ) AS rank
@@ -168,9 +184,9 @@ AS $$
     WHERE q.raw IS NOT NULL
       AND length(q.raw) >= 2
       AND (
-        coalesce(i.title, '') ILIKE '%' || replace(q.raw, '%', '') || '%'
-        OR coalesce(i.henvisning, '') ILIKE '%' || replace(q.raw, '%', '') || '%'
-        OR similarity(coalesce(i.title, ''), q.raw) > 0.2
+        coalesce(i.title, '') ILIKE '%' || public.fm_escape_ilike(q.raw) || '%' ESCAPE E'\\'
+        OR coalesce(i.henvisning, '') ILIKE '%' || public.fm_escape_ilike(q.raw) || '%' ESCAPE E'\\'
+        OR similarity(coalesce(i.title, ''), q.raw) > 0.25
         OR word_similarity(q.raw, coalesce(i.title, '')) > 0.35
       )
   ),
@@ -213,6 +229,6 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION public.search_issues_fts(text, text[], int) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.search_issues_fts(text, text[], int) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.search_issues_fts(text, text[], int) TO service_role;
 
 COMMIT;

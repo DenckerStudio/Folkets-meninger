@@ -5,6 +5,27 @@ BEGIN;
 SET lock_timeout = '5s';
 
 CREATE SCHEMA IF NOT EXISTS extensions;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_extension e
+    JOIN pg_namespace n ON n.oid = e.extnamespace
+    WHERE e.extname = 'unaccent' AND n.nspname = 'public'
+  ) THEN
+    ALTER EXTENSION unaccent SET SCHEMA extensions;
+  END IF;
+  IF EXISTS (
+    SELECT 1
+    FROM pg_extension e
+    JOIN pg_namespace n ON n.oid = e.extnamespace
+    WHERE e.extname = 'pg_trgm' AND n.nspname = 'public'
+  ) THEN
+    ALTER EXTENSION pg_trgm SET SCHEMA extensions;
+  END IF;
+END $$;
+
 CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA extensions;
 
 CREATE OR REPLACE FUNCTION public.fm_unaccent(text)
@@ -19,7 +40,7 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION public.fm_unaccent(text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.fm_unaccent(text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.fm_unaccent(text) TO service_role;
 
 -- Drop non-concurrent GIN if a partial apply created it; concurrent rebuild in 20261022109100.
 DROP INDEX IF EXISTS public.stortinget_issues_tsv_gin_idx;

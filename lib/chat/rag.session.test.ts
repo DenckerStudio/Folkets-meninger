@@ -10,7 +10,7 @@ const rettSrc = readFileSync(new URL('../../app/api/chat/rettskriving/route.ts',
 const sourcesSrc = readFileSync(new URL('../../app/api/chat/sources/route.ts', import.meta.url), 'utf8');
 const sakSrc = readFileSync(new URL('../../app/api/chat/sak-context/route.ts', import.meta.url), 'utf8');
 
-assert.doesNotMatch(ragSrc, /getServiceSupabase/);
+assert.match(ragSrc, /getChatRagRpcClient/);
 assert.match(ragSrc, /getServerSupabase/);
 assert.match(ragSrc, /getAnonSupabase/);
 assert.match(ragSrc, /issue_id, document_id, chunk_index, content/);

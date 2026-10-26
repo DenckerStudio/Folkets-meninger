@@ -41,4 +41,12 @@ assert.ok(citeFail.unsupportedNumbers.some((n) => n.includes('500')));
 const citeOk = auditAnswerCitationSupport('Saken gjelder 2025.', ['Stortinget behandlet saken i 2025.']);
 assert.equal(citeOk.citationSupportPass, true);
 
+const substringFail = auditAnswerCitationSupport('Kostnaden er 500 kr.', ['Beløpet var 1500 kr totalt.']);
+assert.equal(substringFail.citationSupportPass, false);
+
+const curlyOk = auditAnswerCitationSupport('De skrev \u201cfolkevalgt demokrati\u201d i teksten.', [
+  'Innledningen sier folkevalgt demokrati er viktig.',
+]);
+assert.equal(curlyOk.citationSupportPass, true);
+
 console.log('answer-metrics.test.ts: ok');

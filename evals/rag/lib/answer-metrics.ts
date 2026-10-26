@@ -43,7 +43,7 @@ const NUMBER_TOKEN =
 const YEAR_TOKEN = /\b(?:19|20)\d{2}\b/g;
 const QUOTE_PATTERNS = [
   /«([^»]{6,200})»/g,
-  /"([^"]{6,200})"/g,
+  /\u201c([^\u201d]{6,200})\u201d/g,
   /"([^"]{6,200})"/g,
 ];
 
@@ -55,9 +55,13 @@ function numberAppearsInHaystack(token: string, hay: string): boolean {
   const n = normalizeMetricText(token).replace(/\s/g, '');
   const compactHay = hay.replace(/\s/g, '');
   if (n.length < 2) return true;
-  if (compactHay.includes(n)) return true;
   const digitsOnly = n.replace(/[^\d]/g, '');
-  if (digitsOnly.length >= 3 && compactHay.includes(digitsOnly)) return true;
+  if (digitsOnly.length >= 2) {
+    const escaped = digitsOnly.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const bounded = new RegExp(`(^|[^0-9])${escaped}([^0-9]|$)`);
+    return bounded.test(compactHay);
+  }
+  if (compactHay.includes(n)) return true;
   return false;
 }
 
