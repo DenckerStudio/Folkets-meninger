@@ -47,6 +47,8 @@ export PGOPTIONS='-c lock_timeout=30s -c statement_timeout=10min'
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/<transactional-file>.sql
 ```
 
+**Exception — `20261022100000`:** that file opens with `BEGIN` and runs `SET lock_timeout = '5s'` inside the transaction. For the heap rewrite on `document_chunks`, **5 s** is the effective lock timeout (not the session `30s` above). If `22100000` aborts waiting on `ACCESS EXCLUSIVE`, retry in a quieter window; do not raise session `lock_timeout` expecting it to override the in-migration `5s` without editing the migration (out of scope for apply).
+
 **Rollback (per transactional file):** only practical if the migration failed before `COMMIT` — restore from snapshot / PITR. Do not drop `document_chunks.tsv` / `embedding_v2` after a successful `22100000` without a new window.
 
 ## Extensions (transactional migrations)
@@ -77,9 +79,9 @@ Apply after main is at `20261021170000_issue_ai_summary_no_cost_in_how_affected.
 
 ### Locking — `document_chunks.tsv` (`20261022100000`)
 
-Coolify Expert bench on prod host (~380k rows):
+Measured on a **copy** (`rag-eval-pg`) on the same host (**klever**), PostgreSQL **15.19**, idle (~380k rows). **Prod under load may be slower.**
 
-- **`ACCESS EXCLUSIVE`** for ~**74 s** on idle host; under load expect **~1.5–3 min** (blocks RAG/search reads on `document_chunks`).
+- **`ACCESS EXCLUSIVE`** for ~**74 s** on that idle copy; on prod under load expect **~1.5–3 min** (blocks RAG/search reads on `document_chunks`).
 - Heap growth about **+523 MB** on table; WAL about **~1.2 GB** for the rewrite.
 
 `stortinget_issues.tsv` (~480 rows) is cheap in the same file.
@@ -97,6 +99,8 @@ Optional batched manual chunk `tsv` refresh (only if GENERATED is ever dropped):
 ## Phase B — concurrent index session settings
 
 Each file is **one** `CREATE INDEX CONCURRENTLY IF NOT EXISTS`. Do **not** wrap in `BEGIN`/`COMMIT`. Do **not** reuse phase A `statement_timeout = '10min'` — long GIN builds will be killed.
+
+**`maintenance_work_mem`:** GIN build time (especially `22109000` on `document_chunks.tsv`) scales with this setting. Coolify Expert checks the **prod** value read-only (`SHOW maintenance_work_mem;`) before the window; do not change prod GUCs during apply unless Mathias approves a separate tuning change.
 
 Before **each** index file:
 
@@ -116,7 +120,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/<index-file>.sql
 | A | `20261022109000_rag_index_document_chunks_tsv_gin_concurrent.sql` | `document_chunks_tsv_gin_idx` | **10–45 min** worst case on ~380k rows; **5–20 min** typical (IO-bound) |
 | B | `20261022109100_rag_index_stortinget_issues_tsv_gin_concurrent.sql` | `stortinget_issues_tsv_gin_idx` | **&lt;1 min** |
 | C | `20261022109200_rag_index_document_chunks_embedding_v2_hnsw_concurrent.sql` | `document_chunks_embedding_v2_hnsw_idx` | **minutes** (empty at first; reindex after large backfill) |
-| D | `20261022109300_rag_index_document_chunks_content_trgm_concurrent.sql` | `document_chunks_content_trgm_idx` | **~98 s** on prod bench copy; allow headroom under load |
+| D | `20261022109300_rag_index_document_chunks_content_trgm_concurrent.sql` | `document_chunks_content_trgm_idx` | **~98 s** on `rag-eval-pg` copy (klever, PG 15.19, idle); prod under load may be slower |
 | E | `20261022109400_rag_index_stortinget_issues_title_trgm_concurrent.sql` | `stortinget_issues_title_trgm_idx` | **&lt;1 min** |
 | F | `20261022109500_rag_index_document_chunks_metadata_hash_concurrent.sql` | `document_chunks_metadata_content_hash_idx` | **5–20 min** typical |
 
