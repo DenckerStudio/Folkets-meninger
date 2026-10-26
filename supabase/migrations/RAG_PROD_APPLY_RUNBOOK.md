@@ -18,8 +18,11 @@ Før PR **#185** merges til `main`, Coolify Expert må sette på **fm-web** (kun
 | --- | --- |
 | `RERANKER_URL` | `http://192.168.50.154:11434` |
 | `EMBED_QUERY_URL` | `http://192.168.50.154:11435` |
+| `N8N_AI_SUMMARY_WEBHOOK_TOKEN` | Egen hemmelig token (samme verdi som n8n Header Auth **«FM AI Summary Webhook Token»** på `folkets-ai-summary`) |
 
-Uten disse logger fm-web én gang per prosess og kjører hybrid uten sentral embed/rerank (leksikalsk rekkefølge / ingen rerank) — **ikke** `localhost` eller offentlig URL.
+Uten `RERANKER_URL` / `EMBED_QUERY_URL` logger fm-web én gang per prosess og kjører hybrid uten sentral embed/rerank (leksikalsk rekkefølge / ingen rerank) — **ikke** `localhost` eller offentlig URL.
+
+Uten `N8N_AI_SUMMARY_WEBHOOK_TOKEN` på fm-web **før** `ai-summary-backfill` / `pipeline-health` publiseres eller aktiveres, får webhook-kall **401** (workflow-kilden krever `headerAuth`).
 
 Etter env er på plass: fortsett med SQL phase A/B nedenfor, deretter merge.
 
