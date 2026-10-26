@@ -34,21 +34,47 @@ const noisyBracket =
 const polished = polishGroundedAnswer(noisyBracket);
 assert.ok(!/flere voteringer/i.test(polished));
 assert.match(polished, /\[1\]/);
+assert.ok(!/\[flere kilder\]/.test(polished));
+
+const longCite = 'Fakta [1][2][3][4][5] om olje.';
+const polishedLong = polishGroundedAnswer(longCite);
+assert.match(polishedLong, /\(flere kilder\)/);
+assert.ok(!/\[flere kilder\]/.test(polishedLong));
 
 const refusal =
   'Kildene inneholder ikke informasjon om begrunnelsen for tiltaket [4].';
 assert.equal(isRefusalAnswer(refusal), true);
 assert.equal(stripBracketCitations(refusal), 'Kildene inneholder ikke informasjon om begrunnelsen for tiltaket.');
 
+const refusalWithFooter = `Kildene inneholder ikke informasjon om begrunnelsen [4].
+
+Kilder:
+[1] Prop. 82 L`;
+const strippedFooter = stripBracketCitations(refusalWithFooter);
+assert.ok(!strippedFooter.includes('[4]'));
+assert.match(strippedFooter, /Kilder:\n\[1\] Prop\. 82 L/);
+
 const refusalProcessed = postProcessGroundedAnswer(refusal, excerpts);
 assert.ok(!refusalProcessed.includes('[4]'));
 
+const multilineAnswer = `Første avsnitt om olje.
+
+- tiltak en
+- tiltag to
+
+Kilder:
+[1] Dokument 8:265 S`;
+const multilineProcessed = postProcessGroundedAnswer(multilineAnswer, excerpts);
+assert.match(multilineProcessed, /Første avsnitt om olje\.\n\n- tiltak en/);
+assert.match(multilineProcessed, /Kilder:\n\[1\] Dokument/);
+
 const voteringExcerpt = formatVoteringRagSummary('28432', 'Drivstoff', { SV: 'for' });
 const partyFix = postProcessGroundedAnswer(
-  'I votering 28432 stemte SV for. SV stemte mot i votering 28432.',
+  'I votering 28432 stemte SV for.\nSV stemte mot i votering 28432.',
   [voteringExcerpt],
 );
 assert.match(partyFix, /stemte SV for/i);
 assert.ok(!/stemte SV mot/i.test(partyFix));
+assert.ok(partyFix.includes('\n'));
 
 console.log('lib/chat/grounded-answer.test.ts ok');

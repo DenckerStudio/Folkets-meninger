@@ -52,10 +52,12 @@ function normalizePartyCode(raw: string): string {
   return raw;
 }
 
-function sentenceMentionsParty(sentence: string, partyCode: string): boolean {
+/** Party codes in answer text: exact case, word boundaries (no /i on A/H/R/V). */
+export function sentenceMentionsParty(sentence: string, partyCode: string): boolean {
   const lower = sentence.toLowerCase();
   const code = normalizePartyCode(partyCode);
-  const codeRe = new RegExp(`\\b${code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+  const escaped = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const codeRe = new RegExp(`\\b${escaped}\\b`);
   if (codeRe.test(sentence)) return true;
   const name = PARTY_NAMES[code];
   if (name && lower.includes(name)) return true;
@@ -88,9 +90,9 @@ function voteringIdsInText(text: string): string[] {
   return [...ids];
 }
 
-function splitSentences(text: string): string[] {
-  return text
-    .split(/(?<=[.!?])\s+/)
+function splitSentencesInLine(line: string): string[] {
+  return line
+    .split(/(?<=[.!?])[ \t]+/)
     .map((s) => s.trim())
     .filter(Boolean);
 }
@@ -122,23 +124,18 @@ function dedupePartyStanceInSentence(
   return kept.join(', ');
 }
 
-/**
- * Removes or corrects sentences that claim the same party voted both for and against
- * in the same votering when excerpts only support one stance.
- */
-export function reconcilePartyVoteClaimsWithSources(answer: string, excerpts: string[]): string {
-  const trimmed = answer.trim();
-  if (!trimmed) return trimmed;
+function reconcilePartyVoteLine(
+  line: string,
+  sourceByVotering: Map<string, Map<string, PartyStance>>,
+  answerVoteringIds: string[],
+): string {
+  const trimmedLine = line.trim();
+  if (!trimmedLine) return line;
 
-  const sourceByVotering = parsePartyStancesByVoteringFromExcerpts(excerpts);
-  if (sourceByVotering.size === 0) return trimmed;
+  const sentences = splitSentencesInLine(trimmedLine);
+  if (sentences.length === 0) return line;
 
-  const sentences = splitSentences(trimmed);
-  if (sentences.length === 0) return trimmed;
-
-  const answerVoteringIds = voteringIdsInText(trimmed);
   const voteringIds = new Set([...answerVoteringIds, ...sourceByVotering.keys()]);
-
   const dropSentence = new Set<number>();
 
   for (const voteringId of voteringIds) {
@@ -172,7 +169,7 @@ export function reconcilePartyVoteClaimsWithSources(answer: string, excerpts: st
     }
   }
 
-  let kept = sentences
+  const kept = sentences
     .map((sentence, idx) => {
       if (dropSentence.has(idx)) return null;
       let s = sentence;
@@ -191,7 +188,31 @@ export function reconcilePartyVoteClaimsWithSources(answer: string, excerpts: st
     })
     .filter((s): s is string => Boolean(s));
 
-  if (kept.length === 0) return trimmed;
+  if (kept.length === 0) return line;
 
-  return kept.join(' ').replace(/\s+([,.])/g, '$1').trim();
+  const rebuilt = kept.join(' ').replace(/[ \t]+([,.])/g, '$1');
+  if (line.startsWith(' ') || line.startsWith('\t')) {
+    const indent = line.match(/^(\s*)/)?.[1] ?? '';
+    return indent + rebuilt;
+  }
+  return rebuilt;
+}
+
+/**
+ * Removes or corrects sentences that claim the same party voted both for and against
+ * in the same votering when excerpts only support one stance.
+ */
+export function reconcilePartyVoteClaimsWithSources(answer: string, excerpts: string[]): string {
+  const trimmed = answer.trim();
+  if (!trimmed) return trimmed;
+
+  const sourceByVotering = parsePartyStancesByVoteringFromExcerpts(excerpts);
+  if (sourceByVotering.size === 0) return trimmed;
+
+  const answerVoteringIds = voteringIdsInText(trimmed);
+  const lines = answer.split('\n');
+  const processed = lines.map((line) =>
+    reconcilePartyVoteLine(line, sourceByVotering, answerVoteringIds),
+  );
+  return processed.join('\n').trimEnd();
 }

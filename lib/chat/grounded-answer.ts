@@ -3,9 +3,15 @@
  * Used by Stemme+ chat system instructions and offline RAG eval answer export.
  */
 
+import {
+  joinAnswerBodyAndSourcesFooter,
+  splitAnswerBodyAndSourcesFooter,
+} from '@/lib/chat/grounded-answer-structure';
 import { reconcilePartyVoteClaimsWithSources } from '@/lib/chat/party-vote-answer-guard';
 
 export const GROUNDED_ANSWER_RULES_VERSION = 'grounded-answer-v4.1';
+
+export { splitAnswerBodyAndSourcesFooter, joinAnswerBodyAndSourcesFooter };
 
 const REFUSAL_PATTERNS = [
   /\bkildene\s+inneholder\s+ikke\b/i,
@@ -38,7 +44,8 @@ export function groundedAnswerBehaviorLines(): string[] {
 }
 
 export function isRefusalAnswer(answer: string): boolean {
-  const a = answer.trim();
+  const { body } = splitAnswerBodyAndSourcesFooter(answer.trim());
+  const a = body.trim();
   if (!a) return false;
   return REFUSAL_PATTERNS.some((re) => re.test(a));
 }
@@ -78,33 +85,50 @@ const LONG_BRACKET_CITE_RUN = /(?:\[\d{1,2}\]){4,}/g;
 const VOTERING_ONLY_SENTENCE =
   /\bKildene\s+viser\s+også\s+flere\s+voteringer[^.]*\./gi;
 
-/** Trim citation noise and hedging the model often adds after generation. */
-export function polishGroundedAnswer(answer: string, _excerpts?: string[]): string {
-  let text = answer.trim();
-  if (!text) return text;
+const INLINE_BRACKET_CITE = /[ \t]*\[(?:\d{1,2})\](?:\[(?:\d{1,2})\])*/g;
+
+function polishGroundedAnswerBody(body: string): string {
+  let text = body;
+  if (!text.trim()) return text;
 
   text = text.replace(LONG_KILDE_LIST, '(flere kilder)');
   text = text.replace(INLINE_KILDE_RUN, 'flere kilder');
-  text = text.replace(LONG_BRACKET_CITE_RUN, '[flere kilder]');
-  text = text.replace(VOTERING_ONLY_SENTENCE, '').trim();
+  text = text.replace(LONG_BRACKET_CITE_RUN, '(flere kilder)');
+  text = text.replace(VOTERING_ONLY_SENTENCE, '');
 
-  return text.replace(/\s+([,.])/g, '$1').trim();
+  const lines = text.split('\n');
+  const polishedLines = lines.map((line) => line.replace(/[ \t]+([,.])/g, '$1').trimEnd());
+  return polishedLines.join('\n').trim();
 }
 
-/** Remove [n] citation markers (refusal answers should not cite). */
+/** Trim citation noise and hedging the model often adds after generation. */
+export function polishGroundedAnswer(answer: string, _excerpts?: string[]): string {
+  const { body, footer } = splitAnswerBodyAndSourcesFooter(answer.trim());
+  const polishedBody = polishGroundedAnswerBody(body);
+  return joinAnswerBodyAndSourcesFooter(polishedBody, footer).trim();
+}
+
+/** Strip inline [n] markers from refusal body text only (preserves «Kilder:» footer). */
+export function stripBracketCitationsFromBody(body: string): string {
+  const lines = body.split('\n');
+  const cleaned = lines.map((line) => line.replace(INLINE_BRACKET_CITE, '').replace(/[ \t]+([,.])/g, '$1'));
+  return cleaned.join('\n').trim();
+}
+
+/** Remove [n] citation markers from refusal answers (body only; footer unchanged). */
 export function stripBracketCitations(answer: string): string {
-  return answer
-    .replace(/\s*\[(?:\d{1,2})\](?:\[(?:\d{1,2})\])*/g, '')
-    .replace(/\s+([,.])/g, '$1')
-    .trim();
+  const { body, footer } = splitAnswerBodyAndSourcesFooter(answer);
+  const cleaned = stripBracketCitationsFromBody(body);
+  return joinAnswerBodyAndSourcesFooter(cleaned, footer).trim();
 }
 
 /** Shared post-generation cleanup for eval export and grounded chat answers. */
 export function postProcessGroundedAnswer(answer: string, excerpts: string[]): string {
-  let text = polishGroundedAnswer(answer, excerpts);
-  if (isRefusalAnswer(text)) {
-    text = stripBracketCitations(text);
+  const { body, footer } = splitAnswerBodyAndSourcesFooter(answer);
+  let text = polishGroundedAnswerBody(body);
+  if (isRefusalAnswer(joinAnswerBodyAndSourcesFooter(text, ''))) {
+    text = stripBracketCitationsFromBody(text);
   }
   text = reconcilePartyVoteClaimsWithSources(text, excerpts);
-  return text.trim();
+  return joinAnswerBodyAndSourcesFooter(text, footer).trim();
 }
