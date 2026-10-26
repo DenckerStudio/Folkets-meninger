@@ -14,8 +14,13 @@ export function validateEmbeddingVector(raw: unknown): number[] | null {
       ? record.embedding
       : null;
   if (!candidate?.length) return null;
-  const vector = candidate.map((v) => (typeof v === 'number' ? v : Number(v)));
-  if (vector.some((v) => !Number.isFinite(v))) return null;
+  const vector: number[] = [];
+  for (const v of candidate) {
+    if (typeof v !== 'number' || !Number.isFinite(v)) {
+      return null;
+    }
+    vector.push(v);
+  }
   if (vector.length !== VECTOR_V2_DIMENSIONS) return null;
   return vector;
 }

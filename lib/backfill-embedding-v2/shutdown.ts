@@ -12,8 +12,17 @@ export async function releaseAllWorkerClaims(
 
 /** SIGINT/SIGTERM: release leases then exit(0). Used by scripts/backfill-embedding-v2.ts. */
 export function installBackfillSignalHandlers(onStop: () => Promise<void>): void {
+  let stopPromise: Promise<void> | null = null;
+  let exitScheduled = false;
   const handle = () => {
-    void onStop().finally(() => process.exit(0));
+    if (!stopPromise) {
+      stopPromise = onStop();
+    }
+    if (exitScheduled) {
+      return;
+    }
+    exitScheduled = true;
+    void stopPromise.finally(() => process.exit(0));
   };
   process.on('SIGINT', handle);
   process.on('SIGTERM', handle);

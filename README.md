@@ -133,7 +133,7 @@ når backfill-URL deler `:11435`.
 
 ```bash
 # Preflight alle endepunkter
-EMBED_QUERY_URL=http://192.168.50.154:11435 \
+EMBED_QUERY_URL=http://ollama-host.example.invalid:11435 \
 SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
 EMBED_BACKFILL_ENDPOINTS='[
   {"name":"server","primary":true,"provider":"lmstudio","url":"https://embed-proxy.example/v1",

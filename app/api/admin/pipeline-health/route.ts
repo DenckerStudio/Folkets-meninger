@@ -32,6 +32,6 @@ export async function POST() {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const triggered = triggerPipelineCatchup();
+  const triggered = await triggerPipelineCatchup();
   return NextResponse.json({ ok: true, triggered });
 }

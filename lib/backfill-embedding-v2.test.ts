@@ -76,6 +76,8 @@ async function main(): Promise<void> {
 
   const good = vec1024();
   assert.ok(validateEmbeddingVector({ embeddings: [good] }));
+  assert.equal(validateEmbeddingVector({ embedding: [0, null, 1] }), null);
+  assert.equal(validateEmbeddingVector({ embedding: [Number.NaN] }), null);
 
   const rows = buildSaveRows([{ id: 'a', content: 'x' }], new Map([['a', good]]));
   assert.match(rows[0].embedding, /^\[/);

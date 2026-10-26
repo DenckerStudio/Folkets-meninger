@@ -13,6 +13,7 @@ import {
   finalizeEndpoints,
 } from '../lib/backfill-embedding-v2/endpoints';
 import { installBackfillSignalHandlers } from '../lib/backfill-embedding-v2/shutdown';
+import { createLeaseReleaseStopController } from '../lib/backfill-embedding-v2/stop-controller';
 import { loadScheduleWindows, parseBackfillArgv } from '../lib/backfill-embedding-v2/parse-args';
 import { runEmbeddingPreflight } from '../lib/backfill-embedding-v2/preflight';
 import { SharedDbPressure } from '../lib/backfill-embedding-v2/shared-pressure';
@@ -140,25 +141,21 @@ async function main(): Promise<void> {
   }
 
   const shared = new SharedDbPressure();
-  let stopping = false;
   const workerIds: string[] = [];
 
-  const requestStop = async () => {
-    if (stopping) return;
-    stopping = true;
+  const stopController = createLeaseReleaseStopController(async () => {
     for (const id of workerIds) {
       await releaseWorkerClaims(supabase, id);
     }
-  };
+  });
 
-  installBackfillSignalHandlers(requestStop);
+  installBackfillSignalHandlers(stopController.requestStop);
 
   const coordinator = (async () => {
-    while (!stopping) {
+    while (!stopController.isStopping()) {
       if (cli.stopFile && existsSync(cli.stopFile)) {
         log('[backfill-v2] stop-file funnet — avslutter.');
-        stopping = true;
-        await requestStop();
+        await stopController.requestStop();
         break;
       }
       await shared.refresh(supabase, { tier0Probe: () => tier0Probe(supabase) });
@@ -204,7 +201,9 @@ async function main(): Promise<void> {
         sleep,
         log,
       },
-      () => stopping || Boolean(cli.stopFile && existsSync(cli.stopFile)),
+      () =>
+        stopController.isStopping() ||
+        Boolean(cli.stopFile && existsSync(cli.stopFile)),
     );
   });
 

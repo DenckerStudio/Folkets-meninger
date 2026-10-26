@@ -17,40 +17,6 @@ import { EXPAND_OR_EMPTY_JS } from './n8n-pipeline.shared';
 import { createInWorkflowErrorNotify } from './in-workflow-error-notify';
 import { DOCUMENT_CHUNKING_SPEC } from './document-chunking.shared';
 
-const scheduleTrigger = trigger({
-  type: 'n8n-nodes-base.scheduleTrigger',
-  version: 1.3,
-  config: {
-    name: 'Every 60 minutes',
-    disabled: true,
-    parameters: {
-      rule: {
-        interval: [{ field: 'hours', hoursInterval: 1 }],
-      },
-    },
-  },
-  output: [{}],
-});
-
-const embeddingSettings = node({
-  type: 'n8n-nodes-base.set',
-  version: 3.4,
-  config: {
-    name: 'Embedding settings',
-    parameters: {
-      mode: 'manual',
-      includeOtherFields: true,
-      assignments: {
-        assignments: [
-          { id: 'batch-limit', name: 'batchLimit', value: '8', type: 'string' },
-          { id: 'issue-id', name: 'issueId', value: '', type: 'string' },
-        ],
-      },
-    },
-  },
-  output: [{ batchLimit: '8', issueId: '' }],
-});
-
 const fetchPendingChunks = node({
   type: 'n8n-nodes-base.httpRequest',
   version: 4.2,
@@ -423,7 +389,9 @@ const hasIssueId = ifElse({
         conditions: [
           {
             id: 'has-issue',
-            leftValue: expr('{{ $json.issueId }}'),
+            leftValue: expr(
+              '{{ $json.body?.stortinget_issue_id || $json.stortinget_issue_id || "" }}',
+            ),
             rightValue: '',
             operator: { type: 'string', operation: 'notEmpty' },
           },
@@ -482,8 +450,8 @@ const normalizeWebhook = node({
 const inWorkflowError = createInWorkflowErrorNotify('folkets-document-embeddings');
 
 sticky(
-  `## Dokument embeddings (legacy nomic)\n\nKun **per sak** via webhook med \`stortinget_issue_id\`. Timeplan av (schedule disabled). Global nomic-drenering er stoppet — \`embedding_v2\` eies av \`scripts/backfill-embedding-v2.ts\`. Ingen AI-sammendrag per batch. Ollama-feil: chunk pending. Error Trigger → /api/ops/n8n-notify.\n\n${DOCUMENT_CHUNKING_SPEC}`,
-  [scheduleTrigger, webhookTrigger],
+  `## Dokument embeddings (legacy nomic)\n\nKun **per sak** via webhook med \`stortinget_issue_id\` (node «Has issue id?» / IkedEm). Ingen timeplan. Global nomic-drenering er stoppet — \`embedding_v2\` eies av \`scripts/backfill-embedding-v2.ts\`. Ingen AI-sammendrag per batch. Ollama-feil: chunk pending. Error Trigger → /api/ops/n8n-notify.\n\n${DOCUMENT_CHUNKING_SPEC}`,
+  [webhookTrigger],
   { color: 5 },
 );
 
@@ -503,17 +471,15 @@ const embeddingPipeline = fetchPendingChunks.to(expandPendingChunks).to(
     .onFalse(logEmptyEmbeddingQueue),
 );
 
-const issueGatedPipeline = hasIssueId.onTrue(embeddingPipeline).onFalse(skipGlobalDrain);
+const webhookGatedPipeline = hasIssueId
+  .onTrue(normalizeWebhook.to(embeddingPipeline))
+  .onFalse(skipGlobalDrain);
 
 export default workflow(
   'folkets-document-embeddings',
   'Folkets Meninger – dokument embeddings (RAG)',
 )
-  .add(scheduleTrigger)
-  .to(embeddingSettings)
-  .to(issueGatedPipeline)
   .add(webhookTrigger)
-  .to(normalizeWebhook)
-  .to(issueGatedPipeline)
+  .to(webhookGatedPipeline)
   .add(inWorkflowError.errorTrigger)
   .to(inWorkflowError.formatError.to(inWorkflowError.notifySettings).to(inWorkflowError.notifyAdmin));

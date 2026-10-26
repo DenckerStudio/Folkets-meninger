@@ -1,9 +1,14 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { join } from 'node:path';
 import {
   compareClaimSortKeys,
   sortClaimCandidates,
   type ClaimSortKey,
 } from './backfill-embedding-v2/claim-order';
+import {
+  createLeaseReleaseStopController,
+} from './backfill-embedding-v2/stop-controller';
 import { installBackfillSignalHandlers, releaseAllWorkerClaims } from './backfill-embedding-v2/shutdown';
 import type { BackfillSupabase } from './backfill-embedding-v2/supabase-client';
 
@@ -42,6 +47,10 @@ class LeaseMockDb {
     }
     return n;
   }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function main(): Promise<void> {
@@ -100,19 +109,64 @@ async function main(): Promise<void> {
   await releaseAllWorkerClaims(supabase, ['a@host', 'b@host']);
   assert.equal(released, 2);
 
+  let releaseCalls = 0;
+  const stopController = createLeaseReleaseStopController(async () => {
+    releaseCalls += 1;
+  });
+  await stopController.requestStop();
+  await stopController.requestStop();
+  assert.equal(releaseCalls, 1);
+  assert.equal(stopController.isStopping(), true);
+
   let stopCalls = 0;
   const onStop = async () => {
     stopCalls += 1;
+    await sleep(30);
     await releaseAllWorkerClaims(supabase, ['sig@host']);
   };
-  const sigtermBefore = process.listenerCount('SIGTERM');
+  const originalExit = process.exit;
+  let exitCount = 0;
+  process.exit = ((code?: number) => {
+    exitCount += 1;
+    if (exitCount > 1) {
+      throw new Error('exit called twice');
+    }
+    void code;
+  }) as typeof process.exit;
+
   installBackfillSignalHandlers(onStop);
-  assert.equal(process.listenerCount('SIGTERM'), sigtermBefore + 1);
-  await onStop();
+  process.emit('SIGTERM');
+  process.emit('SIGTERM');
+  await sleep(80);
+  process.exit = originalExit;
   assert.equal(stopCalls, 1);
   assert.equal(released, 3);
+
+  const child = spawn(
+    'npx',
+    ['tsx', join(process.cwd(), 'lib/backfill-embedding-v2/signal-smoke-child.ts')],
+    { cwd: process.cwd(), stdio: ['ignore', 'pipe', 'pipe'] },
+  );
+  const stdout = await new Promise<string>((resolve, reject) => {
+    let buf = '';
+    child.stdout?.on('data', (chunk) => {
+      buf += String(chunk);
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(`signal-smoke-child exit ${code}: ${buf}`));
+        return;
+      }
+      resolve(buf);
+    });
+  });
+  assert.match(stdout, /signal-smoke: ok/);
 
   console.log('backfill-embedding-v2-lease.test.ts: ok');
 }
 
-void main();
+main().catch((err) => {
+  console.error(err instanceof Error ? err.message : err);
+  process.exit(1);
+});

@@ -61,31 +61,28 @@ export async function fetchLmStudioEmbedVectors(
   texts: string[],
   options: LmStudioEmbedOptions = {},
 ): Promise<{ vectors: number[][]; reportedModel?: string }> {
-  const fetchImpl = options.fetchImpl ?? fetch;
-  const apiUrl = buildOpenAiEmbeddingsUrl(baseUrl);
-  const model = (options.apiModel ?? OLLAMA_EMBED_API_MODEL).trim();
-
-  const res = await fetchImpl(apiUrl, {
-    method: 'POST',
-    headers: authHeaders(options.apiKey),
-    body: JSON.stringify({
-      model,
-      input: texts,
-    }),
-  });
-
-  if (!res.ok) {
-    const secrets = options.apiKey?.trim() ? [options.apiKey.trim()] : [];
-    throw new Error(
-      safeErrorMessage(new Error(`LM Studio embed feilet: HTTP ${res.status}`), secrets),
-    );
-  }
-
+  const secrets = options.apiKey?.trim() ? [options.apiKey.trim()] : [];
   try {
+    const fetchImpl = options.fetchImpl ?? fetch;
+    const apiUrl = buildOpenAiEmbeddingsUrl(baseUrl);
+    const model = (options.apiModel ?? OLLAMA_EMBED_API_MODEL).trim();
+
+    const res = await fetchImpl(apiUrl, {
+      method: 'POST',
+      headers: authHeaders(options.apiKey),
+      body: JSON.stringify({
+        model,
+        input: texts,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`LM Studio embed feilet: HTTP ${res.status}`);
+    }
+
     const payload = await res.json();
     return parseOpenAiEmbeddingsResponse(payload, texts.length);
   } catch (err) {
-    const secrets = options.apiKey?.trim() ? [options.apiKey.trim()] : [];
     throw new Error(safeErrorMessage(err, secrets));
   }
 }
