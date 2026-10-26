@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
+import { BlogCmsUnavailableShell } from '@/components/blog/blog-cms-unavailable-shell';
 import { BlogIndexView } from '@/components/blog/blog-index-view';
-import { listBlogCategories, listPublishedBlogPostsPaginated } from '@/lib/blog/service';
+import { blogCmsOrUnavailable } from '@/lib/blog/cms-read-runtime';
+import { loadBlogIndexPageData } from '@/lib/blog/index-page-loaders';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 
 export const revalidate = 3600;
@@ -11,7 +13,8 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
-  const categories = await listBlogCategories();
+  const loaded = await blogCmsOrUnavailable(() => loadBlogIndexPageData({ page: 1, categorySlug: slug }));
+  const categories = loaded.unavailable ? [] : loaded.data.categories;
   const category = categories.find((item) => item.slug === slug);
   return buildPageMetadata({
     title: category ? `Blogg — ${category.name}` : 'Blogg — tema',
@@ -22,14 +25,12 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function BloggTemaPage({ params }: PageProps) {
   const { slug } = await params;
-  const categories = await listBlogCategories();
+  const loaded = await blogCmsOrUnavailable(() => loadBlogIndexPageData({ page: 1, categorySlug: slug }));
+  if (loaded.unavailable) return <BlogCmsUnavailableShell />;
+
+  const { posts, totalPages, categories } = loaded.data;
   const category = categories.find((item) => item.slug === slug);
   if (!category) notFound();
-
-  const { posts, totalPages } = await listPublishedBlogPostsPaginated({
-    page: 1,
-    categorySlug: slug,
-  });
 
   return (
     <BlogIndexView

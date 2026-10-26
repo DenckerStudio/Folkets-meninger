@@ -50,14 +50,46 @@ export function validateSuggestionInput(input: Record<string, unknown>): { title
   return { title, body, category: input.category, audience: input.audience };
 }
 
-export function validateChangelogInput(input: Record<string, unknown>): { title: string; body: string } | { error: string } {
+export function validateChangelogInput(
+  input: Record<string, unknown>,
+): { title: string; body: string; publish: boolean } | { error: string } {
   const title = normalizeText(input.title);
   const body = normalizeText(input.body);
   const titleError = lengthError('Tittelen', title, CHANGELOG_TITLE_MIN, CHANGELOG_TITLE_MAX);
   if (titleError) return { error: titleError };
   const bodyError = lengthError('Teksten', body, CHANGELOG_BODY_MIN, CHANGELOG_BODY_MAX);
   if (bodyError) return { error: bodyError };
-  return { title, body };
+  const publish = input.publish === true;
+  return { title, body, publish };
+}
+
+export function validateChangelogPatch(
+  input: Record<string, unknown>,
+): { id: string; title?: string; body?: string; published?: boolean } | { error: string } {
+  const id = typeof input.id === 'string' ? input.id.trim() : '';
+  if (!id) return { error: 'Mangler innlegg' };
+
+  const next: { id: string; title?: string; body?: string; published?: boolean } = { id };
+  if (input.title !== undefined) {
+    const title = normalizeText(input.title);
+    const titleError = lengthError('Tittelen', title, CHANGELOG_TITLE_MIN, CHANGELOG_TITLE_MAX);
+    if (titleError) return { error: titleError };
+    next.title = title;
+  }
+  if (input.body !== undefined) {
+    const body = normalizeText(input.body);
+    const bodyError = lengthError('Teksten', body, CHANGELOG_BODY_MIN, CHANGELOG_BODY_MAX);
+    if (bodyError) return { error: bodyError };
+    next.body = body;
+  }
+  if (input.published !== undefined) {
+    if (typeof input.published !== 'boolean') return { error: 'Ugyldig publiseringsstatus.' };
+    next.published = input.published;
+  }
+  if (next.title === undefined && next.body === undefined && next.published === undefined) {
+    return { error: 'Mangler felt å oppdatere' };
+  }
+  return next;
 }
 
 export function parseSortOrder(value: unknown): number | undefined | { error: string } {

@@ -1,10 +1,9 @@
 import { notFound } from 'next/navigation';
+import { BlogCmsUnavailableShell } from '@/components/blog/blog-cms-unavailable-shell';
 import { BlogIndexView } from '@/components/blog/blog-index-view';
-import {
-  getFeaturedBlogPost,
-  listBlogCategories,
-  listPublishedBlogPostsPaginated,
-} from '@/lib/blog/service';
+import { blogCmsOrUnavailable } from '@/lib/blog/cms-read-runtime';
+import { loadBlogIndexPageData } from '@/lib/blog/index-page-loaders';
+import { isBlogPageOutOfRange } from '@/lib/blog/pagination';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { routes } from '@/lib/routes';
 
@@ -29,12 +28,11 @@ export default async function BloggPageNumber({ params }: PageProps) {
   const page = Number.parseInt(n, 10);
   if (!Number.isFinite(page) || page < 2) notFound();
 
-  const [{ posts, totalPages }, categories] = await Promise.all([
-    listPublishedBlogPostsPaginated({ page }),
-    listBlogCategories(),
-  ]);
+  const loaded = await blogCmsOrUnavailable(() => loadBlogIndexPageData({ page }));
+  if (loaded.unavailable) return <BlogCmsUnavailableShell />;
 
-  if (page > totalPages && totalPages > 0) notFound();
+  const { posts, totalPages, categories } = loaded.data;
+  if (isBlogPageOutOfRange(page, totalPages)) notFound();
 
   return (
     <BlogIndexView

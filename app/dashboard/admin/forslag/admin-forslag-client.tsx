@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { Lightbulb } from 'lucide-react';
 import { AdminBackLink } from '@/components/admin/admin-shell';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { formatWhen } from '@/components/appens-fremtid/format';
-import { RoadmapEditor } from '@/components/appens-fremtid/roadmap-editor';
+import { ChangelogAdminPanel } from '@/components/admin/app-future/changelog-admin-panel';
+import { RoadmapAdminPanel } from '@/components/admin/app-future/roadmap-admin-panel';
 import { SectionTabs } from '@/components/appens-fremtid/section-tabs';
 import {
   APPENS_FREMTID_TITLE,
@@ -34,12 +36,15 @@ export default function AdminForslagClient() {
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
   const [roadmap, setRoadmap] = useState<RoadmapItem[]>([]);
   const [filter, setFilter] = useState<InboxFilter>('all');
-  const [error, setError] = useState('');
+  const [inboxError, setInboxError] = useState('');
+  const [changelogLoadError, setChangelogLoadError] = useState('');
+  const [roadmapLoadError, setRoadmapLoadError] = useState('');
+  const [changelogPanelError, setChangelogPanelError] = useState('');
+  const [roadmapPanelError, setRoadmapPanelError] = useState('');
   const [pending, startTransition] = useTransition();
 
   const load = () => {
     startTransition(async () => {
-      setError('');
       const [suggestionsRes, changelogRes, roadmapRes] = await Promise.all([
         fetch('/api/admin/suggestions'),
         fetch('/api/admin/changelog'),
@@ -58,19 +63,33 @@ export default function AdminForslagClient() {
         error?: string;
       };
 
-      if (!suggestionsRes.ok || !changelogRes.ok || !roadmapRes.ok) {
-        setError(
-          suggestionsData.error ||
-            changelogData.error ||
-            roadmapData.error ||
-            'Kunne ikke laste Appens fremtid.',
+      if (!suggestionsRes.ok) {
+        setInboxError(
+          typeof suggestionsData.error === 'string' ? suggestionsData.error : 'Kunne ikke laste forslag.',
         );
-        return;
+      } else {
+        setInboxError('');
+        setSuggestions(Array.isArray(suggestionsData.suggestions) ? suggestionsData.suggestions : []);
       }
 
-      setSuggestions(Array.isArray(suggestionsData.suggestions) ? suggestionsData.suggestions : []);
-      setChangelog(Array.isArray(changelogData.entries) ? changelogData.entries : []);
-      setRoadmap(Array.isArray(roadmapData.items) ? roadmapData.items : []);
+      if (!changelogRes.ok) {
+        setChangelogLoadError(
+          typeof changelogData.error === 'string'
+            ? changelogData.error
+            : 'Kunne ikke laste endringsloggen.',
+        );
+      } else {
+        setChangelogLoadError('');
+        setChangelog(Array.isArray(changelogData.entries) ? changelogData.entries : []);
+      }
+      if (!roadmapRes.ok) {
+        setRoadmapLoadError(
+          typeof roadmapData.error === 'string' ? roadmapData.error : 'Kunne ikke laste veikartet.',
+        );
+      } else {
+        setRoadmapLoadError('');
+        setRoadmap(Array.isArray(roadmapData.items) ? roadmapData.items : []);
+      }
     });
   };
 
@@ -80,7 +99,7 @@ export default function AdminForslagClient() {
 
   const patchSuggestion = (payload: Record<string, unknown>) => {
     startTransition(async () => {
-      setError('');
+      setInboxError('');
       const res = await fetch('/api/admin/suggestions', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -88,7 +107,7 @@ export default function AdminForslagClient() {
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setError(typeof data.error === 'string' ? data.error : 'Kunne ikke oppdatere forslaget.');
+        setInboxError(typeof data.error === 'string' ? data.error : 'Kunne ikke oppdatere forslaget.');
         return;
       }
       load();
@@ -125,8 +144,6 @@ export default function AdminForslagClient() {
 
       <SectionTabs items={PAGE_TABS} value={tab} onChange={setTab} label="Admin Appens fremtid" />
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
       {tab === 'inbox' ? (
         <InboxPanel
           counts={counts}
@@ -134,33 +151,73 @@ export default function AdminForslagClient() {
           onFilter={setFilter}
           pending={pending}
           suggestions={visible}
+          inboxError={inboxError}
           onStatus={(id, status) => patchSuggestion({ id, status })}
           onVoting={(id, votingOpen) => patchSuggestion({ id, votingOpen })}
         />
       ) : null}
 
       {tab === 'changelog' ? (
-        <ChangelogPanel
-          entries={changelog}
-          pending={pending}
-          onCreated={load}
-          onDeleted={load}
-          onError={setError}
-          startTransition={startTransition}
-        />
+        <div className="space-y-4">
+          {changelogLoadError ? (
+            <TabLoadError message={changelogLoadError} onRetry={load} pending={pending} />
+          ) : null}
+          {changelogPanelError ? (
+            <p className="text-sm text-destructive" role="alert">{changelogPanelError}</p>
+          ) : null}
+          <ChangelogAdminPanel
+            entries={changelog}
+            pending={pending}
+            loadFailed={Boolean(changelogLoadError)}
+            onChanged={load}
+            onError={setChangelogPanelError}
+            startTransition={startTransition}
+          />
+        </div>
       ) : null}
 
       {tab === 'roadmap' ? (
-        <RoadmapEditor
-          items={roadmap}
-          pending={pending}
-          onChanged={load}
-          onError={setError}
-          startTransition={startTransition}
-        />
+        <div className="space-y-4">
+          {roadmapLoadError ? (
+            <TabLoadError message={roadmapLoadError} onRetry={load} pending={pending} />
+          ) : null}
+          {roadmapPanelError ? (
+            <p className="text-sm text-destructive" role="alert">{roadmapPanelError}</p>
+          ) : null}
+          <RoadmapAdminPanel
+            items={roadmap}
+            pending={pending}
+            loadFailed={Boolean(roadmapLoadError)}
+            onChanged={load}
+            onError={setRoadmapPanelError}
+            startTransition={startTransition}
+          />
+        </div>
       ) : null}
 
       <AdminBackLink />
+    </div>
+  );
+}
+
+function TabLoadError({
+  message,
+  onRetry,
+  pending,
+}: {
+  message: string;
+  onRetry: () => void;
+  pending: boolean;
+}) {
+  return (
+    <div
+      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3"
+      role="alert"
+    >
+      <p className="text-sm text-destructive">{message}</p>
+      <Button type="button" variant="outline" size="sm" disabled={pending} onClick={onRetry}>
+        Prøv igjen
+      </Button>
     </div>
   );
 }
@@ -171,6 +228,7 @@ function InboxPanel({
   onFilter,
   pending,
   suggestions,
+  inboxError,
   onStatus,
   onVoting,
 }: {
@@ -179,11 +237,13 @@ function InboxPanel({
   onFilter: (filter: InboxFilter) => void;
   pending: boolean;
   suggestions: SuggestionRecord[];
+  inboxError: string;
   onStatus: (id: string, status: SuggestionStatus) => void;
   onVoting: (id: string, votingOpen: boolean) => void;
 }) {
   return (
     <div className="space-y-4">
+      {inboxError ? <p className="text-sm text-destructive" role="alert">{inboxError}</p> : null}
       <p className="text-sm text-muted-foreground">
         Forslag som ikke er lagt ut til stemming blir her. Åpne et forslag for stemming når andre skal kunne stemme.
       </p>
@@ -284,122 +344,6 @@ function InboxPanel({
               </li>
             );
           })}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function ChangelogPanel({
-  entries,
-  pending,
-  onCreated,
-  onDeleted,
-  onError,
-  startTransition,
-}: {
-  entries: ChangelogEntry[];
-  pending: boolean;
-  onCreated: () => void;
-  onDeleted: () => void;
-  onError: (error: string) => void;
-  startTransition: ReturnType<typeof useTransition>[1];
-}) {
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-
-  const publish = () => {
-    startTransition(async () => {
-      onError('');
-      const res = await fetch('/api/admin/changelog', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, body }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        onError(typeof data.error === 'string' ? data.error : 'Kunne ikke publisere innlegget.');
-        return;
-      }
-      setTitle('');
-      setBody('');
-      onCreated();
-    });
-  };
-
-  const remove = (id: string) => {
-    startTransition(async () => {
-      onError('');
-      const res = await fetch('/api/admin/changelog', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        onError(typeof data.error === 'string' ? data.error : 'Kunne ikke slette innlegget.');
-        return;
-      }
-      onDeleted();
-    });
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
-        <h3 className="text-sm font-semibold text-foreground">Publiser endring</h3>
-        <input
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="Kort tittel"
-          className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/30"
-        />
-        <textarea
-          value={body}
-          onChange={(event) => setBody(event.target.value)}
-          rows={4}
-          placeholder="Hva er nytt?"
-          className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/30"
-        />
-        <button
-          type="button"
-          disabled={pending}
-          onClick={publish}
-          className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90 disabled:opacity-50"
-        >
-          Publiser
-        </button>
-      </div>
-
-      {entries.length === 0 ? (
-        <EmptyState
-          compact
-          title="Ingen endringslogg ennå"
-          description="Publiserte endringer vises her."
-        />
-      ) : (
-        <ul className="space-y-3">
-          {entries.map((entry) => (
-            <li key={entry.id} className="rounded-2xl border border-border bg-card p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{entry.title}</p>
-                  <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">{entry.body}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatWhen(entry.publishedAt || entry.createdAt)}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => remove(entry.id)}
-                  className="text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
-                >
-                  Slett
-                </button>
-              </div>
-            </li>
-          ))}
         </ul>
       )}
     </div>

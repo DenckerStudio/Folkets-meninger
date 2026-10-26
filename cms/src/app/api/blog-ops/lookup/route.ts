@@ -46,5 +46,6 @@ export async function POST(request: Request) {
     id: hit.id,
     slug: hit.slug,
     adminUrl: serverUrl ? `${serverUrl}/admin/collections/posts/${hit.id}` : hit.id,
+    cmsStatus: hit.cmsStatus,
   });
 }

@@ -1,17 +1,38 @@
-export const DEFAULT_SEARXNG_BASE_URL = 'https://searxng.heyklever.app';
-
 export type SearxngHit = {
   title: string;
   url: string;
   snippet: string;
 };
 
-export function getSearxngBaseUrl(): string {
-  return process.env.SEARXNG_BASE_URL?.trim() || DEFAULT_SEARXNG_BASE_URL;
+const SEARXNG_UNAVAILABLE_ERROR =
+  'Kunne ikke nå SearXNG akkurat nå. Kilder er midlertidig utilgjengelige.';
+
+let loggedMissingSearxngBaseUrl = false;
+
+function logMissingSearxngBaseUrlOnce(): void {
+  if (loggedMissingSearxngBaseUrl) return;
+  loggedMissingSearxngBaseUrl = true;
+  console.warn('[searxng] SEARXNG_BASE_URL mangler – kildesøk er av');
 }
 
-export function buildSearxngSearchUrl(query: string, baseUrl = getSearxngBaseUrl()): string {
-  const url = new URL('/search', baseUrl);
+export function getSearxngBaseUrl(): string | null {
+  const raw = process.env.SEARXNG_BASE_URL?.trim();
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
+export function buildSearxngSearchUrl(query: string, baseUrl?: string): string {
+  const resolved = baseUrl?.trim() || getSearxngBaseUrl();
+  if (!resolved) {
+    throw new Error('SEARXNG_BASE_URL mangler');
+  }
+  const url = new URL('/search', resolved);
   url.searchParams.set('q', query);
   url.searchParams.set('format', 'json');
   url.searchParams.set('language', 'nb-NO');
@@ -28,13 +49,19 @@ export async function searchSearxng(
     return { ok: false, error: 'Mangler søkestreng' };
   }
 
+  const baseUrl = getSearxngBaseUrl();
+  if (!baseUrl) {
+    logMissingSearxngBaseUrlOnce();
+    return { ok: false, error: SEARXNG_UNAVAILABLE_ERROR };
+  }
+
   const timeoutMs = options?.timeoutMs ?? 8000;
   const limit = options?.limit ?? 6;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(buildSearxngSearchUrl(trimmed), {
+    const response = await fetch(buildSearxngSearchUrl(trimmed, baseUrl), {
       method: 'GET',
       headers: { Accept: 'application/json' },
       signal: controller.signal,
@@ -73,7 +100,7 @@ export async function searchSearxng(
     if (error instanceof Error && error.name === 'AbortError') {
       return { ok: false, error: 'Søket tok for lang tid. Kilder er midlertidig utilgjengelige.' };
     }
-    return { ok: false, error: 'Kunne ikke nå SearXNG akkurat nå. Kilder er midlertidig utilgjengelige.' };
+    return { ok: false, error: SEARXNG_UNAVAILABLE_ERROR };
   } finally {
     clearTimeout(timer);
   }

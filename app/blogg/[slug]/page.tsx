@@ -19,12 +19,16 @@ import {
   loadBlogRelatedHoringCards,
   loadBlogRelatedSakCards,
 } from '@/lib/blog/related-context';
+import { BlogCmsUnavailableShell } from '@/components/blog/blog-cms-unavailable-shell';
+import { blogCmsOrUnavailable } from '@/lib/blog/cms-read-runtime';
+import { CmsFetchError } from '@/lib/cms/cms-fetch-error';
 import {
   getPublishedBlogPostBySlug,
   listPublishedBlogPostsPaginated,
 } from '@/lib/blog/service';
 import { blogIndexPath, blogPostOgImagePath, blogPostPath } from '@/lib/blog/urls';
 import { absoluteUrl, buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
+import { blogGenerateStaticParams } from '@/lib/blog/route-segment';
 import { routes } from '@/lib/routes';
 
 export const revalidate = 3600;
@@ -34,43 +38,60 @@ type PageProps = {
 };
 
 export async function generateStaticParams() {
-  const { listPublishedBlogSlugsForSitemap } = await import('@/lib/blog/service');
-  const slugs = await listPublishedBlogSlugsForSitemap(50);
-  return slugs.map((entry) => ({ slug: entry.slug }));
+  return blogGenerateStaticParams();
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getPublishedBlogPostBySlug(slug);
-  if (!post) {
-    return buildPageMetadata({
-      title: 'Artikkel ikke funnet',
-      description: 'Denne bloggposten finnes ikke eller er ikke publisert.',
-      canonicalPath: blogPostPath(slug),
-      robots: { index: false, follow: false },
-    });
-  }
+  try {
+    const post = await getPublishedBlogPostBySlug(slug);
+    if (!post) {
+      return buildPageMetadata({
+        title: 'Artikkel ikke funnet',
+        description: 'Denne bloggposten finnes ikke eller er ikke publisert.',
+        canonicalPath: blogPostPath(slug),
+        robots: { index: false, follow: false },
+      });
+    }
 
-  return buildPageMetadata({
+    return buildPageMetadata({
     title: post.seo_title || post.title,
     description: truncateDescription(post.seo_description || post.excerpt || post.title),
     canonicalPath: blogPostPath(post.slug),
     openGraphType: 'article',
     keywords: post.tags,
     images: [blogPostOgImagePath(post.slug)],
-  });
+    });
+  } catch (error) {
+    if (error instanceof CmsFetchError) {
+      return buildPageMetadata({
+        title: 'Bloggen er midlertidig utilgjengelig',
+        description: 'Vi klarte ikke å hente artikkelen fra redaksjonssystemet akkurat nå.',
+        canonicalPath: blogPostPath(slug),
+        robots: { index: false, follow: false },
+      });
+    }
+    throw error;
+  }
 }
 
 export default async function BlogPostPage({ params }: PageProps) {
   const { slug } = await params;
-  const post = await getPublishedBlogPostBySlug(slug);
-  if (!post) notFound();
+  const loaded = await blogCmsOrUnavailable(async () => {
+    const post = await getPublishedBlogPostBySlug(slug);
+    if (!post) return null;
+    const [saker, horinger, morePosts] = await Promise.all([
+      loadBlogRelatedSakCards(post.related_sak_ids),
+      loadBlogRelatedHoringCards(post.related_horing_ids),
+      listPublishedBlogPostsPaginated({ page: 1, pageSize: 3 }),
+    ]);
+    return { post, saker, horinger, morePosts };
+  });
 
-  const [saker, horinger, morePosts] = await Promise.all([
-    loadBlogRelatedSakCards(post.related_sak_ids),
-    loadBlogRelatedHoringCards(post.related_horing_ids),
-    listPublishedBlogPostsPaginated({ page: 1, pageSize: 3 }),
-  ]);
+  if (loaded.unavailable) return <BlogCmsUnavailableShell />;
+  if (!loaded.data) notFound();
+
+  const { post, saker, horinger, morePosts } = loaded.data;
 
   const headings = extractMarkdownHeadings(post.body_md);
   const primarySak = post.related_sak_ids[0];

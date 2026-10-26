@@ -61,22 +61,25 @@ const AI_SUMMARY_COLUMNS =
 const AI_SUMMARY_COLUMNS_WITH_FORSLAG = `${AI_SUMMARY_COLUMNS}, forslag`;
 
 /**
- * True when PostgREST/Postgres rejects the select because `forslag` is not
- * migrated yet (20261021170000). A missing column is not a missing summary.
+ * True when Postgres rejects the select because a column is not migrated yet
+ * (e.g. `forslag` / 20261021170000). A missing column is not a missing summary.
  */
 export function isMissingForslagColumnError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
-  const row = error as { code?: unknown; message?: unknown; details?: unknown };
-  const message = [row.message, row.details]
-    .filter((part): part is string => typeof part === 'string')
-    .join(' ');
-  if (!/forslag/i.test(message)) return false;
-  if (row.code === '42703' || row.code === 'PGRST204') return true;
-  return /does not exist|schema cache|could not find/i.test(message);
+  const row = error as { code?: unknown };
+  return row.code === '42703';
 }
 
-async function selectIssueAiSummary(issueId: string, columns: string) {
-  const supabase = getServiceSupabase();
+type IssueAiSummarySelectClient = Pick<
+  ReturnType<typeof getServiceSupabase>,
+  'from'
+>;
+
+async function selectIssueAiSummary(
+  supabase: IssueAiSummarySelectClient,
+  issueId: string,
+  columns: string,
+) {
   return supabase
     .from('issue_ai_summaries')
     .select(columns)
@@ -84,25 +87,52 @@ async function selectIssueAiSummary(issueId: string, columns: string) {
     .maybeSingle();
 }
 
-export async function getAiSummaryFromDb(issueId: string): Promise<AiSummary | null> {
-  if (!supabaseConfigured()) return null;
+export type ReadAiSummaryFromDbResult =
+  | { status: 'ok'; summary: AiSummary | null }
+  | { status: 'read_failed' };
+
+export async function readAiSummaryFromDb(
+  issueId: string,
+  supabase?: IssueAiSummarySelectClient,
+): Promise<ReadAiSummaryFromDbResult> {
+  if (!supabaseConfigured()) {
+    return { status: 'ok', summary: null };
+  }
+
+  const client = supabase ?? getServiceSupabase();
 
   try {
-    let { data, error } = await selectIssueAiSummary(issueId, AI_SUMMARY_COLUMNS_WITH_FORSLAG);
+    let { data, error } = await selectIssueAiSummary(
+      client,
+      issueId,
+      AI_SUMMARY_COLUMNS_WITH_FORSLAG,
+    );
     if (error && isMissingForslagColumnError(error)) {
       console.warn(
         '[ai-summary] Kolonnen forslag finnes ikke ennå. Henter lagret sammendrag uten den.',
       );
-      ({ data, error } = await selectIssueAiSummary(issueId, AI_SUMMARY_COLUMNS));
+      ({ data, error } = await selectIssueAiSummary(client, issueId, AI_SUMMARY_COLUMNS));
     }
 
-    if (error || !data) return null;
+    if (error) {
+      console.error('[ai-summary] Kunne ikke hente sammendrag:', error);
+      return { status: 'read_failed' };
+    }
+    if (!data) {
+      return { status: 'ok', summary: null };
+    }
 
-    return buildAiSummaryFromDbRow(data as IssueAiSummaryRow);
+    return { status: 'ok', summary: buildAiSummaryFromDbRow(data as IssueAiSummaryRow) };
   } catch (e) {
     console.error('[ai-summary] Kunne ikke hente sammendrag:', e);
-    return null;
+    return { status: 'read_failed' };
   }
+}
+
+export async function getAiSummaryFromDb(issueId: string): Promise<AiSummary | null> {
+  const result = await readAiSummaryFromDb(issueId);
+  if (result.status === 'read_failed') return null;
+  return result.summary;
 }
 
 export async function getPopularAiLabels(limit = 200): Promise<string[]> {
@@ -188,7 +218,12 @@ export type AiSummaryPending = {
   retry_after_seconds: number;
 };
 
-export type AiSummaryApiResult = AiSummaryReady | AiSummaryPending;
+export type AiSummaryReadFailed = {
+  status: 'read_failed';
+  retry_after_seconds: number;
+};
+
+export type AiSummaryApiResult = AiSummaryReady | AiSummaryPending | AiSummaryReadFailed;
 
 const WEBHOOK_COOLDOWN_MS = 60 * 60 * 1000;
 
@@ -221,19 +256,32 @@ async function markAiSummaryRequested(issueId: string): Promise<boolean> {
   }
 }
 
+export type ResolveAiSummaryDeps = {
+  readFromDb?: typeof readAiSummaryFromDb;
+  markRequested?: typeof markAiSummaryRequested;
+  triggerWebhook?: typeof triggerAiSummaryWebhook;
+};
+
 export async function resolveAiSummaryForApi(
   issueId: string,
-  options: { triggerIfMissing?: boolean } = {}
+  options: { triggerIfMissing?: boolean; deps?: ResolveAiSummaryDeps } = {},
 ): Promise<AiSummaryApiResult> {
-  const existing = await getAiSummaryFromDb(issueId);
-  if (existing) {
-    return { status: 'ready', ...existing, cached: true };
+  const readFromDb = options.deps?.readFromDb ?? readAiSummaryFromDb;
+  const markRequested = options.deps?.markRequested ?? markAiSummaryRequested;
+  const triggerWebhook = options.deps?.triggerWebhook ?? triggerAiSummaryWebhook;
+
+  const readResult = await readFromDb(issueId);
+  if (readResult.status === 'read_failed') {
+    return { status: 'read_failed', retry_after_seconds: 15 };
+  }
+  if (readResult.summary) {
+    return { status: 'ready', ...readResult.summary, cached: true };
   }
 
   if (options.triggerIfMissing) {
-    const shouldTrigger = await markAiSummaryRequested(issueId);
+    const shouldTrigger = await markRequested(issueId);
     if (shouldTrigger) {
-      triggerAiSummaryWebhook(issueId);
+      triggerWebhook(issueId);
     }
   }
 
