@@ -1,9 +1,11 @@
 import { lookup as dnsLookup } from 'node:dns/promises';
 import ipaddr from 'ipaddr.js';
+import {
+  BYOK_OLLAMA_UNREACHABLE_NB,
+  BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB,
+} from '@/lib/byok/messages';
 
-/** Client-safe copy when an outbound BYOK URL cannot be used (no URL/status/body). */
-export const BYOK_OLLAMA_UNREACHABLE_NB =
-  'Kunne ikke nå Ollama-serveren. Sjekk adressen under Profil → Stemme+ (BYOK).';
+export { BYOK_OLLAMA_UNREACHABLE_NB, BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB };
 
 export const BYOK_BASE_URL_REJECTED_NB =
   'Adressen må være en offentlig http(s)-adresse. localhost og lokale nettverk (192.168.x, 10.x) støttes ikke.';
@@ -225,8 +227,26 @@ function isPrivateUnicast(ip: ipaddr.IPv4 | ipaddr.IPv6): boolean {
   return ip.match(ipaddr.parseCIDR(PRIVATE_IPV6_CIDR));
 }
 
+function loopbackPermittedByAllowlist(address: string, permittedOrigin: string): boolean {
+  try {
+    const url = new URL(permittedOrigin);
+    const host = normalizeHostnameForCheck(url.hostname);
+    if (host === 'localhost' && address === '127.0.0.1') return true;
+    if (host === '127.0.0.1' && address === '127.0.0.1') return true;
+    if (host === '::1' && address === '::1') return true;
+    const literal = parseIpv4Literal(host);
+    return literal !== null && literal === address;
+  } catch {
+    return false;
+  }
+}
+
 /** @internal Exported for tests. */
-export function assertIpAllowedSync(address: string, allowPrivate: boolean): void {
+export function assertIpAllowedSync(
+  address: string,
+  allowPrivate: boolean,
+  permittedOrigin?: string | null,
+): void {
   if (isMetadataIpAddress(address)) {
     throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `metadata ${address}`);
   }
@@ -262,6 +282,14 @@ export function assertIpAllowedSync(address: string, allowPrivate: boolean): voi
     'unspecified',
   ]);
   if (alwaysBlocked.has(range)) {
+    if (
+      range === 'loopback' &&
+      allowPrivate &&
+      permittedOrigin &&
+      loopbackPermittedByAllowlist(address, permittedOrigin)
+    ) {
+      return;
+    }
     throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `non-unicast ${range} ${address}`);
   }
 
@@ -281,12 +309,13 @@ export function assertIpAllowedSync(address: string, allowPrivate: boolean): voi
 export function createValidatingDnsLookup(
   access: ByokOutboundAccess,
   allowPrivate: boolean,
+  permittedOrigin?: string | null,
 ): DnsLookupFn {
   const underlying = access.lookup ?? defaultLookup;
   return async (hostname, options) => {
     const results = await underlying(hostname, options);
     for (const entry of results) {
-      assertIpAllowedSync(entry.address, allowPrivate);
+      assertIpAllowedSync(entry.address, allowPrivate, permittedOrigin);
     }
     return results;
   };
@@ -320,7 +349,7 @@ export function resolveAllowPrivateForUrl(
  */
 export async function assertSafeOutboundUrl(
   urlString: string,
-  options: { allowPrivate: boolean; lookup?: DnsLookupFn },
+  options: { allowPrivate: boolean; lookup?: DnsLookupFn; permittedOrigin?: string | null },
 ): Promise<void> {
   let url: URL;
   try {
@@ -349,20 +378,22 @@ export async function assertSafeOutboundUrl(
     throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `single-label ${host}`);
   }
 
+  const permittedOrigin = options.permittedOrigin ?? null;
+
   const literalV4 = parseIpv4Literal(host);
   if (literalV4) {
-    assertIpAllowedSync(literalV4, options.allowPrivate);
+    assertIpAllowedSync(literalV4, options.allowPrivate, permittedOrigin);
     return;
   }
 
   if (host.startsWith('[') && host.endsWith(']')) {
     const inner = host.slice(1, -1);
-    assertIpAllowedSync(inner, options.allowPrivate);
+    assertIpAllowedSync(inner, options.allowPrivate, permittedOrigin);
     return;
   }
 
   if (ipaddr.isValid(host)) {
-    assertIpAllowedSync(host, options.allowPrivate);
+    assertIpAllowedSync(host, options.allowPrivate, permittedOrigin);
     return;
   }
 
@@ -372,7 +403,7 @@ export async function assertSafeOutboundUrl(
     throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `no dns for ${host}`);
   }
   for (const entry of results) {
-    assertIpAllowedSync(entry.address, options.allowPrivate);
+    assertIpAllowedSync(entry.address, options.allowPrivate, permittedOrigin);
   }
 }
 
@@ -385,6 +416,7 @@ export async function assertSafeByokBaseUrl(
     throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, 'empty base url');
   }
   const allowPrivate = resolveAllowPrivateForUrl(trimmed, access);
-  const lookup = createValidatingDnsLookup(access, allowPrivate);
-  await assertSafeOutboundUrl(trimmed, { allowPrivate, lookup });
+  const permittedOrigin = allowPrivate ? trimmed : null;
+  const lookup = createValidatingDnsLookup(access, allowPrivate, permittedOrigin);
+  await assertSafeOutboundUrl(trimmed, { allowPrivate, lookup, permittedOrigin });
 }

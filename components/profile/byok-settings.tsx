@@ -6,6 +6,10 @@ import { ModelPicker } from '@/components/byok/model-picker';
 import { Button } from '@/components/ui/button';
 import { modelExists } from '@/lib/byok/ollama';
 import {
+  BYOK_OLLAMA_UNREACHABLE_NB,
+  BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB,
+} from '@/lib/byok/messages';
+import {
   DEFAULT_MODELS,
   OTHER_LLM_PROVIDERS,
   PRIMARY_LLM_PROVIDERS,
@@ -14,6 +18,13 @@ import {
   providerNeedsBaseUrl,
   type LlmProvider,
 } from '@/lib/byok/providers';
+
+function ollamaErrorForSettings(message: string): string {
+  if (message === BYOK_OLLAMA_UNREACHABLE_NB) {
+    return BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB;
+  }
+  return message;
+}
 
 export type ByokMetaView = {
   provider: LlmProvider;
@@ -77,9 +88,9 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
         );
         const json = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error(
-            typeof json.error === 'string' ? json.error : 'Kunne ikke hente modelliste fra serveren.',
-          );
+          const raw =
+            typeof json.error === 'string' ? json.error : 'Kunne ikke hente modelliste fra serveren.';
+          throw new Error(ollamaErrorForSettings(raw));
         }
         const list = Array.isArray(json.models)
           ? json.models.filter((item: unknown): item is string => typeof item === 'string')
@@ -92,7 +103,9 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
         if (controller.signal.aborted) return;
         setModels([]);
         setModelsError(
-          e instanceof Error ? e.message : 'Kunne ikke hente modelliste fra serveren.',
+          ollamaErrorForSettings(
+            e instanceof Error ? e.message : 'Kunne ikke hente modelliste fra serveren.',
+          ),
         );
       } finally {
         if (!controller.signal.aborted) setModelsLoading(false);
@@ -127,7 +140,9 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(typeof json.error === 'string' ? json.error : 'Kunne ikke lagre nøkkelen');
+        const raw =
+          typeof json.error === 'string' ? json.error : 'Kunne ikke lagre nøkkelen';
+        throw new Error(ollamaErrorForSettings(raw));
       }
       setApiKey('');
       setSaved({
@@ -140,7 +155,9 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
       setEditing(false);
       setMessage('Nøkkelen er lagret. Den sendes aldri tilbake til nettleseren.');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Kunne ikke lagre nøkkelen');
+      setError(
+        ollamaErrorForSettings(e instanceof Error ? e.message : 'Kunne ikke lagre nøkkelen'),
+      );
     } finally {
       setBusy(false);
     }
@@ -317,8 +334,8 @@ export function ByokSettings({ encryptionReady, initial }: ByokSettingsProps) {
               />
               {provider === 'ollama' ? (
                 <p className="text-xs text-muted-foreground">
-                  Adressen må være en offentlig http(s)-adresse. localhost og lokale nettverk
-                  (192.168.x, 10.x) støttes ikke.
+                  Adressen må være en offentlig http(s)-adresse. Lokale adresser som localhost og
+                  192.168.x/10.x støttes ikke.
                 </p>
               ) : null}
             </label>

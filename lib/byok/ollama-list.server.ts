@@ -3,11 +3,11 @@ import {
   type ByokOutboundAccess,
   assertSafeByokBaseUrl,
   assertSafeOutboundUrl,
-  BYOK_OLLAMA_UNREACHABLE_NB,
+  BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB,
   createValidatingDnsLookup,
   resolveAllowPrivateForUrl,
 } from '@/lib/byok/url-guard';
-import { createByokPinnedFetch } from '@/lib/byok/pinned-fetch.server';
+import { createByokPinnedFetch, type ByokOutboundFetch } from '@/lib/byok/pinned-fetch.server';
 import {
   isChatCapableOllamaModel,
   ollamaTagsUrl,
@@ -19,11 +19,11 @@ const DEFAULT_TIMEOUT_MS = 8000;
 
 async function fetchOllamaChatModelsPinned(
   baseUrl: string,
-  options: { fetchImpl: typeof fetch; timeoutMs?: number },
+  options: { fetchImpl: ByokOutboundFetch; timeoutMs?: number },
 ): Promise<OllamaModelsResult> {
   const tagsUrl = ollamaTagsUrl(baseUrl);
   if (!tagsUrl) {
-    return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_NB };
+    return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB };
   }
 
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -37,18 +37,18 @@ async function fetchOllamaChatModelsPinned(
     });
     if (response.status >= 300 && response.status < 400) {
       console.warn('[byok/ollama] redirect blocked for tags fetch');
-      return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_NB };
+      return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB };
     }
     if (!response.ok) {
       console.warn('[byok/ollama] tags fetch failed with status', response.status);
-      return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_NB };
+      return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB };
     }
 
     const models = readModelNamesFromTagsPayload(await response.json()).filter(
       isChatCapableOllamaModel,
     );
     if (models.length === 0) {
-      return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_NB };
+      return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB };
     }
     return { ok: true, models };
   } catch (error) {
@@ -56,14 +56,14 @@ async function fetchOllamaChatModelsPinned(
       '[byok/ollama] tags fetch error:',
       error instanceof Error ? error.message : error,
     );
-    return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_NB };
+    return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB };
   }
 }
 
 export async function listOllamaModels(
   baseUrl: string,
   options: {
-    fetchImpl?: typeof fetch;
+    fetchImpl?: ByokOutboundFetch;
     timeoutMs?: number;
     outbound?: ByokOutboundAccess;
   } = {},
@@ -71,20 +71,22 @@ export async function listOllamaModels(
   const outbound = options.outbound ?? { isAdmin: false };
   const tagsEndpoint = ollamaTagsUrl(baseUrl);
   if (!tagsEndpoint) {
-    return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_NB };
+    return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB };
   }
   try {
     await assertSafeByokBaseUrl(baseUrl, outbound);
     const allowPrivate = resolveAllowPrivateForUrl(baseUrl, outbound);
-    const lookup = createValidatingDnsLookup(outbound, allowPrivate);
+    const permittedOrigin = allowPrivate ? baseUrl : null;
+    const lookup = createValidatingDnsLookup(outbound, allowPrivate, permittedOrigin);
     await assertSafeOutboundUrl(tagsEndpoint, {
       allowPrivate,
       lookup,
+      permittedOrigin,
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     console.warn('[byok/ollama] blocked outbound url:', detail);
-    return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_NB };
+    return { ok: false, error: BYOK_OLLAMA_UNREACHABLE_SETTINGS_NB };
   }
 
   const fetchImpl =
