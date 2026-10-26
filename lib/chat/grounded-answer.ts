@@ -3,7 +3,27 @@
  * Used by Stemme+ chat system instructions and offline RAG eval answer export.
  */
 
-export const GROUNDED_ANSWER_RULES_VERSION = 'grounded-answer-v4';
+import {
+  joinAnswerBodyAndSourcesFooter,
+  splitAnswerBodyAndSourcesFooter,
+} from '@/lib/chat/grounded-answer-structure';
+import { reconcilePartyVoteClaimsWithSources } from '@/lib/chat/party-vote-answer-guard';
+
+export const GROUNDED_ANSWER_RULES_VERSION = 'grounded-answer-v4.1';
+
+export { splitAnswerBodyAndSourcesFooter, joinAnswerBodyAndSourcesFooter };
+
+const REFUSAL_PATTERNS = [
+  /\bkildene\s+inneholder\s+ikke\b/i,
+  /\bkan\s+ikke\s+besvare\b/i,
+  /\bfinnes\s+ikke\s+(?:nok\s+)?informasjon\b/i,
+  /\bikke\s+nok\s+.*\bkildene\b/i,
+  /\bspørsmålet\s+kan\s+ikke\s+besvares\b/i,
+  /\bmangler\s+informasjon\s+i\s+kildene\b/i,
+  /\bkildene\s+gir\s+ikke\s+nok\s+grunnlag\b/i,
+  /\bikke\s+nok\s+grunnlag\b/i,
+  /\bdette\s+fant\s+jeg\s+ikke\s+i\s+kildene\b/i,
+];
 
 /** Faithfulness / refusal behavior (citation format is set separately). */
 export function groundedAnswerBehaviorLines(): string[] {
@@ -15,10 +35,19 @@ export function groundedAnswerBehaviorLines(): string[] {
     '- Ikke bruk sitattegn eller ordrette sitater med mindre ordlyden finnes i en kilde.',
     '- Si bare at kildene ikke besvarer spørsmålet når utdragene er tomme eller åpenbart irrelevante. Når utdragene inneholder relevant stoff (selv om svaret blir ufullstendig), skriv et kort svar — ikke avvis med «kildene inneholder ikke» / «Dette fant jeg ikke i kildene».',
     '- Hvis utdragene bare er metadata/titler uten substans om spørsmålet, si kort at kildene ikke gir nok grunnlag — ikke spekuler.',
+    '- Når du avviser eller skriver at kildene ikke gir grunnlag, ikke sett [n]-henvisninger i avslagssetningen.',
+    '- Påstå aldri at samme parti stemte både for og mot i samme votering. Oppsummer stemmegang ut fra én stemmeretning per parti per votering i kildene.',
     '- Prioriter dokument- og innstillingsutdrag fremfor lange voteringsoversikter, med mindre spørsmålet handler om stemmegang.',
     '- Oppsummer hva partiene stemte når voteringer i utdragene svarer på spørsmålet — ikke skriv at kildene «ikke gir detaljer» når stemmer står i teksten.',
     '- Bruk maks tre kildenumre i hakeparentes totalt (for eksempel [1] eller [2][3]). Ikke list opp mange numre på rad.',
   ];
+}
+
+export function isRefusalAnswer(answer: string): boolean {
+  const { body } = splitAnswerBodyAndSourcesFooter(answer.trim());
+  const a = body.trim();
+  if (!a) return false;
+  return REFUSAL_PATTERNS.some((re) => re.test(a));
 }
 
 /**
@@ -47,4 +76,59 @@ ${rules}
 - Ikke start med "Basert på utdrag".
 
 Svar:`;
+}
+
+const LONG_KILDE_LIST =
+  /\(\s*Kilde\s+\d+(?:\s*,\s*(?:Kilde\s+)?\d+){3,}[^)]*\)/gi;
+const INLINE_KILDE_RUN = /Kilde\s+\d+(?:\s*,\s*(?:Kilde\s+)?\d+){3,}/gi;
+const LONG_BRACKET_CITE_RUN = /(?:\[\d{1,2}\]){4,}/g;
+const VOTERING_ONLY_SENTENCE =
+  /\bKildene\s+viser\s+også\s+flere\s+voteringer[^.]*\./gi;
+
+const INLINE_BRACKET_CITE = /[ \t]*\[(?:\d{1,2})\](?:\[(?:\d{1,2})\])*/g;
+
+function polishGroundedAnswerBody(body: string): string {
+  let text = body;
+  if (!text.trim()) return text;
+
+  text = text.replace(LONG_KILDE_LIST, '(flere kilder)');
+  text = text.replace(INLINE_KILDE_RUN, 'flere kilder');
+  text = text.replace(LONG_BRACKET_CITE_RUN, '(flere kilder)');
+  text = text.replace(VOTERING_ONLY_SENTENCE, '');
+
+  const lines = text.split('\n');
+  const polishedLines = lines.map((line) => line.replace(/[ \t]+([,.])/g, '$1').trimEnd());
+  return polishedLines.join('\n').trim();
+}
+
+/** Trim citation noise and hedging the model often adds after generation. */
+export function polishGroundedAnswer(answer: string, _excerpts?: string[]): string {
+  const { body, footer } = splitAnswerBodyAndSourcesFooter(answer.trim());
+  const polishedBody = polishGroundedAnswerBody(body);
+  return joinAnswerBodyAndSourcesFooter(polishedBody, footer).trim();
+}
+
+/** Strip inline [n] markers from refusal body text only (preserves «Kilder:» footer). */
+export function stripBracketCitationsFromBody(body: string): string {
+  const lines = body.split('\n');
+  const cleaned = lines.map((line) => line.replace(INLINE_BRACKET_CITE, '').replace(/[ \t]+([,.])/g, '$1'));
+  return cleaned.join('\n').trim();
+}
+
+/** Remove [n] citation markers from refusal answers (body only; footer unchanged). */
+export function stripBracketCitations(answer: string): string {
+  const { body, footer } = splitAnswerBodyAndSourcesFooter(answer);
+  const cleaned = stripBracketCitationsFromBody(body);
+  return joinAnswerBodyAndSourcesFooter(cleaned, footer).trim();
+}
+
+/** Shared post-generation cleanup for eval export and grounded chat answers. */
+export function postProcessGroundedAnswer(answer: string, excerpts: string[]): string {
+  const { body, footer } = splitAnswerBodyAndSourcesFooter(answer);
+  let text = polishGroundedAnswerBody(body);
+  if (isRefusalAnswer(joinAnswerBodyAndSourcesFooter(text, ''))) {
+    text = stripBracketCitationsFromBody(text);
+  }
+  text = reconcilePartyVoteClaimsWithSources(text, excerpts);
+  return joinAnswerBodyAndSourcesFooter(text, footer).trim();
 }

@@ -2,6 +2,10 @@
  * Deterministic answer / retrieval metrics for RAG eval (no LLM).
  */
 
+import { isRefusalAnswer } from '@/lib/chat/grounded-answer';
+
+export { isRefusalAnswer };
+
 export type AnswerMetricsRow = {
   id: string;
   category?: string;
@@ -134,15 +138,6 @@ export function citationRuleFaithfulnessCap(audit: CitationAuditResult): number 
   return 1;
 }
 
-const REFUSAL_PATTERNS = [
-  /\bkildene\s+inneholder\s+ikke\b/i,
-  /\bkan\s+ikke\s+besvare\b/i,
-  /\bfinnes\s+ikke\s+(?:nok\s+)?informasjon\b/i,
-  /\bikke\s+nok\s+.*\bkildene\b/i,
-  /\bspørsmålet\s+kan\s+ikke\s+besvares\b/i,
-  /\bmangler\s+informasjon\s+i\s+kildene\b/i,
-];
-
 export function normalizeMetricText(text: string): string {
   return text
     .toLowerCase()
@@ -181,12 +176,6 @@ export function scoreGoldFactsInAnswer(answer: string, goldFacts: string[]): {
   const perFact = goldFacts.map((f) => fuzzyFactInText(answer, f));
   const hitRate = perFact.filter(Boolean).length / goldFacts.length;
   return { perFact, hitRate, hit: perFact.every(Boolean) };
-}
-
-export function isRefusalAnswer(answer: string): boolean {
-  const a = answer.trim();
-  if (!a) return false;
-  return REFUSAL_PATTERNS.some((re) => re.test(a));
 }
 
 const DOKUMENT_REF = /(?:dokument|dok\.?)\s*(\d+)\s*:\s*(\d+)\s*([sl])/gi;

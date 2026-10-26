@@ -55,7 +55,7 @@ export function buildChatInstructions(
     '- Bruk bare numre som står i verktøyresultatene i dette svaret. Finn aldri opp kildenumre, sitater, tall, stemmetall eller dokumentinnhold.',
     '- Nevn et tall eller et beløp bare når det står i et verktøyresultat.',
     ...groundedAnswerBehaviorLines(),
-    '- Når verktøyresultater ikke inneholder relevant innhold, skriv «Dette fant jeg ikke i kildene.»',
+    '- Når verktøyresultater ikke inneholder relevant innhold, skriv «Dette fant jeg ikke i kildene.» uten [n]-henvisninger.',
     '- Bruk verktøyene før du konkluderer om en sak. Gjett ikke på innhold du ikke har slått opp.',
     `- ${sakHint}`,
     ...(pageLines.length > 0 ? ['', 'Siden brukeren står på:', ...pageLines] : []),
