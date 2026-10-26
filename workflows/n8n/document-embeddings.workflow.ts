@@ -376,6 +376,9 @@ const webhookTrigger = trigger({
   output: [{ body: { stortinget_issue_id: '200329' } }],
 });
 
+const ISSUE_ID_GUARD_EXPR =
+  '{{ (() => { const raw = $json.body?.stortinget_issue_id ?? $json.stortinget_issue_id ?? ""; const id = String(raw).trim(); return /^\\d+$/.test(id) ? id : ""; })() }}';
+
 const hasIssueId = ifElse({
   version: 2.2,
   config: {
@@ -389,9 +392,7 @@ const hasIssueId = ifElse({
         conditions: [
           {
             id: 'has-issue',
-            leftValue: expr(
-              '{{ $json.body?.stortinget_issue_id || $json.stortinget_issue_id || "" }}',
-            ),
+            leftValue: expr(ISSUE_ID_GUARD_EXPR),
             rightValue: '',
             operator: { type: 'string', operation: 'notEmpty' },
           },

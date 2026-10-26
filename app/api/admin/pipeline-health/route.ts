@@ -1,6 +1,9 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
-import { triggerPipelineCatchup } from '@/lib/n8n/pipeline-catchup';
+import {
+  preparePipelineCatchup,
+  runEmbeddingCatchupWebhooks,
+} from '@/lib/n8n/pipeline-catchup';
 import { normalizePipelineHealth } from '@/lib/n8n/pipeline-health';
 import { getServiceSupabase } from '@/lib/supabase';
 
@@ -32,6 +35,19 @@ export async function POST() {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const triggered = await triggerPipelineCatchup();
-  return NextResponse.json({ ok: true, triggered });
+  try {
+    const { result, embeddingIssueIds } = await preparePipelineCatchup();
+    after(() => {
+      void runEmbeddingCatchupWebhooks(embeddingIssueIds).catch((err) => {
+        console.warn('[pipeline-health] Embedding catch-up feilet:', err);
+      });
+    });
+    return NextResponse.json({ ok: true, triggered: result });
+  } catch (err) {
+    console.warn('[pipeline-health] Catch-up feilet:', err);
+    return NextResponse.json(
+      { error: 'Kunne ikke starte catch-up' },
+      { status: 502 },
+    );
+  }
 }
