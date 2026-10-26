@@ -34,7 +34,12 @@ const fakeCredential: DecryptedByokCredential = {
 
 async function main() {
   let correctCalls = 0;
-  const inject = async () => {
+  const inject = async (_input: {
+    draft: string;
+    context: 'diskusjon';
+    credential: DecryptedByokCredential;
+    outbound: { isAdmin: boolean };
+  }) => {
     correctCalls += 1;
     return {
       original: 'Stortinget bør vurdere forslaget om klima.',

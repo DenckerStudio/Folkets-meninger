@@ -14,7 +14,7 @@ docker compose up -d
 
 Default URL (local): `http://127.0.0.1:8080`
 
-Production example used by the n8n workflow source: `https://searxng.heyklever.app` — put behind reverse proxy with TLS.
+Production (fm-web on Coolify): set `SEARXNG_BASE_URL` to the LAN instance, e.g. `http://192.168.50.154:8002`.
 
 ## n8n configuration
 
@@ -22,7 +22,7 @@ In workflow **Folkets Meninger – Forum trending prompts**, set the **Backfill 
 
 | Key | Example |
 |-----|---------|
-| `searxngBaseUrl` | `https://searxng.heyklever.app` |
+| `searxngBaseUrl` | e.g. `http://192.168.50.154:8002` (archived forum workflows only) |
 | `batchLimit` | `25` in the Set node; workflow code clamps generated prompts to max 12 per run |
 
 n8n blocks `$env` in expressions — use Set nodes, not environment variables in node fields.
@@ -30,7 +30,7 @@ n8n blocks `$env` in expressions — use Set nodes, not environment variables in
 ## JSON API
 
 ```bash
-curl 'https://searxng.heyklever.app/search?q=site:vg.no+nyheter&format=json&language=nb-NO'
+curl 'http://192.168.50.154:8002/search?q=site:vg.no+nyheter&format=json&language=nb-NO'
 ```
 
 If SearXNG is unavailable, the n8n workflow continues with RSS-only headlines.

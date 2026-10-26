@@ -81,5 +81,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
-  return NextResponse.json({ ok: true, id: result.id });
+  return NextResponse.json({
+    ok: true,
+    id: result.id,
+    regeneration: result.regeneration,
+    regeneration_hint: result.regeneration_hint ?? null,
+  });
 }

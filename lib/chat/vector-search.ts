@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ollamaApiUrl } from '@/lib/byok/ollama';
 import type { DecryptedByokCredential } from '@/lib/byok/service';
+import { createByokPinnedFetch } from '@/lib/byok/pinned-fetch.server';
+import type { ByokOutboundAccess } from '@/lib/byok/url-guard';
 import { normalizeChunkText } from '@/lib/chat/chunk-excerpt';
 
 /**
@@ -89,26 +91,37 @@ export function readVector(payload: unknown): number[] | null {
  */
 export function createOllamaVectorizer(
   credential: Pick<DecryptedByokCredential, 'provider' | 'baseUrl'> | null | undefined,
-  options: { fetchImpl?: typeof fetch; timeoutMs?: number; model?: string } = {},
+  options: {
+    fetchImpl?: typeof fetch;
+    timeoutMs?: number;
+    model?: string;
+    outbound?: ByokOutboundAccess;
+  } = {},
 ): QueryVectorizer | null {
   if (!credential || credential.provider !== 'ollama') return null;
-  const url = ollamaVectorUrl(credential.baseUrl ?? '');
+  const baseUrl = credential.baseUrl ?? '';
+  const url = ollamaVectorUrl(baseUrl);
   if (!url) return null;
 
   const model = options.model?.trim() || OLLAMA_VECTOR_MODEL;
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const outbound = options.outbound ?? { isAdmin: false };
+  const pinnedFetch =
+    options.fetchImpl ?? createByokPinnedFetch(outbound, baseUrl);
+
   return async (query: string) => {
     const prompt = (query ?? '').trim().slice(0, MAX_QUERY_CHARS);
     if (!prompt) return null;
     const timeoutMs = options.timeoutMs ?? resolveByokOllamaVectorTimeoutMs(prompt.length);
     try {
-      const response = await fetchImpl(url, {
+      const response = await pinnedFetch(url, {
         method: 'POST',
         headers: { 'content-type': 'application/json', accept: 'application/json' },
         body: JSON.stringify({ model, prompt }),
         signal: AbortSignal.timeout(timeoutMs),
         cache: 'no-store',
+        redirect: 'manual',
       });
+      if (response.status >= 300 && response.status < 400) return null;
       if (!response.ok) return null;
       const vector = readVector(await response.json());
       return vector && vector.length === VECTOR_DIMENSIONS ? vector : null;

@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
-import { buildSearxngSearchUrl, DEFAULT_SEARXNG_BASE_URL } from './searxng';
+import { buildSearxngSearchUrl, searchSearxng } from './searxng';
+
+const EXAMPLE_SEARXNG_BASE = 'http://192.168.50.154:8002';
+
+const savedSearxngBaseUrl = process.env.SEARXNG_BASE_URL;
+process.env.SEARXNG_BASE_URL = EXAMPLE_SEARXNG_BASE;
 
 const url = new URL(buildSearxngSearchUrl('statsbudsjettet 2026'));
-assert.equal(url.origin + url.pathname, `${DEFAULT_SEARXNG_BASE_URL}/search`);
+assert.equal(url.origin + url.pathname, `${EXAMPLE_SEARXNG_BASE}/search`);
 assert.equal(url.searchParams.get('q'), 'statsbudsjettet 2026');
 assert.equal(url.searchParams.get('format'), 'json');
 assert.equal(url.searchParams.get('language'), 'nb-NO');
@@ -12,4 +17,22 @@ const custom = new URL(
 );
 assert.equal(custom.origin, 'https://searxng.example.test');
 
-console.log('chat/searxng.test.ts: ok');
+async function testMissingSearxngBaseUrl() {
+  delete process.env.SEARXNG_BASE_URL;
+  const result = await searchSearxng('statsbudsjettet');
+  assert.equal(result.ok, false);
+  if (result.ok) throw new Error('expected failure');
+  assert.equal(
+    result.error,
+    'Kunne ikke nå SearXNG akkurat nå. Kilder er midlertidig utilgjengelige.',
+  );
+}
+
+void testMissingSearxngBaseUrl().then(() => {
+  if (savedSearxngBaseUrl === undefined) {
+    delete process.env.SEARXNG_BASE_URL;
+  } else {
+    process.env.SEARXNG_BASE_URL = savedSearxngBaseUrl;
+  }
+  console.log('chat/searxng.test.ts: ok');
+});

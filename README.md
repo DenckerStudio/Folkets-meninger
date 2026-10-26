@@ -74,7 +74,7 @@ Important constraints:
 - Stemme+ (59 kr/mnd) gates BYOK AI-chat from a glowing orb overlay on dashboard
   chrome (not a sidebar page). `/dashboard/chat` only deep-links the overlay.
   Users store an encrypted LLM key; tools retrieve sak chunks (no embeddings
-  column) and search `https://searxng.heyklever.app`. Stripe checkout is real
+  column) and search via `SEARXNG_BASE_URL` (LAN SearXNG, se `.env.example`). Stripe checkout is real
   when keys exist, otherwise the UI says it is not configured. Admin can still
   grant Stemme+ via `/dashboard/admin/stemme-plus`.
 

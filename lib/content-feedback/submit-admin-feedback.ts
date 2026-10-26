@@ -6,7 +6,7 @@ import {
 import { submitAdminContentFeedbackRpc } from '@/lib/content-feedback/service';
 
 export type SubmitAdminContentFeedbackResult =
-  | { ok: true; id: string }
+  | { ok: true; id: string; regeneration: boolean; regeneration_hint?: string }
   | { ok: false; status: number; error: string };
 
 export function parseAdminContentFeedbackBody(
@@ -39,8 +39,13 @@ export async function submitAdminContentFeedback(
   }
 
   try {
-    const { id } = await submitAdminContentFeedbackRpc(adminUserId, body);
-    return { ok: true, id };
+    const result = await submitAdminContentFeedbackRpc(adminUserId, body);
+    return {
+      ok: true,
+      id: result.id,
+      regeneration: result.regeneration,
+      regeneration_hint: result.regeneration_hint,
+    };
   } catch (error) {
     console.error('content-feedback submit failed', error);
     return { ok: false, status: 500, error: 'Kunne ikke lagre tilbakemelding' };
