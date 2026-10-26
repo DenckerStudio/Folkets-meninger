@@ -1,22 +1,28 @@
 #!/usr/bin/env npx tsx
 /**
- * Backfill document_chunks.embedding_v2 (bge-m3 / 1024) via batched Ollama /api/embed.
+ * Backfill document_chunks.embedding_v2 (bge-m3 / 1024) via lease claims + multi-endpoint workers.
  *
- * Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (trimmed), EMBED_BACKFILL_URL (required),
- *      optional EMBED_QUERY_URL (chat instance detection).
+ * Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EMBED_QUERY_URL (Ollama :11435 preflight),
+ *      EMBED_BACKFILL_ENDPOINTS (JSON array) or EMBED_BACKFILL_URL + EMBED_BACKFILL_PROVIDER.
+ *      API keys only via apiKeyEnv per endpoint (env var name, never the secret in config).
  */
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { LatencyBackoff, effectiveMaxBatchesPerMinute, shouldSleepForBatchRate } from '../lib/backfill-embedding-v2/busy-pause';
-import { buildSaveRows, fetchEmbedBatch, type EmbedRow } from '../lib/backfill-embedding-v2/embed-batch';
-import { loadScheduleWindows, parseBackfillArgv } from '../lib/backfill-embedding-v2/parse-args';
-import {
-  maxBatchesPerMinuteForSchedule,
-  scheduleModeAt,
-} from '../lib/backfill-embedding-v2/schedule';
-import { checkEmbedUrlsAtStartup } from '../lib/backfill-embedding-v2/urls';
+import { createClient } from '@supabase/supabase-js';
 import { existsSync } from 'node:fs';
-
-const FAST_LANE_POLL_MS = 60_000;
+import { loadEndpointConfigs, finalizeEndpoints } from '../lib/backfill-embedding-v2/endpoints';
+import { loadScheduleWindows, parseBackfillArgv } from '../lib/backfill-embedding-v2/parse-args';
+import { runEmbeddingPreflight } from '../lib/backfill-embedding-v2/preflight';
+import { SharedDbPressure } from '../lib/backfill-embedding-v2/shared-pressure';
+import { EndpointHealth } from '../lib/backfill-embedding-v2/endpoint-health';
+import {
+  buildWorkerId,
+  endpointSecrets,
+  releaseWorkerClaims,
+  runEndpointWorkerLoop,
+} from '../lib/backfill-embedding-v2/worker';
+import { safeErrorMessage } from '../lib/backfill-embedding-v2/secrets';
+import { inferModelTagFromApiModel } from '../lib/backfill-embedding-v2/lmstudio';
+import { resolveEmbeddingV2ModelTag } from '../lib/backfill-embedding-v2/provider';
+import { fetchLmStudioEmbedVectors } from '../lib/backfill-embedding-v2/lmstudio';
 
 function requiredEnv(name: string): string {
   const value = (process.env[name] ?? '').trim();
@@ -30,214 +36,181 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-type PriorityIssue = { issue_id: string; pending_chunks: number };
+async function tier0Probe(supabase: ReturnType<typeof createClient>): Promise<boolean> {
+  const { data, error } = await supabase.rpc('n8n_list_v2_priority_issues', {
+    p_tier: 0,
+    p_limit: 1,
+    p_worker_index: 0,
+    p_worker_count: 1,
+  });
+  if (error) return false;
+  return Array.isArray(data) && data.length > 0;
+}
+
+async function runPreflightForEndpoint(
+  endpoint: ReturnType<typeof finalizeEndpoints>[number],
+  queryUrl: string,
+  log: (line: string) => void,
+): Promise<boolean> {
+  try {
+    const result = await runEmbeddingPreflight({
+      provider: endpoint.provider,
+      backfillUrl: endpoint.url,
+      queryUrl,
+      apiModel: endpoint.apiModel,
+      apiKey: endpoint.apiKey,
+      log,
+    });
+
+    let modelTag = endpoint.modelTag;
+    if (endpoint.provider === 'lmstudio') {
+      const probe = await fetchLmStudioEmbedVectors(endpoint.url, ['probe'], {
+        apiKey: endpoint.apiKey,
+        apiModel: endpoint.apiModel,
+      });
+      modelTag = resolveEmbeddingV2ModelTag({
+        provider: 'lmstudio',
+        cliModelTag: endpoint.modelTag,
+        apiReportedModel:
+          inferModelTagFromApiModel(probe.reportedModel) ?? probe.reportedModel,
+      });
+    }
+
+    log(
+      JSON.stringify({
+        endpoint: endpoint.name,
+        preflight: 'ok',
+        minCosine: result.minCosine,
+        samples: result.sampleCount,
+        modelTag,
+        queryModel: result.queryModelSummary,
+      }),
+    );
+    return true;
+  } catch (err) {
+    log(
+      `[${endpoint.name}] preflight feilet — endpoint deaktivert: ${safeErrorMessage(err, endpointSecrets([endpoint]))}`,
+    );
+    return false;
+  }
+}
 
 async function main(): Promise<void> {
-  const cli = parseBackfillArgv(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+  const cli = parseBackfillArgv(argv);
   const supabaseUrl = requiredEnv('SUPABASE_URL');
   const serviceKey = requiredEnv('SUPABASE_SERVICE_ROLE_KEY');
-  const embedBackfillUrl = requiredEnv('EMBED_BACKFILL_URL');
-  const embedQueryUrl = process.env.EMBED_QUERY_URL?.trim();
+  const embedQueryUrl = requiredEnv('EMBED_QUERY_URL');
 
-  const urlCheck = checkEmbedUrlsAtStartup(
-    embedBackfillUrl,
-    embedQueryUrl,
-    cli.allowGpu,
-    cli.busyPause,
-  );
-  for (const warning of urlCheck.warnings) {
-    console.warn(`[backfill-v2] ${warning}`);
-  }
-  const busyPauseEnabled = urlCheck.busyPauseDefault;
+  const endpointInputs = loadEndpointConfigs(argv);
+  const endpoints = finalizeEndpoints(endpointInputs);
+  const secrets = endpointSecrets(endpoints);
+  const log = (line: string) => console.log(line);
 
   const scheduleWindows = loadScheduleWindows(cli);
   const supabase = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const latency = new LatencyBackoff(cli.busyLatencyMs);
-  let batchesThisMinute = 0;
-  let minuteStarted = Date.now();
+  const healthByName = new Map<string, EndpointHealth>();
+  for (const ep of endpoints) {
+    healthByName.set(ep.name, new EndpointHealth());
+  }
 
-  console.log(
-    JSON.stringify({
-      workers: cli.workers,
-      workerIndex: cli.workerIndex,
-      batch: cli.batch,
-      dryRun: cli.dryRun,
-      busyPause: busyPauseEnabled,
-      schedule: cli.schedule,
-    }),
-  );
-
-  while (true) {
-    if (cli.stopFile && existsSync(cli.stopFile)) {
-      console.log('[backfill-v2] stop-file funnet — avslutter.');
-      break;
+  let preflightOkCount = 0;
+  for (const ep of endpoints) {
+    const ok = await runPreflightForEndpoint(ep, embedQueryUrl, log);
+    const health = healthByName.get(ep.name)!;
+    if (ok) {
+      health.markPreflightPassed();
+      preflightOkCount += 1;
     }
+  }
 
-    const now = Date.now();
-    if (now - minuteStarted >= 60_000) {
-      batchesThisMinute = 0;
-      minuteStarted = now;
+  if (cli.preflightOnly) {
+    process.exit(preflightOkCount > 0 ? 0 : 1);
+  }
+
+  const activeEndpoints = endpoints.filter((ep) => healthByName.get(ep.name)?.preflightOk);
+  if (activeEndpoints.length === 0) {
+    throw new Error('Ingen endepunkter bestod preflight');
+  }
+
+  const shared = new SharedDbPressure();
+  let stopping = false;
+  const workerIds: string[] = [];
+
+  const requestStop = async () => {
+    if (stopping) return;
+    stopping = true;
+    for (const id of workerIds) {
+      await releaseWorkerClaims(supabase, id);
     }
+  };
 
-    const scheduleMode = scheduleModeAt(scheduleWindows, new Date(), cli.scheduleTimeZone);
-    const scheduleCap = maxBatchesPerMinuteForSchedule(
-      scheduleMode,
-      cli.maxBatchesPerMin,
-      cli.fullMaxBatchesPerMin,
-    );
+  process.on('SIGINT', () => {
+    void requestStop().finally(() => process.exit(0));
+  });
+  process.on('SIGTERM', () => {
+    void requestStop().finally(() => process.exit(0));
+  });
 
-    const { data: pressure, error: pressureError } = await supabase.rpc('n8n_backfill_db_pressure');
-    if (pressureError) {
-      console.warn(`[backfill-v2] db pressure RPC feilet: ${pressureError.message}`);
-    } else if (pressure?.pause_recommended) {
-      console.warn('[backfill-v2] DB pause anbefalt (WAL/slot) — venter 60s');
-      await sleep(60_000);
-      continue;
+  const coordinator = (async () => {
+    while (!stopping) {
+      if (cli.stopFile && existsSync(cli.stopFile)) {
+        log('[backfill-v2] stop-file funnet — avslutter.');
+        stopping = true;
+        await requestStop();
+        break;
+      }
+      await shared.refresh(supabase, { tier0Probe: () => tier0Probe(supabase) });
+      if (shared.isPaused()) {
+        log('[backfill-v2] delt DB-pause (WAL/slot) — alle workers venter');
+      }
+      for (const ep of activeEndpoints) {
+        const health = healthByName.get(ep.name)!;
+        if (health.needsPreflight) {
+          const ok = await runPreflightForEndpoint(ep, embedQueryUrl, log);
+          if (ok) health.markPreflightPassed();
+        }
+      }
+      await sleep(5000);
     }
+  })();
 
-    const tier0 = await listIssues(supabase, 0, cli);
-    const tier0Pending = tier0.length > 0;
+  const workers = activeEndpoints.map(async (endpoint) => {
+    const workerId = buildWorkerId(endpoint.name);
+    workerIds.push(workerId);
+    const health = healthByName.get(endpoint.name)!;
 
-    let didWork = false;
-
-    if (cli.tiers.includes(0) && tier0.length > 0) {
-      const cap = effectiveMaxBatchesPerMinute({
-        tier0Pending: true,
-        lane: 'fast',
-        scheduleMode,
-        busyPauseEnabled,
-        latencyPaused: latency.isPaused(),
-        maxBatchesPerMin: scheduleCap,
+    await runEndpointWorkerLoop(
+      {
+        supabase,
+        endpoint,
+        workerId,
+        leaseSeconds: cli.leaseSeconds,
+        dryRun: cli.dryRun,
+        shared,
+        health,
+        scheduleWindows,
+        scheduleTimeZone: cli.scheduleTimeZone,
+        maxBatchesPerMin: cli.maxBatchesPerMin,
+        fullMaxBatchesPerMin: cli.fullMaxBatchesPerMin,
         fastLaneMinBatchesPerMin: cli.fastLaneMinBatchesPerMin,
-      });
-      if (shouldSleepForBatchRate(batchesThisMinute, cap)) {
-        await sleep(1000);
-      } else {
-        const issue = tier0[0];
-        didWork = await drainIssue(
-          supabase,
-          issue.issue_id,
-          cli,
-          embedBackfillUrl,
-          latency,
-          busyPauseEnabled,
-          urlCheck.chatInstance,
-        );
-        if (didWork) batchesThisMinute += 1;
-      }
-    } else if (!tier0Pending) {
-      for (const tier of cli.tiers.filter((t) => t > 0)) {
-        const issues = await listIssues(supabase, tier, cli);
-        if (issues.length === 0) continue;
-        const cap = effectiveMaxBatchesPerMinute({
-          tier0Pending: false,
-          lane: 'background',
-          scheduleMode,
-          busyPauseEnabled,
-          latencyPaused: latency.isPaused(),
-          maxBatchesPerMin: scheduleCap,
-          fastLaneMinBatchesPerMin: cli.fastLaneMinBatchesPerMin,
-        });
-        if (shouldSleepForBatchRate(batchesThisMinute, cap)) {
-          break;
-        }
-        didWork = await drainIssue(
-          supabase,
-          issues[0].issue_id,
-          cli,
-          embedBackfillUrl,
-          latency,
-          busyPauseEnabled,
-          urlCheck.chatInstance,
-        );
-        if (didWork) {
-          batchesThisMinute += 1;
-          break;
-        }
-      }
-    }
-
-    if (!didWork) {
-      await sleep(tier0Pending ? FAST_LANE_POLL_MS : 5000);
-    }
-  }
-}
-
-async function listIssues(
-  supabase: SupabaseClient,
-  tier: number,
-  cli: ReturnType<typeof parseBackfillArgv>,
-): Promise<PriorityIssue[]> {
-  const { data, error } = await supabase.rpc('n8n_list_v2_priority_issues', {
-    p_tier: tier,
-    p_limit: 10,
-    p_worker_index: cli.workerIndex,
-    p_worker_count: cli.workers,
+        busyLatencyMs: cli.busyLatencyMs,
+        busyPauseFlag: cli.busyPause,
+        embedQueryUrl,
+        allowGpu: cli.allowGpu,
+        probeBeforeBatch: cli.probeBeforeBatch,
+        secrets,
+        sleep,
+        log,
+      },
+      () => stopping || Boolean(cli.stopFile && existsSync(cli.stopFile)),
+    );
   });
-  if (error) {
-    throw new Error(`n8n_list_v2_priority_issues: ${error.message}`);
-  }
-  return (data ?? []) as PriorityIssue[];
-}
 
-async function drainIssue(
-  supabase: SupabaseClient,
-  issueId: string,
-  cli: ReturnType<typeof parseBackfillArgv>,
-  embedUrl: string,
-  latency: LatencyBackoff,
-  busyPauseEnabled: boolean,
-  chatInstance: boolean,
-): Promise<boolean> {
-  const { data: chunks, error } = await supabase.rpc('n8n_list_chunks_missing_v2_for_issue', {
-    p_issue_id: issueId,
-    p_limit: cli.batch,
-  });
-  if (error) {
-    throw new Error(`n8n_list_chunks_missing_v2_for_issue: ${error.message}`);
-  }
-  const rows = (chunks ?? []) as { id: string; content: string }[];
-  if (rows.length === 0) {
-    return false;
-  }
-
-  const embedRows: EmbedRow[] = rows.map((r) => ({ id: r.id, content: r.content }));
-  if (cli.dryRun) {
-    console.log(`[dry-run] ville embedet ${embedRows.length} chunks for ${issueId}`);
-    return true;
-  }
-
-  const probe =
-    cli.probeBeforeBatch || (busyPauseEnabled && chatInstance) ? '·' : null;
-
-  const { vectors, latencyMs } = await fetchEmbedBatch(embedUrl, embedRows, {
-    probeText: probe,
-  });
-  latency.record(latencyMs);
-
-  const savePayload = buildSaveRows(embedRows, vectors);
-  const { data: saveResult, error: saveError } = await supabase.rpc('save_embeddings_v2', {
-    p_rows: savePayload,
-    p_model: 'bge-m3',
-    p_force: false,
-  });
-  if (saveError) {
-    throw new Error(`save_embeddings_v2: ${saveError.message}`);
-  }
-
-  console.log(
-    JSON.stringify({
-      issueId,
-      saved: saveResult?.saved ?? null,
-      skipped: saveResult?.skipped ?? null,
-      latencyMs,
-      latencyPaused: latency.isPaused(),
-    }),
-  );
-  return true;
+  await Promise.all([coordinator, ...workers]);
 }
 
 main().catch((err) => {
