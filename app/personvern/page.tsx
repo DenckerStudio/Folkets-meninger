@@ -66,7 +66,7 @@ export default function PersonvernPage() {
           <p>{controllerBlock} er behandlingsansvarlig.</p>
         ) : (
           <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-foreground">
-            Behandlingsansvarlig (juridisk navn, org.nr. og adresse) publiseres her når opplysningene er
+            Behandlingsansvarlig (juridisk navn og org.nr.) publiseres her når opplysningene er
             registrert. Kontakt oss om personvern på{' '}
             <a className="font-medium underline" href={`mailto:${DATA_CONTROLLER.privacyEmail}`}>
               {DATA_CONTROLLER.privacyEmail}
@@ -79,7 +79,7 @@ export default function PersonvernPage() {
           <a className="font-medium text-brand underline" href={`mailto:${DATA_CONTROLLER.privacyEmail}`}>
             {DATA_CONTROLLER.privacyEmail}
           </a>
-          {controllerBlock ? ` eller per post til ${DATA_CONTROLLER.postalAddress.trim()}.` : '.'}
+          .
         </p>
       </section>
 

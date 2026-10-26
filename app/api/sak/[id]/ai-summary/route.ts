@@ -28,8 +28,10 @@ export async function GET(
         narrative: result.narrative,
         who_affected: result.who_affected,
         how_affected: result.how_affected,
+        forslag: result.forslag,
         topic_cards: result.topic_cards,
         labels: result.labels,
+        kostnad: result.kostnad ?? '',
         cached: result.cached,
       });
     }

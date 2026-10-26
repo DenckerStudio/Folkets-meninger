@@ -27,7 +27,13 @@ DECLARE
     'require_admin_user_id', 'app_future_require_admin', 'check_api_rate_limit',
     'upsert_action_capture', 'set_action_cluster_verdict',
     'assert_rpc_caller_is_actor', 'rpc_caller_is_trusted_server',
-    'upsert_content_feedback', 'log_blog_content_feedback'
+    'upsert_content_feedback', 'log_blog_content_feedback',
+    'admin_submit_content_feedback',
+    'admin_list_ai_summary_queue_gave_up', 'admin_reset_ai_summary_queue_attempts'
+  ];
+  n8n_hardened text[] := ARRAY[
+    'n8n_list_issues_missing_ai_summary',
+    'n8n_upsert_issue_ai_summary'
   ];
   problems text[] := '{}';
   r record;
@@ -112,6 +118,33 @@ BEGIN
   ) THEN
     problems := problems || 'Default privileges gir EXECUTE på nye funksjoner til PUBLIC/anon/authenticated (public-skjema)'::text;
   END IF;
+
+  FOR r IN SELECT p.oid::regprocedure AS sig, p.proname,
+                  has_function_privilege('anon',p.oid,'EXECUTE') AS a,
+                  has_function_privilege('authenticated',p.oid,'EXECUTE') AS u,
+                  p.proconfig
+           FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+           LEFT JOIN pg_depend d ON d.objid=p.oid AND d.deptype='e'
+           WHERE n.nspname IN ('public','private') AND d.objid IS NULL
+             AND p.proname = ANY(n8n_hardened) LOOP
+    IF r.a OR r.u THEN
+      problems := problems || format('herdet n8n-RPC åpen for klient: %s', r.sig);
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM unnest(coalesce(r.proconfig, '{}')) c WHERE c LIKE 'search_path=%pg_temp'
+    ) THEN
+      problems := problems || format('herdet n8n-RPC uten search_path=public, pg_temp: %s', r.sig);
+    END IF;
+  END LOOP;
+
+  FOR r IN SELECT p.oid::regprocedure AS sig
+           FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+           LEFT JOIN pg_depend d ON d.objid=p.oid AND d.deptype='e'
+           WHERE p.prosecdef AND d.objid IS NULL AND n.nspname IN ('public','private')
+             AND p.proname = 'admin_submit_content_feedback'
+             AND NOT EXISTS (SELECT 1 FROM unnest(p.proconfig) c WHERE c LIKE 'search_path=%pg_temp') LOOP
+    problems := problems || format('SECURITY DEFINER uten herdet search_path: %s', r.sig);
+  END LOOP;
 
   IF to_regclass('public.user_badges') IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='user_badges'

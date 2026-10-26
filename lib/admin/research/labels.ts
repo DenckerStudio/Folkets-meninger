@@ -1,6 +1,7 @@
 import type { ResearchApiAction } from '@/lib/admin/research/actions';
 import type { ResearchBriefKind, ResearchBriefStatus } from '@/lib/admin/research/types';
 import { adminBlogPostUrl } from '@/lib/blog/urls';
+import { adminVurderHref } from '@/lib/admin/vurder-tabs';
 import { routes } from '@/lib/routes';
 
 export const RESEARCH_KIND_LABELS: Record<ResearchBriefKind, string> = {
@@ -31,7 +32,7 @@ export const RESEARCH_ACTION_CONFIRM: Record<ResearchApiAction, string> = {
 export type ResearchBriefOutputLink = { href: string; label: string };
 
 export function adminReelDraftUrl(pollId: string): string {
-  return `${routes.adminReels}?pollId=${encodeURIComponent(pollId)}`;
+  return adminVurderHref('reels', pollId);
 }
 
 export function researchBriefOutputLink(
