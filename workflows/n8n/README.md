@@ -410,6 +410,16 @@ curl -sS -H "x-cron-secret: $CRON_SECRET" \
 
 `n8n-retry` køer manglende AI-sammendrag, pending embeddings og neste Reels-utkast via eksisterende webhooks (`create_system_poll_draft`, aldri `ensure_stortinget_poll`).
 
+## Bloggutkast (`POST /api/ops/blog/drafts`)
+
+App-endepunkt (ikke fm-cms direkte): `POST https://www.folkets-meninger.no/api/ops/blog/drafts` med header `x-cron-secret`.
+
+Suksess (`200`): `{ id, slug, adminUrl, created, cmsStatus }` hvor `cmsStatus` er `draft`, `published` eller `unknown`.
+
+**Idempotent retry:** samme `source_event` kan gi `created: false` og `200`. Flyten **må** sjekke `cmsStatus` — bare `draft` betyr at utkastet finnes og retry kan avsluttes stille. `published` og `unknown` skal varsles / manuell sjekk i CMS (som utilsiktet publisering), ikke behandles som «utkast finnes».
+
+Feil (`4xx`/`5xx`): JSON `{ error, id?, slug?, adminUrl?, cmsStatus? }` når CMS har lagret en rad (f.eks. utkast forventet men `published`).
+
 ## Deploy fra repo
 
 Valider via n8n-mcp: `validate_workflow`. Opprett/publish (`create_workflow_from_code` → `publish_workflow`) og sett live `settings.errorWorkflow` bare når det er et bevisst deploy-steg — ikke fra kilde-fallback-PRen. In-workflow Error Trigger er allerede i `*.workflow.ts`.

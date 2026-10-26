@@ -1,6 +1,10 @@
+import { unstable_noStore as noStore } from 'next/cache';
+import { CmsFetchError } from '@/lib/cms/cms-fetch-error';
 import type { PayloadListResponse } from '@/lib/cms/types';
 
 const DEFAULT_REVALIDATE = 3600;
+
+export { CmsFetchError } from '@/lib/cms/cms-fetch-error';
 
 export function isCmsConfigured(): boolean {
   return Boolean(process.env.CMS_URL?.trim() && process.env.CMS_API_KEY?.trim());
@@ -26,15 +30,23 @@ type FetchOptions = {
   apiKey?: string;
   method?: string;
   body?: unknown;
+  /** When true, skip noStore (e.g. rare non-page reads). Blog reads default to dynamic. */
+  allowIsrCache?: boolean;
 };
 
 export async function payloadFetch<T>(
   path: string,
   options: FetchOptions = {},
-): Promise<T | null> {
+): Promise<T> {
   const base = getCmsBaseUrl();
   const apiKey = options.apiKey ?? process.env.CMS_API_KEY?.trim();
-  if (!base || !apiKey) return null;
+  if (!base || !apiKey) {
+    throw new CmsFetchError('CMS er ikke konfigurert', 'unconfigured');
+  }
+
+  if (!options.allowIsrCache) {
+    noStore();
+  }
 
   const url = path.startsWith('http') ? path : `${base}${path.startsWith('/') ? path : `/${path}`}`;
 
@@ -46,16 +58,23 @@ export async function payloadFetch<T>(
         ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       },
       body: options.body ? JSON.stringify(options.body) : undefined,
-      next: {
-        revalidate: options.revalidate ?? DEFAULT_REVALIDATE,
-        tags: options.tags ?? ['blog'],
-      },
+      signal: AbortSignal.timeout(8000),
+      cache: options.allowIsrCache ? undefined : 'no-store',
+      next: options.allowIsrCache
+        ? {
+            revalidate: options.revalidate ?? DEFAULT_REVALIDATE,
+            tags: options.tags ?? ['blog'],
+          }
+        : undefined,
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      throw new CmsFetchError(`CMS returnerte HTTP ${res.status}`, 'http');
+    }
     return (await res.json()) as T;
   } catch (error) {
+    if (error instanceof CmsFetchError) throw error;
     console.error('[cms] fetch failed', path, error);
-    return null;
+    throw new CmsFetchError('CMS forespørsel feilet', 'network');
   }
 }
 
@@ -63,7 +82,7 @@ export async function payloadFetchList<T>(
   collection: string,
   query: Record<string, string | number | boolean | undefined>,
   options?: FetchOptions,
-): Promise<PayloadListResponse<T> | null> {
+): Promise<PayloadListResponse<T>> {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
     if (value === undefined || value === null) continue;
