@@ -7,6 +7,7 @@ import {
 } from '@/lib/blog/og-image';
 import { blogCmsOrUnavailable } from '@/lib/blog/cms-read-runtime';
 import { getPublishedBlogPostBySlug } from '@/lib/blog/service';
+import { CmsFetchError } from '@/lib/cms/cms-fetch-error';
 
 export const size = BLOG_OG_SIZE;
 export const contentType = BLOG_OG_CONTENT_TYPE;
@@ -17,14 +18,21 @@ type ImageProps = {
 
 export default async function Image({ params }: ImageProps) {
   const { slug } = await params;
-  const loaded = await blogCmsOrUnavailable(async () => {
-    const post = await getPublishedBlogPostBySlug(slug);
-    if (!post) return null;
-    return post;
-  });
-  if (loaded.unavailable) {
-    return renderBlogCmsUnavailableOgImage();
+  try {
+    const loaded = await blogCmsOrUnavailable(async () => {
+      const post = await getPublishedBlogPostBySlug(slug);
+      if (!post) return null;
+      return post;
+    });
+    if (loaded.unavailable) {
+      return renderBlogCmsUnavailableOgImage();
+    }
+    if (!loaded.data) notFound();
+    return renderBlogPostOgImage(loaded.data.title, loaded.data.excerpt);
+  } catch (error) {
+    if (error instanceof CmsFetchError) {
+      return renderBlogCmsUnavailableOgImage();
+    }
+    throw error;
   }
-  if (!loaded.data) notFound();
-  return renderBlogPostOgImage(loaded.data.title, loaded.data.excerpt);
 }

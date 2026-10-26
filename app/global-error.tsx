@@ -13,6 +13,11 @@ export default function GlobalError({
     console.error('[global]', error);
   }, [error]);
 
+  const retry = () => {
+    reset();
+    window.location.reload();
+  };
+
   return (
     <html lang="nb">
       <body className="min-h-screen bg-[#f7f8fb] font-sans text-[#001433] antialiased">
@@ -24,7 +29,7 @@ export default function GlobalError({
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <button
               type="button"
-              onClick={reset}
+              onClick={retry}
               className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#00205b] px-5 text-sm font-semibold text-white hover:bg-[#00205b]/90"
             >
               Prøv igjen
