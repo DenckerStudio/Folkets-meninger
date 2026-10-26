@@ -18,12 +18,17 @@ SKIP_MIGRATIONS=(
   '20261018160000_security_lockdown_n8n.sql'
 )
 
-# Prod half-migrated: 110001 + hotfix + 160000 + 20140000 n8n applied; 120000+ pending.
+# Prod half-migrated: through 20150000, 21120000 (content_feedback) applied; 120000–130000 security chain pending.
 DEFER_MIGRATIONS=(
   '20261020120000_rpc_caller_user_binding.sql'
   '20261020120001_revoke_impersonation_rpc_execute.sql'
   '20261020120002_reapply_rpc_execute_lockdown.sql'
   '20261020130000_api_rate_limit.sql'
+)
+
+# Must run after 120000 so caller helpers are not overwritten by the older binding migration.
+POST_DEFER_MIGRATIONS=(
+  '20261021160000_defense_in_depth_rpc_authz.sql'
 )
 
 should_skip() {
@@ -40,7 +45,7 @@ should_skip() {
 should_defer() {
   local base="$1"
   local d
-  for d in "${DEFER_MIGRATIONS[@]}"; do
+  for d in "${DEFER_MIGRATIONS[@]}" "${POST_DEFER_MIGRATIONS[@]}"; do
     if [[ "$base" == "$d" ]]; then
       return 0
     fi
@@ -103,6 +108,12 @@ done
 echo "Re-apply RPC lockdown (150000 re-grants authenticated EXECUTE on user-bound RPCs) ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261020120002_reapply_rpc_execute_lockdown.sql
 
+echo "Phase 3: defense-in-depth RPC authz (after 120000 binding; must follow 20150000/21120000 from phase 1) ..."
+for d in "${POST_DEFER_MIGRATIONS[@]}"; do
+  echo "  -> $d"
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/$d"
+done
+
 echo "Running security-lockdown-defaults.sql (supabase_admin connection) ..."
 psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-lockdown-defaults.sql
 
@@ -129,5 +140,11 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
 
 echo "Running security-jwt-smoke.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-jwt-smoke.sql
+
+echo "Running rpc-caller-authz-runtime.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/rpc-caller-authz-runtime.sql
+
+echo "Running security-definer-caller-guard.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-definer-caller-guard.sql
 
 echo "=== Prod-like test OK ==="

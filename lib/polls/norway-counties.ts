@@ -31,4 +31,5 @@ export function countyName(code: string | null | undefined): string | null {
 }
 
 /** Minimum ballots per county before regional results are shown (k-anonymity). */
-export const POLL_FYLKE_MIN_VOTES = 5;
+/** Must match server floor in get_poll_totals_by_fylke (GREATEST(p_min_votes, 10)). */
+export const POLL_FYLKE_MIN_VOTES = 10;
