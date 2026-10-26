@@ -60,6 +60,11 @@ const stubClient = {
     }
     return { data: null, error: null };
   },
+  from: () => ({
+    select: () => ({
+      eq: async () => ({ count: 0, error: null }),
+    }),
+  }),
 };
 
 void (async () => {
