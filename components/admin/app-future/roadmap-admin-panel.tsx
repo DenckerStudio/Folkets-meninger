@@ -298,9 +298,11 @@ export function RoadmapAdminPanel({
                   </Badge>
                   <span className="text-sm font-semibold text-foreground">{item.title}</span>
                 </div>
-                <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{item.body}</p>
+                <div className="mt-1 line-clamp-2">
+                  <MarkdownLite source={item.body} className="text-muted-foreground" />
+                </div>
               </button>
-              <div className="flex flex-col gap-1 self-center">
+              <div className="flex shrink-0 flex-row items-center gap-0.5 self-center">
                 <Button
                   type="button"
                   variant="ghost"
@@ -343,17 +345,17 @@ export function RoadmapAdminPanel({
                 >
                   <ChevronDown className="size-3.5" />
                 </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className={ADMIN_ICON_BTN}
+                  onClick={() => openEdit(item)}
+                  aria-label={`Rediger «${item.title}»`}
+                >
+                  <Pencil className="size-3.5" />
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className={ADMIN_ICON_BTN}
-                onClick={() => openEdit(item)}
-                aria-label={`Rediger «${item.title}»`}
-              >
-                <Pencil className="size-3.5" />
-              </Button>
             </li>
           );
           })}
@@ -388,11 +390,16 @@ export function RoadmapAdminPanel({
                 value={draft.title}
                 maxLength={ROADMAP_TITLE_MAX}
                 onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/30"
-                aria-invalid={'error' in validation && validation.error.includes('Tittelen')}
+                className={cn(
+                  'w-full rounded-xl border bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/30',
+                  titleMissing || ('error' in validation && validation.error.includes('Tittelen'))
+                    ? 'border-destructive focus:ring-destructive/30'
+                    : 'border-border',
+                )}
+                aria-invalid={titleMissing || ('error' in validation && validation.error.includes('Tittelen'))}
               />
               {titleMissing ? (
-                <p className="text-xs text-destructive" role="alert">Tittel mangler</p>
+                <p className="text-xs font-medium text-destructive" role="alert">Tittel mangler</p>
               ) : 'error' in validation && validation.error.includes('Tittelen') ? (
                 <p className="text-xs text-destructive">{validation.error}</p>
               ) : null}

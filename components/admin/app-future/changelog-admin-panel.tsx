@@ -243,8 +243,8 @@ export function ChangelogAdminPanel({
             const published = isChangelogPublished(entry);
             return (
               <li key={entry.id} className="rounded-xl border border-border bg-card p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 w-full flex-1 sm:w-auto">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant={published ? 'default' : 'secondary'}>
                         {changelogPublishLabel(entry)}
@@ -256,7 +256,7 @@ export function ChangelogAdminPanel({
                     <h3 className="mt-2 text-sm font-semibold text-foreground">{entry.title}</h3>
                     <MarkdownLite source={entry.body} className="mt-2 text-muted-foreground" />
                   </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-1">
+                  <div className="flex w-full flex-wrap items-center gap-1 sm:w-auto sm:shrink-0">
                     <Button
                       type="button"
                       variant="outline"
