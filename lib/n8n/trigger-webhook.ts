@@ -1,3 +1,5 @@
+import { buildN8nWebhookHeaders } from '@/lib/n8n/n8n-webhook-headers';
+
 export type N8nWebhookKind =
   | 'ai-summary'
   | 'document-embeddings'
@@ -13,15 +15,6 @@ export type TriggerN8nWebhookOptions = {
   timeoutMs?: number;
   attempts?: number;
 };
-
-function n8nWebhookHeaders(webhookToken?: string): Record<string, string> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  const token = webhookToken?.trim();
-  if (token) {
-    headers['X-FM-Webhook-Token'] = token;
-  }
-  return headers;
-}
 
 const DEFAULT_TIMEOUT_MS = 8_000;
 const DEFAULT_ATTEMPTS = 2;
@@ -44,7 +37,7 @@ export async function postN8nWebhook(
     try {
       const res = await fetch(url, {
         method: 'POST',
-        headers: n8nWebhookHeaders(webhookToken),
+        headers: buildN8nWebhookHeaders(webhookToken),
         body: JSON.stringify(body ?? {}),
         signal: controller.signal,
       });

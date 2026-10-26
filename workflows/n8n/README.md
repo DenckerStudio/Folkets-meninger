@@ -99,7 +99,21 @@ N8N_AI_SUMMARY_WEBHOOK_TOKEN=
 
 `lib/trigger-ai-summary-webhook.ts` kalles når sak synkes uten sammendrag, og fra `GET /api/sak/[id]/ai-summary` mens rad mangler. Cron `n8n-retry` bruker samme path via `lib/n8n/retry-pending.ts`.
 
-**n8n (interne HTTP-noder):** `pipeline-health.workflow.ts` og `document-embeddings.workflow.ts` bruker Header Auth-credential «FM AI Summary Webhook Token» (`X-FM-Webhook-Token`) mot `folkets-ai-summary` — ikke `$env` i Code-noder.
+**n8n (interne HTTP-noder):** `pipeline-health.workflow.ts` og `document-embeddings.workflow.ts` bruker Header Auth-credential «AI-sammendrag webhook token» (`X-FM-Webhook-Token`) mot `folkets-ai-summary` — ikke `$env` i Code-noder.
+
+**Mottaker-webhook i `ai-summary-backfill.workflow.ts`:** Header Auth på noden `Webhook new issue` (`folkets-ai-summary`) er **bevisst ikke** slått på i repo-kilden ennå. Det er utrulling steg 4 (etter fm-web har `N8N_AI_SUMMARY_WEBHOOK_TOKEN` satt og er deployet).
+
+### Utrulling Header Auth (folkets-ai-summary)
+
+1. Opprett n8n **Header Auth**-credential med header-navn `X-FM-Webhook-Token` (navn i n8n: **AI-sammendrag webhook token**).
+2. Sett `N8N_AI_SUMMARY_WEBHOOK_TOKEN` på **fm-web** i Coolify og **redeploy** fm-web (samme verdi som i credential).
+3. Koble credential til interne HTTP-noder som POSTer til `folkets-ai-summary` (`pipeline-health`, `document-embeddings` — allerede i workflow-kilde).
+4. Aktiver **Header Auth** på mottaker-webhooken `Webhook new issue` i `ai-summary-backfill` (live n8n; ikke påkrevd i repo før dette steget).
+5. Verifiser én trigger fra fm-web (sak uten sammendrag / `GET /api/sak/[id]/ai-summary`) og én fra cron (`GET /api/cron/n8n-retry`).
+
+**Rollback:** Slå av Header Auth på mottaker-webhooken (steg 4). fm-web uten token eller med feil token vil da feile mot en beskyttet webhook — ved rollback kan token env fjernes eller webhooken åpnes igjen.
+
+Regenerer deploy-JSON fra TypeScript: `npx tsx scripts/export-document-embeddings-workflow-json.mjs`.
 
 ## Triggere
 

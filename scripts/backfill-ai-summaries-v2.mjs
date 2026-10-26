@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S npx tsx
 /**
  * Regenerate AI summaries via n8n webhook for issues missing v2 labels.
  *
@@ -15,6 +15,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildN8nWebhookHeaders } from '../lib/n8n/n8n-webhook-headers.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -66,19 +67,10 @@ async function supabaseFetch(table, query) {
   return res.json();
 }
 
-function webhookHeaders(webhookToken) {
-  const headers = { 'Content-Type': 'application/json' };
-  const token = webhookToken?.trim();
-  if (token) {
-    headers['X-FM-Webhook-Token'] = token;
-  }
-  return headers;
-}
-
 async function triggerWebhook(issueId, webhookUrl, webhookToken) {
   const res = await fetch(webhookUrl, {
     method: 'POST',
-    headers: webhookHeaders(webhookToken),
+    headers: buildN8nWebhookHeaders(webhookToken),
     body: JSON.stringify({ stortinget_issue_id: issueId }),
   });
   if (!res.ok) {

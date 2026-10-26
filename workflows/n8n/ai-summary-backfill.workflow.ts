@@ -479,6 +479,8 @@ const webhookTrigger = trigger({
       path: 'folkets-ai-summary',
       responseMode: 'onReceived',
       options: { responseCode: { values: { responseCode: 'customCode', customCode: 202 } }, responseData: '{"ok":true,"queued":true}' },
+      // Header Auth (X-FM-Webhook-Token) på denne noden er bevisst IKKE aktivert i repo ennå.
+      // Se utrulling steg 4 i workflows/n8n/README.md (etter fm-web har N8N_AI_SUMMARY_WEBHOOK_TOKEN + deploy).
     },
   },
   output: [{ body: { stortinget_issue_id: '200329' } }],

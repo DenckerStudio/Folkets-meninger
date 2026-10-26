@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
+import { buildN8nWebhookHeaders } from './n8n-webhook-headers';
 import { postN8nWebhook, triggerN8nWebhook } from './trigger-webhook';
+
+assert.equal(buildN8nWebhookHeaders(' \t\n')['X-FM-Webhook-Token'], undefined, 'whitespace-only token');
 
 async function run(): Promise<void> {
   assert.equal(
