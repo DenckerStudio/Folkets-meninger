@@ -17,6 +17,7 @@ import {
   type AiSummaryQueueGaveUpItem,
   type PipelineHealth,
 } from '@/lib/n8n/pipeline-health';
+import { pipelineCatchupUserMessage } from '@/lib/n8n/pipeline-catchup';
 
 type DraftsResponse = { drafts: PollRecord[] };
 type CandidatesResponse = { candidates: SakPollCandidate[]; coverage: SakPollCoverage };
@@ -223,15 +224,9 @@ export default function AdminReelsClient({
         return;
       }
       const triggered = data.triggered as
-        | { embeddings?: boolean; embeddingsConfigured?: boolean; health?: boolean }
+        | { health?: boolean; embeddingsIssuesTriggered?: number }
         | undefined;
-      const catchupAvailable =
-        Boolean(triggered?.embeddingsConfigured) || Boolean(triggered?.health);
-      if (catchupAvailable) {
-        setCatchupMessage('Catch-up er startet. Køene oppdateres i bakgrunnen.');
-      } else {
-        setCatchupMessage('Automatisk oppfrisking er ikke tilgjengelig i dette miljøet.');
-      }
+      setCatchupMessage(pipelineCatchupUserMessage(triggered));
     });
   };
 

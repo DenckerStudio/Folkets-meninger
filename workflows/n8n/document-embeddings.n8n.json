@@ -41,7 +41,7 @@
           "conditions": [
             {
               "id": "has-issue",
-              "leftValue": "={{ (() => { const raw = $json.body?.stortinget_issue_id ?? $json.stortinget_issue_id ?? \"\"; const id = String(raw).trim(); return /^\\d+$/.test(id) ? id : \"\"; })() }}",
+              "leftValue": "={{ $json.issueId }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -509,6 +509,17 @@
       "main": [
         [
           {
+            "node": "Normalize webhook payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize webhook payload": {
+      "main": [
+        [
+          {
             "node": "Has issue id?",
             "type": "main",
             "index": 0
@@ -520,7 +531,7 @@
       "main": [
         [
           {
-            "node": "Normalize webhook payload",
+            "node": "Fetch pending chunks",
             "type": "main",
             "index": 0
           }
@@ -528,17 +539,6 @@
         [
           {
             "node": "Skip global drain (no issue id)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Normalize webhook payload": {
-      "main": [
-        [
-          {
-            "node": "Fetch pending chunks",
             "type": "main",
             "index": 0
           }
