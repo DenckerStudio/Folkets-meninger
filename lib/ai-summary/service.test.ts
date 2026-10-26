@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import { buildAiSummaryFromDbRow } from './service';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { buildAiSummaryFromDbRow, isMissingForslagColumnError } from './service';
 
 const baseV2Row = {
   narrative: 'Saken gjelder ti tiltak for å forebygge voldtekt.',
@@ -45,5 +47,44 @@ const noSummary = buildAiSummaryFromDbRow({
   kostnad: 'Kost',
 });
 assert.equal(noSummary, null);
+
+const legacyCard = buildAiSummaryFromDbRow({
+  narrative: 'Saken gjelder havbruk.',
+  topic_cards: [{ title: 'Forslagene (1)', body: '1) Krav om merking.' }],
+});
+assert.ok(legacyCard?.version === 2);
+if (legacyCard?.version === 2) {
+  assert.deepEqual(legacyCard.forslag, ['Krav om merking']);
+}
+
+assert.equal(
+  isMissingForslagColumnError({
+    code: '42703',
+    message: 'column issue_ai_summaries.forslag does not exist',
+  }),
+  true,
+);
+assert.equal(
+  isMissingForslagColumnError({
+    code: 'PGRST204',
+    message: "Could not find the 'forslag' column of 'issue_ai_summaries' in the schema cache",
+  }),
+  true,
+);
+assert.equal(
+  isMissingForslagColumnError({
+    code: '42703',
+    message: 'column issue_ai_summaries.narrative does not exist',
+  }),
+  false,
+);
+assert.equal(isMissingForslagColumnError({ code: '42501', message: 'permission denied' }), false);
+assert.equal(isMissingForslagColumnError(null), false);
+
+const serviceSrc = readFileSync(join(process.cwd(), 'lib/ai-summary/service.ts'), 'utf8');
+const withForslagAt = serviceSrc.indexOf('AI_SUMMARY_COLUMNS_WITH_FORSLAG');
+const withoutForslagAt = serviceSrc.lastIndexOf('AI_SUMMARY_COLUMNS)');
+assert.ok(withForslagAt >= 0 && withoutForslagAt > withForslagAt);
+assert.match(serviceSrc, /isMissingForslagColumnError\(error\)/);
 
 console.log('ai-summary service tests passed');
