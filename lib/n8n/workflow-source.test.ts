@@ -34,6 +34,12 @@ for (const file of productionFlows) {
 const pipelineHealth = readWorkflow('pipeline-health.workflow.ts');
 assert.doesNotMatch(pipelineHealth, /n8n_list_issues_missing_ai_summary/);
 assert.match(pipelineHealth, /n8n_pipeline_health/);
+assert.match(pipelineHealth, /httpHeaderAuth/);
+assert.match(pipelineHealth, /FOLKETS_AI_SUMMARY_WEBHOOK_HEADER_CRED/);
+
+const docEmbeddings = readWorkflow('document-embeddings.workflow.ts');
+assert.match(docEmbeddings, /httpHeaderAuth/);
+assert.match(docEmbeddings, /folkets-ai-summary/);
 
 const cron = readWorkflow('app-cron.workflow.ts');
 assert.match(cron, /\/api\/cron\/n8n-retry/);

@@ -8,6 +8,7 @@ import {
   ifElse,
 } from '@n8n/workflow-sdk';
 import {
+  FOLKETS_AI_SUMMARY_WEBHOOK_HEADER_CRED,
   FOLKETS_N8N_BASE,
   FOLKETS_OLLAMA_EMBEDDINGS_URL,
   FOLKETS_OLLAMA_EMBED_MODEL,
@@ -323,9 +324,12 @@ const triggerAiSummary = node({
   config: {
     name: 'Trigger AI summary',
     onError: 'continueRegularOutput',
+    credentials: { httpHeaderAuth: newCredential(FOLKETS_AI_SUMMARY_WEBHOOK_HEADER_CRED) },
     parameters: {
       method: 'POST',
       url: `${FOLKETS_N8N_BASE}/webhook/folkets-ai-summary`,
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
       sendBody: true,
       specifyBody: 'json',
       jsonBody: expr('={{ JSON.stringify({ stortinget_issue_id: $json.stortinget_issue_id }) }}'),

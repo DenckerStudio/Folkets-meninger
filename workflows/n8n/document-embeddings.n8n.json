@@ -1,24 +1,36 @@
 {
+  "id": "folkets-document-embeddings",
   "name": "Folkets Meninger – dokument embeddings (RAG)",
   "nodes": [
     {
+      "id": "55a11469-e09b-44ff-bf5b-3ac872e35bb5",
+      "name": "Every 60 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        100,
+        300
+      ],
       "parameters": {
         "rule": {
           "interval": [
             {
-              "field": "minutes",
-              "minutesInterval": 60
+              "field": "hours",
+              "hoursInterval": 1
             }
           ]
         }
-      },
-      "id": "schedule-trigger-node",
-      "name": "Every 15 minutes",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.3,
-      "position": [240, 300]
+      }
     },
     {
+      "id": "eac9e0c0-4b2b-49f1-8800-171db33140fd",
+      "name": "Embedding settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        300,
+        300
+      ],
       "parameters": {
         "mode": "manual",
         "includeOtherFields": true,
@@ -38,37 +50,92 @@
             }
           ]
         }
-      },
-      "id": "embedding-settings-node",
-      "name": "Embedding settings",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [460, 300]
+      }
     },
     {
+      "id": "8c67fb23-8020-4224-a148-1d63e3d3a7e4",
+      "name": "Fetch pending chunks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        300
+      ],
       "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT\n  c.id,\n  c.issue_id,\n  c.document_id,\n  c.chunk_index,\n  c.content\nFROM public.document_chunks c\nWHERE c.embedding_status = 'pending'\n  AND ($1::text IS NULL OR $1::text = '' OR c.issue_id = $1::text)\nORDER BY c.created_at ASC\nLIMIT $2",
+        "method": "POST",
+        "url": "https://supabase.heyklever.app/rest/v1/rpc/n8n_list_pending_document_chunks",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_issue_id: $json.issueId || null, p_limit: Number($json.batchLimit || 8) }) }}",
         "options": {
-          "queryReplacement": "={{ [ $json.issueId || null, $json.batchLimit || \"8\" ] }}"
+          "timeout": 60000
         }
       },
-      "id": "fetch-pending-chunks-node",
-      "name": "Fetch pending chunks",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [680, 300],
-      "credentials": {
-        "postgres": {
-          "id": "CREDENTIAL_ID_POSTGRES",
-          "name": "Supabase Postgres Folkets"
+      "credentials": {},
+      "retryOnFail": true
+    },
+    {
+      "id": "b1eef7bc-ab3e-49ea-8c17-bb1a1df6fec1",
+      "name": "Expand pending chunks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const raw = $input.first()?.json;\nlet rows = [];\nif (Array.isArray(raw)) rows = raw;\nelse if (Array.isArray(raw?.data)) rows = raw.data;\nelse if (raw && typeof raw === 'object' && (raw.id || raw.issue_id) && !raw.skip) rows = [raw];\nelse {\n  const all = $input.all().map((i) => i.json).filter(Boolean);\n  if (all.length && all.every((r) => r && (r.id || r.issue_id) && !Array.isArray(r))) rows = all;\n}\nrows = rows.filter((r) => r && (r.id || r.issue_id) && !r.skip && !r.outcome);\nif (!rows.length) return [];\nreturn rows.map((r) => ({ json: r }));"
+      }
+    },
+    {
+      "id": "ee4ed0d9-503b-40cd-971c-63e2842bcac7",
+      "name": "Has pending chunk?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        900,
+        300
+      ],
+      "parameters": {
+        "looseTypeValidation": true,
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-id",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
         }
       }
     },
     {
+      "id": "ff8e039f-2fb1-476b-a05e-33d9ebd1569a",
+      "name": "Ollama embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        300
+      ],
       "parameters": {
         "method": "POST",
-        "url": "PLACEHOLDER_OLLAMA_URL/api/embeddings",
+        "url": "http://127.0.0.1:11434/api/embeddings",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"model\":\"nomic-embed-text:v1.5\",\"prompt\":{{ JSON.stringify($json.content) }}}",
@@ -76,84 +143,183 @@
           "timeout": 120000
         }
       },
-      "id": "embed-chunk-node",
-      "name": "Ollama embeddings",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1120, 300],
-      "onError": "continueErrorOutput"
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "language": "javaScript",
-        "jsCode": "const chunk = $('Fetch pending chunks').item.json;\nconst response = $input.item.json;\nconst embedding = response.embedding;\nreturn { json: { ...chunk, embedding } };"
-      },
-      "id": "map-embedding-node",
+      "id": "dc3705d0-b0a6-47b2-a937-668db69111bc",
       "name": "Map embedding vector",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 300]
-    },
-    {
+      "position": [
+        1300,
+        300
+      ],
       "parameters": {
         "mode": "runOnceForEachItem",
         "language": "javaScript",
-        "jsCode": "const item = $input.item.json;\nconst embedding = item.embedding;\nif (!Array.isArray(embedding) || embedding.length === 0) {\n  throw new Error('Missing embedding vector');\n}\nconst vector = '[' + embedding.join(',') + ']';\nfunction esc(value) {\n  return \"'\" + String(value ?? '').replace(/'/g, \"''\") + \"'\";\n}\nconst updateSql = `UPDATE public.document_chunks\nSET embedding = '${vector}'::vector,\n    embedding_status = 'ready'\nWHERE id = ${esc(item.id)}::uuid`;\nconst finalizeSql = `UPDATE public.stortinget_issue_documents d\nSET chunks_status = CASE\n      WHEN EXISTS (\n        SELECT 1 FROM public.document_chunks c\n        WHERE c.issue_id = d.issue_id\n          AND c.document_id = d.document_id\n          AND c.embedding_status = 'pending'\n      ) THEN 'pending'\n      WHEN EXISTS (\n        SELECT 1 FROM public.document_chunks c\n        WHERE c.issue_id = d.issue_id\n          AND c.document_id = d.document_id\n          AND c.embedding_status = 'ready'\n      ) THEN 'ready'\n      ELSE d.chunks_status\n    END,\n    content_full_text = NULL,\n    content_html = NULL\nWHERE d.issue_id = ${esc(item.issue_id)}\n  AND d.document_id = ${esc(item.document_id)}`;\nreturn { json: { ...item, updateSql, finalizeSql } };"
-      },
-      "id": "prepare-update-node",
+        "jsCode": "const chunk = $('Expand pending chunks').item.json;\nconst response = $input.item.json;\nconst embedding = response.embedding;\nif (!Array.isArray(embedding) || embedding.length === 0) {\n  return {\n    json: {\n      ...chunk,\n      skip: true,\n      outcome: 'embed_failed',\n      reason: 'missing_embedding_vector',\n      message: 'Ollama returned no embedding; chunk left pending for /api/cron/n8n-retry',\n    },\n  };\n}\nreturn { json: { ...chunk, embedding } };"
+      }
+    },
+    {
+      "id": "85bf3bb4-7ab9-49bc-ba73-1302ace4b6a1",
       "name": "Prepare embedding update SQL",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 300]
+      "position": [
+        1500,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const item = $input.item.json;\nif (item.skip || item.outcome === 'embed_failed' || item.outcome === 'empty_queue') {\n  return { json: item };\n}\nconst embedding = item.embedding;\nif (!Array.isArray(embedding) || embedding.length === 0) {\n  return {\n    json: {\n      ...item,\n      skip: true,\n      outcome: 'embed_failed',\n      reason: 'missing_embedding_vector',\n    },\n  };\n}\nreturn {\n  json: {\n    ...item,\n    embedding_vector: '[' + embedding.join(',') + ']',\n  },\n};"
+      }
     },
     {
+      "id": "28d0c3f0-517e-4d99-98db-c55ce873d42f",
+      "name": "Has embedding vector?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1700,
+        300
+      ],
       "parameters": {
-        "operation": "executeQuery",
-        "query": "={{ $json.updateSql }}"
-      },
-      "id": "save-embedding-node",
+        "looseTypeValidation": true,
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-vec",
+              "leftValue": "={{ $json.embedding_vector }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4f389265-2bc0-43b9-8c69-100d970bc88f",
       "name": "Save embedding",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [1780, 300],
-      "credentials": {
-        "postgres": {
-          "id": "CREDENTIAL_ID_POSTGRES",
-          "name": "Supabase Postgres Folkets"
-        }
-      }
-    },
-    {
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1900,
+        300
+      ],
       "parameters": {
-        "operation": "executeQuery",
-        "query": "={{ $('Prepare embedding update SQL').item.json.finalizeSql }}"
-      },
-      "id": "clear-document-body-node",
-      "name": "Clear document body storage",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [2000, 300],
-      "credentials": {
-        "postgres": {
-          "id": "CREDENTIAL_ID_POSTGRES",
-          "name": "Supabase Postgres Folkets"
+        "method": "POST",
+        "url": "https://supabase.heyklever.app/rest/v1/rpc/n8n_save_document_embedding",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_chunk_id: $json.id, p_embedding: $json.embedding_vector }) }}",
+        "options": {
+          "timeout": 60000
         }
+      },
+      "credentials": {},
+      "retryOnFail": true
+    },
+    {
+      "id": "cbb4fce0-ffa4-4142-8c98-52bf8a36f4c9",
+      "name": "Clear document body storage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2100,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://supabase.heyklever.app/rest/v1/rpc/n8n_finalize_document_storage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_issue_id: $('Prepare embedding update SQL').item.json.issue_id, p_document_id: $('Prepare embedding update SQL').item.json.document_id }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "8efadadd-d498-4d8f-99fd-c61c8adc9dc0",
+      "name": "Collect ready issues",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2300,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const ids = new Set();\ntry {\n  for (const item of $('Prepare embedding update SQL').all()) {\n    const issueId = String(item.json?.issue_id || '').trim();\n    if (issueId && !item.json?.skip) ids.add(issueId);\n  }\n} catch (_) {\n  for (const item of $input.all()) {\n    const issueId = String(item.json?.issue_id || '').trim();\n    if (issueId) ids.add(issueId);\n  }\n}\nif (!ids.size) return [];\nreturn [...ids].map((stortinget_issue_id) => ({ json: { stortinget_issue_id } }));"
       }
     },
     {
+      "id": "1de54b26-08fc-40c7-a92d-dc060f1f3041",
+      "name": "Trigger AI summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2500,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.heyklever.app/webhook/folkets-ai-summary",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ stortinget_issue_id: $json.stortinget_issue_id }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "0dd30f6c-cc56-426f-9543-7efdf5c094fa",
+      "name": "Rate limit pause",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2700,
+        300
+      ],
       "parameters": {
         "resume": "timeInterval",
         "amount": 2,
         "unit": "seconds"
-      },
-      "id": "rate-limit-pause-node",
-      "name": "Rate limit pause",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [2220, 300]
+      }
     },
     {
+      "id": "5dc56819-0599-4a45-9931-e37ff9f2e28d",
+      "name": "Batch run complete",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2900,
+        300
+      ],
       "parameters": {
         "mode": "manual",
         "assignments": {
@@ -166,26 +332,94 @@
             }
           ]
         }
-      },
-      "id": "batch-complete-node",
-      "name": "Batch run complete",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [900, 500]
+      }
     },
     {
+      "id": "6f7d29e2-b6ab-48fc-8a78-d49140c90042",
+      "name": "Log embed failure keep pending",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1900,
+        450
+      ],
       "parameters": {
-        "httpMethod": "POST",
-        "path": "folkets-document-embeddings",
-        "responseMode": "onReceived"
-      },
-      "id": "webhook-trigger-node",
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "outcome",
+              "name": "outcome",
+              "value": "embed_failed",
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "Embedding failed; chunk remains pending for next run",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2edae567-dffd-4372-995f-14f2503bead0",
+      "name": "Log empty embedding queue",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1100,
+        450
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "outcome",
+              "name": "outcome",
+              "value": "empty_queue",
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "No pending document_chunks to embed",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "d6549f66-5db7-45e4-bb55-ad5f68cda802",
       "name": "Webhook document embeddings",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [240, 600]
+      "position": [
+        100,
+        450
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "folkets-document-embeddings",
+        "responseMode": "onReceived",
+        "responseData": "allEntries"
+      },
+      "webhookId": "e1a06c5f-55d9-4f81-aa14-2d48a9929a18"
     },
     {
+      "id": "05df1d77-20fc-4810-a056-7b9fa95b5cef",
+      "name": "Normalize webhook payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        300,
+        450
+      ],
       "parameters": {
         "mode": "manual",
         "assignments": {
@@ -204,12 +438,7 @@
             }
           ]
         }
-      },
-      "id": "normalize-webhook-node",
-      "name": "Normalize webhook payload",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [460, 600]
+      }
     },
     {
       "parameters": {
@@ -221,11 +450,94 @@
       "name": "Note",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [140, 180]
+      "position": [
+        -320,
+        80
+      ]
+    },
+    {
+      "id": "82976e5d-8d7b-4ee5-a64a-35dcf9cdcef6",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        100,
+        600
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "9dea137e-c8ad-4ad6-bfe4-16217e29d391",
+      "name": "Format workflow error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        600
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const item = $input.first()?.json || {};\nconst workflowName = item.workflow?.name || item.workflowName || 'ukjent workflow';\nconst workflowId = item.workflow?.id || item.workflowId || '';\nconst executionId = item.execution?.id || item.executionId || '';\nconst executionUrl = item.execution?.url || (executionId ? ('https://n8n.heyklever.app/execution/' + executionId) : '');\nconst lastNode = item.lastNodeExecuted || item.node?.name || '';\nconst message = item.error?.message || item.message || 'Ukjent feil';\nconst subject = 'n8n-feil: ' + workflowName;\nconst text = [\n  'Workflow: ' + workflowName,\n  workflowId ? 'ID: ' + workflowId : null,\n  lastNode ? 'Siste node: ' + lastNode : null,\n  executionUrl ? 'Kjøring: ' + executionUrl : null,\n  '',\n  message,\n].filter(Boolean).join('\\n');\nreturn [{ json: { subject, text, meta: { workflowName, workflowId, executionId, executionUrl, lastNode } } }];"
+      }
+    },
+    {
+      "id": "b6bf61c5-c641-40fd-a685-d74dc21e9530",
+      "name": "Error notify settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        500,
+        600
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cron-secret",
+              "name": "cronSecret",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "59684305-9bdb-40a5-b7ca-cf0dc7202f76",
+      "name": "Varsle admin om feil",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        600
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.folkets-meninger.no/api/ops/n8n-notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-cron-secret",
+              "value": "={{ $('Error notify settings').item.json.cronSecret }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ kind: \"error\", subject: $(\"Format workflow error\").item.json.subject, text: $(\"Format workflow error\").item.json.text, meta: $(\"Format workflow error\").item.json.meta }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
-    "Every 15 minutes": {
+    "Every 60 minutes": {
       "main": [
         [
           {
@@ -251,7 +563,36 @@
       "main": [
         [
           {
+            "node": "Expand pending chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand pending chunks": {
+      "main": [
+        [
+          {
+            "node": "Has pending chunk?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has pending chunk?": {
+      "main": [
+        [
+          {
             "node": "Ollama embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log empty embedding queue",
             "type": "main",
             "index": 0
           }
@@ -284,7 +625,25 @@
       "main": [
         [
           {
+            "node": "Has embedding vector?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has embedding vector?": {
+      "main": [
+        [
+          {
             "node": "Save embedding",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log embed failure keep pending",
             "type": "main",
             "index": 0
           }
@@ -303,6 +662,28 @@
       ]
     },
     "Clear document body storage": {
+      "main": [
+        [
+          {
+            "node": "Collect ready issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect ready issues": {
+      "main": [
+        [
+          {
+            "node": "Trigger AI summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger AI summary": {
       "main": [
         [
           {
@@ -345,14 +726,40 @@
           }
         ]
       ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format workflow error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format workflow error": {
+      "main": [
+        [
+          {
+            "node": "Error notify settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error notify settings": {
+      "main": [
+        [
+          {
+            "node": "Varsle admin om feil",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "staticData": null,
-  "tags": [],
-  "triggerCount": 2,
-  "updatedAt": "2026-06-16T21:47:00.000Z",
-  "versionId": "1"
+  "settings": {}
 }
