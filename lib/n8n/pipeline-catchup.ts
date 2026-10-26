@@ -110,3 +110,20 @@ export async function triggerPipelineCatchup(): Promise<PipelineCatchupResult> {
   await runEmbeddingCatchupWebhooks(embeddingIssueIds);
   return result;
 }
+
+export type PipelineCatchupTriggered = Pick<
+  PipelineCatchupResult,
+  'health' | 'embeddingsIssuesTriggered'
+>;
+
+/** Admin UI copy after POST /api/admin/pipeline-health — only claims success when something ran. */
+export function pipelineCatchupUserMessage(
+  triggered: Partial<PipelineCatchupTriggered> | undefined,
+): string {
+  const health = Boolean(triggered?.health);
+  const embeddingsTriggered = (triggered?.embeddingsIssuesTriggered ?? 0) > 0;
+  if (health || embeddingsTriggered) {
+    return 'Catch-up er startet. Køene oppdateres i bakgrunnen.';
+  }
+  return 'Ingen catch-up ble startet. Pipeline-health er ikke konfigurert i dette miljøet.';
+}
