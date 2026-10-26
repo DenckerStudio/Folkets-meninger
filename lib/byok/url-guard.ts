@@ -33,9 +33,13 @@ const PRIVATE_IPV4_CIDRS = [
 
 const PRIVATE_IPV6_CIDR = 'fc00::/7';
 
+/** RFC 2544 / benchmarking (must not be user BYOK targets). */
+const BLOCKED_IPV4_BENCHMARK_CIDR = '198.18.0.0/15';
+
 const BLOCKED_IPV6_CIDRS = [
   '::/96',
   '64:ff9b::/96',
+  '64:ff9b::/32',
   '2002::/16',
   '2001::/32',
   '100::/64',
@@ -220,15 +224,25 @@ function isMetadataIpAddress(address: string): boolean {
   return false;
 }
 
+function ipv4MatchesCidr(v4: ipaddr.IPv4, cidr: string): boolean {
+  const range = ipaddr.parseCIDR(cidr);
+  if (range[0].kind() !== 'ipv4') return false;
+  return v4.match(range as [ipaddr.IPv4, number]);
+}
+
+function ipv6MatchesCidr(v6: ipaddr.IPv6, cidr: string): boolean {
+  const range = ipaddr.parseCIDR(cidr);
+  if (range[0].kind() !== 'ipv6') return false;
+  return v6.match(range as [ipaddr.IPv6, number]);
+}
+
 function isPrivateUnicast(ip: ipaddr.IPv4 | ipaddr.IPv6): boolean {
   if (ip.kind() === 'ipv4') {
     const v4 = ip as ipaddr.IPv4;
-    return PRIVATE_IPV4_CIDRS.some((cidr) =>
-      v4.match(ipaddr.parseCIDR(cidr) as [ipaddr.IPv4, number]),
-    );
+    return PRIVATE_IPV4_CIDRS.some((cidr) => ipv4MatchesCidr(v4, cidr));
   }
   const v6 = ip as ipaddr.IPv6;
-  return v6.match(ipaddr.parseCIDR(PRIVATE_IPV6_CIDR) as [ipaddr.IPv6, number]);
+  return ipv6MatchesCidr(v6, PRIVATE_IPV6_CIDR);
 }
 
 function loopbackPermittedByAllowlist(address: string, permittedOrigin: string): boolean {
@@ -264,11 +278,7 @@ export function assertIpAllowedSync(
 
   if (ip.kind() === 'ipv6') {
     const v6 = ip as ipaddr.IPv6;
-    if (
-      BLOCKED_IPV6_CIDRS.some((cidr) =>
-        v6.match(ipaddr.parseCIDR(cidr) as [ipaddr.IPv6, number]),
-      )
-    ) {
+    if (BLOCKED_IPV6_CIDRS.some((cidr) => ipv6MatchesCidr(v6, cidr))) {
       throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `blocked ipv6 cidr ${address}`);
     }
     if (v6.isIPv4MappedAddress()) {
@@ -307,6 +317,13 @@ export function assertIpAllowedSync(
 
   if (range !== 'unicast') {
     throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `non-unicast ${range} ${address}`);
+  }
+
+  if (ip.kind() === 'ipv4') {
+    const v4 = ip as ipaddr.IPv4;
+    if (ipv4MatchesCidr(v4, BLOCKED_IPV4_BENCHMARK_CIDR)) {
+      throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `benchmark ${address}`);
+    }
   }
 
   if (!allowPrivate && isPrivateUnicast(ip)) {
