@@ -222,9 +222,13 @@ function isMetadataIpAddress(address: string): boolean {
 
 function isPrivateUnicast(ip: ipaddr.IPv4 | ipaddr.IPv6): boolean {
   if (ip.kind() === 'ipv4') {
-    return PRIVATE_IPV4_CIDRS.some((cidr) => ip.match(ipaddr.parseCIDR(cidr)));
+    const v4 = ip as ipaddr.IPv4;
+    return PRIVATE_IPV4_CIDRS.some((cidr) =>
+      v4.match(ipaddr.parseCIDR(cidr) as [ipaddr.IPv4, number]),
+    );
   }
-  return ip.match(ipaddr.parseCIDR(PRIVATE_IPV6_CIDR));
+  const v6 = ip as ipaddr.IPv6;
+  return v6.match(ipaddr.parseCIDR(PRIVATE_IPV6_CIDR) as [ipaddr.IPv6, number]);
 }
 
 function loopbackPermittedByAllowlist(address: string, permittedOrigin: string): boolean {
@@ -260,7 +264,11 @@ export function assertIpAllowedSync(
 
   if (ip.kind() === 'ipv6') {
     const v6 = ip as ipaddr.IPv6;
-    if (BLOCKED_IPV6_CIDRS.some((cidr) => v6.match(ipaddr.parseCIDR(cidr)))) {
+    if (
+      BLOCKED_IPV6_CIDRS.some((cidr) =>
+        v6.match(ipaddr.parseCIDR(cidr) as [ipaddr.IPv6, number]),
+      )
+    ) {
       throw new ByokUrlRejectedError(BYOK_BASE_URL_REJECTED_NB, `blocked ipv6 cidr ${address}`);
     }
     if (v6.isIPv4MappedAddress()) {
