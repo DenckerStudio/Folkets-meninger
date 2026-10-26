@@ -14,7 +14,10 @@ import { mergeChunks } from './rag';
 
 const vector = (length = VECTOR_DIMENSIONS) => Array.from({ length }, (_, i) => i / length);
 
-function vectorCredential(baseUrl = 'http://localhost:11434/v1') {
+const publicLookup = async () => [{ address: '93.184.216.34', family: 4 }];
+const outbound = { isAdmin: false, lookup: publicLookup };
+
+function vectorCredential(baseUrl = 'https://ollama.example.com/v1') {
   return { provider: 'ollama' as const, baseUrl };
 }
 
@@ -60,21 +63,26 @@ async function main() {
   else delete process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_MS;
   delete process.env.BYOK_OLLAMA_VECTOR_TIMEOUT_ADAPTIVE;
 
-  const vectorizer = createOllamaVectorizer(vectorCredential(), { fetchImpl: okFetch });
+  const vectorizer = createOllamaVectorizer(vectorCredential(), {
+    fetchImpl: okFetch,
+    outbound,
+  });
   assert.ok(vectorizer);
   const result = await vectorizer!('hva koster innvandringsloven');
   assert.equal(result?.length, VECTOR_DIMENSIONS);
-  assert.equal(captured!.url, 'http://localhost:11434/api/embeddings');
+  assert.equal(captured!.url, 'https://ollama.example.com/api/embeddings');
   assert.equal(captured!.body.model, 'nomic-embed-text');
   assert.equal(captured!.body.prompt, 'hva koster innvandringsloven');
 
   const wrongDims = createOllamaVectorizer(vectorCredential(), {
     fetchImpl: (async () => ({ ok: true, json: async () => ({ embedding: [1, 2, 3] }) })) as unknown as typeof fetch,
+    outbound,
   });
   assert.equal(await wrongDims!('q'), null);
 
   const notOk = createOllamaVectorizer(vectorCredential(), {
     fetchImpl: (async () => ({ ok: false })) as unknown as typeof fetch,
+    outbound,
   });
   assert.equal(await notOk!('q'), null);
 
@@ -82,6 +90,7 @@ async function main() {
     fetchImpl: (async () => {
       throw new Error('offline');
     }) as unknown as typeof fetch,
+    outbound,
   });
   assert.equal(await throws!('q'), null);
 

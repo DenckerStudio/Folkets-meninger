@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { listOllamaModels } from '@/lib/byok/ollama';
+import { listOllamaModels } from '@/lib/byok/ollama-list.server';
 import { byokStorageReady, getByokMeta } from '@/lib/byok/service';
+import { byokOutboundForUser } from '@/lib/byok/outbound';
 import { requireStemmePlus } from '@/lib/stemme-plus/entitlement';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,8 @@ export async function GET() {
   }
 
   if (meta.provider === 'ollama' && meta.baseUrl) {
-    const available = await listOllamaModels(meta.baseUrl);
+    const outbound = await byokOutboundForUser(gate.userId);
+    const available = await listOllamaModels(meta.baseUrl, { outbound });
     if (!available.ok) {
       return NextResponse.json({ models: [], error: available.error });
     }

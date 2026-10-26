@@ -189,7 +189,7 @@ const embedRagQuery = node({
     waitBetweenTries: 3000,
     parameters: {
       method: 'POST',
-      url: 'https://ollama.heyklever.app/api/embeddings',
+      url: 'http://192.168.50.154:11434/api/embeddings',
       sendBody: true,
       specifyBody: 'json',
       jsonBody: expr(

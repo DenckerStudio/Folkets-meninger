@@ -3,9 +3,10 @@ import {
   createAppChangelogEntry,
   deleteAppChangelogEntry,
   listAppChangelogEntries,
+  updateAppChangelogEntry,
 } from '@/lib/admin/app-future';
 import { requireAdmin } from '@/lib/admin/gate';
-import { validateChangelogInput } from '@/lib/appens-fremtid/validate';
+import { validateChangelogInput, validateChangelogPatch } from '@/lib/appens-fremtid/validate';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,11 +40,50 @@ export async function POST(request: Request) {
     if ('error' in parsed) {
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
-    const id = await createAppChangelogEntry(auth.userId, parsed.title, parsed.body);
+    const idempotencyKey =
+      typeof payload.idempotencyKey === 'string' ? payload.idempotencyKey.trim() : '';
+    const id = await createAppChangelogEntry(
+      auth.userId,
+      parsed.title,
+      parsed.body,
+      parsed.publish,
+      idempotencyKey || null,
+    );
     return NextResponse.json({ ok: true, id });
   } catch (error) {
     console.error('[admin/changelog] create failed', error);
     return NextResponse.json({ error: 'Kunne ikke publisere innlegget.' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  const auth = await requireAdmin();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: 'Serveren er ikke konfigurert' }, { status: 503 });
+  }
+
+  try {
+    const payload = (await request.json()) as Record<string, unknown>;
+    const parsed = validateChangelogPatch(payload);
+    if ('error' in parsed) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+    await updateAppChangelogEntry(auth.userId, parsed.id, {
+      title: parsed.title,
+      body: parsed.body,
+      published: parsed.published,
+    });
+    return NextResponse.json({ ok: true, id: parsed.id });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.toLowerCase().includes('not found')) {
+      return NextResponse.json({ error: 'Innlegget ble ikke funnet' }, { status: 404 });
+    }
+    console.error('[admin/changelog] update failed', error);
+    return NextResponse.json({ error: 'Kunne ikke oppdatere innlegget.' }, { status: 500 });
   }
 }
 

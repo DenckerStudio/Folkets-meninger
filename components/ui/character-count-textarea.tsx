@@ -11,6 +11,7 @@ type CharacterCountTextareaProps = {
   placeholder?: string;
   'aria-invalid'?: boolean;
   className?: string;
+  onBlur?: () => void;
 };
 
 /** Textarea med tegn-teller (21st.dev / cnippet-dev v-textarea-6). */
@@ -23,6 +24,7 @@ export function CharacterCountTextarea({
   placeholder,
   'aria-invalid': ariaInvalid,
   className,
+  onBlur,
 }: CharacterCountTextareaProps) {
   const length = value.trim().length;
   const atMax = value.length >= maxLength;
@@ -35,6 +37,7 @@ export function CharacterCountTextarea({
         maxLength={maxLength}
         rows={rows}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
         placeholder={placeholder}
         aria-invalid={ariaInvalid}
         className={cn(

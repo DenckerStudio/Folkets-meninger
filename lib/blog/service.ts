@@ -1,5 +1,12 @@
-import { mapPayloadCategories, mapPayloadPostToListItem, mapPayloadPostToPublic } from '@/lib/cms/map-post';
+import {
+  mapPayloadCategories,
+  mapPayloadPostToListItem,
+  mapPayloadPostToPublic,
+  resolvePayloadPublishedAt,
+  sortPayloadPostsByDisplayDate,
+} from '@/lib/cms/map-post';
 import { payloadCreatePost } from '@/lib/cms/payload-create';
+import { CmsFetchError } from '@/lib/cms/cms-fetch-error';
 import {
   getCmsAgentKey,
   getCmsBaseUrl,
@@ -11,7 +18,11 @@ import { isValidBlogSlug, normalizeBlogSlug } from '@/lib/blog/slug';
 import type { BlogCategory, BlogPostListItem, BlogPostPublic } from '@/lib/blog/types';
 import { BLOG_PAGE_SIZE } from '@/lib/blog/types';
 import { adminBlogPostUrl } from '@/lib/blog/urls';
-import { cmsBlogOpsLookup, cmsBlogOpsSocialPosted } from '@/lib/cms/blog-ops-client';
+import {
+  cmsBlogOpsLookup,
+  cmsBlogOpsSocialPosted,
+  type BlogPostCmsStatus,
+} from '@/lib/cms/blog-ops-client';
 import {
   normalizeBlogExcerpt,
   normalizeBlogTitle,
@@ -19,6 +30,11 @@ import {
 } from '@/lib/blog/text-limits';
 
 const POST_DEPTH = 2;
+const BLOG_READ_CACHE = { allowIsrCache: true, revalidate: 3600 } as const;
+
+function emptyPaginated(page: number) {
+  return { posts: [], totalPages: 0, totalDocs: 0, page };
+}
 
 function publishedQuery(extra?: Record<string, string | number>) {
   return {
@@ -31,12 +47,16 @@ function publishedQuery(extra?: Record<string, string | number>) {
 
 export async function listPublishedBlogPosts(limit = 50): Promise<BlogPostPublic[]> {
   if (!isCmsConfigured()) return [];
-  const data = await payloadFetchList<PayloadPost>('posts', {
-    ...publishedQuery(),
-    limit,
-  });
-  if (!data?.docs?.length) return [];
-  return data.docs.map(mapPayloadPostToPublic);
+  const data = await payloadFetchList<PayloadPost>(
+    'posts',
+    {
+      ...publishedQuery(),
+      limit,
+    },
+    BLOG_READ_CACHE,
+  );
+  if (!data.docs.length) return [];
+  return sortPayloadPostsByDisplayDate(data.docs).map(mapPayloadPostToPublic);
 }
 
 export async function listPublishedBlogPostsPaginated(args: {
@@ -51,9 +71,7 @@ export async function listPublishedBlogPostsPaginated(args: {
 }> {
   const pageSize = args.pageSize ?? BLOG_PAGE_SIZE;
   const page = Math.max(1, args.page);
-  if (!isCmsConfigured()) {
-    return { posts: [], totalPages: 0, totalDocs: 0, page };
-  }
+  if (!isCmsConfigured()) return emptyPaginated(page);
 
   const query: Record<string, string | number> = {
     ...publishedQuery(),
@@ -62,10 +80,14 @@ export async function listPublishedBlogPostsPaginated(args: {
   };
 
   if (args.categorySlug) {
-    const categories = await payloadFetchList<PayloadCategory>('categories', {
-      limit: 1,
-      'where[slug][equals]': args.categorySlug,
-    });
+    const categories = await payloadFetchList<PayloadCategory>(
+      'categories',
+      {
+        limit: 1,
+        'where[slug][equals]': args.categorySlug,
+      },
+      BLOG_READ_CACHE,
+    );
     const categoryId = categories?.docs?.[0]?.id;
     if (!categoryId) {
       return { posts: [], totalPages: 0, totalDocs: 0, page };
@@ -73,11 +95,10 @@ export async function listPublishedBlogPostsPaginated(args: {
     query['where[category][equals]'] = categoryId;
   }
 
-  const data = await payloadFetchList<PayloadPost>('posts', query);
-  if (!data) return { posts: [], totalPages: 0, totalDocs: 0, page };
+  const data = await payloadFetchList<PayloadPost>('posts', query, BLOG_READ_CACHE);
 
   return {
-    posts: data.docs.map(mapPayloadPostToListItem),
+    posts: sortPayloadPostsByDisplayDate(data.docs).map(mapPayloadPostToListItem),
     totalPages: data.totalPages,
     totalDocs: data.totalDocs,
     page: data.page,
@@ -86,33 +107,45 @@ export async function listPublishedBlogPostsPaginated(args: {
 
 export async function getFeaturedBlogPost(): Promise<BlogPostPublic | null> {
   if (!isCmsConfigured()) return null;
-  const data = await payloadFetchList<PayloadPost>('posts', {
-    ...publishedQuery(),
-    limit: 1,
-    'where[featured][equals]': 'true',
-  });
+  const data = await payloadFetchList<PayloadPost>(
+    'posts',
+    {
+      ...publishedQuery(),
+      limit: 1,
+      'where[featured][equals]': 'true',
+    },
+    BLOG_READ_CACHE,
+  );
   const post = data?.docs?.[0];
   return post ? mapPayloadPostToPublic(post) : null;
 }
 
 export async function getPublishedBlogPostBySlug(slug: string): Promise<BlogPostPublic | null> {
   if (!isCmsConfigured()) return null;
-  const data = await payloadFetchList<PayloadPost>('posts', {
-    ...publishedQuery(),
-    limit: 1,
-    'where[slug][equals]': slug,
-  });
+  const data = await payloadFetchList<PayloadPost>(
+    'posts',
+    {
+      ...publishedQuery(),
+      limit: 1,
+      'where[slug][equals]': slug,
+    },
+    BLOG_READ_CACHE,
+  );
   const post = data?.docs?.[0];
   return post ? mapPayloadPostToPublic(post) : null;
 }
 
 export async function listBlogCategories(): Promise<BlogCategory[]> {
   if (!isCmsConfigured()) return [];
-  const data = await payloadFetchList<PayloadCategory>('categories', {
-    limit: 20,
-    sort: 'order',
-  });
-  if (!data?.docs?.length) return [];
+  const data = await payloadFetchList<PayloadCategory>(
+    'categories',
+    {
+      limit: 20,
+      sort: 'order',
+    },
+    BLOG_READ_CACHE,
+  );
+  if (!data.docs.length) return [];
   return mapPayloadCategories(data.docs);
 }
 
@@ -120,24 +153,32 @@ export async function listPublishedBlogSlugsForSitemap(limit = 200): Promise<
   { slug: string; published_at: string | null; updated_at: string | null }[]
 > {
   if (!isCmsConfigured()) return [];
-  const data = await payloadFetchList<PayloadPost>('posts', {
-    ...publishedQuery(),
-    limit,
-    depth: 0,
-  });
-  if (!data?.docs?.length) return [];
+  const data = await payloadFetchList<PayloadPost>(
+    'posts',
+    {
+      ...publishedQuery(),
+      limit,
+      depth: 0,
+    },
+    BLOG_READ_CACHE,
+  );
+  if (!data.docs.length) return [];
   return data.docs.map((post) => ({
     slug: post.slug,
-    published_at: post.publishedAt ?? null,
-    updated_at: post.updatedAtDisplay ?? post.updatedAt ?? post.publishedAt ?? null,
+    published_at: resolvePayloadPublishedAt(post),
+    updated_at: post.updatedAtDisplay ?? post.updatedAt ?? resolvePayloadPublishedAt(post) ?? null,
   }));
 }
 
 async function findCategoryId(slug: string): Promise<string | null> {
-  const categories = await payloadFetchList<PayloadCategory>('categories', {
-    limit: 1,
-    'where[slug][equals]': slug,
-  });
+  const categories = await payloadFetchList<PayloadCategory>(
+    'categories',
+    {
+      limit: 1,
+      'where[slug][equals]': slug,
+    },
+    BLOG_READ_CACHE,
+  );
   return categories?.docs?.[0]?.id ?? null;
 }
 
@@ -158,14 +199,35 @@ export type CreateBlogDraftInput = {
 };
 
 export type CreateBlogDraftResult =
-  | { ok: true; id: string; slug: string; created: boolean; adminUrl: string }
-  | { ok: false; status: number; error: string };
+  | {
+      ok: true;
+      id: string;
+      slug: string;
+      created: boolean;
+      adminUrl: string;
+      cmsStatus: BlogPostCmsStatus;
+    }
+  | {
+      ok: false;
+      status: number;
+      error: string;
+      id?: string;
+      slug?: string;
+      adminUrl?: string;
+      cmsStatus?: BlogPostCmsStatus;
+    };
 
 export async function createBlogDraft(input: CreateBlogDraftInput): Promise<CreateBlogDraftResult> {
-  const agentKey = getCmsAgentKey();
   const base = getCmsBaseUrl();
-  if (!base || !agentKey) {
-    return { ok: false, status: 503, error: 'CMS er ikke konfigurert' };
+  const agentKey = getCmsAgentKey();
+  if (!base) {
+    return { ok: false, status: 503, error: 'CMS_URL mangler på app-serveren' };
+  }
+  if (!process.env.CMS_API_KEY?.trim()) {
+    return { ok: false, status: 503, error: 'CMS_API_KEY mangler på app-serveren' };
+  }
+  if (!agentKey) {
+    return { ok: false, status: 503, error: 'CMS_AGENT_API_KEY eller CMS_API_KEY mangler for utkast' };
   }
 
   const slug = normalizeBlogSlug(input.slug);
@@ -188,11 +250,20 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
       slug: existing.slug,
       created: false,
       adminUrl: existing.adminUrl,
+      cmsStatus: existing.cmsStatus,
     };
   }
 
   const categorySlug = normalizeBlogSlug(input.category || 'forklart');
-  const categoryId = await findCategoryId(categorySlug);
+  let categoryId: string | null;
+  try {
+    categoryId = await findCategoryId(categorySlug);
+  } catch (error) {
+    if (error instanceof CmsFetchError) {
+      return { ok: false, status: 503, error: 'CMS-kategorioppslag feilet' };
+    }
+    throw error;
+  }
   if (!categoryId) {
     return { ok: false, status: 400, error: 'Ukjent kategori' };
   }
@@ -253,10 +324,16 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
       slug: doc.slug,
       _status: doc._status,
     });
+    const adminUrl = `${base}/admin/collections/posts/${doc.id}`;
     return {
       ok: false,
       status: 502,
-      error: 'CMS opprettet innlegget som publisert — utkast ble ikke lagret',
+      error:
+        'Innlegget ble lagret i CMS, men ble publisert — forventet utkast (sjekk CMS-status)',
+      id: doc.id,
+      slug: doc.slug,
+      adminUrl,
+      cmsStatus: 'published',
     };
   }
 
@@ -266,6 +343,7 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
     slug: doc.slug,
     created: true,
     adminUrl: `${base}/admin/collections/posts/${doc.id}`,
+    cmsStatus: 'draft',
   };
 }
 

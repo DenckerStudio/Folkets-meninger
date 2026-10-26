@@ -9,6 +9,7 @@ import {
 import { loadDecryptedByok } from '@/lib/byok/service';
 import { buildChatInstructions } from '@/lib/chat/instructions';
 import { parseChatPageContext } from '@/lib/chat/page-context';
+import { byokOutboundForUser } from '@/lib/byok/outbound';
 import { createUserLanguageModel } from '@/lib/chat/model';
 import { createChatTools, selectFocusedChatTools } from '@/lib/chat/tools';
 import { createOllamaVectorizer } from '@/lib/chat/vector-search';
@@ -92,10 +93,11 @@ export async function POST(request: Request) {
   const ragClient = session;
   // Reuse the user's own Ollama server to vectorize queries when that is their
   // provider; every other provider keeps the lexical chunk search.
-  const vectorize = createOllamaVectorizer(credential);
+  const outbound = await byokOutboundForUser(gate.userId);
+  const vectorize = createOllamaVectorizer(credential, { outbound });
 
   try {
-    const model = createUserLanguageModel(credential);
+    const model = await createUserLanguageModel(credential, outbound);
     const result = streamText({
       model,
       instructions: buildChatInstructions(issueId, new Date(), pageContext),

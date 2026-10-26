@@ -15,9 +15,10 @@ assert.match(reelsStage, /EmptyLineState/);
 assert.doesNotMatch(reelsStage, /border-dashed border-border bg-card px-6 py-12/);
 
 const adminForslag = read('app/dashboard/admin/forslag/admin-forslag-client.tsx');
+const changelogAdmin = read('components/admin/app-future/changelog-admin-panel.tsx');
 assert.match(adminForslag, /from '@\/components\/dashboard\/empty-state'/);
 assert.match(adminForslag, /Ingen forslag i denne listen ennå/);
-assert.match(adminForslag, /Ingen endringslogg ennå/);
+assert.match(changelogAdmin, /Ingen endringslogg ennå/);
 assert.doesNotMatch(
   adminForslag,
   /rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground/,

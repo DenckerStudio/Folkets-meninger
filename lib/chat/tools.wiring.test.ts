@@ -3,7 +3,10 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { exitIfCiSkipsProdLive } from '@/lib/test/skip-in-ci-live';
 import { createChatTools } from './tools';
+
+exitIfCiSkipsProdLive('chat/tools.wiring.test.ts');
 
 function resolveEnvTestFile(): string | null {
   const candidates = [

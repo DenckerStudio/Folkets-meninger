@@ -10,6 +10,7 @@ import {
   type SpellingContext,
 } from '@/lib/chat/actions';
 import { createUserLanguageModel } from '@/lib/chat/model';
+import type { ByokOutboundAccess } from '@/lib/byok/url-guard';
 
 const NOTES_MAX = 400;
 
@@ -39,6 +40,7 @@ export type RettsskrivingCorrectFn = (input: {
   draft: string;
   context: SpellingContext;
   credential: DecryptedByokCredential;
+  outbound: ByokOutboundAccess;
 }) => Promise<RettsskrivingResult>;
 
 function logProviderFailure(error: unknown): void {
@@ -54,8 +56,9 @@ export async function correctRettsskrivingWithCredential(input: {
   draft: string;
   context: SpellingContext;
   credential: DecryptedByokCredential;
+  outbound: ByokOutboundAccess;
 }): Promise<RettsskrivingResult> {
-  const model = createUserLanguageModel(input.credential);
+  const model = await createUserLanguageModel(input.credential, input.outbound);
   const { output } = await generateText({
     model,
     output: Output.object({
@@ -92,6 +95,7 @@ export async function resolveRettsskrivingResult(input: {
   draft: string;
   context: SpellingContext;
   credential: DecryptedByokCredential | null;
+  outbound?: ByokOutboundAccess;
   correctDraft?: RettsskrivingCorrectFn;
 }): Promise<RettsskrivingResolveOk | RettsskrivingResolveErr> {
   const validated = runRettsskriving({ draft: input.draft, context: input.context });
@@ -104,11 +108,13 @@ export async function resolveRettsskrivingResult(input: {
   }
 
   try {
+    const outbound = input.outbound ?? { isAdmin: false };
     const correct = input.correctDraft ?? correctRettsskrivingWithCredential;
     const result = await correct({
       draft: validated.result.original,
       context: input.context,
       credential: input.credential,
+      outbound,
     });
     return { ok: true, result };
   } catch (error) {

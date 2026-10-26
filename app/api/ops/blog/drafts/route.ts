@@ -23,15 +23,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
 
-  const result = await createBlogDraft(parsed.input);
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: result.status });
-  }
+  try {
+    const result = await createBlogDraft(parsed.input);
+    if (!result.ok) {
+      return NextResponse.json(
+        {
+          error: result.error,
+          ...(result.id ? { id: result.id } : {}),
+          ...(result.slug ? { slug: result.slug } : {}),
+          ...(result.adminUrl ? { adminUrl: result.adminUrl } : {}),
+          ...(result.cmsStatus ? { cmsStatus: result.cmsStatus } : {}),
+        },
+        { status: result.status },
+      );
+    }
 
-  return NextResponse.json({
-    id: result.id,
-    slug: result.slug,
-    created: result.created,
-    adminUrl: result.adminUrl,
-  });
+    return NextResponse.json({
+      id: result.id,
+      slug: result.slug,
+      created: result.created,
+      adminUrl: result.adminUrl,
+      cmsStatus: result.cmsStatus,
+    });
+  } catch (error) {
+    console.error('[ops/blog/drafts]', error);
+    return NextResponse.json(
+      { error: 'Uventet serverfeil ved opprettelse av bloggutkast' },
+      { status: 500 },
+    );
+  }
 }
