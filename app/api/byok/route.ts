@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import {
   ByokEncryptionNotConfiguredError,
 } from '@/lib/byok/crypto';
-import { listOllamaModels, modelExists } from '@/lib/byok/ollama';
+import { modelExists } from '@/lib/byok/ollama';
+import { listOllamaModels } from '@/lib/byok/ollama-list.server';
 import {
   isLlmProvider,
   invalidApiKeyMessage,
@@ -20,6 +21,12 @@ import {
   saveByokCredential,
   updateByokModel,
 } from '@/lib/byok/service';
+import {
+  BYOK_BASE_URL_REJECTED_NB,
+  ByokUrlRejectedError,
+  assertSafeByokBaseUrl,
+} from '@/lib/byok/url-guard';
+import { byokOutboundForUser } from '@/lib/byok/outbound';
 import { requireStemmePlus } from '@/lib/stemme-plus/entitlement';
 
 export const dynamic = 'force-dynamic';
@@ -80,13 +87,26 @@ export async function POST(request: Request) {
   if (providerNeedsBaseUrl(body.provider) && !baseUrl) {
     const hint =
       body.provider === 'ollama'
-        ? 'Ollama krever en base-URL (http:// eller https://), f.eks. http://localhost:11434/v1.'
+        ? 'Ollama krever en base-URL (http:// eller https://), f.eks. https://din-ollama.example.no/v1.'
         : 'OpenAI-kompatibel nøkkel krever en https-base-URL.';
     return NextResponse.json({ error: hint }, { status: 400 });
   }
 
+  const outbound = await byokOutboundForUser(gate.userId);
+  if (baseUrl) {
+    try {
+      await assertSafeByokBaseUrl(baseUrl, outbound);
+    } catch (error) {
+      if (error instanceof ByokUrlRejectedError) {
+        console.warn('[byok] rejected base url on save:', error.message);
+        return NextResponse.json({ error: BYOK_BASE_URL_REJECTED_NB }, { status: 400 });
+      }
+      throw error;
+    }
+  }
+
   if (body.provider === 'ollama' && baseUrl) {
-    const available = await listOllamaModels(baseUrl);
+    const available = await listOllamaModels(baseUrl, { outbound });
     if (!available.ok) {
       return NextResponse.json({ error: available.error }, { status: 400 });
     }
@@ -162,7 +182,16 @@ export async function PATCH(request: Request) {
         { status: 400 },
       );
     }
-    const available = await listOllamaModels(meta.baseUrl);
+    const outbound = await byokOutboundForUser(gate.userId);
+    try {
+      await assertSafeByokBaseUrl(meta.baseUrl, outbound);
+    } catch (error) {
+      if (error instanceof ByokUrlRejectedError) {
+        return NextResponse.json({ error: BYOK_BASE_URL_REJECTED_NB }, { status: 400 });
+      }
+      throw error;
+    }
+    const available = await listOllamaModels(meta.baseUrl, { outbound });
     if (!available.ok) {
       return NextResponse.json({ error: available.error }, { status: 400 });
     }
