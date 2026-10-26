@@ -389,7 +389,9 @@ const hasIssueId = ifElse({
         conditions: [
           {
             id: 'has-issue',
-            leftValue: expr('{{ $json.issueId }}'),
+            leftValue: expr(
+              '{{ $json.body?.stortinget_issue_id || $json.stortinget_issue_id || "" }}',
+            ),
             rightValue: '',
             operator: { type: 'string', operation: 'notEmpty' },
           },
@@ -469,14 +471,15 @@ const embeddingPipeline = fetchPendingChunks.to(expandPendingChunks).to(
     .onFalse(logEmptyEmbeddingQueue),
 );
 
-const issueGatedPipeline = hasIssueId.onTrue(embeddingPipeline).onFalse(skipGlobalDrain);
+const webhookGatedPipeline = hasIssueId
+  .onTrue(normalizeWebhook.to(embeddingPipeline))
+  .onFalse(skipGlobalDrain);
 
 export default workflow(
   'folkets-document-embeddings',
   'Folkets Meninger – dokument embeddings (RAG)',
 )
   .add(webhookTrigger)
-  .to(normalizeWebhook)
-  .to(issueGatedPipeline)
+  .to(webhookGatedPipeline)
   .add(inWorkflowError.errorTrigger)
   .to(inWorkflowError.formatError.to(inWorkflowError.notifySettings).to(inWorkflowError.notifyAdmin));

@@ -49,6 +49,7 @@ assert.match(readWorkflow('n8n-supabase.shared.ts'), /FM AI Summary Webhook Toke
 const docEmb = readWorkflow('document-embeddings.workflow.ts');
 assert.match(docEmb, /guard-has-issue-id/);
 assert.match(docEmb, /Has issue id\?/);
+assert.match(docEmb, /body\?\.stortinget_issue_id/);
 assert.match(docEmb, /skipped_global_nomic_drain/);
 assert.doesNotMatch(docEmb, /scheduleTrigger/);
 assert.doesNotMatch(docEmb, /Every 60 minutes/);
