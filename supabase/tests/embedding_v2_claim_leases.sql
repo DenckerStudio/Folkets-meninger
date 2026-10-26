@@ -16,8 +16,17 @@ BEGIN
   END IF;
 
   INSERT INTO public.stortinget_issues (id, title, last_synced_at, ferdigbehandlet, detail_json)
-  VALUES (v_issue, 'Lease test', now(), false, '{"sak_sesjon":"2099-2100"}'::jsonb)
-  ON CONFLICT (id) DO UPDATE SET last_synced_at = now(), ferdigbehandlet = false;
+  VALUES (
+    v_issue,
+    'Lease test',
+    now() - interval '30 days',
+    true,
+    '{"sak_sesjon":"1999-2000"}'::jsonb
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    last_synced_at = now() - interval '30 days',
+    ferdigbehandlet = true,
+    detail_json = '{"sak_sesjon":"1999-2000"}'::jsonb;
 
   INSERT INTO public.stortinget_issue_documents (issue_id, document_id, title, document_type, ingest_status, chunks_status)
   VALUES (v_issue, v_doc, 'Innstilling', 'innstilling', 'ready', 'pending')
