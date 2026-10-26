@@ -200,7 +200,7 @@ async function searchIssuesViaFts(
   limit: number,
 ): Promise<ChatIssueHit[] | null> {
   const rpcClient = getChatRagRpcClient();
-  if (!rpcClient.rpc) return null;
+  if (!rpcClient?.rpc) return null;
   try {
     const { data, error } = await rpcClient.rpc('search_issues_fts', {
       query_text: needle,
@@ -414,7 +414,7 @@ async function searchChunksHybrid(
   centralQueryEmbedding?: number[] | null,
 ): Promise<ChatDocumentChunk[] | null> {
   const rpcClient = getChatRagRpcClient();
-  if (!rpcClient.rpc) return null;
+  if (!rpcClient?.rpc) return null;
   const issueId = issue.id.trim();
   if (!issueId) return null;
 

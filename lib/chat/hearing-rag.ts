@@ -210,8 +210,9 @@ async function trySearchChunksHybrid(
 ): Promise<HearingChunkHit[] | null> {
   if (!hearingId) return null;
 
-  const rpc = getChatRagRpcClient() as SupabaseClient;
-  const { data, error } = await rpc.rpc('search_chunks_hybrid', {
+  const rpc = getChatRagRpcClient();
+  if (!rpc?.rpc) return null;
+  const { data, error } = await (rpc as SupabaseClient).rpc('search_chunks_hybrid', {
     query_text: query,
     query_embedding: null,
     filter_issue_ids: null,
@@ -244,8 +245,11 @@ async function searchHearingChunksLexical(
   hearingId: string | null,
   limit: number,
 ): Promise<{ chunks: HearingChunkHit[]; rpcMissing: boolean }> {
-  const rpc = getChatRagRpcClient() as SupabaseClient;
-  const { data, error } = await rpc.rpc('search_hearing_document_chunks_text', {
+  const rpc = getChatRagRpcClient();
+  if (!rpc?.rpc) {
+    return { chunks: [], rpcMissing: true };
+  }
+  const { data, error } = await (rpc as SupabaseClient).rpc('search_hearing_document_chunks_text', {
     p_query: query,
     p_hearing_id: hearingId,
     p_match_count: limit,
