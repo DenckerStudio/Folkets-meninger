@@ -256,6 +256,7 @@ Apply **after** phase B indexes are valid. Order:
 1. `20261026110000_document_chunks_v2_pending_issue_idx_concurrent.sql` — **outside** `BEGIN` (same session GUCs as phase B).
 2. After each CONCURRENTLY file: invalid-index check (see phase B). Rollback: `DROP INDEX CONCURRENTLY IF EXISTS public.document_chunks_v2_pending_issue_idx;`
 3. `20261026110100_embedding_v2_queue_and_gates.sql` — transactional RPCs + gates.
+4. `20261026110200_embedding_backlog_health_perf.sql` — fast health RPC (estimated totals + exact tier-0).
 
 Then start `scripts/backfill-embedding-v2.ts` (see README).
 
