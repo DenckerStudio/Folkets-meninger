@@ -92,7 +92,7 @@ Measured on a **copy** (`rag-eval-pg`) on the same host (**klever**), PostgreSQL
 
 | Work | How | Locking |
 | --- | --- | --- |
-| **`embedding_v2` (bge-m3 / 1024)** | n8n → `n8n_list_pending_embedding_v2` / `n8n_save_document_embedding_v2` | Row-level updates; batches via pipeline (after phase B) |
+| **`embedding_v2` (bge-m3 / 1024)** | Coolify one-off `scripts/backfill-embedding-v2.ts` → `save_embeddings_v2`; RPCs `n8n_list_v2_priority_issues`, `n8n_list_chunks_missing_v2_for_issue`, `n8n_embedding_backlog_health`, `list_chunks_missing_v2` | Row-level updates; batches after phase B + `26110000` index |
 | **`tsv` on chunks** | **GENERATED** after `22100000` — no separate SQL backfill | One-time heap rewrite on column add |
 | **Legacy `embedding` (768)** | Unchanged | — |
 
@@ -248,6 +248,16 @@ WHERE n.nspname = 'public'
 -- Sample FTS (service_role session / direct SQL as postgres)
 SELECT id, title FROM search_issues_fts('statsbudsjett', NULL, 3);
 ```
+
+## Phase D — v2 backfill queue (`26110000`–`26110100`)
+
+Apply **after** phase B indexes are valid. Order:
+
+1. `20261026110000_document_chunks_v2_pending_issue_idx_concurrent.sql` — **outside** `BEGIN` (same session GUCs as phase B).
+2. After each CONCURRENTLY file: invalid-index check (see phase B). Rollback: `DROP INDEX CONCURRENTLY IF EXISTS public.document_chunks_v2_pending_issue_idx;`
+3. `20261026110100_embedding_v2_queue_and_gates.sql` — transactional RPCs + gates.
+
+Then start `scripts/backfill-embedding-v2.ts` (see README).
 
 ## CI / prod-like test
 
