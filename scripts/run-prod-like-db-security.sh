@@ -127,8 +127,8 @@ for f in $(ls -1 supabase/migrations/202610221*.sql | sort); do
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
 done
 
-echo "Phase 5a: embedding v2 queue transactional (26110100–26110300) ..."
-for f in $(ls -1 supabase/migrations/20261026110[1-3]*.sql 2>/dev/null | sort); do
+echo "Phase 5a: embedding v2 queue transactional (26110100–26110400) ..."
+for f in $(ls -1 supabase/migrations/20261026110[1-4]*.sql 2>/dev/null | sort); do
   echo "  -> $(basename "$f")"
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
 done
