@@ -32,6 +32,12 @@ const boldKilderNoColon = `Svar her.
 const boldNoColonSplit = splitAnswerBodyAndSourcesFooter(boldKilderNoColon);
 assert.match(boldNoColonSplit.footer, /\*\*Kilder\*\*/);
 
+const boldKilderColonOutside = `Svar her.
+
+**Kilder**: [1] x`;
+const boldOutsideSplit = splitAnswerBodyAndSourcesFooter(boldKilderColonOutside);
+assert.match(boldOutsideSplit.footer, /^Kilder:\n\[1\] x$/);
+
 const headingKilder = `Svar her.
 
 ### Kilder

@@ -11,7 +11,7 @@ function matchKilderFooterLine(trimmed: string): { rest: string } | null {
   if (boldWithColon) return { rest: boldWithColon[1].trim() };
 
   const boldNoColon = /^\*\*Kilder\*\*\s*(.*)$/i.exec(trimmed);
-  if (boldNoColon) return { rest: boldNoColon[1].trim() };
+  if (boldNoColon) return { rest: boldNoColon[1].trim().replace(/^:\s*/, '') };
 
   return null;
 }
