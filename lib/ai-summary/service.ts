@@ -56,22 +56,49 @@ export function buildAiSummaryFromDbRow(data: IssueAiSummaryRow): AiSummary | nu
   return { version: 1, hva, hvem, kostnad };
 }
 
+const AI_SUMMARY_COLUMNS =
+  'narrative, who_affected, how_affected, topic_cards, labels, hva, hvem, kostnad';
+const AI_SUMMARY_COLUMNS_WITH_FORSLAG = `${AI_SUMMARY_COLUMNS}, forslag`;
+
+/**
+ * True when PostgREST/Postgres rejects the select because `forslag` is not
+ * migrated yet (20261021170000). A missing column is not a missing summary.
+ */
+export function isMissingForslagColumnError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const row = error as { code?: unknown; message?: unknown; details?: unknown };
+  const message = [row.message, row.details]
+    .filter((part): part is string => typeof part === 'string')
+    .join(' ');
+  if (!/forslag/i.test(message)) return false;
+  if (row.code === '42703' || row.code === 'PGRST204') return true;
+  return /does not exist|schema cache|could not find/i.test(message);
+}
+
+async function selectIssueAiSummary(issueId: string, columns: string) {
+  const supabase = getServiceSupabase();
+  return supabase
+    .from('issue_ai_summaries')
+    .select(columns)
+    .eq('stortinget_issue_id', issueId)
+    .maybeSingle();
+}
+
 export async function getAiSummaryFromDb(issueId: string): Promise<AiSummary | null> {
   if (!supabaseConfigured()) return null;
 
   try {
-    const supabase = getServiceSupabase();
-    const { data, error } = await supabase
-      .from('issue_ai_summaries')
-      .select(
-        'narrative, who_affected, how_affected, topic_cards, labels, hva, hvem, kostnad, forslag'
-      )
-      .eq('stortinget_issue_id', issueId)
-      .maybeSingle();
+    let { data, error } = await selectIssueAiSummary(issueId, AI_SUMMARY_COLUMNS_WITH_FORSLAG);
+    if (error && isMissingForslagColumnError(error)) {
+      console.warn(
+        '[ai-summary] Kolonnen forslag finnes ikke ennå. Henter lagret sammendrag uten den.',
+      );
+      ({ data, error } = await selectIssueAiSummary(issueId, AI_SUMMARY_COLUMNS));
+    }
 
     if (error || !data) return null;
 
-    return buildAiSummaryFromDbRow(data);
+    return buildAiSummaryFromDbRow(data as IssueAiSummaryRow);
   } catch (e) {
     console.error('[ai-summary] Kunne ikke hente sammendrag:', e);
     return null;

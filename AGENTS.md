@@ -254,6 +254,14 @@ infra/               coolify/ (cms.md + historical plan), searxng/
   **Vurder** (`/dashboard/admin/vurder?fane=reels|blogg|sammendrag`) samler vurdering av
   reel-utkast, bloggutkast og AI-sammendrag. Etter publiser/arkiver av en reel blir
   tittel, beskrivelse og kilder stående i tilbakemeldingskortet.
+  `POST /api/admin/content-feedback` kaller `admin_submit_content_feedback` først.
+  Mangler funksjonen i PostgREST (PGRST202, `20261021140000` ikke lagt inn), lagres
+  raden via `upsert_content_feedback`. Regenerering av avviste sammendrag starter
+  først når den migrasjonen er lagt inn.
+- Sak-sammendrag vises fra `issue_ai_summaries` uavhengig av vurdering.
+  `getAiSummaryFromDb` prøver kolonnen `forslag` og, ved 42703/PGRST204 for den
+  kolonnen (`20261021170000` ikke lagt inn), henter raden uten den. Kolonnesvikt
+  er ikke «mangler sammendrag» og skal ikke trigge genererings-webhook.
 - **Research** (`/dashboard/admin/research`, cluster detail `/dashboard/admin/research/[id]`):
   action clusters from action capture (`lib/admin/oppfanget/` list/filters; UI label Research).
   Admin actions deepen/blog/reel → `lib/admin/research/` + `POST /api/admin/research/...`;

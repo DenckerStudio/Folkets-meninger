@@ -22,7 +22,10 @@ assert.match(routeSrc, /submitAdminContentFeedback/);
 assert.match(routeSrc, /getAdminContentFeedback/);
 assert.match(serviceSrc, /admin_submit_content_feedback/);
 assert.match(serviceSrc, /buildAdminContentFeedbackSnapshot/);
-assert.doesNotMatch(serviceSrc, /upsert_content_feedback/);
+assert.match(serviceSrc, /isPostgrestMissingRpcError/);
+const adminRpcAt = serviceSrc.indexOf("rpc('admin_submit_content_feedback'");
+const upsertRpcAt = serviceSrc.indexOf("rpc('upsert_content_feedback'");
+assert.ok(adminRpcAt >= 0 && upsertRpcAt > adminRpcAt, 'upsert is only the missing-RPC fallback');
 
 assert.match(f1Migration, /IF v_existing_id IS NOT NULL AND v_existing_source = 'auto' THEN/i);
 assert.match(f1Migration, /source = 'admin'/i);
