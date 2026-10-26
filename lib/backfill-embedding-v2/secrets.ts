@@ -62,14 +62,55 @@ export function collectSensitiveEnvValues(): string[] {
   return values;
 }
 
+function appendErrorField(parts: string[], label: string, value: unknown): void {
+  if (value === null || value === undefined) return;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed) parts.push(`${label}=${trimmed}`);
+    return;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    parts.push(`${label}=${String(value)}`);
+  }
+}
+
+/** Turn RPC/PostgREST plain objects and other unknown throws into a log-safe string. */
+function stringifyUnknownError(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  if (typeof err === 'string') {
+    return err;
+  }
+  if (err !== null && typeof err === 'object') {
+    const record = err as Record<string, unknown>;
+    const parts: string[] = [];
+    if (typeof record.message === 'string' && record.message.trim()) {
+      parts.push(record.message.trim());
+    }
+    appendErrorField(parts, 'code', record.code);
+    appendErrorField(parts, 'details', record.details);
+    appendErrorField(parts, 'hint', record.hint);
+    if (parts.length > 0) {
+      return parts.join(' ');
+    }
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return '[unserializable error]';
+    }
+  }
+  return String(err);
+}
+
 export function safeErrorMessage(err: unknown, secrets: string[] = []): string {
-  const raw = err instanceof Error ? err.message : String(err);
+  const raw = stringifyUnknownError(err);
   return redactSensitiveLogText(raw, secrets);
 }
 
 export function formatFatalErrorForLog(err: unknown, secrets: string[] = []): string {
   const merged = [...secrets, ...collectSensitiveEnvValues()];
-  const raw = err instanceof Error ? err.message : String(err);
+  const raw = stringifyUnknownError(err);
   return redactSensitiveLogText(raw, merged);
 }
 
