@@ -50,12 +50,19 @@ export function mapChangelogRow(row: Record<string, unknown>): ChangelogEntry | 
   if (typeof row.id !== 'string' || typeof row.title !== 'string' || typeof row.body !== 'string') {
     return null;
   }
+  const publicationStatus =
+    row.publication_status === 'draft' || row.publication_status === 'published'
+      ? row.publication_status
+      : row.published_at
+        ? 'published'
+        : 'draft';
   return {
     id: row.id,
     title: row.title,
     body: row.body,
     createdAt: typeof row.created_at === 'string' ? row.created_at : '',
     publishedAt: typeof row.published_at === 'string' ? row.published_at : null,
+    publicationStatus,
   };
 }
 
