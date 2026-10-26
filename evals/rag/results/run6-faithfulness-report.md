@@ -1,6 +1,6 @@
 # Run 6 faithfulness (PR #185)
 
-**Git ref for n8n / Klever eval:** `ea570a1` (branch `cursor/rag-improve-drastisk-5738`). Re-run `git rev-parse HEAD` on the PR branch before scheduling if newer commits landed.
+**Git ref for n8n / Klever eval:** `005ee8b` (branch `cursor/rag-improve-drastisk-5738`). Re-run `git rev-parse HEAD` on the PR branch before scheduling if newer commits landed.
 
 | | run5 (reported) | run6 (this branch) |
 | --- | --- | --- |
