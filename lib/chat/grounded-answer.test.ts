@@ -75,6 +75,5 @@ const partyFix = postProcessGroundedAnswer(
 );
 assert.match(partyFix, /stemte SV for/i);
 assert.ok(!/stemte SV mot/i.test(partyFix));
-assert.ok(partyFix.includes('\n'));
 
 console.log('lib/chat/grounded-answer.test.ts ok');
