@@ -111,6 +111,9 @@ BEGIN
     PERFORM public.n8n_release_embedding_v2_claims('worker-a');
     PERFORM public.n8n_release_embedding_v2_claims('worker-c');
 
+    DELETE FROM public.document_chunks
+    WHERE issue_id IN ('embed-v2-test-issue', 'explain-tier0');
+
     INSERT INTO public.stortinget_issues (id, title, last_synced_at, ferdigbehandlet, detail_json)
     VALUES
       ('embed-v2-fast-tier0', 'Fast', now(), false, '{"sak_sesjon":"2025-2026"}'::jsonb),
@@ -145,16 +148,19 @@ BEGIN
       ('embed-v2-order-t2a', 'doc-t2a', 0, 'tier2 hoved', 'pending', 'pending'),
       ('embed-v2-order-t2b', 'doc-t2b', 0, 'tier2 innst', 'pending', 'pending');
 
-    IF (SELECT count(*) FROM public.n8n_claim_chunks_missing_v2('fast', 10, 'lane-fast', 300)) <> 1 THEN
-      RAISE EXCEPTION 'fast lane: forventet én tier-0 chunk';
+    IF (
+      SELECT c.issue_id
+      FROM public.n8n_claim_chunks_missing_v2('fast', 1, 'lane-fast', 300) c
+      LIMIT 1
+    ) IS DISTINCT FROM 'embed-v2-fast-tier0' THEN
+      RAISE EXCEPTION 'fast lane: forventet tier-0 chunk fra embed-v2-fast-tier0';
     END IF;
 
     IF (
-      SELECT c.issue_id
-      FROM public.n8n_claim_chunks_missing_v2('fast', 10, 'lane-fast', 300) c
-      LIMIT 1
-    ) IS NOT NULL THEN
-      RAISE EXCEPTION 'fast lane: ingen flere tier-0 chunks';
+      SELECT count(*)::int
+      FROM public.n8n_claim_chunks_missing_v2('fast', 1, 'lane-fast', 300) c
+    ) <> 0 THEN
+      RAISE EXCEPTION 'fast lane: ingen flere tier-0 chunks etter første claim';
     END IF;
 
     PERFORM public.n8n_release_embedding_v2_claims('lane-fast');
