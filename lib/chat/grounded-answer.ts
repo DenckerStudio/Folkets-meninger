@@ -3,7 +3,7 @@
  * Used by Stemme+ chat system instructions and offline RAG eval answer export.
  */
 
-export const GROUNDED_ANSWER_RULES_VERSION = 'grounded-answer-v2';
+export const GROUNDED_ANSWER_RULES_VERSION = 'grounded-answer-v3';
 
 /** Faithfulness / refusal behavior (citation format is set separately). */
 export function groundedAnswerBehaviorLines(): string[] {
@@ -15,6 +15,9 @@ export function groundedAnswerBehaviorLines(): string[] {
     '- Ikke bruk sitattegn eller ordrette sitater med mindre ordlyden finnes i en kilde.',
     '- Si bare at kildene ikke besvarer spørsmålet når utdragene er tomme eller åpenbart irrelevante. Når utdragene inneholder relevant stoff (selv om svaret blir ufullstendig), skriv et kort svar — ikke avvis med «kildene inneholder ikke» / «Dette fant jeg ikke i kildene».',
     '- Hvis utdragene bare er metadata/titler uten substans om spørsmålet, si kort at kildene ikke gir nok grunnlag — ikke spekuler.',
+    '- Prioriter dokument- og innstillingsutdrag fremfor lange voteringsoversikter, med mindre spørsmålet handler om stemmegang.',
+    '- Oppsummer hva partiene stemte når voteringer i utdragene svarer på spørsmålet — ikke skriv at kildene «ikke gir detaljer» når stemmer står i teksten.',
+    '- Bruk maks tre «Kilde N»-henvisninger totalt. Ikke list opp mange kilde-numre på rad (for eksempel «Kilde 2, 3, 4 …»).',
   ];
 }
 
@@ -44,4 +47,22 @@ ${rules}
 - Ikke start med "Basert på utdrag".
 
 Svar:`;
+}
+
+const LONG_KILDE_LIST =
+  /\(\s*Kilde\s+\d+(?:\s*,\s*(?:Kilde\s+)?\d+){3,}[^)]*\)/gi;
+const INLINE_KILDE_RUN = /Kilde\s+\d+(?:\s*,\s*(?:Kilde\s+)?\d+){3,}/gi;
+const VOTERING_ONLY_SENTENCE =
+  /\bKildene\s+viser\s+også\s+flere\s+voteringer[^.]*\./gi;
+
+/** Trim citation noise and hedging the model often adds after generation. */
+export function polishGroundedAnswer(answer: string, _excerpts?: string[]): string {
+  let text = answer.trim();
+  if (!text) return text;
+
+  text = text.replace(LONG_KILDE_LIST, '(flere kilder)');
+  text = text.replace(INLINE_KILDE_RUN, 'flere kilder');
+  text = text.replace(VOTERING_ONLY_SENTENCE, '').trim();
+
+  return text.replace(/\s+([,.])/g, '$1').trim();
 }

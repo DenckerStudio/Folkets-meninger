@@ -49,4 +49,10 @@ const curlyOk = auditAnswerCitationSupport('De skrev \u201cfolkevalgt demokrati\
 ]);
 assert.equal(curlyOk.citationSupportPass, true);
 
+const kildeList = auditAnswerCitationSupport(
+  'Kildene viser voteringer (Kilde 2, 3, 4, 5, 6, 7, 8, 10, 11, 12).',
+  ['Votering 26794. Forslag nr. 8'],
+);
+assert.equal(kildeList.citationSupportPass, true);
+
 console.log('answer-metrics.test.ts: ok');

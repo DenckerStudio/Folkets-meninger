@@ -51,6 +51,14 @@ function excerptHaystack(excerpts: string[]): string {
   return normalizeMetricText(excerpts.join('\n'));
 }
 
+/** Kilde N / (Kilde 2, 3, …) reference lists are not factual numeric claims. */
+export function stripCitationReferenceNumbersForAudit(answer: string): string {
+  let s = answer;
+  s = s.replace(/\(\s*Kilde\s+[\d,\s]+\)/gi, '(Kilde)');
+  s = s.replace(/Kilde\s+\d+(?:\s*,\s*(?:Kilde\s+)?\d+)*/gi, 'Kilde');
+  return s;
+}
+
 function numberAppearsInHaystack(token: string, hay: string): boolean {
   const n = normalizeMetricText(token).replace(/\s/g, '');
   const compactHay = hay.replace(/\s/g, '');
@@ -70,17 +78,18 @@ export function auditAnswerCitationSupport(answer: string, excerpts: string[]): 
   const hay = excerptHaystack(excerpts);
   const unsupportedNumbers: string[] = [];
   const unsupportedQuotes: string[] = [];
+  const answerForNumbers = stripCitationReferenceNumbersForAudit(answer);
 
   const numberMatches = new Set<string>();
   let m: RegExpExecArray | null;
   const numRe = new RegExp(NUMBER_TOKEN.source, 'gi');
-  while ((m = numRe.exec(answer)) !== null) {
+  while ((m = numRe.exec(answerForNumbers)) !== null) {
     const tok = m[0].trim();
     if (tok.length < 2) continue;
     numberMatches.add(tok);
   }
   const yearRe = new RegExp(YEAR_TOKEN.source, 'g');
-  while ((m = yearRe.exec(answer)) !== null) {
+  while ((m = yearRe.exec(answerForNumbers)) !== null) {
     numberMatches.add(m[0]);
   }
 

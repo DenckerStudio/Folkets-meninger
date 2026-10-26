@@ -3,7 +3,7 @@
  * Prompt text is shared with prod via `lib/chat/grounded-answer.ts`.
  */
 
-import { buildEvalRagAnswerPrompt } from '@/lib/chat/grounded-answer';
+import { buildEvalRagAnswerPrompt, polishGroundedAnswer } from '@/lib/chat/grounded-answer';
 import {
   buildOllamaGenerateBody,
   ollamaEmptyResponseError,
@@ -149,5 +149,5 @@ export async function generateRagAnswer(opts: GenerateRagAnswerOptions): Promise
   if (isDisallowedExcerptPassthrough(answer, opts.excerpts)) {
     throw new Error('answer LLM produced disallowed excerpt passthrough');
   }
-  return answer;
+  return polishGroundedAnswer(answer, opts.excerpts);
 }
