@@ -51,11 +51,12 @@ function excerptHaystack(excerpts: string[]): string {
   return normalizeMetricText(excerpts.join('\n'));
 }
 
-/** Kilde N / (Kilde 2, 3, …) reference lists are not factual numeric claims. */
+/** Bracket citations [n] and short «Kilde N» lists are not factual numeric claims. */
 export function stripCitationReferenceNumbersForAudit(answer: string): string {
   let s = answer;
-  s = s.replace(/\(\s*Kilde\s+[\d,\s]+\)/gi, '(Kilde)');
-  s = s.replace(/Kilde\s+\d+(?:\s*,\s*(?:Kilde\s+)?\d+)*/gi, 'Kilde');
+  s = s.replace(/\(\s*Kilde\s+(?:\d{1,2}\s*,\s*)*\d{1,2}\s*\)/gi, '(Kilde)');
+  s = s.replace(/Kilde\s+\d{1,2}(?:\s*,\s*(?:Kilde\s+)?\d{1,2})*/gi, 'Kilde');
+  s = s.replace(/\[(?:\d{1,2})\](?:\[(?:\d{1,2})\])*/g, '[]');
   return s;
 }
 

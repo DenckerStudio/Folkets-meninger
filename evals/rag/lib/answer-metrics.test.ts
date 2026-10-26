@@ -55,4 +55,18 @@ const kildeList = auditAnswerCitationSupport(
 );
 assert.equal(kildeList.citationSupportPass, true);
 
+const bracketCite = auditAnswerCitationSupport('CO2-kutt [1][2][3].', ['Representantforslag om CO2.']);
+assert.equal(bracketCite.citationSupportPass, true);
+
+const yearInParens = auditAnswerCitationSupport('Forslaget fra 2019 (Kilde 1).', [
+  'Representantforslag fra 2019 om klima.',
+]);
+assert.equal(yearInParens.citationSupportPass, true);
+
+const wrongYear = auditAnswerCitationSupport('Saken ble behandlet i 2030.', [
+  'Stortinget behandlet saken i 2025.',
+]);
+assert.equal(wrongYear.citationSupportPass, false);
+assert.ok(wrongYear.unsupportedNumbers.some((n) => n.includes('2030')));
+
 console.log('answer-metrics.test.ts: ok');
