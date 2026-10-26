@@ -63,6 +63,7 @@ export function ChangelogAdminPanel({
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [deleteTarget, setDeleteTarget] = useState<ChangelogEntry | null>(null);
   const [publishTarget, setPublishTarget] = useState<ChangelogEntry | null>(null);
+  const [unpublishTarget, setUnpublishTarget] = useState<ChangelogEntry | null>(null);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [sheetError, setSheetError] = useState('');
   const createIdempotencyKey = useRef(crypto.randomUUID());
@@ -176,6 +177,7 @@ export function ChangelogAdminPanel({
       onChanged();
     });
     setPublishTarget(null);
+    setUnpublishTarget(null);
   };
 
   const remove = () => {
@@ -265,7 +267,7 @@ export function ChangelogAdminPanel({
                           setPublishTarget(entry);
                           return;
                         }
-                        applyPublishToggle(entry);
+                        setUnpublishTarget(entry);
                       }}
                     >
                       {published ? 'Avpubliser' : 'Publiser'}
@@ -393,6 +395,34 @@ export function ChangelogAdminPanel({
       >
         <p className="text-sm text-muted-foreground">
           Endringene du har gjort blir ikke lagret hvis du lukker nå.
+        </p>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(unpublishTarget)}
+        onClose={() => setUnpublishTarget(null)}
+        title="Avpublisere innlegg?"
+        description="Innlegget skjules på den offentlige Appens fremtid-siden, men beholdes som utkast."
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setUnpublishTarget(null)}>
+              Avbryt
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={pending}
+              onClick={() => unpublishTarget && applyPublishToggle(unpublishTarget)}
+            >
+              Avpubliser
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Du avpubliserer <strong className="text-foreground">{unpublishTarget?.title ?? 'dette innlegget'}</strong>.
         </p>
       </Dialog>
 

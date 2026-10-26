@@ -18,6 +18,9 @@ SET publication_status = CASE
 END
 WHERE publication_status IS NULL;
 
+ALTER TABLE public.app_changelog_entries
+  ALTER COLUMN published_at DROP NOT NULL;
+
 UPDATE public.app_changelog_entries
 SET published_at = NULL
 WHERE publication_status = 'draft';
@@ -34,9 +37,6 @@ ALTER TABLE public.app_changelog_entries
 ALTER TABLE public.app_changelog_entries
   ADD CONSTRAINT app_changelog_entries_publication_status_check
   CHECK (publication_status IN ('draft', 'published'));
-
-ALTER TABLE public.app_changelog_entries
-  ALTER COLUMN published_at DROP NOT NULL;
 
 ALTER TABLE public.app_changelog_entries
   DROP CONSTRAINT IF EXISTS app_changelog_entries_published_pair_check;
@@ -192,7 +192,7 @@ RETURNS TABLE (
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $function$
   SELECT e.id, e.title, e.body, e.published_at, e.created_at, e.publication_status
   FROM public.app_changelog_entries e
@@ -211,7 +211,7 @@ RETURNS TABLE (
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $function$
   SELECT e.id, e.title, e.body, e.published_at, e.created_at, e.publication_status
   FROM public.app_changelog_entries e

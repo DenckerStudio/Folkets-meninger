@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type TransitionStartFunction } from 'react';
+import { useMemo, useRef, useState, type TransitionStartFunction } from 'react';
 import { ChevronDown, ChevronUp, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -64,6 +64,9 @@ export function RoadmapAdminPanel({
   const [draft, setDraft] = useState<Draft>(() => emptyDraft());
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [sheetError, setSheetError] = useState('');
+  const [reorderMessage, setReorderMessage] = useState('');
+  const moveControlRefs = useRef(new Map<string, HTMLButtonElement>());
 
   const validation = validateRoadmapInput({
     title: draft.title,
@@ -76,6 +79,7 @@ export function RoadmapAdminPanel({
   const openNew = () => {
     setDraft(emptyDraft());
     setSheetOpen(true);
+    setSheetError('');
     onError('');
   };
 
@@ -87,21 +91,25 @@ export function RoadmapAdminPanel({
       status: item.status,
     });
     setSheetOpen(true);
+    setSheetError('');
     onError('');
   };
 
   const closeSheet = () => {
     setSheetOpen(false);
     setDeleteOpen(false);
+    setSheetError('');
   };
 
   const save = () => {
     if ('error' in validation) {
+      setSheetError(validation.error);
       onError(validation.error);
       return;
     }
     startTransition(async () => {
       onError('');
+      setSheetError('');
       const sortOrder = draft.id
         ? undefined
         : nextRoadmapSortOrder(items);
@@ -126,7 +134,9 @@ export function RoadmapAdminPanel({
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        onError(data.error ?? 'Kunne ikke lagre veikartpunktet.');
+        const message = data.error ?? 'Kunne ikke lagre veikartpunktet.';
+        setSheetError(message);
+        onError(message);
         toast('Lagring feilet', 'error');
         return;
       }
@@ -187,14 +197,19 @@ export function RoadmapAdminPanel({
     persistOrder(next);
   };
 
-  const moveItem = (itemId: string, direction: -1 | 1) => {
+  const moveItem = (itemId: string, direction: -1 | 1, control: HTMLButtonElement | null) => {
     const from = sorted.findIndex((row) => row.id === itemId);
     const to = from + direction;
-    if (from < 0 || to < 0 || to >= sorted.length) return;
+    if (from < 0 || to < 0 || to >= sorted.length) {
+      control?.focus();
+      return;
+    }
     const next = sorted.slice();
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
+    setReorderMessage(`«${moved.title}» flyttet ${direction < 0 ? 'opp' : 'ned'}.`);
     persistOrder(next);
+    queueMicrotask(() => control?.focus());
   };
 
   const sheetFooter = (
@@ -220,6 +235,7 @@ export function RoadmapAdminPanel({
 
   return (
     <div className="space-y-6">
+      <p className="sr-only" aria-live="polite" aria-atomic="true">{reorderMessage}</p>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           Dra punktene for å endre rekkefølge. Rediger i sidepanelet med forhåndsvisning.
@@ -234,12 +250,15 @@ export function RoadmapAdminPanel({
         <EmptyState compact title="Veikartet er tomt" description="Legg til det første punktet med knappen over." />
       ) : (
         <ul className="space-y-2">
-          {sorted.map((item) => (
+          {sorted.map((item, index) => {
+            const atTop = index === 0;
+            const atBottom = index === sorted.length - 1;
+            const upRefKey = `${item.id}-up`;
+            const downRefKey = `${item.id}-down`;
+            return (
             <li
               key={item.id}
-              draggable={!pending}
-              onDragStart={() => setDragId(item.id)}
-              onDragEnd={() => setDragId(null)}
+              data-roadmap-item={item.id}
               onDragOver={(event) => event.preventDefault()}
               onDrop={() => onDrop(item.id)}
               className={cn(
@@ -247,13 +266,27 @@ export function RoadmapAdminPanel({
                 dragId === item.id && 'opacity-60',
               )}
             >
-              <button
-                type="button"
+              <div
+                draggable={!pending}
+                onDragStart={() => setDragId(item.id)}
+                onDragEnd={() => setDragId(null)}
                 className="flex cursor-grab touch-none items-center self-center rounded-lg p-2 text-muted-foreground hover:bg-muted active:cursor-grabbing"
-                aria-label="Dra for å endre rekkefølge"
+                role="button"
+                tabIndex={0}
+                aria-label={`Dra «${item.title}» for å endre rekkefølge`}
+                onKeyDown={(event) => {
+                  if (event.key === 'ArrowUp' && !atTop) {
+                    event.preventDefault();
+                    moveItem(item.id, -1, moveControlRefs.current.get(upRefKey) ?? null);
+                  }
+                  if (event.key === 'ArrowDown' && !atBottom) {
+                    event.preventDefault();
+                    moveItem(item.id, 1, moveControlRefs.current.get(downRefKey) ?? null);
+                  }
+                }}
               >
-                <GripVertical className="h-4 w-4" />
-              </button>
+                <GripVertical className="h-4 w-4" aria-hidden />
+              </div>
               <button
                 type="button"
                 onClick={() => openEdit(item)}
@@ -272,10 +305,20 @@ export function RoadmapAdminPanel({
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  className={ADMIN_ICON_BTN}
-                  disabled={pending || sorted.findIndex((row) => row.id === item.id) === 0}
-                  onClick={() => moveItem(item.id, -1)}
-                  aria-label="Flytt opp"
+                  className={cn(ADMIN_ICON_BTN, atTop && 'opacity-40')}
+                  aria-disabled={pending || atTop}
+                  ref={(node) => {
+                    if (node) moveControlRefs.current.set(upRefKey, node);
+                    else moveControlRefs.current.delete(upRefKey);
+                  }}
+                  onClick={(event) => {
+                    if (pending || atTop) {
+                      event.currentTarget.focus();
+                      return;
+                    }
+                    moveItem(item.id, -1, event.currentTarget);
+                  }}
+                  aria-label={`Flytt «${item.title}» opp`}
                 >
                   <ChevronUp className="size-3.5" />
                 </Button>
@@ -283,12 +326,20 @@ export function RoadmapAdminPanel({
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  className={ADMIN_ICON_BTN}
-                  disabled={
-                    pending || sorted.findIndex((row) => row.id === item.id) === sorted.length - 1
-                  }
-                  onClick={() => moveItem(item.id, 1)}
-                  aria-label="Flytt ned"
+                  className={cn(ADMIN_ICON_BTN, atBottom && 'opacity-40')}
+                  aria-disabled={pending || atBottom}
+                  ref={(node) => {
+                    if (node) moveControlRefs.current.set(downRefKey, node);
+                    else moveControlRefs.current.delete(downRefKey);
+                  }}
+                  onClick={(event) => {
+                    if (pending || atBottom) {
+                      event.currentTarget.focus();
+                      return;
+                    }
+                    moveItem(item.id, 1, event.currentTarget);
+                  }}
+                  aria-label={`Flytt «${item.title}» ned`}
                 >
                   <ChevronDown className="size-3.5" />
                 </Button>
@@ -299,12 +350,13 @@ export function RoadmapAdminPanel({
                 size="icon-sm"
                 className={ADMIN_ICON_BTN}
                 onClick={() => openEdit(item)}
-                aria-label="Rediger"
+                aria-label={`Rediger «${item.title}»`}
               >
                 <Pencil className="size-3.5" />
               </Button>
             </li>
-          ))}
+          );
+          })}
         </ul>
       )}
 
@@ -317,6 +369,14 @@ export function RoadmapAdminPanel({
         description="Bruk markdown i beskrivelsen (**fet**, punktlister med -). Cmd/Ctrl+S lagrer."
         footer={sheetFooter}
       >
+        {sheetError ? (
+          <p
+            className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            role="alert"
+          >
+            {sheetError}
+          </p>
+        ) : null}
         <div className="grid gap-5 lg:grid-cols-2">
           <div className="space-y-4">
             <div className="space-y-1.5">
