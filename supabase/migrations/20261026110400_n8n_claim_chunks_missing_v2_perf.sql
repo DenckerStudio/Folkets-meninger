@@ -151,13 +151,15 @@ BEGIN
     RAISE EXCEPTION 'p_lane must be fast or background';
   END IF;
 
-  CREATE TEMP TABLE _fm_v2_claim_picked (id uuid PRIMARY KEY) ON COMMIT DROP;
+  CREATE TEMP TABLE IF NOT EXISTS _fm_v2_claim_picked (id uuid PRIMARY KEY) ON COMMIT DROP;
+  TRUNCATE _fm_v2_claim_picked;
 
-  CREATE TEMP TABLE _fm_v2_claim_issue_tiers (
+  CREATE TEMP TABLE IF NOT EXISTS _fm_v2_claim_issue_tiers (
     issue_id text PRIMARY KEY,
     tier int,
     sort_tier int NOT NULL
   ) ON COMMIT DROP;
+  TRUNCATE _fm_v2_claim_issue_tiers;
 
   INSERT INTO _fm_v2_claim_issue_tiers (issue_id, tier, sort_tier)
   WITH pending_issues AS MATERIALIZED (
