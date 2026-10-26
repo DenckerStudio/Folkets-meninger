@@ -1,3 +1,5 @@
+import { hostname } from 'node:os';
+import { randomBytes } from 'node:crypto';
 import type { BackfillSupabase } from './supabase-client';
 import {
   LatencyBackoff,
@@ -48,7 +50,13 @@ export type WorkerDeps = {
 };
 
 export function buildWorkerId(endpointName: string): string {
-  return `${endpointName}@${process.pid}`;
+  const override = process.env.EMBED_BACKFILL_WORKER_ID?.trim();
+  if (override) {
+    return override.includes('@') ? override : `${endpointName}@${override}`;
+  }
+  const host = hostname().replace(/\s+/g, '-');
+  const suffix = `${host}@${process.pid}.${randomBytes(4).toString('hex')}`;
+  return `${endpointName}@${suffix}`;
 }
 
 export async function runEndpointWorkerLoop(
@@ -149,6 +157,7 @@ export async function runEndpointWorkerLoop(
 
     if (deps.dryRun) {
       deps.log(`[${deps.endpoint.name}] dry-run: ${embedRows.length} chunks (${lane})`);
+      await releaseWorkerClaims(deps.supabase, deps.workerId);
       batchesThisMinute += 1;
       continue;
     }

@@ -19,7 +19,8 @@ import {
   releaseWorkerClaims,
   runEndpointWorkerLoop,
 } from '../lib/backfill-embedding-v2/worker';
-import { safeErrorMessage } from '../lib/backfill-embedding-v2/secrets';
+import { formatFatalErrorForLog, safeErrorMessage } from '../lib/backfill-embedding-v2/secrets';
+import { primaryPreflightPassed } from '../lib/backfill-embedding-v2/preflight-exit';
 import { inferModelTagFromApiModel } from '../lib/backfill-embedding-v2/lmstudio';
 import { resolveEmbeddingV2ModelTag } from '../lib/backfill-embedding-v2/provider';
 import { fetchLmStudioEmbedVectors } from '../lib/backfill-embedding-v2/lmstudio';
@@ -117,18 +118,16 @@ async function main(): Promise<void> {
     healthByName.set(ep.name, new EndpointHealth());
   }
 
-  let preflightOkCount = 0;
   for (const ep of endpoints) {
     const ok = await runPreflightForEndpoint(ep, embedQueryUrl, log);
     const health = healthByName.get(ep.name)!;
     if (ok) {
       health.markPreflightPassed();
-      preflightOkCount += 1;
     }
   }
 
   if (cli.preflightOnly) {
-    process.exit(preflightOkCount > 0 ? 0 : 1);
+    process.exit(primaryPreflightPassed(endpoints, healthByName) ? 0 : 1);
   }
 
   const activeEndpoints = endpoints.filter((ep) => healthByName.get(ep.name)?.preflightOk);
@@ -214,6 +213,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
+  console.error(formatFatalErrorForLog(err));
   process.exit(1);
 });
