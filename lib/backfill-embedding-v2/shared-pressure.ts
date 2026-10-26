@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { BackfillSupabase } from './supabase-client';
 
 /** WAL/slot lag throttle shared across all endpoint workers. */
 export class SharedDbPressure {
@@ -10,7 +10,7 @@ export class SharedDbPressure {
   }
 
   async refresh(
-    supabase: SupabaseClient,
+    supabase: BackfillSupabase,
     options: { tier0Probe?: () => Promise<boolean> } = {},
   ): Promise<void> {
     const { data: pressure, error } = await supabase.rpc('n8n_backfill_db_pressure');

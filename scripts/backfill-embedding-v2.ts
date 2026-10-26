@@ -6,7 +6,7 @@
  *      EMBED_BACKFILL_ENDPOINTS (JSON array) or EMBED_BACKFILL_URL + EMBED_BACKFILL_PROVIDER.
  *      API keys only via apiKeyEnv per endpoint (env var name, never the secret in config).
  */
-import { createClient } from '@supabase/supabase-js';
+import { createBackfillSupabase } from '../lib/backfill-embedding-v2/supabase-client';
 import { existsSync } from 'node:fs';
 import { loadEndpointConfigs, finalizeEndpoints } from '../lib/backfill-embedding-v2/endpoints';
 import { loadScheduleWindows, parseBackfillArgv } from '../lib/backfill-embedding-v2/parse-args';
@@ -36,7 +36,9 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function tier0Probe(supabase: ReturnType<typeof createClient>): Promise<boolean> {
+async function tier0Probe(
+  supabase: ReturnType<typeof createBackfillSupabase>,
+): Promise<boolean> {
   const { data, error } = await supabase.rpc('n8n_list_v2_priority_issues', {
     p_tier: 0,
     p_limit: 1,
@@ -108,9 +110,7 @@ async function main(): Promise<void> {
   const log = (line: string) => console.log(line);
 
   const scheduleWindows = loadScheduleWindows(cli);
-  const supabase = createClient(supabaseUrl, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  const supabase = createBackfillSupabase(supabaseUrl, serviceKey);
 
   const healthByName = new Map<string, EndpointHealth>();
   for (const ep of endpoints) {

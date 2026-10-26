@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { BackfillSupabase } from './supabase-client';
 import {
   LatencyBackoff,
   effectiveMaxBatchesPerMinute,
@@ -25,7 +25,7 @@ export type ClaimedChunk = {
 };
 
 export type WorkerDeps = {
-  supabase: SupabaseClient;
+  supabase: BackfillSupabase;
   endpoint: ResolvedEndpoint;
   workerId: string;
   leaseSeconds: number;
@@ -209,7 +209,7 @@ export async function runEndpointWorkerLoop(
 }
 
 export async function releaseWorkerClaims(
-  supabase: SupabaseClient,
+  supabase: BackfillSupabase,
   workerId: string,
 ): Promise<void> {
   await supabase.rpc('n8n_release_embedding_v2_claims', { p_worker: workerId });
