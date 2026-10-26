@@ -48,12 +48,14 @@ function emptyDraft(): Draft {
 export function RoadmapAdminPanel({
   items,
   pending,
+  loadFailed,
   onChanged,
   onError,
   startTransition,
 }: {
   items: RoadmapItem[];
   pending: boolean;
+  loadFailed?: boolean;
   onChanged: () => void;
   onError: (error: string) => void;
   startTransition: TransitionStartFunction;
@@ -66,6 +68,11 @@ export function RoadmapAdminPanel({
   const [dragId, setDragId] = useState<string | null>(null);
   const [sheetError, setSheetError] = useState('');
   const [reorderMessage, setReorderMessage] = useState('');
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const [baseline, setBaseline] = useState<Draft>(() => emptyDraft());
+  const [titleTouched, setTitleTouched] = useState(false);
+  const [bodyTouched, setBodyTouched] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const moveControlRefs = useRef(new Map<string, HTMLButtonElement>());
 
   const validation = validateRoadmapInput({
@@ -74,34 +81,71 @@ export function RoadmapAdminPanel({
     status: draft.status,
   });
   const canSave = !('error' in validation) && !pending;
-  const titleMissing = sheetOpen && draft.title.trim().length < ROADMAP_TITLE_MIN;
+  const titleTrim = draft.title.trim();
+  const titleFieldError =
+    titleTrim.length === 0 && (titleTouched || submitAttempted)
+      ? 'Tittel mangler'
+      : titleTrim.length > 0 && titleTrim.length < ROADMAP_TITLE_MIN
+        ? 'Tittel mangler'
+        : 'error' in validation && validation.error.includes('Tittelen')
+          ? validation.error
+          : null;
+  const bodyFieldError =
+    'error' in validation && validation.error.includes('Teksten') ? validation.error : null;
+  const showTitleError = Boolean(titleFieldError) && (titleTouched || submitAttempted);
+  const showBodyError = Boolean(bodyFieldError) && (bodyTouched || submitAttempted);
+
+  const isDirty =
+    draft.title !== baseline.title ||
+    draft.body !== baseline.body ||
+    draft.status !== baseline.status;
 
   const openNew = () => {
-    setDraft(emptyDraft());
+    const next = emptyDraft();
+    setDraft(next);
+    setBaseline(next);
     setSheetOpen(true);
     setSheetError('');
+    setTitleTouched(false);
+    setBodyTouched(false);
+    setSubmitAttempted(false);
     onError('');
   };
 
   const openEdit = (item: RoadmapItem) => {
-    setDraft({
+    const next = {
       id: item.id,
       title: item.title,
       body: item.body,
       status: item.status,
-    });
+    };
+    setDraft(next);
+    setBaseline(next);
     setSheetOpen(true);
     setSheetError('');
+    setTitleTouched(false);
+    setBodyTouched(false);
+    setSubmitAttempted(false);
     onError('');
   };
 
-  const closeSheet = () => {
+  const closeSheetWithoutSave = () => {
+    setDiscardOpen(false);
     setSheetOpen(false);
     setDeleteOpen(false);
     setSheetError('');
   };
 
+  const requestCloseSheet = () => {
+    if (isDirty) {
+      setDiscardOpen(true);
+      return;
+    }
+    closeSheetWithoutSave();
+  };
+
   const save = () => {
+    setSubmitAttempted(true);
     if ('error' in validation) {
       setSheetError(validation.error);
       onError(validation.error);
@@ -141,7 +185,7 @@ export function RoadmapAdminPanel({
         return;
       }
       toast(draft.id ? 'Veikartpunkt oppdatert' : 'Veikartpunkt lagt til');
-      closeSheet();
+      closeSheetWithoutSave();
       onChanged();
     });
   };
@@ -162,14 +206,18 @@ export function RoadmapAdminPanel({
         return;
       }
       toast('Veikartpunkt slettet');
-      closeSheet();
+      closeSheetWithoutSave();
       onChanged();
     });
   };
 
-  const persistOrder = (ordered: RoadmapItem[]) => {
+  const persistOrder = (
+    ordered: RoadmapItem[],
+    announce?: { title: string; direction: -1 | 1 },
+  ) => {
     startTransition(async () => {
       onError('');
+      setReorderMessage('');
       const res = await fetch('/api/admin/roadmap/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -177,8 +225,16 @@ export function RoadmapAdminPanel({
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        onError(data.error ?? 'Kunne ikke oppdatere rekkefølgen.');
+        const message = data.error ?? 'Kunne ikke oppdatere rekkefølgen.';
+        setReorderMessage('');
+        onError(message);
+        toast('Rekkefølge feilet', 'error');
         return;
+      }
+      if (announce) {
+        setReorderMessage(
+          `«${announce.title}» flyttet ${announce.direction < 0 ? 'opp' : 'ned'}.`,
+        );
       }
       toast('Rekkefølge oppdatert');
       onChanged();
@@ -207,8 +263,7 @@ export function RoadmapAdminPanel({
     const next = sorted.slice();
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
-    setReorderMessage(`«${moved.title}» flyttet ${direction < 0 ? 'opp' : 'ned'}.`);
-    persistOrder(next);
+    persistOrder(next, { title: moved.title, direction });
     queueMicrotask(() => control?.focus());
   };
 
@@ -223,7 +278,7 @@ export function RoadmapAdminPanel({
         ) : null}
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" size="sm" disabled={pending} onClick={closeSheet}>
+        <Button type="button" variant="outline" size="sm" disabled={pending} onClick={requestCloseSheet}>
           Avbryt
         </Button>
         <Button id="admin-editor-save" type="button" size="sm" disabled={!canSave} onClick={save}>
@@ -238,7 +293,8 @@ export function RoadmapAdminPanel({
       <p className="sr-only" aria-live="polite" aria-atomic="true">{reorderMessage}</p>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Dra punktene for å endre rekkefølge. Rediger i sidepanelet med forhåndsvisning.
+          Dra punktene, eller bruk opp/ned-knappene, for å endre rekkefølge. Rediger i sidepanelet med
+          forhåndsvisning.
         </p>
         <Button type="button" size="sm" onClick={openNew} disabled={pending}>
           <Plus className="size-3.5" />
@@ -247,7 +303,13 @@ export function RoadmapAdminPanel({
       </div>
 
       {sorted.length === 0 ? (
-        <EmptyState compact title="Veikartet er tomt" description="Legg til det første punktet med knappen over." />
+        loadFailed ? (
+          <p className="text-sm text-muted-foreground" role="status">
+            Veikartet kunne ikke lastes. Bruk «Prøv igjen» over.
+          </p>
+        ) : (
+          <EmptyState compact title="Veikartet er tomt" description="Legg til det første punktet med knappen over." />
+        )
       ) : (
         <ul className="space-y-2">
           {sorted.map((item, index) => {
@@ -366,7 +428,7 @@ export function RoadmapAdminPanel({
 
       <ResponsiveEditorSheet
         open={sheetOpen}
-        onClose={closeSheet}
+        onClose={requestCloseSheet}
         title={draft.id ? 'Rediger veikartpunkt' : 'Nytt veikartpunkt'}
         description="Bruk markdown i beskrivelsen (**fet**, punktlister med -). Cmd/Ctrl+S lagrer."
         footer={sheetFooter}
@@ -390,18 +452,15 @@ export function RoadmapAdminPanel({
                 value={draft.title}
                 maxLength={ROADMAP_TITLE_MAX}
                 onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
+                onBlur={() => setTitleTouched(true)}
                 className={cn(
                   'w-full rounded-xl border bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/30',
-                  titleMissing || ('error' in validation && validation.error.includes('Tittelen'))
-                    ? 'border-destructive focus:ring-destructive/30'
-                    : 'border-border',
+                  showTitleError ? 'border-destructive focus:ring-destructive/30' : 'border-border',
                 )}
-                aria-invalid={titleMissing || ('error' in validation && validation.error.includes('Tittelen'))}
+                aria-invalid={showTitleError}
               />
-              {titleMissing ? (
-                <p className="text-xs font-medium text-destructive" role="alert">Tittel mangler</p>
-              ) : 'error' in validation && validation.error.includes('Tittelen') ? (
-                <p className="text-xs text-destructive">{validation.error}</p>
+              {showTitleError && titleFieldError ? (
+                <p className="text-xs font-medium text-destructive" role="alert">{titleFieldError}</p>
               ) : null}
             </div>
             <div className="space-y-1.5">
@@ -414,9 +473,13 @@ export function RoadmapAdminPanel({
                 maxLength={ROADMAP_BODY_MAX}
                 rows={6}
                 onChange={(value) => setDraft((prev) => ({ ...prev, body: value }))}
+                onBlur={() => setBodyTouched(true)}
                 placeholder="Hva skal gjøres? Støtter enkel markdown."
-                aria-invalid={'error' in validation && validation.error.includes('Teksten')}
+                aria-invalid={showBodyError}
               />
+              {showBodyError && bodyFieldError ? (
+                <p className="text-xs font-medium text-destructive" role="alert">{bodyFieldError}</p>
+              ) : null}
             </div>
             <div className="space-y-1.5">
               <span className="text-sm font-medium text-foreground">Status</span>
@@ -441,6 +504,28 @@ export function RoadmapAdminPanel({
           </div>
         </div>
       </ResponsiveEditorSheet>
+
+      <Dialog
+        open={discardOpen}
+        onClose={() => setDiscardOpen(false)}
+        title="Lukke uten å lagre?"
+        description="Du har ulagrede endringer i redigeringsvinduet."
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setDiscardOpen(false)}>
+              Fortsett redigering
+            </Button>
+            <Button type="button" variant="destructive" size="sm" onClick={closeSheetWithoutSave}>
+              Lukk uten å lagre
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Endringene du har gjort blir ikke lagret hvis du lukker nå.
+        </p>
+      </Dialog>
 
       <Dialog
         open={deleteOpen}

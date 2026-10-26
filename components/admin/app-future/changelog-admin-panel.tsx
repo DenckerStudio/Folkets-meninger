@@ -22,6 +22,7 @@ import {
   type ChangelogEntry,
 } from '@/lib/appens-fremtid/constants';
 import { validateChangelogInput } from '@/lib/appens-fremtid/validate';
+import { cn } from '@/lib/utils';
 
 const ADMIN_ICON_BTN = 'max-sm:size-11';
 
@@ -39,12 +40,14 @@ function emptyDraft(): Draft {
 export function ChangelogAdminPanel({
   entries,
   pending,
+  loadFailed,
   onChanged,
   onError,
   startTransition,
 }: {
   entries: ChangelogEntry[];
   pending: boolean;
+  loadFailed?: boolean;
   onChanged: () => void;
   onError: (error: string) => void;
   startTransition: TransitionStartFunction;
@@ -68,6 +71,9 @@ export function ChangelogAdminPanel({
   const [sheetError, setSheetError] = useState('');
   const createIdempotencyKey = useRef(crypto.randomUUID());
   const [baseline, setBaseline] = useState<Draft>(emptyDraft);
+  const [titleTouched, setTitleTouched] = useState(false);
+  const [bodyTouched, setBodyTouched] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const validation = validateChangelogInput({
     title: draft.title,
@@ -75,6 +81,14 @@ export function ChangelogAdminPanel({
     publish: draft.publish,
   });
   const canSave = !('error' in validation) && !pending;
+  const titleFieldError =
+    'error' in validation && validation.error.includes('Tittelen')
+      ? validation.error
+      : null;
+  const bodyFieldError =
+    'error' in validation && validation.error.includes('Teksten') ? validation.error : null;
+  const showTitleError = Boolean(titleFieldError) && (titleTouched || submitAttempted);
+  const showBodyError = Boolean(bodyFieldError) && (bodyTouched || submitAttempted);
 
   const openNew = () => {
     const next = emptyDraft();
@@ -82,6 +96,9 @@ export function ChangelogAdminPanel({
     setDraft(next);
     setBaseline(next);
     setSheetError('');
+    setTitleTouched(false);
+    setBodyTouched(false);
+    setSubmitAttempted(false);
     setSheetOpen(true);
     onError('');
   };
@@ -96,6 +113,9 @@ export function ChangelogAdminPanel({
     setDraft(next);
     setBaseline(next);
     setSheetError('');
+    setTitleTouched(false);
+    setBodyTouched(false);
+    setSubmitAttempted(false);
     setSheetOpen(true);
     onError('');
   };
@@ -118,11 +138,13 @@ export function ChangelogAdminPanel({
   };
 
   const save = () => {
+    setSubmitAttempted(true);
     if ('error' in validation) {
       setSheetError(validation.error);
       onError(validation.error);
       return;
     }
+    const unpublishingOnSave = Boolean(draft.id) && baseline.publish && !validation.publish;
     startTransition(async () => {
       onError('');
       setSheetError('');
@@ -153,7 +175,15 @@ export function ChangelogAdminPanel({
         toast('Lagring feilet', 'error');
         return;
       }
-      toast(draft.id ? 'Endringslogg oppdatert' : validation.publish ? 'Endring publisert' : 'Utkast lagret');
+      if (draft.id) {
+        toast(
+          unpublishingOnSave
+            ? 'Innlegget er avpublisert og lagret som utkast'
+            : 'Endringslogg oppdatert',
+        );
+      } else {
+        toast(validation.publish ? 'Endring publisert' : 'Utkast lagret');
+      }
       setSheetOpen(false);
       onChanged();
     });
@@ -170,7 +200,9 @@ export function ChangelogAdminPanel({
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        onError(data.error ?? 'Kunne ikke oppdatere publisering.');
+        const message = data.error ?? 'Kunne ikke oppdatere publisering.';
+        onError(message);
+        toast('Publisering feilet', 'error');
         return;
       }
       toast(published ? 'Publisert' : 'Avpublisert');
@@ -227,7 +259,7 @@ export function ChangelogAdminPanel({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Versjon, dato og innhold. Utkast er skjult på den offentlige siden til du publiserer.
+          Versjon og innhold. Utkast er skjult på den offentlige siden til du publiserer.
         </p>
         <Button type="button" size="sm" onClick={openNew} disabled={pending}>
           <Plus className="size-3.5" />
@@ -236,7 +268,13 @@ export function ChangelogAdminPanel({
       </div>
 
       {sorted.length === 0 ? (
-        <EmptyState compact title="Ingen endringslogg ennå" description="Opprett første innlegg med knappen over." />
+        loadFailed ? (
+          <p className="text-sm text-muted-foreground" role="status">
+            Endringsloggen kunne ikke lastes. Bruk «Prøv igjen» over.
+          </p>
+        ) : (
+          <EmptyState compact title="Ingen endringslogg ennå" description="Opprett første innlegg med knappen over." />
+        )
       ) : (
         <ul className="space-y-2">
           {sorted.map((entry) => {
@@ -278,7 +316,7 @@ export function ChangelogAdminPanel({
                       size="icon-sm"
                       className={ADMIN_ICON_BTN}
                       onClick={() => openEdit(entry)}
-                      aria-label="Rediger"
+                      aria-label={`Rediger «${entry.title}»`}
                     >
                       <Pencil className="size-3.5" />
                     </Button>
@@ -288,7 +326,7 @@ export function ChangelogAdminPanel({
                       size="icon-sm"
                       className={ADMIN_ICON_BTN}
                       onClick={() => setDeleteTarget(entry)}
-                      aria-label="Slett"
+                      aria-label={`Slett «${entry.title}»`}
                     >
                       <Trash2 className="size-3.5" />
                     </Button>
@@ -323,9 +361,17 @@ export function ChangelogAdminPanel({
                 value={draft.title}
                 maxLength={CHANGELOG_TITLE_MAX}
                 onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
+                onBlur={() => setTitleTouched(true)}
                 placeholder="f.eks. «Mer oversiktlig veikart»"
-                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/30"
+                aria-invalid={showTitleError}
+                className={cn(
+                  'w-full rounded-xl border bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/30',
+                  showTitleError ? 'border-destructive focus:ring-destructive/30' : 'border-border',
+                )}
               />
+              {showTitleError && titleFieldError ? (
+                <p className="text-xs font-medium text-destructive" role="alert">{titleFieldError}</p>
+              ) : null}
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground" htmlFor="changelog-body">
@@ -337,8 +383,13 @@ export function ChangelogAdminPanel({
                 maxLength={CHANGELOG_BODY_MAX}
                 rows={8}
                 onChange={(value) => setDraft((prev) => ({ ...prev, body: value }))}
+                onBlur={() => setBodyTouched(true)}
                 placeholder="- Ny funksjon&#10;- Forbedret ytelse"
+                aria-invalid={showBodyError}
               />
+              {showBodyError && bodyFieldError ? (
+                <p className="text-xs font-medium text-destructive" role="alert">{bodyFieldError}</p>
+              ) : null}
             </div>
           </div>
           <div className="space-y-2">
@@ -423,6 +474,7 @@ export function ChangelogAdminPanel({
       >
         <p className="text-sm text-muted-foreground">
           Du avpubliserer <strong className="text-foreground">{unpublishTarget?.title ?? 'dette innlegget'}</strong>.
+          Publiserer du på nytt senere, får innlegget ny dato på den offentlige siden.
         </p>
       </Dialog>
 

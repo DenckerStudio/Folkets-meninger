@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { Lightbulb } from 'lucide-react';
 import { AdminBackLink } from '@/components/admin/admin-shell';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { formatWhen } from '@/components/appens-fremtid/format';
 import { ChangelogAdminPanel } from '@/components/admin/app-future/changelog-admin-panel';
@@ -36,6 +37,10 @@ export default function AdminForslagClient() {
   const [roadmap, setRoadmap] = useState<RoadmapItem[]>([]);
   const [filter, setFilter] = useState<InboxFilter>('all');
   const [inboxError, setInboxError] = useState('');
+  const [changelogLoadError, setChangelogLoadError] = useState('');
+  const [roadmapLoadError, setRoadmapLoadError] = useState('');
+  const [changelogPanelError, setChangelogPanelError] = useState('');
+  const [roadmapPanelError, setRoadmapPanelError] = useState('');
   const [pending, startTransition] = useTransition();
 
   const load = () => {
@@ -67,10 +72,22 @@ export default function AdminForslagClient() {
         setSuggestions(Array.isArray(suggestionsData.suggestions) ? suggestionsData.suggestions : []);
       }
 
-      if (changelogRes.ok) {
+      if (!changelogRes.ok) {
+        setChangelogLoadError(
+          typeof changelogData.error === 'string'
+            ? changelogData.error
+            : 'Kunne ikke laste endringsloggen.',
+        );
+      } else {
+        setChangelogLoadError('');
         setChangelog(Array.isArray(changelogData.entries) ? changelogData.entries : []);
       }
-      if (roadmapRes.ok) {
+      if (!roadmapRes.ok) {
+        setRoadmapLoadError(
+          typeof roadmapData.error === 'string' ? roadmapData.error : 'Kunne ikke laste veikartet.',
+        );
+      } else {
+        setRoadmapLoadError('');
         setRoadmap(Array.isArray(roadmapData.items) ? roadmapData.items : []);
       }
     });
@@ -141,26 +158,66 @@ export default function AdminForslagClient() {
       ) : null}
 
       {tab === 'changelog' ? (
-        <ChangelogAdminPanel
-          entries={changelog}
-          pending={pending}
-          onChanged={load}
-          onError={() => {}}
-          startTransition={startTransition}
-        />
+        <div className="space-y-4">
+          {changelogLoadError ? (
+            <TabLoadError message={changelogLoadError} onRetry={load} pending={pending} />
+          ) : null}
+          {changelogPanelError ? (
+            <p className="text-sm text-destructive" role="alert">{changelogPanelError}</p>
+          ) : null}
+          <ChangelogAdminPanel
+            entries={changelog}
+            pending={pending}
+            loadFailed={Boolean(changelogLoadError)}
+            onChanged={load}
+            onError={setChangelogPanelError}
+            startTransition={startTransition}
+          />
+        </div>
       ) : null}
 
       {tab === 'roadmap' ? (
-        <RoadmapAdminPanel
-          items={roadmap}
-          pending={pending}
-          onChanged={load}
-          onError={() => {}}
-          startTransition={startTransition}
-        />
+        <div className="space-y-4">
+          {roadmapLoadError ? (
+            <TabLoadError message={roadmapLoadError} onRetry={load} pending={pending} />
+          ) : null}
+          {roadmapPanelError ? (
+            <p className="text-sm text-destructive" role="alert">{roadmapPanelError}</p>
+          ) : null}
+          <RoadmapAdminPanel
+            items={roadmap}
+            pending={pending}
+            loadFailed={Boolean(roadmapLoadError)}
+            onChanged={load}
+            onError={setRoadmapPanelError}
+            startTransition={startTransition}
+          />
+        </div>
       ) : null}
 
       <AdminBackLink />
+    </div>
+  );
+}
+
+function TabLoadError({
+  message,
+  onRetry,
+  pending,
+}: {
+  message: string;
+  onRetry: () => void;
+  pending: boolean;
+}) {
+  return (
+    <div
+      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3"
+      role="alert"
+    >
+      <p className="text-sm text-destructive">{message}</p>
+      <Button type="button" variant="outline" size="sm" disabled={pending} onClick={onRetry}>
+        Prøv igjen
+      </Button>
     </div>
   );
 }
