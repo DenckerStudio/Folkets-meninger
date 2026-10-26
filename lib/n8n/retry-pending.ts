@@ -1,8 +1,5 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { triggerAiSummaryWebhook } from '@/lib/trigger-ai-summary-webhook';
-import { isLegacyEmbeddingsRetryEnabled } from '@/lib/n8n/legacy-embeddings-retry';
-import { listPendingLegacyEmbeddingIssueIds } from '@/lib/n8n/legacy-embedding-pending-issues';
-import { triggerDocumentEmbeddingsWebhook } from '@/lib/trigger-document-embeddings-webhook';
 import { triggerSystemPollDraftWebhook } from '@/lib/trigger-system-poll-draft-webhook';
 
 const AI_SUMMARY_COOLDOWN_MS = 60 * 60 * 1000;
@@ -105,16 +102,6 @@ export async function retryPendingN8nJobs(): Promise<N8nRetryResult> {
 
     triggerAiSummaryWebhook(issue.id);
     result.aiSummariesQueued += 1;
-  }
-
-  if (isLegacyEmbeddingsRetryEnabled()) {
-    const issueIds = await listPendingLegacyEmbeddingIssueIds(service, 50);
-    result.embeddingsPendingIssues = issueIds.length;
-    const firstIssueId = issueIds[0];
-    if (firstIssueId) {
-      result.embeddingsQueued = true;
-      triggerDocumentEmbeddingsWebhook(firstIssueId);
-    }
   }
 
   result.systemPollQueued = triggerSystemPollDraftWebhook();

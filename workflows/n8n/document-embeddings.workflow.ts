@@ -376,9 +376,6 @@ const webhookTrigger = trigger({
   output: [{ body: { stortinget_issue_id: '200329' } }],
 });
 
-const ISSUE_ID_GUARD_EXPR =
-  '{{ (() => { const raw = $json.body?.stortinget_issue_id ?? $json.stortinget_issue_id ?? ""; const id = String(raw).trim(); return /^\\d+$/.test(id) ? id : ""; })() }}';
-
 const hasIssueId = ifElse({
   version: 2.2,
   config: {
@@ -392,7 +389,7 @@ const hasIssueId = ifElse({
         conditions: [
           {
             id: 'has-issue',
-            leftValue: expr(ISSUE_ID_GUARD_EXPR),
+            leftValue: expr('{{ $json.issueId }}'),
             rightValue: '',
             operator: { type: 'string', operation: 'notEmpty' },
           },
@@ -451,7 +448,7 @@ const normalizeWebhook = node({
 const inWorkflowError = createInWorkflowErrorNotify('folkets-document-embeddings');
 
 sticky(
-  `## Dokument embeddings (legacy nomic)\n\nKun **per sak** via webhook med \`stortinget_issue_id\` (node «Has issue id?» / IkedEm). Ingen timeplan. Global nomic-drenering er stoppet — \`embedding_v2\` eies av \`scripts/backfill-embedding-v2.ts\`. Ingen AI-sammendrag per batch. Ollama-feil: chunk pending. Error Trigger → /api/ops/n8n-notify.\n\n${DOCUMENT_CHUNKING_SPEC}`,
+  `## Dokument embeddings (legacy nomic)\n\nKun **per sak** via webhook med \`stortinget_issue_id\` → Normalize → «Has issue id?» (\`$json.issueId\`, IkedEm). Ingen timeplan. Global nomic-drenering er stoppet — \`embedding_v2\` eies av \`scripts/backfill-embedding-v2.ts\`. Ingen AI-sammendrag per batch. Ollama-feil: chunk pending. Error Trigger → /api/ops/n8n-notify.\n\n${DOCUMENT_CHUNKING_SPEC}`,
   [webhookTrigger],
   { color: 5 },
 );
@@ -472,9 +469,9 @@ const embeddingPipeline = fetchPendingChunks.to(expandPendingChunks).to(
     .onFalse(logEmptyEmbeddingQueue),
 );
 
-const webhookGatedPipeline = hasIssueId
-  .onTrue(normalizeWebhook.to(embeddingPipeline))
-  .onFalse(skipGlobalDrain);
+const webhookGatedPipeline = normalizeWebhook.to(
+  hasIssueId.onTrue(embeddingPipeline).onFalse(skipGlobalDrain),
+);
 
 export default workflow(
   'folkets-document-embeddings',

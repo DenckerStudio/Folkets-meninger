@@ -5,13 +5,9 @@ import { pathToFileURL } from 'node:url';
 
 const n8nDir = join(process.cwd(), 'workflows/n8n');
 
-function evaluateIssueIdGuard(payload: {
-  body?: { stortinget_issue_id?: unknown };
-  stortinget_issue_id?: unknown;
-}): boolean {
-  const raw = payload.body?.stortinget_issue_id ?? payload.stortinget_issue_id ?? '';
-  const id = String(raw).trim();
-  return /^\d+$/.test(id);
+function evaluateIssueIdGuard(normalized: { issueId?: unknown }): boolean {
+  const id = String(normalized.issueId ?? '').trim();
+  return id.length > 0;
 }
 
 async function main(): Promise<void> {
@@ -29,28 +25,32 @@ async function main(): Promise<void> {
   assert.deepEqual(
     fromDisk.connections['Webhook document embeddings'],
     fromTs.connections['Webhook document embeddings'],
-    'Webhook must connect to Has issue id? in committed JSON and workflow source',
+    'Webhook entry must match between committed JSON and workflow source',
+  );
+  assert.deepEqual(
+    fromDisk.connections['Normalize webhook payload'],
+    fromTs.connections['Normalize webhook payload'],
+    'Normalize must feed Has issue id? in committed JSON and workflow source',
   );
   assert.deepEqual(
     fromDisk.connections['Has issue id?'],
     fromTs.connections['Has issue id?'],
     'Guard branches must match between JSON and workflow source',
   );
-  assert.doesNotMatch(
+  assert.match(
     JSON.stringify(fromDisk.connections['Webhook document embeddings']),
     /Normalize webhook payload/,
-    'Webhook must not connect directly to Normalize (guard runs first)',
+    'Webhook must connect to Normalize before the guard',
   );
 
   const guardNode = fromDisk.nodes.find((n) => n.name === 'Has issue id?');
   const guardExpr = guardNode?.parameters?.conditions?.conditions?.[0]?.leftValue ?? '';
-  assert.match(guardExpr, /\\d\+/);
+  assert.match(guardExpr, /issueId/);
 
-  assert.equal(evaluateIssueIdGuard({ body: { stortinget_issue_id: '200329' } }), true);
-  assert.equal(evaluateIssueIdGuard({ body: { stortinget_issue_id: ' 200329 ' } }), true);
-  assert.equal(evaluateIssueIdGuard({ body: {} }), false);
-  assert.equal(evaluateIssueIdGuard({ body: { stortinget_issue_id: 'abc' } }), false);
-  assert.equal(evaluateIssueIdGuard({ body: { stortinget_issue_id: '' } }), false);
+  assert.equal(evaluateIssueIdGuard({ issueId: '200329' }), true);
+  assert.equal(evaluateIssueIdGuard({ issueId: ' 200329 ' }), true);
+  assert.equal(evaluateIssueIdGuard({}), false);
+  assert.equal(evaluateIssueIdGuard({ issueId: '' }), false);
 
   console.log('document-embeddings-workflow-json.test.ts: ok');
 }
