@@ -21,7 +21,11 @@ import {
   type QueryVectorizer,
   type VectorSearchClient,
 } from '@/lib/chat/vector-search';
-import { rerankCandidates, rerankerEnabled, shouldRejectRetrieval } from '@/lib/chat/rerank';
+import {
+  rerankCandidates,
+  rerankerEnabled,
+  shouldRejectAfterRerank,
+} from '@/lib/chat/rerank';
 import {
   isMissingSearchChunksHybridRpcError,
   isMissingSearchIssuesFtsRpcError,
@@ -448,12 +452,12 @@ async function searchChunksHybrid(
     });
     if (mapped.length === 0) return [];
     if (!rerankerEnabled() && !process.env.RAG_REJECTION_THRESHOLD) return mapped;
-    const { scores } = await rerankCandidates(
+    const { scores, usedReranker } = await rerankCandidates(
       query,
       mapped.map((c) => ({ id: `${c.documentId}:${c.chunkIndex}`, content: c.content, fusedScore: c.rank })),
     );
     const best = scores.length ? Math.max(...scores) : 0;
-    if (shouldRejectRetrieval(best)) return [];
+    if (shouldRejectAfterRerank(usedReranker, best)) return [];
     return mapped;
   } catch {
     return null;
