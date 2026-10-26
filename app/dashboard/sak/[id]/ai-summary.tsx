@@ -1,10 +1,18 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ComponentType, ReactNode } from 'react';
 import Link from 'next/link';
 import { Children } from 'react';
-import { CircleDollarSign, ExternalLink, FileText, HandHeart, Loader2, Users } from 'lucide-react';
+import {
+  AlertCircle,
+  CircleDollarSign,
+  ExternalLink,
+  FileText,
+  HandHeart,
+  Loader2,
+  Users,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CivicBubble } from '@/components/icons/civic';
 import { ContentFeedbackPanel } from '@/components/admin/content-feedback-panel';
@@ -26,9 +34,14 @@ import {
   SAK_SUMMARY_TIMEOUT_MESSAGE,
   type SakSummaryReady,
 } from '@/lib/ai-summary/sak-summary-fetch';
+import {
+  isActivePollGeneration,
+  loadStateAfterDialogClose,
+  refetchOnNextOpenAfterClose,
+  shouldRefetchOnDialogOpen,
+  type SummaryLoadState,
+} from '@/lib/ai-summary/sak-summary-dialog-state';
 import type { AiSummaryLegacy, AiSummaryV2 } from '@/lib/ai-summary/types';
-
-type SummaryLoadState = 'idle' | 'loading' | 'ready' | 'read_failed' | 'timeout';
 
 type SourceDoc = {
   title: string;
@@ -51,8 +64,19 @@ export default function AiSummary({
   const [sourceDocs, setSourceDocs] = useState<SourceDoc[]>([]);
   const [showFeedback, setShowFeedback] = useState(false);
   const isAdmin = useIsAdmin();
+  const pollGenerationRef = useRef(0);
+  const refetchOnNextOpenRef = useRef(false);
+  const fetchAbortRef = useRef<AbortController | null>(null);
 
   const loading = loadState === 'loading';
+
+  useEffect(() => {
+    return () => {
+      pollGenerationRef.current += 1;
+      fetchAbortRef.current?.abort();
+      fetchAbortRef.current = null;
+    };
+  }, []);
 
   async function loadSourceDocuments() {
     try {
@@ -73,20 +97,22 @@ export default function AiSummary({
     }
   }
 
-  async function fetchSummaryOnce(): Promise<
+  function cancelActiveSummaryPoll() {
+    pollGenerationRef.current += 1;
+    fetchAbortRef.current?.abort();
+    fetchAbortRef.current = null;
+  }
+
+  async function fetchSummaryOnce(signal: AbortSignal): Promise<
     | { kind: 'ready'; summary: SakSummaryReady }
     | { kind: 'pending'; retryAfterSeconds: number }
     | { kind: 'read_failed' }
     | { kind: 'error' }
   > {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30_000);
-
       const res = await fetch(`/api/sak/${sakId}/ai-summary`, {
-        signal: controller.signal,
+        signal,
       });
-      clearTimeout(timeout);
 
       const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       const kind = classifySakSummaryHttpResponse(res.status, json);
@@ -106,71 +132,112 @@ export default function AiSummary({
 
       return { kind: 'error' };
     } catch (error) {
+      if (signal.aborted) {
+        return { kind: 'error' };
+      }
       console.error('Failed to fetch AI summary', error);
       return { kind: 'error' };
     }
   }
 
   async function loadSummary(pollUntilReady = true) {
+    const generation = pollGenerationRef.current + 1;
+    pollGenerationRef.current = generation;
+
+    fetchAbortRef.current?.abort();
+    const controller = new AbortController();
+    fetchAbortRef.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 30_000);
+
     setLoadState('loading');
-    setData(null);
     setStatusMessage(null);
     void loadSourceDocuments();
 
     const MAX_ATTEMPTS = pollUntilReady ? 8 : 1;
 
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-      const result = await fetchSummaryOnce();
+    try {
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+        if (!isActivePollGeneration(generation, pollGenerationRef.current)) {
+          return;
+        }
 
-      if (result.kind === 'read_failed') {
-        setLoadState('read_failed');
-        setStatusMessage(SAK_SUMMARY_READ_FAILED_MESSAGE);
-        return;
-      }
+        const result = await fetchSummaryOnce(controller.signal);
 
-      if (result.kind === 'ready') {
-        setLoadState('ready');
-        setStatusMessage(null);
-        setData(result.summary);
-        return;
-      }
+        if (
+          controller.signal.aborted ||
+          !isActivePollGeneration(generation, pollGenerationRef.current)
+        ) {
+          return;
+        }
 
-      if (result.kind === 'pending') {
-        setStatusMessage(SAK_SUMMARY_GENERATING_MESSAGE);
+        if (result.kind === 'read_failed') {
+          setLoadState('read_failed');
+          setStatusMessage(SAK_SUMMARY_READ_FAILED_MESSAGE);
+          return;
+        }
+
+        if (result.kind === 'ready') {
+          setLoadState('ready');
+          setStatusMessage(null);
+          setData(result.summary);
+          return;
+        }
+
+        if (result.kind === 'pending') {
+          setStatusMessage(SAK_SUMMARY_GENERATING_MESSAGE);
+          if (!pollUntilReady || attempt === MAX_ATTEMPTS - 1) {
+            break;
+          }
+          await new Promise((r) => setTimeout(r, result.retryAfterSeconds * 1000));
+          if (!isActivePollGeneration(generation, pollGenerationRef.current)) {
+            return;
+          }
+          continue;
+        }
+
         if (!pollUntilReady || attempt === MAX_ATTEMPTS - 1) {
           break;
         }
-        await new Promise((r) => setTimeout(r, result.retryAfterSeconds * 1000));
-        continue;
+        setStatusMessage(SAK_SUMMARY_GENERATING_MESSAGE);
+        await new Promise((r) => setTimeout(r, 15_000));
+        if (!isActivePollGeneration(generation, pollGenerationRef.current)) {
+          return;
+        }
       }
 
-      if (!pollUntilReady || attempt === MAX_ATTEMPTS - 1) {
-        break;
+      if (!isActivePollGeneration(generation, pollGenerationRef.current)) {
+        return;
       }
-      setStatusMessage(SAK_SUMMARY_GENERATING_MESSAGE);
-      await new Promise((r) => setTimeout(r, 15_000));
+
+      setLoadState('timeout');
+      setStatusMessage(SAK_SUMMARY_TIMEOUT_MESSAGE);
+    } finally {
+      clearTimeout(timeout);
+      if (fetchAbortRef.current === controller) {
+        fetchAbortRef.current = null;
+      }
     }
-
-    setLoadState('timeout');
-    setStatusMessage(SAK_SUMMARY_TIMEOUT_MESSAGE);
-    setData(null);
-  }
-
-  function resetSummaryView() {
-    setLoadState('idle');
-    setData(null);
-    setStatusMessage(null);
   }
 
   function openSummary() {
-    resetSummaryView();
     setOpen(true);
-    void loadSummary(true);
+    if (shouldRefetchOnDialogOpen(Boolean(data), refetchOnNextOpenRef.current)) {
+      refetchOnNextOpenRef.current = false;
+      void loadSummary(true);
+      return;
+    }
+    if (data) {
+      setLoadState('ready');
+      setStatusMessage(null);
+    }
   }
 
   function closeSummary() {
+    cancelActiveSummaryPoll();
+    refetchOnNextOpenRef.current = refetchOnNextOpenAfterClose(Boolean(data), loadState);
+    setLoadState((current) => loadStateAfterDialogClose(Boolean(data), current));
+    setStatusMessage(null);
     setOpen(false);
-    resetSummaryView();
   }
 
   function retrySummary() {
@@ -284,8 +351,24 @@ export default function AiSummary({
           data.version === 2 ? <V2Summary data={data} /> : <LegacySummary data={data} />
         ) : (
           <div className="space-y-3 rounded-xl border border-border bg-muted/40 px-4 py-4">
-            <p className="text-sm text-muted-foreground">
-              {statusMessage ?? 'Sammendrag genereres når dokumentene er klare. Prøv igjen senere.'}
+            <p
+              role="status"
+              aria-live="polite"
+              className={cn(
+                'text-sm text-muted-foreground',
+                loadState === 'read_failed' && 'flex items-start gap-2',
+              )}
+            >
+              {loadState === 'read_failed' ? (
+                <AlertCircle
+                  className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                  aria-hidden
+                />
+              ) : null}
+              <span>
+                {statusMessage ??
+                  'Sammendrag genereres når dokumentene er klare. Prøv igjen senere.'}
+              </span>
             </p>
             {showRetry ? (
               <button

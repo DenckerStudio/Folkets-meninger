@@ -27,5 +27,5 @@ export async function isRegenerationOnRejectAvailable(
   if (isPostgrestMissingRpcError(error)) {
     return false;
   }
-  return true;
+  return false;
 }

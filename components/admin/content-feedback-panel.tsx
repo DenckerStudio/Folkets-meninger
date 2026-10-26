@@ -82,6 +82,7 @@ export function ContentFeedbackPanel({
   const [aspectsExpanded, setAspectsExpanded] = useState(false);
   const [rejectSubmitAttempted, setRejectSubmitAttempted] = useState(false);
   const [saveSucceeded, setSaveSucceeded] = useState(false);
+  const [showRegenerationHint, setShowRegenerationHint] = useState(false);
   const [regenerationOnRejectAvailable, setRegenerationOnRejectAvailable] = useState<
     boolean | null
   >(null);
@@ -108,6 +109,7 @@ export function ContentFeedbackPanel({
       closeTimerRef.current = null;
     }
     setSaveSucceeded(false);
+    setShowRegenerationHint(false);
     setSuccess('');
     setError('');
     setRejectSubmitAttempted(false);
@@ -191,14 +193,14 @@ export function ContentFeedbackPanel({
         };
         if (cancelled) return;
         if (!res.ok) {
-          setRegenerationOnRejectAvailable(null);
+          setRegenerationOnRejectAvailable(false);
           return;
         }
         setRegenerationOnRejectAvailable(json.regeneration_on_reject === true);
       })
       .catch(() => {
         if (!cancelled) {
-          setRegenerationOnRejectAvailable(null);
+          setRegenerationOnRejectAvailable(false);
         }
       });
     return () => {
@@ -294,17 +296,18 @@ export function ContentFeedbackPanel({
         return;
       }
       setShowAdminReviewedBadge(true);
-      const showRegenerationHint =
+      const regenerationHintActive =
         json.regeneration === false && Boolean(json.regeneration_hint);
-      const savedMessage = showRegenerationHint
+      const savedMessage = regenerationHintActive
         ? json.regeneration_hint!
         : SUCCESS_MESSAGE;
       setSuccess(savedMessage);
       setSaveSucceeded(true);
-      if (showRegenerationHint) {
+      setShowRegenerationHint(regenerationHintActive);
+      if (regenerationHintActive) {
         setRegenerationOnRejectAvailable(false);
       }
-      if (onSaved && !showRegenerationHint) {
+      if (onSaved && !regenerationHintActive) {
         closeTimerRef.current = window.setTimeout(() => {
           closeTimerRef.current = null;
           skipRef.current?.focus();
@@ -319,6 +322,7 @@ export function ContentFeedbackPanel({
   }
 
   const saveLocked = saving || saveSucceeded;
+  const skipDisabled = saving;
   const headingText = preview ? title : (contentSubjectTitle ?? title);
 
   const showAspectList = isReject || aspectsExpanded;
@@ -350,7 +354,15 @@ export function ContentFeedbackPanel({
             </span>
           ) : null}
         </div>
-        <p className="text-sm text-muted-foreground">{effectiveDescription}</p>
+        {contentType === 'ai_summary' ? (
+          <div className="min-h-10">
+            {regenerationOnRejectAvailable === null ? null : (
+              <p className="text-sm text-muted-foreground">{effectiveDescription}</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">{effectiveDescription}</p>
+        )}
       </div>
 
       {preview ? (
@@ -563,11 +575,20 @@ export function ContentFeedbackPanel({
       ) : null}
 
       <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        {showRegenerationHint ? (
+          <button
+            type="button"
+            onClick={onSkip}
+            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50"
+          >
+            Lukk
+          </button>
+        ) : null}
         <button
           ref={skipRef}
           type="button"
           onClick={onSkip}
-          disabled={saveLocked}
+          disabled={skipDisabled}
           className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
         >
           Hopp over
