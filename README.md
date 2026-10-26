@@ -94,6 +94,7 @@ Important constraints:
 |--------|-----|
 | `scripts/backfill-sak-status.ts` | Refresh `ferdigbehandlet`, `voting_closes_at`, and sak metadata from Stortinget detail data |
 | `scripts/backfill-sak-documents.ts` | Ingest recent sak documents and create pending RAG chunks |
+| `scripts/backfill-embedding-v2.ts` | Coolify one-off: fyll `embedding_v2` (bge-m3) med to baner og busy-pause mot chat-embed |
 | `scripts/deploy-document-embeddings-n8n.mjs` | Deploy/update the document embeddings workflow in n8n |
 | `scripts/archive-misaligned-forum-prompts.sql` | Archive active forum prompts that should no longer be shown |
 
@@ -102,6 +103,90 @@ Example status refresh:
 ```bash
 npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
 ```
+
+### embedding_v2 backfill (Coolify one-off)
+
+Krever **#185** RAG fase A+B og **#207** kø/leases (`supabase/migrations/EMBEDDING_V2_QUEUE_APPLY.md`).
+Scriptet bruker `n8n_claim_chunks_missing_v2` + `save_embeddings_v2` (300 s lease, `SKIP LOCKED`).
+
+**Preflight (hver endpoint):** 20 faste norske tekster embeddes på backfill-endpoint og på Ollama
+`EMBED_QUERY_URL` (typisk `:11435` / bge-m3 F16). Alle par må ha cosine ≥ **0.99** og dim **1024**.
+Feil preflight **slår ut kun den endpointen**. `--preflight-only` kjører preflight og avslutter.
+Spørringssiden logges via Ollama `/api/show` (modell/kvantisering).
+
+**LM Studio (server):** `gpustack/bge-m3-GGUF`, API-modell `bge-m3`, lagres som
+`bge-m3:Q8_0 (gpustack GGUF, lmstudio)` i `embedding_v2_model` (eller API/`--model-tag` /
+`EMBED_BACKFILL_MODEL_TAG`). `EMBED_BACKFILL_URL` er **påkrevd** for lmstudio (full proxy-URL —
+ingen hardkodet host/port i koden).
+
+**Flere endepunkter:** `EMBED_BACKFILL_ENDPOINTS` (JSON-array) eller gjentatt `--endpoint '…'`.
+Én **primary** (`"primary": true`) tar **fast** lane (tier 0) + **background**; ekstra noder (f.eks.
+gaming-PC med RTX 3080) kun `"lanes": ["background"]`. API-nøkler **kun** via `"apiKeyEnv":
+"NAVN_PÅ_ENV"` (aldri verdien i JSON, logger eller repo).
+
+**Throughput (klever, målt):** ~**480 chunks/min** på server-GPU (`batch` 32, 1 worker) → ~**13 t**
+for ~380k pending. Ekstra LM Studio-node reduserer wall-clock når den er oppe (background-lane).
+
+**Delt throttle:** WAL/replikasjonsslot (`n8n_backfill_db_pressure`) pauser **alle** workers.
+`--schedule '22-07:full,07-22:throttle'` (standard tidssone `Europe/Oslo`). Busy-latency mot chat
+når backfill-URL deler `:11435`.
+
+```bash
+# Preflight alle endepunkter
+EMBED_QUERY_URL=http://ollama-host.example.invalid:11435 \
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
+EMBED_BACKFILL_ENDPOINTS='[
+  {"name":"server","primary":true,"provider":"lmstudio","url":"https://embed-proxy.example/v1",
+   "lanes":["fast","background"],"batch":32,
+   "modelTag":"bge-m3:Q8_0 (gpustack GGUF, lmstudio)","apiKeyEnv":"EMBED_LMSTUDIO_SERVER_KEY"},
+  {"name":"gaming-pc","provider":"lmstudio","url":"https://pc-tunnel.example/v1",
+   "lanes":["background"],"batch":32,"apiKeyEnv":"EMBED_LMSTUDIO_PC_KEY"}
+]' \
+npx tsx scripts/backfill-embedding-v2.ts --preflight-only
+
+# Kjøring
+npx tsx scripts/backfill-embedding-v2.ts \
+  --schedule '22-07:full,07-22:throttle' \
+  --max-batches-per-min 3 \
+  --stop-file /data/backfill-v2.stop
+```
+
+**Ollama CPU-fallback:** én endpoint med `"provider":"ollama"` — standard `batch` **16**, 1 worker
+(~55 chunks/min). `:11434` (GPU/gemma) avvises uten `--allow-gpu`.
+
+Enkel endpoint uten JSON: `EMBED_BACKFILL_PROVIDER=lmstudio`, `EMBED_BACKFILL_URL=…` (primary).
+Valgfritt: `--busy-pause=off`, `--probe-before-batch`, `--lease-seconds 300`, `--provider lmstudio`.
+
+#### Gaming-PC worker (background, LM Studio)
+
+Eksempel-env (kun placeholders): `scripts/backfill-embedding-v2.gaming-pc.env.example`.
+API-nøkkel **kun** via `LMSTUDIO_API_KEY` (aldri som `apiKey` i JSON).
+
+1. Kopier env-filen lokalt og fyll inn `SUPABASE_*`, `EMBED_QUERY_URL` (Ollama **:11435** for chat/preflight),
+   `EMBED_BACKFILL_URL` (LM Studio på PC-en), `LMSTUDIO_API_KEY`.
+2. Preflight (må bestå før claiming):
+
+```bash
+set -a && source /path/to/gaming-pc.env && set +a
+npx tsx scripts/backfill-embedding-v2.ts --provider lmstudio --preflight-only
+```
+
+3. Kjør background-worker med lav concurrency og busy-pause:
+
+```bash
+npx tsx scripts/backfill-embedding-v2.ts \
+  --provider lmstudio \
+  --schedule '22-07:full,07-22:throttle' \
+  --max-batches-per-min 2 \
+  --full-max-batches-per-min 8 \
+  --busy-pause=on \
+  --busy-latency-ms 1500 \
+  --lease-seconds 300 \
+  --stop-file /tmp/backfill-v2-gaming-pc.stop
+```
+
+**Stopp trygt:** `touch` stop-filen (coordinator frigir leases), eller `SIGINT`/`SIGTERM` (frigir via
+`n8n_release_embedding_v2_claims`). `--dry-run` claimer og frigir uten `save_embeddings_v2`.
 
 Focused unit coverage for recently fragile source parsers/status logic lives in
 `lib/sak-status.test.ts` and `lib/stortinget-horinger.test.ts`; both run through
