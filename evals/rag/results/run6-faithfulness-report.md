@@ -15,7 +15,7 @@
 
 ## Klever / n8n (exact)
 
-Check out **`cursor/rag-improve-drastisk-5738`** at **`ea570a1`** (or current PR HEAD). Apply eval DB stack if needed:
+Check out **`cursor/rag-improve-drastisk-5738`** at **`005ee8b`** (or current PR HEAD). Apply eval DB stack if needed:
 
 ```bash
 export RAG_EVAL_PG_HOST=localhost
