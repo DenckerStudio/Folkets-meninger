@@ -15,12 +15,13 @@
 | 3 | `20261026110300_embedding_v2_chunk_leases.sql` | Transactional | `embedding_v2_claimed_*` columns (metadata-only), `n8n_claim_chunks_missing_v2`, `save_embeddings_v2` lease checks |
 | 4 | `20261026110000_document_chunks_v2_pending_issue_idx_concurrent.sql` | **CONCURRENTLY** | Partial index on pending v2 chunks per issue |
 | 5 | `20261026110400_n8n_claim_chunks_missing_v2_perf.sql` | Transactional | Set-based issue tiers for `n8n_claim_chunks_missing_v2` (fixes 15s statement timeout at ~380k pending) |
+| 6 | `20261027100000_n8n_list_v2_priority_issues_batch_tiers.sql` | Transactional | Set-based tiers for `n8n_list_v2_priority_issues` (fixes 8s PostgREST timeout on tier-0 probe / fast lane) |
 
-**Apply order is fixed:** transactional steps **1 → 2 → 3 → 5**, then concurrent step **4** (do not run `26110000` before `26110300`). Step **5** requires step **3** (lease RPC). After step 3, claim/save RPCs exist for backfill #206; step 4 can still build while backfill runs, but Coolify should follow this sequence.
+**Apply order is fixed:** transactional steps **1 → 2 → 3 → 5 → 6**, then concurrent step **4** (do not run `26110000` before `26110300`). Steps **5–6** require step **3** (lease RPC). After step 3, claim/save RPCs exist for backfill #206; step 4 can still build while backfill runs, but Coolify should follow this sequence.
 
 Each transactional file is its own `psql -f` with phase-A session settings (see below); do not merge 1–3 into one transaction unless you accept all-or-nothing rollback.
 
-CI (`scripts/run-prod-like-db-security.sh`) applies **1–3** and **5**, then **4** in that order.
+CI (`scripts/run-prod-like-db-security.sh`) applies **1–3**, **5–6**, then **4** in that order.
 
 ## Maintenance window
 
@@ -33,7 +34,7 @@ Pause workflows: `dokument-embeddings` (legacy), pipeline catch-up that writes c
 
 ## Phase A — transactional session settings
 
-Before **each** transactional file (steps 1–3 and step 5):
+Before **each** transactional file (steps 1–3 and steps 5–6):
 
 ```sql
 SET lock_timeout = '30s';
@@ -46,6 +47,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261026110100_em
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261026110200_embedding_backlog_health_perf.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261026110300_embedding_v2_chunk_leases.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261026110400_n8n_claim_chunks_missing_v2_perf.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261027100000_n8n_list_v2_priority_issues_batch_tiers.sql
 ```
 
 ### Claim perf (`26110400`)
@@ -60,6 +62,18 @@ ROLLBACK;
 ```
 
 Expect no per-row `fm_embedding_v2_issue_tier` in the plan; runtime should stay well under prod `statement_timeout` (15s).
+
+### Priority list perf (`27100000`)
+
+Transactional only. After apply, verify tier-0 probe latency (PostgREST uses ~8s `statement_timeout`):
+
+```sql
+SET ROLE service_role;
+SET statement_timeout = '8s';
+SELECT count(*) FROM n8n_list_v2_priority_issues(0, 1, 0, 1);
+```
+
+Expect completion without timeout; `count(*)` may be 0 or 1 depending on backlog.
 
 ### Lease columns (`26110300`)
 
@@ -145,6 +159,7 @@ Optional SQL tests (CI parity):
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/embedding_v2_queue_rpcs.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/embedding_backlog_health_explain.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/embedding_v2_claim_leases.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/n8n_list_v2_priority_issues_batch_tiers.sql
 ```
 
 ## App / n8n follow-up (not in SQL migrations)

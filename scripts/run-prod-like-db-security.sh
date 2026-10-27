@@ -127,8 +127,8 @@ for f in $(ls -1 supabase/migrations/202610221*.sql | sort); do
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
 done
 
-echo "Phase 5a: embedding v2 queue transactional (26110100–26110400) ..."
-for f in $(ls -1 supabase/migrations/20261026110[1-4]*.sql 2>/dev/null | sort); do
+echo "Phase 5a: embedding v2 queue transactional (26110100–26110400, 27100000) ..."
+for f in $(ls -1 supabase/migrations/20261026110[1-4]*.sql supabase/migrations/20261027100000_n8n_list_v2_priority_issues_batch_tiers.sql 2>/dev/null | sort); do
   echo "  -> $(basename "$f")"
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
 done
@@ -169,6 +169,9 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/embedding_backlog_health_exp
 
 echo "Running embedding_v2_claim_leases.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/embedding_v2_claim_leases.sql
+
+echo "Running n8n_list_v2_priority_issues_batch_tiers.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/n8n_list_v2_priority_issues_batch_tiers.sql
 
 echo "Running security-guard.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
