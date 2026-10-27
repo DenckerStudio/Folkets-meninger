@@ -11,50 +11,105 @@ export function applyStreamedGroundedPostProcess(answer: string, excerpts: reado
   return postProcessGroundedAnswer(answer, [...excerpts]);
 }
 
+/** True when at least one collected RAG document excerpt has text (party-vote guard may apply). */
+export function shouldBufferStreamGroundedPostProcess(excerpts: readonly string[]): boolean {
+  return excerpts.some((excerpt) => excerpt.trim().length > 0);
+}
+
+type BlockState<TOOLS extends ToolSet> = {
+  activeTextId: string | null;
+  stepBuffer: string;
+  stepBuffering: boolean;
+  textEndEmitted: boolean;
+};
+
+function createBlockState(): BlockState<ToolSet> {
+  return {
+    activeTextId: null,
+    stepBuffer: '',
+    stepBuffering: false,
+    textEndEmitted: false,
+  };
+}
+
+function emitProcessedBuffer<TOOLS extends ToolSet>(
+  controller: TransformStreamDefaultController<TextStreamPart<TOOLS>>,
+  state: BlockState<TOOLS>,
+  getExcerpts: () => readonly string[],
+): void {
+  if (!state.activeTextId || !state.stepBuffering) return;
+  const processed = applyStreamedGroundedPostProcess(state.stepBuffer, getExcerpts());
+  if (processed.length > 0) {
+    controller.enqueue({
+      type: 'text-delta',
+      id: state.activeTextId,
+      text: processed,
+    });
+  }
+}
+
+function flushActiveTextBlock<TOOLS extends ToolSet>(
+  controller: TransformStreamDefaultController<TextStreamPart<TOOLS>>,
+  state: BlockState<TOOLS>,
+  getExcerpts: () => readonly string[],
+): void {
+  if (!state.activeTextId || state.textEndEmitted) return;
+  emitProcessedBuffer(controller, state, getExcerpts);
+  controller.enqueue({
+    type: 'text-end',
+    id: state.activeTextId,
+  });
+  state.textEndEmitted = true;
+  state.activeTextId = null;
+  state.stepBuffer = '';
+  state.stepBuffering = false;
+}
+
 /**
- * Buffers each assistant text block until `text-end`, then emits a single corrected
- * `text-delta` (mirrors eval post-generation semantics without mutating mid-stream tokens).
+ * Buffers assistant text until `text-end` when RAG excerpts exist (party-vote guard).
+ * Otherwise passes `text-delta` through immediately. `flush()` emits buffered text on abort.
  */
 export function createGroundedAnswerStreamTransform<TOOLS extends ToolSet>(
   getExcerpts: () => readonly string[],
 ): StreamTextTransform<TOOLS> {
   return () => {
-    let activeTextId: string | null = null;
-    let stepBuffer = '';
+    const state = createBlockState() as BlockState<TOOLS>;
 
     return new TransformStream<TextStreamPart<TOOLS>, TextStreamPart<TOOLS>>({
       transform(chunk, controller) {
         switch (chunk.type) {
           case 'text-start':
-            activeTextId = chunk.id;
-            stepBuffer = '';
+            state.activeTextId = chunk.id;
+            state.stepBuffer = '';
+            state.textEndEmitted = false;
+            state.stepBuffering = shouldBufferStreamGroundedPostProcess(getExcerpts());
             controller.enqueue(chunk);
             return;
           case 'text-delta':
-            if (chunk.id === activeTextId) {
-              stepBuffer += chunk.text;
+            if (chunk.id === state.activeTextId && state.stepBuffering) {
+              state.stepBuffer += chunk.text;
               return;
             }
             controller.enqueue(chunk);
             return;
           case 'text-end':
-            if (chunk.id === activeTextId) {
-              const processed = applyStreamedGroundedPostProcess(stepBuffer, getExcerpts());
-              if (processed.length > 0) {
-                controller.enqueue({
-                  type: 'text-delta',
-                  id: chunk.id,
-                  text: processed,
-                });
+            if (chunk.id === state.activeTextId) {
+              if (state.stepBuffering) {
+                emitProcessedBuffer(controller, state, getExcerpts);
               }
-              activeTextId = null;
-              stepBuffer = '';
+              state.textEndEmitted = true;
+              state.activeTextId = null;
+              state.stepBuffer = '';
+              state.stepBuffering = false;
             }
             controller.enqueue(chunk);
             return;
           default:
             controller.enqueue(chunk);
         }
+      },
+      flush(controller) {
+        flushActiveTextBlock(controller, state, getExcerpts);
       },
     });
   };

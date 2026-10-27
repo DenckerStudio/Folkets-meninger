@@ -105,6 +105,7 @@ export async function POST(request: Request) {
     const ragExcerptCollector = createChatRagExcerptCollector(citations);
     const result = streamText({
       model,
+      abortSignal: request.signal,
       instructions: buildChatInstructions(issueId, new Date(), pageContext),
       messages: await convertToModelMessages(messages as UIMessage[]),
       // Focused Stemme+ tool set (plan P2): fewer tool descriptions for small models.

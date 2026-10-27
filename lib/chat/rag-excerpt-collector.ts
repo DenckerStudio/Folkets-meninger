@@ -7,6 +7,7 @@ import type { CitationRegistry } from '@/lib/chat/citations';
 export type ChatRagExcerptCollector = {
   recordDocumentExcerpt: (kilde: number, content: string) => void;
   excerptsAlignedWithCitations: () => string[];
+  hasDocumentExcerpts: () => boolean;
 };
 
 export function createChatRagExcerptCollector(registry: CitationRegistry): ChatRagExcerptCollector {
@@ -27,6 +28,9 @@ export function createChatRagExcerptCollector(registry: CitationRegistry): ChatR
         out.push(byKilde.get(n) ?? '');
       }
       return out;
+    },
+    hasDocumentExcerpts() {
+      return byKilde.size > 0;
     },
   };
 }
