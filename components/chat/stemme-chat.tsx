@@ -230,6 +230,13 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
     setActiveCommandIndex(0);
   }, [commandQuery]);
 
+  const lastAssistantMessageId = useMemo(() => {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (messages[index]?.role === 'assistant') return messages[index].id;
+    }
+    return null;
+  }, [messages]);
+
   const lastAssistantId = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       const message = messages[index];
@@ -239,6 +246,9 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
     }
     return null;
   }, [messages]);
+
+  const awaitingAssistantShell =
+    busy && (messages.length === 0 || messages[messages.length - 1]?.role === 'user');
   const followUps = useMemo(() => {
     if (busy || lastAssistantId === null) return [];
     const toolsUsed = messages
@@ -533,6 +543,17 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
                 }
                 return null;
               })}
+              {busy &&
+              message.id === lastAssistantMessageId &&
+              !textFromMessageParts(message.parts) ? (
+                <p
+                  role="status"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-2 py-1 text-xs text-muted-foreground"
+                >
+                  <Loader2 className="size-3 animate-spin" aria-hidden />
+                  Skriver svar…
+                </p>
+              ) : null}
               {!busy && textFromMessageParts(message.parts) ? (
                 <ChatMessageActions
                   text={textFromMessageParts(message.parts)}
@@ -559,6 +580,21 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
           )}
         </article>
       ))}
+      {awaitingAssistantShell ? (
+        <article className="mr-6 space-y-2 pr-3">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-brand">
+            <Sparkles className="size-3.5 shrink-0" aria-hidden />
+            Stemme+
+          </p>
+          <p
+            role="status"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-2 py-1 text-xs text-muted-foreground"
+          >
+            <Loader2 className="size-3 animate-spin" aria-hidden />
+            Skriver svar…
+          </p>
+        </article>
+      ) : null}
     </>
   );
 
