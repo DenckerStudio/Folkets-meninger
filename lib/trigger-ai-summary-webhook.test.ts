@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import {
+  drainAiSummaryWebhookQueue,
+  resetAiSummaryWebhookQueueForTests,
+} from '@/lib/ai-summary/webhook-dispatch';
 import { triggerAiSummaryWebhook } from './trigger-ai-summary-webhook';
 
 async function run(): Promise<void> {
@@ -15,8 +19,9 @@ async function run(): Promise<void> {
   }) as typeof fetch;
 
   try {
+    resetAiSummaryWebhookQueueForTests();
     triggerAiSummaryWebhook('200329');
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await drainAiSummaryWebhookQueue();
     assert.equal(inits.length >= 1, true, 'webhook POST was sent');
     const headers = inits[0]?.headers as Record<string, string> | undefined;
     assert.equal(headers?.['X-FM-Webhook-Token'], 'env-token-from-coolify');
