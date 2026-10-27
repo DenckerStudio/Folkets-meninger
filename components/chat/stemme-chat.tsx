@@ -29,6 +29,11 @@ import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
 import { chatLoginHref, type ChatGateReason } from '@/lib/chat/overlay';
 import { chatErrorMessage } from '@/lib/chat/errors';
+import {
+  STOPPED_BEFORE_TEXT_HINT,
+  shouldShowSkriverSvarOnAssistantMessage,
+  shouldShowStoppedBeforeTextHint,
+} from '@/lib/chat/stemme-chat-stream-ui';
 import { buildFollowUps } from '@/lib/chat/follow-ups';
 import {
   filterChatCommands,
@@ -143,6 +148,8 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
   // same tick, so two Enter/click events could fire two identical sends and
   // duplicate the user turn. The ref blocks the second call immediately.
   const sendLockRef = useRef(false);
+  const stopPendingRef = useRef(false);
+  const [stoppedEmptyHintMessageId, setStoppedEmptyHintMessageId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
   const compact = variant === 'panel';
@@ -249,6 +256,18 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
 
   const awaitingAssistantShell =
     busy && (messages.length === 0 || messages[messages.length - 1]?.role === 'user');
+
+  useEffect(() => {
+    if (busy) return;
+    if (!stopPendingRef.current) return;
+    stopPendingRef.current = false;
+    if (!lastAssistantMessageId) return;
+    const lastAssistant = messages.find((message) => message.id === lastAssistantMessageId);
+    if (lastAssistant?.role !== 'assistant') return;
+    if (textFromMessageParts(lastAssistant.parts)) return;
+    setStoppedEmptyHintMessageId(lastAssistantMessageId);
+  }, [busy, messages, lastAssistantMessageId]);
+
   const followUps = useMemo(() => {
     if (busy || lastAssistantId === null) return [];
     const toolsUsed = messages
@@ -282,6 +301,12 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
     setConversationId(newConversationId());
     setMessages([]);
     setInput('');
+    setStoppedEmptyHintMessageId(null);
+  }
+
+  function handleStop() {
+    stopPendingRef.current = true;
+    stop();
   }
 
   function selectConversation(id: string) {
@@ -331,6 +356,7 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
   function sendText(text: string, contextSakId?: string | null) {
     const trimmed = text.trim();
     if (!trimmed || busy || sendLockRef.current) return;
+    setStoppedEmptyHintMessageId(null);
     sendLockRef.current = true;
     // A suggestion about another sak (e.g. a recent stance) carries its id as
     // structured context for this request only.
@@ -543,9 +569,11 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
                 }
                 return null;
               })}
-              {busy &&
-              message.id === lastAssistantMessageId &&
-              !textFromMessageParts(message.parts) ? (
+              {shouldShowSkriverSvarOnAssistantMessage({
+                busy,
+                isLastAssistantMessage: message.id === lastAssistantMessageId,
+                parts: message.parts,
+              }) ? (
                 <p
                   role="status"
                   className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-2 py-1 text-xs text-muted-foreground"
@@ -553,6 +581,15 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
                   <Loader2 className="size-3 animate-spin" aria-hidden />
                   Skriver svar…
                 </p>
+              ) : null}
+              {shouldShowStoppedBeforeTextHint({
+                busy,
+                messageRole: message.role,
+                messageId: message.id,
+                stoppedEmptyHintMessageId,
+                parts: message.parts,
+              }) ? (
+                <p className="text-sm text-muted-foreground">{STOPPED_BEFORE_TEXT_HINT}</p>
               ) : null}
               {!busy && textFromMessageParts(message.parts) ? (
                 <ChatMessageActions
@@ -644,7 +681,7 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
               )}
             </p>
             {busy ? (
-              <Button type="button" size="sm" variant="outline" onClick={() => stop()}>
+              <Button type="button" size="sm" variant="outline" onClick={handleStop}>
                 Stopp
               </Button>
             ) : (
