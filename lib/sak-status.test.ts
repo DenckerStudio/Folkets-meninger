@@ -3,7 +3,6 @@ import {
   getSakTreatmentLabel,
   resolveSakListStatus,
   resolveSakStatusFromSources,
-  resolveSakTreatmentStatus,
 } from './sak-status';
 
 // Stortinget status codes: 1 = ferdigbehandlet (closed), 2/3 = under behandling (pending).
@@ -21,7 +20,6 @@ assert.equal(resolveSakListStatus({ cachedStatus: 'closed', numericStatus: 2 }),
 assert.equal(resolveSakListStatus({ cachedStatus: 'closed', numericStatus: 1 }), 'closed');
 // Unknown data defaults to "Under behandling" rather than wrongly claiming "Ferdigbehandlet".
 assert.equal(resolveSakListStatus({}), 'pending');
-assert.equal(resolveSakTreatmentStatus({ numericStatus: 2 }), 'pending');
 assert.equal(getSakTreatmentLabel('closed'), 'Ferdigbehandlet');
 assert.equal(getSakTreatmentLabel('pending'), 'Under behandling');
 

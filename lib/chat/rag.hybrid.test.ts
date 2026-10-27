@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import {
-  isMissingHybridRpcError,
+  isMissingSearchChunksHybridRpcError,
+  isMissingSearchIssuesFtsRpcError,
+} from '@/lib/chat/rag-rpc-error';
+import {
   mapHybridChunkRow,
   mergeChunks,
   primaryChunksFromHybridAttempt,
@@ -13,26 +16,31 @@ import {
 
 async function main() {
   assert.equal(
-    isMissingHybridRpcError({
+    isMissingSearchIssuesFtsRpcError({
       code: 'PGRST202',
       message: 'Could not find the function public.search_issues_fts',
     }),
     true,
   );
   assert.equal(
-    isMissingHybridRpcError({ message: 'Could not find the function public.search_chunks_hybrid' }),
+    isMissingSearchChunksHybridRpcError({
+      message: 'Could not find the function public.search_chunks_hybrid',
+    }),
     true,
   );
   assert.equal(
-    isMissingHybridRpcError({ message: 'permission denied for function search_issues_fts' }),
+    isMissingSearchIssuesFtsRpcError({ message: 'permission denied for function search_issues_fts' }),
     false,
   );
   assert.equal(
-    isMissingHybridRpcError({ code: '42883', message: 'function search_issues_fts() does not exist' }),
+    isMissingSearchIssuesFtsRpcError({
+      code: '42883',
+      message: 'function search_issues_fts() does not exist',
+    }),
     true,
   );
-  assert.equal(isMissingHybridRpcError(null), false);
-  assert.equal(isMissingHybridRpcError({ message: 'timeout' }), false);
+  assert.equal(isMissingSearchIssuesFtsRpcError(null), false);
+  assert.equal(isMissingSearchIssuesFtsRpcError({ message: 'timeout' }), false);
 
   const mapped = mapHybridChunkRow({
     document_id: 'doc-1',

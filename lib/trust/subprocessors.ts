@@ -90,11 +90,5 @@ export const TRUST_THIRD_PARTY_PROVIDERS: SubprocessorRow[] = [
   },
 ];
 
-/** @deprecated Bruk TRUST_COOLIFY_STACK og TRUST_THIRD_PARTY_PROVIDERS */
-export const TRUST_SUBPROCESSORS: SubprocessorRow[] = [
-  ...TRUST_COOLIFY_STACK,
-  ...TRUST_THIRD_PARTY_PROVIDERS,
-];
-
 export const TRUST_ANALYTICS_NOTE =
   'Vi bruker ikke tredjeparts analyseverktøy (som Google Analytics). Det kan finnes tekniske serverlogger på vår egen server i Norge.';

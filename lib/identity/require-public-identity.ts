@@ -12,7 +12,4 @@ export async function userHasPublicIdentityInDb(userId: string): Promise<boolean
   return userHasPublicIdentity(data);
 }
 
-export {
-  PUBLIC_IDENTITY_ERROR,
-  FORUM_IDENTITY_ERROR,
-} from '@/lib/identity/public-identity';
+export { PUBLIC_IDENTITY_ERROR } from '@/lib/identity/public-identity';

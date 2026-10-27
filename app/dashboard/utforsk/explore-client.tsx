@@ -51,6 +51,8 @@ type UtforskSort = (typeof UTFORSK_SORT_VALUES)[number];
 const UTFORSK_DEFAULT_STATUS = 'Alle statuser';
 const UTFORSK_DEFAULT_SAK_KIND = 'Alle sakstyper';
 const UTFORSK_DEFAULT_SORT: UtforskSort = 'Nyeste først';
+/** One-time migration from pre-sort localStorage blob; removed on read. */
+const LEGACY_UTFORSK_FILTERS_STORAGE_KEY = 'folkets:utforsk:filters';
 
 function isUtforskSort(value: unknown): value is UtforskSort {
   return typeof value === 'string' && (UTFORSK_SORT_VALUES as readonly string[]).includes(value);
@@ -60,13 +62,13 @@ function isUtforskSort(value: unknown): value is UtforskSort {
 function readLegacyUtforskSort(): UtforskSort | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(PREFERENCE_KEYS.utforsk.filters);
-    localStorage.removeItem(PREFERENCE_KEYS.utforsk.filters);
+    const raw = localStorage.getItem(LEGACY_UTFORSK_FILTERS_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_UTFORSK_FILTERS_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { sortBy?: unknown };
     return isUtforskSort(parsed.sortBy) ? parsed.sortBy : null;
   } catch {
-    localStorage.removeItem(PREFERENCE_KEYS.utforsk.filters);
+    localStorage.removeItem(LEGACY_UTFORSK_FILTERS_STORAGE_KEY);
     return null;
   }
 }
@@ -74,7 +76,7 @@ function readLegacyUtforskSort(): UtforskSort | null {
 function clearDeprecatedUtforskStorage(): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.removeItem(PREFERENCE_KEYS.utforsk.filters);
+    localStorage.removeItem(LEGACY_UTFORSK_FILTERS_STORAGE_KEY);
     const sortRaw = localStorage.getItem(PREFERENCE_KEYS.utforsk.sort);
     if (sortRaw !== null) {
       const parsed = JSON.parse(sortRaw) as unknown;
