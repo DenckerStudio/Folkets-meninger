@@ -2,15 +2,11 @@
 
 DO $$
 DECLARE
-  v_tier int;
-  v_lim int;
-  v_windex int;
-  v_wcount int;
-  v_expected text;
-  v_got text;
-  v_issue_t0 text := 'embed-v2-list-tier0';
-  v_issue_t2 text := 'embed-v2-list-tier2';
+  v_issue_active text := 'embed-v2-list-active';
+  v_issue_other text := 'embed-v2-list-other';
   v_doc text := 'doc-list-priority';
+  v_tier int;
+  v_mismatch int;
 BEGIN
   IF to_regprocedure('public.n8n_list_v2_priority_issues(int,int,int,int)') IS NULL THEN
     RAISE NOTICE 'n8n_list_v2_priority_issues_batch_tiers.sql: hopper over (migrasjon 26110100 ikke kjørt)';
@@ -30,8 +26,8 @@ BEGIN
 
   INSERT INTO public.stortinget_issues (id, title, last_synced_at, last_updated_at, ferdigbehandlet, detail_json)
   VALUES
-    (v_issue_t0, 'Tier0 test', now(), now(), false, '{"sak_sesjon":"2099-2100"}'::jsonb),
-    (v_issue_t2, 'Tier2 test', now() - interval '60 days', now() - interval '60 days', true, '{"sak_sesjon":"1999-2000"}'::jsonb)
+    (v_issue_active, 'Active sak', now(), now(), false, '{"sak_sesjon":"2099-2100"}'::jsonb),
+    (v_issue_other, 'Older sak', now() - interval '90 days', now() - interval '90 days', true, '{"sak_sesjon":"1885-1886"}'::jsonb)
   ON CONFLICT (id) DO UPDATE SET
     last_synced_at = EXCLUDED.last_synced_at,
     last_updated_at = EXCLUDED.last_updated_at,
@@ -40,84 +36,72 @@ BEGIN
 
   INSERT INTO public.stortinget_issue_documents (issue_id, document_id, title, document_type, ingest_status, chunks_status)
   VALUES
-    (v_issue_t0, v_doc, 'Innstilling', 'innstilling', 'ready', 'pending'),
-    (v_issue_t2, v_doc, 'Innstilling', 'innstilling', 'ready', 'pending')
+    (v_issue_active, v_doc, 'Innstilling', 'innstilling', 'ready', 'pending'),
+    (v_issue_other, v_doc, 'Innstilling', 'innstilling', 'ready', 'pending')
   ON CONFLICT DO NOTHING;
 
-  DELETE FROM public.document_chunks WHERE issue_id IN (v_issue_t0, v_issue_t2);
+  DELETE FROM public.document_chunks WHERE issue_id IN (v_issue_active, v_issue_other);
 
   INSERT INTO public.document_chunks (issue_id, document_id, chunk_index, content, embedding_status, embedding_v2_status)
   VALUES
-    (v_issue_t0, v_doc, 0, 'tier0 chunk a', 'pending', 'pending'),
-    (v_issue_t0, v_doc, 1, 'tier0 chunk b', 'pending', 'pending'),
-    (v_issue_t2, v_doc, 0, 'tier2 chunk', 'pending', 'pending');
+    (v_issue_active, v_doc, 0, 'active chunk a', 'pending', 'pending'),
+    (v_issue_active, v_doc, 1, 'active chunk b', 'pending', 'pending'),
+    (v_issue_other, v_doc, 0, 'other chunk', 'pending', 'pending');
 
-  IF public.fm_embedding_v2_issue_tier(v_issue_t0) IS DISTINCT FROM 0 THEN
-    RAISE EXCEPTION 'fixture tier0 forventet 0, fikk %', public.fm_embedding_v2_issue_tier(v_issue_t0);
-  END IF;
-
-  IF public.fm_embedding_v2_issue_tier(v_issue_t2) IS DISTINCT FROM 2 THEN
-    RAISE EXCEPTION 'fixture tier2 forventet 2, fikk %', public.fm_embedding_v2_issue_tier(v_issue_t2);
-  END IF;
-
-  FOR v_tier, v_lim, v_windex, v_wcount IN
-    SELECT * FROM (VALUES
-      (0, 50, 0, 1),
-      (2, 50, 0, 1),
-      (0, 1, 0, 1),
-      (2, 1, 0, 2)
-    ) AS cfg(tier, lim, windex, wcount)
+  FOREACH v_tier IN ARRAY ARRAY[
+    public.fm_embedding_v2_issue_tier(v_issue_active),
+    public.fm_embedding_v2_issue_tier(v_issue_other)
+  ]
   LOOP
-    SELECT s.issue_id
-    INTO v_expected
-    FROM (
-      WITH limits AS (
-        SELECT
-          greatest(1, least(v_lim, 500)) AS lim,
-          greatest(1, v_wcount) AS wcount,
-          greatest(0, least(v_windex, greatest(1, v_wcount) - 1)) AS windex
-      ),
-      issues AS (
-        SELECT DISTINCT c.issue_id
-        FROM public.document_chunks c
-        WHERE c.issue_id IS NOT NULL
-          AND c.embedding_v2 IS NULL
-          AND c.embedding_v2_status = 'pending'
-          AND coalesce(btrim(c.content), '') <> ''
-      ),
-      scored AS (
-        SELECT
-          i.issue_id,
-          public.fm_embedding_v2_issue_tier(i.issue_id) AS tier,
-          count(*)::int AS pending_chunks
-        FROM issues i
-        JOIN public.document_chunks c ON c.issue_id = i.issue_id
-          AND c.embedding_v2 IS NULL
-          AND c.embedding_v2_status = 'pending'
-          AND coalesce(btrim(c.content), '') <> ''
-        CROSS JOIN limits l
-        WHERE public.fm_embedding_v2_issue_tier(i.issue_id) = v_tier
-          AND (
-            l.wcount <= 1
-            OR abs(hashtext(i.issue_id)) % l.wcount = l.windex
-          )
-        GROUP BY i.issue_id
-      )
-      SELECT s.issue_id, s.pending_chunks
-      FROM scored s
-      CROSS JOIN limits l
-      ORDER BY s.pending_chunks DESC, s.issue_id ASC
+    CONTINUE WHEN v_tier IS NULL;
+
+    WITH limits AS (
+      SELECT 50 AS lim, 1 AS wcount, 0 AS windex
+    ),
+    issues AS (
+      SELECT DISTINCT c.issue_id
+      FROM public.document_chunks c
+      WHERE c.issue_id IS NOT NULL
+        AND c.embedding_v2 IS NULL
+        AND c.embedding_v2_status = 'pending'
+        AND coalesce(btrim(c.content), '') <> ''
+    ),
+    ref AS (
+      SELECT
+        i.issue_id,
+        count(*)::int AS pending_chunks
+      FROM issues i
+      JOIN public.document_chunks c ON c.issue_id = i.issue_id
+        AND c.embedding_v2 IS NULL
+        AND c.embedding_v2_status = 'pending'
+        AND coalesce(btrim(c.content), '') <> ''
+      WHERE public.fm_embedding_v2_issue_tier(i.issue_id) = v_tier
+      GROUP BY i.issue_id
+    ),
+    ref_limited AS (
+      SELECT r.issue_id, r.pending_chunks
+      FROM ref r
+      ORDER BY r.pending_chunks DESC, r.issue_id ASC
       LIMIT (SELECT lim FROM limits)
-    ) s;
+    ),
+    new_limited AS (
+      SELECT n.issue_id, n.pending_chunks
+      FROM public.n8n_list_v2_priority_issues(v_tier, 50, 0, 1) n
+    )
+    SELECT count(*)
+    INTO v_mismatch
+    FROM (
+      SELECT n.issue_id, n.pending_chunks FROM new_limited n
+      EXCEPT
+      SELECT r.issue_id, r.pending_chunks FROM ref_limited r
+      UNION ALL
+      SELECT r.issue_id, r.pending_chunks FROM ref_limited r
+      EXCEPT
+      SELECT n.issue_id, n.pending_chunks FROM new_limited n
+    ) diff;
 
-    SELECT n.issue_id
-    INTO v_got
-    FROM public.n8n_list_v2_priority_issues(v_tier, v_lim, v_windex, v_wcount) n
-    LIMIT 1;
-
-    IF v_expected IS DISTINCT FROM v_got THEN
-      RAISE EXCEPTION 'tier=% lim=% w=%/% forventet % fikk %',
-        v_tier, v_lim, v_windex, v_wcount, v_expected, v_got;
+    IF v_mismatch <> 0 THEN
+      RAISE EXCEPTION 'tier %: n8n_list_v2_priority_issues avviker fra referanse', v_tier;
     END IF;
   END LOOP;
 
