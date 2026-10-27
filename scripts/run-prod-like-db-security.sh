@@ -130,16 +130,11 @@ for f in $(ls -1 supabase/migrations/202610221*.sql | sort); do
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
 done
 
-echo "Phase 5a: embedding v2 queue transactional (26110100–26110400) ..."
-for f in $(ls -1 supabase/migrations/20261026110[1-4]*.sql 2>/dev/null | sort); do
+echo "Phase 5a: embedding v2 queue transactional (26110100–26110400, 27090000, 27100000) ..."
+for f in $(ls -1 supabase/migrations/20261026110[1-4]*.sql supabase/migrations/20261027*.sql 2>/dev/null | sort); do
   echo "  -> $(basename "$f")"
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
 done
-
-echo "Phase 5c: backfill DB pressure slot fix (27090000) ..."
-if [[ -f supabase/migrations/20261027090000_n8n_backfill_db_pressure_slot_fix.sql ]]; then
-  psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261027090000_n8n_backfill_db_pressure_slot_fix.sql
-fi
 
 echo "Phase 5b: embedding v2 pending partial index (26110000 CONCURRENTLY) ..."
 if [[ -f supabase/migrations/20261026110000_document_chunks_v2_pending_issue_idx_concurrent.sql ]]; then
@@ -180,6 +175,9 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/embedding_v2_claim_leases.sq
 
 echo "Running n8n_backfill_db_pressure.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/n8n_backfill_db_pressure.sql
+
+echo "Running n8n_list_v2_priority_issues_batch_tiers.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/n8n_list_v2_priority_issues_batch_tiers.sql
 
 echo "Running security-guard.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
