@@ -79,7 +79,7 @@ async function main(): Promise<void> {
       }
       return { data: null, error: null };
     },
-  } as BackfillSupabase;
+  } as unknown as BackfillSupabase;
 
   const shared = new SharedDbPressure();
   const endpointHealth = new EndpointHealth();

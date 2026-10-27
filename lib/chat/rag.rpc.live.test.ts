@@ -30,8 +30,15 @@ assert.ok(url && url.includes('qetckokgtzbpunbzslfp'), 'Folkets Meninger URL mis
 assert.ok(anon, 'Folkets anon key missing');
 assert.equal(process.env.SUPABASE_SERVICE_ROLE_KEY, undefined);
 
+if (!url || !anon) {
+  throw new Error('Folkets Meninger Supabase env missing');
+}
+
+const supabasePublicUrl = url;
+const supabaseAnonKey = anon;
+
 async function main() {
-  const supabase = createClient(url, anon);
+  const supabase = createClient(supabasePublicUrl, supabaseAnonKey);
   const rpc = await supabase.rpc('search_stortinget_issues_for_chat', {
     p_query: 'Demo',
     p_limit: 5,
@@ -48,7 +55,7 @@ async function main() {
   });
 
   const payload = {
-    urlHost: new URL(url).host,
+    urlHost: new URL(supabasePublicUrl).host,
     usedServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
     rpcError: rpc.error?.message ?? null,
     listedIds: listed.map((issue) => issue.id),

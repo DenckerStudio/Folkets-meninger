@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { STORTINGET_BAR_LABELS } from '@/lib/alignment/sak-vedtak';
 import { parseFolkTotals, shapeVoteAlignment } from './vote-alignment';
 import type { AlignmentComparison } from '@/lib/alignment/types';
 
@@ -33,6 +34,7 @@ async function main() {
     stortingetForPercent: 60,
     stortingetAgainstPercent: 40,
     stortingetSide: 'for',
+    stortingetBarLabels: STORTINGET_BAR_LABELS.neutral,
     score: 90,
     gapPoints: 10,
     verdict: 'aligned',

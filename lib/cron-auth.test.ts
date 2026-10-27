@@ -4,7 +4,7 @@ import { verifyCronAuth } from './cron-auth-verify';
 const originalSecret = process.env.CRON_SECRET;
 
 function makeRequest(secret?: string) {
-  const headers = secret ? { 'x-cron-secret': secret } : {};
+  const headers: Record<string, string> = secret ? { 'x-cron-secret': secret } : {};
   return new Request('http://localhost/api/cron/sync-issues', { headers });
 }
 
