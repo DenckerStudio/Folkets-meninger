@@ -45,7 +45,7 @@ No listed RPC is invoked via browser `createBrowserClient` `.rpc()` — only `ge
 |----------|---------------|------|
 | Critical | 3 | 0 |
 | High | 8 | 1 |
-| Medium | 6 | 4 |
+| Medium | 9 | 2 |
 | Low | 5 | 3 |
 
 **Open high/critical:** none after H-1 (Postgres rate limits) and prod hotfix RPC revokes.
@@ -124,11 +124,11 @@ Legend: **Auth** = session required where needed; **Admin** = `requireAdmin()`; 
 | `POST /api/chat` (+ subroutes) | Stemme+ gate | — | session | — | IP + user | **OK** |
 | `POST /api/byok` | yes | — | owner | providers | middleware | **OK** |
 | `POST /api/stemme-plus/checkout` | yes | — | `user.id` | — | middleware | **OK** |
-| `POST /api/user/profile` | yes | — | `user.id` | field limits | — | **OK** (M-1: no per-route RL) |
-| `POST /api/user/political-consent` | yes | — | `user.id` | purpose enums | — | **OK** (M-1) |
+| `PATCH /api/user/profile` | yes | — | `user.id` | field limits | IP + user | **Fixed** — M-1 |
+| `POST /api/user/political-consent` | yes | — | `user.id` | purpose enums | IP + user | **Fixed** — M-1 |
 | `POST /api/user/onboarding` | yes | — | `user.id` | patch schema | — | **OK** |
-| `POST /api/auth/welcome-email` | yes | — | `user.id` | once via notifications | — | **Open M-2** — no RL |
-| `POST /api/politician/response` | yes | — | `user.id` | — | — | **Open M-3** — low traffic |
+| `POST /api/auth/welcome-email` | yes | — | `user.id` | once via notifications | IP + user (strict) | **Fixed** — M-2 |
+| `POST /api/politician/response` | yes | — | `user.id` | — | IP + user | **Fixed** — M-3 |
 | `POST /api/notifications/*` | yes | — | RLS `user_id` | — | — | **OK** |
 | `POST /api/sak/[id]/knowledge` | yes | — | `user.id` | quiz | middleware | **OK** |
 | `POST /api/sak/[id]/impact` | varies | — | — | — | middleware | **OK** |
@@ -194,9 +194,9 @@ File: `next.config.ts`.
 
 | ID | Sev | Finding | Status | File |
 |----|-----|---------|--------|------|
-| M-1 | Medium | Profile/consent POST without per-user RL (auth required) | Open | `app/api/user/profile/route.ts`, `political-consent/route.ts` |
-| M-2 | Medium | Welcome email endpoint without RL | Open | `app/api/auth/welcome-email/route.ts` |
-| M-3 | Medium | Politician response POST without RL | Open | `app/api/politician/response/route.ts` |
+| M-1 | Medium | Profile/consent POST without per-user RL (auth required) | **Fixed** | `app/api/user/profile/route.ts`, `political-consent/route.ts` |
+| M-2 | Medium | Welcome email endpoint without RL | **Fixed** | `app/api/auth/welcome-email/route.ts` |
+| M-3 | Medium | Politician response POST without RL | **Fixed** | `app/api/politician/response/route.ts` |
 | M-4 | Medium | No app-level signup rate limit (Supabase Auth only) | Open | client auth |
 | M-5 | Medium | `/api/admin/me` exposes `admin: boolean` to any logged-in user | Open | `app/api/admin/me/route.ts` |
 | L-1 | Low | CSP allows `unsafe-inline` / `unsafe-eval` for Next.js | Open | `next.config.ts` |
