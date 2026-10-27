@@ -64,6 +64,9 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/embedding_v2_claim_leases.sq
 echo "Running n8n_backfill_db_pressure.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/n8n_backfill_db_pressure.sql
 
+echo "Running system_poll_usable_embedding_gates.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/system_poll_usable_embedding_gates.sql
+
 echo "Running security-guard.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
 
