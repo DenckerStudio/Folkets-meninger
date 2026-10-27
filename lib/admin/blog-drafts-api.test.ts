@@ -25,6 +25,7 @@ const routeSrc = readFileSync(
 );
 assert.match(routeSrc, /editEnabled: isBlogDraftEditConfigured\(\)/);
 assert.match(routeSrc, /parsed\.fields/);
+assert.match(routeSrc, /draft: result\.draft/);
 
 const invalidBody = parseEditBlogDraftBody(null);
 assert.equal(invalidBody.ok, false);

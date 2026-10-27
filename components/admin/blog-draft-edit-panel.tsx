@@ -3,6 +3,7 @@
 import { useId, useRef, useState, useTransition } from 'react';
 import { BlogMarkdown } from '@/components/blog/blog-markdown';
 import { CharacterCountTextarea } from '@/components/ui/character-count-textarea';
+import type { BlogDraftEditSaved } from '@/lib/admin/blog-draft-edit';
 import {
   firstFieldErrorKey,
   mapApiFieldErrors,
@@ -10,45 +11,64 @@ import {
   type BlogDraftEditFieldErrors,
   type BlogDraftEditFieldKey,
 } from '@/lib/admin/blog-draft-edit-fields';
+import type { BlogDraftEditServerSnapshot } from '@/lib/admin/blog-draft-edit-panel-state';
 import { BLOG_EXCERPT_MAX, BLOG_TITLE_MAX } from '@/lib/blog/text-limits';
 import { cn } from '@/lib/utils';
 
-export type BlogDraftEditPanelDraft = {
-  id: string;
+export type BlogDraftEditPanelDraft = BlogDraftEditServerSnapshot;
+
+type BlogDraftEditPanelProps = {
+  draft: BlogDraftEditPanelDraft;
+  onCancel: () => void;
+  onSaved: (saved: BlogDraftEditSaved) => void;
+  onUserEdit: () => void;
+};
+
+type BodyPane = 'skriv' | 'forhandsvis';
+
+type DirtyFields = {
   title: string;
   excerpt: string;
   bodyMarkdown: string;
 };
 
-type BlogDraftEditPanelProps = {
-  draft: BlogDraftEditPanelDraft;
-  onCancel: () => void;
-  onSaved: () => void;
-};
-
-type BodyPane = 'skriv' | 'forhandsvis';
-
-const SAVE_SUCCESS_MESSAGE = 'Utkastet er lagret.';
-
-export function BlogDraftEditPanel({ draft, onCancel, onSaved }: BlogDraftEditPanelProps) {
+export function BlogDraftEditPanel({
+  draft,
+  onCancel,
+  onSaved,
+  onUserEdit,
+}: BlogDraftEditPanelProps) {
   const formId = useId();
   const titleRef = useRef<HTMLInputElement>(null);
   const excerptRef = useRef<HTMLTextAreaElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
-  const [title, setTitle] = useState(draft.title);
-  const [excerpt, setExcerpt] = useState(draft.excerpt);
-  const [bodyMarkdown, setBodyMarkdown] = useState(draft.bodyMarkdown);
+  const [dirtyFields, setDirtyFields] = useState<DirtyFields | null>(null);
   const [fieldErrors, setFieldErrors] = useState<BlogDraftEditFieldErrors>({});
   const [formError, setFormError] = useState('');
-  const [success, setSuccess] = useState('');
   const [bodyPane, setBodyPane] = useState<BodyPane>('skriv');
   const [pending, startTransition] = useTransition();
+
+  const title = dirtyFields?.title ?? draft.title;
+  const excerpt = dirtyFields?.excerpt ?? draft.excerpt;
+  const bodyMarkdown = dirtyFields?.bodyMarkdown ?? draft.bodyMarkdown;
+  const isDirty = dirtyFields !== null;
 
   const titleErrorId = `${formId}-title-error`;
   const titleCountId = `${formId}-title-count`;
   const excerptErrorId = `${formId}-excerpt-error`;
   const bodyErrorId = `${formId}-body-error`;
   const bodyCountId = `${formId}-body-count`;
+
+  const currentFields = (): DirtyFields => ({
+    title,
+    excerpt,
+    bodyMarkdown,
+  });
+
+  const markEdited = (next: DirtyFields) => {
+    onUserEdit();
+    setDirtyFields(next);
+  };
 
   const focusField = (key: BlogDraftEditFieldKey) => {
     const target =
@@ -59,7 +79,6 @@ export function BlogDraftEditPanel({ draft, onCancel, onSaved }: BlogDraftEditPa
 
   const save = () => {
     setFormError('');
-    setSuccess('');
     const validation = validateBlogDraftEditContent({ title, excerpt, bodyMarkdown });
     if (!validation.ok) {
       setFieldErrors(validation.fields);
@@ -89,6 +108,7 @@ export function BlogDraftEditPanel({ draft, onCancel, onSaved }: BlogDraftEditPa
         const data = (await res.json().catch(() => ({}))) as {
           error?: string;
           fields?: Record<string, unknown>;
+          draft?: BlogDraftEditSaved;
         };
         if (!res.ok) {
           const apiFields = mapApiFieldErrors(data.fields);
@@ -109,8 +129,18 @@ export function BlogDraftEditPanel({ draft, onCancel, onSaved }: BlogDraftEditPa
           setFormError(message);
           return;
         }
-        setSuccess(SAVE_SUCCESS_MESSAGE);
-        onSaved();
+        setDirtyFields(null);
+        if (data.draft && typeof data.draft.id === 'string') {
+          onSaved(data.draft);
+          return;
+        }
+        onSaved({
+          id: draft.id,
+          title: title.trim(),
+          excerpt: excerpt.trim(),
+          bodyMarkdown,
+          updatedAt: new Date().toISOString(),
+        });
       } catch {
         setFormError('Kunne ikke lagre endringer.');
       }
@@ -136,11 +166,6 @@ export function BlogDraftEditPanel({ draft, onCancel, onSaved }: BlogDraftEditPa
           {formError}
         </p>
       ) : null}
-      {success ? (
-        <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-400" role="status">
-          {success}
-        </p>
-      ) : null}
       <div className="mt-4 space-y-4">
         <div className="space-y-1.5">
           <label htmlFor={`${formId}-title`} className="text-sm font-medium text-foreground">
@@ -159,7 +184,9 @@ export function BlogDraftEditPanel({ draft, onCancel, onSaved }: BlogDraftEditPa
                 [fieldErrors.title ? titleErrorId : null, titleCountId].filter(Boolean).join(' ') ||
                 undefined
               }
-              onChange={(event) => setTitle(event.target.value)}
+              onChange={(event) => {
+                markEdited({ ...currentFields(), title: event.target.value });
+              }}
               className={cn(
                 'w-full rounded-xl border border-border bg-card px-3 py-2.5 pr-16 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-brand/30',
                 fieldErrors.title && 'border-destructive',
@@ -190,7 +217,9 @@ export function BlogDraftEditPanel({ draft, onCancel, onSaved }: BlogDraftEditPa
             disabled={pending}
             aria-invalid={Boolean(fieldErrors.excerpt)}
             aria-describedby={fieldErrors.excerpt ? excerptErrorId : undefined}
-            onChange={setExcerpt}
+            onChange={(value) => {
+              markEdited({ ...currentFields(), excerpt: value });
+            }}
             placeholder="Kort sammendrag som vises i lister og delinger."
           />
           {fieldErrors.excerpt ? (
@@ -203,14 +232,14 @@ export function BlogDraftEditPanel({ draft, onCancel, onSaved }: BlogDraftEditPa
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm font-medium text-foreground">Brødtekst</span>
             <div
-              className="inline-flex rounded-lg border border-border bg-card p-0.5"
+              className="inline-flex rounded-lg border border-border bg-card p-0.5 lg:hidden"
               role="group"
               aria-label="Vis brødtekst som redigering eller forhåndsvisning"
             >
               <button
                 type="button"
                 className={cn(
-                  'min-h-9 rounded-md px-3 text-xs font-medium',
+                  'min-h-11 rounded-md px-3 text-xs font-medium',
                   bodyPane === 'skriv'
                     ? 'bg-brand text-brand-foreground'
                     : 'text-muted-foreground hover:text-foreground',
@@ -223,7 +252,7 @@ export function BlogDraftEditPanel({ draft, onCancel, onSaved }: BlogDraftEditPa
               <button
                 type="button"
                 className={cn(
-                  'min-h-9 rounded-md px-3 text-xs font-medium',
+                  'min-h-11 rounded-md px-3 text-xs font-medium',
                   bodyPane === 'forhandsvis'
                     ? 'bg-brand text-brand-foreground'
                     : 'text-muted-foreground hover:text-foreground',
@@ -250,7 +279,9 @@ export function BlogDraftEditPanel({ draft, onCancel, onSaved }: BlogDraftEditPa
                       .filter(Boolean)
                       .join(' ') || undefined
                   }
-                  onChange={(event) => setBodyMarkdown(event.target.value)}
+                  onChange={(event) => {
+                    markEdited({ ...currentFields(), bodyMarkdown: event.target.value });
+                  }}
                   placeholder="Skriv innlegget i Markdown."
                   className={cn(
                     'min-h-[12rem] w-full resize-y rounded-xl border border-border bg-card px-3 py-2.5 pb-7 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-brand/30',
@@ -306,6 +337,7 @@ export function BlogDraftEditPanel({ draft, onCancel, onSaved }: BlogDraftEditPa
           Avbryt
         </button>
       </div>
+      {isDirty ? <span className="sr-only">Ulagrede endringer</span> : null}
     </section>
   );
 }

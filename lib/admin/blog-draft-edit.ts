@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { normalizeBlogExcerpt, normalizeBlogTitle } from '@/lib/blog/text-limits';
 import { getCmsBaseUrl, getCmsEditorKey } from '@/lib/cms/payload-client';
 import { payloadPatchPost } from '@/lib/cms/payload-update';
+import type { PayloadPost } from '@/lib/cms/types';
 import {
   BLOG_DRAFT_EDIT_NOT_CONFIGURED_MESSAGE,
   blogDraftEditContentSchema,
@@ -82,8 +83,37 @@ export function buildEditBlogDraftPatch(input: EditBlogDraftInput): Record<strin
   return patch;
 }
 
+export type BlogDraftEditSaved = {
+  id: string;
+  title: string;
+  excerpt: string;
+  bodyMarkdown: string;
+  updatedAt: string | null;
+};
+
+export function blogDraftEditSavedFromInput(input: EditBlogDraftInput): BlogDraftEditSaved {
+  const patch = buildEditBlogDraftPatch(input);
+  return {
+    id: input.id,
+    title: String(patch.title),
+    excerpt: String(patch.excerpt),
+    bodyMarkdown: String(patch.bodyMarkdown),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function blogDraftEditSavedFromPayloadPost(post: PayloadPost): BlogDraftEditSaved {
+  return {
+    id: String(post.id),
+    title: post.title,
+    excerpt: post.excerpt,
+    bodyMarkdown: post.bodyMarkdown ?? '',
+    updatedAt: post.updatedAt ?? null,
+  };
+}
+
 export type EditBlogDraftResult =
-  | { ok: true; id: string }
+  | { ok: true; id: string; draft: BlogDraftEditSaved }
   | { ok: false; status: number; error: string };
 
 export async function editBlogDraft(input: EditBlogDraftInput): Promise<EditBlogDraftResult> {
@@ -108,5 +138,10 @@ export async function editBlogDraft(input: EditBlogDraftInput): Promise<EditBlog
     return { ok: false, status: result.status, error };
   }
 
-  return { ok: true, id: input.id };
+  const draft =
+    result.doc != null
+      ? blogDraftEditSavedFromPayloadPost(result.doc)
+      : blogDraftEditSavedFromInput(input);
+
+  return { ok: true, id: input.id, draft };
 }

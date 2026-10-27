@@ -1,4 +1,5 @@
 import { adminBlogPostUrl } from '@/lib/blog/urls';
+import type { BlogDraftEditSaved } from '@/lib/admin/blog-draft-edit';
 import { payloadPatchPost } from '@/lib/cms/payload-update';
 import { payloadFetchList } from '@/lib/cms/payload-client';
 import type { PayloadPost } from '@/lib/cms/types';
@@ -16,6 +17,12 @@ export type BlogDraftReviewItem = {
   restoredAt: string | null;
   payloadAdminUrl: string | null;
 };
+
+/** Query flags for admin review lists — always read Payload draft versions. */
+export const BLOG_DRAFT_REVIEW_LIST_QUERY = {
+  depth: 0,
+  draft: true,
+} as const;
 
 function mapBlogDraftReviewItem(post: PayloadPost): BlogDraftReviewItem {
   return {
@@ -43,7 +50,7 @@ export async function listBlogDraftsForReview(limit = 30): Promise<BlogDraftRevi
   const data = await payloadFetchList<PayloadPost>(
     'posts',
     {
-      depth: 0,
+      ...BLOG_DRAFT_REVIEW_LIST_QUERY,
       limit,
       sort: '-updatedAt',
       ...PENDING_BLOG_DRAFT_QUERY,
@@ -60,7 +67,7 @@ export async function listExpiredBlogDraftsForReview(limit = 30): Promise<BlogDr
   const data = await payloadFetchList<PayloadPost>(
     'posts',
     {
-      depth: 0,
+      ...BLOG_DRAFT_REVIEW_LIST_QUERY,
       limit,
       sort: '-expiredAt',
       'where[_status][equals]': 'draft',
@@ -73,6 +80,30 @@ export async function listExpiredBlogDraftsForReview(limit = 30): Promise<BlogDr
   if (!data?.docs?.length) return [];
 
   return data.docs.map(mapBlogDraftReviewItem);
+}
+
+export function mergeBlogDraftReviewItemAfterEdit(
+  drafts: BlogDraftReviewItem[],
+  saved: BlogDraftEditSaved,
+): BlogDraftReviewItem[] {
+  return drafts.map((row) =>
+    row.id === saved.id
+      ? {
+          ...row,
+          title: saved.title,
+          excerpt: saved.excerpt,
+          bodyMarkdown: saved.bodyMarkdown,
+          updatedAt: saved.updatedAt ?? row.updatedAt,
+        }
+      : row,
+  );
+}
+
+export function blogDraftReviewItemForReopen(
+  drafts: BlogDraftReviewItem[],
+  draftId: string,
+): BlogDraftReviewItem | null {
+  return drafts.find((row) => row.id === draftId) ?? null;
 }
 
 export async function restoreExpiredBlogDraft(postId: string): Promise<void> {

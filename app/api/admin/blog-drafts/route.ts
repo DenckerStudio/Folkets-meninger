@@ -94,7 +94,12 @@ export async function PATCH(request: Request) {
       if (!result.ok) {
         return NextResponse.json({ error: result.error }, { status: result.status });
       }
-      return NextResponse.json({ ok: true, id: result.id, action: 'edit' });
+      return NextResponse.json({
+        ok: true,
+        id: result.id,
+        action: 'edit',
+        draft: result.draft,
+      });
     } catch (error) {
       console.error('blog-drafts edit failed', error);
       return NextResponse.json({ error: 'Kunne ikke lagre endringer.' }, { status: 500 });

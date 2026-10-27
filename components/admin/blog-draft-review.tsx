@@ -11,23 +11,28 @@ import {
   type DraftReviewQueue,
 } from '@/components/admin/draft-review-queue-toggle';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import type { BlogDraftEditSaved } from '@/lib/admin/blog-draft-edit';
 import { BLOG_DRAFT_EDIT_PANEL_DISABLED_NOTE } from '@/lib/admin/blog-draft-edit-fields';
+import {
+  BLOG_DRAFT_SAVE_SUCCESS_MESSAGE,
+  clearDraftSaveSuccess,
+  isDraftSaveSuccessVisible,
+  markDraftSaveSuccessVisible,
+  nextEditEnabledState,
+  shouldShowBlogDraftEditDisabledNote,
+} from '@/lib/admin/blog-draft-edit-panel-state';
 import { formatBlogReviewState } from '@/lib/admin/blog-review-labels';
+import {
+  blogDraftReviewItemForReopen,
+  mergeBlogDraftReviewItemAfterEdit,
+  type BlogDraftReviewItem,
+} from '@/lib/admin/blog-review';
 import { DRAFT_RESTORE_SUCCESS_MESSAGE } from '@/lib/admin/draft-expiry';
-import type { BlogDraftReviewItem } from '@/lib/admin/blog-review';
 
 type DraftsResponse = {
   drafts?: BlogDraftReviewItem[];
   cmsConfigured?: boolean;
   editEnabled?: boolean;
-};
-
-type ActiveReview = {
-  id: string;
-  title: string;
-  excerpt: string;
-  bodyMarkdown: string;
-  payloadAdminUrl: string | null;
 };
 
 function DraftListSkeleton() {
@@ -48,13 +53,17 @@ export function BlogDraftReview() {
   const [queue, setQueue] = useState<DraftReviewQueue>('pending');
   const [drafts, setDrafts] = useState<BlogDraftReviewItem[]>([]);
   const [cmsConfigured, setCmsConfigured] = useState(true);
-  const [editEnabled, setEditEnabled] = useState(false);
+  const [editEnabled, setEditEnabled] = useState<boolean | null>(null);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [active, setActive] = useState<ActiveReview | null>(null);
+  const [restoreSuccess, setRestoreSuccess] = useState('');
+  const [saveSuccessUntilByDraftId, setSaveSuccessUntilByDraftId] = useState<Record<string, number>>(
+    {},
+  );
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [initialLoad, setInitialLoad] = useState(true);
+  const [, setSaveSuccessTick] = useState(0);
 
   const loadDrafts = () => {
     startTransition(async () => {
@@ -71,7 +80,7 @@ export function BlogDraftReview() {
         }
         setDrafts(json.drafts ?? []);
         setCmsConfigured(json.cmsConfigured !== false);
-        setEditEnabled(json.editEnabled === true);
+        setEditEnabled((prev) => nextEditEnabledState(prev, json.editEnabled));
       } catch {
         setDrafts([]);
         setError('Kunne ikke laste utkast.');
@@ -86,10 +95,29 @@ export function BlogDraftReview() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when queue changes
   }, [queue]);
 
+  useEffect(() => {
+    const hasVisible = Object.values(saveSuccessUntilByDraftId).some((until) => until > Date.now());
+    if (!hasVisible) return;
+    const timer = window.setInterval(() => {
+      setSaveSuccessTick((tick) => tick + 1);
+    }, 500);
+    return () => window.clearInterval(timer);
+  }, [saveSuccessUntilByDraftId]);
+
+  const handleDraftSaved = (saved: BlogDraftEditSaved) => {
+    setDrafts((current) => mergeBlogDraftReviewItemAfterEdit(current, saved));
+    setSaveSuccessUntilByDraftId((current) => markDraftSaveSuccessVisible(current, saved.id));
+    loadDrafts();
+  };
+
+  const clearSaveSuccessForDraft = (draftId: string) => {
+    setSaveSuccessUntilByDraftId((current) => clearDraftSaveSuccess(current, draftId));
+  };
+
   const restoreDraft = (id: string) => {
     startTransition(async () => {
       setError('');
-      setSuccess('');
+      setRestoreSuccess('');
       const res = await fetch('/api/admin/blog-drafts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -100,15 +128,17 @@ export function BlogDraftReview() {
         setError(typeof data.error === 'string' ? data.error : 'Gjenoppretting feilet.');
         return;
       }
-      setSuccess(DRAFT_RESTORE_SUCCESS_MESSAGE);
+      setRestoreSuccess(DRAFT_RESTORE_SUCCESS_MESSAGE);
       setDrafts((current) => current.filter((row) => row.id !== id));
     });
   };
 
   const openEdit = (draft: BlogDraftReviewItem) => {
-    setActive(null);
+    setActiveId(null);
     setEditingId(draft.id);
   };
+
+  const activeDraft = activeId ? blogDraftReviewItemForReopen(drafts, activeId) : null;
 
   return (
     <div className="space-y-4">
@@ -125,7 +155,12 @@ export function BlogDraftReview() {
           className="py-8"
         />
       ) : null}
-      {cmsConfigured && !editEnabled ? (
+      {shouldShowBlogDraftEditDisabledNote({
+        initialLoad,
+        queue,
+        cmsConfigured,
+        editEnabled,
+      }) ? (
         <p className="text-sm text-muted-foreground" role="status">
           {BLOG_DRAFT_EDIT_PANEL_DISABLED_NOTE}
         </p>
@@ -135,9 +170,9 @@ export function BlogDraftReview() {
           {error}
         </p>
       ) : null}
-      {success ? (
+      {restoreSuccess ? (
         <p className="text-sm text-emerald-700 dark:text-emerald-400" role="status">
-          {success}
+          {restoreSuccess}
         </p>
       ) : null}
       {initialLoad ? <DraftListSkeleton /> : null}
@@ -200,13 +235,7 @@ export function BlogDraftReview() {
                       disabled={pending}
                       onClick={() => {
                         setEditingId(null);
-                        setActive({
-                          id: draft.id,
-                          title: draft.title,
-                          excerpt: draft.excerpt,
-                          bodyMarkdown: draft.bodyMarkdown,
-                          payloadAdminUrl: draft.payloadAdminUrl,
-                        });
+                        setActiveId(draft.id);
                       }}
                       className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
                     >
@@ -236,20 +265,30 @@ export function BlogDraftReview() {
                 </div>
               </div>
             </div>
+            {isDraftSaveSuccessVisible(saveSuccessUntilByDraftId, draft.id) ? (
+              <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-400" role="status">
+                {BLOG_DRAFT_SAVE_SUCCESS_MESSAGE}
+              </p>
+            ) : null}
             {editingId === draft.id ? (
               <BlogDraftEditPanel
-                key={`${draft.id}-${draft.updatedAt ?? ''}`}
+                key={draft.id}
                 draft={{
                   id: draft.id,
                   title: draft.title,
                   excerpt: draft.excerpt,
                   bodyMarkdown: draft.bodyMarkdown,
+                  updatedAt: draft.updatedAt,
                 }}
-                onCancel={() => setEditingId(null)}
-                onSaved={() => loadDrafts()}
+                onUserEdit={() => clearSaveSuccessForDraft(draft.id)}
+                onCancel={() => {
+                  clearSaveSuccessForDraft(draft.id);
+                  setEditingId(null);
+                }}
+                onSaved={handleDraftSaved}
               />
             ) : null}
-            {active?.id === draft.id ? (
+            {activeDraft?.id === draft.id ? (
               <ContentFeedbackPanel
                 key={draft.id}
                 className="mt-4"
@@ -258,10 +297,10 @@ export function BlogDraftReview() {
                 contentSubjectTitle={draft.title}
                 title="Vurder blogginnlegg"
                 description="Hva fungerte med utkastet, og hva bør justeres før publisering?"
-                onSkip={() => setActive(null)}
+                onSkip={() => setActiveId(null)}
                 onSaved={() => {
                   loadDrafts();
-                  setActive(null);
+                  setActiveId(null);
                 }}
               />
             ) : null}
