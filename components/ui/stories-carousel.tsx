@@ -17,6 +17,7 @@ import {
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { computeResume } from '@/lib/stories-carousel/resume-timing';
+import { segmentProgressPercent } from '@/lib/stories-carousel/segment-progress';
 import { Button } from '@/components/ui/button';
 
 type StoriesContextValue = {
@@ -227,15 +228,14 @@ interface StoriesHeaderProps extends HTMLAttributes<HTMLDivElement> {}
 
 const StoriesHeader = forwardRef<HTMLDivElement, StoriesHeaderProps>(
   ({ className, ...props }, ref) => {
-    const { total, currentIndex, progress, goTo, active, autoPlay } = useStories();
+    const { total, currentIndex, progress, goTo, autoPlay } = useStories();
 
     return (
       <div ref={ref} className={cn('flex gap-1 p-2', className)} {...props}>
         {Array.from({ length: total }).map((_, index) => {
           const isCurrent = index === currentIndex;
           const isViewed = index < currentIndex;
-          const isUpcoming = index > currentIndex;
-          const segmentProgress = isViewed ? 100 : isCurrent ? (autoPlay && active ? progress : 100) : 0;
+          const segmentProgress = segmentProgressPercent(index, currentIndex, progress, autoPlay);
           const segmentColor = isViewed ? 'bg-white/60' : isCurrent ? 'bg-blue-300' : 'bg-white/20';
           return (
             <div
