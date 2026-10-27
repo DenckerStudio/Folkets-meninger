@@ -3,64 +3,145 @@
   "name": "Folkets Meninger – dokument embeddings (RAG)",
   "nodes": [
     {
-      "id": "92b59060-8f37-496c-a561-440881351b2d",
-      "name": "Webhook document embeddings",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.1,
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "batch-limit",
+              "name": "batchLimit",
+              "value": "16",
+              "type": "string"
+            },
+            {
+              "id": "issue-id",
+              "name": "issueId",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "embedding-settings-node",
+      "name": "Embedding settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
-        100,
-        300
+        464,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:11434/api/embeddings",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"model\":\"nomic-embed-text:v1.5\",\"prompt\":{{ JSON.stringify($json.content) }}}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "embed-chunk-node",
+      "name": "Ollama embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        304
       ],
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const chunk = $('Expand pending chunks').item.json;\nconst response = $input.item.json;\nconst embedding = response.embedding;\nif (!Array.isArray(embedding) || embedding.length === 0) {\n  return {\n    json: {\n      ...chunk,\n      skip: true,\n      outcome: 'embed_failed',\n      reason: 'missing_embedding_vector',\n      message: 'Ollama returned no embedding; chunk left pending for /api/cron/n8n-retry',\n    },\n  };\n}\nreturn { json: { ...chunk, embedding } };"
+      },
+      "id": "map-embedding-node",
+      "name": "Map embedding vector",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1376,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const item = $input.item.json;\nif (item.skip || item.outcome === 'embed_failed' || item.outcome === 'empty_queue') {\n  return { json: item };\n}\nconst embedding = item.embedding;\nif (!Array.isArray(embedding) || embedding.length === 0) {\n  return {\n    json: {\n      ...item,\n      skip: true,\n      outcome: 'embed_failed',\n      reason: 'missing_embedding_vector',\n    },\n  };\n}\nreturn {\n  json: {\n    ...item,\n    embedding_vector: '[' + embedding.join(',') + ']',\n  },\n};"
+      },
+      "id": "prepare-update-node",
+      "name": "Prepare embedding update SQL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "rate-limit-pause-node",
+      "name": "Rate limit pause",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        304
+      ],
+      "webhookId": "c6bb0235-5772-4349-8b4e-f8b36ddfc716"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "status",
+              "name": "status",
+              "value": "embedding_batch_complete",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "batch-complete-node",
+      "name": "Batch run complete",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        912,
+        512
+      ]
+    },
+    {
       "parameters": {
         "httpMethod": "POST",
         "path": "folkets-document-embeddings",
         "responseMode": "onReceived",
         "responseData": "allEntries"
       },
-      "webhookId": "88b84810-1707-4100-95b0-3d43f6c257b7"
+      "id": "webhook-trigger-node",
+      "name": "Webhook document embeddings",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        608
+      ],
+      "webhookId": "d2700c9f-12c7-4ee4-b076-e603b8d70f57"
     },
     {
-      "id": "a154a882-7a2c-4ddc-86b9-7ecd51d600fc",
-      "name": "Has issue id?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        300,
-        300
-      ],
-      "parameters": {
-        "looseTypeValidation": true,
-        "conditions": {
-          "combinator": "and",
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "has-issue",
-              "leftValue": "={{ $json.issueId }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "89c5e2e1-5afe-4b73-be8e-154db8b7d81f",
-      "name": "Normalize webhook payload",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        500,
-        300
-      ],
       "parameters": {
         "mode": "manual",
         "assignments": {
@@ -79,17 +160,101 @@
             }
           ]
         }
-      }
+      },
+      "id": "normalize-webhook-node",
+      "name": "Normalize webhook payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        464,
+        608
+      ]
     },
     {
-      "id": "4f4131ff-c2f6-427e-9609-054e86196ff7",
-      "name": "Fetch pending chunks",
+      "parameters": {
+        "content": "## Dokument embeddings (RAG) – LEGACY nomic\n\nEtter #207: timeplanen «Every 60 minutes» er **deaktivert** (ingen global/timevis drenering av gammel nomic-backlog). v2-embeddings eies av backfill-skriptet.\n\nWebhook: `POST /webhook/folkets-document-embeddings` med `{ \"stortinget_issue_id\": \"…\" }`. Bare kall **med** issue id behandles (per sak: henter `document_chunks` med `embedding_status=pending`, Ollama `nomic-embed-text:v1.5`, lagrer i pgvector). Kall uten issue id stopper i «Has issue id?» → outcome `skipped_global_nomic_drain`.\n\nAI-sammendrag trigges ikke herfra; GP666Zq84qc19tcE (30 min) + app-ingest dekker dem.",
+        "height": 284,
+        "width": 736
+      },
+      "id": "sticky-note-node",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        80,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://supabase.heyklever.app/rest/v1/rpc/n8n_save_document_embedding",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_chunk_id: $json.id, p_embedding: $json.embedding_vector }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "save-embedding-node",
+      "name": "Save embedding",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        700,
-        300
+        1792,
+        304
       ],
+      "credentials": {},
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://supabase.heyklever.app/rest/v1/rpc/n8n_finalize_document_storage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_issue_id: $('Prepare embedding update SQL').item.json.issue_id, p_document_id: $('Prepare embedding update SQL').item.json.document_id }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "clear-document-body-node",
+      "name": "Clear document body storage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1904,
+        304
+      ],
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-node",
+      "name": "Every 60 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        240,
+        304
+      ],
+      "disabled": true
+    },
+    {
       "parameters": {
         "method": "POST",
         "url": "https://supabase.heyklever.app/rest/v1/rpc/n8n_list_pending_document_chunks",
@@ -102,33 +267,33 @@
           "timeout": 60000
         }
       },
+      "id": "c35324e4-0d90-42b3-85f0-dce1b1779529",
+      "name": "Fetch pending chunks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        816,
+        304
+      ],
       "credentials": {},
       "retryOnFail": true
     },
     {
-      "id": "116ce3e8-42cd-4151-a9b3-10a0ac9e8b3f",
-      "name": "Expand pending chunks",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        900,
-        300
-      ],
       "parameters": {
         "mode": "runOnceForAllItems",
         "language": "javaScript",
         "jsCode": "const raw = $input.first()?.json;\nlet rows = [];\nif (Array.isArray(raw)) rows = raw;\nelse if (Array.isArray(raw?.data)) rows = raw.data;\nelse if (raw && typeof raw === 'object' && (raw.id || raw.issue_id) && !raw.skip) rows = [raw];\nelse {\n  const all = $input.all().map((i) => i.json).filter(Boolean);\n  if (all.length && all.every((r) => r && (r.id || r.issue_id) && !Array.isArray(r))) rows = all;\n}\nrows = rows.filter((r) => r && (r.id || r.issue_id) && !r.skip && !r.outcome);\nif (!rows.length) return [];\nreturn rows.map((r) => ({ json: r }));"
-      }
+      },
+      "id": "54304318-8148-4272-a011-8b5cbb89247e",
+      "name": "Expand pending chunks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        304
+      ]
     },
     {
-      "id": "dde554cf-54e2-4c31-aeea-e5621e9a82e2",
-      "name": "Has pending chunk?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        1100,
-        300
-      ],
       "parameters": {
         "looseTypeValidation": true,
         "conditions": {
@@ -151,69 +316,47 @@
             }
           ]
         }
-      }
-    },
-    {
-      "id": "65ba839c-0cf0-4f6b-a752-6db09fb6a142",
-      "name": "Ollama embeddings",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1300,
-        300
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "http://127.0.0.1:11434/api/embeddings",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\"model\":\"nomic-embed-text:v1.5\",\"prompt\":{{ JSON.stringify($json.content) }}}",
-        "options": {
-          "timeout": 120000
-        }
       },
-      "retryOnFail": true,
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "12a73776-a748-4606-93f7-404cccab3384",
-      "name": "Map embedding vector",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1500,
-        300
-      ],
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "language": "javaScript",
-        "jsCode": "const chunk = $('Expand pending chunks').item.json;\nconst response = $input.item.json;\nconst embedding = response.embedding;\nif (!Array.isArray(embedding) || embedding.length === 0) {\n  return {\n    json: {\n      ...chunk,\n      skip: true,\n      outcome: 'embed_failed',\n      reason: 'missing_embedding_vector',\n      message: 'Ollama returned no embedding; chunk left pending for /api/cron/n8n-retry',\n    },\n  };\n}\nreturn { json: { ...chunk, embedding } };"
-      }
-    },
-    {
-      "id": "8a09c537-9723-44c8-99c6-a37adf57a5af",
-      "name": "Prepare embedding update SQL",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1700,
-        300
-      ],
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "language": "javaScript",
-        "jsCode": "const item = $input.item.json;\nif (item.skip || item.outcome === 'embed_failed' || item.outcome === 'empty_queue') {\n  return { json: item };\n}\nconst embedding = item.embedding;\nif (!Array.isArray(embedding) || embedding.length === 0) {\n  return {\n    json: {\n      ...item,\n      skip: true,\n      outcome: 'embed_failed',\n      reason: 'missing_embedding_vector',\n    },\n  };\n}\nreturn {\n  json: {\n    ...item,\n    embedding_vector: '[' + embedding.join(',') + ']',\n  },\n};"
-      }
-    },
-    {
-      "id": "9937f84f-5026-41ac-a511-7ad6d0ea1992",
-      "name": "Has embedding vector?",
+      "id": "3a6be551-1a77-425f-ab60-2a3b76fd75ff",
+      "name": "Has pending chunk?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1900,
-        300
-      ],
+        1232,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "outcome",
+              "name": "outcome",
+              "value": "empty_queue",
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "No pending document_chunks to embed",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "588af2bf-24a9-4c70-8ef2-8a16e46753df",
+      "name": "Log empty embedding queue",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1232,
+        512
+      ]
+    },
+    {
       "parameters": {
         "looseTypeValidation": true,
         "conditions": {
@@ -236,118 +379,17 @@
             }
           ]
         }
-      }
-    },
-    {
-      "id": "b0569597-5ce7-4af2-832c-2e87f67d5dc7",
-      "name": "Save embedding",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2100,
-        300
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://supabase.heyklever.app/rest/v1/rpc/n8n_save_document_embedding",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "supabaseApi",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ p_chunk_id: $json.id, p_embedding: $json.embedding_vector }) }}",
-        "options": {
-          "timeout": 60000
-        }
       },
-      "credentials": {},
-      "retryOnFail": true
+      "id": "b815fc16-a8b7-40ae-981c-e128d1637607",
+      "name": "Has embedding vector?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        304
+      ]
     },
     {
-      "id": "fe87975b-11b6-4b5e-8533-4c0f3b056bf9",
-      "name": "Clear document body storage",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2300,
-        300
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://supabase.heyklever.app/rest/v1/rpc/n8n_finalize_document_storage",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "supabaseApi",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ p_issue_id: $('Prepare embedding update SQL').item.json.issue_id, p_document_id: $('Prepare embedding update SQL').item.json.document_id }) }}",
-        "options": {
-          "timeout": 60000
-        }
-      },
-      "credentials": {},
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "54e3dbc9-bb19-4e24-b920-3798b714548d",
-      "name": "Collect ready issues",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2500,
-        300
-      ],
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "language": "javaScript",
-        "jsCode": "const ids = new Set();\ntry {\n  for (const item of $('Prepare embedding update SQL').all()) {\n    const issueId = String(item.json?.issue_id || '').trim();\n    if (issueId && !item.json?.skip) ids.add(issueId);\n  }\n} catch (_) {\n  for (const item of $input.all()) {\n    const issueId = String(item.json?.issue_id || '').trim();\n    if (issueId) ids.add(issueId);\n  }\n}\nif (!ids.size) return [];\nreturn [...ids].map((stortinget_issue_id) => ({ json: { stortinget_issue_id } }));"
-      }
-    },
-    {
-      "id": "ce6e229f-7a13-463d-b9fc-629589ed9e5f",
-      "name": "Rate limit pause",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        2700,
-        300
-      ],
-      "parameters": {
-        "resume": "timeInterval",
-        "amount": 2,
-        "unit": "seconds"
-      }
-    },
-    {
-      "id": "2be21920-f2ea-4cbe-b3da-c40fc8e13e6d",
-      "name": "Batch run complete",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        2900,
-        300
-      ],
-      "parameters": {
-        "mode": "manual",
-        "assignments": {
-          "assignments": [
-            {
-              "id": "status",
-              "name": "status",
-              "value": "embedding_batch_complete",
-              "type": "string"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "57b2eb4b-9266-4dfb-90f4-720a7a5dd3c0",
-      "name": "Log embed failure keep pending",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        2100,
-        450
-      ],
       "parameters": {
         "mode": "manual",
         "includeOtherFields": true,
@@ -367,97 +409,58 @@
             }
           ]
         }
-      }
-    },
-    {
-      "id": "358b7ff0-fb52-41ed-b09b-93d77aee1780",
-      "name": "Log empty embedding queue",
+      },
+      "id": "092d1673-7f6f-476f-ad1b-3265ae8675b8",
+      "name": "Log embed failure keep pending",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1300,
-        450
-      ],
-      "parameters": {
-        "mode": "manual",
-        "includeOtherFields": true,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "outcome",
-              "name": "outcome",
-              "value": "empty_queue",
-              "type": "string"
-            },
-            {
-              "id": "message",
-              "name": "message",
-              "value": "No pending document_chunks to embed",
-              "type": "string"
-            }
-          ]
-        }
-      }
+        1568,
+        512
+      ]
     },
     {
-      "id": "b1b2c032-82a0-4ead-a880-490c92b1e1af",
-      "name": "Skip global drain (no issue id)",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const ids = new Set();\ntry {\n  for (const item of $('Prepare embedding update SQL').all()) {\n    const issueId = String(item.json?.issue_id || '').trim();\n    if (issueId && !item.json?.skip) ids.add(issueId);\n  }\n} catch (_) {\n  for (const item of $input.all()) {\n    const issueId = String(item.json?.issue_id || '').trim();\n    if (issueId) ids.add(issueId);\n  }\n}\nif (!ids.size) return [];\nreturn [...ids].map((stortinget_issue_id) => ({ json: { stortinget_issue_id } }));"
+      },
+      "id": "e07d4a64-da7a-4af3-b12b-d047ce317380",
+      "name": "Collect ready issues",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        500,
-        450
-      ],
-      "parameters": {
-        "mode": "manual",
-        "includeOtherFields": true,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "outcome",
-              "name": "outcome",
-              "value": "skipped_global_nomic_drain",
-              "type": "string"
-            }
-          ]
-        }
-      }
+        2128,
+        304
+      ]
     },
     {
-      "id": "b73acdcf-166a-4113-b11f-d904603e7b89",
+      "parameters": {},
+      "id": "bfe523fb-19c4-4eb7-8f92-761dd8bfd35c",
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
       "position": [
-        100,
-        450
-      ],
-      "parameters": {}
+        240,
+        912
+      ]
     },
     {
-      "id": "24964bcf-5ff0-4605-ac28-3162c07307c5",
-      "name": "Format workflow error",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        300,
-        450
-      ],
       "parameters": {
         "mode": "runOnceForAllItems",
         "language": "javaScript",
         "jsCode": "const item = $input.first()?.json || {};\nconst workflowName = item.workflow?.name || item.workflowName || 'ukjent workflow';\nconst workflowId = item.workflow?.id || item.workflowId || '';\nconst executionId = item.execution?.id || item.executionId || '';\nconst executionUrl = item.execution?.url || (executionId ? ('https://n8n.heyklever.app/execution/' + executionId) : '');\nconst lastNode = item.lastNodeExecuted || item.node?.name || '';\nconst message = item.error?.message || item.message || 'Ukjent feil';\nconst subject = 'n8n-feil: ' + workflowName;\nconst text = [\n  'Workflow: ' + workflowName,\n  workflowId ? 'ID: ' + workflowId : null,\n  lastNode ? 'Siste node: ' + lastNode : null,\n  executionUrl ? 'Kjøring: ' + executionUrl : null,\n  '',\n  message,\n].filter(Boolean).join('\\n');\nreturn [{ json: { subject, text, meta: { workflowName, workflowId, executionId, executionUrl, lastNode } } }];"
-      }
+      },
+      "id": "24ee36c4-e978-45fa-b2c5-da2b5f6717ae",
+      "name": "Format workflow error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        912
+      ]
     },
     {
-      "id": "84cd4bca-aa2e-497b-9e74-09dc7c730bc8",
-      "name": "Error notify settings",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        500,
-        450
-      ],
       "parameters": {
         "mode": "manual",
         "includeOtherFields": true,
@@ -466,22 +469,22 @@
             {
               "id": "cron-secret",
               "name": "cronSecret",
-              "type": "string",
-              "value": ""
+              "value": "",
+              "type": "string"
             }
           ]
         }
-      }
+      },
+      "id": "12d46758-b06f-44e4-ac63-82f1b8b566e6",
+      "name": "Error notify settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        688,
+        912
+      ]
     },
     {
-      "id": "3c1f36a5-9922-45f9-94a2-d89e47ec64c9",
-      "name": "Varsle admin om feil",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        700,
-        450
-      ],
       "parameters": {
         "method": "POST",
         "url": "https://www.folkets-meninger.no/api/ops/n8n-notify",
@@ -501,10 +504,115 @@
           "timeout": 30000
         }
       },
+      "id": "999674d9-34d5-49eb-9c18-66ac9f86cee6",
+      "name": "Varsle admin om feil",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        912,
+        912
+      ],
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "looseTypeValidation": true,
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-issue",
+              "leftValue": "={{ $json.issueId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        }
+      },
+      "id": "guard-has-issue-id",
+      "name": "Has issue id?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "outcome",
+              "name": "outcome",
+              "value": "skipped_global_nomic_drain",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "skip-global-drain-node",
+      "name": "Skip global drain (no issue id)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        880,
+        720
+      ]
     }
   ],
   "connections": {
+    "Ollama embeddings": {
+      "main": [
+        [
+          {
+            "node": "Map embedding vector",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log embed failure keep pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map embedding vector": {
+      "main": [
+        [
+          {
+            "node": "Prepare embedding update SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate limit pause": {
+      "main": [
+        [
+          {
+            "node": "Batch run complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Webhook document embeddings": {
       "main": [
         [
@@ -516,29 +624,33 @@
         ]
       ]
     },
-    "Normalize webhook payload": {
+    "Save embedding": {
       "main": [
         [
           {
-            "node": "Has issue id?",
+            "node": "Clear document body storage",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Has issue id?": {
+    "Every 60 minutes": {
+      "main": [
+        [
+          {
+            "node": "Embedding settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embedding settings": {
       "main": [
         [
           {
             "node": "Fetch pending chunks",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Skip global drain (no issue id)",
             "type": "main",
             "index": 0
           }
@@ -585,28 +697,6 @@
         ]
       ]
     },
-    "Ollama embeddings": {
-      "main": [
-        [
-          {
-            "node": "Map embedding vector",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Map embedding vector": {
-      "main": [
-        [
-          {
-            "node": "Prepare embedding update SQL",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Prepare embedding update SQL": {
       "main": [
         [
@@ -636,44 +726,11 @@
         ]
       ]
     },
-    "Save embedding": {
-      "main": [
-        [
-          {
-            "node": "Clear document body storage",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Clear document body storage": {
       "main": [
         [
           {
             "node": "Collect ready issues",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Collect ready issues": {
-      "main": [
-        [
-          {
-            "node": "Rate limit pause",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Rate limit pause": {
-      "main": [
-        [
-          {
-            "node": "Batch run complete",
             "type": "main",
             "index": 0
           }
@@ -707,6 +764,46 @@
         [
           {
             "node": "Varsle admin om feil",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect ready issues": {
+      "main": [
+        [
+          {
+            "node": "Rate limit pause",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize webhook payload": {
+      "main": [
+        [
+          {
+            "node": "Has issue id?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has issue id?": {
+      "main": [
+        [
+          {
+            "node": "Fetch pending chunks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip global drain (no issue id)",
             "type": "main",
             "index": 0
           }
