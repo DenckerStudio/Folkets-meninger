@@ -1,4 +1,4 @@
--- TRANSACTIONAL (BEGIN/COMMIT). Apply after 20261026110400 (see EMBEDDING_V2_QUEUE_APPLY.md step 6).
+-- TRANSACTIONAL (BEGIN/COMMIT). Apply after 20261027090000 (see EMBEDDING_V2_QUEUE_APPLY.md step 7).
 -- Fixes prod statement_timeout on n8n_list_v2_priority_issues: tier was computed per distinct issue (~thousands).
 -- Uses set-based fm_embedding_v2_issue_tiers(text[]) (same pattern as n8n_claim_chunks_missing_v2 perf).
 --
