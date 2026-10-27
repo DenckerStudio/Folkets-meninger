@@ -56,6 +56,9 @@ should_defer() {
   if [[ "$base" == 202610261* ]]; then
     return 0
   fi
+  if [[ "$base" == 20261027* ]]; then
+    return 0
+  fi
   return 1
 }
 
@@ -133,6 +136,11 @@ for f in $(ls -1 supabase/migrations/20261026110[1-4]*.sql 2>/dev/null | sort); 
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
 done
 
+echo "Phase 5c: backfill DB pressure slot fix (27090000) ..."
+if [[ -f supabase/migrations/20261027090000_n8n_backfill_db_pressure_slot_fix.sql ]]; then
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261027090000_n8n_backfill_db_pressure_slot_fix.sql
+fi
+
 echo "Phase 5b: embedding v2 pending partial index (26110000 CONCURRENTLY) ..."
 if [[ -f supabase/migrations/20261026110000_document_chunks_v2_pending_issue_idx_concurrent.sql ]]; then
   export PGOPTIONS="${PGOPTIONS:--c lock_timeout=30s -c statement_timeout=0 -c maintenance_work_mem=256MB -c max_parallel_maintenance_workers=0}"
@@ -169,6 +177,9 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/embedding_backlog_health_exp
 
 echo "Running embedding_v2_claim_leases.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/embedding_v2_claim_leases.sql
+
+echo "Running n8n_backfill_db_pressure.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/n8n_backfill_db_pressure.sql
 
 echo "Running security-guard.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
