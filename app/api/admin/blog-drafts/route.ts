@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
+import { editBlogDraft, parseEditBlogDraftBody } from '@/lib/admin/blog-draft-edit';
 import {
   listBlogDraftsForReview,
   listExpiredBlogDraftsForReview,
@@ -44,18 +45,50 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Blogg er ikke tilgjengelig' }, { status: 503 });
   }
 
+  let body: unknown;
   try {
-    const body = await request.json();
-    const id = typeof body.id === 'string' ? body.id : null;
-    const action = body.action === 'restore' ? body.action : null;
-    if (!id || !action) {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Ugyldig JSON' }, { status: 400 });
+  }
+
+  if (!body || typeof body !== 'object') {
+    return NextResponse.json({ error: 'Ugyldig JSON-body' }, { status: 400 });
+  }
+
+  const record = body as Record<string, unknown>;
+  const action = record.action;
+
+  if (action === 'restore') {
+    const id = typeof record.id === 'string' ? record.id : null;
+    if (!id) {
       return NextResponse.json({ error: 'Mangler id eller handling' }, { status: 400 });
     }
-
-    await restoreExpiredBlogDraft(id);
-    return NextResponse.json({ ok: true, id, action });
-  } catch (error) {
-    console.error('blog-drafts restore failed', error);
-    return NextResponse.json({ error: 'Kunne ikke gjenopprette utkast' }, { status: 500 });
+    try {
+      await restoreExpiredBlogDraft(id);
+      return NextResponse.json({ ok: true, id, action });
+    } catch (error) {
+      console.error('blog-drafts restore failed', error);
+      return NextResponse.json({ error: 'Kunne ikke gjenopprette utkast' }, { status: 500 });
+    }
   }
+
+  if (action === 'edit') {
+    const parsed = parseEditBlogDraftBody(body);
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: parsed.status });
+    }
+    try {
+      const result = await editBlogDraft(parsed.input);
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: result.status });
+      }
+      return NextResponse.json({ ok: true, id: result.id, action: 'edit' });
+    } catch (error) {
+      console.error('blog-drafts edit failed', error);
+      return NextResponse.json({ error: 'Kunne ikke lagre endringer' }, { status: 500 });
+    }
+  }
+
+  return NextResponse.json({ error: 'Mangler id eller handling' }, { status: 400 });
 }
