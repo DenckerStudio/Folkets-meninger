@@ -1,5 +1,5 @@
--- Drop legacy n8n hearing upsert overloads that only accept p_payload jsonb.
--- Explicit-arg overloads (PostgREST-friendly) replace them; fm-web sync uses explicit args.
+-- Add PostgREST-friendly explicit-arg overloads for n8n hearing upserts (service_role only).
+-- Legacy (jsonb) / p_payload wrappers from 20261022102000 stay until a follow-up migration drops them.
 
 BEGIN;
 SET LOCAL lock_timeout = '5s';
@@ -198,9 +198,6 @@ GRANT EXECUTE ON FUNCTION public.n8n_upsert_stortinget_hearing(
 GRANT EXECUTE ON FUNCTION public.n8n_upsert_hearing_document(
   text, text, text, text, text, text, text, text, text
 ) TO service_role;
-
-DROP FUNCTION IF EXISTS public.n8n_upsert_stortinget_hearing(jsonb);
-DROP FUNCTION IF EXISTS public.n8n_upsert_hearing_document(jsonb);
 
 NOTIFY pgrst, 'reload schema';
 

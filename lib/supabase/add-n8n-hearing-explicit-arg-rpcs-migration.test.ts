@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 const migrationPath = join(
   process.cwd(),
-  'supabase/migrations/20261027150000_drop_n8n_hearing_p_payload_overloads.sql',
+  'supabase/migrations/20261027150000_add_n8n_hearing_explicit_arg_rpcs.sql',
 );
 const hearingsBasePath = join(
   process.cwd(),
@@ -14,23 +14,15 @@ const hearingsBasePath = join(
 const migration = readFileSync(migrationPath, 'utf8');
 const hearingsBase = readFileSync(hearingsBasePath, 'utf8');
 
-assert.match(
+assert.doesNotMatch(
   migration,
   /DROP FUNCTION IF EXISTS public\.n8n_upsert_stortinget_hearing\(jsonb\);/,
 );
-assert.match(
+assert.doesNotMatch(
   migration,
   /DROP FUNCTION IF EXISTS public\.n8n_upsert_hearing_document\(jsonb\);/,
 );
-
-assert.doesNotMatch(
-  migration,
-  /DROP FUNCTION IF EXISTS public\.n8n_upsert_stortinget_hearing\(\s*text,/,
-);
-assert.doesNotMatch(
-  migration,
-  /DROP FUNCTION IF EXISTS public\.n8n_upsert_hearing_document\(\s*text,/,
-);
+assert.doesNotMatch(migration, /DROP FUNCTION IF EXISTS public\.n8n_upsert_/);
 
 assert.match(
   migration,
@@ -47,6 +39,10 @@ assert.match(
 );
 assert.match(
   migration,
+  /REVOKE ALL ON FUNCTION public\.n8n_upsert_hearing_document\([\s\S]*?\) FROM PUBLIC, anon, authenticated;/,
+);
+assert.match(
+  migration,
   /GRANT EXECUTE ON FUNCTION public\.n8n_upsert_stortinget_hearing\([\s\S]*?\) TO service_role;/,
 );
 assert.match(
@@ -54,25 +50,14 @@ assert.match(
   /GRANT EXECUTE ON FUNCTION public\.n8n_upsert_hearing_document\([\s\S]*?\) TO service_role;/,
 );
 
+assert.doesNotMatch(migration, /GRANT EXECUTE ON FUNCTION public\.n8n_upsert_[\s\S]*? TO anon;/);
 assert.doesNotMatch(
   migration,
-  /GRANT EXECUTE ON FUNCTION public\.n8n_upsert_stortinget_hearing\(jsonb\)/,
+  /GRANT EXECUTE ON FUNCTION public\.n8n_upsert_[\s\S]*? TO authenticated;/,
 );
-assert.doesNotMatch(
-  migration,
-  /GRANT EXECUTE ON FUNCTION public\.n8n_upsert_hearing_document\(jsonb\)/,
-);
-
-const dropJsonbAt = migration.indexOf('DROP FUNCTION IF EXISTS public.n8n_upsert_stortinget_hearing(jsonb)');
-const createExplicitAt = migration.indexOf(
-  'CREATE OR REPLACE FUNCTION public.n8n_upsert_stortinget_hearing(\n  p_id text',
-);
-assert.ok(
-  createExplicitAt >= 0 && dropJsonbAt > createExplicitAt,
-  'must CREATE explicit overloads before DROP jsonb wrappers',
-);
+assert.doesNotMatch(migration, /GRANT EXECUTE ON FUNCTION public\.n8n_upsert_[\s\S]*? TO PUBLIC;/);
 
 assert.match(hearingsBase, /CREATE OR REPLACE FUNCTION public\.n8n_upsert_stortinget_hearing\(p_payload jsonb\)/);
 assert.match(hearingsBase, /CREATE OR REPLACE FUNCTION public\.n8n_upsert_hearing_document\(p_payload jsonb\)/);
 
-console.log('lib/supabase/drop-n8n-hearing-p-payload-migration.test.ts: ok');
+console.log('lib/supabase/add-n8n-hearing-explicit-arg-rpcs-migration.test.ts: ok');
