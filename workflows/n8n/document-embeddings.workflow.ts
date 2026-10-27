@@ -1,12 +1,4 @@
-import {
-  workflow,
-  node,
-  trigger,
-  sticky,
-  newCredential,
-  expr,
-  ifElse,
-} from '@n8n/workflow-sdk';
+import { workflow, node, trigger, newCredential, expr, ifElse } from '@n8n/workflow-sdk';
 import {
   FOLKETS_OLLAMA_EMBEDDINGS_URL,
   FOLKETS_OLLAMA_EMBED_MODEL,
@@ -14,8 +6,8 @@ import {
   rpcUrl,
 } from './n8n-supabase.shared';
 import { EXPAND_OR_EMPTY_JS } from './n8n-pipeline.shared';
+/** Error Trigger chain posts to /api/ops/n8n-notify via createInWorkflowErrorNotify. */
 import { createInWorkflowErrorNotify } from './in-workflow-error-notify';
-import { DOCUMENT_CHUNKING_SPEC } from './document-chunking.shared';
 
 const fetchPendingChunks = node({
   type: 'n8n-nodes-base.httpRequest',
@@ -99,7 +91,7 @@ const embedChunk = node({
   version: 4.2,
   config: {
     name: 'Ollama embeddings',
-    onError: 'continueRegularOutput',
+    onError: 'continueErrorOutput',
     retryOnFail: true,
     maxTries: 3,
     waitBetweenTries: 3000,
@@ -366,6 +358,7 @@ const webhookTrigger = trigger({
   version: 2.1,
   config: {
     name: 'Webhook document embeddings',
+    disabled: false,
     parameters: {
       httpMethod: 'POST',
       path: 'folkets-document-embeddings',
@@ -380,7 +373,6 @@ const hasIssueId = ifElse({
   version: 2.2,
   config: {
     name: 'Has issue id?',
-    id: 'guard-has-issue-id',
     parameters: {
       looseTypeValidation: true,
       conditions: {
@@ -445,13 +437,57 @@ const normalizeWebhook = node({
   output: [{ batchLimit: '12', issueId: '200329' }],
 });
 
-const inWorkflowError = createInWorkflowErrorNotify('folkets-document-embeddings');
+const embeddingSettings = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Embedding settings',
+    parameters: {
+      mode: 'manual',
+      includeOtherFields: true,
+      assignments: {
+        assignments: [
+          { id: 'batch-limit', name: 'batchLimit', value: '16', type: 'string' },
+          { id: 'issue-id', name: 'issueId', value: '', type: 'string' },
+        ],
+      },
+      options: {},
+    },
+  },
+  output: [{ batchLimit: '16', issueId: '' }],
+});
 
-sticky(
-  `## Dokument embeddings (legacy nomic)\n\nKun **per sak** via webhook med \`stortinget_issue_id\` → Normalize → «Has issue id?» (\`$json.issueId\`, IkedEm). Ingen timeplan. Global nomic-drenering er stoppet — \`embedding_v2\` eies av \`scripts/backfill-embedding-v2.ts\`. Ingen AI-sammendrag per batch. Ollama-feil: chunk pending. Error Trigger → /api/ops/n8n-notify.\n\n${DOCUMENT_CHUNKING_SPEC}`,
-  [webhookTrigger],
-  { color: 5 },
-);
+const scheduleTrigger = trigger({
+  type: 'n8n-nodes-base.scheduleTrigger',
+  version: 1.3,
+  config: {
+    name: 'Every 60 minutes',
+    disabled: true,
+    parameters: {
+      rule: {
+        interval: [{ field: 'hours', hoursInterval: 1 }],
+      },
+    },
+  },
+  output: [{}],
+});
+
+const prodCanvasNote = node({
+  type: 'n8n-nodes-base.stickyNote',
+  version: 1,
+  config: {
+    name: 'Note',
+    position: [80, -240],
+    parameters: {
+      content:
+        '## Dokument embeddings (RAG) – LEGACY nomic\n\nEtter #207: timeplanen «Every 60 minutes» er **deaktivert** (ingen global/timevis drenering av gammel nomic-backlog). v2-embeddings eies av backfill-skriptet.\n\nWebhook: `POST /webhook/folkets-document-embeddings` med `{ "stortinget_issue_id": "…" }`. Bare kall **med** issue id behandles (per sak: henter `document_chunks` med `embedding_status=pending`, Ollama `nomic-embed-text:v1.5`, lagrer i pgvector). Kall uten issue id stopper i «Has issue id?» → outcome `skipped_global_nomic_drain`.\n\nAI-sammendrag trigges ikke herfra; GP666Zq84qc19tcE (30 min) + app-ingest dekker dem.',
+      height: 284,
+      width: 736,
+    },
+  },
+});
+
+const inWorkflowError = createInWorkflowErrorNotify('folkets-document-embeddings');
 
 const savedEmbeddingPath = saveEmbedding
   .to(clearDocumentBody)
@@ -459,15 +495,19 @@ const savedEmbeddingPath = saveEmbedding
   .to(rateLimitPause)
   .to(batchRunComplete);
 
+const embedChunkWithFailureBranch = embedChunk.onError(logEmbedFailure);
+
 const embeddingPipeline = fetchPendingChunks.to(expandPendingChunks).to(
   hasPendingChunk
     .onTrue(
-      embedChunk.to(mapEmbedding).to(prepareEmbeddingUpdate).to(
+      embedChunkWithFailureBranch.to(mapEmbedding).to(prepareEmbeddingUpdate).to(
         hasEmbeddingVector.onTrue(savedEmbeddingPath).onFalse(logEmbedFailure),
       ),
     )
     .onFalse(logEmptyEmbeddingQueue),
 );
+
+scheduleTrigger.to(embeddingSettings).to(fetchPendingChunks);
 
 const webhookGatedPipeline = normalizeWebhook.to(
   hasIssueId.onTrue(embeddingPipeline).onFalse(skipGlobalDrain),
@@ -479,5 +519,7 @@ export default workflow(
 )
   .add(webhookTrigger)
   .to(webhookGatedPipeline)
+  .add(scheduleTrigger)
+  .add(prodCanvasNote)
   .add(inWorkflowError.errorTrigger)
   .to(inWorkflowError.formatError.to(inWorkflowError.notifySettings).to(inWorkflowError.notifyAdmin));

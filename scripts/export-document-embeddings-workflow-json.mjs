@@ -13,7 +13,10 @@ const out =
 const mod = await import(
   pathToFileURL(path.join(root, 'workflows/n8n/document-embeddings.workflow.ts')).href
 );
+const { serializeDocumentEmbeddingsJson } = await import(
+  pathToFileURL(path.join(root, 'workflows/n8n/canonicalize-document-embeddings-json.ts')).href
+);
 const json = mod.default.toJSON();
 fs.mkdirSync(path.dirname(out), { recursive: true });
-fs.writeFileSync(out, JSON.stringify(json, null, 2));
+fs.writeFileSync(out, serializeDocumentEmbeddingsJson(json));
 console.log(JSON.stringify({ ok: true, out, nodeCount: json.nodes?.length, name: json.name }));
