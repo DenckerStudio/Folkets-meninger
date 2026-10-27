@@ -188,6 +188,43 @@ npx tsx scripts/backfill-embedding-v2.ts \
 **Stopp trygt:** `touch` stop-filen (coordinator frigir leases), eller `SIGINT`/`SIGTERM` (frigir via
 `n8n_release_embedding_v2_claims`). `--dry-run` claimer og frigir uten `save_embeddings_v2`.
 
+#### Docker restart policy (ops)
+
+When the backfill runs in a long-lived container, use **`--restart on-failure`** on `docker run` — not
+`--restart unless-stopped` and not `always`.
+
+If a **`--stop-file`** path is configured and that file exists, the script exits cleanly with code **0**
+after releasing leases (`[backfill-v2] stop-file funnet — avslutter.`). With **`unless-stopped`**, Docker
+restarts the container regardless of exit code, which causes an endless “stop-file found, exiting” loop
+until you **`docker stop`** the container (observed 2026-10-27). With **`on-failure`**, a clean stop
+stays stopped; crashes (non-zero exit) still auto-restart.
+
+**Caveat:** a container that exited **0** under **`on-failure`** does not come back after a host reboot —
+start it manually.
+
+**Fix an already-running container** (no recreate required):
+
+```bash
+docker update --restart on-failure <BACKFILL_CONTAINER>
+```
+
+**Example run:**
+
+```bash
+docker run -d --name <BACKFILL_CONTAINER> --restart on-failure \
+  --env-file <ENV_FILE> \
+  -v /data:/data \
+  <IMAGE> \
+  npx tsx scripts/backfill-embedding-v2.ts \
+    --schedule '22-07:full,07-22:throttle' \
+    --stop-file /data/backfill-v2.stop
+```
+
+**Stop:** `touch` the path passed to **`--stop-file`** (e.g. `/data/backfill-v2.stop`). Wait for exit **0**.
+
+**Start again:** remove the stop file (`rm` that path), then `docker start <BACKFILL_CONTAINER>` (or
+re-run `docker run` with the same flags).
+
 Focused unit coverage for recently fragile source parsers/status logic lives in
 `lib/sak-status.test.ts` and `lib/stortinget-horinger.test.ts`; both run through
 `npm run test:unit`.
