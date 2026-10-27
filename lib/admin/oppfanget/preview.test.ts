@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { isOppfangetMockPreviewAllowed } from '@/lib/admin/oppfanget/preview';
+import { setNodeEnvForTest } from '@/lib/test/env-node-env';
 
 const originalNodeEnv = process.env.NODE_ENV;
 const originalVercelEnv = process.env.VERCEL_ENV;
 
 function withEnv(nodeEnv: string, vercelEnv: string | undefined, fn: () => void) {
-  process.env.NODE_ENV = nodeEnv;
+  setNodeEnvForTest(nodeEnv);
   if (vercelEnv === undefined) {
     delete process.env.VERCEL_ENV;
   } else {
@@ -14,7 +15,7 @@ function withEnv(nodeEnv: string, vercelEnv: string | undefined, fn: () => void)
   try {
     fn();
   } finally {
-    process.env.NODE_ENV = originalNodeEnv;
+    setNodeEnvForTest(originalNodeEnv ?? 'test');
     if (originalVercelEnv === undefined) {
       delete process.env.VERCEL_ENV;
     } else {

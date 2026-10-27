@@ -19,7 +19,7 @@ const parsed = parseOpsNotifyPayload({
 assert.ok(!('error' in parsed));
 if (!('error' in parsed)) {
   assert.equal(parsed.kind, 'hearing');
-  assert.equal(parsed.meta.sakId, '200329');
+  assert.equal(parsed.meta?.sakId, '200329');
 }
 
 const health = normalizePipelineHealth({

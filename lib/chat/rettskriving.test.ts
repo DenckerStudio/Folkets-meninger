@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import type { DecryptedByokCredential } from '@/lib/byok/service';
-import { RETTSSKRIVING_INSTRUCTION } from '@/lib/chat/actions';
+import { RETTSSKRIVING_INSTRUCTION, type SpellingContext } from '@/lib/chat/actions';
+import type { ByokOutboundAccess } from '@/lib/byok/url-guard';
+import type { RettsskrivingCorrectFn } from '@/lib/chat/rettskriving';
 import {
   RETTSSKRIVING_PROVIDER_ERROR,
   resolveRettsskrivingResult,
@@ -34,11 +36,11 @@ const fakeCredential: DecryptedByokCredential = {
 
 async function main() {
   let correctCalls = 0;
-  const inject = async (_input: {
+  const inject: RettsskrivingCorrectFn = async (_input: {
     draft: string;
-    context: 'diskusjon';
+    context: SpellingContext;
     credential: DecryptedByokCredential;
-    outbound: { isAdmin: boolean };
+    outbound: ByokOutboundAccess;
   }) => {
     correctCalls += 1;
     return {

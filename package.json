@@ -11,6 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:e2e": "playwright test",
     "env:test": "node scripts/use-test-env.mjs",
     "vercel:env:supabase": "node scripts/sync-vercel-supabase-env.mjs",

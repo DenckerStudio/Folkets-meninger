@@ -29,8 +29,15 @@ assert.ok(url && url.includes('qetckokgtzbpunbzslfp'), 'Folkets Meninger URL mis
 assert.ok(anon, 'Folkets anon key missing');
 assert.equal(process.env.SUPABASE_SERVICE_ROLE_KEY, undefined);
 
+if (!url || !anon) {
+  throw new Error('Folkets Meninger Supabase env missing');
+}
+
+const supabasePublicUrl = url;
+const supabaseAnonKey = anon;
+
 async function main() {
-  const supabase = createClient(url, anon);
+  const supabase = createClient(supabasePublicUrl, supabaseAnonKey);
   const [creds, secretCols, tier, customer, userList] = await Promise.all([
     supabase.from('user_llm_credentials').select('user_id, key_last4').limit(1),
     supabase.from('user_llm_credentials').select('ciphertext_b64').limit(1),
@@ -40,7 +47,7 @@ async function main() {
   ]);
 
   const payload = {
-    urlHost: new URL(url).host,
+    urlHost: new URL(supabasePublicUrl).host,
     usedServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
     credentialsError: creds.error?.message ?? null,
     secretError: secretCols.error?.message ?? null,

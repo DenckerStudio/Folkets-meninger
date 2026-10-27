@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
+import { getServiceSupabase } from '@/lib/supabase';
 import {
   buildAiSummaryFromDbRow,
   isMissingForslagColumnError,
   readAiSummaryFromDb,
   resolveAiSummaryForApi,
 } from './service';
+
+type IssueAiSummarySelectClient = Pick<ReturnType<typeof getServiceSupabase>, 'from'>;
 
 const baseV2Row = {
   narrative: 'Saken gjelder ti tiltak for å forebygge voldtekt.',
@@ -132,7 +135,7 @@ async function main() {
         { data: v2Row, error: null },
       ],
       retryStats,
-    ),
+    ) as unknown as IssueAiSummarySelectClient,
   );
   assert.equal(retryWithoutForslag.status, 'ok');
   assert.equal(retryWithoutForslag.status === 'ok' ? retryWithoutForslag.summary?.version : -1, 2);
@@ -141,7 +144,7 @@ async function main() {
   const deniedStats = { selectCalls: 0 };
   const readFailed = await readAiSummaryFromDb(
     '42',
-    issueSummaryMock([{ data: null, error: { code: '42501' } }], deniedStats),
+    issueSummaryMock([{ data: null, error: { code: '42501' } }], deniedStats) as unknown as IssueAiSummarySelectClient,
   );
   assert.equal(readFailed.status, 'read_failed');
   assert.equal(deniedStats.selectCalls, 1);
