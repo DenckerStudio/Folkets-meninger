@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { applyPollStatusViaRpc } from '@/lib/polls/service';
 import { isPostgrestMissingRpcError } from '@/lib/polls/rpc-missing';
 
@@ -83,7 +84,12 @@ const service = {
 };
 
 async function main() {
-  const publishedId = await applyPollStatusViaRpc(pollId, 'publish', service);
+  type PollStatusServiceClient = Pick<SupabaseClient, 'rpc' | 'from'>;
+  const publishedId = await applyPollStatusViaRpc(
+    pollId,
+    'publish',
+    service as unknown as PollStatusServiceClient,
+  );
   assert.equal(publishedId, pollId);
   assert.equal(rpcCalls, 1);
   assert.equal(updateCalls, 1);

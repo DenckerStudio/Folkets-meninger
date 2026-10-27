@@ -17,7 +17,8 @@ function makeRagClient(handlers: {
   maybeSingle: (table: string) => QueryResult;
   list?: (table: string) => QueryResult;
 }): ChatRagClient {
-  return {
+  const client = {
+    rpc: async () => ({ data: null, error: null }),
     from(table: string) {
       const chain = {
         select: () => chain,
@@ -33,6 +34,7 @@ function makeRagClient(handlers: {
       return chain as unknown as ReturnType<ChatRagClient['from']>;
     },
   };
+  return client as unknown as ChatRagClient;
 }
 
 assert.equal(isSpellingContext('diskusjon'), true);

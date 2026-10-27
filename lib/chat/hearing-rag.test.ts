@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import type { StortingetHoring } from '@/lib/stortinget-horinger';
+import type { ChatRagClient } from '@/lib/chat/rag';
 import {
   hearingChunkDocumentLabel,
   hearingMetaFromStortingetExport,
@@ -65,7 +66,7 @@ const stubClient = {
       eq: async () => ({ count: 0, error: null }),
     }),
   }),
-};
+} as unknown as ChatRagClient;
 
 void (async () => {
   const short = await searchHearingDocuments({ query: 'x', hearingId: '10005933', client: stubClient });

@@ -104,7 +104,7 @@ async function main(): Promise<void> {
       }
       return { data: null, error: null };
     },
-  } as BackfillSupabase;
+  } as unknown as BackfillSupabase;
 
   await releaseAllWorkerClaims(supabase, ['a@host', 'b@host']);
   assert.equal(released, 2);

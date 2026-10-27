@@ -148,11 +148,6 @@ export function getHoringInnspillDeadline(hearing: StortingetHoring): Date | nul
   return parseStortingetDate(hearing.innspillsfrist) ?? parseStortingetDate(hearing.anmodningsfrist_dato_tid);
 }
 
-/** @deprecated Use getHoringInnspillDeadline */
-export function getHoringDeadline(hearing: StortingetHoring): Date | null {
-  return getHoringInnspillDeadline(hearing);
-}
-
 export function getHoringApplicationDeadline(hearing: StortingetHoring): Date | null {
   return parseStortingetDate(hearing.soknadfrist_dato);
 }

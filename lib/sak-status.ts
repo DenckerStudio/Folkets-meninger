@@ -59,15 +59,6 @@ export function resolveSakStatusFromSources(input: {
   });
 }
 
-/** @deprecated Use resolveSakListStatus */
-export function resolveSakTreatmentStatus(input: {
-  ferdigbehandlet?: boolean | null;
-  numericStatus?: number | null;
-  cachedStatus?: string | null;
-}): SakTreatmentStatus {
-  return resolveSakListStatus(input);
-}
-
 export function getSakTreatmentLabel(status: SakTreatmentStatus): string {
   return status === 'closed' ? 'Ferdigbehandlet' : 'Under behandling';
 }

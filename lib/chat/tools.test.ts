@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { mockToolExecuteOptions, unwrapToolExecuteResult } from '@/lib/test/tool-execute';
 import { createChatTools } from './tools';
 import { collectPollResults, shapeChatPollResults } from './poll-tools';
 import {
@@ -206,6 +207,7 @@ async function main() {
     opensAt: null,
     closesAt: null,
     createdAt: '2099-01-01T00:00:00Z',
+    updatedAt: '2099-01-01T00:00:00Z',
     generationMetadata: {},
   };
   const belowK = shapeChatPollResults({
@@ -242,18 +244,20 @@ async function main() {
   const noPoll = await collectPollResults({ resolveIssueId: async () => null });
   assert.equal(noPoll.found, false);
 
-  const spelling = await tools.helpRettsskriving.execute(
-    {
-      draft: 'Stortinget bør vurdere forslaget om klima.',
-      context: 'diskusjon',
-    },
-    { toolCallId: 't1', messages: [], abortSignal: undefined as never },
+  const spelling = await unwrapToolExecuteResult(
+    await tools.helpRettsskriving.execute(
+      {
+        draft: 'Stortinget bør vurdere forslaget om klima.',
+        context: 'diskusjon',
+      },
+      mockToolExecuteOptions('t1'),
+    ),
   );
 
   assert.equal(spelling.original, 'Stortinget bør vurdere forslaget om klima.');
   assert.equal(spelling.context, 'diskusjon');
-  assert.equal(spelling.mode, 'instruction');
-  assert.equal(spelling.corrected, null);
+  assert.equal('mode' in spelling ? spelling.mode : 'instruction', 'instruction');
+  assert.equal('corrected' in spelling ? spelling.corrected : null, null);
   assert.match(spelling.instruction, /rettskriving|stavemåte|grammatikk/i);
   assert.doesNotMatch(spelling.instruction, /generer et ferdig innlegg som om det var publisert/i);
 
