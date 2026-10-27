@@ -57,6 +57,11 @@ assert.match(panelSrc, /lg:hidden/);
 assert.match(panelSrc, /min-h-11/);
 assert.doesNotMatch(panelSrc, /setSuccess\(/);
 assert.match(panelSrc, /aria-live="polite"/);
+assert.match(panelSrc, /isDirty \? 'Ulagrede endringer'/);
+
+const globalsCss = readFileSync(join(process.cwd(), 'app/globals.css'), 'utf8');
+assert.match(globalsCss, /--destructive-foreground:/);
+assert.match(globalsCss, /--color-destructive-foreground:/);
 assert.match(panelSrc, /Forkaste endringene/);
 assert.match(reviewUiSrc, /Åpne i Payload/);
 

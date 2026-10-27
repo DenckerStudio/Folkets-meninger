@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState, useTransition } from 'react';
+import { useEffect, useId, useRef, useState, useTransition } from 'react';
 import { BlogMarkdown } from '@/components/blog/blog-markdown';
 import { CharacterCountTextarea } from '@/components/ui/character-count-textarea';
 import type { BlogDraftEditSaved } from '@/lib/admin/blog-draft-edit';
@@ -42,6 +42,8 @@ export function BlogDraftEditPanel({
   const titleRef = useRef<HTMLInputElement>(null);
   const excerptRef = useRef<HTMLTextAreaElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const continueEditRef = useRef<HTMLButtonElement>(null);
   const [dirtyFields, setDirtyFields] = useState<DirtyFields | null>(null);
   const [fieldErrors, setFieldErrors] = useState<BlogDraftEditFieldErrors>({});
   const [formError, setFormError] = useState('');
@@ -158,6 +160,20 @@ export function BlogDraftEditPanel({
     }
     onCancel();
   };
+
+  const closeDiscardConfirm = (focusCancel: boolean) => {
+    setDiscardConfirmOpen(false);
+    if (focusCancel) {
+      requestAnimationFrame(() => {
+        cancelButtonRef.current?.focus();
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!discardConfirmOpen) return;
+    continueEditRef.current?.focus();
+  }, [discardConfirmOpen]);
 
   const titleTrimmedLength = title.trim().length;
   const bodyTrimmedLength = bodyMarkdown.trim().length;
@@ -351,9 +367,10 @@ export function BlogDraftEditPanel({
               Forkast
             </button>
             <button
+              ref={continueEditRef}
               type="button"
               disabled={pending}
-              onClick={() => setDiscardConfirmOpen(false)}
+              onClick={() => closeDiscardConfirm(true)}
               className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
             >
               Fortsett å redigere
@@ -371,6 +388,7 @@ export function BlogDraftEditPanel({
             {pending ? 'Lagrer …' : 'Lagre utkast'}
           </button>
           <button
+            ref={cancelButtonRef}
             type="button"
             disabled={pending}
             onClick={handleCancelClick}
@@ -380,11 +398,9 @@ export function BlogDraftEditPanel({
           </button>
         </div>
       )}
-      {isDirty ? (
-        <p className="sr-only" aria-live="polite">
-          Ulagrede endringer
-        </p>
-      ) : null}
+      <p className="sr-only" aria-live="polite">
+        {isDirty ? 'Ulagrede endringer' : ''}
+      </p>
     </section>
   );
 }
