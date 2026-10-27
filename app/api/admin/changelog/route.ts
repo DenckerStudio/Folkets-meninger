@@ -5,6 +5,7 @@ import {
   listAppChangelogEntries,
   updateAppChangelogEntry,
 } from '@/lib/admin/app-future';
+import { logPostgrestError } from '@/lib/admin/postgrest-error';
 import { requireAdmin } from '@/lib/admin/gate';
 import { validateChangelogInput, validateChangelogPatch } from '@/lib/appens-fremtid/validate';
 
@@ -20,7 +21,7 @@ export async function GET() {
     const entries = await listAppChangelogEntries();
     return NextResponse.json({ entries });
   } catch (error) {
-    console.error('[admin/changelog] list failed', error);
+    logPostgrestError('[admin/changelog] list failed', error);
     return NextResponse.json({ error: 'Kunne ikke laste endringsloggen.' }, { status: 500 });
   }
 }
