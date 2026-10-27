@@ -16,6 +16,7 @@ import {
 } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { computeResume } from '@/lib/stories-carousel/resume-timing';
 import { Button } from '@/components/ui/button';
 
 type StoriesContextValue = {
@@ -157,11 +158,26 @@ const Stories = forwardRef<HTMLDivElement, StoriesProps>(
       clearTimers();
       if (!autoPlay || !active || total === 0) return;
 
-      const startTime = Date.now();
-      lastProgressRef.current = progress;
+      const indexChanged = prevIndexRef.current !== currentIndex;
+      prevIndexRef.current = currentIndex;
+
+      const progressBasis = indexChanged ? 0 : lastProgressRef.current;
+      if (indexChanged) {
+        lastProgressRef.current = 0;
+      }
+
+      const now = Date.now();
+      const { startTimeMs, remainingMs } = computeResume(progressBasis, autoPlayDuration, now);
+
+      if (remainingMs <= 0) {
+        timerRef.current = setTimeout(() => {
+          next();
+        }, 0);
+        return clearTimers;
+      }
 
       progressTimerRef.current = setInterval(() => {
-        const elapsed = Date.now() - startTime;
+        const elapsed = Date.now() - startTimeMs;
         const p = Math.min(100, (elapsed / autoPlayDuration) * 100);
         setProgress(p);
         lastProgressRef.current = p;
@@ -169,7 +185,7 @@ const Stories = forwardRef<HTMLDivElement, StoriesProps>(
 
       timerRef.current = setTimeout(() => {
         next();
-      }, autoPlayDuration);
+      }, remainingMs);
 
       return clearTimers;
     }, [active, autoPlay, autoPlayDuration, clearTimers, currentIndex, next, total]);
