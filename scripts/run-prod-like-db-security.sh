@@ -53,7 +53,7 @@ should_defer() {
   if [[ "$base" == 202610221* ]]; then
     return 0
   fi
-  if [[ "$base" == 202610261* ]]; then
+  if [[ "$base" == 202610261* ]] || [[ "$base" == 202610271* ]]; then
     return 0
   fi
   return 1
