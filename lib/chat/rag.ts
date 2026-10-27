@@ -34,7 +34,6 @@ import {
 import { getChatRagRpcClient } from '@/lib/chat/rag-rpc-client';
 
 export {
-  isMissingHybridRpcError,
   isMissingSearchChunksHybridRpcError,
   isMissingSearchIssuesFtsRpcError,
 } from '@/lib/chat/rag-rpc-error';

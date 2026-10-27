@@ -39,6 +39,3 @@ export function authUserHasPublicIdentity(user: User): boolean {
   };
   return userHasPublicIdentity(fields);
 }
-
-/** @deprecated Use authUserHasPublicIdentity */
-export const authUserHasForumIdentity = authUserHasPublicIdentity;

@@ -76,9 +76,6 @@ export function resolveAnswerLlmConfig(): {
   };
 }
 
-/** @deprecated Use `buildEvalRagAnswerPrompt` from `@/lib/chat/grounded-answer`. */
-export const buildRagAnswerPrompt = buildEvalRagAnswerPrompt;
-
 function normalizeWs(text: string): string {
   return text.replace(/\s+/g, ' ').trim().toLowerCase();
 }

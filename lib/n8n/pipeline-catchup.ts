@@ -104,10 +104,3 @@ export async function preparePipelineCatchup(): Promise<{
   };
 }
 
-/** @deprecated Prefer preparePipelineCatchup + runEmbeddingCatchupWebhooks (admin route uses after()). */
-export async function triggerPipelineCatchup(): Promise<PipelineCatchupResult> {
-  const { result, embeddingIssueIds } = await preparePipelineCatchup();
-  await runEmbeddingCatchupWebhooks(embeddingIssueIds);
-  return result;
-}
-

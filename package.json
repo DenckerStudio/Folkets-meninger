@@ -14,7 +14,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:e2e": "playwright test",
     "env:test": "node scripts/use-test-env.mjs",
-    "vercel:env:supabase": "node scripts/sync-vercel-supabase-env.mjs",
     "supabase:start": "npx supabase start",
     "supabase:stop": "npx supabase stop",
     "supabase:status": "npx supabase status",

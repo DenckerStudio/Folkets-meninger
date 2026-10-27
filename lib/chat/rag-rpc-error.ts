@@ -52,10 +52,3 @@ export function isMissingSearchIssuesFtsRpcError(error: RpcErrorLike): boolean {
 export function isMissingSearchChunksHybridRpcError(error: RpcErrorLike): boolean {
   return isMissingRpcByName(error, 'search_chunks_hybrid');
 }
-
-/** @deprecated Prefer the function-specific helpers at call sites. */
-export function isMissingHybridRpcError(error: RpcErrorLike): boolean {
-  return (
-    isMissingSearchIssuesFtsRpcError(error) || isMissingSearchChunksHybridRpcError(error)
-  );
-}

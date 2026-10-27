@@ -14,8 +14,6 @@ export const routes = {
       ? `${DASHBOARD_PREFIX}/utforsk/reels?poll=${encodeURIComponent(pollId)}`
       : `${DASHBOARD_PREFIX}/utforsk/reels`,
   avstemninger: `${DASHBOARD_PREFIX}/avstemninger`,
-  /** @deprecated Reels live on Utforsk; this path redirects to /dashboard/utforsk/reels. */
-  avstemningerReels: `${DASHBOARD_PREFIX}/avstemninger/reels`,
   minSide: `${DASHBOARD_PREFIX}/min-side`,
   horinger: `${DASHBOARD_PREFIX}/horinger`,
   kalender: `${DASHBOARD_PREFIX}/kalender`,
@@ -56,8 +54,6 @@ export const routes = {
   adminForslag: `${DASHBOARD_PREFIX}/admin/forslag`,
   adminBrukere: `${DASHBOARD_PREFIX}/admin/brukere`,
   adminStemmePlus: `${DASHBOARD_PREFIX}/admin/stemme-plus`,
-  /** @deprecated Bruk adminResearch; oppfanget-URL redirecter permanent. */
-  adminOppfanget: `${DASHBOARD_PREFIX}/admin/oppfanget`,
   adminResearch: `${DASHBOARD_PREFIX}/admin/research`,
   adminResearchCluster: (id: string) =>
     `${DASHBOARD_PREFIX}/admin/research/${encodeURIComponent(id)}`,
