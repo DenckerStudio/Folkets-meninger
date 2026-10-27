@@ -208,6 +208,8 @@ async function main() {
     closesAt: null,
     createdAt: '2099-01-01T00:00:00Z',
     updatedAt: '2099-01-01T00:00:00Z',
+    expiredAt: null,
+    restoredAt: null,
     generationMetadata: {},
   };
   const belowK = shapeChatPollResults({

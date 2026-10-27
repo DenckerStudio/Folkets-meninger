@@ -19,6 +19,8 @@ const poll = {
   closesAt: null,
   createdAt: '',
   updatedAt: '',
+  expiredAt: null,
+  restoredAt: null,
   generationMetadata: {},
 };
 

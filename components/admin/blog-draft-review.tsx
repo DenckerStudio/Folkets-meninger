@@ -4,8 +4,16 @@ import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 import { ContentFeedbackPanel } from '@/components/admin/content-feedback-panel';
+import { DraftExpiryBadge } from '@/components/admin/draft-expiry-badge';
+import {
+  DraftReviewQueueToggle,
+  type DraftReviewQueue,
+} from '@/components/admin/draft-review-queue-toggle';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { formatBlogReviewState } from '@/lib/admin/blog-review-labels';
+import {
+  DRAFT_RESTORE_SUCCESS_MESSAGE,
+} from '@/lib/admin/draft-expiry';
 import type { BlogDraftReviewItem } from '@/lib/admin/blog-review';
 
 type DraftsResponse = {
@@ -35,9 +43,11 @@ function DraftListSkeleton() {
 }
 
 export function BlogDraftReview() {
+  const [queue, setQueue] = useState<DraftReviewQueue>('pending');
   const [drafts, setDrafts] = useState<BlogDraftReviewItem[]>([]);
   const [cmsConfigured, setCmsConfigured] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [active, setActive] = useState<ActiveReview | null>(null);
   const [pending, startTransition] = useTransition();
   const [initialLoad, setInitialLoad] = useState(true);
@@ -45,8 +55,11 @@ export function BlogDraftReview() {
   const loadDrafts = () => {
     startTransition(async () => {
       setError('');
+      setSuccess('');
       try {
-        const res = await fetch('/api/admin/blog-drafts');
+        const res = await fetch(
+          `/api/admin/blog-drafts?queue=${queue === 'expired' ? 'expired' : 'pending'}`,
+        );
         const json = (await res.json()) as DraftsResponse & { error?: string };
         if (!res.ok) {
           setDrafts([]);
@@ -66,12 +79,35 @@ export function BlogDraftReview() {
 
   useEffect(() => {
     loadDrafts();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when queue changes
+  }, [queue]);
+
+  const restoreDraft = (id: string) => {
+    startTransition(async () => {
+      setError('');
+      setSuccess('');
+      const res = await fetch('/api/admin/blog-drafts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'restore' }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(typeof data.error === 'string' ? data.error : 'Gjenoppretting feilet');
+        return;
+      }
+      setSuccess(DRAFT_RESTORE_SUCCESS_MESSAGE);
+      setDrafts((current) => current.filter((row) => row.id !== id));
+    });
+  };
 
   return (
     <div className="space-y-4">
+      <DraftReviewQueueToggle queue={queue} onQueueChange={setQueue} className="max-w-md" />
       <p className="text-sm text-muted-foreground">
-        Utkast som venter på vurdering før de kan publiseres i bloggen.
+        {queue === 'pending'
+          ? 'Utkast som venter på vurdering før de kan publiseres i bloggen. Utkast utløper etter 72 timer.'
+          : 'Utløpte bloggutkast kan gjenopprettes til vurderingskøen.'}
       </p>
       {!cmsConfigured ? (
         <EmptyState
@@ -85,11 +121,20 @@ export function BlogDraftReview() {
           {error}
         </p>
       ) : null}
+      {success ? (
+        <p className="text-sm text-emerald-700 dark:text-emerald-400" role="status">
+          {success}
+        </p>
+      ) : null}
       {initialLoad ? <DraftListSkeleton /> : null}
       {!initialLoad && !error && cmsConfigured && drafts.length === 0 ? (
         <EmptyState
-          title="Ingen utkast til vurdering"
-          description="Når nye bloggutkast er klare til vurdering, vises de her."
+          title={queue === 'expired' ? 'Ingen utløpte utkast' : 'Ingen utkast til vurdering'}
+          description={
+            queue === 'expired'
+              ? 'Utløpte bloggutkast vises her.'
+              : 'Når nye bloggutkast er klare til vurdering, vises de her.'
+          }
           className="py-8"
         />
       ) : null}
@@ -108,38 +153,61 @@ export function BlogDraftReview() {
                 </p>
                 <p className="mt-2 text-xs text-muted-foreground">
                   {formatBlogReviewState(draft.reviewState) ?? 'Utkast'}
-                  {draft.updatedAt
-                    ? ` · Oppdatert ${new Date(draft.updatedAt).toLocaleString('nb-NO')}`
-                    : ''}
+                  {queue === 'expired' && draft.expiredAt
+                    ? ` · Utløpt ${new Date(draft.expiredAt).toLocaleString('nb-NO')}`
+                    : draft.updatedAt
+                      ? ` · Oppdatert ${new Date(draft.updatedAt).toLocaleString('nb-NO')}`
+                      : ''}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {draft.payloadAdminUrl ? (
-                  <a
-                    href={draft.payloadAdminUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50"
-                  >
-                    Rediger utkast
-                    <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                  </a>
+              <div className="flex flex-col items-end gap-2">
+                {queue === 'pending' ? (
+                  <DraftExpiryBadge
+                    clock={{
+                      createdAt: draft.createdAt ?? draft.updatedAt,
+                      restoredAt: draft.restoredAt,
+                    }}
+                  />
                 ) : null}
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() =>
-                    setActive({
-                      id: draft.id,
-                      title: draft.title,
-                      excerpt: draft.excerpt,
-                      payloadAdminUrl: draft.payloadAdminUrl,
-                    })
-                  }
-                  className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
-                >
-                  Vurder
-                </button>
+                <div className="flex flex-wrap justify-end gap-2">
+                  {draft.payloadAdminUrl ? (
+                    <a
+                      href={draft.payloadAdminUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50"
+                    >
+                      Rediger utkast
+                      <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                    </a>
+                  ) : null}
+                  {queue === 'pending' ? (
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() =>
+                        setActive({
+                          id: draft.id,
+                          title: draft.title,
+                          excerpt: draft.excerpt,
+                          payloadAdminUrl: draft.payloadAdminUrl,
+                        })
+                      }
+                      className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+                    >
+                      Vurder
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => restoreDraft(draft.id)}
+                      className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+                    >
+                      Gjenopprett
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
             {active?.id === draft.id ? (
