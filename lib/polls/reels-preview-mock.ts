@@ -18,6 +18,7 @@ export const REELS_PREVIEW_MOCK_ITEMS: SystemReelFeedItem[] = [
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
       expiredAt: null,
+      restoredAt: null,
       generationMetadata: {},
     },
     totals: { ja: 12, nei: 8, blank: 2, total: 22 },

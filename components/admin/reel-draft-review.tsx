@@ -13,6 +13,7 @@ import { ReelContentPreview } from '@/components/admin/reel-content-preview';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import type { ContentFeedbackVerdict } from '@/lib/content-feedback/types';
 import { routes } from '@/lib/routes';
+import { DRAFT_RESTORE_SUCCESS_MESSAGE } from '@/lib/admin/draft-expiry';
 import type { PollRecord } from '@/lib/polls/types';
 
 type DraftsResponse = { drafts?: PollRecord[] };
@@ -99,8 +100,10 @@ export function ReelDraftReview() {
         return;
       }
       if (action === 'restore') {
-        setSuccess('Utkastet er gjenopprettet.');
+        setSuccess(DRAFT_RESTORE_SUCCESS_MESSAGE);
         setReviewed(null);
+        setDrafts((current) => current.filter((row) => row.id !== poll.id));
+        return;
       } else {
         setSuccess(action === 'publish' ? 'Utkastet er publisert.' : 'Utkastet er arkivert.');
         setReviewed({
@@ -176,7 +179,11 @@ export function ReelDraftReview() {
                 <div className="min-w-0 flex-1">
                   <ReelContentPreview poll={poll} />
                 </div>
-                {queue === 'pending' ? <DraftExpiryBadge createdAt={poll.createdAt} /> : null}
+                {queue === 'pending' ? (
+                  <DraftExpiryBadge
+                    clock={{ createdAt: poll.createdAt, restoredAt: poll.restoredAt }}
+                  />
+                ) : null}
               </div>
               {queue === 'expired' && poll.expiredAt ? (
                 <p className="mt-2 text-xs text-muted-foreground">

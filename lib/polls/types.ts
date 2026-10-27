@@ -55,6 +55,7 @@ export type PollRecord = {
   createdAt: string;
   updatedAt: string;
   expiredAt: string | null;
+  restoredAt: string | null;
   generationMetadata: PollGenerationMetadata;
 };
 

@@ -45,8 +45,14 @@ const alreadyExpired: PayloadPost = {
   expiredAt: '2026-10-24T12:00:00.000Z',
 };
 
+const restoredStale: PayloadPost = {
+  ...staleDraft,
+  id: '5',
+  restoredAt: '2026-10-24T12:00:00.000Z',
+};
+
 const eligible = postsEligibleForBlogDraftExpiry(
-  [staleDraft, published, fresh, alreadyExpired],
+  [staleDraft, published, fresh, alreadyExpired, restoredStale],
   nowMs,
 );
 assert.deepEqual(eligible.map((p) => p.id), ['1']);

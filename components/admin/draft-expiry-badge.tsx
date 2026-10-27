@@ -1,16 +1,19 @@
 'use client';
 
-import { formatDraftExpiryLabel } from '@/lib/admin/draft-expiry';
+import {
+  formatDraftExpiryLabel,
+  type DraftSoftExpiryClock,
+} from '@/lib/admin/draft-expiry';
 import { cn } from '@/lib/utils';
 
 type Props = {
-  createdAt: string | null;
+  clock: DraftSoftExpiryClock;
   className?: string;
 };
 
-export function DraftExpiryBadge({ createdAt, className }: Props) {
-  if (!createdAt) return null;
-  const label = formatDraftExpiryLabel(createdAt);
+export function DraftExpiryBadge({ clock, className }: Props) {
+  if (!clock.createdAt && !clock.restoredAt) return null;
+  const label = formatDraftExpiryLabel(clock);
   const urgent = label === 'Utløper snart';
   return (
     <span

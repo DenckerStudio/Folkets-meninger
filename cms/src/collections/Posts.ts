@@ -166,6 +166,16 @@ export const Posts: CollectionConfig = {
       },
     },
     {
+      name: 'restoredAt',
+      type: 'date',
+      admin: {
+        description:
+          'Sist gjenopprettet fra utløpt. Utløpsklokke = coalesce(restoredAt, createdAt).',
+        date: { pickerAppearance: 'dayAndTime' },
+        readOnly: true,
+      },
+    },
+    {
       name: 'updatedAtDisplay',
       type: 'date',
       admin: {

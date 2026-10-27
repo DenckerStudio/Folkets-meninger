@@ -1,4 +1,9 @@
-import { DRAFT_SOFT_EXPIRY_MS, isDraftPastSoftExpiry } from '@/lib/admin/draft-expiry';
+import {
+  DRAFT_SOFT_EXPIRY_MS,
+  draftSoftExpiryStartMs,
+  isDraftPastSoftExpiry,
+  type DraftSoftExpiryClock,
+} from '@/lib/admin/draft-expiry';
 import { payloadPatchPost } from '@/lib/cms/payload-update';
 import { getCmsAgentKey, payloadFetchList } from '@/lib/cms/payload-client';
 import type { PayloadPost } from '@/lib/cms/types';
@@ -10,10 +15,11 @@ export type ExpireStaleBlogDraftsResult = {
 
 const REVIEW_STATES = 'til_vurdering,ny';
 
-function parsePostCreatedAt(post: PayloadPost): string | null {
-  const raw = post.createdAt;
-  if (!raw || typeof raw !== 'string') return null;
-  return raw;
+export function blogDraftExpiryClock(post: PayloadPost): DraftSoftExpiryClock {
+  return {
+    createdAt: post.createdAt ?? null,
+    restoredAt: post.restoredAt ?? null,
+  };
 }
 
 export function postsEligibleForBlogDraftExpiry(
@@ -24,9 +30,7 @@ export function postsEligibleForBlogDraftExpiry(
   return docs.filter((post) => {
     if (post._status === 'published') return false;
     if (post.expiredAt) return false;
-    const createdAt = parsePostCreatedAt(post);
-    if (!createdAt) return false;
-    return isDraftPastSoftExpiry(createdAt, nowMs, maxAgeMs);
+    return isDraftPastSoftExpiry(blogDraftExpiryClock(post), nowMs, maxAgeMs);
   });
 }
 
@@ -89,4 +93,9 @@ export async function expireStaleBlogDrafts(options: {
   }
 
   return { count: ids.length, ids };
+}
+
+/** Server-side cutoff aligned with `coalesce(restoredAt, createdAt)` (for tests / docs). */
+export function isBlogDraftPastExpiryCutoff(post: PayloadPost, cutoffMs: number): boolean {
+  return draftSoftExpiryStartMs(blogDraftExpiryClock(post)) < cutoffMs;
 }

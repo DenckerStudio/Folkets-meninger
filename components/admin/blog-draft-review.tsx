@@ -11,6 +11,9 @@ import {
 } from '@/components/admin/draft-review-queue-toggle';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { formatBlogReviewState } from '@/lib/admin/blog-review-labels';
+import {
+  DRAFT_RESTORE_SUCCESS_MESSAGE,
+} from '@/lib/admin/draft-expiry';
 import type { BlogDraftReviewItem } from '@/lib/admin/blog-review';
 
 type DraftsResponse = {
@@ -44,6 +47,7 @@ export function BlogDraftReview() {
   const [drafts, setDrafts] = useState<BlogDraftReviewItem[]>([]);
   const [cmsConfigured, setCmsConfigured] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [active, setActive] = useState<ActiveReview | null>(null);
   const [pending, startTransition] = useTransition();
   const [initialLoad, setInitialLoad] = useState(true);
@@ -51,6 +55,7 @@ export function BlogDraftReview() {
   const loadDrafts = () => {
     startTransition(async () => {
       setError('');
+      setSuccess('');
       try {
         const res = await fetch(
           `/api/admin/blog-drafts?queue=${queue === 'expired' ? 'expired' : 'pending'}`,
@@ -80,6 +85,7 @@ export function BlogDraftReview() {
   const restoreDraft = (id: string) => {
     startTransition(async () => {
       setError('');
+      setSuccess('');
       const res = await fetch('/api/admin/blog-drafts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -90,7 +96,8 @@ export function BlogDraftReview() {
         setError(typeof data.error === 'string' ? data.error : 'Gjenoppretting feilet');
         return;
       }
-      loadDrafts();
+      setSuccess(DRAFT_RESTORE_SUCCESS_MESSAGE);
+      setDrafts((current) => current.filter((row) => row.id !== id));
     });
   };
 
@@ -112,6 +119,11 @@ export function BlogDraftReview() {
       {error ? (
         <p className="text-sm text-destructive" role="alert">
           {error}
+        </p>
+      ) : null}
+      {success ? (
+        <p className="text-sm text-emerald-700 dark:text-emerald-400" role="status">
+          {success}
         </p>
       ) : null}
       {initialLoad ? <DraftListSkeleton /> : null}
@@ -150,7 +162,12 @@ export function BlogDraftReview() {
               </div>
               <div className="flex flex-col items-end gap-2">
                 {queue === 'pending' ? (
-                  <DraftExpiryBadge createdAt={draft.createdAt ?? draft.updatedAt} />
+                  <DraftExpiryBadge
+                    clock={{
+                      createdAt: draft.createdAt ?? draft.updatedAt,
+                      restoredAt: draft.restoredAt,
+                    }}
+                  />
                 ) : null}
                 <div className="flex flex-wrap justify-end gap-2">
                   {draft.payloadAdminUrl ? (

@@ -6,8 +6,14 @@ SET LOCAL lock_timeout = '5s';
 ALTER TABLE public.polls
   ADD COLUMN IF NOT EXISTS expired_at timestamptz;
 
+ALTER TABLE public.polls
+  ADD COLUMN IF NOT EXISTS restored_at timestamptz;
+
 COMMENT ON COLUMN public.polls.expired_at IS
   'Satt når et system-utkast utløper uten admin-vurdering (status utløpt).';
+
+COMMENT ON COLUMN public.polls.restored_at IS
+  'Sist gjenopprettet fra utløpt; utløpsklokke = coalesce(restored_at, created_at).';
 
 ALTER TABLE public.polls
   DROP CONSTRAINT IF EXISTS polls_status_check;
@@ -46,7 +52,7 @@ BEGIN
   FROM public.polls p
   WHERE p.track = 'system'
     AND p.status = 'draft'
-    AND p.created_at < now() - p_max_age;
+    AND coalesce(p.restored_at, p.created_at) < now() - p_max_age;
 
   IF p_dry_run OR v_count = 0 THEN
     RETURN v_count;
@@ -59,7 +65,7 @@ BEGIN
     updated_at = now()
   WHERE track = 'system'
     AND status = 'draft'
-    AND created_at < now() - p_max_age;
+    AND coalesce(restored_at, created_at) < now() - p_max_age;
 
   RETURN v_count;
 END;
@@ -104,6 +110,7 @@ BEGIN
   SET
     status = 'draft',
     expired_at = NULL,
+    restored_at = now(),
     updated_at = now()
   WHERE id = p_poll_id;
 

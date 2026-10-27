@@ -8,6 +8,9 @@ const migration = readFileSync(
 );
 
 assert.match(migration, /ADD COLUMN IF NOT EXISTS expired_at timestamptz/i);
+assert.match(migration, /ADD COLUMN IF NOT EXISTS restored_at timestamptz/i);
+assert.match(migration, /coalesce\(p\.restored_at, p\.created_at\)/i);
+assert.match(migration, /restored_at = now\(\)/i);
 assert.match(migration, /status IN \('draft', 'open', 'closed', 'archived', 'utløpt'\)/);
 assert.match(migration, /polls_expired_at_pair_check/i);
 assert.match(migration, /FUNCTION public\.n8n_expire_stale_reel_drafts/i);

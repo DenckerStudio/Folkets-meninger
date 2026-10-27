@@ -12,6 +12,7 @@ export type BlogDraftReviewItem = {
   createdAt: string | null;
   updatedAt: string | null;
   expiredAt: string | null;
+  restoredAt: string | null;
   payloadAdminUrl: string | null;
 };
 
@@ -25,6 +26,7 @@ function mapBlogDraftReviewItem(post: PayloadPost): BlogDraftReviewItem {
     createdAt: post.createdAt ?? null,
     updatedAt: post.updatedAt ?? null,
     expiredAt: post.expiredAt ?? null,
+    restoredAt: post.restoredAt ?? null,
     payloadAdminUrl: adminBlogPostUrl(String(post.id)),
   };
 }
@@ -72,7 +74,10 @@ export async function listExpiredBlogDraftsForReview(limit = 30): Promise<BlogDr
 }
 
 export async function restoreExpiredBlogDraft(postId: string): Promise<void> {
-  const result = await payloadPatchPost(postId, { expiredAt: null });
+  const result = await payloadPatchPost(postId, {
+    expiredAt: null,
+    restoredAt: new Date().toISOString(),
+  });
   if (!result.ok) {
     throw new Error(result.error);
   }
