@@ -2,7 +2,13 @@
 
 **Coolify Expert applies manually** on the DB host after Mathias approves. This is **not** an app-database migration: it runs against the internal Postgres database **`_supabase`** (Logflare / `supabase-analytics`), not `postgres`. **Do not** add files under `supabase/migrations` for this change.
 
+This runbook matches what was applied on **prod (2026-10-27)** — use it for new environments and as the rollback reference.
+
 **Related app guard:** `n8n_backfill_db_pressure` (migration `20261027090000`) pauses embedding v2 backfill when Realtime slot lag or WAL size exceeds **3 GiB**. That guard limits damage but does not fix the root cause described here. See [`EMBEDDING_V2_QUEUE_APPLY.md`](../../supabase/migrations/EMBEDDING_V2_QUEUE_APPLY.md) § step 6.
+
+### Observed result (prod, 2026-10-27)
+
+After SQL, cron, and a one-time **supabase-analytics** restart, slot lag fell from about **1.5 GB** to about **50–60 MB** within minutes, and **`confirmed_flush_lsn`** began advancing with each cron tick.
 
 ## Problem
 
@@ -18,53 +24,84 @@ Ops and upstream have tried logical decoding keepalive messages. Cainophile’s 
 
 ## Agreed fix (ops-approved)
 
-1. **Backup** `_analytics` (or full `_supabase`) before changes.
-2. Create **`_analytics.wal_heartbeat`**: single-row table, primary key `id smallint`, `beat_at timestamptz`.
-3. Add the table to publication **`logflare_pub`** (idempotent).
-4. **Revoke** access from `PUBLIC`, `anon`, and `authenticated` (cron uses a privileged DB role on the host).
-5. **Host cron** updates `beat_at` every minute so replication sees steady changes.
-6. **Restart** `supabase-analytics` once after setup so Cainophile reconnects with the new publication member.
-7. **Verify** slot lag and `confirmed_flush_lsn` movement; keep **`max_slot_wal_keep_size = 4GB`** during rollout.
+1. **Backup** `_supabase` schema before changes (method used on prod below).
+2. Create **`_analytics.wal_heartbeat`**: single row, `id int PRIMARY KEY`, `ts timestamptz NOT NULL DEFAULT now()`.
+3. Add the table to publication **`logflare_pub`** (idempotent in repo SQL; prod also used a plain `ALTER PUBLICATION … ADD TABLE` when run manually).
+4. **Revoke** access from `PUBLIC`, `anon`, and `authenticated` — only **`supabase_admin`** retains access on prod.
+5. **Host cron** (`/etc/cron.d/logflare-heartbeat`) updates `ts` every minute.
+6. **Restart** `supabase-analytics` once after setup.
+7. **Verify** slot lag and `confirmed_flush_lsn` movement; keep **`max_slot_wal_keep_size = 4GB`**.
 
 Optional idempotent SQL file: [`sql/logflare-wal-heartbeat.sql`](./sql/logflare-wal-heartbeat.sql).
+
+## Gotchas
+
+1. **`cainophile_*` slot names change** on every Logflare reconnect or **supabase-analytics** restart (prod e.g. `cainophile_v3qw67o9` → `cainophile_6vjauso7`). Never hardcode a slot name; always filter `slot_name LIKE 'cainophile\_%' ESCAPE '\'`.
+2. After any **Logflare / supabase-analytics upgrade**, confirm `pg_publication_tables` still lists `_analytics.wal_heartbeat` on **`logflare_pub`**. Re-add with `ALTER PUBLICATION logflare_pub ADD TABLE _analytics.wal_heartbeat` if it is missing.
+3. Remove any legacy **`pg_logical_emit_message` keepalive cron** — it does **not** move `confirmed_flush_lsn` and can confuse ops.
 
 ## Prerequisites
 
 - Shell access on the host that runs the Supabase Postgres container (Coolify **`supabase-folkets`** stack).
 - A maintenance note in the ops log (no fm-web deploy required).
-- Confirm you are connected to database **`_supabase`**, not `postgres`:
+- Connect as **`supabase_admin`** on database **`_supabase`**, not `postgres`:
+
+```bash
+docker exec -it <SUPABASE_DB_CONTAINER> psql -U supabase_admin -d _supabase -v ON_ERROR_STOP=1
+```
 
 ```sql
-SELECT current_database();
+SELECT current_database(), current_user;
 ```
 
 ## Step 0 — Backup
 
-On the DB host (placeholders — adjust to your layout):
+**Method used on prod** — schema-only dump via `docker exec` on the DB host:
 
 ```bash
 export SUPABASE_DB_CONTAINER='<SUPABASE_DB_CONTAINER>'
-export BACKUP_DIR='<OPS_BACKUP_DIR>'
-mkdir -p "$BACKUP_DIR"
-docker exec "$SUPABASE_DB_CONTAINER" pg_dump -U postgres -d _supabase -n _analytics -Fc \
-  -f /tmp/_supabase_analytics_pre_wal_heartbeat.dump
-docker cp "$SUPABASE_DB_CONTAINER:/tmp/_supabase_analytics_pre_wal_heartbeat.dump" \
-  "$BACKUP_DIR/_supabase_analytics_pre_wal_heartbeat.dump"
+export OPS_BACKUP_DIR='<OPS_BACKUP_DIR>'
+export BACKUP_TS='<YYYYMMDD-HHMMSS>'
+mkdir -p "$OPS_BACKUP_DIR"
+docker exec "$SUPABASE_DB_CONTAINER" pg_dump -U supabase_admin -d _supabase --schema-only \
+  > "$OPS_BACKUP_DIR/pre-walhb-${BACKUP_TS}-supabase-schema.sql"
 ```
 
-Keep the dump until heartbeat has been stable for 24h+.
+Keep the file until heartbeat has been stable for 24h+.
+
+**Optional alternative** — `_analytics` custom-format dump (heavier; useful if you need data restore):
+
+```bash
+docker exec "$SUPABASE_DB_CONTAINER" pg_dump -U supabase_admin -d _supabase -n _analytics -Fc \
+  -f /tmp/_supabase_analytics_pre_wal_heartbeat.dump
+docker cp "$SUPABASE_DB_CONTAINER:/tmp/_supabase_analytics_pre_wal_heartbeat.dump" \
+  "$OPS_BACKUP_DIR/_supabase_analytics_pre_wal_heartbeat.dump"
+```
 
 ## Step 1 — Setup SQL (idempotent)
 
 ```bash
 export SUPABASE_DB_CONTAINER='<SUPABASE_DB_CONTAINER>'
-docker exec -i "$SUPABASE_DB_CONTAINER" psql -U postgres -d _supabase -v ON_ERROR_STOP=1 \
+docker exec -i "$SUPABASE_DB_CONTAINER" psql -U supabase_admin -d _supabase -v ON_ERROR_STOP=1 \
   < docs/ops/sql/logflare-wal-heartbeat.sql
 ```
 
-Or paste the equivalent statements from [`sql/logflare-wal-heartbeat.sql`](./sql/logflare-wal-heartbeat.sql).
+Or paste from [`sql/logflare-wal-heartbeat.sql`](./sql/logflare-wal-heartbeat.sql). Seed on prod:
 
-Confirm publication membership:
+```sql
+INSERT INTO _analytics.wal_heartbeat VALUES (1, now())
+ON CONFLICT (id) DO UPDATE SET ts = now();
+```
+
+**Publication:** the repo SQL uses a guarded `DO` block. On prod, ops also ran a direct:
+
+```sql
+ALTER PUBLICATION logflare_pub ADD TABLE _analytics.wal_heartbeat;
+```
+
+Either is fine if the table is not already published.
+
+Confirm membership:
 
 ```sql
 SELECT schemaname, tablename
@@ -78,21 +115,18 @@ Expect **one row**.
 
 ## Step 2 — Cron (every minute)
 
-Run on the **DB host** (not inside fm-web). Use a dedicated ops user or root crontab; do not commit connection strings or passwords.
-
-Template:
+Create **`/etc/cron.d/logflare-heartbeat`** on the DB host, mode **644**:
 
 ```cron
-# Logflare WAL heartbeat — updates replication-visible row in _supabase._analytics.wal_heartbeat
-* * * * * docker exec -i <SUPABASE_DB_CONTAINER> psql -U postgres -d _supabase -v ON_ERROR_STOP=1 -c "UPDATE _analytics.wal_heartbeat SET beat_at = now() WHERE id = 1;" >> <OPS_CRON_LOG> 2>&1
+* * * * * root docker exec <SUPABASE_DB_CONTAINER> psql -U supabase_admin -d _supabase -At -c "UPDATE _analytics.wal_heartbeat SET ts=now() WHERE id=1" >/dev/null 2>>/var/log/logflare-heartbeat.err
 ```
 
-Replace `<SUPABASE_DB_CONTAINER>`, `<OPS_CRON_LOG>`. If you use host `psql` instead of `docker exec`, use a **host-only** connection URI in the crontab (never store it in git).
+Replace `<SUPABASE_DB_CONTAINER>`. Stderr goes to `/var/log/logflare-heartbeat.err` on the host.
 
-After adding cron, wait **2–3 minutes** and confirm `beat_at` advances:
+After **2–3 minutes**, confirm `ts` advances:
 
 ```sql
-SELECT id, beat_at, now() - beat_at AS age
+SELECT id, ts, now() - ts AS age
 FROM _analytics.wal_heartbeat
 WHERE id = 1;
 ```
@@ -101,13 +135,46 @@ Expect `age` well under **2 minutes**.
 
 ## Step 3 — Restart supabase-analytics (once)
 
-In Coolify, restart the **`supabase-analytics`** service (Logflare container) **once** after SQL + cron are in place so the subscriber picks up `wal_heartbeat` on `logflare_pub`.
+After SQL + cron:
 
-Do not restart the primary Postgres container unless separately planned.
+```bash
+docker restart <SUPABASE_ANALYTICS_CONTAINER>
+```
+
+Or restart **`supabase-analytics`** once in Coolify. Do not restart the primary Postgres container unless separately planned.
 
 ## Verification
 
-### Immediate (same session, database `_supabase`)
+### Quick check (database `_supabase`, as `supabase_admin`)
+
+Prod-style overview (all slots; filter mentally to `cainophile_*`):
+
+```sql
+SELECT
+  slot_name,
+  active,
+  confirmed_flush_lsn,
+  pg_size_pretty(pg_current_wal_lsn() - restart_lsn) AS restart_lag,
+  wal_status
+FROM pg_replication_slots;
+```
+
+Cainophile only:
+
+```sql
+SELECT
+  slot_name,
+  active,
+  confirmed_flush_lsn,
+  pg_size_pretty(pg_current_wal_lsn() - restart_lsn) AS restart_lag,
+  wal_status
+FROM pg_replication_slots
+WHERE slot_name LIKE 'cainophile\_%' ESCAPE '\';
+```
+
+After cron and analytics restart: **`confirmed_flush_lsn`** should advance; **`restart_lag`** should stay small (prod: ~50–60 MB vs ~1.5 GB before fix).
+
+### Detailed lag (bytes)
 
 ```sql
 SELECT
@@ -121,16 +188,9 @@ FROM pg_replication_slots
 WHERE slot_name LIKE 'cainophile\_%' ESCAPE '\';
 ```
 
-After cron has run and analytics has restarted:
+Re-run every **10–15 minutes** for an hour with embedding backfill running; lag should not climb toward 3–4 GiB.
 
-- **`confirmed_flush_lsn`** should **advance** over several minutes (not frozen at `restart_lsn`).
-- **`confirm_lag_bytes`** should stay **far below** `max_slot_wal_keep_size` (4GB). Compare to app-side pressure RPC lag on `postgres` only after heartbeat is healthy.
-
-### Over ~1 hour (with embedding backfill running)
-
-Re-run the query above every **10–15 minutes**. **`restart_lag_bytes`** (and/or confirm lag) should remain **low and stable**, not climbing toward 3–4 GiB.
-
-On the app DB (`postgres`), optional cross-check that the guard is not stuck paused:
+On the app DB (`postgres`), optional cross-check:
 
 ```sql
 BEGIN;
@@ -143,9 +203,7 @@ Expect `pause_recommended` **false** when heartbeat keeps slot lag down.
 
 ## Interim emergency guard (before or during rollout)
 
-If slot **restart lag** exceeds **~2.5 GiB** and you cannot deploy heartbeat immediately, you may **terminate the Cainophile walsender** to stop WAL retention temporarily. **Never `pg_drop_replication_slot`** on production analytics slots unless explicitly directed by Mathias and a full rebuild plan exists.
-
-Database **`_supabase`**:
+If slot **restart lag** exceeds **~2.5 GiB** and heartbeat is not in place, you may **terminate the Cainophile walsender**. **Never `pg_drop_replication_slot`** unless Mathias approves a full rebuild plan.
 
 ```sql
 SELECT
@@ -158,7 +216,7 @@ FROM pg_replication_slots AS s
 LEFT JOIN pg_stat_replication AS r ON r.slot_name = s.slot_name
 WHERE s.slot_name LIKE 'cainophile\_%' ESCAPE '\';
 
--- Only when restart_lag_bytes > 2684354560 (2.5 GiB) and ops accepts brief analytics disconnect:
+-- Only when restart_lag_bytes > 2684354560 (2.5 GiB):
 SELECT pg_terminate_backend(r.pid)
 FROM pg_replication_slots AS s
 JOIN pg_stat_replication AS r ON r.slot_name = s.slot_name
@@ -166,27 +224,25 @@ WHERE s.slot_name LIKE 'cainophile\_%' ESCAPE '\'
   AND pg_wal_lsn_diff(pg_current_wal_lsn(), s.restart_lsn) > 2684354560;
 ```
 
-Logflare will reconnect; pair with heartbeat rollout or expect lag to return.
-
 ## Rollback
 
-1. Remove the **cron** line from the host crontab.
-2. On `_supabase`:
+1. On `_supabase` as `supabase_admin`:
 
 ```sql
 ALTER PUBLICATION logflare_pub DROP TABLE _analytics.wal_heartbeat;
 ```
 
-3. **Leave** `_analytics.wal_heartbeat` in place (harmless) unless you explicitly drop it during a later window:
+2. On the DB host:
 
-```sql
--- Optional, only if Mathias approves:
--- DROP TABLE IF EXISTS _analytics.wal_heartbeat;
+```bash
+rm /etc/cron.d/logflare-heartbeat
 ```
 
-4. Restart **supabase-analytics** if replication does not recover after DROP.
+3. **Leave** `_analytics.wal_heartbeat` in place unless Mathias approves a later drop.
 
-Restore from Step 0 backup only if publication or analytics schema was damaged.
+4. Restart **supabase-analytics** if replication does not recover.
+
+Restore from Step 0 backup only if publication or `_analytics` schema was damaged.
 
 ## `max_slot_wal_keep_size` policy
 
