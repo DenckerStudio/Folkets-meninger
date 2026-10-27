@@ -1,41 +1,14 @@
 import { NextResponse } from 'next/server';
+import { adminLoadErrorJson, logPostgrestError } from '@/lib/admin/postgrest-error';
 import { requireAdmin } from '@/lib/admin/gate';
 import { parseResetAiSummaryQueueBody } from '@/lib/content-feedback/ai-summary-queue-admin';
+import { parseGaveUpRows } from '@/lib/content-feedback/ai-summary-queue-parse';
+import type { AiSummaryQueueGaveUpRow } from '@/lib/content-feedback/ai-summary-queue-types';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-export type AiSummaryQueueGaveUpRow = {
-  issue_id: string;
-  title: string | null;
-  kind: 'mangler_sammendrag' | 'regenerering' | 'tynt_sammendrag';
-  attempts: number;
-  last_attempt_at: string | null;
-};
-
-function parseGaveUpRows(raw: unknown): AiSummaryQueueGaveUpRow[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .map((row) => {
-      if (!row || typeof row !== 'object') return null;
-      const item = row as Record<string, unknown>;
-      const issueId = typeof item.issue_id === 'string' ? item.issue_id : null;
-      const kind = item.kind;
-      if (!issueId || typeof kind !== 'string') return null;
-      if (kind !== 'mangler_sammendrag' && kind !== 'regenerering' && kind !== 'tynt_sammendrag') {
-        return null;
-      }
-      return {
-        issue_id: issueId,
-        title: typeof item.title === 'string' ? item.title : null,
-        kind,
-        attempts: typeof item.attempts === 'number' ? item.attempts : Number(item.attempts) || 0,
-        last_attempt_at:
-          typeof item.last_attempt_at === 'string' ? item.last_attempt_at : null,
-      } satisfies AiSummaryQueueGaveUpRow;
-    })
-    .filter((row): row is AiSummaryQueueGaveUpRow => row !== null);
-}
+export type { AiSummaryQueueGaveUpRow };
 
 export async function GET() {
   const auth = await requireAdmin();
@@ -53,8 +26,11 @@ export async function GET() {
     p_limit: 50,
   });
   if (error) {
-    console.error('[ai-summary-queue] list feilet:', error);
-    return NextResponse.json({ error: 'Kunne ikke hente køstatus' }, { status: 500 });
+    logPostgrestError('[ai-summary-queue] list feilet', error);
+    return NextResponse.json(
+      adminLoadErrorJson('Kunne ikke hente køstatus', error),
+      { status: 500 },
+    );
   }
 
   const rows = parseGaveUpRows(data);
@@ -89,8 +65,11 @@ export async function POST(request: Request) {
     p_issue_id: parsed.issueId,
   });
   if (error) {
-    console.error('[ai-summary-queue] reset feilet:', error);
-    return NextResponse.json({ error: 'Kunne ikke nullstille forsøk' }, { status: 500 });
+    logPostgrestError('[ai-summary-queue] reset feilet', error);
+    return NextResponse.json(
+      adminLoadErrorJson('Kunne ikke nullstille forsøk', error),
+      { status: 500 },
+    );
   }
 
   if (data !== true) {
