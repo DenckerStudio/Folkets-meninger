@@ -25,6 +25,7 @@ export type PollFylkeTotals = {
 };
 
 export type PollGenerationMetadata = {
+  uten_kontekst?: boolean;
   source_type?: string;
   confidence?: string;
   rag_chunk_count?: number;

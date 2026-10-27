@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ContentFeedbackPanel } from '@/components/admin/content-feedback-panel';
 import { DraftExpiryBadge } from '@/components/admin/draft-expiry-badge';
+import { UtenKontekstBadge } from '@/components/admin/uten-kontekst-badge';
+import { isPollDraftUtenKontekst } from '@/lib/admin/uten-kontekst';
 import {
   DraftReviewQueueToggle,
   type DraftReviewQueue,
@@ -41,6 +43,7 @@ export function ReelDraftReview() {
   const [drafts, setDrafts] = useState<PollRecord[]>([]);
   const [reviewed, setReviewed] = useState<ReviewedReel | null>(null);
   const [error, setError] = useState('');
+  const [publishErrors, setPublishErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState('');
   const [initialLoad, setInitialLoad] = useState(true);
   const [pending, startTransition] = useTransition();
@@ -88,6 +91,11 @@ export function ReelDraftReview() {
   const patchPoll = (poll: PollRecord, action: 'publish' | 'archive' | 'restore') => {
     startTransition(async () => {
       setError('');
+      setPublishErrors((current) => {
+        const next = { ...current };
+        delete next[poll.id];
+        return next;
+      });
       setSuccess('');
       const res = await fetch('/api/admin/polls', {
         method: 'PATCH',
@@ -96,7 +104,12 @@ export function ReelDraftReview() {
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setError(typeof data.error === 'string' ? data.error : 'Handling feilet');
+        const message = typeof data.error === 'string' ? data.error : 'Handling feilet';
+        if (action === 'publish') {
+          setPublishErrors((current) => ({ ...current, [poll.id]: message }));
+        } else {
+          setError(message);
+        }
         return;
       }
       if (action === 'restore') {
@@ -180,9 +193,14 @@ export function ReelDraftReview() {
                   <ReelContentPreview poll={poll} />
                 </div>
                 {queue === 'pending' ? (
-                  <DraftExpiryBadge
-                    clock={{ createdAt: poll.createdAt, restoredAt: poll.restoredAt }}
-                  />
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {isPollDraftUtenKontekst(poll.generationMetadata) ? (
+                      <UtenKontekstBadge />
+                    ) : null}
+                    <DraftExpiryBadge
+                      clock={{ createdAt: poll.createdAt, restoredAt: poll.restoredAt }}
+                    />
+                  </div>
                 ) : null}
               </div>
               {queue === 'expired' && poll.expiredAt ? (
@@ -190,17 +208,24 @@ export function ReelDraftReview() {
                   Utløpt {new Date(poll.expiredAt).toLocaleString('nb-NO')}
                 </p>
               ) : null}
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap items-start gap-2">
                 {queue === 'pending' ? (
                   <>
-                    <button
-                      type="button"
-                      disabled={pending}
-                      onClick={() => patchPoll(poll, 'publish')}
-                      className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
-                    >
-                      Publiser
-                    </button>
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => patchPoll(poll, 'publish')}
+                        className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+                      >
+                        Publiser
+                      </button>
+                      {publishErrors[poll.id] ? (
+                        <p className="max-w-md text-sm text-destructive" role="alert">
+                          {publishErrors[poll.id]}
+                        </p>
+                      ) : null}
+                    </div>
                     <button
                       type="button"
                       disabled={pending}

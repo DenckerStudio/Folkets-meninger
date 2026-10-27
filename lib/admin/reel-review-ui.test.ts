@@ -40,7 +40,17 @@ assert.match(vurderSrc, /AiSummaryReview/);
 assert.match(vurderSrc, /role="tablist"/);
 assert.match(reviewSrc, /DraftReviewQueueToggle/);
 assert.match(reviewSrc, /DraftExpiryBadge/);
+assert.match(reviewSrc, /UtenKontekstBadge/);
+assert.match(reviewSrc, /isPollDraftUtenKontekst/);
+assert.match(reviewSrc, /publishErrors\[poll\.id\]/);
 assert.match(reviewSrc, /Gjenopprett/);
+
+const utenKontekstBadgeSrc = readFileSync(
+  join(process.cwd(), 'components/admin/uten-kontekst-badge.tsx'),
+  'utf8',
+);
+assert.match(utenKontekstBadgeSrc, /Uten kontekst/);
+assert.match(utenKontekstBadgeSrc, /kildetreff/);
 
 const blogReviewSrc = readFileSync(
   join(process.cwd(), 'components/admin/blog-draft-review.tsx'),
