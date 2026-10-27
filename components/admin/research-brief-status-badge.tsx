@@ -20,8 +20,9 @@ export function ResearchBriefStatusBadge({
 
   return (
     <span
+      title={label}
       className={cn(
-        'inline-flex max-w-full whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium leading-snug',
+        'inline-flex max-w-full rounded-full px-2 py-0.5 text-xs font-medium leading-snug break-words',
         status === 'failed' && 'bg-destructive/10 text-destructive',
         status === 'done' && 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
         status === 'running' && 'bg-brand/10 text-brand',
