@@ -1,7 +1,11 @@
 import type { PollChoice, PollStatus, PollTrack } from '@/lib/polls/types';
+import { POLL_BALLOT_BUTTON_ORDER } from '@/lib/polls/ballot-buttons';
 
-/** Public poll ballots are always Ja / Nei / Blank. Sak ballots stay For/Mot/Avstår. */
-export const POLL_BALLOT_CHOICES: PollChoice[] = ['ja', 'nei', 'blank'];
+/** Button order on ballots: Nei / Blank / Ja (Reels colors). Sak ballots stay For/Mot/Avstår. */
+export const POLL_BALLOT_CHOICES: PollChoice[] = POLL_BALLOT_BUTTON_ORDER;
+
+/** Short copy for ballot UIs and share metadata (matches {@link pollChoiceLabel}). */
+export const POLL_BALLOT_OPTIONS_PHRASE = 'Ja, nei eller blank';
 
 export function pollChoiceLabel(choice: PollChoice): string {
   switch (choice) {

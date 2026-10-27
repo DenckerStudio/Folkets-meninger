@@ -36,10 +36,10 @@ assert(pollChoiceLabel('ja') === 'Ja', 'ja label');
 assert(pollChoiceLabel('blank') === 'Blank', 'blank label');
 assert(
   POLL_BALLOT_CHOICES.length === 3 &&
-    POLL_BALLOT_CHOICES[0] === 'ja' &&
-    POLL_BALLOT_CHOICES[1] === 'nei' &&
-    POLL_BALLOT_CHOICES[2] === 'blank',
-  'public poll ballot is ja/nei/blank',
+    POLL_BALLOT_CHOICES[0] === 'nei' &&
+    POLL_BALLOT_CHOICES[1] === 'blank' &&
+    POLL_BALLOT_CHOICES[2] === 'ja',
+  'public poll ballot button order is nei/blank/ja',
 );
 assert(pollTrackLabel('citizen') === 'Avviklet', 'citizen track');
 assert(pollTrackLabel('system') === 'Systemgenerert', 'system track');

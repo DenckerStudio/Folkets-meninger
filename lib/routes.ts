@@ -138,7 +138,7 @@ export function isEmbedPath(pathname: string): boolean {
   return pathname.startsWith('/embed/');
 }
 
-/** Public shareable poll widget page (Ja / Vet ikke / Nei). */
+/** Public shareable poll widget page (Ja / Nei / Blank). */
 export function isSharePollPath(pathname: string): boolean {
   return /^\/del\/[^/]+$/.test(pathname);
 }

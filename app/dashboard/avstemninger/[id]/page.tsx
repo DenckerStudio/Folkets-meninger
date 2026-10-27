@@ -8,7 +8,12 @@ import { PollResultView } from '@/components/polls/poll-result-view';
 import { isAdmin } from '@/lib/admin/gate';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { formatPollDisplayTitle } from '@/lib/polls/display-title';
-import { pollStatusLabel, pollTrackLabel, SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
+import {
+  POLL_BALLOT_OPTIONS_PHRASE,
+  pollStatusLabel,
+  pollTrackLabel,
+  SYSTEM_REEL_DISCLAIMER,
+} from '@/lib/polls/labels';
 import {
   getPollById,
   getPollTotals,
@@ -118,7 +123,7 @@ export default async function PollDetailPage({ params }: PageProps) {
             href={routes.sharePoll(poll.id)}
             className="inline-flex min-h-11 items-center font-medium text-brand hover:underline"
           >
-            Åpne delbar side (Ja / Vet ikke / Nei) →
+            Åpne delbar side ({POLL_BALLOT_OPTIONS_PHRASE.replace(/, /g, ' / ')}) →
           </Link>
         </p>
       ) : null}

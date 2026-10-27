@@ -11,6 +11,7 @@ import { useReelVote } from '@/components/polls/use-reel-vote';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { useReelExpandMobile } from '@/hooks/use-reel-expand-mobile';
 import { listReelPollSourceLinks } from '@/lib/polls/reel-source-links';
+import { pollBallotVoteButtonClassName } from '@/lib/polls/ballot-buttons';
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, SystemReelFeedItem } from '@/lib/polls/types';
 import { REEL_TEXT_HIT } from '@/lib/polls/reel-tap-targets';
@@ -21,21 +22,6 @@ const SLIDE = { type: 'spring', stiffness: 90, damping: 18 } as const;
 
 export function reelExpandLayoutId(pollId: string) {
   return `reel-expand-${pollId}`;
-}
-
-function reelChoiceClassName(choice: PollChoice): string {
-  switch (choice) {
-    case 'nei':
-      return 'bg-[#ba0c2f] text-white hover:bg-[#ba0c2f]/90';
-    case 'blank':
-      return 'bg-white text-[#00205b] hover:bg-white/90';
-    case 'ja':
-      return 'bg-[#0a3d9e] text-white ring-1 ring-inset ring-white/45 hover:bg-[#0c4ab8]';
-    default: {
-      const _exhaustive: never = choice;
-      return _exhaustive;
-    }
-  }
 }
 
 function reelTotalsSummary(totals: { ja: number; nei: number; blank: number; total: number }): string {
@@ -104,7 +90,7 @@ function ReelVoteFace({
             onClick={() => void vote('nei')}
             className={cn(
               'flex items-center justify-center rounded-xl px-2 py-3.5 text-base font-bold tracking-wide transition-opacity disabled:opacity-60 sm:py-4 [@media(max-height:700px)]:py-2.5',
-              reelChoiceClassName('nei'),
+              pollBallotVoteButtonClassName('nei'),
               userVote === 'nei' ? 'ring-2 ring-inset ring-white/80' : '',
             )}
           >
@@ -125,7 +111,7 @@ function ReelVoteFace({
             onClick={() => void vote('ja')}
             className={cn(
               'flex items-center justify-center rounded-xl px-2 py-3.5 text-base font-bold tracking-wide transition-opacity disabled:opacity-60 sm:py-4 [@media(max-height:700px)]:py-2.5',
-              reelChoiceClassName('ja'),
+              pollBallotVoteButtonClassName('ja'),
               userVote === 'ja' ? 'ring-2 ring-inset ring-white/80' : '',
             )}
           >

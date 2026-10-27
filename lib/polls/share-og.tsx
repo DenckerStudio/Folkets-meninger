@@ -1,9 +1,10 @@
 import { ImageResponse } from 'next/og';
-import type { PollRecord } from '@/lib/polls/types';
+import { POLL_BALLOT_CHOICES, pollChoiceLabel } from '@/lib/polls/labels';
+import type { PollChoice, PollRecord } from '@/lib/polls/types';
 
 export const OG_IMAGE_SIZE = { width: 1200, height: 630 } as const;
 export const OG_IMAGE_CONTENT_TYPE = 'image/png';
-export const OG_IMAGE_ALT = 'Folkets Meninger med spørsmålet og svarene Ja, Vet ikke og Nei';
+export const OG_IMAGE_ALT = 'Folkets Meninger med spørsmålet og svarene Ja, Nei og Blank';
 /**
  * Only shareable polls get a long-lived immutable cache. Unknown, hidden or
  * legacy `citizen` polls return 404 (see the image routes) so a future poll at
@@ -12,7 +13,8 @@ export const OG_IMAGE_ALT = 'Folkets Meninger med spørsmålet og svarene Ja, Ve
 export const OG_IMAGE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
 export function pollOgImageAlt(title: string): string {
-  return `Spørsmål: ${title.trim()}. Svar Ja, Vet ikke eller Nei på Folkets Meninger.`;
+  const options = POLL_BALLOT_CHOICES.map((choice) => pollChoiceLabel(choice)).join(', ');
+  return `Spørsmål: ${title.trim()}. Svar ${options} på Folkets Meninger.`;
 }
 
 function clampText(value: string, max: number): string {
@@ -29,12 +31,23 @@ function titleFontSize(length: number): number {
   return 44;
 }
 
-type ChoiceIconKind = 'check' | 'question' | 'cross';
+type ChoiceIconKind = 'check' | 'minus' | 'cross';
+
+const OG_CHOICE_ICON: Record<PollChoice, ChoiceIconKind> = {
+  ja: 'check',
+  nei: 'cross',
+  blank: 'minus',
+};
+
+const OG_CHOICE_STYLE: Record<PollChoice, { background: string; color: string }> = {
+  ja: { background: '#0a3d9e', color: '#ffffff' },
+  nei: { background: '#ba0c2f', color: '#ffffff' },
+  blank: { background: '#ffffff', color: '#00205b' },
+};
 
 const CHOICE_ICON_PATHS: Record<ChoiceIconKind, string> = {
   check: '<path d="M20 6 9 17l-5-5"/>',
-  question:
-    '<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+  minus: '<path d="M5 12h14"/>',
   cross: '<path d="M18 6 6 18M6 6l12 12"/>',
 };
 
@@ -83,7 +96,7 @@ function pollButton(
 
 /**
  * Renders the 1200×630 social preview for a shareable poll: the question plus
- * the Ja / Vet ikke / Nei buttons and Folkets Meninger branding. The caller is
+ * the Ja / Nei / Blank buttons and Folkets Meninger branding. The caller is
  * responsible for rejecting unknown or non-shareable polls with a 404 so no
  * question leaks and no generic image is cached under a real poll id.
  */
@@ -157,9 +170,15 @@ export function renderPollShareOgImage(poll: PollRecord): ImageResponse {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div style={{ display: 'flex', gap: 18 }}>
-            {pollButton('check', 'Ja', '#0a3d9e', '#ffffff')}
-            {pollButton('question', 'Vet ikke', '#ffffff', '#00205b')}
-            {pollButton('cross', 'Nei', '#ba0c2f', '#ffffff')}
+            {POLL_BALLOT_CHOICES.map((choice) => {
+              const style = OG_CHOICE_STYLE[choice];
+              return pollButton(
+                OG_CHOICE_ICON[choice],
+                pollChoiceLabel(choice),
+                style.background,
+                style.color,
+              );
+            })}
           </div>
           <div style={{ display: 'flex', fontSize: 22, color: 'rgba(255,255,255,0.72)' }}>
             folkets-meninger.no · Uoffisiell meningsmåling
