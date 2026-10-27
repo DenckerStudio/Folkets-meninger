@@ -10,7 +10,10 @@ import {
 import { formatSensitiveTemaCell } from '@/lib/admin/oppfanget/sensitive-category';
 import type { OppfangetRow } from '@/lib/admin/oppfanget/types';
 import { REEL_TEXT_HIT } from '@/lib/polls/reel-tap-targets';
-import { ResearchRowActions } from '@/components/admin/research-row-actions';
+import {
+  ResearchRowActions,
+  ResearchRowTableCells,
+} from '@/components/admin/research-row-actions';
 import type { ResearchBriefsByKind } from '@/lib/admin/research/service';
 import { adminReelDraftUrl } from '@/lib/admin/research/labels';
 import { routes } from '@/lib/routes';
@@ -238,16 +241,18 @@ export function OppfangetDesktopTable({
       <p className="mb-2 text-xs text-muted-foreground md:hidden">
         Tabellen kan rulles sideveis på smale skjermer.
       </p>
-      <div className="max-w-full overflow-x-auto rounded-xl border border-border md:overflow-x-visible">
-        <table className="w-full table-fixed text-left text-xs leading-snug">
+      <div className="max-w-full overflow-x-auto rounded-xl border border-border">
+        <table className="w-full min-w-[68rem] table-fixed text-left text-xs leading-snug">
           <colgroup>
-            <col />
+            <col className="min-w-[14rem]" />
             <col className="w-28" />
-            <col className="w-[14%]" />
-            <col className="w-[14%]" />
+            <col className="w-[11rem]" />
+            <col className="w-[11rem]" />
             <col className="w-24" />
             <col className="w-16" />
-            <col className="w-[7.5rem]" />
+            <col className="w-[5.5rem]" />
+            <col className="w-[9.5rem]" />
+            <col className="w-[6.75rem]" />
           </colgroup>
           <thead className="border-b border-border bg-muted/40 text-[10px] uppercase tracking-wide text-muted-foreground">
             <tr>
@@ -259,11 +264,19 @@ export function OppfangetDesktopTable({
               <th className={headBase}>Sensitivt tema</th>
               <th className={headBase}>Åpne</th>
               <th className={headBase}>Research</th>
+              <th
+                className={cn(
+                  headBase,
+                  'sticky right-0 z-20 w-[6.75rem] bg-muted/95 shadow-[-6px_0_12px_-8px_rgba(0,0,0,0.25)] backdrop-blur-sm',
+                )}
+              >
+                <span className="sr-only">Handlinger</span>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {rows.map((row) => (
-              <tr key={row.id} className="hover:bg-muted/20">
+              <tr key={row.id} className="group hover:bg-muted/20">
                 <td className={cellClass}>
                   <TitleCell row={row} showTypeMeta desktopTable />
                 </td>
@@ -286,13 +299,15 @@ export function OppfangetDesktopTable({
                 <td className={cellClass}>
                   <PollLinkCell row={row} />
                 </td>
-                <td className={cellClass}>
-                  <ResearchRowActions
-                    clusterId={row.id}
-                    variant="table-compact"
-                    initialBriefsByKind={researchBriefsByCluster[row.id] ?? {}}
-                  />
-                </td>
+                <ResearchRowTableCells
+                  clusterId={row.id}
+                  initialBriefsByKind={researchBriefsByCluster[row.id] ?? {}}
+                  researchCellClassName={cellClass}
+                  actionsCellClassName={cn(
+                    cellClass,
+                    'sticky right-0 z-10 bg-background shadow-[-6px_0_12px_-8px_rgba(0,0,0,0.12)] group-hover:bg-[color-mix(in_oklch,var(--color-muted)_20%,var(--color-background))]',
+                  )}
+                />
               </tr>
             ))}
           </tbody>
