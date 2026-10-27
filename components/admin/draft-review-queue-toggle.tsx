@@ -21,8 +21,9 @@ export function DraftReviewQueueToggle({
 }: Props) {
   return (
     <div
+      role="group"
+      aria-label="Velg kø"
       className={cn('flex flex-wrap gap-1 rounded-xl bg-muted/40 p-1', className)}
-      aria-label="Utkastkø"
     >
       {(
         [
