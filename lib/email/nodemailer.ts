@@ -1,11 +1,11 @@
-import nodemailer from 'nodemailer';
+import nodemailer, { type Transporter } from 'nodemailer';
 import { digestEmailSubject } from '@/lib/notifications/digest';
 import { getSmtpConfig } from '@/lib/email/smtp-config';
 import type { DigestFrequency } from '@/lib/notifications/channels';
 import type { PreparedDigest } from '@/lib/notifications/enrichment';
 import { STEMME_PLUS_MONTHLY_PRICE_NOK } from '@/lib/stemme-plus/constants';
 
-let cachedTransporter: nodemailer.Transporter | null = null;
+let cachedTransporter: Transporter | null = null;
 
 function getTransporter() {
   if (cachedTransporter) return cachedTransporter;
