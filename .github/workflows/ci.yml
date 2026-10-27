@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           cache: npm
       - name: Load public test Supabase env
         run: |
@@ -47,7 +47,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           cache: npm
       - name: Load public test Supabase env
         run: |
@@ -97,7 +97,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           cache: npm
       - name: Load public test Supabase env
         run: |
@@ -115,6 +115,8 @@ jobs:
       - name: fm-cms unit tests
         working-directory: cms
         run: |
+          # cms/package-lock.json is still on the npm 10 lockfile shape; Node 24 ships npm 11.
+          npm i -g npm@10.9.2
           npm ci --ignore-scripts
           npm run test:unit
       - name: fm-cms integration tests (Payload outbox)
@@ -137,7 +139,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
       - name: Sjekk nye migrasjoner for REVOKE/RLS-mønster
         run: |
           BASE="${{ github.event.pull_request.base.sha || 'origin/main' }}"
