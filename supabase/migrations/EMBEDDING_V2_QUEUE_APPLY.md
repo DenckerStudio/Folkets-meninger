@@ -17,6 +17,8 @@
 | 5 | `20261026110400_n8n_claim_chunks_missing_v2_perf.sql` | Transactional | Set-based issue tiers for `n8n_claim_chunks_missing_v2` (fixes 15s statement timeout at ~380k pending) |
 | 6 | `20261027090000_n8n_backfill_db_pressure_slot_fix.sql` | Transactional | Auto-detect Realtime `cainophile_*` replication slot lag; default slot-lag and WAL pause at **3 GiB** (below `max_slot_wal_keep_size`) |
 
+**Ops (not SQL migrations):** Cainophile on database **`_supabase`** (Logflare / `supabase-analytics`) can retain WAL even when the app DB is healthy. Root fix: [`docs/ops/logflare-wal-heartbeat.md`](../../docs/ops/logflare-wal-heartbeat.md) (`_analytics.wal_heartbeat` + cron). Step 6 only pauses backfill on the app DB when lag is high.
+
 **Apply order is fixed:** transactional steps **1 → 2 → 3 → 5 → 6**, then concurrent step **4** (do not run `26110000` before `26110300`). Step **5** requires step **3** (lease RPC). Step **6** replaces `n8n_backfill_db_pressure` from step **1** — run after **5** (or any time after **1** if claim perf is already applied). After step 3, claim/save RPCs exist for backfill #206; step 4 can still build while backfill runs, but Coolify should follow this sequence.
 
 Each transactional file is its own `psql -f` with phase-A session settings (see below); do not merge 1–3 into one transaction unless you accept all-or-nothing rollback.
@@ -64,6 +66,8 @@ ROLLBACK;
 Expect `slot_name` to name the **measured** Realtime slot (auto-detected `cainophile_*` when present), not a stale hardcoded name. Default `p_max_wal_bytes` is **3 GiB** (`3221225472`).
 
 On self-hosted Supabase the function owner may be `supabase_admin`; `CREATE OR REPLACE` as the migration role is fine as long as grants stay `service_role` only.
+
+If `pause_recommended` stays true while embedding backfill is light, check **Logflare slot lag on `_supabase`**, not only `postgres`. Apply the WAL heartbeat runbook: [`docs/ops/logflare-wal-heartbeat.md`](../../docs/ops/logflare-wal-heartbeat.md).
 
 ### Claim perf (`26110400`)
 
