@@ -29,6 +29,7 @@ import { primaryPreflightPassed } from '../lib/backfill-embedding-v2/preflight-e
 import { inferModelTagFromApiModel } from '../lib/backfill-embedding-v2/lmstudio';
 import { resolveEmbeddingV2ModelTag } from '../lib/backfill-embedding-v2/provider';
 import { fetchLmStudioEmbedVectors } from '../lib/backfill-embedding-v2/lmstudio';
+import { createCachedTier0Probe } from '../lib/backfill-embedding-v2/tier0-probe';
 
 function requiredEnv(name: string): string {
   const value = (process.env[name] ?? '').trim();
@@ -40,19 +41,6 @@ function requiredEnv(name: string): string {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function tier0Probe(
-  supabase: ReturnType<typeof createBackfillSupabase>,
-): Promise<boolean> {
-  const { data, error } = await supabase.rpc('n8n_list_v2_priority_issues', {
-    p_tier: 0,
-    p_limit: 1,
-    p_worker_index: 0,
-    p_worker_count: 1,
-  });
-  if (error) return false;
-  return Array.isArray(data) && data.length > 0;
 }
 
 async function runPreflightForEndpoint(
@@ -117,6 +105,7 @@ async function main(): Promise<void> {
 
   const scheduleWindows = loadScheduleWindows(cli);
   const supabase = createBackfillSupabase(supabaseUrl, serviceKey);
+  const tier0Probe = createCachedTier0Probe(supabase, { log, secrets });
 
   const healthByName = new Map<string, EndpointHealth>();
   for (const ep of endpoints) {
@@ -158,7 +147,7 @@ async function main(): Promise<void> {
         await stopController.requestStop();
         break;
       }
-      await shared.refresh(supabase, { tier0Probe: () => tier0Probe(supabase) });
+      await shared.refresh(supabase, { tier0Probe });
       if (shared.isPaused()) {
         log('[backfill-v2] delt DB-pause (WAL/slot) — alle workers venter');
       }
