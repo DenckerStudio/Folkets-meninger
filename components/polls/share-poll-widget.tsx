@@ -2,11 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, ChevronDown, Code2, HelpCircle, Link2, Share2, X } from 'lucide-react';
+import { ChevronDown, Code2, Link2, Share2 } from 'lucide-react';
+import { PollBallotVoteButton } from '@/components/polls/poll-ballot-vote-button';
 import { useAuth } from '@/hooks/use-auth';
 import { Dialog } from '@/components/ui/dialog';
 import { formatStemmerCount } from '@/lib/norwegian-plural';
 import { pollChoicePercent } from '@/lib/polls/format';
+import {
+  POLL_BALLOT_RESULT_BAR_CLASS,
+  POLL_BALLOT_VOTE_BUTTON_GRID_CLASS,
+  pollBallotAltTextPhrase,
+} from '@/lib/polls/ballot-buttons';
+import { pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
 import {
   DEFAULT_EMBED_RADIUS,
@@ -23,42 +30,15 @@ import {
   buildPollShareTargetUrl,
   buildPollShareText,
   isPollChoice,
-  POLL_SHARE_CHOICES,
+  POLL_BALLOT_CHOICES,
   POLL_SHARE_TARGETS,
   POLL_SHARE_TARGET_LABELS,
-  sharePollChoiceLabel,
 } from '@/lib/polls/share';
 import { loginWithNext } from '@/lib/safe-redirect';
 import { cn } from '@/lib/utils';
 
 /** Below this many votes we show counts, not percentages. */
 export const POLL_LOW_SAMPLE_THRESHOLD = 30;
-
-const CHOICE_ICON = {
-  ja: Check,
-  blank: HelpCircle,
-  nei: X,
-} as const;
-
-const CHOICE_BUTTON: Record<PollChoice, string> = {
-  // Locked palette: Ja navy, Vet ikke white/neutral, Nei red.
-  ja: 'border border-transparent bg-[#0a3d9e] text-white hover:bg-[#0c4ab8]',
-  blank:
-    'border border-[#00205b]/20 bg-white text-[#00205b] hover:bg-[#f2f5fb] dark:border-white/40 dark:bg-white dark:text-[#0b1220] dark:hover:bg-[#eef2fa]',
-  nei: 'border border-transparent bg-[#ba0c2f] text-white hover:bg-[#a00f2b]',
-};
-
-const CHOICE_BAR: Record<PollChoice, string> = {
-  ja: 'bg-[#0a3d9e]',
-  blank: 'bg-[#64748b] dark:bg-[#94a3b8]',
-  nei: 'bg-[#ba0c2f]',
-};
-
-const CHOICE_DOT: Record<PollChoice, string> = {
-  ja: 'bg-[#0a3d9e]',
-  blank: 'bg-[#64748b] dark:bg-[#94a3b8]',
-  nei: 'bg-[#ba0c2f]',
-};
 
 const STORAGE_PREFIX = 'folkets:poll-choice:';
 
@@ -313,37 +293,25 @@ export function SharePollWidget({
       <div
         role="group"
         aria-labelledby={headingId}
-        aria-label={headingId ? undefined : 'Stem Ja, Vet ikke eller Nei'}
-        className={cn(
-          'grid grid-cols-3 gap-2',
-          !compact && 'gap-3',
-        )}
+        aria-label={headingId ? undefined : `Stem ${pollBallotAltTextPhrase()}`}
+        className={cn(POLL_BALLOT_VOTE_BUTTON_GRID_CLASS, !compact && 'gap-3')}
       >
-        {POLL_SHARE_CHOICES.map((choice) => {
-          const Icon = CHOICE_ICON[choice];
+        {POLL_BALLOT_CHOICES.map((choice) => {
           const selectedVote = userVote === choice;
           const isPending = pending === choice && !userVote;
           const dimmed = (!votingOpen || Boolean(userVote)) && !selectedVote;
+          const selected = selectedVote || isPending;
           return (
-            <button
+            <PollBallotVoteButton
               key={choice}
-              type="button"
-              disabled={!votingOpen || Boolean(userVote) || busy}
-              aria-pressed={selectedVote || isPending}
+              choice={choice}
+              selected={selected}
+              disabled={!votingOpen || Boolean(userVote) || busy || loading}
               onClick={() => handleChoice(choice)}
-              className={cn(
-                'flex min-h-[56px] items-center justify-center gap-2 rounded-2xl px-2 py-3 text-sm font-bold tracking-wide shadow-sm transition-all sm:text-base',
-                CHOICE_BUTTON[choice],
-                selectedVote || isPending
-                  ? 'ring-2 ring-[#00205b] ring-offset-2 ring-offset-background dark:ring-[#93b4ff]'
-                  : '',
-                dimmed ? 'opacity-50' : '',
-                busy ? 'cursor-wait opacity-70' : '',
-              )}
+              className={cn(dimmed ? 'opacity-60' : '', busy ? 'cursor-wait opacity-70' : '')}
             >
-              <Icon className="h-4 w-4 shrink-0" aria-hidden />
-              <span>{sharePollChoiceLabel(choice)}</span>
-            </button>
+              {pollChoiceLabel(choice)}
+            </PollBallotVoteButton>
           );
         })}
       </div>
@@ -365,7 +333,7 @@ export function SharePollWidget({
           <p className="text-sm text-foreground">
             {pending ? (
               <>
-                Du har valgt <strong>{sharePollChoiceLabel(pending)}</strong>. Bekreft for å
+                Du har valgt <strong>{pollChoiceLabel(pending)}</strong>. Bekreft for å
                 registrere stemmen. Du kan endre valget ved å trykke på et annet alternativ.
               </>
             ) : (
@@ -385,7 +353,7 @@ export function SharePollWidget({
         </div>
       ) : pending && !user && !loading ? (
         <p className="text-sm text-muted-foreground">
-          Du valgte <strong className="text-foreground">{sharePollChoiceLabel(pending)}</strong>.{' '}
+          Du valgte <strong className="text-foreground">{pollChoiceLabel(pending)}</strong>.{' '}
           <button
             type="button"
             onClick={() => {
@@ -410,14 +378,17 @@ export function SharePollWidget({
           aria-live="polite"
         >
           <h2 className="text-sm font-semibold text-foreground">Resultat</h2>
-          {POLL_SHARE_CHOICES.map((choice) => {
+          {POLL_BALLOT_CHOICES.map((choice) => {
             const pct = pollChoicePercent(totals, choice);
             return (
               <div key={choice}>
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2 font-semibold text-foreground">
-                    <span className={cn('h-2.5 w-2.5 rounded-full', CHOICE_DOT[choice])} aria-hidden />
-                    {sharePollChoiceLabel(choice)}
+                    <span
+                      className={cn('h-2.5 w-2.5 rounded-full', POLL_BALLOT_RESULT_BAR_CLASS[choice])}
+                      aria-hidden
+                    />
+                    {pollChoiceLabel(choice)}
                   </span>
                   <span className="tabular-nums text-muted-foreground">
                     {lowSample || pct == null ? totals[choice] : `${pct}% · ${totals[choice]}`}
@@ -427,7 +398,7 @@ export function SharePollWidget({
                   <div
                     className={cn(
                       'h-full rounded-full motion-safe:transition-[width] motion-safe:duration-500',
-                      CHOICE_BAR[choice],
+                      POLL_BALLOT_RESULT_BAR_CLASS[choice],
                     )}
                     style={{ width: lowSample || pct == null ? '0%' : `${pct}%` }}
                   />

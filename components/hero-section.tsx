@@ -7,6 +7,7 @@ import { routes } from '@/lib/routes';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { LandingMeshBackground } from '@/components/landing-mesh-background';
 import { STANCE_AGGREGATE_DISCLOSURE } from '@/lib/copy/stance-privacy';
+import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
 
 /** Short pitch in the hero info card — keep in sync with product positioning. */
 export const LANDING_HERO_CARD_COPY =
@@ -51,7 +52,8 @@ export default function HeroSection() {
           transition={{ duration: 0.75, delay: 0.4, ease: 'easeOut' }}
           className="mt-6 max-w-2xl mx-auto text-lg text-[#001433]/75 sm:text-xl leading-relaxed"
         >
-          Si din mening med Ja, Nei eller Blank i avstemninger. Stemmen telles bare i samlet statistikk — uten navn.
+          Si din mening med {pollBallotRunningTextPhrase()} i avstemninger. Stemmen telles bare i samlet
+          statistikk — uten navn.
         </motion.p>
 
         <motion.div

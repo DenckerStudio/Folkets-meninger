@@ -1,7 +1,10 @@
 'use client';
 
 import { LandingHeadingRule } from '@/components/icons/civic';
+import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
 import { cn } from '@/lib/utils';
+
+const BALLOT_RUNNING_TEXT = pollBallotRunningTextPhrase();
 
 export interface Step {
   title: string;
@@ -42,9 +45,9 @@ const DEFAULT_FEATURES: Step[] = [
     colorTheme: 'red',
   },
   {
-    title: 'Stem Ja, Nei eller Blank',
+    title: `Stem ${BALLOT_RUNNING_TEXT}`,
     description:
-      'Nasjonale spørsmål bruker Ja, Nei eller Blank. Stemmen telles uten navn i samlet statistikk.',
+      `Nasjonale spørsmål bruker ${BALLOT_RUNNING_TEXT}. Stemmen telles uten navn i samlet statistikk.`,
     colorTheme: 'blue',
   },
   {

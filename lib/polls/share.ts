@@ -2,9 +2,11 @@ import { DEFAULT_SITE_URL } from '@/lib/seo/metadata';
 import type { PollChoice, PollRecord } from '@/lib/polls/types';
 import type { PollEmbedOptions } from '@/lib/polls/embed';
 import { serializePollEmbedOptions } from '@/lib/polls/embed';
+import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
+import { POLL_BALLOT_CHOICES } from '@/lib/polls/labels';
 
 /**
- * Shareable Ja / Vet ikke / Nei poll widget helpers.
+ * Shareable Nei / Blank / Ja poll widget helpers.
  *
  * Polls reuse the existing `polls` / `poll_votes` schema. Only official tracks
  * (`stortinget`, `system`) with an open/closed status may be shared; hidden or
@@ -27,23 +29,8 @@ export const POLL_SHARE_TARGET_LABELS: Record<PollShareTarget, string> = {
 /** Canonical production origin, shared with the SEO metadata helpers. */
 export const DEFAULT_SITE_ORIGIN = DEFAULT_SITE_URL;
 
-/** Display order for the share widget: Ja (blue) → Vet ikke (neutral) → Nei (red). */
-export const POLL_SHARE_CHOICES: PollChoice[] = ['ja', 'blank', 'nei'];
-
-export function sharePollChoiceLabel(choice: PollChoice): string {
-  switch (choice) {
-    case 'ja':
-      return 'Ja';
-    case 'blank':
-      return 'Vet ikke';
-    case 'nei':
-      return 'Nei';
-    default: {
-      const _exhaustive: never = choice;
-      return _exhaustive;
-    }
-  }
-}
+/** Same ballot order and values as dashboard polls (`POLL_BALLOT_CHOICES`). */
+export { POLL_BALLOT_CHOICES };
 
 export function isPollChoice(value: unknown): value is PollChoice {
   return value === 'ja' || value === 'nei' || value === 'blank';
@@ -248,5 +235,5 @@ export function buildPollShareTargetUrl(
 /** Short share copy used for native share + social posts. */
 export function buildPollShareText(title: string): string {
   const clean = title.trim();
-  return `${clean} Hva mener du? Svar Ja, Vet ikke eller Nei.`;
+  return `${clean} Hva mener du? Svar ${pollBallotRunningTextPhrase()}.`;
 }

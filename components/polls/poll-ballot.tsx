@@ -5,9 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { pollChoicePercent } from '@/lib/polls/format';
+import {
+  POLL_BALLOT_VOTE_BUTTON_GRID_CLASS,
+  pollBallotRunningTextPhraseSentenceStart,
+} from '@/lib/polls/ballot-buttons';
 import { POLL_BALLOT_CHOICES, pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
-import { VoteFillButton } from '@/components/motion/vote-fill';
+import { PollBallotVoteButton } from '@/components/polls/poll-ballot-vote-button';
 import { routes } from '@/lib/routes';
 import { NonRepresentativeNotice } from '@/components/trust/non-representative-notice';
 import { cn } from '@/lib/utils';
@@ -70,35 +74,34 @@ export function PollBallot({
         <>
           <h2 className="text-base font-semibold text-foreground">Hva mener du?</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Ja, nei eller blank. Stemmen telles i samlet statistikk uten navn.
+            {pollBallotRunningTextPhraseSentenceStart()}. Stemmen telles i samlet statistikk uten navn.
           </p>
           <NonRepresentativeNotice count={totals.total} countLabel="stemmer" countLabelSingular="stemme" className="mt-2" />
         </>
       )}
-      <div className={cn('grid gap-2 sm:grid-cols-3', compact ? 'mt-0' : 'mt-4')}>
+      <div className={cn(POLL_BALLOT_VOTE_BUTTON_GRID_CLASS, compact ? 'mt-0' : 'mt-4')}>
         {POLL_BALLOT_CHOICES.map((choice) => {
           const selected = userVote === choice;
           return (
-            <VoteFillButton
+            <PollBallotVoteButton
               key={choice}
+              choice={choice}
               selected={selected}
               disabled={!votingOpen || Boolean(userVote) || busy || !user}
               onClick={() => void vote(choice)}
               className={cn(
-                'rounded-xl border px-4 py-3 text-sm font-semibold transition-colors',
+                'flex-col gap-0.5 py-2',
                 (!votingOpen || userVote) && !selected ? 'opacity-60' : '',
               )}
-              selectedClassName="border-brand text-white"
-              idleClassName="border-border bg-background text-foreground hover:border-brand/40 hover:bg-brand/5"
             >
-              {pollChoiceLabel(choice)}
-              <span className="mt-1 block text-xs font-normal opacity-80">
+              <span>{pollChoiceLabel(choice)}</span>
+              <span className="text-xs font-normal opacity-90">
                 {(() => {
                   const pct = pollChoicePercent(totals, choice);
                   return pct != null ? `${pct}% · ${totals[choice]}` : `${totals[choice]} stemmer`;
                 })()}
               </span>
-            </VoteFillButton>
+            </PollBallotVoteButton>
           );
         })}
       </div>

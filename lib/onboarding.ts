@@ -1,4 +1,5 @@
 import type { User } from '@supabase/supabase-js';
+import { pollBallotSlugPhrase } from '@/lib/polls/ballot-buttons';
 
 /** Post-signup onboarding wizard and optional product tour for Folkets Meninger. */
 
@@ -233,7 +234,7 @@ export const PRODUCT_TOUR_STEPS: readonly ProductTourStep[] = [
   {
     id: 'reels',
     title: 'Reels',
-    body: 'Korte, systemgenererte ja/nei/blank-spørsmål bygget fra stortingssaker. Sveip og si din mening.',
+    body: `Korte, systemgenererte ${pollBallotSlugPhrase()}-spørsmål bygget fra stortingssaker. Sveip og si din mening.`,
     selector: '[data-tour="reels"]',
     placement: 'bottom',
     openNav: false,

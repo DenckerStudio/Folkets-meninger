@@ -12,10 +12,10 @@ import {
   normalizeOrigin,
   pollEmbedPath,
   pollSharePath,
-  POLL_SHARE_CHOICES,
+  POLL_BALLOT_CHOICES,
   resolveShareOrigin,
-  sharePollChoiceLabel,
 } from '@/lib/polls/share';
+import { pollChoiceLabel } from '@/lib/polls/labels';
 import { parsePollEmbedOptions } from '@/lib/polls/embed';
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -159,17 +159,17 @@ assert(!isShareablePoll({ track: 'system', status: 'draft' }), 'drafts are not s
 assert(!isShareablePoll(null), 'missing poll is not shareable');
 
 assert(
-  POLL_SHARE_CHOICES.length === 3 &&
-    POLL_SHARE_CHOICES[0] === 'ja' &&
-    POLL_SHARE_CHOICES[1] === 'blank' &&
-    POLL_SHARE_CHOICES[2] === 'nei',
-  'share ballot order ja/blank/nei',
+  POLL_BALLOT_CHOICES.length === 3 &&
+    POLL_BALLOT_CHOICES[0] === 'nei' &&
+    POLL_BALLOT_CHOICES[1] === 'blank' &&
+    POLL_BALLOT_CHOICES[2] === 'ja',
+  'share re-exports ballot button order nei/blank/ja',
 );
-assert(sharePollChoiceLabel('ja') === 'Ja', 'ja label');
-assert(sharePollChoiceLabel('blank') === 'Vet ikke', 'blank label is vet ikke');
-assert(sharePollChoiceLabel('nei') === 'Nei', 'nei label');
+assert(pollChoiceLabel('ja') === 'Ja', 'ja label');
+assert(pollChoiceLabel('blank') === 'Blank', 'blank label');
+assert(pollChoiceLabel('nei') === 'Nei', 'nei label');
 assert(
-  buildPollShareText('Test?') === 'Test? Hva mener du? Svar Ja, Vet ikke eller Nei.',
+  buildPollShareText('Test?') === 'Test? Hva mener du? Svar nei, blank eller ja.',
   'share text',
 );
 
