@@ -80,7 +80,7 @@ export function isPublicDashboardPolitikerPath(pathname: string): boolean {
   );
 }
 
-/** Public Ja/Nei/Blank ballots — guests can read; voting requires login. */
+/** Public Nei/Blank/Ja ballots — guests can read; voting requires login. */
 export function isPublicDashboardAvstemningPath(pathname: string): boolean {
   return pathname === routes.avstemninger || /^\/dashboard\/avstemninger\/[^/]+$/.test(pathname);
 }
@@ -134,7 +134,7 @@ export function isEmbedPath(pathname: string): boolean {
   return pathname.startsWith('/embed/');
 }
 
-/** Public shareable poll widget page (Ja / Nei / Blank). */
+/** Public shareable poll widget page (Nei / Blank / Ja). */
 export function isSharePollPath(pathname: string): boolean {
   return /^\/del\/[^/]+$/.test(pathname);
 }

@@ -1,5 +1,6 @@
 import { listSystemReelFeedItems } from '@/lib/polls/service';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import ReelsFullPage from '@/components/polls/reels-full-page';
 
@@ -7,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata = buildPageMetadata({
   title: 'Reels',
-  description: 'Systemgenererte Reels om Stortingssaker. Stem ja, nei eller blankt.',
+  description: `Systemgenererte Reels om Stortingssaker. Stem ${pollBallotRunningTextPhrase()}.`,
   canonicalPath: '/dashboard/utforsk/reels',
 });
 

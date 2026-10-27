@@ -1,10 +1,47 @@
 import type { PollChoice } from '@/lib/polls/types';
 
+export function pollChoiceLabel(choice: PollChoice): string {
+  switch (choice) {
+    case 'ja':
+      return 'Ja';
+    case 'nei':
+      return 'Nei';
+    case 'blank':
+      return 'Blank';
+    default: {
+      const _exhaustive: never = choice;
+      return _exhaustive;
+    }
+  }
+}
+
 /**
  * Three-button ballot layout (Nei / Blank / Ja). Matches Reels card vote colors.
  * Stored vote values remain `ja` | `nei` | `blank`.
  */
 export const POLL_BALLOT_BUTTON_ORDER: PollChoice[] = ['nei', 'blank', 'ja'];
+
+/** Slash-separated button labels: Nei / Blank / Ja (dashboard share link). */
+export function pollBallotButtonLabelsPhrase(separator = ' / '): string {
+  return POLL_BALLOT_BUTTON_ORDER.map((choice) => pollChoiceLabel(choice)).join(separator);
+}
+
+/** Running prose: Nei, blank eller ja */
+export function pollBallotRunningTextPhrase(): string {
+  const [nei, blank, ja] = POLL_BALLOT_BUTTON_ORDER;
+  return `${pollChoiceLabel(nei)}, ${pollChoiceLabel(blank).toLowerCase()} eller ${pollChoiceLabel(ja).toLowerCase()}`;
+}
+
+/** Alt / OG copy: Nei, Blank og Ja */
+export function pollBallotAltTextPhrase(): string {
+  const labels = POLL_BALLOT_BUTTON_ORDER.map((choice) => pollChoiceLabel(choice));
+  return `${labels[0]}, ${labels[1]} og ${labels[2]}`;
+}
+
+/** Compact reference: nei/blank/ja */
+export function pollBallotSlugPhrase(): string {
+  return POLL_BALLOT_BUTTON_ORDER.join('/');
+}
 
 /** All valid stored vote values (order-independent). */
 export const POLL_VOTE_VALUES: PollChoice[] = ['ja', 'nei', 'blank'];
@@ -33,7 +70,7 @@ export function pollBallotVoteButtonSelectedRing(selected: boolean): string {
 /** Result bar / legend colors aligned with vote buttons. */
 export const POLL_BALLOT_RESULT_BAR_CLASS: Record<PollChoice, string> = {
   nei: 'bg-[#ba0c2f]',
-  blank: 'bg-white ring-1 ring-inset ring-[#00205b]/20',
+  blank: 'bg-[#94a3b8] dark:bg-white',
   ja: 'bg-[#0a3d9e]',
 };
 

@@ -169,7 +169,7 @@ assert(pollChoiceLabel('ja') === 'Ja', 'ja label');
 assert(pollChoiceLabel('blank') === 'Blank', 'blank label');
 assert(pollChoiceLabel('nei') === 'Nei', 'nei label');
 assert(
-  buildPollShareText('Test?') === 'Test? Hva mener du? Svar Ja, nei eller blank.',
+  buildPollShareText('Test?') === 'Test? Hva mener du? Svar Nei, blank eller ja.',
   'share text',
 );
 

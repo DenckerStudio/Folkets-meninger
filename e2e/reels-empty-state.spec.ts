@@ -27,7 +27,7 @@ test.describe('Utforsk Reels empty chrome', () => {
     await expect(
       page.getByRole('status').getByText(/Systemgenerert fra stortingssaker/),
     ).toBeVisible();
-    await expect(page.getByRole('status').getByText(/ja\/nei\/blank/i)).toBeVisible();
+    await expect(page.getByRole('status').getByText(/nei\/blank\/ja/i)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Åpne Stemme+' })).toHaveCount(0);
 
     await page.screenshot({ path: `${ARTIFACTS}/tip_utforsk_reels_empty_state.png` });

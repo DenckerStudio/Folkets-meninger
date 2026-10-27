@@ -2,6 +2,7 @@ import { ALIGNMENT_MIN_FOLK_VOTES } from '@/lib/alignment/types';
 import { DATA_CONTROLLER, formatDataControllerBlock } from '@/lib/legal/controller';
 import { STANCE_AGGREGATE_DISCLOSURE } from '@/lib/copy/stance-privacy';
 import { GOVERNMENT_STATS_MIN_VOTES } from '@/lib/government-stats/snapshot';
+import { pollBallotAltTextPhrase } from '@/lib/polls/ballot-buttons';
 import {
   STEMME_PLUS_BENEFITS,
   STEMME_PLUS_MONTHLY_PRICE_NOK,
@@ -25,7 +26,7 @@ export const OM_WHY_POINTS = [
   {
     title: 'Si din mening',
     body:
-      'Innloggede brukere kan stemme For, Mot eller Avstår på saker, delta i Ja/Nei/Blank-avstemninger og skrive strukturerte meninger i Folkets meninger.',
+      `Innloggede brukere kan stemme For, Mot eller Avstår på saker, delta i ${pollBallotAltTextPhrase()}-avstemninger og skrive strukturerte meninger i Folkets meninger.`,
   },
   {
     title: 'Sammenlign med vedtak',
@@ -48,7 +49,7 @@ export const OM_PROCESS_STEPS = [
   },
   {
     title: 'Avstemninger og Reels',
-    body: 'Ja/Nei/Blank-avstemninger og systemgenererte Reels på Utforsk. Reels-utkast lages av admin fra saksdokumenter (AI), merket som systemgenerert.',
+    body: `${pollBallotAltTextPhrase()}-avstemninger og systemgenererte Reels på Utforsk. Reels-utkast lages av admin fra saksdokumenter (AI), merket som systemgenerert.`,
   },
   {
     title: 'Valgomat 2.0',

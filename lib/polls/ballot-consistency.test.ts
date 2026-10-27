@@ -3,6 +3,11 @@ import { fileURLToPath } from 'node:url';
 import {
   POLL_BALLOT_BUTTON_ORDER,
   POLL_VOTE_VALUES,
+  POLL_BALLOT_RESULT_BAR_CLASS,
+  pollBallotAltTextPhrase,
+  pollBallotButtonLabelsPhrase,
+  pollBallotRunningTextPhrase,
+  pollBallotSlugPhrase,
   pollBallotVoteButtonClassName,
 } from '@/lib/polls/ballot-buttons';
 import { POLL_BALLOT_CHOICES, pollChoiceLabel } from '@/lib/polls/labels';
@@ -39,6 +44,23 @@ for (const value of POLL_VOTE_VALUES) {
 
 assert(POLL_VOTE_VALUES.length === 3, 'three stored vote values');
 assert(
+  pollBallotButtonLabelsPhrase() === 'Nei / Blank / Ja',
+  'dashboard share link lists ballot buttons in display order',
+);
+assert(
+  pollBallotRunningTextPhrase() === 'Nei, blank eller ja',
+  'running text follows ballot button order',
+);
+assert(
+  pollBallotAltTextPhrase() === 'Nei, Blank og Ja',
+  'alt text follows ballot button order',
+);
+assert(pollBallotSlugPhrase() === 'nei/blank/ja', 'slug follows ballot button order');
+assert(
+  POLL_BALLOT_RESULT_BAR_CLASS.blank.includes('#94a3b8'),
+  'blank result bar is visible on light backgrounds',
+);
+assert(
   pollBallotVoteButtonClassName('nei').includes('#ba0c2f'),
   'nei uses Reels red',
 );
@@ -48,7 +70,7 @@ assert(
 );
 assert(
   pollBallotVoteButtonClassName('blank').includes('bg-white'),
-  'blank uses Reels white surface',
+  'blank vote button uses Reels white surface',
 );
 
 const shareWidgetSource = readFileSync(

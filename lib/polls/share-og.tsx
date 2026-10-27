@@ -1,10 +1,11 @@
 import { ImageResponse } from 'next/og';
+import { pollBallotAltTextPhrase } from '@/lib/polls/ballot-buttons';
 import { POLL_BALLOT_CHOICES, pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, PollRecord } from '@/lib/polls/types';
 
 export const OG_IMAGE_SIZE = { width: 1200, height: 630 } as const;
 export const OG_IMAGE_CONTENT_TYPE = 'image/png';
-export const OG_IMAGE_ALT = 'Folkets Meninger med spørsmålet og svarene Ja, Nei og Blank';
+export const OG_IMAGE_ALT = `Folkets Meninger med spørsmålet og svarene ${pollBallotAltTextPhrase()}`;
 /**
  * Only shareable polls get a long-lived immutable cache. Unknown, hidden or
  * legacy `citizen` polls return 404 (see the image routes) so a future poll at
@@ -13,8 +14,7 @@ export const OG_IMAGE_ALT = 'Folkets Meninger med spørsmålet og svarene Ja, Ne
 export const OG_IMAGE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
 export function pollOgImageAlt(title: string): string {
-  const options = POLL_BALLOT_CHOICES.map((choice) => pollChoiceLabel(choice)).join(', ');
-  return `Spørsmål: ${title.trim()}. Svar ${options} på Folkets Meninger.`;
+  return `Spørsmål: ${title.trim()}. Svar ${pollBallotAltTextPhrase()} på Folkets Meninger.`;
 }
 
 function clampText(value: string, max: number): string {
@@ -96,7 +96,7 @@ function pollButton(
 
 /**
  * Renders the 1200×630 social preview for a shareable poll: the question plus
- * the Ja / Nei / Blank buttons and Folkets Meninger branding. The caller is
+ * the Nei / Blank / Ja buttons and Folkets Meninger branding. The caller is
  * responsible for rejecting unknown or non-shareable polls with a 404 so no
  * question leaks and no generic image is cached under a real poll id.
  */

@@ -11,8 +11,9 @@ import { pollChoicePercent } from '@/lib/polls/format';
 import {
   POLL_BALLOT_RESULT_BAR_CLASS,
   POLL_BALLOT_VOTE_BUTTON_GRID_CLASS,
+  pollBallotAltTextPhrase,
 } from '@/lib/polls/ballot-buttons';
-import { POLL_BALLOT_OPTIONS_PHRASE, pollChoiceLabel } from '@/lib/polls/labels';
+import { pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
 import {
   DEFAULT_EMBED_RADIUS,
@@ -292,7 +293,7 @@ export function SharePollWidget({
       <div
         role="group"
         aria-labelledby={headingId}
-        aria-label={headingId ? undefined : `Stem ${POLL_BALLOT_OPTIONS_PHRASE}`}
+        aria-label={headingId ? undefined : `Stem ${pollBallotAltTextPhrase()}`}
         className={cn(POLL_BALLOT_VOTE_BUTTON_GRID_CLASS, !compact && 'gap-3')}
       >
         {POLL_BALLOT_CHOICES.map((choice) => {

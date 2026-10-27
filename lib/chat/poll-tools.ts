@@ -11,6 +11,7 @@ import {
   type PollReadClient,
 } from '@/lib/polls/service';
 import { isPollVotingOpen, POLL_PUBLIC_PERCENT_MIN_VOTES, pollChoicePercent } from '@/lib/polls/format';
+import { pollBallotAltTextPhrase } from '@/lib/polls/ballot-buttons';
 import { POLL_FYLKE_MIN_VOTES } from '@/lib/polls/norway-counties';
 import type { PollFylkeTotals, PollRecord, PollTotals } from '@/lib/polls/types';
 import type { CitationRegistry } from '@/lib/chat/citations';
@@ -145,7 +146,7 @@ export function createPollChatTools(args: {
   return {
     getPollResults: tool({
       description:
-        'Hent resultatet av en Ja/Nei/Blank-avstemning i appen: antall og prosent per valg, om den er åpen, og fylkesfordeling når den er over personvern-terskelen. Bruk når brukeren spør hva folk stemte i en avstemning eller hvordan en sak står i avstemningen.',
+        `Hent resultatet av en ${pollBallotAltTextPhrase()}-avstemning i appen: antall og prosent per valg, om den er åpen, og fylkesfordeling når den er over personvern-terskelen. Bruk når brukeren spør hva folk stemte i en avstemning eller hvordan en sak står i avstemningen.`,
       inputSchema: z.object({
         pollId: z.string().optional().describe('Avstemnings-id hvis kjent.'),
         issueId: z

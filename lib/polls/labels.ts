@@ -1,26 +1,10 @@
 import type { PollChoice, PollStatus, PollTrack } from '@/lib/polls/types';
-import { POLL_BALLOT_BUTTON_ORDER } from '@/lib/polls/ballot-buttons';
+import { POLL_BALLOT_BUTTON_ORDER, pollChoiceLabel } from '@/lib/polls/ballot-buttons';
 
 /** Button order on ballots: Nei / Blank / Ja (Reels colors). Sak ballots stay For/Mot/Avstår. */
 export const POLL_BALLOT_CHOICES: PollChoice[] = POLL_BALLOT_BUTTON_ORDER;
 
-/** Short copy for ballot UIs and share metadata (matches {@link pollChoiceLabel}). */
-export const POLL_BALLOT_OPTIONS_PHRASE = 'Ja, nei eller blank';
-
-export function pollChoiceLabel(choice: PollChoice): string {
-  switch (choice) {
-    case 'ja':
-      return 'Ja';
-    case 'nei':
-      return 'Nei';
-    case 'blank':
-      return 'Blank';
-    default: {
-      const _exhaustive: never = choice;
-      return _exhaustive;
-    }
-  }
-}
+export { pollChoiceLabel };
 
 export const SYSTEM_REEL_DISCLAIMER =
   'Systemgenerert fra stortingssaker og godkjent av admin. Ikke en offisiell Stortinget-avstemning.';

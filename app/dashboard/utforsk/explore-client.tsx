@@ -18,6 +18,7 @@ import { SurfaceCard } from '@/components/dashboard/surface-card';
 import { MotionList, MotionListRow } from '@/components/motion/list-row';
 import { SectionSettle } from '@/components/motion/section-settle';
 import { TabUnderline } from '@/components/motion/tab-underline';
+import { pollBallotSlugPhrase } from '@/lib/polls/ballot-buttons';
 import { PageHeader } from '@/components/page-header';
 import { UtforskReelsStage, ReelsEntryCta } from '@/components/polls/utforsk-reels-stage';
 import { useAuth } from '@/hooks/use-auth';
@@ -316,7 +317,7 @@ export default function ExploreClient({
             Holdningene dine brukes til Valgomat og hjertesaker.
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
-            For andre nasjonale ja/nei/blank-avstemninger, se Avstemninger.
+            For andre nasjonale {pollBallotSlugPhrase()}-avstemninger, se Avstemninger.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {firstOpenIssue ? (

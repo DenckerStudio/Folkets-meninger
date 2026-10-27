@@ -2,10 +2,11 @@ import { DEFAULT_SITE_URL } from '@/lib/seo/metadata';
 import type { PollChoice, PollRecord } from '@/lib/polls/types';
 import type { PollEmbedOptions } from '@/lib/polls/embed';
 import { serializePollEmbedOptions } from '@/lib/polls/embed';
-import { POLL_BALLOT_CHOICES, POLL_BALLOT_OPTIONS_PHRASE } from '@/lib/polls/labels';
+import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
+import { POLL_BALLOT_CHOICES } from '@/lib/polls/labels';
 
 /**
- * Shareable Ja / Nei / Blank poll widget helpers.
+ * Shareable Nei / Blank / Ja poll widget helpers.
  *
  * Polls reuse the existing `polls` / `poll_votes` schema. Only official tracks
  * (`stortinget`, `system`) with an open/closed status may be shared; hidden or
@@ -234,5 +235,5 @@ export function buildPollShareTargetUrl(
 /** Short share copy used for native share + social posts. */
 export function buildPollShareText(title: string): string {
   const clean = title.trim();
-  return `${clean} Hva mener du? Svar ${POLL_BALLOT_OPTIONS_PHRASE}.`;
+  return `${clean} Hva mener du? Svar ${pollBallotRunningTextPhrase()}.`;
 }

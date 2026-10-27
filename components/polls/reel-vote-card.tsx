@@ -25,7 +25,7 @@ export function reelExpandLayoutId(pollId: string) {
 }
 
 function reelTotalsSummary(totals: { ja: number; nei: number; blank: number; total: number }): string {
-  return `${totals.ja} ja · ${totals.nei} nei · ${totals.blank} blank.`;
+  return `${totals.nei} nei · ${totals.blank} blank · ${totals.ja} ja.`;
 }
 
 type ReelVoteState = ReturnType<typeof useReelVote>;
