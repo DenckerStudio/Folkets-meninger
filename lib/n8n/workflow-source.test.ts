@@ -47,14 +47,16 @@ assert.match(aiSummary, /authentication: 'headerAuth'/);
 assert.match(readWorkflow('n8n-supabase.shared.ts'), /FM AI Summary Webhook Token/);
 
 const docEmb = readWorkflow('document-embeddings.workflow.ts');
-assert.match(docEmb, /guard-has-issue-id/);
+assert.match(readWorkflow('document-embeddings.pins.ts'), /guard-has-issue-id/);
+assert.match(readWorkflow('document-embeddings.pins.ts'), /skip-global-drain-node/);
 assert.match(docEmb, /Has issue id\?/);
 assert.match(docEmb, /body\?\.stortinget_issue_id/);
 assert.match(docEmb, /\$json\.issueId/);
 assert.match(docEmb, /normalizeWebhook\.to\(/);
 assert.match(docEmb, /skipped_global_nomic_drain/);
-assert.doesNotMatch(docEmb, /scheduleTrigger/);
-assert.doesNotMatch(docEmb, /Every 60 minutes/);
+assert.match(docEmb, /scheduleTrigger/);
+assert.match(docEmb, /Every 60 minutes/);
+assert.match(docEmb, /disabled: true/);
 assert.doesNotMatch(docEmb, /Trigger AI summary/);
 
 const cron = readWorkflow('app-cron.workflow.ts');
