@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
-import { getPublishBlockedUtenKontekstMessage } from '@/lib/admin/uten-kontekst';
+import { preparePollPublicTextForPublish } from '@/lib/admin/uten-kontekst';
 import {
   archivePoll,
   getPollById,
   listExpiredSystemReelDrafts,
   listSystemPollDrafts,
   publishPoll,
+  publishPollWithPublicText,
   restoreExpiredReelDraft,
 } from '@/lib/polls/service';
 
@@ -65,11 +66,16 @@ export async function PATCH(request: Request) {
       if (!poll) {
         return NextResponse.json({ error: 'Avstemning ikke funnet' }, { status: 404 });
       }
-      const blocked = getPublishBlockedUtenKontekstMessage(poll);
-      if (blocked) {
-        return NextResponse.json({ error: blocked }, { status: 400 });
+      const prepared = preparePollPublicTextForPublish(poll);
+      if ('error' in prepared) {
+        return NextResponse.json({ error: prepared.error }, { status: 400 });
       }
-      const pollId = await publishPoll(id);
+      const pollId = prepared.textChanged
+        ? await publishPollWithPublicText(id, {
+            title: prepared.title,
+            neutralSummary: prepared.neutralSummary,
+          })
+        : await publishPoll(id);
       return NextResponse.json({ ok: true, id: pollId, action });
     }
 

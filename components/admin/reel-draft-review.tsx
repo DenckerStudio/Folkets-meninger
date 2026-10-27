@@ -6,7 +6,10 @@ import { useSearchParams } from 'next/navigation';
 import { ContentFeedbackPanel } from '@/components/admin/content-feedback-panel';
 import { DraftExpiryBadge } from '@/components/admin/draft-expiry-badge';
 import { UtenKontekstBadge } from '@/components/admin/uten-kontekst-badge';
-import { isPollDraftUtenKontekst } from '@/lib/admin/uten-kontekst';
+import {
+  getUtenKontekstPrefixNoticeMessage,
+  isPollDraftUtenKontekst,
+} from '@/lib/admin/uten-kontekst';
 import {
   DraftReviewQueueToggle,
   type DraftReviewQueue,
@@ -104,7 +107,8 @@ export function ReelDraftReview() {
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        const message = typeof data.error === 'string' ? data.error : 'Handling feilet';
+        const raw = typeof data.error === 'string' ? data.error : 'Handling feilet';
+        const message = raw.endsWith('.') ? raw : `${raw}.`;
         if (action === 'publish') {
           setPublishErrors((current) => ({ ...current, [poll.id]: message }));
         } else {
@@ -208,10 +212,10 @@ export function ReelDraftReview() {
                   Utløpt {new Date(poll.expiredAt).toLocaleString('nb-NO')}
                 </p>
               ) : null}
-              <div className="mt-4 flex flex-wrap items-start gap-2">
+              <div className="mt-4 space-y-2">
                 {queue === 'pending' ? (
                   <>
-                    <div className="flex min-w-0 flex-col gap-1">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
                         disabled={pending}
@@ -220,22 +224,34 @@ export function ReelDraftReview() {
                       >
                         Publiser
                       </button>
-                      {publishErrors[poll.id] ? (
-                        <p className="max-w-md text-sm text-destructive" role="alert">
-                          {publishErrors[poll.id]}
-                        </p>
-                      ) : null}
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => patchPoll(poll, 'archive')}
+                        className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+                      >
+                        Arkiver
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      disabled={pending}
-                      onClick={() => patchPoll(poll, 'archive')}
-                      className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
-                    >
-                      Arkiver
-                    </button>
+                    {(() => {
+                      const notice = getUtenKontekstPrefixNoticeMessage(poll);
+                      return notice ? (
+                        <p
+                          className="w-full text-sm leading-snug text-amber-900 dark:text-amber-200"
+                          role="note"
+                        >
+                          {notice}
+                        </p>
+                      ) : null;
+                    })()}
+                    {publishErrors[poll.id] ? (
+                      <p className="w-full text-sm leading-snug text-destructive" role="alert">
+                        {publishErrors[poll.id]}
+                      </p>
+                    ) : null}
                   </>
                 ) : (
+                  <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     disabled={pending}
@@ -244,6 +260,7 @@ export function ReelDraftReview() {
                   >
                     Gjenopprett
                   </button>
+                  </div>
                 )}
               </div>
             </li>

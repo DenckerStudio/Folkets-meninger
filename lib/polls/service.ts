@@ -484,10 +484,16 @@ export async function createSystemPollDraft(input: {
 
 type PollStatusServiceClient = Pick<SupabaseClient, 'rpc' | 'from'>;
 
+type PollPublicTextRowPatch = {
+  title: string;
+  neutral_summary: string;
+};
+
 export async function updatePollStatusRow(
   pollId: string,
   action: PollStatusAction,
   service: PollStatusServiceClient = getServiceSupabase(),
+  publicText?: PollPublicTextRowPatch,
 ): Promise<string> {
   const { data: row, error: readError } = await service
     .from('polls')
@@ -498,12 +504,22 @@ export async function updatePollStatusRow(
   if (!row) throw new Error('Poll not found');
 
   const next = nextPollStatusForAction(String(row.status), action);
-  const patch: { status: 'open' | 'archived'; updated_at: string; opens_at?: string } = {
+  const patch: {
+    status: 'open' | 'archived';
+    updated_at: string;
+    opens_at?: string;
+    title?: string;
+    neutral_summary?: string;
+  } = {
     status: next.status,
     updated_at: new Date().toISOString(),
   };
   if (next.setOpensAtIfMissing && !row.opens_at) {
     patch.opens_at = patch.updated_at;
+  }
+  if (publicText) {
+    patch.title = publicText.title;
+    patch.neutral_summary = publicText.neutral_summary;
   }
 
   const { error: updateError } = await service.from('polls').update(patch).eq('id', pollId);
@@ -550,6 +566,18 @@ export async function applyPollStatusViaRpc(
 
 export async function publishPoll(pollId: string): Promise<string> {
   return applyPollStatusViaRpc(pollId, 'publish');
+}
+
+/** Publishes and updates title/summary in a single row write (e.g. strip uten-kontekst marker). */
+export async function publishPollWithPublicText(
+  pollId: string,
+  publicText: { title: string; neutralSummary: string },
+): Promise<string> {
+  const service = getServiceSupabase();
+  return updatePollStatusRow(pollId, 'publish', service, {
+    title: publicText.title,
+    neutral_summary: publicText.neutralSummary,
+  });
 }
 
 export async function archivePoll(pollId: string): Promise<string> {

@@ -43,6 +43,8 @@ assert.match(reviewSrc, /DraftExpiryBadge/);
 assert.match(reviewSrc, /UtenKontekstBadge/);
 assert.match(reviewSrc, /isPollDraftUtenKontekst/);
 assert.match(reviewSrc, /publishErrors\[poll\.id\]/);
+assert.match(reviewSrc, /getUtenKontekstPrefixNoticeMessage/);
+assert.match(reviewSrc, /role="note"/);
 assert.match(reviewSrc, /Gjenopprett/);
 
 const utenKontekstBadgeSrc = readFileSync(
@@ -50,7 +52,11 @@ const utenKontekstBadgeSrc = readFileSync(
   'utf8',
 );
 assert.match(utenKontekstBadgeSrc, /Uten kontekst/);
-assert.match(utenKontekstBadgeSrc, /kildetreff/);
+assert.match(utenKontekstBadgeSrc, /InfoTooltip/);
+assert.match(utenKontekstBadgeSrc, /AlertTriangle/);
+assert.match(utenKontekstBadgeSrc, /sr-only/);
+assert.match(utenKontekstBadgeSrc, /border-amber/);
+assert.doesNotMatch(utenKontekstBadgeSrc, /bg-amber-500\/15/);
 
 const blogReviewSrc = readFileSync(
   join(process.cwd(), 'components/admin/blog-draft-review.tsx'),
