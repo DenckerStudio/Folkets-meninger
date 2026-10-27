@@ -8,6 +8,7 @@ export type BlogDraftReviewItem = {
   slug: string;
   title: string;
   excerpt: string;
+  bodyMarkdown: string;
   reviewState: string | null;
   createdAt: string | null;
   updatedAt: string | null;
@@ -22,6 +23,7 @@ function mapBlogDraftReviewItem(post: PayloadPost): BlogDraftReviewItem {
     slug: post.slug,
     title: post.title,
     excerpt: post.excerpt,
+    bodyMarkdown: post.bodyMarkdown ?? '',
     reviewState: post.review?.state ? String(post.review.state) : null,
     createdAt: post.createdAt ?? null,
     updatedAt: post.updatedAt ?? null,
