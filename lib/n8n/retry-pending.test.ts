@@ -10,9 +10,13 @@ assert.match(src, /\.order\('last_synced_at', \{ ascending: true \}\)/);
 assert.match(src, /\.in\('stortinget_issue_id', candidateIds\)/);
 assert.match(src, /isWebhookRetryEligible/);
 assert.match(src, /claimAiSummaryWebhook\(issue\.id\)/);
-assert.match(src, /deleteAiSummary\(issueId\)/);
+assert.match(src, /runRegenerationWebhookRetry/);
 assert.match(src, /regeneration_requested_at/);
-assert.match(src, /n8n_upsert_issue_ai_summary/);
+assert.match(
+  src,
+  /export async function runRegenerationWebhookRetry[\s\S]*?if \(!\(await claimFn\(issueId\)\)\)[\s\S]*?await deleteFn\(issueId\)/,
+);
+assert.doesNotMatch(src, /n8n_upsert_issue_ai_summary/);
 assert.doesNotMatch(src, /\.from\('issue_ai_summaries'\)\.select\('stortinget_issue_id'\)\s*;/);
 assert.doesNotMatch(src, /triggerDocumentEmbeddingsWebhook/);
 assert.doesNotMatch(src, /listPendingLegacyEmbeddingIssueIds/);

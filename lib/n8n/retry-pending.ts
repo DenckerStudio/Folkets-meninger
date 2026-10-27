@@ -27,14 +27,39 @@ function isWebhookRetryEligible(requestedAt: string | null | undefined, cutoffMs
   return !Number.isFinite(requestedMs) || requestedMs < cutoffMs;
 }
 
+export type RegenerationWebhookRetryDeps = {
+  claim?: (issueId: string) => Promise<boolean>;
+  deleteSummary?: (issueId: string) => Promise<void>;
+  triggerWebhook?: (issueId: string) => void;
+};
+
+/**
+ * Regenerering: claim først (beholder sammendrag ved tapt claim), deretter slett + webhook.
+ * deleteAiSummary fjerner issue_ai_summaries-raden og dermed regeneration_requested_at.
+ * Etter slett har saken ikke sammendrag; ved feilende webhook gjenoppretter vanlig pending-sti
+ * (ai_summary_requested_at + 1 t cooldown) via n8n-retry.
+ */
+export async function runRegenerationWebhookRetry(
+  issueId: string,
+  deps: RegenerationWebhookRetryDeps = {},
+): Promise<boolean> {
+  const claimFn = deps.claim ?? claimAiSummaryWebhook;
+  const deleteFn = deps.deleteSummary ?? deleteAiSummary;
+  const triggerFn = deps.triggerWebhook ?? triggerAiSummaryWebhook;
+
+  if (!(await claimFn(issueId))) {
+    return false;
+  }
+
+  await deleteFn(issueId);
+  triggerFn(issueId);
+  return true;
+}
+
 /**
  * Re-triggers n8n work that is still pending in the DB.
  * Does not generate summaries/embeddings/reels in-app — only the existing webhook path.
  * List queries never select detail_json.
- *
- * Regenerering (regeneration_requested_at): sletter eksisterende sammendrag som admin force,
- * deretter claim + webhook. Flagget nullstilles ved vellykket n8n_upsert_issue_ai_summary,
- * ikke ved claim (tryggere ved feilende webhook).
  */
 export async function retryPendingN8nJobs(): Promise<N8nRetryResult> {
   const result: N8nRetryResult = {
@@ -147,12 +172,10 @@ export async function retryPendingN8nJobs(): Promise<N8nRetryResult> {
         const requestedAt = issueRequestedAt.get(issueId) ?? null;
         if (!isWebhookRetryEligible(requestedAt, cutoffMs)) continue;
 
-        await deleteAiSummary(issueId);
-        if (!(await claimAiSummaryWebhook(issueId))) {
+        if (!(await runRegenerationWebhookRetry(issueId))) {
           continue;
         }
 
-        triggerAiSummaryWebhook(issueId);
         result.aiSummariesQueued += 1;
       }
     }

@@ -1,7 +1,7 @@
 import { postN8nWebhook } from '@/lib/n8n/trigger-webhook';
 
-/** Maks samtidige ai-summary webhook-kall fra fm-web (unngår burst mot n8n/Ollama). */
-export const AI_SUMMARY_WEBHOOK_MAX_IN_FLIGHT = 2;
+/** Maks samtidige ai-summary webhook-kall fra fm-web (GP666: én Ollama-jobb om gangen). */
+export const AI_SUMMARY_WEBHOOK_MAX_IN_FLIGHT = 1;
 
 const queue: string[] = [];
 let inFlight = 0;

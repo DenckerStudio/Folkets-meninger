@@ -7,8 +7,7 @@ import {
 } from './webhook-dispatch';
 
 async function main(): Promise<void> {
-  assert.ok(AI_SUMMARY_WEBHOOK_MAX_IN_FLIGHT >= 1);
-  assert.ok(AI_SUMMARY_WEBHOOK_MAX_IN_FLIGHT <= 2);
+  assert.equal(AI_SUMMARY_WEBHOOK_MAX_IN_FLIGHT, 1);
 
   resetAiSummaryWebhookQueueForTests();
 
