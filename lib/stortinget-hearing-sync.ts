@@ -124,16 +124,14 @@ export async function syncStortingetHearingsToDb(): Promise<SyncHearingsResult> 
 
     for (const { draft, markdown } of resolved) {
       const { data: docRow, error: docError } = await service.rpc('n8n_upsert_hearing_document', {
-        p_payload: {
-          hearing_id: hearingId,
-          external_key: draft.externalKey,
-          title: draft.title,
-          kind: draft.kind,
-          source_url: draft.sourceUrl,
-          markdown,
-          status: 'converted',
-          content_hash: draft.contentHash,
-        },
+        p_hearing_id: hearingId,
+        p_external_key: draft.externalKey,
+        p_title: draft.title,
+        p_kind: draft.kind,
+        p_source_url: draft.sourceUrl,
+        p_markdown: markdown,
+        p_status: 'converted',
+        p_content_hash: draft.contentHash,
       });
       if (docError) throw docError;
       documentsUpserted += 1;
