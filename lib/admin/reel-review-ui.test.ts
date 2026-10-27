@@ -58,6 +58,8 @@ const badgeSrc = readFileSync(
   'utf8',
 );
 assert.match(queueToggleSrc, /aria-pressed=\{selected\}/);
+assert.match(queueToggleSrc, /role="group"/);
+assert.match(queueToggleSrc, /aria-label="Velg kø"/);
 assert.doesNotMatch(queueToggleSrc, /role="tab"/);
 assert.doesNotMatch(queueToggleSrc, /role="tablist"/);
 assert.doesNotMatch(badgeSrc, /min-h-\[2\.75rem\]/);
