@@ -78,43 +78,30 @@ function isLocalHost(host: string): boolean {
 }
 
 /**
- * Resolve the canonical site origin for share links.
+ * Resolve the canonical site origin for share links, `og:url` and embed snippets.
  *
- * Production (`VERCEL_ENV=production`) always uses the configured canonical
- * origin (`NEXT_PUBLIC_APP_URL` / `NEXT_PUBLIC_SITE_URL`), never an alias host.
- * Everywhere else (local dev, Vercel previews) the request host wins so share
- * links, the embed snippet and `og:image` point at the deployment actually
- * serving the page instead of production, where `/del` and `/embed` may not be
- * live yet. Falls back to the Vercel deployment URL, then the configured origin.
+ * Uses the configured app origin (`NEXT_PUBLIC_APP_URL` / `NEXT_PUBLIC_SITE_URL`)
+ * when set so alias or internal hosts never leak into canonical URLs. Without
+ * configuration, only local development hosts (`localhost`, loopback) use the
+ * request origin; everything else falls back to {@link DEFAULT_SITE_ORIGIN}.
  */
 export function resolveShareOrigin(
   input: {
     configured?: string | null;
     forwardedProto?: string | null;
     host?: string | null;
-    /** `process.env.VERCEL_ENV` (`production` | `preview` | `development`). */
-    vercelEnv?: string | null;
-    /** `process.env.VERCEL_URL` — deployment host without protocol. */
-    vercelUrl?: string | null;
   } = {},
 ): string {
   const configured = input.configured?.trim();
-  const isProduction = input.vercelEnv === 'production';
-
-  if (isProduction && configured) return normalizeOrigin(configured);
+  if (configured) return normalizeOrigin(configured);
 
   const host = input.host?.trim();
-  if (host) {
-    const proto =
-      input.forwardedProto?.split(',')[0]?.trim() ||
-      (isLocalHost(host) ? 'http' : 'https');
+  if (host && isLocalHost(host)) {
+    const proto = input.forwardedProto?.split(',')[0]?.trim() || 'http';
     return normalizeOrigin(`${proto}://${host}`);
   }
 
-  const vercelUrl = input.vercelUrl?.trim();
-  if (vercelUrl) return normalizeOrigin(vercelUrl);
-
-  return configured ? normalizeOrigin(configured) : DEFAULT_SITE_ORIGIN;
+  return DEFAULT_SITE_ORIGIN;
 }
 
 /** Path of the public share page. */

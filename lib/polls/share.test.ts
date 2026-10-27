@@ -34,8 +34,8 @@ assert(
 );
 assert(
   resolveShareOrigin({ host: 'preview.example.no', forwardedProto: 'https' }) ===
-    'https://preview.example.no',
-  'host + proto',
+    DEFAULT_SITE_ORIGIN,
+  'non-local host without configured origin uses canonical default',
 );
 assert(
   resolveShareOrigin({ host: 'localhost:3000' }) === 'http://localhost:3000',
@@ -44,32 +44,14 @@ assert(
 assert(resolveShareOrigin({ forwardedProto: 'https' }) === DEFAULT_SITE_ORIGIN, 'default host');
 assert(
   resolveShareOrigin({
-    vercelEnv: 'production',
     configured: 'https://www.folkets-meninger.no',
-    host: 'preview.example.no',
+    host: 'folkets-meninger.no',
     forwardedProto: 'https',
   }) === DEFAULT_SITE_ORIGIN,
-  'production prefers configured origin over alias host',
+  'configured origin wins over alias request host (Coolify / no VERCEL_ENV)',
 );
 assert(
-  resolveShareOrigin({
-    vercelEnv: 'preview',
-    configured: 'https://www.folkets-meninger.no',
-    host: 'folkets-inspill-git-feat-share-poll-widget.vercel.app',
-    forwardedProto: 'https',
-  }) === 'https://folkets-inspill-git-feat-share-poll-widget.vercel.app',
-  'preview uses request host instead of configured production origin',
-);
-assert(
-  resolveShareOrigin({
-    vercelEnv: 'preview',
-    configured: 'https://www.folkets-meninger.no',
-    vercelUrl: 'folkets-inspill-git-feat-share-poll-widget.vercel.app',
-  }) === 'https://folkets-inspill-git-feat-share-poll-widget.vercel.app',
-  'preview falls back to VERCEL_URL',
-);
-assert(
-  resolveShareOrigin({ host: 'localhost:3000', vercelEnv: 'development', forwardedProto: 'http' }) ===
+  resolveShareOrigin({ host: 'localhost:3000', forwardedProto: 'http' }) ===
     'http://localhost:3000',
   'local dev uses request host',
 );
