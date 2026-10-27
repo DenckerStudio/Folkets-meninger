@@ -22,8 +22,12 @@ BEGIN
   END IF;
 
   v_args := pg_get_function_arguments(v_fn);
-  IF v_args NOT LIKE '%3221225472%' THEN
-    RAISE EXCEPTION 'forventet p_max_wal_bytes default 3221225472 (3 GiB), fikk: %', v_args;
+  IF (SELECT count(*) FROM regexp_matches(v_args, '3221225472', 'g')) < 2 THEN
+    RAISE EXCEPTION 'forventet 3 GiB (3221225472) default på slot-lag og WAL, fikk: %', v_args;
+  END IF;
+
+  IF v_args LIKE '%4294967296%' THEN
+    RAISE EXCEPTION '4 GiB default (4294967296) skal ikke brukes (max_slot_wal_keep_size): %', v_args;
   END IF;
 
   IF v_args LIKE '%cainophile_vlftkp89%' THEN

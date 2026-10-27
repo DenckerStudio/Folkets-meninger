@@ -15,7 +15,7 @@
 | 3 | `20261026110300_embedding_v2_chunk_leases.sql` | Transactional | `embedding_v2_claimed_*` columns (metadata-only), `n8n_claim_chunks_missing_v2`, `save_embeddings_v2` lease checks |
 | 4 | `20261026110000_document_chunks_v2_pending_issue_idx_concurrent.sql` | **CONCURRENTLY** | Partial index on pending v2 chunks per issue |
 | 5 | `20261026110400_n8n_claim_chunks_missing_v2_perf.sql` | Transactional | Set-based issue tiers for `n8n_claim_chunks_missing_v2` (fixes 15s statement timeout at ~380k pending) |
-| 6 | `20261027090000_n8n_backfill_db_pressure_slot_fix.sql` | Transactional | Auto-detect Realtime `cainophile_*` replication slot lag; default WAL pause at **3 GiB** (below `max_slot_wal_keep_size`) |
+| 6 | `20261027090000_n8n_backfill_db_pressure_slot_fix.sql` | Transactional | Auto-detect Realtime `cainophile_*` replication slot lag; default slot-lag and WAL pause at **3 GiB** (below `max_slot_wal_keep_size`) |
 
 **Apply order is fixed:** transactional steps **1 → 2 → 3 → 5 → 6**, then concurrent step **4** (do not run `26110000` before `26110300`). Step **5** requires step **3** (lease RPC). Step **6** replaces `n8n_backfill_db_pressure` from step **1** — run after **5** (or any time after **1** if claim perf is already applied). After step 3, claim/save RPCs exist for backfill #206; step 4 can still build while backfill runs, but Coolify should follow this sequence.
 

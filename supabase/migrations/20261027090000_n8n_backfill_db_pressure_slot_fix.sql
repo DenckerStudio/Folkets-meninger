@@ -3,7 +3,7 @@ BEGIN;
 
 CREATE OR REPLACE FUNCTION public.n8n_backfill_db_pressure(
   p_slot_name text DEFAULT NULL,
-  p_max_slot_lag_bytes bigint DEFAULT 4294967296,
+  p_max_slot_lag_bytes bigint DEFAULT 3221225472,
   p_max_wal_bytes bigint DEFAULT 3221225472
 )
 RETURNS jsonb
@@ -38,16 +38,17 @@ BEGIN
         s.slot_name,
         coalesce(pg_wal_lsn_diff(pg_current_wal_lsn(), s.restart_lsn), 0) AS lag_bytes
       FROM pg_replication_slots AS s
-      WHERE s.active IS TRUE
-        AND s.slot_type = 'logical'
+      WHERE s.slot_type = 'logical'
         AND (
           s.slot_name LIKE 'cainophile\_%' ESCAPE '\'
-          OR NOT EXISTS (
-            SELECT 1
-            FROM pg_replication_slots AS c
-            WHERE c.active IS TRUE
-              AND c.slot_type = 'logical'
-              AND c.slot_name LIKE 'cainophile\_%' ESCAPE '\'
+          OR (
+            s.active IS TRUE
+            AND NOT EXISTS (
+              SELECT 1
+              FROM pg_replication_slots AS c
+              WHERE c.slot_type = 'logical'
+                AND c.slot_name LIKE 'cainophile\_%' ESCAPE '\'
+            )
           )
         )
       ORDER BY 2 DESC
