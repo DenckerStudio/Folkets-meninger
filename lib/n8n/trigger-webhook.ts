@@ -44,7 +44,10 @@ export async function postN8nWebhook(
       if (res.ok || res.status === 409) {
         return true;
       }
-      console.warn(`[n8n] ${kind} webhook HTTP ${res.status} (attempt ${attempt}/${attempts})`);
+      console.warn(
+        `[n8n] ${kind} webhook HTTP ${res.status} (attempt ${attempt}/${attempts}); no retry after response`,
+      );
+      return false;
     } catch (err) {
       const aborted = err instanceof Error && err.name === 'AbortError';
       console.warn(

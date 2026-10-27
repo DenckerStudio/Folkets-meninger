@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
+  claimAiSummaryWebhook,
   deleteAiSummary,
   resolveAiSummaryForApi,
 } from '@/lib/ai-summary/service';
@@ -86,7 +87,9 @@ export async function POST(
   }
 
   await deleteAiSummary(id);
-  triggerAiSummaryWebhook(id);
+  if (await claimAiSummaryWebhook(id)) {
+    triggerAiSummaryWebhook(id);
+  }
 
   return NextResponse.json(
     {

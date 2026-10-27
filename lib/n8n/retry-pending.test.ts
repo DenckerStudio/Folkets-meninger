@@ -9,7 +9,7 @@ assert.match(src, /\.order\('ai_summary_requested_at', \{ ascending: true, nulls
 assert.match(src, /\.order\('last_synced_at', \{ ascending: true \}\)/);
 assert.match(src, /\.in\('stortinget_issue_id', candidateIds\)/);
 assert.match(src, /Date\.parse\(issue\.ai_summary_requested_at\)/);
-assert.match(src, /ai_summary_requested_at: requestedNow/);
+assert.match(src, /claimAiSummaryWebhook\(issue\.id\)/);
 assert.doesNotMatch(src, /\.from\('issue_ai_summaries'\)\.select\('stortinget_issue_id'\)\s*;/);
 assert.doesNotMatch(src, /triggerDocumentEmbeddingsWebhook/);
 assert.doesNotMatch(src, /listPendingLegacyEmbeddingIssueIds/);

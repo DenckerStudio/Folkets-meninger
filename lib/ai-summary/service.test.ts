@@ -168,6 +168,49 @@ async function main() {
   assert.equal(webhookCalls, 0);
   assert.equal(markCalls, 0);
 
+  webhookCalls = 0;
+  let claimGrants = 0;
+  const markOnce = async () => {
+    claimGrants += 1;
+    return claimGrants === 1;
+  };
+  await Promise.all([
+    resolveAiSummaryForApi('42', {
+      triggerIfMissing: true,
+      deps: {
+        readFromDb: async () => ({ status: 'ok', summary: null }),
+        markRequested: markOnce,
+        triggerWebhook: () => {
+          webhookCalls += 1;
+        },
+      },
+    }),
+    resolveAiSummaryForApi('42', {
+      triggerIfMissing: true,
+      deps: {
+        readFromDb: async () => ({ status: 'ok', summary: null }),
+        markRequested: markOnce,
+        triggerWebhook: () => {
+          webhookCalls += 1;
+        },
+      },
+    }),
+  ]);
+  assert.equal(webhookCalls, 1, 'parallel resolve should trigger webhook at most once');
+
+  webhookCalls = 0;
+  await resolveAiSummaryForApi('42', {
+    triggerIfMissing: true,
+    deps: {
+      readFromDb: async () => ({ status: 'ok', summary: null }),
+      markRequested: async () => false,
+      triggerWebhook: () => {
+        webhookCalls += 1;
+      },
+    },
+  });
+  assert.equal(webhookCalls, 0, 'failed claim must not trigger webhook');
+
   process.env.NEXT_PUBLIC_SUPABASE_URL = savedEnv.url;
   process.env.SUPABASE_SERVICE_ROLE_KEY = savedEnv.key;
 
