@@ -46,7 +46,7 @@ export async function POST() {
   } catch (err) {
     console.warn('[pipeline-health] Catch-up feilet:', err);
     return NextResponse.json(
-      { error: 'Kunne ikke starte catch-up' },
+      { error: 'Kunne ikke starte oppfrisking' },
       { status: 502 },
     );
   }

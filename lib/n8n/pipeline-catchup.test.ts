@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { pipelineCatchupUserMessage } from './pipeline-catchup';
+import { pipelineCatchupUserMessage } from './pipeline-catchup-user-message';
 
 const src = readFileSync(join(process.cwd(), 'lib/n8n/pipeline-catchup.ts'), 'utf8');
 
@@ -30,26 +30,34 @@ assert.match(routeSrc, /status:\s*502/);
 
 assert.equal(
   pipelineCatchupUserMessage({ health: true, embeddingsIssuesTriggered: 0 }),
-  'Catch-up er startet. Køene oppdateres i bakgrunnen.',
+  'Oppfrisking er startet. Køene oppdateres i bakgrunnen.',
 );
 assert.equal(
   pipelineCatchupUserMessage({ health: false, embeddingsIssuesTriggered: 2 }),
-  'Catch-up er startet. Køene oppdateres i bakgrunnen.',
+  'Oppfrisking er startet. Køene oppdateres i bakgrunnen.',
 );
 assert.equal(
   pipelineCatchupUserMessage({ health: false, embeddingsIssuesTriggered: 0 }),
-  'Ingen catch-up ble startet. Pipeline-health er ikke konfigurert i dette miljøet.',
+  'Ingen oppfrisking ble startet. Helsesjekken for pipelinen er ikke konfigurert i dette miljøet.',
 );
 assert.match(
   pipelineCatchupUserMessage(undefined),
-  /Ingen catch-up ble startet/,
+  /Ingen oppfrisking ble startet/,
 );
 
 const reelsSrc = readFileSync(
   join(process.cwd(), 'app/dashboard/admin/reels/admin-reels-client.tsx'),
   'utf8',
 );
-assert.match(reelsSrc, /pipelineCatchupUserMessage/);
+assert.match(reelsSrc, /pipeline-catchup-user-message/);
+assert.doesNotMatch(reelsSrc, /from '@\/lib\/n8n\/pipeline-catchup'/);
 assert.doesNotMatch(reelsSrc, /embeddingsConfigured/);
+
+const userMessageSrc = readFileSync(
+  join(process.cwd(), 'lib/n8n/pipeline-catchup-user-message.ts'),
+  'utf8',
+);
+assert.doesNotMatch(userMessageSrc, /server-only/);
+assert.doesNotMatch(userMessageSrc, /trigger-webhook/);
 
 console.log('pipeline-catchup.test.ts: ok');
