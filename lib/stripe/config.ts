@@ -1,5 +1,5 @@
 /**
- * Stripe is the production payment path (Vercel Marketplace → Stripe).
+ * Stripe checkout for Stemme+ on fm-web (Coolify).
  * Checkout stays disabled until secret key + Stemme+ Price id exist.
  */
 export type StripeRuntimeConfig = {

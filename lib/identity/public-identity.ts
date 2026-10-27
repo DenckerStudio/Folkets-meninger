@@ -64,9 +64,3 @@ export function resolveHearingCommentAuthor(
 
 export const PUBLIC_IDENTITY_ERROR =
   'Du må fylle ut fornavn og etternavn under Min side før du kan publisere.';
-
-/** @deprecated Use userHasPublicIdentity */
-export const userHasForumIdentity = userHasPublicIdentity;
-
-/** @deprecated Use PUBLIC_IDENTITY_ERROR */
-export const FORUM_IDENTITY_ERROR = PUBLIC_IDENTITY_ERROR;
