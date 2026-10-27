@@ -55,6 +55,7 @@ Create CMS users:
 | `CMS_URL` | Internal or public CMS base URL |
 | `CMS_API_KEY` | Payload user API key (`reader` role) |
 | `CMS_AGENT_API_KEY` | Optional; n8n draft writes |
+| `CMS_EDITOR_API_KEY` | Payload user API key (`redaktor` or `admin`) for fm-web admin blog draft edits (`PATCH /api/admin/blog-drafts`, action `edit`) |
 | `REVALIDATE_SECRET` | Validates CMS → `/api/revalidate/blog` |
 | `CMS_CONTENT_FEEDBACK_WEBHOOK_SECRET` | Required HMAC for CMS → `/api/ops/content-feedback` (same value on fm-cms) |
 | `CRON_SECRET` | Existing; protects `/api/ops/blog/*` |

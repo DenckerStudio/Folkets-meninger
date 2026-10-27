@@ -24,6 +24,11 @@ export function getCmsAgentKey(): string | null {
   );
 }
 
+/** Editor API key for fm-web admin blog draft edits (`redaktor` / `admin`). No fallback. */
+export function getCmsEditorKey(): string | null {
+  return process.env.CMS_EDITOR_API_KEY?.trim() || null;
+}
+
 type FetchOptions = {
   revalidate?: number;
   tags?: string[];

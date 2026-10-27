@@ -4,10 +4,16 @@ export type PayloadPatchPostResult =
   | { ok: true; id: string }
   | { ok: false; status: number; error: string };
 
+export type PayloadPatchPostOptions = {
+  /** When true, append `draft=true` so Payload updates the draft version only. */
+  draft?: boolean;
+};
+
 export async function payloadPatchPost(
   id: string,
   body: Record<string, unknown>,
   apiKey?: string | null,
+  options?: PayloadPatchPostOptions,
 ): Promise<PayloadPatchPostResult> {
   const base = getCmsBaseUrl();
   const key = apiKey ?? getCmsAgentKey();
@@ -15,7 +21,8 @@ export async function payloadPatchPost(
     return { ok: false, status: 503, error: 'CMS er ikke konfigurert' };
   }
 
-  const url = `${base}/api/posts/${encodeURIComponent(id)}`;
+  const draftQuery = options?.draft ? '?draft=true' : '';
+  const url = `${base}/api/posts/${encodeURIComponent(id)}${draftQuery}`;
 
   try {
     const res = await fetch(url, {
