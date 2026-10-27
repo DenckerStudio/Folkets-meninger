@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { sendWelcomeEmail } from '@/lib/email/nodemailer';
@@ -6,7 +7,15 @@ import { isSmtpConfigured } from '@/lib/email/smtp-config';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST() {
+function clientIp(request: Request): string {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+  );
+}
+
+export async function POST(request: Request) {
   try {
     const supabase = await getServerSupabase();
     const {
@@ -15,6 +24,29 @@ export async function POST() {
 
     if (!user) {
       return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
+    }
+
+    const ip = clientIp(request);
+    const ipRate = await checkRateLimit(`welcome-email:ip:${ip}`, 5, 3_600_000);
+    if (!ipRate.ok) {
+      return NextResponse.json(
+        { error: 'For mange forespørsler. Prøv igjen om litt.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(ipRate.retryAfterSeconds) },
+        },
+      );
+    }
+
+    const userRate = await checkRateLimit(`welcome-email:user:${user.id}`, 2, 3_600_000);
+    if (!userRate.ok) {
+      return NextResponse.json(
+        { error: 'Velkomst-e-post kan bare sendes noen ganger per time. Prøv igjen senere.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(userRate.retryAfterSeconds) },
+        },
+      );
     }
 
     // Only send once (best-effort): record via notifications table.

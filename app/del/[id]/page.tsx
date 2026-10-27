@@ -69,8 +69,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 
   return {
-    // Use the origin serving the request so `og:image`, `og:url` and the
-    // canonical link resolve on previews instead of production.
     metadataBase: new URL(`${origin}/`),
     title: shareable && poll ? `${poll.title} – ${SITE_NAME}` : SITE_NAME,
     description,

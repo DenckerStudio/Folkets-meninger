@@ -17,7 +17,7 @@ import {
   type AiSummaryQueueGaveUpItem,
   type PipelineHealth,
 } from '@/lib/n8n/pipeline-health';
-import { pipelineCatchupUserMessage } from '@/lib/n8n/pipeline-catchup';
+import { pipelineCatchupUserMessage } from '@/lib/n8n/pipeline-catchup-user-message';
 
 type DraftsResponse = { drafts: PollRecord[] };
 type CandidatesResponse = { candidates: SakPollCandidate[]; coverage: SakPollCoverage };
@@ -220,7 +220,7 @@ export default function AdminReelsClient({
       const res = await fetch('/api/admin/pipeline-health', { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(typeof data.error === 'string' ? data.error : 'Kunne ikke starte catch-up');
+        setError(typeof data.error === 'string' ? data.error : 'Kunne ikke starte oppfrisking');
         return;
       }
       const triggered = data.triggered as
@@ -280,7 +280,7 @@ export default function AdminReelsClient({
             <p className="mt-1 text-sm text-muted-foreground">
               {pipelineHealth
                 ? pipelineHealthNeedsAttention(pipelineHealth)
-                  ? 'Køen er stor — kjør catch-up eller vent på daglig sjekk kl. 08:00.'
+                  ? 'Køen er stor — kjør oppfrisking eller vent på daglig sjekk kl. 08:00.'
                   : 'Sync → dokumentindeks → sammendrag → Reels-utkast.'
                 : 'Automatisk generering av sammendrag og utkast.'}
             </p>
@@ -291,7 +291,7 @@ export default function AdminReelsClient({
             disabled={pending}
             className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
           >
-            Kjør catch-up
+            Kjør oppfrisking
           </button>
         </div>
         {pipelineHealthError ? (

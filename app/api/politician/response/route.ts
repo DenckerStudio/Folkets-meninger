@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
 const MAX_RESPONSE_LENGTH = 4000;
+
+function clientIp(request: Request): string {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+  );
+}
 
 export async function POST(request: Request) {
   try {
@@ -14,6 +23,29 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Ikke logget inn' }, { status: 401 });
+    }
+
+    const ip = clientIp(request);
+    const ipRate = await checkRateLimit(`politician-response:ip:${ip}`, 10, 60_000);
+    if (!ipRate.ok) {
+      return NextResponse.json(
+        { error: 'For mange forespørsler. Prøv igjen om litt.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(ipRate.retryAfterSeconds) },
+        },
+      );
+    }
+
+    const userRate = await checkRateLimit(`politician-response:user:${user.id}`, 5, 60_000);
+    if (!userRate.ok) {
+      return NextResponse.json(
+        { error: 'For mange svar. Prøv igjen om litt.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(userRate.retryAfterSeconds) },
+        },
+      );
     }
 
     const body = await request.json();

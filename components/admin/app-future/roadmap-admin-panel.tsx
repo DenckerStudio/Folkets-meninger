@@ -324,47 +324,49 @@ export function RoadmapAdminPanel({
               onDragOver={(event) => event.preventDefault()}
               onDrop={() => onDrop(item.id)}
               className={cn(
-                'flex items-stretch gap-2 rounded-xl border border-border bg-card p-3 transition-colors',
+                'flex flex-wrap items-stretch gap-2 rounded-xl border border-border bg-card p-3 transition-colors',
                 dragId === item.id && 'opacity-60',
               )}
             >
-              <div
-                draggable={!pending}
-                onDragStart={() => setDragId(item.id)}
-                onDragEnd={() => setDragId(null)}
-                className="flex cursor-grab touch-none items-center self-center rounded-lg p-2 text-muted-foreground hover:bg-muted active:cursor-grabbing"
-                role="button"
-                tabIndex={0}
-                aria-label={`Dra «${item.title}» for å endre rekkefølge`}
-                onKeyDown={(event) => {
-                  if (event.key === 'ArrowUp' && !atTop) {
-                    event.preventDefault();
-                    moveItem(item.id, -1, moveControlRefs.current.get(upRefKey) ?? null);
-                  }
-                  if (event.key === 'ArrowDown' && !atBottom) {
-                    event.preventDefault();
-                    moveItem(item.id, 1, moveControlRefs.current.get(downRefKey) ?? null);
-                  }
-                }}
-              >
-                <GripVertical className="h-4 w-4" aria-hidden />
+              <div className="flex min-w-0 flex-1 basis-full gap-2 sm:basis-auto">
+                <div
+                  draggable={!pending}
+                  onDragStart={() => setDragId(item.id)}
+                  onDragEnd={() => setDragId(null)}
+                  className="flex cursor-grab touch-none items-center self-center rounded-lg p-2 text-muted-foreground hover:bg-muted active:cursor-grabbing"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Dra «${item.title}» for å endre rekkefølge`}
+                  onKeyDown={(event) => {
+                    if (event.key === 'ArrowUp' && !atTop) {
+                      event.preventDefault();
+                      moveItem(item.id, -1, moveControlRefs.current.get(upRefKey) ?? null);
+                    }
+                    if (event.key === 'ArrowDown' && !atBottom) {
+                      event.preventDefault();
+                      moveItem(item.id, 1, moveControlRefs.current.get(downRefKey) ?? null);
+                    }
+                  }}
+                >
+                  <GripVertical className="h-4 w-4" aria-hidden />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openEdit(item)}
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="border-border">
+                      {roadmapStatusLabel(item.status)}
+                    </Badge>
+                    <span className="text-sm font-semibold text-foreground">{item.title}</span>
+                  </div>
+                  <div className="mt-1 line-clamp-2">
+                    <MarkdownLite source={item.body} className="text-muted-foreground" />
+                  </div>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => openEdit(item)}
-                className="min-w-0 flex-1 text-left"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline" className="border-border">
-                    {roadmapStatusLabel(item.status)}
-                  </Badge>
-                  <span className="text-sm font-semibold text-foreground">{item.title}</span>
-                </div>
-                <div className="mt-1 line-clamp-2">
-                  <MarkdownLite source={item.body} className="text-muted-foreground" />
-                </div>
-              </button>
-              <div className="flex shrink-0 flex-row items-center gap-0.5 self-center">
+              <div className="flex w-full shrink-0 flex-row items-center justify-end gap-0.5 sm:w-auto sm:self-center">
                 <Button
                   type="button"
                   variant="ghost"
