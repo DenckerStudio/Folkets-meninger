@@ -32,12 +32,13 @@ type PollRow = {
   closes_at: string | null;
   created_at: string;
   updated_at: string | null;
+  expired_at?: string | null;
   generation_metadata?: unknown;
 };
 
 /** Public lists stay lean. Admin draft list includes generation_metadata for stored ratings. */
 const POLL_LIST_SELECT =
-  'id, track, status, title, neutral_summary, source_urls, stortinget_issue_id, opens_at, closes_at, created_at, updated_at';
+  'id, track, status, title, neutral_summary, source_urls, stortinget_issue_id, opens_at, closes_at, created_at, updated_at, expired_at';
 
 const POLL_ADMIN_DRAFT_SELECT = `${POLL_LIST_SELECT}, generation_metadata`;
 
@@ -100,6 +101,7 @@ export function mapPollRow(row: PollRow): PollRecord {
     closesAt: row.closes_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? row.created_at,
+    expiredAt: row.expired_at ?? null,
     generationMetadata: parseGenerationMetadata(row.generation_metadata),
   };
 }
@@ -211,6 +213,37 @@ export async function listSystemPollDrafts(limit = 50): Promise<PollRecord[]> {
     POLL_ADMIN_DRAFT_SELECT,
   );
   return rows.map(mapPollRow);
+}
+
+export async function listExpiredSystemReelDrafts(limit = 50): Promise<PollRecord[]> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
+  const service = getServiceSupabase();
+  const rows = await listPollRows(
+    (select) =>
+      service
+        .from('polls')
+        .select(select)
+        .eq('track', 'system')
+        .eq('status', 'utløpt')
+        .order('expired_at', { ascending: false })
+        .limit(limit),
+    'listExpiredSystemReelDrafts',
+    POLL_ADMIN_DRAFT_SELECT,
+  );
+  return rows.map(mapPollRow);
+}
+
+export async function restoreExpiredReelDraft(
+  pollId: string,
+  adminUserId: string,
+): Promise<string> {
+  const service = getServiceSupabase();
+  const { data, error } = await service.rpc('admin_restore_expired_reel_draft', {
+    p_admin_user_id: adminUserId,
+    p_poll_id: pollId,
+  });
+  if (error) throw error;
+  return typeof data === 'string' && data.length > 0 ? data : pollId;
 }
 
 export async function findSystemPollForIssue(issueId: string): Promise<PollRecord | null> {

@@ -38,5 +38,15 @@ assert.match(vurderSrc, /ReelDraftReview/);
 assert.match(vurderSrc, /BlogDraftReview/);
 assert.match(vurderSrc, /AiSummaryReview/);
 assert.match(vurderSrc, /role="tablist"/);
+assert.match(reviewSrc, /DraftReviewQueueToggle/);
+assert.match(reviewSrc, /DraftExpiryBadge/);
+assert.match(reviewSrc, /Gjenopprett/);
+
+const blogReviewSrc = readFileSync(
+  join(process.cwd(), 'components/admin/blog-draft-review.tsx'),
+  'utf8',
+);
+assert.match(blogReviewSrc, /DraftReviewQueueToggle/);
+assert.match(blogReviewSrc, /Utløpte/);
 
 console.log('admin/reel-review-ui.test.ts: ok');

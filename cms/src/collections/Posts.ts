@@ -156,6 +156,16 @@ export const Posts: CollectionConfig = {
       access: { create: canPublishField, update: canPublishField },
     },
     {
+      name: 'expiredAt',
+      type: 'date',
+      admin: {
+        description:
+          'Satt automatisk når et utkast utløper uten vurdering. Nullstilles ved gjenoppretting.',
+        date: { pickerAppearance: 'dayAndTime' },
+        readOnly: true,
+      },
+    },
+    {
       name: 'updatedAtDisplay',
       type: 'date',
       admin: {

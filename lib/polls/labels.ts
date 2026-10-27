@@ -46,6 +46,8 @@ export function pollStatusLabel(status: PollStatus): string {
       return 'Stengt';
     case 'archived':
       return 'Arkivert';
+    case 'utløpt':
+      return 'Utløpt';
     default: {
       const _exhaustive: never = status;
       return _exhaustive;

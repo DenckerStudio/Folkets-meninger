@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
-import { archivePoll, listSystemPollDrafts, publishPoll } from '@/lib/polls/service';
+import {
+  archivePoll,
+  listExpiredSystemReelDrafts,
+  listSystemPollDrafts,
+  publishPoll,
+  restoreExpiredReelDraft,
+} from '@/lib/polls/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,14 +19,17 @@ function pollPatchErrorMessage(error: unknown): string {
   return '';
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const auth = await requireAdmin();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  const drafts = await listSystemPollDrafts(50);
-  return NextResponse.json({ drafts });
+  const url = new URL(request.url);
+  const queue = url.searchParams.get('queue') === 'expired' ? 'expired' : 'pending';
+  const drafts =
+    queue === 'expired' ? await listExpiredSystemReelDrafts(50) : await listSystemPollDrafts(50);
+  return NextResponse.json({ drafts, queue });
 }
 
 export async function PATCH(request: Request) {
@@ -36,9 +45,17 @@ export async function PATCH(request: Request) {
   try {
     const body = await request.json();
     const id = typeof body.id === 'string' ? body.id : null;
-    const action = body.action === 'publish' || body.action === 'archive' ? body.action : null;
+    const action =
+      body.action === 'publish' || body.action === 'archive' || body.action === 'restore'
+        ? body.action
+        : null;
     if (!id || !action) {
       return NextResponse.json({ error: 'Mangler id eller handling' }, { status: 400 });
+    }
+
+    if (action === 'restore') {
+      const pollId = await restoreExpiredReelDraft(id, auth.userId);
+      return NextResponse.json({ ok: true, id: pollId, action });
     }
 
     const pollId = action === 'publish' ? await publishPoll(id) : await archivePoll(id);

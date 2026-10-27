@@ -1,5 +1,5 @@
 export type PollTrack = 'stortinget' | 'citizen' | 'system';
-export type PollStatus = 'draft' | 'open' | 'closed' | 'archived';
+export type PollStatus = 'draft' | 'open' | 'closed' | 'archived' | 'utløpt';
 export type PollChoice = 'ja' | 'nei' | 'blank';
 
 export type PollSourceUrl = {
@@ -54,6 +54,7 @@ export type PollRecord = {
   closesAt: string | null;
   createdAt: string;
   updatedAt: string;
+  expiredAt: string | null;
   generationMetadata: PollGenerationMetadata;
 };
 

@@ -4,6 +4,11 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ContentFeedbackPanel } from '@/components/admin/content-feedback-panel';
+import { DraftExpiryBadge } from '@/components/admin/draft-expiry-badge';
+import {
+  DraftReviewQueueToggle,
+  type DraftReviewQueue,
+} from '@/components/admin/draft-review-queue-toggle';
 import { ReelContentPreview } from '@/components/admin/reel-content-preview';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import type { ContentFeedbackVerdict } from '@/lib/content-feedback/types';
@@ -31,6 +36,7 @@ export function ReelDraftReview() {
   const highlightPollId = searchParams.get('pollId')?.trim() ?? '';
   const highlightedRef = useRef(false);
   const reviewedRef = useRef<HTMLDivElement>(null);
+  const [queue, setQueue] = useState<DraftReviewQueue>('pending');
   const [drafts, setDrafts] = useState<PollRecord[]>([]);
   const [reviewed, setReviewed] = useState<ReviewedReel | null>(null);
   const [error, setError] = useState('');
@@ -42,7 +48,9 @@ export function ReelDraftReview() {
     startTransition(async () => {
       setError('');
       try {
-        const res = await fetch('/api/admin/polls');
+        const res = await fetch(
+          `/api/admin/polls?queue=${queue === 'expired' ? 'expired' : 'pending'}`,
+        );
         const json = (await res.json().catch(() => ({}))) as DraftsResponse & { error?: string };
         if (!res.ok) {
           setError(typeof json.error === 'string' ? json.error : 'Kunne ikke laste utkast');
@@ -59,7 +67,8 @@ export function ReelDraftReview() {
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when queue changes
+  }, [queue]);
 
   useEffect(() => {
     if (!reviewed) return;
@@ -75,7 +84,7 @@ export function ReelDraftReview() {
     el.classList.add('ring-2', 'ring-brand');
   }, [drafts, highlightPollId]);
 
-  const patchPoll = (poll: PollRecord, action: 'publish' | 'archive') => {
+  const patchPoll = (poll: PollRecord, action: 'publish' | 'archive' | 'restore') => {
     startTransition(async () => {
       setError('');
       setSuccess('');
@@ -89,11 +98,16 @@ export function ReelDraftReview() {
         setError(typeof data.error === 'string' ? data.error : 'Handling feilet');
         return;
       }
-      setSuccess(action === 'publish' ? 'Utkastet er publisert.' : 'Utkastet er arkivert.');
-      setReviewed({
-        poll,
-        verdict: action === 'publish' ? 'approve' : 'reject',
-      });
+      if (action === 'restore') {
+        setSuccess('Utkastet er gjenopprettet.');
+        setReviewed(null);
+      } else {
+        setSuccess(action === 'publish' ? 'Utkastet er publisert.' : 'Utkastet er arkivert.');
+        setReviewed({
+          poll,
+          verdict: action === 'publish' ? 'approve' : 'reject',
+        });
+      }
       setDrafts((current) => current.filter((row) => row.id !== poll.id));
       load();
     });
@@ -103,9 +117,11 @@ export function ReelDraftReview() {
 
   return (
     <div className="space-y-4">
+      <DraftReviewQueueToggle queue={queue} onQueueChange={setQueue} className="max-w-md" />
       <p className="text-sm text-muted-foreground">
-        Publiser til Reels-feeden, eller arkiver. Tittel, beskrivelse og kilder blir stående mens du gir
-        tilbakemelding.
+        {queue === 'pending'
+          ? 'Publiser til Reels-feeden, eller arkiver. Utkast utløper etter 72 timer uten vurdering.'
+          : 'Utløpte utkast kan gjenopprettes til vurderingskøen.'}
       </p>
       {error ? (
         <p className="text-sm text-destructive" role="alert">
@@ -139,8 +155,12 @@ export function ReelDraftReview() {
       {initialLoad ? <DraftListSkeleton /> : null}
       {!initialLoad && visibleDrafts.length === 0 && !reviewed ? (
         <EmptyState
-          title="Ingen utkast"
-          description="Generer fra Reels-siden, eller vent på automatisk kjøring."
+          title={queue === 'expired' ? 'Ingen utløpte utkast' : 'Ingen utkast'}
+          description={
+            queue === 'expired'
+              ? 'Utløpte reel-utkast vises her.'
+              : 'Generer fra Reels-siden, eller vent på automatisk kjøring.'
+          }
           className="py-8"
         />
       ) : null}
@@ -152,24 +172,47 @@ export function ReelDraftReview() {
               id={`reel-draft-${poll.id}`}
               className="rounded-2xl border border-border bg-card p-4"
             >
-              <ReelContentPreview poll={poll} />
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <ReelContentPreview poll={poll} />
+                </div>
+                {queue === 'pending' ? <DraftExpiryBadge createdAt={poll.createdAt} /> : null}
+              </div>
+              {queue === 'expired' && poll.expiredAt ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Utløpt {new Date(poll.expiredAt).toLocaleString('nb-NO')}
+                </p>
+              ) : null}
               <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => patchPoll(poll, 'publish')}
-                  className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
-                >
-                  Publiser
-                </button>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => patchPoll(poll, 'archive')}
-                  className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
-                >
-                  Arkiver
-                </button>
+                {queue === 'pending' ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => patchPoll(poll, 'publish')}
+                      className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+                    >
+                      Publiser
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => patchPoll(poll, 'archive')}
+                      className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+                    >
+                      Arkiver
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => patchPoll(poll, 'restore')}
+                    className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+                  >
+                    Gjenopprett
+                  </button>
+                )}
               </div>
             </li>
           ))}
