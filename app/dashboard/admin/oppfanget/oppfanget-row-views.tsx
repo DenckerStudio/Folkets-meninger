@@ -305,7 +305,7 @@ export function OppfangetDesktopTable({
                   researchCellClassName={cellClass}
                   actionsCellClassName={cn(
                     cellClass,
-                    'sticky right-0 z-10 bg-background shadow-[-6px_0_12px_-8px_rgba(0,0,0,0.12)] group-hover:bg-muted/20',
+                    'sticky right-0 z-10 bg-background shadow-[-6px_0_12px_-8px_rgba(0,0,0,0.12)] group-hover:bg-[color-mix(in_oklch,var(--color-muted)_20%,var(--color-background))]',
                   )}
                 />
               </tr>

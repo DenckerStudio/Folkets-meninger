@@ -184,7 +184,7 @@ function ResearchTableMenuDropdown({
         type="button"
         className={cn(
           buttonVariants({ variant: 'outline', size: 'sm' }),
-          'min-h-11 shrink-0 gap-1 px-2.5',
+          'min-h-11 min-w-11 shrink-0 gap-1 px-2.5',
           triggerClassName,
         )}
         aria-label="Handlinger"
