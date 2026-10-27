@@ -193,13 +193,19 @@ function ResearchTableMenuDropdown({
         <MoreHorizontal className="min-[640px]:hidden" aria-hidden />
         <ChevronDown className="hidden size-3.5 opacity-70 min-[640px]:inline" aria-hidden />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={6} className="z-[100] min-w-52">
+      <DropdownMenuContent
+        align="end"
+        sideOffset={6}
+        className="z-[100] !w-max min-w-52 max-w-[min(20rem,calc(100vw-2rem))]"
+      >
         {items.map((item) => {
           const Icon = item.icon;
+          const itemClassName =
+            'min-h-11 items-start gap-2 py-2.5 text-left whitespace-normal';
           const content = (
             <>
-              {Icon ? <Icon className="size-4 shrink-0" aria-hidden /> : null}
-              <span className="truncate">{item.label}</span>
+              {Icon ? <Icon className="mt-0.5 size-4 shrink-0" aria-hidden /> : null}
+              <span className="min-w-0 flex-1 whitespace-normal leading-snug">{item.label}</span>
             </>
           );
 
@@ -207,6 +213,7 @@ function ResearchTableMenuDropdown({
             return (
               <DropdownMenuItem
                 key={item.id}
+                className={itemClassName}
                 variant={item.destructive ? 'destructive' : 'default'}
                 render={<Link href={item.href} />}
                 nativeButton={false}
@@ -219,6 +226,7 @@ function ResearchTableMenuDropdown({
           return (
             <DropdownMenuItem
               key={item.id}
+              className={itemClassName}
               disabled={item.disabled}
               variant={item.destructive ? 'destructive' : 'default'}
               onClick={() => {
