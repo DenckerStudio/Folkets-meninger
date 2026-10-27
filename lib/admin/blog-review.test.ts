@@ -56,5 +56,8 @@ const panelSrc = readFileSync(join(process.cwd(), 'components/admin/blog-draft-e
 assert.match(panelSrc, /lg:hidden/);
 assert.match(panelSrc, /min-h-11/);
 assert.doesNotMatch(panelSrc, /setSuccess\(/);
+assert.match(panelSrc, /aria-live="polite"/);
+assert.match(panelSrc, /Forkaste endringene/);
+assert.match(reviewUiSrc, /Åpne i Payload/);
 
 console.log('lib/admin/blog-review.test.ts ok');

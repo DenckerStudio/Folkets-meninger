@@ -91,17 +91,6 @@ export type BlogDraftEditSaved = {
   updatedAt: string | null;
 };
 
-export function blogDraftEditSavedFromInput(input: EditBlogDraftInput): BlogDraftEditSaved {
-  const patch = buildEditBlogDraftPatch(input);
-  return {
-    id: input.id,
-    title: String(patch.title),
-    excerpt: String(patch.excerpt),
-    bodyMarkdown: String(patch.bodyMarkdown),
-    updatedAt: new Date().toISOString(),
-  };
-}
-
 export function blogDraftEditSavedFromPayloadPost(post: PayloadPost): BlogDraftEditSaved {
   return {
     id: String(post.id),
@@ -138,10 +127,7 @@ export async function editBlogDraft(input: EditBlogDraftInput): Promise<EditBlog
     return { ok: false, status: result.status, error };
   }
 
-  const draft =
-    result.doc != null
-      ? blogDraftEditSavedFromPayloadPost(result.doc)
-      : blogDraftEditSavedFromInput(input);
+  const draft = blogDraftEditSavedFromPayloadPost(result.doc);
 
   return { ok: true, id: input.id, draft };
 }

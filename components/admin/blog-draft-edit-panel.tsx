@@ -46,6 +46,7 @@ export function BlogDraftEditPanel({
   const [fieldErrors, setFieldErrors] = useState<BlogDraftEditFieldErrors>({});
   const [formError, setFormError] = useState('');
   const [bodyPane, setBodyPane] = useState<BodyPane>('skriv');
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const title = dirtyFields?.title ?? draft.title;
@@ -81,8 +82,8 @@ export function BlogDraftEditPanel({
     setFormError('');
     const validation = validateBlogDraftEditContent({ title, excerpt, bodyMarkdown });
     if (!validation.ok) {
+      setFormError('');
       setFieldErrors(validation.fields);
-      setFormError(validation.error);
       const firstKey = firstFieldErrorKey(validation.fields);
       if (firstKey) {
         if (firstKey === 'bodyMarkdown') setBodyPane('skriv');
@@ -113,13 +114,16 @@ export function BlogDraftEditPanel({
         if (!res.ok) {
           const apiFields = mapApiFieldErrors(data.fields);
           if (Object.keys(apiFields).length > 0) {
+            setFormError('');
             setFieldErrors(apiFields);
             const firstKey = firstFieldErrorKey(apiFields);
             if (firstKey) {
               if (firstKey === 'bodyMarkdown') setBodyPane('skriv');
               focusField(firstKey);
             }
+            return;
           }
+          setFieldErrors({});
           const message =
             typeof data.error === 'string' && data.error.trim()
               ? data.error.endsWith('.')
@@ -145,6 +149,14 @@ export function BlogDraftEditPanel({
         setFormError('Kunne ikke lagre endringer.');
       }
     });
+  };
+
+  const handleCancelClick = () => {
+    if (isDirty) {
+      setDiscardConfirmOpen(true);
+      return;
+    }
+    onCancel();
   };
 
   const titleTrimmedLength = title.trim().length;
@@ -200,7 +212,7 @@ export function BlogDraftEditPanel({
             </span>
           </div>
           {fieldErrors.title ? (
-            <p id={titleErrorId} className="text-xs font-medium text-destructive" role="alert">
+            <p id={titleErrorId} className="text-xs font-medium text-destructive">
               {fieldErrors.title}
             </p>
           ) : null}
@@ -223,7 +235,7 @@ export function BlogDraftEditPanel({
             placeholder="Kort sammendrag som vises i lister og delinger."
           />
           {fieldErrors.excerpt ? (
-            <p id={excerptErrorId} className="text-xs font-medium text-destructive" role="alert">
+            <p id={excerptErrorId} className="text-xs font-medium text-destructive">
               {fieldErrors.excerpt}
             </p>
           ) : null}
@@ -296,7 +308,7 @@ export function BlogDraftEditPanel({
                 </span>
               </div>
               {fieldErrors.bodyMarkdown ? (
-                <p id={bodyErrorId} className="mt-1 text-xs font-medium text-destructive" role="alert">
+                <p id={bodyErrorId} className="mt-1 text-xs font-medium text-destructive">
                   {fieldErrors.bodyMarkdown}
                 </p>
               ) : null}
@@ -319,25 +331,60 @@ export function BlogDraftEditPanel({
           </div>
         </div>
       </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={pending}
-          onClick={save}
-          className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+      {discardConfirmOpen ? (
+        <div
+          className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-3"
+          role="region"
+          aria-label="Bekreft forkasting"
         >
-          {pending ? 'Lagrer …' : 'Lagre utkast'}
-        </button>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={onCancel}
-          className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
-        >
-          Avbryt
-        </button>
-      </div>
-      {isDirty ? <span className="sr-only">Ulagrede endringer</span> : null}
+          <p className="text-sm font-medium text-foreground">Forkaste endringene?</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                setDiscardConfirmOpen(false);
+                onCancel();
+              }}
+              className="inline-flex min-h-11 items-center rounded-lg bg-destructive px-4 py-2.5 text-sm font-medium text-destructive-foreground hover:opacity-90 disabled:opacity-50"
+            >
+              Forkast
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setDiscardConfirmOpen(false)}
+              className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+            >
+              Fortsett å redigere
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={save}
+            className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+          >
+            {pending ? 'Lagrer …' : 'Lagre utkast'}
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={handleCancelClick}
+            className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+          >
+            Avbryt
+          </button>
+        </div>
+      )}
+      {isDirty ? (
+        <p className="sr-only" aria-live="polite">
+          Ulagrede endringer
+        </p>
+      ) : null}
     </section>
   );
 }
