@@ -1,3 +1,4 @@
+import { claimAiSummaryWebhook } from '@/lib/ai-summary/service';
 import { getServiceSupabase } from '@/lib/supabase';
 import { triggerAiSummaryWebhook } from '@/lib/trigger-ai-summary-webhook';
 import { triggerSystemPollDraftWebhook } from '@/lib/trigger-system-poll-draft-webhook';
@@ -86,17 +87,7 @@ export async function retryPendingN8nJobs(): Promise<N8nRetryResult> {
         : Number.NaN;
     if (Number.isFinite(requestedMs) && requestedMs >= cutoffMs) continue;
 
-    const requestedNow = new Date().toISOString();
-    const { error: markError } = await service
-      .from('stortinget_issues')
-      .update({ ai_summary_requested_at: requestedNow })
-      .eq('id', issue.id);
-
-    if (markError) {
-      console.warn(
-        `[n8n-retry] Could not mark ai_summary_requested_at for ${issue.id}:`,
-        markError.message,
-      );
+    if (!(await claimAiSummaryWebhook(issue.id))) {
       continue;
     }
 

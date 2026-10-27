@@ -80,7 +80,22 @@ async function run(): Promise<void> {
 
       calls.length = 0;
       failCount = 0;
-      globalThis.fetch = (async () => new Response('', { status: 500 })) as typeof fetch;
+      globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        calls.push({ url: String(input), init });
+        return new Response('', { status: 500 });
+      }) as typeof fetch;
+      const httpErrorNoRetry = await postN8nWebhook(
+        'https://n8n.example/webhook',
+        {},
+        'ai-summary',
+        200,
+        2,
+        secretToken,
+      );
+      assert.equal(httpErrorNoRetry, false, 'HTTP 5xx is not retried');
+      assert.equal(calls.length, 1, 'single attempt after HTTP error response');
+
+      calls.length = 0;
       await postN8nWebhook(
         'https://n8n.example/webhook',
         {},

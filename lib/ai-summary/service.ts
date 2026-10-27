@@ -205,7 +205,10 @@ export async function deleteAiSummary(issueId: string): Promise<void> {
     console.error('[ai-summary] Kunne ikke slette sammendrag:', error);
   }
 
-  await supabase.from('stortinget_issues').update({ ai_labels: [] }).eq('id', issueId);
+  await supabase
+    .from('stortinget_issues')
+    .update({ ai_labels: [], ai_summary_requested_at: null })
+    .eq('id', issueId);
 }
 
 export type AiSummaryReady = AiSummary & {
@@ -227,38 +230,40 @@ export type AiSummaryApiResult = AiSummaryReady | AiSummaryPending | AiSummaryRe
 
 const WEBHOOK_COOLDOWN_MS = 60 * 60 * 1000;
 
-async function markAiSummaryRequested(issueId: string): Promise<boolean> {
+/**
+ * Atomically marks an issue as having requested an AI summary webhook (1 h cooldown).
+ * Returns true only when this caller won the claim and should fire the webhook.
+ */
+export async function claimAiSummaryWebhook(issueId: string): Promise<boolean> {
   if (!supabaseConfigured()) return false;
 
   try {
     const supabase = getServiceSupabase();
     const cutoff = new Date(Date.now() - WEBHOOK_COOLDOWN_MS).toISOString();
+    const requestedAt = new Date().toISOString();
 
-    const { data: row } = await supabase
+    const { data, error } = await supabase
       .from('stortinget_issues')
-      .select('ai_summary_requested_at')
+      .update({ ai_summary_requested_at: requestedAt })
       .eq('id', issueId)
-      .maybeSingle();
+      .or(`ai_summary_requested_at.is.null,ai_summary_requested_at.lt.${cutoff}`)
+      .select('id');
 
-    if (row?.ai_summary_requested_at && row.ai_summary_requested_at >= cutoff) {
+    if (error) {
+      console.error('[ai-summary] Kunne ikke markere webhook-forespørsel:', error);
       return false;
     }
 
-    await supabase
-      .from('stortinget_issues')
-      .update({ ai_summary_requested_at: new Date().toISOString() })
-      .eq('id', issueId);
-
-    return true;
+    return Array.isArray(data) && data.length === 1;
   } catch (e) {
     console.error('[ai-summary] Kunne ikke markere webhook-forespørsel:', e);
-    return true;
+    return false;
   }
 }
 
 export type ResolveAiSummaryDeps = {
   readFromDb?: typeof readAiSummaryFromDb;
-  markRequested?: typeof markAiSummaryRequested;
+  markRequested?: typeof claimAiSummaryWebhook;
   triggerWebhook?: typeof triggerAiSummaryWebhook;
 };
 
@@ -267,7 +272,7 @@ export async function resolveAiSummaryForApi(
   options: { triggerIfMissing?: boolean; deps?: ResolveAiSummaryDeps } = {},
 ): Promise<AiSummaryApiResult> {
   const readFromDb = options.deps?.readFromDb ?? readAiSummaryFromDb;
-  const markRequested = options.deps?.markRequested ?? markAiSummaryRequested;
+  const markRequested = options.deps?.markRequested ?? claimAiSummaryWebhook;
   const triggerWebhook = options.deps?.triggerWebhook ?? triggerAiSummaryWebhook;
 
   const readResult = await readFromDb(issueId);
