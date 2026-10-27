@@ -49,4 +49,18 @@ const blogReviewSrc = readFileSync(
 assert.match(blogReviewSrc, /DraftReviewQueueToggle/);
 assert.match(blogReviewSrc, /Utløpte/);
 
+const queueToggleSrc = readFileSync(
+  join(process.cwd(), 'components/admin/draft-review-queue-toggle.tsx'),
+  'utf8',
+);
+const badgeSrc = readFileSync(
+  join(process.cwd(), 'components/admin/draft-expiry-badge.tsx'),
+  'utf8',
+);
+assert.match(queueToggleSrc, /aria-pressed=\{selected\}/);
+assert.doesNotMatch(queueToggleSrc, /role="tab"/);
+assert.doesNotMatch(queueToggleSrc, /role="tablist"/);
+assert.doesNotMatch(badgeSrc, /min-h-\[2\.75rem\]/);
+assert.match(badgeSrc, /rounded-full/);
+
 console.log('admin/reel-review-ui.test.ts: ok');

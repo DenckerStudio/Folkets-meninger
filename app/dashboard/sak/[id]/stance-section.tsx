@@ -9,6 +9,7 @@ import { ISSUE_STANCE_LABELS, type IssueStance } from '@/lib/stances/types';
 import { routes } from '@/lib/routes';
 import { PoliticalConsentDialog } from '@/components/consent/political-consent-dialog';
 import { usePoliticalConsent } from '@/hooks/use-political-consent';
+import { pollBallotSlugPhrase } from '@/lib/polls/ballot-buttons';
 
 interface StanceSectionProps {
   sakId: string;
@@ -230,7 +231,8 @@ export default function StanceSection({
       </AnimatePresence>
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        Systemgenererte ja/nei/blank-spørsmål finner du på Utforsk. Andre nasjonale avstemninger ligger under Avstemninger.
+        Systemgenererte {pollBallotSlugPhrase()}-spørsmål finner du på Utforsk. Andre nasjonale avstemninger ligger
+        under Avstemninger.
       </p>
 
       <PoliticalConsentDialog

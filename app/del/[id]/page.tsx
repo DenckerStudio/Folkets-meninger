@@ -25,6 +25,7 @@ import {
 import { OG_IMAGE_ALT, OG_IMAGE_SIZE, pollOgImageAlt } from '@/lib/polls/share-og';
 import { isSharePollsEnabled } from '@/lib/polls/share-flag';
 import { resolveRequestShareOrigin } from '@/lib/polls/share-server';
+import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
 import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { routes } from '@/lib/routes';
@@ -57,7 +58,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     shareable && poll
       ? poll.neutralSummary.trim()
         ? truncateDescription(poll.neutralSummary, 155)
-        : 'Stem Ja, Vet ikke eller Nei. Se hva andre mener på Folkets Meninger.'
+        : `Stem ${pollBallotRunningTextPhrase()}. Se hva andre mener på Folkets Meninger.`
       : DEFAULT_DESCRIPTION;
 
   const canonical = pollSharePath(id);

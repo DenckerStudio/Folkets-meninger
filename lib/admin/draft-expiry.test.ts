@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  DRAFT_RESTORE_SUCCESS_MESSAGE,
   DRAFT_SOFT_EXPIRY_MS,
   draftExpiryHoursLeft,
   draftSoftExpiryStartMs,
@@ -31,5 +32,6 @@ const afterRestore = Date.parse(restoredAt) + 2 * HOUR_MS;
 assert.equal(draftSoftExpiryStartMs(restoredClock), Date.parse(restoredAt));
 assert.equal(formatDraftExpiryLabel(restoredClock, afterRestore), 'Utløper om 70 t');
 assert.equal(isDraftPastSoftExpiry(restoredClock, at72h), false);
+assert.match(DRAFT_RESTORE_SUCCESS_MESSAGE, /Til vurdering\.$/);
 
 console.log('lib/admin/draft-expiry.test.ts: ok');

@@ -18,7 +18,7 @@ export function DraftExpiryBadge({ clock, className }: Props) {
   return (
     <span
       className={cn(
-        'inline-flex min-h-[2.75rem] items-center rounded-lg px-3 py-1.5 text-xs font-medium',
+        'inline-flex items-center rounded-full px-3 py-1 text-xs font-medium',
         urgent
           ? 'bg-amber-500/15 text-amber-800 dark:text-amber-300'
           : 'bg-muted text-muted-foreground',

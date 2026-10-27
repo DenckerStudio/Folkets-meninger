@@ -8,6 +8,10 @@ import { PollResultView } from '@/components/polls/poll-result-view';
 import { isAdmin } from '@/lib/admin/gate';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { formatPollDisplayTitle } from '@/lib/polls/display-title';
+import {
+  pollBallotButtonLabelsPhrase,
+  pollBallotRunningTextPhrase,
+} from '@/lib/polls/ballot-buttons';
 import { pollStatusLabel, pollTrackLabel, SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import {
   getPollById,
@@ -33,7 +37,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = formatPollDisplayTitle(poll.title);
   return buildPageMetadata({
     title,
-    description: truncateDescription(poll.neutralSummary || `${title} — stem ja, nei eller blank.`),
+    description: truncateDescription(
+      poll.neutralSummary || `${title} — stem ${pollBallotRunningTextPhrase()}.`,
+    ),
     canonicalPath: routes.poll(poll.id),
   });
 }
@@ -118,7 +124,7 @@ export default async function PollDetailPage({ params }: PageProps) {
             href={routes.sharePoll(poll.id)}
             className="inline-flex min-h-11 items-center font-medium text-brand hover:underline"
           >
-            Åpne delbar side (Ja / Vet ikke / Nei) →
+            Åpne delbar side ({pollBallotButtonLabelsPhrase()}) →
           </Link>
         </p>
       ) : null}

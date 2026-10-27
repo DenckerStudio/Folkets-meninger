@@ -1,7 +1,7 @@
 export const DRAFT_SOFT_EXPIRY_MS = 72 * 60 * 60 * 1000;
 
 export const DRAFT_RESTORE_SUCCESS_MESSAGE =
-  'Utkastet er gjenopprettet og ligger nå i Til vurdering';
+  'Utkastet er gjenopprettet og ligger nå i Til vurdering.';
 
 export type DraftExpiryLabel = 'Utløper snart' | `Utløper om ${number} t`;
 

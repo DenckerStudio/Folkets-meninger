@@ -3,6 +3,7 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import { PollCard } from '@/components/polls/poll-card';
 import { PageHeader } from '@/components/page-header';
 import { getPollTotals, listOpenPolls } from '@/lib/polls/service';
+import { pollBallotRunningTextPhrase, pollBallotSlugPhrase } from '@/lib/polls/ballot-buttons';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = buildPageMetadata({
   title: 'Avstemninger',
   description:
-    'Nasjonale spørsmål med ja, nei eller blank. Se resultatene og delta i avstemninger.',
+    `Nasjonale spørsmål med ${pollBallotRunningTextPhrase()}. Se resultatene og delta i avstemninger.`,
   canonicalPath: '/dashboard/avstemninger',
 });
 
@@ -27,7 +28,7 @@ export default async function AvstemningerPage() {
     <DashboardPage>
       <PageHeader
         title="Avstemninger"
-        description="Samme ja/nei/blank-spørsmål som under Utforsk → Reels, samlet i liste. Enkeltsaker fra Stortinget finner du under Utforsk."
+        description={`Samme ${pollBallotSlugPhrase()}-spørsmål som under Utforsk → Reels, samlet i liste. Enkeltsaker fra Stortinget finner du under Utforsk.`}
       />
       {withTotals.length === 0 ? (
         <EmptyState

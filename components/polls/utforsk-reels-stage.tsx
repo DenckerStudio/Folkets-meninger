@@ -18,7 +18,11 @@ import { CoverflowCarousel } from '@/components/ui/coverflow-carousel';
 import { Stories, StoriesContent, StoriesHeader, StoriesCounter, StoriesNavigationInline, Story } from '@/components/ui/stories-carousel';
 import { ReelCarouselCard } from '@/components/polls/reel-vote-card';
 import { ReelsExpandPortalProvider } from '@/components/polls/reels-expand-portal';
+import { pollBallotSlugPhrase } from '@/lib/polls/ballot-buttons';
+import { reelsNavCopy as buildReelsNavCopy } from '@/lib/polls/reels-nav-copy';
 import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
+
+const BALLOT_SLUG = pollBallotSlugPhrase();
 import type { SystemReelFeedItem } from '@/lib/polls/types';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
@@ -200,29 +204,9 @@ type ReelsNavCopy = {
 };
 
 function reelsNavCopy(direction: 'forward' | 'back', itemCount: number): ReelsNavCopy {
-  switch (direction) {
-    case 'forward':
-      return {
-        badge: 'Reels',
-        title: 'Del din mening',
-        subtitle:
-          itemCount > 0
-            ? 'Ja, nei eller blank på spørsmål fra stortingssaker.'
-            : 'Ingen systemgenererte ja/nei/blank-Reels er publisert ennå.',
-        BadgeIcon: CivicBubble,
-      };
-    case 'back':
-      return {
-        badge: 'Utforsk',
-        title: 'Tilbake til saker',
-        subtitle: 'Lovforslag og representantforslag.',
-        BadgeIcon: Compass,
-      };
-    default: {
-      const _exhaustive: never = direction;
-      return _exhaustive;
-    }
-  }
+  const copy = buildReelsNavCopy(direction, itemCount);
+  const BadgeIcon = direction === 'forward' ? CivicBubble : Compass;
+  return { ...copy, BadgeIcon };
 }
 
 function ReelsNavCta({
@@ -457,7 +441,7 @@ export function ReelsPanel({
             </div>
             <h2 className="mt-4 text-lg font-semibold text-white">Ingen Reels publisert ennå</h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-white/75">
-              {SYSTEM_REEL_DISCLAIMER} Godkjente ja/nei/blank-spørsmål fra stortingssaker vises her når de er
+              {SYSTEM_REEL_DISCLAIMER} Godkjente {BALLOT_SLUG}-spørsmål fra stortingssaker vises her når de er
               publisert.
             </p>
           </EmptyLineState>

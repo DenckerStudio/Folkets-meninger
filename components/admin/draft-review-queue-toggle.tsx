@@ -22,7 +22,6 @@ export function DraftReviewQueueToggle({
   return (
     <div
       className={cn('flex flex-wrap gap-1 rounded-xl bg-muted/40 p-1', className)}
-      role="tablist"
       aria-label="Utkastkø"
     >
       {(
@@ -36,8 +35,7 @@ export function DraftReviewQueueToggle({
           <button
             key={item.id}
             type="button"
-            role="tab"
-            aria-selected={selected}
+            aria-pressed={selected}
             onClick={() => onQueueChange(item.id)}
             className={cn(
               'inline-flex min-h-11 min-w-[8.5rem] flex-1 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-colors',
