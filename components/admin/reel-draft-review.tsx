@@ -5,6 +5,11 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ContentFeedbackPanel } from '@/components/admin/content-feedback-panel';
 import { DraftExpiryBadge } from '@/components/admin/draft-expiry-badge';
+import { UtenKontekstBadge } from '@/components/admin/uten-kontekst-badge';
+import {
+  getUtenKontekstPrefixNoticeMessage,
+  isPollDraftUtenKontekst,
+} from '@/lib/admin/uten-kontekst';
 import {
   DraftReviewQueueToggle,
   type DraftReviewQueue,
@@ -41,6 +46,7 @@ export function ReelDraftReview() {
   const [drafts, setDrafts] = useState<PollRecord[]>([]);
   const [reviewed, setReviewed] = useState<ReviewedReel | null>(null);
   const [error, setError] = useState('');
+  const [publishErrors, setPublishErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState('');
   const [initialLoad, setInitialLoad] = useState(true);
   const [pending, startTransition] = useTransition();
@@ -88,6 +94,11 @@ export function ReelDraftReview() {
   const patchPoll = (poll: PollRecord, action: 'publish' | 'archive' | 'restore') => {
     startTransition(async () => {
       setError('');
+      setPublishErrors((current) => {
+        const next = { ...current };
+        delete next[poll.id];
+        return next;
+      });
       setSuccess('');
       const res = await fetch('/api/admin/polls', {
         method: 'PATCH',
@@ -96,7 +107,13 @@ export function ReelDraftReview() {
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setError(typeof data.error === 'string' ? data.error : 'Handling feilet');
+        const raw = typeof data.error === 'string' ? data.error : 'Handling feilet';
+        const message = raw.endsWith('.') ? raw : `${raw}.`;
+        if (action === 'publish') {
+          setPublishErrors((current) => ({ ...current, [poll.id]: message }));
+        } else {
+          setError(message);
+        }
         return;
       }
       if (action === 'restore') {
@@ -180,9 +197,14 @@ export function ReelDraftReview() {
                   <ReelContentPreview poll={poll} />
                 </div>
                 {queue === 'pending' ? (
-                  <DraftExpiryBadge
-                    clock={{ createdAt: poll.createdAt, restoredAt: poll.restoredAt }}
-                  />
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {isPollDraftUtenKontekst(poll.generationMetadata) ? (
+                      <UtenKontekstBadge />
+                    ) : null}
+                    <DraftExpiryBadge
+                      clock={{ createdAt: poll.createdAt, restoredAt: poll.restoredAt }}
+                    />
+                  </div>
                 ) : null}
               </div>
               {queue === 'expired' && poll.expiredAt ? (
@@ -190,27 +212,46 @@ export function ReelDraftReview() {
                   Utløpt {new Date(poll.expiredAt).toLocaleString('nb-NO')}
                 </p>
               ) : null}
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 space-y-2">
                 {queue === 'pending' ? (
                   <>
-                    <button
-                      type="button"
-                      disabled={pending}
-                      onClick={() => patchPoll(poll, 'publish')}
-                      className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
-                    >
-                      Publiser
-                    </button>
-                    <button
-                      type="button"
-                      disabled={pending}
-                      onClick={() => patchPoll(poll, 'archive')}
-                      className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
-                    >
-                      Arkiver
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => patchPoll(poll, 'publish')}
+                        className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+                      >
+                        Publiser
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => patchPoll(poll, 'archive')}
+                        className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+                      >
+                        Arkiver
+                      </button>
+                    </div>
+                    {(() => {
+                      const notice = getUtenKontekstPrefixNoticeMessage(poll);
+                      return notice ? (
+                        <p
+                          className="w-full text-sm leading-snug text-amber-900 dark:text-amber-200"
+                          role="note"
+                        >
+                          {notice}
+                        </p>
+                      ) : null;
+                    })()}
+                    {publishErrors[poll.id] ? (
+                      <p className="w-full text-sm leading-snug text-destructive" role="alert">
+                        {publishErrors[poll.id]}
+                      </p>
+                    ) : null}
                   </>
                 ) : (
+                  <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     disabled={pending}
@@ -219,6 +260,7 @@ export function ReelDraftReview() {
                   >
                     Gjenopprett
                   </button>
+                  </div>
                 )}
               </div>
             </li>

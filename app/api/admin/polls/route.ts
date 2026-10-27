@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
+import { preparePollPublicTextForPublish } from '@/lib/admin/uten-kontekst';
 import {
   archivePoll,
+  getPollById,
   listExpiredSystemReelDrafts,
   listSystemPollDrafts,
   publishPoll,
+  publishPollWithPublicText,
   restoreExpiredReelDraft,
 } from '@/lib/polls/service';
 
@@ -58,7 +61,25 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ ok: true, id: pollId, action });
     }
 
-    const pollId = action === 'publish' ? await publishPoll(id) : await archivePoll(id);
+    if (action === 'publish') {
+      const poll = await getPollById(id);
+      if (!poll) {
+        return NextResponse.json({ error: 'Avstemning ikke funnet' }, { status: 404 });
+      }
+      const prepared = preparePollPublicTextForPublish(poll);
+      if ('error' in prepared) {
+        return NextResponse.json({ error: prepared.error }, { status: 400 });
+      }
+      const pollId = prepared.textChanged
+        ? await publishPollWithPublicText(id, {
+            title: prepared.title,
+            neutralSummary: prepared.neutralSummary,
+          })
+        : await publishPoll(id);
+      return NextResponse.json({ ok: true, id: pollId, action });
+    }
+
+    const pollId = await archivePoll(id);
     return NextResponse.json({ ok: true, id: pollId, action });
   } catch (error) {
     const message = pollPatchErrorMessage(error);
