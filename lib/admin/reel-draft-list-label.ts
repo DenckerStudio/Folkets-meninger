@@ -13,16 +13,29 @@ export function adminReelDraftListLabel(shown: number, total: number | null | un
   return '0';
 }
 
+/**
+ * Subtitle under «Utkast til vurdering».
+ * `listShowsNewestFirst` should match `/api/admin/polls` (`listSystemPollDrafts`: created_at DESC).
+ */
 export function adminReelDraftWaitingDescription(
   shown: number,
   total: number | null | undefined,
+  listShowsNewestFirst = true,
 ): string {
   if (shown <= 0) {
     return 'Ingen utkast venter. Generer fra en sak under, eller vent på automatisk kjøring.';
   }
-  const label = adminReelDraftListLabel(shown, total);
-  if (typeof total === 'number' && total > shown) {
-    return `${label} utkast venter på publisering eller arkivering.`;
+
+  const safeShown = Math.floor(shown);
+  const safeTotal =
+    typeof total === 'number' && Number.isFinite(total) && total > 0 ? Math.floor(total) : safeShown;
+
+  if (safeTotal > safeShown) {
+    const viserClause = listShowsNewestFirst
+      ? `(viser de ${safeShown} nyeste)`
+      : `(viser ${safeShown})`;
+    return `${safeTotal} utkast venter på publisering eller arkivering ${viserClause}.`;
   }
-  return `${shown} utkast venter på publisering eller arkivering.`;
+
+  return `${safeShown} utkast venter på publisering eller arkivering.`;
 }
