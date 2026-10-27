@@ -3,10 +3,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { BookOpen, Clapperboard, Loader2, Microscope } from 'lucide-react';
+import {
+  BookOpen,
+  ChevronDown,
+  Clapperboard,
+  Loader2,
+  Microscope,
+  MoreHorizontal,
+} from 'lucide-react';
 import { ResearchBriefStatusBadge } from '@/components/admin/research-brief-status-badge';
+import { buttonVariants } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Dialog } from '@/components/ui/dialog';
-import { SmoothDropdown, type SmoothDropdownItem } from '@/components/ui/smooth-dropdown';
 import type { ResearchApiAction } from '@/lib/admin/research/actions';
 import {
   RESEARCH_API_ERROR_CODES,
@@ -42,6 +55,15 @@ const ACTION_ICONS: Record<ResearchApiAction, typeof Microscope> = {
   deepen: Microscope,
   blog: BookOpen,
   reel: Clapperboard,
+};
+
+export type ResearchTableMenuItem = {
+  id: string;
+  label: string;
+  icon: (typeof ACTION_ICONS)[ResearchApiAction] | null;
+  disabled?: boolean;
+  destructive?: boolean;
+  href?: string;
 };
 
 const actionButtonClass =
@@ -86,11 +108,11 @@ function pickHighlightBrief(briefsByKind: ResearchBriefsByKind): ResearchBriefSn
   return best;
 }
 
-function buildTableMenuItem(
+export function buildResearchTableMenuItem(
   action: ResearchApiAction,
   brief?: ResearchBriefSnapshot,
   clusterId?: string,
-): SmoothDropdownItem {
+): ResearchTableMenuItem {
   const status = brief?.status;
   const baseLabel = RESEARCH_ACTION_LABELS[action];
 
@@ -100,7 +122,6 @@ function buildTableMenuItem(
       id: action,
       label: `${baseLabel} · ${suffix}`,
       icon: ACTION_ICONS[action],
-      type: 'item',
       disabled: true,
     };
   }
@@ -114,7 +135,6 @@ function buildTableMenuItem(
         id: action,
         label: output.label,
         icon: ACTION_ICONS[action],
-        type: 'item',
         href: output.href,
       };
     }
@@ -122,7 +142,6 @@ function buildTableMenuItem(
       id: action,
       label: 'Ferdig',
       icon: ACTION_ICONS[action],
-      type: 'item',
       disabled: true,
     };
   }
@@ -132,7 +151,6 @@ function buildTableMenuItem(
       id: action,
       label: `${RESEARCH_KIND_LABELS[action]} feilet – Prøv igjen`,
       icon: ACTION_ICONS[action],
-      type: 'item',
       destructive: true,
     };
   }
@@ -141,8 +159,79 @@ function buildTableMenuItem(
     id: action,
     label: baseLabel,
     icon: ACTION_ICONS[action],
-    type: 'item',
   };
+}
+
+export function getResearchTableMenuItems(
+  briefsByKind: ResearchBriefsByKind,
+  clusterId: string,
+): ResearchTableMenuItem[] {
+  return ACTIONS.map((action) => buildResearchTableMenuItem(action, briefsByKind[action], clusterId));
+}
+
+function ResearchTableMenuDropdown({
+  items,
+  onSelect,
+  triggerClassName,
+}: {
+  items: ResearchTableMenuItem[];
+  onSelect: (id: string) => void;
+  triggerClassName?: string;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        type="button"
+        className={cn(
+          buttonVariants({ variant: 'outline', size: 'sm' }),
+          'min-h-11 shrink-0 gap-1 px-2.5',
+          triggerClassName,
+        )}
+        aria-label="Handlinger"
+      >
+        <span className="hidden min-[640px]:inline">Handlinger</span>
+        <MoreHorizontal className="min-[640px]:hidden" aria-hidden />
+        <ChevronDown className="hidden size-3.5 opacity-70 min-[640px]:inline" aria-hidden />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={6} className="z-[100] min-w-52">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const content = (
+            <>
+              {Icon ? <Icon className="size-4 shrink-0" aria-hidden /> : null}
+              <span className="truncate">{item.label}</span>
+            </>
+          );
+
+          if (item.href && !item.disabled) {
+            return (
+              <DropdownMenuItem
+                key={item.id}
+                variant={item.destructive ? 'destructive' : 'default'}
+                render={<Link href={item.href} />}
+                nativeButton={false}
+              >
+                {content}
+              </DropdownMenuItem>
+            );
+          }
+
+          return (
+            <DropdownMenuItem
+              key={item.id}
+              disabled={item.disabled}
+              variant={item.destructive ? 'destructive' : 'default'}
+              onClick={() => {
+                if (!item.disabled) onSelect(item.id);
+              }}
+            >
+              {content}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 function mergeBriefFromResponse(
@@ -238,15 +327,54 @@ function ResearchActionButton({
   );
 }
 
-export function ResearchRowActions({
-  clusterId,
-  variant = 'full',
-  initialBriefsByKind = {},
+function ResearchRowActionsConfirmDialog({
+  confirmAction,
+  pendingAction,
+  confirmAndRun,
+  onDismissConfirm,
 }: {
-  clusterId: string;
-  variant?: 'full' | 'table-compact';
-  initialBriefsByKind?: ResearchBriefsByKind;
+  confirmAction: ResearchApiAction | null;
+  pendingAction: ResearchApiAction | null;
+  confirmAndRun: () => void;
+  onDismissConfirm: () => void;
 }) {
+  return (
+    <Dialog
+      open={confirmAction !== null}
+      onClose={() => {
+        if (pendingAction === null) onDismissConfirm();
+      }}
+      title="Bekreft handling"
+      description={confirmAction ? RESEARCH_ACTION_CONFIRM[confirmAction] : undefined}
+      size="md"
+      className="sm:max-w-md"
+      footer={
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onDismissConfirm}
+            disabled={pendingAction !== null}
+            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            Avbryt
+          </button>
+          <button
+            type="button"
+            onClick={() => confirmAndRun()}
+            disabled={pendingAction !== null}
+            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand/90 disabled:opacity-50"
+          >
+            {pendingAction !== null ? 'Starter…' : 'Fortsett'}
+          </button>
+        </div>
+      }
+    >
+      <span className="sr-only">Bekreft research-handling</span>
+    </Dialog>
+  );
+}
+
+function useResearchRowActions(clusterId: string, initialBriefsByKind: ResearchBriefsByKind) {
   const router = useRouter();
   const [briefsByKind, setBriefsByKind] = useState<ResearchBriefsByKind>(initialBriefsByKind);
   const [pendingAction, setPendingAction] = useState<ResearchApiAction | null>(null);
@@ -379,8 +507,7 @@ export function ResearchRowActions({
   }, [confirmAction, pendingRequestId, runAction]);
 
   const tableMenuItems = useMemo(
-    () =>
-      ACTIONS.map((action) => buildTableMenuItem(action, briefsByKind[action], clusterId)),
+    () => getResearchTableMenuItems(briefsByKind, clusterId),
     [briefsByKind, clusterId],
   );
 
@@ -395,23 +522,105 @@ export function ResearchRowActions({
     [onRequest, tableMenuItems],
   );
 
+  const dismissConfirm = useCallback(() => setConfirmAction(null), []);
+
+  return {
+    briefsByKind,
+    pendingAction,
+    confirmAction,
+    error,
+    onRequest,
+    confirmAndRun,
+    dismissConfirm,
+    tableMenuItems,
+    highlightBrief,
+    onTableMenuSelect,
+  };
+}
+
+export function ResearchRowTableCells({
+  clusterId,
+  initialBriefsByKind = {},
+  researchCellClassName,
+  actionsCellClassName,
+}: {
+  clusterId: string;
+  initialBriefsByKind?: ResearchBriefsByKind;
+  researchCellClassName?: string;
+  actionsCellClassName?: string;
+}) {
+  const {
+    briefsByKind,
+    pendingAction,
+    confirmAction,
+    error,
+    confirmAndRun,
+    dismissConfirm,
+    tableMenuItems,
+    highlightBrief,
+    onTableMenuSelect,
+  } = useResearchRowActions(clusterId, initialBriefsByKind);
+
   return (
     <>
-      <div className={cn(variant === 'table-compact' ? 'flex items-center gap-2' : 'flex flex-col gap-2')}>
+      <td className={researchCellClassName}>
+        {highlightBrief ? (
+          <ResearchBriefStatusBadge status={highlightBrief.status} kind={highlightBrief.kind} />
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+        {error ? (
+          <p className="mt-1 text-xs text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </td>
+      <td className={actionsCellClassName}>
+        <div className="flex justify-end">
+          <ResearchTableMenuDropdown items={tableMenuItems} onSelect={onTableMenuSelect} />
+        </div>
+      </td>
+      <ResearchRowActionsConfirmDialog
+        confirmAction={confirmAction}
+        pendingAction={pendingAction}
+        confirmAndRun={confirmAndRun}
+        onDismissConfirm={dismissConfirm}
+      />
+    </>
+  );
+}
+
+export function ResearchRowActions({
+  clusterId,
+  variant = 'full',
+  initialBriefsByKind = {},
+}: {
+  clusterId: string;
+  variant?: 'full' | 'table-compact';
+  initialBriefsByKind?: ResearchBriefsByKind;
+}) {
+  const {
+    briefsByKind,
+    pendingAction,
+    confirmAction,
+    error,
+    onRequest,
+    confirmAndRun,
+    dismissConfirm,
+    tableMenuItems,
+    highlightBrief,
+    onTableMenuSelect,
+  } = useResearchRowActions(clusterId, initialBriefsByKind);
+
+  return (
+    <>
+      <div className={cn(variant === 'table-compact' ? 'flex flex-col gap-2' : 'flex flex-col gap-2')}>
         {variant === 'table-compact' ? (
           <>
             {highlightBrief ? (
               <ResearchBriefStatusBadge status={highlightBrief.status} kind={highlightBrief.kind} />
             ) : null}
-            <SmoothDropdown
-              items={tableMenuItems}
-              onSelect={onTableMenuSelect}
-              triggerAriaLabel="Handlinger"
-              triggerContent={
-                <span className="text-xs font-medium text-foreground">Handlinger</span>
-              }
-              className="shrink-0 !h-11 !w-auto min-w-[6.75rem]"
-            />
+            <ResearchTableMenuDropdown items={tableMenuItems} onSelect={onTableMenuSelect} />
           </>
         ) : (
           ACTIONS.map((action) => (
@@ -432,38 +641,12 @@ export function ResearchRowActions({
         ) : null}
       </div>
 
-      <Dialog
-        open={confirmAction !== null}
-        onClose={() => {
-          if (pendingAction === null) setConfirmAction(null);
-        }}
-        title="Bekreft handling"
-        description={confirmAction ? RESEARCH_ACTION_CONFIRM[confirmAction] : undefined}
-        size="md"
-        className="sm:max-w-md"
-        footer={
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setConfirmAction(null)}
-              disabled={pendingAction !== null}
-              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-            >
-              Avbryt
-            </button>
-            <button
-              type="button"
-              onClick={() => confirmAndRun()}
-              disabled={pendingAction !== null}
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand/90 disabled:opacity-50"
-            >
-              {pendingAction !== null ? 'Starter…' : 'Fortsett'}
-            </button>
-          </div>
-        }
-      >
-        <span className="sr-only">Bekreft research-handling</span>
-      </Dialog>
+      <ResearchRowActionsConfirmDialog
+        confirmAction={confirmAction}
+        pendingAction={pendingAction}
+        confirmAndRun={confirmAndRun}
+        onDismissConfirm={dismissConfirm}
+      />
     </>
   );
 }
