@@ -1,4 +1,4 @@
-import { triggerN8nWebhook } from '@/lib/n8n/trigger-webhook';
+import { enqueueAiSummaryWebhook } from '@/lib/ai-summary/webhook-dispatch';
 
 /**
  * Fire-and-forget n8n webhook when a stortingssak needs AI summary generation.
@@ -6,10 +6,5 @@ import { triggerN8nWebhook } from '@/lib/n8n/trigger-webhook';
  * (see workflows/n8n/README.md).
  */
 export function triggerAiSummaryWebhook(stortingetIssueId: string): void {
-  triggerN8nWebhook({
-    kind: 'ai-summary',
-    url: process.env.N8N_AI_SUMMARY_WEBHOOK_URL,
-    webhookToken: process.env.N8N_AI_SUMMARY_WEBHOOK_TOKEN,
-    body: { stortinget_issue_id: stortingetIssueId },
-  });
+  enqueueAiSummaryWebhook(stortingetIssueId);
 }
