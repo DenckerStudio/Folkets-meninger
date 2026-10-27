@@ -6,6 +6,7 @@ export function isOppfangetMockPreviewRequested(previewParam: string | null | un
 export function isOppfangetMockPreviewAllowed(previewParam: string | null | undefined): boolean {
   if (!isOppfangetMockPreviewRequested(previewParam)) return false;
   if (process.env.NODE_ENV === 'production') return false;
+  // Block mock preview on production-like hosted deploys (legacy VERCEL_ENV still set on some targets).
   if (process.env.VERCEL_ENV === 'production') return false;
   return true;
 }

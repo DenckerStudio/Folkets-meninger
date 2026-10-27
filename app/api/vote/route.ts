@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { resolveSakTreatmentStatus } from '@/lib/sak-status';
+import { resolveSakListStatus } from '@/lib/sak-status';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +17,7 @@ async function getIssueVotingState(issueId: string) {
 
   const treatmentStatus =
     typeof issue?.ferdigbehandlet === 'boolean'
-      ? resolveSakTreatmentStatus({ ferdigbehandlet: issue.ferdigbehandlet })
+      ? resolveSakListStatus({ ferdigbehandlet: issue.ferdigbehandlet })
       : issue?.status === 'closed' || issue?.status === 'pending'
         ? issue.status
         : 'pending';

@@ -26,14 +26,3 @@ export function stanceCountFromRpc(data: unknown): number {
   }
   return 0;
 }
-
-/** @deprecated Use stanceCountFromRpc — kept for legacy tests. */
-export function voteCountFromHistoryRpc(data: unknown): number {
-  if (Array.isArray(data)) {
-    return data.length;
-  }
-  if (data && typeof data === 'object' && !Array.isArray(data)) {
-    return 0;
-  }
-  return 0;
-}
