@@ -3,16 +3,20 @@ import {
   CONTENT_FEEDBACK_FALLBACK_REGENERATION_HINT,
   submitAdminContentFeedbackRpc,
 } from '@/lib/content-feedback/service';
+import type { AdminContentFeedbackBody } from '@/lib/content-feedback/validation';
+import { getServiceSupabase } from '@/lib/supabase';
 
 const adminId = '00000000-0000-4000-8000-000000000001';
-const rejectBody = {
-  content_type: 'ai_summary' as const,
+const rejectBody: AdminContentFeedbackBody = {
+  content_type: 'ai_summary',
   content_id: '12345',
-  verdict: 'reject' as const,
+  verdict: 'reject',
   aspects: { title: '-' },
-  reason_tags: [] as string[],
+  reason_tags: [],
   note: null,
 };
+
+type ContentFeedbackRpcClient = Pick<ReturnType<typeof getServiceSupabase>, 'rpc'>;
 
 const snapshotPayload = { title: 'Sammendrag' };
 
@@ -32,7 +36,7 @@ function makeRpcRecorder(
       return handler(args);
     },
   };
-  return { supabase, calls };
+  return { supabase: supabase as unknown as ContentFeedbackRpcClient, calls };
 }
 
 async function main() {

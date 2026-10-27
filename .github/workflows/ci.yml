@@ -32,6 +32,7 @@ jobs:
           echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" >> "$GITHUB_ENV"
       - run: npm ci --ignore-scripts
       - run: npm run lint
+      - run: npm run typecheck
       - run: npm run typecheck:evals
       - run: npm run test:unit
       - run: npm run build

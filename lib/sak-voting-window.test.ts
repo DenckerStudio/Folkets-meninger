@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import type { StortingetSakDetail } from './stortinget';
 import {
   formatVotingDaysLeftLabel,
   getSakVotingWindow,
@@ -7,7 +8,8 @@ import {
 
 assert.equal(parseSaksgangEventDate('15.06.2026 00:00:00')?.getFullYear(), 2026);
 
-const openDetail = {
+const openDetail: StortingetSakDetail = {
+  id: 1,
   ferdigbehandlet: false,
   saksgang: {
     saksgang_steg_liste: [
@@ -25,10 +27,11 @@ const openWindow = getSakVotingWindow(openDetail, { now: new Date('2026-06-15T12
 assert.equal(openWindow.isOpen, true);
 assert.ok((openWindow.daysLeft ?? 0) > 0);
 
-const closedWindow = getSakVotingWindow({ ferdigbehandlet: true });
+const closedWindow = getSakVotingWindow({ id: 2, ferdigbehandlet: true } as StortingetSakDetail);
 assert.equal(closedWindow.isOpen, false);
 
-const pastVotDetail = {
+const pastVotDetail: StortingetSakDetail = {
+  id: 3,
   ferdigbehandlet: false,
   saksgang: {
     saksgang_steg_liste: [
