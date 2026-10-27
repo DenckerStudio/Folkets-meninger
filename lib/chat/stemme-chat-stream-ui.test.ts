@@ -101,6 +101,7 @@ const chatSrc = readFileSync(
 );
 assert.match(chatSrc, /shouldShowSkriverSvarOnAssistantMessage/);
 assert.match(chatSrc, /shouldShowStoppedBeforeTextHint/);
-assert.match(chatSrc, new RegExp(STOPPED_BEFORE_TEXT_HINT.replace(/\./g, '\\.')));
+assert.match(chatSrc, /STOPPED_BEFORE_TEXT_HINT/);
+assert.equal(STOPPED_BEFORE_TEXT_HINT, 'Svaret ble stoppet før det kom noe tekst.');
 
 console.log('lib/chat/stemme-chat-stream-ui.test.ts ok');
