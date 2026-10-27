@@ -58,7 +58,7 @@ function fakeSubscriptionClient(
             maybeSingle: async () => ({ data: row, error }),
           }),
         }),
-      }) as ReturnType<SubscriptionClient['from']>,
+      }) as unknown as ReturnType<SubscriptionClient['from']>,
   };
 }
 
@@ -76,7 +76,7 @@ function fakeSelectAwareClient(
             maybeSingle: async () => onSelect(columns),
           }),
         }),
-      }) as ReturnType<SubscriptionClient['from']>,
+      }) as unknown as ReturnType<SubscriptionClient['from']>,
   };
 }
 

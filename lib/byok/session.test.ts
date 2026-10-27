@@ -23,7 +23,7 @@ function fakeByokClient(row: Row | null): ByokClient {
             maybeSingle: async () => ({ data: row, error: row ? null : { message: 'not found' } }),
           }),
         }),
-      }) as ReturnType<ByokClient['from']>,
+      }) as unknown as ReturnType<ByokClient['from']>,
   };
 }
 

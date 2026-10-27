@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { isRegenerationOnRejectAvailable } from '@/lib/content-feedback/capabilities';
+import { getServiceSupabase } from '@/lib/supabase';
+
+type RpcProbeClient = Pick<ReturnType<typeof getServiceSupabase>, 'rpc'>;
 
 const missingRpc = {
   async rpc(name: string) {
@@ -23,9 +26,9 @@ const successRpc = {
 };
 
 async function main() {
-  assert.equal(await isRegenerationOnRejectAvailable(missingRpc), false);
-  assert.equal(await isRegenerationOnRejectAvailable(validationErrorRpc), false);
-  assert.equal(await isRegenerationOnRejectAvailable(successRpc), true);
+  assert.equal(await isRegenerationOnRejectAvailable(missingRpc as unknown as RpcProbeClient), false);
+  assert.equal(await isRegenerationOnRejectAvailable(validationErrorRpc as unknown as RpcProbeClient), false);
+  assert.equal(await isRegenerationOnRejectAvailable(successRpc as unknown as RpcProbeClient), true);
   console.log('content-feedback/capabilities.test.ts: ok');
 }
 

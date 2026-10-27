@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { exitIfCiSkipsProdLive } from '@/lib/test/skip-in-ci-live';
+import { mockToolExecuteOptions, unwrapToolExecuteResult } from '@/lib/test/tool-execute';
 import { createChatTools } from './tools';
 
 exitIfCiSkipsProdLive('chat/tools.wiring.test.ts');
@@ -76,59 +77,63 @@ async function main() {
   assert.equal(typeof tools.findHearingsForSak.execute, 'function');
   assert.equal(typeof tools.getFolketsMeninger.execute, 'function');
 
-  const retrieve = await tools.retrieveSakContext.execute(
-    { issueId: '200365', query: 'vektgrense førerkort' },
-    { toolCallId: 'retrieve-1', messages: [], abortSignal: undefined as never },
+  const retrieve = await unwrapToolExecuteResult(
+    await tools.retrieveSakContext.execute(
+      { issueId: '200365', query: 'vektgrense førerkort' },
+      mockToolExecuteOptions('retrieve-1'),
+    ),
   );
 
-  const spelling = await tools.helpRettsskriving.execute(
-    {
-      draft: 'Jeg meiner stortinget burde heve vektgrensen for førerkort klasse B.',
-      context: 'motforslag',
-    },
-    { toolCallId: 'rett-1', messages: [], abortSignal: undefined as never },
+  const spelling = await unwrapToolExecuteResult(
+    await tools.helpRettsskriving.execute(
+      {
+        draft: 'Jeg meiner stortinget burde heve vektgrensen for førerkort klasse B.',
+        context: 'motforslag',
+      },
+      mockToolExecuteOptions('rett-1'),
+    ),
   );
 
-  const sources = await tools.searchUpdatedSources.execute(
-    { query: 'Dokument 8:314 S førerkort vektgrense' },
-    { toolCallId: 'searx-1', messages: [], abortSignal: undefined as never },
+  const sources = await unwrapToolExecuteResult(
+    await tools.searchUpdatedSources.execute(
+      { query: 'Dokument 8:314 S førerkort vektgrense' },
+      mockToolExecuteOptions('searx-1'),
+    ),
   );
 
-  const listed = await tools.listMatchingSaker.execute(
-    { query: 'vektgrense førerkort' },
-    { toolCallId: 'list-1', messages: [], abortSignal: undefined as never },
+  const listed = await unwrapToolExecuteResult(
+    await tools.listMatchingSaker.execute(
+      { query: 'vektgrense førerkort' },
+      mockToolExecuteOptions('list-1'),
+    ),
   );
 
   // No session user id in this call — personal tools must fail closed.
-  const activity = await tools.getMyActivity.execute(
-    {},
-    { toolCallId: 'activity-1', messages: [], abortSignal: undefined as never },
+  const activity = await unwrapToolExecuteResult(
+    await tools.getMyActivity.execute({}, mockToolExecuteOptions('activity-1')),
   );
-  const profile = await tools.getPublicProfile.execute(
-    {},
-    { toolCallId: 'profile-1', messages: [], abortSignal: undefined as never },
+  const profile = await unwrapToolExecuteResult(
+    await tools.getPublicProfile.execute({}, mockToolExecuteOptions('profile-1')),
   );
   // Service role is absent, so impact falls back to a grounded-less local estimate.
-  const impact = await tools.getImpact.execute(
-    { issueId: '200365' },
-    { toolCallId: 'impact-1', messages: [], abortSignal: undefined as never },
+  const impact = await unwrapToolExecuteResult(
+    await tools.getImpact.execute({ issueId: '200365' }, mockToolExecuteOptions('impact-1')),
   );
 
-  const notifications = await tools.listMyNotifications.execute(
-    {},
-    { toolCallId: 'notifications-1', messages: [], abortSignal: undefined as never },
+  const notifications = await unwrapToolExecuteResult(
+    await tools.listMyNotifications.execute({}, mockToolExecuteOptions('notifications-1')),
   );
-  const innspill = await tools.getInnspillStatus.execute(
-    { opinionId: 'does-not-matter' },
-    { toolCallId: 'innspill-1', messages: [], abortSignal: undefined as never },
+  const innspill = await unwrapToolExecuteResult(
+    await tools.getInnspillStatus.execute(
+      { opinionId: 'does-not-matter' },
+      mockToolExecuteOptions('innspill-1'),
+    ),
   );
-  const hearings = await tools.findHearingsForSak.execute(
-    { issueId: '200365' },
-    { toolCallId: 'hearings-1', messages: [], abortSignal: undefined as never },
+  const hearings = await unwrapToolExecuteResult(
+    await tools.findHearingsForSak.execute({ issueId: '200365' }, mockToolExecuteOptions('hearings-1')),
   );
-  const meninger = await tools.getFolketsMeninger.execute(
-    { issueId: '200365' },
-    { toolCallId: 'meninger-1', messages: [], abortSignal: undefined as never },
+  const meninger = await unwrapToolExecuteResult(
+    await tools.getFolketsMeninger.execute({ issueId: '200365' }, mockToolExecuteOptions('meninger-1')),
   );
 
   assert.equal(notifications.signedIn, false);
@@ -137,6 +142,7 @@ async function main() {
   assert.equal(innspill.signedIn, false);
   assert.ok(Array.isArray(hearings.hearings));
   for (const hearing of hearings.hearings) {
+    assert.ok(hearing.skriftligInnspillUrl);
     assert.match(hearing.skriftligInnspillUrl, /stortinget\.no/);
   }
   assert.equal(typeof meninger.total, 'number');
@@ -151,7 +157,7 @@ async function main() {
   assert.match(spelling.instruction, /rettskriving|stavemåte|grammatikk/i);
   assert.equal(retrieve.issue?.id, '200365');
   assert.ok(retrieve.chunks.length > 0 || retrieve.summary);
-  assert.ok(listed.issues.some((issue) => issue.id === '200365'));
+  assert.ok(listed.issues.some((issue: { id: string }) => issue.id === '200365'));
   assert.equal(typeof sources.unavailable, 'boolean');
   assert.equal(activity.found, false);
   assert.equal(activity.signedIn, false);
@@ -170,7 +176,10 @@ async function main() {
     },
     rettskriving: {
       context: spelling.context,
-      instructionOnly: spelling.mode === 'instruction' && spelling.corrected == null,
+      instructionOnly:
+        'mode' in spelling
+          ? spelling.mode === 'instruction' && spelling.corrected == null
+          : true,
     },
     searxng: {
       unavailable: sources.unavailable,
