@@ -115,6 +115,8 @@ jobs:
       - name: fm-cms unit tests
         working-directory: cms
         run: |
+          # cms/package-lock.json is still on the npm 10 lockfile shape; Node 24 ships npm 11.
+          npm i -g npm@10.9.2
           npm ci --ignore-scripts
           npm run test:unit
       - name: fm-cms integration tests (Payload outbox)
