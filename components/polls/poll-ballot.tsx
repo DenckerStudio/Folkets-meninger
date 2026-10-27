@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { pollChoicePercent } from '@/lib/polls/format';
 import {
   POLL_BALLOT_VOTE_BUTTON_GRID_CLASS,
-  pollBallotRunningTextPhrase,
+  pollBallotRunningTextPhraseSentenceStart,
 } from '@/lib/polls/ballot-buttons';
 import { POLL_BALLOT_CHOICES, pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
@@ -74,7 +74,7 @@ export function PollBallot({
         <>
           <h2 className="text-base font-semibold text-foreground">Hva mener du?</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {pollBallotRunningTextPhrase()}. Stemmen telles i samlet statistikk uten navn.
+            {pollBallotRunningTextPhraseSentenceStart()}. Stemmen telles i samlet statistikk uten navn.
           </p>
           <NonRepresentativeNotice count={totals.total} countLabel="stemmer" countLabelSingular="stemme" className="mt-2" />
         </>

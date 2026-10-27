@@ -7,6 +7,7 @@ import {
   pollBallotAltTextPhrase,
   pollBallotButtonLabelsPhrase,
   pollBallotRunningTextPhrase,
+  pollBallotRunningTextPhraseSentenceStart,
   pollBallotSlugPhrase,
   pollBallotVoteButtonClassName,
 } from '@/lib/polls/ballot-buttons';
@@ -48,8 +49,12 @@ assert(
   'dashboard share link lists ballot buttons in display order',
 );
 assert(
-  pollBallotRunningTextPhrase() === 'Nei, blank eller ja',
-  'running text follows ballot button order',
+  pollBallotRunningTextPhrase() === 'nei, blank eller ja',
+  'running text is lowercase mid-sentence copy',
+);
+assert(
+  pollBallotRunningTextPhraseSentenceStart() === 'Nei, blank eller ja',
+  'sentence-start running text capitalizes only the first letter',
 );
 assert(
   pollBallotAltTextPhrase() === 'Nei, Blank og Ja',

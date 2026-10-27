@@ -18,10 +18,13 @@ import { CoverflowCarousel } from '@/components/ui/coverflow-carousel';
 import { Stories, StoriesContent, StoriesHeader, StoriesCounter, StoriesNavigationInline, Story } from '@/components/ui/stories-carousel';
 import { ReelCarouselCard } from '@/components/polls/reel-vote-card';
 import { ReelsExpandPortalProvider } from '@/components/polls/reels-expand-portal';
-import { pollBallotRunningTextPhrase, pollBallotSlugPhrase } from '@/lib/polls/ballot-buttons';
+import {
+  pollBallotRunningTextPhraseSentenceStart,
+  pollBallotSlugPhrase,
+} from '@/lib/polls/ballot-buttons';
 import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 
-const BALLOT_RUNNING_TEXT = pollBallotRunningTextPhrase();
+const BALLOT_RUNNING_TEXT = pollBallotRunningTextPhraseSentenceStart();
 const BALLOT_SLUG = pollBallotSlugPhrase();
 import type { SystemReelFeedItem } from '@/lib/polls/types';
 import { routes } from '@/lib/routes';

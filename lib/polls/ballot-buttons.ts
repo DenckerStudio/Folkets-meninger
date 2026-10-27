@@ -26,10 +26,16 @@ export function pollBallotButtonLabelsPhrase(separator = ' / '): string {
   return POLL_BALLOT_BUTTON_ORDER.map((choice) => pollChoiceLabel(choice)).join(separator);
 }
 
-/** Running prose: Nei, blank eller ja */
+/** Mid-sentence running copy: nei, blank eller ja */
 export function pollBallotRunningTextPhrase(): string {
-  const [nei, blank, ja] = POLL_BALLOT_BUTTON_ORDER;
-  return `${pollChoiceLabel(nei)}, ${pollChoiceLabel(blank).toLowerCase()} eller ${pollChoiceLabel(ja).toLowerCase()}`;
+  const labels = POLL_BALLOT_BUTTON_ORDER.map((choice) => pollChoiceLabel(choice).toLowerCase());
+  return `${labels[0]}, ${labels[1]} eller ${labels[2]}`;
+}
+
+/** Same phrase at the start of a sentence: Nei, blank eller ja */
+export function pollBallotRunningTextPhraseSentenceStart(): string {
+  const phrase = pollBallotRunningTextPhrase();
+  return phrase.charAt(0).toUpperCase() + phrase.slice(1);
 }
 
 /** Alt / OG copy: Nei, Blank og Ja */

@@ -18,6 +18,10 @@ import {
   type PipelineHealth,
 } from '@/lib/n8n/pipeline-health';
 import { pipelineCatchupUserMessage } from '@/lib/n8n/pipeline-catchup-user-message';
+import {
+  adminReelDraftListLabel,
+  adminReelDraftWaitingDescription,
+} from '@/lib/admin/reel-draft-list-label';
 
 type DraftsResponse = { drafts: PollRecord[] };
 type CandidatesResponse = { candidates: SakPollCandidate[]; coverage: SakPollCoverage };
@@ -262,8 +266,8 @@ export default function AdminReelsClient({
 
       {coverage ? (
         <p className="text-sm text-muted-foreground">
-          {coverage.sakCandidates} kandidater · {coverage.pendingWithRag} saker med dokumentindeks · {draftCount}{' '}
-          utkast
+          {coverage.sakCandidates} kandidater · {coverage.pendingWithRag} saker med dokumentindeks ·{' '}
+          {adminReelDraftListLabel(draftCount, pipelineHealth?.draftPolls)} utkast
         </p>
       ) : null}
 
@@ -409,9 +413,7 @@ export default function AdminReelsClient({
           <div>
             <h2 className="text-base font-semibold text-foreground">Utkast til vurdering</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {draftCount === 0
-                ? 'Ingen utkast venter. Generer fra en sak under, eller vent på automatisk kjøring.'
-                : `${draftCount} utkast venter på publisering eller arkivering.`}
+              {adminReelDraftWaitingDescription(draftCount, pipelineHealth?.draftPolls)}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
