@@ -7,7 +7,10 @@ import {
   type UIMessage,
 } from 'ai';
 import { loadDecryptedByok } from '@/lib/byok/service';
+import { createCitationRegistry } from '@/lib/chat/citations';
 import { buildChatInstructions } from '@/lib/chat/instructions';
+import { createChatRagExcerptCollector } from '@/lib/chat/rag-excerpt-collector';
+import { createGroundedAnswerStreamTransform } from '@/lib/chat/stream-grounded-answer';
 import { parseChatPageContext } from '@/lib/chat/page-context';
 import { byokOutboundForUser } from '@/lib/byok/outbound';
 import { createUserLanguageModel } from '@/lib/chat/model';
@@ -98,6 +101,8 @@ export async function POST(request: Request) {
 
   try {
     const model = await createUserLanguageModel(credential, outbound);
+    const citations = createCitationRegistry();
+    const ragExcerptCollector = createChatRagExcerptCollector(citations);
     const result = streamText({
       model,
       instructions: buildChatInstructions(issueId, new Date(), pageContext),
@@ -111,7 +116,12 @@ export async function POST(request: Request) {
           vectorize,
           userId: gate.userId,
           impactProfile: readImpactProfile(body),
+          citations,
+          ragExcerptCollector,
         }),
+      ),
+      experimental_transform: createGroundedAnswerStreamTransform(() =>
+        ragExcerptCollector.excerptsAlignedWithCitations(),
       ),
       stopWhen: isStepCount(8),
       onError: ({ error }) => {

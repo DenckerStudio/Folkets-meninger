@@ -33,6 +33,10 @@ import { createPersonalChatTools } from '@/lib/chat/personal-tools';
 import type { QueryVectorizer } from '@/lib/chat/vector-search';
 import { hearingChunkDocumentLabel, searchHearingDocuments } from '@/lib/chat/hearing-rag';
 import { getIssueOpinionSummary } from '@/lib/opinions/service';
+import {
+  type ChatRagExcerptCollector,
+  recordDocumentExcerptsForCollector,
+} from '@/lib/chat/rag-excerpt-collector';
 
 export type ChatToolOptions = {
   preferredIssueId?: string | null;
@@ -45,6 +49,8 @@ export type ChatToolOptions = {
   impactProfile?: unknown;
   /** Per-request source numbering; a fresh registry is created when omitted. */
   citations?: CitationRegistry | null;
+  /** Collects document excerpt text per [n] for streamed grounded post-process. */
+  ragExcerptCollector?: ChatRagExcerptCollector | null;
 };
 
 /**
@@ -103,6 +109,7 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
   const ragClient = resolved.ragClient ?? null;
   const vectorize = resolved.vectorize ?? null;
   const citations = resolved.citations ?? createCitationRegistry();
+  const ragExcerptCollector = resolved.ragExcerptCollector ?? null;
 
   const citeIssue = (issue: Pick<ChatIssueHit, 'id' | 'title'> | null): ChatSource | null =>
     issue
@@ -152,10 +159,12 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
         });
         const issueSource = citeIssue(context.issue);
         const cited = context.issue ? citeChunks(context.issue.id, context.chunks) : [];
+        const chunksOut = context.issue ? cited.map((entry) => entry.chunk) : context.chunks;
+        recordDocumentExcerptsForCollector(ragExcerptCollector, chunksOut);
         return {
           issue: context.issue ? { ...context.issue, kilde: issueSource?.n ?? null } : null,
           summary: context.summary,
-          chunks: context.issue ? cited.map((entry) => entry.chunk) : context.chunks,
+          chunks: chunksOut,
           kilder: uniqueSources([
             ...(issueSource ? [issueSource] : []),
             ...cited.map((entry) => entry.source),
@@ -253,10 +262,12 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
           const issueSource = citeIssue(sak.issue)!;
           const cited = citeChunks(sak.issue.id, sak.chunks);
           sources.push(issueSource, ...cited.map((entry) => entry.source));
+          const chunksOut = cited.map((entry) => entry.chunk);
+          recordDocumentExcerptsForCollector(ragExcerptCollector, chunksOut);
           return {
             ...sak,
             issue: { ...sak.issue, kilde: issueSource.n },
-            chunks: cited.map((entry) => entry.chunk),
+            chunks: chunksOut,
           };
         });
         return { query: context.query, saker, kilder: uniqueSources(sources), note: context.note };
@@ -395,6 +406,11 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
             }),
           );
         }
+
+        recordDocumentExcerptsForCollector(
+          ragExcerptCollector,
+          excerpts.map((row) => ({ kilde: row.kilde, content: row.content })),
+        );
 
         return {
           hearing: result.hearing,
