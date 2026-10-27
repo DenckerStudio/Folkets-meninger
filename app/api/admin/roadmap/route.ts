@@ -5,6 +5,7 @@ import {
   listAppRoadmapItems,
   updateAppRoadmapItem,
 } from '@/lib/admin/app-future';
+import { logPostgrestError } from '@/lib/admin/postgrest-error';
 import { requireAdmin } from '@/lib/admin/gate';
 import { validateRoadmapInput, validateRoadmapPatch } from '@/lib/appens-fremtid/validate';
 
@@ -20,7 +21,7 @@ export async function GET() {
     const items = await listAppRoadmapItems();
     return NextResponse.json({ items });
   } catch (error) {
-    console.error('[admin/roadmap] list failed', error);
+    logPostgrestError('[admin/roadmap] list failed', error);
     return NextResponse.json({ error: 'Kunne ikke laste veikartet.' }, { status: 500 });
   }
 }

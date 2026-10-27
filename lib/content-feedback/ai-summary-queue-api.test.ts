@@ -20,6 +20,9 @@ assert.match(routeSrc, /requireAdmin\(\)/);
 assert.match(routeSrc, /parseResetAiSummaryQueueBody/);
 assert.match(routeSrc, /p_admin_user_id: auth\.userId/);
 assert.match(routeSrc, /status: 404/);
+assert.match(routeSrc, /logPostgrestError/);
+assert.match(routeSrc, /adminLoadErrorJson/);
+assert.match(routeSrc, /parseGaveUpRows/);
 
 assert.doesNotMatch(pipelineHealthWorkflow, /n8n_list_issues_missing_ai_summary/);
 assert.match(pipelineHealthWorkflow, /n8n_pipeline_health/);

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { logPostgrestError } from '@/lib/admin/postgrest-error';
 import { requireAdmin } from '@/lib/admin/gate';
 import {
   listAppSuggestions,
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
     const suggestions = await listAppSuggestions(status);
     return NextResponse.json({ suggestions });
   } catch (error) {
-    console.error('[admin/suggestions] list failed', error);
+    logPostgrestError('[admin/suggestions] list failed', error);
     return NextResponse.json({ error: 'Kunne ikke laste forslag.' }, { status: 500 });
   }
 }
