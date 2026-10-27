@@ -9,7 +9,10 @@ SET LOCAL lock_timeout = '5s';
 COMMENT ON FUNCTION public.n8n_blocking_poll_id(text) IS
   'Eneste kilde til sannhet for «saken har blokkerende poll». Brukes av n8n_blocking_poll_for_issue, n8n_list_saks_without_blocking_poll, n8n_list_sak_for_system_poll og create_system_poll_draft.';
 
-CREATE OR REPLACE FUNCTION public.n8n_list_sak_for_system_poll(p_issue_id text DEFAULT NULL)
+-- Prod hadde avvikende OUT-kolonner; ingen view/funksjon i repo-migrasjoner avhenger av denne RPC-en.
+DROP FUNCTION IF EXISTS public.n8n_list_sak_for_system_poll(text);
+
+CREATE FUNCTION public.n8n_list_sak_for_system_poll(p_issue_id text DEFAULT NULL)
 RETURNS TABLE (
   issue_id text,
   issue_title text,
