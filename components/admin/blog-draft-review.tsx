@@ -193,11 +193,11 @@ export function BlogDraftReview() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tittel</p>
-                <p className="mt-1 font-medium text-foreground">{draft.title}</p>
+                <p className="mt-1 font-medium break-words text-foreground">{draft.title}</p>
                 <p className="mt-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Beskrivelse
                 </p>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+                <p className="mt-1 whitespace-pre-wrap text-sm break-words text-muted-foreground">
                   {draft.excerpt?.trim() || 'Ingen beskrivelse er lagret for dette utkastet.'}
                 </p>
                 <p className="mt-2 text-xs text-muted-foreground">
@@ -209,7 +209,7 @@ export function BlogDraftReview() {
                       : ''}
                 </p>
               </div>
-              <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end">
+              <div className="flex w-full flex-col items-start gap-2 lg:w-auto lg:items-end">
                 {queue === 'pending' ? (
                   <DraftExpiryBadge
                     clock={{
@@ -218,7 +218,7 @@ export function BlogDraftReview() {
                     }}
                   />
                 ) : null}
-                <div className="flex flex-wrap justify-end gap-2">
+                <div className="flex flex-wrap gap-2 lg:justify-end">
                   {queue === 'pending' && editEnabled ? (
                     <button
                       type="button"

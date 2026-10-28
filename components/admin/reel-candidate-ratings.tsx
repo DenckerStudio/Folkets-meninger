@@ -25,15 +25,15 @@ export function ReelCandidateRatings({
   if (!hasStoredCandidateRatings(ratings) || !ratings) {
     return (
       <div className="mt-3 rounded-xl border border-dashed border-border px-3 py-2.5">
-        <p className="text-xs font-medium text-foreground">AI-vurdering</p>
-        <p className="mt-1 text-sm text-muted-foreground">Ingen AI-vurdering er lagret for dette utkastet.</p>
+        <p className="text-xs font-medium text-foreground">Kandidatvurdering</p>
+        <p className="mt-1 text-sm text-muted-foreground">Ingen kandidatvurdering er lagret for dette utkastet.</p>
       </div>
     );
   }
 
   return (
     <div className="mt-3 space-y-2 rounded-xl border border-border bg-muted/30 px-3 py-2.5">
-      <p className="text-xs font-medium text-foreground">AI-vurdering</p>
+      <p className="text-xs font-medium text-foreground">Kandidatvurdering</p>
       <dl className="space-y-2 text-sm">
         {ratings.relevance ? (
           <div>
@@ -73,7 +73,7 @@ export function ReelCandidateRatings({
                   {ratings.discussed.hits.map((hit, index) => (
                     <li key={hit.url ?? `${hit.title ?? 'hit'}-${index}`}>
                       {hit.url ? (
-                        <a href={hit.url} className="text-brand hover:underline" target="_blank" rel="noreferrer">
+                        <a href={hit.url} className="wrap-anywhere text-brand hover:underline" target="_blank" rel="noreferrer">
                           {hit.title ?? hit.url}
                         </a>
                       ) : (

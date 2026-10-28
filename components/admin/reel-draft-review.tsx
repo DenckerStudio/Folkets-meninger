@@ -192,12 +192,12 @@ export function ReelDraftReview() {
               id={`reel-draft-${poll.id}`}
               className="rounded-2xl border border-border bg-card p-4"
             >
-              <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
                 <div className="min-w-0 flex-1">
                   <ReelContentPreview poll={poll} />
                 </div>
                 {queue === 'pending' ? (
-                  <div className="flex flex-wrap items-center justify-end gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
                     {isPollDraftUtenKontekst(poll.generationMetadata) ? (
                       <UtenKontekstBadge />
                     ) : null}
