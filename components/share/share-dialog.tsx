@@ -263,8 +263,8 @@ function SharePreviewCard({ title, description, host, imageUrl }: SharePreviewCa
       <figcaption className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Forhåndsvisning
       </figcaption>
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <div className="relative aspect-[1200/630] w-full bg-muted">
+      <div className="flex overflow-hidden rounded-2xl border border-border bg-card shadow-sm sm:block">
+        <div className="relative aspect-[1200/630] w-32 shrink-0 self-center bg-muted sm:w-full">
           {!loaded ? (
             <div className="absolute inset-0 animate-pulse bg-muted motion-reduce:animate-none" aria-hidden />
           ) : null}
@@ -285,7 +285,7 @@ function SharePreviewCard({ title, description, host, imageUrl }: SharePreviewCa
             )}
           />
         </div>
-        <div className="space-y-1 border-t border-border px-4 py-3">
+        <div className="min-w-0 flex-1 space-y-1 border-l border-border px-3 py-2.5 sm:border-l-0 sm:border-t sm:px-4 sm:py-3">
           {host ? (
             <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{host}</p>
           ) : null}
