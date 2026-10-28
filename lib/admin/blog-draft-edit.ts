@@ -1,37 +1,29 @@
 import { z } from 'zod';
-import {
-  BLOG_EXCERPT_MAX,
-  BLOG_TITLE_MAX,
-  normalizeBlogExcerpt,
-  normalizeBlogTitle,
-} from '@/lib/blog/text-limits';
+import { normalizeBlogExcerpt, normalizeBlogTitle } from '@/lib/blog/text-limits';
 import { getCmsBaseUrl, getCmsEditorKey } from '@/lib/cms/payload-client';
 import { payloadPatchPost } from '@/lib/cms/payload-update';
+import type { PayloadPost } from '@/lib/cms/types';
+import {
+  BLOG_DRAFT_EDIT_NOT_CONFIGURED_MESSAGE,
+  blogDraftEditContentSchema,
+  fieldErrorsFromZod,
+  type BlogDraftEditFieldErrors,
+} from '@/lib/admin/blog-draft-edit-fields';
 
-export const BLOG_DRAFT_EDIT_NOT_CONFIGURED = 'Redigering er ikke satt opp ennå';
+export { BLOG_DRAFT_EDIT_NOT_CONFIGURED_MESSAGE as BLOG_DRAFT_EDIT_NOT_CONFIGURED };
 
-const nonEmptyTrimmed = (label: string) =>
-  z
-    .string()
-    .trim()
-    .min(1, `${label} er påkrevd`);
+const nonEmptyTrimmedId = z
+  .string()
+  .trim()
+  .min(1, 'Utkast-id er påkrevd.');
 
 export const editBlogDraftBodySchema = z
   .object({
-    id: nonEmptyTrimmed('id'),
+    id: nonEmptyTrimmedId,
     action: z.literal('edit'),
-    title: nonEmptyTrimmed('title').max(
-      BLOG_TITLE_MAX,
-      `title kan være maks ${BLOG_TITLE_MAX} tegn`,
-    ),
-    excerpt: nonEmptyTrimmed('excerpt').max(
-      BLOG_EXCERPT_MAX,
-      `excerpt kan være maks ${BLOG_EXCERPT_MAX} tegn`,
-    ),
-    bodyMarkdown: z
-      .string()
-      .min(1, 'bodyMarkdown er påkrevd')
-      .refine((value) => value.trim().length > 0, 'bodyMarkdown kan ikke være tom'),
+    title: blogDraftEditContentSchema.shape.title,
+    excerpt: blogDraftEditContentSchema.shape.excerpt,
+    bodyMarkdown: blogDraftEditContentSchema.shape.bodyMarkdown,
     category: z.string().trim().min(1).optional(),
     review: z
       .object({
@@ -46,22 +38,28 @@ export type EditBlogDraftInput = z.infer<typeof editBlogDraftBodySchema>;
 
 export type ParseEditBlogDraftResult =
   | { ok: true; input: EditBlogDraftInput }
-  | { ok: false; status: number; error: string };
+  | { ok: false; status: number; error: string; fields?: BlogDraftEditFieldErrors };
+
+export function isBlogDraftEditConfigured(): boolean {
+  return Boolean(getCmsBaseUrl() && getCmsEditorKey());
+}
 
 export function parseEditBlogDraftBody(body: unknown): ParseEditBlogDraftResult {
   if (!body || typeof body !== 'object') {
-    return { ok: false, status: 400, error: 'Ugyldig JSON-body' };
+    return { ok: false, status: 400, error: 'Ugyldig forespørsel.' };
   }
 
   const record = body as Record<string, unknown>;
   if (record._status === 'published' || record._status === 'publish') {
-    return { ok: false, status: 400, error: 'Kan ikke publisere via redigering' };
+    return { ok: false, status: 400, error: 'Kan ikke publisere via redigering.' };
   }
 
   const parsed = editBlogDraftBodySchema.safeParse(body);
   if (!parsed.success) {
-    const message = parsed.error.issues[0]?.message ?? 'Ugyldig forespørsel';
-    return { ok: false, status: 400, error: message };
+    const fields = fieldErrorsFromZod(parsed.error);
+    const firstMessage = parsed.error.issues[0]?.message ?? 'Ugyldig forespørsel.';
+    const error = firstMessage.endsWith('.') ? firstMessage : `${firstMessage}.`;
+    return { ok: false, status: 400, error, fields };
   }
 
   return { ok: true, input: parsed.data };
@@ -85,26 +83,51 @@ export function buildEditBlogDraftPatch(input: EditBlogDraftInput): Record<strin
   return patch;
 }
 
+export type BlogDraftEditSaved = {
+  id: string;
+  title: string;
+  excerpt: string;
+  bodyMarkdown: string;
+  updatedAt: string | null;
+};
+
+export function blogDraftEditSavedFromPayloadPost(post: PayloadPost): BlogDraftEditSaved {
+  return {
+    id: String(post.id),
+    title: post.title,
+    excerpt: post.excerpt,
+    bodyMarkdown: post.bodyMarkdown ?? '',
+    updatedAt: post.updatedAt ?? null,
+  };
+}
+
 export type EditBlogDraftResult =
-  | { ok: true; id: string }
+  | { ok: true; id: string; draft: BlogDraftEditSaved }
   | { ok: false; status: number; error: string };
 
 export async function editBlogDraft(input: EditBlogDraftInput): Promise<EditBlogDraftResult> {
   const base = getCmsBaseUrl();
   if (!base) {
-    return { ok: false, status: 503, error: 'Blogg er ikke tilgjengelig' };
+    return { ok: false, status: 503, error: 'Blogg er ikke tilgjengelig.' };
   }
 
   const editorKey = getCmsEditorKey();
   if (!editorKey) {
-    return { ok: false, status: 503, error: BLOG_DRAFT_EDIT_NOT_CONFIGURED };
+    return { ok: false, status: 503, error: BLOG_DRAFT_EDIT_NOT_CONFIGURED_MESSAGE };
   }
 
   const patch = buildEditBlogDraftPatch(input);
   const result = await payloadPatchPost(input.id, patch, editorKey, { draft: true });
   if (!result.ok) {
-    return { ok: false, status: result.status, error: result.error };
+    const message = result.error?.trim();
+    const error =
+      message && message.endsWith('.')
+        ? message
+        : `${message || 'Kunne ikke lagre endringer'}.`;
+    return { ok: false, status: result.status, error };
   }
 
-  return { ok: true, id: input.id };
+  const draft = blogDraftEditSavedFromPayloadPost(result.doc);
+
+  return { ok: true, id: input.id, draft };
 }

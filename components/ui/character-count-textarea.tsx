@@ -10,6 +10,8 @@ type CharacterCountTextareaProps = {
   rows?: number;
   placeholder?: string;
   'aria-invalid'?: boolean;
+  'aria-describedby'?: string;
+  disabled?: boolean;
   className?: string;
   onBlur?: () => void;
 };
@@ -23,6 +25,8 @@ export function CharacterCountTextarea({
   rows = 2,
   placeholder,
   'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
+  disabled,
   className,
   onBlur,
 }: CharacterCountTextareaProps) {
@@ -40,6 +44,8 @@ export function CharacterCountTextarea({
         onBlur={onBlur}
         placeholder={placeholder}
         aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
+        disabled={disabled}
         className={cn(
           'w-full resize-y rounded-xl border border-border bg-card px-3 py-2.5 pb-7 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-brand/30',
           className,

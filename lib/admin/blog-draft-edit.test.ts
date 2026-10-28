@@ -37,7 +37,10 @@ assert.equal(parseEditBlogDraftBody(validEdit).ok, true);
 
 const missingTitle = parseEditBlogDraftBody({ ...validEdit, title: '   ' });
 assert.equal(missingTitle.ok, false);
-if (!missingTitle.ok) assert.equal(missingTitle.status, 400);
+if (!missingTitle.ok) {
+  assert.equal(missingTitle.status, 400);
+  assert.equal(missingTitle.fields?.title, 'Tittel er påkrevd.');
+}
 
 const longTitle = parseEditBlogDraftBody({ ...validEdit, title: tooLongTitle });
 assert.equal(longTitle.ok, false);
@@ -52,6 +55,7 @@ const publishAttempt = parseEditBlogDraftBody({ ...validEdit, _status: 'publishe
 assert.equal(publishAttempt.ok, false);
 if (!publishAttempt.ok) {
   assert.match(publishAttempt.error, /publisere/i);
+  assert.match(publishAttempt.error, /\.$/);
 }
 
 const patch = buildEditBlogDraftPatch({
@@ -78,6 +82,7 @@ assert.match(routeSrc, /requireAdmin\(\)/);
 assert.match(routeSrc, /parseEditBlogDraftBody/);
 assert.match(routeSrc, /editBlogDraft/);
 assert.match(routeSrc, /action === 'edit'/);
+assert.doesNotMatch(routeSrc, /Ugyldig JSON-body/);
 
 const editorKeyFn = readFileSync(join(process.cwd(), 'lib/cms/payload-client.ts'), 'utf8');
 const editorKeyBlock = editorKeyFn.match(
