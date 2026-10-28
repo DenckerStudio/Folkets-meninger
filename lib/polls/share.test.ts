@@ -3,7 +3,6 @@ import {
   buildPollEmbedUrl,
   buildPollShareChannelUrl,
   buildPollShareRelativePath,
-  buildPollShareTargetUrl,
   buildPollShareText,
   buildPollShareUrl,
   DEFAULT_SITE_ORIGIN,
@@ -88,23 +87,11 @@ const embedChannel = buildPollShareChannelUrl('abc-123', undefined, 'embed');
 assert(embedChannel.includes('ref=embed'), 'embed channel ref');
 assert(!embedChannel.includes('utm_'), 'embed channel has no utm');
 
-const reddit = buildPollShareTargetUrl('reddit', { url: 'https://x.no/del/1', title: 'Test tittel' });
-assert(reddit.startsWith('https://www.reddit.com/submit?'), 'reddit host');
-assert(reddit.includes('url=https%3A%2F%2Fx.no%2Fdel%2F1'), 'reddit url param');
-assert(reddit.includes('title=Test+tittel'), 'reddit title param');
+const blueskyChannel = buildPollShareChannelUrl('abc-123', undefined, 'bluesky');
+assert(blueskyChannel.includes('utm_source=bluesky') && blueskyChannel.includes('ref=bs'), 'bluesky channel utm');
 
-const facebook = buildPollShareTargetUrl('facebook', { url: 'https://x.no/del/1' });
-assert(facebook.startsWith('https://www.facebook.com/sharer/sharer.php?u='), 'facebook sharer');
-
-const linkedin = buildPollShareTargetUrl('linkedin', { url: 'https://x.no/del/1' });
-assert(
-  linkedin === `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://x.no/del/1')}`,
-  'linkedin url',
-);
-
-const x = buildPollShareTargetUrl('x', { url: 'https://x.no/del/1', title: 'Test tittel' });
-assert(x.startsWith('https://x.com/intent/post?'), 'x host');
-assert(x.includes('text=Test+tittel'), 'x text param');
+const smsChannel = buildPollShareChannelUrl('abc-123', undefined, 'sms');
+assert(smsChannel.includes('utm_medium=messaging') && smsChannel.includes('ref=sms'), 'sms channel utm');
 
 assert(
   buildPollEmbedUrl('abc-123', 'https://www.folkets-meninger.no', { theme: 'dark', size: 'compact', ref: 'partner' }) ===

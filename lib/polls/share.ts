@@ -4,6 +4,7 @@ import type { PollEmbedOptions } from '@/lib/polls/embed';
 import { serializePollEmbedOptions } from '@/lib/polls/embed';
 import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
 import { POLL_BALLOT_CHOICES } from '@/lib/polls/labels';
+import type { ShareChannel } from '@/lib/share/targets';
 
 /**
  * Shareable Nei / Blank / Ja poll widget helpers.
@@ -14,17 +15,7 @@ import { POLL_BALLOT_CHOICES } from '@/lib/polls/labels';
  * Nothing here touches the database.
  */
 
-export type PollShareTarget = 'reddit' | 'facebook' | 'linkedin' | 'x';
-export type PollShareChannel = PollShareTarget | 'native' | 'copy' | 'embed';
-
-export const POLL_SHARE_TARGETS: PollShareTarget[] = ['reddit', 'facebook', 'linkedin', 'x'];
-
-export const POLL_SHARE_TARGET_LABELS: Record<PollShareTarget, string> = {
-  reddit: 'Reddit',
-  facebook: 'Facebook',
-  linkedin: 'LinkedIn',
-  x: 'X',
-};
+export type PollShareChannel = ShareChannel | 'embed';
 
 /** Canonical production origin, shared with the SEO metadata helpers. */
 export const DEFAULT_SITE_ORIGIN = DEFAULT_SITE_URL;
@@ -119,8 +110,10 @@ const CHANNEL_UTM: Record<
 > = {
   facebook: { source: 'facebook', medium: 'social', ref: 'fb' },
   linkedin: { source: 'linkedin', medium: 'social', ref: 'li' },
-  x: { source: 'x', medium: 'social', ref: 'x' },
-  reddit: { source: 'reddit', medium: 'social', ref: 'rd' },
+  bluesky: { source: 'bluesky', medium: 'social', ref: 'bs' },
+  whatsapp: { source: 'whatsapp', medium: 'messaging', ref: 'wa' },
+  sms: { source: 'sms', medium: 'messaging', ref: 'sms' },
+  email: { source: 'email', medium: 'email', ref: 'ep' },
   native: { source: 'native', medium: 'share', ref: 'ns' },
   copy: { source: 'copy', medium: 'share', ref: 'cp' },
   embed: { source: 'embed', medium: 'embed', ref: 'embed' },
@@ -196,40 +189,6 @@ export function buildPollEmbedSnippet({
   if (!autoHeight) return iframe;
   const scriptSrc = new URL('/embed.js', `${normalizeOrigin(origin)}/`).toString();
   return `${iframe}\n<script async src="${escapeHtmlAttr(scriptSrc)}"></script>`;
-}
-
-/**
- * Deep-link a poll into the native share sheets of Reddit / Facebook /
- * LinkedIn / X. All targets take a share URL; Reddit and X also take text.
- */
-export function buildPollShareTargetUrl(
-  target: PollShareTarget,
-  input: { url: string; title?: string },
-): string {
-  const url = input.url;
-  const title = input.title ?? 'Folkets Meninger';
-  switch (target) {
-    case 'reddit': {
-      const params = new URLSearchParams({ url, title });
-      return `https://www.reddit.com/submit?${params.toString()}`;
-    }
-    case 'facebook': {
-      const params = new URLSearchParams({ u: url });
-      return `https://www.facebook.com/sharer/sharer.php?${params.toString()}`;
-    }
-    case 'linkedin': {
-      const params = new URLSearchParams({ url });
-      return `https://www.linkedin.com/sharing/share-offsite/?${params.toString()}`;
-    }
-    case 'x': {
-      const params = new URLSearchParams({ url, text: title });
-      return `https://x.com/intent/post?${params.toString()}`;
-    }
-    default: {
-      const _exhaustive: never = target;
-      return _exhaustive;
-    }
-  }
 }
 
 /** Short share copy used for native share + social posts. */
