@@ -100,7 +100,10 @@ function pollButton(
  * responsible for rejecting unknown or non-shareable polls with a 404 so no
  * question leaks and no generic image is cached under a real poll id.
  */
-export function renderPollShareOgImage(poll: PollRecord): ImageResponse {
+export function renderPollShareOgImage(
+  poll: PollRecord,
+  cacheControl: string = OG_IMAGE_CACHE_CONTROL,
+): ImageResponse {
   const title = clampText(poll.title, 150);
   const showSummary = title.length <= 90 && Boolean(poll.neutralSummary);
   const summary = showSummary ? clampText(poll.neutralSummary, 140) : '';
@@ -188,7 +191,7 @@ export function renderPollShareOgImage(poll: PollRecord): ImageResponse {
     ),
     {
       ...OG_IMAGE_SIZE,
-      headers: { 'cache-control': OG_IMAGE_CACHE_CONTROL },
+      headers: { 'cache-control': cacheControl },
     },
   );
 }

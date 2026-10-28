@@ -85,6 +85,16 @@ export function isPublicDashboardAvstemningPath(pathname: string): boolean {
   return pathname === routes.avstemninger || /^\/dashboard\/avstemninger\/[^/]+$/.test(pathname);
 }
 
+/**
+ * Generated Open Graph / Twitter images for public share pages. Crawlers fetch
+ * these without cookies, so they must never be login-gated.
+ */
+export function isPublicDashboardShareImagePath(pathname: string): boolean {
+  return /^\/dashboard\/(sak|avstemninger|folkets-meninger)\/[^/]+\/(opengraph|twitter)-image(-[\w-]+)?$/.test(
+    pathname,
+  );
+}
+
 /** Public Utforsk (saker + system Reels) — guests can read; voting requires login. */
 export function isPublicDashboardUtforskPath(pathname: string): boolean {
   return pathname === routes.utforsk || pathname.startsWith(`${routes.utforsk}/`);
