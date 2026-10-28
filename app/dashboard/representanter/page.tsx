@@ -4,35 +4,15 @@ import { SurfaceCard } from '@/components/dashboard/surface-card';
 import FadeIn from '@/components/fade-in';
 import { PageHeader } from '@/components/page-header';
 import Image from 'next/image';
+import { getRepresentanterForPeriode } from '@/lib/stortinget';
 import { STORTINGET_ACTIVE_PERIODE_ID } from '@/lib/stortinget-config';
-import { headers } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
-type ApiResponse = {
-  periode: string;
-  representanter: Array<{
-    id: string;
-    fornavn: string;
-    etternavn: string;
-    fylke?: { navn?: string };
-    parti?: { navn?: string; id?: string };
-  }>;
-};
-
 export default async function RepresentanterPage() {
-  const h = await headers();
-  const host = h.get('x-forwarded-host') || h.get('host');
-  const proto = h.get('x-forwarded-proto') || 'http';
-  const baseUrl = host ? `${proto}://${host}` : '';
-
-  const res = await fetch(`${baseUrl}/api/representanter?periode=${encodeURIComponent(STORTINGET_ACTIVE_PERIODE_ID)}`, {
-    cache: 'no-store',
-  });
-
-  const data = (res.ok ? ((await res.json()) as ApiResponse) : null) ?? {
+  const data = {
     periode: STORTINGET_ACTIVE_PERIODE_ID,
-    representanter: [],
+    representanter: await getRepresentanterForPeriode(STORTINGET_ACTIVE_PERIODE_ID).catch(() => []),
   };
 
   const sorted = [...data.representanter].sort((a, b) => a.etternavn.localeCompare(b.etternavn, 'no'));
