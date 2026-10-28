@@ -25,15 +25,15 @@ export function ReelCandidateRatings({
   if (!hasStoredCandidateRatings(ratings) || !ratings) {
     return (
       <div className="mt-3 rounded-xl border border-dashed border-border px-3 py-2.5">
-        <p className="text-xs font-medium text-foreground">AI-vurdering</p>
-        <p className="mt-1 text-sm text-muted-foreground">Ingen AI-vurdering er lagret for dette utkastet.</p>
+        <p className="text-xs font-medium text-foreground">Kandidatvurdering</p>
+        <p className="mt-1 text-sm text-muted-foreground">Ingen kandidatvurdering er lagret for dette utkastet.</p>
       </div>
     );
   }
 
   return (
     <div className="mt-3 space-y-2 rounded-xl border border-border bg-muted/30 px-3 py-2.5">
-      <p className="text-xs font-medium text-foreground">AI-vurdering</p>
+      <p className="text-xs font-medium text-foreground">Kandidatvurdering</p>
       <dl className="space-y-2 text-sm">
         {ratings.relevance ? (
           <div>
