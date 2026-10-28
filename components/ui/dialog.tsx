@@ -26,13 +26,22 @@ const SIZE_CLASS: Record<DialogSize, string> = {
   full: 'sm:max-w-6xl',
 };
 
+const openDialogs: HTMLElement[] = [];
+const dialogRestoreTargets = new WeakMap<HTMLElement, HTMLElement | null>();
+
 const FOCUSABLE_SELECTOR = [
   'a[href]',
   'button:not([disabled])',
   'input:not([disabled]):not([type="hidden"])',
   'select:not([disabled])',
   'textarea:not([disabled])',
-  '[contenteditable="true"]',
+  'iframe',
+  'summary',
+  'audio[controls]',
+  'video[controls]',
+  '[contenteditable=""]',
+  '[contenteditable="true" i]',
+  '[contenteditable="plaintext-only" i]',
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
@@ -46,6 +55,28 @@ function getFocusableElements(dialog: HTMLElement): HTMLElement[] {
       window.getComputedStyle(element).visibility !== 'hidden' &&
       element.getClientRects().length > 0,
   );
+}
+
+function restoreFocus(previouslyFocused: HTMLElement | null): void {
+  const visitedTargets = new Set<HTMLElement>();
+  let focusTarget = previouslyFocused;
+
+  while (focusTarget && !visitedTargets.has(focusTarget)) {
+    visitedTargets.add(focusTarget);
+    const previouslyFocusedDialog =
+      focusTarget.closest<HTMLElement>('[data-shared-dialog]');
+
+    if (
+      focusTarget.isConnected &&
+      (!previouslyFocusedDialog || openDialogs.includes(previouslyFocusedDialog))
+    ) {
+      focusTarget.focus();
+      return;
+    }
+
+    if (!previouslyFocusedDialog) return;
+    focusTarget = dialogRestoreTargets.get(previouslyFocusedDialog) ?? null;
+  }
 }
 
 export type DialogProps = {
@@ -87,33 +118,43 @@ export function Dialog({
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !mounted) return;
     const dialog = dialogRef.current;
     if (!dialog) return;
     const previouslyFocused =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const [firstFocusable] = getFocusableElements(dialog);
 
+    dialogRestoreTargets.set(dialog, previouslyFocused);
+    openDialogs.push(dialog);
     (firstFocusable ?? dialog).focus();
 
     return () => {
-      if (previouslyFocused?.isConnected) {
-        previouslyFocused.focus();
+      const wasTopmost = openDialogs.at(-1) === dialog;
+      const dialogIndex = openDialogs.lastIndexOf(dialog);
+      if (dialogIndex !== -1) {
+        openDialogs.splice(dialogIndex, 1);
+      }
+
+      if (wasTopmost) {
+        restoreFocus(previouslyFocused);
       }
     };
-  }, [open]);
+  }, [open, mounted]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !mounted) return;
     const onKey = (event: KeyboardEvent) => {
+      const dialog = dialogRef.current;
+      if (!dialog || openDialogs.at(-1) !== dialog || event.defaultPrevented) return;
+
       if (event.key === 'Escape') {
+        event.preventDefault();
         onClose();
         return;
       }
       if (event.key !== 'Tab') return;
 
-      const dialog = dialogRef.current;
-      if (!dialog) return;
       const focusableElements = getFocusableElements(dialog);
       const firstFocusable = focusableElements.at(0);
       const lastFocusable = focusableElements.at(-1);
@@ -142,7 +183,7 @@ export function Dialog({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open, mounted, onClose]);
 
   if (!mounted) return null;
 
@@ -169,6 +210,7 @@ export function Dialog({
             aria-modal="true"
             aria-labelledby={titleId}
             aria-describedby={description ? descriptionId : undefined}
+            data-shared-dialog
             tabIndex={-1}
             initial={reducedMotion ? false : { opacity: 0, scale: 0.972 }}
             animate={{ opacity: 1, scale: 1 }}
