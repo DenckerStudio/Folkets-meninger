@@ -7,16 +7,9 @@ import {
 } from '@/lib/consent/service';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { trustedClientIp } from '@/lib/trusted-client-ip';
 
 export const dynamic = 'force-dynamic';
-
-function clientIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
-}
 
 export async function GET() {
   const supabase = await getServerSupabase();
@@ -47,7 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Ikke konfigurert' }, { status: 503 });
   }
 
-  const ip = clientIp(request);
+  const ip = trustedClientIp(request);
   const ipRate = await checkRateLimit(`political-consent:ip:${ip}`, 15, 60_000);
   if (!ipRate.ok) {
     return NextResponse.json(

@@ -6,17 +6,10 @@ import { byokOutboundForUser } from '@/lib/byok/outbound';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { requireStemmePlus } from '@/lib/stemme-plus/entitlement';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { trustedClientIp } from '@/lib/trusted-client-ip';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
-
-function clientIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
-}
 
 function logDecryptFailure(error: unknown): void {
   const message = error instanceof Error ? error.message : 'unknown decrypt error';
@@ -33,7 +26,11 @@ export async function POST(request: Request) {
     return Response.json({ error: gate.error }, { status: gate.status });
   }
 
-  const ipRate = await checkRateLimit(`chat-rettskriving:ip:${clientIp(request)}`, 20, 60_000);
+  const ipRate = await checkRateLimit(
+    `chat-rettskriving:ip:${trustedClientIp(request)}`,
+    20,
+    60_000,
+  );
   if (!ipRate.ok) {
     return Response.json(
       { error: 'For mange forespørsler. Prøv igjen om litt.' },

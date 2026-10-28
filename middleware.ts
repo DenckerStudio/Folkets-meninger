@@ -13,6 +13,7 @@ import {
   routes,
 } from '@/lib/routes';
 import { refreshSessionCookies, resolveMiddlewareUser } from '@/lib/supabase-middleware';
+import { trustedClientIp } from '@/lib/trusted-client-ip';
 
 async function applyRateLimit(request: NextRequest, pathname: string): Promise<NextResponse | null> {
   const ratePolicy = getRateLimitPolicy(pathname, request.method);
@@ -20,10 +21,7 @@ async function applyRateLimit(request: NextRequest, pathname: string): Promise<N
     return null;
   }
 
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown';
+  const ip = trustedClientIp(request);
   const rate = await checkRateLimit(`${pathname}:${ip}`, ratePolicy.limit, ratePolicy.windowMs);
   if (!rate.ok) {
     return NextResponse.json(

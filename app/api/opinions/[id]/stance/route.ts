@@ -6,16 +6,9 @@ import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { PUBLIC_IDENTITY_ERROR } from '@/lib/identity/public-identity';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { trustedClientIp } from '@/lib/trusted-client-ip';
 
 export const dynamic = 'force-dynamic';
-
-function clientIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
-}
 
 export async function POST(
   request: Request,
@@ -31,7 +24,7 @@ export async function POST(
     return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
   }
 
-  const ip = clientIp(request);
+  const ip = trustedClientIp(request);
   const ipRate = await checkRateLimit(`opinions:reply:ip:${ip}`, 20, 60_000);
   if (!ipRate.ok) {
     return NextResponse.json(

@@ -8,16 +8,9 @@ import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { PUBLIC_IDENTITY_ERROR } from '@/lib/identity/public-identity';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { trustedClientIp } from '@/lib/trusted-client-ip';
 
 export const dynamic = 'force-dynamic';
-
-function clientIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
-}
 
 export async function GET() {
   const opinions = await listCitizenOpinions(OPINION_LIST_PAGE_SIZE);
@@ -44,7 +37,7 @@ export async function POST(request: Request) {
   const consentBlock = await ensurePoliticalConsent(user.id, 'political_storage');
   if (consentBlock) return consentBlock;
 
-  const ip = clientIp(request);
+  const ip = trustedClientIp(request);
   const ipRate = await checkRateLimit(`opinions:create:ip:${ip}`, 12, 60_000);
   if (!ipRate.ok) {
     return NextResponse.json(
