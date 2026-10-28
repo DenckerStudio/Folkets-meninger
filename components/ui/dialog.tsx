@@ -26,6 +26,28 @@ const SIZE_CLASS: Record<DialogSize, string> = {
   full: 'sm:max-w-6xl',
 };
 
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[contenteditable="true"]',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+function getFocusableElements(dialog: HTMLElement): HTMLElement[] {
+  return Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    (element) =>
+      element.tabIndex >= 0 &&
+      !element.matches(':disabled') &&
+      element.getAttribute('aria-disabled') !== 'true' &&
+      !element.closest('[hidden], [aria-hidden="true"], [inert]') &&
+      window.getComputedStyle(element).visibility !== 'hidden' &&
+      element.getClientRects().length > 0,
+  );
+}
+
 export type DialogProps = {
   open: boolean;
   onClose: () => void;
@@ -66,8 +88,57 @@ export function Dialog({
 
   useEffect(() => {
     if (!open) return;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const [firstFocusable] = getFocusableElements(dialog);
+
+    (firstFocusable ?? dialog).focus();
+
+    return () => {
+      if (previouslyFocused?.isConnected) {
+        previouslyFocused.focus();
+      }
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusableElements = getFocusableElements(dialog);
+      const firstFocusable = focusableElements.at(0);
+      const lastFocusable = focusableElements.at(-1);
+
+      if (!firstFocusable || !lastFocusable) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const activeElement = document.activeElement;
+      const focusIsOutsideDialog = !dialog.contains(activeElement);
+      if (
+        event.shiftKey &&
+        (activeElement === firstFocusable || activeElement === dialog || focusIsOutsideDialog)
+      ) {
+        event.preventDefault();
+        lastFocusable.focus();
+      } else if (
+        !event.shiftKey &&
+        (activeElement === lastFocusable || activeElement === dialog || focusIsOutsideDialog)
+      ) {
+        event.preventDefault();
+        firstFocusable.focus();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -98,6 +169,7 @@ export function Dialog({
             aria-modal="true"
             aria-labelledby={titleId}
             aria-describedby={description ? descriptionId : undefined}
+            tabIndex={-1}
             initial={reducedMotion ? false : { opacity: 0, scale: 0.972 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={reducedMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.985 }}
