@@ -8,6 +8,7 @@ import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { OpinionInnspillPanel } from '@/components/opinions/opinion-innspill-panel';
 import { OpinionReportButton } from '@/components/opinions/opinion-report-button';
+import { OpinionShareButton } from '@/components/opinions/opinion-share-button';
 import { OpinionPointsList } from '@/components/opinions/opinion-points-list';
 import { StanceExpandModal } from '@/components/opinions/stance-expand-modal';
 import { useAuth } from '@/hooks/use-auth';
@@ -67,7 +68,10 @@ export function OpinionDetailClient({ opinion, isAuthor, innspill }: OpinionDeta
 
   return (
     <DashboardPage>
-      <BackButton fallbackHref={routes.folketsMeninger} />
+      <div className="flex items-center justify-between gap-3">
+        <BackButton fallbackHref={routes.folketsMeninger} />
+        <OpinionShareButton opinion={opinion} label="Del" />
+      </div>
 
       <article className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <div className="p-6">

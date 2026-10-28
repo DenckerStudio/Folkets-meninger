@@ -104,6 +104,24 @@ function buildSaksgangSteps(
   });
 }
 
+function sakShareDescription(
+  sak: { summary?: string | null },
+  detail: StortingetSakDetail,
+  title: string,
+): string {
+  const source = (
+    sak.summary ||
+    detail.innstillingstekst ||
+    detail.kortvedtak ||
+    detail.vedtakstekst ||
+    detail.tittel ||
+    ''
+  ).trim();
+  return source
+    ? truncateDescription(source)
+    : `Les om saken «${truncateDescription(title, 90)}» på Folkets Meninger.`;
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -123,17 +141,7 @@ export async function generateMetadata({
 
   const { sak, detail } = bundle;
   const title = (detail.korttittel || detail.tittel || sak.title || 'Stortingssak').trim();
-  const descriptionSource = (
-    sak.summary ||
-    detail.innstillingstekst ||
-    detail.kortvedtak ||
-    detail.vedtakstekst ||
-    detail.tittel ||
-    ''
-  ).trim();
-  const description = descriptionSource
-    ? truncateDescription(descriptionSource)
-    : `Les om saken «${truncateDescription(title, 90)}» på Folkets Meninger.`;
+  const description = sakShareDescription(sak, detail, title);
 
   const keywords = [
     ...(detail.emne_liste ?? []).map((emne) => emne.navn),
@@ -150,6 +158,7 @@ export async function generateMetadata({
     description,
     canonicalPath: `/dashboard/sak/${id}`,
     openGraphType: 'article',
+    images: [`/dashboard/sak/${encodeURIComponent(id)}/opengraph-image`],
     ...(keywords.length ? { keywords } : {}),
   });
 }
@@ -221,7 +230,12 @@ export default async function SakPage({
       <FadeIn delay={0.1}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <BackButton fallbackHref={routes.utforsk} />
-          <SakPageActions sakId={sak.id} title={officialTitle} className="sm:justify-end" />
+          <SakPageActions
+            sakId={sak.id}
+            title={officialTitle}
+            description={sakShareDescription(sak, detailedContent, officialTitle)}
+            className="sm:justify-end"
+          />
         </div>
       </FadeIn>
 

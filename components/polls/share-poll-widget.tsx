@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, Code2, Link2, Share2 } from 'lucide-react';
+import { Code2 } from 'lucide-react';
 import { PollBallotVoteButton } from '@/components/polls/poll-ballot-vote-button';
+import { ShareTrigger } from '@/components/share/share-trigger';
 import { useAuth } from '@/hooks/use-auth';
 import { Dialog } from '@/components/ui/dialog';
 import { formatStemmerCount } from '@/lib/norwegian-plural';
@@ -12,6 +13,7 @@ import {
   POLL_BALLOT_RESULT_BAR_CLASS,
   POLL_BALLOT_VOTE_BUTTON_GRID_CLASS,
   pollBallotAltTextPhrase,
+  pollBallotRunningTextPhrase,
 } from '@/lib/polls/ballot-buttons';
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
@@ -27,13 +29,11 @@ import {
   buildPollEmbedUrl,
   buildPollShareChannelUrl,
   buildPollShareRelativePath,
-  buildPollShareTargetUrl,
   buildPollShareText,
   isPollChoice,
   POLL_BALLOT_CHOICES,
-  POLL_SHARE_TARGETS,
-  POLL_SHARE_TARGET_LABELS,
 } from '@/lib/polls/share';
+import type { ShareChannel } from '@/lib/share/targets';
 import { loginWithNext } from '@/lib/safe-redirect';
 import { cn } from '@/lib/utils';
 
@@ -78,6 +78,8 @@ type SharePollWidgetProps = {
   size?: PollEmbedSize;
   /** id of the page H1, used for `aria-labelledby` on the answer group. */
   headingId?: string;
+  /** Mirrors the page's `og:description` in the share dialog preview. */
+  shareDescription?: string;
 };
 
 export function SharePollWidget({
@@ -92,6 +94,7 @@ export function SharePollWidget({
   refCode = null,
   size = 'full',
   headingId,
+  shareDescription,
 }: SharePollWidgetProps) {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -104,7 +107,7 @@ export function SharePollWidget({
   );
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState('');
   const [configOpen, setConfigOpen] = useState(false);
   const [snippetTab, setSnippetTab] = useState<'auto' | 'plain'>('auto');
@@ -126,17 +129,9 @@ export function SharePollWidget({
   }, [shareUrl]);
 
   const shareText = useMemo(() => buildPollShareText(title), [title]);
-  const targetUrls = useMemo(
-    () =>
-      POLL_SHARE_TARGETS.map((target) => ({
-        target,
-        label: POLL_SHARE_TARGET_LABELS[target],
-        href: buildPollShareTargetUrl(target, {
-          url: buildPollShareChannelUrl(pollId, origin, target, refCode),
-          title: shareText,
-        }),
-      })),
-    [origin, pollId, refCode, shareText],
+  const shareChannelUrl = useCallback(
+    (channel: ShareChannel) => buildPollShareChannelUrl(pollId, origin, channel, refCode),
+    [origin, pollId, refCode],
   );
 
   const embedSrc = useMemo(
@@ -248,7 +243,6 @@ export function SharePollWidget({
       try {
         await navigator.clipboard.writeText(value);
         setCopied(confirmation);
-        setMenuOpen(false);
         window.setTimeout(() => setCopied(''), 2500);
       } catch {
         setError('Kunne ikke kopiere automatisk. Kopier lenken manuelt.');
@@ -256,32 +250,6 @@ export function SharePollWidget({
     },
     [],
   );
-
-  const handleShare = async () => {
-    const nativeUrl = buildPollShareChannelUrl(pollId, origin, 'native', refCode);
-    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-      try {
-        await navigator.share({ title, text: shareText, url: nativeUrl });
-        return;
-      } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') return;
-      }
-    }
-    setMenuOpen((open) => !open);
-  };
-
-  // Close the share menu on Escape and focus the first item on open.
-  const menuRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!menuOpen) return;
-    const first = menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
-    first?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [menuOpen]);
 
   const showResults = Boolean(userVote) || !votingOpen;
   const lowSample = totals.total < POLL_LOW_SAMPLE_THRESHOLD;
@@ -414,16 +382,39 @@ export function SharePollWidget({
         </div>
       ) : null}
 
-      <div className="relative flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {!compact ? (
-          <button
-            type="button"
-            onClick={() => void handleShare()}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#00205b] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#00205b]/90 dark:bg-[#8fb4ff] dark:text-[#0b1220]"
-          >
-            <Share2 className="h-4 w-4" aria-hidden />
-            Del spørsmålet
-          </button>
+          <ShareTrigger
+            label="Del spørsmålet"
+            dialogTitle="Del spørsmålet"
+            open={shareOpen}
+            onOpenChange={setShareOpen}
+            url={shareUrl}
+            title={title}
+            text={shareText}
+            description={
+              shareDescription ??
+              `Stem ${pollBallotRunningTextPhrase()}. Se hva andre mener på Folkets Meninger.`
+            }
+            previewImageUrl={`${shareUrl.replace(/[?#].*$/, '')}/opengraph-image`}
+            channelUrl={shareChannelUrl}
+            showPreview={!embed}
+            extraActions={
+              !embed ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShareOpen(false);
+                    setConfigOpen(true);
+                  }}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl px-1 text-sm font-medium text-brand hover:underline"
+                >
+                  <Code2 className="h-4 w-4" aria-hidden />
+                  Bygg inn på nettstedet ditt
+                </button>
+              ) : undefined
+            }
+          />
         ) : (
           <a
             href={buildPollShareRelativePath(pollId, { ref: 'embed' })}
@@ -434,85 +425,9 @@ export function SharePollWidget({
             Se resultat
           </a>
         )}
-        <button
-          type="button"
-          onClick={() => setMenuOpen((open) => !open)}
-          aria-label="Flere delealternativer"
-          aria-expanded={menuOpen}
-          aria-haspopup="menu"
-          className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-3 py-2.5 text-foreground transition-colors hover:bg-muted"
-        >
-          <ChevronDown
-            className={cn('h-4 w-4 transition-transform', menuOpen ? 'rotate-180' : '')}
-            aria-hidden
-          />
-        </button>
         <span className="text-xs text-muted-foreground" role="status" aria-live="polite">
           {copied}
         </span>
-
-        {menuOpen ? (
-          <>
-            <button
-              type="button"
-              aria-hidden
-              tabIndex={-1}
-              onClick={() => setMenuOpen(false)}
-              className="fixed inset-0 z-20 cursor-default"
-            />
-            <div
-              ref={menuRef}
-              role="menu"
-              className="absolute left-0 top-full z-30 mt-2 w-64 rounded-2xl border border-border bg-card p-2 shadow-lg"
-            >
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() =>
-                  void copyToClipboard(
-                    buildPollShareChannelUrl(pollId, origin, 'copy', refCode),
-                    'Lenke kopiert',
-                  )
-                }
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
-              >
-                <Link2 className="h-4 w-4" aria-hidden />
-                Kopier lenke
-              </button>
-              <div className="my-1 h-px bg-border" />
-              {targetUrls.map((item) => (
-                <a
-                  key={item.target}
-                  role="menuitem"
-                  href={item.href}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
-                >
-                  {item.label}
-                </a>
-              ))}
-              {!embed ? (
-                <>
-                  <div className="my-1 h-px bg-border" />
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setConfigOpen(true);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-foreground hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
-                  >
-                    <Code2 className="h-4 w-4" aria-hidden />
-                    Bygg inn på nettstedet ditt
-                  </button>
-                </>
-              ) : null}
-            </div>
-          </>
-        ) : null}
       </div>
 
       {!embed ? (

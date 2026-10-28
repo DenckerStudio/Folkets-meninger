@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { OpinionPointsList } from '@/components/opinions/opinion-points-list';
+import { OpinionShareButton } from '@/components/opinions/opinion-share-button';
 import { formatOpinionDate, stanceLabel, STANCE_VISUAL } from '@/lib/opinions/labels';
 import type { OpinionListItem } from '@/lib/opinions/types';
 import { formatNumber } from '@/lib/utils';
@@ -65,13 +66,16 @@ export function OpinionCard({ opinion }: OpinionCardProps) {
             'Delt av en innbygger'
           )}
         </p>
-        <Link
-          href={routes.opinion(opinion.id)}
-          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90"
-        >
-          Si For, Blank eller Imot
-          <ArrowRight className="ml-1.5 h-4 w-4" />
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <OpinionShareButton opinion={opinion} />
+          <Link
+            href={routes.opinion(opinion.id)}
+            className="inline-flex flex-1 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90 sm:flex-none"
+          >
+            Si For, Blank eller Imot
+            <ArrowRight className="ml-1.5 h-4 w-4" />
+          </Link>
+        </div>
       </div>
     </div>
   );

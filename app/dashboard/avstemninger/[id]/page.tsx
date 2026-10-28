@@ -4,14 +4,12 @@ import type { Metadata } from 'next';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { PageHeader } from '@/components/page-header';
 import { PollBallot } from '@/components/polls/poll-ballot';
+import { PollShareButton } from '@/components/polls/poll-share-button';
 import { PollResultView } from '@/components/polls/poll-result-view';
 import { isAdmin } from '@/lib/admin/gate';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { formatPollDisplayTitle } from '@/lib/polls/display-title';
-import {
-  pollBallotButtonLabelsPhrase,
-  pollBallotRunningTextPhrase,
-} from '@/lib/polls/ballot-buttons';
+import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
 import { pollStatusLabel, pollTrackLabel, SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import {
   getPollById,
@@ -20,6 +18,7 @@ import {
   getUserPollVote,
   isPollVotingOpen,
 } from '@/lib/polls/service';
+import { isShareablePoll } from '@/lib/polls/share';
 import { isSharePollsEnabled } from '@/lib/polls/share-flag';
 import { routes } from '@/lib/routes';
 import { buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
@@ -41,6 +40,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       poll.neutralSummary || `${title} — stem ${pollBallotRunningTextPhrase()}.`,
     ),
     canonicalPath: routes.poll(poll.id),
+    images: [`${routes.poll(poll.id)}/opengraph-image`],
   });
 }
 
@@ -60,8 +60,9 @@ export default async function PollDetailPage({ params }: PageProps) {
     user ? getUserPollVote(user.id, id) : Promise.resolve({ hasVoted: false, vote: null }),
   ]);
 
-  const shareEnabled =
-    isSharePollsEnabled() || (user ? await isAdmin(user.id, user.email) : false);
+  const sharePageEnabled =
+    isShareablePoll(poll) &&
+    (isSharePollsEnabled() || (user ? await isAdmin(user.id, user.email) : false));
 
   const sakUrl = poll.stortingetIssueId ? routes.sak(poll.stortingetIssueId) : null;
   // Avoid listing the same Stortinget sak twice (Kilde link + sourceUrls).
@@ -75,11 +76,25 @@ export default async function PollDetailPage({ params }: PageProps) {
       >
         ← Alle avstemninger
       </Link>
-      <div className="flex flex-wrap gap-2 text-xs font-medium">
-        <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-brand">{pollTrackLabel(poll.track)}</span>
-        <span className="rounded-full bg-muted px-2.5 py-0.5 text-muted-foreground">
-          {pollStatusLabel(poll.status)}
-        </span>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2 text-xs font-medium">
+          <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-brand">{pollTrackLabel(poll.track)}</span>
+          <span className="rounded-full bg-muted px-2.5 py-0.5 text-muted-foreground">
+            {pollStatusLabel(poll.status)}
+          </span>
+        </div>
+        {isShareablePoll(poll) ? (
+          <PollShareButton
+            pollId={poll.id}
+            title={formatPollDisplayTitle(poll.title)}
+            description={
+              poll.neutralSummary
+                ? truncateDescription(poll.neutralSummary)
+                : `Stem ${pollBallotRunningTextPhrase()}. Se hva andre mener på Folkets Meninger.`
+            }
+            sharePageEnabled={sharePageEnabled}
+          />
+        ) : null}
       </div>
       <PageHeader title={formatPollDisplayTitle(poll.title)} />
       {poll.track === 'system' ? (
@@ -118,16 +133,6 @@ export default async function PollDetailPage({ params }: PageProps) {
         initialTotals={totals}
         initialVote={voteState.vote}
       />
-      {shareEnabled ? (
-        <p className="text-sm">
-          <Link
-            href={routes.sharePoll(poll.id)}
-            className="inline-flex min-h-11 items-center font-medium text-brand hover:underline"
-          >
-            Åpne delbar side ({pollBallotButtonLabelsPhrase()}) →
-          </Link>
-        </p>
-      ) : null}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight text-foreground">Resultat per fylke</h2>
         <PollResultView byFylke={byFylke} />

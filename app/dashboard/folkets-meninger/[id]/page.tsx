@@ -4,6 +4,7 @@ import { OpinionDetailClient } from './opinion-detail-client';
 import { getCitizenOpinion } from '@/lib/opinions/service';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
+import { opinionShareDescription } from '@/lib/opinions/share';
 import {
   findHearingLinkForSak,
   getOpinionInnspill,
@@ -30,16 +31,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const title = (opinion.title || 'Mening').trim();
-  const body = opinion.body ?? '';
-  const description = body
-    ? truncateDescription(body)
-    : `Les meningen «${truncateDescription(title, 90)}» på Folkets Meninger.`;
 
   return buildPageMetadata({
     title: truncateDescription(title, 70),
-    description,
+    description: opinionShareDescription(opinion),
     canonicalPath: `/dashboard/folkets-meninger/${id}`,
     openGraphType: 'article',
+    images: [`/dashboard/folkets-meninger/${encodeURIComponent(id)}/opengraph-image`],
   });
 }
 

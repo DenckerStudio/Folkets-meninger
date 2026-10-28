@@ -11,6 +11,7 @@ import FadeIn from '@/components/fade-in';
 import { ComposerBanner } from '@/components/opinions/composer-banner';
 import { OpinionCard } from '@/components/opinions/opinion-card';
 import { PageHeader } from '@/components/page-header';
+import { ShareTrigger } from '@/components/share/share-trigger';
 import { routes } from '@/lib/routes';
 import type { OpinionListItem, SakPickerOption } from '@/lib/opinions/types';
 
@@ -63,10 +64,25 @@ export function FolketsMeningerClient({
   return (
     <DashboardPage className="space-y-6">
       <FadeIn delay={0.1}>
-        <PageHeader
-          title="Folkets meninger"
-          description="Holdninger og begrunnelser fra innloggede brukere."
-        />
+        <div className="flex items-start justify-between gap-3">
+          <PageHeader
+            title="Folkets meninger"
+            description="Holdninger og begrunnelser fra innloggede brukere."
+          />
+          <ShareTrigger
+            ariaLabel="Del Folkets meninger"
+            dialogTitle={scopedTitle ? 'Del meningene om saken' : 'Del Folkets meninger'}
+            url={issueId ? routes.folketsMeningerForSak(issueId) : routes.folketsMeninger}
+            title={scopedTitle ? `Folkets meninger om ${scopedTitle}` : 'Folkets meninger'}
+            text={
+              scopedTitle
+                ? `Se hva folk mener om «${scopedTitle}» på Folkets Meninger`
+                : 'Se hva folk mener om sakene på Stortinget'
+            }
+            description="Les og del meninger om Stortingssaker. Ett innlegg per bruker, med for- og imot-punkter."
+            className="mt-1"
+          />
+        </div>
       </FadeIn>
 
       <FadeIn delay={0.12} direction="up">

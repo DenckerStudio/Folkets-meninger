@@ -175,6 +175,7 @@ export default async function SharePollPage({ params, searchParams }: PageProps)
           refCode={refCode}
           shareUrl={shareUrl}
           headingId="poll-question"
+          shareDescription={summary ? truncateDescription(summary, 155) : undefined}
         />
       </section>
 

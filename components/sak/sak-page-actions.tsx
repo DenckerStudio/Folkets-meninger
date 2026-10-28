@@ -1,23 +1,34 @@
 'use client';
 
-import ShareButton from '@/app/dashboard/sak/[id]/share-button';
+import { ShareTrigger } from '@/components/share/share-trigger';
 import { useChatOverlay } from '@/components/chat/chat-overlay-context';
+import { routes } from '@/lib/routes';
 
 type SakPageActionsProps = {
   sakId: string;
   title: string;
+  description?: string;
   className?: string;
 };
 
-export function SakPageActions({ sakId, title, className = '' }: SakPageActionsProps) {
+export function SakPageActions({ sakId, title, description, className = '' }: SakPageActionsProps) {
   const { openChat } = useChatOverlay();
+  const sakUrl = routes.sak(sakId);
 
   return (
     <nav
       aria-label="Sakshandlinger"
       className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-sm ${className}`.trim()}
     >
-      <ShareButton id={sakId} title={title} />
+      <ShareTrigger
+        label="Del sak"
+        dialogTitle="Del saken"
+        url={sakUrl}
+        title={title}
+        text={`Se denne saken på Folkets Meninger: ${title}`}
+        description={description}
+        previewImageUrl={`${sakUrl}/opengraph-image`}
+      />
       <button
         type="button"
         onClick={() => openChat({ issueId: sakId, issueTitle: title })}
