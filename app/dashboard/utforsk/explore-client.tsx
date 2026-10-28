@@ -403,15 +403,14 @@ export default function ExploreClient({
 
       <SectionSettle>
         <LayoutGroup>
-        <div role="tablist" aria-label="Sorter saker" className="flex flex-wrap gap-2">
+        <div role="group" aria-label="Sorter saker" className="flex flex-wrap gap-2">
           {(['Nyeste først', 'Mest engasjement', 'Snart votering'] as const).map((option) => {
             const selected = sortBy === option;
             return (
               <button
                 key={option}
                 type="button"
-                role="tab"
-                aria-selected={selected}
+                aria-pressed={selected}
                 onClick={() => setSortBy(option)}
                 className={`relative rounded-full px-4 py-2 text-sm font-semibold border transition-colors active:scale-[0.98] ${
                   selected
