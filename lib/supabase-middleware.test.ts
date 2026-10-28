@@ -49,6 +49,5 @@ assert.doesNotMatch(
   'authorization helper must not fall back to a cookie-derived session',
 );
 
-void testVerificationOutcomes().then(() => {
-  console.log('supabase-middleware.test.ts: ok');
-});
+await testVerificationOutcomes();
+console.log('supabase-middleware.test.ts: ok');

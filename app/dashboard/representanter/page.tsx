@@ -10,19 +10,15 @@ import { STORTINGET_ACTIVE_PERIODE_ID } from '@/lib/stortinget-config';
 export const dynamic = 'force-dynamic';
 
 export default async function RepresentanterPage() {
-  const data = {
-    periode: STORTINGET_ACTIVE_PERIODE_ID,
-    representanter: await getRepresentanterForPeriode(STORTINGET_ACTIVE_PERIODE_ID).catch(() => []),
-  };
-
-  const sorted = [...data.representanter].sort((a, b) => a.etternavn.localeCompare(b.etternavn, 'no'));
+  const representanter = await getRepresentanterForPeriode(STORTINGET_ACTIVE_PERIODE_ID);
+  const sorted = [...representanter].sort((a, b) => a.etternavn.localeCompare(b.etternavn, 'no'));
 
   return (
     <DashboardPage>
       <FadeIn delay={0.1}>
         <PageHeader
           title="Representanter"
-          description={`Innvalgte representanter for stortingsperioden ${data.periode}.`}
+          description={`Innvalgte representanter for stortingsperioden ${STORTINGET_ACTIVE_PERIODE_ID}.`}
         />
       </FadeIn>
 
