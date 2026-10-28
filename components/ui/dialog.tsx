@@ -3,9 +3,7 @@
 import {
   useEffect,
   useId,
-  useLayoutEffect,
   useRef,
-  useState,
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
@@ -145,15 +143,10 @@ export function Dialog({
   const titleId = useId();
   const descriptionId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
-  const [stackIndex, setStackIndex] = useState(0);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePrefersReducedMotion();
   const transition = reducedMotion ? { duration: 0 } : MODAL_TRANSITION;
   useBodyOverlayFlag(open);
-
-  useLayoutEffect(() => {
-    if (!open || !mounted) return;
-    setStackIndex(openDialogs.length);
-  }, [open, mounted]);
 
   useEffect(() => {
     if (!open) return;
@@ -174,6 +167,12 @@ export function Dialog({
 
     dialogRestoreTargets.set(dialog, previouslyFocused);
     openDialogs.push(dialog);
+    const overlay = overlayRef.current;
+    if (overlay) {
+      overlay.style.zIndex = String(
+        DIALOG_Z_INDEX_BASE + (openDialogs.length - 1) * DIALOG_Z_INDEX_STEP,
+      );
+    }
     (firstFocusable ?? dialog).focus();
 
     return () => {
@@ -240,9 +239,9 @@ export function Dialog({
       {open ? (
         <motion.div
           key="quiet-dialog"
+          ref={overlayRef}
           data-shared-dialog-overlay
           className="fixed inset-0 z-[80] flex items-end justify-center p-3 sm:items-center sm:p-4"
-          style={{ zIndex: DIALOG_Z_INDEX_BASE + stackIndex * DIALOG_Z_INDEX_STEP }}
           initial={reducedMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={reducedMotion ? { opacity: 1 } : { opacity: 0 }}

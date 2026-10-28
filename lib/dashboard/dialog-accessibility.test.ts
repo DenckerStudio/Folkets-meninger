@@ -54,9 +54,8 @@ assert.match(dialogSource, /DIALOG_Z_INDEX_BASE = 80/);
 assert.match(dialogSource, /DIALOG_Z_INDEX_STEP/);
 assert.match(
   dialogSource,
-  /zIndex:\s*DIALOG_Z_INDEX_BASE \+ stackIndex \* DIALOG_Z_INDEX_STEP/,
+  /overlay\.style\.zIndex = String\(\s*DIALOG_Z_INDEX_BASE \+ \(openDialogs\.length - 1\) \* DIALOG_Z_INDEX_STEP/,
 );
-assert.match(dialogSource, /setStackIndex\(openDialogs\.length\)/);
 assert.match(dialogSource, /z-\[80\]/);
 
 assert.match(dialogSource, /addEventListener\(['"]keydown['"], onKey, true\)/);
