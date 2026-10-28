@@ -41,13 +41,13 @@ function SummarySources({ sources, issueId }: { sources: AiSummaryReviewSource[]
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-medium text-brand hover:underline"
+                  className="inline-flex max-w-full items-center gap-1 font-medium text-brand hover:underline"
                 >
-                  {source.title}
+                  <span className="min-w-0 wrap-anywhere">{source.title}</span>
                   <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 </a>
               ) : (
-                <span className="text-foreground">{source.title}</span>
+                <span className="wrap-anywhere text-foreground">{source.title}</span>
               )}
             </li>
           );
@@ -62,11 +62,11 @@ function SummaryPreview({ item }: { item: AiSummaryReviewItem }) {
     <div className="space-y-3">
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tittel</p>
-        <h4 className="mt-1 text-base font-semibold text-foreground">{item.title}</h4>
+        <h4 className="mt-1 text-base font-semibold break-words text-foreground">{item.title}</h4>
       </div>
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Beskrivelse</p>
-        <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed break-words text-muted-foreground">
           {item.narrative.trim() || 'Ingen beskrivelse er lagret for dette sammendraget.'}
         </p>
       </div>
@@ -76,7 +76,7 @@ function SummaryPreview({ item }: { item: AiSummaryReviewItem }) {
           {item.labels.map((label) => (
             <li
               key={label}
-              className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground"
+              className="max-w-full rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs break-words text-muted-foreground"
             >
               {label}
             </li>

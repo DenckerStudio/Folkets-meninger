@@ -78,7 +78,7 @@ export default function AdminVurderClient() {
               aria-controls={`${tablistId}-${item.id}-panel`}
               onClick={() => selectTab(item.id)}
               className={cn(
-                'inline-flex min-h-11 min-w-[8.5rem] flex-1 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-colors',
+                'inline-flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-lg px-2 py-2.5 text-sm font-medium transition-colors sm:min-w-[8.5rem] sm:px-4',
                 selected
                   ? 'bg-card text-brand shadow-sm'
                   : 'text-muted-foreground hover:bg-card/60 hover:text-foreground',

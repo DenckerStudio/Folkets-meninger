@@ -26,7 +26,7 @@ export function UtenKontekstBadge({ className }: Props) {
       <span id={hintId} className="sr-only">
         {UTEN_KONTEKST_BADGE_HINT}
       </span>
-      <InfoTooltip label="Uten kontekst" description={UTEN_KONTEKST_BADGE_HINT} side="bottom" />
+      <InfoTooltip label="Uten kontekst" description={UTEN_KONTEKST_BADGE_HINT} side="bottom" align="center" />
     </span>
   );
 }

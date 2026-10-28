@@ -345,7 +345,7 @@ export function ContentFeedbackPanel({
           <p className="w-full text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {EYEBROW_LABEL}
           </p>
-          <h3 id={titleId} className="text-sm font-semibold text-foreground">
+          <h3 id={titleId} className="min-w-0 text-sm font-semibold break-words text-foreground">
             {headingText}
           </h3>
           {showAdminReviewedBadge ? (
@@ -366,7 +366,7 @@ export function ContentFeedbackPanel({
       </div>
 
       {preview ? (
-        <div className="mt-4 rounded-xl border border-border bg-card p-4">{preview}</div>
+        <div className="mt-4 rounded-xl border border-border bg-card p-3 sm:p-4">{preview}</div>
       ) : null}
 
       <div className="mt-2 min-h-[1.25rem]" aria-live="polite" aria-atomic="true">
@@ -480,7 +480,7 @@ export function ContentFeedbackPanel({
                   role="radiogroup"
                   aria-label={CONTENT_FEEDBACK_ASPECT_LABELS[key]}
                 >
-                  <span className="text-sm font-medium text-foreground">
+                  <span className="min-w-0 text-sm font-medium break-words text-foreground">
                     {CONTENT_FEEDBACK_ASPECT_LABELS[key]}
                   </span>
                   <div className="flex shrink-0 gap-1.5">

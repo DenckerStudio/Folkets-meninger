@@ -73,7 +73,7 @@ export function ReelCandidateRatings({
                   {ratings.discussed.hits.map((hit, index) => (
                     <li key={hit.url ?? `${hit.title ?? 'hit'}-${index}`}>
                       {hit.url ? (
-                        <a href={hit.url} className="text-brand hover:underline" target="_blank" rel="noreferrer">
+                        <a href={hit.url} className="wrap-anywhere text-brand hover:underline" target="_blank" rel="noreferrer">
                           {hit.title ?? hit.url}
                         </a>
                       ) : (
