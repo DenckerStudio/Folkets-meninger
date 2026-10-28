@@ -40,4 +40,41 @@ assert.match(
   /openDialogs\.at\(-1\) !== dialog[\s\S]*?event\.defaultPrevented[\s\S]*?event\.key === ['"]Escape['"][\s\S]*?event\.key !== ['"]Tab['"]/,
 );
 
+assert.match(dialogSource, /data-shared-dialog-backdrop/);
+assert.match(dialogSource, /data-shared-dialog-overlay/);
+assert.match(
+  dialogSource,
+  /<div\s+className="absolute inset-0[\s\S]*?data-shared-dialog-backdrop[\s\S]*?onClick=\{onClose\}/,
+);
+assert.doesNotMatch(dialogSource, /<button[\s\S]*?className="absolute inset-0/);
+assert.doesNotMatch(dialogSource, /aria-label="Lukk"/);
+assert.match(dialogSource, /aria-label="Lukk dialog"/);
+
+assert.match(dialogSource, /DIALOG_Z_INDEX_BASE = 80/);
+assert.match(dialogSource, /DIALOG_Z_INDEX_STEP/);
+assert.match(
+  dialogSource,
+  /zIndex:\s*DIALOG_Z_INDEX_BASE \+ stackIndex \* DIALOG_Z_INDEX_STEP/,
+);
+assert.match(dialogSource, /setStackIndex\(openDialogs\.length\)/);
+assert.match(dialogSource, /z-\[80\]/);
+
+assert.match(dialogSource, /addEventListener\(['"]keydown['"], onKey, true\)/);
+assert.match(dialogSource, /removeEventListener\(['"]keydown['"], onKey, true\)/);
+assert.match(
+  dialogSource,
+  /event\.key === ['"]Escape['"][\s\S]*?event\.stopPropagation\(\)/,
+);
+
+assert.match(dialogSource, /function isOverlayElement/);
+assert.match(
+  dialogSource,
+  /\[data-shared-dialog-overlay\], \[data-shared-dialog-backdrop\]/,
+);
+assert.match(dialogSource, /isOverlayElement\(focusTarget\)/);
+assert.match(
+  dialogSource,
+  /previouslyFocusedDialog && !openDialogs\.includes\(previouslyFocusedDialog\)/,
+);
+
 console.log('dashboard/dialog-accessibility.test.ts: ok');

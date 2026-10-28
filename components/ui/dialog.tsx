@@ -1,6 +1,14 @@
 'use client';
 
-import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from 'react';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { X } from 'lucide-react';
@@ -28,6 +36,8 @@ const SIZE_CLASS: Record<DialogSize, string> = {
 
 const openDialogs: HTMLElement[] = [];
 const dialogRestoreTargets = new WeakMap<HTMLElement, HTMLElement | null>();
+const DIALOG_Z_INDEX_BASE = 80;
+const DIALOG_Z_INDEX_STEP = 10;
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -57,19 +67,50 @@ function getFocusableElements(dialog: HTMLElement): HTMLElement[] {
   );
 }
 
+function isOverlayElement(element: HTMLElement): boolean {
+  return element.matches(
+    '[data-shared-dialog-overlay], [data-shared-dialog-backdrop]',
+  );
+}
+
+function overlayDialogFor(element: HTMLElement): HTMLElement | null {
+  return (
+    element.closest<HTMLElement>('[data-shared-dialog]') ??
+    element
+      .closest<HTMLElement>('[data-shared-dialog-overlay]')
+      ?.querySelector<HTMLElement>('[data-shared-dialog]') ??
+    null
+  );
+}
+
 function restoreFocus(previouslyFocused: HTMLElement | null): void {
   const visitedTargets = new Set<HTMLElement>();
   let focusTarget = previouslyFocused;
 
   while (focusTarget && !visitedTargets.has(focusTarget)) {
     visitedTargets.add(focusTarget);
-    const previouslyFocusedDialog =
-      focusTarget.closest<HTMLElement>('[data-shared-dialog]');
+    const previouslyFocusedDialog = overlayDialogFor(focusTarget);
+    const overlayIsOpen =
+      previouslyFocusedDialog != null &&
+      openDialogs.includes(previouslyFocusedDialog);
 
-    if (
-      focusTarget.isConnected &&
-      (!previouslyFocusedDialog || openDialogs.includes(previouslyFocusedDialog))
-    ) {
+    if (isOverlayElement(focusTarget)) {
+      if (overlayIsOpen && previouslyFocusedDialog) {
+        const [firstFocusable] = getFocusableElements(previouslyFocusedDialog);
+        (firstFocusable ?? previouslyFocusedDialog).focus();
+        return;
+      }
+      if (!previouslyFocusedDialog) return;
+      focusTarget = dialogRestoreTargets.get(previouslyFocusedDialog) ?? null;
+      continue;
+    }
+
+    if (previouslyFocusedDialog && !openDialogs.includes(previouslyFocusedDialog)) {
+      focusTarget = dialogRestoreTargets.get(previouslyFocusedDialog) ?? null;
+      continue;
+    }
+
+    if (focusTarget.isConnected) {
       focusTarget.focus();
       return;
     }
@@ -104,9 +145,15 @@ export function Dialog({
   const titleId = useId();
   const descriptionId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const [stackIndex, setStackIndex] = useState(0);
   const reducedMotion = usePrefersReducedMotion();
   const transition = reducedMotion ? { duration: 0 } : MODAL_TRANSITION;
   useBodyOverlayFlag(open);
+
+  useLayoutEffect(() => {
+    if (!open || !mounted) return;
+    setStackIndex(openDialogs.length);
+  }, [open, mounted]);
 
   useEffect(() => {
     if (!open) return;
@@ -150,6 +197,7 @@ export function Dialog({
 
       if (event.key === 'Escape') {
         event.preventDefault();
+        event.stopPropagation();
         onClose();
         return;
       }
@@ -181,8 +229,8 @@ export function Dialog({
         firstFocusable.focus();
       }
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [open, mounted, onClose]);
 
   if (!mounted) return null;
@@ -192,16 +240,17 @@ export function Dialog({
       {open ? (
         <motion.div
           key="quiet-dialog"
-          className="fixed inset-0 z-50 flex items-end justify-center p-3 sm:items-center sm:p-4"
+          data-shared-dialog-overlay
+          className="fixed inset-0 z-[80] flex items-end justify-center p-3 sm:items-center sm:p-4"
+          style={{ zIndex: DIALOG_Z_INDEX_BASE + stackIndex * DIALOG_Z_INDEX_STEP }}
           initial={reducedMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={reducedMotion ? { opacity: 1 } : { opacity: 0 }}
           transition={transition}
         >
-          <button
-            type="button"
+          <div
             className="absolute inset-0 bg-overlay/50 backdrop-blur-[2px] dark:bg-overlay/60"
-            aria-label="Lukk"
+            data-shared-dialog-backdrop
             onClick={onClose}
           />
           <motion.div
