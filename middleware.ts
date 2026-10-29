@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { checkRateLimit, getRateLimitPolicy } from '@/lib/rate-limit';
 import {
+  dashboardIndexRedirect,
   isPublicDashboardAvstemningPath,
   isPublicDashboardChatPath,
   isPublicDashboardFolketsMeningerPath,
@@ -42,6 +43,13 @@ export async function middleware(request: NextRequest) {
   const rateLimited = await applyRateLimit(request, pathname);
   if (rateLimited) {
     return rateLimited;
+  }
+
+  const indexRedirect = dashboardIndexRedirect(pathname);
+  if (indexRedirect) {
+    const url = request.nextUrl.clone();
+    url.pathname = indexRedirect;
+    return NextResponse.redirect(url);
   }
 
   if (pathname.startsWith('/api/') || isPublicDashboardShareImagePath(pathname)) {

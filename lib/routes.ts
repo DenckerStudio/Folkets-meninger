@@ -67,6 +67,12 @@ export function isDashboardPath(pathname: string): boolean {
   return pathname === DASHBOARD_PREFIX || pathname.startsWith(`${DASHBOARD_PREFIX}/`);
 }
 
+/** `/dashboard` has no page of its own. Guests and members both land on Utforsk. */
+export function dashboardIndexRedirect(pathname: string): string | null {
+  if (pathname === routes.dashboard) return routes.utforsk;
+  return null;
+}
+
 /** Public issue pages linked from the landing page. */
 export function isPublicDashboardSakPath(pathname: string): boolean {
   return /^\/dashboard\/sak\/[^/]+$/.test(pathname);

@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
-import { buildHoringerIcs, escapeIcsText, formatIcsUtc } from './kalender-ics';
+import { buildHoringerIcs, escapeIcsText, formatIcsUtc, resolveKalenderSiteOrigin } from './kalender-ics';
+import { getSiteUrl } from './seo/metadata';
 import type { KalenderEvent } from './kalender-events';
 
+assert.equal(resolveKalenderSiteOrigin(), getSiteUrl());
 assert.equal(escapeIcsText('A;B,C\nD'), 'A\\;B\\,C\\nD');
 assert.equal(formatIcsUtc(new Date('2026-08-21T09:30:00Z')), '20260821T093000Z');
 
