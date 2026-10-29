@@ -15,6 +15,8 @@ function toFilterableRows(rows: OppfangetListResponse['rows']) {
       publisher: s.publisher,
       signalOnly: s.signalOnly,
       title: s.title,
+      sourceType: s.sourceType,
+      url: s.url,
     })),
     firstSeenAt: row.firstSeenAt,
     lastSeenAt: row.lastSeenAt,

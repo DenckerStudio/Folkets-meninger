@@ -24,12 +24,15 @@ export type OppfangetDisplayStatus =
   | 'publisert'
   | 'avvist';
 
+export type OppfangetSourceType = 'news_rss' | 'reddit' | 'petition' | 'searxng';
+
 export type OppfangetSourceRow = {
   id: string;
   url: string;
   publisher: string | null;
   signalOnly: boolean;
   title: string | null;
+  sourceType: OppfangetSourceType | null;
 };
 
 export type OppfangetScale = {

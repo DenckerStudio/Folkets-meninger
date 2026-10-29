@@ -80,7 +80,7 @@ export function Dialog({
       {open ? (
         <motion.div
           key="quiet-dialog"
-          className="fixed inset-0 z-50 flex items-end justify-center p-3 sm:items-center sm:p-4"
+          className="fixed inset-0 z-[95] flex items-end justify-center p-3 sm:items-center sm:p-4"
           initial={reducedMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={reducedMotion ? { opacity: 1 } : { opacity: 0 }}

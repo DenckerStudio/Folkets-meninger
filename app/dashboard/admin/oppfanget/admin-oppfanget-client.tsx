@@ -117,12 +117,32 @@ function OppfangetPageHeader({ previewMock }: { previewMock?: boolean }) {
   );
 }
 
+function ResearchWebhookNotice({ configured }: { configured: boolean }) {
+  if (configured) return null;
+  return (
+    <div
+      className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-foreground"
+      role="status"
+    >
+      <p className="font-medium">Research-knapper krever n8n</p>
+      <p className="mt-1 text-muted-foreground">
+        Utdyp, blogg og Reel starter webhook-arbeidsflyter. Sett{' '}
+        <code className="text-xs">N8N_RESEARCH_WEBHOOK_BASE</code>,{' '}
+        <code className="text-xs">N8N_RESEARCH_WEBHOOK_SECRET</code> og{' '}
+        <code className="text-xs">N8N_RESEARCH_WEBHOOK_TOKEN</code> på fm-web, og aktiver{' '}
+        research-utdyp, blogg-fra-research og reel-fra-research i n8n (ikke dryRun).
+      </p>
+    </div>
+  );
+}
+
 export default function AdminOppfangetClient({
   initialData = null,
   initialFilters,
   devPreview,
   adminUserId,
   initialResearchBriefsByCluster = {},
+  researchWebhooksConfigured = true,
 }: {
   initialData?: OppfangetListResponse | null;
   initialFilters?: OppfangetFilterInput;
@@ -130,6 +150,7 @@ export default function AdminOppfangetClient({
   devPreview?: string;
   adminUserId?: string;
   initialResearchBriefsByCluster?: Record<string, ResearchBriefsByKind>;
+  researchWebhooksConfigured?: boolean;
 }) {
   const router = useRouter();
   const [data, setData] = useState<OppfangetListResponse | null>(initialData);
@@ -273,6 +294,7 @@ export default function AdminOppfangetClient({
   return (
     <div className="space-y-6" lang="nb-NO">
       <OppfangetPageHeader previewMock={data?.previewMock} />
+      {!mockMode ? <ResearchWebhookNotice configured={researchWebhooksConfigured} /> : null}
 
       {data ? <StatusPills counts={data.counts} filteredTotal={rows.length} /> : null}
 

@@ -1,6 +1,9 @@
 import { mapClusterToRow } from '@/lib/admin/oppfanget/service';
 import type { OppfangetRow } from '@/lib/admin/oppfanget/types';
-import { listResearchBriefsForCluster } from '@/lib/admin/research/service';
+import {
+  expireStaleResearchBriefs,
+  listResearchBriefsForCluster,
+} from '@/lib/admin/research/service';
 import type { ResearchBriefRow } from '@/lib/admin/research/types';
 import { getServiceSupabase } from '@/lib/supabase';
 
@@ -22,9 +25,11 @@ export async function loadResearchClusterDetail(
     .maybeSingle();
   if (error || !cluster) return null;
 
+  await expireStaleResearchBriefs();
+
   const { data: sources } = await supabase
     .from('action_sources')
-    .select('id, cluster_id, url_canonical, publisher, signal_only, title')
+    .select('id, cluster_id, url_canonical, publisher, signal_only, title, source_type')
     .eq('cluster_id', clusterId);
 
   let pollStatus: string | null = null;
