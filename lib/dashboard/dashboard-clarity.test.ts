@@ -24,4 +24,12 @@ assert.doesNotMatch(kalender, /x-forwarded-host|x-forwarded-proto/);
 assert.doesNotMatch(kalender, /next\/headers/);
 assert.match(kalender, /resolveKalenderSiteOrigin\(\)/);
 
+const explore = read('app/dashboard/utforsk/explore-client.tsx');
+assert.doesNotMatch(explore, /ikke representative/);
+assert.doesNotMatch(explore, /Åpne for stemmer/);
+
+const header = read('components/ui/header-3.tsx');
+assert.match(header, /inDashboard \? null : \(/);
+assert.match(header, /Gå til Utforsk/);
+
 console.log('dashboard/dashboard-clarity.test.ts: ok');

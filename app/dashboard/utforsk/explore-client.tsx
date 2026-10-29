@@ -166,7 +166,7 @@ export default function ExploreClient({
   // Compute displayed issues based on current filters
   const computeDisplayedIssues = useCallback(() => {
     let result = issues;
-    if (selectedStatus === 'Under behandling' || selectedStatus === 'Åpne for stemmer') {
+    if (selectedStatus === 'Under behandling') {
       result = result.filter((issue) => issue.status !== 'closed');
     } else if (selectedStatus === 'Ferdigbehandlet / Historikk') {
       result = result.filter((issue) => issue.status === 'closed');
@@ -299,8 +299,8 @@ export default function ExploreClient({
         <p className="text-sm text-muted-foreground">
           {issues.length > 0
             ? listScopeFiltered
-              ? `Viser ${displayedIssues.length} av ${issues.length} saker fra Stortingets sesjon ${STORTINGET_ACTIVE_SESSION_ID} (filtre eller sortering er aktive). Tall under er fra Folkets Meninger og er ikke representative.`
-              : `Listen viser ${issues.length} saker fra Stortingets sesjon ${STORTINGET_ACTIVE_SESSION_ID}. Tall under er fra Folkets Meninger og er ikke representative.`
+              ? `Viser ${displayedIssues.length} av ${issues.length} saker fra Stortingets sesjon ${STORTINGET_ACTIVE_SESSION_ID}. Filtre eller sortering er aktive.`
+              : `Listen viser ${issues.length} saker fra Stortingets sesjon ${STORTINGET_ACTIVE_SESSION_ID}.`
             : 'Saker hentes fra Stortinget. Hvis listen er tom, prøv igjen om litt.'}
         </p>
       </SectionSettle>
