@@ -2,7 +2,11 @@ import AdminOppfangetClient from '../oppfanget/admin-oppfanget-client';
 import { requireAdminPage } from '@/lib/admin/gate';
 import { parseOppfangetFilters } from '@/lib/admin/oppfanget/query';
 import { listOppfangetForAdmin } from '@/lib/admin/oppfanget/service';
-import { getLatestResearchBriefsByClusterIds } from '@/lib/admin/research/service';
+import {
+  expireStaleResearchBriefs,
+  getLatestResearchBriefsByClusterIds,
+} from '@/lib/admin/research/service';
+import { isResearchWebhookConfigured } from '@/lib/admin/research/webhook-status';
 import { routes } from '@/lib/routes';
 import { getServerSupabase } from '@/lib/supabase-server';
 
@@ -18,7 +22,9 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const preview = typeof params.preview === 'string' ? params.preview : undefined;
   const filters = parseOppfangetFilters(params);
+  await expireStaleResearchBriefs();
   const initialData = await listOppfangetForAdmin(filters, preview);
+  const researchWebhooksConfigured = isResearchWebhookConfigured();
   const researchBriefsByCluster = await getLatestResearchBriefsByClusterIds(
     initialData.rows.map((row) => row.id),
   );
@@ -34,6 +40,7 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
       devPreview={preview}
       adminUserId={user?.id}
       initialResearchBriefsByCluster={researchBriefsByCluster}
+      researchWebhooksConfigured={researchWebhooksConfigured}
     />
   );
 }

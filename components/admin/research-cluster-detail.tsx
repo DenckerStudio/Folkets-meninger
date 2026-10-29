@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ResearchBriefStatusBadge } from '@/components/admin/research-brief-status-badge';
 import { ResearchRowActions } from '@/components/admin/research-row-actions';
 import { formatOppfangetDateTime } from '@/app/dashboard/admin/oppfanget/oppfanget-row-views';
+import { formatOppfangetSourcePublisher } from '@/lib/admin/oppfanget/source-display';
 import type { OppfangetRow } from '@/lib/admin/oppfanget/types';
 import { formatResearchBriefError } from '@/lib/admin/research/error-messages';
 import {
@@ -85,10 +86,10 @@ export function ResearchClusterDetailView({
                   rel="noopener noreferrer"
                   className="font-medium text-brand hover:underline break-words"
                 >
-                  {s.title ?? s.url}
+                  {s.title ?? formatOppfangetSourcePublisher(s)}
                 </a>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {s.publisher ?? 'Ukjent utgiver'}
+                  {formatOppfangetSourcePublisher(s)}
                   {s.signalOnly ? ' · signal' : ''}
                 </p>
               </li>

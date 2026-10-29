@@ -475,6 +475,16 @@ function useResearchRowActions(clusterId: string, initialBriefsByKind: ResearchB
             return;
           }
         }
+        if (res.status === 503) {
+          setError(
+            'Research-arbeidsflytene i n8n er ikke koblet til (mangler webhook-oppsett). Be drift sette N8N_RESEARCH_WEBHOOK_* på fm-web og aktivere research-utdyp / blogg-fra-research / reel-fra-research.',
+          );
+          return;
+        }
+        if (res.status === 502) {
+          setError('Kunne ikke nå research-webhook. Sjekk at n8n-arbeidsflytene er aktive og ikke står i dryRun.');
+          return;
+        }
         if (!res.ok) {
           setError(body.error ?? 'Kunne ikke starte oppgaven');
           return;
