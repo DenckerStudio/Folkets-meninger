@@ -4,16 +4,9 @@ import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { sendWelcomeEmail } from '@/lib/email/nodemailer';
 import { isSmtpConfigured } from '@/lib/email/smtp-config';
+import { trustedClientIp } from '@/lib/trusted-client-ip';
 
 export const dynamic = 'force-dynamic';
-
-function clientIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
-}
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +19,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
     }
 
-    const ip = clientIp(request);
+    const ip = trustedClientIp(request);
     const ipRate = await checkRateLimit(`welcome-email:ip:${ip}`, 5, 3_600_000);
     if (!ipRate.ok) {
       return NextResponse.json(

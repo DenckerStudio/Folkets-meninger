@@ -4,45 +4,21 @@ import { SurfaceCard } from '@/components/dashboard/surface-card';
 import FadeIn from '@/components/fade-in';
 import { PageHeader } from '@/components/page-header';
 import Image from 'next/image';
+import { getRepresentanterForPeriode } from '@/lib/stortinget';
 import { STORTINGET_ACTIVE_PERIODE_ID } from '@/lib/stortinget-config';
-import { headers } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
-type ApiResponse = {
-  periode: string;
-  representanter: Array<{
-    id: string;
-    fornavn: string;
-    etternavn: string;
-    fylke?: { navn?: string };
-    parti?: { navn?: string; id?: string };
-  }>;
-};
-
 export default async function RepresentanterPage() {
-  const h = await headers();
-  const host = h.get('x-forwarded-host') || h.get('host');
-  const proto = h.get('x-forwarded-proto') || 'http';
-  const baseUrl = host ? `${proto}://${host}` : '';
-
-  const res = await fetch(`${baseUrl}/api/representanter?periode=${encodeURIComponent(STORTINGET_ACTIVE_PERIODE_ID)}`, {
-    cache: 'no-store',
-  });
-
-  const data = (res.ok ? ((await res.json()) as ApiResponse) : null) ?? {
-    periode: STORTINGET_ACTIVE_PERIODE_ID,
-    representanter: [],
-  };
-
-  const sorted = [...data.representanter].sort((a, b) => a.etternavn.localeCompare(b.etternavn, 'no'));
+  const representanter = await getRepresentanterForPeriode(STORTINGET_ACTIVE_PERIODE_ID);
+  const sorted = [...representanter].sort((a, b) => a.etternavn.localeCompare(b.etternavn, 'no'));
 
   return (
     <DashboardPage>
       <FadeIn delay={0.1}>
         <PageHeader
           title="Representanter"
-          description={`Innvalgte representanter for stortingsperioden ${data.periode}.`}
+          description={`Innvalgte representanter for stortingsperioden ${STORTINGET_ACTIVE_PERIODE_ID}.`}
         />
       </FadeIn>
 

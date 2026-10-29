@@ -15,16 +15,9 @@ import {
   getUserVerificationStatus,
   PROFILE_BIO_MIN_LENGTH,
 } from '@/lib/user-verification';
+import { trustedClientIp } from '@/lib/trusted-client-ip';
 
 export const dynamic = 'force-dynamic';
-
-function clientIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
-}
 
 export async function GET() {
   const supabase = await getServerSupabase();
@@ -107,7 +100,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Ikke innlogget' }, { status: 401 });
   }
 
-  const ip = clientIp(request);
+  const ip = trustedClientIp(request);
   const ipRate = await checkRateLimit(`user-profile:ip:${ip}`, 30, 60_000);
   if (!ipRate.ok) {
     return NextResponse.json(

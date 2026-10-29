@@ -3,22 +3,15 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { getServiceSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { sendSiteFeedbackEmail } from '@/lib/email/nodemailer';
+import { trustedClientIp } from '@/lib/trusted-client-ip';
 
 export const dynamic = 'force-dynamic';
 
 const CATEGORIES = new Set(['idé', 'feil', 'spørsmål', 'skjevhet', 'annet']);
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function clientIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
-}
-
 export async function POST(request: Request) {
-  const rate = await checkRateLimit(`feedback:${clientIp(request)}`, 5, 60_000);
+  const rate = await checkRateLimit(`feedback:${trustedClientIp(request)}`, 5, 60_000);
   if (!rate.ok) {
     return NextResponse.json(
       { error: 'For mange forespørsler. Prøv igjen om litt.' },

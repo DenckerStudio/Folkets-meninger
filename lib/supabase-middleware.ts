@@ -6,6 +6,12 @@ const MIDDLEWARE_AUTH_TIMEOUT_MS = 3_500;
 
 type MiddlewareSupabaseClient = ReturnType<typeof createServerClient>;
 
+type UserVerificationClient = {
+  auth: {
+    getUser: () => Promise<{ data: { user: User | null } }>;
+  };
+};
+
 export function hasSupabaseAuthCookies(request: NextRequest): boolean {
   return request.cookies.getAll().some(
     (cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token'),
@@ -43,25 +49,29 @@ export function createMiddlewareSupabaseClient(
   };
 }
 
-async function getUserWithTimeout(supabase: MiddlewareSupabaseClient): Promise<User | null> {
+export async function getUserWithTimeout(
+  supabase: UserVerificationClient,
+): Promise<User | null> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
   try {
     const result = await Promise.race([
       supabase.auth.getUser(),
       new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('MIDDLEWARE_AUTH_TIMEOUT')), MIDDLEWARE_AUTH_TIMEOUT_MS);
+        timeoutId = setTimeout(
+          () => reject(new Error('MIDDLEWARE_AUTH_TIMEOUT')),
+          MIDDLEWARE_AUTH_TIMEOUT_MS,
+        );
       }),
     ]);
 
     return result.data.user;
-  } catch (error) {
-    if (error instanceof Error && error.message === 'MIDDLEWARE_AUTH_TIMEOUT') {
-      console.warn('[middleware] getUser timed out; falling back to getSession');
+  } catch {
+    return null;
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
     }
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    return session?.user ?? null;
   }
 }
 
