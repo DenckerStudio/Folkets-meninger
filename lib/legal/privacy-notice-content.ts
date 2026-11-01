@@ -74,6 +74,6 @@ export const PRIVACY_COMPLAINT =
   'Du kan klage til Datatilsynet (www.datatilsynet.no, Postboks 458 Sentrum, 0105 Oslo).';
 
 export const PRIVACY_COOKIES =
-  'Vi bruker informasjonskapsler som er nødvendige for innlogging, og lokal lagring for tema, omvisning, utkast, konsekvenskalkulator og chat-samtaler i nettleseren. Vi bruker ikke tredjeparts analyseverktøy på forsiden.';
+  'Vi bruker informasjonskapsler som er nødvendige for innlogging, og lokal lagring for tema, omvisning, utkast, konsekvenskalkulator og chat-samtaler i nettleseren. Besøksstatistikk telles uten analysekapsler.';
 
 export const PRIVACY_AGE = `Du må være minst ${MIN_ACCOUNT_AGE_YEARS} år for å opprette konto. Vi gjennomfører ikke aldersverifisering utover det du bekrefter ved registrering.`;

@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { PollShareLandingBeacon } from '@/components/analytics/poll-share-landing-beacon';
 import { SharePollWidget } from '@/components/polls/share-poll-widget';
+import { isAnalyticsEnabled } from '@/lib/analytics/flags';
 import { isAdmin } from '@/lib/admin/gate';
 import { truncateDescription } from '@/lib/seo/metadata';
 import { buildDelSharePageMetadata, buildRetiredDelSharePageMetadata } from '@/lib/polls/page-metadata';
@@ -80,12 +82,17 @@ export default async function SharePollPage({ params, searchParams }: PageProps)
   const valgParam = firstParam(query.valg);
   const initialChoice = isPollChoice(valgParam) ? valgParam : null;
   const refCode = firstParam(query.ref);
+  const utmSource = firstParam(query.utm_source);
+  const utmMedium = firstParam(query.utm_medium);
+  const utmCampaign = firstParam(query.utm_campaign);
+  const fmShare = firstParam(query.fm_share);
 
   const summary = poll.neutralSummary.trim();
   const truncatedSummary = summary ? truncateDescription(summary, 160) : '';
   const summaryIsTruncated = truncatedSummary !== summary;
 
   return (
+    <>
     <div className="mx-auto max-w-2xl space-y-6">
       <header className="flex items-center justify-between gap-3">
         <Link href="/" className="flex items-baseline gap-1.5">
@@ -173,5 +180,16 @@ export default async function SharePollPage({ params, searchParams }: PageProps)
         </ul>
       ) : null}
     </div>
+    {isAnalyticsEnabled() ? (
+      <PollShareLandingBeacon
+        pollId={poll.id}
+        utmSource={utmSource}
+        utmMedium={utmMedium}
+        utmCampaign={utmCampaign}
+        refCode={refCode}
+        fmShare={fmShare}
+      />
+    ) : null}
+    </>
   );
 }

@@ -18,6 +18,14 @@ const routes: Array<{ path: string; keys: string[] }> = [
     path: 'app/api/politician/response/route.ts',
     keys: ['politician-response:ip:', 'politician-response:user:'],
   },
+  {
+    path: 'app/api/analytics/collect/route.ts',
+    keys: ['analytics-collect:ip:'],
+  },
+  {
+    path: 'app/api/share-links/route.ts',
+    keys: ['share-links:ip:', 'share-links:user:'],
+  },
 ];
 
 for (const { path, keys } of routes) {
