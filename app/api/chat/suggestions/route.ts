@@ -10,19 +10,12 @@ import { getUserStanceHistory, getUserStanceSignals } from '@/lib/stances/servic
 import { requireStemmePlus } from '@/lib/stemme-plus/entitlement';
 import { fetchStortingetHoringById, getHoringTitle } from '@/lib/stortinget-horinger';
 import { getPolitikereOversikt } from '@/lib/stortinget';
+import { trustedClientIp } from '@/lib/trusted-client-ip';
 
 export const dynamic = 'force-dynamic';
 
 const RECENT_STANCE_LIMIT = 5;
 const OWN_OPINION_LIMIT = 5;
-
-function clientIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
-}
 
 async function sakTitle(issueId: string | null): Promise<string | null> {
   if (!issueId) return null;
@@ -162,7 +155,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
 
-  const ipRate = await checkRateLimit(`chat-suggestions:ip:${clientIp(request)}`, 60, 60_000);
+  const ipRate = await checkRateLimit(
+    `chat-suggestions:ip:${trustedClientIp(request)}`,
+    60,
+    60_000,
+  );
   if (!ipRate.ok) {
     return NextResponse.json(
       { error: 'For mange forespørsler. Prøv igjen om litt.' },
