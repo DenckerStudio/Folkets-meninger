@@ -411,6 +411,16 @@ curl -sS -H "x-cron-secret: $CRON_SECRET" \
 
 `n8n-retry` køer manglende AI-sammendrag, pending embeddings og neste Reels-utkast via eksisterende webhooks (`create_system_poll_draft`, aldri `ensure_stortinget_poll`).
 
+## Aksjonsfangst — Reddit (Research-liste)
+
+`workflows/n8n/action-capture-reddit.shared.ts` dokumenterer samme Reddit-mønster som blogg/research-pipeline:
+
+- én samlet RSS (`REDDIT_NORGE_MULTI_RSS`) for å unngå 429
+- søk-RSS via `buildRedditSearchRssUrl` (som research-utdyp «Lag søk»)
+- `REDDIT_CLUSTER_KEY_PATCH_JS` for n8n «Tolk og vakter»: lenkeposter med `source_type=reddit` og ekstern artikkel-URL får `cluster_key` fra artikkelen, slik at de kan klynges med RSS-kilder
+
+Sync til live n8n: **Folkets Aksjoner – fase 1 fangst** (`0ptiRfF2qPgu6flm`).
+
 ## Bloggutkast (`POST /api/ops/blog/drafts`)
 
 App-endepunkt (ikke fm-cms direkte): `POST https://www.folkets-meninger.no/api/ops/blog/drafts` med header `x-cron-secret`.

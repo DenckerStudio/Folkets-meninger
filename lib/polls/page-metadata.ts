@@ -36,14 +36,28 @@ export function delOpenGraphImageUrl(pollId: string, totals: PollTotals): string
 
 export function buildPollDetailPageMetadata(poll: PollRecord, totals: PollTotals): Metadata {
   const title = formatPollDisplayTitle(poll.title);
-  return buildPageMetadata({
+  const imageUrl = pollOpenGraphImageUrl(poll.id, totals);
+  const imageAlt = pollOgImageAlt(poll.title, totals);
+  const base = buildPageMetadata({
     title,
     description: truncateDescription(
       poll.neutralSummary || `${title} — stem ${pollBallotRunningTextPhrase()}.`,
     ),
     canonicalPath: routes.poll(poll.id),
-    images: [pollOpenGraphImageUrl(poll.id, totals)],
+    images: [imageUrl],
   });
+  const imageSpec = { url: imageUrl, ...OG_IMAGE_SIZE, alt: imageAlt };
+  return {
+    ...base,
+    openGraph: {
+      ...(base.openGraph as object),
+      images: [imageSpec],
+    },
+    twitter: {
+      ...(base.twitter as object),
+      images: [imageSpec],
+    },
+  };
 }
 
 type DelShareMetadataInput = {
@@ -72,7 +86,7 @@ export function buildDelSharePageMetadata({ poll, pollId, totals }: DelShareMeta
   const image = {
     url: imagePath,
     ...OG_IMAGE_SIZE,
-    alt: shareable && poll ? pollOgImageAlt(poll.title) : OG_IMAGE_ALT,
+    alt: shareable && poll && totals ? pollOgImageAlt(poll.title, totals) : OG_IMAGE_ALT,
   };
 
   return {

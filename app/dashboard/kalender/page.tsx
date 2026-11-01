@@ -1,4 +1,3 @@
-import { headers } from 'next/headers';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { PageHeader } from '@/components/page-header';
@@ -17,14 +16,6 @@ export const metadata = buildPageMetadata({
   canonicalPath: '/dashboard/kalender',
 });
 
-async function resolveRequestOrigin(): Promise<string> {
-  const headerList = await headers();
-  const host = headerList.get('x-forwarded-host') ?? headerList.get('host');
-  const proto = headerList.get('x-forwarded-proto') ?? 'https';
-  if (host) return `${proto}://${host}`;
-  return resolveKalenderSiteOrigin();
-}
-
 export default async function KalenderPage() {
   let events: ReturnType<typeof toKalenderEventDto>[] = [];
   try {
@@ -34,7 +25,7 @@ export default async function KalenderPage() {
     console.error('Error fetching calendar hearings:', error);
   }
 
-  const origin = await resolveRequestOrigin();
+  const origin = resolveKalenderSiteOrigin();
   const icsHttpsUrl = `${origin}${routes.horingerIcs}`;
   const webcalUrl = icsHttpsUrl.replace(/^https:/, 'webcal:').replace(/^http:/, 'webcal:');
 

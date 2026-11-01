@@ -24,25 +24,30 @@ export default function HearingCommentForm({
     setSubmitting(true);
     setError('');
 
-    const res = await fetch('/api/hearings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        stortinget_hearing_id: stortingetHearingId,
-        body: body.trim(),
-      }),
-    });
+    try {
+      const res = await fetch('/api/hearings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stortinget_hearing_id: stortingetHearingId,
+          body: body.trim(),
+        }),
+      });
 
-    const data = await res.json().catch(() => ({}));
-    setSubmitting(false);
+      const data = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-      setError(data.error || 'Kunne ikke publisere innspillet. Prøv igjen.');
-      return;
+      if (!res.ok) {
+        setError(data.error || 'Kunne ikke publisere innspillet. Prøv igjen.');
+        return;
+      }
+
+      setBody('');
+      router.refresh();
+    } catch {
+      setError('Kunne ikke publisere innspillet. Prøv igjen.');
+    } finally {
+      setSubmitting(false);
     }
-
-    setBody('');
-    router.refresh();
   };
 
   if (!user) {

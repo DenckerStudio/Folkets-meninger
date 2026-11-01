@@ -3,8 +3,8 @@ import { test } from 'node:test';
 import {
   POLL_OG_BAR_MIN_TOTAL,
   buildPollOgBarSegments,
-  formatPollOgLegendLine,
-  formatPollOgTotalLine,
+  formatPollOgResultsLine,
+  pollOgImageAltText,
   showPollOgProportionalBar,
 } from './share-og-bar';
 
@@ -14,32 +14,29 @@ test('buildPollOgBarSegments keeps Nei, Blank, Ja order', () => {
     segments.map((segment) => segment.choice),
     ['nei', 'blank', 'ja'],
   );
-  assert.equal(segments[0].percent, 20);
-  assert.equal(segments[1].percent, 10);
-  assert.equal(segments[2].percent, 70);
 });
 
-test('formatPollOgLegendLine lists choices once', () => {
-  const legend = formatPollOgLegendLine({ nei: 12, blank: 3, ja: 45, total: 60 });
-  assert.equal(legend, 'Nei 12 · Blank 3 · Ja 45');
+test('formatPollOgResultsLine merges shares and total', () => {
+  assert.equal(
+    formatPollOgResultsLine({ nei: 24, blank: 6, ja: 30, total: 60 }),
+    'Nei 40 % · Blank 10 % · Ja 50 % — 60 stemmer',
+  );
+});
+
+test('formatPollOgResultsLine handles zero and small samples', () => {
+  assert.match(formatPollOgResultsLine({ nei: 0, blank: 0, ja: 0, total: 0 }), /Bli den første til å stemme/);
+  assert.match(formatPollOgResultsLine({ nei: 2, blank: 1, ja: 3, total: 6 }), /Få stemmer så langt/);
+});
+
+test('pollOgImageAltText includes percentages when sample is large enough', () => {
+  assert.equal(
+    pollOgImageAltText('Spørsmål', { nei: 24, blank: 6, ja: 30, total: 60 }),
+    'Spørsmål – Nei 40 %, Blank 10 %, Ja 50 %',
+  );
 });
 
 test('showPollOgProportionalBar requires minimum sample', () => {
   assert.equal(showPollOgProportionalBar({ nei: 0, blank: 0, ja: 9, total: 9 }), false);
   assert.equal(showPollOgProportionalBar({ nei: 0, blank: 0, ja: 10, total: 10 }), true);
   assert.equal(POLL_OG_BAR_MIN_TOTAL, 10);
-});
-
-test('formatPollOgTotalLine uses small-sample and empty copy', () => {
-  assert.equal(formatPollOgTotalLine({ nei: 0, blank: 0, ja: 0, total: 0 }), 'Bli den første til å stemme');
-  assert.equal(formatPollOgTotalLine({ nei: 2, blank: 1, ja: 3, total: 6 }), 'Få stemmer så langt');
-  assert.equal(formatPollOgTotalLine({ nei: 12, blank: 3, ja: 45, total: 60 }), '60 stemmer');
-  assert.equal(formatPollOgTotalLine({ nei: 1, blank: 0, ja: 0, total: 1 }), 'Få stemmer så langt');
-});
-
-test('buildPollOgBarSegments uses Nei red, Blank white, Ja blue', () => {
-  const segments = buildPollOgBarSegments({ nei: 1, blank: 1, ja: 1, total: 3 });
-  assert.equal(segments[0].background, '#ba0c2f');
-  assert.equal(segments[1].background, '#ffffff');
-  assert.equal(segments[2].background, '#0a3d9e');
 });

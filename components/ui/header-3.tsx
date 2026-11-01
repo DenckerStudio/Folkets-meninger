@@ -46,7 +46,11 @@ export function Header() {
     >
       <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link href={logoHref} className="rounded-md p-1 transition-opacity hover:opacity-90" aria-label="Gå til forsiden">
+          <Link
+            href={logoHref}
+            className="rounded-md p-1 transition-opacity hover:opacity-90"
+            aria-label={logoHref === routes.home ? 'Gå til forsiden' : 'Gå til Utforsk'}
+          >
             <FolketsMeningerLogo />
           </Link>
           {!inDashboard ? (
@@ -96,13 +100,15 @@ export function Header() {
                 <LogIn className="size-4" aria-hidden />
                 <span className="hidden min-[380px]:inline">Logg inn</span>
               </Button>
-              <Button
-                nativeButton={false}
-                className={cn(touchTargetLinkClass, 'hidden h-11 px-4 sm:inline-flex')}
-                render={<Link href={loginHref} />}
-              >
-                Kom i gang
-              </Button>
+              {inDashboard ? null : (
+                <Button
+                  nativeButton={false}
+                  className={cn(touchTargetLinkClass, 'hidden h-11 px-4 sm:inline-flex')}
+                  render={<Link href={loginHref} />}
+                >
+                  Kom i gang
+                </Button>
+              )}
             </>
           )}
           {inDashboard ? (

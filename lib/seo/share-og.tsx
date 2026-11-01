@@ -50,11 +50,13 @@ export function clampOgText(value: string, max: number): string {
   return `${(lastSpace > 20 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
 
+const OG_BODY_MIN_PX = 28;
+
 function titleFontSize(length: number): number {
-  if (length <= 50) return 66;
-  if (length <= 90) return 56;
-  if (length <= 130) return 48;
-  return 42;
+  if (length <= 50) return 52;
+  if (length <= 90) return 48;
+  if (length <= 130) return 44;
+  return 40;
 }
 
 /** 1200×630 Folkets Meninger card for sak / mening links (same visual family as the poll card). */
@@ -96,8 +98,8 @@ export async function renderShareOgImage(
               padding: '8px 20px',
               borderRadius: 999,
               background: 'rgba(255,255,255,0.14)',
-              fontSize: 22,
-              fontWeight: 600,
+              fontSize: OG_BODY_MIN_PX,
+              fontWeight: 700,
             }}
           >
             {input.eyebrow}
@@ -116,7 +118,7 @@ export async function renderShareOgImage(
                       display: 'flex',
                       padding: '6px 18px',
                       borderRadius: 999,
-                      fontSize: 22,
+                      fontSize: OG_BODY_MIN_PX,
                       fontWeight: 700,
                       background: style.background,
                       color: style.color,
@@ -144,7 +146,7 @@ export async function renderShareOgImage(
               style={{
                 display: 'flex',
                 marginTop: 18,
-                fontSize: 26,
+                fontSize: OG_BODY_MIN_PX,
                 lineHeight: 1.35,
                 color: 'rgba(255,255,255,0.82)',
                 maxWidth: 1000,
@@ -156,7 +158,7 @@ export async function renderShareOgImage(
         </div>
 
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', fontSize: 22, color: 'rgba(255,255,255,0.72)' }}>
+          <div style={{ display: 'flex', fontSize: OG_BODY_MIN_PX, color: 'rgba(255,255,255,0.72)' }}>
             {input.footer}
           </div>
           {stats.length > 0 ? (
@@ -171,7 +173,7 @@ export async function renderShareOgImage(
                     padding: '10px 18px',
                     borderRadius: 16,
                     background: 'rgba(255,255,255,0.1)',
-                    fontSize: 24,
+                    fontSize: OG_BODY_MIN_PX,
                     fontWeight: 700,
                   }}
                 >

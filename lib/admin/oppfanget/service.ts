@@ -21,6 +21,9 @@ import type {
   OppfangetScale,
   OppfangetSourceRow,
 } from '@/lib/admin/oppfanget/types';
+import { normalizeSeenAtRange } from '@/lib/admin/oppfanget/format-seen-dates';
+import { sortOppfangetSources } from '@/lib/admin/oppfanget/source-display';
+import type { OppfangetSourceType } from '@/lib/admin/oppfanget/types';
 import { getServiceSupabase } from '@/lib/supabase';
 
 type ClusterRow = {
@@ -44,7 +47,15 @@ type SourceRow = {
   publisher: string | null;
   signal_only: boolean;
   title: string | null;
+  source_type: string | null;
 };
+
+const SOURCE_TYPES: OppfangetSourceType[] = ['news_rss', 'reddit', 'petition', 'searxng'];
+
+function parseSourceType(raw: string | null): OppfangetSourceType | null {
+  if (!raw) return null;
+  return (SOURCE_TYPES as string[]).includes(raw) ? (raw as OppfangetSourceType) : null;
+}
 
 type PollRow = {
   id: string;
@@ -82,13 +93,16 @@ export function mapClusterToRow(
   sources: SourceRow[],
   pollStatus: string | null,
 ): OppfangetRow {
-  const sourceRows: OppfangetSourceRow[] = sources.map((s) => ({
-    id: s.id,
-    url: s.url_canonical,
-    publisher: s.publisher,
-    signalOnly: s.signal_only,
-    title: s.title,
-  }));
+  const sourceRows: OppfangetSourceRow[] = sortOppfangetSources(
+    sources.map((s) => ({
+      id: s.id,
+      url: s.url_canonical,
+      publisher: s.publisher,
+      signalOnly: s.signal_only,
+      title: s.title,
+      sourceType: parseSourceType(s.source_type),
+    })),
+  );
   const sourcesSignalOnly = sourceRows.length > 0 && sourceRows.every((s) => s.signalOnly);
   const hasNonSignalSource = sourceRows.some((s) => !s.signalOnly);
   const isSignal = inferIsSignalRow({
@@ -98,6 +112,8 @@ export function mapClusterToRow(
     hasNonSignalSource,
   });
 
+  const seen = normalizeSeenAtRange(cluster.first_seen_at, cluster.last_seen_at);
+
   return {
     id: cluster.id,
     title: cluster.action_name,
@@ -106,8 +122,8 @@ export function mapClusterToRow(
     displayType: mapActionTypeToDisplayType(cluster.action_type, { isSignal }),
     displayStatus: mapClusterAndPollToDisplayStatus(cluster.status, pollStatus),
     sources: sourceRows,
-    firstSeenAt: cluster.first_seen_at,
-    lastSeenAt: cluster.last_seen_at,
+    firstSeenAt: seen.firstSeenAt,
+    lastSeenAt: seen.lastSeenAt,
     scale: parseBestScale(cluster.best_scale),
     confidence: cluster.max_confidence,
     sensitive: Boolean(cluster.sensitive_category),
@@ -179,7 +195,7 @@ export async function listOppfangetForAdmin(
   if (clusterIds.length > 0) {
     const { data: sourceData, error: sourceError } = await service
       .from('action_sources')
-      .select('id, cluster_id, url_canonical, publisher, signal_only, title')
+      .select('id, cluster_id, url_canonical, publisher, signal_only, title, source_type')
       .in('cluster_id', clusterIds);
 
     if (sourceError && !isMissingTableError(sourceError)) {
@@ -222,6 +238,8 @@ export async function listOppfangetForAdmin(
       publisher: s.publisher,
       signalOnly: s.signalOnly,
       title: s.title,
+      sourceType: s.sourceType,
+      url: s.url,
     })),
     firstSeenAt: row.firstSeenAt,
     lastSeenAt: row.lastSeenAt,
