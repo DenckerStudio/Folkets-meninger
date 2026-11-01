@@ -9,6 +9,7 @@ import {
   isPublicDashboardPolitikerPath,
   isPublicDashboardSakPath,
   isPublicDashboardShareImagePath,
+  isPublicShareImagePath,
   isPublicDashboardUtforskPath,
   routes,
 } from '@/lib/routes';
@@ -46,7 +47,7 @@ export async function middleware(request: NextRequest) {
     return rateLimited;
   }
 
-  if (pathname.startsWith('/api/') || isPublicDashboardShareImagePath(pathname)) {
+  if (pathname.startsWith('/api/') || isPublicShareImagePath(pathname)) {
     return NextResponse.next();
   }
 

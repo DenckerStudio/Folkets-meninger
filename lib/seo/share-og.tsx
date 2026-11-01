@@ -1,13 +1,18 @@
 import { ImageResponse } from 'next/og';
+import { loadOgFonts, OG_FONT_FAMILY } from '@/lib/seo/og-fonts';
 
 export const SHARE_OG_SIZE = { width: 1200, height: 630 } as const;
 export const SHARE_OG_CONTENT_TYPE = 'image/png';
 
-/** Content images: a crawler refetch within the hour is fine; CDNs may serve stale while refreshing. */
-export const SHARE_OG_CACHE_CONTROL =
-  'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800';
+/** Live share cards (poll results, sak/mening): refetch every few minutes. */
+export const SHARE_OG_LIVE_CACHE_CONTROL =
+  'public, max-age=300, s-maxage=300, stale-while-revalidate=600';
+/** @deprecated use SHARE_OG_LIVE_CACHE_CONTROL */
+export const SHARE_OG_CACHE_CONTROL = SHARE_OG_LIVE_CACHE_CONTROL;
 /** Fallback after a data error: keep it short so the real card replaces it soon. */
 export const SHARE_OG_FALLBACK_CACHE_CONTROL = 'public, max-age=300, s-maxage=300';
+
+export const SHARE_OG_REVALIDATE_SECONDS = 300;
 
 export type ShareOgPill = {
   label: string;
@@ -53,10 +58,11 @@ function titleFontSize(length: number): number {
 }
 
 /** 1200×630 Folkets Meninger card for sak / mening links (same visual family as the poll card). */
-export function renderShareOgImage(
+export async function renderShareOgImage(
   input: ShareOgInput,
-  cacheControl: string = SHARE_OG_CACHE_CONTROL,
-): ImageResponse {
+  cacheControl: string = SHARE_OG_LIVE_CACHE_CONTROL,
+): Promise<ImageResponse> {
+  const fonts = await loadOgFonts();
   const title = clampOgText(input.title, 160);
   const description =
     input.description && title.length <= 110 ? clampOgText(input.description, 150) : '';
@@ -73,7 +79,7 @@ export function renderShareOgImage(
           flexDirection: 'column',
           justifyContent: 'space-between',
           padding: '60px 64px',
-          fontFamily: 'sans-serif',
+          fontFamily: OG_FONT_FAMILY,
           color: '#ffffff',
           background: 'linear-gradient(135deg, #001a4a 0%, #00205b 55%, #0a3d9e 100%)',
         }}
@@ -181,13 +187,14 @@ export function renderShareOgImage(
     ),
     {
       ...SHARE_OG_SIZE,
+      fonts,
       headers: { 'cache-control': cacheControl },
     },
   );
 }
 
 /** Branded card used when the content lookup fails (Stortinget / database unavailable). */
-export function renderShareOgFallback(eyebrow: string): ImageResponse {
+export async function renderShareOgFallback(eyebrow: string): Promise<ImageResponse> {
   return renderShareOgImage(
     {
       eyebrow,

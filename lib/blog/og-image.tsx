@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { SITE_NAME } from '@/lib/seo/metadata';
+import { loadOgFonts, OG_FONT_FAMILY } from '@/lib/seo/og-fonts';
 
 export const BLOG_OG_SIZE = { width: 1200, height: 630 };
 export const BLOG_OG_CONTENT_TYPE = 'image/png';
@@ -10,14 +11,15 @@ function truncate(text: string, max: number): string {
   return `${normalized.slice(0, max - 1).trimEnd()}…`;
 }
 
-export function renderBlogCmsUnavailableOgImage() {
+export async function renderBlogCmsUnavailableOgImage() {
   return renderBlogPostOgImage(
     'Bloggen er midlertidig utilgjengelig',
     'Vi klarte ikke å hente artikkelen fra redaksjonssystemet akkurat nå.',
   );
 }
 
-export function renderBlogPostOgImage(title: string, excerpt: string) {
+export async function renderBlogPostOgImage(title: string, excerpt: string) {
+  const fonts = await loadOgFonts();
   return new ImageResponse(
     (
       <div
@@ -30,6 +32,7 @@ export function renderBlogPostOgImage(title: string, excerpt: string) {
           backgroundColor: '#00205b',
           padding: '72px',
           color: '#ffffff',
+          fontFamily: OG_FONT_FAMILY,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -61,6 +64,6 @@ export function renderBlogPostOgImage(title: string, excerpt: string) {
         <div style={{ fontSize: 26, color: '#f3b6c4' }}>folkets-meninger.no/blogg</div>
       </div>
     ),
-    { ...BLOG_OG_SIZE },
+    { ...BLOG_OG_SIZE, fonts },
   );
 }

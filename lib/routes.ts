@@ -90,9 +90,21 @@ export function isPublicDashboardAvstemningPath(pathname: string): boolean {
  * these without cookies, so they must never be login-gated.
  */
 export function isPublicDashboardShareImagePath(pathname: string): boolean {
+  if (pathname === '/dashboard/utforsk/reels/opengraph-image') {
+    return true;
+  }
   return /^\/dashboard\/(sak|avstemninger|folkets-meninger)\/[^/]+\/(opengraph|twitter)-image(-[\w-]+)?$/.test(
     pathname,
   );
+}
+
+/** OG/Twitter image routes under `/del/` (public share widget). */
+export function isPublicDelShareImagePath(pathname: string): boolean {
+  return /^\/del\/[^/]+\/(opengraph|twitter)-image$/.test(pathname);
+}
+
+export function isPublicShareImagePath(pathname: string): boolean {
+  return isPublicDashboardShareImagePath(pathname) || isPublicDelShareImagePath(pathname);
 }
 
 /** Public Utforsk (saker + system Reels) — guests can read; voting requires login. */
