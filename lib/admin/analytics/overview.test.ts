@@ -6,8 +6,18 @@ import {
 } from '@/lib/admin/analytics/overview';
 
 assert.equal(isMissingAnalyticsRpc({ code: 'PGRST202' }), true);
-assert.equal(isMissingAnalyticsRpc({ message: 'function does not exist' }), true);
-assert.equal(isMissingAnalyticsRpc({ message: '42883: no function matches' }), true);
+assert.equal(isMissingAnalyticsRpc({ code: '42883', message: 'no function matches' }), true);
+assert.equal(
+  isMissingAnalyticsRpc({ message: 'function admin_get_analytics_overview() does not exist' }),
+  true,
+);
+assert.equal(
+  isMissingAnalyticsRpc({
+    code: '42P01',
+    message: 'relation "analytics_events" does not exist',
+  }),
+  false,
+);
 assert.equal(isMissingAnalyticsRpc({ code: '22023', message: 'bad input' }), false);
 assert.equal(isMissingAnalyticsRpc(null), false);
 

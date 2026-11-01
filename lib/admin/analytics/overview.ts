@@ -37,14 +37,14 @@ type PostgrestLikeError = {
   message?: string;
 };
 
+const missingRpcFunctionMessage = /function .* does not exist/i;
+
 export function isMissingAnalyticsRpc(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const row = error as PostgrestLikeError;
-  if (row.code === 'PGRST202') return true;
+  if (row.code === 'PGRST202' || row.code === '42883') return true;
   const message = typeof row.message === 'string' ? row.message : '';
-  if (message.includes('does not exist')) return true;
-  if (message.includes('42883')) return true;
-  return false;
+  return missingRpcFunctionMessage.test(message);
 }
 
 function asNumber(value: unknown): number {
