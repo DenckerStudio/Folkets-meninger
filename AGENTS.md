@@ -263,6 +263,13 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 
 - Admin: `public.user_roles` + `is_admin()` via `lib/admin/gate.ts`. Hub:
   `/dashboard/admin` (Appens fremtid, Research, Reels, Vurder, Statistikk, Brukere, Stemme+).
+  **Statistikk** (`/dashboard/admin/statistikk`): visitor counts, user lifecycle (registered,
+  signed in 30d, inactive), blog paths, personal share links. First-party `analytics_events` and
+  `share_links`; RPCs are service_role-only (`insert_analytics_event`, `admin_get_user_metrics`,
+  `admin_get_share_link_stats`, `admin_get_analytics_overview`, `create_share_link`,
+  `list_my_share_links`). Migrations `20261101120000`–`20261101140000` are manual — until applied,
+  the page shows an honest empty state. Public `/l/{code}` redirects and logs a click. Optional
+  self-hosted Umami (`infra/coolify/umami.md`) is off unless `NEXT_PUBLIC_ANALYTICS_ENABLED=true`.
   **Vurder** (`/dashboard/admin/vurder?fane=reels|blogg|sammendrag`) samler vurdering av
   reel-utkast, bloggutkast og AI-sammendrag. Etter publiser/arkiver av en reel blir
   tittel, beskrivelse og kilder stående i tilbakemeldingskortet.
