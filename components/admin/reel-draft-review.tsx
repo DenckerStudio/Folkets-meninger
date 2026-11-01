@@ -18,8 +18,10 @@ import { ReelContentPreview } from '@/components/admin/reel-content-preview';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import type { ContentFeedbackVerdict } from '@/lib/content-feedback/types';
 import { routes } from '@/lib/routes';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { DRAFT_RESTORE_SUCCESS_MESSAGE } from '@/lib/admin/draft-expiry';
 import type { PollRecord } from '@/lib/polls/types';
+import { cn } from '@/lib/utils';
 
 type DraftsResponse = { drafts?: PollRecord[] };
 type ReviewedReel = {
@@ -136,7 +138,7 @@ export function ReelDraftReview() {
   const visibleDrafts = drafts.filter((poll) => poll.id !== reviewed?.poll.id);
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <DraftReviewQueueToggle queue={queue} onQueueChange={setQueue} className="max-w-md" />
       <p className="text-sm text-muted-foreground">
         {queue === 'pending'
@@ -190,7 +192,7 @@ export function ReelDraftReview() {
             <li
               key={poll.id}
               id={`reel-draft-${poll.id}`}
-              className="rounded-2xl border border-border bg-card p-4"
+              className="min-w-0 rounded-2xl border border-border bg-card p-4"
             >
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
                 <div className="min-w-0 flex-1">
@@ -215,12 +217,15 @@ export function ReelDraftReview() {
               <div className="mt-4 space-y-2">
                 {queue === 'pending' ? (
                   <>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                       <button
                         type="button"
                         disabled={pending}
                         onClick={() => patchPoll(poll, 'publish')}
-                        className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+                        className={cn(
+                          'inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
+                          VURDER_FOCUS_RING,
+                        )}
                       >
                         Publiser
                       </button>
@@ -228,7 +233,10 @@ export function ReelDraftReview() {
                         type="button"
                         disabled={pending}
                         onClick={() => patchPoll(poll, 'archive')}
-                        className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+                        className={cn(
+                          'inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50 sm:w-auto',
+                          VURDER_FOCUS_RING,
+                        )}
                       >
                         Arkiver
                       </button>
@@ -251,15 +259,18 @@ export function ReelDraftReview() {
                     ) : null}
                   </>
                 ) : (
-                  <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => patchPoll(poll, 'restore')}
-                    className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
-                  >
-                    Gjenopprett
-                  </button>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => patchPoll(poll, 'restore')}
+                      className={cn(
+                        'inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
+                        VURDER_FOCUS_RING,
+                      )}
+                    >
+                      Gjenopprett
+                    </button>
                   </div>
                 )}
               </div>
@@ -268,10 +279,16 @@ export function ReelDraftReview() {
         </ul>
       ) : null}
       <div className="flex flex-wrap gap-4 text-sm">
-        <Link href={routes.adminReels} className="font-medium text-brand hover:underline">
+        <Link
+          href={routes.adminReels}
+          className={cn('inline-flex min-h-11 items-center font-medium text-brand hover:underline', VURDER_FOCUS_RING)}
+        >
           Generering og kø
         </Link>
-        <Link href={routes.utforsk} className="font-medium text-brand hover:underline">
+        <Link
+          href={routes.utforsk}
+          className={cn('inline-flex min-h-11 items-center font-medium text-brand hover:underline', VURDER_FOCUS_RING)}
+        >
           Offentlig Reels-feed
         </Link>
       </div>

@@ -15,6 +15,7 @@ import type {
   ContentFeedbackType,
   ContentFeedbackVerdict,
 } from '@/lib/content-feedback/types';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { cn } from '@/lib/utils';
 
 type AspectMark = '+' | '-';
@@ -335,7 +336,7 @@ export function ContentFeedbackPanel({
   return (
     <section
       className={cn(
-        'rounded-2xl border border-brand/25 bg-brand/5 p-4 sm:p-5',
+        'min-w-0 rounded-2xl border border-brand/25 bg-brand/5 p-4 sm:p-5',
         className,
       )}
       aria-labelledby={titleId}
@@ -394,7 +395,7 @@ export function ContentFeedbackPanel({
             Dom{' '}
             <span className="text-xs font-normal text-muted-foreground">(påkrevd)</span>
           </p>
-          <div className="flex flex-wrap gap-2" role="group" aria-labelledby={verdictGroupId}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap" role="group" aria-labelledby={verdictGroupId}>
             {(
               [
                 { value: 'approve' as const, label: 'Godkjenn' },
@@ -410,7 +411,8 @@ export function ContentFeedbackPanel({
                   setVerdictError('');
                 }}
                 className={cn(
-                  'inline-flex min-h-11 items-center rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors',
+                  'inline-flex min-h-11 w-full items-center justify-center rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors sm:w-auto',
+                  VURDER_FOCUS_RING,
                   verdict === option.value
                     ? 'border-brand bg-brand/15 text-brand'
                     : 'border-border bg-card text-muted-foreground hover:bg-muted/50',
@@ -431,7 +433,10 @@ export function ContentFeedbackPanel({
         <button
           type="button"
           onClick={() => setAspectsExpanded(true)}
-          className="mt-4 inline-flex min-h-11 w-full items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted/40"
+          className={cn(
+            'mt-4 inline-flex min-h-11 w-full items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted/40',
+            VURDER_FOCUS_RING,
+          )}
           aria-expanded={false}
         >
           Merk deler (valgfritt)
@@ -452,7 +457,10 @@ export function ContentFeedbackPanel({
             <button
               type="button"
               onClick={() => setAspectsExpanded(false)}
-              className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              className={cn(
+                'inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground',
+                VURDER_FOCUS_RING,
+              )}
               aria-expanded={true}
             >
               <ChevronDown className="h-4 w-4 rotate-180" aria-hidden />
@@ -492,6 +500,7 @@ export function ContentFeedbackPanel({
                       onClick={() => toggleAspectMark(key, '+')}
                       className={cn(
                         'inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border',
+                        VURDER_FOCUS_RING,
                         mark === '+'
                           ? 'border-brand bg-brand/10 text-brand'
                           : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted/60',
@@ -507,6 +516,7 @@ export function ContentFeedbackPanel({
                       onClick={() => toggleAspectMark(key, '-')}
                       className={cn(
                         'inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border',
+                        VURDER_FOCUS_RING,
                         mark === '-'
                           ? 'border-destructive/40 bg-destructive/10 text-destructive'
                           : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted/60',
@@ -537,6 +547,7 @@ export function ContentFeedbackPanel({
                   onClick={() => toggleReason(item.tag)}
                   className={cn(
                     'inline-flex min-h-11 items-center rounded-full border px-3 py-2 text-sm font-medium transition-colors',
+                    VURDER_FOCUS_RING,
                     active
                       ? 'border-brand bg-brand/15 text-brand'
                       : 'border-border bg-card text-muted-foreground hover:bg-muted/40',
@@ -579,7 +590,10 @@ export function ContentFeedbackPanel({
           <button
             type="button"
             onClick={onSkip}
-            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50"
+            className={cn(
+              'inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 sm:w-auto',
+              VURDER_FOCUS_RING,
+            )}
           >
             Lukk
           </button>
@@ -589,7 +603,10 @@ export function ContentFeedbackPanel({
           type="button"
           onClick={onSkip}
           disabled={skipDisabled}
-          className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+          className={cn(
+            'inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50 sm:w-auto',
+            VURDER_FOCUS_RING,
+          )}
         >
           Hopp over
         </button>
@@ -597,7 +614,10 @@ export function ContentFeedbackPanel({
           type="button"
           onClick={() => void save()}
           disabled={saveLocked || loadingExisting}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+          className={cn(
+            'inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
+            VURDER_FOCUS_RING,
+          )}
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
           Lagre tilbakemelding

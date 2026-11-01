@@ -11,6 +11,8 @@ import {
   type AiSummaryReviewSource,
 } from '@/lib/admin/ai-summary-review';
 import { routes } from '@/lib/routes';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
+import { cn } from '@/lib/utils';
 
 type SummariesResponse = {
   summaries?: AiSummaryReviewItem[];
@@ -32,7 +34,13 @@ function SummarySources({ sources, issueId }: { sources: AiSummaryReviewSource[]
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Kilder</p>
       <ul className="mt-1 space-y-1.5 text-sm">
         <li>
-          <Link href={routes.sak(issueId)} className="font-medium text-brand hover:underline">
+          <Link
+            href={routes.sak(issueId)}
+            className={cn(
+              'inline-flex min-h-11 items-center font-medium text-brand hover:underline',
+              VURDER_FOCUS_RING,
+            )}
+          >
             Stortingssak {issueId}
           </Link>
         </li>
@@ -45,7 +53,10 @@ function SummarySources({ sources, issueId }: { sources: AiSummaryReviewSource[]
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex max-w-full items-center gap-1 font-medium text-brand hover:underline"
+                  className={cn(
+                    'inline-flex max-w-full min-h-11 items-center gap-1 font-medium text-brand hover:underline',
+                    VURDER_FOCUS_RING,
+                  )}
                 >
                   <span className="min-w-0 wrap-anywhere">{source.title}</span>
                   <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -134,7 +145,7 @@ export function AiSummaryReview() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <p className="text-sm text-muted-foreground">
         Sammendrag vises her enten de er vurdert eller ikke. Nye saker får sammendrag etter
         hvert, og du kan vurdere dem når du vil. Ved avvisning settes saken i kø for ny
@@ -157,7 +168,7 @@ export function AiSummaryReview() {
         {items.map((item) => {
           const reviewLabel = summaryReviewLabel(item.reviewMark, item.reviewLookupOk);
           return (
-            <li key={item.issueId} className="rounded-2xl border border-border bg-card p-4">
+            <li key={item.issueId} className="min-w-0 rounded-2xl border border-border bg-card p-4">
               <SummaryPreview item={item} />
               {reviewLabel || item.updatedAt ? (
                 <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -191,7 +202,10 @@ export function AiSummaryReview() {
                   type="button"
                   disabled={pending}
                   onClick={() => setActiveId(item.issueId)}
-                  className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+                  className={cn(
+                    'inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
+                    VURDER_FOCUS_RING,
+                  )}
                 >
                   Vurder
                 </button>
