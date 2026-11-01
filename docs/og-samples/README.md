@@ -10,5 +10,7 @@ Generated with `OG_SAMPLE_DIR=docs/og-samples npx tsx scripts/render-og-samples.
 | `og-sample-poll-glyphs.png` | æøå ÆØÅ · … |
 | `og-sample-poll-long-title.png` | Lang tittel (2 linjer), uten ingress |
 | `og-sample-poll-long-title-few-votes.png` | Lang tittel + få stemmer |
+| `og-sample-poll-title-85-chars.png` | ~85–90 tegn tittel (2 linjer + …) |
 | `og-sample-poll-short-title-summary.png` | Kort tittel + ingress |
 | `og-sample-blog.png` | Blogg-kort |
+| `og-sample-sak.png` | Stortingssak-kort |

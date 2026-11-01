@@ -30,7 +30,14 @@ const TITLE_MAX_LINES = 2;
 /** Summary only when the title fits on a single line at max size. */
 const SUMMARY_TITLE_MAX_CHARS = 46;
 const CARD_PADDING_Y = 44;
-const CARD_PADDING_X = 56;
+const CARD_PADDING_X = 64;
+
+/** Muted bar fills when totals are below proportional threshold (no opacity on navy). */
+const LOW_SAMPLE_BAR_SEGMENT: Record<'nei' | 'blank' | 'ja', { background: string }> = {
+  nei: { background: '#7a3848' },
+  blank: { background: '#e8ecf4' },
+  ja: { background: '#4a6a9e' },
+};
 
 export function pollOgImageAlt(title: string, totals: PollTotals): string {
   return pollOgImageAltText(title, totals);
@@ -50,16 +57,26 @@ function titleFontSize(length: number): number {
   return 40;
 }
 
+/** Rough two-line capacity at card width (fallback if line-clamp ellipses poorly in Satori). */
+function maxPollTitleChars(fontSize: number): number {
+  if (fontSize >= OG_TITLE_MAX_PX) return 78;
+  if (fontSize >= 46) return 84;
+  return 96;
+}
+
 function titleBoxStyle(fontSize: number) {
-  const lineHeight = 1.12;
+  const size = Math.min(fontSize, OG_TITLE_MAX_PX);
+  const lineHeight = 1.2;
   return {
-    display: 'flex',
-    fontSize: Math.min(fontSize, OG_TITLE_MAX_PX),
+    display: '-webkit-box',
+    WebkitBoxOrient: 'vertical' as const,
+    WebkitLineClamp: TITLE_MAX_LINES,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    fontSize: size,
     fontWeight: 700,
     lineHeight,
     maxWidth: 1060,
-    maxHeight: Math.round(Math.min(fontSize, OG_TITLE_MAX_PX) * lineHeight * TITLE_MAX_LINES),
-    overflow: 'hidden' as const,
   };
 }
 
@@ -104,22 +121,24 @@ function pollResultsBar(totals: PollTotals) {
               />
             ))
         ) : (
-          segments.map((segment, index) => (
-            <div
-              key={segment.choice}
-              style={{
-                display: 'flex',
-                flex: 1,
-                height: '100%',
-                background: segment.background,
-                opacity: segment.choice === 'blank' ? 0.9 : 0.28,
-                ...(segment.choice === 'blank'
-                  ? { border: '2px solid rgba(255,255,255,0.55)' }
-                  : {}),
-                ...segmentSeparatorStyle(index === segments.length - 1),
-              }}
-            />
-          ))
+          segments.map((segment, index) => {
+            const lowStyle = LOW_SAMPLE_BAR_SEGMENT[segment.choice];
+            return (
+              <div
+                key={segment.choice}
+                style={{
+                  display: 'flex',
+                  flex: 1,
+                  height: '100%',
+                  background: lowStyle.background,
+                  ...(segment.choice === 'blank'
+                    ? { border: '2px solid rgba(255,255,255,0.55)' }
+                    : {}),
+                  ...segmentSeparatorStyle(index === segments.length - 1),
+                }}
+              />
+            );
+          })
         )}
       </div>
       <div style={{ display: 'flex', fontSize: OG_TEXT_MIN_PX, fontWeight: 700, lineHeight: 1.25 }}>
@@ -151,8 +170,9 @@ export async function renderPollShareOgImage(
   cacheControl: string = OG_IMAGE_CACHE_CONTROL,
 ): Promise<ImageResponse> {
   const fonts = await loadOgFonts();
-  const title = clampText(poll.title, 130);
-  const titleSize = titleFontSize(title.length);
+  const rawTitle = clampText(poll.title, 130);
+  const titleSize = titleFontSize(rawTitle.length);
+  const title = clampText(rawTitle, maxPollTitleChars(titleSize));
   const showSummary = title.length <= SUMMARY_TITLE_MAX_CHARS && Boolean(poll.neutralSummary);
   const summary = showSummary ? clampText(poll.neutralSummary, 88) : '';
 

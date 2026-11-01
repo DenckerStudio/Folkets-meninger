@@ -9,6 +9,7 @@ import type { PollRecord } from '@/lib/polls/types';
 (globalThis as typeof globalThis & { React: typeof React }).React = React;
 import { renderBlogPostOgImage } from '@/lib/blog/og-image';
 import { renderPollShareOgImage } from '@/lib/polls/share-og';
+import { renderShareOgImage } from '@/lib/seo/share-og';
 
 const outDir = process.env.OG_SAMPLE_DIR ?? '/workspace/docs/og-samples';
 
@@ -46,6 +47,10 @@ const basePoll: PollRecord = {
 
 const longTwoLineTitle =
   'Skal staten gå videre med omfattende endringer i skatte- og avgiftsregelverket for næringsliv og privatpersoner i hele landet, også i distriktene, på kort sikt?';
+
+/** ~87 tegn — tittelstørrelse 46px, to linjer + ellipsis uten å kappe descenders. */
+const title85To90Chars =
+  'Skal staten innføre nye avgiftsregler for næringsliv og privatpersoner i hele landet?';
 
 async function main() {
   mkdirSync(outDir, { recursive: true });
@@ -97,6 +102,14 @@ async function main() {
   );
 
   await savePng(
+    'og-sample-poll-title-85-chars.png',
+    await renderPollShareOgImage(
+      { ...basePoll, title: title85To90Chars, neutralSummary: 'Skjult ingress.' },
+      { nei: 12, blank: 3, ja: 45, total: 60 },
+    ),
+  );
+
+  await savePng(
     'og-sample-poll-short-title-summary.png',
     await renderPollShareOgImage(
       {
@@ -115,6 +128,20 @@ async function main() {
       'Grunnlovsforslag om uavhengig offentlig påtale',
       'Kort ingress med æøå for typografi.',
     ),
+  );
+
+  await savePng(
+    'og-sample-sak.png',
+    await renderShareOgImage({
+      eyebrow: 'Stortingssak',
+      title: 'Endringer i skatte- og avgiftsregelverket (2025–2026)',
+      description: 'Komité: Finans- og næringskomiteen',
+      pills: [
+        { label: 'Proposisjon', tone: 'neutral' },
+        { label: 'Under behandling', tone: 'positive' },
+      ],
+      footer: 'folkets-meninger.no · Hva mener du om saken?',
+    }),
   );
 
   console.log('all PNGs verified 1200×630');

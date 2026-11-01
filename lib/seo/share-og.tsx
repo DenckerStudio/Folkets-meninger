@@ -177,7 +177,17 @@ export async function renderShareOgImage(
                     fontWeight: 700,
                   }}
                 >
-                  <div style={{ display: 'flex', width: 14, height: 14, borderRadius: 999, background: stat.color }} />
+                  <div
+                    style={{
+                      display: 'flex',
+                      width: 14,
+                      height: 14,
+                      borderRadius: 999,
+                      background: stat.color,
+                      border: '2px solid #ffffff',
+                      boxSizing: 'border-box',
+                    }}
+                  />
                   <span>{stat.label}</span>
                   <span style={{ color: 'rgba(255,255,255,0.75)' }}>{stat.value}</span>
                 </div>
