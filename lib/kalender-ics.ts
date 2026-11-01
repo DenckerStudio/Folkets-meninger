@@ -1,4 +1,5 @@
 import type { KalenderEvent } from '@/lib/kalender-events';
+import { getSiteUrl } from '@/lib/seo/metadata';
 
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
@@ -97,15 +98,7 @@ export function buildHoringerIcs(events: KalenderEvent[], siteOrigin: string): s
 export const STORTINGET_HORINGER_ICS_URL =
   'https://www.stortinget.no/api/kalender/geticalhearings?languageCode=no';
 
-export function resolveKalenderSiteOrigin(requestUrl?: string): string {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
-  if (fromEnv) return fromEnv;
-  if (requestUrl) {
-    try {
-      return new URL(requestUrl).origin;
-    } catch {
-      /* ignore */
-    }
-  }
-  return 'https://www.folkets-meninger.no';
+/** Canonical origin for calendar subscribe links. Never derived from request headers. */
+export function resolveKalenderSiteOrigin(): string {
+  return getSiteUrl();
 }
