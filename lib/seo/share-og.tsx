@@ -85,7 +85,7 @@ export async function renderShareOgImage(
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ display: 'flex', fontSize: 34, fontWeight: 800, letterSpacing: -1 }}>
+          <div style={{ display: 'flex', fontSize: 34, fontWeight: 700, letterSpacing: -1 }}>
             <span>Folkets&nbsp;</span>
             <span style={{ color: '#ff9fb1' }}>Meninger</span>
           </div>
@@ -132,7 +132,7 @@ export async function renderShareOgImage(
             style={{
               display: 'flex',
               fontSize: titleFontSize(title.length),
-              fontWeight: 800,
+              fontWeight: 700,
               lineHeight: 1.12,
               maxWidth: 1060,
             }}

@@ -1,6 +1,5 @@
 import { ImageResponse } from 'next/og';
 import { pollBallotAltTextPhrase } from '@/lib/polls/ballot-buttons';
-import { pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollRecord, PollTotals } from '@/lib/polls/types';
 import { loadOgFonts, OG_FONT_FAMILY } from '@/lib/seo/og-fonts';
 import {
@@ -8,13 +7,27 @@ import {
   SHARE_OG_LIVE_CACHE_CONTROL,
   SHARE_OG_REVALIDATE_SECONDS,
 } from '@/lib/seo/share-og';
-import { buildPollOgBarSegments, formatPollOgVoteSummary } from '@/lib/polls/share-og-bar';
+import {
+  buildPollOgBarSegments,
+  formatPollOgLegendLine,
+  formatPollOgTotalLine,
+  showPollOgProportionalBar,
+} from '@/lib/polls/share-og-bar';
+
+export const POLL_OG_CTA_LINE = 'Stem på folkets-meninger.no';
 
 export const OG_IMAGE_SIZE = { width: 1200, height: 630 } as const;
 export const OG_IMAGE_CONTENT_TYPE = 'image/png';
 export const OG_IMAGE_ALT = `Folkets Meninger med spørsmålet og svarene ${pollBallotAltTextPhrase()}`;
 export const OG_IMAGE_REVALIDATE_SECONDS = SHARE_OG_REVALIDATE_SECONDS;
 export const OG_IMAGE_CACHE_CONTROL = SHARE_OG_LIVE_CACHE_CONTROL;
+
+const OG_TEXT_MIN_PX = 28;
+const BAR_OUTLINE = '2px solid rgba(255,255,255,0.55)';
+const BAR_SEGMENT_GAP = '2px solid rgba(255,255,255,0.65)';
+const TITLE_MAX_LINES = 3;
+/** Summary only when the title is short enough to leave vertical room. */
+const SUMMARY_TITLE_MAX_CHARS = 72;
 
 export function pollOgImageAlt(title: string): string {
   return `Spørsmål: ${title.trim()}. Svar ${pollBallotAltTextPhrase()} på Folkets Meninger.`;
@@ -34,9 +47,26 @@ function titleFontSize(length: number): number {
   return 44;
 }
 
+function titleBoxStyle(fontSize: number) {
+  const lineHeight = 1.15;
+  return {
+    display: 'flex',
+    fontSize,
+    fontWeight: 700,
+    lineHeight,
+    maxWidth: 1040,
+    maxHeight: Math.round(fontSize * lineHeight * TITLE_MAX_LINES),
+    overflow: 'hidden' as const,
+  };
+}
+
+function segmentSeparatorStyle(isLast: boolean) {
+  return isLast ? {} : { borderRight: BAR_SEGMENT_GAP };
+}
+
 function pollResultsBar(totals: PollTotals) {
   const segments = buildPollOgBarSegments(totals);
-  const hasVotes = totals.total > 0;
+  const proportional = showPollOgProportionalBar(totals);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -47,11 +77,11 @@ function pollResultsBar(totals: PollTotals) {
           height: 52,
           borderRadius: 16,
           overflow: 'hidden',
-          border: '2px solid rgba(255,255,255,0.35)',
+          border: BAR_OUTLINE,
           background: 'rgba(255,255,255,0.08)',
         }}
       >
-        {hasVotes ? (
+        {proportional ? (
           segments
             .filter((segment) => segment.percent > 0)
             .map((segment, index, visible) => (
@@ -66,19 +96,12 @@ function pollResultsBar(totals: PollTotals) {
                   ...(segment.choice === 'blank'
                     ? { border: '2px solid rgba(255,255,255,0.55)' }
                     : {}),
-                  ...(index < visible.length - 1
-                    ? {
-                        borderRight:
-                          segment.choice === 'blank'
-                            ? '2px solid rgba(255,255,255,0.55)'
-                            : '1px solid rgba(255,255,255,0.25)',
-                      }
-                    : {}),
+                  ...segmentSeparatorStyle(index === visible.length - 1),
                 }}
               />
             ))
         ) : (
-          segments.map((segment) => (
+          segments.map((segment, index) => (
             <div
               key={segment.choice}
               style={{
@@ -86,49 +109,24 @@ function pollResultsBar(totals: PollTotals) {
                 flex: 1,
                 height: '100%',
                 background: segment.background,
-                opacity: segment.choice === 'blank' ? 1 : 0.35,
+                opacity: segment.choice === 'blank' ? 0.9 : 0.28,
                 ...(segment.choice === 'blank'
                   ? { border: '2px solid rgba(255,255,255,0.55)' }
                   : {}),
-                ...(segment.choice !== 'ja'
-                  ? { borderRight: '1px solid rgba(255,255,255,0.25)' }
-                  : {}),
+                ...segmentSeparatorStyle(index === segments.length - 1),
               }}
             />
           ))
         )}
       </div>
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 18,
-          fontSize: 24,
-          fontWeight: 700,
-        }}
-      >
-        {segments.map((segment) => (
-          <div key={segment.choice} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div
-              style={{
-                display: 'flex',
-                width: 16,
-                height: 16,
-                borderRadius: 999,
-                background: segment.background,
-                ...(segment.choice === 'blank'
-                  ? { border: '2px solid rgba(255,255,255,0.5)' }
-                  : {}),
-              }}
-            />
-            <span>
-              {pollChoiceLabel(segment.choice)} {segment.count}
-            </span>
-          </div>
-        ))}
+      <div style={{ display: 'flex', fontSize: OG_TEXT_MIN_PX, fontWeight: 700 }}>
+        {formatPollOgLegendLine(totals)}
       </div>
-      <div style={{ display: 'flex', fontSize: 22, color: 'rgba(255,255,255,0.72)' }}>
-        {formatPollOgVoteSummary(totals)}
+      <div style={{ display: 'flex', fontSize: OG_TEXT_MIN_PX, color: 'rgba(255,255,255,0.82)' }}>
+        {formatPollOgTotalLine(totals)}
+      </div>
+      <div style={{ display: 'flex', fontSize: OG_TEXT_MIN_PX, fontWeight: 700, color: '#ff9fb1' }}>
+        {POLL_OG_CTA_LINE}
       </div>
     </div>
   );
@@ -146,8 +144,9 @@ export async function renderPollShareOgImage(
 ): Promise<ImageResponse> {
   const fonts = await loadOgFonts();
   const title = clampText(poll.title, 150);
-  const showSummary = title.length <= 90 && Boolean(poll.neutralSummary);
-  const summary = showSummary ? clampText(poll.neutralSummary, 140) : '';
+  const titleSize = titleFontSize(title.length);
+  const showSummary = title.length <= SUMMARY_TITLE_MAX_CHARS && Boolean(poll.neutralSummary);
+  const summary = showSummary ? clampText(poll.neutralSummary, 100) : '';
 
   return new ImageResponse(
     (
@@ -165,7 +164,7 @@ export async function renderPollShareOgImage(
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ display: 'flex', fontSize: 36, fontWeight: 800, letterSpacing: -1 }}>
+          <div style={{ display: 'flex', fontSize: 36, fontWeight: 700, letterSpacing: -1 }}>
             <span>Folkets&nbsp;</span>
             <span style={{ color: '#ff9fb1' }}>Meninger</span>
           </div>
@@ -176,34 +175,26 @@ export async function renderPollShareOgImage(
               padding: '8px 20px',
               borderRadius: 999,
               background: 'rgba(255,255,255,0.14)',
-              fontSize: 22,
-              fontWeight: 600,
+              fontSize: OG_TEXT_MIN_PX,
+              fontWeight: 700,
             }}
           >
             Hva mener du?
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          <div
-            style={{
-              display: 'flex',
-              fontSize: titleFontSize(title.length),
-              fontWeight: 800,
-              lineHeight: 1.15,
-              maxWidth: 1040,
-            }}
-          >
-            {title}
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={titleBoxStyle(titleSize)}>{title}</div>
           {summary ? (
             <div
               style={{
                 display: 'flex',
-                fontSize: 26,
+                fontSize: OG_TEXT_MIN_PX,
                 lineHeight: 1.35,
                 color: 'rgba(255,255,255,0.82)',
                 maxWidth: 980,
+                maxHeight: Math.round(OG_TEXT_MIN_PX * 1.35 * 2),
+                overflow: 'hidden',
               }}
             >
               {summary}
@@ -212,7 +203,7 @@ export async function renderPollShareOgImage(
           {pollResultsBar(totals)}
         </div>
 
-        <div style={{ display: 'flex', fontSize: 22, color: 'rgba(255,255,255,0.72)' }}>
+        <div style={{ display: 'flex', fontSize: OG_TEXT_MIN_PX, color: 'rgba(255,255,255,0.72)' }}>
           folkets-meninger.no · Uoffisiell meningsmåling
         </div>
       </div>
@@ -244,13 +235,13 @@ export async function renderPollShareOgFallback(
           background: 'linear-gradient(135deg, #001a4a 0%, #00205b 55%, #0a3d9e 100%)',
         }}
       >
-        <div style={{ display: 'flex', fontSize: 36, fontWeight: 800 }}>
+        <div style={{ display: 'flex', fontSize: 36, fontWeight: 700 }}>
           Folkets <span style={{ color: '#ff9fb1' }}>Meninger</span>
         </div>
-        <div style={{ display: 'flex', fontSize: 52, fontWeight: 800, lineHeight: 1.12 }}>
+        <div style={{ display: 'flex', fontSize: 52, fontWeight: 700, lineHeight: 1.12 }}>
           Les saker, følg høringer og si din mening.
         </div>
-        <div style={{ display: 'flex', fontSize: 22, color: 'rgba(255,255,255,0.72)' }}>
+        <div style={{ display: 'flex', fontSize: OG_TEXT_MIN_PX, color: 'rgba(255,255,255,0.72)' }}>
           folkets-meninger.no
         </div>
       </div>

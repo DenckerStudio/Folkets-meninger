@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { SharePollWidget } from '@/components/polls/share-poll-widget';
 import { isAdmin } from '@/lib/admin/gate';
-import { DEFAULT_DESCRIPTION, truncateDescription } from '@/lib/seo/metadata';
+import { truncateDescription } from '@/lib/seo/metadata';
 import { buildDelSharePageMetadata } from '@/lib/polls/page-metadata';
 import {
   getPollTotals,
@@ -40,7 +40,11 @@ function firstParam(value: string | string[] | undefined): string | null {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const poll = await getPublicPollById(id).catch(() => null);
-  return buildDelSharePageMetadata({ poll, pollId: id });
+  const totals =
+    poll && isShareablePoll(poll)
+      ? await getPollTotals(id).catch(() => null)
+      : null;
+  return buildDelSharePageMetadata({ poll, pollId: id, totals });
 }
 
 export default async function SharePollPage({ params, searchParams }: PageProps) {

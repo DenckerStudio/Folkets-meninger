@@ -9,7 +9,6 @@ import { join } from 'node:path';
 (globalThis as typeof globalThis & { React: typeof React }).React = React;
 import { renderBlogPostOgImage } from '@/lib/blog/og-image';
 import { renderPollShareOgImage } from '@/lib/polls/share-og';
-import { renderShareOgImage } from '@/lib/seo/share-og';
 import type { PollRecord } from '@/lib/polls/types';
 
 const outDir = process.env.OG_SAMPLE_DIR ?? '/opt/cursor/artifacts';
@@ -24,7 +23,7 @@ const samplePoll: PollRecord = {
   id: 'sample-poll',
   track: 'system',
   status: 'open',
-  title: 'Bør Norge ha kortere arbeidsuke – hva mener du?',
+  title: 'Bør Norge ha kortere arbeidsuke – æøå ÆØÅ · tall 0123?',
   neutralSummary: 'Eksempelspørsmål med norske bokstaver: æøå.',
   sourceUrls: [],
   stortingetIssueId: '103102',
@@ -47,13 +46,20 @@ async function main() {
   );
 
   await savePng(
-    'og-sample-utforsk-reels.png',
-    await renderShareOgImage({
-      eyebrow: 'Utforsk',
-      title: 'Reels om Stortingssaker',
-      description: 'Stem Nei, Blank eller Ja og se hva andre mener.',
-      footer: 'folkets-meninger.no · Utforsk',
-    }),
+    'og-sample-poll-few-votes.png',
+    await renderPollShareOgImage(samplePoll, { nei: 2, blank: 1, ja: 3, total: 6 }),
+  );
+
+  await savePng(
+    'og-sample-poll-glyphs.png',
+    await renderPollShareOgImage(
+      {
+        ...samplePoll,
+        title: 'Ærlig meningsmåling: æøå ÆØÅ – Nei · Blank · Ja 0123',
+        neutralSummary: 'Kort oppsummert: æøå og tegnsetting – …',
+      },
+      { nei: 12, blank: 3, ja: 45, total: 60 },
+    ),
   );
 
   await savePng(

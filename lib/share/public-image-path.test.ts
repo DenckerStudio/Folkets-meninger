@@ -7,7 +7,6 @@ for (const path of [
   '/dashboard/folkets-meninger/abc/opengraph-image',
   '/dashboard/sak/104123/twitter-image',
   '/dashboard/sak/104123/opengraph-image-1a2b3c',
-  '/dashboard/utforsk/reels/opengraph-image',
 ]) {
   assert.equal(isPublicDashboardShareImagePath(path), true, path);
 }

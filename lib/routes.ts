@@ -90,9 +90,6 @@ export function isPublicDashboardAvstemningPath(pathname: string): boolean {
  * these without cookies, so they must never be login-gated.
  */
 export function isPublicDashboardShareImagePath(pathname: string): boolean {
-  if (pathname === '/dashboard/utforsk/reels/opengraph-image') {
-    return true;
-  }
   return /^\/dashboard\/(sak|avstemninger|folkets-meninger)\/[^/]+\/(opengraph|twitter)-image(-[\w-]+)?$/.test(
     pathname,
   );

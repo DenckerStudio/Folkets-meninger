@@ -34,7 +34,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   const poll = await getPollById(id);
   if (!poll || poll.track === 'citizen') return {};
-  return buildPollDetailPageMetadata(poll);
+  const totals = await getPollTotals(id).catch(() => ({
+    ja: 0,
+    nei: 0,
+    blank: 0,
+    total: 0,
+  }));
+  return buildPollDetailPageMetadata(poll, totals);
 }
 
 export default async function PollDetailPage({ params }: PageProps) {

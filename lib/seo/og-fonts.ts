@@ -1,4 +1,4 @@
-/** Cached Noto Sans (latin-ext) for OG ImageResponse — renders æ, ø and å reliably. */
+/** Cached Noto Sans (latin + latin-ext) for OG ImageResponse — basic Latin, digits, punctuation and æøå. */
 
 type OgFontFace = {
   name: 'Noto Sans';
@@ -7,29 +7,37 @@ type OgFontFace = {
   style: 'normal';
 };
 
-const NOTO_LATIN_EXT = {
-  400: 'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans@5.2.5/latin-ext-400-normal.woff',
-  700: 'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans@5.2.5/latin-ext-700-normal.woff',
+const NOTO_BASE = 'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans@5.2.5';
+
+const NOTO_SOURCES = {
+  latin400: `${NOTO_BASE}/latin-400-normal.woff`,
+  latin700: `${NOTO_BASE}/latin-700-normal.woff`,
+  latinExt400: `${NOTO_BASE}/latin-ext-400-normal.woff`,
+  latinExt700: `${NOTO_BASE}/latin-ext-700-normal.woff`,
 } as const;
 
 let cached: OgFontFace[] | null = null;
 
-async function fetchFont(weight: 400 | 700): Promise<OgFontFace> {
-  const response = await fetch(NOTO_LATIN_EXT[weight], {
+async function fetchFontFile(url: string, weight: 400 | 700): Promise<OgFontFace> {
+  const response = await fetch(url, {
     next: { revalidate: 86_400 },
   });
   if (!response.ok) {
-    throw new Error(`OG font fetch failed (${weight}): ${response.status}`);
+    throw new Error(`OG font fetch failed (${weight} ${url}): ${response.status}`);
   }
   const data = await response.arrayBuffer();
   return { name: 'Noto Sans', data, weight, style: 'normal' };
 }
 
-/** Bold + regular Noto Sans for social preview cards (memoized per process). */
+/** Regular + bold Noto Sans, latin and latin-ext subsets (memoized per process). */
 export async function loadOgFonts(): Promise<OgFontFace[]> {
   if (cached) return cached;
-  const [regular, bold] = await Promise.all([fetchFont(400), fetchFont(700)]);
-  cached = [regular, bold];
+  cached = await Promise.all([
+    fetchFontFile(NOTO_SOURCES.latin400, 400),
+    fetchFontFile(NOTO_SOURCES.latinExt400, 400),
+    fetchFontFile(NOTO_SOURCES.latin700, 700),
+    fetchFontFile(NOTO_SOURCES.latinExt700, 700),
+  ]);
   return cached;
 }
 

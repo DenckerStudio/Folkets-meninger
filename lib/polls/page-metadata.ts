@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { Metadata } from 'next';
 import {
   DEFAULT_DESCRIPTION,
@@ -11,14 +12,29 @@ import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
 import { OG_IMAGE_ALT, OG_IMAGE_SIZE, pollOgImageAlt } from '@/lib/polls/share-og';
 import { isShareablePoll, pollSharePath } from '@/lib/polls/share';
 import { routes } from '@/lib/routes';
-import type { PollRecord } from '@/lib/polls/types';
+import type { PollRecord, PollTotals } from '@/lib/polls/types';
 
-export function pollOpenGraphImagePath(pollId: string, basePath?: string): string {
-  const prefix = basePath ?? routes.poll(pollId);
-  return `${prefix}/opengraph-image`;
+export function pollOpenGraphImagePath(pollId: string): string {
+  return `${routes.poll(pollId)}/opengraph-image`;
 }
 
-export function buildPollDetailPageMetadata(poll: PollRecord): Metadata {
+/** Cache-bust OG image URLs when Nei/Blank/Ja counts change (social crawlers). */
+export function pollOgImageVersionFromTotals(totals: PollTotals): string {
+  const payload = `${totals.nei}:${totals.blank}:${totals.ja}`;
+  return createHash('sha256').update(payload).digest('hex').slice(0, 12);
+}
+
+export function pollOpenGraphImageUrl(pollId: string, totals: PollTotals): string {
+  const base = pollOpenGraphImagePath(pollId);
+  return `${base}?v=${pollOgImageVersionFromTotals(totals)}`;
+}
+
+export function delOpenGraphImageUrl(pollId: string, totals: PollTotals): string {
+  const base = `${pollSharePath(pollId)}/opengraph-image`;
+  return `${base}?v=${pollOgImageVersionFromTotals(totals)}`;
+}
+
+export function buildPollDetailPageMetadata(poll: PollRecord, totals: PollTotals): Metadata {
   const title = formatPollDisplayTitle(poll.title);
   return buildPageMetadata({
     title,
@@ -26,30 +42,18 @@ export function buildPollDetailPageMetadata(poll: PollRecord): Metadata {
       poll.neutralSummary || `${title} — stem ${pollBallotRunningTextPhrase()}.`,
     ),
     canonicalPath: routes.poll(poll.id),
-    images: [pollOpenGraphImagePath(poll.id)],
-  });
-}
-
-export function buildUtforskReelPollMetadata(poll: PollRecord): Metadata {
-  const title = formatPollDisplayTitle(poll.title);
-  return buildPageMetadata({
-    title,
-    description: truncateDescription(
-      poll.neutralSummary ||
-        `Systemgenerert Reel. Stem ${pollBallotRunningTextPhrase()} på Folkets Meninger.`,
-    ),
-    canonicalPath: routes.utforskReels(poll.id),
-    images: [pollOpenGraphImagePath(poll.id)],
+    images: [pollOpenGraphImageUrl(poll.id, totals)],
   });
 }
 
 type DelShareMetadataInput = {
   poll: PollRecord | null;
   pollId: string;
+  totals: PollTotals | null;
 };
 
 /** Metadata for public `/del/[id]` share landing (OG title without brand suffix). */
-export function buildDelSharePageMetadata({ poll, pollId }: DelShareMetadataInput): Metadata {
+export function buildDelSharePageMetadata({ poll, pollId, totals }: DelShareMetadataInput): Metadata {
   const shareable = Boolean(poll && isShareablePoll(poll));
 
   const title = shareable && poll ? poll.title : SITE_NAME;
@@ -61,9 +65,12 @@ export function buildDelSharePageMetadata({ poll, pollId }: DelShareMetadataInpu
       : DEFAULT_DESCRIPTION;
 
   const canonical = pollSharePath(pollId);
-  const version = shareable && poll ? poll.updatedAt : 'generic';
+  const imagePath =
+    shareable && poll && totals
+      ? delOpenGraphImageUrl(pollId, totals)
+      : `${canonical}/opengraph-image`;
   const image = {
-    url: `${canonical}/opengraph-image?v=${encodeURIComponent(version)}`,
+    url: imagePath,
     ...OG_IMAGE_SIZE,
     alt: shareable && poll ? pollOgImageAlt(poll.title) : OG_IMAGE_ALT,
   };
