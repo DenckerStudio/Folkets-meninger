@@ -7,6 +7,16 @@ const migration = readFileSync(
   'utf-8',
 );
 
+function extractFunction(name: string): string {
+  const re = new RegExp(
+    `CREATE OR REPLACE FUNCTION public\\.${name}[\\s\\S]*?\\$function\\$;`,
+    'i',
+  );
+  const m = migration.match(re);
+  assert.ok(m, `missing function ${name}`);
+  return m[0];
+}
+
 const tables = ['share_links', 'analytics_events'];
 
 for (const table of tables) {
@@ -18,6 +28,14 @@ for (const table of tables) {
     migration,
     new RegExp(`REVOKE ALL ON TABLE public\\.${table} FROM PUBLIC, anon, authenticated`, 'i'),
   );
+  assert.match(
+    migration,
+    new RegExp(`GRANT ALL ON TABLE public\\.${table} TO service_role`, 'i'),
+  );
+  assert.doesNotMatch(
+    migration,
+    new RegExp(`GRANT[\\s\\S]*ON TABLE public\\.${table}[\\s\\S]*TO authenticated`, 'i'),
+  );
 }
 
 assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.share_links/);
@@ -25,13 +43,21 @@ assert.match(migration, /target_kind IN \('poll', 'blog_post', 'sak', 'generic'\
 assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.analytics_events/);
 assert.match(migration, /event_name = 'share_link_click'/);
 
+const insertAnalyticsEvent = extractFunction('insert_analytics_event');
+assert.match(insertAnalyticsEvent, /SET search_path TO public, pg_temp/i);
+
+const adminGetUserMetrics = extractFunction('admin_get_user_metrics');
+assert.match(adminGetUserMetrics, /SET search_path TO public, auth, pg_temp/i);
 assert.match(
-  migration,
-  /admin_get_user_metrics[\s\S]*v_actor := public\.require_admin_user_id\(p_admin_user_id\)/,
+  adminGetUserMetrics,
+  /v_actor := public\.require_admin_user_id\(p_admin_user_id\)/,
 );
+
+const adminGetShareLinkStats = extractFunction('admin_get_share_link_stats');
+assert.match(adminGetShareLinkStats, /SET search_path TO public, auth, pg_temp/i);
 assert.match(
-  migration,
-  /admin_get_share_link_stats[\s\S]*v_actor := public\.require_admin_user_id\(p_admin_user_id\)/,
+  adminGetShareLinkStats,
+  /v_actor := public\.require_admin_user_id\(p_admin_user_id\)/,
 );
 
 const serviceRoleFunctions: Array<{ name: string; signature: string }> = [

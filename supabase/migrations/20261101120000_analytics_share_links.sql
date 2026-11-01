@@ -39,13 +39,15 @@ ALTER TABLE public.analytics_events ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON TABLE public.share_links FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.analytics_events FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.share_links TO service_role;
+GRANT ALL ON TABLE public.analytics_events TO service_role;
 
 -- insert_analytics_event: service_role only (from API route / edge)
 CREATE OR REPLACE FUNCTION public.insert_analytics_event(p_row jsonb)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'public'
+SET search_path TO public, pg_temp
 AS $function$
 BEGIN
   INSERT INTO public.analytics_events (
@@ -75,7 +77,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path TO 'public', 'auth'
+SET search_path TO public, auth, pg_temp
 AS $function$
 DECLARE
   v_actor uuid;
@@ -118,7 +120,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path TO 'public', 'auth'
+SET search_path TO public, auth, pg_temp
 AS $function$
 DECLARE
   v_actor uuid;
