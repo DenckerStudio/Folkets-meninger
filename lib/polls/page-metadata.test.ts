@@ -12,7 +12,7 @@ import type { PollRecord } from '@/lib/polls/types';
 
 const samplePoll: PollRecord = {
   id: 'abc-123',
-  track: 'system',
+  track: 'stortinget',
   status: 'open',
   title: 'Bør Norge innføre nattåpent apotek?',
   neutralSummary: 'Kort oppsummert spørsmål om helsepolitikk.',

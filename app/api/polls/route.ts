@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensurePoliticalConsent } from '@/lib/consent/require-api';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { isPublicAvstemningTrack } from '@/lib/polls/public-tracks';
 import {
   castPollVote,
   getPollById,
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
   }
 
   const poll = await getPollById(pollId);
-  if (!poll || poll.track === 'citizen') {
+  if (!poll || !isPublicAvstemningTrack(poll.track)) {
     return NextResponse.json({ error: 'Avstemning ikke funnet' }, { status: 404 });
   }
 
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
     }
 
     const poll = await getPollById(pollId);
-    if (!poll || poll.track === 'citizen') {
+    if (!poll || !isPublicAvstemningTrack(poll.track)) {
       return NextResponse.json({ error: 'Avstemning ikke funnet' }, { status: 404 });
     }
     if (!isPollVotingOpen(poll)) {

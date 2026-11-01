@@ -1,7 +1,6 @@
 import { claimAiSummaryWebhook, deleteAiSummary } from '@/lib/ai-summary/service';
 import { getServiceSupabase } from '@/lib/supabase';
 import { triggerAiSummaryWebhook } from '@/lib/trigger-ai-summary-webhook';
-import { triggerSystemPollDraftWebhook } from '@/lib/trigger-system-poll-draft-webhook';
 
 const AI_SUMMARY_COOLDOWN_MS = 60 * 60 * 1000;
 const AI_SUMMARY_PENDING_SCAN_LIMIT = 200;
@@ -71,7 +70,6 @@ export async function retryPendingN8nJobs(): Promise<N8nRetryResult> {
 
   if (!supabaseConfigured()) {
     console.warn('[n8n-retry] Supabase is not configured; skipping queue scan');
-    result.systemPollQueued = triggerSystemPollDraftWebhook();
     return result;
   }
 
@@ -181,6 +179,5 @@ export async function retryPendingN8nJobs(): Promise<N8nRetryResult> {
     }
   }
 
-  result.systemPollQueued = triggerSystemPollDraftWebhook();
   return result;
 }

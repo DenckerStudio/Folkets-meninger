@@ -1,7 +1,7 @@
 import { routes } from '@/lib/routes';
 
 export const VURDER_TABS = [
-  { id: 'reels', label: 'Reels' },
+  { id: 'reels', label: 'Systemutkast' },
   { id: 'blogg', label: 'Blogginnlegg' },
   { id: 'sammendrag', label: 'Sammendrag' },
 ] as const;

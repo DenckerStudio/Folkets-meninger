@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
 import { preparePollPublicTextForPublish } from '@/lib/admin/uten-kontekst';
+import { SYSTEM_REELS_RETIRED_ADMIN_MESSAGE } from '@/lib/polls/system-reels-retired';
 import {
   archivePoll,
   getPollById,
@@ -65,6 +66,9 @@ export async function PATCH(request: Request) {
       const poll = await getPollById(id);
       if (!poll) {
         return NextResponse.json({ error: 'Avstemning ikke funnet' }, { status: 404 });
+      }
+      if (poll.track === 'system') {
+        return NextResponse.json({ error: SYSTEM_REELS_RETIRED_ADMIN_MESSAGE }, { status: 410 });
       }
       const prepared = preparePollPublicTextForPublish(poll);
       if ('error' in prepared) {

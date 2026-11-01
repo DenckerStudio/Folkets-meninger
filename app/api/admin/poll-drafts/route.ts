@@ -1,46 +1,19 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
-import { findSystemPollForIssue } from '@/lib/polls/service';
-import { triggerSystemPollDraftWebhook } from '@/lib/trigger-system-poll-draft-webhook';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request) {
+export async function POST() {
   const auth = await requireAdmin();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  let issueId: string | undefined;
-  try {
-    const body = await request.json();
-    if (typeof body.stortinget_issue_id === 'string' && body.stortinget_issue_id.trim()) {
-      issueId = body.stortinget_issue_id.trim();
-    }
-  } catch {
-    issueId = undefined;
-  }
-
-  if (issueId) {
-    const existing = await findSystemPollForIssue(issueId);
-    if (existing) {
-      return NextResponse.json({
-        ok: true,
-        alreadyExists: true,
-        queued: false,
-        draft: existing,
-        stortinget_issue_id: issueId,
-      });
-    }
-  }
-
-  const queued = triggerSystemPollDraftWebhook(issueId);
-  if (!queued) {
-    return NextResponse.json(
-      { error: 'Generering er ikke konfigurert (mangler N8N_SYSTEM_POLL_DRAFT_WEBHOOK_URL)' },
-      { status: 503 },
-    );
-  }
-
-  return NextResponse.json({ ok: true, queued: true, stortinget_issue_id: issueId ?? null });
+  return NextResponse.json(
+    {
+      error:
+        'Systemgenererte Reels-avstemninger er avviklet. Avstemninger opprettes når en mening i Folkets meninger får nok popularitet.',
+    },
+    { status: 410 },
+  );
 }

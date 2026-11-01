@@ -13,6 +13,10 @@ import { OG_IMAGE_ALT, OG_IMAGE_SIZE, pollOgImageAlt } from '@/lib/polls/share-o
 import { isShareablePoll, pollSharePath } from '@/lib/polls/share';
 import { routes } from '@/lib/routes';
 import type { PollRecord, PollTotals } from '@/lib/polls/types';
+import {
+  SYSTEM_POLL_SHARE_RETIRED_LEAD,
+  SYSTEM_POLL_SHARE_RETIRED_TITLE,
+} from '@/lib/polls/system-reels-retired';
 
 export function pollOpenGraphImagePath(pollId: string): string {
   return `${routes.poll(pollId)}/opengraph-image`;
@@ -56,6 +60,32 @@ export function buildPollDetailPageMetadata(poll: PollRecord, totals: PollTotals
     twitter: {
       ...(base.twitter as object),
       images: [imageSpec],
+    },
+  };
+}
+
+/** Metadata for retired system-Reels on `/del/[id]` (no ballot, noindex). */
+export function buildRetiredDelSharePageMetadata(pollId: string): Metadata {
+  const canonical = pollSharePath(pollId);
+  const title = `${SYSTEM_POLL_SHARE_RETIRED_TITLE} – ${SITE_NAME}`;
+  const description = SYSTEM_POLL_SHARE_RETIRED_LEAD;
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    robots: { index: false, follow: true },
+    openGraph: {
+      title: SYSTEM_POLL_SHARE_RETIRED_TITLE,
+      description,
+      url: canonical,
+      siteName: SITE_NAME,
+      locale: SITE_LOCALE,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary',
+      title: SYSTEM_POLL_SHARE_RETIRED_TITLE,
+      description,
     },
   };
 }

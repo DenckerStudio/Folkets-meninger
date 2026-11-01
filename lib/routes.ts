@@ -110,7 +110,7 @@ export function isPublicShareImagePath(pathname: string): boolean {
   return isPublicDashboardShareImagePath(pathname) || isPublicDelShareImagePath(pathname);
 }
 
-/** Public Utforsk (saker + system Reels) — guests can read; voting requires login. */
+/** Public Utforsk (Stortingssaker) — guests can read; holdninger krever innlogging. */
 export function isPublicDashboardUtforskPath(pathname: string): boolean {
   return pathname === routes.utforsk || pathname.startsWith(`${routes.utforsk}/`);
 }

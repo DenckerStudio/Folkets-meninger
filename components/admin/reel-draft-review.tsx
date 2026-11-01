@@ -20,6 +20,7 @@ import type { ContentFeedbackVerdict } from '@/lib/content-feedback/types';
 import { routes } from '@/lib/routes';
 import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { DRAFT_RESTORE_SUCCESS_MESSAGE } from '@/lib/admin/draft-expiry';
+import { VURDER_REELS_QUEUE_INTRO } from '@/lib/polls/system-reels-retired';
 import type { PollRecord } from '@/lib/polls/types';
 import { cn } from '@/lib/utils';
 
@@ -48,7 +49,6 @@ export function ReelDraftReview() {
   const [drafts, setDrafts] = useState<PollRecord[]>([]);
   const [reviewed, setReviewed] = useState<ReviewedReel | null>(null);
   const [error, setError] = useState('');
-  const [publishErrors, setPublishErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState('');
   const [initialLoad, setInitialLoad] = useState(true);
   const [pending, startTransition] = useTransition();
@@ -93,14 +93,9 @@ export function ReelDraftReview() {
     el.classList.add('ring-2', 'ring-brand');
   }, [drafts, highlightPollId]);
 
-  const patchPoll = (poll: PollRecord, action: 'publish' | 'archive' | 'restore') => {
+  const patchPoll = (poll: PollRecord, action: 'archive' | 'restore') => {
     startTransition(async () => {
       setError('');
-      setPublishErrors((current) => {
-        const next = { ...current };
-        delete next[poll.id];
-        return next;
-      });
       setSuccess('');
       const res = await fetch('/api/admin/polls', {
         method: 'PATCH',
@@ -111,11 +106,7 @@ export function ReelDraftReview() {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         const raw = typeof data.error === 'string' ? data.error : 'Handling feilet';
         const message = raw.endsWith('.') ? raw : `${raw}.`;
-        if (action === 'publish') {
-          setPublishErrors((current) => ({ ...current, [poll.id]: message }));
-        } else {
-          setError(message);
-        }
+        setError(message);
         return;
       }
       if (action === 'restore') {
@@ -123,13 +114,12 @@ export function ReelDraftReview() {
         setReviewed(null);
         setDrafts((current) => current.filter((row) => row.id !== poll.id));
         return;
-      } else {
-        setSuccess(action === 'publish' ? 'Utkastet er publisert.' : 'Utkastet er arkivert.');
-        setReviewed({
-          poll,
-          verdict: action === 'publish' ? 'approve' : 'reject',
-        });
       }
+      setSuccess('Utkastet er arkivert.');
+      setReviewed({
+        poll,
+        verdict: 'reject',
+      });
       setDrafts((current) => current.filter((row) => row.id !== poll.id));
       load();
     });
@@ -142,7 +132,7 @@ export function ReelDraftReview() {
       <DraftReviewQueueToggle queue={queue} onQueueChange={setQueue} className="max-w-md" />
       <p className="text-sm text-muted-foreground">
         {queue === 'pending'
-          ? 'Publiser til Reels-feeden, eller arkiver. Utkast utløper etter 72 timer uten vurdering.'
+          ? VURDER_REELS_QUEUE_INTRO
           : 'Utløpte utkast kan gjenopprettes til vurderingskøen.'}
       </p>
       {error ? (
@@ -180,8 +170,8 @@ export function ReelDraftReview() {
           title={queue === 'expired' ? 'Ingen utløpte utkast' : 'Ingen utkast'}
           description={
             queue === 'expired'
-              ? 'Utløpte reel-utkast vises her.'
-              : 'Generer fra Reels-siden, eller vent på automatisk kjøring.'
+              ? 'Utløpte systemutkast vises her.'
+              : 'Når nye systemutkast er klare, vises de her. Publisering er avviklet.'
           }
           className="py-8"
         />
@@ -221,17 +211,6 @@ export function ReelDraftReview() {
                       <button
                         type="button"
                         disabled={pending}
-                        onClick={() => patchPoll(poll, 'publish')}
-                        className={cn(
-                          'inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
-                          VURDER_FOCUS_RING,
-                        )}
-                      >
-                        Publiser
-                      </button>
-                      <button
-                        type="button"
-                        disabled={pending}
                         onClick={() => patchPoll(poll, 'archive')}
                         className={cn(
                           'inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50 sm:w-auto',
@@ -252,11 +231,6 @@ export function ReelDraftReview() {
                         </p>
                       ) : null;
                     })()}
-                    {publishErrors[poll.id] ? (
-                      <p className="w-full text-sm leading-snug text-destructive" role="alert">
-                        {publishErrors[poll.id]}
-                      </p>
-                    ) : null}
                   </>
                 ) : (
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -283,13 +257,13 @@ export function ReelDraftReview() {
           href={routes.adminReels}
           className={cn('inline-flex min-h-11 items-center font-medium text-brand hover:underline', VURDER_FOCUS_RING)}
         >
-          Generering og kø
+          Systemutkast og kø
         </Link>
         <Link
-          href={routes.utforsk}
+          href={routes.avstemninger}
           className={cn('inline-flex min-h-11 items-center font-medium text-brand hover:underline', VURDER_FOCUS_RING)}
         >
-          Offentlig Reels-feed
+          Åpne avstemninger
         </Link>
       </div>
     </div>

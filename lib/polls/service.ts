@@ -5,6 +5,7 @@ import { isPollAlreadyExistsError, normalizePollIssueId } from '@/lib/polls/alre
 import { nextPollStatusForAction, type PollStatusAction } from '@/lib/polls/apply-status';
 import { isPostgrestMissingRpcError } from '@/lib/polls/rpc-missing';
 import { POLL_FYLKE_MIN_VOTES } from '@/lib/polls/norway-counties';
+import { isPublicAvstemningTrack } from '@/lib/polls/public-tracks';
 import type {
   PollChoice,
   PollFylkeTotals,
@@ -163,7 +164,7 @@ export async function listOpenPolls(limit = 30): Promise<PollRecord[]> {
       service
         .from('polls')
         .select(select)
-        .neq('track', 'citizen')
+        .eq('track', 'stortinget')
         .in('status', ['open', 'closed'])
         .order('created_at', { ascending: false })
         .limit(limit),
@@ -172,31 +173,9 @@ export async function listOpenPolls(limit = 30): Promise<PollRecord[]> {
   return rows.map(mapPollRow);
 }
 
-export async function listOpenSystemPolls(limit = 30): Promise<PollRecord[]> {
-  const query = (client: ReturnType<typeof getAnonSupabase>) =>
-    listPollRows(
-      (select) =>
-        client
-          .from('polls')
-          .select(select)
-          .eq('track', 'system')
-          .in('status', ['open', 'closed'])
-          .order('created_at', { ascending: false })
-          .limit(limit),
-      'listOpenSystemPolls',
-    );
-
-  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    try {
-      const rows = await query(getServiceSupabase());
-      if (rows.length > 0) return rows.map(mapPollRow);
-    } catch {
-      // Dead or mismatched service-role host — fall through to public read.
-    }
-  }
-
-  const publicRows = await query(getAnonSupabase());
-  return publicRows.map(mapPollRow);
+/** Systemgenererte Reels-avstemninger er avviklet — returnerer alltid tom liste. */
+export async function listOpenSystemPolls(_limit = 30): Promise<PollRecord[]> {
+  return [];
 }
 
 export async function listSystemPollDrafts(limit = 50): Promise<PollRecord[]> {
@@ -325,6 +304,7 @@ export async function findPublicPollForIssue(
     .from('polls')
     .select(POLL_LIST_SELECT)
     .eq('stortinget_issue_id', trimmed)
+    .eq('track', 'stortinget')
     .in('status', ['open', 'closed'])
     .order('created_at', { ascending: false })
     .limit(1)
@@ -348,6 +328,7 @@ export async function searchPublicPolls(
   const { data, error } = await supabase
     .from('polls')
     .select(POLL_LIST_SELECT)
+    .eq('track', 'stortinget')
     .in('status', ['open', 'closed'])
     .ilike('title', pattern)
     .order('created_at', { ascending: false })
@@ -357,8 +338,18 @@ export async function searchPublicPolls(
   return (data as PollRow[]).map(mapPollRow);
 }
 
-/** Public poll lookup by id. Open/closed only (RLS). */
+/** Public poll lookup by id. Open/closed only (RLS). Stortinget track only. */
 export async function getPublicPollById(
+  pollId: string,
+  client?: PollReadClient | null,
+): Promise<PollRecord | null> {
+  const poll = await getSharePagePollById(pollId, client);
+  if (!poll || !isPublicAvstemningTrack(poll.track)) return null;
+  return poll;
+}
+
+/** Open/closed poll by id for `/del/[id]` (Stortinget ballot or retired system notice). */
+export async function getSharePagePollById(
   pollId: string,
   client?: PollReadClient | null,
 ): Promise<PollRecord | null> {
@@ -391,28 +382,13 @@ export async function getUserPollVote(
   return { hasVoted: Boolean(row.hasVoted), vote };
 }
 
+/** System-Reels-feed er avviklet — returnerer alltid tom liste. */
 export async function listSystemReelFeedItems(
-  userId: string | null,
-  limit = 40,
-  focusPollId?: string | null,
+  _userId: string | null,
+  _limit = 40,
+  _focusPollId?: string | null,
 ): Promise<SystemReelFeedItem[]> {
-  let polls = await listOpenSystemPolls(limit);
-  // Deep link (?poll=<id>): if the requested system poll is not in the first page, fetch it and put it first.
-  if (focusPollId && !polls.some((p) => p.id === focusPollId)) {
-    const focus = await getPublicPollById(focusPollId).catch(() => null);
-    if (focus && focus.track === 'system') polls = [focus, ...polls];
-  }
-  return Promise.all(
-    polls.map(async (poll) => {
-      const [totals, voteState] = await Promise.all([
-        getPollTotals(poll.id),
-        userId
-          ? getUserPollVote(userId, poll.id)
-          : Promise.resolve({ hasVoted: false, vote: null }),
-      ]);
-      return { poll, totals, userVote: voteState.vote };
-    }),
-  );
+  return [];
 }
 
 export async function castPollVote(input: {

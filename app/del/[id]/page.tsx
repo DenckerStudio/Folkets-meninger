@@ -4,16 +4,17 @@ import { notFound } from 'next/navigation';
 import { SharePollWidget } from '@/components/polls/share-poll-widget';
 import { isAdmin } from '@/lib/admin/gate';
 import { truncateDescription } from '@/lib/seo/metadata';
-import { buildDelSharePageMetadata } from '@/lib/polls/page-metadata';
+import { buildDelSharePageMetadata, buildRetiredDelSharePageMetadata } from '@/lib/polls/page-metadata';
 import {
   getPollTotals,
-  getPublicPollById,
+  getSharePagePollById,
   getUserPollVote,
   isPollVotingOpen,
 } from '@/lib/polls/service';
 import {
   buildPollShareUrl,
   isPollChoice,
+  isRetiredSystemSharePoll,
   isShareablePoll,
 } from '@/lib/polls/share';
 import { isSharePollsEnabled } from '@/lib/polls/share-flag';
@@ -21,6 +22,7 @@ import { resolveRequestShareOrigin } from '@/lib/polls/share-server';
 import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { routes } from '@/lib/routes';
+import { SharePollRetiredPage } from '@/components/polls/share-poll-retired';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,11 +41,12 @@ function firstParam(value: string | string[] | undefined): string | null {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const poll = await getPublicPollById(id).catch(() => null);
+  const poll = await getSharePagePollById(id).catch(() => null);
+  if (isRetiredSystemSharePoll(poll)) {
+    return buildRetiredDelSharePageMetadata(id);
+  }
   const totals =
-    poll && isShareablePoll(poll)
-      ? await getPollTotals(id).catch(() => null)
-      : null;
+    poll && isShareablePoll(poll) ? await getPollTotals(id).catch(() => null) : null;
   return buildDelSharePageMetadata({ poll, pollId: id, totals });
 }
 
@@ -59,8 +62,12 @@ export default async function SharePollPage({ params, searchParams }: PageProps)
   const enabled = isSharePollsEnabled() || (user ? await isAdmin(user.id, user.email) : false);
   if (!enabled) notFound();
 
-  const poll = await getPublicPollById(id).catch(() => null);
-  if (!poll || !isShareablePoll(poll)) notFound();
+  const poll = await getSharePagePollById(id).catch(() => null);
+  if (!poll) notFound();
+  if (isRetiredSystemSharePoll(poll)) {
+    return <SharePollRetiredPage />;
+  }
+  if (!isShareablePoll(poll)) notFound();
 
   const [totals, voteState, origin] = await Promise.all([
     getPollTotals(id),

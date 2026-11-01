@@ -21,13 +21,11 @@ import { TabUnderline } from '@/components/motion/tab-underline';
 import { pollBallotSlugPhrase } from '@/lib/polls/ballot-buttons';
 import { PageHeader } from '@/components/page-header';
 import { ShareButton } from '@/components/share/share-button';
-import { UtforskReelsStage, ReelsEntryCta } from '@/components/polls/utforsk-reels-stage';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsMounted } from '@/hooks/use-is-mounted';
 import { routes } from '@/lib/routes';
 import { PREFERENCE_KEYS } from '@/lib/preferences/keys';
 import { usePersistedState } from '@/hooks/use-persisted-state';
-import type { SystemReelFeedItem } from '@/lib/polls/types';
 import { STORTINGET_ACTIVE_SESSION_ID } from '@/lib/stortinget-config';
 
 import { ISSUE_STANCE_LABELS, type IssueStance } from '@/lib/stances/types';
@@ -95,12 +93,10 @@ export default function ExploreClient({
   initialIssues,
   issueLabels,
   popularLabels,
-  reelItems,
 }: {
   initialIssues: SakListItem[];
   issueLabels: Record<string, string[]>;
   popularLabels: string[];
-  reelItems: SystemReelFeedItem[];
 }) {
   const [issues] = useState(initialIssues);
   const [labelsExpanded, setLabelsExpanded] = useState(false);
@@ -282,8 +278,6 @@ export default function ExploreClient({
   ];
 
   return (
-    <UtforskReelsStage items={reelItems}>
-      {({ openReels, itemCount }) => (
     <DashboardPage>
       <SectionSettle>
         <div className="flex items-start justify-between gap-3">
@@ -301,10 +295,6 @@ export default function ExploreClient({
             className="mt-1 shrink-0"
           />
         </div>
-      </SectionSettle>
-
-      <SectionSettle>
-        <ReelsEntryCta onOpen={openReels} itemCount={itemCount} />
       </SectionSettle>
 
       <SectionSettle>
@@ -329,7 +319,7 @@ export default function ExploreClient({
             Holdningene dine brukes til Valgomat og hjertesaker.
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
-            For andre nasjonale {pollBallotSlugPhrase()}-avstemninger, se Avstemninger.
+            Nasjonale {pollBallotSlugPhrase()}-avstemninger lages når en mening får nok popularitet — se Avstemninger.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {firstOpenIssue ? (
@@ -595,7 +585,5 @@ export default function ExploreClient({
         </div>
       </SectionSettle>
     </DashboardPage>
-      )}
-    </UtforskReelsStage>
   );
 }
