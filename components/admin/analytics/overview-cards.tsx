@@ -38,7 +38,7 @@ export function OverviewCards({ user, traffic }: OverviewCardsProps) {
       <StatCard
         label="Inaktive"
         value={user.inactiveApprox}
-        caption="Ingen innlogging på 90 dager, eller aldri innlogget."
+        caption={`Ingen innlogging på ${user.inactiveDaysThreshold} dager, eller aldri innlogget.`}
       />
       <StatCard label="Stemme+" value={user.stemmePlus} />
       <StatCard label="Landinger på avstemninger" value={traffic.pollLandings} />
