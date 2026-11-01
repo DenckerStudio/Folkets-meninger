@@ -11,7 +11,7 @@ import {
 } from '@/lib/seo/metadata';
 import {
   getPollTotals,
-  getPublicPollById,
+  getSharePagePollById,
   getUserPollVote,
   isPollVotingOpen,
 } from '@/lib/polls/service';
@@ -19,6 +19,7 @@ import {
   buildPollShareUrl,
   DEFAULT_SITE_ORIGIN,
   isPollChoice,
+  isRetiredSystemSharePoll,
   isShareablePoll,
   pollSharePath,
 } from '@/lib/polls/share';
@@ -27,8 +28,13 @@ import { isSharePollsEnabled } from '@/lib/polls/share-flag';
 import { resolveRequestShareOrigin } from '@/lib/polls/share-server';
 import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
 import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
+import {
+  SYSTEM_POLL_SHARE_RETIRED_LEAD,
+  SYSTEM_POLL_SHARE_RETIRED_TITLE,
+} from '@/lib/polls/system-reels-retired';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { routes } from '@/lib/routes';
+import { SharePollRetiredPage } from '@/components/polls/share-poll-retired';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,10 +54,37 @@ function firstParam(value: string | string[] | undefined): string | null {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const [poll, origin] = await Promise.all([
-    getPublicPollById(id).catch(() => null),
+    getSharePagePollById(id).catch(() => null),
     resolveRequestShareOrigin().catch(() => DEFAULT_SITE_ORIGIN),
   ]);
   const shareable = isShareablePoll(poll) && Boolean(poll);
+  const retired = isRetiredSystemSharePoll(poll) && Boolean(poll);
+
+  if (retired) {
+    const title = `${SYSTEM_POLL_SHARE_RETIRED_TITLE} – ${SITE_NAME}`;
+    const description = SYSTEM_POLL_SHARE_RETIRED_LEAD;
+    const canonical = pollSharePath(id);
+    return {
+      metadataBase: new URL(`${origin}/`),
+      title,
+      description,
+      alternates: { canonical },
+      robots: { index: false, follow: true },
+      openGraph: {
+        title: SYSTEM_POLL_SHARE_RETIRED_TITLE,
+        description,
+        url: canonical,
+        siteName: SITE_NAME,
+        locale: SITE_LOCALE,
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary',
+        title: SYSTEM_POLL_SHARE_RETIRED_TITLE,
+        description,
+      },
+    };
+  }
 
   const title = shareable && poll ? poll.title : SITE_NAME;
   const description =
@@ -105,8 +138,12 @@ export default async function SharePollPage({ params, searchParams }: PageProps)
   const enabled = isSharePollsEnabled() || (user ? await isAdmin(user.id, user.email) : false);
   if (!enabled) notFound();
 
-  const poll = await getPublicPollById(id).catch(() => null);
-  if (!poll || !isShareablePoll(poll)) notFound();
+  const poll = await getSharePagePollById(id).catch(() => null);
+  if (!poll) notFound();
+  if (isRetiredSystemSharePoll(poll)) {
+    return <SharePollRetiredPage />;
+  }
+  if (!isShareablePoll(poll)) notFound();
 
   const [totals, voteState, origin] = await Promise.all([
     getPollTotals(id),

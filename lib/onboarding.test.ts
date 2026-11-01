@@ -120,7 +120,7 @@ assert.equal(isNewAuthUser(new Date(Date.now() - 48 * 60 * 60 * 1000).toISOStrin
 assert.equal(isNewAuthUser(null), false);
 
 const tourIds = PRODUCT_TOUR_STEPS.map((step) => step.id);
-assert.deepEqual(tourIds, ['utforsk', 'reels', 'varsler', 'stemme']);
+assert.deepEqual(tourIds, ['utforsk', 'varsler', 'stemme']);
 assert.ok(PRODUCT_TOUR_STEPS.every((step) => step.selector.length > 0));
 
 console.log('onboarding tests passed');

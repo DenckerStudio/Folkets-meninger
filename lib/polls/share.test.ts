@@ -7,6 +7,7 @@ import {
   buildPollShareUrl,
   DEFAULT_SITE_ORIGIN,
   isPollChoice,
+  isRetiredSystemSharePoll,
   isShareablePoll,
   normalizeOrigin,
   pollEmbedPath,
@@ -138,6 +139,10 @@ assert(!isPollChoice('kanskje'), 'invalid choice');
 
 assert(isShareablePoll({ track: 'stortinget', status: 'open' }), 'stortinget polls are shareable');
 assert(!isShareablePoll({ track: 'system', status: 'closed' }), 'system polls are not shareable');
+assert(isRetiredSystemSharePoll({ track: 'system', status: 'closed' }), 'closed system polls are retired share');
+assert(isRetiredSystemSharePoll({ track: 'system', status: 'open' }), 'open system polls are retired share');
+assert(!isRetiredSystemSharePoll({ track: 'system', status: 'draft' }), 'system drafts are not retired share');
+assert(!isRetiredSystemSharePoll({ track: 'stortinget', status: 'open' }), 'stortinget polls use ballot share');
 assert(!isShareablePoll({ track: 'citizen', status: 'open' }), 'citizen polls are not shareable');
 assert(!isShareablePoll({ track: 'system', status: 'draft' }), 'drafts are not shareable');
 assert(!isShareablePoll(null), 'missing poll is not shareable');

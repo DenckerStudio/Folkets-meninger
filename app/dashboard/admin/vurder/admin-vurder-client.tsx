@@ -57,7 +57,7 @@ export default function AdminVurderClient() {
           Vurder
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Samlet vurdering av reels, blogginnlegg og sammendrag.
+          Samlet vurdering av systemutkast, blogginnlegg og sammendrag.
         </p>
       </div>
 

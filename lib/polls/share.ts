@@ -10,8 +10,9 @@ import type { ShareChannel } from '@/lib/share/targets';
  * Shareable Nei / Blank / Ja poll widget helpers.
  *
  * Polls reuse the existing `polls` / `poll_votes` schema. Only official tracks
- * (`stortinget`, `system`) with an open/closed status may be shared; hidden or
- * legacy `citizen` polls are never exposed by the share pages or OG images.
+ * (`stortinget`) with an open/closed status may be shared. Published system polls
+ * show a retired notice on `/del/[id]` instead of a ballot. Hidden or legacy
+ * `citizen` polls are never exposed by the share pages or OG images.
  * Nothing here touches the database.
  */
 
@@ -33,6 +34,15 @@ export function isShareablePoll(
 ): boolean {
   if (!poll) return false;
   if (poll.track !== 'stortinget') return false;
+  return poll.status === 'open' || poll.status === 'closed';
+}
+
+/** Former system-Reels share links: open/closed system polls get a retired page, not a ballot. */
+export function isRetiredSystemSharePoll(
+  poll: Pick<PollRecord, 'track' | 'status'> | null | undefined,
+): boolean {
+  if (!poll) return false;
+  if (poll.track !== 'system') return false;
   return poll.status === 'open' || poll.status === 'closed';
 }
 

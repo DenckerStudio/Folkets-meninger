@@ -338,8 +338,18 @@ export async function searchPublicPolls(
   return (data as PollRow[]).map(mapPollRow);
 }
 
-/** Public poll lookup by id. Open/closed only (RLS). */
+/** Public poll lookup by id. Open/closed only (RLS). Stortinget track only. */
 export async function getPublicPollById(
+  pollId: string,
+  client?: PollReadClient | null,
+): Promise<PollRecord | null> {
+  const poll = await getSharePagePollById(pollId, client);
+  if (!poll || !isPublicAvstemningTrack(poll.track)) return null;
+  return poll;
+}
+
+/** Open/closed poll by id for `/del/[id]` (Stortinget ballot or retired system notice). */
+export async function getSharePagePollById(
   pollId: string,
   client?: PollReadClient | null,
 ): Promise<PollRecord | null> {
@@ -353,8 +363,7 @@ export async function getPublicPollById(
     .maybeSingle();
 
   if (error || !data) return null;
-  const poll = mapPollRow(data as PollRow);
-  return isPublicAvstemningTrack(poll.track) ? poll : null;
+  return mapPollRow(data as PollRow);
 }
 
 export async function getUserPollVote(
