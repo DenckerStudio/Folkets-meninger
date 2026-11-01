@@ -89,11 +89,10 @@ export async function POST(request: Request) {
     sessionHash,
   });
 
-  try {
-    const service = getServiceSupabase();
-    await service.rpc('insert_analytics_event', { p_row: row });
-  } catch {
-    return new NextResponse(null, { status: 204 });
+  const service = getServiceSupabase();
+  const { error } = await service.rpc('insert_analytics_event', { p_row: row });
+  if (error) {
+    console.error(`analytics collect insert failed: ${error.code ?? error.message}`);
   }
 
   return new NextResponse(null, { status: 204 });

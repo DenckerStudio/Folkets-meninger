@@ -39,6 +39,16 @@ assert.equal(parsed.value.referrerHost, 'www.google.com');
 assert.equal(parsed.value.utmSource, 'facebook');
 assert.equal(parsed.value.metadata.bucket, 'social_facebook');
 
+const snakeUtm = parseCollectPayload({
+  eventName: 'page_view',
+  path: '/',
+  utm_source: 'facebook',
+});
+assert.equal(snakeUtm.ok, true);
+if (!snakeUtm.ok) throw new Error('expected ok');
+assert.equal(snakeUtm.value.utmSource, 'facebook');
+assert.equal(snakeUtm.value.metadata.bucket, 'social_facebook');
+
 assert.equal(
   parseCollectPayload({
     eventName: 'poll_share_landing',

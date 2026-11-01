@@ -56,6 +56,20 @@ function requiredTrimmedString(value: unknown, maxLen: number): string | null {
   return trimmed;
 }
 
+function firstTrimmedField(
+  record: Record<string, unknown>,
+  keys: string[],
+  maxLen: number,
+): string | null {
+  for (const key of keys) {
+    const value = optionalTrimmedString(record[key], maxLen);
+    if (value !== null) {
+      return value;
+    }
+  }
+  return null;
+}
+
 export function extractReferrerHost(referrerUrl: string | null | undefined): string | null {
   const raw = referrerUrl?.trim();
   if (!raw) {
@@ -87,10 +101,14 @@ export function parseCollectPayload(body: unknown): ParseCollectResult {
   }
 
   const referrerRaw = optionalTrimmedString(record.referrer, 2048);
-  const utmSource = optionalTrimmedString(record.utmSource, MAX_FIELD_LEN);
-  const utmMedium = optionalTrimmedString(record.utmMedium, MAX_FIELD_LEN);
-  const utmCampaign = optionalTrimmedString(record.utmCampaign, MAX_FIELD_LEN);
-  const refCode = optionalTrimmedString(record.ref, MAX_FIELD_LEN);
+  const utmSource = firstTrimmedField(record, ['utmSource', 'utm_source'], MAX_FIELD_LEN);
+  const utmMedium = firstTrimmedField(record, ['utmMedium', 'utm_medium'], MAX_FIELD_LEN);
+  const utmCampaign = firstTrimmedField(
+    record,
+    ['utmCampaign', 'utm_campaign'],
+    MAX_FIELD_LEN,
+  );
+  const refCode = firstTrimmedField(record, ['ref', 'ref_code'], MAX_FIELD_LEN);
   const shareCode = optionalTrimmedString(record.shareCode, MAX_FIELD_LEN);
 
   const { bucket } = classifyReferrer({
