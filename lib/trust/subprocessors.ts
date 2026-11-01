@@ -91,4 +91,4 @@ export const TRUST_THIRD_PARTY_PROVIDERS: SubprocessorRow[] = [
 ];
 
 export const TRUST_ANALYTICS_NOTE =
-  'Vi bruker ikke tredjeparts analyseverktøy (som Google Analytics). Det kan finnes tekniske serverlogger på vår egen server i Norge.';
+  'Vi bruker ikke Google Analytics eller andre annonseanalyseverktøy. Besøk kan telles anonymt på vår egen server i Norge (sidevisning, henvisning og delingslenke), slik at vi kan drive og forbedre tjenesten. Vi selger ikke disse opplysningene og deler dem ikke med annonsenettverk. Innloggede administratorer kan se hvem som har opprettet en delingslenke, men ikke hvem som klikket.';

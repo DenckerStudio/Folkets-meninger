@@ -125,11 +125,22 @@ export function LandingFooter() {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col gap-3 border-t border-[#00205b]/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-[#001433]/70">© {year} Folkets Meninger. Alle rettigheter forbeholdt.</p>
+        <div className="mt-12 space-y-3 border-t border-[#00205b]/10 pt-6">
           <p className="text-xs text-[#001433]/70">
-            Uavhengig initiativ — vi samarbeider ikke med Regjeringen eller Stortinget.
+            Vi teller besøk anonymt på vår egen server.{' '}
+            <Link
+              href={routes.personvern}
+              className="font-medium text-[#00205b] underline-offset-2 hover:text-[#ba0c2f] hover:underline"
+            >
+              Les mer
+            </Link>
           </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-[#001433]/70">© {year} Folkets Meninger. Alle rettigheter forbeholdt.</p>
+            <p className="text-xs text-[#001433]/70">
+              Uavhengig initiativ — vi samarbeider ikke med Regjeringen eller Stortinget.
+            </p>
+          </div>
         </div>
       </div>
       <FlagStripe animate />
