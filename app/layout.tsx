@@ -6,6 +6,9 @@ import { THEME_INIT_SCRIPT } from '@/lib/preferences/theme-init-script';
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { SITE_NAME, defaultSiteMetadata, getMetadataBase } from '@/lib/seo/metadata';
+import { AnalyticsPageView } from '@/components/analytics/analytics-page-view';
+import { isAnalyticsEnabled } from '@/lib/analytics/flags';
+import { UmamiScript } from '@/lib/analytics/umami-script';
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -31,6 +34,12 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
         <ThemeProvider>
           <AppShell>{children}</AppShell>
         </ThemeProvider>
+        {isAnalyticsEnabled() ? (
+          <>
+            <AnalyticsPageView />
+            <UmamiScript />
+          </>
+        ) : null}
       </body>
     </html>
   );
