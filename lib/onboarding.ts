@@ -232,14 +232,6 @@ export const PRODUCT_TOUR_STEPS: readonly ProductTourStep[] = [
     openNav: true,
   },
   {
-    id: 'reels',
-    title: 'Reels',
-    body: `Korte, systemgenererte ${pollBallotSlugPhrase()}-spørsmål bygget fra stortingssaker. Sveip og si din mening.`,
-    selector: '[data-tour="reels"]',
-    placement: 'bottom',
-    openNav: false,
-  },
-  {
     id: 'varsler',
     title: 'Varsler',
     body: 'Bjella samler varsler om hjertesakene og emnene dine, så du ikke går glipp av en sak som betyr noe for deg.',

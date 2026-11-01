@@ -32,7 +32,7 @@ export function isShareablePoll(
   poll: Pick<PollRecord, 'track' | 'status'> | null | undefined,
 ): boolean {
   if (!poll) return false;
-  if (poll.track !== 'stortinget' && poll.track !== 'system') return false;
+  if (poll.track !== 'stortinget') return false;
   return poll.status === 'open' || poll.status === 'closed';
 }
 

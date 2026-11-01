@@ -22,6 +22,10 @@ import {
   adminReelDraftListLabel,
   adminReelDraftWaitingDescription,
 } from '@/lib/admin/reel-draft-list-label';
+import {
+  SYSTEM_REELS_RETIRED,
+  SYSTEM_REELS_RETIRED_ADMIN_MESSAGE,
+} from '@/lib/polls/system-reels-retired';
 
 type DraftsResponse = { drafts: PollRecord[] };
 type CandidatesResponse = { candidates: SakPollCandidate[]; coverage: SakPollCoverage };
@@ -260,9 +264,17 @@ export default function AdminReelsClient({
           Reels-utkast
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Generer utkast og følg køen. Publisering og tilbakemelding skjer under Vurder.
+          {SYSTEM_REELS_RETIRED
+            ? 'Avviklet — kun opprydding av eldre utkast.'
+            : 'Generer utkast og følg køen. Publisering og tilbakemelding skjer under Vurder.'}
         </p>
       </div>
+
+      {SYSTEM_REELS_RETIRED ? (
+        <p className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          {SYSTEM_REELS_RETIRED_ADMIN_MESSAGE}
+        </p>
+      ) : null}
 
       {coverage ? (
         <p className="text-sm text-muted-foreground">
@@ -285,7 +297,9 @@ export default function AdminReelsClient({
               {pipelineHealth
                 ? pipelineHealthNeedsAttention(pipelineHealth)
                   ? 'Køen er stor — kjør oppfrisking eller vent på daglig sjekk kl. 08:00.'
-                  : 'Sync → dokumentindeks → sammendrag → Reels-utkast.'
+                  : SYSTEM_REELS_RETIRED
+                    ? 'Sync → dokumentindeks → sammendrag.'
+                    : 'Sync → dokumentindeks → sammendrag → Reels-utkast.'
                 : 'Automatisk generering av sammendrag og utkast.'}
             </p>
           </div>
@@ -381,7 +395,7 @@ export default function AdminReelsClient({
         ) : null}
       </section>
 
-      {activeGeneratingJobs.length > 0 ? (
+      {!SYSTEM_REELS_RETIRED && activeGeneratingJobs.length > 0 ? (
         <div
           className="flex items-start gap-3 rounded-xl border border-brand/30 bg-brand/5 px-4 py-3"
           role="status"
@@ -417,15 +431,19 @@ export default function AdminReelsClient({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {getJob() ? <GenerationStatusBadge getJob={getJob} onDismiss={dismissJob} /> : null}
-            <button
-              type="button"
-              onClick={() => generate()}
-              disabled={pending || isGenerating()}
-              className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
-            >
-              Generer neste
-            </button>
+            {!SYSTEM_REELS_RETIRED && getJob() ? (
+              <GenerationStatusBadge getJob={getJob} onDismiss={dismissJob} />
+            ) : null}
+            {!SYSTEM_REELS_RETIRED ? (
+              <button
+                type="button"
+                onClick={() => generate()}
+                disabled={pending || isGenerating()}
+                className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+              >
+                Generer neste
+              </button>
+            ) : null}
             <Link
               href={vurderHref}
               className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90"
@@ -436,6 +454,7 @@ export default function AdminReelsClient({
         </div>
       </section>
 
+      {!SYSTEM_REELS_RETIRED ? (
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-foreground">Sak-kandidater</h2>
         {candidates.length === 0 ? (
@@ -482,14 +501,21 @@ export default function AdminReelsClient({
           </ul>
         )}
       </section>
+      ) : null}
 
       <div className="flex flex-wrap gap-4 text-sm">
         <Link href={adminVurderHref('reels')} className="font-medium text-brand hover:underline">
-          Vurder reels
+          Vurder utkast
         </Link>
-        <Link href={routes.utforsk} className="font-medium text-brand hover:underline">
-          Offentlig Reels-feed
-        </Link>
+        {!SYSTEM_REELS_RETIRED ? (
+          <Link href={routes.utforsk} className="font-medium text-brand hover:underline">
+            Offentlig Reels-feed
+          </Link>
+        ) : (
+          <Link href={routes.avstemninger} className="font-medium text-brand hover:underline">
+            Avstemninger
+          </Link>
+        )}
         <AdminBackLink />
       </div>
     </div>

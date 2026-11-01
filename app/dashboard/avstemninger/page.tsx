@@ -28,12 +28,12 @@ export default async function AvstemningerPage() {
     <DashboardPage>
       <PageHeader
         title="Avstemninger"
-        description={`Samme ${pollBallotSlugPhrase()}-spørsmål som under Utforsk → Reels, samlet i liste. Enkeltsaker fra Stortinget finner du under Utforsk.`}
+        description={`Nasjonale ${pollBallotSlugPhrase()}-avstemninger som løftes fra Folkets meninger når en mening får nok popularitet.`}
       />
       {withTotals.length === 0 ? (
         <EmptyState
           title="Ingen avstemninger er publisert ennå"
-          description="Når en stortingssak løftes til nasjonal avstemning, dukker den opp her. Kom gjerne tilbake senere."
+          description="Når en mening i Folkets meninger får nok popularitet, kan den løftes til avstemning her. Skriv og støtt meninger du bryr deg om."
         />
       ) : (
         <div className="grid gap-3 sm:gap-4">

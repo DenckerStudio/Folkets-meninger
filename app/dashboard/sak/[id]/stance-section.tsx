@@ -231,8 +231,12 @@ export default function StanceSection({
       </AnimatePresence>
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        Systemgenererte {pollBallotSlugPhrase()}-spørsmål finner du på Utforsk. Andre nasjonale avstemninger ligger
-        under Avstemninger.
+        Nasjonale {pollBallotSlugPhrase()}-avstemninger opprettes når en mening i Folkets meninger får nok popularitet.
+        Se{' '}
+        <Link href={routes.avstemninger} className="font-medium text-brand hover:underline">
+          Avstemninger
+        </Link>
+        .
       </p>
 
       <PoliticalConsentDialog

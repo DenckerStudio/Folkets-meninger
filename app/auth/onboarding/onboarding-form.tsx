@@ -305,7 +305,7 @@ function WelcomePanel() {
             Til slutt: en kort omvisning
           </span>
           <span className="mt-0.5 block text-sm text-muted-foreground">
-            Utforsk, Reels, varsler og Stemme+-chatten. Du kan hoppe over når som helst.
+            Utforsk, varsler og Stemme+-chatten. Du kan hoppe over når som helst.
           </span>
         </span>
       </li>

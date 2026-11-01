@@ -136,11 +136,8 @@ assert(defaults.summary === true, 'full shows summary by default');
 assert(isPollChoice('ja') && isPollChoice('blank') && isPollChoice('nei'), 'valid choices');
 assert(!isPollChoice('kanskje'), 'invalid choice');
 
-assert(
-  isShareablePoll({ track: 'stortinget', status: 'open' }) &&
-    isShareablePoll({ track: 'system', status: 'closed' }),
-  'official published polls are shareable',
-);
+assert(isShareablePoll({ track: 'stortinget', status: 'open' }), 'stortinget polls are shareable');
+assert(!isShareablePoll({ track: 'system', status: 'closed' }), 'system polls are not shareable');
 assert(!isShareablePoll({ track: 'citizen', status: 'open' }), 'citizen polls are not shareable');
 assert(!isShareablePoll({ track: 'system', status: 'draft' }), 'drafts are not shareable');
 assert(!isShareablePoll(null), 'missing poll is not shareable');
