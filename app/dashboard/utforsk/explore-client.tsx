@@ -20,6 +20,7 @@ import { SectionSettle } from '@/components/motion/section-settle';
 import { TabUnderline } from '@/components/motion/tab-underline';
 import { pollBallotSlugPhrase } from '@/lib/polls/ballot-buttons';
 import { PageHeader } from '@/components/page-header';
+import { ShareButton } from '@/components/share/share-button';
 import { UtforskReelsStage, ReelsEntryCta } from '@/components/polls/utforsk-reels-stage';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsMounted } from '@/hooks/use-is-mounted';
@@ -285,10 +286,21 @@ export default function ExploreClient({
       {({ openReels, itemCount }) => (
     <DashboardPage>
       <SectionSettle>
-        <PageHeader
-          title="Utforsk saker"
-          description="Lovforslag og representantforslag fra Stortinget."
-        />
+        <div className="flex items-start justify-between gap-3">
+          <PageHeader
+            title="Utforsk saker"
+            description="Lovforslag og representantforslag fra Stortinget."
+          />
+          <ShareButton
+            ariaLabel="Del Utforsk"
+            dialogTitle="Del Utforsk"
+            url={routes.utforsk}
+            title="Utforsk saker på Folkets Meninger"
+            text="Se Stortingssaker og holdninger på Folkets Meninger"
+            description="Lovforslag og representantforslag fra Stortinget — les, stem og følg med."
+            className="mt-1 shrink-0"
+          />
+        </div>
       </SectionSettle>
 
       <SectionSettle>
