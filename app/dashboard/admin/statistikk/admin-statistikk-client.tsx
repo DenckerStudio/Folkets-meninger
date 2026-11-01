@@ -7,7 +7,10 @@ import type { AdminAnalyticsOverview } from '@/lib/admin/analytics/overview';
 import { OverviewCards } from '@/components/admin/analytics/overview-cards';
 import { ShareLinksTable } from '@/components/admin/analytics/share-links-table';
 import { TrafficTable } from '@/components/admin/analytics/traffic-table';
+import { AnalyticsCollectionDisabled } from '@/components/admin/analytics/analytics-collection-disabled';
 import { AdminBackLink } from '@/components/admin/admin-shell';
+import { isAnalyticsEnabled } from '@/lib/analytics/flags';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { PUBLIC_STATS_DISCLAIMER } from '@/lib/government-stats/snapshot';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
@@ -40,9 +43,15 @@ function AnalyticsNotReady() {
 
 function BlogPathsTable({
   blogPaths,
+  collectionEnabled,
 }: {
   blogPaths: NonNullable<AdminAnalyticsOverview['traffic']>['blogPaths'];
+  collectionEnabled: boolean;
 }) {
+  if (!collectionEnabled) {
+    return <AnalyticsCollectionDisabled />;
+  }
+
   if (blogPaths.length === 0) {
     return <p className="text-sm text-muted-foreground">Ingen bloggvisninger ennå.</p>;
   }
@@ -93,20 +102,29 @@ function ExportPanel({
           type="button"
           onClick={onDownloadCsv}
           disabled={downloading}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand/90 disabled:opacity-50"
+          className={cn(
+            'inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:bg-brand/90 disabled:opacity-50',
+            VURDER_FOCUS_RING,
+          )}
         >
           <Download className="w-4 h-4" />
           {downloading ? 'Laster ned…' : 'Last ned CSV'}
         </button>
         <a
           href="/api/admin/government-stats/export?format=json&limit=200"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted/50"
+          className={cn(
+            'inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50',
+            VURDER_FOCUS_RING,
+          )}
         >
           JSON (krever innlogging)
         </a>
         <Link
           href={routes.innsikt}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted/50"
+          className={cn(
+            'inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50',
+            VURDER_FOCUS_RING,
+          )}
         >
           Offentlig innsikt-side →
         </Link>
@@ -126,6 +144,8 @@ function StatTabPanel({
   downloading: boolean;
   onDownloadCsv: () => void;
 }) {
+  const trafficCollectionEnabled = isAnalyticsEnabled();
+
   if (tab === 'eksport') {
     return <ExportPanel downloading={downloading} onDownloadCsv={onDownloadCsv} />;
   }
@@ -149,13 +169,23 @@ function StatTabPanel({
       if (!data.user || !data.traffic) {
         return <AnalyticsNotReady />;
       }
-      return <OverviewCards user={data.user} traffic={data.traffic} />;
+      return (
+        <OverviewCards
+          user={data.user}
+          traffic={data.traffic}
+          trafficCollectionEnabled={trafficCollectionEnabled}
+        />
+      );
     case 'trafikk':
       if (!data.traffic) {
         return <AnalyticsNotReady />;
       }
       return (
-        <TrafficTable topPaths={data.traffic.topPaths} channels={data.traffic.channels} />
+        <TrafficTable
+          topPaths={data.traffic.topPaths}
+          channels={data.traffic.channels}
+          collectionEnabled={trafficCollectionEnabled}
+        />
       );
     case 'deling':
       return <ShareLinksTable links={data.links} />;
@@ -163,7 +193,12 @@ function StatTabPanel({
       if (!data.traffic) {
         return <AnalyticsNotReady />;
       }
-      return <BlogPathsTable blogPaths={data.traffic.blogPaths} />;
+      return (
+        <BlogPathsTable
+          blogPaths={data.traffic.blogPaths}
+          collectionEnabled={trafficCollectionEnabled}
+        />
+      );
     default: {
       const unreachable: never = tab;
       return unreachable;
@@ -249,6 +284,7 @@ export default function AdminStatistikkClient() {
               onClick={() => setTab(item.id)}
               className={cn(
                 'inline-flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-lg px-2 py-2.5 text-sm font-medium transition-colors sm:min-w-[6.5rem] sm:px-3',
+                VURDER_FOCUS_RING,
                 selected
                   ? 'bg-card text-brand shadow-sm'
                   : 'text-muted-foreground hover:bg-card/60 hover:text-foreground',

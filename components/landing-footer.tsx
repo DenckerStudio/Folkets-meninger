@@ -8,6 +8,8 @@ import { FlagStripe } from '@/components/motion/flag-stripe';
 import { routes } from '@/lib/routes';
 import { touchTargetLinkClass } from '@/lib/touch-target';
 import { useAuth } from '@/hooks/use-auth';
+import { isAnalyticsEnabled } from '@/lib/analytics/flags';
+import { ANALYTICS_FOOTER_NOTICE } from '@/lib/analytics/collection-notice';
 
 const platformLinks = [
   { href: routes.utforsk, label: 'Utforsk saker' },
@@ -39,6 +41,7 @@ export function LandingFooter() {
   const year = new Date().getFullYear();
   const { user } = useAuth();
   const aboutLinks = user ? signedInAboutLinks : signedOutAboutLinks;
+  const showAnalyticsNotice = isAnalyticsEnabled();
 
   return (
     <footer className="mt-8 border-t border-[#00205b]/10 bg-[#f7f8fb] text-[#001433]">
@@ -126,15 +129,17 @@ export function LandingFooter() {
         </div>
 
         <div className="mt-12 space-y-3 border-t border-[#00205b]/10 pt-6">
-          <p className="text-xs text-[#001433]/70">
-            Vi teller besøk anonymt på vår egen server.{' '}
-            <Link
-              href={routes.personvern}
-              className="font-medium text-[#00205b] underline-offset-2 hover:text-[#ba0c2f] hover:underline"
-            >
-              Les mer
-            </Link>
-          </p>
+          {showAnalyticsNotice ? (
+            <p className="text-xs text-[#001433]/70">
+              {ANALYTICS_FOOTER_NOTICE}{' '}
+              <Link
+                href={routes.personvern}
+                className="font-medium text-[#00205b] underline-offset-2 hover:text-[#ba0c2f] hover:underline"
+              >
+                Les mer
+              </Link>
+            </p>
+          ) : null}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-[#001433]/70">© {year} Folkets Meninger. Alle rettigheter forbeholdt.</p>
             <p className="text-xs text-[#001433]/70">

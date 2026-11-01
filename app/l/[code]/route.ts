@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { notFound } from 'next/navigation';
 import { trustedClientIp } from '@/lib/analytics/client-ip';
 import { shouldRecordShareClick } from '@/lib/analytics/share-click';
 import { resolveShareTarget } from '@/lib/polls/share-personal';
@@ -12,8 +13,8 @@ const SHARE_CLICK_WINDOW_MS = 60_000;
 const SHARE_CLICK_IP_LIMIT = 60;
 const SHARE_CLICK_CODE_LIMIT = 120;
 
-function notFound(): NextResponse {
-  return new NextResponse(null, { status: 404 });
+function redirectHome(request: Request): NextResponse {
+  return NextResponse.redirect(new URL('/', request.url), 302);
 }
 
 function sameOriginLocation(path: string, code: string, requestUrl: string): URL | null {
@@ -40,13 +41,13 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> },
 ) {
   const { code } = await params;
-  if (!CODE_RE.test(code)) return notFound();
+  if (!CODE_RE.test(code)) notFound();
 
   if (
     !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
     !process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
   ) {
-    return NextResponse.json({ error: 'Serveren er ikke konfigurert' }, { status: 503 });
+    return redirectHome(request);
   }
 
   const service = getServiceSupabase();
@@ -59,15 +60,15 @@ export async function GET(
 
   if (error) {
     console.error(`share link lookup failed: ${error.code ?? 'unknown'}`);
-    return notFound();
+    return redirectHome(request);
   }
-  if (!data || typeof data.id !== 'string') return notFound();
+  if (!data || typeof data.id !== 'string') notFound();
 
   const targetKind = typeof data.target_kind === 'string' ? data.target_kind : '';
   const targetId = typeof data.target_id === 'string' ? data.target_id : '';
   const path = resolveShareTarget(targetKind, targetId);
   const location = path ? sameOriginLocation(path, code, request.url) : null;
-  if (!location) return notFound();
+  if (!location) notFound();
 
   // Klikktallet i delingspanelet skal telles også når offentlig analyse er av.
   // Over grensen hopper vi over innsettingen og sender besøkende videre.

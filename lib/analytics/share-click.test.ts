@@ -18,5 +18,11 @@ assert.match(route, /share-click:code:/);
 assert.match(route, /shouldRecordShareClick/);
 assert.match(route, /NextResponse\.redirect/);
 assert.doesNotMatch(route, /status:\s*429/);
+assert.match(route, /from 'next\/navigation'/);
+assert.match(route, /if \(!CODE_RE\.test\(code\)\) notFound\(\)/);
+assert.match(route, /if \(!data \|\| typeof data\.id !== 'string'\) notFound\(\)/);
+assert.match(route, /return redirectHome\(request\)/);
+assert.doesNotMatch(route, /NextResponse\.json/);
+assert.doesNotMatch(route, /status:\s*503/);
 
 console.log('lib/analytics/share-click.test.ts ok');

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
+import { cn } from '@/lib/utils';
 
 type PersonalSharePanelProps = {
   pollId: string;
@@ -72,7 +74,10 @@ export function PersonalSharePanel({ pollId, origin }: PersonalSharePanelProps) 
             onClick={() => {
               void copyUrl();
             }}
-            className="inline-flex items-center rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+            className={cn(
+              'inline-flex min-h-11 items-center rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted',
+              VURDER_FOCUS_RING,
+            )}
           >
             Kopier
           </button>
@@ -89,7 +94,10 @@ export function PersonalSharePanel({ pollId, origin }: PersonalSharePanelProps) 
           onClick={() => {
             void createLink();
           }}
-          className="inline-flex items-center rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-foreground transition-colors hover:opacity-90 disabled:opacity-60"
+          className={cn(
+            'inline-flex min-h-11 items-center rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-foreground transition-colors hover:opacity-90 disabled:opacity-60',
+            VURDER_FOCUS_RING,
+          )}
         >
           {busy ? 'Lager lenke…' : 'Lag lenke'}
         </button>

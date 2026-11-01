@@ -1,4 +1,5 @@
 import { channelBucketLabel } from '@/lib/admin/analytics/channel-labels';
+import { AnalyticsCollectionDisabled } from '@/components/admin/analytics/analytics-collection-disabled';
 
 type PathRow = { path: string; views: number };
 type ChannelRow = { bucket: string; views: number };
@@ -6,13 +7,18 @@ type ChannelRow = { bucket: string; views: number };
 type TrafficTableProps = {
   topPaths: PathRow[];
   channels: ChannelRow[];
+  collectionEnabled: boolean;
 };
 
 function formatViews(views: number): string {
   return views.toLocaleString('nb-NO');
 }
 
-export function TrafficTable({ topPaths, channels }: TrafficTableProps) {
+export function TrafficTable({ topPaths, channels, collectionEnabled }: TrafficTableProps) {
+  if (!collectionEnabled) {
+    return <AnalyticsCollectionDisabled />;
+  }
+
   if (topPaths.length === 0 && channels.length === 0) {
     return <p className="text-sm text-muted-foreground">Ingen trafikk ennå.</p>;
   }
