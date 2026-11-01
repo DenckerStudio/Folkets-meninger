@@ -1,6 +1,15 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { X } from 'lucide-react';
@@ -67,12 +76,12 @@ export function ReelExpandedShell({
     };
   }, [open]);
 
-  useEffect(() => {
-    if (open) return;
+  const handleClose = useCallback(() => {
     setShareDialogOpen(false);
-  }, [open]);
+    onClose();
+  }, [onClose]);
 
-  useFocusTrap(open && !shareDialogOpen, panelRef, onClose);
+  useFocusTrap(open && !shareDialogOpen, panelRef, handleClose);
 
   useEffect(() => {
     if (!open) return;
@@ -125,7 +134,7 @@ export function ReelExpandedShell({
               type="button"
               aria-label="Lukk utvidet kort"
               className="pointer-events-auto fixed inset-0 z-[225] bg-black/55"
-              onClick={onClose}
+              onClick={handleClose}
               initial={reducedMotion ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={reducedMotion ? { opacity: 0 } : { opacity: 0 }}
@@ -154,7 +163,7 @@ export function ReelExpandedShell({
                 <button
                   ref={closeButtonRef}
                   type="button"
-                  onClick={onClose}
+                  onClick={handleClose}
                   aria-label="Lukk"
                 className={cn(
                   REEL_ICON_HIT,
@@ -190,7 +199,7 @@ export function ReelExpandedShell({
                   <button
                     ref={closeButtonRef}
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     aria-label="Lukk"
                     className={cn(
                       REEL_ICON_HIT,

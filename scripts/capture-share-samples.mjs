@@ -12,8 +12,10 @@ async function capture(page, name) {
 }
 
 async function openModal(page, buttonName) {
-  await page.getByRole('button', { name: buttonName }).first().click();
-  await page.getByRole('dialog').last().waitFor({ state: 'visible', timeout: 15_000 });
+  const trigger = page.getByRole('button', { name: buttonName }).first();
+  await trigger.waitFor({ state: 'visible', timeout: 60_000 });
+  await trigger.click();
+  await page.getByRole('button', { name: 'Kopier lenke' }).waitFor({ state: 'visible', timeout: 30_000 });
 }
 
 async function run() {
@@ -36,10 +38,12 @@ async function run() {
         document.documentElement.classList.toggle('dark', dark);
       }, theme === 'dark');
 
-      await page.goto(`${baseUrl}/dashboard/utforsk`, { waitUntil: 'networkidle' });
+      await page.goto(`${baseUrl}/dashboard/utforsk`, { waitUntil: 'domcontentloaded', timeout: 90_000 });
+      await page.waitForLoadState('networkidle', { timeout: 90_000 }).catch(() => {});
       await openModal(page, 'Del Utforsk');
+      await page.waitForTimeout(500);
       await capture(page, `utforsk-${tag}-${theme}-open`);
-      await page.getByRole('button', { name: 'Kopier lenke' }).click();
+      await page.getByRole('button', { name: 'Kopier lenke' }).click({ force: true });
       await page.waitForTimeout(350);
       await capture(page, `utforsk-${tag}-${theme}-copied`);
       await context.close();
