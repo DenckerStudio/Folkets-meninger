@@ -79,7 +79,7 @@ export default function AdminVurderClient() {
               aria-controls={`${tablistId}-${item.id}-panel`}
               onClick={() => selectTab(item.id)}
               className={cn(
-                'inline-flex min-h-11 shrink-0 snap-start items-center justify-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors sm:min-w-0 sm:flex-1 sm:shrink sm:snap-align-none sm:px-4 sm:min-w-[8.5rem]',
+                'inline-flex min-h-11 shrink-0 snap-start items-center justify-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors sm:flex-1 sm:shrink sm:snap-align-none sm:px-4 sm:min-w-[8.5rem]',
                 VURDER_FOCUS_RING,
                 selected
                   ? 'bg-card text-brand shadow-sm'

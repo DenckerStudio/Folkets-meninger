@@ -457,7 +457,10 @@ export function ContentFeedbackPanel({
             <button
               type="button"
               onClick={() => setAspectsExpanded(false)}
-              className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              className={cn(
+                'inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground',
+                VURDER_FOCUS_RING,
+              )}
               aria-expanded={true}
             >
               <ChevronDown className="h-4 w-4 rotate-180" aria-hidden />
@@ -497,6 +500,7 @@ export function ContentFeedbackPanel({
                       onClick={() => toggleAspectMark(key, '+')}
                       className={cn(
                         'inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border',
+                        VURDER_FOCUS_RING,
                         mark === '+'
                           ? 'border-brand bg-brand/10 text-brand'
                           : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted/60',
@@ -512,6 +516,7 @@ export function ContentFeedbackPanel({
                       onClick={() => toggleAspectMark(key, '-')}
                       className={cn(
                         'inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border',
+                        VURDER_FOCUS_RING,
                         mark === '-'
                           ? 'border-destructive/40 bg-destructive/10 text-destructive'
                           : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted/60',
@@ -542,6 +547,7 @@ export function ContentFeedbackPanel({
                   onClick={() => toggleReason(item.tag)}
                   className={cn(
                     'inline-flex min-h-11 items-center rounded-full border px-3 py-2 text-sm font-medium transition-colors',
+                    VURDER_FOCUS_RING,
                     active
                       ? 'border-brand bg-brand/15 text-brand'
                       : 'border-border bg-card text-muted-foreground hover:bg-muted/40',

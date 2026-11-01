@@ -322,7 +322,13 @@ export function BlogDraftReview() {
           </li>
         ))}
       </ul>
-      <Link href="/blogg" className="inline-flex text-sm font-medium text-brand hover:underline">
+      <Link
+        href="/blogg"
+        className={cn(
+          'inline-flex min-h-11 items-center text-sm font-medium text-brand hover:underline',
+          VURDER_FOCUS_RING,
+        )}
+      >
         Offentlig blogg
       </Link>
     </div>

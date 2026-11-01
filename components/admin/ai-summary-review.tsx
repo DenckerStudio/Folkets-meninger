@@ -34,7 +34,13 @@ function SummarySources({ sources, issueId }: { sources: AiSummaryReviewSource[]
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Kilder</p>
       <ul className="mt-1 space-y-1.5 text-sm">
         <li>
-          <Link href={routes.sak(issueId)} className="font-medium text-brand hover:underline">
+          <Link
+            href={routes.sak(issueId)}
+            className={cn(
+              'inline-flex min-h-11 items-center font-medium text-brand hover:underline',
+              VURDER_FOCUS_RING,
+            )}
+          >
             Stortingssak {issueId}
           </Link>
         </li>
@@ -47,7 +53,10 @@ function SummarySources({ sources, issueId }: { sources: AiSummaryReviewSource[]
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex max-w-full items-center gap-1 font-medium text-brand hover:underline"
+                  className={cn(
+                    'inline-flex max-w-full min-h-11 items-center gap-1 font-medium text-brand hover:underline',
+                    VURDER_FOCUS_RING,
+                  )}
                 >
                   <span className="min-w-0 wrap-anywhere">{source.title}</span>
                   <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />

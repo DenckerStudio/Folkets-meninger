@@ -260,17 +260,17 @@ export function ReelDraftReview() {
                   </>
                 ) : (
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => patchPoll(poll, 'restore')}
-                  className={cn(
-                    'inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
-                    VURDER_FOCUS_RING,
-                  )}
-                  >
-                    Gjenopprett
-                  </button>
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => patchPoll(poll, 'restore')}
+                      className={cn(
+                        'inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
+                        VURDER_FOCUS_RING,
+                      )}
+                    >
+                      Gjenopprett
+                    </button>
                   </div>
                 )}
               </div>
@@ -279,10 +279,16 @@ export function ReelDraftReview() {
         </ul>
       ) : null}
       <div className="flex flex-wrap gap-4 text-sm">
-        <Link href={routes.adminReels} className="font-medium text-brand hover:underline">
+        <Link
+          href={routes.adminReels}
+          className={cn('inline-flex min-h-11 items-center font-medium text-brand hover:underline', VURDER_FOCUS_RING)}
+        >
           Generering og kø
         </Link>
-        <Link href={routes.utforsk} className="font-medium text-brand hover:underline">
+        <Link
+          href={routes.utforsk}
+          className={cn('inline-flex min-h-11 items-center font-medium text-brand hover:underline', VURDER_FOCUS_RING)}
+        >
           Offentlig Reels-feed
         </Link>
       </div>

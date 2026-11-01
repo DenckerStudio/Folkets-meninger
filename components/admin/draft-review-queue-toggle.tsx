@@ -1,5 +1,6 @@
 'use client';
 
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { cn } from '@/lib/utils';
 
 export type DraftReviewQueue = 'pending' | 'expired';
@@ -40,6 +41,7 @@ export function DraftReviewQueueToggle({
             onClick={() => onQueueChange(item.id)}
             className={cn(
               'inline-flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors sm:min-w-[8.5rem] sm:px-4',
+              VURDER_FOCUS_RING,
               selected
                 ? 'bg-card text-brand shadow-sm'
                 : 'text-muted-foreground hover:bg-card/60 hover:text-foreground',
