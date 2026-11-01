@@ -18,6 +18,10 @@ const routes: Array<{ path: string; keys: string[] }> = [
     path: 'app/api/politician/response/route.ts',
     keys: ['politician-response:ip:', 'politician-response:user:'],
   },
+  {
+    path: 'app/api/analytics/collect/route.ts',
+    keys: ['analytics-collect:ip:'],
+  },
 ];
 
 for (const { path, keys } of routes) {
