@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Code2 } from 'lucide-react';
 import { PollBallotVoteButton } from '@/components/polls/poll-ballot-vote-button';
+import { PersonalSharePanel } from '@/components/share/personal-share-panel';
 import { ShareTrigger } from '@/components/share/share-trigger';
 import { useAuth } from '@/hooks/use-auth';
 import { Dialog } from '@/components/ui/dialog';
@@ -429,6 +430,10 @@ export function SharePollWidget({
           {copied}
         </span>
       </div>
+
+      {user && variant === 'page' && origin ? (
+        <PersonalSharePanel pollId={pollId} origin={origin} />
+      ) : null}
 
       {!embed ? (
         <EmbedConfigurator
