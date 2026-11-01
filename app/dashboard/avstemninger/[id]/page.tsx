@@ -1,6 +1,6 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import type { Metadata } from 'next';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { PageHeader } from '@/components/page-header';
 import { PollBallot } from '@/components/polls/poll-ballot';
@@ -20,8 +20,9 @@ import {
 } from '@/lib/polls/service';
 import { isShareablePoll } from '@/lib/polls/share';
 import { isSharePollsEnabled } from '@/lib/polls/share-flag';
+import { buildPollDetailPageMetadata } from '@/lib/polls/page-metadata';
 import { routes } from '@/lib/routes';
-import { buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
+import { truncateDescription } from '@/lib/seo/metadata';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,15 +34,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   const poll = await getPollById(id);
   if (!poll || poll.track === 'citizen') return {};
-  const title = formatPollDisplayTitle(poll.title);
-  return buildPageMetadata({
-    title,
-    description: truncateDescription(
-      poll.neutralSummary || `${title} — stem ${pollBallotRunningTextPhrase()}.`,
-    ),
-    canonicalPath: routes.poll(poll.id),
-    images: [`${routes.poll(poll.id)}/opengraph-image`],
-  });
+  const totals = await getPollTotals(id).catch(() => ({
+    ja: 0,
+    nei: 0,
+    blank: 0,
+    total: 0,
+  }));
+  return buildPollDetailPageMetadata(poll, totals);
 }
 
 export default async function PollDetailPage({ params }: PageProps) {

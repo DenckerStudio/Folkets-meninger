@@ -9,6 +9,9 @@ import {
   SHARE_OG_SIZE,
 } from '@/lib/seo/share-og';
 
+/** Keep in sync with SHARE_OG_REVALIDATE_SECONDS (Next.js requires a literal here). */
+export const revalidate = 300;
+
 export const alt = 'Stortingssak på Folkets Meninger';
 export const size = SHARE_OG_SIZE;
 export const contentType = SHARE_OG_CONTENT_TYPE;
@@ -24,7 +27,7 @@ export default async function Image({ params }: ImageProps) {
     bundle = await getSakPageBundle(id);
   } catch (error) {
     console.error('sak opengraph-image:', error instanceof Error ? error.message : error);
-    return renderShareOgFallback('Stortingssak');
+    return await renderShareOgFallback('Stortingssak');
   }
   if (!bundle) notFound();
 
@@ -38,7 +41,7 @@ export default async function Image({ params }: ImageProps) {
     });
   const komite = typeof detail.komite === 'object' ? detail.komite?.navn : detail.komite;
 
-  return renderShareOgImage({
+  return await renderShareOgImage({
     eyebrow: 'Stortingssak',
     title,
     description: komite ? `Komité: ${komite}` : null,
