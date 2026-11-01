@@ -14,6 +14,7 @@ import { BackButton } from '@/components/dashboard/back-button';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { routes } from '@/lib/routes';
+import { readAiSummaryFromDb } from '@/lib/ai-summary/service';
 import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
 import FadeIn from '@/components/fade-in';
@@ -182,10 +183,12 @@ export default async function SakPage({
   }
 
   const { sak, detail: detailedContent, issueMeta } = bundle;
-  const [documents, voteringer] = await Promise.all([
+  const [documents, voteringer, summaryRead] = await Promise.all([
     getSakDocumentsWithStatus(sak.id, detailedContent),
     fetchSakVoteringer(sak.id),
+    readAiSummaryFromDb(sak.id),
   ]);
+  const storedSummary = summaryRead.status === 'ok' ? summaryRead.summary : null;
 
   const innstillingstekst = detailedContent?.innstillingstekst;
   const kortvedtak = detailedContent?.kortvedtak;
@@ -276,6 +279,7 @@ export default async function SakPage({
           </h1>
           <AiSummary
             sakId={sak.id}
+            initialSummary={storedSummary}
             stortingetPageUrl={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
           />
           {descriptionToShow ? <SakOfficialDescription text={descriptionToShow} /> : null}
