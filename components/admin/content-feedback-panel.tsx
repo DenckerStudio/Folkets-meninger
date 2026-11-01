@@ -335,7 +335,7 @@ export function ContentFeedbackPanel({
   return (
     <section
       className={cn(
-        'rounded-2xl border border-brand/25 bg-brand/5 p-4 sm:p-5',
+        'min-w-0 rounded-2xl border border-brand/25 bg-brand/5 p-4 sm:p-5',
         className,
       )}
       aria-labelledby={titleId}
@@ -394,7 +394,7 @@ export function ContentFeedbackPanel({
             Dom{' '}
             <span className="text-xs font-normal text-muted-foreground">(påkrevd)</span>
           </p>
-          <div className="flex flex-wrap gap-2" role="group" aria-labelledby={verdictGroupId}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap" role="group" aria-labelledby={verdictGroupId}>
             {(
               [
                 { value: 'approve' as const, label: 'Godkjenn' },
@@ -410,7 +410,7 @@ export function ContentFeedbackPanel({
                   setVerdictError('');
                 }}
                 className={cn(
-                  'inline-flex min-h-11 items-center rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors',
+                  'inline-flex min-h-11 w-full items-center justify-center rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors sm:w-auto',
                   verdict === option.value
                     ? 'border-brand bg-brand/15 text-brand'
                     : 'border-border bg-card text-muted-foreground hover:bg-muted/50',
@@ -574,12 +574,12 @@ export function ContentFeedbackPanel({
         </div>
       ) : null}
 
-      <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      <div className="mt-4 flex flex-col-reverse gap-2 sm:static sm:flex-row sm:justify-end">
         {showRegenerationHint ? (
           <button
             type="button"
             onClick={onSkip}
-            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 sm:w-auto"
           >
             Lukk
           </button>
@@ -589,7 +589,7 @@ export function ContentFeedbackPanel({
           type="button"
           onClick={onSkip}
           disabled={skipDisabled}
-          className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50 sm:w-auto"
         >
           Hopp over
         </button>
@@ -597,7 +597,7 @@ export function ContentFeedbackPanel({
           type="button"
           onClick={() => void save()}
           disabled={saveLocked || loadingExisting}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
           Lagre tilbakemelding

@@ -130,7 +130,7 @@ export function AiSummaryReview() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <p className="text-sm text-muted-foreground">
         Godkjenn eller avvis sammendrag. Ved avvisning settes saken i kø for ny generering.
       </p>
@@ -149,7 +149,7 @@ export function AiSummaryReview() {
       ) : null}
       <ul className="space-y-3">
         {items.map((item) => (
-          <li key={item.issueId} className="rounded-2xl border border-border bg-card p-4">
+          <li key={item.issueId} className="min-w-0 rounded-2xl border border-border bg-card p-4">
             <SummaryPreview item={item} />
             {item.updatedAt ? (
               <p className="mt-3 text-xs text-muted-foreground">
@@ -173,7 +173,7 @@ export function AiSummaryReview() {
                   type="button"
                   disabled={pending}
                   onClick={() => setActiveId(item.issueId)}
-                  className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto"
                 >
                   Vurder
                 </button>

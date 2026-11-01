@@ -23,7 +23,7 @@ export function DraftReviewQueueToggle({
     <div
       role="group"
       aria-label="Velg kø"
-      className={cn('flex flex-wrap gap-1 rounded-xl bg-muted/40 p-1', className)}
+      className={cn('flex w-full min-w-0 gap-1 rounded-xl bg-muted/40 p-1 sm:flex-wrap', className)}
     >
       {(
         [
@@ -39,7 +39,7 @@ export function DraftReviewQueueToggle({
             aria-pressed={selected}
             onClick={() => onQueueChange(item.id)}
             className={cn(
-              'inline-flex min-h-11 min-w-[8.5rem] flex-1 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-colors',
+              'inline-flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors sm:min-w-[8.5rem] sm:px-4',
               selected
                 ? 'bg-card text-brand shadow-sm'
                 : 'text-muted-foreground hover:bg-card/60 hover:text-foreground',
