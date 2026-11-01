@@ -1,20 +1,46 @@
 import { ImageResponse } from 'next/og';
 import { pollBallotAltTextPhrase } from '@/lib/polls/ballot-buttons';
-import { POLL_BALLOT_CHOICES, pollChoiceLabel } from '@/lib/polls/labels';
-import type { PollChoice, PollRecord } from '@/lib/polls/types';
+import type { PollRecord, PollTotals } from '@/lib/polls/types';
+import { loadOgFonts, OG_FONT_FAMILY } from '@/lib/seo/og-fonts';
+import {
+  SHARE_OG_FALLBACK_CACHE_CONTROL,
+  SHARE_OG_LIVE_CACHE_CONTROL,
+  SHARE_OG_REVALIDATE_SECONDS,
+} from '@/lib/seo/share-og';
+import {
+  buildPollOgBarSegments,
+  formatPollOgResultsLine,
+  pollOgImageAltText,
+  showPollOgProportionalBar,
+} from '@/lib/polls/share-og-bar';
+
+export const POLL_OG_CTA_LINE = 'Stem på folkets-meninger.no';
 
 export const OG_IMAGE_SIZE = { width: 1200, height: 630 } as const;
 export const OG_IMAGE_CONTENT_TYPE = 'image/png';
 export const OG_IMAGE_ALT = `Folkets Meninger med spørsmålet og svarene ${pollBallotAltTextPhrase()}`;
-/**
- * Only shareable polls get a long-lived immutable cache. Unknown, hidden or
- * legacy `citizen` polls return 404 (see the image routes) so a future poll at
- * the same id is never stuck behind a year-long cached fallback.
- */
-export const OG_IMAGE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
+export const OG_IMAGE_REVALIDATE_SECONDS = SHARE_OG_REVALIDATE_SECONDS;
+export const OG_IMAGE_CACHE_CONTROL = SHARE_OG_LIVE_CACHE_CONTROL;
 
-export function pollOgImageAlt(title: string): string {
-  return `Spørsmål: ${title.trim()}. Svar ${pollBallotAltTextPhrase()} på Folkets Meninger.`;
+const OG_TEXT_MIN_PX = 28;
+const OG_TITLE_MAX_PX = 52;
+const BAR_OUTLINE = '2px solid rgba(255,255,255,0.55)';
+const BAR_SEGMENT_GAP = '2px solid rgba(255,255,255,0.65)';
+const TITLE_MAX_LINES = 2;
+/** Summary only when the title fits on a single line at max size. */
+const SUMMARY_TITLE_MAX_CHARS = 46;
+const CARD_PADDING_Y = 44;
+const CARD_PADDING_X = 64;
+
+/** Muted bar fills when totals are below proportional threshold (no opacity on navy). */
+const LOW_SAMPLE_BAR_SEGMENT: Record<'nei' | 'blank' | 'ja', { background: string }> = {
+  nei: { background: '#7a3848' },
+  blank: { background: '#e8ecf4' },
+  ja: { background: '#4a6a9e' },
+};
+
+export function pollOgImageAlt(title: string, totals: PollTotals): string {
+  return pollOgImageAltText(title, totals);
 }
 
 function clampText(value: string, max: number): string {
@@ -26,87 +52,129 @@ function clampText(value: string, max: number): string {
 }
 
 function titleFontSize(length: number): number {
-  if (length <= 60) return 64;
-  if (length <= 110) return 52;
-  return 44;
+  if (length <= 48) return OG_TITLE_MAX_PX;
+  if (length <= 90) return 46;
+  return 40;
 }
 
-type ChoiceIconKind = 'check' | 'minus' | 'cross';
-
-const OG_CHOICE_ICON: Record<PollChoice, ChoiceIconKind> = {
-  ja: 'check',
-  nei: 'cross',
-  blank: 'minus',
-};
-
-const OG_CHOICE_STYLE: Record<PollChoice, { background: string; color: string }> = {
-  ja: { background: '#0a3d9e', color: '#ffffff' },
-  nei: { background: '#ba0c2f', color: '#ffffff' },
-  blank: { background: '#ffffff', color: '#00205b' },
-};
-
-const CHOICE_ICON_PATHS: Record<ChoiceIconKind, string> = {
-  check: '<path d="M20 6 9 17l-5-5"/>',
-  minus: '<path d="M5 12h14"/>',
-  cross: '<path d="M18 6 6 18M6 6l12 12"/>',
-};
-
-/**
- * Renders the ballot glyph as an SVG data URI. The default OG font has no
- * ✓/✕ glyphs, so drawing them as text produced tofu boxes; a real SVG renders
- * identically everywhere satori runs.
- */
-function choiceIconSrc(kind: ChoiceIconKind, color: string): string {
-  const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" ` +
-    `fill="none" stroke="${color}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">` +
-    `${CHOICE_ICON_PATHS[kind]}</svg>`;
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+/** Rough two-line capacity at card width (fallback if line-clamp ellipses poorly in Satori). */
+function maxPollTitleChars(fontSize: number): number {
+  if (fontSize >= OG_TITLE_MAX_PX) return 78;
+  if (fontSize >= 46) return 84;
+  return 96;
 }
 
-function pollButton(
-  kind: ChoiceIconKind,
-  label: string,
-  background: string,
-  color: string,
-) {
+function titleBoxStyle(fontSize: number) {
+  const size = Math.min(fontSize, OG_TITLE_MAX_PX);
+  const lineHeight = 1.2;
+  return {
+    display: '-webkit-box',
+    WebkitBoxOrient: 'vertical' as const,
+    WebkitLineClamp: TITLE_MAX_LINES,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    fontSize: size,
+    fontWeight: 700,
+    lineHeight,
+    maxWidth: 1060,
+  };
+}
+
+function segmentSeparatorStyle(isLast: boolean) {
+  return isLast ? {} : { borderRight: BAR_SEGMENT_GAP };
+}
+
+function pollResultsBar(totals: PollTotals) {
+  const segments = buildPollOgBarSegments(totals);
+  const proportional = showPollOgProportionalBar(totals);
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 14,
-        padding: '22px 0',
-        borderRadius: 20,
-        border: background === '#ffffff' ? 'none' : '2px solid rgba(255,255,255,0.45)',
-        background,
-        color,
-        fontSize: 32,
-        fontWeight: 700,
-      }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={choiceIconSrc(kind, color)} width={34} height={34} alt="" />
-      <span>{label}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div
+        style={{
+          display: 'flex',
+          width: '100%',
+          height: 44,
+          borderRadius: 14,
+          overflow: 'hidden',
+          border: BAR_OUTLINE,
+          background: 'rgba(255,255,255,0.08)',
+        }}
+      >
+        {proportional ? (
+          segments
+            .filter((segment) => segment.percent > 0)
+            .map((segment, index, visible) => (
+              <div
+                key={segment.choice}
+                style={{
+                  display: 'flex',
+                  width: `${segment.percent}%`,
+                  minWidth: 8,
+                  height: '100%',
+                  background: segment.background,
+                  ...(segment.choice === 'blank'
+                    ? { border: '2px solid rgba(255,255,255,0.55)' }
+                    : {}),
+                  ...segmentSeparatorStyle(index === visible.length - 1),
+                }}
+              />
+            ))
+        ) : (
+          segments.map((segment, index) => {
+            const lowStyle = LOW_SAMPLE_BAR_SEGMENT[segment.choice];
+            return (
+              <div
+                key={segment.choice}
+                style={{
+                  display: 'flex',
+                  flex: 1,
+                  height: '100%',
+                  background: lowStyle.background,
+                  ...(segment.choice === 'blank'
+                    ? { border: '2px solid rgba(255,255,255,0.55)' }
+                    : {}),
+                  ...segmentSeparatorStyle(index === segments.length - 1),
+                }}
+              />
+            );
+          })
+        )}
+      </div>
+      <div style={{ display: 'flex', fontSize: OG_TEXT_MIN_PX, fontWeight: 700, lineHeight: 1.25 }}>
+        {formatPollOgResultsLine(totals)}
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          marginTop: 8,
+          fontSize: OG_TEXT_MIN_PX,
+          fontWeight: 700,
+          color: '#ff9fb1',
+        }}
+      >
+        {POLL_OG_CTA_LINE}
+      </div>
     </div>
   );
 }
 
 /**
- * Renders the 1200×630 social preview for a shareable poll: the question plus
- * the Nei / Blank / Ja buttons and Folkets Meninger branding. The caller is
- * responsible for rejecting unknown or non-shareable polls with a 404 so no
- * question leaks and no generic image is cached under a real poll id.
+ * Renders the 1200×630 social preview for a shareable poll: question, live Nei/Blank/Ja
+ * result bar, and Folkets Meninger branding. Callers should use the branded fallback when
+ * the poll is missing or not shareable (never cache a generic image under a real poll id).
  */
-export function renderPollShareOgImage(
+export async function renderPollShareOgImage(
   poll: PollRecord,
+  totals: PollTotals,
   cacheControl: string = OG_IMAGE_CACHE_CONTROL,
-): ImageResponse {
-  const title = clampText(poll.title, 150);
-  const showSummary = title.length <= 90 && Boolean(poll.neutralSummary);
-  const summary = showSummary ? clampText(poll.neutralSummary, 140) : '';
+): Promise<ImageResponse> {
+  const fonts = await loadOgFonts();
+  const rawTitle = clampText(poll.title, 130);
+  const titleSize = titleFontSize(rawTitle.length);
+  const title = clampText(rawTitle, maxPollTitleChars(titleSize));
+  const showSummary = title.length <= SUMMARY_TITLE_MAX_CHARS && Boolean(poll.neutralSummary);
+  const summary = showSummary ? clampText(poll.neutralSummary, 88) : '';
 
   return new ImageResponse(
     (
@@ -117,80 +185,94 @@ export function renderPollShareOgImage(
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          padding: '64px',
-          fontFamily: 'sans-serif',
+          padding: `${CARD_PADDING_Y}px ${CARD_PADDING_X}px`,
+          fontFamily: OG_FONT_FAMILY,
           color: '#ffffff',
           background: 'linear-gradient(135deg, #001a4a 0%, #00205b 55%, #0a3d9e 100%)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ display: 'flex', fontSize: 36, fontWeight: 800, letterSpacing: -1 }}>
+          <div style={{ display: 'flex', fontSize: 32, fontWeight: 700, letterSpacing: -1 }}>
             <span>Folkets&nbsp;</span>
             <span style={{ color: '#ff9fb1' }}>Meninger</span>
           </div>
           <div
             style={{
               display: 'flex',
-              marginLeft: 20,
-              padding: '8px 20px',
+              marginLeft: 16,
+              padding: '6px 16px',
               borderRadius: 999,
               background: 'rgba(255,255,255,0.14)',
-              fontSize: 22,
-              fontWeight: 600,
+              fontSize: OG_TEXT_MIN_PX,
+              fontWeight: 700,
             }}
           >
             Hva mener du?
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div
-            style={{
-              display: 'flex',
-              fontSize: titleFontSize(title.length),
-              fontWeight: 800,
-              lineHeight: 1.15,
-              maxWidth: 1040,
-            }}
-          >
-            {title}
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, flex: 1, justifyContent: 'center' }}>
+          <div style={titleBoxStyle(titleSize)}>{title}</div>
           {summary ? (
             <div
               style={{
                 display: 'flex',
-                marginTop: 20,
-                fontSize: 26,
-                lineHeight: 1.35,
+                fontSize: OG_TEXT_MIN_PX,
+                lineHeight: 1.3,
                 color: 'rgba(255,255,255,0.82)',
                 maxWidth: 980,
+                maxHeight: Math.round(OG_TEXT_MIN_PX * 1.3 * 2),
+                overflow: 'hidden',
               }}
             >
               {summary}
             </div>
           ) : null}
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div style={{ display: 'flex', gap: 18 }}>
-            {POLL_BALLOT_CHOICES.map((choice) => {
-              const style = OG_CHOICE_STYLE[choice];
-              return pollButton(
-                OG_CHOICE_ICON[choice],
-                pollChoiceLabel(choice),
-                style.background,
-                style.color,
-              );
-            })}
-          </div>
-          <div style={{ display: 'flex', fontSize: 22, color: 'rgba(255,255,255,0.72)' }}>
-            folkets-meninger.no · Uoffisiell meningsmåling
-          </div>
+          {pollResultsBar(totals)}
         </div>
       </div>
     ),
     {
       ...OG_IMAGE_SIZE,
+      fonts,
+      headers: { 'cache-control': cacheControl },
+    },
+  );
+}
+
+export async function renderPollShareOgFallback(
+  cacheControl: string = SHARE_OG_FALLBACK_CACHE_CONTROL,
+): Promise<ImageResponse> {
+  const fonts = await loadOgFonts();
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          padding: `${CARD_PADDING_Y}px ${CARD_PADDING_X}px`,
+          fontFamily: OG_FONT_FAMILY,
+          color: '#ffffff',
+          background: 'linear-gradient(135deg, #001a4a 0%, #00205b 55%, #0a3d9e 100%)',
+        }}
+      >
+        <div style={{ display: 'flex', fontSize: 32, fontWeight: 700 }}>
+          Folkets <span style={{ color: '#ff9fb1' }}>Meninger</span>
+        </div>
+        <div style={{ display: 'flex', fontSize: OG_TITLE_MAX_PX, fontWeight: 700, lineHeight: 1.12 }}>
+          Les saker, følg høringer og si din mening.
+        </div>
+        <div style={{ display: 'flex', fontSize: OG_TEXT_MIN_PX, color: 'rgba(255,255,255,0.72)' }}>
+          folkets-meninger.no
+        </div>
+      </div>
+    ),
+    {
+      ...OG_IMAGE_SIZE,
+      fonts,
       headers: { 'cache-control': cacheControl },
     },
   );

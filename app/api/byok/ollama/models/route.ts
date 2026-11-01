@@ -8,16 +8,9 @@ import {
 import { byokOutboundForUser } from '@/lib/byok/outbound';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { requireStemmePlus } from '@/lib/stemme-plus/entitlement';
+import { trustedClientIp } from '@/lib/trusted-client-ip';
 
 export const dynamic = 'force-dynamic';
-
-function clientIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
-}
 
 function probeFailure(): NextResponse {
   return NextResponse.json(
@@ -34,7 +27,7 @@ export async function GET(request: Request) {
     }
 
     const ipRate = await checkRateLimit(
-      `byok-ollama-models:ip:${clientIp(request)}`,
+      `byok-ollama-models:ip:${trustedClientIp(request)}`,
       30,
       60_000,
     );

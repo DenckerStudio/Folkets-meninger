@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react';
 import {
@@ -10,6 +10,7 @@ import {
   Linkedin01Icon,
   Mail01Icon,
   Message01Icon,
+  NewTwitterIcon,
   SmartPhone01Icon,
   Tick02Icon,
   WhatsappIcon,
@@ -17,6 +18,7 @@ import {
 import { Dialog } from '@/components/ui/dialog';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { DEFAULT_OG_IMAGE_PATH } from '@/lib/seo/metadata';
+import { SHARE_DIALOG_OVERLAY_Z_INDEX } from '@/lib/share/share-overlay-z-index';
 import {
   buildShareTargetUrl,
   resolveShareUrl,
@@ -28,9 +30,14 @@ import {
   type ShareTarget,
 } from '@/lib/share/targets';
 import { cn } from '@/lib/utils';
+import { canUseNativeShare } from '@/lib/share/native-share';
+
+const FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
 const TARGET_ICONS: Record<ShareTarget, IconSvgElement> = {
   facebook: Facebook01Icon,
+  x: NewTwitterIcon,
   linkedin: Linkedin01Icon,
   bluesky: BlueskyIcon,
   whatsapp: WhatsappIcon,
@@ -40,10 +47,6 @@ const TARGET_ICONS: Record<ShareTarget, IconSvgElement> = {
 
 function subscribeNoop() {
   return () => {};
-}
-
-function canNativeShare(): boolean {
-  return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 }
 
 export type ShareDialogProps = {
@@ -64,6 +67,8 @@ export type ShareDialogProps = {
   /** Extra actions under the share options (e.g. embed for polls). */
   extraActions?: ReactNode;
   showPreview?: boolean;
+  /** Stack above reel expanded UI (`z-[400]`). */
+  overlayTop?: boolean;
 };
 
 export function ShareDialog({
@@ -78,11 +83,33 @@ export function ShareDialog({
   dialogTitle = 'Del',
   extraActions,
   showPreview = true,
+  overlayTop = true,
 }: ShareDialogProps) {
   const reducedMotion = usePrefersReducedMotion();
-  const nativeShare = useSyncExternalStore(subscribeNoop, canNativeShare, () => false);
+  const nativeShare = useSyncExternalStore(subscribeNoop, canUseNativeShare, () => false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const dialogInstanceRef = useRef(0);
+
+  useEffect(() => {
+    if (!open || !overlayTop) return;
+    dialogInstanceRef.current += 1;
+    const instance = dialogInstanceRef.current;
+    const applyZIndex = () => {
+      const overlays = document.querySelectorAll('[data-shared-dialog-overlay]');
+      const overlay = overlays[overlays.length - 1];
+      if (overlay instanceof HTMLElement) {
+        overlay.style.zIndex = String(SHARE_DIALOG_OVERLAY_Z_INDEX);
+      }
+    };
+    const id = window.requestAnimationFrame(applyZIndex);
+    return () => {
+      window.cancelAnimationFrame(id);
+      if (dialogInstanceRef.current === instance) {
+        dialogInstanceRef.current = 0;
+      }
+    };
+  }, [open, overlayTop]);
 
   const urlFor = useCallback(
     (channel: ShareChannel) => resolveShareUrl(channelUrl ? channelUrl(channel) : url),
@@ -120,9 +147,12 @@ export function ShareDialog({
       handleClose();
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      setError('Delingen ble avbrutt. Prøv et av alternativene under.');
+      setError('Kunne ikke dele. Prøv å kopiere lenken.');
     }
   };
+
+  const targetCount = SHARE_TARGETS.length;
+  const orphanMobile = targetCount % 2 === 1;
 
   return (
     <Dialog
@@ -164,8 +194,9 @@ export function ShareDialog({
               onClick={() => void copyLink()}
               className={cn(
                 'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors',
+                FOCUS_RING,
                 copied
-                  ? 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-[#0b1220]'
+                  ? 'bg-emerald-700 text-white dark:bg-emerald-700 dark:text-white'
                   : 'bg-brand text-brand-foreground hover:bg-brand/90',
               )}
             >
@@ -185,11 +216,11 @@ export function ShareDialog({
                   />
                 </motion.span>
               </AnimatePresence>
-              {copied ? 'Kopiert' : 'Kopier'}
+              {copied ? 'Lenke kopiert' : 'Kopier lenke'}
             </button>
           </div>
           <p className="sr-only" role="status" aria-live="polite">
-            {copied ? 'Lenken er kopiert' : ''}
+            {copied ? 'Lenke kopiert' : ''}
           </p>
         </div>
 
@@ -197,19 +228,30 @@ export function ShareDialog({
           <button
             type="button"
             onClick={() => void shareNative()}
-            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+            className={cn(
+              'flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted',
+              FOCUS_RING,
+            )}
           >
             <HugeiconsIcon icon={SmartPhone01Icon} className="h-4 w-4" aria-hidden />
             Flere valg på enheten
           </button>
         ) : null}
 
-        <ul className="grid grid-cols-3 gap-2" aria-label="Del til">
+        <ul
+          className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:justify-items-stretch"
+          aria-label="Del til"
+        >
           {SHARE_TARGETS.map((target, index) => {
             const newTab = shareTargetOpensNewTab(target);
+            const isOrphanMobile = orphanMobile && index === targetCount - 1;
             return (
               <motion.li
                 key={target}
+                className={cn(
+                  isOrphanMobile && 'col-span-2 sm:col-span-1',
+                  isOrphanMobile && 'flex justify-center sm:block',
+                )}
                 initial={reducedMotion ? false : { opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: reducedMotion ? 0 : 0.04 * index, duration: 0.25 }}
@@ -222,7 +264,11 @@ export function ShareDialog({
                   })}
                   target={newTab ? '_blank' : undefined}
                   rel={newTab ? 'noreferrer noopener' : undefined}
-                  className="group flex min-h-11 flex-col items-center gap-1.5 rounded-xl border border-border bg-card px-2 py-3 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  className={cn(
+                    'group flex min-h-11 w-full flex-col items-center gap-1.5 rounded-xl border border-border bg-card px-2 py-3 text-xs font-medium text-foreground transition-colors hover:bg-muted',
+                    FOCUS_RING,
+                    isOrphanMobile && 'max-w-[calc(50%-0.25rem)] sm:max-w-none',
+                  )}
                 >
                   <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground transition-transform group-hover:scale-110 group-active:scale-95 motion-reduce:transition-none motion-reduce:group-hover:scale-100">
                     <HugeiconsIcon icon={TARGET_ICONS[target]} className="h-[18px] w-[18px]" aria-hidden />
@@ -298,3 +344,6 @@ function SharePreviewCard({ title, description, host, imageUrl }: SharePreviewCa
     </figure>
   );
 }
+
+export { ShareDialog as ShareModal };
+export type { ShareDialogProps as ShareModalProps };

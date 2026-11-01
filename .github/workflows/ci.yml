@@ -36,6 +36,7 @@ jobs:
       - run: npm run typecheck:evals
       - run: npm run test:unit
       - run: npm run build
+      - run: node scripts/verify-opengraph-image-routes.mjs
 
   test-unit:
     runs-on: ubuntu-latest

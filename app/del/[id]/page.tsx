@@ -5,12 +5,8 @@ import { PollShareLandingBeacon } from '@/components/analytics/poll-share-landin
 import { SharePollWidget } from '@/components/polls/share-poll-widget';
 import { isAnalyticsEnabled } from '@/lib/analytics/flags';
 import { isAdmin } from '@/lib/admin/gate';
-import {
-  DEFAULT_DESCRIPTION,
-  SITE_LOCALE,
-  SITE_NAME,
-  truncateDescription,
-} from '@/lib/seo/metadata';
+import { truncateDescription } from '@/lib/seo/metadata';
+import { buildDelSharePageMetadata } from '@/lib/polls/page-metadata';
 import {
   getPollTotals,
   getPublicPollById,
@@ -19,15 +15,11 @@ import {
 } from '@/lib/polls/service';
 import {
   buildPollShareUrl,
-  DEFAULT_SITE_ORIGIN,
   isPollChoice,
   isShareablePoll,
-  pollSharePath,
 } from '@/lib/polls/share';
-import { OG_IMAGE_ALT, OG_IMAGE_SIZE, pollOgImageAlt } from '@/lib/polls/share-og';
 import { isSharePollsEnabled } from '@/lib/polls/share-flag';
 import { resolveRequestShareOrigin } from '@/lib/polls/share-server';
-import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
 import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { routes } from '@/lib/routes';
@@ -49,50 +41,12 @@ function firstParam(value: string | string[] | undefined): string | null {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const [poll, origin] = await Promise.all([
-    getPublicPollById(id).catch(() => null),
-    resolveRequestShareOrigin().catch(() => DEFAULT_SITE_ORIGIN),
-  ]);
-  const shareable = isShareablePoll(poll) && Boolean(poll);
-
-  const title = shareable && poll ? poll.title : SITE_NAME;
-  const description =
-    shareable && poll
-      ? poll.neutralSummary.trim()
-        ? truncateDescription(poll.neutralSummary, 155)
-        : `Stem ${pollBallotRunningTextPhrase()}. Se hva andre mener på Folkets Meninger.`
-      : DEFAULT_DESCRIPTION;
-
-  const canonical = pollSharePath(id);
-  const version = shareable && poll ? poll.updatedAt : 'generic';
-  const image = {
-    url: `${canonical}/opengraph-image?v=${encodeURIComponent(version)}`,
-    ...OG_IMAGE_SIZE,
-    alt: shareable && poll ? pollOgImageAlt(poll.title) : OG_IMAGE_ALT,
-  };
-
-  return {
-    metadataBase: new URL(`${origin}/`),
-    title: shareable && poll ? `${poll.title} – ${SITE_NAME}` : SITE_NAME,
-    description,
-    alternates: { canonical },
-    openGraph: {
-      // No brand suffix — `siteName` already carries the brand under the card.
-      title,
-      description,
-      url: canonical,
-      siteName: SITE_NAME,
-      locale: SITE_LOCALE,
-      type: 'website',
-      images: [image],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [image],
-    },
-  };
+  const poll = await getPublicPollById(id).catch(() => null);
+  const totals =
+    poll && isShareablePoll(poll)
+      ? await getPollTotals(id).catch(() => null)
+      : null;
+  return buildDelSharePageMetadata({ poll, pollId: id, totals });
 }
 
 export default async function SharePollPage({ params, searchParams }: PageProps) {

@@ -28,10 +28,11 @@ import {
 import {
   buildPollEmbedSnippet,
   buildPollEmbedUrl,
-  buildPollShareChannelUrl,
+  buildPollPageShareChannelUrl,
   buildPollShareRelativePath,
   buildPollShareText,
   isPollChoice,
+  pollPublicPagePath,
   POLL_BALLOT_CHOICES,
 } from '@/lib/polls/share';
 import type { ShareChannel } from '@/lib/share/targets';
@@ -121,6 +122,8 @@ export function SharePollWidget({
     ref: refCode ?? null,
   });
 
+  const canonicalSharePath = useMemo(() => pollPublicPagePath(pollId), [pollId]);
+
   const origin = useMemo(() => {
     try {
       return new URL(shareUrl).origin;
@@ -131,7 +134,7 @@ export function SharePollWidget({
 
   const shareText = useMemo(() => buildPollShareText(title), [title]);
   const shareChannelUrl = useCallback(
-    (channel: ShareChannel) => buildPollShareChannelUrl(pollId, origin, channel, refCode),
+    (channel: ShareChannel) => buildPollPageShareChannelUrl(pollId, origin, channel, refCode),
     [origin, pollId, refCode],
   );
 
@@ -390,14 +393,14 @@ export function SharePollWidget({
             dialogTitle="Del spørsmålet"
             open={shareOpen}
             onOpenChange={setShareOpen}
-            url={shareUrl}
+            url={canonicalSharePath}
             title={title}
             text={shareText}
             description={
               shareDescription ??
               `Stem ${pollBallotRunningTextPhrase()}. Se hva andre mener på Folkets Meninger.`
             }
-            previewImageUrl={`${shareUrl.replace(/[?#].*$/, '')}/opengraph-image`}
+            previewImageUrl={`${canonicalSharePath}/opengraph-image`}
             channelUrl={shareChannelUrl}
             showPreview={!embed}
             extraActions={

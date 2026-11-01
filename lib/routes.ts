@@ -67,6 +67,12 @@ export function isDashboardPath(pathname: string): boolean {
   return pathname === DASHBOARD_PREFIX || pathname.startsWith(`${DASHBOARD_PREFIX}/`);
 }
 
+/** `/dashboard` has no page of its own. Guests and members both land on Utforsk. */
+export function dashboardIndexRedirect(pathname: string): string | null {
+  if (pathname === routes.dashboard) return routes.utforsk;
+  return null;
+}
+
 /** Public issue pages linked from the landing page. */
 export function isPublicDashboardSakPath(pathname: string): boolean {
   return /^\/dashboard\/sak\/[^/]+$/.test(pathname);
@@ -93,6 +99,15 @@ export function isPublicDashboardShareImagePath(pathname: string): boolean {
   return /^\/dashboard\/(sak|avstemninger|folkets-meninger)\/[^/]+\/(opengraph|twitter)-image(-[\w-]+)?$/.test(
     pathname,
   );
+}
+
+/** OG/Twitter image routes under `/del/` (public share widget). */
+export function isPublicDelShareImagePath(pathname: string): boolean {
+  return /^\/del\/[^/]+\/(opengraph|twitter)-image$/.test(pathname);
+}
+
+export function isPublicShareImagePath(pathname: string): boolean {
+  return isPublicDashboardShareImagePath(pathname) || isPublicDelShareImagePath(pathname);
 }
 
 /** Public Utforsk (saker + system Reels) — guests can read; voting requires login. */

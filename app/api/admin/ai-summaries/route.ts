@@ -15,7 +15,7 @@ export async function GET() {
   }
 
   try {
-    const summaries = await listAiSummariesForReview(30);
+    const summaries = await listAiSummariesForReview(80);
     return NextResponse.json({ summaries });
   } catch (error) {
     console.error('[ai-summary-review] liste feilet', error);

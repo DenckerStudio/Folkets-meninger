@@ -1,9 +1,19 @@
 'use client';
 
-import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { X } from 'lucide-react';
+import { ReelExpandedShareProvider } from '@/components/polls/reel-expanded-share-context';
 import { useBodyOverlayFlag } from '@/hooks/use-body-overlay';
 import { useFocusTrap } from '@/hooks/use-focus-trap';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
@@ -47,6 +57,7 @@ export function ReelExpandedShell({
   const shareLayout = open && !isMobile && !reducedMotion;
   const panelRef = useRef<HTMLDivElement>(null);
   const wasOpenRef = useRef(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const titleId = useId();
 
   const portalRoot = isMobile ? document.body : layoutPortalRoot;
@@ -65,7 +76,12 @@ export function ReelExpandedShell({
     };
   }, [open]);
 
-  useFocusTrap(open, panelRef, onClose);
+  const handleClose = useCallback(() => {
+    setShareDialogOpen(false);
+    onClose();
+  }, [onClose]);
+
+  useFocusTrap(open && !shareDialogOpen, panelRef, handleClose);
 
   useEffect(() => {
     if (!open) return;
@@ -118,7 +134,7 @@ export function ReelExpandedShell({
               type="button"
               aria-label="Lukk utvidet kort"
               className="pointer-events-auto fixed inset-0 z-[225] bg-black/55"
-              onClick={onClose}
+              onClick={handleClose}
               initial={reducedMotion ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={reducedMotion ? { opacity: 0 } : { opacity: 0 }}
@@ -147,7 +163,7 @@ export function ReelExpandedShell({
                 <button
                   ref={closeButtonRef}
                   type="button"
-                  onClick={onClose}
+                  onClick={handleClose}
                   aria-label="Lukk"
                 className={cn(
                   REEL_ICON_HIT,
@@ -157,7 +173,11 @@ export function ReelExpandedShell({
                 <X className="h-5 w-5" aria-hidden />
               </button>
             </div>
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <ReelExpandedShareProvider setShareDialogOpen={setShareDialogOpen}>
+                {children}
+              </ReelExpandedShareProvider>
+            </div>
           </motion.div>
           ) : (
             <div className="pointer-events-none fixed inset-0 z-[230] flex items-center justify-center p-4 sm:p-6">
@@ -179,7 +199,7 @@ export function ReelExpandedShell({
                   <button
                     ref={closeButtonRef}
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     aria-label="Lukk"
                     className={cn(
                       REEL_ICON_HIT,
@@ -189,7 +209,11 @@ export function ReelExpandedShell({
                     <X className="h-5 w-5" aria-hidden />
                   </button>
                 </div>
-                <div className="flex min-h-0 max-h-full flex-col overflow-hidden">{children}</div>
+                <div className="flex min-h-0 max-h-full flex-col overflow-hidden">
+                  <ReelExpandedShareProvider setShareDialogOpen={setShareDialogOpen}>
+                    {children}
+                  </ReelExpandedShareProvider>
+                </div>
               </motion.div>
             </div>
           )}

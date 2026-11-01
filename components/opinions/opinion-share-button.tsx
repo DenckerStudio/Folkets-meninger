@@ -1,6 +1,6 @@
 'use client';
 
-import { ShareTrigger } from '@/components/share/share-trigger';
+import { ShareButton } from '@/components/share/share-button';
 import { routes } from '@/lib/routes';
 import { opinionShareDescription } from '@/lib/opinions/share';
 
@@ -15,7 +15,7 @@ export function OpinionShareButton({ opinion, label, className }: OpinionShareBu
   const title = (opinion.title || 'Mening').trim();
 
   return (
-    <ShareTrigger
+    <ShareButton
       label={label}
       ariaLabel={label ? undefined : `Del meningen «${title}»`}
       dialogTitle="Del meningen"

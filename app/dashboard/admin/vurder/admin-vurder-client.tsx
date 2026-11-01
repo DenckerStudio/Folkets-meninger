@@ -8,6 +8,7 @@ import { AiSummaryReview } from '@/components/admin/ai-summary-review';
 import { BlogDraftReview } from '@/components/admin/blog-draft-review';
 import { ReelDraftReview } from '@/components/admin/reel-draft-review';
 import { parseVurderTab, VURDER_TABS, type VurderTabId } from '@/lib/admin/vurder-tabs';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -50,10 +51,10 @@ export default function AdminVurderClient() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-6 sm:space-y-8">
       <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
-          <ClipboardCheck className="h-6 w-6 text-brand" aria-hidden />
+        <h1 className="flex items-center gap-2 text-xl font-bold text-foreground sm:text-2xl">
+          <ClipboardCheck className="h-6 w-6 shrink-0 text-brand" aria-hidden />
           Vurder
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -62,7 +63,7 @@ export default function AdminVurderClient() {
       </div>
 
       <div
-        className="flex flex-wrap gap-1 rounded-xl bg-muted/50 p-1"
+        className="-mx-1 flex snap-x snap-mandatory gap-1 overflow-x-auto rounded-xl bg-muted/50 p-1 [scrollbar-width:none] sm:mx-0 sm:snap-none sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden"
         role="tablist"
         aria-label="Innhold som skal vurderes"
       >
@@ -78,7 +79,8 @@ export default function AdminVurderClient() {
               aria-controls={`${tablistId}-${item.id}-panel`}
               onClick={() => selectTab(item.id)}
               className={cn(
-                'inline-flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-lg px-2 py-2.5 text-sm font-medium transition-colors sm:min-w-[8.5rem] sm:px-4',
+                'inline-flex min-h-11 shrink-0 snap-start items-center justify-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors sm:flex-1 sm:shrink sm:snap-align-none sm:px-4 sm:min-w-[8.5rem]',
+                VURDER_FOCUS_RING,
                 selected
                   ? 'bg-card text-brand shadow-sm'
                   : 'text-muted-foreground hover:bg-card/60 hover:text-foreground',

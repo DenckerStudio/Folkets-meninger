@@ -17,6 +17,7 @@ import {
 import type { ResearchBriefsByKind } from '@/lib/admin/research/service';
 import { adminReelDraftUrl } from '@/lib/admin/research/labels';
 import { routes } from '@/lib/routes';
+import { formatOppfangetSourcePublisher } from '@/lib/admin/oppfanget/source-display';
 import { cn } from '@/lib/utils';
 
 const cellClass = 'min-w-0 overflow-hidden break-words px-2 py-1.5 align-top text-xs';
@@ -121,7 +122,7 @@ function SourcesList({ row, mobile = false }: { row: OppfangetRow; mobile?: bool
             rel="noopener noreferrer"
             className={linkClass}
           >
-            <span className="break-words">{s.publisher ?? 'Kilde'}</span>
+            <span className="break-words">{formatOppfangetSourcePublisher(s)}</span>
             <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
           </a>
           {s.signalOnly ? <span className="text-muted-foreground"> (signal)</span> : null}

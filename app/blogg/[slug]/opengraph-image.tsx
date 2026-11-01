@@ -9,6 +9,8 @@ import { blogCmsOrUnavailable } from '@/lib/blog/cms-read-runtime';
 import { getPublishedBlogPostBySlug } from '@/lib/blog/service';
 import { CmsFetchError } from '@/lib/cms/cms-fetch-error';
 
+/** Keep in sync with SHARE_OG_REVALIDATE_SECONDS (Next.js requires a literal here). */
+export const revalidate = 300;
 export const size = BLOG_OG_SIZE;
 export const contentType = BLOG_OG_CONTENT_TYPE;
 
@@ -25,13 +27,13 @@ export default async function Image({ params }: ImageProps) {
       return post;
     });
     if (loaded.unavailable) {
-      return renderBlogCmsUnavailableOgImage();
+      return await renderBlogCmsUnavailableOgImage();
     }
     if (!loaded.data) notFound();
-    return renderBlogPostOgImage(loaded.data.title, loaded.data.excerpt);
+    return await renderBlogPostOgImage(loaded.data.title, loaded.data.excerpt);
   } catch (error) {
     if (error instanceof CmsFetchError) {
-      return renderBlogCmsUnavailableOgImage();
+      return await renderBlogCmsUnavailableOgImage();
     }
     throw error;
   }
