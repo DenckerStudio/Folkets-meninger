@@ -34,7 +34,7 @@ const SIZE_CLASS: Record<DialogSize, string> = {
 
 const openDialogs: HTMLElement[] = [];
 const dialogRestoreTargets = new WeakMap<HTMLElement, HTMLElement | null>();
-const DIALOG_Z_INDEX_BASE = 80;
+const DIALOG_Z_INDEX_BASE = 95;
 const DIALOG_Z_INDEX_STEP = 10;
 
 const FOCUSABLE_SELECTOR = [
@@ -241,7 +241,7 @@ export function Dialog({
           key="quiet-dialog"
           ref={overlayRef}
           data-shared-dialog-overlay
-          className="fixed inset-0 z-[80] flex items-end justify-center p-3 sm:items-center sm:p-4"
+          className="fixed inset-0 flex items-end justify-center p-3 sm:items-center sm:p-4"
           initial={reducedMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={reducedMotion ? { opacity: 1 } : { opacity: 0 }}
