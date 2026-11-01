@@ -1,4 +1,5 @@
 import { DEFAULT_SITE_URL } from '@/lib/seo/metadata';
+import { routes } from '@/lib/routes';
 import type { PollChoice, PollRecord } from '@/lib/polls/types';
 import type { PollEmbedOptions } from '@/lib/polls/embed';
 import { serializePollEmbedOptions } from '@/lib/polls/embed';
@@ -97,6 +98,11 @@ export function pollSharePath(pollId: string): string {
   return `/del/${encodeURIComponent(pollId)}`;
 }
 
+/** Canonical in-app poll detail page (used by Del-dialog share links). */
+export function pollPublicPagePath(pollId: string): string {
+  return routes.poll(pollId);
+}
+
 /** Absolute public share URL for a poll. Always parameter-free (canonical / og:url). */
 export function buildPollShareUrl(pollId: string, origin?: string | null): string {
   return new URL(pollSharePath(pollId), `${normalizeOrigin(origin)}/`).toString();
@@ -119,6 +125,7 @@ const CHANNEL_UTM: Record<
   { source: string; medium: string; ref: string }
 > = {
   facebook: { source: 'facebook', medium: 'social', ref: 'fb' },
+  x: { source: 'x', medium: 'social', ref: 'x' },
   linkedin: { source: 'linkedin', medium: 'social', ref: 'li' },
   bluesky: { source: 'bluesky', medium: 'social', ref: 'bs' },
   whatsapp: { source: 'whatsapp', medium: 'messaging', ref: 'wa' },
@@ -129,17 +136,13 @@ const CHANNEL_UTM: Record<
   embed: { source: 'embed', medium: 'embed', ref: 'embed' },
 };
 
-/**
- * Channel-specific share URL. Social channels carry standard UTM parameters plus
- * a short `ref`; the embed link only carries `ref`.
- */
-export function buildPollShareChannelUrl(
-  pollId: string,
+function buildPollChannelUrl(
+  pagePath: string,
   origin: string | null | undefined,
   channel: PollShareChannel,
   ref?: string | null,
 ): string {
-  const url = new URL(pollSharePath(pollId), `${normalizeOrigin(origin)}/`);
+  const url = new URL(pagePath, `${normalizeOrigin(origin)}/`);
   const utm = CHANNEL_UTM[channel];
   if (channel !== 'embed') {
     url.searchParams.set('utm_source', utm.source);
@@ -149,6 +152,29 @@ export function buildPollShareChannelUrl(
   const refValue = ref?.trim() || utm.ref;
   if (refValue) url.searchParams.set('ref', refValue);
   return url.toString();
+}
+
+/** Channel URL for the public poll detail page (`/dashboard/avstemninger/...`). */
+export function buildPollPageShareChannelUrl(
+  pollId: string,
+  origin: string | null | undefined,
+  channel: PollShareChannel,
+  ref?: string | null,
+): string {
+  return buildPollChannelUrl(pollPublicPagePath(pollId), origin, channel, ref);
+}
+
+/**
+ * Channel-specific share URL for `/del/...` (legacy widget landing).
+ * Social channels carry standard UTM parameters plus a short `ref`.
+ */
+export function buildPollShareChannelUrl(
+  pollId: string,
+  origin: string | null | undefined,
+  channel: PollShareChannel,
+  ref?: string | null,
+): string {
+  return buildPollChannelUrl(pollSharePath(pollId), origin, channel, ref);
 }
 
 /** Path of the iframe embed route. */

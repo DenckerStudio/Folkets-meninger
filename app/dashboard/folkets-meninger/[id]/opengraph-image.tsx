@@ -9,6 +9,9 @@ import {
   SHARE_OG_SIZE,
 } from '@/lib/seo/share-og';
 
+/** Keep in sync with SHARE_OG_REVALIDATE_SECONDS (Next.js requires a literal here). */
+export const revalidate = 300;
+
 export const alt = 'Mening på Folkets Meninger';
 export const size = SHARE_OG_SIZE;
 export const contentType = SHARE_OG_CONTENT_TYPE;
@@ -29,12 +32,12 @@ export default async function Image({ params }: ImageProps) {
   // getCitizenOpinion returns null both for unknown ids and read errors, so both
   // get the short-lived branded fallback rather than a long-cached 404.
   const opinion = await getCitizenOpinion(id, null).catch(() => null);
-  if (!opinion) return renderShareOgFallback('Folkets meninger');
+  if (!opinion) return await renderShareOgFallback('Folkets meninger');
 
   const counts = opinion.counts;
   const stances: OpinionStance[] = ['for', 'blank', 'imot'];
 
-  return renderShareOgImage({
+  return await renderShareOgImage({
     eyebrow: 'Folkets meninger',
     title: opinion.title || 'Mening',
     description: opinion.issueTitle ? `Om saken: ${opinion.issueTitle}` : null,

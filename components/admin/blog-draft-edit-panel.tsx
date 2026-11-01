@@ -13,6 +13,7 @@ import {
 } from '@/lib/admin/blog-draft-edit-fields';
 import type { BlogDraftEditServerSnapshot } from '@/lib/admin/blog-draft-edit-panel-state';
 import { BLOG_EXCERPT_MAX, BLOG_TITLE_MAX } from '@/lib/blog/text-limits';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { cn } from '@/lib/utils';
 
 export type BlogDraftEditPanelDraft = BlogDraftEditServerSnapshot;
@@ -354,7 +355,7 @@ export function BlogDraftEditPanel({
           aria-label="Bekreft forkasting"
         >
           <p className="text-sm font-medium text-foreground">Forkaste endringene?</p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <button
               type="button"
               disabled={pending}
@@ -362,7 +363,10 @@ export function BlogDraftEditPanel({
                 setDiscardConfirmOpen(false);
                 onCancel();
               }}
-              className="inline-flex min-h-11 items-center rounded-lg bg-destructive px-4 py-2.5 text-sm font-medium text-destructive-foreground hover:opacity-90 disabled:opacity-50"
+              className={cn(
+                'inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-destructive px-4 py-2.5 text-sm font-medium text-destructive-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
+                VURDER_FOCUS_RING,
+              )}
             >
               Forkast
             </button>
@@ -371,19 +375,25 @@ export function BlogDraftEditPanel({
               type="button"
               disabled={pending}
               onClick={() => closeDiscardConfirm(true)}
-              className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+              className={cn(
+                'inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50 sm:w-auto',
+                VURDER_FOCUS_RING,
+              )}
             >
               Fortsett å redigere
             </button>
           </div>
         </div>
       ) : (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <button
             type="button"
             disabled={pending}
             onClick={save}
-            className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+            className={cn(
+              'inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
+              VURDER_FOCUS_RING,
+            )}
           >
             {pending ? 'Lagrer …' : 'Lagre utkast'}
           </button>
@@ -392,7 +402,10 @@ export function BlogDraftEditPanel({
             type="button"
             disabled={pending}
             onClick={handleCancelClick}
-            className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+            className={cn(
+              'inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50 sm:w-auto',
+              VURDER_FOCUS_RING,
+            )}
           >
             Avbryt
           </button>

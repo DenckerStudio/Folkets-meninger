@@ -101,6 +101,15 @@ export function isPublicDashboardShareImagePath(pathname: string): boolean {
   );
 }
 
+/** OG/Twitter image routes under `/del/` (public share widget). */
+export function isPublicDelShareImagePath(pathname: string): boolean {
+  return /^\/del\/[^/]+\/(opengraph|twitter)-image$/.test(pathname);
+}
+
+export function isPublicShareImagePath(pathname: string): boolean {
+  return isPublicDashboardShareImagePath(pathname) || isPublicDelShareImagePath(pathname);
+}
+
 /** Public Utforsk (Stortingssaker) — guests can read; holdninger krever innlogging. */
 export function isPublicDashboardUtforskPath(pathname: string): boolean {
   return pathname === routes.utforsk || pathname.startsWith(`${routes.utforsk}/`);

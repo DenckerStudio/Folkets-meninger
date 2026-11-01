@@ -2,6 +2,7 @@ import {
   buildPollEmbedSnippet,
   buildPollEmbedUrl,
   buildPollShareChannelUrl,
+  buildPollPageShareChannelUrl,
   buildPollShareRelativePath,
   buildPollShareText,
   buildPollShareUrl,
@@ -11,6 +12,7 @@ import {
   isShareablePoll,
   normalizeOrigin,
   pollEmbedPath,
+  pollPublicPagePath,
   pollSharePath,
   POLL_BALLOT_CHOICES,
   resolveShareOrigin,
@@ -57,6 +59,23 @@ assert(
 );
 
 assert(pollSharePath('abc-123') === '/del/abc-123', 'share path');
+assert(
+  pollPublicPagePath('abc-123') === '/dashboard/avstemninger/abc-123',
+  'public poll page path',
+);
+
+const pageFacebook = buildPollPageShareChannelUrl(
+  'abc-123',
+  'https://www.folkets-meninger.no',
+  'facebook',
+);
+assert(
+  pageFacebook.startsWith('https://www.folkets-meninger.no/dashboard/avstemninger/abc-123'),
+  'page channel path',
+);
+assert(pageFacebook.includes('utm_source=facebook'), 'page channel utm');
+assert(!pageFacebook.includes('/del/'), 'page channel not del');
+
 assert(pollSharePath('a/b') === '/del/a%2Fb', 'share path encodes');
 assert(pollEmbedPath('abc-123') === '/embed/abc-123', 'embed path');
 assert(

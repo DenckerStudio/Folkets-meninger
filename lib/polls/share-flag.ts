@@ -1,8 +1,7 @@
 /**
- * Global launch flag for the shareable poll widget (`/del`, `/embed` and the
- * "Del" entry points). Off by default so the feature can ship dark and be
- * switched on per environment. Admins can still open the routes for preview
- * while the flag is off.
+ * Global launch flag for the public `/del` + `/embed` widget routes.
+ * Off in prod by default (those URLs 404). In-app «Del» always shares the
+ * canonical poll page (`/dashboard/avstemninger/...`) regardless of this flag.
  */
 export function isSharePollsEnabled(): boolean {
   const raw = process.env.SHARE_POLLS_ENABLED?.trim().toLowerCase();

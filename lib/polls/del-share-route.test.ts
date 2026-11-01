@@ -11,8 +11,8 @@ const retiredSrc = readFileSync(
 assert.match(pageSrc, /getSharePagePollById/);
 assert.match(pageSrc, /isRetiredSystemSharePoll/);
 assert.match(pageSrc, /SharePollRetiredPage/);
-assert.match(pageSrc, /robots: \{ index: false/);
-assert.doesNotMatch(pageSrc, /isRetiredSystemSharePoll\(poll\)\) notFound\(\)/);
+assert.match(pageSrc, /buildRetiredDelSharePageMetadata/);
+assert.match(pageSrc, /isRetiredSystemSharePoll/);
 
 assert.match(retiredSrc, /SYSTEM_POLL_SHARE_RETIRED_TITLE/);
 assert.match(retiredSrc, /routes\.avstemninger/);

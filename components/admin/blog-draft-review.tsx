@@ -28,6 +28,8 @@ import {
   type BlogDraftReviewItem,
 } from '@/lib/admin/blog-review';
 import { DRAFT_RESTORE_SUCCESS_MESSAGE } from '@/lib/admin/draft-expiry';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
+import { cn } from '@/lib/utils';
 
 type DraftsResponse = {
   drafts?: BlogDraftReviewItem[];
@@ -141,7 +143,7 @@ export function BlogDraftReview() {
   const activeDraft = activeId ? blogDraftReviewItemForReopen(drafts, activeId) : null;
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <DraftReviewQueueToggle queue={queue} onQueueChange={setQueue} className="max-w-md" />
       <p className="text-sm text-muted-foreground">
         {queue === 'pending'
@@ -189,8 +191,8 @@ export function BlogDraftReview() {
       ) : null}
       <ul className="space-y-3">
         {drafts.map((draft) => (
-          <li key={draft.id} className="rounded-2xl border border-border bg-card p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+          <li key={draft.id} className="min-w-0 rounded-2xl border border-border bg-card p-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between">
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tittel</p>
                 <p className="mt-1 font-medium break-words text-foreground">{draft.title}</p>
@@ -209,22 +211,26 @@ export function BlogDraftReview() {
                       : ''}
                 </p>
               </div>
-              <div className="flex w-full flex-col items-start gap-2 lg:w-auto lg:items-end">
+              <div className="flex w-full min-w-0 flex-col items-stretch gap-2 lg:w-auto lg:max-w-full lg:items-end">
                 {queue === 'pending' ? (
                   <DraftExpiryBadge
                     clock={{
                       createdAt: draft.createdAt ?? draft.updatedAt,
                       restoredAt: draft.restoredAt,
                     }}
+                    className="self-start lg:self-end"
                   />
                 ) : null}
-                <div className="flex flex-wrap gap-2 lg:justify-end">
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap lg:justify-end">
                   {queue === 'pending' && editEnabled ? (
                     <button
                       type="button"
                       disabled={pending}
                       onClick={() => openEdit(draft)}
-                      className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+                      className={cn(
+                        'inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50 sm:w-auto',
+                        VURDER_FOCUS_RING,
+                      )}
                     >
                       Rediger her
                     </button>
@@ -237,7 +243,10 @@ export function BlogDraftReview() {
                         setEditingId(null);
                         setActiveId(draft.id);
                       }}
-                      className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+                      className={cn(
+                        'inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
+                        VURDER_FOCUS_RING,
+                      )}
                     >
                       Vurder
                     </button>
@@ -246,7 +255,10 @@ export function BlogDraftReview() {
                       type="button"
                       disabled={pending}
                       onClick={() => restoreDraft(draft.id)}
-                      className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+                      className={cn(
+                        'inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
+                        VURDER_FOCUS_RING,
+                      )}
                     >
                       Gjenopprett
                     </button>
@@ -256,7 +268,10 @@ export function BlogDraftReview() {
                       href={draft.payloadAdminUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                      className={cn(
+                        'inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline sm:w-auto',
+                        VURDER_FOCUS_RING,
+                      )}
                     >
                       Åpne i Payload
                       <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -307,7 +322,13 @@ export function BlogDraftReview() {
           </li>
         ))}
       </ul>
-      <Link href="/blogg" className="inline-flex text-sm font-medium text-brand hover:underline">
+      <Link
+        href="/blogg"
+        className={cn(
+          'inline-flex min-h-11 items-center text-sm font-medium text-brand hover:underline',
+          VURDER_FOCUS_RING,
+        )}
+      >
         Offentlig blogg
       </Link>
     </div>

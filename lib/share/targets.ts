@@ -1,13 +1,16 @@
 /**
  * Share targets used by the share dialog (`components/share/share-dialog.tsx`).
- * X and Reddit are deliberately not offered (dropped for now, see AGENTS.md).
+ * Reddit is deliberately not offered (dropped for now, see AGENTS.md).
  */
 
-export type ShareTarget = 'facebook' | 'linkedin' | 'bluesky' | 'whatsapp' | 'sms' | 'email';
+import { resolveClientShareOrigin } from '@/lib/share/client-origin';
+
+export type ShareTarget = 'facebook' | 'x' | 'linkedin' | 'bluesky' | 'whatsapp' | 'sms' | 'email';
 export type ShareChannel = ShareTarget | 'native' | 'copy';
 
 export const SHARE_TARGETS: ShareTarget[] = [
   'facebook',
+  'x',
   'linkedin',
   'bluesky',
   'whatsapp',
@@ -17,6 +20,7 @@ export const SHARE_TARGETS: ShareTarget[] = [
 
 export const SHARE_TARGET_LABELS: Record<ShareTarget, string> = {
   facebook: 'Facebook',
+  x: 'X',
   linkedin: 'LinkedIn',
   bluesky: 'Bluesky',
   whatsapp: 'WhatsApp',
@@ -43,6 +47,12 @@ export function buildShareTargetUrl(target: ShareTarget, input: ShareTargetInput
   switch (target) {
     case 'facebook':
       return `https://www.facebook.com/sharer/sharer.php?${new URLSearchParams({ u: url })}`;
+    case 'x': {
+      const params = new URLSearchParams({ url });
+      const tweetText = text.trim();
+      if (tweetText) params.set('text', tweetText);
+      return `https://twitter.com/intent/tweet?${params}`;
+    }
     case 'linkedin':
       return `https://www.linkedin.com/sharing/share-offsite/?${new URLSearchParams({ url })}`;
     case 'bluesky':
@@ -69,10 +79,10 @@ export function shareTargetOpensNewTab(target: ShareTarget): boolean {
   return target !== 'sms' && target !== 'email';
 }
 
-/** Resolve a root-relative path against the browser origin (client) or return as-is. */
+/** Resolve a root-relative path against the canonical public origin (or local dev). */
 export function resolveShareUrl(url: string, origin?: string | null): string {
   if (/^https?:\/\//i.test(url)) return url;
-  const base = origin ?? (typeof window !== 'undefined' ? window.location.origin : null);
+  const base = origin ?? resolveClientShareOrigin();
   if (!base) return url;
   return new URL(url.startsWith('/') ? url : `/${url}`, `${base}/`).toString();
 }

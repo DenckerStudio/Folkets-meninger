@@ -50,13 +50,16 @@ assert.doesNotMatch(dialogSource, /<button[\s\S]*?className="absolute inset-0/);
 assert.doesNotMatch(dialogSource, /aria-label="Lukk"/);
 assert.match(dialogSource, /aria-label="Lukk dialog"/);
 
-assert.match(dialogSource, /DIALOG_Z_INDEX_BASE = 80/);
+assert.match(dialogSource, /DIALOG_Z_INDEX_BASE = 95/);
 assert.match(dialogSource, /DIALOG_Z_INDEX_STEP/);
 assert.match(
   dialogSource,
   /overlay\.style\.zIndex = String\(\s*DIALOG_Z_INDEX_BASE \+ \(openDialogs\.length - 1\) \* DIALOG_Z_INDEX_STEP/,
 );
-assert.match(dialogSource, /z-\[80\]/);
+assert.doesNotMatch(
+  dialogSource,
+  /data-shared-dialog-overlay[\s\S]*?className="fixed inset-0 z-\[/,
+);
 
 assert.match(dialogSource, /addEventListener\(['"]keydown['"], onKey, true\)/);
 assert.match(dialogSource, /removeEventListener\(['"]keydown['"], onKey, true\)/);
