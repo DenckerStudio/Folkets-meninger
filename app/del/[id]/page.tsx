@@ -124,6 +124,7 @@ export default async function SharePollPage({ params, searchParams }: PageProps)
   const utmSource = firstParam(query.utm_source);
   const utmMedium = firstParam(query.utm_medium);
   const utmCampaign = firstParam(query.utm_campaign);
+  const fmShare = firstParam(query.fm_share);
 
   const summary = poll.neutralSummary.trim();
   const truncatedSummary = summary ? truncateDescription(summary, 160) : '';
@@ -225,6 +226,7 @@ export default async function SharePollPage({ params, searchParams }: PageProps)
         utmMedium={utmMedium}
         utmCampaign={utmCampaign}
         refCode={refCode}
+        fmShare={fmShare}
       />
     ) : null}
     </>

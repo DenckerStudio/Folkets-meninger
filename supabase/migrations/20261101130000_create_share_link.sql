@@ -1,5 +1,9 @@
 -- Personal share-link create/list (manual apply). Caller must be the session user.
 
+CREATE UNIQUE INDEX IF NOT EXISTS share_links_active_target_uidx
+  ON public.share_links (created_by, target_kind, target_id)
+  WHERE revoked_at IS NULL;
+
 CREATE OR REPLACE FUNCTION public.create_share_link(
   p_user_id uuid,
   p_target_kind text,
@@ -29,6 +33,8 @@ BEGIN
   v_target_id := btrim(COALESCE(p_target_id, ''));
   IF char_length(v_target_id) < 1
      OR char_length(v_target_id) > 200
+     OR v_target_id = '.'
+     OR position('..' IN v_target_id) > 0
      OR v_target_id !~ '^[A-Za-z0-9_.:-]{1,200}$' THEN
     RAISE EXCEPTION 'Ugyldig delingsmål'
       USING ERRCODE = '22023';
@@ -73,6 +79,25 @@ BEGIN
       );
     EXCEPTION
       WHEN unique_violation THEN
+        SELECT *
+        INTO v_existing
+        FROM public.share_links
+        WHERE created_by = p_user_id
+          AND target_kind = p_target_kind
+          AND target_id = v_target_id
+          AND revoked_at IS NULL
+        ORDER BY created_at DESC
+        LIMIT 1;
+
+        IF FOUND THEN
+          RETURN jsonb_build_object(
+            'id', v_existing.id,
+            'code', v_existing.code,
+            'targetKind', v_existing.target_kind,
+            'targetId', v_existing.target_id
+          );
+        END IF;
+
         IF v_attempt = 3 THEN
           RAISE;
         END IF;

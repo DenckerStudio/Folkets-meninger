@@ -10,6 +10,7 @@ export type PollShareLandingBeaconProps = {
   utmMedium: string | null;
   utmCampaign: string | null;
   refCode: string | null;
+  fmShare: string | null;
 };
 
 function buildLandingPath(
@@ -18,6 +19,7 @@ function buildLandingPath(
   utmMedium: string | null,
   utmCampaign: string | null,
   refCode: string | null,
+  fmShare: string | null,
 ): string {
   const base = `/del/${pollId}`;
   const params = new URLSearchParams();
@@ -33,6 +35,9 @@ function buildLandingPath(
   if (refCode) {
     params.set('ref', refCode);
   }
+  if (fmShare) {
+    params.set('fm_share', fmShare);
+  }
   const query = params.toString();
   return query ? `${base}?${query}` : base;
 }
@@ -43,6 +48,7 @@ export function PollShareLandingBeacon({
   utmMedium,
   utmCampaign,
   refCode,
+  fmShare,
 }: PollShareLandingBeaconProps) {
   useEffect(() => {
     const storageKey = `${SESSION_KEY_PREFIX}${pollId}`;
@@ -56,9 +62,17 @@ export function PollShareLandingBeacon({
       // sessionStorage unavailable — still attempt one beacon
     }
 
+    const shareCode = fmShare?.trim() ?? '';
     const body: Record<string, string> = {
       eventName: 'poll_share_landing',
-      path: buildLandingPath(pollId, utmSource, utmMedium, utmCampaign, refCode),
+      path: buildLandingPath(
+        pollId,
+        utmSource,
+        utmMedium,
+        utmCampaign,
+        refCode,
+        shareCode || null,
+      ),
     };
 
     const referrer = document.referrer.trim();
@@ -77,6 +91,9 @@ export function PollShareLandingBeacon({
     if (refCode) {
       body.ref = refCode;
     }
+    if (shareCode) {
+      body.shareCode = shareCode;
+    }
 
     void fetch('/api/analytics/collect', {
       method: 'POST',
@@ -84,7 +101,7 @@ export function PollShareLandingBeacon({
       body: JSON.stringify(body),
       keepalive: true,
     });
-  }, [pollId, utmSource, utmMedium, utmCampaign, refCode]);
+  }, [pollId, utmSource, utmMedium, utmCampaign, refCode, fmShare]);
 
   return null;
 }

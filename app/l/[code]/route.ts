@@ -10,7 +10,7 @@ function notFound(): NextResponse {
   return new NextResponse(null, { status: 404 });
 }
 
-function sameOriginLocation(path: string, requestUrl: string): URL | null {
+function sameOriginLocation(path: string, code: string, requestUrl: string): URL | null {
   if (!path.startsWith('/') || path.startsWith('//') || path.includes('//')) {
     return null;
   }
@@ -24,6 +24,8 @@ function sameOriginLocation(path: string, requestUrl: string): URL | null {
   }
   if (location.origin !== request.origin) return null;
   if (!location.pathname.startsWith('/') || location.pathname.includes('//')) return null;
+  location.search = '';
+  location.searchParams.set('fm_share', code);
   return location;
 }
 
@@ -58,7 +60,7 @@ export async function GET(
   const targetKind = typeof data.target_kind === 'string' ? data.target_kind : '';
   const targetId = typeof data.target_id === 'string' ? data.target_id : '';
   const path = resolveShareTarget(targetKind, targetId);
-  const location = path ? sameOriginLocation(path, request.url) : null;
+  const location = path ? sameOriginLocation(path, code, request.url) : null;
   if (!location) return notFound();
 
   const { error: insertError } = await service.rpc('insert_analytics_event', {

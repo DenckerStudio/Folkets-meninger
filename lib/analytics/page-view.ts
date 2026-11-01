@@ -12,6 +12,7 @@ export type PageViewCollectBody = {
   utm_medium?: string;
   utm_campaign?: string;
   ref?: string;
+  shareCode?: string;
 };
 
 function joinPath(pathname: string, search: string): string {
@@ -63,6 +64,10 @@ export function buildPageViewBody(input: BuildPageViewBodyInput): PageViewCollec
   const ref = optionalQueryField(params, 'ref');
   if (ref) {
     body.ref = ref;
+  }
+  const shareCode = optionalQueryField(params, 'fm_share');
+  if (shareCode) {
+    body.shareCode = shareCode;
   }
 
   return body;

@@ -40,6 +40,32 @@ assert.deepEqual(
   },
 );
 
+assert.deepEqual(
+  buildPageViewBody({
+    pathname: '/del/abc',
+    search: 'fm_share=kode123&utm_source=facebook',
+    referrer: '',
+  }),
+  {
+    eventName: 'page_view',
+    path: '/del/abc?fm_share=kode123&utm_source=facebook',
+    utm_source: 'facebook',
+    shareCode: 'kode123',
+  },
+);
+
+assert.deepEqual(
+  buildPageViewBody({
+    pathname: '/blogg/hei',
+    search: '?fm_share=',
+    referrer: '',
+  }),
+  {
+    eventName: 'page_view',
+    path: '/blogg/hei?fm_share=',
+  },
+);
+
 assert.equal(shouldTrackPath('/dashboard/admin'), false);
 assert.equal(shouldTrackPath('/dashboard/admin/statistikk'), false);
 assert.equal(shouldTrackPath('/'), true);

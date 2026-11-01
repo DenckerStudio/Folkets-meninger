@@ -20,6 +20,9 @@ assert.equal(resolveShareTarget('generic', 'kampanje'), null);
 assert.equal(resolveShareTarget('https://evil', 'abc'), null);
 assert.equal(resolveShareTarget('poll', 'https://evil'), null);
 assert.equal(resolveShareTarget('poll', '../'), null);
+assert.equal(resolveShareTarget('poll', '..'), null);
+assert.equal(resolveShareTarget('poll', '.'), null);
+assert.equal(resolveShareTarget('sak', 'a..b'), null);
 assert.equal(resolveShareTarget('unknown', 'abc'), null);
 
 assert.equal(personalSharePath('abc 123'), '/l/abc%20123');

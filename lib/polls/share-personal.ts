@@ -13,7 +13,9 @@ export function isShareTargetKind(kind: string): kind is ShareTargetKind {
 }
 
 export function isShareTargetId(targetId: string): boolean {
-  return SHARE_TARGET_ID_RE.test(targetId);
+  if (!SHARE_TARGET_ID_RE.test(targetId)) return false;
+  if (targetId === '.' || targetId.includes('..')) return false;
+  return true;
 }
 
 function pathForKind(kind: ShareTargetKind, targetId: string): string | null {

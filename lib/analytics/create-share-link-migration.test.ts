@@ -43,4 +43,15 @@ for (const name of functions) {
   );
 }
 
+const createShareLink = extractFunction('create_share_link');
+assert.match(createShareLink, /position\('\.\.' IN v_target_id\)/);
+assert.match(
+  createShareLink,
+  /WHEN unique_violation THEN[\s\S]*revoked_at IS NULL[\s\S]*RETURN jsonb_build_object/,
+);
+assert.match(
+  migration,
+  /CREATE UNIQUE INDEX IF NOT EXISTS share_links_active_target_uidx[\s\S]*WHERE revoked_at IS NULL/i,
+);
+
 console.log('lib/analytics/create-share-link-migration.test.ts: ok');
