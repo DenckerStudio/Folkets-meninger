@@ -32,8 +32,8 @@ export function TrafficTable({ topPaths, channels, collectionEnabled }: TrafficT
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/40 text-left">
-                  <th className="px-4 py-2.5 font-medium text-muted-foreground">Sti</th>
-                  <th className="px-4 py-2.5 font-medium text-muted-foreground text-right">
+                  <th scope="col" className="px-4 py-2.5 font-medium text-muted-foreground">Sti</th>
+                  <th scope="col" className="px-4 py-2.5 font-medium text-muted-foreground text-right">
                     Visninger
                   </th>
                 </tr>
@@ -62,8 +62,8 @@ export function TrafficTable({ topPaths, channels, collectionEnabled }: TrafficT
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/40 text-left">
-                  <th className="px-4 py-2.5 font-medium text-muted-foreground">Kanal</th>
-                  <th className="px-4 py-2.5 font-medium text-muted-foreground text-right">
+                  <th scope="col" className="px-4 py-2.5 font-medium text-muted-foreground">Kanal</th>
+                  <th scope="col" className="px-4 py-2.5 font-medium text-muted-foreground text-right">
                     Visninger
                   </th>
                 </tr>

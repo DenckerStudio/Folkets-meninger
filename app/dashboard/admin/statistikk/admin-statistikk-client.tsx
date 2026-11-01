@@ -61,8 +61,8 @@ function BlogPathsTable({
       <table className="min-w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/40 text-left">
-            <th className="px-4 py-2.5 font-medium text-muted-foreground">Sti</th>
-            <th className="px-4 py-2.5 font-medium text-muted-foreground text-right">
+            <th scope="col" className="px-4 py-2.5 font-medium text-muted-foreground">Sti</th>
+            <th scope="col" className="px-4 py-2.5 font-medium text-muted-foreground text-right">
               Visninger
             </th>
           </tr>
@@ -151,11 +151,19 @@ function StatTabPanel({
   }
 
   if (loadState.status === 'loading') {
-    return <p className="text-sm text-muted-foreground">Laster statistikk …</p>;
+    return (
+      <p className="text-sm text-muted-foreground" role="status">
+        Laster statistikk …
+      </p>
+    );
   }
 
   if (loadState.status === 'error') {
-    return <p className="text-sm text-destructive">Kunne ikke laste statistikk.</p>;
+    return (
+      <p className="text-sm text-destructive" role="alert">
+        Kunne ikke laste statistikk.
+      </p>
+    );
   }
 
   const { data } = loadState;

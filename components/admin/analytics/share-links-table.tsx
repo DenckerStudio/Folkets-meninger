@@ -24,10 +24,10 @@ export function ShareLinksTable({ links }: ShareLinksTableProps) {
       <table className="min-w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/40 text-left">
-            <th className="px-4 py-2.5 font-medium text-muted-foreground">Kode</th>
-            <th className="px-4 py-2.5 font-medium text-muted-foreground">Mål</th>
-            <th className="px-4 py-2.5 font-medium text-muted-foreground">Opprettet av</th>
-            <th className="px-4 py-2.5 font-medium text-muted-foreground text-right">Klikk</th>
+            <th scope="col" className="px-4 py-2.5 font-medium text-muted-foreground">Kode</th>
+            <th scope="col" className="px-4 py-2.5 font-medium text-muted-foreground">Mål</th>
+            <th scope="col" className="px-4 py-2.5 font-medium text-muted-foreground">Opprettet av</th>
+            <th scope="col" className="px-4 py-2.5 font-medium text-muted-foreground text-right">Klikk</th>
           </tr>
         </thead>
         <tbody>

@@ -50,7 +50,7 @@ export function LandingFooter() {
           <div className="lg:col-span-2">
             <Link
               href={routes.home}
-              aria-label="Folkets Meninger – til forsiden"
+              aria-label="Folkets meninger – til forsiden"
               className="inline-flex rounded-md transition-opacity hover:opacity-90"
             >
               <LandingLogo clipId="fs-footer-bubble" />
@@ -141,7 +141,7 @@ export function LandingFooter() {
             </p>
           ) : null}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-[#001433]/70">© {year} Folkets Meninger. Alle rettigheter forbeholdt.</p>
+            <p className="text-xs text-[#001433]/70">© {year} Folkets meninger. Alle rettigheter forbeholdt.</p>
             <p className="text-xs text-[#001433]/70">
               Uavhengig initiativ — vi samarbeider ikke med Regjeringen eller Stortinget.
             </p>
