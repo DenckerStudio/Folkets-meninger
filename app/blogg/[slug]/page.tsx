@@ -150,6 +150,7 @@ export default async function BlogPostPage({ params }: PageProps) {
             <ShareButton
               url={canonicalUrl}
               title={post.title}
+              label="Del"
               ariaLabel="Del artikkelen"
               dialogTitle="Del artikkelen"
               className="hidden lg:flex"
@@ -161,6 +162,7 @@ export default async function BlogPostPage({ params }: PageProps) {
             <ShareButton
               url={canonicalUrl}
               title={post.title}
+              label="Del"
               ariaLabel="Del artikkelen"
               dialogTitle="Del artikkelen"
               className="lg:hidden"

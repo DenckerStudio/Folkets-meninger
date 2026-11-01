@@ -270,7 +270,9 @@ infra/               coolify/ (cms.md + historical plan), searxng/
   Mangler funksjonen i PostgREST (PGRST202, `20261021140000` ikke lagt inn), lagres
   raden via `upsert_content_feedback`. Regenerering av avviste sammendrag starter
   først når den migrasjonen er lagt inn.
-- Sak-sammendrag vises fra `issue_ai_summaries` uavhengig av vurdering.
+- Sak-sammendrag vises fra `issue_ai_summaries` uavhengig av vurdering. Saksiden
+  viser fortellingen med en gang raden finnes. Vurder-fanen lister sammendrag enten
+  de er vurdert eller ikke.
   `readAiSummaryFromDb` / `getAiSummaryFromDb` prøver kolonnen `forslag` og, ved
   Postgres `42703` (`20261021170000` ikke lagt inn), henter raden uten den.
   Kolonnesvikt er ikke «mangler sammendrag»; lesefeil (`read_failed`) skal ikke

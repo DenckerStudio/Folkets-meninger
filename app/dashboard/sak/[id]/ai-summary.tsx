@@ -28,12 +28,15 @@ import { isDisplayableAiSummaryKostnad } from '@/lib/ai-summary/display-kostnad'
 import {
   classifySakSummaryHttpResponse,
   parseReadySakSummary,
+  publicSakSummaryLead,
   retryAfterSeconds,
+  sakSummaryReadyFromStored,
   SAK_SUMMARY_GENERATING_MESSAGE,
   SAK_SUMMARY_READ_FAILED_MESSAGE,
   SAK_SUMMARY_TIMEOUT_MESSAGE,
   type SakSummaryReady,
 } from '@/lib/ai-summary/sak-summary-fetch';
+import type { AiSummary as StoredAiSummary } from '@/lib/ai-summary/types';
 import {
   isActivePollGeneration,
   loadStateAfterDialogClose,
@@ -51,15 +54,19 @@ type SourceDoc = {
 export default function AiSummary({
   sakId,
   stortingetPageUrl,
+  initialSummary = null,
 }: {
   sakId: string;
   stortingetPageUrl?: string | null;
+  /** Row from issue_ai_summaries. Shown whether or not an admin has reviewed it. */
+  initialSummary?: StoredAiSummary | null;
 }) {
   const headingId = useId();
   const showTooltips = useSakTooltipsEnabled();
+  const seeded = sakSummaryReadyFromStored(initialSummary);
   const [open, setOpen] = useState(false);
-  const [loadState, setLoadState] = useState<SummaryLoadState>('idle');
-  const [data, setData] = useState<SakSummaryReady | null>(null);
+  const [loadState, setLoadState] = useState<SummaryLoadState>(seeded ? 'ready' : 'idle');
+  const [data, setData] = useState<SakSummaryReady | null>(seeded);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [sourceDocs, setSourceDocs] = useState<SourceDoc[]>([]);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -246,6 +253,7 @@ export default function AiSummary({
 
   const showRetry =
     loadState === 'read_failed' || loadState === 'timeout';
+  const lead = publicSakSummaryLead(data);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -262,7 +270,7 @@ export default function AiSummary({
         aria-expanded={open}
       >
         <CivicBubble className="h-3.5 w-3.5" />
-        Les sammendrag
+        {lead ? 'Hele sammendraget' : 'Les sammendrag'}
       </button>
       <Link
         href={routes.omAi}
@@ -291,6 +299,10 @@ export default function AiSummary({
           onSkip={() => setShowFeedback(false)}
           onSaved={() => setShowFeedback(false)}
         />
+      ) : null}
+
+      {lead ? (
+        <p className="basis-full text-base leading-relaxed text-foreground">{lead}</p>
       ) : null}
 
       <Dialog

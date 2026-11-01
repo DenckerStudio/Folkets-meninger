@@ -14,12 +14,26 @@ import { listReelPollSourceLinks } from '@/lib/polls/reel-source-links';
 import { pollBallotVoteButtonClassName } from '@/lib/polls/ballot-buttons';
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, SystemReelFeedItem } from '@/lib/polls/types';
-import { PollShareButton } from '@/components/polls/poll-share-button';
+import { ReelPollShareDel } from '@/components/polls/reel-poll-share-del';
 import { formatPollDisplayTitle } from '@/lib/polls/display-title';
 import { REEL_TEXT_HIT } from '@/lib/polls/reel-tap-targets';
 import { routes } from '@/lib/routes';
 import { truncateDescription } from '@/lib/seo/metadata';
 import { cn } from '@/lib/utils';
+
+function reelShareDelProps(item: SystemReelFeedItem) {
+  const title = formatPollDisplayTitle(item.poll.title);
+  return {
+    pollId: item.poll.id,
+    title,
+    description: item.poll.neutralSummary
+      ? truncateDescription(item.poll.neutralSummary)
+      : `Stem på Folkets Meninger.`,
+    sharePageEnabled: false as const,
+    iconOnly: true as const,
+    ariaLabel: `Del avstemningen «${title}»`,
+  };
+}
 
 const SLIDE = { type: 'spring', stiffness: 90, damping: 18 } as const;
 
@@ -144,7 +158,12 @@ function ReelVoteFace({
     return (
       <div data-testid="reel-vote-face" className="flex h-full min-h-0 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-3 pt-2">
-          <h3 className="text-lg font-semibold leading-snug text-white sm:text-xl">{item.poll.title}</h3>
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="min-w-0 flex-1 text-lg font-semibold leading-snug text-white sm:text-xl">
+              {item.poll.title}
+            </h3>
+            <ReelPollShareDel {...reelShareDelProps(item)} />
+          </div>
           {item.poll.neutralSummary ? (
             <p
               data-testid="reel-description"
@@ -203,18 +222,7 @@ function ReelVoteFace({
           <h3 className="min-w-0 flex-1 text-base font-semibold leading-snug text-white sm:text-lg">
             {item.poll.title}
           </h3>
-          <PollShareButton
-            pollId={item.poll.id}
-            title={formatPollDisplayTitle(item.poll.title)}
-            description={
-              item.poll.neutralSummary
-                ? truncateDescription(item.poll.neutralSummary)
-                : `Stem på Folkets Meninger.`
-            }
-            sharePageEnabled={false}
-            iconOnly
-            ariaLabel={`Del avstemningen «${formatPollDisplayTitle(item.poll.title)}»`}
-          />
+          <ReelPollShareDel {...reelShareDelProps(item)} />
         </div>
         {item.poll.neutralSummary ? (
           <p

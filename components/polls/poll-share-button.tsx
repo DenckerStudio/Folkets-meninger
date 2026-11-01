@@ -7,7 +7,7 @@ import { buildPollPageShareChannelUrl, buildPollShareText } from '@/lib/polls/sh
 import { routes } from '@/lib/routes';
 import type { ShareChannel } from '@/lib/share/targets';
 
-type PollShareButtonProps = {
+export type PollShareButtonProps = {
   pollId: string;
   title: string;
   description?: string;
@@ -18,6 +18,8 @@ type PollShareButtonProps = {
   iconOnly?: boolean;
   ariaLabel?: string;
   className?: string;
+  onDialogOpenChange?: (open: boolean) => void;
+  overlayTop?: boolean;
 };
 
 export function PollShareButton({
@@ -29,6 +31,8 @@ export function PollShareButton({
   iconOnly = false,
   ariaLabel,
   className,
+  onDialogOpenChange,
+  overlayTop,
 }: PollShareButtonProps) {
   const pagePath = routes.poll(pollId);
 
@@ -49,6 +53,8 @@ export function PollShareButton({
       previewImageUrl={`${pagePath}/opengraph-image`}
       channelUrl={channelUrl}
       className={className}
+      onOpenChange={onDialogOpenChange}
+      overlayTop={overlayTop}
       extraActions={
         sharePageEnabled ? (
           <Link
