@@ -1,16 +1,9 @@
 import { runSakContextRetrieve } from '@/lib/chat/sak-context';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { requireStemmePlus } from '@/lib/stemme-plus/entitlement';
+import { trustedClientIp } from '@/lib/trusted-client-ip';
 
 export const dynamic = 'force-dynamic';
-
-function clientIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
-}
 
 export async function POST(request: Request) {
   const gate = await requireStemmePlus();
@@ -18,7 +11,11 @@ export async function POST(request: Request) {
     return Response.json({ error: gate.error }, { status: gate.status });
   }
 
-  const ipRate = await checkRateLimit(`chat-sak-context:ip:${clientIp(request)}`, 20, 60_000);
+  const ipRate = await checkRateLimit(
+    `chat-sak-context:ip:${trustedClientIp(request)}`,
+    20,
+    60_000,
+  );
   if (!ipRate.ok) {
     return Response.json(
       { error: 'For mange forespørsler. Prøv igjen om litt.' },

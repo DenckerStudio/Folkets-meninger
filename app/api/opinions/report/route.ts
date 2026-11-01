@@ -6,16 +6,9 @@ import {
   isContentReportCategory,
   isContentReportTarget,
 } from '@/lib/moderation/content-report';
+import { trustedClientIp } from '@/lib/trusted-client-ip';
 
 export const dynamic = 'force-dynamic';
-
-function clientIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
-}
 
 /** POST /api/opinions/report — report an opinion or one of its replies. */
 export async function POST(request: Request) {
@@ -27,7 +20,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
   }
 
-  const ipRate = await checkRateLimit(`opinion-report:ip:${clientIp(request)}`, 15, 60_000);
+  const ipRate = await checkRateLimit(
+    `opinion-report:ip:${trustedClientIp(request)}`,
+    15,
+    60_000,
+  );
   if (!ipRate.ok) {
     return NextResponse.json(
       { error: 'For mange rapporter. Prøv igjen om litt.' },
