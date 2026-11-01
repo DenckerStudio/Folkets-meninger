@@ -92,3 +92,5 @@ $function$;
 
 REVOKE ALL ON FUNCTION public.admin_get_analytics_overview(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_analytics_overview(uuid) TO service_role;
+
+NOTIFY pgrst, 'reload schema';

@@ -154,3 +154,5 @@ $function$;
 
 REVOKE ALL ON FUNCTION public.list_my_share_links(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.list_my_share_links(uuid) TO service_role;
+
+NOTIFY pgrst, 'reload schema';

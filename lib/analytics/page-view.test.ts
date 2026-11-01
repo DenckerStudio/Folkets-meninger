@@ -9,7 +9,7 @@ assert.deepEqual(
   }),
   {
     eventName: 'page_view',
-    path: '/blogg?side=2',
+    path: '/blogg',
     referrer: 'https://www.google.com/',
   },
 );
@@ -22,7 +22,7 @@ assert.deepEqual(
   }),
   {
     eventName: 'page_view',
-    path: '/?utm_source=facebook&utm_medium=social',
+    path: '/',
     utm_source: 'facebook',
     utm_medium: 'social',
   },
@@ -48,7 +48,7 @@ assert.deepEqual(
   }),
   {
     eventName: 'page_view',
-    path: '/del/abc?fm_share=kode123&utm_source=facebook',
+    path: '/del/abc',
     utm_source: 'facebook',
     shareCode: 'kode123',
   },
@@ -62,7 +62,7 @@ assert.deepEqual(
   }),
   {
     eventName: 'page_view',
-    path: '/blogg/hei?fm_share=',
+    path: '/blogg/hei',
   },
 );
 

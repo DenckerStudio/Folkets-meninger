@@ -156,3 +156,5 @@ $function$;
 
 REVOKE ALL ON FUNCTION public.admin_get_share_link_stats(uuid, int) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_share_link_stats(uuid, int) TO service_role;
+
+NOTIFY pgrst, 'reload schema';

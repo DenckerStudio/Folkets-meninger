@@ -1,23 +1,16 @@
 import { NextResponse } from 'next/server';
-import { isAnalyticsEnabled } from '@/lib/analytics/flags';
+import { trustedClientIp } from '@/lib/analytics/client-ip';
 import {
   buildAnalyticsInsertRow,
   computeSessionHash,
   parseCollectPayload,
   utcDateString,
 } from '@/lib/analytics/collect-server';
+import { isAnalyticsEnabled } from '@/lib/analytics/flags';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
-
-function clientIp(request: Request): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
-}
 
 async function resolveShareLinkId(shareCode: string | null): Promise<string | null> {
   if (!shareCode) {
@@ -49,7 +42,7 @@ export async function POST(request: Request) {
     return new NextResponse(null, { status: 204 });
   }
 
-  const ip = clientIp(request);
+  const ip = trustedClientIp(request);
   const ipRate = await checkRateLimit(`analytics-collect:ip:${ip}`, 60, 60_000);
   if (!ipRate.ok) {
     return NextResponse.json(

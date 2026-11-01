@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
+import { trustedClientIp } from '@/lib/analytics/client-ip';
+import { shouldRecordShareClick } from '@/lib/analytics/share-click';
 import { resolveShareTarget } from '@/lib/polls/share-personal';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
 const CODE_RE = /^[A-Za-z0-9]{1,64}$/;
+const SHARE_CLICK_WINDOW_MS = 60_000;
+const SHARE_CLICK_IP_LIMIT = 60;
+const SHARE_CLICK_CODE_LIMIT = 120;
 
 function notFound(): NextResponse {
   return new NextResponse(null, { status: 404 });
@@ -63,17 +69,34 @@ export async function GET(
   const location = path ? sameOriginLocation(path, code, request.url) : null;
   if (!location) return notFound();
 
-  const { error: insertError } = await service.rpc('insert_analytics_event', {
-    p_row: {
-      event_name: 'share_link_click',
-      path: `/l/${code}`,
-      share_link_id: data.id,
-      session_hash: null,
-      metadata: {},
-    },
-  });
-  if (insertError) {
-    console.error(`share_link_click insert failed: ${insertError.code ?? 'unknown'}`);
+  // Klikktallet i delingspanelet skal telles også når offentlig analyse er av.
+  // Over grensen hopper vi over innsettingen og sender besøkende videre.
+  const ip = trustedClientIp(request);
+  const ipRate = await checkRateLimit(
+    `share-click:ip:${ip}`,
+    SHARE_CLICK_IP_LIMIT,
+    SHARE_CLICK_WINDOW_MS,
+  );
+  const codeRate = ipRate.ok
+    ? await checkRateLimit(
+        `share-click:code:${code}`,
+        SHARE_CLICK_CODE_LIMIT,
+        SHARE_CLICK_WINDOW_MS,
+      )
+    : ipRate;
+  if (shouldRecordShareClick(ipRate, codeRate)) {
+    const { error: insertError } = await service.rpc('insert_analytics_event', {
+      p_row: {
+        event_name: 'share_link_click',
+        path: `/l/${code}`,
+        share_link_id: data.id,
+        session_hash: null,
+        metadata: {},
+      },
+    });
+    if (insertError) {
+      console.error(`share_link_click insert failed: ${insertError.code ?? 'unknown'}`);
+    }
   }
 
   const response = NextResponse.redirect(location, 302);

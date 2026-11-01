@@ -15,14 +15,6 @@ export type PageViewCollectBody = {
   shareCode?: string;
 };
 
-function joinPath(pathname: string, search: string): string {
-  if (!search) {
-    return pathname;
-  }
-  const query = search.startsWith('?') ? search : `?${search}`;
-  return `${pathname}${query}`;
-}
-
 function optionalQueryField(params: URLSearchParams, key: string): string | undefined {
   const value = params.get(key)?.trim();
   return value ? value : undefined;
@@ -34,14 +26,13 @@ export function shouldTrackPath(pathname: string): boolean {
 }
 
 export function buildPageViewBody(input: BuildPageViewBodyInput): PageViewCollectBody {
-  const path = joinPath(input.pathname, input.search);
   const params = new URLSearchParams(
     input.search.startsWith('?') ? input.search.slice(1) : input.search,
   );
 
   const body: PageViewCollectBody = {
     eventName: 'page_view',
-    path,
+    path: input.pathname,
   };
 
   const referrer = input.referrer.trim();

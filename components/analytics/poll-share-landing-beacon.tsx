@@ -13,35 +13,6 @@ export type PollShareLandingBeaconProps = {
   fmShare: string | null;
 };
 
-function buildLandingPath(
-  pollId: string,
-  utmSource: string | null,
-  utmMedium: string | null,
-  utmCampaign: string | null,
-  refCode: string | null,
-  fmShare: string | null,
-): string {
-  const base = `/del/${pollId}`;
-  const params = new URLSearchParams();
-  if (utmSource) {
-    params.set('utm_source', utmSource);
-  }
-  if (utmMedium) {
-    params.set('utm_medium', utmMedium);
-  }
-  if (utmCampaign) {
-    params.set('utm_campaign', utmCampaign);
-  }
-  if (refCode) {
-    params.set('ref', refCode);
-  }
-  if (fmShare) {
-    params.set('fm_share', fmShare);
-  }
-  const query = params.toString();
-  return query ? `${base}?${query}` : base;
-}
-
 export function PollShareLandingBeacon({
   pollId,
   utmSource,
@@ -65,14 +36,7 @@ export function PollShareLandingBeacon({
     const shareCode = fmShare?.trim() ?? '';
     const body: Record<string, string> = {
       eventName: 'poll_share_landing',
-      path: buildLandingPath(
-        pollId,
-        utmSource,
-        utmMedium,
-        utmCampaign,
-        refCode,
-        shareCode || null,
-      ),
+      path: `/del/${pollId}`,
     };
 
     const referrer = document.referrer.trim();
