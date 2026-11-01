@@ -18,8 +18,10 @@ import { ReelContentPreview } from '@/components/admin/reel-content-preview';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import type { ContentFeedbackVerdict } from '@/lib/content-feedback/types';
 import { routes } from '@/lib/routes';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { DRAFT_RESTORE_SUCCESS_MESSAGE } from '@/lib/admin/draft-expiry';
 import type { PollRecord } from '@/lib/polls/types';
+import { cn } from '@/lib/utils';
 
 type DraftsResponse = { drafts?: PollRecord[] };
 type ReviewedReel = {
@@ -220,7 +222,10 @@ export function ReelDraftReview() {
                         type="button"
                         disabled={pending}
                         onClick={() => patchPoll(poll, 'publish')}
-                        className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto"
+                        className={cn(
+                          'inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
+                          VURDER_FOCUS_RING,
+                        )}
                       >
                         Publiser
                       </button>
@@ -228,7 +233,10 @@ export function ReelDraftReview() {
                         type="button"
                         disabled={pending}
                         onClick={() => patchPoll(poll, 'archive')}
-                        className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50 sm:w-auto"
+                        className={cn(
+                          'inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50 sm:w-auto',
+                          VURDER_FOCUS_RING,
+                        )}
                       >
                         Arkiver
                       </button>
@@ -256,7 +264,10 @@ export function ReelDraftReview() {
                     type="button"
                     disabled={pending}
                     onClick={() => patchPoll(poll, 'restore')}
-                    className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto"
+                  className={cn(
+                    'inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
+                    VURDER_FOCUS_RING,
+                  )}
                   >
                     Gjenopprett
                   </button>

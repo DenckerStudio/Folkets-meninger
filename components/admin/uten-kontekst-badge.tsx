@@ -10,6 +10,9 @@ type Props = {
   className?: string;
 };
 
+const INFO_HITBOX =
+  '[&_button]:relative [&_button]:before:absolute [&_button]:before:-inset-3 [&_button]:before:content-[""] [&_button]:focus-visible:outline-none [&_button]:focus-visible:ring-2 [&_button]:focus-visible:ring-ring [&_button]:focus-visible:ring-offset-2 [&_button]:focus-visible:ring-offset-background';
+
 export function UtenKontekstBadge({ className }: Props) {
   const hintId = useId();
 
@@ -31,7 +34,7 @@ export function UtenKontekstBadge({ className }: Props) {
         description={UTEN_KONTEKST_BADGE_HINT}
         side="bottom"
         align="center"
-        className="shrink-0 [&_button]:min-h-11 [&_button]:min-w-11 sm:[&_button]:h-5 sm:[&_button]:min-h-0 sm:[&_button]:min-w-0 sm:[&_button]:w-5"
+        className={cn('shrink-0', INFO_HITBOX)}
       />
     </span>
   );

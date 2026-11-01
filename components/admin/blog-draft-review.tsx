@@ -28,6 +28,8 @@ import {
   type BlogDraftReviewItem,
 } from '@/lib/admin/blog-review';
 import { DRAFT_RESTORE_SUCCESS_MESSAGE } from '@/lib/admin/draft-expiry';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
+import { cn } from '@/lib/utils';
 
 type DraftsResponse = {
   drafts?: BlogDraftReviewItem[];
@@ -225,7 +227,10 @@ export function BlogDraftReview() {
                       type="button"
                       disabled={pending}
                       onClick={() => openEdit(draft)}
-                      className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50 sm:w-auto"
+                      className={cn(
+                        'inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50 sm:w-auto',
+                        VURDER_FOCUS_RING,
+                      )}
                     >
                       Rediger her
                     </button>
@@ -238,7 +243,10 @@ export function BlogDraftReview() {
                         setEditingId(null);
                         setActiveId(draft.id);
                       }}
-                      className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto"
+                      className={cn(
+                        'inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
+                        VURDER_FOCUS_RING,
+                      )}
                     >
                       Vurder
                     </button>
@@ -247,7 +255,10 @@ export function BlogDraftReview() {
                       type="button"
                       disabled={pending}
                       onClick={() => restoreDraft(draft.id)}
-                      className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto"
+                      className={cn(
+                        'inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
+                        VURDER_FOCUS_RING,
+                      )}
                     >
                       Gjenopprett
                     </button>
@@ -257,7 +268,10 @@ export function BlogDraftReview() {
                       href={draft.payloadAdminUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline sm:w-auto"
+                      className={cn(
+                        'inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline sm:w-auto',
+                        VURDER_FOCUS_RING,
+                      )}
                     >
                       Åpne i Payload
                       <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />

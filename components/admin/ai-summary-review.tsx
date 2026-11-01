@@ -5,8 +5,14 @@ import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 import { ContentFeedbackPanel } from '@/components/admin/content-feedback-panel';
 import { EmptyState } from '@/components/dashboard/empty-state';
-import type { AiSummaryReviewItem, AiSummaryReviewSource } from '@/lib/admin/ai-summary-review';
+import {
+  summaryReviewLabel,
+  type AiSummaryReviewItem,
+  type AiSummaryReviewSource,
+} from '@/lib/admin/ai-summary-review';
 import { routes } from '@/lib/routes';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
+import { cn } from '@/lib/utils';
 
 type SummariesResponse = {
   summaries?: AiSummaryReviewItem[];
@@ -132,7 +138,9 @@ export function AiSummaryReview() {
   return (
     <div className="min-w-0 space-y-4">
       <p className="text-sm text-muted-foreground">
-        Godkjenn eller avvis sammendrag. Ved avvisning settes saken i kø for ny generering.
+        Sammendrag vises her enten de er vurdert eller ikke. Nye saker får sammendrag etter
+        hvert, og du kan vurdere dem når du vil. Ved avvisning settes saken i kø for ny
+        generering.
       </p>
       {error ? (
         <p className="text-sm text-destructive" role="alert">
@@ -143,19 +151,28 @@ export function AiSummaryReview() {
       {!initialLoad && !error && items.length === 0 ? (
         <EmptyState
           title="Ingen sammendrag å vurdere"
-          description="Når saker har fått et sammendrag, vises de her."
+          description="Når en sak har fått et sammendrag, vises det her selv om det ikke er vurdert ennå."
           className="py-8"
         />
       ) : null}
       <ul className="space-y-3">
-        {items.map((item) => (
-          <li key={item.issueId} className="min-w-0 rounded-2xl border border-border bg-card p-4">
-            <SummaryPreview item={item} />
-            {item.updatedAt ? (
-              <p className="mt-3 text-xs text-muted-foreground">
-                Oppdatert {new Date(item.updatedAt).toLocaleString('nb-NO')}
-              </p>
-            ) : null}
+        {items.map((item) => {
+          const reviewLabel = summaryReviewLabel(item.reviewMark, item.reviewLookupOk);
+          return (
+            <li key={item.issueId} className="min-w-0 rounded-2xl border border-border bg-card p-4">
+              <SummaryPreview item={item} />
+              {reviewLabel || item.updatedAt ? (
+                <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  {reviewLabel ? (
+                    <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2.5 py-0.5 font-medium text-foreground">
+                      {reviewLabel}
+                    </span>
+                  ) : null}
+                  {item.updatedAt ? (
+                    <span>Oppdatert {new Date(item.updatedAt).toLocaleString('nb-NO')}</span>
+                  ) : null}
+                </p>
+              ) : null}
             <div className="mt-4">
               {activeId === item.issueId ? (
                 <ContentFeedbackPanel
@@ -166,21 +183,28 @@ export function AiSummaryReview() {
                   title="Vurder sammendraget"
                   description="Godkjenn eller avvis sammendraget. Ved avvisning settes saken i kø for ny generering."
                   onSkip={() => setActiveId(null)}
-                  onSaved={() => setActiveId(null)}
+                  onSaved={() => {
+                    setActiveId(null);
+                    load();
+                  }}
                 />
               ) : (
                 <button
                   type="button"
                   disabled={pending}
                   onClick={() => setActiveId(item.issueId)}
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto"
+                  className={cn(
+                    'inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
+                    VURDER_FOCUS_RING,
+                  )}
                 >
                   Vurder
                 </button>
               )}
             </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );

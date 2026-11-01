@@ -47,7 +47,13 @@ export type OppfangetFilterableRow = {
   clusterStatus: ActionClusterDbStatus;
   pollStatus: string | null;
   metadata: Record<string, unknown> | null;
-  sources: { publisher: string | null; signalOnly: boolean; title: string | null }[];
+  sources: {
+    publisher: string | null;
+    signalOnly: boolean;
+    title: string | null;
+    sourceType?: string | null;
+    url?: string;
+  }[];
   firstSeenAt: string;
   lastSeenAt: string;
 };
@@ -73,7 +79,13 @@ function matchesSource(row: OppfangetFilterableRow, source: string): boolean {
   if (!needle) return true;
   return row.sources.some((s) => {
     const pub = (s.publisher ?? '').toLowerCase();
-    return pub.includes(needle);
+    const title = (s.title ?? '').toLowerCase();
+    const url = (s.url ?? '').toLowerCase();
+    const type = (s.sourceType ?? '').toLowerCase();
+    if (needle === 'reddit') {
+      return type === 'reddit' || pub.includes('reddit') || url.includes('reddit.com');
+    }
+    return pub.includes(needle) || title.includes(needle) || type.includes(needle);
   });
 }
 

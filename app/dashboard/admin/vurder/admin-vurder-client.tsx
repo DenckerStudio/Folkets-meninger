@@ -8,6 +8,7 @@ import { AiSummaryReview } from '@/components/admin/ai-summary-review';
 import { BlogDraftReview } from '@/components/admin/blog-draft-review';
 import { ReelDraftReview } from '@/components/admin/reel-draft-review';
 import { parseVurderTab, VURDER_TABS, type VurderTabId } from '@/lib/admin/vurder-tabs';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -62,7 +63,7 @@ export default function AdminVurderClient() {
       </div>
 
       <div
-        className="-mx-1 flex gap-1 overflow-x-auto rounded-xl bg-muted/50 p-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden"
+        className="-mx-1 flex snap-x snap-mandatory gap-1 overflow-x-auto rounded-xl bg-muted/50 p-1 [scrollbar-width:none] sm:mx-0 sm:snap-none sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden"
         role="tablist"
         aria-label="Innhold som skal vurderes"
       >
@@ -78,7 +79,8 @@ export default function AdminVurderClient() {
               aria-controls={`${tablistId}-${item.id}-panel`}
               onClick={() => selectTab(item.id)}
               className={cn(
-                'inline-flex min-h-11 shrink-0 snap-start items-center justify-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors sm:min-w-0 sm:flex-1 sm:shrink sm:px-4 sm:min-w-[8.5rem]',
+                'inline-flex min-h-11 shrink-0 snap-start items-center justify-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors sm:min-w-0 sm:flex-1 sm:shrink sm:snap-align-none sm:px-4 sm:min-w-[8.5rem]',
+                VURDER_FOCUS_RING,
                 selected
                   ? 'bg-card text-brand shadow-sm'
                   : 'text-muted-foreground hover:bg-card/60 hover:text-foreground',

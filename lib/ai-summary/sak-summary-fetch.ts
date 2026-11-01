@@ -1,4 +1,10 @@
-import type { AiSummaryLegacy, AiSummaryV2, TopicCard } from '@/lib/ai-summary/types';
+import {
+  isAiSummaryV2,
+  type AiSummary,
+  type AiSummaryLegacy,
+  type AiSummaryV2,
+  type TopicCard,
+} from '@/lib/ai-summary/types';
 
 export type SakSummaryReady =
   | ({ version: 2 } & AiSummaryV2 & { cached?: boolean })
@@ -57,6 +63,33 @@ export function classifySakSummaryHttpResponse(
     return 'pending';
   }
   return 'unexpected';
+}
+
+/** Stored row → the shape the sak dialog already renders. Review status is not an input. */
+export function sakSummaryReadyFromStored(summary: AiSummary | null): SakSummaryReady | null {
+  if (!summary) return null;
+  if (isAiSummaryV2(summary)) {
+    if (!summary.narrative.trim()) return null;
+    return { ...summary, cached: true };
+  }
+  if (!summary.hva.trim()) return null;
+  return { ...summary, cached: true };
+}
+
+/** Lead text shown on the sak page as soon as a summary row exists. */
+export function publicSakSummaryLead(summary: AiSummary | null): string | null {
+  const ready = sakSummaryReadyFromStored(summary);
+  if (!ready) return null;
+  switch (ready.version) {
+    case 2:
+      return ready.narrative.trim();
+    case 1:
+      return ready.hva.trim();
+    default: {
+      const unreachable: never = ready;
+      return unreachable;
+    }
+  }
 }
 
 export function retryAfterSeconds(json: Record<string, unknown>, fallback = 15): number {

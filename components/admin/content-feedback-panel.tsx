@@ -15,6 +15,7 @@ import type {
   ContentFeedbackType,
   ContentFeedbackVerdict,
 } from '@/lib/content-feedback/types';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { cn } from '@/lib/utils';
 
 type AspectMark = '+' | '-';
@@ -411,6 +412,7 @@ export function ContentFeedbackPanel({
                 }}
                 className={cn(
                   'inline-flex min-h-11 w-full items-center justify-center rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors sm:w-auto',
+                  VURDER_FOCUS_RING,
                   verdict === option.value
                     ? 'border-brand bg-brand/15 text-brand'
                     : 'border-border bg-card text-muted-foreground hover:bg-muted/50',
@@ -431,7 +433,10 @@ export function ContentFeedbackPanel({
         <button
           type="button"
           onClick={() => setAspectsExpanded(true)}
-          className="mt-4 inline-flex min-h-11 w-full items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted/40"
+          className={cn(
+            'mt-4 inline-flex min-h-11 w-full items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted/40',
+            VURDER_FOCUS_RING,
+          )}
           aria-expanded={false}
         >
           Merk deler (valgfritt)
@@ -574,12 +579,15 @@ export function ContentFeedbackPanel({
         </div>
       ) : null}
 
-      <div className="mt-4 flex flex-col-reverse gap-2 sm:static sm:flex-row sm:justify-end">
+      <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         {showRegenerationHint ? (
           <button
             type="button"
             onClick={onSkip}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 sm:w-auto"
+            className={cn(
+              'inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 sm:w-auto',
+              VURDER_FOCUS_RING,
+            )}
           >
             Lukk
           </button>
@@ -589,7 +597,10 @@ export function ContentFeedbackPanel({
           type="button"
           onClick={onSkip}
           disabled={skipDisabled}
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50 sm:w-auto"
+          className={cn(
+            'inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50 sm:w-auto',
+            VURDER_FOCUS_RING,
+          )}
         >
           Hopp over
         </button>
@@ -597,7 +608,10 @@ export function ContentFeedbackPanel({
           type="button"
           onClick={() => void save()}
           disabled={saveLocked || loadingExisting}
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto"
+          className={cn(
+            'inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto',
+            VURDER_FOCUS_RING,
+          )}
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
           Lagre tilbakemelding
