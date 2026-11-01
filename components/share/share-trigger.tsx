@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Share08Icon } from '@hugeicons/core-free-icons';
 import { ShareDialog, type ShareDialogProps } from '@/components/share/share-dialog';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
+import { tryNativeShare } from '@/lib/share/native-share';
 import { cn } from '@/lib/utils';
 
 export type ShareTriggerProps = Omit<ShareDialogProps, 'open' | 'onClose'> & {
@@ -20,7 +22,7 @@ export type ShareTriggerProps = Omit<ShareDialogProps, 'open' | 'onClose'> & {
 
 /**
  * Round "Del" button in the same style as the profile / handlinger menu triggers
- * (`SmoothDropdown`), opening {@link ShareDialog} instead of navigating away.
+ * (`SmoothDropdown`). On mobile, tries `navigator.share` first; otherwise opens {@link ShareDialog}.
  */
 export function ShareTrigger({
   label,
@@ -28,21 +30,46 @@ export function ShareTrigger({
   className,
   open: controlledOpen,
   onOpenChange,
+  title,
+  text,
+  url,
+  channelUrl,
   ...dialogProps
 }: ShareTriggerProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const isMobile = useIsMobile();
   const open = controlledOpen ?? uncontrolledOpen;
-  const setOpen = (next: boolean) => {
-    if (controlledOpen === undefined) setUncontrolledOpen(next);
-    onOpenChange?.(next);
-  };
+  const setOpen = useCallback(
+    (next: boolean) => {
+      if (controlledOpen === undefined) setUncontrolledOpen(next);
+      onOpenChange?.(next);
+    },
+    [controlledOpen, onOpenChange],
+  );
   const reducedMotion = usePrefersReducedMotion();
+
+  const handleClose = useCallback(() => {
+    setOpen(false);
+    window.requestAnimationFrame(() => triggerRef.current?.focus());
+  }, [setOpen]);
+
+  const openDialog = useCallback(() => setOpen(true), [setOpen]);
+
+  const handleTriggerClick = useCallback(async () => {
+    if (isMobile) {
+      const shared = await tryNativeShare({ title, text, url, channelUrl });
+      if (shared) return;
+    }
+    openDialog();
+  }, [channelUrl, isMobile, openDialog, text, title, url]);
 
   return (
     <>
       <motion.button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => void handleTriggerClick()}
         aria-label={ariaLabel ?? (label ? undefined : 'Del')}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -51,7 +78,7 @@ export function ShareTrigger({
         whileHover={reducedMotion ? undefined : 'hover'}
         whileTap={reducedMotion ? undefined : 'tap'}
         className={cn(
-          'inline-flex h-11 shrink-0 items-center justify-center rounded-full border border-border bg-popover text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+          'inline-flex h-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full border border-border bg-popover text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
           label ? 'gap-2 px-4 text-sm font-medium' : 'w-11',
           className,
         )}
@@ -69,7 +96,15 @@ export function ShareTrigger({
         </motion.span>
         {label ? <span>{label}</span> : null}
       </motion.button>
-      <ShareDialog {...dialogProps} open={open} onClose={() => setOpen(false)} />
+      <ShareDialog
+        {...dialogProps}
+        url={url}
+        title={title}
+        text={text}
+        channelUrl={channelUrl}
+        open={open}
+        onClose={handleClose}
+      />
     </>
   );
 }

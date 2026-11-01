@@ -14,8 +14,11 @@ import { listReelPollSourceLinks } from '@/lib/polls/reel-source-links';
 import { pollBallotVoteButtonClassName } from '@/lib/polls/ballot-buttons';
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, SystemReelFeedItem } from '@/lib/polls/types';
+import { PollShareButton } from '@/components/polls/poll-share-button';
+import { formatPollDisplayTitle } from '@/lib/polls/display-title';
 import { REEL_TEXT_HIT } from '@/lib/polls/reel-tap-targets';
 import { routes } from '@/lib/routes';
+import { truncateDescription } from '@/lib/seo/metadata';
 import { cn } from '@/lib/utils';
 
 const SLIDE = { type: 'spring', stiffness: 90, damping: 18 } as const;
@@ -196,9 +199,23 @@ function ReelVoteFace({
         <p className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-white/70">
           Hva mener du?
         </p>
-        <h3 className="shrink-0 text-base font-semibold leading-snug text-white sm:text-lg">
-          {item.poll.title}
-        </h3>
+        <div className="flex shrink-0 items-start justify-between gap-2">
+          <h3 className="min-w-0 flex-1 text-base font-semibold leading-snug text-white sm:text-lg">
+            {item.poll.title}
+          </h3>
+          <PollShareButton
+            pollId={item.poll.id}
+            title={formatPollDisplayTitle(item.poll.title)}
+            description={
+              item.poll.neutralSummary
+                ? truncateDescription(item.poll.neutralSummary)
+                : `Stem på Folkets Meninger.`
+            }
+            sharePageEnabled={false}
+            iconOnly
+            ariaLabel={`Del avstemningen «${formatPollDisplayTitle(item.poll.title)}»`}
+          />
+        </div>
         {item.poll.neutralSummary ? (
           <p
             ref={descriptionClampRef}

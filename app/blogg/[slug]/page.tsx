@@ -147,12 +147,24 @@ export default async function BlogPostPage({ params }: PageProps) {
         <div className="mt-10 grid gap-10 lg:grid-cols-[220px_minmax(0,1fr)_280px]">
           <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start" data-landing-section>
             <BlogToc headings={headings} />
-            <ShareButton url={canonicalUrl} title={post.title} className="hidden lg:flex" />
+            <ShareButton
+              url={canonicalUrl}
+              title={post.title}
+              ariaLabel="Del artikkelen"
+              dialogTitle="Del artikkelen"
+              className="hidden lg:flex"
+            />
           </aside>
 
           <div className="min-w-0 space-y-8" data-landing-section>
             <BlogArticleBody markdown={post.body_md} className="prose-lg" />
-            <ShareButton url={canonicalUrl} title={post.title} className="lg:hidden" />
+            <ShareButton
+              url={canonicalUrl}
+              title={post.title}
+              ariaLabel="Del artikkelen"
+              dialogTitle="Del artikkelen"
+              className="lg:hidden"
+            />
             <BlogAuthorBox post={post} />
           </div>
 

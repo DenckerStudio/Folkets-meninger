@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback } from 'react';
 import Link from 'next/link';
-import { ShareTrigger } from '@/components/share/share-trigger';
-import { buildPollShareChannelUrl, buildPollShareText, pollSharePath } from '@/lib/polls/share';
+import { useCallback } from 'react';
+import { ShareButton } from '@/components/share/share-button';
+import { buildPollPageShareChannelUrl, buildPollShareText } from '@/lib/polls/share';
 import { routes } from '@/lib/routes';
 import type { ShareChannel } from '@/lib/share/targets';
 
@@ -11,8 +11,12 @@ type PollShareButtonProps = {
   pollId: string;
   title: string;
   description?: string;
-  /** Public `/del` landing is live (flag on, or admin preview). Otherwise share the dashboard page. */
+  /** When true, show embed partner link (admin / feature flag). Share URLs always use the poll detail page. */
   sharePageEnabled: boolean;
+  label?: string;
+  /** Round icon trigger without visible «Del» text. */
+  iconOnly?: boolean;
+  ariaLabel?: string;
   className?: string;
 };
 
@@ -21,22 +25,22 @@ export function PollShareButton({
   title,
   description,
   sharePageEnabled,
+  label = 'Del',
+  iconOnly = false,
+  ariaLabel,
   className,
 }: PollShareButtonProps) {
-  const pagePath = sharePageEnabled ? pollSharePath(pollId) : routes.poll(pollId);
+  const pagePath = routes.poll(pollId);
 
   const channelUrl = useCallback(
-    (channel: ShareChannel) => {
-      if (!sharePageEnabled) return pagePath;
-      const origin = typeof window !== 'undefined' ? window.location.origin : undefined;
-      return buildPollShareChannelUrl(pollId, origin, channel);
-    },
-    [pagePath, pollId, sharePageEnabled],
+    (channel: ShareChannel) => buildPollPageShareChannelUrl(pollId, null, channel),
+    [pollId],
   );
 
   return (
-    <ShareTrigger
-      label="Del"
+    <ShareButton
+      label={iconOnly ? undefined : label}
+      ariaLabel={ariaLabel}
       dialogTitle="Del avstemningen"
       url={pagePath}
       title={title}

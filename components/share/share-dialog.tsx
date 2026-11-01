@@ -10,6 +10,7 @@ import {
   Linkedin01Icon,
   Mail01Icon,
   Message01Icon,
+  NewTwitterIcon,
   SmartPhone01Icon,
   Tick02Icon,
   WhatsappIcon,
@@ -28,9 +29,11 @@ import {
   type ShareTarget,
 } from '@/lib/share/targets';
 import { cn } from '@/lib/utils';
+import { canUseNativeShare } from '@/lib/share/native-share';
 
 const TARGET_ICONS: Record<ShareTarget, IconSvgElement> = {
   facebook: Facebook01Icon,
+  x: NewTwitterIcon,
   linkedin: Linkedin01Icon,
   bluesky: BlueskyIcon,
   whatsapp: WhatsappIcon,
@@ -40,10 +43,6 @@ const TARGET_ICONS: Record<ShareTarget, IconSvgElement> = {
 
 function subscribeNoop() {
   return () => {};
-}
-
-function canNativeShare(): boolean {
-  return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 }
 
 export type ShareDialogProps = {
@@ -80,7 +79,7 @@ export function ShareDialog({
   showPreview = true,
 }: ShareDialogProps) {
   const reducedMotion = usePrefersReducedMotion();
-  const nativeShare = useSyncExternalStore(subscribeNoop, canNativeShare, () => false);
+  const nativeShare = useSyncExternalStore(subscribeNoop, canUseNativeShare, () => false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
 
@@ -185,11 +184,11 @@ export function ShareDialog({
                   />
                 </motion.span>
               </AnimatePresence>
-              {copied ? 'Kopiert' : 'Kopier'}
+              {copied ? 'Lenke kopiert' : 'Kopier lenke'}
             </button>
           </div>
           <p className="sr-only" role="status" aria-live="polite">
-            {copied ? 'Lenken er kopiert' : ''}
+            {copied ? 'Lenke kopiert' : ''}
           </p>
         </div>
 
@@ -298,3 +297,6 @@ function SharePreviewCard({ title, description, host, imageUrl }: SharePreviewCa
     </figure>
   );
 }
+
+export { ShareDialog as ShareModal };
+export type { ShareDialogProps as ShareModalProps };

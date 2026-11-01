@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { X } from 'lucide-react';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { useBodyOverlayFlag } from '@/hooks/use-body-overlay';
+import { useFocusTrap } from '@/hooks/use-focus-trap';
 import { MODAL_TRANSITION } from '@/lib/motion/tokens';
 import { cn } from '@/lib/utils';
 
@@ -51,9 +52,12 @@ export function Dialog({
   const titleId = useId();
   const descriptionId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const reducedMotion = usePrefersReducedMotion();
   const transition = reducedMotion ? { duration: 0 } : MODAL_TRANSITION;
   useBodyOverlayFlag(open);
+
+  useFocusTrap(open, dialogRef, onClose);
 
   useEffect(() => {
     if (!open) return;
@@ -66,12 +70,11 @@ export function Dialog({
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+    const id = window.requestAnimationFrame(() => {
+      closeButtonRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [open]);
 
   if (!mounted) return null;
 
@@ -124,6 +127,7 @@ export function Dialog({
               </div>
               <button
                 type="button"
+                ref={closeButtonRef}
                 onClick={onClose}
                 className="shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 aria-label="Lukk dialog"
