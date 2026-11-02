@@ -186,7 +186,10 @@ export function ShareDialog({
               readOnly
               value={displayUrl}
               onFocus={(event) => event.currentTarget.select()}
-              className="min-h-11 min-w-0 flex-1 rounded-xl border border-border bg-muted/40 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              className={cn(
+                'min-h-11 min-w-0 flex-1 rounded-xl border border-border bg-muted/40 px-3 text-sm text-foreground',
+                VURDER_FOCUS_RING,
+              )}
             />
             <button
               type="button"
@@ -199,10 +202,14 @@ export function ShareDialog({
                   : 'bg-brand text-brand-foreground hover:bg-brand/90',
               )}
             >
-              <AnimatePresence mode="wait" initial={false}>
+              <AnimatePresence initial={false}>
                 <motion.span
                   key={copied ? 'copied' : 'copy'}
-                  initial={reducedMotion ? false : { scale: 0.6, opacity: 0, rotate: -20 }}
+                  initial={
+                    reducedMotion || copied
+                      ? false
+                      : { scale: 0.6, opacity: 0, rotate: -20 }
+                  }
                   animate={{ scale: 1, opacity: 1, rotate: 0 }}
                   exit={reducedMotion ? undefined : { scale: 0.6, opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 520, damping: 26 }}
@@ -241,7 +248,7 @@ export function ShareDialog({
         ) : null}
 
         <ul
-          className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:justify-items-stretch sm:[&>li:nth-child(5):nth-last-child(3)]:col-start-2"
+          className="grid grid-cols-2 gap-2 sm:grid-cols-8 sm:justify-items-stretch"
           aria-label="Del til"
         >
           {SHARE_TARGETS.map((target, index) => {
@@ -251,7 +258,9 @@ export function ShareDialog({
               <motion.li
                 key={target}
                 className={cn(
-                  isOrphanMobile && 'col-span-2 sm:col-span-1',
+                  'sm:col-span-2',
+                  index === 4 && 'sm:col-start-2',
+                  isOrphanMobile && 'col-span-2 sm:col-span-2',
                   isOrphanMobile && 'flex justify-center sm:block',
                 )}
                 initial={reducedMotion ? false : { opacity: 0, y: 6 }}
