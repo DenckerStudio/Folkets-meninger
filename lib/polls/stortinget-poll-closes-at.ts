@@ -1,6 +1,6 @@
 import { getServiceSupabase } from '@/lib/supabase';
 
-export async function setPollClosesAt(pollId: string, closesAtIso: string): Promise<void> {
+export async function setPollClosesAt(pollId: string, closesAtIso: string | null): Promise<void> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('missing service role');
   }

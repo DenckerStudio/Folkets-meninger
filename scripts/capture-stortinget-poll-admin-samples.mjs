@@ -63,11 +63,38 @@ export default function StortingetPollAdminCaptureDialogPage() {
 }
 `;
 
+const updateDialogPage = `'use client';
+
+import { StortingetPollAdminSection } from '@/components/sak/stortinget-poll-admin-section';
+
+export default function StortingetPollAdminCaptureUpdateDialogPage() {
+  return (
+    <main className="mx-auto min-h-dvh max-w-4xl bg-background p-4 sm:p-8">
+      <StortingetPollAdminSection
+        sakId="${FIXTURE.sakId}"
+        sakTitle="${FIXTURE.sakTitle.replace(/'/g, "\\'")}"
+        defaultNeutralSummary="${FIXTURE.neutralSummary.replace(/'/g, "\\'")}"
+        stortingetPageUrl="${FIXTURE.stortingetUrl}"
+        existingPoll={{
+          id: 'fixture-poll-uuid',
+          title: '${FIXTURE.sakTitle.replace(/'/g, "\\'")}',
+          neutralSummary: '${FIXTURE.neutralSummary.replace(/'/g, "\\'")}',
+          closesAt: '2020-06-01T10:00:00.000Z',
+        }}
+        captureUpdateDialogOpen
+      />
+    </main>
+  );
+}
+`;
+
 async function writeDevRoutes() {
   await mkdir(join(devRoot, 'sak'), { recursive: true });
   await mkdir(join(devRoot, 'dialog'), { recursive: true });
+  await mkdir(join(devRoot, 'dialog-oppdater'), { recursive: true });
   await writeFile(join(devRoot, 'sak/page.tsx'), sakPage);
   await writeFile(join(devRoot, 'dialog/page.tsx'), dialogPage);
+  await writeFile(join(devRoot, 'dialog-oppdater/page.tsx'), updateDialogPage);
 }
 
 async function removeDevRoutes() {
@@ -123,6 +150,14 @@ async function capture() {
       colorScheme: 'dark',
       waitDialog: true,
     },
+    {
+      path: '/dev/stortinget-poll-admin-capture/dialog-oppdater',
+      name: 'oppdater-dialog',
+      width: 1280,
+      colorScheme: 'light',
+      waitDialog: true,
+      dialogTitle: 'Oppdater avstemning',
+    },
   ];
 
   for (const shot of shots) {
@@ -134,6 +169,9 @@ async function capture() {
     await page.goto(`${baseUrl}${shot.path}`, { waitUntil: 'networkidle' });
     if (shot.waitDialog) {
       await page.getByRole('dialog').waitFor({ state: 'visible', timeout: 20_000 });
+      if (shot.dialogTitle) {
+        await page.getByRole('heading', { name: shot.dialogTitle }).waitFor();
+      }
     } else {
       await page.getByRole('button', { name: 'Opprett avstemning' }).waitFor();
     }

@@ -10,8 +10,13 @@ export type PublishStortingetPollInput = {
   issueId: string;
   title: string;
   neutralSummary: string;
-  closesAtIso: string | null;
+  closesAt: ClosesAtApplyAction;
 };
+
+export type ClosesAtApplyAction =
+  | { action: 'skip' }
+  | { action: 'clear' }
+  | { action: 'set'; iso: string };
 
 export type PublishStortingetPollDeps = {
   ensureStortingetPoll: (input: {
@@ -20,7 +25,7 @@ export type PublishStortingetPollDeps = {
     neutralSummary?: string;
     sourceUrls?: PollSourceUrl[];
   }) => Promise<string | null>;
-  setPollClosesAt: (pollId: string, closesAtIso: string) => Promise<void>;
+  setPollClosesAt: (pollId: string, closesAtIso: string | null) => Promise<void>;
 };
 
 export function buildStortingetPollSourceUrls(issueId: string): PollSourceUrl[] {
@@ -36,6 +41,122 @@ export function buildStortingetPollSourceUrls(issueId: string): PollSourceUrl[] 
 export function normalizePublishStortingetPollText(raw: unknown): string {
   if (typeof raw !== 'string') return '';
   return raw.trim();
+}
+
+export function parseNorwegianDate(raw: string): { day: number; month: number; year: number } | null {
+  const match = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(raw.trim());
+  if (!match) return null;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) return null;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return { day, month, year };
+}
+
+export function parseNorwegianTime(raw: string): { hour: number; minute: number } | null {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(raw.trim());
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  if (hour > 23 || minute > 59) return null;
+  return { hour, minute };
+}
+
+export function formatNorwegianDateParts(day: number, month: number, year: number): string {
+  return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.${year}`;
+}
+
+export function formatNorwegianTimeParts(hour: number, minute: number): string {
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+/** Wire format YYYY-MM-DDTHH:mm (Oslo wall clock) for internal comparison. */
+export function norwegianClosesAtToWire(dateRaw: string, timeRaw: string): string | null {
+  const date = normalizePublishStortingetPollText(dateRaw);
+  const time = normalizePublishStortingetPollText(timeRaw);
+  if (!date && !time) return null;
+  if (!date || !time) return null;
+  const parsedDate = parseNorwegianDate(date);
+  const parsedTime = parseNorwegianTime(time);
+  if (!parsedDate || !parsedTime) return null;
+  const wire = `${String(parsedDate.year).padStart(4, '0')}-${String(parsedDate.month).padStart(2, '0')}-${String(parsedDate.day).padStart(2, '0')}T${formatNorwegianTimeParts(parsedTime.hour, parsedTime.minute)}`;
+  if (!osloLocalDateTimeToUtcDate(wire)) return null;
+  return wire;
+}
+
+export function utcIsoToNorwegianClosesAtFields(iso: string): { date: string; time: string } {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return { date: '', time: '' };
+  }
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: STORTINGET_POLL_ADMIN_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const read = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((part) => part.type === type)?.value ?? Number.NaN);
+  return {
+    date: formatNorwegianDateParts(read('day'), read('month'), read('year')),
+    time: formatNorwegianTimeParts(read('hour'), read('minute')),
+  };
+}
+
+export function isPollClosesAtPast(iso: string | null | undefined, now: Date = new Date()): boolean {
+  if (!iso) return false;
+  const ms = new Date(iso).getTime();
+  return !Number.isNaN(ms) && ms <= now.getTime();
+}
+
+export function validateClosesAtForPublish(
+  raw: Record<string, unknown>,
+  now: Date = new Date(),
+): { ok: true; closesAt: ClosesAtApplyAction } | { ok: false; error: string } {
+  const isUpdate = raw.isUpdate === true;
+  const initialWire =
+    typeof raw.initialClosesAtWire === 'string' && raw.initialClosesAtWire.trim()
+      ? raw.initialClosesAtWire.trim()
+      : null;
+  const dateRaw = normalizePublishStortingetPollText(raw.closesAtDate);
+  const timeRaw = normalizePublishStortingetPollText(raw.closesAtTime);
+
+  if (!dateRaw && !timeRaw) {
+    if (isUpdate && initialWire) {
+      return { ok: true, closesAt: { action: 'clear' } };
+    }
+    return { ok: true, closesAt: { action: 'skip' } };
+  }
+
+  if (!dateRaw || !timeRaw) {
+    return {
+      ok: false,
+      error: 'Fyll inn både dato (dd.mm.åååå) og klokkeslett (tt:mm), eller la begge stå tomme.',
+    };
+  }
+
+  const wire = norwegianClosesAtToWire(dateRaw, timeRaw);
+  if (!wire) {
+    return { ok: false, error: 'Ugyldig sluttidspunkt.' };
+  }
+
+  if (initialWire && wire === initialWire) {
+    return { ok: true, closesAt: { action: 'skip' } };
+  }
+
+  const parsed = osloLocalDateTimeToUtcDate(wire);
+  if (!parsed) {
+    return { ok: false, error: 'Ugyldig sluttidspunkt.' };
+  }
+  if (parsed.getTime() <= now.getTime()) {
+    return { ok: false, error: 'Sluttidspunkt må ligge i fremtiden.' };
+  }
+  return { ok: true, closesAt: { action: 'set', iso: parsed.toISOString() } };
 }
 
 export function validatePublishStortingetPollInput(
@@ -68,8 +189,8 @@ export function validatePublishStortingetPollInput(
     };
   }
 
-  const closesAtParsed = parseFutureClosesAtOslo(raw.closesAtOslo, now);
-  if ('error' in closesAtParsed) {
+  const closesAtParsed = validateClosesAtForPublish(raw, now);
+  if (!closesAtParsed.ok) {
     return { ok: false, error: closesAtParsed.error };
   }
 
@@ -79,32 +200,12 @@ export function validatePublishStortingetPollInput(
       issueId,
       title,
       neutralSummary,
-      closesAtIso: closesAtParsed.closesAt,
+      closesAt: closesAtParsed.closesAt,
     },
   };
 }
 
-export function parseFutureClosesAtOslo(
-  raw: unknown,
-  now: Date = new Date(),
-): { closesAt: string | null } | { error: string } {
-  if (raw == null || (typeof raw === 'string' && !raw.trim())) {
-    return { closesAt: null };
-  }
-  if (typeof raw !== 'string') {
-    return { error: 'Ugyldig sluttidspunkt.' };
-  }
-  const parsed = osloLocalDateTimeToUtcDate(raw.trim());
-  if (!parsed) {
-    return { error: 'Ugyldig sluttidspunkt.' };
-  }
-  if (parsed.getTime() <= now.getTime()) {
-    return { error: 'Sluttidspunkt må ligge i fremtiden.' };
-  }
-  return { closesAt: parsed.toISOString() };
-}
-
-/** datetime-local value interpreted as wall time in Europe/Oslo → UTC Date. */
+/** datetime-local wire YYYY-MM-DDTHH:mm interpreted as wall time in Europe/Oslo → UTC Date. */
 export function osloLocalDateTimeToUtcDate(local: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(local.trim());
   if (!match) return null;
@@ -155,6 +256,7 @@ export function osloLocalDateTimeToUtcDate(local: string): Date | null {
   return guess;
 }
 
+/** @deprecated Prefer utcIsoToNorwegianClosesAtFields in UI. */
 export function utcIsoToOsloLocalInput(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
@@ -182,7 +284,7 @@ export async function publishStortingetPollForAdmin(
     return { ok: false, error: validated.error };
   }
 
-  const { issueId, title, neutralSummary, closesAtIso } = validated.value;
+  const { issueId, title, neutralSummary, closesAt } = validated.value;
   const pollId = await deps.ensureStortingetPoll({
     issueId,
     title,
@@ -194,12 +296,23 @@ export async function publishStortingetPollForAdmin(
     return { ok: false, error: 'Kunne ikke publisere avstemningen. Prøv igjen senere.' };
   }
 
-  if (closesAtIso) {
-    try {
-      await deps.setPollClosesAt(pollId, closesAtIso);
-    } catch {
-      return { ok: false, error: 'Avstemningen ble opprettet, men sluttidspunktet ble ikke lagret.' };
+  try {
+    switch (closesAt.action) {
+      case 'skip':
+        break;
+      case 'clear':
+        await deps.setPollClosesAt(pollId, null);
+        break;
+      case 'set':
+        await deps.setPollClosesAt(pollId, closesAt.iso);
+        break;
+      default: {
+        const _never: never = closesAt;
+        return _never;
+      }
     }
+  } catch {
+    return { ok: false, error: 'Avstemningen ble lagret, men sluttidspunktet ble ikke oppdatert.' };
   }
 
   return { ok: true, pollId };

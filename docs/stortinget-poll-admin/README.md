@@ -8,4 +8,4 @@ Generering:
 node scripts/capture-stortinget-poll-admin-samples.mjs
 ```
 
-Skriptet oppretter midlertidige ruter under `app/dev/stortinget-poll-admin-capture/`, bygger appen, tar bilder og sletter rutene igjen.
+Skriptet oppretter midlertidige ruter under `app/dev/stortinget-poll-admin-capture/`, bygger appen, tar bilder (inkl. oppdater-dialog-light-1280) og sletter rutene igjen.
