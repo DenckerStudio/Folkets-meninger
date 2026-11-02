@@ -15,6 +15,9 @@ const dialog = read('components/ui/dialog.tsx');
 assert.match(shell, /useFocusTrap\(open && !shareDialogOpen/, 'reel trap pauses while share open');
 assert.match(shell, /ReelExpandedShareProvider/, 'reel share provider wraps expanded content');
 assert.match(shareDialog, /SHARE_DIALOG_OVERLAY_Z_INDEX/, 'share dialog raises overlay z-index');
+assert.match(shareDialog, /overlayZIndex=\{overlayTop \? SHARE_DIALOG_OVERLAY_Z_INDEX/, 'share passes overlay z-index to Dialog');
+assert.doesNotMatch(shareDialog, /requestAnimationFrame/, 'no rAF z-index workaround');
+assert.match(shareDialog, /mode="popLayout"/, 'copy icon swap keeps stable width');
 assert.doesNotMatch(dialog, /SHARE_DIALOG/, 'base dialog unchanged');
 assert.match(read('components/polls/reel-poll-share-del.tsx'), /ReelPollShareDel/, 'isolated reel del');
 

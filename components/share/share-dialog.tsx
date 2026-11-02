@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react';
 import {
@@ -87,28 +87,6 @@ export function ShareDialog({
   const nativeShare = useSyncExternalStore(subscribeNoop, canUseNativeShare, () => false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
-  const dialogInstanceRef = useRef(0);
-
-  // Dialog sets overlay z-index on open; re-apply after paint so share sits above reel expanded UI.
-  useEffect(() => {
-    if (!open || !overlayTop) return;
-    dialogInstanceRef.current += 1;
-    const instance = dialogInstanceRef.current;
-    const applyZIndex = () => {
-      const overlays = document.querySelectorAll('[data-shared-dialog-overlay]');
-      const overlay = overlays[overlays.length - 1];
-      if (overlay instanceof HTMLElement) {
-        overlay.style.zIndex = String(SHARE_DIALOG_OVERLAY_Z_INDEX);
-      }
-    };
-    const id = window.requestAnimationFrame(applyZIndex);
-    return () => {
-      window.cancelAnimationFrame(id);
-      if (dialogInstanceRef.current === instance) {
-        dialogInstanceRef.current = 0;
-      }
-    };
-  }, [open, overlayTop]);
 
   const urlFor = useCallback(
     (channel: ShareChannel) => resolveShareUrl(channelUrl ? channelUrl(channel) : url),
@@ -161,6 +139,7 @@ export function ShareDialog({
       description="Velg hvordan du vil dele. Mottakeren ser en forhåndsvisning av siden."
       size="md"
       className="sm:max-w-lg"
+      overlayZIndex={overlayTop ? SHARE_DIALOG_OVERLAY_Z_INDEX : undefined}
     >
       <div className="space-y-5">
         {showPreview ? (
@@ -202,26 +181,28 @@ export function ShareDialog({
                   : 'bg-brand text-brand-foreground hover:bg-brand/90',
               )}
             >
-              <AnimatePresence initial={false}>
-                <motion.span
-                  key={copied ? 'copied' : 'copy'}
-                  initial={
-                    reducedMotion || copied
-                      ? false
-                      : { scale: 0.6, opacity: 0, rotate: -20 }
-                  }
-                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                  exit={reducedMotion ? undefined : { scale: 0.6, opacity: 0 }}
-                  transition={{ type: 'spring', stiffness: 520, damping: 26 }}
-                  className="inline-flex shrink-0"
-                >
-                  <HugeiconsIcon
-                    icon={copied ? Tick02Icon : Copy01Icon}
-                    className="h-4 w-4"
-                    aria-hidden
-                  />
-                </motion.span>
-              </AnimatePresence>
+              <span className="relative grid h-4 w-4 shrink-0 place-items-center [&>span]:col-start-1 [&>span]:row-start-1">
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.span
+                    key={copied ? 'copied' : 'copy'}
+                    initial={
+                      reducedMotion || copied
+                        ? false
+                        : { scale: 0.6, opacity: 0, rotate: -20 }
+                    }
+                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                    exit={reducedMotion ? undefined : { scale: 0.6, opacity: 0 }}
+                    transition={{ type: 'spring', stiffness: 520, damping: 26 }}
+                    className="inline-flex"
+                  >
+                    <HugeiconsIcon
+                      icon={copied ? Tick02Icon : Copy01Icon}
+                      className="h-4 w-4"
+                      aria-hidden
+                    />
+                  </motion.span>
+                </AnimatePresence>
+              </span>
               <span className="grid [&>span]:col-start-1 [&>span]:row-start-1">
                 <span className={cn(!copied && 'invisible')}>Lenke kopiert</span>
                 <span className={cn(copied && 'invisible')}>Kopier lenke</span>
