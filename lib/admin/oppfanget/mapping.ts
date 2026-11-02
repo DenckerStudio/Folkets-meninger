@@ -72,6 +72,7 @@ export const OPPFANGET_DISPLAY_TYPE_LABELS: Record<OppfangetDisplayType, string>
   opprop: 'Opprop',
   aksjon: 'Aksjon',
   boikott: 'Boikott',
+  reddit: 'Reddit',
 };
 
 export const ALL_OPPFANGET_DISPLAY_STATUSES: OppfangetDisplayStatus[] = [
@@ -84,6 +85,7 @@ export const ALL_OPPFANGET_DISPLAY_STATUSES: OppfangetDisplayStatus[] = [
 
 export const ALL_OPPFANGET_DISPLAY_TYPES: OppfangetDisplayType[] = [
   'melding',
+  'reddit',
   'opprop',
   'aksjon',
   'boikott',

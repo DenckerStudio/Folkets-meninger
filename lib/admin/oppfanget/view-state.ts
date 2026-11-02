@@ -7,6 +7,19 @@ export const OPPFANGET_PIPELINE_EMPTY_DESCRIPTION =
 export const OPPFANGET_FILTER_EMPTY_TITLE = 'Ingen treff for filtrene';
 export const OPPFANGET_FILTER_EMPTY_DESCRIPTION =
   'Prøv å endre eller fjerne filtervalgene.';
+export const OPPFANGET_REDDIT_EMPTY_TITLE = 'Ingen Reddit-signaler';
+export const OPPFANGET_REDDIT_EMPTY_DESCRIPTION =
+  'Reddit-henting er ikke aktivert ennå.';
+
+export function shouldShowOppfangetRedditTypeEmpty(
+  data: OppfangetListResponse | null,
+  filters: OppfangetFilterInput,
+  pending: boolean,
+): boolean {
+  if (!data || pending || data.tableMissing) return false;
+  if (filters.type !== 'reddit') return false;
+  return data.rows.length === 0;
+}
 
 const EMPTY_COUNTS: OppfangetStatusCounts = {
   oppfanget: 0,

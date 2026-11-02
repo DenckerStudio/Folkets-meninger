@@ -16,6 +16,7 @@ import {
 import type {
   ActionClusterDbStatus,
   ActionTypeDb,
+  OppfangetClusterRow,
   OppfangetListResponse,
   OppfangetRow,
   OppfangetScale,
@@ -25,6 +26,11 @@ import { normalizeSeenAtRange } from '@/lib/admin/oppfanget/format-seen-dates';
 import { filterOppfangetRowsForResearchList } from '@/lib/admin/oppfanget/excluded-from-research-list';
 import { sortOppfangetSources } from '@/lib/admin/oppfanget/source-display';
 import type { OppfangetSourceType } from '@/lib/admin/oppfanget/types';
+import {
+  mapRedditSignalToOppfangetRow,
+  REDDIT_SIGNALS_LIST_LIMIT,
+  type RedditSignalDbRow,
+} from '@/lib/reddit-signals/admin-map';
 import { getServiceSupabase } from '@/lib/supabase';
 
 type ClusterRow = {
@@ -67,6 +73,73 @@ function isMissingTableError(error: { code?: string; message?: string } | null):
   if (!error) return false;
   if (error.code === '42P01') return true;
   return /action_clusters|does not exist|undefined_table/i.test(error.message ?? '');
+}
+
+function isMissingRedditTableError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  if (error.code === '42P01') return true;
+  return /reddit_signals|does not exist|undefined_table/i.test(error.message ?? '');
+}
+
+async function loadRedditSignalsForAdmin(): Promise<OppfangetRow[]> {
+  const service = getServiceSupabase();
+  const { data, error } = await service
+    .from('reddit_signals')
+    .select(
+      'id, reddit_id, subreddit, title, url, score, num_comments, contention, posted_at, snapshot_at, first_seen_at, last_seen_at, topic, related_issue_id, related_similarity',
+    )
+    .order('last_seen_at', { ascending: false })
+    .limit(REDDIT_SIGNALS_LIST_LIMIT);
+
+  if (error) {
+    if (isMissingRedditTableError(error)) {
+      return [];
+    }
+    throw error;
+  }
+
+  return ((data ?? []) as RedditSignalDbRow[]).map(mapRedditSignalToOppfangetRow);
+}
+
+function sortOppfangetRowsByLastSeen(rows: OppfangetRow[]): OppfangetRow[] {
+  return rows.slice().sort((a, b) => {
+    const aTime = new Date(a.lastSeenAt).getTime();
+    const bTime = new Date(b.lastSeenAt).getTime();
+    if (bTime !== aTime) return bTime - aTime;
+    return a.id.localeCompare(b.id);
+  });
+}
+
+function toFilterableFromOppfangetRow(row: OppfangetRow, metadata: Record<string, unknown> | null) {
+  if (row.rowKind === 'reddit') {
+    return {
+      id: row.id,
+      title: row.title,
+      rowKind: 'reddit' as const,
+      displayType: 'reddit' as const,
+      subreddit: row.subreddit,
+      firstSeenAt: row.firstSeenAt,
+      lastSeenAt: row.lastSeenAt,
+    };
+  }
+  return {
+    id: row.id,
+    title: row.title,
+    rowKind: 'cluster' as const,
+    actionType: row.actionType,
+    clusterStatus: row.clusterStatus,
+    pollStatus: row.pollStatus,
+    metadata,
+    sources: row.sources.map((s) => ({
+      publisher: s.publisher,
+      signalOnly: s.signalOnly,
+      title: s.title,
+      sourceType: s.sourceType,
+      url: s.url,
+    })),
+    firstSeenAt: row.firstSeenAt,
+    lastSeenAt: row.lastSeenAt,
+  };
 }
 
 function parseBestScale(raw: Record<string, unknown> | null): OppfangetScale | null {
@@ -153,7 +226,7 @@ export function mapClusterToRow(
   cluster: ClusterRow,
   sources: SourceRow[],
   pollStatus: string | null,
-): OppfangetRow {
+): OppfangetClusterRow {
   const sourceRows: OppfangetSourceRow[] = sortOppfangetSources(
     sources.map((s) => ({
       id: s.id,
@@ -176,11 +249,12 @@ export function mapClusterToRow(
   const seen = normalizeSeenAtRange(cluster.first_seen_at, cluster.last_seen_at);
 
   return {
+    rowKind: 'cluster',
     id: cluster.id,
     title: cluster.action_name,
     actionType: cluster.action_type,
     clusterStatus: cluster.status,
-    displayType: mapActionTypeToDisplayType(cluster.action_type, { isSignal }),
+    displayType: mapActionTypeToDisplayType(cluster.action_type, { isSignal }) as OppfangetClusterRow['displayType'],
     displayStatus: mapClusterAndPollToDisplayStatus(cluster.status, pollStatus),
     sources: sourceRows,
     firstSeenAt: seen.firstSeenAt,
@@ -292,27 +366,16 @@ export async function listOppfangetForAdmin(
     }
   }
 
-  const filterable = researchRows.map((row) => ({
-    id: row.id,
-    title: row.title,
-    actionType: row.actionType,
-    clusterStatus: row.clusterStatus,
-    pollStatus: row.pollStatus,
-    metadata: clusterById.get(row.id)?.metadata ?? null,
-    sources: row.sources.map((s) => ({
-      publisher: s.publisher,
-      signalOnly: s.signalOnly,
-      title: s.title,
-      sourceType: s.sourceType,
-      url: s.url,
-    })),
-    firstSeenAt: row.firstSeenAt,
-    lastSeenAt: row.lastSeenAt,
-  }));
+  const redditRows = await loadRedditSignalsForAdmin();
+  const combinedRows = sortOppfangetRowsByLastSeen([...researchRows, ...redditRows]);
+
+  const filterable = combinedRows.map((row) =>
+    toFilterableFromOppfangetRow(row, clusterById.get(row.id)?.metadata ?? null),
+  );
 
   const counts = countOppfangetStatuses(filterable);
   const filteredIds = new Set(filterOppfangetRows(filterable, filters).map((r) => r.id));
-  const rows = researchRows.filter((r) => filteredIds.has(r.id));
+  const rows = combinedRows.filter((r) => filteredIds.has(r.id));
 
   return {
     rows,

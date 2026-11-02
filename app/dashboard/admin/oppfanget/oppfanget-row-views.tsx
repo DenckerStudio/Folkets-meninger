@@ -8,7 +8,8 @@ import {
   OPPFANGET_DISPLAY_TYPE_LABELS,
 } from '@/lib/admin/oppfanget/mapping';
 import { formatSensitiveTemaCell } from '@/lib/admin/oppfanget/sensitive-category';
-import type { OppfangetRow } from '@/lib/admin/oppfanget/types';
+import type { OppfangetClusterRow, OppfangetRedditRow, OppfangetRow } from '@/lib/admin/oppfanget/types';
+import { isOppfangetRedditRow } from '@/lib/admin/oppfanget/types';
 import { REEL_TEXT_HIT } from '@/lib/polls/reel-tap-targets';
 import {
   ResearchRowActions,
@@ -18,6 +19,11 @@ import type { ResearchBriefsByKind } from '@/lib/admin/research/service';
 import { adminReelDraftUrl } from '@/lib/admin/research/labels';
 import { routes } from '@/lib/routes';
 import { formatOppfangetSourcePublisher } from '@/lib/admin/oppfanget/source-display';
+import {
+  formatRedditContention,
+  RedditSubredditBadge,
+  redditSnapshotUpdatedLabel,
+} from '@/lib/reddit-signals/format';
 import { cn } from '@/lib/utils';
 
 const cellClass = 'min-w-0 overflow-hidden break-words px-2 py-1.5 align-top text-xs';
@@ -62,7 +68,7 @@ function formatAsOfDate(value: string): string {
   }).format(d);
 }
 
-export function formatOppfangetScale(row: OppfangetRow): string {
+export function formatOppfangetScale(row: OppfangetClusterRow): string {
   if (!row.scale?.value) return '—';
   const unit = row.scale.unit ?? '';
   const parts = [`ca. ${row.scale.value.toLocaleString('nb-NO')}${unit ? ` ${unit}` : ''}`];
@@ -70,13 +76,13 @@ export function formatOppfangetScale(row: OppfangetRow): string {
   return parts.join(' ');
 }
 
-export function oppfangetPollLink(row: OppfangetRow): string | null {
+export function oppfangetPollLink(row: OppfangetClusterRow): string | null {
   if (!row.pollId) return null;
   if (row.pollStatus === 'draft') return adminReelDraftUrl(row.pollId);
   return routes.poll(row.pollId);
 }
 
-function StatusBadge({ row }: { row: OppfangetRow }) {
+function StatusBadge({ row }: { row: OppfangetClusterRow }) {
   return (
     <span
       className={cn(
@@ -107,7 +113,7 @@ function ScaleSourceLink({ url, mobile = false }: { url: string; mobile?: boolea
   );
 }
 
-function SourcesList({ row, mobile = false }: { row: OppfangetRow; mobile?: boolean }) {
+function SourcesList({ row, mobile = false }: { row: OppfangetClusterRow; mobile?: boolean }) {
   if (row.sources.length === 0) {
     return <span className="text-xs text-muted-foreground">—</span>;
   }
@@ -132,7 +138,7 @@ function SourcesList({ row, mobile = false }: { row: OppfangetRow; mobile?: bool
   );
 }
 
-function PollLinkCell({ row, mobile = false }: { row: OppfangetRow; mobile?: boolean }) {
+function PollLinkCell({ row, mobile = false }: { row: OppfangetClusterRow; mobile?: boolean }) {
   const link = oppfangetPollLink(row);
   if (!link) return <span className="text-xs text-muted-foreground">—</span>;
   const isDraft = row.pollStatus === 'draft';
@@ -154,12 +160,112 @@ function PollLinkCell({ row, mobile = false }: { row: OppfangetRow; mobile?: boo
   );
 }
 
+function RedditRelatedIssueCell({ row }: { row: OppfangetRedditRow }) {
+  if (!row.relatedIssueId) {
+    return <span className="text-xs text-muted-foreground">Ingen sak funnet</span>;
+  }
+  return (
+    <Link href={routes.sak(row.relatedIssueId)} className={cn(tapLinkClass, 'text-xs font-medium')}>
+      Sak {row.relatedIssueId}
+    </Link>
+  );
+}
+
+function RedditMetricsCell({ row }: { row: OppfangetRedditRow }) {
+  return (
+    <div
+      className="ml-auto flex flex-col items-end gap-0.5 tabular-nums text-xs text-foreground"
+      title="kommentarer per poeng"
+    >
+      <span>{row.score.toLocaleString('nb-NO')} poeng</span>
+      <span>{row.numComments.toLocaleString('nb-NO')} kommentarer</span>
+      <span className="text-muted-foreground" title="kommentarer per poeng">
+        {formatRedditContention(row.contention)} kommentarer per poeng
+      </span>
+    </div>
+  );
+}
+
+function RedditTitleCell({ row, desktopTable = false }: { row: OppfangetRedditRow; desktopTable?: boolean }) {
+  return (
+    <div className="min-w-0 space-y-1">
+      <RedditSubredditBadge subreddit={row.subreddit} />
+      <a
+        href={row.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={row.title}
+        className={cn(
+          'block min-w-0 font-medium text-brand hover:underline',
+          desktopTable ? 'line-clamp-2 break-normal hyphens-auto' : 'line-clamp-3 break-words',
+        )}
+      >
+        {row.title}
+        <ExternalLink className="ml-1 inline h-3.5 w-3.5 shrink-0 align-text-bottom" aria-hidden />
+      </a>
+      <p className="text-xs text-muted-foreground">{OPPFANGET_DISPLAY_TYPE_LABELS.reddit}</p>
+    </div>
+  );
+}
+
+function RedditDesktopRow({ row }: { row: OppfangetRedditRow }) {
+  return (
+    <tr key={row.id} className="group hover:bg-muted/20">
+      <td className={cellClass}>
+        <RedditTitleCell row={row} desktopTable />
+      </td>
+      <td className={cn(cellClass, 'w-28 max-w-[7rem] pr-3')}>
+        <span className="text-xs text-muted-foreground">—</span>
+      </td>
+      <td className={cellClass}>
+        <RedditRelatedIssueCell row={row} />
+      </td>
+      <td className={cellClass}>
+        <p className="text-xs text-foreground">{redditSnapshotUpdatedLabel(row.snapshotAt)}</p>
+      </td>
+      <td className={cellClass}>
+        <RedditMetricsCell row={row} />
+      </td>
+      <td className={cn(cellClass, 'text-muted-foreground')}>—</td>
+      <td className={cellClass}>—</td>
+      <td className={cellClass}>—</td>
+      <td className={cn(cellClass, 'sticky right-0 z-10 bg-background shadow-[-6px_0_12px_-8px_rgba(0,0,0,0.12)] group-hover:bg-[color-mix(in_oklch,var(--color-muted)_20%,var(--color-background))]')} />
+    </tr>
+  );
+}
+
+function RedditMobileCard({ row }: { row: OppfangetRedditRow }) {
+  return (
+    <li key={row.id} className="rounded-xl border border-border bg-card p-4 text-sm shadow-sm">
+      <RedditTitleCell row={row} />
+      <dl className="mt-3 space-y-2 text-xs">
+        <div>
+          <dt className="font-medium text-muted-foreground">Sak</dt>
+          <dd className="mt-0.5">
+            <RedditRelatedIssueCell row={row} />
+          </dd>
+        </div>
+        <div>
+          <dt className="font-medium text-muted-foreground">Oppdatert</dt>
+          <dd className="mt-0.5 text-foreground">{redditSnapshotUpdatedLabel(row.snapshotAt)}</dd>
+        </div>
+        <div>
+          <dt className="font-medium text-muted-foreground">Engasjement</dt>
+          <dd className="mt-0.5">
+            <RedditMetricsCell row={row} />
+          </dd>
+        </div>
+      </dl>
+    </li>
+  );
+}
+
 function TitleCell({
   row,
   showTypeMeta = false,
   desktopTable = false,
 }: {
-  row: OppfangetRow;
+  row: OppfangetClusterRow;
   showTypeMeta?: boolean;
   desktopTable?: boolean;
 }) {
@@ -276,7 +382,10 @@ export function OppfangetDesktopTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {rows.map((row) => (
+            {rows.map((row) =>
+              isOppfangetRedditRow(row) ? (
+                <RedditDesktopRow key={row.id} row={row} />
+              ) : (
               <tr key={row.id} className="group hover:bg-muted/20">
                 <td className={cellClass}>
                   <TitleCell row={row} showTypeMeta desktopTable />
@@ -310,7 +419,8 @@ export function OppfangetDesktopTable({
                   )}
                 />
               </tr>
-            ))}
+              ),
+            )}
           </tbody>
         </table>
       </div>
@@ -330,6 +440,9 @@ export function OppfangetMobileCards({
   return (
     <ul className="space-y-3 sm:hidden">
       {rows.map((row) => {
+        if (isOppfangetRedditRow(row)) {
+          return <RedditMobileCard key={row.id} row={row} />;
+        }
         const pollLink = oppfangetPollLink(row);
         const sensitiveLabel = row.sensitive
           ? formatSensitiveTemaCell(row.sensitive, row.sensitiveCategory)
