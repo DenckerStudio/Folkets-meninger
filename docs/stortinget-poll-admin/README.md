@@ -18,6 +18,9 @@ Skriptet oppretter midlertidige ruter under `app/dev/stortinget-poll-admin-captu
 | `sak-dialog-light-1280.png` | Samme, lys, desktop |
 | `sak-dialog-dark-360.png` | Samme, mørk, smal |
 | `sak-dialog-dark-1280.png` | Samme, mørk, desktop |
+| `sak-blokkert-light-360.png` | Sak med eldre systemavstemning: forklaring uten handling (lys, smal) |
+| `sak-blokkert-light-1280.png` | Samme blokkert-tilstand, lys, desktop |
+| `sak-blokkert-dark-1280.png` | Samme blokkert-tilstand, mørk, desktop |
 | `dialog-bekreft-light-360.png` | Bekreftelsessteg «Publisere nå?» før første publisering |
 | `dialog-feil-light-360.png` | Valideringsfeil (sluttidspunkt i fortiden) |
 | `dialog-last-light-360.png` | Publiseringsdialog med lasteindikator (fixture) |

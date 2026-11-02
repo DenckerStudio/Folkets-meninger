@@ -3,6 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/admin/gate';
 import { ensureStortingetPoll } from '@/lib/polls/service';
+import {
+  listPollsForStortingetIssueAdmin,
+  readStortingetIssueTextSnapshot,
+  restoreStortingetIssueTextSnapshot,
+} from '@/lib/polls/stortinget-poll-admin-data';
 import { setPollClosesAt } from '@/lib/polls/stortinget-poll-closes-at';
 import { runPublishStortingetPollAdminAction } from '@/lib/polls/stortinget-poll-admin';
 import { routes } from '@/lib/routes';
@@ -18,6 +23,9 @@ export async function publishStortingetPollAction(
   const result = await runPublishStortingetPollAdminAction(raw, {
     isAdmin: auth.ok,
     deps: {
+      listIssuePolls: listPollsForStortingetIssueAdmin,
+      readIssueSnapshot: readStortingetIssueTextSnapshot,
+      restoreIssueSnapshot: restoreStortingetIssueTextSnapshot,
       ensureStortingetPoll,
       setPollClosesAt,
     },

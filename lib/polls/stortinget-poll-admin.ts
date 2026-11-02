@@ -1,5 +1,7 @@
 import type { PollSourceUrl } from '@/lib/polls/types';
 import { getStortingetSakUrl } from '@/lib/stortinget-horinger';
+import type { IssuePollAdminRow, StortingetIssueTextSnapshot } from '@/lib/polls/stortinget-poll-admin-guard';
+import { validateStortingetPollAdminAction } from '@/lib/polls/stortinget-poll-admin-guard';
 
 export const STORTINGET_POLL_ADMIN_TIMEZONE = 'Europe/Oslo';
 /** Same cap as POLL_OG_TITLE_RAW_MAX in lib/polls/share-og.tsx */
@@ -19,6 +21,9 @@ export type ClosesAtApplyAction =
   | { action: 'set'; iso: string };
 
 export type PublishStortingetPollDeps = {
+  listIssuePolls: (issueId: string) => Promise<IssuePollAdminRow[]>;
+  readIssueSnapshot: (issueId: string) => Promise<StortingetIssueTextSnapshot | null>;
+  restoreIssueSnapshot: (issueId: string, snapshot: StortingetIssueTextSnapshot) => Promise<void>;
   ensureStortingetPoll: (input: {
     issueId: string;
     title: string;
@@ -300,6 +305,16 @@ export async function publishStortingetPollForAdmin(
   }
 
   const { issueId, title, neutralSummary, closesAt } = validated.value;
+  const isUpdate = raw.isUpdate === true;
+
+  const rows = await deps.listIssuePolls(issueId);
+  const gate = validateStortingetPollAdminAction(rows, { isUpdate });
+  if (!gate.ok) {
+    return { ok: false, error: gate.error };
+  }
+
+  const issueSnapshot = await deps.readIssueSnapshot(issueId);
+
   const pollId = await deps.ensureStortingetPoll({
     issueId,
     title,
@@ -309,6 +324,14 @@ export async function publishStortingetPollForAdmin(
 
   if (!pollId) {
     return { ok: false, error: 'Kunne ikke publisere avstemningen. Prøv igjen senere.' };
+  }
+
+  if (issueSnapshot) {
+    try {
+      await deps.restoreIssueSnapshot(issueId, issueSnapshot);
+    } catch {
+      return { ok: false, error: 'Avstemningen ble lagret, men saksdata ble ikke gjenopprettet.' };
+    }
   }
 
   try {

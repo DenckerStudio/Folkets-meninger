@@ -22,12 +22,17 @@ const FIXTURE = {
 
 const esc = (value) => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
-const existingPollBlock = `{
-          id: 'fixture-poll-uuid',
-          title: '${esc(FIXTURE.sakTitle)}',
-          neutralSummary: '${esc(FIXTURE.neutralSummary)}',
-          closesAt: '2020-06-01T10:00:00.000Z',
-        }`;
+const adminStateCreate = 'adminState={{ kind: "create" }}';
+const adminStateEditable = `adminState={{
+          kind: 'editable',
+          poll: {
+            id: 'fixture-poll-uuid',
+            title: '${esc(FIXTURE.sakTitle)}',
+            neutralSummary: '${esc(FIXTURE.neutralSummary)}',
+            closesAt: '2020-06-01T10:00:00.000Z',
+          },
+        }}`;
+const adminStateBlocked = 'captureAdminState={{ kind: "blocked_system_poll" }} adminState={{ kind: "create" }}';
 
 const sakHeader = `
       <header className="space-y-2">
@@ -51,7 +56,7 @@ export default function Page() {
     <main className="mx-auto min-h-dvh max-w-4xl space-y-6 bg-background p-4 sm:p-8">
       ${sakHeader}
       <StortingetPollAdminSection
-        ${sectionProps('existingPoll={null}\n        captureDialogOpen')}
+        ${sectionProps(`${adminStateCreate}\n        captureDialogOpen`)}
       />
     </main>
   );
@@ -67,7 +72,7 @@ export default function Page() {
     <main className="mx-auto min-h-dvh max-w-4xl space-y-6 bg-background p-4 sm:p-8">
       ${sakHeader}
       <StortingetPollAdminSection
-        ${sectionProps(`existingPoll={${existingPollBlock}}`)}
+        ${sectionProps(adminStateEditable)}
       />
     </main>
   );
@@ -82,7 +87,7 @@ export default function Page() {
   return (
     <main className="mx-auto min-h-dvh max-w-4xl bg-background p-4 sm:p-8">
       <StortingetPollAdminSection
-        ${sectionProps('existingPoll={null}\n        captureDialogOpen\n        captureDialogStep="confirm"')}
+        ${sectionProps(`${adminStateCreate}\n        captureDialogOpen\n        captureDialogStep="confirm"`)}
       />
     </main>
   );
@@ -98,7 +103,7 @@ export default function Page() {
     <main className="mx-auto min-h-dvh max-w-4xl bg-background p-4 sm:p-8">
       <StortingetPollAdminSection
         ${sectionProps(
-          'existingPoll={null}\n        captureDialogOpen\n        captureFieldError="Sluttidspunktet må ligge i fremtiden. Velg en senere dato og klokkeslett (Europe/Oslo)."',
+          `${adminStateCreate}\n        captureDialogOpen\n        captureFieldError="Sluttidspunktet må ligge i fremtiden. Velg en senere dato og klokkeslett (Europe/Oslo)."`,
         )}
       />
     </main>
@@ -114,7 +119,7 @@ export default function Page() {
   return (
     <main className="mx-auto min-h-dvh max-w-4xl bg-background p-4 sm:p-8">
       <StortingetPollAdminSection
-        ${sectionProps('existingPoll={null}\n        captureDialogOpen\n        capturePending')}
+        ${sectionProps(`${adminStateCreate}\n        captureDialogOpen\n        capturePending`)}
       />
     </main>
   );
@@ -129,7 +134,23 @@ export default function Page() {
   return (
     <main className="mx-auto min-h-dvh max-w-4xl bg-background p-4 sm:p-8">
       <StortingetPollAdminSection
-        ${sectionProps(`existingPoll={${existingPollBlock}}\n        captureEditDialogOpen`)}
+        ${sectionProps(`${adminStateEditable}\n        captureEditDialogOpen`)}
+      />
+    </main>
+  );
+}
+`;
+
+const sakBlokkertPage = `'use client';
+
+import { StortingetPollAdminSection } from '@/components/sak/stortinget-poll-admin-section';
+
+export default function Page() {
+  return (
+    <main className="mx-auto min-h-dvh max-w-4xl space-y-6 bg-background p-4 sm:p-8">
+      ${sakHeader}
+      <StortingetPollAdminSection
+        ${sectionProps(adminStateBlocked)}
       />
     </main>
   );
@@ -203,6 +224,7 @@ async function writeDevRoutes() {
     ['dialog-feil', dialogFeilPage],
     ['dialog-last', dialogLastPage],
     ['dialog-rediger', dialogRedigerPage],
+    ['sak-blokkert', sakBlokkertPage],
     ['poll-liste-apen', pollListPage(true)],
     ['poll-liste-avsluttet', pollListPage(false)],
     ['poll-detalj-apen', pollDetailPage(true)],
@@ -307,6 +329,33 @@ const shots = [
     colorScheme: 'light',
     wait: async (page) => {
       await page.getByRole('dialog').waitFor({ state: 'visible' });
+    },
+  },
+  {
+    path: '/dev/stortinget-poll-admin-capture/sak-blokkert',
+    file: 'sak-blokkert-light-360.png',
+    width: 360,
+    colorScheme: 'light',
+    wait: async (page) => {
+      await page.getByRole('heading', { name: 'Saken har en avviklet systemavstemning' }).waitFor();
+    },
+  },
+  {
+    path: '/dev/stortinget-poll-admin-capture/sak-blokkert',
+    file: 'sak-blokkert-light-1280.png',
+    width: 1280,
+    colorScheme: 'light',
+    wait: async (page) => {
+      await page.getByRole('heading', { name: 'Saken har en avviklet systemavstemning' }).waitFor();
+    },
+  },
+  {
+    path: '/dev/stortinget-poll-admin-capture/sak-blokkert',
+    file: 'sak-blokkert-dark-1280.png',
+    width: 1280,
+    colorScheme: 'dark',
+    wait: async (page) => {
+      await page.getByRole('heading', { name: 'Saken har en avviklet systemavstemning' }).waitFor();
     },
   },
   {

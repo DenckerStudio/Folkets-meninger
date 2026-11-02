@@ -18,22 +18,25 @@ import {
   utcIsoToNorwegianClosesAtFields,
   utcIsoToOsloLocalInput,
 } from '@/lib/polls/stortinget-poll-admin';
+import {
+  STORTINGET_POLL_ADMIN_ARCHIVED_MESSAGE,
+  STORTINGET_POLL_ADMIN_BLOCKED_BODY,
+  STORTINGET_POLL_ADMIN_BLOCKED_HEADING,
+  STORTINGET_POLL_ADMIN_BLOCKED_NEXT,
+  STORTINGET_POLL_ADMIN_DRAFT_MESSAGE,
+  type StortingetPollAdminUiState,
+} from '@/lib/polls/stortinget-poll-admin-guard';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
-
-type ExistingPoll = {
-  id: string;
-  title: string;
-  neutralSummary: string;
-  closesAt: string | null;
-};
 
 type StortingetPollAdminSectionProps = {
   sakId: string;
   sakTitle: string;
   defaultNeutralSummary: string;
   stortingetPageUrl: string;
-  existingPoll: ExistingPoll | null;
+  adminState: StortingetPollAdminUiState;
+  /** Overstyrer adminState for docs/screenshots. */
+  captureAdminState?: StortingetPollAdminUiState;
   /** Kun for docs/screenshots — åpner dialog ved mount. */
   captureDialogOpen?: boolean;
   captureEditDialogOpen?: boolean;
@@ -76,13 +79,15 @@ export function StortingetPollAdminSection({
   sakTitle,
   defaultNeutralSummary,
   stortingetPageUrl,
-  existingPoll,
+  adminState,
+  captureAdminState,
   captureDialogOpen = false,
   captureEditDialogOpen = false,
   captureDialogStep = 'form',
   captureFieldError = null,
   capturePending = false,
 }: StortingetPollAdminSectionProps) {
+  const effectiveState = captureAdminState ?? adminState;
   const [dialogOpen, setDialogOpen] = useState(captureDialogOpen || captureEditDialogOpen);
   const [dialogStep, setDialogStep] = useState<'form' | 'confirm'>(captureDialogStep);
   const [title, setTitle] = useState(sakTitle);
@@ -96,8 +101,13 @@ export function StortingetPollAdminSection({
   const router = useRouter();
   const { message, variant, toast } = useAdminToast();
 
-  const hasPoll = Boolean(existingPoll || publishedPollId);
-  const isEditMode = Boolean(existingPoll);
+  const existingPoll = effectiveState.kind === 'editable' ? effectiveState.poll : null;
+  const hasPoll =
+    effectiveState.kind === 'editable' ||
+    effectiveState.kind === 'stortinget_draft' ||
+    effectiveState.kind === 'stortinget_archived' ||
+    Boolean(publishedPollId);
+  const isEditMode = effectiveState.kind === 'editable';
   const pollClosed =
     isEditMode && existingPoll?.closesAt ? isPollClosesAtPast(existingPoll.closesAt) : false;
   const showPending = pending || capturePending;
@@ -188,6 +198,41 @@ export function StortingetPollAdminSection({
         ? 'Endringene vises for velgerne med en gang du lagrer.'
         : 'Avstemningen blir synlig for alle med en gang du publiserer.';
 
+  const primaryLabel = isEditMode ? 'Lagre endringer' : 'Publiser avstemning';
+
+  if (effectiveState.kind === 'blocked_system_poll') {
+    return (
+      <section
+        className="rounded-2xl border border-dashed border-muted-foreground/35 bg-muted/40 p-4 sm:p-5"
+        aria-label="Admin: avstemning blokkert"
+      >
+        <h2 className="text-sm font-semibold text-foreground">{STORTINGET_POLL_ADMIN_BLOCKED_HEADING}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-foreground">{STORTINGET_POLL_ADMIN_BLOCKED_BODY}</p>
+        <p className="mt-2 text-sm leading-relaxed text-foreground/80">{STORTINGET_POLL_ADMIN_BLOCKED_NEXT}</p>
+      </section>
+    );
+  }
+
+  if (effectiveState.kind === 'stortinget_draft' || effectiveState.kind === 'stortinget_archived') {
+    const message =
+      effectiveState.kind === 'stortinget_draft'
+        ? STORTINGET_POLL_ADMIN_DRAFT_MESSAGE
+        : STORTINGET_POLL_ADMIN_ARCHIVED_MESSAGE;
+    return (
+      <section
+        className="rounded-2xl border border-dashed border-brand/30 bg-brand/5 p-4 sm:p-5"
+        aria-label="Admin: avstemning"
+      >
+        <h2 className="text-sm font-semibold text-foreground">Avstemning (admin)</h2>
+        <p className="mt-2 text-sm font-medium text-foreground">{message}</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Det finnes allerede en Stortinget-avstemning på denne saken i den tilstanden. Redigering via saksiden er
+          ikke tilgjengelig ennå.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <>
       <section
@@ -220,13 +265,6 @@ export function StortingetPollAdminSection({
             </button>
           )}
         </div>
-        {publishedPollId ? (
-          <p className="mt-3 text-sm text-foreground">
-            <Link href={routes.poll(publishedPollId)} className="font-medium text-brand hover:underline">
-              Gå til avstemningen
-            </Link>
-          </p>
-        ) : null}
       </section>
 
       <Dialog
@@ -309,19 +347,6 @@ export function StortingetPollAdminSection({
 
             <div className="space-y-2">
               <span className="block text-sm font-medium text-foreground">Sluttidspunkt (valgfritt)</span>
-              {pollClosed && existingPoll?.closesAt ? (
-                <p className="text-sm text-muted-foreground">
-                  {(() => {
-                    const closedAt = utcIsoToNorwegianClosesAtFields(existingPoll.closesAt);
-                    return (
-                      <>
-                        Avstemningen er stengt (sluttidspunkt {closedAt.date} {closedAt.time}). Du kan lagre andre
-                        endringer uten å endre sluttidspunktet.
-                      </>
-                    );
-                  })()}
-                </p>
-              ) : null}
               <div className="flex max-w-md flex-col gap-2 sm:flex-row">
                 <div className="min-w-0 flex-1 space-y-1">
                   <label htmlFor="stortinget-poll-closes-date" className="block text-xs text-muted-foreground">
@@ -354,6 +379,19 @@ export function StortingetPollAdminSection({
                   />
                 </div>
               </div>
+              {pollClosed && existingPoll?.closesAt ? (
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  {(() => {
+                    const closedAt = utcIsoToNorwegianClosesAtFields(existingPoll.closesAt);
+                    return (
+                      <>
+                        Avstemningen er stengt (sluttidspunkt {closedAt.date} {closedAt.time}). Du kan lagre andre
+                        endringer uten å endre sluttidspunktet.
+                      </>
+                    );
+                  })()}
+                </p>
+              ) : null}
               <p className="text-xs text-muted-foreground">
                 Tid i Europe/Oslo. La begge felt stå tomme for å fjerne sluttidspunkt. Nytt tidspunkt må ligge i
                 fremtiden.

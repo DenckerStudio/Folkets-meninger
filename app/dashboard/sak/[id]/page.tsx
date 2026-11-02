@@ -16,7 +16,8 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import { routes } from '@/lib/routes';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { isAdmin } from '@/lib/admin/gate';
-import { findPublicPollForIssue } from '@/lib/polls/service';
+import { listPollsForStortingetIssueAdmin } from '@/lib/polls/stortinget-poll-admin-data';
+import { resolveStortingetPollAdminUiState } from '@/lib/polls/stortinget-poll-admin-guard';
 import { getStortingetSakUrl } from '@/lib/stortinget-horinger';
 import { publicSakSummaryLead } from '@/lib/ai-summary/sak-summary-fetch';
 import { readAiSummaryFromDb } from '@/lib/ai-summary/service';
@@ -233,9 +234,9 @@ export default async function SakPage({
     data: { user },
   } = await supabase.auth.getUser();
   const viewerIsAdmin = user ? await isAdmin(user.id, user.email) : false;
-  const existingStortingetPoll = viewerIsAdmin
-    ? await findPublicPollForIssue(sak.id, supabase)
-    : null;
+  const stortingetPollAdminState = viewerIsAdmin
+    ? resolveStortingetPollAdminUiState(await listPollsForStortingetIssueAdmin(sak.id))
+    : { kind: 'create' as const };
   const pollDefaultNeutralSummary =
     (publicSakSummaryLead(storedSummary) ?? descriptionToShow.trim()) || '';
 
@@ -472,16 +473,7 @@ export default async function SakPage({
                 sakTitle={officialTitle}
                 defaultNeutralSummary={pollDefaultNeutralSummary}
                 stortingetPageUrl={getStortingetSakUrl(sak.id)}
-                existingPoll={
-                  existingStortingetPoll
-                    ? {
-                        id: existingStortingetPoll.id,
-                        title: existingStortingetPoll.title,
-                        neutralSummary: existingStortingetPoll.neutralSummary,
-                        closesAt: existingStortingetPoll.closesAt,
-                      }
-                    : null
-                }
+                adminState={stortingetPollAdminState}
               />
             ) : null}
 
