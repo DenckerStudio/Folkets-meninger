@@ -29,4 +29,5 @@ Skriptet oppretter midlertidige ruter under `app/dev/stortinget-poll-admin-captu
 | `avstemning-liste-apen-light-1280.png` | `/avstemninger`-kort med lang tittel og fremtidig sluttid |
 | `avstemning-detalj-apen-light-1280.png` | Avstemningsside med stemmeknapper (åpen) |
 | `avstemning-liste-avsluttet-light-1280.png` | Liste med «Avstemningen er avsluttet» |
-| `avstemning-detalj-avsluttet-light-1280.png` | Detalj uten stemmeknapper, avsluttet |
+| `avstemning-detalj-avsluttet-light-1280.png` | Detalj uten stemmeknapper, avsluttet, med resultatfelt |
+| `avstemning-detalj-avsluttet-dark-1280.png` | Samme, mørk tema |

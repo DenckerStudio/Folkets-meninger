@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useId } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ExternalLink, Loader2 } from 'lucide-react';
@@ -74,6 +74,30 @@ function ballotWarningPhrase(): string {
   return `${labels[0]}, ${labels[1]} eller ${labels[2]}`;
 }
 
+function invalidFieldsFromError(error: string | null): {
+  title: boolean;
+  neutralSummary: boolean;
+  closesAt: boolean;
+} {
+  if (!error) {
+    return { title: false, neutralSummary: false, closesAt: false };
+  }
+  const lower = error.toLowerCase();
+  return {
+    title: /tittel/.test(lower),
+    neutralSummary: /ingress/.test(lower),
+    closesAt: /dato|klokkeslett|sluttidspunkt|fremtiden|ugyldig slutt/.test(lower),
+  };
+}
+
+function fieldClass(invalid: boolean): string {
+  return cn(FIELD_CLASS, invalid && 'border-destructive');
+}
+
+function textareaClass(invalid: boolean): string {
+  return cn(TEXTAREA_CLASS, invalid && 'border-destructive');
+}
+
 export function StortingetPollAdminSection({
   sakId,
   sakTitle,
@@ -100,6 +124,8 @@ export function StortingetPollAdminSection({
   const [publishedPollId, setPublishedPollId] = useState<string | null>(null);
   const router = useRouter();
   const { message, variant, toast } = useAdminToast();
+  const formErrorId = useId();
+  const invalidFields = invalidFieldsFromError(fieldError);
 
   const existingPoll = effectiveState.kind === 'editable' ? effectiveState.poll : null;
   const hasPoll =
@@ -198,7 +224,12 @@ export function StortingetPollAdminSection({
         ? 'Endringene vises for velgerne med en gang du lagrer.'
         : 'Avstemningen blir synlig for alle med en gang du publiserer.';
 
-  const primaryLabel = isEditMode ? 'Lagre endringer' : 'Publiser avstemning';
+  const formFooterError =
+    fieldError && dialogStep === 'form' ? (
+      <p id={formErrorId} role="alert" className="mb-3 text-sm font-medium text-destructive">
+        {fieldError}
+      </p>
+    ) : null;
 
   if (effectiveState.kind === 'blocked_system_poll') {
     return (
@@ -284,20 +315,23 @@ export function StortingetPollAdminSection({
               </button>
             </div>
           ) : (
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button type="button" disabled={showPending} onClick={closeDialog} className={BTN_SECONDARY}>
-                Avbryt
-              </button>
-              <button
-                type="button"
-                disabled={showPending}
-                onClick={handlePrimaryFormClick}
-                className={BTN_PRIMARY}
-              >
-                {showPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-                {isEditMode ? 'Lagre endringer' : 'Publiser avstemning'}
-              </button>
-            </div>
+            <>
+              {formFooterError}
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button" disabled={showPending} onClick={closeDialog} className={BTN_SECONDARY}>
+                  Avbryt
+                </button>
+                <button
+                  type="button"
+                  disabled={showPending}
+                  onClick={handlePrimaryFormClick}
+                  className={BTN_PRIMARY}
+                >
+                  {showPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+                  {isEditMode ? 'Lagre endringer' : 'Publiser avstemning'}
+                </button>
+              </div>
+            </>
           )
         }
       >
@@ -324,7 +358,9 @@ export function StortingetPollAdminSection({
                 maxLength={STORTINGET_POLL_TITLE_MAX}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                className={FIELD_CLASS}
+                className={fieldClass(invalidFields.title)}
+                aria-invalid={invalidFields.title || undefined}
+                aria-describedby={invalidFields.title && fieldError ? formErrorId : undefined}
               />
               <p className="text-xs text-muted-foreground">
                 Maks {STORTINGET_POLL_TITLE_MAX} tegn ({title.length}/{STORTINGET_POLL_TITLE_MAX})
@@ -341,12 +377,27 @@ export function StortingetPollAdminSection({
                 maxLength={STORTINGET_POLL_NEUTRAL_SUMMARY_MAX}
                 value={neutralSummary}
                 onChange={(event) => setNeutralSummary(event.target.value)}
-                className={TEXTAREA_CLASS}
+                className={textareaClass(invalidFields.neutralSummary)}
+                aria-invalid={invalidFields.neutralSummary || undefined}
+                aria-describedby={invalidFields.neutralSummary && fieldError ? formErrorId : undefined}
               />
             </div>
 
             <div className="space-y-3">
               <span className="block text-sm font-medium text-foreground">Sluttidspunkt (valgfritt)</span>
+              {pollClosed && existingPoll?.closesAt ? (
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {(() => {
+                    const closedAt = utcIsoToNorwegianClosesAtFields(existingPoll.closesAt);
+                    return (
+                      <>
+                        Avstemningen er stengt (sluttidspunkt {closedAt.date} {closedAt.time}). Du kan lagre andre
+                        endringer uten å endre sluttidspunktet.
+                      </>
+                    );
+                  })()}
+                </p>
+              ) : null}
               <div className="flex max-w-md flex-col gap-3 sm:flex-row sm:gap-2">
                 <div className="min-w-0 flex-1 space-y-1">
                   <label htmlFor="stortinget-poll-closes-date" className="block text-xs text-muted-foreground">
@@ -360,7 +411,9 @@ export function StortingetPollAdminSection({
                     autoComplete="off"
                     value={closesAtDate}
                     onChange={(event) => setClosesAtDate(event.target.value)}
-                    className={FIELD_CLASS}
+                    className={fieldClass(invalidFields.closesAt)}
+                    aria-invalid={invalidFields.closesAt || undefined}
+                    aria-describedby={invalidFields.closesAt && fieldError ? formErrorId : undefined}
                   />
                 </div>
                 <div className="min-w-0 flex-1 space-y-1">
@@ -375,23 +428,12 @@ export function StortingetPollAdminSection({
                     autoComplete="off"
                     value={closesAtTime}
                     onChange={(event) => setClosesAtTime(event.target.value)}
-                    className={FIELD_CLASS}
+                    className={fieldClass(invalidFields.closesAt)}
+                    aria-invalid={invalidFields.closesAt || undefined}
+                    aria-describedby={invalidFields.closesAt && fieldError ? formErrorId : undefined}
                   />
                 </div>
               </div>
-              {pollClosed && existingPoll?.closesAt ? (
-                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                  {(() => {
-                    const closedAt = utcIsoToNorwegianClosesAtFields(existingPoll.closesAt);
-                    return (
-                      <>
-                        Avstemningen er stengt (sluttidspunkt {closedAt.date} {closedAt.time}). Du kan lagre andre
-                        endringer uten å endre sluttidspunktet.
-                      </>
-                    );
-                  })()}
-                </p>
-              ) : null}
               <p className="text-xs text-muted-foreground">
                 Tid i Europe/Oslo. La begge felt stå tomme for å fjerne sluttidspunkt. Nytt tidspunkt må ligge i
                 fremtiden.
@@ -413,12 +455,6 @@ export function StortingetPollAdminSection({
                 <span className="break-all">{stortingetPageUrl}</span>
               </a>
             </div>
-
-            {fieldError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {fieldError}
-              </p>
-            ) : null}
           </div>
         )}
       </Dialog>

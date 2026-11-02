@@ -410,6 +410,17 @@ const shots = [
     colorScheme: 'light',
     wait: async (page) => {
       await page.getByText('Avstemningen er avsluttet').first().waitFor();
+      await page.getByText('Nei').first().waitFor();
+    },
+  },
+  {
+    path: '/dev/stortinget-poll-admin-capture/poll-detalj-avsluttet',
+    file: 'avstemning-detalj-avsluttet-dark-1280.png',
+    width: 1280,
+    colorScheme: 'dark',
+    wait: async (page) => {
+      await page.getByText('Avstemningen er avsluttet').first().waitFor();
+      await page.getByText('Nei').first().waitFor();
     },
   },
 ];
