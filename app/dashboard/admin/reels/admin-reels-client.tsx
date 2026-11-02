@@ -32,6 +32,9 @@ import { cn } from '@/lib/utils';
 type DraftsResponse = { drafts: PollRecord[] };
 type CandidatesResponse = { candidates: SakPollCandidate[]; coverage: SakPollCoverage };
 
+const STATUS_PILL_DISMISS_BUTTON =
+  'relative inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full after:absolute after:-inset-2.5 after:content-[""]';
+
 function GenerationStatusBadge({
   issueId,
   getJob,
@@ -53,14 +56,15 @@ function GenerationStatusBadge({
 
   if (job.status === 'ready') {
     return (
-      <span className="relative inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 py-1 pl-2.5 pr-10 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
         <CheckCircle2 className="h-3 w-3 shrink-0" aria-hidden />
         Utkast klart
         <button
           type="button"
           onClick={() => onDismiss(job.key)}
           className={cn(
-            'absolute right-0 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded hover:bg-emerald-500/10',
+            STATUS_PILL_DISMISS_BUTTON,
+            'hover:bg-emerald-500/10',
             VURDER_FOCUS_RING,
           )}
           aria-label="Lukk status"
@@ -72,14 +76,15 @@ function GenerationStatusBadge({
   }
 
   return (
-    <span className="relative inline-flex items-center gap-1.5 rounded-full bg-destructive/10 py-1 pl-2.5 pr-10 text-xs font-medium text-destructive">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
       <AlertCircle className="h-3 w-3 shrink-0" aria-hidden />
       {pollDraftGenerationStatusLabel(job.status)}
       <button
         type="button"
         onClick={() => onDismiss(job.key)}
         className={cn(
-          'absolute right-0 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded hover:bg-destructive/10',
+          STATUS_PILL_DISMISS_BUTTON,
+          'hover:bg-destructive/10',
           VURDER_FOCUS_RING,
         )}
         aria-label="Lukk status"
