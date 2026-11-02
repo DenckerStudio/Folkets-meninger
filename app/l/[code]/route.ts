@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { trustedClientIp } from '@/lib/analytics/client-ip';
 import {
-  SHARE_LINK_REDIRECT_EXPIRED,
-  SHARE_LINK_REDIRECT_HOME,
   buildSameOriginShareLocation,
+  buildShareLinkExpiredRedirectUrl,
+  buildShareLinkHomeRedirectUrl,
 } from '@/lib/analytics/share-link-redirect';
 import { shouldRecordShareClick } from '@/lib/analytics/share-click';
 import { resolveShareTarget } from '@/lib/polls/share-personal';
@@ -18,11 +18,11 @@ const SHARE_CLICK_IP_LIMIT = 60;
 const SHARE_CLICK_CODE_LIMIT = 120;
 
 function redirectHome(): NextResponse {
-  return NextResponse.redirect(SHARE_LINK_REDIRECT_HOME, 302);
+  return NextResponse.redirect(buildShareLinkHomeRedirectUrl(), 302);
 }
 
 function redirectExpiredLink(): NextResponse {
-  return NextResponse.redirect(SHARE_LINK_REDIRECT_EXPIRED, 302);
+  return NextResponse.redirect(buildShareLinkExpiredRedirectUrl(), 302);
 }
 
 export async function GET(
