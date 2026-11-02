@@ -8,8 +8,8 @@ import type {
   ActionTypeDb,
   OppfangetDisplayStatus,
   OppfangetDisplayType,
-  OppfangetRow,
   OppfangetStatusCounts,
+  RedditSignalSubreddit,
 } from '@/lib/admin/oppfanget/types';
 
 /** Cluster DB status exposed as an explicit admin status filter (hidden by default). */
@@ -40,14 +40,28 @@ export function hasActiveOppfangetFilters(filters: OppfangetFilterInput): boolea
   );
 }
 
+/** Aktive filtre utenom type (f.eks. søk/dato). */
+export function hasOppfangetFiltersBesidesType(filters: OppfangetFilterInput): boolean {
+  return Boolean(
+    filters.status ||
+      (filters.source ?? '').trim() ||
+      filters.dateFrom ||
+      filters.dateTo ||
+      (filters.q ?? '').trim(),
+  );
+}
+
 export type OppfangetFilterableRow = {
   id: string;
   title: string;
-  actionType: ActionTypeDb;
-  clusterStatus: ActionClusterDbStatus;
-  pollStatus: string | null;
-  metadata: Record<string, unknown> | null;
-  sources: {
+  rowKind?: 'cluster' | 'reddit';
+  displayType?: OppfangetDisplayType;
+  subreddit?: RedditSignalSubreddit;
+  actionType?: ActionTypeDb;
+  clusterStatus?: ActionClusterDbStatus;
+  pollStatus?: string | null;
+  metadata?: Record<string, unknown> | null;
+  sources?: {
     publisher: string | null;
     signalOnly: boolean;
     title: string | null;
@@ -59,25 +73,39 @@ export type OppfangetFilterableRow = {
 };
 
 function rowDisplayType(row: OppfangetFilterableRow): OppfangetDisplayType {
-  const sourcesSignalOnly = row.sources.length > 0 && row.sources.every((s) => s.signalOnly);
-  const hasNonSignalSource = row.sources.some((s) => !s.signalOnly);
+  if (row.rowKind === 'reddit' || row.displayType === 'reddit') {
+    return 'reddit';
+  }
+  const sources = row.sources ?? [];
+  const sourcesSignalOnly = sources.length > 0 && sources.every((s) => s.signalOnly);
+  const hasNonSignalSource = sources.some((s) => !s.signalOnly);
   const isSignal = inferIsSignalRow({
-    clusterStatus: row.clusterStatus,
-    metadata: row.metadata,
+    clusterStatus: row.clusterStatus ?? 'candidate',
+    metadata: row.metadata ?? null,
     sourcesSignalOnly,
     hasNonSignalSource,
   });
-  return mapActionTypeToDisplayType(row.actionType, { isSignal });
+  return mapActionTypeToDisplayType(row.actionType ?? 'kampanje', { isSignal });
 }
 
 function rowDisplayStatus(row: OppfangetFilterableRow): OppfangetDisplayStatus {
-  return mapClusterAndPollToDisplayStatus(row.clusterStatus, row.pollStatus);
+  if (row.rowKind === 'reddit') {
+    return 'oppfanget';
+  }
+  return mapClusterAndPollToDisplayStatus(row.clusterStatus ?? 'candidate', row.pollStatus);
 }
 
 function matchesSource(row: OppfangetFilterableRow, source: string): boolean {
   const needle = source.trim().toLowerCase();
   if (!needle) return true;
-  return row.sources.some((s) => {
+  if (row.rowKind === 'reddit' && row.subreddit) {
+    const sub = row.subreddit.toLowerCase();
+    if (needle === 'reddit' || sub.includes(needle) || `r/${sub}`.includes(needle)) {
+      return true;
+    }
+  }
+  const sources = row.sources ?? [];
+  return sources.some((s) => {
     const pub = (s.publisher ?? '').toLowerCase();
     const title = (s.title ?? '').toLowerCase();
     const url = (s.url ?? '').toLowerCase();
@@ -106,10 +134,19 @@ function matchesSearch(row: OppfangetFilterableRow, q?: string): boolean {
   const needle = (q ?? '').trim().toLowerCase();
   if (!needle) return true;
   if (row.title.toLowerCase().includes(needle)) return true;
-  return row.sources.some((s) => (s.title ?? '').toLowerCase().includes(needle));
+  if (row.rowKind === 'reddit' && row.subreddit?.toLowerCase().includes(needle)) return true;
+  const sources = row.sources ?? [];
+  return sources.some((s) => (s.title ?? '').toLowerCase().includes(needle));
 }
 
 function matchesStatusFilter(row: OppfangetFilterableRow, status: OppfangetStatusFilter | undefined): boolean {
+  if (row.rowKind === 'reddit') {
+    const filter = status ?? '';
+    if (!filter || filter === OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION) {
+      return filter !== OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION;
+    }
+    return filter === 'oppfanget';
+  }
   const filter = status ?? '';
   if (row.clusterStatus === OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION) {
     return filter === OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION;
@@ -146,6 +183,10 @@ export function countOppfangetStatuses(rows: OppfangetFilterableRow[]): Oppfange
     avvist: 0,
   };
   for (const row of rows) {
+    if (row.rowKind === 'reddit') {
+      counts.oppfanget += 1;
+      continue;
+    }
     if (row.clusterStatus === OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION) {
       continue;
     }
@@ -154,6 +195,6 @@ export function countOppfangetStatuses(rows: OppfangetFilterableRow[]): Oppfange
   return counts;
 }
 
-export function toOppfangetRowIdSet(rows: Pick<OppfangetRow, 'id'>[]): Set<string> {
+export function toOppfangetRowIdSet(rows: Pick<{ id: string }, 'id'>[]): Set<string> {
   return new Set(rows.map((r) => r.id));
 }

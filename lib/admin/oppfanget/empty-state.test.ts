@@ -6,11 +6,13 @@ import {
   OPPFANGET_PIPELINE_EMPTY_TITLE,
   shouldShowOppfangetFilterEmpty,
   shouldShowOppfangetPipelineEmpty,
+  shouldShowOppfangetRedditTypeEmpty,
 } from './view-state';
 import type { OppfangetListResponse } from './types';
 
 const emptyList: OppfangetListResponse = {
   rows: [],
+  redditSignalTotal: 0,
   counts: {
     oppfanget: 0,
     under_terskel: 0,
@@ -37,6 +39,20 @@ assert.equal(
 );
 assert.equal(
   shouldShowOppfangetPipelineEmpty(emptyList, { q: 'x' }, false),
+  false,
+);
+
+assert.equal(shouldShowOppfangetRedditTypeEmpty(emptyList, { type: 'reddit' }, false), true);
+assert.equal(
+  shouldShowOppfangetRedditTypeEmpty(emptyList, { type: 'reddit', q: 'x' }, false),
+  false,
+);
+assert.equal(
+  shouldShowOppfangetRedditTypeEmpty(
+    { ...emptyList, redditSignalTotal: 2 },
+    { type: 'reddit' },
+    false,
+  ),
   false,
 );
 

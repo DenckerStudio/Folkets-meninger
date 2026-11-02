@@ -5,7 +5,7 @@ import { ResearchBriefStatusBadge } from '@/components/admin/research-brief-stat
 import { ResearchRowActions } from '@/components/admin/research-row-actions';
 import { formatOppfangetDateTime } from '@/app/dashboard/admin/oppfanget/oppfanget-row-views';
 import { formatOppfangetSourcePublisher } from '@/lib/admin/oppfanget/source-display';
-import type { OppfangetRow } from '@/lib/admin/oppfanget/types';
+import type { OppfangetClusterRow } from '@/lib/admin/oppfanget/types';
 import { formatResearchBriefError } from '@/lib/admin/research/error-messages';
 import {
   RESEARCH_KIND_LABELS,
@@ -43,7 +43,7 @@ export function ResearchClusterDetailView({
   briefs,
   adminUserId,
 }: {
-  row: OppfangetRow;
+  row: OppfangetClusterRow;
   briefs: ResearchBriefRow[];
   adminUserId?: string;
 }) {

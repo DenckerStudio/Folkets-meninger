@@ -31,15 +31,20 @@ import {
   OPPFANGET_PIPELINE_EMPTY_TITLE,
   shouldShowOppfangetFilterEmpty,
   shouldShowOppfangetPipelineEmpty,
+  shouldShowOppfangetRedditTypeEmpty,
+  OPPFANGET_REDDIT_EMPTY_DESCRIPTION,
+  OPPFANGET_REDDIT_EMPTY_TITLE,
 } from '@/lib/admin/oppfanget/view-state';
 import {
   OppfangetDesktopTable,
   OppfangetMobileCards,
 } from './oppfanget-row-views';
+import { cn } from '@/lib/utils';
 
 const TYPE_OPTIONS: { value: '' | OppfangetDisplayType; label: string }[] = [
   { value: '', label: 'Alle typer' },
   { value: 'melding', label: OPPFANGET_DISPLAY_TYPE_LABELS.melding },
+  { value: 'reddit', label: OPPFANGET_DISPLAY_TYPE_LABELS.reddit },
 ];
 
 /** Skjul type-filter når bare én konkret type finnes (behold logikk for flere typer senere). */
@@ -318,7 +323,12 @@ export default function AdminOppfangetClient({
 
       {data ? <StatusPills counts={data.counts} filteredTotal={rows.length} /> : null}
 
-      <div className="grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        className={cn(
+          'grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2',
+          SHOW_OPPFANGET_TYPE_FILTER ? 'lg:grid-cols-3 xl:grid-cols-6' : 'lg:grid-cols-5',
+        )}
+      >
         {SHOW_OPPFANGET_TYPE_FILTER ? (
           <label className="space-y-1 text-sm">
             <span className="text-muted-foreground">Type</span>
@@ -398,7 +408,15 @@ export default function AdminOppfangetClient({
         </p>
       ) : null}
 
-      {shouldShowOppfangetFilterEmpty(data, filters, pending) ? (
+      {shouldShowOppfangetRedditTypeEmpty(data, filters, pending) ? (
+        <EmptyState
+          title={OPPFANGET_REDDIT_EMPTY_TITLE}
+          description={OPPFANGET_REDDIT_EMPTY_DESCRIPTION}
+        />
+      ) : null}
+
+      {shouldShowOppfangetFilterEmpty(data, filters, pending) &&
+      !shouldShowOppfangetRedditTypeEmpty(data, filters, pending) ? (
         <EmptyState
           title={OPPFANGET_FILTER_EMPTY_TITLE}
           description={OPPFANGET_FILTER_EMPTY_DESCRIPTION}
