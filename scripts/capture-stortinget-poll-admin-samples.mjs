@@ -103,7 +103,7 @@ export default function Page() {
     <main className="mx-auto min-h-dvh max-w-4xl bg-background p-4 sm:p-8">
       <StortingetPollAdminSection
         ${sectionProps(
-          `${adminStateCreate}\n        captureDialogOpen\n        captureFieldError="Sluttidspunktet må ligge i fremtiden. Velg en senere dato og klokkeslett (Europe/Oslo)."`,
+          `${adminStateCreate}\n        captureDialogOpen\n        captureClosesAtDate="01.01.2020"\n        captureClosesAtTime="10:00"\n        captureFieldError="Sluttidspunktet må ligge i fremtiden. Velg en senere dato og klokkeslett (Europe/Oslo)."`,
         )}
       />
     </main>
@@ -318,8 +318,24 @@ const shots = [
     file: 'dialog-feil-light-360.png',
     width: 360,
     colorScheme: 'light',
+    clipToDialog: true,
     wait: async (page) => {
-      await page.getByText('Sluttidspunktet må ligge i fremtiden').waitFor();
+      const dialog = page.locator('[data-shared-dialog]');
+      await dialog.waitFor({ state: 'visible' });
+      await dialog.locator('[role="alert"]').filter({ hasText: 'Sluttidspunktet' }).waitFor();
+      await dialog.locator('input#stortinget-poll-closes-date').waitFor();
+    },
+  },
+  {
+    path: '/dev/stortinget-poll-admin-capture/dialog-feil',
+    file: 'dialog-feil-dark-360.png',
+    width: 360,
+    colorScheme: 'dark',
+    clipToDialog: true,
+    wait: async (page) => {
+      const dialog = page.locator('[data-shared-dialog]');
+      await dialog.waitFor({ state: 'visible' });
+      await dialog.locator('[role="alert"]').filter({ hasText: 'Sluttidspunktet' }).waitFor();
     },
   },
   {
@@ -440,7 +456,11 @@ async function capture() {
     await shot.wait(page);
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(350);
-    await page.screenshot({ path: join(outDir, shot.file), fullPage: true });
+    if (shot.clipToDialog) {
+      await page.locator('[data-shared-dialog]').screenshot({ path: join(outDir, shot.file) });
+    } else {
+      await page.screenshot({ path: join(outDir, shot.file), fullPage: true });
+    }
     await context.close();
   }
 

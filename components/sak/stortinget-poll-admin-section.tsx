@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useId } from 'react';
+import { useState, useTransition, useId, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ExternalLink, Loader2 } from 'lucide-react';
@@ -43,6 +43,9 @@ type StortingetPollAdminSectionProps = {
   captureDialogStep?: 'form' | 'confirm';
   captureFieldError?: string | null;
   capturePending?: boolean;
+  /** Kun for docs/screenshots — forhåndsutfylte sluttid-felt ved valideringsfeil. */
+  captureClosesAtDate?: string;
+  captureClosesAtTime?: string;
 };
 
 const FIELD_CLASS = cn(
@@ -110,14 +113,16 @@ export function StortingetPollAdminSection({
   captureDialogStep = 'form',
   captureFieldError = null,
   capturePending = false,
+  captureClosesAtDate = '',
+  captureClosesAtTime = '',
 }: StortingetPollAdminSectionProps) {
   const effectiveState = captureAdminState ?? adminState;
   const [dialogOpen, setDialogOpen] = useState(captureDialogOpen || captureEditDialogOpen);
   const [dialogStep, setDialogStep] = useState<'form' | 'confirm'>(captureDialogStep);
   const [title, setTitle] = useState(sakTitle);
   const [neutralSummary, setNeutralSummary] = useState(defaultNeutralSummary);
-  const [closesAtDate, setClosesAtDate] = useState('');
-  const [closesAtTime, setClosesAtTime] = useState('');
+  const [closesAtDate, setClosesAtDate] = useState(captureClosesAtDate);
+  const [closesAtTime, setClosesAtTime] = useState(captureClosesAtTime);
   const [initialClosesAtWire, setInitialClosesAtWire] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(captureFieldError);
   const [pending, startTransition] = useTransition();
@@ -126,6 +131,34 @@ export function StortingetPollAdminSection({
   const { message, variant, toast } = useAdminToast();
   const formErrorId = useId();
   const invalidFields = invalidFieldsFromError(fieldError);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const ingressRef = useRef<HTMLTextAreaElement>(null);
+  const closesDateRef = useRef<HTMLInputElement>(null);
+  const closesTimeRef = useRef<HTMLInputElement>(null);
+  const footerErrorRef = useRef<HTMLParagraphElement>(null);
+
+  function focusFirstInvalidField(fields: ReturnType<typeof invalidFieldsFromError>) {
+    const target = fields.title
+      ? titleRef.current
+      : fields.closesAt
+        ? closesDateRef.current
+        : fields.neutralSummary
+          ? ingressRef.current
+          : null;
+    target?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    target?.focus({ preventScroll: true });
+    footerErrorRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  useEffect(() => {
+    if (!fieldError || !dialogOpen || dialogStep !== 'form') return;
+    const fields = invalidFieldsFromError(fieldError);
+    if (!fields.title && !fields.closesAt && !fields.neutralSummary) return;
+    const frame = requestAnimationFrame(() => {
+      focusFirstInvalidField(fields);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [fieldError, dialogOpen, dialogStep]);
 
   const existingPoll = effectiveState.kind === 'editable' ? effectiveState.poll : null;
   const hasPoll =
@@ -226,7 +259,12 @@ export function StortingetPollAdminSection({
 
   const formFooterError =
     fieldError && dialogStep === 'form' ? (
-      <p id={formErrorId} role="alert" className="mb-3 text-sm font-medium text-destructive">
+      <p
+        ref={footerErrorRef}
+        id={formErrorId}
+        role="alert"
+        className="mb-3 text-sm font-medium text-destructive"
+      >
         {fieldError}
       </p>
     ) : null;
@@ -352,6 +390,7 @@ export function StortingetPollAdminSection({
                 Tittel <span className="text-destructive">*</span>
               </label>
               <input
+                ref={titleRef}
                 id="stortinget-poll-title"
                 type="text"
                 required
@@ -372,6 +411,7 @@ export function StortingetPollAdminSection({
                 Nøytral ingress
               </label>
               <textarea
+                ref={ingressRef}
                 id="stortinget-poll-ingress"
                 rows={4}
                 maxLength={STORTINGET_POLL_NEUTRAL_SUMMARY_MAX}
@@ -404,6 +444,7 @@ export function StortingetPollAdminSection({
                     Dato (dd.mm.åååå)
                   </label>
                   <input
+                    ref={closesDateRef}
                     id="stortinget-poll-closes-date"
                     type="text"
                     inputMode="numeric"
@@ -421,6 +462,7 @@ export function StortingetPollAdminSection({
                     Klokkeslett (tt:mm)
                   </label>
                   <input
+                    ref={closesTimeRef}
                     id="stortinget-poll-closes-time"
                     type="text"
                     inputMode="numeric"
