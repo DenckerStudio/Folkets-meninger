@@ -53,7 +53,11 @@ function BlogPathsTable({
   }
 
   if (blogPaths.length === 0) {
-    return <p className="text-sm text-muted-foreground">Ingen bloggvisninger ennå.</p>;
+    return (
+      <p className="text-sm text-muted-foreground" role="status">
+        Ingen bloggvisninger ennå.
+      </p>
+    );
   }
 
   return (

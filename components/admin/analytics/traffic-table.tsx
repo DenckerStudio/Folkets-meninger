@@ -20,11 +20,15 @@ export function TrafficTable({ topPaths, channels, collectionEnabled }: TrafficT
   }
 
   if (topPaths.length === 0 && channels.length === 0) {
-    return <p className="text-sm text-muted-foreground">Ingen trafikk ennå.</p>;
+    return (
+      <p className="text-sm text-muted-foreground" role="status">
+        Ingen trafikk ennå.
+      </p>
+    );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {topPaths.length > 0 ? (
         <div>
           <h2 className="mb-3 text-sm font-semibold text-foreground">Topp stier</h2>

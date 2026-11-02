@@ -16,7 +16,11 @@ function formatClicks(clicks: number): string {
 
 export function ShareLinksTable({ links }: ShareLinksTableProps) {
   if (links.length === 0) {
-    return <p className="text-sm text-muted-foreground">Ingen delingslenker ennå.</p>;
+    return (
+      <p className="text-sm text-muted-foreground" role="status">
+        Ingen delingslenker ennå.
+      </p>
+    );
   }
 
   return (

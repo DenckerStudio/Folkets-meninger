@@ -16,6 +16,10 @@ function redirectHome(request: Request): NextResponse {
   return NextResponse.redirect(new URL('/', request.url), 302);
 }
 
+function redirectExpiredLink(request: Request): NextResponse {
+  return NextResponse.redirect(new URL('/?lenke=utlopt', request.url), 302);
+}
+
 function sameOriginLocation(path: string, code: string, requestUrl: string): URL | null {
   if (!path.startsWith('/') || path.startsWith('//') || path.includes('//')) {
     return null;
@@ -40,7 +44,7 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> },
 ) {
   const { code } = await params;
-  if (!CODE_RE.test(code)) return redirectHome(request);
+  if (!CODE_RE.test(code)) return redirectExpiredLink(request);
 
   if (
     !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
@@ -61,13 +65,13 @@ export async function GET(
     console.error(`share link lookup failed: ${error.code ?? 'unknown'}`);
     return redirectHome(request);
   }
-  if (!data || typeof data.id !== 'string') return redirectHome(request);
+  if (!data || typeof data.id !== 'string') return redirectExpiredLink(request);
 
   const targetKind = typeof data.target_kind === 'string' ? data.target_kind : '';
   const targetId = typeof data.target_id === 'string' ? data.target_id : '';
   const path = resolveShareTarget(targetKind, targetId);
   const location = path ? sameOriginLocation(path, code, request.url) : null;
-  if (!location) return redirectHome(request);
+  if (!location) return redirectExpiredLink(request);
 
   // Klikktallet i delingspanelet skal telles også når offentlig analyse er av.
   // Over grensen hopper vi over innsettingen og sender besøkende videre.

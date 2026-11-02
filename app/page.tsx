@@ -1,4 +1,6 @@
+import { Suspense } from 'react';
 import HeroSection from '@/components/hero-section';
+import { LandingExpiredLinkNotice } from '@/components/landing-expired-link-notice';
 import { LandingAbout } from '@/components/landing-about';
 import { LandingExperience } from '@/components/landing-experience';
 import { LandingHowItWorks } from '@/components/landing-how-it-works';
@@ -18,6 +20,9 @@ export default function LandingPage() {
     <LandingExperience>
       <JsonLd data={[siteOrganizationJsonLd(), siteWebSiteJsonLd()]} />
       <div className="bg-background pb-8">
+        <Suspense fallback={null}>
+          <LandingExpiredLinkNotice />
+        </Suspense>
         <HeroSection />
         <div data-landing-section>
           <LandingHowItWorks />
