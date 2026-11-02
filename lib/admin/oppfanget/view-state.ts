@@ -3,7 +3,7 @@ import type { OppfangetListResponse, OppfangetStatusCounts } from '@/lib/admin/o
 
 export const OPPFANGET_PIPELINE_EMPTY_TITLE = 'Ingenting i Research ennå';
 export const OPPFANGET_PIPELINE_EMPTY_DESCRIPTION =
-  'Når nye klynger fanges opp, vises de her med kilder og status.';
+  'Når nye saker og signaler fanges opp, vises de her med kilder og status. Opprop og demonstrasjoner vises ikke lenger på denne siden.';
 export const OPPFANGET_FILTER_EMPTY_TITLE = 'Ingen treff for filtrene';
 export const OPPFANGET_FILTER_EMPTY_DESCRIPTION =
   'Prøv å endre eller fjerne filtervalgene.';

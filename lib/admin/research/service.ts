@@ -5,6 +5,7 @@ import type {
   ResearchWebhookBody,
 } from '@/lib/admin/research/types';
 import { postResearchWebhook } from '@/lib/admin/research/webhook';
+import { mapResearchWebhookFailure } from '@/lib/admin/research/webhook-errors';
 import {
   researchApiActionToKind,
   type ResearchApiAction,
@@ -151,7 +152,7 @@ export async function buildResearchWebhookBody(
     },
   };
 
-  if (kind === 'blog' || kind === 'reel') {
+  if (kind === 'blog') {
     body.source_request_id = await getLatestDoneDeepenRequestIdForCluster(clusterId);
     if (latest) {
       body.latest_brief = {
@@ -167,11 +168,11 @@ export async function buildResearchWebhookBody(
 
 export type ResearchBriefSnapshot = Pick<
   ResearchBriefRow,
-  'kind' | 'status' | 'output_ref' | 'request_id'
+  'kind' | 'status' | 'output_ref' | 'request_id' | 'created_at' | 'updated_at'
 >;
 
 export type ResearchBriefsByKind = Partial<
-  Record<ResearchApiAction, ResearchBriefSnapshot>
+  Record<ResearchBriefKind, ResearchBriefSnapshot>
 >;
 
 export async function getResearchBriefsByKindForCluster(
@@ -188,7 +189,7 @@ export async function getLatestResearchBriefsByClusterIds(
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('research_briefs')
-    .select('cluster_id, kind, status, output_ref, request_id, created_at')
+    .select('cluster_id, kind, status, output_ref, request_id, created_at, updated_at')
     .in('cluster_id', clusterIds)
     .order('created_at', { ascending: false });
   if (error || !data) return {};
@@ -204,6 +205,8 @@ export async function getLatestResearchBriefsByClusterIds(
       status: row.status as ResearchBriefRow['status'],
       output_ref: typeof row.output_ref === 'string' ? row.output_ref : null,
       request_id: String(row.request_id),
+      created_at: String(row.created_at),
+      updated_at: String(row.updated_at),
     };
     out[clusterId] = bucket;
   }
@@ -218,7 +221,7 @@ async function findActiveResearchBrief(
   const supabase = getServiceSupabase();
   let query = supabase
     .from('research_briefs')
-    .select('kind, status, output_ref, request_id')
+    .select('kind, status, output_ref, request_id, created_at, updated_at')
     .eq('cluster_id', clusterId)
     .eq('kind', kind)
     .in('status', ['queued', 'running'])
@@ -234,6 +237,8 @@ async function findActiveResearchBrief(
     status: data.status as ResearchBriefRow['status'],
     output_ref: typeof data.output_ref === 'string' ? data.output_ref : null,
     request_id: String(data.request_id),
+    created_at: String(data.created_at),
+    updated_at: String(data.updated_at),
   };
 }
 
@@ -253,7 +258,10 @@ export async function enqueueResearchJob(
         | 'db_error'
         | 'research_brief_active'
         | 'research_request_conflict'
-        | 'invalid_request_id';
+        | 'invalid_request_id'
+        | string;
+      message?: string;
+      httpStatus?: number;
       requestId?: string;
       status?: ResearchBriefRow['status'];
     }
@@ -331,17 +339,22 @@ export async function enqueueResearchJob(
 
   const webhook = await postResearchWebhook(action, webhookBody);
   if (!webhook.ok) {
-    const briefError =
+    const failure = mapResearchWebhookFailure(
       webhook.reason === 'not_configured'
-        ? 'arbeidsflyt_utilgjengelig'
-        : `webhook_http_${webhook.status ?? 502}`;
+        ? { reason: 'not_configured' }
+        : webhook.reason === 'timeout'
+          ? { reason: 'timeout' }
+          : { reason: 'http', status: webhook.status },
+    );
     await supabase
       .from('research_briefs')
-      .update({ status: 'failed', error: briefError })
+      .update({ status: 'failed', error: failure.briefError })
       .eq('request_id', requestId);
     return {
       ok: false,
-      code: webhook.reason === 'not_configured' ? 'not_configured' : 'webhook_failed',
+      code: failure.code,
+      message: failure.message,
+      httpStatus: failure.httpStatus,
     };
   }
 

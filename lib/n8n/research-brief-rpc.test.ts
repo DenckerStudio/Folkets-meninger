@@ -111,6 +111,7 @@ assert.match(service, /research_request_conflict/);
 assert.match(service, /research_brief_active/);
 assert.match(service, /source_request_id/);
 assert.match(service, /getLatestDoneDeepenRequestIdForCluster/);
-assert.match(service, /arbeidsflyt_utilgjengelig/);
+assert.match(service, /mapResearchWebhookFailure/);
+assert.match(service, /failure\.briefError/);
 
 console.log('n8n/research-brief-rpc.test.ts: ok');

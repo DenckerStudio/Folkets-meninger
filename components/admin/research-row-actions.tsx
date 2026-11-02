@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import {
   BookOpen,
   ChevronDown,
-  Clapperboard,
   Loader2,
   Microscope,
   MoreHorizontal,
@@ -20,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Dialog } from '@/components/ui/dialog';
-import type { ResearchApiAction } from '@/lib/admin/research/actions';
+import { RESEARCH_API_ACTIONS, type ResearchApiAction } from '@/lib/admin/research/actions';
 import {
   RESEARCH_API_ERROR_CODES,
   researchApiErrorMessage,
@@ -39,22 +38,27 @@ import {
   hasActiveResearchBriefs,
   RESEARCH_BRIEF_POLL_MS,
 } from '@/lib/admin/research/polling';
+import {
+  RESEARCH_JOB_SLOW_NOTICE_DETAIL,
+  RESEARCH_JOB_SLOW_NOTICE_HEADLINE,
+  shouldShowResearchRowSlowNotice,
+} from '@/lib/admin/research/slow-job-notice';
 import type { ResearchBriefSnapshot, ResearchBriefsByKind } from '@/lib/admin/research/service';
-import type { ResearchBriefStatus } from '@/lib/admin/research/types';
+import type { ResearchBriefKind, ResearchBriefStatus } from '@/lib/admin/research/types';
 import { cn } from '@/lib/utils';
 
-const ACTIONS: ResearchApiAction[] = ['deepen', 'blog', 'reel'];
+const ACTIONS = RESEARCH_API_ACTIONS;
 
-const DONE_MENU_LABELS: Record<ResearchApiAction, string> = {
+const HIGHLIGHT_KINDS: ResearchBriefKind[] = ['deepen', 'blog'];
+
+const DONE_MENU_LABELS: Partial<Record<ResearchBriefKind, string>> = {
   deepen: 'Se utdyping',
   blog: 'Åpne bloggutkast',
-  reel: 'Åpne Reel',
 };
 
 const ACTION_ICONS: Record<ResearchApiAction, typeof Microscope> = {
   deepen: Microscope,
   blog: BookOpen,
-  reel: Clapperboard,
 };
 
 export type ResearchTableMenuItem = {
@@ -96,8 +100,8 @@ function statusPriority(status: ResearchBriefStatus | undefined): number {
 function pickHighlightBrief(briefsByKind: ResearchBriefsByKind): ResearchBriefSnapshot | null {
   let best: ResearchBriefSnapshot | null = null;
   let bestPriority = 4;
-  for (const action of ACTIONS) {
-    const brief = briefsByKind[action];
+  for (const kind of HIGHLIGHT_KINDS) {
+    const brief = briefsByKind[kind];
     if (!brief) continue;
     const priority = statusPriority(brief.status);
     if (priority < bestPriority) {
@@ -147,9 +151,10 @@ export function buildResearchTableMenuItem(
   }
 
   if (status === 'failed') {
+    const kindLabel = RESEARCH_KIND_LABELS[action];
     return {
       id: action,
-      label: `${RESEARCH_KIND_LABELS[action]} feilet – Prøv igjen`,
+      label: `${kindLabel} feilet – Prøv igjen`,
       icon: ACTION_ICONS[action],
       destructive: true,
     };
@@ -248,15 +253,63 @@ function mergeBriefFromResponse(
   status: ResearchBriefStatus,
   requestId: string,
 ): ResearchBriefsByKind {
+  const previous = prev[action];
   return {
     ...prev,
     [action]: {
       kind: action,
       status,
-      output_ref: prev[action]?.output_ref ?? null,
+      output_ref: previous?.output_ref ?? null,
       request_id: requestId,
+      created_at: previous?.created_at,
+      updated_at: previous?.updated_at,
     },
   };
+}
+
+function ResearchRowSlowJobNotice({
+  visible,
+  onRefresh,
+  refreshPending,
+  refreshError,
+}: {
+  visible: boolean;
+  onRefresh: () => void;
+  refreshPending: boolean;
+  refreshError: string;
+}) {
+  if (!visible) return null;
+  return (
+    <div className="mt-1 max-w-[360px] space-y-1">
+      <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
+        <div className="min-w-0 flex-1 space-y-0.5" role="status">
+          <p className="text-xs text-foreground">{RESEARCH_JOB_SLOW_NOTICE_HEADLINE}</p>
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            {RESEARCH_JOB_SLOW_NOTICE_DETAIL}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={refreshPending}
+          className={cn(
+            buttonVariants({ variant: 'outline', size: 'sm' }),
+            'min-h-8 shrink-0 gap-1.5 text-xs',
+          )}
+        >
+          {refreshPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+          ) : null}
+          Oppdater status
+        </button>
+      </div>
+      {refreshError ? (
+        <p className="text-xs text-destructive" role="alert">
+          {refreshError}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function ResearchActionButton({
@@ -285,7 +338,7 @@ function ResearchActionButton({
   if (status === 'queued') label = `${RESEARCH_KIND_LABELS[action]} · I kø`;
   else if (status === 'running') label = `${RESEARCH_KIND_LABELS[action]} · Kjører`;
   else if (done && output) label = output.label;
-  else if (done && action === 'deepen') label = DONE_MENU_LABELS.deepen;
+  else if (done && action === 'deepen') label = DONE_MENU_LABELS.deepen ?? 'Ferdig';
   else if (done) label = 'Ferdig';
   else if (failed) label = `${RESEARCH_KIND_LABELS[action]} feilet – Prøv igjen`;
 
@@ -389,6 +442,9 @@ function useResearchRowActions(clusterId: string, initialBriefsByKind: ResearchB
   const [confirmAction, setConfirmAction] = useState<ResearchApiAction | null>(null);
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [statusRefreshPending, setStatusRefreshPending] = useState(false);
+  const [statusRefreshError, setStatusRefreshError] = useState('');
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     setBriefsByKind(initialBriefsByKind);
@@ -398,23 +454,52 @@ function useResearchRowActions(clusterId: string, initialBriefsByKind: ResearchB
 
   useEffect(() => {
     if (!hasActiveBriefs) return;
+    setNowMs(Date.now());
+    const tickId = window.setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => window.clearInterval(tickId);
+  }, [hasActiveBriefs]);
+
+  const showSlowJobNotice = useMemo(
+    () =>
+      shouldShowResearchRowSlowNotice(
+        HIGHLIGHT_KINDS.map((kind) => briefsByKind[kind]),
+        nowMs,
+      ),
+    [briefsByKind, nowMs],
+  );
+
+  const refreshBriefsFromServer = useCallback(async (): Promise<
+    { ok: true } | { ok: false; message: string }
+  > => {
+    try {
+      const res = await fetch(`/api/admin/research/clusters/${clusterId}/briefs`);
+      if (res.status === 401 || res.status === 403) {
+        return { ok: false, message: 'Ingen tilgang' };
+      }
+      if (!res.ok) {
+        return { ok: false, message: 'Kunne ikke hente status' };
+      }
+      const body = (await res.json()) as { briefs_by_kind?: ResearchBriefsByKind };
+      const next = body.briefs_by_kind ?? {};
+      setBriefsByKind((prev) => ({ ...prev, ...next }));
+      setNowMs(Date.now());
+      if (!hasActiveResearchBriefs(next)) {
+        router.refresh();
+      }
+      return { ok: true };
+    } catch {
+      return { ok: false, message: 'Kunne ikke hente status' };
+    }
+  }, [clusterId, router]);
+
+  useEffect(() => {
+    if (!hasActiveBriefs) return;
 
     let cancelled = false;
 
     const pollBriefs = async () => {
       if (document.visibilityState === 'hidden' || cancelled) return;
-      try {
-        const res = await fetch(`/api/admin/research/clusters/${clusterId}/briefs`);
-        if (!res.ok || cancelled) return;
-        const body = (await res.json()) as { briefs_by_kind?: ResearchBriefsByKind };
-        const next = body.briefs_by_kind ?? {};
-        setBriefsByKind((prev) => ({ ...prev, ...next }));
-        if (!hasActiveResearchBriefs(next)) {
-          router.refresh();
-        }
-      } catch {
-        // Ignorer nettverksfeil ved polling
-      }
+      await refreshBriefsFromServer();
     };
 
     void pollBriefs();
@@ -426,7 +511,23 @@ function useResearchRowActions(clusterId: string, initialBriefsByKind: ResearchB
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [clusterId, hasActiveBriefs, router]);
+  }, [clusterId, hasActiveBriefs, refreshBriefsFromServer]);
+
+  const onRefreshJobStatus = useCallback(async () => {
+    setStatusRefreshError('');
+    setStatusRefreshPending(true);
+    const result = await refreshBriefsFromServer();
+    if (!result.ok) {
+      setStatusRefreshError(result.message);
+    }
+    setStatusRefreshPending(false);
+  }, [refreshBriefsFromServer]);
+
+  useEffect(() => {
+    if (!showSlowJobNotice) {
+      setStatusRefreshError('');
+    }
+  }, [showSlowJobNotice]);
 
   const runAction = useCallback(
     async (action: ResearchApiAction, requestId: string) => {
@@ -475,18 +576,18 @@ function useResearchRowActions(clusterId: string, initialBriefsByKind: ResearchB
             return;
           }
         }
-        if (res.status === 503) {
-          setError(
-            'Research-arbeidsflytene i n8n er ikke koblet til (mangler webhook-oppsett). Be drift sette N8N_RESEARCH_WEBHOOK_* på fm-web og aktivere research-utdyp / blogg-fra-research / reel-fra-research.',
-          );
-          return;
-        }
-        if (res.status === 502) {
-          setError('Kunne ikke nå research-webhook. Sjekk at n8n-arbeidsflytene er aktive og ikke står i dryRun.');
-          return;
+        if (res.status === 503 || res.status === 502 || res.status === 504) {
+          if (typeof body.message === 'string' && body.message.trim()) {
+            setError(body.message);
+            return;
+          }
         }
         if (!res.ok) {
-          setError(body.error ?? 'Kunne ikke starte oppgaven');
+          setError(
+            typeof body.message === 'string' && body.message.trim()
+              ? body.message
+              : (body.error ?? 'Kunne ikke starte oppgaven'),
+          );
           return;
         }
         const resolvedId =
@@ -553,6 +654,10 @@ function useResearchRowActions(clusterId: string, initialBriefsByKind: ResearchB
     tableMenuItems,
     highlightBrief,
     onTableMenuSelect,
+    showSlowJobNotice,
+    onRefreshJobStatus,
+    statusRefreshPending,
+    statusRefreshError,
   };
 }
 
@@ -577,6 +682,10 @@ export function ResearchRowTableCells({
     tableMenuItems,
     highlightBrief,
     onTableMenuSelect,
+    showSlowJobNotice,
+    onRefreshJobStatus,
+    statusRefreshPending,
+    statusRefreshError,
   } = useResearchRowActions(clusterId, initialBriefsByKind);
 
   return (
@@ -587,6 +696,12 @@ export function ResearchRowTableCells({
         ) : (
           <span className="text-muted-foreground">—</span>
         )}
+        <ResearchRowSlowJobNotice
+          visible={showSlowJobNotice}
+          onRefresh={() => void onRefreshJobStatus()}
+          refreshPending={statusRefreshPending}
+          refreshError={statusRefreshError}
+        />
         {error ? (
           <p className="mt-1 text-xs text-destructive" role="alert">
             {error}
@@ -628,6 +743,10 @@ export function ResearchRowActions({
     tableMenuItems,
     highlightBrief,
     onTableMenuSelect,
+    showSlowJobNotice,
+    onRefreshJobStatus,
+    statusRefreshPending,
+    statusRefreshError,
   } = useResearchRowActions(clusterId, initialBriefsByKind);
 
   return (
@@ -652,6 +771,12 @@ export function ResearchRowActions({
             />
           ))
         )}
+        <ResearchRowSlowJobNotice
+          visible={showSlowJobNotice}
+          onRefresh={() => void onRefreshJobStatus()}
+          refreshPending={statusRefreshPending}
+          refreshError={statusRefreshError}
+        />
         {error ? (
           <p className="text-xs text-destructive" role="alert">
             {error}

@@ -32,12 +32,18 @@ export function signResearchWebhookPayload(
   return `sha256=${digest}`;
 }
 
+export type ResearchWebhookPostResult =
+  | { ok: true }
+  | { ok: false; reason: 'not_configured' }
+  | { ok: false; reason: 'timeout' }
+  | { ok: false; reason: 'http'; status?: number };
+
+const RESEARCH_WEBHOOK_TIMEOUT_MS = 60_000;
+
 export async function postResearchWebhook(
   action: ResearchApiAction,
   body: ResearchWebhookBody,
-): Promise<
-  { ok: true } | { ok: false; reason: 'not_configured' | 'http'; status?: number }
-> {
+): Promise<ResearchWebhookPostResult> {
   if (!isResearchApiAction(action)) {
     return { ok: false, reason: 'http', status: 400 };
   }
@@ -52,6 +58,9 @@ export async function postResearchWebhook(
   const path = researchWebhookPathForAction(action);
   const url = `${config.baseUrl}/${path}`;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), RESEARCH_WEBHOOK_TIMEOUT_MS);
+
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -62,13 +71,19 @@ export async function postResearchWebhook(
         'X-FM-Webhook-Token': config.token,
       },
       body: rawBody,
+      signal: controller.signal,
     });
 
     if (res.status === 202 || res.ok) {
       return { ok: true };
     }
     return { ok: false, reason: 'http', status: res.status };
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return { ok: false, reason: 'timeout' };
+    }
     return { ok: false, reason: 'http', status: 502 };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

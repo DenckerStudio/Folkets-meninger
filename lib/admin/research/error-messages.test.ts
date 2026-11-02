@@ -7,7 +7,9 @@ assert.equal(
   formatResearchBriefError('arbeidsflyt_utilgjengelig'),
   'Arbeidsflyten er ikke tilgjengelig akkurat nå. Prøv igjen senere.',
 );
-assert.match(formatResearchBriefError('webhook_http_502') ?? '', /Kunne ikke nå arbeidsflyten/);
+assert.match(formatResearchBriefError('webhook_http_404') ?? '', /ikke aktiv i n8n/);
+assert.match(formatResearchBriefError('webhook_http_503') ?? '', /feilkode 503/);
+assert.equal(formatResearchBriefError('webhook_http_401'), 'Webhook-token ble avvist.');
 assert.equal(formatResearchBriefError(null), null);
 assert.equal(
   formatResearchBriefError('Modellen returnerte ugyldig JSON.'),

@@ -4,7 +4,7 @@ import type { ResearchBriefStatus } from '@/lib/admin/research/types';
 
 export const RESEARCH_BRIEF_POLL_MS = 5000;
 
-const POLL_ACTIONS: ResearchApiAction[] = ['deepen', 'blog', 'reel'];
+const POLL_ACTIONS: ResearchApiAction[] = ['deepen', 'blog'];
 
 export function isActiveResearchBriefStatus(status: ResearchBriefStatus | undefined): boolean {
   return status === 'queued' || status === 'running';
