@@ -20,8 +20,9 @@ import { adminReelDraftUrl } from '@/lib/admin/research/labels';
 import { routes } from '@/lib/routes';
 import { formatOppfangetSourcePublisher } from '@/lib/admin/oppfanget/source-display';
 import {
-  formatRedditContention,
+  RedditEngagementMeta,
   RedditSubredditBadge,
+  redditRelatedIssueLinkLabel,
   redditSnapshotUpdatedLabel,
 } from '@/lib/reddit-signals/format';
 import { cn } from '@/lib/utils';
@@ -164,24 +165,19 @@ function RedditRelatedIssueCell({ row }: { row: OppfangetRedditRow }) {
   if (!row.relatedIssueId) {
     return <span className="text-xs text-muted-foreground">Ingen sak funnet</span>;
   }
+  const label = redditRelatedIssueLinkLabel(row);
   return (
     <Link href={routes.sak(row.relatedIssueId)} className={cn(tapLinkClass, 'text-xs font-medium')}>
-      Sak {row.relatedIssueId}
+      {label}
     </Link>
   );
 }
 
-function RedditMetricsCell({ row }: { row: OppfangetRedditRow }) {
+function RedditSakBlock({ row }: { row: OppfangetRedditRow }) {
   return (
-    <div
-      className="ml-auto flex flex-col items-end gap-0.5 tabular-nums text-xs text-foreground"
-      title="kommentarer per poeng"
-    >
-      <span>{row.score.toLocaleString('nb-NO')} poeng</span>
-      <span>{row.numComments.toLocaleString('nb-NO')} kommentarer</span>
-      <span className="text-muted-foreground" title="kommentarer per poeng">
-        {formatRedditContention(row.contention)} kommentarer per poeng
-      </span>
+    <div className="mt-1 text-xs">
+      <span className="font-medium text-muted-foreground">Sak </span>
+      <RedditRelatedIssueCell row={row} />
     </div>
   );
 }
@@ -194,7 +190,6 @@ function RedditTitleCell({ row, desktopTable = false }: { row: OppfangetRedditRo
         href={row.url}
         target="_blank"
         rel="noopener noreferrer"
-        title={row.title}
         className={cn(
           'block min-w-0 font-medium text-brand hover:underline',
           desktopTable ? 'line-clamp-2 break-normal hyphens-auto' : 'line-clamp-3 break-words',
@@ -204,6 +199,8 @@ function RedditTitleCell({ row, desktopTable = false }: { row: OppfangetRedditRo
         <ExternalLink className="ml-1 inline h-3.5 w-3.5 shrink-0 align-text-bottom" aria-hidden />
       </a>
       <p className="text-xs text-muted-foreground">{OPPFANGET_DISPLAY_TYPE_LABELS.reddit}</p>
+      <RedditEngagementMeta row={row} />
+      <RedditSakBlock row={row} />
     </div>
   );
 }
@@ -218,13 +215,13 @@ function RedditDesktopRow({ row }: { row: OppfangetRedditRow }) {
         <span className="text-xs text-muted-foreground">—</span>
       </td>
       <td className={cellClass}>
-        <RedditRelatedIssueCell row={row} />
+        <span className="text-xs text-muted-foreground">—</span>
       </td>
       <td className={cellClass}>
         <p className="text-xs text-foreground">{redditSnapshotUpdatedLabel(row.snapshotAt)}</p>
       </td>
       <td className={cellClass}>
-        <RedditMetricsCell row={row} />
+        <span className="text-xs text-muted-foreground">—</span>
       </td>
       <td className={cn(cellClass, 'text-muted-foreground')}>—</td>
       <td className={cellClass}>—</td>
@@ -237,7 +234,18 @@ function RedditDesktopRow({ row }: { row: OppfangetRedditRow }) {
 function RedditMobileCard({ row }: { row: OppfangetRedditRow }) {
   return (
     <li key={row.id} className="rounded-xl border border-border bg-card p-4 text-sm shadow-sm">
-      <RedditTitleCell row={row} />
+      <RedditSubredditBadge subreddit={row.subreddit} />
+      <a
+        href={row.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-1 block min-w-0 font-medium text-brand hover:underline line-clamp-3 break-words"
+      >
+        {row.title}
+        <ExternalLink className="ml-1 inline h-3.5 w-3.5 shrink-0 align-text-bottom" aria-hidden />
+      </a>
+      <p className="mt-0.5 text-xs text-muted-foreground">{OPPFANGET_DISPLAY_TYPE_LABELS.reddit}</p>
+      <RedditEngagementMeta row={row} />
       <dl className="mt-3 space-y-2 text-xs">
         <div>
           <dt className="font-medium text-muted-foreground">Sak</dt>
@@ -248,12 +256,6 @@ function RedditMobileCard({ row }: { row: OppfangetRedditRow }) {
         <div>
           <dt className="font-medium text-muted-foreground">Oppdatert</dt>
           <dd className="mt-0.5 text-foreground">{redditSnapshotUpdatedLabel(row.snapshotAt)}</dd>
-        </div>
-        <div>
-          <dt className="font-medium text-muted-foreground">Engasjement</dt>
-          <dd className="mt-0.5">
-            <RedditMetricsCell row={row} />
-          </dd>
         </div>
       </dl>
     </li>

@@ -80,6 +80,7 @@ export type OppfangetRedditRow = {
   snapshotAt: string;
   topic: string | null;
   relatedIssueId: string | null;
+  relatedIssueTitle: string | null;
   relatedSimilarity: number | null;
 };
 
@@ -94,6 +95,8 @@ export type OppfangetStatusCounts = Record<OppfangetDisplayStatus, number>;
 export type OppfangetListResponse = {
   rows: OppfangetRow[];
   counts: OppfangetStatusCounts;
+  /** Reddit-rader lastet for listen (før filtre), brukes til tom tilstand. */
+  redditSignalTotal: number;
   tableMissing: boolean;
   tableMissingMessage: string | null;
   previewMock: boolean;

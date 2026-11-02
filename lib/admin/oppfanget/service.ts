@@ -18,6 +18,7 @@ import type {
   ActionTypeDb,
   OppfangetClusterRow,
   OppfangetListResponse,
+  OppfangetRedditRow,
   OppfangetRow,
   OppfangetScale,
   OppfangetSourceRow,
@@ -81,7 +82,7 @@ function isMissingRedditTableError(error: { code?: string; message?: string } | 
   return /reddit_signals|does not exist|undefined_table/i.test(error.message ?? '');
 }
 
-async function loadRedditSignalsForAdmin(): Promise<OppfangetRow[]> {
+async function loadRedditSignalsForAdmin(): Promise<OppfangetRedditRow[]> {
   const service = getServiceSupabase();
   const { data, error } = await service
     .from('reddit_signals')
@@ -98,7 +99,43 @@ async function loadRedditSignalsForAdmin(): Promise<OppfangetRow[]> {
     throw error;
   }
 
-  return ((data ?? []) as RedditSignalDbRow[]).map(mapRedditSignalToOppfangetRow);
+  let rows = ((data ?? []) as RedditSignalDbRow[]).map(mapRedditSignalToOppfangetRow);
+  const issueIds = [
+    ...new Set(
+      rows
+        .map((row) => row.relatedIssueId)
+        .filter((id): id is string => Boolean(id?.trim())),
+    ),
+  ];
+  if (issueIds.length === 0) {
+    return rows;
+  }
+
+  const { data: issues, error: issueError } = await service
+    .from('stortinget_issues')
+    .select('id, title')
+    .in('id', issueIds);
+
+  if (issueError) {
+    return rows;
+  }
+
+  const titleById = new Map<string, string | null>();
+  for (const issue of issues ?? []) {
+    if (typeof issue.id === 'string') {
+      titleById.set(issue.id, typeof issue.title === 'string' ? issue.title : null);
+    }
+  }
+
+  rows = rows.map((row) => {
+    if (!row.relatedIssueId) return row;
+    return {
+      ...row,
+      relatedIssueTitle: titleById.get(row.relatedIssueId) ?? null,
+    };
+  });
+
+  return rows;
 }
 
 function sortOppfangetRowsByLastSeen(rows: OppfangetRow[]): OppfangetRow[] {
@@ -285,6 +322,7 @@ export async function listOppfangetForAdmin(
       tableMissing: false,
       tableMissingMessage: null,
       previewMock: false,
+      redditSignalTotal: 0,
     };
   }
 
@@ -325,6 +363,7 @@ export async function listOppfangetForAdmin(
           tableMissingMessage:
             'Research-listen er ikke klar i databasen ennå. En administrator må kjøre den ventende databasemigrasjonen før nye signaler kan vises her.',
           previewMock: false,
+          redditSignalTotal: 0,
         };
       }
       throw clusterError;
@@ -367,6 +406,7 @@ export async function listOppfangetForAdmin(
   }
 
   const redditRows = await loadRedditSignalsForAdmin();
+  const redditSignalTotal = redditRows.length;
   const combinedRows = sortOppfangetRowsByLastSeen([...researchRows, ...redditRows]);
 
   const filterable = combinedRows.map((row) =>
@@ -383,5 +423,6 @@ export async function listOppfangetForAdmin(
     tableMissing: false,
     tableMissingMessage: null,
     previewMock: false,
+    redditSignalTotal,
   };
 }

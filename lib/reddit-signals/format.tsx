@@ -1,11 +1,9 @@
+import type { OppfangetRedditRow } from '@/lib/admin/oppfanget/types';
 import type { RedditSignalSubreddit } from '@/lib/admin/oppfanget/types';
 import { cn } from '@/lib/utils';
 
-const SUBREDDIT_BADGE_CLASS: Record<RedditSignalSubreddit, string> = {
-  norge: 'border-brand/30 bg-brand/10 text-brand',
-  norske: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300',
-  Nordmenn: 'border-violet-500/30 bg-violet-500/10 text-violet-800 dark:text-violet-300',
-};
+const subredditBadgeClass =
+  'inline-flex max-w-full items-center rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium leading-snug text-foreground';
 
 export function redditSubredditLabel(subreddit: RedditSignalSubreddit): string {
   return `r/${subreddit}`;
@@ -19,15 +17,7 @@ export function RedditSubredditBadge({
   className?: string;
 }) {
   return (
-    <span
-      className={cn(
-        'inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[11px] font-medium leading-snug',
-        SUBREDDIT_BADGE_CLASS[subreddit],
-        className,
-      )}
-    >
-      {redditSubredditLabel(subreddit)}
-    </span>
+    <span className={cn(subredditBadgeClass, className)}>{redditSubredditLabel(subreddit)}</span>
   );
 }
 
@@ -54,4 +44,25 @@ export function formatRedditSnapshotRelative(iso: string, nowMs = Date.now()): s
 
 export function redditSnapshotUpdatedLabel(iso: string, nowMs = Date.now()): string {
   return `Oppdatert ${formatRedditSnapshotRelative(iso, nowMs)}`;
+}
+
+export function redditRelatedIssueLinkLabel(row: OppfangetRedditRow): string {
+  const title = row.relatedIssueTitle?.trim();
+  if (title) return title;
+  if (row.relatedIssueId) return `Sak ${row.relatedIssueId}`;
+  return '';
+}
+
+export function RedditEngagementMeta({ row }: { row: OppfangetRedditRow }) {
+  return (
+    <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+      <span>{row.score.toLocaleString('nb-NO')} poeng</span>
+      <span aria-hidden> · </span>
+      <span>{row.numComments.toLocaleString('nb-NO')} kommentarer</span>
+      <span aria-hidden> · </span>
+      <span title="kommentarer per poeng">
+        {formatRedditContention(row.contention)} kommentarer per poeng
+      </span>
+    </p>
+  );
 }

@@ -39,6 +39,7 @@ export function mapRedditSignalToOppfangetRow(row: RedditSignalDbRow): Oppfanget
     snapshotAt: row.snapshot_at,
     topic: row.topic,
     relatedIssueId: row.related_issue_id,
+    relatedIssueTitle: null,
     relatedSimilarity: row.related_similarity,
   };
 }

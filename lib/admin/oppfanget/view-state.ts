@@ -1,4 +1,4 @@
-import { hasActiveOppfangetFilters, type OppfangetFilterInput } from '@/lib/admin/oppfanget/filters';
+import { hasActiveOppfangetFilters, hasOppfangetFiltersBesidesType, type OppfangetFilterInput } from '@/lib/admin/oppfanget/filters';
 import type { OppfangetListResponse, OppfangetStatusCounts } from '@/lib/admin/oppfanget/types';
 
 export const OPPFANGET_PIPELINE_EMPTY_TITLE = 'Ingenting i Research ennå';
@@ -18,7 +18,10 @@ export function shouldShowOppfangetRedditTypeEmpty(
 ): boolean {
   if (!data || pending || data.tableMissing) return false;
   if (filters.type !== 'reddit') return false;
-  return data.rows.length === 0;
+  if (data.rows.length > 0) return false;
+  if ((data.redditSignalTotal ?? 0) > 0) return false;
+  if (hasOppfangetFiltersBesidesType(filters)) return false;
+  return true;
 }
 
 const EMPTY_COUNTS: OppfangetStatusCounts = {
@@ -45,7 +48,11 @@ export function normalizeOppfangetCounts(
 export function isOppfangetListResponse(value: unknown): value is OppfangetListResponse {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as OppfangetListResponse;
-  return Array.isArray(candidate.rows) && typeof candidate.tableMissing === 'boolean';
+  return (
+    Array.isArray(candidate.rows) &&
+    typeof candidate.tableMissing === 'boolean' &&
+    typeof candidate.redditSignalTotal === 'number'
+  );
 }
 
 export function shouldShowOppfangetPipelineEmpty(

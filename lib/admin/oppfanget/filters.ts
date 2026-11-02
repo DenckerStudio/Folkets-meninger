@@ -40,6 +40,17 @@ export function hasActiveOppfangetFilters(filters: OppfangetFilterInput): boolea
   );
 }
 
+/** Aktive filtre utenom type (f.eks. søk/dato). */
+export function hasOppfangetFiltersBesidesType(filters: OppfangetFilterInput): boolean {
+  return Boolean(
+    filters.status ||
+      (filters.source ?? '').trim() ||
+      filters.dateFrom ||
+      filters.dateTo ||
+      (filters.q ?? '').trim(),
+  );
+}
+
 export type OppfangetFilterableRow = {
   id: string;
   title: string;
@@ -172,7 +183,10 @@ export function countOppfangetStatuses(rows: OppfangetFilterableRow[]): Oppfange
     avvist: 0,
   };
   for (const row of rows) {
-    if (row.rowKind === 'reddit') continue;
+    if (row.rowKind === 'reddit') {
+      counts.oppfanget += 1;
+      continue;
+    }
     if (row.clusterStatus === OPPFANGET_FILTER_CLUSTER_STATUS_NOT_ACTION) {
       continue;
     }
