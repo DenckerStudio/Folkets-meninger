@@ -15,7 +15,8 @@ const feedbackRoute = readFileSync(
 
 assert.match(actionRoute, /requireAdmin\(\)/);
 assert.match(actionRoute, /isResearchApiAction\(action\)/);
-assert.match(actionRoute, /status: 502/);
+assert.match(actionRoute, /result\.httpStatus/);
+assert.match(actionRoute, /message: result\.message/);
 assert.match(actionRoute, /status: 409/);
 assert.match(actionRoute, /RESEARCH_API_ERROR_CODES\.briefActive/);
 assert.match(actionRoute, /RESEARCH_API_ERROR_CODES\.requestConflict/);
@@ -26,7 +27,8 @@ assert.match(feedbackRoute, /requireAdmin\(\)/);
 assert.match(feedbackRoute, /status: 501/);
 assert.match(feedbackRoute, /Ikke tilgjengelig ennå/);
 
-assert.deepEqual(RESEARCH_API_ACTIONS, ['deepen', 'blog', 'reel']);
+assert.deepEqual(RESEARCH_API_ACTIONS, ['deepen', 'blog']);
+assert.equal(isResearchApiAction('reel'), false);
 assert.equal(isResearchApiAction('deepen'), true);
 assert.equal(isResearchApiAction('invalid'), false);
 

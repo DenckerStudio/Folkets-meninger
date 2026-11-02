@@ -22,7 +22,7 @@ const activeWithoutId = resolveResearchEnqueueConflict(
 assert.equal(activeWithoutId.kind, 'message_only');
 
 const activeWithId = resolveResearchEnqueueConflict(
-  'reel',
+  'blog',
   {
     error: RESEARCH_API_ERROR_CODES.briefActive,
     request_id: '11111111-1111-4111-8111-111111111111',
@@ -33,8 +33,8 @@ const activeWithId = resolveResearchEnqueueConflict(
 assert.equal(activeWithId.kind, 'sync_active');
 if (activeWithId.kind === 'sync_active') {
   assert.equal(activeWithId.status, 'running');
-  const merged = mergeActiveBriefFromConflict({}, 'reel', activeWithId.requestId, 'running');
-  assert.equal(merged.reel?.status, 'running');
+  const merged = mergeActiveBriefFromConflict({}, 'blog', activeWithId.requestId, 'running');
+  assert.equal(merged.blog?.status, 'running');
 }
 
 console.log('admin/research/enqueue-response.test.ts: ok');

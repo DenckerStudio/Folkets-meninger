@@ -6,7 +6,7 @@ import {
   expireStaleResearchBriefs,
   getLatestResearchBriefsByClusterIds,
 } from '@/lib/admin/research/service';
-import { isResearchWebhookConfigured } from '@/lib/admin/research/webhook-status';
+import { isResearchWebhookConfigured, getMissingResearchWebhookEnvKeys } from '@/lib/admin/research/webhook-status';
 import { routes } from '@/lib/routes';
 import { getServerSupabase } from '@/lib/supabase-server';
 
@@ -25,6 +25,7 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
   await expireStaleResearchBriefs();
   const initialData = await listOppfangetForAdmin(filters, preview);
   const researchWebhooksConfigured = isResearchWebhookConfigured();
+  const missingResearchWebhookEnvKeys = getMissingResearchWebhookEnvKeys();
   const researchBriefsByCluster = await getLatestResearchBriefsByClusterIds(
     initialData.rows.map((row) => row.id),
   );
@@ -41,6 +42,7 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
       adminUserId={user?.id}
       initialResearchBriefsByCluster={researchBriefsByCluster}
       researchWebhooksConfigured={researchWebhooksConfigured}
+      missingResearchWebhookEnvKeys={missingResearchWebhookEnvKeys}
     />
   );
 }

@@ -22,6 +22,7 @@ import type {
   OppfangetSourceRow,
 } from '@/lib/admin/oppfanget/types';
 import { normalizeSeenAtRange } from '@/lib/admin/oppfanget/format-seen-dates';
+import { OPPFANGET_ACTION_TYPES_EXCLUDED_FROM_RESEARCH_LIST } from '@/lib/admin/oppfanget/excluded-from-research-list';
 import { sortOppfangetSources } from '@/lib/admin/oppfanget/source-display';
 import type { OppfangetSourceType } from '@/lib/admin/oppfanget/types';
 import { getServiceSupabase } from '@/lib/supabase';
@@ -164,6 +165,11 @@ export async function listOppfangetForAdmin(
     .select(
       'id, action_name, action_type, status, sensitive_category, max_confidence, best_scale, first_seen_at, last_seen_at, poll_id, metadata',
     )
+    .not(
+      'action_type',
+      'in',
+      `(${OPPFANGET_ACTION_TYPES_EXCLUDED_FROM_RESEARCH_LIST.join(',')})`,
+    )
     .order('last_seen_at', { ascending: false })
     .limit(500);
 
@@ -187,7 +193,10 @@ export async function listOppfangetForAdmin(
     throw clusterError;
   }
 
-  const clusterList = (clusters ?? []) as ClusterRow[];
+  const clusterList = ((clusters ?? []) as ClusterRow[]).filter(
+    (cluster) =>
+      !OPPFANGET_ACTION_TYPES_EXCLUDED_FROM_RESEARCH_LIST.includes(cluster.action_type),
+  );
   const clusterIds = clusterList.map((c) => c.id);
   const pollIds = clusterList.map((c) => c.poll_id).filter((id): id is string => Boolean(id));
 

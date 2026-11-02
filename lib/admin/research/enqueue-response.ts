@@ -68,6 +68,8 @@ export function mergeActiveBriefFromConflict(
       status,
       output_ref: previous?.output_ref ?? null,
       request_id: requestId,
+      created_at: previous?.created_at,
+      updated_at: previous?.updated_at,
     },
   };
 }

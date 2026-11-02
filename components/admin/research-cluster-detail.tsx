@@ -12,7 +12,6 @@ import {
   researchBriefOutputLink,
 } from '@/lib/admin/research/labels';
 import type { ResearchBriefRow, ResearchPerspective } from '@/lib/admin/research/types';
-import type { ResearchApiAction } from '@/lib/admin/research/actions';
 import type { ResearchBriefsByKind } from '@/lib/admin/research/service';
 
 const STANCE_LABELS: Record<ResearchPerspective['stance'], string> = {
@@ -24,13 +23,15 @@ const STANCE_LABELS: Record<ResearchPerspective['stance'], string> = {
 function briefsToByKind(briefs: ResearchBriefRow[]): ResearchBriefsByKind {
   const out: ResearchBriefsByKind = {};
   for (const brief of briefs) {
-    const action = brief.kind as ResearchApiAction;
-    if (!out[action]) {
-      out[action] = {
+    const kind = brief.kind;
+    if (!out[kind]) {
+      out[kind] = {
         kind: brief.kind,
         status: brief.status,
         output_ref: brief.output_ref,
         request_id: brief.request_id,
+        created_at: brief.created_at,
+        updated_at: brief.updated_at,
       };
     }
   }

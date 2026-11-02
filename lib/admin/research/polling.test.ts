@@ -10,7 +10,33 @@ assert.equal(isActiveResearchBriefStatus('queued'), true);
 assert.equal(isActiveResearchBriefStatus('running'), true);
 assert.equal(isActiveResearchBriefStatus('done'), false);
 
-assert.equal(hasActiveResearchBriefs({ deepen: { kind: 'deepen', status: 'running', request_id: 'a', output_ref: null } }), true);
-assert.equal(hasActiveResearchBriefs({ blog: { kind: 'blog', status: 'failed', request_id: 'b', output_ref: null } }), false);
+const ts = '2026-11-02T12:00:00.000Z';
+
+assert.equal(
+  hasActiveResearchBriefs({
+    deepen: {
+      kind: 'deepen',
+      status: 'running',
+      request_id: 'a',
+      output_ref: null,
+      created_at: ts,
+      updated_at: ts,
+    },
+  }),
+  true,
+);
+assert.equal(
+  hasActiveResearchBriefs({
+    blog: {
+      kind: 'blog',
+      status: 'failed',
+      request_id: 'b',
+      output_ref: null,
+      created_at: ts,
+      updated_at: ts,
+    },
+  }),
+  false,
+);
 
 console.log('admin/research/polling.test.ts: ok');
