@@ -22,7 +22,7 @@ import type {
   OppfangetSourceRow,
 } from '@/lib/admin/oppfanget/types';
 import { normalizeSeenAtRange } from '@/lib/admin/oppfanget/format-seen-dates';
-import { OPPFANGET_ACTION_TYPES_EXCLUDED_FROM_RESEARCH_LIST } from '@/lib/admin/oppfanget/excluded-from-research-list';
+import { filterOppfangetRowsForResearchList } from '@/lib/admin/oppfanget/excluded-from-research-list';
 import { sortOppfangetSources } from '@/lib/admin/oppfanget/source-display';
 import type { OppfangetSourceType } from '@/lib/admin/oppfanget/types';
 import { getServiceSupabase } from '@/lib/supabase';
@@ -165,11 +165,6 @@ export async function listOppfangetForAdmin(
     .select(
       'id, action_name, action_type, status, sensitive_category, max_confidence, best_scale, first_seen_at, last_seen_at, poll_id, metadata',
     )
-    .not(
-      'action_type',
-      'in',
-      `(${OPPFANGET_ACTION_TYPES_EXCLUDED_FROM_RESEARCH_LIST.join(',')})`,
-    )
     .order('last_seen_at', { ascending: false })
     .limit(500);
 
@@ -193,10 +188,7 @@ export async function listOppfangetForAdmin(
     throw clusterError;
   }
 
-  const clusterList = ((clusters ?? []) as ClusterRow[]).filter(
-    (cluster) =>
-      !OPPFANGET_ACTION_TYPES_EXCLUDED_FROM_RESEARCH_LIST.includes(cluster.action_type),
-  );
+  const clusterList = (clusters ?? []) as ClusterRow[];
   const clusterIds = clusterList.map((c) => c.id);
   const pollIds = clusterList.map((c) => c.poll_id).filter((id): id is string => Boolean(id));
 
@@ -236,7 +228,9 @@ export async function listOppfangetForAdmin(
     ),
   );
 
-  const filterable = allRows.map((row) => ({
+  const researchRows = filterOppfangetRowsForResearchList(allRows);
+
+  const filterable = researchRows.map((row) => ({
     id: row.id,
     title: row.title,
     actionType: row.actionType,
@@ -256,7 +250,7 @@ export async function listOppfangetForAdmin(
 
   const counts = countOppfangetStatuses(filterable);
   const filteredIds = new Set(filterOppfangetRows(filterable, filters).map((r) => r.id));
-  const rows = allRows.filter((r) => filteredIds.has(r.id));
+  const rows = researchRows.filter((r) => filteredIds.has(r.id));
 
   return {
     rows,

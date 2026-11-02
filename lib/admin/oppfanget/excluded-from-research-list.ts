@@ -1,10 +1,19 @@
-import type { ActionTypeDb } from '@/lib/admin/oppfanget/types';
+import type { OppfangetDisplayType, OppfangetRow } from '@/lib/admin/oppfanget/types';
 
-/** Aksjonstyper fra fangst-pipeline som ikke vises på Research-listen (data beholdes). */
-export const OPPFANGET_ACTION_TYPES_EXCLUDED_FROM_RESEARCH_LIST: readonly ActionTypeDb[] = [
+/** Visningstyper for klassiske aksjonsfangst (skjules på Research; rader beholdes i DB). */
+export const OPPFANGET_DISPLAY_TYPES_EXCLUDED_FROM_RESEARCH_LIST: readonly OppfangetDisplayType[] = [
   'opprop',
-  'demonstrasjon',
-  'innsamling',
-  'boykott',
-  'kampanje',
+  'aksjon',
+  'boikott',
 ];
+
+/** Research-listen viser signaler («melding»), ikke opprop/demonstrasjon m.m. */
+export function shouldIncludeOppfangetRowInResearchList(
+  displayType: OppfangetDisplayType,
+): boolean {
+  return !OPPFANGET_DISPLAY_TYPES_EXCLUDED_FROM_RESEARCH_LIST.includes(displayType);
+}
+
+export function filterOppfangetRowsForResearchList(rows: OppfangetRow[]): OppfangetRow[] {
+  return rows.filter((row) => shouldIncludeOppfangetRowInResearchList(row.displayType));
+}

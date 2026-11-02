@@ -3,8 +3,10 @@ import type { ResearchBriefStatus } from '@/lib/admin/research/types';
 /** Vis «tar lengre tid»-merknad etter dette antall ms i kø/kjører (server-tidsstempel). */
 export const RESEARCH_JOB_SLOW_NOTICE_MS = 3 * 60 * 1000;
 
-export const RESEARCH_JOB_SLOW_NOTICE_MESSAGE =
-  'Tar lengre tid enn vanlig. Hvis den ikke er ferdig innen 30 minutter, markeres den som feilet og du kan prøve igjen.';
+export const RESEARCH_JOB_SLOW_NOTICE_HEADLINE = 'Tar lengre tid enn vanlig.';
+
+export const RESEARCH_JOB_SLOW_NOTICE_DETAIL =
+  'Markeres som feilet etter 30 min, så kan du prøve igjen.';
 
 export type ResearchBriefTimingFields = {
   status: ResearchBriefStatus;

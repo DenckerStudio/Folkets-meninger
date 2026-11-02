@@ -40,9 +40,6 @@ import {
 const TYPE_OPTIONS: { value: '' | OppfangetDisplayType; label: string }[] = [
   { value: '', label: 'Alle typer' },
   { value: 'melding', label: OPPFANGET_DISPLAY_TYPE_LABELS.melding },
-  { value: 'opprop', label: OPPFANGET_DISPLAY_TYPE_LABELS.opprop },
-  { value: 'aksjon', label: OPPFANGET_DISPLAY_TYPE_LABELS.aksjon },
-  { value: 'boikott', label: OPPFANGET_DISPLAY_TYPE_LABELS.boikott },
 ];
 
 const STATUS_OPTIONS: { value: OppfangetStatusFilter; label: string }[] = [

@@ -39,7 +39,8 @@ import {
   RESEARCH_BRIEF_POLL_MS,
 } from '@/lib/admin/research/polling';
 import {
-  RESEARCH_JOB_SLOW_NOTICE_MESSAGE,
+  RESEARCH_JOB_SLOW_NOTICE_DETAIL,
+  RESEARCH_JOB_SLOW_NOTICE_HEADLINE,
   shouldShowResearchRowSlowNotice,
 } from '@/lib/admin/research/slow-job-notice';
 import type { ResearchBriefSnapshot, ResearchBriefsByKind } from '@/lib/admin/research/service';
@@ -48,7 +49,7 @@ import { cn } from '@/lib/utils';
 
 const ACTIONS = RESEARCH_API_ACTIONS;
 
-const HIGHLIGHT_KINDS: ResearchBriefKind[] = ['deepen', 'blog', 'reel'];
+const HIGHLIGHT_KINDS: ResearchBriefKind[] = ['deepen', 'blog'];
 
 const DONE_MENU_LABELS: Partial<Record<ResearchBriefKind, string>> = {
   deepen: 'Se utdyping',
@@ -279,11 +280,14 @@ function ResearchRowSlowJobNotice({
 }) {
   if (!visible) return null;
   return (
-    <div className="mt-1 space-y-1">
-      <div className="flex flex-wrap items-start gap-2">
-        <p className="min-w-0 flex-1 text-xs text-muted-foreground" role="status">
-          {RESEARCH_JOB_SLOW_NOTICE_MESSAGE}
-        </p>
+    <div className="mt-1 max-w-[360px] space-y-1">
+      <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
+        <div className="min-w-0 flex-1 space-y-0.5" role="status">
+          <p className="text-xs text-foreground">{RESEARCH_JOB_SLOW_NOTICE_HEADLINE}</p>
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            {RESEARCH_JOB_SLOW_NOTICE_DETAIL}
+          </p>
+        </div>
         <button
           type="button"
           onClick={onRefresh}
