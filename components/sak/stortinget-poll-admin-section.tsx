@@ -203,12 +203,12 @@ export function StortingetPollAdminSection({
   if (effectiveState.kind === 'blocked_system_poll') {
     return (
       <section
-        className="rounded-2xl border border-dashed border-muted-foreground/35 bg-muted/40 p-4 sm:p-5"
+        className="rounded-2xl border border-border bg-card p-4 sm:p-5"
         aria-label="Admin: avstemning blokkert"
       >
-        <h2 className="text-sm font-semibold text-foreground">{STORTINGET_POLL_ADMIN_BLOCKED_HEADING}</h2>
-        <p className="mt-2 text-sm leading-relaxed text-foreground">{STORTINGET_POLL_ADMIN_BLOCKED_BODY}</p>
-        <p className="mt-2 text-sm leading-relaxed text-foreground/80">{STORTINGET_POLL_ADMIN_BLOCKED_NEXT}</p>
+        <h2 className="text-base font-semibold text-foreground">{STORTINGET_POLL_ADMIN_BLOCKED_HEADING}</h2>
+        <p className="mt-3 text-sm leading-relaxed text-foreground">{STORTINGET_POLL_ADMIN_BLOCKED_BODY}</p>
+        <p className="mt-3 text-sm leading-relaxed text-foreground">{STORTINGET_POLL_ADMIN_BLOCKED_NEXT}</p>
       </section>
     );
   }
@@ -345,9 +345,9 @@ export function StortingetPollAdminSection({
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <span className="block text-sm font-medium text-foreground">Sluttidspunkt (valgfritt)</span>
-              <div className="flex max-w-md flex-col gap-2 sm:flex-row">
+              <div className="flex max-w-md flex-col gap-3 sm:flex-row sm:gap-2">
                 <div className="min-w-0 flex-1 space-y-1">
                   <label htmlFor="stortinget-poll-closes-date" className="block text-xs text-muted-foreground">
                     Dato (dd.mm.åååå)
@@ -380,7 +380,7 @@ export function StortingetPollAdminSection({
                 </div>
               </div>
               {pollClosed && existingPoll?.closesAt ? (
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
                   {(() => {
                     const closedAt = utcIsoToNorwegianClosesAtFields(existingPoll.closesAt);
                     return (
