@@ -3,6 +3,7 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useSyncExternalStore,
   type ReactNode,
@@ -13,6 +14,7 @@ import { X } from 'lucide-react';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { useBodyOverlayFlag } from '@/hooks/use-body-overlay';
 import { MODAL_TRANSITION } from '@/lib/motion/tokens';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { cn } from '@/lib/utils';
 
 function useIsMounted() {
@@ -127,6 +129,8 @@ export type DialogProps = {
   footer?: ReactNode;
   size?: DialogSize;
   className?: string;
+  /** When set, used instead of the default stacked overlay z-index (e.g. above reel expanded UI). */
+  overlayZIndex?: number;
 };
 
 export function Dialog({
@@ -138,6 +142,7 @@ export function Dialog({
   footer,
   size = 'lg',
   className,
+  overlayZIndex,
 }: DialogProps) {
   const mounted = useIsMounted();
   const titleId = useId();
@@ -157,6 +162,22 @@ export function Dialog({
     };
   }, [open]);
 
+  useLayoutEffect(() => {
+    if (!open || !mounted) return;
+    const dialog = dialogRef.current;
+    const overlay = overlayRef.current;
+    if (!dialog || !overlay) return;
+
+    if (!openDialogs.includes(dialog)) {
+      openDialogs.push(dialog);
+    }
+    const stackIndex = openDialogs.indexOf(dialog);
+    overlay.style.zIndex = String(
+      overlayZIndex ??
+        DIALOG_Z_INDEX_BASE + stackIndex * DIALOG_Z_INDEX_STEP,
+    );
+  }, [open, mounted, overlayZIndex]);
+
   useEffect(() => {
     if (!open || !mounted) return;
     const dialog = dialogRef.current;
@@ -166,12 +187,8 @@ export function Dialog({
     const [firstFocusable] = getFocusableElements(dialog);
 
     dialogRestoreTargets.set(dialog, previouslyFocused);
-    openDialogs.push(dialog);
-    const overlay = overlayRef.current;
-    if (overlay) {
-      overlay.style.zIndex = String(
-        DIALOG_Z_INDEX_BASE + (openDialogs.length - 1) * DIALOG_Z_INDEX_STEP,
-      );
+    if (!openDialogs.includes(dialog)) {
+      openDialogs.push(dialog);
     }
     (firstFocusable ?? dialog).focus();
 
@@ -287,10 +304,13 @@ export function Dialog({
               <button
                 type="button"
                 onClick={onClose}
-                className="shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className={cn(
+                  'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+                  VURDER_FOCUS_RING,
+                )}
                 aria-label="Lukk dialog"
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5" aria-hidden />
               </button>
             </div>
 

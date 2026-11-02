@@ -35,7 +35,11 @@ type LoadState =
 
 function AnalyticsNotReady() {
   return (
-    <p className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-foreground">
+    <p
+      role="status"
+      aria-live="polite"
+      className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-foreground"
+    >
       {NOT_READY_MESSAGE}
     </p>
   );

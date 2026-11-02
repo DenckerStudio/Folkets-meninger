@@ -52,10 +52,16 @@ assert.match(dialogSource, /aria-label="Lukk dialog"/);
 
 assert.match(dialogSource, /DIALOG_Z_INDEX_BASE = 95/);
 assert.match(dialogSource, /DIALOG_Z_INDEX_STEP/);
+assert.match(dialogSource, /useLayoutEffect\(/);
+assert.match(dialogSource, /overlay\.style\.zIndex = String\(/);
+assert.match(dialogSource, /overlayZIndex/);
+assert.match(dialogSource, /VURDER_FOCUS_RING/);
+assert.match(dialogSource, /h-11 w-11/);
 assert.match(
   dialogSource,
-  /overlay\.style\.zIndex = String\(\s*DIALOG_Z_INDEX_BASE \+ \(openDialogs\.length - 1\) \* DIALOG_Z_INDEX_STEP/,
+  /overlay\.style\.zIndex = String\(\s*overlayZIndex \?\?[\s\S]*?DIALOG_Z_INDEX_BASE \+ stackIndex \* DIALOG_Z_INDEX_STEP/,
 );
+assert.doesNotMatch(dialogSource, /requestAnimationFrame/);
 assert.doesNotMatch(
   dialogSource,
   /data-shared-dialog-overlay[\s\S]*?className="fixed inset-0 z-\[/,

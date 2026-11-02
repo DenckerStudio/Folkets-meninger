@@ -32,6 +32,9 @@ import { cn } from '@/lib/utils';
 type DraftsResponse = { drafts: PollRecord[] };
 type CandidatesResponse = { candidates: SakPollCandidate[]; coverage: SakPollCoverage };
 
+const STATUS_PILL_DISMISS_BUTTON =
+  'relative inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full after:absolute after:-inset-2.5 after:content-[""]';
+
 function GenerationStatusBadge({
   issueId,
   getJob,
@@ -54,18 +57,19 @@ function GenerationStatusBadge({
   if (job.status === 'ready') {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-        <CheckCircle2 className="h-3 w-3" aria-hidden />
+        <CheckCircle2 className="h-3 w-3 shrink-0" aria-hidden />
         Utkast klart
         <button
           type="button"
           onClick={() => onDismiss(job.key)}
           className={cn(
-            'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded hover:bg-emerald-500/10',
+            STATUS_PILL_DISMISS_BUTTON,
+            'hover:bg-emerald-500/10',
             VURDER_FOCUS_RING,
           )}
           aria-label="Lukk status"
         >
-          <X className="h-3 w-3" />
+          <X className="h-3 w-3" aria-hidden />
         </button>
       </span>
     );
@@ -73,18 +77,19 @@ function GenerationStatusBadge({
 
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
-      <AlertCircle className="h-3 w-3" aria-hidden />
+      <AlertCircle className="h-3 w-3 shrink-0" aria-hidden />
       {pollDraftGenerationStatusLabel(job.status)}
       <button
         type="button"
         onClick={() => onDismiss(job.key)}
         className={cn(
-          'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded hover:bg-destructive/10',
+          STATUS_PILL_DISMISS_BUTTON,
+          'hover:bg-destructive/10',
           VURDER_FOCUS_RING,
         )}
         aria-label="Lukk status"
       >
-        <X className="h-3 w-3" />
+        <X className="h-3 w-3" aria-hidden />
       </button>
     </span>
   );
@@ -382,7 +387,10 @@ export default function AdminReelsClient({
                   <div className="flex shrink-0 gap-2">
                     <Link
                       href={routes.sak(row.issueId)}
-                      className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/50"
+                      className={cn(
+                        'inline-flex min-h-11 items-center rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/50',
+                        VURDER_FOCUS_RING,
+                      )}
                     >
                       Åpne sak
                     </Link>
@@ -394,7 +402,10 @@ export default function AdminReelsClient({
                       }}
                       disabled={pending || resettingIssueId === row.issueId}
                       onClick={() => resetQueueAttempts(row.issueId)}
-                      className="inline-flex min-h-11 items-center rounded-lg bg-muted px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/80 disabled:opacity-50"
+                      className={cn(
+                        'inline-flex min-h-11 items-center rounded-lg bg-muted px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/80 disabled:opacity-50',
+                        VURDER_FOCUS_RING,
+                      )}
                     >
                       {resettingIssueId === row.issueId ? 'Nullstiller…' : 'Nullstill'}
                     </button>
@@ -450,14 +461,20 @@ export default function AdminReelsClient({
                 type="button"
                 onClick={() => generate()}
                 disabled={pending || isGenerating()}
-                className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+                className={cn(
+                  'inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50',
+                  VURDER_FOCUS_RING,
+                )}
               >
                 Generer neste
               </button>
             ) : null}
             <Link
               href={vurderHref}
-              className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90"
+              className={cn(
+                'inline-flex min-h-11 items-center rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90',
+                VURDER_FOCUS_RING,
+              )}
             >
               Vurder utkast
             </Link>

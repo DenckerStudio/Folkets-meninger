@@ -27,9 +27,10 @@ export function LandingExpiredLinkNotice() {
   return (
     <div
       role="status"
+      aria-live="polite"
       className="mx-auto max-w-5xl px-4 pt-4 sm:px-6 lg:px-8"
     >
-      <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-foreground sm:items-center sm:gap-3">
+      <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-foreground sm:gap-3">
         <p className="flex-1 leading-snug">
           Lenken du fulgte er utløpt eller finnes ikke lenger.
         </p>

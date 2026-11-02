@@ -50,6 +50,13 @@ assert.match(reviewSrc, /getUtenKontekstPrefixNoticeMessage/);
 assert.match(reviewSrc, /role="note"/);
 assert.match(reviewSrc, /Gjenopprett/);
 
+assert.match(reelsSrc, /STATUS_PILL_DISMISS_BUTTON/);
+assert.match(reelsSrc, /h-6 w-6 shrink-0 items-center justify-center rounded-full/);
+assert.match(reelsSrc, /after:-inset-2\.5 after:content-\[""\]/);
+assert.match(reelsSrc, /aria-label="Lukk status"/);
+assert.doesNotMatch(reelsSrc, /pr-10/);
+assert.doesNotMatch(reelsSrc, /absolute right-0 top-1\/2 inline-flex h-11 w-11/);
+
 const utenKontekstBadgeSrc = readFileSync(
   join(process.cwd(), 'components/admin/uten-kontekst-badge.tsx'),
   'utf8',
