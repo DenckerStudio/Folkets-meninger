@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="nb" class="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="brukere-fixture.css" />
+  <title>Brukere – tabell</title>
+</head>
+<body data-scene="table">
+  <div class="page">
+    <h1>Brukere</h1>
+    <p class="muted">Administrer kontoer, roller og Stemme+.</p>
+    <div class="tabs"><span class="tab active">Alle brukere</span><span class="tab">Administratorer</span></div>
+    <div class="toolbar">
+      <input type="search" placeholder="Søk på navn eller e-post…" value="ola" />
+      <select><option>Alle roller</option></select>
+      <select><option>Alle nivåer</option></select>
+      <select><option>Alle statuser</option></select>
+    </div>
+    <div class="card table-wrap">
+      <table>
+        <thead>
+          <tr><th></th><th>Bruker</th><th>Status</th><th>Rolle</th><th>Stemme+</th><th>Registrert</th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="checkbox checked"></span></td>
+            <td><div class="usercell"><span class="avatar">ON</span><div><strong>Ola Nordmann</strong><small>ola@example.com</small></div></div></td>
+            <td><span class="badge ok">Aktiv</span></td>
+            <td>Medlem</td>
+            <td><span class="badge">Gratis</span></td>
+            <td class="muted">12. jan. 2026</td>
+            <td>⋯</td>
+          </tr>
+          <tr>
+            <td><span class="checkbox"></span></td>
+            <td><div class="usercell"><span class="avatar">KH</span><div><strong>Kari Hansen</strong><small>kari@example.com</small></div></div></td>
+            <td><span class="badge ok">Aktiv</span></td>
+            <td><strong>Administrator</strong></td>
+            <td><span class="badge plus">Aktiv</span></td>
+            <td class="muted">03. des. 2025</td>
+            <td>⋯</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted small">Side 1 av 4 · 87 brukere totalt</p>
+  </div>
+</body>
+</html>

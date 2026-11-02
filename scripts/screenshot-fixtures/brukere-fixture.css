@@ -1,0 +1,78 @@
+:root {
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --border: oklch(0.9 0 0);
+  --primary: oklch(0.45 0.12 250);
+  --primary-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.55 0.2 25);
+  --brand: oklch(0.5 0.14 250);
+  color-scheme: light;
+}
+
+html.dark {
+  --background: oklch(0.16 0 0);
+  --foreground: oklch(0.96 0 0);
+  --card: oklch(0.2 0 0);
+  --muted: oklch(0.24 0 0);
+  --muted-foreground: oklch(0.7 0 0);
+  --border: oklch(0.32 0 0);
+  --primary: oklch(0.72 0.12 250);
+  --primary-foreground: oklch(0.16 0 0);
+  --destructive: oklch(0.65 0.18 25);
+  --brand: oklch(0.72 0.12 250);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: var(--background);
+  color: var(--foreground);
+}
+.page { padding: 1rem; max-width: 960px; margin: 0 auto; }
+h1 { font-size: 1.125rem; margin: 0 0 0.25rem; }
+.muted { color: var(--muted-foreground); }
+.small { font-size: 0.75rem; }
+.tabs { display: flex; gap: 0.25rem; padding: 0.25rem; border: 1px solid var(--border); border-radius: 1rem; background: color-mix(in oklch, var(--muted) 40%, transparent); margin: 1rem 0; }
+.tab { flex: 1; text-align: center; padding: 0.65rem; border-radius: 0.75rem; font-size: 0.875rem; color: var(--muted-foreground); }
+.tab.active { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgb(0 0 0 / 0.06); }
+.toolbar { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; }
+input, select { width: 100%; min-height: 2.25rem; border: 1px solid var(--border); border-radius: 0.5rem; padding: 0 0.75rem; background: var(--background); color: var(--foreground); }
+.card { border: 1px solid var(--border); border-radius: 0.75rem; background: var(--card); overflow: hidden; }
+table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+th { text-align: left; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted-foreground); padding: 0.5rem; border-bottom: 1px solid var(--border); }
+td { padding: 0.5rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.usercell { display: flex; gap: 0.75rem; align-items: center; min-width: 0; }
+.usercell small { display: block; color: var(--muted-foreground); font-size: 0.75rem; }
+.avatar { width: 2rem; height: 2rem; border-radius: 999px; background: var(--muted); display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; border: 1px solid var(--border); }
+.badge { display: inline-block; border-radius: 999px; padding: 0.125rem 0.5rem; font-size: 0.65rem; border: 1px solid var(--border); }
+.badge.ok { background: var(--primary); color: var(--primary-foreground); border-color: transparent; }
+.badge.plus { background: var(--muted); }
+.checkbox { width: 1rem; height: 1rem; border: 1px solid var(--border); border-radius: 0.25rem; display: inline-block; }
+.checkbox.checked { background: var(--primary); }
+.empty { padding: 2rem 1.5rem; text-align: center; }
+.empty.error strong { color: var(--destructive); }
+.dimmed { opacity: 0.55; }
+.dialog-backdrop { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgb(0 0 0 / 0.45); }
+.dialog { width: min(100%, 28rem); background: var(--card); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.25rem; box-shadow: 0 8px 30px rgb(0 0 0 / 0.2); }
+.dialog h2 { margin: 0 0 0.5rem; font-size: 1rem; }
+.dialog label { display: block; margin: 1rem 0 0.25rem; font-size: 0.875rem; font-weight: 600; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
+.btn { border-radius: 0.5rem; padding: 0.45rem 0.75rem; border: 1px solid transparent; font-size: 0.875rem; }
+.btn.outline { border-color: var(--border); background: var(--background); }
+.btn.danger { background: color-mix(in oklch, var(--destructive) 15%, transparent); color: var(--destructive); }
+
+@media (min-width: 640px) {
+  .toolbar { flex-direction: row; flex-wrap: wrap; }
+  input[type="search"] { max-width: 18rem; }
+  select { width: auto; min-width: 8rem; }
+}
+
+@media (max-width: 360px) {
+  .page { padding: 0.75rem; }
+  table { font-size: 0.8125rem; }
+}
