@@ -40,7 +40,6 @@ export const POLL_OG_TITLE_RAW_MAX = 130;
 const CARD_PADDING_Y = 44;
 const CARD_PADDING_BOTTOM = 32;
 const CARD_PADDING_X = 64;
-const CARD_BODY_GAP = 18;
 
 /** Muted bar fills when totals are below proportional threshold (no opacity on navy). */
 const LOW_SAMPLE_BAR_SEGMENT: Record<'nei' | 'blank' | 'ja', { background: string }> = {
@@ -58,7 +57,9 @@ export function clampPollOgText(value: string, max: number): string {
   if (trimmed.length <= max) return trimmed;
   const cut = trimmed.slice(0, max - 1);
   const lastSpace = cut.lastIndexOf(' ');
-  return `${(lastSpace > 20 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+  const body = (lastSpace > 20 ? cut.slice(0, lastSpace) : cut).trimEnd();
+  if (body.length === 0) return '…';
+  return `${body}…`;
 }
 
 /** True when clampPollOgText added an ellipsis at a word boundary (not a hard slice). */
@@ -228,8 +229,6 @@ export async function renderPollShareOgImage(
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'flex-start',
-          gap: CARD_BODY_GAP,
           padding: `${CARD_PADDING_Y}px ${CARD_PADDING_X}px ${CARD_PADDING_BOTTOM}px ${CARD_PADDING_X}px`,
           fontFamily: OG_FONT_FAMILY,
           color: '#ffffff',
@@ -256,31 +255,41 @@ export async function renderPollShareOgImage(
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div
-            style={{
-              ...titleBoxStyle(titleSize),
-              marginBottom: POLL_OG_TITLE_TO_BAR_EXTRA_GAP_PX,
-            }}
-          >
-            {title}
-          </div>
-          {summary ? (
+        <div
+          style={{
+            display: 'flex',
+            flex: 1,
+            flexDirection: 'column',
+            justifyContent: 'center',
+            minHeight: 0,
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div
               style={{
-                display: 'flex',
-                fontSize: OG_TEXT_MIN_PX,
-                lineHeight: 1.3,
-                color: 'rgba(255,255,255,0.82)',
-                maxWidth: 980,
-                maxHeight: Math.round(OG_TEXT_MIN_PX * 1.3 * 2),
-                overflow: 'hidden',
+                ...titleBoxStyle(titleSize),
+                marginBottom: POLL_OG_TITLE_TO_BAR_EXTRA_GAP_PX,
               }}
             >
-              {summary}
+              {title}
             </div>
-          ) : null}
-          {pollResultsBar(totals)}
+            {summary ? (
+              <div
+                style={{
+                  display: 'flex',
+                  fontSize: OG_TEXT_MIN_PX,
+                  lineHeight: 1.3,
+                  color: 'rgba(255,255,255,0.82)',
+                  maxWidth: 980,
+                  maxHeight: Math.round(OG_TEXT_MIN_PX * 1.3 * 2),
+                  overflow: 'hidden',
+                }}
+              >
+                {summary}
+              </div>
+            ) : null}
+            {pollResultsBar(totals)}
+          </div>
         </div>
       </div>
     ),
