@@ -29,11 +29,9 @@ import {
   type ShareChannel,
   type ShareTarget,
 } from '@/lib/share/targets';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { cn } from '@/lib/utils';
 import { canUseNativeShare } from '@/lib/share/native-share';
-
-const FOCUS_RING =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
 const TARGET_ICONS: Record<ShareTarget, IconSvgElement> = {
   facebook: Facebook01Icon,
@@ -67,7 +65,7 @@ export type ShareDialogProps = {
   /** Extra actions under the share options (e.g. embed for polls). */
   extraActions?: ReactNode;
   showPreview?: boolean;
-  /** Stack above reel expanded UI (`z-[400]`). */
+  /** Raise overlay above reel expanded UI (see SHARE_DIALOG_OVERLAY_Z_INDEX). */
   overlayTop?: boolean;
 };
 
@@ -91,6 +89,7 @@ export function ShareDialog({
   const [error, setError] = useState('');
   const dialogInstanceRef = useRef(0);
 
+  // Dialog sets overlay z-index on open; re-apply after paint so share sits above reel expanded UI.
   useEffect(() => {
     if (!open || !overlayTop) return;
     dialogInstanceRef.current += 1;
@@ -194,7 +193,7 @@ export function ShareDialog({
               onClick={() => void copyLink()}
               className={cn(
                 'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors',
-                FOCUS_RING,
+                VURDER_FOCUS_RING,
                 copied
                   ? 'bg-emerald-700 text-white dark:bg-emerald-700 dark:text-white'
                   : 'bg-brand text-brand-foreground hover:bg-brand/90',
@@ -207,7 +206,7 @@ export function ShareDialog({
                   animate={{ scale: 1, opacity: 1, rotate: 0 }}
                   exit={reducedMotion ? undefined : { scale: 0.6, opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 520, damping: 26 }}
-                  className="inline-flex"
+                  className="inline-flex shrink-0"
                 >
                   <HugeiconsIcon
                     icon={copied ? Tick02Icon : Copy01Icon}
@@ -216,7 +215,10 @@ export function ShareDialog({
                   />
                 </motion.span>
               </AnimatePresence>
-              {copied ? 'Lenke kopiert' : 'Kopier lenke'}
+              <span className="grid [&>span]:col-start-1 [&>span]:row-start-1">
+                <span className={cn(!copied && 'invisible')}>Lenke kopiert</span>
+                <span className={cn(copied && 'invisible')}>Kopier lenke</span>
+              </span>
             </button>
           </div>
           <p className="sr-only" role="status" aria-live="polite">
@@ -230,7 +232,7 @@ export function ShareDialog({
             onClick={() => void shareNative()}
             className={cn(
               'flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted',
-              FOCUS_RING,
+              VURDER_FOCUS_RING,
             )}
           >
             <HugeiconsIcon icon={SmartPhone01Icon} className="h-4 w-4" aria-hidden />
@@ -239,7 +241,7 @@ export function ShareDialog({
         ) : null}
 
         <ul
-          className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:justify-items-stretch"
+          className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:justify-items-stretch sm:[&>li:nth-child(5):nth-last-child(3)]:col-start-2"
           aria-label="Del til"
         >
           {SHARE_TARGETS.map((target, index) => {
@@ -266,7 +268,7 @@ export function ShareDialog({
                   rel={newTab ? 'noreferrer noopener' : undefined}
                   className={cn(
                     'group flex min-h-11 w-full flex-col items-center gap-1.5 rounded-xl border border-border bg-card px-2 py-3 text-xs font-medium text-foreground transition-colors hover:bg-muted',
-                    FOCUS_RING,
+                    VURDER_FOCUS_RING,
                     isOrphanMobile && 'max-w-[calc(50%-0.25rem)] sm:max-w-none',
                   )}
                 >
