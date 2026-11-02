@@ -13,6 +13,10 @@ import {
   pollOgImageAltText,
   showPollOgProportionalBar,
 } from '@/lib/polls/share-og-bar';
+import {
+  loadPollOgTitleMeasurer,
+  type PollOgTitleMeasurer,
+} from '@/lib/polls/share-og-title-measure';
 
 export const POLL_OG_CTA_LINE = 'Stem på folkets-meninger.no';
 
@@ -29,7 +33,12 @@ const BAR_SEGMENT_GAP = '2px solid rgba(255,255,255,0.65)';
 const TITLE_MAX_LINES = 2;
 /** Summary only when the title fits on a single line at max size. */
 const SUMMARY_TITLE_MAX_CHARS = 46;
+/** Extra space between the title block and ingress / result bar (added to flex gap). */
+export const POLL_OG_TITLE_TO_BAR_EXTRA_GAP_PX = 12;
+/** Hard limit on raw poll title length before sizing bands. */
+export const POLL_OG_TITLE_RAW_MAX = 130;
 const CARD_PADDING_Y = 44;
+const CARD_PADDING_BOTTOM = 32;
 const CARD_PADDING_X = 64;
 
 /** Muted bar fills when totals are below proportional threshold (no opacity on navy). */
@@ -43,25 +52,63 @@ export function pollOgImageAlt(title: string, totals: PollTotals): string {
   return pollOgImageAltText(title, totals);
 }
 
-function clampText(value: string, max: number): string {
+export function clampPollOgText(value: string, max: number): string {
   const trimmed = value.replace(/\s+/g, ' ').trim();
   if (trimmed.length <= max) return trimmed;
   const cut = trimmed.slice(0, max - 1);
   const lastSpace = cut.lastIndexOf(' ');
-  return `${(lastSpace > 20 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+  const body = (lastSpace > 20 ? cut.slice(0, lastSpace) : cut).trimEnd();
+  if (body.length === 0) return '…';
+  return `${body}…`;
 }
 
-function titleFontSize(length: number): number {
-  if (length <= 48) return OG_TITLE_MAX_PX;
-  if (length <= 90) return 46;
+/** True when clampPollOgText added an ellipsis at a word boundary (not a hard slice). */
+export function pollOgTitleEndsWithWordBoundaryEllipsis(title: string): boolean {
+  if (!title.endsWith('…')) return true;
+  const core = title.slice(0, -1).trimEnd();
+  if (core.length === 0) return false;
+  return !/\s$/.test(core);
+}
+
+export function pickPollOgTitleFontSize(raw: string, measurer: PollOgTitleMeasurer): number {
+  if (raw.length <= 48 && measurer.fitsTwoLines(raw, OG_TITLE_MAX_PX)) return OG_TITLE_MAX_PX;
+  if (measurer.fitsTwoLines(raw, 46)) return 46;
   return 40;
 }
 
-/** Rough two-line capacity at card width (fallback if line-clamp ellipses poorly in Satori). */
-function maxPollTitleChars(fontSize: number): number {
-  if (fontSize >= OG_TITLE_MAX_PX) return 78;
-  if (fontSize >= 46) return 84;
-  return 96;
+export function truncatePollOgTitleToTwoLines(
+  text: string,
+  fontSize: number,
+  measurer: PollOgTitleMeasurer,
+): string {
+  if (measurer.fitsTwoLines(text, fontSize)) return text;
+  for (let max = text.length; max >= 15; max -= 1) {
+    const candidate = clampPollOgText(text, max);
+    if (measurer.fitsTwoLines(candidate, fontSize)) return candidate;
+  }
+  return clampPollOgText(text, 15);
+}
+
+export type PollOgTitleLayout = {
+  fontSize: number;
+  title: string;
+  charCap: number;
+};
+
+export function resolvePollOgTitleDisplayWithMeasurer(
+  rawTitle: string,
+  measurer: PollOgTitleMeasurer,
+): PollOgTitleLayout {
+  const raw = clampPollOgText(rawTitle, POLL_OG_TITLE_RAW_MAX);
+  const fontSize = pickPollOgTitleFontSize(raw, measurer);
+  const title = truncatePollOgTitleToTwoLines(raw, fontSize, measurer);
+  return { fontSize, title, charCap: title.length };
+}
+
+/** Measure with Noto Sans 700 and clamp on word boundaries before Satori line-clamp. */
+export async function resolvePollOgTitleDisplay(rawTitle: string): Promise<PollOgTitleLayout> {
+  const measurer = await loadPollOgTitleMeasurer();
+  return resolvePollOgTitleDisplayWithMeasurer(rawTitle, measurer);
 }
 
 function titleBoxStyle(fontSize: number) {
@@ -89,7 +136,7 @@ function pollResultsBar(totals: PollTotals) {
   const proportional = showPollOgProportionalBar(totals);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div
         style={{
           display: 'flex',
@@ -147,7 +194,7 @@ function pollResultsBar(totals: PollTotals) {
       <div
         style={{
           display: 'flex',
-          marginTop: 8,
+          marginTop: 4,
           fontSize: OG_TEXT_MIN_PX,
           fontWeight: 700,
           color: '#ff9fb1',
@@ -170,11 +217,9 @@ export async function renderPollShareOgImage(
   cacheControl: string = OG_IMAGE_CACHE_CONTROL,
 ): Promise<ImageResponse> {
   const fonts = await loadOgFonts();
-  const rawTitle = clampText(poll.title, 130);
-  const titleSize = titleFontSize(rawTitle.length);
-  const title = clampText(rawTitle, maxPollTitleChars(titleSize));
+  const { fontSize: titleSize, title } = await resolvePollOgTitleDisplay(poll.title);
   const showSummary = title.length <= SUMMARY_TITLE_MAX_CHARS && Boolean(poll.neutralSummary);
-  const summary = showSummary ? clampText(poll.neutralSummary, 88) : '';
+  const summary = showSummary ? clampPollOgText(poll.neutralSummary, 88) : '';
 
   return new ImageResponse(
     (
@@ -184,8 +229,7 @@ export async function renderPollShareOgImage(
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
-          padding: `${CARD_PADDING_Y}px ${CARD_PADDING_X}px`,
+          padding: `${CARD_PADDING_Y}px ${CARD_PADDING_X}px ${CARD_PADDING_BOTTOM}px ${CARD_PADDING_X}px`,
           fontFamily: OG_FONT_FAMILY,
           color: '#ffffff',
           background: 'linear-gradient(135deg, #001a4a 0%, #00205b 55%, #0a3d9e 100%)',
@@ -211,24 +255,41 @@ export async function renderPollShareOgImage(
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, flex: 1, justifyContent: 'center' }}>
-          <div style={titleBoxStyle(titleSize)}>{title}</div>
-          {summary ? (
+        <div
+          style={{
+            display: 'flex',
+            flex: 1,
+            flexDirection: 'column',
+            justifyContent: 'center',
+            minHeight: 0,
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div
               style={{
-                display: 'flex',
-                fontSize: OG_TEXT_MIN_PX,
-                lineHeight: 1.3,
-                color: 'rgba(255,255,255,0.82)',
-                maxWidth: 980,
-                maxHeight: Math.round(OG_TEXT_MIN_PX * 1.3 * 2),
-                overflow: 'hidden',
+                ...titleBoxStyle(titleSize),
+                marginBottom: POLL_OG_TITLE_TO_BAR_EXTRA_GAP_PX,
               }}
             >
-              {summary}
+              {title}
             </div>
-          ) : null}
-          {pollResultsBar(totals)}
+            {summary ? (
+              <div
+                style={{
+                  display: 'flex',
+                  fontSize: OG_TEXT_MIN_PX,
+                  lineHeight: 1.3,
+                  color: 'rgba(255,255,255,0.82)',
+                  maxWidth: 980,
+                  maxHeight: Math.round(OG_TEXT_MIN_PX * 1.3 * 2),
+                  overflow: 'hidden',
+                }}
+              >
+                {summary}
+              </div>
+            ) : null}
+            {pollResultsBar(totals)}
+          </div>
         </div>
       </div>
     ),

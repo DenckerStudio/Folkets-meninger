@@ -1,4 +1,4 @@
-# OG sample images (PR #254)
+# OG sample images (PR #254 / #262)
 
 Generated with `OG_SAMPLE_DIR=docs/og-samples npx tsx scripts/render-og-samples.ts` (asserts 1200×630).
 
@@ -10,7 +10,10 @@ Generated with `OG_SAMPLE_DIR=docs/og-samples npx tsx scripts/render-og-samples.
 | `og-sample-poll-glyphs.png` | æøå ÆØÅ · … |
 | `og-sample-poll-long-title.png` | Lang tittel (2 linjer), uten ingress |
 | `og-sample-poll-long-title-few-votes.png` | Lang tittel + få stemmer |
-| `og-sample-poll-title-85-chars.png` | ~85–90 tegn tittel (2 linjer + …) |
+| `og-sample-poll-title-90-chars.png` | 90 tegn @ 40px (Noto-målt, ordgrense) |
+| `og-sample-poll-title-max-length.png` | 130 tegn rå tittel, clamp på ordgrense |
+| `og-sample-poll-title-worst-aeoeaa.png` | Tett æøå/ÆØÅ + lang tittel |
+| `og-sample-poll-title-long-word.png` | Ekstremt langt ord + ordgrense-ellipsis |
 | `og-sample-poll-short-title-summary.png` | Kort tittel + ingress |
 | `og-sample-blog.png` | Blogg-kort |
 | `og-sample-sak.png` | Stortingssak-kort |

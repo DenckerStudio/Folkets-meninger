@@ -1,0 +1,171 @@
+import assert from 'node:assert/strict';
+import React from 'react';
+import { test } from 'node:test';
+import type { PollRecord } from '@/lib/polls/types';
+import {
+  OG_IMAGE_SIZE,
+  POLL_OG_TITLE_RAW_MAX,
+  POLL_OG_TITLE_TO_BAR_EXTRA_GAP_PX,
+  clampPollOgText,
+  pollOgTitleEndsWithWordBoundaryEllipsis,
+  renderPollShareOgImage,
+  resolvePollOgTitleDisplay,
+  resolvePollOgTitleDisplayWithMeasurer,
+} from '@/lib/polls/share-og';
+import {
+  isNotDefGlyph,
+  loadPollOgTitleMeasurer,
+  loadPollOgTitleMeasurerFonts,
+  resetPollOgTitleMeasurerCacheForTests,
+} from '@/lib/polls/share-og-title-measure';
+
+(globalThis as typeof globalThis & { React: typeof React }).React = React;
+
+const TITLE_84_CHARS =
+  'Skal staten innføre nye avgiftsregler for næringsliv og privatpersoner i hele landet';
+
+const TITLE_90_CHARS =
+  'Skal staten innføre nye avgiftsregler for næringsliv og privatpersoner i hele landet snart';
+
+const TITLE_ALL_CAPS =
+  'SKAL STATEN INNFØRE NYE AVGIFTSREGLER FOR NÆRINGSLIV OG PRIVATPERSONER I HELE LANDET SNART';
+
+const TITLE_WORST_AEOEAA =
+  'Bør æøå ÆØÅ innføre nye avgiftsregler for næringsliv og privatpersoner i hele landet snart';
+
+const TITLE_LONG_WORD = `Skal ${'M'.repeat(120)} vurderes av Stortinget?`;
+
+const TITLE_MAX_RAW = 'W'.repeat(POLL_OG_TITLE_RAW_MAX);
+
+const MEASURED_STRINGS = [
+  TITLE_84_CHARS,
+  TITLE_90_CHARS,
+  TITLE_ALL_CAPS,
+  TITLE_WORST_AEOEAA,
+  TITLE_LONG_WORD,
+  TITLE_MAX_RAW,
+  'æøå ÆØÅ',
+];
+
+async function withMeasurer() {
+  resetPollOgTitleMeasurerCacheForTests();
+  return loadPollOgTitleMeasurer();
+}
+
+function assertMeasuredTwoLineTitle(
+  measurer: Awaited<ReturnType<typeof withMeasurer>>,
+  layout: { fontSize: number; title: string },
+) {
+  assert.ok(
+    measurer.fitsTwoLines(layout.title, layout.fontSize),
+    `title must fit on 2 lines at ${layout.fontSize}px: ${JSON.stringify(layout.title)} (lines=${measurer.lineCount(layout.title, layout.fontSize)})`,
+  );
+  assert.ok(
+    pollOgTitleEndsWithWordBoundaryEllipsis(layout.title),
+    `title ellipsis must be on word boundary: ${JSON.stringify(layout.title)}`,
+  );
+  if (layout.title.endsWith('…')) {
+    assert.match(layout.title, /\S…$/);
+  }
+  assert.ok(!measurer.hasNotDefGlyph(layout.title));
+}
+
+test('title-to-bar spacing constant is within requested 8–16px band', () => {
+  assert.equal(POLL_OG_TITLE_TO_BAR_EXTRA_GAP_PX, 12);
+});
+
+test('dual-font measurer uses latin-700 widths (not .notdef counting)', async () => {
+  const measurer = await withMeasurer();
+  const { latin700, latinExt700 } = await loadPollOgTitleMeasurerFonts();
+
+  assert.ok(measurer.measureWidth('iiii', 46) < measurer.measureWidth('MMMM', 46));
+
+  for (const sample of MEASURED_STRINGS) {
+    assert.ok(!measurer.hasNotDefGlyph(sample), `unexpected .notdef in ${JSON.stringify(sample)}`);
+  }
+
+  for (const char of 'æøåÆØÅ') {
+    assert.ok(!isNotDefGlyph(latin700, char), `${char} should exist in latin-700`);
+    assert.ok(isNotDefGlyph(latinExt700, char), `${char} should not be measured from latin-ext alone`);
+  }
+
+  assert.equal(TITLE_84_CHARS.length, 84);
+  assert.ok(measurer.fitsTwoLines(TITLE_84_CHARS, 46));
+  assert.ok(!measurer.fitsTwoLines(TITLE_ALL_CAPS, 46));
+});
+
+test('84-, 90-, caps, max-length, æøå and long-word titles resolve on word boundaries', async () => {
+  const measurer = await withMeasurer();
+
+  for (const raw of [
+    TITLE_84_CHARS,
+    TITLE_90_CHARS,
+    TITLE_ALL_CAPS,
+    TITLE_MAX_RAW,
+    TITLE_WORST_AEOEAA,
+    TITLE_LONG_WORD,
+  ]) {
+    const layout = resolvePollOgTitleDisplayWithMeasurer(raw, measurer);
+    assertMeasuredTwoLineTitle(measurer, layout);
+  }
+
+  const at84 = resolvePollOgTitleDisplayWithMeasurer(TITLE_84_CHARS, measurer);
+  assert.equal(at84.fontSize, 46);
+  assert.equal(at84.title, TITLE_84_CHARS);
+
+  const caps = resolvePollOgTitleDisplayWithMeasurer(TITLE_ALL_CAPS, measurer);
+  assert.equal(caps.fontSize, 40);
+  assert.ok(caps.title.endsWith('…'));
+
+  const at90 = resolvePollOgTitleDisplayWithMeasurer(TITLE_90_CHARS, measurer);
+  assert.equal(at90.fontSize, 40);
+
+  const maxRaw = resolvePollOgTitleDisplayWithMeasurer(TITLE_MAX_RAW, measurer);
+  assert.ok(maxRaw.title.endsWith('…'));
+});
+
+test('clampPollOgText adds ellipsis on hard cut (no spaces)', () => {
+  assert.ok(clampPollOgText('W'.repeat(130), 40).endsWith('…'));
+  const long = `${'Skal staten '.repeat(20)}avslutning`;
+  const clamped = clampPollOgText(long, 96);
+  assert.ok(pollOgTitleEndsWithWordBoundaryEllipsis(clamped));
+  assert.ok(clamped.endsWith('…'));
+});
+
+test('sample titles render 1200×630 OG PNGs', async () => {
+  for (const [id, title] of [
+    ['og-title-84', TITLE_84_CHARS],
+    ['og-title-90', TITLE_90_CHARS],
+    ['og-title-caps', TITLE_ALL_CAPS],
+    ['og-title-max', TITLE_MAX_RAW],
+    ['og-title-aegoesaa', TITLE_WORST_AEOEAA],
+    ['og-title-long-word', TITLE_LONG_WORD],
+  ] as const) {
+    const layout = await resolvePollOgTitleDisplay(title);
+    const measurer = await withMeasurer();
+    assertMeasuredTwoLineTitle(measurer, layout);
+
+    const poll: PollRecord = {
+      id,
+      track: 'system',
+      status: 'open',
+      title,
+      neutralSummary: 'Skjult ingress.',
+      sourceUrls: [],
+      stortingetIssueId: '103102',
+      citizenInitiativeId: null,
+      opensAt: null,
+      closesAt: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      expiredAt: null,
+      restoredAt: null,
+      generationMetadata: {},
+    };
+
+    const response = await renderPollShareOgImage(poll, { nei: 12, blank: 3, ja: 45, total: 60 });
+    const buffer = Buffer.from(await response.arrayBuffer());
+    assert.equal(buffer.readUInt32BE(16), OG_IMAGE_SIZE.width);
+    assert.equal(buffer.readUInt32BE(20), OG_IMAGE_SIZE.height);
+  }
+});
