@@ -1,6 +1,6 @@
 import type { ResearchBriefKind } from '@/lib/admin/research/types';
 
-export const RESEARCH_API_ACTIONS = ['deepen', 'blog', 'reel'] as const;
+export const RESEARCH_API_ACTIONS = ['deepen', 'blog'] as const;
 
 export type ResearchApiAction = (typeof RESEARCH_API_ACTIONS)[number];
 
@@ -14,8 +14,6 @@ export function researchApiActionToKind(action: ResearchApiAction): ResearchBrie
       return 'deepen';
     case 'blog':
       return 'blog';
-    case 'reel':
-      return 'reel';
     default: {
       const _exhaustive: never = action;
       return _exhaustive;
@@ -29,8 +27,6 @@ export function researchWebhookPathForAction(action: ResearchApiAction): string 
       return 'research-utdyp';
     case 'blog':
       return 'blogg-fra-research';
-    case 'reel':
-      return 'reel-fra-research';
     default: {
       const _exhaustive: never = action;
       return _exhaustive;

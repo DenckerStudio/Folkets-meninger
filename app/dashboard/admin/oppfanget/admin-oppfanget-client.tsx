@@ -31,19 +31,24 @@ import {
   OPPFANGET_PIPELINE_EMPTY_TITLE,
   shouldShowOppfangetFilterEmpty,
   shouldShowOppfangetPipelineEmpty,
+  shouldShowOppfangetRedditTypeEmpty,
+  OPPFANGET_REDDIT_EMPTY_DESCRIPTION,
+  OPPFANGET_REDDIT_EMPTY_TITLE,
 } from '@/lib/admin/oppfanget/view-state';
 import {
   OppfangetDesktopTable,
   OppfangetMobileCards,
 } from './oppfanget-row-views';
+import { cn } from '@/lib/utils';
 
 const TYPE_OPTIONS: { value: '' | OppfangetDisplayType; label: string }[] = [
   { value: '', label: 'Alle typer' },
   { value: 'melding', label: OPPFANGET_DISPLAY_TYPE_LABELS.melding },
-  { value: 'opprop', label: OPPFANGET_DISPLAY_TYPE_LABELS.opprop },
-  { value: 'aksjon', label: OPPFANGET_DISPLAY_TYPE_LABELS.aksjon },
-  { value: 'boikott', label: OPPFANGET_DISPLAY_TYPE_LABELS.boikott },
+  { value: 'reddit', label: OPPFANGET_DISPLAY_TYPE_LABELS.reddit },
 ];
+
+/** Skjul type-filter når bare én konkret type finnes (behold logikk for flere typer senere). */
+const SHOW_OPPFANGET_TYPE_FILTER = TYPE_OPTIONS.filter((opt) => opt.value !== '').length > 1;
 
 const STATUS_OPTIONS: { value: OppfangetStatusFilter; label: string }[] = [
   { value: '', label: 'Alle statuser' },
@@ -117,20 +122,33 @@ function OppfangetPageHeader({ previewMock }: { previewMock?: boolean }) {
   );
 }
 
-function ResearchWebhookNotice({ configured }: { configured: boolean }) {
+function ResearchWebhookNotice({
+  configured,
+  missingEnvKeys,
+}: {
+  configured: boolean;
+  missingEnvKeys: string[];
+}) {
   if (configured) return null;
+  const names =
+    missingEnvKeys.length > 0
+      ? missingEnvKeys
+      : ['N8N_RESEARCH_WEBHOOK_BASE', 'N8N_RESEARCH_WEBHOOK_SECRET', 'N8N_RESEARCH_WEBHOOK_TOKEN'];
   return (
     <div
       className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-foreground"
       role="status"
     >
-      <p className="font-medium">Research-knapper krever n8n</p>
+      <p className="font-medium">Research-knapper krever n8n-oppsett</p>
       <p className="mt-1 text-muted-foreground">
-        Utdyp, blogg og Reel starter webhook-arbeidsflyter. Sett{' '}
-        <code className="text-xs">N8N_RESEARCH_WEBHOOK_BASE</code>,{' '}
-        <code className="text-xs">N8N_RESEARCH_WEBHOOK_SECRET</code> og{' '}
-        <code className="text-xs">N8N_RESEARCH_WEBHOOK_TOKEN</code> på fm-web, og aktiver{' '}
-        research-utdyp, blogg-fra-research og reel-fra-research i n8n (ikke dryRun).
+        Utdyp og blogg starter webhook-arbeidsflyter. Sett{' '}
+        {names.map((key, index) => (
+          <span key={key}>
+            {index > 0 ? (index === names.length - 1 ? ' og ' : ', ') : null}
+            <code className="text-xs">{key}</code>
+          </span>
+        ))}{' '}
+        på fm-web, og aktiver research-utdyp og blogg-fra-research i n8n (ikke dryRun).
       </p>
     </div>
   );
@@ -143,6 +161,7 @@ export default function AdminOppfangetClient({
   adminUserId,
   initialResearchBriefsByCluster = {},
   researchWebhooksConfigured = true,
+  missingResearchWebhookEnvKeys = [],
 }: {
   initialData?: OppfangetListResponse | null;
   initialFilters?: OppfangetFilterInput;
@@ -151,6 +170,7 @@ export default function AdminOppfangetClient({
   adminUserId?: string;
   initialResearchBriefsByCluster?: Record<string, ResearchBriefsByKind>;
   researchWebhooksConfigured?: boolean;
+  missingResearchWebhookEnvKeys?: string[];
 }) {
   const router = useRouter();
   const [data, setData] = useState<OppfangetListResponse | null>(initialData);
@@ -294,23 +314,35 @@ export default function AdminOppfangetClient({
   return (
     <div className="space-y-6" lang="nb-NO">
       <OppfangetPageHeader previewMock={data?.previewMock} />
-      {!mockMode ? <ResearchWebhookNotice configured={researchWebhooksConfigured} /> : null}
+      {!mockMode ? (
+        <ResearchWebhookNotice
+          configured={researchWebhooksConfigured}
+          missingEnvKeys={missingResearchWebhookEnvKeys}
+        />
+      ) : null}
 
       {data ? <StatusPills counts={data.counts} filteredTotal={rows.length} /> : null}
 
-      <div className="grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-3">
-        <label className="space-y-1 text-sm">
-          <span className="text-muted-foreground">Type</span>
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value as '' | OppfangetDisplayType)}
-            className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-          >
-            {TYPE_OPTIONS.map((opt) => (
-              <option key={opt.label} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </label>
+      <div
+        className={cn(
+          'grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2',
+          SHOW_OPPFANGET_TYPE_FILTER ? 'lg:grid-cols-3 xl:grid-cols-6' : 'lg:grid-cols-5',
+        )}
+      >
+        {SHOW_OPPFANGET_TYPE_FILTER ? (
+          <label className="space-y-1 text-sm">
+            <span className="text-muted-foreground">Type</span>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value as '' | OppfangetDisplayType)}
+              className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            >
+              {TYPE_OPTIONS.map((opt) => (
+                <option key={opt.label} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <label className="space-y-1 text-sm">
           <span className="text-muted-foreground">Status</span>
           <select
@@ -376,7 +408,15 @@ export default function AdminOppfangetClient({
         </p>
       ) : null}
 
-      {shouldShowOppfangetFilterEmpty(data, filters, pending) ? (
+      {shouldShowOppfangetRedditTypeEmpty(data, filters, pending) ? (
+        <EmptyState
+          title={OPPFANGET_REDDIT_EMPTY_TITLE}
+          description={OPPFANGET_REDDIT_EMPTY_DESCRIPTION}
+        />
+      ) : null}
+
+      {shouldShowOppfangetFilterEmpty(data, filters, pending) &&
+      !shouldShowOppfangetRedditTypeEmpty(data, filters, pending) ? (
         <EmptyState
           title={OPPFANGET_FILTER_EMPTY_TITLE}
           description={OPPFANGET_FILTER_EMPTY_DESCRIPTION}

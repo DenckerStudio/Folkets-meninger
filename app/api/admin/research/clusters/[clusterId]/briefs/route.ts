@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
-import { getResearchBriefsByKindForCluster } from '@/lib/admin/research/service';
+import { fetchResearchClusterBriefsForPoll } from '@/lib/admin/research/cluster-briefs-for-poll';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +19,6 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Ugyldig forespørsel' }, { status: 400 });
   }
 
-  const briefsByKind = await getResearchBriefsByKindForCluster(clusterId.trim());
+  const briefsByKind = await fetchResearchClusterBriefsForPoll(clusterId.trim());
   return NextResponse.json({ briefs_by_kind: briefsByKind });
 }

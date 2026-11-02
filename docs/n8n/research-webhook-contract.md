@@ -1,4 +1,4 @@
-# n8n — Research-webhook (utdyp / blogg / Reel)
+# n8n — Research-webhook (utdyp / blogg)
 
 Kontrakt mellom fm-web admin Research og n8n. Resultat skrives til `public.research_briefs` via PostgREST-RPC med **service_role** (credential «Folkets Stemme Self-hosted»).
 
@@ -10,16 +10,16 @@ Miljø på **fm-web** (Coolify):
 | `N8N_RESEARCH_WEBHOOK_SECRET` | HMAC-nøkkel for `X-FM-Signature` (aldri logg eller vis) |
 | `N8N_RESEARCH_WEBHOOK_TOKEN` | **Egen** statisk token for `X-FM-Webhook-Token` — ikke samme verdi som `N8N_RESEARCH_WEBHOOK_SECRET`. Brukes i n8n Webhook Header Auth (uten env i Code-noder). Aldri logg. |
 
-Mangler base, secret eller token: fm-web **kaller ikke** webhook; brief settes til `failed` med generisk `error=arbeidsflyt_utilgjengelig`.
+Mangler base, secret eller token: fm-web **kaller ikke** webhook; brief settes til `failed` med `error=arbeidsflyt_utilgjengelig`. API returnerer **503** med kode `research_webhook_not_configured` og navn på manglende env-nøkler (aldri verdier).
 
 ## Utkøring fra admin
 
-`POST /api/admin/research/{clusterId}/{action}` med `action` ∈ `deepen` | `blog` | `reel`.
+`POST /api/admin/research/{clusterId}/{action}` med `action` ∈ `deepen` | `blog`. Ugyldig action (f.eks. `reel`) → **400**.
 
 1. Kjører `research_briefs_expire_stale` (standard 30 min) slik at gamle `queued`/`running` blir `failed` med `error=tidsavbrudd`.
 2. Oppretter rad i `research_briefs` (`status=queued`, ny `request_id`) hvis ingen aktiv jobb for samme klynge+kind.
 3. POST til n8n (se under).
-4. Ved webhook-feil: `status=failed`, fm-web returnerer **502**.
+4. Ved webhook-feil: `status=failed`, fm-web returnerer stabil `error`-kode + norsk `message` (typisk **502**, **503** ved manglende env, **504** ved timeout).
 
 **Utløpte jobber:** fm-web kaller `research_briefs_expire_stale` kun ved **ny bestilling** (steg 1). Lesing av Research-liste og klynge-detalj gjør **ikke** expire. n8n skal kjøre `research_briefs_expire_stale` på **fast schedule** (anbefalt hvert **10. minutt**, `p_minutes: 30`) med service_role.
 
@@ -31,7 +31,8 @@ Mangler base, secret eller token: fm-web **kaller ikke** webhook; brief settes t
 |-----------------|------|
 | deepen | `research-utdyp` |
 | blog | `blogg-fra-research` |
-| reel | `reel-fra-research` |
+
+(`reel-fra-research` er pensjonert; `kind=reel` kan fortsatt finnes i eldre rader i databasen.)
 
 ## Signatur og auth
 
@@ -72,7 +73,7 @@ Felter felles for alle `kind`:
 }
 ```
 
-For **`kind` blog og reel** legges til:
+For **`kind` blog** legges til:
 
 | Felt | Type | Beskrivelse |
 |------|------|-------------|

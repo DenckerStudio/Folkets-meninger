@@ -67,6 +67,20 @@ const counts = countOppfangetStatuses(rows);
 assert.equal(counts.under_terskel, 1);
 assert.equal(counts.oppfanget, 1);
 
+const withReddit = [
+  ...rows,
+  {
+    id: 'r1',
+    title: 'Reddit tråd',
+    rowKind: 'reddit' as const,
+    displayType: 'reddit' as const,
+    subreddit: 'norge' as const,
+    firstSeenAt: '2026-10-19T08:00:00.000Z',
+    lastSeenAt: '2026-10-19T09:00:00.000Z',
+  },
+];
+assert.equal(countOppfangetStatuses(withReddit).oppfanget, 2);
+
 const oppfangetDisplay = filterOppfangetRows(rows, { status: 'oppfanget' });
 assert.equal(oppfangetDisplay.some((r) => r.id === '3'), false);
 

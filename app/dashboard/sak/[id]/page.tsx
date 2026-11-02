@@ -14,6 +14,12 @@ import { BackButton } from '@/components/dashboard/back-button';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { routes } from '@/lib/routes';
+import { getServerSupabase } from '@/lib/supabase-server';
+import { isAdmin } from '@/lib/admin/gate';
+import { listPollsForStortingetIssueAdmin } from '@/lib/polls/stortinget-poll-admin-data';
+import { resolveStortingetPollAdminUiState } from '@/lib/polls/stortinget-poll-admin-guard';
+import { getStortingetSakUrl } from '@/lib/stortinget-horinger';
+import { publicSakSummaryLead } from '@/lib/ai-summary/sak-summary-fetch';
 import { readAiSummaryFromDb } from '@/lib/ai-summary/service';
 import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
@@ -27,6 +33,7 @@ import { ImpactCalculator } from '@/components/sak/impact-calculator';
 import { AlignmentScore } from '@/components/sak/alignment-score';
 import { KnowledgeQuiz } from '@/components/sak/knowledge-quiz';
 import { SakMeningerSection } from '@/components/sak/sak-meninger-section';
+import { StortingetPollAdminSection } from '@/components/sak/stortinget-poll-admin-section';
 import StanceSection from './stance-section';
 import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
@@ -221,6 +228,17 @@ export default async function SakPage({
   const officialDescription = (detailedContent?.tittel || sak.summary || '').trim();
   const descriptionToShow =
     officialDescription && officialDescription !== officialTitle ? officialDescription : '';
+
+  const supabase = await getServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const viewerIsAdmin = user ? await isAdmin(user.id, user.email) : false;
+  const stortingetPollAdminState = viewerIsAdmin
+    ? resolveStortingetPollAdminUiState(await listPollsForStortingetIssueAdmin(sak.id))
+    : { kind: 'create' as const };
+  const pollDefaultNeutralSummary =
+    (publicSakSummaryLead(storedSummary) ?? descriptionToShow.trim()) || '';
 
   const treatmentStatus = sak.status;
 
@@ -448,6 +466,16 @@ export default async function SakPage({
             ) : null}
 
             <KnowledgeQuiz sakId={sak.id} variant="pre-vote" />
+
+            {viewerIsAdmin ? (
+              <StortingetPollAdminSection
+                sakId={sak.id}
+                sakTitle={officialTitle}
+                defaultNeutralSummary={pollDefaultNeutralSummary}
+                stortingetPageUrl={getStortingetSakUrl(sak.id)}
+                adminState={stortingetPollAdminState}
+              />
+            ) : null}
 
             <StanceSection
               sakId={sak.id}

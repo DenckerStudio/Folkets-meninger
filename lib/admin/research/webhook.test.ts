@@ -11,7 +11,6 @@ assert.equal(isResearchApiAction('nope'), false);
 
 assert.equal(researchWebhookPathForAction('deepen'), 'research-utdyp');
 assert.equal(researchWebhookPathForAction('blog'), 'blogg-fra-research');
-assert.equal(researchWebhookPathForAction('reel'), 'reel-fra-research');
 
 const sig = signResearchWebhookPayload('test-secret', '1700000000', '{"a":1}');
 assert.match(sig, /^sha256=[a-f0-9]{64}$/);

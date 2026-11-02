@@ -16,14 +16,22 @@ import {
 import type {
   ActionClusterDbStatus,
   ActionTypeDb,
+  OppfangetClusterRow,
   OppfangetListResponse,
+  OppfangetRedditRow,
   OppfangetRow,
   OppfangetScale,
   OppfangetSourceRow,
 } from '@/lib/admin/oppfanget/types';
 import { normalizeSeenAtRange } from '@/lib/admin/oppfanget/format-seen-dates';
+import { filterOppfangetRowsForResearchList } from '@/lib/admin/oppfanget/excluded-from-research-list';
 import { sortOppfangetSources } from '@/lib/admin/oppfanget/source-display';
 import type { OppfangetSourceType } from '@/lib/admin/oppfanget/types';
+import {
+  mapRedditSignalToOppfangetRow,
+  REDDIT_SIGNALS_LIST_LIMIT,
+  type RedditSignalDbRow,
+} from '@/lib/reddit-signals/admin-map';
 import { getServiceSupabase } from '@/lib/supabase';
 
 type ClusterRow = {
@@ -68,6 +76,109 @@ function isMissingTableError(error: { code?: string; message?: string } | null):
   return /action_clusters|does not exist|undefined_table/i.test(error.message ?? '');
 }
 
+function isMissingRedditTableError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  if (error.code === '42P01') return true;
+  return /reddit_signals|does not exist|undefined_table/i.test(error.message ?? '');
+}
+
+async function loadRedditSignalsForAdmin(): Promise<OppfangetRedditRow[]> {
+  const service = getServiceSupabase();
+  const { data, error } = await service
+    .from('reddit_signals')
+    .select(
+      'id, reddit_id, subreddit, title, url, score, num_comments, contention, posted_at, snapshot_at, first_seen_at, last_seen_at, topic, related_issue_id, related_similarity',
+    )
+    .order('last_seen_at', { ascending: false })
+    .limit(REDDIT_SIGNALS_LIST_LIMIT);
+
+  if (error) {
+    if (isMissingRedditTableError(error)) {
+      return [];
+    }
+    throw error;
+  }
+
+  let rows = ((data ?? []) as RedditSignalDbRow[]).map(mapRedditSignalToOppfangetRow);
+  const issueIds = [
+    ...new Set(
+      rows
+        .map((row) => row.relatedIssueId)
+        .filter((id): id is string => Boolean(id?.trim())),
+    ),
+  ];
+  if (issueIds.length === 0) {
+    return rows;
+  }
+
+  const { data: issues, error: issueError } = await service
+    .from('stortinget_issues')
+    .select('id, title')
+    .in('id', issueIds);
+
+  if (issueError) {
+    return rows;
+  }
+
+  const titleById = new Map<string, string | null>();
+  for (const issue of issues ?? []) {
+    if (typeof issue.id === 'string') {
+      titleById.set(issue.id, typeof issue.title === 'string' ? issue.title : null);
+    }
+  }
+
+  rows = rows.map((row) => {
+    if (!row.relatedIssueId) return row;
+    return {
+      ...row,
+      relatedIssueTitle: titleById.get(row.relatedIssueId) ?? null,
+    };
+  });
+
+  return rows;
+}
+
+function sortOppfangetRowsByLastSeen(rows: OppfangetRow[]): OppfangetRow[] {
+  return rows.slice().sort((a, b) => {
+    const aTime = new Date(a.lastSeenAt).getTime();
+    const bTime = new Date(b.lastSeenAt).getTime();
+    if (bTime !== aTime) return bTime - aTime;
+    return a.id.localeCompare(b.id);
+  });
+}
+
+function toFilterableFromOppfangetRow(row: OppfangetRow, metadata: Record<string, unknown> | null) {
+  if (row.rowKind === 'reddit') {
+    return {
+      id: row.id,
+      title: row.title,
+      rowKind: 'reddit' as const,
+      displayType: 'reddit' as const,
+      subreddit: row.subreddit,
+      firstSeenAt: row.firstSeenAt,
+      lastSeenAt: row.lastSeenAt,
+    };
+  }
+  return {
+    id: row.id,
+    title: row.title,
+    rowKind: 'cluster' as const,
+    actionType: row.actionType,
+    clusterStatus: row.clusterStatus,
+    pollStatus: row.pollStatus,
+    metadata,
+    sources: row.sources.map((s) => ({
+      publisher: s.publisher,
+      signalOnly: s.signalOnly,
+      title: s.title,
+      sourceType: s.sourceType,
+      url: s.url,
+    })),
+    firstSeenAt: row.firstSeenAt,
+    lastSeenAt: row.lastSeenAt,
+  };
+}
+
 function parseBestScale(raw: Record<string, unknown> | null): OppfangetScale | null {
   if (!raw || typeof raw !== 'object') return null;
   const value = typeof raw.value === 'number' ? raw.value : null;
@@ -88,106 +199,17 @@ function parseBestScale(raw: Record<string, unknown> | null): OppfangetScale | n
   return { value, unit, sourceUrl, asOf };
 }
 
-export function mapClusterToRow(
-  cluster: ClusterRow,
-  sources: SourceRow[],
-  pollStatus: string | null,
-): OppfangetRow {
-  const sourceRows: OppfangetSourceRow[] = sortOppfangetSources(
-    sources.map((s) => ({
-      id: s.id,
-      url: s.url_canonical,
-      publisher: s.publisher,
-      signalOnly: s.signal_only,
-      title: s.title,
-      sourceType: parseSourceType(s.source_type),
-    })),
-  );
-  const sourcesSignalOnly = sourceRows.length > 0 && sourceRows.every((s) => s.signalOnly);
-  const hasNonSignalSource = sourceRows.some((s) => !s.signalOnly);
-  const isSignal = inferIsSignalRow({
-    clusterStatus: cluster.status,
-    metadata: cluster.metadata,
-    sourcesSignalOnly,
-    hasNonSignalSource,
-  });
+const OPPFANGET_CLUSTER_BATCH_SIZE = 500;
+const OPPFANGET_CLUSTER_MAX_BATCHES = 5;
+const OPPFANGET_RESEARCH_VISIBLE_TARGET = 500;
 
-  const seen = normalizeSeenAtRange(cluster.first_seen_at, cluster.last_seen_at);
-
-  return {
-    id: cluster.id,
-    title: cluster.action_name,
-    actionType: cluster.action_type,
-    clusterStatus: cluster.status,
-    displayType: mapActionTypeToDisplayType(cluster.action_type, { isSignal }),
-    displayStatus: mapClusterAndPollToDisplayStatus(cluster.status, pollStatus),
-    sources: sourceRows,
-    firstSeenAt: seen.firstSeenAt,
-    lastSeenAt: seen.lastSeenAt,
-    scale: parseBestScale(cluster.best_scale),
-    confidence: cluster.max_confidence,
-    sensitive: Boolean(cluster.sensitive_category),
-    sensitiveCategory: cluster.sensitive_category,
-    pollId: cluster.poll_id,
-    pollStatus,
-  };
-}
-
-export async function listOppfangetForAdmin(
-  filters: OppfangetFilterInput,
-  previewParam?: string | null,
-): Promise<OppfangetListResponse> {
-  if (isOppfangetEmptyPreviewAllowed(previewParam)) {
-    return {
-      rows: [],
-      counts: {
-        oppfanget: 0,
-        under_terskel: 0,
-        utkast_laget: 0,
-        publisert: 0,
-        avvist: 0,
-      },
-      tableMissing: false,
-      tableMissingMessage: null,
-      previewMock: false,
-    };
-  }
-
-  if (isOppfangetMockPreviewAllowed(previewParam)) {
-    return listOppfangetMockFiltered(filters);
-  }
-
-  const service = getServiceSupabase();
-
-  const { data: clusters, error: clusterError } = await service
-    .from('action_clusters')
-    .select(
-      'id, action_name, action_type, status, sensitive_category, max_confidence, best_scale, first_seen_at, last_seen_at, poll_id, metadata',
-    )
-    .order('last_seen_at', { ascending: false })
-    .limit(500);
-
-  if (clusterError) {
-    if (isMissingTableError(clusterError)) {
-      return {
-        rows: [],
-        counts: {
-          oppfanget: 0,
-          under_terskel: 0,
-          utkast_laget: 0,
-          publisert: 0,
-          avvist: 0,
-        },
-        tableMissing: true,
-        tableMissingMessage:
-          'Research-listen er ikke klar i databasen ennå. En administrator må kjøre den ventende databasemigrasjonen før nye signaler kan vises her.',
-        previewMock: false,
-      };
-    }
-    throw clusterError;
-  }
-
-  const clusterList = (clusters ?? []) as ClusterRow[];
+async function loadSourcesAndPollStatusForClusters(
+  service: ReturnType<typeof getServiceSupabase>,
+  clusterList: ClusterRow[],
+): Promise<{
+  sourcesByCluster: Map<string, SourceRow[]>;
+  pollStatusById: Map<string, string>;
+}> {
   const clusterIds = clusterList.map((c) => c.id);
   const pollIds = clusterList.map((c) => c.poll_id).filter((id): id is string => Boolean(id));
 
@@ -219,6 +241,14 @@ export async function listOppfangetForAdmin(
     sourcesByCluster.set(source.cluster_id, list);
   }
 
+  return { sourcesByCluster, pollStatusById };
+}
+
+function mapClustersToResearchRows(
+  clusterList: ClusterRow[],
+  sourcesByCluster: Map<string, SourceRow[]>,
+  pollStatusById: Map<string, string>,
+): OppfangetRow[] {
   const allRows = clusterList.map((cluster) =>
     mapClusterToRow(
       cluster,
@@ -226,28 +256,166 @@ export async function listOppfangetForAdmin(
       cluster.poll_id ? pollStatusById.get(cluster.poll_id) ?? null : null,
     ),
   );
+  return filterOppfangetRowsForResearchList(allRows);
+}
 
-  const filterable = allRows.map((row) => ({
-    id: row.id,
-    title: row.title,
-    actionType: row.actionType,
-    clusterStatus: row.clusterStatus,
-    pollStatus: row.pollStatus,
-    metadata: clusterList.find((c) => c.id === row.id)?.metadata ?? null,
-    sources: row.sources.map((s) => ({
+export function mapClusterToRow(
+  cluster: ClusterRow,
+  sources: SourceRow[],
+  pollStatus: string | null,
+): OppfangetClusterRow {
+  const sourceRows: OppfangetSourceRow[] = sortOppfangetSources(
+    sources.map((s) => ({
+      id: s.id,
+      url: s.url_canonical,
       publisher: s.publisher,
-      signalOnly: s.signalOnly,
+      signalOnly: s.signal_only,
       title: s.title,
-      sourceType: s.sourceType,
-      url: s.url,
+      sourceType: parseSourceType(s.source_type),
     })),
-    firstSeenAt: row.firstSeenAt,
-    lastSeenAt: row.lastSeenAt,
-  }));
+  );
+  const sourcesSignalOnly = sourceRows.length > 0 && sourceRows.every((s) => s.signalOnly);
+  const hasNonSignalSource = sourceRows.some((s) => !s.signalOnly);
+  const isSignal = inferIsSignalRow({
+    clusterStatus: cluster.status,
+    metadata: cluster.metadata,
+    sourcesSignalOnly,
+    hasNonSignalSource,
+  });
+
+  const seen = normalizeSeenAtRange(cluster.first_seen_at, cluster.last_seen_at);
+
+  return {
+    rowKind: 'cluster',
+    id: cluster.id,
+    title: cluster.action_name,
+    actionType: cluster.action_type,
+    clusterStatus: cluster.status,
+    displayType: mapActionTypeToDisplayType(cluster.action_type, { isSignal }) as OppfangetClusterRow['displayType'],
+    displayStatus: mapClusterAndPollToDisplayStatus(cluster.status, pollStatus),
+    sources: sourceRows,
+    firstSeenAt: seen.firstSeenAt,
+    lastSeenAt: seen.lastSeenAt,
+    scale: parseBestScale(cluster.best_scale),
+    confidence: cluster.max_confidence,
+    sensitive: Boolean(cluster.sensitive_category),
+    sensitiveCategory: cluster.sensitive_category,
+    pollId: cluster.poll_id,
+    pollStatus,
+  };
+}
+
+export async function listOppfangetForAdmin(
+  filters: OppfangetFilterInput,
+  previewParam?: string | null,
+): Promise<OppfangetListResponse> {
+  if (isOppfangetEmptyPreviewAllowed(previewParam)) {
+    return {
+      rows: [],
+      counts: {
+        oppfanget: 0,
+        under_terskel: 0,
+        utkast_laget: 0,
+        publisert: 0,
+        avvist: 0,
+      },
+      tableMissing: false,
+      tableMissingMessage: null,
+      previewMock: false,
+      redditSignalTotal: 0,
+    };
+  }
+
+  if (isOppfangetMockPreviewAllowed(previewParam)) {
+    return listOppfangetMockFiltered(filters);
+  }
+
+  const service = getServiceSupabase();
+
+  const clusterById = new Map<string, ClusterRow>();
+  const researchRows: OppfangetRow[] = [];
+  const researchRowIds = new Set<string>();
+
+  for (let batchIndex = 0; batchIndex < OPPFANGET_CLUSTER_MAX_BATCHES; batchIndex += 1) {
+    const rangeFrom = batchIndex * OPPFANGET_CLUSTER_BATCH_SIZE;
+    const rangeTo = rangeFrom + OPPFANGET_CLUSTER_BATCH_SIZE - 1;
+
+    const { data: clusters, error: clusterError } = await service
+      .from('action_clusters')
+      .select(
+        'id, action_name, action_type, status, sensitive_category, max_confidence, best_scale, first_seen_at, last_seen_at, poll_id, metadata',
+      )
+      .order('last_seen_at', { ascending: false })
+      .range(rangeFrom, rangeTo);
+
+    if (clusterError) {
+      if (isMissingTableError(clusterError)) {
+        return {
+          rows: [],
+          counts: {
+            oppfanget: 0,
+            under_terskel: 0,
+            utkast_laget: 0,
+            publisert: 0,
+            avvist: 0,
+          },
+          tableMissing: true,
+          tableMissingMessage:
+            'Research-listen er ikke klar i databasen ennå. En administrator må kjøre den ventende databasemigrasjonen før nye signaler kan vises her.',
+          previewMock: false,
+          redditSignalTotal: 0,
+        };
+      }
+      throw clusterError;
+    }
+
+    const clusterList = (clusters ?? []) as ClusterRow[];
+    if (clusterList.length === 0) {
+      break;
+    }
+
+    for (const cluster of clusterList) {
+      clusterById.set(cluster.id, cluster);
+    }
+
+    const { sourcesByCluster, pollStatusById } = await loadSourcesAndPollStatusForClusters(
+      service,
+      clusterList,
+    );
+    const batchResearchRows = mapClustersToResearchRows(
+      clusterList,
+      sourcesByCluster,
+      pollStatusById,
+    );
+
+    for (const row of batchResearchRows) {
+      if (researchRowIds.has(row.id)) continue;
+      researchRowIds.add(row.id);
+      researchRows.push(row);
+      if (researchRows.length >= OPPFANGET_RESEARCH_VISIBLE_TARGET) {
+        break;
+      }
+    }
+
+    if (researchRows.length >= OPPFANGET_RESEARCH_VISIBLE_TARGET) {
+      break;
+    }
+    if (clusterList.length < OPPFANGET_CLUSTER_BATCH_SIZE) {
+      break;
+    }
+  }
+
+  const redditRows = await loadRedditSignalsForAdmin();
+  const redditSignalTotal = redditRows.length;
+  const combinedRows = sortOppfangetRowsByLastSeen([...researchRows, ...redditRows]);
+
+  const filterable = combinedRows.map((row) =>
+    toFilterableFromOppfangetRow(row, clusterById.get(row.id)?.metadata ?? null),
+  );
 
   const counts = countOppfangetStatuses(filterable);
   const filteredIds = new Set(filterOppfangetRows(filterable, filters).map((r) => r.id));
-  const rows = allRows.filter((r) => filteredIds.has(r.id));
+  const rows = combinedRows.filter((r) => filteredIds.has(r.id));
 
   return {
     rows,
@@ -255,5 +423,6 @@ export async function listOppfangetForAdmin(
     tableMissing: false,
     tableMissingMessage: null,
     previewMock: false,
+    redditSignalTotal,
   };
 }

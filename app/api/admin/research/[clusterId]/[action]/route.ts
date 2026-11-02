@@ -60,21 +60,18 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
     if (result.code === 'not_found') {
-      return NextResponse.json({ error: 'Klyngen finnes ikke' }, { status: 404 });
+      return NextResponse.json({ error: 'not_found', message: 'Klyngen finnes ikke' }, { status: 404 });
     }
-    if (result.code === 'not_configured') {
+    if (typeof result.message === 'string' && result.httpStatus) {
       return NextResponse.json(
-        { error: 'Research-webhook er ikke konfigurert' },
-        { status: 503 },
+        { error: result.code, message: result.message },
+        { status: result.httpStatus },
       );
     }
-    if (result.code === 'webhook_failed') {
-      return NextResponse.json(
-        { error: 'Kunne ikke nå research-webhook' },
-        { status: 502 },
-      );
-    }
-    return NextResponse.json({ error: 'Kunne ikke opprette research-oppgave' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'db_error', message: 'Kunne ikke opprette research-oppgave' },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({

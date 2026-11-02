@@ -15,7 +15,9 @@ export type ActionTypeDb =
   | 'innsamling'
   | 'kampanje';
 
-export type OppfangetDisplayType = 'melding' | 'opprop' | 'aksjon' | 'boikott';
+export type OppfangetDisplayType = 'melding' | 'opprop' | 'aksjon' | 'boikott' | 'reddit';
+
+export type RedditSignalSubreddit = 'norge' | 'norske' | 'Nordmenn';
 
 export type OppfangetDisplayStatus =
   | 'oppfanget'
@@ -42,10 +44,11 @@ export type OppfangetScale = {
   asOf: string | null;
 };
 
-export type OppfangetRow = {
+export type OppfangetClusterRow = {
+  rowKind?: 'cluster';
   id: string;
   title: string;
-  displayType: OppfangetDisplayType;
+  displayType: Exclude<OppfangetDisplayType, 'reddit'>;
   displayStatus: OppfangetDisplayStatus;
   clusterStatus: ActionClusterDbStatus;
   actionType: ActionTypeDb;
@@ -60,11 +63,40 @@ export type OppfangetRow = {
   pollStatus: string | null;
 };
 
+export type OppfangetRedditRow = {
+  rowKind: 'reddit';
+  id: string;
+  title: string;
+  displayType: 'reddit';
+  firstSeenAt: string;
+  lastSeenAt: string;
+  subreddit: RedditSignalSubreddit;
+  redditId: string;
+  url: string;
+  score: number;
+  numComments: number;
+  contention: number;
+  postedAt: string;
+  snapshotAt: string;
+  topic: string | null;
+  relatedIssueId: string | null;
+  relatedIssueTitle: string | null;
+  relatedSimilarity: number | null;
+};
+
+export type OppfangetRow = OppfangetClusterRow | OppfangetRedditRow;
+
+export function isOppfangetRedditRow(row: OppfangetRow): row is OppfangetRedditRow {
+  return row.rowKind === 'reddit';
+}
+
 export type OppfangetStatusCounts = Record<OppfangetDisplayStatus, number>;
 
 export type OppfangetListResponse = {
   rows: OppfangetRow[];
   counts: OppfangetStatusCounts;
+  /** Reddit-rader lastet for listen (før filtre), brukes til tom tilstand. */
+  redditSignalTotal: number;
   tableMissing: boolean;
   tableMissingMessage: string | null;
   previewMock: boolean;

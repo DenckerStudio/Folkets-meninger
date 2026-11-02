@@ -1,5 +1,5 @@
 import { mapClusterToRow } from '@/lib/admin/oppfanget/service';
-import type { OppfangetRow } from '@/lib/admin/oppfanget/types';
+import type { OppfangetClusterRow } from '@/lib/admin/oppfanget/types';
 import {
   expireStaleResearchBriefs,
   listResearchBriefsForCluster,
@@ -8,7 +8,7 @@ import type { ResearchBriefRow } from '@/lib/admin/research/types';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export type ResearchClusterDetail = {
-  row: OppfangetRow;
+  row: OppfangetClusterRow;
   briefs: ResearchBriefRow[];
 };
 

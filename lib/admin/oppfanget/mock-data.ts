@@ -5,6 +5,7 @@ export function buildOppfangetMockList(): OppfangetListResponse {
     tableMissing: false,
     tableMissingMessage: null,
     previewMock: true,
+    redditSignalTotal: 0,
     counts: {
       oppfanget: 2,
       under_terskel: 1,
