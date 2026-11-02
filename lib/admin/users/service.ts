@@ -1,12 +1,19 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { isStripeSubscriptionEntitled } from '@/lib/stripe/subscription';
+import {
+  ADMIN_DEACTIVATE_STRIPE_BLOCK_MESSAGE,
+  ADMIN_HARD_DELETE_STRIPE_BLOCK_MESSAGE,
+} from '@/lib/admin/users/constants';
 import type { AdminBulkItemResult, AdminUserListResult, AdminUserRow } from '@/lib/admin/users/types';
 import type { AdminUserBulkBody, AdminUserListQuery, AdminUserPatchBody } from '@/lib/admin/users/schemas';
+
+export type AdminUsersConflictKind = 'stripe_subscription' | 'self' | 'last_admin';
 
 export class AdminUsersServiceError extends Error {
   constructor(
     message: string,
     readonly code: 'not_found' | 'conflict' | 'misconfigured' | 'invalid',
+    readonly conflictKind?: AdminUsersConflictKind,
   ) {
     super(message);
     this.name = 'AdminUsersServiceError';
@@ -31,10 +38,10 @@ function mapRpcError(error: { message?: string }): AdminUsersServiceError {
   const message = error.message ?? '';
   const lower = message.toLowerCase();
   if (lower.includes('cannot modify self')) {
-    return new AdminUsersServiceError('Du kan ikke endre din egen konto', 'conflict');
+    return new AdminUsersServiceError('Du kan ikke endre din egen konto', 'conflict', 'self');
   }
   if (lower.includes('last admin') || lower.includes('siste administrator')) {
-    return new AdminUsersServiceError('Kan ikke fjerne siste administrator', 'conflict');
+    return new AdminUsersServiceError('Kan ikke fjerne siste administrator', 'conflict', 'last_admin');
   }
   if (lower.includes('not found') || lower.includes('user not found')) {
     return new AdminUsersServiceError('Bruker ikke funnet', 'not_found');
@@ -228,8 +235,7 @@ async function anonymizeUser(adminUserId: string, targetUserId: string): Promise
   }
 }
 
-export async function assertHardDeleteAllowed(targetUserId: string): Promise<void> {
-  requireServiceRole();
+async function readUserSubscriptionStatus(targetUserId: string): Promise<string | null> {
   const service = getServiceSupabase();
   const { data, error } = await service
     .from('users')
@@ -237,12 +243,40 @@ export async function assertHardDeleteAllowed(targetUserId: string): Promise<voi
     .eq('id', targetUserId)
     .maybeSingle();
   if (error) throw error;
-  if (isStripeSubscriptionEntitled(data?.subscription_status)) {
+  return data?.subscription_status ?? null;
+}
+
+export async function assertDeactivationAllowed(targetUserId: string): Promise<void> {
+  requireServiceRole();
+  const status = await readUserSubscriptionStatus(targetUserId);
+  if (isStripeSubscriptionEntitled(status)) {
     throw new AdminUsersServiceError(
-      'Brukeren har et aktivt Stemme+-abonnement i Stripe. Avslutt abonnementet før permanent sletting.',
+      ADMIN_DEACTIVATE_STRIPE_BLOCK_MESSAGE,
       'conflict',
+      'stripe_subscription',
     );
   }
+}
+
+export async function assertHardDeleteAllowed(targetUserId: string): Promise<void> {
+  requireServiceRole();
+  const status = await readUserSubscriptionStatus(targetUserId);
+  if (isStripeSubscriptionEntitled(status)) {
+    throw new AdminUsersServiceError(
+      ADMIN_HARD_DELETE_STRIPE_BLOCK_MESSAGE,
+      'conflict',
+      'stripe_subscription',
+    );
+  }
+}
+
+export async function anonymizeAdminUserProfile(
+  adminUserId: string,
+  targetUserId: string,
+): Promise<void> {
+  requireServiceRole();
+  await assertDeactivationAllowed(targetUserId);
+  await anonymizeUser(adminUserId, targetUserId);
 }
 
 export async function deactivateAdminUser(
@@ -250,6 +284,7 @@ export async function deactivateAdminUser(
   targetUserId: string,
 ): Promise<void> {
   requireServiceRole();
+  await assertDeactivationAllowed(targetUserId);
   await assertMutationAllowed(adminUserId, targetUserId, {
     preventSelf: true,
     preventLastAdmin: true,
@@ -401,14 +436,16 @@ export async function bulkAdminUsersAction(
       results.push({ userId, ok: true });
     } catch (error) {
       if (error instanceof AdminUsersServiceError) {
-        const reason =
-          error.code === 'conflict' && error.message.includes('egen')
-            ? 'self'
-            : error.code === 'conflict' && error.message.includes('siste')
-              ? 'last_admin'
-              : error.code === 'not_found'
-                ? 'not_found'
-                : 'invalid';
+        const reason: AdminBulkItemResult['reason'] =
+          error.conflictKind === 'stripe_subscription'
+            ? 'stripe_subscription'
+            : error.conflictKind === 'self'
+              ? 'self'
+              : error.conflictKind === 'last_admin'
+                ? 'last_admin'
+                : error.code === 'not_found'
+                  ? 'not_found'
+                  : 'invalid';
         results.push({ userId, ok: false, reason, message: error.message });
         continue;
       }

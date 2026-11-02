@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="nb" class="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="brukere-fixture.css" />
+  <title>Deaktiver bekreftelse</title>
+</head>
+<body data-scene="deactivate-dialog">
+  <div class="page dimmed">
+    <h1>Brukere</h1>
+    <div class="dialog-backdrop">
+      <div class="dialog" role="dialog">
+        <h2>Deaktivere 2 brukere?</h2>
+        <p class="muted">Profilnavn, bio og bilde slettes permanent. Innlogging kan åpnes igjen senere, men profilen gjenopprettes ikke.</p>
+        <p class="muted"><strong class="fg">Valgte brukere:</strong> Ola Nordmann, Kari Hansen</p>
+        <p class="warn">1 valgt bruker har aktivt Stemme+-abonnement i Stripe og kan ikke deaktiveres før abonnementet avsluttes.</p>
+        <div class="dialog-actions">
+          <button type="button" class="btn outline">Avbryt</button>
+          <button type="button" class="btn danger">Deaktiver og anonymiser</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

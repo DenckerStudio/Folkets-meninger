@@ -5,6 +5,7 @@ import {
   AdminUsersServiceError,
   serviceErrorStatus,
 } from '@/lib/admin/users/service';
+import { ADMIN_HARD_DELETE_STRIPE_BLOCK_MESSAGE } from '@/lib/admin/users/constants';
 import { isStripeSubscriptionEntitled } from '@/lib/stripe/subscription';
 import {
   adminUserBulkSchema,
@@ -45,6 +46,8 @@ assert.match(listRoute, /adminUserListQuerySchema/);
 assert.match(listRoute, /status: 400/);
 assert.match(detailRoute, /requireAdmin\(\)/);
 assert.match(detailRoute, /adminUserDeleteQuerySchema/);
+assert.match(detailRoute, /deactivateAdminUser/);
+assert.match(detailRoute, /anonymizeAdminUserProfile/);
 assert.match(detailRoute, /confirmEmail/);
 assert.match(detailRoute, /status: 503/);
 
@@ -65,8 +68,9 @@ const selfError = new AdminUsersServiceError('Du kan ikke endre din egen konto',
 assert.equal(serviceErrorStatus(selfError), 409);
 
 const stripeError = new AdminUsersServiceError(
-  'Brukeren har et aktivt Stemme+-abonnement i Stripe. Avslutt abonnementet før permanent sletting.',
+  ADMIN_HARD_DELETE_STRIPE_BLOCK_MESSAGE,
   'conflict',
+  'stripe_subscription',
 );
 assert.equal(serviceErrorStatus(stripeError), 409);
 

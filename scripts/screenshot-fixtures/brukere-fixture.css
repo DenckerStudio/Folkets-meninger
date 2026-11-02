@@ -41,7 +41,10 @@ h1 { font-size: 1.125rem; margin: 0 0 0.25rem; }
 .tab { flex: 1; text-align: center; padding: 0.65rem; border-radius: 0.75rem; font-size: 0.875rem; color: var(--muted-foreground); }
 .tab.active { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgb(0 0 0 / 0.06); }
 .toolbar { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; }
-input, select { width: 100%; min-height: 2.25rem; border: 1px solid var(--border); border-radius: 0.5rem; padding: 0 0.75rem; background: var(--background); color: var(--foreground); }
+.search-wrap input, .select-wrap select { width: 100%; min-height: 2.75rem; border: 1px solid var(--border); border-radius: 0.5rem; padding: 0 2rem 0 0.75rem; background: var(--background); color: var(--foreground); appearance: none; }
+.select-wrap { position: relative; width: 100%; }
+.select-wrap .chev { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--muted-foreground); font-size: 0.75rem; }
+input, select { width: 100%; min-height: 2.75rem; border: 1px solid var(--border); border-radius: 0.5rem; padding: 0 0.75rem; background: var(--background); color: var(--foreground); }
 .card { border: 1px solid var(--border); border-radius: 0.75rem; background: var(--card); overflow: hidden; }
 table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 th { text-align: left; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted-foreground); padding: 0.5rem; border-bottom: 1px solid var(--border); }
@@ -52,8 +55,14 @@ td { padding: 0.5rem; border-bottom: 1px solid var(--border); vertical-align: mi
 .badge { display: inline-block; border-radius: 999px; padding: 0.125rem 0.5rem; font-size: 0.65rem; border: 1px solid var(--border); }
 .badge.ok { background: var(--primary); color: var(--primary-foreground); border-color: transparent; }
 .badge.plus { background: var(--muted); }
+.badge.outline { background: transparent; }
+.checkbox-hit { display: inline-flex; min-height: 2.75rem; min-width: 2.75rem; align-items: center; justify-content: center; }
 .checkbox { width: 1rem; height: 1rem; border: 1px solid var(--border); border-radius: 0.25rem; display: inline-block; }
 .checkbox.checked { background: var(--primary); }
+.skeleton-row { height: 3rem; margin: 0.5rem; border-radius: 0.5rem; background: color-mix(in oklch, var(--muted) 70%, transparent); animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+.fg { color: var(--foreground); }
+.warn { color: var(--destructive); font-size: 0.875rem; margin: 0.75rem 0 0; }
 .empty { padding: 2rem 1.5rem; text-align: center; }
 .empty.error strong { color: var(--destructive); }
 .dimmed { opacity: 0.55; }

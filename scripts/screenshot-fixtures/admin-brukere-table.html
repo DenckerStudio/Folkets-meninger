@@ -12,10 +12,10 @@
     <p class="muted">Administrer kontoer, roller og Stemme+.</p>
     <div class="tabs"><span class="tab active">Alle brukere</span><span class="tab">Administratorer</span></div>
     <div class="toolbar">
-      <input type="search" placeholder="Søk på navn eller e-post…" value="ola" />
-      <select><option>Alle roller</option></select>
-      <select><option>Alle nivåer</option></select>
-      <select><option>Alle statuser</option></select>
+      <div class="search-wrap"><input type="search" placeholder="Søk på navn eller e-post…" value="ola" /></div>
+      <div class="select-wrap"><select><option>Alle roller</option></select><span class="chev">▾</span></div>
+      <div class="select-wrap"><select><option>Alle nivåer</option></select><span class="chev">▾</span></div>
+      <div class="select-wrap"><select><option>Alle statuser</option></select><span class="chev">▾</span></div>
     </div>
     <div class="card table-wrap">
       <table>
@@ -24,27 +24,27 @@
         </thead>
         <tbody>
           <tr>
-            <td><span class="checkbox checked"></span></td>
+            <td><span class="checkbox-hit"><span class="checkbox checked"></span></span></td>
             <td><div class="usercell"><span class="avatar">ON</span><div><strong>Ola Nordmann</strong><small>ola@example.com</small></div></div></td>
             <td><span class="badge ok">Aktiv</span></td>
             <td>Medlem</td>
-            <td><span class="badge">Gratis</span></td>
+            <td><span class="badge outline">Gratis</span></td>
             <td class="muted">12. jan. 2026</td>
             <td>⋯</td>
           </tr>
           <tr>
-            <td><span class="checkbox"></span></td>
+            <td><span class="checkbox-hit"><span class="checkbox"></span></span></td>
             <td><div class="usercell"><span class="avatar">KH</span><div><strong>Kari Hansen</strong><small>kari@example.com</small></div></div></td>
             <td><span class="badge ok">Aktiv</span></td>
             <td><strong>Administrator</strong></td>
-            <td><span class="badge plus">Aktiv</span></td>
+            <td><span class="badge plus">Stemme+</span></td>
             <td class="muted">03. des. 2025</td>
             <td>⋯</td>
           </tr>
         </tbody>
       </table>
     </div>
-    <p class="muted small">Side 1 av 4 · 87 brukere totalt</p>
+    <p class="muted small">87 brukere totalt</p>
   </div>
 </body>
 </html>

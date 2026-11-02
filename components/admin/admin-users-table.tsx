@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
   flexRender,
   getCoreRowModel,
@@ -22,14 +22,25 @@ import {
   UserX,
 } from 'lucide-react';
 import { AdminToast, useAdminToast } from '@/components/admin/app-future/admin-toast';
+import { formatAdminBulkResultSummary } from '@/lib/admin/users/bulk-result-summary';
+import {
+  ADMIN_REACTIVATE_LOGIN_LABEL,
+  ADMIN_REACTIVATE_LOGIN_NOTE,
+} from '@/lib/admin/users/constants';
+import {
+  countUsersWithActiveStripeSubscription,
+  formatDeactivateConfirmDescription,
+  formatDeactivateConfirmTitle,
+  formatDeactivateStripeWarning,
+  formatDeactivateTargetNames,
+} from '@/lib/admin/users/deactivate-copy';
+import { adminEmailsMatchForConfirm } from '@/lib/admin/users/email-confirm';
 import type { AdminBulkItemResult, AdminUserRow } from '@/lib/admin/users/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Dialog,
-} from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -62,6 +73,14 @@ type ListResponse = {
 type RoleFilter = 'all' | 'admin' | 'member';
 type TierFilter = 'all' | 'stemme_plus' | 'free';
 type StatusFilter = 'all' | 'active' | 'deactivated';
+
+type AdminBulkBodyAction =
+  | 'set_admin'
+  | 'revoke_admin'
+  | 'grant_stemme_plus'
+  | 'revoke_stemme_plus'
+  | 'deactivate'
+  | 'reactivate';
 
 const COLUMN_LABELS: Record<string, string> = {
   user: 'Bruker',
@@ -102,25 +121,21 @@ function SortIcon({ sorted }: { sorted: false | 'asc' | 'desc' }) {
   return <ChevronsUpDown className="size-3.5 text-muted-foreground/60" aria-hidden />;
 }
 
-function summarizeBulkSkips(results: AdminBulkItemResult[]): string | null {
-  const skipped = results.filter((r) => !r.ok);
-  if (skipped.length === 0) return null;
-  const parts = skipped.slice(0, 3).map((s) => s.message ?? s.reason ?? s.userId);
-  const suffix = skipped.length > 3 ? ` (+${skipped.length - 3} til)` : '';
-  return `Hoppet over ${skipped.length}: ${parts.join('; ')}${suffix}`;
+function UsersTableSkeleton() {
+  return (
+    <div className="space-y-2 p-4" aria-busy="true" aria-label="Laster brukere">
+      {Array.from({ length: 6 }, (_, i) => (
+        <div key={i} className="h-12 animate-pulse rounded-lg bg-muted/60" />
+      ))}
+    </div>
+  );
 }
-
-type AdminBulkBodyAction =
-  | 'set_admin'
-  | 'revoke_admin'
-  | 'grant_stemme_plus'
-  | 'revoke_stemme_plus'
-  | 'deactivate'
-  | 'reactivate';
 
 export function AdminUsersTable() {
   const { message, variant, toast } = useAdminToast();
   const [pending, startTransition] = useTransition();
+  const hasLoadedOnceRef = useRef(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const [misconfigured, setMisconfigured] = useState(false);
   const [users, setUsers] = useState<AdminUserRow[]>([]);
@@ -138,6 +153,7 @@ export function AdminUsersTable() {
   const [rowSelection, setRowSelection] = useState({});
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 });
 
+  const [deactivateTargets, setDeactivateTargets] = useState<AdminUserRow[] | null>(null);
   const [hardDeleteTarget, setHardDeleteTarget] = useState<AdminUserRow | null>(null);
   const [hardDeleteEmail, setHardDeleteEmail] = useState('');
   const [hardDeleteError, setHardDeleteError] = useState('');
@@ -165,26 +181,33 @@ export function AdminUsersTable() {
       params.set('page', String(pagination.pageIndex + 1));
       params.set('pageSize', String(pagination.pageSize));
 
-      const res = await fetch(`/api/admin/users?${params.toString()}`);
-      const data = (await res.json().catch(() => ({}))) as ListResponse & { error?: string };
-      if (!res.ok) {
-        if (res.status === 503) {
-          setMisconfigured(true);
-          setUsers([]);
-          setTotal(0);
-          setLoadError(
-            typeof data.error === 'string'
-              ? data.error
-              : 'Brukeradmin er ikke tilgjengelig ennå (database-migrasjon mangler)',
-          );
+      try {
+        const res = await fetch(`/api/admin/users?${params.toString()}`);
+        const data = (await res.json().catch(() => ({}))) as ListResponse & { error?: string };
+        if (!res.ok) {
+          if (res.status === 503) {
+            setMisconfigured(true);
+            setUsers([]);
+            setTotal(0);
+            setLoadError(
+              typeof data.error === 'string'
+                ? data.error
+                : 'Brukeradmin er ikke tilgjengelig ennå (database-migrasjon mangler)',
+            );
+            return;
+          }
+          setLoadError(typeof data.error === 'string' ? data.error : 'Kunne ikke laste brukere.');
           return;
         }
-        setLoadError(typeof data.error === 'string' ? data.error : 'Kunne ikke laste brukere.');
-        return;
+        setUsers(data.users ?? []);
+        setTotal(typeof data.total === 'number' ? data.total : 0);
+        setRowSelection({});
+      } finally {
+        if (!hasLoadedOnceRef.current) {
+          hasLoadedOnceRef.current = true;
+          setHasLoadedOnce(true);
+        }
       }
-      setUsers(data.users ?? []);
-      setTotal(typeof data.total === 'number' ? data.total : 0);
-      setRowSelection({});
     });
   }, [
     debouncedQ,
@@ -201,10 +224,38 @@ export function AdminUsersTable() {
     loadUsers();
   }, [loadUsers]);
 
+  const selectedUsers = useMemo(() => {
+    const ids = new Set(Object.keys(rowSelection));
+    return users.filter((u) => ids.has(u.userId));
+  }, [rowSelection, users]);
+
+  const deactivateStripeCount = useMemo(
+    () => (deactivateTargets ? countUsersWithActiveStripeSubscription(deactivateTargets) : 0),
+    [deactivateTargets],
+  );
+
+  const hardDeleteEmailMatches = useMemo(() => {
+    if (!hardDeleteTarget?.email) return false;
+    return adminEmailsMatchForConfirm(hardDeleteEmail, hardDeleteTarget.email);
+  }, [hardDeleteEmail, hardDeleteTarget]);
+
+  const postBulkResults = useCallback(
+    (results: AdminBulkItemResult[]) => {
+      const summary = formatAdminBulkResultSummary(results);
+      toast(summary.message, summary.variant === 'success' ? 'success' : 'error');
+      loadUsers();
+    },
+    [loadUsers, toast],
+  );
+
   const runBulk = useCallback(
     (action: AdminBulkBodyAction) => {
       const selectedIds = Object.keys(rowSelection);
       if (selectedIds.length === 0) return;
+      if (action === 'deactivate') {
+        setDeactivateTargets(selectedUsers);
+        return;
+      }
       startTransition(async () => {
         const res = await fetch('/api/admin/users', {
           method: 'POST',
@@ -219,34 +270,51 @@ export function AdminUsersTable() {
           toast(typeof data.error === 'string' ? data.error : 'Massehandling feilet', 'error');
           return;
         }
-        const summary = summarizeBulkSkips(data.results ?? []);
-        if (summary) {
-          toast(summary, 'error');
-        } else {
-          toast('Massehandling fullført');
-        }
-        loadUsers();
+        postBulkResults(data.results ?? []);
       });
     },
-    [loadUsers, rowSelection, toast],
+    [postBulkResults, rowSelection, selectedUsers, toast],
   );
 
-  const runRowDelete = useCallback(
-    (user: AdminUserRow) => {
+  const executeDeactivate = useCallback(
+    (targets: AdminUserRow[]) => {
+      if (targets.length === 0) return;
       startTransition(async () => {
-        const res = await fetch(`/api/admin/users/${user.userId}?mode=deactivate`, {
-          method: 'DELETE',
-        });
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        if (!res.ok) {
-          toast(typeof data.error === 'string' ? data.error : 'Kunne ikke deaktivere bruker', 'error');
-          return;
+        if (targets.length === 1) {
+          const user = targets[0]!;
+          const res = await fetch(`/api/admin/users/${user.userId}?mode=deactivate`, {
+            method: 'DELETE',
+          });
+          const data = (await res.json().catch(() => ({}))) as { error?: string };
+          if (!res.ok) {
+            toast(typeof data.error === 'string' ? data.error : 'Kunne ikke deaktivere bruker', 'error');
+            return;
+          }
+          toast('Bruker deaktivert og anonymisert');
+        } else {
+          const res = await fetch('/api/admin/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userIds: targets.map((t) => t.userId),
+              action: 'deactivate',
+            }),
+          });
+          const data = (await res.json().catch(() => ({}))) as {
+            results?: AdminBulkItemResult[];
+            error?: string;
+          };
+          if (!res.ok) {
+            toast(typeof data.error === 'string' ? data.error : 'Massehandling feilet', 'error');
+            return;
+          }
+          postBulkResults(data.results ?? []);
         }
-        toast('Bruker deaktivert og anonymisert');
+        setDeactivateTargets(null);
         loadUsers();
       });
     },
-    [loadUsers, toast],
+    [loadUsers, postBulkResults, toast],
   );
 
   const runRowReactivate = useCallback(
@@ -259,10 +327,13 @@ export function AdminUsersTable() {
         });
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         if (!res.ok) {
-          toast(typeof data.error === 'string' ? data.error : 'Kunne ikke reaktivere bruker', 'error');
+          toast(
+            typeof data.error === 'string' ? data.error : 'Kunne ikke åpne innlogging igjen',
+            'error',
+          );
           return;
         }
-        toast('Bruker reaktivert');
+        toast(`Innlogging åpnet. ${ADMIN_REACTIVATE_LOGIN_NOTE}`);
         loadUsers();
       });
     },
@@ -270,7 +341,7 @@ export function AdminUsersTable() {
   );
 
   const confirmHardDelete = () => {
-    if (!hardDeleteTarget) return;
+    if (!hardDeleteTarget || !hardDeleteEmailMatches) return;
     startTransition(async () => {
       setHardDeleteError('');
       const res = await fetch(`/api/admin/users/${hardDeleteTarget.userId}?mode=hard`, {
@@ -289,6 +360,11 @@ export function AdminUsersTable() {
       loadUsers();
     });
   };
+
+  const openDeactivateConfirm = useCallback((targets: AdminUserRow[]) => {
+    if (targets.length === 0) return;
+    setDeactivateTargets(targets);
+  }, []);
 
   const columns = useMemo<ColumnDef<AdminUserRow>[]>(
     () => [
@@ -391,7 +467,7 @@ export function AdminUsersTable() {
             variant={row.original.subscriptionTier === 'stemme_plus' ? 'secondary' : 'outline'}
             className="text-xs"
           >
-            {row.original.subscriptionTier === 'stemme_plus' ? 'Aktiv' : 'Gratis'}
+            {row.original.subscriptionTier === 'stemme_plus' ? 'Stemme+' : 'Gratis'}
           </Badge>
         ),
       },
@@ -432,13 +508,18 @@ export function AdminUsersTable() {
                 <DropdownMenuLabel>Handlinger</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {!user.isDeactivated ? (
-                  <DropdownMenuItem onClick={() => runRowDelete(user)}>
+                  <DropdownMenuItem onClick={() => openDeactivateConfirm([user])}>
                     <UserX className="size-4" />
                     Deaktiver og anonymiser
                   </DropdownMenuItem>
                 ) : (
                   <DropdownMenuItem onClick={() => runRowReactivate(user)}>
-                    Reaktiver
+                    <span className="flex flex-col items-start gap-0.5">
+                      <span>{ADMIN_REACTIVATE_LOGIN_LABEL}</span>
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {ADMIN_REACTIVATE_LOGIN_NOTE}
+                      </span>
+                    </span>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
@@ -458,7 +539,7 @@ export function AdminUsersTable() {
         },
       },
     ],
-    [runRowDelete, runRowReactivate],
+    [openDeactivateConfirm, runRowReactivate],
   );
 
   const pageCount = Math.max(1, Math.ceil(total / pagination.pageSize) || 1);
@@ -480,6 +561,15 @@ export function AdminUsersTable() {
   });
 
   const selectedCount = Object.keys(rowSelection).length;
+  const showInitialLoading = !hasLoadedOnce || (pending && users.length === 0 && !loadError);
+  const showEmpty = hasLoadedOnce && !pending && users.length === 0 && !loadError;
+  const showError = hasLoadedOnce && Boolean(loadError) && !pending;
+
+  const deactivateNameList =
+    deactivateTargets && deactivateTargets.length > 1
+      ? formatDeactivateTargetNames(deactivateTargets)
+      : null;
+  const deactivateStripeWarning = formatDeactivateStripeWarning(deactivateStripeCount);
 
   return (
     <div className="space-y-4" data-admin-users-table>
@@ -500,7 +590,7 @@ export function AdminUsersTable() {
             aria-label="Søk brukere"
           />
         </div>
-        <div className="grid grid-cols-1 gap-2 xs:grid-cols-3 sm:flex sm:flex-wrap">
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
           <Select
             value={roleFilter}
             onChange={(e) => {
@@ -569,14 +659,18 @@ export function AdminUsersTable() {
             Deaktiver
           </Button>
           <Button size="sm" variant="outline" disabled={pending} onClick={() => runBulk('reactivate')}>
-            Reaktiver
+            {ADMIN_REACTIVATE_LOGIN_LABEL}
           </Button>
         </div>
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
-          {total === 0 ? 'Ingen treff' : `${total} brukere totalt`}
+          {!hasLoadedOnce
+            ? 'Laster…'
+            : total === 0
+              ? 'Ingen treff'
+              : `${total} brukere totalt`}
         </p>
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -606,20 +700,26 @@ export function AdminUsersTable() {
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border bg-card">
-        {loadError && !pending ? (
-          <div className="p-6" data-state="error">
+        {showError ? (
+          <div className="space-y-4 p-6" data-state="error">
             <EmptyState
               compact
               title={misconfigured ? 'Brukeradmin utilgjengelig' : 'Kunne ikke laste brukere'}
-              description={loadError}
+              description={loadError ?? ''}
             />
+            <Button type="button" variant="outline" onClick={() => loadUsers()}>
+              Prøv igjen
+            </Button>
           </div>
-        ) : pending && users.length === 0 ? (
-          <div className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" aria-hidden />
-            Laster brukere…
+        ) : showInitialLoading ? (
+          <div data-state="loading">
+            <div className="flex items-center justify-center gap-2 border-b border-border p-4 text-sm text-muted-foreground sm:hidden">
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+              Laster brukere…
+            </div>
+            <UsersTableSkeleton />
           </div>
-        ) : users.length === 0 ? (
+        ) : showEmpty ? (
           <div className="p-6" data-state="empty">
             <EmptyState
               compact
@@ -684,6 +784,47 @@ export function AdminUsersTable() {
       ) : null}
 
       <Dialog
+        open={Boolean(deactivateTargets?.length)}
+        onClose={() => setDeactivateTargets(null)}
+        size="md"
+        title={
+          deactivateTargets
+            ? formatDeactivateConfirmTitle(deactivateTargets.length)
+            : 'Deaktivere brukeren?'
+        }
+        description={
+          deactivateTargets ? formatDeactivateConfirmDescription(deactivateTargets.length) : ''
+        }
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setDeactivateTargets(null)}>
+              Avbryt
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={pending}
+              onClick={() => deactivateTargets && executeDeactivate(deactivateTargets)}
+            >
+              Deaktiver og anonymiser
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3 text-sm text-muted-foreground">
+          {deactivateNameList ? (
+            <p>
+              <span className="font-medium text-foreground">Valgte brukere: </span>
+              {deactivateNameList}
+            </p>
+          ) : null}
+          {deactivateStripeWarning ? (
+            <p className="text-destructive">{deactivateStripeWarning}</p>
+          ) : null}
+        </div>
+      </Dialog>
+
+      <Dialog
         open={Boolean(hardDeleteTarget)}
         onClose={() => {
           setHardDeleteTarget(null);
@@ -695,10 +836,15 @@ export function AdminUsersTable() {
         description="Dette fjerner brukeren helt og kan ikke angres. Skriv brukerens e-postadresse for å bekrefte. Permanent sletting blokkeres når brukeren har aktivt Stemme+-abonnement i Stripe."
         footer={
           <>
-            <Button variant="outline" onClick={() => setHardDeleteTarget(null)}>
+            <Button type="button" variant="outline" onClick={() => setHardDeleteTarget(null)}>
               Avbryt
             </Button>
-            <Button variant="destructive" disabled={pending} onClick={confirmHardDelete}>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={pending || !hardDeleteEmailMatches}
+              onClick={confirmHardDelete}
+            >
               Slett permanent
             </Button>
           </>

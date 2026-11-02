@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
 import {
   AdminUsersServiceError,
+  anonymizeAdminUserProfile,
   deactivateAdminUser,
   getAdminUserById,
   hardDeleteAdminUser,
@@ -13,7 +14,6 @@ import {
   adminUserHardDeleteBodySchema,
   adminUserPatchSchema,
 } from '@/lib/admin/users/schemas';
-import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -120,14 +120,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     } else if (modeParsed.data.mode === 'deactivate') {
       await deactivateAdminUser(auth.userId, id);
     } else {
-      const service = getServiceSupabase();
-      const { error } = await service.rpc('admin_anonymize_user', {
-        p_admin_user_id: auth.userId,
-        p_target_user_id: id,
-      });
-      if (error) {
-        throw error;
-      }
+      await anonymizeAdminUserProfile(auth.userId, id);
     }
     return NextResponse.json({ ok: true });
   } catch (error) {

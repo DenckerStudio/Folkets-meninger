@@ -9,8 +9,10 @@ const outDir = '/opt/cursor/artifacts/admin-brukere';
 
 const scenes = [
   ['admin-brukere-table.html', 'brukere-table'],
+  ['admin-brukere-loading.html', 'brukere-loading'],
   ['admin-brukere-empty.html', 'brukere-empty'],
   ['admin-brukere-error.html', 'brukere-error'],
+  ['admin-brukere-deactivate-dialog.html', 'brukere-deactivate-dialog'],
   ['admin-brukere-hard-delete-dialog.html', 'brukere-hard-delete-dialog'],
 ];
 
