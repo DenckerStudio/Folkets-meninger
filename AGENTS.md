@@ -100,8 +100,9 @@ All on **Coolify, server `klever`**:
 - **n8n** handles every scheduled and AI job. It calls app endpoints with header
   `x-cron-secret: $CRON_SECRET` (`/api/cron/*`, `/api/ops/*`) and receives
   fire-and-forget webhooks from the app. Its jobs:
-  - sak flow: sync-issues → document embeddings → AI summaries → system-poll (Reels) drafts
-  - GP / Reels drafts (`create_system_poll_draft` → admin `publish_poll`)
+  - sak flow: sync-issues → document embeddings → AI summaries
+  - **Retired 2026-11-01:** system-poll (Reels) drafts (`create_system_poll_draft` → admin
+    `publish_poll`). Legacy workflows remain in repo; do not schedule new runs without owner yes.
   - høringer packaging (`/api/cron/package-opinion-innspill` → `N8N_HEARING_INNSPILL_WEBHOOK_URL`)
   - blog drafts: `POST /api/ops/blog/drafts` (`verifyOpsSecret`, `x-cron-secret`) creates a
     Payload draft; on `200` + `created: false` n8n must read `cmsStatus` (see Blog below).
@@ -119,7 +120,11 @@ All on **Coolify, server `klever`**:
   "not configured" when `STRIPE_SECRET_KEY` / `STRIPE_STEMME_PLUS_PRICE_ID` are missing.
 - **Bluesky**: blog posts are shared there. On publish `fm-cms` fires
   `BLOG_PUBLISHED_WEBHOOK_URL` (configured on `fm-cms`, not `fm-web`) and n8n posts.
-- **X and Reddit are dropped for now.** Don't add integrations for them.
+- **X is dropped for now.** Don't add X integrations.
+- **Reddit** (owner decision 2026-11-02): allowed only as an **interest signal** (what people
+  talk about), never as a fact source. Facts always need an independent source (news, official
+  sources). Read via public RSS/search-RSS without OAuth; batch into **one combined request** to
+  avoid 429 rate limits and send a proper User-Agent. Persisted records are flagged `signal_only`.
 - SMTP for notifications and digests. SearXNG for Stemme+ chat source search.
 
 ## Blog
@@ -201,14 +206,12 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 
 ### Polls / Reels (Utforsk)
 
+- **System Reels and system polls retired 2026-11-01.** Do not add new system-poll drafts,
+  Reels generation, or `publish_poll` for `system` polls. Legacy `system` rows and admin routes
+  may remain until cleaned up.
 - `polls` (`stortinget` | `system`; legacy `citizen` rows are hidden), anonymous
   `poll_votes`, encrypted receipts. Choices are `ja`/`nei`/`blank`. Voting requires login.
-- System Reels are ja/nei/blank questions generated from sak RAG by n8n + Ollama.
-  Use `create_system_poll_draft` → admin `publish_poll`, never
-  `ensure_stortinget_poll` for drafts. Copy must say they are system-generated.
-  Publisering, arkivering og tilbakemelding ligger under `/dashboard/admin/vurder`
-  (fane Reels). `/dashboard/admin/reels` er generering og pipeline; `?pollId=`
-  redirecter til vurder.
+  Stortinget-aligned polls on Utforsk remain; the n8n/Ollama Reels pipeline is off.
 - Fylke breakdowns only count `users.fylke_code` when `fylke_verified` is true.
 
 ### Høringer
@@ -262,7 +265,7 @@ infra/               coolify/ (cms.md + historical plan), searxng/
 ### Identity, admin, Stemme+
 
 - Admin: `public.user_roles` + `is_admin()` via `lib/admin/gate.ts`. Hub:
-  `/dashboard/admin` (Appens fremtid, Research, Reels, Vurder, Statistikk, Brukere, Stemme+).
+  `/dashboard/admin` (Appens fremtid, Research, Vurder, Statistikk, Brukere, Stemme+).
   **Statistikk** (`/dashboard/admin/statistikk`): visitor counts, user lifecycle (registered,
   signed in 30d, inactive), blog paths, personal share links. First-party `analytics_events` and
   `share_links`; RPCs are service_role-only (`insert_analytics_event`, `admin_get_user_metrics`,
@@ -270,9 +273,8 @@ infra/               coolify/ (cms.md + historical plan), searxng/
   `list_my_share_links`). Migrations `20261101120000`–`20261101140000` are manual — until applied,
   the page shows an honest empty state. Public `/l/{code}` redirects and logs a click. Optional
   self-hosted Umami (`infra/coolify/umami.md`) is off unless `NEXT_PUBLIC_ANALYTICS_ENABLED=true`.
-  **Vurder** (`/dashboard/admin/vurder?fane=reels|blogg|sammendrag`) samler vurdering av
-  reel-utkast, bloggutkast og AI-sammendrag. Etter publiser/arkiver av en reel blir
-  tittel, beskrivelse og kilder stående i tilbakemeldingskortet.
+  **Vurder** (`/dashboard/admin/vurder?fane=blogg|sammendrag`; Reels-fane retired 2026-11-01)
+  samler vurdering av bloggutkast og AI-sammendrag.
   `POST /api/admin/content-feedback` kaller `admin_submit_content_feedback` først.
   Mangler funksjonen i PostgREST (PGRST202, `20261021140000` ikke lagt inn), lagres
   raden via `upsert_content_feedback`. Regenerering av avviste sammendrag starter
