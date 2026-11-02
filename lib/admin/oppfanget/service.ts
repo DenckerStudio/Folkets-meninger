@@ -89,6 +89,66 @@ function parseBestScale(raw: Record<string, unknown> | null): OppfangetScale | n
   return { value, unit, sourceUrl, asOf };
 }
 
+const OPPFANGET_CLUSTER_BATCH_SIZE = 500;
+const OPPFANGET_CLUSTER_MAX_BATCHES = 5;
+const OPPFANGET_RESEARCH_VISIBLE_TARGET = 500;
+
+async function loadSourcesAndPollStatusForClusters(
+  service: ReturnType<typeof getServiceSupabase>,
+  clusterList: ClusterRow[],
+): Promise<{
+  sourcesByCluster: Map<string, SourceRow[]>;
+  pollStatusById: Map<string, string>;
+}> {
+  const clusterIds = clusterList.map((c) => c.id);
+  const pollIds = clusterList.map((c) => c.poll_id).filter((id): id is string => Boolean(id));
+
+  let sources: SourceRow[] = [];
+  if (clusterIds.length > 0) {
+    const { data: sourceData, error: sourceError } = await service
+      .from('action_sources')
+      .select('id, cluster_id, url_canonical, publisher, signal_only, title, source_type')
+      .in('cluster_id', clusterIds);
+
+    if (sourceError && !isMissingTableError(sourceError)) {
+      throw sourceError;
+    }
+    sources = (sourceData ?? []) as SourceRow[];
+  }
+
+  const pollStatusById = new Map<string, string>();
+  if (pollIds.length > 0) {
+    const { data: polls } = await service.from('polls').select('id, status').in('id', pollIds);
+    for (const poll of (polls ?? []) as PollRow[]) {
+      pollStatusById.set(poll.id, poll.status);
+    }
+  }
+
+  const sourcesByCluster = new Map<string, SourceRow[]>();
+  for (const source of sources) {
+    const list = sourcesByCluster.get(source.cluster_id) ?? [];
+    list.push(source);
+    sourcesByCluster.set(source.cluster_id, list);
+  }
+
+  return { sourcesByCluster, pollStatusById };
+}
+
+function mapClustersToResearchRows(
+  clusterList: ClusterRow[],
+  sourcesByCluster: Map<string, SourceRow[]>,
+  pollStatusById: Map<string, string>,
+): OppfangetRow[] {
+  const allRows = clusterList.map((cluster) =>
+    mapClusterToRow(
+      cluster,
+      sourcesByCluster.get(cluster.id) ?? [],
+      cluster.poll_id ? pollStatusById.get(cluster.poll_id) ?? null : null,
+    ),
+  );
+  return filterOppfangetRowsForResearchList(allRows);
+}
+
 export function mapClusterToRow(
   cluster: ClusterRow,
   sources: SourceRow[],
@@ -160,75 +220,77 @@ export async function listOppfangetForAdmin(
 
   const service = getServiceSupabase();
 
-  const { data: clusters, error: clusterError } = await service
-    .from('action_clusters')
-    .select(
-      'id, action_name, action_type, status, sensitive_category, max_confidence, best_scale, first_seen_at, last_seen_at, poll_id, metadata',
-    )
-    .order('last_seen_at', { ascending: false })
-    .limit(500);
+  const clusterById = new Map<string, ClusterRow>();
+  const researchRows: OppfangetRow[] = [];
+  const researchRowIds = new Set<string>();
 
-  if (clusterError) {
-    if (isMissingTableError(clusterError)) {
-      return {
-        rows: [],
-        counts: {
-          oppfanget: 0,
-          under_terskel: 0,
-          utkast_laget: 0,
-          publisert: 0,
-          avvist: 0,
-        },
-        tableMissing: true,
-        tableMissingMessage:
-          'Research-listen er ikke klar i databasen ennå. En administrator må kjøre den ventende databasemigrasjonen før nye signaler kan vises her.',
-        previewMock: false,
-      };
+  for (let batchIndex = 0; batchIndex < OPPFANGET_CLUSTER_MAX_BATCHES; batchIndex += 1) {
+    const rangeFrom = batchIndex * OPPFANGET_CLUSTER_BATCH_SIZE;
+    const rangeTo = rangeFrom + OPPFANGET_CLUSTER_BATCH_SIZE - 1;
+
+    const { data: clusters, error: clusterError } = await service
+      .from('action_clusters')
+      .select(
+        'id, action_name, action_type, status, sensitive_category, max_confidence, best_scale, first_seen_at, last_seen_at, poll_id, metadata',
+      )
+      .order('last_seen_at', { ascending: false })
+      .range(rangeFrom, rangeTo);
+
+    if (clusterError) {
+      if (isMissingTableError(clusterError)) {
+        return {
+          rows: [],
+          counts: {
+            oppfanget: 0,
+            under_terskel: 0,
+            utkast_laget: 0,
+            publisert: 0,
+            avvist: 0,
+          },
+          tableMissing: true,
+          tableMissingMessage:
+            'Research-listen er ikke klar i databasen ennå. En administrator må kjøre den ventende databasemigrasjonen før nye signaler kan vises her.',
+          previewMock: false,
+        };
+      }
+      throw clusterError;
     }
-    throw clusterError;
-  }
 
-  const clusterList = (clusters ?? []) as ClusterRow[];
-  const clusterIds = clusterList.map((c) => c.id);
-  const pollIds = clusterList.map((c) => c.poll_id).filter((id): id is string => Boolean(id));
-
-  let sources: SourceRow[] = [];
-  if (clusterIds.length > 0) {
-    const { data: sourceData, error: sourceError } = await service
-      .from('action_sources')
-      .select('id, cluster_id, url_canonical, publisher, signal_only, title, source_type')
-      .in('cluster_id', clusterIds);
-
-    if (sourceError && !isMissingTableError(sourceError)) {
-      throw sourceError;
+    const clusterList = (clusters ?? []) as ClusterRow[];
+    if (clusterList.length === 0) {
+      break;
     }
-    sources = (sourceData ?? []) as SourceRow[];
-  }
 
-  const pollStatusById = new Map<string, string>();
-  if (pollIds.length > 0) {
-    const { data: polls } = await service.from('polls').select('id, status').in('id', pollIds);
-    for (const poll of (polls ?? []) as PollRow[]) {
-      pollStatusById.set(poll.id, poll.status);
+    for (const cluster of clusterList) {
+      clusterById.set(cluster.id, cluster);
+    }
+
+    const { sourcesByCluster, pollStatusById } = await loadSourcesAndPollStatusForClusters(
+      service,
+      clusterList,
+    );
+    const batchResearchRows = mapClustersToResearchRows(
+      clusterList,
+      sourcesByCluster,
+      pollStatusById,
+    );
+
+    for (const row of batchResearchRows) {
+      if (researchRowIds.has(row.id)) continue;
+      researchRowIds.add(row.id);
+      researchRows.push(row);
+      if (researchRows.length >= OPPFANGET_RESEARCH_VISIBLE_TARGET) {
+        break;
+      }
+    }
+
+    if (researchRows.length >= OPPFANGET_RESEARCH_VISIBLE_TARGET) {
+      break;
+    }
+    if (clusterList.length < OPPFANGET_CLUSTER_BATCH_SIZE) {
+      break;
     }
   }
-
-  const sourcesByCluster = new Map<string, SourceRow[]>();
-  for (const source of sources) {
-    const list = sourcesByCluster.get(source.cluster_id) ?? [];
-    list.push(source);
-    sourcesByCluster.set(source.cluster_id, list);
-  }
-
-  const allRows = clusterList.map((cluster) =>
-    mapClusterToRow(
-      cluster,
-      sourcesByCluster.get(cluster.id) ?? [],
-      cluster.poll_id ? pollStatusById.get(cluster.poll_id) ?? null : null,
-    ),
-  );
-
-  const researchRows = filterOppfangetRowsForResearchList(allRows);
 
   const filterable = researchRows.map((row) => ({
     id: row.id,
@@ -236,7 +298,7 @@ export async function listOppfangetForAdmin(
     actionType: row.actionType,
     clusterStatus: row.clusterStatus,
     pollStatus: row.pollStatus,
-    metadata: clusterList.find((c) => c.id === row.id)?.metadata ?? null,
+    metadata: clusterById.get(row.id)?.metadata ?? null,
     sources: row.sources.map((s) => ({
       publisher: s.publisher,
       signalOnly: s.signalOnly,

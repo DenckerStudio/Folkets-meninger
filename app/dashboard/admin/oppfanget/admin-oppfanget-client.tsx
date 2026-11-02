@@ -42,6 +42,9 @@ const TYPE_OPTIONS: { value: '' | OppfangetDisplayType; label: string }[] = [
   { value: 'melding', label: OPPFANGET_DISPLAY_TYPE_LABELS.melding },
 ];
 
+/** Skjul type-filter når bare én konkret type finnes (behold logikk for flere typer senere). */
+const SHOW_OPPFANGET_TYPE_FILTER = TYPE_OPTIONS.filter((opt) => opt.value !== '').length > 1;
+
 const STATUS_OPTIONS: { value: OppfangetStatusFilter; label: string }[] = [
   { value: '', label: 'Alle statuser' },
   { value: 'oppfanget', label: OPPFANGET_DISPLAY_STATUS_LABELS.oppfanget },
@@ -316,18 +319,20 @@ export default function AdminOppfangetClient({
       {data ? <StatusPills counts={data.counts} filteredTotal={rows.length} /> : null}
 
       <div className="grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-3">
-        <label className="space-y-1 text-sm">
-          <span className="text-muted-foreground">Type</span>
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value as '' | OppfangetDisplayType)}
-            className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-          >
-            {TYPE_OPTIONS.map((opt) => (
-              <option key={opt.label} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </label>
+        {SHOW_OPPFANGET_TYPE_FILTER ? (
+          <label className="space-y-1 text-sm">
+            <span className="text-muted-foreground">Type</span>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value as '' | OppfangetDisplayType)}
+              className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            >
+              {TYPE_OPTIONS.map((opt) => (
+                <option key={opt.label} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <label className="space-y-1 text-sm">
           <span className="text-muted-foreground">Status</span>
           <select

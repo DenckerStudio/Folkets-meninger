@@ -83,6 +83,8 @@ const serviceSrc = readFileSync(
   'utf-8',
 );
 assert.match(serviceSrc, /filterOppfangetRowsForResearchList/);
+assert.match(serviceSrc, /OPPFANGET_CLUSTER_MAX_BATCHES/);
+assert.match(serviceSrc, /\.range\(rangeFrom, rangeTo\)/);
 assert.doesNotMatch(serviceSrc, /OPPFANGET_ACTION_TYPES_EXCLUDED/);
 
 console.log('excluded-from-research-list.test.ts: ok');
