@@ -2,13 +2,13 @@
  * Renders sample OG PNGs for PR review (run locally: npx tsx scripts/render-og-samples.ts).
  */
 import React from 'react';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PollRecord } from '@/lib/polls/types';
 
 (globalThis as typeof globalThis & { React: typeof React }).React = React;
 import { renderBlogPostOgImage } from '@/lib/blog/og-image';
-import { renderPollShareOgImage } from '@/lib/polls/share-og';
+import { renderPollShareOgImage, resolvePollOgTitleDisplay } from '@/lib/polls/share-og';
 import { renderShareOgImage } from '@/lib/seo/share-og';
 
 const outDir = process.env.OG_SAMPLE_DIR ?? '/workspace/docs/og-samples';
@@ -48,9 +48,17 @@ const basePoll: PollRecord = {
 const longTwoLineTitle =
   'Skal staten gå videre med omfattende endringer i skatte- og avgiftsregelverket for næringsliv og privatpersoner i hele landet, også i distriktene, på kort sikt?';
 
-/** Exactly 90 tegn — tittelstørrelse 46px, to linjer uten å flyte over kortet. */
+/** 90 tegn — 40px tittel (over 46px-båndet), ordgrense via clampPollOgText. */
 const title90Chars =
   'Skal staten innføre nye avgiftsregler for næringsliv og privatpersoner i hele landet snart';
+
+/** 130 tegn — 40px tittel kappet på ordgrense før line-clamp. */
+const titleMaxRawChars = 'W'.repeat(130);
+
+const titleWorstAeoeaa =
+  'Bør æøå ÆØÅ innføre nye avgiftsregler for næringsliv og privatpersoner i hele landet snart';
+
+const titleLongWord = `Skal ${'M'.repeat(120)} vurderes av Stortinget?`;
 
 async function main() {
   mkdirSync(outDir, { recursive: true });
@@ -108,6 +116,34 @@ async function main() {
       { nei: 12, blank: 3, ja: 45, total: 60 },
     ),
   );
+  console.log('90-char resolved title:', await resolvePollOgTitleDisplay(title90Chars));
+
+  await savePng(
+    'og-sample-poll-title-max-length.png',
+    await renderPollShareOgImage(
+      { ...basePoll, title: titleMaxRawChars, neutralSummary: 'Skjult ingress.' },
+      { nei: 12, blank: 3, ja: 45, total: 60 },
+    ),
+  );
+  console.log('max-length resolved title:', await resolvePollOgTitleDisplay(titleMaxRawChars));
+
+  await savePng(
+    'og-sample-poll-title-worst-aeoeaa.png',
+    await renderPollShareOgImage(
+      { ...basePoll, title: titleWorstAeoeaa, neutralSummary: 'Skjult ingress.' },
+      { nei: 12, blank: 3, ja: 45, total: 60 },
+    ),
+  );
+  console.log('worst æøå resolved title:', await resolvePollOgTitleDisplay(titleWorstAeoeaa));
+
+  await savePng(
+    'og-sample-poll-title-long-word.png',
+    await renderPollShareOgImage(
+      { ...basePoll, title: titleLongWord, neutralSummary: 'Skjult ingress.' },
+      { nei: 12, blank: 3, ja: 45, total: 60 },
+    ),
+  );
+  console.log('long-word resolved title:', await resolvePollOgTitleDisplay(titleLongWord));
 
   await savePng(
     'og-sample-poll-short-title-summary.png',
