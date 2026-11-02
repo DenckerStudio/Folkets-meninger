@@ -14,7 +14,9 @@ import {
   showPollOgProportionalBar,
 } from '@/lib/polls/share-og-bar';
 import {
+  layoutPollOgTitleLines,
   loadPollOgTitleMeasurer,
+  POLL_OG_TITLE_MAX_LINES,
   type PollOgTitleMeasurer,
 } from '@/lib/polls/share-og-title-measure';
 
@@ -30,7 +32,6 @@ const OG_TEXT_MIN_PX = 28;
 const OG_TITLE_MAX_PX = 52;
 const BAR_OUTLINE = '2px solid rgba(255,255,255,0.55)';
 const BAR_SEGMENT_GAP = '2px solid rgba(255,255,255,0.65)';
-const TITLE_MAX_LINES = 2;
 /** Extra space between the title block and ingress / result bar (added to flex gap). */
 export const POLL_OG_TITLE_TO_BAR_EXTRA_GAP_PX = 12;
 /** Hard limit on raw poll title length before sizing bands. */
@@ -118,8 +119,18 @@ export function truncatePollOgTitleToTwoLines(
 export type PollOgTitleLayout = {
   fontSize: number;
   title: string;
+  /** Lines drawn in Satori (max 2); matches layoutPollOgTitleLines. */
+  titleLines: string[];
   charCap: number;
 };
+
+export function buildPollOgTitleRenderLines(
+  title: string,
+  fontSize: number,
+  measurer: PollOgTitleMeasurer,
+): string[] {
+  return layoutPollOgTitleLines(title, fontSize, measurer).slice(0, POLL_OG_TITLE_MAX_LINES);
+}
 
 export function resolvePollOgTitleDisplayWithMeasurer(
   rawTitle: string,
@@ -128,16 +139,15 @@ export function resolvePollOgTitleDisplayWithMeasurer(
   const raw = clampPollOgText(rawTitle, POLL_OG_TITLE_RAW_MAX);
   const fontSize = pickPollOgTitleFontSize(raw, measurer);
   const title = truncatePollOgTitleToTwoLines(raw, fontSize, measurer);
-  return { fontSize, title, charCap: title.length };
+  const titleLines = buildPollOgTitleRenderLines(title, fontSize, measurer);
+  return { fontSize, title, titleLines, charCap: title.length };
 }
 
 export function shouldShowPollOgNeutralSummary(
-  title: string,
-  titleFontSize: number,
-  measurer: PollOgTitleMeasurer,
+  titleLines: string[],
   neutralSummary: string | null | undefined,
 ): boolean {
-  return measurer.lineCount(title, titleFontSize) === 1 && Boolean(neutralSummary?.trim());
+  return titleLines.length === 1 && Boolean(neutralSummary?.trim());
 }
 
 /** Measure with Noto Sans 700 and clamp on word boundaries before Satori line-clamp. */
@@ -146,20 +156,27 @@ export async function resolvePollOgTitleDisplay(rawTitle: string): Promise<PollO
   return resolvePollOgTitleDisplayWithMeasurer(rawTitle, measurer);
 }
 
-function titleBoxStyle(fontSize: number) {
+function pollOgTitleBlock(titleLines: string[], fontSize: number) {
   const size = Math.min(fontSize, OG_TITLE_MAX_PX);
   const lineHeight = 1.2;
-  return {
-    display: '-webkit-box',
-    WebkitBoxOrient: 'vertical' as const,
-    WebkitLineClamp: TITLE_MAX_LINES,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    fontSize: size,
-    fontWeight: 700,
-    lineHeight,
-    maxWidth: 1060,
-  };
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        fontSize: size,
+        fontWeight: 700,
+        lineHeight,
+        maxWidth: 1060,
+      }}
+    >
+      {titleLines.map((line, index) => (
+        <div key={index} style={{ display: 'flex' }}>
+          {line}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function segmentSeparatorStyle(isLast: boolean) {
@@ -252,14 +269,12 @@ export async function renderPollShareOgImage(
   cacheControl: string = OG_IMAGE_CACHE_CONTROL,
 ): Promise<ImageResponse> {
   const fonts = await loadOgFonts();
-  const { fontSize: titleSize, title } = await resolvePollOgTitleDisplay(poll.title);
   const measurer = await loadPollOgTitleMeasurer();
-  const showSummary = shouldShowPollOgNeutralSummary(
-    title,
-    titleSize,
+  const { fontSize: titleSize, titleLines } = resolvePollOgTitleDisplayWithMeasurer(
+    poll.title,
     measurer,
-    poll.neutralSummary,
   );
+  const showSummary = shouldShowPollOgNeutralSummary(titleLines, poll.neutralSummary);
   const summary = showSummary ? clampPollOgText(poll.neutralSummary, 88) : '';
 
   return new ImageResponse(
@@ -306,13 +321,8 @@ export async function renderPollShareOgImage(
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div
-              style={{
-                ...titleBoxStyle(titleSize),
-                marginBottom: POLL_OG_TITLE_TO_BAR_EXTRA_GAP_PX,
-              }}
-            >
-              {title}
+            <div style={{ display: 'flex', marginBottom: POLL_OG_TITLE_TO_BAR_EXTRA_GAP_PX }}>
+              {pollOgTitleBlock(titleLines, titleSize)}
             </div>
             {summary ? (
               <div
