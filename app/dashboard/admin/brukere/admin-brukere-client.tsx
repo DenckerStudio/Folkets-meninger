@@ -3,12 +3,21 @@
 import { useEffect, useState, useTransition } from 'react';
 import { Users } from 'lucide-react';
 import { AdminEmailGrant } from '@/components/admin/admin-email-grant';
+import { AdminUsersTable } from '@/components/admin/admin-users-table';
 import { AdminBackLink } from '@/components/admin/admin-shell';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { AnimatedTabs } from '@/components/ui/animated-tabs';
 
 type AdminsResponse = { admins: { userId: string; email: string | null }[] };
 
-export default function AdminBrukereClient() {
+const TABS = [
+  { id: 'all', label: 'Alle brukere' },
+  { id: 'admins', label: 'Administratorer' },
+] as const;
+
+type TabId = (typeof TABS)[number]['id'];
+
+function AdminBrukereAdminsPanel() {
   const [admins, setAdmins] = useState<{ userId: string; email: string | null }[]>([]);
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -69,17 +78,7 @@ export default function AdminBrukereClient() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-          <Users className="h-5 w-5 text-brand" aria-hidden />
-          Brukere
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Roller lagres i databasen. Gi eller fjern admin-tilgang med e-post.
-        </p>
-      </div>
-
+    <div className="space-y-4">
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       <ul className="space-y-2">
@@ -94,7 +93,7 @@ export default function AdminBrukereClient() {
                 type="button"
                 disabled={pending}
                 onClick={() => revokeAdmin(admin.email as string)}
-                className="text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                className="min-h-11 px-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
               >
                 Fjern
               </button>
@@ -118,6 +117,36 @@ export default function AdminBrukereClient() {
         placeholder="epost@domene.no"
         submitLabel="Gi admin"
       />
+    </div>
+  );
+}
+
+export default function AdminBrukereClient() {
+  const [tab, setTab] = useState<TabId>('all');
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+          <Users className="h-5 w-5 text-brand" aria-hidden />
+          Brukere
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Administrer kontoer, roller og Stemme+. Deaktivering anonymiserer profil og hindrer innlogging.
+        </p>
+      </div>
+
+      <AnimatedTabs
+        tabs={TABS}
+        activeId={tab}
+        onSelect={(id) => setTab(id as TabId)}
+        ariaLabel="Brukeradmin-faner"
+        idPrefix="brukere"
+      />
+
+      <div role="tabpanel" aria-labelledby={`brukere-${tab}`}>
+        {tab === 'all' ? <AdminUsersTable /> : <AdminBrukereAdminsPanel />}
+      </div>
 
       <AdminBackLink />
     </div>
