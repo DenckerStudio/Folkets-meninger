@@ -64,6 +64,32 @@ export function buildPollDetailPageMetadata(poll: PollRecord, totals: PollTotals
   };
 }
 
+/** Metadata for retired system polls on `/dashboard/avstemninger/[id]` (no ballot, noindex). */
+export function buildRetiredPollDetailPageMetadata(pollId: string): Metadata {
+  const canonical = routes.poll(pollId);
+  const title = `${SYSTEM_POLL_SHARE_RETIRED_TITLE} – ${SITE_NAME}`;
+  const description = SYSTEM_POLL_SHARE_RETIRED_LEAD;
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    robots: { index: false, follow: true },
+    openGraph: {
+      title: SYSTEM_POLL_SHARE_RETIRED_TITLE,
+      description,
+      url: canonical,
+      siteName: SITE_NAME,
+      locale: SITE_LOCALE,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary',
+      title: SYSTEM_POLL_SHARE_RETIRED_TITLE,
+      description,
+    },
+  };
+}
+
 /** Metadata for retired system-Reels on `/del/[id]` (no ballot, noindex). */
 export function buildRetiredDelSharePageMetadata(pollId: string): Metadata {
   const canonical = pollSharePath(pollId);

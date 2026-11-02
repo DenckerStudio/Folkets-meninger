@@ -8,13 +8,10 @@ const retiredSrc = readFileSync(
   'utf8',
 );
 
-assert.match(pageSrc, /getSharePagePollById/);
-assert.match(pageSrc, /isRetiredSystemSharePoll/);
+assert.match(pageSrc, /resolvePublicPollSharePage/);
 assert.match(pageSrc, /SharePollRetiredPage/);
 assert.match(pageSrc, /buildRetiredDelSharePageMetadata/);
-assert.match(pageSrc, /isRetiredSystemSharePoll/);
 
-assert.match(retiredSrc, /SYSTEM_POLL_SHARE_RETIRED_TITLE/);
-assert.match(retiredSrc, /routes\.avstemninger/);
+assert.match(retiredSrc, /PollRetiredNotice/);
 
 console.log('polls/del-share-route.test.ts: ok');

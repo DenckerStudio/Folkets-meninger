@@ -4,13 +4,20 @@ import { notFound } from 'next/navigation';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { PageHeader } from '@/components/page-header';
 import { PollBallot } from '@/components/polls/poll-ballot';
+import { PollRetiredNotice } from '@/components/polls/poll-retired-notice';
 import { PollShareButton } from '@/components/polls/poll-share-button';
 import { PollResultView } from '@/components/polls/poll-result-view';
 import { isAdmin } from '@/lib/admin/gate';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { formatPollDisplayTitle } from '@/lib/polls/display-title';
 import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
-import { pollStatusLabel, pollTrackLabel, SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
+import { pollStatusLabel, pollTrackLabel } from '@/lib/polls/labels';
+import {
+  buildPollDetailPageMetadata,
+  buildRetiredPollDetailPageMetadata,
+} from '@/lib/polls/page-metadata';
+import { isPublicAvstemningTrack } from '@/lib/polls/public-tracks';
+import { getRetiredSystemPollById } from '@/lib/polls/retired-system';
 import {
   getPollById,
   getPollTotals,
@@ -20,7 +27,6 @@ import {
 } from '@/lib/polls/service';
 import { isShareablePoll } from '@/lib/polls/share';
 import { isSharePollsEnabled } from '@/lib/polls/share-flag';
-import { buildPollDetailPageMetadata } from '@/lib/polls/page-metadata';
 import { routes } from '@/lib/routes';
 import { truncateDescription } from '@/lib/seo/metadata';
 
@@ -32,8 +38,12 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
+  const retired = await getRetiredSystemPollById(id);
+  if (retired) return buildRetiredPollDetailPageMetadata(id);
+
   const poll = await getPollById(id);
-  if (!poll || poll.track === 'citizen') return {};
+  if (!poll || !isPublicAvstemningTrack(poll.track)) return {};
+
   const totals = await getPollTotals(id).catch(() => ({
     ja: 0,
     nei: 0,
@@ -45,8 +55,24 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function PollDetailPage({ params }: PageProps) {
   const { id } = await params;
+
+  const retired = await getRetiredSystemPollById(id);
+  if (retired) {
+    return (
+      <DashboardPage className="mx-auto max-w-3xl space-y-5 sm:space-y-6">
+        <Link
+          href={routes.avstemninger}
+          className="-ml-1 inline-flex min-h-11 items-center rounded-md px-1 text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          ← Alle avstemninger
+        </Link>
+        <PollRetiredNotice />
+      </DashboardPage>
+    );
+  }
+
   const poll = await getPollById(id);
-  if (!poll || poll.track === 'citizen') notFound();
+  if (!poll || !isPublicAvstemningTrack(poll.track)) notFound();
 
   const supabase = await getServerSupabase();
   const {
@@ -64,7 +90,6 @@ export default async function PollDetailPage({ params }: PageProps) {
     (isSharePollsEnabled() || (user ? await isAdmin(user.id, user.email) : false));
 
   const sakUrl = poll.stortingetIssueId ? routes.sak(poll.stortingetIssueId) : null;
-  // Avoid listing the same Stortinget sak twice (Kilde link + sourceUrls).
   const sourceUrls = poll.sourceUrls.filter((source) => !sakUrl || source.url !== sakUrl);
 
   return (
@@ -96,9 +121,6 @@ export default async function PollDetailPage({ params }: PageProps) {
         ) : null}
       </div>
       <PageHeader title={formatPollDisplayTitle(poll.title)} />
-      {poll.track === 'system' ? (
-        <p className="text-sm text-muted-foreground">{SYSTEM_REEL_DISCLAIMER}</p>
-      ) : null}
       {poll.neutralSummary ? (
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{poll.neutralSummary}</p>
       ) : null}
@@ -117,9 +139,12 @@ export default async function PollDetailPage({ params }: PageProps) {
         <ul className="space-y-1 text-sm text-muted-foreground">
           {sourceUrls.map((source) => (
             <li key={source.url}>
-              <a href={source.url} className="inline-flex min-h-11 items-center break-all text-brand hover:underline"
+              <a
+                href={source.url}
+                className="inline-flex min-h-11 items-center break-all text-brand hover:underline"
                 rel="noreferrer"
-                target="_blank">
+                target="_blank"
+              >
                 {source.label || source.url}
               </a>
             </li>

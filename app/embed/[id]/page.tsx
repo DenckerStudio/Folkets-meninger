@@ -3,17 +3,18 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { SharePollWidget } from '@/components/polls/share-poll-widget';
 import { EmbedThemeController } from '@/components/polls/embed-theme';
+import { PollRetiredNotice } from '@/components/polls/poll-retired-notice';
 import { isAdmin } from '@/lib/admin/gate';
 import {
   getPollTotals,
-  getPublicPollById,
+  getSharePagePollById,
   getUserPollVote,
   isPollVotingOpen,
 } from '@/lib/polls/service';
 import { parsePollEmbedOptions } from '@/lib/polls/embed';
+import { resolvePublicPollSharePage } from '@/lib/polls/retired-system';
 import { buildPollShareRelativePath, buildPollShareUrl, isShareablePoll } from '@/lib/polls/share';
 import { isSharePollsEnabled } from '@/lib/polls/share-flag';
-import { SYSTEM_REEL_DISCLAIMER } from '@/lib/polls/labels';
 import { resolveRequestShareOrigin } from '@/lib/polls/share-server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { routes } from '@/lib/routes';
@@ -45,10 +46,39 @@ export default async function PollEmbedPage({ params, searchParams }: PageProps)
   const enabled = isSharePollsEnabled() || (user ? await isAdmin(user.id, user.email) : false);
   if (!enabled) notFound();
 
-  const poll = await getPublicPollById(id).catch(() => null);
-  if (!poll || !isShareablePoll(poll)) notFound();
+  const resolved = await resolvePublicPollSharePage(id, getSharePagePollById);
+  if (resolved.kind === 'missing') notFound();
 
   const options = parsePollEmbedOptions(query);
+  const compact = options.size === 'compact';
+
+  if (resolved.kind === 'retired') {
+    return (
+      <div lang="nb">
+        <EmbedThemeController theme={options.theme} />
+        <div className="bg-background p-3">
+          <div
+            className={cn(
+              'mx-auto w-full max-w-xl bg-card',
+              compact ? 'p-4' : 'p-5',
+              options.border && 'border border-border',
+            )}
+            style={{ borderRadius: options.radius }}
+          >
+            <PollRetiredNotice
+              compact
+              headingLevel="h2"
+              variant="bare"
+              linkOpensInNewTab
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const poll = resolved.poll;
+  if (!isShareablePoll(poll)) notFound();
 
   const [totals, voteState, origin] = await Promise.all([
     getPollTotals(id),
@@ -58,7 +88,6 @@ export default async function PollEmbedPage({ params, searchParams }: PageProps)
 
   const shareUrl = buildPollShareUrl(id, origin);
   const votingOpen = isPollVotingOpen(poll);
-  const compact = options.size === 'compact';
   const openOnSite = buildPollShareRelativePath(poll.id, { ref: 'embed' });
 
   return (
@@ -109,9 +138,7 @@ export default async function PollEmbedPage({ params, searchParams }: PageProps)
             headingId="embed-poll-question"
           />
 
-          <p className="text-[11px] leading-relaxed text-muted-foreground">
-            {poll.track === 'system' ? SYSTEM_REEL_DISCLAIMER : STORTINGET_DISCLAIMER}
-          </p>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">{STORTINGET_DISCLAIMER}</p>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
             {poll.stortingetIssueId ? (
