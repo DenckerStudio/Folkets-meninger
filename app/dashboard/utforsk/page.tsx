@@ -1,6 +1,5 @@
 import { getSaker } from '@/lib/stortinget';
 import { getIssueAiLabelsMap, getPopularAiLabels } from '@/lib/ai-summary/service';
-import { listOpenPolls } from '@/lib/polls/service';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import ExploreClient from './explore-client';
 
@@ -13,11 +12,10 @@ export const metadata = buildPageMetadata({
 });
 
 export default async function ExplorePage() {
-  const [initialIssues, issueLabels, popularLabels, publicPolls] = await Promise.all([
+  const [initialIssues, issueLabels, popularLabels] = await Promise.all([
     getSaker(),
     getIssueAiLabelsMap(),
     getPopularAiLabels(),
-    listOpenPolls(1),
   ]);
 
   return (
@@ -25,7 +23,6 @@ export default async function ExplorePage() {
       initialIssues={initialIssues}
       issueLabels={issueLabels}
       popularLabels={popularLabels}
-      hasPublicPolls={publicPolls.length > 0}
     />
   );
 }

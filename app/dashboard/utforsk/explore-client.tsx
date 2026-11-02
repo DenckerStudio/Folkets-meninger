@@ -11,7 +11,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { LayoutGroup } from 'motion/react';
 import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
-import { PollListEmptyState } from '@/components/polls/poll-list-empty-state';
 import { dashboardSearchClass } from '@/components/dashboard/filter-field';
 import { ChipGroup } from '@/components/ui/chip-group';
 import { FilterTokenBar, type FilterToken } from '@/components/ui/filter-token-bar';
@@ -94,12 +93,10 @@ export default function ExploreClient({
   initialIssues,
   issueLabels,
   popularLabels,
-  hasPublicPolls,
 }: {
   initialIssues: SakListItem[];
   issueLabels: Record<string, string[]>;
   popularLabels: string[];
-  hasPublicPolls: boolean;
 }) {
   const [issues] = useState(initialIssues);
   const [labelsExpanded, setLabelsExpanded] = useState(false);
@@ -310,12 +307,6 @@ export default function ExploreClient({
         </p>
       </SectionSettle>
 
-      {!hasPublicPolls ? (
-        <SectionSettle>
-          <PollListEmptyState />
-        </SectionSettle>
-      ) : null}
-
       {user &&
       stanceHistoryLoaded &&
       Object.keys(displayedUserStances).length === 0 ? (
@@ -328,8 +319,7 @@ export default function ExploreClient({
             Holdningene dine brukes til Valgomat og hjertesaker.
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
-            Nasjonale {pollBallotSlugPhrase()}-avstemninger vises under Avstemninger når en mening får nok
-            popularitet.
+            Nasjonale {pollBallotSlugPhrase()}-avstemninger lages når en mening får nok popularitet — se Avstemninger.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {firstOpenIssue ? (
@@ -348,10 +338,10 @@ export default function ExploreClient({
               </Link>
             ) : null}
             <Link
-              href={routes.folketsMeninger}
+              href={routes.avstemninger}
               className="inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
             >
-              Folkets meninger
+              Gå til avstemninger
             </Link>
           </div>
         </div>

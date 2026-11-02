@@ -13,5 +13,7 @@ assert.match(page, /PollRetiredNotice/);
 assert.match(page, /isPublicAvstemningTrack/);
 assert.match(embed, /resolvePublicPollSharePage/);
 assert.match(embed, /PollRetiredNotice/);
+assert.match(embed, /linkOpensInNewTab/);
+assert.match(embed, /variant="bare"/);
 
 console.log('lib/polls/avstemning-detail-route.test.ts: ok');

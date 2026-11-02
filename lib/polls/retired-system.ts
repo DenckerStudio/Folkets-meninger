@@ -1,12 +1,16 @@
-import { getPollById } from '@/lib/polls/service';
-import { isRetiredSystemSharePoll } from '@/lib/polls/share';
+import { getPollById, getSharePagePollById } from '@/lib/polls/service';
+import { isRetiredSystemSharePoll, isShareablePoll } from '@/lib/polls/share';
 import type { PollRecord } from '@/lib/polls/types';
 
-/** Service-role lookup for open/closed system polls hidden from public RLS. */
+/** Open/closed system poll by id (service role, or public row before RLS hides track=system). */
 export async function getRetiredSystemPollById(pollId: string): Promise<PollRecord | null> {
-  const poll = await getPollById(pollId);
-  if (!poll || !isRetiredSystemSharePoll(poll)) return null;
-  return poll;
+  const servicePoll = await getPollById(pollId);
+  if (servicePoll && isRetiredSystemSharePoll(servicePoll)) return servicePoll;
+
+  const publicPoll = await getSharePagePollById(pollId).catch(() => null);
+  if (publicPoll && isRetiredSystemSharePoll(publicPoll)) return publicPoll;
+
+  return null;
 }
 
 export type PublicPollPageResolution =
@@ -14,13 +18,18 @@ export type PublicPollPageResolution =
   | { kind: 'retired' }
   | { kind: 'missing' };
 
-/** Resolve `/del` and embed: public row first, then retired system fallback. */
+/** Resolve `/del` and embed: ballot, retired system notice, or missing. */
 export async function resolvePublicPollSharePage(
   pollId: string,
   loadPublic: (id: string) => Promise<PollRecord | null>,
 ): Promise<PublicPollPageResolution> {
   const publicPoll = await loadPublic(pollId).catch(() => null);
-  if (publicPoll) return { kind: 'ballot', poll: publicPoll };
+  if (publicPoll && isRetiredSystemSharePoll(publicPoll)) {
+    return { kind: 'retired' };
+  }
+  if (publicPoll && isShareablePoll(publicPoll)) {
+    return { kind: 'ballot', poll: publicPoll };
+  }
   const retired = await getRetiredSystemPollById(pollId);
   if (retired) return { kind: 'retired' };
   return { kind: 'missing' };

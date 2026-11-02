@@ -65,7 +65,12 @@ export default async function PollEmbedPage({ params, searchParams }: PageProps)
             )}
             style={{ borderRadius: options.radius }}
           >
-            <PollRetiredNotice compact headingLevel="h2" />
+            <PollRetiredNotice
+              compact
+              headingLevel="h2"
+              variant="bare"
+              linkOpensInNewTab
+            />
           </div>
         </div>
       </div>
