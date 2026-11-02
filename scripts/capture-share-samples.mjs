@@ -7,8 +7,55 @@ const baseUrl = process.env.SHARE_SHOT_BASE_URL ?? 'http://127.0.0.1:3000';
 const outDir = join(process.cwd(), 'docs/share-samples');
 mkdirSync(outDir, { recursive: true });
 
+const COPY_SETTLE_MS = 600;
+
+/** Hide Next.js dev indicators so PNGs match production chrome. */
+function devOverlayHideScript() {
+  const selectors = [
+    'nextjs-portal',
+    '[data-nextjs-toast]',
+    '[data-next-badge-root]',
+    '#devtools-indicator',
+    '[data-nextjs-dev-tools-button]',
+    '#__next-build-watcher',
+  ];
+  const hide = () => {
+    for (const sel of selectors) {
+      document.querySelectorAll(sel).forEach((el) => {
+        if (el instanceof HTMLElement) {
+          el.style.setProperty('display', 'none', 'important');
+        }
+      });
+    }
+  };
+  hide();
+  new MutationObserver(hide).observe(document.documentElement, { childList: true, subtree: true });
+}
+
 async function capture(page, name) {
   await page.screenshot({ path: join(outDir, `${name}.png`) });
+}
+
+async function waitForSharePreviewImage(page) {
+  const img = page.locator('figure img').first();
+  await img.waitFor({ state: 'attached', timeout: 30_000 });
+  await page.waitForFunction(
+    () => {
+      const img = document.querySelector('figure img');
+      return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
+    },
+    undefined,
+    { timeout: 30_000 },
+  );
+  await page.waitForFunction(
+    () => {
+      const img = document.querySelector('figure img');
+      return img instanceof HTMLImageElement && !img.classList.contains('opacity-0');
+    },
+    undefined,
+    { timeout: 30_000 },
+  );
+  await page.waitForTimeout(350);
 }
 
 async function openModal(page, buttonName) {
@@ -16,6 +63,7 @@ async function openModal(page, buttonName) {
   await trigger.waitFor({ state: 'visible', timeout: 60_000 });
   await trigger.click();
   await page.getByRole('button', { name: 'Kopier lenke' }).waitFor({ state: 'visible', timeout: 30_000 });
+  await waitForSharePreviewImage(page);
 }
 
 async function run() {
@@ -34,6 +82,7 @@ async function run() {
         permissions: ['clipboard-read', 'clipboard-write'],
       });
       const page = await context.newPage();
+      await page.addInitScript(devOverlayHideScript);
       await page.addInitScript((dark) => {
         document.documentElement.classList.toggle('dark', dark);
       }, theme === 'dark');
@@ -41,10 +90,11 @@ async function run() {
       await page.goto(`${baseUrl}/dashboard/utforsk`, { waitUntil: 'domcontentloaded', timeout: 90_000 });
       await page.waitForLoadState('networkidle', { timeout: 90_000 }).catch(() => {});
       await openModal(page, 'Del Utforsk');
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(150);
       await capture(page, `utforsk-${tag}-${theme}-open`);
       await page.getByRole('button', { name: 'Kopier lenke' }).click({ force: true });
-      await page.waitForTimeout(350);
+      await page.locator('[role="status"]').filter({ hasText: 'Lenke kopiert' }).waitFor({ timeout: 10_000 });
+      await page.waitForTimeout(COPY_SETTLE_MS);
       await capture(page, `utforsk-${tag}-${theme}-copied`);
       await context.close();
     }
