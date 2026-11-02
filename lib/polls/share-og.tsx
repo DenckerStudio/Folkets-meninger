@@ -31,8 +31,6 @@ const OG_TITLE_MAX_PX = 52;
 const BAR_OUTLINE = '2px solid rgba(255,255,255,0.55)';
 const BAR_SEGMENT_GAP = '2px solid rgba(255,255,255,0.65)';
 const TITLE_MAX_LINES = 2;
-/** Summary only when the title fits on a single line at max size. */
-const SUMMARY_TITLE_MAX_CHARS = 46;
 /** Extra space between the title block and ingress / result bar (added to flex gap). */
 export const POLL_OG_TITLE_TO_BAR_EXTRA_GAP_PX = 12;
 /** Hard limit on raw poll title length before sizing bands. */
@@ -76,12 +74,40 @@ export function pickPollOgTitleFontSize(raw: string, measurer: PollOgTitleMeasur
   return 40;
 }
 
+const POLL_OG_ELLIPSIS = '…';
+
+function truncatePollOgTitleNoSpaces(
+  text: string,
+  fontSize: number,
+  measurer: PollOgTitleMeasurer,
+): string {
+  if (measurer.fitsTwoLines(text, fontSize)) return text;
+
+  let lo = 0;
+  let hi = text.length;
+  let best = POLL_OG_ELLIPSIS;
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const candidate = `${text.slice(0, mid)}${POLL_OG_ELLIPSIS}`;
+    if (measurer.fitsTwoLines(candidate, fontSize)) {
+      best = candidate;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return best;
+}
+
 export function truncatePollOgTitleToTwoLines(
   text: string,
   fontSize: number,
   measurer: PollOgTitleMeasurer,
 ): string {
   if (measurer.fitsTwoLines(text, fontSize)) return text;
+  if (!/\s/.test(text)) {
+    return truncatePollOgTitleNoSpaces(text, fontSize, measurer);
+  }
   for (let max = text.length; max >= 15; max -= 1) {
     const candidate = clampPollOgText(text, max);
     if (measurer.fitsTwoLines(candidate, fontSize)) return candidate;
@@ -103,6 +129,15 @@ export function resolvePollOgTitleDisplayWithMeasurer(
   const fontSize = pickPollOgTitleFontSize(raw, measurer);
   const title = truncatePollOgTitleToTwoLines(raw, fontSize, measurer);
   return { fontSize, title, charCap: title.length };
+}
+
+export function shouldShowPollOgNeutralSummary(
+  title: string,
+  titleFontSize: number,
+  measurer: PollOgTitleMeasurer,
+  neutralSummary: string | null | undefined,
+): boolean {
+  return measurer.lineCount(title, titleFontSize) === 1 && Boolean(neutralSummary?.trim());
 }
 
 /** Measure with Noto Sans 700 and clamp on word boundaries before Satori line-clamp. */
@@ -218,7 +253,13 @@ export async function renderPollShareOgImage(
 ): Promise<ImageResponse> {
   const fonts = await loadOgFonts();
   const { fontSize: titleSize, title } = await resolvePollOgTitleDisplay(poll.title);
-  const showSummary = title.length <= SUMMARY_TITLE_MAX_CHARS && Boolean(poll.neutralSummary);
+  const measurer = await loadPollOgTitleMeasurer();
+  const showSummary = shouldShowPollOgNeutralSummary(
+    title,
+    titleSize,
+    measurer,
+    poll.neutralSummary,
+  );
   const summary = showSummary ? clampPollOgText(poll.neutralSummary, 88) : '';
 
   return new ImageResponse(

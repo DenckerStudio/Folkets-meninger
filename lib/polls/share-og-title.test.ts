@@ -3,6 +3,15 @@ import React from 'react';
 import { test } from 'node:test';
 import type { PollRecord } from '@/lib/polls/types';
 import {
+  isNotDefGlyph,
+  layoutPollOgTitleLines,
+  loadPollOgTitleMeasurer,
+  loadPollOgTitleMeasurerFonts,
+  maxPollOgTitleLineWidth,
+  POLL_OG_TITLE_MAX_WIDTH,
+  resetPollOgTitleMeasurerCacheForTests,
+} from '@/lib/polls/share-og-title-measure';
+import {
   OG_IMAGE_SIZE,
   POLL_OG_TITLE_RAW_MAX,
   POLL_OG_TITLE_TO_BAR_EXTRA_GAP_PX,
@@ -11,13 +20,8 @@ import {
   renderPollShareOgImage,
   resolvePollOgTitleDisplay,
   resolvePollOgTitleDisplayWithMeasurer,
+  shouldShowPollOgNeutralSummary,
 } from '@/lib/polls/share-og';
-import {
-  isNotDefGlyph,
-  loadPollOgTitleMeasurer,
-  loadPollOgTitleMeasurerFonts,
-  resetPollOgTitleMeasurerCacheForTests,
-} from '@/lib/polls/share-og-title-measure';
 
 (globalThis as typeof globalThis & { React: typeof React }).React = React;
 
@@ -60,12 +64,18 @@ function assertMeasuredTwoLineTitle(
     measurer.fitsTwoLines(layout.title, layout.fontSize),
     `title must fit on 2 lines at ${layout.fontSize}px: ${JSON.stringify(layout.title)} (lines=${measurer.lineCount(layout.title, layout.fontSize)})`,
   );
-  assert.ok(
-    pollOgTitleEndsWithWordBoundaryEllipsis(layout.title),
-    `title ellipsis must be on word boundary: ${JSON.stringify(layout.title)}`,
-  );
+  if (/\s/.test(layout.title)) {
+    assert.ok(
+      pollOgTitleEndsWithWordBoundaryEllipsis(layout.title),
+      `title ellipsis must be on word boundary: ${JSON.stringify(layout.title)}`,
+    );
+  }
   if (layout.title.endsWith('…')) {
     assert.match(layout.title, /\S…$/);
+    assert.ok(
+      maxPollOgTitleLineWidth(layout.title, layout.fontSize, measurer) <= POLL_OG_TITLE_MAX_WIDTH + 0.5,
+      `line width must stay within ${POLL_OG_TITLE_MAX_WIDTH}px`,
+    );
   }
   assert.ok(!measurer.hasNotDefGlyph(layout.title));
 }
@@ -122,6 +132,36 @@ test('84-, 90-, caps, max-length, æøå and long-word titles resolve on word bo
 
   const maxRaw = resolvePollOgTitleDisplayWithMeasurer(TITLE_MAX_RAW, measurer);
   assert.ok(maxRaw.title.endsWith('…'));
+  assert.equal(measurer.lineCount(maxRaw.title, maxRaw.fontSize), 2);
+  assert.ok(
+    maxPollOgTitleLineWidth(maxRaw.title, maxRaw.fontSize, measurer) <= POLL_OG_TITLE_MAX_WIDTH,
+  );
+  const maxLines = layoutPollOgTitleLines(maxRaw.title, maxRaw.fontSize, measurer);
+  assert.ok(maxLines.at(-1)?.endsWith('…'));
+});
+
+test('130 W title uses width-measured hard cut with visible ellipsis', async () => {
+  const measurer = await withMeasurer();
+  const layout = resolvePollOgTitleDisplayWithMeasurer(TITLE_MAX_RAW, measurer);
+  assert.ok(layout.title.endsWith('…'));
+  assert.ok(
+    maxPollOgTitleLineWidth(layout.title, layout.fontSize, measurer) <= POLL_OG_TITLE_MAX_WIDTH,
+  );
+});
+
+test('neutral summary only when fitted title is a single measured line', async () => {
+  const measurer = await withMeasurer();
+  const oneLine = resolvePollOgTitleDisplayWithMeasurer('Kortere arbeidsuke?', measurer);
+  assert.equal(measurer.lineCount(oneLine.title, oneLine.fontSize), 1);
+  assert.ok(
+    shouldShowPollOgNeutralSummary(oneLine.title, oneLine.fontSize, measurer, 'Eksempel ingress.'),
+  );
+
+  const twoLine = resolvePollOgTitleDisplayWithMeasurer(TITLE_90_CHARS, measurer);
+  assert.equal(measurer.lineCount(twoLine.title, twoLine.fontSize), 2);
+  assert.ok(
+    !shouldShowPollOgNeutralSummary(twoLine.title, twoLine.fontSize, measurer, 'Skjult ingress.'),
+  );
 });
 
 test('clampPollOgText adds ellipsis on hard cut (no spaces)', () => {

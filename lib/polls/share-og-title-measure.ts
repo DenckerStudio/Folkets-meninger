@@ -114,6 +114,25 @@ function wrapLines(text: string, measureWidth: (value: string) => number): strin
   return lines;
 }
 
+/** Wrapped title lines at fontSize — same rules as lineCount / Satori width. */
+export function layoutPollOgTitleLines(
+  text: string,
+  fontSize: number,
+  measurer: Pick<PollOgTitleMeasurer, 'measureWidth'>,
+): string[] {
+  return wrapLines(text, (value) => measurer.measureWidth(value, fontSize));
+}
+
+export function maxPollOgTitleLineWidth(
+  text: string,
+  fontSize: number,
+  measurer: Pick<PollOgTitleMeasurer, 'measureWidth'>,
+): number {
+  const lines = layoutPollOgTitleLines(text, fontSize, measurer);
+  if (lines.length === 0) return 0;
+  return Math.max(...lines.map((line) => measurer.measureWidth(line, fontSize)));
+}
+
 export function createDualFontPollOgTitleMeasurer(
   latin700: opentype.Font,
   latinExt700: opentype.Font,
