@@ -154,7 +154,11 @@ export function validateClosesAtForPublish(
     return { ok: false, error: 'Ugyldig sluttidspunkt.' };
   }
   if (parsed.getTime() <= now.getTime()) {
-    return { ok: false, error: 'Sluttidspunkt må ligge i fremtiden.' };
+    return {
+      ok: false,
+      error:
+        'Sluttidspunktet må ligge i fremtiden. Velg en senere dato og klokkeslett (Europe/Oslo).',
+    };
   }
   return { ok: true, closesAt: { action: 'set', iso: parsed.toISOString() } };
 }
@@ -272,6 +276,17 @@ export function utcIsoToOsloLocalInput(iso: string): string {
   const read = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((part) => part.type === type)?.value ?? '';
   return `${read('year')}-${read('month')}-${read('day')}T${read('hour')}:${read('minute')}`;
+}
+
+export function validateStortingetPollAdminForm(
+  raw: Record<string, unknown>,
+  now: Date = new Date(),
+): { ok: true } | { ok: false; error: string } {
+  const result = validatePublishStortingetPollInput(raw, now);
+  if (!result.ok) {
+    return { ok: false, error: result.error };
+  }
+  return { ok: true };
 }
 
 export async function publishStortingetPollForAdmin(

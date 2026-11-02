@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { formatStemmerCount } from '@/lib/norwegian-plural';
-import { isPollVotingOpen, pollChoicePercent } from '@/lib/polls/format';
+import { isPollVotingOpen, pollChoicePercent, POLL_ENDED_USER_MESSAGE } from '@/lib/polls/format';
 import { formatPollDisplayTitle } from '@/lib/polls/display-title';
 import {
   POLL_BALLOT_CHOICES,
@@ -67,6 +67,9 @@ export function PollCard({ poll, totals }: PollCardProps) {
       </h2>
       {poll.neutralSummary ? (
         <p className="relative mt-2 line-clamp-3 text-sm text-muted-foreground">{poll.neutralSummary}</p>
+      ) : null}
+      {!open ? (
+        <p className="relative mt-3 text-sm font-medium text-foreground">{POLL_ENDED_USER_MESSAGE}</p>
       ) : null}
       <div className="relative mt-4 grid grid-cols-3 gap-2">
         {POLL_BALLOT_CHOICES.map((choice) => (

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { pollChoicePercent } from '@/lib/polls/format';
+import { pollChoicePercent, POLL_ENDED_USER_MESSAGE } from '@/lib/polls/format';
 import {
   POLL_BALLOT_VOTE_BUTTON_GRID_CLASS,
   pollBallotRunningTextPhraseSentenceStart,
@@ -80,33 +80,34 @@ export function PollBallot({
         </>
       )}
       <div className={cn(POLL_BALLOT_VOTE_BUTTON_GRID_CLASS, compact ? 'mt-0' : 'mt-4')}>
-        {POLL_BALLOT_CHOICES.map((choice) => {
-          const selected = userVote === choice;
-          return (
-            <PollBallotVoteButton
-              key={choice}
-              choice={choice}
-              selected={selected}
-              disabled={!votingOpen || Boolean(userVote) || busy || !user}
-              onClick={() => void vote(choice)}
-              className={cn(
-                'flex-col gap-0.5 py-2',
-                (!votingOpen || userVote) && !selected ? 'opacity-60' : '',
-              )}
-            >
-              <span>{pollChoiceLabel(choice)}</span>
-              <span className="text-xs font-normal opacity-90">
-                {(() => {
-                  const pct = pollChoicePercent(totals, choice);
-                  return pct != null ? `${pct}% · ${totals[choice]}` : `${totals[choice]} stemmer`;
-                })()}
-              </span>
-            </PollBallotVoteButton>
-          );
-        })}
+        {votingOpen
+          ? POLL_BALLOT_CHOICES.map((choice) => {
+              const selected = userVote === choice;
+              return (
+                <PollBallotVoteButton
+                  key={choice}
+                  choice={choice}
+                  selected={selected}
+                  disabled={Boolean(userVote) || busy || !user}
+                  onClick={() => void vote(choice)}
+                  className={cn('flex-col gap-0.5 py-2', userVote && !selected ? 'opacity-60' : '')}
+                >
+                  <span>{pollChoiceLabel(choice)}</span>
+                  <span className="text-xs font-normal opacity-90">
+                    {(() => {
+                      const pct = pollChoicePercent(totals, choice);
+                      return pct != null ? `${pct}% · ${totals[choice]}` : `${totals[choice]} stemmer`;
+                    })()}
+                  </span>
+                </PollBallotVoteButton>
+              );
+            })
+          : null}
       </div>
       {!votingOpen ? (
-        <p className="mt-3 text-sm text-muted-foreground">Avstemningen er stengt.</p>
+        <p className="mt-3 text-sm font-medium text-foreground" role="status">
+          {POLL_ENDED_USER_MESSAGE}
+        </p>
       ) : userVote ? (
         <p className="mt-3 text-sm text-foreground">
           Du har stemt {pollChoiceLabel(userVote).toLowerCase()} (telles uten navn i statistikken).

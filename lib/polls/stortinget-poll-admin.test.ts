@@ -7,6 +7,7 @@ import {
   publishStortingetPollForAdmin,
   runPublishStortingetPollAdminAction,
   validatePublishStortingetPollInput,
+  validateStortingetPollAdminForm,
 } from '@/lib/polls/stortinget-poll-admin';
 
 const fixedNow = new Date('2026-11-02T10:00:00.000Z');
@@ -72,7 +73,19 @@ const updateChangedPast = validatePublishStortingetPollInput(
 );
 assert.equal(updateChangedPast.ok, false);
 if (updateChangedPast.ok) throw new Error('expected changed past to fail');
-assert.match(updateChangedPast.error, /fremtiden/i);
+assert.match(updateChangedPast.error, /senere dato/i);
+
+const clientPast = validateStortingetPollAdminForm(
+  {
+    issueId: '999001',
+    title: 'Tittel',
+    neutralSummary: '',
+    closesAtDate: '01.01.2020',
+    closesAtTime: '09:00',
+  },
+  fixedNow,
+);
+assert.equal(clientPast.ok, false);
 
 async function main() {
   const adminDenied = await runPublishStortingetPollAdminAction(
