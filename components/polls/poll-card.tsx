@@ -7,7 +7,6 @@ import {
   pollChoiceLabel,
   pollStatusLabel,
   pollTrackLabel,
-  SYSTEM_REEL_DISCLAIMER,
 } from '@/lib/polls/labels';
 import type { PollRecord, PollTotals } from '@/lib/polls/types';
 import { routes } from '@/lib/routes';
@@ -68,9 +67,6 @@ export function PollCard({ poll, totals }: PollCardProps) {
       </h2>
       {poll.neutralSummary ? (
         <p className="relative mt-2 line-clamp-3 text-sm text-muted-foreground">{poll.neutralSummary}</p>
-      ) : null}
-      {poll.track === 'system' ? (
-        <p className="relative mt-2 text-xs leading-relaxed text-muted-foreground">{SYSTEM_REEL_DISCLAIMER}</p>
       ) : null}
       <div className="relative mt-4 grid grid-cols-3 gap-2">
         {POLL_BALLOT_CHOICES.map((choice) => (
