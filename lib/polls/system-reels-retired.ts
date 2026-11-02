@@ -10,4 +10,4 @@ export const VURDER_REELS_QUEUE_INTRO =
 export const SYSTEM_POLL_SHARE_RETIRED_TITLE = 'Denne avstemningen er avviklet';
 
 export const SYSTEM_POLL_SHARE_RETIRED_LEAD =
-  'Systemgenererte Reels-avstemninger er ikke lenger tilgjengelige. Du finner åpne avstemninger og annet innhold på Folkets Meninger.';
+  'Systemgenererte Reels-avstemninger er ikke lenger tilgjengelige. Du finner åpne avstemninger og annet innhold på Folkets meninger.';

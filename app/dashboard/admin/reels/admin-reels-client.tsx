@@ -261,7 +261,7 @@ export default function AdminReelsClient({
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
           <CivicBubble className="h-6 w-6 text-brand" />
-          Reels-utkast
+          Systemutkast
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {SYSTEM_REELS_RETIRED
@@ -299,7 +299,7 @@ export default function AdminReelsClient({
                   ? 'Køen er stor — kjør oppfrisking eller vent på daglig sjekk kl. 08:00.'
                   : SYSTEM_REELS_RETIRED
                     ? 'Sync → dokumentindeks → sammendrag.'
-                    : 'Sync → dokumentindeks → sammendrag → Reels-utkast.'
+                    : 'Sync → dokumentindeks → sammendrag → systemutkast.'
                 : 'Automatisk generering av sammendrag og utkast.'}
             </p>
           </div>
@@ -455,52 +455,52 @@ export default function AdminReelsClient({
       </section>
 
       {!SYSTEM_REELS_RETIRED ? (
-      <section className="space-y-3">
-        <h2 className="text-base font-semibold text-foreground">Sak-kandidater</h2>
-        {candidates.length === 0 ? (
-          <EmptyState
-            title="Ingen sak-kandidater"
-            description="Ingen kandidater med dokumentindeks, sammendrag eller sakssammendrag akkurat nå."
-            className="py-6"
-          />
-        ) : (
-          <ul className="space-y-2">
-            {candidates.map((candidate) => (
-              <li
-                key={candidate.issueId}
-                className="flex items-start justify-between gap-3 rounded-xl border border-border px-3 py-2.5"
-              >
-                <div>
-                  <p className="text-sm font-medium text-foreground">{candidate.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {candidate.issueId} · {candidate.ragChunkCount} dokumentutdrag
-                    {candidate.hasAiSummary ? ' · Sammendrag' : ''}
-                    {candidate.sourceKind === 'metadata' ? ' · kun metadata' : ''}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-2">
-                  {getJob(candidate.issueId) ? (
-                    <GenerationStatusBadge
-                      issueId={candidate.issueId}
-                      getJob={getJob}
-                      onDismiss={dismissJob}
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={pending || isGenerating(candidate.issueId)}
-                      onClick={() => generate(candidate.issueId)}
-                      className="rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
-                    >
-                      Generer utkast
-                    </button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        <section className="space-y-3">
+          <h2 className="text-base font-semibold text-foreground">Sak-kandidater</h2>
+          {candidates.length === 0 ? (
+            <EmptyState
+              title="Ingen sak-kandidater"
+              description="Ingen kandidater med dokumentindeks, sammendrag eller sakssammendrag akkurat nå."
+              className="py-6"
+            />
+          ) : (
+            <ul className="space-y-2">
+              {candidates.map((candidate) => (
+                <li
+                  key={candidate.issueId}
+                  className="flex items-start justify-between gap-3 rounded-xl border border-border px-3 py-2.5"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{candidate.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {candidate.issueId} · {candidate.ragChunkCount} dokumentutdrag
+                      {candidate.hasAiSummary ? ' · Sammendrag' : ''}
+                      {candidate.sourceKind === 'metadata' ? ' · kun metadata' : ''}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    {getJob(candidate.issueId) ? (
+                      <GenerationStatusBadge
+                        issueId={candidate.issueId}
+                        getJob={getJob}
+                        onDismiss={dismissJob}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={pending || isGenerating(candidate.issueId)}
+                        onClick={() => generate(candidate.issueId)}
+                        className="rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+                      >
+                        Generer utkast
+                      </button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       ) : null}
 
       <div className="flex flex-wrap gap-4 text-sm">
