@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
 import { trustedClientIp } from '@/lib/analytics/client-ip';
+import {
+  buildSameOriginShareLocation,
+  buildShareLinkExpiredRedirectUrl,
+  buildShareLinkHomeRedirectUrl,
+} from '@/lib/analytics/share-link-redirect';
 import { shouldRecordShareClick } from '@/lib/analytics/share-click';
 import { resolveShareTarget } from '@/lib/polls/share-personal';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -12,31 +17,12 @@ const SHARE_CLICK_WINDOW_MS = 60_000;
 const SHARE_CLICK_IP_LIMIT = 60;
 const SHARE_CLICK_CODE_LIMIT = 120;
 
-function redirectHome(request: Request): NextResponse {
-  return NextResponse.redirect(new URL('/', request.url), 302);
+function redirectHome(): NextResponse {
+  return NextResponse.redirect(buildShareLinkHomeRedirectUrl(), 302);
 }
 
-function redirectExpiredLink(request: Request): NextResponse {
-  return NextResponse.redirect(new URL('/?lenke=utlopt', request.url), 302);
-}
-
-function sameOriginLocation(path: string, code: string, requestUrl: string): URL | null {
-  if (!path.startsWith('/') || path.startsWith('//') || path.includes('//')) {
-    return null;
-  }
-  let request: URL;
-  let location: URL;
-  try {
-    request = new URL(requestUrl);
-    location = new URL(path, request);
-  } catch {
-    return null;
-  }
-  if (location.origin !== request.origin) return null;
-  if (!location.pathname.startsWith('/') || location.pathname.includes('//')) return null;
-  location.search = '';
-  location.searchParams.set('fm_share', code);
-  return location;
+function redirectExpiredLink(): NextResponse {
+  return NextResponse.redirect(buildShareLinkExpiredRedirectUrl(), 302);
 }
 
 export async function GET(
@@ -44,13 +30,13 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> },
 ) {
   const { code } = await params;
-  if (!CODE_RE.test(code)) return redirectExpiredLink(request);
+  if (!CODE_RE.test(code)) return redirectExpiredLink();
 
   if (
     !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
     !process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
   ) {
-    return redirectHome(request);
+    return redirectHome();
   }
 
   const service = getServiceSupabase();
@@ -63,15 +49,15 @@ export async function GET(
 
   if (error) {
     console.error(`share link lookup failed: ${error.code ?? 'unknown'}`);
-    return redirectHome(request);
+    return redirectHome();
   }
-  if (!data || typeof data.id !== 'string') return redirectExpiredLink(request);
+  if (!data || typeof data.id !== 'string') return redirectExpiredLink();
 
   const targetKind = typeof data.target_kind === 'string' ? data.target_kind : '';
   const targetId = typeof data.target_id === 'string' ? data.target_id : '';
   const path = resolveShareTarget(targetKind, targetId);
-  const location = path ? sameOriginLocation(path, code, request.url) : null;
-  if (!location) return redirectExpiredLink(request);
+  const location = path ? buildSameOriginShareLocation(path, code) : null;
+  if (!location) return redirectExpiredLink();
 
   // Klikktallet i delingspanelet skal telles også når offentlig analyse er av.
   // Over grensen hopper vi over innsettingen og sender besøkende videre.

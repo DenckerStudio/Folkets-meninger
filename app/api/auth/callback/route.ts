@@ -1,20 +1,26 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import {
+  buildAuthCallbackFailureRedirect,
+  buildAuthCallbackSuccessRedirect,
+  buildCompleteProfileRedirect,
+  buildOnboardingRedirect,
+  resolveAuthCallbackNext,
+} from '@/lib/auth/oauth-callback-redirect';
 import { ensurePublicUser } from '@/lib/ensure-public-user';
 import { userHasPublicIdentityInDb } from '@/lib/identity/require-public-identity';
-import { onboardingPathWithNext, shouldStartSignupOnboarding } from '@/lib/onboarding';
+import { shouldStartSignupOnboarding } from '@/lib/onboarding';
 import { routes } from '@/lib/routes';
-import { toRelativeNext } from '@/lib/safe-redirect';
 
 function requiresPublicIdentity(pathname: string): boolean {
   return pathname.startsWith(`${routes.horinger}/`) || pathname.startsWith('/dashboard/horinger/');
 }
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = toRelativeNext(searchParams.get('next'));
+  const next = resolveAuthCallbackNext(searchParams.get('next'));
 
   if (code) {
     const cookieStore = await cookies();
@@ -50,17 +56,15 @@ export async function GET(request: Request) {
       if (user && requiresPublicIdentity(next)) {
         const hasIdentity = await userHasPublicIdentityInDb(user.id);
         if (!hasIdentity) {
-          const profileUrl = new URL(routes.completeProfile, origin);
-          profileUrl.searchParams.set('next', next);
-          return NextResponse.redirect(profileUrl.toString());
+          return NextResponse.redirect(buildCompleteProfileRedirect(next));
         }
       }
       if (user && shouldStartSignupOnboarding(user)) {
-        return NextResponse.redirect(`${origin}${onboardingPathWithNext(next)}`);
+        return NextResponse.redirect(buildOnboardingRedirect(next));
       }
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(buildAuthCallbackSuccessRedirect(next));
     }
   }
 
-  return NextResponse.redirect(`${origin}/auth/login?error=auth_failed`);
+  return NextResponse.redirect(buildAuthCallbackFailureRedirect());
 }
