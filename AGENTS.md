@@ -120,11 +120,11 @@ All on **Coolify, server `klever`**:
   "not configured" when `STRIPE_SECRET_KEY` / `STRIPE_STEMME_PLUS_PRICE_ID` are missing.
 - **Bluesky**: blog posts are shared there. On publish `fm-cms` fires
   `BLOG_PUBLISHED_WEBHOOK_URL` (configured on `fm-cms`, not `fm-web`) and n8n posts.
-- **X is dropped for now.** Don't add X integrations.
-- **Reddit** (owner decision 2026-11-02): allowed only as an **interest signal** (what people
-  talk about), never as a fact source. Facts always need an independent source (news, official
-  sources). Read via public RSS/search-RSS without OAuth; batch into **one combined request** to
-  avoid 429 rate limits and send a proper User-Agent. Persisted records are flagged `signal_only`.
+- **X** is still dropped — don't add X integrations.
+- **Reddit** (interest signal only, not a fact source): n8n henter read-only via Arctic Shift
+  (`r/norge`, `r/norske`, `r/Nordmenn`, attribuert per subreddit — aldri slått sammen) og
+  sender til `POST /api/ops/reddit-signals` (`x-cron-secret`) → `reddit_signals`. Kontrakt:
+  `docs/n8n/reddit-signals-contract.md`.
 - SMTP for notifications and digests. SearXNG for Stemme+ chat source search.
 
 ## Blog
