@@ -1,14 +1,13 @@
 import Link from 'next/link';
 import { formatStemmerCount } from '@/lib/norwegian-plural';
-import { isPollVotingOpen, pollChoicePercent } from '@/lib/polls/format';
+import { isPollVotingOpen, POLL_ENDED_USER_MESSAGE } from '@/lib/polls/format';
 import { formatPollDisplayTitle } from '@/lib/polls/display-title';
 import {
-  POLL_BALLOT_CHOICES,
-  pollChoiceLabel,
   pollStatusLabel,
   pollTrackLabel,
 } from '@/lib/polls/labels';
 import type { PollRecord, PollTotals } from '@/lib/polls/types';
+import { PollChoiceResultTiles } from '@/components/polls/poll-choice-result-tiles';
 import { routes } from '@/lib/routes';
 
 type PollCardProps = {
@@ -68,20 +67,10 @@ export function PollCard({ poll, totals }: PollCardProps) {
       {poll.neutralSummary ? (
         <p className="relative mt-2 line-clamp-3 text-sm text-muted-foreground">{poll.neutralSummary}</p>
       ) : null}
-      <div className="relative mt-4 grid grid-cols-3 gap-2">
-        {POLL_BALLOT_CHOICES.map((choice) => (
-          <div key={choice} className="rounded-xl border border-border bg-muted/40 px-3 py-2 text-center">
-            <p className="text-xs font-medium text-muted-foreground">{pollChoiceLabel(choice)}</p>
-            <p className="text-lg font-semibold text-foreground">
-              {(() => {
-                const pct = pollChoicePercent(totals, choice);
-                return pct != null ? `${pct}%` : '—';
-              })()}
-            </p>
-            <p className="text-xs text-muted-foreground">{totals[choice]}</p>
-          </div>
-        ))}
-      </div>
+      {!open ? (
+        <p className="relative mt-3 text-sm font-medium text-foreground">{POLL_ENDED_USER_MESSAGE}</p>
+      ) : null}
+      <PollChoiceResultTiles totals={totals} className="relative mt-4" />
       <div className="relative mt-4 flex items-center justify-between text-sm">
         <span className="text-muted-foreground">{formatStemmerCount(totals.total)}</span>
         <span className="inline-flex min-h-11 items-center font-medium text-brand">Åpne avstemning</span>

@@ -1,0 +1,507 @@
+'use client';
+
+import { useState, useTransition, useId, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ExternalLink, Loader2 } from 'lucide-react';
+import { AdminToast, useAdminToast } from '@/components/admin/app-future/admin-toast';
+import { Dialog } from '@/components/ui/dialog';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
+import { POLL_BALLOT_BUTTON_ORDER } from '@/lib/polls/ballot-buttons';
+import { pollChoiceLabel } from '@/lib/polls/labels';
+import { publishStortingetPollAction } from '@/lib/polls/stortinget-poll-admin-action';
+import {
+  STORTINGET_POLL_NEUTRAL_SUMMARY_MAX,
+  STORTINGET_POLL_TITLE_MAX,
+  isPollClosesAtPast,
+  validateStortingetPollAdminForm,
+  utcIsoToNorwegianClosesAtFields,
+  utcIsoToOsloLocalInput,
+} from '@/lib/polls/stortinget-poll-admin';
+import {
+  STORTINGET_POLL_ADMIN_ARCHIVED_MESSAGE,
+  STORTINGET_POLL_ADMIN_BLOCKED_BODY,
+  STORTINGET_POLL_ADMIN_BLOCKED_HEADING,
+  STORTINGET_POLL_ADMIN_BLOCKED_NEXT,
+  STORTINGET_POLL_ADMIN_DRAFT_MESSAGE,
+  type StortingetPollAdminUiState,
+} from '@/lib/polls/stortinget-poll-admin-guard';
+import { routes } from '@/lib/routes';
+import { cn } from '@/lib/utils';
+
+type StortingetPollAdminSectionProps = {
+  sakId: string;
+  sakTitle: string;
+  defaultNeutralSummary: string;
+  stortingetPageUrl: string;
+  adminState: StortingetPollAdminUiState;
+  /** Overstyrer adminState for docs/screenshots. */
+  captureAdminState?: StortingetPollAdminUiState;
+  /** Kun for docs/screenshots — åpner dialog ved mount. */
+  captureDialogOpen?: boolean;
+  captureEditDialogOpen?: boolean;
+  captureDialogStep?: 'form' | 'confirm';
+  captureFieldError?: string | null;
+  capturePending?: boolean;
+  /** Kun for docs/screenshots — forhåndsutfylte sluttid-felt ved valideringsfeil. */
+  captureClosesAtDate?: string;
+  captureClosesAtTime?: string;
+};
+
+const FIELD_CLASS = cn(
+  'min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground',
+  VURDER_FOCUS_RING,
+);
+
+const TEXTAREA_CLASS = cn(
+  'min-h-[7rem] w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground',
+  VURDER_FOCUS_RING,
+);
+
+const BTN_SECONDARY = cn(
+  'inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 text-sm font-medium text-foreground hover:bg-muted',
+  VURDER_FOCUS_RING,
+);
+
+const BTN_PRIMARY = cn(
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-medium text-brand-foreground hover:bg-brand/90 disabled:opacity-60',
+  VURDER_FOCUS_RING,
+);
+
+function ballotSectionPhrase(): string {
+  return `${POLL_BALLOT_BUTTON_ORDER.map((choice) => pollChoiceLabel(choice)).join(' / ')}-avstemning`;
+}
+
+function ballotWarningPhrase(): string {
+  const labels = POLL_BALLOT_BUTTON_ORDER.map((choice) => pollChoiceLabel(choice));
+  return `${labels[0]}, ${labels[1]} eller ${labels[2]}`;
+}
+
+function invalidFieldsFromError(error: string | null): {
+  title: boolean;
+  neutralSummary: boolean;
+  closesAt: boolean;
+} {
+  if (!error) {
+    return { title: false, neutralSummary: false, closesAt: false };
+  }
+  const lower = error.toLowerCase();
+  return {
+    title: /tittel/.test(lower),
+    neutralSummary: /ingress/.test(lower),
+    closesAt: /dato|klokkeslett|sluttidspunkt|fremtiden|ugyldig slutt/.test(lower),
+  };
+}
+
+function fieldClass(invalid: boolean): string {
+  return cn(FIELD_CLASS, invalid && 'border-destructive');
+}
+
+function textareaClass(invalid: boolean): string {
+  return cn(TEXTAREA_CLASS, invalid && 'border-destructive');
+}
+
+export function StortingetPollAdminSection({
+  sakId,
+  sakTitle,
+  defaultNeutralSummary,
+  stortingetPageUrl,
+  adminState,
+  captureAdminState,
+  captureDialogOpen = false,
+  captureEditDialogOpen = false,
+  captureDialogStep = 'form',
+  captureFieldError = null,
+  capturePending = false,
+  captureClosesAtDate = '',
+  captureClosesAtTime = '',
+}: StortingetPollAdminSectionProps) {
+  const effectiveState = captureAdminState ?? adminState;
+  const [dialogOpen, setDialogOpen] = useState(captureDialogOpen || captureEditDialogOpen);
+  const [dialogStep, setDialogStep] = useState<'form' | 'confirm'>(captureDialogStep);
+  const [title, setTitle] = useState(sakTitle);
+  const [neutralSummary, setNeutralSummary] = useState(defaultNeutralSummary);
+  const [closesAtDate, setClosesAtDate] = useState(captureClosesAtDate);
+  const [closesAtTime, setClosesAtTime] = useState(captureClosesAtTime);
+  const [initialClosesAtWire, setInitialClosesAtWire] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(captureFieldError);
+  const [pending, startTransition] = useTransition();
+  const [publishedPollId, setPublishedPollId] = useState<string | null>(null);
+  const router = useRouter();
+  const { message, variant, toast } = useAdminToast();
+  const formErrorId = useId();
+  const invalidFields = invalidFieldsFromError(fieldError);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const ingressRef = useRef<HTMLTextAreaElement>(null);
+  const closesDateRef = useRef<HTMLInputElement>(null);
+  const closesTimeRef = useRef<HTMLInputElement>(null);
+  const footerErrorRef = useRef<HTMLParagraphElement>(null);
+
+  function focusFirstInvalidField(fields: ReturnType<typeof invalidFieldsFromError>) {
+    const target = fields.title
+      ? titleRef.current
+      : fields.closesAt
+        ? closesDateRef.current
+        : fields.neutralSummary
+          ? ingressRef.current
+          : null;
+    target?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    target?.focus({ preventScroll: true });
+    footerErrorRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  useEffect(() => {
+    if (!fieldError || !dialogOpen || dialogStep !== 'form') return;
+    const fields = invalidFieldsFromError(fieldError);
+    if (!fields.title && !fields.closesAt && !fields.neutralSummary) return;
+    const frame = requestAnimationFrame(() => {
+      focusFirstInvalidField(fields);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [fieldError, dialogOpen, dialogStep]);
+
+  const existingPoll = effectiveState.kind === 'editable' ? effectiveState.poll : null;
+  const hasPoll =
+    effectiveState.kind === 'editable' ||
+    effectiveState.kind === 'stortinget_draft' ||
+    effectiveState.kind === 'stortinget_archived' ||
+    Boolean(publishedPollId);
+  const isEditMode = effectiveState.kind === 'editable';
+  const pollClosed =
+    isEditMode && existingPoll?.closesAt ? isPollClosesAtPast(existingPoll.closesAt) : false;
+  const showPending = pending || capturePending;
+  const activePollId = existingPoll?.id ?? publishedPollId;
+
+  function buildActionPayload() {
+    return {
+      issueId: sakId,
+      title,
+      neutralSummary,
+      isUpdate: isEditMode,
+      initialClosesAtWire,
+      closesAtDate,
+      closesAtTime,
+    };
+  }
+
+  function loadClosesAtFields(closesAtIso: string | null) {
+    if (!closesAtIso) {
+      setClosesAtDate('');
+      setClosesAtTime('');
+      setInitialClosesAtWire(null);
+      return;
+    }
+    const wire = utcIsoToOsloLocalInput(closesAtIso);
+    setInitialClosesAtWire(wire || null);
+    const fields = utcIsoToNorwegianClosesAtFields(closesAtIso);
+    setClosesAtDate(fields.date);
+    setClosesAtTime(fields.time);
+  }
+
+  function openDialog() {
+    setTitle(existingPoll?.title ?? sakTitle);
+    setNeutralSummary(existingPoll?.neutralSummary ?? defaultNeutralSummary);
+    loadClosesAtFields(existingPoll?.closesAt ?? null);
+    setFieldError(null);
+    setDialogStep('form');
+    setDialogOpen(true);
+  }
+
+  function closeDialog() {
+    if (showPending) return;
+    setDialogOpen(false);
+    setDialogStep('form');
+  }
+
+  function validateForm(): boolean {
+    const validated = validateStortingetPollAdminForm(buildActionPayload());
+    if (!validated.ok) {
+      setFieldError(validated.error);
+      return false;
+    }
+    setFieldError(null);
+    return true;
+  }
+
+  function handlePrimaryFormClick() {
+    if (!validateForm()) return;
+    if (isEditMode) {
+      void executePublish();
+      return;
+    }
+    setDialogStep('confirm');
+  }
+
+  function executePublish() {
+    startTransition(async () => {
+      const result = await publishStortingetPollAction(buildActionPayload());
+      if (!result.ok) {
+        setFieldError(result.error);
+        setDialogStep('form');
+        toast(result.error, 'error');
+        return;
+      }
+      setPublishedPollId(result.pollId);
+      setDialogOpen(false);
+      setDialogStep('form');
+      toast(isEditMode ? 'Endringene er lagret.' : 'Avstemningen er publisert.');
+      router.refresh();
+    });
+  }
+
+  const dialogTitle = isEditMode ? 'Rediger avstemning' : 'Publiser avstemning';
+  const dialogDescription =
+    dialogStep === 'confirm'
+      ? 'Bekreft før avstemningen blir synlig.'
+      : isEditMode
+        ? 'Endringene vises for velgerne med en gang du lagrer.'
+        : 'Avstemningen blir synlig for alle med en gang du publiserer.';
+
+  const formFooterError =
+    fieldError && dialogStep === 'form' ? (
+      <p
+        ref={footerErrorRef}
+        id={formErrorId}
+        role="alert"
+        className="mb-3 text-sm font-medium text-destructive"
+      >
+        {fieldError}
+      </p>
+    ) : null;
+
+  if (effectiveState.kind === 'blocked_system_poll') {
+    return (
+      <section
+        className="rounded-2xl border border-border bg-card p-4 sm:p-5"
+        aria-label="Admin: avstemning blokkert"
+      >
+        <h2 className="text-base font-semibold text-foreground">{STORTINGET_POLL_ADMIN_BLOCKED_HEADING}</h2>
+        <p className="mt-3 text-sm leading-relaxed text-foreground">{STORTINGET_POLL_ADMIN_BLOCKED_BODY}</p>
+        <p className="mt-3 text-sm leading-relaxed text-foreground">{STORTINGET_POLL_ADMIN_BLOCKED_NEXT}</p>
+      </section>
+    );
+  }
+
+  if (effectiveState.kind === 'stortinget_draft' || effectiveState.kind === 'stortinget_archived') {
+    const message =
+      effectiveState.kind === 'stortinget_draft'
+        ? STORTINGET_POLL_ADMIN_DRAFT_MESSAGE
+        : STORTINGET_POLL_ADMIN_ARCHIVED_MESSAGE;
+    return (
+      <section
+        className="rounded-2xl border border-dashed border-brand/30 bg-brand/5 p-4 sm:p-5"
+        aria-label="Admin: avstemning"
+      >
+        <h2 className="text-sm font-semibold text-foreground">Avstemning (admin)</h2>
+        <p className="mt-2 text-sm font-medium text-foreground">{message}</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Det finnes allerede en Stortinget-avstemning på denne saken i den tilstanden. Redigering via saksiden er
+          ikke tilgjengelig ennå.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <>
+      <section
+        className="rounded-2xl border border-dashed border-brand/30 bg-brand/5 p-4 sm:p-5"
+        aria-label="Admin: avstemning"
+      >
+        <h2 className="text-sm font-semibold text-foreground">Avstemning (admin)</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Publiser en offentlig {ballotSectionPhrase()} knyttet til denne saken.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {hasPoll && activePollId ? (
+            <>
+              <Link
+                href={routes.poll(activePollId)}
+                className={cn(
+                  'inline-flex min-h-11 items-center rounded-lg border border-border bg-card px-4 text-sm font-medium text-brand hover:bg-muted/60',
+                  VURDER_FOCUS_RING,
+                )}
+              >
+                Se avstemningen
+              </Link>
+              <button type="button" onClick={openDialog} className={BTN_PRIMARY}>
+                Rediger avstemning
+              </button>
+            </>
+          ) : (
+            <button type="button" onClick={openDialog} className={BTN_PRIMARY}>
+              Opprett avstemning
+            </button>
+          )}
+        </div>
+      </section>
+
+      <Dialog
+        open={dialogOpen}
+        onClose={closeDialog}
+        title={dialogStep === 'confirm' ? 'Publisere nå?' : dialogTitle}
+        description={dialogDescription}
+        footer={
+          dialogStep === 'confirm' ? (
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button type="button" disabled={showPending} onClick={() => setDialogStep('form')} className={BTN_SECONDARY}>
+                Avbryt
+              </button>
+              <button type="button" disabled={showPending} onClick={() => executePublish()} className={BTN_PRIMARY}>
+                {showPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+                Publiser
+              </button>
+            </div>
+          ) : (
+            <>
+              {formFooterError}
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button" disabled={showPending} onClick={closeDialog} className={BTN_SECONDARY}>
+                  Avbryt
+                </button>
+                <button
+                  type="button"
+                  disabled={showPending}
+                  onClick={handlePrimaryFormClick}
+                  className={BTN_PRIMARY}
+                >
+                  {showPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+                  {isEditMode ? 'Lagre endringer' : 'Publiser avstemning'}
+                </button>
+              </div>
+            </>
+          )
+        }
+      >
+        {dialogStep === 'confirm' ? (
+          <p className="text-sm leading-relaxed text-foreground">
+            Avstemningen blir synlig for alle med en gang.
+          </p>
+        ) : (
+          <div className="space-y-5">
+            <p className="rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
+              {isEditMode
+                ? `Endringene gjelder med en gang. Velgerne kan stemme ${ballotWarningPhrase()}.`
+                : `Publisering gjør avstemningen offentlig med en gang. Alle innloggede kan stemme ${ballotWarningPhrase()}.`}
+            </p>
+
+            <div className="space-y-2">
+              <label htmlFor="stortinget-poll-title" className="block text-sm font-medium text-foreground">
+                Tittel <span className="text-destructive">*</span>
+              </label>
+              <input
+                ref={titleRef}
+                id="stortinget-poll-title"
+                type="text"
+                required
+                maxLength={STORTINGET_POLL_TITLE_MAX}
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                className={fieldClass(invalidFields.title)}
+                aria-invalid={invalidFields.title || undefined}
+                aria-describedby={invalidFields.title && fieldError ? formErrorId : undefined}
+              />
+              <p className="text-xs text-muted-foreground">
+                Maks {STORTINGET_POLL_TITLE_MAX} tegn ({title.length}/{STORTINGET_POLL_TITLE_MAX})
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="stortinget-poll-ingress" className="block text-sm font-medium text-foreground">
+                Nøytral ingress
+              </label>
+              <textarea
+                ref={ingressRef}
+                id="stortinget-poll-ingress"
+                rows={4}
+                maxLength={STORTINGET_POLL_NEUTRAL_SUMMARY_MAX}
+                value={neutralSummary}
+                onChange={(event) => setNeutralSummary(event.target.value)}
+                className={textareaClass(invalidFields.neutralSummary)}
+                aria-invalid={invalidFields.neutralSummary || undefined}
+                aria-describedby={invalidFields.neutralSummary && fieldError ? formErrorId : undefined}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <span className="block text-sm font-medium text-foreground">Sluttidspunkt (valgfritt)</span>
+              {pollClosed && existingPoll?.closesAt ? (
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {(() => {
+                    const closedAt = utcIsoToNorwegianClosesAtFields(existingPoll.closesAt);
+                    return (
+                      <>
+                        Avstemningen er stengt (sluttidspunkt {closedAt.date} {closedAt.time}). Du kan lagre andre
+                        endringer uten å endre sluttidspunktet.
+                      </>
+                    );
+                  })()}
+                </p>
+              ) : null}
+              <div className="flex max-w-md flex-col gap-3 sm:flex-row sm:gap-2">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <label htmlFor="stortinget-poll-closes-date" className="block text-xs text-muted-foreground">
+                    Dato (dd.mm.åååå)
+                  </label>
+                  <input
+                    ref={closesDateRef}
+                    id="stortinget-poll-closes-date"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="dd.mm.åååå"
+                    autoComplete="off"
+                    value={closesAtDate}
+                    onChange={(event) => setClosesAtDate(event.target.value)}
+                    className={fieldClass(invalidFields.closesAt)}
+                    aria-invalid={invalidFields.closesAt || undefined}
+                    aria-describedby={invalidFields.closesAt && fieldError ? formErrorId : undefined}
+                  />
+                </div>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <label htmlFor="stortinget-poll-closes-time" className="block text-xs text-muted-foreground">
+                    Klokkeslett (tt:mm)
+                  </label>
+                  <input
+                    ref={closesTimeRef}
+                    id="stortinget-poll-closes-time"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="tt:mm"
+                    autoComplete="off"
+                    value={closesAtTime}
+                    onChange={(event) => setClosesAtTime(event.target.value)}
+                    className={fieldClass(invalidFields.closesAt)}
+                    aria-invalid={invalidFields.closesAt || undefined}
+                    aria-describedby={invalidFields.closesAt && fieldError ? formErrorId : undefined}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Tid i Europe/Oslo. La begge felt stå tomme for å fjerne sluttidspunkt. Nytt tidspunkt må ligge i
+                fremtiden.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <span className="block text-sm font-medium text-foreground">Kilde</span>
+              <a
+                href={stortingetPageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  'flex min-h-11 items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-brand hover:bg-muted',
+                  VURDER_FOCUS_RING,
+                )}
+              >
+                <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="break-all">{stortingetPageUrl}</span>
+              </a>
+            </div>
+          </div>
+        )}
+      </Dialog>
+
+      <AdminToast message={message} variant={variant} />
+    </>
+  );
+}
