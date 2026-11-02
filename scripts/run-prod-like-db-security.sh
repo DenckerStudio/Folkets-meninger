@@ -182,6 +182,9 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/n8n_list_v2_priority_issues_
 echo "Running system_poll_usable_embedding_gates.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/system_poll_usable_embedding_gates.sql
 
+echo "Running admin_publish_stortinget_poll.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/admin_publish_stortinget_poll.sql
+
 echo "Running security-guard.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
 
