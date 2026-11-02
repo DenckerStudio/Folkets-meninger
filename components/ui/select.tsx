@@ -5,9 +5,14 @@ import { ChevronDown } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-function Select({ className, ...props }: React.ComponentProps<'select'>) {
+type SelectProps = React.ComponentProps<'select'> & {
+  /** Classes for the outer positioning wrapper (width, margins). Defaults to `w-full`. */
+  wrapperClassName?: string;
+};
+
+function Select({ className, wrapperClassName, ...props }: SelectProps) {
   return (
-    <div className="relative w-full min-w-0">
+    <div className={cn('relative min-w-0', wrapperClassName ?? 'w-full')}>
       <select
         data-slot="select"
         className={cn(
