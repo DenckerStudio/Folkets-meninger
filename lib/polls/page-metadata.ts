@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { Metadata } from 'next';
 import {
   DEFAULT_DESCRIPTION,
+  DEFAULT_OG_IMAGE_PATH,
   SITE_LOCALE,
   SITE_NAME,
   buildPageMetadata,
@@ -112,6 +113,35 @@ export function buildRetiredDelSharePageMetadata(pollId: string): Metadata {
       card: 'summary',
       title: SYSTEM_POLL_SHARE_RETIRED_TITLE,
       description,
+    },
+  };
+}
+
+/** Neutral `/del/[id]` metadata when the share route is disabled (404 for non-admins). */
+export function buildDisabledDelSharePageMetadata(): Metadata {
+  const description = DEFAULT_DESCRIPTION;
+  const image = {
+    url: DEFAULT_OG_IMAGE_PATH,
+    ...OG_IMAGE_SIZE,
+    alt: SITE_NAME,
+  };
+  return {
+    title: SITE_NAME,
+    description,
+    robots: { index: false, follow: false },
+    openGraph: {
+      title: SITE_NAME,
+      description,
+      siteName: SITE_NAME,
+      locale: SITE_LOCALE,
+      type: 'website',
+      images: [image],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: SITE_NAME,
+      description,
+      images: [image],
     },
   };
 }

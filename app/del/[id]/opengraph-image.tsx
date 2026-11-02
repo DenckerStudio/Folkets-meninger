@@ -1,4 +1,6 @@
+import { notFound } from 'next/navigation';
 import { getPublicPollById, getPollTotals } from '@/lib/polls/service';
+import { isPublicSharePollRouteEnabledForRequest } from '@/lib/polls/del-share-route';
 import { isShareablePoll } from '@/lib/polls/share';
 import {
   OG_IMAGE_ALT,
@@ -21,6 +23,10 @@ type ImageProps = {
 const EMPTY_TOTALS = { ja: 0, nei: 0, blank: 0, total: 0 };
 
 export default async function Image({ params }: ImageProps) {
+  if (!(await isPublicSharePollRouteEnabledForRequest())) {
+    notFound();
+  }
+
   const { id } = await params;
   const poll = await getPublicPollById(id).catch(() => null);
   if (!poll || !isShareablePoll(poll)) return renderPollShareOgFallback();

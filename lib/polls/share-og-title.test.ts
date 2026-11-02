@@ -3,6 +3,16 @@ import React from 'react';
 import { test } from 'node:test';
 import type { PollRecord } from '@/lib/polls/types';
 import {
+  isNotDefGlyph,
+  loadPollOgTitleMeasurer,
+  loadPollOgTitleMeasurerFonts,
+  maxPollOgTitleLineWidth,
+  POLL_OG_TITLE_MAX_LINES,
+  POLL_OG_TITLE_MAX_WIDTH,
+  resetPollOgTitleMeasurerCacheForTests,
+} from '@/lib/polls/share-og-title-measure';
+import {
+  buildPollOgTitleRenderLines,
   OG_IMAGE_SIZE,
   POLL_OG_TITLE_RAW_MAX,
   POLL_OG_TITLE_TO_BAR_EXTRA_GAP_PX,
@@ -11,13 +21,9 @@ import {
   renderPollShareOgImage,
   resolvePollOgTitleDisplay,
   resolvePollOgTitleDisplayWithMeasurer,
+  shouldShowPollOgNeutralSummary,
+  type PollOgTitleLayout,
 } from '@/lib/polls/share-og';
-import {
-  isNotDefGlyph,
-  loadPollOgTitleMeasurer,
-  loadPollOgTitleMeasurerFonts,
-  resetPollOgTitleMeasurerCacheForTests,
-} from '@/lib/polls/share-og-title-measure';
 
 (globalThis as typeof globalThis & { React: typeof React }).React = React;
 
@@ -52,20 +58,45 @@ async function withMeasurer() {
   return loadPollOgTitleMeasurer();
 }
 
+function assertPollOgTitleRenderModel(
+  measurer: Awaited<ReturnType<typeof withMeasurer>>,
+  layout: PollOgTitleLayout,
+) {
+  assert.ok(layout.titleLines.length >= 1);
+  assert.ok(layout.titleLines.length <= POLL_OG_TITLE_MAX_LINES);
+  assert.deepEqual(
+    layout.titleLines,
+    buildPollOgTitleRenderLines(layout.title, layout.fontSize, measurer),
+  );
+  for (const line of layout.titleLines) {
+    assert.ok(
+      measurer.measureWidth(line, layout.fontSize) <= POLL_OG_TITLE_MAX_WIDTH + 0.5,
+      `render line wider than ${POLL_OG_TITLE_MAX_WIDTH}px: ${JSON.stringify(line)}`,
+    );
+  }
+}
+
 function assertMeasuredTwoLineTitle(
   measurer: Awaited<ReturnType<typeof withMeasurer>>,
-  layout: { fontSize: number; title: string },
+  layout: PollOgTitleLayout,
 ) {
+  assertPollOgTitleRenderModel(measurer, layout);
   assert.ok(
-    measurer.fitsTwoLines(layout.title, layout.fontSize),
-    `title must fit on 2 lines at ${layout.fontSize}px: ${JSON.stringify(layout.title)} (lines=${measurer.lineCount(layout.title, layout.fontSize)})`,
+    layout.titleLines.length <= POLL_OG_TITLE_MAX_LINES,
+    `title must fit on ${POLL_OG_TITLE_MAX_LINES} rendered lines: ${JSON.stringify(layout.titleLines)}`,
   );
-  assert.ok(
-    pollOgTitleEndsWithWordBoundaryEllipsis(layout.title),
-    `title ellipsis must be on word boundary: ${JSON.stringify(layout.title)}`,
-  );
+  if (/\s/.test(layout.title)) {
+    assert.ok(
+      pollOgTitleEndsWithWordBoundaryEllipsis(layout.title),
+      `title ellipsis must be on word boundary: ${JSON.stringify(layout.title)}`,
+    );
+  }
   if (layout.title.endsWith('…')) {
     assert.match(layout.title, /\S…$/);
+    assert.ok(
+      maxPollOgTitleLineWidth(layout.title, layout.fontSize, measurer) <= POLL_OG_TITLE_MAX_WIDTH + 0.5,
+      `line width must stay within ${POLL_OG_TITLE_MAX_WIDTH}px`,
+    );
   }
   assert.ok(!measurer.hasNotDefGlyph(layout.title));
 }
@@ -122,6 +153,32 @@ test('84-, 90-, caps, max-length, æøå and long-word titles resolve on word bo
 
   const maxRaw = resolvePollOgTitleDisplayWithMeasurer(TITLE_MAX_RAW, measurer);
   assert.ok(maxRaw.title.endsWith('…'));
+  assert.equal(maxRaw.titleLines.length, 2);
+  assert.ok(maxRaw.titleLines.at(-1)?.endsWith('…'));
+  assert.ok(
+    maxPollOgTitleLineWidth(maxRaw.title, maxRaw.fontSize, measurer) <= POLL_OG_TITLE_MAX_WIDTH,
+  );
+});
+
+test('130 W title uses two explicit render lines with ellipsis on line 2', async () => {
+  const measurer = await withMeasurer();
+  const layout = resolvePollOgTitleDisplayWithMeasurer(TITLE_MAX_RAW, measurer);
+  assertPollOgTitleRenderModel(measurer, layout);
+  assert.equal(layout.titleLines.length, 2);
+  assert.ok(layout.titleLines[1]!.endsWith('…'));
+  assert.ok(!layout.titleLines[0]!.includes('…'));
+  assert.ok(layout.title.endsWith('…'));
+});
+
+test('neutral summary only when fitted title is a single rendered line', async () => {
+  const measurer = await withMeasurer();
+  const oneLine = resolvePollOgTitleDisplayWithMeasurer('Kortere arbeidsuke?', measurer);
+  assert.equal(oneLine.titleLines.length, 1);
+  assert.ok(shouldShowPollOgNeutralSummary(oneLine.titleLines, 'Eksempel ingress.'));
+
+  const twoLine = resolvePollOgTitleDisplayWithMeasurer(TITLE_90_CHARS, measurer);
+  assert.equal(twoLine.titleLines.length, 2);
+  assert.ok(!shouldShowPollOgNeutralSummary(twoLine.titleLines, 'Skjult ingress.'));
 });
 
 test('clampPollOgText adds ellipsis on hard cut (no spaces)', () => {

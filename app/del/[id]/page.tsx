@@ -4,9 +4,13 @@ import { notFound } from 'next/navigation';
 import { PollShareLandingBeacon } from '@/components/analytics/poll-share-landing-beacon';
 import { SharePollWidget } from '@/components/polls/share-poll-widget';
 import { isAnalyticsEnabled } from '@/lib/analytics/flags';
-import { isAdmin } from '@/lib/admin/gate';
 import { truncateDescription } from '@/lib/seo/metadata';
-import { buildDelSharePageMetadata, buildRetiredDelSharePageMetadata } from '@/lib/polls/page-metadata';
+import { buildDelSharePageMetadata, buildDisabledDelSharePageMetadata, buildRetiredDelSharePageMetadata } from '@/lib/polls/page-metadata';
+import {
+  isPublicSharePollRouteEnabled,
+  isPublicSharePollRouteEnabledForRequest,
+  resolvePublicSharePollRouteAccess,
+} from '@/lib/polls/del-share-route';
 import { resolvePublicPollSharePage } from '@/lib/polls/retired-system';
 import {
   getPollTotals,
@@ -19,7 +23,6 @@ import {
   isPollChoice,
   isShareablePoll,
 } from '@/lib/polls/share';
-import { isSharePollsEnabled } from '@/lib/polls/share-flag';
 import { resolveRequestShareOrigin } from '@/lib/polls/share-server';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { routes } from '@/lib/routes';
@@ -41,6 +44,11 @@ function firstParam(value: string | string[] | undefined): string | null {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const enabled = await isPublicSharePollRouteEnabledForRequest();
+  if (!enabled) {
+    return buildDisabledDelSharePageMetadata();
+  }
+
   const { id } = await params;
   const resolved = await resolvePublicPollSharePage(id, getSharePagePollById);
   if (resolved.kind === 'retired') {
@@ -61,7 +69,8 @@ export default async function SharePollPage({ params, searchParams }: PageProps)
     data: { user },
   } = await supabase.auth.getUser();
 
-  const enabled = isSharePollsEnabled() || (user ? await isAdmin(user.id, user.email) : false);
+  const access = await resolvePublicSharePollRouteAccess();
+  const enabled = isPublicSharePollRouteEnabled(access);
   if (!enabled) notFound();
 
   const resolved = await resolvePublicPollSharePage(id, getSharePagePollById);

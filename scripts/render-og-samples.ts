@@ -52,8 +52,10 @@ const longTwoLineTitle =
 const title90Chars =
   'Skal staten innføre nye avgiftsregler for næringsliv og privatpersoner i hele landet snart';
 
-/** 130 tegn — 40px tittel kappet på ordgrense før line-clamp. */
-const titleMaxRawChars = 'W'.repeat(130);
+/** 130 tegn uten mellomrom — glyfmålt hardkutt med synlig «…». */
+const title130Ws = 'W'.repeat(130);
+
+const titleOneLine = 'Kortere arbeidsuke?';
 
 const titleWorstAeoeaa =
   'Bør æøå ÆØÅ innføre nye avgiftsregler for næringsliv og privatpersoner i hele landet snart';
@@ -121,11 +123,36 @@ async function main() {
   await savePng(
     'og-sample-poll-title-max-length.png',
     await renderPollShareOgImage(
-      { ...basePoll, title: titleMaxRawChars, neutralSummary: 'Skjult ingress.' },
+      { ...basePoll, title: title130Ws, neutralSummary: 'Skjult ingress.' },
       { nei: 12, blank: 3, ja: 45, total: 60 },
     ),
   );
-  console.log('max-length resolved title:', await resolvePollOgTitleDisplay(titleMaxRawChars));
+  console.log('130×W resolved title:', await resolvePollOgTitleDisplay(title130Ws));
+
+  await savePng(
+    'og-sample-poll-title-one-line-summary.png',
+    await renderPollShareOgImage(
+      {
+        ...basePoll,
+        title: titleOneLine,
+        neutralSummary:
+          'Et lengre sammendrag som forklarer bakgrunnen for spørsmålet og hvorfor det er aktuelt nå, med æøå og typografi · …',
+      },
+      { nei: 12, blank: 3, ja: 45, total: 60 },
+    ),
+  );
+
+  await savePng(
+    'og-sample-poll-title-two-lines-no-summary.png',
+    await renderPollShareOgImage(
+      {
+        ...basePoll,
+        title: title90Chars,
+        neutralSummary: 'Denne ingressen skal ikke vises når tittelen er to linjer.',
+      },
+      { nei: 12, blank: 3, ja: 45, total: 60 },
+    ),
+  );
 
   await savePng(
     'og-sample-poll-title-worst-aeoeaa.png',
