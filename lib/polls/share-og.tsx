@@ -29,6 +29,10 @@ const BAR_SEGMENT_GAP = '2px solid rgba(255,255,255,0.65)';
 const TITLE_MAX_LINES = 2;
 /** Summary only when the title fits on a single line at max size. */
 const SUMMARY_TITLE_MAX_CHARS = 46;
+/** Extra space between the title block and ingress / result bar (added to flex gap). */
+export const POLL_OG_TITLE_TO_BAR_EXTRA_GAP_PX = 12;
+/** Two-line char fallback at 46px title size (Satori line-clamp safety). */
+export const POLL_OG_TITLE_46PX_CHAR_CAP = 90;
 const CARD_PADDING_Y = 44;
 const CARD_PADDING_X = 64;
 
@@ -51,16 +55,16 @@ function clampText(value: string, max: number): string {
   return `${(lastSpace > 20 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
 
-function titleFontSize(length: number): number {
-  if (length <= 48) return OG_TITLE_MAX_PX;
-  if (length <= 90) return 46;
+export function pollOgTitleFontSize(charLength: number): number {
+  if (charLength <= 48) return OG_TITLE_MAX_PX;
+  if (charLength <= 90) return 46;
   return 40;
 }
 
 /** Rough two-line capacity at card width (fallback if line-clamp ellipses poorly in Satori). */
-function maxPollTitleChars(fontSize: number): number {
+export function pollOgTitleCharCap(fontSize: number): number {
   if (fontSize >= OG_TITLE_MAX_PX) return 78;
-  if (fontSize >= 46) return 84;
+  if (fontSize >= 46) return POLL_OG_TITLE_46PX_CHAR_CAP;
   return 96;
 }
 
@@ -171,8 +175,8 @@ export async function renderPollShareOgImage(
 ): Promise<ImageResponse> {
   const fonts = await loadOgFonts();
   const rawTitle = clampText(poll.title, 130);
-  const titleSize = titleFontSize(rawTitle.length);
-  const title = clampText(rawTitle, maxPollTitleChars(titleSize));
+  const titleSize = pollOgTitleFontSize(rawTitle.length);
+  const title = clampText(rawTitle, pollOgTitleCharCap(titleSize));
   const showSummary = title.length <= SUMMARY_TITLE_MAX_CHARS && Boolean(poll.neutralSummary);
   const summary = showSummary ? clampText(poll.neutralSummary, 88) : '';
 
@@ -212,7 +216,14 @@ export async function renderPollShareOgImage(
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, flex: 1, justifyContent: 'center' }}>
-          <div style={titleBoxStyle(titleSize)}>{title}</div>
+          <div
+            style={{
+              ...titleBoxStyle(titleSize),
+              marginBottom: POLL_OG_TITLE_TO_BAR_EXTRA_GAP_PX,
+            }}
+          >
+            {title}
+          </div>
           {summary ? (
             <div
               style={{

@@ -48,9 +48,9 @@ const basePoll: PollRecord = {
 const longTwoLineTitle =
   'Skal staten gå videre med omfattende endringer i skatte- og avgiftsregelverket for næringsliv og privatpersoner i hele landet, også i distriktene, på kort sikt?';
 
-/** ~87 tegn — tittelstørrelse 46px, to linjer + ellipsis uten å kappe descenders. */
-const title85To90Chars =
-  'Skal staten innføre nye avgiftsregler for næringsliv og privatpersoner i hele landet?';
+/** Exactly 90 tegn — tittelstørrelse 46px, to linjer uten å flyte over kortet. */
+const title90Chars =
+  'Skal staten innføre nye avgiftsregler for næringsliv og privatpersoner i hele landet snart';
 
 async function main() {
   mkdirSync(outDir, { recursive: true });
@@ -102,9 +102,9 @@ async function main() {
   );
 
   await savePng(
-    'og-sample-poll-title-85-chars.png',
+    'og-sample-poll-title-90-chars.png',
     await renderPollShareOgImage(
-      { ...basePoll, title: title85To90Chars, neutralSummary: 'Skjult ingress.' },
+      { ...basePoll, title: title90Chars, neutralSummary: 'Skjult ingress.' },
       { nei: 12, blank: 3, ja: 45, total: 60 },
     ),
   );
