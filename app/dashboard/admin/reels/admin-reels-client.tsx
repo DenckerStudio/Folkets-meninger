@@ -26,6 +26,8 @@ import {
   SYSTEM_REELS_RETIRED,
   SYSTEM_REELS_RETIRED_ADMIN_MESSAGE,
 } from '@/lib/polls/system-reels-retired';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
+import { cn } from '@/lib/utils';
 
 type DraftsResponse = { drafts: PollRecord[] };
 type CandidatesResponse = { candidates: SakPollCandidate[]; coverage: SakPollCoverage };
@@ -57,7 +59,10 @@ function GenerationStatusBadge({
         <button
           type="button"
           onClick={() => onDismiss(job.key)}
-          className="rounded p-0.5 hover:bg-emerald-500/10"
+          className={cn(
+            'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded hover:bg-emerald-500/10',
+            VURDER_FOCUS_RING,
+          )}
           aria-label="Lukk status"
         >
           <X className="h-3 w-3" />
@@ -73,7 +78,10 @@ function GenerationStatusBadge({
       <button
         type="button"
         onClick={() => onDismiss(job.key)}
-        className="rounded p-0.5 hover:bg-destructive/10"
+        className={cn(
+          'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded hover:bg-destructive/10',
+          VURDER_FOCUS_RING,
+        )}
         aria-label="Lukk status"
       >
         <X className="h-3 w-3" />
@@ -307,7 +315,10 @@ export default function AdminReelsClient({
             type="button"
             onClick={runPipelineCatchup}
             disabled={pending}
-            className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+            className={cn(
+              'inline-flex min-h-11 items-center rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50',
+              VURDER_FOCUS_RING,
+            )}
           >
             Kjør oppfrisking
           </button>
@@ -470,7 +481,7 @@ export default function AdminReelsClient({
                   key={candidate.issueId}
                   className="flex items-start justify-between gap-3 rounded-xl border border-border px-3 py-2.5"
                 >
-                  <div>
+                  <div className="min-w-0 break-words">
                     <p className="text-sm font-medium text-foreground">{candidate.title}</p>
                     <p className="text-xs text-muted-foreground">
                       {candidate.issueId} · {candidate.ragChunkCount} dokumentutdrag
@@ -490,7 +501,10 @@ export default function AdminReelsClient({
                         type="button"
                         disabled={pending || isGenerating(candidate.issueId)}
                         onClick={() => generate(candidate.issueId)}
-                        className="rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/50 disabled:opacity-50"
+                        className={cn(
+                          'inline-flex min-h-11 items-center rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/50 disabled:opacity-50',
+                          VURDER_FOCUS_RING,
+                        )}
                       >
                         Generer utkast
                       </button>
@@ -504,15 +518,33 @@ export default function AdminReelsClient({
       ) : null}
 
       <div className="flex flex-wrap gap-4 text-sm">
-        <Link href={adminVurderHref('reels')} className="font-medium text-brand hover:underline">
+        <Link
+          href={adminVurderHref('reels')}
+          className={cn(
+            'inline-flex min-h-11 items-center font-medium text-brand hover:underline',
+            VURDER_FOCUS_RING,
+          )}
+        >
           Vurder utkast
         </Link>
         {!SYSTEM_REELS_RETIRED ? (
-          <Link href={routes.utforsk} className="font-medium text-brand hover:underline">
+          <Link
+            href={routes.utforsk}
+            className={cn(
+              'inline-flex min-h-11 items-center font-medium text-brand hover:underline',
+              VURDER_FOCUS_RING,
+            )}
+          >
             Offentlig Reels-feed
           </Link>
         ) : (
-          <Link href={routes.avstemninger} className="font-medium text-brand hover:underline">
+          <Link
+            href={routes.avstemninger}
+            className={cn(
+              'inline-flex min-h-11 items-center font-medium text-brand hover:underline',
+              VURDER_FOCUS_RING,
+            )}
+          >
             Avstemninger
           </Link>
         )}
