@@ -309,6 +309,183 @@ Maks én `queued`/`running` per `(cluster_id, kind)` (partial unique index). fm-
 - `error`: maks 500 tegn (kjent kode eller fri tekst)
 - `perspectives` / `sources` / `details`: maks 64 KB (`octet_length` på JSON)
 
-## Migrasjon
+## Tema-brief («Bruk funn»)
+
+Én rad per tema i `public.research_topics` (brief-felter som kolonner, ingen egen brief-tabell). fm-web kaller n8n; n8n skriver tilbake med **`n8n_upsert_research_topic_brief`**. Lesing for n8n: **`n8n_get_research_topic`**.
+
+### Utkøring fra admin
+
+`POST /api/admin/research/topics` med JSON:
+
+| Felt | Type | Beskrivelse |
+|------|------|-------------|
+| `source_kind` | `cluster` \| `reddit` | Kilde-type |
+| `cluster_id` | uuid | Påkrevd når `source_kind=cluster` |
+| `reddit_signal_id` | uuid | Påkrevd når `source_kind=reddit` (rad-id i Research) |
+| `title` | string | Påkrevd for `cluster` (rå tittel). Utelates for reddit. |
+| `request_id` | uuid | Idempotensnøkkel (lagres som tekst) |
+| `force` | boolean | Valgfri. `true` arkiverer gjeldende `output` i `previous_output` og starter ny jobb |
+
+Flyt:
+
+1. `research_topics_expire_stale` (30 min, bruker `heartbeat_at`; setter `failed` / `error=ukjent_feil` ved tidsavbrudd).
+2. `research_topics_request_brief` (service_role) — returnerer eksisterende rad med **HTTP 200** når brief finnes (`done` / aktiv), med mindre `force=true`.
+3. POST webhook (under). n8n svarer **202 Accepted**.
+4. Ved webhook-feil: `status=failed` (eneste feil-tilstand i UI med «Prøv igjen»).
+
+**Testcase (reddit):** `reddit_id=1xlz4r8` (formueskatt) → webhook `source_ref: "1xlz4r8"` (n8n henter selv via Arctic Shift).
+
+### Webhook-URL
+
+`POST ${N8N_RESEARCH_WEBHOOK_BASE}/folkets-research-topic-brief`
+
+Samme headers/signatur som utdyp/blogg (`X-FM-Timestamp`, `X-FM-Signature`, `X-FM-Webhook-Token`).
+
+### Request body (JSON)
+
+Felles:
+
+| Felt | Type | Beskrivelse |
+|------|------|-------------|
+| `request_id` | string (uuid) | Matcher `research_topics.request_id` |
+| `kind` | `"topic_brief"` | Fast |
+| `topic_id` | uuid | `research_topics.id` |
+| `source_kind` | `cluster` \| `reddit` | |
+| `source_ref` | string | Cluster: `cluster_id` uuid. Reddit: post-id, f.eks. `1xlz4r8` |
+| `title` | string | **Kun cluster** — rå radtittel |
+| `context` | objekt | Valgfri (f.eks. `action_key`, `summary`) |
+| `force` | boolean | Valgfri |
+
+**Cluster (formueskatt-eksempel):**
+
+```json
+{
+  "request_id": "00000000-0000-4000-8000-000000000001",
+  "kind": "topic_brief",
+  "topic_id": "00000000-0000-4000-8000-000000000002",
+  "source_kind": "cluster",
+  "source_ref": "00000000-0000-4000-8000-000000000099",
+  "title": "Formueskatt",
+  "context": {
+    "action_key": "opprop:formueskatt"
+  },
+  "force": false
+}
+```
+
+**Reddit (1xlz4r8 — ingen `title`):**
+
+```json
+{
+  "request_id": "00000000-0000-4000-8000-000000000003",
+  "kind": "topic_brief",
+  "topic_id": "00000000-0000-4000-8000-000000000004",
+  "source_kind": "reddit",
+  "source_ref": "1xlz4r8",
+  "force": false
+}
+```
+
+### Output JSON (`research_topics.output` ved `status=done`)
+
+Alle fem seksjoner **alltid** med `{ "items": [], "note": "…" }`. Tom seksjon: `note` = **`ingen funnet`**. Valgfri **`topic_title`** (nøytralt visningsnavn; primær tittel i admin-UI). Reddit skal **aldri** stå som publiserbar kilde i `sources`.
+
+```json
+{
+  "topic_title": "Formueskatt",
+  "current_rules": { "items": ["…"], "note": "…" },
+  "party_proposals": { "items": [], "note": "ingen funnet" },
+  "media_coverage": { "items": [], "note": "ingen funnet" },
+  "polls": { "items": [], "note": "ingen funnet" },
+  "sources": {
+    "items": [
+      {
+        "id": "s1",
+        "title": "…",
+        "url": "https://www.nrk.no/…",
+        "publisher": "nrk.no",
+        "grade": "A"
+      }
+    ],
+    "note": "…"
+  },
+  "generated_at": "2026-11-03T12:00:00.000Z"
+}
+```
+
+Meningsmålingsbyråer (Norstat, Opinion, Infact, Kantar, …) skal ha **grad B** med byrå og oppdragsgiver navngitt.
+
+`publishable=false` → **`status=done`** (ikke `failed`), med `blocking_reason`. fm-web viser nøytral «Ikke publiserbar»-tilstand og teksten «Trenger minst én kilde utenom Reddit før publisering».
+
+### n8n RPC-er (PostgREST, service_role)
+
+**Returkontrakt (jsonb):**
+
+| RPC | Suksess | Feil (ingen exception) |
+|-----|---------|-------------------------|
+| `n8n_get_research_topic(p_topic_id)` | `{ "ok": true, "topic": { … } }` | `{ "ok": false, "code": "not_found" }` |
+| `n8n_upsert_research_topic_brief(...)` | `{ "ok": true, "topic_id": uuid, "status": "…" }` | `{ "ok": false, "code": "unknown_request" }` (ukjent `request_id`, **ingen skriving**), `{ "ok": false, "code": "invalid_status" }` (ugyldig `p_status` / mangler påkrevde felt ved `done`) |
+
+**Les topic + kilde:**
+
+```sql
+n8n_get_research_topic(p_topic_id uuid)
+```
+
+Returnerer topic-rad + `source` (reddit: `reddit_id`, `subreddit`, `permalink` — **aldri forfatter**).
+
+**Skriv status / output:**
+
+```sql
+n8n_upsert_research_topic_brief(
+  p_request_id text,
+  p_status text,
+  p_error text DEFAULT NULL,
+  p_output jsonb DEFAULT NULL,
+  p_publishable boolean DEFAULT NULL,
+  p_blocking_reason text DEFAULT NULL
+)
+```
+
+Eksempler:
+
+```json
+{ "p_request_id": "00000000-0000-4000-8000-000000000001", "p_status": "running" }
+```
+
+```json
+{
+  "p_request_id": "00000000-0000-4000-8000-000000000001",
+  "p_status": "done",
+  "p_output": { "topic_title": "Formueskatt", "current_rules": { "items": [], "note": "ingen funnet" }, "party_proposals": { "items": [], "note": "ingen funnet" }, "media_coverage": { "items": [], "note": "ingen funnet" }, "polls": { "items": [], "note": "ingen funnet" }, "sources": { "items": [], "note": "ingen funnet" } },
+  "p_publishable": false,
+  "p_blocking_reason": "Kun Reddit-kilder funnet"
+}
+```
+
+- `p_status=running` (eller `queued`) oppdaterer `heartbeat_at`.
+- `p_status=done` krever `p_output` + `p_publishable`; skriver `output`, `blocking_reason`, `finished_at`.
+- `p_status=failed` setter `error` (kun **kode**, se under) og `finished_at`.
+- NULL på valgfrie felt = behold lagret verdi (unntatt ved `done` der output/publishable er påkrevd).
+
+**`p_error` (kun kode ved `p_status=failed`):** `modell_feil`, `ugyldig_svar`, `henting_feil`, `tema_mangler`. Alt annet normaliseres til `ukjent_feil`. fm-web mapper til admin-tekst i `lib/admin/research/topic-error-messages.ts`:
+
+| Kode | Admin-tekst | «Prøv igjen» |
+|------|-------------|--------------|
+| `modell_feil` | Språkmodellen svarte ikke | ja |
+| `ugyldig_svar` | Svaret kunne ikke leses | ja |
+| `henting_feil` | Kildesøket feilet | ja |
+| `tema_mangler` | Temaet mangler eller er ufullstendig | nei — kun lenke tilbake til Research |
+| `ukjent_feil` | Noe gikk galt | ja, plus «Si fra til en utvikler hvis feilen kommer igjen.» |
+
+Manglende kilder er **ikke** feil: `status=done` med `publishable=false` og `blocking_reason` (nøytral «Ikke publiserbar»-tilstand).
+
+Schedule: `research_topics_expire_stale(p_minutes := 30)` hvert 10. min (service_role).
+
+### Migrasjon
+
+`supabase/migrations/20261103120000_research_topics.sql` — **manuell apply** på prod.
+
+## Migrasjon (research_briefs)
 
 `supabase/migrations/20261021130000_research_briefs.sql` — **manuell apply** på prod. Ingen embedding-kolonner i v1; hvis de legges til senere, bruk **bge-m3** og `vector(1024)`.

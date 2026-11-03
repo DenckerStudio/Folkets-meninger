@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ResearchClusterDetailView } from '@/components/admin/research-cluster-detail';
 import { requireAdminPage } from '@/lib/admin/gate';
 import { loadResearchClusterDetail } from '@/lib/admin/research/cluster-detail';
+import { getResearchTopicSnapshotsBySources } from '@/lib/admin/research/topic-service';
 import { routes } from '@/lib/routes';
 import { getServerSupabase } from '@/lib/supabase-server';
 
@@ -17,6 +18,11 @@ export default async function AdminResearchClusterPage({ params }: PageProps) {
   const { id } = await params;
   const detail = await loadResearchClusterDetail(id);
   if (!detail) notFound();
+
+  const { byClusterId } = await getResearchTopicSnapshotsBySources({
+    clusterIds: [id],
+    redditSignalIds: [],
+  });
 
   const supabase = await getServerSupabase();
   const {
@@ -39,6 +45,7 @@ export default async function AdminResearchClusterPage({ params }: PageProps) {
         row={detail.row}
         briefs={detail.briefs}
         adminUserId={user?.id}
+        topicSnapshot={byClusterId[id]}
       />
       <Link
         href={routes.adminResearch}
