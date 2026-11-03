@@ -16,6 +16,8 @@ import {
   ResearchRowTableCells,
 } from '@/components/admin/research-row-actions';
 import type { ResearchBriefsByKind } from '@/lib/admin/research/service';
+import type { ResearchTopicSnapshot } from '@/lib/admin/research/topic-types';
+import { ResearchTopicUseFindingButton } from '@/components/admin/research-topic-use-finding-button';
 import { adminReelDraftUrl } from '@/lib/admin/research/labels';
 import { routes } from '@/lib/routes';
 import { formatOppfangetSourcePublisher } from '@/lib/admin/oppfanget/source-display';
@@ -205,7 +207,13 @@ function RedditTitleCell({ row, desktopTable = false }: { row: OppfangetRedditRo
   );
 }
 
-function RedditDesktopRow({ row }: { row: OppfangetRedditRow }) {
+function RedditDesktopRow({
+  row,
+  topicSnapshot,
+}: {
+  row: OppfangetRedditRow;
+  topicSnapshot?: ResearchTopicSnapshot | null;
+}) {
   return (
     <tr key={row.id} className="group hover:bg-muted/20">
       <td className={cellClass}>
@@ -225,13 +233,32 @@ function RedditDesktopRow({ row }: { row: OppfangetRedditRow }) {
       </td>
       <td className={cn(cellClass, 'text-muted-foreground')}>—</td>
       <td className={cellClass}>—</td>
-      <td className={cellClass}>—</td>
-      <td className={cn(cellClass, 'sticky right-0 z-10 bg-background shadow-[-6px_0_12px_-8px_rgba(0,0,0,0.12)] group-hover:bg-[color-mix(in_oklch,var(--color-muted)_20%,var(--color-background))]')} />
+      <td className={cellClass}>
+        <ResearchTopicUseFindingButton
+          sourceKind="reddit"
+          redditSignalId={row.id}
+          title={row.title}
+          initialSnapshot={topicSnapshot}
+          compact
+        />
+      </td>
+      <td
+        className={cn(
+          cellClass,
+          'sticky right-0 z-10 bg-background shadow-[-6px_0_12px_-8px_rgba(0,0,0,0.12)] group-hover:bg-[color-mix(in_oklch,var(--color-muted)_20%,var(--color-background))]',
+        )}
+      />
     </tr>
   );
 }
 
-function RedditMobileCard({ row }: { row: OppfangetRedditRow }) {
+function RedditMobileCard({
+  row,
+  topicSnapshot,
+}: {
+  row: OppfangetRedditRow;
+  topicSnapshot?: ResearchTopicSnapshot | null;
+}) {
   return (
     <li key={row.id} className="rounded-xl border border-border bg-card p-4 text-sm shadow-sm">
       <RedditSubredditBadge subreddit={row.subreddit} />
@@ -256,6 +283,17 @@ function RedditMobileCard({ row }: { row: OppfangetRedditRow }) {
         <div>
           <dt className="font-medium text-muted-foreground">Oppdatert</dt>
           <dd className="mt-0.5 text-foreground">{redditSnapshotUpdatedLabel(row.snapshotAt)}</dd>
+        </div>
+        <div>
+          <dt className="font-medium text-muted-foreground">Tema-brief</dt>
+          <dd className="mt-1">
+            <ResearchTopicUseFindingButton
+              sourceKind="reddit"
+              redditSignalId={row.id}
+              title={row.title}
+              initialSnapshot={topicSnapshot}
+            />
+          </dd>
         </div>
       </dl>
     </li>
@@ -337,10 +375,14 @@ export function OppfangetDesktopTable({
   rows,
   adminUserId,
   researchBriefsByCluster = {},
+  researchTopicsByCluster = {},
+  researchTopicsByRedditId = {},
 }: {
   rows: OppfangetRow[];
   adminUserId?: string;
   researchBriefsByCluster?: Record<string, ResearchBriefsByKind>;
+  researchTopicsByCluster?: Record<string, ResearchTopicSnapshot>;
+  researchTopicsByRedditId?: Record<string, ResearchTopicSnapshot>;
 }) {
   const statusCell = cn(cellClass, 'w-28 max-w-[7rem] pr-3');
   const headBase = 'px-2 py-1.5 font-medium';
@@ -386,7 +428,11 @@ export function OppfangetDesktopTable({
           <tbody className="divide-y divide-border">
             {rows.map((row) =>
               isOppfangetRedditRow(row) ? (
-                <RedditDesktopRow key={row.id} row={row} />
+                <RedditDesktopRow
+                  key={row.id}
+                  row={row}
+                  topicSnapshot={researchTopicsByRedditId[row.id]}
+                />
               ) : (
               <tr key={row.id} className="group hover:bg-muted/20">
                 <td className={cellClass}>
@@ -419,6 +465,8 @@ export function OppfangetDesktopTable({
                     cellClass,
                     'sticky right-0 z-10 bg-background shadow-[-6px_0_12px_-8px_rgba(0,0,0,0.12)] group-hover:bg-[color-mix(in_oklch,var(--color-muted)_20%,var(--color-background))]',
                   )}
+                  topicSnapshot={researchTopicsByCluster[row.id]}
+                  clusterTitle={row.title}
                 />
               </tr>
               ),
@@ -434,16 +482,26 @@ export function OppfangetMobileCards({
   rows,
   adminUserId,
   researchBriefsByCluster = {},
+  researchTopicsByCluster = {},
+  researchTopicsByRedditId = {},
 }: {
   rows: OppfangetRow[];
   adminUserId?: string;
   researchBriefsByCluster?: Record<string, ResearchBriefsByKind>;
+  researchTopicsByCluster?: Record<string, ResearchTopicSnapshot>;
+  researchTopicsByRedditId?: Record<string, ResearchTopicSnapshot>;
 }) {
   return (
     <ul className="space-y-3 sm:hidden">
       {rows.map((row) => {
         if (isOppfangetRedditRow(row)) {
-          return <RedditMobileCard key={row.id} row={row} />;
+          return (
+            <RedditMobileCard
+              key={row.id}
+              row={row}
+              topicSnapshot={researchTopicsByRedditId[row.id]}
+            />
+          );
         }
         const pollLink = oppfangetPollLink(row);
         const sensitiveLabel = row.sensitive
@@ -496,6 +554,17 @@ export function OppfangetMobileCards({
                     clusterId={row.id}
                     variant="full"
                     initialBriefsByKind={researchBriefsByCluster[row.id] ?? {}}
+                  />
+                </dd>
+              </div>
+              <div>
+                <dt className="font-medium text-muted-foreground">Tema-brief</dt>
+                <dd className="mt-1">
+                  <ResearchTopicUseFindingButton
+                    sourceKind="cluster"
+                    clusterId={row.id}
+                    title={row.title}
+                    initialSnapshot={researchTopicsByCluster[row.id]}
                   />
                 </dd>
               </div>

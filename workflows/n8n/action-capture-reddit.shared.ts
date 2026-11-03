@@ -1,21 +1,7 @@
 /**
- * Reddit-innhenting for aksjonsfangst — samme mønster som blogg/research-pipeline:
- * én samlet RSS-forespørsel (unngår 429) + søk via r/norge+norske.
+ * Reddit-hints for aksjonsfangst (cluster_key når lenke peker på ekstern artikkel).
+ * Innhenting av Reddit-data skjer kun via Arctic Shift i n8n — ingen reddit.com-RSS her.
  */
-
-export const REDDIT_NORGE_MULTI_RSS = {
-  feed_id: 'reddit_norge_multi',
-  url: 'https://www.reddit.com/r/norge+norske+oslo+bergen+trondheim+stavanger/new/.rss?limit=100',
-  source_type: 'reddit' as const,
-  publisher: 'reddit.com',
-  kind: 'rss' as const,
-};
-
-/** Søk-RSS brukt i research-utdyp («Lag søk»-noden). */
-export function buildRedditSearchRssUrl(query: string): string {
-  const q = query.trim();
-  return `https://www.reddit.com/r/norge+norske/search.rss?q=${encodeURIComponent(q)}&restrict_sr=1&sort=relevance`;
-}
 
 /**
  * Foreslå cluster_key for Reddit-lenkeposter: peker URL til en nyhetsdomene,

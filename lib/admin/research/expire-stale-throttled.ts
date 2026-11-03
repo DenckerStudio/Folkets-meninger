@@ -1,4 +1,5 @@
 import { expireStaleResearchBriefs } from '@/lib/admin/research/service';
+import { expireStaleResearchTopics } from '@/lib/admin/research/topic-service';
 
 export const RESEARCH_BRIEF_EXPIRE_THROTTLE_MS = 60_000;
 
@@ -23,6 +24,7 @@ export async function expireStaleResearchBriefsThrottled(
   const expire = options?.expire ?? expireStaleResearchBriefs;
   try {
     await expire();
+    await expireStaleResearchTopics();
   } catch (error) {
     console.warn('[research] research_briefs_expire_stale failed:', error);
   }

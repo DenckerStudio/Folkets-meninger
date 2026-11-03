@@ -22,6 +22,7 @@ import type {
   OppfangetListResponse,
 } from '@/lib/admin/oppfanget/types';
 import type { ResearchBriefsByKind } from '@/lib/admin/research/service';
+import type { ResearchTopicSnapshot } from '@/lib/admin/research/topic-types';
 import {
   isOppfangetListResponse,
   normalizeOppfangetCounts,
@@ -160,6 +161,8 @@ export default function AdminOppfangetClient({
   devPreview,
   adminUserId,
   initialResearchBriefsByCluster = {},
+  initialResearchTopicsByCluster = {},
+  initialResearchTopicsByRedditId = {},
   researchWebhooksConfigured = true,
   missingResearchWebhookEnvKeys = [],
 }: {
@@ -169,6 +172,8 @@ export default function AdminOppfangetClient({
   devPreview?: string;
   adminUserId?: string;
   initialResearchBriefsByCluster?: Record<string, ResearchBriefsByKind>;
+  initialResearchTopicsByCluster?: Record<string, ResearchTopicSnapshot>;
+  initialResearchTopicsByRedditId?: Record<string, ResearchTopicSnapshot>;
   researchWebhooksConfigured?: boolean;
   missingResearchWebhookEnvKeys?: string[];
 }) {
@@ -445,11 +450,15 @@ export default function AdminOppfangetClient({
             rows={rows}
             adminUserId={adminUserId}
             researchBriefsByCluster={initialResearchBriefsByCluster}
+            researchTopicsByCluster={initialResearchTopicsByCluster}
+            researchTopicsByRedditId={initialResearchTopicsByRedditId}
           />
           <OppfangetDesktopTable
             rows={rows}
             adminUserId={adminUserId}
             researchBriefsByCluster={initialResearchBriefsByCluster}
+            researchTopicsByCluster={initialResearchTopicsByCluster}
+            researchTopicsByRedditId={initialResearchTopicsByRedditId}
           />
         </>
       ) : null}

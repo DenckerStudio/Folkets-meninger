@@ -1,10 +1,5 @@
 import assert from 'node:assert/strict';
-import {
-  buildRedditSearchRssUrl,
-  redditLinkClusterKeyHint,
-} from '@/workflows/n8n/action-capture-reddit.shared';
-
-assert.match(buildRedditSearchRssUrl('ki opprop'), /search\.rss\?q=/);
+import { redditLinkClusterKeyHint } from '@/workflows/n8n/action-capture-reddit.shared';
 
 assert.equal(
   redditLinkClusterKeyHint({
