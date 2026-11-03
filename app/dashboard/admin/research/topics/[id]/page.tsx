@@ -36,7 +36,7 @@ export default async function AdminResearchTopicPage({ params }: PageProps) {
             Research
           </Link>
           <span aria-hidden> / </span>
-          <span className="line-clamp-1 text-foreground">Tema-brief</span>
+          <span className="inline-block min-w-0 max-w-full truncate text-foreground">Tema-brief</span>
         </p>
         <h1 className="mt-2 text-2xl font-bold text-foreground">{pageTitle}</h1>
         {showRawAdminTitle ? (

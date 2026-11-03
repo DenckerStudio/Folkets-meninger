@@ -1,9 +1,13 @@
 -- Integrasjonstest for research_topics (CI db-security).
+-- Egen fixture-data; ruller tilbake så prod-lignende CI ikke trenger seed.
+
+BEGIN;
 
 DO $test$
 DECLARE
-  v_cluster_id uuid;
-  v_reddit_id uuid;
+  v_fixture_cluster_id uuid := '00000000-0000-4000-8000-000000000301';
+  v_fixture_reddit_id text := 'ci_research_topics_test01';
+  v_reddit_signal_id uuid;
   v_topic_id uuid;
   v_request_id text := '00000000-0000-4000-8000-000000000201';
   v_r jsonb;
@@ -13,10 +17,27 @@ BEGIN
     RAISE EXCEPTION 'research_topics.sql: forventet tabell research_topics';
   END IF;
 
-  SELECT id INTO v_cluster_id FROM public.action_clusters LIMIT 1;
-  IF v_cluster_id IS NULL THEN
-    RAISE EXCEPTION 'research_topics.sql: trenger minst én action_cluster';
+  IF to_regclass('public.action_clusters') IS NULL THEN
+    RAISE EXCEPTION 'research_topics.sql: forventet tabell action_clusters';
   END IF;
+
+  INSERT INTO public.action_clusters (
+    id,
+    action_key,
+    action_type,
+    action_name,
+    description_nb
+  )
+  VALUES (
+    v_fixture_cluster_id,
+    'ci-research-topics-' || v_fixture_cluster_id::text,
+    'opprop',
+    'CI research topics',
+    'Testklynge for research_topics.sql'
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    action_name = EXCLUDED.action_name,
+    description_nb = EXCLUDED.description_nb;
 
   INSERT INTO public.reddit_signals (
     reddit_id,
@@ -27,25 +48,25 @@ BEGIN
     snapshot_at
   )
   VALUES (
-    'testtopic01',
+    v_fixture_reddit_id,
     'norge',
     'Test tema-brief',
-    'https://www.reddit.com/comments/testtopic01/',
+    'https://www.reddit.com/comments/ci_research_topics_test01/',
     now(),
     now()
   )
   ON CONFLICT (reddit_id) DO UPDATE SET title = EXCLUDED.title
-  RETURNING id INTO v_reddit_id;
+  RETURNING id INTO v_reddit_signal_id;
 
   DELETE FROM public.research_topics
   WHERE request_id = v_request_id
-     OR reddit_signal_id = v_reddit_id;
+     OR reddit_signal_id = v_reddit_signal_id;
 
   v_r := public.research_topics_request_brief(
     v_request_id,
     'reddit',
     NULL,
-    v_reddit_id,
+    v_reddit_signal_id,
     'Test tema-brief',
     NULL,
     false
@@ -172,7 +193,7 @@ BEGIN
     v_request_id,
     'reddit',
     NULL,
-    v_reddit_id,
+    v_reddit_signal_id,
     'Test tema-brief',
     NULL,
     false
@@ -181,8 +202,8 @@ BEGIN
     RAISE EXCEPTION 'forventet enqueue=false for eksisterende brief';
   END IF;
 
-  DELETE FROM public.research_topics WHERE id = v_topic_id;
-
   RAISE NOTICE 'research_topics.sql: OK';
 END;
 $test$;
+
+ROLLBACK;
