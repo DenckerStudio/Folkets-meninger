@@ -18,7 +18,7 @@ DECLARE
     'grant_stemme_plus', 'grant_stemme_plus_by_email', 'revoke_stemme_plus',
     'revoke_stemme_plus_by_email', 'list_stemme_plus_supporters',
     'grant_app_role', 'grant_app_role_by_email', 'revoke_app_role', 'revoke_app_role_by_email',
-    'list_app_admins', 'publish_poll', 'archive_poll',
+    'list_app_admins', 'publish_poll', 'archive_poll', 'admin_publish_stortinget_poll',
     'create_app_changelog_entry', 'delete_app_changelog_entry',
     'create_app_roadmap_item', 'update_app_roadmap_item', 'delete_app_roadmap_item',
     'set_app_roadmap_item_status', 'set_app_suggestion_status', 'set_app_suggestion_voting',

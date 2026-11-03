@@ -427,6 +427,34 @@ export async function ensureStortingetPoll(input: {
   return typeof data === 'string' ? data : null;
 }
 
+type AdminPublishStortingetPollClient = Pick<SupabaseClient, 'rpc'>;
+
+export async function adminPublishStortingetPoll(
+  input: {
+    issueId: string;
+    title: string;
+    neutralSummary?: string;
+    sourceUrls?: PollSourceUrl[];
+    closesAt?: string | null;
+    clearClosesAt?: boolean;
+  },
+  service: AdminPublishStortingetPollClient = getServiceSupabase(),
+): Promise<string> {
+  const { data, error } = await service.rpc('admin_publish_stortinget_poll', {
+    p_issue_id: input.issueId,
+    p_title: input.title,
+    p_neutral_summary: input.neutralSummary ?? '',
+    p_source_urls: input.sourceUrls ?? [],
+    p_closes_at: input.closesAt ?? null,
+    p_clear_closes_at: input.clearClosesAt ?? false,
+  });
+  if (error) throw error;
+  if (typeof data !== 'string' || data.length === 0) {
+    throw new Error('admin_publish_stortinget_poll returnerte ingen poll-id');
+  }
+  return data;
+}
+
 export async function createSystemPollDraft(input: {
   issueId?: string | null;
   title: string;
