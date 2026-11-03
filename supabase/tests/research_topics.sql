@@ -51,11 +51,14 @@ BEGIN
     v_fixture_reddit_id,
     'norge',
     'Test tema-brief',
-    'https://www.reddit.com/comments/ci_research_topics_test01/',
+    'https://www.reddit.com/comments/' || v_fixture_reddit_id || '/',
     now(),
     now()
   )
-  ON CONFLICT (reddit_id) DO UPDATE SET title = EXCLUDED.title
+  ON CONFLICT (reddit_id) DO UPDATE SET
+    title = EXCLUDED.title,
+    url = EXCLUDED.url,
+    subreddit = EXCLUDED.subreddit
   RETURNING id INTO v_reddit_signal_id;
 
   DELETE FROM public.research_topics
