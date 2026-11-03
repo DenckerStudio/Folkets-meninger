@@ -6,7 +6,7 @@ BEGIN;
 DO $test$
 DECLARE
   v_fixture_cluster_id uuid := '00000000-0000-4000-8000-000000000301';
-  v_fixture_reddit_id text := 'ci_research_topics_test01';
+  v_fixture_reddit_id text := 'ci0rt0test1';
   v_reddit_signal_id uuid;
   v_topic_id uuid;
   v_request_id text := '00000000-0000-4000-8000-000000000201';
