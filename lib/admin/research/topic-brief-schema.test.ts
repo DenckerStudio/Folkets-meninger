@@ -7,6 +7,7 @@ import {
   isUnpublishableSourceHost,
   researchTopicBriefOutputSchema,
   researchTopicHasOpenableBrief,
+  formatResearchTopicBriefGeneratedAt,
 } from '@/lib/admin/research/topic-brief-schema';
 import { resolveResearchTopicSourceKey } from '@/lib/admin/research/topic-service';
 
@@ -59,7 +60,13 @@ const redditOnly = filterPublishableSources([
 assert.equal(redditOnly.length, 0);
 
 assert.equal(researchTopicHasOpenableBrief('done'), true);
+assert.equal(researchTopicHasOpenableBrief('queued'), false);
+assert.equal(researchTopicHasOpenableBrief('running'), false);
 assert.equal(researchTopicHasOpenableBrief('failed'), false);
+
+const formatted = formatResearchTopicBriefGeneratedAt('2026-11-03T11:00:00.000Z');
+assert.match(formatted, /2026/);
+assert.match(formatted, /13:00|12:00/);
 
 assert.equal(resolveResearchTopicSourceKey({ sourceKind: 'cluster', clusterId: 'c1' }), 'cluster:c1');
 

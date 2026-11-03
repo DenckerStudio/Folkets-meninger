@@ -12,6 +12,7 @@ export function buildTopicBriefWebhookPayloadForDocs(): ResearchTopicWebhookBody
     title: 'Formueskatt',
     context: {
       action_key: 'opprop:formueskatt',
+      summary: 'Opprop om formueskatt og fordeling mellom stat og kommuner.',
     },
     force: false,
   };

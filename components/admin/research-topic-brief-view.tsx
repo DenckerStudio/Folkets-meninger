@@ -1,15 +1,17 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Loader2 } from 'lucide-react';
 import {
   RESEARCH_TOPIC_BRIEF_GRADE_LEGEND,
   RESEARCH_TOPIC_UNPUBLISHABLE_NOTICE,
   buildResearchTopicBriefViewModel,
-  researchTopicRowDisplayTitle,
+  formatResearchTopicBriefGeneratedAt,
   sectionIsEmpty,
   type ResearchTopicBriefSource,
+  type ResearchTopicStatus,
 } from '@/lib/admin/research/topic-brief-schema';
 import {
   formatResearchTopicBriefError,
@@ -18,8 +20,11 @@ import {
   researchTopicBriefFailedMessage,
   RESEARCH_TOPIC_BRIEF_DEVELOPER_HINT,
 } from '@/lib/admin/research/topic-error-messages';
+import { RESEARCH_BRIEF_POLL_MS } from '@/lib/admin/research/polling';
 import type { ResearchTopicRow as TopicRowType } from '@/lib/admin/research/topic-types';
+import { buttonVariants } from '@/components/ui/button';
 import { routes } from '@/lib/routes';
+import { cn } from '@/lib/utils';
 
 function GradeBadge({ grade }: { grade: ResearchTopicBriefSource['grade'] }) {
   return (
@@ -99,13 +104,100 @@ function RedditSourceAdminLink({ topic }: { topic: TopicRowType }) {
   );
 }
 
-export function ResearchTopicBriefView({ topic }: { topic: TopicRowType }) {
-  const heading = researchTopicRowDisplayTitle({
-    status: topic.status,
-    rawTitle: topic.title,
-    output: topic.output,
-    redditSubreddit: topic.subreddit,
-  });
+function mergeTopicFromPoll(
+  prev: TopicRowType,
+  body: Record<string, unknown>,
+): TopicRowType {
+  const status = body.status as ResearchTopicStatus;
+  return {
+    ...prev,
+    status,
+    request_id: typeof body.request_id === 'string' ? body.request_id : prev.request_id,
+    publishable: typeof body.publishable === 'boolean' ? body.publishable : null,
+    blocking_reason:
+      typeof body.blocking_reason === 'string' ? body.blocking_reason : prev.blocking_reason,
+    error: typeof body.error === 'string' ? body.error : null,
+    updated_at: typeof body.updated_at === 'string' ? body.updated_at : prev.updated_at,
+    title: typeof body.title === 'string' ? body.title : prev.title,
+    output: status === 'done' && body.output != null ? body.output : prev.output,
+    subreddit: typeof body.subreddit === 'string' ? body.subreddit : prev.subreddit,
+  };
+}
+
+export function ResearchTopicBriefView({ topic: initialTopic }: { topic: TopicRowType }) {
+  const [topic, setTopic] = useState(initialTopic);
+  const [retryPending, setRetryPending] = useState(false);
+  const [retryError, setRetryError] = useState('');
+
+  useEffect(() => {
+    setTopic(initialTopic);
+  }, [initialTopic]);
+
+  const pollTopic = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/admin/research/topics?topic_id=${encodeURIComponent(topic.id)}`,
+      );
+      if (!res.ok) return;
+      const body = (await res.json()) as Record<string, unknown>;
+      if (typeof body.status !== 'string') return;
+      setTopic((prev) => mergeTopicFromPoll(prev, body));
+    } catch {
+      /* ignore poll errors */
+    }
+  }, [topic.id]);
+
+  useEffect(() => {
+    if (topic.status !== 'queued' && topic.status !== 'running') return;
+    void pollTopic();
+    const id = window.setInterval(() => {
+      if (document.visibilityState !== 'hidden') void pollTopic();
+    }, RESEARCH_BRIEF_POLL_MS);
+    return () => window.clearInterval(id);
+  }, [pollTopic, topic.status]);
+
+  const retryBrief = useCallback(async () => {
+    setRetryError('');
+    setRetryPending(true);
+    try {
+      const res = await fetch('/api/admin/research/topics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_kind: topic.source_kind,
+          cluster_id: topic.source_kind === 'cluster' ? topic.cluster_id : undefined,
+          reddit_signal_id: topic.source_kind === 'reddit' ? topic.reddit_signal_id : undefined,
+          title: topic.source_kind === 'cluster' ? topic.title : undefined,
+          request_id: crypto.randomUUID(),
+          force: true,
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok) {
+        setRetryError(
+          typeof body.message === 'string' && body.message.trim()
+            ? body.message
+            : 'Kunne ikke starte tema-brief på nytt',
+        );
+        return;
+      }
+      if (typeof body.topic_id === 'string' && typeof body.status === 'string') {
+        setTopic((prev) => ({
+          ...prev,
+          id: body.topic_id as string,
+          status: body.status as ResearchTopicStatus,
+          request_id: typeof body.request_id === 'string' ? body.request_id : prev.request_id,
+          error: null,
+          publishable: typeof body.publishable === 'boolean' ? body.publishable : null,
+          updated_at: new Date().toISOString(),
+        }));
+      }
+    } catch {
+      setRetryError('Kunne ikke starte tema-brief på nytt');
+    } finally {
+      setRetryPending(false);
+    }
+  }, [topic]);
 
   if (topic.status === 'queued' || topic.status === 'running') {
     return (
@@ -115,11 +207,8 @@ export function ResearchTopicBriefView({ topic }: { topic: TopicRowType }) {
           <div className="h-3 w-full rounded bg-muted" />
           <div className="h-3 w-5/6 rounded bg-muted" />
         </div>
-        {topic.title ? (
-          <p className="text-xs text-muted-foreground line-clamp-2">{topic.title}</p>
-        ) : null}
         <RedditSourceAdminLink topic={topic} />
-        <p className="text-sm text-muted-foreground">Tema-brief genereres. Oppdater siden om litt.</p>
+        <p className="text-sm text-muted-foreground">Tema-brief genereres…</p>
       </div>
     );
   }
@@ -136,12 +225,26 @@ export function ResearchTopicBriefView({ topic }: { topic: TopicRowType }) {
         </p>
         {allowsRetry ? (
           <>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Gå tilbake til Research og velg «Prøv igjen» på raden.
-            </p>
             {researchTopicBriefErrorShowsDeveloperHint(topic.error) ? (
               <p className="mt-2 text-sm text-muted-foreground">
                 {RESEARCH_TOPIC_BRIEF_DEVELOPER_HINT}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              disabled={retryPending}
+              onClick={() => void retryBrief()}
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'sm' }),
+                'mt-4 min-h-11 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10',
+              )}
+            >
+              {retryPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+              Prøv igjen
+            </button>
+            {retryError ? (
+              <p className="mt-2 text-xs text-destructive" role="alert">
+                {retryError}
               </p>
             ) : null}
           </>
@@ -180,13 +283,7 @@ export function ResearchTopicBriefView({ topic }: { topic: TopicRowType }) {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">{heading}</h2>
-        {model.rawAdminTitle && model.output.topic_title ? (
-          <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{model.rawAdminTitle}</p>
-        ) : null}
-        <RedditSourceAdminLink topic={topic} />
-      </div>
+      <RedditSourceAdminLink topic={topic} />
 
       {model.showUnpublishableNotice ? (
         <div
@@ -197,8 +294,7 @@ export function ResearchTopicBriefView({ topic }: { topic: TopicRowType }) {
             Ikke publiserbar
           </span>
           <div className="min-w-0 flex-1 space-y-1">
-            {model.blockingReason ? <p>{model.blockingReason}</p> : null}
-            <p>{RESEARCH_TOPIC_UNPUBLISHABLE_NOTICE}</p>
+            <p>{model.blockingReason?.trim() || RESEARCH_TOPIC_UNPUBLISHABLE_NOTICE}</p>
           </div>
         </div>
       ) : null}
@@ -302,7 +398,7 @@ export function ResearchTopicBriefView({ topic }: { topic: TopicRowType }) {
         <p className="text-xs text-muted-foreground">
           Generert{' '}
           <time dateTime={output.generated_at} className="tabular-nums">
-            {output.generated_at}
+            {formatResearchTopicBriefGeneratedAt(output.generated_at)}
           </time>
         </p>
       ) : null}

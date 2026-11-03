@@ -13,6 +13,7 @@ const clusterPayload = buildTopicBriefWebhookPayloadForDocs();
 assert.equal(clusterPayload.kind, 'topic_brief');
 assert.ok(clusterPayload.title);
 assert.equal(clusterPayload.source_kind, 'cluster');
+assert.ok((clusterPayload.context as { summary?: string }).summary?.trim());
 
 const redditPayload = buildTopicBriefWebhookPayloadRedditDocs();
 assert.equal(redditPayload.source_ref, '1xlz4r8');

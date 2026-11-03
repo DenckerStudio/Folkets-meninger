@@ -147,5 +147,19 @@ export function researchTopicRowDisplayTitle(input: {
 }
 
 export function researchTopicHasOpenableBrief(status: ResearchTopicStatus): boolean {
-  return status === 'queued' || status === 'running' || status === 'done';
+  return status === 'done';
+}
+
+const RESEARCH_TOPIC_BRIEF_GENERATED_AT_FORMAT: Intl.DateTimeFormatOptions = {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'Europe/Oslo',
+};
+
+export function formatResearchTopicBriefGeneratedAt(iso: string): string {
+  const trimmed = iso.trim();
+  if (!trimmed) return iso;
+  const date = new Date(trimmed);
+  if (Number.isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat('nb-NO', RESEARCH_TOPIC_BRIEF_GENERATED_AT_FORMAT).format(date);
 }

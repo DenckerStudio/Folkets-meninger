@@ -713,9 +713,7 @@ export function ResearchRowTableCells({
             {error}
           </p>
         ) : null}
-      </td>
-      <td className={actionsCellClassName}>
-        <div className="flex min-w-0 flex-col gap-2">
+        <div className="mt-2">
           <ResearchTopicUseFindingButton
             sourceKind="cluster"
             clusterId={clusterId}
@@ -723,6 +721,10 @@ export function ResearchRowTableCells({
             initialSnapshot={topicSnapshot}
             compact
           />
+        </div>
+      </td>
+      <td className={actionsCellClassName}>
+        <div className="flex min-w-0 flex-col gap-2">
           <div className="flex justify-end">
             <ResearchTableMenuDropdown items={tableMenuItems} onSelect={onTableMenuSelect} />
           </div>

@@ -367,7 +367,8 @@ Felles:
   "source_ref": "00000000-0000-4000-8000-000000000099",
   "title": "Formueskatt",
   "context": {
-    "action_key": "opprop:formueskatt"
+    "action_key": "opprop:formueskatt",
+    "summary": "Opprop om formueskatt og fordeling mellom stat og kommuner."
   },
   "force": false
 }

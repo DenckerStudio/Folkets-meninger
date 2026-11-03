@@ -161,6 +161,14 @@ export async function buildResearchTopicWebhookBody(input: {
       .maybeSingle();
     if (error || !cluster) return null;
 
+    const summary = typeof cluster.description_nb === 'string' ? cluster.description_nb.trim() : '';
+    const context: { action_key: string; summary?: string } = {
+      action_key: cluster.action_key,
+    };
+    if (summary) {
+      context.summary = summary;
+    }
+
     const body: ResearchTopicWebhookBody = {
       request_id: input.requestId,
       kind: RESEARCH_TOPIC_WEBHOOK_KIND,
@@ -168,10 +176,7 @@ export async function buildResearchTopicWebhookBody(input: {
       source_kind: 'cluster',
       source_ref: input.clusterId,
       title: input.title ?? cluster.action_name,
-      context: {
-        action_key: cluster.action_key,
-        summary: cluster.description_nb,
-      },
+      context,
       force: input.force,
     };
     return body;

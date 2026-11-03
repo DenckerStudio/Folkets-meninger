@@ -15,7 +15,7 @@ import {
   type ResearchTopicSourceKind,
   type ResearchTopicStatus,
 } from '@/lib/admin/research/topic-brief-schema';
-import { researchTopicBriefErrorAllowsRetry } from '@/lib/admin/research/topic-error-messages';
+import { formatResearchTopicBriefError, researchTopicBriefErrorAllowsRetry } from '@/lib/admin/research/topic-error-messages';
 import type { ResearchTopicSnapshot } from '@/lib/admin/research/topic-types';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
@@ -177,15 +177,9 @@ export function ResearchTopicUseFindingButton({
     return (
       <div className={cn('flex min-w-0 flex-col gap-1', className)}>
         <ResearchBriefStatusBadge status="failed" />
-        <Link
-          href={routes.adminResearch}
-          className={cn(
-            buttonVariants({ variant: 'outline', size: 'sm' }),
-            'min-h-11 w-full max-w-full justify-center whitespace-normal text-center text-xs font-medium leading-snug focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-          )}
-        >
-          Tilbake til Research
-        </Link>
+        <p className="text-xs text-muted-foreground" role="status">
+          {formatResearchTopicBriefError(snapshot?.error)}
+        </p>
       </div>
     );
   }
