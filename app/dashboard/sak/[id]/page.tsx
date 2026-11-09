@@ -19,6 +19,7 @@ import { isAdmin } from '@/lib/admin/gate';
 import { listPollsForStortingetIssueAdmin } from '@/lib/polls/stortinget-poll-admin-data';
 import { resolveStortingetPollAdminUiState } from '@/lib/polls/stortinget-poll-admin-guard';
 import { getStortingetSakUrl } from '@/lib/stortinget-horinger';
+import { isResearchTopicDedicatedIssueId } from '@/lib/sak/research-topic-dedicated-issue';
 import { publicSakSummaryLead } from '@/lib/ai-summary/sak-summary-fetch';
 import { readAiSummaryFromDb } from '@/lib/ai-summary/service';
 import AiSummary from './ai-summary';
@@ -190,10 +191,13 @@ export default async function SakPage({
   }
 
   const { sak, detail: detailedContent, issueMeta } = bundle;
+  const isDedicatedResearchSak = isResearchTopicDedicatedIssueId(sak.id);
   const [documents, voteringer, summaryRead] = await Promise.all([
-    getSakDocumentsWithStatus(sak.id, detailedContent),
-    fetchSakVoteringer(sak.id),
-    readAiSummaryFromDb(sak.id),
+    isDedicatedResearchSak ? Promise.resolve([]) : getSakDocumentsWithStatus(sak.id, detailedContent),
+    isDedicatedResearchSak ? Promise.resolve([]) : fetchSakVoteringer(sak.id),
+    isDedicatedResearchSak
+      ? Promise.resolve({ status: 'ok' as const, summary: null })
+      : readAiSummaryFromDb(sak.id),
   ]);
   const storedSummary = summaryRead.status === 'ok' ? summaryRead.summary : null;
 
@@ -295,11 +299,13 @@ export default async function SakPage({
           <h1 className="text-balance text-2xl font-bold tracking-tight break-words text-foreground sm:text-3xl">
             {officialTitle}
           </h1>
-          <AiSummary
-            sakId={sak.id}
-            initialSummary={storedSummary}
-            stortingetPageUrl={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
-          />
+          {!isDedicatedResearchSak ? (
+            <AiSummary
+              sakId={sak.id}
+              initialSummary={storedSummary}
+              stortingetPageUrl={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
+            />
+          ) : null}
           {descriptionToShow ? <SakOfficialDescription text={descriptionToShow} /> : null}
           {(sak.henvisning || henvisning) ? (
             <p className="text-sm text-muted-foreground">{sak.henvisning || henvisning}</p>
@@ -465,14 +471,18 @@ export default async function SakPage({
               />
             ) : null}
 
-            <KnowledgeQuiz sakId={sak.id} variant="pre-vote" />
+            {!isDedicatedResearchSak ? (
+              <KnowledgeQuiz sakId={sak.id} variant="pre-vote" />
+            ) : null}
 
             {viewerIsAdmin ? (
               <StortingetPollAdminSection
                 sakId={sak.id}
                 sakTitle={officialTitle}
                 defaultNeutralSummary={pollDefaultNeutralSummary}
-                stortingetPageUrl={getStortingetSakUrl(sak.id)}
+                stortingetPageUrl={
+                  isDedicatedResearchSak ? null : getStortingetSakUrl(sak.id)
+                }
                 adminState={stortingetPollAdminState}
               />
             ) : null}
@@ -510,7 +520,11 @@ export default async function SakPage({
               <EmptyState
                 compact
                 title="Ingen saksdokumenter ennå"
-                description="Dokumenter hentes inn fra Stortinget når de er tilgjengelige."
+                description={
+                  isDedicatedResearchSak
+                    ? 'Denne saken har ingen saksdokumenter i appen.'
+                    : 'Dokumenter hentes inn fra Stortinget når de er tilgjengelige.'
+                }
               />
             )}
 
@@ -569,26 +583,28 @@ export default async function SakPage({
               </div>
             ) : null}
 
-            <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:flex-wrap sm:gap-4">
-              <a
-                href={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-brand transition-colors"
-              >
-                <ExternalLink className="mr-1.5 w-4 h-4" />
-                Kilde: stortinget.no (sak {sak.id})
-              </a>
-              <a
-                href={`https://data.stortinget.no/eksport/sak?sakid=${sak.id}&format=json`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-brand transition-colors"
-              >
-                <ExternalLink className="mr-1.5 w-4 h-4" />
-                Teknisk saksdata fra Stortinget
-              </a>
-            </div>
+            {!isDedicatedResearchSak ? (
+              <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:flex-wrap sm:gap-4">
+                <a
+                  href={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-brand transition-colors"
+                >
+                  <ExternalLink className="mr-1.5 w-4 h-4" />
+                  Kilde: stortinget.no (sak {sak.id})
+                </a>
+                <a
+                  href={`https://data.stortinget.no/eksport/sak?sakid=${sak.id}&format=json`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-brand transition-colors"
+                >
+                  <ExternalLink className="mr-1.5 w-4 h-4" />
+                  Teknisk saksdata fra Stortinget
+                </a>
+              </div>
+            ) : null}
           </div>
         }
         forDeg={

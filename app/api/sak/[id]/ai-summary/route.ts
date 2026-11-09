@@ -7,6 +7,7 @@ import {
 import { requireAdmin } from '@/lib/admin/gate';
 import { triggerAiSummaryWebhook } from '@/lib/trigger-ai-summary-webhook';
 import { isAiSummaryV2 } from '@/lib/ai-summary/types';
+import { isResearchTopicDedicatedIssueId } from '@/lib/sak/research-topic-dedicated-issue';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,13 @@ export async function GET(
 
   if (!id) {
     return NextResponse.json({ error: 'Mangler saks-ID' }, { status: 400 });
+  }
+
+  if (isResearchTopicDedicatedIssueId(id)) {
+    return NextResponse.json(
+      { status: 'not_available', message: 'Sammendrag finnes ikke for denne saken.' },
+      { status: 404 },
+    );
   }
 
   const result = await resolveAiSummaryForApi(id, { triggerIfMissing: true });
@@ -75,6 +83,13 @@ export async function POST(
 
   if (!id) {
     return NextResponse.json({ error: 'Mangler saks-ID' }, { status: 400 });
+  }
+
+  if (isResearchTopicDedicatedIssueId(id)) {
+    return NextResponse.json(
+      { status: 'not_available', message: 'Sammendrag kan ikke genereres for denne saken.' },
+      { status: 404 },
+    );
   }
 
   if (!force) {

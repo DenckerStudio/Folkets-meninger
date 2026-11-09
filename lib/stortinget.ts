@@ -184,6 +184,14 @@ export async function getSakPageBundle(
   detail: StortingetSakDetail;
   issueMeta: import('./stortinget-detail-cache').SakIssueMeta | null;
 } | null> {
+  const { getDedicatedResearchTopicSakBundle } = await import(
+    './sak/dedicated-research-topic-bundle'
+  );
+  const dedicatedBundle = await getDedicatedResearchTopicSakBundle(id);
+  if (dedicatedBundle) {
+    return dedicatedBundle;
+  }
+
   const { getCachedSakDetail, getSakIssueMeta } = await import('./stortinget-detail-cache');
   const { getLiveListExportFields } = await import('./stortinget-saker-cache');
   const detail = await getCachedSakDetail(id);

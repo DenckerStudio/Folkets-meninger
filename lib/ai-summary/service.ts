@@ -271,6 +271,13 @@ export async function resolveAiSummaryForApi(
   issueId: string,
   options: { triggerIfMissing?: boolean; deps?: ResolveAiSummaryDeps } = {},
 ): Promise<AiSummaryApiResult> {
+  const { isResearchTopicDedicatedIssueId } = await import(
+    '@/lib/sak/research-topic-dedicated-issue'
+  );
+  if (isResearchTopicDedicatedIssueId(issueId)) {
+    return { status: 'read_failed', retry_after_seconds: 0 };
+  }
+
   const readFromDb = options.deps?.readFromDb ?? readAiSummaryFromDb;
   const markRequested = options.deps?.markRequested ?? claimAiSummaryWebhook;
   const triggerWebhook = options.deps?.triggerWebhook ?? triggerAiSummaryWebhook;
