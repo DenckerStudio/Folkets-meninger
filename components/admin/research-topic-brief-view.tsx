@@ -23,6 +23,7 @@ import {
 import { RESEARCH_BRIEF_POLL_MS } from '@/lib/admin/research/polling';
 import type { ResearchTopicRow as TopicRowType } from '@/lib/admin/research/topic-types';
 import { buttonVariants } from '@/components/ui/button';
+import { ResearchTopicBlogDraftPanel } from '@/components/admin/research-topic-blog-draft-panel';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -284,6 +285,8 @@ export function ResearchTopicBriefView({ topic: initialTopic }: { topic: TopicRo
   return (
     <div className="space-y-8">
       <RedditSourceAdminLink topic={topic} />
+
+      <ResearchTopicBlogDraftPanel topic={topic} />
 
       {model.showUnpublishableNotice ? (
         <div
