@@ -29,6 +29,9 @@ export const routes = {
   omAi: '/om/ai',
   hvaErAnnerledes: '/#hva-er-annerledes',
   innspill: '/innspill',
+  detteSnakkesDetOm: '/dette-snakkes-det-om',
+  detteSnakkesDetOmTopic: (id: string) =>
+    `/dette-snakkes-det-om/${encodeURIComponent(id)}`,
   blogg: '/blogg',
   bloggPost: (slug: string) => `/blogg/${encodeURIComponent(slug)}`,
   login: '/auth/login',

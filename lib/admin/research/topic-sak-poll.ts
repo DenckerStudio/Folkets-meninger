@@ -1,10 +1,16 @@
 import {
   filterPublishableSources,
   parseTopicBriefSources,
-  researchTopicBriefOutputSchema,
   sectionIsEmpty,
   type ResearchTopicBriefOutput,
 } from '@/lib/admin/research/topic-brief-schema';
+import {
+  buildResearchTopicPublicTitle,
+  parsePublicResearchTopicBriefOutput,
+} from '@/lib/research-topics/public-content';
+import { validateResearchTopicPublicString } from '@/lib/research-topics/public-strings';
+
+export { buildResearchTopicPublicTitle, validateResearchTopicPublicString };
 import type { ResearchTopicRow } from '@/lib/admin/research/topic-types';
 import { getServiceSupabase } from '@/lib/supabase';
 import {
@@ -31,14 +37,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 export function parseResearchTopicBriefOutput(output: unknown): ResearchTopicBriefOutput | null {
-  const parsed = researchTopicBriefOutputSchema.safeParse(output);
-  return parsed.success ? parsed.data : null;
-}
-
-export function buildResearchTopicPublicTitle(output: unknown): string | null {
-  const brief = parseResearchTopicBriefOutput(output);
-  const title = brief?.topic_title?.trim();
-  return title ? title : null;
+  return parsePublicResearchTopicBriefOutput(output);
 }
 
 function linesFromStringItems(items: unknown[]): string[] {
@@ -158,14 +157,6 @@ export function buildResearchTopicPollSourceUrls(
     urls.push(primary);
   }
   return urls;
-}
-
-export function validateResearchTopicPublicString(text: string): string | null {
-  const lower = text.toLowerCase();
-  if (lower.includes('reddit')) {
-    return 'Teksten kan ikke nevne Reddit';
-  }
-  return null;
 }
 
 export async function syncDedicatedResearchTopicIssueText(input: {
