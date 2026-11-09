@@ -48,8 +48,8 @@ export const OM_PROCESS_STEPS = [
     body: 'Se Stortingets høringer i appen og skriv kommentarer lokalt — de sendes ikke automatisk til Stortinget.',
   },
   {
-    title: 'Avstemninger og Reels',
-    body: `${pollBallotAltTextPhrase()}-avstemninger og systemgenererte Reels på Utforsk. Reels-utkast lages av admin fra saksdokumenter (AI), merket som systemgenerert.`,
+    title: 'Avstemninger',
+    body: `${pollBallotAltTextPhrase()}-avstemninger på Utforsk knyttet til saker fra Stortinget. Du må være innlogget for å stemme.`,
   },
   {
     title: 'Valgomat 2.0',
