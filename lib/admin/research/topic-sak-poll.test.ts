@@ -5,6 +5,7 @@ import {
   buildResearchTopicNeutralSummary,
   buildResearchTopicPollSourceUrls,
   buildResearchTopicPublicTitle,
+  validateResearchTopicPublicString,
 } from '@/lib/admin/research/topic-sak-poll';
 import {
   isResearchTopicDedicatedIssueId,
@@ -20,6 +21,8 @@ const builderSrc = readFileSync(
 assert.doesNotMatch(builderSrc, /topic\.title/);
 assert.doesNotMatch(builderSrc, /rawTitle/);
 assert.match(builderSrc, /topic_title/);
+assert.match(builderSrc, /syncDedicatedResearchTopicIssueText/);
+assert.equal(validateResearchTopicPublicString('Innlegg om reddit'), 'Teksten kan ikke nevne Reddit');
 
 const panelSrc = readFileSync(
   join(process.cwd(), 'components/admin/research-topic-sak-poll-panel.tsx'),

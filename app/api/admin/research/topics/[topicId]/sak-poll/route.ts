@@ -50,7 +50,7 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({
       topic_id: topic.id,
       can_create: false,
-      blocking_message: 'Briefen mangler tittel (topic_title).',
+      blocking_message: 'Briefen mangler tittel – kjør briefen på nytt.',
     });
   }
 
@@ -99,7 +99,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (!buildResearchTopicPublicTitle(topic.output)) {
     return NextResponse.json(
-      { message: 'Briefen mangler tittel (topic_title).' },
+      { message: 'Briefen mangler tittel – kjør briefen på nytt.' },
       { status: 400 },
     );
   }

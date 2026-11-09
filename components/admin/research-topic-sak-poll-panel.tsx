@@ -83,6 +83,7 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [publishForceNew, setPublishForceNew] = useState(false);
   const [publishedNotice, setPublishedNotice] = useState(false);
+  const [confirmNewError, setConfirmNewError] = useState<string | null>(null);
   const formErrorId = useId();
   const footerErrorRef = useRef<HTMLParagraphElement>(null);
 
@@ -146,6 +147,7 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
     setClosesAtDate('');
     setClosesAtTime('');
     setFieldError(null);
+    setConfirmNewError(null);
     setPublishForceNew(fromRepublish);
     setPublishedNotice(false);
     setDialogStep('form');
@@ -161,7 +163,7 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
   function buildPayload(forceNew: boolean) {
     return {
       issue_id: state?.suggestedIssueId,
-      title: title.trim() || state?.defaultTitle || '',
+      title: resolvedTitleForSubmit(),
       neutral_summary: resolvedNeutralSummaryForSubmit(),
       closes_at_date: closesAtDate,
       closes_at_time: closesAtTime,
@@ -171,8 +173,10 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
   }
 
   async function executePublish(forceNew: boolean) {
+    const publishFromConfirmNew = confirmNewOpen && !dialogOpen;
     setError('');
     setFieldError(null);
+    setConfirmNewError(null);
     setPending(true);
     try {
       const res = await fetch(
@@ -199,21 +203,37 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
           typeof body.message === 'string' && body.message.trim()
             ? body.message
             : 'Kunne ikke publisere avstemning';
-        setFieldError(message);
-        setDialogStep('form');
+        if (publishFromConfirmNew) {
+          setConfirmNewError(message);
+        } else {
+          setFieldError(message);
+          setDialogOpen(true);
+          setDialogStep('form');
+        }
         return;
       }
       setDialogOpen(false);
       setConfirmNewOpen(false);
+      setConfirmNewError(null);
       setPublishForceNew(false);
       setPublishedNotice(true);
       await refreshState();
     } catch {
-      setFieldError('Kunne ikke publisere avstemning');
-      setDialogStep('form');
+      const message = 'Kunne ikke publisere avstemning';
+      if (publishFromConfirmNew) {
+        setConfirmNewError(message);
+      } else {
+        setFieldError(message);
+        setDialogOpen(true);
+        setDialogStep('form');
+      }
     } finally {
       setPending(false);
     }
+  }
+
+  function resolvedTitleForSubmit(): string {
+    return title.trim() || state?.defaultTitle || '';
   }
 
   function resolvedNeutralSummaryForSubmit(): string {
@@ -226,7 +246,7 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
   function buildFormValidationInput() {
     return buildResearchTopicSakPollFormValidationInput({
       suggestedIssueId: state?.suggestedIssueId ?? '',
-      title: title.trim() || state?.defaultTitle || '',
+      title: resolvedTitleForSubmit(),
       neutralSummary: resolvedNeutralSummaryForSubmit(),
       closesAtDate,
       closesAtTime,
@@ -494,10 +514,10 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
         ) : (
           <div className="space-y-2 text-sm text-foreground">
             <p className="line-clamp-4">
-              <span className="font-medium">Tittel:</span> {title}
+              <span className="font-medium">Tittel:</span> {resolvedTitleForSubmit()}
             </p>
             <p className="line-clamp-4">
-              <span className="font-medium">Ingress:</span> {neutralSummary}
+              <span className="font-medium">Ingress:</span> {resolvedNeutralSummaryForSubmit()}
             </p>
             <p className="text-muted-foreground">
               Avstemningen blir offentlig med en gang. Systemavstemninger på samme sak arkiveres
@@ -517,7 +537,7 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
         size="md"
         className="sm:max-w-md"
         footer={
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
             <button
               type="button"
               onClick={() => setConfirmNewOpen(false)}
@@ -549,6 +569,11 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
           </div>
         }
       >
+        {confirmNewError ? (
+          <p className="mb-3 text-sm font-medium text-destructive" role="alert">
+            {confirmNewError}
+          </p>
+        ) : null}
         <span className="sr-only">Bekreft ny sak eller avstemning fra tema-brief</span>
       </Dialog>
     </section>

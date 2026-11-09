@@ -160,11 +160,33 @@ export function buildResearchTopicPollSourceUrls(
   return urls;
 }
 
-export function assertResearchTopicPublicStrings(text: string): void {
+export function validateResearchTopicPublicString(text: string): string | null {
   const lower = text.toLowerCase();
   if (lower.includes('reddit')) {
-    throw new Error('Offentlig tekst kan ikke nevne Reddit');
+    return 'Teksten kan ikke nevne Reddit';
   }
+  return null;
+}
+
+export async function syncDedicatedResearchTopicIssueText(input: {
+  issueId: string;
+  title: string;
+  neutralSummary: string;
+}): Promise<void> {
+  const issueId = input.issueId.trim();
+  if (!isResearchTopicDedicatedIssueId(issueId)) {
+    return;
+  }
+  const supabase = getServiceSupabase();
+  const { error } = await supabase
+    .from('stortinget_issues')
+    .update({
+      title: input.title.trim(),
+      summary: input.neutralSummary.trim() || null,
+      last_synced_at: new Date().toISOString(),
+    })
+    .eq('id', issueId);
+  if (error) throw error;
 }
 
 export type ResearchTopicSakPollLookup = {
@@ -300,8 +322,14 @@ export type PublishResearchTopicSakPollInput = {
 export async function publishResearchTopicSakPoll(
   input: PublishResearchTopicSakPollInput,
 ): Promise<{ ok: true; pollId: string; issueId: string } | { ok: false; error: string }> {
-  assertResearchTopicPublicStrings(input.title);
-  assertResearchTopicPublicStrings(input.neutralSummary);
+  const titlePublicError = validateResearchTopicPublicString(input.title);
+  if (titlePublicError) {
+    return { ok: false, error: titlePublicError };
+  }
+  const summaryPublicError = validateResearchTopicPublicString(input.neutralSummary);
+  if (summaryPublicError) {
+    return { ok: false, error: summaryPublicError };
+  }
 
   const ingressError = validateResearchTopicSakPollIngress(input.neutralSummary);
   if (ingressError) {
@@ -309,8 +337,12 @@ export async function publishResearchTopicSakPoll(
   }
 
   for (const source of input.sourceUrls) {
-    if (source.label) assertResearchTopicPublicStrings(source.label);
-    assertResearchTopicPublicStrings(source.url);
+    if (source.label) {
+      const labelError = validateResearchTopicPublicString(source.label);
+      if (labelError) return { ok: false, error: labelError };
+    }
+    const urlError = validateResearchTopicPublicString(source.url);
+    if (urlError) return { ok: false, error: urlError };
   }
 
   if (!input.forceNew && input.existingPollId) {
@@ -362,6 +394,12 @@ export async function publishResearchTopicSakPoll(
       sourceUrls: input.sourceUrls,
       closesAt: closesAtIso,
       clearClosesAt,
+    });
+
+    await syncDedicatedResearchTopicIssueText({
+      issueId: input.issueId.trim(),
+      title: input.title.trim(),
+      neutralSummary: input.neutralSummary,
     });
 
     await persistResearchTopicSakPollLink({

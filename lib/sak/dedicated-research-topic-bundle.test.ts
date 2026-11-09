@@ -6,6 +6,7 @@ import {
   getDedicatedResearchTopicSakBundle,
 } from '@/lib/sak/dedicated-research-topic-bundle';
 import { researchTopicDedicatedIssueId } from '@/lib/sak/research-topic-dedicated-issue';
+import { resolveAiSummaryForApi } from '@/lib/ai-summary/service';
 
 const detailCacheSrc = readFileSync(
   join(process.cwd(), 'lib/stortinget-detail-cache.ts'),
@@ -34,6 +35,38 @@ assert.equal(detail.tittel, 'Nøytral ingress.');
 async function main() {
   const bundleWithoutDb = await getDedicatedResearchTopicSakBundle(sakId);
   assert.equal(bundleWithoutDb, null);
+
+  let markRequested = false;
+  let triggered = false;
+  const apiResult = await resolveAiSummaryForApi(sakId, {
+    triggerIfMissing: true,
+    deps: {
+      readFromDb: async () => ({ status: 'ok', summary: null }),
+      markRequested: async () => {
+        markRequested = true;
+        return true;
+      },
+      triggerWebhook: () => {
+        triggered = true;
+      },
+    },
+  });
+  assert.equal(apiResult.status, 'read_failed');
+  assert.equal(markRequested, false);
+  assert.equal(triggered, false);
+
+  const aiRouteSrc = readFileSync(
+    join(process.cwd(), 'app/api/sak/[id]/ai-summary/route.ts'),
+    'utf8',
+  );
+  assert.match(aiRouteSrc, /isResearchTopicDedicatedIssueId/);
+
+  const sakPageSrc = readFileSync(
+    join(process.cwd(), 'app/dashboard/sak/[id]/page.tsx'),
+    'utf8',
+  );
+  assert.match(sakPageSrc, /!isDedicatedResearchSak \? \(\s*<AiSummary/);
+
   console.log('lib/sak/dedicated-research-topic-bundle.test.ts: ok');
 }
 

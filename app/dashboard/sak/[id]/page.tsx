@@ -299,15 +299,13 @@ export default async function SakPage({
           <h1 className="text-balance text-2xl font-bold tracking-tight break-words text-foreground sm:text-3xl">
             {officialTitle}
           </h1>
-          <AiSummary
-            sakId={sak.id}
-            initialSummary={storedSummary}
-            stortingetPageUrl={
-              isDedicatedResearchSak
-                ? null
-                : `https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`
-            }
-          />
+          {!isDedicatedResearchSak ? (
+            <AiSummary
+              sakId={sak.id}
+              initialSummary={storedSummary}
+              stortingetPageUrl={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
+            />
+          ) : null}
           {descriptionToShow ? <SakOfficialDescription text={descriptionToShow} /> : null}
           {(sak.henvisning || henvisning) ? (
             <p className="text-sm text-muted-foreground">{sak.henvisning || henvisning}</p>
@@ -522,7 +520,11 @@ export default async function SakPage({
               <EmptyState
                 compact
                 title="Ingen saksdokumenter ennå"
-                description="Dokumenter hentes inn fra Stortinget når de er tilgjengelige."
+                description={
+                  isDedicatedResearchSak
+                    ? 'Denne saken har ingen saksdokumenter i appen.'
+                    : 'Dokumenter hentes inn fra Stortinget når de er tilgjengelige.'
+                }
               />
             )}
 
