@@ -19,6 +19,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/dashboard/sporsmal`, changeFrequency: 'weekly', priority: 0.5 },
     { url: `${base}/dashboard/appens-fremtid`, changeFrequency: 'weekly', priority: 0.4 },
     { url: `${base}/innspill`, changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${base}/dette-snakkes-det-om`, changeFrequency: 'weekly', priority: 0.5 },
     { url: `${base}/blogg`, changeFrequency: 'weekly', priority: 0.5 },
     { url: `${base}/om/ai`, changeFrequency: 'monthly', priority: 0.3 },
     { url: `${base}/personvern`, changeFrequency: 'monthly', priority: 0.3 },

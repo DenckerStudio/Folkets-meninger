@@ -6,6 +6,7 @@ import { LandingExperience } from '@/components/landing-experience';
 import { LandingHowItWorks } from '@/components/landing-how-it-works';
 import { LandingHvaErAnnerledes } from '@/components/landing-hva-er-annerledes';
 import { LandingPopularIssuesLazy } from '@/components/landing-popular-issues-lazy';
+import { LandingResearchTopicsLazy } from '@/components/research-topics/landing-research-topics-lazy';
 import { LandingSectionContainer } from '@/components/landing-section-container';
 import CallToAction from '@/components/ui/call-to-action';
 import { routes } from '@/lib/routes';
@@ -35,6 +36,10 @@ export default function LandingPage() {
 
           <div data-landing-section>
             <LandingHvaErAnnerledes />
+          </div>
+
+          <div data-landing-section>
+            <LandingResearchTopicsLazy />
           </div>
 
           <div data-landing-section>

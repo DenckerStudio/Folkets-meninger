@@ -20,7 +20,12 @@ const builderSrc = readFileSync(
 );
 assert.doesNotMatch(builderSrc, /topic\.title/);
 assert.doesNotMatch(builderSrc, /rawTitle/);
-assert.match(builderSrc, /topic_title/);
+const publicContentSrc = readFileSync(
+  join(process.cwd(), 'lib/research-topics/public-content.ts'),
+  'utf8',
+);
+assert.match(publicContentSrc, /topic_title/);
+assert.match(builderSrc, /buildResearchTopicPublicTitle/);
 assert.match(builderSrc, /syncDedicatedResearchTopicIssueText/);
 assert.equal(validateResearchTopicPublicString('Innlegg om reddit'), 'Teksten kan ikke nevne Reddit');
 
