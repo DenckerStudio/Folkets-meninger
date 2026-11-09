@@ -65,7 +65,7 @@ export function LandingAbout() {
   }));
 
   const summaryModels = PLATFORM_AI_PIPELINES
-    .filter((row) => row.feature.includes('Saksammendrag') || row.feature.includes('Reels'))
+    .filter((row) => row.feature.includes('Saksammendrag'))
     .map((row) => row.model)
     .join(' · ');
 
@@ -155,8 +155,8 @@ export function LandingAbout() {
             <Cpu className="mt-0.5 h-6 w-6 shrink-0 text-[#00205b]" aria-hidden />
             <div className="space-y-3 text-sm leading-relaxed text-[#001433]/75">
               <p>
-                Saksammendrag og system-Reels lages av språkmodeller som kjører på våre egne servere, ikke i
-                nettleseren din. Modellfamiliene vi bruker er blant annet {summaryModels || 'se dokumentasjon'}.
+                Saksammendrag lages av språkmodeller som kjører på våre egne servere, ikke i nettleseren din.
+                Modellfamiliene vi bruker er blant annet {summaryModels || 'se dokumentasjon'}.
               </p>
               <p>
                 Sammendrag merkes «AI-generert» med lenker til Stortinget-dokumenter. Konsekvens-kalkulatoren
