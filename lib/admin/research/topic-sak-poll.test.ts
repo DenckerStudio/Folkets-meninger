@@ -5,9 +5,12 @@ import {
   buildResearchTopicNeutralSummary,
   buildResearchTopicPollSourceUrls,
   buildResearchTopicPublicTitle,
+} from '@/lib/admin/research/topic-sak-poll';
+import {
   isResearchTopicDedicatedIssueId,
   researchTopicDedicatedIssueId,
-} from '@/lib/admin/research/topic-sak-poll';
+} from '@/lib/sak/research-topic-dedicated-issue';
+import { validateResearchTopicSakPollIngress } from '@/lib/admin/research/topic-sak-poll-client';
 import { researchTopicSakPollCanCreate } from '@/lib/admin/research/topic-sak-poll-client';
 
 const builderSrc = readFileSync(
@@ -62,8 +65,19 @@ assert.equal(buildResearchTopicPublicTitle(baseOutput), 'Formueskatt i kommunene
 assert.equal(buildResearchTopicPublicTitle({ ...baseOutput, topic_title: undefined }), null);
 
 const summary = buildResearchTopicNeutralSummary(baseOutput);
-assert.match(summary, /formueskatt/i);
-assert.doesNotMatch(summary.toLowerCase(), /reddit/);
+assert.equal(summary.hasContent, true);
+assert.match(summary.text, /formueskatt/i);
+assert.doesNotMatch(summary.text.toLowerCase(), /reddit/);
+
+const emptyBrief = buildResearchTopicNeutralSummary({
+  ...baseOutput,
+  current_rules: { items: [], note: 'ingen funnet' },
+  party_proposals: { items: [], note: 'ingen funnet' },
+  media_coverage: { items: [], note: 'ingen funnet' },
+});
+assert.equal(emptyBrief.hasContent, false);
+assert.equal(emptyBrief.text, '');
+assert.equal(validateResearchTopicSakPollIngress(''), 'Nøytral ingress er påkrevd.');
 
 const dedicatedId = researchTopicDedicatedIssueId('550e8400-e29b-41d4-a716-446655440000');
 assert.ok(isResearchTopicDedicatedIssueId(dedicatedId));

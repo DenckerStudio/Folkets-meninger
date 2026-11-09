@@ -13,6 +13,9 @@ assert.doesNotMatch(panelSrc, /@\/lib\/cms\//);
 assert.doesNotMatch(panelSrc, /hmac/);
 assert.doesNotMatch(panelSrc, /node:crypto/);
 assert.match(panelSrc, /topic-sak-poll-client/);
+assert.match(panelSrc, /buildResearchTopicSakPollFormValidationInput/);
+assert.match(panelSrc, /executePublish\(publishForceNew\)/);
+assert.match(panelSrc, /openDialog\(true\)/);
 
 const clientHelperSrc = readFileSync(
   join(process.cwd(), 'lib/admin/research/topic-sak-poll-client.ts'),

@@ -15,16 +15,16 @@ import type { PollSourceUrl } from '@/lib/polls/types';
 import { adminPublishStortingetPoll } from '@/lib/polls/service';
 import { getStortingetSakUrl } from '@/lib/stortinget-horinger';
 import type { ClosesAtApplyAction } from '@/lib/polls/stortinget-poll-admin';
+import {
+  isResearchTopicDedicatedIssueId,
+  researchTopicDedicatedIssueId,
+} from '@/lib/sak/research-topic-dedicated-issue';
+import { validateResearchTopicSakPollIngress } from '@/lib/admin/research/topic-sak-poll-client';
 
-export const RESEARCH_TOPIC_SAK_ID_PREFIX = 'research-topic:';
-
-export function researchTopicDedicatedIssueId(topicId: string): string {
-  return `${RESEARCH_TOPIC_SAK_ID_PREFIX}${topicId.trim()}`;
-}
-
-export function isResearchTopicDedicatedIssueId(issueId: string): boolean {
-  return issueId.trim().startsWith(RESEARCH_TOPIC_SAK_ID_PREFIX);
-}
+export {
+  isResearchTopicDedicatedIssueId,
+  researchTopicDedicatedIssueId,
+};
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' ? (value as Record<string, unknown>) : null;
@@ -85,9 +85,17 @@ function linesFromMedia(items: unknown[]): string[] {
   return lines;
 }
 
-export function buildResearchTopicNeutralSummary(output: unknown): string {
+export type ResearchTopicNeutralSummaryBuild = {
+  text: string;
+  truncated: boolean;
+  hasContent: boolean;
+};
+
+export function buildResearchTopicNeutralSummary(output: unknown): ResearchTopicNeutralSummaryBuild {
   const brief = parseResearchTopicBriefOutput(output);
-  if (!brief) return '';
+  if (!brief) {
+    return { text: '', truncated: false, hasContent: false };
+  }
 
   const chunks: string[] = [];
 
@@ -114,12 +122,16 @@ export function buildResearchTopicNeutralSummary(output: unknown): string {
 
   const text = chunks.join('\n\n').replace(/\s+/g, ' ').trim();
   if (!text) {
-    return 'Nøytral oppsummering av temaet, basert på brief-funnene.';
+    return { text: '', truncated: false, hasContent: false };
   }
   if (text.length <= STORTINGET_POLL_NEUTRAL_SUMMARY_MAX) {
-    return text;
+    return { text, truncated: false, hasContent: true };
   }
-  return `${text.slice(0, STORTINGET_POLL_NEUTRAL_SUMMARY_MAX - 1).trimEnd()}…`;
+  return {
+    text: `${text.slice(0, STORTINGET_POLL_NEUTRAL_SUMMARY_MAX - 1).trimEnd()}…`,
+    truncated: true,
+    hasContent: true,
+  };
 }
 
 export function pickResearchTopicPublicSource(output: unknown): PollSourceUrl | null {
@@ -163,6 +175,8 @@ export type ResearchTopicSakPollLookup = {
   suggestedIssueId: string;
   defaultTitle: string | null;
   defaultNeutralSummary: string;
+  defaultNeutralSummaryTruncated: boolean;
+  defaultNeutralSummaryHasContent: boolean;
   sourceUrls: PollSourceUrl[];
   stortingetPageUrl: string | null;
   titleOverLimit: boolean;
@@ -205,7 +219,8 @@ export async function lookupResearchTopicSakPoll(
   topic: ResearchTopicRow,
 ): Promise<ResearchTopicSakPollLookup> {
   const defaultTitle = buildResearchTopicPublicTitle(topic.output);
-  const defaultNeutralSummary = buildResearchTopicNeutralSummary(topic.output);
+  const neutralBuild = buildResearchTopicNeutralSummary(topic.output);
+  const defaultNeutralSummary = neutralBuild.text;
   const suggestedIssueId = await resolveResearchTopicSuggestedIssueId(topic);
   const sourceUrls = buildResearchTopicPollSourceUrls(suggestedIssueId, topic.output);
   const dedicatedSak = isResearchTopicDedicatedIssueId(suggestedIssueId);
@@ -246,6 +261,8 @@ export async function lookupResearchTopicSakPoll(
     suggestedIssueId,
     defaultTitle,
     defaultNeutralSummary,
+    defaultNeutralSummaryTruncated: neutralBuild.truncated,
+    defaultNeutralSummaryHasContent: neutralBuild.hasContent,
     sourceUrls,
     stortingetPageUrl,
     titleOverLimit: (defaultTitle?.length ?? 0) > STORTINGET_POLL_TITLE_MAX,
@@ -285,6 +302,11 @@ export async function publishResearchTopicSakPoll(
 ): Promise<{ ok: true; pollId: string; issueId: string } | { ok: false; error: string }> {
   assertResearchTopicPublicStrings(input.title);
   assertResearchTopicPublicStrings(input.neutralSummary);
+
+  const ingressError = validateResearchTopicSakPollIngress(input.neutralSummary);
+  if (ingressError) {
+    return { ok: false, error: ingressError };
+  }
 
   for (const source of input.sourceUrls) {
     if (source.label) assertResearchTopicPublicStrings(source.label);

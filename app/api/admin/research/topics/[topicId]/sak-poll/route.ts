@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/admin/gate';
 import {
   researchTopicSakPollBlockingMessage,
   researchTopicSakPollCanCreate,
+  validateResearchTopicSakPollIngress,
 } from '@/lib/admin/research/topic-sak-poll-client';
 import {
   buildResearchTopicPublicTitle,
@@ -65,6 +66,8 @@ export async function GET(_request: Request, context: RouteContext) {
     suggested_issue_id: lookup.suggestedIssueId,
     default_title: lookup.defaultTitle,
     default_neutral_summary: lookup.defaultNeutralSummary,
+    default_neutral_summary_truncated: lookup.defaultNeutralSummaryTruncated,
+    default_neutral_summary_has_content: lookup.defaultNeutralSummaryHasContent,
     source_urls: lookup.sourceUrls,
     stortinget_page_url: lookup.stortingetPageUrl,
     title_over_limit: lookup.titleOverLimit,
@@ -126,6 +129,11 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (!validated.ok) {
     return NextResponse.json({ message: validated.error }, { status: 400 });
+  }
+
+  const ingressError = validateResearchTopicSakPollIngress(validated.value.neutralSummary);
+  if (ingressError) {
+    return NextResponse.json({ message: ingressError }, { status: 400 });
   }
 
   const sourceUrls =

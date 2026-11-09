@@ -7,7 +7,11 @@ import { Dialog } from '@/components/ui/dialog';
 import { buttonVariants } from '@/components/ui/button';
 import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import type { ResearchTopicRow } from '@/lib/admin/research/topic-types';
-import { researchTopicSakPollCanCreate } from '@/lib/admin/research/topic-sak-poll-client';
+import {
+  buildResearchTopicSakPollFormValidationInput,
+  researchTopicSakPollCanCreate,
+  validateResearchTopicSakPollIngress,
+} from '@/lib/admin/research/topic-sak-poll-client';
 import { POLL_BALLOT_BUTTON_ORDER } from '@/lib/polls/ballot-buttons';
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import {
@@ -25,6 +29,8 @@ type SakPollState = {
   suggestedIssueId: string;
   defaultTitle: string | null;
   defaultNeutralSummary: string;
+  defaultNeutralSummaryTruncated: boolean;
+  defaultNeutralSummaryHasContent: boolean;
   stortingetPageUrl: string | null;
   titleOverLimit: boolean;
   dedicatedSak: boolean;
@@ -75,6 +81,8 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
   const [closesAtDate, setClosesAtDate] = useState('');
   const [closesAtTime, setClosesAtTime] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [publishForceNew, setPublishForceNew] = useState(false);
+  const [publishedNotice, setPublishedNotice] = useState(false);
   const formErrorId = useId();
   const footerErrorRef = useRef<HTMLParagraphElement>(null);
 
@@ -105,6 +113,8 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
         defaultTitle: typeof body.default_title === 'string' ? body.default_title : null,
         defaultNeutralSummary:
           typeof body.default_neutral_summary === 'string' ? body.default_neutral_summary : '',
+        defaultNeutralSummaryTruncated: body.default_neutral_summary_truncated === true,
+        defaultNeutralSummaryHasContent: body.default_neutral_summary_has_content === true,
         stortingetPageUrl:
           typeof body.stortinget_page_url === 'string' ? body.stortinget_page_url : null,
         titleOverLimit: body.title_over_limit === true,
@@ -127,13 +137,17 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
 
   const hasLink = Boolean(state?.issueId && state?.pollId);
 
-  function openDialog() {
+  function openDialog(fromRepublish = false) {
     if (!state) return;
     setTitle(state.defaultTitle ?? '');
-    setNeutralSummary(state.defaultNeutralSummary);
+    setNeutralSummary(
+      state.defaultNeutralSummaryHasContent ? state.defaultNeutralSummary : '',
+    );
     setClosesAtDate('');
     setClosesAtTime('');
     setFieldError(null);
+    setPublishForceNew(fromRepublish);
+    setPublishedNotice(false);
     setDialogStep('form');
     setDialogOpen(true);
   }
@@ -148,7 +162,7 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
     return {
       issue_id: state?.suggestedIssueId,
       title: title.trim() || state?.defaultTitle || '',
-      neutral_summary: neutralSummary.trim() || state?.defaultNeutralSummary || '',
+      neutral_summary: resolvedNeutralSummaryForSubmit(),
       closes_at_date: closesAtDate,
       closes_at_time: closesAtTime,
       source_urls: state?.sourceUrls ?? [],
@@ -191,6 +205,8 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
       }
       setDialogOpen(false);
       setConfirmNewOpen(false);
+      setPublishForceNew(false);
+      setPublishedNotice(true);
       await refreshState();
     } catch {
       setFieldError('Kunne ikke publisere avstemning');
@@ -200,8 +216,31 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
     }
   }
 
+  function resolvedNeutralSummaryForSubmit(): string {
+    return (
+      neutralSummary.trim() ||
+      (state?.defaultNeutralSummaryHasContent ? state.defaultNeutralSummary : '')
+    );
+  }
+
+  function buildFormValidationInput() {
+    return buildResearchTopicSakPollFormValidationInput({
+      suggestedIssueId: state?.suggestedIssueId ?? '',
+      title: title.trim() || state?.defaultTitle || '',
+      neutralSummary: resolvedNeutralSummaryForSubmit(),
+      closesAtDate,
+      closesAtTime,
+    });
+  }
+
   function handlePrimaryFormClick() {
-    const validated = validateStortingetPollAdminForm(buildPayload(false));
+    const ingressError = validateResearchTopicSakPollIngress(resolvedNeutralSummaryForSubmit());
+    if (ingressError) {
+      setFieldError(ingressError);
+      footerErrorRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      return;
+    }
+    const validated = validateStortingetPollAdminForm(buildFormValidationInput());
     if (!validated.ok) {
       setFieldError(validated.error);
       footerErrorRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -230,8 +269,8 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
           Sak og avstemning
         </h2>
         <p className="text-sm text-muted-foreground">
-          Kobler briefen til en sak og publiserer en offentlig {ballotSectionPhrase()} (Ja / Nei /
-          Blank). Valget er synlig med én gang etter publisering.
+          Kobler briefen til en sak og publiserer en offentlig {ballotSectionPhrase()}. Valget er
+          synlig med én gang etter publisering.
         </p>
       </div>
 
@@ -259,6 +298,11 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
         <div className="h-11 w-full max-w-md animate-pulse rounded-lg bg-muted" aria-busy="true" />
       ) : (
         <div className="flex flex-wrap items-center gap-2">
+          {publishedNotice ? (
+            <p className="w-full text-sm text-foreground" role="status">
+              Publisert – synlig for alle nå.
+            </p>
+          ) : null}
           {hasLink && state?.issueId ? (
             <Link
               href={routes.sak(state.issueId)}
@@ -294,9 +338,9 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
         </p>
       ) : null}
 
-      {!lookupLoading && !state?.defaultTitle ? (
+      {!lookupLoading && !lookupFailed && state && !state.defaultTitle ? (
         <p className="text-sm text-destructive" role="alert">
-          Briefen mangler tittel (topic_title). Fyll inn i brief-output før du kan publisere.
+          Briefen mangler tittel – kjør briefen på nytt.
         </p>
       ) : null}
 
@@ -327,7 +371,7 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => void executePublish(false)}
+                onClick={() => void executePublish(publishForceNew)}
                 className={BTN_PRIMARY}
               >
                 {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
@@ -406,6 +450,12 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
                 className={TEXTAREA_CLASS}
                 maxLength={STORTINGET_POLL_NEUTRAL_SUMMARY_MAX}
               />
+              {state?.defaultNeutralSummaryTruncated ? (
+                <p className="text-xs text-muted-foreground">
+                  Forslaget fra briefen ble forkortet til maks {STORTINGET_POLL_NEUTRAL_SUMMARY_MAX}{' '}
+                  tegn. Les gjennom og skriv inn hele ingressen du vil publisere.
+                </p>
+              ) : null}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -443,7 +493,7 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
           </div>
         ) : (
           <div className="space-y-2 text-sm text-foreground">
-            <p>
+            <p className="line-clamp-4">
               <span className="font-medium">Tittel:</span> {title}
             </p>
             <p className="line-clamp-4">
@@ -463,11 +513,11 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
           if (!pending) setConfirmNewOpen(false);
         }}
         title="Ny avstemning på briefen?"
-        description="Det finnes allerede en koblet sak og avstemning. Vil du publisere på nytt? Eksisterende avstemning kan arkiveres eller oppdateres etter saksreglene."
+        description="Det finnes allerede en koblet sak og avstemning. Publisering oppdaterer den åpne Stortinget-avstemningen på saken (tittel, ingress, kilder og valgfri sluttid). En aktiv systemavstemning på saken arkiveres automatisk."
         size="md"
         className="sm:max-w-md"
         footer={
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={() => setConfirmNewOpen(false)}
@@ -480,7 +530,7 @@ export function ResearchTopicSakPollPanel({ topic }: { topic: ResearchTopicRow }
               type="button"
               onClick={() => {
                 setConfirmNewOpen(false);
-                openDialog();
+                openDialog(true);
               }}
               disabled={pending}
               className={BTN_PRIMARY}

@@ -33,7 +33,7 @@ type StortingetPollAdminSectionProps = {
   sakId: string;
   sakTitle: string;
   defaultNeutralSummary: string;
-  stortingetPageUrl: string;
+  stortingetPageUrl?: string | null;
   adminState: StortingetPollAdminUiState;
   /** Overstyrer adminState for docs/screenshots. */
   captureAdminState?: StortingetPollAdminUiState;
@@ -482,21 +482,23 @@ export function StortingetPollAdminSection({
               </p>
             </div>
 
-            <div className="space-y-2">
-              <span className="block text-sm font-medium text-foreground">Kilde</span>
-              <a
-                href={stortingetPageUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  'flex min-h-11 items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-brand hover:bg-muted',
-                  VURDER_FOCUS_RING,
-                )}
-              >
-                <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
-                <span className="break-all">{stortingetPageUrl}</span>
-              </a>
-            </div>
+            {stortingetPageUrl ? (
+              <div className="space-y-2">
+                <span className="block text-sm font-medium text-foreground">Kilde</span>
+                <a
+                  href={stortingetPageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    'flex min-h-11 items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-brand hover:bg-muted',
+                    VURDER_FOCUS_RING,
+                  )}
+                >
+                  <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+                  <span className="break-all">{stortingetPageUrl}</span>
+                </a>
+              </div>
+            ) : null}
           </div>
         )}
       </Dialog>

@@ -98,7 +98,17 @@ export async function getCachedSakDetail(
   sakId: string,
   opts?: { forceRefresh?: boolean; statusOnly?: boolean },
 ): Promise<StortingetSakDetail | null> {
+  const { isResearchTopicDedicatedIssueId } = await import(
+    './sak/research-topic-dedicated-issue'
+  );
+  const { buildDedicatedResearchTopicSakDetail } = await import(
+    './sak/dedicated-research-topic-bundle'
+  );
+
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    if (isResearchTopicDedicatedIssueId(sakId)) {
+      return null;
+    }
     return getSakDetail(sakId, { nextRevalidateSeconds: 3600 });
   }
 
@@ -106,7 +116,25 @@ export async function getCachedSakDetail(
   try {
     service = getServiceSupabase();
   } catch {
+    if (isResearchTopicDedicatedIssueId(sakId)) {
+      return null;
+    }
     return getSakDetail(sakId, { nextRevalidateSeconds: 3600 });
+  }
+
+  if (isResearchTopicDedicatedIssueId(sakId)) {
+    const { data: row } = await service
+      .from('stortinget_issues')
+      .select('title, summary')
+      .eq('id', sakId)
+      .maybeSingle();
+    if (!row?.title?.trim()) {
+      return null;
+    }
+    return buildDedicatedResearchTopicSakDetail(sakId, {
+      title: row.title,
+      summary: typeof row.summary === 'string' ? row.summary : null,
+    });
   }
 
   const { data: cached } = await service
