@@ -11,6 +11,8 @@ import {
   RESEARCH_KIND_LABELS,
   researchBriefOutputLink,
 } from '@/lib/admin/research/labels';
+import { ResearchTopicUseFindingButton } from '@/components/admin/research-topic-use-finding-button';
+import type { ResearchTopicSnapshot } from '@/lib/admin/research/topic-types';
 import type { ResearchBriefRow, ResearchPerspective } from '@/lib/admin/research/types';
 import type { ResearchBriefsByKind } from '@/lib/admin/research/service';
 
@@ -42,10 +44,12 @@ export function ResearchClusterDetailView({
   row,
   briefs,
   adminUserId,
+  topicSnapshot,
 }: {
   row: OppfangetClusterRow;
   briefs: ResearchBriefRow[];
   adminUserId?: string;
+  topicSnapshot?: ResearchTopicSnapshot | null;
 }) {
   const latest = briefs[0] ?? null;
   const perspectives = latest?.perspectives ?? [];
@@ -62,6 +66,18 @@ export function ResearchClusterDetailView({
 
   return (
     <div className="space-y-8">
+      <section className="rounded-xl border border-border bg-card p-4">
+        <h2 className="text-sm font-semibold text-foreground">Tema-brief</h2>
+        <div className="mt-3 max-w-sm">
+          <ResearchTopicUseFindingButton
+            sourceKind="cluster"
+            clusterId={row.id}
+            title={row.title}
+            initialSnapshot={topicSnapshot}
+          />
+        </div>
+      </section>
+
       <section className="rounded-xl border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">Handlinger</h2>
         <div className="mt-3 max-w-sm">

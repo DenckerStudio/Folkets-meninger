@@ -45,6 +45,8 @@ import {
 } from '@/lib/admin/research/slow-job-notice';
 import type { ResearchBriefSnapshot, ResearchBriefsByKind } from '@/lib/admin/research/service';
 import type { ResearchBriefKind, ResearchBriefStatus } from '@/lib/admin/research/types';
+import type { ResearchTopicSnapshot } from '@/lib/admin/research/topic-types';
+import { ResearchTopicUseFindingButton } from '@/components/admin/research-topic-use-finding-button';
 import { cn } from '@/lib/utils';
 
 const ACTIONS = RESEARCH_API_ACTIONS;
@@ -666,11 +668,15 @@ export function ResearchRowTableCells({
   initialBriefsByKind = {},
   researchCellClassName,
   actionsCellClassName,
+  topicSnapshot,
+  clusterTitle,
 }: {
   clusterId: string;
   initialBriefsByKind?: ResearchBriefsByKind;
   researchCellClassName?: string;
   actionsCellClassName?: string;
+  topicSnapshot?: ResearchTopicSnapshot | null;
+  clusterTitle?: string;
 }) {
   const {
     briefsByKind,
@@ -707,10 +713,21 @@ export function ResearchRowTableCells({
             {error}
           </p>
         ) : null}
+        <div className="mt-2">
+          <ResearchTopicUseFindingButton
+            sourceKind="cluster"
+            clusterId={clusterId}
+            title={clusterTitle ?? 'Tema'}
+            initialSnapshot={topicSnapshot}
+            compact
+          />
+        </div>
       </td>
       <td className={actionsCellClassName}>
-        <div className="flex justify-end">
-          <ResearchTableMenuDropdown items={tableMenuItems} onSelect={onTableMenuSelect} />
+        <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex justify-end">
+            <ResearchTableMenuDropdown items={tableMenuItems} onSelect={onTableMenuSelect} />
+          </div>
         </div>
       </td>
       <ResearchRowActionsConfirmDialog

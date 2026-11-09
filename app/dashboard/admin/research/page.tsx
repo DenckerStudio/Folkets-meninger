@@ -4,6 +4,8 @@ import { parseOppfangetFilters } from '@/lib/admin/oppfanget/query';
 import { listOppfangetForAdmin } from '@/lib/admin/oppfanget/service';
 import { expireStaleResearchBriefsThrottled } from '@/lib/admin/research/expire-stale-throttled';
 import { getLatestResearchBriefsByClusterIds } from '@/lib/admin/research/service';
+import { getResearchTopicSnapshotsBySources } from '@/lib/admin/research/topic-service';
+import { isOppfangetRedditRow } from '@/lib/admin/oppfanget/types';
 import { isResearchWebhookConfigured, getMissingResearchWebhookEnvKeys } from '@/lib/admin/research/webhook-status';
 import { routes } from '@/lib/routes';
 import { getServerSupabase } from '@/lib/supabase-server';
@@ -27,6 +29,13 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
   const researchBriefsByCluster = await getLatestResearchBriefsByClusterIds(
     initialData.rows.map((row) => row.id),
   );
+  const clusterIds = initialData.rows.filter((row) => !isOppfangetRedditRow(row)).map((r) => r.id);
+  const redditIds = initialData.rows.filter(isOppfangetRedditRow).map((r) => r.id);
+  const { byClusterId: researchTopicsByCluster, byRedditSignalId: researchTopicsByRedditId } =
+    await getResearchTopicSnapshotsBySources({
+      clusterIds,
+      redditSignalIds: redditIds,
+    });
   const supabase = await getServerSupabase();
   const {
     data: { user },
@@ -39,6 +48,8 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
       devPreview={preview}
       adminUserId={user?.id}
       initialResearchBriefsByCluster={researchBriefsByCluster}
+      initialResearchTopicsByCluster={researchTopicsByCluster}
+      initialResearchTopicsByRedditId={researchTopicsByRedditId}
       researchWebhooksConfigured={researchWebhooksConfigured}
       missingResearchWebhookEnvKeys={missingResearchWebhookEnvKeys}
     />
