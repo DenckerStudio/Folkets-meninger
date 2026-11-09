@@ -1,12 +1,10 @@
 import {
-  RESEARCH_TOPIC_UNPUBLISHABLE_NOTICE,
   filterPublishableSources,
   parseTopicBriefSources,
   researchTopicBriefOutputSchema,
   sectionIsEmpty,
   type ResearchTopicBriefOutput,
 } from '@/lib/admin/research/topic-brief-schema';
-import type { ResearchTopicRow } from '@/lib/admin/research/topic-types';
 import type { CreateBlogDraftInput } from '@/lib/blog/service';
 import { normalizeBlogSlug, isValidBlogSlug } from '@/lib/blog/slug';
 import { normalizeBlogExcerpt, normalizeBlogTitle } from '@/lib/blog/text-limits';
@@ -56,17 +54,6 @@ export async function listResearchTopicBlogDrafts(requestId: string): Promise<{
       updatedAt: row.updatedAt,
     })),
   };
-}
-
-export function researchTopicBlogBlockingMessage(topic: Pick<ResearchTopicRow, 'blocking_reason'>): string {
-  const reason = topic.blocking_reason?.trim();
-  return reason || RESEARCH_TOPIC_UNPUBLISHABLE_NOTICE;
-}
-
-export function researchTopicBlogCanCreate(
-  topic: Pick<ResearchTopicRow, 'status' | 'publishable'>,
-): boolean {
-  return topic.status === 'done' && topic.publishable === true;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

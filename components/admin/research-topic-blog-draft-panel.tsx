@@ -6,7 +6,7 @@ import { ExternalLink, Loader2 } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import { buttonVariants } from '@/components/ui/button';
 import type { ResearchTopicRow } from '@/lib/admin/research/topic-types';
-import { researchTopicBlogCanCreate } from '@/lib/admin/research/topic-blog-draft';
+import { researchTopicBlogCanCreate } from '@/lib/admin/research/topic-blog-draft-client';
 import { cn } from '@/lib/utils';
 
 type DraftState = {

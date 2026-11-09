@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
 import {
-  buildResearchTopicBlogDraftInput,
-  listResearchTopicBlogDrafts,
   researchTopicBlogBlockingMessage,
   researchTopicBlogCanCreate,
+} from '@/lib/admin/research/topic-blog-draft-client';
+import {
+  buildResearchTopicBlogDraftInput,
+  listResearchTopicBlogDrafts,
   type ResearchTopicBlogDraftRef,
 } from '@/lib/admin/research/topic-blog-draft';
 import { getResearchTopicById } from '@/lib/admin/research/topic-service';
