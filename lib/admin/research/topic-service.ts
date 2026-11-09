@@ -16,7 +16,7 @@ export const RESEARCH_TOPIC_API_ERROR_CODES = {
 const RESEARCH_TOPIC_STALE_MINUTES = 30;
 
 const TOPIC_SELECT =
-  'id, source_kind, cluster_id, reddit_signal_id, title, status, request_id, output, previous_output, publishable, blocking_reason, error, heartbeat_at, started_at, finished_at, created_by, created_at, updated_at';
+  'id, source_kind, cluster_id, reddit_signal_id, title, status, request_id, output, previous_output, publishable, blocking_reason, error, heartbeat_at, started_at, finished_at, created_by, created_at, updated_at, stortinget_issue_id, stortinget_poll_id';
 
 function parseTopicRow(
   raw: Record<string, unknown>,
@@ -43,6 +43,10 @@ function parseTopicRow(
     created_by: typeof raw.created_by === 'string' ? raw.created_by : null,
     created_at: String(raw.created_at),
     updated_at: String(raw.updated_at),
+    stortinget_issue_id:
+      typeof raw.stortinget_issue_id === 'string' ? raw.stortinget_issue_id : null,
+    stortinget_poll_id:
+      typeof raw.stortinget_poll_id === 'string' ? raw.stortinget_poll_id : null,
   };
 }
 

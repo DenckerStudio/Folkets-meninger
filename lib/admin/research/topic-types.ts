@@ -47,6 +47,8 @@ export type ResearchTopicRow = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  stortinget_issue_id: string | null;
+  stortinget_poll_id: string | null;
 };
 
 export type ResearchTopicDetail = ResearchTopicRow;
