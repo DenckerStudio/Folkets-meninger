@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/gate';
 import {
   buildResearchTopicBlogDraftInput,
-  lookupResearchTopicBlogDraft,
+  listResearchTopicBlogDrafts,
   researchTopicBlogBlockingMessage,
   researchTopicBlogCanCreate,
+  type ResearchTopicBlogDraftRef,
 } from '@/lib/admin/research/topic-blog-draft';
 import { getResearchTopicById } from '@/lib/admin/research/topic-service';
 import { parseClientResearchRequestId } from '@/lib/admin/research/request-id';
@@ -15,6 +16,17 @@ export const dynamic = 'force-dynamic';
 type RouteContext = {
   params: Promise<{ topicId: string }>;
 };
+
+function serializeDraft(row: ResearchTopicBlogDraftRef) {
+  return {
+    id: row.id,
+    slug: row.slug,
+    admin_url: row.adminUrl,
+    cms_status: row.cmsStatus,
+    source_event: row.sourceEvent,
+    updated_at: row.updatedAt,
+  };
+}
 
 export async function GET(_request: Request, context: RouteContext) {
   const auth = await requireAdmin();
@@ -29,25 +41,33 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const canCreate = researchTopicBlogCanCreate(topic);
-  const existing = canCreate ? await lookupResearchTopicBlogDraft(topic.request_id) : { found: false as const };
+  if (!canCreate) {
+    return NextResponse.json({
+      topic_id: topic.id,
+      status: topic.status,
+      publishable: topic.publishable,
+      can_create: false,
+      blocking_message: researchTopicBlogBlockingMessage(topic),
+      request_id: topic.request_id,
+      primary_draft: null,
+      other_drafts: [],
+      cms_lookup_failed: false,
+    });
+  }
+
+  const listed = await listResearchTopicBlogDrafts(topic.request_id);
+  const [primary, ...other] = listed.drafts;
 
   return NextResponse.json({
     topic_id: topic.id,
     status: topic.status,
     publishable: topic.publishable,
-    can_create: canCreate,
-    blocking_message: canCreate ? null : researchTopicBlogBlockingMessage(topic),
+    can_create: true,
+    blocking_message: null,
     request_id: topic.request_id,
-    existing_draft:
-      existing && existing.found
-        ? {
-            id: existing.id,
-            slug: existing.slug,
-            admin_url: existing.adminUrl,
-            cms_status: existing.cmsStatus,
-          }
-        : null,
-    cms_lookup_failed: existing === null,
+    primary_draft: primary ? serializeDraft(primary) : null,
+    other_drafts: other.map(serializeDraft),
+    cms_lookup_failed: listed.lookupFailed,
   });
 }
 
@@ -93,31 +113,31 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const existing = await lookupResearchTopicBlogDraft(topic.request_id);
-  if (existing === null) {
+  const listed = await listResearchTopicBlogDrafts(topic.request_id);
+  if (listed.lookupFailed) {
     return NextResponse.json(
       { error: 'cms_unavailable', message: 'CMS-oppslag feilet — prøv igjen senere' },
       { status: 503 },
     );
   }
 
-  if (existing.found && !forceNew) {
+  if (listed.drafts.length > 0 && !forceNew) {
+    const [primary, ...other] = listed.drafts;
     return NextResponse.json({
       ok: true,
       created: false,
-      id: existing.id,
-      slug: existing.slug,
-      admin_url: existing.adminUrl,
-      cms_status: existing.cmsStatus,
+      id: primary.id,
+      slug: primary.slug,
+      admin_url: primary.adminUrl,
+      cms_status: primary.cmsStatus,
       needs_confirm_for_new: true,
+      other_drafts: other.map(serializeDraft),
     });
   }
 
   const built = buildResearchTopicBlogDraftInput({
-    topicId: topic.id,
     requestId: topic.request_id,
     output: topic.output,
-    rawTopicTitle: topic.title,
     variantId,
   });
 

@@ -86,4 +86,5 @@ Coolify can keep probing `/health`; schema/seed readiness is handled at process 
 | Endpoint | Auth | Purpose |
 |----------|------|---------|
 | `POST /api/blog-ops/lookup` | Agent API key | Idempotency: slug / `sourceEvent`, all statuses, no cache |
+| `POST /api/blog-ops/list-by-source-event` | Agent API key | List posts whose `sourceEvent` starts with prefix (newest `updatedAt` first) |
 | `POST /api/blog-ops/social-posted` | HMAC (`x-fm-timestamp`, `x-fm-signature`; secret = `REVALIDATE_SECRET` if `BLOG_OPS_SIGNING_SECRET` unset) | Set `socialPostedAt` + `blueskyUri` on **published** posts only |

@@ -6,16 +6,19 @@ import { ExternalLink, Loader2 } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import { buttonVariants } from '@/components/ui/button';
 import type { ResearchTopicRow } from '@/lib/admin/research/topic-types';
-import { researchTopicBlogCanCreate, researchTopicBlogBlockingMessage } from '@/lib/admin/research/topic-blog-draft';
+import { researchTopicBlogCanCreate } from '@/lib/admin/research/topic-blog-draft';
 import { cn } from '@/lib/utils';
 
 type DraftState = {
   adminUrl: string;
   cmsStatus: string;
+  slug: string;
 };
 
 export function ResearchTopicBlogDraftPanel({ topic }: { topic: ResearchTopicRow }) {
-  const [existingDraft, setExistingDraft] = useState<DraftState | null>(null);
+  const [primaryDraft, setPrimaryDraft] = useState<DraftState | null>(null);
+  const [otherDrafts, setOtherDrafts] = useState<DraftState[]>([]);
+  const [lookupLoading, setLookupLoading] = useState(true);
   const [cmsLookupFailed, setCmsLookupFailed] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -23,32 +26,59 @@ export function ResearchTopicBlogDraftPanel({ topic }: { topic: ResearchTopicRow
   const [createdNotice, setCreatedNotice] = useState(false);
 
   const canCreate = researchTopicBlogCanCreate(topic);
-  const blockingMessage = researchTopicBlogBlockingMessage(topic);
+
+  const applyListBody = useCallback(
+    (body: {
+      primary_draft?: {
+        admin_url: string;
+        cms_status: string;
+        slug: string;
+      } | null;
+      other_drafts?: { admin_url: string; cms_status: string; slug: string }[];
+      cms_lookup_failed?: boolean;
+    }) => {
+      setCmsLookupFailed(body.cms_lookup_failed === true);
+      if (body.primary_draft?.admin_url) {
+        setPrimaryDraft({
+          adminUrl: body.primary_draft.admin_url,
+          cmsStatus: body.primary_draft.cms_status,
+          slug: body.primary_draft.slug,
+        });
+      } else {
+        setPrimaryDraft(null);
+      }
+      setOtherDrafts(
+        (body.other_drafts ?? [])
+          .filter((row) => Boolean(row.admin_url))
+          .map((row) => ({
+            adminUrl: row.admin_url,
+            cmsStatus: row.cms_status,
+            slug: row.slug,
+          })),
+      );
+    },
+    [],
+  );
 
   const refreshState = useCallback(async () => {
+    setLookupLoading(true);
     try {
       const res = await fetch(
         `/api/admin/research/topics/${encodeURIComponent(topic.id)}/blog-draft`,
         { cache: 'no-store' },
       );
-      if (!res.ok) return;
-      const body = (await res.json()) as {
-        existing_draft?: { admin_url: string; cms_status: string } | null;
-        cms_lookup_failed?: boolean;
-      };
-      setCmsLookupFailed(body.cms_lookup_failed === true);
-      if (body.existing_draft?.admin_url) {
-        setExistingDraft({
-          adminUrl: body.existing_draft.admin_url,
-          cmsStatus: body.existing_draft.cms_status,
-        });
-      } else {
-        setExistingDraft(null);
+      if (!res.ok) {
+        setCmsLookupFailed(true);
+        return;
       }
+      const body = (await res.json()) as Parameters<typeof applyListBody>[0];
+      applyListBody(body);
     } catch {
-      /* ignore */
+      setCmsLookupFailed(true);
+    } finally {
+      setLookupLoading(false);
     }
-  }, [topic.id]);
+  }, [applyListBody, topic.id]);
 
   useEffect(() => {
     if (canCreate) void refreshState();
@@ -57,6 +87,7 @@ export function ResearchTopicBlogDraftPanel({ topic }: { topic: ResearchTopicRow
   const createDraft = useCallback(
     async (forceNew: boolean) => {
       setError('');
+      setCreatedNotice(false);
       setPending(true);
       try {
         const payload: Record<string, unknown> = {};
@@ -77,7 +108,6 @@ export function ResearchTopicBlogDraftPanel({ topic }: { topic: ResearchTopicRow
           admin_url?: string;
           cms_status?: string;
           needs_confirm_for_new?: boolean;
-          created?: boolean;
         };
         if (!res.ok) {
           setError(
@@ -85,40 +115,34 @@ export function ResearchTopicBlogDraftPanel({ topic }: { topic: ResearchTopicRow
               ? body.message
               : 'Kunne ikke opprette bloggutkast',
           );
+          setCreatedNotice(false);
           return;
         }
         if (body.needs_confirm_for_new && body.admin_url) {
-          setExistingDraft({
-            adminUrl: body.admin_url,
-            cmsStatus: body.cms_status ?? 'draft',
-          });
           setConfirmNewOpen(true);
+          await refreshState();
           return;
         }
         if (body.admin_url) {
-          setExistingDraft({
-            adminUrl: body.admin_url,
-            cmsStatus: body.cms_status ?? 'draft',
-          });
           setCreatedNotice(true);
           setConfirmNewOpen(false);
+          await refreshState();
         }
       } catch {
         setError('Kunne ikke opprette bloggutkast');
+        setCreatedNotice(false);
       } finally {
         setPending(false);
       }
     },
-    [topic.id],
+    [refreshState, topic.id],
   );
 
-  if (topic.status !== 'done') {
+  if (topic.status !== 'done' || !canCreate) {
     return null;
   }
 
-  if (!canCreate) {
-    return <ResearchTopicBlogDraftBlockedNotice message={blockingMessage} />;
-  }
+  const hasDrafts = Boolean(primaryDraft);
 
   return (
     <section
@@ -142,53 +166,99 @@ export function ResearchTopicBlogDraftPanel({ topic }: { topic: ResearchTopicRow
       ) : null}
 
       {cmsLookupFailed ? (
-        <p className="text-sm text-muted-foreground" role="status">
-          Kunne ikke sjekke om utkast finnes fra før (CMS utilgjengelig).
+        <div
+          className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100"
+          role="alert"
+        >
+          <p className="min-w-0 flex-1">
+            Kunne ikke sjekke om utkast finnes fra før (CMS utilgjengelig).
+          </p>
+          <button
+            type="button"
+            disabled={lookupLoading}
+            onClick={() => void refreshState()}
+            className={cn(
+              buttonVariants({ variant: 'outline', size: 'sm' }),
+              'min-h-9 shrink-0 border-amber-600/30 bg-background',
+            )}
+          >
+            Prøv igjen
+          </button>
+        </div>
+      ) : null}
+
+      {lookupLoading ? (
+        <div className="flex flex-wrap items-center gap-2" aria-busy="true" aria-label="Laster utkast-status">
+          <div className="h-11 min-w-[9.5rem] animate-pulse rounded-lg bg-muted" />
+          <div className="h-11 min-w-[9.5rem] animate-pulse rounded-lg bg-muted" />
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          {primaryDraft ? (
+            <Link
+              href={primaryDraft.adminUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                buttonVariants({ variant: 'default', size: 'sm' }),
+                'min-h-11 gap-1.5',
+              )}
+            >
+              Åpne utkast
+              <ExternalLink className="size-4 shrink-0" aria-hidden />
+            </Link>
+          ) : null}
+
+          {!hasDrafts ? (
+            <button
+              type="button"
+              disabled={pending || cmsLookupFailed}
+              onClick={() => void createDraft(false)}
+              className={cn(buttonVariants({ variant: 'default', size: 'sm' }), 'min-h-11 gap-1.5')}
+            >
+              {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+              Lag blogg-utkast
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={pending || cmsLookupFailed}
+              onClick={() => setConfirmNewOpen(true)}
+              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'min-h-11 gap-1.5')}
+            >
+              {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+              Lag nytt utkast
+            </button>
+          )}
+        </div>
+      )}
+
+      {!lookupLoading && primaryDraft ? (
+        <p className="text-xs text-muted-foreground">
+          Siste utkast i CMS:{' '}
+          {primaryDraft.cmsStatus === 'published' ? 'publisert' : 'utkast'} ({primaryDraft.slug})
         </p>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2">
-        {existingDraft ? (
-          <Link
-            href={existingDraft.adminUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              buttonVariants({ variant: 'default', size: 'sm' }),
-              'min-h-11 gap-1.5',
-            )}
-          >
-            Åpne utkast
-            <ExternalLink className="size-4 shrink-0" aria-hidden />
-          </Link>
-        ) : null}
-
-        {!existingDraft ? (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => void createDraft(false)}
-            className={cn(buttonVariants({ variant: 'default', size: 'sm' }), 'min-h-11 gap-1.5')}
-          >
-            {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-            Lag blogg-utkast
-          </button>
-        ) : (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => setConfirmNewOpen(true)}
-            className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'min-h-11 gap-1.5')}
-          >
-            Lag nytt utkast
-          </button>
-        )}
-      </div>
-
-      {existingDraft ? (
-        <p className="text-xs text-muted-foreground">
-          Status i CMS: {existingDraft.cmsStatus === 'published' ? 'publisert' : 'utkast'}
-        </p>
+      {!lookupLoading && otherDrafts.length > 0 ? (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground">Tidligere utkast fra samme brief</p>
+          <ul className="space-y-1">
+            {otherDrafts.map((draft) => (
+              <li key={draft.adminUrl}>
+                <Link
+                  href={draft.adminUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-9 items-center gap-1 text-xs text-brand hover:underline"
+                >
+                  {draft.slug}
+                  <ExternalLink className="size-3 shrink-0" aria-hidden />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       {error ? (
@@ -229,15 +299,6 @@ export function ResearchTopicBlogDraftPanel({ topic }: { topic: ResearchTopicRow
       >
         <span className="sr-only">Bekreft nytt bloggutkast fra tema-brief</span>
       </Dialog>
-    </section>
-  );
-}
-
-function ResearchTopicBlogDraftBlockedNotice({ message }: { message: string }) {
-  return (
-    <section className="rounded-xl border border-border bg-muted/40 p-4" role="status">
-      <h2 className="text-base font-semibold text-foreground">Bloggutkast</h2>
-      <p className="mt-2 text-sm text-foreground">{message}</p>
     </section>
   );
 }

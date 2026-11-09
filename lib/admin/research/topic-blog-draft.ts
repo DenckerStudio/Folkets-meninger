@@ -10,7 +10,7 @@ import type { ResearchTopicRow } from '@/lib/admin/research/topic-types';
 import type { CreateBlogDraftInput } from '@/lib/blog/service';
 import { normalizeBlogSlug, isValidBlogSlug } from '@/lib/blog/slug';
 import { normalizeBlogExcerpt, normalizeBlogTitle } from '@/lib/blog/text-limits';
-import { cmsBlogOpsLookup } from '@/lib/cms/blog-ops-client';
+import { cmsBlogOpsListBySourceEventPrefix } from '@/lib/cms/blog-ops-client';
 
 export const RESEARCH_TOPIC_BLOG_SOURCE_PREFIX = 'research_topic:';
 
@@ -23,24 +23,38 @@ export function researchTopicBlogSourceEvent(
   return variant ? `${base}:${variant}` : base;
 }
 
-export type ResearchTopicBlogDraftLookup =
-  | { found: false }
-  | { found: true; id: string; slug: string; adminUrl: string; cmsStatus: 'draft' | 'published' | 'unknown' };
+export type ResearchTopicBlogDraftRef = {
+  id: string;
+  slug: string;
+  adminUrl: string;
+  cmsStatus: 'draft' | 'published' | 'unknown';
+  sourceEvent: string | null;
+  updatedAt: string | null;
+};
 
-export async function lookupResearchTopicBlogDraft(
-  requestId: string,
-): Promise<ResearchTopicBlogDraftLookup | null> {
-  const hit = await cmsBlogOpsLookup({
-    sourceEvent: researchTopicBlogSourceEvent(requestId),
-  });
-  if (hit === null) return null;
-  if (!hit.found) return { found: false };
+export function researchTopicBlogSourceEventPrefix(requestId: string): string {
+  return researchTopicBlogSourceEvent(requestId);
+}
+
+export async function listResearchTopicBlogDrafts(requestId: string): Promise<{
+  drafts: ResearchTopicBlogDraftRef[];
+  lookupFailed: boolean;
+}> {
+  const prefix = researchTopicBlogSourceEventPrefix(requestId);
+  const listed = await cmsBlogOpsListBySourceEventPrefix(prefix);
+  if (listed === null) {
+    return { drafts: [], lookupFailed: true };
+  }
   return {
-    found: true,
-    id: hit.id,
-    slug: hit.slug,
-    adminUrl: hit.adminUrl,
-    cmsStatus: hit.cmsStatus,
+    lookupFailed: false,
+    drafts: listed.map((row) => ({
+      id: row.id,
+      slug: row.slug,
+      adminUrl: row.adminUrl,
+      cmsStatus: row.cmsStatus,
+      sourceEvent: row.sourceEvent,
+      updatedAt: row.updatedAt,
+    })),
   };
 }
 
@@ -191,17 +205,11 @@ export type BuildResearchTopicBlogDraftResult =
   | { ok: true; input: CreateBlogDraftInput }
   | { ok: false; error: string; code: 'missing_topic_title' | 'invalid_output' | 'empty_body' | 'invalid_slug' };
 
-/** Bygger Payload-utkast kun fra `output` — `rawTopicTitle` brukes aldri til innhold (testet). */
 export function buildResearchTopicBlogDraftInput(args: {
-  topicId: string;
   requestId: string;
   output: unknown;
-  rawTopicTitle?: string | null;
   variantId?: string | null;
 }): BuildResearchTopicBlogDraftResult {
-  void args.rawTopicTitle;
-  void args.topicId;
-
   const parsed = researchTopicBriefOutputSchema.safeParse(args.output);
   if (!parsed.success) {
     return { ok: false, error: 'Brief-innholdet kan ikke leses', code: 'invalid_output' };
@@ -209,7 +217,7 @@ export function buildResearchTopicBlogDraftInput(args: {
 
   const topicTitle = parsed.data.topic_title?.trim();
   if (!topicTitle) {
-    return { ok: false, error: 'Brief mangler topic_title', code: 'missing_topic_title' };
+    return { ok: false, error: 'Briefen mangler tittel', code: 'missing_topic_title' };
   }
 
   const title = normalizeBlogTitle(topicTitle);
@@ -220,7 +228,11 @@ export function buildResearchTopicBlogDraftInput(args: {
 
   const slug = topicBlogSlugFromTitle(title, args.variantId);
   if (!isValidBlogSlug(slug)) {
-    return { ok: false, error: 'Kunne ikke lage gyldig slug fra topic_title', code: 'invalid_slug' };
+    return {
+      ok: false,
+      error: 'Kunne ikke lage gyldig nettadresse fra brief-tittelen',
+      code: 'invalid_slug',
+    };
   }
 
   const publishableSources = filterPublishableSources(parseTopicBriefSources(parsed.data.sources));
