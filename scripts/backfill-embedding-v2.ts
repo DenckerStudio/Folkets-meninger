@@ -114,6 +114,7 @@ async function main(): Promise<void> {
     throw new Error('Ingen endepunkter bestod preflight');
   }
 
+  const boundedRun = cli.maxBatches !== null;
   const shared = new SharedDbPressure();
   const workerIds: string[] = [];
 
@@ -125,6 +126,8 @@ async function main(): Promise<void> {
 
   installBackfillSignalHandlers(stopController.requestStop);
 
+  await shared.refresh(supabase, { tier0Probe });
+
   const coordinator = (async () => {
     while (!stopController.isStopping()) {
       if (cli.stopFile && existsSync(cli.stopFile)) {
@@ -132,15 +135,17 @@ async function main(): Promise<void> {
         await stopController.requestStop();
         break;
       }
-      await shared.refresh(supabase, { tier0Probe });
+      await shared.refresh(supabase, boundedRun ? {} : { tier0Probe });
       if (shared.isPaused()) {
         log('[backfill-v2] delt DB-pause (WAL/slot) — alle workers venter');
       }
-      for (const ep of activeEndpoints) {
-        const health = healthByName.get(ep.name)!;
-        if (health.needsPreflight) {
-          const ok = await runPreflightForEndpoint(ep, embedQueryUrl, log);
-          if (ok) health.markPreflightPassed();
+      if (!boundedRun) {
+        for (const ep of activeEndpoints) {
+          const health = healthByName.get(ep.name)!;
+          if (health.needsPreflight) {
+            const ok = await runPreflightForEndpoint(ep, embedQueryUrl, log);
+            if (ok) health.markPreflightPassed();
+          }
         }
       }
       await sleep(5000);
@@ -159,6 +164,7 @@ async function main(): Promise<void> {
         workerId,
         leaseSeconds: cli.leaseSeconds,
         dryRun: cli.dryRun,
+        maxBatches: cli.maxBatches,
         shared,
         health,
         scheduleWindows,
@@ -180,7 +186,14 @@ async function main(): Promise<void> {
     );
   });
 
-  await Promise.all([coordinator, ...workers]);
+  await Promise.all(workers);
+  if (boundedRun) {
+    log(
+      `[backfill-v2] fullførte batch-grense${cli.maxBatches === 1 ? '' : ` (${cli.maxBatches} batches per worker)`} — avslutter.`,
+    );
+    await stopController.requestStop();
+  }
+  await coordinator;
 }
 
 main().catch((err) => {

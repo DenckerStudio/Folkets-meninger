@@ -89,7 +89,6 @@ async function main(): Promise<void> {
   const shared = new SharedDbPressure();
   const endpointHealth = new EndpointHealth();
   endpointHealth.markPreflightPassed();
-  let loops = 0;
   const workerId = buildWorkerId('server');
   assert.match(workerId, /^server@/);
   assert.ok(workerId.includes(String(process.pid)));
@@ -101,6 +100,7 @@ async function main(): Promise<void> {
       workerId,
       leaseSeconds: 300,
       dryRun: true,
+      maxBatches: 1,
       shared,
       health: endpointHealth,
       scheduleWindows: [],
@@ -115,12 +115,10 @@ async function main(): Promise<void> {
       sleep: async () => {},
       log: () => {},
     },
-    () => {
-      loops += 1;
-      return loops > 2;
-    },
+    () => false,
   );
 
+  assert.equal(claimCalls, 1);
   assert.equal(releaseCalls, 1);
   assert.equal(claimed[0].worker, undefined);
 
