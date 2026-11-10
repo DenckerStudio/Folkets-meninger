@@ -30,8 +30,8 @@ BEGIN
   IF to_regprocedure('public.fm_embedding_v2_issue_tiers(text[])') IS NOT NULL THEN
     IF (
       SELECT pg_get_functiondef('public.fm_embedding_v2_issue_tiers(text[])'::regprocedure)
-    ) ILIKE '%has_pending%FROM public.document_chunks%' THEN
-      RAISE EXCEPTION 'fm_embedding_v2_issue_tiers skal ikke seq-scan document_chunks i has_pending';
+    ) NOT ILIKE '%has_pending%EXISTS%' THEN
+      RAISE EXCEPTION 'fm_embedding_v2_issue_tiers has_pending må bruke EXISTS per issue_id';
     END IF;
   END IF;
 

@@ -95,6 +95,7 @@ async function main(): Promise<void> {
   assert.equal(resolveMaxBatches([], false), null);
 
   assert.throws(() => resolveMaxBatches(['--max-batches', '0'], false));
+  assert.throws(() => resolveMaxBatches(['--max-batches', '2.5'], false));
 
   const dryCli = parseBackfillArgv(['--dry-run']);
   assert.equal(dryCli.maxBatches, 1);

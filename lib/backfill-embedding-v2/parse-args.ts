@@ -46,10 +46,10 @@ export function resolveMaxBatches(argv: string[], dryRun: boolean): number | nul
   const raw = readValue(argv, '--max-batches');
   if (raw !== undefined) {
     const parsed = Number(raw);
-    if (!Number.isFinite(parsed) || parsed < 1) {
+    if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 1) {
       throw new Error(`Ugyldig --max-batches=${raw} (må være et heltall ≥ 1)`);
     }
-    return Math.floor(parsed);
+    return parsed;
   }
   if (dryRun) {
     return 1;

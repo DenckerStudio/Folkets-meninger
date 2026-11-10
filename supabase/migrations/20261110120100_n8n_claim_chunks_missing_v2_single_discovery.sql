@@ -1,5 +1,5 @@
 -- TRANSACTIONAL (BEGIN/COMMIT). Apply after 20261110120000 (claim partial index).
--- One pending-issue discovery per claim; fm_embedding_v2_issue_tiers trusts caller issue ids (no second seq-scan).
+-- One index-friendly pending discovery per claim/list; has_pending uses EXISTS per issue_id (not full-table GROUP BY).
 --
 -- Coolify verify (after index VALID):
 --   SET ROLE service_role;
@@ -37,6 +37,15 @@ AS $$
   has_pending AS (
     SELECT ids.id AS issue_id, true AS v
     FROM ids
+    WHERE EXISTS (
+      SELECT 1
+      FROM public.document_chunks c
+      WHERE c.issue_id = ids.id
+        AND c.issue_id IS NOT NULL
+        AND c.embedding_v2 IS NULL
+        AND c.embedding_v2_status = 'pending'
+        AND coalesce(btrim(c.content), '') <> ''
+    )
   ),
   current_sesjon AS (
     SELECT s.sesjon
@@ -103,6 +112,66 @@ AS $$
   FROM flags f;
 $$;
 
+CREATE OR REPLACE FUNCTION public.n8n_list_v2_priority_issues(
+  p_tier int,
+  p_limit int DEFAULT 50,
+  p_worker_index int DEFAULT 0,
+  p_worker_count int DEFAULT 1
+)
+RETURNS TABLE (
+  issue_id text,
+  pending_chunks int
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  WITH limits AS (
+    SELECT
+      greatest(1, least(coalesce(p_limit, 50), 500)) AS lim,
+      greatest(1, coalesce(p_worker_count, 1)) AS wcount,
+      greatest(0, least(coalesce(p_worker_index, 0), greatest(1, coalesce(p_worker_count, 1)) - 1)) AS windex
+  ),
+  issues AS (
+    SELECT DISTINCT c.issue_id
+    FROM public.document_chunks c
+    WHERE c.issue_id IS NOT NULL
+      AND c.embedding_v2 IS NULL
+      AND c.embedding_v2_status = 'pending'
+  ),
+  issue_ids AS MATERIALIZED (
+    SELECT coalesce(array_agg(i.issue_id ORDER BY i.issue_id), ARRAY[]::text[]) AS ids
+    FROM issues i
+  ),
+  tiered AS (
+    SELECT t.issue_id, t.tier
+    FROM public.fm_embedding_v2_issue_tiers((SELECT ids FROM issue_ids)) t
+    WHERE t.tier = p_tier
+  ),
+  scored AS (
+    SELECT
+      t.issue_id,
+      count(*)::int AS pending_chunks
+    FROM tiered t
+    JOIN public.document_chunks c ON c.issue_id = t.issue_id
+      AND c.embedding_v2 IS NULL
+      AND c.embedding_v2_status = 'pending'
+      AND coalesce(btrim(c.content), '') <> ''
+    CROSS JOIN limits l
+    WHERE (
+      l.wcount <= 1
+      OR abs(hashtext(t.issue_id)) % l.wcount = l.windex
+    )
+    GROUP BY t.issue_id
+  )
+  SELECT s.issue_id, s.pending_chunks
+  FROM scored s
+  CROSS JOIN limits l
+  ORDER BY s.pending_chunks DESC, s.issue_id ASC
+  LIMIT (SELECT lim FROM limits);
+$$;
+
 CREATE OR REPLACE FUNCTION public.n8n_claim_chunks_missing_v2(
   p_lane text,
   p_limit int,
@@ -159,7 +228,6 @@ BEGIN
     AND c.embedding_v2 IS NULL
     AND c.embedding_v2_status = 'pending'
     AND c.embedding_v2_attempts < 3
-    AND coalesce(btrim(c.content), '') <> ''
     AND (
       c.embedding_v2_claimed_at IS NULL
       OR c.embedding_v2_claimed_at < now() - make_interval(secs => v_lease)
@@ -286,9 +354,11 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.fm_embedding_v2_issue_tiers(text[]) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.n8n_list_v2_priority_issues(int, int, int, int) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.n8n_claim_chunks_missing_v2(text, int, text, int) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.fm_embedding_v2_issue_tiers(text[]) TO service_role;
+GRANT EXECUTE ON FUNCTION public.n8n_list_v2_priority_issues(int, int, int, int) TO service_role;
 GRANT EXECUTE ON FUNCTION public.n8n_claim_chunks_missing_v2(text, int, text, int) TO service_role;
 
 NOTIFY pgrst, 'reload schema';
