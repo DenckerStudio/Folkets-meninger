@@ -199,7 +199,17 @@ BEGIN
       EXIT;
     END IF;
 
-    IF (SELECT count(*)::int FROM _fm_v2_claim_picked) = v_picked_before_pass THEN
+    IF (
+      EXISTS (
+        SELECT 1
+        FROM _fm_v2_claim_issue_tiers sit
+        WHERE sit.sort_tier = v_tier_sort
+          AND NOT EXISTS (
+            SELECT 1 FROM _fm_v2_claim_exhausted_issues e WHERE e.issue_id = sit.issue_id
+          )
+      )
+      AND (SELECT count(*)::int FROM _fm_v2_claim_picked) = v_picked_before_pass
+    ) THEN
       EXIT;
     END IF;
   END LOOP;
