@@ -113,10 +113,12 @@ Scriptet bruker `n8n_claim_chunks_missing_v2` + `save_embeddings_v2` (300 s leas
 `document_chunks.embedding_v2`). LM Studio / OpenAI `/v1/embeddings` støttes ikke lenger — gammel
 `provider: lmstudio` eller `EMBED_BACKFILL_PROVIDER=lmstudio` avvises med tydelig feilmelding.
 
-**Preflight (hver endpoint):** 20 faste norske tekster embeddes på backfill-URL og på
-`EMBED_QUERY_URL` (typisk `http://<ollama-host>:11435`). Alle par må ha cosine ≥ **0.99** og dim **1024**.
-Feil preflight **slår ut kun den endpointen**. `--preflight-only` / `--dry-run` kjører uten
-`save_embeddings_v2`. Spørringssiden logges via Ollama `/api/show`.
+**Preflight (hver endpoint, én gang per prosess):** 20 faste norske tekster embeddes på
+backfill-URL og på `EMBED_QUERY_URL` (typisk `http://<ollama-host>:11435`). Alle par må ha cosine ≥
+**0.99** og dim **1024**. Feil preflight **slår ut kun den endpointen**. `--preflight-only` stopper
+etter preflight. Ved lang kjøring kan coordinator kjøre recovery-preflight kun når en endpoint har
+feilet; begrenset kjøring (`--dry-run` / `--max-batches`) gjør kun oppstarts-preflight.
+`--dry-run` kjører uten `save_embeddings_v2`. Spørringssiden logges via Ollama `/api/show`.
 
 **URL:** `EMBED_BACKFILL_URL` kan være `http://<ollama-host>:11435` eller full
 `http://<ollama-host>:11435/api/embed`. Standard `provider` er `ollama`, standard `batch` **16**.
@@ -132,7 +134,7 @@ som standard for å beskytte 800 ms query-embeddings. Overstyr med `--busy-pause
 `--schedule '22-07:full,07-22:throttle'` (standard tidssone `Europe/Oslo`).
 
 ```bash
-# Preflight / dry-run (ingen DB-skriving med --dry-run etter godkjent preflight)
+# Preflight / dry-run (ingen DB-skriving; én claim-batch og avslutt som standard)
 EMBED_QUERY_URL=http://<ollama-host>:11435 \
 SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
 EMBED_BACKFILL_ENDPOINTS='[
@@ -140,6 +142,9 @@ EMBED_BACKFILL_ENDPOINTS='[
    "lanes":["fast","background"],"batch":16,"modelTag":"bge-m3"}
 ]' \
 npx tsx scripts/backfill-embedding-v2.ts --preflight-only
+npx tsx scripts/backfill-embedding-v2.ts --dry-run
+# valgfritt: flere dry-run-batcher uten lagring
+npx tsx scripts/backfill-embedding-v2.ts --dry-run --max-batches 3
 
 # Kjøring
 npx tsx scripts/backfill-embedding-v2.ts \
@@ -167,7 +172,9 @@ npx tsx scripts/backfill-embedding-v2.ts \
 ```
 
 **Stopp trygt:** `touch` stop-filen (coordinator frigir leases), eller `SIGINT`/`SIGTERM` (frigir via
-`n8n_release_embedding_v2_claims`). `--dry-run` claimer og frigir uten `save_embeddings_v2`.
+`n8n_release_embedding_v2_claims`). `--dry-run` claimer og frigir uten `save_embeddings_v2`, og
+stopper etter **én** batch per worker med mindre `--max-batches` settes. Normal kjøring er ubegrenset
+til stoppsignal; `--max-batches N` begrenser antall lagrede (eller dry-run-)batcher per worker.
 
 #### Docker restart policy (ops)
 

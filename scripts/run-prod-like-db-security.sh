@@ -143,6 +143,18 @@ if [[ -f supabase/migrations/20261026110000_document_chunks_v2_pending_issue_idx
   unset PGOPTIONS
 fi
 
+echo "Phase 5c: embedding v2 claim discovery index (6110120000 CONCURRENTLY) ..."
+if [[ -f supabase/migrations/20261110120000_document_chunks_v2_pending_claim_idx_concurrent.sql ]]; then
+  export PGOPTIONS="${PGOPTIONS:--c lock_timeout=30s -c statement_timeout=0 -c maintenance_work_mem=256MB -c max_parallel_maintenance_workers=0}"
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261110120000_document_chunks_v2_pending_claim_idx_concurrent.sql
+  unset PGOPTIONS
+fi
+
+echo "Phase 5d: embedding v2 claim single discovery (6110120100 transactional) ..."
+if [[ -f supabase/migrations/20261110120100_n8n_claim_chunks_missing_v2_single_discovery.sql ]]; then
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261110120100_n8n_claim_chunks_missing_v2_single_discovery.sql
+fi
+
 echo "Running security-lockdown-defaults.sql (supabase_admin connection) ..."
 psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-lockdown-defaults.sql
 

@@ -6,6 +6,8 @@ export type BackfillCli = {
   maxBatchesPerMin: number;
   fullMaxBatchesPerMin: number;
   fastLaneMinBatchesPerMin: number;
+  /** null = unlimited batches until stop signal */
+  maxBatches: number | null;
   dryRun: boolean;
   stopFile: string | null;
   schedule: string | null;
@@ -39,6 +41,22 @@ function readBoolOption(argv: string[], name: string): boolean | undefined {
   throw new Error(`Ugyldig ${name}=${raw} (bruk on/off)`);
 }
 
+/** Default 1 batch in dry-run; unlimited in normal mode unless --max-batches is set. */
+export function resolveMaxBatches(argv: string[], dryRun: boolean): number | null {
+  const raw = readValue(argv, '--max-batches');
+  if (raw !== undefined) {
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      throw new Error(`Ugyldig --max-batches=${raw} (må være et heltall ≥ 1)`);
+    }
+    return Math.floor(parsed);
+  }
+  if (dryRun) {
+    return 1;
+  }
+  return null;
+}
+
 export function parseBackfillArgv(argv: string[]): BackfillCli {
   const maxBatchesPerMin = Math.max(
     1,
@@ -67,12 +85,16 @@ export function parseBackfillArgv(argv: string[]): BackfillCli {
   const providerRaw = readValue(argv, '--provider');
   const provider = providerRaw ? parseBackfillProvider(providerRaw) : undefined;
 
+  const dryRun = readFlag(argv, '--dry-run');
+  const maxBatches = resolveMaxBatches(argv, dryRun);
+
   return {
     provider,
     maxBatchesPerMin,
     fullMaxBatchesPerMin,
     fastLaneMinBatchesPerMin,
-    dryRun: readFlag(argv, '--dry-run'),
+    maxBatches,
+    dryRun,
     stopFile: readValue(argv, '--stop-file') ?? null,
     schedule: readValue(argv, '--schedule') ?? null,
     scheduleTimeZone: readValue(argv, '--schedule-tz') ?? 'Europe/Oslo',

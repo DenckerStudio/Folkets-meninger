@@ -27,6 +27,14 @@ BEGIN
     RAISE EXCEPTION 'n8n_claim_chunks_missing_v2 skal ikke kalle fm_embedding_v2_issue_tier per rad';
   END IF;
 
+  IF to_regprocedure('public.fm_embedding_v2_issue_tiers(text[])') IS NOT NULL THEN
+    IF (
+      SELECT pg_get_functiondef('public.fm_embedding_v2_issue_tiers(text[])'::regprocedure)
+    ) ILIKE '%has_pending%FROM public.document_chunks%' THEN
+      RAISE EXCEPTION 'fm_embedding_v2_issue_tiers skal ikke seq-scan document_chunks i has_pending';
+    END IF;
+  END IF;
+
   INSERT INTO public.stortinget_issues (id, title, last_synced_at, ferdigbehandlet, detail_json)
   VALUES (
     v_issue,

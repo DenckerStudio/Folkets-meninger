@@ -31,6 +31,7 @@ export type WorkerDeps = {
   workerId: string;
   leaseSeconds: number;
   dryRun: boolean;
+  maxBatches: number | null;
   shared: SharedDbPressure;
   health: EndpointHealth;
   scheduleWindows: ScheduleWindow[];
@@ -70,8 +71,12 @@ export async function runEndpointWorkerLoop(
   const latency = new LatencyBackoff(deps.busyLatencyMs);
   let batchesThisMinute = 0;
   let minuteStarted = Date.now();
+  let completedBatches = 0;
 
   while (!shouldStop()) {
+    if (deps.maxBatches !== null && completedBatches >= deps.maxBatches) {
+      break;
+    }
     if (!deps.health.preflightOk) {
       await deps.sleep(2000);
       continue;
@@ -156,6 +161,7 @@ export async function runEndpointWorkerLoop(
       deps.log(`[${deps.endpoint.name}] dry-run: ${embedRows.length} chunks (${lane})`);
       await releaseWorkerClaims(deps.supabase, deps.workerId);
       batchesThisMinute += 1;
+      completedBatches += 1;
       continue;
     }
 
@@ -194,6 +200,7 @@ export async function runEndpointWorkerLoop(
 
       deps.health.recordSuccess();
       batchesThisMinute += 1;
+      completedBatches += 1;
       deps.log(
         JSON.stringify({
           endpoint: deps.endpoint.name,
