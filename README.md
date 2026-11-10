@@ -109,38 +109,35 @@ npx tsx scripts/backfill-sak-status.ts --pending-only --concurrency 8
 Krever **#185** RAG fase A+B og **#207** kø/leases (`supabase/migrations/EMBEDDING_V2_QUEUE_APPLY.md`).
 Scriptet bruker `n8n_claim_chunks_missing_v2` + `save_embeddings_v2` (300 s lease, `SKIP LOCKED`).
 
-**Preflight (hver endpoint):** 20 faste norske tekster embeddes på backfill-endpoint og på Ollama
-`EMBED_QUERY_URL` (typisk `:11435` / bge-m3 F16). Alle par må ha cosine ≥ **0.99** og dim **1024**.
-Feil preflight **slår ut kun den endpointen**. `--preflight-only` kjører preflight og avslutter.
-Spørringssiden logges via Ollama `/api/show` (modell/kvantisering).
+**Kun Ollama:** embeddings hentes via native `POST …/api/embed` (modell `bge-m3`, **1024** dim til
+`document_chunks.embedding_v2`). LM Studio / OpenAI `/v1/embeddings` støttes ikke lenger — gammel
+`provider: lmstudio` eller `EMBED_BACKFILL_PROVIDER=lmstudio` avvises med tydelig feilmelding.
 
-**LM Studio (server):** `gpustack/bge-m3-GGUF`, API-modell `bge-m3`, lagres som
-`bge-m3:Q8_0 (gpustack GGUF, lmstudio)` i `embedding_v2_model` (eller API/`--model-tag` /
-`EMBED_BACKFILL_MODEL_TAG`). `EMBED_BACKFILL_URL` er **påkrevd** for lmstudio (full proxy-URL —
-ingen hardkodet host/port i koden).
+**Preflight (hver endpoint):** 20 faste norske tekster embeddes på backfill-URL og på
+`EMBED_QUERY_URL` (typisk `http://<ollama-host>:11435`). Alle par må ha cosine ≥ **0.99** og dim **1024**.
+Feil preflight **slår ut kun den endpointen**. `--preflight-only` / `--dry-run` kjører uten
+`save_embeddings_v2`. Spørringssiden logges via Ollama `/api/show`.
+
+**URL:** `EMBED_BACKFILL_URL` kan være `http://<ollama-host>:11435` eller full
+`http://<ollama-host>:11435/api/embed`. Standard `provider` er `ollama`, standard `batch` **16**.
 
 **Flere endepunkter:** `EMBED_BACKFILL_ENDPOINTS` (JSON-array) eller gjentatt `--endpoint '…'`.
-Én **primary** (`"primary": true`) tar **fast** lane (tier 0) + **background**; ekstra noder (f.eks.
-gaming-PC med RTX 3080) kun `"lanes": ["background"]`. API-nøkler **kun** via `"apiKeyEnv":
-"NAVN_PÅ_ENV"` (aldri verdien i JSON, logger eller repo).
+Én **primary** (`"primary": true`) tar **fast** lane (tier 0) + **background**; ekstra noder kun
+`"lanes": ["background"]`.
 
-**Throughput (klever, målt):** ~**480 chunks/min** på server-GPU (`batch` 32, 1 worker) → ~**13 t**
-for ~380k pending. Ekstra LM Studio-node reduserer wall-clock når den er oppe (background-lane).
+**Busy-pause:** når backfill deler `:11435` med `EMBED_QUERY_URL` (chat-spørring), er busy-pause **på**
+som standard for å beskytte 800 ms query-embeddings. Overstyr med `--busy-pause=off` om nødvendig.
 
 **Delt throttle:** WAL/replikasjonsslot (`n8n_backfill_db_pressure`) pauser **alle** workers.
-`--schedule '22-07:full,07-22:throttle'` (standard tidssone `Europe/Oslo`). Busy-latency mot chat
-når backfill-URL deler `:11435`.
+`--schedule '22-07:full,07-22:throttle'` (standard tidssone `Europe/Oslo`).
 
 ```bash
-# Preflight alle endepunkter
-EMBED_QUERY_URL=http://ollama-host.example.invalid:11435 \
+# Preflight / dry-run (ingen DB-skriving med --dry-run etter godkjent preflight)
+EMBED_QUERY_URL=http://<ollama-host>:11435 \
 SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
 EMBED_BACKFILL_ENDPOINTS='[
-  {"name":"server","primary":true,"provider":"lmstudio","url":"https://embed-proxy.example/v1",
-   "lanes":["fast","background"],"batch":32,
-   "modelTag":"bge-m3:Q8_0 (gpustack GGUF, lmstudio)","apiKeyEnv":"EMBED_LMSTUDIO_SERVER_KEY"},
-  {"name":"gaming-pc","provider":"lmstudio","url":"https://pc-tunnel.example/v1",
-   "lanes":["background"],"batch":32,"apiKeyEnv":"EMBED_LMSTUDIO_PC_KEY"}
+  {"name":"server","primary":true,"provider":"ollama","url":"http://<ollama-host>:11435",
+   "lanes":["fast","background"],"batch":16,"modelTag":"bge-m3"}
 ]' \
 npx tsx scripts/backfill-embedding-v2.ts --preflight-only
 
@@ -151,38 +148,22 @@ npx tsx scripts/backfill-embedding-v2.ts \
   --stop-file /data/backfill-v2.stop
 ```
 
-**Ollama CPU-fallback:** én endpoint med `"provider":"ollama"` — standard `batch` **16**, 1 worker
-(~55 chunks/min). `:11434` (GPU/gemma) avvises uten `--allow-gpu`.
+Enkel endpoint uten JSON: `EMBED_BACKFILL_URL=http://<ollama-host>:11435` (provider default `ollama`).
+Valgfritt: `--busy-pause=off`, `--probe-before-batch`, `--lease-seconds 300`.
 
-Enkel endpoint uten JSON: `EMBED_BACKFILL_PROVIDER=lmstudio`, `EMBED_BACKFILL_URL=…` (primary).
-Valgfritt: `--busy-pause=off`, `--probe-before-batch`, `--lease-seconds 300`, `--provider lmstudio`.
+#### Sekundær worker (background)
 
-#### Gaming-PC worker (background, LM Studio)
-
-Eksempel-env (kun placeholders): `scripts/backfill-embedding-v2.gaming-pc.env.example`.
-API-nøkkel **kun** via `LMSTUDIO_API_KEY` (aldri som `apiKey` i JSON).
-
-1. Kopier env-filen lokalt og fyll inn `SUPABASE_*`, `EMBED_QUERY_URL` (Ollama **:11435** for chat/preflight),
-   `EMBED_BACKFILL_URL` (LM Studio på PC-en), `LMSTUDIO_API_KEY`.
-2. Preflight (må bestå før claiming):
+Eksempel-env: `scripts/backfill-embedding-v2.gaming-pc.env.example` (kun placeholders).
 
 ```bash
-set -a && source /path/to/gaming-pc.env && set +a
-npx tsx scripts/backfill-embedding-v2.ts --provider lmstudio --preflight-only
-```
-
-3. Kjør background-worker med lav concurrency og busy-pause:
-
-```bash
+set -a && source /path/to/local-backfill.env && set +a
+npx tsx scripts/backfill-embedding-v2.ts --preflight-only
 npx tsx scripts/backfill-embedding-v2.ts \
-  --provider lmstudio \
   --schedule '22-07:full,07-22:throttle' \
   --max-batches-per-min 2 \
-  --full-max-batches-per-min 8 \
   --busy-pause=on \
-  --busy-latency-ms 1500 \
   --lease-seconds 300 \
-  --stop-file /tmp/backfill-v2-gaming-pc.stop
+  --stop-file /tmp/backfill-v2.stop
 ```
 
 **Stopp trygt:** `touch` stop-filen (coordinator frigir leases), eller `SIGINT`/`SIGTERM` (frigir via

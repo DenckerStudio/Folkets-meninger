@@ -14,17 +14,17 @@ import {
 } from './backfill-embedding-v2/secrets';
 import { PREFLIGHT_TEXT_COUNT } from './backfill-embedding-v2/preflight-texts';
 import { cosineSimilarity } from './backfill-embedding-v2/cosine';
-import { DEFAULT_LMSTUDIO_MODEL_TAG } from './backfill-embedding-v2/provider';
+import { LMSTUDIO_DEPRECATED_MESSAGE, parseBackfillProvider } from './backfill-embedding-v2/provider';
 import type { ResolvedEndpoint } from './backfill-embedding-v2/endpoints';
 
 function primaryEndpoint(overrides: Partial<ResolvedEndpoint> = {}): ResolvedEndpoint {
   return {
     name: 'server',
-    provider: 'lmstudio',
-    url: 'http://embed.example/v1',
+    provider: 'ollama',
+    url: 'http://embed.example.invalid:11435',
     lanes: ['fast', 'background'],
-    batch: 32,
-    modelTag: DEFAULT_LMSTUDIO_MODEL_TAG,
+    batch: 16,
+    modelTag: 'bge-m3',
     primary: true,
     apiModel: 'bge-m3',
     ...overrides,
@@ -74,6 +74,10 @@ class MockClaimDb {
 async function main(): Promise<void> {
   assert.equal(PREFLIGHT_TEXT_COUNT, 20);
 
+  assert.throws(() => parseBackfillProvider('lmstudio'), (err: Error) => {
+    return err.message === LMSTUDIO_DEPRECATED_MESSAGE;
+  });
+
   assert.equal(selectClaimLane(primaryEndpoint(), true), 'fast');
   assert.equal(selectClaimLane(primaryEndpoint(), false), 'background');
   assert.equal(
@@ -104,7 +108,7 @@ async function main(): Promise<void> {
   assert.throws(() =>
     resolveEndpointConfig({
       name: 'x',
-      provider: 'lmstudio',
+      provider: 'ollama',
       url: '',
       primary: true,
     }),
@@ -122,30 +126,46 @@ async function main(): Promise<void> {
     ),
   );
 
-  const epJson = parseEndpointJson(
-    JSON.stringify({
-      name: 'gaming-pc',
+  assert.throws(() =>
+    resolveEndpointConfig({
+      name: 'legacy',
       provider: 'lmstudio',
       url: 'https://pc.example/v1',
+      primary: true,
+    }),
+  );
+
+  const epJson = parseEndpointJson(
+    JSON.stringify({
+      name: 'secondary',
+      provider: 'ollama',
+      url: 'http://ollama-secondary.example.invalid:11435',
       lanes: ['background'],
-      apiKeyEnv: 'EMBED_TEST_API_KEY',
+      batch: 16,
     }),
     'test',
   );
   const endpoints = finalizeEndpoints([
-    { name: 'server', provider: 'lmstudio', url: 'https://srv/v1', primary: true },
+    {
+      name: 'server',
+      provider: 'ollama',
+      url: 'http://ollama-host.example.invalid:11435',
+      primary: true,
+    },
     epJson,
   ]);
-  assert.equal(endpoints[1].apiKey, secret);
+  assert.equal(endpoints[0].provider, 'ollama');
+  assert.equal(endpoints[0].batch, 16);
   assert.ok(!JSON.stringify(epJson).includes(secret));
 
-  const lmDefault = resolveEndpointConfig({
+  const ollamaDefault = resolveEndpointConfig({
     name: 'srv',
-    provider: 'lmstudio',
-    url: 'https://srv/v1',
+    provider: 'ollama',
+    url: 'http://ollama-host.example.invalid:11435',
     primary: true,
   });
-  assert.equal(lmDefault.apiKeyEnv, 'LMSTUDIO_API_KEY');
+  assert.equal(ollamaDefault.apiKeyEnv, undefined);
+  assert.equal(ollamaDefault.modelTag, 'bge-m3');
 
   const logs: string[] = [];
   const err = new Error(`Auth failed Bearer ${secret}`);

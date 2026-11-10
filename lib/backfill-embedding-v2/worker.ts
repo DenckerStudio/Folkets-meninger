@@ -10,7 +10,6 @@ import type { ResolvedEndpoint } from './endpoints';
 import { EndpointHealth } from './endpoint-health';
 import { buildSaveRows, type EmbedRow } from './embed-batch';
 import { fetchEmbedBatchForEndpoint } from './embed-provider';
-import { inferModelTagFromApiModel } from './lmstudio';
 import { selectClaimLane } from './lane-routing';
 import { resolveEmbeddingV2ModelTag } from './provider';
 import type { SharedDbPressure } from './shared-pressure';
@@ -42,7 +41,6 @@ export type WorkerDeps = {
   busyLatencyMs: number;
   busyPauseFlag: boolean | undefined;
   embedQueryUrl?: string;
-  allowGpu: boolean;
   probeBeforeBatch: boolean;
   secrets: string[];
   sleep: (ms: number) => Promise<void>;
@@ -66,7 +64,6 @@ export async function runEndpointWorkerLoop(
   const urlCheck = checkEmbedUrlsAtStartup(
     deps.endpoint.url,
     deps.embedQueryUrl,
-    deps.allowGpu,
     deps.busyPauseFlag,
   );
   const busyPauseEnabled = urlCheck.busyPauseDefault;
@@ -176,7 +173,7 @@ export async function runEndpointWorkerLoop(
       const modelTag = resolveEmbeddingV2ModelTag({
         provider: deps.endpoint.provider,
         cliModelTag: deps.endpoint.modelTag,
-        apiReportedModel: inferModelTagFromApiModel(reportedModel) ?? reportedModel,
+        apiReportedModel: reportedModel,
       });
 
       const savePayload = buildSaveRows(embedRows, vectors);

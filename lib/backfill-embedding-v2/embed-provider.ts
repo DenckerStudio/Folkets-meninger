@@ -1,5 +1,4 @@
 import type { EmbedRow } from './embed-batch';
-import { fetchLmStudioEmbedBatch } from './lmstudio';
 import { fetchOllamaEmbedBatch } from './ollama-embed';
 import type { ResolvedEndpoint } from './endpoints';
 
@@ -18,20 +17,10 @@ export async function fetchEmbedBatchForEndpoint(
     keepAlive?: string;
   } = {},
 ): Promise<EmbedBatchOutcome> {
-  if (endpoint.provider === 'lmstudio') {
-    const res = await fetchLmStudioEmbedBatch(endpoint.url, rows, {
-      fetchImpl: options.fetchImpl,
-      apiKey: endpoint.apiKey,
-      apiModel: endpoint.apiModel,
-    });
-    return res;
-  }
-
-  const res = await fetchOllamaEmbedBatch(endpoint.url, rows, {
+  return fetchOllamaEmbedBatch(endpoint.url, rows, {
     fetchImpl: options.fetchImpl,
     probeText: options.probeText,
     keepAlive: options.keepAlive,
     apiModel: endpoint.apiModel,
   });
-  return res;
 }

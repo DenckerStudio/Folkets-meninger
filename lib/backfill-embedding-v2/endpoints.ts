@@ -64,9 +64,7 @@ export function resolveEndpointConfig(input: EndpointConfigInput): ResolvedEndpo
     Math.min(64, input.batch ?? defaultBatchForProvider(provider)),
   );
 
-  const apiKeyEnv =
-    input.apiKeyEnv?.trim() ||
-    (provider === 'lmstudio' ? 'LMSTUDIO_API_KEY' : undefined);
+  const apiKeyEnv = input.apiKeyEnv?.trim() || undefined;
   const apiKey = resolveApiKeyFromEnvVarName(apiKeyEnv);
 
   const envModelTag = input.modelTagEnv

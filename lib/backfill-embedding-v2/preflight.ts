@@ -1,6 +1,5 @@
 import { validateEmbeddingVector } from './embed-batch';
 import { cosineSimilarity } from './cosine';
-import { fetchLmStudioEmbedVectors } from './lmstudio';
 import { fetchOllamaEmbedVectors } from './ollama-embed';
 import { safeErrorMessage } from './secrets';
 import { fetchOllamaShowSummary } from './ollama-show';
@@ -39,20 +38,11 @@ export async function runEmbeddingPreflight(options: {
   let backfillVectors: number[][];
   let queryVectors: number[][];
   try {
-    if (options.provider === 'lmstudio') {
-      const res = await fetchLmStudioEmbedVectors(options.backfillUrl, texts, {
-        fetchImpl,
-        apiKey: options.apiKey,
-        apiModel,
-      });
-      backfillVectors = res.vectors;
-    } else {
-      const res = await fetchOllamaEmbedVectors(options.backfillUrl, texts, {
-        fetchImpl,
-        apiModel,
-      });
-      backfillVectors = res.vectors;
-    }
+    const res = await fetchOllamaEmbedVectors(options.backfillUrl, texts, {
+      fetchImpl,
+      apiModel,
+    });
+    backfillVectors = res.vectors;
 
     const queryRes = await fetchOllamaEmbedVectors(options.queryUrl, texts, {
       fetchImpl,
@@ -96,7 +86,7 @@ export async function runEmbeddingPreflight(options: {
   if (minCosine < PREFLIGHT_MIN_COSINE) {
     throw new Error(
       `Preflight feilet: min cosine ${minCosine.toFixed(5)} < ${PREFLIGHT_MIN_COSINE} ` +
-        `(backfill ${options.provider} vs Ollama query på EMBED_QUERY_URL)`,
+        '(backfill Ollama vs query på EMBED_QUERY_URL)',
     );
   }
 
