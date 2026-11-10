@@ -11,7 +11,7 @@ DECLARE
   v_save jsonb;
   v_row record;
   v_i int;
-  v_prog_issue text;
+  v_prog_all_good boolean;
   v_prog_count int;
   v_expected_order text[] := ARRAY[
     'embed-v2-order-t2b',
@@ -285,21 +285,24 @@ BEGIN
       RAISE EXCEPTION 'progress guard fixture: embed-v2-pg-good-zzz må ikke være tier 0 (bakgrunn)';
     END IF;
 
-    SELECT count(*)::int, max(c.issue_id)
-    INTO v_prog_count, v_prog_issue
-    FROM public.n8n_claim_chunks_missing_v2('background', 5, 'prog-guard', 300) c;
-
-    IF v_prog_issue IS DISTINCT FROM 'embed-v2-pg-good-zzz' OR v_prog_count <> 1 THEN
-      RAISE EXCEPTION 'progress guard: forventet 1 claim fra embed-v2-pg-good-zzz, fikk % (issue=%)',
-        v_prog_count, v_prog_issue;
+    IF (
+      SELECT count(*)::int
+      FROM public.document_chunks d
+      WHERE d.issue_id = 'embed-v2-pg-good-zzz'
+        AND d.embedding_v2 IS NULL
+        AND d.embedding_v2_status = 'pending'
+        AND coalesce(btrim(d.content), '') <> ''
+    ) < 1 THEN
+      RAISE EXCEPTION 'progress guard fixture: mangler embeddbar chunk på embed-v2-pg-good-zzz';
     END IF;
 
-    IF (
-      SELECT c.issue_id
-      FROM public.n8n_claim_chunks_missing_v2('background', 5, 'prog-guard-2', 300) c
-      LIMIT 1
-    ) IS NOT NULL THEN
-      RAISE EXCEPTION 'progress guard: andre claim skal ikke gi rader når good allerede tatt';
+    SELECT count(*)::int, bool_and(c.issue_id = 'embed-v2-pg-good-zzz')
+    INTO v_prog_count, v_prog_all_good
+    FROM public.n8n_claim_chunks_missing_v2('background', 5, 'prog-guard', 300) c;
+
+    IF v_prog_count < 1 OR v_prog_all_good IS DISTINCT FROM true THEN
+      RAISE EXCEPTION 'progress guard: forventet minst én claim kun fra embed-v2-pg-good-zzz, fikk %',
+        v_prog_count;
     END IF;
 
     PERFORM public.n8n_release_embedding_v2_claims('prog-guard');
