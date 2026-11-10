@@ -59,6 +59,10 @@ should_defer() {
   if [[ "$base" == 20261027* ]]; then
     return 0
   fi
+  # embedding_v2 claim index + RPCs (after phase 4–5; mirrors 26110000 defer + phase 5b–5d)
+  if [[ "$base" == 20261110120* ]]; then
+    return 0
+  fi
   return 1
 }
 
