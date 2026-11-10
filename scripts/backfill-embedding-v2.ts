@@ -3,8 +3,8 @@
  * Backfill document_chunks.embedding_v2 (bge-m3 / 1024) via lease claims + multi-endpoint workers.
  *
  * Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EMBED_QUERY_URL (Ollama :11435 preflight),
- *      EMBED_BACKFILL_ENDPOINTS (JSON array) or EMBED_BACKFILL_URL + EMBED_BACKFILL_PROVIDER.
- *      API keys only via apiKeyEnv per endpoint (env var name, never the secret in config).
+ *      EMBED_BACKFILL_ENDPOINTS (JSON array) or EMBED_BACKFILL_URL (+ optional EMBED_BACKFILL_PROVIDER=ollama).
+ *      Kun Ollama native /api/embed (bge-m3, 1024 dim). LM Studio støttes ikke lenger.
  */
 import { createBackfillSupabase } from '../lib/backfill-embedding-v2/supabase-client';
 import { existsSync } from 'node:fs';
@@ -26,9 +26,6 @@ import {
 } from '../lib/backfill-embedding-v2/worker';
 import { formatFatalErrorForLog, safeErrorMessage } from '../lib/backfill-embedding-v2/secrets';
 import { primaryPreflightPassed } from '../lib/backfill-embedding-v2/preflight-exit';
-import { inferModelTagFromApiModel } from '../lib/backfill-embedding-v2/lmstudio';
-import { resolveEmbeddingV2ModelTag } from '../lib/backfill-embedding-v2/provider';
-import { fetchLmStudioEmbedVectors } from '../lib/backfill-embedding-v2/lmstudio';
 import { createCachedTier0Probe } from '../lib/backfill-embedding-v2/tier0-probe';
 
 function requiredEnv(name: string): string {
@@ -58,19 +55,7 @@ async function runPreflightForEndpoint(
       log,
     });
 
-    let modelTag = endpoint.modelTag;
-    if (endpoint.provider === 'lmstudio') {
-      const probe = await fetchLmStudioEmbedVectors(endpoint.url, ['probe'], {
-        apiKey: endpoint.apiKey,
-        apiModel: endpoint.apiModel,
-      });
-      modelTag = resolveEmbeddingV2ModelTag({
-        provider: 'lmstudio',
-        cliModelTag: endpoint.modelTag,
-        apiReportedModel:
-          inferModelTagFromApiModel(probe.reportedModel) ?? probe.reportedModel,
-      });
-    }
+    const modelTag = endpoint.modelTag;
 
     log(
       JSON.stringify({
@@ -184,7 +169,6 @@ async function main(): Promise<void> {
         busyLatencyMs: cli.busyLatencyMs,
         busyPauseFlag: cli.busyPause,
         embedQueryUrl,
-        allowGpu: cli.allowGpu,
         probeBeforeBatch: cli.probeBeforeBatch,
         secrets,
         sleep,

@@ -13,7 +13,6 @@ export type BackfillCli = {
   busyPause: boolean | undefined;
   busyLatencyMs: number;
   probeBeforeBatch: boolean;
-  allowGpu: boolean;
   preflightOnly: boolean;
   leaseSeconds: number;
 };
@@ -80,7 +79,6 @@ export function parseBackfillArgv(argv: string[]): BackfillCli {
     busyPause,
     busyLatencyMs,
     probeBeforeBatch: readFlag(argv, '--probe-before-batch'),
-    allowGpu: readFlag(argv, '--allow-gpu'),
     preflightOnly: readFlag(argv, '--preflight-only'),
     leaseSeconds,
   };

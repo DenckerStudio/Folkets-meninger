@@ -12,11 +12,16 @@ import type { BackfillSupabase } from './backfill-embedding-v2/supabase-client';
 
 function primaryEndpoints() {
   return finalizeEndpoints([
-    { name: 'server', provider: 'lmstudio', url: 'https://srv/v1', primary: true },
+    {
+      name: 'server',
+      provider: 'ollama',
+      url: 'http://ollama-host.example.invalid:11435',
+      primary: true,
+    },
     {
       name: 'pc',
-      provider: 'lmstudio',
-      url: 'https://pc/v1',
+      provider: 'ollama',
+      url: 'http://ollama-secondary.example.invalid:11435',
       primary: false,
       lanes: ['background'],
     },
@@ -105,7 +110,6 @@ async function main(): Promise<void> {
       fastLaneMinBatchesPerMin: 1,
       busyLatencyMs: 1500,
       busyPauseFlag: false,
-      allowGpu: false,
       probeBeforeBatch: false,
       secrets: [],
       sleep: async () => {},

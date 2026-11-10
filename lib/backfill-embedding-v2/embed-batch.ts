@@ -93,7 +93,11 @@ export async function fetchEmbedBatch(
   for (let i = 0; i < rows.length; i += 1) {
     const vec = validateEmbeddingVector({ embeddings: [embeddings[i]] });
     if (!vec) {
-      throw new Error(`Ugyldig vektor for chunk ${rows[i].id}`);
+      const raw = embeddings[i];
+      const dim = Array.isArray(raw) ? raw.length : 0;
+      throw new Error(
+        `Ugyldig vektor for chunk ${rows[i].id}: forventet ${VECTOR_V2_DIMENSIONS} dim, fikk ${dim}`,
+      );
     }
     vectors.set(rows[i].id, vec);
   }

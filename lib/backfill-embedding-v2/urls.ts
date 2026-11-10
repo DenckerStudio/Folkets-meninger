@@ -19,11 +19,6 @@ export function buildEmbedApiUrl(baseUrl: string): string {
   return parsed.toString();
 }
 
-export function isGpuOllamaUrl(url: string): boolean {
-  const origin = embedOrigin(url);
-  return origin?.endsWith(':11434') ?? false;
-}
-
 export function isChatQueryEmbedUrl(backfillUrl: string, queryUrl: string | undefined): boolean {
   const back = embedOrigin(backfillUrl);
   if (!back) return false;
@@ -36,7 +31,6 @@ export function isChatQueryEmbedUrl(backfillUrl: string, queryUrl: string | unde
 
 export type EmbedUrlStartupCheck = {
   chatInstance: boolean;
-  gpuInstance: boolean;
   busyPauseDefault: boolean;
   warnings: string[];
 };
@@ -44,18 +38,10 @@ export type EmbedUrlStartupCheck = {
 export function checkEmbedUrlsAtStartup(
   backfillUrl: string,
   queryUrl: string | undefined,
-  allowGpu: boolean,
   busyPauseFlag: boolean | undefined,
 ): EmbedUrlStartupCheck {
   const warnings: string[] = [];
-  const gpuInstance = isGpuOllamaUrl(backfillUrl);
   const chatInstance = isChatQueryEmbedUrl(backfillUrl, queryUrl);
-
-  if (gpuInstance && !allowGpu) {
-    throw new Error(
-      'EMBED_BACKFILL_URL peker på GPU-instansen (:11434). Bruk --allow-gpu kun hvis du vet at gemma ikke kastes ut.',
-    );
-  }
 
   if (chatInstance) {
     warnings.push(
@@ -67,5 +53,5 @@ export function checkEmbedUrlsAtStartup(
   const busyPauseDefault =
     busyPauseFlag !== undefined ? busyPauseFlag : chatInstance ? true : false;
 
-  return { chatInstance, gpuInstance, busyPauseDefault, warnings };
+  return { chatInstance, busyPauseDefault, warnings };
 }

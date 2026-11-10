@@ -1,5 +1,6 @@
 import { buildEmbedApiUrl } from './urls';
-import { OLLAMA_EMBED_API_MODEL, type BackfillProvider } from './provider';
+import { OLLAMA_EMBED_API_MODEL } from './provider';
+import { VECTOR_V2_DIMENSIONS } from '@/lib/chat/vector-search';
 import { validateEmbeddingVector, type EmbedRow } from './embed-batch';
 
 export type OllamaEmbedOptions = {
@@ -43,7 +44,11 @@ export async function fetchOllamaEmbedVectors(
   for (let i = 0; i < texts.length; i += 1) {
     const vec = validateEmbeddingVector({ embeddings: [embeddings[i]] });
     if (!vec) {
-      throw new Error(`Ugyldig Ollama-vektor for input ${i}`);
+      const raw = embeddings[i];
+      const dim = Array.isArray(raw) ? raw.length : 0;
+      throw new Error(
+        `Ugyldig Ollama-vektor for input ${i}: forventet ${VECTOR_V2_DIMENSIONS} dim, fikk ${dim}`,
+      );
     }
     vectors.push(vec);
   }
@@ -92,8 +97,4 @@ export async function fetchOllamaEmbedBatch(
   }
 
   return { vectors, latencyMs: Date.now() - started, reportedModel };
-}
-
-export function providerUsesOllamaApi(provider: BackfillProvider): boolean {
-  return provider === 'ollama';
 }
