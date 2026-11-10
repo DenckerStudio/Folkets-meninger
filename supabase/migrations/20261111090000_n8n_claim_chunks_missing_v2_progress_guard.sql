@@ -172,7 +172,7 @@ BEGIN
         IF v_row_count = 0 THEN
           INSERT INTO _fm_v2_claim_issue_zero_pick (issue_id, doc_rank)
           VALUES (v_issue, v_doc_rank)
-          ON CONFLICT (issue_id, doc_rank) DO NOTHING;
+          ON CONFLICT DO NOTHING;
 
           IF (
             SELECT count(*)::int
@@ -181,7 +181,7 @@ BEGIN
           ) >= cardinality(v_doc_ranks) THEN
             INSERT INTO _fm_v2_claim_exhausted_issues (issue_id)
             VALUES (v_issue)
-            ON CONFLICT (issue_id) DO NOTHING;
+            ON CONFLICT DO NOTHING;
           END IF;
         ELSE
           DELETE FROM _fm_v2_claim_issue_zero_pick z WHERE z.issue_id = v_issue;
