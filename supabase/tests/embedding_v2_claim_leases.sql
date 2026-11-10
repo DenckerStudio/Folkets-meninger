@@ -267,6 +267,11 @@ BEGIN
       ('embed-v2-empty-first', 'doc-empty', 1, E'\t\n', 'pending', 'pending'),
       ('embed-v2-good-second', 'doc-good', 0, 'embeddable content', 'pending', 'pending');
 
+    DELETE FROM public.document_chunks
+    WHERE embedding_v2 IS NULL
+      AND embedding_v2_status = 'pending'
+      AND issue_id NOT IN ('embed-v2-empty-first', 'embed-v2-good-second');
+
     IF (
       SELECT count(*)::int
       FROM public.n8n_claim_chunks_missing_v2('background', 5, 'prog-guard', 300)
