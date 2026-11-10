@@ -233,6 +233,73 @@ BEGIN
       'embed-v2-order-t2a',
       'embed-v2-order-t2b'
     );
+
+    -- Progress guard (611011090000): discovery uten btrim, pick med btrim
+    IF (
+      SELECT pg_get_functiondef('public.n8n_claim_chunks_missing_v2(text,int,text,int)'::regprocedure)
+    ) NOT ILIKE '%_fm_v2_claim_exhausted_issues%' THEN
+      RAISE EXCEPTION 'n8n_claim_chunks_missing_v2 må spore uttømte issues (progress guard)';
+    END IF;
+
+    INSERT INTO public.stortinget_issues (id, title, last_synced_at, ferdigbehandlet, detail_json)
+    VALUES
+      ('embed-v2-empty-first', 'Empty', now() - interval '60 days', true, '{"sak_sesjon":"1999-2000"}'::jsonb),
+      ('embed-v2-good-second', 'Good', now() - interval '60 days', true, '{"sak_sesjon":"1999-2000"}'::jsonb)
+    ON CONFLICT (id) DO UPDATE SET
+      last_synced_at = EXCLUDED.last_synced_at,
+      ferdigbehandlet = EXCLUDED.ferdigbehandlet,
+      detail_json = EXCLUDED.detail_json;
+
+    DELETE FROM public.stortinget_issue_documents
+    WHERE issue_id IN ('embed-v2-empty-first', 'embed-v2-good-second');
+
+    INSERT INTO public.stortinget_issue_documents (issue_id, document_id, title, document_type, ingest_status, chunks_status)
+    VALUES
+      ('embed-v2-empty-first', 'doc-empty', 'Tom', 'hoveddokument', 'ready', 'pending'),
+      ('embed-v2-good-second', 'doc-good', 'Hoved', 'hoveddokument', 'ready', 'pending');
+
+    DELETE FROM public.document_chunks
+    WHERE issue_id IN ('embed-v2-empty-first', 'embed-v2-good-second');
+
+    INSERT INTO public.document_chunks (issue_id, document_id, chunk_index, content, embedding_status, embedding_v2_status)
+    VALUES
+      ('embed-v2-empty-first', 'doc-empty', 0, '   ', 'pending', 'pending'),
+      ('embed-v2-empty-first', 'doc-empty', 1, E'\t\n', 'pending', 'pending'),
+      ('embed-v2-good-second', 'doc-good', 0, 'embeddable content', 'pending', 'pending');
+
+    IF (
+      SELECT count(*)::int
+      FROM public.n8n_claim_chunks_missing_v2('background', 5, 'prog-guard', 300)
+    ) <> 1 THEN
+      RAISE EXCEPTION 'progress guard: forventet 1 claim fra good issue, ikke spin på empty-first';
+    END IF;
+
+    IF (
+      SELECT c.issue_id
+      FROM public.n8n_claim_chunks_missing_v2('background', 5, 'prog-guard-2', 300) c
+      LIMIT 1
+    ) IS NOT NULL THEN
+      RAISE EXCEPTION 'progress guard: andre claim skal ikke gi rader når good allerede tatt';
+    END IF;
+
+    PERFORM public.n8n_release_embedding_v2_claims('prog-guard');
+
+    -- Kun whitespace-pending: 0 rader raskt
+    DELETE FROM public.document_chunks WHERE issue_id = 'embed-v2-good-second';
+
+    IF (
+      SELECT count(*)::int
+      FROM public.n8n_claim_chunks_missing_v2('background', 16, 'prog-exhaust', 300)
+    ) <> 0 THEN
+      RAISE EXCEPTION 'progress guard: kun tomme pending chunks skal gi 0 rader raskt';
+    END IF;
+
+    DELETE FROM public.document_chunks
+    WHERE issue_id IN ('embed-v2-empty-first', 'embed-v2-good-second');
+    DELETE FROM public.stortinget_issue_documents
+    WHERE issue_id IN ('embed-v2-empty-first', 'embed-v2-good-second');
+    DELETE FROM public.stortinget_issues
+    WHERE id IN ('embed-v2-empty-first', 'embed-v2-good-second');
   END IF;
 END;
 $$;
