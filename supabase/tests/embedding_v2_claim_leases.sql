@@ -243,40 +243,60 @@ BEGIN
 
     INSERT INTO public.stortinget_issues (id, title, last_synced_at, ferdigbehandlet, detail_json)
     VALUES
-      ('embed-v2-empty-first', 'Empty', now() - interval '60 days', true, '{"sak_sesjon":"1999-2000"}'::jsonb),
-      ('embed-v2-good-second', 'Good', now() - interval '60 days', true, '{"sak_sesjon":"1999-2000"}'::jsonb)
+      ('embed-v2-progress-a-empty', 'Empty', now() - interval '60 days', true, '{"sak_sesjon":"1999-2000"}'::jsonb),
+      ('embed-v2-progress-b-good', 'Good', now() - interval '60 days', true, '{"sak_sesjon":"1999-2000"}'::jsonb)
     ON CONFLICT (id) DO UPDATE SET
       last_synced_at = EXCLUDED.last_synced_at,
       ferdigbehandlet = EXCLUDED.ferdigbehandlet,
       detail_json = EXCLUDED.detail_json;
 
     DELETE FROM public.stortinget_issue_documents
-    WHERE issue_id IN ('embed-v2-empty-first', 'embed-v2-good-second');
+    WHERE issue_id IN ('embed-v2-progress-a-empty', 'embed-v2-progress-b-good');
 
     INSERT INTO public.stortinget_issue_documents (issue_id, document_id, title, document_type, ingest_status, chunks_status)
     VALUES
-      ('embed-v2-empty-first', 'doc-empty', 'Tom', 'hoveddokument', 'ready', 'pending'),
-      ('embed-v2-good-second', 'doc-good', 'Hoved', 'hoveddokument', 'ready', 'pending');
+      ('embed-v2-progress-a-empty', 'doc-empty', 'Tom', 'hoveddokument', 'ready', 'pending'),
+      ('embed-v2-progress-b-good', 'doc-good', 'Hoved', 'hoveddokument', 'ready', 'pending');
 
     DELETE FROM public.document_chunks
-    WHERE issue_id IN ('embed-v2-empty-first', 'embed-v2-good-second');
-
-    INSERT INTO public.document_chunks (issue_id, document_id, chunk_index, content, embedding_status, embedding_v2_status)
-    VALUES
-      ('embed-v2-empty-first', 'doc-empty', 0, '   ', 'pending', 'pending'),
-      ('embed-v2-empty-first', 'doc-empty', 1, E'\t\n', 'pending', 'pending'),
-      ('embed-v2-good-second', 'doc-good', 0, 'embeddable content', 'pending', 'pending');
+    WHERE issue_id IN ('embed-v2-progress-a-empty', 'embed-v2-progress-b-good');
 
     DELETE FROM public.document_chunks
     WHERE embedding_v2 IS NULL
       AND embedding_v2_status = 'pending'
-      AND issue_id NOT IN ('embed-v2-empty-first', 'embed-v2-good-second');
+      AND (issue_id IS NULL OR issue_id NOT IN (
+        'embed-v2-progress-a-empty',
+        'embed-v2-progress-b-good'
+      ));
+
+    INSERT INTO public.document_chunks (
+      issue_id,
+      document_id,
+      chunk_index,
+      content,
+      metadata,
+      embedding_status,
+      embedding_v2_status
+    )
+    VALUES
+      ('embed-v2-progress-a-empty', 'doc-empty', 0, '   ', '{}'::jsonb, 'pending', 'pending'),
+      ('embed-v2-progress-a-empty', 'doc-empty', 1, E'\t\n', '{}'::jsonb, 'pending', 'pending'),
+      (
+        'embed-v2-progress-b-good',
+        'doc-good',
+        0,
+        'embeddable content',
+        '{"document_kind":"hoveddokument"}'::jsonb,
+        'pending',
+        'pending'
+      );
 
     IF (
-      SELECT count(*)::int
-      FROM public.n8n_claim_chunks_missing_v2('background', 5, 'prog-guard', 300)
-    ) <> 1 THEN
-      RAISE EXCEPTION 'progress guard: forventet 1 claim fra good issue, ikke spin på empty-first';
+      SELECT c.issue_id
+      FROM public.n8n_claim_chunks_missing_v2('background', 5, 'prog-guard', 300) c
+      LIMIT 1
+    ) IS DISTINCT FROM 'embed-v2-progress-b-good' THEN
+      RAISE EXCEPTION 'progress guard: forventet claim fra embed-v2-progress-b-good, ikke spin på embed-v2-progress-a-empty';
     END IF;
 
     IF (
@@ -290,7 +310,7 @@ BEGIN
     PERFORM public.n8n_release_embedding_v2_claims('prog-guard');
 
     -- Kun whitespace-pending: 0 rader raskt
-    DELETE FROM public.document_chunks WHERE issue_id = 'embed-v2-good-second';
+    DELETE FROM public.document_chunks WHERE issue_id = 'embed-v2-progress-b-good';
 
     IF (
       SELECT count(*)::int
@@ -300,11 +320,11 @@ BEGIN
     END IF;
 
     DELETE FROM public.document_chunks
-    WHERE issue_id IN ('embed-v2-empty-first', 'embed-v2-good-second');
+    WHERE issue_id IN ('embed-v2-progress-a-empty', 'embed-v2-progress-b-good');
     DELETE FROM public.stortinget_issue_documents
-    WHERE issue_id IN ('embed-v2-empty-first', 'embed-v2-good-second');
+    WHERE issue_id IN ('embed-v2-progress-a-empty', 'embed-v2-progress-b-good');
     DELETE FROM public.stortinget_issues
-    WHERE id IN ('embed-v2-empty-first', 'embed-v2-good-second');
+    WHERE id IN ('embed-v2-progress-a-empty', 'embed-v2-progress-b-good');
   END IF;
 END;
 $$;
