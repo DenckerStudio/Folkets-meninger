@@ -11,6 +11,8 @@ DECLARE
   v_save jsonb;
   v_row record;
   v_i int;
+  v_prog_issue text;
+  v_prog_count int;
   v_expected_order text[] := ARRAY[
     'embed-v2-order-t2b',
     'embed-v2-order-t2a'
@@ -256,7 +258,11 @@ BEGIN
     INSERT INTO public.stortinget_issue_documents (issue_id, document_id, title, document_type, ingest_status, chunks_status)
     VALUES
       ('embed-v2-pg-empty-aaa', 'doc-empty', 'Tom', 'hoveddokument', 'ready', 'pending'),
-      ('embed-v2-pg-good-zzz', 'doc-good', 'Hoved', 'hoveddokument', 'ready', 'pending');
+      ('embed-v2-pg-good-zzz', 'doc-good', 'Innst', 'innstilling', 'ready', 'pending');
+
+    UPDATE public.stortinget_issues
+    SET last_updated_at = now() - interval '60 days'
+    WHERE id IN ('embed-v2-pg-empty-aaa', 'embed-v2-pg-good-zzz');
 
     DELETE FROM public.document_chunks
     WHERE issue_id IN ('embed-v2-pg-empty-aaa', 'embed-v2-pg-good-zzz');
@@ -270,14 +276,22 @@ BEGIN
     VALUES
       ('embed-v2-pg-empty-aaa', 'doc-empty', 0, '   ', 'pending', 'pending'),
       ('embed-v2-pg-empty-aaa', 'doc-empty', 1, E'\t\n', 'pending', 'pending'),
-      ('embed-v2-pg-good-zzz', 'doc-good', 0, 'tier2 hoved', 'pending', 'pending');
+      ('embed-v2-pg-good-zzz', 'doc-good', 0, 'tier2 innst', 'pending', 'pending');
 
-    IF (
-      SELECT c.issue_id
-      FROM public.n8n_claim_chunks_missing_v2('background', 5, 'prog-guard', 300) c
-      LIMIT 1
-    ) IS DISTINCT FROM 'embed-v2-pg-good-zzz' THEN
-      RAISE EXCEPTION 'progress guard: forventet claim fra embed-v2-pg-good-zzz, ikke spin på embed-v2-pg-empty-aaa';
+    IF coalesce(
+      (SELECT t.tier FROM public.fm_embedding_v2_issue_tiers(ARRAY['embed-v2-pg-good-zzz']) t LIMIT 1),
+      -1
+    ) = 0 THEN
+      RAISE EXCEPTION 'progress guard fixture: embed-v2-pg-good-zzz må ikke være tier 0 (bakgrunn)';
+    END IF;
+
+    SELECT count(*)::int, max(c.issue_id)
+    INTO v_prog_count, v_prog_issue
+    FROM public.n8n_claim_chunks_missing_v2('background', 5, 'prog-guard', 300) c;
+
+    IF v_prog_issue IS DISTINCT FROM 'embed-v2-pg-good-zzz' OR v_prog_count <> 1 THEN
+      RAISE EXCEPTION 'progress guard: forventet 1 claim fra embed-v2-pg-good-zzz, fikk % (issue=%)',
+        v_prog_count, v_prog_issue;
     END IF;
 
     IF (
