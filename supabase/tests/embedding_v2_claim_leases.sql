@@ -12,6 +12,12 @@ DECLARE
   v_row record;
   v_i int;
   v_prog_count int;
+  v_prog_id uuid;
+  v_pg_claim_issue text;
+  v_pg_claim_content text;
+  v_tier_hi int;
+  v_tier_lo int;
+  v_pg_fixture_id text;
   v_expected_order text[] := ARRAY[
     'embed-v2-order-t2b',
     'embed-v2-order-t2a'
@@ -235,109 +241,186 @@ BEGIN
       'embed-v2-order-t2b'
     );
 
-    -- Progress guard (611011090000): discovery uten btrim, pick med btrim
-    IF (
-      SELECT pg_get_functiondef('public.n8n_claim_chunks_missing_v2(text,int,text,int)'::regprocedure)
-    ) NOT ILIKE '%_fm_v2_claim_exhausted_issues%' THEN
-      RAISE EXCEPTION 'n8n_claim_chunks_missing_v2 må spore uttømte issues (progress guard)';
-    END IF;
+    -- Set-based pick per sort_tier (20261111090000)
+    DELETE FROM public.document_chunks
+    WHERE issue_id LIKE 'embed-v2-pg-%'
+      OR issue_id LIKE 'embed-v2-pg-ws-%';
 
+    DELETE FROM public.stortinget_issue_documents
+    WHERE issue_id LIKE 'embed-v2-pg-%'
+      OR issue_id LIKE 'embed-v2-pg-ws-%';
+
+    DELETE FROM public.stortinget_issues
+    WHERE id LIKE 'embed-v2-pg-%'
+      OR id LIKE 'embed-v2-pg-ws-%';
+
+    DELETE FROM public.document_chunks
+    WHERE embedding_v2 IS NULL
+      AND embedding_v2_status = 'pending'
+      AND (issue_id IS NULL OR issue_id NOT LIKE 'embed-v2-pg%');
+
+    -- (a) Høyere prioritet (lav sort_tier): kun whitespace i plukk; lavere prioritet har embeddbar
     INSERT INTO public.stortinget_issues (id, title, last_synced_at, ferdigbehandlet, detail_json)
     VALUES
-      ('embed-v2-pg-empty-aaa', 'Empty', now() - interval '60 days', true, '{"sak_sesjon":"1999-2000"}'::jsonb),
-      ('embed-v2-pg-good-zzz', 'Good', now() - interval '60 days', true, '{"sak_sesjon":"1999-2000"}'::jsonb)
+      ('embed-v2-pg-hi-ws', 'WS hi', now() - interval '60 days', true, '{"sak_sesjon":"1999-2000"}'::jsonb),
+      ('embed-v2-pg-lo-good--referatsak', 'Good lo', now() - interval '60 days', true, '{"sak_sesjon":"1999-2000"}'::jsonb)
     ON CONFLICT (id) DO UPDATE SET
       last_synced_at = EXCLUDED.last_synced_at,
       ferdigbehandlet = EXCLUDED.ferdigbehandlet,
       detail_json = EXCLUDED.detail_json;
 
-    DELETE FROM public.stortinget_issue_documents
-    WHERE issue_id IN ('embed-v2-pg-empty-aaa', 'embed-v2-pg-good-zzz');
+    UPDATE public.stortinget_issues
+    SET last_updated_at = now() - interval '60 days'
+    WHERE id IN ('embed-v2-pg-hi-ws', 'embed-v2-pg-lo-good--referatsak');
 
     INSERT INTO public.stortinget_issue_documents (issue_id, document_id, title, document_type, ingest_status, chunks_status)
     VALUES
-      ('embed-v2-pg-empty-aaa', 'doc-empty', 'Tom', 'hoveddokument', 'ready', 'pending'),
-      ('embed-v2-pg-good-zzz', 'doc-good', 'Innst', 'innstilling', 'ready', 'pending');
+      ('embed-v2-pg-hi-ws', 'doc-hi', 'Tom', 'innstilling', 'ready', 'pending'),
+      ('embed-v2-pg-lo-good--referatsak', 'doc-lo', 'Innst', 'innstilling', 'ready', 'pending');
+
+    -- has_pending via «ghost» (ikke claimbar pga attempts); kun whitespace er discoverybare
+    INSERT INTO public.document_chunks (
+      issue_id, document_id, chunk_index, content, embedding_status, embedding_v2_status, embedding_v2_attempts
+    )
+    VALUES
+      ('embed-v2-pg-hi-ws', 'doc-hi', 0, 'ghost has_pending', 'pending', 'pending', 3),
+      ('embed-v2-pg-hi-ws', 'doc-hi', 1, '', 'pending', 'pending', 0),
+      ('embed-v2-pg-lo-good--referatsak', 'doc-lo', 0, 'tier2 innst', 'pending', 'pending', 0);
+
+    v_tier_hi := coalesce(
+      (SELECT coalesce(t.tier, 99) FROM public.fm_embedding_v2_issue_tiers(ARRAY['embed-v2-pg-hi-ws']) t LIMIT 1),
+      99
+    );
+    v_tier_lo := coalesce(
+      (SELECT coalesce(t.tier, 99) FROM public.fm_embedding_v2_issue_tiers(ARRAY['embed-v2-pg-lo-good--referatsak']) t LIMIT 1),
+      99
+    );
+
+    IF v_tier_hi >= v_tier_lo THEN
+      RAISE EXCEPTION 'progress guard (a): forventet høyere prioritet (lavere sort_tier) på hi-ws (%, %)',
+        v_tier_hi, v_tier_lo;
+    END IF;
+
+    SELECT c.issue_id
+    INTO v_pg_claim_issue
+    FROM public.n8n_claim_chunks_missing_v2('background', 3, 'pg-tier-ab', 300) c
+    LIMIT 1;
+
+    IF v_pg_claim_issue IS DISTINCT FROM 'embed-v2-pg-lo-good--referatsak' THEN
+      RAISE EXCEPTION 'progress guard (a): forventet embed-v2-pg-lo-good--referatsak, fikk %', v_pg_claim_issue;
+    END IF;
+
+    PERFORM public.n8n_release_embedding_v2_claims('pg-tier-ab');
+
+    DELETE FROM public.document_chunks
+    WHERE issue_id IN ('embed-v2-pg-hi-ws', 'embed-v2-pg-lo-good--referatsak');
+
+    -- (b) 100+ whitespace-issues foran én embeddbar i samme sort_tier (ingen kap-tap)
+    FOR v_i IN 1..105 LOOP
+      v_pg_fixture_id := format('embed-v2-pg-ws-%s', lpad(v_i::text, 4, '0'));
+      INSERT INTO public.stortinget_issues (id, title, last_synced_at, ferdigbehandlet, detail_json)
+      VALUES (
+        v_pg_fixture_id,
+        'WS',
+        now() - interval '60 days',
+        true,
+        '{"sak_sesjon":"1999-2000"}'::jsonb
+      )
+      ON CONFLICT (id) DO UPDATE SET last_updated_at = now() - interval '60 days';
+
+      UPDATE public.stortinget_issues
+      SET last_updated_at = now() - interval '60 days'
+      WHERE id = v_pg_fixture_id;
+
+      INSERT INTO public.stortinget_issue_documents (issue_id, document_id, title, document_type, ingest_status, chunks_status)
+      VALUES (v_pg_fixture_id, 'd', 'D', 'innstilling', 'ready', 'pending')
+      ON CONFLICT DO NOTHING;
+
+      INSERT INTO public.document_chunks (issue_id, document_id, chunk_index, content, embedding_status, embedding_v2_status)
+      VALUES (v_pg_fixture_id, 'd', 0, '', 'pending', 'pending');
+    END LOOP;
+
+    INSERT INTO public.stortinget_issues (id, title, last_synced_at, ferdigbehandlet, detail_json)
+    VALUES (
+      'embed-v2-pg-ws-good',
+      'Good',
+      now() - interval '60 days',
+      true,
+      '{"sak_sesjon":"1999-2000"}'::jsonb
+    )
+    ON CONFLICT (id) DO UPDATE SET last_updated_at = now() - interval '60 days';
 
     UPDATE public.stortinget_issues
     SET last_updated_at = now() - interval '60 days'
-    WHERE id IN ('embed-v2-pg-empty-aaa', 'embed-v2-pg-good-zzz');
+    WHERE id = 'embed-v2-pg-ws-good';
 
-    DELETE FROM public.document_chunks
-    WHERE issue_id IN ('embed-v2-pg-empty-aaa', 'embed-v2-pg-good-zzz');
+    INSERT INTO public.stortinget_issue_documents (issue_id, document_id, title, document_type, ingest_status, chunks_status)
+    VALUES ('embed-v2-pg-ws-good', 'dg', 'G', 'innstilling', 'ready', 'pending')
+    ON CONFLICT DO NOTHING;
+
+    INSERT INTO public.document_chunks (issue_id, document_id, chunk_index, content, embedding_status, embedding_v2_status)
+    VALUES ('embed-v2-pg-ws-good', 'dg', 0, 'embed me', 'pending', 'pending');
 
     DELETE FROM public.document_chunks
     WHERE embedding_v2 IS NULL
       AND embedding_v2_status = 'pending'
-      AND (issue_id IS NULL OR issue_id NOT IN ('embed-v2-pg-empty-aaa', 'embed-v2-pg-good-zzz'));
+      AND issue_id NOT LIKE 'embed-v2-pg-ws-%'
+      AND issue_id <> 'embed-v2-pg-ws-good';
+
+    SELECT c.issue_id
+    INTO v_pg_claim_issue
+    FROM public.n8n_claim_chunks_missing_v2('background', 1, 'pg-ws-many', 300) c
+    LIMIT 1;
+
+    IF v_pg_claim_issue IS DISTINCT FROM 'embed-v2-pg-ws-good' THEN
+      RAISE EXCEPTION 'progress guard (b): forventet embed-v2-pg-ws-good etter 105 ws-issues, fikk %', v_pg_claim_issue;
+    END IF;
+
+    PERFORM public.n8n_release_embedding_v2_claims('pg-ws-many');
+
+    -- (c) Kun whitespace-pending → 0 rader
+    DELETE FROM public.document_chunks WHERE issue_id = 'embed-v2-pg-ws-good';
+
+    IF (
+      SELECT count(*)::int
+      FROM public.n8n_claim_chunks_missing_v2('background', 16, 'pg-exhaust', 300)
+    ) <> 0 THEN
+      RAISE EXCEPTION 'progress guard (c): kun tomme pending chunks skal gi 0 rader';
+    END IF;
+
+    -- (d) Leased rad hoppes over; neste embeddbare returneres
+    INSERT INTO public.document_chunks (issue_id, document_id, chunk_index, content, embedding_status, embedding_v2_status)
+    VALUES ('embed-v2-pg-ws-good', 'dg', 0, 'first locked', 'pending', 'pending')
+    RETURNING id INTO v_id1;
 
     INSERT INTO public.document_chunks (issue_id, document_id, chunk_index, content, embedding_status, embedding_v2_status)
-    VALUES
-      ('embed-v2-pg-empty-aaa', 'doc-empty', 0, '', 'pending', 'pending'),
-      ('embed-v2-pg-empty-aaa', 'doc-empty', 1, '', 'pending', 'pending'),
-      ('embed-v2-pg-good-zzz', 'doc-good', 0, 'tier2 innst', 'pending', 'pending');
+    VALUES ('embed-v2-pg-ws-good', 'dg', 1, 'second free', 'pending', 'pending')
+    RETURNING id INTO v_id2;
 
-    IF coalesce(
-      (SELECT t.tier FROM public.fm_embedding_v2_issue_tiers(ARRAY['embed-v2-pg-good-zzz']) t LIMIT 1),
-      -1
-    ) = 0 THEN
-      RAISE EXCEPTION 'progress guard fixture: embed-v2-pg-good-zzz må ikke være tier 0 (bakgrunn)';
+    UPDATE public.document_chunks
+    SET
+      embedding_v2_claimed_at = now(),
+      embedding_v2_claimed_by = 'other-worker'
+    WHERE id = v_id1;
+
+    SELECT c.id, c.content
+    INTO v_prog_id, v_pg_claim_content
+    FROM public.n8n_claim_chunks_missing_v2('background', 1, 'pg-skip-lock', 300) c
+    LIMIT 1;
+
+    IF v_prog_id IS DISTINCT FROM v_id2 OR v_pg_claim_content IS DISTINCT FROM 'second free' THEN
+      RAISE EXCEPTION 'progress guard (d): forventet andre chunk etter lease, fikk % / %',
+        v_prog_id, v_pg_claim_content;
     END IF;
 
-    IF (
-      SELECT count(*)::int
-      FROM public.document_chunks d
-      WHERE d.issue_id = 'embed-v2-pg-good-zzz'
-        AND d.embedding_v2 IS NULL
-        AND d.embedding_v2_status = 'pending'
-        AND coalesce(btrim(d.content), '') <> ''
-    ) < 1 THEN
-      RAISE EXCEPTION 'progress guard fixture: mangler embeddbar chunk på embed-v2-pg-good-zzz';
-    END IF;
-
-    DROP TABLE IF EXISTS _pg_claim_progress_guard;
-    CREATE TEMP TABLE _pg_claim_progress_guard ON COMMIT DROP AS
-      SELECT c.*
-      FROM public.n8n_claim_chunks_missing_v2('background', 5, 'prog-guard', 300) c;
-
-    SELECT count(*)::int INTO v_prog_count FROM _pg_claim_progress_guard;
-
-    IF v_prog_count < 1 THEN
-      RAISE EXCEPTION 'progress guard: forventet minst én claim, fikk 0';
-    END IF;
-
-    IF EXISTS (
-      SELECT 1 FROM _pg_claim_progress_guard c
-      WHERE c.issue_id = 'embed-v2-pg-empty-aaa'
-    ) THEN
-      RAISE EXCEPTION 'progress guard: whitespace-issue ble plukket (btrim-brudd)';
-    END IF;
-
-    IF NOT EXISTS (
-      SELECT 1 FROM _pg_claim_progress_guard c
-      WHERE c.issue_id = 'embed-v2-pg-good-zzz'
-    ) THEN
-      RAISE EXCEPTION 'progress guard: mangler claim fra embed-v2-pg-good-zzz';
-    END IF;
-
-    PERFORM public.n8n_release_embedding_v2_claims('prog-guard');
-
-    -- Kun whitespace-pending: 0 rader raskt
-    DELETE FROM public.document_chunks WHERE issue_id = 'embed-v2-pg-good-zzz';
-
-    IF (
-      SELECT count(*)::int
-      FROM public.n8n_claim_chunks_missing_v2('background', 16, 'prog-exhaust', 300)
-    ) <> 0 THEN
-      RAISE EXCEPTION 'progress guard: kun tomme pending chunks skal gi 0 rader raskt';
-    END IF;
+    PERFORM public.n8n_release_embedding_v2_claims('pg-skip-lock');
 
     DELETE FROM public.document_chunks
-    WHERE issue_id IN ('embed-v2-pg-empty-aaa', 'embed-v2-pg-good-zzz');
+    WHERE issue_id LIKE 'embed-v2-pg-ws-%' OR issue_id LIKE 'embed-v2-pg-%';
     DELETE FROM public.stortinget_issue_documents
-    WHERE issue_id IN ('embed-v2-pg-empty-aaa', 'embed-v2-pg-good-zzz');
+    WHERE issue_id LIKE 'embed-v2-pg-ws-%' OR issue_id LIKE 'embed-v2-pg-%';
     DELETE FROM public.stortinget_issues
-    WHERE id IN ('embed-v2-pg-empty-aaa', 'embed-v2-pg-good-zzz');
+    WHERE id LIKE 'embed-v2-pg-ws-%' OR id LIKE 'embed-v2-pg-%';
   END IF;
 END;
 $$;
