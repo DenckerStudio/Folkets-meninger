@@ -172,7 +172,7 @@ fi
 
 echo "Phase 5f: extensions.unaccent EXECUTE for service_role (20261111100000; needs RAG/fm_unaccent) ..."
 if [[ -f supabase/migrations/20261111100000_grant_unaccent_execute.sql ]]; then
-  psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261111100000_grant_unaccent_execute.sql
+  psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261111100000_grant_unaccent_execute.sql
 fi
 
 echo "Running security-lockdown-defaults.sql (supabase_admin connection) ..."

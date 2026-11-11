@@ -13,9 +13,6 @@ BEGIN
     WHERE n.nspname = 'extensions'
       AND p.proname = 'unaccent'
   LOOP
-    IF has_function_privilege('authenticated', v_unaccent.oid, 'EXECUTE') THEN
-      RAISE EXCEPTION 'authenticated must not EXECUTE %', v_unaccent.sig;
-    END IF;
     IF NOT has_function_privilege('service_role', v_unaccent.oid, 'EXECUTE') THEN
       RAISE EXCEPTION 'service_role missing EXECUTE on %', v_unaccent.sig;
     END IF;
@@ -40,6 +37,9 @@ BEGIN
   LOOP
     IF has_function_privilege('anon', v_any.oid, 'EXECUTE') THEN
       RAISE EXCEPTION 'anon must not EXECUTE % (any schema)', v_any.sig;
+    END IF;
+    IF has_function_privilege('authenticated', v_any.oid, 'EXECUTE') THEN
+      RAISE EXCEPTION 'authenticated must not EXECUTE % (any schema)', v_any.sig;
     END IF;
   END LOOP;
 
