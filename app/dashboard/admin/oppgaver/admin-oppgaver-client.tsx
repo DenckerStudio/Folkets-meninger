@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { formatWhen } from '@/components/appens-fremtid/format';
 import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import {
+  DEV_TASK_PROPOSAL_HASH_HIGHLIGHT_MS,
   devTaskProposalCardDomId,
   isHttpOrHttpsUrl,
   parseDevTaskProposalIdFromHash,
@@ -66,7 +67,7 @@ function SignalRefLine({ signalRef }: { signalRef: string }) {
 
   return (
     <p className="mt-1 min-w-0 text-xs text-muted-foreground">
-      <span className="text-muted-foreground">Kilde: </span>
+      <span className="text-muted-foreground">Signal: </span>
       {isHttpOrHttpsUrl(trimmed) ? (
         <Link
           href={trimmed}
@@ -447,9 +448,18 @@ export default function AdminOppgaverClient() {
     hashScrollDoneRef.current = true;
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setHighlightedId(id);
-    const timer = window.setTimeout(() => setHighlightedId(null), 2800);
-    return () => window.clearTimeout(timer);
   }, [isInitialLoading, proposals]);
+
+  useEffect(() => {
+    if (!highlightedId) {
+      return;
+    }
+    const timer = window.setTimeout(
+      () => setHighlightedId(null),
+      DEV_TASK_PROPOSAL_HASH_HIGHLIGHT_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [highlightedId]);
 
   const columns = useMemo(() => {
     const byStatus = Object.fromEntries(

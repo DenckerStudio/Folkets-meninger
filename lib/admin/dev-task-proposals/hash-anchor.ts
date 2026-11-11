@@ -1,5 +1,8 @@
 export const DEV_TASK_PROPOSAL_CARD_ID_PREFIX = 'oppgave-';
 
+/** Duration the hash-target card keeps its highlight ring (client-only). */
+export const DEV_TASK_PROPOSAL_HASH_HIGHLIGHT_MS = 2800;
+
 export function devTaskProposalCardDomId(proposalId: string): string {
   return `${DEV_TASK_PROPOSAL_CARD_ID_PREFIX}${proposalId}`;
 }

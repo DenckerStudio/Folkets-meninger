@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   DEV_TASK_PROPOSAL_CARD_ID_PREFIX,
+  DEV_TASK_PROPOSAL_HASH_HIGHLIGHT_MS,
   devTaskProposalCardDomId,
   isHttpOrHttpsUrl,
   parseDevTaskProposalIdFromHash,
@@ -23,5 +24,7 @@ assert.equal(isHttpOrHttpsUrl('https://slack.com/archives/C123/p456'), true);
 assert.equal(isHttpOrHttpsUrl('http://example.test/ref'), true);
 assert.equal(isHttpOrHttpsUrl('slack:channel'), false);
 assert.equal(isHttpOrHttpsUrl('not a url'), false);
+
+assert.equal(DEV_TASK_PROPOSAL_HASH_HIGHLIGHT_MS, 2800);
 
 console.log('dev-task-proposals/hash-anchor.test.ts: ok');
