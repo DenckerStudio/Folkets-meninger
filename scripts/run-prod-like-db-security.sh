@@ -66,6 +66,9 @@ should_defer() {
   if [[ "$base" == 20261111090000_n8n_claim_chunks_missing_v2_progress_guard.sql ]]; then
     return 0
   fi
+  if [[ "$base" == 20261111100000_grant_unaccent_execute.sql ]]; then
+    return 0
+  fi
   return 1
 }
 
@@ -167,6 +170,11 @@ if [[ -f supabase/migrations/20261111090000_n8n_claim_chunks_missing_v2_progress
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261111090000_n8n_claim_chunks_missing_v2_progress_guard.sql
 fi
 
+echo "Phase 5f: extensions.unaccent EXECUTE for service_role (20261111100000; needs RAG/fm_unaccent) ..."
+if [[ -f supabase/migrations/20261111100000_grant_unaccent_execute.sql ]]; then
+  psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261111100000_grant_unaccent_execute.sql
+fi
+
 echo "Running security-lockdown-defaults.sql (supabase_admin connection) ..."
 psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-lockdown-defaults.sql
 
@@ -211,6 +219,9 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/system_poll_usable_embedding
 
 echo "Running admin_publish_stortinget_poll.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/admin_publish_stortinget_poll.sql
+
+echo "Running unaccent_execute_grant.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/unaccent_execute_grant.sql
 
 echo "Running security-guard.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
