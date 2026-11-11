@@ -1,4 +1,5 @@
 import { buildEmbedApiUrl } from './urls';
+import { fetchWithTimeout } from './fetch-with-timeout';
 
 export function buildOllamaShowUrl(baseUrl: string): string {
   const embed = buildEmbedApiUrl(baseUrl);
@@ -30,15 +31,21 @@ export function formatOllamaShowForLog(payload: unknown): string {
 export async function fetchOllamaShowSummary(
   queryBaseUrl: string,
   model: string,
-  options: { fetchImpl?: typeof fetch } = {},
+  options: { fetchImpl?: typeof fetch; httpTimeoutMs?: number } = {},
 ): Promise<string> {
-  const fetchImpl = options.fetchImpl ?? fetch;
   const url = buildOllamaShowUrl(queryBaseUrl);
-  const res = await fetchImpl(url, {
+  const init: RequestInit = {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ model }),
-  });
+  };
+  const res =
+    options.httpTimeoutMs != null
+      ? await fetchWithTimeout(url, init, {
+          timeoutMs: options.httpTimeoutMs,
+          fetchImpl: options.fetchImpl,
+        })
+      : await (options.fetchImpl ?? fetch)(url, init);
   if (!res.ok) {
     return `show feilet HTTP ${res.status}`;
   }

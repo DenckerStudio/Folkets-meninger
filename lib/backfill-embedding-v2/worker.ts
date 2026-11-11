@@ -46,6 +46,8 @@ export type WorkerDeps = {
   secrets: string[];
   sleep: (ms: number) => Promise<void>;
   log: (line: string) => void;
+  embedHttpTimeoutMs: number;
+  onProgress?: () => void;
 };
 
 export function buildWorkerId(endpointName: string): string {
@@ -151,6 +153,9 @@ export async function runEndpointWorkerLoop(
 
     const rows = (claimed ?? []) as ClaimedChunk[];
     if (rows.length === 0) {
+      if (!(deps.shared.tier0Pending && lane === 'fast')) {
+        deps.onProgress?.();
+      }
       await deps.sleep(deps.shared.tier0Pending && lane === 'fast' ? 60_000 : 5000);
       continue;
     }
@@ -172,7 +177,10 @@ export async function runEndpointWorkerLoop(
       const { vectors, latencyMs, reportedModel } = await fetchEmbedBatchForEndpoint(
         deps.endpoint,
         embedRows,
-        { probeText: probe },
+        {
+          probeText: probe,
+          httpTimeoutMs: deps.embedHttpTimeoutMs,
+        },
       );
       latency.record(latencyMs);
 
@@ -201,6 +209,10 @@ export async function runEndpointWorkerLoop(
       deps.health.recordSuccess();
       batchesThisMinute += 1;
       completedBatches += 1;
+      const savedCount = saveResult?.saved ?? 0;
+      if (typeof savedCount === 'number' && savedCount > 0) {
+        deps.onProgress?.();
+      }
       deps.log(
         JSON.stringify({
           endpoint: deps.endpoint.name,

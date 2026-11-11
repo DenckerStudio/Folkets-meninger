@@ -114,6 +114,7 @@ async function main(): Promise<void> {
       secrets: [],
       sleep: async () => {},
       log: () => {},
+      embedHttpTimeoutMs: 60_000,
     },
     () => false,
   );

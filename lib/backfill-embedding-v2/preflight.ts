@@ -25,6 +25,7 @@ export async function runEmbeddingPreflight(options: {
   apiKey?: string;
   texts?: string[];
   fetchImpl?: typeof fetch;
+  httpTimeoutMs?: number;
   log?: (line: string) => void;
 }): Promise<PreflightResult> {
   const texts = options.texts ?? PREFLIGHT_TEXTS.slice(0, PREFLIGHT_TEXT_COUNT);
@@ -41,12 +42,14 @@ export async function runEmbeddingPreflight(options: {
     const res = await fetchOllamaEmbedVectors(options.backfillUrl, texts, {
       fetchImpl,
       apiModel,
+      httpTimeoutMs: options.httpTimeoutMs,
     });
     backfillVectors = res.vectors;
 
     const queryRes = await fetchOllamaEmbedVectors(options.queryUrl, texts, {
       fetchImpl,
       apiModel,
+      httpTimeoutMs: options.httpTimeoutMs,
     });
     queryVectors = queryRes.vectors;
   } catch (err) {
@@ -93,6 +96,7 @@ export async function runEmbeddingPreflight(options: {
   const queryModel = (options.apiModel ?? DEFAULT_EMBED_QUERY_MODEL).trim();
   const queryModelSummary = await fetchOllamaShowSummary(options.queryUrl, queryModel, {
     fetchImpl,
+    httpTimeoutMs: options.httpTimeoutMs,
   });
   options.log?.(
     `[preflight] Ollama query-modell (${options.queryUrl}): ${queryModelSummary}`,
