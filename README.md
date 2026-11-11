@@ -82,7 +82,8 @@ Important constraints:
 
 | File | Covers |
 |------|--------|
-| [`AGENTS.md`](AGENTS.md) | Agent-facing architecture facts, env vars, validation expectations, and operational notes |
+| [`AGENTS.md`](AGENTS.md) | Compact agent rules (injected on every coding task) |
+| [`docs/agents/reference.md`](docs/agents/reference.md) | Full agent runbook: architecture, env, integrations, subsystems |
 | [`supabase/README.md`](supabase/README.md) | Migration domains, voting RPCs, sak cache, hearing comments, forum schema, notifications, RAG tables, and DB runbooks |
 | [`workflows/n8n/README.md`](workflows/n8n/README.md) | AI summary, forum prompt, document embedding, and app cron workflows |
 | [`infra/searxng/README.md`](infra/searxng/README.md) | SearXNG used by Stemme+ chat source search (and archived forum workflows) |

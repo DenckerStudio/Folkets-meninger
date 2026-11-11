@@ -58,7 +58,7 @@ Prioritize: query performance, connection discipline, security/RLS, then schema.
 ## Output expectations
 
 - Touch only files needed for the active phase.
-- Update `supabase/README.md`, `workflows/n8n/README.md`, `.env.example`, and `AGENTS.md` when removing forum/reels runbooks.
+- Update `supabase/README.md`, `workflows/n8n/README.md`, `.env.example`, `docs/agents/reference.md`, and root `AGENTS.md` when removing forum/reels runbooks.
 - Branch naming: `cursor/<descriptive-name>-c641`.
 - Commit focused changes; exclude unrelated artifacts.
 - When reporting: state phase completed, what was deleted vs redirected, and any remaining forum references (`rg forum` sanity check).
