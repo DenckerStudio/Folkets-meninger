@@ -199,7 +199,7 @@ DROP (typisk liste — verifiser med `list_tables`):
 - `workflows/n8n/forum-*` → flytt til `workflows/n8n/archive/forum/` eller slett med note i `workflows/n8n/README.md`
 - `scripts/deploy-forum-*`, `scripts/build-n8n-forum-*` — fjern eller arkiver
 - `.env.example` — fjern FORUM_* og N8N_FORUM_*
-- `AGENTS.md` — fjern forum/reels runbooks; legg til denne planen
+- `docs/agents/reference.md` / root `AGENTS.md` — fjern forum/reels runbooks; legg til denne planen
 - `npm run lint`, `npm run build`, `test:e2e` — oppdater smoke til ny default route
 
 ### Fase F5 — Verifisering
