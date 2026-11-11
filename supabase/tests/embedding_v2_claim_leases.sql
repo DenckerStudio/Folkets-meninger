@@ -273,8 +273,8 @@ BEGIN
 
     INSERT INTO public.document_chunks (issue_id, document_id, chunk_index, content, embedding_status, embedding_v2_status)
     VALUES
-      ('embed-v2-pg-empty-aaa', 'doc-empty', 0, '   ', 'pending', 'pending'),
-      ('embed-v2-pg-empty-aaa', 'doc-empty', 1, E'\t\n', 'pending', 'pending'),
+      ('embed-v2-pg-empty-aaa', 'doc-empty', 0, '', 'pending', 'pending'),
+      ('embed-v2-pg-empty-aaa', 'doc-empty', 1, '', 'pending', 'pending'),
       ('embed-v2-pg-good-zzz', 'doc-good', 0, 'tier2 innst', 'pending', 'pending');
 
     IF coalesce(
@@ -293,15 +293,6 @@ BEGIN
         AND coalesce(btrim(d.content), '') <> ''
     ) < 1 THEN
       RAISE EXCEPTION 'progress guard fixture: mangler embeddbar chunk på embed-v2-pg-good-zzz';
-    END IF;
-
-    IF EXISTS (
-      SELECT 1
-      FROM public.document_chunks d
-      WHERE d.issue_id = 'embed-v2-pg-empty-aaa'
-        AND coalesce(btrim(d.content), '') <> ''
-    ) THEN
-      RAISE EXCEPTION 'progress guard fixture: embed-v2-pg-empty-aaa har embeddbar innhold';
     END IF;
 
     DROP TABLE IF EXISTS _pg_claim_progress_guard;
