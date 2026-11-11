@@ -27,9 +27,8 @@ import {
 import { formatFatalErrorForLog, safeErrorMessage } from '../lib/backfill-embedding-v2/secrets';
 import { primaryPreflightPassed } from '../lib/backfill-embedding-v2/preflight-exit';
 import { createCachedTier0Probe } from '../lib/backfill-embedding-v2/tier0-probe';
-import { createProgressWatchdog } from '../lib/backfill-embedding-v2/progress-watchdog';
+import { createWorkerWatchdogRegistry } from '../lib/backfill-embedding-v2/progress-watchdog';
 import { withDbRpcTimeout } from '../lib/backfill-embedding-v2/supabase-rpc-timeout';
-import { idleWait } from '../lib/backfill-embedding-v2/idle-wait';
 
 function requiredEnv(name: string): string {
   const value = (process.env[name] ?? '').trim();
@@ -99,7 +98,7 @@ async function main(): Promise<void> {
     cli.dbRpcTimeoutMs,
   );
   const tier0Probe = createCachedTier0Probe(supabase, { log, secrets });
-  const progressWatchdog = createProgressWatchdog({
+  const workerWatchdogs = createWorkerWatchdogRegistry({
     timeoutMs: cli.progressWatchdogMs,
     log: (line) => console.error(line),
   });
@@ -140,7 +139,11 @@ async function main(): Promise<void> {
 
   await shared.refresh(supabase, { tier0Probe });
 
-  progressWatchdog.start();
+  const stallWatchdogByEndpoint = new Map<string, ReturnType<typeof workerWatchdogs.registerWorker>>();
+  for (const endpoint of activeEndpoints) {
+    stallWatchdogByEndpoint.set(endpoint.name, workerWatchdogs.registerWorker(endpoint.name));
+  }
+  workerWatchdogs.start();
 
   const coordinator = (async () => {
     while (!stopController.isStopping()) {
@@ -162,7 +165,7 @@ async function main(): Promise<void> {
           }
         }
       }
-      await idleWait(sleep, 5000, progressWatchdog);
+      await sleep(5000);
     }
   })();
 
@@ -171,6 +174,7 @@ async function main(): Promise<void> {
     const workerId = buildWorkerId(endpoint.name);
     workerIds.push(workerId);
     const health = healthByName.get(endpoint.name)!;
+    const stallWatchdog = stallWatchdogByEndpoint.get(endpoint.name)!;
 
     await runEndpointWorkerLoop(
       {
@@ -195,9 +199,9 @@ async function main(): Promise<void> {
         sleep,
         log,
         embedHttpTimeoutMs: cli.embedHttpTimeoutMs,
-        onProgress: progressWatchdog.touch,
-        pauseWatchdog: progressWatchdog.pause,
-        resumeWatchdog: progressWatchdog.resume,
+        onProgress: stallWatchdog.touch,
+        pauseWatchdog: stallWatchdog.pause,
+        resumeWatchdog: stallWatchdog.resume,
       },
       () =>
         stopController.isStopping() ||
@@ -214,7 +218,7 @@ async function main(): Promise<void> {
     }
     await coordinator;
   } finally {
-    progressWatchdog.stop();
+    workerWatchdogs.stop();
   }
 }
 

@@ -4,7 +4,7 @@ export type WatchdogIdleHooks = {
   resume?: () => void;
 };
 
-/** Intentional worker/coordinator sleep — pauses stall watchdog while waiting. */
+/** Intentional worker sleep — pauses that worker's stall watchdog while waiting. */
 export async function idleWait(
   sleep: (ms: number) => Promise<void>,
   ms: number,
