@@ -5,7 +5,7 @@ DECLARE
   v_user_id uuid := 'd2222222-2222-4222-8222-222222222202';
   v_proposal_id uuid;
   v_count int;
-  v_instance_id uuid := '00000000-0000-0000-0000-000000000000';
+  v_instance_id uuid;
 BEGIN
   IF to_regclass('public.dev_task_proposals') IS NULL THEN
     RAISE EXCEPTION 'dev_task_proposals.sql: forventet tabell dev_task_proposals';
@@ -26,6 +26,14 @@ BEGIN
   END IF;
   IF NOT has_table_privilege('service_role', 'public.dev_task_proposals', 'INSERT') THEN
     RAISE EXCEPTION 'service_role mangler INSERT på dev_task_proposals';
+  END IF;
+
+  SELECT id INTO v_instance_id FROM auth.instances LIMIT 1;
+  IF v_instance_id IS NULL THEN
+    v_instance_id := '00000000-0000-0000-0000-000000000000';
+    INSERT INTO auth.instances (id, uuid, raw_base_config)
+    VALUES (v_instance_id, v_instance_id, '{}'::jsonb)
+    ON CONFLICT (id) DO NOTHING;
   END IF;
 
   INSERT INTO auth.users (
