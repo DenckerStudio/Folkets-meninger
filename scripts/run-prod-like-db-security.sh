@@ -2,7 +2,12 @@
 # Prod-lignende verifisering: ingen 140000/160000, dropp drift-tabeller før 150000.
 set -euo pipefail
 
-LOG="${LOG:-/opt/cursor/artifacts/db-security-prod-like.log}"
+if [[ -d /opt/cursor/artifacts ]]; then
+  LOG="${LOG:-/opt/cursor/artifacts/db-security-prod-like.log}"
+else
+  LOG="${LOG:-/tmp/db-security-prod-like.log}"
+fi
+mkdir -p "$(dirname "$LOG")"
 DB_URL="${DB_URL:-postgresql://postgres:postgres@127.0.0.1:54330/postgres}"
 DEFAULTS_URL="${DEFAULTS_URL:-postgresql://supabase_admin:postgres@127.0.0.1:54330/postgres}"
 
