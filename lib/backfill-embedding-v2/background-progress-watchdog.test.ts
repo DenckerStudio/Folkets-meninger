@@ -122,6 +122,38 @@ function testBackgroundPendingArmsOnFalseToTrue(): void {
   watchdog.stop();
 }
 
+function testRepeatedClaimsWithoutSaveStall(): void {
+  let now = 0;
+  const logs: string[] = [];
+  const calls: Array<() => void> = [];
+  const { watchdog, getExitCode } = makeWatchdog(() => now, calls, {
+    timeoutMs: 100_000,
+    pollMs: 10_000,
+    log: (line) => logs.push(line),
+  });
+
+  watchdog.start();
+  watchdog.setTier0Pending(false);
+  watchdog.touchBackgroundSave();
+  now = 10_000;
+
+  for (let i = 0; i < 20; i += 1) {
+    watchdog.noteBackgroundClaimAttempt();
+    now += 10_000;
+  }
+
+  let threw = false;
+  try {
+    now = 120_000;
+    calls[0]!();
+  } catch {
+    threw = true;
+  }
+  assert.equal(threw, true);
+  assert.equal(getExitCode(), 2);
+  assert.ok(logs.some((line) => line.includes(BACKGROUND_PROGRESS_WATCHDOG_LOG_PREFIX)));
+}
+
 function testArmedFromStartBeforeClaim(): void {
   let now = 0;
   const logs: string[] = [];
@@ -196,6 +228,7 @@ void testEvaluatePendingZero();
 testStallTriggersRecovery();
 testTier0ClearDoesNotFalsePositive();
 testBackgroundPendingArmsOnFalseToTrue();
+testRepeatedClaimsWithoutSaveStall();
 testArmedFromStartBeforeClaim();
 testTier0StarvationWithoutFastSaves();
 testTier0WithPeriodicFastSavesSurvives();

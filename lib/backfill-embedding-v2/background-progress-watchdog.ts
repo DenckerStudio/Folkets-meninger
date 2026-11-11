@@ -82,8 +82,8 @@ export function createBackgroundProgressWatchdog(
     noteBackgroundClaimAttempt: () => {
       if (!backgroundPending) {
         backgroundPending = true;
+        resetBackgroundTimer();
       }
-      resetBackgroundTimer();
     },
     setBackgroundPending: (pending: boolean) => {
       const was = backgroundPending;
