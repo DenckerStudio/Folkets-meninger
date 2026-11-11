@@ -3,6 +3,7 @@ import {
   BarChart3,
   Bell,
   ClipboardCheck,
+  Columns3,
   LayoutDashboard,
   Lightbulb,
   Radar,
@@ -51,6 +52,14 @@ export const adminNavItems: AdminNavItem[] = [
     description: 'Systemutkast, blogginnlegg og sammendrag',
     href: routes.adminVurder,
     icon: ClipboardCheck,
+    status: 'active',
+  },
+  {
+    id: 'oppgaver',
+    title: 'Oppgaver',
+    description: 'Kanban for godkjenning av dev-forslag',
+    href: routes.adminOppgaver,
+    icon: Columns3,
     status: 'active',
   },
   {

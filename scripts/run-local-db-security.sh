@@ -76,6 +76,9 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/admin_publish_stortinget_pol
 echo "Running unaccent_execute_grant.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/unaccent_execute_grant.sql
 
+echo "Running dev_task_proposals.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/dev_task_proposals.sql
+
 echo "Running security-guard.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
 

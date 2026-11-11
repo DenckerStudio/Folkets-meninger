@@ -2,7 +2,12 @@
 # Prod-lignende verifisering: ingen 140000/160000, dropp drift-tabeller før 150000.
 set -euo pipefail
 
-LOG="${LOG:-/opt/cursor/artifacts/db-security-prod-like.log}"
+if [[ -d /opt/cursor/artifacts ]]; then
+  LOG="${LOG:-/opt/cursor/artifacts/db-security-prod-like.log}"
+else
+  LOG="${LOG:-/tmp/db-security-prod-like.log}"
+fi
+mkdir -p "$(dirname "$LOG")"
 DB_URL="${DB_URL:-postgresql://postgres:postgres@127.0.0.1:54330/postgres}"
 DEFAULTS_URL="${DEFAULTS_URL:-postgresql://supabase_admin:postgres@127.0.0.1:54330/postgres}"
 
@@ -67,6 +72,9 @@ should_defer() {
     return 0
   fi
   if [[ "$base" == 20261111100000_grant_unaccent_execute.sql ]]; then
+    return 0
+  fi
+  if [[ "$base" == 20261111110000* ]]; then
     return 0
   fi
   return 1
@@ -175,6 +183,11 @@ if [[ -f supabase/migrations/20261111100000_grant_unaccent_execute.sql ]]; then
   psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261111100000_grant_unaccent_execute.sql
 fi
 
+echo "Phase 5g: dev_task_proposals (20261111110000 transactional) ..."
+if [[ -f supabase/migrations/20261111110000_dev_task_proposals.sql ]]; then
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261111110000_dev_task_proposals.sql
+fi
+
 echo "Running security-lockdown-defaults.sql (supabase_admin connection) ..."
 psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-lockdown-defaults.sql
 
@@ -222,6 +235,9 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/admin_publish_stortinget_pol
 
 echo "Running unaccent_execute_grant.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/unaccent_execute_grant.sql
+
+echo "Running dev_task_proposals.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/dev_task_proposals.sql
 
 echo "Running security-guard.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
