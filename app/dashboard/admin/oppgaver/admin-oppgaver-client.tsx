@@ -457,7 +457,7 @@ export default function AdminOppgaverClient() {
           Oppgaver
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Godkjenn eller avslå auto-genererte forslag før kodeflyten tar over.
+          Godkjenn eller avslå auto-genererte forslag. Kodeflyten følger status i databasen.
         </p>
       </header>
 
