@@ -66,6 +66,12 @@ should_defer() {
   if [[ "$base" == 20261111090000_n8n_claim_chunks_missing_v2_progress_guard.sql ]]; then
     return 0
   fi
+  if [[ "$base" == 20261111100000* ]]; then
+    return 0
+  fi
+  if [[ "$base" == 20261111110000* ]]; then
+    return 0
+  fi
   return 1
 }
 
@@ -166,6 +172,24 @@ echo "Phase 5e: embedding v2 claim progress guard (20261111090000 transactional)
 if [[ -f supabase/migrations/20261111090000_n8n_claim_chunks_missing_v2_progress_guard.sql ]]; then
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261111090000_n8n_claim_chunks_missing_v2_progress_guard.sql
 fi
+
+echo "Phase 5f: placeholder for 20261111100000 (andre PR-er; kjøres hvis fil finnes) ..."
+if [[ -f supabase/migrations/20261111100000_n8n_reclaim_stale_claims_rpc.sql ]]; then
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261111100000_n8n_reclaim_stale_claims_rpc.sql
+elif compgen -G "supabase/migrations/20261111100000*.sql" > /dev/null; then
+  for f in supabase/migrations/20261111100000*.sql; do
+    echo "  -> $(basename "$f")"
+    psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
+  done
+fi
+
+echo "Phase 5g: dev_task_proposals (20261111110000 transactional) ..."
+if [[ -f supabase/migrations/20261111110000_dev_task_proposals.sql ]]; then
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261111110000_dev_task_proposals.sql
+fi
+
+echo "Running dev_task_proposals.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/dev_task_proposals.sql
 
 echo "Running security-lockdown-defaults.sql (supabase_admin connection) ..."
 psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-lockdown-defaults.sql

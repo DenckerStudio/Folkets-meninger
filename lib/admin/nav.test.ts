@@ -26,6 +26,10 @@ assert.equal(research.href, routes.adminResearch);
 const vurder = adminNavItems.find((item) => item.id === 'vurder');
 assert.ok(vurder);
 assert.equal(vurder.href, routes.adminVurder);
+
+const oppgaver = adminNavItems.find((item) => item.id === 'oppgaver');
+assert.ok(oppgaver);
+assert.equal(oppgaver.href, routes.adminOppgaver);
 assert.equal(adminNavItems.some((item) => item.id === 'blog'), false);
 assert.equal(adminNavItems.some((item) => item.id === 'blogg'), false);
 
