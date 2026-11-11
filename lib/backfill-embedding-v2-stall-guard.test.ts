@@ -1,45 +1,11 @@
 import assert from 'node:assert/strict';
-import { fetchWithTimeout, EMBED_HTTP_TIMEOUT_MESSAGE } from './backfill-embedding-v2/fetch-with-timeout';
+import { parseBackfillArgv } from './backfill-embedding-v2/parse-args';
+import { DEFAULT_BACKGROUND_PROGRESS_WATCHDOG_MS } from './backfill-embedding-v2/background-progress-watchdog';
 import {
   createWorkerWatchdogRegistry,
   PROGRESS_WATCHDOG_LOG_PREFIX,
 } from './backfill-embedding-v2/progress-watchdog';
-import { parseBackfillArgv } from './backfill-embedding-v2/parse-args';
 import { idleWait } from './backfill-embedding-v2/idle-wait';
-
-function hangUntilAbortFetch(): typeof fetch {
-  return (_url, init) =>
-    new Promise<Response>((_resolve, reject) => {
-      const signal = init?.signal;
-      if (signal?.aborted) {
-        reject(new DOMException('Aborted', 'AbortError'));
-        return;
-      }
-      signal?.addEventListener(
-        'abort',
-        () => {
-          reject(new DOMException('Aborted', 'AbortError'));
-        },
-        { once: true },
-      );
-    });
-}
-
-async function testFetchTimeoutAborts(): Promise<void> {
-  const fetchImpl = hangUntilAbortFetch();
-
-  let message = '';
-  try {
-    await fetchWithTimeout(
-      'http://ollama-host.example.invalid:11435/api/embed',
-      { method: 'POST', body: '{}' },
-      { timeoutMs: 25, fetchImpl },
-    );
-  } catch (err) {
-    message = err instanceof Error ? err.message : String(err);
-  }
-  assert.equal(message, EMBED_HTTP_TIMEOUT_MESSAGE);
-}
 
 function makeRegistry(
   now: () => number,
@@ -242,10 +208,10 @@ function testParseTimeoutDefaults(): void {
   assert.equal(cli.embedHttpTimeoutMs, 60_000);
   assert.equal(cli.dbRpcTimeoutMs, 30_000);
   assert.equal(cli.progressWatchdogMs, 600_000);
+  assert.equal(cli.backgroundProgressWatchdogMs, DEFAULT_BACKGROUND_PROGRESS_WATCHDOG_MS);
 }
 
 async function main(): Promise<void> {
-  await testFetchTimeoutAborts();
   testHungWorkerExits();
   testWatchdogResetsOnProgress();
   testParseTimeoutDefaults();

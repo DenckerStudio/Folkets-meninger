@@ -1,5 +1,6 @@
 import { parseSchedule } from './schedule';
 import { parseBackfillProvider, type BackfillProvider } from './provider';
+import { DEFAULT_BACKGROUND_PROGRESS_WATCHDOG_MS } from './background-progress-watchdog';
 import {
   DEFAULT_DB_RPC_TIMEOUT_MS,
   DEFAULT_EMBED_HTTP_TIMEOUT_MS,
@@ -25,6 +26,7 @@ export type BackfillCli = {
   embedHttpTimeoutMs: number;
   dbRpcTimeoutMs: number;
   progressWatchdogMs: number;
+  backgroundProgressWatchdogMs: number;
 };
 
 function readFlag(argv: string[], name: string): boolean {
@@ -135,6 +137,13 @@ export function parseBackfillArgv(argv: string[]): BackfillCli {
     DEFAULT_PROGRESS_WATCHDOG_MS,
     'progress watchdog ms ≥ 1',
   );
+  const backgroundProgressWatchdogMs = readPositiveIntMs(
+    argv,
+    '--background-progress-watchdog-ms',
+    'EMBED_BACKFILL_BACKGROUND_PROGRESS_WATCHDOG_MS',
+    DEFAULT_BACKGROUND_PROGRESS_WATCHDOG_MS,
+    'background progress watchdog ms ≥ 1',
+  );
 
   return {
     provider,
@@ -154,6 +163,7 @@ export function parseBackfillArgv(argv: string[]): BackfillCli {
     embedHttpTimeoutMs,
     dbRpcTimeoutMs,
     progressWatchdogMs,
+    backgroundProgressWatchdogMs,
   };
 }
 

@@ -49,6 +49,8 @@ export type WorkerDeps = {
   log: (line: string) => void;
   embedHttpTimeoutMs: number;
   onProgress?: () => void;
+  onBackgroundBatchSaved?: () => void;
+  onBackgroundPending?: (pending: boolean) => void;
   pauseWatchdog?: () => void;
   resumeWatchdog?: () => void;
 };
@@ -162,6 +164,9 @@ export async function runEndpointWorkerLoop(
     }
 
     const rows = (claimed ?? []) as ClaimedChunk[];
+    if (lane === 'background') {
+      deps.onBackgroundPending?.(rows.length > 0);
+    }
     if (rows.length === 0) {
       deps.onProgress?.();
       await idle(deps.shared.tier0Pending && lane === 'fast' ? 60_000 : 5000);
@@ -221,6 +226,9 @@ export async function runEndpointWorkerLoop(
       const savedCount = saveResult?.saved ?? 0;
       if (typeof savedCount === 'number' && savedCount > 0) {
         deps.onProgress?.();
+        if (lane === 'background') {
+          deps.onBackgroundBatchSaved?.();
+        }
       }
       deps.log(
         JSON.stringify({

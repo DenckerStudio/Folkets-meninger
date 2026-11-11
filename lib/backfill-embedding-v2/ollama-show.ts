@@ -1,5 +1,6 @@
 import { buildEmbedApiUrl } from './urls';
-import { fetchWithTimeout } from './fetch-with-timeout';
+import { DEFAULT_EMBED_HTTP_TIMEOUT_MS } from './progress-watchdog';
+import { fetchJsonWithTimeout } from './fetch-with-timeout';
 
 export function buildOllamaShowUrl(baseUrl: string): string {
   const embed = buildEmbedApiUrl(baseUrl);
@@ -39,16 +40,14 @@ export async function fetchOllamaShowSummary(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ model }),
   };
-  const res =
-    options.httpTimeoutMs != null
-      ? await fetchWithTimeout(url, init, {
-          timeoutMs: options.httpTimeoutMs,
-          fetchImpl: options.fetchImpl,
-        })
-      : await (options.fetchImpl ?? fetch)(url, init);
-  if (!res.ok) {
-    return `show feilet HTTP ${res.status}`;
+  const timeoutMs = options.httpTimeoutMs ?? DEFAULT_EMBED_HTTP_TIMEOUT_MS;
+  try {
+    const json = await fetchJsonWithTimeout(url, init, {
+      timeoutMs,
+      fetchImpl: options.fetchImpl,
+    });
+    return formatOllamaShowForLog(json);
+  } catch {
+    return 'show feilet (timeout eller nettverk)';
   }
-  const json = await res.json();
-  return formatOllamaShowForLog(json);
 }
