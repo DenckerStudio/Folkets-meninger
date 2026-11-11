@@ -63,6 +63,9 @@ should_defer() {
   if [[ "$base" == 20261110120* ]]; then
     return 0
   fi
+  if [[ "$base" == 20261111090000_n8n_claim_chunks_missing_v2_progress_guard.sql ]]; then
+    return 0
+  fi
   return 1
 }
 
@@ -157,6 +160,11 @@ fi
 echo "Phase 5d: embedding v2 claim single discovery (6110120100 transactional) ..."
 if [[ -f supabase/migrations/20261110120100_n8n_claim_chunks_missing_v2_single_discovery.sql ]]; then
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261110120100_n8n_claim_chunks_missing_v2_single_discovery.sql
+fi
+
+echo "Phase 5e: embedding v2 claim progress guard (20261111090000 transactional) ..."
+if [[ -f supabase/migrations/20261111090000_n8n_claim_chunks_missing_v2_progress_guard.sql ]]; then
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261111090000_n8n_claim_chunks_missing_v2_progress_guard.sql
 fi
 
 echo "Running security-lockdown-defaults.sql (supabase_admin connection) ..."
