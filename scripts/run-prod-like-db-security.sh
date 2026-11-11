@@ -71,7 +71,7 @@ should_defer() {
   if [[ "$base" == 20261111090000_n8n_claim_chunks_missing_v2_progress_guard.sql ]]; then
     return 0
   fi
-  if [[ "$base" == 20261111100000* ]]; then
+  if [[ "$base" == 20261111100000_grant_unaccent_execute.sql ]]; then
     return 0
   fi
   if [[ "$base" == 20261111110000* ]]; then
@@ -178,14 +178,9 @@ if [[ -f supabase/migrations/20261111090000_n8n_claim_chunks_missing_v2_progress
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261111090000_n8n_claim_chunks_missing_v2_progress_guard.sql
 fi
 
-echo "Phase 5f: placeholder for 20261111100000 (andre PR-er; kjøres hvis fil finnes) ..."
-if [[ -f supabase/migrations/20261111100000_n8n_reclaim_stale_claims_rpc.sql ]]; then
-  psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261111100000_n8n_reclaim_stale_claims_rpc.sql
-elif compgen -G "supabase/migrations/20261111100000*.sql" > /dev/null; then
-  for f in supabase/migrations/20261111100000*.sql; do
-    echo "  -> $(basename "$f")"
-    psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
-  done
+echo "Phase 5f: extensions.unaccent EXECUTE for service_role (20261111100000; needs RAG/fm_unaccent) ..."
+if [[ -f supabase/migrations/20261111100000_grant_unaccent_execute.sql ]]; then
+  psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261111100000_grant_unaccent_execute.sql
 fi
 
 echo "Phase 5g: dev_task_proposals (20261111110000 transactional) ..."
@@ -240,6 +235,9 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/system_poll_usable_embedding
 
 echo "Running admin_publish_stortinget_poll.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/admin_publish_stortinget_poll.sql
+
+echo "Running unaccent_execute_grant.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/unaccent_execute_grant.sql
 
 echo "Running security-guard.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
