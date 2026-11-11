@@ -81,17 +81,11 @@ BEGIN
       END IF;
   END;
 
-  BEGIN
-    UPDATE public.dev_task_proposals SET status = 'avslatt' WHERE id = v_proposal_id;
-    RAISE EXCEPTION 'ikke-admin UPDATE skulle feile';
-  EXCEPTION
-    WHEN insufficient_privilege THEN
-      NULL;
-    WHEN OTHERS THEN
-      IF SQLERRM NOT LIKE '%row-level security%' THEN
-        RAISE;
-      END IF;
-  END;
+  UPDATE public.dev_task_proposals SET status = 'avslatt' WHERE id = v_proposal_id;
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'ikke-admin UPDATE skulle ikke endre rader, oppdaterte %', v_count;
+  END IF;
   RESET ROLE;
 
   PERFORM set_config('request.jwt.claim.sub', v_admin_id::text, true);
