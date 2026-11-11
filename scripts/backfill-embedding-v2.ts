@@ -27,6 +27,7 @@ import {
 import { formatFatalErrorForLog, safeErrorMessage } from '../lib/backfill-embedding-v2/secrets';
 import { primaryPreflightPassed } from '../lib/backfill-embedding-v2/preflight-exit';
 import { createCachedTier0Probe } from '../lib/backfill-embedding-v2/tier0-probe';
+import { createBackgroundProgressWatchdog } from '../lib/backfill-embedding-v2/background-progress-watchdog';
 import { createWorkerWatchdogRegistry } from '../lib/backfill-embedding-v2/progress-watchdog';
 import { withDbRpcTimeout } from '../lib/backfill-embedding-v2/supabase-rpc-timeout';
 
@@ -102,6 +103,11 @@ async function main(): Promise<void> {
     timeoutMs: cli.progressWatchdogMs,
     log: (line) => console.error(line),
   });
+  const backgroundProgressWatchdog = createBackgroundProgressWatchdog({
+    timeoutMs: cli.backgroundProgressWatchdogMs,
+    tier0StarvationMs: cli.tier0StarvationMs,
+    log: (line) => console.error(line),
+  });
 
   const healthByName = new Map<string, EndpointHealth>();
   for (const ep of endpoints) {
@@ -144,6 +150,7 @@ async function main(): Promise<void> {
     stallWatchdogByEndpoint.set(endpoint.name, workerWatchdogs.registerWorker(endpoint.name));
   }
   workerWatchdogs.start();
+  backgroundProgressWatchdog.start();
 
   const coordinator = (async () => {
     while (!stopController.isStopping()) {
@@ -153,6 +160,8 @@ async function main(): Promise<void> {
         break;
       }
       await shared.refresh(supabase, boundedRun ? {} : { tier0Probe });
+      backgroundProgressWatchdog.setTier0Pending(shared.tier0Pending);
+      backgroundProgressWatchdog.setPaused(shared.isPaused());
       if (shared.isPaused()) {
         log('[backfill-v2] delt DB-pause (WAL/slot) — alle workers venter');
       }
@@ -200,6 +209,10 @@ async function main(): Promise<void> {
         log,
         embedHttpTimeoutMs: cli.embedHttpTimeoutMs,
         onProgress: stallWatchdog.touch,
+        onBackgroundBatchSaved: backgroundProgressWatchdog.touchBackgroundSave,
+        onFastLaneBatchSaved: backgroundProgressWatchdog.touchFastLaneSave,
+        onBackgroundClaimAttempt: backgroundProgressWatchdog.noteBackgroundClaimAttempt,
+        onBackgroundPending: backgroundProgressWatchdog.setBackgroundPending,
         pauseWatchdog: stallWatchdog.pause,
         resumeWatchdog: stallWatchdog.resume,
       },
@@ -218,6 +231,7 @@ async function main(): Promise<void> {
     }
     await coordinator;
   } finally {
+    backgroundProgressWatchdog.stop();
     workerWatchdogs.stop();
   }
 }

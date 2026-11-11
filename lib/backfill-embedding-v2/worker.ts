@@ -49,6 +49,10 @@ export type WorkerDeps = {
   log: (line: string) => void;
   embedHttpTimeoutMs: number;
   onProgress?: () => void;
+  onBackgroundBatchSaved?: () => void;
+  onFastLaneBatchSaved?: () => void;
+  onBackgroundClaimAttempt?: () => void;
+  onBackgroundPending?: (pending: boolean) => void;
   pauseWatchdog?: () => void;
   resumeWatchdog?: () => void;
 };
@@ -142,6 +146,10 @@ export async function runEndpointWorkerLoop(
       continue;
     }
 
+    if (lane === 'background') {
+      deps.onBackgroundClaimAttempt?.();
+    }
+
     const { data: claimed, error: claimError } = await deps.supabase.rpc(
       'n8n_claim_chunks_missing_v2',
       {
@@ -162,6 +170,9 @@ export async function runEndpointWorkerLoop(
     }
 
     const rows = (claimed ?? []) as ClaimedChunk[];
+    if (lane === 'background') {
+      deps.onBackgroundPending?.(rows.length > 0);
+    }
     if (rows.length === 0) {
       deps.onProgress?.();
       await idle(deps.shared.tier0Pending && lane === 'fast' ? 60_000 : 5000);
@@ -221,6 +232,11 @@ export async function runEndpointWorkerLoop(
       const savedCount = saveResult?.saved ?? 0;
       if (typeof savedCount === 'number' && savedCount > 0) {
         deps.onProgress?.();
+        if (lane === 'background') {
+          deps.onBackgroundBatchSaved?.();
+        } else if (lane === 'fast') {
+          deps.onFastLaneBatchSaved?.();
+        }
       }
       deps.log(
         JSON.stringify({

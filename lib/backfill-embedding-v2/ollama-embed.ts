@@ -2,7 +2,8 @@ import { buildEmbedApiUrl } from './urls';
 import { OLLAMA_EMBED_API_MODEL } from './provider';
 import { VECTOR_V2_DIMENSIONS } from '@/lib/chat/vector-search';
 import { validateEmbeddingVector, type EmbedRow } from './embed-batch';
-import { fetchWithTimeout } from './fetch-with-timeout';
+import { DEFAULT_EMBED_HTTP_TIMEOUT_MS } from './progress-watchdog';
+import { fetchJsonWithTimeout } from './fetch-with-timeout';
 
 export type OllamaEmbedOptions = {
   fetchImpl?: typeof fetch;
@@ -12,24 +13,34 @@ export type OllamaEmbedOptions = {
   httpTimeoutMs?: number;
 };
 
-async function ollamaFetch(
+function resolveEmbedHttpTimeoutMs(options: OllamaEmbedOptions): number {
+  return options.httpTimeoutMs ?? DEFAULT_EMBED_HTTP_TIMEOUT_MS;
+}
+
+async function ollamaEmbedJson(
   apiUrl: string,
   body: Record<string, unknown>,
   options: OllamaEmbedOptions,
-): Promise<Response> {
-  const init: RequestInit = {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  };
-  if (options.httpTimeoutMs != null) {
-    return fetchWithTimeout(apiUrl, init, {
-      timeoutMs: options.httpTimeoutMs,
-      fetchImpl: options.fetchImpl,
-    });
+  httpErrorLabel: string,
+): Promise<unknown> {
+  const timeoutMs = resolveEmbedHttpTimeoutMs(options);
+  try {
+    return await fetchJsonWithTimeout(
+      apiUrl,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+      { timeoutMs, fetchImpl: options.fetchImpl },
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.startsWith('HTTP ')) {
+      throw new Error(`${httpErrorLabel}: ${message}`);
+    }
+    throw err;
   }
-  const fetchImpl = options.fetchImpl ?? fetch;
-  return fetchImpl(apiUrl, init);
 }
 
 export async function fetchOllamaEmbedVectors(
@@ -40,7 +51,7 @@ export async function fetchOllamaEmbedVectors(
   const apiUrl = buildEmbedApiUrl(baseUrl);
   const model = (options.apiModel ?? OLLAMA_EMBED_API_MODEL).trim();
 
-  const res = await ollamaFetch(
+  const payload = await ollamaEmbedJson(
     apiUrl,
     {
       model,
@@ -49,13 +60,8 @@ export async function fetchOllamaEmbedVectors(
       keep_alive: options.keepAlive ?? '30m',
     },
     options,
+    'Ollama embed feilet',
   );
-
-  if (!res.ok) {
-    throw new Error(`Ollama embed feilet: HTTP ${res.status}`);
-  }
-
-  const payload = await res.json();
   const embeddings = (payload as { embeddings?: unknown[][] }).embeddings;
   if (!Array.isArray(embeddings) || embeddings.length !== texts.length) {
     throw new Error('Ollama embed returnerte feil antall vektorer');
@@ -87,7 +93,7 @@ export async function fetchOllamaEmbedBatch(
   const model = (options.apiModel ?? OLLAMA_EMBED_API_MODEL).trim();
 
   if (options.probeText) {
-    const probeRes = await ollamaFetch(
+    const probeJson = await ollamaEmbedJson(
       apiUrl,
       {
         model,
@@ -96,11 +102,8 @@ export async function fetchOllamaEmbedBatch(
         keep_alive: options.keepAlive ?? '30m',
       },
       options,
+      'Probe embed feilet',
     );
-    if (!probeRes.ok) {
-      throw new Error(`Probe embed feilet: HTTP ${probeRes.status}`);
-    }
-    const probeJson = await probeRes.json();
     if (!validateEmbeddingVector(probeJson)) {
       throw new Error('Probe embed returnerte ugyldig vektor');
     }
