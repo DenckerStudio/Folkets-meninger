@@ -134,6 +134,17 @@ som standard for å beskytte 800 ms query-embeddings. Overstyr med `--busy-pause
 **Delt throttle:** WAL/replikasjonsslot (`n8n_backfill_db_pressure`) pauser **alle** workers.
 `--schedule '22-07:full,07-22:throttle'` (standard tidssone `Europe/Oslo`).
 
+**Watchdog-/timeout-miljø (valgfritt, CLI-flagg med samme navn):**
+
+| Miljøvariabel | Standard (ms) | Formål |
+|---------------|---------------|--------|
+| `EMBED_BACKFILL_BACKGROUND_PROGRESS_WATCHDOG_MS` | `900000` (15 min) | Restart hvis ingen background-batch er lagret mens background-køen har arbeid |
+| `EMBED_BACKFILL_TIER0_STARVATION_MS` | `1800000` (30 min) | Restart hvis tier-0 blokkerer uten fast-lane-lagring i vinduet |
+| `EMBED_BACKFILL_HTTP_TIMEOUT_MS` | `60000` | Hard timeout på Ollama embed HTTP + JSON-body |
+| `EMBED_BACKFILL_PROGRESS_WATCHDOG_MS` | `600000` (10 min) | Per-endpoint watchdog ved hengende worker |
+
+Under aktiv WAL/slot-pause teller ikke background- eller tier-0-watchdog ned; fristene nullstilles når pausen slipper.
+
 ```bash
 # Preflight / dry-run (ingen DB-skriving; én claim-batch og avslutt som standard)
 EMBED_QUERY_URL=http://<ollama-host>:11435 \

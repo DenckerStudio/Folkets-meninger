@@ -13,6 +13,7 @@ export type BackgroundProgressWatchdog = {
   noteBackgroundClaimAttempt: () => void;
   setBackgroundPending: (pending: boolean) => void;
   setTier0Pending: (tier0: boolean) => void;
+  setPaused: (paused: boolean) => void;
   start: () => void;
   stop: () => void;
 };
@@ -42,6 +43,7 @@ export function createBackgroundProgressWatchdog(
   let lastFastLaneSaveMs = now();
   let backgroundPending = true;
   let tier0Pending = false;
+  let sharedPaused = false;
   let timer: ReturnType<typeof setInterval> | null = null;
   let started = false;
 
@@ -50,6 +52,9 @@ export function createBackgroundProgressWatchdog(
   };
 
   const evaluate = (): void => {
+    if (sharedPaused) {
+      return;
+    }
     if (tier0Pending) {
       const sinceFastMs = now() - lastFastLaneSaveMs;
       if (sinceFastMs >= options.tier0StarvationMs) {
@@ -100,6 +105,14 @@ export function createBackgroundProgressWatchdog(
       }
       if (!tier0 && was) {
         resetBackgroundTimer();
+      }
+    },
+    setPaused: (paused: boolean) => {
+      const was = sharedPaused;
+      sharedPaused = paused;
+      if (!paused && was) {
+        resetBackgroundTimer();
+        lastFastLaneSaveMs = now();
       }
     },
     start: () => {

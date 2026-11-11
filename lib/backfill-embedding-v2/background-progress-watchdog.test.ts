@@ -122,6 +122,61 @@ function testBackgroundPendingArmsOnFalseToTrue(): void {
   watchdog.stop();
 }
 
+function testSharedDbPauseDoesNotCountTowardStall(): void {
+  let now = 0;
+  const calls: Array<() => void> = [];
+  const { watchdog, getExitCode } = makeWatchdog(() => now, calls, {
+    timeoutMs: 100_000,
+    tier0StarvationMs: 100_000,
+    pollMs: 10_000,
+  });
+
+  watchdog.start();
+  watchdog.setTier0Pending(false);
+  watchdog.touchBackgroundSave();
+  watchdog.setPaused(true);
+  now = 500_000;
+  calls[0]!();
+  assert.equal(getExitCode(), null);
+
+  watchdog.setTier0Pending(true);
+  now = 600_000;
+  calls[0]!();
+  assert.equal(getExitCode(), null);
+  watchdog.stop();
+}
+
+function testUnpauseResetsStallDeadline(): void {
+  let now = 0;
+  const calls: Array<() => void> = [];
+  const { watchdog, getExitCode } = makeWatchdog(() => now, calls, {
+    timeoutMs: 100_000,
+    pollMs: 10_000,
+  });
+
+  watchdog.start();
+  watchdog.setTier0Pending(false);
+  watchdog.touchBackgroundSave();
+  now = 50_000;
+  watchdog.setPaused(true);
+  now = 400_000;
+  watchdog.setPaused(false);
+  now += 50_000;
+  calls[0]!();
+  assert.equal(getExitCode(), null, 'full timeout må løpe på nytt etter unpause');
+
+  let threw = false;
+  try {
+    now += 60_000;
+    calls[0]!();
+  } catch {
+    threw = true;
+  }
+  assert.equal(threw, true);
+  assert.equal(getExitCode(), 2);
+  watchdog.stop();
+}
+
 function testRepeatedClaimsWithoutSaveStall(): void {
   let now = 0;
   const logs: string[] = [];
@@ -228,6 +283,8 @@ void testEvaluatePendingZero();
 testStallTriggersRecovery();
 testTier0ClearDoesNotFalsePositive();
 testBackgroundPendingArmsOnFalseToTrue();
+testSharedDbPauseDoesNotCountTowardStall();
+testUnpauseResetsStallDeadline();
 testRepeatedClaimsWithoutSaveStall();
 testArmedFromStartBeforeClaim();
 testTier0StarvationWithoutFastSaves();

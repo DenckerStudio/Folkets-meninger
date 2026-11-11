@@ -161,6 +161,7 @@ async function main(): Promise<void> {
       }
       await shared.refresh(supabase, boundedRun ? {} : { tier0Probe });
       backgroundProgressWatchdog.setTier0Pending(shared.tier0Pending);
+      backgroundProgressWatchdog.setPaused(shared.isPaused());
       if (shared.isPaused()) {
         log('[backfill-v2] delt DB-pause (WAL/slot) — alle workers venter');
       }
