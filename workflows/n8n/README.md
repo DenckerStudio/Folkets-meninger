@@ -36,7 +36,7 @@ Aktive flyter har **per-node retry** (`retryOnFail` / `maxTries`) og `onError` s
 |------|----------------|------------|
 | AI-sammendrag | Agent `continueErrorOutput` — rad skrives ikke. In-workflow Error Trigger → `/api/ops/n8n-notify` | `ai_summary_requested_at` + `GET /api/cron/n8n-retry` / sak-side poller webhook |
 | Dokument embeddings | Chunk blir stående `embedding_status=pending`. In-workflow Error Trigger → `/api/ops/n8n-notify` | Samme cron re-trigges `N8N_DOCUMENT_EMBEDDINGS_WEBHOOK_URL` |
-| System poll / Reels | Embedding-feil → fallback til AI-sammendrag + dokumentutdrag. Tom/ugyldig Ollama → ingen draft. In-workflow Error Trigger → `/api/ops/n8n-notify` | Cron + admin «Generer utkast» kaller `create_system_poll_draft` via n8n (aldri `ensure_stortinget_poll`) |
+| (utfaset) System poll / Reels | Embedding-feil → fallback til AI-sammendrag + dokumentutdrag. Tom/ugyldig Ollama → ingen draft. In-workflow Error Trigger → `/api/ops/n8n-notify` | Utfaset 2026-11-01. Appen kaller ikke lenger denne webhooken. |
 | App cron | HTTP mot `/api/cron/*` retried én gang. In-workflow Error Trigger → `/api/ops/n8n-notify` | Endepunktene er selvstendige (`x-cron-secret`) og kan kalles uten n8n |
 | Motforslag innspill | In-workflow Error Trigger → `/api/ops/n8n-notify` | Appen logger webhook-feil; rapporten kan postes på nytt |
 
