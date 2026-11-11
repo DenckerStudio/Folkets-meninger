@@ -3,8 +3,44 @@ import {
   BACKGROUND_PROGRESS_WATCHDOG_LOG_PREFIX,
   createBackgroundProgressWatchdog,
   DEFAULT_BACKGROUND_PROGRESS_WATCHDOG_MS,
+  DEFAULT_TIER0_STARVATION_MS,
   evaluateBackgroundStall,
+  evaluateTier0Starvation,
+  TIER0_STARVATION_LOG_PREFIX,
 } from './background-progress-watchdog';
+
+function makeWatchdog(
+  now: () => number,
+  calls: Array<() => void>,
+  options: {
+    timeoutMs?: number;
+    tier0StarvationMs?: number;
+    pollMs?: number;
+    log?: (line: string) => void;
+    exit?: (code: number) => never;
+  } = {},
+) {
+  let exitCode: number | null = null;
+  const watchdog = createBackgroundProgressWatchdog({
+    timeoutMs: options.timeoutMs ?? DEFAULT_BACKGROUND_PROGRESS_WATCHDOG_MS,
+    tier0StarvationMs: options.tier0StarvationMs ?? DEFAULT_TIER0_STARVATION_MS,
+    now,
+    setIntervalFn: (fn) => {
+      calls.push(fn);
+      return { unref: () => {} } as NodeJS.Timeout;
+    },
+    clearIntervalFn: () => {},
+    pollMs: options.pollMs ?? 60_000,
+    log: options.log,
+    exit:
+      options.exit ??
+      ((code) => {
+        exitCode = code;
+        throw new Error('exit');
+      }),
+  });
+  return { watchdog, getExitCode: () => exitCode };
+}
 
 function testEvaluatePendingZero(): void {
   assert.equal(
@@ -21,96 +57,147 @@ function testEvaluatePendingZero(): void {
     ),
     false,
   );
+  assert.equal(evaluateTier0Starvation(DEFAULT_TIER0_STARVATION_MS - 1, DEFAULT_TIER0_STARVATION_MS), false);
+  assert.equal(evaluateTier0Starvation(DEFAULT_TIER0_STARVATION_MS, DEFAULT_TIER0_STARVATION_MS), true);
 }
 
 function testStallTriggersRecovery(): void {
   let now = 0;
   const logs: string[] = [];
-  let exitCode: number | null = null;
   const calls: Array<() => void> = [];
-
-  const watchdog = createBackgroundProgressWatchdog({
-    timeoutMs: 900_000,
-    now: () => now,
-    setIntervalFn: (fn) => {
-      calls.push(fn);
-      return { unref: () => {} } as NodeJS.Timeout;
-    },
-    clearIntervalFn: () => {},
-    pollMs: 60_000,
+  const { watchdog, getExitCode } = makeWatchdog(() => now, calls, {
     log: (line) => logs.push(line),
-    exit: (code) => {
-      exitCode = code;
-      throw new Error('exit');
-    },
   });
 
   watchdog.start();
-  watchdog.setBackgroundPending(true);
   watchdog.setTier0Pending(false);
   watchdog.touchBackgroundSave();
   now = 500_000;
   watchdog.touchBackgroundSave();
 
-  let fastLaneThrew = false;
+  let threw = false;
   try {
     now = 1_500_000;
     calls[0]!();
   } catch {
-    fastLaneThrew = true;
+    threw = true;
   }
 
-  assert.equal(fastLaneThrew, true);
-  assert.equal(exitCode, 2);
+  assert.equal(threw, true);
+  assert.equal(getExitCode(), 2);
   assert.ok(logs.some((line) => line.includes(BACKGROUND_PROGRESS_WATCHDOG_LOG_PREFIX)));
 }
 
-function testFastLaneDoesNotResetBackgroundTimer(): void {
+function testTier0ClearDoesNotFalsePositive(): void {
   let now = 0;
-  let exitCode: number | null = null;
   const calls: Array<() => void> = [];
+  const { watchdog, getExitCode } = makeWatchdog(() => now, calls, { pollMs: 10_000 });
 
-  const watchdog = createBackgroundProgressWatchdog({
-    timeoutMs: 900_000,
-    now: () => now,
-    setIntervalFn: (fn) => {
-      calls.push(fn);
-      return { unref: () => {} } as NodeJS.Timeout;
-    },
-    clearIntervalFn: () => {},
-    pollMs: 50_000,
-    exit: (code) => {
-      exitCode = code;
-      throw new Error('exit');
-    },
+  watchdog.start();
+  watchdog.setTier0Pending(true);
+  now = 5_000_000;
+  watchdog.setTier0Pending(false);
+  now += 100_000;
+  calls[0]!();
+  assert.equal(getExitCode(), null);
+  watchdog.stop();
+}
+
+function testBackgroundPendingArmsOnFalseToTrue(): void {
+  let now = 0;
+  const calls: Array<() => void> = [];
+  const { watchdog, getExitCode } = makeWatchdog(() => now, calls, {
+    timeoutMs: 100_000,
+    pollMs: 10_000,
   });
 
   watchdog.start();
-  watchdog.setBackgroundPending(true);
   watchdog.setTier0Pending(false);
-  watchdog.touchBackgroundSave();
+  watchdog.setBackgroundPending(false);
+  now = 200_000;
+  watchdog.setBackgroundPending(true);
+  now += 50_000;
+  calls[0]!();
+  assert.equal(getExitCode(), null);
+  watchdog.stop();
+}
 
-  for (let i = 0; i < 8; i += 1) {
-    now += 100_000;
-    calls[0]!();
-  }
+function testArmedFromStartBeforeClaim(): void {
+  let now = 0;
+  const logs: string[] = [];
+  const calls: Array<() => void> = [];
+  const { watchdog, getExitCode } = makeWatchdog(() => now, calls, {
+    timeoutMs: 60_000,
+    pollMs: 5_000,
+    log: (line) => logs.push(line),
+  });
 
-  assert.equal(exitCode, null, 'per-worker fast-lane touch skal ikke forlenge background-timer');
+  watchdog.start();
+  watchdog.setTier0Pending(false);
 
   let threw = false;
   try {
-    now = 950_000;
+    now = 70_000;
     calls[0]!();
   } catch {
     threw = true;
   }
   assert.equal(threw, true);
-  assert.equal(exitCode, 2);
+  assert.equal(getExitCode(), 2);
+  assert.ok(logs.some((line) => line.includes(BACKGROUND_PROGRESS_WATCHDOG_LOG_PREFIX)));
+}
+
+function testTier0StarvationWithoutFastSaves(): void {
+  let now = 0;
+  const logs: string[] = [];
+  const calls: Array<() => void> = [];
+  const { watchdog, getExitCode } = makeWatchdog(() => now, calls, {
+    tier0StarvationMs: 100_000,
+    pollMs: 10_000,
+    log: (line) => logs.push(line),
+  });
+
+  watchdog.start();
+  watchdog.setTier0Pending(true);
+
+  let threw = false;
+  try {
+    now = 150_000;
+    calls[0]!();
+  } catch {
+    threw = true;
+  }
+  assert.equal(threw, true);
+  assert.equal(getExitCode(), 2);
+  assert.ok(logs.some((line) => line.includes(TIER0_STARVATION_LOG_PREFIX)));
+}
+
+function testTier0WithPeriodicFastSavesSurvives(): void {
+  let now = 0;
+  const calls: Array<() => void> = [];
+  const { watchdog, getExitCode } = makeWatchdog(() => now, calls, {
+    tier0StarvationMs: 100_000,
+    pollMs: 20_000,
+  });
+
+  watchdog.start();
+  watchdog.setTier0Pending(true);
+
+  for (let i = 0; i < 5; i += 1) {
+    now += 50_000;
+    watchdog.touchFastLaneSave();
+    calls[0]!();
+  }
+  assert.equal(getExitCode(), null);
   watchdog.stop();
 }
 
 void testEvaluatePendingZero();
 testStallTriggersRecovery();
-testFastLaneDoesNotResetBackgroundTimer();
+testTier0ClearDoesNotFalsePositive();
+testBackgroundPendingArmsOnFalseToTrue();
+testArmedFromStartBeforeClaim();
+testTier0StarvationWithoutFastSaves();
+testTier0WithPeriodicFastSavesSurvives();
 
 console.log('lib/backfill-embedding-v2/background-progress-watchdog.test.ts: ok');

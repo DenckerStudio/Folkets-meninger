@@ -105,6 +105,7 @@ async function main(): Promise<void> {
   });
   const backgroundProgressWatchdog = createBackgroundProgressWatchdog({
     timeoutMs: cli.backgroundProgressWatchdogMs,
+    tier0StarvationMs: cli.tier0StarvationMs,
     log: (line) => console.error(line),
   });
 
@@ -208,6 +209,8 @@ async function main(): Promise<void> {
         embedHttpTimeoutMs: cli.embedHttpTimeoutMs,
         onProgress: stallWatchdog.touch,
         onBackgroundBatchSaved: backgroundProgressWatchdog.touchBackgroundSave,
+        onFastLaneBatchSaved: backgroundProgressWatchdog.touchFastLaneSave,
+        onBackgroundClaimAttempt: backgroundProgressWatchdog.noteBackgroundClaimAttempt,
         onBackgroundPending: backgroundProgressWatchdog.setBackgroundPending,
         pauseWatchdog: stallWatchdog.pause,
         resumeWatchdog: stallWatchdog.resume,

@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { parseBackfillArgv } from './backfill-embedding-v2/parse-args';
-import { DEFAULT_BACKGROUND_PROGRESS_WATCHDOG_MS } from './backfill-embedding-v2/background-progress-watchdog';
+import {
+  DEFAULT_BACKGROUND_PROGRESS_WATCHDOG_MS,
+  DEFAULT_TIER0_STARVATION_MS,
+} from './backfill-embedding-v2/background-progress-watchdog';
 import {
   createWorkerWatchdogRegistry,
   PROGRESS_WATCHDOG_LOG_PREFIX,
@@ -209,6 +212,7 @@ function testParseTimeoutDefaults(): void {
   assert.equal(cli.dbRpcTimeoutMs, 30_000);
   assert.equal(cli.progressWatchdogMs, 600_000);
   assert.equal(cli.backgroundProgressWatchdogMs, DEFAULT_BACKGROUND_PROGRESS_WATCHDOG_MS);
+  assert.equal(cli.tier0StarvationMs, DEFAULT_TIER0_STARVATION_MS);
 }
 
 async function main(): Promise<void> {

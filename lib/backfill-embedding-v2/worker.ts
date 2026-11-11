@@ -50,6 +50,8 @@ export type WorkerDeps = {
   embedHttpTimeoutMs: number;
   onProgress?: () => void;
   onBackgroundBatchSaved?: () => void;
+  onFastLaneBatchSaved?: () => void;
+  onBackgroundClaimAttempt?: () => void;
   onBackgroundPending?: (pending: boolean) => void;
   pauseWatchdog?: () => void;
   resumeWatchdog?: () => void;
@@ -144,6 +146,10 @@ export async function runEndpointWorkerLoop(
       continue;
     }
 
+    if (lane === 'background') {
+      deps.onBackgroundClaimAttempt?.();
+    }
+
     const { data: claimed, error: claimError } = await deps.supabase.rpc(
       'n8n_claim_chunks_missing_v2',
       {
@@ -228,6 +234,8 @@ export async function runEndpointWorkerLoop(
         deps.onProgress?.();
         if (lane === 'background') {
           deps.onBackgroundBatchSaved?.();
+        } else if (lane === 'fast') {
+          deps.onFastLaneBatchSaved?.();
         }
       }
       deps.log(
