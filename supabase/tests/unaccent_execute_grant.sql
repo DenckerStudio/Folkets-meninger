@@ -3,7 +3,7 @@ DO $$
 DECLARE
   v_unaccent record;
   v_definer record;
-  v_role text;
+  v_any record;
 BEGIN
   FOR v_unaccent IN
     SELECT p.oid,
@@ -13,9 +13,6 @@ BEGIN
     WHERE n.nspname = 'extensions'
       AND p.proname = 'unaccent'
   LOOP
-    IF has_function_privilege('anon', v_unaccent.oid, 'EXECUTE') THEN
-      RAISE EXCEPTION 'anon must not EXECUTE %', v_unaccent.sig;
-    END IF;
     IF has_function_privilege('authenticated', v_unaccent.oid, 'EXECUTE') THEN
       RAISE EXCEPTION 'authenticated must not EXECUTE %', v_unaccent.sig;
     END IF;
@@ -35,6 +32,16 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'extensions.unaccent not found';
   END IF;
+
+  FOR v_any IN
+    SELECT p.oid, p.oid::regprocedure AS sig
+    FROM pg_proc p
+    WHERE p.proname = 'unaccent'
+  LOOP
+    IF has_function_privilege('anon', v_any.oid, 'EXECUTE') THEN
+      RAISE EXCEPTION 'anon must not EXECUTE % (any schema)', v_any.sig;
+    END IF;
+  END LOOP;
 
   FOR v_definer IN
     SELECT p.oid::regprocedure AS sig,
