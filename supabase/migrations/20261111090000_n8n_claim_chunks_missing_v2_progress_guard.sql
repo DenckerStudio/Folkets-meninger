@@ -25,6 +25,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
+#variable_conflict use_column
 DECLARE
   v_lane text := lower(nullif(btrim(p_lane), ''));
   v_worker text := nullif(btrim(p_worker), '');
