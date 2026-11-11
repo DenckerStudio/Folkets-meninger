@@ -5,7 +5,6 @@ DECLARE
   v_user_id uuid := 'd2222222-2222-4222-8222-222222222202';
   v_proposal_id uuid;
   v_count int;
-  v_instance_id uuid;
 BEGIN
   IF to_regclass('public.dev_task_proposals') IS NULL THEN
     RAISE EXCEPTION 'dev_task_proposals.sql: forventet tabell dev_task_proposals';
@@ -28,14 +27,19 @@ BEGIN
     RAISE EXCEPTION 'service_role mangler INSERT på dev_task_proposals';
   END IF;
 
-  SELECT id INTO v_instance_id FROM auth.instances LIMIT 1;
-  IF v_instance_id IS NULL THEN
-    RAISE EXCEPTION 'dev_task_proposals.sql: auth.instances mangler (forventet fra supabase start)';
+  IF to_regclass('auth.instances') IS NOT NULL THEN
+    INSERT INTO auth.instances (id, raw_base_config, created_at, updated_at)
+    SELECT
+      '00000000-0000-0000-0000-000000000001'::uuid,
+      '{}',
+      now(),
+      now()
+    WHERE NOT EXISTS (SELECT 1 FROM auth.instances LIMIT 1);
   END IF;
 
   INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at)
   VALUES (
-    v_instance_id,
+    (SELECT id FROM auth.instances LIMIT 1),
     v_admin_id,
     'authenticated',
     'authenticated',
