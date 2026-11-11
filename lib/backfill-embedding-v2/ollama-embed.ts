@@ -2,33 +2,54 @@ import { buildEmbedApiUrl } from './urls';
 import { OLLAMA_EMBED_API_MODEL } from './provider';
 import { VECTOR_V2_DIMENSIONS } from '@/lib/chat/vector-search';
 import { validateEmbeddingVector, type EmbedRow } from './embed-batch';
+import { fetchWithTimeout } from './fetch-with-timeout';
 
 export type OllamaEmbedOptions = {
   fetchImpl?: typeof fetch;
   keepAlive?: string;
   probeText?: string | null;
   apiModel?: string;
+  httpTimeoutMs?: number;
 };
+
+async function ollamaFetch(
+  apiUrl: string,
+  body: Record<string, unknown>,
+  options: OllamaEmbedOptions,
+): Promise<Response> {
+  const init: RequestInit = {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  };
+  if (options.httpTimeoutMs != null) {
+    return fetchWithTimeout(apiUrl, init, {
+      timeoutMs: options.httpTimeoutMs,
+      fetchImpl: options.fetchImpl,
+    });
+  }
+  const fetchImpl = options.fetchImpl ?? fetch;
+  return fetchImpl(apiUrl, init);
+}
 
 export async function fetchOllamaEmbedVectors(
   baseUrl: string,
   texts: string[],
   options: OllamaEmbedOptions = {},
 ): Promise<{ vectors: number[][]; reportedModel?: string }> {
-  const fetchImpl = options.fetchImpl ?? fetch;
   const apiUrl = buildEmbedApiUrl(baseUrl);
   const model = (options.apiModel ?? OLLAMA_EMBED_API_MODEL).trim();
 
-  const res = await fetchImpl(apiUrl, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
+  const res = await ollamaFetch(
+    apiUrl,
+    {
       model,
       input: texts,
       truncate: true,
       keep_alive: options.keepAlive ?? '30m',
-    }),
-  });
+    },
+    options,
+  );
 
   if (!res.ok) {
     throw new Error(`Ollama embed feilet: HTTP ${res.status}`);
@@ -61,22 +82,21 @@ export async function fetchOllamaEmbedBatch(
   rows: EmbedRow[],
   options: OllamaEmbedOptions = {},
 ): Promise<{ vectors: Map<string, number[]>; latencyMs: number; reportedModel?: string }> {
-  const fetchImpl = options.fetchImpl ?? fetch;
   const apiUrl = buildEmbedApiUrl(baseUrl);
   const started = Date.now();
   const model = (options.apiModel ?? OLLAMA_EMBED_API_MODEL).trim();
 
   if (options.probeText) {
-    const probeRes = await fetchImpl(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
+    const probeRes = await ollamaFetch(
+      apiUrl,
+      {
         model,
         input: [options.probeText],
         truncate: true,
         keep_alive: options.keepAlive ?? '30m',
-      }),
-    });
+      },
+      options,
+    );
     if (!probeRes.ok) {
       throw new Error(`Probe embed feilet: HTTP ${probeRes.status}`);
     }

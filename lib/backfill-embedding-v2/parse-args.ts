@@ -1,5 +1,10 @@
 import { parseSchedule } from './schedule';
 import { parseBackfillProvider, type BackfillProvider } from './provider';
+import {
+  DEFAULT_DB_RPC_TIMEOUT_MS,
+  DEFAULT_EMBED_HTTP_TIMEOUT_MS,
+  DEFAULT_PROGRESS_WATCHDOG_MS,
+} from './progress-watchdog';
 
 export type BackfillCli = {
   provider?: BackfillProvider;
@@ -17,6 +22,9 @@ export type BackfillCli = {
   probeBeforeBatch: boolean;
   preflightOnly: boolean;
   leaseSeconds: number;
+  embedHttpTimeoutMs: number;
+  dbRpcTimeoutMs: number;
+  progressWatchdogMs: number;
 };
 
 function readFlag(argv: string[], name: string): boolean {
@@ -31,6 +39,24 @@ function readValue(argv: string[], name: string): string | undefined {
     return argv[idx + 1];
   }
   return undefined;
+}
+
+function readPositiveIntMs(
+  argv: string[],
+  flag: string,
+  envName: string,
+  fallback: number,
+  label: string,
+): number {
+  const raw = readValue(argv, flag) ?? process.env[envName]?.trim();
+  if (raw === undefined) {
+    return fallback;
+  }
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`Ugyldig ${flag}=${raw} (${label})`);
+  }
+  return parsed;
 }
 
 function readBoolOption(argv: string[], name: string): boolean | undefined {
@@ -88,6 +114,28 @@ export function parseBackfillArgv(argv: string[]): BackfillCli {
   const dryRun = readFlag(argv, '--dry-run');
   const maxBatches = resolveMaxBatches(argv, dryRun);
 
+  const embedHttpTimeoutMs = readPositiveIntMs(
+    argv,
+    '--embed-http-timeout-ms',
+    'EMBED_BACKFILL_HTTP_TIMEOUT_MS',
+    DEFAULT_EMBED_HTTP_TIMEOUT_MS,
+    'embed HTTP timeout ms ≥ 1',
+  );
+  const dbRpcTimeoutMs = readPositiveIntMs(
+    argv,
+    '--db-rpc-timeout-ms',
+    'EMBED_BACKFILL_DB_TIMEOUT_MS',
+    DEFAULT_DB_RPC_TIMEOUT_MS,
+    'DB RPC timeout ms ≥ 1',
+  );
+  const progressWatchdogMs = readPositiveIntMs(
+    argv,
+    '--progress-watchdog-ms',
+    'EMBED_BACKFILL_PROGRESS_WATCHDOG_MS',
+    DEFAULT_PROGRESS_WATCHDOG_MS,
+    'progress watchdog ms ≥ 1',
+  );
+
   return {
     provider,
     maxBatchesPerMin,
@@ -103,6 +151,9 @@ export function parseBackfillArgv(argv: string[]): BackfillCli {
     probeBeforeBatch: readFlag(argv, '--probe-before-batch'),
     preflightOnly: readFlag(argv, '--preflight-only'),
     leaseSeconds,
+    embedHttpTimeoutMs,
+    dbRpcTimeoutMs,
+    progressWatchdogMs,
   };
 }
 

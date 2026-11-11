@@ -15,6 +15,7 @@ export async function fetchEmbedBatchForEndpoint(
     fetchImpl?: typeof fetch;
     probeText?: string | null;
     keepAlive?: string;
+    httpTimeoutMs?: number;
   } = {},
 ): Promise<EmbedBatchOutcome> {
   return fetchOllamaEmbedBatch(endpoint.url, rows, {
@@ -22,5 +23,6 @@ export async function fetchEmbedBatchForEndpoint(
     probeText: options.probeText,
     keepAlive: options.keepAlive,
     apiModel: endpoint.apiModel,
+    httpTimeoutMs: options.httpTimeoutMs,
   });
 }

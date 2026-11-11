@@ -27,6 +27,8 @@ import {
 import { formatFatalErrorForLog, safeErrorMessage } from '../lib/backfill-embedding-v2/secrets';
 import { primaryPreflightPassed } from '../lib/backfill-embedding-v2/preflight-exit';
 import { createCachedTier0Probe } from '../lib/backfill-embedding-v2/tier0-probe';
+import { createWorkerWatchdogRegistry } from '../lib/backfill-embedding-v2/progress-watchdog';
+import { withDbRpcTimeout } from '../lib/backfill-embedding-v2/supabase-rpc-timeout';
 
 function requiredEnv(name: string): string {
   const value = (process.env[name] ?? '').trim();
@@ -44,6 +46,7 @@ async function runPreflightForEndpoint(
   endpoint: ReturnType<typeof finalizeEndpoints>[number],
   queryUrl: string,
   log: (line: string) => void,
+  embedHttpTimeoutMs: number,
 ): Promise<boolean> {
   try {
     const result = await runEmbeddingPreflight({
@@ -52,6 +55,7 @@ async function runPreflightForEndpoint(
       queryUrl,
       apiModel: endpoint.apiModel,
       apiKey: endpoint.apiKey,
+      httpTimeoutMs: embedHttpTimeoutMs,
       log,
     });
 
@@ -89,8 +93,15 @@ async function main(): Promise<void> {
   const log = (line: string) => console.log(line);
 
   const scheduleWindows = loadScheduleWindows(cli);
-  const supabase = createBackfillSupabase(supabaseUrl, serviceKey);
+  const supabase = withDbRpcTimeout(
+    createBackfillSupabase(supabaseUrl, serviceKey),
+    cli.dbRpcTimeoutMs,
+  );
   const tier0Probe = createCachedTier0Probe(supabase, { log, secrets });
+  const workerWatchdogs = createWorkerWatchdogRegistry({
+    timeoutMs: cli.progressWatchdogMs,
+    log: (line) => console.error(line),
+  });
 
   const healthByName = new Map<string, EndpointHealth>();
   for (const ep of endpoints) {
@@ -98,7 +109,7 @@ async function main(): Promise<void> {
   }
 
   for (const ep of endpoints) {
-    const ok = await runPreflightForEndpoint(ep, embedQueryUrl, log);
+    const ok = await runPreflightForEndpoint(ep, embedQueryUrl, log, cli.embedHttpTimeoutMs);
     const health = healthByName.get(ep.name)!;
     if (ok) {
       health.markPreflightPassed();
@@ -128,6 +139,12 @@ async function main(): Promise<void> {
 
   await shared.refresh(supabase, { tier0Probe });
 
+  const stallWatchdogByEndpoint = new Map<string, ReturnType<typeof workerWatchdogs.registerWorker>>();
+  for (const endpoint of activeEndpoints) {
+    stallWatchdogByEndpoint.set(endpoint.name, workerWatchdogs.registerWorker(endpoint.name));
+  }
+  workerWatchdogs.start();
+
   const coordinator = (async () => {
     while (!stopController.isStopping()) {
       if (cli.stopFile && existsSync(cli.stopFile)) {
@@ -143,7 +160,7 @@ async function main(): Promise<void> {
         for (const ep of activeEndpoints) {
           const health = healthByName.get(ep.name)!;
           if (health.needsPreflight) {
-            const ok = await runPreflightForEndpoint(ep, embedQueryUrl, log);
+            const ok = await runPreflightForEndpoint(ep, embedQueryUrl, log, cli.embedHttpTimeoutMs);
             if (ok) health.markPreflightPassed();
           }
         }
@@ -152,10 +169,12 @@ async function main(): Promise<void> {
     }
   })();
 
-  const workers = activeEndpoints.map(async (endpoint) => {
+  try {
+    const workers = activeEndpoints.map(async (endpoint) => {
     const workerId = buildWorkerId(endpoint.name);
     workerIds.push(workerId);
     const health = healthByName.get(endpoint.name)!;
+    const stallWatchdog = stallWatchdogByEndpoint.get(endpoint.name)!;
 
     await runEndpointWorkerLoop(
       {
@@ -179,21 +198,28 @@ async function main(): Promise<void> {
         secrets,
         sleep,
         log,
+        embedHttpTimeoutMs: cli.embedHttpTimeoutMs,
+        onProgress: stallWatchdog.touch,
+        pauseWatchdog: stallWatchdog.pause,
+        resumeWatchdog: stallWatchdog.resume,
       },
       () =>
         stopController.isStopping() ||
         Boolean(cli.stopFile && existsSync(cli.stopFile)),
-    );
-  });
+      );
+    });
 
-  await Promise.all(workers);
-  if (boundedRun) {
-    log(
-      `[backfill-v2] fullførte batch-grense${cli.maxBatches === 1 ? '' : ` (${cli.maxBatches} batches per worker)`} — avslutter.`,
-    );
-    await stopController.requestStop();
+    await Promise.all(workers);
+    if (boundedRun) {
+      log(
+        `[backfill-v2] fullførte batch-grense${cli.maxBatches === 1 ? '' : ` (${cli.maxBatches} batches per worker)`} — avslutter.`,
+      );
+      await stopController.requestStop();
+    }
+    await coordinator;
+  } finally {
+    workerWatchdogs.stop();
   }
-  await coordinator;
 }
 
 main().catch((err) => {

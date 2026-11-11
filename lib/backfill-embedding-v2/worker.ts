@@ -17,6 +17,7 @@ import { maxBatchesPerMinuteForSchedule, scheduleModeAt } from './schedule';
 import type { ScheduleWindow } from './schedule';
 import { checkEmbedUrlsAtStartup } from './urls';
 import { safeErrorMessage, collectEndpointSecrets } from './secrets';
+import { idleWait } from './idle-wait';
 
 export type ClaimedChunk = {
   id: string;
@@ -46,6 +47,10 @@ export type WorkerDeps = {
   secrets: string[];
   sleep: (ms: number) => Promise<void>;
   log: (line: string) => void;
+  embedHttpTimeoutMs: number;
+  onProgress?: () => void;
+  pauseWatchdog?: () => void;
+  resumeWatchdog?: () => void;
 };
 
 export function buildWorkerId(endpointName: string): string {
@@ -73,22 +78,29 @@ export async function runEndpointWorkerLoop(
   let minuteStarted = Date.now();
   let completedBatches = 0;
 
+  const idleHooks = {
+    touch: deps.onProgress,
+    pause: deps.pauseWatchdog,
+    resume: deps.resumeWatchdog,
+  };
+  const idle = (ms: number) => idleWait(deps.sleep, ms, idleHooks);
+
   while (!shouldStop()) {
     if (deps.maxBatches !== null && completedBatches >= deps.maxBatches) {
       break;
     }
     if (!deps.health.preflightOk) {
-      await deps.sleep(2000);
+      await idle(2000);
       continue;
     }
 
     if (deps.shared.isPaused()) {
-      await deps.sleep(1000);
+      await idle(1000);
       continue;
     }
 
     if (deps.health.isBackingOff()) {
-      await deps.sleep(Math.min(deps.health.backoffRemainingMs(), 5000));
+      await idle(Math.min(deps.health.backoffRemainingMs(), 5000));
       continue;
     }
 
@@ -111,7 +123,7 @@ export async function runEndpointWorkerLoop(
 
     const lane = selectClaimLane(deps.endpoint, deps.shared.tier0Pending);
     if (!lane) {
-      await deps.sleep(deps.shared.tier0Pending ? 60_000 : 5000);
+      await idle(deps.shared.tier0Pending ? 60_000 : 5000);
       continue;
     }
 
@@ -126,7 +138,7 @@ export async function runEndpointWorkerLoop(
     });
 
     if (shouldSleepForBatchRate(batchesThisMinute, cap)) {
-      await deps.sleep(1000);
+      await idle(1000);
       continue;
     }
 
@@ -145,13 +157,14 @@ export async function runEndpointWorkerLoop(
       deps.log(
         `[${deps.endpoint.name}] claim feilet: ${safeErrorMessage(claimError, deps.secrets)}`,
       );
-      await deps.sleep(2000);
+      await idle(2000);
       continue;
     }
 
     const rows = (claimed ?? []) as ClaimedChunk[];
     if (rows.length === 0) {
-      await deps.sleep(deps.shared.tier0Pending && lane === 'fast' ? 60_000 : 5000);
+      deps.onProgress?.();
+      await idle(deps.shared.tier0Pending && lane === 'fast' ? 60_000 : 5000);
       continue;
     }
 
@@ -162,6 +175,7 @@ export async function runEndpointWorkerLoop(
       await releaseWorkerClaims(deps.supabase, deps.workerId);
       batchesThisMinute += 1;
       completedBatches += 1;
+      deps.onProgress?.();
       continue;
     }
 
@@ -172,7 +186,10 @@ export async function runEndpointWorkerLoop(
       const { vectors, latencyMs, reportedModel } = await fetchEmbedBatchForEndpoint(
         deps.endpoint,
         embedRows,
-        { probeText: probe },
+        {
+          probeText: probe,
+          httpTimeoutMs: deps.embedHttpTimeoutMs,
+        },
       );
       latency.record(latencyMs);
 
@@ -201,6 +218,10 @@ export async function runEndpointWorkerLoop(
       deps.health.recordSuccess();
       batchesThisMinute += 1;
       completedBatches += 1;
+      const savedCount = saveResult?.saved ?? 0;
+      if (typeof savedCount === 'number' && savedCount > 0) {
+        deps.onProgress?.();
+      }
       deps.log(
         JSON.stringify({
           endpoint: deps.endpoint.name,
@@ -216,7 +237,7 @@ export async function runEndpointWorkerLoop(
       deps.log(
         `[${deps.endpoint.name}] batch feilet: ${safeErrorMessage(err, deps.secrets)}`,
       );
-      await deps.sleep(2000);
+      await idle(2000);
     }
   }
 }

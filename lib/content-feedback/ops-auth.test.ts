@@ -116,18 +116,20 @@ withSecrets(undefined, () => {
   assert.equal(contentFeedbackWebhookSecret(), null);
 });
 
+const ts = String(Date.now());
 assert.equal(
   verifyContentFeedbackRequest({
     secret: 's',
     method: 'POST',
     path: CONTENT_FEEDBACK_OPS_PATH,
     body: '{}',
-    timestampHeader: String(Date.now()),
+    timestampHeader: ts,
     signatureHeader: signContentFeedbackRequest({
       secret: 's',
       method: 'POST',
       path: CONTENT_FEEDBACK_OPS_PATH,
       body: '{}',
+      timestamp: ts,
     })['x-fm-signature'],
   }),
   true,
