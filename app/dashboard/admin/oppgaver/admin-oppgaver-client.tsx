@@ -7,6 +7,11 @@ import { AdminBackLink } from '@/components/admin/admin-shell';
 import { Button } from '@/components/ui/button';
 import { formatWhen } from '@/components/appens-fremtid/format';
 import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
+import {
+  devTaskProposalCardDomId,
+  isHttpOrHttpsUrl,
+  parseDevTaskProposalIdFromHash,
+} from '@/lib/admin/dev-task-proposals/hash-anchor';
 import { resolveDevTaskProposalDecision } from '@/lib/admin/dev-task-proposals/transitions';
 import {
   DEV_TASK_PROPOSAL_STATUSES,
@@ -55,6 +60,32 @@ function riskBadgeClass(risk: DevTaskProposalRow['risk']): string {
     : 'bg-muted text-muted-foreground';
 }
 
+function SignalRefLine({ signalRef }: { signalRef: string }) {
+  const trimmed = signalRef.trim();
+  if (!trimmed) return null;
+
+  return (
+    <p className="mt-1 min-w-0 text-xs text-muted-foreground">
+      <span className="text-muted-foreground">Kilde: </span>
+      {isHttpOrHttpsUrl(trimmed) ? (
+        <Link
+          href={trimmed}
+          className={cn(LINK_TOUCH_CLASS, 'inline-block max-w-full truncate align-bottom')}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={trimmed}
+        >
+          {trimmed}
+        </Link>
+      ) : (
+        <span className="block truncate text-muted-foreground" title={trimmed}>
+          {trimmed}
+        </span>
+      )}
+    </p>
+  );
+}
+
 function applyOptimisticDecision(
   proposals: DevTaskProposalRow[],
   id: string,
@@ -86,6 +117,8 @@ function ProposalCard({
   pendingAction,
   rejectConfirmId,
   inlineError,
+  highlighted,
+  onDismissError,
 }: {
   proposal: DevTaskProposalRow;
   onGodkjenn: (id: string) => void;
@@ -96,6 +129,8 @@ function ProposalCard({
   pendingAction: DevTaskProposalDecisionAction | null;
   rejectConfirmId: string | null;
   inlineError: string;
+  highlighted: boolean;
+  onDismissError: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const avbrytRef = useRef<HTMLButtonElement>(null);
@@ -111,9 +146,17 @@ function ProposalCard({
   }, [confirmingReject]);
 
   return (
-    <article className="rounded-lg border border-border bg-background p-3 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <h3 className="text-sm font-semibold text-foreground">{proposal.title}</h3>
+    <article
+      id={devTaskProposalCardDomId(proposal.id)}
+      className={cn(
+        'scroll-mt-24 rounded-lg border border-border bg-background p-3 shadow-sm transition-shadow',
+        highlighted && 'ring-2 ring-brand ring-offset-2 ring-offset-background',
+      )}
+    >
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+        <h3 className="min-w-0 flex-1 break-words text-sm font-semibold text-foreground">
+          {proposal.title}
+        </h3>
         <span
           className={cn(
             'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium',
@@ -124,6 +167,7 @@ function ProposalCard({
         </span>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">Kilde: {proposal.source}</p>
+      {proposal.signal_ref ? <SignalRefLine signalRef={proposal.signal_ref} /> : null}
       <p className="mt-1 text-xs text-muted-foreground">
         Opprettet {formatWhen(proposal.created_at)}
       </p>
@@ -165,9 +209,20 @@ function ProposalCard({
       ) : null}
 
       {inlineError ? (
-        <p className="mt-2 text-xs text-destructive" role="alert">
-          {inlineError}
-        </p>
+        <div className="mt-2 flex items-start gap-2" role="alert">
+          <p className="min-w-0 flex-1 text-xs text-destructive">{inlineError}</p>
+          <button
+            type="button"
+            className={cn(
+              'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground',
+              VURDER_FOCUS_RING,
+            )}
+            aria-label="Lukk"
+            onClick={() => onDismissError(proposal.id)}
+          >
+            <span aria-hidden>×</span>
+          </button>
+        </div>
       ) : null}
 
       {showActions && !confirmingReject ? (
@@ -241,6 +296,8 @@ function KanbanColumn({
   pendingAction,
   rejectConfirmId,
   cardErrors,
+  highlightedId,
+  onDismissError,
 }: {
   status: DevTaskProposalStatus;
   items: DevTaskProposalRow[];
@@ -254,6 +311,8 @@ function KanbanColumn({
   pendingAction: DevTaskProposalDecisionAction | null;
   rejectConfirmId: string | null;
   cardErrors: Record<string, string>;
+  highlightedId: string | null;
+  onDismissError: (id: string) => void;
 }) {
   const meta = COLUMN_META[status];
 
@@ -284,6 +343,8 @@ function KanbanColumn({
               pendingAction={pendingAction}
               rejectConfirmId={rejectConfirmId}
               inlineError={cardErrors[proposal.id] ?? ''}
+              highlighted={highlightedId === proposal.id}
+              onDismissError={onDismissError}
             />
           ))
         )}
@@ -299,7 +360,11 @@ function SkeletonBlock({ className }: { className?: string }) {
 export function OppgaverPageSkeleton() {
   return (
     <div className="space-y-6" aria-busy="true" aria-label="Laster oppgaver">
-      <SkeletonBlock className="h-10 w-56" />
+      <SkeletonBlock className="h-11 w-44" />
+      <header className="space-y-2">
+        <SkeletonBlock className="h-8 w-36 sm:h-9 sm:w-40" />
+        <SkeletonBlock className="h-10 w-full max-w-2xl" />
+      </header>
       <div className={KANBAN_GRID_CLASS}>
         {DEV_TASK_PROPOSAL_STATUSES.map((status) => (
           <div
@@ -329,6 +394,8 @@ export default function AdminOppgaverClient() {
   const [pendingAction, setPendingAction] = useState<DevTaskProposalDecisionAction | null>(null);
   const [rejectConfirmId, setRejectConfirmId] = useState<string | null>(null);
   const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const hashScrollDoneRef = useRef(false);
 
   const fetchProposals = useCallback(async (opts: { showLoading: boolean }) => {
     if (opts.showLoading) {
@@ -364,6 +431,25 @@ export default function AdminOppgaverClient() {
   useEffect(() => {
     void fetchProposals({ showLoading: true });
   }, [fetchProposals]);
+
+  useEffect(() => {
+    if (isInitialLoading || hashScrollDoneRef.current || proposals.length === 0) {
+      return;
+    }
+    const id = parseDevTaskProposalIdFromHash(window.location.hash);
+    if (!id) {
+      return;
+    }
+    const el = document.getElementById(devTaskProposalCardDomId(id));
+    if (!el) {
+      return;
+    }
+    hashScrollDoneRef.current = true;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setHighlightedId(id);
+    const timer = window.setTimeout(() => setHighlightedId(null), 2800);
+    return () => window.clearTimeout(timer);
+  }, [isInitialLoading, proposals]);
 
   const columns = useMemo(() => {
     const byStatus = Object.fromEntries(
@@ -497,6 +583,8 @@ export default function AdminOppgaverClient() {
             pendingAction={pendingAction}
             rejectConfirmId={rejectConfirmId}
             cardErrors={cardErrors}
+            highlightedId={highlightedId}
+            onDismissError={clearCardError}
           />
         ))}
       </div>
