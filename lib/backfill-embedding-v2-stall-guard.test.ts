@@ -42,7 +42,7 @@ function testWatchdogFiresOnStall(): void {
   let exitCode: number | null = null;
   const calls: Array<() => void> = [];
 
-  const setIntervalFn = (fn: () => void, _ms: number) => {
+  const setIntervalFn = (fn: () => void) => {
     calls.push(fn);
     return { unref: () => {} } as NodeJS.Timeout;
   };
@@ -72,7 +72,7 @@ function testWatchdogResetsOnProgress(): void {
   let exitCode: number | null = null;
   const calls: Array<() => void> = [];
 
-  const setIntervalFn = (fn: () => void, _ms: number) => {
+  const setIntervalFn = (fn: () => void) => {
     calls.push(fn);
     return { unref: () => {} } as NodeJS.Timeout;
   };

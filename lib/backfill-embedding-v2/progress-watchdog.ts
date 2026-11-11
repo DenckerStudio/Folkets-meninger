@@ -10,10 +10,15 @@ export type ProgressWatchdog = {
   stop: () => void;
 };
 
+export type WatchdogSetInterval = (
+  handler: () => void,
+  delay?: number,
+) => ReturnType<typeof setInterval>;
+
 export type CreateProgressWatchdogOptions = {
   timeoutMs: number;
   now?: () => number;
-  setIntervalFn?: typeof setInterval;
+  setIntervalFn?: WatchdogSetInterval;
   clearIntervalFn?: typeof clearInterval;
   log?: (line: string) => void;
   exit?: (code: number) => never;
