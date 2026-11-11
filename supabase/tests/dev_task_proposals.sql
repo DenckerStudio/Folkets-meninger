@@ -33,23 +33,7 @@ BEGIN
     RAISE EXCEPTION 'dev_task_proposals.sql: auth.instances mangler (forventet fra supabase start)';
   END IF;
 
-  INSERT INTO auth.users (
-    instance_id,
-    id,
-    aud,
-    role,
-    email,
-    encrypted_password,
-    email_confirmed_at,
-    raw_app_meta_data,
-    raw_user_meta_data,
-    created_at,
-    updated_at,
-    confirmation_token,
-    email_change,
-    email_change_token_new,
-    recovery_token
-  )
+  INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at)
   VALUES (
     v_instance_id,
     v_admin_id,
@@ -57,15 +41,7 @@ BEGIN
     'authenticated',
     'ci-dev-task-admin@folkets-meninger.test',
     '$2a$10$PznFIrLXp7kIyf2uABqafeNHEMakoAameoJrJJx7qH6xwfdEecy12',
-    now(),
-    '{}'::jsonb,
-    '{}'::jsonb,
-    now(),
-    now(),
-    '',
-    '',
-    '',
-    ''
+    now()
   )
   ON CONFLICT (id) DO NOTHING;
 
