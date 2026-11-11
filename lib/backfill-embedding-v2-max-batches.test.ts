@@ -80,6 +80,7 @@ async function runWorker(maxBatches: number | null, dryRun: boolean): Promise<nu
       secrets: [],
       sleep: async () => {},
       log: () => {},
+      embedHttpTimeoutMs: 60_000,
     },
     () => {
       loops += 1;
