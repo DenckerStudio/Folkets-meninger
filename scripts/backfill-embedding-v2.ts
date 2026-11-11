@@ -29,6 +29,7 @@ import { primaryPreflightPassed } from '../lib/backfill-embedding-v2/preflight-e
 import { createCachedTier0Probe } from '../lib/backfill-embedding-v2/tier0-probe';
 import { createProgressWatchdog } from '../lib/backfill-embedding-v2/progress-watchdog';
 import { withDbRpcTimeout } from '../lib/backfill-embedding-v2/supabase-rpc-timeout';
+import { idleWait } from '../lib/backfill-embedding-v2/idle-wait';
 
 function requiredEnv(name: string): string {
   const value = (process.env[name] ?? '').trim();
@@ -161,7 +162,7 @@ async function main(): Promise<void> {
           }
         }
       }
-      await sleep(5000);
+      await idleWait(sleep, 5000, progressWatchdog);
     }
   })();
 
@@ -195,6 +196,8 @@ async function main(): Promise<void> {
         log,
         embedHttpTimeoutMs: cli.embedHttpTimeoutMs,
         onProgress: progressWatchdog.touch,
+        pauseWatchdog: progressWatchdog.pause,
+        resumeWatchdog: progressWatchdog.resume,
       },
       () =>
         stopController.isStopping() ||

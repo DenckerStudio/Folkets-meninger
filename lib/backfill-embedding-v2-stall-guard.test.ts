@@ -5,6 +5,7 @@ import {
   PROGRESS_WATCHDOG_LOG_PREFIX,
 } from './backfill-embedding-v2/progress-watchdog';
 import { parseBackfillArgv } from './backfill-embedding-v2/parse-args';
+import { idleWait } from './backfill-embedding-v2/idle-wait';
 
 function hangUntilAbortFetch(): typeof fetch {
   return (_url, init) =>
@@ -105,11 +106,79 @@ function testParseTimeoutDefaults(): void {
   assert.equal(cli.progressWatchdogMs, 600_000);
 }
 
+function testHungAwaitWithoutIdlePauseExits(): void {
+  let now = 0;
+  let exitCode: number | null = null;
+  const calls: Array<() => void> = [];
+
+  const setIntervalFn = (fn: () => void) => {
+    calls.push(fn);
+    return { unref: () => {} } as NodeJS.Timeout;
+  };
+
+  const watchdog = createProgressWatchdog({
+    timeoutMs: 600,
+    now: () => now,
+    setIntervalFn,
+    clearIntervalFn: () => {},
+    pollMs: 100,
+    exit: (code) => {
+      exitCode = code;
+      throw new Error('exit');
+    },
+  });
+
+  watchdog.start();
+  now = 700;
+  assert.throws(() => calls[0]!(), /exit/);
+  assert.equal(exitCode, 2);
+}
+
+async function testIdleFastLaneWaitDoesNotExitAsync(): Promise<void> {
+  let now = 0;
+  let exitCode: number | null = null;
+  const calls: Array<() => void> = [];
+
+  const setIntervalFn = (fn: () => void) => {
+    calls.push(fn);
+    return { unref: () => {} } as NodeJS.Timeout;
+  };
+
+  const watchdog = createProgressWatchdog({
+    timeoutMs: 600_000,
+    now: () => now,
+    setIntervalFn,
+    clearIntervalFn: () => {},
+    pollMs: 30_000,
+    exit: (code) => {
+      exitCode = code;
+      throw new Error('exit');
+    },
+  });
+
+  watchdog.start();
+
+  for (let i = 0; i < 12; i += 1) {
+    watchdog.touch();
+    await idleWait(async (ms) => {
+      now += ms;
+      calls[0]!();
+    }, 60_000, watchdog);
+    now += 5_000;
+    calls[0]!();
+  }
+
+  assert.equal(exitCode, null);
+  assert.ok(now > 600_000);
+}
+
 async function main(): Promise<void> {
   await testFetchTimeoutAborts();
   testWatchdogFiresOnStall();
   testWatchdogResetsOnProgress();
   testParseTimeoutDefaults();
+  testHungAwaitWithoutIdlePauseExits();
+  await testIdleFastLaneWaitDoesNotExitAsync();
   console.log('backfill-embedding-v2-stall-guard.test.ts: ok');
 }
 

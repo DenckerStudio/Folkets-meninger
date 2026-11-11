@@ -6,6 +6,8 @@ export const DEFAULT_DB_RPC_TIMEOUT_MS = 30_000;
 
 export type ProgressWatchdog = {
   touch: () => void;
+  pause: () => void;
+  resume: () => void;
   start: () => void;
   stop: () => void;
 };
@@ -37,12 +39,26 @@ export function createProgressWatchdog(options: CreateProgressWatchdogOptions): 
   let lastProgressMs = now();
   let timer: ReturnType<typeof setInterval> | null = null;
   let started = false;
+  let paused = false;
 
   const touch = (): void => {
     lastProgressMs = now();
   };
 
+  const pause = (): void => {
+    paused = true;
+    touch();
+  };
+
+  const resume = (): void => {
+    paused = false;
+    touch();
+  };
+
   const evaluate = (): void => {
+    if (paused) {
+      return;
+    }
     const elapsed = now() - lastProgressMs;
     if (elapsed >= options.timeoutMs) {
       log(
@@ -70,5 +86,5 @@ export function createProgressWatchdog(options: CreateProgressWatchdogOptions): 
     started = false;
   };
 
-  return { touch, start, stop };
+  return { touch, pause, resume, start, stop };
 }
