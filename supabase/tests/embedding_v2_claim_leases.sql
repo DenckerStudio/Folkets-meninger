@@ -11,7 +11,6 @@ DECLARE
   v_save jsonb;
   v_row record;
   v_i int;
-  v_prog_all_good boolean;
   v_prog_count int;
   v_expected_order text[] := ARRAY[
     'embed-v2-order-t2b',
@@ -296,13 +295,38 @@ BEGIN
       RAISE EXCEPTION 'progress guard fixture: mangler embeddbar chunk på embed-v2-pg-good-zzz';
     END IF;
 
-    SELECT count(*)::int, bool_and(c.issue_id = 'embed-v2-pg-good-zzz')
-    INTO v_prog_count, v_prog_all_good
-    FROM public.n8n_claim_chunks_missing_v2('background', 5, 'prog-guard', 300) c;
+    IF EXISTS (
+      SELECT 1
+      FROM public.document_chunks d
+      WHERE d.issue_id = 'embed-v2-pg-empty-aaa'
+        AND coalesce(btrim(d.content), '') <> ''
+    ) THEN
+      RAISE EXCEPTION 'progress guard fixture: embed-v2-pg-empty-aaa har embeddbar innhold';
+    END IF;
 
-    IF v_prog_count < 1 OR v_prog_all_good IS DISTINCT FROM true THEN
-      RAISE EXCEPTION 'progress guard: forventet minst én claim kun fra embed-v2-pg-good-zzz, fikk %',
-        v_prog_count;
+    DROP TABLE IF EXISTS _pg_claim_progress_guard;
+    CREATE TEMP TABLE _pg_claim_progress_guard ON COMMIT DROP AS
+      SELECT c.*
+      FROM public.n8n_claim_chunks_missing_v2('background', 5, 'prog-guard', 300) c;
+
+    SELECT count(*)::int INTO v_prog_count FROM _pg_claim_progress_guard;
+
+    IF v_prog_count < 1 THEN
+      RAISE EXCEPTION 'progress guard: forventet minst én claim, fikk 0';
+    END IF;
+
+    IF EXISTS (
+      SELECT 1 FROM _pg_claim_progress_guard c
+      WHERE c.issue_id = 'embed-v2-pg-empty-aaa'
+    ) THEN
+      RAISE EXCEPTION 'progress guard: whitespace-issue ble plukket (btrim-brudd)';
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM _pg_claim_progress_guard c
+      WHERE c.issue_id = 'embed-v2-pg-good-zzz'
+    ) THEN
+      RAISE EXCEPTION 'progress guard: mangler claim fra embed-v2-pg-good-zzz';
     END IF;
 
     PERFORM public.n8n_release_embedding_v2_claims('prog-guard');
