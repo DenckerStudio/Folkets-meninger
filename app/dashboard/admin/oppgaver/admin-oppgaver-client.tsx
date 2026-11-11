@@ -1,11 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Columns3 } from 'lucide-react';
 import { AdminBackLink } from '@/components/admin/admin-shell';
 import { Button } from '@/components/ui/button';
 import { formatWhen } from '@/components/appens-fremtid/format';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
+import { resolveDevTaskProposalDecision } from '@/lib/admin/dev-task-proposals/transitions';
 import {
   DEV_TASK_PROPOSAL_STATUSES,
   type DevTaskProposalDecisionAction,
@@ -13,6 +15,8 @@ import {
   type DevTaskProposalStatus,
 } from '@/lib/admin/dev-task-proposals/types';
 import { cn } from '@/lib/utils';
+
+const KANBAN_GRID_CLASS = 'grid gap-4 lg:grid-cols-2 xl:grid-cols-4';
 
 const COLUMN_META: Record<
   DevTaskProposalStatus,
@@ -36,6 +40,11 @@ const COLUMN_META: Record<
   },
 };
 
+const LINK_TOUCH_CLASS = cn(
+  'inline-flex min-h-11 items-center text-xs font-medium text-brand hover:underline',
+  VURDER_FOCUS_RING,
+);
+
 function riskLabel(risk: DevTaskProposalRow['risk']): string {
   return risk === 'low' ? 'Lav' : 'Normal';
 }
@@ -46,25 +55,60 @@ function riskBadgeClass(risk: DevTaskProposalRow['risk']): string {
     : 'bg-muted text-muted-foreground';
 }
 
-type ColumnState = {
-  items: DevTaskProposalRow[];
-  loadError: string;
-  isLoading: boolean;
-};
+function applyOptimisticDecision(
+  proposals: DevTaskProposalRow[],
+  id: string,
+  action: DevTaskProposalDecisionAction,
+): DevTaskProposalRow[] | null {
+  const current = proposals.find((p) => p.id === id);
+  if (!current) return null;
+  const transition = resolveDevTaskProposalDecision(current.status, action);
+  if (!transition.ok) return null;
+  const now = new Date().toISOString();
+  return proposals.map((p) =>
+    p.id === id
+      ? {
+          ...p,
+          status: transition.nextStatus,
+          decided_at: now,
+        }
+      : p,
+  );
+}
 
 function ProposalCard({
   proposal,
-  onDecision,
+  onGodkjenn,
+  onRequestAvslå,
+  onConfirmAvslå,
+  onCancelAvslå,
   pendingId,
+  pendingAction,
+  rejectConfirmId,
+  inlineError,
 }: {
   proposal: DevTaskProposalRow;
-  onDecision: (id: string, action: DevTaskProposalDecisionAction) => void;
+  onGodkjenn: (id: string) => void;
+  onRequestAvslå: (id: string) => void;
+  onConfirmAvslå: (id: string) => void;
+  onCancelAvslå: () => void;
   pendingId: string | null;
+  pendingAction: DevTaskProposalDecisionAction | null;
+  rejectConfirmId: string | null;
+  inlineError: string;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const avbrytRef = useRef<HTMLButtonElement>(null);
   const body = proposal.body?.trim() ?? '';
   const showActions = proposal.status === 'til_godkjenning';
   const busy = pendingId === proposal.id;
+  const confirmingReject = rejectConfirmId === proposal.id;
+
+  useEffect(() => {
+    if (confirmingReject) {
+      avbrytRef.current?.focus();
+    }
+  }, [confirmingReject]);
 
   return (
     <article className="rounded-lg border border-border bg-background p-3 shadow-sm">
@@ -96,7 +140,7 @@ function ProposalCard({
         <p className="mt-2">
           <Link
             href={proposal.pr_url}
-            className="text-xs font-medium text-brand hover:underline"
+            className={LINK_TOUCH_CLASS}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -111,7 +155,7 @@ function ProposalCard({
           {body.length > 160 ? (
             <button
               type="button"
-              className="mt-1 text-xs font-medium text-brand hover:underline"
+              className={cn('mt-1', LINK_TOUCH_CLASS)}
               onClick={() => setExpanded((v) => !v)}
             >
               {expanded ? 'Vis mindre' : 'Vis mer'}
@@ -120,25 +164,64 @@ function ProposalCard({
         </div>
       ) : null}
 
-      {showActions ? (
+      {inlineError ? (
+        <p className="mt-2 text-xs text-destructive" role="alert">
+          {inlineError}
+        </p>
+      ) : null}
+
+      {showActions && !confirmingReject ? (
         <div className="mt-3 flex flex-wrap gap-2">
           <Button
             type="button"
-            size="sm"
+            className={cn('min-h-11', VURDER_FOCUS_RING)}
             disabled={busy}
-            onClick={() => onDecision(proposal.id, 'godkjenn')}
+            aria-busy={busy && pendingAction === 'godkjenn'}
+            onClick={() => onGodkjenn(proposal.id)}
           >
-            Godkjenn
+            {busy && pendingAction === 'godkjenn' ? 'Godkjenner …' : 'Godkjenn'}
           </Button>
           <Button
             type="button"
-            size="sm"
             variant="outline"
+            className={cn('min-h-11', VURDER_FOCUS_RING)}
             disabled={busy}
-            onClick={() => onDecision(proposal.id, 'avslå')}
+            onClick={() => onRequestAvslå(proposal.id)}
           >
             Avslå
           </Button>
+        </div>
+      ) : null}
+
+      {showActions && confirmingReject ? (
+        <div
+          className="mt-3 space-y-2 rounded-lg border border-border bg-muted/40 p-3"
+          role="region"
+          aria-label="Bekreft avslag"
+        >
+          <p className="text-sm font-medium text-foreground">Avslå forslaget?</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="destructive"
+              className={cn('min-h-11', VURDER_FOCUS_RING)}
+              disabled={busy}
+              aria-busy={busy && pendingAction === 'avslå'}
+              onClick={() => onConfirmAvslå(proposal.id)}
+            >
+              {busy && pendingAction === 'avslå' ? 'Avslår …' : 'Avslå'}
+            </Button>
+            <Button
+              ref={avbrytRef}
+              type="button"
+              variant="outline"
+              className={cn('min-h-11', VURDER_FOCUS_RING)}
+              disabled={busy}
+              onClick={onCancelAvslå}
+            >
+              Avbryt
+            </Button>
+          </div>
         </div>
       ) : null}
     </article>
@@ -147,14 +230,30 @@ function ProposalCard({
 
 function KanbanColumn({
   status,
-  state,
-  onDecision,
+  items,
+  boardLoading,
+  boardError,
+  onGodkjenn,
+  onRequestAvslå,
+  onConfirmAvslå,
+  onCancelAvslå,
   pendingId,
+  pendingAction,
+  rejectConfirmId,
+  cardErrors,
 }: {
   status: DevTaskProposalStatus;
-  state: ColumnState;
-  onDecision: (id: string, action: DevTaskProposalDecisionAction) => void;
+  items: DevTaskProposalRow[];
+  boardLoading: boolean;
+  boardError: boolean;
+  onGodkjenn: (id: string) => void;
+  onRequestAvslå: (id: string) => void;
+  onConfirmAvslå: (id: string) => void;
+  onCancelAvslå: () => void;
   pendingId: string | null;
+  pendingAction: DevTaskProposalDecisionAction | null;
+  rejectConfirmId: string | null;
+  cardErrors: Record<string, string>;
 }) {
   const meta = COLUMN_META[status];
 
@@ -162,25 +261,29 @@ function KanbanColumn({
     <section className="flex min-h-[16rem] flex-col rounded-xl border border-border bg-card p-3">
       <header className="mb-3 border-b border-border pb-2">
         <h2 className="text-sm font-semibold text-foreground">{meta.title}</h2>
-        <p className="text-xs text-muted-foreground">{state.items.length} forslag</p>
+        {!boardError && !boardLoading ? (
+          <p className="text-xs text-muted-foreground">{items.length} forslag</p>
+        ) : null}
       </header>
 
       <div className="flex flex-1 flex-col gap-2">
-        {state.isLoading ? (
+        {boardLoading ? (
           <p className="text-sm text-muted-foreground">Laster …</p>
-        ) : state.loadError ? (
-          <p className="text-sm text-destructive" role="alert">
-            {state.loadError}
-          </p>
-        ) : state.items.length === 0 ? (
+        ) : boardError ? null : items.length === 0 ? (
           <p className="text-sm text-muted-foreground">{meta.empty}</p>
         ) : (
-          state.items.map((proposal) => (
+          items.map((proposal) => (
             <ProposalCard
               key={proposal.id}
               proposal={proposal}
-              onDecision={onDecision}
+              onGodkjenn={onGodkjenn}
+              onRequestAvslå={onRequestAvslå}
+              onConfirmAvslå={onConfirmAvslå}
+              onCancelAvslå={onCancelAvslå}
               pendingId={pendingId}
+              pendingAction={pendingAction}
+              rejectConfirmId={rejectConfirmId}
+              inlineError={cardErrors[proposal.id] ?? ''}
             />
           ))
         )}
@@ -189,13 +292,29 @@ function KanbanColumn({
   );
 }
 
+function SkeletonBlock({ className }: { className?: string }) {
+  return <div className={cn('animate-pulse rounded bg-muted/60', className)} />;
+}
+
 export function OppgaverPageSkeleton() {
   return (
-    <div className="space-y-4">
-      <div className="h-8 w-48 animate-pulse rounded bg-muted" />
-      <div className="grid gap-4 lg:grid-cols-4">
+    <div className="space-y-6" aria-busy="true" aria-label="Laster oppgaver">
+      <SkeletonBlock className="h-10 w-56" />
+      <div className={KANBAN_GRID_CLASS}>
         {DEV_TASK_PROPOSAL_STATUSES.map((status) => (
-          <div key={status} className="h-64 animate-pulse rounded-xl bg-muted" />
+          <div
+            key={status}
+            className="flex min-h-[16rem] flex-col rounded-xl border border-border bg-card p-3"
+          >
+            <div className="mb-3 space-y-2 border-b border-border pb-2">
+              <SkeletonBlock className="h-4 w-32" />
+              <SkeletonBlock className="h-3 w-20" />
+            </div>
+            <div className="flex flex-1 flex-col gap-2">
+              <SkeletonBlock className="min-h-[7rem] w-full rounded-lg" />
+              <SkeletonBlock className="min-h-[7rem] w-full rounded-lg" />
+            </div>
+          </div>
         ))}
       </div>
     </div>
@@ -205,39 +324,46 @@ export function OppgaverPageSkeleton() {
 export default function AdminOppgaverClient() {
   const [proposals, setProposals] = useState<DevTaskProposalRow[]>([]);
   const [loadError, setLoadError] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [actionError, setActionError] = useState('');
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
+  const [pendingAction, setPendingAction] = useState<DevTaskProposalDecisionAction | null>(null);
+  const [rejectConfirmId, setRejectConfirmId] = useState<string | null>(null);
+  const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
 
-  const load = useCallback(() => {
-    setIsLoading(true);
-    startTransition(async () => {
-      try {
-        const res = await fetch('/api/admin/dev-task-proposals');
-        const data = (await res.json().catch(() => ({}))) as {
-          proposals?: DevTaskProposalRow[];
-          error?: string;
-        };
-        if (!res.ok) {
-          setLoadError(typeof data.error === 'string' ? data.error : 'Kunne ikke laste oppgaver.');
+  const fetchProposals = useCallback(async (opts: { showLoading: boolean }) => {
+    if (opts.showLoading) {
+      setIsInitialLoading(true);
+    }
+    try {
+      const res = await fetch('/api/admin/dev-task-proposals');
+      const data = (await res.json().catch(() => ({}))) as {
+        proposals?: DevTaskProposalRow[];
+        error?: string;
+      };
+      if (!res.ok) {
+        setLoadError(typeof data.error === 'string' ? data.error : 'Kunne ikke laste oppgaver.');
+        if (opts.showLoading) {
           setProposals([]);
-        } else {
-          setLoadError('');
-          setProposals(Array.isArray(data.proposals) ? data.proposals : []);
         }
-      } catch {
-        setLoadError('Kunne ikke laste oppgaver.');
-        setProposals([]);
-      } finally {
-        setIsLoading(false);
+      } else {
+        setLoadError('');
+        setProposals(Array.isArray(data.proposals) ? data.proposals : []);
       }
-    });
+    } catch {
+      setLoadError('Kunne ikke laste oppgaver.');
+      if (opts.showLoading) {
+        setProposals([]);
+      }
+    } finally {
+      if (opts.showLoading) {
+        setIsInitialLoading(false);
+      }
+    }
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    void fetchProposals({ showLoading: true });
+  }, [fetchProposals]);
 
   const columns = useMemo(() => {
     const byStatus = Object.fromEntries(
@@ -248,80 +374,129 @@ export default function AdminOppgaverClient() {
         byStatus[row.status].push(row);
       }
     }
-  return byStatus;
+    return byStatus;
   }, [proposals]);
 
-  const columnStates = useMemo(
-    () =>
-      Object.fromEntries(
-        DEV_TASK_PROPOSAL_STATUSES.map((status) => [
-          status,
-          {
-            items: columns[status],
-            loadError,
-            isLoading,
-          } satisfies ColumnState,
-        ]),
-      ) as Record<DevTaskProposalStatus, ColumnState>,
-    [columns, isLoading, loadError],
-  );
-
-  const onDecision = (id: string, action: DevTaskProposalDecisionAction) => {
-    const current = proposals.find((p) => p.id === id);
-    if (!current || current.status !== 'til_godkjenning') {
-      setActionError('Forslaget kan ikke behandles lenger.');
-      return;
-    }
-    setActionError('');
-    setPendingId(id);
-    startTransition(async () => {
-      try {
-        const res = await fetch(`/api/admin/dev-task-proposals/${encodeURIComponent(id)}/decision`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, currentStatus: current.status }),
-        });
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        if (!res.ok) {
-          setActionError(typeof data.error === 'string' ? data.error : 'Handlingen feilet.');
-        } else {
-          load();
-        }
-      } catch {
-        setActionError('Handlingen feilet.');
-      } finally {
-        setPendingId(null);
-      }
+  const clearCardError = (id: string) => {
+    setCardErrors((prev) => {
+      if (!prev[id]) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
     });
   };
+
+  const runDecision = async (id: string, action: DevTaskProposalDecisionAction) => {
+    const current = proposals.find((p) => p.id === id);
+    if (!current || current.status !== 'til_godkjenning') {
+      setCardErrors((prev) => ({
+        ...prev,
+        [id]: 'Kortet er allerede behandlet',
+      }));
+      void fetchProposals({ showLoading: false });
+      return;
+    }
+
+    const snapshot = proposals;
+    const optimistic = applyOptimisticDecision(proposals, id, action);
+    if (!optimistic) {
+      return;
+    }
+
+    clearCardError(id);
+    setRejectConfirmId(null);
+    setPendingId(id);
+    setPendingAction(action);
+    setProposals(optimistic);
+
+    try {
+      const res = await fetch(`/api/admin/dev-task-proposals/${encodeURIComponent(id)}/decision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, currentStatus: 'til_godkjenning' }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+
+      if (res.status === 409) {
+        setProposals(snapshot);
+        setCardErrors((prev) => ({
+          ...prev,
+          [id]: 'Kortet er allerede behandlet',
+        }));
+        void fetchProposals({ showLoading: false });
+        return;
+      }
+
+      if (!res.ok) {
+        setProposals(snapshot);
+        setCardErrors((prev) => ({
+          ...prev,
+          [id]: typeof data.error === 'string' ? data.error : 'Handlingen feilet.',
+        }));
+      }
+    } catch {
+      setProposals(snapshot);
+      setCardErrors((prev) => ({
+        ...prev,
+        [id]: 'Handlingen feilet.',
+      }));
+    } finally {
+      setPendingId(null);
+      setPendingAction(null);
+    }
+  };
+
+  const boardError = Boolean(loadError);
 
   return (
     <div className="space-y-6">
       <AdminBackLink />
-      <div className="flex items-start gap-3">
-        <Columns3 className="mt-1 h-6 w-6 shrink-0 text-brand" aria-hidden />
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-foreground">Oppgaver</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Godkjenn eller avslå auto-genererte forslag før kodeflyten tar over.
-          </p>
-        </div>
-      </div>
-
-      {actionError ? (
-        <p className="text-sm text-destructive" role="alert">
-          {actionError}
+      <header>
+        <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+          <Columns3 className="h-6 w-6 shrink-0 text-brand" aria-hidden />
+          Oppgaver
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Godkjenn eller avslå auto-genererte forslag før kodeflyten tar over.
         </p>
+      </header>
+
+      {loadError ? (
+        <div
+          className="flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+          role="alert"
+        >
+          <p className="text-sm text-destructive">{loadError}</p>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn('min-h-11 shrink-0', VURDER_FOCUS_RING)}
+            onClick={() => void fetchProposals({ showLoading: true })}
+          >
+            Prøv igjen
+          </Button>
+        </div>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+      <div className={KANBAN_GRID_CLASS}>
         {DEV_TASK_PROPOSAL_STATUSES.map((status) => (
           <KanbanColumn
             key={status}
             status={status}
-            state={columnStates[status]}
-            onDecision={onDecision}
+            items={columns[status]}
+            boardLoading={isInitialLoading}
+            boardError={boardError}
+            onGodkjenn={(id) => void runDecision(id, 'godkjenn')}
+            onRequestAvslå={(id) => {
+              clearCardError(id);
+              setRejectConfirmId(id);
+            }}
+            onConfirmAvslå={(id) => void runDecision(id, 'avslå')}
+            onCancelAvslå={() => setRejectConfirmId(null)}
             pendingId={pendingId}
+            pendingAction={pendingAction}
+            rejectConfirmId={rejectConfirmId}
+            cardErrors={cardErrors}
           />
         ))}
       </div>

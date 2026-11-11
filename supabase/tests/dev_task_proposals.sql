@@ -5,7 +5,7 @@ DECLARE
   v_user_id uuid := 'd2222222-2222-4222-8222-222222222202';
   v_proposal_id uuid;
   v_count int;
-  v_instance_id uuid;
+  v_instance_id uuid := '00000000-0000-0000-0000-000000000000';
 BEGIN
   IF to_regclass('public.dev_task_proposals') IS NULL THEN
     RAISE EXCEPTION 'dev_task_proposals.sql: forventet tabell dev_task_proposals';
@@ -28,17 +28,9 @@ BEGIN
     RAISE EXCEPTION 'service_role mangler INSERT på dev_task_proposals';
   END IF;
 
-  SELECT id INTO v_instance_id FROM auth.instances LIMIT 1;
-  IF v_instance_id IS NULL THEN
-    v_instance_id := '00000000-0000-0000-0000-000000000000';
-    INSERT INTO auth.instances (id, uuid, raw_base_config)
-    VALUES (v_instance_id, v_instance_id, '{}'::jsonb)
-    ON CONFLICT (id) DO NOTHING;
-  END IF;
-
   INSERT INTO auth.users (
-    id,
     instance_id,
+    id,
     aud,
     role,
     email,
@@ -47,35 +39,29 @@ BEGIN
     raw_app_meta_data,
     raw_user_meta_data,
     created_at,
-    updated_at
+    updated_at,
+    confirmation_token,
+    email_change,
+    email_change_token_new,
+    recovery_token
   )
-  VALUES
-    (
-      v_admin_id,
-      v_instance_id,
-      'authenticated',
-      'authenticated',
-      'ci-dev-task-admin@folkets-meninger.test',
-      '',
-      now(),
-      '{}'::jsonb,
-      '{}'::jsonb,
-      now(),
-      now()
-    ),
-    (
-      v_user_id,
-      v_instance_id,
-      'authenticated',
-      'authenticated',
-      'ci-dev-task-user@folkets-meninger.test',
-      '',
-      now(),
-      '{}'::jsonb,
-      '{}'::jsonb,
-      now(),
-      now()
-    )
+  VALUES (
+    v_instance_id,
+    v_admin_id,
+    'authenticated',
+    'authenticated',
+    'ci-dev-task-admin@folkets-meninger.test',
+    '$2a$10$PznFIrLXp7kIyf2uABqafeNHEMakoAameoJrJJx7qH6xwfdEecy12',
+    now(),
+    '{}'::jsonb,
+    '{}'::jsonb,
+    now(),
+    now(),
+    '',
+    '',
+    '',
+    ''
+  )
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.user_roles (user_id, role)
@@ -190,6 +176,8 @@ BEGIN
   RESET ROLE;
 
   DELETE FROM public.dev_task_proposals WHERE dedupe_key LIKE 'ci-dev-task-%';
+  DELETE FROM public.user_roles WHERE user_id = v_admin_id AND role = 'admin';
+  DELETE FROM auth.users WHERE id = v_admin_id;
 
   RAISE NOTICE 'dev_task_proposals.sql: OK';
 END $$;
