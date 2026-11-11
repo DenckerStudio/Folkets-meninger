@@ -188,9 +188,6 @@ if [[ -f supabase/migrations/20261111110000_dev_task_proposals.sql ]]; then
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261111110000_dev_task_proposals.sql
 fi
 
-echo "Running dev_task_proposals.sql ..."
-psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/dev_task_proposals.sql
-
 echo "Running security-lockdown-defaults.sql (supabase_admin connection) ..."
 psql "$DEFAULTS_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-lockdown-defaults.sql
 
@@ -238,6 +235,9 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/admin_publish_stortinget_pol
 
 echo "Running unaccent_execute_grant.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/unaccent_execute_grant.sql
+
+echo "Running dev_task_proposals.sql ..."
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/dev_task_proposals.sql
 
 echo "Running security-guard.sql ..."
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/security-guard.sql
