@@ -176,7 +176,7 @@ curl -X POST "$N8N_SYSTEM_POLL_DRAFT_WEBHOOK_URL" \
   -d '{"stortinget_issue_id":"200329"}'
 ```
 
-Triggere: daglig 06:00 + `POST /webhook/folkets-system-poll-draft`. Appen kaller webhooken og admin «Generer utkast».
+Triggere: daglig 06:00 + `POST /webhook/folkets-system-poll-draft`. Appen ikke lenger kaller denne webhooken og admin «Generer utkast».
 
 ## Forum Reels — archived (product removed)
 
