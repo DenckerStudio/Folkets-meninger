@@ -38,4 +38,14 @@ describe('parseStortingetDotNetDateToISO', () => {
     const result = parseStortingetDotNetDateToISO('unknown');
     assert.strictEqual(result, 'unknown');
   });
+
+  it('returns an empty string for an empty string input', () => {
+    const result = parseStortingetDotNetDateToISO('');
+    assert.strictEqual(result, '');
+  });
+
+  it('returns the input unchanged for an unknown format', () => {
+    const result = parseStortingetDotNetDateToISO('unknown');
+    assert.strictEqual(result, 'unknown');
+  });
 });
