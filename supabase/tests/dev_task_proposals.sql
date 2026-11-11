@@ -30,10 +30,7 @@ BEGIN
 
   SELECT id INTO v_instance_id FROM auth.instances LIMIT 1;
   IF v_instance_id IS NULL THEN
-    v_instance_id := '00000000-0000-0000-0000-000000000000';
-    INSERT INTO auth.instances (id, uuid, raw_base_config)
-    VALUES (v_instance_id, v_instance_id, '{}'::jsonb)
-    ON CONFLICT (id) DO NOTHING;
+    RAISE EXCEPTION 'dev_task_proposals.sql: auth.instances mangler (forventet fra supabase start)';
   END IF;
 
   INSERT INTO auth.users (
