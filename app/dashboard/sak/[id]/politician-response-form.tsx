@@ -85,7 +85,7 @@ export default function PoliticianResponseForm({ sakId }: { sakId?: string }) {
         onChange={(e) => setResponse(e.target.value)}
         maxLength={4000}
         className="w-full border border-border rounded-xl p-4 bg-background text-foreground outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand mb-2 text-sm"
-        placeholder="Skriv din forklaring her..."
+        placeholder="Skriv din forklaring her…"
       ></textarea>
       <div className="flex items-center justify-between mb-4 text-xs text-muted-foreground">
         <span>{response.length}/4000 tegn</span>
@@ -97,7 +97,7 @@ export default function PoliticianResponseForm({ sakId }: { sakId?: string }) {
           disabled={!response.trim() || isSubmitting}
           className="px-6 py-2 bg-brand text-white font-medium rounded-lg hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? 'Publiserer...' : 'Publiser svar'}
+          {isSubmitting ? 'Publiserer…' : 'Publiser svar'}
         </button>
       </div>
     </div>
