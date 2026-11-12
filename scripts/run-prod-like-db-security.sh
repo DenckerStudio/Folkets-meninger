@@ -71,6 +71,9 @@ should_defer() {
   if [[ "$base" == 20261111090000_n8n_claim_chunks_missing_v2_progress_guard.sql ]]; then
     return 0
   fi
+  if [[ "$base" == 20261112120000_n8n_claim_chunks_missing_v2_issueless_fallback.sql ]]; then
+    return 0
+  fi
   if [[ "$base" == 20261111100000_grant_unaccent_execute.sql ]]; then
     return 0
   fi
@@ -176,6 +179,11 @@ fi
 echo "Phase 5e: embedding v2 claim progress guard (20261111090000 transactional) ..."
 if [[ -f supabase/migrations/20261111090000_n8n_claim_chunks_missing_v2_progress_guard.sql ]]; then
   psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261111090000_n8n_claim_chunks_missing_v2_progress_guard.sql
+fi
+
+echo "Phase 5e2: embedding v2 claim issueless fallback (20261112120000 transactional) ..."
+if [[ -f supabase/migrations/20261112120000_n8n_claim_chunks_missing_v2_issueless_fallback.sql ]]; then
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261112120000_n8n_claim_chunks_missing_v2_issueless_fallback.sql
 fi
 
 echo "Phase 5f: extensions.unaccent EXECUTE for service_role (20261111100000; needs RAG/fm_unaccent) ..."
