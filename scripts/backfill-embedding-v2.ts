@@ -30,6 +30,7 @@ import { createCachedTier0Probe } from '../lib/backfill-embedding-v2/tier0-probe
 import { createBackgroundProgressWatchdog } from '../lib/backfill-embedding-v2/background-progress-watchdog';
 import { createWorkerWatchdogRegistry } from '../lib/backfill-embedding-v2/progress-watchdog';
 import { withDbRpcTimeout } from '../lib/backfill-embedding-v2/supabase-rpc-timeout';
+import { createBackgroundEmptyQueueLog } from '../lib/backfill-embedding-v2/background-empty-queue-log';
 
 function requiredEnv(name: string): string {
   const value = (process.env[name] ?? '').trim();
@@ -103,6 +104,7 @@ async function main(): Promise<void> {
     timeoutMs: cli.progressWatchdogMs,
     log: (line) => console.error(line),
   });
+  const backgroundEmptyQueueLog = createBackgroundEmptyQueueLog({ log });
   const backgroundProgressWatchdog = createBackgroundProgressWatchdog({
     timeoutMs: cli.backgroundProgressWatchdogMs,
     tier0StarvationMs: cli.tier0StarvationMs,
@@ -213,6 +215,7 @@ async function main(): Promise<void> {
         onFastLaneBatchSaved: backgroundProgressWatchdog.touchFastLaneSave,
         onBackgroundClaimAttempt: backgroundProgressWatchdog.noteBackgroundClaimAttempt,
         onBackgroundPending: backgroundProgressWatchdog.setBackgroundPending,
+        backgroundEmptyQueueLog,
         pauseWatchdog: stallWatchdog.pause,
         resumeWatchdog: stallWatchdog.resume,
       },

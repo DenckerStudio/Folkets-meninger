@@ -18,12 +18,13 @@ import type { ScheduleWindow } from './schedule';
 import { checkEmbedUrlsAtStartup } from './urls';
 import { safeErrorMessage, collectEndpointSecrets } from './secrets';
 import { idleWait } from './idle-wait';
+import type { BackgroundEmptyQueueLog } from './background-empty-queue-log';
 
 export type ClaimedChunk = {
   id: string;
   content: string;
   chunk_index: number;
-  issue_id: string;
+  issue_id: string | null;
 };
 
 export type WorkerDeps = {
@@ -55,6 +56,7 @@ export type WorkerDeps = {
   onBackgroundPending?: (pending: boolean) => void;
   pauseWatchdog?: () => void;
   resumeWatchdog?: () => void;
+  backgroundEmptyQueueLog?: BackgroundEmptyQueueLog;
 };
 
 export function buildWorkerId(endpointName: string): string {
@@ -174,6 +176,9 @@ export async function runEndpointWorkerLoop(
       deps.onBackgroundPending?.(rows.length > 0);
     }
     if (rows.length === 0) {
+      if (lane === 'background') {
+        deps.backgroundEmptyQueueLog?.maybeLogEmptyBackgroundQueue();
+      }
       deps.onProgress?.();
       await idle(deps.shared.tier0Pending && lane === 'fast' ? 60_000 : 5000);
       continue;
@@ -233,6 +238,7 @@ export async function runEndpointWorkerLoop(
       if (typeof savedCount === 'number' && savedCount > 0) {
         deps.onProgress?.();
         if (lane === 'background') {
+          deps.backgroundEmptyQueueLog?.resetThrottle();
           deps.onBackgroundBatchSaved?.();
         } else if (lane === 'fast') {
           deps.onFastLaneBatchSaved?.();
