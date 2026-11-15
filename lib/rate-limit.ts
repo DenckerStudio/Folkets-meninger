@@ -108,6 +108,9 @@ export function getRateLimitPolicy(
   if (pathname.startsWith('/api/dashboard/utforsk/issue-search')) {
     return { limit: 30, windowMs: 60_000 };
   }
+  if (/^\/api\/admin\/research\/(topics|issues)\/[^/]+\/more-sources/.test(pathname)) {
+    return { limit: 12, windowMs: 60_000 };
+  }
   if (pathname.startsWith('/api/byok')) {
     return { limit: 20, windowMs: 60_000 };
   }

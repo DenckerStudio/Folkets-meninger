@@ -11,6 +11,7 @@ import {
   RESEARCH_KIND_LABELS,
   researchBriefOutputLink,
 } from '@/lib/admin/research/labels';
+import { ResearchMoreSourcesPanel } from '@/components/admin/research-more-sources-panel';
 import { ResearchTopicUseFindingButton } from '@/components/admin/research-topic-use-finding-button';
 import type { ResearchTopicSnapshot } from '@/lib/admin/research/topic-types';
 import type { ResearchBriefRow, ResearchPerspective } from '@/lib/admin/research/types';
@@ -77,6 +78,13 @@ export function ResearchClusterDetailView({
             initialSnapshot={topicSnapshot}
           />
         </div>
+        {topicSnapshot?.topicId && topicSnapshot.status === 'done' ? (
+          <div className="mt-4">
+            <ResearchMoreSourcesPanel
+              scope={{ kind: 'topic', topicId: topicSnapshot.topicId }}
+            />
+          </div>
+        ) : null}
       </section>
 
       <TopicAroundResearchPanel clusterId={row.id} />
