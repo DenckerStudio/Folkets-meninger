@@ -10,7 +10,8 @@ import {
   getSporsmalFraId,
   getSporsmalSearchText,
 } from '@/lib/sporsmal/search-text';
-import { resolveSporsmalTheme, type SporsmalThemeLabel } from '@/lib/sporsmal/themes';
+import { resolveSporsmalTheme, SPORSMAL_FALLBACK_THEME, type SporsmalThemeLabel } from '@/lib/sporsmal/themes';
+import { parseStortingetDate } from '@/lib/stortinget-horinger';
 
 export const SPORSMAL_PAGE_SIZE = 30;
 
@@ -80,13 +81,39 @@ export function filterSporsmalList(
     }));
 }
 
+/** Milliseconds since epoch for default nyeste-først sorting. */
+export function getSporsmalSortTime(item: StortingetSporsmal): number {
+  const sent = parseStortingetDate(item.sendt_dato ? String(item.sendt_dato) : undefined);
+  const dated = parseStortingetDate(item.datert_dato ? String(item.datert_dato) : undefined);
+  const ms = sent?.getTime() ?? dated?.getTime() ?? 0;
+  if (ms > 0) return ms;
+  return item.sporsmal_nummer ?? 0;
+}
+
+/** Default list order: newest question first; tema is not a sort key. */
 export function sortSporsmalForDisplay(items: SporsmalListItemView[]): SporsmalListItemView[] {
   return [...items].sort((a, b) => {
-    const themeCompare = a.theme.localeCompare(b.theme, 'nb');
-    if (themeCompare !== 0) return themeCompare;
+    const tA = getSporsmalSortTime(a);
+    const tB = getSporsmalSortTime(b);
+    if (tB !== tA) return tB - tA;
     const numA = a.sporsmal_nummer ?? 0;
     const numB = b.sporsmal_nummer ?? 0;
-    return numB - numA;
+    if (numB !== numA) return numB - numA;
+    return String(b.id ?? '').localeCompare(String(a.id ?? ''), 'nb');
+  });
+}
+
+/** When rendering tema-grupper on a page, rank grupper by nyeste spørsmål — «Annet» sist. */
+export function sortGroupedSporsmalThemes(
+  groups: Array<[SporsmalThemeLabel, SporsmalListItemView[]]>,
+): Array<[SporsmalThemeLabel, SporsmalListItemView[]]> {
+  return [...groups].sort((a, b) => {
+    const maxA = Math.max(0, ...a[1].map((item) => getSporsmalSortTime(item)));
+    const maxB = Math.max(0, ...b[1].map((item) => getSporsmalSortTime(item)));
+    if (maxB !== maxA) return maxB - maxA;
+    if (a[0] === SPORSMAL_FALLBACK_THEME && b[0] !== SPORSMAL_FALLBACK_THEME) return 1;
+    if (b[0] === SPORSMAL_FALLBACK_THEME && a[0] !== SPORSMAL_FALLBACK_THEME) return -1;
+    return a[0].localeCompare(b[0], 'nb');
   });
 }
 

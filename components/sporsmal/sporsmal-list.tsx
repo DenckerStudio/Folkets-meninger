@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { RotateCcw, Search } from 'lucide-react';
@@ -11,7 +11,6 @@ import {
   getSporsmalFraNavn,
   getSporsmalTitle,
   isSporsmalBesvart,
-  sporsmalTypeLabel,
   type StortingetSporsmal,
 } from '@/lib/stortinget-sporsmal';
 import { EmptyState } from '@/components/dashboard/empty-state';
@@ -22,6 +21,7 @@ import {
   filterSporsmalList,
   paginateList,
   sortSporsmalForDisplay,
+  sortGroupedSporsmalThemes,
   countByTheme,
   uniqueParties,
   uniqueRepresentatives,
@@ -29,6 +29,7 @@ import {
   type SporsmalListItemView,
 } from '@/lib/sporsmal/filter';
 import { SPORSMAL_THEME_LABELS, type SporsmalThemeLabel } from '@/lib/sporsmal/themes';
+import { SporsmalTypeTabs } from '@/components/sporsmal/sporsmal-type-tabs';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -56,6 +57,10 @@ export default function SporsmalList({ sporsmal, type, sesjonId, sakBySporsmalId
   const answerFilter = readAnswerFilter(searchParams.get('status'));
   const page = Math.max(1, Number.parseInt(searchParams.get('page') ?? '1', 10) || 1);
   const [searchDraft, setSearchDraft] = useState(query);
+
+  useEffect(() => {
+    setSearchDraft(query);
+  }, [query]);
 
   const sakMap = useMemo(() => new Map(Object.entries(sakBySporsmalId)), [sakBySporsmalId]);
 
@@ -115,11 +120,6 @@ export default function SporsmalList({ sporsmal, type, sesjonId, sakBySporsmalId
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  const typeHref = (nextType: SporsmalType) => {
-    const params = new URLSearchParams({ type: nextType, sesjonId });
-    return `${routes.sporsmal}?${params.toString()}`;
-  };
-
   const showGrouped = !query.trim() && !themeFilter;
   const pageItems = paginated.items;
 
@@ -131,7 +131,7 @@ export default function SporsmalList({ sporsmal, type, sesjonId, sakBySporsmalId
       list.push(item);
       map.set(item.theme, list);
     }
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0], 'nb'));
+    return sortGroupedSporsmalThemes([...map.entries()]);
   }, [pageItems, showGrouped]);
 
   const renderRow = (item: SporsmalListItemView, idx: number) => {
@@ -155,8 +155,8 @@ export default function SporsmalList({ sporsmal, type, sesjonId, sakBySporsmalId
             className={cn(
               'inline-flex px-2 py-0.5 rounded-full text-xs font-semibold',
               besvart
-                ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800'
-                : 'bg-amber-100 dark:bg-amber-950/50 text-amber-800',
+                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200'
+                : 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200',
             )}
           >
             {besvart ? 'Besvart' : 'Ubesvart'}
@@ -205,22 +205,7 @@ export default function SporsmalList({ sporsmal, type, sesjonId, sakBySporsmalId
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2">
-        {(['skriftligesporsmal', 'sporretimesporsmal', 'interpellasjoner'] as SporsmalType[]).map((t) => (
-          <Link
-            key={t}
-            href={typeHref(t)}
-            className={cn(
-              'px-4 py-2 rounded-xl text-sm font-semibold border transition-colors min-h-11 inline-flex items-center',
-              t === type
-                ? 'bg-muted text-brand border-border'
-                : 'bg-card text-muted-foreground border-border hover:bg-muted/50',
-            )}
-          >
-            {sporsmalTypeLabel(t)}
-          </Link>
-        ))}
-      </div>
+      <SporsmalTypeTabs activeType={type} sesjonId={sesjonId} />
 
       <div className="flex flex-wrap gap-2">
         <Link
@@ -232,6 +217,7 @@ export default function SporsmalList({ sporsmal, type, sesjonId, sakBySporsmalId
               params.delete('page');
             });
           }}
+          aria-pressed={!themeFilter}
           className={cn(
             'px-3 py-2 rounded-xl text-xs font-semibold border min-h-11 inline-flex items-center',
             !themeFilter ? 'bg-muted text-brand border-border' : 'bg-card text-muted-foreground border-border hover:bg-muted/50',
@@ -243,6 +229,7 @@ export default function SporsmalList({ sporsmal, type, sesjonId, sakBySporsmalId
           <button
             key={label}
             type="button"
+            aria-pressed={themeFilter === label}
             onClick={() =>
               pushParams((params) => {
                 if (params.get('tema') === label) params.delete('tema');
@@ -275,7 +262,10 @@ export default function SporsmalList({ sporsmal, type, sesjonId, sakBySporsmalId
         }}
       >
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+            aria-hidden
+          />
           <input
             type="search"
             value={searchDraft}

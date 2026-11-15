@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import FadeIn from '@/components/fade-in';
 import { PageHeader } from '@/components/page-header';
 import SporsmalList from '@/components/sporsmal/sporsmal-list';
+import { SporsmalTypeTabs } from '@/components/sporsmal/sporsmal-type-tabs';
 import { STORTINGET_ACTIVE_SESSION_ID } from '@/lib/stortinget-config';
 import { type SporsmalType } from '@/lib/stortinget';
 import { buildHenvisningToSakIdIndex, resolveSporsmalSakId } from '@/lib/sporsmal/sak-link';
@@ -64,7 +65,7 @@ export default async function SporsmalPage({
       <FadeIn delay={0.1}>
         <PageHeader
           title="Spørsmål"
-          description={`Skriftlige spørsmål, spørretime og interpellasjoner fra Stortinget (${sesjonId}). Åpent for alle å lese — innlogging kreves bare for å følge og lagre.`}
+          description={`Søk, filtrer og les skriftlige spørsmål, spørretime og interpellasjoner fra Stortingets åpne data (${sesjonId}).`}
         />
       </FadeIn>
 
@@ -84,18 +85,21 @@ export default async function SporsmalPage({
             }
           />
         ) : sporsmal.length === 0 ? (
-          <EmptyState
-            title="Ingen spørsmål i denne perioden"
-            description="Bytt type eller sesjon, eller gå til Utforsk for å lese stortings­saker."
-            action={
-              <Link
-                href={routes.utforsk}
-                className="inline-flex min-h-11 items-center rounded-xl border border-border bg-card px-4 text-sm font-medium text-brand hover:bg-muted"
-              >
-                Gå til Utforsk
-              </Link>
-            }
-          />
+          <div className="space-y-6">
+            <SporsmalTypeTabs activeType={type} sesjonId={sesjonId} />
+            <EmptyState
+              title="Ingen spørsmål for dette valget"
+              description="Velg en annen spørsmålstype over, eller gå til Utforsk for å lese stortingssaker."
+              action={
+                <Link
+                  href={routes.utforsk}
+                  className="inline-flex min-h-11 items-center rounded-xl border border-border bg-card px-4 text-sm font-medium text-brand hover:bg-muted"
+                >
+                  Gå til Utforsk
+                </Link>
+              }
+            />
+          </div>
         ) : (
           <Suspense
             fallback={
