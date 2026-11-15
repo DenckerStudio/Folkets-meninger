@@ -6,6 +6,7 @@ import { loadResearchClusterDetail } from '@/lib/admin/research/cluster-detail';
 import { getResearchTopicSnapshotsBySources } from '@/lib/admin/research/topic-service';
 import { routes } from '@/lib/routes';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { UserAnnotationHost } from '@/components/user-annotations/user-annotation-host';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,7 @@ export default async function AdminResearchClusterPage({ params }: PageProps) {
   } = await supabase.auth.getUser();
 
   return (
+    <UserAnnotationHost enabled={Boolean(user)} targetType="research" targetId={id}>
     <div className="space-y-6" lang="nb-NO">
       <div>
         <p className="text-sm text-muted-foreground">
@@ -54,5 +56,6 @@ export default async function AdminResearchClusterPage({ params }: PageProps) {
         ← Tilbake til Research
       </Link>
     </div>
+    </UserAnnotationHost>
   );
 }

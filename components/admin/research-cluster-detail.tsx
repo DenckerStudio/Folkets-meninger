@@ -15,6 +15,8 @@ import { ResearchTopicUseFindingButton } from '@/components/admin/research-topic
 import type { ResearchTopicSnapshot } from '@/lib/admin/research/topic-types';
 import type { ResearchBriefRow, ResearchPerspective } from '@/lib/admin/research/types';
 import type { ResearchBriefsByKind } from '@/lib/admin/research/service';
+import { UserAnnotatableText } from '@/components/user-annotations/user-annotatable-text';
+import { useUserAnnotations } from '@/components/user-annotations/user-annotation-context';
 
 const STANCE_LABELS: Record<ResearchPerspective['stance'], string> = {
   for: 'For',
@@ -63,6 +65,7 @@ export function ResearchClusterDetailView({
   }
 
   const initialBriefsByKind = briefsToByKind(briefs);
+  const annotationCtx = useUserAnnotations();
 
   return (
     <div className="space-y-8">
@@ -157,7 +160,16 @@ export function ResearchClusterDetailView({
       {latest?.summary ? (
         <section className="rounded-xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground">Siste research-sammendrag</h2>
-          <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{latest.summary}</p>
+          {annotationCtx?.enabled ? (
+            <UserAnnotatableText
+              containerKey="research_latest_summary"
+              text={latest.summary}
+              as="div"
+              className="mt-2 whitespace-pre-wrap text-sm text-foreground"
+            />
+          ) : (
+            <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{latest.summary}</p>
+          )}
         </section>
       ) : null}
 
@@ -174,7 +186,15 @@ export function ResearchClusterDetailView({
                   {byStance[stance].map((p, idx) => (
                     <li key={`${stance}-${idx}`} className="rounded-lg border border-border p-3 text-sm">
                       <p className="font-medium">{p.actor}</p>
-                      <p className="mt-1 text-muted-foreground">{p.summary}</p>
+                      {annotationCtx?.enabled ? (
+                        <UserAnnotatableText
+                          containerKey={`research_perspective_${stance}_${idx}`}
+                          text={p.summary}
+                          className="mt-1 text-muted-foreground"
+                        />
+                      ) : (
+                        <p className="mt-1 text-muted-foreground">{p.summary}</p>
+                      )}
                       {p.quotes?.length ? (
                         <ul className="mt-2 space-y-1 text-xs">
                           {p.quotes.map((q, qi) => (

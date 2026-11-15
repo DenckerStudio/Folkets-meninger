@@ -43,6 +43,7 @@ import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
+import { UserAnnotationHost } from '@/components/user-annotations/user-annotation-host';
 export const dynamic = 'force-dynamic';
 
 function formatEventDate(dateStr: string | null): string | null {
@@ -261,6 +262,7 @@ export default async function SakPage({
     (issueMeta?.lastUpdatedAt ? formatStortingetDate(issueMeta.lastUpdatedAt) : null);
 
   return (
+    <UserAnnotationHost enabled={Boolean(user)} targetType="sak" targetId={sak.id}>
     <DashboardPage className="mx-auto w-full min-w-0 max-w-4xl overflow-x-clip sm:space-y-10">
       <FadeIn delay={0.1}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -633,5 +635,6 @@ export default async function SakPage({
         }
       />
     </DashboardPage>
+    </UserAnnotationHost>
   );
 }
