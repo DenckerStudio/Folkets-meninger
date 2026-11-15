@@ -33,6 +33,7 @@ import { SakPageTabs } from '@/components/sak/sak-page-tabs';
 import { ImpactCalculator } from '@/components/sak/impact-calculator';
 import { AlignmentScore } from '@/components/sak/alignment-score';
 import { KnowledgeQuiz } from '@/components/sak/knowledge-quiz';
+import { SimilarIssuesSection } from '@/components/sak/similar-issues-section';
 import { SakMeningerSection } from '@/components/sak/sak-meninger-section';
 import { StortingetPollAdminSection } from '@/components/sak/stortinget-poll-admin-section';
 import StanceSection from './stance-section';
@@ -582,6 +583,14 @@ export default async function SakPage({
                 </div>
               </div>
             ) : null}
+
+            <SimilarIssuesSection
+              sakId={sak.id}
+              excludeIssueIds={relaterteSaker.flatMap((rel: { relatert_sak?: { id?: unknown } }) => {
+                const id = rel.relatert_sak?.id;
+                return id != null ? [String(id)] : [];
+              })}
+            />
 
             {!isDedicatedResearchSak ? (
               <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:flex-wrap sm:gap-4">
