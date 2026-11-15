@@ -38,6 +38,10 @@ import { KnowledgeQuiz } from '@/components/sak/knowledge-quiz';
 import { SimilarIssuesSection } from '@/components/sak/similar-issues-section';
 import { TopicAroundSakSection } from '@/components/search/topic-around-sak-section';
 import { SakMeningerSection } from '@/components/sak/sak-meninger-section';
+import { SakStortingetStatusCard } from '@/components/sak/sak-stortinget-status-card';
+import { SakViktigeHendelser } from '@/components/sak/sak-viktige-hendelser';
+import { SakStortingetPollAggregateSection } from '@/components/sak/sak-stortinget-poll-aggregate-section';
+import { buildSakStortingetPublicStatus } from '@/lib/sak/stortinget-public-status';
 import { StortingetPollAdminSection } from '@/components/sak/stortinget-poll-admin-section';
 import StanceSection from './stance-section';
 import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
@@ -261,6 +265,16 @@ export default async function SakPage({
     formatStortingetDate(sak.date) ??
     (issueMeta?.lastUpdatedAt ? formatStortingetDate(issueMeta.lastUpdatedAt) : null);
 
+  const stortingetPublicStatus =
+    !isDedicatedResearchSak
+      ? buildSakStortingetPublicStatus({
+          sakId: sak.id,
+          detail: detailedContent,
+          treatmentStatus,
+          documents,
+        })
+      : null;
+
   return (
     <DashboardPage className="mx-auto w-full min-w-0 max-w-4xl overflow-x-clip sm:space-y-10">
       <FadeIn delay={0.1}>
@@ -323,6 +337,20 @@ export default async function SakPage({
           ) : null}
         </div>
       </FadeIn>
+
+      {!isDedicatedResearchSak ? (
+        <FadeIn delay={0.25} direction="up">
+          <div className="space-y-4">
+            {stortingetPublicStatus ? (
+              <SakStortingetStatusCard status={stortingetPublicStatus} />
+            ) : null}
+            {stortingetPublicStatus && stortingetPublicStatus.keyEvents.length > 0 ? (
+              <SakViktigeHendelser events={stortingetPublicStatus.keyEvents} />
+            ) : null}
+            <SakStortingetPollAggregateSection sakId={sak.id} />
+          </div>
+        </FadeIn>
+      ) : null}
 
       <SakPageTabs
         oversikt={

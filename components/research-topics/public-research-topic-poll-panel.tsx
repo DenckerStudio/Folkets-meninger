@@ -9,6 +9,8 @@ import {
 import { pollBallotRunningTextPhraseSentenceStart } from '@/lib/polls/ballot-buttons';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { routes } from '@/lib/routes';
+import { POLL_PUBLIC_AGGREGATE_BELOW_THRESHOLD_LABEL } from '@/lib/public-aggregate/poll-public-output';
+import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
 
 type PublicResearchTopicPollPanelProps = {
   pollId: string;
@@ -60,6 +62,11 @@ export async function PublicResearchTopicPollPanel({
         loginNext={topicPath}
         compact
       />
+      {!publicAggregateMeetsThreshold(totals.total) ? (
+        <p className="text-sm text-[#001433]/65" role="status">
+          {POLL_PUBLIC_AGGREGATE_BELOW_THRESHOLD_LABEL}
+        </p>
+      ) : null}
       <p className="text-sm">
         <Link
           href={routes.poll(poll.id)}

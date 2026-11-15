@@ -1,10 +1,9 @@
 import {
-  filterPublishableSources,
-  parseTopicBriefSources,
   researchTopicBriefOutputSchema,
   sectionIsEmpty,
   type ResearchTopicBriefOutput,
 } from '@/lib/admin/research/topic-brief-schema';
+import { filterPublicTopicBriefSources } from '@/lib/sources/public-topic-sources';
 import {
   assertResearchTopicPublicStrings,
   validateResearchTopicPublicString,
@@ -110,7 +109,7 @@ export type PublicResearchTopicBriefSections = {
   partyProposals: Array<{ party: string; proposal: string }>;
   mediaCoverage: Array<{ headline: string; summary: string }>;
   polls: Array<{ question: string; result: string }>;
-  sources: ReturnType<typeof filterPublishableSources>;
+  sources: ReturnType<typeof filterPublicTopicBriefSources>;
   generatedAt: string | null;
 };
 
@@ -160,7 +159,7 @@ export function buildPublicResearchTopicBriefSections(
     }
   }
 
-  const sources = filterPublishableSources(parseTopicBriefSources(brief.sources));
+  const sources = filterPublicTopicBriefSources(brief.sources);
   const generatedAt =
     typeof brief.generated_at === 'string' && brief.generated_at.trim()
       ? brief.generated_at.trim()
