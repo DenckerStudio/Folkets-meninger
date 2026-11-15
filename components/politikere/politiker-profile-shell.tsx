@@ -289,6 +289,7 @@ export default function PolitikerProfileShell({ rep, profile, stemmerContent }: 
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
         <nav
+          id={tablistId}
           className="-mx-4 flex w-full max-w-[100vw] gap-1 overflow-x-auto overscroll-x-contain px-4 pb-1 lg:mx-0 lg:max-w-none lg:flex-col lg:gap-0 lg:space-y-1 lg:overflow-visible lg:px-0 lg:pb-0"
           aria-label="Politikerseksjoner"
           role="tablist"
@@ -296,6 +297,7 @@ export default function PolitikerProfileShell({ rep, profile, stemmerContent }: 
           {POLITIKER_TABS.map((tab) => {
             const active = activeTab === tab.id;
             const Icon = tab.icon;
+            const panelId = `${tablistId}-panel-${tab.id}`;
             return (
               <Link
                 key={tab.id}
@@ -304,6 +306,7 @@ export default function PolitikerProfileShell({ rep, profile, stemmerContent }: 
                 id={`${tablistId}-${tab.id}`}
                 role="tab"
                 aria-selected={active}
+                aria-controls={panelId}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex w-max max-w-[88vw] shrink-0 items-start gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 lg:w-full lg:max-w-none',
@@ -323,12 +326,35 @@ export default function PolitikerProfileShell({ rep, profile, stemmerContent }: 
         </nav>
 
         <div className="min-w-0">
-          {activeTab === 'oversikt' ? <OverviewPanel rep={rep} profile={profile} /> : null}
+          {activeTab === 'oversikt' ? (
+            <div
+              role="tabpanel"
+              id={`${tablistId}-panel-oversikt`}
+              aria-labelledby={`${tablistId}-oversikt`}
+              className="min-w-0"
+            >
+              <OverviewPanel rep={rep} profile={profile} />
+            </div>
+          ) : null}
 
-          {activeTab === 'stemmer' && stemmerContent ? <div className="min-w-0">{stemmerContent}</div> : null}
+          {activeTab === 'stemmer' && stemmerContent ? (
+            <div
+              role="tabpanel"
+              id={`${tablistId}-panel-stemmer`}
+              aria-labelledby={`${tablistId}-stemmer`}
+              className="min-w-0"
+            >
+              {stemmerContent}
+            </div>
+          ) : null}
 
           {activeTab === 'forslag' ? (
-            <section className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+            <section
+              role="tabpanel"
+              id={`${tablistId}-panel-forslag`}
+              aria-labelledby={`${tablistId}-forslag`}
+              className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+            >
               <h2 className="mb-2 flex items-center gap-2 text-xl font-bold text-foreground">
                 <FileText className="h-5 w-5 text-brand" />
                 Forslag politikeren har brakt opp
@@ -344,7 +370,12 @@ export default function PolitikerProfileShell({ rep, profile, stemmerContent }: 
           ) : null}
 
           {activeTab === 'saksordfoerer' ? (
-            <section className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+            <section
+              role="tabpanel"
+              id={`${tablistId}-panel-saksordfoerer`}
+              aria-labelledby={`${tablistId}-saksordfoerer`}
+              className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+            >
               <h2 className="mb-2 flex items-center gap-2 text-xl font-bold text-foreground">
                 <ShieldCheck className="h-5 w-5 text-brand" />
                 Saker som saksordfører
@@ -360,7 +391,12 @@ export default function PolitikerProfileShell({ rep, profile, stemmerContent }: 
           ) : null}
 
           {activeTab === 'temaer' ? (
-            <section className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+            <section
+              role="tabpanel"
+              id={`${tablistId}-panel-temaer`}
+              aria-labelledby={`${tablistId}-temaer`}
+              className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+            >
               <h2 className="mb-2 flex items-center gap-2 text-xl font-bold text-foreground">
                 <Tags className="h-5 w-5 text-brand" />
                 Temaer med mest involvering
@@ -403,7 +439,12 @@ export default function PolitikerProfileShell({ rep, profile, stemmerContent }: 
           ) : null}
 
           {activeTab === 'svar' ? (
-            <section className="space-y-6 rounded-2xl border border-border bg-card p-4 sm:p-6">
+            <section
+              role="tabpanel"
+              id={`${tablistId}-panel-svar`}
+              aria-labelledby={`${tablistId}-svar`}
+              className="space-y-6 rounded-2xl border border-border bg-card p-4 sm:p-6"
+            >
               <div>
                 <h2 className="text-xl font-bold text-foreground mb-2 flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-brand" />

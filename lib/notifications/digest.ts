@@ -171,21 +171,49 @@ export function mergeWeeklyOverviewIntoDigestBody(
   return `${body}\n\n${overviewBlock}`;
 }
 
+export type InAppDigestWeeklyOverviewCounts = Pick<
+  WeeklyOverview,
+  'votingSoon' | 'votedRecently' | 'newSummaries'
+>;
+
+export function buildWeeklyInAppDigestBody(
+  notificationCount: number,
+  overview: InAppDigestWeeklyOverviewCounts | null | undefined,
+): string {
+  const nyeSaker = overview?.newSummaries.length ?? 0;
+  const avstemninger = (overview?.votingSoon.length ?? 0) + (overview?.votedRecently.length ?? 0);
+  const parts = [
+    `${nyeSaker} ${nyeSaker === 1 ? 'oppdatert sak' : 'oppdaterte saker'}`,
+    `${avstemninger} ${avstemninger === 1 ? 'avstemning' : 'avstemninger'} i ukesvinduet`,
+    `${notificationCount} ${notificationCount === 1 ? 'personlig varsel' : 'personlige varsler'}`,
+  ];
+  return `Denne uken: ${parts.join(', ')}. Les mer på «Dette skjer nå».`;
+}
+
 export function buildInAppDigestSummary(
   items: Array<{ title: string }>,
-  options?: { maxTitles?: number; url?: string },
+  options?: {
+    maxTitles?: number;
+    url?: string;
+    overview?: InAppDigestWeeklyOverviewCounts | null;
+  },
 ): { title: string; body: string; url: string } {
   const maxTitles = options?.maxTitles ?? 3;
   const count = items.length;
+  const url = options?.url ?? routes.minSide;
+  const linksToWeeklyOverview = url === routes.denneUka;
+  if (linksToWeeklyOverview) {
+    return {
+      title: 'Ukens oppsummering: Dette skjer nå',
+      body: buildWeeklyInAppDigestBody(count, options?.overview),
+      url,
+    };
+  }
   const titles = items.slice(0, maxTitles).map((i) => `• ${i.title}`);
   const rest = count - titles.length;
   const lines = [...titles, ...(rest > 0 ? [`… og ${rest} til`] : [])];
-  const url = options?.url ?? routes.minSide;
-  const linksToWeeklyOverview = url === routes.denneUka;
   return {
-    title: linksToWeeklyOverview
-      ? 'Ukens oppsummering: Dette skjer nå'
-      : `Ukens oppsummering: ${count} ${count === 1 ? 'nytt varsel' : 'nye varsler'}`,
+    title: `Ukens oppsummering: ${count} ${count === 1 ? 'nytt varsel' : 'nye varsler'}`,
     body: lines.join('\n'),
     url,
   };

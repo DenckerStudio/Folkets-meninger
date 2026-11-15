@@ -1,7 +1,9 @@
+import { POLITIKER_STEMMER_PANEL_MIN_CLASS } from '@/components/politikere/politiker-stemmer-panel-layout';
+
 export function PolitikerStemmerLoading() {
   return (
     <section
-      className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+      className={`rounded-2xl border border-border bg-card p-4 sm:p-6 ${POLITIKER_STEMMER_PANEL_MIN_CLASS}`}
       role="status"
       aria-live="polite"
     >
