@@ -156,28 +156,6 @@ export function blogDraftSourcesToCms(sources: readonly BlogDraftSource[]): Blog
   }));
 }
 
-export function renderBlogDraftSourceListSection(sources: readonly BlogDraftSource[]): string {
-  if (sources.length === 0) return '';
-  const lines = sources.map((source, index) => {
-    const n = index + 1;
-    const datePart = source.publishedAt ? `, ${source.publishedAt}` : '';
-    return `${n}. **${source.title.trim()}** — ${source.publisher.trim() || 'Ukjent utgiver'}${datePart}  \n   ${source.url}`;
-  });
-  return `## Kilder\n\n${lines.join('\n\n')}\n\n`;
-}
-
-export function appendFootnoteDefinitions(body: string, sources: readonly BlogDraftSource[]): string {
-  const trimmed = body.trim();
-  if (sources.length === 0) return trimmed;
-  const defs = sources.map((source, index) => {
-    const n = index + 1;
-    const datePart = source.publishedAt ? `, ${source.publishedAt}` : '';
-    return `[^${n}]: ${source.title} — ${source.publisher}${datePart}. ${source.url}`;
-  });
-  const withoutOldFootnotes = trimmed.replace(/\n\[\^\d+\]:.*$/gm, '').trim();
-  return `${withoutOldFootnotes}\n\n${defs.join('\n')}\n`;
-}
-
 export type CollectBlogDraftSourcesResult = {
   sources: BlogDraftSource[];
   query: string | null;

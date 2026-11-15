@@ -1,5 +1,13 @@
 export const BLOG_AUTHOR_LABEL = 'Folkets Meninger';
 
+export type BlogPostSourcePublic = {
+  index: number;
+  title: string;
+  publisher: string;
+  url: string;
+  publishedAt: string | null;
+};
+
 export type BlogAuthorSummary = {
   name: string;
   slug: string;
@@ -29,6 +37,7 @@ export type BlogPostPublic = {
   seo_title: string | null;
   seo_description: string | null;
   author_label: string;
+  sources: BlogPostSourcePublic[];
 };
 
 export type BlogPostListItem = BlogPostPublic & { id: string };

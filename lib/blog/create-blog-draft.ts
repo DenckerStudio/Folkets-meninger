@@ -3,11 +3,10 @@ import {
   type ResearchTopicBriefOutput,
 } from '@/lib/admin/research/topic-brief-schema';
 import { generateWithAnswerLlm, isAnswerLlmConfigured } from '@/lib/blog/answer-llm';
+import { sanitizeBlogDraftBodyMarkdown } from '@/lib/blog/blog-draft-body';
 import {
-  appendFootnoteDefinitions,
   blogDraftSourcesToCms,
   collectBlogDraftSources,
-  renderBlogDraftSourceListSection,
   type BlogDraftSource,
 } from '@/lib/blog/blog-draft-sources';
 import type { CreateBlogDraftInput } from '@/lib/blog/service';
@@ -37,7 +36,7 @@ function buildLlmPrompt(args: {
   });
 
   return `Du er redaksjonell skribent for Folkets Meninger. Skriv et forklarende bloggutkast på norsk bokmål.
-Bruk KUN oppgitte kilder. Sett fotnotehenvisninger i teksten som [^1], [^2] osv. som matcher kildelisten.
+Bruk KUN oppgitte kilder. Sett kildehenvisninger i teksten som [1], [2] osv. som matcher kildelisten — ikke GFM-fotnoter.
 Ikke nevn Reddit, ikke nevn research_topics.title, og ikke finn opp kilder.
 
 Tittel: ${args.title}
@@ -57,7 +56,7 @@ ${JSON.stringify(
     2,
   )}
 
-Skriv markdown med overskrifter (##) der det passer. Inkluder IKKE egen "## Kilder"-seksjon — den legges til automatisk.
+Skriv markdown med overskrifter (##) der det passer. Inkluder IKKE en "## Kilder"-seksjon i svaret.
 Svar kun med brødtekst-markdown.`;
 }
 
@@ -71,8 +70,7 @@ async function generateBlogBodyWithLlm(args: {
   try {
     const prompt = buildLlmPrompt(args);
     const raw = await generateWithAnswerLlm(prompt, args.fetchImpl);
-    const withoutSourceSection = raw.replace(/^##\s*Kilder\b[\s\S]*$/im, '').trim();
-    return appendFootnoteDefinitions(withoutSourceSection, args.sources);
+    return sanitizeBlogDraftBodyMarkdown(raw);
   } catch (error) {
     console.error('[blog] ANSWER_LLM generering feilet', error);
     return null;
@@ -110,20 +108,10 @@ export async function buildResearchTopicBlogDraftWithSources(args: {
     fetchImpl: args.fetchImpl,
   });
 
-  const sourceSection = renderBlogDraftSourceListSection(sources);
+  const includeBriefSources = sources.length === 0;
   let body_md =
-    llmBody ??
-    buildBriefBodyMarkdownFromOutput(parsed.data, sources.length === 0);
-
-  if (sources.length > 0) {
-    body_md = body_md.replace(/## Kilder[\s\S]*$/m, '').trim();
-    if (!llmBody) {
-      body_md = appendFootnoteDefinitions(body_md, sources);
-    }
-    if (sourceSection.trim()) {
-      body_md = `${body_md}\n\n${sourceSection}`.trim();
-    }
-  }
+    llmBody ?? buildBriefBodyMarkdownFromOutput(parsed.data, includeBriefSources);
+  body_md = sanitizeBlogDraftBodyMarkdown(body_md);
 
   if (!body_md.trim()) {
     return { ok: false, error: 'Brief har ikke nok innhold til bloggutkast', code: 'empty_body' };

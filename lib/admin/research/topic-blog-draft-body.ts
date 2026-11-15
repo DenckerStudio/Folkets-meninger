@@ -127,6 +127,7 @@ export function pickBlogExcerptFromBody(bodyMarkdown: string, title: string): st
     .replace(/\*\*/g, '')
     .replace(/\[([A-D])\]/g, '')
     .replace(/\[\^\d+\]/g, '')
+    .replace(/\[\d{1,3}\]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
   const candidate = plain || title;

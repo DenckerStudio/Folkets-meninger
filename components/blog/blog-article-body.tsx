@@ -1,14 +1,16 @@
 import { ChatMarkdown } from '@/components/chat/chat-markdown';
 import { extractMarkdownHeadings } from '@/lib/blog/markdown-headings';
+import type { ChatSourceLink } from '@/lib/chat/source-links';
 import { cn } from '@/lib/utils';
 
 type BlogArticleBodyProps = {
   markdown: string;
   className?: string;
+  citationSources?: ReadonlyMap<number, ChatSourceLink>;
 };
 
 /** Renders markdown with stable ids on h2/h3 for TOC anchors. */
-export function BlogArticleBody({ markdown, className }: BlogArticleBodyProps) {
+export function BlogArticleBody({ markdown, className, citationSources }: BlogArticleBodyProps) {
   const headings = extractMarkdownHeadings(markdown);
   let headingIndex = 0;
 
@@ -61,7 +63,7 @@ export function BlogArticleBody({ markdown, className }: BlogArticleBodyProps) {
         }
         return (
           <div key={index}>
-            <ChatMarkdown text={chunk} />
+            <ChatMarkdown text={chunk} sources={citationSources} />
           </div>
         );
       })}
