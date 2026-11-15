@@ -607,6 +607,10 @@ export default async function SakPage({
               issueId={sak.id}
               title={officialTitle}
               summary={descriptionToShow || null}
+              relatedIssueIds={relaterteSaker.flatMap((rel: { relatert_sak?: { id?: unknown } }) => {
+                const id = rel.relatert_sak?.id;
+                return id != null ? [String(id)] : [];
+              })}
             />
 
             {!isDedicatedResearchSak ? (

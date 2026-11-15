@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { trustedClientIp } from '@/lib/trusted-client-ip';
 import { getSakPageBundle } from '@/lib/stortinget';
+import { fetchSimilarSaker } from '@/lib/sak/similar-issues';
 import { buildTopicAroundSearchQuery } from '@/lib/search/topic-around-query';
 import { isTopicAroundSearchEnabled } from '@/lib/search/topic-around-enabled';
-import { fetchTopicAroundSearch } from '@/lib/search/topic-around-search';
 import {
-  shouldShowPublicTopicAroundSection,
+  resolvePublicTopicAroundSakSection,
   TOPIC_AROUND_PUBLIC_MIN_ITEMS,
-} from '@/lib/search/topic-around-filters';
+} from '@/lib/search/topic-around-public';
+import { fetchTopicAroundSearchWithTimeout } from '@/lib/search/topic-around-search';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
   if (!isTopicAroundSearchEnabled()) {
     return NextResponse.json(
-      { ok: false, reason: 'disabled', items: [], minPublicItems: TOPIC_AROUND_PUBLIC_MIN_ITEMS },
+      { ok: true, items: [], showPublic: false, minPublicItems: TOPIC_AROUND_PUBLIC_MIN_ITEMS },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
   }
@@ -59,22 +60,30 @@ export async function GET(request: Request, { params }: RouteParams) {
     (typeof detail.innstillingstekst === 'string' && detail.innstillingstekst.trim()) ||
     null;
 
-  const result = await fetchTopicAroundSearch({
+  const similarSaker = await fetchSimilarSaker(issueId);
+  const excludeIssueIds = [issueId, ...similarSaker.map((item) => item.id)];
+
+  const result = await fetchTopicAroundSearchWithTimeout({
     query: buildTopicAroundSearchQuery({ title, summary }),
     themeLabel: title,
-    filters: { excludeIssueIds: [issueId] },
+    filters: { excludeIssueIds },
   });
 
-  const payload =
-    result.ok === true
-      ? {
-          ...result,
-          minPublicItems: TOPIC_AROUND_PUBLIC_MIN_ITEMS,
-          showPublic: shouldShowPublicTopicAroundSection(result.items.length),
-        }
-      : { ...result, minPublicItems: TOPIC_AROUND_PUBLIC_MIN_ITEMS, showPublic: false };
-
-  return NextResponse.json(payload, {
-    headers: { 'Cache-Control': 'private, max-age=120, stale-while-revalidate=300' },
+  const items = resolvePublicTopicAroundSakSection({
+    result,
+    issueId,
+    excludeIssueIds,
   });
+
+  return NextResponse.json(
+    {
+      ok: true,
+      items: items ?? [],
+      showPublic: Boolean(items?.length),
+      minPublicItems: TOPIC_AROUND_PUBLIC_MIN_ITEMS,
+    },
+    {
+      headers: { 'Cache-Control': 'private, max-age=120, stale-while-revalidate=300' },
+    },
+  );
 }

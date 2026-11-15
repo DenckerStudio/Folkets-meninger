@@ -53,8 +53,24 @@ export type TopicAroundSearchSuccess = {
 
 export type TopicAroundSearchFailure = {
   ok: false;
-  reason: 'disabled' | 'empty_query' | 'embedding_unavailable' | 'rpc_failed';
+  reason:
+    | 'disabled'
+    | 'empty_query'
+    | 'embedding_unavailable'
+    | 'rpc_failed'
+    | 'timeout';
 };
+
+const DEFAULT_TOPIC_AROUND_SEARCH_TIMEOUT_MS = 8000;
+
+export function topicAroundSearchTimeoutMs(): number {
+  const raw = process.env.TOPIC_AROUND_SEARCH_TIMEOUT_MS;
+  if (raw) {
+    const n = Number(raw);
+    if (Number.isFinite(n) && n >= 500) return n;
+  }
+  return DEFAULT_TOPIC_AROUND_SEARCH_TIMEOUT_MS;
+}
 
 export type TopicAroundSearchResult = TopicAroundSearchSuccess | TopicAroundSearchFailure;
 
@@ -221,5 +237,23 @@ export async function fetchTopicAroundSearch(input: {
     return { ok: true, items: sorted, themeLabel: input.themeLabel.trim() || query };
   } catch {
     return { ok: false, reason: 'rpc_failed' };
+  }
+}
+
+/** Bound slow embed/RPC so sakssiden kan strømme resten i Suspense. */
+export async function fetchTopicAroundSearchWithTimeout(input: Parameters<
+  typeof fetchTopicAroundSearch
+>[0]): Promise<TopicAroundSearchResult> {
+  const ms = topicAroundSearchTimeoutMs();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      fetchTopicAroundSearch(input),
+      new Promise<TopicAroundSearchFailure>((resolve) => {
+        timer = setTimeout(() => resolve({ ok: false, reason: 'timeout' }), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }

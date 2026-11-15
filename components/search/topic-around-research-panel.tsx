@@ -86,7 +86,9 @@ export function TopicAroundResearchPanel(props: PanelProps) {
           message:
             body.reason === 'embedding_unavailable'
               ? 'Embedding-tjenesten svarer ikke. Prøv igjen om litt.'
-              : 'Søket feilet. Prøv igjen.',
+              : body.reason === 'timeout'
+                ? 'Søket tok for lang tid. Prøv igjen.'
+                : 'Søket feilet. Prøv igjen.',
         });
         return;
       }
@@ -147,7 +149,7 @@ export function TopicAroundResearchPanel(props: PanelProps) {
         <label className="flex min-h-11 flex-col gap-1 text-xs text-muted-foreground">
           Periode
           <select
-            className="min-h-11 rounded-lg border border-border bg-background px-3 text-sm text-foreground"
+            className="min-h-11 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
             value={period}
             onChange={(event) => setPeriod(event.target.value as TopicAroundPeriod)}
           >
@@ -161,7 +163,7 @@ export function TopicAroundResearchPanel(props: PanelProps) {
         <label className="flex min-h-11 flex-col gap-1 text-xs text-muted-foreground">
           Sortering
           <select
-            className="min-h-11 rounded-lg border border-border bg-background px-3 text-sm text-foreground"
+            className="min-h-11 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
             value={sort}
             onChange={(event) => setSort(event.target.value as TopicAroundSort)}
           >
@@ -201,7 +203,11 @@ export function TopicAroundResearchPanel(props: PanelProps) {
 
       <div className="mt-4">
         {state.status === 'loading' ? (
-          <p className="flex min-h-11 items-center gap-2 text-sm text-muted-foreground">
+          <p
+            role="status"
+            aria-live="polite"
+            className="flex min-h-11 items-center gap-2 text-sm text-muted-foreground"
+          >
             <Loader2 className="size-4 animate-spin" aria-hidden />
             Søker i Stortinget-dokumenter …
           </p>
