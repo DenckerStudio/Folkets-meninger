@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { PublicResearchTopicPollPanel } from '@/components/research-topics/public-research-topic-poll-panel';
+import { PublicResearchTopicPollPanelSection } from '@/components/research-topics/public-research-topic-poll-panel-section';
 import { PublicResearchTopicSections } from '@/components/research-topics/public-research-topic-sections';
 import { getPublicResearchTopicById } from '@/lib/research-topics/public-service';
 import { buildPublicResearchTopicDetailMetadata } from '@/lib/research-topics/public-metadata';
@@ -76,7 +76,7 @@ export default async function PublicResearchTopicPage({ params }: PageProps) {
       <PublicResearchTopicSections sections={topic.sections} />
 
       {topic.pollId ? (
-        <PublicResearchTopicPollPanel pollId={topic.pollId} topicPath={topicPath} />
+        <PublicResearchTopicPollPanelSection pollId={topic.pollId} topicPath={topicPath} />
       ) : null}
     </div>
   );

@@ -10,6 +10,7 @@ export type BlogDraftReviewItem = {
   title: string;
   excerpt: string;
   bodyMarkdown: string;
+  sources: Array<{ label: string; url: string }>;
   reviewState: string | null;
   createdAt: string | null;
   updatedAt: string | null;
@@ -31,6 +32,14 @@ function mapBlogDraftReviewItem(post: PayloadPost): BlogDraftReviewItem {
     title: post.title,
     excerpt: post.excerpt,
     bodyMarkdown: post.bodyMarkdown ?? '',
+    sources: (post.sources ?? [])
+      .map((row) => {
+        const label = typeof row.label === 'string' ? row.label.trim() : '';
+        const url = typeof row.url === 'string' ? row.url.trim() : '';
+        if (!label || !url) return null;
+        return { label, url };
+      })
+      .filter((row): row is { label: string; url: string } => row !== null),
     reviewState: post.review?.state ? String(post.review.state) : null,
     createdAt: post.createdAt ?? null,
     updatedAt: post.updatedAt ?? null,
@@ -93,6 +102,7 @@ export function mergeBlogDraftReviewItemAfterEdit(
           title: saved.title,
           excerpt: saved.excerpt,
           bodyMarkdown: saved.bodyMarkdown,
+          sources: saved.sources,
           updatedAt: saved.updatedAt ?? row.updatedAt,
         }
       : row,

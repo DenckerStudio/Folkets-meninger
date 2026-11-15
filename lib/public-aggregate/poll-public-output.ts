@@ -9,8 +9,10 @@ export type PublicPollTotals = {
   total: number;
 };
 
-export const POLL_AGGREGATE_BELOW_THRESHOLD_NOTE =
-  'Det er for få svar ennå til at vi kan vise fordeling. Du kan fortsatt stemme når avstemningen er åpen.';
+export const POLL_PUBLIC_AGGREGATE_BELOW_THRESHOLD_LABEL =
+  'For få stemmer til å vise fordeling';
+
+export const POLL_AGGREGATE_BELOW_THRESHOLD_NOTE = `${POLL_PUBLIC_AGGREGATE_BELOW_THRESHOLD_LABEL}. Du kan fortsatt stemme når avstemningen er åpen.`;
 
 export function redactPublicPollTotals(totals: PollTotals): PublicPollTotals {
   if (!publicAggregateMeetsThreshold(totals.total)) {

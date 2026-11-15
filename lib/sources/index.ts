@@ -11,3 +11,4 @@ export {
 } from '@/lib/sources/parse-public-search-request';
 export { isWebSearchEnabled, getWebSearchBaseUrl } from '@/lib/sources/web-search';
 export { appendSourcesToResearchTopic } from '@/lib/sources/save-topic-sources';
+export { filterPublicTopicBriefSources } from '@/lib/sources/public-topic-sources';

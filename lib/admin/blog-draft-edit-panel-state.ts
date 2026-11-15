@@ -7,6 +7,7 @@ export type BlogDraftEditServerSnapshot = {
   title: string;
   excerpt: string;
   bodyMarkdown: string;
+  sources?: Array<{ label: string; url: string }>;
   updatedAt?: string | null;
 };
 

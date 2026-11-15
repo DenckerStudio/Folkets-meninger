@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { PollBallot } from '@/components/polls/poll-ballot';
+import { PublicTopicPollBallot } from '@/components/research-topics/public-topic-poll-ballot';
 import {
   getPollTotals,
   getPublicPollById,
@@ -8,7 +8,6 @@ import {
 } from '@/lib/polls/service';
 import { pollBallotRunningTextPhraseSentenceStart } from '@/lib/polls/ballot-buttons';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
 import { routes } from '@/lib/routes';
 
 type PublicResearchTopicPollPanelProps = {
@@ -53,13 +52,12 @@ export async function PublicResearchTopicPollPanel({
           {pollBallotRunningTextPhraseSentenceStart()} på denne avstemningen.
         </p>
       </div>
-      <PollBallot
+      <PublicTopicPollBallot
         pollId={poll.id}
         votingOpen={votingOpen}
-        initialTotals={redactPollTotalsForViewer(totals, votingOpen, voteState.hasVoted)}
+        rawTotals={totals}
         initialVote={voteState.vote}
         loginNext={topicPath}
-        compact
       />
       <p className="text-sm">
         <Link

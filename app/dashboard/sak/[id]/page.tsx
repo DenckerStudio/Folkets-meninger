@@ -38,12 +38,15 @@ import { KnowledgeQuiz } from '@/components/sak/knowledge-quiz';
 import { SimilarIssuesSection } from '@/components/sak/similar-issues-section';
 import { TopicAroundSakSection } from '@/components/search/topic-around-sak-section';
 import { SakMeningerSection } from '@/components/sak/sak-meninger-section';
+import { SakStortingetPollAggregateSection } from '@/components/sak/sak-stortinget-poll-aggregate-section';
+import { buildSakStortingetOversiktExtras } from '@/lib/sak/stortinget-public-status';
 import { StortingetPollAdminSection } from '@/components/sak/stortinget-poll-admin-section';
 import StanceSection from './stance-section';
 import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
+import { UserAnnotationHost } from '@/components/user-annotations/user-annotation-host';
 export const dynamic = 'force-dynamic';
 
 function formatEventDate(dateStr: string | null): string | null {
@@ -261,7 +264,18 @@ export default async function SakPage({
     formatStortingetDate(sak.date) ??
     (issueMeta?.lastUpdatedAt ? formatStortingetDate(issueMeta.lastUpdatedAt) : null);
 
+  const stortingetOversiktExtras =
+    !isDedicatedResearchSak
+      ? buildSakStortingetOversiktExtras({
+          sakId: sak.id,
+          detail: detailedContent,
+          treatmentStatus,
+          documents,
+        })
+      : null;
+
   return (
+    <UserAnnotationHost enabled={Boolean(user)} targetType="sak" targetId={sak.id}>
     <DashboardPage className="mx-auto w-full min-w-0 max-w-4xl overflow-x-clip sm:space-y-10">
       <FadeIn delay={0.1}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -324,9 +338,42 @@ export default async function SakPage({
         </div>
       </FadeIn>
 
+      {!isDedicatedResearchSak ? (
+        <FadeIn delay={0.25} direction="up">
+          <SakStortingetPollAggregateSection sakId={sak.id} />
+        </FadeIn>
+      ) : null}
+
       <SakPageTabs
         oversikt={
           <div className="space-y-6">
+            {stortingetOversiktExtras ? (
+              <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 text-sm shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:p-5">
+                <div className="space-y-1 text-muted-foreground">
+                  {stortingetOversiktExtras.decisionDateLabel ? (
+                    <p>
+                      <span className="font-medium text-foreground">Vedtak / siste votering: </span>
+                      <span className="tabular-nums">{stortingetOversiktExtras.decisionDateLabel}</span>
+                    </p>
+                  ) : null}
+                  {stortingetOversiktExtras.nextMilestoneLabel ? (
+                    <p>
+                      <span className="font-medium text-foreground">Planlagt behandling: </span>
+                      <span className="tabular-nums">{stortingetOversiktExtras.nextMilestoneLabel}</span>
+                    </p>
+                  ) : null}
+                </div>
+                <a
+                  href={stortingetOversiktExtras.stortingetSakUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-11 items-center font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                >
+                  Åpne på stortinget.no
+                  <ExternalLink className="ml-1.5 h-4 w-4" aria-hidden />
+                </a>
+              </div>
+            ) : null}
             {detailedContent ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {sakNummer && sakSesjon ? (
@@ -644,5 +691,6 @@ export default async function SakPage({
         }
       />
     </DashboardPage>
+    </UserAnnotationHost>
   );
 }

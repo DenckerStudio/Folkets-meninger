@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ExternalLink, Loader2 } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
@@ -24,6 +24,7 @@ export function ResearchTopicBlogDraftPanel({ topic }: { topic: ResearchTopicRow
   const [error, setError] = useState('');
   const [confirmNewOpen, setConfirmNewOpen] = useState(false);
   const [createdNotice, setCreatedNotice] = useState(false);
+  const createInFlightRef = useRef(false);
 
   const canCreate = researchTopicBlogCanCreate(topic);
 
@@ -86,6 +87,8 @@ export function ResearchTopicBlogDraftPanel({ topic }: { topic: ResearchTopicRow
 
   const createDraft = useCallback(
     async (forceNew: boolean) => {
+      if (createInFlightRef.current) return;
+      createInFlightRef.current = true;
       setError('');
       setCreatedNotice(false);
       setPending(true);
@@ -104,17 +107,26 @@ export function ResearchTopicBlogDraftPanel({ topic }: { topic: ResearchTopicRow
           },
         );
         const body = (await res.json().catch(() => ({}))) as {
+          error?: string;
           message?: string;
           admin_url?: string;
           cms_status?: string;
           needs_confirm_for_new?: boolean;
         };
         if (!res.ok) {
-          setError(
-            typeof body.message === 'string' && body.message.trim()
-              ? body.message
-              : 'Kunne ikke opprette bloggutkast',
-          );
+          if (body.error === 'llm_timeout' || res.status === 504) {
+            setError(
+              typeof body.message === 'string' && body.message.trim()
+                ? body.message
+                : 'Tekstgenerering tok for lang tid (over 110 s). Prøv igjen senere.',
+            );
+          } else {
+            setError(
+              typeof body.message === 'string' && body.message.trim()
+                ? body.message
+                : 'Kunne ikke opprette bloggutkast',
+            );
+          }
           setCreatedNotice(false);
           return;
         }
@@ -132,6 +144,7 @@ export function ResearchTopicBlogDraftPanel({ topic }: { topic: ResearchTopicRow
         setError('Kunne ikke opprette bloggutkast');
         setCreatedNotice(false);
       } finally {
+        createInFlightRef.current = false;
         setPending(false);
       }
     },
