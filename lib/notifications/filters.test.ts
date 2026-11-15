@@ -71,6 +71,7 @@ assert.equal(shouldSendNotification(strict, true, 'opinion_innspill_endorsed', {
 const followed = normalizeNotificationPreferences({ only_followed: true }, true);
 assert.equal(shouldSendNotification(followed, true, 'admin_message', {}, now), false);
 assert.equal(shouldSendNotification(followed, true, 'new_case_in_category', { date: iso(1) }, now), true);
+assert.equal(shouldSendNotification(followed, true, 'hearing_deadline_soon', {}, now), true);
 
 // Cron cursor cap.
 assert.equal(capLastSeenMs(0, now), now - 30 * DAY);

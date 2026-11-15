@@ -18,6 +18,7 @@ import {
   fetchStortingetHoringById,
   formatDateNb,
   formatHoringDeadlineSummary,
+  formatHoringInnspillFristLabel,
   formatStortingetDateTime,
   getDaysUntilHoringDeadline,
   getHoringApplicationDeadline,
@@ -36,6 +37,8 @@ import {
   normalizeStortingetUrl,
 } from '@/lib/stortinget-horinger';
 import { resolveHearingCommentAuthor } from '@/lib/identity/public-identity';
+import { loadHearingUserInterest } from '@/lib/hearing-interest/service';
+import { getUser } from '@/lib/supabase-server';
 import { routes } from '@/lib/routes';
 import { buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
 import HearingCommentForm from './comment-form';
@@ -115,6 +118,13 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
   }
 
   const comments = await getComments(String(hearing.id));
+  const sessionUser = await getUser();
+  const hearingInterest = sessionUser
+    ? await loadHearingUserInterest(sessionUser.id, String(hearing.id)).catch(() => ({
+        following: false,
+        draftOpened: false,
+      }))
+    : { following: false, draftOpened: false };
   const innspillDeadline = getHoringInnspillDeadline(hearing);
   const applicationDeadline = getHoringApplicationDeadline(hearing);
   const startDate = getHoringStartDate(hearing);
@@ -174,15 +184,28 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
           ) : null}
         </div>
 
-        {open && daysLeft != null && daysLeft >= 0 ? (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/40 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100">
-            {daysLeft === 0
-              ? 'Siste dag for å sende innspill.'
-              : daysLeft === 1
-                ? '1 dag igjen til fristen for innspill.'
-                : `${daysLeft} dager igjen til fristen for innspill.`}
-          </div>
-        ) : null}
+        {(() => {
+          const fristLabel = formatHoringInnspillFristLabel(hearing);
+          if (!fristLabel) return null;
+          const past = daysLeft != null && daysLeft < 0;
+          return (
+            <div
+              className={`rounded-xl border px-4 py-3 text-sm ${
+                past
+                  ? 'border-border bg-muted/40 text-muted-foreground'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
+              }`}
+            >
+              <span className="font-medium">{fristLabel}</span>
+              {innspillDeadline ? (
+                <span className="text-muted-foreground dark:text-emerald-200/80">
+                  {' '}
+                  · {formatDateNb(innspillDeadline)}
+                </span>
+              ) : null}
+            </div>
+          );
+        })()}
 
         {kind === 'planned' ? (
           <div className="rounded-xl border border-sky-200 bg-sky-50 dark:border-sky-900 dark:bg-sky-950/40 px-4 py-3 text-sm text-sky-900 dark:text-sky-100">
@@ -201,7 +224,16 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
             <div>
               <dt className="text-muted-foreground">Frist for innspill</dt>
               <dd className="font-medium text-foreground">
-                {innspillDeadline ? formatDateNb(innspillDeadline) : 'Ikke publisert'}
+                {innspillDeadline ? (
+                  <>
+                    {formatHoringInnspillFristLabel(hearing) ?? formatDateNb(innspillDeadline)}
+                    <span className="block text-xs font-normal text-muted-foreground mt-0.5">
+                      {formatDateNb(innspillDeadline)}
+                    </span>
+                  </>
+                ) : (
+                  'Ikke publisert'
+                )}
               </dd>
             </div>
           </div>
@@ -357,7 +389,10 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
         )}
 
         {open ? (
-          <HearingCommentForm stortingetHearingId={String(hearing.id)} />
+          <HearingCommentForm
+            stortingetHearingId={String(hearing.id)}
+            initialFollowing={hearingInterest.following}
+          />
         ) : (
           <p className="text-sm text-muted-foreground text-center py-4 rounded-xl border border-border bg-muted/20">
             {kind === 'planned'

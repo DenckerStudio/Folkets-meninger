@@ -236,16 +236,47 @@ export function getDaysUntilHoringDeadline(hearing: StortingetHoring): number | 
   return osloDayNumber(deadline) - osloDayNumber(new Date());
 }
 
+/** Short relative label for innspillsfrist on dashboard høring pages (Europe/Oslo). */
+export function formatHoringInnspillFristLabel(hearing: StortingetHoring): string | null {
+  const deadline = getHoringInnspillDeadline(hearing);
+  if (!deadline) return null;
+  const days = getDaysUntilHoringDeadline(hearing);
+  if (days == null) return null;
+  if (days < 0) return 'Fristen har gått ut';
+  if (days === 0) return 'Frist i dag';
+  return `Frist om ${days} dager`;
+}
+
+export function isHoringInnspillDeadlineWithinDays(
+  hearing: StortingetHoring,
+  withinDays: number,
+): boolean {
+  if (!isHoringOpen(hearing)) return false;
+  const days = getDaysUntilHoringDeadline(hearing);
+  return days != null && days >= 0 && days <= withinDays;
+}
+
+export function compareHoringerByInnspillDeadline(
+  a: StortingetHoring,
+  b: StortingetHoring,
+): number {
+  const aTime = getHoringInnspillDeadline(a)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+  const bTime = getHoringInnspillDeadline(b)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+  if (aTime !== bTime) return aTime - bTime;
+  return getHoringTitle(a).localeCompare(getHoringTitle(b), 'nb');
+}
+
 export function formatHoringDeadlineSummary(hearing: StortingetHoring): string {
   const deadline = getHoringInnspillDeadline(hearing);
   if (deadline) {
     const days = getDaysUntilHoringDeadline(hearing);
     const dateLabel = formatDateNb(deadline);
-    if (days != null && days > 0 && isHoringOpen(hearing)) {
-      return days === 1 ? `Frist i morgen (${dateLabel})` : `${days} dager til frist (${dateLabel})`;
+    const relative = formatHoringInnspillFristLabel(hearing);
+    if (relative && isHoringOpen(hearing)) {
+      return `${relative} (${dateLabel})`;
     }
-    if (days === 0 && isHoringOpen(hearing)) {
-      return `Frist i dag (${dateLabel})`;
+    if (days != null && days < 0) {
+      return `Fristen har gått ut (${dateLabel})`;
     }
     return `Frist ${dateLabel}`;
   }
@@ -350,6 +381,10 @@ export function sortHoringer(hearings: StortingetHoring[]): StortingetHoring[] {
     const bKind = getHoringStatusKind(b);
     if (kindOrder[aKind] !== kindOrder[bKind]) {
       return kindOrder[aKind] - kindOrder[bKind];
+    }
+
+    if (aKind === 'open' && bKind === 'open') {
+      return compareHoringerByInnspillDeadline(a, b);
     }
 
     const aDeadline = getHoringInnspillDeadline(a)?.getTime() ?? getHoringStartDate(a)?.getTime() ?? 0;

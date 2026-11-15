@@ -44,6 +44,7 @@ Generer hint fra kode: `node scripts/build-security-allowlist.mjs` (heuristikk â
 | `create_app_suggestion` | API | |
 | `cast_app_suggestion_vote` | API | |
 | `create_hearing_comment` | API | |
+| `record_hearing_user_interest` | API (`/api/horinger/[id]/interest`, utkast) | service_role |
 | `set_user_onboarding_state` | API | |
 | `report_content` | API | |
 | `create_opinion_innspill` / `endorse_opinion_innspill` | API | |

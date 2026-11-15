@@ -35,7 +35,8 @@ DECLARE
     'insert_analytics_event', 'admin_get_user_metrics', 'admin_get_share_link_stats',
     'admin_get_analytics_overview', 'create_share_link', 'list_my_share_links',
     'admin_list_users', 'admin_anonymize_user', 'admin_assert_user_mutation_allowed',
-    'admin_write_audit_log'
+    'admin_write_audit_log',
+    'record_hearing_user_interest'
   ];
   n8n_hardened text[] := ARRAY[
     'n8n_list_issues_missing_ai_summary',
