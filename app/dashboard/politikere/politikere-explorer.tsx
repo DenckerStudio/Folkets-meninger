@@ -57,7 +57,6 @@ function PolitikerCard({ rep }: { rep: PolitikerOversikt }) {
             <MapPin className="mr-1.5 h-3.5 w-3.5 shrink-0" aria-hidden />
             <span className="truncate">{locationLabel}</span>
           </p>
-
         </Link>
 
         <div className="flex flex-col items-stretch gap-3 border-t border-border bg-muted/40 px-6 py-4">

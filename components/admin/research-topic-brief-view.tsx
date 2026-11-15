@@ -23,8 +23,10 @@ import {
 import { RESEARCH_BRIEF_POLL_MS } from '@/lib/admin/research/polling';
 import type { ResearchTopicRow as TopicRowType } from '@/lib/admin/research/topic-types';
 import { buttonVariants } from '@/components/ui/button';
+import { ResearchMoreSourcesPanel } from '@/components/admin/research-more-sources-panel';
 import { ResearchTopicBlogDraftPanel } from '@/components/admin/research-topic-blog-draft-panel';
 import { ResearchTopicSakPollPanel } from '@/components/admin/research-topic-sak-poll-panel';
+import { TopicAroundResearchPanel } from '@/components/search/topic-around-research-panel';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -289,7 +291,11 @@ export function ResearchTopicBriefView({ topic: initialTopic }: { topic: TopicRo
 
       <ResearchTopicBlogDraftPanel topic={topic} />
 
+      <ResearchMoreSourcesPanel scope={{ kind: 'topic', topicId: topic.id }} />
+
       <ResearchTopicSakPollPanel topic={topic} />
+
+      <TopicAroundResearchPanel topicId={topic.id} />
 
       {model.showUnpublishableNotice ? (
         <div

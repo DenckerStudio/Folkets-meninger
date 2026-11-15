@@ -63,6 +63,11 @@ assert.equal(digestEmailSubject('weekly', true), 'Dine varsler (ukentlig smakebi
   const weekly = buildInAppDigestSummary([{ title: 'A' }], { url: routes.denneUka });
   assert.equal(weekly.url, '/denne-uka');
   assert.equal(weekly.title, 'Ukens oppsummering: Dette skjer nå');
+  assert.match(weekly.body, /0 oppdaterte saker/);
+  assert.match(weekly.body, /0 avstemninger i ukesvinduet/);
+  assert.match(weekly.body, /1 personlig varsel/);
+  assert.doesNotMatch(weekly.body, /^• /m);
+  assert.match(weekly.body, /«Dette skjer nå»/);
 }
 
 console.log('notifications/preferences.test.ts: ok');

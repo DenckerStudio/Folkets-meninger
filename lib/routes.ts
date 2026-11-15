@@ -66,6 +66,8 @@ export const routes = {
     `${DASHBOARD_PREFIX}/admin/research/topics/${encodeURIComponent(id)}`,
   adminVurder: `${DASHBOARD_PREFIX}/admin/vurder`,
   adminOppgaver: `${DASHBOARD_PREFIX}/admin/oppgaver`,
+  adminKilder: `${DASHBOARD_PREFIX}/admin/kilder`,
+  adminEmbeddings: `${DASHBOARD_PREFIX}/admin/embeddings`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,
   forslag: `${DASHBOARD_PREFIX}/appens-fremtid`,
   chat: `${DASHBOARD_PREFIX}/chat`,

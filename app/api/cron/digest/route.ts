@@ -14,7 +14,7 @@ import {
   shouldSendDigestEmail,
   toAbsoluteNotificationUrl,
 } from '@/lib/notifications/digest';
-import { buildWeeklyOverview } from '@/lib/weekly-overview';
+import { buildWeeklyOverview, type WeeklyOverview } from '@/lib/weekly-overview';
 import { routes } from '@/lib/routes';
 import { pickDigestChannels } from '@/lib/notifications/preferences';
 import { isDigestFrequency } from '@/lib/notifications/channels';
@@ -83,13 +83,16 @@ export async function GET(request: Request) {
 
     let weeklyOverviewPlainBlock: string | null = null;
     let weeklyOverviewHtmlBlock: string | null = null;
-    if (frequency === 'weekly' && isWeeklyOverviewDigestEnabled()) {
+    let weeklyOverview: WeeklyOverview | null = null;
+    if (frequency === 'weekly') {
       try {
-        const overview = await buildWeeklyOverview();
-        const pageUrl = `${origin}/denne-uka`;
-        weeklyOverviewPlainBlock = buildWeeklyOverviewDigestPlainBlock(overview);
-        if (weeklyOverviewPlainBlock) {
-          weeklyOverviewHtmlBlock = buildWeeklyOverviewDigestHtmlBlock(pageUrl, overview);
+        weeklyOverview = await buildWeeklyOverview();
+        if (isWeeklyOverviewDigestEnabled()) {
+          const pageUrl = `${origin}/denne-uka`;
+          weeklyOverviewPlainBlock = buildWeeklyOverviewDigestPlainBlock(weeklyOverview);
+          if (weeklyOverviewPlainBlock) {
+            weeklyOverviewHtmlBlock = buildWeeklyOverviewDigestHtmlBlock(pageUrl, weeklyOverview);
+          }
         }
       } catch (overviewError) {
         console.error('Cron digest: weekly overview block failed', overviewError);
@@ -172,7 +175,8 @@ export async function GET(request: Request) {
 
       if (!isPlus) {
         const summary = buildInAppDigestSummary(items, {
-          url: weeklyOverviewPlainBlock ? routes.denneUka : undefined,
+          url: routes.denneUka,
+          overview: weeklyOverview,
         });
         const body = mergeWeeklyOverviewIntoDigestBody(summary.body, weeklyOverviewPlainBlock);
         const { error: insertError } = await service.from('notifications').insert({

@@ -11,12 +11,14 @@ import {
   RESEARCH_KIND_LABELS,
   researchBriefOutputLink,
 } from '@/lib/admin/research/labels';
+import { ResearchMoreSourcesPanel } from '@/components/admin/research-more-sources-panel';
 import { ResearchTopicUseFindingButton } from '@/components/admin/research-topic-use-finding-button';
 import type { ResearchTopicSnapshot } from '@/lib/admin/research/topic-types';
 import type { ResearchBriefRow, ResearchPerspective } from '@/lib/admin/research/types';
 import type { ResearchBriefsByKind } from '@/lib/admin/research/service';
 import { UserAnnotatableText } from '@/components/user-annotations/user-annotatable-text';
 import { useUserAnnotations } from '@/components/user-annotations/user-annotation-context';
+import { TopicAroundResearchPanel } from '@/components/search/topic-around-research-panel';
 
 const STANCE_LABELS: Record<ResearchPerspective['stance'], string> = {
   for: 'For',
@@ -79,7 +81,16 @@ export function ResearchClusterDetailView({
             initialSnapshot={topicSnapshot}
           />
         </div>
+        {topicSnapshot?.topicId && topicSnapshot.status === 'done' ? (
+          <div className="mt-4">
+            <ResearchMoreSourcesPanel
+              scope={{ kind: 'topic', topicId: topicSnapshot.topicId }}
+            />
+          </div>
+        ) : null}
       </section>
+
+      <TopicAroundResearchPanel clusterId={row.id} />
 
       <section className="rounded-xl border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">Handlinger</h2>

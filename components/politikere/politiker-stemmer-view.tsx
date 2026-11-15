@@ -15,6 +15,7 @@ import { publicPollPercentsNullable, type PublicPollTotals } from '@/lib/public-
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
+import { POLITIKER_STEMMER_PANEL_MIN_CLASS } from '@/components/politikere/politiker-stemmer-panel-layout';
 
 type PolitikerStemmerViewProps = {
   repId: string;
@@ -216,7 +217,9 @@ export function PolitikerStemmerView({ repId, repName, bundle }: PolitikerStemme
   }
 
   return (
-    <section className="space-y-6 rounded-2xl border border-border bg-card p-4 sm:p-6">
+    <section
+      className={`space-y-6 rounded-2xl border border-border bg-card p-4 sm:p-6 ${POLITIKER_STEMMER_PANEL_MIN_CLASS}`}
+    >
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold text-foreground">
           <Scale className="h-5 w-5 text-brand" aria-hidden />
