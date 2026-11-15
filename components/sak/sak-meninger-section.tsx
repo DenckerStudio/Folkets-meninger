@@ -9,7 +9,18 @@ import { formatNumber } from '@/lib/utils';
 const FLAG_STANCES: readonly OpinionStance[] = ['for', 'blank', 'imot'];
 
 export async function SakMeningerSection({ sakId }: { sakId: string }) {
-  const { total, counts, latest } = await getIssueOpinionSummary(sakId);
+  let total = 0;
+  let counts = { for: 0, blank: 0, imot: 0 };
+  let latest: Awaited<ReturnType<typeof getIssueOpinionSummary>>['latest'] = [];
+
+  try {
+    const summary = await getIssueOpinionSummary(sakId);
+    total = summary.total;
+    counts = summary.counts;
+    latest = summary.latest;
+  } catch {
+    return null;
+  }
   const allHref = routes.folketsMeningerForSak(sakId);
   const composeHref = routes.folketsMeningerForSak(sakId, { compose: true });
 

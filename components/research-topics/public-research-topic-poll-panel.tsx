@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { PollBallot } from '@/components/polls/poll-ballot';
+import { PublicTopicPollBallot } from '@/components/research-topics/public-topic-poll-ballot';
 import {
   getPollTotals,
   getPublicPollById,
@@ -52,13 +52,12 @@ export async function PublicResearchTopicPollPanel({
           {pollBallotRunningTextPhraseSentenceStart()} på denne avstemningen.
         </p>
       </div>
-      <PollBallot
+      <PublicTopicPollBallot
         pollId={poll.id}
         votingOpen={votingOpen}
-        initialTotals={totals}
+        rawTotals={totals}
         initialVote={voteState.vote}
         loginNext={topicPath}
-        compact
       />
       <p className="text-sm">
         <Link
