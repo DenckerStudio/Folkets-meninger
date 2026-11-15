@@ -23,6 +23,14 @@ assert.ok(research);
 assert.equal(research.title, 'Research');
 assert.equal(research.href, routes.adminResearch);
 
+const kilder = adminNavItems.find((item) => item.id === 'kilder');
+assert.ok(kilder);
+assert.equal(kilder.href, routes.adminKilder);
+
+const embeddings = adminNavItems.find((item) => item.id === 'embeddings');
+assert.ok(embeddings);
+assert.equal(embeddings.href, routes.adminEmbeddings);
+
 const vurder = adminNavItems.find((item) => item.id === 'vurder');
 assert.ok(vurder);
 assert.equal(vurder.href, routes.adminVurder);
