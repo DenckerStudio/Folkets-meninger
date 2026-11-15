@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { redactPublicFolkChoiceFields } from '@/lib/public-aggregate/folk-public-output';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { resolveSakListStatus } from '@/lib/sak-status';
@@ -104,9 +105,10 @@ export async function GET(request: Request) {
     }
 
     const votingState = await getIssueVotingState(issueId);
+    const publicTotals = redactPublicFolkChoiceFields(totals);
 
     return NextResponse.json({
-      ...totals,
+      ...publicTotals,
       hasVoted,
       userVote,
       votingClosed: votingState.votingClosed,

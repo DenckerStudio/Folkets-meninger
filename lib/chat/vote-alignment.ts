@@ -2,10 +2,13 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getAnonSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { buildAlignmentComparison } from '@/lib/alignment/score';
+import { redactPublicFolkForTool } from '@/lib/public-aggregate/folk-public-output';
+import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
 import { fetchSakVedtakContext } from '@/lib/alignment/sak-vedtak';
 import type { AlignmentComparison, FolkVoteCounts } from '@/lib/alignment/types';
+import { findOpenStortingetPollForIssue, type PollReadClient } from '@/lib/polls/service';
 import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
-import type { ChatRagClient } from '@/lib/chat/rag';
+import { resolveChatRagClient, type ChatRagClient } from '@/lib/chat/rag';
 
 export type ChatRpcClient = Pick<SupabaseClient, 'rpc'>;
 
@@ -15,9 +18,9 @@ export type VoteAlignmentResult = {
   stortingetForPercent: number | null;
   stortingetAgainstPercent: number | null;
   folk: FolkVoteCounts;
-  folkForPercent: number;
-  folkAgainstPercent: number;
-  folkAbstainPercent: number;
+  folkForPercent: number | null;
+  folkAgainstPercent: number | null;
+  folkAbstainPercent: number | null;
   score: number | null;
   gapPoints: number | null;
   verdict: AlignmentComparison['verdict'];
@@ -25,6 +28,10 @@ export type VoteAlignmentResult = {
   summary: string;
   voteringTema: string | null;
   otherVoteringCount: number;
+  /** Open Nei/Blank/Ja poll on this sak, when one exists. */
+  openPollId: string | null;
+  belowPublicThreshold: boolean;
+  folkBreakdownNote: string | null;
 };
 
 const EMPTY_FOLK: FolkVoteCounts = { for: 0, against: 0, abstain: 0, total: 0 };
@@ -47,9 +54,17 @@ export function shapeVoteAlignment(comparison: AlignmentComparison): VoteAlignme
     stortingetForPercent: comparison.stortingetForPercent,
     stortingetAgainstPercent: comparison.stortingetAgainstPercent,
     folk: comparison.folk,
-    folkForPercent: comparison.folkForPercent,
-    folkAgainstPercent: comparison.folkAgainstPercent,
-    folkAbstainPercent: comparison.folkAbstainPercent,
+    folkForPercent: publicAggregateMeetsThreshold(comparison.folk.total)
+      ? comparison.folkForPercent
+      : null,
+    folkAgainstPercent: publicAggregateMeetsThreshold(comparison.folk.total)
+      ? comparison.folkAgainstPercent
+      : null,
+    folkAbstainPercent: publicAggregateMeetsThreshold(comparison.folk.total)
+      ? comparison.folkAbstainPercent
+      : null,
+    belowPublicThreshold: !publicAggregateMeetsThreshold(comparison.folk.total),
+    folkBreakdownNote: null,
     score: comparison.score,
     gapPoints: comparison.gapPoints,
     verdict: comparison.verdict,
@@ -57,6 +72,7 @@ export function shapeVoteAlignment(comparison: AlignmentComparison): VoteAlignme
     summary: comparison.summary,
     voteringTema: comparison.votering?.votering_tema ?? null,
     otherVoteringCount: comparison.otherVoteringCount,
+    openPollId: null,
   };
 }
 
@@ -102,10 +118,16 @@ export async function fetchVoteAlignment(args: {
 }): Promise<VoteAlignmentResult | null> {
   const issueId = args.issueId.trim();
   if (!issueId) return null;
-  const [voteringer, folk, sakVedtak] = await Promise.all([
+  const ragClient = await resolveChatRagClient(args.client);
+  const [voteringer, folk, sakVedtak, openPoll] = await Promise.all([
     fetchSakVoteringer(issueId),
     fetchFolkTotals(issueId, args.client),
     fetchSakVedtakContext(issueId),
+    ragClient
+      ? findOpenStortingetPollForIssue(issueId, ragClient as PollReadClient)
+      : Promise.resolve(null),
   ]);
-  return shapeVoteAlignment(buildAlignmentComparison(folk, voteringer, sakVedtak));
+  const shaped = shapeVoteAlignment(buildAlignmentComparison(folk, voteringer, sakVedtak));
+  const withPoll = { ...shaped, openPollId: openPoll?.id ?? null };
+  return redactPublicFolkForTool(withPoll);
 }

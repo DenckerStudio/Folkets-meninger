@@ -6,9 +6,9 @@ import { SurfaceCard } from '@/components/dashboard/surface-card';
 import { PageHeader } from '@/components/page-header';
 import {
   buildGovernmentStatsSnapshot,
-  GOVERNMENT_STATS_MIN_VOTES,
   PUBLIC_STATS_DISCLAIMER,
 } from '@/lib/government-stats/snapshot';
+import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
 import { routes } from '@/lib/routes';
 
 export const dynamic = 'force-dynamic';
@@ -31,7 +31,7 @@ export default async function InnsiktPage() {
             timeStyle: 'short',
             timeZone: 'Europe/Oslo',
           })} · Kun saker med minst{' '}
-          {GOVERNMENT_STATS_MIN_VOTES} stemmer
+          {MIN_PUBLIC_AGGREGATE_N} stemmer
         </p>
       </div>
 
@@ -43,7 +43,15 @@ export default async function InnsiktPage() {
       {snapshot.issues.length === 0 ? (
         <EmptyState
           title="Ingen offentlig statistikk ennå"
-          description={`Saker vises her når de har fått minst ${GOVERNMENT_STATS_MIN_VOTES} anonyme stemmer. Stem på saker under Utforsk for å bidra.`}
+          description={`Saker vises her når de har fått minst ${MIN_PUBLIC_AGGREGATE_N} anonyme stemmer.`}
+          action={
+            <Link
+              href={routes.utforsk}
+              className="inline-flex min-h-11 items-center rounded-lg font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+            >
+              Utforsk saker →
+            </Link>
+          }
         />
       ) : (
         <ul className="space-y-3 sm:space-y-4">

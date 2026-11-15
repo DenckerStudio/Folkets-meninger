@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import Link from 'next/link';
 import { Scale, ExternalLink } from 'lucide-react';
 import {
   Bar,
@@ -16,12 +17,13 @@ import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { useSakTooltipsEnabled } from '@/components/theme-provider';
 import { buildAlignmentComparison, type SakVedtakContext } from '@/lib/alignment/score';
+import type { AlignmentVerdict, FolkVoteCounts, SakVotering } from '@/lib/alignment/types';
+import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
+import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
 import {
-  ALIGNMENT_MIN_FOLK_VOTES,
-  type AlignmentVerdict,
-  type FolkVoteCounts,
-  type SakVotering,
-} from '@/lib/alignment/types';
+  folkBelowThresholdNextStep,
+  folkHistoricAggregateBelowThresholdMessage,
+} from '@/lib/public-aggregate/folk-below-threshold';
 import { formatStemmerCount } from '@/lib/norwegian-plural';
 import { NonRepresentativeNotice } from '@/components/trust/non-representative-notice';
 import { cn } from '@/lib/utils';
@@ -143,11 +145,13 @@ function SplitBar({
 
 export function AlignmentScore({
   sakId,
+  openPollId,
   voteringer,
   initialFolk,
   sakVedtak,
 }: {
   sakId: string;
+  openPollId?: string | null;
   voteringer: SakVotering[];
   initialFolk: FolkVoteCounts;
   sakVedtak?: SakVedtakContext;
@@ -168,14 +172,20 @@ export function AlignmentScore({
         const res = await fetch(`/api/vote?issueId=${encodeURIComponent(sakId)}`);
         const data = await res.json();
         if (cancelled) return;
-        const forCount = data.for ?? 0;
-        const against = data.against ?? 0;
-        const abstain = data.abstain ?? 0;
+        const parseNullable = (value: unknown): number | null =>
+          typeof value === 'number' && Number.isFinite(value) ? value : null;
+        const forCount = parseNullable(data.for);
+        const against = parseNullable(data.against);
+        const abstain = parseNullable(data.abstain);
+        const total =
+          typeof data.total === 'number' && Number.isFinite(data.total)
+            ? data.total
+            : (forCount ?? 0) + (against ?? 0) + (abstain ?? 0);
         setFolk({
           for: forCount,
           against,
           abstain,
-          total: data.total ?? forCount + against + abstain,
+          total,
         });
       } catch {
         // Keep server-rendered totals
@@ -196,8 +206,13 @@ export function AlignmentScore({
     ];
   }, [comparison]);
 
+  const folkAggregatePublic = publicAggregateMeetsThreshold(comparison.folk.total);
+  const folkNextStep = useMemo(
+    () => folkBelowThresholdNextStep(openPollId),
+    [openPollId],
+  );
   const showComparisonChart =
-    comparison.stortingetForPercent != null && comparison.folk.total >= ALIGNMENT_MIN_FOLK_VOTES;
+    comparison.stortingetForPercent != null && folkAggregatePublic;
 
   return (
     <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-8">
@@ -218,10 +233,16 @@ export function AlignmentScore({
         </span>
       </div>
 
-      <NonRepresentativeNotice count={comparison.folk.total} countLabel="stemmer i appen" countLabelSingular="stemme i appen" className="mb-2" />
+      <NonRepresentativeNotice
+        count={folkAggregatePublic ? comparison.folk.total : undefined}
+        countLabel="stemmer i appen"
+        countLabelSingular="stemme i appen"
+        className="mb-2"
+      />
       <p className="mb-4 text-xs text-muted-foreground">
-        «Folket i appen» viser historiske anonyme For/Mot/Avstår-stemmer der de finnes. Nye holdninger
-        (enig/uenig) er personlige og inngår ikke her. Stortingets tall er offisielle voteringer.
+        «Folket i appen» er historiske anonyme For/Mot/Avstår-stemmer (per-sak stemming er avviklet).
+        Holdninger (enig/uenig) og Nei/Blank/Ja-avstemninger inngår ikke i denne fordelingen. Stortingets
+        tall er offisielle voteringer.
       </p>
 
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -273,9 +294,11 @@ export function AlignmentScore({
             <h3 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
               Brukere av Folkets Meninger
             </h3>
-            <span className="text-xs text-muted-foreground">{formatStemmerCount(comparison.folk.total)}</span>
+            {folkAggregatePublic ? (
+              <span className="text-xs text-muted-foreground">{formatStemmerCount(comparison.folk.total)}</span>
+            ) : null}
           </div>
-          {comparison.folk.total > 0 ? (
+          {folkAggregatePublic ? (
             <>
               <SplitBar
                 forPercent={comparison.folkForPercent}
@@ -289,8 +312,23 @@ export function AlignmentScore({
                 <span className="text-rose-600 dark:text-rose-400">Mot {comparison.folkAgainstPercent}%</span>
               </div>
             </>
+          ) : comparison.folk.total > 0 ? (
+            <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {folkHistoricAggregateBelowThresholdMessage()}
+              </p>
+              <Link
+                href={folkNextStep.href}
+                className="mt-3 inline-flex min-h-11 items-center rounded-lg font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+              >
+                {folkNextStep.label}
+              </Link>
+            </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Ingen har stemt i appen ennå.</p>
+            <p className="text-sm text-muted-foreground">
+              Ingen historiske anonyme stemmer er registrert ennå. Se om det finnes en åpen Nei/Blank/Ja-avstemning
+              knyttet til saken.
+            </p>
           )}
         </div>
 
@@ -350,7 +388,7 @@ export function AlignmentScore({
 
       {comparison.verdict === 'insufficient' ? (
         <p className="mt-3 text-xs text-muted-foreground">
-          Samsvars-score vises når minst {ALIGNMENT_MIN_FOLK_VOTES} anonyme stemmer er avgitt.
+          Samsvars-score vises når minst {MIN_PUBLIC_AGGREGATE_N} anonyme stemmer er avgitt.
         </p>
       ) : null}
 

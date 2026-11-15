@@ -1,7 +1,6 @@
-import { ALIGNMENT_MIN_FOLK_VOTES } from '@/lib/alignment/types';
+import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
 import { DATA_CONTROLLER, formatDataControllerBlock } from '@/lib/legal/controller';
 import { STANCE_AGGREGATE_DISCLOSURE } from '@/lib/copy/stance-privacy';
-import { GOVERNMENT_STATS_MIN_VOTES } from '@/lib/government-stats/snapshot';
 import { pollBallotAltTextPhrase } from '@/lib/polls/ballot-buttons';
 import {
   STEMME_PLUS_BENEFITS,
@@ -30,7 +29,7 @@ export const OM_WHY_POINTS = [
   },
   {
     title: 'Sammenlign med vedtak',
-    body: `På sakssider viser vi «Folkets vilje vs. Stortinget» når voteringer finnes og minst ${ALIGNMENT_MIN_FOLK_VOTES} stemmer er avgitt i appen (samlet, uten navn).`,
+    body: `På sakssider viser vi «Folkets vilje vs. Stortinget» når voteringer finnes og minst ${MIN_PUBLIC_AGGREGATE_N} stemmer er avgitt i appen (samlet, uten navn).`,
   },
 ] as const;
 
@@ -83,12 +82,12 @@ export const OM_STAT_FACTS = [
   },
   {
     label: 'Sammenligning',
-    value: `${ALIGNMENT_MIN_FOLK_VOTES}+ stemmer`,
+    value: `${MIN_PUBLIC_AGGREGATE_N}+ stemmer`,
     detail: 'Før vi sammenligner folkets stemmer med en Stortinget-votering på sakssiden.',
   },
   {
     label: 'Offentlig statistikk',
-    value: `${GOVERNMENT_STATS_MIN_VOTES}+ stemmer`,
+    value: `${MIN_PUBLIC_AGGREGATE_N}+ stemmer`,
     detail: 'Før saker inkluderes i anonyme aggregater på Innsikt.',
   },
   {

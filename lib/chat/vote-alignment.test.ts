@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { buildAlignmentComparison } from '@/lib/alignment/score';
 import { STORTINGET_BAR_LABELS } from '@/lib/alignment/sak-vedtak';
+import { redactPublicFolkForTool } from '@/lib/public-aggregate/folk-public-output';
 import { parseFolkTotals, shapeVoteAlignment } from './vote-alignment';
 import type { AlignmentComparison } from '@/lib/alignment/types';
 
@@ -45,6 +47,7 @@ async function main() {
   };
 
   const shaped = shapeVoteAlignment(comparison);
+  assert.equal(shaped.belowPublicThreshold, false);
   assert.equal(shaped.hasStortingetVote, true);
   assert.equal(shaped.score, 90);
   assert.equal(shaped.gapPoints, 10);
@@ -69,6 +72,17 @@ async function main() {
   assert.equal(pending.hasStortingetVote, false);
   assert.equal(pending.voteringTema, null);
   assert.equal(pending.score, null);
+  assert.equal(pending.belowPublicThreshold, false);
+  assert.equal(pending.folkBreakdownNote, null);
+
+  const fewComparison = buildAlignmentComparison(
+    { for: 2, against: 1, abstain: 0, total: 3 },
+    [],
+  );
+  const fewShaped = shapeVoteAlignment(fewComparison);
+  const fewPublic = redactPublicFolkForTool({ ...fewShaped, openPollId: null });
+  assert.equal(fewPublic.belowPublicThreshold, true);
+  assert.equal(fewPublic.folk.for, null);
 
   console.log('chat/vote-alignment.test.ts: ok');
 }

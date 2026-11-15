@@ -1,3 +1,5 @@
+import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
+
 /** Norway's 15 counties (fylker) after the 2024 regional reform. */
 export const NORWAY_COUNTIES = [
   { code: '03', name: 'Oslo', sortOrder: 1 },
@@ -31,5 +33,5 @@ export function countyName(code: string | null | undefined): string | null {
 }
 
 /** Minimum ballots per county before regional results are shown (k-anonymity). */
-/** Must match server floor in get_poll_totals_by_fylke (GREATEST(p_min_votes, 10)). */
-export const POLL_FYLKE_MIN_VOTES = 10;
+/** Must match server floor in get_poll_totals_by_fylke (GREATEST(p_min_votes, 5)). */
+export const POLL_FYLKE_MIN_VOTES = MIN_PUBLIC_AGGREGATE_N;

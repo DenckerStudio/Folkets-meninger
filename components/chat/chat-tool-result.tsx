@@ -22,6 +22,11 @@ import {
   Vote,
 } from 'lucide-react';
 import { formatChunkExcerptForDisplay } from '@/lib/chat/chunk-excerpt';
+import {
+  folkBelowThresholdNextStep,
+  folkHistoricAggregateBelowThresholdMessage,
+} from '@/lib/public-aggregate/folk-below-threshold';
+import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
 import { routes } from '@/lib/routes';
 
 /**
@@ -95,14 +100,18 @@ type VoteResultsOutput = {
   } | null;
   stortingetForPercent?: number | null;
   stortingetAgainstPercent?: number | null;
-  folk?: { for?: number; against?: number; abstain?: number; total?: number };
-  folkForPercent?: number;
-  folkAgainstPercent?: number;
+  folk?: { for?: number | null; against?: number | null; abstain?: number | null; total?: number };
+  folkForPercent?: number | null;
+  folkAgainstPercent?: number | null;
+  folkAbstainPercent?: number | null;
+  belowPublicThreshold?: boolean;
+  folkBreakdownNote?: string | null;
   score?: number | null;
   gapPoints?: number | null;
   headline?: string;
   summary?: string;
   voteringTema?: string | null;
+  openPollId?: string | null;
 };
 
 type HearingItem = {
@@ -539,6 +548,14 @@ function VoteResultsCard({ output }: { output: VoteResultsOutput }) {
   const stortinget = output.stortinget ?? null;
   const folk = output.folk ?? {};
   const folkTotal = folk.total ?? 0;
+  const belowPublicThreshold =
+    output.belowPublicThreshold ?? !publicAggregateMeetsThreshold(folkTotal);
+  const folkAggregatePublic =
+    !belowPublicThreshold &&
+    publicAggregateMeetsThreshold(folkTotal) &&
+    output.folkForPercent != null &&
+    output.folkAgainstPercent != null;
+  const folkNextStep = folkBelowThresholdNextStep(output.openPollId);
 
   return (
     <ToolCard
@@ -575,13 +592,25 @@ function VoteResultsCard({ output }: { output: VoteResultsOutput }) {
         </p>
       )}
 
-      {folkTotal > 0 ? (
+      {folkAggregatePublic ? (
         <p className="text-xs text-foreground">
           <span className="font-medium text-muted-foreground">Folket i appen ({folkTotal}): </span>
-          For {output.folkForPercent ?? 0}% · Mot {output.folkAgainstPercent ?? 0}%
+          For {output.folkForPercent}% · Mot {output.folkAgainstPercent}%
+        </p>
+      ) : folkTotal > 0 || belowPublicThreshold ? (
+        <p className="text-xs text-muted-foreground">
+          {folkHistoricAggregateBelowThresholdMessage()}{' '}
+          <Link
+            href={folkNextStep.href}
+            className="font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+          >
+            {folkNextStep.label}
+          </Link>
         </p>
       ) : (
-        <p className="text-xs text-muted-foreground">Ingen anonyme stemmer i appen ennå.</p>
+        <p className="text-xs text-muted-foreground">
+          Ingen historiske anonyme stemmer i appen ennå.
+        </p>
       )}
 
       {output.score != null ? (

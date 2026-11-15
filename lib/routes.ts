@@ -145,6 +145,11 @@ export function isPublicDashboardKalenderPath(pathname: string): boolean {
   return pathname === routes.kalender;
 }
 
+/** Open insight — anonymous aggregate vote stats (read-only for guests). */
+export function isPublicDashboardInnsiktPath(pathname: string): boolean {
+  return pathname === routes.innsikt;
+}
+
 export function isPublicProfilePath(pathname: string): boolean {
   return /^\/profil\/[^/]+$/.test(pathname);
 }

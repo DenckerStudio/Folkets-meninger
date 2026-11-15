@@ -11,8 +11,10 @@ import {
 } from '@/lib/alignment/sak-vedtak';
 
 export type { SakVedtakContext };
+import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
+import { folkVoteTotal, publicFolkPercents } from '@/lib/public-aggregate/folk-public-output';
+import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
 import {
-  ALIGNMENT_MIN_FOLK_VOTES,
   type AlignmentComparison,
   type AlignmentSide,
   type AlignmentVerdict,
@@ -30,7 +32,8 @@ function percent(part: number, total: number): number {
   return Math.round((part / total) * 100);
 }
 
-function sideFromCounts(forCount: number, againstCount: number): AlignmentSide {
+function sideFromCounts(forCount: number | null, againstCount: number | null): AlignmentSide {
+  if (forCount == null || againstCount == null) return 'tie';
   if (forCount === againstCount) return 'tie';
   return forCount > againstCount ? 'for' : 'against';
 }
@@ -125,14 +128,18 @@ export function buildAlignmentComparison(
   sakVedtak?: SakVedtakContext,
 ): AlignmentComparison {
   const votering = pickPrimaryVotering(voteringer);
-  const folkTotal = folk.total || folk.for + folk.against + folk.abstain;
-  const folkDecided = folk.for + folk.against;
-  const folkForPercent = percent(folk.for, folkTotal);
-  const folkAgainstPercent = percent(folk.against, folkTotal);
-  const folkAbstainPercent = percent(folk.abstain, folkTotal);
-  const folkSide = sideFromCounts(folk.for, folk.against);
+  const folkTotal = folkVoteTotal(folk);
+  const folkPublic = publicAggregateMeetsThreshold(folkTotal);
+  const folkDecided = folkPublic ? (folk.for ?? 0) + (folk.against ?? 0) : 0;
+  const { folkForPercent, folkAgainstPercent, folkAbstainPercent } = publicFolkPercents(folk, folkTotal);
+  const folkSide = folkPublic ? sideFromCounts(folk.for, folk.against) : 'tie';
 
   if (!votering) {
+    const pendingHeadline = folkTotal > 0 && !folkPublic
+      ? 'Stortinget har ikke votert i saken ennå. Historisk folkemening vises når nok anonyme stemmer er samlet.'
+      : folkTotal > 0 && folkPublic
+        ? `${folkForPercent} % av brukerne stemte For. Stortinget har ikke votert i saken ennå.`
+        : 'Stortinget har ikke votert i saken ennå.';
     return {
       folk,
       folkForPercent,
@@ -147,10 +154,7 @@ export function buildAlignmentComparison(
       score: null,
       gapPoints: null,
       verdict: 'pending',
-      headline:
-        folkTotal > 0
-          ? `${folkForPercent} % av brukerne stemte For. Stortinget har ikke votert i saken ennå.`
-          : 'Stortinget har ikke votert i saken ennå.',
+      headline: pendingHeadline,
       summary:
         'Når Stortinget har votert, viser vi avstanden mellom folkets mening i appen og det faktiske vedtaket.',
       votering: null,
@@ -211,7 +215,7 @@ export function buildAlignmentComparison(
     stHeadlineParts.votePhrase,
   );
 
-  if (folkTotal < ALIGNMENT_MIN_FOLK_VOTES) {
+  if (!publicAggregateMeetsThreshold(folkTotal)) {
     return {
       folk,
       folkForPercent,
@@ -227,13 +231,13 @@ export function buildAlignmentComparison(
       gapPoints: null,
       verdict: 'insufficient',
       headline: stCountHeadline,
-      summary: `Folkets mening vises når minst ${ALIGNMENT_MIN_FOLK_VOTES} anonyme stemmer er avgitt i appen.`,
+      summary: `Folkets historiske For/Mot/Avstår-fordeling vises når minst ${MIN_PUBLIC_AGGREGATE_N} anonyme stemmer finnes i arkivet.`,
       votering,
       otherVoteringCount,
     };
   }
 
-  const folkShare = folkDecided > 0 ? folk.for / folkDecided : 0;
+  const folkShare = folkDecided > 0 ? (folk.for ?? 0) / folkDecided : 0;
   const stShare = stortingetForShareForFolkAlignment({
     stFor,
     stAgainst,

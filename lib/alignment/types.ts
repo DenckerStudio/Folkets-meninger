@@ -1,3 +1,5 @@
+import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
+
 export type SakVotering = {
   votering_id: number;
   sak_id?: number;
@@ -26,9 +28,9 @@ export type AlignmentSide = 'for' | 'against' | 'tie';
 export type AlignmentVerdict = 'aligned' | 'partial' | 'divergent' | 'pending' | 'insufficient';
 
 export type FolkVoteCounts = {
-  for: number;
-  against: number;
-  abstain: number;
+  for: number | null;
+  against: number | null;
+  abstain: number | null;
   total: number;
 };
 
@@ -57,4 +59,4 @@ export type AlignmentComparison = {
   otherVoteringCount: number;
 };
 
-export const ALIGNMENT_MIN_FOLK_VOTES = 5;
+export const ALIGNMENT_MIN_FOLK_VOTES = MIN_PUBLIC_AGGREGATE_N;
