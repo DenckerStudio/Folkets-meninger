@@ -1,8 +1,12 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { WeeklyOverview } from '@/lib/weekly-overview';
+import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 import { touchTargetLinkClass } from '@/lib/touch-target';
+
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
 type WeeklyOverviewSectionsProps = {
   overview: WeeklyOverview;
@@ -32,14 +36,32 @@ function SectionShell({
   );
 }
 
-function EmptySectionMessage({ children }: { children: string }) {
+function EmptySectionMessage({
+  children,
+  action,
+}: {
+  children: string;
+  action?: { href: string; label: string };
+}) {
   return (
-    <p
-      className="rounded-2xl border border-dashed border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground"
+    <div
+      className="space-y-3 rounded-2xl border border-dashed border-border bg-card px-4 py-8 text-center"
       role="status"
     >
-      {children}
-    </p>
+      <p className="text-sm text-muted-foreground">{children}</p>
+      {action ? (
+        <Link
+          href={action.href}
+          className={cn(
+            touchTargetLinkClass,
+            focusRing,
+            'inline-flex rounded-md text-sm font-medium text-brand underline-offset-2 hover:underline',
+          )}
+        >
+          {action.label}
+        </Link>
+      ) : null}
+    </div>
   );
 }
 
@@ -60,7 +82,8 @@ function OverviewList({
               href={item.href}
               className={cn(
                 touchTargetLinkClass,
-                'block px-4 py-3 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                focusRing,
+                'block px-4 py-3 text-left transition-colors hover:bg-muted/60',
               )}
             >
               <span className="font-medium text-foreground">{item.title}</span>
@@ -73,9 +96,24 @@ function OverviewList({
   );
 }
 
+export function WeeklyOverviewLoadError() {
+  return (
+    <div
+      className="rounded-2xl border border-destructive/40 bg-destructive/5 px-6 py-10 text-center"
+      role="alert"
+    >
+      <p className="text-base font-semibold text-foreground">Kunne ikke laste ukeoversikten</p>
+      <p className="mt-2 text-sm text-muted-foreground">Prøv igjen senere.</p>
+    </div>
+  );
+}
+
 export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps) {
   const metaByVotingSoon = new Map(
     overview.votingSoon.map((item) => [item.issueId, item.daysLeftLabel]),
+  );
+  const metaByVoted = new Map(
+    overview.votedRecently.map((item) => [item.issueId, item.votedAtLabel ?? null]),
   );
   const metaByHearing = new Map(
     overview.openHearings.map((item) => [item.hearingId, item.fristLabel]),
@@ -86,10 +124,12 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
       <SectionShell
         id="votering-snart"
         title="Saker nær votering"
-        description="Offentlige saker der votering er ventet innen de neste sju dagene."
+        description={`Åpne saker med planlagt votering: ${overview.window.futureRangeLabel.toLowerCase()}.`}
       >
         {overview.votingSoon.length === 0 ? (
-          <EmptySectionMessage>Ingen saker med planlagt votering i denne perioden.</EmptySectionMessage>
+          <EmptySectionMessage action={{ href: routes.utforsk, label: 'Utforsk saker' }}>
+            Ingen saker med planlagt votering i denne perioden.
+          </EmptySectionMessage>
         ) : (
           <OverviewList
             items={overview.votingSoon.map((item) => ({
@@ -104,11 +144,13 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
 
       <SectionShell
         id="votering-nettopp"
-        title="Saker med votering denne uken"
-        description="Saker som er ferdig behandlet og votert i løpet av de siste sju dagene."
+        title="Nylig votert"
+        description={`Ferdig behandlet etter voteringsdato i saksgangen: ${overview.window.pastRangeLabel.toLowerCase()}.`}
       >
         {overview.votedRecently.length === 0 ? (
-          <EmptySectionMessage>Ingen registrerte voteringer i denne perioden.</EmptySectionMessage>
+          <EmptySectionMessage action={{ href: routes.utforsk, label: 'Se saker på Utforsk' }}>
+            Ingen voteringer med dato i denne perioden.
+          </EmptySectionMessage>
         ) : (
           <OverviewList
             items={overview.votedRecently.map((item) => ({
@@ -116,7 +158,7 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
               href: item.href,
               title: item.title,
             }))}
-            renderMeta={() => 'Votert i perioden'}
+            renderMeta={(key) => metaByVoted.get(key) ?? null}
           />
         )}
       </SectionShell>
@@ -124,10 +166,12 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
       <SectionShell
         id="horingsfrister"
         title="Åpne høringer med frist snart"
-        description="Innspillsfrist innen sju dager (Europe/Oslo)."
+        description={`Innspillsfrist: ${overview.window.futureRangeLabel.toLowerCase()} (Europe/Oslo).`}
       >
         {overview.openHearings.length === 0 ? (
-          <EmptySectionMessage>Ingen åpne høringer med frist i denne perioden.</EmptySectionMessage>
+          <EmptySectionMessage action={{ href: routes.horinger, label: 'Se alle høringer' }}>
+            Ingen åpne høringer med frist i denne perioden.
+          </EmptySectionMessage>
         ) : (
           <OverviewList
             items={overview.openHearings.map((item) => ({
@@ -143,10 +187,12 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
       <SectionShell
         id="sammendrag"
         title="Oppdaterte sammendrag"
-        description="Saker med oppdatert sakssammendrag de siste sju dagene."
+        description={`Oppdatert sakssammendrag: ${overview.window.pastRangeLabel.toLowerCase()}.`}
       >
         {overview.newSummaries.length === 0 ? (
-          <EmptySectionMessage>Ingen nye eller oppdaterte sammendrag i denne perioden.</EmptySectionMessage>
+          <EmptySectionMessage action={{ href: routes.utforsk, label: 'Utforsk saker med sammendrag' }}>
+            Ingen nye eller oppdaterte sammendrag i denne perioden.
+          </EmptySectionMessage>
         ) : (
           <OverviewList
             items={overview.newSummaries.map((item) => ({
@@ -172,7 +218,7 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
       <SectionShell
         id="skriftlige-sporsmal"
         title="Skriftlige spørsmål"
-        description="Antall nye skriftlige spørsmål fra Stortinget i perioden — uten spørsmålstekst."
+        description={`Antall nye fra Stortinget ${overview.window.pastRangeLabel.toLowerCase()} — uten spørsmålstekst.`}
       >
         <div className="rounded-2xl border border-border bg-card px-4 py-6">
           <p className="text-base font-medium text-foreground">{overview.skriftligeSporsmal.label}</p>
@@ -180,10 +226,11 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
             href={overview.skriftligeSporsmal.href}
             className={cn(
               touchTargetLinkClass,
-              'mt-3 inline-flex text-sm font-medium text-brand underline-offset-2 hover:underline',
+              focusRing,
+              'mt-3 inline-flex rounded-md text-sm font-medium text-brand underline-offset-2 hover:underline',
             )}
           >
-            Se spørsmålsoversikt i appen
+            Se spørsmålsoversikten
           </Link>
         </div>
       </SectionShell>

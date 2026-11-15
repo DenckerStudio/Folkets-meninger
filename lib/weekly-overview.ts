@@ -1,7 +1,8 @@
 import { KALENDER_TIMEZONE } from '@/lib/kalender-events';
 import { getServiceSupabase } from '@/lib/supabase';
-import { formatVotingDaysLeftLabel } from '@/lib/sak-voting-window';
+import { formatVotingDaysLeftLabel, getLastPastVoteEventDate } from '@/lib/sak-voting-window';
 import { routes } from '@/lib/routes';
+import type { StortingetSakDetail } from '@/lib/stortinget';
 import type { StortingetHoring } from '@/lib/stortinget-horinger';
 import {
   compareHoringerByInnspillDeadline,
@@ -25,7 +26,10 @@ export type WeeklyOverviewWindow = {
   now: Date;
   pastStart: Date;
   futureEnd: Date;
+  /** Full bokmål-beskrivelse for intro og digest. */
   label: string;
+  pastRangeLabel: string;
+  futureRangeLabel: string;
 };
 
 export type WeeklyOverviewVotingItem = {
@@ -34,6 +38,7 @@ export type WeeklyOverviewVotingItem = {
   href: string;
   votingClosesAt: string | null;
   daysLeftLabel: string | null;
+  votedAtLabel?: string | null;
 };
 
 export type WeeklyOverviewHearingItem = {
@@ -73,6 +78,12 @@ type IssueVotingRow = {
   ferdigbehandlet: boolean | null;
 };
 
+type IssueSaksgangRow = {
+  id: string;
+  title: string | null;
+  detail_json: unknown;
+};
+
 function osloDayNumber(date: Date): number {
   const formatted = new Intl.DateTimeFormat('en-CA', {
     timeZone: KALENDER_TIMEZONE,
@@ -91,8 +102,10 @@ export function daysUntilOsloCalendarDeadline(deadline: Date, now: Date): number
 export function buildWeeklyOverviewWindow(now = new Date()): WeeklyOverviewWindow {
   const pastStart = new Date(now.getTime() - WEEKLY_OVERVIEW_LOOKBACK_MS);
   const futureEnd = new Date(now.getTime() + WEEKLY_OVERVIEW_LOOKAHEAD_MS);
-  const label = `${formatDateNb(pastStart)} – ${formatDateNb(futureEnd)}`;
-  return { now, pastStart, futureEnd, label };
+  const pastRangeLabel = `Siste 7 dager (${formatDateNb(pastStart)}–${formatDateNb(now)})`;
+  const futureRangeLabel = `Neste 7 dager (${formatDateNb(now)}–${formatDateNb(futureEnd)})`;
+  const label = `${pastRangeLabel}. ${futureRangeLabel}.`;
+  return { now, pastStart, futureEnd, label, pastRangeLabel, futureRangeLabel };
 }
 
 export function isInstantInWeeklyWindow(
@@ -137,23 +150,20 @@ export function filterVotingSoonIssues(
     );
 }
 
-export function filterRecentlyVotedIssues(
-  rows: IssueVotingRow[],
+/** Bruker faktisk voteringsdato fra saksgang — ignorerer voting_closes_at=«nå» på ferdigbehandlede saker. */
+export function filterRecentlyVotedFromSaksgang(
+  rows: IssueSaksgangRow[],
   window: Pick<WeeklyOverviewWindow, 'pastStart' | 'now'>,
-): IssueVotingRow[] {
-  const startMs = window.pastStart.getTime();
-  const nowMs = window.now.getTime();
-  return rows
-    .filter((row) => {
-      if (row.ferdigbehandlet !== true) return false;
-      if (!row.voting_closes_at) return false;
-      const closesMs = new Date(row.voting_closes_at).getTime();
-      return closesMs >= startMs && closesMs <= nowMs;
-    })
-    .sort(
-      (a, b) =>
-        new Date(b.voting_closes_at ?? 0).getTime() - new Date(a.voting_closes_at ?? 0).getTime(),
-    );
+): Array<{ id: string; title: string | null; votedAt: Date }> {
+  const mapped: Array<{ id: string; title: string | null; votedAt: Date }> = [];
+  for (const row of rows) {
+    const detail = row.detail_json as StortingetSakDetail | null | undefined;
+    const votedAt = getLastPastVoteEventDate(detail, window.now);
+    if (!votedAt) continue;
+    if (!isInstantInWeeklyWindow(votedAt, window)) continue;
+    mapped.push({ id: String(row.id), title: row.title, votedAt });
+  }
+  return mapped.sort((a, b) => b.votedAt.getTime() - a.votedAt.getTime());
 }
 
 export function filterSummariesUpdatedInWindow(
@@ -183,7 +193,7 @@ export function countSkriftligeSporsmalInWindow(
   return count;
 }
 
-function mapVotingItem(row: IssueVotingRow, now: Date): WeeklyOverviewVotingItem {
+function mapUpcomingVotingItem(row: IssueVotingRow, now: Date): WeeklyOverviewVotingItem {
   const closesAt = row.voting_closes_at;
   const closesDate = closesAt ? new Date(closesAt) : null;
   const daysLeft =
@@ -195,12 +205,18 @@ function mapVotingItem(row: IssueVotingRow, now: Date): WeeklyOverviewVotingItem
     title: row.title?.trim() || `Sak ${row.id}`,
     href: routes.sak(String(row.id)),
     votingClosesAt: closesAt,
-    daysLeftLabel:
-      daysLeft > 0
-        ? formatVotingDaysLeftLabel(daysLeft)
-        : closesDate
-          ? 'Votert i perioden'
-          : null,
+    daysLeftLabel: daysLeft > 0 ? formatVotingDaysLeftLabel(daysLeft) : null,
+  };
+}
+
+function mapVotedItem(row: { id: string; title: string | null; votedAt: Date }): WeeklyOverviewVotingItem {
+  return {
+    issueId: row.id,
+    title: row.title?.trim() || `Sak ${row.id}`,
+    href: routes.sak(row.id),
+    votingClosesAt: row.votedAt.toISOString(),
+    daysLeftLabel: null,
+    votedAtLabel: `Votert ${formatDateNb(row.votedAt)}`,
   };
 }
 
@@ -215,54 +231,79 @@ function mapHearingItem(hearing: StortingetHoring): WeeklyOverviewHearingItem {
   };
 }
 
-async function loadVotingIssueRows(
+async function loadVotingSoonRows(
   window: WeeklyOverviewWindow,
-): Promise<{ soon: IssueVotingRow[]; recent: IssueVotingRow[] }> {
+): Promise<{ rows: IssueVotingRow[]; ok: boolean }> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return { soon: [], recent: [] };
+    return { rows: [], ok: false };
   }
 
   try {
     const service = getServiceSupabase();
     const nowIso = window.now.toISOString();
-    const pastIso = window.pastStart.toISOString();
     const futureIso = window.futureEnd.toISOString();
 
-    const [soonRes, recentRes] = await Promise.all([
-      service
-        .from('stortinget_issues')
-        .select('id, title, voting_closes_at, ferdigbehandlet')
-        .eq('ferdigbehandlet', false)
-        .not('voting_closes_at', 'is', null)
-        .gte('voting_closes_at', nowIso)
-        .lte('voting_closes_at', futureIso)
-        .order('voting_closes_at', { ascending: true })
-        .limit(WEEKLY_OVERVIEW_LIST_LIMIT),
-      service
-        .from('stortinget_issues')
-        .select('id, title, voting_closes_at, ferdigbehandlet')
-        .eq('ferdigbehandlet', true)
-        .not('voting_closes_at', 'is', null)
-        .gte('voting_closes_at', pastIso)
-        .lte('voting_closes_at', nowIso)
-        .order('voting_closes_at', { ascending: false })
-        .limit(WEEKLY_OVERVIEW_LIST_LIMIT),
-    ]);
+    const soonRes = await service
+      .from('stortinget_issues')
+      .select('id, title, voting_closes_at, ferdigbehandlet')
+      .eq('ferdigbehandlet', false)
+      .not('voting_closes_at', 'is', null)
+      .gte('voting_closes_at', nowIso)
+      .lte('voting_closes_at', futureIso)
+      .order('voting_closes_at', { ascending: true })
+      .limit(WEEKLY_OVERVIEW_LIST_LIMIT);
+
+    if (soonRes.error) {
+      console.error('weekly-overview: votering-snart query', soonRes.error);
+      return { rows: [], ok: false };
+    }
 
     const soon = filterVotingSoonIssues((soonRes.data ?? []) as IssueVotingRow[], window);
-    const recent = filterRecentlyVotedIssues((recentRes.data ?? []) as IssueVotingRow[], window);
-    return { soon, recent };
+    return { rows: soon, ok: true };
   } catch (error) {
-    console.error('weekly-overview: kunne ikke hente voteringssaker', error);
-    return { soon: [], recent: [] };
+    console.error('weekly-overview: kunne ikke hente votering-snart', error);
+    return { rows: [], ok: false };
+  }
+}
+
+async function loadRecentlyVotedRows(
+  window: WeeklyOverviewWindow,
+): Promise<{ rows: Array<{ id: string; title: string | null; votedAt: Date }>; ok: boolean }> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { rows: [], ok: false };
+  }
+
+  try {
+    const service = getServiceSupabase();
+    const { data, error } = await service
+      .from('stortinget_issues')
+      .select('id, title, detail_json')
+      .eq('ferdigbehandlet', true)
+      .not('detail_json', 'is', null)
+      .order('last_updated_at', { ascending: false, nullsFirst: false })
+      .limit(120);
+
+    if (error) {
+      console.error('weekly-overview: votert query', error);
+      return { rows: [], ok: false };
+    }
+
+    const rows = filterRecentlyVotedFromSaksgang((data ?? []) as IssueSaksgangRow[], window).slice(
+      0,
+      WEEKLY_OVERVIEW_LIST_LIMIT,
+    );
+    return { rows, ok: true };
+  } catch (error) {
+    console.error('weekly-overview: kunne ikke hente votert', error);
+    return { rows: [], ok: false };
   }
 }
 
 async function loadSummaryRows(
   window: WeeklyOverviewWindow,
-): Promise<Array<{ issueId: string; title: string; updatedAt: string }>> {
+): Promise<{ rows: Array<{ issueId: string; title: string; updatedAt: string }>; ok: boolean }> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return [];
+    return { rows: [], ok: false };
   }
 
   try {
@@ -275,7 +316,14 @@ async function loadSummaryRows(
       .order('updated_at', { ascending: false })
       .limit(WEEKLY_OVERVIEW_LIST_LIMIT * 2);
 
-    if (error || !data?.length) return [];
+    if (error) {
+      console.error('weekly-overview: sammendrag query', error);
+      return { rows: [], ok: false };
+    }
+
+    if (!data?.length) {
+      return { rows: [], ok: true };
+    }
 
     const issueIds = data.map((row) => String(row.stortinget_issue_id));
     const { data: issues, error: issueError } = await service
@@ -283,7 +331,9 @@ async function loadSummaryRows(
       .select('id, title')
       .in('id', issueIds);
 
-    if (issueError) return [];
+    if (issueError) {
+      return { rows: [], ok: false };
+    }
 
     const titleById = new Map(
       (issues ?? []).map((row) => [String(row.id), String(row.title ?? '').trim()]),
@@ -295,23 +345,26 @@ async function loadSummaryRows(
       updatedAt: String(row.updated_at),
     }));
 
-    return filterSummariesUpdatedInWindow(mapped, window).slice(0, WEEKLY_OVERVIEW_LIST_LIMIT);
+    const rows = filterSummariesUpdatedInWindow(mapped, window).slice(0, WEEKLY_OVERVIEW_LIST_LIMIT);
+    return { rows, ok: true };
   } catch (error) {
     console.error('weekly-overview: kunne ikke hente sammendrag', error);
-    return [];
+    return { rows: [], ok: false };
   }
 }
 
-async function loadSkriftligeSporsmalCount(window: WeeklyOverviewWindow): Promise<number> {
+async function loadSkriftligeSporsmalCount(
+  window: WeeklyOverviewWindow,
+): Promise<{ count: number; ok: boolean }> {
   try {
     const list = (await getSporsmalListe({
       type: 'skriftligesporsmal',
       nextRevalidateSeconds: 3600,
     })) as StortingetSporsmal[];
-    return countSkriftligeSporsmalInWindow(list, window);
+    return { count: countSkriftligeSporsmalInWindow(list, window), ok: true };
   } catch (error) {
     console.error('weekly-overview: kunne ikke telle skriftlige spørsmål', error);
-    return 0;
+    return { count: 0, ok: false };
   }
 }
 
@@ -336,36 +389,52 @@ export async function buildWeeklyOverview(options?: { now?: Date }): Promise<Wee
   const now = options?.now ?? new Date();
   const window = buildWeeklyOverviewWindow(now);
 
-  const [hearings, votingRows, summaryRows, sporsmalCount] = await Promise.all([
-    fetchStortingetHoringer().catch(() => [] as StortingetHoring[]),
-    loadVotingIssueRows(window),
+  let hearingsOk = false;
+  let hearings: StortingetHoring[] = [];
+  try {
+    hearings = await fetchStortingetHoringer();
+    hearingsOk = true;
+  } catch (error) {
+    console.error('weekly-overview: høringer', error);
+  }
+
+  const [votingSoonResult, votedResult, summaryResult, sporsmalResult] = await Promise.all([
+    loadVotingSoonRows(window),
+    loadRecentlyVotedRows(window),
     loadSummaryRows(window),
     loadSkriftligeSporsmalCount(window),
   ]);
 
-  const openHearings = filterHearingsWithInnspillFristWithinDays(
-    hearings,
-    WEEKLY_OVERVIEW_HEARING_DEADLINE_DAYS,
-    now,
-  )
-    .slice(0, WEEKLY_OVERVIEW_LIST_LIMIT)
-    .map(mapHearingItem);
+  if (
+    !hearingsOk &&
+    !votingSoonResult.ok &&
+    !votedResult.ok &&
+    !summaryResult.ok &&
+    !sporsmalResult.ok
+  ) {
+    throw new Error('weekly-overview: alle datakilder utilgjengelige');
+  }
 
-  const votingSoon = votingRows.soon
-    .slice(0, WEEKLY_OVERVIEW_LIST_LIMIT)
-    .map((row) => mapVotingItem(row, now));
+  const openHearings = hearingsOk
+    ? filterHearingsWithInnspillFristWithinDays(hearings, WEEKLY_OVERVIEW_HEARING_DEADLINE_DAYS, now)
+        .slice(0, WEEKLY_OVERVIEW_LIST_LIMIT)
+        .map(mapHearingItem)
+    : [];
 
-  const votedRecently = votingRows.recent
+  const votingSoon = votingSoonResult.rows
     .slice(0, WEEKLY_OVERVIEW_LIST_LIMIT)
-    .map((row) => mapVotingItem(row, now));
+    .map((row) => mapUpcomingVotingItem(row, now));
 
-  const newSummaries = summaryRows.map((row) => ({
+  const votedRecently = votedResult.rows.map(mapVotedItem);
+
+  const newSummaries = summaryResult.rows.map((row) => ({
     issueId: row.issueId,
     title: row.title,
     href: routes.sak(row.issueId),
     updatedAt: row.updatedAt,
   }));
 
+  const sporsmalCount = sporsmalResult.count;
   const sporsmalLabel =
     sporsmalCount === 0
       ? 'Ingen nye skriftlige spørsmål i perioden'

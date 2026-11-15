@@ -64,18 +64,45 @@ export function digestEmailSubject(frequency: DigestFrequency, isTeaser = false)
 export function buildWeeklyOverviewDigestPlainBlock(
   overview: Pick<
     WeeklyOverview,
-    'votingSoon' | 'votedRecently' | 'openHearings' | 'newSummaries' | 'skriftligeSporsmal'
+    | 'votingSoon'
+    | 'votedRecently'
+    | 'openHearings'
+    | 'newSummaries'
+    | 'skriftligeSporsmal'
+    | 'window'
   >,
   pageUrl: string,
 ): string {
-  const lines = [
-    'Dette skjer nå (offentlig ukeoversikt)',
-    `• ${overview.votingSoon.length} sak${overview.votingSoon.length === 1 ? '' : 'er'} nær votering`,
-    `• ${overview.openHearings.length} åpen${overview.openHearings.length === 1 ? '' : 'e'} høring${overview.openHearings.length === 1 ? '' : 'er'} med frist snart`,
-    `• ${overview.newSummaries.length} oppdatert${overview.newSummaries.length === 1 ? '' : 'e'} sammendrag`,
-    `• ${overview.skriftligeSporsmal.label.toLowerCase()}`,
-    `Les hele ukeoversikten: ${pageUrl}`,
-  ];
+  const bullets: string[] = [];
+  if (overview.votingSoon.length > 0) {
+    bullets.push(
+      `${overview.votingSoon.length} sak${overview.votingSoon.length === 1 ? '' : 'er'} nær votering (${overview.window.futureRangeLabel.toLowerCase()})`,
+    );
+  }
+  if (overview.votedRecently.length > 0) {
+    bullets.push(
+      `${overview.votedRecently.length} nylig votert (${overview.window.pastRangeLabel.toLowerCase()})`,
+    );
+  }
+  if (overview.openHearings.length > 0) {
+    bullets.push(
+      `${overview.openHearings.length} høring${overview.openHearings.length === 1 ? '' : 'er'} med frist snart`,
+    );
+  }
+  if (overview.newSummaries.length > 0) {
+    bullets.push(
+      `${overview.newSummaries.length} oppdatert${overview.newSummaries.length === 1 ? '' : 'e'} sammendrag`,
+    );
+  }
+  if (overview.skriftligeSporsmal.count > 0) {
+    bullets.push(overview.skriftligeSporsmal.label);
+  }
+
+  const lines = ['Dette skjer nå', overview.window.label];
+  for (const bullet of bullets) {
+    lines.push(`• ${bullet}`);
+  }
+  lines.push(`Les hele ukeoversikten: ${pageUrl}`);
   return lines.join('\n');
 }
 

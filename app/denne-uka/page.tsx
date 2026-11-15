@@ -1,13 +1,19 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { WeeklyOverviewSections } from '@/components/weekly-overview/weekly-overview-sections';
-import { buildEmptyWeeklyOverview, buildWeeklyOverview } from '@/lib/weekly-overview';
+import {
+  WeeklyOverviewLoadError,
+  WeeklyOverviewSections,
+} from '@/components/weekly-overview/weekly-overview-sections';
+import { buildWeeklyOverview } from '@/lib/weekly-overview';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 import { touchTargetLinkClass } from '@/lib/touch-target';
 
 export const revalidate = 3600;
+
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
 export const metadata = buildPageMetadata({
   title: 'Dette skjer nå',
@@ -17,12 +23,14 @@ export const metadata = buildPageMetadata({
 });
 
 export default async function DenneUkaPage() {
-  let overview: Awaited<ReturnType<typeof buildWeeklyOverview>>;
+  let loadFailed = false;
+  let overview: Awaited<ReturnType<typeof buildWeeklyOverview>> | null = null;
+
   try {
     overview = await buildWeeklyOverview();
   } catch (error) {
     console.error('denne-uka: buildWeeklyOverview failed', error);
-    overview = buildEmptyWeeklyOverview();
+    loadFailed = true;
   }
 
   return (
@@ -32,6 +40,7 @@ export default async function DenneUkaPage() {
           href={routes.home}
           className={cn(
             touchTargetLinkClass,
+            focusRing,
             '-ml-1 inline-flex items-center gap-1 rounded-md px-1 text-sm font-medium text-brand hover:underline',
           )}
         >
@@ -42,13 +51,18 @@ export default async function DenneUkaPage() {
         <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
           Dette skjer nå
         </h1>
-        <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
-          Offentlig Stortinget-materiale for perioden {overview.window.label}. Ingen persondata, ingen
-          brukerstemmer — bare en grunn til å komme tilbake og følge med.
-        </p>
+        {overview ? (
+          <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
+            Offentlig Stortinget-materiale. {overview.window.label} Ingen persondata eller brukerstemmer.
+          </p>
+        ) : (
+          <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
+            Offentlig ukeoversikt fra Stortinget.
+          </p>
+        )}
       </header>
 
-      <WeeklyOverviewSections overview={overview} />
+      {loadFailed || !overview ? <WeeklyOverviewLoadError /> : <WeeklyOverviewSections overview={overview} />}
     </div>
   );
 }

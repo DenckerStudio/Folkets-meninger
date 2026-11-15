@@ -25,7 +25,10 @@ const pageUrl = 'https://www.folkets-meninger.no/denne-uka';
 const plain = buildWeeklyOverviewDigestPlainBlock(overview, pageUrl);
 
 assert.match(plain, /Dette skjer nå/);
+assert.match(plain, /Siste 7 dager/);
+assert.match(plain, /Neste 7 dager/);
 assert.match(plain, /denne-uka/);
+assert.doesNotMatch(plain, /• 0 /);
 assert.doesNotMatch(plain, /spørsmålstekst/i);
 
 const merged = mergeWeeklyOverviewIntoDigestBody('Varsellinje', plain);

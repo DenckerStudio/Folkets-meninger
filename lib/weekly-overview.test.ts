@@ -4,19 +4,21 @@ import {
   countSkriftligeSporsmalInWindow,
   daysUntilOsloCalendarDeadline,
   filterHearingsWithInnspillFristWithinDays,
-  filterRecentlyVotedIssues,
+  filterRecentlyVotedFromSaksgang,
   filterSummariesUpdatedInWindow,
   filterVotingSoonIssues,
 } from './weekly-overview';
 import type { StortingetHoring } from './stortinget-horinger';
 import { parseStortingetDate } from './stortinget-horinger';
+import type { StortingetSakDetail } from './stortinget';
 
 const fixedNow = new Date('2026-11-15T12:00:00.000Z');
 const window = buildWeeklyOverviewWindow(fixedNow);
 
 assert.ok(window.pastStart.getTime() < fixedNow.getTime());
 assert.ok(window.futureEnd.getTime() > fixedNow.getTime());
-assert.ok(window.label.includes('2026'));
+assert.match(window.label, /Siste 7 dager/);
+assert.match(window.label, /Neste 7 dager/);
 
 const nearDeadline = parseStortingetDate('/Date(1893455940000+0200)/');
 assert.ok(nearDeadline);
@@ -66,7 +68,7 @@ const votingRows = [
   {
     id: '3',
     title: 'Ferdig',
-    voting_closes_at: '2026-11-10T00:00:00.000Z',
+    voting_closes_at: fixedNow.toISOString(),
     ferdigbehandlet: true,
   },
 ];
@@ -77,10 +79,50 @@ assert.deepEqual(
   ['1'],
 );
 
-const recent = filterRecentlyVotedIssues(votingRows, window);
+const staleVoteDetail = {
+  id: 1,
+  ferdigbehandlet: true,
+  saksgang: {
+    saksgang_steg_liste: [
+      {
+        navn: 'Behandling',
+        saksgang_hendelse_liste: [{ id: 'VOT', dato: '01.06.2020' }],
+      },
+    ],
+  },
+} satisfies StortingetSakDetail;
+
+const recentVoteDetail = {
+  id: 2,
+  ferdigbehandlet: true,
+  saksgang: {
+    saksgang_steg_liste: [
+      {
+        navn: 'Vedtak',
+        saksgang_hendelse_liste: [{ id: 'VEDTAK', dato: '13.11.2026' }],
+      },
+    ],
+  },
+} satisfies StortingetSakDetail;
+
+const votedRows = [
+  {
+    id: 'stale-sync',
+    title: 'Resynket gammel sak',
+    detail_json: staleVoteDetail,
+  },
+  {
+    id: 'fresh-vote',
+    title: 'Nylig votert',
+    detail_json: recentVoteDetail,
+  },
+];
+
+const recent = filterRecentlyVotedFromSaksgang(votedRows, window);
 assert.deepEqual(
   recent.map((row) => row.id),
-  ['3'],
+  ['fresh-vote'],
+  'voting_closes_at=now skal ikke telle som votert denne uken uten dato i saksgangen',
 );
 
 const summaries = filterSummariesUpdatedInWindow(
