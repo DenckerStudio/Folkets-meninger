@@ -196,12 +196,11 @@ export type ResearchTopicSakPollLookup = {
   dedicatedSak: boolean;
 };
 
-export async function resolveResearchTopicRealStortingetIssueId(
+export async function resolveResearchTopicSuggestedIssueId(
   topic: ResearchTopicRow,
-): Promise<string | null> {
-  const stored = topic.stortinget_issue_id?.trim();
-  if (stored && !isResearchTopicDedicatedIssueId(stored)) {
-    return stored;
+): Promise<string> {
+  if (topic.stortinget_issue_id?.trim()) {
+    return topic.stortinget_issue_id.trim();
   }
 
   const supabase = getServiceSupabase();
@@ -213,7 +212,7 @@ export async function resolveResearchTopicRealStortingetIssueId(
       .eq('id', topic.cluster_id)
       .maybeSingle();
     const related = typeof data?.related_issue_id === 'string' ? data.related_issue_id.trim() : '';
-    if (related && !isResearchTopicDedicatedIssueId(related)) return related;
+    if (related) return related;
   }
 
   if (topic.source_kind === 'reddit' && topic.reddit_signal_id) {
@@ -223,32 +222,10 @@ export async function resolveResearchTopicRealStortingetIssueId(
       .eq('id', topic.reddit_signal_id)
       .maybeSingle();
     const related = typeof data?.related_issue_id === 'string' ? data.related_issue_id.trim() : '';
-    if (related && !isResearchTopicDedicatedIssueId(related)) return related;
+    if (related) return related;
   }
-
-  return null;
-}
-
-export async function resolveResearchTopicSuggestedIssueId(
-  topic: ResearchTopicRow,
-): Promise<string> {
-  const real = await resolveResearchTopicRealStortingetIssueId(topic);
-  if (real) return real;
 
   return researchTopicDedicatedIssueId(topic.id);
-}
-
-export async function resolveResearchTopicPollStortingetIssueId(
-  topic: ResearchTopicRow,
-  suggestedIssueId: string,
-): Promise<string> {
-  const trimmed = suggestedIssueId.trim();
-  if (trimmed && !isResearchTopicDedicatedIssueId(trimmed)) {
-    return trimmed;
-  }
-  const real = await resolveResearchTopicRealStortingetIssueId(topic);
-  if (real) return real;
-  return trimmed;
 }
 
 export async function lookupResearchTopicSakPoll(
@@ -401,26 +378,8 @@ export async function publishResearchTopicSakPoll(
   }
 
   try {
-    const supabase = getServiceSupabase();
-    const { data: topicRow, error: topicError } = await supabase
-      .from('research_topics')
-      .select(
-        'id, source_kind, cluster_id, reddit_signal_id, stortinget_issue_id, stortinget_poll_id',
-      )
-      .eq('id', input.topicId.trim())
-      .maybeSingle();
-    if (topicError || !topicRow) {
-      return { ok: false, error: 'Kunne ikke publisere avstemningen. Prøv igjen senere.' };
-    }
-
-    const topic = topicRow as ResearchTopicRow;
-    const dedicatedIssueId = isResearchTopicDedicatedIssueId(input.issueId.trim())
-      ? input.issueId.trim()
-      : researchTopicDedicatedIssueId(topic.id);
-    const pollIssueId = await resolveResearchTopicPollStortingetIssueId(topic, input.issueId.trim());
-
     const pollId = await adminPublishStortingetPoll({
-      issueId: pollIssueId,
+      issueId: input.issueId.trim(),
       title: input.title.trim(),
       neutralSummary: input.neutralSummary,
       sourceUrls: input.sourceUrls,
@@ -429,18 +388,18 @@ export async function publishResearchTopicSakPoll(
     });
 
     await syncDedicatedResearchTopicIssueText({
-      issueId: dedicatedIssueId,
+      issueId: input.issueId.trim(),
       title: input.title.trim(),
       neutralSummary: input.neutralSummary,
     });
 
     await persistResearchTopicSakPollLink({
       topicId: input.topicId,
-      issueId: dedicatedIssueId,
+      issueId: input.issueId.trim(),
       pollId,
     });
 
-    return { ok: true, pollId, issueId: pollIssueId };
+    return { ok: true, pollId, issueId: input.issueId.trim() };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Ukjent feil';
     if (/130 characters/i.test(message) || /maks 130/i.test(message)) {

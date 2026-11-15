@@ -22,12 +22,13 @@ import {
   getPollById,
   getPollTotals,
   getPollTotalsByFylke,
+  getResearchTopicIdForPoll,
   getUserPollVote,
   isPollVotingOpen,
 } from '@/lib/polls/service';
 import { isShareablePoll } from '@/lib/polls/share';
 import { isSharePollsEnabled } from '@/lib/polls/share-flag';
-import { pollPublicStortingetIssueId, pollSakDashboardHref } from '@/lib/polls/stortinget-issue-link';
+import { resolvePollSourceSakLink } from '@/lib/polls/stortinget-issue-link';
 import { routes } from '@/lib/routes';
 import { truncateDescription } from '@/lib/seo/metadata';
 
@@ -90,9 +91,9 @@ export default async function PollDetailPage({ params }: PageProps) {
     isShareablePoll(poll) &&
     (isSharePollsEnabled() || (user ? await isAdmin(user.id, user.email) : false));
 
-  const publicSakIssueId = pollPublicStortingetIssueId(poll.stortingetIssueId);
-  const sakUrl = pollSakDashboardHref(poll.stortingetIssueId);
-  const sourceUrls = poll.sourceUrls.filter((source) => !sakUrl || source.url !== sakUrl);
+  const researchTopicId = await getResearchTopicIdForPoll(poll.id);
+  const sakLink = resolvePollSourceSakLink(poll.stortingetIssueId, { researchTopicId });
+  const sourceUrls = poll.sourceUrls.filter((source) => !sakLink || source.url !== sakLink.href);
 
   return (
     <DashboardPage className="mx-auto max-w-3xl space-y-5 sm:space-y-6">
@@ -126,14 +127,16 @@ export default async function PollDetailPage({ params }: PageProps) {
       {poll.neutralSummary ? (
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{poll.neutralSummary}</p>
       ) : null}
-      {publicSakIssueId && sakUrl ? (
+      {sakLink ? (
         <p className="flex flex-wrap items-center gap-x-1 text-sm">
           Kilde:{' '}
           <Link
-            href={sakUrl}
+            href={sakLink.href}
             className="inline-flex min-h-11 items-center font-medium text-brand hover:underline"
           >
-            Stortingssak {publicSakIssueId}
+            {sakLink.kind === 'stortinget'
+              ? `Stortingssak ${poll.stortingetIssueId}`
+              : sakLink.label}
           </Link>
         </p>
       ) : null}

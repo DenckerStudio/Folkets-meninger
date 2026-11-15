@@ -227,6 +227,21 @@ export async function restoreExpiredReelDraft(
   return typeof data === 'string' && data.length > 0 ? data : pollId;
 }
 
+export async function getResearchTopicIdForPoll(pollId: string): Promise<string | null> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  const service = getServiceSupabase();
+  const { data, error } = await service
+    .from('research_topics')
+    .select('id')
+    .eq('stortinget_poll_id', pollId)
+    .maybeSingle();
+  if (error) {
+    console.error('[polls] getResearchTopicIdForPoll failed', error);
+    return null;
+  }
+  return typeof data?.id === 'string' ? data.id : null;
+}
+
 export async function findSystemPollForIssue(issueId: string): Promise<PollRecord | null> {
   const trimmed = normalizePollIssueId(issueId);
   if (!trimmed || !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;

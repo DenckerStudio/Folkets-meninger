@@ -7,6 +7,7 @@ import { PollRetiredNotice } from '@/components/polls/poll-retired-notice';
 import { isAdmin } from '@/lib/admin/gate';
 import {
   getPollTotals,
+  getResearchTopicIdForPoll,
   getSharePagePollById,
   getUserPollVote,
   isPollVotingOpen,
@@ -17,7 +18,7 @@ import { buildPollShareRelativePath, buildPollShareUrl, isShareablePoll } from '
 import { isSharePollsEnabled } from '@/lib/polls/share-flag';
 import { resolveRequestShareOrigin } from '@/lib/polls/share-server';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { pollSakDashboardHref } from '@/lib/polls/stortinget-issue-link';
+import { resolvePollSourceSakLink } from '@/lib/polls/stortinget-issue-link';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -90,6 +91,8 @@ export default async function PollEmbedPage({ params, searchParams }: PageProps)
   const shareUrl = buildPollShareUrl(id, origin);
   const votingOpen = isPollVotingOpen(poll);
   const openOnSite = buildPollShareRelativePath(poll.id, { ref: 'embed' });
+  const researchTopicId = await getResearchTopicIdForPoll(poll.id);
+  const sakLink = resolvePollSourceSakLink(poll.stortingetIssueId, { researchTopicId });
 
   return (
     <div lang="nb">
@@ -142,14 +145,16 @@ export default async function PollEmbedPage({ params, searchParams }: PageProps)
           <p className="text-[11px] leading-relaxed text-muted-foreground">{STORTINGET_DISCLAIMER}</p>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-            {pollSakDashboardHref(poll.stortingetIssueId) ? (
+            {sakLink ? (
               <Link
-                href={pollSakDashboardHref(poll.stortingetIssueId)!}
+                href={sakLink.href}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="font-medium text-brand hover:underline"
               >
-                Les saken på Folkets Meninger
+                {sakLink.kind === 'stortinget'
+                  ? 'Les saken på Folkets Meninger'
+                  : sakLink.label}
               </Link>
             ) : null}
             <a

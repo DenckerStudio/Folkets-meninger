@@ -1,5 +1,6 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import {
   POLL_BALLOT_VOTE_BUTTON_BASE_CLASS,
   pollBallotVoteButtonClassName,
@@ -7,10 +8,77 @@ import {
 } from '@/lib/polls/ballot-buttons';
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import { pollBallotPercents } from '@/lib/polls/format';
-import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
+import {
+  BALLOT_SEGMENT_MIN_WIDTH_REM,
+  ballotSegmentFlexGrow,
+  ballotShowProportionalLayout,
+  formatPollBallotDistributionSummary,
+} from '@/lib/polls/ballot-distribution-layout';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
 import { POLL_BALLOT_CHOICES } from '@/lib/polls/labels';
 import { cn } from '@/lib/utils';
+
+const SEGMENT_MIN_WIDTH = `${BALLOT_SEGMENT_MIN_WIDTH_REM}rem`;
+
+function ballotSegmentStyle(flexGrow: number): CSSProperties {
+  return {
+    flexGrow,
+    flexShrink: 0,
+    flexBasis: SEGMENT_MIN_WIDTH,
+    minWidth: SEGMENT_MIN_WIDTH,
+    maxWidth: '100%',
+  };
+}
+
+function segmentAriaLabel(
+  choice: PollChoice,
+  count: number,
+  percent: number | null,
+  showNumbers: boolean,
+): string {
+  const label = pollChoiceLabel(choice);
+  if (!showNumbers || percent == null) {
+    return `Stem ${label}`;
+  }
+  const stemmer = count === 1 ? '1 stemme' : `${count} stemmer`;
+  return `Stem ${label}, ${stemmer}, ${percent} prosent`;
+}
+
+function segmentSurfaceClass(
+  choice: PollChoice,
+  isFirst: boolean,
+  isLast: boolean,
+): string {
+  return cn(
+    pollBallotVoteButtonClassName(choice),
+    choice === 'blank' && 'border-y border-[#00205b]/25 dark:border-white/35',
+    isFirst && 'rounded-l-xl',
+    isLast && 'rounded-r-xl',
+    !isFirst && choice !== 'blank' && 'border-l border-black/10',
+  );
+}
+
+type SegmentContentProps = {
+  choice: PollChoice;
+  showNumbers: boolean;
+  count: number;
+  percent: number | null;
+};
+
+function SegmentContent({ choice, showNumbers, count, percent }: SegmentContentProps) {
+  const label = pollChoiceLabel(choice);
+  return (
+    <span className="flex w-full max-w-full flex-col items-center justify-center gap-0.5 px-1 py-0.5 text-center leading-snug">
+      <span className="text-xs font-bold sm:text-sm">{label}</span>
+      {showNumbers && percent != null ? (
+        <span className="w-full text-center text-[0.65rem] font-normal leading-snug opacity-95 sm:text-xs">
+          <span className="block break-words">{percent} %</span>
+          <span className="block break-words">{count}</span>
+        </span>
+      ) : null}
+    </span>
+  );
+}
 
 type PollBallotDistributionBarProps = {
   totals: PollTotals;
@@ -23,71 +91,9 @@ type PollBallotDistributionBarProps = {
   onVote: (choice: PollChoice) => void;
   className?: string;
   compact?: boolean;
+  /** Vis tall og proporsjonal bredde før bruker har stemt (default på). */
+  showResultsBeforeVote?: boolean;
 };
-
-function segmentFlexWeight(totals: PollTotals, choice: PollChoice, showDistribution: boolean): number {
-  if (!showDistribution) return 1;
-  return Math.max(totals[choice], 1);
-}
-
-type SegmentButtonProps = {
-  choice: PollChoice;
-  selected: boolean;
-  disabled: boolean;
-  flexWeight: number;
-  showStats: boolean;
-  count: number;
-  percent: number | null;
-  isFirst: boolean;
-  isLast: boolean;
-  onClick: () => void;
-  compact?: boolean;
-  className?: string;
-};
-
-function SegmentButton({
-  choice,
-  selected,
-  disabled,
-  flexWeight,
-  showStats,
-  count,
-  percent,
-  isFirst,
-  isLast,
-  onClick,
-  compact,
-  className,
-}: SegmentButtonProps) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      aria-pressed={selected}
-      onClick={onClick}
-      style={{ flexGrow: flexWeight, flexBasis: 0 }}
-      className={cn(
-        POLL_BALLOT_VOTE_BUTTON_BASE_CLASS,
-        pollBallotVoteButtonClassName(choice),
-        pollBallotVoteButtonSelectedRing(selected),
-        'min-w-0 rounded-none border-0 px-1 shadow-none',
-        choice === 'blank' && 'border-y border-[#00205b]/25 dark:border-white/35',
-        isFirst && 'rounded-l-xl',
-        isLast && 'rounded-r-xl',
-        !isFirst && choice !== 'blank' && 'border-l border-black/10',
-        compact ? 'py-1.5 text-xs sm:text-sm' : 'py-2',
-        className,
-      )}
-    >
-      <span className="truncate font-bold">{pollChoiceLabel(choice)}</span>
-      {showStats && percent != null ? (
-        <span className="text-[0.7rem] font-normal leading-tight opacity-95 sm:text-xs">
-          {percent}% · {count}
-        </span>
-      ) : null}
-    </button>
-  );
-}
 
 /** Nei / Blank / Ja vote bar with proportional segments (shared dashboard + `/del`). */
 export function PollBallotDistributionBar({
@@ -100,8 +106,10 @@ export function PollBallotDistributionBar({
   onVote,
   className,
   compact = false,
+  showResultsBeforeVote = true,
 }: PollBallotDistributionBarProps) {
-  const showStats = publicAggregateMeetsThreshold(totals.total);
+  const proportional = ballotShowProportionalLayout(totals, showResultsBeforeVote);
+  const showNumbers = proportional;
   const percents = pollBallotPercents(totals);
 
   return (
@@ -109,8 +117,8 @@ export function PollBallotDistributionBar({
       role="group"
       aria-label={`Stem ${POLL_BALLOT_CHOICES.map((c) => pollChoiceLabel(c)).join(', ')}`}
       className={cn(
-        'flex w-full overflow-hidden rounded-xl border border-border shadow-sm',
-        compact ? 'min-h-11' : 'min-h-[3.25rem]',
+        'flex w-full overflow-x-auto rounded-xl border border-border shadow-sm',
+        'min-h-11',
         className,
       )}
     >
@@ -118,22 +126,36 @@ export function PollBallotDistributionBar({
         const selected = userVote === choice || (pendingChoice === choice && !userVote);
         const dimmed = Boolean(userVote) && userVote !== choice;
         const segmentDisabled = disabled || !votingOpen || Boolean(userVote) || busy;
+        const count = totals[choice];
+        const percent = percents[choice];
+        const flexGrow = ballotSegmentFlexGrow(totals, choice, proportional);
+
         return (
-          <SegmentButton
+          <button
             key={choice}
-            choice={choice}
-            selected={selected}
+            type="button"
             disabled={segmentDisabled}
-            flexWeight={segmentFlexWeight(totals, choice, showStats)}
-            showStats={showStats}
-            count={totals[choice]}
-            percent={percents[choice]}
-            isFirst={index === 0}
-            isLast={index === POLL_BALLOT_CHOICES.length - 1}
+            aria-pressed={selected}
+            aria-label={segmentAriaLabel(choice, count, percent, showNumbers)}
             onClick={() => onVote(choice)}
-            compact={compact}
-            className={cn(dimmed ? 'opacity-60' : '', busy ? 'cursor-wait' : '')}
-          />
+            style={ballotSegmentStyle(flexGrow)}
+            className={cn(
+              POLL_BALLOT_VOTE_BUTTON_BASE_CLASS,
+              'min-h-11 rounded-none border-0 shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              segmentSurfaceClass(choice, index === 0, index === POLL_BALLOT_CHOICES.length - 1),
+              pollBallotVoteButtonSelectedRing(selected),
+              compact ? 'text-xs sm:text-sm' : 'py-2',
+              dimmed ? 'opacity-60' : '',
+              busy ? 'cursor-wait' : '',
+            )}
+          >
+            <SegmentContent
+              choice={choice}
+              showNumbers={showNumbers}
+              count={count}
+              percent={percent}
+            />
+          </button>
         );
       })}
     </div>
@@ -143,49 +165,57 @@ export function PollBallotDistributionBar({
 type PollBallotDistributionBarDisplayProps = {
   totals: PollTotals;
   className?: string;
+  showResultsBeforeVote?: boolean;
 };
 
 /** Read-only distribution bar for poll cards and closed ballots. */
 export function PollBallotDistributionBarDisplay({
   totals,
   className,
+  showResultsBeforeVote = true,
 }: PollBallotDistributionBarDisplayProps) {
-  const showStats = publicAggregateMeetsThreshold(totals.total);
+  const proportional = ballotShowProportionalLayout(totals, showResultsBeforeVote);
+  const showNumbers = proportional;
   const percents = pollBallotPercents(totals);
+  const summary = formatPollBallotDistributionSummary(totals, percents, showNumbers);
+  const summaryId = 'poll-ballot-distribution-summary';
 
   return (
-    <div
-      className={cn(
-        'flex w-full min-h-11 overflow-hidden rounded-xl border border-border',
-        className,
-      )}
-      aria-label="Fordeling av stemmer"
-    >
-      {POLL_BALLOT_CHOICES.map((choice, index) => {
-        const flexWeight = segmentFlexWeight(totals, choice, showStats);
-        return (
-          <div
-            key={choice}
-            style={{ flexGrow: flexWeight, flexBasis: 0 }}
-            className={cn(
-              'flex min-w-0 flex-col items-center justify-center px-1 py-2 text-center',
-              pollBallotVoteButtonClassName(choice),
-              choice === 'blank' && 'border-y border-[#00205b]/25 dark:border-white/35',
-              index === 0 && 'rounded-l-xl',
-              index === POLL_BALLOT_CHOICES.length - 1 && 'rounded-r-xl',
-            )}
-          >
-            <span className="truncate text-xs font-bold sm:text-sm">{pollChoiceLabel(choice)}</span>
-            {showStats && percents[choice] != null ? (
-              <span className="text-[0.65rem] font-normal opacity-95 sm:text-xs">
-                {percents[choice]}% · {totals[choice]}
-              </span>
-            ) : (
-              <span className="sr-only">{pollChoiceLabel(choice)}</span>
-            )}
-          </div>
-        );
-      })}
-    </div>
+    <figure className={cn('space-y-2', className)}>
+      <figcaption id={summaryId} className="text-xs text-muted-foreground">
+        {summary}
+      </figcaption>
+      <ul
+        role="img"
+        aria-labelledby={summaryId}
+        className={cn(
+          'm-0 flex w-full list-none overflow-x-auto rounded-xl border border-border p-0',
+          'min-h-11',
+        )}
+      >
+        {POLL_BALLOT_CHOICES.map((choice, index) => {
+          const flexGrow = ballotSegmentFlexGrow(totals, choice, proportional);
+          const percent = percents[choice];
+
+          return (
+            <li
+              key={choice}
+              style={ballotSegmentStyle(flexGrow)}
+              className={cn(
+                'flex min-h-11 flex-col items-center justify-center',
+                segmentSurfaceClass(choice, index === 0, index === POLL_BALLOT_CHOICES.length - 1),
+              )}
+            >
+              <SegmentContent
+                choice={choice}
+                showNumbers={showNumbers}
+                count={totals[choice]}
+                percent={percent}
+              />
+            </li>
+          );
+        })}
+      </ul>
+    </figure>
   );
 }
