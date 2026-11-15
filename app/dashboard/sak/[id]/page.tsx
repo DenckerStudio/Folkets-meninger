@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import { routes } from '@/lib/routes';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { isAdmin } from '@/lib/admin/gate';
+import { findOpenStortingetPollForIssue } from '@/lib/polls/service';
 import { listPollsForStortingetIssueAdmin } from '@/lib/polls/stortinget-poll-admin-data';
 import { resolveStortingetPollAdminUiState } from '@/lib/polls/stortinget-poll-admin-guard';
 import { getStortingetSakUrl } from '@/lib/stortinget-horinger';
@@ -234,6 +235,7 @@ export default async function SakPage({
     officialDescription && officialDescription !== officialTitle ? officialDescription : '';
 
   const supabase = await getServerSupabase();
+  const openStortingetPoll = await findOpenStortingetPollForIssue(sak.id, supabase);
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -495,6 +497,7 @@ export default async function SakPage({
 
             <AlignmentScore
               sakId={sak.id}
+              openPollId={openStortingetPoll?.id ?? null}
               voteringer={voteringer}
               initialFolk={sak.votes}
               sakVedtak={{

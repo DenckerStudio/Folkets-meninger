@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getAnonSupabase, getServiceSupabase } from '@/lib/supabase';
-import { emptyPollTotals } from '@/lib/polls/format';
+import { emptyPollTotals, isPollVotingOpen } from '@/lib/polls/format';
 import { isPollAlreadyExistsError, normalizePollIssueId } from '@/lib/polls/already-exists';
 import { nextPollStatusForAction, type PollStatusAction } from '@/lib/polls/apply-status';
 import { isPostgrestMissingRpcError } from '@/lib/polls/rpc-missing';
@@ -291,7 +291,6 @@ export async function getPollTotalsByFylke(
   return parseFylkeTotals(data);
 }
 
-/** Public poll lookup by Stortinget issue id. Open/closed only (RLS). */
 export async function findPublicPollForIssue(
   issueId: string,
   client?: PollReadClient | null,
@@ -312,6 +311,16 @@ export async function findPublicPollForIssue(
 
   if (error || !data) return null;
   return mapPollRow(data as PollRow);
+}
+
+/** Newest open Nei/Blank/Ja poll tied to a Stortinget sak, if any. */
+export async function findOpenStortingetPollForIssue(
+  issueId: string,
+  client?: PollReadClient | null,
+): Promise<PollRecord | null> {
+  const poll = await findPublicPollForIssue(issueId, client);
+  if (!poll) return null;
+  return isPollVotingOpen(poll) ? poll : null;
 }
 
 /** Case-insensitive public poll search on title. Open/closed only (RLS). */

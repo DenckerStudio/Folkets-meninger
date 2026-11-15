@@ -228,7 +228,7 @@ export function buildAlignmentComparison(
       gapPoints: null,
       verdict: 'insufficient',
       headline: stCountHeadline,
-      summary: `Folkets mening vises når minst ${MIN_PUBLIC_AGGREGATE_N} anonyme stemmer er avgitt i appen.`,
+      summary: `Folkets historiske For/Mot/Avstår-fordeling vises når minst ${MIN_PUBLIC_AGGREGATE_N} anonyme stemmer finnes i arkivet.`,
       votering,
       otherVoteringCount,
     };

@@ -3,7 +3,13 @@ import { DashboardPage } from '@/components/dashboard/dashboard-page';
 export default function InnsiktLoading() {
   return (
     <DashboardPage>
-      <div aria-busy="true" aria-label="Laster innsikt" className="contents">
+      <div
+        aria-busy="true"
+        aria-live="polite"
+        role="status"
+        aria-label="Laster innsikt"
+        className="contents"
+      >
         <div className="space-y-2">
           <div className="h-8 max-w-xs animate-pulse rounded-lg bg-muted" />
           <div className="h-5 max-w-md animate-pulse rounded-lg bg-muted/80" />

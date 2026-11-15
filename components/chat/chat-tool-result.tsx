@@ -22,8 +22,11 @@ import {
   Vote,
 } from 'lucide-react';
 import { formatChunkExcerptForDisplay } from '@/lib/chat/chunk-excerpt';
-import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
-import { publicAggregateMeetsThreshold, publicAggregateVotesRemaining } from '@/lib/public-aggregate/threshold';
+import {
+  folkBelowThresholdNextStep,
+  folkHistoricAggregateBelowThresholdMessage,
+} from '@/lib/public-aggregate/folk-below-threshold';
+import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
 import { routes } from '@/lib/routes';
 
 /**
@@ -105,6 +108,7 @@ type VoteResultsOutput = {
   headline?: string;
   summary?: string;
   voteringTema?: string | null;
+  openPollId?: string | null;
 };
 
 type HearingItem = {
@@ -542,7 +546,7 @@ function VoteResultsCard({ output }: { output: VoteResultsOutput }) {
   const folk = output.folk ?? {};
   const folkTotal = folk.total ?? 0;
   const folkAggregatePublic = publicAggregateMeetsThreshold(folkTotal);
-  const folkVotesRemaining = publicAggregateVotesRemaining(folkTotal);
+  const folkNextStep = folkBelowThresholdNextStep(output.openPollId);
 
   return (
     <ToolCard
@@ -586,16 +590,18 @@ function VoteResultsCard({ output }: { output: VoteResultsOutput }) {
         </p>
       ) : folkTotal > 0 ? (
         <p className="text-xs text-muted-foreground">
-          Folkets fordeling vises når minst {MIN_PUBLIC_AGGREGATE_N} har stemt
-          {folkVotesRemaining > 0
-            ? ` (trenger ${folkVotesRemaining} ${folkVotesRemaining === 1 ? 'stemme' : 'stemmer'} til).`
-            : '.'}{' '}
-          <Link href={routes.sak(output.issueId)} className="font-medium text-brand hover:underline">
-            Stem på saken
+          {folkHistoricAggregateBelowThresholdMessage()}{' '}
+          <Link
+            href={folkNextStep.href}
+            className="font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+          >
+            {folkNextStep.label}
           </Link>
         </p>
       ) : (
-        <p className="text-xs text-muted-foreground">Ingen anonyme stemmer i appen ennå.</p>
+        <p className="text-xs text-muted-foreground">
+          Ingen historiske anonyme stemmer i appen ennå.
+        </p>
       )}
 
       {output.score != null ? (

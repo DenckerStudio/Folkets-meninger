@@ -19,12 +19,12 @@ import { useSakTooltipsEnabled } from '@/components/theme-provider';
 import { buildAlignmentComparison, type SakVedtakContext } from '@/lib/alignment/score';
 import type { AlignmentVerdict, FolkVoteCounts, SakVotering } from '@/lib/alignment/types';
 import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
+import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
 import {
-  publicAggregateMeetsThreshold,
-  publicAggregateVotesRemaining,
-} from '@/lib/public-aggregate/threshold';
+  folkBelowThresholdNextStep,
+  folkHistoricAggregateBelowThresholdMessage,
+} from '@/lib/public-aggregate/folk-below-threshold';
 import { formatStemmerCount } from '@/lib/norwegian-plural';
-import { routes } from '@/lib/routes';
 import { NonRepresentativeNotice } from '@/components/trust/non-representative-notice';
 import { cn } from '@/lib/utils';
 
@@ -145,11 +145,13 @@ function SplitBar({
 
 export function AlignmentScore({
   sakId,
+  openPollId,
   voteringer,
   initialFolk,
   sakVedtak,
 }: {
   sakId: string;
+  openPollId?: string | null;
   voteringer: SakVotering[];
   initialFolk: FolkVoteCounts;
   sakVedtak?: SakVedtakContext;
@@ -199,7 +201,10 @@ export function AlignmentScore({
   }, [comparison]);
 
   const folkAggregatePublic = publicAggregateMeetsThreshold(comparison.folk.total);
-  const folkVotesRemaining = publicAggregateVotesRemaining(comparison.folk.total);
+  const folkNextStep = useMemo(
+    () => folkBelowThresholdNextStep(openPollId),
+    [openPollId],
+  );
   const showComparisonChart =
     comparison.stortingetForPercent != null && folkAggregatePublic;
 
@@ -229,8 +234,9 @@ export function AlignmentScore({
         className="mb-2"
       />
       <p className="mb-4 text-xs text-muted-foreground">
-        «Folket i appen» viser historiske anonyme For/Mot/Avstår-stemmer der de finnes. Nye holdninger
-        (enig/uenig) er personlige og inngår ikke her. Stortingets tall er offisielle voteringer.
+        «Folket i appen» er historiske anonyme For/Mot/Avstår-stemmer (per-sak stemming er avviklet).
+        Holdninger (enig/uenig) og Nei/Blank/Ja-avstemninger inngår ikke i denne fordelingen. Stortingets
+        tall er offisielle voteringer.
       </p>
 
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -303,24 +309,20 @@ export function AlignmentScore({
           ) : comparison.folk.total > 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4">
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Folkets anonyme fordeling vises når minst {MIN_PUBLIC_AGGREGATE_N} har stemt.
-                {folkVotesRemaining > 0 ? (
-                  <>
-                    {' '}
-                    Det trengs {folkVotesRemaining}{' '}
-                    {folkVotesRemaining === 1 ? 'stemme til' : 'stemmer til'}.
-                  </>
-                ) : null}
+                {folkHistoricAggregateBelowThresholdMessage()}
               </p>
               <Link
-                href={routes.sak(sakId)}
+                href={folkNextStep.href}
                 className="mt-3 inline-flex min-h-11 items-center rounded-lg font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-card"
               >
-                Gi din stemme på saken →
+                {folkNextStep.label}
               </Link>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Ingen har stemt i appen ennå.</p>
+            <p className="text-sm text-muted-foreground">
+              Ingen historiske anonyme stemmer er registrert ennå. Se om det finnes en åpen Nei/Blank/Ja-avstemning
+              knyttet til saken.
+            </p>
           )}
         </div>
 

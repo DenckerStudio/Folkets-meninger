@@ -69,6 +69,7 @@ async function main() {
   assert.equal(pending.hasStortingetVote, false);
   assert.equal(pending.voteringTema, null);
   assert.equal(pending.score, null);
+  assert.equal(shaped.openPollId, null);
 
   console.log('chat/vote-alignment.test.ts: ok');
 }

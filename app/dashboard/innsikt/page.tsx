@@ -49,7 +49,7 @@ export default async function InnsiktPage() {
               href={routes.utforsk}
               className="inline-flex min-h-11 items-center rounded-lg font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
             >
-              Utforsk saker og stem →
+              Utforsk saker →
             </Link>
           }
         />
