@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ThumbsDown, ThumbsUp } from 'lucide-react';
@@ -43,20 +43,18 @@ function partyVoteLabel(vote: 'for' | 'mot'): string {
 function PartyDetailPanel({
   summary,
   detailHeadingId,
-  headingRef,
+  panelRef,
 }: {
   summary: ValgomatPartySummary;
   detailHeadingId: string;
-  headingRef?: (el: HTMLHeadingElement | null) => void;
+  panelRef?: (el: HTMLDivElement | null) => void;
 }) {
   return (
-    <div className="mt-2 space-y-3 rounded-xl border border-border bg-card p-4">
-      <h3
-        id={detailHeadingId}
-        ref={headingRef}
-        tabIndex={-1}
-        className="text-base font-semibold text-foreground outline-none"
-      >
+    <div
+      ref={panelRef}
+      className="mt-2 space-y-3 rounded-xl border border-border bg-card p-4"
+    >
+      <h3 id={detailHeadingId} className="text-base font-semibold text-foreground">
         {summary.party_name} — sak for sak
       </h3>
       {summary.agreement_percent === null &&
@@ -105,8 +103,9 @@ export function ValgomatClient({ initialTab = 'hjertesaker' }: ValgomatClientPro
   const [fetchState, setFetchState] = useState<FetchState>({ status: 'loading' });
   const [selectedParty, setSelectedParty] = useState<string | null>(null);
   const [reloadNonce, setReloadNonce] = useState(0);
+  const [partyPanelAnnouncement, setPartyPanelAnnouncement] = useState('');
   const tabListId = useId();
-  const detailHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const partyPanelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -148,8 +147,47 @@ export function ValgomatClient({ initialTab = 'hjertesaker' }: ValgomatClientPro
   const showTabs =
     fetchState.status === 'ready' && fetchState.data.stance_count > 0;
 
+  const focusTab = useCallback((tabId: ValgomatTab) => {
+    setActiveTab(tabId);
+    const tabButton = document.getElementById(`${tabListId}-${tabId}`);
+    if (tabButton instanceof HTMLButtonElement) {
+      tabButton.focus();
+    }
+  }, [tabListId]);
+
+  const handleTabListKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const currentIndex = TABS.findIndex((tab) => tab.id === activeTab);
+    if (currentIndex < 0) return;
+
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowLeft': {
+        event.preventDefault();
+        const delta = event.key === 'ArrowRight' ? 1 : -1;
+        const nextIndex = (currentIndex + delta + TABS.length) % TABS.length;
+        focusTab(TABS[nextIndex].id);
+        break;
+      }
+      case 'Home':
+        event.preventDefault();
+        focusTab(TABS[0].id);
+        break;
+      case 'End':
+        event.preventDefault();
+        focusTab(TABS[TABS.length - 1].id);
+        break;
+      default:
+        break;
+    }
+  };
+
   const tabNav = showTabs ? (
-    <div role="tablist" aria-label="Valgomat" className="flex flex-wrap gap-2">
+    <div
+      role="tablist"
+      aria-label="Valgomat"
+      className="flex flex-wrap gap-2"
+      onKeyDown={handleTabListKeyDown}
+    >
       {TABS.map((tab) => {
         const selected = activeTab === tab.id;
         const tabId = `${tabListId}-${tab.id}`;
@@ -161,6 +199,7 @@ export function ValgomatClient({ initialTab = 'hjertesaker' }: ValgomatClientPro
             id={tabId}
             aria-selected={selected}
             aria-controls={`${tabListId}-panel-${tab.id}`}
+            tabIndex={selected ? 0 : -1}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
               'min-h-11 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
@@ -179,8 +218,7 @@ export function ValgomatClient({ initialTab = 'hjertesaker' }: ValgomatClientPro
 
   useEffect(() => {
     if (!selectedParty || activeTab !== 'partisamsvar') return;
-    detailHeadingRef.current?.focus({ preventScroll: true });
-    detailHeadingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    partyPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [selectedParty, activeTab]);
 
   if (fetchState.status === 'loading') {
@@ -250,6 +288,9 @@ export function ValgomatClient({ initialTab = 'hjertesaker' }: ValgomatClientPro
   return (
     <div className="space-y-6">
       {tabNav}
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {partyPanelAnnouncement}
+      </p>
 
       <p className="text-sm text-muted-foreground">
         Basert på dine egne holdninger (enig/uenig). Dette er en sammenligning med Stortingets
@@ -333,7 +374,17 @@ export function ValgomatClient({ initialTab = 'hjertesaker' }: ValgomatClientPro
                       type="button"
                       aria-expanded={expanded}
                       aria-controls={expanded ? `${detailHeadingId}-panel` : undefined}
-                      onClick={() => setSelectedParty(expanded ? null : row.party_code)}
+                      onClick={() => {
+                        const next = expanded ? null : row.party_code;
+                        setSelectedParty(next);
+                        if (next) {
+                          setPartyPanelAnnouncement(
+                            `${row.party_name} — detaljer for partisamsvar er utvidet.`,
+                          );
+                        } else {
+                          setPartyPanelAnnouncement('');
+                        }
+                      }}
                       className={cn(
                         'flex w-full min-h-11 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
@@ -376,9 +427,9 @@ export function ValgomatClient({ initialTab = 'hjertesaker' }: ValgomatClientPro
                         <PartyDetailPanel
                           summary={row}
                           detailHeadingId={detailHeadingId}
-                          headingRef={(el) => {
+                          panelRef={(el) => {
                             if (row.party_code === selectedParty) {
-                              detailHeadingRef.current = el;
+                              partyPanelRef.current = el;
                             }
                           }}
                         />

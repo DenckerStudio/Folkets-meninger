@@ -33,7 +33,12 @@ export function ValgomatConsentPrompt({ onConsented, compact = false }: Valgomat
           Valgomat og partisamsvar bruker dine lagrede holdninger. Du må gi samtykke til lagring og
           profilering (valgomat/partimatch) før vi kan vise resultatene.
         </p>
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
+        <div
+          className={cn(
+            'flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-center',
+            compact && 'items-center',
+          )}
+        >
           <button
             type="button"
             onClick={() => setDialogOpen(true)}
