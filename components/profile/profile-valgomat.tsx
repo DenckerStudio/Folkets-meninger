@@ -1,9 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { ValgomatPanel } from '@/components/valgomat-panel';
 import { ProfileCard } from '@/components/profile/profile-card';
-import { routes } from '@/lib/routes';
 
 type ProfileValgomatProps = {
   stanceCount: number;
@@ -21,12 +19,6 @@ export function ProfileValgomat({ stanceCount }: ProfileValgomatProps) {
         }
       >
         <ValgomatPanel />
-        <Link
-          href={routes.valgomat}
-          className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-        >
-          Se full valgomat-side →
-        </Link>
       </ProfileCard>
     </div>
   );
