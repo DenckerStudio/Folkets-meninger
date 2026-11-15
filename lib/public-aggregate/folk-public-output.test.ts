@@ -39,8 +39,15 @@ const toolShaped: VoteAlignmentResult = shapeVoteAlignment(insufficient);
 const toolPublic = redactPublicFolkForTool(toolShaped);
 assert.equal(toolPublic.folkForPercent, null);
 assert.equal(toolPublic.folkAgainstPercent, null);
-assert.equal(toolPublic.folk.for, 0);
-assert.equal(toolPublic.folk.against, 0);
+assert.equal(toolPublic.folk.for, null);
+assert.equal(toolPublic.folk.against, null);
+assert.equal(toolPublic.folk.abstain, null);
 assert.equal(toolPublic.folk.total, 3);
+assert.equal(toolPublic.belowPublicThreshold, true);
+assert.match(toolPublic.folkBreakdownNote ?? '', /Oppgi ingen/);
+
+const rscPayload = redactPublicFolkChoiceFields({ for: 4, against: 0, abstain: 0, total: 4 });
+assert.equal(rscPayload.for, null);
+assert.equal(rscPayload.total, 4);
 
 console.log('lib/public-aggregate/folk-public-output.test.ts: ok');

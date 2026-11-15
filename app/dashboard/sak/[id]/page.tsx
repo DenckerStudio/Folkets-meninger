@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import { routes } from '@/lib/routes';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { isAdmin } from '@/lib/admin/gate';
+import { redactPublicFolkChoiceFields } from '@/lib/public-aggregate/folk-public-output';
 import { findOpenStortingetPollForIssue } from '@/lib/polls/service';
 import { listPollsForStortingetIssueAdmin } from '@/lib/polls/stortinget-poll-admin-data';
 import { resolveStortingetPollAdminUiState } from '@/lib/polls/stortinget-poll-admin-guard';
@@ -193,6 +194,12 @@ export default async function SakPage({
   }
 
   const { sak, detail: detailedContent, issueMeta } = bundle;
+  const initialPublicFolk = redactPublicFolkChoiceFields({
+    for: sak.votes.for,
+    against: sak.votes.against,
+    abstain: sak.votes.abstain,
+    total: sak.votes.total,
+  });
   const isDedicatedResearchSak = isResearchTopicDedicatedIssueId(sak.id);
   const [documents, voteringer, summaryRead] = await Promise.all([
     isDedicatedResearchSak ? Promise.resolve([]) : getSakDocumentsWithStatus(sak.id, detailedContent),
@@ -500,7 +507,7 @@ export default async function SakPage({
               sakId={sak.id}
               openPollId={openStortingetPoll?.id ?? null}
               voteringer={voteringer}
-              initialFolk={sak.votes}
+              initialFolk={initialPublicFolk}
               sakVedtak={{
                 kortvedtak: kortvedtak ?? null,
                 vedtakstekst: vedtakstekst ?? null,

@@ -28,9 +28,9 @@ export type AlignmentSide = 'for' | 'against' | 'tie';
 export type AlignmentVerdict = 'aligned' | 'partial' | 'divergent' | 'pending' | 'insufficient';
 
 export type FolkVoteCounts = {
-  for: number;
-  against: number;
-  abstain: number;
+  for: number | null;
+  against: number | null;
+  abstain: number | null;
   total: number;
 };
 

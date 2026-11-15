@@ -12,7 +12,7 @@ import {
 
 export type { SakVedtakContext };
 import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
-import { publicFolkPercents } from '@/lib/public-aggregate/folk-public-output';
+import { folkVoteTotal, publicFolkPercents } from '@/lib/public-aggregate/folk-public-output';
 import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
 import {
   type AlignmentComparison,
@@ -32,7 +32,8 @@ function percent(part: number, total: number): number {
   return Math.round((part / total) * 100);
 }
 
-function sideFromCounts(forCount: number, againstCount: number): AlignmentSide {
+function sideFromCounts(forCount: number | null, againstCount: number | null): AlignmentSide {
+  if (forCount == null || againstCount == null) return 'tie';
   if (forCount === againstCount) return 'tie';
   return forCount > againstCount ? 'for' : 'against';
 }
@@ -127,11 +128,11 @@ export function buildAlignmentComparison(
   sakVedtak?: SakVedtakContext,
 ): AlignmentComparison {
   const votering = pickPrimaryVotering(voteringer);
-  const folkTotal = folk.total || folk.for + folk.against + folk.abstain;
-  const folkDecided = folk.for + folk.against;
-  const { folkForPercent, folkAgainstPercent, folkAbstainPercent } = publicFolkPercents(folk, folkTotal);
-  const folkSide = sideFromCounts(folk.for, folk.against);
+  const folkTotal = folkVoteTotal(folk);
   const folkPublic = publicAggregateMeetsThreshold(folkTotal);
+  const folkDecided = folkPublic ? (folk.for ?? 0) + (folk.against ?? 0) : 0;
+  const { folkForPercent, folkAgainstPercent, folkAbstainPercent } = publicFolkPercents(folk, folkTotal);
+  const folkSide = folkPublic ? sideFromCounts(folk.for, folk.against) : 'tie';
 
   if (!votering) {
     const pendingHeadline = folkTotal > 0 && !folkPublic
@@ -236,7 +237,7 @@ export function buildAlignmentComparison(
     };
   }
 
-  const folkShare = folkDecided > 0 ? folk.for / folkDecided : 0;
+  const folkShare = folkDecided > 0 ? (folk.for ?? 0) / folkDecided : 0;
   const stShare = stortingetForShareForFolkAlignment({
     stFor,
     stAgainst,

@@ -30,6 +30,8 @@ export type VoteAlignmentResult = {
   otherVoteringCount: number;
   /** Open Nei/Blank/Ja poll on this sak, when one exists. */
   openPollId: string | null;
+  belowPublicThreshold: boolean;
+  folkBreakdownNote: string | null;
 };
 
 const EMPTY_FOLK: FolkVoteCounts = { for: 0, against: 0, abstain: 0, total: 0 };
@@ -61,6 +63,8 @@ export function shapeVoteAlignment(comparison: AlignmentComparison): VoteAlignme
     folkAbstainPercent: publicAggregateMeetsThreshold(comparison.folk.total)
       ? comparison.folkAbstainPercent
       : null,
+    belowPublicThreshold: !publicAggregateMeetsThreshold(comparison.folk.total),
+    folkBreakdownNote: null,
     score: comparison.score,
     gapPoints: comparison.gapPoints,
     verdict: comparison.verdict,

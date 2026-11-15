@@ -172,14 +172,20 @@ export function AlignmentScore({
         const res = await fetch(`/api/vote?issueId=${encodeURIComponent(sakId)}`);
         const data = await res.json();
         if (cancelled) return;
-        const forCount = data.for ?? 0;
-        const against = data.against ?? 0;
-        const abstain = data.abstain ?? 0;
+        const parseNullable = (value: unknown): number | null =>
+          typeof value === 'number' && Number.isFinite(value) ? value : null;
+        const forCount = parseNullable(data.for);
+        const against = parseNullable(data.against);
+        const abstain = parseNullable(data.abstain);
+        const total =
+          typeof data.total === 'number' && Number.isFinite(data.total)
+            ? data.total
+            : (forCount ?? 0) + (against ?? 0) + (abstain ?? 0);
         setFolk({
           for: forCount,
           against,
           abstain,
-          total: data.total ?? forCount + against + abstain,
+          total,
         });
       } catch {
         // Keep server-rendered totals

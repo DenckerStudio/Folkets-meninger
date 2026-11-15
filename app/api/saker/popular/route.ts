@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { redactPublicFolkChoiceFields } from '@/lib/public-aggregate/folk-public-output';
 import { getPopularSaker } from '@/lib/stortinget-saker-cache';
 
 export const dynamic = 'force-dynamic';
@@ -13,11 +14,12 @@ export async function GET(request: Request) {
       summary: issue.summary,
       category: issue.category,
       date: issue.date,
-      votes: {
+      votes: redactPublicFolkChoiceFields({
         for: issue.votes.for,
         against: issue.votes.against,
+        abstain: issue.votes.abstain,
         total: issue.votes.total,
-      },
+      }),
     }));
 
   return NextResponse.json(

@@ -100,9 +100,12 @@ type VoteResultsOutput = {
   } | null;
   stortingetForPercent?: number | null;
   stortingetAgainstPercent?: number | null;
-  folk?: { for?: number; against?: number; abstain?: number; total?: number };
-  folkForPercent?: number;
-  folkAgainstPercent?: number;
+  folk?: { for?: number | null; against?: number | null; abstain?: number | null; total?: number };
+  folkForPercent?: number | null;
+  folkAgainstPercent?: number | null;
+  folkAbstainPercent?: number | null;
+  belowPublicThreshold?: boolean;
+  folkBreakdownNote?: string | null;
   score?: number | null;
   gapPoints?: number | null;
   headline?: string;
@@ -545,7 +548,13 @@ function VoteResultsCard({ output }: { output: VoteResultsOutput }) {
   const stortinget = output.stortinget ?? null;
   const folk = output.folk ?? {};
   const folkTotal = folk.total ?? 0;
-  const folkAggregatePublic = publicAggregateMeetsThreshold(folkTotal);
+  const belowPublicThreshold =
+    output.belowPublicThreshold ?? !publicAggregateMeetsThreshold(folkTotal);
+  const folkAggregatePublic =
+    !belowPublicThreshold &&
+    publicAggregateMeetsThreshold(folkTotal) &&
+    output.folkForPercent != null &&
+    output.folkAgainstPercent != null;
   const folkNextStep = folkBelowThresholdNextStep(output.openPollId);
 
   return (
@@ -586,9 +595,9 @@ function VoteResultsCard({ output }: { output: VoteResultsOutput }) {
       {folkAggregatePublic ? (
         <p className="text-xs text-foreground">
           <span className="font-medium text-muted-foreground">Folket i appen ({folkTotal}): </span>
-          For {output.folkForPercent ?? 0}% · Mot {output.folkAgainstPercent ?? 0}%
+          For {output.folkForPercent}% · Mot {output.folkAgainstPercent}%
         </p>
-      ) : folkTotal > 0 ? (
+      ) : folkTotal > 0 || belowPublicThreshold ? (
         <p className="text-xs text-muted-foreground">
           {folkHistoricAggregateBelowThresholdMessage()}{' '}
           <Link
