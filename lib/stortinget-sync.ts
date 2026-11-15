@@ -5,6 +5,7 @@ import {
   enrichSakerList,
 } from './stortinget-saker-cache';
 import { getCachedSakDetail, refreshStalePendingSakDetails } from './stortinget-detail-cache';
+import { backfillSessionSakDocuments, type DocumentBackfillResult } from './stortinget-sak-document-backfill';
 import { isDebattSak } from './stortinget-sak-presentation';
 import { resolveSakStatusFromSources } from './sak-status';
 
@@ -14,6 +15,7 @@ export type SyncIssuesResult = {
   newIssueIds: string[];
   aiSummaryTriggered: number;
   detailsRefreshed: number;
+  documentBackfill: DocumentBackfillResult;
 };
 
 type ExistingIssueRow = {
@@ -74,7 +76,14 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
   );
 
   if (filtered.length === 0) {
-    return { upserted: 0, total: 0, newIssueIds: [], aiSummaryTriggered: 0, detailsRefreshed: 0 };
+    return {
+      upserted: 0,
+      total: 0,
+      newIssueIds: [],
+      aiSummaryTriggered: 0,
+      detailsRefreshed: 0,
+      documentBackfill: { attempted: 0, issueIds: [], results: [] },
+    };
   }
 
   const issues = await enrichSakerList(filtered.map((sak) => mapStortingetSakToListItem(sak)));
@@ -177,6 +186,15 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
   }
 
   const detailsRefreshed = await refreshStalePendingSakDetails(10);
+  const sessionIssueIds = issues.map((issue) => String(issue.id));
+  const documentBackfill = await backfillSessionSakDocuments(sessionIssueIds);
 
-  return { upserted, total: issues.length, newIssueIds, aiSummaryTriggered, detailsRefreshed };
+  return {
+    upserted,
+    total: issues.length,
+    newIssueIds,
+    aiSummaryTriggered,
+    detailsRefreshed,
+    documentBackfill,
+  };
 }

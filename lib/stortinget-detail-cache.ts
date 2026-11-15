@@ -96,7 +96,7 @@ export async function refreshSakStatusOnly(sakId: string): Promise<StortingetSak
 
 export async function getCachedSakDetail(
   sakId: string,
-  opts?: { forceRefresh?: boolean; statusOnly?: boolean },
+  opts?: { forceRefresh?: boolean; statusOnly?: boolean; skipBackgroundIngest?: boolean },
 ): Promise<StortingetSakDetail | null> {
   const { isResearchTopicDedicatedIssueId } = await import(
     './sak/research-topic-dedicated-issue'
@@ -214,9 +214,11 @@ export async function getCachedSakDetail(
     }
   }
 
-  void ingestSakDocuments(sakId, detail).catch((error) => {
-    console.warn('[document-ingest] Failed during cache refresh:', error);
-  });
+  if (!opts?.skipBackgroundIngest) {
+    void ingestSakDocuments(sakId, detail).catch((error) => {
+      console.warn('[document-ingest] Failed during cache refresh:', error);
+    });
+  }
 
   return detail;
 }
