@@ -95,6 +95,7 @@ test('dashboard sidebar has exact title order', () => {
     'Politikere',
     'Kalender',
     'Innsikt',
+    'Valgomat',
     'Appens fremtid',
     'Min side',
   ];

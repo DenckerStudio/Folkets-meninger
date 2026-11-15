@@ -15,6 +15,7 @@ export const routes = {
       : `${DASHBOARD_PREFIX}/utforsk/reels`,
   avstemninger: `${DASHBOARD_PREFIX}/avstemninger`,
   minSide: `${DASHBOARD_PREFIX}/min-side`,
+  valgomat: `${DASHBOARD_PREFIX}/valgomat`,
   horinger: `${DASHBOARD_PREFIX}/horinger`,
   kalender: `${DASHBOARD_PREFIX}/kalender`,
   horingerIcs: '/api/kalender/horinger.ics',

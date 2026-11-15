@@ -12,6 +12,7 @@ const EXACT_LABELS: Record<string, string> = {
   [routes.sporsmal]: 'Spørsmål',
   [routes.forslag]: 'Appens fremtid',
   [routes.minSide]: 'Min side',
+  [routes.valgomat]: 'Valgomat',
   [routes.admin]: 'Admin',
   [routes.completeProfile]: 'profiloppsettet',
   [routes.onboarding]: 'oppstarten',

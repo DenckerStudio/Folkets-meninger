@@ -1,7 +1,8 @@
 export type ValgomatPartyScore = {
   party: string;
-  agreement_percent: number;
+  agreement_percent: number | null;
   compared_issues: number;
+  matching_issues: number;
 };
 
 export const VALGOMAT_PARTIES = [
@@ -16,8 +17,7 @@ export const VALGOMAT_PARTIES = [
   'Miljøpartiet De Grønne',
 ] as const;
 
-/** Partisammenligning krever stemmedata fra Stortinget per sak — ikke tilgjengelig ennå. */
-export const PARTY_ALIGNMENT_AVAILABLE = false;
+export const PARTY_ALIGNMENT_AVAILABLE = true;
 
 /** Normalizes stance count RPC payload. */
 export function stanceCountFromRpc(data: unknown): number {

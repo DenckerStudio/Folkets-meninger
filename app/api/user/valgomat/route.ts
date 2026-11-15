@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensurePoliticalConsent } from '@/lib/consent/require-api';
 import { getServerSupabase } from '@/lib/supabase-server';
-import {
-  getValgomatForUser,
-  ValgomatServiceError,
-} from '@/lib/valgomat/service';
+import { getValgomatForSession, ValgomatServiceError } from '@/lib/valgomat/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,16 +20,8 @@ export async function GET() {
   const profilingConsent = await ensurePoliticalConsent(user.id, 'political_profiling');
   if (profilingConsent) return profilingConsent;
 
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.error('valgomat: SUPABASE_SERVICE_ROLE_KEY is not configured');
-    return NextResponse.json(
-      { error: 'Valgomat er ikke konfigurert på serveren (mangler service role key).' },
-      { status: 503 },
-    );
-  }
-
   try {
-    const result = await getValgomatForUser(user.id);
+    const result = await getValgomatForSession(supabase);
     return NextResponse.json(result);
   } catch (e) {
     if (e instanceof ValgomatServiceError) {
