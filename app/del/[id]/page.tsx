@@ -14,6 +14,7 @@ import {
 import { resolvePublicPollSharePage } from '@/lib/polls/retired-system';
 import {
   getPollTotals,
+  getResearchTopicIdForPoll,
   getSharePagePollById,
   getUserPollVote,
   isPollVotingOpen,
@@ -25,6 +26,7 @@ import {
 } from '@/lib/polls/share';
 import { resolveRequestShareOrigin } from '@/lib/polls/share-server';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { resolvePollSourceSakLink } from '@/lib/polls/stortinget-issue-link';
 import { routes } from '@/lib/routes';
 import { SharePollRetiredPage } from '@/components/polls/share-poll-retired';
 
@@ -97,6 +99,9 @@ export default async function SharePollPage({ params, searchParams }: PageProps)
   const utmCampaign = firstParam(query.utm_campaign);
   const fmShare = firstParam(query.fm_share);
 
+  const researchTopicId = await getResearchTopicIdForPoll(poll.id);
+  const sakLink = resolvePollSourceSakLink(poll.stortingetIssueId, { researchTopicId });
+
   const summary = poll.neutralSummary.trim();
   const truncatedSummary = summary ? truncateDescription(summary, 160) : '';
   const summaryIsTruncated = truncatedSummary !== summary;
@@ -128,11 +133,11 @@ export default async function SharePollPage({ params, searchParams }: PageProps)
           {summary ? (
             <p className="text-sm leading-relaxed text-muted-foreground">
               {truncatedSummary}
-              {summaryIsTruncated && poll.stortingetIssueId ? (
+              {summaryIsTruncated && sakLink ? (
                 <>
                   {' '}
                   <Link
-                    href={routes.sak(poll.stortingetIssueId)}
+                    href={sakLink.href}
                     className="font-medium text-brand hover:underline"
                   >
                     Les mer
@@ -159,14 +164,13 @@ export default async function SharePollPage({ params, searchParams }: PageProps)
 
       <p className="text-xs leading-relaxed text-muted-foreground">{STORTINGET_DISCLAIMER}</p>
 
-      {poll.stortingetIssueId ? (
+      {sakLink ? (
         <p className="text-sm">
           Kilde:{' '}
-          <Link
-            href={routes.sak(poll.stortingetIssueId)}
-            className="font-medium text-brand hover:underline"
-          >
-            Stortingssak {poll.stortingetIssueId}
+          <Link href={sakLink.href} className="font-medium text-brand hover:underline">
+            {sakLink.kind === 'stortinget'
+              ? `Stortingssak ${poll.stortingetIssueId}`
+              : sakLink.label}
           </Link>
         </p>
       ) : null}

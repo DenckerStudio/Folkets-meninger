@@ -178,12 +178,16 @@ export async function getSak(id: string): Promise<SakListItem | null> {
 }
 
 export async function getSakPageBundle(
-  id: string,
+  rawId: string,
 ): Promise<{
   sak: SakListItem;
   detail: StortingetSakDetail;
   issueMeta: import('./stortinget-detail-cache').SakIssueMeta | null;
 } | null> {
+  const { normalizeDashboardSakRouteId } = await import(
+    './sak/research-topic-dedicated-issue'
+  );
+  const id = normalizeDashboardSakRouteId(rawId);
   const { getDedicatedResearchTopicSakBundle } = await import(
     './sak/dedicated-research-topic-bundle'
   );

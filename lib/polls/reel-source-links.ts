@@ -1,5 +1,5 @@
 import type { PollRecord } from '@/lib/polls/types';
-import { routes } from '@/lib/routes';
+import { resolvePollSourceSakLink } from '@/lib/polls/stortinget-issue-link';
 
 export type ReelPollSourceLink = {
   id: string;
@@ -27,14 +27,17 @@ function normalizeHttpUrl(url: string): string {
 export function listReelPollSourceLinks(poll: PollRecord): ReelPollSourceLink[] {
   const links: ReelPollSourceLink[] = [];
   const seen = new Set<string>();
-  const sakUrl = poll.stortingetIssueId ? routes.sak(poll.stortingetIssueId) : null;
+  const sakLink = resolvePollSourceSakLink(poll.stortingetIssueId);
 
-  if (poll.stortingetIssueId && sakUrl) {
-    seen.add(sakUrl);
+  if (sakLink) {
+    seen.add(sakLink.href);
     links.push({
-      id: `sak-${poll.stortingetIssueId}`,
-      href: sakUrl,
-      label: `Stortingssak ${poll.stortingetIssueId}`,
+      id: `sak-${sakLink.kind}-${poll.stortingetIssueId ?? 'none'}`,
+      href: sakLink.href,
+      label:
+        sakLink.kind === 'stortinget'
+          ? `Stortingssak ${poll.stortingetIssueId}`
+          : sakLink.label,
       external: false,
     });
   }
@@ -42,7 +45,7 @@ export function listReelPollSourceLinks(poll: PollRecord): ReelPollSourceLink[] 
   for (const source of poll.sourceUrls) {
     if (!isHttpUrl(source.url)) continue;
     const normalized = normalizeHttpUrl(source.url);
-    if (sakUrl && normalized === sakUrl) continue;
+    if (sakLink && normalized === sakLink.href) continue;
     if (seen.has(normalized)) continue;
     seen.add(normalized);
     links.push({

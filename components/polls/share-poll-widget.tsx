@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Code2 } from 'lucide-react';
-import { PollBallotVoteButton } from '@/components/polls/poll-ballot-vote-button';
+import { PollBallotDistributionBar } from '@/components/polls/poll-ballot-distribution-bar';
 import { PersonalSharePanel } from '@/components/share/personal-share-panel';
 import { ShareTrigger } from '@/components/share/share-trigger';
 import { useAuth } from '@/hooks/use-auth';
@@ -12,8 +12,6 @@ import { formatStemmerCount } from '@/lib/norwegian-plural';
 import { pollChoicePercent } from '@/lib/polls/format';
 import {
   POLL_BALLOT_RESULT_BAR_CLASS,
-  POLL_BALLOT_VOTE_BUTTON_GRID_CLASS,
-  pollBallotAltTextPhrase,
   pollBallotRunningTextPhrase,
 } from '@/lib/polls/ballot-buttons';
 import { pollChoiceLabel } from '@/lib/polls/labels';
@@ -262,31 +260,16 @@ export function SharePollWidget({
 
   return (
     <section ref={rootRef} className={cn('space-y-5', compact && 'space-y-3')} lang="nb">
-      <div
-        role="group"
-        aria-labelledby={headingId}
-        aria-label={headingId ? undefined : `Stem ${pollBallotAltTextPhrase()}`}
-        className={cn(POLL_BALLOT_VOTE_BUTTON_GRID_CLASS, !compact && 'gap-3')}
-      >
-        {POLL_BALLOT_CHOICES.map((choice) => {
-          const selectedVote = userVote === choice;
-          const isPending = pending === choice && !userVote;
-          const dimmed = (!votingOpen || Boolean(userVote)) && !selectedVote;
-          const selected = selectedVote || isPending;
-          return (
-            <PollBallotVoteButton
-              key={choice}
-              choice={choice}
-              selected={selected}
-              disabled={!votingOpen || Boolean(userVote) || busy || loading}
-              onClick={() => handleChoice(choice)}
-              className={cn(dimmed ? 'opacity-60' : '', busy ? 'cursor-wait opacity-70' : '')}
-            >
-              {pollChoiceLabel(choice)}
-            </PollBallotVoteButton>
-          );
-        })}
-      </div>
+      <PollBallotDistributionBar
+        totals={totals}
+        votingOpen={votingOpen}
+        userVote={userVote}
+        pendingChoice={pending}
+        busy={busy || loading}
+        disabled={false}
+        onVote={handleChoice}
+        compact={compact}
+      />
 
       {error ? (
         <p className="text-sm text-destructive" role="alert">

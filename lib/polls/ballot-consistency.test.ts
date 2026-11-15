@@ -88,14 +88,12 @@ const pollBallotSource = readFileSync(
 );
 
 assert(
-  shareWidgetSource.includes('PollBallotVoteButton') &&
-    shareWidgetSource.includes('POLL_BALLOT_CHOICES'),
-  'share poll widget uses shared ballot vote buttons',
+  shareWidgetSource.includes('PollBallotDistributionBar'),
+  'share poll widget uses shared distribution bar',
 );
 assert(
-  pollBallotSource.includes('PollBallotVoteButton') &&
-    pollBallotSource.includes('POLL_BALLOT_CHOICES'),
-  'dashboard poll ballot uses shared ballot vote buttons',
+  pollBallotSource.includes('PollBallotDistributionBar'),
+  'dashboard poll ballot uses shared distribution bar',
 );
 
 console.log('poll ballot consistency tests OK');
