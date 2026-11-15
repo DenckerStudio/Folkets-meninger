@@ -36,6 +36,7 @@ import { ImpactCalculator } from '@/components/sak/impact-calculator';
 import { AlignmentScore } from '@/components/sak/alignment-score';
 import { KnowledgeQuiz } from '@/components/sak/knowledge-quiz';
 import { SimilarIssuesSection } from '@/components/sak/similar-issues-section';
+import { TopicAroundSakSection } from '@/components/search/topic-around-sak-section';
 import { SakMeningerSection } from '@/components/sak/sak-meninger-section';
 import { StortingetPollAdminSection } from '@/components/sak/stortinget-poll-admin-section';
 import StanceSection from './stance-section';
@@ -597,6 +598,16 @@ export default async function SakPage({
             <SimilarIssuesSection
               sakId={sak.id}
               excludeIssueIds={relaterteSaker.flatMap((rel: { relatert_sak?: { id?: unknown } }) => {
+                const id = rel.relatert_sak?.id;
+                return id != null ? [String(id)] : [];
+              })}
+            />
+
+            <TopicAroundSakSection
+              issueId={sak.id}
+              title={officialTitle}
+              summary={descriptionToShow || null}
+              relatedIssueIds={relaterteSaker.flatMap((rel: { relatert_sak?: { id?: unknown } }) => {
                 const id = rel.relatert_sak?.id;
                 return id != null ? [String(id)] : [];
               })}
