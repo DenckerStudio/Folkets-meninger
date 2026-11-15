@@ -51,6 +51,30 @@ assert.equal(longExcerpt.ok, false);
 const emptyBody = parseEditBlogDraftBody({ ...validEdit, bodyMarkdown: '   ' });
 assert.equal(emptyBody.ok, false);
 
+const withSources = parseEditBlogDraftBody({
+  ...validEdit,
+  sources: [
+    {
+      title: 'Artikkel',
+      publisher: 'nrk.no',
+      url: 'https://www.nrk.no/nyheter/1',
+    },
+  ],
+});
+assert.equal(withSources.ok, true);
+
+const blockedSource = parseEditBlogDraftBody({
+  ...validEdit,
+  sources: [
+    {
+      title: 'Reddit',
+      publisher: 'reddit.com',
+      url: 'https://www.reddit.com/r/norge',
+    },
+  ],
+});
+assert.equal(blockedSource.ok, false);
+
 const publishAttempt = parseEditBlogDraftBody({ ...validEdit, _status: 'published' });
 assert.equal(publishAttempt.ok, false);
 if (!publishAttempt.ok) {
@@ -73,6 +97,20 @@ assert.deepEqual(patch, {
 assert.equal('_status' in patch, false);
 assert.equal('origin' in patch, false);
 assert.equal('sourceEvent' in patch, false);
+
+const patchSources = buildEditBlogDraftPatch({
+  ...validEdit,
+  sources: [
+    {
+      title: 'Artikkel',
+      publisher: 'nrk.no',
+      url: 'https://www.nrk.no/nyheter/1',
+    },
+  ],
+});
+assert.deepEqual(patchSources.sources, [
+  { label: 'Artikkel (nrk.no)', url: 'https://www.nrk.no/nyheter/1' },
+]);
 
 const routeSrc = readFileSync(
   join(process.cwd(), 'app/api/admin/blog-drafts/route.ts'),
