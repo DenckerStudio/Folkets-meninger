@@ -87,14 +87,26 @@ export async function expireStaleResearchTopics(
   await supabase.rpc('research_topics_expire_stale', { p_minutes: minutes });
 }
 
-export async function getResearchTopicById(topicId: string): Promise<ResearchTopicRow | null> {
+export type GetResearchTopicByIdResult =
+  | { ok: true; topic: ResearchTopicRow }
+  | { ok: false; reason: 'not_found' | 'db_error' };
+
+export async function getResearchTopicByIdResult(
+  topicId: string,
+): Promise<GetResearchTopicByIdResult> {
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('research_topics')
     .select(TOPIC_SELECT)
     .eq('id', topicId)
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) {
+    console.error('[research] getResearchTopicByIdResult', error);
+    return { ok: false, reason: 'db_error' };
+  }
+  if (!data) {
+    return { ok: false, reason: 'not_found' };
+  }
   let redditMeta: { reddit_id: string | null; subreddit: string | null } | undefined;
   if (data.reddit_signal_id) {
     const map = await loadRedditMetaBySignalIds([String(data.reddit_signal_id)]);
@@ -103,7 +115,12 @@ export async function getResearchTopicById(topicId: string): Promise<ResearchTop
       ? { reddit_id: meta.reddit_id, subreddit: meta.subreddit }
       : { reddit_id: null, subreddit: null };
   }
-  return parseTopicRow(data as Record<string, unknown>, redditMeta);
+  return { ok: true, topic: parseTopicRow(data as Record<string, unknown>, redditMeta) };
+}
+
+export async function getResearchTopicById(topicId: string): Promise<ResearchTopicRow | null> {
+  const loaded = await getResearchTopicByIdResult(topicId);
+  return loaded.ok ? loaded.topic : null;
 }
 
 export async function getResearchTopicSnapshotsBySources(input: {
