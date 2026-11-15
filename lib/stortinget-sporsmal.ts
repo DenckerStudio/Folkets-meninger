@@ -4,7 +4,10 @@ import type { SporsmalType } from '@/lib/stortinget';
 export type StortingetSporsmal = {
   id?: string | number;
   tittel?: string;
+  /** Full question body when Stortinget provides it separately from `tittel`. */
   sporsmal?: string;
+  /** Optional curated grouping label from a future backfill column. */
+  theme?: string | null;
   status?: string | number;
   type?: string;
   sendt_dato?: string;
@@ -16,7 +19,7 @@ export type StortingetSporsmal = {
     fornavn?: string;
     etternavn?: string;
     id?: string;
-    parti?: { navn?: string };
+    parti?: { id?: string; navn?: string };
     fylke?: { navn?: string };
   };
   sporsmal_til_minister_tittel?: string;

@@ -150,6 +150,11 @@ export function isPublicDashboardInnsiktPath(pathname: string): boolean {
   return pathname === routes.innsikt;
 }
 
+/** Written/oral questions from Stortinget — guests can read; follow/save requires login. */
+export function isPublicDashboardSporsmalPath(pathname: string): boolean {
+  return pathname === routes.sporsmal || /^\/dashboard\/sporsmal\/[^/]+$/.test(pathname);
+}
+
 export function isPublicProfilePath(pathname: string): boolean {
   return /^\/profil\/[^/]+$/.test(pathname);
 }
