@@ -33,6 +33,12 @@ assert.match(pending.headline, /ikke votert/);
 const few = buildAlignmentComparison({ for: 2, against: 1, abstain: 0, total: 3 }, [votering]);
 assert.equal(few.verdict, 'insufficient');
 assert.ok(few.score == null);
+assert.doesNotMatch(few.headline, /% av brukerne/);
+assert.equal(few.folkForPercent, 0);
+assert.equal(few.folkAgainstPercent, 0);
+
+const pendingFew = buildAlignmentComparison({ for: 3, against: 1, abstain: 0, total: 4 }, []);
+assert.doesNotMatch(pendingFew.headline, /%/);
 
 const noButtons = buildAlignmentComparison(folk, [
   {
