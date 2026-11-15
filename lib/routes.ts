@@ -30,6 +30,7 @@ export const routes = {
   hvaErAnnerledes: '/#hva-er-annerledes',
   innspill: '/innspill',
   detteSnakkesDetOm: '/dette-snakkes-det-om',
+  denneUka: '/denne-uka',
   detteSnakkesDetOmTopic: (id: string) =>
     `/dette-snakkes-det-om/${encodeURIComponent(id)}`,
   blogg: '/blogg',

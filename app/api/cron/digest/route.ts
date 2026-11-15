@@ -6,10 +6,15 @@ import { cronAuthResponse, verifyCronAuth } from '@/lib/cron-auth';
 import {
   buildDigestCursorUpdate,
   buildInAppDigestSummary,
+  buildWeeklyOverviewDigestHtmlBlock,
+  buildWeeklyOverviewDigestPlainBlock,
+  isWeeklyOverviewDigestEnabled,
+  mergeWeeklyOverviewIntoDigestBody,
   resolveDigestSinceIso,
   shouldSendDigestEmail,
   toAbsoluteNotificationUrl,
 } from '@/lib/notifications/digest';
+import { buildWeeklyOverview } from '@/lib/weekly-overview';
 import { pickDigestChannels } from '@/lib/notifications/preferences';
 import { isDigestFrequency } from '@/lib/notifications/channels';
 import { prepareDigestForUser } from '@/lib/notifications/enrichment';
@@ -74,6 +79,19 @@ export async function GET(request: Request) {
     let failedUsers = 0;
     let inAppDigestsCreated = 0;
     const sentAtIso = new Date().toISOString();
+
+    let weeklyOverviewPlainBlock: string | null = null;
+    let weeklyOverviewHtmlBlock: string | null = null;
+    if (frequency === 'weekly' && isWeeklyOverviewDigestEnabled()) {
+      try {
+        const overview = await buildWeeklyOverview();
+        const pageUrl = `${origin}/denne-uka`;
+        weeklyOverviewPlainBlock = buildWeeklyOverviewDigestPlainBlock(overview, pageUrl);
+        weeklyOverviewHtmlBlock = buildWeeklyOverviewDigestHtmlBlock(weeklyOverviewPlainBlock, pageUrl);
+      } catch (overviewError) {
+        console.error('Cron digest: weekly overview block failed', overviewError);
+      }
+    }
 
     for (const p of prefs || []) {
       // Tier is enforced here too: free users only get the weekly in-app digest, never e-mail.
@@ -151,12 +169,13 @@ export async function GET(request: Request) {
 
       if (!isPlus) {
         const summary = buildInAppDigestSummary(items);
+        const body = mergeWeeklyOverviewIntoDigestBody(summary.body, weeklyOverviewPlainBlock);
         const { error: insertError } = await service.from('notifications').insert({
           user_id: p.user_id,
           type: 'weekly_digest',
           channel: 'digest',
           title: summary.title,
-          body: summary.body,
+          body,
           url: summary.url,
           data: { digest: true, frequency: 'weekly', count: items.length },
         });
@@ -186,7 +205,12 @@ export async function GET(request: Request) {
       const preparedDigest = prepareDigestForUser(items, subscription);
 
       try {
-        await sendDigestEmail({ to: email, frequency, digest: preparedDigest });
+        await sendDigestEmail({
+          to: email,
+          frequency,
+          digest: preparedDigest,
+          weeklyOverviewHtmlBlock,
+        });
         emailsSent += 1;
 
         const nextCursor = buildDigestCursorUpdate(lastDigest, channels, sentAtIso);

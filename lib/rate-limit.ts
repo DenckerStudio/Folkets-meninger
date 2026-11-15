@@ -105,6 +105,9 @@ export function getRateLimitPolicy(
   if (pathname.startsWith('/api/chat')) {
     return { limit: 20, windowMs: 60_000 };
   }
+  if (pathname.startsWith('/api/dashboard/utforsk/issue-search')) {
+    return { limit: 30, windowMs: 60_000 };
+  }
   if (pathname.startsWith('/api/byok')) {
     return { limit: 20, windowMs: 60_000 };
   }

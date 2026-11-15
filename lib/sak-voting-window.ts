@@ -52,6 +52,22 @@ function collectVoteCloseDates(detail: StortingetSakDetail | null | undefined): 
   return dates;
 }
 
+/** Seneste voterings-/vedtaksdato i saksgangen som allerede har passert (ekte dato, ikke sync-«nå»). */
+export function getLastPastVoteEventDate(
+  detail: StortingetSakDetail | null | undefined,
+  now: Date | number = Date.now(),
+): Date | null {
+  const nowMs = typeof now === 'number' ? now : now.getTime();
+  let latest: Date | null = null;
+  for (const date of collectVoteCloseDates(detail)) {
+    if (date.getTime() > nowMs) continue;
+    if (!latest || date.getTime() > latest.getTime()) {
+      latest = date;
+    }
+  }
+  return latest;
+}
+
 export function getNextVoteCloseDate(
   detail: StortingetSakDetail | null | undefined,
   now = Date.now(),

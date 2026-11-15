@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import {
+  compareHoringerByInnspillDeadline,
   findHoringerForSak,
+  formatInnspillFristFromDays,
+  formatHoringInnspillFristLabel,
   formatStortingetDate,
   getHoringApplicationDeadline,
   getHoringInnspillDeadline,
@@ -8,6 +11,7 @@ import {
   getHoringStartDate,
   getHoringStatusKind,
   getHoringStatusLabel,
+  isHoringInnspillDeadlineWithinDays,
   isHoringOpen,
   parseStortingetDate,
   STORTINGET_MIN_DATE_MS,
@@ -63,5 +67,60 @@ assert.equal(
   getHoringSkriftligInnspillUrl({ id: '10005906' }),
   'https://www.stortinget.no/no/Hva-skjer-pa-Stortinget/Horing/skriv-skriftlig-innspill/?h=10005906',
 );
+
+const futureA = '/Date(1924996740000+0200)/';
+const futureB = '/Date(1927588740000+0200)/';
+
+const openSoon = {
+  id: 'open-soon',
+  horing_status: 'Aktiv',
+  innspillsfrist: futureA,
+};
+
+const openLater = {
+  id: 'open-later',
+  horing_status: 'Aktiv',
+  innspillsfrist: futureB,
+};
+
+const label = formatHoringInnspillFristLabel(openSoon);
+assert.ok(
+  label === 'Frist i dag' ||
+    (label?.startsWith('Frist om ') ?? false) ||
+    label === 'Fristen har gått ut',
+);
+
+assert.ok(compareHoringerByInnspillDeadline(openSoon, openLater) < 0);
+
+const expiredOpen = {
+  id: 'expired',
+  horing_status: 'Aktiv',
+  innspillsfrist: '/Date(1609459200000+0100)/',
+};
+
+const noDeadlineOpen = {
+  id: 'no-deadline',
+  horing_status: 'Aktiv',
+};
+
+assert.ok(compareHoringerByInnspillDeadline(openSoon, expiredOpen) < 0);
+assert.ok(compareHoringerByInnspillDeadline(noDeadlineOpen, expiredOpen) < 0);
+
+const sortedByFrist = [expiredOpen, noDeadlineOpen, openSoon, openLater].sort(
+  compareHoringerByInnspillDeadline,
+);
+assert.deepEqual(
+  sortedByFrist.map((h) => h.id),
+  ['open-soon', 'open-later', 'no-deadline', 'expired'],
+);
+
+assert.equal(formatInnspillFristFromDays(0), 'Frist i dag');
+assert.equal(formatInnspillFristFromDays(1), 'Frist i morgen');
+assert.equal(formatInnspillFristFromDays(2), 'Frist om 2 dager');
+assert.equal(formatInnspillFristFromDays(-1), 'Fristen har gått ut');
+
+assert.equal(isHoringInnspillDeadlineWithinDays(openSoon, 2000), true);
+assert.equal(isHoringInnspillDeadlineWithinDays(openSoon, 7), false);
+assert.equal(isHoringInnspillDeadlineWithinDays(hearing10005766, 7), false);
 
 console.log('stortinget-horinger.test.ts: ok');

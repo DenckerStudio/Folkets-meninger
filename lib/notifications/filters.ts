@@ -112,7 +112,8 @@ export function isFollowedNotificationType(type: string): boolean {
   return (
     type === 'new_case_in_category' ||
     type === 'new_case_for_label' ||
-    type.startsWith('opinion_')
+    type.startsWith('opinion_') ||
+    type.startsWith('hearing_')
   );
 }
 

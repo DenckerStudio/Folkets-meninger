@@ -109,6 +109,7 @@ export const config = {
     '/api/suggestions/:path*',
     '/api/chat',
     '/api/chat/:path*',
+    '/api/dashboard/utforsk/issue-search',
     '/api/byok',
     '/api/polls',
     '/del/:path*',
