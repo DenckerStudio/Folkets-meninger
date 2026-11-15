@@ -51,6 +51,7 @@ export type PolitikerSporsmalItem = {
 export type PolitikerProfileData = {
   broughtUpSaker: PolitikerSakItem[];
   saksordfoererSaker: PolitikerSakItem[];
+  allSaker: PolitikerSakItem[];
   topicStats: PolitikerTopicStat[];
   officialResponses: PolitikerOfficialResponse[];
   sporsmalFra: PolitikerSporsmalItem[];
@@ -253,6 +254,7 @@ export async function getPolitikerProfileData(
   return {
     broughtUpSaker,
     saksordfoererSaker,
+    allSaker: saker,
     topicStats,
     officialResponses,
     sporsmalFra: sporsmal.fra,

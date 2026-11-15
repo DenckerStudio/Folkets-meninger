@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowRight,
@@ -28,10 +29,10 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import { PoliticianResponseList } from '@/components/politikere/politician-response-dialog';
 import { getPolitikerRolleInfo } from '@/lib/politiker-roller';
 import { getPartyLogoSrc } from '@/lib/party-logos';
-
 type PolitikerProfileShellProps = {
   rep: PolitikerOversikt;
   profile: PolitikerProfileData;
+  stemmerContent: ReactNode;
 };
 
 function resolveTab(tabParam: string | null): PolitikerTabId {
@@ -111,7 +112,13 @@ function SporsmalList({ items, emptyMessage }: { items: PolitikerSporsmalItem[];
   );
 }
 
-function OverviewPanel({ rep, profile }: PolitikerProfileShellProps) {
+function OverviewPanel({
+  rep,
+  profile,
+}: {
+  rep: PolitikerOversikt;
+  profile: PolitikerProfileData;
+}) {
   const totalSaker = profile.broughtUpSaker.length + profile.saksordfoererSaker.length;
   const topTopics = profile.topicStats.slice(0, 5);
   const rolleInfo = getPolitikerRolleInfo(rep.tittel, rep.erRegjeringsmedlem);
@@ -217,7 +224,7 @@ function OverviewPanel({ rep, profile }: PolitikerProfileShellProps) {
   );
 }
 
-export default function PolitikerProfileShell({ rep, profile }: PolitikerProfileShellProps) {
+export default function PolitikerProfileShell({ rep, profile, stemmerContent }: PolitikerProfileShellProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const activeTab = resolveTab(searchParams.get('tab'));
@@ -284,7 +291,7 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
         <nav
-          className="-mx-4 flex gap-1 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:space-y-1 lg:overflow-visible lg:px-0"
+          className="-mx-4 flex w-full max-w-[100vw] gap-1 overflow-x-auto overscroll-x-contain px-4 pb-1 lg:mx-0 lg:max-w-none lg:flex-col lg:gap-0 lg:space-y-1 lg:overflow-visible lg:px-0 lg:pb-0"
           aria-label="Politikerseksjoner"
         >
           {POLITIKER_TABS.map((tab) => {
@@ -296,7 +303,7 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
                 type="button"
                 onClick={() => setTab(tab.id)}
                 className={cn(
-                  'flex shrink-0 items-start gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors lg:w-full',
+                  'flex w-max max-w-[88vw] shrink-0 items-start gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors lg:w-full lg:max-w-none',
                   active
                     ? 'border-brand/20 bg-brand/10 text-brand'
                     : 'border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground',
@@ -315,6 +322,13 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
 
         <div className="min-w-0">
           {activeTab === 'oversikt' ? <OverviewPanel rep={rep} profile={profile} /> : null}
+
+          <div
+            className={cn('min-w-0', activeTab !== 'stemmer' && 'hidden')}
+            aria-hidden={activeTab !== 'stemmer'}
+          >
+            {stemmerContent}
+          </div>
 
           {activeTab === 'forslag' ? (
             <section className="rounded-2xl border border-border bg-card p-4 sm:p-6">
