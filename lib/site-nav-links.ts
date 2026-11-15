@@ -5,6 +5,7 @@ import {
   FileEdit,
   Lightbulb,
   MessagesSquare,
+  Scale,
   Search,
   Shield,
   UserRound,
@@ -62,6 +63,9 @@ export const isKalenderActive: NavIsActive = (pathname) =>
 export const isMinSideActive: NavIsActive = (pathname) =>
   pathname.startsWith(routes.minSide) || pathname.startsWith('/auth');
 
+export const isValgomatActive: NavIsActive = (pathname) =>
+  pathname === routes.valgomat || pathname.startsWith(`${routes.valgomat}/`);
+
 export const isOmOssActive: NavIsActive = (pathname) =>
   pathname === '/' || pathname === routes.home;
 
@@ -118,6 +122,13 @@ export const extendedNavItems: SiteNavLinkItem[] = [
     href: routes.innsikt,
     icon: BarChart2,
     isActive: isInnsiktActive,
+    loginRequired: true,
+  },
+  {
+    title: 'Valgomat',
+    href: routes.valgomat,
+    icon: Scale,
+    isActive: isValgomatActive,
     loginRequired: true,
   },
   {

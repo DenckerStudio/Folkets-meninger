@@ -2,7 +2,7 @@ import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 
 export type PartyStance = 'for' | 'mot';
 
-const PARTY_LABELS: Record<string, string> = {
+export const PARTY_LABELS: Record<string, string> = {
   A: 'Arbeiderpartiet',
   H: 'Høyre',
   FrP: 'Fremskrittspartiet',
@@ -48,10 +48,9 @@ export function formatVoteringRagSummary(
   ].join('\n');
 }
 
-export async function fetchVoteringRagSummaryText(
+export async function fetchPartyStancesForVoteringId(
   voteringId: string,
-  tema: string,
-): Promise<string | null> {
+): Promise<Record<string, PartyStance> | null> {
   const url = `https://data.stortinget.no/eksport/voteringsresultat?voteringid=${encodeURIComponent(voteringId)}&format=json`;
   const res = await fetch(url, { signal: AbortSignal.timeout(45_000) });
   if (!res.ok) return null;
@@ -65,6 +64,15 @@ export async function fetchVoteringRagSummaryText(
     })) ?? [];
   const stances = aggregatePartyStancesFromVoteringRows(rows.filter((r) => r.partiId));
   if (Object.keys(stances).length === 0) return null;
+  return stances;
+}
+
+export async function fetchVoteringRagSummaryText(
+  voteringId: string,
+  tema: string,
+): Promise<string | null> {
+  const stances = await fetchPartyStancesForVoteringId(voteringId);
+  if (!stances) return null;
   return formatVoteringRagSummary(voteringId, tema, stances);
 }
 

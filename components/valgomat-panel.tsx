@@ -2,138 +2,145 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { ValgomatConsentPrompt } from '@/components/valgomat/valgomat-consent-prompt';
 import { routes } from '@/lib/routes';
+import { parseValgomatApiResponse } from '@/lib/valgomat/api-client';
+import { VALGOMAT_SMALL_SAMPLE_COMPARABLE } from '@/lib/valgomat/alignment';
+import type { ValgomatPayload } from '@/lib/valgomat/types';
 
-type PartyScore = {
-  party: string;
-  agreement_percent: number;
-  compared_issues: number;
-};
-
-type ValgomatResponse = {
-  scores?: PartyScore[];
-  stance_count?: number;
-  vote_count?: number;
-  party_alignment_available?: boolean;
-  error?: string;
-};
+type FetchState =
+  | { status: 'loading' }
+  | { status: 'consent_required' }
+  | { status: 'error'; message: string }
+  | { status: 'ready'; data: ValgomatPayload };
 
 export function ValgomatPanel() {
-  const [scores, setScores] = useState<PartyScore[]>([]);
-  const [stanceCount, setStanceCount] = useState(0);
-  const [alignmentAvailable, setAlignmentAvailable] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<FetchState>({ status: 'loading' });
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
 
     fetch('/api/user/valgomat', { credentials: 'same-origin', cache: 'no-store' })
       .then(async (res) => {
-        const data = (await res.json()) as ValgomatResponse;
-        if (!res.ok) {
-          throw new Error(data.error ?? 'Kunne ikke laste Valgomat');
+        const data = (await res.json()) as ValgomatPayload & { error?: string; code?: string };
+        const parsed = parseValgomatApiResponse(res.status, data);
+        if (cancelled) return;
+        if (parsed.kind === 'consent_required') {
+          setState({ status: 'consent_required' });
+          return;
         }
-        if (cancelled) return;
-        setScores(data.scores ?? []);
-        setStanceCount(data.stance_count ?? data.vote_count ?? 0);
-        setAlignmentAvailable(data.party_alignment_available === true);
-        setError(null);
+        if (parsed.kind === 'error') {
+          setState({ status: 'error', message: parsed.message });
+          return;
+        }
+        setState({ status: 'ready', data: parsed.data });
       })
-      .catch((err: Error) => {
+      .catch(() => {
         if (cancelled) return;
-        setScores([]);
-        setStanceCount(0);
-        setError(err.message || 'Kunne ikke laste Valgomat');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+        setState({ status: 'error', message: 'Kunne ikke laste Valgomat' });
       });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadNonce]);
 
-  if (loading) {
-    return <p className="text-sm text-muted-foreground py-6 text-center">Beregner partiforslag…</p>;
-  }
+  const reload = () => {
+    setState({ status: 'loading' });
+    setReloadNonce((n) => n + 1);
+  };
 
-  if (error) {
+  if (state.status === 'loading') {
     return (
-      <div className="text-center py-8 space-y-2">
-        <p className="text-sm text-destructive">{error}</p>
-        <button
-          type="button"
-          onClick={() => {
-            setLoading(true);
-            setError(null);
-            window.location.reload();
-          }}
-          className="text-sm text-brand font-medium hover:text-brand/80"
-        >
-          Prøv igjen
-        </button>
-      </div>
+      <p role="status" className="py-6 text-center text-sm text-muted-foreground">
+        Laster…
+      </p>
     );
   }
 
-  if (stanceCount === 0) {
+  if (state.status === 'consent_required') {
+    return <ValgomatConsentPrompt compact onConsented={reload} />;
+  }
+
+  if (state.status === 'error') {
     return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">
-          Marker holdning (enig eller uenig) på minst noen saker for å se din Valgomat.
+      <ErrorRetryBlock message={state.message} onRetry={reload} />
+    );
+  }
+
+  const { data } = state;
+
+  if (data.stance_count === 0) {
+    return (
+      <div className="space-y-4 py-4 text-center">
+        <p className="text-sm text-muted-foreground">
+          Marker holdning (enig eller uenig) på saker for å se hjertesaker og partisamsvar.
         </p>
-        <Link href={routes.utforsk} className="mt-4 inline-block text-brand font-medium hover:text-brand/80">
+        <Link
+          href={routes.utforsk}
+          className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:text-brand/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+        >
           Utforsk saker →
         </Link>
       </div>
     );
   }
 
-  if (!alignmentAvailable || scores.length === 0) {
-    return (
-      <div className="space-y-4 py-4">
-        <div className="rounded-xl border border-brand/20 bg-brand/5 p-4 text-sm text-foreground">
-          Du har markert <strong>{stanceCount}</strong>{' '}
-          {stanceCount === 1 ? 'holdning' : 'holdninger'} (enig/uenig). Partisammenligning er klar i
-          produktet, men slått av inntil vi har ekte stemmedata per parti fra Stortinget — vi viser
-          ingen fiktive prosenter.
-        </div>
-        <p className="text-center text-sm text-muted-foreground">
-          Fortsett å markere holdninger. Når partidata er koblet, dukker Valgomaten opp automatisk her.
-        </p>
-        <Link
-          href={routes.utforsk}
-          className="block text-center text-sm font-medium text-brand hover:text-brand/80"
-        >
-          Utforsk flere saker →
-        </Link>
-      </div>
-    );
-  }
+  const top = data.partisamsvar[0];
 
   return (
     <div className="space-y-4">
-      <div className="bg-brand/5 border border-brand/20 rounded-xl p-4 text-sm text-foreground">
-        Basert på {stanceCount} holdninger sammenlignet med partivurdering per sak.
-      </div>
-      <ul className="space-y-3">
-        {scores.map((row) => (
-          <li key={row.party}>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="font-medium text-foreground">{row.party}</span>
-              <span className="text-muted-foreground">{row.agreement_percent}% enighet</span>
-            </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full bg-brand rounded-full"
-                style={{ width: `${row.agreement_percent}%` }}
-              />
-            </div>
-          </li>
-        ))}
-      </ul>
+      <p className="text-sm text-muted-foreground">
+        {data.stance_count} {data.stance_count === 1 ? 'holdning' : 'holdninger'} ·{' '}
+        {data.comparable_issue_count}{' '}
+        {data.comparable_issue_count === 1 ? 'sak' : 'saker'} med partivotering
+      </p>
+      {top ? (
+        <div className="rounded-xl border border-brand/20 bg-brand/5 p-4 text-sm">
+          <p className="font-medium text-foreground">{top.party_name}</p>
+          <p className="text-muted-foreground">
+            {top.matching} av {top.comparable} saker stemmer overens
+            {top.agreement_percent !== null ? ` (${top.agreement_percent} %)` : null}
+          </p>
+          {top.small_sample ? (
+            <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">
+              Lite grunnlag (færre enn {VALGOMAT_SMALL_SAMPLE_COMPARABLE} sammenlignbare saker)
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="space-y-3 text-sm text-muted-foreground">
+          <p>Ingen sammenlignbare partivoteringer ennå for sakene du har markert.</p>
+          <Link
+            href={routes.utforsk}
+            className="inline-flex min-h-11 items-center font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+          >
+            Utforsk saker →
+          </Link>
+        </div>
+      )}
+      <Link
+        href={routes.valgomat}
+        className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+      >
+        Åpne Valgomat →
+      </Link>
+    </div>
+  );
+}
+
+function ErrorRetryBlock({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div role="alert" className="space-y-2 py-6 text-center">
+      <p className="text-sm text-destructive">{message}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="min-h-11 px-3 text-sm font-medium text-brand hover:text-brand/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+      >
+        Prøv igjen
+      </button>
     </div>
   );
 }
