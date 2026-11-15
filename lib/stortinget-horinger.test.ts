@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   compareHoringerByInnspillDeadline,
   findHoringerForSak,
+  formatInnspillFristFromDays,
   formatHoringInnspillFristLabel,
   formatStortingetDate,
   getHoringApplicationDeadline,
@@ -90,6 +91,33 @@ assert.ok(
 );
 
 assert.ok(compareHoringerByInnspillDeadline(openSoon, openLater) < 0);
+
+const expiredOpen = {
+  id: 'expired',
+  horing_status: 'Aktiv',
+  innspillsfrist: '/Date(1609459200000+0100)/',
+};
+
+const noDeadlineOpen = {
+  id: 'no-deadline',
+  horing_status: 'Aktiv',
+};
+
+assert.ok(compareHoringerByInnspillDeadline(openSoon, expiredOpen) < 0);
+assert.ok(compareHoringerByInnspillDeadline(noDeadlineOpen, expiredOpen) < 0);
+
+const sortedByFrist = [expiredOpen, noDeadlineOpen, openSoon, openLater].sort(
+  compareHoringerByInnspillDeadline,
+);
+assert.deepEqual(
+  sortedByFrist.map((h) => h.id),
+  ['open-soon', 'open-later', 'no-deadline', 'expired'],
+);
+
+assert.equal(formatInnspillFristFromDays(0), 'Frist i dag');
+assert.equal(formatInnspillFristFromDays(1), 'Frist i morgen');
+assert.equal(formatInnspillFristFromDays(2), 'Frist om 2 dager');
+assert.equal(formatInnspillFristFromDays(-1), 'Fristen har gått ut');
 
 assert.equal(isHoringInnspillDeadlineWithinDays(openSoon, 2000), true);
 assert.equal(isHoringInnspillDeadlineWithinDays(openSoon, 7), false);

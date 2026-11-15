@@ -37,6 +37,7 @@ import {
   normalizeStortingetUrl,
 } from '@/lib/stortinget-horinger';
 import { resolveHearingCommentAuthor } from '@/lib/identity/public-identity';
+import { isHearingDeadlineAlertsEnabled } from '@/lib/hearing-deadline-alerts-flag';
 import { loadHearingUserInterest } from '@/lib/hearing-interest/service';
 import { getUser } from '@/lib/supabase-server';
 import { routes } from '@/lib/routes';
@@ -125,6 +126,7 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
         draftOpened: false,
       }))
     : { following: false, draftOpened: false };
+  const deadlineAlertsEnabled = isHearingDeadlineAlertsEnabled();
   const innspillDeadline = getHoringInnspillDeadline(hearing);
   const applicationDeadline = getHoringApplicationDeadline(hearing);
   const startDate = getHoringStartDate(hearing);
@@ -392,6 +394,7 @@ export default async function HoringDetailPage({ params }: { params: Promise<{ i
           <HearingCommentForm
             stortingetHearingId={String(hearing.id)}
             initialFollowing={hearingInterest.following}
+            deadlineAlertsEnabled={deadlineAlertsEnabled}
           />
         ) : (
           <p className="text-sm text-muted-foreground text-center py-4 rounded-xl border border-border bg-muted/20">

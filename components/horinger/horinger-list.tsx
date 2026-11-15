@@ -105,8 +105,8 @@ export default function HoringerList({ hearings }: HoringerListProps) {
         </div>
       </div>
 
-      <SurfaceCard className="mb-6 flex flex-col gap-4 p-4 md:flex-row">
-        <div className="relative flex-grow">
+      <SurfaceCard className="mb-6 grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="relative lg:col-span-2">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
             <Search className="h-4 w-4 text-muted-foreground" />
           </div>
@@ -171,7 +171,7 @@ export default function HoringerList({ hearings }: HoringerListProps) {
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortOption)}
           aria-label="Sorter høringer"
-          className={dashboardControlClass('md:w-52')}
+          className={dashboardControlClass('md:col-span-2 lg:col-span-1')}
         >
           <option value="relevant">Mest relevant</option>
           <option value="frist">Nærmeste frist</option>
