@@ -33,6 +33,7 @@ import { SakPageTabs } from '@/components/sak/sak-page-tabs';
 import { ImpactCalculator } from '@/components/sak/impact-calculator';
 import { AlignmentScore } from '@/components/sak/alignment-score';
 import { KnowledgeQuiz } from '@/components/sak/knowledge-quiz';
+import { SimilarIssuesSection } from '@/components/sak/similar-issues-section';
 import { SakMeningerSection } from '@/components/sak/sak-meninger-section';
 import { StortingetPollAdminSection } from '@/components/sak/stortinget-poll-admin-section';
 import StanceSection from './stance-section';
@@ -558,6 +559,8 @@ export default async function SakPage({
                 ))}
               </div>
             ) : null}
+
+            <SimilarIssuesSection sakId={sak.id} />
 
             {relaterteSaker.length > 0 ? (
               <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
