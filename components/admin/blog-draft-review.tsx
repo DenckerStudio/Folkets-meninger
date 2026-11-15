@@ -287,7 +287,7 @@ export function BlogDraftReview() {
             ) : null}
             {editingId === draft.id ? (
               <BlogDraftEditPanel
-                key={draft.id}
+                key={`${draft.id}:${draft.updatedAt ?? '0'}`}
                 draft={{
                   id: draft.id,
                   title: draft.title,

@@ -145,7 +145,8 @@ export async function POST(request: Request, context: RouteContext) {
   });
 
   if (!built.ok) {
-    return NextResponse.json({ error: built.code, message: built.error }, { status: 400 });
+    const status = built.code === 'llm_timeout' ? 504 : 400;
+    return NextResponse.json({ error: built.code, message: built.error }, { status });
   }
 
   const result = await createBlogDraft(built.input);

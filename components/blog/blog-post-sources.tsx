@@ -1,4 +1,6 @@
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import type { BlogPostSourcePublic } from '@/lib/blog/types';
+import { cn } from '@/lib/utils';
 
 type BlogPostSourcesProps = {
   sources: readonly BlogPostSourcePublic[];
@@ -26,7 +28,10 @@ export function BlogPostSources({ sources }: BlogPostSourcesProps) {
                 href={source.url}
                 rel="noopener noreferrer"
                 target="_blank"
-                className="text-sm font-medium text-[#00205b] underline underline-offset-2 hover:text-[#ba0c2f]"
+                className={cn(
+                  'block max-w-full break-all text-sm font-medium text-[#00205b] underline underline-offset-2 [overflow-wrap:anywhere] hover:text-[#ba0c2f]',
+                  VURDER_FOCUS_RING,
+                )}
               >
                 {source.url}
               </a>

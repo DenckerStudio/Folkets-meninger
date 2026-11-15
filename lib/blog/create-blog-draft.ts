@@ -2,7 +2,12 @@ import {
   researchTopicBriefOutputSchema,
   type ResearchTopicBriefOutput,
 } from '@/lib/admin/research/topic-brief-schema';
-import { generateWithAnswerLlm, isAnswerLlmConfigured } from '@/lib/blog/answer-llm';
+import {
+  generateWithAnswerLlm,
+  isAnswerLlmConfigured,
+  isAnswerLlmTimeoutError,
+  resolveBlogDraftAnswerLlmTimeoutMs,
+} from '@/lib/blog/answer-llm';
 import { sanitizeBlogDraftBodyMarkdown } from '@/lib/blog/blog-draft-body';
 import {
   blogDraftSourcesToCms,
@@ -23,7 +28,16 @@ import {
 
 export type BuildResearchTopicBlogDraftResult =
   | { ok: true; input: CreateBlogDraftInput; sourcesUsed: BlogDraftSource[] }
-  | { ok: false; error: string; code: 'missing_topic_title' | 'invalid_output' | 'empty_body' | 'invalid_slug' };
+  | {
+      ok: false;
+      error: string;
+      code:
+        | 'missing_topic_title'
+        | 'invalid_output'
+        | 'empty_body'
+        | 'invalid_slug'
+        | 'llm_timeout';
+    };
 
 function buildLlmPrompt(args: {
   title: string;
@@ -69,9 +83,15 @@ async function generateBlogBodyWithLlm(args: {
   if (!isAnswerLlmConfigured() || args.sources.length === 0) return null;
   try {
     const prompt = buildLlmPrompt(args);
-    const raw = await generateWithAnswerLlm(prompt, args.fetchImpl);
+    const raw = await generateWithAnswerLlm(prompt, {
+      fetchImpl: args.fetchImpl,
+      timeoutMs: resolveBlogDraftAnswerLlmTimeoutMs(),
+    });
     return sanitizeBlogDraftBodyMarkdown(raw);
   } catch (error) {
+    if (isAnswerLlmTimeoutError(error)) {
+      throw error;
+    }
     console.error('[blog] ANSWER_LLM generering feilet', error);
     return null;
   }
@@ -101,12 +121,24 @@ export async function buildResearchTopicBlogDraftWithSources(args: {
   );
   const sources = collected.sources;
 
-  const llmBody = await generateBlogBodyWithLlm({
-    title,
-    brief: parsed.data,
-    sources,
-    fetchImpl: args.fetchImpl,
-  });
+  let llmBody: string | null = null;
+  try {
+    llmBody = await generateBlogBodyWithLlm({
+      title,
+      brief: parsed.data,
+      sources,
+      fetchImpl: args.fetchImpl,
+    });
+  } catch (error) {
+    if (isAnswerLlmTimeoutError(error)) {
+      return {
+        ok: false,
+        error: 'Tekstgenerering tok for lang tid (over 110 s). Prøv igjen uten LLM eller senere.',
+        code: 'llm_timeout',
+      };
+    }
+    throw error;
+  }
 
   const includeBriefSources = sources.length === 0;
   let body_md =

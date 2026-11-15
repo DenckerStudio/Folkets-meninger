@@ -1,8 +1,15 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, useTransition } from 'react';
-import { BlogMarkdown } from '@/components/blog/blog-markdown';
+import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
+import { BlogArticleBody } from '@/components/blog/blog-article-body';
+import { BlogPostSources } from '@/components/blog/blog-post-sources';
 import { CharacterCountTextarea } from '@/components/ui/character-count-textarea';
+import { finalizeBlogDraftBodyWithSources } from '@/lib/blog/blog-citations';
+import {
+  blogCitationMapFromPostSources,
+  mapEditorRowsToPublicSources,
+  mapPayloadSourcesToPublic,
+} from '@/lib/blog/public-post-sources';
 import type { BlogDraftEditSaved, BlogDraftSourceEditRow } from '@/lib/admin/blog-draft-edit';
 import { blogDraftSourcesEditSchema, editRowsFromCmsSources } from '@/lib/admin/blog-draft-source-edit';
 import {
@@ -119,6 +126,9 @@ export function BlogDraftEditPanel({
   const [bodyPane, setBodyPane] = useState<BodyPane>('skriv');
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [citationBaseline, setCitationBaseline] = useState(
+    () => draft.sources ?? [],
+  );
 
   const title = dirtyFields?.title ?? draft.title;
   const excerpt = dirtyFields?.excerpt ?? draft.excerpt;
@@ -189,6 +199,7 @@ export function BlogDraftEditPanel({
             excerpt: excerpt.trim(),
             bodyMarkdown,
             sources: payloadSources,
+            previous_cms_sources: citationBaseline,
           }),
         });
         const data = (await res.json().catch(() => ({}))) as {
@@ -229,6 +240,7 @@ export function BlogDraftEditPanel({
         setSourcesDirty(false);
         setSourceFieldErrors({});
         if (data.draft && typeof data.draft.id === 'string') {
+          setCitationBaseline(data.draft.sources);
           onSaved(data.draft);
           return;
         }
@@ -273,6 +285,21 @@ export function BlogDraftEditPanel({
 
   const titleTrimmedLength = title.trim().length;
   const bodyTrimmedLength = bodyMarkdown.trim().length;
+
+  const previewSources = useMemo(
+    () => mapEditorRowsToPublicSources(stripSourceRowIds(sourceRows)),
+    [sourceRows],
+  );
+
+  const previewBodyMarkdown = useMemo(() => {
+    const previousPublic = mapPayloadSourcesToPublic(citationBaseline);
+    return finalizeBlogDraftBodyWithSources(bodyMarkdown, previousPublic, previewSources);
+  }, [bodyMarkdown, citationBaseline, previewSources]);
+
+  const previewCitationMap = useMemo(
+    () => blogCitationMapFromPostSources(previewSources),
+    [previewSources],
+  );
 
   return (
     <section
@@ -433,8 +460,14 @@ export function BlogDraftEditPanel({
             >
               <p className="text-xs font-medium text-muted-foreground">Forhåndsvisning</p>
               <div className="mt-2 max-w-full overflow-x-auto">
-                {bodyMarkdown.trim() ? (
-                  <BlogMarkdown markdown={bodyMarkdown} />
+                {previewBodyMarkdown.trim() ? (
+                  <div className="mx-auto max-w-[375px] space-y-6 sm:max-w-none">
+                    <BlogArticleBody
+                      markdown={previewBodyMarkdown}
+                      citationSources={previewCitationMap}
+                    />
+                    <BlogPostSources sources={previewSources} />
+                  </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">Ingen brødtekst å vise ennå.</p>
                 )}
