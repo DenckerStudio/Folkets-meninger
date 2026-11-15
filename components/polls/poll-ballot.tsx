@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
+import { formatStemmerCount } from '@/lib/norwegian-plural';
 import { POLL_ENDED_USER_MESSAGE } from '@/lib/polls/format';
 import { PollDistributionAwaitingAggregateNote } from '@/components/polls/poll-distribution-awaiting-aggregate';
 import {
@@ -97,6 +98,9 @@ export function PollBallot({
           compact={compact}
           className={compact ? 'mt-0' : 'mt-4'}
         />
+      ) : null}
+      {votingOpen && compact && !hasVoted ? (
+        <p className="mt-2 text-sm text-muted-foreground">{formatStemmerCount(totals.total)}</p>
       ) : null}
       {votingOpen && shouldShowPollDistributionAwaitingNote(votingOpen, hasVoted, totals) ? (
         <PollDistributionAwaitingAggregateNote className={compact ? 'mt-2' : 'mt-3'} />

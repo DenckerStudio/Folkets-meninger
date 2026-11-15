@@ -7,7 +7,7 @@ import {
   pollBallotVoteButtonSelectedRing,
 } from '@/lib/polls/ballot-buttons';
 import { pollChoiceLabel } from '@/lib/polls/labels';
-import { pollBallotPercents } from '@/lib/polls/format';
+import { formatPollBallotPercentDisplay, pollBallotPercents } from '@/lib/polls/format';
 import {
   BALLOT_SEGMENT_MIN_WIDTH_REM,
   ballotSegmentFlexGrow,
@@ -74,7 +74,7 @@ function SegmentContent({ choice, showNumbers, count, percent }: SegmentContentP
       <span className="text-xs font-bold sm:text-sm">{label}</span>
       {showNumbers && percent != null ? (
         <span className="w-full text-center text-[0.65rem] font-normal leading-snug opacity-95 sm:text-xs">
-          <span className="block break-words">{percent} %</span>
+          <span className="block break-words">{formatPollBallotPercentDisplay(percent)}</span>
           <span className="block break-words">{count}</span>
         </span>
       ) : null}

@@ -1,5 +1,5 @@
 import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
-import type { PollTotals } from '@/lib/polls/types';
+import type { PollFylkeTotals, PollTotals } from '@/lib/polls/types';
 
 export const POLL_DISTRIBUTION_AWAITING_AGGREGATE_MESSAGE =
   'Fordelingen vises når minst 5 har stemt.';
@@ -38,4 +38,34 @@ export function redactPollTotalsForViewer(
 ): PollTotals {
   if (pollDistributionRevealAllowed(votingOpen, hasVoted, totals)) return totals;
   return { ja: 0, nei: 0, blank: 0, total: totals.total };
+}
+
+/** Skjuler per-valg per fylke på åpne avstemninger for ikke-stemmere; k≥5 per rad når synlig. */
+export function redactPollFylkeTotalsForViewer(
+  rows: PollFylkeTotals[],
+  votingOpen: boolean,
+  hasVoted: boolean,
+): PollFylkeTotals[] {
+  const mayReveal = pollDistributionMayReveal(votingOpen, hasVoted);
+  if (!mayReveal) {
+    return rows.map((row) => ({
+      ...row,
+      ja: null,
+      nei: null,
+      blank: null,
+      sufficientData: false,
+    }));
+  }
+  return rows.map((row) => {
+    if (!row.sufficientData || !publicAggregateMeetsThreshold(row.total)) {
+      return {
+        ...row,
+        ja: null,
+        nei: null,
+        blank: null,
+        sufficientData: false,
+      };
+    }
+    return row;
+  });
 }

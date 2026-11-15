@@ -1,4 +1,4 @@
-import { pollChoicePercent } from '@/lib/polls/format';
+import { formatPollBallotPercentDisplay, pollChoicePercent } from '@/lib/polls/format';
 import { ballotShouldShowDistribution } from '@/lib/polls/ballot-distribution-layout';
 import { POLL_BALLOT_CHOICES, pollChoiceLabel } from '@/lib/polls/labels';
 import { shouldShowPollDistributionAwaitingNote } from '@/lib/polls/poll-distribution-reveal';
@@ -38,7 +38,7 @@ export function PollChoiceResultTiles({
           >
             <p className="text-xs font-medium text-muted-foreground">{pollChoiceLabel(choice)}</p>
             <p className="text-base font-semibold tabular-nums text-foreground">
-              {pct != null ? `${pct} %` : '—'}
+              {pct != null ? formatPollBallotPercentDisplay(pct) : '—'}
             </p>
             {pct != null ? (
               <p className="text-xs tabular-nums text-muted-foreground">{totals[choice]}</p>

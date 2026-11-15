@@ -48,8 +48,18 @@ const root = process.cwd();
 const surfaceChecks: Array<{ file: string; pattern: RegExp; hint: string }> = [
   {
     file: 'app/api/polls/route.ts',
-    pattern: /redactPollTotalsForViewer\(totals,\s*isPollVotingOpen\(poll\),\s*hasVoted\)/,
-    hint: 'GET /api/polls',
+    pattern: /redactPollTotalsForViewer\(totals,\s*votingOpen,\s*hasVoted\)/,
+    hint: 'GET /api/polls totals',
+  },
+  {
+    file: 'app/api/polls/route.ts',
+    pattern: /redactPollFylkeTotalsForViewer\(byFylke,\s*votingOpen,\s*hasVoted\)/,
+    hint: 'GET /api/polls byFylke',
+  },
+  {
+    file: 'app/dashboard/avstemninger/[id]/page.tsx',
+    pattern: /redactPollFylkeTotalsForViewer\(byFylke,\s*votingOpen,\s*voteState\.hasVoted\)/,
+    hint: 'poll detail byFylke',
   },
   {
     file: 'components/polls/poll-ballot.tsx',

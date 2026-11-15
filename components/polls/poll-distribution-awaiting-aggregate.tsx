@@ -9,7 +9,7 @@ export function PollDistributionAwaitingAggregateNote({
   className,
 }: PollDistributionAwaitingAggregateNoteProps) {
   return (
-    <p className={cn('text-sm text-muted-foreground', className)} role="status">
+    <p className={cn('text-sm text-muted-foreground', className)}>
       {POLL_DISTRIBUTION_AWAITING_AGGREGATE_MESSAGE}
     </p>
   );

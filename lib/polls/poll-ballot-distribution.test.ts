@@ -36,6 +36,13 @@ if (pollCardSrc.includes('showResultsBeforeVote')) {
 if (!pollCardSrc.includes('showOpenStemCountOnly')) {
   throw new Error('poll card shows stem count when open and not voted');
 }
+if (!pollBallotSrc.includes('compact && !hasVoted')) {
+  throw new Error('compact poll ballot shows stem count for open non-voters');
+}
+const serviceSrc = readFileSync(join(process.cwd(), 'lib/polls/service.ts'), 'utf8');
+if (!serviceSrc.includes('getUserHasVotedOnPolls: SUPABASE_SERVICE_ROLE_KEY mangler')) {
+  throw new Error('getUserHasVotedOnPolls warns when service role missing');
+}
 if (!pollCardSrc.includes('PollDistributionAwaitingAggregateNote')) {
   throw new Error('poll card shows awaiting aggregate note below k');
 }

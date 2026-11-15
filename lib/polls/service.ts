@@ -390,12 +390,21 @@ export async function getSharePagePollById(
   return mapPollRow(data as PollRow);
 }
 
+let loggedMissingServiceRoleForHasVotedBatch = false;
+
 /** Én spørring for «har brukeren stemt?» på flere avstemninger (PollCard-lister). */
 export async function getUserHasVotedOnPolls(
   userId: string,
   pollIds: string[],
 ): Promise<Set<string>> {
-  if (!pollIds.length || !process.env.SUPABASE_SERVICE_ROLE_KEY) return new Set();
+  if (!pollIds.length) return new Set();
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    if (!loggedMissingServiceRoleForHasVotedBatch) {
+      console.warn('[polls] getUserHasVotedOnPolls: SUPABASE_SERVICE_ROLE_KEY mangler');
+      loggedMissingServiceRoleForHasVotedBatch = true;
+    }
+    return new Set();
+  }
   const service = getServiceSupabase();
   const { data, error } = await service
     .from('poll_vote_receipts')

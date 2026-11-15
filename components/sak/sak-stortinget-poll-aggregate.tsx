@@ -52,8 +52,6 @@ export async function SakStortingetPollAggregate({ sakId }: SakStortingetPollAgg
   const ballotTotals = publicPollBallotInitialTotals(totals, votingOpen, hasVoted);
   const showDistribution = pollDistributionRevealAllowed(votingOpen, hasVoted, totals);
   const showAwaitingNote = shouldShowPollDistributionAwaitingNote(votingOpen, hasVoted, totals);
-  const showOpenStemCountOnly = votingOpen && !hasVoted;
-
   const srSummary = showDistribution
     ? `Avstemningsresultat på Folkets Meninger, ${formatStemmerCount(totals.total)}`
     : `${formatStemmerCount(totals.total)} på avstemningen`;
@@ -95,8 +93,6 @@ export async function SakStortingetPollAggregate({ sakId }: SakStortingetPollAgg
         </>
       ) : showAwaitingNote ? (
         <PollDistributionAwaitingAggregateNote className="mt-4" />
-      ) : showOpenStemCountOnly ? (
-        <p className="mt-4 text-sm text-muted-foreground">{formatStemmerCount(totals.total)}</p>
       ) : (
         <p className="mt-4 text-sm text-muted-foreground">{formatStemmerCount(totals.total)}</p>
       )}

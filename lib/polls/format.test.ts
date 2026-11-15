@@ -1,4 +1,9 @@
-import { emptyPollTotals, pollChoicePercent, isPollVotingOpen } from '@/lib/polls/format';
+import {
+  emptyPollTotals,
+  formatPollBallotPercentDisplay,
+  pollChoicePercent,
+  isPollVotingOpen,
+} from '@/lib/polls/format';
 import { POLL_BALLOT_CHOICES, pollChoiceLabel, pollTrackLabel } from '@/lib/polls/labels';
 import { isNorwayCountyCode } from '@/lib/polls/norway-counties';
 import type { PollTotals } from '@/lib/polls/types';
@@ -46,5 +51,6 @@ assert(pollTrackLabel('system') === 'Systemgenerert', 'system track');
 assert(pollTrackLabel('stortinget') === 'Stortinget', 'stortinget track');
 assert(isNorwayCountyCode('03'), 'oslo code');
 assert(!isNorwayCountyCode('99'), 'invalid code');
+assert(formatPollBallotPercentDisplay(12) === '12 %', 'percent display');
 
 console.log('polls format tests OK');

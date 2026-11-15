@@ -1,3 +1,4 @@
+import { formatPollBallotPercentDisplay } from '@/lib/polls/format';
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import { POLL_BALLOT_CHOICES } from '@/lib/polls/labels';
 import { pollDistributionRevealAllowed } from '@/lib/polls/poll-distribution-reveal';
@@ -39,7 +40,9 @@ export function formatPollBallotDistributionSummary(
 
   const parts = POLL_BALLOT_CHOICES.map((choice) => {
     const pct = percents[choice];
-    return pct != null ? `${pollChoiceLabel(choice)} ${pct} %` : pollChoiceLabel(choice);
+    return pct != null
+      ? `${pollChoiceLabel(choice)} ${formatPollBallotPercentDisplay(pct)}`
+      : pollChoiceLabel(choice);
   });
   const stemmer = totals.total === 1 ? '1 stemme' : `${totals.total} stemmer`;
   return `${parts.join(', ')}, ${stemmer}`;

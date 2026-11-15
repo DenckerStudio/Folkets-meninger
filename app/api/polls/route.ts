@@ -12,7 +12,10 @@ import {
   listOpenPolls,
 } from '@/lib/polls/service';
 import type { PollChoice } from '@/lib/polls/types';
-import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
+import {
+  redactPollFylkeTotalsForViewer,
+  redactPollTotalsForViewer,
+} from '@/lib/polls/poll-distribution-reveal';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,13 +52,14 @@ export async function GET(request: Request) {
     userVote = voteState.vote;
   }
 
+  const votingOpen = isPollVotingOpen(poll);
   return NextResponse.json({
     poll,
-    totals: redactPollTotalsForViewer(totals, isPollVotingOpen(poll), hasVoted),
-    byFylke,
+    totals: redactPollTotalsForViewer(totals, votingOpen, hasVoted),
+    byFylke: redactPollFylkeTotalsForViewer(byFylke, votingOpen, hasVoted),
     hasVoted,
     userVote,
-    votingOpen: isPollVotingOpen(poll),
+    votingOpen,
   });
 }
 
