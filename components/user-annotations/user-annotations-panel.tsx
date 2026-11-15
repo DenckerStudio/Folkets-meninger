@@ -1,98 +1,74 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { X } from 'lucide-react';
 import { Drawer } from '@/components/ui/drawer';
+import { Button } from '@/components/ui/button';
 import { useUserAnnotations } from '@/components/user-annotations/user-annotation-context';
+import { UserAnnotationsPanelContent } from '@/components/user-annotations/user-annotations-panel-content';
+import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { cn } from '@/lib/utils';
 
-function AnnotationEditor({
-  id,
-  initialNote,
-  quote,
-  onSaved,
-  onDeleted,
+const FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2';
+
+function DesktopAnnotationsPanel({
+  open,
+  onClose,
 }: {
-  id: string;
-  initialNote: string | null;
-  quote: string;
-  onSaved: () => void;
-  onDeleted: () => void;
+  open: boolean;
+  onClose: () => void;
 }) {
-  const ctx = useUserAnnotations();
-  const textareaId = useId();
-  const [note, setNote] = useState(initialNote ?? '');
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
-
-  const save = async () => {
-    if (!ctx) return;
-    setBusy(true);
-    setMessage('');
-    const ok = await ctx.updateNote(id, note.trim() || null);
-    setBusy(false);
-    if (!ok) {
-      setMessage('Kunne ikke lagre notatet.');
-      return;
-    }
-    onSaved();
-  };
-
-  const remove = async () => {
-    if (!ctx) return;
-    setBusy(true);
-    const ok = await ctx.removeAnnotation(id);
-    setBusy(false);
-    if (!ok) {
-      setMessage('Kunne ikke slette.');
-      return;
-    }
-    onDeleted();
-  };
+  const reducedMotion = usePrefersReducedMotion();
 
   return (
-    <li className="rounded-lg border border-border bg-card p-3">
-      <p className="text-sm font-medium text-foreground">«{quote}»</p>
-      <label htmlFor={textareaId} className="mt-2 block text-xs font-medium text-muted-foreground">
-        Notat
-      </label>
-      <textarea
-        id={textareaId}
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        rows={3}
-        className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-      />
-      {message ? <p className="mt-1 text-xs text-destructive">{message}</p> : null}
-      <div className="mt-2 flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void save()}
-          className="inline-flex min-h-11 items-center rounded-md bg-brand px-3 text-sm font-medium text-brand-foreground"
-        >
-          Lagre
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void remove()}
-          className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm font-medium text-foreground"
-        >
-          Slett
-        </button>
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-brand hover:underline"
-          onClick={() => {
-            ctx?.setFocusAnnotationId(id);
-            const el = document.querySelector(`[data-annotation-id="${CSS.escape(id)}"]`);
-            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }}
-        >
-          Vis i tekst
-        </button>
-      </div>
-    </li>
+    <AnimatePresence>
+      {open ? (
+        <>
+          <motion.button
+            type="button"
+            className="fixed inset-0 z-[68] hidden bg-black/40 lg:block"
+            aria-label="Lukk notater"
+            onClick={onClose}
+            initial={reducedMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={reducedMotion ? undefined : { opacity: 0 }}
+          />
+          <motion.aside
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mine notater"
+            className="fixed inset-y-0 right-0 z-[69] hidden w-full max-w-md flex-col border-l border-border bg-background shadow-2xl lg:flex"
+            initial={reducedMotion ? false : { x: '100%' }}
+            animate={{ x: 0 }}
+            exit={reducedMotion ? undefined : { x: '100%' }}
+            transition={reducedMotion ? { duration: 0 } : { type: 'tween', duration: 0.25 }}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-4">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Mine notater</h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Private markeringer — bare synlig for deg.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={cn('min-h-11 min-w-11 shrink-0', FOCUS_RING)}
+                aria-label="Lukk"
+                onClick={onClose}
+              >
+                <X className="h-5 w-5" aria-hidden />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto overscroll-contain">
+              <UserAnnotationsPanelContent />
+            </div>
+          </motion.aside>
+        </>
+      ) : null}
+    </AnimatePresence>
   );
 }
 
@@ -100,30 +76,22 @@ export function UserAnnotationsPanel() {
   const ctx = useUserAnnotations();
   if (!ctx?.enabled) return null;
 
+  const close = () => ctx.setPanelOpen(false);
+
   return (
-  <Drawer
-      open={ctx.panelOpen}
-      onClose={() => ctx.setPanelOpen(false)}
-      title="Mine notater"
-      description="Private markeringer — bare synlig for deg."
-      className="max-h-[85vh]"
-    >
-      {ctx.annotations.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Du har ingen lagrede markeringer på denne siden ennå.</p>
-      ) : (
-        <ul className={cn('space-y-3 overflow-y-auto pb-4')}>
-          {ctx.annotations.map((row) => (
-            <AnnotationEditor
-              key={row.id}
-              id={row.id}
-              quote={row.quote}
-              initialNote={row.note}
-              onSaved={() => undefined}
-              onDeleted={() => undefined}
-            />
-          ))}
-        </ul>
-      )}
-    </Drawer>
+    <>
+      <div className="lg:hidden">
+        <Drawer
+          open={ctx.panelOpen}
+          onClose={close}
+          title="Mine notater"
+          description="Private markeringer — bare synlig for deg."
+          className="max-h-[85vh]"
+        >
+          <UserAnnotationsPanelContent className="px-2" />
+        </Drawer>
+      </div>
+      <DesktopAnnotationsPanel open={ctx.panelOpen} onClose={close} />
+    </>
   );
 }

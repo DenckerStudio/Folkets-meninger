@@ -1,39 +1,43 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { StickyNote } from 'lucide-react';
 import type { UserAnnotationTargetType } from '@/lib/user-annotations/types';
 import { UserAnnotationProvider, useUserAnnotations } from '@/components/user-annotations/user-annotation-context';
 import { UserAnnotationSelectionDialog } from '@/components/user-annotations/user-annotation-selection-dialog';
 import { UserAnnotationsPanel } from '@/components/user-annotations/user-annotations-panel';
+import { UserAnnotationSelectionCapture } from '@/components/user-annotations/user-annotation-selection-capture';
+import { UserAnnotationDraftToolbar } from '@/components/user-annotations/user-annotation-draft-toolbar';
+import { UserAnnotationToast } from '@/components/user-annotations/user-annotation-toast';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+const FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2';
 
 function UserAnnotationToolbar() {
   const ctx = useUserAnnotations();
-  useEffect(() => {
-    if (!ctx?.enabled) return;
-    void ctx.refresh();
-  }, [ctx]);
-
-  useEffect(() => {
-    if (!ctx?.enabled) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === 'm' && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault();
-        ctx.setPanelOpen(!ctx.panelOpen);
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [ctx]);
-
   if (!ctx?.enabled) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2 sm:bottom-6 sm:right-6">
-      <button
+    <div
+      className={cn(
+        'fixed z-[60]',
+        'bottom-[max(1rem,env(safe-area-inset-bottom,0px))]',
+        'right-[max(1rem,env(safe-area-inset-right,0px))]',
+        'max-sm:left-[max(1rem,env(safe-area-inset-left,0px))]',
+      )}
+    >
+      <Button
         type="button"
-        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-md hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        variant="outline"
+        className={cn(
+          'min-h-11 gap-2 rounded-full border-border bg-card px-4 shadow-md hover:bg-muted',
+          'max-sm:w-full max-sm:justify-center',
+          FOCUS_RING,
+        )}
         aria-haspopup="dialog"
+        aria-expanded={ctx.panelOpen}
         onClick={() => ctx.setPanelOpen(true)}
       >
         <StickyNote className="h-4 w-4" aria-hidden />
@@ -43,12 +47,14 @@ function UserAnnotationToolbar() {
             {ctx.annotations.length}
           </span>
         ) : null}
-      </button>
-      <p className="max-w-[14rem] text-right text-xs text-muted-foreground">
-        Marker tekst og velg lagre. Tast Ctrl+M (Cmd+M) for panelet.
-      </p>
+      </Button>
     </div>
   );
+}
+
+function UserAnnotationToastHost() {
+  const ctx = useUserAnnotations();
+  return <UserAnnotationToast toast={ctx?.toast ?? null} />;
 }
 
 export function UserAnnotationHost({
@@ -69,9 +75,12 @@ export function UserAnnotationHost({
   return (
     <UserAnnotationProvider enabled={enabled} targetType={targetType} targetId={targetId}>
       {children}
+      <UserAnnotationSelectionCapture />
+      <UserAnnotationDraftToolbar />
       <UserAnnotationToolbar />
       <UserAnnotationSelectionDialog />
       <UserAnnotationsPanel />
+      <UserAnnotationToastHost />
     </UserAnnotationProvider>
   );
 }

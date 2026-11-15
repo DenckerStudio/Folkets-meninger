@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useAnnotationContainerExpand } from '@/components/user-annotations/use-annotation-container-expand';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { motion } from 'motion/react';
 import { UserAnnotatableText } from '@/components/user-annotations/user-annotatable-text';
@@ -25,12 +26,14 @@ export default function ExpandableText({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const annotationCtx = useUserAnnotations();
+  const containerKey = containerKeyForTitle(title);
+  const expand = useCallback(() => setIsExpanded(true), []);
+  useAnnotationContainerExpand(containerKey, expand);
 
   if (!text) return null;
 
   const displayText = stripHtml(text);
   const isLong = displayText.length > maxLength;
-  const containerKey = containerKeyForTitle(title);
   const shown =
     !isExpanded && isLong ? `${displayText.slice(0, maxLength).trimEnd()}…` : displayText;
 

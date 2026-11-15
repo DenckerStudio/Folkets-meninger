@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useAnnotationContainerExpand } from '@/components/user-annotations/use-annotation-container-expand';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { UserAnnotatableText } from '@/components/user-annotations/user-annotatable-text';
 import { useUserAnnotations } from '@/components/user-annotations/user-annotation-context';
@@ -15,6 +16,8 @@ export function SakOfficialDescription({
   previewLength?: number;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const expand = useCallback(() => setExpanded(true), []);
+  useAnnotationContainerExpand('official_description', expand);
   const annotationCtx = useUserAnnotations();
   const description = text.trim();
   if (!description) return null;

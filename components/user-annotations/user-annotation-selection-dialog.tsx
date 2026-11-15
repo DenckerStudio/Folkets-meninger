@@ -2,7 +2,12 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { Dialog } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { useUserAnnotations } from '@/components/user-annotations/user-annotation-context';
+import { cn } from '@/lib/utils';
+
+const FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2';
 
 export function UserAnnotationSelectionDialog() {
   const ctx = useUserAnnotations();
@@ -58,7 +63,10 @@ export function UserAnnotationSelectionDialog() {
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={4}
-            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className={cn(
+              'mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground',
+              FOCUS_RING,
+            )}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
@@ -67,23 +75,28 @@ export function UserAnnotationSelectionDialog() {
             }}
           />
         </div>
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {error ? (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
         <div className="flex flex-wrap gap-2">
-          <button
+          <Button
             type="button"
-            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-foreground hover:bg-brand/90 disabled:opacity-60"
+            className={cn('min-h-11 bg-brand text-brand-foreground hover:bg-brand/90', FOCUS_RING)}
             disabled={saving}
             onClick={() => void save()}
           >
             {saving ? 'Lagrer…' : 'Lagre markering'}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 text-sm font-medium text-foreground hover:bg-muted"
+            variant="outline"
+            className={cn('min-h-11', FOCUS_RING)}
             onClick={close}
           >
             Avbryt
-          </button>
+          </Button>
         </div>
         <p className="text-xs text-muted-foreground">Hurtigtast: Ctrl+Enter (Cmd+Enter på Mac) for å lagre.</p>
       </div>

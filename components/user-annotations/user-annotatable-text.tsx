@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useId, useRef, type ReactNode } from 'react';
-import { buildHighlightSegments, captureSelectionInRoot } from '@/lib/user-annotations/selection';
+import { useId, useRef, type ReactNode } from 'react';
+import { buildHighlightSegments } from '@/lib/user-annotations/selection';
 import { cn } from '@/lib/utils';
 import { useUserAnnotations } from '@/components/user-annotations/user-annotation-context';
 
@@ -25,19 +25,6 @@ export function UserAnnotatableText({
   const enabled = ctx?.enabled ?? false;
   const marks = enabled ? ctx?.annotationsByContainer.get(containerKey) ?? [] : [];
 
-  const onMouseUp = useCallback(() => {
-    if (!ctx?.enabled || !rootRef.current) return;
-    const selection = window.getSelection();
-    if (!selection) return;
-    const captured = captureSelectionInRoot(rootRef.current, selection);
-    if (!captured) return;
-    ctx.setPending({
-      container_key: containerKey,
-      ...captured,
-    });
-    selection.removeAllRanges();
-  }, [containerKey, ctx]);
-
   const segments = buildHighlightSegments(text, marks);
 
   const content =
@@ -46,9 +33,10 @@ export function UserAnnotatableText({
       seg.highlighted ? (
         <mark
           key={`${seg.annotationId ?? 'hl'}-${idx}`}
+          tabIndex={seg.annotationId ? -1 : undefined}
           className={cn(
             'rounded-sm bg-amber-200/80 text-foreground dark:bg-amber-500/35',
-            ctx?.focusAnnotationId === seg.annotationId && 'ring-2 ring-brand ring-offset-1',
+            ctx?.focusAnnotationId === seg.annotationId && 'ring-2 ring-brand ring-offset-2',
           )}
           data-annotation-id={seg.annotationId}
         >
@@ -63,8 +51,7 @@ export function UserAnnotatableText({
     <Tag
       id={regionId}
       data-annotation-container={containerKey}
-      className={cn(enabled && 'select-text', className)}
-      onMouseUp={enabled ? onMouseUp : undefined}
+      className={cn(enabled && 'select-text touch-manipulation', className)}
       ref={(node) => {
         rootRef.current = node;
       }}
