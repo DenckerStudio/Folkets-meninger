@@ -50,4 +50,15 @@ const rscPayload = redactPublicFolkChoiceFields({ for: 4, against: 0, abstain: 0
 assert.equal(rscPayload.for, null);
 assert.equal(rscPayload.total, 4);
 
+const zeroPayload = redactPublicFolkChoiceFields({ for: 0, against: 0, abstain: 0, total: 0 });
+assert.equal(zeroPayload.for, 0);
+assert.equal(zeroPayload.against, 0);
+
+const zeroTool = redactPublicFolkForTool({
+  ...toolPublic,
+  folk: { for: 0, against: 0, abstain: 0, total: 0 },
+});
+assert.equal(zeroTool.belowPublicThreshold, false);
+assert.equal(zeroTool.folkBreakdownNote, null);
+
 console.log('lib/public-aggregate/folk-public-output.test.ts: ok');

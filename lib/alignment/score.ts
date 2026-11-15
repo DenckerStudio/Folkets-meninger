@@ -135,9 +135,8 @@ export function buildAlignmentComparison(
   const folkSide = folkPublic ? sideFromCounts(folk.for, folk.against) : 'tie';
 
   if (!votering) {
-    const pendingHeadline = folkTotal > 0 && !folkPublic
-      ? 'Stortinget har ikke votert i saken ennå. Historisk folkemening vises når nok anonyme stemmer er samlet.'
-      : folkTotal > 0 && folkPublic
+    const pendingHeadline =
+      folkTotal > 0 && folkPublic
         ? `${folkForPercent} % av brukerne stemte For. Stortinget har ikke votert i saken ennå.`
         : 'Stortinget har ikke votert i saken ennå.';
     return {

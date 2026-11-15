@@ -86,8 +86,10 @@ export async function GET(request: Request) {
       try {
         const overview = await buildWeeklyOverview();
         const pageUrl = `${origin}/denne-uka`;
-        weeklyOverviewPlainBlock = buildWeeklyOverviewDigestPlainBlock(overview, pageUrl);
-        weeklyOverviewHtmlBlock = buildWeeklyOverviewDigestHtmlBlock(weeklyOverviewPlainBlock, pageUrl);
+        weeklyOverviewPlainBlock = buildWeeklyOverviewDigestPlainBlock(overview);
+        if (weeklyOverviewPlainBlock) {
+          weeklyOverviewHtmlBlock = buildWeeklyOverviewDigestHtmlBlock(pageUrl, overview);
+        }
       } catch (overviewError) {
         console.error('Cron digest: weekly overview block failed', overviewError);
       }

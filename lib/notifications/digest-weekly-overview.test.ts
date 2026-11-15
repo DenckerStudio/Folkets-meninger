@@ -4,6 +4,7 @@ import {
   buildWeeklyOverviewDigestPlainBlock,
   isWeeklyOverviewDigestEnabled,
   mergeWeeklyOverviewIntoDigestBody,
+  weeklyOverviewHasDigestContent,
 } from './digest';
 import { buildEmptyWeeklyOverview } from '@/lib/weekly-overview';
 
@@ -20,24 +21,45 @@ if (original === undefined) {
   process.env.WEEKLY_OVERVIEW_DIGEST_ENABLED = original;
 }
 
-const overview = buildEmptyWeeklyOverview(new Date('2026-11-15T12:00:00.000Z'));
-const pageUrl = 'https://www.folkets-meninger.no/denne-uka';
-const plain = buildWeeklyOverviewDigestPlainBlock(overview, pageUrl);
+const emptyOverview = buildEmptyWeeklyOverview(new Date('2026-11-15T12:00:00.000Z'));
+assert.equal(weeklyOverviewHasDigestContent(emptyOverview), false);
+assert.equal(buildWeeklyOverviewDigestPlainBlock(emptyOverview), null);
 
+const overview = {
+  ...emptyOverview,
+  votingSoon: [
+    {
+      issueId: '200501',
+      title: 'Test',
+      href: '/dashboard/sak/200501',
+      votingClosesAt: null,
+      daysLeftLabel: '2 dager',
+    },
+  ],
+};
+assert.equal(weeklyOverviewHasDigestContent(overview), true);
+
+const pageUrl = 'https://www.folkets-meninger.no/denne-uka';
+const plain = buildWeeklyOverviewDigestPlainBlock(overview);
+assert.ok(plain);
 assert.match(plain, /Dette skjer nå/);
 assert.match(plain, /Siste 7 dager/);
 assert.match(plain, /Neste 7 dager/);
-assert.match(plain, /denne-uka/);
+assert.match(plain, /nær votering \(Neste 7 dager /);
+assert.doesNotMatch(plain, /neste 7 dager/);
+assert.doesNotMatch(plain, /https?:\/\//);
 assert.doesNotMatch(plain, /• 0 /);
 assert.doesNotMatch(plain, /spørsmålstekst/i);
+assert.match(plain, /«Dette skjer nå»/);
 
 const merged = mergeWeeklyOverviewIntoDigestBody('Varsellinje', plain);
 assert.match(merged, /Varsellinje/);
 assert.match(merged, /Dette skjer nå/);
 assert.equal(mergeWeeklyOverviewIntoDigestBody('Kun varsler', null), 'Kun varsler');
 
-const html = buildWeeklyOverviewDigestHtmlBlock(plain, pageUrl);
-assert.match(html, /Åpne ukeoversikten/);
+const html = buildWeeklyOverviewDigestHtmlBlock(pageUrl, overview);
+assert.match(html, /Åpne «Dette skjer nå»/);
 assert.match(html, /folkets-meninger\.no\/denne-uka/);
+assert.doesNotMatch(html, /Les hele ukeoversikten på siden/);
 
 console.log('lib/notifications/digest-weekly-overview.test.ts: ok');

@@ -103,7 +103,17 @@ export function WeeklyOverviewLoadError() {
       role="alert"
     >
       <p className="text-base font-semibold text-foreground">Kunne ikke laste ukeoversikten</p>
-      <p className="mt-2 text-sm text-muted-foreground">Prøv igjen senere.</p>
+      <p className="mt-2 text-sm text-muted-foreground">Prøv igjen senere, eller utforsk saker i mellomtiden.</p>
+      <Link
+        href={routes.utforsk}
+        className={cn(
+          touchTargetLinkClass,
+          focusRing,
+          'mt-4 inline-flex rounded-md text-sm font-medium text-brand underline-offset-2 hover:underline',
+        )}
+      >
+        Gå til Utforsk
+      </Link>
     </div>
   );
 }
@@ -124,7 +134,7 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
       <SectionShell
         id="votering-snart"
         title="Saker nær votering"
-        description={`Åpne saker med planlagt votering: ${overview.window.futureRangeLabel.toLowerCase()}.`}
+        description={`Åpne saker med planlagt votering: ${overview.window.futureRangeLabel}.`}
       >
         {overview.votingSoon.length === 0 ? (
           <EmptySectionMessage action={{ href: routes.utforsk, label: 'Utforsk saker' }}>
@@ -145,7 +155,7 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
       <SectionShell
         id="votering-nettopp"
         title="Nylig votert"
-        description={`Ferdig behandlet etter voteringsdato i saksgangen: ${overview.window.pastRangeLabel.toLowerCase()}.`}
+        description={`Ferdig behandlet etter voteringsdato i saksgangen: ${overview.window.pastRangeLabel}.`}
       >
         {overview.votedRecently.length === 0 ? (
           <EmptySectionMessage action={{ href: routes.utforsk, label: 'Se saker på Utforsk' }}>
@@ -166,7 +176,7 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
       <SectionShell
         id="horingsfrister"
         title="Åpne høringer med frist snart"
-        description={`Innspillsfrist: ${overview.window.futureRangeLabel.toLowerCase()} (Europe/Oslo).`}
+        description={`Innspillsfrist: ${overview.window.futureRangeLabel} (Europe/Oslo).`}
       >
         {overview.openHearings.length === 0 ? (
           <EmptySectionMessage action={{ href: routes.horinger, label: 'Se alle høringer' }}>
@@ -187,7 +197,7 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
       <SectionShell
         id="sammendrag"
         title="Oppdaterte sammendrag"
-        description={`Oppdatert sakssammendrag: ${overview.window.pastRangeLabel.toLowerCase()}.`}
+        description={`Oppdatert sakssammendrag: ${overview.window.pastRangeLabel}.`}
       >
         {overview.newSummaries.length === 0 ? (
           <EmptySectionMessage action={{ href: routes.utforsk, label: 'Utforsk saker med sammendrag' }}>
@@ -218,7 +228,7 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
       <SectionShell
         id="skriftlige-sporsmal"
         title="Skriftlige spørsmål"
-        description={`Antall nye fra Stortinget ${overview.window.pastRangeLabel.toLowerCase()} — uten spørsmålstekst.`}
+        description={`Antall nye fra Stortinget ${overview.window.pastRangeLabel} — uten spørsmålstekst.`}
       >
         <div className="rounded-2xl border border-border bg-card px-4 py-6">
           <p className="text-base font-medium text-foreground">{overview.skriftligeSporsmal.label}</p>

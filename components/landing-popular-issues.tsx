@@ -14,7 +14,7 @@ export type LandingIssue = {
   summary: string;
   category: string;
   date: string;
-  votes: { for: number; against: number; total: number };
+  votes: { for: number | null; against: number | null; total: number };
 };
 
 type LandingPopularIssuesProps = {
@@ -52,9 +52,14 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 items-stretch">
           {issues.map((issue) => {
             const total = issue.votes.total;
-            const showPercents = total >= STANCE_PUBLIC_MIN_ENGAGED;
-            const forPercent = showPercents ? Math.round((issue.votes.for / total) * 100) : 0;
-            const againstPercent = showPercents ? Math.round((issue.votes.against / total) * 100) : 0;
+            const forCount = issue.votes.for;
+            const againstCount = issue.votes.against;
+            const showPercents =
+              total >= STANCE_PUBLIC_MIN_ENGAGED &&
+              forCount != null &&
+              againstCount != null;
+            const forPercent = showPercents ? Math.round((forCount / total) * 100) : 0;
+            const againstPercent = showPercents ? Math.round((againstCount / total) * 100) : 0;
 
             return (
               <Link

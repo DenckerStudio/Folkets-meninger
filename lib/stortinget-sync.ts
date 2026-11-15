@@ -5,7 +5,11 @@ import {
   enrichSakerList,
 } from './stortinget-saker-cache';
 import { getCachedSakDetail, refreshStalePendingSakDetails } from './stortinget-detail-cache';
-import { backfillSessionSakDocuments, type DocumentBackfillResult } from './stortinget-sak-document-backfill';
+import {
+  backfillSessionSakDocuments,
+  EMPTY_DOCUMENT_BACKFILL_RESULT,
+  type DocumentBackfillResult,
+} from './stortinget-sak-document-backfill';
 import { isDebattSak } from './stortinget-sak-presentation';
 import { resolveSakStatusFromSources } from './sak-status';
 
@@ -82,7 +86,7 @@ export async function syncStortingetIssuesToDb(): Promise<SyncIssuesResult> {
       newIssueIds: [],
       aiSummaryTriggered: 0,
       detailsRefreshed: 0,
-      documentBackfill: { attempted: 0, issueIds: [], results: [] },
+      documentBackfill: EMPTY_DOCUMENT_BACKFILL_RESULT,
     };
   }
 
