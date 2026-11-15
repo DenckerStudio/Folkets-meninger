@@ -3,6 +3,13 @@ import { normalizeBlogExcerpt, normalizeBlogTitle } from '@/lib/blog/text-limits
 import { getCmsBaseUrl, getCmsEditorKey } from '@/lib/cms/payload-client';
 import { payloadPatchPost } from '@/lib/cms/payload-update';
 import type { PayloadPost } from '@/lib/cms/types';
+import { finalizeBlogDraftBodyWithSources } from '@/lib/blog/blog-citations';
+import { mapPayloadSourcesToPublic } from '@/lib/blog/public-post-sources';
+import {
+  blogDraftSourcesEditSchema,
+  cmsSourcesFromEditRows,
+  type BlogDraftSourceEditRow,
+} from '@/lib/admin/blog-draft-source-edit';
 import {
   BLOG_DRAFT_EDIT_NOT_CONFIGURED_MESSAGE,
   blogDraftEditContentSchema,
@@ -24,6 +31,16 @@ export const editBlogDraftBodySchema = z
     title: blogDraftEditContentSchema.shape.title,
     excerpt: blogDraftEditContentSchema.shape.excerpt,
     bodyMarkdown: blogDraftEditContentSchema.shape.bodyMarkdown,
+    sources: blogDraftSourcesEditSchema.optional(),
+    previous_cms_sources: z
+      .array(
+        z.object({
+          label: z.string().trim().min(1),
+          url: z.string().trim().url(),
+        }),
+      )
+      .max(24)
+      .optional(),
     category: z.string().trim().min(1).optional(),
     review: z
       .object({
@@ -65,15 +82,34 @@ export function parseEditBlogDraftBody(body: unknown): ParseEditBlogDraftResult 
   return { ok: true, input: parsed.data };
 }
 
-export function buildEditBlogDraftPatch(input: EditBlogDraftInput): Record<string, unknown> {
+export function buildEditBlogDraftPatch(
+  input: EditBlogDraftInput,
+  options?: { previousCmsSources?: Array<{ label: string; url: string }> },
+): Record<string, unknown> {
+  const previousCms = options?.previousCmsSources ?? [];
+  const previousPublic = mapPayloadSourcesToPublic(previousCms);
+
+  let bodyMarkdown = input.bodyMarkdown;
+  if (input.sources) {
+    const cmsSources = cmsSourcesFromEditRows(input.sources);
+    const nextPublic = mapPayloadSourcesToPublic(cmsSources);
+    bodyMarkdown = finalizeBlogDraftBodyWithSources(bodyMarkdown, previousPublic, nextPublic);
+  } else if (previousPublic.length > 0) {
+    bodyMarkdown = finalizeBlogDraftBodyWithSources(bodyMarkdown, previousPublic, []);
+  }
+
   const patch: Record<string, unknown> = {
     title: normalizeBlogTitle(input.title),
     excerpt: normalizeBlogExcerpt(input.excerpt),
-    bodyMarkdown: input.bodyMarkdown,
+    bodyMarkdown,
   };
 
   if (input.category) {
     patch.category = input.category;
+  }
+
+  if (input.sources) {
+    patch.sources = cmsSourcesFromEditRows(input.sources);
   }
 
   if (input.review?.note !== undefined) {
@@ -88,6 +124,7 @@ export type BlogDraftEditSaved = {
   title: string;
   excerpt: string;
   bodyMarkdown: string;
+  sources: Array<{ label: string; url: string }>;
   updatedAt: string | null;
 };
 
@@ -97,9 +134,19 @@ export function blogDraftEditSavedFromPayloadPost(post: PayloadPost): BlogDraftE
     title: post.title,
     excerpt: post.excerpt,
     bodyMarkdown: post.bodyMarkdown ?? '',
+    sources: (post.sources ?? [])
+      .map((row) => {
+        const label = typeof row.label === 'string' ? row.label.trim() : '';
+        const url = typeof row.url === 'string' ? row.url.trim() : '';
+        if (!label || !url) return null;
+        return { label, url };
+      })
+      .filter((row): row is { label: string; url: string } => row !== null),
     updatedAt: post.updatedAt ?? null,
   };
 }
+
+export type { BlogDraftSourceEditRow };
 
 export type EditBlogDraftResult =
   | { ok: true; id: string; draft: BlogDraftEditSaved }
@@ -116,7 +163,9 @@ export async function editBlogDraft(input: EditBlogDraftInput): Promise<EditBlog
     return { ok: false, status: 503, error: BLOG_DRAFT_EDIT_NOT_CONFIGURED_MESSAGE };
   }
 
-  const patch = buildEditBlogDraftPatch(input);
+  const patch = buildEditBlogDraftPatch(input, {
+    previousCmsSources: input.previous_cms_sources,
+  });
   const result = await payloadPatchPost(input.id, patch, editorKey, { draft: true });
   if (!result.ok) {
     const message = result.error?.trim();

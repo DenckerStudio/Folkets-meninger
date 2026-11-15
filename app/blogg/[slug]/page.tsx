@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { BlogArticleBody } from '@/components/blog/blog-article-body';
+import { BlogPostSources } from '@/components/blog/blog-post-sources';
 import { BlogAuthorBox } from '@/components/blog/blog-author-box';
 import { BlogCtaBand } from '@/components/blog/blog-cta-band';
 import { BlogPostGrid } from '@/components/blog/blog-post-grid';
@@ -26,6 +27,7 @@ import {
   getPublishedBlogPostBySlug,
   listPublishedBlogPostsPaginated,
 } from '@/lib/blog/service';
+import { blogCitationMapFromPostSources } from '@/lib/blog/public-post-sources';
 import { blogIndexPath, blogPostOgImagePath, blogPostPath } from '@/lib/blog/urls';
 import { absoluteUrl, buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
 import { blogGenerateStaticParams } from '@/lib/blog/route-segment';
@@ -94,6 +96,7 @@ export default async function BlogPostPage({ params }: PageProps) {
   const { post, saker, horinger, morePosts } = loaded.data;
 
   const headings = extractMarkdownHeadings(post.body_md);
+  const citationSources = blogCitationMapFromPostSources(post.sources);
   const primarySak = post.related_sak_ids[0];
   const canonicalUrl = absoluteUrl(blogPostPath(post.slug));
 
@@ -158,7 +161,12 @@ export default async function BlogPostPage({ params }: PageProps) {
           </aside>
 
           <div className="min-w-0 space-y-8" data-landing-section>
-            <BlogArticleBody markdown={post.body_md} className="prose-lg" />
+            <BlogArticleBody
+              markdown={post.body_md}
+              className="prose-lg"
+              citationSources={citationSources}
+            />
+            <BlogPostSources sources={post.sources} />
             <ShareButton
               url={canonicalUrl}
               title={post.title}

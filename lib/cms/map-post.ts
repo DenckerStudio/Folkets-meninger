@@ -1,6 +1,8 @@
 import type { BlogCategory, BlogPostPublic, BlogPostListItem } from '@/lib/blog/types';
 import type { PayloadAuthor, PayloadCategory, PayloadMedia, PayloadPost, PayloadTag } from '@/lib/cms/types';
 import { getCmsBaseUrl } from '@/lib/cms/payload-client';
+import { sanitizeBlogDraftBodyMarkdown } from '@/lib/blog/blog-draft-body';
+import { mapPayloadSourcesToPublic } from '@/lib/blog/public-post-sources';
 import { BLOG_AUTHOR_LABEL } from '@/lib/blog/types';
 
 function resolveRelation<T extends { id?: string }>(value: T | string | null | undefined): T | null {
@@ -55,11 +57,16 @@ export function mapPayloadPostToPublic(post: PayloadPost): BlogPostPublic {
     .map((author) => resolveRelation<PayloadAuthor>(author))
     .filter(Boolean) as PayloadAuthor[];
 
+  const publicSources = mapPayloadSourcesToPublic(post.sources);
+  const rawBody = post.bodyMarkdown ?? '';
+  const body_md =
+    publicSources.length > 0 ? sanitizeBlogDraftBodyMarkdown(rawBody) : rawBody;
+
   return {
     slug: post.slug,
     title: post.title,
     excerpt: post.excerpt,
-    body_md: post.bodyMarkdown ?? '',
+    body_md,
     tags,
     related_sak_ids: (post.relatedSakIds ?? []).map((row) => row.id).filter(Boolean),
     related_horing_ids: (post.relatedHoringIds ?? []).map((row) => row.id).filter(Boolean),
@@ -83,6 +90,7 @@ export function mapPayloadPostToPublic(post: PayloadPost): BlogPostPublic {
     seo_title: post.seo?.metaTitle ?? null,
     seo_description: post.seo?.metaDescription ?? null,
     author_label: authors[0]?.name ?? BLOG_AUTHOR_LABEL,
+    sources: publicSources,
   };
 }
 

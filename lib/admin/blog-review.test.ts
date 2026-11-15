@@ -18,6 +18,7 @@ const baseRow: BlogDraftReviewItem = {
   title: 'Gammel tittel',
   excerpt: 'Gammel ingress',
   bodyMarkdown: 'Gammel brødtekst',
+  sources: [{ label: 'Kilde (nrk.no)', url: 'https://www.nrk.no/1' }],
   reviewState: 'til_vurdering',
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
@@ -31,6 +32,7 @@ const saved = {
   title: 'Ny tittel',
   excerpt: 'Ny ingress',
   bodyMarkdown: 'Ny brødtekst etter lagring',
+  sources: [{ label: 'Ny kilde (vg.no)', url: 'https://www.vg.no/1' }],
   updatedAt: '2026-02-01T12:00:00.000Z',
 };
 
@@ -38,6 +40,7 @@ const merged = mergeBlogDraftReviewItemAfterEdit([baseRow], saved);
 assert.equal(merged.length, 1);
 assert.equal(merged[0]?.title, 'Ny tittel');
 assert.equal(merged[0]?.bodyMarkdown, 'Ny brødtekst etter lagring');
+assert.deepEqual(merged[0]?.sources, saved.sources);
 
 const reopened = blogDraftReviewItemForReopen(merged, 'post-1');
 assert.ok(reopened);
