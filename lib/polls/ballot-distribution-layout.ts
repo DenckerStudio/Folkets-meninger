@@ -7,9 +7,19 @@ export const BALLOT_SEGMENT_MIN_WIDTH_REM = 5.5;
 
 export function ballotShowProportionalLayout(
   totals: PollTotals,
-  showResultsBeforeVote: boolean,
+  revealDistribution: boolean,
 ): boolean {
-  return showResultsBeforeVote && publicAggregateMeetsThreshold(totals.total);
+  return revealDistribution && publicAggregateMeetsThreshold(totals.total);
+}
+
+/** Vis fordeling når prop er true, bruker har stemt, eller read-only flate ber om det. */
+export function ballotShouldShowDistribution(
+  totals: PollTotals,
+  showResultsBeforeVote: boolean,
+  hasVoted: boolean,
+): boolean {
+  const reveal = showResultsBeforeVote || hasVoted;
+  return ballotShowProportionalLayout(totals, reveal);
 }
 
 /** Proportional grow by vote count; 0 keeps min-width only (never max(count, 1)). */

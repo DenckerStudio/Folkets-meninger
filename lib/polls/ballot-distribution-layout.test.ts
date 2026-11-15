@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   ballotSegmentFlexGrow,
+  ballotShouldShowDistribution,
   formatPollBallotDistributionSummary,
 } from '@/lib/polls/ballot-distribution-layout';
 import { pollBallotPercents } from '@/lib/polls/format';
@@ -16,6 +17,27 @@ const percents = pollBallotPercents(skewed);
 assert.match(
   formatPollBallotDistributionSummary(skewed, percents, true),
   /Nei 30 %, Blank 10 %, Ja 60 %, 100 stemmer/,
+);
+
+assert.equal(
+  ballotShouldShowDistribution({ ja: 3, nei: 2, blank: 0, total: 5 }, false, false),
+  false,
+  'skjult før stemme når prop er false',
+);
+assert.equal(
+  ballotShouldShowDistribution({ ja: 3, nei: 2, blank: 0, total: 5 }, true, false),
+  true,
+  'showResultsBeforeVote viser ved k>=5',
+);
+assert.equal(
+  ballotShouldShowDistribution({ ja: 2, nei: 1, blank: 0, total: 3 }, false, true),
+  false,
+  'under k=5 skjules tall selv etter stemme',
+);
+assert.equal(
+  ballotShouldShowDistribution({ ja: 3, nei: 2, blank: 0, total: 5 }, false, true),
+  true,
+  'etter stemme ved k>=5',
 );
 
 console.log('lib/polls/ballot-distribution-layout.test.ts: ok');

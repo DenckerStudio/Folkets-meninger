@@ -11,6 +11,7 @@ import { pollBallotPercents } from '@/lib/polls/format';
 import {
   BALLOT_SEGMENT_MIN_WIDTH_REM,
   ballotSegmentFlexGrow,
+  ballotShouldShowDistribution,
   ballotShowProportionalLayout,
   formatPollBallotDistributionSummary,
 } from '@/lib/polls/ballot-distribution-layout';
@@ -91,7 +92,7 @@ type PollBallotDistributionBarProps = {
   onVote: (choice: PollChoice) => void;
   className?: string;
   compact?: boolean;
-  /** Vis tall og proporsjonal bredde før bruker har stemt (default på). */
+  /** Vis tall før stemme; default av — etter stemme vises fordeling uansett. */
   showResultsBeforeVote?: boolean;
 };
 
@@ -106,10 +107,15 @@ export function PollBallotDistributionBar({
   onVote,
   className,
   compact = false,
-  showResultsBeforeVote = true,
+  showResultsBeforeVote = false,
 }: PollBallotDistributionBarProps) {
-  const proportional = ballotShowProportionalLayout(totals, showResultsBeforeVote);
-  const showNumbers = proportional;
+  const reveal = ballotShouldShowDistribution(
+    totals,
+    showResultsBeforeVote,
+    Boolean(userVote),
+  );
+  const proportional = reveal;
+  const showNumbers = reveal;
   const percents = pollBallotPercents(totals);
 
   return (
@@ -172,10 +178,11 @@ type PollBallotDistributionBarDisplayProps = {
 export function PollBallotDistributionBarDisplay({
   totals,
   className,
-  showResultsBeforeVote = true,
+  showResultsBeforeVote = false,
 }: PollBallotDistributionBarDisplayProps) {
-  const proportional = ballotShowProportionalLayout(totals, showResultsBeforeVote);
-  const showNumbers = proportional;
+  const reveal = ballotShowProportionalLayout(totals, showResultsBeforeVote);
+  const proportional = reveal;
+  const showNumbers = reveal;
   const percents = pollBallotPercents(totals);
   const summary = formatPollBallotDistributionSummary(totals, percents, showNumbers);
   const summaryId = useId();

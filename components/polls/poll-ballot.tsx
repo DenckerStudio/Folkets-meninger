@@ -89,13 +89,18 @@ export function PollBallot({
           onVote={(choice) => void vote(choice)}
           compact={compact}
           className={compact ? 'mt-0' : 'mt-4'}
+          showResultsBeforeVote
         />
       ) : (
         <>
           <p className={cn('text-sm font-medium text-foreground', compact ? 'mt-0' : 'mt-4')} role="status">
             {POLL_ENDED_USER_MESSAGE}
           </p>
-          <PollBallotDistributionBarDisplay totals={totals} className={compact ? 'mt-3' : 'mt-4'} />
+          <PollBallotDistributionBarDisplay
+            totals={totals}
+            className={compact ? 'mt-3' : 'mt-4'}
+            showResultsBeforeVote
+          />
         </>
       )}
       {votingOpen && userVote ? (

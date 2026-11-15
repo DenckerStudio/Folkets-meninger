@@ -17,9 +17,20 @@ const barSrc = readFileSync(
   join(process.cwd(), 'components/polls/poll-ballot-distribution-bar.tsx'),
   'utf8',
 );
+const pollBallotSrc = readFileSync(join(process.cwd(), 'components/polls/poll-ballot.tsx'), 'utf8');
+const pollCardSrc = readFileSync(join(process.cwd(), 'components/polls/poll-card.tsx'), 'utf8');
 
-if (!barSrc.includes('showResultsBeforeVote')) {
-  throw new Error('ballot bar exposes showResultsBeforeVote');
+if (!barSrc.includes('showResultsBeforeVote = false')) {
+  throw new Error('ballot bar defaults showResultsBeforeVote to false');
+}
+if (!barSrc.includes('ballotShouldShowDistribution')) {
+  throw new Error('interactive bar reveals after vote');
+}
+if (!pollBallotSrc.includes('showResultsBeforeVote')) {
+  throw new Error('dashboard poll ballot passes showResultsBeforeVote true');
+}
+if (!pollCardSrc.includes('showResultsBeforeVote')) {
+  throw new Error('poll card passes showResultsBeforeVote true');
 }
 const layoutSrc = readFileSync(
   join(process.cwd(), 'lib/polls/ballot-distribution-layout.ts'),
