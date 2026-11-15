@@ -10,6 +10,8 @@ import { normalizeBlogSlug, isValidBlogSlug } from '@/lib/blog/slug';
 import { normalizeBlogExcerpt, normalizeBlogTitle } from '@/lib/blog/text-limits';
 import { cmsBlogOpsListBySourceEventPrefix } from '@/lib/cms/blog-ops-client';
 
+export { findMoreSources } from '@/lib/sources';
+
 export const RESEARCH_TOPIC_BLOG_SOURCE_PREFIX = 'research_topic:';
 
 export function researchTopicBlogSourceEvent(
