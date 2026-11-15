@@ -51,12 +51,15 @@ export type PolitikerSporsmalItem = {
 export type PolitikerProfileData = {
   broughtUpSaker: PolitikerSakItem[];
   saksordfoererSaker: PolitikerSakItem[];
+  allSaker: PolitikerSakItem[];
   topicStats: PolitikerTopicStat[];
   officialResponses: PolitikerOfficialResponse[];
   sporsmalFra: PolitikerSporsmalItem[];
   sporsmalTil: PolitikerSporsmalItem[];
   isPlatformVerified: boolean;
 };
+
+export { getPolitikerStemmerBundle } from '@/lib/politiker-profile-stemmer';
 
 type PolitikerSakRow = {
   id: string;
@@ -253,6 +256,7 @@ export async function getPolitikerProfileData(
   return {
     broughtUpSaker,
     saksordfoererSaker,
+    allSaker: saker,
     topicStats,
     officialResponses,
     sporsmalFra: sporsmal.fra,

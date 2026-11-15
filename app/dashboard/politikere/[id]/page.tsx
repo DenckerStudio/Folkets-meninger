@@ -33,7 +33,7 @@ export async function generateMetadata({
       partyLine(name, rep.parti?.navn),
       role,
       rep.fylke?.navn,
-      'Se profil, roller og stemmer på Folkets Meninger.',
+      'Se profil, roller, voteringer og hva brukerne mener på Folkets Meninger.',
     ]
       .filter(Boolean)
       .join(' '),

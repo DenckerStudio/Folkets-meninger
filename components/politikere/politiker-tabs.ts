@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
-import { FileText, LayoutGrid, MessageSquareQuote, ShieldCheck, Tags } from 'lucide-react';
+import { FileText, LayoutGrid, MessageSquareQuote, Scale, ShieldCheck, Tags } from 'lucide-react';
 
-export type PolitikerTabId = 'oversikt' | 'forslag' | 'saksordfoerer' | 'temaer' | 'svar';
+export type PolitikerTabId = 'oversikt' | 'stemmer' | 'forslag' | 'saksordfoerer' | 'temaer' | 'svar';
 
 export const POLITIKER_TABS: {
   id: PolitikerTabId;
@@ -14,6 +14,12 @@ export const POLITIKER_TABS: {
     label: 'Oversikt',
     icon: LayoutGrid,
     description: 'Rolle og aktivitet',
+  },
+  {
+    id: 'stemmer',
+    label: 'Stemmer',
+    icon: Scale,
+    description: 'Voteringer og folkemening',
   },
   {
     id: 'forslag',

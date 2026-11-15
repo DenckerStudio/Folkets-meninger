@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowRight,
@@ -28,6 +29,8 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import { PoliticianResponseList } from '@/components/politikere/politician-response-dialog';
 import { getPolitikerRolleInfo } from '@/lib/politiker-roller';
 import { getPartyLogoSrc } from '@/lib/party-logos';
+import { PolitikerStemmerPanel } from '@/components/politikere/politiker-stemmer-panel';
+import { PolitikerStemmerLoading } from '@/components/politikere/politiker-stemmer-loading';
 
 type PolitikerProfileShellProps = {
   rep: PolitikerOversikt;
@@ -315,6 +318,15 @@ export default function PolitikerProfileShell({ rep, profile }: PolitikerProfile
 
         <div className="min-w-0">
           {activeTab === 'oversikt' ? <OverviewPanel rep={rep} profile={profile} /> : null}
+
+          {activeTab === 'stemmer' ? (
+            <Suspense fallback={<PolitikerStemmerLoading />}>
+              <PolitikerStemmerPanel
+                rep={rep}
+                saker={profile.allSaker.length > 0 ? profile.allSaker : [...profile.broughtUpSaker, ...profile.saksordfoererSaker]}
+              />
+            </Suspense>
+          ) : null}
 
           {activeTab === 'forslag' ? (
             <section className="rounded-2xl border border-border bg-card p-4 sm:p-6">

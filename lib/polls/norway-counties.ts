@@ -32,6 +32,15 @@ export function countyName(code: string | null | undefined): string | null {
   return NORWAY_COUNTIES.find((c) => c.code === code)?.name ?? null;
 }
 
+export function findCountyCodeByName(name: string | null | undefined): string | null {
+  if (!name?.trim()) return null;
+  const normalized = name.trim().toLocaleLowerCase('nb-NO');
+  const hit = NORWAY_COUNTIES.find(
+    (county) => county.name.toLocaleLowerCase('nb-NO') === normalized,
+  );
+  return hit?.code ?? null;
+}
+
 /** Minimum ballots per county before regional results are shown (k-anonymity). */
 /** Must match server floor in get_poll_totals_by_fylke (GREATEST(p_min_votes, 5)). */
 export const POLL_FYLKE_MIN_VOTES = MIN_PUBLIC_AGGREGATE_N;
