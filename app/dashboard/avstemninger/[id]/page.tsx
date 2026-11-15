@@ -26,6 +26,7 @@ import {
   getUserPollVote,
   isPollVotingOpen,
 } from '@/lib/polls/service';
+import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
 import { isShareablePoll } from '@/lib/polls/share';
 import { isSharePollsEnabled } from '@/lib/polls/share-flag';
 import { resolvePollSourceSakLink } from '@/lib/polls/stortinget-issue-link';
@@ -159,7 +160,7 @@ export default async function PollDetailPage({ params }: PageProps) {
       <PollBallot
         pollId={poll.id}
         votingOpen={isPollVotingOpen(poll)}
-        initialTotals={totals}
+        initialTotals={redactPollTotalsForViewer(totals, voteState.hasVoted)}
         initialVote={voteState.vote}
       />
       <section className="space-y-3">

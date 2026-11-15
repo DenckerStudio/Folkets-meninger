@@ -3,17 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Code2 } from 'lucide-react';
-import { PollBallotDistributionBar } from '@/components/polls/poll-ballot-distribution-bar';
+import {
+  PollBallotDistributionBar,
+  PollBallotDistributionBarDisplay,
+} from '@/components/polls/poll-ballot-distribution-bar';
 import { PersonalSharePanel } from '@/components/share/personal-share-panel';
 import { ShareTrigger } from '@/components/share/share-trigger';
 import { useAuth } from '@/hooks/use-auth';
 import { Dialog } from '@/components/ui/dialog';
 import { formatStemmerCount } from '@/lib/norwegian-plural';
-import { pollChoicePercent } from '@/lib/polls/format';
-import {
-  POLL_BALLOT_RESULT_BAR_CLASS,
-  pollBallotRunningTextPhrase,
-} from '@/lib/polls/ballot-buttons';
+import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
+import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
 import {
@@ -31,14 +31,10 @@ import {
   buildPollShareText,
   isPollChoice,
   pollPublicPagePath,
-  POLL_BALLOT_CHOICES,
 } from '@/lib/polls/share';
 import type { ShareChannel } from '@/lib/share/targets';
 import { loginWithNext } from '@/lib/safe-redirect';
 import { cn } from '@/lib/utils';
-
-/** Below this many votes we show counts, not percentages. */
-export const POLL_LOW_SAMPLE_THRESHOLD = 30;
 
 const STORAGE_PREFIX = 'folkets:poll-choice:';
 
@@ -253,23 +249,27 @@ export function SharePollWidget({
     [],
   );
 
-  const showResults = Boolean(userVote) || !votingOpen;
-  const lowSample = totals.total < POLL_LOW_SAMPLE_THRESHOLD;
+  const hasVoted = Boolean(userVote);
+  const viewerTotals = redactPollTotalsForViewer(totals, hasVoted);
   const embed = variant === 'embed';
   const compact = embed && size === 'compact';
 
   return (
     <section ref={rootRef} className={cn('space-y-5', compact && 'space-y-3')} lang="nb">
-      <PollBallotDistributionBar
-        totals={totals}
-        votingOpen={votingOpen}
-        userVote={userVote}
-        pendingChoice={pending}
-        busy={busy || loading}
-        disabled={false}
-        onVote={handleChoice}
-        compact={compact}
-      />
+      {votingOpen ? (
+        <PollBallotDistributionBar
+          totals={viewerTotals}
+          votingOpen={votingOpen}
+          userVote={userVote}
+          pendingChoice={pending}
+          busy={busy || loading}
+          disabled={false}
+          onVote={handleChoice}
+          compact={compact}
+        />
+      ) : hasVoted ? (
+        <PollBallotDistributionBarDisplay totals={viewerTotals} hasVoted={hasVoted} />
+      ) : null}
 
       {error ? (
         <p className="text-sm text-destructive" role="alert">
@@ -278,7 +278,11 @@ export function SharePollWidget({
       ) : null}
 
       {!votingOpen ? (
-        <p className="text-sm text-muted-foreground">Avstemningen er stengt. Her er resultatet.</p>
+        <p className="text-sm text-muted-foreground" role="status">
+          {hasVoted
+            ? 'Avstemningen er stengt.'
+            : `Avstemningen er stengt. ${formatStemmerCount(totals.total)}.`}
+        </p>
       ) : userVote ? (
         <p className="text-sm text-foreground">
           Takk! Stemmen din er registrert. Ingen andre kan se hva du stemte.
@@ -327,46 +331,12 @@ export function SharePollWidget({
         </p>
       ) : null}
 
-      {showResults ? (
-        <div
-          className="space-y-3 rounded-2xl border border-border bg-card p-4"
-          aria-live="polite"
-        >
-          <h2 className="text-sm font-semibold text-foreground">Resultat</h2>
-          {POLL_BALLOT_CHOICES.map((choice) => {
-            const pct = pollChoicePercent(totals, choice);
-            return (
-              <div key={choice}>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 font-semibold text-foreground">
-                    <span
-                      className={cn('h-2.5 w-2.5 rounded-full', POLL_BALLOT_RESULT_BAR_CLASS[choice])}
-                      aria-hidden
-                    />
-                    {pollChoiceLabel(choice)}
-                  </span>
-                  <span className="tabular-nums text-muted-foreground">
-                    {lowSample || pct == null ? totals[choice] : `${pct}% · ${totals[choice]}`}
-                  </span>
-                </div>
-                <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={cn(
-                      'h-full rounded-full motion-safe:transition-[width] motion-safe:duration-500',
-                      POLL_BALLOT_RESULT_BAR_CLASS[choice],
-                    )}
-                    style={{ width: lowSample || pct == null ? '0%' : `${pct}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-          <p className="text-xs text-muted-foreground">
-            {lowSample
-              ? `${formatStemmerCount(totals.total)} · For få stemmer til å vise prosent ennå`
-              : `${formatStemmerCount(totals.total)} · Uoffisiell meningsmåling, ikke representativ`}
-          </p>
-        </div>
+      {hasVoted ? (
+        <p className="text-xs text-muted-foreground">
+          {formatStemmerCount(totals.total)} · Uoffisiell meningsmåling, ikke representativ
+        </p>
+      ) : votingOpen ? (
+        <p className="text-xs text-muted-foreground">{formatStemmerCount(totals.total)}</p>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">

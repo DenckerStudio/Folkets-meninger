@@ -19,6 +19,7 @@ import {
   getUserPollVote,
   isPollVotingOpen,
 } from '@/lib/polls/service';
+import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
 import {
   buildPollShareUrl,
   isPollChoice,
@@ -152,7 +153,7 @@ export default async function SharePollPage({ params, searchParams }: PageProps)
           pollId={poll.id}
           title={poll.title}
           votingOpen={votingOpen}
-          initialTotals={totals}
+          initialTotals={redactPollTotalsForViewer(totals, voteState.hasVoted)}
           initialVote={voteState.vote}
           initialChoice={initialChoice}
           refCode={refCode}

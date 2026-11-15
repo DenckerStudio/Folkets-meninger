@@ -2,7 +2,9 @@ import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { PageHeader } from '@/components/page-header';
 import { PollCard } from '@/components/polls/poll-card';
 import { PollListEmptyState } from '@/components/polls/poll-list-empty-state';
-import { getPollTotals, listOpenPolls } from '@/lib/polls/service';
+import { getPollTotals, getUserHasVotedOnPolls, listOpenPolls } from '@/lib/polls/service';
+import { getServerSupabase } from '@/lib/supabase-server';
+import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
 import { pollBallotRunningTextPhrase, pollBallotSlugPhrase } from '@/lib/polls/ballot-buttons';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 
@@ -17,11 +19,22 @@ export const metadata = buildPageMetadata({
 
 export default async function AvstemningerPage() {
   const polls = await listOpenPolls(40);
+  const supabase = await getServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const pollIds = polls.map((p) => p.id);
+  const votedPollIds = user ? await getUserHasVotedOnPolls(user.id, pollIds) : new Set<string>();
   const withTotals = await Promise.all(
-    polls.map(async (poll) => ({
-      poll,
-      totals: await getPollTotals(poll.id),
-    })),
+    polls.map(async (poll) => {
+      const totals = await getPollTotals(poll.id);
+      const hasVoted = votedPollIds.has(poll.id);
+      return {
+        poll,
+        totals: redactPollTotalsForViewer(totals, hasVoted),
+        hasVoted,
+      };
+    }),
   );
 
   return (
@@ -34,8 +47,8 @@ export default async function AvstemningerPage() {
         <PollListEmptyState />
       ) : (
         <div className="grid gap-3 sm:gap-4">
-          {withTotals.map(({ poll, totals }) => (
-            <PollCard key={poll.id} poll={poll} totals={totals} />
+          {withTotals.map(({ poll, totals, hasVoted }) => (
+            <PollCard key={poll.id} poll={poll} totals={totals} hasVoted={hasVoted} />
           ))}
         </div>
       )}

@@ -1,25 +1,13 @@
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import { POLL_BALLOT_CHOICES } from '@/lib/polls/labels';
-import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
+import { pollDistributionRevealAllowed } from '@/lib/polls/poll-distribution-reveal';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
 
 export const BALLOT_SEGMENT_MIN_WIDTH_REM = 5.5;
 
-export function ballotShowProportionalLayout(
-  totals: PollTotals,
-  revealDistribution: boolean,
-): boolean {
-  return revealDistribution && publicAggregateMeetsThreshold(totals.total);
-}
-
-/** Vis fordeling når prop er true, bruker har stemt, eller read-only flate ber om det. */
-export function ballotShouldShowDistribution(
-  totals: PollTotals,
-  showResultsBeforeVote: boolean,
-  hasVoted: boolean,
-): boolean {
-  const reveal = showResultsBeforeVote || hasVoted;
-  return ballotShowProportionalLayout(totals, reveal);
+/** Sentral regel: fordeling kun etter egen stemme og k ≥ 5. */
+export function ballotShouldShowDistribution(totals: PollTotals, hasVoted: boolean): boolean {
+  return pollDistributionRevealAllowed(hasVoted, totals);
 }
 
 /** Proportional grow by vote count; 0 keeps min-width only (never max(count, 1)). */

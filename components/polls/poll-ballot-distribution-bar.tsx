@@ -12,7 +12,6 @@ import {
   BALLOT_SEGMENT_MIN_WIDTH_REM,
   ballotSegmentFlexGrow,
   ballotShouldShowDistribution,
-  ballotShowProportionalLayout,
   formatPollBallotDistributionSummary,
 } from '@/lib/polls/ballot-distribution-layout';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
@@ -92,8 +91,6 @@ type PollBallotDistributionBarProps = {
   onVote: (choice: PollChoice) => void;
   className?: string;
   compact?: boolean;
-  /** Vis tall før stemme; default av — etter stemme vises fordeling uansett. */
-  showResultsBeforeVote?: boolean;
 };
 
 /** Nei / Blank / Ja vote bar with proportional segments (shared dashboard + `/del`). */
@@ -107,13 +104,8 @@ export function PollBallotDistributionBar({
   onVote,
   className,
   compact = false,
-  showResultsBeforeVote = false,
 }: PollBallotDistributionBarProps) {
-  const reveal = ballotShouldShowDistribution(
-    totals,
-    showResultsBeforeVote,
-    Boolean(userVote),
-  );
+  const reveal = ballotShouldShowDistribution(totals, Boolean(userVote));
   const proportional = reveal;
   const showNumbers = reveal;
   const percents = pollBallotPercents(totals);
@@ -170,17 +162,17 @@ export function PollBallotDistributionBar({
 
 type PollBallotDistributionBarDisplayProps = {
   totals: PollTotals;
+  hasVoted: boolean;
   className?: string;
-  showResultsBeforeVote?: boolean;
 };
 
 /** Read-only distribution bar for poll cards and closed ballots. */
 export function PollBallotDistributionBarDisplay({
   totals,
+  hasVoted,
   className,
-  showResultsBeforeVote = false,
 }: PollBallotDistributionBarDisplayProps) {
-  const reveal = ballotShowProportionalLayout(totals, showResultsBeforeVote);
+  const reveal = ballotShouldShowDistribution(totals, hasVoted);
   const proportional = reveal;
   const showNumbers = reveal;
   const percents = pollBallotPercents(totals);

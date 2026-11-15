@@ -20,22 +20,17 @@ assert.match(
 );
 
 assert.equal(
-  ballotShouldShowDistribution({ ja: 3, nei: 2, blank: 0, total: 5 }, false, false),
+  ballotShouldShowDistribution({ ja: 3, nei: 2, blank: 0, total: 5 }, false),
   false,
-  'skjult før stemme når prop er false',
+  'skjult før stemme',
 );
 assert.equal(
-  ballotShouldShowDistribution({ ja: 3, nei: 2, blank: 0, total: 5 }, true, false),
-  true,
-  'showResultsBeforeVote viser ved k>=5',
-);
-assert.equal(
-  ballotShouldShowDistribution({ ja: 2, nei: 1, blank: 0, total: 3 }, false, true),
+  ballotShouldShowDistribution({ ja: 2, nei: 1, blank: 0, total: 3 }, true),
   false,
   'under k=5 skjules tall selv etter stemme',
 );
 assert.equal(
-  ballotShouldShowDistribution({ ja: 3, nei: 2, blank: 0, total: 5 }, false, true),
+  ballotShouldShowDistribution({ ja: 3, nei: 2, blank: 0, total: 5 }, true),
   true,
   'etter stemme ved k>=5',
 );

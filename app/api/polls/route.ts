@@ -12,6 +12,7 @@ import {
   listOpenPolls,
 } from '@/lib/polls/service';
 import type { PollChoice } from '@/lib/polls/types';
+import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     poll,
-    totals,
+    totals: redactPollTotalsForViewer(totals, hasVoted),
     byFylke,
     hasVoted,
     userVote,

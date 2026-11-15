@@ -4,7 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
+import { formatStemmerCount } from '@/lib/norwegian-plural';
 import { POLL_ENDED_USER_MESSAGE } from '@/lib/polls/format';
+import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
 import { pollBallotRunningTextPhraseSentenceStart } from '@/lib/polls/ballot-buttons';
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
@@ -37,6 +39,8 @@ export function PollBallot({
   const router = useRouter();
   const [totals, setTotals] = useState(initialTotals);
   const [userVote, setUserVote] = useState<PollChoice | null>(initialVote);
+  const hasVoted = Boolean(userVote);
+  const viewerTotals = redactPollTotalsForViewer(totals, hasVoted);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -81,7 +85,7 @@ export function PollBallot({
       )}
       {votingOpen ? (
         <PollBallotDistributionBar
-          totals={totals}
+          totals={viewerTotals}
           votingOpen={votingOpen}
           userVote={userVote}
           busy={busy}
@@ -89,18 +93,23 @@ export function PollBallot({
           onVote={(choice) => void vote(choice)}
           compact={compact}
           className={compact ? 'mt-0' : 'mt-4'}
-          showResultsBeforeVote
         />
       ) : (
         <>
           <p className={cn('text-sm font-medium text-foreground', compact ? 'mt-0' : 'mt-4')} role="status">
             {POLL_ENDED_USER_MESSAGE}
           </p>
-          <PollBallotDistributionBarDisplay
-            totals={totals}
-            className={compact ? 'mt-3' : 'mt-4'}
-            showResultsBeforeVote
-          />
+          {hasVoted ? (
+            <PollBallotDistributionBarDisplay
+              totals={viewerTotals}
+              hasVoted={hasVoted}
+              className={compact ? 'mt-3' : 'mt-4'}
+            />
+          ) : (
+            <p className={cn('text-sm text-muted-foreground', compact ? 'mt-2' : 'mt-3')}>
+              {formatStemmerCount(totals.total)}
+            </p>
+          )}
         </>
       )}
       {votingOpen && userVote ? (

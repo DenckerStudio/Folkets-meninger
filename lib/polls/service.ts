@@ -390,6 +390,26 @@ export async function getSharePagePollById(
   return mapPollRow(data as PollRow);
 }
 
+/** Én spørring for «har brukeren stemt?» på flere avstemninger (PollCard-lister). */
+export async function getUserHasVotedOnPolls(
+  userId: string,
+  pollIds: string[],
+): Promise<Set<string>> {
+  if (!pollIds.length || !process.env.SUPABASE_SERVICE_ROLE_KEY) return new Set();
+  const service = getServiceSupabase();
+  const { data, error } = await service
+    .from('poll_vote_receipts')
+    .select('poll_id')
+    .eq('user_id', userId)
+    .in('poll_id', pollIds);
+  if (error || !Array.isArray(data)) return new Set();
+  return new Set(
+    data
+      .map((row) => (row && typeof row === 'object' ? (row as { poll_id?: string }).poll_id : null))
+      .filter((id): id is string => typeof id === 'string'),
+  );
+}
+
 export async function getUserPollVote(
   userId: string,
   pollId: string,

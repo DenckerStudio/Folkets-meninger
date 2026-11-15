@@ -8,6 +8,7 @@ import {
 } from '@/lib/polls/service';
 import { pollBallotRunningTextPhraseSentenceStart } from '@/lib/polls/ballot-buttons';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
 import { routes } from '@/lib/routes';
 
 type PublicResearchTopicPollPanelProps = {
@@ -55,7 +56,7 @@ export async function PublicResearchTopicPollPanel({
       <PollBallot
         pollId={poll.id}
         votingOpen={votingOpen}
-        initialTotals={totals}
+        initialTotals={redactPollTotalsForViewer(totals, voteState.hasVoted)}
         initialVote={voteState.vote}
         loginNext={topicPath}
         compact

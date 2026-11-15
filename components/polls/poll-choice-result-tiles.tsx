@@ -1,14 +1,18 @@
 import { pollChoicePercent } from '@/lib/polls/format';
+import { ballotShouldShowDistribution } from '@/lib/polls/ballot-distribution-layout';
 import { POLL_BALLOT_CHOICES, pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollTotals } from '@/lib/polls/types';
 import { cn } from '@/lib/utils';
 
 type PollChoiceResultTilesProps = {
   totals: PollTotals;
+  hasVoted?: boolean;
   className?: string;
 };
 
-export function PollChoiceResultTiles({ totals, className }: PollChoiceResultTilesProps) {
+export function PollChoiceResultTiles({ totals, hasVoted = false, className }: PollChoiceResultTilesProps) {
+  if (!ballotShouldShowDistribution(totals, hasVoted)) return null;
+
   return (
     <div className={cn('grid grid-cols-3 gap-2', className)}>
       {POLL_BALLOT_CHOICES.map((choice) => (
@@ -20,7 +24,12 @@ export function PollChoiceResultTiles({ totals, className }: PollChoiceResultTil
               return pct != null ? `${pct}%` : '—';
             })()}
           </p>
-          <p className="text-xs text-muted-foreground">{totals[choice]}</p>
+          <p className="text-xs text-muted-foreground">
+            {(() => {
+              const pct = pollChoicePercent(totals, choice);
+              return pct != null ? totals[choice] : null;
+            })()}
+          </p>
         </div>
       ))}
     </div>

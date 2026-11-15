@@ -13,6 +13,7 @@ import { routes } from '@/lib/routes';
 type PollCardProps = {
   poll: PollRecord;
   totals: PollTotals;
+  hasVoted?: boolean;
 };
 
 function formatPollDeadline(closesAt: string | null): string | null {
@@ -28,7 +29,7 @@ function formatPollDeadline(closesAt: string | null): string | null {
   });
 }
 
-export function PollCard({ poll, totals }: PollCardProps) {
+export function PollCard({ poll, totals, hasVoted = false }: PollCardProps) {
   const href = routes.poll(poll.id);
   const title = formatPollDisplayTitle(poll.title);
   const deadline = formatPollDeadline(poll.closesAt);
@@ -70,11 +71,13 @@ export function PollCard({ poll, totals }: PollCardProps) {
       {!open ? (
         <p className="relative mt-3 text-sm font-medium text-foreground">{POLL_ENDED_USER_MESSAGE}</p>
       ) : null}
-      <PollBallotDistributionBarDisplay
-        totals={totals}
-        className="relative mt-4"
-        showResultsBeforeVote
-      />
+      {hasVoted ? (
+        <PollBallotDistributionBarDisplay
+          totals={totals}
+          hasVoted={hasVoted}
+          className="relative mt-4"
+        />
+      ) : null}
       <div className="relative mt-4 flex items-center justify-between text-sm">
         <span className="text-muted-foreground">{formatStemmerCount(totals.total)}</span>
         <span className="inline-flex min-h-11 items-center font-medium text-brand">Åpne avstemning</span>
