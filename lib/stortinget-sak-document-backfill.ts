@@ -229,10 +229,26 @@ export async function refreshSakDetailsWithDocumentIngest(
   return results;
 }
 
+export type DocumentBackfillSelectionStats = {
+  issueIds: string[];
+  skippedWithDocuments: number;
+  skippedNoCachedDocumentRefs: number;
+};
+
 export type DocumentBackfillResult = {
   attempted: number;
   issueIds: string[];
   results: SakDocumentRefreshResult[];
+  skippedWithDocuments: number;
+  skippedNoCachedDocumentRefs: number;
+};
+
+export const EMPTY_DOCUMENT_BACKFILL_RESULT: DocumentBackfillResult = {
+  attempted: 0,
+  issueIds: [],
+  results: [],
+  skippedWithDocuments: 0,
+  skippedNoCachedDocumentRefs: 0,
 };
 
 async function fetchIssueIdsWithStoredDocuments(
@@ -248,8 +264,11 @@ async function fetchIssueIdsWithStoredDocuments(
       .in('issue_id', chunk);
 
     if (error) {
-      console.warn('[document-ingest] Kunne ikke hente dokumentrader for backfill:', error);
-      throw error;
+      console.warn(
+        `[document-ingest] Kunne ikke hente dokumentrader for backfill (chunk ${chunk.length} saker); fortsetter uten disse:`,
+        error,
+      );
+      continue;
     }
 
     for (const row of data ?? []) {
@@ -273,8 +292,11 @@ async function fetchIssueRowsForBackfill(
       .in('id', chunk);
 
     if (error) {
-      console.warn('[document-ingest] Kunne ikke hente saker for backfill:', error);
-      throw error;
+      console.warn(
+        `[document-ingest] Kunne ikke hente saker for backfill (chunk ${chunk.length} id-er); hopper over chunk:`,
+        error,
+      );
+      continue;
     }
 
     for (const row of data ?? []) {
@@ -289,60 +311,96 @@ async function fetchIssueRowsForBackfill(
   return rows;
 }
 
+export function buildDocumentBackfillSelection(args: {
+  candidateIds: string[];
+  issueIdsWithDocuments: Set<string>;
+  issueIdsWithoutCachedDocumentRefs: Set<string>;
+  firstSeenAtById: Map<string, string | null>;
+  limit: number;
+  rotationOffset?: number;
+}): DocumentBackfillSelectionStats {
+  const skippedWithDocuments = args.candidateIds.filter((id) =>
+    args.issueIdsWithDocuments.has(id),
+  ).length;
+  const skippedNoCachedDocumentRefs = args.candidateIds.filter((id) =>
+    args.issueIdsWithoutCachedDocumentRefs.has(id),
+  ).length;
+  return {
+    issueIds: pickIssueIdsMissingDocuments(args),
+    skippedWithDocuments,
+    skippedNoCachedDocumentRefs,
+  };
+}
+
 export async function selectSessionIssueIdsMissingDocuments(
   sessionIssueIds: string[],
   limit = SYNC_DOCUMENT_BACKFILL_LIMIT,
   now: Date = new Date(),
-): Promise<string[]> {
-  if (sessionIssueIds.length === 0) return [];
+): Promise<DocumentBackfillSelectionStats> {
+  if (sessionIssueIds.length === 0) {
+    return { issueIds: [], skippedWithDocuments: 0, skippedNoCachedDocumentRefs: 0 };
+  }
 
   let service;
   try {
     service = getServiceSupabase();
   } catch {
-    return [];
+    return { issueIds: [], skippedWithDocuments: 0, skippedNoCachedDocumentRefs: 0 };
   }
 
   const uniqueIds = [...new Set(sessionIssueIds)];
 
-  try {
-    const [issueIdsWithDocuments, issueRows] = await Promise.all([
-      fetchIssueIdsWithStoredDocuments(service, uniqueIds),
-      fetchIssueRowsForBackfill(service, uniqueIds),
-    ]);
+  const [issueIdsWithDocuments, issueRows] = await Promise.all([
+    fetchIssueIdsWithStoredDocuments(service, uniqueIds),
+    fetchIssueRowsForBackfill(service, uniqueIds),
+  ]);
 
-    const issueIdsWithoutCachedDocumentRefs = collectIssueIdsWithoutCachedDocumentRefs(issueRows);
-    const firstSeenAtById = new Map(
-      issueRows.map((row) => [row.id, row.first_seen_at] as const),
-    );
+  const issueIdsWithoutCachedDocumentRefs = collectIssueIdsWithoutCachedDocumentRefs(issueRows);
+  const firstSeenAtById = new Map(
+    issueRows.map((row) => [row.id, row.first_seen_at] as const),
+  );
 
-    const rotationOffset = computeUtcDayIndex(now);
+  const rotationOffset = computeUtcDayIndex(now);
 
-    return pickIssueIdsMissingDocuments({
-      candidateIds: uniqueIds,
-      issueIdsWithDocuments,
-      issueIdsWithoutCachedDocumentRefs,
-      firstSeenAtById,
-      limit,
-      rotationOffset,
-    });
-  } catch {
-    return [];
-  }
+  return buildDocumentBackfillSelection({
+    candidateIds: uniqueIds,
+    issueIdsWithDocuments,
+    issueIdsWithoutCachedDocumentRefs,
+    firstSeenAtById,
+    limit,
+    rotationOffset,
+  });
 }
 
 export async function backfillSessionSakDocuments(
   sessionIssueIds: string[],
   limit = SYNC_DOCUMENT_BACKFILL_LIMIT,
 ): Promise<DocumentBackfillResult> {
-  const issueIds = await selectSessionIssueIdsMissingDocuments(sessionIssueIds, limit);
-  if (issueIds.length === 0) {
-    return { attempted: 0, issueIds: [], results: [] };
+  const selection = await selectSessionIssueIdsMissingDocuments(sessionIssueIds, limit);
+  if (selection.skippedWithDocuments > 0 || selection.skippedNoCachedDocumentRefs > 0) {
+    console.log(
+      `[document-ingest] Backfill hoppet over ${selection.skippedWithDocuments} saker med dokumenter og ${selection.skippedNoCachedDocumentRefs} uten forventede dokumentreferanser i cache`,
+    );
+  }
+  if (selection.issueIds.length === 0) {
+    return {
+      attempted: 0,
+      issueIds: [],
+      results: [],
+      skippedWithDocuments: selection.skippedWithDocuments,
+      skippedNoCachedDocumentRefs: selection.skippedNoCachedDocumentRefs,
+    };
   }
 
   console.log(
-    `[document-ingest] Sync backfill starter for ${issueIds.length} saker: ${issueIds.join(', ')}`,
+    `[document-ingest] Sync backfill starter for ${selection.issueIds.length} saker: ${selection.issueIds.join(', ')}`,
   );
-  const results = await refreshSakDetailsWithDocumentIngest(issueIds);
-  return { attempted: issueIds.length, issueIds, results };
+  const results = await refreshSakDetailsWithDocumentIngest(selection.issueIds);
+  return {
+    attempted: selection.issueIds.length,
+    issueIds: selection.issueIds,
+    results,
+    skippedWithDocuments: selection.skippedWithDocuments,
+    skippedNoCachedDocumentRefs: selection.skippedNoCachedDocumentRefs,
+  };
 }

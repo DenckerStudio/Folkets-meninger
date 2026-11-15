@@ -26,8 +26,13 @@ import {
   folkBelowThresholdNextStep,
   folkHistoricAggregateBelowThresholdMessage,
 } from '@/lib/public-aggregate/folk-below-threshold';
-import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
+import {
+  folkPublicBreakdownRedacted,
+  publicAggregateMeetsThreshold,
+} from '@/lib/public-aggregate/threshold';
 import { routes } from '@/lib/routes';
+import { touchTargetLinkClass } from '@/lib/touch-target';
+import { cn } from '@/lib/utils';
 
 /**
  * Tool results streamed by `/api/chat`. Kept structural (no class imports) so the
@@ -549,9 +554,8 @@ function VoteResultsCard({ output }: { output: VoteResultsOutput }) {
   const folk = output.folk ?? {};
   const folkTotal = folk.total ?? 0;
   const belowPublicThreshold =
-    output.belowPublicThreshold ?? !publicAggregateMeetsThreshold(folkTotal);
+    output.belowPublicThreshold ?? folkPublicBreakdownRedacted(folkTotal);
   const folkAggregatePublic =
-    !belowPublicThreshold &&
     publicAggregateMeetsThreshold(folkTotal) &&
     output.folkForPercent != null &&
     output.folkAgainstPercent != null;
@@ -565,10 +569,13 @@ function VoteResultsCard({ output }: { output: VoteResultsOutput }) {
       action={
         <Link
           href={routes.sak(output.issueId)}
-          className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+          className={cn(
+            touchTargetLinkClass,
+            'inline-flex items-center gap-1 rounded-md text-sm font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+          )}
         >
           Åpne sak
-          <ExternalLink className="size-3" aria-hidden />
+          <ExternalLink className="size-4 shrink-0" aria-hidden />
         </Link>
       }
     >
@@ -597,19 +604,31 @@ function VoteResultsCard({ output }: { output: VoteResultsOutput }) {
           <span className="font-medium text-muted-foreground">Folket i appen ({folkTotal}): </span>
           For {output.folkForPercent}% · Mot {output.folkAgainstPercent}%
         </p>
-      ) : folkTotal > 0 || belowPublicThreshold ? (
+      ) : belowPublicThreshold ? (
         <p className="text-xs text-muted-foreground">
           {folkHistoricAggregateBelowThresholdMessage()}{' '}
           <Link
             href={folkNextStep.href}
-            className="font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+            className={cn(
+              touchTargetLinkClass,
+              'inline-flex rounded-md font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+            )}
           >
             {folkNextStep.label}
           </Link>
         </p>
       ) : (
         <p className="text-xs text-muted-foreground">
-          Ingen historiske anonyme stemmer i appen ennå.
+          Ingen historiske anonyme stemmer i appen ennå.{' '}
+          <Link
+            href={folkNextStep.href}
+            className={cn(
+              touchTargetLinkClass,
+              'inline-flex rounded-md font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+            )}
+          >
+            {folkNextStep.label}
+          </Link>
         </p>
       )}
 

@@ -1,5 +1,6 @@
 import type { DigestFrequency } from '@/lib/notifications/channels';
 import type { WeeklyOverview } from '@/lib/weekly-overview';
+import { routes } from '@/lib/routes';
 
 export const DIGEST_DEFAULT_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -60,8 +61,22 @@ export function digestEmailSubject(frequency: DigestFrequency, isTeaser = false)
     : 'Dine varsler (ukentlig oppsummering — Stemme+)';
 }
 
-/** Free users' weekly digest: one summarized in-app notification (no e-mail). */
-export function buildWeeklyOverviewDigestPlainBlock(
+export function weeklyOverviewHasDigestContent(
+  overview: Pick<
+    WeeklyOverview,
+    'votingSoon' | 'votedRecently' | 'openHearings' | 'newSummaries' | 'skriftligeSporsmal'
+  >,
+): boolean {
+  return (
+    overview.votingSoon.length > 0 ||
+    overview.votedRecently.length > 0 ||
+    overview.openHearings.length > 0 ||
+    overview.newSummaries.length > 0 ||
+    overview.skriftligeSporsmal.count > 0
+  );
+}
+
+function buildWeeklyOverviewDigestBullets(
   overview: Pick<
     WeeklyOverview,
     | 'votingSoon'
@@ -71,17 +86,16 @@ export function buildWeeklyOverviewDigestPlainBlock(
     | 'skriftligeSporsmal'
     | 'window'
   >,
-  pageUrl: string,
-): string {
+): string[] {
   const bullets: string[] = [];
   if (overview.votingSoon.length > 0) {
     bullets.push(
-      `${overview.votingSoon.length} sak${overview.votingSoon.length === 1 ? '' : 'er'} nær votering (${overview.window.futureRangeLabel.toLowerCase()})`,
+      `${overview.votingSoon.length} sak${overview.votingSoon.length === 1 ? '' : 'er'} nær votering (${overview.window.futureRangeLabel})`,
     );
   }
   if (overview.votedRecently.length > 0) {
     bullets.push(
-      `${overview.votedRecently.length} nylig votert (${overview.window.pastRangeLabel.toLowerCase()})`,
+      `${overview.votedRecently.length} nylig votert (${overview.window.pastRangeLabel})`,
     );
   }
   if (overview.openHearings.length > 0) {
@@ -97,22 +111,53 @@ export function buildWeeklyOverviewDigestPlainBlock(
   if (overview.skriftligeSporsmal.count > 0) {
     bullets.push(overview.skriftligeSporsmal.label);
   }
+  return bullets;
+}
 
+/** Free users' weekly digest: one summarized in-app notification (no e-mail). Returns null when everything is empty. */
+export function buildWeeklyOverviewDigestPlainBlock(
+  overview: Pick<
+    WeeklyOverview,
+    | 'votingSoon'
+    | 'votedRecently'
+    | 'openHearings'
+    | 'newSummaries'
+    | 'skriftligeSporsmal'
+    | 'window'
+  >,
+): string | null {
+  if (!weeklyOverviewHasDigestContent(overview)) {
+    return null;
+  }
+  const bullets = buildWeeklyOverviewDigestBullets(overview);
   const lines = ['Dette skjer nå', overview.window.label];
   for (const bullet of bullets) {
     lines.push(`• ${bullet}`);
   }
-  lines.push(`Les hele ukeoversikten: ${pageUrl}`);
+  lines.push('Les hele ukeoversikten på siden «Dette skjer nå».');
   return lines.join('\n');
 }
 
-export function buildWeeklyOverviewDigestHtmlBlock(plainBlock: string, pageUrl: string): string {
-  const body = escapeDigestHtml(plainBlock).replaceAll('\n', '<br/>');
+export function buildWeeklyOverviewDigestHtmlBlock(
+  pageUrl: string,
+  overview: Pick<
+    WeeklyOverview,
+    | 'votingSoon'
+    | 'votedRecently'
+    | 'openHearings'
+    | 'newSummaries'
+    | 'skriftligeSporsmal'
+    | 'window'
+  >,
+): string {
+  const bullets = buildWeeklyOverviewDigestBullets(overview);
+  const bodyLines = [overview.window.label, ...bullets.map((b) => `• ${b}`)];
+  const escaped = escapeDigestHtml(bodyLines.join('\n')).replaceAll('\n', '<br/>');
   return `
     <div style="margin:20px 0 0 0;padding-top:16px;border-top:1px solid #e5e7eb;">
       <h4 style="margin:0 0 8px 0;font-size:14px;color:#374151;">Dette skjer nå</h4>
-      <p style="margin:0 0 8px 0;font-size:14px;color:#374151;">${body}</p>
-      <p style="margin:0;"><a href="${pageUrl}" target="_blank" rel="noreferrer">Åpne ukeoversikten</a></p>
+      <p style="margin:0 0 12px 0;font-size:14px;color:#374151;">${escaped}</p>
+      <p style="margin:0;"><a href="${pageUrl}" target="_blank" rel="noreferrer">Åpne «Dette skjer nå»</a></p>
     </div>
   `.trim();
 }
@@ -136,7 +181,7 @@ export function buildInAppDigestSummary(
   return {
     title: `Ukens oppsummering: ${count} ${count === 1 ? 'nytt varsel' : 'nye varsler'}`,
     body: lines.join('\n'),
-    url: '/dashboard',
+    url: routes.minSide,
   };
 }
 

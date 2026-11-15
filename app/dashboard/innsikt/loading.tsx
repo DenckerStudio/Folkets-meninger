@@ -8,7 +8,7 @@ export default function InnsiktLoading() {
         aria-live="polite"
         role="status"
         aria-label="Laster innsikt"
-        className="contents"
+        className="space-y-6"
       >
         <div className="space-y-2">
           <div className="h-8 max-w-xs animate-pulse rounded-lg bg-muted" />

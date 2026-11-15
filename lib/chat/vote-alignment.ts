@@ -3,7 +3,10 @@ import { getAnonSupabase } from '@/lib/supabase';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { buildAlignmentComparison } from '@/lib/alignment/score';
 import { redactPublicFolkForTool } from '@/lib/public-aggregate/folk-public-output';
-import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
+import {
+  folkPublicBreakdownRedacted,
+  publicAggregateMeetsThreshold,
+} from '@/lib/public-aggregate/threshold';
 import { fetchSakVedtakContext } from '@/lib/alignment/sak-vedtak';
 import type { AlignmentComparison, FolkVoteCounts } from '@/lib/alignment/types';
 import { findOpenStortingetPollForIssue, type PollReadClient } from '@/lib/polls/service';
@@ -63,7 +66,7 @@ export function shapeVoteAlignment(comparison: AlignmentComparison): VoteAlignme
     folkAbstainPercent: publicAggregateMeetsThreshold(comparison.folk.total)
       ? comparison.folkAbstainPercent
       : null,
-    belowPublicThreshold: !publicAggregateMeetsThreshold(comparison.folk.total),
+    belowPublicThreshold: folkPublicBreakdownRedacted(comparison.folk.total),
     folkBreakdownNote: null,
     score: comparison.score,
     gapPoints: comparison.gapPoints,

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   MAX_SAK_DOCUMENT_REFRESH_IDS,
+  buildDocumentBackfillSelection,
   chunkIssueIds,
   collectIssueIdsWithoutCachedDocumentRefs,
   issueCachedDetailExcludesDocumentBackfill,
@@ -127,6 +128,19 @@ assert.equal(
   assert.notDeepEqual(day0, day5);
   assert.equal(day0[0], '200600');
   assert.equal(day5[0], '200605');
+}
+
+{
+  const selection = buildDocumentBackfillSelection({
+    candidateIds: ['200501', '200502', '200503'],
+    issueIdsWithDocuments: new Set(['200502']),
+    issueIdsWithoutCachedDocumentRefs: new Set(['200503']),
+    firstSeenAtById: new Map([['200501', '2025-01-01T00:00:00.000Z']]),
+    limit: 5,
+  });
+  assert.deepEqual(selection.issueIds, ['200501']);
+  assert.equal(selection.skippedWithDocuments, 1);
+  assert.equal(selection.skippedNoCachedDocumentRefs, 1);
 }
 
 console.log('stortinget-sak-document-backfill.test.ts: ok');

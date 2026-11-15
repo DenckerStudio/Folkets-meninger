@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
 import {
+  folkPublicBreakdownRedacted,
   publicAggregateMeetsThreshold,
   publicAggregateVotesRemaining,
   suppressPublicAggregateBreakdown,
@@ -13,6 +14,10 @@ assert.equal(publicAggregateMeetsThreshold(5), true);
 assert.equal(publicAggregateMeetsThreshold(99), true);
 assert.equal(publicAggregateMeetsThreshold(-1), false);
 assert.equal(publicAggregateMeetsThreshold(Number.NaN), false);
+
+assert.equal(folkPublicBreakdownRedacted(0), false);
+assert.equal(folkPublicBreakdownRedacted(3), true);
+assert.equal(folkPublicBreakdownRedacted(5), false);
 
 assert.equal(publicAggregateVotesRemaining(0), 5);
 assert.equal(publicAggregateVotesRemaining(3), 2);

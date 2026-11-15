@@ -39,6 +39,7 @@ assert.equal(few.folkAgainstPercent, 0);
 
 const pendingFew = buildAlignmentComparison({ for: 3, against: 1, abstain: 0, total: 4 }, []);
 assert.doesNotMatch(pendingFew.headline, /%/);
+assert.equal(pendingFew.headline, 'Stortinget har ikke votert i saken ennå.');
 
 const noButtons = buildAlignmentComparison(folk, [
   {

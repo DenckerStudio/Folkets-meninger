@@ -197,20 +197,23 @@ export function AlignmentScore({
     };
   }, [sakId]);
 
-  const chartData = useMemo(() => {
-    const stFor = comparison.stortingetForPercent ?? 0;
-    const stAgainst = comparison.stortingetAgainstPercent ?? 0;
-    return [
-      { name: 'For', Folket: comparison.folkForPercent, Stortinget: stFor },
-      { name: 'Mot', Folket: comparison.folkAgainstPercent, Stortinget: stAgainst },
-    ];
-  }, [comparison]);
-
   const folkAggregatePublic = publicAggregateMeetsThreshold(comparison.folk.total);
   const folkNextStep = useMemo(
     () => folkBelowThresholdNextStep(openPollId),
     [openPollId],
   );
+
+  const chartData = useMemo(() => {
+    const stFor = comparison.stortingetForPercent ?? 0;
+    const stAgainst = comparison.stortingetAgainstPercent ?? 0;
+    const folkForValue = folkAggregatePublic ? comparison.folkForPercent : undefined;
+    const folkAgainstValue = folkAggregatePublic ? comparison.folkAgainstPercent : undefined;
+    return [
+      { name: 'For', Folket: folkForValue, Stortinget: stFor },
+      { name: 'Mot', Folket: folkAgainstValue, Stortinget: stAgainst },
+    ];
+  }, [comparison, folkAggregatePublic]);
+
   const showComparisonChart =
     comparison.stortingetForPercent != null && folkAggregatePublic;
 
@@ -325,10 +328,17 @@ export function AlignmentScore({
               </Link>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              Ingen historiske anonyme stemmer er registrert ennå. Se om det finnes en åpen Nei/Blank/Ja-avstemning
-              knyttet til saken.
-            </p>
+            <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Ingen historiske anonyme stemmer i appen ennå.
+              </p>
+              <Link
+                href={folkNextStep.href}
+                className="mt-3 inline-flex min-h-11 items-center rounded-lg font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+              >
+                {folkNextStep.label}
+              </Link>
+            </div>
           )}
         </div>
 

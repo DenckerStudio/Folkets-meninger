@@ -1,5 +1,8 @@
 import type { FolkVoteCounts } from '@/lib/alignment/types';
-import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
+import {
+  folkPublicBreakdownRedacted,
+  publicAggregateMeetsThreshold,
+} from '@/lib/public-aggregate/threshold';
 
 export type PublicFolkChoiceFields = FolkVoteCounts;
 
@@ -13,7 +16,7 @@ export function folkVoteTotal(counts: FolkVoteCounts): number {
 
 export function redactPublicFolkChoiceFields(counts: FolkVoteCounts): PublicFolkChoiceFields {
   const total = folkVoteTotal(counts);
-  if (!publicAggregateMeetsThreshold(total)) {
+  if (folkPublicBreakdownRedacted(total)) {
     return { for: null, against: null, abstain: null, total };
   }
   return {
@@ -75,7 +78,7 @@ export function redactPublicFolkForTool<
   },
 >(result: T): T & FolkToolRedactionFields {
   const total = folkVoteTotal(result.folk);
-  if (publicAggregateMeetsThreshold(total)) {
+  if (!folkPublicBreakdownRedacted(total)) {
     return {
       ...result,
       belowPublicThreshold: false,

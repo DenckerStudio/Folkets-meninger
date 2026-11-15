@@ -84,6 +84,14 @@ async function main() {
   assert.equal(fewPublic.belowPublicThreshold, true);
   assert.equal(fewPublic.folk.for, null);
 
+  const zeroComparison = buildAlignmentComparison(
+    { for: 0, against: 0, abstain: 0, total: 0 },
+    [],
+  );
+  const zeroShaped = shapeVoteAlignment(zeroComparison);
+  const zeroPublic = redactPublicFolkForTool({ ...zeroShaped, openPollId: null });
+  assert.equal(zeroPublic.belowPublicThreshold, false);
+
   console.log('chat/vote-alignment.test.ts: ok');
 }
 

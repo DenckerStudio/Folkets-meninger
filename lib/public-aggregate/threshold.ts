@@ -5,6 +5,12 @@ export function publicAggregateMeetsThreshold(count: number): boolean {
   return count >= MIN_PUBLIC_AGGREGATE_N;
 }
 
+/** True when some folk votes exist but per-choice breakdown must stay hidden (1–4 stems). */
+export function folkPublicBreakdownRedacted(total: number): boolean {
+  if (!Number.isFinite(total) || total <= 0) return false;
+  return !publicAggregateMeetsThreshold(total);
+}
+
 /** Whole votes still needed before aggregates may be shown publicly (0 when already sufficient). */
 export function publicAggregateVotesRemaining(count: number): number {
   if (!Number.isFinite(count) || count < 0) return MIN_PUBLIC_AGGREGATE_N;
