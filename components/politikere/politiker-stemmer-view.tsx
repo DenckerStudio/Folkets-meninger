@@ -86,7 +86,7 @@ function FolkemeningBelowThreshold({
         For få svar ennå til å vise fordeling.{' '}
         <Link
           href={pollHref}
-          className="font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-sm"
+          className="font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-sm"
         >
           Gå til avstemningen
         </Link>
@@ -185,13 +185,13 @@ function PolitikerStemmerErrorActions({ repId }: { repId: string }) {
       <button
         type="button"
         onClick={() => router.refresh()}
-        className="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
       >
         Prøv igjen
       </button>
       <Link
         href={routes.politiker(repId)}
-        className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
       >
         Tilbake til oversikt
       </Link>
@@ -228,9 +228,11 @@ export function PolitikerStemmerView({ repId, repName, bundle }: PolitikerStemme
         </p>
       </div>
 
-      <div className="rounded-xl border border-brand/20 bg-brand/5 p-4 text-sm text-foreground">
-        {bundle.summary.message}
-      </div>
+      {bundle.status !== 'empty' && bundle.rows.length > 0 ? (
+        <div className="rounded-xl border border-brand/20 bg-brand/5 p-4 text-sm text-foreground">
+          {bundle.summary.message}
+        </div>
+      ) : null}
 
       {bundle.status === 'empty' || bundle.rows.length === 0 ? (
         <EmptyState

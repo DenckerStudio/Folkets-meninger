@@ -5,6 +5,7 @@ import { getPolitikereOversikt } from '@/lib/stortinget';
 import { getPolitikerProfileData } from '@/lib/politiker-profile-data';
 import { buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
 import PolitikerProfileShell from '@/components/politikere/politiker-profile-shell';
+import { isPolitikerTabId } from '@/components/politikere/politiker-tabs';
 import { PolitikerStemmerServerPanel } from '@/components/politikere/politiker-stemmer-server-panel';
 import { PolitikerStemmerLoading } from '@/components/politikere/politiker-stemmer-loading';
 
@@ -55,10 +56,14 @@ function partyLine(name: string, party?: string | null): string {
 
 export default async function PolitikerDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
+  const { tab: tabParam } = await searchParams;
+  const activeTab = isPolitikerTabId(tabParam ?? null) ? tabParam! : 'oversikt';
   const politikere = await getPolitikereOversikt();
   const rep = politikere.find((r) => String(r.id) === String(id));
 
@@ -72,11 +77,12 @@ export default async function PolitikerDetailPage({
       ? profile.allSaker
       : [...profile.broughtUpSaker, ...profile.saksordfoererSaker];
 
-  const stemmerContent = (
-    <Suspense fallback={<PolitikerStemmerLoading />}>
-      <PolitikerStemmerServerPanel rep={rep} saker={stemmerSaker} />
-    </Suspense>
-  );
+  const stemmerContent =
+    activeTab === 'stemmer' ? (
+      <Suspense fallback={<PolitikerStemmerLoading />}>
+        <PolitikerStemmerServerPanel rep={rep} saker={stemmerSaker} />
+      </Suspense>
+    ) : null;
 
   return (
     <Suspense fallback={<div className="max-w-5xl mx-auto py-12 text-center text-muted-foreground">Laster profil…</div>}>

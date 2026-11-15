@@ -58,11 +58,6 @@ function PolitikerCard({ rep }: { rep: PolitikerOversikt }) {
             <span className="truncate">{locationLabel}</span>
           </p>
 
-          <div className="mt-4 flex items-center justify-end">
-            <span className="flex items-center text-sm font-medium text-brand">
-              Les mer <ArrowRight className="ml-1 h-4 w-4" />
-            </span>
-          </div>
         </Link>
 
         <div className="flex flex-col items-stretch gap-3 border-t border-border bg-muted/40 px-6 py-4">
@@ -77,7 +72,7 @@ function PolitikerCard({ rep }: { rep: PolitikerOversikt }) {
           </Link>
           <Link
             href={routes.politiker(String(rep.id))}
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
           >
             Se profil
             <ArrowRight className="ml-1.5 h-4 w-4" />

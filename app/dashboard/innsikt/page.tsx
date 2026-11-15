@@ -14,6 +14,7 @@ import {
   historicFolkBallotLabel,
   type HistoricFolkBallotSide,
 } from '@/lib/public-aggregate/historic-folk-ballot-labels';
+import { historicFolkPercents } from '@/lib/public-aggregate/historic-folk-percents';
 import { POLL_BALLOT_RESULT_BAR_CLASS } from '@/lib/polls/ballot-buttons';
 import { routes } from '@/lib/routes';
 
@@ -83,13 +84,7 @@ export default async function InnsiktPage() {
       ) : (
         <ul className="space-y-3 sm:space-y-4">
           {snapshot.issues.map((issue) => {
-            const total = issue.total || 1;
-            const percents = Object.fromEntries(
-              HISTORIC_FOLK_BALLOT_ORDER.map((side) => {
-                const count = historicCount(issue, side);
-                return [side, Math.round((count / total) * 100)] as const;
-              }),
-            ) as Record<HistoricFolkBallotSide, number>;
+            const percents = historicFolkPercents(issue);
 
             return (
               <li

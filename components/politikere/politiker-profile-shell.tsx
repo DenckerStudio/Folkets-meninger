@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useId } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   ArrowRight,
   FileText,
@@ -226,15 +227,12 @@ function OverviewPanel({
 
 export default function PolitikerProfileShell({ rep, profile, stemmerContent }: PolitikerProfileShellProps) {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const tablistId = useId();
   const activeTab = resolveTab(searchParams.get('tab'));
   const roleLabel = rep.tittel || 'Stortingsrepresentant';
   const locationLabel = rep.departement || rep.fylke.navn;
   const rolleInfo = getPolitikerRolleInfo(rep.tittel, rep.erRegjeringsmedlem);
-
-  const setTab = (tab: PolitikerTabId) => {
-    router.replace(`${routes.politiker(String(rep.id))}?tab=${tab}`, { scroll: false });
-  };
+  const profileHref = routes.politiker(String(rep.id));
 
   return (
     <DashboardPage className="mx-auto max-w-5xl">
@@ -293,29 +291,33 @@ export default function PolitikerProfileShell({ rep, profile, stemmerContent }: 
         <nav
           className="-mx-4 flex w-full max-w-[100vw] gap-1 overflow-x-auto overscroll-x-contain px-4 pb-1 lg:mx-0 lg:max-w-none lg:flex-col lg:gap-0 lg:space-y-1 lg:overflow-visible lg:px-0 lg:pb-0"
           aria-label="Politikerseksjoner"
+          role="tablist"
         >
           {POLITIKER_TABS.map((tab) => {
             const active = activeTab === tab.id;
             const Icon = tab.icon;
             return (
-              <button
+              <Link
                 key={tab.id}
-                type="button"
-                onClick={() => setTab(tab.id)}
+                href={`${profileHref}?tab=${tab.id}`}
+                scroll={false}
+                id={`${tablistId}-${tab.id}`}
+                role="tab"
+                aria-selected={active}
+                aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex w-max max-w-[88vw] shrink-0 items-start gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors lg:w-full lg:max-w-none',
+                  'flex w-max max-w-[88vw] shrink-0 items-start gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 lg:w-full lg:max-w-none',
                   active
                     ? 'border-brand/20 bg-brand/10 text-brand'
                     : 'border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground',
                 )}
-                aria-current={active ? 'page' : undefined}
               >
                 <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', active ? 'text-brand' : 'text-muted-foreground')} />
                 <span className="min-w-0">
                   <span className="block font-medium">{tab.label}</span>
                   <span className="hidden text-xs text-muted-foreground lg:line-clamp-2 lg:block">{tab.description}</span>
                 </span>
-              </button>
+              </Link>
             );
           })}
         </nav>
@@ -323,12 +325,7 @@ export default function PolitikerProfileShell({ rep, profile, stemmerContent }: 
         <div className="min-w-0">
           {activeTab === 'oversikt' ? <OverviewPanel rep={rep} profile={profile} /> : null}
 
-          <div
-            className={cn('min-w-0', activeTab !== 'stemmer' && 'hidden')}
-            aria-hidden={activeTab !== 'stemmer'}
-          >
-            {stemmerContent}
-          </div>
+          {activeTab === 'stemmer' && stemmerContent ? <div className="min-w-0">{stemmerContent}</div> : null}
 
           {activeTab === 'forslag' ? (
             <section className="rounded-2xl border border-border bg-card p-4 sm:p-6">

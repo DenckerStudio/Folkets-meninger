@@ -180,10 +180,14 @@ export function buildInAppDigestSummary(
   const titles = items.slice(0, maxTitles).map((i) => `• ${i.title}`);
   const rest = count - titles.length;
   const lines = [...titles, ...(rest > 0 ? [`… og ${rest} til`] : [])];
+  const url = options?.url ?? routes.minSide;
+  const linksToWeeklyOverview = url === routes.denneUka;
   return {
-    title: `Ukens oppsummering: ${count} ${count === 1 ? 'nytt varsel' : 'nye varsler'}`,
+    title: linksToWeeklyOverview
+      ? 'Ukens oppsummering: Dette skjer nå'
+      : `Ukens oppsummering: ${count} ${count === 1 ? 'nytt varsel' : 'nye varsler'}`,
     body: lines.join('\n'),
-    url: options?.url ?? routes.minSide,
+    url,
   };
 }
 
