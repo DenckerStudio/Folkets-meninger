@@ -9,10 +9,37 @@ import {
   PUBLIC_STATS_DISCLAIMER,
 } from '@/lib/government-stats/snapshot';
 import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
+import {
+  HISTORIC_FOLK_BALLOT_ORDER,
+  historicFolkBallotLabel,
+  type HistoricFolkBallotSide,
+} from '@/lib/public-aggregate/historic-folk-ballot-labels';
+import { POLL_BALLOT_RESULT_BAR_CLASS } from '@/lib/polls/ballot-buttons';
 import { routes } from '@/lib/routes';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 3600;
+
+const HISTORIC_BAR_CLASS: Record<HistoricFolkBallotSide, string> = {
+  against: POLL_BALLOT_RESULT_BAR_CLASS.nei,
+  abstain: POLL_BALLOT_RESULT_BAR_CLASS.blank,
+  for: POLL_BALLOT_RESULT_BAR_CLASS.ja,
+};
+
+function historicCount(issue: { for: number; against: number; abstain: number }, side: HistoricFolkBallotSide) {
+  switch (side) {
+    case 'for':
+      return issue.for;
+    case 'against':
+      return issue.against;
+    case 'abstain':
+      return issue.abstain;
+    default: {
+      const _exhaustive: never = side;
+      return _exhaustive;
+    }
+  }
+}
 
 export default async function InnsiktPage() {
   const snapshot = await buildGovernmentStatsSnapshot({ limit: 80 });
@@ -21,7 +48,7 @@ export default async function InnsiktPage() {
     <DashboardPage>
       <PageHeader
         title="Åpen innsikt"
-        description="Historiske anonyme For/Mot/Avstår-tall fra appen (ikke dagens avstemninger eller holdninger). Ingen persondata."
+        description="Historiske anonyme Nei/Blank/Ja-tall fra appen (ikke dagens avstemninger eller holdninger). Ingen persondata."
       />
       <div className="flex items-start gap-2 text-sm text-muted-foreground">
         <BarChart3 className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden />
@@ -30,8 +57,8 @@ export default async function InnsiktPage() {
             dateStyle: 'medium',
             timeStyle: 'short',
             timeZone: 'Europe/Oslo',
-          })} · Kun saker med minst{' '}
-          {MIN_PUBLIC_AGGREGATE_N} stemmer
+          })}{' '}
+          · Kun saker med minst {MIN_PUBLIC_AGGREGATE_N} stemmer
         </p>
       </div>
 
@@ -57,9 +84,12 @@ export default async function InnsiktPage() {
         <ul className="space-y-3 sm:space-y-4">
           {snapshot.issues.map((issue) => {
             const total = issue.total || 1;
-            const forPct = Math.round((issue.for / total) * 100);
-            const againstPct = Math.round((issue.against / total) * 100);
-            const abstainPct = Math.round((issue.abstain / total) * 100);
+            const percents = Object.fromEntries(
+              HISTORIC_FOLK_BALLOT_ORDER.map((side) => {
+                const count = historicCount(issue, side);
+                return [side, Math.round((count / total) * 100)] as const;
+              }),
+            ) as Record<HistoricFolkBallotSide, number>;
 
             return (
               <li
@@ -72,27 +102,22 @@ export default async function InnsiktPage() {
                 </div>
 
                 <div className="mt-4 h-3 rounded-full overflow-hidden flex bg-muted">
-                  <div
-                    className="bg-emerald-500"
-                    style={{ width: `${forPct}%` }}
-                    title={`For ${forPct}%`}
-                  />
-                  <div
-                    className="bg-rose-500"
-                    style={{ width: `${againstPct}%` }}
-                    title={`Mot ${againstPct}%`}
-                  />
-                  <div
-                    className="bg-muted-foreground/50"
-                    style={{ width: `${abstainPct}%` }}
-                    title={`Avstår ${abstainPct}%`}
-                  />
+                  {HISTORIC_FOLK_BALLOT_ORDER.map((side) => (
+                    <div
+                      key={side}
+                      className={HISTORIC_BAR_CLASS[side]}
+                      style={{ width: `${percents[side]}%` }}
+                      title={`${historicFolkBallotLabel(side)} ${percents[side]}%`}
+                    />
+                  ))}
                 </div>
 
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-muted-foreground">
-                  <span>For: {issue.for} ({forPct}%)</span>
-                  <span>Mot: {issue.against} ({againstPct}%)</span>
-                  <span>Avstår: {issue.abstain} ({abstainPct}%)</span>
+                  {HISTORIC_FOLK_BALLOT_ORDER.map((side) => (
+                    <span key={side}>
+                      {historicFolkBallotLabel(side)}: {historicCount(issue, side)} ({percents[side]}%)
+                    </span>
+                  ))}
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-x-4 text-sm">

@@ -15,6 +15,7 @@ import {
   toAbsoluteNotificationUrl,
 } from '@/lib/notifications/digest';
 import { buildWeeklyOverview } from '@/lib/weekly-overview';
+import { routes } from '@/lib/routes';
 import { pickDigestChannels } from '@/lib/notifications/preferences';
 import { isDigestFrequency } from '@/lib/notifications/channels';
 import { prepareDigestForUser } from '@/lib/notifications/enrichment';
@@ -170,7 +171,9 @@ export async function GET(request: Request) {
       }
 
       if (!isPlus) {
-        const summary = buildInAppDigestSummary(items);
+        const summary = buildInAppDigestSummary(items, {
+          url: weeklyOverviewPlainBlock ? routes.denneUka : undefined,
+        });
         const body = mergeWeeklyOverviewIntoDigestBody(summary.body, weeklyOverviewPlainBlock);
         const { error: insertError } = await service.from('notifications').insert({
           user_id: p.user_id,

@@ -129,7 +129,7 @@ export async function buildGovernmentStatsSnapshot(options?: {
   };
 }
 
-export const PUBLIC_STATS_DISCLAIMER = `Folkets Meninger er en uavhengig plattform. Tallene er historiske anonyme For/Mot/Avstår-stemmer fra perioden før per-sak stemming på sakssiden ble avviklet — ikke dagens Nei/Blank/Ja-avstemninger eller holdninger (enig/uenig). Ingen persondata eller foruminnlegg. Saker med færre enn ${MIN_PUBLIC_AGGREGATE_N} historiske stemmer vises ikke av personvernhensyn.`;
+export const PUBLIC_STATS_DISCLAIMER = `Folkets Meninger er en uavhengig plattform. Tallene er historiske anonyme Nei/Blank/Ja-stemmer fra perioden før dagens avstemninger på sakssiden ble standardisert — ikke dagens holdninger (enig/uenig). Ingen persondata eller foruminnlegg. Saker med færre enn ${MIN_PUBLIC_AGGREGATE_N} historiske stemmer vises ikke av personvernhensyn.`;
 
 export function snapshotToCsv(snapshot: GovernmentStatsSnapshot): string {
   const header = [
