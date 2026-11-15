@@ -4,6 +4,11 @@ import { getCmsBaseUrl, getCmsEditorKey } from '@/lib/cms/payload-client';
 import { payloadPatchPost } from '@/lib/cms/payload-update';
 import type { PayloadPost } from '@/lib/cms/types';
 import {
+  blogDraftSourcesEditSchema,
+  cmsSourcesFromEditRows,
+  type BlogDraftSourceEditRow,
+} from '@/lib/admin/blog-draft-source-edit';
+import {
   BLOG_DRAFT_EDIT_NOT_CONFIGURED_MESSAGE,
   blogDraftEditContentSchema,
   fieldErrorsFromZod,
@@ -24,6 +29,7 @@ export const editBlogDraftBodySchema = z
     title: blogDraftEditContentSchema.shape.title,
     excerpt: blogDraftEditContentSchema.shape.excerpt,
     bodyMarkdown: blogDraftEditContentSchema.shape.bodyMarkdown,
+    sources: blogDraftSourcesEditSchema.optional(),
     category: z.string().trim().min(1).optional(),
     review: z
       .object({
@@ -76,6 +82,10 @@ export function buildEditBlogDraftPatch(input: EditBlogDraftInput): Record<strin
     patch.category = input.category;
   }
 
+  if (input.sources) {
+    patch.sources = cmsSourcesFromEditRows(input.sources);
+  }
+
   if (input.review?.note !== undefined) {
     patch.review = { note: input.review.note };
   }
@@ -88,6 +98,7 @@ export type BlogDraftEditSaved = {
   title: string;
   excerpt: string;
   bodyMarkdown: string;
+  sources: Array<{ label: string; url: string }>;
   updatedAt: string | null;
 };
 
@@ -97,9 +108,19 @@ export function blogDraftEditSavedFromPayloadPost(post: PayloadPost): BlogDraftE
     title: post.title,
     excerpt: post.excerpt,
     bodyMarkdown: post.bodyMarkdown ?? '',
+    sources: (post.sources ?? [])
+      .map((row) => {
+        const label = typeof row.label === 'string' ? row.label.trim() : '';
+        const url = typeof row.url === 'string' ? row.url.trim() : '';
+        if (!label || !url) return null;
+        return { label, url };
+      })
+      .filter((row): row is { label: string; url: string } => row !== null),
     updatedAt: post.updatedAt ?? null,
   };
 }
+
+export type { BlogDraftSourceEditRow };
 
 export type EditBlogDraftResult =
   | { ok: true; id: string; draft: BlogDraftEditSaved }

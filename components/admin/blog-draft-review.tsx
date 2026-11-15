@@ -293,6 +293,7 @@ export function BlogDraftReview() {
                   title: draft.title,
                   excerpt: draft.excerpt,
                   bodyMarkdown: draft.bodyMarkdown,
+                  sources: draft.sources,
                   updatedAt: draft.updatedAt,
                 }}
                 onUserEdit={() => clearSaveSuccessForDraft(draft.id)}

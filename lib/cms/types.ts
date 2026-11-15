@@ -67,6 +67,7 @@ export type PayloadPost = {
   authors?: Array<PayloadAuthor | string> | null;
   relatedSakIds?: Array<{ id: string }> | null;
   relatedHoringIds?: Array<{ id: string }> | null;
+  sources?: Array<{ label: string; url: string; id?: string }> | null;
   heroImage?: PayloadMedia | string | null;
   ai?: {
     assisted?: boolean | null;

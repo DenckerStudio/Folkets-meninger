@@ -3,7 +3,8 @@
 import { useEffect, useId, useRef, useState, useTransition } from 'react';
 import { BlogMarkdown } from '@/components/blog/blog-markdown';
 import { CharacterCountTextarea } from '@/components/ui/character-count-textarea';
-import type { BlogDraftEditSaved } from '@/lib/admin/blog-draft-edit';
+import type { BlogDraftEditSaved, BlogDraftSourceEditRow } from '@/lib/admin/blog-draft-edit';
+import { editRowsFromCmsSources } from '@/lib/admin/blog-draft-source-edit';
 import {
   firstFieldErrorKey,
   mapApiFieldErrors,
@@ -46,6 +47,10 @@ export function BlogDraftEditPanel({
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const continueEditRef = useRef<HTMLButtonElement>(null);
   const [dirtyFields, setDirtyFields] = useState<DirtyFields | null>(null);
+  const [sourceRows, setSourceRows] = useState<BlogDraftSourceEditRow[]>(() =>
+    editRowsFromCmsSources(draft.sources),
+  );
+  const [sourcesDirty, setSourcesDirty] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<BlogDraftEditFieldErrors>({});
   const [formError, setFormError] = useState('');
   const [bodyPane, setBodyPane] = useState<BodyPane>('skriv');
@@ -55,7 +60,7 @@ export function BlogDraftEditPanel({
   const title = dirtyFields?.title ?? draft.title;
   const excerpt = dirtyFields?.excerpt ?? draft.excerpt;
   const bodyMarkdown = dirtyFields?.bodyMarkdown ?? draft.bodyMarkdown;
-  const isDirty = dirtyFields !== null;
+  const isDirty = dirtyFields !== null || sourcesDirty;
 
   const titleErrorId = `${formId}-title-error`;
   const titleCountId = `${formId}-title-count`;
@@ -107,6 +112,7 @@ export function BlogDraftEditPanel({
             title: title.trim(),
             excerpt: excerpt.trim(),
             bodyMarkdown,
+            sources: sourceRows,
           }),
         });
         const data = (await res.json().catch(() => ({}))) as {
@@ -137,6 +143,7 @@ export function BlogDraftEditPanel({
           return;
         }
         setDirtyFields(null);
+        setSourcesDirty(false);
         if (data.draft && typeof data.draft.id === 'string') {
           onSaved(data.draft);
           return;
@@ -146,6 +153,10 @@ export function BlogDraftEditPanel({
           title: title.trim(),
           excerpt: excerpt.trim(),
           bodyMarkdown,
+          sources: sourceRows.map((row) => ({
+            label: `${row.title} (${row.publisher})`,
+            url: row.url,
+          })),
           updatedAt: new Date().toISOString(),
         });
       } catch {
@@ -346,6 +357,135 @@ export function BlogDraftEditPanel({
               </div>
             </div>
           </div>
+        </div>
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-medium text-foreground">Kilder brukt i utkastet</p>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                onUserEdit();
+                setSourcesDirty(true);
+                setSourceRows((rows) => [
+                  ...rows,
+                  { title: '', publisher: '', url: '' },
+                ]);
+              }}
+              className={cn(
+                'inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-50',
+                VURDER_FOCUS_RING,
+              )}
+            >
+              Legg til kilde
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Justér kildelisten før godkjenning. Reddit og blokkerte domener kan ikke lagres.
+          </p>
+          {sourceRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Ingen kilder er knyttet til utkastet ennå.</p>
+          ) : (
+            <ul className="space-y-3">
+              {sourceRows.map((row, index) => (
+                <li
+                  key={`${row.url || 'new'}-${index}`}
+                  className="rounded-xl border border-border bg-card p-3"
+                >
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <label className="block space-y-1 text-xs font-medium text-foreground">
+                      Tittel
+                      <input
+                        type="text"
+                        disabled={pending}
+                        value={row.title}
+                        onChange={(event) => {
+                          onUserEdit();
+                          setSourcesDirty(true);
+                          setSourceRows((rows) =>
+                            rows.map((item, i) =>
+                              i === index ? { ...item, title: event.target.value } : item,
+                            ),
+                          );
+                        }}
+                        className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-normal"
+                      />
+                    </label>
+                    <label className="block space-y-1 text-xs font-medium text-foreground">
+                      Utgiver / domene
+                      <input
+                        type="text"
+                        disabled={pending}
+                        value={row.publisher}
+                        onChange={(event) => {
+                          onUserEdit();
+                          setSourcesDirty(true);
+                          setSourceRows((rows) =>
+                            rows.map((item, i) =>
+                              i === index ? { ...item, publisher: event.target.value } : item,
+                            ),
+                          );
+                        }}
+                        className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-normal"
+                      />
+                    </label>
+                    <label className="block space-y-1 text-xs font-medium text-foreground sm:col-span-2">
+                      URL
+                      <input
+                        type="url"
+                        disabled={pending}
+                        value={row.url}
+                        onChange={(event) => {
+                          onUserEdit();
+                          setSourcesDirty(true);
+                          setSourceRows((rows) =>
+                            rows.map((item, i) =>
+                              i === index ? { ...item, url: event.target.value } : item,
+                            ),
+                          );
+                        }}
+                        className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-normal"
+                      />
+                    </label>
+                    <label className="block space-y-1 text-xs font-medium text-foreground">
+                      Dato (valgfritt)
+                      <input
+                        type="text"
+                        disabled={pending}
+                        value={row.publishedAt ?? ''}
+                        placeholder="2026-01-15"
+                        onChange={(event) => {
+                          onUserEdit();
+                          setSourcesDirty(true);
+                          setSourceRows((rows) =>
+                            rows.map((item, i) =>
+                              i === index ? { ...item, publishedAt: event.target.value } : item,
+                            ),
+                          );
+                        }}
+                        className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-normal"
+                      />
+                    </label>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => {
+                      onUserEdit();
+                      setSourcesDirty(true);
+                      setSourceRows((rows) => rows.filter((_, i) => i !== index));
+                    }}
+                    className={cn(
+                      'mt-3 inline-flex min-h-11 items-center justify-center rounded-lg border border-destructive/40 px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50',
+                      VURDER_FOCUS_RING,
+                    )}
+                  >
+                    Fjern kilde
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
       {discardConfirmOpen ? (

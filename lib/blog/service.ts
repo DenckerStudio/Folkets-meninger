@@ -195,6 +195,7 @@ export type CreateBlogDraftInput = {
   source_event?: string | null;
   review_note?: string;
   bluesky_text?: string;
+  sources?: Array<{ label: string; url: string }>;
   ai?: { model_family?: string; prompt_version?: string; generated_at?: string };
 };
 
@@ -310,6 +311,7 @@ export async function createBlogDraft(input: CreateBlogDraftInput): Promise<Crea
       state: 'til_vurdering',
       ...(input.review_note ? { note: input.review_note } : {}),
     },
+    ...(input.sources?.length ? { sources: input.sources } : {}),
   };
 
   const created = await payloadCreatePost('/api/posts?draft=true', body);

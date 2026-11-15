@@ -5,12 +5,12 @@ import {
   researchTopicBlogCanCreate,
 } from '@/lib/admin/research/topic-blog-draft-client';
 import {
-  buildResearchTopicBlogDraftInput,
   listResearchTopicBlogDrafts,
   type ResearchTopicBlogDraftRef,
 } from '@/lib/admin/research/topic-blog-draft';
 import { getResearchTopicById } from '@/lib/admin/research/topic-service';
 import { parseClientResearchRequestId } from '@/lib/admin/research/request-id';
+import { buildResearchTopicBlogDraftWithSources } from '@/lib/blog/create-blog-draft';
 import { createBlogDraft } from '@/lib/blog/service';
 
 export const dynamic = 'force-dynamic';
@@ -137,8 +137,9 @@ export async function POST(request: Request, context: RouteContext) {
     });
   }
 
-  const built = buildResearchTopicBlogDraftInput({
+  const built = await buildResearchTopicBlogDraftWithSources({
     requestId: topic.request_id,
+    topicId: topic.id,
     output: topic.output,
     variantId,
   });
