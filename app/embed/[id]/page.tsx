@@ -134,7 +134,7 @@ export default async function PollEmbedPage({ params, searchParams }: PageProps)
             pollId={poll.id}
             title={poll.title}
             votingOpen={votingOpen}
-            initialTotals={redactPollTotalsForViewer(totals, voteState.hasVoted)}
+            initialTotals={redactPollTotalsForViewer(totals, votingOpen, voteState.hasVoted)}
             initialVote={voteState.vote}
             shareUrl={shareUrl}
             variant="embed"

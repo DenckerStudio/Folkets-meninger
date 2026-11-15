@@ -16,6 +16,8 @@ import {
 } from '@/lib/polls/ballot-distribution-layout';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
 import { POLL_BALLOT_CHOICES } from '@/lib/polls/labels';
+import { PollDistributionAwaitingAggregateNote } from '@/components/polls/poll-distribution-awaiting-aggregate';
+import { shouldShowPollDistributionAwaitingNote } from '@/lib/polls/poll-distribution-reveal';
 import { cn } from '@/lib/utils';
 
 const SEGMENT_MIN_WIDTH = `${BALLOT_SEGMENT_MIN_WIDTH_REM}rem`;
@@ -105,7 +107,7 @@ export function PollBallotDistributionBar({
   className,
   compact = false,
 }: PollBallotDistributionBarProps) {
-  const reveal = ballotShouldShowDistribution(totals, Boolean(userVote));
+  const reveal = ballotShouldShowDistribution(totals, votingOpen, Boolean(userVote));
   const proportional = reveal;
   const showNumbers = reveal;
   const percents = pollBallotPercents(totals);
@@ -162,6 +164,7 @@ export function PollBallotDistributionBar({
 
 type PollBallotDistributionBarDisplayProps = {
   totals: PollTotals;
+  votingOpen: boolean;
   hasVoted: boolean;
   className?: string;
 };
@@ -169,15 +172,25 @@ type PollBallotDistributionBarDisplayProps = {
 /** Read-only distribution bar for poll cards and closed ballots. */
 export function PollBallotDistributionBarDisplay({
   totals,
+  votingOpen,
   hasVoted,
   className,
 }: PollBallotDistributionBarDisplayProps) {
-  const reveal = ballotShouldShowDistribution(totals, hasVoted);
+  const summaryId = useId();
+  const awaitingNote = shouldShowPollDistributionAwaitingNote(votingOpen, hasVoted, totals);
+  if (awaitingNote) {
+    return <PollDistributionAwaitingAggregateNote className={className} />;
+  }
+
+  const reveal = ballotShouldShowDistribution(totals, votingOpen, hasVoted);
+  if (!reveal) {
+    return null;
+  }
+
   const proportional = reveal;
   const showNumbers = reveal;
   const percents = pollBallotPercents(totals);
   const summary = formatPollBallotDistributionSummary(totals, percents, showNumbers);
-  const summaryId = useId();
 
   return (
     <figure className={cn('space-y-2', className)}>

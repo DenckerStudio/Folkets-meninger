@@ -33,8 +33,11 @@ if (pollBallotSrc.includes('showResultsBeforeVote')) {
 if (pollCardSrc.includes('showResultsBeforeVote')) {
   throw new Error('poll card must not pass showResultsBeforeVote');
 }
-if (!pollCardSrc.includes('hasVoted')) {
-  throw new Error('poll card gates distribution on hasVoted');
+if (!pollCardSrc.includes('showOpenStemCountOnly')) {
+  throw new Error('poll card shows stem count when open and not voted');
+}
+if (!pollCardSrc.includes('PollDistributionAwaitingAggregateNote')) {
+  throw new Error('poll card shows awaiting aggregate note below k');
 }
 if (shareSrc.includes('POLL_LOW_SAMPLE_THRESHOLD')) {
   throw new Error('share widget must use publicAggregateMeetsThreshold only');

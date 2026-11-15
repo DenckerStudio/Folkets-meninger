@@ -5,9 +5,13 @@ import type { PollChoice, PollTotals } from '@/lib/polls/types';
 
 export const BALLOT_SEGMENT_MIN_WIDTH_REM = 5.5;
 
-/** Sentral regel: fordeling kun etter egen stemme og k ≥ 5. */
-export function ballotShouldShowDistribution(totals: PollTotals, hasVoted: boolean): boolean {
-  return pollDistributionRevealAllowed(hasVoted, totals);
+/** Sentral regel: (!votingOpen || hasVoted) og k ≥ 5. */
+export function ballotShouldShowDistribution(
+  totals: PollTotals,
+  votingOpen: boolean,
+  hasVoted: boolean,
+): boolean {
+  return pollDistributionRevealAllowed(votingOpen, hasVoted, totals);
 }
 
 /** Proportional grow by vote count; 0 keeps min-width only (never max(count, 1)). */

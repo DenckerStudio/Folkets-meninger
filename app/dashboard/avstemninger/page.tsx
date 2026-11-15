@@ -5,6 +5,7 @@ import { PollListEmptyState } from '@/components/polls/poll-list-empty-state';
 import { getPollTotals, getUserHasVotedOnPolls, listOpenPolls } from '@/lib/polls/service';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
+import { isPollVotingOpen } from '@/lib/polls/format';
 import { pollBallotRunningTextPhrase, pollBallotSlugPhrase } from '@/lib/polls/ballot-buttons';
 import { buildPageMetadata } from '@/lib/seo/metadata';
 
@@ -29,9 +30,10 @@ export default async function AvstemningerPage() {
     polls.map(async (poll) => {
       const totals = await getPollTotals(poll.id);
       const hasVoted = votedPollIds.has(poll.id);
+      const votingOpen = isPollVotingOpen(poll);
       return {
         poll,
-        totals: redactPollTotalsForViewer(totals, hasVoted),
+        totals: redactPollTotalsForViewer(totals, votingOpen, hasVoted),
         hasVoted,
       };
     }),

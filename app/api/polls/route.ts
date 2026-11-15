@@ -51,7 +51,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     poll,
-    totals: redactPollTotalsForViewer(totals, hasVoted),
+    totals: redactPollTotalsForViewer(totals, isPollVotingOpen(poll), hasVoted),
     byFylke,
     hasVoted,
     userVote,
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: 'Stemme registrert anonymt',
-      totals,
+      totals: redactPollTotalsForViewer(totals, isPollVotingOpen(poll), true),
       userVote: choice,
     });
   } catch (error) {

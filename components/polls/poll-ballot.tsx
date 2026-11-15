@@ -4,9 +4,12 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { formatStemmerCount } from '@/lib/norwegian-plural';
 import { POLL_ENDED_USER_MESSAGE } from '@/lib/polls/format';
-import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
+import { PollDistributionAwaitingAggregateNote } from '@/components/polls/poll-distribution-awaiting-aggregate';
+import {
+  redactPollTotalsForViewer,
+  shouldShowPollDistributionAwaitingNote,
+} from '@/lib/polls/poll-distribution-reveal';
 import { pollBallotRunningTextPhraseSentenceStart } from '@/lib/polls/ballot-buttons';
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
@@ -40,7 +43,7 @@ export function PollBallot({
   const [totals, setTotals] = useState(initialTotals);
   const [userVote, setUserVote] = useState<PollChoice | null>(initialVote);
   const hasVoted = Boolean(userVote);
-  const viewerTotals = redactPollTotalsForViewer(totals, hasVoted);
+  const viewerTotals = redactPollTotalsForViewer(totals, votingOpen, hasVoted);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -94,24 +97,23 @@ export function PollBallot({
           compact={compact}
           className={compact ? 'mt-0' : 'mt-4'}
         />
-      ) : (
+      ) : null}
+      {votingOpen && shouldShowPollDistributionAwaitingNote(votingOpen, hasVoted, totals) ? (
+        <PollDistributionAwaitingAggregateNote className={compact ? 'mt-2' : 'mt-3'} />
+      ) : null}
+      {!votingOpen ? (
         <>
           <p className={cn('text-sm font-medium text-foreground', compact ? 'mt-0' : 'mt-4')} role="status">
             {POLL_ENDED_USER_MESSAGE}
           </p>
-          {hasVoted ? (
-            <PollBallotDistributionBarDisplay
-              totals={viewerTotals}
-              hasVoted={hasVoted}
-              className={compact ? 'mt-3' : 'mt-4'}
-            />
-          ) : (
-            <p className={cn('text-sm text-muted-foreground', compact ? 'mt-2' : 'mt-3')}>
-              {formatStemmerCount(totals.total)}
-            </p>
-          )}
+          <PollBallotDistributionBarDisplay
+            totals={viewerTotals}
+            votingOpen={false}
+            hasVoted={hasVoted}
+            className={compact ? 'mt-3' : 'mt-4'}
+          />
         </>
-      )}
+      ) : null}
       {votingOpen && userVote ? (
         <p className="mt-3 text-sm text-foreground">
           Du har stemt {pollChoiceLabel(userVote).toLowerCase()} (telles uten navn i statistikken).

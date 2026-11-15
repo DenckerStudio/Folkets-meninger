@@ -56,7 +56,7 @@ export async function PublicResearchTopicPollPanel({
       <PollBallot
         pollId={poll.id}
         votingOpen={votingOpen}
-        initialTotals={redactPollTotalsForViewer(totals, voteState.hasVoted)}
+        initialTotals={redactPollTotalsForViewer(totals, votingOpen, voteState.hasVoted)}
         initialVote={voteState.vote}
         loginNext={topicPath}
         compact

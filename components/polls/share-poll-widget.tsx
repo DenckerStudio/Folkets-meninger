@@ -13,7 +13,11 @@ import { useAuth } from '@/hooks/use-auth';
 import { Dialog } from '@/components/ui/dialog';
 import { formatStemmerCount } from '@/lib/norwegian-plural';
 import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
-import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
+import { PollDistributionAwaitingAggregateNote } from '@/components/polls/poll-distribution-awaiting-aggregate';
+import {
+  redactPollTotalsForViewer,
+  shouldShowPollDistributionAwaitingNote,
+} from '@/lib/polls/poll-distribution-reveal';
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
 import {
@@ -250,7 +254,7 @@ export function SharePollWidget({
   );
 
   const hasVoted = Boolean(userVote);
-  const viewerTotals = redactPollTotalsForViewer(totals, hasVoted);
+  const viewerTotals = redactPollTotalsForViewer(totals, votingOpen, hasVoted);
   const embed = variant === 'embed';
   const compact = embed && size === 'compact';
 
@@ -267,8 +271,16 @@ export function SharePollWidget({
           onVote={handleChoice}
           compact={compact}
         />
-      ) : hasVoted ? (
-        <PollBallotDistributionBarDisplay totals={viewerTotals} hasVoted={hasVoted} />
+      ) : (
+        <PollBallotDistributionBarDisplay
+          totals={viewerTotals}
+          votingOpen={false}
+          hasVoted={hasVoted}
+        />
+      )}
+
+      {votingOpen && shouldShowPollDistributionAwaitingNote(votingOpen, hasVoted, totals) ? (
+        <PollDistributionAwaitingAggregateNote />
       ) : null}
 
       {error ? (
@@ -279,9 +291,7 @@ export function SharePollWidget({
 
       {!votingOpen ? (
         <p className="text-sm text-muted-foreground" role="status">
-          {hasVoted
-            ? 'Avstemningen er stengt.'
-            : `Avstemningen er stengt. ${formatStemmerCount(totals.total)}.`}
+          Avstemningen er stengt.
         </p>
       ) : userVote ? (
         <p className="text-sm text-foreground">
@@ -331,12 +341,12 @@ export function SharePollWidget({
         </p>
       ) : null}
 
-      {hasVoted ? (
+      {votingOpen && !hasVoted ? (
+        <p className="text-xs text-muted-foreground">{formatStemmerCount(totals.total)}</p>
+      ) : !votingOpen || hasVoted ? (
         <p className="text-xs text-muted-foreground">
           {formatStemmerCount(totals.total)} · Uoffisiell meningsmåling, ikke representativ
         </p>
-      ) : votingOpen ? (
-        <p className="text-xs text-muted-foreground">{formatStemmerCount(totals.total)}</p>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">

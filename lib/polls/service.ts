@@ -402,7 +402,14 @@ export async function getUserHasVotedOnPolls(
     .select('poll_id')
     .eq('user_id', userId)
     .in('poll_id', pollIds);
-  if (error || !Array.isArray(data)) return new Set();
+  if (error) {
+    console.error('[polls] getUserHasVotedOnPolls failed', error);
+    return new Set();
+  }
+  if (!Array.isArray(data)) {
+    console.error('[polls] getUserHasVotedOnPolls unexpected response', { data });
+    return new Set();
+  }
   return new Set(
     data
       .map((row) => (row && typeof row === 'object' ? (row as { poll_id?: string }).poll_id : null))

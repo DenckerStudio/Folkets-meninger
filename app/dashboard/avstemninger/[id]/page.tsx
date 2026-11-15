@@ -160,7 +160,7 @@ export default async function PollDetailPage({ params }: PageProps) {
       <PollBallot
         pollId={poll.id}
         votingOpen={isPollVotingOpen(poll)}
-        initialTotals={redactPollTotalsForViewer(totals, voteState.hasVoted)}
+        initialTotals={redactPollTotalsForViewer(totals, isPollVotingOpen(poll), voteState.hasVoted)}
         initialVote={voteState.vote}
       />
       <section className="space-y-3">

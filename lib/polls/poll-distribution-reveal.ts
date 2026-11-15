@@ -1,13 +1,41 @@
 import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
 import type { PollTotals } from '@/lib/polls/types';
 
-/** Fordeling (stolpe/prosent/antall) vises bare etter egen stemme og når k ≥ 5. */
-export function pollDistributionRevealAllowed(hasVoted: boolean, totals: PollTotals): boolean {
-  return hasVoted && publicAggregateMeetsThreshold(totals.total);
+export const POLL_DISTRIBUTION_AWAITING_AGGREGATE_MESSAGE =
+  'Fordelingen vises når minst 5 har stemt.';
+
+/**
+ * Fordeling vises når (hasVoted || !votingOpen) og k ≥ 5.
+ * Åpen: kun etter egen stemme. Avsluttet: for alle.
+ */
+export function pollDistributionRevealAllowed(
+  votingOpen: boolean,
+  hasVoted: boolean,
+  totals: PollTotals,
+): boolean {
+  const mayReveal = hasVoted || !votingOpen;
+  return mayReveal && publicAggregateMeetsThreshold(totals.total);
 }
 
-/** Skjuler per-valg-tall for ikke-stemmere (beholder total). */
-export function redactPollTotalsForViewer(totals: PollTotals, hasVoted: boolean): PollTotals {
-  if (pollDistributionRevealAllowed(hasVoted, totals)) return totals;
+export function pollDistributionMayReveal(votingOpen: boolean, hasVoted: boolean): boolean {
+  return hasVoted || !votingOpen;
+}
+
+/** Melding når bruker/kontekst har rett til fordeling, men total &lt; k. */
+export function shouldShowPollDistributionAwaitingNote(
+  votingOpen: boolean,
+  hasVoted: boolean,
+  totals: PollTotals,
+): boolean {
+  return pollDistributionMayReveal(votingOpen, hasVoted) && !publicAggregateMeetsThreshold(totals.total);
+}
+
+/** Skjuler per-valg-tall for åpne avstemninger når brukeren ikke har stemt. */
+export function redactPollTotalsForViewer(
+  totals: PollTotals,
+  votingOpen: boolean,
+  hasVoted: boolean,
+): PollTotals {
+  if (pollDistributionRevealAllowed(votingOpen, hasVoted, totals)) return totals;
   return { ja: 0, nei: 0, blank: 0, total: totals.total };
 }
