@@ -7,6 +7,7 @@ import {
   POLL_PUBLIC_AGGREGATE_BELOW_THRESHOLD_LABEL,
 } from '@/lib/public-aggregate/poll-public-output';
 import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
+import { publicPollBallotInitialTotals } from '@/lib/public-aggregate/poll-ballot-public-totals';
 import { routes } from '@/lib/routes';
 
 type SakStortingetPollAggregateProps = {
@@ -34,6 +35,7 @@ export async function SakStortingetPollAggregate({ sakId }: SakStortingetPollAgg
     );
   }
 
+  const ballotTotals = publicPollBallotInitialTotals(totals);
   const showBreakdown = publicAggregateMeetsThreshold(totals.total);
 
   return (
@@ -58,7 +60,7 @@ export async function SakStortingetPollAggregate({ sakId }: SakStortingetPollAgg
       </div>
       {showBreakdown ? (
         <>
-          <PollChoiceResultTiles totals={totals} className="mt-4" />
+          <PollChoiceResultTiles totals={ballotTotals} className="mt-4" />
           <NonRepresentativeNotice
             count={totals.total}
             countLabel="stemmer"
@@ -67,9 +69,8 @@ export async function SakStortingetPollAggregate({ sakId }: SakStortingetPollAgg
           />
         </>
       ) : (
-        <p className="mt-3 text-sm text-muted-foreground">
+        <p className="mt-3 text-sm text-muted-foreground" role="status">
           {POLL_PUBLIC_AGGREGATE_BELOW_THRESHOLD_LABEL}
-          {totals.total > 0 ? ` (${totals.total} stemmer registrert).` : '.'}
         </p>
       )}
     </section>
