@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties } from 'react';
+import { useId, type CSSProperties } from 'react';
 import {
   POLL_BALLOT_VOTE_BUTTON_BASE_CLASS,
   pollBallotVoteButtonClassName,
@@ -178,7 +178,7 @@ export function PollBallotDistributionBarDisplay({
   const showNumbers = proportional;
   const percents = pollBallotPercents(totals);
   const summary = formatPollBallotDistributionSummary(totals, percents, showNumbers);
-  const summaryId = 'poll-ballot-distribution-summary';
+  const summaryId = useId();
 
   return (
     <figure className={cn('space-y-2', className)}>
