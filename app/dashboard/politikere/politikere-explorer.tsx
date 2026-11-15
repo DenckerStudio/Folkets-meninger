@@ -58,10 +58,9 @@ function PolitikerCard({ rep }: { rep: PolitikerOversikt }) {
             <span className="truncate">{locationLabel}</span>
           </p>
 
-          <div className="mt-4 flex flex-col items-end gap-1">
-            <span className="text-xs text-muted-foreground">Stemmer og folkemening</span>
+          <div className="mt-4 flex items-center justify-end">
             <span className="flex items-center text-sm font-medium text-brand">
-              Les profil <ArrowRight className="ml-1 h-4 w-4" />
+              Les mer <ArrowRight className="ml-1 h-4 w-4" />
             </span>
           </div>
         </Link>
@@ -77,10 +76,10 @@ function PolitikerCard({ rep }: { rep: PolitikerOversikt }) {
             <span className="min-w-0 flex-1 break-words">{rep.parti.navn}</span>
           </Link>
           <Link
-            href={`${routes.politiker(String(rep.id))}?tab=stemmer`}
+            href={routes.politiker(String(rep.id))}
             className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
-            Se stemmer
+            Se profil
             <ArrowRight className="ml-1.5 h-4 w-4" />
           </Link>
         </div>

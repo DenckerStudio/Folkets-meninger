@@ -1,28 +1,25 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AlertTriangle, ArrowRight, Scale, Users } from 'lucide-react';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { POLL_BALLOT_CHOICES, pollChoiceLabel } from '@/lib/polls/labels';
 import { POLL_BALLOT_RESULT_BAR_CLASS } from '@/lib/polls/ballot-buttons';
-import type { PolitikerOversikt } from '@/lib/stortinget';
-import type { PolitikerSakItem } from '@/lib/politiker-profile-data';
+import type { PolitikerStemmerBundle, PolitikerStemmerRow } from '@/lib/politiker-profile-stemmer-model';
 import {
   formatPartyLineLabel,
   formatRepresentantStortingetVoteLabel,
-  getPolitikerStemmerBundle,
-  type PolitikerStemmerRow,
-} from '@/lib/politiker-profile-stemmer';
-import {
-  POLL_AGGREGATE_BELOW_THRESHOLD_NOTE,
-  publicPollPercentsNullable,
-  type PublicPollTotals,
-} from '@/lib/public-aggregate/poll-public-output';
+} from '@/lib/politiker-profile-stemmer-model';
+import { publicPollPercentsNullable, type PublicPollTotals } from '@/lib/public-aggregate/poll-public-output';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
 
-type PolitikerStemmerPanelProps = {
-  rep: PolitikerOversikt;
-  saker: PolitikerSakItem[];
+type PolitikerStemmerViewProps = {
+  repId: string;
+  repName: string;
+  bundle: PolitikerStemmerBundle;
 };
 
 function toPollTotals(publicTotals: PublicPollTotals): PollTotals {
@@ -44,42 +41,68 @@ function PollAggregateBars({
   className?: string;
 }) {
   const showBreakdown = totals.ja != null && totals.nei != null && totals.blank != null;
-  const percents = showBreakdown ? publicPollPercentsNullable(toPollTotals(totals)) : null;
+  if (!showBreakdown) return null;
+
+  const percents = publicPollPercentsNullable(toPollTotals(totals));
 
   return (
     <div className={cn('rounded-xl border border-border bg-muted/30 p-3', className)}>
       <p className="text-xs font-semibold text-foreground mb-2">{title}</p>
-      {!showBreakdown || !percents ? (
-        <p className="text-sm text-muted-foreground">{POLL_AGGREGATE_BELOW_THRESHOLD_NOTE}</p>
-      ) : (
-        <div className="space-y-2">
-          {POLL_BALLOT_CHOICES.map((choice: PollChoice) => {
-            const pct = percents[choice];
-            return (
-              <div key={choice}>
-                <div className="mb-1 flex items-center justify-between gap-2 text-xs">
-                  <span className="font-medium text-foreground">{pollChoiceLabel(choice)}</span>
-                  <span className="text-muted-foreground">
-                    {pct != null ? `${pct} %` : '—'}
-                  </span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={cn('h-full rounded-full', POLL_BALLOT_RESULT_BAR_CLASS[choice])}
-                    style={{ width: `${pct ?? 0}%` }}
-                    aria-hidden
-                  />
-                </div>
+      <div className="space-y-2">
+        {POLL_BALLOT_CHOICES.map((choice: PollChoice) => {
+          const pct = percents[choice];
+          if (pct == null) return null;
+          return (
+            <div key={choice}>
+              <div className="mb-1 flex items-center justify-between gap-2 text-xs">
+                <span className="font-medium text-foreground">{pollChoiceLabel(choice)}</span>
+                <span className="text-muted-foreground">{pct} %</span>
               </div>
-            );
-          })}
-        </div>
-      )}
+              <div className="h-2 overflow-hidden rounded-full bg-muted">
+                <div
+                  className={cn('h-full rounded-full', POLL_BALLOT_RESULT_BAR_CLASS[choice])}
+                  style={{ width: `${pct}%` }}
+                  aria-hidden
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
+function FolkemeningBelowThreshold({
+  pollOpen,
+  pollHref,
+}: {
+  pollOpen: boolean;
+  pollHref: string | null;
+}) {
+  if (pollOpen && pollHref) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        For få svar ennå til å vise fordeling.{' '}
+        <Link
+          href={pollHref}
+          className="font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-sm"
+        >
+          Gå til avstemningen
+        </Link>
+      </p>
+    );
+  }
+  return (
+    <p className="text-sm text-muted-foreground">
+      Det kom ikke nok svar til å vise fordeling.
+    </p>
+  );
+}
+
 function StemRowCard({ row }: { row: PolitikerStemmerRow }) {
+  const showPublicPollTotals = row.pollTotalsPublic?.ja != null;
+
   return (
     <article className="rounded-2xl border border-border bg-card p-4 sm:p-5">
       <div className="grid gap-4 lg:grid-cols-2">
@@ -108,7 +131,7 @@ function StemRowCard({ row }: { row: PolitikerStemmerRow }) {
               className={cn(
                 'rounded-xl border px-3 py-2',
                 row.votedAgainstParty
-                  ? 'border-[#ba0c2f]/40 bg-[#ba0c2f]/10'
+                  ? 'border-destructive/40 bg-destructive/10'
                   : 'border-border bg-muted/40',
               )}
             >
@@ -117,9 +140,7 @@ function StemRowCard({ row }: { row: PolitikerStemmerRow }) {
                 {formatPartyLineLabel(row.partyLine)}
               </p>
               {row.votedAgainstParty ? (
-                <p className="mt-1 text-xs font-medium text-[#ba0c2f]" role="status">
-                  Stemte mot eget parti
-                </p>
+                <p className="mt-1 text-xs font-medium text-destructive">Stemte mot eget parti</p>
               ) : null}
             </div>
           </div>
@@ -133,29 +154,17 @@ function StemRowCard({ row }: { row: PolitikerStemmerRow }) {
 
           {row.poll && row.pollTotalsPublic ? (
             <>
-              <PollAggregateBars title="Nasjonalt" totals={row.pollTotalsPublic} />
-              {row.pollFylkeTotalsPublic && row.pollFylkeName ? (
+              {showPublicPollTotals ? (
+                <PollAggregateBars title="Nasjonalt" totals={row.pollTotalsPublic} />
+              ) : null}
+              {showPublicPollTotals && row.pollFylkeTotalsPublic && row.pollFylkeName ? (
                 <PollAggregateBars
                   title={row.pollFylkeName}
                   totals={row.pollFylkeTotalsPublic}
                 />
               ) : null}
-              {row.pollTotalsPublic.ja == null && row.pollHref ? (
-                <p className="text-sm text-muted-foreground">
-                  {row.pollOpen ? (
-                    <>
-                      Avstemningen er åpen.{' '}
-                      <Link
-                        href={row.pollHref}
-                        className="font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-sm"
-                      >
-                        Gå til avstemningen
-                      </Link>
-                    </>
-                  ) : (
-                    'Det er ikke nok stemmer til å vise fordeling ennå.'
-                  )}
-                </p>
+              {!showPublicPollTotals ? (
+                <FolkemeningBelowThreshold pollOpen={row.pollOpen} pollHref={row.pollHref} />
               ) : null}
             </>
           ) : (
@@ -169,9 +178,28 @@ function StemRowCard({ row }: { row: PolitikerStemmerRow }) {
   );
 }
 
-export async function PolitikerStemmerPanel({ rep, saker }: PolitikerStemmerPanelProps) {
-  const bundle = await getPolitikerStemmerBundle(rep, saker);
+function PolitikerStemmerErrorActions({ repId }: { repId: string }) {
+  const router = useRouter();
+  return (
+    <div className="mt-4 flex flex-wrap gap-3">
+      <button
+        type="button"
+        onClick={() => router.refresh()}
+        className="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      >
+        Prøv igjen
+      </button>
+      <Link
+        href={routes.politiker(repId)}
+        className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      >
+        Tilbake til oversikt
+      </Link>
+    </div>
+  );
+}
 
+export function PolitikerStemmerView({ repId, repName, bundle }: PolitikerStemmerViewProps) {
   if (bundle.status === 'error') {
     return (
       <div
@@ -182,6 +210,7 @@ export async function PolitikerStemmerPanel({ rep, saker }: PolitikerStemmerPane
           <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
           {bundle.errorMessage}
         </p>
+        <PolitikerStemmerErrorActions repId={repId} />
       </div>
     );
   }
@@ -199,10 +228,7 @@ export async function PolitikerStemmerPanel({ rep, saker }: PolitikerStemmerPane
         </p>
       </div>
 
-      <div
-        className="rounded-xl border border-brand/20 bg-brand/5 p-4 text-sm text-foreground"
-        role="status"
-      >
+      <div className="rounded-xl border border-brand/20 bg-brand/5 p-4 text-sm text-foreground">
         {bundle.summary.message}
       </div>
 
@@ -210,7 +236,7 @@ export async function PolitikerStemmerPanel({ rep, saker }: PolitikerStemmerPane
         <EmptyState
           compact
           title="Ingen voteringer å vise ennå"
-          description="Vi fant ingen personlige stemmer på saker med tilknyttede avstemninger eller politikerens saker i perioden."
+          description={`Vi fant ingen voteringer der ${repName} har stemt på saker vi følger ennå.`}
         />
       ) : (
         <div className="space-y-4">

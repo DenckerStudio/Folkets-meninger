@@ -1,5 +1,6 @@
+import 'server-only';
+
 import type { SakVotering } from '@/lib/alignment/types';
-import type { PartyStance } from '@/lib/stortinget-votering-rag';
 import {
   aggregatePartyStancesFromVoteringRows,
   fetchPartyStancesForVoteringId,
@@ -20,47 +21,24 @@ import {
   type PollReadClient,
 } from '@/lib/polls/service';
 import { isPollVotingOpen } from '@/lib/polls/format';
-import type { PollRecord, PollTotals } from '@/lib/polls/types';
-import {
-  pollUserMajority,
-  redactPublicPollTotals,
-  type PublicPollTotals,
-} from '@/lib/public-aggregate/poll-public-output';
+import type { PollTotals } from '@/lib/polls/types';
+import { pollUserMajority, redactPublicPollTotals } from '@/lib/public-aggregate/poll-public-output';
 import { stortingetUrl, type StortingetFormat } from '@/lib/stortinget-utils';
+import {
+  buildPolitikerStemmerSummary,
+  parseStortingetRepresentantVoteCode,
+  representativeAlignsWithPollUsers,
+  representativeVotedAgainstParty,
+  type PolitikerStemmerBundle,
+  type PolitikerStemmerRow,
+} from '@/lib/politiker-profile-stemmer-model';
 
-export type RepresentantStortingetVote = 'for' | 'mot' | 'ikke_tilstede';
-
-export type PolitikerStemmerRow = {
-  issueId: string;
-  sakTitle: string;
-  sakHref: string;
-  voteringId: string;
-  voteringTema: string;
-  votedAtIso: string | null;
-  votedAtLabel: string | null;
-  representantVote: RepresentantStortingetVote;
-  partyLine: PartyStance | null;
-  votedAgainstParty: boolean;
-  poll: PollRecord | null;
-  pollTotalsPublic: PublicPollTotals | null;
-  pollFylkeTotalsPublic: PublicPollTotals | null;
-  pollFylkeName: string | null;
-  pollOpen: boolean;
-  pollHref: string | null;
-  comparableWithUsers: boolean;
-  alignsWithUsers: boolean;
-};
-
-export type PolitikerStemmerSummary =
-  | { kind: 'neutral'; message: string }
-  | { kind: 'stats'; alignedCount: number; comparableCount: number; message: string };
-
-export type PolitikerStemmerBundle = {
-  status: 'ok' | 'error' | 'empty';
-  summary: PolitikerStemmerSummary;
-  rows: PolitikerStemmerRow[];
-  errorMessage?: string;
-};
+export type {
+  PolitikerStemmerBundle,
+  PolitikerStemmerRow,
+  PolitikerStemmerSummary,
+  RepresentantStortingetVote,
+} from '@/lib/politiker-profile-stemmer-model';
 
 type VoteringsresultatRow = {
   votering?: number;
@@ -73,71 +51,6 @@ function voteringTimeMs(votering: SakVotering): number {
   if (match?.[1]) return Number.parseInt(match[1], 10);
   const parsed = Date.parse(raw);
   return Number.isFinite(parsed) ? parsed : 0;
-}
-
-export function parseStortingetRepresentantVoteCode(code: number): RepresentantStortingetVote {
-  if (code === 1) return 'for';
-  if (code === 3) return 'mot';
-  return 'ikke_tilstede';
-}
-
-export function representativeVotedAgainstParty(
-  representantVote: RepresentantStortingetVote,
-  partyLine: PartyStance | null,
-): boolean {
-  if (representantVote === 'ikke_tilstede' || !partyLine) return false;
-  return (
-    (representantVote === 'for' && partyLine === 'mot') ||
-    (representantVote === 'mot' && partyLine === 'for')
-  );
-}
-
-export function representativeAlignsWithPollUsers(
-  representantVote: Exclude<RepresentantStortingetVote, 'ikke_tilstede'>,
-  majority: 'ja' | 'nei',
-): boolean {
-  return (
-    (representantVote === 'for' && majority === 'ja') ||
-    (representantVote === 'mot' && majority === 'nei')
-  );
-}
-
-export function buildPolitikerStemmerSummary(rows: PolitikerStemmerRow[]): PolitikerStemmerSummary {
-  const comparable = rows.filter((row) => row.comparableWithUsers);
-  if (comparable.length === 0) {
-    return {
-      kind: 'neutral',
-      message:
-        'Her sammenligner vi Stortingets stemmer med anonyme Nei/Blank/Ja-avstemninger på saker der det finnes nok svar.',
-    };
-  }
-  const alignedCount = comparable.filter((row) => row.alignsWithUsers).length;
-  return {
-    kind: 'stats',
-    alignedCount,
-    comparableCount: comparable.length,
-    message: `Stemte i tråd med flertallet blant brukerne i ${alignedCount} av ${comparable.length} saker`,
-  };
-}
-
-export function formatRepresentantStortingetVoteLabel(vote: RepresentantStortingetVote): string {
-  switch (vote) {
-    case 'for':
-      return 'For';
-    case 'mot':
-      return 'Mot';
-    case 'ikke_tilstede':
-      return 'Ikke til stede';
-    default: {
-      const _exhaustive: never = vote;
-      return _exhaustive;
-    }
-  }
-}
-
-export function formatPartyLineLabel(line: PartyStance | null): string {
-  if (!line) return 'Ukjent';
-  return line === 'for' ? 'Partiet stemte for' : 'Partiet stemte mot';
 }
 
 async function fetchVoteringsresultatRows(voteringId: string): Promise<VoteringsresultatRow[]> {
@@ -162,7 +75,7 @@ function findRepresentantVoteCode(
   return typeof hit.votering === 'number' ? hit.votering : null;
 }
 
-function partyLineFromRows(rows: VoteringsresultatRow[], partyId: string): PartyStance | null {
+function partyLineFromRows(rows: VoteringsresultatRow[], partyId: string) {
   const mapped = rows
     .filter((row) => String(row.representant?.parti?.id ?? '') === partyId)
     .map((row) => ({
@@ -276,8 +189,8 @@ async function buildRowForIssue(args: {
   const poll = args.pollClient
     ? await findPublicPollForIssue(args.issueId, args.pollClient)
     : null;
-  let pollTotalsPublic: PublicPollTotals | null = null;
-  let pollFylkeTotalsPublic: PublicPollTotals | null = null;
+  let pollTotalsPublic: PolitikerStemmerRow['pollTotalsPublic'] = null;
+  let pollFylkeTotalsPublic: PolitikerStemmerRow['pollFylkeTotalsPublic'] = null;
   let pollFylkeName: string | null = null;
   let comparableWithUsers = false;
   let alignsWithUsers = false;
@@ -342,7 +255,7 @@ async function buildRowForIssue(args: {
   };
 }
 
-export function resolvePollReadClientForPublic(): PollReadClient | null {
+function resolvePollReadClientForPublic(): PollReadClient | null {
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()

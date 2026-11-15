@@ -5,6 +5,8 @@ import { getPolitikereOversikt } from '@/lib/stortinget';
 import { getPolitikerProfileData } from '@/lib/politiker-profile-data';
 import { buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
 import PolitikerProfileShell from '@/components/politikere/politiker-profile-shell';
+import { PolitikerStemmerServerPanel } from '@/components/politikere/politiker-stemmer-server-panel';
+import { PolitikerStemmerLoading } from '@/components/politikere/politiker-stemmer-loading';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,10 +67,20 @@ export default async function PolitikerDetailPage({
   }
 
   const profile = await getPolitikerProfileData(String(rep.id), rep);
+  const stemmerSaker =
+    profile.allSaker.length > 0
+      ? profile.allSaker
+      : [...profile.broughtUpSaker, ...profile.saksordfoererSaker];
+
+  const stemmerContent = (
+    <Suspense fallback={<PolitikerStemmerLoading />}>
+      <PolitikerStemmerServerPanel rep={rep} saker={stemmerSaker} />
+    </Suspense>
+  );
 
   return (
     <Suspense fallback={<div className="max-w-5xl mx-auto py-12 text-center text-muted-foreground">Laster profil…</div>}>
-      <PolitikerProfileShell rep={rep} profile={profile} />
+      <PolitikerProfileShell rep={rep} profile={profile} stemmerContent={stemmerContent} />
     </Suspense>
   );
 }

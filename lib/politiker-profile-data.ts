@@ -59,8 +59,6 @@ export type PolitikerProfileData = {
   isPlatformVerified: boolean;
 };
 
-export { getPolitikerStemmerBundle } from '@/lib/politiker-profile-stemmer';
-
 type PolitikerSakRow = {
   id: string;
   title: string;

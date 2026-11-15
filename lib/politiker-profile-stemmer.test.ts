@@ -6,7 +6,7 @@ import {
   representativeAlignsWithPollUsers,
   representativeVotedAgainstParty,
   type PolitikerStemmerRow,
-} from '@/lib/politiker-profile-stemmer';
+} from '@/lib/politiker-profile-stemmer-model';
 import { redactPublicPollTotals } from '@/lib/public-aggregate/poll-public-output';
 import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
 
@@ -46,7 +46,7 @@ test('buildPolitikerStemmerSummary neutral when comparable is zero', () => {
   assert.equal(summary.kind, 'neutral');
 });
 
-test('buildPolitikerStemmerSummary counts aligned rows only when k>=5', () => {
+test('buildPolitikerStemmerSummary counts aligned rows with sak/saker and period', () => {
   const rows: PolitikerStemmerRow[] = [
     {
       issueId: '1',
@@ -115,5 +115,32 @@ test('buildPolitikerStemmerSummary counts aligned rows only when k>=5', () => {
   if (summary.kind !== 'stats') throw new Error('expected stats');
   assert.equal(summary.alignedCount, 1);
   assert.equal(summary.comparableCount, 2);
-  assert.match(summary.message, /1 av 2/);
+  assert.match(summary.message, /1 av 2 saker\./);
+});
+
+test('buildPolitikerStemmerSummary uses entall sak for single comparable row', () => {
+  const row: PolitikerStemmerRow = {
+    issueId: '1',
+    sakTitle: 'A',
+    sakHref: '/dashboard/sak/1',
+    voteringId: '10',
+    voteringTema: 'Tema',
+    votedAtIso: '2026-01-01',
+    votedAtLabel: '1. jan. 2026',
+    representantVote: 'for',
+    partyLine: 'for',
+    votedAgainstParty: false,
+    poll: null,
+    pollTotalsPublic: null,
+    pollFylkeTotalsPublic: null,
+    pollFylkeName: null,
+    pollOpen: false,
+    pollHref: null,
+    comparableWithUsers: true,
+    alignsWithUsers: true,
+  };
+  const summary = buildPolitikerStemmerSummary([row]);
+  assert.equal(summary.kind, 'stats');
+  if (summary.kind !== 'stats') throw new Error('expected stats');
+  assert.match(summary.message, /1 av 1 sak\./);
 });
