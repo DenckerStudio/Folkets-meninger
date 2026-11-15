@@ -12,6 +12,7 @@ import { fetchVoteringRagSummariesForSak } from '@/lib/stortinget-votering-rag';
 import { persistAiSummarySource } from '@/lib/ai-summary/persist-source';
 import { claimAiSummaryWebhook } from '@/lib/ai-summary/service';
 import { triggerAiSummaryWebhook } from '@/lib/trigger-ai-summary-webhook';
+import { upsertStortingetIssueDocument } from '@/lib/stortinget-issue-document-upsert';
 
 const INGEST_DELAY_MS = 400;
 
@@ -255,47 +256,41 @@ async function ingestOneDocument(args: {
   const { service, issueId, document, issueContext } = args;
 
   if (!document.viewable || !document.exportId) {
-    await service.from('stortinget_issue_documents').upsert(
-      {
-        issue_id: issueId,
-        document_id: document.id,
-        title: document.title,
-        document_type: document.documentType,
-        source_url: document.sourceUrl,
-        text_excerpt: null,
-        content_html: null,
-        content_full_text: null,
-        mime_type: null,
-        ingest_status: 'external_only',
-        chunks_status: 'none',
-        content_hash: contentHash(`${document.title}:${document.sourceUrl ?? ''}`),
-        fetched_at: new Date().toISOString(),
-      },
-      { onConflict: 'issue_id,document_id' }
-    );
+    await upsertStortingetIssueDocument(service, issueId, document.id, {
+      issue_id: issueId,
+      document_id: document.id,
+      title: document.title,
+      document_type: document.documentType,
+      source_url: document.sourceUrl,
+      text_excerpt: null,
+      content_html: null,
+      content_full_text: null,
+      mime_type: null,
+      ingest_status: 'external_only',
+      chunks_status: 'none',
+      content_hash: contentHash(`${document.title}:${document.sourceUrl ?? ''}`),
+      fetched_at: new Date().toISOString(),
+    });
     return { status: 'external_only', chunksCreated: 0 };
   }
 
   const fetched = await fetchPublikasjonHtml(document.exportId);
   if (!fetched) {
-    await service.from('stortinget_issue_documents').upsert(
-      {
-        issue_id: issueId,
-        document_id: document.id,
-        title: document.title,
-        document_type: document.documentType,
-        source_url: document.sourceUrl,
-        text_excerpt: null,
-        content_html: null,
-        content_full_text: null,
-        mime_type: null,
-        ingest_status: 'failed',
-        chunks_status: 'none',
-        content_hash: contentHash(document.exportId),
-        fetched_at: new Date().toISOString(),
-      },
-      { onConflict: 'issue_id,document_id' }
-    );
+    await upsertStortingetIssueDocument(service, issueId, document.id, {
+      issue_id: issueId,
+      document_id: document.id,
+      title: document.title,
+      document_type: document.documentType,
+      source_url: document.sourceUrl,
+      text_excerpt: null,
+      content_html: null,
+      content_full_text: null,
+      mime_type: null,
+      ingest_status: 'failed',
+      chunks_status: 'none',
+      content_hash: contentHash(document.exportId),
+      fetched_at: new Date().toISOString(),
+    });
     return { status: 'failed', chunksCreated: 0 };
   }
 
@@ -303,24 +298,21 @@ async function ingestOneDocument(args: {
   const excerpt = fetched.plainText.slice(0, 3_000);
 
   // Do not cache HTML (viewer fetches live). Plain text is temporary until chunked.
-  await service.from('stortinget_issue_documents').upsert(
-    {
-      issue_id: issueId,
-      document_id: document.id,
-      title: document.title,
-      document_type: document.documentType,
-      source_url: document.sourceUrl,
-      text_excerpt: excerpt,
-      content_html: null,
-      content_full_text: fetched.plainText,
-      mime_type: fetched.mimeType,
-      ingest_status: 'ready',
-      chunks_status: 'pending',
-      content_hash: hash,
-      fetched_at: new Date().toISOString(),
-    },
-    { onConflict: 'issue_id,document_id' }
-  );
+  await upsertStortingetIssueDocument(service, issueId, document.id, {
+    issue_id: issueId,
+    document_id: document.id,
+    title: document.title,
+    document_type: document.documentType,
+    source_url: document.sourceUrl,
+    text_excerpt: excerpt,
+    content_html: null,
+    content_full_text: fetched.plainText,
+    mime_type: fetched.mimeType,
+    ingest_status: 'ready',
+    chunks_status: 'pending',
+    content_hash: hash,
+    fetched_at: new Date().toISOString(),
+  });
 
   const chunksCreated = await upsertDocumentChunks({
     service,
