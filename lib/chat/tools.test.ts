@@ -214,14 +214,31 @@ async function main() {
   };
   const belowK = shapeChatPollResults({
     poll,
-    totals: { ja: 2, nei: 1, blank: 0, total: 3 },
+    totals: { ja: 0, nei: 0, blank: 0, total: 3 },
+    rawTotals: { ja: 2, nei: 1, blank: 0, total: 3 },
+    votingOpen: true,
+    hasVoted: true,
   });
   assert.equal(belowK.percents.ja, 0);
-  assert.ok(belowK.note?.includes('Færre enn'));
+  assert.match(belowK.note ?? '', /minst 5/);
+
+  const openNotVoted = shapeChatPollResults({
+    poll,
+    totals: { ja: 0, nei: 0, blank: 0, total: 20 },
+    rawTotals: { ja: 15, nei: 5, blank: 0, total: 20 },
+    votingOpen: true,
+    hasVoted: false,
+  });
+  assert.equal(openNotVoted.distributionVisible, false);
+  assert.equal(openNotVoted.percents.ja, 0);
+  assert.match(openNotVoted.note ?? '', /Stem for å se/);
 
   const shaped = shapeChatPollResults({
     poll,
     totals: { ja: 15, nei: 5, blank: 0, total: 20 },
+    rawTotals: { ja: 15, nei: 5, blank: 0, total: 20 },
+    votingOpen: true,
+    hasVoted: true,
   });
   assert.equal(shaped.found, true);
   assert.equal(shaped.isOpen, true);
@@ -232,10 +249,13 @@ async function main() {
 
   const belowMin = shapeChatPollResults({
     poll,
-    totals: { ja: 3, nei: 1, blank: 0, total: 4 },
+    totals: { ja: 0, nei: 0, blank: 0, total: 4 },
+    rawTotals: { ja: 3, nei: 1, blank: 0, total: 4 },
+    votingOpen: false,
+    hasVoted: false,
   });
   assert.equal(belowMin.percents.ja, 0);
-  assert.match(belowMin.note ?? '', /Færre enn/);
+  assert.match(belowMin.note ?? '', /minst 5/);
 
   const emptyShaped = shapeChatPollResults({ poll: null });
   assert.equal(emptyShaped.found, false);

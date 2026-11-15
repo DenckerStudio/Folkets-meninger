@@ -613,7 +613,12 @@ export function createChatTools(options?: ChatToolOptions | string | null) {
         };
       },
     }),
-    ...createPollChatTools({ client: ragClient, citations, resolveIssueId }),
+    ...createPollChatTools({
+      client: ragClient,
+      citations,
+      resolveIssueId,
+      viewerUserId: resolved.userId ?? null,
+    }),
     ...createPersonalChatTools({
       client: ragClient,
       userId: resolved.userId ?? null,

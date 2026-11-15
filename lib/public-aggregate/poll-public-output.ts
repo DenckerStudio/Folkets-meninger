@@ -1,4 +1,5 @@
 import { pollChoicePercent } from '@/lib/polls/format';
+import { pollDistributionRevealAllowed } from '@/lib/polls/poll-distribution-reveal';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
 import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
 
@@ -24,6 +25,18 @@ export function redactPublicPollTotals(totals: PollTotals): PublicPollTotals {
     blank: totals.blank,
     total: totals.total,
   };
+}
+
+/** Samme reveal-regel som i appen, med PublicPollTotals-form (null = skjult valg). */
+export function redactPublicPollTotalsForViewer(
+  totals: PollTotals,
+  votingOpen: boolean,
+  hasVoted: boolean,
+): PublicPollTotals {
+  if (!pollDistributionRevealAllowed(votingOpen, hasVoted, totals)) {
+    return { ja: null, nei: null, blank: null, total: totals.total };
+  }
+  return redactPublicPollTotals(totals);
 }
 
 export function publicPollPercentsNullable(

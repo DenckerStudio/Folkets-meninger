@@ -1,6 +1,9 @@
 import { ImageResponse } from 'next/og';
 import { pollBallotAltTextPhrase } from '@/lib/polls/ballot-buttons';
+import { isPollVotingOpen } from '@/lib/polls/format';
+import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
 import type { PollRecord, PollTotals } from '@/lib/polls/types';
+import { isPollOgTotalsOnlyReveal } from '@/lib/polls/share-og-bar';
 import { loadOgFonts, OG_FONT_FAMILY } from '@/lib/seo/og-fonts';
 import {
   SHARE_OG_FALLBACK_CACHE_CONTROL,
@@ -184,11 +187,13 @@ function segmentSeparatorStyle(isLast: boolean) {
 }
 
 function pollResultsBar(totals: PollTotals) {
+  const totalsOnly = isPollOgTotalsOnlyReveal(totals);
   const segments = buildPollOgBarSegments(totals);
   const proportional = showPollOgProportionalBar(totals);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {totalsOnly ? null : (
       <div
         style={{
           display: 'flex',
@@ -240,6 +245,7 @@ function pollResultsBar(totals: PollTotals) {
           })
         )}
       </div>
+      )}
       <div style={{ display: 'flex', fontSize: OG_TEXT_MIN_PX, fontWeight: 700, lineHeight: 1.25 }}>
         {formatPollOgResultsLine(totals)}
       </div>
@@ -268,6 +274,8 @@ export async function renderPollShareOgImage(
   totals: PollTotals,
   cacheControl: string = OG_IMAGE_CACHE_CONTROL,
 ): Promise<ImageResponse> {
+  const votingOpen = isPollVotingOpen(poll);
+  const ogTotals = redactPollTotalsForViewer(totals, votingOpen, false);
   const fonts = await loadOgFonts();
   const measurer = await loadPollOgTitleMeasurer();
   const { fontSize: titleSize, titleLines } = resolvePollOgTitleDisplayWithMeasurer(
@@ -339,7 +347,7 @@ export async function renderPollShareOgImage(
                 {summary}
               </div>
             ) : null}
-            {pollResultsBar(totals)}
+            {pollResultsBar(ogTotals)}
           </div>
         </div>
       </div>

@@ -9,7 +9,9 @@ import {
   truncateDescription,
 } from '@/lib/seo/metadata';
 import { formatPollDisplayTitle } from '@/lib/polls/display-title';
+import { isPollVotingOpen } from '@/lib/polls/format';
 import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
+import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
 import { OG_IMAGE_ALT, OG_IMAGE_SIZE, pollOgImageAlt } from '@/lib/polls/share-og';
 import { isShareablePoll, pollSharePath } from '@/lib/polls/share';
 import { routes } from '@/lib/routes';
@@ -41,8 +43,9 @@ export function delOpenGraphImageUrl(pollId: string, totals: PollTotals): string
 
 export function buildPollDetailPageMetadata(poll: PollRecord, totals: PollTotals): Metadata {
   const title = formatPollDisplayTitle(poll.title);
-  const imageUrl = pollOpenGraphImageUrl(poll.id, totals);
-  const imageAlt = pollOgImageAlt(poll.title, totals);
+  const ogTotals = redactPollTotalsForViewer(totals, isPollVotingOpen(poll), false);
+  const imageUrl = pollOpenGraphImageUrl(poll.id, ogTotals);
+  const imageAlt = pollOgImageAlt(poll.title, ogTotals);
   const base = buildPageMetadata({
     title,
     description: truncateDescription(
@@ -165,14 +168,18 @@ export function buildDelSharePageMetadata({ poll, pollId, totals }: DelShareMeta
       : DEFAULT_DESCRIPTION;
 
   const canonical = pollSharePath(pollId);
-  const imagePath =
+  const ogTotals =
     shareable && poll && totals
-      ? delOpenGraphImageUrl(pollId, totals)
+      ? redactPollTotalsForViewer(totals, isPollVotingOpen(poll), false)
+      : null;
+  const imagePath =
+    shareable && poll && ogTotals
+      ? delOpenGraphImageUrl(pollId, ogTotals)
       : `${canonical}/opengraph-image`;
   const image = {
     url: imagePath,
     ...OG_IMAGE_SIZE,
-    alt: shareable && poll && totals ? pollOgImageAlt(poll.title, totals) : OG_IMAGE_ALT,
+    alt: shareable && poll && ogTotals ? pollOgImageAlt(poll.title, ogTotals) : OG_IMAGE_ALT,
   };
 
   return {

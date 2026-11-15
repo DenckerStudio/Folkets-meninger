@@ -13,7 +13,7 @@ import {
 } from '@/lib/polls/service';
 import type { PollChoice } from '@/lib/polls/types';
 import {
-  redactPollFylkeTotalsForViewer,
+  preparePollFylkeForViewer,
   redactPollTotalsForViewer,
 } from '@/lib/polls/poll-distribution-reveal';
 
@@ -53,10 +53,12 @@ export async function GET(request: Request) {
   }
 
   const votingOpen = isPollVotingOpen(poll);
+  const fylkePayload = preparePollFylkeForViewer(byFylke, votingOpen, hasVoted);
   return NextResponse.json({
     poll,
     totals: redactPollTotalsForViewer(totals, votingOpen, hasVoted),
-    byFylke: redactPollFylkeTotalsForViewer(byFylke, votingOpen, hasVoted),
+    byFylke: fylkePayload.byFylke,
+    fylkeHiddenUntilVote: fylkePayload.hiddenUntilVote,
     hasVoted,
     userVote,
     votingOpen,

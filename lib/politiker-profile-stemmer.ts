@@ -18,11 +18,17 @@ import {
   findPublicPollForIssue,
   getPollTotals,
   getPollTotalsByFylke,
+  getUserPollVote,
   type PollReadClient,
 } from '@/lib/polls/service';
+import { pollDistributionRevealAllowed } from '@/lib/polls/poll-distribution-reveal';
 import { isPollVotingOpen } from '@/lib/polls/format';
 import type { PollTotals } from '@/lib/polls/types';
-import { pollUserMajority, redactPublicPollTotals } from '@/lib/public-aggregate/poll-public-output';
+import {
+  pollUserMajority,
+  redactPublicPollTotals,
+  redactPublicPollTotalsForViewer,
+} from '@/lib/public-aggregate/poll-public-output';
 import { stortingetUrl, type StortingetFormat } from '@/lib/stortinget-utils';
 import {
   buildPolitikerStemmerSummary,
@@ -167,6 +173,7 @@ async function buildRowForIssue(args: {
   title: string;
   rep: PolitikerOversikt;
   pollClient: PollReadClient | null;
+  viewerUserId?: string | null;
 }): Promise<PolitikerStemmerRow | null> {
   const voteringer = await fetchSakVoteringer(args.issueId);
   const substantive = voteringer.filter((v) => !isProtocolVotering(v));
@@ -202,8 +209,14 @@ async function buildRowForIssue(args: {
     pollHref = `/dashboard/avstemninger/${poll.id}`;
     const totals = args.pollClient ? await getPollTotals(poll.id, args.pollClient) : null;
     if (totals) {
-      pollTotalsPublic = redactPublicPollTotals(totals);
-      const majority = pollUserMajority(totals);
+      let viewerHasVoted = false;
+      if (args.viewerUserId?.trim() && args.pollClient) {
+        const voteState = await getUserPollVote(args.viewerUserId, poll.id);
+        viewerHasVoted = voteState.hasVoted;
+      }
+      const revealUserPoll = pollDistributionRevealAllowed(pollOpen, viewerHasVoted, totals);
+      pollTotalsPublic = redactPublicPollTotalsForViewer(totals, pollOpen, viewerHasVoted);
+      const majority = revealUserPoll ? pollUserMajority(totals) : null;
       if (
         majority &&
         majority !== 'tie' &&
@@ -214,7 +227,7 @@ async function buildRowForIssue(args: {
       }
 
       const fylkeCode = findCountyCodeByName(args.rep.fylke.navn);
-      if (fylkeCode && args.pollClient) {
+      if (revealUserPoll && fylkeCode && args.pollClient) {
         const fylkeRows = await getPollTotalsByFylke(poll.id, POLL_FYLKE_MIN_VOTES, args.pollClient);
         const hit = fylkeRows.find((row) => row.code === fylkeCode && row.sufficientData);
         if (hit) {
@@ -272,7 +285,7 @@ function resolvePollReadClientForPublic(): PollReadClient | null {
 export async function getPolitikerStemmerBundle(
   rep: PolitikerOversikt,
   saker: PolitikerSakItem[],
-  options?: { maxIssues?: number; maxRows?: number },
+  options?: { maxIssues?: number; maxRows?: number; viewerUserId?: string | null },
 ): Promise<PolitikerStemmerBundle> {
   const maxIssues = options?.maxIssues ?? 28;
   const maxRows = options?.maxRows ?? 15;
@@ -291,6 +304,7 @@ export async function getPolitikerStemmerBundle(
           title: issue.title,
           rep,
           pollClient,
+          viewerUserId: options?.viewerUserId ?? null,
         }),
     );
 

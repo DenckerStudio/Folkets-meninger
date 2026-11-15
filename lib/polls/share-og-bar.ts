@@ -37,7 +37,13 @@ export function buildPollOgBarSegments(totals: PollTotals): PollOgBarSegment[] {
   });
 }
 
+/** Åpne avstemninger for anonyme delingskort: kun total, ingen valgfordeling. */
+export function isPollOgTotalsOnlyReveal(totals: PollTotals): boolean {
+  return totals.total > 0 && totals.ja === 0 && totals.nei === 0 && totals.blank === 0;
+}
+
 export function showPollOgProportionalBar(totals: PollTotals): boolean {
+  if (isPollOgTotalsOnlyReveal(totals)) return false;
   return totals.total >= POLL_OG_BAR_MIN_TOTAL;
 }
 
@@ -47,6 +53,9 @@ function formatPercentShare(percent: number): string {
 
 /** One results line: Nei/Blank/Ja shares plus status (Nei → Blank → Ja). */
 export function formatPollOgResultsLine(totals: PollTotals): string {
+  if (isPollOgTotalsOnlyReveal(totals)) {
+    return totals.total === 1 ? '1 stemme' : `${totals.total} stemmer`;
+  }
   const segments = buildPollOgBarSegments(totals);
   if (totals.total <= 0) {
     const zeros = segments.map((segment) => `${segment.label} 0 %`).join(' · ');
@@ -66,6 +75,10 @@ export function pollOgImageAltText(title: string, totals: PollTotals): string {
   const trimmed = title.trim();
   if (totals.total <= 0) {
     return `${trimmed} – ingen stemmer ennå`;
+  }
+  if (isPollOgTotalsOnlyReveal(totals)) {
+    const stemmer = totals.total === 1 ? '1 stemme' : `${totals.total} stemmer`;
+    return `${trimmed} – ${stemmer}`;
   }
   const segments = buildPollOgBarSegments(totals);
   if (totals.total < POLL_OG_BAR_MIN_TOTAL) {

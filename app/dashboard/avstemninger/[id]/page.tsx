@@ -27,7 +27,7 @@ import {
   isPollVotingOpen,
 } from '@/lib/polls/service';
 import {
-  redactPollFylkeTotalsForViewer,
+  preparePollFylkeForViewer,
   redactPollTotalsForViewer,
 } from '@/lib/polls/poll-distribution-reveal';
 import { isShareablePoll } from '@/lib/polls/share';
@@ -96,7 +96,7 @@ export default async function PollDetailPage({ params }: PageProps) {
     (isSharePollsEnabled() || (user ? await isAdmin(user.id, user.email) : false));
 
   const votingOpen = isPollVotingOpen(poll);
-  const viewerByFylke = redactPollFylkeTotalsForViewer(byFylke, votingOpen, voteState.hasVoted);
+  const fylkeForViewer = preparePollFylkeForViewer(byFylke, votingOpen, voteState.hasVoted);
 
   const researchTopicId = await getResearchTopicIdForPoll(poll.id);
   const sakLink = resolvePollSourceSakLink(poll.stortingetIssueId, { researchTopicId });
@@ -171,7 +171,10 @@ export default async function PollDetailPage({ params }: PageProps) {
       />
       <section className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight text-foreground">Resultat per fylke</h2>
-        <PollResultView byFylke={viewerByFylke} />
+        <PollResultView
+          byFylke={fylkeForViewer.byFylke}
+          hiddenUntilVote={fylkeForViewer.hiddenUntilVote}
+        />
       </section>
     </DashboardPage>
   );

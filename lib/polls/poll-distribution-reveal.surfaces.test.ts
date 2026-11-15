@@ -53,12 +53,12 @@ const surfaceChecks: Array<{ file: string; pattern: RegExp; hint: string }> = [
   },
   {
     file: 'app/api/polls/route.ts',
-    pattern: /redactPollFylkeTotalsForViewer\(byFylke,\s*votingOpen,\s*hasVoted\)/,
+    pattern: /preparePollFylkeForViewer\(byFylke,\s*votingOpen,\s*hasVoted\)/,
     hint: 'GET /api/polls byFylke',
   },
   {
     file: 'app/dashboard/avstemninger/[id]/page.tsx',
-    pattern: /redactPollFylkeTotalsForViewer\(byFylke,\s*votingOpen,\s*voteState\.hasVoted\)/,
+    pattern: /preparePollFylkeForViewer\(byFylke,\s*votingOpen,\s*voteState\.hasVoted\)/,
     hint: 'poll detail byFylke',
   },
   {
@@ -85,6 +85,26 @@ const surfaceChecks: Array<{ file: string; pattern: RegExp; hint: string }> = [
     file: 'app/embed/[id]/page.tsx',
     pattern: /redactPollTotalsForViewer\(totals,\s*votingOpen,/,
     hint: '/embed SSR',
+  },
+  {
+    file: 'lib/polls/share-og.tsx',
+    pattern: /redactPollTotalsForViewer\(totals,\s*votingOpen,\s*false\)/,
+    hint: 'OG/Twitter delingskort',
+  },
+  {
+    file: 'lib/polls/page-metadata.ts',
+    pattern: /redactPollTotalsForViewer\(totals,\s*isPollVotingOpen\(poll\),\s*false\)/,
+    hint: 'OG metadata',
+  },
+  {
+    file: 'lib/chat/poll-tools.ts',
+    pattern: /redactPollTotalsForViewer\(totals,\s*votingOpen,\s*hasVoted\)/,
+    hint: 'chat getPollResults',
+  },
+  {
+    file: 'lib/politiker-profile-stemmer.ts',
+    pattern: /redactPublicPollTotalsForViewer/,
+    hint: 'politiker FM-stemmer',
   },
 ];
 

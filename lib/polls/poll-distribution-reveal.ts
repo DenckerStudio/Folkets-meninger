@@ -1,8 +1,11 @@
 import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
-import type { PollFylkeTotals, PollTotals } from '@/lib/polls/types';
+import type { PollFylkeTotals, PollFylkeViewerPayload, PollTotals } from '@/lib/polls/types';
 
 export const POLL_DISTRIBUTION_AWAITING_AGGREGATE_MESSAGE =
   'Fordelingen vises når minst 5 har stemt.';
+
+export const POLL_FYLKE_HIDDEN_UNTIL_VOTE_MESSAGE =
+  'Fylkesfordelingen vises når du har stemt.';
 
 /**
  * Fordeling vises når (hasVoted || !votingOpen) og k ≥ 5.
@@ -40,32 +43,29 @@ export function redactPollTotalsForViewer(
   return { ja: 0, nei: 0, blank: 0, total: totals.total };
 }
 
-/** Skjuler per-valg per fylke på åpne avstemninger for ikke-stemmere; k≥5 per rad når synlig. */
-export function redactPollFylkeTotalsForViewer(
+/** Fylke til API/side: tom liste + flagg når åpen og ikke stemt; ellers k≥5 per rad. */
+export function preparePollFylkeForViewer(
   rows: PollFylkeTotals[],
   votingOpen: boolean,
   hasVoted: boolean,
-): PollFylkeTotals[] {
-  const mayReveal = pollDistributionMayReveal(votingOpen, hasVoted);
-  if (!mayReveal) {
-    return rows.map((row) => ({
-      ...row,
-      ja: null,
-      nei: null,
-      blank: null,
-      sufficientData: false,
-    }));
+): PollFylkeViewerPayload {
+  if (votingOpen && !hasVoted) {
+    return { hiddenUntilVote: true, byFylke: [] };
   }
-  return rows.map((row) => {
-    if (!row.sufficientData || !publicAggregateMeetsThreshold(row.total)) {
+
+  const byFylke = rows.map((row) => {
+    if (!publicAggregateMeetsThreshold(row.total)) {
       return {
         ...row,
         ja: null,
         nei: null,
         blank: null,
         sufficientData: false,
+        hiddenUntilVote: false,
       };
     }
-    return row;
+    return { ...row, hiddenUntilVote: false };
   });
+
+  return { hiddenUntilVote: false, byFylke };
 }
