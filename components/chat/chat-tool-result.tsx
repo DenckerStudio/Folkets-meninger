@@ -22,6 +22,8 @@ import {
   Vote,
 } from 'lucide-react';
 import { formatChunkExcerptForDisplay } from '@/lib/chat/chunk-excerpt';
+import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
+import { publicAggregateMeetsThreshold, publicAggregateVotesRemaining } from '@/lib/public-aggregate/threshold';
 import { routes } from '@/lib/routes';
 
 /**
@@ -539,6 +541,8 @@ function VoteResultsCard({ output }: { output: VoteResultsOutput }) {
   const stortinget = output.stortinget ?? null;
   const folk = output.folk ?? {};
   const folkTotal = folk.total ?? 0;
+  const folkAggregatePublic = publicAggregateMeetsThreshold(folkTotal);
+  const folkVotesRemaining = publicAggregateVotesRemaining(folkTotal);
 
   return (
     <ToolCard
@@ -575,10 +579,20 @@ function VoteResultsCard({ output }: { output: VoteResultsOutput }) {
         </p>
       )}
 
-      {folkTotal > 0 ? (
+      {folkAggregatePublic ? (
         <p className="text-xs text-foreground">
           <span className="font-medium text-muted-foreground">Folket i appen ({folkTotal}): </span>
           For {output.folkForPercent ?? 0}% · Mot {output.folkAgainstPercent ?? 0}%
+        </p>
+      ) : folkTotal > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Folkets fordeling vises når minst {MIN_PUBLIC_AGGREGATE_N} har stemt
+          {folkVotesRemaining > 0
+            ? ` (trenger ${folkVotesRemaining} ${folkVotesRemaining === 1 ? 'stemme' : 'stemmer'} til).`
+            : '.'}{' '}
+          <Link href={routes.sak(output.issueId)} className="font-medium text-brand hover:underline">
+            Stem på saken
+          </Link>
         </p>
       ) : (
         <p className="text-xs text-muted-foreground">Ingen anonyme stemmer i appen ennå.</p>

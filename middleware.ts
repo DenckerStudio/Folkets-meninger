@@ -6,6 +6,7 @@ import {
   isPublicDashboardChatPath,
   isPublicDashboardFolketsMeningerPath,
   isPublicDashboardHoringerPath,
+  isPublicDashboardInnsiktPath,
   isPublicDashboardKalenderPath,
   isPublicDashboardPolitikerPath,
   isPublicDashboardSakPath,
@@ -71,7 +72,8 @@ export async function middleware(request: NextRequest) {
     isPublicDashboardHoringerPath(pathname) ||
     isPublicDashboardKalenderPath(pathname) ||
     isPublicDashboardUtforskPath(pathname) ||
-    isPublicDashboardChatPath(pathname)
+    isPublicDashboardChatPath(pathname) ||
+    isPublicDashboardInnsiktPath(pathname)
   ) {
     return refreshSessionCookies(request);
   }

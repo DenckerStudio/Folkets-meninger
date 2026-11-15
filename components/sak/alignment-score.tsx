@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import Link from 'next/link';
 import { Scale, ExternalLink } from 'lucide-react';
 import {
   Bar,
@@ -16,13 +17,14 @@ import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { useSakTooltipsEnabled } from '@/components/theme-provider';
 import { buildAlignmentComparison, type SakVedtakContext } from '@/lib/alignment/score';
+import type { AlignmentVerdict, FolkVoteCounts, SakVotering } from '@/lib/alignment/types';
+import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
 import {
-  ALIGNMENT_MIN_FOLK_VOTES,
-  type AlignmentVerdict,
-  type FolkVoteCounts,
-  type SakVotering,
-} from '@/lib/alignment/types';
+  publicAggregateMeetsThreshold,
+  publicAggregateVotesRemaining,
+} from '@/lib/public-aggregate/threshold';
 import { formatStemmerCount } from '@/lib/norwegian-plural';
+import { routes } from '@/lib/routes';
 import { NonRepresentativeNotice } from '@/components/trust/non-representative-notice';
 import { cn } from '@/lib/utils';
 
@@ -196,8 +198,10 @@ export function AlignmentScore({
     ];
   }, [comparison]);
 
+  const folkAggregatePublic = publicAggregateMeetsThreshold(comparison.folk.total);
+  const folkVotesRemaining = publicAggregateVotesRemaining(comparison.folk.total);
   const showComparisonChart =
-    comparison.stortingetForPercent != null && comparison.folk.total >= ALIGNMENT_MIN_FOLK_VOTES;
+    comparison.stortingetForPercent != null && folkAggregatePublic;
 
   return (
     <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-8">
@@ -218,7 +222,12 @@ export function AlignmentScore({
         </span>
       </div>
 
-      <NonRepresentativeNotice count={comparison.folk.total} countLabel="stemmer i appen" countLabelSingular="stemme i appen" className="mb-2" />
+      <NonRepresentativeNotice
+        count={folkAggregatePublic ? comparison.folk.total : undefined}
+        countLabel="stemmer i appen"
+        countLabelSingular="stemme i appen"
+        className="mb-2"
+      />
       <p className="mb-4 text-xs text-muted-foreground">
         «Folket i appen» viser historiske anonyme For/Mot/Avstår-stemmer der de finnes. Nye holdninger
         (enig/uenig) er personlige og inngår ikke her. Stortingets tall er offisielle voteringer.
@@ -273,9 +282,11 @@ export function AlignmentScore({
             <h3 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
               Brukere av Folkets Meninger
             </h3>
-            <span className="text-xs text-muted-foreground">{formatStemmerCount(comparison.folk.total)}</span>
+            {folkAggregatePublic ? (
+              <span className="text-xs text-muted-foreground">{formatStemmerCount(comparison.folk.total)}</span>
+            ) : null}
           </div>
-          {comparison.folk.total > 0 ? (
+          {folkAggregatePublic ? (
             <>
               <SplitBar
                 forPercent={comparison.folkForPercent}
@@ -289,6 +300,25 @@ export function AlignmentScore({
                 <span className="text-rose-600 dark:text-rose-400">Mot {comparison.folkAgainstPercent}%</span>
               </div>
             </>
+          ) : comparison.folk.total > 0 ? (
+            <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Folkets anonyme fordeling vises når minst {MIN_PUBLIC_AGGREGATE_N} har stemt.
+                {folkVotesRemaining > 0 ? (
+                  <>
+                    {' '}
+                    Det trengs {folkVotesRemaining}{' '}
+                    {folkVotesRemaining === 1 ? 'stemme til' : 'stemmer til'}.
+                  </>
+                ) : null}
+              </p>
+              <Link
+                href={routes.sak(sakId)}
+                className="mt-3 inline-flex min-h-11 items-center rounded-lg font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+              >
+                Gi din stemme på saken →
+              </Link>
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground">Ingen har stemt i appen ennå.</p>
           )}
@@ -350,7 +380,7 @@ export function AlignmentScore({
 
       {comparison.verdict === 'insufficient' ? (
         <p className="mt-3 text-xs text-muted-foreground">
-          Samsvars-score vises når minst {ALIGNMENT_MIN_FOLK_VOTES} anonyme stemmer er avgitt.
+          Samsvars-score vises når minst {MIN_PUBLIC_AGGREGATE_N} anonyme stemmer er avgitt.
         </p>
       ) : null}
 

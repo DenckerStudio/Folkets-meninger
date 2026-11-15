@@ -1,6 +1,5 @@
 import { MIN_ACCOUNT_AGE_YEARS } from '@/lib/legal/account-age';
-import { STANCE_PUBLIC_MIN_ENGAGED } from '@/lib/stances/constants';
-import { GOVERNMENT_STATS_MIN_VOTES } from '@/lib/government-stats/snapshot';
+import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
 
 export const PRIVACY_NOTICE_UPDATED = '17. oktober 2026';
 
@@ -55,7 +54,7 @@ export const PRIVACY_PROCESSING_TABLE = [
   },
   {
     purpose: 'Anonym statistikk',
-    data: `Aggregater (minst ${STANCE_PUBLIC_MIN_ENGAGED} / ${GOVERNMENT_STATS_MIN_VOTES} svar der det gjelder)`,
+    data: `Aggregater (minst ${MIN_PUBLIC_AGGREGATE_N} svar der det gjelder)`,
     legalBasis: 'Ikke personopplysninger etter aggregering',
     retention: 'Løpende aggregater',
   },

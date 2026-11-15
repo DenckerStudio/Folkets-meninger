@@ -11,8 +11,9 @@ import {
 } from '@/lib/alignment/sak-vedtak';
 
 export type { SakVedtakContext };
+import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
+import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
 import {
-  ALIGNMENT_MIN_FOLK_VOTES,
   type AlignmentComparison,
   type AlignmentSide,
   type AlignmentVerdict,
@@ -211,7 +212,7 @@ export function buildAlignmentComparison(
     stHeadlineParts.votePhrase,
   );
 
-  if (folkTotal < ALIGNMENT_MIN_FOLK_VOTES) {
+  if (!publicAggregateMeetsThreshold(folkTotal)) {
     return {
       folk,
       folkForPercent,
@@ -227,7 +228,7 @@ export function buildAlignmentComparison(
       gapPoints: null,
       verdict: 'insufficient',
       headline: stCountHeadline,
-      summary: `Folkets mening vises når minst ${ALIGNMENT_MIN_FOLK_VOTES} anonyme stemmer er avgitt i appen.`,
+      summary: `Folkets mening vises når minst ${MIN_PUBLIC_AGGREGATE_N} anonyme stemmer er avgitt i appen.`,
       votering,
       otherVoteringCount,
     };

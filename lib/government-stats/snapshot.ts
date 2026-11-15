@@ -1,8 +1,10 @@
+import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
+import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
 import { getServiceSupabase } from '@/lib/supabase';
 import { routes } from '@/lib/routes';
 
 /** Minimum ballots before aggregate is published (k-anonymity). */
-export const GOVERNMENT_STATS_MIN_VOTES = 50;
+export const GOVERNMENT_STATS_MIN_VOTES = MIN_PUBLIC_AGGREGATE_N;
 
 export type PublicVoteStatRow = {
   stortingetIssueId: string;
@@ -101,7 +103,7 @@ export async function buildGovernmentStatsSnapshot(options?: {
   const publicRows: PublicVoteStatRow[] = rows
     .map((issue) => {
       const v = totals[issue.id] ?? { for: 0, against: 0, abstain: 0, total: 0 };
-      const sufficient = v.total >= GOVERNMENT_STATS_MIN_VOTES;
+      const sufficient = publicAggregateMeetsThreshold(v.total);
       return {
         stortingetIssueId: issue.id,
         title: issue.title ?? `Sak ${issue.id}`,
@@ -127,8 +129,7 @@ export async function buildGovernmentStatsSnapshot(options?: {
   };
 }
 
-export const PUBLIC_STATS_DISCLAIMER =
-  'Folkets Meninger er en uavhengig plattform. Tallene er anonyme aggregater over innloggede brukeres stemmer og inkluderer ikke persondata eller foruminnlegg. Saker med færre enn 50 stemmer vises ikke av personvernhensyn.';
+export const PUBLIC_STATS_DISCLAIMER = `Folkets Meninger er en uavhengig plattform. Tallene er anonyme aggregater over innloggede brukeres stemmer og inkluderer ikke persondata eller foruminnlegg. Saker med færre enn ${MIN_PUBLIC_AGGREGATE_N} stemmer vises ikke av personvernhensyn.`;
 
 export function snapshotToCsv(snapshot: GovernmentStatsSnapshot): string {
   const header = [

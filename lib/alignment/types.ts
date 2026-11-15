@@ -1,3 +1,5 @@
+import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
+
 export type SakVotering = {
   votering_id: number;
   sak_id?: number;
@@ -57,4 +59,4 @@ export type AlignmentComparison = {
   otherVoteringCount: number;
 };
 
-export const ALIGNMENT_MIN_FOLK_VOTES = 5;
+export const ALIGNMENT_MIN_FOLK_VOTES = MIN_PUBLIC_AGGREGATE_N;
