@@ -13,6 +13,7 @@ import { ANALYTICS_FOOTER_NOTICE } from '@/lib/analytics/collection-notice';
 
 const platformLinks = [
   { href: routes.utforsk, label: 'Utforsk saker' },
+  { href: routes.denneUka, label: 'Dette skjer nå' },
   { href: routes.horinger, label: 'Høringer' },
   { href: routes.politikere, label: 'Politikere' },
   { href: routes.folketsMeninger, label: 'Folkets meninger' },
