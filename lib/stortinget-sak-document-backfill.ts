@@ -1,9 +1,12 @@
+import type { StortingetSakDetail } from './stortinget';
 import { getServiceSupabase } from './supabase';
 import { getCachedSakDetail } from './stortinget-detail-cache';
 import { ingestSakDocuments } from './stortinget-document-ingest';
+import { parseSakDocuments } from './stortinget-documents';
 
 export const MAX_SAK_DOCUMENT_REFRESH_IDS = 10;
 export const SYNC_DOCUMENT_BACKFILL_LIMIT = 10;
+export const ISSUE_DOCUMENT_LOOKUP_BATCH_SIZE = 100;
 
 const EMPTY_ISSUE_ID = /^[0-9]+$/;
 
@@ -67,17 +70,58 @@ export function resolveSakDocumentIngestStatus(ingest: {
   return 'none';
 }
 
+export function chunkIssueIds(ids: string[], batchSize = ISSUE_DOCUMENT_LOOKUP_BATCH_SIZE): string[][] {
+  if (batchSize <= 0) return [ids];
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += batchSize) {
+    chunks.push(ids.slice(i, i + batchSize));
+  }
+  return chunks;
+}
+
+/**
+ * Ekskluder saker der cachet detail_json ikke forventer dokumentrader (samme som ingest).
+ * Manglende detail_json behandles som ukjent og kan fortsatt backfylles.
+ */
+export function issueCachedDetailExcludesDocumentBackfill(detailJson: unknown): boolean {
+  if (detailJson == null) return false;
+  return parseSakDocuments(detailJson as StortingetSakDetail).length === 0;
+}
+
+export function collectIssueIdsWithoutCachedDocumentRefs(
+  issueRows: Array<{ id: string; detail_json: unknown }>,
+): Set<string> {
+  const excluded = new Set<string>();
+  for (const row of issueRows) {
+    if (issueCachedDetailExcludesDocumentBackfill(row.detail_json)) {
+      excluded.add(String(row.id));
+    }
+  }
+  return excluded;
+}
+
+export function computeUtcDayIndex(now: Date = new Date()): number {
+  return Math.floor(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 86_400_000,
+  );
+}
+
 /**
  * Velg saker uten dokumentrader, eldste first_seen_at først (null til slutt).
- * Ren funksjon for testing av utvalgslogikk.
+ * Roterer deterministisk slik at samme sett ikke blokkerer køen hver natt.
  */
 export function pickIssueIdsMissingDocuments(args: {
   candidateIds: string[];
   issueIdsWithDocuments: Set<string>;
+  issueIdsWithoutCachedDocumentRefs?: Set<string>;
   firstSeenAtById: Map<string, string | null>;
   limit: number;
+  rotationOffset?: number;
 }): string[] {
-  const missing = args.candidateIds.filter((id) => !args.issueIdsWithDocuments.has(id));
+  const withoutRefs = args.issueIdsWithoutCachedDocumentRefs ?? new Set<string>();
+  const missing = args.candidateIds.filter(
+    (id) => !args.issueIdsWithDocuments.has(id) && !withoutRefs.has(id),
+  );
 
   const sorted = [...missing].sort((a, b) => {
     const aSeen = args.firstSeenAtById.get(a) ?? null;
@@ -88,7 +132,15 @@ export function pickIssueIdsMissingDocuments(args: {
     return aSeen.localeCompare(bSeen);
   });
 
-  return sorted.slice(0, Math.max(0, args.limit));
+  const limit = Math.max(0, args.limit);
+  if (sorted.length <= limit) {
+    return sorted;
+  }
+
+  const offset =
+    sorted.length > 0 ? (args.rotationOffset ?? 0) % sorted.length : 0;
+  const rotated = [...sorted.slice(offset), ...sorted.slice(0, offset)];
+  return rotated.slice(0, limit);
 }
 
 async function countIssueDocumentRows(issueId: string): Promise<number> {
@@ -183,9 +235,64 @@ export type DocumentBackfillResult = {
   results: SakDocumentRefreshResult[];
 };
 
+async function fetchIssueIdsWithStoredDocuments(
+  service: ReturnType<typeof getServiceSupabase>,
+  issueIds: string[],
+): Promise<Set<string>> {
+  const issueIdsWithDocuments = new Set<string>();
+
+  for (const chunk of chunkIssueIds(issueIds)) {
+    const { data, error } = await service
+      .from('stortinget_issue_documents')
+      .select('issue_id')
+      .in('issue_id', chunk);
+
+    if (error) {
+      console.warn('[document-ingest] Kunne ikke hente dokumentrader for backfill:', error);
+      throw error;
+    }
+
+    for (const row of data ?? []) {
+      issueIdsWithDocuments.add(String(row.issue_id));
+    }
+  }
+
+  return issueIdsWithDocuments;
+}
+
+async function fetchIssueRowsForBackfill(
+  service: ReturnType<typeof getServiceSupabase>,
+  issueIds: string[],
+): Promise<Array<{ id: string; first_seen_at: string | null; detail_json: unknown }>> {
+  const rows: Array<{ id: string; first_seen_at: string | null; detail_json: unknown }> = [];
+
+  for (const chunk of chunkIssueIds(issueIds)) {
+    const { data, error } = await service
+      .from('stortinget_issues')
+      .select('id, first_seen_at, detail_json')
+      .in('id', chunk);
+
+    if (error) {
+      console.warn('[document-ingest] Kunne ikke hente saker for backfill:', error);
+      throw error;
+    }
+
+    for (const row of data ?? []) {
+      rows.push({
+        id: String(row.id),
+        first_seen_at: (row.first_seen_at as string | null) ?? null,
+        detail_json: row.detail_json,
+      });
+    }
+  }
+
+  return rows;
+}
+
 export async function selectSessionIssueIdsMissingDocuments(
   sessionIssueIds: string[],
   limit = SYNC_DOCUMENT_BACKFILL_LIMIT,
+  now: Date = new Date(),
 ): Promise<string[]> {
   if (sessionIssueIds.length === 0) return [];
 
@@ -198,35 +305,30 @@ export async function selectSessionIssueIdsMissingDocuments(
 
   const uniqueIds = [...new Set(sessionIssueIds)];
 
-  const [{ data: docRows, error: docError }, { data: issueRows, error: issueError }] =
-    await Promise.all([
-      service.from('stortinget_issue_documents').select('issue_id').in('issue_id', uniqueIds),
-      service
-        .from('stortinget_issues')
-        .select('id, first_seen_at')
-        .in('id', uniqueIds),
+  try {
+    const [issueIdsWithDocuments, issueRows] = await Promise.all([
+      fetchIssueIdsWithStoredDocuments(service, uniqueIds),
+      fetchIssueRowsForBackfill(service, uniqueIds),
     ]);
 
-  if (docError) {
-    console.warn('[document-ingest] Kunne ikke hente dokumentrader for backfill:', docError);
+    const issueIdsWithoutCachedDocumentRefs = collectIssueIdsWithoutCachedDocumentRefs(issueRows);
+    const firstSeenAtById = new Map(
+      issueRows.map((row) => [row.id, row.first_seen_at] as const),
+    );
+
+    const rotationOffset = computeUtcDayIndex(now);
+
+    return pickIssueIdsMissingDocuments({
+      candidateIds: uniqueIds,
+      issueIdsWithDocuments,
+      issueIdsWithoutCachedDocumentRefs,
+      firstSeenAtById,
+      limit,
+      rotationOffset,
+    });
+  } catch {
     return [];
   }
-  if (issueError) {
-    console.warn('[document-ingest] Kunne ikke hente first_seen_at for backfill:', issueError);
-    return [];
-  }
-
-  const issueIdsWithDocuments = new Set((docRows ?? []).map((row) => String(row.issue_id)));
-  const firstSeenAtById = new Map(
-    (issueRows ?? []).map((row) => [String(row.id), (row.first_seen_at as string | null) ?? null]),
-  );
-
-  return pickIssueIdsMissingDocuments({
-    candidateIds: uniqueIds,
-    issueIdsWithDocuments,
-    firstSeenAtById,
-    limit,
-  });
 }
 
 export async function backfillSessionSakDocuments(
