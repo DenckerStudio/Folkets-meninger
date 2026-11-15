@@ -1,13 +1,20 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { dashboardIndexRedirect, isPublicDashboardInnsiktPath, routes } from '../routes';
+import {
+  dashboardIndexRedirect,
+  isPublicDashboardInnsiktPath,
+  isPublicDashboardSporsmalPath,
+  routes,
+} from '../routes';
 
 assert.equal(dashboardIndexRedirect(routes.dashboard), routes.utforsk);
 assert.equal(dashboardIndexRedirect(routes.utforsk), null);
 assert.equal(dashboardIndexRedirect(routes.minSide), null);
 assert.equal(dashboardIndexRedirect(routes.innsikt), null);
 assert.equal(dashboardIndexRedirect(`${routes.dashboard}/`), null);
+assert.equal(isPublicDashboardSporsmalPath(routes.sporsmal), true);
+assert.equal(isPublicDashboardSporsmalPath(routes.sporsmalDetail('1')), true);
 
 function read(rel: string): string {
   return readFileSync(join(process.cwd(), rel), 'utf8');
@@ -17,6 +24,7 @@ assert.equal(isPublicDashboardInnsiktPath(routes.innsikt), true);
 assert.equal(isPublicDashboardInnsiktPath(routes.minSide), false);
 
 const middleware = read('middleware.ts');
+assert.match(middleware, /isPublicDashboardSporsmalPath/);
 const redirectAt = middleware.indexOf('dashboardIndexRedirect(pathname)');
 const authAt = middleware.indexOf('resolveMiddlewareUser(request)');
 assert.ok(redirectAt >= 0, 'middleware must redirect the dashboard index');

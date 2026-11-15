@@ -9,6 +9,7 @@ const EXACT_LABELS: Record<string, string> = {
   [routes.politikere]: 'Politikere',
   [routes.kalender]: 'Kalender',
   [routes.innsikt]: 'Innsikt',
+  [routes.sporsmal]: 'Spørsmål',
   [routes.forslag]: 'Appens fremtid',
   [routes.minSide]: 'Min side',
   [routes.admin]: 'Admin',
@@ -27,6 +28,7 @@ export function labelForLoginNext(path: string): string {
   if (pathname.startsWith(`${DASHBOARD_PREFIX}/sak/`)) return 'saken';
   if (pathname.startsWith(`${routes.folketsMeninger}/`)) return 'meningen';
   if (pathname.startsWith(`${routes.politikere}/`)) return 'politikeren';
+  if (pathname.startsWith(`${routes.sporsmal}/`)) return 'spørsmålet';
   if (pathname.startsWith(`${routes.admin}/`)) return 'admin';
 
   return pathname;

@@ -4,6 +4,8 @@ import { STORTINGET_ACTIVE_SESSION_ID } from '@/lib/stortinget-config';
 
 export const dynamic = 'force-dynamic';
 
+/** Read-only Stortinget open data; guests may call this without login (see middleware). */
+
 function isSporsmalType(x: string | null): x is SporsmalType {
   return x === 'sporretimesporsmal' || x === 'interpellasjoner' || x === 'skriftligesporsmal';
 }
