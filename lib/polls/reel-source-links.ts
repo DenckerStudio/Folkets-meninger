@@ -1,5 +1,5 @@
 import type { PollRecord } from '@/lib/polls/types';
-import { routes } from '@/lib/routes';
+import { pollPublicStortingetIssueId, pollSakDashboardHref } from '@/lib/polls/stortinget-issue-link';
 
 export type ReelPollSourceLink = {
   id: string;
@@ -27,14 +27,15 @@ function normalizeHttpUrl(url: string): string {
 export function listReelPollSourceLinks(poll: PollRecord): ReelPollSourceLink[] {
   const links: ReelPollSourceLink[] = [];
   const seen = new Set<string>();
-  const sakUrl = poll.stortingetIssueId ? routes.sak(poll.stortingetIssueId) : null;
+  const publicIssueId = pollPublicStortingetIssueId(poll.stortingetIssueId);
+  const sakUrl = pollSakDashboardHref(poll.stortingetIssueId);
 
-  if (poll.stortingetIssueId && sakUrl) {
+  if (publicIssueId && sakUrl) {
     seen.add(sakUrl);
     links.push({
-      id: `sak-${poll.stortingetIssueId}`,
+      id: `sak-${publicIssueId}`,
       href: sakUrl,
-      label: `Stortingssak ${poll.stortingetIssueId}`,
+      label: `Stortingssak ${publicIssueId}`,
       external: false,
     });
   }

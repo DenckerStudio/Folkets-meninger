@@ -4,15 +4,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { pollChoicePercent, POLL_ENDED_USER_MESSAGE } from '@/lib/polls/format';
-import {
-  POLL_BALLOT_VOTE_BUTTON_GRID_CLASS,
-  pollBallotRunningTextPhraseSentenceStart,
-} from '@/lib/polls/ballot-buttons';
-import { POLL_BALLOT_CHOICES, pollChoiceLabel } from '@/lib/polls/labels';
+import { POLL_ENDED_USER_MESSAGE } from '@/lib/polls/format';
+import { pollBallotRunningTextPhraseSentenceStart } from '@/lib/polls/ballot-buttons';
+import { pollChoiceLabel } from '@/lib/polls/labels';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
-import { PollBallotVoteButton } from '@/components/polls/poll-ballot-vote-button';
-import { PollChoiceResultTiles } from '@/components/polls/poll-choice-result-tiles';
+import {
+  PollBallotDistributionBar,
+  PollBallotDistributionBarDisplay,
+} from '@/components/polls/poll-ballot-distribution-bar';
 import { routes } from '@/lib/routes';
 import { NonRepresentativeNotice } from '@/components/trust/non-representative-notice';
 import { cn } from '@/lib/utils';
@@ -81,35 +80,22 @@ export function PollBallot({
         </>
       )}
       {votingOpen ? (
-        <div className={cn(POLL_BALLOT_VOTE_BUTTON_GRID_CLASS, compact ? 'mt-0' : 'mt-4')}>
-          {POLL_BALLOT_CHOICES.map((choice) => {
-            const selected = userVote === choice;
-            return (
-              <PollBallotVoteButton
-                key={choice}
-                choice={choice}
-                selected={selected}
-                disabled={Boolean(userVote) || busy || !user}
-                onClick={() => void vote(choice)}
-                className={cn('flex-col gap-0.5 py-2', userVote && !selected ? 'opacity-60' : '')}
-              >
-                <span>{pollChoiceLabel(choice)}</span>
-                <span className="text-xs font-normal opacity-90">
-                  {(() => {
-                    const pct = pollChoicePercent(totals, choice);
-                    return pct != null ? `${pct}% · ${totals[choice]}` : `${totals[choice]} stemmer`;
-                  })()}
-                </span>
-              </PollBallotVoteButton>
-            );
-          })}
-        </div>
+        <PollBallotDistributionBar
+          totals={totals}
+          votingOpen={votingOpen}
+          userVote={userVote}
+          busy={busy}
+          disabled={!user}
+          onVote={(choice) => void vote(choice)}
+          compact={compact}
+          className={compact ? 'mt-0' : 'mt-4'}
+        />
       ) : (
         <>
           <p className={cn('text-sm font-medium text-foreground', compact ? 'mt-0' : 'mt-4')} role="status">
             {POLL_ENDED_USER_MESSAGE}
           </p>
-          <PollChoiceResultTiles totals={totals} className={compact ? 'mt-3' : 'mt-4'} />
+          <PollBallotDistributionBarDisplay totals={totals} className={compact ? 'mt-3' : 'mt-4'} />
         </>
       )}
       {votingOpen && userVote ? (

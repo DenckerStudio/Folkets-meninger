@@ -17,6 +17,7 @@ import { buildPollShareRelativePath, buildPollShareUrl, isShareablePoll } from '
 import { isSharePollsEnabled } from '@/lib/polls/share-flag';
 import { resolveRequestShareOrigin } from '@/lib/polls/share-server';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { pollSakDashboardHref } from '@/lib/polls/stortinget-issue-link';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -141,9 +142,9 @@ export default async function PollEmbedPage({ params, searchParams }: PageProps)
           <p className="text-[11px] leading-relaxed text-muted-foreground">{STORTINGET_DISCLAIMER}</p>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-            {poll.stortingetIssueId ? (
+            {pollSakDashboardHref(poll.stortingetIssueId) ? (
               <Link
-                href={routes.sak(poll.stortingetIssueId)}
+                href={pollSakDashboardHref(poll.stortingetIssueId)!}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="font-medium text-brand hover:underline"

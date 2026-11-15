@@ -27,6 +27,7 @@ import {
 } from '@/lib/polls/service';
 import { isShareablePoll } from '@/lib/polls/share';
 import { isSharePollsEnabled } from '@/lib/polls/share-flag';
+import { pollPublicStortingetIssueId, pollSakDashboardHref } from '@/lib/polls/stortinget-issue-link';
 import { routes } from '@/lib/routes';
 import { truncateDescription } from '@/lib/seo/metadata';
 
@@ -89,7 +90,8 @@ export default async function PollDetailPage({ params }: PageProps) {
     isShareablePoll(poll) &&
     (isSharePollsEnabled() || (user ? await isAdmin(user.id, user.email) : false));
 
-  const sakUrl = poll.stortingetIssueId ? routes.sak(poll.stortingetIssueId) : null;
+  const publicSakIssueId = pollPublicStortingetIssueId(poll.stortingetIssueId);
+  const sakUrl = pollSakDashboardHref(poll.stortingetIssueId);
   const sourceUrls = poll.sourceUrls.filter((source) => !sakUrl || source.url !== sakUrl);
 
   return (
@@ -124,14 +126,14 @@ export default async function PollDetailPage({ params }: PageProps) {
       {poll.neutralSummary ? (
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{poll.neutralSummary}</p>
       ) : null}
-      {poll.stortingetIssueId ? (
+      {publicSakIssueId && sakUrl ? (
         <p className="flex flex-wrap items-center gap-x-1 text-sm">
           Kilde:{' '}
           <Link
-            href={routes.sak(poll.stortingetIssueId)}
+            href={sakUrl}
             className="inline-flex min-h-11 items-center font-medium text-brand hover:underline"
           >
-            Stortingssak {poll.stortingetIssueId}
+            Stortingssak {publicSakIssueId}
           </Link>
         </p>
       ) : null}

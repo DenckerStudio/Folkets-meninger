@@ -25,6 +25,7 @@ import {
 } from '@/lib/polls/share';
 import { resolveRequestShareOrigin } from '@/lib/polls/share-server';
 import { getServerSupabase } from '@/lib/supabase-server';
+import { pollPublicStortingetIssueId, pollSakDashboardHref } from '@/lib/polls/stortinget-issue-link';
 import { routes } from '@/lib/routes';
 import { SharePollRetiredPage } from '@/components/polls/share-poll-retired';
 
@@ -128,11 +129,11 @@ export default async function SharePollPage({ params, searchParams }: PageProps)
           {summary ? (
             <p className="text-sm leading-relaxed text-muted-foreground">
               {truncatedSummary}
-              {summaryIsTruncated && poll.stortingetIssueId ? (
+              {summaryIsTruncated && pollSakDashboardHref(poll.stortingetIssueId) ? (
                 <>
                   {' '}
                   <Link
-                    href={routes.sak(poll.stortingetIssueId)}
+                    href={pollSakDashboardHref(poll.stortingetIssueId)!}
                     className="font-medium text-brand hover:underline"
                   >
                     Les mer
@@ -159,14 +160,15 @@ export default async function SharePollPage({ params, searchParams }: PageProps)
 
       <p className="text-xs leading-relaxed text-muted-foreground">{STORTINGET_DISCLAIMER}</p>
 
-      {poll.stortingetIssueId ? (
+      {pollPublicStortingetIssueId(poll.stortingetIssueId) &&
+      pollSakDashboardHref(poll.stortingetIssueId) ? (
         <p className="text-sm">
           Kilde:{' '}
           <Link
-            href={routes.sak(poll.stortingetIssueId)}
+            href={pollSakDashboardHref(poll.stortingetIssueId)!}
             className="font-medium text-brand hover:underline"
           >
-            Stortingssak {poll.stortingetIssueId}
+            Stortingssak {pollPublicStortingetIssueId(poll.stortingetIssueId)}
           </Link>
         </p>
       ) : null}
