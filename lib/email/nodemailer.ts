@@ -74,6 +74,7 @@ export type DigestEmailInput = {
   to: string;
   frequency: DigestFrequency;
   digest: PreparedDigest;
+  weeklyOverviewHtmlBlock?: string | null;
 };
 
 export async function sendDigestEmail(input: DigestEmailInput) {
@@ -81,12 +82,12 @@ export async function sendDigestEmail(input: DigestEmailInput) {
   const { from } = getSmtpConfig();
 
   const subject = digestEmailSubject(input.frequency, input.digest.isTeaser);
-  const html = buildDigestEmailHtml(input.digest);
+  const html = buildDigestEmailHtml(input.digest, input.weeklyOverviewHtmlBlock);
 
   await transporter.sendMail({ from, to: input.to, subject, html });
 }
 
-function buildDigestEmailHtml(digest: PreparedDigest): string {
+function buildDigestEmailHtml(digest: PreparedDigest, weeklyOverviewHtmlBlock?: string | null): string {
   const sections: string[] = [];
 
   if (digest.groupedByChannel.length > 0) {
@@ -108,11 +109,14 @@ function buildDigestEmailHtml(digest: PreparedDigest): string {
     ? `<p style="margin:16px 0 0 0;font-size:13px;color:#6b7280;">Dette er en kort smakebit (maks ${digest.maxItems} saker). Med Stemme+ (${STEMME_PLUS_MONTHLY_PRICE_NOK} kr/mnd) får du full oppsummering med mer kontekst og sanntidsvarsler.</p>`
     : '';
 
+  const weeklyBlock = weeklyOverviewHtmlBlock?.trim() ? weeklyOverviewHtmlBlock.trim() : '';
+
   return `
     <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5;">
       <h3 style="margin:0 0 12px 0;">${digest.isTeaser ? 'Ukentlig smakebit' : 'Din oppsummering'}</h3>
       ${sections.join('')}
       ${teaserNote}
+      ${weeklyBlock}
     </div>
   `.trim();
 }
