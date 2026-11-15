@@ -560,8 +560,6 @@ export default async function SakPage({
               </div>
             ) : null}
 
-            <SimilarIssuesSection sakId={sak.id} />
-
             {relaterteSaker.length > 0 ? (
               <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
                 <h2 className="text-lg font-bold text-foreground mb-4">Relaterte saker</h2>
@@ -585,6 +583,14 @@ export default async function SakPage({
                 </div>
               </div>
             ) : null}
+
+            <SimilarIssuesSection
+              sakId={sak.id}
+              excludeIssueIds={relaterteSaker.flatMap((rel: { relatert_sak?: { id?: unknown } }) => {
+                const id = rel.relatert_sak?.id;
+                return id != null ? [String(id)] : [];
+              })}
+            />
 
             {!isDedicatedResearchSak ? (
               <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:flex-wrap sm:gap-4">

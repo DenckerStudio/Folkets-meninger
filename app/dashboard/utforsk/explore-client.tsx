@@ -29,46 +29,37 @@ import { usePersistedState } from '@/hooks/use-persisted-state';
 import { STORTINGET_ACTIVE_SESSION_ID } from '@/lib/stortinget-config';
 
 import { ISSUE_STANCE_LABELS, type IssueStance } from '@/lib/stances/types';
-import { issueMatchesStortingetSearch } from '@/lib/stortinget-issue-search';
 import { shouldFallbackUtforskToLexicalSearch } from '@/lib/search/utforsk-search-fallback';
+import { UTFORSK_ISSUE_SEARCH_MIN_QUERY_CHARS } from '@/lib/search/utforsk-issue-search-api';
+import {
+  UTFORSK_DEFAULT_SORT,
+  buildHybridRankMap,
+  filterUtforskIssuesBySearch,
+  isUtforskSortOption,
+  resolveEffectiveUtforskSort,
+  sortUtforskIssues,
+  utforskSortOptionsForQuery,
+  type UtforskSortOption,
+} from '@/lib/search/utforsk-explore-display';
 
 const ISSUE_PAGE_SIZE = 24;
 const UTFORSK_HYBRID_SEARCH_DEBOUNCE_MS = 280;
 const LABEL_CHIP_LIMIT = 12;
 
-function votingUrgency(issue: SakListItem): number {
-  if (issue.votingOpen && issue.votingDaysLeft != null && issue.votingDaysLeft > 0) {
-    return issue.votingDaysLeft;
-  }
-  return Number.POSITIVE_INFINITY;
-}
-
-function issueEngagementTotal(issue: SakListItem): number {
-  return issue.votes?.total ?? 0;
-}
-
-const UTFORSK_SORT_VALUES = ['Nyeste først', 'Mest engasjement', 'Snart votering'] as const;
-type UtforskSort = (typeof UTFORSK_SORT_VALUES)[number];
-
 const UTFORSK_DEFAULT_STATUS = 'Alle statuser';
 const UTFORSK_DEFAULT_SAK_KIND = 'Alle sakstyper';
-const UTFORSK_DEFAULT_SORT: UtforskSort = 'Nyeste først';
 /** One-time migration from pre-sort localStorage blob; removed on read. */
 const LEGACY_UTFORSK_FILTERS_STORAGE_KEY = 'folkets:utforsk:filters';
 
-function isUtforskSort(value: unknown): value is UtforskSort {
-  return typeof value === 'string' && (UTFORSK_SORT_VALUES as readonly string[]).includes(value);
-}
-
 /** Legacy blob in `folkets:utforsk:filters` — only `sortBy` is migrated. */
-function readLegacyUtforskSort(): UtforskSort | null {
+function readLegacyUtforskSort(): UtforskSortOption | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(LEGACY_UTFORSK_FILTERS_STORAGE_KEY);
     localStorage.removeItem(LEGACY_UTFORSK_FILTERS_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { sortBy?: unknown };
-    return isUtforskSort(parsed.sortBy) ? parsed.sortBy : null;
+    return isUtforskSortOption(parsed.sortBy) ? parsed.sortBy : null;
   } catch {
     localStorage.removeItem(LEGACY_UTFORSK_FILTERS_STORAGE_KEY);
     return null;
@@ -82,7 +73,7 @@ function clearDeprecatedUtforskStorage(): void {
     const sortRaw = localStorage.getItem(PREFERENCE_KEYS.utforsk.sort);
     if (sortRaw !== null) {
       const parsed = JSON.parse(sortRaw) as unknown;
-      if (!isUtforskSort(parsed)) {
+      if (!isUtforskSortOption(parsed)) {
         localStorage.removeItem(PREFERENCE_KEYS.utforsk.sort);
       }
     }
@@ -110,11 +101,14 @@ export default function ExploreClient({
   const [sortBy, setSortByPersisted] = usePersistedState(
     PREFERENCE_KEYS.utforsk.sort,
     UTFORSK_DEFAULT_SORT,
-    isUtforskSort,
+    isUtforskSortOption,
   );
   const [searchQuery, setSearchQuery] = useState('');
-  const [hybridSearchIds, setHybridSearchIds] = useState<string[] | null>(null);
-  const [hybridSearchLoading, setHybridSearchLoading] = useState(false);
+  const [committedHybridIds, setCommittedHybridIds] = useState<string[] | null>(null);
+  const [committedHybridQuery, setCommittedHybridQuery] = useState<string | null>(null);
+  const [hybridSearchPending, setHybridSearchPending] = useState(false);
+  const hybridRequestGenRef = useRef(0);
+  const hybridAbortRef = useRef<AbortController | null>(null);
   const [selectedStatus, setSelectedStatus] = useState(UTFORSK_DEFAULT_STATUS);
   const [selectedSakKind, setSelectedSakKind] = useState(UTFORSK_DEFAULT_SAK_KIND);
   const [selectedAiLabels, setSelectedAiLabels] = useState<string[]>([]);
@@ -126,35 +120,50 @@ export default function ExploreClient({
   const legacySortMigratedRef = useRef(false);
 
   const trimmedSearchQuery = searchQuery.trim();
-  const hybridSearchActive = trimmedSearchQuery.length > 0;
-  const effectiveHybridSearchIds = hybridSearchActive ? hybridSearchIds : null;
-  const effectiveHybridSearchLoading = hybridSearchActive ? hybridSearchLoading : false;
+  const hybridSearchEligible = trimmedSearchQuery.length >= UTFORSK_ISSUE_SEARCH_MIN_QUERY_CHARS;
+  const effectiveSortBy = resolveEffectiveUtforskSort(sortBy, hybridSearchEligible);
+  const sortOptions = utforskSortOptionsForQuery(hybridSearchEligible);
+  const showHybridSearchIndicator =
+    hybridSearchEligible && hybridSearchPending && committedHybridQuery !== trimmedSearchQuery;
 
   useEffect(() => {
-    if (!trimmedSearchQuery) {
+    if (!hybridSearchEligible) {
+      hybridAbortRef.current?.abort();
       return;
     }
 
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      setHybridSearchLoading(true);
-      const url = `/api/dashboard/utforsk/issue-search?q=${encodeURIComponent(trimmedSearchQuery)}`;
-      fetch(url, { credentials: 'same-origin' })
-        .then((res) => (res.ok ? res.json() : null))
+      const queryForRequest = trimmedSearchQuery;
+      const requestGen = hybridRequestGenRef.current + 1;
+      hybridRequestGenRef.current = requestGen;
+      hybridAbortRef.current?.abort();
+      const controller = new AbortController();
+      hybridAbortRef.current = controller;
+      setHybridSearchPending(true);
+
+      const url = `/api/dashboard/utforsk/issue-search?q=${encodeURIComponent(queryForRequest)}`;
+      fetch(url, { credentials: 'same-origin', signal: controller.signal })
+        .then((res) => (res.ok || res.status === 429 ? res.json() : null))
         .then((payload: { issueIds?: string[] | null } | null) => {
-          if (cancelled) return;
+          if (cancelled || requestGen !== hybridRequestGenRef.current) return;
           const next = Array.isArray(payload?.issueIds)
             ? payload.issueIds.map(String)
             : shouldFallbackUtforskToLexicalSearch(payload?.issueIds ?? null)
               ? null
               : [];
-          setHybridSearchIds(next);
+          setCommittedHybridIds(next);
+          setCommittedHybridQuery(queryForRequest);
         })
-        .catch(() => {
-          if (!cancelled) setHybridSearchIds(null);
+        .catch((error: unknown) => {
+          if (cancelled || requestGen !== hybridRequestGenRef.current) return;
+          if (error instanceof DOMException && error.name === 'AbortError') return;
+          setCommittedHybridIds(null);
+          setCommittedHybridQuery(queryForRequest);
         })
         .finally(() => {
-          if (!cancelled) setHybridSearchLoading(false);
+          if (cancelled || requestGen !== hybridRequestGenRef.current) return;
+          setHybridSearchPending(false);
         });
     }, UTFORSK_HYBRID_SEARCH_DEBOUNCE_MS);
 
@@ -162,12 +171,14 @@ export default function ExploreClient({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [trimmedSearchQuery]);
+  }, [trimmedSearchQuery, hybridSearchEligible]);
 
   const resetUtforskFilters = useCallback(() => {
     setSearchQuery('');
-    setHybridSearchIds(null);
-    setHybridSearchLoading(false);
+    hybridAbortRef.current?.abort();
+    setCommittedHybridIds(null);
+    setCommittedHybridQuery(null);
+    setHybridSearchPending(false);
     setSelectedStatus(UTFORSK_DEFAULT_STATUS);
     setSelectedSakKind(UTFORSK_DEFAULT_SAK_KIND);
     setSelectedAiLabels([]);
@@ -196,7 +207,7 @@ export default function ExploreClient({
     setSelectedSakKind(sakKind);
   };
   const setSortBy = (next: string) => {
-    if (isUtforskSort(next)) setSortByPersisted(next);
+    if (isUtforskSortOption(next)) setSortByPersisted(next);
   };
 
   const toggleAiLabel = (label: string) => {
@@ -222,67 +233,33 @@ export default function ExploreClient({
         (issue) => issue.sakKind !== 'lovforslag' && issue.sakKind !== 'representantforslag',
       );
     }
-    if (trimmedSearchQuery !== '') {
-      const useLexical =
-        effectiveHybridSearchLoading ||
-        shouldFallbackUtforskToLexicalSearch(effectiveHybridSearchIds);
-      if (useLexical) {
-        result = result.filter((issue) => issueMatchesStortingetSearch(issue, trimmedSearchQuery));
-      } else if (effectiveHybridSearchIds && effectiveHybridSearchIds.length > 0) {
-        const rank = new Map(effectiveHybridSearchIds.map((id, index) => [id, index]));
-        result = result.filter((issue) => rank.has(String(issue.id)));
-        result.sort(
-          (a, b) =>
-            (rank.get(String(a.id)) ?? Number.MAX_SAFE_INTEGER) -
-            (rank.get(String(b.id)) ?? Number.MAX_SAFE_INTEGER),
-        );
-      } else {
-        result = [];
-      }
-    }
+    result = filterUtforskIssuesBySearch(result, {
+      trimmedQuery: trimmedSearchQuery,
+      hybridIssueIds: committedHybridIds,
+      hybridCommittedQuery: committedHybridQuery,
+    });
     if (activeAiLabels.length > 0) {
       result = result.filter((issue) => {
         const labels = issueLabels[String(issue.id)] ?? [];
         return activeAiLabels.some((label) => labels.includes(label));
       });
     }
-    if (sortBy === 'Snart votering') {
-      // Only saker with a known upcoming voting deadline belong in this view.
-      result = result.filter((issue) => votingUrgency(issue) !== Number.POSITIVE_INFINITY);
-    }
 
-    const preserveHybridSearchOrder =
-      trimmedSearchQuery !== '' &&
-      !effectiveHybridSearchLoading &&
-      !shouldFallbackUtforskToLexicalSearch(effectiveHybridSearchIds);
+    const hybridRank =
+      committedHybridQuery === trimmedSearchQuery && !shouldFallbackUtforskToLexicalSearch(committedHybridIds)
+        ? buildHybridRankMap(committedHybridIds)
+        : null;
 
-    if (preserveHybridSearchOrder) {
-      return result;
-    }
-
-    return [...result].sort((a, b) => {
-      if (sortBy === 'Nyeste først') {
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      }
-      if (sortBy === 'Mest engasjement') {
-        const voteDiff = issueEngagementTotal(b) - issueEngagementTotal(a);
-        if (voteDiff !== 0) return voteDiff;
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      }
-      if (sortBy === 'Snart votering') {
-        return votingUrgency(a) - votingUrgency(b);
-      }
-      return 0;
-    });
+    return sortUtforskIssues(result, effectiveSortBy, hybridRank);
   }, [
     issues,
     selectedStatus,
     selectedSakKind,
     trimmedSearchQuery,
-    effectiveHybridSearchIds,
-    effectiveHybridSearchLoading,
+    committedHybridIds,
+    committedHybridQuery,
     activeAiLabels,
-    sortBy,
+    effectiveSortBy,
     issueLabels,
   ]);
 
@@ -295,8 +272,10 @@ export default function ExploreClient({
     () =>
       JSON.stringify([
         trimmedSearchQuery,
-        effectiveHybridSearchIds,
-        effectiveHybridSearchLoading,
+        committedHybridIds,
+        committedHybridQuery,
+        hybridSearchPending,
+        effectiveSortBy,
         selectedStatus,
         selectedSakKind,
         sortBy,
@@ -304,8 +283,10 @@ export default function ExploreClient({
       ]),
     [
       trimmedSearchQuery,
-      effectiveHybridSearchIds,
-      effectiveHybridSearchLoading,
+      committedHybridIds,
+      committedHybridQuery,
+      hybridSearchPending,
+      effectiveSortBy,
       selectedStatus,
       selectedSakKind,
       sortBy,
@@ -457,8 +438,14 @@ export default function ExploreClient({
                 className={dashboardSearchClass()}
                 placeholder="Søk i saker"
                 autoComplete="off"
+                aria-busy={showHybridSearchIndicator}
               />
             </div>
+            {showHybridSearchIndicator ? (
+              <p className="text-sm text-muted-foreground" aria-live="polite">
+                Søker …
+              </p>
+            ) : null}
             {hasActiveUtforskFilters ? (
               <button
                 type="button"
@@ -502,8 +489,8 @@ export default function ExploreClient({
       <SectionSettle>
         <LayoutGroup>
         <div role="group" aria-label="Sorter saker" className="flex flex-wrap gap-2">
-          {(['Nyeste først', 'Mest engasjement', 'Snart votering'] as const).map((option) => {
-            const selected = sortBy === option;
+          {sortOptions.map((option) => {
+            const selected = effectiveSortBy === option;
             return (
               <button
                 key={option}
@@ -530,14 +517,14 @@ export default function ExploreClient({
           {displayedIssues.length === 0 ? (
             <EmptyState
               title={
-                sortBy === 'Snart votering'
+                effectiveSortBy === 'Snart votering'
                   ? 'Ingen saker med kjent votering'
                   : searchQuery
                     ? 'Ingen saker matcher søket ditt'
                     : 'Ingen saker matcher filtrene'
               }
               description={
-                sortBy === 'Snart votering'
+                effectiveSortBy === 'Snart votering'
                   ? 'Stortinget har ikke publisert en framtidig votering for sakene som matcher filtrene dine ennå.'
                   : searchQuery
                     ? 'Prøv et annet søk, eller nullstill filtrene for å se alle saker.'

@@ -6,6 +6,7 @@ import {
   shouldShowSimilarSakerSection,
   type SimilarSakListItem,
 } from '@/lib/sak/similar-issues';
+import { dedupeSimilarSaker } from '@/lib/sak/similar-issues-dedupe';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -15,10 +16,12 @@ function SimilarSakRow({ item }: { item: SimilarSakListItem }) {
   return (
     <Link
       href={routes.sak(item.id)}
-      className="group flex min-h-11 items-start justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-3 transition-colors hover:border-brand/30 hover:bg-muted"
+      className="group flex min-h-11 items-start justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-3 transition-colors hover:border-brand/30 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
     >
       <div className="min-w-0">
-        <div className="text-sm font-medium text-foreground group-hover:text-brand">{item.title}</div>
+        <div className="break-words text-sm font-medium text-foreground [overflow-wrap:anywhere] group-hover:text-brand">
+          {item.title}
+        </div>
         {meta ? <div className="mt-1 text-xs text-muted-foreground">{meta}</div> : null}
       </div>
       <ArrowRight
@@ -29,10 +32,17 @@ function SimilarSakRow({ item }: { item: SimilarSakListItem }) {
   );
 }
 
-export async function SimilarIssuesSection({ sakId }: { sakId: string }) {
+export async function SimilarIssuesSection({
+  sakId,
+  excludeIssueIds = [],
+}: {
+  sakId: string;
+  excludeIssueIds?: readonly string[];
+}) {
   let items: SimilarSakListItem[] = [];
   try {
     items = await fetchSimilarSaker(sakId);
+    items = dedupeSimilarSaker(items, sakId, excludeIssueIds);
   } catch {
     items = [];
   }
