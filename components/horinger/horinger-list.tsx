@@ -5,9 +5,12 @@ import Link from 'next/link';
 import { ArrowRight, Calendar, Clock, Filter, MapPin, Search } from 'lucide-react';
 import type { StortingetHoring } from '@/lib/stortinget-horinger';
 import {
+  compareHoringerByInnspillDeadline,
   formatHoringDeadlineSummary,
+  formatHoringInnspillFristLabel,
   formatStortingetDateTime,
   getHoringStartDate,
+  isHoringInnspillDeadlineWithinDays,
   getHoringStatusBadgeClass,
   getHoringStatusKind,
   getHoringStatusLabel,
@@ -28,12 +31,14 @@ type HoringerListProps = {
 
 type SortOption = 'relevant' | 'frist' | 'nyeste';
 type StatusFilter = 'Alle statuser' | 'Åpen for innspill' | 'Planlagt' | 'Avholdt' | 'Avlyst';
+type DeadlineFilter = 'Alle frister' | 'Frist innen 7 dager';
 
 export default function HoringerList({ hearings }: HoringerListProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('Alle statuser');
   const [committeeFilter, setCommitteeFilter] = useState('Alle departement/komiteer');
   const [sortBy, setSortBy] = useState<SortOption>('relevant');
+  const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>('Alle frister');
 
   const stats = useMemo(() => summarizeHoringer(hearings), [hearings]);
 
@@ -59,6 +64,9 @@ export default function HoringerList({ hearings }: HoringerListProps) {
       if (statusFilter === 'Avholdt' && kind !== 'held') return false;
       if (statusFilter === 'Avlyst' && kind !== 'cancelled') return false;
       if (committeeFilter !== 'Alle departement/komiteer' && komite !== committeeFilter) return false;
+      if (deadlineFilter === 'Frist innen 7 dager' && !isHoringInnspillDeadlineWithinDays(hearing, 7)) {
+        return false;
+      }
       if (q && !title.includes(q) && !subtitle.includes(q) && !komite.toLowerCase().includes(q)) {
         return false;
       }
@@ -67,20 +75,14 @@ export default function HoringerList({ hearings }: HoringerListProps) {
 
     if (sortBy === 'relevant') return sortHoringer(matched);
     if (sortBy === 'frist') {
-      return [...matched].sort((a, b) => {
-        const aTime =
-          getHoringStartDate(a)?.getTime() ?? Number.MAX_SAFE_INTEGER;
-        const bTime =
-          getHoringStartDate(b)?.getTime() ?? Number.MAX_SAFE_INTEGER;
-        return aTime - bTime;
-      });
+      return [...matched].sort((a, b) => compareHoringerByInnspillDeadline(a, b));
     }
     return [...matched].sort((a, b) => {
       const aStart = getHoringStartDate(a)?.getTime() ?? 0;
       const bStart = getHoringStartDate(b)?.getTime() ?? 0;
       return bStart - aStart;
     });
-  }, [hearings, search, statusFilter, committeeFilter, sortBy]);
+  }, [hearings, search, statusFilter, committeeFilter, sortBy, deadlineFilter]);
 
   return (
     <>
@@ -103,8 +105,8 @@ export default function HoringerList({ hearings }: HoringerListProps) {
         </div>
       </div>
 
-      <SurfaceCard className="mb-6 flex flex-col gap-4 p-4 md:flex-row">
-        <div className="relative flex-grow">
+      <SurfaceCard className="mb-6 grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="relative lg:col-span-2">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
             <Search className="h-4 w-4 text-muted-foreground" />
           </div>
@@ -136,6 +138,20 @@ export default function HoringerList({ hearings }: HoringerListProps) {
         </div>
         <div className="relative">
           <select
+            value={deadlineFilter}
+            onChange={(e) => setDeadlineFilter(e.target.value as DeadlineFilter)}
+            aria-label="Filtrer på frist"
+            className={dashboardControlClass()}
+          >
+            <option>Alle frister</option>
+            <option>Frist innen 7 dager</option>
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground">
+            <Filter className="h-4 w-4" />
+          </div>
+        </div>
+        <div className="relative">
+          <select
             value={committeeFilter}
             onChange={(e) => setCommitteeFilter(e.target.value)}
             aria-label="Filtrer på komité"
@@ -155,10 +171,10 @@ export default function HoringerList({ hearings }: HoringerListProps) {
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortOption)}
           aria-label="Sorter høringer"
-          className={dashboardControlClass('md:w-52')}
+          className={dashboardControlClass('md:col-span-2 lg:col-span-1')}
         >
           <option value="relevant">Mest relevant</option>
-          <option value="frist">Tidligste høring</option>
+          <option value="frist">Nærmeste frist</option>
           <option value="nyeste">Nyeste først</option>
         </select>
       </SurfaceCard>
@@ -180,6 +196,7 @@ export default function HoringerList({ hearings }: HoringerListProps) {
                   setStatusFilter('Alle statuser');
                   setCommitteeFilter('Alle departement/komiteer');
                   setSortBy('relevant');
+                  setDeadlineFilter('Alle frister');
                 }}
                 className="inline-flex min-h-11 items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
               >
@@ -194,7 +211,8 @@ export default function HoringerList({ hearings }: HoringerListProps) {
             const komiteNavn = hearing.komite?.navn || 'Ukjent komité';
             const tittel = getHoringTitle(hearing);
             const subtitle = getHoringSubtitle(hearing);
-            const deadlineSummary = formatHoringDeadlineSummary(hearing);
+            const fristLabel = formatHoringInnspillFristLabel(hearing);
+            const deadlineSummary = fristLabel ?? formatHoringDeadlineSummary(hearing);
             const nextSession = hearing.horingstidspunkt_liste?.[0];
             const sessionText = nextSession?.tidspunkt
               ? formatStortingetDateTime(nextSession.tidspunkt)
