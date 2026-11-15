@@ -3,8 +3,10 @@ import type { SakListItem } from '@/lib/stortinget';
 import {
   buildHybridRankMap,
   filterUtforskIssuesBySearch,
-  resolveEffectiveUtforskSort,
+  isUtforskSearchQueryActive,
+  resolveUtforskEffectiveSort,
   sortUtforskIssues,
+  UTFORSK_DEFAULT_SEARCH_SESSION_SORT,
   utforskSortOptionsForQuery,
 } from './utforsk-explore-display';
 
@@ -25,17 +27,31 @@ function sak(id: string, date: string, votes = 0): SakListItem {
   };
 }
 
-assert.deepEqual(resolveEffectiveUtforskSort('Nyeste først', true), 'Mest relevant');
-assert.equal(resolveEffectiveUtforskSort('Mest engasjement', true), 'Mest engasjement');
-assert.equal(resolveEffectiveUtforskSort('Mest relevant', true), 'Mest relevant');
-assert.equal(resolveEffectiveUtforskSort('Nyeste først', false), 'Nyeste først');
-assert.equal(resolveEffectiveUtforskSort('Mest relevant', false), 'Nyeste først');
+assert.equal(isUtforskSearchQueryActive(''), false);
+assert.equal(isUtforskSearchQueryActive('a'), false);
+assert.equal(isUtforskSearchQueryActive('ab'), true);
+
+assert.equal(UTFORSK_DEFAULT_SEARCH_SESSION_SORT, 'Mest relevant');
+
+assert.equal(resolveUtforskEffectiveSort(true, 'Nyeste først', 'Mest engasjement'), 'Nyeste først');
+assert.equal(resolveUtforskEffectiveSort(true, null, 'Nyeste først'), 'Mest relevant');
+assert.equal(resolveUtforskEffectiveSort(false, null, 'Nyeste først'), 'Nyeste først');
+assert.equal(resolveUtforskEffectiveSort(false, null, 'Mest relevant'), 'Nyeste først');
 
 const options = utforskSortOptionsForQuery(true);
 assert.ok(options.includes('Mest relevant'));
 assert.equal(utforskSortOptionsForQuery(false).includes('Mest relevant'), false);
 
 const corpus = [sak('1', '2025-01-01'), sak('2', '2025-06-01'), sak('3', '2025-03-01')];
+
+assert.deepEqual(
+  filterUtforskIssuesBySearch(corpus, {
+    trimmedQuery: 'x',
+    hybridIssueIds: null,
+    hybridCommittedQuery: null,
+  }).map((i) => i.id),
+  ['1', '2', '3'],
+);
 
 const hybridFiltered = filterUtforskIssuesBySearch(corpus, {
   trimmedQuery: 'test',

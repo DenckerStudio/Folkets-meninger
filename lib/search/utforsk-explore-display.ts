@@ -1,6 +1,7 @@
 import type { SakListItem } from '@/lib/stortinget';
 import { issueMatchesStortingetSearch } from '@/lib/stortinget-issue-search';
 import { shouldFallbackUtforskToLexicalSearch } from '@/lib/search/utforsk-search-fallback';
+import { UTFORSK_ISSUE_SEARCH_MIN_QUERY_CHARS } from '@/lib/search/utforsk-issue-search-api';
 
 export const UTFORSK_SORT_OPTIONS = [
   'Mest relevant',
@@ -17,22 +18,36 @@ export function isUtforskSortOption(value: unknown): value is UtforskSortOption 
   return typeof value === 'string' && (UTFORSK_SORT_OPTIONS as readonly string[]).includes(value);
 }
 
-/** While a search query is active, default to «Mest relevant» unless the user chose another sort. */
-export function resolveEffectiveUtforskSort(
-  persistedSort: UtforskSortOption,
-  queryActive: boolean,
-): UtforskSortOption {
-  if (!queryActive) {
-    return persistedSort === 'Mest relevant' ? UTFORSK_DEFAULT_SORT : persistedSort;
-  }
-  if (persistedSort === UTFORSK_DEFAULT_SORT) {
-    return 'Mest relevant';
-  }
-  return persistedSort;
+export function isUtforskSearchQueryActive(trimmedQuery: string): boolean {
+  return trimmedQuery.length >= UTFORSK_ISSUE_SEARCH_MIN_QUERY_CHARS;
 }
 
-export function utforskSortOptionsForQuery(queryActive: boolean): readonly UtforskSortOption[] {
-  if (!queryActive) {
+/** Sort while the user is not in an active search session (persisted preference). */
+export function utforskSortWithoutSearchSession(persistedSort: UtforskSortOption): UtforskSortOption {
+  return persistedSort === 'Mest relevant' ? UTFORSK_DEFAULT_SORT : persistedSort;
+}
+
+/** Sort during an active search; `sessionSort` is set once to «Mest relevant» then follows explicit user picks. */
+export function utforskSortDuringSearchSession(sessionSort: UtforskSortOption): UtforskSortOption {
+  return sessionSort;
+}
+
+export function resolveUtforskEffectiveSort(
+  searchActive: boolean,
+  sessionSort: UtforskSortOption | null,
+  persistedSort: UtforskSortOption,
+): UtforskSortOption {
+  if (!searchActive) {
+    return utforskSortWithoutSearchSession(persistedSort);
+  }
+  return sessionSort ?? 'Mest relevant';
+}
+
+/** Sort applied when a new search session starts (query reached min length). */
+export const UTFORSK_DEFAULT_SEARCH_SESSION_SORT: UtforskSortOption = 'Mest relevant';
+
+export function utforskSortOptionsForQuery(searchActive: boolean): readonly UtforskSortOption[] {
+  if (!searchActive) {
     return UTFORSK_SORT_OPTIONS.filter((option) => option !== 'Mest relevant');
   }
   return UTFORSK_SORT_OPTIONS;
@@ -61,7 +76,7 @@ export function filterUtforskIssuesBySearch(
   input: UtforskSearchFilterInput,
 ): SakListItem[] {
   const { trimmedQuery, hybridIssueIds, hybridCommittedQuery } = input;
-  if (!trimmedQuery) return [...issues];
+  if (!isUtforskSearchQueryActive(trimmedQuery)) return [...issues];
 
   const hybridReady =
     hybridCommittedQuery === trimmedQuery &&

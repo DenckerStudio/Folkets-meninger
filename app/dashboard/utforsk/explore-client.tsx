@@ -30,13 +30,14 @@ import { STORTINGET_ACTIVE_SESSION_ID } from '@/lib/stortinget-config';
 
 import { ISSUE_STANCE_LABELS, type IssueStance } from '@/lib/stances/types';
 import { shouldFallbackUtforskToLexicalSearch } from '@/lib/search/utforsk-search-fallback';
-import { UTFORSK_ISSUE_SEARCH_MIN_QUERY_CHARS } from '@/lib/search/utforsk-issue-search-api';
 import {
+  UTFORSK_DEFAULT_SEARCH_SESSION_SORT,
   UTFORSK_DEFAULT_SORT,
   buildHybridRankMap,
   filterUtforskIssuesBySearch,
+  isUtforskSearchQueryActive,
   isUtforskSortOption,
-  resolveEffectiveUtforskSort,
+  resolveUtforskEffectiveSort,
   sortUtforskIssues,
   utforskSortOptionsForQuery,
   type UtforskSortOption,
@@ -112,6 +113,8 @@ export default function ExploreClient({
   const [selectedStatus, setSelectedStatus] = useState(UTFORSK_DEFAULT_STATUS);
   const [selectedSakKind, setSelectedSakKind] = useState(UTFORSK_DEFAULT_SAK_KIND);
   const [selectedAiLabels, setSelectedAiLabels] = useState<string[]>([]);
+  const [activeSearchSort, setActiveSearchSort] = useState<UtforskSortOption | null>(null);
+  const [searchSessionEligible, setSearchSessionEligible] = useState(false);
 
   const displayedUserStances = user ? userStances : {};
   const activeAiLabels = selectedAiLabels;
@@ -120,9 +123,26 @@ export default function ExploreClient({
   const legacySortMigratedRef = useRef(false);
 
   const trimmedSearchQuery = searchQuery.trim();
-  const hybridSearchEligible = trimmedSearchQuery.length >= UTFORSK_ISSUE_SEARCH_MIN_QUERY_CHARS;
-  const effectiveSortBy = resolveEffectiveUtforskSort(sortBy, hybridSearchEligible);
+  const hybridSearchEligible = isUtforskSearchQueryActive(trimmedSearchQuery);
+  const searchFilterQuery = useMemo(
+    () => (hybridSearchEligible ? trimmedSearchQuery : ''),
+    [hybridSearchEligible, trimmedSearchQuery],
+  );
+  const effectiveSortBy = useMemo(
+    () => resolveUtforskEffectiveSort(hybridSearchEligible, activeSearchSort, sortBy),
+    [hybridSearchEligible, activeSearchSort, sortBy],
+  );
   const sortOptions = utforskSortOptionsForQuery(hybridSearchEligible);
+
+  if (searchSessionEligible !== hybridSearchEligible) {
+    setSearchSessionEligible(hybridSearchEligible);
+    if (hybridSearchEligible) {
+      setActiveSearchSort(UTFORSK_DEFAULT_SEARCH_SESSION_SORT);
+    } else {
+      setActiveSearchSort(null);
+    }
+  }
+
   const showHybridSearchIndicator =
     hybridSearchEligible && hybridSearchPending && committedHybridQuery !== trimmedSearchQuery;
 
@@ -179,6 +199,7 @@ export default function ExploreClient({
     setCommittedHybridIds(null);
     setCommittedHybridQuery(null);
     setHybridSearchPending(false);
+    setActiveSearchSort(null);
     setSelectedStatus(UTFORSK_DEFAULT_STATUS);
     setSelectedSakKind(UTFORSK_DEFAULT_SAK_KIND);
     setSelectedAiLabels([]);
@@ -186,7 +207,7 @@ export default function ExploreClient({
   }, [setSortByPersisted]);
 
   const hasActiveUtforskFilters =
-    searchQuery.trim() !== '' ||
+    hybridSearchEligible ||
     selectedStatus !== UTFORSK_DEFAULT_STATUS ||
     selectedSakKind !== UTFORSK_DEFAULT_SAK_KIND ||
     activeAiLabels.length > 0 ||
@@ -207,7 +228,12 @@ export default function ExploreClient({
     setSelectedSakKind(sakKind);
   };
   const setSortBy = (next: string) => {
-    if (isUtforskSortOption(next)) setSortByPersisted(next);
+    if (!isUtforskSortOption(next)) return;
+    if (hybridSearchEligible) {
+      setActiveSearchSort(next);
+      return;
+    }
+    setSortByPersisted(next);
   };
 
   const toggleAiLabel = (label: string) => {
@@ -234,7 +260,7 @@ export default function ExploreClient({
       );
     }
     result = filterUtforskIssuesBySearch(result, {
-      trimmedQuery: trimmedSearchQuery,
+      trimmedQuery: searchFilterQuery,
       hybridIssueIds: committedHybridIds,
       hybridCommittedQuery: committedHybridQuery,
     });
@@ -246,7 +272,8 @@ export default function ExploreClient({
     }
 
     const hybridRank =
-      committedHybridQuery === trimmedSearchQuery && !shouldFallbackUtforskToLexicalSearch(committedHybridIds)
+      committedHybridQuery === searchFilterQuery &&
+      !shouldFallbackUtforskToLexicalSearch(committedHybridIds)
         ? buildHybridRankMap(committedHybridIds)
         : null;
 
@@ -255,7 +282,7 @@ export default function ExploreClient({
     issues,
     selectedStatus,
     selectedSakKind,
-    trimmedSearchQuery,
+    searchFilterQuery,
     committedHybridIds,
     committedHybridQuery,
     activeAiLabels,
@@ -441,11 +468,12 @@ export default function ExploreClient({
                 aria-busy={showHybridSearchIndicator}
               />
             </div>
-            {showHybridSearchIndicator ? (
-              <p className="text-sm text-muted-foreground" aria-live="polite">
-                Søker …
-              </p>
-            ) : null}
+            <p
+              className="min-h-5 shrink-0 self-center text-sm text-muted-foreground sm:min-w-[4.5rem]"
+              aria-live="polite"
+            >
+              {showHybridSearchIndicator ? 'Søker …' : '\u00a0'}
+            </p>
             {hasActiveUtforskFilters ? (
               <button
                 type="button"
@@ -519,14 +547,14 @@ export default function ExploreClient({
               title={
                 effectiveSortBy === 'Snart votering'
                   ? 'Ingen saker med kjent votering'
-                  : searchQuery
+                  : hybridSearchEligible
                     ? 'Ingen saker matcher søket ditt'
                     : 'Ingen saker matcher filtrene'
               }
               description={
                 effectiveSortBy === 'Snart votering'
                   ? 'Stortinget har ikke publisert en framtidig votering for sakene som matcher filtrene dine ennå.'
-                  : searchQuery
+                  : hybridSearchEligible
                     ? 'Prøv et annet søk, eller nullstill filtrene for å se alle saker.'
                     : 'Prøv å endre søk, status eller emne for å se flere saker.'
               }
