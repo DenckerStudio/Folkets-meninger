@@ -1,7 +1,7 @@
 import { MIN_ACCOUNT_AGE_YEARS } from '@/lib/legal/account-age';
 import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
 
-export const PRIVACY_NOTICE_UPDATED = '17. oktober 2026';
+export const PRIVACY_NOTICE_UPDATED = '15. november 2026';
 
 export const PRIVACY_PROCESSING_TABLE = [
   {
