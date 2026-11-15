@@ -31,6 +31,7 @@ import {
 import { SPORSMAL_THEME_LABELS, type SporsmalThemeLabel } from '@/lib/sporsmal/themes';
 import { SporsmalTypeTabs } from '@/components/sporsmal/sporsmal-type-tabs';
 import { routes } from '@/lib/routes';
+import { buildSporsmalAlleTemaHref } from '@/lib/sporsmal/page-href';
 import { cn } from '@/lib/utils';
 
 type SporsmalListProps = {
@@ -209,7 +210,7 @@ export default function SporsmalList({ sporsmal, type, sesjonId, sakBySporsmalId
 
       <div className="flex flex-wrap gap-2">
         <Link
-          href={routes.sporsmal}
+          href={buildSporsmalAlleTemaHref(type, sesjonId, new URLSearchParams(searchParams.toString()))}
           onClick={(event) => {
             event.preventDefault();
             pushParams((params) => {
@@ -217,9 +218,10 @@ export default function SporsmalList({ sporsmal, type, sesjonId, sakBySporsmalId
               params.delete('page');
             });
           }}
-          aria-pressed={!themeFilter}
+          aria-current={!themeFilter ? 'true' : undefined}
           className={cn(
             'px-3 py-2 rounded-xl text-xs font-semibold border min-h-11 inline-flex items-center',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
             !themeFilter ? 'bg-muted text-brand border-border' : 'bg-card text-muted-foreground border-border hover:bg-muted/50',
           )}
         >
@@ -239,6 +241,7 @@ export default function SporsmalList({ sporsmal, type, sesjonId, sakBySporsmalId
             }
             className={cn(
               'px-3 py-2 rounded-xl text-xs font-semibold border min-h-11',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
               themeFilter === label
                 ? 'bg-muted text-brand border-border'
                 : 'bg-card text-muted-foreground border-border hover:bg-muted/50',

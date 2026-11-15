@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { WeeklyOverview } from '@/lib/weekly-overview';
+import { weeklyPeriodLabelMidSentence } from '@/lib/weekly-overview-labels';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 import { touchTargetLinkClass } from '@/lib/touch-target';
@@ -134,7 +135,7 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
       <SectionShell
         id="votering-snart"
         title="Saker nær votering"
-        description={`Åpne saker med planlagt votering: ${overview.window.futureRangeLabel}.`}
+        description={`Åpne saker med planlagt votering: ${weeklyPeriodLabelMidSentence(overview.window.futureRangeLabel)}.`}
       >
         {overview.votingSoon.length === 0 ? (
           <EmptySectionMessage action={{ href: routes.utforsk, label: 'Utforsk saker' }}>
@@ -155,7 +156,7 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
       <SectionShell
         id="votering-nettopp"
         title="Nylig votert"
-        description={`Ferdig behandlet etter voteringsdato i saksgangen: ${overview.window.pastRangeLabel}.`}
+        description={`Ferdig behandlet etter voteringsdato i saksgangen: ${weeklyPeriodLabelMidSentence(overview.window.pastRangeLabel)}.`}
       >
         {overview.votedRecently.length === 0 ? (
           <EmptySectionMessage action={{ href: routes.utforsk, label: 'Se saker på Utforsk' }}>
@@ -176,7 +177,7 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
       <SectionShell
         id="horingsfrister"
         title="Åpne høringer med frist snart"
-        description={`Innspillsfrist: ${overview.window.futureRangeLabel} (Europe/Oslo).`}
+        description={`Innspillsfrist: ${weeklyPeriodLabelMidSentence(overview.window.futureRangeLabel)} (Europe/Oslo).`}
       >
         {overview.openHearings.length === 0 ? (
           <EmptySectionMessage action={{ href: routes.horinger, label: 'Se alle høringer' }}>
@@ -197,7 +198,7 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
       <SectionShell
         id="sammendrag"
         title="Oppdaterte sammendrag"
-        description={`Oppdatert sakssammendrag: ${overview.window.pastRangeLabel}.`}
+        description={`Oppdatert sakssammendrag: ${weeklyPeriodLabelMidSentence(overview.window.pastRangeLabel)}.`}
       >
         {overview.newSummaries.length === 0 ? (
           <EmptySectionMessage action={{ href: routes.utforsk, label: 'Utforsk saker med sammendrag' }}>
@@ -228,7 +229,7 @@ export function WeeklyOverviewSections({ overview }: WeeklyOverviewSectionsProps
       <SectionShell
         id="skriftlige-sporsmal"
         title="Skriftlige spørsmål"
-        description={`Antall nye fra Stortinget ${overview.window.pastRangeLabel} — uten spørsmålstekst.`}
+        description={`Antall nye fra Stortinget ${weeklyPeriodLabelMidSentence(overview.window.pastRangeLabel)} — uten spørsmålstekst.`}
       >
         <div className="rounded-2xl border border-border bg-card px-4 py-6">
           <p className="text-base font-medium text-foreground">{overview.skriftligeSporsmal.label}</p>

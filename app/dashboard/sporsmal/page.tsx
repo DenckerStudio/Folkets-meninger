@@ -71,19 +71,22 @@ export default async function SporsmalPage({
 
       <FadeIn delay={0.2} direction="up">
         {!ok ? (
-          <EmptyState
-            title="Klarte ikke å hente spørsmål"
-            description="Stortingets åpne data svarer ikke akkurat nå. Prøv igjen om litt, eller utforsk saker i mellomtiden."
-            tone="error"
-            action={
-              <Link
-                href={routes.utforsk}
-                className="inline-flex min-h-11 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-primary-foreground hover:opacity-90"
-              >
-                Gå til Utforsk
-              </Link>
-            }
-          />
+          <div className="space-y-6">
+            <SporsmalTypeTabs activeType={type} sesjonId={sesjonId} />
+            <EmptyState
+              title="Klarte ikke å hente spørsmål"
+              description="Stortingets åpne data svarer ikke akkurat nå. Prøv igjen om litt, eller utforsk saker i mellomtiden."
+              tone="error"
+              action={
+                <Link
+                  href={routes.utforsk}
+                  className="inline-flex min-h-11 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-primary-foreground hover:opacity-90"
+                >
+                  Gå til Utforsk
+                </Link>
+              }
+            />
+          </div>
         ) : sporsmal.length === 0 ? (
           <div className="space-y-6">
             <SporsmalTypeTabs activeType={type} sesjonId={sesjonId} />

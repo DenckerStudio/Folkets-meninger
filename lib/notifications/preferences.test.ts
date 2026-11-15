@@ -7,6 +7,7 @@ import {
   shouldSendDigestEmail,
   toAbsoluteNotificationUrl,
 } from './digest';
+import { routes } from '@/lib/routes';
 import { normalizeEmailFrequencyByChannel, pickDigestChannels } from './preferences';
 
 assert.deepEqual(normalizeEmailFrequencyByChannel(null), {
@@ -59,6 +60,10 @@ assert.equal(digestEmailSubject('weekly', true), 'Dine varsler (ukentlig smakebi
   assert.equal(s.title, 'Ukens oppsummering: 4 nye varsler');
   assert.equal(s.body, '• A\n• B\n• C\n… og 1 til');
   assert.equal(buildInAppDigestSummary([{ title: 'A' }]).title, 'Ukens oppsummering: 1 nytt varsel');
+  assert.equal(
+    buildInAppDigestSummary([{ title: 'A' }], { url: routes.denneUka }).url,
+    '/denne-uka',
+  );
 }
 
 console.log('notifications/preferences.test.ts: ok');

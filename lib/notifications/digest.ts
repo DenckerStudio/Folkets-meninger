@@ -1,5 +1,6 @@
 import type { DigestFrequency } from '@/lib/notifications/channels';
 import type { WeeklyOverview } from '@/lib/weekly-overview';
+import { weeklyPeriodLabelMidSentence } from '@/lib/weekly-overview-labels';
 import { routes } from '@/lib/routes';
 
 export const DIGEST_DEFAULT_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -90,12 +91,12 @@ function buildWeeklyOverviewDigestBullets(
   const bullets: string[] = [];
   if (overview.votingSoon.length > 0) {
     bullets.push(
-      `${overview.votingSoon.length} sak${overview.votingSoon.length === 1 ? '' : 'er'} nær votering (${overview.window.futureRangeLabel})`,
+      `${overview.votingSoon.length} sak${overview.votingSoon.length === 1 ? '' : 'er'} nær votering (${weeklyPeriodLabelMidSentence(overview.window.futureRangeLabel)})`,
     );
   }
   if (overview.votedRecently.length > 0) {
     bullets.push(
-      `${overview.votedRecently.length} nylig votert (${overview.window.pastRangeLabel})`,
+      `${overview.votedRecently.length} nylig votert (${weeklyPeriodLabelMidSentence(overview.window.pastRangeLabel)})`,
     );
   }
   if (overview.openHearings.length > 0) {
@@ -172,8 +173,9 @@ export function mergeWeeklyOverviewIntoDigestBody(
 
 export function buildInAppDigestSummary(
   items: Array<{ title: string }>,
-  maxTitles = 3,
+  options?: { maxTitles?: number; url?: string },
 ): { title: string; body: string; url: string } {
+  const maxTitles = options?.maxTitles ?? 3;
   const count = items.length;
   const titles = items.slice(0, maxTitles).map((i) => `• ${i.title}`);
   const rest = count - titles.length;
@@ -181,7 +183,7 @@ export function buildInAppDigestSummary(
   return {
     title: `Ukens oppsummering: ${count} ${count === 1 ? 'nytt varsel' : 'nye varsler'}`,
     body: lines.join('\n'),
-    url: routes.minSide,
+    url: options?.url ?? routes.minSide,
   };
 }
 

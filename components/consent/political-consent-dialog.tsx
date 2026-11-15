@@ -94,8 +94,8 @@ export function PoliticalConsentDialog({
               onChange={(e) => setProfiling(e.target.checked)}
             />
             <span>
-              Jeg samtykker til at holdningene mine brukes til valgomat, partimatch og forslag til saker.
-              (Valgfritt)
+              Jeg samtykker til at holdningene mine brukes til valgomat, partimatch og forslag til saker.{' '}
+              {requireProfiling ? '(Påkrevd for Valgomat)' : '(Valgfritt)'}
             </span>
           </label>
 
