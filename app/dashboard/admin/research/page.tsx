@@ -4,7 +4,7 @@ import { requireAdminPage } from '@/lib/admin/gate';
 import { parseOppfangetFilters } from '@/lib/admin/oppfanget/query';
 import { listOppfangetForAdmin } from '@/lib/admin/oppfanget/service';
 import { isRedditSignalsView, parseRedditSignalsFilters } from '@/lib/reddit-signals/query';
-import { loadRedditSpikeBadgeForAdmin } from '@/lib/reddit-signals/spike-badge';
+import { loadRedditSpikeBadgeForAdmin } from '@/lib/reddit-signals/spike-badge-server';
 import { listRedditSignalsForAdmin } from '@/lib/reddit-signals/service';
 import { expireStaleResearchBriefsThrottled } from '@/lib/admin/research/expire-stale-throttled';
 import { getLatestResearchBriefsByClusterIds } from '@/lib/admin/research/service';

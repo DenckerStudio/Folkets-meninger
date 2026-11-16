@@ -1,5 +1,3 @@
-import { getServerSupabase } from '@/lib/supabase-server';
-import { isRedditSignalsFixturePreviewAllowed } from '@/lib/reddit-signals/preview';
 import { isValidRedditId } from '@/lib/reddit-signals/url';
 import { routes } from '@/lib/routes';
 
@@ -165,33 +163,6 @@ export function rowMatchesSpikeFocus(
   if (focus.signalId) return row.id === focus.signalId;
   if (focus.redditId) return row.redditId === focus.redditId;
   return false;
-}
-
-function isMissingIngestConfigTable(error: { message?: string } | null): boolean {
-  if (!error) return false;
-  return /reddit_ingest_config|does not exist|undefined_table/i.test(error.message ?? '');
-}
-
-export async function loadRedditSpikeBadgeForAdmin(
-  previewParam?: string | null,
-): Promise<RedditSpikeBadgeView | null> {
-  if (isRedditSignalsFixturePreviewAllowed(previewParam)) {
-    return buildRedditSpikeBadgeFixture();
-  }
-  const supabase = await getServerSupabase();
-  const { data, error } = await supabase
-    .from('reddit_ingest_config')
-    .select('value')
-    .eq('key', REDDIT_SPIKE_BADGE_CONFIG_KEY)
-    .maybeSingle();
-
-  if (error) {
-    if (isMissingIngestConfigTable(error)) return null;
-    return null;
-  }
-  if (!data) return null;
-
-  return parseSpikeBadgeConfigValue(data.value);
 }
 
 /** Fixture for dev `?preview=fixture` (viser badge uten DB). */

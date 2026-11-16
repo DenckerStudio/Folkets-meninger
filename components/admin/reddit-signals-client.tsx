@@ -28,14 +28,32 @@ import {
   type RedditSpikeBadgeView,
 } from '@/lib/reddit-signals/spike-badge';
 import {
-  REDDIT_SIGNAL_ACTION_LABELS,
   REDDIT_SIGNAL_BLOKKER_CONFIRM,
   REDDIT_SIGNAL_SORT_LABELS,
   REDDIT_SIGNAL_STATUS_LABELS,
 } from '@/lib/reddit-signals/labels';
+import { REDDIT_SIGNALS_LIST_LIMIT } from '@/lib/reddit-signals/admin-map';
 import { RedditSubredditBadge, formatRedditContention } from '@/lib/reddit-signals/format';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
+
+const REASON_MIN_LENGTH = 3;
+const FILTER_DEBOUNCE_MS = 300;
+
+const actionButtonClass = cn(
+  'inline-flex min-h-11 items-center rounded-lg border px-3 text-xs font-medium disabled:opacity-50',
+  VURDER_FOCUS_RING,
+);
+
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+  return debounced;
+}
 
 const SUBREDDIT_OPTIONS: { value: '' | RedditSignalSubreddit; label: string }[] = [
   { value: '', label: 'Alle subreddits' },
@@ -83,6 +101,38 @@ function formatRatio(ratio: number | null): string {
   return `${Math.round(ratio * 100)} %`;
 }
 
+function ReasonFields({
+  reason,
+  onReasonChange,
+  dialogError,
+  reasonValid,
+}: {
+  reason: string;
+  onReasonChange: (value: string) => void;
+  dialogError: string;
+  reasonValid: boolean;
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm">
+        <span className={labelClass}>Begrunnelse</span>
+        <textarea
+          className={cn(fieldClass, 'mt-1 min-h-[88px]')}
+          value={reason}
+          onChange={(e) => onReasonChange(e.target.value)}
+          aria-invalid={!reasonValid && reason.length > 0}
+        />
+      </label>
+      <p className="text-xs text-muted-foreground">Minst 3 tegn</p>
+      {dialogError ? (
+        <p className="text-xs text-destructive" role="alert">
+          {dialogError}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function RedditSignalRowActions({
   row,
   onUpdated,
@@ -91,15 +141,33 @@ function RedditSignalRowActions({
   onUpdated: () => void;
 }) {
   const [pending, setPending] = useState<RedditSignalApiAction | null>(null);
-  const [error, setError] = useState('');
-  const [reasonOpen, setReasonOpen] = useState<RedditSignalApiAction | null>(null);
-  const [blokkerConfirm, setBlokkerConfirm] = useState(false);
+  const [rowError, setRowError] = useState('');
+  const [dialogError, setDialogError] = useState('');
+  const [activeDialog, setActiveDialog] = useState<null | 'ignorer' | 'blokker'>(null);
   const [reason, setReason] = useState('');
+
+  const reasonValid = reason.trim().length >= REASON_MIN_LENGTH;
+  const dialogPending = pending === 'ignorer' || pending === 'blokker';
+
+  const openDialog = (kind: 'ignorer' | 'blokker') => {
+    setReason('');
+    setDialogError('');
+    setRowError('');
+    setActiveDialog(kind);
+  };
+
+  const closeDialog = () => {
+    if (dialogPending) return;
+    setActiveDialog(null);
+    setDialogError('');
+    setReason('');
+  };
 
   const runAction = useCallback(
     async (action: RedditSignalApiAction, body: { reason?: string }) => {
       setPending(action);
-      setError('');
+      setDialogError('');
+      setRowError('');
       try {
         const res = await fetch(
           `/api/admin/reddit-signals/${encodeURIComponent(row.id)}/${action}`,
@@ -111,15 +179,24 @@ function RedditSignalRowActions({
         );
         const json = (await res.json().catch(() => ({}))) as { message?: string };
         if (!res.ok) {
-          setError(json.message ?? 'Handlingen feilet');
+          const message = json.message ?? 'Handlingen feilet';
+          if (action === 'marker_brukt') {
+            setRowError(message);
+          } else {
+            setDialogError(message);
+          }
           return;
         }
-        setReasonOpen(null);
-        setBlokkerConfirm(false);
+        setActiveDialog(null);
         setReason('');
         onUpdated();
       } catch {
-        setError('Handlingen feilet');
+        const message = 'Handlingen feilet';
+        if (action === 'marker_brukt') {
+          setRowError(message);
+        } else {
+          setDialogError(message);
+        }
       } finally {
         setPending(null);
       }
@@ -131,44 +208,53 @@ function RedditSignalRowActions({
 
   return (
     <div className="flex flex-col gap-2">
+      {(row.status === 'ignorert' || row.status === 'auto_ignorert') && (
+        <p className="text-xs text-muted-foreground">
+          Ignorerte signaler forblir i listen. Det finnes ingen knapp for å sette status tilbake til
+          «Ny».
+        </p>
+      )}
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           disabled={disabled}
-          onClick={() => setReasonOpen('ignorer')}
-          className="inline-flex min-h-11 items-center rounded-lg border border-border bg-card px-3 text-xs font-medium hover:bg-muted disabled:opacity-50"
+          onClick={() => openDialog('ignorer')}
+          className={cn(actionButtonClass, 'border-border bg-card hover:bg-muted')}
         >
-          {pending === 'ignorer' ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
           Ignorer
         </button>
         <button
           type="button"
           disabled={disabled}
-          onClick={() => setBlokkerConfirm(true)}
-          className="inline-flex min-h-11 items-center rounded-lg border border-destructive/40 bg-card px-3 text-xs font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
+          onClick={() => openDialog('blokker')}
+          className={cn(
+            actionButtonClass,
+            'border-destructive/40 bg-card text-destructive hover:bg-destructive/10',
+          )}
         >
-          {pending === 'blokker' ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
           Blokker permanent
         </button>
         <button
           type="button"
           disabled={disabled || row.status === 'brukt'}
           onClick={() => runAction('marker_brukt', {})}
-          className="inline-flex min-h-11 items-center rounded-lg border border-border bg-card px-3 text-xs font-medium hover:bg-muted disabled:opacity-50"
+          className={cn(actionButtonClass, 'border-border bg-card hover:bg-muted')}
         >
           {pending === 'marker_brukt' ? (
-            <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+            <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" aria-hidden />
           ) : null}
           Marker brukt
         </button>
       </div>
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {rowError ? (
+        <p className="text-xs text-destructive" role="alert">
+          {rowError}
+        </p>
+      ) : null}
 
       <Dialog
-        open={reasonOpen === 'ignorer'}
-        onClose={() => {
-          if (pending === null) setReasonOpen(null);
-        }}
+        open={activeDialog === 'ignorer'}
+        onClose={closeDialog}
         title="Ignorer signal"
         description="Oppgi hvorfor signalet skal ignoreres. Dette logges internt."
         size="md"
@@ -176,38 +262,46 @@ function RedditSignalRowActions({
           <div className="flex justify-end gap-2">
             <button
               type="button"
-              className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm"
-              onClick={() => setReasonOpen(null)}
-              disabled={pending !== null}
+              className={cn(
+                'inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm',
+                VURDER_FOCUS_RING,
+              )}
+              onClick={closeDialog}
+              disabled={dialogPending}
             >
               Avbryt
             </button>
             <button
               type="button"
-              className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-foreground"
-              disabled={pending !== null}
+              className={cn(
+                'inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-foreground disabled:opacity-50',
+                VURDER_FOCUS_RING,
+              )}
+              disabled={dialogPending || !reasonValid}
               onClick={() => runAction('ignorer', { reason })}
             >
-              Lagre
+              {dialogPending ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden />
+              ) : null}
+              {dialogPending ? 'Lagrer…' : 'Lagre'}
             </button>
           </div>
         }
       >
-        <label className="block text-sm">
-          <span className={labelClass}>Begrunnelse</span>
-          <textarea
-            className={cn(fieldClass, 'mt-1 min-h-[88px]')}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
-        </label>
+        <ReasonFields
+          reason={reason}
+          dialogError={dialogError}
+          reasonValid={reasonValid}
+          onReasonChange={(value) => {
+            setReason(value);
+            if (dialogError) setDialogError('');
+          }}
+        />
       </Dialog>
 
       <Dialog
-        open={blokkerConfirm}
-        onClose={() => {
-          if (pending === null) setBlokkerConfirm(false);
-        }}
+        open={activeDialog === 'blokker'}
+        onClose={closeDialog}
         title="Blokker permanent?"
         description={REDDIT_SIGNAL_BLOKKER_CONFIRM}
         size="md"
@@ -215,63 +309,41 @@ function RedditSignalRowActions({
           <div className="flex justify-end gap-2">
             <button
               type="button"
-              className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm"
-              onClick={() => setBlokkerConfirm(false)}
-              disabled={pending !== null}
+              className={cn(
+                'inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm',
+                VURDER_FOCUS_RING,
+              )}
+              onClick={closeDialog}
+              disabled={dialogPending}
             >
               Avbryt
             </button>
             <button
               type="button"
-              className="inline-flex min-h-11 items-center rounded-lg bg-destructive px-4 text-sm font-medium text-destructive-foreground"
-              disabled={pending !== null}
-              onClick={() => setReasonOpen('blokker')}
-            >
-              Fortsett
-            </button>
-          </div>
-        }
-      >
-        <span className="sr-only">Bekreft blokkering</span>
-      </Dialog>
-
-      <Dialog
-        open={reasonOpen === 'blokker'}
-        onClose={() => {
-          if (pending === null) setReasonOpen(null);
-        }}
-        title="Begrunnelse for blokkering"
-        description="Oppgi kort hvorfor dette signalet skal blokkeres permanent."
-        size="md"
-        footer={
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm"
-              onClick={() => setReasonOpen(null)}
-              disabled={pending !== null}
-            >
-              Avbryt
-            </button>
-            <button
-              type="button"
-              className="inline-flex min-h-11 items-center rounded-lg bg-destructive px-4 text-sm font-medium text-destructive-foreground"
-              disabled={pending !== null}
+              className={cn(
+                'inline-flex min-h-11 items-center rounded-lg bg-destructive px-4 text-sm font-medium text-destructive-foreground disabled:opacity-50',
+                VURDER_FOCUS_RING,
+              )}
+              disabled={dialogPending || !reasonValid}
               onClick={() => runAction('blokker', { reason })}
             >
-              Blokker
+              {dialogPending ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden />
+              ) : null}
+              {dialogPending ? 'Blokkerer…' : 'Blokker permanent'}
             </button>
           </div>
         }
       >
-        <label className="block text-sm">
-          <span className={labelClass}>Begrunnelse</span>
-          <textarea
-            className={cn(fieldClass, 'mt-1 min-h-[88px]')}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
-        </label>
+        <ReasonFields
+          reason={reason}
+          dialogError={dialogError}
+          reasonValid={reasonValid}
+          onReasonChange={(value) => {
+            setReason(value);
+            if (dialogError) setDialogError('');
+          }}
+        />
       </Dialog>
     </div>
   );
@@ -377,7 +449,8 @@ export default function RedditSignalsClient({
   spikeBadge: RedditSpikeBadgeView | null;
 }) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
+  const [isListPending, startListTransition] = useTransition();
+  const [isRefreshing, startRefreshTransition] = useTransition();
   const urlSyncReadyRef = useRef(false);
 
   const [subreddit, setSubreddit] = useState(initialFilters.subreddit);
@@ -395,50 +468,52 @@ export default function RedditSignalsClient({
   const [hideRemoved, setHideRemoved] = useState(initialFilters.hideRemoved);
   const [onlySak, setOnlySak] = useState(initialFilters.onlyWithSakLink);
   const [sort, setSort] = useState(initialFilters.sort);
-  const [spikeFocus, setSpikeFocus] = useState(initialFilters.spikeFocus);
-
-  useEffect(() => {
-    setSpikeFocus(initialFilters.spikeFocus);
-  }, [initialFilters.spikeFocus]);
+  const debouncedTopic = useDebouncedValue(topic, FILTER_DEBOUNCE_MS);
+  const debouncedMinScore = useDebouncedValue(minScore, FILTER_DEBOUNCE_MS);
+  const debouncedMinComments = useDebouncedValue(minComments, FILTER_DEBOUNCE_MS);
+  const debouncedMinRelevance = useDebouncedValue(minRelevance, FILTER_DEBOUNCE_MS);
 
   const spikeBadgeActive = spikeBadge !== null && spikeBadge.items.length > 0;
 
-  const filters = useMemo<RedditSignalListFilters>(() => {
-    const parseNum = (s: string) => {
-      const t = s.trim();
-      if (!t) return null;
-      const n = Number.parseInt(t, 10);
-      return Number.isFinite(n) && n >= 0 ? n : null;
-    };
-    return {
+  const parseFilterNum = (s: string) => {
+    const t = s.trim();
+    if (!t) return null;
+    const n = Number.parseInt(t, 10);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  };
+
+  const urlFilters = useMemo<RedditSignalListFilters>(
+    () => ({
       subreddit,
-      topic: topic.trim(),
-      minScore: parseNum(minScore),
-      minComments: parseNum(minComments),
-      minRelevance: parseNum(minRelevance),
+      topic: debouncedTopic.trim(),
+      minScore: parseFilterNum(debouncedMinScore),
+      minComments: parseFilterNum(debouncedMinComments),
+      minRelevance: parseFilterNum(debouncedMinRelevance),
       status,
       hideRemoved,
       onlyWithSakLink: onlySak,
-      spikeFocus,
+      spikeFocus: initialFilters.spikeFocus,
       sort,
-    };
-  }, [
-    subreddit,
-    topic,
-    minScore,
-    minComments,
-    minRelevance,
-    status,
-    hideRemoved,
-    onlySak,
-    spikeFocus,
-    sort,
-  ]);
+    }),
+    [
+      subreddit,
+      debouncedTopic,
+      debouncedMinScore,
+      debouncedMinComments,
+      debouncedMinRelevance,
+      status,
+      hideRemoved,
+      onlySak,
+      initialFilters.spikeFocus,
+      sort,
+    ],
+  );
 
   const previewParam = devPreview === 'fixture' ? 'fixture' : null;
+  const listPending = isListPending || isRefreshing;
 
   useEffect(() => {
-    const path = buildRedditSignalsAdminPath(filters, previewParam);
+    const path = buildRedditSignalsAdminPath(urlFilters, previewParam);
     if (!urlSyncReadyRef.current) {
       urlSyncReadyRef.current = true;
       if (typeof window !== 'undefined') {
@@ -446,8 +521,10 @@ export default function RedditSignalsClient({
         if (path === current) return;
       }
     }
-    router.replace(path, { scroll: false });
-  }, [filters, previewParam, router]);
+    startListTransition(() => {
+      router.replace(path, { scroll: false });
+    });
+  }, [urlFilters, previewParam, router]);
 
   const clearFilters = () => {
     setSubreddit('');
@@ -458,16 +535,33 @@ export default function RedditSignalsClient({
     setStatus('');
     setHideRemoved(false);
     setOnlySak(false);
-    setSpikeFocus(null);
     setSort('engagement');
+    const cleared: RedditSignalListFilters = {
+      subreddit: '',
+      topic: '',
+      minScore: null,
+      minComments: null,
+      minRelevance: null,
+      status: '',
+      hideRemoved: false,
+      onlyWithSakLink: false,
+      spikeFocus: null,
+      sort: 'engagement',
+    };
+    startListTransition(() => {
+      router.replace(buildRedditSignalsAdminPath(cleared, previewParam), { scroll: false });
+    });
   };
 
   const clearSpikeFilter = () => {
-    setSpikeFocus(null);
+    const next: RedditSignalListFilters = { ...urlFilters, spikeFocus: null };
+    startListTransition(() => {
+      router.replace(buildRedditSignalsAdminPath(next, previewParam), { scroll: false });
+    });
   };
 
   const refreshList = () => {
-    startTransition(() => {
+    startRefreshTransition(() => {
       router.refresh();
     });
   };
@@ -485,7 +579,7 @@ export default function RedditSignalsClient({
         </p>
         <ResearchViewTabs active="signaler" spikeBadgeActive={spikeBadgeActive} />
         <RedditSpikeBadgePanel badge={spikeBadge} />
-        {spikeFocus ? (
+        {initialFilters.spikeFocus ? (
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span className="text-muted-foreground">Vekstfilter er aktivt.</span>
             <button
@@ -625,8 +719,16 @@ export default function RedditSignalsClient({
       </section>
 
       <p className="text-xs text-muted-foreground">
-        Viser {initialData.filteredTotal} av {initialData.total} signaler
+        Viser {initialData.filteredTotal} treff av siste {initialData.total} signaler (maks{' '}
+        {REDDIT_SIGNALS_LIST_LIMIT.toLocaleString('nb-NO')} etter «sist sett»).
       </p>
+
+      {listPending ? (
+        <p className="text-xs text-muted-foreground" role="status">
+          <Loader2 className="mr-1 inline h-3.5 w-3.5 animate-spin align-[-2px]" aria-hidden />
+          Oppdaterer listen…
+        </p>
+      ) : null}
 
       {initialData.tableMissing ? (
         <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
@@ -634,10 +736,10 @@ export default function RedditSignalsClient({
         </div>
       ) : null}
 
-      {initialData.rows.length === 0 ? (
+      {initialData.rows.length === 0 && !initialData.tableMissing ? (
         <EmptyState title="Ingen signaler" description="Justér filter eller vent på ny innhenting." />
-      ) : (
-        <div className="space-y-3">
+      ) : initialData.rows.length > 0 ? (
+        <div className={cn('space-y-3', listPending && 'opacity-60')}>
           {initialData.rows.map((row) => (
             <RedditSignalRow
               key={row.id}
@@ -647,11 +749,7 @@ export default function RedditSignalsClient({
             />
           ))}
         </div>
-      )}
-
-      <p className="text-xs text-muted-foreground">
-        Handlinger: {Object.values(REDDIT_SIGNAL_ACTION_LABELS).join(' · ')}
-      </p>
+      ) : null}
     </div>
   );
 }

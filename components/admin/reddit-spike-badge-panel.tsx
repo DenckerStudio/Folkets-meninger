@@ -12,11 +12,10 @@ const itemLinkClass =
 export function RedditSpikeBadgeTabDot({ show }: { show: boolean }) {
   if (!show) return null;
   return (
-    <span
-      className="ml-1.5 inline-flex h-2 w-2 rounded-full bg-brand"
-      aria-hidden
-      title="Aktive vekstmarkeringer"
-    />
+    <span className="ml-1.5 inline-flex items-center gap-1">
+      <span className="inline-flex h-2 w-2 rounded-full bg-brand" aria-hidden />
+      <span className="sr-only">Aktive vekstmarkeringer</span>
+    </span>
   );
 }
 
