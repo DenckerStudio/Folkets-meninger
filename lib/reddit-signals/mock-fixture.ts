@@ -1,0 +1,124 @@
+import type { RedditSignalAdminRow } from '@/lib/reddit-signals/types';
+
+const HOUR_MS = 60 * 60 * 1000;
+const now = Date.now();
+
+function isoHoursAgo(hours: number): string {
+  return new Date(now - hours * HOUR_MS).toISOString();
+}
+
+/** Fixture-data for skjermbilder (`?view=signaler&preview=fixture`). */
+export function buildRedditSignalsFixtureList(): { rows: RedditSignalAdminRow[] } {
+  const snapshotsA = [
+    { capturedAt: isoHoursAgo(30), score: 40, numComments: 12, numCrossposts: 0 },
+    { capturedAt: isoHoursAgo(20), score: 85, numComments: 28, numCrossposts: 1 },
+    { capturedAt: isoHoursAgo(8), score: 120, numComments: 45, numCrossposts: 1 },
+    { capturedAt: isoHoursAgo(2), score: 145, numComments: 52, numCrossposts: 2 },
+  ];
+
+  const snapshotsB = [
+    { capturedAt: isoHoursAgo(26), score: 200, numComments: 30, numCrossposts: null },
+    { capturedAt: isoHoursAgo(4), score: 210, numComments: 34, numCrossposts: null },
+  ];
+
+  const rows: RedditSignalAdminRow[] = [
+    {
+      id: '00000000-0000-4000-8000-000000000101',
+      redditId: 'fixture01',
+      subreddit: 'norge',
+      title: 'Skal kommunene få beholde mer av formuesskatten?',
+      url: 'https://www.reddit.com/comments/fixture01/',
+      score: 145,
+      numComments: 52,
+      contention: 0.36,
+      numCrossposts: 2,
+      upvoteRatio: 0.92,
+      postedAt: isoHoursAgo(36),
+      snapshotAt: isoHoursAgo(2),
+      firstSeenAt: isoHoursAgo(30),
+      lastSeenAt: isoHoursAgo(2),
+      topic: 'formuesskatt',
+      relatedIssueId: null,
+      relatedIssueTitle: null,
+      removalType: null,
+      flair: 'Politikk',
+      aiRelevance: 4,
+      aiReason: 'Direkte kobling til skattepolitikk',
+      clusterId: null,
+      status: 'ny',
+      statusReason: null,
+      researchTopicId: null,
+      linkedSakViaTopic: false,
+      stortingetIssueId: null,
+      engagement: 145 + 2 * 52 + 5 * 2,
+      growth24h: 72,
+      snapshots: snapshotsA,
+    },
+    {
+      id: '00000000-0000-4000-8000-000000000102',
+      redditId: 'fixture02',
+      subreddit: 'norske',
+      title: 'Erfaringer med nye strømstøtte-regler',
+      url: 'https://www.reddit.com/comments/fixture02/',
+      score: 210,
+      numComments: 34,
+      contention: 0.16,
+      numCrossposts: null,
+      upvoteRatio: 0.88,
+      postedAt: isoHoursAgo(40),
+      snapshotAt: isoHoursAgo(4),
+      firstSeenAt: isoHoursAgo(28),
+      lastSeenAt: isoHoursAgo(4),
+      topic: 'strøm',
+      relatedIssueId: 'stortinget-fixture-1',
+      relatedIssueTitle: 'Strømstøtte',
+      removalType: null,
+      flair: null,
+      aiRelevance: 3,
+      aiReason: null,
+      clusterId: 'fixture-klynge-a',
+      status: 'brukt',
+      statusReason: null,
+      researchTopicId: '00000000-0000-4000-8000-000000000201',
+      linkedSakViaTopic: true,
+      stortingetIssueId: 'stortinget-fixture-1',
+      engagement: 210 + 2 * 34,
+      growth24h: 28,
+      snapshots: snapshotsB,
+    },
+    {
+      id: '00000000-0000-4000-8000-000000000103',
+      redditId: 'fixture03',
+      subreddit: 'Nordmenn',
+      title: '[Fjernet] Off-topic diskusjon',
+      url: 'https://www.reddit.com/comments/fixture03/',
+      score: 12,
+      numComments: 3,
+      contention: 0.25,
+      numCrossposts: 0,
+      upvoteRatio: 0.55,
+      postedAt: isoHoursAgo(12),
+      snapshotAt: isoHoursAgo(1),
+      firstSeenAt: isoHoursAgo(10),
+      lastSeenAt: isoHoursAgo(1),
+      topic: null,
+      relatedIssueId: null,
+      relatedIssueTitle: null,
+      removalType: 'moderator',
+      flair: null,
+      aiRelevance: 1,
+      aiReason: 'Lav tematikk',
+      clusterId: null,
+      status: 'ignorert',
+      statusReason: 'Ikke relevant for saker',
+      researchTopicId: null,
+      linkedSakViaTopic: false,
+      stortingetIssueId: null,
+      engagement: 12 + 2 * 3,
+      growth24h: null,
+      snapshots: [],
+    },
+  ];
+
+  return { rows };
+}
