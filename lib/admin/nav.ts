@@ -5,6 +5,7 @@ import {
   BookOpen,
   ClipboardCheck,
   Columns3,
+  Gavel,
   LayoutDashboard,
   Layers,
   Lightbulb,
@@ -70,6 +71,14 @@ export const adminNavItems: AdminNavItem[] = [
     description: 'Systemutkast, blogginnlegg og sammendrag',
     href: routes.adminVurder,
     icon: ClipboardCheck,
+    status: 'active',
+  },
+  {
+    id: 'sak-avstemning',
+    title: 'Sak-avstemninger',
+    description: 'Opprett og rediger avstemninger på Stortingssaker',
+    href: routes.adminSak,
+    icon: Gavel,
     status: 'active',
   },
   {

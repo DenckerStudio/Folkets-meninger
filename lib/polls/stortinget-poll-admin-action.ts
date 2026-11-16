@@ -41,6 +41,8 @@ export async function publishStortingetPollAction(
     typeof raw.issueId === 'string' && raw.issueId.trim() ? raw.issueId.trim() : null;
   if (issueId) {
     revalidatePath(routes.sak(issueId));
+    revalidatePath(routes.adminSak);
+    revalidatePath(routes.adminSakPoll(issueId));
   }
 
   return result;
