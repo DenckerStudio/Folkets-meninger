@@ -67,7 +67,7 @@ export const PRIVACY_TRANSFERS =
   'Overføring utenfor EU/EØS kan skje til Stripe, Google og andre BYOK-leverandører du velger (for eksempel OpenAI, Anthropic eller xAI). Overføringen bygger på EU–US Data Privacy Framework der leverandøren er sertifisert, ellers standardavtaler (art. 46).';
 
 export const PRIVACY_RIGHTS =
-  'Du har rett til innsyn, retting, sletting, begrensning, dataportabilitet og til å protestere mot behandling basert på berettiget interesse. Du kan når som helst trekke tilbake samtykke uten at det påvirker lovligheten av behandlingen før tilbaketrekkingen. Bruk Min side → Personvern for samtykke og sletting av holdningsdata, eller kontakt oss. Vi svarer innen én måned.';
+  'Du har rett til innsyn, retting, sletting, begrensning, dataportabilitet og til å protestere mot behandling basert på berettiget interesse. Du kan når som helst trekke tilbake samtykke uten at det påvirker lovligheten av behandlingen før tilbaketrekkingen. Du kan slette hele kontoen selv under Min side → Personvern. Der kan du også styre samtykke og sletting av holdningsdata, eller kontakte oss. Vi svarer innen én måned.';
 
 export const PRIVACY_COMPLAINT =
   'Du kan klage til Datatilsynet (www.datatilsynet.no, Postboks 458 Sentrum, 0105 Oslo).';

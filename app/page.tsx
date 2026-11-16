@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import HeroSection from '@/components/hero-section';
+import { LandingAccountDeletedNotice } from '@/components/landing-account-deleted-notice';
 import { LandingExpiredLinkNotice } from '@/components/landing-expired-link-notice';
 import { LandingAbout } from '@/components/landing-about';
 import { LandingExperience } from '@/components/landing-experience';
@@ -22,6 +23,7 @@ export default function LandingPage() {
       <JsonLd data={[siteOrganizationJsonLd(), siteWebSiteJsonLd()]} />
       <div className="bg-background pb-8">
         <Suspense fallback={null}>
+          <LandingAccountDeletedNotice />
           <LandingExpiredLinkNotice />
         </Suspense>
         <HeroSection />
