@@ -46,7 +46,6 @@ import { SakStatusCard } from '@/components/sak/sak-status-card';
 import { SakOversiktShell } from '@/components/sak/sak-oversikt-shell';
 import type { SakOversiktTocEntry } from '@/components/sak/sak-oversikt-toc';
 import { SakImpactExcerpt } from '@/components/sak/sak-impact-excerpt';
-import { SakTabSlot } from '@/components/sak/sak-tab-slot';
 import { StortingetPollAdminSection } from '@/components/sak/stortinget-poll-admin-section';
 import StanceSection from './stance-section';
 import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
@@ -285,9 +284,6 @@ export default async function SakPage({
         })
       : null;
 
-  const vedtakForKortFortalt =
-    treatmentStatus === 'closed' ? kortvedtak ?? vedtakstekst ?? null : null;
-
   const oversiktToc: SakOversiktTocEntry[] = [
     { id: 'sak-oversikt-metadata', label: 'Nøkkelinfo' },
     ...(innstillingstekst ? [{ id: 'sak-oversikt-innstilling', label: 'Innstilling' }] : []),
@@ -353,7 +349,7 @@ export default async function SakPage({
           ) : null}
           {!isDedicatedResearchSak ? (
             <>
-              <SakKortFortalt summary={storedSummary} vedtakText={vedtakForKortFortalt} />
+              <SakKortFortalt summary={storedSummary} />
               <AiSummary
                 sakId={sak.id}
                 initialSummary={storedSummary}
@@ -558,6 +554,12 @@ export default async function SakPage({
               <KnowledgeQuiz sakId={sak.id} variant="pre-vote" />
             ) : null}
 
+            <StanceSection
+              sakId={sak.id}
+              sakTitle={officialTitle}
+              sakSummary={descriptionToShow || officialTitle}
+            />
+
             {viewerIsAdmin ? (
               <StortingetPollAdminSection
                 sakId={sak.id}
@@ -620,12 +622,6 @@ export default async function SakPage({
               ) : null}
             </div>
           </SakOversiktShell>
-        }
-        argumenter={
-          <SakTabSlot
-            title="Argumenter"
-            description="Her kommer argumenter for og imot, med kilder fra saksdokumentene (PR B)."
-          />
         }
         dokumenter={
           <div className="space-y-6">
@@ -714,19 +710,10 @@ export default async function SakPage({
                 vedtakstekst: vedtakstekst ?? null,
               }}
             />
-            <SakTabSlot
-              title="Folkets vilje og Stortinget"
-              description="Utvidet sammenligning og votering kommer i PR B."
-            />
           </div>
         }
         diskusjon={
           <div className="space-y-6">
-            <StanceSection
-              sakId={sak.id}
-              sakTitle={officialTitle}
-              sakSummary={descriptionToShow || officialTitle}
-            />
             <SakMeningerSection sakId={sak.id} />
             <PoliticianResponseForm sakId={sak.id} />
           </div>

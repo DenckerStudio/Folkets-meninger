@@ -8,7 +8,9 @@ import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import {
   SAK_PAGE_TAB_IDS,
   SAK_PAGE_TAB_LABELS,
+  SAK_PAGE_TABS_HIDDEN_UNTIL_CONTENT,
   sakPageTabFromLocationHash,
+  visibleSakPageTabIds,
   type SakPageTabId,
 } from '@/lib/sak/sak-page-tabs';
 
@@ -42,11 +44,14 @@ export function navigateToSakTab(tabId: SakPageTabId) {
   window.dispatchEvent(new Event('sak-tab-change'));
 }
 
+const DEFAULT_HIDDEN = new Set<SakPageTabId>(SAK_PAGE_TABS_HIDDEN_UNTIL_CONTENT);
+
 export function SakPageTabs({
   initialTab,
   documentCount,
+  hiddenTabIds = DEFAULT_HIDDEN,
   oversikt,
-  argumenter,
+  argumenter = null,
   dokumenter,
   stortinget,
   diskusjon,
@@ -54,8 +59,9 @@ export function SakPageTabs({
 }: {
   initialTab: SakPageTabId;
   documentCount?: number;
+  hiddenTabIds?: ReadonlySet<SakPageTabId>;
   oversikt: ReactNode;
-  argumenter: ReactNode;
+  argumenter?: ReactNode;
   dokumenter: ReactNode;
   stortinget: ReactNode;
   diskusjon: ReactNode;
@@ -66,47 +72,56 @@ export function SakPageTabs({
   const searchParams = useSearchParams();
   const reducedMotion = usePrefersReducedMotion();
 
-  const active = readTabFromQuery(searchParams) ?? initialTab;
+  const tabOrder = useMemo(() => visibleSakPageTabIds(hiddenTabIds), [hiddenTabIds]);
+
+  const rawActive = readTabFromQuery(searchParams) ?? initialTab;
+  const active = hiddenTabIds.has(rawActive) ? 'oversikt' : rawActive;
+
+  useEffect(() => {
+    if (hiddenTabIds.has(rawActive)) {
+      router.replace(replaceTabInUrl(pathname, searchParams, 'oversikt'), { scroll: false });
+    }
+  }, [rawActive, hiddenTabIds, pathname, router, searchParams]);
 
   useEffect(() => {
     if (readTabFromQuery(searchParams)) return;
     const legacy = sakPageTabFromLocationHash(window.location.hash);
-    if (legacy) {
+    if (legacy && !hiddenTabIds.has(legacy)) {
       router.replace(replaceTabInUrl(pathname, searchParams, legacy), { scroll: false });
     }
-  }, [searchParams, pathname, router]);
+  }, [searchParams, pathname, router, hiddenTabIds]);
 
   useEffect(() => {
     const onHashChange = () => {
       if (readTabFromQuery(searchParams)) return;
       const legacy = sakPageTabFromLocationHash(window.location.hash);
-      if (legacy) {
+      if (legacy && !hiddenTabIds.has(legacy)) {
         router.replace(replaceTabInUrl(pathname, searchParams, legacy), { scroll: false });
       }
     };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
-  }, [pathname, router, searchParams]);
+  }, [pathname, router, searchParams, hiddenTabIds]);
 
   const tabs = useMemo(
     () =>
-      SAK_PAGE_TAB_IDS.map((id) => ({
+      tabOrder.map((id) => ({
         id,
         label:
           id === 'dokumenter' && documentCount != null && documentCount > 0
             ? `${SAK_PAGE_TAB_LABELS[id]} (${documentCount})`
             : SAK_PAGE_TAB_LABELS[id],
       })),
-    [documentCount],
+    [documentCount, tabOrder],
   );
 
   const selectTab = useCallback(
     (id: string) => {
-      if (!isSakPageTabId(id)) return;
+      if (!isSakPageTabId(id) || hiddenTabIds.has(id)) return;
       const href = replaceTabInUrl(pathname, searchParams, id);
       router.replace(href, { scroll: false });
     },
-    [pathname, router, searchParams],
+    [pathname, router, searchParams, hiddenTabIds],
   );
 
   const onTabKeyDown = useCallback(
@@ -115,17 +130,18 @@ export function SakPageTabs({
         return;
       }
       event.preventDefault();
-      const index = SAK_PAGE_TAB_IDS.indexOf(active);
+      const index = tabOrder.indexOf(active);
       let next = index;
-      if (event.key === 'ArrowRight') next = (index + 1) % SAK_PAGE_TAB_IDS.length;
-      if (event.key === 'ArrowLeft') next = (index - 1 + SAK_PAGE_TAB_IDS.length) % SAK_PAGE_TAB_IDS.length;
+      if (event.key === 'ArrowRight') next = (index + 1) % tabOrder.length;
+      if (event.key === 'ArrowLeft') next = (index - 1 + tabOrder.length) % tabOrder.length;
       if (event.key === 'Home') next = 0;
-      if (event.key === 'End') next = SAK_PAGE_TAB_IDS.length - 1;
-      selectTab(SAK_PAGE_TAB_IDS[next]);
-      const button = document.getElementById(`sak-tab-${SAK_PAGE_TAB_IDS[next]}`);
+      if (event.key === 'End') next = tabOrder.length - 1;
+      const nextId = tabOrder[next];
+      selectTab(nextId);
+      const button = document.getElementById(`sak-tab-${nextId}`);
       button?.focus();
     },
-    [active, selectTab],
+    [active, selectTab, tabOrder],
   );
 
   const panels: Record<SakPageTabId, ReactNode> = {
@@ -157,7 +173,7 @@ export function SakPageTabs({
       </nav>
 
       <AnimatePresence mode="wait">
-        {SAK_PAGE_TAB_IDS.map((id) =>
+        {tabOrder.map((id) =>
           active === id ? (
             <motion.section
               key={id}
@@ -165,7 +181,7 @@ export function SakPageTabs({
               role="tabpanel"
               aria-labelledby={`sak-tab-${id}`}
               tabIndex={0}
-              className="space-y-6 focus:outline-none"
+              className="space-y-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               initial={reducedMotion ? false : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={reducedMotion ? undefined : { opacity: 0, y: -6 }}

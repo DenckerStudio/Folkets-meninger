@@ -43,6 +43,13 @@ function useActiveSection(ids: string[]) {
   return activeId;
 }
 
+const tocLinkClass = (active: boolean) =>
+  cn(
+    'block rounded-lg px-2 py-1.5 text-muted-foreground underline-offset-2 hover:bg-brand/5 hover:text-brand-accent',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card',
+    active && 'bg-brand/10 font-semibold text-brand',
+  );
+
 export function SakOversiktToc({ entries, variant }: SakOversiktTocProps) {
   const [open, setOpen] = useState(false);
   const ids = useMemo(() => entries.map((e) => e.id), [entries]);
@@ -50,29 +57,27 @@ export function SakOversiktToc({ entries, variant }: SakOversiktTocProps) {
 
   if (entries.length === 0) return null;
 
-  const linkClass = (id: string) =>
-    cn(
-      'block rounded-lg px-2 py-1.5 text-[#001433]/75 hover:bg-[#00205b]/5 hover:text-[#ba0c2f]',
-      activeId === id && 'bg-[#00205b]/8 font-semibold text-[#00205b]',
-    );
-
   if (variant === 'mobile') {
     return (
       <div className="lg:hidden">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex w-full min-h-11 items-center justify-between rounded-xl border border-[#00205b]/10 bg-card px-4 py-3 text-sm font-medium text-foreground"
+          className="flex w-full min-h-11 items-center justify-between rounded-xl border border-brand/10 bg-card px-4 py-3 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-expanded={open}
         >
           Hopp til seksjon
           <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} aria-hidden />
         </button>
         {open ? (
-          <ul className="mt-2 space-y-1 rounded-xl border border-[#00205b]/10 bg-card p-3 text-sm">
+          <ul className="mt-2 space-y-1 rounded-xl border border-brand/10 bg-card p-3 text-sm">
             {entries.map((entry) => (
               <li key={entry.id}>
-                <a href={`#${entry.id}`} className={linkClass(entry.id)} onClick={() => setOpen(false)}>
+                <a
+                  href={`#${entry.id}`}
+                  className={tocLinkClass(activeId === entry.id)}
+                  onClick={() => setOpen(false)}
+                >
                   {entry.label}
                 </a>
               </li>
@@ -88,11 +93,11 @@ export function SakOversiktToc({ entries, variant }: SakOversiktTocProps) {
       className="sticky top-[calc(4rem+5.5rem+env(safe-area-inset-top,0px))] hidden max-h-[calc(100vh-9rem)] overflow-y-auto lg:block"
       aria-label="Innhold i oversikten"
     >
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#001433]/55">På denne siden</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">På denne siden</p>
       <ul className="mt-3 space-y-1 text-sm">
         {entries.map((entry) => (
           <li key={entry.id}>
-            <a href={`#${entry.id}`} className={linkClass(entry.id)}>
+            <a href={`#${entry.id}`} className={tocLinkClass(activeId === entry.id)}>
               {entry.label}
             </a>
           </li>

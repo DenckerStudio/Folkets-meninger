@@ -5,7 +5,6 @@ import {
   getLastPastVoteEventDate,
   getNextVoteCloseDate,
 } from '@/lib/sak-voting-window';
-import { hearingsFromSaksgang } from '@/lib/chat/stortinget-tools';
 import { findHoringerForSak, isHoringOpen, type StortingetHoring } from '@/lib/stortinget-horinger';
 import { routes } from '@/lib/routes';
 
@@ -17,7 +16,6 @@ export type SakStatusHighlight = {
   hearingHref: string | null;
   hearingLinkLabel: string | null;
   vedtakExcerpt: string | null;
-  currentSaksgangStep: string | null;
 };
 
 function formatNbDate(date: Date): string {
@@ -31,48 +29,24 @@ function formatNbDate(date: Date): string {
 
 function pickNextHearingLink(
   sakId: string,
-  detail: StortingetSakDetail,
   linkedHearings: StortingetHoring[],
 ): { href: string; label: string } | null {
   const real = findHoringerForSak(linkedHearings, sakId);
-  const open = real.find((h) => isHoringOpen(h));
+  const open = real.find((h) => isHoringOpen(h) && h.id != null);
   if (open?.id != null) {
     return {
       href: routes.horing(String(open.id)),
       label: 'Gå til høringen',
     };
   }
-  const saksgang = hearingsFromSaksgang(detail);
-  const upcoming = saksgang.find((h) => h.statusKind === 'open');
-  if (upcoming) {
+  const latestWithId = real.find((h) => h.id != null);
+  if (latestWithId?.id != null) {
     return {
-      href: routes.horinger,
-      label: 'Se høringer',
-    };
-  }
-  const held = saksgang[0];
-  if (held) {
-    return {
-      href: routes.horinger,
-      label: 'Høring i saksgangen',
+      href: routes.horing(String(latestWithId.id)),
+      label: 'Se høringen',
     };
   }
   return null;
-}
-
-function inferCurrentSaksgangStep(detail: StortingetSakDetail | null | undefined): string | null {
-  const steps = detail?.saksgang?.saksgang_steg_liste ?? [];
-  let lastWithEvents: string | null = null;
-  for (const step of steps) {
-    const events = step.saksgang_hendelse_liste ?? [];
-    const hasMeaningful = events.some((e) => {
-      const hasDate = e.dato && !e.dato.startsWith('01.01.0001');
-      return hasDate || Boolean(e.hendelse_tekst?.trim());
-    });
-    if (hasMeaningful) lastWithEvents = step.navn;
-  }
-  if (lastWithEvents) return lastWithEvents;
-  return steps[steps.length - 1]?.navn ?? null;
 }
 
 export function buildSakStatusHighlight(input: {
@@ -96,19 +70,12 @@ export function buildSakStatusHighlight(input: {
     if (nextVote && nextVote.getTime() > Date.now()) {
       nextStepLabel = 'Planlagt behandling';
       nextStepDateLabel = formatNbDate(nextVote);
-    } else {
-      const step = inferCurrentSaksgangStep(detail);
-      if (step) {
-        nextStepLabel = 'Nåværende steg';
-        nextStepDateLabel = step;
-      }
     }
   }
 
-  const hearingLink =
-    detail && input.sakId
-      ? pickNextHearingLink(input.sakId, detail, input.linkedHearings)
-      : null;
+  const hearingLink = input.sakId
+    ? pickNextHearingLink(input.sakId, input.linkedHearings)
+    : null;
 
   const vedtakExcerpt =
     treatmentStatus === 'closed'
@@ -123,6 +90,5 @@ export function buildSakStatusHighlight(input: {
     hearingHref: hearingLink?.href ?? null,
     hearingLinkLabel: hearingLink?.label ?? null,
     vedtakExcerpt,
-    currentSaksgangStep: inferCurrentSaksgangStep(detail),
   };
 }

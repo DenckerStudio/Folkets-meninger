@@ -32,14 +32,23 @@ function isSakPageTabId(value: string): value is SakPageTabId {
   return (SAK_PAGE_TAB_IDS as readonly string[]).includes(value);
 }
 
-/** Server-safe: read `?fane=` from search params. */
+export const SAK_PAGE_TABS_HIDDEN_UNTIL_CONTENT: readonly SakPageTabId[] = ['argumenter'];
+
+/** Server-safe: read `?fane=` from search params. Hidden tabs fall back to oversikt. */
 export function parseSakPageTabParam(
   value: string | string[] | undefined,
+  hiddenTabIds: ReadonlySet<SakPageTabId> = new Set(SAK_PAGE_TABS_HIDDEN_UNTIL_CONTENT),
 ): SakPageTabId {
   const raw = Array.isArray(value) ? value[0] : value;
   const trimmed = typeof raw === 'string' ? raw.trim().toLowerCase() : '';
-  if (trimmed && isSakPageTabId(trimmed)) return trimmed;
+  if (trimmed && isSakPageTabId(trimmed) && !hiddenTabIds.has(trimmed)) return trimmed;
   return 'oversikt';
+}
+
+export function visibleSakPageTabIds(
+  hiddenTabIds: ReadonlySet<SakPageTabId> = new Set(SAK_PAGE_TABS_HIDDEN_UNTIL_CONTENT),
+): SakPageTabId[] {
+  return SAK_PAGE_TAB_IDS.filter((id) => !hiddenTabIds.has(id));
 }
 
 /** Client-only legacy `#dokumenter` etc. */

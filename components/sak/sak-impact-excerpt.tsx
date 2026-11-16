@@ -32,7 +32,7 @@ export function SakImpactExcerpt({ sakId }: { sakId: string }) {
         </h2>
         <Link
           href={href}
-          className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:underline"
+          className="inline-flex min-h-11 items-center rounded-md text-sm font-medium text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
         >
           Åpne konsekvenskalkulator
         </Link>

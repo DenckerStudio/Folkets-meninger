@@ -4,6 +4,7 @@ import { GitBranch } from 'lucide-react';
 import { getSakEventTooltip, getSakStepTooltip, SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { useSakTooltipsEnabled } from '@/components/theme-provider';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { resolveCurrentSaksgangStepIndex } from '@/lib/sak/saksgang-current-step';
 import { cn } from '@/lib/utils';
 
 export type SaksgangEvent = {
@@ -25,20 +26,6 @@ type SaksgangTimelineProps = {
 
 function cleanSaksgangName(name: string): string {
   return name.replace(/^K(?=[A-ZÆØÅ][a-zæøå])/, '');
-}
-
-function stepHasMeaningfulEvents(step: SaksgangStep): boolean {
-  return step.events.some((e) => e.label || e.date);
-}
-
-export function resolveCurrentSaksgangStepIndex(steps: SaksgangStep[], ferdigbehandlet: boolean): number {
-  let lastDone = -1;
-  for (let i = 0; i < steps.length; i += 1) {
-    if (stepHasMeaningfulEvents(steps[i])) lastDone = i;
-  }
-  if (ferdigbehandlet) return lastDone >= 0 ? lastDone : steps.length - 1;
-  if (lastDone >= 0 && lastDone < steps.length - 1) return lastDone + 1;
-  return lastDone >= 0 ? lastDone : 0;
 }
 
 function EventLabel({
@@ -68,7 +55,7 @@ export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: Saksg
   const currentIndex = resolveCurrentSaksgangStepIndex(steps, Boolean(ferdigbehandlet));
 
   return (
-    <div className="rounded-2xl border border-[#00205b]/12 bg-card p-4 shadow-sm sm:p-6">
+    <div className="rounded-2xl border border-brand/12 bg-card p-4 shadow-sm sm:p-6">
       <div className="mb-2 flex items-center gap-2">
         <h2 className="flex items-center text-lg font-bold text-foreground">
           <GitBranch className="mr-2 h-5 w-5 text-brand" aria-hidden />
@@ -93,20 +80,17 @@ export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: Saksg
           return (
             <li key={`${steg.navn}-${i}`} className="relative flex gap-4 pb-8 last:pb-0">
               {!isLast ? (
-                <span
-                  className="absolute left-[1.125rem] top-10 bottom-0 w-px bg-[#00205b]/15"
-                  aria-hidden
-                />
+                <span className="absolute left-[1.125rem] top-10 bottom-0 w-px bg-brand/15" aria-hidden />
               ) : null}
               <span
                 className={cn(
                   'relative z-10 mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-bold',
                   isCurrent
-                    ? 'border-[#ba0c2f]/40 bg-[#ba0c2f]/10 text-[#ba0c2f]'
+                    ? 'border-brand-accent/40 bg-brand-accent-soft text-brand-accent'
                     : stepDone && ferdigbehandlet
                       ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                       : stepDone
-                        ? 'border-[#00205b]/25 bg-[#00205b]/5 text-[#00205b]'
+                        ? 'border-brand/25 bg-brand/5 text-brand'
                         : 'border-border bg-muted/40 text-muted-foreground',
                 )}
                 aria-current={isCurrent ? 'step' : undefined}
@@ -124,7 +108,7 @@ export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: Saksg
                     {steg.navn}
                   </div>
                   {isCurrent ? (
-                    <span className="rounded-full border border-[#ba0c2f]/30 bg-[#ba0c2f]/10 px-2 py-0.5 text-xs font-medium text-[#ba0c2f]">
+                    <span className="rounded-full border border-brand-accent/30 bg-brand-accent-soft px-2 py-0.5 text-xs font-medium text-brand-accent">
                       Nå
                     </span>
                   ) : null}

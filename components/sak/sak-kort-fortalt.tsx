@@ -51,7 +51,8 @@ export function SakKortFortalt({
         )}
         aria-label="Kort fortalt"
       >
-        Sammendrag er ikke klart ennå. Offisiell sakstekst lenger ned på siden.
+        Kort sammendrag er ikke tilgjengelig for denne saken ennå. Du finner offisiell sakstekst under fanen
+        Dokumenter.
       </section>
     );
   }
@@ -64,10 +65,10 @@ export function SakKortFortalt({
 
   return (
     <section
-      className={cn('rounded-2xl border border-[#00205b]/12 bg-card p-4 shadow-sm sm:p-6', className)}
+      className={cn('rounded-2xl border border-brand/12 bg-card p-4 shadow-sm sm:p-6', className)}
       aria-label="Kort fortalt"
     >
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-[#00205b]/80">Kort fortalt</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-brand/80">Kort fortalt</h2>
       {narrative ? (
         <p className="mt-3 text-base leading-relaxed text-pretty text-foreground">{narrative}</p>
       ) : null}

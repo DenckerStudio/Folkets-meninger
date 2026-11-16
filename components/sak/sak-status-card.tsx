@@ -5,6 +5,9 @@ import { cn } from '@/lib/utils';
 import { ExternalLink } from 'lucide-react';
 import { getStortingetSakUrl } from '@/lib/stortinget-horinger';
 
+const linkFocus =
+  'rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card';
+
 export function SakStatusCard({
   sakId,
   highlight,
@@ -17,7 +20,7 @@ export function SakStatusCard({
   return (
     <section
       className={cn(
-        'rounded-2xl border border-[#00205b]/12 bg-gradient-to-br from-[#00205b]/[0.04] to-card p-4 shadow-sm sm:p-5',
+        'rounded-2xl border border-brand/12 bg-gradient-to-br from-brand-soft to-card p-4 shadow-sm sm:p-5',
         className,
       )}
       aria-label="Saksstatus"
@@ -25,11 +28,6 @@ export function SakStatusCard({
       <div className="flex flex-wrap items-center gap-2">
         <SakProcessingBadge status={highlight.statusKind} size="sm" />
         <span className="text-sm font-medium text-foreground">{highlight.statusLabel}</span>
-        {highlight.currentSaksgangStep ? (
-          <span className="text-sm text-muted-foreground">
-            · {highlight.currentSaksgangStep}
-          </span>
-        ) : null}
       </div>
 
       <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
@@ -45,7 +43,10 @@ export function SakStatusCard({
             <dd className="mt-0.5">
               <Link
                 href={highlight.hearingHref}
-                className="inline-flex min-h-11 items-center font-medium text-brand hover:underline"
+                className={cn(
+                  'inline-flex min-h-11 items-center font-medium text-brand underline-offset-2 hover:underline',
+                  linkFocus,
+                )}
               >
                 {highlight.hearingLinkLabel}
               </Link>
@@ -64,7 +65,10 @@ export function SakStatusCard({
         href={getStortingetSakUrl(sakId)}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground hover:text-brand"
+        className={cn(
+          'mt-4 inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground underline-offset-2 hover:text-brand hover:underline',
+          linkFocus,
+        )}
       >
         Se på stortinget.no
         <ExternalLink className="ml-1.5 h-4 w-4" aria-hidden />

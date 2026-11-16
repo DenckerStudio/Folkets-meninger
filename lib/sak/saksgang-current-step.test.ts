@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { resolveCurrentSaksgangStepIndex } from '@/components/sak/saksgang-timeline';
+import { resolveCurrentSaksgangStepIndex, resolveCurrentSaksgangStepName } from './saksgang-current-step';
 
 assert.equal(
   resolveCurrentSaksgangStepIndex(
@@ -13,14 +13,14 @@ assert.equal(
 );
 
 assert.equal(
-  resolveCurrentSaksgangStepIndex(
+  resolveCurrentSaksgangStepName(
     [
       { navn: 'A', events: [{ label: 'x', date: '1' }] },
-      { navn: 'B', events: [{ label: 'y', date: '2' }] },
+      { navn: 'B', events: [] },
     ],
-    true,
+    false,
   ),
-  1,
+  'B',
 );
 
-console.log('saksgang-timeline.test.ts OK');
+console.log('saksgang-current-step.test.ts OK');
