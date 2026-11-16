@@ -11,12 +11,13 @@ import { cn } from '@/lib/utils';
 
 type ProfileHeroProps = {
   user: User;
-  stanceCount: number;
+  stanceCount?: number;
   points?: number;
   pointsProgress?: UserPointsProgress | null;
   badges?: EarnedBadge[];
   isStemmePlus?: boolean;
-  onSignOut: () => void;
+  onSignOut?: () => void;
+  variant?: 'default' | 'compact';
 };
 
 function initialsFromUser(user: User): string {
@@ -34,13 +35,15 @@ function initialsFromUser(user: User): string {
 
 export function ProfileHero({
   user,
-  stanceCount,
+  stanceCount = 0,
   points = 0,
   pointsProgress = null,
   badges = [],
   isStemmePlus = false,
   onSignOut,
+  variant = 'default',
 }: ProfileHeroProps) {
+  const compact = variant === 'compact';
   const displayName =
     (user.user_metadata?.full_name as string | undefined) || user.email || 'Bruker';
 
@@ -59,7 +62,11 @@ export function ProfileHero({
               {initialsFromUser(user)}
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-foreground truncate">Min profil</h1>
+              {compact ? (
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Din profil</p>
+              ) : (
+                <h1 className="text-2xl font-bold text-foreground truncate">Min profil</h1>
+              )}
               <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-2 truncate flex-wrap">
                 <span className="inline-flex items-center gap-1 truncate">
                   <Shield className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
@@ -69,20 +76,24 @@ export function ProfileHero({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onSignOut}
-            className="min-h-11 inline-flex items-center justify-center gap-2 self-start sm:self-center px-4 py-2 border border-border rounded-xl text-sm font-medium text-foreground bg-card hover:bg-muted/50 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Logg ut
-          </button>
+          {onSignOut ? (
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="min-h-11 inline-flex items-center justify-center gap-2 self-start sm:self-center px-4 py-2 border border-border rounded-xl text-sm font-medium text-foreground bg-card hover:bg-muted/50 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Logg ut
+            </button>
+          ) : null}
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl bg-muted/40 border border-border px-4 py-3">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Holdninger markert</p>
-            <p className="text-2xl font-bold text-brand mt-0.5">{stanceCount}</p>
-          </div>
+        <div className={cn('mt-5 grid gap-3', compact ? 'sm:grid-cols-1' : 'sm:grid-cols-2')}>
+          {!compact ? (
+            <div className="rounded-xl bg-muted/40 border border-border px-4 py-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Holdninger markert</p>
+              <p className="text-2xl font-bold text-brand mt-0.5">{stanceCount}</p>
+            </div>
+          ) : null}
           <PointsProgress points={points} progress={pointsProgress} />
         </div>
         <div className="mt-5">

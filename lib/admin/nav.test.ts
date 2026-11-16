@@ -41,6 +41,10 @@ assert.equal(oppgaver.href, routes.adminOppgaver);
 assert.equal(adminNavItems.some((item) => item.id === 'blog'), false);
 assert.equal(adminNavItems.some((item) => item.id === 'blogg'), false);
 
+const sakAvstemning = adminNavItems.find((item) => item.id === 'sak-avstemning');
+assert.ok(sakAvstemning);
+assert.equal(sakAvstemning.href, routes.adminSak);
+
 const varsler = adminNavItems.find((item) => item.id === 'varsler');
 assert.ok(varsler);
 assert.equal(varsler.status, 'coming');

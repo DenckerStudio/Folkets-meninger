@@ -1,6 +1,6 @@
 import type { OpinionListItem } from '@/lib/opinions/types';
 import type { SakDocumentRef } from '@/lib/stortinget-documents';
-import type { SakPageTabId } from '@/components/sak/sak-page-tabs';
+import type { SakPageTabId } from '@/lib/sak/sak-page-tabs';
 import { sakDocumentListAnchorId, sakOpinionAnchorId } from '@/lib/sak/anchors';
 
 export type SakSearchTargetKind = 'tittel' | 'sammendrag' | 'dokument' | 'mening' | 'innstilling' | 'argument';

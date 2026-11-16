@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { useRouter } from 'next/navigation';
 import { Loader2, Radar } from 'lucide-react';
 import { AdminBackLink } from '@/components/admin/admin-shell';
+import { ResearchViewTabs } from '@/components/admin/research-view-tabs';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import {
   OPPFANGET_DISPLAY_STATUS_LABELS,
@@ -104,7 +105,13 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
   return debounced;
 }
 
-function OppfangetPageHeader({ previewMock }: { previewMock?: boolean }) {
+function OppfangetPageHeader({
+  previewMock,
+  spikeBadgeActive = false,
+}: {
+  previewMock?: boolean;
+  spikeBadgeActive?: boolean;
+}) {
   return (
     <div>
       <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
@@ -114,6 +121,9 @@ function OppfangetPageHeader({ previewMock }: { previewMock?: boolean }) {
       <p className="mt-1 text-sm text-muted-foreground">
         Saker og aksjoner vi har fanget opp, med kilder. Tall og kilder er ikke verifisert her.
       </p>
+      <div className="mt-3">
+        <ResearchViewTabs active="oppfanget" spikeBadgeActive={spikeBadgeActive} />
+      </div>
       {previewMock ? (
         <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
           Forhåndsvisning med mock-data (kun utvikling).
@@ -165,6 +175,7 @@ export default function AdminOppfangetClient({
   initialResearchTopicsByRedditId = {},
   researchWebhooksConfigured = true,
   missingResearchWebhookEnvKeys = [],
+  spikeBadgeActive = false,
 }: {
   initialData?: OppfangetListResponse | null;
   initialFilters?: OppfangetFilterInput;
@@ -176,6 +187,7 @@ export default function AdminOppfangetClient({
   initialResearchTopicsByRedditId?: Record<string, ResearchTopicSnapshot>;
   researchWebhooksConfigured?: boolean;
   missingResearchWebhookEnvKeys?: string[];
+  spikeBadgeActive?: boolean;
 }) {
   const router = useRouter();
   const [data, setData] = useState<OppfangetListResponse | null>(initialData);
@@ -306,7 +318,7 @@ export default function AdminOppfangetClient({
   if (tableMissing && data) {
     return (
       <div className="space-y-6" lang="nb-NO">
-        <OppfangetPageHeader previewMock={data.previewMock} />
+        <OppfangetPageHeader previewMock={data.previewMock} spikeBadgeActive={spikeBadgeActive} />
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-foreground">
           <p className="font-medium">Database ikke klar</p>
           <p className="mt-1 text-muted-foreground">{data.tableMissingMessage}</p>
@@ -318,7 +330,7 @@ export default function AdminOppfangetClient({
 
   return (
     <div className="space-y-6" lang="nb-NO">
-      <OppfangetPageHeader previewMock={data?.previewMock} />
+      <OppfangetPageHeader previewMock={data?.previewMock} spikeBadgeActive={spikeBadgeActive} />
       {!mockMode ? (
         <ResearchWebhookNotice
           configured={researchWebhooksConfigured}

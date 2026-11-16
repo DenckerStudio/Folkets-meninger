@@ -1,18 +1,11 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { useAnnotationContainerExpand } from '@/components/user-annotations/use-annotation-container-expand';
+import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { motion } from 'motion/react';
-import { UserAnnotatableText } from '@/components/user-annotations/user-annotatable-text';
-import { useUserAnnotations } from '@/components/user-annotations/user-annotation-context';
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-function containerKeyForTitle(title: string): string {
-  return `expandable_${title.toLowerCase().replace(/\s+/g, '_').slice(0, 80)}`;
 }
 
 export default function ExpandableText({
@@ -25,10 +18,6 @@ export default function ExpandableText({
   maxLength?: number;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const annotationCtx = useUserAnnotations();
-  const containerKey = containerKeyForTitle(title);
-  const expand = useCallback(() => setIsExpanded(true), []);
-  useAnnotationContainerExpand(containerKey, expand);
 
   if (!text) return null;
 
@@ -42,20 +31,11 @@ export default function ExpandableText({
       <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">{title}</h3>
       <div className="relative">
         <motion.div layout initial={false} className="relative">
-          {annotationCtx?.enabled ? (
-            <UserAnnotatableText
-              containerKey={containerKey}
-              text={shown}
-              as="div"
-              className={`break-words whitespace-pre-wrap text-muted-foreground ${!isExpanded && isLong ? 'line-clamp-4 overflow-hidden' : ''}`}
-            />
-          ) : (
-            <div
-              className={`break-words whitespace-pre-wrap text-muted-foreground ${!isExpanded && isLong ? 'line-clamp-4 overflow-hidden' : ''}`}
-            >
-              {shown}
-            </div>
-          )}
+          <div
+            className={`break-words whitespace-pre-wrap text-muted-foreground ${!isExpanded && isLong ? 'line-clamp-4 overflow-hidden' : ''}`}
+          >
+            {shown}
+          </div>
         </motion.div>
         {!isExpanded && isLong && (
           <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-card to-transparent pointer-events-none" />

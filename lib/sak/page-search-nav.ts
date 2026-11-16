@@ -1,4 +1,4 @@
-import type { SakPageTabId } from '@/components/sak/sak-page-tabs';
+import type { SakPageTabId } from '@/lib/sak/sak-page-tabs';
 
 export type WaitForElementOptions = {
   timeoutMs?: number;

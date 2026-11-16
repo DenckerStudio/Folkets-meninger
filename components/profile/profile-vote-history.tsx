@@ -15,13 +15,18 @@ export type VoteHistoryItem = {
 type ProfileVoteHistoryProps = {
   items: VoteHistoryItem[];
   loading: boolean;
+  error?: boolean;
 };
 
-export function ProfileVoteHistory({ items, loading }: ProfileVoteHistoryProps) {
+export function ProfileVoteHistory({ items, loading, error = false }: ProfileVoteHistoryProps) {
   return (
     <ProfileCard title="Siste stemmer" description="Anonyme i offentlig statistikk.">
       {loading ? (
         <p className="text-center py-8 text-muted-foreground text-sm">Laster stemmehistorikk…</p>
+      ) : error ? (
+        <p className="rounded-xl border border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
+          Kunne ikke hente stemmehistorikk akkurat nå. Prøv igjen senere.
+        </p>
       ) : items.length === 0 ? (
         <EmptyState
           compact

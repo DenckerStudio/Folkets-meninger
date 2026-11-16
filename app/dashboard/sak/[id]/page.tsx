@@ -3,7 +3,7 @@ import { getSakPageBundle, type StortingetSakDetail } from '@/lib/stortinget';
 import { classifySakKind, getSakKindLabel } from '@/lib/stortinget-sak-presentation';
 import { buildPageMetadata, truncateDescription } from '@/lib/seo/metadata';
 import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
-import { SakMetaCard, SakProcessingBadge, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
+import { SakMetaCard, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
 import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS, SAK_TYPE_BADGE_CLASS } from '@/lib/sak-status';
 import { formatStortingetDate } from '@/lib/stortinget-horinger';
 import { SaksgangTimeline, type SaksgangStep } from '@/components/sak/saksgang-timeline';
@@ -15,40 +15,45 @@ import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { routes } from '@/lib/routes';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { isAdmin } from '@/lib/admin/gate';
 import { redactPublicFolkChoiceFields } from '@/lib/public-aggregate/folk-public-output';
-import { listPollsForStortingetIssueAdmin } from '@/lib/polls/stortinget-poll-admin-data';
-import { resolveStortingetPollAdminUiState } from '@/lib/polls/stortinget-poll-admin-guard';
-import { getStortingetSakUrl } from '@/lib/stortinget-horinger';
+import { findOpenStortingetPollForIssue } from '@/lib/polls/service';
 import { isResearchTopicDedicatedIssueId } from '@/lib/sak/research-topic-dedicated-issue';
-import { publicSakSummaryLead } from '@/lib/ai-summary/sak-summary-fetch';
 import { readAiSummaryFromDb } from '@/lib/ai-summary/service';
+import { publicSakSummaryLead } from '@/lib/ai-summary/sak-summary-fetch';
 import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
 import FadeIn from '@/components/fade-in';
 import ExpandableText from './expandable-text';
-import { SakPageActions } from '@/components/sak/sak-page-actions';
-import { SakOfficialDescription } from '@/components/sak/sak-official-description';
-import { SakPageTabs } from '@/components/sak/sak-page-tabs';
-import { ImpactCalculator } from '@/components/sak/impact-calculator';
 import { SakArgumentsSection } from '@/components/sak/sak-arguments-section';
 import { SakDocumentsPanel } from '@/components/sak/sak-documents-panel';
 import { SakDocumentsShortlist } from '@/components/sak/sak-documents-shortlist';
 import { SakFolketsViljeVsStortingetSection } from '@/components/sak/sak-folkets-vilje-vs-stortinget-section';
 import { SakPageSearchCorpus } from '@/components/sak/sak-page-search-corpus';
+import { SakPageActions } from '@/components/sak/sak-page-actions';
+import { SakPageTabs } from '@/components/sak/sak-page-tabs';
+import { SakTabSlot } from '@/components/sak/sak-tab-slot';
+import { ImpactCalculator } from '@/components/sak/impact-calculator';
 import { KnowledgeQuiz } from '@/components/sak/knowledge-quiz';
 import { SimilarIssuesSection } from '@/components/sak/similar-issues-section';
 import { TopicAroundSakSection } from '@/components/search/topic-around-sak-section';
 import { SakMeningerSection } from '@/components/sak/sak-meninger-section';
 import { SakStortingetPollAggregateSection } from '@/components/sak/sak-stortinget-poll-aggregate-section';
-import { buildSakStortingetOversiktExtras } from '@/lib/sak/stortinget-public-status';
-import { StortingetPollAdminSection } from '@/components/sak/stortinget-poll-admin-section';
+import { parseSakPageTabParam } from '@/lib/sak/sak-page-tabs';
+import { buildSakStatusHighlight } from '@/lib/sak/sak-status-highlights';
+import { fetchStortingetHoringer } from '@/lib/stortinget-horinger';
+import { SakKortFortalt } from '@/components/sak/sak-kort-fortalt';
+import { SakStatusCard } from '@/components/sak/sak-status-card';
+import { SakOversiktShell } from '@/components/sak/sak-oversikt-shell';
+import type { SakOversiktTocEntry } from '@/components/sak/sak-oversikt-toc';
+import { SakImpactExcerpt } from '@/components/sak/sak-impact-excerpt';
+import { SakOpenPollStickySlot } from '@/components/sak/sak-open-poll-sticky-slot';
+import { isSakKnowledgeQuizEnabled } from '@/lib/sak/flags';
+import { cn } from '@/lib/utils';
 import StanceSection from './stance-section';
 import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
-import { UserAnnotationHost } from '@/components/user-annotations/user-annotation-host';
 export const dynamic = 'force-dynamic';
 
 function formatEventDate(dateStr: string | null): string | null {
@@ -186,13 +191,14 @@ export default async function SakPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ dokument?: string | string[] }>;
+  searchParams?: Promise<{ dokument?: string | string[]; fane?: string | string[] }>;
 }) {
   const resolvedParams = await params;
   const resolvedSearch = searchParams ? await searchParams : undefined;
   const dokumentParam = resolvedSearch?.dokument;
   const initialDocumentId =
     typeof dokumentParam === 'string' ? dokumentParam.trim() : undefined;
+  const initialTab = parseSakPageTabParam(resolvedSearch?.fane);
   const bundle = await getSakPageBundle(resolvedParams.id);
 
   if (!bundle) {
@@ -207,12 +213,13 @@ export default async function SakPage({
     total: sak.votes.total,
   });
   const isDedicatedResearchSak = isResearchTopicDedicatedIssueId(sak.id);
-  const [documents, voteringer, summaryRead] = await Promise.all([
+  const [documents, voteringer, summaryRead, linkedHearings] = await Promise.all([
     isDedicatedResearchSak ? Promise.resolve([]) : getSakDocumentsWithStatus(sak.id, detailedContent),
     isDedicatedResearchSak ? Promise.resolve([]) : fetchSakVoteringer(sak.id),
     isDedicatedResearchSak
       ? Promise.resolve({ status: 'ok' as const, summary: null })
       : readAiSummaryFromDb(sak.id),
+    isDedicatedResearchSak ? Promise.resolve([]) : fetchStortingetHoringer().catch(() => []),
   ]);
   const storedSummary = summaryRead.status === 'ok' ? summaryRead.summary : null;
 
@@ -249,15 +256,11 @@ export default async function SakPage({
     officialDescription && officialDescription !== officialTitle ? officialDescription : '';
 
   const supabase = await getServerSupabase();
+  const openStortingetPoll = await findOpenStortingetPollForIssue(sak.id, supabase);
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const viewerIsAdmin = user ? await isAdmin(user.id, user.email) : false;
-  const stortingetPollAdminState = viewerIsAdmin
-    ? resolveStortingetPollAdminUiState(await listPollsForStortingetIssueAdmin(sak.id))
-    : { kind: 'create' as const };
-  const pollDefaultNeutralSummary =
-    (publicSakSummaryLead(storedSummary) ?? descriptionToShow.trim()) || '';
+  const showKnowledgeQuiz = isSakKnowledgeQuizEnabled();
 
   const treatmentStatus = sak.status;
 
@@ -265,19 +268,36 @@ export default async function SakPage({
     formatStortingetDate(sak.date) ??
     (issueMeta?.lastUpdatedAt ? formatStortingetDate(issueMeta.lastUpdatedAt) : null);
 
-  const stortingetOversiktExtras =
+  const statusHighlight =
     !isDedicatedResearchSak
-      ? buildSakStortingetOversiktExtras({
+      ? buildSakStatusHighlight({
           sakId: sak.id,
           detail: detailedContent,
           treatmentStatus,
-          documents,
+          linkedHearings,
+          kortvedtak,
+          vedtakstekst,
         })
       : null;
 
+  const oversiktToc: SakOversiktTocEntry[] = [
+    { id: 'sak-oversikt-metadata', label: 'Nøkkelinfo' },
+    ...(innstillingstekst ? [{ id: 'sak-oversikt-innstilling', label: 'Innstilling' }] : []),
+    ...(forslagstillere.length > 0 ? [{ id: 'sak-oversikt-forslagstillere', label: 'Forslagstillere' }] : []),
+    ...(saksordfoerere.length > 0 ? [{ id: 'sak-oversikt-ordforer', label: 'Saksordførere' }] : []),
+    { id: 'sak-oversikt-konsekvens', label: 'Konsekvenser' },
+    ...(relaterteSaker.length > 0 || !isDedicatedResearchSak
+      ? [{ id: 'sak-oversikt-relatert', label: 'Relaterte saker' }]
+      : []),
+  ];
+
   return (
-    <UserAnnotationHost enabled={Boolean(user)} targetType="sak" targetId={sak.id}>
-    <DashboardPage className="mx-auto w-full min-w-0 max-w-4xl overflow-x-clip sm:space-y-10">
+    <DashboardPage
+      className={cn(
+        'mx-auto w-full min-w-0 max-w-5xl overflow-x-clip sm:space-y-10',
+        openStortingetPoll && 'pb-[calc(9.5rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))]',
+      )}
+    >
       <FadeIn delay={0.1}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <BackButton fallbackHref={routes.utforsk} />
@@ -292,7 +312,7 @@ export default async function SakPage({
 
       <FadeIn delay={0.2} direction="up">
         <div className="space-y-4 sm:space-y-5">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 opacity-90">
             {displaySakKind ? (
               <SakStatusBadge
                 label={getSakKindLabel(displaySakKind)}
@@ -301,22 +321,21 @@ export default async function SakPage({
                     ? SAK_META_TOOLTIPS.lovforslag
                     : SAK_META_TOOLTIPS.representantforslag
                 }
-                className={SAK_KIND_BADGE_CLASS}
+                className={`${SAK_KIND_BADGE_CLASS} text-xs`}
               />
             ) : null}
             {sak.category && (!displaySakKind || sak.category !== getSakKindLabel(displaySakKind)) ? (
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${SAK_CATEGORY_BADGE_CLASS}`}>
+              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${SAK_CATEGORY_BADGE_CLASS}`}>
                 {sak.category}
               </span>
             ) : null}
             {sakType ? (
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${SAK_TYPE_BADGE_CLASS}`}>
+              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${SAK_TYPE_BADGE_CLASS}`}>
                 {sakType}
               </span>
             ) : null}
-            <SakProcessingBadge status={treatmentStatus} />
             {lastUpdatedLabel ? (
-              <span className="w-full text-sm text-muted-foreground sm:ml-auto sm:w-auto whitespace-nowrap">
+              <span className="w-full text-xs text-muted-foreground sm:ml-auto sm:w-auto whitespace-nowrap">
                 Sist oppdatert: {lastUpdatedLabel}
               </span>
             ) : null}
@@ -324,21 +343,24 @@ export default async function SakPage({
 
           <h1
             id="sak-tittel"
-            className="text-balance text-2xl font-bold tracking-tight break-words text-foreground sm:text-3xl"
+            className="text-balance text-xl font-semibold tracking-tight break-words text-foreground sm:text-2xl"
           >
             {officialTitle}
           </h1>
-          {!isDedicatedResearchSak ? (
-            <AiSummary
-              sakId={sak.id}
-              initialSummary={storedSummary}
-              stortingetPageUrl={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
-            />
-          ) : null}
           {descriptionToShow ? (
-            <div id="sak-offisiell-beskrivelse">
-              <SakOfficialDescription text={descriptionToShow} />
-            </div>
+            <p id="sak-offisiell-beskrivelse" className="text-sm leading-relaxed text-muted-foreground">
+              {descriptionToShow}
+            </p>
+          ) : null}
+          {!isDedicatedResearchSak ? (
+            <>
+              <SakKortFortalt summary={storedSummary} />
+              <AiSummary
+                sakId={sak.id}
+                initialSummary={storedSummary}
+                stortingetPageUrl={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
+              />
+            </>
           ) : null}
           {(sak.henvisning || henvisning) ? (
             <p className="text-sm text-muted-foreground">{sak.henvisning || henvisning}</p>
@@ -346,9 +368,24 @@ export default async function SakPage({
         </div>
       </FadeIn>
 
-      {!isDedicatedResearchSak ? (
+      {!isDedicatedResearchSak && !openStortingetPoll ? (
         <FadeIn delay={0.25} direction="up">
           <SakStortingetPollAggregateSection sakId={sak.id} />
+        </FadeIn>
+      ) : null}
+
+      {!isDedicatedResearchSak && statusHighlight ? (
+        <FadeIn delay={0.28} direction="up">
+          <div className="space-y-4">
+            <SakStatusCard sakId={sak.id} highlight={statusHighlight} />
+            {saksgangSteps.length > 0 ? (
+              <SaksgangTimeline
+                saksgangName={saksgang?.navn}
+                steps={saksgangSteps}
+                ferdigbehandlet={treatmentStatus === 'closed'}
+              />
+            ) : null}
+          </div>
         </FadeIn>
       ) : null}
 
@@ -365,37 +402,15 @@ export default async function SakPage({
       ) : null}
 
       <SakPageTabs
+        initialTab={initialTab}
+        documentCount={documents.length}
         oversikt={
-          <div className="space-y-6">
-            {stortingetOversiktExtras ? (
-              <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 text-sm shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:p-5">
-                <div className="space-y-1 text-muted-foreground">
-                  {stortingetOversiktExtras.decisionDateLabel ? (
-                    <p>
-                      <span className="font-medium text-foreground">Vedtak / siste votering: </span>
-                      <span className="tabular-nums">{stortingetOversiktExtras.decisionDateLabel}</span>
-                    </p>
-                  ) : null}
-                  {stortingetOversiktExtras.nextMilestoneLabel ? (
-                    <p>
-                      <span className="font-medium text-foreground">Planlagt behandling: </span>
-                      <span className="tabular-nums">{stortingetOversiktExtras.nextMilestoneLabel}</span>
-                    </p>
-                  ) : null}
-                </div>
-                <a
-                  href={stortingetOversiktExtras.stortingetSakUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex min-h-11 items-center font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                >
-                  Åpne på stortinget.no
-                  <ExternalLink className="ml-1.5 h-4 w-4" aria-hidden />
-                </a>
-              </div>
-            ) : null}
+          <SakOversiktShell toc={oversiktToc}>
             {detailedContent ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div
+                id="sak-oversikt-metadata"
+                className="scroll-mt-32 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+              >
                 {sakNummer && sakSesjon ? (
                   <SakMetaCard icon="file-text" label="Saksnummer" tooltipKey="saksnummer">
                     Sak nr. {sakNummer} ({sakSesjon})
@@ -418,12 +433,11 @@ export default async function SakPage({
               <SakDocumentsShortlist sakId={sak.id} documents={documents} />
             ) : null}
 
-            {!isDedicatedResearchSak ? (
-              <SakArgumentsSection sakId={sak.id} innstillingstekst={innstillingstekst} />
-            ) : null}
-
             {innstillingstekst ? (
-              <div id="sak-innstilling" className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
+              <div
+                id="sak-oversikt-innstilling"
+                className="scroll-mt-32 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6"
+              >
                 <SakSectionHeading
                   title="Komiteens innstilling (Stortinget)"
                   tooltipKey="innstilling"
@@ -439,7 +453,10 @@ export default async function SakPage({
             ) : null}
 
             {forslagstillere.length > 0 ? (
-              <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
+              <div
+                id="sak-oversikt-forslagstillere"
+                className="scroll-mt-32 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6"
+              >
                 <SakSectionHeading
                   title="Forslagstillere"
                   tooltipKey="forslagstillere"
@@ -496,7 +513,10 @@ export default async function SakPage({
             ) : null}
 
             {saksordfoerere.length > 0 ? (
-              <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
+              <div
+                id="sak-oversikt-ordforer"
+                className="scroll-mt-32 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6"
+              >
                 <SakSectionHeading
                   title="Saksordførere"
                   tooltipKey="saksordfoerer"
@@ -549,28 +569,10 @@ export default async function SakPage({
               </div>
             ) : null}
 
-            {saksgangSteps.length > 0 ? (
-              <SaksgangTimeline
-                saksgangName={saksgang?.navn}
-                steps={saksgangSteps}
-                ferdigbehandlet={treatmentStatus === 'closed'}
-              />
-            ) : null}
+            {!isDedicatedResearchSak ? <SakImpactExcerpt sakId={sak.id} /> : null}
 
-            {!isDedicatedResearchSak ? (
+            {!isDedicatedResearchSak && showKnowledgeQuiz ? (
               <KnowledgeQuiz sakId={sak.id} variant="pre-vote" />
-            ) : null}
-
-            {viewerIsAdmin ? (
-              <StortingetPollAdminSection
-                sakId={sak.id}
-                sakTitle={officialTitle}
-                defaultNeutralSummary={pollDefaultNeutralSummary}
-                stortingetPageUrl={
-                  isDedicatedResearchSak ? null : getStortingetSakUrl(sak.id)
-                }
-                adminState={stortingetPollAdminState}
-              />
             ) : null}
 
             <StanceSection
@@ -579,20 +581,69 @@ export default async function SakPage({
               sakSummary={descriptionToShow || officialTitle}
             />
 
-            <SakFolketsViljeVsStortingetSection
-              sakId={sak.id}
-              voteringer={voteringer}
-              initialFolk={initialPublicFolk}
-              sakVedtak={{
-                kortvedtak: kortvedtak ?? null,
-                vedtakstekst: vedtakstekst ?? null,
-              }}
-            />
+            <div id="sak-oversikt-relatert" className="scroll-mt-32 space-y-6">
+              {relaterteSaker.length > 0 ? (
+                <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
+                  <h2 className="mb-4 text-lg font-bold text-foreground">Relaterte saker</h2>
+                  <div className="space-y-2">
+                    {relaterteSaker.map((rel: any, i: number) => {
+                      const relSak = rel.relatert_sak;
+                      if (!relSak) return null;
+                      return (
+                        <Link
+                          key={i}
+                          href={`/dashboard/sak/${relSak.id}`}
+                          className="group block rounded-lg border border-border bg-muted/50 p-3 transition-colors hover:bg-muted"
+                        >
+                          <div className="text-sm font-medium text-foreground group-hover:text-brand">
+                            {relSak.korttittel || relSak.tittel}
+                          </div>
+                          {rel.relasjonstype ? (
+                            <div className="mt-1 text-xs text-muted-foreground">{rel.relasjonstype}</div>
+                          ) : null}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
 
-            <SakMeningerSection sakId={sak.id} />
+              {!isDedicatedResearchSak ? (
+                <SimilarIssuesSection
+                  sakId={sak.id}
+                  excludeIssueIds={relaterteSaker.flatMap((rel: { relatert_sak?: { id?: unknown } }) => {
+                    const id = rel.relatert_sak?.id;
+                    return id != null ? [String(id)] : [];
+                  })}
+                />
+              ) : null}
 
-            <PoliticianResponseForm sakId={sak.id} />
-          </div>
+              {!isDedicatedResearchSak ? (
+                <TopicAroundSakSection
+                  issueId={sak.id}
+                  title={officialTitle}
+                  summary={descriptionToShow || null}
+                  relatedIssueIds={relaterteSaker.flatMap((rel: { relatert_sak?: { id?: unknown } }) => {
+                    const id = rel.relatert_sak?.id;
+                    return id != null ? [String(id)] : [];
+                  })}
+                />
+              ) : null}
+            </div>
+          </SakOversiktShell>
+        }
+        argumenter={
+          <SakTabSlot>
+            {!isDedicatedResearchSak ? (
+              <SakArgumentsSection sakId={sak.id} innstillingstekst={innstillingstekst} />
+            ) : (
+              <EmptyState
+                compact
+                title="Ingen argumenter for denne saken"
+                description="Argumenter hentes fra dokumentmerknader og folkets meninger når saken har Stortinget-kilder i appen."
+              />
+            )}
+          </SakTabSlot>
         }
         dokumenter={
           <div className="space-y-6">
@@ -645,48 +696,6 @@ export default async function SakPage({
               </div>
             ) : null}
 
-            {relaterteSaker.length > 0 ? (
-              <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
-                <h2 className="text-lg font-bold text-foreground mb-4">Relaterte saker</h2>
-                <div className="space-y-2">
-                  {relaterteSaker.map((rel: any, i: number) => {
-                    const relSak = rel.relatert_sak;
-                    if (!relSak) return null;
-                    return (
-                      <Link
-                        key={i}
-                        href={`/dashboard/sak/${relSak.id}`}
-                        className="group block p-3 rounded-lg bg-muted/50 hover:bg-muted border border-border transition-colors"
-                      >
-                        <div className="text-sm font-medium text-foreground group-hover:text-brand">{relSak.korttittel || relSak.tittel}</div>
-                        {rel.relasjonstype ? (
-                          <div className="text-xs text-muted-foreground mt-1">{rel.relasjonstype}</div>
-                        ) : null}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-
-            <SimilarIssuesSection
-              sakId={sak.id}
-              excludeIssueIds={relaterteSaker.flatMap((rel: { relatert_sak?: { id?: unknown } }) => {
-                const id = rel.relatert_sak?.id;
-                return id != null ? [String(id)] : [];
-              })}
-            />
-
-            <TopicAroundSakSection
-              issueId={sak.id}
-              title={officialTitle}
-              summary={descriptionToShow || null}
-              relatedIssueIds={relaterteSaker.flatMap((rel: { relatert_sak?: { id?: unknown } }) => {
-                const id = rel.relatert_sak?.id;
-                return id != null ? [String(id)] : [];
-              })}
-            />
-
             {!isDedicatedResearchSak ? (
               <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:flex-wrap sm:gap-4">
                 <a
@@ -695,7 +704,7 @@ export default async function SakPage({
                   rel="noopener noreferrer"
                   className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-brand transition-colors"
                 >
-                  <ExternalLink className="mr-1.5 w-4 h-4" />
+                  <ExternalLink className="mr-1.5 w-4 h-4" aria-hidden />
                   Kilde: stortinget.no (sak {sak.id})
                 </a>
                 <a
@@ -704,20 +713,53 @@ export default async function SakPage({
                   rel="noopener noreferrer"
                   className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-brand transition-colors"
                 >
-                  <ExternalLink className="mr-1.5 w-4 h-4" />
+                  <ExternalLink className="mr-1.5 w-4 h-4" aria-hidden />
                   Teknisk saksdata fra Stortinget
                 </a>
               </div>
             ) : null}
           </div>
         }
-        forDeg={
+        stortinget={
+          <SakTabSlot>
+            {!isDedicatedResearchSak ? (
+              <SakFolketsViljeVsStortingetSection
+                sakId={sak.id}
+                voteringer={voteringer}
+                initialFolk={initialPublicFolk}
+                sakVedtak={{
+                  kortvedtak: kortvedtak ?? null,
+                  vedtakstekst: vedtakstekst ?? null,
+                }}
+              />
+            ) : (
+              <EmptyState
+                compact
+                title="Ingen Stortinget-sammenligning"
+                description="Denne saken er en research-sak uten Stortinget-voteringer i appen."
+              />
+            )}
+          </SakTabSlot>
+        }
+        diskusjon={
           <div className="space-y-6">
-            <ImpactCalculator sakId={sak.id} sakTitle={officialTitle} sakSummary={descriptionToShow || officialTitle} />
+            <SakMeningerSection sakId={sak.id} />
+            <PoliticianResponseForm sakId={sak.id} />
+          </div>
+        }
+        konsekvens={
+          <div className="space-y-6">
+            <ImpactCalculator
+              sakId={sak.id}
+              sakTitle={officialTitle}
+              sakSummary={descriptionToShow || officialTitle}
+            />
           </div>
         }
       />
+      {!isDedicatedResearchSak && openStortingetPoll ? (
+        <SakOpenPollStickySlot sakId={sak.id} openPoll={openStortingetPoll} />
+      ) : null}
     </DashboardPage>
-    </UserAnnotationHost>
   );
 }

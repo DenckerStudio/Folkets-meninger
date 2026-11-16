@@ -2,6 +2,12 @@
 
 import { useId, useRef, type ReactNode } from 'react';
 import { buildHighlightSegments } from '@/lib/user-annotations/selection';
+import {
+  DEFAULT_USER_ANNOTATION_FLAG_TYPE,
+  USER_ANNOTATION_FLAG_LABELS,
+  USER_ANNOTATION_FLAG_STYLES,
+  isUserAnnotationFlagType,
+} from '@/lib/user-annotations/flag-types';
 import { cn } from '@/lib/utils';
 import { useUserAnnotations } from '@/components/user-annotations/user-annotation-context';
 
@@ -35,10 +41,18 @@ export function UserAnnotatableText({
           key={`${seg.annotationId ?? 'hl'}-${idx}`}
           tabIndex={seg.annotationId ? -1 : undefined}
           className={cn(
-            'rounded-sm bg-amber-200/80 text-foreground dark:bg-amber-500/35',
+            'rounded-sm text-foreground',
+            USER_ANNOTATION_FLAG_STYLES[
+              isUserAnnotationFlagType(seg.flagType) ? seg.flagType : DEFAULT_USER_ANNOTATION_FLAG_TYPE
+            ].mark,
             ctx?.focusAnnotationId === seg.annotationId && 'ring-2 ring-brand ring-offset-2',
           )}
           data-annotation-id={seg.annotationId}
+          aria-label={`Markering: ${
+            USER_ANNOTATION_FLAG_LABELS[
+              isUserAnnotationFlagType(seg.flagType) ? seg.flagType : DEFAULT_USER_ANNOTATION_FLAG_TYPE
+            ]
+          }`}
         >
           {seg.text}
         </mark>

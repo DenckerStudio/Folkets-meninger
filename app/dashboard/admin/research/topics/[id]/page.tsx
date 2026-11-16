@@ -5,6 +5,8 @@ import { requireAdminPage } from '@/lib/admin/gate';
 import { researchTopicRowDisplayTitle } from '@/lib/admin/research/topic-brief-schema';
 import { getResearchTopicById } from '@/lib/admin/research/topic-service';
 import { routes } from '@/lib/routes';
+import { getServerSupabase } from '@/lib/supabase-server';
+import { UserAnnotationHost } from '@/components/user-annotations/user-annotation-host';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +30,13 @@ export default async function AdminResearchTopicPage({ params }: PageProps) {
   const showRawAdminTitle =
     rawAdminTitle.length > 0 && rawAdminTitle !== pageTitle.trim();
 
+  const supabase = await getServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
+    <UserAnnotationHost enabled={Boolean(user)} targetType="research_topic" targetId={topic.id}>
     <div className="space-y-6" lang="nb-NO">
       <div>
         <p className="text-sm text-muted-foreground">
@@ -53,5 +61,6 @@ export default async function AdminResearchTopicPage({ params }: PageProps) {
         ← Tilbake til Research
       </Link>
     </div>
+    </UserAnnotationHost>
   );
 }

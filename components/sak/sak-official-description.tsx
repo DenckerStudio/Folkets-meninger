@@ -1,10 +1,7 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { useAnnotationContainerExpand } from '@/components/user-annotations/use-annotation-container-expand';
+import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { UserAnnotatableText } from '@/components/user-annotations/user-annotatable-text';
-import { useUserAnnotations } from '@/components/user-annotations/user-annotation-context';
 
 const DEFAULT_PREVIEW_LENGTH = 220;
 
@@ -16,9 +13,6 @@ export function SakOfficialDescription({
   previewLength?: number;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const expand = useCallback(() => setExpanded(true), []);
-  useAnnotationContainerExpand('official_description', expand);
-  const annotationCtx = useUserAnnotations();
   const description = text.trim();
   if (!description) return null;
 
@@ -28,15 +22,7 @@ export function SakOfficialDescription({
 
   return (
     <div className="space-y-2">
-      {annotationCtx?.enabled ? (
-        <UserAnnotatableText
-          containerKey="official_description"
-          text={displayText}
-          className="text-base leading-relaxed text-muted-foreground"
-        />
-      ) : (
-        <p className="text-base leading-relaxed text-muted-foreground">{displayText}</p>
-      )}
+      <p className="text-base leading-relaxed text-muted-foreground">{displayText}</p>
       {isLong ? (
         <button
           type="button"

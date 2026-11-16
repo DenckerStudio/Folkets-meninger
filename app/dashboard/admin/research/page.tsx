@@ -1,7 +1,11 @@
 import AdminOppfangetClient from '../oppfanget/admin-oppfanget-client';
+import RedditSignalsClient from '@/components/admin/reddit-signals-client';
 import { requireAdminPage } from '@/lib/admin/gate';
 import { parseOppfangetFilters } from '@/lib/admin/oppfanget/query';
 import { listOppfangetForAdmin } from '@/lib/admin/oppfanget/service';
+import { isRedditSignalsView, parseRedditSignalsFilters } from '@/lib/reddit-signals/query';
+import { loadRedditSpikeBadgeForAdmin } from '@/lib/reddit-signals/spike-badge-server';
+import { listRedditSignalsForAdmin } from '@/lib/reddit-signals/service';
 import { expireStaleResearchBriefsThrottled } from '@/lib/admin/research/expire-stale-throttled';
 import { getLatestResearchBriefsByClusterIds } from '@/lib/admin/research/service';
 import { getResearchTopicSnapshotsBySources } from '@/lib/admin/research/topic-service';
@@ -21,6 +25,22 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
 
   const params = await searchParams;
   const preview = typeof params.preview === 'string' ? params.preview : undefined;
+  const spikeBadge = await loadRedditSpikeBadgeForAdmin(preview);
+  const spikeBadgeActive = spikeBadge !== null && spikeBadge.items.length > 0;
+
+  if (isRedditSignalsView(params)) {
+    const signalFilters = parseRedditSignalsFilters(params);
+    const signalData = await listRedditSignalsForAdmin(signalFilters, preview);
+    return (
+      <RedditSignalsClient
+        initialData={signalData}
+        initialFilters={signalFilters}
+        devPreview={preview}
+        spikeBadge={spikeBadge}
+      />
+    );
+  }
+
   const filters = parseOppfangetFilters(params);
   await expireStaleResearchBriefsThrottled();
   const initialData = await listOppfangetForAdmin(filters, preview);
@@ -52,6 +72,7 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
       initialResearchTopicsByRedditId={researchTopicsByRedditId}
       researchWebhooksConfigured={researchWebhooksConfigured}
       missingResearchWebhookEnvKeys={missingResearchWebhookEnvKeys}
+      spikeBadgeActive={spikeBadgeActive}
     />
   );
 }
