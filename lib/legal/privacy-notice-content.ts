@@ -1,7 +1,7 @@
 import { MIN_ACCOUNT_AGE_YEARS } from '@/lib/legal/account-age';
 import { MIN_PUBLIC_AGGREGATE_N } from '@/lib/public-aggregate/constants';
 
-export const PRIVACY_NOTICE_UPDATED = '15. november 2026';
+export const PRIVACY_NOTICE_UPDATED = '16. november 2026';
 
 export const PRIVACY_PROCESSING_TABLE = [
   {
@@ -70,7 +70,7 @@ export const PRIVACY_RIGHTS =
   'Du har rett til innsyn, retting, sletting, begrensning, dataportabilitet og til å protestere mot behandling basert på berettiget interesse. Du kan når som helst trekke tilbake samtykke uten at det påvirker lovligheten av behandlingen før tilbaketrekkingen. Bruk Min side → Personvern for samtykke og sletting av holdningsdata, eller kontakt oss. Vi svarer innen én måned.';
 
 export const PRIVACY_COMPLAINT =
-  'Du kan klage til Datatilsynet (www.datatilsynet.no, Postboks 458 Sentrum, 0105 Oslo).';
+  'Du kan klage til Datatilsynet dersom du mener at behandlingen av dine personopplysninger er i strid med personvernregelverket.';
 
 export const PRIVACY_COOKIES =
   'Vi bruker informasjonskapsler som er nødvendige for innlogging, og lokal lagring for tema, omvisning, utkast, konsekvenskalkulator og chat-samtaler i nettleseren. Besøksstatistikk telles uten analysekapsler.';
