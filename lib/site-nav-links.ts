@@ -60,8 +60,7 @@ export const isForslagActive: NavIsActive = (pathname) =>
 export const isKalenderActive: NavIsActive = (pathname) =>
   pathname === routes.kalender || pathname.startsWith(`${routes.kalender}/`);
 
-export const isMinSideActive: NavIsActive = (pathname) =>
-  pathname.startsWith(routes.minSide) || pathname.startsWith('/auth');
+export const isMinSideActive: NavIsActive = (pathname) => pathname.startsWith(routes.minSide);
 
 export const isValgomatActive: NavIsActive = (pathname) =>
   pathname === routes.valgomat || pathname.startsWith(`${routes.valgomat}/`);
@@ -166,6 +165,18 @@ export const desktopPrimaryNavLinks: PrimaryNavLink[] = coreNavItems.map((item) 
   href: item.href,
   isActive: item.isActive ?? (() => false),
 }));
+
+/** Logged-in header entry — visible outside the profile menu. */
+export const loggedInHeaderNavLink: PrimaryNavLink = {
+  label: 'Min side',
+  href: routes.minSide,
+  isActive: isMinSideActive,
+};
+
+export function headerPrimaryNavLinks(isLoggedIn: boolean): PrimaryNavLink[] {
+  if (!isLoggedIn) return desktopPrimaryNavLinks;
+  return [...desktopPrimaryNavLinks, loggedInHeaderNavLink];
+}
 
 /**
  * Dashboard sidebar + mobile drawer — single in-app nav surface.

@@ -477,7 +477,7 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
             <StemmePlusBadge size="md" />
             <p className="text-sm text-foreground">{priceNok} kr/mnd</p>
             <Link
-              href={`${routes.minSide}?tab=stemme-plus`}
+              href={`${routes.minSide}/stemme-plus`}
               className="inline-flex rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
             >
               {checkoutConfigured ? 'Gå til Stemme+' : 'Se Stemme+-status'}
@@ -496,7 +496,7 @@ export const StemmeChat = forwardRef<StemmeChatHandle, StemmeChatProps>(function
       description="Stemme+-chat kjører på nøkkelen din (OpenAI, Anthropic, AI Gateway eller OpenAI-kompatibel). Uten nøkkel viser rettskriving bare instruksjonen — vi later ikke som en modell har rettet teksten. Sakskontekst og kildesøk fungerer uten nøkkel. Vi lagrer nøkkelen kryptert og sender den aldri tilbake til nettleseren."
       action={
         <Link
-          href={`${routes.minSide}?tab=stemme-plus`}
+          href={`${routes.minSide}/stemme-plus`}
           className="inline-flex rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
         >
           Åpne nøkkelinnstillinger

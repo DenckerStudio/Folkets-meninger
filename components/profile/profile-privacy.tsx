@@ -1,10 +1,8 @@
 'use client';
 
-import Link from 'next/link';
-import { Shield } from 'lucide-react';
 import { ProfileCard } from '@/components/profile/profile-card';
 import { ProfilePublicSettings } from '@/components/profile/profile-public-settings';
-import { routes } from '@/lib/routes';
+import { DeleteAccountSettings } from '@/components/profile/delete-account-settings';
 import { STANCE_PROFILE_PRIVACY_SUMMARY } from '@/lib/copy/stance-privacy';
 import { PoliticalConsentSettings } from '@/components/consent/political-consent-settings';
 
@@ -51,36 +49,7 @@ export function ProfilePrivacy({ userId }: ProfilePrivacyProps) {
 
       <ProfilePublicSettings userId={userId} />
 
-      <ProfileCard
-        title="Slett konto og data"
-        description="I tråd med norsk lov og GDPR har du rett til å bli glemt."
-      >
-        <div className="flex flex-col gap-4 rounded-xl border border-border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex gap-3">
-            <Shield className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
-            <div>
-              <h4 className="text-sm font-medium text-foreground">Be om sletting</h4>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Send oss en henvendelse, så sletter vi profil, innstillinger og stemmehistorikk.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Link
-              href={routes.personvern}
-              className="min-h-11 inline-flex shrink-0 items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              Personvern
-            </Link>
-            <Link
-              href={routes.innspill}
-              className="min-h-11 inline-flex shrink-0 items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              Kontakt oss
-            </Link>
-          </div>
-        </div>
-      </ProfileCard>
+      <DeleteAccountSettings />
     </div>
   );
 }
