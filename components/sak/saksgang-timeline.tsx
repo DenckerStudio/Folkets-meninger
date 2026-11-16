@@ -4,6 +4,8 @@ import { GitBranch } from 'lucide-react';
 import { getSakEventTooltip, getSakStepTooltip, SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { useSakTooltipsEnabled } from '@/components/theme-provider';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { resolveCurrentSaksgangStepIndex } from '@/lib/sak/saksgang-current-step';
+import { cn } from '@/lib/utils';
 
 export type SaksgangEvent = {
   id?: string;
@@ -50,11 +52,13 @@ export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: Saksg
 
   if (steps.length === 0) return null;
 
+  const currentIndex = resolveCurrentSaksgangStepIndex(steps, Boolean(ferdigbehandlet));
+
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <div className="rounded-2xl border border-brand/12 bg-card p-4 shadow-sm sm:p-6">
       <div className="mb-2 flex items-center gap-2">
-        <h2 className="text-lg font-bold text-foreground flex items-center">
-          <GitBranch className="w-5 h-5 mr-2 text-brand" />
+        <h2 className="flex items-center text-lg font-bold text-foreground">
+          <GitBranch className="mr-2 h-5 w-5 text-brand" aria-hidden />
           Saksgang
         </h2>
         {showTooltips ? (
@@ -62,40 +66,52 @@ export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: Saksg
         ) : null}
       </div>
       {saksgangName ? (
-        <p className="text-sm text-muted-foreground mb-4">{cleanSaksgangName(saksgangName)}</p>
+        <p className="mb-4 text-sm text-muted-foreground">{cleanSaksgangName(saksgangName)}</p>
       ) : null}
 
-      <div className="relative">
-        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
-        <div className="space-y-4">
-          {steps.map((steg, i) => {
-            const isLast = i === steps.length - 1;
-            const meaningfulEvents = steg.events.filter((e) => e.label || e.date);
-            const stepDone = meaningfulEvents.length > 0;
-            const stepTooltip = getSakStepTooltip(steg.navn);
+      <ol className="relative space-y-0" aria-label="Saksgang">
+        {steps.map((steg, i) => {
+          const isLast = i === steps.length - 1;
+          const meaningfulEvents = steg.events.filter((e) => e.label || e.date);
+          const stepDone = meaningfulEvents.length > 0;
+          const isCurrent = i === currentIndex;
+          const stepTooltip = getSakStepTooltip(steg.navn);
 
-            return (
-              <div key={`${steg.navn}-${i}`} className="relative pl-10">
-                <div
-                  className={`absolute left-2.5 w-3 h-3 rounded-full border-2 ${
-                    stepDone && ferdigbehandlet
-                      ? 'bg-emerald-500 border-emerald-500'
-                      : isLast && !ferdigbehandlet
-                        ? 'bg-brand/10 border-brand'
-                        : stepDone
-                          ? 'bg-brand/10 border-brand'
-                          : 'bg-card border-border'
-                  }`}
-                  style={{ top: '0.35rem' }}
-                />
-                <div className="flex items-center gap-1.5">
+          return (
+            <li key={`${steg.navn}-${i}`} className="relative flex gap-4 pb-8 last:pb-0">
+              {!isLast ? (
+                <span className="absolute left-[1.125rem] top-10 bottom-0 w-px bg-brand/15" aria-hidden />
+              ) : null}
+              <span
+                className={cn(
+                  'relative z-10 mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-bold',
+                  isCurrent
+                    ? 'border-brand-accent/40 bg-brand-accent-soft text-brand-accent'
+                    : stepDone && ferdigbehandlet
+                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                      : stepDone
+                        ? 'border-brand/25 bg-brand/5 text-brand'
+                        : 'border-border bg-muted/40 text-muted-foreground',
+                )}
+                aria-current={isCurrent ? 'step' : undefined}
+              >
+                {i + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <div
-                    className={`text-sm font-semibold ${
-                      !stepDone ? 'text-muted-foreground' : 'text-foreground'
-                    }`}
+                    className={cn(
+                      'text-sm font-semibold',
+                      !stepDone && !isCurrent ? 'text-muted-foreground' : 'text-foreground',
+                    )}
                   >
                     {steg.navn}
                   </div>
+                  {isCurrent ? (
+                    <span className="rounded-full border border-brand-accent/30 bg-brand-accent-soft px-2 py-0.5 text-xs font-medium text-brand-accent">
+                      Nå
+                    </span>
+                  ) : null}
                   {showTooltips && stepTooltip ? (
                     <InfoTooltip label={steg.navn} description={stepTooltip} side="bottom" />
                   ) : null}
@@ -103,7 +119,7 @@ export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: Saksg
                 {meaningfulEvents.length > 0 ? (
                   <div className="mt-1.5 space-y-1">
                     {meaningfulEvents.map((evt, j) => (
-                      <div key={`${evt.label}-${j}`} className="flex items-baseline gap-2 text-xs">
+                      <div key={`${evt.label}-${j}`} className="flex flex-wrap items-baseline gap-2 text-xs">
                         {evt.label ? (
                           <EventLabel eventId={evt.id} label={evt.label} showTooltips={showTooltips} />
                         ) : null}
@@ -113,10 +129,10 @@ export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: Saksg
                   </div>
                 ) : null}
               </div>
-            );
-          })}
-        </div>
-      </div>
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }

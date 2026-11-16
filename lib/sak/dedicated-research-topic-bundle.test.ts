@@ -65,7 +65,7 @@ async function main() {
     join(process.cwd(), 'app/dashboard/sak/[id]/page.tsx'),
     'utf8',
   );
-  assert.match(sakPageSrc, /!isDedicatedResearchSak \? \(\s*<AiSummary/);
+  assert.match(sakPageSrc, /!isDedicatedResearchSak \? \([\s\S]*<AiSummary/);
 
   console.log('lib/sak/dedicated-research-topic-bundle.test.ts: ok');
 }
