@@ -54,6 +54,7 @@ export function computeLandingOpenPollsSnapshot(
 
 export async function fetchLandingOpenPollsSnapshot(): Promise<LandingOpenPollsSnapshot | null> {
   try {
+    // Nyeste 40 rader (open+closed i kilden); filtreres til faktisk åpne. Teller capes ved høyt volum.
     const polls = await listOpenPolls(40);
     const openPolls = polls.filter((poll) => isPollVotingOpen(poll));
     const totalsEntries = await Promise.all(

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Info } from 'lucide-react';
+import { ArrowRight, Info } from 'lucide-react';
 import { motion } from 'motion/react';
 import { routes } from '@/lib/routes';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
@@ -19,14 +19,16 @@ export type HeroSectionClientProps = {
   pollsSnapshot: LandingOpenPollsSnapshot | null;
 };
 
+const landingLinkFocusClass =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00205b] focus-visible:ring-offset-2';
+
 function HeroLiveStats({ snapshot }: { snapshot: LandingOpenPollsSnapshot }) {
   if (snapshot.openCount <= 0) return null;
 
   return (
     <Link
       href={routes.avstemninger}
-      className="mx-auto mt-8 flex w-full max-w-xl min-h-11 flex-col gap-2 rounded-2xl border border-[#ba0c2f]/25 bg-white/90 px-4 py-4 text-sm text-[#001433] shadow-sm backdrop-blur-md transition-colors hover:border-[#00205b]/35 hover:bg-white sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-x-6 sm:gap-y-1"
-      role="status"
+      className={`mx-auto mt-8 flex w-full max-w-xl min-h-11 flex-col gap-2 rounded-2xl border border-[#ba0c2f]/25 bg-white/90 px-4 py-4 text-sm text-[#001433] shadow-sm backdrop-blur-md transition-colors hover:border-[#00205b]/35 hover:bg-white sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-x-6 sm:gap-y-1 ${landingLinkFocusClass}`}
     >
       <span className="inline-flex items-center justify-center gap-2 font-semibold text-[#00205b]">
         <span className="h-2 w-2 shrink-0 rounded-full bg-[#ba0c2f]" aria-hidden />
@@ -42,7 +44,10 @@ function HeroLiveStats({ snapshot }: { snapshot: LandingOpenPollsSnapshot }) {
           {formatNumber(snapshot.publicVoteCount)} stemmer registrert (samlet, uten navn)
         </span>
       ) : null}
-      <span className="sr-only">Gå til åpne avstemninger</span>
+      <span className="inline-flex items-center gap-1 font-semibold text-[#00205b]">
+        Se avstemninger
+        <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+      </span>
     </Link>
   );
 }
@@ -106,13 +111,13 @@ export function HeroSectionClient({ pollsSnapshot }: HeroSectionClientProps) {
         >
           <Link
             href={routes.login}
-            className="inline-flex min-h-11 w-full sm:w-auto items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold text-white bg-[#ba0c2f] shadow-md transition-colors duration-200 hover:bg-[#00205b] sm:px-7 sm:py-3 sm:text-base"
+            className={`inline-flex min-h-11 w-full sm:w-auto items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold text-white bg-[#ba0c2f] shadow-md transition-colors duration-200 hover:bg-[#00205b] sm:px-7 sm:py-3 sm:text-base ${landingLinkFocusClass}`}
           >
             Kom i gang gratis
           </Link>
           <Link
             href={routes.utforsk}
-            className="inline-flex min-h-11 w-full sm:w-auto items-center justify-center rounded-full border-2 border-[#00205b]/20 bg-white/90 px-5 py-2.5 text-sm font-semibold text-[#00205b] backdrop-blur-md transition-colors duration-200 hover:border-[#00205b]/45 hover:bg-white sm:px-7 sm:py-3 sm:text-base"
+            className={`inline-flex min-h-11 w-full sm:w-auto items-center justify-center rounded-full border-2 border-[#00205b]/20 bg-white/90 px-5 py-2.5 text-sm font-semibold text-[#00205b] backdrop-blur-md transition-colors duration-200 hover:border-[#00205b]/45 hover:bg-white sm:px-7 sm:py-3 sm:text-base ${landingLinkFocusClass}`}
           >
             Utforsk saker
           </Link>

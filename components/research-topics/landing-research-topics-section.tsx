@@ -18,7 +18,7 @@ function LandingResearchTopicsError() {
         </p>
         <Link
           href={routes.detteSnakkesDetOm}
-          className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-[#00205b] hover:text-[#ba0c2f]"
+          className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-[#00205b] transition-colors hover:text-[#ba0c2f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00205b] focus-visible:ring-offset-2"
         >
           Gå til temaoversikten <ArrowRight className="ml-1 h-4 w-4" aria-hidden />
         </Link>
