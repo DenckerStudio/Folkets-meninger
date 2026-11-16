@@ -8,6 +8,8 @@ import {
   dashboardSidebarNavItems,
   dashboardSidebarNavItemsForAdmin,
   desktopPrimaryNavLinks,
+  headerPrimaryNavLinks,
+  loggedInHeaderNavLink,
   extendedNavItems,
   isUtforskActive,
 } from '@/lib/site-nav-links';
@@ -34,6 +36,12 @@ test('primary nav does not repeat sidebar-only destinations', () => {
   for (const href of [...extendedNavItems, ...accountNavItems].map((item) => item.href)) {
     assert.equal(primaryHrefs.has(href), false, `primary nav should not include ${href}`);
   }
+});
+
+test('logged-in header adds Min side; guests keep core only', () => {
+  assert.equal(headerPrimaryNavLinks(false).length, desktopPrimaryNavLinks.length);
+  assert.equal(headerPrimaryNavLinks(true).at(-1)?.href, loggedInHeaderNavLink.href);
+  assert.equal(headerPrimaryNavLinks(true).at(-1)?.label, 'Min side');
 });
 
 test('utforsk is active on sak pages and reels', () => {

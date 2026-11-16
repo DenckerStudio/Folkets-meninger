@@ -1,23 +1,21 @@
-import { Suspense } from 'react';
-import { ProfileShell } from '@/components/profile/profile-shell';
+import { MinSideOverviewPanel } from '@/components/min-side/min-side-overview-panel';
 import { isAdmin } from '@/lib/admin/gate';
-import { isStripeCheckoutConfigured } from '@/lib/stripe/config';
+import { loadMinSideOverview } from '@/lib/min-side/overview';
 import { getServerSupabase } from '@/lib/supabase-server';
 
-export default async function MinSidePage() {
-  const checkoutConfigured = isStripeCheckoutConfigured();
+export default async function MinSideOverviewPage() {
   const supabase = await getServerSupabase();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
   const viewerIsAdmin = user ? await isAdmin(user.id, user.email) : false;
+  const overview = user ? await loadMinSideOverview(user.id) : { ok: false as const };
 
   return (
-    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Laster…</div>}>
-      <ProfileShell
-        stemmePlusCheckoutConfigured={checkoutConfigured}
-        viewerIsAdmin={viewerIsAdmin}
-      />
-    </Suspense>
+    <MinSideOverviewPanel
+      snapshot={overview.ok ? overview.data : null}
+      showAdminLink={viewerIsAdmin}
+    />
   );
 }

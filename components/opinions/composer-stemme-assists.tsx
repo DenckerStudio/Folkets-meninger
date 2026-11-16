@@ -132,7 +132,7 @@ export function ComposerStemmeAssists({
         <div className="flex shrink-0 items-center gap-2">
           <StemmePlusBadge size="sm" />
           <Link
-            href={`${routes.minSide}?tab=stemme-plus`}
+            href={`${routes.minSide}/stemme-plus`}
             className="inline-flex rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
           >
             {gate === 'login' ? 'Logg inn' : 'Se Stemme+'}

@@ -140,7 +140,7 @@ export default function PersonvernPage() {
         <p>
           Samtykke til politiske holdninger administreres under{' '}
           <Link
-            href={`${routes.minSide}?tab=min-data`}
+            href={`${routes.minSide}/personvern`}
             className="font-medium text-brand underline"
           >
             Min side → Personvern

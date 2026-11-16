@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { ProfileCard } from '@/components/profile/profile-card';
 import { CHANNEL_UI_COPY, NOTIFICATION_CHANNELS } from '@/lib/notifications/channels';
-import { routes } from '@/lib/routes';
+import { minSideSectionHref } from '@/lib/min-side/sections';
 
 type ProfileNotificationsProps = {
   emailEnabled: boolean;
@@ -31,7 +31,7 @@ export function ProfileNotifications({
     >
       <p className="text-sm text-muted-foreground">
         Abonnement på{' '}
-        <Link href={`${routes.minSide}?tab=innstillinger`} className="text-brand hover:underline">
+        <Link href={minSideSectionHref('stemmer-og-meninger')} className="text-brand hover:underline">
           hjertesaker og emner
         </Link>{' '}
         styres under Mine hjertesaker.
@@ -92,7 +92,7 @@ export function ProfileNotifications({
 
       {!isStemmePlus ? (
         <p className="mt-4 text-sm text-muted-foreground">
-          <Link href={`${routes.minSide}?tab=stemme-plus`} className="text-brand hover:underline">
+          <Link href={minSideSectionHref('stemme-plus')} className="text-brand hover:underline">
             Stemme+
           </Link>{' '}
           gir sanntidsvarsler, rikere ukentlig oppsummering og smartere hjertesak-varsler.
