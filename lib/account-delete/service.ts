@@ -1,10 +1,15 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import { readUserSubscription } from '@/lib/stemme-plus/service';
-import { isStemmePlusActive } from '@/lib/stemme-plus/tier';
+import {
+  evaluateLastAdminDeleteBlock,
+  evaluateStemmePlusDeleteBlock,
+  mergeDeleteEligibility,
+  type SelfDeleteEligibility,
+} from '@/lib/account-delete/eligibility';
 import {
   SELF_DELETE_LAST_ADMIN_BLOCK_MESSAGE,
   SELF_DELETE_MISSING_MIGRATION_MESSAGE,
-  SELF_DELETE_STEMME_PLUS_BLOCK_MESSAGE,
+  SELF_DELETE_RPC_FAILED_MESSAGE,
 } from '@/lib/account-delete/constants';
 
 export type AccountDeleteBlockReason = 'stemme_plus' | 'last_admin' | 'missing_migration';
@@ -18,6 +23,8 @@ export class AccountDeleteBlockedError extends Error {
     this.name = 'AccountDeleteBlockedError';
   }
 }
+
+export type AccountDeleteResult = 'complete' | 'auth_pending';
 
 function isMissingDeleteRpc(error: { code?: string; message?: string } | null): boolean {
   if (!error) return false;
@@ -33,7 +40,46 @@ function mapDeleteRpcError(message: string): Error {
   if (lower.includes('user not found')) {
     return new Error('Bruker ikke funnet');
   }
-  return new Error('Kunne ikke slette kontoen');
+  return new Error(SELF_DELETE_RPC_FAILED_MESSAGE);
+}
+
+async function isOnlyAppAdmin(userId: string): Promise<boolean> {
+  const service = getServiceSupabase();
+  const { data: roleRow, error: roleError } = await service
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userId)
+    .eq('role', 'admin')
+    .maybeSingle();
+  if (roleError) {
+    throw roleError;
+  }
+  if (!roleRow) {
+    return false;
+  }
+  const { count, error: countError } = await service
+    .from('user_roles')
+    .select('*', { count: 'exact', head: true })
+    .eq('role', 'admin');
+  if (countError) {
+    throw countError;
+  }
+  return (count ?? 0) === 1;
+}
+
+export async function getSelfDeleteEligibility(userId: string): Promise<SelfDeleteEligibility> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { allowed: true };
+  }
+
+  const service = getServiceSupabase();
+  const subscription = await readUserSubscription(service, userId);
+  const onlyAdmin = await isOnlyAppAdmin(userId);
+
+  return mergeDeleteEligibility([
+    evaluateStemmePlusDeleteBlock(subscription),
+    evaluateLastAdminDeleteBlock(onlyAdmin),
+  ]);
 }
 
 export async function assertSelfDeleteAllowed(userId: string): Promise<void> {
@@ -41,10 +87,9 @@ export async function assertSelfDeleteAllowed(userId: string): Promise<void> {
     throw new Error('Ikke konfigurert');
   }
 
-  const service = getServiceSupabase();
-  const subscription = await readUserSubscription(service, userId);
-  if (isStemmePlusActive(subscription)) {
-    throw new AccountDeleteBlockedError(SELF_DELETE_STEMME_PLUS_BLOCK_MESSAGE, 'stemme_plus');
+  const eligibility = await getSelfDeleteEligibility(userId);
+  if (!eligibility.allowed && eligibility.reason && eligibility.message) {
+    throw new AccountDeleteBlockedError(eligibility.message, eligibility.reason);
   }
 }
 
@@ -63,12 +108,18 @@ export async function deleteAuthUser(userId: string): Promise<void> {
   const service = getServiceSupabase();
   const { error } = await service.auth.admin.deleteUser(userId);
   if (error) {
-    throw new Error('Kunne ikke fullføre sletting av innlogging');
+    throw error;
   }
 }
 
-export async function deleteOwnAccount(userId: string): Promise<void> {
+export async function deleteOwnAccount(userId: string): Promise<AccountDeleteResult> {
   await assertSelfDeleteAllowed(userId);
   await purgeAccountData(userId);
-  await deleteAuthUser(userId);
+  try {
+    await deleteAuthUser(userId);
+    return 'complete';
+  } catch (err) {
+    console.error('delete-account auth.admin.deleteUser failed', err);
+    return 'auth_pending';
+  }
 }
