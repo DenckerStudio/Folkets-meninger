@@ -49,7 +49,7 @@ function MinSideLoginGate({ children }: { children: React.ReactNode }) {
   return children;
 }
 
-export function MinSideStemmerPage({ userId: _userId }: { userId: string }) {
+export function MinSideStemmerPage() {
   const data = useMinSideProfileData();
   const [votes, setVotes] = useState<VoteHistoryItem[]>([]);
   const [votesLoading, setVotesLoading] = useState(true);
