@@ -9,9 +9,9 @@ const segments = buildHighlightSegments(text, [
 
 assert.deepEqual(segments, [
   { text: 'a', highlighted: false },
-  { text: 'bc', highlighted: true, annotationId: 'a' },
+  { text: 'bc', highlighted: true, annotationId: 'a', flagType: undefined },
   { text: 'de', highlighted: false },
-  { text: 'fg', highlighted: true, annotationId: 'b' },
+  { text: 'fg', highlighted: true, annotationId: 'b', flagType: undefined },
   { text: 'h', highlighted: false },
 ]);
 

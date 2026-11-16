@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { StickyNote } from 'lucide-react';
-import type { UserAnnotationTargetType } from '@/lib/user-annotations/types';
+import type { UserAnnotationCreatableTargetType } from '@/lib/user-annotations/types';
 import { UserAnnotationProvider, useUserAnnotations } from '@/components/user-annotations/user-annotation-context';
 import { UserAnnotationSelectionDialog } from '@/components/user-annotations/user-annotation-selection-dialog';
 import { UserAnnotationsPanel } from '@/components/user-annotations/user-annotations-panel';
@@ -41,7 +41,7 @@ function UserAnnotationToolbar() {
         onClick={() => ctx.setPanelOpen(true)}
       >
         <StickyNote className="h-4 w-4" aria-hidden />
-        Mine notater
+        Research-markeringer
         {ctx.annotations.length > 0 ? (
           <span className="rounded-full bg-brand px-2 py-0.5 text-xs text-brand-foreground">
             {ctx.annotations.length}
@@ -64,7 +64,7 @@ export function UserAnnotationHost({
   children,
 }: {
   enabled: boolean;
-  targetType: UserAnnotationTargetType;
+  targetType: UserAnnotationCreatableTargetType;
   targetId: string;
   children: ReactNode;
 }) {

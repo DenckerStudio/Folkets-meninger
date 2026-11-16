@@ -37,7 +37,7 @@ function DesktopAnnotationsPanel({
           <motion.aside
             role="dialog"
             aria-modal="true"
-            aria-label="Mine notater"
+            aria-label="Research-markeringer"
             className="fixed inset-y-0 right-0 z-[69] hidden w-full max-w-md flex-col border-l border-border bg-background shadow-2xl lg:flex"
             initial={reducedMotion ? false : { x: '100%' }}
             animate={{ x: 0 }}
@@ -46,9 +46,9 @@ function DesktopAnnotationsPanel({
           >
             <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-4">
               <div>
-                <h2 className="text-base font-semibold text-foreground">Mine notater</h2>
+                <h2 className="text-base font-semibold text-foreground">Research-markeringer</h2>
                 <p className="mt-0.5 text-sm text-muted-foreground">
-                  Private markeringer — bare synlig for deg.
+                  Markeringer i research-funn — bare synlig for deg som admin.
                 </p>
               </div>
               <Button
@@ -84,8 +84,8 @@ export function UserAnnotationsPanel() {
         <Drawer
           open={ctx.panelOpen}
           onClose={close}
-          title="Mine notater"
-          description="Private markeringer — bare synlig for deg."
+          title="Research-markeringer"
+          description="Markeringer i research-funn — bare synlig for deg som admin."
           className="max-h-[85vh]"
         >
           <UserAnnotationsPanelContent className="px-2" />

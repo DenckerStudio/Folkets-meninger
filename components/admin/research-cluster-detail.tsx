@@ -210,7 +210,16 @@ export function ResearchClusterDetailView({
                         <ul className="mt-2 space-y-1 text-xs">
                           {p.quotes.map((q, qi) => (
                             <li key={qi}>
-                              <span className="text-foreground">«{q.text}»</span>
+                              {annotationCtx?.enabled ? (
+                                <UserAnnotatableText
+                                  containerKey={`research_quote_${stance}_${idx}_${qi}`}
+                                  text={`«${q.text}»`}
+                                  as="span"
+                                  className="text-foreground"
+                                />
+                              ) : (
+                                <span className="text-foreground">«{q.text}»</span>
+                              )}
                               {q.url ? (
                                 <>
                                   {' '}
