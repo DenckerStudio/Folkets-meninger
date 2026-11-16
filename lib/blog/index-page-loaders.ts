@@ -1,3 +1,4 @@
+import { logBloggCmsReadFailure } from '@/lib/blog/cms-read-log';
 import {
   getFeaturedBlogPost,
   listBlogCategories,
@@ -9,10 +10,15 @@ export async function loadBlogIndexPageData(args: {
   categorySlug?: string | null;
 }) {
   const categorySlug = args.categorySlug ?? null;
-  const [{ posts, totalPages }, categories, featured] = await Promise.all([
-    listPublishedBlogPostsPaginated({ page: args.page, categorySlug }),
-    listBlogCategories(),
-    args.page === 1 && !categorySlug ? getFeaturedBlogPost() : Promise.resolve(null),
-  ]);
-  return { posts, totalPages, categories, featured };
+  try {
+    const [{ posts, totalPages }, categories, featured] = await Promise.all([
+      listPublishedBlogPostsPaginated({ page: args.page, categorySlug }),
+      listBlogCategories(),
+      args.page === 1 && !categorySlug ? getFeaturedBlogPost() : Promise.resolve(null),
+    ]);
+    return { posts, totalPages, categories, featured };
+  } catch (error) {
+    logBloggCmsReadFailure('loader', error);
+    throw error;
+  }
 }

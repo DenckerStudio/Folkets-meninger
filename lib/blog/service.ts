@@ -28,6 +28,7 @@ import {
   normalizeBlogTitle,
   normalizeBlueskyText,
 } from '@/lib/blog/text-limits';
+import { logBloggCmsReadFailure } from '@/lib/blog/cms-read-log';
 
 const POST_DEPTH = 2;
 const BLOG_READ_CACHE = { allowIsrCache: true, revalidate: 3600 } as const;
@@ -73,51 +74,62 @@ export async function listPublishedBlogPostsPaginated(args: {
   const page = Math.max(1, args.page);
   if (!isCmsConfigured()) return emptyPaginated(page);
 
-  const query: Record<string, string | number> = {
-    ...publishedQuery(),
-    limit: pageSize,
-    page,
-  };
+  try {
+    const query: Record<string, string | number> = {
+      ...publishedQuery(),
+      limit: pageSize,
+      page,
+    };
 
-  if (args.categorySlug) {
-    const categories = await payloadFetchList<PayloadCategory>(
-      'categories',
-      {
-        limit: 1,
-        'where[slug][equals]': args.categorySlug,
-      },
-      BLOG_READ_CACHE,
-    );
-    const categoryId = categories?.docs?.[0]?.id;
-    if (!categoryId) {
-      return { posts: [], totalPages: 0, totalDocs: 0, page };
+    if (args.categorySlug) {
+      const categories = await payloadFetchList<PayloadCategory>(
+        'categories',
+        {
+          limit: 1,
+          'where[slug][equals]': args.categorySlug,
+        },
+        BLOG_READ_CACHE,
+      );
+      const categoryId = categories?.docs?.[0]?.id;
+      if (!categoryId) {
+        return { posts: [], totalPages: 0, totalDocs: 0, page };
+      }
+      query['where[category][equals]'] = categoryId;
     }
-    query['where[category][equals]'] = categoryId;
+
+    const data = await payloadFetchList<PayloadPost>('posts', query, BLOG_READ_CACHE);
+    const docs = data.docs ?? [];
+
+    return {
+      posts: sortPayloadPostsByDisplayDate(docs).map(mapPayloadPostToListItem),
+      totalPages: data.totalPages ?? 0,
+      totalDocs: data.totalDocs ?? 0,
+      page: data.page ?? page,
+    };
+  } catch (error) {
+    logBloggCmsReadFailure('list', error);
+    return emptyPaginated(page);
   }
-
-  const data = await payloadFetchList<PayloadPost>('posts', query, BLOG_READ_CACHE);
-
-  return {
-    posts: sortPayloadPostsByDisplayDate(data.docs).map(mapPayloadPostToListItem),
-    totalPages: data.totalPages,
-    totalDocs: data.totalDocs,
-    page: data.page,
-  };
 }
 
 export async function getFeaturedBlogPost(): Promise<BlogPostPublic | null> {
   if (!isCmsConfigured()) return null;
-  const data = await payloadFetchList<PayloadPost>(
-    'posts',
-    {
-      ...publishedQuery(),
-      limit: 1,
-      'where[featured][equals]': 'true',
-    },
-    BLOG_READ_CACHE,
-  );
-  const post = data?.docs?.[0];
-  return post ? mapPayloadPostToPublic(post) : null;
+  try {
+    const data = await payloadFetchList<PayloadPost>(
+      'posts',
+      {
+        ...publishedQuery(),
+        limit: 1,
+        'where[featured][equals]': 'true',
+      },
+      BLOG_READ_CACHE,
+    );
+    const post = data?.docs?.[0];
+    return post ? mapPayloadPostToPublic(post) : null;
+  } catch (error) {
+    logBloggCmsReadFailure('featured', error);
+    return null;
+  }
 }
 
 export async function getPublishedBlogPostBySlug(slug: string): Promise<BlogPostPublic | null> {
@@ -137,16 +149,22 @@ export async function getPublishedBlogPostBySlug(slug: string): Promise<BlogPost
 
 export async function listBlogCategories(): Promise<BlogCategory[]> {
   if (!isCmsConfigured()) return [];
-  const data = await payloadFetchList<PayloadCategory>(
-    'categories',
-    {
-      limit: 20,
-      sort: 'order',
-    },
-    BLOG_READ_CACHE,
-  );
-  if (!data.docs.length) return [];
-  return mapPayloadCategories(data.docs);
+  try {
+    const data = await payloadFetchList<PayloadCategory>(
+      'categories',
+      {
+        limit: 20,
+        sort: 'order',
+      },
+      BLOG_READ_CACHE,
+    );
+    const docs = data.docs ?? [];
+    if (!docs.length) return [];
+    return mapPayloadCategories(docs);
+  } catch (error) {
+    logBloggCmsReadFailure('categories', error);
+    return [];
+  }
 }
 
 export async function listPublishedBlogSlugsForSitemap(limit = 200): Promise<
