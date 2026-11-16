@@ -452,6 +452,7 @@ export default function RedditSignalsClient({
   const [isListPending, startListTransition] = useTransition();
   const [isRefreshing, startRefreshTransition] = useTransition();
   const urlSyncReadyRef = useRef(false);
+  const suppressUrlSyncRef = useRef(false);
 
   const [subreddit, setSubreddit] = useState(initialFilters.subreddit);
   const [topic, setTopic] = useState(initialFilters.topic);
@@ -516,6 +517,7 @@ export default function RedditSignalsClient({
   const listPending = isListPending || isRefreshing;
 
   useEffect(() => {
+    if (suppressUrlSyncRef.current) return;
     const path = buildRedditSignalsAdminPath(urlFilters, previewParam);
     if (!urlSyncReadyRef.current) {
       urlSyncReadyRef.current = true;
@@ -530,6 +532,7 @@ export default function RedditSignalsClient({
   }, [urlFilters, previewParam, router]);
 
   const clearFilters = () => {
+    suppressUrlSyncRef.current = true;
     setSubreddit('');
     setTopic('');
     setMinScore('');
@@ -555,6 +558,9 @@ export default function RedditSignalsClient({
     startListTransition(() => {
       router.replace(buildRedditSignalsAdminPath(cleared, previewParam), { scroll: false });
     });
+    window.setTimeout(() => {
+      suppressUrlSyncRef.current = false;
+    }, FILTER_DEBOUNCE_MS + 50);
   };
 
   const clearSpikeFilter = () => {
@@ -581,7 +587,11 @@ export default function RedditSignalsClient({
         <p className="text-sm text-muted-foreground">
           Interessesignaler til internt arbeid. Tall er ikke offentlige kilder.
         </p>
-        <ResearchViewTabs active="signaler" spikeBadgeActive={spikeBadgeActive} />
+        <ResearchViewTabs
+          active="signaler"
+          spikeBadgeActive={spikeBadgeActive}
+          devPreview={devPreview}
+        />
         <RedditSpikeBadgePanel badge={spikeBadge} />
         {initialFilters.spikeFocus ? (
           <div className="flex flex-wrap items-center gap-2 text-sm">

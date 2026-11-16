@@ -61,6 +61,8 @@ export async function loadRedditLearningStatsForAdmin(
       rows: buildRedditLearningStatsFixture(),
       viewMissing: false,
       viewMissingMessage: null,
+      loadError: false,
+      loadErrorMessage: null,
     };
   }
 
@@ -70,6 +72,8 @@ export async function loadRedditLearningStatsForAdmin(
       viewMissing: true,
       viewMissingMessage:
         'Brukt-rate-statistikk krever service role på serveren (SUPABASE_SERVICE_ROLE_KEY).',
+      loadError: false,
+      loadErrorMessage: null,
     };
   }
 
@@ -81,16 +85,32 @@ export async function loadRedditLearningStatsForAdmin(
       rows: [],
       viewMissing: true,
       viewMissingMessage: 'Kunne ikke koble til databasen for statistikk.',
+      loadError: false,
+      loadErrorMessage: null,
     };
   }
 
-  const { data, error } = await supabase
-    .from('reddit_learning_stats')
-    .select(
-      'dimension, group_key, total, brukt, ignorert, auto_ignorert, blokkert, avg_ai_relevance, brukt_rate',
-    )
-    .order('dimension', { ascending: true })
-    .order('total', { ascending: false });
+  let data;
+  let error;
+  try {
+    const result = await supabase
+      .from('reddit_learning_stats')
+      .select(
+        'dimension, group_key, total, brukt, ignorert, auto_ignorert, blokkert, avg_ai_relevance, brukt_rate',
+      )
+      .order('dimension', { ascending: true })
+      .order('total', { ascending: false });
+    data = result.data;
+    error = result.error;
+  } catch {
+    return {
+      rows: [],
+      viewMissing: false,
+      viewMissingMessage: null,
+      loadError: true,
+      loadErrorMessage: 'Kunne ikke hente statistikk akkurat nå.',
+    };
+  }
 
   if (error) {
     if (isMissingViewError(error)) {
@@ -99,9 +119,17 @@ export async function loadRedditLearningStatsForAdmin(
         viewMissing: true,
         viewMissingMessage:
           'Statistikkvisningen er ikke tilgjengelig ennå. En administrator må kjøre den ventende databasemigrasjonen.',
+        loadError: false,
+        loadErrorMessage: null,
       };
     }
-    throw error;
+    return {
+      rows: [],
+      viewMissing: false,
+      viewMissingMessage: null,
+      loadError: true,
+      loadErrorMessage: 'Kunne ikke hente statistikk akkurat nå.',
+    };
   }
 
   const rows: RedditLearningStatRow[] = [];
@@ -114,5 +142,7 @@ export async function loadRedditLearningStatsForAdmin(
     rows,
     viewMissing: false,
     viewMissingMessage: null,
+    loadError: false,
+    loadErrorMessage: null,
   };
 }

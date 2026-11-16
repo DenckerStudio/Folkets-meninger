@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import type { RedditSignalSubreddit } from '@/lib/admin/oppfanget/types';
 import {
   REDDIT_CLUSTER_SORT_KEYS,
+  redditClusterFiltersAreActive,
   type RedditClusterListFilters,
   type RedditClusterListResponse,
   type RedditClusterSummary,
@@ -88,6 +89,13 @@ function StatusDistribution({ cluster }: { cluster: RedditClusterSummary }) {
   );
 }
 
+function clusterCardTitle(cluster: RedditClusterSummary): string {
+  const topTitle = cluster.topPost?.title?.trim();
+  if (topTitle) return topTitle;
+  if (cluster.topics[0]) return cluster.topics[0];
+  return cluster.clusterId;
+}
+
 function ClusterMetrics({ cluster }: { cluster: RedditClusterSummary }) {
   const growth =
     cluster.growth24h === null
@@ -97,11 +105,11 @@ function ClusterMetrics({ cluster }: { cluster: RedditClusterSummary }) {
     <div className="flex flex-wrap gap-1.5">
       <span className={chipClass} title="Sum poeng">
         <span className="sr-only">Sum poeng: </span>
-        {cluster.sumScore.toLocaleString('nb-NO')} p
+        {cluster.sumScore.toLocaleString('nb-NO')} poeng
       </span>
       <span className={chipClass} title="Sum kommentarer">
         <span className="sr-only">Sum kommentarer: </span>
-        {cluster.sumComments.toLocaleString('nb-NO')} k
+        {cluster.sumComments.toLocaleString('nb-NO')} kommentarer
       </span>
       <span className={chipClass} title="Vekst siste 24 timer">
         <span className="sr-only">Vekst 24 t: </span>
@@ -116,15 +124,20 @@ function ClusterCard({ cluster, preview }: { cluster: RedditClusterSummary; prev
     signalListFiltersForCluster(cluster.clusterId),
     preview === 'fixture' ? 'fixture' : null,
   );
+  const heading = clusterCardTitle(cluster);
+  const showClusterIdBelow = heading !== cluster.clusterId;
 
   return (
     <article className="rounded-xl border border-border bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="break-all text-sm font-semibold text-foreground">{cluster.clusterId}</h3>
+            <h3 className="text-sm font-semibold text-foreground line-clamp-2">{heading}</h3>
             <span className={chipClass}>{cluster.postCount} innlegg</span>
           </div>
+          {showClusterIdBelow ? (
+            <p className="text-xs text-muted-foreground break-all">Klynge: {cluster.clusterId}</p>
+          ) : null}
           <ClusterMetrics cluster={cluster} />
           {cluster.topics.length > 0 ? (
             <p className="text-xs text-muted-foreground">
@@ -155,7 +168,10 @@ function ClusterCard({ cluster, preview }: { cluster: RedditClusterSummary; prev
             href={cluster.topPost.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1 inline-flex min-h-11 max-w-full items-center gap-1 text-sm font-medium text-brand hover:underline"
+            className={cn(
+              'mt-1 inline-flex min-h-11 max-w-full items-center gap-1 text-sm font-medium text-brand hover:underline',
+              VURDER_FOCUS_RING,
+            )}
           >
             <span className="line-clamp-2">{cluster.topPost.title}</span>
             <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -191,6 +207,7 @@ export default function RedditClustersClient({
   const router = useRouter();
   const [isListPending, startListTransition] = useTransition();
   const urlSyncReadyRef = useRef(false);
+  const suppressUrlSyncRef = useRef(false);
 
   const [subreddit, setSubreddit] = useState(initialFilters.subreddit);
   const [topic, setTopic] = useState(initialFilters.topic);
@@ -220,7 +237,10 @@ export default function RedditClustersClient({
 
   const previewParam = devPreview === 'fixture' ? 'fixture' : null;
 
+  const filtersActive = redditClusterFiltersAreActive(initialFilters);
+
   useEffect(() => {
+    if (suppressUrlSyncRef.current) return;
     const path = buildRedditTemaerAdminPath(urlFilters, previewParam);
     if (!urlSyncReadyRef.current) {
       urlSyncReadyRef.current = true;
@@ -235,6 +255,7 @@ export default function RedditClustersClient({
   }, [urlFilters, previewParam, router]);
 
   const clearFilters = () => {
+    suppressUrlSyncRef.current = true;
     setSubreddit('');
     setTopic('');
     setMinPosts('');
@@ -248,6 +269,9 @@ export default function RedditClustersClient({
     startListTransition(() => {
       router.replace(buildRedditTemaerAdminPath(cleared, previewParam), { scroll: false });
     });
+    window.setTimeout(() => {
+      suppressUrlSyncRef.current = false;
+    }, FILTER_DEBOUNCE_MS + 50);
   };
 
   return (
@@ -261,7 +285,11 @@ export default function RedditClustersClient({
         <p className="text-sm text-muted-foreground">
           Temaklynger fra interessesignaler (cluster_id fra arbeidsflyt). Kun for intern bruk.
         </p>
-        <ResearchViewTabs active="temaer" spikeBadgeActive={spikeBadgeActive} />
+        <ResearchViewTabs
+          active="temaer"
+          spikeBadgeActive={spikeBadgeActive}
+          devPreview={devPreview}
+        />
         {initialData.previewFixture ? (
           <p className="text-xs text-amber-700 dark:text-amber-400">
             Forhåndsvisning med fixture-data (kun utvikling).
@@ -330,7 +358,7 @@ export default function RedditClustersClient({
             type="button"
             onClick={clearFilters}
             className={cn(
-              'inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm',
+              'inline-flex min-h-11 items-center rounded-lg border border-border bg-card px-4 text-sm hover:bg-muted',
               VURDER_FOCUS_RING,
             )}
           >
@@ -355,6 +383,24 @@ export default function RedditClustersClient({
         <p className="text-sm text-destructive" role="alert">
           {initialData.tableMissingMessage}
         </p>
+      ) : initialData.clusters.length === 0 && filtersActive ? (
+        <EmptyState
+          icon={<Layers className="h-8 w-8 text-muted-foreground" aria-hidden />}
+          title="Ingen klynger matcher filteret"
+          description="Prøv andre filterverdier, eller nullstill for å se alle klynger."
+          action={
+            <button
+              type="button"
+              onClick={clearFilters}
+              className={cn(
+                'inline-flex min-h-11 items-center rounded-lg border border-border bg-card px-4 text-sm font-medium hover:bg-muted',
+                VURDER_FOCUS_RING,
+              )}
+            >
+              Nullstill filter
+            </button>
+          }
+        />
       ) : initialData.clusters.length === 0 ? (
         <EmptyState
           icon={<Layers className="h-8 w-8 text-muted-foreground" aria-hidden />}

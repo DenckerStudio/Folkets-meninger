@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { RedditSpikeBadgeTabDot } from '@/components/admin/reddit-spike-badge-panel';
+import { appendResearchFixturePreview } from '@/lib/reddit-signals/preview';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -9,14 +10,23 @@ const tabClass =
 export function ResearchViewTabs({
   active,
   spikeBadgeActive = false,
+  devPreview,
 }: {
   active: 'oppfanget' | 'signaler' | 'temaer';
   spikeBadgeActive?: boolean;
+  devPreview?: string;
 }) {
+  const oppfangetHref = appendResearchFixturePreview(routes.adminResearch, devPreview);
+  const signalerHref = appendResearchFixturePreview(
+    `${routes.adminResearch}?view=signaler`,
+    devPreview,
+  );
+  const temaerHref = appendResearchFixturePreview(`${routes.adminResearch}?view=temaer`, devPreview);
+
   return (
     <nav className="flex flex-wrap gap-2" aria-label="Research-visninger">
       <Link
-        href={routes.adminResearch}
+        href={oppfangetHref}
         className={cn(
           tabClass,
           active === 'oppfanget'
@@ -28,7 +38,7 @@ export function ResearchViewTabs({
         Oppfanget
       </Link>
       <Link
-        href={`${routes.adminResearch}?view=signaler`}
+        href={signalerHref}
         className={cn(
           tabClass,
           active === 'signaler'
@@ -41,7 +51,7 @@ export function ResearchViewTabs({
         <RedditSpikeBadgeTabDot show={spikeBadgeActive} />
       </Link>
       <Link
-        href={`${routes.adminResearch}?view=temaer`}
+        href={temaerHref}
         className={cn(
           tabClass,
           active === 'temaer'

@@ -38,10 +38,32 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
 
   if (isRedditTemaerView(params)) {
     const clusterFilters = parseRedditClusterFilters(params);
-    const [clusterData, learningStats] = await Promise.all([
+    const [clusterResult, learningResult] = await Promise.allSettled([
       listRedditClustersForAdmin(clusterFilters, preview),
       loadRedditLearningStatsForAdmin(preview),
     ]);
+    const clusterData =
+      clusterResult.status === 'fulfilled'
+        ? clusterResult.value
+        : {
+            clusters: [],
+            totalClusters: 0,
+            filteredTotal: 0,
+            unclusteredCount: 0,
+            previewFixture: false,
+            tableMissing: true,
+            tableMissingMessage: 'Kunne ikke hente temaklynger akkurat nå.',
+          };
+    const learningStats =
+      learningResult.status === 'fulfilled'
+        ? learningResult.value
+        : {
+            rows: [],
+            viewMissing: false,
+            viewMissingMessage: null,
+            loadError: true,
+            loadErrorMessage: 'Kunne ikke hente statistikk akkurat nå.',
+          };
     return (
       <RedditClustersClient
         initialData={clusterData}

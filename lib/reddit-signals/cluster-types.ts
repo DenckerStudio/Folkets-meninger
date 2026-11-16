@@ -72,4 +72,10 @@ export type RedditLearningStatsResponse = {
   rows: RedditLearningStatRow[];
   viewMissing: boolean;
   viewMissingMessage: string | null;
+  loadError: boolean;
+  loadErrorMessage: string | null;
 };
+
+export function redditClusterFiltersAreActive(filters: RedditClusterListFilters): boolean {
+  return Boolean(filters.subreddit || filters.topic.trim() || filters.minPosts !== null);
+}

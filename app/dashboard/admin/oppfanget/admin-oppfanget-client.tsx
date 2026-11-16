@@ -108,9 +108,11 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 function OppfangetPageHeader({
   previewMock,
   spikeBadgeActive = false,
+  devPreview,
 }: {
   previewMock?: boolean;
   spikeBadgeActive?: boolean;
+  devPreview?: string;
 }) {
   return (
     <div>
@@ -122,7 +124,11 @@ function OppfangetPageHeader({
         Saker og aksjoner vi har fanget opp, med kilder. Tall og kilder er ikke verifisert her.
       </p>
       <div className="mt-3">
-        <ResearchViewTabs active="oppfanget" spikeBadgeActive={spikeBadgeActive} />
+        <ResearchViewTabs
+          active="oppfanget"
+          spikeBadgeActive={spikeBadgeActive}
+          devPreview={devPreview}
+        />
       </div>
       {previewMock ? (
         <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
@@ -318,7 +324,11 @@ export default function AdminOppfangetClient({
   if (tableMissing && data) {
     return (
       <div className="space-y-6" lang="nb-NO">
-        <OppfangetPageHeader previewMock={data.previewMock} spikeBadgeActive={spikeBadgeActive} />
+        <OppfangetPageHeader
+          previewMock={data.previewMock}
+          spikeBadgeActive={spikeBadgeActive}
+          devPreview={devPreview}
+        />
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-foreground">
           <p className="font-medium">Database ikke klar</p>
           <p className="mt-1 text-muted-foreground">{data.tableMissingMessage}</p>
@@ -330,7 +340,11 @@ export default function AdminOppfangetClient({
 
   return (
     <div className="space-y-6" lang="nb-NO">
-      <OppfangetPageHeader previewMock={data?.previewMock} spikeBadgeActive={spikeBadgeActive} />
+      <OppfangetPageHeader
+        previewMock={data?.previewMock}
+        spikeBadgeActive={spikeBadgeActive}
+        devPreview={devPreview}
+      />
       {!mockMode ? (
         <ResearchWebhookNotice
           configured={researchWebhooksConfigured}

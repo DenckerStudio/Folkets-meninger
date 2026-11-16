@@ -112,17 +112,33 @@ function DimensionTable({
 export function RedditLearningStatsPanel({ data }: { data: RedditLearningStatsResponse }) {
   const grouped = useMemo(() => groupByDimension(data.rows), [data.rows]);
 
+  if (data.loadError) {
+    return (
+      <section
+        className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4"
+        aria-labelledby="reddit-learning-stats-heading"
+      >
+        <h2 id="reddit-learning-stats-heading" className="text-sm font-semibold text-foreground">
+          Brukt-rate (n ≥ 5)
+        </h2>
+        <p className="mt-2 text-sm text-foreground" role="alert">
+          {data.loadErrorMessage ?? 'Kunne ikke hente statistikk akkurat nå.'}
+        </p>
+      </section>
+    );
+  }
+
   if (data.viewMissing) {
     return (
       <section
-        className="rounded-xl border border-border bg-card p-4"
+        className="rounded-xl border border-dashed border-border bg-muted/20 p-4"
         aria-labelledby="reddit-learning-stats-heading"
       >
         <h2 id="reddit-learning-stats-heading" className="text-sm font-semibold text-foreground">
           Brukt-rate (n ≥ 5)
         </h2>
         <p className="mt-2 text-sm text-muted-foreground" role="status">
-          {data.viewMissingMessage ?? 'Statistikk er ikke tilgjengelig.'}
+          {data.viewMissingMessage ?? 'Statistikk er ikke tilgjengelig ennå.'}
         </p>
       </section>
     );

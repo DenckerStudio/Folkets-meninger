@@ -100,5 +100,28 @@ BEGIN
     RAISE EXCEPTION 'view skal ikke eksponere grupper med total < 5';
   END IF;
 
+  IF to_regclass('public.reddit_cluster_stats') IS NULL THEN
+    RAISE EXCEPTION 'forventer view reddit_cluster_stats';
+  END IF;
+
+  IF has_table_privilege('anon', 'public.reddit_cluster_stats', 'SELECT') THEN
+    RAISE EXCEPTION 'anon skal ikke ha SELECT på reddit_cluster_stats';
+  END IF;
+  IF NOT has_table_privilege('service_role', 'public.reddit_cluster_stats', 'SELECT') THEN
+    RAISE EXCEPTION 'service_role mangler SELECT på reddit_cluster_stats';
+  END IF;
+
+  UPDATE public.reddit_signals
+  SET cluster_id = 'lrn-cluster-a'
+  WHERE reddit_id IN ('lrnstat1', 'lrnstat2', 'lrnstat3');
+
+  IF (SELECT post_count FROM public.reddit_cluster_stats WHERE cluster_id = 'lrn-cluster-a') <> 3 THEN
+    RAISE EXCEPTION 'reddit_cluster_stats post_count forventet 3';
+  END IF;
+
+  IF (SELECT total_clusters FROM public.reddit_cluster_meta) < 1 THEN
+    RAISE EXCEPTION 'reddit_cluster_meta total_clusters forventet >= 1';
+  END IF;
+
   DELETE FROM public.reddit_signals WHERE reddit_id LIKE 'lrnstat%';
 END $$;
