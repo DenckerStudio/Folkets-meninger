@@ -106,6 +106,27 @@ export function legacyTabRedirectPath(tab: string | null): string | null {
   return minSideSectionHref(section);
 }
 
+const LEGACY_PASSTHROUGH_PARAMS = ['tour', 'checkout'] as const;
+
+/** Server-side redirect for `/dashboard/min-side?tab=…` (avoids oversikt flash). */
+export function legacyMinSideRedirectFromSearchParams(
+  params: Record<string, string | string[] | undefined>,
+): string | null {
+  const tab = typeof params.tab === 'string' ? params.tab : null;
+  const targetPath = legacyTabRedirectPath(tab);
+  if (!targetPath) return null;
+
+  const search = new URLSearchParams();
+  for (const key of LEGACY_PASSTHROUGH_PARAMS) {
+    const raw = params[key];
+    if (typeof raw === 'string' && raw.length > 0) {
+      search.set(key, raw);
+    }
+  }
+  const qs = search.toString();
+  return qs ? `${targetPath}?${qs}` : targetPath;
+}
+
 export function isMinSidePath(pathname: string): boolean {
   return pathname === routes.minSide || pathname.startsWith(`${routes.minSide}/`);
 }

@@ -1,13 +1,7 @@
 /**
- * Mount point for «Slett kontoen min» (parallel PR). Keep an empty, stable wrapper
- * so the deletion UI can replace this node without reshaping Min side.
+ * Mount point for «Slett kontoen min» (parallel PR #318). Renders nothing until
+ * that PR replaces this component with the real deletion UI on Personvern.
  */
 export function AccountDeletionSlot() {
-  return (
-    <div
-      data-account-deletion-slot
-      className="rounded-2xl border border-dashed border-border bg-muted/20 p-6"
-      aria-hidden
-    />
-  );
+  return null;
 }

@@ -1,13 +1,41 @@
 import Link from 'next/link';
-import type { MinSideOverviewSnapshot } from '@/lib/min-side/overview';
+import type { User } from '@supabase/supabase-js';
+import type { MinSideOverviewSnapshot, OverviewStat } from '@/lib/min-side/overview';
 import { MIN_SIDE_NAV_ITEMS, minSideSectionHref } from '@/lib/min-side/sections';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/utils';
+import { MinSideOverviewIdentity } from '@/components/min-side/min-side-overview-identity';
+import type { EarnedBadge } from '@/lib/knowledge/types';
+import type { UserPointsProgress } from '@/lib/user-points-levels';
 
 type MinSideOverviewPanelProps = {
+  user: User;
   snapshot: MinSideOverviewSnapshot | null;
+  points: number;
+  pointsProgress: UserPointsProgress | null;
+  badges: EarnedBadge[];
+  isStemmePlus: boolean;
   showAdminLink?: boolean;
 };
+
+const UNAVAILABLE_LABEL = 'Midlertidig utilgjengelig';
+
+function formatNumber(stat: OverviewStat<number>): { value: string; hint?: string } {
+  if (stat.status === 'unavailable') {
+    return { value: '–', hint: UNAVAILABLE_LABEL };
+  }
+  return { value: String(stat.value) };
+}
+
+function formatBoolean(stat: OverviewStat<boolean>): { value: string; hint?: string } {
+  if (stat.status === 'unavailable') {
+    return { value: '–', hint: UNAVAILABLE_LABEL };
+  }
+  return {
+    value: stat.value ? 'Aktiv' : 'Ikke aktiv',
+    hint: stat.value ? 'Medlemskap på plass' : 'Se fordeler og abonnement',
+  };
+}
 
 function StatCard({
   label,
@@ -27,12 +55,26 @@ function StatCard({
   );
 }
 
-export function MinSideOverviewPanel({ snapshot, showAdminLink = false }: MinSideOverviewPanelProps) {
-  const unavailable = snapshot === null;
-
+export function MinSideOverviewPanel({
+  user,
+  snapshot,
+  points,
+  pointsProgress,
+  badges,
+  isStemmePlus,
+  showAdminLink = false,
+}: MinSideOverviewPanelProps) {
   return (
     <div className="space-y-6">
-      {unavailable ? (
+      <MinSideOverviewIdentity
+        user={user}
+        points={points}
+        pointsProgress={pointsProgress}
+        badges={badges}
+        isStemmePlus={isStemmePlus}
+      />
+
+      {snapshot === null ? (
         <p className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
           Nøkkeltall er midlertidig utilgjengelig.
         </p>
@@ -96,23 +138,47 @@ export function MinSideOverviewPanel({ snapshot, showAdminLink = false }: MinSid
 }
 
 function StatGrid({ snapshot }: { snapshot: MinSideOverviewSnapshot }) {
-  const stemmerSum = snapshot.stanceCount + snapshot.pollVoteCount;
-  const valgomatLabel = snapshot.valgomatReady
-    ? 'Partimatch klar'
-    : snapshot.valgomatStanceCount > 0
-      ? `${snapshot.valgomatComparableIssues} saker med partidata`
-      : 'Ingen holdninger ennå';
+  const stance = formatNumber(snapshot.stanceCount);
+  const polls = formatNumber(snapshot.pollVoteCount);
+  const opinions = formatNumber(snapshot.opinionCount);
+  const valgomatCount = formatNumber(snapshot.valgomatStanceCount);
+  const stemmePlus = formatBoolean(snapshot.stemmePlusActive);
+
+  const stemmerSum =
+    stance.value !== '–' && polls.value !== '–'
+      ? String(Number(stance.value) + Number(polls.value))
+      : stance.value !== '–'
+        ? stance.value
+        : polls.value !== '–'
+          ? polls.value
+          : '–';
+
+  const stemmerHint =
+    stance.hint || polls.hint
+      ? UNAVAILABLE_LABEL
+      : 'Saker og avstemninger';
+
+  let valgomatHint = valgomatCount.hint;
+  if (!valgomatHint && snapshot.valgomatReady.status === 'ok') {
+    if (snapshot.valgomatReady.value) {
+      valgomatHint = 'Partimatch klar';
+    } else if (snapshot.valgomatStanceCount.status === 'ok' && snapshot.valgomatStanceCount.value > 0) {
+      const comparable =
+        snapshot.valgomatComparableIssues.status === 'ok'
+          ? snapshot.valgomatComparableIssues.value
+          : 0;
+      valgomatHint = `${comparable} saker med partidata`;
+    } else {
+      valgomatHint = 'Ingen holdninger ennå';
+    }
+  }
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard label="Stemmer og holdninger" value={String(stemmerSum)} hint="Saker og avstemninger" />
-      <StatCard label="Meninger" value={String(snapshot.opinionCount)} hint="Publiserte innlegg" />
-      <StatCard label="Valgomat" value={String(snapshot.valgomatStanceCount)} hint={valgomatLabel} />
-      <StatCard
-        label="Stemme+"
-        value={snapshot.stemmePlusActive ? 'Aktiv' : 'Ikke aktiv'}
-        hint={snapshot.stemmePlusActive ? 'Medlemskap på plass' : 'Se fordeler og abonnement'}
-      />
+      <StatCard label="Stemmer og holdninger" value={stemmerSum} hint={stemmerHint} />
+      <StatCard label="Meninger" value={opinions.value} hint={opinions.hint ?? 'Publiserte innlegg'} />
+      <StatCard label="Valgomat" value={valgomatCount.value} hint={valgomatHint} />
+      <StatCard label="Stemme+" value={stemmePlus.value} hint={stemmePlus.hint} />
     </div>
   );
 }

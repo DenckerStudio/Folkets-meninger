@@ -30,11 +30,11 @@ export function ProfileNotifications({
       description="E-postvarsler. Bjellen påvirkes ikke."
     >
       <p className="text-sm text-muted-foreground">
-        Abonnement på{' '}
+        Hjertesaker og emner du følger finner du under{' '}
         <Link href={minSideSectionHref('stemmer-og-meninger')} className="text-brand hover:underline">
-          hjertesaker og emner
-        </Link>{' '}
-        styres under Mine hjertesaker.
+          Mine stemmer og meninger
+        </Link>
+        .
       </p>
 
       <div className="flex items-center justify-between rounded-xl border border-border bg-muted/50 px-4 py-3">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { LogIn } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { ProfileStanceHistory } from '@/components/profile/profile-stance-history';
@@ -26,6 +27,7 @@ import type { LlmProvider } from '@/lib/byok/providers';
 
 function MinSideLoginGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const pathname = usePathname() ?? routes.minSide;
   if (loading) {
     return <p className="text-center text-sm text-muted-foreground">Laster…</p>;
   }
@@ -36,7 +38,7 @@ function MinSideLoginGate({ children }: { children: React.ReactNode }) {
         description="Du må være logget inn for å se innstillinger og historikk."
         action={
           <Link
-            href={loginWithNext(routes.minSide)}
+            href={loginWithNext(pathname)}
             className="inline-flex min-h-11 items-center rounded-xl bg-brand px-6 py-3 font-medium text-brand-foreground hover:bg-brand/90"
           >
             <LogIn className="mr-2 h-5 w-5" />
@@ -53,14 +55,23 @@ export function MinSideStemmerPage() {
   const data = useMinSideProfileData();
   const [votes, setVotes] = useState<VoteHistoryItem[]>([]);
   const [votesLoading, setVotesLoading] = useState(true);
+  const [votesError, setVotesError] = useState(false);
 
   useEffect(() => {
     fetch('/api/user/vote-history')
-      .then((res) => res.json())
-      .then((json) => {
-        if (Array.isArray(json)) setVotes(json);
+      .then((res) => {
+        if (!res.ok) {
+          setVotesError(true);
+          return null;
+        }
+        return res.json();
       })
-      .catch(() => {})
+      .then((json) => {
+        if (json === null) return;
+        if (Array.isArray(json)) setVotes(json);
+        else setVotesError(true);
+      })
+      .catch(() => setVotesError(true))
       .finally(() => setVotesLoading(false));
   }, []);
 
@@ -76,7 +87,7 @@ export function MinSideStemmerPage() {
         />
         <ProfileFylkePicker fylkeCode={data.fylkeCode} onSaved={data.onFylkeSaved} />
         <ProfileStanceHistory items={data.stanceHistory} loading={data.historyLoading} />
-        <ProfileVoteHistory items={votes} loading={votesLoading} />
+        <ProfileVoteHistory items={votes} loading={votesLoading} error={votesError} />
         <ProfileValgomat stanceCount={engagedCount} />
         <ProfileInterests
           interestCategories={data.interestCategories}

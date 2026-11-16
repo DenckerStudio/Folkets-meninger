@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import test from 'node:test';
 import {
   isMinSidePath,
+  legacyMinSideRedirectFromSearchParams,
   legacyTabRedirectPath,
   minSideSectionHref,
   resolveMinSideSectionId,
@@ -35,4 +38,24 @@ test('isMinSidePath covers overview and nested routes', () => {
   assert.equal(isMinSidePath(routes.minSide), true);
   assert.equal(isMinSidePath(`${routes.minSide}/personvern`), true);
   assert.equal(isMinSidePath(routes.utforsk), false);
+});
+
+test('legacy searchParams redirect preserves checkout and tour', () => {
+  assert.equal(
+    legacyMinSideRedirectFromSearchParams({ tab: 'stemme-plus', checkout: 'success' }),
+    `${minSideSectionHref('stemme-plus')}?checkout=success`,
+  );
+  assert.equal(
+    legacyMinSideRedirectFromSearchParams({ tab: 'varsler', tour: '1' }),
+    `${minSideSectionHref('varsler')}?tour=1`,
+  );
+  assert.equal(legacyMinSideRedirectFromSearchParams({}), null);
+});
+
+test('account deletion slot renders nothing until filled', () => {
+  const src = readFileSync(
+    join(process.cwd(), 'components/min-side/account-deletion-slot.tsx'),
+    'utf8',
+  );
+  assert.match(src, /return null/);
 });
