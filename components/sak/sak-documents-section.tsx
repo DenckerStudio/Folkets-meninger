@@ -134,7 +134,7 @@ function SakDocumentViewer({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand/80"
           >
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className="h-4 w-4" aria-hidden />
             Åpne originalkilde
           </a>
         ) : null
@@ -158,7 +158,7 @@ function SakDocumentViewer({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 font-medium text-brand hover:text-brand/80"
               >
-                <ExternalLink className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4" aria-hidden />
                 Åpne på ekstern side
               </a>
             </div>
@@ -176,7 +176,7 @@ function SakDocumentViewer({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 font-medium text-brand hover:text-brand/80"
             >
-              <ExternalLink className="h-4 w-4" />
+              <ExternalLink className="h-4 w-4" aria-hidden />
               Åpne {content.title}
             </a>
           ) : (
@@ -195,7 +195,7 @@ function SakDocumentViewer({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 font-medium text-brand hover:text-brand/80"
             >
-              <ExternalLink className="h-4 w-4" />
+              <ExternalLink className="h-4 w-4" aria-hidden />
               Åpne originalkilde
             </a>
           ) : null}

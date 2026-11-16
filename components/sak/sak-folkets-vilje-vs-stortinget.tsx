@@ -65,7 +65,7 @@ export function SakFolketsViljeVsStortinget({
                       {
                         label: 'for',
                         percent: model.stortingetForPercent,
-                        barClass: 'bg-emerald-500',
+                        barClass: 'bg-brand',
                       },
                       {
                         label: 'mot',
@@ -114,7 +114,7 @@ export function SakFolketsViljeVsStortinget({
                   <>
                     <SplitBar
                       segments={[
-                        { label: 'for', percent: model.historicForPercent, barClass: 'bg-emerald-500' },
+                        { label: 'for', percent: model.historicForPercent, barClass: 'bg-brand' },
                         { label: 'mot', percent: model.historicAgainstPercent, barClass: 'bg-brand-accent' },
                         { label: 'avstår', percent: model.historicAbstainPercent, barClass: 'bg-muted-foreground/35' },
                       ]}
@@ -178,7 +178,7 @@ function PollLegend({
 }) {
   return (
     <>
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs font-medium">
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium">
         {rows.map((row) => (
           <span key={row.label} className={cn(row.className)}>
             {row.label} {row.value}%
@@ -207,7 +207,7 @@ function StortingLegend({
   absent: string | null;
 }) {
   return (
-    <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs font-medium">
+    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium">
       <span className="text-emerald-700 dark:text-emerald-300">
         {forLabel} {forPercent}%
       </span>

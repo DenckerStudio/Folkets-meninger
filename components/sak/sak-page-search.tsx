@@ -23,7 +23,7 @@ const FIELD_SHELL_CLASS =
   'flex min-h-11 items-center gap-2 rounded-xl border border-border bg-card px-3 shadow-sm focus-within:ring-2 focus-within:ring-brand/40 focus-within:ring-offset-2 focus-within:ring-offset-background';
 
 const HIT_BUTTON_CLASS =
-  'flex w-full flex-col gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset';
+  'flex w-full flex-col gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-card';
 
 export type SakPageSearchCorpus = {
   title: string;
@@ -82,11 +82,13 @@ export function SakPageSearch({ corpus, className }: { corpus: SakPageSearchCorp
     <div ref={rootRef} data-sak-page-search="" className={cn('relative', className)}>
       <label htmlFor={inputId} className={FIELD_SHELL_CLASS}>
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+        <span className="sr-only">Søk i saken</span>
         <input
           id={inputId}
           type="search"
           role="combobox"
           aria-expanded={listOpen}
+          aria-haspopup="listbox"
           aria-controls={listOpen ? listboxId : undefined}
           aria-activedescendant={activeDescendantId}
           aria-autocomplete="list"
@@ -100,11 +102,22 @@ export function SakPageSearch({ corpus, className }: { corpus: SakPageSearchCorp
             if (trimmedQuery.length >= 2) setOpen(true);
           }}
           onKeyDown={(event) => {
-            if (!listOpen) return;
-            if (hits.length === 0) {
-              if (event.key === 'Escape') setOpen(false);
+            if (event.key === 'Escape') {
+              if (listOpen) {
+                event.preventDefault();
+                setOpen(false);
+              }
               return;
             }
+            if (trimmedQuery.length < 2) return;
+            if (!listOpen) {
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                setOpen(true);
+              }
+              return;
+            }
+            if (hits.length === 0) return;
             if (event.key === 'ArrowDown') {
               event.preventDefault();
               setActiveIndex((value) => (value + 1) % hits.length);
@@ -118,7 +131,6 @@ export function SakPageSearch({ corpus, className }: { corpus: SakPageSearchCorp
               const hit = hits[resolvedActiveIndex];
               if (hit) scrollToHit(hit);
             }
-            if (event.key === 'Escape') setOpen(false);
           }}
           placeholder="Søk i tittel, sammendrag, dokumenter og meninger …"
           className="min-h-10 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
