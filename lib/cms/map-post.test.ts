@@ -42,4 +42,12 @@ const withSources = mapPayloadPostToPublic({
 assert.equal(withSources.sources.length, 1);
 assert.equal(withSources.sources[0]?.index, 1);
 
+const noBodyMarkdown = mapPayloadPostToPublic({
+  id: '7',
+  slug: 'uten-body',
+  title: 'T',
+  excerpt: 'E',
+} as PayloadPost);
+assert.equal(noBodyMarkdown.reading_time_minutes, 1);
+
 console.log('lib/cms/map-post.test.ts ok');

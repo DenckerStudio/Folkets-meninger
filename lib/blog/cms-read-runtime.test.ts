@@ -14,12 +14,17 @@ void (async () => {
   delete process.env.NEXT_PHASE;
   assert.equal(isNextProductionBuildPhase(), false);
 
+  const runtimeSoft = await blogCmsOrUnavailable(async () => {
+    throw new CmsFetchError('nettverk', 'network');
+  });
+  assert.deepEqual(runtimeSoft, { unavailable: true });
+
   await assert.rejects(
     () =>
       blogCmsOrUnavailable(async () => {
-        throw new CmsFetchError('nettverk', 'network');
+        throw new Error('kartleggingsfeil');
       }),
-    CmsFetchError,
+    /kartleggingsfeil/,
   );
 
   process.env.NEXT_PHASE = 'phase-production-build';

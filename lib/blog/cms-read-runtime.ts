@@ -1,3 +1,5 @@
+import { unstable_noStore as noStore } from 'next/cache';
+import { logBloggCmsReadFailure } from '@/lib/blog/cms-read-log';
 import { CmsFetchError } from '@/lib/cms/cms-fetch-error';
 import { isNextProductionBuildPhase } from '@/lib/cms/next-build-phase';
 
@@ -6,8 +8,8 @@ export type BlogCmsPageLoad<T> =
   | { unavailable: false; data: T };
 
 /**
- * During `next build`, CMS outages render a soft-unavailable blog shell instead of failing deploy.
- * At runtime, CMS errors propagate so ISR can keep the last good HTML.
+ * CMS read failures render a soft-unavailable blog shell instead of HTTP 500.
+ * During `next build`, the same path keeps deploy green when Payload is down.
  */
 export async function blogCmsOrUnavailable<T>(
   loader: () => Promise<T>,
@@ -15,7 +17,9 @@ export async function blogCmsOrUnavailable<T>(
   try {
     return { unavailable: false, data: await loader() };
   } catch (error) {
-    if (error instanceof CmsFetchError && isNextProductionBuildPhase()) {
+    if (error instanceof CmsFetchError) {
+      logBloggCmsReadFailure('loader', error);
+      noStore();
       return { unavailable: true };
     }
     throw error;
