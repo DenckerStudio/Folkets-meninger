@@ -54,6 +54,7 @@ export function parseRedditSignalsFilters(
   return {
     subreddit: parseSubreddit(pick('subreddit')),
     topic: pick('topic').trim(),
+    cluster: pick('cluster').trim(),
     minScore: parseOptionalInt(pick('minScore')),
     minComments: parseOptionalInt(pick('minComments')),
     minRelevance: parseOptionalInt(pick('minRelevance')),
@@ -73,6 +74,7 @@ export function buildRedditSignalsQueryString(
   params.set('view', 'signaler');
   if (filters.subreddit) params.set('subreddit', filters.subreddit);
   if (filters.topic) params.set('topic', filters.topic);
+  if (filters.cluster) params.set('cluster', filters.cluster);
   if (filters.minScore !== null) params.set('minScore', String(filters.minScore));
   if (filters.minComments !== null) params.set('minComments', String(filters.minComments));
   if (filters.minRelevance !== null) params.set('minRelevance', String(filters.minRelevance));
@@ -96,10 +98,4 @@ export function buildRedditSignalsAdminPath(
   return `${routes.adminResearch}?${query}`;
 }
 
-export function isRedditSignalsView(
-  input: Record<string, string | string[] | undefined>,
-): boolean {
-  const raw = input.view;
-  const view = typeof raw === 'string' ? raw : '';
-  return view === 'signaler';
-}
+export { isRedditSignalsView, isRedditTemaerView } from '@/lib/reddit-signals/research-view';

@@ -8,6 +8,7 @@ const { rows } = buildRedditSignalsFixtureList();
 const defaults: RedditSignalListFilters = {
   subreddit: '',
   topic: '',
+  cluster: '',
   minScore: null,
   minComments: null,
   minRelevance: null,
@@ -18,10 +19,14 @@ const defaults: RedditSignalListFilters = {
   sort: 'engagement',
 };
 
-assert.equal(filterRedditSignalRows(rows, defaults).length, 3);
+assert.equal(filterRedditSignalRows(rows, defaults).length, 4);
+assert.equal(
+  filterRedditSignalRows(rows, { ...defaults, cluster: 'fixture-klynge-a' }).length,
+  3,
+);
 assert.equal(
   filterRedditSignalRows(rows, { ...defaults, hideRemoved: true }).length,
-  2,
+  3,
 );
 assert.equal(
   filterRedditSignalRows(rows, { ...defaults, onlyWithSakLink: true }).length,

@@ -3,9 +3,17 @@ import RedditSignalsClient from '@/components/admin/reddit-signals-client';
 import { requireAdminPage } from '@/lib/admin/gate';
 import { parseOppfangetFilters } from '@/lib/admin/oppfanget/query';
 import { listOppfangetForAdmin } from '@/lib/admin/oppfanget/service';
-import { isRedditSignalsView, parseRedditSignalsFilters } from '@/lib/reddit-signals/query';
+import { parseRedditClusterFilters } from '@/lib/reddit-signals/cluster-query';
+import { listRedditClustersForAdmin } from '@/lib/reddit-signals/cluster-service';
+import { loadRedditLearningStatsForAdmin } from '@/lib/reddit-signals/learning-stats-service';
+import {
+  isRedditSignalsView,
+  isRedditTemaerView,
+  parseRedditSignalsFilters,
+} from '@/lib/reddit-signals/query';
 import { loadRedditSpikeBadgeForAdmin } from '@/lib/reddit-signals/spike-badge-server';
 import { listRedditSignalsForAdmin } from '@/lib/reddit-signals/service';
+import RedditClustersClient from '@/components/admin/reddit-clusters-client';
 import { expireStaleResearchBriefsThrottled } from '@/lib/admin/research/expire-stale-throttled';
 import { getLatestResearchBriefsByClusterIds } from '@/lib/admin/research/service';
 import { getResearchTopicSnapshotsBySources } from '@/lib/admin/research/topic-service';
@@ -27,6 +35,45 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
   const preview = typeof params.preview === 'string' ? params.preview : undefined;
   const spikeBadge = await loadRedditSpikeBadgeForAdmin(preview);
   const spikeBadgeActive = spikeBadge !== null && spikeBadge.items.length > 0;
+
+  if (isRedditTemaerView(params)) {
+    const clusterFilters = parseRedditClusterFilters(params);
+    const [clusterResult, learningResult] = await Promise.allSettled([
+      listRedditClustersForAdmin(clusterFilters, preview),
+      loadRedditLearningStatsForAdmin(preview),
+    ]);
+    const clusterData =
+      clusterResult.status === 'fulfilled'
+        ? clusterResult.value
+        : {
+            clusters: [],
+            totalClusters: 0,
+            filteredTotal: 0,
+            unclusteredCount: 0,
+            previewFixture: false,
+            tableMissing: true,
+            tableMissingMessage: 'Kunne ikke hente temaklynger akkurat nå.',
+          };
+    const learningStats =
+      learningResult.status === 'fulfilled'
+        ? learningResult.value
+        : {
+            rows: [],
+            viewMissing: false,
+            viewMissingMessage: null,
+            loadError: true,
+            loadErrorMessage: 'Kunne ikke hente statistikk akkurat nå.',
+          };
+    return (
+      <RedditClustersClient
+        initialData={clusterData}
+        initialFilters={clusterFilters}
+        learningStats={learningStats}
+        devPreview={preview}
+        spikeBadgeActive={spikeBadgeActive}
+      />
+    );
+  }
 
   if (isRedditSignalsView(params)) {
     const signalFilters = parseRedditSignalsFilters(params);

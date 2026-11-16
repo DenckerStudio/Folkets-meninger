@@ -452,6 +452,7 @@ export default function RedditSignalsClient({
   const [isListPending, startListTransition] = useTransition();
   const [isRefreshing, startRefreshTransition] = useTransition();
   const urlSyncReadyRef = useRef(false);
+  const suppressUrlSyncRef = useRef(false);
 
   const [subreddit, setSubreddit] = useState(initialFilters.subreddit);
   const [topic, setTopic] = useState(initialFilters.topic);
@@ -468,6 +469,7 @@ export default function RedditSignalsClient({
   const [hideRemoved, setHideRemoved] = useState(initialFilters.hideRemoved);
   const [onlySak, setOnlySak] = useState(initialFilters.onlyWithSakLink);
   const [sort, setSort] = useState(initialFilters.sort);
+  const clusterFilter = initialFilters.cluster;
   const debouncedTopic = useDebouncedValue(topic, FILTER_DEBOUNCE_MS);
   const debouncedMinScore = useDebouncedValue(minScore, FILTER_DEBOUNCE_MS);
   const debouncedMinComments = useDebouncedValue(minComments, FILTER_DEBOUNCE_MS);
@@ -494,6 +496,7 @@ export default function RedditSignalsClient({
       onlyWithSakLink: onlySak,
       spikeFocus: initialFilters.spikeFocus,
       sort,
+      cluster: clusterFilter,
     }),
     [
       subreddit,
@@ -506,6 +509,7 @@ export default function RedditSignalsClient({
       onlySak,
       initialFilters.spikeFocus,
       sort,
+      clusterFilter,
     ],
   );
 
@@ -513,6 +517,7 @@ export default function RedditSignalsClient({
   const listPending = isListPending || isRefreshing;
 
   useEffect(() => {
+    if (suppressUrlSyncRef.current) return;
     const path = buildRedditSignalsAdminPath(urlFilters, previewParam);
     if (!urlSyncReadyRef.current) {
       urlSyncReadyRef.current = true;
@@ -527,6 +532,7 @@ export default function RedditSignalsClient({
   }, [urlFilters, previewParam, router]);
 
   const clearFilters = () => {
+    suppressUrlSyncRef.current = true;
     setSubreddit('');
     setTopic('');
     setMinScore('');
@@ -539,6 +545,7 @@ export default function RedditSignalsClient({
     const cleared: RedditSignalListFilters = {
       subreddit: '',
       topic: '',
+      cluster: '',
       minScore: null,
       minComments: null,
       minRelevance: null,
@@ -551,6 +558,9 @@ export default function RedditSignalsClient({
     startListTransition(() => {
       router.replace(buildRedditSignalsAdminPath(cleared, previewParam), { scroll: false });
     });
+    window.setTimeout(() => {
+      suppressUrlSyncRef.current = false;
+    }, FILTER_DEBOUNCE_MS + 50);
   };
 
   const clearSpikeFilter = () => {
@@ -577,7 +587,11 @@ export default function RedditSignalsClient({
         <p className="text-sm text-muted-foreground">
           Interessesignaler til internt arbeid. Tall er ikke offentlige kilder.
         </p>
-        <ResearchViewTabs active="signaler" spikeBadgeActive={spikeBadgeActive} />
+        <ResearchViewTabs
+          active="signaler"
+          spikeBadgeActive={spikeBadgeActive}
+          devPreview={devPreview}
+        />
         <RedditSpikeBadgePanel badge={spikeBadge} />
         {initialFilters.spikeFocus ? (
           <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -589,6 +603,22 @@ export default function RedditSignalsClient({
             >
               Fjern vekstfilter
             </button>
+          </div>
+        ) : null}
+        {clusterFilter ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">
+              Klyngefilter: <span className="font-medium text-foreground">{clusterFilter}</span>
+            </span>
+            <Link
+              href={buildRedditSignalsAdminPath(
+                { ...initialFilters, cluster: '' },
+                previewParam,
+              )}
+              className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:underline"
+            >
+              Fjern klyngefilter
+            </Link>
           </div>
         ) : null}
         {initialData.previewFixture ? (
