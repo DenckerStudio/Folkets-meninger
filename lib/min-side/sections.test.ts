@@ -52,10 +52,29 @@ test('legacy searchParams redirect preserves checkout and tour', () => {
   assert.equal(legacyMinSideRedirectFromSearchParams({}), null);
 });
 
-test('account deletion slot renders nothing until filled', () => {
+test('account deletion slot mounts DeleteAccountSettings', () => {
   const src = readFileSync(
     join(process.cwd(), 'components/min-side/account-deletion-slot.tsx'),
     'utf8',
   );
-  assert.match(src, /return null/);
+  assert.match(src, /DeleteAccountSettings/);
+  assert.doesNotMatch(src, /return null/);
+});
+
+test('personvern page composes privacy without duplicate delete embed', () => {
+  const src = readFileSync(
+    join(process.cwd(), 'components/min-side/min-side-section-pages.tsx'),
+    'utf8',
+  );
+  assert.match(src, /accountDeletionPlacement="none"/);
+  assert.match(src, /AccountDeletionSlot/);
+});
+
+test('profile privacy defaults to min-side link instead of inline delete', () => {
+  const src = readFileSync(
+    join(process.cwd(), 'components/profile/profile-privacy.tsx'),
+    'utf8',
+  );
+  assert.match(src, /accountDeletionPlacement = 'link'/);
+  assert.doesNotMatch(src, /DeleteAccountSettings/);
 });

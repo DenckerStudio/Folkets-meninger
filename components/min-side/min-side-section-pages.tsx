@@ -219,7 +219,7 @@ export function MinSidePersonvernPage({ userId }: { userId: string }) {
           title="Personvern og konto"
           description="Data, samtykke og kontoinnstillinger."
         />
-        <ProfilePrivacy userId={userId} />
+        <ProfilePrivacy userId={userId} accountDeletionPlacement="none" />
         <AccountDeletionSlot />
       </div>
     </MinSideLoginGate>
