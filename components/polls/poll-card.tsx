@@ -8,11 +8,16 @@ import {
 } from '@/lib/polls/labels';
 import type { PollRecord, PollTotals } from '@/lib/polls/types';
 import { PollBallotDistributionBarDisplay } from '@/components/polls/poll-ballot-distribution-bar';
+import { ballotShouldShowDistribution } from '@/lib/polls/ballot-distribution-layout';
+import { PollDistributionAwaitingAggregateNote } from '@/components/polls/poll-distribution-awaiting-aggregate';
+import { shouldShowPollDistributionAwaitingNote } from '@/lib/polls/poll-distribution-reveal';
 import { routes } from '@/lib/routes';
+import { cn } from '@/lib/utils';
 
 type PollCardProps = {
   poll: PollRecord;
   totals: PollTotals;
+  hasVoted?: boolean;
 };
 
 function formatPollDeadline(closesAt: string | null): string | null {
@@ -28,7 +33,7 @@ function formatPollDeadline(closesAt: string | null): string | null {
   });
 }
 
-export function PollCard({ poll, totals }: PollCardProps) {
+export function PollCard({ poll, totals, hasVoted = false }: PollCardProps) {
   const href = routes.poll(poll.id);
   const title = formatPollDisplayTitle(poll.title);
   const deadline = formatPollDeadline(poll.closesAt);
@@ -40,6 +45,9 @@ export function PollCard({ poll, totals }: PollCardProps) {
       year: 'numeric',
     });
   const open = isPollVotingOpen(poll);
+  const showDistribution = ballotShouldShowDistribution(totals, open, hasVoted);
+  const showAwaitingNote = shouldShowPollDistributionAwaitingNote(open, hasVoted, totals);
+  const showOpenStemCountOnly = open && !hasVoted;
 
   return (
     <article className="relative rounded-2xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
@@ -70,13 +78,27 @@ export function PollCard({ poll, totals }: PollCardProps) {
       {!open ? (
         <p className="relative mt-3 text-sm font-medium text-foreground">{POLL_ENDED_USER_MESSAGE}</p>
       ) : null}
-      <PollBallotDistributionBarDisplay
-        totals={totals}
-        className="relative mt-4"
-        showResultsBeforeVote
-      />
-      <div className="relative mt-4 flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">{formatStemmerCount(totals.total)}</span>
+      {showDistribution ? (
+        <PollBallotDistributionBarDisplay
+          totals={totals}
+          votingOpen={open}
+          hasVoted={hasVoted}
+          className="relative mt-4"
+        />
+      ) : showAwaitingNote ? (
+        <PollDistributionAwaitingAggregateNote className="relative mt-4" />
+      ) : showOpenStemCountOnly ? (
+        <p className="relative mt-4 text-sm text-muted-foreground">{formatStemmerCount(totals.total)}</p>
+      ) : null}
+      <div
+        className={cn(
+          'relative mt-4 flex items-center text-sm',
+          showOpenStemCountOnly ? 'justify-end' : 'justify-between',
+        )}
+      >
+        {showOpenStemCountOnly ? null : (
+          <span className="text-muted-foreground">{formatStemmerCount(totals.total)}</span>
+        )}
         <span className="inline-flex min-h-11 items-center font-medium text-brand">Åpne avstemning</span>
       </div>
     </article>

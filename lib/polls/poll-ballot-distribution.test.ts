@@ -19,18 +19,38 @@ const barSrc = readFileSync(
 );
 const pollBallotSrc = readFileSync(join(process.cwd(), 'components/polls/poll-ballot.tsx'), 'utf8');
 const pollCardSrc = readFileSync(join(process.cwd(), 'components/polls/poll-card.tsx'), 'utf8');
+const shareSrc = readFileSync(join(process.cwd(), 'components/polls/share-poll-widget.tsx'), 'utf8');
 
-if (!barSrc.includes('showResultsBeforeVote = false')) {
-  throw new Error('ballot bar defaults showResultsBeforeVote to false');
+if (barSrc.includes('showResultsBeforeVote')) {
+  throw new Error('ballot bar must not expose showResultsBeforeVote');
 }
 if (!barSrc.includes('ballotShouldShowDistribution')) {
-  throw new Error('interactive bar reveals after vote');
+  throw new Error('interactive bar uses central reveal rule');
 }
-if (!pollBallotSrc.includes('showResultsBeforeVote')) {
-  throw new Error('dashboard poll ballot passes showResultsBeforeVote true');
+if (pollBallotSrc.includes('showResultsBeforeVote')) {
+  throw new Error('dashboard poll ballot must not pass showResultsBeforeVote');
 }
-if (!pollCardSrc.includes('showResultsBeforeVote')) {
-  throw new Error('poll card passes showResultsBeforeVote true');
+if (pollCardSrc.includes('showResultsBeforeVote')) {
+  throw new Error('poll card must not pass showResultsBeforeVote');
+}
+if (!pollCardSrc.includes('showOpenStemCountOnly')) {
+  throw new Error('poll card shows stem count when open and not voted');
+}
+if (!pollBallotSrc.includes('compact && !hasVoted')) {
+  throw new Error('compact poll ballot shows stem count for open non-voters');
+}
+const serviceSrc = readFileSync(join(process.cwd(), 'lib/polls/service.ts'), 'utf8');
+if (!serviceSrc.includes('getUserHasVotedOnPolls: SUPABASE_SERVICE_ROLE_KEY mangler')) {
+  throw new Error('getUserHasVotedOnPolls warns when service role missing');
+}
+if (!pollCardSrc.includes('PollDistributionAwaitingAggregateNote')) {
+  throw new Error('poll card shows awaiting aggregate note below k');
+}
+if (shareSrc.includes('POLL_LOW_SAMPLE_THRESHOLD')) {
+  throw new Error('share widget must use publicAggregateMeetsThreshold only');
+}
+if (shareSrc.includes('showResultsBeforeVote')) {
+  throw new Error('share widget must not bypass reveal rule');
 }
 const layoutSrc = readFileSync(
   join(process.cwd(), 'lib/polls/ballot-distribution-layout.ts'),

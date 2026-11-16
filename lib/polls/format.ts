@@ -31,6 +31,11 @@ export function pollChoicePercent(totals: PollTotals, choice: PollChoice): numbe
   return pollBallotPercents(totals)[choice];
 }
 
+/** Felles visning: «12 %» (med mellomrom før %). */
+export function formatPollBallotPercentDisplay(percent: number): string {
+  return `${percent} %`;
+}
+
 export function isPollVotingOpen(
   poll: { status: string; opensAt: string | null; closesAt: string | null },
   now = Date.now(),

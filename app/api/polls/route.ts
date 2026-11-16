@@ -12,6 +12,10 @@ import {
   listOpenPolls,
 } from '@/lib/polls/service';
 import type { PollChoice } from '@/lib/polls/types';
+import {
+  preparePollFylkeForViewer,
+  redactPollTotalsForViewer,
+} from '@/lib/polls/poll-distribution-reveal';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,13 +52,16 @@ export async function GET(request: Request) {
     userVote = voteState.vote;
   }
 
+  const votingOpen = isPollVotingOpen(poll);
+  const fylkePayload = preparePollFylkeForViewer(byFylke, votingOpen, hasVoted);
   return NextResponse.json({
     poll,
-    totals,
-    byFylke,
+    totals: redactPollTotalsForViewer(totals, votingOpen, hasVoted),
+    byFylke: fylkePayload.byFylke,
+    fylkeHiddenUntilVote: fylkePayload.hiddenUntilVote,
     hasVoted,
     userVote,
-    votingOpen: isPollVotingOpen(poll),
+    votingOpen,
   });
 }
 
@@ -96,7 +103,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: 'Stemme registrert anonymt',
-      totals,
+      totals: redactPollTotalsForViewer(totals, isPollVotingOpen(poll), true),
       userVote: choice,
     });
   } catch (error) {

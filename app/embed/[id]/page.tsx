@@ -12,6 +12,7 @@ import {
   getUserPollVote,
   isPollVotingOpen,
 } from '@/lib/polls/service';
+import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
 import { parsePollEmbedOptions } from '@/lib/polls/embed';
 import { resolvePublicPollSharePage } from '@/lib/polls/retired-system';
 import { buildPollShareRelativePath, buildPollShareUrl, isShareablePoll } from '@/lib/polls/share';
@@ -133,7 +134,7 @@ export default async function PollEmbedPage({ params, searchParams }: PageProps)
             pollId={poll.id}
             title={poll.title}
             votingOpen={votingOpen}
-            initialTotals={totals}
+            initialTotals={redactPollTotalsForViewer(totals, votingOpen, voteState.hasVoted)}
             initialVote={voteState.vote}
             shareUrl={shareUrl}
             variant="embed"

@@ -1,25 +1,18 @@
+import { formatPollBallotPercentDisplay } from '@/lib/polls/format';
 import { pollChoiceLabel } from '@/lib/polls/labels';
 import { POLL_BALLOT_CHOICES } from '@/lib/polls/labels';
-import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
+import { pollDistributionRevealAllowed } from '@/lib/polls/poll-distribution-reveal';
 import type { PollChoice, PollTotals } from '@/lib/polls/types';
 
 export const BALLOT_SEGMENT_MIN_WIDTH_REM = 5.5;
 
-export function ballotShowProportionalLayout(
-  totals: PollTotals,
-  revealDistribution: boolean,
-): boolean {
-  return revealDistribution && publicAggregateMeetsThreshold(totals.total);
-}
-
-/** Vis fordeling når prop er true, bruker har stemt, eller read-only flate ber om det. */
+/** Sentral regel: (!votingOpen || hasVoted) og k ≥ 5. */
 export function ballotShouldShowDistribution(
   totals: PollTotals,
-  showResultsBeforeVote: boolean,
+  votingOpen: boolean,
   hasVoted: boolean,
 ): boolean {
-  const reveal = showResultsBeforeVote || hasVoted;
-  return ballotShowProportionalLayout(totals, reveal);
+  return pollDistributionRevealAllowed(votingOpen, hasVoted, totals);
 }
 
 /** Proportional grow by vote count; 0 keeps min-width only (never max(count, 1)). */
@@ -47,7 +40,9 @@ export function formatPollBallotDistributionSummary(
 
   const parts = POLL_BALLOT_CHOICES.map((choice) => {
     const pct = percents[choice];
-    return pct != null ? `${pollChoiceLabel(choice)} ${pct} %` : pollChoiceLabel(choice);
+    return pct != null
+      ? `${pollChoiceLabel(choice)} ${formatPollBallotPercentDisplay(pct)}`
+      : pollChoiceLabel(choice);
   });
   const stemmer = totals.total === 1 ? '1 stemme' : `${totals.total} stemmer`;
   return `${parts.join(', ')}, ${stemmer}`;

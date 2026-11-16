@@ -8,6 +8,7 @@ import {
   pollOpenGraphImageUrl,
 } from './page-metadata';
 import { SITE_NAME } from '@/lib/seo/metadata';
+import { redactPollTotalsForViewer } from '@/lib/polls/poll-distribution-reveal';
 import type { PollRecord } from '@/lib/polls/types';
 
 const samplePoll: PollRecord = {
@@ -45,6 +46,7 @@ test('pollOgImageVersionFromTotals changes when counts change', () => {
 });
 
 test('buildPollDetailPageMetadata versions OG image from totals', () => {
+  const ogTotals = redactPollTotalsForViewer(sampleTotals, true, false);
   const metadata = buildPollDetailPageMetadata(samplePoll, sampleTotals);
   assert.match(String(metadata.title), /nattåpent apotek/);
   assert.equal(metadata.alternates?.canonical, '/dashboard/avstemninger/abc-123');
@@ -53,13 +55,14 @@ test('buildPollDetailPageMetadata versions OG image from totals', () => {
   assert.equal(og.url, '/dashboard/avstemninger/abc-123');
   assert.equal(
     og.images?.[0]?.url,
-    `${pollOpenGraphImageUrl('abc-123', sampleTotals)}`,
+    `${pollOpenGraphImageUrl('abc-123', ogTotals)}`,
   );
   const twitter = metadata.twitter as { card?: string };
   assert.equal(twitter.card, 'summary_large_image');
 });
 
 test('buildDelSharePageMetadata versions del OG image from totals', () => {
+  const ogTotals = redactPollTotalsForViewer(sampleTotals, true, false);
   const metadata = buildDelSharePageMetadata({
     poll: samplePoll,
     pollId: samplePoll.id,
@@ -70,7 +73,7 @@ test('buildDelSharePageMetadata versions del OG image from totals', () => {
   assert.match(
     og.images?.[0]?.url ?? '',
     new RegExp(
-      `/del/abc-123/opengraph-image\\?v=${pollOgImageVersionFromTotals(sampleTotals)}`,
+      `/del/abc-123/opengraph-image\\?v=${pollOgImageVersionFromTotals(ogTotals)}`,
     ),
   );
 });

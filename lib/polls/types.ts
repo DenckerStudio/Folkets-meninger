@@ -22,6 +22,13 @@ export type PollFylkeTotals = {
   blank: number | null;
   total: number;
   sufficientData: boolean;
+  /** Sant når raden er skjult pga. åpen avstemning uten egen stemme (ikke fordi k&lt;5). */
+  hiddenUntilVote?: boolean;
+};
+
+export type PollFylkeViewerPayload = {
+  hiddenUntilVote: boolean;
+  byFylke: PollFylkeTotals[];
 };
 
 export type PollGenerationMetadata = {

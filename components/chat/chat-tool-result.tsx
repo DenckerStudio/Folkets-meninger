@@ -215,6 +215,8 @@ type PollResultsOutput = {
     sufficientData?: boolean;
   }>;
   fylkeMinVotes?: number;
+  distributionVisible?: boolean;
+  fylkeHiddenUntilVote?: boolean;
   note?: string | null;
 };
 
@@ -956,6 +958,7 @@ function PollResultsCard({ output }: { output: PollResultsOutput }) {
 
   const totals = output.totals ?? {};
   const percents = output.percents ?? {};
+  const distributionVisible = output.distributionVisible ?? true;
   const byFylke = (output.byFylke ?? []).filter((row) => row.sufficientData);
 
   return (
@@ -977,13 +980,18 @@ function PollResultsCard({ output }: { output: PollResultsOutput }) {
       <p className="text-xs text-foreground">
         <span className="font-medium text-muted-foreground">
           {output.isOpen ? 'Åpen' : 'Avsluttet'}
-          {typeof totals.total === 'number' ? ` · ${totals.total} stemmer` : ''}:{' '}
+          {typeof totals.total === 'number' ? ` · ${totals.total} stemmer` : ''}
+          {distributionVisible ? ': ' : ''}
         </span>
-        Ja {percents.ja ?? 0}% ({totals.ja ?? 0}) · Nei {percents.nei ?? 0}% ({totals.nei ?? 0}) ·
-        Blank {percents.blank ?? 0}% ({totals.blank ?? 0})
+        {distributionVisible ? (
+          <>
+            Ja {percents.ja ?? 0}% ({totals.ja ?? 0}) · Nei {percents.nei ?? 0}% ({totals.nei ?? 0}) ·
+            Blank {percents.blank ?? 0}% ({totals.blank ?? 0})
+          </>
+        ) : null}
       </p>
       {output.note ? <p className="text-xs text-muted-foreground">{output.note}</p> : null}
-      {byFylke.length > 0 ? (
+      {output.fylkeHiddenUntilVote ? null : byFylke.length > 0 ? (
         <div className="space-y-0.5">
           <p className="text-xs font-medium text-muted-foreground">
             Fylke med nok stemmer (minst {output.fylkeMinVotes ?? 0})

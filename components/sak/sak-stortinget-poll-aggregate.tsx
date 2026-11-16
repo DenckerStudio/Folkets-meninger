@@ -1,13 +1,17 @@
 import Link from 'next/link';
 import { BarChart3 } from 'lucide-react';
 import { PollChoiceResultTiles } from '@/components/polls/poll-choice-result-tiles';
+import { PollDistributionAwaitingAggregateNote } from '@/components/polls/poll-distribution-awaiting-aggregate';
 import { NonRepresentativeNotice } from '@/components/trust/non-representative-notice';
-import { findPublicPollForIssue, getPollTotals } from '@/lib/polls/service';
+import { formatStemmerCount } from '@/lib/norwegian-plural';
+import { isPollVotingOpen } from '@/lib/polls/format';
 import {
-  POLL_PUBLIC_AGGREGATE_BELOW_THRESHOLD_LABEL,
-} from '@/lib/public-aggregate/poll-public-output';
-import { publicAggregateMeetsThreshold } from '@/lib/public-aggregate/threshold';
+  pollDistributionRevealAllowed,
+  shouldShowPollDistributionAwaitingNote,
+} from '@/lib/polls/poll-distribution-reveal';
+import { findPublicPollForIssue, getPollTotals, getUserPollVote } from '@/lib/polls/service';
 import { publicPollBallotInitialTotals } from '@/lib/public-aggregate/poll-ballot-public-totals';
+import { getServerSupabase } from '@/lib/supabase-server';
 import { routes } from '@/lib/routes';
 
 type SakStortingetPollAggregateProps = {
@@ -35,8 +39,22 @@ export async function SakStortingetPollAggregate({ sakId }: SakStortingetPollAgg
     );
   }
 
-  const ballotTotals = publicPollBallotInitialTotals(totals);
-  const showBreakdown = publicAggregateMeetsThreshold(totals.total);
+  const votingOpen = isPollVotingOpen(poll);
+  const supabase = await getServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const voteState = user
+    ? await getUserPollVote(user.id, poll.id).catch(() => ({ hasVoted: false, vote: null }))
+    : { hasVoted: false, vote: null };
+  const hasVoted = voteState.hasVoted;
+
+  const ballotTotals = publicPollBallotInitialTotals(totals, votingOpen, hasVoted);
+  const showDistribution = pollDistributionRevealAllowed(votingOpen, hasVoted, totals);
+  const showAwaitingNote = shouldShowPollDistributionAwaitingNote(votingOpen, hasVoted, totals);
+  const srSummary = showDistribution
+    ? `Avstemningsresultat på Folkets Meninger, ${formatStemmerCount(totals.total)}`
+    : `${formatStemmerCount(totals.total)} på avstemningen`;
 
   return (
     <section
@@ -44,7 +62,7 @@ export async function SakStortingetPollAggregate({ sakId }: SakStortingetPollAgg
       aria-labelledby="sak-poll-aggregate-heading"
     >
       <p className="sr-only" id="sak-poll-aggregate-heading">
-        Avstemningsresultat på Folkets Meninger
+        {srSummary}
       </p>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -58,9 +76,14 @@ export async function SakStortingetPollAggregate({ sakId }: SakStortingetPollAgg
           Gå til avstemningen
         </Link>
       </div>
-      {showBreakdown ? (
+      {showDistribution ? (
         <>
-          <PollChoiceResultTiles totals={ballotTotals} className="mt-4" />
+          <PollChoiceResultTiles
+            totals={ballotTotals}
+            votingOpen={votingOpen}
+            hasVoted={hasVoted}
+            className="mt-4"
+          />
           <NonRepresentativeNotice
             count={totals.total}
             countLabel="stemmer"
@@ -68,10 +91,10 @@ export async function SakStortingetPollAggregate({ sakId }: SakStortingetPollAgg
             className="mt-3"
           />
         </>
+      ) : showAwaitingNote ? (
+        <PollDistributionAwaitingAggregateNote className="mt-4" />
       ) : (
-        <p className="mt-3 text-sm text-muted-foreground" role="status">
-          {POLL_PUBLIC_AGGREGATE_BELOW_THRESHOLD_LABEL}
-        </p>
+        <p className="mt-4 text-sm text-muted-foreground">{formatStemmerCount(totals.total)}</p>
       )}
     </section>
   );

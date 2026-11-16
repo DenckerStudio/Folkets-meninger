@@ -20,24 +20,24 @@ assert.match(
 );
 
 assert.equal(
-  ballotShouldShowDistribution({ ja: 3, nei: 2, blank: 0, total: 5 }, false, false),
-  false,
-  'skjult før stemme når prop er false',
-);
-assert.equal(
   ballotShouldShowDistribution({ ja: 3, nei: 2, blank: 0, total: 5 }, true, false),
-  true,
-  'showResultsBeforeVote viser ved k>=5',
-);
-assert.equal(
-  ballotShouldShowDistribution({ ja: 2, nei: 1, blank: 0, total: 3 }, false, true),
   false,
-  'under k=5 skjules tall selv etter stemme',
+  'åpen: skjult før stemme',
 );
 assert.equal(
-  ballotShouldShowDistribution({ ja: 3, nei: 2, blank: 0, total: 5 }, false, true),
+  ballotShouldShowDistribution({ ja: 2, nei: 1, blank: 0, total: 3 }, true, true),
+  false,
+  'åpen: under k=5 skjules tall selv etter stemme',
+);
+assert.equal(
+  ballotShouldShowDistribution({ ja: 3, nei: 2, blank: 0, total: 5 }, true, true),
   true,
-  'etter stemme ved k>=5',
+  'åpen: etter stemme ved k>=5',
+);
+assert.equal(
+  ballotShouldShowDistribution({ ja: 3, nei: 2, blank: 0, total: 5 }, false, false),
+  true,
+  'avsluttet: vist for alle ved k>=5',
 );
 
 console.log('lib/polls/ballot-distribution-layout.test.ts: ok');

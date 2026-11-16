@@ -7,12 +7,20 @@ import {
   getPollTotals,
   getPollTotalsByFylke,
   getPublicPollById,
+  getUserPollVote,
   searchPublicPolls,
   type PollReadClient,
 } from '@/lib/polls/service';
-import { isPollVotingOpen, POLL_PUBLIC_PERCENT_MIN_VOTES, pollChoicePercent } from '@/lib/polls/format';
+import { isPollVotingOpen, pollChoicePercent } from '@/lib/polls/format';
 import { pollBallotAltTextPhrase } from '@/lib/polls/ballot-buttons';
 import { POLL_FYLKE_MIN_VOTES } from '@/lib/polls/norway-counties';
+import {
+  POLL_DISTRIBUTION_AWAITING_AGGREGATE_MESSAGE,
+  POLL_FYLKE_HIDDEN_UNTIL_VOTE_MESSAGE,
+  pollDistributionRevealAllowed,
+  preparePollFylkeForViewer,
+  redactPollTotalsForViewer,
+} from '@/lib/polls/poll-distribution-reveal';
 import type { PollFylkeTotals, PollRecord, PollTotals } from '@/lib/polls/types';
 import type { CitationRegistry } from '@/lib/chat/citations';
 
@@ -32,6 +40,8 @@ export type ChatPollResults = {
   percents: ChatPollPercents;
   byFylke: PollFylkeTotals[];
   fylkeMinVotes: number;
+  distributionVisible: boolean;
+  fylkeHiddenUntilVote: boolean;
   note: string | null;
 };
 
@@ -44,10 +54,35 @@ function asPollClient(client?: ChatRagClient | null): PollReadClient | null {
   return (client as unknown as PollReadClient | null | undefined) ?? null;
 }
 
+function chatPollResultsNote(args: {
+  votingOpen: boolean;
+  hasVoted: boolean;
+  rawTotals: PollTotals;
+  fylkeHiddenUntilVote: boolean;
+}): string | null {
+  if (args.rawTotals.total === 0) {
+    return 'Ingen har stemt i denne avstemningen ennå.';
+  }
+  if (args.votingOpen && !args.hasVoted) {
+    return 'Stem for å se fordelingen.';
+  }
+  if (!pollDistributionRevealAllowed(args.votingOpen, args.hasVoted, args.rawTotals)) {
+    return POLL_DISTRIBUTION_AWAITING_AGGREGATE_MESSAGE;
+  }
+  if (args.fylkeHiddenUntilVote) {
+    return POLL_FYLKE_HIDDEN_UNTIL_VOTE_MESSAGE;
+  }
+  return null;
+}
+
 export function shapeChatPollResults(args: {
   poll: PollRecord | null;
   totals?: PollTotals;
+  rawTotals?: PollTotals;
   byFylke?: PollFylkeTotals[];
+  fylkeHiddenUntilVote?: boolean;
+  votingOpen?: boolean;
+  hasVoted?: boolean;
 }): ChatPollResults {
   const totals = args.totals ?? emptyPollTotals();
   const poll = args.poll;
@@ -67,9 +102,17 @@ export function shapeChatPollResults(args: {
       percents: { ja: 0, nei: 0, blank: 0 },
       byFylke: args.byFylke ?? [],
       fylkeMinVotes: POLL_FYLKE_MIN_VOTES,
+      distributionVisible: false,
+      fylkeHiddenUntilVote: false,
       note: 'Fant ingen åpen eller avsluttet avstemning som passer. Oppgi et poll-id, en sak eller en tydeligere tittel.',
     };
   }
+
+  const votingOpen = args.votingOpen ?? isPollVotingOpen(poll);
+  const hasVoted = args.hasVoted ?? false;
+  const rawTotals = args.rawTotals ?? totals;
+  const reveal = pollDistributionRevealAllowed(votingOpen, hasVoted, rawTotals);
+  const fylkeHiddenUntilVote = args.fylkeHiddenUntilVote ?? false;
 
   return {
     found: true,
@@ -79,22 +122,21 @@ export function shapeChatPollResults(args: {
     status: poll.status,
     track: poll.track,
     stortingetIssueId: poll.stortingetIssueId,
-    isOpen: isPollVotingOpen(poll),
+    isOpen: votingOpen,
     closesAt: poll.closesAt,
     totals,
-    percents: {
-      ja: pollChoicePercent(totals, 'ja') ?? 0,
-      nei: pollChoicePercent(totals, 'nei') ?? 0,
-      blank: pollChoicePercent(totals, 'blank') ?? 0,
-    },
+    percents: reveal
+      ? {
+          ja: pollChoicePercent(rawTotals, 'ja') ?? 0,
+          nei: pollChoicePercent(rawTotals, 'nei') ?? 0,
+          blank: pollChoicePercent(rawTotals, 'blank') ?? 0,
+        }
+      : { ja: 0, nei: 0, blank: 0 },
     byFylke: args.byFylke ?? [],
     fylkeMinVotes: POLL_FYLKE_MIN_VOTES,
-    note:
-      totals.total === 0
-        ? 'Ingen har stemt i denne avstemningen ennå.'
-        : totals.total < POLL_PUBLIC_PERCENT_MIN_VOTES
-          ? `Færre enn ${POLL_PUBLIC_PERCENT_MIN_VOTES} stemmer — vis ikke prosentandeler.`
-          : null,
+    distributionVisible: reveal,
+    fylkeHiddenUntilVote,
+    note: chatPollResultsNote({ votingOpen, hasVoted, rawTotals, fylkeHiddenUntilVote }),
   };
 }
 
@@ -104,6 +146,7 @@ export async function collectPollResults(args: {
   query?: string;
   resolveIssueId: (input: { issueId?: string; query?: string }) => Promise<string | null>;
   client?: ChatRagClient | null;
+  viewerUserId?: string | null;
 }): Promise<ChatPollResults> {
   const client = asPollClient(args.client);
   const pollId = args.pollId?.trim();
@@ -129,12 +172,30 @@ export async function collectPollResults(args: {
 
   if (!poll) return shapeChatPollResults({ poll: null });
 
+  const votingOpen = isPollVotingOpen(poll);
+  let hasVoted = false;
+  if (args.viewerUserId?.trim()) {
+    const voteState = await getUserPollVote(args.viewerUserId, poll.id);
+    hasVoted = voteState.hasVoted;
+  }
+
   const [totals, byFylke] = await Promise.all([
     getPollTotals(poll.id, client),
     getPollTotalsByFylke(poll.id, POLL_FYLKE_MIN_VOTES, client),
   ]);
 
-  return shapeChatPollResults({ poll, totals, byFylke });
+  const viewerTotals = redactPollTotalsForViewer(totals, votingOpen, hasVoted);
+  const fylkePayload = preparePollFylkeForViewer(byFylke, votingOpen, hasVoted);
+
+  return shapeChatPollResults({
+    poll,
+    totals: viewerTotals,
+    rawTotals: totals,
+    byFylke: fylkePayload.byFylke,
+    fylkeHiddenUntilVote: fylkePayload.hiddenUntilVote,
+    votingOpen,
+    hasVoted,
+  });
 }
 
 export function createPollChatTools(args: {
@@ -142,6 +203,7 @@ export function createPollChatTools(args: {
   /** Per-request source registry so poll results can be cited as [n]. */
   citations?: CitationRegistry | null;
   resolveIssueId: (input: { issueId?: string; query?: string }) => Promise<string | null>;
+  viewerUserId?: string | null;
 }) {
   return {
     getPollResults: tool({
@@ -166,6 +228,7 @@ export function createPollChatTools(args: {
           query,
           resolveIssueId: args.resolveIssueId,
           client: args.client,
+          viewerUserId: args.viewerUserId,
         });
         if (!result.found || !result.pollId || !args.citations) return result;
         const source = args.citations.cite({

@@ -26,6 +26,10 @@ import {
   getUserPollVote,
   isPollVotingOpen,
 } from '@/lib/polls/service';
+import {
+  preparePollFylkeForViewer,
+  redactPollTotalsForViewer,
+} from '@/lib/polls/poll-distribution-reveal';
 import { isShareablePoll } from '@/lib/polls/share';
 import { isSharePollsEnabled } from '@/lib/polls/share-flag';
 import { resolvePollSourceSakLink } from '@/lib/polls/stortinget-issue-link';
@@ -90,6 +94,9 @@ export default async function PollDetailPage({ params }: PageProps) {
   const sharePageEnabled =
     isShareablePoll(poll) &&
     (isSharePollsEnabled() || (user ? await isAdmin(user.id, user.email) : false));
+
+  const votingOpen = isPollVotingOpen(poll);
+  const fylkeForViewer = preparePollFylkeForViewer(byFylke, votingOpen, voteState.hasVoted);
 
   const researchTopicId = await getResearchTopicIdForPoll(poll.id);
   const sakLink = resolvePollSourceSakLink(poll.stortingetIssueId, { researchTopicId });
@@ -158,13 +165,16 @@ export default async function PollDetailPage({ params }: PageProps) {
       ) : null}
       <PollBallot
         pollId={poll.id}
-        votingOpen={isPollVotingOpen(poll)}
-        initialTotals={totals}
+        votingOpen={votingOpen}
+        initialTotals={redactPollTotalsForViewer(totals, votingOpen, voteState.hasVoted)}
         initialVote={voteState.vote}
       />
       <section className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight text-foreground">Resultat per fylke</h2>
-        <PollResultView byFylke={byFylke} />
+        <PollResultView
+          byFylke={fylkeForViewer.byFylke}
+          hiddenUntilVote={fylkeForViewer.hiddenUntilVote}
+        />
       </section>
     </DashboardPage>
   );

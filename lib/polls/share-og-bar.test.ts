@@ -4,6 +4,7 @@ import {
   POLL_OG_BAR_MIN_TOTAL,
   buildPollOgBarSegments,
   formatPollOgResultsLine,
+  isPollOgTotalsOnlyReveal,
   pollOgImageAltText,
   showPollOgProportionalBar,
 } from './share-og-bar';
@@ -39,4 +40,12 @@ test('showPollOgProportionalBar requires minimum sample', () => {
   assert.equal(showPollOgProportionalBar({ nei: 0, blank: 0, ja: 9, total: 9 }), false);
   assert.equal(showPollOgProportionalBar({ nei: 0, blank: 0, ja: 10, total: 10 }), true);
   assert.equal(POLL_OG_BAR_MIN_TOTAL, 10);
+});
+
+test('åpne avstemninger viser kun total på OG-linje', () => {
+  const redacted = { ja: 0, nei: 0, blank: 0, total: 37 };
+  assert.equal(isPollOgTotalsOnlyReveal(redacted), true);
+  assert.equal(formatPollOgResultsLine(redacted), '37 stemmer');
+  assert.equal(showPollOgProportionalBar(redacted), false);
+  assert.equal(pollOgImageAltText('Spørsmål', redacted), 'Spørsmål – 37 stemmer');
 });
