@@ -2,37 +2,44 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const migration = readFileSync(
+const baseMigration = readFileSync(
   join(process.cwd(), 'supabase/migrations/20261102200000_reddit_signals.sql'),
   'utf-8',
 );
-
-assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.reddit_signals/);
-assert.match(migration, /ENABLE ROW LEVEL SECURITY/i);
-assert.match(
-  migration,
-  /REVOKE ALL ON TABLE public\.reddit_signals FROM PUBLIC, anon, authenticated/i,
+const v2Migration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/20261116170000_reddit_signals_v2.sql'),
+  'utf-8',
 );
-assert.match(migration, /GRANT ALL ON TABLE public\.reddit_signals TO service_role/i);
-assert.doesNotMatch(migration, /\bauthor\b/i);
-assert.doesNotMatch(migration, /\bselftext\b/i);
-assert.doesNotMatch(migration, /\busername\b/i);
 
-assert.match(migration, /CREATE OR REPLACE FUNCTION public\.n8n_upsert_reddit_signals\(p_rows jsonb\)/i);
-assert.match(migration, /SECURITY DEFINER/i);
-assert.match(migration, /SET search_path = public, pg_temp/i);
+assert.match(baseMigration, /CREATE TABLE IF NOT EXISTS public\.reddit_signals/);
+assert.doesNotMatch(baseMigration, /\bauthor\b/i);
+assert.doesNotMatch(baseMigration, /\bselftext\b/i);
+assert.doesNotMatch(baseMigration, /\busername\b/i);
+
+assert.match(v2Migration, /reddit_blocklist/i);
+assert.match(v2Migration, /reddit_signal_snapshots/i);
+assert.match(v2Migration, /CREATE OR REPLACE FUNCTION public\.n8n_upsert_reddit_signals\(p_rows jsonb\)/i);
+assert.match(v2Migration, /SECURITY DEFINER/i);
+assert.match(v2Migration, /SET search_path = public, pg_temp/i);
 assert.match(
-  migration,
+  v2Migration,
   /REVOKE ALL ON FUNCTION public\.n8n_upsert_reddit_signals\(jsonb\) FROM PUBLIC, anon, authenticated/i,
 );
 assert.match(
-  migration,
+  v2Migration,
   /GRANT EXECUTE ON FUNCTION public\.n8n_upsert_reddit_signals\(jsonb\) TO service_role/i,
 );
-assert.match(migration, /v_len > 100/i);
-assert.match(migration, /ON CONFLICT \(reddit_id\) DO UPDATE/i);
-assert.match(migration, /COALESCE\(EXCLUDED\.related_issue_id, rs\.related_issue_id\)/i);
-assert.match(migration, /'https:\/\/www\.reddit\.com\/comments\/' \|\| v_reddit_id/i);
+assert.match(v2Migration, /v_len > 100/i);
+assert.match(v2Migration, /ON CONFLICT \(reddit_id\) DO UPDATE/i);
+assert.match(v2Migration, /'blocked', v_blocked/i);
+assert.match(v2Migration, /INSERT INTO public\.reddit_signal_snapshots/i);
+assert.match(v2Migration, /reddit_signals_status_check/i);
+assert.match(v2Migration, /COALESCE\(EXCLUDED\.related_issue_id, rs\.related_issue_id\)/i);
+assert.doesNotMatch(
+  v2Migration,
+  /ON CONFLICT \(reddit_id\) DO UPDATE SET[\s\S]*status = EXCLUDED\.status/i,
+);
+assert.match(v2Migration, /'https:\/\/www\.reddit\.com\/comments\/' \|\| v_reddit_id/i);
 
 const contract = readFileSync(
   join(process.cwd(), 'docs/n8n/reddit-signals-contract.md'),
