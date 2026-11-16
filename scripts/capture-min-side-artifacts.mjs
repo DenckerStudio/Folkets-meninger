@@ -10,42 +10,69 @@ import path from 'node:path';
 const ARTIFACTS = '/opt/cursor/artifacts';
 const PREFIX = process.argv[2] || 'after';
 const BASE = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:3000';
+const routesMinSide = '/dashboard/min-side';
 
-const EMAIL = process.env.E2E_MIN_SIDE_EMAIL ?? 'e2e-min-side+cloudagent@folkets-meninger.test';
+const EMAIL = process.env.E2E_MIN_SIDE_EMAIL ?? 'e2e.minside.cloudagent@example.com';
 const PASSWORD = process.env.E2E_MIN_SIDE_PASSWORD ?? 'E2eMinSide!CloudAgent2026';
 
 async function ensureTestUser() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) {
-    console.warn('Missing Supabase admin env — login screenshots may be skipped.');
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !anonKey) {
+    console.warn('Missing Supabase anon env — login screenshots may be skipped.');
     return false;
   }
-  const admin = createClient(url, serviceKey, {
+  const anon = createClient(url, anonKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const existing = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
-  const found = existing.data.users.find((u) => u.email === EMAIL);
-  if (!found) {
-    const created = await admin.auth.admin.createUser({
-      email: EMAIL,
-      password: PASSWORD,
-      email_confirm: true,
-    });
-    if (created.error) {
-      console.warn('Could not create e2e user:', created.error.message);
-      return false;
-    }
-  }
+  const signIn = await anon.auth.signInWithPassword({ email: EMAIL, password: PASSWORD });
+  if (!signIn.error) return true;
+  console.warn('E2E-bruker mangler eller feil passord — prøver UI-innlogging:', signIn.error.message);
   return true;
 }
 
 async function login(page) {
-  await page.goto(`${BASE}/auth/login`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
-  await page.getByLabel(/e-post/i).fill(EMAIL);
-  await page.getByLabel(/passord/i).fill(PASSWORD);
-  await page.getByRole('button', { name: /logg inn/i }).click();
-  await page.waitForURL(/dashboard\/utforsk|dashboard\/min-side/, { timeout: 60_000 });
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !anonKey) throw new Error('missing anon key');
+  const anon = createClient(url, anonKey);
+  const { data, error } = await anon.auth.signInWithPassword({ email: EMAIL, password: PASSWORD });
+  if (error || !data.session) {
+    throw new Error(error?.message ?? 'login failed');
+  }
+
+  const projectRef = new URL(url).hostname.split('.')[0];
+  const cookieBase = {
+    domain: '127.0.0.1',
+    path: '/',
+    httpOnly: true,
+    secure: false,
+    sameSite: 'Lax',
+  };
+  await page.context().addCookies([
+    {
+      name: `sb-${projectRef}-auth-token`,
+      value: JSON.stringify({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+        expires_at: data.session.expires_at,
+        token_type: 'bearer',
+        user: data.session.user,
+      }),
+      ...cookieBase,
+    },
+  ]);
+
+  await page.goto(`${BASE}/dashboard/min-side`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
+  if (page.url().includes('/auth/login')) {
+    await page.goto(`${BASE}/auth/login`, { waitUntil: 'domcontentloaded' });
+    await page.getByLabel(/e-post/i).fill(EMAIL);
+    await page.getByLabel(/passord/i).fill(PASSWORD);
+    await page.getByRole('button', { name: /logg inn/i }).click();
+    await page.waitForURL(/dashboard\//, { timeout: 60_000 });
+  }
 }
 
 async function captureViewport(viewport, suffix) {
@@ -53,11 +80,15 @@ async function captureViewport(viewport, suffix) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport });
 
-  const canLogin = await ensureTestUser();
-  if (canLogin) {
+  try {
+    await ensureTestUser();
     await login(page);
-  } else {
-    console.warn('Skipping authenticated captures — no admin API');
+  } catch (error) {
+    console.warn('Autentisering feilet — tar skjermbilde av innloggingsgate:', error);
+    await page.goto(`${BASE}${routesMinSide}`, { waitUntil: 'domcontentloaded' });
+    const gatePath = path.join(ARTIFACTS, `${PREFIX}_min_side_login_gate_${suffix}.png`);
+    await page.screenshot({ path: gatePath, fullPage: false });
+    console.log(gatePath);
     await browser.close();
     return;
   }
