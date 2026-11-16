@@ -1,0 +1,27 @@
+import type { RedditSignalApiAction, RedditSignalSortKey, RedditSignalStatus } from '@/lib/reddit-signals/types';
+
+export const REDDIT_SIGNAL_STATUS_LABELS: Record<RedditSignalStatus, string> = {
+  ny: 'Ny',
+  brukt: 'Brukt',
+  ignorert: 'Ignorert',
+  auto_ignorert: 'Auto ignorert',
+  blokkert: 'Blokkert',
+};
+
+export const REDDIT_SIGNAL_SORT_LABELS: Record<RedditSignalSortKey, string> = {
+  score: 'Poeng',
+  comments: 'Kommentarer',
+  contention: 'Kommentarer per poeng',
+  relevance: 'Relevans',
+  engagement: 'Engasjement',
+  growth24h: 'Vekst siste 24 t',
+};
+
+export const REDDIT_SIGNAL_ACTION_LABELS: Record<RedditSignalApiAction, string> = {
+  ignorer: 'Ignorer',
+  blokker: 'Blokker permanent',
+  marker_brukt: 'Marker brukt',
+};
+
+export const REDDIT_SIGNAL_BLOKKER_CONFIRM =
+  'Signalet legges på permanent blokkliste og vises ikke i fremtidige importer. Dette kan ikke angres fra denne siden.';
