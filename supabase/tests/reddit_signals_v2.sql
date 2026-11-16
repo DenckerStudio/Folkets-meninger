@@ -169,3 +169,120 @@ BEGIN
   DELETE FROM public.research_topics WHERE id = v_topic_id;
 END;
 $$;
+
+DO $$
+DECLARE
+  v_reddit_id text := 'civ2clsc01';
+  v_r jsonb;
+  v_matured timestamptz := '2026-11-01T12:00:00Z'::timestamptz;
+  v_scored timestamptz := '2026-11-02T14:00:00Z'::timestamptz;
+  v_matured2 timestamptz := '2026-11-10T08:00:00Z'::timestamptz;
+BEGIN
+  SET LOCAL ROLE service_role;
+
+  v_r := public.n8n_upsert_reddit_signals(
+    jsonb_build_array(
+      jsonb_build_object(
+        'reddit_id', v_reddit_id,
+        'subreddit', 'norge',
+        'title', 'Coalesce seed',
+        'score', 5,
+        'num_comments', 1,
+        'upvote_ratio', 0.88,
+        'num_crossposts', 2,
+        'crosspost_parent', 'parent-a',
+        'link_domain', 'example.com',
+        'link_url_canonical', 'https://example.com/a',
+        'flair', 'Politikk',
+        'removal_type', 'none',
+        'matured_at', v_matured,
+        'ai_relevance', 4,
+        'ai_reason', 'seed-reason',
+        'ai_model', 'ci-model-v1',
+        'ai_scored_at', v_scored,
+        'cluster_id', 'cluster-seed',
+        'posted_at', now(),
+        'snapshot_at', now()
+      )
+    )
+  );
+  IF (v_r ->> 'inserted')::int < 1 AND (v_r ->> 'updated')::int < 1 THEN
+    RAISE EXCEPTION 'coalesce seed upsert feilet: %', v_r;
+  END IF;
+
+  v_r := public.n8n_upsert_reddit_signals(
+    jsonb_build_array(
+      jsonb_build_object(
+        'reddit_id', v_reddit_id,
+        'subreddit', 'norge',
+        'title', 'Coalesce re-upsert uten valgfrie felt',
+        'score', 6,
+        'num_comments', 2,
+        'posted_at', now(),
+        'snapshot_at', now()
+      )
+    )
+  );
+  IF (v_r ->> 'updated')::int < 1 THEN
+    RAISE EXCEPTION 'coalesce re-upsert: forventet updated, fikk %', v_r;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.reddit_signals rs
+    WHERE rs.reddit_id = v_reddit_id
+      AND rs.upvote_ratio = 0.88
+      AND rs.num_crossposts = 2
+      AND rs.crosspost_parent = 'parent-a'
+      AND rs.link_domain = 'example.com'
+      AND rs.link_url_canonical = 'https://example.com/a'
+      AND rs.flair = 'Politikk'
+      AND rs.removal_type = 'none'
+      AND rs.matured_at = v_matured
+      AND rs.ai_relevance = 4
+      AND rs.ai_reason = 'seed-reason'
+      AND rs.ai_model = 'ci-model-v1'
+      AND rs.ai_scored_at = v_scored
+      AND rs.cluster_id = 'cluster-seed'
+  ) THEN
+    RAISE EXCEPTION 'coalesce: valgfrie felt ble nullstilt ved re-upsert uten payload';
+  END IF;
+
+  v_r := public.n8n_upsert_reddit_signals(
+    jsonb_build_array(
+      jsonb_build_object(
+        'reddit_id', v_reddit_id,
+        'subreddit', 'norge',
+        'title', 'Coalesce override',
+        'score', 7,
+        'num_comments', 3,
+        'ai_relevance', 5,
+        'ai_reason', 'override-reason',
+        'ai_model', 'ci-model-v2',
+        'cluster_id', 'cluster-override',
+        'matured_at', v_matured2,
+        'posted_at', now(),
+        'snapshot_at', now()
+      )
+    )
+  );
+  IF (v_r ->> 'updated')::int < 1 THEN
+    RAISE EXCEPTION 'coalesce override upsert: forventet updated, fikk %', v_r;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.reddit_signals rs
+    WHERE rs.reddit_id = v_reddit_id
+      AND rs.ai_relevance = 5
+      AND rs.ai_reason = 'override-reason'
+      AND rs.ai_model = 'ci-model-v2'
+      AND rs.cluster_id = 'cluster-override'
+      AND rs.matured_at = v_matured2
+      AND rs.upvote_ratio = 0.88
+      AND rs.link_domain = 'example.com'
+  ) THEN
+    RAISE EXCEPTION 'coalesce: nye AI-felt ble ikke lagret eller andre felt ble feilaktig nullstilt';
+  END IF;
+END;
+$$;

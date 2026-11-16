@@ -10,6 +10,10 @@ const v2Migration = readFileSync(
   join(process.cwd(), 'supabase/migrations/20261116170000_reddit_signals_v2.sql'),
   'utf-8',
 );
+const coalesceMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/20261116183000_reddit_upsert_coalesce.sql'),
+  'utf-8',
+);
 
 assert.match(baseMigration, /CREATE TABLE IF NOT EXISTS public\.reddit_signals/);
 assert.doesNotMatch(baseMigration, /\bauthor\b/i);
@@ -40,6 +44,21 @@ assert.doesNotMatch(
   /ON CONFLICT \(reddit_id\) DO UPDATE SET[\s\S]*status = EXCLUDED\.status/i,
 );
 assert.match(v2Migration, /'https:\/\/www\.reddit\.com\/comments\/' \|\| v_reddit_id/i);
+
+assert.match(coalesceMigration, /CREATE OR REPLACE FUNCTION public\.n8n_upsert_reddit_signals\(p_rows jsonb\)/i);
+assert.match(coalesceMigration, /matured_at = COALESCE\(EXCLUDED\.matured_at, rs\.matured_at\)/i);
+assert.match(coalesceMigration, /ai_relevance = COALESCE\(EXCLUDED\.ai_relevance, rs\.ai_relevance\)/i);
+assert.match(coalesceMigration, /cluster_id = COALESCE\(EXCLUDED\.cluster_id, rs\.cluster_id\)/i);
+assert.match(coalesceMigration, /upvote_ratio = COALESCE\(EXCLUDED\.upvote_ratio, rs\.upvote_ratio\)/i);
+assert.match(
+  coalesceMigration,
+  /REVOKE ALL ON FUNCTION public\.n8n_upsert_reddit_signals\(jsonb\) FROM PUBLIC, anon, authenticated/i,
+);
+assert.match(
+  coalesceMigration,
+  /GRANT EXECUTE ON FUNCTION public\.n8n_upsert_reddit_signals\(jsonb\) TO service_role/i,
+);
+assert.match(coalesceMigration, /'blocked', v_blocked/i);
 
 const contract = readFileSync(
   join(process.cwd(), 'docs/n8n/reddit-signals-contract.md'),
