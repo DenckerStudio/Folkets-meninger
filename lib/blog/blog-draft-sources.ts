@@ -161,6 +161,8 @@ export type CollectBlogDraftSourcesResult = {
   query: string | null;
   webSearchEnabled: boolean;
   webSearchAttempted: boolean;
+  /** True når nettsøk var konfigurert, kjørt og returnerte feil (ikke «disabled»). */
+  webSearchFailed: boolean;
 };
 
 export async function collectBlogDraftSources(
@@ -181,6 +183,7 @@ export async function collectBlogDraftSources(
   let stortinget: NormalizedSourceHit[] = [];
   let web: NormalizedSourceHit[] = [];
   let query: string | null = null;
+  let webSearchFailed = false;
 
   if (built.ok) {
     query = built.query;
@@ -198,6 +201,9 @@ export async function collectBlogDraftSources(
     ]);
     stortinget = stHits;
     web = webRes.ok ? webRes.results : [];
+    if (webEnabled) {
+      webSearchFailed = !webRes.ok && !webRes.disabled;
+    }
   }
 
   const sources = mergeBlogDraftSources({
@@ -206,10 +212,13 @@ export async function collectBlogDraftSources(
     web,
   });
 
+  const webSearchAttempted = webEnabled && Boolean(built.ok);
+
   return {
     sources,
     query,
     webSearchEnabled: webEnabled,
-    webSearchAttempted: webEnabled && Boolean(built.ok),
+    webSearchAttempted,
+    webSearchFailed,
   };
 }

@@ -36,7 +36,9 @@ export type BuildResearchTopicBlogDraftResult =
         | 'invalid_output'
         | 'empty_body'
         | 'invalid_slug'
-        | 'llm_timeout';
+        | 'llm_timeout'
+        | 'llm_error'
+        | 'search_error';
     };
 
 function buildLlmPrompt(args: {
@@ -103,6 +105,10 @@ export async function buildResearchTopicBlogDraftWithSources(args: {
   output: unknown;
   variantId?: string | null;
   fetchImpl?: typeof fetch;
+  /** Ved `fail`: ikke fall tilbake til brief når LLM feiler (ops/cron). */
+  llmOnFailure?: 'fallback' | 'fail';
+  /** Ved true: avbryt når konfigurert nettsøk feiler (ops/cron). */
+  failOnSearchError?: boolean;
 }): Promise<BuildResearchTopicBlogDraftResult> {
   const parsed = researchTopicBriefOutputSchema.safeParse(args.output);
   if (!parsed.success) {
@@ -119,6 +125,13 @@ export async function buildResearchTopicBlogDraftWithSources(args: {
     { kind: 'topic', topicId: args.topicId },
     { briefOutput: args.output, fetchImpl: args.fetchImpl },
   );
+  if (args.failOnSearchError && collected.webSearchFailed) {
+    return {
+      ok: false,
+      error: 'Kildesøk feilet. Prøv igjen senere.',
+      code: 'search_error',
+    };
+  }
   const sources = collected.sources;
 
   let llmBody: string | null = null;
@@ -138,6 +151,19 @@ export async function buildResearchTopicBlogDraftWithSources(args: {
       };
     }
     throw error;
+  }
+
+  if (
+    args.llmOnFailure === 'fail' &&
+    isAnswerLlmConfigured() &&
+    sources.length > 0 &&
+    !llmBody
+  ) {
+    return {
+      ok: false,
+      error: 'Tekstgenerering feilet. Prøv igjen senere.',
+      code: 'llm_error',
+    };
   }
 
   const includeBriefSources = sources.length === 0;
