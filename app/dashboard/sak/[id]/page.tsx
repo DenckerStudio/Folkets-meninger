@@ -19,15 +19,20 @@ import { redactPublicFolkChoiceFields } from '@/lib/public-aggregate/folk-public
 import { findOpenStortingetPollForIssue } from '@/lib/polls/service';
 import { isResearchTopicDedicatedIssueId } from '@/lib/sak/research-topic-dedicated-issue';
 import { readAiSummaryFromDb } from '@/lib/ai-summary/service';
+import { publicSakSummaryLead } from '@/lib/ai-summary/sak-summary-fetch';
 import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
 import FadeIn from '@/components/fade-in';
 import ExpandableText from './expandable-text';
-import { SakDocumentsSection } from '@/components/sak/sak-documents-section';
+import { SakArgumentsSection } from '@/components/sak/sak-arguments-section';
+import { SakDocumentsPanel } from '@/components/sak/sak-documents-panel';
+import { SakDocumentsShortlist } from '@/components/sak/sak-documents-shortlist';
+import { SakFolketsViljeVsStortingetSection } from '@/components/sak/sak-folkets-vilje-vs-stortinget-section';
+import { SakPageSearchCorpus } from '@/components/sak/sak-page-search-corpus';
 import { SakPageActions } from '@/components/sak/sak-page-actions';
 import { SakPageTabs } from '@/components/sak/sak-page-tabs';
+import { SakTabSlot } from '@/components/sak/sak-tab-slot';
 import { ImpactCalculator } from '@/components/sak/impact-calculator';
-import { AlignmentScore } from '@/components/sak/alignment-score';
 import { KnowledgeQuiz } from '@/components/sak/knowledge-quiz';
 import { SimilarIssuesSection } from '@/components/sak/similar-issues-section';
 import { TopicAroundSakSection } from '@/components/search/topic-around-sak-section';
@@ -193,7 +198,14 @@ export default async function SakPage({
   const dokumentParam = resolvedSearch?.dokument;
   const initialDocumentId =
     typeof dokumentParam === 'string' ? dokumentParam.trim() : undefined;
-  const initialTab = parseSakPageTabParam(resolvedSearch?.fane);
+  const faneParam = resolvedSearch?.fane;
+  const hasExplicitFane =
+    (typeof faneParam === 'string' && faneParam.trim().length > 0) ||
+    (Array.isArray(faneParam) && faneParam.some((value) => typeof value === 'string' && value.trim().length > 0));
+  const initialTab =
+    initialDocumentId && !hasExplicitFane
+      ? 'dokumenter'
+      : parseSakPageTabParam(resolvedSearch?.fane);
   const bundle = await getSakPageBundle(resolvedParams.id);
 
   if (!bundle) {
@@ -336,11 +348,16 @@ export default async function SakPage({
             ) : null}
           </div>
 
-          <h1 className="text-balance text-xl font-semibold tracking-tight break-words text-foreground sm:text-2xl">
+          <h1
+            id="sak-tittel"
+            className="text-balance text-xl font-semibold tracking-tight break-words text-foreground sm:text-2xl"
+          >
             {officialTitle}
           </h1>
           {descriptionToShow ? (
-            <p className="text-sm leading-relaxed text-muted-foreground">{descriptionToShow}</p>
+            <p id="sak-offisiell-beskrivelse" className="text-sm leading-relaxed text-muted-foreground">
+              {descriptionToShow}
+            </p>
           ) : null}
           {!isDedicatedResearchSak ? (
             <>
@@ -379,6 +396,18 @@ export default async function SakPage({
         </FadeIn>
       ) : null}
 
+      {!isDedicatedResearchSak ? (
+        <FadeIn delay={0.24} direction="up">
+          <SakPageSearchCorpus
+            sakId={sak.id}
+            title={officialTitle}
+            summary={descriptionToShow || publicSakSummaryLead(storedSummary) || null}
+            documents={documents}
+            innstillingstekst={innstillingstekst}
+          />
+        </FadeIn>
+      ) : null}
+
       <SakPageTabs
         initialTab={initialTab}
         documentCount={documents.length}
@@ -405,6 +434,10 @@ export default async function SakPage({
                   </SakMetaCard>
                 ) : null}
               </div>
+            ) : null}
+
+            {!isDedicatedResearchSak && documents.length > 0 ? (
+              <SakDocumentsShortlist sakId={sak.id} documents={documents} />
             ) : null}
 
             {innstillingstekst ? (
@@ -606,10 +639,23 @@ export default async function SakPage({
             </div>
           </SakOversiktShell>
         }
+        argumenter={
+          <SakTabSlot>
+            {!isDedicatedResearchSak ? (
+              <SakArgumentsSection sakId={sak.id} innstillingstekst={innstillingstekst} />
+            ) : (
+              <EmptyState
+                compact
+                title="Ingen argumenter for denne saken"
+                description="Argumenter hentes fra dokumentmerknader og folkets meninger når saken har Stortinget-kilder i appen."
+              />
+            )}
+          </SakTabSlot>
+        }
         dokumenter={
           <div className="space-y-6">
             {documents.length > 0 ? (
-              <SakDocumentsSection
+              <SakDocumentsPanel
                 sakId={sak.id}
                 initialDocuments={documents}
                 initialDocumentId={initialDocumentId}
@@ -665,7 +711,7 @@ export default async function SakPage({
                   rel="noopener noreferrer"
                   className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-brand transition-colors"
                 >
-                  <ExternalLink className="mr-1.5 w-4 h-4" />
+                  <ExternalLink className="mr-1.5 w-4 h-4" aria-hidden />
                   Kilde: stortinget.no (sak {sak.id})
                 </a>
                 <a
@@ -674,7 +720,7 @@ export default async function SakPage({
                   rel="noopener noreferrer"
                   className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-brand transition-colors"
                 >
-                  <ExternalLink className="mr-1.5 w-4 h-4" />
+                  <ExternalLink className="mr-1.5 w-4 h-4" aria-hidden />
                   Teknisk saksdata fra Stortinget
                 </a>
               </div>
@@ -682,18 +728,25 @@ export default async function SakPage({
           </div>
         }
         stortinget={
-          <div className="space-y-6">
-            <AlignmentScore
-              sakId={sak.id}
-              openPollId={openStortingetPoll?.id ?? null}
-              voteringer={voteringer}
-              initialFolk={initialPublicFolk}
-              sakVedtak={{
-                kortvedtak: kortvedtak ?? null,
-                vedtakstekst: vedtakstekst ?? null,
-              }}
-            />
-          </div>
+          <SakTabSlot>
+            {!isDedicatedResearchSak ? (
+              <SakFolketsViljeVsStortingetSection
+                sakId={sak.id}
+                voteringer={voteringer}
+                initialFolk={initialPublicFolk}
+                sakVedtak={{
+                  kortvedtak: kortvedtak ?? null,
+                  vedtakstekst: vedtakstekst ?? null,
+                }}
+              />
+            ) : (
+              <EmptyState
+                compact
+                title="Ingen Stortinget-sammenligning"
+                description="Denne saken er en research-sak uten Stortinget-voteringer i appen."
+              />
+            )}
+          </SakTabSlot>
         }
         diskusjon={
           <div className="space-y-6">

@@ -4,8 +4,8 @@ import { parseSakPageTabParam, sakPageTabHref, sakPageTabFromLocationHash } from
 assert.equal(parseSakPageTabParam(undefined), 'oversikt');
 assert.equal(parseSakPageTabParam('dokumenter'), 'dokumenter');
 assert.equal(parseSakPageTabParam('ugyldig'), 'oversikt');
-assert.equal(parseSakPageTabParam('argumenter'), 'oversikt');
-assert.equal(parseSakPageTabParam('argumenter', new Set()), 'argumenter');
+assert.equal(parseSakPageTabParam('argumenter'), 'argumenter');
+assert.equal(parseSakPageTabParam('argumenter', new Set(['argumenter'])), 'oversikt');
 assert.equal(parseSakPageTabParam(['konsekvens']), 'konsekvens');
 
 assert.equal(sakPageTabFromLocationHash('#dokumenter'), 'dokumenter');

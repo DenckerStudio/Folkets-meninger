@@ -32,7 +32,7 @@ function isSakPageTabId(value: string): value is SakPageTabId {
   return (SAK_PAGE_TAB_IDS as readonly string[]).includes(value);
 }
 
-export const SAK_PAGE_TABS_HIDDEN_UNTIL_CONTENT: readonly SakPageTabId[] = ['argumenter'];
+export const SAK_PAGE_TABS_HIDDEN_UNTIL_CONTENT: readonly SakPageTabId[] = [];
 
 /** Server-safe: read `?fane=` from search params. Hidden tabs fall back to oversikt. */
 export function parseSakPageTabParam(

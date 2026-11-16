@@ -1,8 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ExternalLink, FileText, Loader2 } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
+import {
+  SAK_DOCUMENT_FILTER_ALL,
+  filterAndSearchSakDocuments,
+  type SakDocumentFilterValue,
+} from '@/lib/sak/documents-filter';
+import { sakDocumentListAnchorId } from '@/lib/sak/anchors';
 import {
   groupSakDocumentsByKind,
   SAK_DOCUMENT_KIND_LABELS,
@@ -128,7 +134,7 @@ function SakDocumentViewer({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand/80"
           >
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className="h-4 w-4" aria-hidden />
             Åpne originalkilde
           </a>
         ) : null
@@ -152,7 +158,7 @@ function SakDocumentViewer({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 font-medium text-brand hover:text-brand/80"
               >
-                <ExternalLink className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4" aria-hidden />
                 Åpne på ekstern side
               </a>
             </div>
@@ -170,7 +176,7 @@ function SakDocumentViewer({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 font-medium text-brand hover:text-brand/80"
             >
-              <ExternalLink className="h-4 w-4" />
+              <ExternalLink className="h-4 w-4" aria-hidden />
               Åpne {content.title}
             </a>
           ) : (
@@ -189,7 +195,7 @@ function SakDocumentViewer({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 font-medium text-brand hover:text-brand/80"
             >
-              <ExternalLink className="h-4 w-4" />
+              <ExternalLink className="h-4 w-4" aria-hidden />
               Åpne originalkilde
             </a>
           ) : null}
@@ -212,20 +218,38 @@ function SakDocumentViewer({
 
 export function SakDocumentsSection({
   sakId,
-  initialDocuments,
+  seedDocuments,
   initialDocumentId,
+  filter = SAK_DOCUMENT_FILTER_ALL,
+  titleQuery = '',
+  onClearFilters,
 }: {
   sakId: string;
-  initialDocuments: DocumentWithStatus[];
+  seedDocuments: DocumentWithStatus[];
   /** Deep link (?dokument=<id>) from chat citations — opens the viewer on mount. */
   initialDocumentId?: string | null;
+  filter?: SakDocumentFilterValue;
+  titleQuery?: string;
+  onClearFilters?: () => void;
 }) {
-  const [documents, setDocuments] = useState(initialDocuments);
+  const [sourceDocuments, setSourceDocuments] = useState(seedDocuments);
   const [activeDocument, setActiveDocument] = useState<DocumentWithStatus | null>(() => {
     if (!initialDocumentId) return null;
-    return initialDocuments.find((doc) => doc.id === initialDocumentId) ?? null;
+    return seedDocuments.find((doc) => doc.id === initialDocumentId) ?? null;
   });
   const [pendingTimedOut, setPendingTimedOut] = useState(false);
+
+  useEffect(() => {
+    setSourceDocuments(seedDocuments);
+  }, [seedDocuments]);
+
+  const displayedDocuments = useMemo(
+    () => filterAndSearchSakDocuments(sourceDocuments, filter, titleQuery),
+    [filter, sourceDocuments, titleQuery],
+  );
+
+  const filterActive =
+    filter !== SAK_DOCUMENT_FILTER_ALL || titleQuery.trim().length > 0;
 
   const refreshStatuses = useCallback(async () => {
     const controller = new AbortController();
@@ -235,7 +259,7 @@ export function SakDocumentsSection({
       if (!res.ok) return;
       const json = (await res.json()) as { documents?: DocumentWithStatus[] };
       if (Array.isArray(json.documents)) {
-        setDocuments(json.documents);
+        setSourceDocuments(json.documents);
       }
     } catch {
       // Keep initial server-rendered list on failure or timeout.
@@ -244,7 +268,7 @@ export function SakDocumentsSection({
     }
   }, [sakId]);
 
-  const hasPending = documents.some((doc) => doc.ingestStatus === 'pending');
+  const hasPending = sourceDocuments.some((doc) => doc.ingestStatus === 'pending');
 
   useEffect(() => {
     // Stop polling once we give up, so the page does not keep hitting the API forever.
@@ -263,7 +287,7 @@ export function SakDocumentsSection({
     };
   }, [hasPending, pendingTimedOut, refreshStatuses]);
 
-  if (documents.length === 0) {
+  if (sourceDocuments.length === 0) {
     return (
       <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
         <div className="mb-4 flex items-center gap-2">
@@ -286,7 +310,7 @@ export function SakDocumentsSection({
     );
   }
 
-  const groups = groupSakDocumentsByKind(documents);
+  const groups = groupSakDocumentsByKind(displayedDocuments);
 
   return (
     <>
@@ -296,6 +320,23 @@ export function SakDocumentsSection({
           <h2 className="text-lg font-bold text-foreground">Tilknyttede dokumenter</h2>
         </div>
 
+        {filterActive && displayedDocuments.length === 0 ? (
+          <div className="mb-4 space-y-2" role="status">
+            <p className="text-sm text-muted-foreground">
+              Ingen dokumenter matcher søket eller filteret ditt.
+            </p>
+            {onClearFilters ? (
+              <button
+                type="button"
+                onClick={onClearFilters}
+                className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+              >
+                Nullstill søk og filter
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="space-y-5">
           {groups.map((group) => (
             <div key={group.kind}>
@@ -304,7 +345,11 @@ export function SakDocumentsSection({
               </h3>
               <ul className="space-y-2">
                 {group.documents.map((doc) => (
-                  <li key={doc.id}>
+                  <li
+                    key={doc.id}
+                    id={sakDocumentListAnchorId(doc.id)}
+                    data-sak-dokument-id={doc.id}
+                  >
                     <button
                       type="button"
                       onClick={() => setActiveDocument(doc)}
