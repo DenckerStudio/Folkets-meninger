@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from 'next/cache';
 import { logBloggCmsReadFailure } from '@/lib/blog/cms-read-log';
 import { CmsFetchError } from '@/lib/cms/cms-fetch-error';
 import { isNextProductionBuildPhase } from '@/lib/cms/next-build-phase';
@@ -18,6 +19,7 @@ export async function blogCmsOrUnavailable<T>(
   } catch (error) {
     if (error instanceof CmsFetchError) {
       logBloggCmsReadFailure('loader', error);
+      noStore();
       return { unavailable: true };
     }
     throw error;

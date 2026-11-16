@@ -5,8 +5,8 @@ import { mapPayloadPostToPublic } from '@/lib/cms/map-post';
 import type { PayloadPost } from '@/lib/cms/types';
 
 /**
- * Dokumenterer to kjente 500-veier på /blogg side 1 (kun denne ruten henter featured + kategorier parallelt).
- * Bevist lokalt; prod-rotårsak kan være én av disse eller kombinasjon ved kald ISR-cache.
+ * Dokumenterer mapping på /blogg side 1 (featured-parallell lesing).
+ * CMS-listefeil skal propagere til blogCmsOrUnavailable (se blogg-cms-list-unavailable.test.ts).
  */
 
 function legacyEstimateReadingMinutes(markdown: string): number {

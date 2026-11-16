@@ -108,7 +108,7 @@ export async function listPublishedBlogPostsPaginated(args: {
     };
   } catch (error) {
     logBloggCmsReadFailure('list', error);
-    return emptyPaginated(page);
+    throw error;
   }
 }
 
