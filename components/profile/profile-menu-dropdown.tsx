@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { LogOut, Shield, UserCircle } from "lucide-react";
 import { ProfileMenuAccountTrigger } from "@/components/profile/profile-menu-account-trigger";
@@ -9,7 +9,7 @@ import { ProfileMenuAvatarTrigger } from "@/components/profile/profile-menu-avat
 import { getProfileDisplayName } from "@/lib/profile/user-display";
 import { SmoothDropdown, type SmoothDropdownItem } from "@/components/ui/smooth-dropdown";
 import { Dialog } from "@/components/ui/dialog";
-import { PROFILE_TABS, type ProfileTabId } from "@/components/profile/profile-tabs";
+import { MIN_SIDE_NAV_ITEMS, isMinSidePath, resolveMinSideSectionId } from "@/lib/min-side/sections";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { isAdminActive } from "@/lib/site-nav-links";
 import { routes } from "@/lib/routes";
@@ -21,8 +21,6 @@ type ProfileMenuDropdownProps = {
   user?: User | null;
 };
 
-const DROPDOWN_TAB_IDS = PROFILE_TABS.map((tab) => tab.id);
-
 export function ProfileMenuDropdown({
   onSignOut,
   className,
@@ -31,30 +29,23 @@ export function ProfileMenuDropdown({
 }: ProfileMenuDropdownProps) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
-  const searchParams = useSearchParams();
   const isAdminUser = useIsAdmin();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
-  const activeTab = searchParams.get("tab");
-  const onMinSideOverview =
-    pathname === routes.minSide || pathname === `${routes.minSide}/`;
-  const onMinSideSubPage =
-    pathname.startsWith(routes.minSide) &&
-    Boolean(activeTab && DROPDOWN_TAB_IDS.includes(activeTab as ProfileTabId));
+  const onMinSide = isMinSidePath(pathname);
+  const activeSection = onMinSide ? resolveMinSideSectionId(pathname) : null;
 
   const activeItemId = useMemo(() => {
     if (isAdminActive(pathname)) return "admin";
-    if (onMinSideOverview) return "min-side";
-    if (onMinSideSubPage) return activeTab;
-    if (pathname.startsWith(routes.minSide)) return null;
+    if (activeSection) return activeSection;
     return null;
-  }, [activeTab, onMinSideOverview, onMinSideSubPage, pathname]);
+  }, [activeSection, pathname]);
 
   const items = useMemo((): SmoothDropdownItem[] => {
     const menuItems: SmoothDropdownItem[] = [];
 
-    if (!onMinSideSubPage) {
+    if (!onMinSide) {
       menuItems.push({
         id: "min-side",
         label: "Min side",
@@ -63,10 +54,10 @@ export function ProfileMenuDropdown({
     }
 
     menuItems.push(
-      ...PROFILE_TABS.map((tab) => ({
-        id: tab.id,
-        label: tab.label,
-        icon: tab.icon,
+      ...MIN_SIDE_NAV_ITEMS.filter((item) => item.id !== "oversikt").map((item) => ({
+        id: item.id,
+        label: item.label,
+        icon: item.icon,
       })),
     );
 
@@ -88,7 +79,7 @@ export function ProfileMenuDropdown({
     });
 
     return menuItems;
-  }, [isAdminUser, onMinSideSubPage]);
+  }, [isAdminUser, onMinSide]);
 
   const handleSelect = (id: string) => {
     if (id === "logout") {
@@ -106,8 +97,9 @@ export function ProfileMenuDropdown({
       return;
     }
 
-    if (DROPDOWN_TAB_IDS.includes(id as ProfileTabId)) {
-      router.push(`${routes.minSide}?tab=${id}`);
+    const section = MIN_SIDE_NAV_ITEMS.find((item) => item.id === id);
+    if (section) {
+      router.push(section.href);
     }
   };
 

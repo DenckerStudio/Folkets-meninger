@@ -33,11 +33,13 @@ type ProfileStemmePlusProps = {
   /** Same check as GET /api/stemme-plus/status (`isStripeCheckoutConfigured`). */
   checkoutConfigured: boolean;
   isAdmin: boolean;
+  showByok?: boolean;
 };
 
 export function ProfileStemmePlus({
   checkoutConfigured: serverCheckoutConfigured,
   isAdmin,
+  showByok = true,
 }: ProfileStemmePlusProps) {
   const { openChat } = useChatOverlay();
   const router = useRouter();
@@ -229,11 +231,13 @@ export function ProfileStemmePlus({
               Medlemskapet ditt er aktivt.
             </p>
           )}
-          <ByokSettings
-            encryptionReady={status.byok_encryption_ready}
-            initial={byokInitial}
-            isAdmin={isAdmin}
-          />
+          {showByok ? (
+            <ByokSettings
+              encryptionReady={status.byok_encryption_ready}
+              initial={byokInitial}
+              isAdmin={isAdmin}
+            />
+          ) : null}
         </div>
       ) : (
         <div className="mt-5 space-y-3">

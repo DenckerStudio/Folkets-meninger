@@ -28,7 +28,7 @@ const FREQUENCY_OPTIONS: Array<{ id: NotificationPreferencesV2['frequency']; lab
   { id: 'weekly', label: 'Ukentlig sammendrag', description: 'Én e-post per uke.' },
 ];
 
-const UPGRADE_HREF = `${routes.minSide}?tab=stemme-plus`;
+const UPGRADE_HREF = `${routes.minSide}/stemme-plus`;
 
 type Props = {
   open: boolean;

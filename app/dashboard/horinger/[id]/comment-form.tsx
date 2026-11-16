@@ -189,7 +189,7 @@ export default function HearingCommentForm({
         </button>
         {stemmePlus === 'inactive' ? (
           <Link
-            href={`${routes.minSide}?tab=stemme-plus`}
+            href={`${routes.minSide}/stemme-plus`}
             className="inline-flex min-h-11 w-full items-center rounded-lg px-3 text-sm text-muted-foreground hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-auto"
           >
             Utkast krever Stemme+ og egen modellnøkkel

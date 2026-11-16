@@ -50,7 +50,7 @@ export function ValgomatConsentPrompt({ onConsented, compact = false }: Valgomat
             Gi samtykke
           </button>
           <Link
-            href={`${routes.minSide}?tab=min-data`}
+            href={`${routes.minSide}/personvern`}
             className={cn(
               'inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 text-sm font-medium text-foreground',
               'hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
