@@ -68,6 +68,7 @@ export const routes = {
   adminOppgaver: `${DASHBOARD_PREFIX}/admin/oppgaver`,
   adminKilder: `${DASHBOARD_PREFIX}/admin/kilder`,
   adminEmbeddings: `${DASHBOARD_PREFIX}/admin/embeddings`,
+  adminSakPoll: (id: string) => `${DASHBOARD_PREFIX}/admin/sak/${encodeURIComponent(id)}`,
   innsikt: `${DASHBOARD_PREFIX}/innsikt`,
   forslag: `${DASHBOARD_PREFIX}/appens-fremtid`,
   chat: `${DASHBOARD_PREFIX}/chat`,

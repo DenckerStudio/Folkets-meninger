@@ -15,14 +15,9 @@ import { DashboardPage } from '@/components/dashboard/dashboard-page';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { routes } from '@/lib/routes';
 import { getServerSupabase } from '@/lib/supabase-server';
-import { isAdmin } from '@/lib/admin/gate';
 import { redactPublicFolkChoiceFields } from '@/lib/public-aggregate/folk-public-output';
 import { findOpenStortingetPollForIssue } from '@/lib/polls/service';
-import { listPollsForStortingetIssueAdmin } from '@/lib/polls/stortinget-poll-admin-data';
-import { resolveStortingetPollAdminUiState } from '@/lib/polls/stortinget-poll-admin-guard';
-import { getStortingetSakUrl } from '@/lib/stortinget-horinger';
 import { isResearchTopicDedicatedIssueId } from '@/lib/sak/research-topic-dedicated-issue';
-import { publicSakSummaryLead } from '@/lib/ai-summary/sak-summary-fetch';
 import { readAiSummaryFromDb } from '@/lib/ai-summary/service';
 import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
@@ -40,7 +35,9 @@ import { TopicAroundSakSection } from '@/components/search/topic-around-sak-sect
 import { SakMeningerSection } from '@/components/sak/sak-meninger-section';
 import { SakStortingetPollAggregateSection } from '@/components/sak/sak-stortinget-poll-aggregate-section';
 import { buildSakStortingetOversiktExtras } from '@/lib/sak/stortinget-public-status';
-import { StortingetPollAdminSection } from '@/components/sak/stortinget-poll-admin-section';
+import { SakOpenPollStickySlot } from '@/components/sak/sak-open-poll-sticky-slot';
+import { isSakKnowledgeQuizEnabled } from '@/lib/sak/flags';
+import { cn } from '@/lib/utils';
 import StanceSection from './stance-section';
 import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
@@ -251,12 +248,7 @@ export default async function SakPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const viewerIsAdmin = user ? await isAdmin(user.id, user.email) : false;
-  const stortingetPollAdminState = viewerIsAdmin
-    ? resolveStortingetPollAdminUiState(await listPollsForStortingetIssueAdmin(sak.id))
-    : { kind: 'create' as const };
-  const pollDefaultNeutralSummary =
-    (publicSakSummaryLead(storedSummary) ?? descriptionToShow.trim()) || '';
+  const showKnowledgeQuiz = isSakKnowledgeQuizEnabled();
 
   const treatmentStatus = sak.status;
 
@@ -276,7 +268,12 @@ export default async function SakPage({
 
   return (
     <UserAnnotationHost enabled={Boolean(user)} targetType="sak" targetId={sak.id}>
-    <DashboardPage className="mx-auto w-full min-w-0 max-w-4xl overflow-x-clip sm:space-y-10">
+    <DashboardPage
+      className={cn(
+        'mx-auto w-full min-w-0 max-w-4xl overflow-x-clip sm:space-y-10',
+        openStortingetPoll && 'pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))]',
+      )}
+    >
       <FadeIn delay={0.1}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <BackButton fallbackHref={routes.utforsk} />
@@ -338,7 +335,7 @@ export default async function SakPage({
         </div>
       </FadeIn>
 
-      {!isDedicatedResearchSak ? (
+      {!isDedicatedResearchSak && !openStortingetPoll ? (
         <FadeIn delay={0.25} direction="up">
           <SakStortingetPollAggregateSection sakId={sak.id} />
         </FadeIn>
@@ -529,20 +526,8 @@ export default async function SakPage({
               />
             ) : null}
 
-            {!isDedicatedResearchSak ? (
+            {!isDedicatedResearchSak && showKnowledgeQuiz ? (
               <KnowledgeQuiz sakId={sak.id} variant="pre-vote" />
-            ) : null}
-
-            {viewerIsAdmin ? (
-              <StortingetPollAdminSection
-                sakId={sak.id}
-                sakTitle={officialTitle}
-                defaultNeutralSummary={pollDefaultNeutralSummary}
-                stortingetPageUrl={
-                  isDedicatedResearchSak ? null : getStortingetSakUrl(sak.id)
-                }
-                adminState={stortingetPollAdminState}
-              />
             ) : null}
 
             <StanceSection
@@ -690,6 +675,9 @@ export default async function SakPage({
           </div>
         }
       />
+      {!isDedicatedResearchSak && openStortingetPoll ? (
+        <SakOpenPollStickySlot sakId={sak.id} openPoll={openStortingetPoll} />
+      ) : null}
     </DashboardPage>
     </UserAnnotationHost>
   );
