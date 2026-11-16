@@ -64,10 +64,10 @@ function LandingPopularIssuesEmpty() {
           Logg inn og stem
         </Link>
         <Link
-          href={`${routes.login}?next=${encodeURIComponent(routes.utforsk)}`}
+          href={routes.utforsk}
           className="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-[#00205b] transition-colors hover:text-[#ba0c2f]"
         >
-          Utforsk saker etter innlogging <ArrowRight className="ml-1 h-4 w-4" />
+          Utforsk saker <ArrowRight className="ml-1 h-4 w-4" />
         </Link>
       </div>
     </section>

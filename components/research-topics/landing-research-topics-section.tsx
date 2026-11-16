@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { unstable_noStore as noStore } from 'next/cache';
 import { LandingResearchTopics } from '@/components/research-topics/landing-research-topics';
 import { LandingSectionContainer } from '@/components/landing-section-container';
 import { fetchLandingResearchTopics } from '@/lib/landing/home-data';
@@ -30,6 +31,7 @@ export async function LandingResearchTopicsSection() {
   const { topics, failed } = await fetchLandingResearchTopics(3);
 
   if (failed) {
+    noStore();
     return <LandingResearchTopicsError />;
   }
 

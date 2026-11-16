@@ -23,8 +23,9 @@ function HeroLiveStats({ snapshot }: { snapshot: LandingOpenPollsSnapshot }) {
   if (snapshot.openCount <= 0) return null;
 
   return (
-    <div
-      className="mx-auto mt-8 flex w-full max-w-xl flex-col gap-2 rounded-2xl border border-[#ba0c2f]/25 bg-white/90 px-4 py-4 text-sm text-[#001433] shadow-sm backdrop-blur-md sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-x-6 sm:gap-y-1"
+    <Link
+      href={routes.avstemninger}
+      className="mx-auto mt-8 flex w-full max-w-xl min-h-11 flex-col gap-2 rounded-2xl border border-[#ba0c2f]/25 bg-white/90 px-4 py-4 text-sm text-[#001433] shadow-sm backdrop-blur-md transition-colors hover:border-[#00205b]/35 hover:bg-white sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-x-6 sm:gap-y-1"
       role="status"
     >
       <span className="inline-flex items-center justify-center gap-2 font-semibold text-[#00205b]">
@@ -41,7 +42,8 @@ function HeroLiveStats({ snapshot }: { snapshot: LandingOpenPollsSnapshot }) {
           {formatNumber(snapshot.publicVoteCount)} stemmer registrert (samlet, uten navn)
         </span>
       ) : null}
-    </div>
+      <span className="sr-only">Gå til åpne avstemninger</span>
+    </Link>
   );
 }
 

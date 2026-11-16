@@ -6,6 +6,7 @@ import { listPublicResearchTopics } from '@/lib/research-topics/public-service';
 import type { PublicResearchTopicListItem } from '@/lib/research-topics/public-map';
 import { getPopularSaker } from '@/lib/stortinget-saker-cache';
 import type { LandingIssue } from '@/components/landing-popular-issues';
+import { formatLandingPollDeadline } from '@/lib/landing/display-time';
 
 export type LandingOpenPollsSnapshot = {
   openCount: number;
@@ -14,18 +15,6 @@ export type LandingOpenPollsSnapshot = {
   /** Sum of votes on open polls — only set when total ≥ MIN_PUBLIC_AGGREGATE_N. */
   publicVoteCount: number | null;
 };
-
-export function formatLandingPollDeadline(closesAt: string, now = Date.now()): string | null {
-  const date = new Date(closesAt);
-  if (Number.isNaN(date.getTime())) return null;
-  if (date.getTime() <= now) return null;
-  return date.toLocaleString('nb-NO', {
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 export function computeLandingOpenPollsSnapshot(
   openPolls: PollRecord[],

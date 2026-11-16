@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, Vote } from 'lucide-react';
+import { unstable_noStore as noStore } from 'next/cache';
 import { LandingPopularIssues } from '@/components/landing-popular-issues';
 import { LandingSectionContainer } from '@/components/landing-section-container';
 import { fetchLandingPopularIssues } from '@/lib/landing/home-data';
@@ -24,12 +25,31 @@ function LandingPopularIssuesEmpty() {
             Logg inn og stem
           </Link>
           <Link
-            href={`${routes.login}?next=${encodeURIComponent(routes.utforsk)}`}
+            href={routes.utforsk}
             className="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-[#00205b] transition-colors hover:text-[#ba0c2f]"
           >
-            Utforsk saker etter innlogging <ArrowRight className="ml-1 h-4 w-4" />
+            Utforsk saker <ArrowRight className="ml-1 h-4 w-4" />
           </Link>
         </div>
+      </section>
+    </LandingSectionContainer>
+  );
+}
+
+function LandingPopularIssuesUnavailable() {
+  return (
+    <LandingSectionContainer>
+      <section
+        className="rounded-3xl border border-dashed border-[#00205b]/20 bg-white px-6 py-10 text-center sm:px-10"
+        role="status"
+      >
+        <p className="text-sm text-[#001433]/65">Populære saker er midlertidig utilgjengelig. Prøv igjen senere.</p>
+        <Link
+          href={routes.utforsk}
+          className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-[#00205b] hover:text-[#ba0c2f]"
+        >
+          Gå til Utforsk <ArrowRight className="ml-1 h-4 w-4" aria-hidden />
+        </Link>
       </section>
     </LandingSectionContainer>
   );
@@ -38,7 +58,12 @@ function LandingPopularIssuesEmpty() {
 export async function LandingPopularIssuesSection() {
   const { issues, failed } = await fetchLandingPopularIssues(6);
 
-  if (failed || !issues.length) {
+  if (failed) {
+    noStore();
+    return <LandingPopularIssuesUnavailable />;
+  }
+
+  if (!issues.length) {
     return <LandingPopularIssuesEmpty />;
   }
 
