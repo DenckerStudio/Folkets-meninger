@@ -16,7 +16,10 @@ assert.match(pageSrc, /isSakKnowledgeQuizEnabled/, 'kunnskapstest bak flagg');
 assert.doesNotMatch(pageSrc, /NEXT_PUBLIC_SAK_KNOWLEDGE_QUIZ/, 'ikke hardkodet env i page');
 
 assert.match(stickySrc, /PollBallot/, 'gjenbruker poll-ballot');
+assert.match(stickySrc, /NonRepresentativeNotice/, 'stikkprøve-merknad');
+assert.match(stickySrc, /Hva mener du om saken/, 'standard spørsmål');
 assert.match(stickySrc, /compact/, 'kompakt ballot i linjen');
+assert.match(slotSrc, /totalsLoadError/, 'tallfeil gir likevel linje');
 assert.match(stickySrc, /safe-area-inset-bottom/, 'safe area på mobil');
 assert.match(stickySrc, /fixed inset-x-0 bottom-0/, 'sticky nederst');
 assert.match(stickySrc, /focus-visible|PollBallot/, 'fokus via ballot');

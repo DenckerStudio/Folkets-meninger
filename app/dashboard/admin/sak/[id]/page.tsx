@@ -49,6 +49,10 @@ export default async function AdminSakPollPage({ params }: PageProps) {
             Admin
           </Link>
           <span aria-hidden> / </span>
+          <Link href={routes.adminSak} className="text-brand hover:underline">
+            Sak-avstemninger
+          </Link>
+          <span aria-hidden> / </span>
           <Link href={routes.sak(sak.id)} className="text-brand hover:underline">
             Sak {sak.id}
           </Link>

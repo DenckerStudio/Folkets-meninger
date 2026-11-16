@@ -271,7 +271,7 @@ export default async function SakPage({
     <DashboardPage
       className={cn(
         'mx-auto w-full min-w-0 max-w-4xl overflow-x-clip sm:space-y-10',
-        openStortingetPoll && 'pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))]',
+        openStortingetPoll && 'pb-[calc(9.5rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))]',
       )}
     >
       <FadeIn delay={0.1}>

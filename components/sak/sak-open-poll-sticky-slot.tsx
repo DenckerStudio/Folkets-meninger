@@ -12,10 +12,11 @@ type SakOpenPollStickySlotProps = {
 /** Server-del: henter stemmer og viser fast stemmelinje for åpen avstemning. */
 export async function SakOpenPollStickySlot({ sakId, openPoll }: SakOpenPollStickySlotProps) {
   let totals = { ja: 0, nei: 0, blank: 0, total: 0 };
+  let totalsLoadError = false;
   try {
     totals = await getPollTotals(openPoll.id);
   } catch {
-    return null;
+    totalsLoadError = true;
   }
 
   const supabase = await getServerSupabase();
@@ -32,8 +33,10 @@ export async function SakOpenPollStickySlot({ sakId, openPoll }: SakOpenPollStic
     <SakStickyPollLine
       pollId={openPoll.id}
       sakId={sakId}
+      pollTitle={openPoll.title}
       initialTotals={viewerTotals}
       initialVote={voteState.vote}
+      totalsLoadError={totalsLoadError}
     />
   );
 }
