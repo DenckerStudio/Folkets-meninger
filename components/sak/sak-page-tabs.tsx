@@ -1,82 +1,140 @@
 'use client';
 
-import { useCallback, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, type KeyboardEvent, type ReactNode } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { AnimatedTabs } from '@/components/ui/animated-tabs';
 import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
-
-export const SAK_PAGE_TAB_IDS = [
-  'oversikt',
-  'dokumenter',
-  'for-deg',
-] as const;
-
-export type SakPageTabId = (typeof SAK_PAGE_TAB_IDS)[number];
-
-const TAB_LABELS: Record<SakPageTabId, string> = {
-  oversikt: 'Oversikt',
-  dokumenter: 'Dokumenter',
-  'for-deg': 'For deg',
-};
-
-const TAB_CHANGE_EVENT = 'sak-tab-change';
+import {
+  SAK_PAGE_TAB_IDS,
+  SAK_PAGE_TAB_LABELS,
+  sakPageTabFromLocationHash,
+  type SakPageTabId,
+} from '@/lib/sak/sak-page-tabs';
 
 function isSakPageTabId(value: string): value is SakPageTabId {
   return (SAK_PAGE_TAB_IDS as readonly string[]).includes(value);
 }
 
-function tabFromHash(): SakPageTabId {
-  if (typeof window === 'undefined') return 'oversikt';
-  const hash = window.location.hash.replace(/^#/, '');
-  return isSakPageTabId(hash) ? hash : 'oversikt';
+function readTabFromQuery(searchParams: URLSearchParams): SakPageTabId | null {
+  const raw = searchParams.get('fane')?.trim().toLowerCase();
+  if (raw && isSakPageTabId(raw)) return raw;
+  return null;
 }
 
-function dispatchTabChange() {
-  window.dispatchEvent(new Event(TAB_CHANGE_EVENT));
-}
-
-export function navigateToSakTab(id: SakPageTabId) {
-  const nextHash = `#${id}`;
-  if (window.location.hash !== nextHash) {
-    window.history.replaceState(null, '', nextHash);
+function replaceTabInUrl(pathname: string, searchParams: URLSearchParams, tabId: SakPageTabId): string {
+  const params = new URLSearchParams(searchParams.toString());
+  if (tabId === 'oversikt') {
+    params.delete('fane');
+  } else {
+    params.set('fane', tabId);
   }
-  dispatchTabChange();
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
 }
 
-function subscribeToTab(onChange: () => void) {
-  window.addEventListener('hashchange', onChange);
-  window.addEventListener(TAB_CHANGE_EVENT, onChange);
-  return () => {
-    window.removeEventListener('hashchange', onChange);
-    window.removeEventListener(TAB_CHANGE_EVENT, onChange);
-  };
+export function navigateToSakTab(tabId: SakPageTabId) {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (tabId === 'oversikt') url.searchParams.delete('fane');
+  else url.searchParams.set('fane', tabId);
+  window.history.replaceState(null, '', `${url.pathname}${url.search}`);
+  window.dispatchEvent(new Event('sak-tab-change'));
 }
-
-const TABS = SAK_PAGE_TAB_IDS.map((id) => ({ id, label: TAB_LABELS[id] })) as readonly {
-  id: SakPageTabId;
-  label: string;
-}[];
 
 export function SakPageTabs({
+  initialTab,
+  documentCount,
   oversikt,
+  argumenter,
   dokumenter,
-  forDeg,
+  stortinget,
+  diskusjon,
+  konsekvens,
 }: {
+  initialTab: SakPageTabId;
+  documentCount?: number;
   oversikt: ReactNode;
+  argumenter: ReactNode;
   dokumenter: ReactNode;
-  forDeg: ReactNode;
+  stortinget: ReactNode;
+  diskusjon: ReactNode;
+  konsekvens: ReactNode;
 }) {
-  const active = useSyncExternalStore(subscribeToTab, tabFromHash, () => 'oversikt');
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const reducedMotion = usePrefersReducedMotion();
 
-  const selectTab = useCallback((id: string) => {
-    if (isSakPageTabId(id)) navigateToSakTab(id);
-  }, []);
+  const active = readTabFromQuery(searchParams) ?? initialTab;
+
+  useEffect(() => {
+    if (readTabFromQuery(searchParams)) return;
+    const legacy = sakPageTabFromLocationHash(window.location.hash);
+    if (legacy) {
+      router.replace(replaceTabInUrl(pathname, searchParams, legacy), { scroll: false });
+    }
+  }, [searchParams, pathname, router]);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      if (readTabFromQuery(searchParams)) return;
+      const legacy = sakPageTabFromLocationHash(window.location.hash);
+      if (legacy) {
+        router.replace(replaceTabInUrl(pathname, searchParams, legacy), { scroll: false });
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, [pathname, router, searchParams]);
+
+  const tabs = useMemo(
+    () =>
+      SAK_PAGE_TAB_IDS.map((id) => ({
+        id,
+        label:
+          id === 'dokumenter' && documentCount != null && documentCount > 0
+            ? `${SAK_PAGE_TAB_LABELS[id]} (${documentCount})`
+            : SAK_PAGE_TAB_LABELS[id],
+      })),
+    [documentCount],
+  );
+
+  const selectTab = useCallback(
+    (id: string) => {
+      if (!isSakPageTabId(id)) return;
+      const href = replaceTabInUrl(pathname, searchParams, id);
+      router.replace(href, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const onTabKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLElement>) => {
+      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft' && event.key !== 'Home' && event.key !== 'End') {
+        return;
+      }
+      event.preventDefault();
+      const index = SAK_PAGE_TAB_IDS.indexOf(active);
+      let next = index;
+      if (event.key === 'ArrowRight') next = (index + 1) % SAK_PAGE_TAB_IDS.length;
+      if (event.key === 'ArrowLeft') next = (index - 1 + SAK_PAGE_TAB_IDS.length) % SAK_PAGE_TAB_IDS.length;
+      if (event.key === 'Home') next = 0;
+      if (event.key === 'End') next = SAK_PAGE_TAB_IDS.length - 1;
+      selectTab(SAK_PAGE_TAB_IDS[next]);
+      const button = document.getElementById(`sak-tab-${SAK_PAGE_TAB_IDS[next]}`);
+      button?.focus();
+    },
+    [active, selectTab],
+  );
 
   const panels: Record<SakPageTabId, ReactNode> = {
     oversikt,
+    argumenter,
     dokumenter,
-    'for-deg': forDeg,
+    stortinget,
+    diskusjon,
+    konsekvens,
   };
 
   return (
@@ -84,13 +142,15 @@ export function SakPageTabs({
       <nav
         className="sticky top-[calc(4rem+env(safe-area-inset-top,0px))] z-30 -mx-4 overflow-x-auto border-b border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:mx-0 sm:px-0"
         aria-label="Saksseksjoner"
+        onKeyDown={onTabKeyDown}
       >
         <AnimatedTabs
-          tabs={TABS}
+          tabs={tabs}
           activeId={active}
           onSelect={selectTab}
           layoutId="sak-page-tabs"
           idPrefix="sak-tab"
+          ariaLabel="Sakfaner"
           className="w-max min-w-full sm:w-auto sm:min-w-0"
           tabClassName="shrink-0 text-xs sm:text-sm"
         />
@@ -101,10 +161,11 @@ export function SakPageTabs({
           active === id ? (
             <motion.section
               key={id}
-              id={id}
+              id={`sak-fane-${id}`}
               role="tabpanel"
               aria-labelledby={`sak-tab-${id}`}
-              className="space-y-6"
+              tabIndex={0}
+              className="space-y-6 focus:outline-none"
               initial={reducedMotion ? false : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={reducedMotion ? undefined : { opacity: 0, y: -6 }}

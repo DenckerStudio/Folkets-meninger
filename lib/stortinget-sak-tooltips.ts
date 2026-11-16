@@ -38,7 +38,7 @@ export const SAK_STEP_TOOLTIPS: Record<string, string> = {
   'Første behandling': 'Stortinget tar saken opp til diskusjon for første gang.',
   'Andre behandling': 'Stortinget behandler saken på nytt, ofte med endringer fra komiteen.',
   'Tredje behandling': 'Siste runde i lovprosessen før endelig votering.',
-  Vedtak: 'Stortinget fatte et endelig vedtak i saken.',
+  Vedtak: 'Stortinget fatter et endelig vedtak i saken.',
 };
 
 export const SAK_META_TOOLTIPS = {
