@@ -156,8 +156,8 @@ export async function createStemmePlusCheckoutSession(args: {
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     line_items: [{ price: config.priceId, quantity: 1 }],
-    success_url: `${baseUrl}/dashboard/min-side?tab=stemme-plus&checkout=success`,
-    cancel_url: `${baseUrl}/dashboard/min-side?tab=stemme-plus&checkout=cancel`,
+    success_url: `${baseUrl}/dashboard/min-side/stemme-plus?checkout=success`,
+    cancel_url: `${baseUrl}/dashboard/min-side/stemme-plus?checkout=cancel`,
     client_reference_id: args.userId,
     customer_email: args.email || undefined,
     metadata: { user_id: args.userId },
@@ -187,7 +187,7 @@ export async function createBillingPortalSession(args: {
   const stripe = new Stripe(config.secretKey);
   const session = await stripe.billingPortal.sessions.create({
     customer: args.customerId,
-    return_url: `${baseUrl}/dashboard/min-side?tab=stemme-plus`,
+    return_url: `${baseUrl}/dashboard/min-side/stemme-plus`,
   });
   return { url: session.url };
 }

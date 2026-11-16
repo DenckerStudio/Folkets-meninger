@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { usePathname, useRouter } from 'next/navigation';
 import { isDashboardPath, isPublicProfilePath, routes } from '@/lib/routes';
 import { loginWithNext } from '@/lib/safe-redirect';
-import { desktopPrimaryNavLinks } from '@/lib/site-nav-links';
+import { headerPrimaryNavLinks, loggedInHeaderNavLink } from '@/lib/site-nav-links';
 import { touchTargetIconButtonClass, touchTargetLinkClass } from '@/lib/touch-target';
 import { DashboardNavMenuButton } from '@/components/dashboard/dashboard-nav-context';
 import { ProfileMenuDropdown } from '@/components/profile/profile-menu-dropdown';
@@ -53,26 +53,41 @@ export function Header() {
           >
             <FolketsMeningerLogo />
           </Link>
-          {!inDashboard ? (
+          {!inDashboard || isLoggedIn ? (
             <nav className="ml-2 hidden items-center gap-1 md:flex" aria-label="Hovedmeny">
-              {desktopPrimaryNavLinks.map((link) => {
-                const active = link.isActive(pathname ?? '');
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={cn(
-                      touchTargetLinkClass,
-                      'rounded-lg px-3 text-sm font-medium transition-colors',
-                      active
-                        ? 'bg-brand/10 text-brand'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
+              {!inDashboard
+                ? headerPrimaryNavLinks(isLoggedIn).map((link) => {
+                    const active = link.isActive(pathname ?? '');
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className={cn(
+                          touchTargetLinkClass,
+                          'rounded-lg px-3 text-sm font-medium transition-colors',
+                          active
+                            ? 'bg-brand/10 text-brand'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                        )}
+                      >
+                        {link.label}
+                      </Link>
+                    );
+                  })
+                : (
+                    <Link
+                      href={loggedInHeaderNavLink.href}
+                      className={cn(
+                        touchTargetLinkClass,
+                        'rounded-lg px-3 text-sm font-medium transition-colors',
+                        loggedInHeaderNavLink.isActive(pathname ?? '')
+                          ? 'bg-brand/10 text-brand'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      )}
+                    >
+                      {loggedInHeaderNavLink.label}
+                    </Link>
+                  )}
             </nav>
           ) : null}
         </div>

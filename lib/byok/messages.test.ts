@@ -21,7 +21,7 @@ const byokSettingsSrc = readFileSync(
   join(process.cwd(), 'components/profile/byok-settings.tsx'),
   'utf8',
 );
-const minSideSrc = readFileSync(join(process.cwd(), 'app/dashboard/min-side/page.tsx'), 'utf8');
+const minSideSrc = readFileSync(join(process.cwd(), 'app/dashboard/min-side/nokler/page.tsx'), 'utf8');
 const stemmePlusSrc = readFileSync(
   join(process.cwd(), 'components/profile/profile-stemme-plus.tsx'),
   'utf8',
