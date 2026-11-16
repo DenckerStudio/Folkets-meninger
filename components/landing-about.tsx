@@ -9,7 +9,6 @@ import { LandingHeadingRule } from '@/components/icons/civic';
 import { BentoFeatureGrid } from '@/components/ui/bento-feature-grid';
 import { LandingFaqAccordion } from '@/components/ui/landing-faq-accordion';
 import { LandingFactStats } from '@/components/ui/landing-fact-stats';
-import { LandingProcessTimeline } from '@/components/ui/landing-process-timeline';
 import { SoftBlurIn } from '@/components/ui/soft-blur-in';
 import { TextReveal } from '@/components/ui/text-reveal';
 import {
@@ -19,14 +18,13 @@ import {
   OM_INTRO,
   OM_LINKS,
   OM_PRIVACY_SNIPPET,
-  OM_PROCESS_STEPS,
   OM_STAT_FACTS,
   OM_STEMME_PLUS_FEATURES,
   OM_WHY_POINTS,
   STORTINGET_DATA_API,
 } from '@/lib/landing/om-content';
 import { STEMME_PLUS_MONTHLY_PRICE_NOK, STEMME_PLUS_NON_INFLUENCE_NOTE } from '@/lib/stemme-plus/constants';
-import { PLATFORM_AI_PIPELINES } from '@/lib/trust/ai-transparency';
+import { platformSummaryModelsSentence } from '@/lib/trust/ai-transparency';
 import { cn } from '@/lib/utils';
 
 function SectionBlock({
@@ -64,10 +62,7 @@ export function LandingAbout() {
     className: i === 0 ? 'sm:col-span-2' : undefined,
   }));
 
-  const summaryModels = PLATFORM_AI_PIPELINES
-    .filter((row) => row.feature.includes('Saksammendrag'))
-    .map((row) => row.model)
-    .join(' · ');
+  const aiModelsSentence = platformSummaryModelsSentence();
 
   return (
     <LandingSectionContainer>
@@ -107,12 +102,6 @@ export function LandingAbout() {
         <div className="mx-auto mt-14 max-w-5xl">
           <BentoFeatureGrid tiles={whyTiles} />
         </div>
-
-        <SectionBlock eyebrow="Slik fungerer det" title="Fra sak til din stemme">
-          <div className="mx-auto max-w-2xl">
-            <LandingProcessTimeline steps={OM_PROCESS_STEPS} />
-          </div>
-        </SectionBlock>
 
         <SectionBlock eyebrow="Tall vi står for" title="Åpne terskler, ikke påstander">
           <LandingFactStats items={OM_STAT_FACTS} />
@@ -154,10 +143,7 @@ export function LandingAbout() {
           <div className="flex gap-4 rounded-2xl border border-[#00205b]/10 bg-white p-6 shadow-sm">
             <Cpu className="mt-0.5 h-6 w-6 shrink-0 text-[#00205b]" aria-hidden />
             <div className="space-y-3 text-sm leading-relaxed text-[#001433]/75">
-              <p>
-                Saksammendrag lages av språkmodeller som kjører på våre egne servere, ikke i nettleseren din.
-                Modellfamiliene vi bruker er blant annet {summaryModels || 'se dokumentasjon'}.
-              </p>
+              <p>{aiModelsSentence}</p>
               <p>
                 Sammendrag merkes «AI-generert» med lenker til Stortinget-dokumenter. Konsekvens-kalkulatoren
                 bygger på dokumentutdrag og lagret sammendrag uten å kalle en språkmodell.

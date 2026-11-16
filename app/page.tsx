@@ -5,8 +5,8 @@ import { LandingAbout } from '@/components/landing-about';
 import { LandingExperience } from '@/components/landing-experience';
 import { LandingHowItWorks } from '@/components/landing-how-it-works';
 import { LandingHvaErAnnerledes } from '@/components/landing-hva-er-annerledes';
-import { LandingPopularIssuesLazy } from '@/components/landing-popular-issues-lazy';
-import { LandingResearchTopicsLazy } from '@/components/research-topics/landing-research-topics-lazy';
+import { LandingPopularIssuesSection } from '@/components/landing-popular-issues-section';
+import { LandingResearchTopicsSection } from '@/components/research-topics/landing-research-topics-section';
 import { LandingSectionContainer } from '@/components/landing-section-container';
 import CallToAction from '@/components/ui/call-to-action';
 import { routes } from '@/lib/routes';
@@ -16,6 +16,9 @@ import { homepageMetadata } from '@/lib/seo/metadata';
 
 export const metadata = homepageMetadata();
 
+/** Forsiden: levende data med kort ISR — align med populære saker / temaer. */
+export const revalidate = 300;
+
 export default function LandingPage() {
   return (
     <LandingExperience>
@@ -24,7 +27,9 @@ export default function LandingPage() {
         <Suspense fallback={null}>
           <LandingExpiredLinkNotice />
         </Suspense>
-        <HeroSection />
+        <Suspense fallback={null}>
+          <HeroSection />
+        </Suspense>
         <div data-landing-section>
           <LandingHowItWorks />
         </div>
@@ -39,22 +44,26 @@ export default function LandingPage() {
           </div>
 
           <div data-landing-section>
-            <LandingResearchTopicsLazy />
+            <Suspense fallback={null}>
+              <LandingResearchTopicsSection />
+            </Suspense>
           </div>
 
           <div data-landing-section>
-            <LandingPopularIssuesLazy />
+            <Suspense fallback={null}>
+              <LandingPopularIssuesSection />
+            </Suspense>
           </div>
 
           <div data-landing-section>
             <LandingSectionContainer>
               <CallToAction
-                title="Klar til å delta?"
-                subtitle="Opprett konto gratis. Én person, én stemme."
-                primaryButtonText="Kom i gang"
+                title="Vil du at stemmen din skal telle?"
+                subtitle="Opprett gratis konto på ett minutt. Én person, én stemme — tallene vises bare samlet."
+                primaryButtonText="Opprett konto"
                 primaryButtonLink={routes.login}
-                secondaryButtonText="Gi innspill"
-                secondaryButtonLink={routes.innspill}
+                secondaryButtonText="Les om hvordan det fungerer"
+                secondaryButtonLink={routes.omOss}
               />
             </LandingSectionContainer>
           </div>

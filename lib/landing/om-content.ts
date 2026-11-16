@@ -25,7 +25,7 @@ export const OM_WHY_POINTS = [
   {
     title: 'Si din mening',
     body:
-      `Innloggede brukere kan stemme For, Mot eller Avstår på saker, delta i ${pollBallotAltTextPhrase()}-avstemninger og skrive strukturerte meninger i Folkets meninger.`,
+      `Innloggede brukere kan markere holdning på saker, stemme Ja, Nei eller Blank i avstemninger og skrive strukturerte meninger i Folkets meninger.`,
   },
   {
     title: 'Sammenlign med vedtak',

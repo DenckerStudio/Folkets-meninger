@@ -48,3 +48,22 @@ export const PLATFORM_AI_PIPELINES: AiPipelineRow[] = [
 ];
 
 export const AI_SUMMARY_LABEL = 'AI-generert sammendrag';
+
+/** Landing / om-side: full setning uten modell-ID-er eller leverandørnavn. */
+export function platformSummaryModelsSentence(): string {
+  const onPremise = PLATFORM_AI_PIPELINES.filter(
+    (row) =>
+      row.where.includes('Norge') &&
+      !row.model.startsWith('Brukerens') &&
+      !row.model.includes('Ingen språkmodell'),
+  );
+  const labels = [...new Set(onPremise.map((row) => row.model))];
+  if (labels.length === 0) {
+    return 'Saksammendrag og dokumentsøk behandles på egne servere i Norge — ikke i nettleseren din.';
+  }
+  const modelList =
+    labels.length === 1
+      ? labels[0]!
+      : `${labels.slice(0, -1).join(', ')} og ${labels[labels.length - 1]}`;
+  return `Til saksammendrag og dokumentsøk bruker vi ${modelList}, kjørende på egne servere i Norge. Teksten du leser behandles der — ikke lokalt i nettleseren.`;
+}
