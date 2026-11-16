@@ -1,4 +1,6 @@
+import { sakPageTabPanelId } from '@/lib/sak/anchors';
 import type { SakPageTabId } from '@/lib/sak/sak-page-tabs';
+import { navigateToSakTab } from '@/lib/sak/sak-tab-navigate';
 
 export type WaitForElementOptions = {
   timeoutMs?: number;
@@ -83,6 +85,15 @@ export async function focusSakSearchAnchor(anchorId: string): Promise<boolean> {
   if (!el) return false;
   flashSakSearchTarget(el);
   return true;
+}
+
+export async function focusSakSearchHit(
+  tab: SakPageTabId,
+  anchorId: string,
+): Promise<boolean> {
+  navigateToSakTab(tab);
+  await waitForElementById(sakPageTabPanelId(tab), { timeoutMs: 5_000, pollMs: 40 });
+  return focusSakSearchAnchor(anchorId);
 }
 
 export type NavigateToSakTab = (tab: SakPageTabId) => void;

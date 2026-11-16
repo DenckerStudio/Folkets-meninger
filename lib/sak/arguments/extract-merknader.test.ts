@@ -23,6 +23,7 @@ const items = extractMerknadArguments('200192', [
 assert.equal(items.length, 2);
 assert.ok(items.some((row) => row.side === 'for' && row.text.includes('Ap:')));
 assert.ok(items.some((row) => row.side === 'mot'));
+assert.match(items[0].source.href ?? '', /fane=dokumenter/);
 assert.match(items[0].source.href ?? '', /dokument=inns-1/);
 
 console.log('lib/sak/arguments/extract-merknader.test.ts: ok');

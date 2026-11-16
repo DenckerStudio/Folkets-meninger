@@ -13,6 +13,7 @@ import {
   visibleSakPageTabIds,
   type SakPageTabId,
 } from '@/lib/sak/sak-page-tabs';
+import { SAK_TAB_NAVIGATE_EVENT, type SakTabNavigateDetail } from '@/lib/sak/sak-tab-navigate';
 
 function isSakPageTabId(value: string): value is SakPageTabId {
   return (SAK_PAGE_TAB_IDS as readonly string[]).includes(value);
@@ -35,14 +36,7 @@ function replaceTabInUrl(pathname: string, searchParams: URLSearchParams, tabId:
   return query ? `${pathname}?${query}` : pathname;
 }
 
-export function navigateToSakTab(tabId: SakPageTabId) {
-  if (typeof window === 'undefined') return;
-  const url = new URL(window.location.href);
-  if (tabId === 'oversikt') url.searchParams.delete('fane');
-  else url.searchParams.set('fane', tabId);
-  window.history.replaceState(null, '', `${url.pathname}${url.search}`);
-  window.dispatchEvent(new Event('sak-tab-change'));
-}
+export { navigateToSakTab } from '@/lib/sak/sak-tab-navigate';
 
 const DEFAULT_HIDDEN = new Set<SakPageTabId>(SAK_PAGE_TABS_HIDDEN_UNTIL_CONTENT);
 
@@ -90,6 +84,16 @@ export function SakPageTabs({
       router.replace(replaceTabInUrl(pathname, searchParams, legacy), { scroll: false });
     }
   }, [searchParams, pathname, router, hiddenTabIds]);
+
+  useEffect(() => {
+    const onSakTabNavigate = (event: Event) => {
+      const tabId = (event as CustomEvent<SakTabNavigateDetail>).detail?.tabId;
+      if (!tabId || !isSakPageTabId(tabId) || hiddenTabIds.has(tabId)) return;
+      router.replace(replaceTabInUrl(pathname, searchParams, tabId), { scroll: false });
+    };
+    window.addEventListener(SAK_TAB_NAVIGATE_EVENT, onSakTabNavigate);
+    return () => window.removeEventListener(SAK_TAB_NAVIGATE_EVENT, onSakTabNavigate);
+  }, [hiddenTabIds, pathname, router, searchParams]);
 
   useEffect(() => {
     const onHashChange = () => {

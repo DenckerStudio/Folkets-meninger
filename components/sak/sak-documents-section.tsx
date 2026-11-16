@@ -222,6 +222,7 @@ export function SakDocumentsSection({
   initialDocumentId,
   filter = SAK_DOCUMENT_FILTER_ALL,
   titleQuery = '',
+  onClearFilters,
 }: {
   sakId: string;
   seedDocuments: DocumentWithStatus[];
@@ -229,6 +230,7 @@ export function SakDocumentsSection({
   initialDocumentId?: string | null;
   filter?: SakDocumentFilterValue;
   titleQuery?: string;
+  onClearFilters?: () => void;
 }) {
   const [sourceDocuments, setSourceDocuments] = useState(seedDocuments);
   const [activeDocument, setActiveDocument] = useState<DocumentWithStatus | null>(() => {
@@ -319,9 +321,20 @@ export function SakDocumentsSection({
         </div>
 
         {filterActive && displayedDocuments.length === 0 ? (
-          <p className="mb-4 text-sm text-muted-foreground" role="status">
-            Ingen dokumenter matcher søket eller filteret ditt.
-          </p>
+          <div className="mb-4 space-y-2" role="status">
+            <p className="text-sm text-muted-foreground">
+              Ingen dokumenter matcher søket eller filteret ditt.
+            </p>
+            {onClearFilters ? (
+              <button
+                type="button"
+                onClick={onClearFilters}
+                className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+              >
+                Nullstill søk og filter
+              </button>
+            ) : null}
+          </div>
         ) : null}
 
         <div className="space-y-5">

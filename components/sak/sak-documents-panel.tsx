@@ -19,6 +19,11 @@ export function SakDocumentsPanel({
   const [query, setQuery] = useState('');
 
   const filteredCount = filterAndSearchSakDocuments(initialDocuments, filter, query).length;
+  const filterActive = filter !== SAK_DOCUMENT_FILTER_ALL || query.trim().length > 0;
+  const clearFilters = () => {
+    setFilter(SAK_DOCUMENT_FILTER_ALL);
+    setQuery('');
+  };
 
   return (
     <div className="space-y-4" data-sak-dokumenter-panel="">
@@ -35,6 +40,7 @@ export function SakDocumentsPanel({
         initialDocumentId={initialDocumentId}
         filter={filter}
         titleQuery={query}
+        onClearFilters={filterActive ? clearFilters : undefined}
       />
     </div>
   );

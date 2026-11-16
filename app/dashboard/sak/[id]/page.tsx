@@ -198,7 +198,14 @@ export default async function SakPage({
   const dokumentParam = resolvedSearch?.dokument;
   const initialDocumentId =
     typeof dokumentParam === 'string' ? dokumentParam.trim() : undefined;
-  const initialTab = parseSakPageTabParam(resolvedSearch?.fane);
+  const faneParam = resolvedSearch?.fane;
+  const hasExplicitFane =
+    (typeof faneParam === 'string' && faneParam.trim().length > 0) ||
+    (Array.isArray(faneParam) && faneParam.some((value) => typeof value === 'string' && value.trim().length > 0));
+  const initialTab =
+    initialDocumentId && !hasExplicitFane
+      ? 'dokumenter'
+      : parseSakPageTabParam(resolvedSearch?.fane);
   const bundle = await getSakPageBundle(resolvedParams.id);
 
   if (!bundle) {

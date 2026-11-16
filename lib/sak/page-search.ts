@@ -1,7 +1,14 @@
 import type { OpinionListItem } from '@/lib/opinions/types';
 import type { SakDocumentRef } from '@/lib/stortinget-documents';
 import type { SakPageTabId } from '@/lib/sak/sak-page-tabs';
-import { sakDocumentListAnchorId, sakOpinionAnchorId } from '@/lib/sak/anchors';
+import {
+  SAK_ARGUMENTER_SECTION_ANCHOR_ID,
+  SAK_OVERSIKT_INNSTILLING_ANCHOR_ID,
+  SAK_OFFISIELL_BESKRIVELSE_ANCHOR_ID,
+  SAK_TITTEL_ANCHOR_ID,
+  sakDocumentListAnchorId,
+  sakOpinionAnchorId,
+} from '@/lib/sak/anchors';
 
 export type SakSearchTargetKind = 'tittel' | 'sammendrag' | 'dokument' | 'mening' | 'innstilling' | 'argument';
 
@@ -17,6 +24,23 @@ export type SakSearchHit = {
 
 function normalize(text: string): string {
   return text.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function excerptAroundQuery(text: string, query: string, maxLen = 160): string {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (normalized.length <= maxLen) return normalized;
+  const q = normalize(query);
+  if (!q) return normalized.slice(0, maxLen);
+  const lower = normalized.toLowerCase();
+  const idx = lower.indexOf(q);
+  if (idx < 0) return `${normalized.slice(0, maxLen - 1)}…`;
+  const half = Math.floor((maxLen - q.length) / 2);
+  const start = Math.max(0, idx - half);
+  const end = Math.min(normalized.length, start + maxLen - 1);
+  const slice = normalized.slice(start, end);
+  const prefix = start > 0 ? '…' : '';
+  const suffix = end < normalized.length ? '…' : '';
+  return `${prefix}${slice}${suffix}`;
 }
 
 function scoreMatch(haystack: string, query: string): number {
@@ -71,7 +95,7 @@ export function searchSakPage(args: {
       snippet: args.title,
       kind: 'tittel',
       tab: 'oversikt',
-      anchorId: 'sak-tittel',
+      anchorId: SAK_TITTEL_ANCHOR_ID,
       text: args.title,
     },
     query,
@@ -83,10 +107,10 @@ export function searchSakPage(args: {
       {
         id: 'search-summary',
         label: 'Offisiell beskrivelse',
-        snippet: args.summary.slice(0, 160),
+        snippet: excerptAroundQuery(args.summary, query),
         kind: 'sammendrag',
         tab: 'oversikt',
-        anchorId: 'sak-offisiell-beskrivelse',
+        anchorId: SAK_OFFISIELL_BESKRIVELSE_ANCHOR_ID,
         text: args.summary,
       },
       query,
@@ -99,10 +123,10 @@ export function searchSakPage(args: {
       {
         id: 'search-innstilling',
         label: 'Komiteens innstilling',
-        snippet: args.innstillingSnippet.slice(0, 160),
+        snippet: excerptAroundQuery(args.innstillingSnippet, query),
         kind: 'innstilling',
         tab: 'oversikt',
-        anchorId: 'sak-innstilling',
+        anchorId: SAK_OVERSIKT_INNSTILLING_ANCHOR_ID,
         text: args.innstillingSnippet,
       },
       query,
@@ -132,9 +156,9 @@ export function searchSakPage(args: {
       {
         id: `search-mening-${opinion.id}`,
         label: opinion.title,
-        snippet: opinion.body.slice(0, 160),
+        snippet: excerptAroundQuery(text, query),
         kind: 'mening',
-        tab: 'oversikt',
+        tab: 'diskusjon',
         anchorId: sakOpinionAnchorId(opinion.id),
         text,
       },
@@ -148,10 +172,10 @@ export function searchSakPage(args: {
       {
         id: `search-arg-${argument.id}`,
         label: argument.side === 'for' ? 'Argument for' : 'Argument mot',
-        snippet: argument.text.slice(0, 160),
+        snippet: excerptAroundQuery(argument.text, query),
         kind: 'argument',
-        tab: 'oversikt',
-        anchorId: 'sak-argumenter',
+        tab: 'argumenter',
+        anchorId: SAK_ARGUMENTER_SECTION_ANCHOR_ID,
         text: argument.text,
       },
       query,

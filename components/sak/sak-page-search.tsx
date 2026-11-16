@@ -6,8 +6,7 @@ import type { SakSearchHit } from '@/lib/sak/page-search';
 import { searchSakPage } from '@/lib/sak/page-search';
 import type { OpinionListItem } from '@/lib/opinions/types';
 import type { SakDocumentRef } from '@/lib/stortinget-documents';
-import { navigateToSakTab } from '@/components/sak/sak-page-tabs';
-import { focusSakSearchAnchor } from '@/lib/sak/page-search-nav';
+import { focusSakSearchHit } from '@/lib/sak/page-search-nav';
 import { cn } from '@/lib/utils';
 
 const KIND_LABEL: Record<SakSearchHit['kind'], string> = {
@@ -62,8 +61,7 @@ export function SakPageSearch({ corpus, className }: { corpus: SakPageSearchCorp
   const resolvedActiveIndex = hits.length === 0 ? 0 : Math.min(activeIndex, hits.length - 1);
 
   const scrollToHit = useCallback((hit: SakSearchHit) => {
-    navigateToSakTab(hit.tab);
-    void focusSakSearchAnchor(hit.anchorId);
+    void focusSakSearchHit(hit.tab, hit.anchorId);
     setOpen(false);
   }, []);
 

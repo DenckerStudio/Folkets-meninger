@@ -28,5 +28,9 @@ const opinionHits = searchSakPage({
   argumentSnippets: [],
 });
 assert.equal(opinionHits[0]?.anchorId, sakOpinionAnchorId('op-9'));
+assert.equal(opinionHits[0]?.tab, 'diskusjon');
+
+const innstHit = hits.find((hit) => hit.kind === 'innstilling');
+assert.equal(innstHit?.anchorId, 'sak-oversikt-innstilling');
 
 console.log('lib/sak/page-search.test.ts: ok');

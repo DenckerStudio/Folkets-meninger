@@ -1,5 +1,6 @@
-import { listCitizenOpinionsByIssue } from '@/lib/opinions/service';
-import { extractInnstillingArguments } from '@/lib/sak/arguments/extract-innstilling';
+import { getIssueOpinionSummary, listCitizenOpinionsByIssue } from '@/lib/opinions/service';
+import { buildSakArgumentsBundle } from '@/lib/sak/arguments/build-arguments';
+import { loadSakMerknadChunks } from '@/lib/sak/arguments/load-merknad-chunks';
 import { SakPageSearchHost } from '@/components/sak/sak-page-search-host';
 import type { SakPageSearchCorpus } from '@/components/sak/sak-page-search';
 import type { SakDocumentRef } from '@/lib/stortinget-documents';
@@ -17,8 +18,24 @@ export async function SakPageSearchCorpus({
   documents: readonly Pick<SakDocumentRef, 'id' | 'title'>[];
   innstillingstekst: string | null | undefined;
 }) {
-  const opinions = await listCitizenOpinionsByIssue(sakId, 40).catch(() => []);
-  const argumentItems = extractInnstillingArguments(innstillingstekst);
+  const [merknadChunks, opinionSummary, opinions] = await Promise.all([
+    loadSakMerknadChunks(sakId),
+    getIssueOpinionSummary(sakId, 0).catch(() => ({
+      total: 0,
+      counts: { for: 0, blank: 0, imot: 0 },
+      latest: [],
+    })),
+    listCitizenOpinionsByIssue(sakId, 80).catch(() => []),
+  ]);
+
+  const bundle = buildSakArgumentsBundle({
+    sakId,
+    innstillingstekst,
+    merknadChunks,
+    opinions,
+    totalOpinions: opinionSummary.total,
+  });
+
   const corpus: SakPageSearchCorpus = {
     title,
     summary,
@@ -29,7 +46,7 @@ export async function SakPageSearchCorpus({
       body: opinion.body,
     })),
     innstillingSnippet: innstillingstekst?.trim() ? innstillingstekst.trim() : null,
-    argumentSnippets: argumentItems.map((item) => ({
+    argumentSnippets: [...bundle.for, ...bundle.mot].map((item) => ({
       id: item.id,
       text: item.text,
       side: item.side,
