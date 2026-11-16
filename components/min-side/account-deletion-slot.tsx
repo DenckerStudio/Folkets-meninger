@@ -1,7 +1,8 @@
-/**
- * Mount point for «Slett kontoen min» (parallel PR #318). Renders nothing until
- * that PR replaces this component with the real deletion UI on Personvern.
- */
+'use client';
+
+import { DeleteAccountSettings } from '@/components/profile/delete-account-settings';
+
+/** «Slett kontoen min» på Min side → Personvern og konto (GDPR #318). */
 export function AccountDeletionSlot() {
-  return null;
+  return <DeleteAccountSettings />;
 }

@@ -1,16 +1,22 @@
 'use client';
 
+import Link from 'next/link';
 import { ProfileCard } from '@/components/profile/profile-card';
 import { ProfilePublicSettings } from '@/components/profile/profile-public-settings';
-import { DeleteAccountSettings } from '@/components/profile/delete-account-settings';
 import { STANCE_PROFILE_PRIVACY_SUMMARY } from '@/lib/copy/stance-privacy';
 import { PoliticalConsentSettings } from '@/components/consent/political-consent-settings';
+import { minSideSectionHref } from '@/lib/min-side/sections';
 
 type ProfilePrivacyProps = {
   userId: string;
+  /** På Min side → Personvern rendres sletting via account-deletion-slot. */
+  accountDeletionPlacement?: 'none' | 'link';
 };
 
-export function ProfilePrivacy({ userId }: ProfilePrivacyProps) {
+export function ProfilePrivacy({
+  userId,
+  accountDeletionPlacement = 'link',
+}: ProfilePrivacyProps) {
   return (
     <div className="space-y-6">
       <ProfileCard title="Slik beskytter vi deg">
@@ -49,7 +55,24 @@ export function ProfilePrivacy({ userId }: ProfilePrivacyProps) {
 
       <ProfilePublicSettings userId={userId} />
 
-      <DeleteAccountSettings />
+      {accountDeletionPlacement === 'link' ? (
+        <ProfileCard
+          title="Slett kontoen min"
+          description="Permanent sletting i tråd med GDPR. Dette kan ikke angres."
+        >
+          <p className="text-sm text-muted-foreground">
+            Kontosletting gjør du på Min side under Personvern og konto.
+          </p>
+          <p className="mt-3">
+            <Link
+              href={minSideSectionHref('personvern')}
+              className="inline-flex min-h-11 items-center font-medium text-brand underline-offset-4 hover:underline"
+            >
+              Gå til Personvern og konto
+            </Link>
+          </p>
+        </ProfileCard>
+      ) : null}
     </div>
   );
 }

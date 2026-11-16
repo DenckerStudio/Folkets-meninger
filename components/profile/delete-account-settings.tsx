@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { accountDeleteConfirmationMatches, normalizeAccountDeleteConfirmation } from '@/lib/account-delete/confirmation';
 import { ACCOUNT_DELETE_CONFIRMATION_TOKEN } from '@/lib/account-delete/constants';
 import type { SelfDeleteBlockReason } from '@/lib/account-delete/eligibility';
+import { minSideSectionHref } from '@/lib/min-side/sections';
 import { routes } from '@/lib/routes';
 
 const DELETED_ITEMS = [
@@ -159,7 +160,7 @@ export function DeleteAccountSettings() {
             {eligibility.reason === 'stemme_plus' ? (
               <p className="mt-3">
                 <Link
-                  href={`${routes.minSide}?tab=stemme-plus`}
+                  href={minSideSectionHref('stemme-plus')}
                   className="min-h-11 inline-flex items-center font-medium text-brand underline-offset-4 hover:underline"
                 >
                   Gå til Stemme+ og abonnement
