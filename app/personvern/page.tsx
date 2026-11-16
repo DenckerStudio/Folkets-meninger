@@ -147,26 +147,22 @@ export default function PersonvernPage() {
           </Link>
           .
         </p>
-      </section>
-
-      <section className="space-y-2 text-sm leading-relaxed">
-        <h2 className="text-xl font-bold text-foreground">8. Klage til Datatilsynet</h2>
         <p>{PRIVACY_COMPLAINT}</p>
       </section>
 
       <section className="space-y-2 text-sm leading-relaxed">
-        <h2 className="text-xl font-bold text-foreground">9. Informasjonskapsler og lokal lagring</h2>
+        <h2 className="text-xl font-bold text-foreground">8. Informasjonskapsler og lokal lagring</h2>
         <p>{PRIVACY_COOKIES}</p>
         <p className="text-muted-foreground">{TRUST_ANALYTICS_NOTE}</p>
       </section>
 
       <section className="space-y-2 text-sm leading-relaxed">
-        <h2 className="text-xl font-bold text-foreground">10. Aldersgrense</h2>
+        <h2 className="text-xl font-bold text-foreground">9. Aldersgrense</h2>
         <p>{PRIVACY_AGE}</p>
       </section>
 
       <section className="space-y-2 text-sm leading-relaxed">
-        <h2 className="text-xl font-bold text-foreground">11. AI og modeller</h2>
+        <h2 className="text-xl font-bold text-foreground">10. AI og modeller</h2>
         <p>
           Se{' '}
           <Link href={routes.omAi} className="font-medium text-brand underline">
