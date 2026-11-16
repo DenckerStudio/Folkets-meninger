@@ -9,7 +9,11 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { UserAnnotationPublic, UserAnnotationTargetType } from '@/lib/user-annotations/types';
+import type { UserAnnotationFlagType } from '@/lib/user-annotations/flag-types';
+import type {
+  UserAnnotationCreatableTargetType,
+  UserAnnotationPublic,
+} from '@/lib/user-annotations/types';
 import { annotationFetchQueryKey } from '@/lib/user-annotations/fetch-query';
 import { scrollToAnnotationMark } from '@/lib/user-annotations/reveal-annotation';
 
@@ -33,7 +37,7 @@ export type UserAnnotationToastState = {
 
 type UserAnnotationContextValue = {
   enabled: boolean;
-  targetType: UserAnnotationTargetType;
+  targetType: UserAnnotationCreatableTargetType;
   targetId: string;
   fetchQueryKey: string;
   annotations: UserAnnotationPublic[];
@@ -51,8 +55,11 @@ type UserAnnotationContextValue = {
   focusAnnotationId: string | null;
   setFocusAnnotationId: (id: string | null) => void;
   openSaveDialogFromDraft: () => void;
-  savePending: (note: string | null) => Promise<boolean>;
-  updateNote: (id: string, note: string | null) => Promise<boolean>;
+  savePending: (input: { note: string | null; flag_type: UserAnnotationFlagType }) => Promise<boolean>;
+  updateAnnotation: (
+    id: string,
+    input: { note?: string | null; flag_type?: UserAnnotationFlagType },
+  ) => Promise<boolean>;
   removeAnnotation: (id: string) => Promise<boolean>;
   revealAnnotation: (id: string) => Promise<void>;
   showToast: (toast: UserAnnotationToastState, autoHideMs?: number) => void;
@@ -72,7 +79,7 @@ export function UserAnnotationProvider({
   children,
 }: {
   enabled: boolean;
-  targetType: UserAnnotationTargetType;
+  targetType: UserAnnotationCreatableTargetType;
   targetId: string;
   children: ReactNode;
 }) {
@@ -113,7 +120,9 @@ export function UserAnnotationProvider({
         const message =
           res.status === 401
             ? 'Du må være logget inn for å se notater.'
-            : 'Kunne ikke hente notater.';
+            : res.status === 403
+              ? 'Kun admin har tilgang til research-markeringer.'
+              : 'Kunne ikke hente notater.';
         setLoadError(message);
         setLoadStatus('error');
         return;
@@ -153,6 +162,7 @@ export function UserAnnotationProvider({
           container_key: row.container_key,
           quote: row.quote,
           note: row.note,
+          flag_type: row.flag_type,
           start_offset: row.start_offset,
           end_offset: row.end_offset,
           anchor_prefix: row.anchor_prefix,
@@ -173,7 +183,7 @@ export function UserAnnotationProvider({
   );
 
   const savePending = useCallback(
-    async (note: string | null) => {
+    async ({ note, flag_type }: { note: string | null; flag_type: UserAnnotationFlagType }) => {
       if (!pending) return false;
       const res = await fetch('/api/user-annotations', {
         method: 'POST',
@@ -185,6 +195,7 @@ export function UserAnnotationProvider({
           container_key: pending.container_key,
           quote: pending.quote,
           note,
+          flag_type,
           start_offset: pending.start_offset,
           end_offset: pending.end_offset,
           anchor_prefix: pending.anchor_prefix,
@@ -201,13 +212,16 @@ export function UserAnnotationProvider({
     [pending, refresh, showToast, targetId, targetType],
   );
 
-  const updateNote = useCallback(
-    async (id: string, note: string | null) => {
+  const updateAnnotation = useCallback(
+    async (
+      id: string,
+      input: { note?: string | null; flag_type?: UserAnnotationFlagType },
+    ) => {
       const res = await fetch(`/api/user-annotations/${encodeURIComponent(id)}`, {
         method: 'PATCH',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ note }),
+        body: JSON.stringify(input),
       });
       if (!res.ok) return false;
       await refresh();
@@ -286,7 +300,7 @@ export function UserAnnotationProvider({
       setFocusAnnotationId,
       openSaveDialogFromDraft,
       savePending,
-      updateNote,
+      updateAnnotation,
       removeAnnotation,
       revealAnnotation,
       showToast,
@@ -313,7 +327,7 @@ export function UserAnnotationProvider({
       targetId,
       targetType,
       toast,
-      updateNote,
+      updateAnnotation,
     ],
   );
 

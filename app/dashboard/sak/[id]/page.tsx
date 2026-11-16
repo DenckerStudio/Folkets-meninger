@@ -43,7 +43,6 @@ import { fetchSakVoteringer } from '@/lib/stortinget-voteringer';
 import { getSakDocumentsWithStatus } from '@/lib/stortinget-document-ingest';
 import Image from 'next/image';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
-import { UserAnnotationHost } from '@/components/user-annotations/user-annotation-host';
 export const dynamic = 'force-dynamic';
 
 function formatEventDate(dateStr: string | null): string | null {
@@ -267,7 +266,6 @@ export default async function SakPage({
       : null;
 
   return (
-    <UserAnnotationHost enabled={Boolean(user)} targetType="sak" targetId={sak.id}>
     <DashboardPage
       className={cn(
         'mx-auto w-full min-w-0 max-w-4xl overflow-x-clip sm:space-y-10',
@@ -679,6 +677,5 @@ export default async function SakPage({
         <SakOpenPollStickySlot sakId={sak.id} openPoll={openStortingetPoll} />
       ) : null}
     </DashboardPage>
-    </UserAnnotationHost>
   );
 }

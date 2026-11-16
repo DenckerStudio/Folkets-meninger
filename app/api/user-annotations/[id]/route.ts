@@ -1,25 +1,25 @@
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/admin/gate';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { parseUpdateUserAnnotationBody, rowToPublic } from '@/lib/user-annotations/validate';
 
 export const dynamic = 'force-dynamic';
 
+const ANNOTATION_COLUMNS =
+  'id, user_id, target_type, target_id, container_key, quote, note, flag_type, start_offset, end_offset, anchor_prefix, anchor_suffix, created_at, updated_at';
+
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const auth = await requireAdmin();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   const { id } = await context.params;
   const annotationId = id?.trim() ?? '';
   if (!annotationId) {
     return NextResponse.json({ error: 'Mangler id' }, { status: 400 });
-  }
-
-  const supabase = await getServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
   }
 
   let body: unknown;
@@ -34,13 +34,21 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
 
+  const patch: Record<string, unknown> = {};
+  if ('note' in parsed.value) {
+    patch.note = parsed.value.note ?? null;
+  }
+  if ('flag_type' in parsed.value && parsed.value.flag_type) {
+    patch.flag_type = parsed.value.flag_type;
+  }
+
+  const supabase = await getServerSupabase();
+
   const { data, error } = await supabase
     .from('user_annotations')
-    .update({ note: parsed.value.note ?? null })
+    .update(patch)
     .eq('id', annotationId)
-    .select(
-      'id, user_id, target_type, target_id, container_key, quote, note, start_offset, end_offset, anchor_prefix, anchor_suffix, created_at, updated_at',
-    )
+    .select(ANNOTATION_COLUMNS)
     .maybeSingle();
 
   if (error) {
@@ -58,6 +66,11 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
+  const auth = await requireAdmin();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   const { id } = await context.params;
   const annotationId = id?.trim() ?? '';
   if (!annotationId) {
@@ -65,13 +78,6 @@ export async function DELETE(_request: Request, context: RouteContext) {
   }
 
   const supabase = await getServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Du må være logget inn' }, { status: 401 });
-  }
 
   const { error, count } = await supabase
     .from('user_annotations')

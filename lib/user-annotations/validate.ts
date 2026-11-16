@@ -1,7 +1,15 @@
 import {
+  DEFAULT_USER_ANNOTATION_FLAG_TYPE,
+  isUserAnnotationFlagType,
+  type UserAnnotationFlagType,
+} from '@/lib/user-annotations/flag-types';
+import {
+  USER_ANNOTATION_CREATABLE_TARGET_TYPES,
   USER_ANNOTATION_TARGET_TYPES,
   type CreateUserAnnotationInput,
   type UpdateUserAnnotationInput,
+  type UserAnnotationCreatableTargetType,
+  type UserAnnotationPublic,
   type UserAnnotationTargetType,
 } from '@/lib/user-annotations/types';
 
@@ -15,6 +23,15 @@ export function isUserAnnotationTargetType(value: unknown): value is UserAnnotat
   return (
     typeof value === 'string' &&
     (USER_ANNOTATION_TARGET_TYPES as readonly string[]).includes(value)
+  );
+}
+
+export function isUserAnnotationCreatableTargetType(
+  value: unknown,
+): value is UserAnnotationCreatableTargetType {
+  return (
+    typeof value === 'string' &&
+    (USER_ANNOTATION_CREATABLE_TARGET_TYPES as readonly string[]).includes(value)
   );
 }
 
@@ -60,6 +77,16 @@ function optionalAnchor(value: unknown): string | null | { error: string } {
   return trimmed;
 }
 
+function parseFlagType(value: unknown): UserAnnotationFlagType | { error: string } {
+  if (value === undefined || value === null || value === '') {
+    return DEFAULT_USER_ANNOTATION_FLAG_TYPE;
+  }
+  if (!isUserAnnotationFlagType(value)) {
+    return { error: 'Ugyldig markeringstype' };
+  }
+  return value;
+}
+
 export function parseCreateUserAnnotationBody(
   body: unknown,
 ): { ok: true; value: CreateUserAnnotationInput } | { ok: false; error: string } {
@@ -68,7 +95,7 @@ export function parseCreateUserAnnotationBody(
   }
   const raw = body as Record<string, unknown>;
 
-  if (!isUserAnnotationTargetType(raw.target_type)) {
+  if (!isUserAnnotationCreatableTargetType(raw.target_type)) {
     return { ok: false, error: 'Ugyldig måltype' };
   }
 
@@ -83,6 +110,9 @@ export function parseCreateUserAnnotationBody(
 
   const note = optionalNote(raw.note);
   if (note !== null && typeof note === 'object') return { ok: false, error: note.error };
+
+  const flagType = parseFlagType(raw.flag_type);
+  if (typeof flagType === 'object') return { ok: false, error: flagType.error };
 
   const anchorPrefix = optionalAnchor(raw.anchor_prefix);
   if (anchorPrefix !== null && typeof anchorPrefix === 'object') {
@@ -119,6 +149,7 @@ export function parseCreateUserAnnotationBody(
       container_key: containerKey,
       quote,
       note,
+      flag_type: flagType,
       start_offset: startOffset,
       end_offset: endOffset,
       anchor_prefix: anchorPrefix,
@@ -134,12 +165,25 @@ export function parseUpdateUserAnnotationBody(
     return { ok: false, error: 'Ugyldig forespørsel' };
   }
   const raw = body as Record<string, unknown>;
-  if (!('note' in raw)) {
+  if (!('note' in raw) && !('flag_type' in raw)) {
     return { ok: false, error: 'Ingenting å oppdatere' };
   }
-  const note = optionalNote(raw.note);
-  if (note !== null && typeof note === 'object') return { ok: false, error: note.error };
-  return { ok: true, value: { note } };
+
+  const value: UpdateUserAnnotationInput = {};
+
+  if ('note' in raw) {
+    const note = optionalNote(raw.note);
+    if (note !== null && typeof note === 'object') return { ok: false, error: note.error };
+    value.note = note;
+  }
+
+  if ('flag_type' in raw) {
+    const flagType = parseFlagType(raw.flag_type);
+    if (typeof flagType === 'object') return { ok: false, error: flagType.error };
+    value.flag_type = flagType;
+  }
+
+  return { ok: true, value };
 }
 
 export function rowToPublic(row: {
@@ -150,13 +194,17 @@ export function rowToPublic(row: {
   container_key: string;
   quote: string;
   note: string | null;
+  flag_type?: string | null;
   start_offset: number;
   end_offset: number;
   anchor_prefix: string | null;
   anchor_suffix: string | null;
   created_at: string;
   updated_at: string;
-}): Omit<typeof row, 'user_id'> {
+}): UserAnnotationPublic {
   const { user_id: _userId, ...rest } = row;
-  return rest;
+  const flag_type: UserAnnotationFlagType = isUserAnnotationFlagType(rest.flag_type)
+    ? rest.flag_type
+    : DEFAULT_USER_ANNOTATION_FLAG_TYPE;
+  return { ...rest, flag_type };
 }

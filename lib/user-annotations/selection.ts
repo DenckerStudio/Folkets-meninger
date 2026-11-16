@@ -67,11 +67,12 @@ export type HighlightSegment = {
   text: string;
   highlighted: boolean;
   annotationId?: string;
+  flagType?: string;
 };
 
 export function buildHighlightSegments(
   text: string,
-  annotations: Array<{ id: string; start_offset: number; end_offset: number }>,
+  annotations: Array<{ id: string; start_offset: number; end_offset: number; flag_type?: string }>,
 ): HighlightSegment[] {
   if (annotations.length === 0) {
     return [{ text, highlighted: false }];
@@ -93,6 +94,7 @@ export function buildHighlightSegments(
         text: text.slice(start, end),
         highlighted: true,
         annotationId: ann.id,
+        flagType: ann.flag_type,
       });
     }
     cursor = Math.max(cursor, end);

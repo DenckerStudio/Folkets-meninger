@@ -28,6 +28,7 @@ import { ResearchTopicBlogDraftPanel } from '@/components/admin/research-topic-b
 import { ResearchTopicSakPollPanel } from '@/components/admin/research-topic-sak-poll-panel';
 import { TopicAroundResearchPanel } from '@/components/search/topic-around-research-panel';
 import { routes } from '@/lib/routes';
+import { ResearchFindingText } from '@/components/admin/research-finding-text';
 import { cn } from '@/lib/utils';
 
 function GradeBadge({ grade }: { grade: ResearchTopicBriefSource['grade'] }) {
@@ -318,7 +319,15 @@ export function ResearchTopicBriefView({ topic: initialTopic }: { topic: TopicRo
           <ul className="list-disc space-y-1 pl-5 text-sm text-foreground">
             {output.current_rules.items.map((item, idx) => (
               <li key={idx} className="leading-relaxed">
-                {typeof item === 'string' ? item : JSON.stringify(item)}
+                {typeof item === 'string' ? (
+                  <ResearchFindingText
+                    containerKey={`topic_${topic.id}_rules_${idx}`}
+                    text={item}
+                    className="leading-relaxed"
+                  />
+                ) : (
+                  JSON.stringify(item)
+                )}
               </li>
             ))}
           </ul>
@@ -338,11 +347,13 @@ export function ResearchTopicBriefView({ topic: initialTopic }: { topic: TopicRo
                     <p className="font-medium text-foreground">
                       {'party' in item ? String((item as { party?: string }).party) : 'Parti'}
                     </p>
-                    <p className="mt-1 text-muted-foreground">
-                      {'proposal' in item
-                        ? String((item as { proposal?: string }).proposal)
-                        : ''}
-                    </p>
+                    <ResearchFindingText
+                      containerKey={`topic_${topic.id}_party_${idx}`}
+                      text={
+                        'proposal' in item ? String((item as { proposal?: string }).proposal ?? '') : ''
+                      }
+                      className="mt-1 text-muted-foreground"
+                    />
                   </>
                 ) : (
                   String(item)
@@ -364,9 +375,11 @@ export function ResearchTopicBriefView({ topic: initialTopic }: { topic: TopicRo
                       {String((item as { headline?: string }).headline)}
                     </p>
                     {'summary' in item && (item as { summary?: string }).summary ? (
-                      <p className="mt-1 text-muted-foreground">
-                        {String((item as { summary?: string }).summary)}
-                      </p>
+                      <ResearchFindingText
+                        containerKey={`topic_${topic.id}_media_${idx}`}
+                        text={String((item as { summary?: string }).summary)}
+                        className="mt-1 text-muted-foreground"
+                      />
                     ) : null}
                   </>
                 ) : (
