@@ -1,7 +1,36 @@
 import Link from 'next/link';
-import { ExternalLink, Scale } from 'lucide-react';
+import { Scale } from 'lucide-react';
 import type { SakArgumentItem, SakArgumentsBundle } from '@/lib/sak/arguments/types';
 import { STANCE_VISUAL } from '@/lib/opinions/labels';
+
+const SOURCE_LINK_CLASS =
+  'inline-flex min-h-9 items-center rounded-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2';
+
+function ArgumentSourceLink({ item }: { item: SakArgumentItem }) {
+  if (item.source.href) {
+    const external = item.source.href.startsWith('http');
+    if (external) {
+      return (
+        <a href={item.source.href} className={SOURCE_LINK_CLASS} target="_blank" rel="noopener noreferrer">
+          Kildelenke
+        </a>
+      );
+    }
+    return (
+      <Link href={item.source.href} className={SOURCE_LINK_CLASS}>
+        Gå til kilden
+      </Link>
+    );
+  }
+  if (item.source.anchorId) {
+    return (
+      <a href={`#${item.source.anchorId}`} className={SOURCE_LINK_CLASS}>
+        Gå til kilden
+      </a>
+    );
+  }
+  return null;
+}
 
 function ArgumentList({
   title,
@@ -18,7 +47,7 @@ function ArgumentList({
     <div className="min-w-0 flex-1 rounded-2xl border border-border bg-muted/20 p-4 sm:p-5">
       <div className="mb-3 flex items-center gap-2">
         <span className="h-2 w-8 rounded-full" style={{ backgroundColor: stripeColor }} aria-hidden />
-        <h3 className={`text-sm font-semibold uppercase tracking-wide ${accentClass}`}>{title}</h3>
+        <h3 className={`text-sm font-semibold ${accentClass}`}>{title}</h3>
       </div>
       {items.length === 0 ? (
         <p className="text-sm text-muted-foreground">Ingen treff i tilgjengelige kilder.</p>
@@ -32,19 +61,7 @@ function ArgumentList({
                 {item.supportCount ? (
                   <span className="tabular-nums">· {item.supportCount} liknende punkter</span>
                 ) : null}
-                {item.source.href ? (
-                  <Link
-                    href={item.source.href}
-                    className="inline-flex min-h-9 items-center gap-1 font-medium text-brand hover:underline"
-                  >
-                    Kildelenke
-                    <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                  </Link>
-                ) : item.source.anchorId ? (
-                  <a href={`#${item.source.anchorId}`} className="min-h-9 font-medium text-brand hover:underline">
-                    Gå til kilden
-                  </a>
-                ) : null}
+                <ArgumentSourceLink item={item} />
               </div>
             </li>
           ))}
@@ -79,15 +96,15 @@ export function SakArgumentsProsCons({ bundle }: { bundle: SakArgumentsBundle })
           <ArgumentList
             title="Argumenter mot"
             items={bundle.mot}
-            accentClass="text-rose-700 dark:text-rose-300"
+            accentClass="text-brand-accent"
             stripeColor={STANCE_VISUAL.imot.bg}
           />
         </div>
       )}
 
       <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-        Kun tekst fra Stortingets innstilling, dokumentmerknader og offentlige meninger (aggregert). Vi
-        finner ikke opp nye argumenter.
+        Kun tekst fra dokumentmerknader med tydelig avsender og offentlige meninger (aggregert). Vi finner
+        ikke opp nye argumenter.
       </p>
     </section>
   );

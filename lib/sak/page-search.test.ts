@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { sakDocumentListAnchorId, sakOpinionAnchorId } from '@/lib/sak/anchors';
 import { searchSakPage } from '@/lib/sak/page-search';
 
 const hits = searchSakPage({
@@ -13,5 +14,19 @@ const hits = searchSakPage({
 
 assert.ok(hits.some((hit) => hit.kind === 'dokument'));
 assert.ok(hits.some((hit) => hit.kind === 'innstilling'));
+
+const docHit = hits.find((hit) => hit.kind === 'dokument');
+assert.equal(docHit?.anchorId, sakDocumentListAnchorId('1'));
+
+const opinionHits = searchSakPage({
+  query: 'lokaldemokrati',
+  title: 'Sak',
+  summary: null,
+  documents: [],
+  opinions: [{ id: 'op-9', title: 'Lokaldemokrati', body: 'Lokaldemokrati i praksis.' }],
+  innstillingSnippet: null,
+  argumentSnippets: [],
+});
+assert.equal(opinionHits[0]?.anchorId, sakOpinionAnchorId('op-9'));
 
 console.log('lib/sak/page-search.test.ts: ok');

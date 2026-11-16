@@ -1,13 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import {
-  SAK_DOCUMENT_FILTER_ALL,
-  filterAndSearchSakDocuments,
-  type SakDocumentFilterValue,
-} from '@/lib/sak/documents-filter';
+import { useState } from 'react';
+import { SAK_DOCUMENT_FILTER_ALL, type SakDocumentFilterValue } from '@/lib/sak/documents-filter';
 import { SakDocumentsSection, type DocumentWithStatus } from '@/components/sak/sak-documents-section';
 import { SakDocumentsToolbar } from '@/components/sak/sak-documents-toolbar';
+import { filterAndSearchSakDocuments } from '@/lib/sak/documents-filter';
 
 export function SakDocumentsPanel({
   sakId,
@@ -21,10 +18,7 @@ export function SakDocumentsPanel({
   const [filter, setFilter] = useState<SakDocumentFilterValue>(SAK_DOCUMENT_FILTER_ALL);
   const [query, setQuery] = useState('');
 
-  const filtered = useMemo(
-    () => filterAndSearchSakDocuments(initialDocuments, filter, query),
-    [filter, initialDocuments, query],
-  );
+  const filteredCount = filterAndSearchSakDocuments(initialDocuments, filter, query).length;
 
   return (
     <div className="space-y-4" data-sak-dokumenter-panel="">
@@ -33,12 +27,14 @@ export function SakDocumentsPanel({
         query={query}
         onFilterChange={setFilter}
         onQueryChange={setQuery}
-        resultCount={filtered.length}
+        resultCount={filteredCount}
       />
       <SakDocumentsSection
         sakId={sakId}
-        initialDocuments={filtered}
+        seedDocuments={initialDocuments}
         initialDocumentId={initialDocumentId}
+        filter={filter}
+        titleQuery={query}
       />
     </div>
   );

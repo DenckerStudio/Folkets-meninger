@@ -6,8 +6,18 @@ import { aggregateOpinionArguments } from '@/lib/sak/arguments/extract-meninger'
 
 const MAX_PER_SIDE = 8;
 
-function capSide<T extends { side: 'for' | 'mot'; text: string }>(items: T[]): { for: T[]; mot: T[] } {
-  const sorted = [...items].sort((a, b) => a.text.length - b.text.length);
+function rankArgument<T extends { side: 'for' | 'mot'; text: string; supportCount?: number }>(
+  item: T,
+): number {
+  const support = item.supportCount ?? 0;
+  if (support > 0) return support * 10_000 + item.text.length;
+  return item.text.length;
+}
+
+function capSide<T extends { side: 'for' | 'mot'; text: string; supportCount?: number }>(
+  items: T[],
+): { for: T[]; mot: T[] } {
+  const sorted = [...items].sort((a, b) => rankArgument(b) - rankArgument(a));
   return {
     for: sorted.filter((item) => item.side === 'for').slice(0, MAX_PER_SIDE),
     mot: sorted.filter((item) => item.side === 'mot').slice(0, MAX_PER_SIDE),
@@ -23,7 +33,7 @@ export function buildSakArgumentsBundle(args: {
 }): SakArgumentsBundle {
   const combined = [
     ...extractInnstillingArguments(args.innstillingstekst),
-    ...extractMerknadArguments(args.merknadChunks),
+    ...extractMerknadArguments(args.sakId, args.merknadChunks),
     ...aggregateOpinionArguments({
       sakId: args.sakId,
       opinions: args.opinions,

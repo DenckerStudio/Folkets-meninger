@@ -5,6 +5,7 @@ import { STANCE_VISUAL, formatOpinionDate, stanceLabel } from '@/lib/opinions/la
 import type { OpinionStance } from '@/lib/opinions/types';
 import { routes } from '@/lib/routes';
 import { formatNumber } from '@/lib/utils';
+import { sakOpinionAnchorId } from '@/lib/sak/anchors';
 
 const FLAG_STANCES: readonly OpinionStance[] = ['for', 'blank', 'imot'];
 
@@ -99,7 +100,7 @@ export async function SakMeningerSection({ sakId }: { sakId: string }) {
             {latest.map((opinion) => {
               const visual = STANCE_VISUAL[opinion.stance];
               return (
-                <li key={opinion.id}>
+                <li key={opinion.id} id={sakOpinionAnchorId(opinion.id)}>
                   <Link
                     href={routes.opinion(opinion.id)}
                     className="block rounded-xl border border-border bg-muted/30 p-3 transition-colors hover:border-brand/40 hover:bg-brand/5"

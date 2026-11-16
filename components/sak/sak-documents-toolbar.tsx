@@ -1,11 +1,15 @@
 'use client';
 
+import { useId } from 'react';
 import { Search } from 'lucide-react';
 import {
   SAK_DOCUMENT_FILTER_OPTIONS,
   type SakDocumentFilterValue,
 } from '@/lib/sak/documents-filter';
 import { cn } from '@/lib/utils';
+
+const FIELD_SHELL_CLASS =
+  'flex min-h-11 flex-1 items-center gap-2 rounded-lg border border-border bg-background px-3 focus-within:ring-2 focus-within:ring-brand/40 focus-within:ring-offset-2 focus-within:ring-offset-background';
 
 export function SakDocumentsToolbar({
   filter,
@@ -22,6 +26,9 @@ export function SakDocumentsToolbar({
   resultCount: number;
   className?: string;
 }) {
+  const searchInputId = useId();
+  const filterId = useId();
+
   return (
     <div
       className={cn(
@@ -29,10 +36,10 @@ export function SakDocumentsToolbar({
         className,
       )}
     >
-      <label className="flex min-h-11 flex-1 items-center gap-2 rounded-lg border border-border bg-background px-3">
+      <label htmlFor={searchInputId} className={FIELD_SHELL_CLASS}>
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-        <span className="sr-only">Søk i dokumenttitler</span>
         <input
+          id={searchInputId}
           type="search"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
@@ -43,14 +50,14 @@ export function SakDocumentsToolbar({
       </label>
 
       <div className="flex flex-wrap items-center gap-2">
-        <label htmlFor="sak-dokument-filter" className="text-xs font-medium text-muted-foreground">
+        <label htmlFor={filterId} className="text-xs font-medium text-muted-foreground">
           Type
         </label>
         <select
-          id="sak-dokument-filter"
+          id={filterId}
           value={filter}
           onChange={(event) => onFilterChange(event.target.value as SakDocumentFilterValue)}
-          className="min-h-11 rounded-lg border border-border bg-background px-3 text-sm text-foreground"
+          className="min-h-11 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           {SAK_DOCUMENT_FILTER_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>

@@ -1,6 +1,7 @@
 import type { OpinionListItem } from '@/lib/opinions/types';
 import type { SakDocumentRef } from '@/lib/stortinget-documents';
 import type { SakPageTabId } from '@/components/sak/sak-page-tabs';
+import { sakDocumentListAnchorId, sakOpinionAnchorId } from '@/lib/sak/anchors';
 
 export type SakSearchTargetKind = 'tittel' | 'sammendrag' | 'dokument' | 'mening' | 'innstilling' | 'argument';
 
@@ -117,7 +118,7 @@ export function searchSakPage(args: {
         snippet: doc.title,
         kind: 'dokument',
         tab: 'dokumenter',
-        anchorId: `sak-dokument-${doc.id}`,
+        anchorId: sakDocumentListAnchorId(doc.id),
         text: doc.title,
       },
       query,
@@ -134,7 +135,7 @@ export function searchSakPage(args: {
         snippet: opinion.body.slice(0, 160),
         kind: 'mening',
         tab: 'oversikt',
-        anchorId: 'sak-meninger',
+        anchorId: sakOpinionAnchorId(opinion.id),
         text,
       },
       query,

@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 import type { SakSearchHit } from '@/lib/sak/page-search';
 import { searchSakPage } from '@/lib/sak/page-search';
 import type { OpinionListItem } from '@/lib/opinions/types';
 import type { SakDocumentRef } from '@/lib/stortinget-documents';
 import { navigateToSakTab } from '@/components/sak/sak-page-tabs';
+import { focusSakSearchAnchor } from '@/lib/sak/page-search-nav';
 import { cn } from '@/lib/utils';
 
 const KIND_LABEL: Record<SakSearchHit['kind'], string> = {
@@ -17,6 +18,12 @@ const KIND_LABEL: Record<SakSearchHit['kind'], string> = {
   innstilling: 'Innstilling',
   argument: 'Argument',
 };
+
+const FIELD_SHELL_CLASS =
+  'flex min-h-11 items-center gap-2 rounded-xl border border-border bg-card px-3 shadow-sm focus-within:ring-2 focus-within:ring-brand/40 focus-within:ring-offset-2 focus-within:ring-offset-background';
+
+const HIT_BUTTON_CLASS =
+  'flex w-full flex-col gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset';
 
 export type SakPageSearchCorpus = {
   title: string;
@@ -32,9 +39,14 @@ export function SakPageSearch({ corpus, className }: { corpus: SakPageSearchCorp
   const [activeIndex, setActiveIndex] = useState(0);
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const listboxId = useId();
+  const inputId = useId();
+
+  const trimmedQuery = query.trim();
+  const listOpen = open && trimmedQuery.length >= 2;
 
   const hits = useMemo(
-  () =>
+    () =>
       searchSakPage({
         query,
         title: corpus.title,
@@ -47,17 +59,11 @@ export function SakPageSearch({ corpus, className }: { corpus: SakPageSearchCorp
     [corpus, query],
   );
 
+  const resolvedActiveIndex = hits.length === 0 ? 0 : Math.min(activeIndex, hits.length - 1);
+
   const scrollToHit = useCallback((hit: SakSearchHit) => {
     navigateToSakTab(hit.tab);
-    window.requestAnimationFrame(() => {
-      const el = document.getElementById(hit.anchorId);
-      if (!el) return;
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      el.classList.add('ring-2', 'ring-brand', 'ring-offset-2', 'ring-offset-background');
-      window.setTimeout(() => {
-        el.classList.remove('ring-2', 'ring-brand', 'ring-offset-2', 'ring-offset-background');
-      }, 1600);
-    });
+    void focusSakSearchAnchor(hit.anchorId);
     setOpen(false);
   }, []);
 
@@ -69,17 +75,21 @@ export function SakPageSearch({ corpus, className }: { corpus: SakPageSearchCorp
     return () => window.removeEventListener('pointerdown', onPointer);
   }, []);
 
+  const activeDescendantId =
+    listOpen && hits.length > 0 ? `${listboxId}-option-${resolvedActiveIndex}` : undefined;
+
   return (
-    <div
-      ref={rootRef}
-      data-sak-page-search=""
-      className={cn('relative', className)}
-    >
-      <label className="flex min-h-11 items-center gap-2 rounded-xl border border-border bg-card px-3 shadow-sm">
+    <div ref={rootRef} data-sak-page-search="" className={cn('relative', className)}>
+      <label htmlFor={inputId} className={FIELD_SHELL_CLASS}>
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-        <span className="sr-only">Søk i saken</span>
         <input
+          id={inputId}
           type="search"
+          role="combobox"
+          aria-expanded={listOpen}
+          aria-controls={listOpen ? listboxId : undefined}
+          aria-activedescendant={activeDescendantId}
+          aria-autocomplete="list"
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
@@ -87,10 +97,14 @@ export function SakPageSearch({ corpus, className }: { corpus: SakPageSearchCorp
             setOpen(event.target.value.trim().length >= 2);
           }}
           onFocus={() => {
-            if (query.trim().length >= 2) setOpen(true);
+            if (trimmedQuery.length >= 2) setOpen(true);
           }}
           onKeyDown={(event) => {
-            if (!open || hits.length === 0) return;
+            if (!listOpen) return;
+            if (hits.length === 0) {
+              if (event.key === 'Escape') setOpen(false);
+              return;
+            }
             if (event.key === 'ArrowDown') {
               event.preventDefault();
               setActiveIndex((value) => (value + 1) % hits.length);
@@ -101,7 +115,7 @@ export function SakPageSearch({ corpus, className }: { corpus: SakPageSearchCorp
             }
             if (event.key === 'Enter') {
               event.preventDefault();
-              const hit = hits[activeIndex];
+              const hit = hits[resolvedActiveIndex];
               if (hit) scrollToHit(hit);
             }
             if (event.key === 'Escape') setOpen(false);
@@ -112,20 +126,27 @@ export function SakPageSearch({ corpus, className }: { corpus: SakPageSearchCorp
         />
       </label>
 
-      {open && query.trim().length >= 2 ? (
-        <ul className="absolute z-40 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-border bg-card py-1 shadow-lg">
+      {listOpen ? (
+        <ul
+          id={listboxId}
+          role="listbox"
+          aria-label="Søketreff i saken"
+          className="absolute z-40 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-border bg-card py-1 shadow-lg"
+        >
           {hits.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-muted-foreground">Ingen treff i saken.</li>
+            <li role="status" className="px-3 py-2 text-sm text-muted-foreground">
+              Ingen treff i saken.
+            </li>
           ) : (
             hits.map((hit, index) => (
-              <li key={hit.id}>
+              <li key={hit.id} role="presentation">
                 <button
+                  id={`${listboxId}-option-${index}`}
                   type="button"
+                  role="option"
+                  aria-selected={index === resolvedActiveIndex}
                   onClick={() => scrollToHit(hit)}
-                  className={cn(
-                    'flex w-full flex-col gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted/50',
-                    index === activeIndex && 'bg-muted/60',
-                  )}
+                  className={cn(HIT_BUTTON_CLASS, index === resolvedActiveIndex && 'bg-muted/60')}
                 >
                   <span className="font-medium text-foreground">{hit.label}</span>
                   <span className="text-xs text-muted-foreground">

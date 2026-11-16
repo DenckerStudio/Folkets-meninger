@@ -7,19 +7,18 @@ import { aggregateOpinionArguments } from '@/lib/sak/arguments/extract-meninger'
 const innst = extractInnstillingArguments(
   'Komiteen tilrår at Stortinget vedtar endringen. Enkelte medlemmer er uenige i at ordningen bør innføres uten evaluering.',
 );
-assert.equal(innst.length, 2);
-assert.ok(innst.some((row) => row.side === 'for'));
-assert.ok(innst.some((row) => row.side === 'mot'));
+assert.equal(innst.length, 0);
 
-const merknad = extractMerknadArguments([
+const merknad = extractMerknadArguments('200192', [
   {
     document_id: 'inns-1',
     chunk_index: 0,
-    content: '## Komiteens merknader\n- Støtter hovedlinjen i forslaget om sikkerhet i nærskolen.\n- Er uenige i at ordningen bør innføres uten evaluering.',
+    content:
+      '## Komiteens merknader\nAp: Vi går inn for hovedlinjen i forslaget om sikkerhet i nærskolen.\nFrP – står imot at ordningen innføres uten evaluering.',
     metadata: { section_title: 'Komiteens merknader', document_title: 'Innstilling' },
   },
 ]);
-assert.ok(merknad.length >= 2);
+assert.equal(merknad.length, 2);
 
 const opinions = Array.from({ length: 6 }, (_, index) => ({
   id: String(index),

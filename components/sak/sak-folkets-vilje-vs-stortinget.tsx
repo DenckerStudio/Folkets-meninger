@@ -5,12 +5,11 @@ import { ExternalLink, Scale } from 'lucide-react';
 import type { SakFolkVsStortingetViewModel } from '@/lib/sak/folk-vs-stortinget-view';
 import { formatStemmerCount } from '@/lib/norwegian-plural';
 import { cn } from '@/lib/utils';
-import { STANCE_VISUAL } from '@/lib/opinions/labels';
 
 function SplitBar({
   segments,
 }: {
-  segments: { label: string; percent: number; color: string }[];
+  segments: { label: string; percent: number; barClass: string }[];
 }) {
   return (
     <div className="mt-2 flex h-3 overflow-hidden rounded-full bg-muted" aria-hidden>
@@ -19,8 +18,8 @@ function SplitBar({
         .map((segment) => (
           <div
             key={segment.label}
-            className="h-full"
-            style={{ width: `${segment.percent}%`, backgroundColor: segment.color }}
+            className={cn('h-full', segment.barClass)}
+            style={{ width: `${segment.percent}%` }}
           />
         ))}
     </div>
@@ -66,12 +65,12 @@ export function SakFolketsViljeVsStortinget({
                       {
                         label: 'for',
                         percent: model.stortingetForPercent,
-                        color: '#10b981',
+                        barClass: 'bg-emerald-500',
                       },
                       {
                         label: 'mot',
                         percent: model.stortingetAgainstPercent,
-                        color: '#e11d48',
+                        barClass: 'bg-brand-accent',
                       },
                     ]}
                   />
@@ -97,14 +96,14 @@ export function SakFolketsViljeVsStortinget({
                   <>
                     <SplitBar
                       segments={[
-                        { label: 'nei', percent: model.pollPercents.nei, color: STANCE_VISUAL.imot.bg },
-                        { label: 'blank', percent: model.pollPercents.blank, color: '#e5e7eb' },
-                        { label: 'ja', percent: model.pollPercents.ja, color: STANCE_VISUAL.for.bg },
+                        { label: 'nei', percent: model.pollPercents.nei, barClass: 'bg-brand-accent' },
+                        { label: 'blank', percent: model.pollPercents.blank, barClass: 'bg-muted-foreground/35' },
+                        { label: 'ja', percent: model.pollPercents.ja, barClass: 'bg-brand' },
                       ]}
                     />
                     <PollLegend
                       rows={[
-                        { label: 'Nei', value: model.pollPercents.nei, className: 'text-rose-700 dark:text-rose-300' },
+                        { label: 'Nei', value: model.pollPercents.nei, className: 'text-brand-accent' },
                         { label: 'Blank', value: model.pollPercents.blank, className: 'text-muted-foreground' },
                         { label: 'Ja', value: model.pollPercents.ja, className: 'text-brand' },
                       ]}
@@ -115,15 +114,15 @@ export function SakFolketsViljeVsStortinget({
                   <>
                     <SplitBar
                       segments={[
-                        { label: 'for', percent: model.historicForPercent, color: '#10b981' },
-                        { label: 'mot', percent: model.historicAgainstPercent, color: '#e11d48' },
-                        { label: 'avstår', percent: model.historicAbstainPercent, color: '#94a3b8' },
+                        { label: 'for', percent: model.historicForPercent, barClass: 'bg-emerald-500' },
+                        { label: 'mot', percent: model.historicAgainstPercent, barClass: 'bg-brand-accent' },
+                        { label: 'avstår', percent: model.historicAbstainPercent, barClass: 'bg-muted-foreground/35' },
                       ]}
                     />
                     <PollLegend
                       rows={[
                         { label: 'For', value: model.historicForPercent, className: 'text-emerald-700 dark:text-emerald-300' },
-                        { label: 'Mot', value: model.historicAgainstPercent, className: 'text-rose-700 dark:text-rose-300' },
+                        { label: 'Mot', value: model.historicAgainstPercent, className: 'text-brand-accent' },
                         { label: 'Avstår', value: model.historicAbstainPercent, className: 'text-muted-foreground' },
                       ]}
                       total={model.historicFolk.total}
@@ -147,7 +146,10 @@ export function SakFolketsViljeVsStortinget({
 
       <div className="mt-5 flex flex-wrap gap-4 text-sm">
         {model.pollHref ? (
-          <Link href={model.pollHref} className="inline-flex min-h-11 items-center font-medium text-brand hover:underline">
+          <Link
+            href={model.pollHref}
+            className="inline-flex min-h-11 items-center rounded-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+          >
             {model.votingOpen ? 'Stem i avstemningen' : 'Se avstemningen'}
           </Link>
         ) : null}
@@ -155,9 +157,9 @@ export function SakFolketsViljeVsStortinget({
           href={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sakId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex min-h-11 items-center font-medium text-muted-foreground transition-colors hover:text-brand"
+          className="inline-flex min-h-11 items-center rounded-sm font-medium text-muted-foreground transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
         >
-          <ExternalLink className="mr-1.5 h-4 w-4" />
+          <ExternalLink className="mr-1.5 h-4 w-4" aria-hidden />
           Stortingets sakside
         </a>
       </div>
@@ -176,14 +178,17 @@ function PollLegend({
 }) {
   return (
     <>
-      <div className="mt-2 flex justify-between gap-2 text-xs font-medium">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs font-medium">
         {rows.map((row) => (
           <span key={row.label} className={cn(row.className)}>
             {row.label} {row.value}%
           </span>
         ))}
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">{formatStemmerCount(total)}{note ? ` · ${note}` : ''}</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {formatStemmerCount(total)}
+        {note ? ` · ${note}` : ''}
+      </p>
     </>
   );
 }
@@ -202,12 +207,12 @@ function StortingLegend({
   absent: string | null;
 }) {
   return (
-    <div className="mt-2 flex justify-between gap-2 text-xs font-medium">
+    <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs font-medium">
       <span className="text-emerald-700 dark:text-emerald-300">
         {forLabel} {forPercent}%
       </span>
-      {absent ? <span className="text-center text-muted-foreground">{absent}</span> : <span />}
-      <span className="text-rose-700 dark:text-rose-300">
+      {absent ? <span className="text-center text-muted-foreground">{absent}</span> : null}
+      <span className="text-brand-accent">
         {againstLabel} {againstPercent}%
       </span>
     </div>

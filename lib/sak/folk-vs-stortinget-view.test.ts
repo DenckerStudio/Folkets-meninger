@@ -31,6 +31,26 @@ const openPollHidden = buildSakFolkVsStortingetView({
 });
 assert.equal(openPollHidden.folkKind, 'none');
 assert.equal(openPollHidden.folkHiddenMessage, 'Fordelingen fra avstemningen vises når du har stemt.');
+const stOnlyHeadline = buildSakFolkVsStortingetView({
+  folk: { for: 0, against: 0, abstain: 0, total: 0 },
+  voteringer: [votering],
+  sakVedtak: { kortvedtak: 'Innstillingen ble vedtatt.', vedtakstekst: null },
+  poll: {
+    id: 'poll-1',
+    totals: { ja: 8, nei: 2, blank: 1, total: 11 },
+    votingOpen: true,
+    hasVoted: false,
+  },
+}).headline;
+assert.equal(openPollHidden.headline, stOnlyHeadline);
+
+const historicHeadline = buildSakFolkVsStortingetView({
+  folk: { for: 10, against: 2, abstain: 0, total: 12 },
+  voteringer: [votering],
+  sakVedtak: { kortvedtak: 'Innstillingen ble vedtatt.', vedtakstekst: null },
+  poll: null,
+}).headline;
+assert.notEqual(openPollHidden.headline, historicHeadline);
 
 const closedPoll = buildSakFolkVsStortingetView({
   folk: { for: 0, against: 0, abstain: 0, total: 0 },

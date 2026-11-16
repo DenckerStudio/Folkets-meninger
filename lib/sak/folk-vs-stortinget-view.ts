@@ -72,6 +72,10 @@ export function buildSakFolkVsStortingetView(args: {
     comparison.stortingetForPercent != null &&
     comparison.stortingetAgainstPercent != null;
   const hasFolkSignal = showPollDistribution || historicPublic;
+  const hideFolkInHeadline = poll != null && !showPollDistribution;
+  const stOnlyComparison = hideFolkInHeadline
+    ? buildAlignmentComparison({ for: 0, against: 0, abstain: 0, total: 0 }, [...args.voteringer], args.sakVedtak)
+  : null;
 
   const emptyMessage =
     !hasStorting && !hasFolkSignal && !poll
@@ -80,8 +84,8 @@ export function buildSakFolkVsStortingetView(args: {
 
   return {
     emptyMessage,
-    headline: comparison.headline,
-    summary: comparison.summary,
+    headline: stOnlyComparison?.headline ?? comparison.headline,
+    summary: stOnlyComparison?.summary ?? comparison.summary,
     stortingetForPercent: comparison.stortingetForPercent,
     stortingetAgainstPercent: comparison.stortingetAgainstPercent,
     stortingetBarFor: comparison.stortingetBarLabels.for,
