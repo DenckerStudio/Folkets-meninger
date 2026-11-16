@@ -468,6 +468,7 @@ export default function RedditSignalsClient({
   const [hideRemoved, setHideRemoved] = useState(initialFilters.hideRemoved);
   const [onlySak, setOnlySak] = useState(initialFilters.onlyWithSakLink);
   const [sort, setSort] = useState(initialFilters.sort);
+  const clusterFilter = initialFilters.cluster;
   const debouncedTopic = useDebouncedValue(topic, FILTER_DEBOUNCE_MS);
   const debouncedMinScore = useDebouncedValue(minScore, FILTER_DEBOUNCE_MS);
   const debouncedMinComments = useDebouncedValue(minComments, FILTER_DEBOUNCE_MS);
@@ -494,6 +495,7 @@ export default function RedditSignalsClient({
       onlyWithSakLink: onlySak,
       spikeFocus: initialFilters.spikeFocus,
       sort,
+      cluster: clusterFilter,
     }),
     [
       subreddit,
@@ -506,6 +508,7 @@ export default function RedditSignalsClient({
       onlySak,
       initialFilters.spikeFocus,
       sort,
+      clusterFilter,
     ],
   );
 
@@ -539,6 +542,7 @@ export default function RedditSignalsClient({
     const cleared: RedditSignalListFilters = {
       subreddit: '',
       topic: '',
+      cluster: '',
       minScore: null,
       minComments: null,
       minRelevance: null,
@@ -589,6 +593,22 @@ export default function RedditSignalsClient({
             >
               Fjern vekstfilter
             </button>
+          </div>
+        ) : null}
+        {clusterFilter ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">
+              Klyngefilter: <span className="font-medium text-foreground">{clusterFilter}</span>
+            </span>
+            <Link
+              href={buildRedditSignalsAdminPath(
+                { ...initialFilters, cluster: '' },
+                previewParam,
+              )}
+              className="inline-flex min-h-11 items-center text-sm font-medium text-brand hover:underline"
+            >
+              Fjern klyngefilter
+            </Link>
           </div>
         ) : null}
         {initialData.previewFixture ? (

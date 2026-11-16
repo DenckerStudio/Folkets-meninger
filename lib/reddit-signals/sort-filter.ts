@@ -32,6 +32,10 @@ export function filterRedditSignalRows(
       const topic = row.topic?.toLowerCase() ?? '';
       if (!topic.includes(filters.topic.toLowerCase())) return false;
     }
+    if (filters.cluster) {
+      const cluster = row.clusterId?.trim() ?? '';
+      if (cluster !== filters.cluster) return false;
+    }
     if (filters.minScore !== null && row.score < filters.minScore) return false;
     if (filters.minComments !== null && row.numComments < filters.minComments) return false;
     if (filters.minRelevance !== null) {

@@ -10,7 +10,7 @@ export function ResearchViewTabs({
   active,
   spikeBadgeActive = false,
 }: {
-  active: 'oppfanget' | 'signaler';
+  active: 'oppfanget' | 'signaler' | 'temaer';
   spikeBadgeActive?: boolean;
 }) {
   return (
@@ -39,6 +39,18 @@ export function ResearchViewTabs({
       >
         Interessesignaler
         <RedditSpikeBadgeTabDot show={spikeBadgeActive} />
+      </Link>
+      <Link
+        href={`${routes.adminResearch}?view=temaer`}
+        className={cn(
+          tabClass,
+          active === 'temaer'
+            ? 'border-brand bg-brand/10 text-brand'
+            : 'border-border bg-card text-foreground hover:bg-muted',
+        )}
+        aria-current={active === 'temaer' ? 'page' : undefined}
+      >
+        Temaer
       </Link>
     </nav>
   );
