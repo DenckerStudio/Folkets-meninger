@@ -17,7 +17,6 @@ import { routes } from '@/lib/routes';
 import { getServerSupabase } from '@/lib/supabase-server';
 import { isAdmin } from '@/lib/admin/gate';
 import { redactPublicFolkChoiceFields } from '@/lib/public-aggregate/folk-public-output';
-import { findOpenStortingetPollForIssue } from '@/lib/polls/service';
 import { listPollsForStortingetIssueAdmin } from '@/lib/polls/stortinget-poll-admin-data';
 import { resolveStortingetPollAdminUiState } from '@/lib/polls/stortinget-poll-admin-guard';
 import { getStortingetSakUrl } from '@/lib/stortinget-horinger';
@@ -28,12 +27,15 @@ import AiSummary from './ai-summary';
 import PoliticianResponseForm from './politician-response-form';
 import FadeIn from '@/components/fade-in';
 import ExpandableText from './expandable-text';
-import { SakDocumentsSection } from '@/components/sak/sak-documents-section';
 import { SakPageActions } from '@/components/sak/sak-page-actions';
 import { SakOfficialDescription } from '@/components/sak/sak-official-description';
 import { SakPageTabs } from '@/components/sak/sak-page-tabs';
 import { ImpactCalculator } from '@/components/sak/impact-calculator';
-import { AlignmentScore } from '@/components/sak/alignment-score';
+import { SakArgumentsSection } from '@/components/sak/sak-arguments-section';
+import { SakDocumentsPanel } from '@/components/sak/sak-documents-panel';
+import { SakDocumentsShortlist } from '@/components/sak/sak-documents-shortlist';
+import { SakFolketsViljeVsStortingetSection } from '@/components/sak/sak-folkets-vilje-vs-stortinget-section';
+import { SakPageSearchCorpus } from '@/components/sak/sak-page-search-corpus';
 import { KnowledgeQuiz } from '@/components/sak/knowledge-quiz';
 import { SimilarIssuesSection } from '@/components/sak/similar-issues-section';
 import { TopicAroundSakSection } from '@/components/search/topic-around-sak-section';
@@ -247,7 +249,6 @@ export default async function SakPage({
     officialDescription && officialDescription !== officialTitle ? officialDescription : '';
 
   const supabase = await getServerSupabase();
-  const openStortingetPoll = await findOpenStortingetPollForIssue(sak.id, supabase);
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -321,7 +322,10 @@ export default async function SakPage({
             ) : null}
           </div>
 
-          <h1 className="text-balance text-2xl font-bold tracking-tight break-words text-foreground sm:text-3xl">
+          <h1
+            id="sak-tittel"
+            className="text-balance text-2xl font-bold tracking-tight break-words text-foreground sm:text-3xl"
+          >
             {officialTitle}
           </h1>
           {!isDedicatedResearchSak ? (
@@ -331,7 +335,11 @@ export default async function SakPage({
               stortingetPageUrl={`https://www.stortinget.no/no/Saker-og-publikasjoner/Saker/Sak/?p=${sak.id}`}
             />
           ) : null}
-          {descriptionToShow ? <SakOfficialDescription text={descriptionToShow} /> : null}
+          {descriptionToShow ? (
+            <div id="sak-offisiell-beskrivelse">
+              <SakOfficialDescription text={descriptionToShow} />
+            </div>
+          ) : null}
           {(sak.henvisning || henvisning) ? (
             <p className="text-sm text-muted-foreground">{sak.henvisning || henvisning}</p>
           ) : null}
@@ -341,6 +349,18 @@ export default async function SakPage({
       {!isDedicatedResearchSak ? (
         <FadeIn delay={0.25} direction="up">
           <SakStortingetPollAggregateSection sakId={sak.id} />
+        </FadeIn>
+      ) : null}
+
+      {!isDedicatedResearchSak ? (
+        <FadeIn delay={0.24} direction="up">
+          <SakPageSearchCorpus
+            sakId={sak.id}
+            title={officialTitle}
+            summary={descriptionToShow || publicSakSummaryLead(storedSummary) || null}
+            documents={documents}
+            innstillingstekst={innstillingstekst}
+          />
         </FadeIn>
       ) : null}
 
@@ -394,8 +414,16 @@ export default async function SakPage({
               </div>
             ) : null}
 
+            {!isDedicatedResearchSak && documents.length > 0 ? (
+              <SakDocumentsShortlist sakId={sak.id} documents={documents} />
+            ) : null}
+
+            {!isDedicatedResearchSak ? (
+              <SakArgumentsSection sakId={sak.id} innstillingstekst={innstillingstekst} />
+            ) : null}
+
             {innstillingstekst ? (
-              <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
+              <div id="sak-innstilling" className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
                 <SakSectionHeading
                   title="Komiteens innstilling (Stortinget)"
                   tooltipKey="innstilling"
@@ -551,9 +579,8 @@ export default async function SakPage({
               sakSummary={descriptionToShow || officialTitle}
             />
 
-            <AlignmentScore
+            <SakFolketsViljeVsStortingetSection
               sakId={sak.id}
-              openPollId={openStortingetPoll?.id ?? null}
               voteringer={voteringer}
               initialFolk={initialPublicFolk}
               sakVedtak={{
@@ -570,7 +597,7 @@ export default async function SakPage({
         dokumenter={
           <div className="space-y-6">
             {documents.length > 0 ? (
-              <SakDocumentsSection
+              <SakDocumentsPanel
                 sakId={sak.id}
                 initialDocuments={documents}
                 initialDocumentId={initialDocumentId}

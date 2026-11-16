@@ -26,6 +26,7 @@ export async function SakMeningerSection({ sakId }: { sakId: string }) {
 
   return (
     <section
+      id="sak-meninger"
       data-sak-meninger=""
       className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6"
     >

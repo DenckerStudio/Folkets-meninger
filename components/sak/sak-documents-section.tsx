@@ -304,7 +304,7 @@ export function SakDocumentsSection({
               </h3>
               <ul className="space-y-2">
                 {group.documents.map((doc) => (
-                  <li key={doc.id}>
+                  <li key={doc.id} id={`sak-dokument-${doc.id}`} data-sak-dokument-id={doc.id}>
                     <button
                       type="button"
                       onClick={() => setActiveDocument(doc)}
