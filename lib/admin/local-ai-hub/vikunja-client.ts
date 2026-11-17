@@ -1,4 +1,9 @@
-import { LOCAL_AI_FETCH_TIMEOUT_MS } from '@/lib/admin/local-ai-hub/labels';
+import 'server-only';
+
+import { LOCAL_AI_FETCH_TIMEOUT_MS, LOCAL_AI_LABEL_TITLES } from '@/lib/admin/local-ai-hub/labels';
+
+const MAX_TASK_PAGES = 30;
+const TASKS_PER_PAGE = 50;
 
 export type VikunjaLabel = { id: number; title: string };
 
@@ -18,6 +23,8 @@ type VikunjaClientOptions = {
   apiToken: string;
   projectId: number;
 };
+
+const LOCAL_AI_LABEL_SET = new Set<string>(Object.values(LOCAL_AI_LABEL_TITLES));
 
 function normalizeBaseUrl(apiUrl: string): string {
   const trimmed = apiUrl.replace(/\/+$/, '');
@@ -59,18 +66,40 @@ async function vikunjaFetch<T>(
   }
 }
 
+function taskHasLocalAiLabel(task: VikunjaTask): boolean {
+  return (task.labels ?? []).some((l) => LOCAL_AI_LABEL_SET.has(l.title));
+}
+
 export async function listProjectTasks(
   opts: VikunjaClientOptions,
 ): Promise<{ ok: true; tasks: VikunjaTask[] } | { ok: false; error: string }> {
-  const result = await vikunjaFetch<VikunjaTask[] | { tasks?: VikunjaTask[] }>(
-    opts,
-    `/projects/${opts.projectId}/tasks?per_page=100&expand=comments`,
-    { method: 'GET' },
-  );
-  if (!result.ok) return result;
-  const raw = result.data;
-  const tasks = Array.isArray(raw) ? raw : Array.isArray(raw.tasks) ? raw.tasks : [];
-  return { ok: true, tasks };
+  const collected: VikunjaTask[] = [];
+
+  for (let page = 1; page <= MAX_TASK_PAGES; page += 1) {
+    const result = await vikunjaFetch<VikunjaTask[] | { tasks?: VikunjaTask[] }>(
+      opts,
+      `/projects/${opts.projectId}/tasks?per_page=${TASKS_PER_PAGE}&page=${page}&expand=comments`,
+      { method: 'GET' },
+    );
+    if (!result.ok) {
+      return page === 1 ? result : { ok: true, tasks: collected };
+    }
+    const raw = result.data;
+    const batch = Array.isArray(raw) ? raw : Array.isArray(raw.tasks) ? raw.tasks : [];
+    if (batch.length === 0) {
+      break;
+    }
+    for (const task of batch) {
+      if (taskHasLocalAiLabel(task)) {
+        collected.push(task);
+      }
+    }
+    if (batch.length < TASKS_PER_PAGE) {
+      break;
+    }
+  }
+
+  return { ok: true, tasks: collected };
 }
 
 export async function listLabels(
@@ -115,16 +144,12 @@ export function replaceLabelOnTask(
   task: VikunjaTask,
   fromTitle: string,
   toLabelId: number,
-  allLabelsByTitle: Map<string, number>,
+  _allLabelsByTitle: Map<string, number>,
 ): number[] {
   const keep = new Set<number>();
   for (const l of task.labels ?? []) {
     if (l.title === fromTitle) continue;
-    if (allLabelsByTitle.has(l.title)) {
-      keep.add(l.id);
-    } else {
-      keep.add(l.id);
-    }
+    keep.add(l.id);
   }
   keep.add(toLabelId);
   return [...keep];

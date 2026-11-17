@@ -1,7 +1,10 @@
 'use server';
 
+import 'server-only';
+
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/admin/gate';
+import { isAdminLocalAiHubEnabled } from '@/lib/admin/local-ai-hub/flags';
 import { readLocalAiHubConfig } from '@/lib/admin/local-ai-hub/config';
 import { rollupCi } from '@/lib/admin/local-ai-hub/ci-rollup';
 import {
@@ -21,9 +24,17 @@ import {
   setTaskLabelsBulk,
   taskHasLabel,
 } from '@/lib/admin/local-ai-hub/vikunja-client';
+import { shortenUpstreamError } from '@/lib/admin/local-ai-hub/upstream-errors';
 import { routes } from '@/lib/routes';
 
 export type LocalAiActionResult = { ok: true } | { ok: false; error: string };
+
+function requireLocalAiHubFlag(): LocalAiActionResult | { ok: true } {
+  if (!isAdminLocalAiHubEnabled()) {
+    return { ok: false, error: 'Lokal-AI-hub er ikke aktivert' };
+  }
+  return { ok: true };
+}
 
 async function requireConfig() {
   const config = readLocalAiHubConfig();
@@ -34,6 +45,9 @@ async function requireConfig() {
 }
 
 export async function approveLocalAiSuggestionAction(taskId: number): Promise<LocalAiActionResult> {
+  const flag = requireLocalAiHubFlag();
+  if (!flag.ok) return flag;
+
   const auth = await requireAdmin();
   if (!auth.ok) return { ok: false, error: auth.error };
 
@@ -70,6 +84,9 @@ export async function approveLocalAiSuggestionAction(taskId: number): Promise<Lo
 }
 
 export async function rejectLocalAiSuggestionAction(taskId: number): Promise<LocalAiActionResult> {
+  const flag = requireLocalAiHubFlag();
+  if (!flag.ok) return flag;
+
   const auth = await requireAdmin();
   if (!auth.ok) return { ok: false, error: auth.error };
 
@@ -114,6 +131,9 @@ export async function mergeLocalAiPullAction(input: {
   number: number;
   expectedHeadSha: string;
 }): Promise<LocalAiActionResult> {
+  const flag = requireLocalAiHubFlag();
+  if (!flag.ok) return flag;
+
   const auth = await requireAdmin();
   if (!auth.ok) return { ok: false, error: auth.error };
 
@@ -150,7 +170,11 @@ export async function mergeLocalAiPullAction(input: {
   const verdicts =
     commentsRes.ok
       ? parseVerdictsFromComments(
-          commentsRes.comments.map((c) => ({ body: c.body ?? '', created_at: c.created_at })),
+          commentsRes.comments.map((c) => ({
+            body: c.body ?? '',
+            created_at: c.created_at,
+            author_association: c.author_association,
+          })),
           pull.head.sha,
         )
       : { pixel: 'unknown' as const, friction: 'unknown' as const };
@@ -166,7 +190,104 @@ export async function mergeLocalAiPullAction(input: {
   }
 
   const merged = await mergePullSquash(gh, pull.number, pull.head.sha);
-  if (!merged.ok) return { ok: false, error: merged.error };
+  if (!merged.ok) {
+    return { ok: false, error: shortenUpstreamError(merged.error, 'Merge feilet') };
+  }
+
+  revalidatePath(routes.adminOppgaver);
+  return { ok: true };
+}
+
+export async function requeueFailedLocalAiTaskAction(taskId: number): Promise<LocalAiActionResult> {
+  const flag = requireLocalAiHubFlag();
+  if (!flag.ok) return flag;
+
+  const auth = await requireAdmin();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const cfg = await requireConfig();
+  if (!cfg.ok) return cfg;
+
+  const vikunjaOpts = {
+    apiUrl: cfg.config.apiUrl,
+    apiToken: cfg.config.apiToken,
+    projectId: cfg.config.projectId,
+  };
+
+  const [tasksRes, labelsRes] = await Promise.all([listProjectTasks(vikunjaOpts), listLabels(vikunjaOpts)]);
+  if (!tasksRes.ok) {
+    return { ok: false, error: shortenUpstreamError(tasksRes.error, 'Kunne ikke hente oppgaver') };
+  }
+  if (!labelsRes.ok) {
+    return { ok: false, error: shortenUpstreamError(labelsRes.error, 'Kunne ikke hente etiketter') };
+  }
+
+  const task = tasksRes.tasks.find((t) => t.id === taskId);
+  if (!task || !taskHasLabel(task, LOCAL_AI_LABEL_TITLES.feilet)) {
+    return { ok: false, error: 'Oppgaven finnes ikke eller er ikke merket som feilet' };
+  }
+
+  const labelMap = new Map(labelsRes.labels.map((l) => [l.title, l.id]));
+  const queuedId = labelMap.get(LOCAL_AI_LABEL_TITLES.queued);
+  if (!queuedId) {
+    return { ok: false, error: `Mangler Vikunja-etikett «${LOCAL_AI_LABEL_TITLES.queued}»` };
+  }
+
+  const nextIds = replaceLabelOnTask(task, LOCAL_AI_LABEL_TITLES.feilet, queuedId, labelMap);
+  const bulk = await setTaskLabelsBulk(vikunjaOpts, taskId, nextIds);
+  if (!bulk.ok) {
+    return { ok: false, error: shortenUpstreamError(bulk.error, 'Kunne ikke oppdatere etiketter') };
+  }
+
+  revalidatePath(routes.adminOppgaver);
+  return { ok: true };
+}
+
+export async function rejectFailedLocalAiTaskAction(taskId: number): Promise<LocalAiActionResult> {
+  const flag = requireLocalAiHubFlag();
+  if (!flag.ok) return flag;
+
+  const auth = await requireAdmin();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const cfg = await requireConfig();
+  if (!cfg.ok) return cfg;
+
+  const vikunjaOpts = {
+    apiUrl: cfg.config.apiUrl,
+    apiToken: cfg.config.apiToken,
+    projectId: cfg.config.projectId,
+  };
+
+  const [tasksRes, labelsRes] = await Promise.all([listProjectTasks(vikunjaOpts), listLabels(vikunjaOpts)]);
+  if (!tasksRes.ok) {
+    return { ok: false, error: shortenUpstreamError(tasksRes.error, 'Kunne ikke hente oppgaver') };
+  }
+  if (!labelsRes.ok) {
+    return { ok: false, error: shortenUpstreamError(labelsRes.error, 'Kunne ikke hente etiketter') };
+  }
+
+  const task = tasksRes.tasks.find((t) => t.id === taskId);
+  if (!task || !taskHasLabel(task, LOCAL_AI_LABEL_TITLES.feilet)) {
+    return { ok: false, error: 'Oppgaven finnes ikke eller er ikke merket som feilet' };
+  }
+
+  const labelMap = new Map(labelsRes.labels.map((l) => [l.title, l.id]));
+  const avvistId = labelMap.get(LOCAL_AI_LABEL_TITLES.avvist);
+  if (!avvistId) {
+    return { ok: false, error: `Mangler Vikunja-etikett «${LOCAL_AI_LABEL_TITLES.avvist}»` };
+  }
+
+  const nextIds = replaceLabelOnTask(task, LOCAL_AI_LABEL_TITLES.feilet, avvistId, labelMap);
+  const bulk = await setTaskLabelsBulk(vikunjaOpts, taskId, nextIds);
+  if (!bulk.ok) {
+    return { ok: false, error: shortenUpstreamError(bulk.error, 'Kunne ikke oppdatere etiketter') };
+  }
+
+  const done = await patchTaskDone(vikunjaOpts, taskId, true);
+  if (!done.ok) {
+    return { ok: false, error: shortenUpstreamError(done.error, 'Kunne ikke markere oppgave som ferdig') };
+  }
 
   revalidatePath(routes.adminOppgaver);
   return { ok: true };

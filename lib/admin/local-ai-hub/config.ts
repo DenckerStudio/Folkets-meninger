@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { LOCAL_AI_GITHUB_REPO } from '@/lib/admin/local-ai-hub/labels';
 
 export type LocalAiHubConfig =

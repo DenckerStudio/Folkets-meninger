@@ -23,10 +23,17 @@ export function computeMergeEligibility(input: {
   if (pull.state !== 'open') {
     reasons.push('Pull request er ikke åpen');
   }
-  if (pull.mergeable === false) {
+  if (pull.draft === true) {
+    reasons.push('Pull request er et utkast (draft)');
+  }
+  if (pull.mergeable === null) {
+    reasons.push('GitHub beregner fortsatt om pull request kan merges');
+  } else if (pull.mergeable === false) {
     reasons.push('Pull request er ikke mergebar (konflikt eller sperre)');
   }
-  if (input.ci && ciBlocksMerge(input.ci)) {
+  if (input.ci === null) {
+    reasons.push('Kunne ikke hente CI-status');
+  } else if (ciBlocksMerge(input.ci)) {
     reasons.push(input.ci.summary);
   }
   if (input.pixel !== 'pass') {

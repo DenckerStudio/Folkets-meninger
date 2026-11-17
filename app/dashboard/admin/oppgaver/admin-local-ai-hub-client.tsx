@@ -10,9 +10,12 @@ import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
 import {
   approveLocalAiSuggestionAction,
   mergeLocalAiPullAction,
+  rejectFailedLocalAiTaskAction,
   rejectLocalAiSuggestionAction,
+  requeueFailedLocalAiTaskAction,
 } from '@/lib/admin/local-ai-hub/actions';
-import type { LocalAiOverviewResult } from '@/lib/admin/local-ai-hub/overview';
+import type { LocalAiFinishedRow, LocalAiOverviewResult } from '@/lib/admin/local-ai-hub/overview';
+import { routes } from '@/lib/routes';
 import { verdictLabel, type ReviewVerdictOutcome } from '@/lib/admin/local-ai-hub/verdict-parser';
 import { cn } from '@/lib/utils';
 
@@ -25,6 +28,16 @@ function verdictClass(outcome: ReviewVerdictOutcome): string {
     default:
       return 'bg-muted text-muted-foreground';
   }
+}
+
+function prStatusLabel(pr: NonNullable<LocalAiFinishedRow['pr']>): string {
+  if (pr.merged) return 'Merget';
+  if (pr.state === 'open') return 'Åpen';
+  return 'Lukket';
+}
+
+function isInactiveFinishedRow(row: LocalAiFinishedRow): boolean {
+  return !row.failed && row.pr !== null && (row.pr.merged || row.pr.state !== 'open');
 }
 
 function ciBadgeClass(state: string | undefined): string {
@@ -46,7 +59,7 @@ type Props = {
 
 export function LocalAiHubPageSkeleton() {
   return (
-    <div className="space-y-6" aria-busy="true" aria-label="Laster lokal-AI-oversikt">
+    <div className="space-y-6" role="status" aria-busy="true" aria-label="Laster lokal-AI-oversikt">
       <div className="h-11 w-44 animate-pulse rounded bg-muted/60" />
       <div className="h-20 w-full max-w-2xl animate-pulse rounded bg-muted/60" />
       <div className="grid gap-4 lg:grid-cols-2">
@@ -63,8 +76,20 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
   const [pendingTaskId, setPendingTaskId] = useState<number | null>(null);
   const [rejectConfirmId, setRejectConfirmId] = useState<number | null>(null);
   const [mergeConfirmKey, setMergeConfirmKey] = useState<string | null>(null);
+  const [pendingMergingKey, setPendingMergingKey] = useState<string | null>(null);
+  const [failedRejectConfirmId, setFailedRejectConfirmId] = useState<number | null>(null);
+  const [showInactivePrs, setShowInactivePrs] = useState(false);
   const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
+
+  const forgetCardError = (key: string) => {
+    setCardErrors((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
 
   const refresh = useCallback(async () => {
     try {
@@ -113,6 +138,8 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
 
   const failedRows = overview.ferdig.filter((r) => r.failed);
   const doneRows = overview.ferdig.filter((r) => !r.failed);
+  const visibleDoneRows = showInactivePrs ? doneRows : doneRows.filter((r) => !isInactiveFinishedRow(r));
+  const hiddenInactiveCount = doneRows.filter((r) => isInactiveFinishedRow(r)).length;
 
   const runApprove = (taskId: number) => {
     setPendingTaskId(taskId);
@@ -123,6 +150,7 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
         setCardErrors((p) => ({ ...p, [`f-${taskId}`]: res.error }));
         return;
       }
+      forgetCardError(`f-${taskId}`);
       setRejectConfirmId(null);
       await refresh();
     });
@@ -138,18 +166,51 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
         setCardErrors((p) => ({ ...p, [`f-${taskId}`]: res.error }));
         return;
       }
+      forgetCardError(`f-${taskId}`);
+      await refresh();
+    });
+  };
+
+  const runRequeueFailed = (taskId: number) => {
+    setPendingTaskId(taskId);
+    startTransition(async () => {
+      const res = await requeueFailedLocalAiTaskAction(taskId);
+      setPendingTaskId(null);
+      if (!res.ok) {
+        setCardErrors((p) => ({ ...p, [`feilet-${taskId}`]: res.error }));
+        return;
+      }
+      forgetCardError(`feilet-${taskId}`);
+      await refresh();
+    });
+  };
+
+  const runRejectFailed = (taskId: number) => {
+    setPendingTaskId(taskId);
+    startTransition(async () => {
+      const res = await rejectFailedLocalAiTaskAction(taskId);
+      setPendingTaskId(null);
+      setFailedRejectConfirmId(null);
+      if (!res.ok) {
+        setCardErrors((p) => ({ ...p, [`feilet-${taskId}`]: res.error }));
+        return;
+      }
+      forgetCardError(`feilet-${taskId}`);
       await refresh();
     });
   };
 
   const runMerge = (key: string, owner: string, repo: string, number: number, headSha: string) => {
+    setPendingMergingKey(key);
     startTransition(async () => {
       const res = await mergeLocalAiPullAction({ owner, repo, number, expectedHeadSha: headSha });
       setMergeConfirmKey(null);
+      setPendingMergingKey(null);
       if (!res.ok) {
         setCardErrors((p) => ({ ...p, [key]: res.error }));
         return;
       }
+      forgetCardError(key);
       await refresh();
     });
   };
@@ -163,12 +224,27 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
           Lokal-AI
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Ferdige kjøringer, forslag til godkjenning og merge når CI og vurdering er på plass.
+          Ferdige kjøringer, forslag til godkjenning og merge når CI og vurdering er på plass. Dev-task-kanban
+          finnes fortsatt via lenken under.
+        </p>
+        <p className="mt-2">
+          <Link
+            href={`${routes.adminOppgaver}?view=kanban`}
+            className={cn(
+              'inline-flex min-h-11 items-center text-sm font-medium text-brand hover:underline',
+              VURDER_FOCUS_RING,
+            )}
+          >
+            Åpne dev-task-kanban
+          </Link>
         </p>
       </header>
 
       {overview.partialErrors.length > 0 ? (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3" role="status">
+        <div
+          className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3"
+          role="alert"
+        >
           <p className="text-sm text-foreground">Noen datakilder feilet:</p>
           <ul className="mt-1 list-inside list-disc text-sm text-muted-foreground">
             {overview.partialErrors.map((e) => (
@@ -191,23 +267,37 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
           <h2 id="lokal-ai-ferdig-heading" className="text-lg font-semibold text-foreground">
             Ferdig
           </h2>
-          <Button
-            type="button"
-            variant="outline"
-            className={cn('min-h-11', VURDER_FOCUS_RING)}
-            disabled={isPending}
-            onClick={() => void refresh()}
-          >
-            Oppdater
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {hiddenInactiveCount > 0 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className={cn('min-h-11', VURDER_FOCUS_RING)}
+                onClick={() => setShowInactivePrs((v) => !v)}
+              >
+                {showInactivePrs
+                  ? 'Skjul lukkede'
+                  : `Vis lukkede (${hiddenInactiveCount})`}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              className={cn('min-h-11', VURDER_FOCUS_RING)}
+              disabled={isPending}
+              onClick={() => void refresh()}
+            >
+              Oppdater
+            </Button>
+          </div>
         </div>
 
-        {doneRows.length === 0 && failedRows.length === 0 ? (
+        {visibleDoneRows.length === 0 && failedRows.length === 0 ? (
           <p className="text-sm text-muted-foreground">Ingen ferdige oppgaver med PR-etikett akkurat nå.</p>
         ) : null}
 
         <div className="grid gap-4">
-          {doneRows.map((row) => {
+          {visibleDoneRows.map((row) => {
             const mergeKey = `pr-${row.pr?.number ?? row.taskId}`;
             const confirmingMerge = mergeConfirmKey === mergeKey;
             return (
@@ -246,7 +336,7 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
                   <dl className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
                     <div>
                       <dt className="font-medium text-foreground">Status</dt>
-                      <dd>{row.pr.state === 'open' ? 'Åpen' : 'Lukket'}</dd>
+                      <dd>{prStatusLabel(row.pr)}</dd>
                     </div>
                     <div>
                       <dt className="font-medium text-foreground">Head SHA</dt>
@@ -261,7 +351,7 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
                             ciBadgeClass(row.ci?.state),
                           )}
                         >
-                          {row.ci?.summary ?? row.ciError ?? 'Ukjent'}
+                          {row.ci?.summary ?? row.ciError ?? 'Kunne ikke hente CI-status'}
                         </span>
                       </dd>
                     </div>
@@ -307,7 +397,7 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
                           }
                           onClick={() => setMergeConfirmKey(mergeKey)}
                         >
-                          Squash-merge
+                          {pendingMergingKey === mergeKey ? 'Merger …' : 'Squash-merge'}
                         </Button>
                         {!row.merge.canMerge ? (
                           <p className="text-xs text-muted-foreground">
@@ -340,7 +430,7 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
                               )
                             }
                           >
-                            Bekreft merge
+                            {pendingMergingKey === mergeKey ? 'Merger …' : 'Bekreft merge'}
                           </Button>
                           <Button
                             type="button"
@@ -363,33 +453,93 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
         {failedRows.length > 0 ? (
           <div className="space-y-3">
             <h3 className="text-base font-semibold text-foreground">Feilet</h3>
-            {failedRows.map((row) => (
-              <article
-                key={row.taskId}
-                className="rounded-xl border border-destructive/30 bg-destructive/5 p-4"
-              >
-                <h4 className="text-sm font-semibold text-foreground">{row.title}</h4>
-                <p className="mt-1 text-xs text-muted-foreground">Vikunja #{row.taskId}</p>
-                {row.failureComment ? (
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{row.failureComment}</p>
-                ) : (
-                  <p className="mt-2 text-sm text-muted-foreground">Ingen feilmelding i kommentarer.</p>
-                )}
-                {row.pr ? (
-                  <Link
-                    href={row.pr.url}
-                    className={cn(
-                      'mt-2 inline-flex min-h-11 items-center text-sm text-brand hover:underline',
-                      VURDER_FOCUS_RING,
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Se pull request
-                  </Link>
-                ) : null}
-              </article>
-            ))}
+            {failedRows.map((row) => {
+              const errKey = `feilet-${row.taskId}`;
+              const busy = pendingTaskId === row.taskId;
+              const confirming = failedRejectConfirmId === row.taskId;
+              return (
+                <article
+                  key={row.taskId}
+                  className="rounded-xl border border-destructive/30 bg-destructive/5 p-4"
+                >
+                  <h4 className="text-sm font-semibold text-foreground">{row.title}</h4>
+                  <p className="mt-1 text-xs text-muted-foreground">Vikunja #{row.taskId}</p>
+                  {row.failureComment ? (
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{row.failureComment}</p>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted-foreground">Ingen feilmelding i kommentarer.</p>
+                  )}
+                  {row.pr ? (
+                    <Link
+                      href={row.pr.url}
+                      className={cn(
+                        'mt-2 inline-flex min-h-11 items-center text-sm text-brand hover:underline',
+                        VURDER_FOCUS_RING,
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Se pull request
+                    </Link>
+                  ) : null}
+                  {cardErrors[errKey] ? (
+                    <p className="mt-2 text-xs text-destructive" role="alert">
+                      {cardErrors[errKey]}
+                    </p>
+                  ) : null}
+                  {!confirming ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        className={cn('min-h-11', VURDER_FOCUS_RING)}
+                        disabled={busy || isPending}
+                        onClick={() => runRequeueFailed(row.taskId)}
+                      >
+                        {busy && pendingTaskId === row.taskId ? 'Legger i kø …' : 'Sett i kø igjen'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn('min-h-11', VURDER_FOCUS_RING)}
+                        disabled={busy || isPending}
+                        onClick={() => setFailedRejectConfirmId(row.taskId)}
+                      >
+                        Avvis
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      className="mt-3 space-y-2 rounded-lg border border-border bg-muted/40 p-3"
+                      role="region"
+                      aria-label="Bekreft avvisning av feilet oppgave"
+                    >
+                      <p className="text-sm font-medium text-foreground">
+                        Avvis feilet oppgave og marker som ferdig?
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          className={cn('min-h-11', VURDER_FOCUS_RING)}
+                          disabled={busy || isPending}
+                          onClick={() => runRejectFailed(row.taskId)}
+                        >
+                          {busy ? 'Avviser …' : 'Bekreft avvisning'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn('min-h-11', VURDER_FOCUS_RING)}
+                          onClick={() => setFailedRejectConfirmId(null)}
+                        >
+                          Avbryt
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
           </div>
         ) : null}
       </section>
@@ -428,7 +578,7 @@ export default function AdminLocalAiHubClient({ initial }: Props) {
                         disabled={busy || isPending}
                         onClick={() => runApprove(row.taskId)}
                       >
-                        Godkjenn
+                        {busy ? 'Godkjenner …' : 'Godkjenn'}
                       </Button>
                       <Button
                         type="button"

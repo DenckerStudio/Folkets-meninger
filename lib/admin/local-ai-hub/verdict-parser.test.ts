@@ -1,64 +1,96 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseVerdictsFromComments } from '@/lib/admin/local-ai-hub/verdict-parser';
+import {
+  FRICTION_VERDICT_FIXTURES,
+  PIXEL_VERDICT_FIXTURES,
+} from '@/lib/admin/local-ai-hub/verdict-parser-fixtures';
+import {
+  isTrustedVerdictComment,
+  parseVerdictsFromComments,
+} from '@/lib/admin/local-ai-hub/verdict-parser';
 
 const HEAD = 'abc123def4567890abcdef1234567890abcdef12';
+const OWNER = 'OWNER';
+
+describe('isTrustedVerdictComment', () => {
+  it('godtar OWNER, MEMBER og COLLABORATOR', () => {
+    assert.equal(isTrustedVerdictComment('OWNER'), true);
+    assert.equal(isTrustedVerdictComment('MEMBER'), true);
+    assert.equal(isTrustedVerdictComment('collaborator'), true);
+  });
+
+  it('avviser CONTRIBUTOR og NONE', () => {
+    assert.equal(isTrustedVerdictComment('CONTRIBUTOR'), false);
+    assert.equal(isTrustedVerdictComment('NONE'), false);
+    assert.equal(isTrustedVerdictComment(null), false);
+  });
+});
 
 describe('parseVerdictsFromComments', () => {
-  it('matcher nyeste PASS for Pixel og Friction når SHA stemmer', () => {
-    const comments = [
-      {
-        body: '**Pixel UI PASS @ abc123d**',
-        created_at: '2026-01-01T00:00:00Z',
-      },
-      {
-        body: '**Friction UX: PASS @ `abc123def456`**',
-        created_at: '2026-01-02T00:00:00Z',
-      },
-      {
-        body: 'Pixel UI FAIL @ deadbeef',
-        created_at: '2026-01-03T00:00:00Z',
-      },
-    ];
-    const v = parseVerdictsFromComments(comments, HEAD);
+  for (const fixture of PIXEL_VERDICT_FIXTURES) {
+    it(`gjenkjenner Pixel fra PR #${fixture.pr}`, () => {
+      const v = parseVerdictsFromComments(
+        [{ body: fixture.body, created_at: '2026-01-01T00:00:00Z', author_association: OWNER }],
+        fixture.headSha,
+      );
+      assert.equal(v.pixel, fixture.outcome);
+    });
+  }
+
+  for (const fixture of FRICTION_VERDICT_FIXTURES) {
+    it(`gjenkjenner Friction fra PR #${fixture.pr}`, () => {
+      const v = parseVerdictsFromComments(
+        [{ body: fixture.body, created_at: '2026-01-01T00:00:00Z', author_association: OWNER }],
+        fixture.headSha,
+      );
+      assert.equal(v.friction, fixture.outcome);
+    });
+  }
+
+  it('ignorerer verdict fra ikke-trusted association', () => {
+    const v = parseVerdictsFromComments(
+      [
+        {
+          body: '**Pixel UI PASS @ abc123d**',
+          created_at: '2026-01-02T00:00:00Z',
+          author_association: 'CONTRIBUTOR',
+        },
+      ],
+      HEAD,
+    );
     assert.equal(v.pixel, 'unknown');
-    assert.equal(v.friction, 'pass');
   });
 
-  it('ignorerer eldre PASS når nyeste ikke matcher head', () => {
-    const comments = [
-      {
-        body: 'Pixel UI PASS @ abc123def4567890abcdef1234567890abcdef12',
-        created_at: '2026-01-01T00:00:00Z',
-      },
-      {
-        body: 'Pixel UI FAIL @ abc123def4567890abcdef1234567890abcdef12',
-        created_at: '2026-01-02T00:00:00Z',
-      },
-    ];
-    const v = parseVerdictsFromComments(comments, HEAD);
+  it('velger første verdict i brødteksten (PASS før FAIL i samme kommentar)', () => {
+    const v = parseVerdictsFromComments(
+      [
+        {
+          body: `**Pixel UI PASS @ abc123d**\n\nre-review (mot min Pixel UI FAIL @ ff00ff0)`,
+          created_at: '2026-01-02T00:00:00Z',
+          author_association: OWNER,
+        },
+      ],
+      HEAD,
+    );
+    assert.equal(v.pixel, 'pass');
+  });
+
+  it('nyeste trusted kommentar vinner på tvers av kommentarer', () => {
+    const v = parseVerdictsFromComments(
+      [
+        {
+          body: 'Pixel UI PASS @ abc123def4567890abcdef1234567890abcdef12',
+          created_at: '2026-01-01T00:00:00Z',
+          author_association: OWNER,
+        },
+        {
+          body: 'Pixel UI FAIL @ abc123def4567890abcdef1234567890abcdef12',
+          created_at: '2026-01-02T00:00:00Z',
+          author_association: OWNER,
+        },
+      ],
+      HEAD,
+    );
     assert.equal(v.pixel, 'fail');
-  });
-
-  it('returnerer unknown når nyeste kommentar har feil SHA', () => {
-    const comments = [
-      {
-        body: 'Pixel UI PASS @ ff00ff0',
-        created_at: '2026-01-02T00:00:00Z',
-      },
-    ];
-    const v = parseVerdictsFromComments(comments, HEAD);
-    assert.equal(v.pixel, 'unknown');
-  });
-
-  it('støtter Friction FAIL uten ekstra markdown', () => {
-    const comments = [
-      {
-        body: 'Friction UX: FAIL @ abc123d',
-        created_at: '2026-01-01T00:00:00Z',
-      },
-    ];
-    const v = parseVerdictsFromComments(comments, HEAD);
-    assert.equal(v.friction, 'fail');
   });
 });

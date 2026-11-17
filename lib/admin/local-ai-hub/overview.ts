@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { readLocalAiHubConfig, type LocalAiHubConfig } from '@/lib/admin/local-ai-hub/config';
 import { rollupCi, type CiRollup } from '@/lib/admin/local-ai-hub/ci-rollup';
 import {
@@ -12,6 +14,7 @@ import { computeMergeEligibility, type MergeEligibility } from '@/lib/admin/loca
 import { collectTaskTextParts, resolvePrLinkFromTask } from '@/lib/admin/local-ai-hub/pr-link';
 import { parseVerdictsFromComments, type ReviewVerdictOutcome } from '@/lib/admin/local-ai-hub/verdict-parser';
 import { listProjectTasks, type VikunjaTask } from '@/lib/admin/local-ai-hub/vikunja-client';
+import { shortenUpstreamError } from '@/lib/admin/local-ai-hub/upstream-errors';
 
 export type LocalAiFinishedRow = {
   taskId: number;
@@ -22,6 +25,7 @@ export type LocalAiFinishedRow = {
     number: number;
     url: string;
     state: string;
+    merged: boolean;
     headSha: string;
     headRef: string;
     mergeable: boolean | null;
@@ -113,7 +117,9 @@ async function enrichPullRow(
   }
 
   if (!pull) {
-    base.prError = prError;
+    base.prError = prError
+      ? shortenUpstreamError(prError, 'Kunne ikke hente pull request')
+      : 'Kunne ikke hente pull request';
     return base;
   }
 
@@ -121,6 +127,7 @@ async function enrichPullRow(
     number: pull.number,
     url: pull.html_url,
     state: pull.state,
+    merged: pull.merged,
     headSha: pull.head.sha,
     headRef: pull.head.ref,
     mergeable: pull.mergeable,
@@ -138,7 +145,7 @@ async function enrichPullRow(
     if (ciSettled.value.ok) {
       ci = rollupCi(ciSettled.value);
     } else {
-      ciError = ciSettled.value.error;
+      ciError = shortenUpstreamError(ciSettled.value.error, 'Kunne ikke hente CI-status');
     }
   } else {
     ciError = 'Kunne ikke hente CI-status';
@@ -153,6 +160,7 @@ async function enrichPullRow(
       commentsSettled.value.comments.map((c) => ({
         body: c.body ?? '',
         created_at: c.created_at,
+        author_association: c.author_association,
       })),
       pull.head.sha,
     );
@@ -179,7 +187,12 @@ export async function loadLocalAiOverview(): Promise<LocalAiOverviewResult> {
   });
 
   if (!tasksRes.ok) {
-    return { ok: true, ferdig: [], forslag: [], partialErrors: [tasksRes.error] };
+    return {
+      ok: true,
+      ferdig: [],
+      forslag: [],
+      partialErrors: [shortenUpstreamError(tasksRes.error, 'Kunne ikke hente Vikunja-oppgaver')],
+    };
   }
 
   const ferdigTasks: VikunjaTask[] = [];

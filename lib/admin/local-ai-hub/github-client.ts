@@ -1,4 +1,9 @@
+import 'server-only';
+
+import { parseGithubLinkNext } from '@/lib/admin/local-ai-hub/github-link';
 import { LOCAL_AI_FETCH_TIMEOUT_MS } from '@/lib/admin/local-ai-hub/labels';
+
+const MAX_ISSUE_COMMENT_PAGES = 10;
 
 type GithubClientOptions = {
   token: string;
@@ -11,6 +16,7 @@ export type GithubPull = {
   html_url: string;
   state: 'open' | 'closed';
   merged: boolean;
+  draft?: boolean;
   mergeable: boolean | null;
   mergeable_state: string;
   head: { ref: string; sha: string };
@@ -20,6 +26,7 @@ export type GithubIssueComment = {
   id: number;
   body: string | null;
   created_at: string;
+  author_association?: string | null;
   user?: { login?: string } | null;
 };
 
@@ -87,13 +94,42 @@ export async function listPullComments(
   opts: GithubClientOptions,
   number: number,
 ): Promise<{ ok: true; comments: GithubIssueComment[] } | { ok: false; error: string }> {
-  const result = await githubFetch<GithubIssueComment[]>(
-    opts,
-    `/repos/${opts.owner}/${opts.repo}/issues/${number}/comments?per_page=100`,
-    { method: 'GET' },
-  );
-  if (!result.ok) return result;
-  return { ok: true, comments: Array.isArray(result.data) ? result.data : [] };
+  const comments: GithubIssueComment[] = [];
+  let url: string | null =
+    `https://api.github.com/repos/${opts.owner}/${opts.repo}/issues/${number}/comments?per_page=100`;
+  let pages = 0;
+
+  try {
+    while (url && pages < MAX_ISSUE_COMMENT_PAGES) {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${opts.token}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+        signal: AbortSignal.timeout(LOCAL_AI_FETCH_TIMEOUT_MS),
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        return {
+          ok: false,
+          error: text || `GitHub svarte med HTTP ${res.status}`,
+        };
+      }
+      const page = (await res.json()) as GithubIssueComment[];
+      if (Array.isArray(page)) {
+        comments.push(...page);
+      }
+      url = parseGithubLinkNext(res.headers.get('link'));
+      pages += 1;
+    }
+    return { ok: true, comments };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Ukjent feil';
+    return { ok: false, error: msg };
+  }
 }
 
 export async function fetchCiForSha(

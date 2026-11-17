@@ -9,31 +9,48 @@ export type ParsedReviewVerdict = {
   createdAt: string | null;
 };
 
-const PIXEL_PASS =
-  /\*{0,2}\s*Pixel\s+UI\s*:?\s*PASS\s*@\*{0,2}\s*[`']?([0-9a-f]{7,40})[`']?\s*\*{0,2}/i;
-const PIXEL_FAIL =
-  /\*{0,2}\s*Pixel\s+UI\s*:?\s*FAIL\s*@\*{0,2}\s*[`']?([0-9a-f]{7,40})[`']?\s*\*{0,2}/i;
-const FRICTION_PASS =
-  /\*{0,2}\s*Friction\s+UX\s*:?\s*PASS\s*@\*{0,2}\s*[`']?([0-9a-f]{7,40})[`']?\s*\*{0,2}/i;
-const FRICTION_FAIL =
-  /\*{0,2}\s*Friction\s+UX\s*:?\s*FAIL\s*@\*{0,2}\s*[`']?([0-9a-f]{7,40})[`']?\s*\*{0,2}/i;
+export const TRUSTED_VERDICT_ASSOCIATIONS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 
-type CommentLike = { body: string; created_at?: string | null };
+/** Pixel: «Pixel UI PASS», «Pixel: UI PASS», valgfri ** før @ */
+const PIXEL_VERDICT_RE =
+  /(?:\*{1,2}\s*)?Pixel(?:\s*:\s*UI|\s+UI)?\s*:?\s*(PASS|FAIL)[\s*]*@\*{0,2}\s*[`'"]?([0-9a-f]{7,40})/gi;
 
-function extractVerdict(
+/** Friction: «Friction UX: PASS», «Friction FAIL» (UX valgfritt i korte varianter) */
+const FRICTION_VERDICT_RE =
+  /(?:\*{1,2}\s*)?Friction(?:\s+UX)?\s*:?\s*(PASS|FAIL)[\s*]*@\*{0,2}\s*[`'"]?([0-9a-f]{7,40})/gi;
+
+export type VerdictCommentLike = {
+  body: string;
+  created_at?: string | null;
+  author_association?: string | null;
+};
+
+export function isTrustedVerdictComment(authorAssociation: string | null | undefined): boolean {
+  if (!authorAssociation) return false;
+  return TRUSTED_VERDICT_ASSOCIATIONS.has(authorAssociation.toUpperCase());
+}
+
+function firstVerdictInBody(
   body: string,
-  passRe: RegExp,
-  failRe: RegExp,
+  verdictRe: RegExp,
 ): { outcome: 'pass' | 'fail'; sha: string } | null {
-  const fail = failRe.exec(body);
-  if (fail?.[1]) {
-    return { outcome: 'fail', sha: fail[1].toLowerCase() };
+  let earliestIndex = Number.POSITIVE_INFINITY;
+  let result: { outcome: 'pass' | 'fail'; sha: string } | null = null;
+  const re = new RegExp(verdictRe.source, verdictRe.flags);
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(body)) !== null) {
+    const outcomeRaw = match[1]?.toUpperCase();
+    const sha = match[2]?.toLowerCase();
+    if (!sha || (outcomeRaw !== 'PASS' && outcomeRaw !== 'FAIL') || match.index === undefined) {
+      continue;
+    }
+    const outcome = outcomeRaw === 'PASS' ? 'pass' : 'fail';
+    if (match.index < earliestIndex) {
+      earliestIndex = match.index;
+      result = { outcome, sha };
+    }
   }
-  const pass = passRe.exec(body);
-  if (pass?.[1]) {
-    return { outcome: 'pass', sha: pass[1].toLowerCase() };
-  }
-  return null;
+  return result;
 }
 
 export function shaMatchesHead(commentSha: string, headSha: string): boolean {
@@ -47,21 +64,19 @@ export function shaMatchesHead(commentSha: string, headSha: string): boolean {
 }
 
 export function parseVerdictsFromComments(
-  comments: CommentLike[],
+  comments: VerdictCommentLike[],
   headSha: string,
 ): { pixel: ReviewVerdictOutcome; friction: ReviewVerdictOutcome } {
-  const sorted = [...comments].sort((a, b) => {
+  const trusted = comments.filter((c) => isTrustedVerdictComment(c.author_association));
+  const sorted = [...trusted].sort((a, b) => {
     const ta = a.created_at ? Date.parse(a.created_at) : 0;
     const tb = b.created_at ? Date.parse(b.created_at) : 0;
     return tb - ta;
   });
 
-  const resolveNewest = (
-    passRe: RegExp,
-    failRe: RegExp,
-  ): ReviewVerdictOutcome => {
+  const resolveNewest = (verdictRe: RegExp): ReviewVerdictOutcome => {
     for (const c of sorted) {
-      const hit = extractVerdict(c.body ?? '', passRe, failRe);
+      const hit = firstVerdictInBody(c.body ?? '', verdictRe);
       if (!hit) continue;
       if (shaMatchesHead(hit.sha, headSha)) {
         return hit.outcome;
@@ -72,8 +87,8 @@ export function parseVerdictsFromComments(
   };
 
   return {
-    pixel: resolveNewest(PIXEL_PASS, PIXEL_FAIL),
-    friction: resolveNewest(FRICTION_PASS, FRICTION_FAIL),
+    pixel: resolveNewest(PIXEL_VERDICT_RE),
+    friction: resolveNewest(FRICTION_VERDICT_RE),
   };
 }
 
