@@ -986,8 +986,8 @@ function PollResultsCard({ output }: { output: PollResultsOutput }) {
         </span>
         {distributionVisible ? (
           <>
-            Ja {formatPollBallotPercentDisplay(percents.ja)} ({totals.ja ?? 0}) · Nei {formatPollBallotPercentDisplay(percents.nei)} ({totals.nei ?? 0}) ·
-            Blank {formatPollBallotPercentDisplay(percents.blank)} ({totals.blank ?? 0})
+            Ja {formatPollBallotPercentDisplay(percents.ja ?? 0)} ({totals.ja ?? 0}) · Nei {formatPollBallotPercentDisplay(percents.nei ?? 0)} ({totals.nei ?? 0}) ·
+            Blank {formatPollBallotPercentDisplay(percents.blank ?? 0)} ({totals.blank ?? 0})
           </>
         ) : null}
       </p>
