@@ -83,8 +83,7 @@ function FolkemeningBelowThreshold({
   pollHref: string | null;
   total: number | null;
 }) {
-  // If poll is open, user hasn't voted, and total is at least 5, show "Stem for å se fordelingen"
-  if (pollOpen && pollHref && (total || 0) >= 5) {
+  if (pollOpen && pollHref && (total ?? 0) >= 5) {
     return (
       <p className="text-sm text-muted-foreground">
         Stem for å se fordelingen.{' '}
@@ -97,7 +96,7 @@ function FolkemeningBelowThreshold({
       </p>
     );
   }
-  
+
   if (pollOpen && pollHref) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -182,10 +181,10 @@ function StemRowCard({ row }: { row: PolitikerStemmerRow }) {
                 />
               ) : null}
               {!showPublicPollTotals ? (
-                <FolkemeningBelowThreshold 
-                  pollOpen={row.pollOpen} 
-                  pollHref={row.pollHref} 
-                  total={row.pollTotalsPublic?.total || null} 
+                <FolkemeningBelowThreshold
+                  pollOpen={row.pollOpen}
+                  pollHref={row.pollHref}
+                  total={row.pollTotalsPublic?.total ?? null}
                 />
               ) : null}
             </>
