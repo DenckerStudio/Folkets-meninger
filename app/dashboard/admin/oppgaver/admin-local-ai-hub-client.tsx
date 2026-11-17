@@ -1,0 +1,479 @@
+'use client';
+
+import { useCallback, useState, useTransition } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Columns3, ExternalLink } from 'lucide-react';
+import { AdminBackLink } from '@/components/admin/admin-shell';
+import { Button } from '@/components/ui/button';
+import { VURDER_FOCUS_RING } from '@/lib/admin/vurder-interaction-classes';
+import {
+  approveLocalAiSuggestionAction,
+  mergeLocalAiPullAction,
+  rejectLocalAiSuggestionAction,
+} from '@/lib/admin/local-ai-hub/actions';
+import type { LocalAiOverviewResult } from '@/lib/admin/local-ai-hub/overview';
+import { verdictLabel, type ReviewVerdictOutcome } from '@/lib/admin/local-ai-hub/verdict-parser';
+import { cn } from '@/lib/utils';
+
+function verdictClass(outcome: ReviewVerdictOutcome): string {
+  switch (outcome) {
+    case 'pass':
+      return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
+    case 'fail':
+      return 'bg-destructive/10 text-destructive';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
+}
+
+function ciBadgeClass(state: string | undefined): string {
+  switch (state) {
+    case 'success':
+      return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
+    case 'failure':
+      return 'bg-destructive/10 text-destructive';
+    case 'pending':
+      return 'bg-amber-500/10 text-amber-800 dark:text-amber-200';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
+}
+
+type Props = {
+  initial: LocalAiOverviewResult;
+};
+
+export function LocalAiHubPageSkeleton() {
+  return (
+    <div className="space-y-6" aria-busy="true" aria-label="Laster lokal-AI-oversikt">
+      <div className="h-11 w-44 animate-pulse rounded bg-muted/60" />
+      <div className="h-20 w-full max-w-2xl animate-pulse rounded bg-muted/60" />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="min-h-48 animate-pulse rounded-xl border border-border bg-card" />
+        <div className="min-h-48 animate-pulse rounded-xl border border-border bg-card" />
+      </div>
+    </div>
+  );
+}
+
+export default function AdminLocalAiHubClient({ initial }: Props) {
+  const router = useRouter();
+  const [overview, setOverview] = useState(initial);
+  const [pendingTaskId, setPendingTaskId] = useState<number | null>(null);
+  const [rejectConfirmId, setRejectConfirmId] = useState<number | null>(null);
+  const [mergeConfirmKey, setMergeConfirmKey] = useState<string | null>(null);
+  const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
+  const [isPending, startTransition] = useTransition();
+
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/local-ai-hub/overview');
+      const data = (await res.json()) as LocalAiOverviewResult;
+      if (res.ok) setOverview(data);
+    } catch {
+      // beholder forrige data
+    }
+    router.refresh();
+  }, [router]);
+
+  if (!overview.ok && overview.kind === 'config') {
+    return (
+      <div className="space-y-6">
+        <AdminBackLink />
+        <header>
+          <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            <Columns3 className="h-6 w-6 shrink-0 text-brand" aria-hidden />
+            Lokal-AI
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Oversikt over Vikunja-køen og tilknyttede pull requests.
+          </p>
+        </header>
+        <div
+          className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3"
+          role="alert"
+        >
+          <p className="text-sm font-medium text-destructive">Oppsettet er ufullstendig</p>
+          <ul className="mt-2 list-inside list-disc text-sm text-destructive">
+            {overview.missing.map((name) => (
+              <li key={name}>
+                Mangler miljøvariabel <code className="text-xs">{name}</code>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    );
+  }
+
+  if (!overview.ok) {
+    return null;
+  }
+
+  const failedRows = overview.ferdig.filter((r) => r.failed);
+  const doneRows = overview.ferdig.filter((r) => !r.failed);
+
+  const runApprove = (taskId: number) => {
+    setPendingTaskId(taskId);
+    startTransition(async () => {
+      const res = await approveLocalAiSuggestionAction(taskId);
+      setPendingTaskId(null);
+      if (!res.ok) {
+        setCardErrors((p) => ({ ...p, [`f-${taskId}`]: res.error }));
+        return;
+      }
+      setRejectConfirmId(null);
+      await refresh();
+    });
+  };
+
+  const runReject = (taskId: number) => {
+    setPendingTaskId(taskId);
+    startTransition(async () => {
+      const res = await rejectLocalAiSuggestionAction(taskId);
+      setPendingTaskId(null);
+      setRejectConfirmId(null);
+      if (!res.ok) {
+        setCardErrors((p) => ({ ...p, [`f-${taskId}`]: res.error }));
+        return;
+      }
+      await refresh();
+    });
+  };
+
+  const runMerge = (key: string, owner: string, repo: string, number: number, headSha: string) => {
+    startTransition(async () => {
+      const res = await mergeLocalAiPullAction({ owner, repo, number, expectedHeadSha: headSha });
+      setMergeConfirmKey(null);
+      if (!res.ok) {
+        setCardErrors((p) => ({ ...p, [key]: res.error }));
+        return;
+      }
+      await refresh();
+    });
+  };
+
+  return (
+    <div className="space-y-8">
+      <AdminBackLink />
+      <header>
+        <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+          <Columns3 className="h-6 w-6 shrink-0 text-brand" aria-hidden />
+          Lokal-AI
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Ferdige kjøringer, forslag til godkjenning og merge når CI og vurdering er på plass.
+        </p>
+      </header>
+
+      {overview.partialErrors.length > 0 ? (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3" role="status">
+          <p className="text-sm text-foreground">Noen datakilder feilet:</p>
+          <ul className="mt-1 list-inside list-disc text-sm text-muted-foreground">
+            {overview.partialErrors.map((e) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn('mt-3 min-h-11', VURDER_FOCUS_RING)}
+            onClick={() => void refresh()}
+          >
+            Oppdater
+          </Button>
+        </div>
+      ) : null}
+
+      <section aria-labelledby="lokal-ai-ferdig-heading" className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <h2 id="lokal-ai-ferdig-heading" className="text-lg font-semibold text-foreground">
+            Ferdig
+          </h2>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn('min-h-11', VURDER_FOCUS_RING)}
+            disabled={isPending}
+            onClick={() => void refresh()}
+          >
+            Oppdater
+          </Button>
+        </div>
+
+        {doneRows.length === 0 && failedRows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Ingen ferdige oppgaver med PR-etikett akkurat nå.</p>
+        ) : null}
+
+        <div className="grid gap-4">
+          {doneRows.map((row) => {
+            const mergeKey = `pr-${row.pr?.number ?? row.taskId}`;
+            const confirmingMerge = mergeConfirmKey === mergeKey;
+            return (
+              <article
+                key={row.taskId}
+                className="rounded-xl border border-border bg-card p-4 shadow-sm"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-foreground">{row.title}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">Vikunja #{row.taskId}</p>
+                  </div>
+                  {row.pr ? (
+                    <Link
+                      href={row.pr.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        'inline-flex min-h-11 items-center gap-1 text-sm font-medium text-brand hover:underline',
+                        VURDER_FOCUS_RING,
+                      )}
+                    >
+                      PR #{row.pr.number}
+                      <ExternalLink className="h-4 w-4" aria-hidden />
+                    </Link>
+                  ) : null}
+                </div>
+
+                {row.prError ? (
+                  <p className="mt-2 text-sm text-destructive" role="alert">
+                    {row.prError}
+                  </p>
+                ) : null}
+
+                {row.pr ? (
+                  <dl className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+                    <div>
+                      <dt className="font-medium text-foreground">Status</dt>
+                      <dd>{row.pr.state === 'open' ? 'Åpen' : 'Lukket'}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-foreground">Head SHA</dt>
+                      <dd className="font-mono">{row.pr.headSha.slice(0, 12)}…</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-foreground">CI</dt>
+                      <dd>
+                        <span
+                          className={cn(
+                            'inline-flex rounded-full px-2 py-0.5 font-medium',
+                            ciBadgeClass(row.ci?.state),
+                          )}
+                        >
+                          {row.ci?.summary ?? row.ciError ?? 'Ukjent'}
+                        </span>
+                      </dd>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <span
+                        className={cn(
+                          'inline-flex rounded-full px-2 py-0.5 font-medium',
+                          verdictClass(row.pixel),
+                        )}
+                      >
+                        Pixel: {verdictLabel(row.pixel)}
+                      </span>
+                      <span
+                        className={cn(
+                          'inline-flex rounded-full px-2 py-0.5 font-medium',
+                          verdictClass(row.friction),
+                        )}
+                      >
+                        Friction: {verdictLabel(row.friction)}
+                      </span>
+                    </div>
+                  </dl>
+                ) : null}
+
+                {cardErrors[mergeKey] ? (
+                  <p className="mt-2 text-xs text-destructive" role="alert">
+                    {cardErrors[mergeKey]}
+                  </p>
+                ) : null}
+
+                {row.pr && row.pr.state === 'open' ? (
+                  <div className="mt-4">
+                    {!confirmingMerge ? (
+                      <div className="space-y-2">
+                        <Button
+                          type="button"
+                          className={cn('min-h-11', VURDER_FOCUS_RING)}
+                          disabled={!row.merge.canMerge || isPending}
+                          title={
+                            row.merge.canMerge
+                              ? undefined
+                              : row.merge.reasons.join(' · ')
+                          }
+                          onClick={() => setMergeConfirmKey(mergeKey)}
+                        >
+                          Squash-merge
+                        </Button>
+                        {!row.merge.canMerge ? (
+                          <p className="text-xs text-muted-foreground">
+                            {row.merge.reasons.join(' · ')}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div
+                        className="space-y-2 rounded-lg border border-border bg-muted/40 p-3"
+                        role="region"
+                        aria-label="Bekreft merge"
+                      >
+                        <p className="text-sm font-medium text-foreground">
+                          Squash-merge PR #{row.pr.number} på head{' '}
+                          <span className="font-mono text-xs">{row.pr.headSha.slice(0, 7)}</span>?
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            className={cn('min-h-11', VURDER_FOCUS_RING)}
+                            disabled={isPending}
+                            onClick={() =>
+                              runMerge(
+                                mergeKey,
+                                'DenckerStudio',
+                                'Folkets-meninger',
+                                row.pr!.number,
+                                row.pr!.headSha,
+                              )
+                            }
+                          >
+                            Bekreft merge
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className={cn('min-h-11', VURDER_FOCUS_RING)}
+                            onClick={() => setMergeConfirmKey(null)}
+                          >
+                            Avbryt
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
+
+        {failedRows.length > 0 ? (
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold text-foreground">Feilet</h3>
+            {failedRows.map((row) => (
+              <article
+                key={row.taskId}
+                className="rounded-xl border border-destructive/30 bg-destructive/5 p-4"
+              >
+                <h4 className="text-sm font-semibold text-foreground">{row.title}</h4>
+                <p className="mt-1 text-xs text-muted-foreground">Vikunja #{row.taskId}</p>
+                {row.failureComment ? (
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{row.failureComment}</p>
+                ) : (
+                  <p className="mt-2 text-sm text-muted-foreground">Ingen feilmelding i kommentarer.</p>
+                )}
+                {row.pr ? (
+                  <Link
+                    href={row.pr.url}
+                    className={cn(
+                      'mt-2 inline-flex min-h-11 items-center text-sm text-brand hover:underline',
+                      VURDER_FOCUS_RING,
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Se pull request
+                  </Link>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </section>
+
+      <section aria-labelledby="lokal-ai-forslag-heading" className="space-y-4">
+        <h2 id="lokal-ai-forslag-heading" className="text-lg font-semibold text-foreground">
+          Forslag
+        </h2>
+        {overview.forslag.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Ingen forslag venter på godkjenning.</p>
+        ) : (
+          <div className="grid gap-4">
+            {overview.forslag.map((row) => {
+              const busy = pendingTaskId === row.taskId;
+              const confirming = rejectConfirmId === row.taskId;
+              const errKey = `f-${row.taskId}`;
+              return (
+                <article
+                  key={row.taskId}
+                  className="rounded-xl border border-border bg-card p-4 shadow-sm"
+                >
+                  <h3 className="text-sm font-semibold text-foreground">{row.title}</h3>
+                  {row.description ? (
+                    <p className="mt-2 line-clamp-6 text-sm text-muted-foreground">{row.description}</p>
+                  ) : null}
+                  {cardErrors[errKey] ? (
+                    <p className="mt-2 text-xs text-destructive" role="alert">
+                      {cardErrors[errKey]}
+                    </p>
+                  ) : null}
+                  {!confirming ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        className={cn('min-h-11', VURDER_FOCUS_RING)}
+                        disabled={busy || isPending}
+                        onClick={() => runApprove(row.taskId)}
+                      >
+                        Godkjenn
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn('min-h-11', VURDER_FOCUS_RING)}
+                        disabled={busy || isPending}
+                        onClick={() => setRejectConfirmId(row.taskId)}
+                      >
+                        Avvis
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      className="mt-3 space-y-2 rounded-lg border border-border bg-muted/40 p-3"
+                      role="region"
+                      aria-label="Bekreft avvisning"
+                    >
+                      <p className="text-sm font-medium text-foreground">Avvis forslaget og marker som ferdig?</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          className={cn('min-h-11', VURDER_FOCUS_RING)}
+                          disabled={busy || isPending}
+                          onClick={() => runReject(row.taskId)}
+                        >
+                          Bekreft avvisning
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn('min-h-11', VURDER_FOCUS_RING)}
+                          onClick={() => setRejectConfirmId(null)}
+                        >
+                          Avbryt
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
