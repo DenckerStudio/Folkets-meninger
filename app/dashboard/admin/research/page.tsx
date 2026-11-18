@@ -78,12 +78,19 @@ export default async function AdminResearchPage({ searchParams }: PageProps) {
   if (isRedditSignalsView(params)) {
     const signalFilters = parseRedditSignalsFilters(params);
     const signalData = await listRedditSignalsForAdmin(signalFilters, preview);
+    const { byRedditSignalId } = await getResearchTopicSnapshotsBySources({
+      clusterIds: [],
+      redditSignalIds: signalData.rows.map((row) => row.id),
+    });
     return (
       <RedditSignalsClient
         initialData={signalData}
         initialFilters={signalFilters}
         devPreview={preview}
         spikeBadge={spikeBadge}
+        researchTopicsBySignalId={byRedditSignalId}
+        researchWebhooksConfigured={isResearchWebhookConfigured()}
+        missingResearchWebhookEnvKeys={getMissingResearchWebhookEnvKeys()}
       />
     );
   }

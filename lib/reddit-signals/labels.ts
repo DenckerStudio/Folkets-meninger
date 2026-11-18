@@ -22,6 +22,3 @@ export const REDDIT_SIGNAL_ACTION_LABELS: Record<RedditSignalApiAction, string> 
   blokker: 'Blokker permanent',
   marker_brukt: 'Marker brukt',
 };
-
-export const REDDIT_SIGNAL_BLOKKER_CONFIRM =
-  'Signalet legges på permanent blokkliste og vises ikke i fremtidige importer. Dette kan ikke angres fra denne siden.';
