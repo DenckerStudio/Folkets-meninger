@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getPageTokens } from '@/components/ui/pagination';
+import { getPageTokens } from '@/lib/pagination/page-tokens';
 import { cn } from '@/lib/utils';
 import { routes } from '@/lib/routes';
 
