@@ -47,7 +47,7 @@ test('buildPageMetadata adds brand suffix, canonical and social tags', () => {
 
 test('absoluteTitle skips the brand suffix', () => {
   const metadata = homepageMetadata();
-  assert.equal(metadata.title, 'Folkets Meninger — din stemme mellom valgene');
+  assert.equal(metadata.title, 'Folkets Meninger — din mening mellom valgene');
   assert.equal(metadata.alternates?.canonical, '/');
 });
 

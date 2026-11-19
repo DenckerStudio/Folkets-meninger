@@ -1,7 +1,8 @@
 import { ImageResponse } from 'next/og';
+import { HOMEPAGE_DOCUMENT_TITLE, HOMEPAGE_OG_HEADLINE } from '@/lib/landing/homepage-copy';
 import { SITE_NAME } from '@/lib/seo/metadata';
 
-export const alt = 'Folkets Meninger — din stemme mellom valgene';
+export const alt = HOMEPAGE_DOCUMENT_TITLE;
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -39,7 +40,7 @@ export default function OpengraphImage() {
           <div style={{ fontSize: 32, fontWeight: 600 }}>{SITE_NAME}</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ fontSize: 76, fontWeight: 800, lineHeight: 1.05 }}>Din stemme teller.</div>
+          <div style={{ fontSize: 76, fontWeight: 800, lineHeight: 1.05 }}>{HOMEPAGE_OG_HEADLINE}</div>
           <div style={{ fontSize: 76, fontWeight: 800, lineHeight: 1.05, color: '#f3b6c4' }}>
             Også mellom valgene.
           </div>

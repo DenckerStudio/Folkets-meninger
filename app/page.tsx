@@ -9,7 +9,14 @@ import { LandingHvaErAnnerledes } from '@/components/landing-hva-er-annerledes';
 import { LandingPopularIssuesSection } from '@/components/landing-popular-issues-section';
 import { LandingResearchTopicsSection } from '@/components/research-topics/landing-research-topics-section';
 import { LandingSectionContainer } from '@/components/landing-section-container';
+import { HighlightPhrase } from '@/components/ui/highlight-phrase';
 import CallToAction from '@/components/ui/call-to-action';
+import {
+  LANDING_CTA_PRIMARY,
+  LANDING_CTA_SUBTITLE,
+  LANDING_CTA_TITLE,
+  LANDING_CTA_TITLE_KEYWORD,
+} from '@/lib/landing/homepage-copy';
 import { routes } from '@/lib/routes';
 import { JsonLd } from '@/components/blog/json-ld';
 import { siteOrganizationJsonLd, siteWebSiteJsonLd } from '@/lib/blog/json-ld';
@@ -60,9 +67,15 @@ export default function LandingPage() {
           <div data-landing-section>
             <LandingSectionContainer>
               <CallToAction
-                title="Vil du at stemmen din skal telle?"
-                subtitle="Opprett gratis konto på ett minutt. Én person, én stemme — tallene vises bare samlet."
-                primaryButtonText="Opprett konto"
+                title={
+                  <HighlightPhrase
+                    text={LANDING_CTA_TITLE}
+                    highlight={LANDING_CTA_TITLE_KEYWORD}
+                    as="span"
+                  />
+                }
+                subtitle={LANDING_CTA_SUBTITLE}
+                primaryButtonText={LANDING_CTA_PRIMARY}
                 primaryButtonLink={routes.login}
                 secondaryButtonText="Les om hvordan det fungerer"
                 secondaryButtonLink={routes.omOss}

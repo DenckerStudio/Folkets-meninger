@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { LandingHeadingRule } from '@/components/icons/civic';
 import { cn } from '@/lib/utils';
 
 export type CallToActionProps = {
-  title: string;
+  title: ReactNode;
   subtitle: string;
   primaryButtonText: string;
   primaryButtonLink: string;
@@ -41,7 +42,7 @@ export default function CallToAction({
       </div>
 
       <div className="relative mx-auto flex max-w-3xl flex-col items-center text-center">
-        <h2 className="text-balance text-3xl font-extrabold tracking-tight text-[#001433] sm:text-4xl md:text-5xl">
+        <h2 className="text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl md:text-5xl">
           {title}
         </h2>
         <LandingHeadingRule className="landing-heading-rule--center" />
