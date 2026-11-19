@@ -14,6 +14,10 @@ export const SAK_EVENT_TOOLTIPS: Record<string, string> = {
   SAK: 'Saken er opprettet i Stortingets system og får et saksnummer.',
   FREMMET:
     'Saken er offisielt lagt frem i Stortinget. Fra dette tidspunktet behandles den formelt av Stortinget.',
+  FREMSATT:
+    'Forslaget er formelt lagt frem for Stortinget av representantene som står bak det.',
+  AVGITT:
+    'Komiteen har levert sin innstilling — en anbefaling til Stortinget om hva som bør vedtas.',
   REFS: 'Saken er omtalt eller referert til i et stortingsmøte, uten at det nødvendigvis er tatt en avgjørelse.',
   SENDT:
     'Saken er sendt til en stortingskomité som skal vurdere innholdet og ofte skrive en innstilling til Stortinget.',

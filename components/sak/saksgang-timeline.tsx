@@ -5,18 +5,10 @@ import { getSakEventTooltip, getSakStepTooltip, SAK_META_TOOLTIPS } from '@/lib/
 import { useSakTooltipsEnabled } from '@/components/theme-provider';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { resolveCurrentSaksgangStepIndex } from '@/lib/sak/saksgang-current-step';
+import type { SaksgangStep } from '@/lib/sak/saksgang-steps';
 import { cn } from '@/lib/utils';
 
-export type SaksgangEvent = {
-  id?: string;
-  label: string | null;
-  date: string | null;
-};
-
-export type SaksgangStep = {
-  navn: string;
-  events: SaksgangEvent[];
-};
+export type { SaksgangEvent, SaksgangStep } from '@/lib/sak/saksgang-steps';
 
 type SaksgangTimelineProps = {
   saksgangName?: string | null;
@@ -53,6 +45,10 @@ export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: Saksg
   if (steps.length === 0) return null;
 
   const currentIndex = resolveCurrentSaksgangStepIndex(steps, Boolean(ferdigbehandlet));
+  const lastReachedIndex = steps.reduce(
+    (last, step, i) => (step.events.some((e) => e.label || e.date) ? i : last),
+    -1,
+  );
 
   return (
     <div className="rounded-2xl border border-brand/12 bg-card p-4 shadow-sm sm:p-6">
@@ -75,6 +71,7 @@ export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: Saksg
           const meaningfulEvents = steg.events.filter((e) => e.label || e.date);
           const stepDone = meaningfulEvents.length > 0;
           const isCurrent = i === currentIndex;
+          const isFinished = Boolean(ferdigbehandlet) && i === lastReachedIndex;
           const stepTooltip = getSakStepTooltip(steg.navn);
 
           return (
@@ -110,6 +107,11 @@ export function SaksgangTimeline({ saksgangName, steps, ferdigbehandlet }: Saksg
                   {isCurrent ? (
                     <span className="rounded-full border border-brand-accent/30 bg-brand-accent-soft px-2 py-0.5 text-xs font-medium text-brand-accent">
                       Nå
+                    </span>
+                  ) : null}
+                  {isFinished ? (
+                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                      Avsluttet
                     </span>
                   ) : null}
                   {showTooltips && stepTooltip ? (

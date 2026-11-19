@@ -6,7 +6,8 @@ import { SAK_META_TOOLTIPS } from '@/lib/stortinget-sak-tooltips';
 import { SakMetaCard, SakSectionHeading, SakStatusBadge } from '@/components/sak/sak-meta';
 import { SAK_CATEGORY_BADGE_CLASS, SAK_KIND_BADGE_CLASS, SAK_TYPE_BADGE_CLASS } from '@/lib/sak-status';
 import { formatStortingetDate } from '@/lib/stortinget-horinger';
-import { SaksgangTimeline, type SaksgangStep } from '@/components/sak/saksgang-timeline';
+import { SaksgangTimeline } from '@/components/sak/saksgang-timeline';
+import { buildSaksgangSteps, resolveSakLastUpdatedDate } from '@/lib/sak/saksgang-steps';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ExternalLink, Tag } from 'lucide-react';
@@ -56,44 +57,6 @@ import Image from 'next/image';
 import { getPersonbildeUrl } from '@/lib/stortinget-utils';
 export const dynamic = 'force-dynamic';
 
-function formatEventDate(dateStr: string | null): string | null {
-  if (!dateStr || dateStr.startsWith('01.01.0001')) return null;
-  const match = dateStr.match(/\/Date\((\d+)[+-]\d+\)\//);
-  if (match && match[1]) {
-    const d = new Date(parseInt(match[1], 10));
-    return d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Oslo' });
-  }
-  const parts = dateStr.split(' ')[0];
-  if (/^\d{2}\.\d{2}\.\d{4}$/.test(parts)) {
-    const [day, month, year] = parts.split('.');
-    const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    if (!isNaN(d.getTime())) {
-      return d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Oslo' });
-    }
-  }
-  return dateStr;
-}
-
-const eventLabels: Record<string, string> = {
-  FRADEP: 'Fra departementet',
-  FRAREP: 'Fra representant',
-  SAK: 'Sak opprettet',
-  FREMMET: 'Fremmet',
-  REFS: 'Referert i Stortinget',
-  SENDT: 'Sendt til komité',
-  KOMITE: 'Til komitébehandling',
-  HOERFRIST: 'Høringsfrist',
-  HOER: 'Høring',
-  ORDFORER: 'Saksordfører oppnevnt',
-  INNST: 'Innstilling avgitt',
-  BEHS: 'Behandlet i Stortinget',
-  PLBEHS: 'Planlagt behandling',
-  VOT: 'Votering',
-  VEDTAK: 'Vedtak',
-  DEBATT: 'Debatt',
-  LOV: 'Lov vedtatt',
-};
-
 const sakTypeMap: Record<number, string> = {
   0: 'Alminnelig sak',
   1: 'Lovsak',
@@ -102,30 +65,6 @@ const sakTypeMap: Record<number, string> = {
   4: 'Interpellasjon',
   5: 'Spørsmål',
 };
-
-function buildSaksgangSteps(
-  saksgangSteg: NonNullable<StortingetSakDetail['saksgang']>['saksgang_steg_liste'],
-): SaksgangStep[] {
-  return (saksgangSteg ?? []).map((steg) => {
-    const allEvents = steg.saksgang_hendelse_liste || [];
-    const events = allEvents
-      .filter((h) => {
-        const hasValidDate = h.dato && !h.dato.startsWith('01.01.0001');
-        return hasValidDate || h.hendelse_tekst;
-      })
-      .map((h) => ({
-        id: h.id,
-        label: h.hendelse_tekst || eventLabels[h.id ?? ''] || null,
-        date: formatEventDate(h.dato ?? null),
-      }))
-      .filter((e) => e.label || e.date);
-
-    return {
-      navn: steg.navn,
-      events,
-    };
-  });
-}
 
 function sakShareDescription(
   sak: { summary?: string | null },
@@ -271,9 +210,13 @@ export default async function SakPage({
 
   const treatmentStatus = sak.status;
 
-  const lastUpdatedLabel =
-    formatStortingetDate(sak.date) ??
-    (issueMeta?.lastUpdatedAt ? formatStortingetDate(issueMeta.lastUpdatedAt) : null);
+  const lastUpdatedLabel = formatStortingetDate(
+    resolveSakLastUpdatedDate({
+      sakDate: sak.date,
+      cachedLastUpdatedAt: issueMeta?.lastUpdatedAt,
+      saksgangSteg: saksgang?.saksgang_steg_liste,
+    }) ?? undefined,
+  );
 
   const statusHighlight =
     !isDedicatedResearchSak
