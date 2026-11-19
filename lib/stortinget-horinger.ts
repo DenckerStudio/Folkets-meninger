@@ -162,24 +162,24 @@ export function getHoringStartDate(hearing: StortingetHoring): Date | null {
   return parseStortingetDate(hearing.start_dato);
 }
 
-export function getHoringStatusKind(hearing: StortingetHoring): HoringStatusKind {
+export function getHoringStatusKind(hearing: StortingetHoring, now = new Date()): HoringStatusKind {
   if (hearing.horing_status === 'Avlyst') return 'cancelled';
   if (hearing.horing_status === 'Avholdt') return 'held';
   if (hearing.horing_status === 'Planlagt') return 'planned';
   if (hearing.horing_status === 'Aktiv') {
     const deadline = getHoringInnspillDeadline(hearing);
     if (!deadline) return 'open';
-    return deadline > new Date() ? 'open' : 'held';
+    return deadline > now ? 'open' : 'held';
   }
 
   const deadline = getHoringInnspillDeadline(hearing);
-  if (deadline && deadline <= new Date()) return 'held';
-  if (deadline && deadline > new Date()) return 'open';
+  if (deadline && deadline <= now) return 'held';
+  if (deadline && deadline > now) return 'open';
   return 'held';
 }
 
-export function isHoringOpen(hearing: StortingetHoring): boolean {
-  return getHoringStatusKind(hearing) === 'open';
+export function isHoringOpen(hearing: StortingetHoring, now = new Date()): boolean {
+  return getHoringStatusKind(hearing, now) === 'open';
 }
 
 export function getHoringStatusLabel(hearing: StortingetHoring): string {
