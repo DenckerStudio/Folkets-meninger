@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { HOMEPAGE_DOCUMENT_TITLE } from '@/lib/landing/homepage-copy';
 
 /** Public brand name. Stemme+ is a product tier and keeps its own name. */
 export const SITE_NAME = 'Folkets Meninger';
@@ -120,7 +121,7 @@ export function buildPageMetadata({
 
 export function homepageMetadata(): Metadata {
   return buildPageMetadata({
-    title: 'Folkets Meninger — din stemme mellom valgene',
+    title: HOMEPAGE_DOCUMENT_TITLE,
     description:
       'Norsk plattform for åpen debatt: les Stortingssaker, følg høringer og si din mening. Uavhengig av Regjeringen og Stortinget.',
     canonicalPath: '/',

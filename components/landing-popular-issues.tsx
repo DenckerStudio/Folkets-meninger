@@ -30,8 +30,8 @@ export function LandingPopularIssues({ issues }: LandingPopularIssuesProps) {
       <section>
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f] mb-3">Engasjement</p>
-            <h2 className="text-3xl font-bold text-[#001433] tracking-tight sm:text-4xl">Populære saker nå</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-accent mb-3">Engasjement</p>
+            <h2 className="text-balance text-3xl font-bold text-foreground tracking-tight sm:text-4xl md:text-5xl">Populære saker nå</h2>
             <LandingHeadingRule />
             <p className="mt-2 min-h-5 text-[#001433]/65 max-w-xl">
               {formatNumber(issues.length)} saker · {formatNumber(deltakere)} holdninger

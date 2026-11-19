@@ -1,10 +1,15 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { LandingHeadingRule } from '@/components/icons/civic';
-import { pollBallotRunningTextPhrase } from '@/lib/polls/ballot-buttons';
+import { HighlightPhrase } from '@/components/ui/highlight-phrase';
+import {
+  HOW_IT_WORKS_DESCRIPTION,
+  HOW_IT_WORKS_KEYWORD,
+  HOW_IT_WORKS_STEPS,
+  HOW_IT_WORKS_TITLE,
+} from '@/lib/landing/homepage-copy';
 import { cn } from '@/lib/utils';
-
-const BALLOT_RUNNING_TEXT = pollBallotRunningTextPhrase();
 
 export interface Step {
   title: string;
@@ -17,16 +22,10 @@ export interface Step {
   };
 }
 
-export interface StepPosition {
-  className?: string;
-  rotate?: string;
-}
-
 export interface HowItWorksProps {
-  features?: Step[];
+  features?: readonly Step[];
   className?: string;
-  stepPositions?: StepPosition[];
-  title?: string;
+  title?: ReactNode;
   eyebrow?: string;
   description?: string;
 }
@@ -37,48 +36,32 @@ const STEP_THEME: Record<'red' | 'blue' | 'navy', string> = {
   navy: 'bg-foreground/5 text-foreground',
 };
 
-const DEFAULT_FEATURES: Step[] = [
-  {
-    title: 'Direkte fra Stortinget',
-    description:
-      'Lovforslag og representantforslag hentes ufiltrert fra Stortingets åpne API — kildedokumentene bak avstemningene.',
-    colorTheme: 'red',
-  },
-  {
-    title: `Stem ${BALLOT_RUNNING_TEXT}`,
-    description:
-      `Nasjonale spørsmål bruker ${BALLOT_RUNNING_TEXT}. Stemmen telles uten navn i samlet statistikk.`,
-    colorTheme: 'blue',
-  },
-  {
-    title: 'Delta i debatten',
-    description:
-      'Høringer med navngitte innspill — del mening med fornavn og etternavn.',
-    colorTheme: 'navy',
-  },
-  {
-    title: 'Innsikt for politikere',
-    description:
-      'Anonymisert statistikk hjelper representanter å forstå hva velgerne faktisk mener.',
-    colorTheme: 'red',
-  },
-];
-
 /** Landing “Slik fungerer det” — responsive numbered steps. */
 export default function HowItWorks({
   features,
   className,
-  title = 'Fra Stortinget til din stemme',
+  title,
   eyebrow = 'Slik fungerer det',
-  description = 'Data fra Stortinget. Stem, høring og innsikt.',
+  description = HOW_IT_WORKS_DESCRIPTION,
 }: HowItWorksProps = {}) {
-  const data = features && features.length > 0 ? features : DEFAULT_FEATURES;
+  const data = features && features.length > 0 ? features : HOW_IT_WORKS_STEPS;
 
   return (
     <div className={cn('relative w-full px-4 py-14 sm:px-8 sm:py-16 md:py-20', className)}>
       <div className="relative z-10 mx-auto mb-10 max-w-2xl text-center md:mb-14">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-brand-accent">{eyebrow}</p>
-        <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{title}</h2>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-brand-accent">{eyebrow}</p>
+        {typeof title === 'string' || title == null ? (
+          <HighlightPhrase
+            text={typeof title === 'string' ? title : HOW_IT_WORKS_TITLE}
+            highlight={HOW_IT_WORKS_KEYWORD}
+            as="h2"
+            className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl"
+          />
+        ) : (
+          <h2 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
+            {title}
+          </h2>
+        )}
         <LandingHeadingRule className="landing-heading-rule--center" />
         <p className="mt-3 text-muted-foreground">{description}</p>
       </div>

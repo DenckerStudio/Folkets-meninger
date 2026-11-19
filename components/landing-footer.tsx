@@ -10,6 +10,7 @@ import { touchTargetLinkClass } from '@/lib/touch-target';
 import { useAuth } from '@/hooks/use-auth';
 import { isAnalyticsEnabled } from '@/lib/analytics/flags';
 import { ANALYTICS_FOOTER_NOTICE } from '@/lib/analytics/collection-notice';
+import { LANDING_FOOTER_TAGLINE } from '@/lib/landing/homepage-copy';
 
 const platformLinks = [
   { href: routes.utforsk, label: 'Utforsk saker' },
@@ -57,7 +58,7 @@ export function LandingFooter() {
               <LandingLogo clipId="fs-footer-bubble" />
             </Link>
             <p className="mt-5 max-w-md text-sm leading-relaxed text-[#001433]/65">
-              Uavhengig plattform for stemmegivning og høringer.
+              {LANDING_FOOTER_TAGLINE}
             </p>
             <Link
               href={routes.innspill}

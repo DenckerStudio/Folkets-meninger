@@ -7,11 +7,9 @@ import { LandingHeadingRule } from '@/components/icons/civic';
 import { BentoFeatureGrid } from '@/components/ui/bento-feature-grid';
 import { SoftBlurIn } from '@/components/ui/soft-blur-in';
 import { TextReveal } from '@/components/ui/text-reveal';
+import { HVA_ER_ANNERLEDES_INTRO } from '@/lib/landing/homepage-copy';
 import { STEMME_PLUS_MONTHLY_PRICE_NOK, STEMME_PLUS_NON_INFLUENCE_NOTE } from '@/lib/stemme-plus/constants';
 import { routes } from '@/lib/routes';
-
-const INTRO =
-  'Vi er ikke en offisiell meningsmåling. Her er det som skiller Folkets Meninger fra en generell «stem i appen»-opplevelse.';
 
 export function LandingHvaErAnnerledes() {
   const tiles = [
@@ -74,17 +72,17 @@ export function LandingHvaErAnnerledes() {
       <section id="hva-er-annerledes" className="scroll-mt-28">
         <div className="mx-auto max-w-3xl text-center">
           <SoftBlurIn>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ba0c2f]">Slik skiller vi oss ut</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-accent">Slik skiller vi oss ut</p>
           </SoftBlurIn>
           <SoftBlurIn delay={0.08}>
-            <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-[#001433] sm:text-4xl md:text-5xl">
+            <h2 className="mt-4 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl md:text-5xl">
               Hva er annerledes?
             </h2>
             <LandingHeadingRule className="landing-heading-rule--center" />
           </SoftBlurIn>
           <SoftBlurIn delay={0.14}>
             <TextReveal
-              text={INTRO}
+              text={HVA_ER_ANNERLEDES_INTRO}
               className="mt-5 text-lg leading-relaxed text-[#001433]/70"
               amount={0.2}
               stagger={0.045}

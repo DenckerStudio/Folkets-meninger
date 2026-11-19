@@ -54,6 +54,16 @@ const aktivOpen = {
 assert.equal(getHoringStatusKind(aktivOpen), 'open');
 assert.equal(isHoringOpen(aktivOpen), true);
 
+const clockedDeadline = {
+  id: 'clocked',
+  horing_status: 'Aktiv',
+  innspillsfrist: '/Date(1794970800000+0000)/', // 2026-11-18T12:00:00.000Z
+};
+assert.equal(getHoringStatusKind(clockedDeadline, new Date('2026-11-15T12:00:00.000Z')), 'open');
+assert.equal(isHoringOpen(clockedDeadline, new Date('2026-11-15T12:00:00.000Z')), true);
+assert.equal(getHoringStatusKind(clockedDeadline, new Date('2026-11-19T12:00:00.000Z')), 'held');
+assert.equal(isHoringOpen(clockedDeadline, new Date('2026-11-19T12:00:00.000Z')), false);
+
 const linked = findHoringerForSak(
   [
     { id: 'h1', horing_sak_info_liste: [{ sak_id: 200211 }] },
