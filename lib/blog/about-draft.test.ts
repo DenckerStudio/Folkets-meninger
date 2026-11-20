@@ -4,6 +4,7 @@ import {
   ABOUT_BLOG_CATEGORY_SLUG,
   ABOUT_BLOG_PROMPT_VERSION,
   ABOUT_BLOG_SOURCE_PREFIX,
+  aboutBlogExcerpt,
   aboutBlogProductFacts,
   aboutBlogSlug,
   aboutBlogSourceEvent,
@@ -146,6 +147,23 @@ function testSlugAndSourceEvent() {
   assert.ok(long.endsWith('-3f2b8c1a'));
 }
 
+function testExcerpt() {
+  assert.equal(
+    aboutBlogExcerpt('## Bakgrunn\n\nKort **ingress** her.\n\nNeste avsnitt.', 'Tittel'),
+    'Kort ingress her.',
+  );
+  assert.equal(aboutBlogExcerpt('## Bare overskrift', 'Tittel'), 'Tittel');
+
+  const firstSentence = `${'Vi følger sakene fra Stortinget '.repeat(4).trim()}.`;
+  const longParagraph = `${firstSentence} ${'ord '.repeat(120).trim()}.`;
+  assert.equal(aboutBlogExcerpt(longParagraph, 'Tittel'), firstSentence);
+
+  const oneLongSentence = `${'ord '.repeat(120).trim()}.`;
+  const clipped = aboutBlogExcerpt(oneLongSentence, 'Tittel');
+  assert.ok(clipped.length <= BLOG_EXCERPT_MAX, String(clipped.length));
+  assert.ok(clipped.endsWith('ord…'), clipped.slice(-10));
+}
+
 async function testBuildDraftInput() {
   const base = { title: 'Slik virker avstemninger', requestId: REQUEST_ID, slug: 'slik-virker-avstemninger' };
 
@@ -236,6 +254,7 @@ void (async () => {
   testPrompt();
   testParseRequest();
   testSlugAndSourceEvent();
+  testExcerpt();
   await testBuildDraftInput();
   restoreEnv();
   console.log('lib/blog/about-draft.test.ts ok');

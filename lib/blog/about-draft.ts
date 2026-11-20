@@ -9,7 +9,7 @@ import {
 import { sanitizeBlogDraftBodyMarkdown } from '@/lib/blog/blog-draft-body';
 import type { CreateBlogDraftInput } from '@/lib/blog/service';
 import { isValidBlogSlug, normalizeBlogSlug } from '@/lib/blog/slug';
-import { BLOG_TITLE_MAX, normalizeBlogTitle } from '@/lib/blog/text-limits';
+import { BLOG_EXCERPT_MAX, BLOG_TITLE_MAX, normalizeBlogTitle } from '@/lib/blog/text-limits';
 import {
   cmsBlogOpsListBySourceEventPrefix,
   type BlogOpsListedDraft,
@@ -150,6 +150,28 @@ function cleanAboutBody(raw: string): string {
   return sanitizeBlogDraftBodyMarkdown(withoutTitleHeading);
 }
 
+const ABOUT_EXCERPT_MIN_SENTENCE = 80;
+
+/** Ingress from the opening paragraph, ended at a sentence or word instead of mid-word. */
+export function aboutBlogExcerpt(bodyMarkdown: string, title: string): string {
+  const firstParagraph =
+    bodyMarkdown.split(/\n{2,}/).find((block) => block.trim() && !block.trimStart().startsWith('#')) ??
+    '';
+  const plain = pickBlogExcerptFromBody(firstParagraph, title);
+  if (plain.length < BLOG_EXCERPT_MAX) return plain;
+
+  const sentenceEnd = Math.max(
+    plain.lastIndexOf('. '),
+    plain.lastIndexOf('! '),
+    plain.lastIndexOf('? '),
+  );
+  if (sentenceEnd >= ABOUT_EXCERPT_MIN_SENTENCE) return plain.slice(0, sentenceEnd + 1);
+
+  const wordEnd = plain.lastIndexOf(' ');
+  if (wordEnd <= 0) return plain;
+  return `${plain.slice(0, wordEnd).replace(/[\s,;:–-]+$/, '')}…`;
+}
+
 export type AboutBlogDraftErrorCode =
   | 'llm_unconfigured'
   | 'llm_timeout'
@@ -229,7 +251,7 @@ export async function buildAboutBlogDraftInput(args: {
     input: {
       slug: args.slug,
       title: args.title,
-      excerpt: pickBlogExcerptFromBody(body_md, args.title),
+      excerpt: aboutBlogExcerpt(body_md, args.title),
       body_md,
       category: ABOUT_BLOG_CATEGORY_SLUG,
       source_event: aboutBlogSourceEvent(args.requestId),
