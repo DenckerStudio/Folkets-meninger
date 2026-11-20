@@ -41,6 +41,12 @@ assert.equal(oppgaver.href, routes.adminOppgaver);
 assert.equal(adminNavItems.some((item) => item.id === 'blog'), false);
 assert.equal(adminNavItems.some((item) => item.id === 'blogg'), false);
 
+const omFolketsMeninger = adminNavItems.find((item) => item.id === 'om-folkets-meninger');
+assert.ok(omFolketsMeninger);
+assert.equal(omFolketsMeninger.title, 'Om Folkets Meninger');
+assert.equal(omFolketsMeninger.status, 'active');
+assert.equal(omFolketsMeninger.href, routes.adminBlogg);
+
 const sakAvstemning = adminNavItems.find((item) => item.id === 'sak-avstemning');
 assert.ok(sakAvstemning);
 assert.equal(sakAvstemning.href, routes.adminSak);

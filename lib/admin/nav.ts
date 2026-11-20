@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Layers,
   Lightbulb,
+  PenLine,
   Radar,
   Users,
 } from 'lucide-react';
@@ -71,6 +72,14 @@ export const adminNavItems: AdminNavItem[] = [
     description: 'Systemutkast, blogginnlegg og sammendrag',
     href: routes.adminVurder,
     icon: ClipboardCheck,
+    status: 'active',
+  },
+  {
+    id: 'om-folkets-meninger',
+    title: 'Om Folkets Meninger',
+    description: 'Lag utkast om tjenesten',
+    href: routes.adminBlogg,
+    icon: PenLine,
     status: 'active',
   },
   {
