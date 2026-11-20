@@ -211,7 +211,7 @@ async function testBuildDraftInput() {
 
   const repeatedTitle = await buildAboutBlogDraftInput({
     ...base,
-    fetchImpl: llmFetch('## slik virker  avstemninger\n\nIngress.\n\n## Blank\n\nBlank teller med.'),
+    fetchImpl: llmFetch('## **slik virker  avstemninger?**\n\nIngress.\n\n## Blank\n\nBlank teller med.'),
   });
   assert.equal(repeatedTitle.ok, true);
   if (repeatedTitle.ok) {

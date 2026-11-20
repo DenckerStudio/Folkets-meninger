@@ -151,7 +151,7 @@ const LEADING_HEADING = /^(#{1,6})\s+([^\n]*)\n+/;
 const MARKDOWN_LINK = /!?\[([^\]\n]*)\]\([^)\n]*\)/g;
 
 function comparableHeading(text: string): string {
-  return text.replace(/[*_`]/g, '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('nb');
+  return text.replace(/[^\p{L}\p{N}]+/gu, ' ').trim().toLocaleLowerCase('nb');
 }
 
 /** The page already renders the title, so a leading H1 or a heading repeating it is dropped. */
