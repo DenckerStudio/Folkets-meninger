@@ -326,23 +326,26 @@ export function AboutBlogDraftPanel({
         {!listLoading && drafts.length > 0 ? (
           <ul className="divide-y divide-border">
             {drafts.map((draft) => (
-              <li key={draft.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+              <li
+                key={draft.id}
+                className="flex flex-col gap-y-0.5 py-2 sm:flex-row sm:items-center sm:gap-x-3"
+              >
                 {draft.adminUrl ? (
                   <Link
                     href={draft.adminUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-11 min-w-0 flex-1 items-center gap-1.5 break-all text-sm font-medium text-brand hover:underline"
+                    className="inline-flex min-h-11 min-w-0 items-center gap-1.5 text-sm font-medium text-brand [overflow-wrap:anywhere] hover:underline sm:flex-1"
                   >
                     {draft.slug}
                     <ExternalLink className="size-3.5 shrink-0" aria-hidden />
                   </Link>
                 ) : (
-                  <span className="min-w-0 flex-1 break-all text-sm font-medium text-foreground">
+                  <span className="min-w-0 text-sm font-medium text-foreground [overflow-wrap:anywhere] sm:flex-1">
                     {draft.slug}
                   </span>
                 )}
-                <span className="text-xs text-muted-foreground">
+                <span className="shrink-0 text-xs text-muted-foreground">
                   {statusLabel(draft.cmsStatus)}
                   {draft.updatedAt ? ` · ${formatBlogDate(draft.updatedAt)}` : ''}
                 </span>
