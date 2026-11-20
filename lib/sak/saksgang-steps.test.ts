@@ -3,7 +3,11 @@ import {
   buildSaksgangSteps,
   formatSaksgangEventDate,
   parseSaksgangEventDate,
+  latestPastSaksgangEventDate,
+  nextPlannedSaksgangDate,
+  saksgangDecisionDate,
   resolveSakLastUpdatedDate,
+  saksgangFinishedSummaryLabel,
 } from './saksgang-steps';
 
 const NO_DATE = '01.01.0001 00:00:00';
@@ -48,8 +52,8 @@ const steps = buildSaksgangSteps(sak200211);
 assert.deepEqual(
   steps.map((s) => s.events.map((e) => `${e.label}|${e.date}`)),
   [
-    ['Forslag fremsatt|26. mars 2026', 'Referert i Stortinget|9. apr. 2026'],
-    ['Sendt til komité|9. apr. 2026', 'Innstilling avgitt|12. juni 2026'],
+    ['Forslag fremsatt|26. mars 2026', 'Referert i Stortinget|9. april 2026'],
+    ['Sendt til komité|9. april 2026', 'Innstilling avgitt|12. juni 2026'],
     ['Behandlet i Stortinget|19. juni 2026', 'Votering|19. juni 2026'],
   ],
   'hver dato skal ha en etikett, og udaterte ID-hendelser skal skjules',
@@ -100,5 +104,50 @@ assert.equal(
 );
 
 assert.equal(resolveSakLastUpdatedDate({ saksgangSteg: undefined, now }), null);
+
+assert.equal(
+  latestPastSaksgangEventDate(sak200211, now)?.toISOString().split('T')[0],
+  '2026-06-19',
+  'siste hendelse som har skjedd',
+);
+assert.equal(latestPastSaksgangEventDate(undefined, now), null);
+assert.equal(
+  saksgangDecisionDate(sak200211, now)?.toISOString().split('T')[0],
+  '2026-06-19',
+  'behandlingsdagen er votering/behandling, ikke «innstilling avgitt»',
+);
+assert.equal(
+  saksgangDecisionDate(
+    [{ navn: 'X', saksgang_hendelse_liste: [{ id: 'AVGITT', dato: '12.06.2026 00:00:00' }] }],
+    now,
+  ),
+  null,
+  'uten behandlingshendelse finnes ingen behandlingsdato',
+);
+assert.equal(
+  latestPastSaksgangEventDate(
+    [{ navn: 'X', saksgang_hendelse_liste: [{ id: 'PLBEHS', dato: '01.12.2026 00:00:00' }] }],
+    now,
+  ),
+  null,
+  'kun fremtidige hendelser gir ingen dato',
+);
+
+const planned = [
+  { navn: 'X', saksgang_hendelse_liste: [{ id: 'PLBEHS', dato: '01.12.2026 00:00:00' }] },
+  { navn: 'Y', saksgang_hendelse_liste: [{ id: 'PLBEHS', dato: '19.11.2026 00:00:00' }] },
+];
+assert.equal(
+  nextPlannedSaksgangDate(planned, now)?.toISOString(),
+  '2026-11-19T12:00:00.000Z',
+  'dagen i dag regnes som kommende og tolkes som kalenderdag, ikke 23:59 lokal tid',
+);
+assert.equal(nextPlannedSaksgangDate(planned, new Date('2026-11-20T09:00:00Z'))?.toISOString(), '2026-12-01T12:00:00.000Z');
+assert.equal(nextPlannedSaksgangDate(sak200211, now), null, 'fortidige hendelser er ikke planlagt');
+assert.equal(nextPlannedSaksgangDate(undefined, now), null);
+
+assert.equal(saksgangFinishedSummaryLabel('19. juni 2026'), 'Saksgang – ferdigbehandlet 19. juni 2026');
+assert.equal(saksgangFinishedSummaryLabel(null), 'Saksgang – ferdigbehandlet');
+assert.equal(saksgangFinishedSummaryLabel('  '), 'Saksgang – ferdigbehandlet');
 
 console.log('saksgang-steps.test.ts OK');

@@ -1,7 +1,7 @@
 import type { StortingetSakDetail } from './stortinget';
 
 /** Saksgang-hendelser som markerer at Stortinget snart / har tatt stilling. */
-const VOTE_CLOSE_EVENT_IDS = new Set([
+export const VOTE_CLOSE_EVENT_IDS: ReadonlySet<string> = new Set([
   'PLBEHS',
   'VOT',
   'VOTLOV1',
